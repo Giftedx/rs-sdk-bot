@@ -92546,6 +92546,24 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/pk-gang-collect.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/pk-gang-record.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/pk-hunt-trip.ts",
    "intents": [
     "observe"

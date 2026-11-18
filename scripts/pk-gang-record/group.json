@@ -1,0 +1,936 @@
+{
+ "names": [
+  "goondelf",
+  "ligma",
+  "sugma"
+ ],
+ "built": "bun scripts/measure/pk-gang-record.ts build",
+ "sources": [
+  {
+   "path": ".practice/rival-dds/trace-3.jsonl",
+   "ticks": 6540,
+   "from": "2026-11-12T04:48:39.130Z",
+   "to": "2026-11-12T05:32:15.130Z",
+   "frames": 655
+  },
+  {
+   "path": ".practice/rival-dds/trace-long-1.jsonl",
+   "ticks": 107920,
+   "from": "2026-11-12T05:19:27.681Z",
+   "to": "2026-11-12T17:18:55.681Z",
+   "frames": 10793
+  },
+  {
+   "path": ".practice/gang-record/feed-1794981300762.jsonl",
+   "ticks": 3120,
+   "from": "2026-11-18T05:55:02.069Z",
+   "to": "2026-11-18T06:15:50.069Z",
+   "frames": 313
+  }
+ ],
+ "post": {
+  "value": {
+   "tile": [
+    3078,
+    3640
+   ],
+   "wilderness": 16,
+   "percentOfFramesOnIt": {
+    "goondelf": 68.6,
+    "ligma": 64.9,
+    "sugma": 65.1
+   }
+  },
+  "status": "measured",
+  "n": 11761,
+  "evidence": "the traces of `sources`: roster frames within 1 tile of the post"
+ },
+ "accountsOffThePostInOneFrame": {
+  "value": {
+   "0": 5813,
+   "1": 2491,
+   "2": 938,
+   "3": 2519
+  },
+  "status": "measured",
+  "n": 11761,
+  "evidence": "the traces of `sources`: roster frames with all three online"
+ },
+ "accountsOnOneTarget": {
+  "value": {
+   "1": 99,
+   "2": 54,
+   "3": 54
+  },
+  "status": "measured",
+  "n": 207,
+  "evidence": "the traces of `sources`: for each fight, the gang accounts with a fight on that player within 40 ticks"
+ },
+ "fights": {
+  "value": {
+   "count": 207,
+   "ticks": {
+    "n": 207,
+    "min": 0,
+    "median": 18,
+    "max": 550
+   },
+   "ended": {
+    "target left": 95,
+    "stopped": 76,
+    "target died": 35,
+    "attacker died": 1
+   }
+  },
+  "status": "measured",
+  "n": 207,
+  "evidence": "the traces of `sources`: pk-rival-feed.ts digest"
+ },
+ "targets": {
+  "combatOfAttacked": {
+   "value": {
+    "78": 1,
+    "85": 2,
+    "96": 10,
+    "109": 15,
+    "113": 1,
+    "120": 14,
+    "123": 3,
+    "124": 22,
+    "125": 6,
+    "126": 133
+   },
+   "status": "measured",
+   "n": 207,
+   "evidence": "the traces of `sources`: the first attack of each fight"
+  },
+  "wildernessLevelOfAttacked": {
+   "value": {
+    "0": 1,
+    "1": 33,
+    "2": 7,
+    "3": 1,
+    "4": 5,
+    "7": 1,
+    "8": 2,
+    "9": 5,
+    "10": 7,
+    "11": 2,
+    "12": 6,
+    "13": 10,
+    "14": 10,
+    "15": 17,
+    "16": 3,
+    "17": 6,
+    "18": 1,
+    "19": 4,
+    "20": 3,
+    "21": 3,
+    "22": 5,
+    "23": 16,
+    "24": 16,
+    "25": 3,
+    "26": 5,
+    "28": 1,
+    "30": 1,
+    "32": 4,
+    "34": 2,
+    "37": 1,
+    "39": 1,
+    "40": 3,
+    "42": 4,
+    "43": 1,
+    "44": 2,
+    "45": 3,
+    "46": 4,
+    "48": 1,
+    "49": 2,
+    "52": 1,
+    "55": 4
+   },
+   "status": "measured",
+   "n": 207,
+   "evidence": "the traces of `sources`: the tile of the player at the first attack"
+  },
+  "attackableAndNotAttacked": {
+   "value": {
+    "byCombat": {},
+    "examples": []
+   },
+   "status": "measured",
+   "n": 0,
+   "evidence": "the traces of `sources`: players the game lets a combat 126 account attack, 5 roster frames or more within 30 tiles of the post with a gang account on it, with no attack in that trace"
+  },
+  "combatRule": {
+   "value": "the game allows an attack only within as many combat levels as the Wilderness level of the tile",
+   "status": "measured",
+   "n": 1,
+   "evidence": "vendor/rs-sdk/server/content: the Wilderness level rule, research/pvp-fight-loop.md \"The least build that can fight the gang is combat 110\"",
+   "note": "a player of combat 26 to 64 near the post (level 16) is not a target the game allows"
+  }
+ },
+ "pileOn": {
+  "value": {
+   "accountsOnOneTargetWithin4Ticks": {
+    "multiWayTile": {
+     "1": 421,
+     "2": 394,
+     "3": 278
+    },
+    "singleWayTile": {
+     "1": 2121,
+     "2": 16
+    }
+   },
+   "kills": {
+    "multiWayTile": [
+     {
+      "ticks": 20,
+      "attackers": 3,
+      "combat": 126,
+      "wilderness": 15,
+      "worn": "(nothing)"
+     },
+     {
+      "ticks": 9,
+      "attackers": 2,
+      "combat": 126,
+      "wilderness": 15,
+      "worn": "(nothing)"
+     },
+     {
+      "ticks": 14,
+      "attackers": 3,
+      "combat": 96,
+      "wilderness": 44,
+      "worn": "magic_shortbow"
+     },
+     {
+      "ticks": 11,
+      "attackers": 2,
+      "combat": 124,
+      "wilderness": 23,
+      "worn": "(nothing)"
+     },
+     {
+      "ticks": 120,
+      "attackers": 1,
+      "combat": 126,
+      "wilderness": 40,
+      "worn": "dragon_dagger_p"
+     },
+     {
+      "ticks": 85,
+      "attackers": 3,
+      "combat": 126,
+      "wilderness": 43,
+      "worn": "dragon_dagger_p"
+     },
+     {
+      "ticks": 15,
+      "attackers": 3,
+      "combat": 124,
+      "wilderness": 23,
+      "worn": "(nothing)"
+     },
+     {
+      "ticks": 31,
+      "attackers": 2,
+      "combat": 126,
+      "wilderness": 28,
+      "worn": "rune_2h_sword"
+     },
+     {
+      "ticks": 14,
+      "attackers": 3,
+      "combat": 126,
+      "wilderness": 23,
+      "worn": "(nothing)"
+     },
+     {
+      "ticks": 16,
+      "attackers": 3,
+      "combat": 126,
+      "wilderness": 14,
+      "worn": "(nothing)"
+     },
+     {
+      "ticks": 13,
+      "attackers": 3,
+      "combat": 126,
+      "wilderness": 14,
+      "worn": "(nothing)"
+     },
+     {
+      "ticks": 400,
+      "attackers": 2,
+      "combat": 126,
+      "wilderness": 14,
+      "worn": "rune_full_helm,rune_kiteshield,rune_platelegs"
+     }
+    ],
+    "singleWayTile": [
+     {
+      "ticks": 68,
+      "attackers": 1,
+      "combat": 126,
+      "wilderness": 52,
+      "worn": "rune_full_helm,rune_kiteshield,rune_platelegs"
+     },
+     {
+      "ticks": 68,
+      "attackers": 2,
+      "combat": 126,
+      "wilderness": 55,
+      "worn": "rune_full_helm,amulet_of_glory_4,rune_scimitar,rune_chainbody,rune_kiteshield,rune_platelegs,leather_boots"
+     },
+     {
+      "ticks": 222,
+      "attackers": 2,
+      "combat": 126,
+      "wilderness": 55,
+      "worn": "adamant_scimitar"
+     }
+    ]
+   }
+  },
+  "status": "measured",
+  "n": 3230,
+  "evidence": "the traces of `sources`: attacks on one target, by vendor/rs-sdk/server/content/maps/multiway.csv"
+ },
+ "nearOurAccounts": {
+  "value": [
+   {
+    "record": ".practice/ticks/edge-pursuit-recovery/bigpackage-1794165968921.ticks.ndjson.gz",
+    "ourCombat": 48,
+    "ticks": 27,
+    "from": [
+     3066,
+     3741
+    ],
+    "to": [
+     3074,
+     3694
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {
+     "goondelf": {
+      "ticks": 25,
+      "ourTiles": 50,
+      "gap": {
+       "n": 25,
+       "min": 6,
+       "median": 10,
+       "max": 14
+      },
+      "gangAccountOnMultiWayTiles": 0
+     }
+    }
+   },
+   {
+    "record": ".practice/ticks/gang-fight/mightyrod-1794500212997.ticks.ndjson.gz",
+    "ourCombat": 126,
+    "ticks": 60,
+    "from": [
+     3080,
+     3635
+    ],
+    "to": [
+     3083,
+     3521
+    ],
+    "hpLost": 25,
+    "died": false,
+    "chase": {
+     "sugma": {
+      "ticks": 47,
+      "ourTiles": 94,
+      "gap": {
+       "n": 47,
+       "min": 1,
+       "median": 14,
+       "max": 14
+      },
+      "gangAccountOnMultiWayTiles": 0
+     },
+     "goondelf": {
+      "ticks": 50,
+      "ourTiles": 100,
+      "gap": {
+       "n": 50,
+       "min": 1,
+       "median": 3,
+       "max": 8
+      },
+      "gangAccountOnMultiWayTiles": 0
+     },
+     "ligma": {
+      "ticks": 26,
+      "ourTiles": 52,
+      "gap": {
+       "n": 26,
+       "min": 1,
+       "median": 13,
+       "max": 15
+      },
+      "gangAccountOnMultiWayTiles": 0
+     }
+    }
+   },
+   {
+    "record": ".practice/ticks/gang-fight/mightyrod-1794500879391.ticks.ndjson.gz",
+    "ourCombat": 126,
+    "ticks": 892,
+    "from": [
+     3098,
+     3582
+    ],
+    "to": [
+     3080,
+     3639
+    ],
+    "hpLost": 464,
+    "died": false,
+    "chase": {
+     "goondelf": {
+      "ticks": 81,
+      "ourTiles": 159,
+      "gap": {
+       "n": 81,
+       "min": 5,
+       "median": 9,
+       "max": 15
+      },
+      "gangAccountOnMultiWayTiles": 0
+     },
+     "ligma": {
+      "ticks": 16,
+      "ourTiles": 31,
+      "gap": {
+       "n": 16,
+       "min": 2,
+       "median": 5,
+       "max": 12
+      },
+      "gangAccountOnMultiWayTiles": 0
+     },
+     "sugma": {
+      "ticks": 16,
+      "ourTiles": 31,
+      "gap": {
+       "n": 16,
+       "min": 2,
+       "median": 11,
+       "max": 15
+      },
+      "gangAccountOnMultiWayTiles": 0
+     }
+    }
+   },
+   {
+    "record": ".practice/ticks/shaft-contest/shaftsinker-1794149805959.ticks.ndjson.gz",
+    "ourCombat": 29,
+    "ticks": 14,
+    "from": [
+     3085,
+     3655
+    ],
+    "to": [
+     3093,
+     3635
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {}
+   },
+   {
+    "record": ".practice/ticks/shaft-contest/shaftsinker-1794151052855.ticks.ndjson.gz",
+    "ourCombat": 29,
+    "ticks": 21,
+    "from": [
+     3070,
+     3731
+    ],
+    "to": [
+     3093,
+     3635
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {
+     "goondelf": {
+      "ticks": 7,
+      "ourTiles": 14,
+      "gap": {
+       "n": 7,
+       "min": 2,
+       "median": 6,
+       "max": 15
+      },
+      "gangAccountOnMultiWayTiles": 0
+     }
+    }
+   },
+   {
+    "record": ".practice/ticks/shaft-contest/shaftsinker-1794152323653.ticks.ndjson.gz",
+    "ourCombat": 29,
+    "ticks": 11,
+    "from": [
+     3092,
+     3637
+    ],
+    "to": [
+     3086,
+     3655
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {}
+   },
+   {
+    "record": ".practice/ticks/shaft-contest/shaftsinker-1794152966979.ticks.ndjson.gz",
+    "ourCombat": 29,
+    "ticks": 12,
+    "from": [
+     3092,
+     3637
+    ],
+    "to": [
+     3086,
+     3655
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {}
+   },
+   {
+    "record": ".practice/ticks/shaft-contest/shaftsinker-1794153617999.ticks.ndjson.gz",
+    "ourCombat": 29,
+    "ticks": 27,
+    "from": [
+     3092,
+     3637
+    ],
+    "to": [
+     3093,
+     3635
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {}
+   },
+   {
+    "record": ".practice/ticks/shaft-contest/shaftsinker-1794154366958.ticks.ndjson.gz",
+    "ourCombat": 29,
+    "ticks": 12,
+    "from": [
+     3085,
+     3655
+    ],
+    "to": [
+     3093,
+     3635
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {}
+   },
+   {
+    "record": ".practice/ticks/shaft-contest/shaftsinker-1794155008109.ticks.ndjson.gz",
+    "ourCombat": 29,
+    "ticks": 1,
+    "from": [
+     3003,
+     3862
+    ],
+    "to": [
+     3003,
+     3862
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {}
+   },
+   {
+    "record": ".practice/ticks/shaft-contest/shaftsinker-1794155808581.ticks.ndjson.gz",
+    "ourCombat": 29,
+    "ticks": 25,
+    "from": [
+     3092,
+     3637
+    ],
+    "to": [
+     3093,
+     3635
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {}
+   },
+   {
+    "record": ".practice/ticks/shaft-contest/shaftsinker-1794156569879.ticks.ndjson.gz",
+    "ourCombat": 29,
+    "ticks": 14,
+    "from": [
+     3085,
+     3655
+    ],
+    "to": [
+     3093,
+     3635
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {}
+   },
+   {
+    "record": ".practice/ticks/shaft-contest/shaftsinker-1794157147793.ticks.ndjson.gz",
+    "ourCombat": 29,
+    "ticks": 12,
+    "from": [
+     3092,
+     3637
+    ],
+    "to": [
+     3086,
+     3655
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {}
+   },
+   {
+    "record": ".practice/ticks/shaft-contest/shaftsinker-1794157807073.ticks.ndjson.gz",
+    "ourCombat": 29,
+    "ticks": 13,
+    "from": [
+     3085,
+     3655
+    ],
+    "to": [
+     3093,
+     3635
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {}
+   },
+   {
+    "record": ".practice/ticks/shaft-contest/shaftsinker-1794158448055.ticks.ndjson.gz",
+    "ourCombat": 29,
+    "ticks": 12,
+    "from": [
+     3085,
+     3655
+    ],
+    "to": [
+     3093,
+     3635
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {}
+   },
+   {
+    "record": ".practice/ticks/shaft-contest/shaftsinker-1794160661306.ticks.ndjson.gz",
+    "ourCombat": 29,
+    "ticks": 76,
+    "from": [
+     3092,
+     3637
+    ],
+    "to": [
+     3088,
+     3643
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {
+     "goondelf": {
+      "ticks": 8,
+      "ourTiles": 16,
+      "gap": {
+       "n": 8,
+       "min": 7,
+       "median": 11,
+       "max": 14
+      },
+      "gangAccountOnMultiWayTiles": 0
+     }
+    }
+   },
+   {
+    "record": ".practice/ticks/shaft-contest/shaftsinker-1794166244118.ticks.ndjson.gz",
+    "ourCombat": 29,
+    "ticks": 92,
+    "from": [
+     3044,
+     3868
+    ],
+    "to": [
+     3060,
+     3885
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {}
+   },
+   {
+    "record": ".practice/ticks/teleport-home/mightyrod-1794501768924.ticks.ndjson.gz",
+    "ourCombat": 126,
+    "ticks": 3,
+    "from": [
+     3078,
+     3593
+    ],
+    "to": [
+     3078,
+     3593
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {}
+   },
+   {
+    "record": ".practice/ticks/walk-to/pocketpool-1794971507374.ticks.ndjson.gz",
+    "ourCombat": 126,
+    "ticks": 70,
+    "from": [
+     3065,
+     3659
+    ],
+    "to": [
+     3081,
+     3521
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {
+     "goondelf": {
+      "ticks": 69,
+      "ourTiles": 138,
+      "gap": {
+       "n": 69,
+       "min": 6,
+       "median": 15,
+       "max": 15
+      },
+      "gangAccountOnMultiWayTiles": 34
+     },
+     "ligma": {
+      "ticks": 66,
+      "ourTiles": 132,
+      "gap": {
+       "n": 66,
+       "min": 5,
+       "median": 8,
+       "max": 15
+      },
+      "gangAccountOnMultiWayTiles": 26
+     }
+    }
+   },
+   {
+    "record": ".practice/ticks/walk-to/thefullmonty-1794970953388.ticks.ndjson.gz",
+    "ourCombat": 126,
+    "ticks": 69,
+    "from": [
+     3065,
+     3657
+    ],
+    "to": [
+     3081,
+     3521
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {
+     "sugma": {
+      "ticks": 67,
+      "ourTiles": 134,
+      "gap": {
+       "n": 67,
+       "min": 5,
+       "median": 9,
+       "max": 12
+      },
+      "gangAccountOnMultiWayTiles": 30
+     },
+     "ligma": {
+      "ticks": 66,
+      "ourTiles": 132,
+      "gap": {
+       "n": 66,
+       "min": 6,
+       "median": 10,
+       "max": 13
+      },
+      "gangAccountOnMultiWayTiles": 29
+     }
+    }
+   },
+   {
+    "record": ".practice/ticks/walk-to/trousersnake-1794971055369.ticks.ndjson.gz",
+    "ourCombat": 126,
+    "ticks": 71,
+    "from": [
+     3065,
+     3663
+    ],
+    "to": [
+     3081,
+     3521
+    ],
+    "hpLost": 0,
+    "died": false,
+    "chase": {
+     "ligma": {
+      "ticks": 2,
+      "ourTiles": 4,
+      "gap": {
+       "n": 2,
+       "min": 14,
+       "median": 15,
+       "max": 15
+      },
+      "gangAccountOnMultiWayTiles": 0
+     },
+     "goondelf": {
+      "ticks": 67,
+      "ourTiles": 134,
+      "gap": {
+       "n": 67,
+       "min": 6,
+       "median": 10,
+       "max": 13
+      },
+      "gangAccountOnMultiWayTiles": 29
+     },
+     "sugma": {
+      "ticks": 67,
+      "ourTiles": 134,
+      "gap": {
+       "n": 67,
+       "min": 6,
+       "median": 10,
+       "max": 13
+      },
+      "gangAccountOnMultiWayTiles": 29
+     }
+    }
+   }
+  ],
+  "status": "measured",
+  "n": 21,
+  "evidence": "the tick records of <data>/.practice/gang-record/tick-records.txt (`scan` mode): the state of our account and its nearby players each tick",
+  "note": "a chase is the ticks in which our account and the gang account both moved, at most 20 tiles apart"
+ },
+ "walkIn": {
+  "value": {
+   "meetingTile": [
+    3072,
+    3610
+   ],
+   "split": "each gang account took one of ours on single-way tiles",
+   "hpLostAKill": [
+    249,
+    260
+   ],
+   "kills": [
+    4,
+    6
+   ],
+   "oneOnOneFightTicks": [
+    114,
+    386
+   ],
+   "ourDeaths": [
+    0,
+    1
+   ]
+  },
+  "status": "reported",
+  "n": 2,
+  "evidence": "research/pvp-fight-loop.md \"The cost of a kill\" (two squad pilots of side claude-cloud; their logs are not on this PC)"
+ },
+ "followsIntoMultiWay": {
+  "value": {
+   "records": [
+    ".practice/ticks/walk-to/pocketpool-1794971507374.ticks.ndjson.gz",
+    ".practice/ticks/walk-to/thefullmonty-1794970953388.ticks.ndjson.gz",
+    ".practice/ticks/walk-to/trousersnake-1794971055369.ticks.ndjson.gz"
+   ],
+   "ticksOfAGangAccountOnAMultiWayTileInAChase": 177
+  },
+  "status": "measured",
+  "n": 3,
+  "evidence": "`nearOurAccounts`: a gang account ran after one of ours across multi-way tiles",
+  "note": "a chase across multi-way tiles; a fight on one against a squad is not in a record on this PC"
+ },
+ "fightsOnMultiWayAgainstASquad": {
+  "status": "unknown",
+  "closes": "the tick record of a bounded squad run (packages/core/src/tick-record.ts) with the squad on the multi-way tiles west of the post: whether a gang account attacks one of ours there while others of ours stand beside it",
+  "cloneRange": {
+   "attacksASquadOnMultiWay": [
+    true,
+    false
+   ]
+  },
+  "note": "in the second pilot the gang stood at (3192, 3679) and (3136, 3583), both multi-way tiles (research/pvp-fight-loop.md \"The cost of a kill\" (two squad pilots of side claude-cloud; their logs are not on this PC))"
+ },
+ "againstAGroup": {
+  "value": {
+   "fourOfOurs": "the three came to the squad and each fought one of ours; none stayed away"
+  },
+  "status": "reported",
+  "n": 2,
+  "evidence": "research/pvp-fight-loop.md \"The cost of a kill\" (two squad pilots of side claude-cloud; their logs are not on this PC)"
+ },
+ "againstBind": {
+  "status": "unknown",
+  "closes": "the tick record of a bounded squad run (packages/core/src/tick-record.ts) with Bind runes, or a freeze spot animation on a gang account in a longer run of scripts/measure/pk-gang-collect.ts",
+  "cloneRange": {
+   "whenFrozen": [
+    "attacks a player beside it",
+    "stands"
+   ]
+  },
+  "note": "the second pilot carried Bind runes; its log is not on this PC"
+ },
+ "againstABowAtRange": {
+  "value": {
+   "goondelf": {
+    "ranged | opponent weapon ranged | opponent animation human_bow": 9,
+    "ranged | opponent weapon ranged | opponent animation human_ddagger_block": 3,
+    "ranged | opponent weapon none | opponent animation -": 1
+   },
+   "ligma": {
+    "ranged | opponent weapon none | opponent animation -": 6,
+    "ranged | opponent weapon ranged | opponent animation human_bow": 2,
+    "ranged | opponent weapon ranged | opponent animation human_ddagger_block": 2
+   },
+   "sugma": {
+    "ranged | opponent weapon none | opponent animation -": 4,
+    "ranged | opponent weapon ranged | opponent animation human_bow": 20,
+    "ranged | opponent weapon ranged | opponent animation puncture": 1,
+    "ranged | opponent weapon ranged | opponent animation human_ddagger_lunge": 2,
+    "ranged | opponent weapon ranged | opponent animation human_ddagger_block": 3,
+    "ranged | opponent weapon ranged | opponent animation human_eat": 2,
+    "ranged | opponent weapon ranged | opponent animation human_unarmedblock": 4
+   }
+  },
+  "status": "measured",
+  "n": 59,
+  "evidence": "the traces of `sources`: Protect from Missiles on, by the weapon of the opponent",
+  "note": "the gang accounts run to a bow user and attack with the dagger; they turn Protect from Missiles on"
+ },
+ "unknowns": [
+  "the pack of a gang account: the number of sharks, potions, runes (not in the feed)",
+  "prayers with no head icon, and the prayer points",
+  "whether a gang account attacks one of ours on a multi-way tile with others of ours beside it",
+  "what a frozen gang account does",
+  "the rule that picks one of several players in range (a rank by distance is measured; the rule is not known)",
+  "the hours of a week (the traces cover parts of single days)"
+ ]
+}

@@ -9,6 +9,7 @@ Use the [current plan](../docs/plans/joined-plan.md) for priorities and the [loo
 | How must new scripts and accounts work? | [Swarm script contract](../docs/script-contract.md): reuse, observations, recovery, progress and proof |
 | Find and deliver a reusable script | [Capability checks](../docs/script-contract.md#deliver-a-capability): `bun run deliver --list`; installed workers, native outcomes and their consumers |
 | Food, funding, transfers and refill | [food-chain](food-chain.md), [supply-logistics](supply-logistics.md), [supply-costs](supply-costs.md) |
+| What does each account of the dagger gang (Goondelf, Ligma, Sugma) do, and how sure is each value? | [gang-clones](gang-clones.md): the behaviour record `scripts/pk-gang-record/*.json`, its sources, its builder and the world feed collector |
 | Where do the ticks of a knight thief go, and which knight spot pays? | [goldfarm](goldfarm.md): live coins a tick by spot, the players that kill the market knights, the refuge rule of the worker |
 | Run the gang squad for hours: which account is ready, what to stage, the job, the watcher, the supplies | [gang-hunt-ops](gang-hunt-ops.md): `scripts/squad-ready.ts`, `scripts/squad-watch.ts` and the runbook; the fight and the gang are in [pvp-fight-loop](pvp-fight-loop.md) |
 | Main route and board rules | [haggis-run](haggis-run.md), [boards-special](boards-special.md), [overall-board](overall-board.md), [gap-closers](gap-closers.md) |
