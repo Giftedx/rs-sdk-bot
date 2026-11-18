@@ -15,7 +15,7 @@ function fixture(mode='ok'){
  const remove=(rows:typeof inventory,id:number,n:number)=>{const i=rows.findIndex(i=>i.id===id);if(i<0||rows[i]!.count<n)throw Error('test stock missing');rows[i]!.count-=n;if(!rows[i]!.count)rows.splice(i,1);};
  const listeners=new Set<()=>void>(),timer=setInterval(()=>{tick++;for(const cb of listeners)cb();},1);
  const session={name:'fixture',tick:()=>tick,onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},ended:new Promise(()=>{}),
-  bankObservation:()=>generation?{generation,at:tick,items:bank}:undefined,
+  bankObservation:()=>generation&&(mode!=='reading-ends-on-close'||open)?{generation,at:tick,items:bank}:undefined,
   sdk:{getState:()=>({player:{lifeId:1,isDead:false},bank:{isOpen:open,items:bank},inventory,interface:{isOpen:false},dialog:{isOpen:false}}),
    getInventory:()=>inventory,getEquipment:()=>[],getSkill:(skill:string)=>({baseLevel:skill==='Cooking'?82:99,level:99}),getSkillXp:()=>0,
    sendUseItemOnItem:async()=>{remove(inventory,1987,1);remove(inventory,1937,1);add(inventory,1995,1);tick++;return{success:true};}},
@@ -33,6 +33,13 @@ test('each real pair is deposited and noted before the next bank close; reserves
   expect(f.inventory.filter(i=>i.id===1996).reduce((n,i)=>n+i.count,0)).toBe(2);
   expect(f.bank.filter(i=>i.id===1987||i.id===1937).map(i=>i.count)).toEqual([2,2]);
   expect(f.unsafeCloses()).toBe(0);
+ }finally{f.close();}
+});
+test('the used inputs come from the stock read with the bank open, when the session holds no bank reading after the close',async()=>{
+ const f=fixture('reading-ends-on-close');try{
+  const result=await runPreservedWine(f.session,{maximum:2,cap:100,reserve:2});
+  expect(result).toMatchObject({ok:true,made:2,noted:2,inputs:{grapes:2,water:2},assets:true});
+  expect(f.session.bankObservation?.()).toBeUndefined();
  }finally{f.close();}
 });
 test('a refused note withdrawal leaves the raw bank modal open and cannot claim preserved stock',async()=>{

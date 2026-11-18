@@ -42,7 +42,7 @@ export async function runPreservedWine(s:Session,o:WineStockOptions,stop:()=>boo
    throw Error('preserved wine fresh bank unavailable');
   guard();
  };
- let before:WineStock|undefined,made=0,noted=0,failure='',assets=false;
+ let before:WineStock|undefined,after:WineStock|undefined,made=0,noted=0,failure='',assets=false;
  try{
   guard();if((s.sdk.getSkill('Cooking')?.baseLevel??0)<recipe.level)throw Error('preserved wine requires Cooking35');
   await open();before=stock();
@@ -86,12 +86,15 @@ export async function runPreservedWine(s:Session,o:WineStockOptions,stop:()=>boo
    close:async()=>{},
   },recipe,{maximum:o.maximum,cap:o.cap-(s.tick()-start),maxAttempts:o.maximum});
   made=result.made;if(!result.ok)throw Error(result.failure);
-  guard();const checks=wineStockChecks(before,stock(),o.maximum);assets=Object.values(checks).every(Boolean);
+  guard();after=stock();const checks=wineStockChecks(before,after,o.maximum);assets=Object.values(checks).every(Boolean);
   if(!assets||noted!==o.maximum)throw Error('preserved wine final input/output/assets mismatch');
   if(!(await s.bot.closeBank()).success||!await waitUntil(s,()=>!s.sdk.getState()?.bank.isOpen,{timeoutTicks:8}))throw Error('preserved wine final close unobserved');
   guard();
  }catch(error){failure=String(error);}
- return{ok:!failure,made,noted,inputs:{grapes:before?(before.items[1987]??0)-stored(1987)-held(1987):0,water:before?(before.items[1937]??0)-stored(1937)-held(1937):0},assets,ticks:s.tick()-start,failure:failure||'-'};
+ // The count of used inputs comes from the stock read with the bank open. After the last close the session holds no
+ // bank reading, and a count from it gives every staged input as used.
+ const used=(id:number)=>!before?0:after?(before.items[id]??0)-(after.items[id]??0):(before.items[id]??0)-stored(id)-held(id);
+ return{ok:!failure,made,noted,inputs:{grapes:used(1987),water:used(1937)},assets,ticks:s.tick()-start,failure:failure||'-'};
 }
 
 if(import.meta.main){

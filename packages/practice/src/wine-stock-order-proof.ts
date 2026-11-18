@@ -15,7 +15,7 @@ import {waitUntil} from '../../core/src/ticks';
 import {readLogoutProof} from '../../core/src/session-lifecycle';
 import {capabilityRevision} from '../../core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
-import {performFleetTransfer,runOrderWork,watchTradeScreen} from '../../../scripts/fleet-trade';
+import {performFleetTransfer,runOrderWork,watchTradeScreen,type Order} from '../../../scripts/fleet-trade';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {xpForLevel} from '../../planner/src/curve';
 
@@ -100,7 +100,7 @@ async function phase(directory:string,mode:string){
   }else if(mode==='--handoff'){
    const progress:Parameters<typeof performFleetTransfer>[3][]=[{uncertain:false,count:0},{uncertain:false,count:0}];
    for(const name of names)await open(name);
-   const at=Date.now(),order={id:'wine-stock-'+at,server:endpoint.server,from:names[0]!,to:names[1]!,item:'Unfermented wine',count:QUANTITY,start:at,end:at+90000,
+   const at=Date.now(),order:Order={id:'wine-stock-'+at,server:endpoint.server,from:names[0]!,to:names[1]!,item:'Unfermented wine',count:QUANTITY,start:at,end:at+90000,
     meet:[{x:3092,z:3243,level:0},{x:3093,z:3243,level:0}]};
    for(const [i,s]of sessions.entries())off.push(watchTradeScreen(s,progress[i]!));
    await Promise.all(sessions.map((s,i)=>runOrderWork(order,()=>performFleetTransfer(s,order,i?'to':'from',progress[i]!,{gone:()=>stopped}))));
