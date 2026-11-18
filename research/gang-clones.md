@@ -291,9 +291,7 @@ How to read the columns:
   of a kill.
 - **With ticks times 1.1.** Our bench attacks do about 1.1 times the live damage on the gang (1.05 to 1.11). The
   column is the kills of an hour with the ticks of a run times 1.1.
-- **The spread of one condition.** The same squad on the same seed gives another result after a change of the case
-  list. The base (four of ours) lost 20, 27 and 113 Hitpoints on seeds 1, 2 and 3 in this run, and 38, 37 and 104
-  in the run before it. A difference between two rows of under about 20 Hitpoints a kill, or of one kill in nine, is
+- **The spread of one condition.** A seed gives the same squad another result after a change of the case list. The base (four of ours) lost 20, 27 and 113 Hitpoints on seeds 1, 2 and 3. A difference between two rows of under about 20 Hitpoints a kill, or of one kill in nine, is
   inside that spread.
 
 Each number is provisional where a fight option that the clones do not have yet would change it: the wait before an
