@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795000503757-pocketrocket-woodpecker-firerune",
  "account": "Woodpecker",
  "partner": "Pocketrocket",
@@ -10,8 +10,22 @@
  "item": "Fire rune",
  "requested": 168,
  "claim": "8eb59b15-8cbb-4655-85ba-f2b89d36ed70",
- "count": 0,
- "ok": false,
- "at": 1795000619053,
- "detail": "trade claimed"
+ "count": 168,
+ "ok": true,
+ "at": 1795000644098,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 168
+ },
+ "bank": {
+  "count": 168,
+  "at": 1795000643296
+ },
+ "logout": {
+  "attemptId": "1795000619062-0000017628-0000000001",
+  "at": 1795000644077,
+  "sha256": "6ba20bd5f9c5491cbf7f83d2363c060d9721f7e3a2e8440859eb0db903d5f639"
+ },
+ "screen": true
 }
