@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import { applyLevers, bestSet, haggisActivities, haggisTravel, haggisUnsourceable, LEVERS, loadSnapshot, overallRequirementsFor, schedule, scheduleOverall, SCENARIOS, suppliesFor, TRICKS, XP99, type Activity, type Board } from '../src/haggis';
-import { leg, place, resolve, RUN_TICKS_PER_TILE, START_TICKS, type TravelModel } from '../src/travel';
+import { leg, place, resolve, RUN_TICKS_PER_TILE, START_TICKS, TRAVEL_FILE, type TravelModel } from '../src/travel';
 import { join } from 'node:path';
 import { xpForLevel } from '../src/curve';
 import { readFileSync } from 'node:fs';
@@ -557,4 +557,13 @@ test('superheat-stun and q-burst levers reduce smithing and burst quests cleanly
     expect(real.order.find(p => p.id === 'tree')!.ticks).toBe(noBurst.order.find(p => p.id === 'tree')!.ticks - 114);
     expect(real.order.find(p => p.id === 'druid')!.ticks).toBe(noBurst.order.find(p => p.id === 'druid')!.ticks - 31);
     expect(real.order.find(p => p.id === 'imp-catcher')!.ticks).toBe(noBurst.order.find(p => p.id === 'imp-catcher')!.ticks - 29);
+});
+
+test('a Haggis travel model built with a leg cache path prices the same route as the default model', () => {
+    const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-live.json'));
+    const acts = haggisActivities();
+    const finish = (travel: TravelModel) => scheduleOverall(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel }).overallFinish;
+    const model = haggisTravel(undefined, TRAVEL_FILE);
+    expect((model as { start?: string }).start).toBe('lumbridge-spawn');
+    expect(finish(model)).toBe(finish(haggisTravel()));
 });

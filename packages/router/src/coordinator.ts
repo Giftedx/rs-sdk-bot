@@ -1,5 +1,6 @@
 // Durable orchestration above the existing author, delivery and swarm paths.
 // Task counts are coordination metrics, never percentages of game completion.
+import {RESERVED_ACCOUNTS} from '../../core/src/specialist-boards';
 import type {DeliveryTask} from './delivery';
 import {boundAccounts,COORDINATOR_ACCOUNT_PATTERN as ACCOUNT} from '../../core/src/coordinator-accounts';
 export {boundAccounts} from '../../core/src/coordinator-accounts';
@@ -207,7 +208,7 @@ export function validateTask(t:CoordTask){
  if(t.rule!==undefined&&(t.rule!=='next-band'||t.kind!=='run'))throw Error('invalid rule task');
  if(t.repairs!==undefined&&(!Array.isArray(t.repairs)||t.repairs.some(r=>!r||!ACCOUNT.test(r.account)||!Number.isFinite(r.endedAt)||r.endedAt<0)))throw Error('invalid exact recovery request');
  if(t.sessionRecovery!==undefined&&(t.kind!=='run'||t.launch&&t.launch!=='ordinary'||t.account!==t.sessionRecovery?.account
-  ||!ACCOUNT.test(t.sessionRecovery.account)||['haggis','shaftshooter','polevaulter'].includes(t.sessionRecovery.account.toLowerCase())
+  ||!ACCOUNT.test(t.sessionRecovery.account)||RESERVED_ACCOUNTS.includes(t.sessionRecovery.account.toLowerCase())
   ||!t.repairs?.some(r=>r.account===t.sessionRecovery!.account&&r.endedAt===t.sessionRecovery!.endedAt)))throw Error('invalid authenticated session recovery authorization');
  if(!t||!/^[-a-z0-9]+$/.test(t.id)||!GOALS.includes(t.goal)||!['build','qualify','provision','run','review'].includes(t.kind)
   ||!Array.isArray(t.dependsOn)||!t.dependsOn.every(v=>typeof v==='string'&&TASK_ID.test(v))||!t.why?.trim()

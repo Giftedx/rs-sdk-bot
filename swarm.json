@@ -40,6 +40,14 @@
       "repeat": false
     },
     {
+      "account": "Hiltsdeep",
+      "role": "combat",
+      "goal": "Fresh-clock Attack specialist; win the board after route proof",
+      "script": "",
+      "enabled": false,
+      "repeat": false
+    },
+    {
       "account": "FishAndChips",
       "script": "scripts/chain.ts",
       "args": [

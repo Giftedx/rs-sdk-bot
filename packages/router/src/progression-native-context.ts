@@ -1,4 +1,5 @@
 // Coordinator-only native context. No live worker imports this module.
+import {RESERVED_ACCOUNTS} from '../../core/src/specialist-boards';
 import {createHash} from 'node:crypto';
 import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
@@ -20,7 +21,7 @@ export async function runQualifiedDelivery<T>(definition:Pick<DeliveryTask,'id'>
  if(requested){
   if(contextKeys.some(k=>!env[k]))throw Error('native progression context is incomplete');
   const account=env.PROGRESSION_ACCOUNT!;
-  if(!/^[a-zA-Z0-9]{1,12}$/.test(account)||account.toLowerCase()!==task.account?.toLowerCase()||['haggis','shaftshooter','polevaulter'].includes(account.toLowerCase()))throw Error('native progression account is not an ordinary bound account');
+  if(!/^[a-zA-Z0-9]{1,12}$/.test(account)||account.toLowerCase()!==task.account?.toLowerCase()||RESERVED_ACCOUNTS.includes(account.toLowerCase()))throw Error('native progression account is not an ordinary bound account');
   if(options.owns?!options.owns(account):!owns(account))throw Error('native progression account belongs to another side');
   const path=join(base,'.practice/status',account+'.json'),raw=readFileSync(path),status=JSON.parse(raw.toString());
   const expected=env.PROGRESSION_ENTRY_SHA256;

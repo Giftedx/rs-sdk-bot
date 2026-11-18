@@ -3,6 +3,7 @@
 // section 8.6, change 2). A rule only adds ordinary run records and the refresh qualify a stale source needs; admission,
 // memory, review and recovery checks apply.
 // The planner keeps new capabilities, builds, repairs, supply and every case a rule cannot decide.
+import {RESERVED_ACCOUNTS} from '../../core/src/specialist-boards';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {addTasks,boundAccounts,type CoordinatorState,type CoordTask,type TaskRecord} from './coordinator';
@@ -18,7 +19,7 @@ export type RuleId=keyof typeof RULES;
 export const MIN_BAND_STEP=5,BAND_STEP=10,MAX_LEVEL=99;
 // A chain continues only from a fresh result; an older one leaves the account to the planner.
 export const CHAIN_FRESH_MS=24*60*60*1000;
-const PROTECTED=['haggis','shaftshooter','polevaulter'];
+const PROTECTED=RESERVED_ACCOUNTS;
 // A supply or repair run in a chain's dependencies says its inputs were moved in for that band only.
 const NEUTRAL_DEPENDENCIES=new Set(['session-recovery-only']);
 export interface RuleDeps{

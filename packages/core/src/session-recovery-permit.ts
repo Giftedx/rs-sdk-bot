@@ -1,3 +1,4 @@
+import {RESERVED_ACCOUNTS} from './specialist-boards';
 import {existsSync,mkdirSync,readFileSync,writeFileSync,linkSync,realpathSync,unlinkSync,readdirSync,lstatSync,statSync} from 'node:fs';
 import {join,resolve,dirname,sep} from 'node:path';
 import {createHash} from 'node:crypto';
@@ -52,7 +53,7 @@ export function assertRecoveryNotStopped(account:string,base:string,present:(pat
 }
 export function validateRecoveryRequest(r:any):asserts r is RecoveryRequest{
  if(!r||r.schema!==RECOVERY_SCHEMA||! /^[A-Za-z0-9_ -]{1,12}$/.test(r.account??'')
-  ||['haggis','shaftshooter','polevaulter'].includes(r.account.toLowerCase())
+  ||RESERVED_ACCOUNTS.includes(r.account.toLowerCase())
   ||typeof r.server!=='string'||! /^[A-Za-z0-9.:[\]-]{1,253}$/.test(r.server)
   ||! /^[a-zA-Z0-9-]{1,100}$/.test(r.runId??'')||! /^[a-zA-Z0-9-]{1,100}$/.test(r.nonce??'')
   ||!Number.isFinite(r.endedAt)||r.endedAt<0||! /^[a-f0-9]{64}$/.test(r.source??''))throw Error('invalid or protected session recovery request');

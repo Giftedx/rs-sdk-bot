@@ -7,7 +7,6 @@ import {SPECIALIST_BOARDS} from '../../core/src/specialist-launch';
 import {readBound} from '../../core/src/launch-evidence';
 import {readKillReceipts} from '../../core/src/kill-receipt';
 import {boardsFromSnapshot,haggisActivities,haggisTravel,scheduleOverall,overallRequirementsFor,SKILLS,TRICKS} from '../../planner/src/haggis';
-import {loadTravel} from '../../planner/src/travel';
 import {supplyBill,type BillRow} from '../../planner/src/supply-bill';
 import {kitItems} from '../../../scripts/pk-kits';
 import {handNamed,ruleRoster} from '../../core/src/army-roster';
@@ -101,8 +100,8 @@ export function buildOwnerGoals({root,now,statuses,questNames,fleetDir=join(root
  try{
   if(!compatibleSnapshot(mainSnapshot)||!mainRecord)throw Error('Overall record unavailable');
   const path=join(root,'packages/planner/src/haggis-boards.json'),activities=haggisActivities(path);
-  const travel=haggisTravel(path);
-  const opts={mode:'realistic' as const,tricks:new Set(TRICKS),travel:{...travel,...loadTravel(travel.places,join(root,'packages/planner/src/haggis-travel.json'))}};
+  const travel=haggisTravel(path,join(root,'packages/planner/src/haggis-travel.json'));
+  const opts={mode:'realistic' as const,tricks:new Set(TRICKS),travel};
   const plan=scheduleOverall(boardsFromSnapshot(mainSnapshot),activities,opts);
   modelTicks=plan.overallFinish;
   demands=mainRank?.rank===1?[]:overallRequirementsFor(activities,opts,plan).supplies.map(s=>({...s,consumer:'main Overall'}));
@@ -115,7 +114,7 @@ export function buildOwnerGoals({root,now,statuses,questNames,fleetDir=join(root
  const gapTicks=modelTicks===null||launchTargetTicks===null?null:Math.max(0,modelTicks-launchTargetTicks);
  const main:OwnerGoals['main']={modelTicks,recordTicks,launchTargetTicks,gapTicks,rank:mainRank?.rank??null,rankAt:mainRank?.at??null,rank1:mainRank?mainRank.rank===1:null,evidence:mainEvidence};
 
- const specialistEvidence=[ev(specialistSource,snapshotTime(specialistSnapshot),'Formal candidates cover the reserved Ranged and Agility accounts; all winnable skill targets are not defined')];
+ const specialistEvidence=[ev(specialistSource,snapshotTime(specialistSnapshot),'Formal candidates cover the reserved Ranged, Agility and Attack accounts; all winnable skill targets are not defined')];
  const targets=Object.entries(SPECIALIST_BOARDS).map(([account,board]):SpecialistGoal=>{
   const source=`.practice/specialist-launch/${account}.json`,p=read(join(root,source)),rank=ranks.find(r=>r.account===account&&boardKey(r.board)===boardKey(board.name));
   const valid=p?.version===1&&p.account===account&&p.board===board.name&&positive(p.planTicks)&&/^[a-f0-9]{64}$/.test(String(p.context))&&Array.isArray(p.requirements);

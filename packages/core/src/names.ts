@@ -3,7 +3,10 @@
 // YewGotWood). A rude word bolted onto a skill word is not a joke (CoinCock, PickpockDick, NabTheKnob). Scottish where
 // it fits. Server rule (vendor/rs-sdk/bots/create-bot.ts): 1-12 letters or digits. Names are taken in list order; a
 // name someone else owns fails at login, so the caller moves on. Never remove or reorder a name an account uses:
-// status.ts finds a bot's role from these lists. Each list starts with the names in use.
+// status.ts finds a bot's role from these lists. Each list starts with the names in use. A specialist name
+// (SPECIALIST_BOARDS) is never picked for an ordinary account.
+
+import { SPECIALIST_BOARDS } from './specialist-boards';
 
 export const NAMES = {
     thieving: ['Pocketrocket', 'Pocketpython', 'Quickhandjob', 'TrouserSnake', 'TheFullMonty', 'UnderMyKilt', 'Fingerblastr', 'Kiltlifter', 'Knightstick', 'PocketPool', 'SporranDip', 'FullSporran', 'Fingersmith', 'Dipstick', 'KnightRider', 'DipYourWick', 'HalfInch'],
@@ -13,7 +16,7 @@ export const NAMES = {
     fishing: ['Mightyrod', 'Masterbaiter', 'LochNessRod', 'Fishfingerer'],
     cooking: ['Porksword', 'MeatNTwoVeg', 'Spitroaster', 'Sausagefest', 'Saltysausage'],
     crafting: ['Ballspinner', 'Crownjewels', 'Familyjewel', 'Glassblower'],
-    combat: ['Swordinhand', 'BraveHardon', 'TossTheCaber', 'Swordswallow', 'Unsheathed'],
+    combat: ['Swordinhand', 'BraveHardon', 'TossTheCaber', 'Swordswallow', 'Unsheathed', 'Hiltsdeep'],
     ranged: ['Shaftshooter', 'Earlyshooter', 'Pullmybow', 'Quiverfull'],
     magic: ['Abracadickra', 'Hocuspokeus', 'Wandwanker'],
     prayer: ['Bigboner', 'BoneToPick', 'Bonezone'],
@@ -30,7 +33,7 @@ export const NAMES = {
 export type Role = keyof typeof NAMES;
 
 export function pickName(role: Role, used: readonly string[]): string {
-    const taken = new Set(used.map(n => n.toLowerCase()));
+    const taken = new Set([...used, ...Object.keys(SPECIALIST_BOARDS)].map(n => n.toLowerCase()));
     const name = NAMES[role].find(n => !taken.has(n.toLowerCase()));
     if (!name) throw new Error(`no names left for ${role}`);
     return name;
