@@ -1,0 +1,22 @@
+{
+ "id": "1794967692986-pocketrocket-swordinhand-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Pocketrocket",
+ "to": "Swordinhand",
+ "item": "Air rune",
+ "count": 36,
+ "start": 1794967692986,
+ "end": 1794970092986,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
