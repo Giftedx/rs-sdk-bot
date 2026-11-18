@@ -1,0 +1,22 @@
+{
+ "id": "1795007736314-bigchopper-moneyshot-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "Moneyshot",
+ "item": "Nature rune",
+ "count": 48,
+ "start": 1795007736314,
+ "end": 1795010136314,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
