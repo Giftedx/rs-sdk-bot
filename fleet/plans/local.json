@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795027987025,
+ "at": 1795028322093,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -339,7 +339,8 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Attack\":99}}"
    },
    "enabled": true,
    "standing": true,
@@ -351,6 +352,26 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {
+    "ALCH_ITEM": "airrune",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-air-magic-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "mmthv2350",
@@ -464,19 +485,20 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Attack",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Attack\":99}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
+   "goal": "train Attack to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-strength-99",
+   "template": "army-trooper-attack-99",
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
