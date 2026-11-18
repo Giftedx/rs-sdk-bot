@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794992160064-trousersnake-wandwaver-shark",
  "account": "Wandwaver",
  "partner": "TrouserSnake",
@@ -12,6 +12,12 @@
  "claim": "832efde1-b04e-4f33-832b-31031848d825",
  "count": 0,
  "ok": false,
- "at": 1794992431769,
- "detail": "trade claimed"
+ "at": 1794994560305,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1794992431778-0000024128-0000000001",
+  "at": 1794994560286,
+  "sha256": "94c91a7ebd575260a32c54400727a11d765b6a00a441133dcc06c04c9005c6b7"
+ },
+ "screen": false
 }
