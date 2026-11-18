@@ -2699,14 +2699,36 @@ test('a cow band needs one wearable melee weapon, not a bronze sword by name; a 
     // A banked or worn weapon counts the same: the holdings are one map.
     expect(run(acct('Dagger', { ...base, Attack: 1 }, { ...kit, 'bronze dagger': 1 }), cow).template?.id).toBe('army-cow-strength-45');
     // A weapon the Attack level cannot wear is no weapon: Attack 1 with a rune scimitar gets none.
-    expect(run(acct('Weak', { ...base, Attack: 1 }, { ...kit, 'rune scimitar': 1 }), cow).template?.id).not.toBe('army-cow-strength-45');
+    expect(run(acct('Weak', { ...base, Attack: 1 }, { ...kit, 'rune scimitar': 1 }), cow).reason).toBe('vacant: army-cow-strength-45 needs 1 bronze sword and no source gives them');
     // No weapon: the Zeke scimitar step, not a dead end.
     const bare = acct('Bare', { ...base, Attack: 10 }, { ...kit, coin: 5_000 });
     expect(run(bare, [...cow, ...zeke]).template?.id).toBe('army-weapon-zeke-steel');
     // Food stays a need: a weapon and no food is no band start.
-    expect(run(acct('Hungry', { ...base, Attack: 40 }, { 'rune scimitar': 1 }), cow).template?.id).not.toBe('army-cow-strength-45');
+    expect(run(acct('Hungry', { ...base, Attack: 40 }, { 'rune scimitar': 1 }), cow).reason).toBe('vacant: army-cow-strength-45 needs 2 trout and no source gives them');
     // A donor with a cheap weapon fills the line (one item order), and the vacant reason names the line when no source has it.
     const sent = run(bare, cow, { stock: [{ name: 'Spare', side, items: { 'iron scimitar': 1 } }] });
     expect(sent.send).toMatchObject({ from: 'Spare', to: 'Bare', item: 'iron scimitar', count: 1 });
     expect(run(bare, cow).reason).toMatch(/^vacant: army-cow-strength-45 needs 1 bronze sword and no source gives them$/);
+});
+
+test('an army donor keeps the one melee weapon its band needs, and gives only the spare', () => {
+    const cow = catalogue().filter(t => t.id === 'army-cow-strength-45');
+    const base = { Strength: 10, Defence: 10, Hitpoints: 30, Attack: 10 };
+    // The donor has no food, so it cannot start its own band and is free stock; the band still needs its one weapon.
+    const run = (donorSwords: number) => plan(inputs([acct('Needy', base, { trout: 20, coin: 100 }), acct('Donor', base, { 'bronze sword': donorSwords })], { templates: cow, army: new Set(['needy', 'donor']),
+        capacity: { 'cow:ardougne-north': 6 }, stock: [{ name: 'Donor', side, items: { 'bronze sword': donorSwords } }] }));
+    // One sword is the donor's own weapon: it stays, and the needy account gets no order for it.
+    expect(run(1).find(x => x.account === 'Needy')!.send).toBeUndefined();
+    // A second sword is spare.
+    expect(run(2).find(x => x.account === 'Needy')!.send).toMatchObject({ from: 'Donor', item: 'bronze sword', count: 1 });
+});
+
+import { canWearGear, gearById, gearIdByName } from '../src/gear-progression';
+import { COW_WEAPONS } from '../src/autopilot';
+test('COW_WEAPONS levels are the Attack levels that wear each weapon in the gear data', () => {
+    for (const [item, attack] of COW_WEAPONS) {
+        const gear = gearById(gearIdByName(item)!)!;
+        expect([item, canWearGear(gear, { attack })]).toEqual([item, true]);
+        if (attack > 1) expect([item, canWearGear(gear, { attack: attack - 1 })]).toEqual([item, false]);
+    }
 });

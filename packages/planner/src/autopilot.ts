@@ -448,6 +448,8 @@ export function kitReserve(templates: readonly Template[], own?: Acct): Record<s
     for (const t of templates) if (t.tier === 'goal' && !t.buildOnly) {
         count(t.needs);
         if (own && t.batchFor) for (const [i, n] of Object.entries(t.batchFor(own))) reserve[norm(i)] = Math.max(reserve[norm(i)] ?? 0, n);
+        // An account whose band needs a melee weapon keeps the cheap weapon it holds: giving away its only one ends the band at once.
+        if (own && t.needs?.meleeWeapon) for (const [weapon] of COW_WEAPONS) if ((own.items[weapon] ?? 0) > 0) reserve[weapon] = Math.max(reserve[weapon] ?? 0, 1);
     }
     delete reserve.coin;
     return reserve;
