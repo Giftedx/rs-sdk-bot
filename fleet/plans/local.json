@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795030286362,
+ "at": 1795030332045,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -233,6 +233,24 @@
    "resources": [
     "shop:zaff"
    ]
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=14 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit24-532-6to20 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 14 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-big-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Bigpackage",
@@ -588,24 +606,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "Sausagefest",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=14 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit24-532-6to20 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 14 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
-   "autopilot": "local",
-   "resources": []
   }
  ],
  "army": [
