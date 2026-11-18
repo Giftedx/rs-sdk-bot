@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795018062290-deeppockets-pickpockdick",
+ "account": "Deeppockets",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 184566,
+ "claim": "3d799a16-9874-41ef-94f2-97dff7058fbe",
+ "count": 184566,
+ "ok": true,
+ "at": 1795018160155,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 184566,
+  "after": 0
+ },
+ "bank": {
+  "count": 156126,
+  "at": 1795018145450
+ },
+ "logout": {
+  "attemptId": "1795018137087-0000000440-0000000001",
+  "at": 1795018160145,
+  "sha256": "eec03602b86bc4d3b17d8fc7a0cf329db55fb1fc3e7951b97e7068a74d156bcd"
+ },
+ "screen": true
+}
