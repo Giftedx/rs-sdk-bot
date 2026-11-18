@@ -1,0 +1,59 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795036460816-pocketpool-mmsmk1232-2099293f1fe6fbdf",
+ "account": "mmsmk1232",
+ "partner": "PocketPool",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "6eab86b9-2979-4082-85c2-ea52c9db4a6c",
+ "count": 1,
+ "ok": true,
+ "at": 1795036524646,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Law rune",
+   "requested": 2,
+   "count": 2,
+   "inventory": {
+    "before": 0,
+    "after": 2
+   },
+   "bank": {
+    "count": 2,
+    "at": 1795036523510
+   }
+  },
+  {
+   "item": "Shark",
+   "requested": 10,
+   "count": 10,
+   "inventory": {
+    "before": 0,
+    "after": 10
+   },
+   "bank": {
+    "count": 10,
+    "at": 1795036523882
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795036522851
+ },
+ "logout": {
+  "attemptId": "1795036490706-0000004624-0000000001",
+  "at": 1795036524635,
+  "sha256": "26122439db31af60027b2d19d5fb43abaca2ba8b1a7a3c57fbc6be5ad88d7098"
+ },
+ "screen": true
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795036460816-pocketpool-mmsmk1232-2099293f1fe6fbdf",
  "account": "PocketPool",
  "partner": "mmsmk1232",
@@ -10,20 +10,42 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "3a1296a7-fda4-4c35-9665-536428025f7b",
- "count": 0,
- "ok": false,
- "at": 1795036470229,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795036521711,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Law rune",
    "requested": 2,
-   "count": 0
+   "count": 2,
+   "inventory": {
+    "before": 2,
+    "after": 0
+   }
   },
   {
    "item": "Shark",
    "requested": 10,
-   "count": 0
+   "count": 10,
+   "inventory": {
+    "before": 20,
+    "after": 10
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795036480305
+ },
+ "logout": {
+  "attemptId": "1795036470237-0000020880-0000000001",
+  "at": 1795036521426,
+  "sha256": "507688bc5b2e9aa367bc5adcb626c493e46a696c0bde934a66c98878ccd374f3"
+ },
+ "screen": true
 }
