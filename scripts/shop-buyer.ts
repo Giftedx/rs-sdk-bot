@@ -21,12 +21,14 @@ import { walkTargetPersist } from './walk-to';
 import { bankCargo, courierWaiting, exactItem } from '../packages/core/src/cargo';
 import { depositPack } from '../packages/core/src/deposit';
 import { knownBanks } from '../packages/core/src/trip';
+import { contentUnitBound, shopRules, type ShopRule } from './shop-price';
 
 export const PROFILES: Record<string, {
     npc: RegExp;
     npcSpot: { x: number; z: number; level?: number };
     bankSpot: { x: number; z: number };
-    // shelf: the stock count of the item in the shop's .inv. It bounds the unit price (maximumUnitCost).
+    // shelf: the stock count of the item in the shop's .inv. It marks a line for BLIND_BUY, and it bounds the unit price
+    // (maximumUnitCost) of a shop that the content has no price rule for (scripts/shop-price.ts).
     items: { re: RegExp; buyPerTick: number; shelf?: number }[];
     // A shop behind a skill door: below this level the run refuses before any walk.
     need?: { skill: string; level: number };
@@ -432,6 +434,12 @@ export function maximumUnitCost(item: { baseCost: number }, config: { sellMultip
     return Math.min(2_000_000_000, Math.max(1, Math.ceil(item.baseCost * (config.sellMultiplier + adjustment) / 1000)));
 }
 
+// The most that one unit of a shop line can cost. The content's rule of the shop gives the price of the last unit on
+// the shelf (scripts/shop-price.ts); a shop with no rule in the content keeps the bound from the client's shop state.
+export function unitBound(item: { name: string; baseCost: number }, config: { sellMultiplier: number; haggle?: number } | undefined, shelf: number | undefined, rules: readonly ShopRule[] | null | undefined): number {
+    return (rules?.length ? contentUnitBound(rules, item.name) : null) ?? maximumUnitCost(item, config, shelf);
+}
+
 // One dialogue click of a doorman's or ladder attendant's talk: the choice that matches `say`, else the continue line.
 export function dialogClick(dialog: { isOpen: boolean; isWaiting: boolean; options: { index: number; text: string }[] } | null, say: RegExp): number | null {
     if (!dialog?.isOpen || dialog.isWaiting) return null;
@@ -471,13 +479,13 @@ export async function approachShop(conf: Pick<(typeof PROFILES)[string], 'npcSpo
 
 export async function buyWithBudget(bot: { buyFromShop(item: RegExp, amount: number): Promise<unknown> },
     sdk: { getInventory(): { name: string; count: number }[]; getState(): { shop?: { shopItems: { name: string; count: number; baseCost: number }[]; shopConfig?: { sellMultiplier: number; haggle?: number } } } | null },
-    name: string, requested: number, reserve: number, remainingSpend: number, shelf?: number): Promise<{ bought: number; spent: number }> {
+    name: string, requested: number, reserve: number, remainingSpend: number, shelf?: number, rules?: readonly ShopRule[] | null): Promise<{ bought: number; spent: number }> {
     const count = (re: RegExp) => sdk.getInventory().filter(i => re.test(i.name)).reduce((n, i) => n + i.count, 0);
     const wallet = count(/^coins$/i), before = count(exactItem(name));
     const shop = sdk.getState()?.shop;
     const item = shop?.shopItems.find(i => i.name.toLowerCase() === name.toLowerCase());
     if (!item || item.count <= 0) return { bought: 0, spent: 0 };
-    const unit = maximumUnitCost(item, shop?.shopConfig, shelf);
+    const unit = unitBound(item, shop?.shopConfig, shelf, rules);
     const amount = Math.max(0, Math.min(requested, item.count, Math.floor(Math.min(wallet - reserve, remainingSpend) / unit)));
     if (amount === 0) return { bought: 0, spent: 0 };
     const re = exactItem(name);
@@ -512,6 +520,8 @@ if (!botName || !PROFILES[profileKey]) {
 
 // ITEMS=<regex> keeps only the profile items a run needs (ITEMS='fire rune' buys no other rune).
 const conf = { ...PROFILES[profileKey]!, items: selectItems(PROFILES[profileKey]!.items, process.env.ITEMS) };
+// The shop's price rule from the content, for the bound of each unit that a buy may cost.
+const priceRules = shopRules(conf.npc, conf.npcSpot);
 if (!conf.items.length) throw new Error(`ITEMS=${process.env.ITEMS} matches no ${profileKey} item`);
 const s = await openBot(botName).catch(e => finish([], false, `login: ${String(e)}`));
 try {
@@ -785,7 +795,7 @@ try {
             for (const target of blindTargets) {
                 const item = shop.shopItems.find(i => target.re.test(i.name));
                 if (!item) continue;
-                const unit = maximumUnitCost(item, shop.shopConfig, target.shelf);
+                const unit = unitBound(item, shop.shopConfig, target.shelf, priceRules);
                 blindBase ??= { coins: coins(), held: blindHeld(), unit };
                 blindBase.unit = Math.max(blindBase.unit, unit);
                 const owned = s.sdk.getInventory().filter(i => target.re.test(i.name)).reduce((n, i) => n + i.count, 0) + (stock.get(item.name.toLowerCase()) ?? 0);
@@ -807,7 +817,7 @@ try {
                 if (remaining <= 0) break;
                 let countBought = 0;
                 if (guarded) {
-                    const result = await buyWithBudget(s.bot, s.sdk, purchase.name, remaining, COIN_RESERVE, MAX_SPEND - spentTotal, shelfOf(purchase.name));
+                    const result = await buyWithBudget(s.bot, s.sdk, purchase.name, remaining, COIN_RESERVE, MAX_SPEND - spentTotal, shelfOf(purchase.name), priceRules);
                     countBought = result.bought;
                     spentTotal += result.spent;
                 } else {
@@ -840,7 +850,7 @@ try {
             const shelves = s.sdk.getState()?.shop;
             if (guarded && needed.length && needed.every(n => {
                 const item = shelves?.shopItems.find(i => i.name === n.name);
-                return shelfOf(n.name) !== undefined && !!item && coins() - COIN_RESERVE < maximumUnitCost(item, shelves?.shopConfig, shelfOf(n.name));
+                return shelfOf(n.name) !== undefined && !!item && coins() - COIN_RESERVE < unitBound(item, shelves?.shopConfig, shelfOf(n.name), priceRules);
             })) { stopReason = 'coin-reserve'; break; }
             // A blind item the coins cannot pay: the bank's coins, else stop. No wait brings the coins.
             if (blindWaits && blindPending() === 0 && Math.min(coins() - COIN_RESERVE, MAX_SPEND - spentTotal) < blindUnit) {
