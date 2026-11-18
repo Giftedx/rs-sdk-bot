@@ -238,7 +238,7 @@ export type DeathRecord = {
 export const RESPAWN_TICKS = 40;
 export const DEFAULT_MAX_DEATHS = 2;
 // The death limit of HUNT_MAX_DEATHS: a whole number of 0 or more, else the default.
-export const maxDeathsOf = (value: string | undefined): number => { const n = Number(value); return value !== undefined && value.trim() !== '' && Number.isSafeInteger(n) && n >= 0 ? n : DEFAULT_MAX_DEATHS; };
+export const maxDeathsOf = (value: string | undefined, fallback = DEFAULT_MAX_DEATHS): number => { const n = Number(value); return value !== undefined && value.trim() !== '' && Number.isSafeInteger(n) && n >= 0 ? n : fallback; };
 const WEAR_OPTION = /^(Wield|Wear)$/i;
 const isFood = (i: { optionsWithIndex?: { text: string }[] }) => !!i.optionsWithIndex?.some(op => /^eat$/i.test(op.text));
 // Eats until the Hitpoints are within a tenth of the maximum (at most 10) of full, or no food is left. Returns the Hitpoints.
@@ -289,7 +289,13 @@ export async function rekitAfterDeath(s: Session, o: { lifeBefore: number | unde
     const wornNow = () => (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : s.sdk.getState()?.equipment ?? []);
     const have = (id: number) => wornNow().some(e => e.id === id) || held(s, id) > 0;
     const hp = player()?.hp ?? 1, maxHp = player()?.maxHp ?? 99;
-    await take(ITEMS.shark, Math.max(1, Math.ceil((maxHp - hp) / 20)) + 1);
+    // Food to eat up with: sharks first, then lobsters (FOOD_LIST), enough pieces to heal the missing Hitpoints and one more.
+    let missingHp = maxHp - hp, pieces = 0;
+    for (const kind of FOOD_LIST) {
+        if (missingHp <= 0 && pieces > 0) break;
+        const want = Math.max(1, Math.ceil(missingHp / kind.heal)) + 1, got = await take(kind.id, want);
+        pieces += got; missingHp -= got * kind.heal;
+    }
     const taken: number[] = [];
     for (const piece of o.wornAtStart) {
         if (have(piece.id)) continue;

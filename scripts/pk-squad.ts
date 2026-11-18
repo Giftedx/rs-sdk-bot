@@ -12,6 +12,8 @@
 //   TARGETS=goondelf,ligma,sugma  POST=3067,3640  MAX_MINUTES=30  MAX_KILLS=0 (no limit)  SQUAD_PROFILE=gang-hunter
 //   SQUAD_OPTS={"cureNow":true,"eatAt":60,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}
 //   PICKUP=1  TRIPS=10 (bank trips an account may make)  ALLOW_SINGLE=1 (a single-way post)
+//   SQUAD_MAX_DEATHS=1 (the deaths of each account that it recovers from: it respawns at Lumbridge, walks to the bank, wears its starting kit,
+//   eats up, restocks and walks back to the post; a death over the limit ends the account's part and the run ends as RESULT fail died)
 //   FOLLOW=1 (march to the targets the world feed shows: MAX_WILD=20, FOLLOW_WAIT=30)  MARCH=1 STEP=12 (move together)
 //   PULL=1 (attacked on a single-way tile with a multi-way post: walk on into multi-way)
 //   RESCUE=1 (a dropped account logs in again at the end and leaves the Wilderness)
@@ -27,7 +29,7 @@ import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { attackable, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, recordKillLoot, STUNNED_SHOVE_SPOTANIM, wildernessLevel, type FightOptions } from './pk';
 import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { settleKillFeed } from './pk-kill-feed';
-import { EDGEVILLE_BANK } from './pk-hunt';
+import { EDGEVILLE_BANK, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
 import { connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './pk-roam';
 import { sparOptions } from './pk-spar';
 
@@ -197,7 +199,10 @@ export async function openSquad(names: readonly string[], open: (name: string) =
     return sessions;
 }
 
-export type SquadStats = { name: string; fights: number; pulls: number; kills: number; trips: number; died: boolean; picked: Record<string, number>; taken: number; receipts: string[] };
+export type SquadStats = { name: string; fights: number; pulls: number; kills: number; trips: number; died: boolean; picked: Record<string, number>; taken: number; receipts: string[];
+    // The deaths of the account in the run, and the ones that it recovered from (re-kit, restock and the walk back to the post).
+    // `died` is true for a death that it did not recover from.
+    deaths: number; rekits: number };
 
 // The target of the squad: the target account in view with the lowest health bar, the nearest on a tie; one the game
 // refused ("I'm already under attack.", "Someone else is already fighting your opponent.") leaves the pick for 8 ticks.
@@ -264,22 +269,40 @@ export function squadFallbackPlan(opts: {
 // The end of a squad run: its ok and the detail of its RESULT line. A squad with a death is not a finished squad: the supervisor reads
 // `RESULT fail died` as a death and does not start the squad again with an account that holds no kit (packages/practice/src/supervise.ts and
 // supervise-host.ts classify), and scripts/squad-watch.ts reads it as a death.
-export function squadEnd(o: { accounts: number; kills: number; gangDied?: number; deaths: number; taken: number; trips: number; fights: number; picked: Record<string, number>; dropped: readonly string[]; stranded: readonly string[]; halted?: string; receiptProof?: string }): { ok: boolean; detail: string } {
+export function squadEnd(o: { accounts: number; kills: number; gangDied?: number; deaths: number; taken: number; trips: number; fights: number; picked: Record<string, number>; dropped: readonly string[]; stranded: readonly string[]; halted?: string; receiptProof?: string; rekits?: number }): { ok: boolean; detail: string } {
     const ok = o.halted === undefined && o.stranded.length === 0 && o.fights > 0 && o.deaths === 0;
-    return { ok, detail: `${o.deaths > 0 ? 'died ' : ''}squad accounts=${o.accounts} kills=${o.kills}${o.receiptProof ? ` ${o.receiptProof}` : ''}${o.gangDied !== undefined ? ` gangDied=${o.gangDied}` : ''} died=${o.deaths} taken=${o.taken} trips=${o.trips} picked=${JSON.stringify(o.picked)}${o.dropped.length ? ` dropped=${o.dropped.join(',')}` : ''}${o.stranded.length ? ` stranded=${o.stranded.join(',')}` : ''}${o.halted ? ` halted=${o.halted}` : ''}` };
+    return { ok, detail: `${o.deaths > 0 ? 'died ' : ''}squad accounts=${o.accounts} kills=${o.kills}${o.receiptProof ? ` ${o.receiptProof}` : ''}${o.gangDied !== undefined ? ` gangDied=${o.gangDied}` : ''} died=${o.deaths}${o.rekits ? ` rekits=${o.rekits}` : ''} taken=${o.taken} trips=${o.trips} picked=${JSON.stringify(o.picked)}${o.dropped.length ? ` dropped=${o.dropped.join(',')}` : ''}${o.stranded.length ? ` stranded=${o.stranded.join(',')}` : ''}${o.halted ? ` halted=${o.halted}` : ''}` };
 }
 // One account of the squad: hold the post, fight the squad's target, pick up, bank and come back.
 export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: { x: number; z: number }; aim?: { x: number; z: number }; options: FightOptions; allies: readonly string[]; pickup: boolean; pull?: boolean;
     stunShareFor?: (target: string) => FightOptions['stunShare']; burstOnStun?: boolean; stunSpec?: FightOptions['stunSpec'];
-    trips: number; deadline: number; stopped: () => boolean; killsLeft: () => boolean; log: (l: string) => void }): Promise<SquadStats> {
-    const stats: SquadStats = { name: s.name, fights: 0, pulls: 0, kills: 0, trips: 0, died: false, picked: {}, taken: 0, receipts: [] };
-    const st = s.sdk.getState(), me = () => s.sdk.getState()?.player, life0 = st?.player?.lifeId;
+    trips: number; deadline: number; stopped: () => boolean; killsLeft: () => boolean; log: (l: string) => void;
+    // Deaths that the account recovers from in the run (default 0: a death ends the account's part).
+    maxDeaths?: number }): Promise<SquadStats> {
+    const stats: SquadStats = { name: s.name, fights: 0, pulls: 0, kills: 0, trips: 0, died: false, picked: {}, taken: 0, receipts: [], deaths: 0, rekits: 0 };
+    const st = s.sdk.getState(), me = () => s.sdk.getState()?.player;
+    let life0 = st?.player?.lifeId, lastTile: { x: number; z: number } | null = null;
+    const wornAtStart = (st?.equipment ?? []).map(e => ({ id: e.id, count: e.count ?? 1 }));
     const pack = packOf(st?.inventory ?? [], st?.equipment ?? []), kit = kitFrom(st?.equipment ?? [], st?.inventory ?? []);
     const ammo = (st?.equipment ?? []).find(e => /arrow|bolt/i.test(e.name))?.id;
     const wanted = new Set([...PICKUP_ITEMS, ...(ammo ? [ammo] : [])]);
     const going = () => !o.stopped() && s.tick() < o.deadline && o.killsLeft();
     const trip = bankTrip(bankNear(o.post.x), o.post, pack, kit, () => !going());
     const walker = await sessionWalker(s);
+    // A death: with deaths left (SQUAD_MAX_DEATHS, `maxDeaths`) the account respawns, walks to the bank, wears its starting kit and eats up
+    // (rekitAfterDeath), restocks its pack and walks back to the post. It returns false when it is over the limit or the re-kit stopped.
+    const recover = async (): Promise<boolean> => {
+        stats.deaths++;
+        if (stats.deaths > (o.maxDeaths ?? 0)) { o.log(`[${s.name}] SQUAD death ${stats.deaths}: over the limit of ${o.maxDeaths ?? 0}`); return false; }
+        const rec = await rekitAfterDeath(s, { lifeBefore: life0, diedNear: lastTile, wornAtStart, stop: () => !going(), log: l => o.log(`[${s.name}] ${l}`), bank: bankNear(o.post.x) });
+        if (rec.rekit !== 'ok') { o.log(`[${s.name}] SQUAD no re-kit: ${rec.rekit}`); return false; }
+        life0 = rec.lifeAfter ?? life0;
+        const fault = await trip(s);
+        if (fault) { o.log(`[${s.name}] SQUAD re-kit trip: ${fault}`); return false; }
+        stats.rekits++;
+        o.log(`[${s.name}] SQUAD re-kitted after a death (${stats.rekits})`);
+        return true;
+    };
     let lastHp = me()?.hp ?? 0, seenMessage = 0, refusedAt = -100, pullSince = -1;
     const skip = new Map<string, number>();
     const unwatch = s.onTick(() => {
@@ -290,7 +313,12 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         while (going()) {
             const p = me();
             if (!p) { if (!await nextTick(s)) break; continue; }
-            if ((life0 !== undefined && p.lifeId !== life0) || Math.max(Math.abs(p.worldX - 3222), Math.abs(p.worldZ - 3218)) <= 40) { stats.died = true; o.log(`[${s.name}] SQUAD died`); break; }
+            if ((life0 !== undefined && p.lifeId !== life0) || Math.max(Math.abs(p.worldX - 3222), Math.abs(p.worldZ - 3218)) <= 40) {
+                o.log(`[${s.name}] SQUAD died`);
+                if (await recover()) continue;
+                stats.died = true; break;
+            }
+            lastTile = { x: p.worldX, z: p.worldZ };
             // Out of the Wilderness (a walk out, a teleport): to the bank and back to the post.
             if (wildernessLevel(p.worldZ) === 0) {
                 if (stats.trips >= o.trips) { o.log(`[${s.name}] SQUAD no trips left`); break; }
@@ -305,7 +333,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 }
                 const fault = await trip(s);
                 const after = me();
-                if (after && ((life0 !== undefined && after.lifeId !== life0) || Math.max(Math.abs(after.worldX - 3222), Math.abs(after.worldZ - 3218)) <= 40)) { stats.died = true; o.log(`[${s.name}] SQUAD died on a bank trip`); break; }
+                if (after && ((life0 !== undefined && after.lifeId !== life0) || Math.max(Math.abs(after.worldX - 3222), Math.abs(after.worldZ - 3218)) <= 40)) { o.log(`[${s.name}] SQUAD died on a bank trip`); if (await recover()) continue; stats.died = true; break; }
                 if (fault) { o.log(`[${s.name}] SQUAD bank trip: ${fault}`); break; }
                 continue;
             }
@@ -385,7 +413,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 recordKillLoot(r, got);
                 for (const [id, n] of Object.entries(got)) stats.picked[id] = (stats.picked[id] ?? 0) + n;
             }
-            if (r.outcome === 'died') { stats.died = true; break; }
+            if (r.outcome === 'died') { if (await recover()) continue; stats.died = true; break; }
             if (!await nextTick(s)) break;
         }
     } finally { unwatch(); }
@@ -440,7 +468,7 @@ if (import.meta.main) {
     // finishes the process, and in the third live pilot one account's drop logged the other three out in the Wilderness.
     const dropped = new Map<string, string>();
     const onSessionEnd = async (s: Session, detail: string) => { if (!dropped.has(s.name)) { dropped.set(s.name, detail); console.log(`[${s.name}] SQUAD session ended: ${detail}`); } };
-    const all = await openSquad(names, name => openBot(name, { onStop, onSessionEnd }), (sessions, detail) => finish(sessions, false, detail));
+    const all = await openSquad(names, name => openBot(name, { onStop, onSessionEnd, continueAfterDeath: true }), (sessions, detail) => finish(sessions, false, detail));
     const squad = all.slice(0, ours.length).map(squadWorkSession), gang = all.slice(ours.length).map(squadWorkSession);
     // Bench: a gang account is out when it died (a new life, or at the Lumbridge spawn) or left the Wilderness.
     const gangLife = new Map(gang.map(g => [g, g.sdk.getState()?.player?.lifeId] as const));
@@ -556,7 +584,7 @@ if (import.meta.main) {
             targets, post,
             options: sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200),
             ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
-            allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), deadline,
+            allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), deadline,
             stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (/PK kill /.test(l)) kills++; log(l); },
         });
     }));
@@ -576,10 +604,10 @@ if (import.meta.main) {
     const sum = (f: (r: SquadStats) => number) => results.reduce((n, r) => n + f(r), 0);
     // RESCUE=1 (default): each dropped account logs in again, eats, and leaves the Wilderness by Camelot Teleport
     // (Wilderness 20 or less, runes held) or a walk to the Edgeville bank; one it cannot get out the RESULT names.
-    if (get('RESCUE', '1') === '1') stranded.push(...await rescueDropped(dropped.keys(), all, (name, onStop) => openBot(name, { onStop, onSessionEnd: (s, detail) => onStop(s, detail) }), log));
+    if (get('RESCUE', '1') === '1') stranded.push(...await rescueDropped(dropped.keys(), all, (name, onStop) => openBot(name, { onStop, continueAfterDeath: true, onSessionEnd: (s, detail) => onStop(s, detail) }), log));
     else stranded.push(...dropped.keys());
     const end = squadEnd({ accounts: results.length, kills: sum(r => r.kills), gangDied: gang.length ? gang.filter(gangDead).length : undefined, deaths: results.filter(r => r.died).length,
-        taken: sum(r => r.taken), trips: sum(r => r.trips), fights: sum(r => r.fights), picked, dropped: [...dropped.keys()], stranded, halted, receiptProof: killReceiptProof(results.flatMap(r => r.receipts)) });
+        taken: sum(r => r.taken), trips: sum(r => r.trips), fights: sum(r => r.fights), picked, dropped: [...dropped.keys()], stranded, halted, rekits: results.reduce((n, r) => n + r.rekits, 0), receiptProof: killReceiptProof(results.flatMap(r => r.receipts)) });
     await settleKillFeed();
     await finish(all, end.ok, end.detail);
 }

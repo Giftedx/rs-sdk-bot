@@ -1,7 +1,10 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
+import * as walking from '../packages/core/src/walk';
+import * as pk from './pk';
+import { maxDeathsOf } from './pk-hunt';
 import { bankNear, leaveWilderness, openSquad, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
-import { squadEnd } from './pk-squad';
+import { hold, squadEnd } from './pk-squad';
 import { newWatch, readLine } from './squad-watch';
 import { classify } from '../packages/practice/src/supervise-host';
 import { supervise } from '../packages/practice/src/supervise';
@@ -247,4 +250,90 @@ describe('squad end with a death', () => {
 test('the squad end line carries the kill receipt proof right after the kills, for the bench pass rule', () => {
     const end = squadEnd({ accounts: 4, kills: 3, taken: 500, trips: 1, fights: 6, picked: {}, dropped: [], stranded: [], deaths: 0, gangDied: 3, receiptProof: 'killReceipts=3 receiptDomain=practice feedMatched=0' });
     expect(`RESULT ok ${end.detail}`).toBe('RESULT ok squad accounts=4 kills=3 killReceipts=3 receiptDomain=practice feedMatched=0 gangDied=3 died=0 taken=500 trips=1 picked={}');
+});
+
+// A squad member that dies at the post: with deaths left it respawns, re-kits at the bank, restocks and walks back; over the limit it ends.
+function squadWorld() {
+    const worn = [{ id: 1163, count: 1, slot: 0, name: 'Rune full helm', optionsWithIndex: [] }, { id: 1231, count: 1, slot: 3, name: 'Dragon dagger(p)', optionsWithIndex: [] }];
+    const inventory: any[] = [], equipment: any[] = worn.map(w => ({ ...w })), bank = [{ id: 385, count: 40 }, { id: 1163, count: 1 }, { id: 1231, count: 1 }];
+    let tick = 0, deadAt = -1, slots = 0, eaten = 0;
+    const player: any = { worldX: 3066, worldZ: 3641, combatLevel: 126, hp: 99, maxHp: 99, isDead: false, lifeId: 1, runEnergy: 100 };
+    const state: any = { player, inventory, equipment, skills: [], combatEvents: [], gameMessages: [], nearbyPlayers: [], prayers: { prayerPoints: 99, activePrayers: [] } };
+    const walks: { x: number; z: number }[] = [];
+    const s: any = {
+        name: 'Soldier', tick: () => tick, ended: new Promise(() => {}), client: {}, onTick: () => () => {},
+        sdk: {
+            getState: () => state, getInventory: () => inventory, getEquipment: () => equipment, getBankItems: () => bank, getSkill: () => ({ level: 99 }), sendWalk: async () => {},
+            sendUseItem: async (slot: number, op: number) => {
+                const at = inventory.findIndex(i => i.slot === slot), item = inventory[at];
+                if (!item) return;
+                if (op === 1) { eaten++; player.hp = Math.min(99, player.hp + 20); inventory.splice(at, 1); } else { inventory.splice(at, 1); equipment.push(item); }
+            },
+        },
+        bot: {
+            openBank: async () => ({ success: true }), closeBank: async () => {}, depositItem: async (item: any) => { const at = inventory.indexOf(item); if (at >= 0) inventory.splice(at, 1); },
+            withdrawItem: async (row: any, count: number) => {
+                row.count -= count;
+                const food = row.id === 385;
+                for (let i = 0; i < (food ? count : 1); i++) inventory.push({ id: row.id, count: food ? 1 : count, slot: ++slots, name: food ? 'Shark' : 'Piece', optionsWithIndex: food ? [{ text: 'Eat', opIndex: 1 }] : [{ text: 'Wear', opIndex: 2 }] });
+            },
+            eatFood: async () => ({ success: true }),
+        },
+    };
+    // The account dies at tick 5: its pack and worn items are gone, and it respawns at Lumbridge 3 ticks later with 1 Hitpoints.
+    const next = async () => {
+        tick++;
+        if (tick === 5) { deadAt = tick; equipment.length = 0; inventory.length = 0; Object.assign(player, { hp: 0, isDead: true }); }
+        if (deadAt >= 0 && tick === deadAt + 3) Object.assign(player, { worldX: 3222, worldZ: 3218, hp: 1, isDead: false, lifeId: 2 });
+        return true;
+    };
+    return { s, player, equipment, inventory, walks, next, eaten: () => eaten, tick: () => tick };
+}
+
+async function runSquadDeath(maxDeaths: number | undefined) {
+    const w = squadWorld(), lines: string[] = [];
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_deps, path) => { w.walks.push({ x: path[0]!.x, z: path[0]!.z }); w.player.worldX = path[0]!.x; w.player.worldZ = path[0]!.z; return { ok: true, ticks: 3, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 }; }),
+        spyOn(pk, 'nextTick').mockImplementation(w.next),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+    ];
+    try {
+        const stats = await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3066, z: 3641 }, options: { kit: {} }, allies: [], pickup: false, trips: 3, deadline: 400,
+            stopped: () => w.tick() >= 120, killsLeft: () => true, log: l => lines.push(l), ...(maxDeaths === undefined ? {} : { maxDeaths }) });
+        return { stats, w, lines };
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+}
+
+test('a squad member that dies with deaths left re-kits, restocks and goes back to the post', async () => {
+    const { stats, w, lines } = await runSquadDeath(1);
+    expect(stats).toMatchObject({ deaths: 1, rekits: 1, died: false });
+    expect(w.equipment.map(e => e.id).sort()).toEqual([1163, 1231]);
+    expect(w.player.hp).toBeGreaterThanOrEqual(89);
+    // It walked to a bank after the death and back to the post.
+    expect(w.walks.some(t => t.z < 3520)).toBe(true);
+    expect(w.walks.at(-1)).toEqual({ x: 3066, z: 3641 });
+    expect(lines.some(l => l.includes('SQUAD re-kitted after a death (1)'))).toBe(true);
+});
+
+test('a squad member that dies over its limit ends its part as died, with no re-kit', async () => {
+    for (const limit of [0, undefined]) {
+        const { stats, w, lines } = await runSquadDeath(limit);
+        expect(stats).toMatchObject({ deaths: 1, rekits: 0, died: true });
+        expect(w.equipment).toEqual([]);
+        expect(lines.some(l => l.includes('over the limit of 0'))).toBe(true);
+    }
+});
+
+test('the squad end line counts the re-kits and stays ok when every death was recovered', () => {
+    const base = { accounts: 4, kills: 3, taken: 500, trips: 1, fights: 6, picked: {}, dropped: [], stranded: [] };
+    const recovered = squadEnd({ ...base, deaths: 0, rekits: 2 });
+    expect(recovered.ok).toBe(true);
+    expect(recovered.detail).toBe('squad accounts=4 kills=3 died=0 rekits=2 taken=500 trips=1 picked={}');
+    const lost = squadEnd({ ...base, deaths: 1, rekits: 1 });
+    expect(lost.ok).toBe(false);
+    expect(lost.detail.startsWith('died squad accounts=4')).toBe(true);
+    expect(maxDeathsOf('1', 1)).toBe(1);
+    expect(maxDeathsOf('x', 1)).toBe(1);
+    expect(maxDeathsOf('0', 1)).toBe(0);
 });

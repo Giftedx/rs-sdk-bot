@@ -1257,7 +1257,13 @@ mark of 1,000 ticks keeps any later death at 1 Hitpoint. The bank is not touched
 - **A threat retreat.** `hunt` uses the result of the retreat: a death is handled, and a retreat that did not leave the
   Wilderness is counted in `retreatsFailed` and logged.
 
-Gap: the hunt re-kits a death to a player in the Wilderness. The roam, the squad and the gang end their run at a death.
+- **The squad.** `hold` in `scripts/pk-squad.ts` recovers a member's death with the same `rekitAfterDeath`, then the member's bank trip
+  (restock, eat up, walk back to the post). `SQUAD_MAX_DEATHS` (default 1) bounds the recoveries of each member in a run. A death over
+  the limit ends the member's part, and the run ends as `RESULT fail died squad ...`. A run with only recovered deaths ends ok with
+  `died=0 rekits=N`. The squad opens its accounts with `continueAfterDeath`.
+
+Gap: the hunt and the squad re-kit a death to a player in the Wilderness. The roam and the gang end their run at a death. No bound
+spans two runs yet.
 
 ### Rings, prayer and poison in the gang meeting
 
