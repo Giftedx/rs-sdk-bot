@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794988656659-kiltlifter-thefullmonty-e808e2a9be53fa3e",
  "account": "Kiltlifter",
  "partner": "TheFullMonty",
@@ -12,6 +12,16 @@
  "claim": "637e6363-7436-45ad-9eba-dbcde3b17fda",
  "count": 0,
  "ok": false,
- "at": 1794988809325,
- "detail": "trade claimed"
+ "at": 1794988889750,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "bank": {
+  "count": 41,
+  "at": 1794988820586
+ },
+ "logout": {
+  "attemptId": "1794988809333-0000014880-0000000001",
+  "at": 1794988889732,
+  "sha256": "7864d67c5838d2e83f618163b0d7eaa741bc6492bbb4112f7adec1bc84d5b8a5"
+ },
+ "screen": false
 }
