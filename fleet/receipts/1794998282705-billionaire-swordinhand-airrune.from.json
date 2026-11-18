@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794998282705-billionaire-swordinhand-airrune",
+ "account": "Billionaire",
+ "partner": "Swordinhand",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 36,
+ "claim": "d42f916d-0d76-4965-89d6-0f68b01c800a",
+ "count": 36,
+ "ok": true,
+ "at": 1794998394966,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 299,
+  "after": 263
+ },
+ "logout": {
+  "attemptId": "1794998380202-0000009172-0000000001",
+  "at": 1794998394954,
+  "sha256": "700b4c0a9d4cd652591cd270470879c5d0cf93dbf8afed122ae6f19d0f1191bd"
+ },
+ "screen": true
+}
