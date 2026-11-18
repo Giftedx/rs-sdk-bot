@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794984924220,
+ "at": 1794984964991,
  "jobs": [
   {
    "account": "AFKnight",
@@ -187,6 +187,110 @@
    ]
   },
   {
+   "account": "Moneyshot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1113 QUANTITY=1 LIMIT_PRICE=220886 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit1-1113-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=110644 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit1-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1079\":1}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Rune chainbody, 1 Rune platelegs on the Grand Exchange to wear rune armour",
+   "role": "supply",
+   "template": "kit-buy:army-armour-rune",
+   "autopilot": "local",
+   "resources": [
+    "ge:armour"
+   ]
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1113 QUANTITY=1 LIMIT_PRICE=220886 CASH_RESERVE=1000 ORDER_KEY=oreelse-kit3-1113-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=110644 CASH_RESERVE=1000 ORDER_KEY=oreelse-kit3-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1079\":1}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Rune chainbody, 1 Rune platelegs on the Grand Exchange to wear rune armour",
+   "role": "supply",
+   "template": "kit-buy:army-armour-rune",
+   "autopilot": "local",
+   "resources": [
+    "ge:armour"
+   ]
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=pocketpython-kit9-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"554\":250}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1333 QUANTITY=1 LIMIT_PRICE=50000 CASH_RESERVE=1000 ORDER_KEY=billionaire-kit3-1333-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1333\":1}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Rune scimitar on the Grand Exchange to fight with a rune blade",
+   "role": "supply",
+   "template": "kit-buy:army-weapon-rune",
+   "autopilot": "local",
+   "resources": [
+    "ge:weapon"
+   ]
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=21 EXPECTED_OWNED=9 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit2-557-9to30 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=19 EXPECTED_OWNED=11 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit2-555-11to30 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":30}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 21 Earth rune, 19 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Masterbaiter",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -233,50 +337,6 @@
    ]
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1113 QUANTITY=1 LIMIT_PRICE=220886 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit1-1113-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=110644 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit1-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1079\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Rune chainbody, 1 Rune platelegs on the Grand Exchange to wear rune armour",
-   "role": "supply",
-   "template": "kit-buy:army-armour-rune",
-   "autopilot": "local",
-   "resources": [
-    "ge:armour"
-   ]
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1113 QUANTITY=1 LIMIT_PRICE=220886 CASH_RESERVE=1000 ORDER_KEY=oreelse-kit3-1113-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=110644 CASH_RESERVE=1000 ORDER_KEY=oreelse-kit3-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1079\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Rune chainbody, 1 Rune platelegs on the Grand Exchange to wear rune armour",
-   "role": "supply",
-   "template": "kit-buy:army-armour-rune",
-   "autopilot": "local",
-   "resources": [
-    "ge:armour"
-   ]
-  },
-  {
    "account": "PickpockDick",
    "script": "scripts/alch-train.ts",
    "args": [
@@ -292,25 +352,6 @@
    "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
    "role": "combat",
    "template": "army-alch-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=pocketpython-kit9-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"554\":250}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
    "autopilot": "local",
    "resources": []
   },
@@ -445,50 +486,6 @@
    ]
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1333 QUANTITY=1 LIMIT_PRICE=50000 CASH_RESERVE=1000 ORDER_KEY=billionaire-kit3-1333-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1333\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Rune scimitar on the Grand Exchange to fight with a rune blade",
-   "role": "supply",
-   "template": "kit-buy:army-weapon-rune",
-   "autopilot": "local",
-   "resources": [
-    "ge:weapon"
-   ]
-  },
-  {
-   "account": "Magicwanda",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "betty"
-   ],
-   "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "STOCK_TARGET": "500",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
-   "autopilot": "local",
-   "resources": [
-    "shop:betty"
-   ]
-  },
-  {
    "account": "Ballspinner",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -517,26 +514,6 @@
    "resources": [
     "shop:zaff"
    ]
-  },
-  {
-   "account": "Sausagefest",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=21 EXPECTED_OWNED=9 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit2-557-9to30 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=19 EXPECTED_OWNED=11 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit2-555-11to30 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":30}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 21 Earth rune, 19 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "mmtha0205",
