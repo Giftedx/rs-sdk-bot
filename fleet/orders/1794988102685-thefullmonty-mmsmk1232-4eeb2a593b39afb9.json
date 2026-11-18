@@ -1,0 +1,23 @@
+{
+ "id": "1794988102685-thefullmonty-mmsmk1232-4eeb2a593b39afb9",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TheFullMonty",
+ "to": "mmsmk1232",
+ "item": "Rune scimitar",
+ "count": 1,
+ "start": 1794988102685,
+ "end": 1794990502685,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

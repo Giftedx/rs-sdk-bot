@@ -1,0 +1,23 @@
+{
+ "id": "1794988463389-knightstick-mmsmk1232-a261a8f4632a6207",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Knightstick",
+ "to": "mmsmk1232",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1794988463389,
+ "end": 1794990863389,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

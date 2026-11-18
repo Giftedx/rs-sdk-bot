@@ -1,0 +1,23 @@
+{
+ "id": "1794989244283-trousersnake-mmsmk1232-90949c8411a01875",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TrouserSnake",
+ "to": "mmsmk1232",
+ "item": "Water rune",
+ "count": 28,
+ "start": 1794989244283,
+ "end": 1794991644283,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

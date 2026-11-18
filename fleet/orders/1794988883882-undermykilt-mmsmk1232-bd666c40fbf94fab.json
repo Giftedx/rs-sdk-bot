@@ -1,0 +1,33 @@
+{
+ "id": "1794988883882-undermykilt-mmsmk1232-bd666c40fbf94fab",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "UnderMyKilt",
+ "to": "mmsmk1232",
+ "item": "Dragonhide body",
+ "count": 1,
+ "start": 1794988883882,
+ "end": 1794991283882,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Dragonhide chaps",
+   "count": 1
+  },
+  {
+   "item": "Nature rune",
+   "count": 20
+  }
+ ],
+ "takerWaits": true
+}
