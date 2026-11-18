@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795001464045-fatstack-sausagefest-airrune",
+ "account": "Sausagefest",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 26,
+ "claim": "4bbafa58-bad1-43cd-b9ad-1e78fd6049d6",
+ "count": 0,
+ "ok": false,
+ "at": 1795001651012,
+ "detail": "trade claimed"
+}
