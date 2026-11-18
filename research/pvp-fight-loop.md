@@ -1596,6 +1596,19 @@ each bank row. This revision has no dragon scimitar: the melee list names the dr
 Gap: practice and unit proof only. No live restock ran after this change. The market file needs a refresh within 30 minutes
 before a pilot run (`bun scripts/market-cache.ts`), which the fleet agent does while it runs.
 
+## A squad death in the swarm
+
+The squad end line names the accounts that died (`diedAccounts=A,B`, `squadEnd` in `scripts/pk-squad.ts`). `scripts/swarm.ts` gives the
+`died after N runs` end to those accounts only (`endsOfRun`). The other members end `released after N runs`, which `startable` treats as
+resumable and which holds no script. A run that names no account gives every member the run's end.
+
+The repair `kit-restored` (`applyKitRestored`) clears the script hold of a PvP death for the account that died. A PvP death is a hold of
+`aio-pvp.ts`, `pk-squad.ts`, `pk-hunt.ts`, `pk-roam.ts` or `pk-army.ts` with a `died` reason. The request must hold a passing receipt of
+`bun scripts/squad-ready.ts <account> --receipt <dir>`: newer than the death, at most 15 minutes old, and bound by its hash to the
+account's status file as it is now (the fresh bank and worn snapshot). The account must be inactive with a current logout proof. The hold
+stays in the history (`restored`) and no longer blocks. No other hold kind is cleared. Proof: `scripts/swarm.test.ts`, a five-member job with
+one death.
+
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).

@@ -352,6 +352,8 @@ export function loadEnded(file: string): Map<string, EndRecord> {
 //   {account, endedAt, server:'rs-sdk-demo.fly.dev', proof:{kind:'producer', attemptId}}
 //   {account, endedAt, server, proof:LegacyLogoutClaim}   labelled legacy bootstrap, only while no producer attempt exists
 //   {kind:'script-qualified', account, script, holdAt, server, proof, qualification:{receiptPath, receiptSha256, at}}
+//   {kind:'kit-restored', account, script, holdAt, server, proof, kit:{receiptPath, receiptSha256, at}}   the hold of a PvP death only,
+//       with a passing squad-ready receipt of the account's fresh snapshot (applyKitRestored)
 // The proof is re-read from session-lifecycle.ts immediately before any mutation. Unknown, crossed, stale or
 // superseded evidence refuses. Clearing a persistent failure keeps its script as a durable failed-script hold.
 export const LIVE_SERVER = 'rs-sdk-demo.fly.dev';
@@ -360,10 +362,14 @@ export type EndRepairRequest = { account: string; endedAt: number; server: strin
 export type ScriptQualificationRequest = { kind: 'script-qualified'; account: string; script: string; holdAt: number; server: string; proof: ProducerProofRef | LegacyLogoutClaim;
     qualification: { receiptPath: string; receiptSha256: string; at: number } };
 export type ScriptHold = { account: string; script: string; at: number; reason: string; revision?: string; heldAt: number;
-    qualified?: { at: number; receiptPath: string; receiptSha256: string; recordedAt: number } };
+    qualified?: { at: number; receiptPath: string; receiptSha256: string; recordedAt: number };
+    // The hold of a PvP death after its kit is back (applyKitRestored). The hold stays in the history and no longer blocks.
+    restored?: { at: number; receiptPath: string; receiptSha256: string; recordedAt: number } };
 export type RepairProofs = { readProof: (account: string, server: string) => LogoutProof; verifyLegacy: (claim: unknown) => LegacyLogoutProof; now?: () => number;
     // The account's current status file, if any. A session it shows after the logout, outside the receipts, refuses.
-    status?: (account: string) => { server?: unknown; started?: unknown; sessionAttemptId?: unknown } | undefined };
+    status?: (account: string) => { server?: unknown; started?: unknown; sessionAttemptId?: unknown } | undefined;
+    // The SHA-256 of the bytes of the account's current status file (the snapshot that a kit receipt must have read).
+    statusSha256?: (account: string) => string | undefined };
 export const defaultRepairProofs: RepairProofs = { readProof: (a, s) => {if(ACCOUNT.test(a))assertNoRecoveryLease(a,resolve(import.meta.dir,'..'));return readLogoutProof(a,s);}, verifyLegacy: c => verifyLegacyLogout(c) };
 
 export const scriptKey = (script: string) => script.trim().replace(/\\/g, '/').replace(/^\.\//, '').toLowerCase();
@@ -491,11 +497,47 @@ export function applyScriptQualification(request: any, holds: ScriptHold[], acti
     if (!logout.ok) return { changed: false, reason: logout.reason };
     return { changed:false,reason:'script qualification unsupported: caller receipt has no producer-bound work result' };
 }
+// The scripts whose death is a PvP death (a risk of the work, not a fault of the route): the hold of such a death can be cleared by
+// applyKitRestored when the account's kit is back. No other hold kind is cleared there.
+export const PVP_DEATH_SCRIPTS: ReadonlySet<string> = new Set(['scripts/aio-pvp.ts', 'scripts/pk-squad.ts', 'scripts/pk-hunt.ts', 'scripts/pk-roam.ts', 'scripts/pk-army.ts']);
+export const KIT_RECEIPT_MAX_AGE_MS = 15 * 60_000;
+// Clears the hold of a PvP death for the one account that died, on evidence in the same call that its kit is back: a receipt of
+// `bun scripts/squad-ready.ts <account> --receipt <dir>` (schema squad-ready/1, ok, newer than the death and at most 15 minutes old)
+// whose `statusSha256` is the hash of the account's status file now, so that it read the fresh bank and worn snapshot. The account
+// must be inactive with a current producer logout proof, as for every repair. The hold keeps its place in the history (`restored`).
+export function applyKitRestored(request: any, holds: ScriptHold[], active: readonly string[], proofs: RepairProofs) {
+    const q = request?.kit;
+    if (!request || request.kind !== 'kit-restored' || typeof request.account !== 'string' || !ACCOUNT.test(request.account) || typeof request.script !== 'string'
+        || !Number.isFinite(request.holdAt) || !q || typeof q.receiptPath !== 'string' || !/^[0-9a-f]{64}$/.test(q.receiptSha256 ?? '') || !Number.isFinite(q.at)) return { changed: false, reason: 'invalid kit-restored request' };
+    const key = request.account.toLowerCase(), script = scriptKey(request.script);
+    if (active.some(a => a.toLowerCase() === key)) return { changed: false, reason: 'account still active' };
+    const hold = holds.find(h => h.account.toLowerCase() === key && scriptKey(h.script) === script && h.at === request.holdAt);
+    if (!hold) return { changed: false, reason: 'no matching open hold' };
+    if (hold.restored) return { changed: false, reason: 'hold already restored' };
+    if (!PVP_DEATH_SCRIPTS.has(script) || !/^died\b/.test(hold.reason)) return { changed: false, reason: 'not the hold of a PvP death' };
+    const now = (proofs.now ?? Date.now)();
+    if (q.at <= hold.at) return { changed: false, reason: 'kit receipt is not newer than the death' };
+    if (now - q.at > KIT_RECEIPT_MAX_AGE_MS || q.at > now) return { changed: false, reason: 'kit receipt is stale' };
+    let receipt: any;
+    try {
+        const raw = readFileSync(q.receiptPath);
+        if (createHash('sha256').update(raw).digest('hex') !== q.receiptSha256) return { changed: false, reason: 'kit receipt hash changed' };
+        receipt = JSON.parse(raw.toString('utf8'));
+    } catch { return { changed: false, reason: 'kit receipt missing or malformed' }; }
+    if (receipt?.schema !== 'squad-ready/1' || receipt.ok !== true || receipt.at !== q.at || typeof receipt.account !== 'string' || receipt.account.toLowerCase() !== key
+        || typeof receipt.rule !== 'string' || !/^[0-9a-f]{64}$/.test(receipt.statusSha256 ?? '')) return { changed: false, reason: 'kit receipt is not a passing squad-ready check of this account' };
+    const snapshot = proofs.statusSha256?.(request.account);
+    if (snapshot === undefined || snapshot !== receipt.statusSha256) return { changed: false, reason: 'kit receipt does not match the current status snapshot' };
+    const logout = currentLogout(request, proofs);
+    if (!logout.ok) return { changed: false, reason: logout.reason };
+    hold.restored = { at: q.at, receiptPath: q.receiptPath, receiptSha256: q.receiptSha256, recordedAt: now };
+    return { changed: true, reason: `PvP death hold cleared, kit restored (${logout.label})` };
+}
 export function openHold(holds: readonly ScriptHold[], account: string, script: string): ScriptHold | undefined {
     const key = account.toLowerCase(), s = scriptKey(script);
     // Old optional qualified fields are preserved as history, but cannot close a hold:
-    // the former caller-receipt contract never proved work by this script.
-    return holds.find(h => h.account.toLowerCase() === key && scriptKey(h.script) === s);
+    // the former caller-receipt contract never proved work by this script. A restored hold (applyKitRestored) is closed.
+    return holds.find(h => h.account.toLowerCase() === key && scriptKey(h.script) === s && !h.restored);
 }
 // Admission keeps a failed script blocked for its account after a role transition, until same-script qualification.
 export function holdCandidates(selection: { start: string[]; blocked: Record<string, string> }, script: string, holds: readonly ScriptHold[]) {
@@ -589,6 +631,20 @@ export function applyResume(accounts: readonly string[], active: boolean, ended:
 export function supervisorEndLine(line: string): string | undefined {
     return line.match(/^SUPERVISE end ([\w-]+ after \d+ runs)\s*$/)?.[1];
 }
+// The accounts that a squad run names as dead on its RESULT line (`RESULT fail died squad accounts=4 diedAccounts=A,B ...`,
+// scripts/pk-squad.ts squadEnd). The supervisor logs the line, cut at 200 characters, so the names come early.
+export function diedAccountsOf(line: string): string[] | undefined {
+    const m = line.match(/\bRESULT fail died .*?\bdiedAccounts=([A-Za-z0-9_,-]+)/);
+    return m ? m[1]!.split(',').filter(Boolean) : undefined;
+}
+// The end of each account of a non-host run. A died end goes to the accounts that died when the run names them. The others are
+// released: `released after N runs`, which startable treats as resumable, and which holds no script (applyEndRepair holds a script
+// only for /^died/). Without names every account takes the run's end, as before.
+export function endsOfRun(accounts: readonly string[], reason: string, died: readonly string[] | undefined): Map<string, string> {
+    const named = new Set((died ?? []).map(a => a.toLowerCase()));
+    const released = /^died\b/.test(reason) && named.size > 0 ? `released${reason.slice('died'.length)}` : reason;
+    return new Map(accounts.map(a => [a, /^died\b/.test(reason) && named.size > 0 && !named.has(a.toLowerCase()) ? released : reason]));
+}
 
 // Which accounts of a job may start now, and the state of each one that may not.
 export function startable(accounts: string[], repeat: boolean | undefined, ended: Map<string, { reason: string; at?: number; revision?: string }>, statusAge: (a: string) => number, statusStarted?: (a: string) => number | undefined, revision?: string, stopped?: (a: string) => boolean): { start: string[]; blocked: Record<string, string> } {
@@ -603,7 +659,7 @@ export function startable(accounts: string[], repeat: boolean | undefined, ended
         // A refusal before any game tick (supervise isEntryRefusal) changed nothing, so a changed job may start again.
         // A release pause clears itself: a non-standing start checks the pin again, and a standing job has no pin.
         const resumable = !!end && (/^refused\b/.test(end.reason) && !!end.revision && !!revision && end.revision !== revision
-            || /^release-paused\b/.test(end.reason));
+            || /^release-paused\b/.test(end.reason) || /^released\b/.test(end.reason));
         if (stopped?.(a)) blocked[a] = 'paused: stop file';
         else if (endedForGood(end, repeat) && !newMission && !resumable) blocked[a] = /^release-paused\b/.test(end!.reason) ? 'paused: worker release' : `ended: ${end!.reason}`;
         else if (statusAge(a) < 30_000) {
@@ -703,9 +759,9 @@ if (import.meta.main) {
     // Follow a run's log from its saved offset: end lines become end records, and when the process is gone the
     // run ends with its last end line (or `exit <code>`).
     const follow = (key: string, run: Run, child?: { on(e: 'exit', f: (code: number | null) => void): unknown }) => {
-        let tail = '', currentEnd: string | undefined, exitCode: number | null | undefined, done = false;
+        let tail = '', currentEnd: string | undefined, diedNames: string[] | undefined, exitCode: number | null | undefined, done = false;
         const consume = (line: string) => {
-            if (!run.host) { currentEnd = supervisorEndLine(line) ?? currentEnd; return; }
+            if (!run.host) { currentEnd = supervisorEndLine(line) ?? currentEnd; diedNames = diedAccountsOf(line) ?? diedNames; return; }
             const m = line.match(/^SUPERVISE-HOST account (.+?) ([\w-]+) after \d+ runs/);
             if (m) { ended.set(m[1]!, { at: Date.now(), reason: m[2]!, revision: run.revision }); console.log(`SWARM end ${m[1]} ${m[2]} (host)`); }
         };
@@ -732,7 +788,8 @@ if (import.meta.main) {
             const code = exitCode === undefined ? 'unknown' : exitCode;
             if (!run.host) {
                 const reason = currentEnd ?? `exit ${code}`;
-                for (const account of run.accounts) { ended.set(account, { at: Date.now(), reason, revision: run.revision }); console.log(`SWARM end ${account} ${reason}`); }
+                const ends = endsOfRun(run.accounts, reason, diedNames);
+                for (const account of run.accounts) { const own = ends.get(account)!; ended.set(account, { at: Date.now(), reason: own, revision: run.revision }); console.log(`SWARM end ${account} ${own}`); }
             } else {
                 // An account with no end line (the supervisor itself crashed) ends with the exit code.
                 for (const a of run.accounts) {
@@ -869,8 +926,12 @@ if (import.meta.main) {
                 const proofs: RepairProofs = { ...defaultRepairProofs, status: a => {
                     const file = join(prac, 'status', `${a}.json`);
                     return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : undefined;
+                }, statusSha256: a => {
+                    const file = join(prac, 'status', `${a}.json`);
+                    try { return createHash('sha256').update(readFileSync(file)).digest('hex'); } catch { return undefined; }
                 } };
                 if (request) result = request.kind === 'script-qualified' ? applyScriptQualification(request, holds, active, proofs)
+                    : request.kind === 'kit-restored' ? applyKitRestored(request, holds, active, proofs)
                     : applyEndRepair(request, ended, active, proofs, holds);
                 // History first: a lost end-state write then leaves an extra hold, never a silent unban.
                 if (result.changed) try { persistHolds(holdsFile, holds); persistEnded(deathsFile, ended); } catch (e) {
