@@ -1,0 +1,23 @@
+{
+ "id": "1795042266748-undermykilt-mmsmk1232-3026744267102c65",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "UnderMyKilt",
+ "to": "mmsmk1232",
+ "item": "Rune full helm",
+ "count": 1,
+ "start": 1795042266748,
+ "end": 1795044666748,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

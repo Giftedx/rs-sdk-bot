@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795041883383-bigchopper-mmtha0205-naturerune",
+ "account": "Bigchopper",
+ "partner": "mmtha0205",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 20,
+ "claim": "6b52afec-1730-4414-a976-09511c6398ae",
+ "count": 0,
+ "ok": false,
+ "at": 1795042000388,
+ "detail": "trade claimed"
+}
