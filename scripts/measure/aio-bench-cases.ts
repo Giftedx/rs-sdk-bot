@@ -232,10 +232,12 @@ const gangCase = (key: string, kit: string, gangKit: string, groups: number, at:
 // The gang squad (scripts/pk-squad.ts): `n` of ours at the multi-way post west of the gang, the three of the gang on
 // their post, driven by the script's bench gang (SQUAD_GANG=3, profile ganker-live).
 // `food`: the sharks of each of ours at the start (the kit's own count by default), with EDGE_BANK_SNARE in its bank: a
-// low count sends it to the bank and back mid-meeting.
-const squadCase = (key: string, kit: string, gangKit: string, n: number, args: string[] = [], food?: number, start = {x: 3066, z: 3641}): BenchCase => {
+// low count sends it to the bank and back mid-meeting. `foodId`: the food item in place of each shark of the kit
+// (379 is the lobster, which heals 12 where the shark heals 20).
+const squadCase = (key: string, kit: string, gangKit: string, n: number, args: string[] = [], food?: number, start = {x: 3066, z: 3641}, foodId = 385): BenchCase => {
   const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, n + 2).split('');
-  const ours = (x: number, z: number): SaveConfig => { const c = kitFixture(kit, x, z); return food === undefined ? c : {...c, bank: [...EDGE_BANK_SNARE, {id: 884, count: 2000}], inventory: [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: food}, () => ({id: 385, count: 1}))]}; };
+  const ours = (x: number, z: number): SaveConfig => { const c = kitFixture(kit, x, z), pack = (count: number) => [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: count}, () => ({id: foodId, count: 1}))];
+    return food !== undefined ? {...c, bank: [...EDGE_BANK_SNARE, {id: 884, count: 2000}], inventory: pack(food)} : foodId === 385 ? c : {...c, inventory: pack(c.inventory!.filter(i => i.id === 385).length)}; };
   return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: ours(start.x + 1, start.z - 1), output: /kills=(\d+)/,
     scriptArgs: ['squad', ...letters.map(l => `{bot:${l}}`), 'SQUAD_GANG=3', 'MAX_MINUTES=6', 'STALL_TICKS=3000', ...args],
     companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < n - 1 ? ours(start.x + (i % 3), start.z) : kitFixture(gangKit, 3078, 3640)}))};
@@ -930,6 +932,13 @@ const ROUTE_CASES: BenchCase[] = [
   squadCase('extra:squad-4-gang-hunted-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1'], undefined, {x: 3093, z: 3501}),
   // The same walk-in in the first live pilot's kit (chainbody, no antipoison, no freeze runes).
   squadCase('extra:squad-4-gang-hunted-chain-x1', 'live-walker-iron-rune-chain-bare', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1'], undefined, {x: 3093, z: 3501}),
+  // The same walk-in in the kit that the maxed accounts hold (scripts/squad-ready.ts rule gang-chain-bind: rune
+  // chainbody, an antipoison with 3 doses, the runes of 10 Binds and 2 Camelot Teleports, 20 sharks): each account goes
+  // to the Edgeville bank first and takes its pack again. Then the same kit at the post, and with a lobster for each
+  // shark (the bank trip takes sharks only, so the lobster case has no trip).
+  squadCase('extra:squad-4-gang-hunted-chainbind-x1', 'live-walker-iron-rune-chain-bind', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1'], undefined, {x: 3093, z: 3501}),
+  squadCase('extra:squad-4-gang-chainbind-x1', 'live-walker-iron-rune-chain-bind', 'ganker-dds', 4),
+  squadCase('extra:squad-4-gang-chainbind-lobster-x1', 'live-walker-iron-rune-chain-bind', 'ganker-dds', 4, [], undefined, undefined, 379),
   // The east multi-way zone runs up to the ditch north of Varrock (x 3136 to 3327 from z 3520): a post there at
   // Wilderness 3 leaves no single-way tile on the walk in, and the hunting gang comes into multi-way to fight.
   squadCase('extra:squad-4-gang-hunted-east-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'POST=3160,3540'], undefined, {x: 3160, z: 3512}),
@@ -1369,6 +1378,11 @@ const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:jewellery-trip-env-order', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['crafting', 'jewellery-trip', 'RECIPE=gold_ring', 'TARGET=1', 'BATCH=1', 'CAP=800'],
     presetConfig: {position: {x: 3269, z: 3167, level: 0}, skills: {Crafting: 10}, bank: [{id: 2357, count: 1}, {id: 1592, count: 1}]},
     pass: s => ok(s) && s.includes('LOGOUT logged-out')},
+  // The antipoison of the gang squad (scripts/shop-buyer.ts profile jiminua) from the Ardougne south bank: the fare
+  // and the float from the bank, the ship to Brimhaven, the shelf of 10 at Jiminua's Jungle Store, the ship back, the bank.
+  {key: 'extra:shop-jiminua', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-buy', 'jiminua', '6000', 'STOCK_TARGET=10', 'STOP_AT_TARGET=1', 'MAX_ITEMS=10', 'MAX_SPEND=10000', 'COIN_RESERVE=1000', 'NO_BUY_TICKS=40'],
+    pass: s => ok(s) && /boughtTotal=10 bankedTotal=10 /.test(s), timeoutMs: 600_000,
+    presetConfig: {position: {x: 2654, z: 3283, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, bank: [{id: 995, count: 20000}]}},
   // Jakut's dragon longswords in Zanaris (scripts/shop-buyer.ts profile jukat) from Ardougne with Lost City done: the
   // Dramen staff, the coins and the doorman's diamond from the bank, the Lumbridge swamp shed door, the shelf of 2 and one restock for the
   // third sword, the ladder out, the rune scimitar it wore wielded again and the Al Kharid bank.
