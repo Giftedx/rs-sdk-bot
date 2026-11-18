@@ -3,9 +3,9 @@ import * as fs from 'node:fs';
 import {mkdtempSync,writeFileSync,readFileSync,unlinkSync,existsSync,rmSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
-import {SWORDINHAND,cases,cowFixture,cowEntry,cowResult,cowSaveChecks,cowChildChecks,cowChildConfiguration,cowSequenceChecks,claimCowStop,retainCowStop,
+import {SWORDINHAND,COW_MELEE_WEAPONS,cases,cowFixture,cowEntry,cowResult,cowSaveChecks,cowChildChecks,cowChildConfiguration,cowSequenceChecks,failedChecks,claimCowStop,retainCowStop,
  MIGHTYROD,GIANT_HITPOINTS_XP,xpForLevel,giantFixture,giantEntry,giantSaveChecks,giantChildChecks,giantChildConfiguration,giantResult,
- NABTHEKNOB,trooperCases,trooperFixture,trooperEntry,trooperChildConfiguration,trooperSaveChecks,trooperChildChecks} from '../src/cow-progress-isolated-proof';
+ NABTHEKNOB,COW_BOT_HOST,trooperCases,trooperFixture,trooperEntry,trooperChildConfiguration,trooperSaveChecks,trooperChildChecks} from '../src/cow-progress-isolated-proof';
 import {giantTraining} from '../../../scripts/gather-combat';
 import {cowProfile} from '../../../scripts/gather-combat';
 import {ISOLATED,ISOLATED_ENGINE_ENV,pointBotAt} from '../src/rehearse';
@@ -20,13 +20,32 @@ test('native combat proof starts a named isolated stack and points its fixtures 
  expect(stack).toMatchObject({ports:ISOLATED,instance:'cow-progress-order',tickMs:150,xpRate:25,
   enginePreload:{module:join(root,'packages/practice/src/save-endpoint.ts'),env:{...ISOLATED_ENGINE_ENV,BUILD_LIVE_RELOAD:'false',BUILD_STARTUP:'false',NODE_INFINITE_RUN:'true'}}});
  expect(stack.ports.engine).not.toBe(8888);expect(stack.ports.gateway).not.toBe(7780);
- expect(proof).toContain('pointBotAt(bot.envPath,ISOLATED.engine,ISOLATED.gateway)');
+ expect(proof).toContain('pointBotAt(bot.envPath,ISOLATED.engine,ISOLATED.gateway,COW_BOT_HOST)');
  const dir=mkdtempSync(join(tmpdir(),'cow-isolated-'));try{
   const path=join(dir,'bot.env');writeFileSync(path,'SERVER=localhost:8888\r\nGATEWAY_URL=ws://localhost:7780\r\n');
-  pointBotAt(path,stack.ports.engine,stack.ports.gateway);
-  expect(readFileSync(path,'utf8')).toBe(`SERVER=localhost:${ISOLATED.engine}\nGATEWAY_URL=ws://localhost:${ISOLATED.gateway}\n`);
+  pointBotAt(path,stack.ports.engine,stack.ports.gateway,COW_BOT_HOST);
+  expect(readFileSync(path,'utf8')).toBe(`SERVER=127.0.0.1:${ISOLATED.engine}\nGATEWAY_URL=ws://127.0.0.1:${ISOLATED.gateway}\n`);
   for(const child of [cowChildConfiguration('fixture',{SERVER:'localhost:8888',GATEWAY_URL:'ws://localhost:7780'}),giantChildConfiguration('fixture',{SERVER:'localhost:8888',GATEWAY_URL:'ws://localhost:7780'})])
-   expect(child.env).toMatchObject({SERVER:`localhost:${ISOLATED.engine}`,GATEWAY_URL:`ws://localhost:${ISOLATED.gateway}`});
+   expect(child.env).toMatchObject({SERVER:`127.0.0.1:${ISOLATED.engine}`,GATEWAY_URL:`ws://127.0.0.1:${ISOLATED.gateway}`});
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('every native child and the pointed bot.env use IPv4 127.0.0.1, never localhost',()=>{
+ expect(COW_BOT_HOST).toBe('127.0.0.1');
+ const inherited={SERVER:'localhost:8888',GATEWAY_URL:'ws://localhost:7780'};
+ const children=[...cases.map(kind=>cowChildConfiguration('fixture',inherited,kind)),giantChildConfiguration('fixture',inherited),trooperChildConfiguration('fixture',inherited)];
+ for(const child of children){
+  expect(child.env.SERVER).toBe(`127.0.0.1:${ISOLATED.engine}`);expect(child.env.GATEWAY_URL).toBe(`ws://127.0.0.1:${ISOLATED.gateway}`);
+  expect(`${child.env.SERVER} ${child.env.GATEWAY_URL}`).not.toContain('localhost');
+ }
+ const proof=readFileSync(resolve(import.meta.dir,'../src/cow-progress-isolated-proof.ts'),'utf8');
+ expect(proof).toContain('`SERVER=${COW_BOT_HOST}:${ISOLATED.engine}`');
+ expect(proof.split(/\r?\n/).filter(l=>!l.trimStart().startsWith('//')&&l.includes('localhost'))).toEqual([]);
+ const dir=mkdtempSync(join(tmpdir(),'cow-ipv4-'));try{
+  const path=join(dir,'bot.env');writeFileSync(path,'SERVER=localhost:8888\nGATEWAY_URL=ws://localhost:7780\n');
+  pointBotAt(path,ISOLATED.engine,ISOLATED.gateway,COW_BOT_HOST);
+  const env=readFileSync(path,'utf8');
+  expect(env.split('\n')).toContain(`SERVER=127.0.0.1:${ISOLATED.engine}`);expect(env).not.toContain('localhost');
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
 
@@ -108,6 +127,23 @@ test('dated Swordinhand entry matches the work order and refusal fixtures differ
  expect(cowEntry(save('nokit'),'nokit')).toBe(true);expect(cowEntry(save('nokit'),'entry')).toBe(false);
  const fresh=save();fresh.skills[0].level=1;expect(cowEntry(fresh,'entry')).toBe(false);
 });
+test('nokit fixture holds no catalog melee weapon in any container and keeps every other asset',()=>{
+ for(const id of [1277,1205,1351,1265])expect(COW_MELEE_WEAPONS.has(id)).toBe(true);
+ for(const id of [1171,841,882,995,333])expect(COW_MELEE_WEAPONS.has(id)).toBe(false);
+ const f=cowFixture('nokit');
+ expect([...f.inventory!,...f.equipment!,...f.bank!].filter(i=>COW_MELEE_WEAPONS.has(i.id))).toEqual([]);
+ expect(f.bank).toEqual(SWORDINHAND.bank.filter(i=>![1205,1351,1265].includes(i.id)));
+ expect(f.equipment).toEqual([{id:1171,count:1,slot:5}]);
+ expect(f.inventory).toEqual(SWORDINHAND.inventory.filter(i=>i.id!==1277));
+ for(const kind of ['entry','nofood'] as const)expect(cowFixture(kind).bank).toEqual(SWORDINHAND.bank);
+});
+test('a nokit save whose bank or pack holds a melee weapon fails cowEntry',()=>{
+ for(const [inv,id] of [[95,1205],[95,1351],[93,1265]] as const){
+  const s=save('nokit');s.inventories[inv].push({slot:s.inventories[inv].length,id,count:1});
+  expect(cowEntry(s,'nokit')).toBe(false);
+ }
+ const lost=save('nokit');lost.inventories[95]=lost.inventories[95].filter((i:any)=>i.id!==590);expect(cowEntry(lost,'nokit')).toBe(false);
+});
 test('Attack20 order needs saved level, matching XP, banked drops, eaten food and preserved kit',()=>{
  const {before,after,result}=finished();expect(Object.values(cowSaveChecks(before,after,result,'entry')).every(Boolean)).toBe(true);
  const mutations:((a:any,r:any)=>void)[]=[
@@ -169,6 +205,22 @@ test('refusal cases need no worker result, no movement and no asset or skill cha
   const ate=structuredClone(before);ate.inventories[93].splice(ate.inventories[93].findIndex((i:any)=>i.id===333),1);expect(cowSaveChecks(before,ate,null,kind).assets).toBe(false);
  }
 });
+// worker.log:15 of the nokit case: the gear stage refuses after its bank visit.
+const nokitResult={ok:false,creditedKills:0,banked:{hide:0,bones:0,beef:0},trainSkill:'Attack',targetLevel:20,startLevel:9,finalLevel:9,selectedXp:0,attackXp:0,damageXp:0,
+ eaten:0,initialFood:6,finalFood:6,foodAccounted:true,bankTrips:2,hpMin:19,died:false,lifeId:1,respawns:0,ticks:8,preserved:true,targetMet:false,partial:false,stop:'cap',
+ failure:'Error: cow prerequisite: missing owned wearable melee weapon',bankProfile:'south',foodMode:'held'};
+test('nokit gear-stage COW_RESULT refusal passes every key; a credited kill or other failure is refused',()=>{
+ const before=save('nokit'),after=structuredClone(before);
+ const checks=cowSaveChecks(before,after,structuredClone(nokitResult),'nokit');
+ expect(failedChecks(checks)).toEqual([]);
+ expect(Object.keys(checks)).toEqual(['entry','bank','refused','skills','assets','health']);
+ expect(cowSaveChecks(before,after,{...nokitResult,creditedKills:1},'nokit').refused).toBe(false);
+ for(const change of [{ok:true},{targetMet:true},{preserved:false},{died:true},{failure:'Error: cow prerequisite: stage2unnoted Trout'},{failure:undefined}])
+  expect(cowSaveChecks(before,after,{...nokitResult,...change},'nokit').refused).toBe(false);
+ // nofood still requires no worker result.
+ expect(cowSaveChecks(save('nofood'),structuredClone(save('nofood')),structuredClone(nokitResult),'nofood').refused).toBe(false);
+ expect(failedChecks({refused:false,bank:true,assets:false})).toEqual(['refused','assets']);
+});
 test('CLI exit, RESULT line and a single confirmed logout are required per case',()=>{
  const ok='LOGOUT logged-out\nRESULT ok mode=cow ok=true\n';
  expect(Object.values(cowChildChecks(0,false,ok,'entry')).every(Boolean)).toBe(true);
@@ -182,6 +234,9 @@ test('CLI exit, RESULT line and a single confirmed logout are required per case'
  expect(cowChildChecks(1,false,'LOGOUT logged-out\nRESULT fail mode=cow ok=false stop=cap\n','stopped').result).toBe(false);
  expect(Object.values(cowChildChecks(1,false,'LOGOUT logged-out\nRESULT fail Error: cow prerequisite: stage2unnoted Trout and syncedHP/skill\n','nofood')).every(Boolean)).toBe(true);
  expect(cowChildChecks(1,false,'LOGOUT logged-out\nRESULT fail Error: cow prerequisite: stage2unnoted Trout\n','nokit').result).toBe(false);
+ expect(Object.values(cowChildChecks(1,false,'LOGOUT logged-out\nRESULT fail Error: cow prerequisite: missing owned wearable melee weapon\n','nokit')).every(Boolean)).toBe(true);
+ expect(cowChildChecks(1,false,'LOGOUT logged-out\nRESULT fail Error: cow prerequisite: missing kit1277\n','nokit').result).toBe(false);
+ expect(cowChildChecks(0,false,'LOGOUT logged-out\nRESULT ok mode=cow ok=true\n','nokit').exit).toBe(false);
  expect(cowResult('x\nCOW_RESULT {"creditedKills":4}\n')).toEqual({creditedKills:4});expect(cowResult('RESULT ok')).toBeNull();
 });
 
@@ -283,7 +338,7 @@ test('Nab child pins the exact finite trooper CLI and controls despite inherited
   GIANT_FOOD:'5',GIANT_BURY:'0',TROOPER_COOK:'0',LOOT_WATCH:'1',RANDOM_EVENTS:'1',GIANT_KILLS:'1',MAX_KILLS:'1',COMBAT_POTIONS_FILE:'foreign',COMBAT_ALCH_FILE:'foreign',TELEGRAB_MAX:'1'};
  const original={...inherited},child=trooperChildConfiguration('fixture',inherited);
  expect(child.cmd).toEqual(['bun','scripts/gather-combat.ts','fixture','2500','trooper']);expect(child.windowsHide).toBe(true);
- expect(child.env).toMatchObject({SERVER:`localhost:${ISOLATED.engine}`,GATEWAY_URL:`ws://localhost:${ISOLATED.gateway}`,DEMO_OK:'',
+ expect(child.env).toMatchObject({SERVER:`127.0.0.1:${ISOLATED.engine}`,GATEWAY_URL:`ws://127.0.0.1:${ISOLATED.gateway}`,DEMO_OK:'',
   TRAIN_SKILL:'Defence',TARGET_LEVEL:'60',GIANT_FOOD:'20',GIANT_BURY:'1',TROOPER_COOK:'1',LOOT_WATCH:'0',RANDOM_EVENTS:'0'});
  for(const key of ['GIANT_KILLS','MAX_KILLS','COMBAT_POTIONS_FILE','COMBAT_ALCH_FILE','TELEGRAB_MAX'])expect(child.env[key]).toBeUndefined();
  expect(inherited).toEqual(original);

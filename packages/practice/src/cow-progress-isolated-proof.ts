@@ -13,6 +13,7 @@ import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,setPracticeSkills,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {verifyCompletedRecoveryDelivery} from './session-recovery-proof';
 import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
+import {meleeWeaponSlot} from '../../planner/src/gear-progression';
 
 type Save=ReturnType<typeof readPracticeSave>;
 type Kind=typeof cases[number];
@@ -22,6 +23,8 @@ const source=()=>({runtime:workerSourceRevision(),files:Object.fromEntries(owned
 const hash=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex');
 const DROPS=[1739,526,2132],TROUT=333,SWORD=1277,SHIELD=1171;
 const BANK={x:2654,z:3283};
+// localhost can resolve to ::1 while the isolated engine listens on IPv4.
+export const COW_BOT_HOST='127.0.0.1';
 // Swordinhand entry: Attack9/900, Defence20/3200, Strength20/3300, HP19/20 (3385XP) at Ardougne south bank.
 export const SWORDINHAND={position:{x:2655,z:3283,level:0},
  skills:[{level:9,xp:900},{level:20,xp:3200},{level:20,xp:3300},{level:19,xp:3385},...Array.from({length:17},()=>({level:1,xp:0}))],
@@ -32,7 +35,7 @@ export const cases=['nofood','nokit','entry','stopped','partial','restarted'] as
 // The native fixture follows the finite south-bank consumer, regardless of the parent profile.
 export function cowChildConfiguration(name:string,inherited:NodeJS.ProcessEnv=process.env,kind:Kind='entry'){
  return {cmd:['bun','scripts/gather-combat.ts',name,'1500','cow'],cwd:root,
-  env:{...inherited,SERVER:`localhost:${ISOLATED.engine}`,GATEWAY_URL:`ws://localhost:${ISOLATED.gateway}`,DEMO_OK:'',RANDOM_EVENTS:'0',TARGET:'cow',MAX_KILLS:kind==='partial'?'1':'5',TRAIN_SKILL:'Attack',TARGET_LEVEL:'20',COW_BANK_PROFILE:'south',COW_FOOD_MODE:'held'},windowsHide:true};
+  env:{...inherited,SERVER:`${COW_BOT_HOST}:${ISOLATED.engine}`,GATEWAY_URL:`ws://${COW_BOT_HOST}:${ISOLATED.gateway}`,DEMO_OK:'',RANDOM_EVENTS:'0',TARGET:'cow',MAX_KILLS:kind==='partial'?'1':'5',TRAIN_SKILL:'Attack',TARGET_LEVEL:'20',COW_BANK_PROFILE:'south',COW_FOOD_MODE:'held'},windowsHide:true};
 }
 // Source decision: session-recovery-proof.ts releaseStopArtifact -> cow CLI proof
 // -> reuse mutation-free retention. Path-based compare/rename/delete has a race.
@@ -46,11 +49,23 @@ export function claimCowStop(path:string,marker:string):CowStop{
 export function retainCowStop(stop:CowStop,_evidence?:string){
  return stop.path;
 }
-const refusal:Partial<Record<Kind,RegExp>>={nofood:/^RESULT fail .*cow prerequisite: stage2unnoted Trout/m,nokit:/^RESULT fail .*cow prerequisite: missing kit1277/m};
+const refusal:Partial<Record<Kind,RegExp>>={nofood:/^RESULT fail .*cow prerequisite: stage2unnoted Trout/m,nokit:/^RESULT fail .*cow prerequisite: missing owned wearable melee weapon/m};
+// nofood refuses before the fight loop and prints no COW_RESULT. nokit refuses at the gear
+// stage after its bank visit, so its COW_RESULT must show the refusal with nothing spent.
+export function cowRefused(result:any,kind:Kind){
+ if(result===null)return true;
+ return kind==='nokit'&&result?.ok===false&&result.creditedKills===0&&result.targetMet===false&&result.preserved===true&&result.died===false
+  &&typeof result.failure==='string'&&/cow prerequisite: missing owned wearable melee weapon/.test(result.failure);
+}
+export const failedChecks=(checks:Record<string,unknown>)=>Object.entries(checks).filter(([,v])=>!v).map(([k])=>k);
+// Every melee weapon of the worker's gear catalog, at every Attack level. Hitpoints admits spears and halberds too.
+export const COW_MELEE_WEAPONS:ReadonlySet<number>=new Set(meleeWeaponSlot(99,{trainSkill:'Hitpoints'}).options.map(o=>o.id));
+// The worker equips the best owned melee weapon from any container, so nokit removes them all.
 export function cowFixture(kind:Kind):SaveConfig{
- const inventory=SWORDINHAND.inventory.filter((i,n)=>kind==='nofood'?i.id!==TROUT||n===1:kind==='nokit'?i.id!==SWORD:true);
+ const kit=(i:{id:number})=>kind!=='nokit'||!COW_MELEE_WEAPONS.has(i.id);
+ const inventory=SWORDINHAND.inventory.filter((i,n)=>(kind!=='nofood'||i.id!==TROUT||n===1)&&kit(i));
  return {position:SWORDINHAND.position,skills:{Attack:9,Defence:20,Strength:20,Hitpoints:20},inventory,
-  equipment:SWORDINHAND.equipment.filter(i=>kind!=='nokit'||i.id!==SWORD),bank:SWORDINHAND.bank};
+  equipment:SWORDINHAND.equipment.filter(kit),bank:SWORDINHAND.bank.filter(kit)};
 }
 const count=(s:Save,container:number,id:number)=>(s.inventories[container]??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const total=(s:Save,id:number)=>Object.values(s.inventories).flat().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
@@ -60,7 +75,9 @@ export function cowEntry(before:Save,kind:Kind){
  const p=before.position,expectedTrout=kind==='nofood'?1:6;
  return p.level===0&&p.x===2655&&p.z===3283&&SWORDINHAND.skills.every((v,i)=>before.skills[i]?.level===v.level&&before.skills[i]?.xp===v.xp)
   &&total(before,TROUT)===expectedTrout&&count(before,93,TROUT)===expectedTrout&&count(before,95,TROUT)===0
-  &&total(before,SWORD)===(kind==='nokit'?0:2)&&total(before,SHIELD)===2&&total(before,995)===165&&DROPS.every(id=>count(before,95,id)===8&&count(before,93,id)===0);
+  &&total(before,SWORD)===(kind==='nokit'?0:2)&&total(before,SHIELD)===2&&total(before,995)===165&&DROPS.every(id=>count(before,95,id)===8&&count(before,93,id)===0)
+  &&(kind!=='nokit'||Object.values(before.inventories).flat().every(i=>!COW_MELEE_WEAPONS.has(i.id))
+   &&SWORDINHAND.bank.filter(i=>!COW_MELEE_WEAPONS.has(i.id)).every(i=>count(before,95,i.id)===i.count));
 }
 export function cowSaveChecks(before:Save,after:Save,result:any,kind:Kind){
  const p=after.position,ids=new Set([...Object.values(before.inventories).flat(),...Object.values(after.inventories).flat()].map(i=>i.id));
@@ -69,7 +86,7 @@ export function cowSaveChecks(before:Save,after:Save,result:any,kind:Kind){
  const assets=(food:number,loot:number)=>[...ids].every(id=>total(after,id)===total(before,id)+(DROPS.includes(id)?loot:id===TROUT?-food:0))
   &&[93,94].every(inv=>(before.inventories[inv]??[]).filter(i=>!DROPS.includes(i.id)&&i.id!==TROUT).every(i=>count(after,inv,i.id)===count(before,inv,i.id)));
  if(refusal[kind])return {
-  entry:cowEntry(before,kind),bank:atBank&&p.x===before.position.x&&p.z===before.position.z,refused:result===null,
+  entry:cowEntry(before,kind),bank:atBank&&p.x===before.position.x&&p.z===before.position.z,refused:cowRefused(result,kind),
   // Natural regeneration may restore one HP during the refusal session.
   skills:skillsSame([]),assets:assets(0,0),health:after.skills[3]!.level>=before.skills[3]!.level&&after.skills[3]!.level<=20};
  const kills=result?.creditedKills,gain=after.skills[0]!.xp-before.skills[0]!.xp;
@@ -107,7 +124,7 @@ export function giantFixture():SaveConfig{
 }
 export function giantChildConfiguration(name:string,inherited:NodeJS.ProcessEnv=process.env){
  return {cmd:['bun','scripts/gather-combat.ts',name,'1500','giant'],cwd:root,
-  env:{...inherited,SERVER:`localhost:${ISOLATED.engine}`,GATEWAY_URL:`ws://localhost:${ISOLATED.gateway}`,DEMO_OK:'',RANDOM_EVENTS:'0',LOOT_WATCH:'0',TARGET:'giant',TRAIN_SKILL:'Hitpoints',TARGET_LEVEL:'87',GIANT_FOOD:'5'},windowsHide:true};
+  env:{...inherited,SERVER:`${COW_BOT_HOST}:${ISOLATED.engine}`,GATEWAY_URL:`ws://${COW_BOT_HOST}:${ISOLATED.gateway}`,DEMO_OK:'',RANDOM_EVENTS:'0',LOOT_WATCH:'0',TARGET:'giant',TRAIN_SKILL:'Hitpoints',TARGET_LEVEL:'87',GIANT_FOOD:'5'},windowsHide:true};
 }
 export function giantResult(log:string){try{return JSON.parse(log.split(/\r?\n/).filter(l=>l.startsWith('GIANT_RESULT ')).at(-1)?.slice(13)??'null');}catch{return null;}}
 export function giantEntry(before:Save){
@@ -155,7 +172,7 @@ export function trooperFixture():SaveConfig{
  return {position:NABTHEKNOB.position,skills:{Attack:70,Defence:1,Strength:99,Hitpoints:86,Prayer:69},inventory:NABTHEKNOB.inventory,equipment:NABTHEKNOB.equipment,bank:NABTHEKNOB.bank};
 }
 export function trooperChildConfiguration(name:string,inherited:NodeJS.ProcessEnv=process.env){
- const env:NodeJS.ProcessEnv={...inherited,SERVER:`localhost:${ISOLATED.engine}`,GATEWAY_URL:`ws://localhost:${ISOLATED.gateway}`,DEMO_OK:'',
+ const env:NodeJS.ProcessEnv={...inherited,SERVER:`${COW_BOT_HOST}:${ISOLATED.engine}`,GATEWAY_URL:`ws://${COW_BOT_HOST}:${ISOLATED.gateway}`,DEMO_OK:'',
   TRAIN_SKILL:'Defence',TARGET_LEVEL:'60',GIANT_FOOD:'20',GIANT_BURY:'1',TROOPER_COOK:'1',LOOT_WATCH:'0',RANDOM_EVENTS:'0'};
  // These opt-ins change or refuse the finite level order instead of running it.
  for(const key of ['GIANT_KILLS','MAX_KILLS','COMBAT_POTIONS_FILE','COMBAT_ALCH_FILE','TELEGRAB_MAX'])delete env[key];
@@ -258,8 +275,8 @@ async function run(directory:string){
     // setPracticeSkills accepts only generated fl* practice saves.
     name=runBotName('flcow',index+1);const botDir=join(root,'vendor/rs-sdk/bots',name);
     if(existsSync(botDir))throw Error('isolated practice identity already exists');
-    const bot=await createBot(name);pointBotAt(bot.envPath,ISOLATED.engine,ISOLATED.gateway);
-    if(!readFileSync(bot.envPath,'utf8').split(/\r?\n/).includes(`SERVER=localhost:${ISOLATED.engine}`))throw Error('isolated local fixture required');
+    const bot=await createBot(name);pointBotAt(bot.envPath,ISOLATED.engine,ISOLATED.gateway,COW_BOT_HOST);
+    if(!readFileSync(bot.envPath,'utf8').split(/\r?\n/).includes(`SERVER=${COW_BOT_HOST}:${ISOLATED.engine}`))throw Error('isolated local fixture required');
     if(id==='trooper'){path=await applyPreset(name,trooperFixture());setPracticeSkills(path,NABTHEKNOB.skills);}
     else if(id==='giant'){path=await applyPreset(name,giantFixture());setPracticeSkills(path,MIGHTYROD.skills);}
     else{path=await applyPreset(name,cowFixture(id));setPracticeSkills(path,SWORDINHAND.skills);}
@@ -293,7 +310,8 @@ async function run(directory:string){
    if(stopFailure)throw Error(stopFailure);
    const text=readFileSync(log,'utf8'),saved=readPracticeSave(join(dir,'after.sav'));
    const local=id==='trooper'?{...trooperSaveChecks(before,saved,giantResult(text)),...trooperChildChecks(code,timedOut,text)}:id==='giant'?{...giantSaveChecks(before,saved,giantResult(text)),...giantChildChecks(code,timedOut,text)}:{...cowSaveChecks(before,saved,cowResult(text),id),...cowChildChecks(code,timedOut,text,id)};
-   if(!Object.values(local).every(Boolean))throw Error(`cow ${id} checks failed; evidence retained`);
+   const failed=failedChecks(local);
+   if(failed.length)throw Error(`cow ${id} checks failed: ${failed.join(',')}; evidence retained`);
    if(id==='partial')partial={name,path};
   }
   return verifyCow(directory);
