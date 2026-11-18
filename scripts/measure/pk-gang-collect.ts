@@ -35,16 +35,18 @@ export function tapFeed(url: string, file: string, rect: Rect, first?: unknown):
     try { mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, first === undefined ? '' : JSON.stringify(first) + '\n'); } catch { return () => {}; }
     const feed = new RosterFeed(), ws = new WebSocket(url), line = (o: unknown) => { try { appendFileSync(file, JSON.stringify(o) + '\n'); } catch { /* the folder went away */ } };
     ws.onopen = () => { ws.send(JSON.stringify({ t: 'roster', on: true })); ws.send(JSON.stringify({ t: 'sub', ...rect })); };
-    ws.onmessage = e => { const m = feed.expand(JSON.parse(String(e.data)));
+    ws.onmessage = e => { try { const m = feed.expand(JSON.parse(String(e.data)));
         if (m.t === 'hello') line({ t: 'hello', r: 0, at: Date.now(), tick: m.tick });
         else if (m.t === 'roster') line({ t: 'roster', k: m.k, p: m.p });
-        else if (m.t === 'tick' && (m.p?.length || m.rp?.length)) line({ t: 'tick', r: 0, k: m.k, p: m.p, rp: m.rp }); };
+        else if (m.t === 'tick' && (m.p?.length || m.rp?.length)) line({ t: 'tick', r: 0, k: m.k, p: m.p, rp: m.rp }); } catch { /* a frame that is no JSON is left out */ } };
     ws.onerror = () => { /* a bench with no feed writes the first line only */ };
     return () => { try { ws.close(); } catch { /* closed */ } };
 }
 
 if (import.meta.main) {
-    const hours = Number(process.argv[2] ?? 1), dir = resolve(process.argv[3] ?? join(import.meta.dir, '..', '..', '.practice', 'gang-record'));
+    const hours = Number(process.argv[2] ?? 1);
+    if (!Number.isFinite(hours) || hours <= 0 || hours > 24 * 14) { console.log('usage: bun scripts/measure/pk-gang-collect.ts <hours, over 0 and at most 336> [outDir] [name,name,...]'); process.exit(2); }
+    const dir = resolve(process.argv[3] ?? join(import.meta.dir, '..', '..', '.practice', 'gang-record'));
     const names = new Set((process.argv[4] ?? 'goondelf,ligma,sugma').toLowerCase().split(','));
     mkdirSync(dir, { recursive: true });
     const samples = join(dir, 'samples.jsonl');

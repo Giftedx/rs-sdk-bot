@@ -20,7 +20,6 @@ import { BOOST_POTIONS, EDGEVILLE_BANK, hitByPlayer, restock, TRIBRID_KIT, type 
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
-import { tapFeed } from './measure/pk-gang-collect';
 
 // The attack animations of a dragon dagger (content pack/seq.pack): the lunge, the hack and the special.
 const DAGGER_ATTACKS = ['human_ddagger_lunge', 'human_ddagger_hack', 'puncture'];
@@ -396,12 +395,16 @@ if (import.meta.main) {
     // reads it as it reads a trace of the live gang.
     const { serverFromEnv } = await import('../packages/core/src/bot');
     const feedFile = env.SPAR_FEED ? resolve(import.meta.dir, '..', env.BENCH_OUTPUT_DIR ?? '.practice/aio-bench/output', `${env.SPAR_FEED}.feed.jsonl`) : undefined;
-    const stopFeed = feedFile ? tapFeed(`ws://${serverFromEnv(readFileSync(join(resolve(import.meta.dir, '..'), 'vendor', 'rs-sdk', 'bots', bots[0]!, 'bot.env'), 'utf8'))}/worldfeed`, feedFile, { x: 2944, z: 3456, w: 384, h: 384 },
+    const stopFeed = feedFile ? (await import('./measure/pk-gang-collect')).tapFeed(`ws://${serverFromEnv(readFileSync(join(resolve(import.meta.dir, '..'), 'vendor', 'rs-sdk', 'bots', bots[0]!, 'bot.env'), 'utf8'))}/worldfeed`, feedFile, { x: 2944, z: 3456, w: 384, h: 384 },
         { t: 'names', groups: groups.map(([a, ...others]) => ({ ours: a!.name.toLowerCase(), gang: others.map(o => o.name.toLowerCase()) })) }) : undefined;
     const results = await Promise.all(groups.map(([a, ...others], i) => gang(a!, others, options(0, i), (member: number) => options(1, i, member), undefined, () => halted !== undefined, tripCount > 1 ? resupplies[i] : resupplies[i] && { ...resupplies[i]!, count: 1 },
         { wait: env.SPAR_WAIT === undefined ? undefined : Number(env.SPAR_WAIT), gangTrips: gangTripsOf[i], idlePrayerOff: env.SPAR_IDLE_PRAYER_OFF === '1', pickup: pickupOf[i] })));
     for (const r of results) console.log(`GANG ${JSON.stringify({ profiles: { a: nameA, b: gangProfiles.length ? gangProfiles.join('+') : nameB }, kits: { a: kitA, b: kitList }, ...r })}`);
     stopFeed?.();
+    // The measures of each group's meeting from the bench feed go into the case log, which a hosted run keeps.
+    if (feedFile) try { const { contentNames, feedMeetings } = await import('./measure/pk-gang-fidelity'), names = contentNames(), text = readFileSync(feedFile, 'utf8');
+        for (const m of feedMeetings(text, names.obj, names.seq)) console.log(`FEED_MEETING ${JSON.stringify(m)}`);
+        for (const m of feedMeetings(text, names.obj, names.seq, true)) console.log(`FEED_MEETING_ALL ${JSON.stringify(m)}`); } catch (e) { console.log(`FEED_MEETING none: ${e instanceof Error ? e.message : e}`); }
     const s = gangSummary(results), ok = results.every(gangValid) && halted === undefined;
     await finish(groups.flat(), ok, `gang groups=${s.groups} cleared=${s.cleared} died=${s.died} escaped=${s.escaped} away=${s.away} cap=${s.cap} kills=${s.kills} ticks=${s.ticks} a=${nameA} b=${nameB} `
         + `picked=${results.map(r => Object.values(r.picked ?? {}).reduce((n, c) => n + c, 0)).join(',')} valid=${results.filter(gangValid).length} killsEach=${s.killsEach.join(',')} taken=${results.map(r => r.taken).join(',')} eaten=${results.map(r => r.eaten).join(',')} `

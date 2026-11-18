@@ -18,10 +18,10 @@
   },
   {
    "path": ".practice/gang-record/feed-1794981300762.jsonl",
-   "ticks": 8460,
+   "ticks": 9000,
    "from": "2026-11-18T05:55:02.069Z",
-   "to": "2026-11-18T06:51:26.069Z",
-   "frames": 847
+   "to": "2026-11-18T06:55:02.069Z",
+   "frames": 901
   }
  ],
  "levels": {
@@ -56,17 +56,17 @@
   "combat": {
    "value": 125,
    "status": "measured",
-   "n": 12295,
+   "n": 12349,
    "evidence": "the traces of `sources`: the roster rows"
   }
  },
  "kit": {
   "worn": {
    "value": {
-    "blackwizhat,dragon_dagger_p,monkrobetop,monkrobebottom": 1355
+    "blackwizhat,dragon_dagger_p,monkrobetop,monkrobebottom": 1376
    },
    "status": "measured",
-   "n": 1355,
+   "n": 1376,
    "evidence": "the traces of `sources`: each appearance block, by its worn objects"
   },
   "weaponPoison": {
@@ -155,19 +155,32 @@
    "note": "Herblore has no level on any of the three; a drink and an eat share animation 829"
   },
   "runes": {
-   "status": "unknown",
-   "closes": "a cast animation of the name in a longer run of scripts/measure/pk-gang-collect.ts",
-   "cloneRange": {
-    "casts": false
-   },
-   "note": "no cast animation of a gang account is in any trace"
+   "value": "no cast and no shot",
+   "status": "measured",
+   "n": 1727,
+   "evidence": "the traces of `sources`: the names of all animations of the name",
+   "note": "the name attacks with melee only"
   }
  },
  "attack": {
+  "animations": {
+   "value": {
+    "human_ddagger_lunge": 1115,
+    "human_ddagger_block": 424,
+    "puncture": 163,
+    "human_eat": 13,
+    "human_pray": 7,
+    "human_ddagger_hack": 4,
+    "human_pickupfloor": 1
+   },
+   "status": "measured",
+   "n": 1727,
+   "evidence": "the traces of `sources`: each animation of the name, by its name in the content"
+  },
   "ticksBetweenAttacks": {
    "value": {
     "3": 2,
-    "4": 974,
+    "4": 991,
     "5": 60,
     "6": 27,
     "7": 22,
@@ -178,7 +191,7 @@
     "12": 9
    },
    "status": "measured",
-   "n": 1148,
+   "n": 1165,
    "evidence": "the traces of `sources`: animations 376, 377 and 1062"
   },
   "ticksBetweenAttacksWithAnEat": {
@@ -192,22 +205,22 @@
   "tilesToTarget": {
    "value": {
     "0": 13,
-    "1": 287,
+    "1": 302,
     "2": 176,
-    "3": 453,
+    "3": 454,
     "4": 111,
     "5": 116,
     "6": 25,
     "7": 25
    },
    "status": "measured",
-   "n": 1206,
+   "n": 1222,
    "evidence": "the traces of `sources`: the tiles of both at each attack"
   },
   "damage": {
    "value": {
     "attack on a player without Protect from Melee": {
-     "0": 64,
+     "0": 69,
      "1": 2,
      "3": 2,
      "4": 2,
@@ -226,7 +239,7 @@
      "19": 1
     },
     "special on a player with Protect from Melee": {
-     "0": 131,
+     "0": 133,
      "1": 3,
      "2": 5,
      "3": 4,
@@ -257,8 +270,8 @@
      "12": 2
     },
     "special on a player without Protect from Melee": {
-     "0": 36,
-     "1": 3,
+     "0": 41,
+     "1": 4,
      "3": 1,
      "5": 3,
      "6": 4,
@@ -277,26 +290,26 @@
     }
    },
    "status": "measured",
-   "n": 1184,
+   "n": 1197,
    "evidence": "the traces of `sources`: the first splat on the player in the tick of the attack or the 2 ticks after it (two splats for a special), when no second gang account attacked it then",
-   "note": "208 splats with two gang accounts on the player are left out"
+   "note": "214 splats with two gang accounts on the player are left out"
   },
   "specials": {
    "value": {
-    "attacks": 1206,
-    "specials": 158,
+    "attacks": 1222,
+    "specials": 162,
     "perFight": {
-     "0": 28,
+     "0": 29,
      "1": 22,
      "2": 9,
      "3": 8,
-     "4": 9,
+     "4": 10,
      "5": 4,
      "6": 4,
      "7": 2
     },
     "attacksBeforeTheFirst": {
-     "0": 15,
+     "0": 16,
      "1": 29,
      "2": 5,
      "3": 2,
@@ -307,14 +320,14 @@
     }
    },
    "status": "measured",
-   "n": 86,
+   "n": 88,
    "evidence": "the traces of `sources`: the order of each fight (pk-rival-feed.ts digest)"
   },
   "specialAtTargetHp": {
    "value": {
     "90-99": 30,
     "70-79": 41,
-    "80-89": 32,
+    "80-89": 36,
     "60-69": 32,
     "40-49": 5,
     "50-59": 8,
@@ -323,17 +336,17 @@
     "20-29": 4
    },
    "status": "measured",
-   "n": 158,
+   "n": 162,
    "evidence": "the traces of `sources`: the Hitpoints of the player before the splats of the tick of the special"
   },
   "specialAtOwnHp": {
    "value": {
-    "not known": 45,
+    "not known": 49,
     "90-99": 111,
     "80-89": 2
    },
    "status": "measured",
-   "n": 158,
+   "n": 162,
    "evidence": "the traces of `sources`: the last Hitpoints of the name that a splat showed"
   }
  },
@@ -357,6 +370,7 @@
   },
   "ticksFromWeaponChangeToPrayer": {
    "value": {
+    "windowTicks": 8,
     "whenTheOpponentFacesIt": {
      "1": 6,
      "2": 1,
@@ -401,7 +415,7 @@
    "value": {
     "byHeadIcon": {
      "off": {
-      "splats": 418,
+      "splats": 427,
       "damage": 212,
       "highest": 15
      },
@@ -424,7 +438,7 @@
     "poison": 0
    },
    "status": "measured",
-   "n": 438,
+   "n": 447,
    "evidence": "the traces of `sources`: splats on the name, by its protect prayer in that tick"
   },
   "prayerPoints": {
@@ -451,10 +465,11 @@
   "chaosAltarVisits": {
    "value": [
     "2026-11-12T04:49:35.130Z",
-    "2026-11-12T07:33:11.681Z"
+    "2026-11-12T07:33:11.681Z",
+    "2026-11-18T06:52:58.069Z"
    ],
    "status": "measured",
-   "n": 2,
+   "n": 3,
    "evidence": "the traces of `sources`: roster frames within 4 tiles of (2948, 3820)"
   },
   "monasteryVisits": {
@@ -507,15 +522,15 @@
  "movement": {
   "place": {
    "value": {
-    "wilderness": 34,
-    "chaos altar": 0,
-    "post": 64.5,
+    "wilderness": 34.3,
+    "chaos altar": 0.1,
+    "post": 64.2,
     "outside": 0.5,
     "west tile": 0.6,
     "monastery": 0.3
    },
    "status": "measured",
-   "n": 12295,
+   "n": 12349,
    "evidence": "the traces of `sources`: the tile of each roster frame (each 10 ticks)"
   },
   "standsOffThePost": {
@@ -539,17 +554,17 @@
   },
   "steps": {
    "value": {
-    "run": 36298,
-    "walk": 771
+    "run": 36666,
+    "walk": 780
    },
    "status": "measured",
-   "n": 37069,
+   "n": 37446,
    "evidence": "the traces of `sources`: the step records of each tick"
   },
   "farthestFromPost": {
    "value": 317,
    "status": "measured",
-   "n": 12295,
+   "n": 12349,
    "evidence": "the traces of `sources`: roster frames"
   },
   "trips": {
@@ -573,7 +588,7 @@
      "max": 344
     },
     "tilesWalkedOverStraightLineToTheFirstAttack": {
-     "n": 47,
+     "n": 48,
      "min": 0.75,
      "median": 1.15,
      "max": 6.81
@@ -611,14 +626,14 @@
  "targets": {
   "rankByDistanceFromPostOfTheFirstTarget": {
    "value": {
-    "1 of 1": 24,
+    "1 of 1": 25,
     "not in range at the leave": 15,
     "1 of 2": 7,
     "2 of 2": 3,
     "2 of 3": 1
    },
    "status": "measured",
-   "n": 50,
+   "n": 51,
    "evidence": "the traces of `sources`: the players the game lets the name attack at the frame of the leave, nearest to the post first"
   },
   "targetChange": {
@@ -632,9 +647,9 @@
   },
   "targetTilesMovedBetweenTwoAttacks": {
    "value": {
-    "0": 95,
+    "0": 107,
     "1": 45,
-    "2": 96,
+    "2": 97,
     "3": 68,
     "4": 163,
     "5": 60,
@@ -642,10 +657,10 @@
     "7": 53,
     "8": 253,
     "9": 20,
-    "10": 91
+    "10": 92
    },
    "status": "measured",
-   "n": 1074,
+   "n": 1088,
    "evidence": "the traces of `sources`: the tile of the player at two attacks at most 8 ticks apart",
    "note": "a player that moves is still attacked"
   },
@@ -681,8 +696,13 @@
     "walkOutAtHp": [
      20,
      40
+    ],
+    "walkOutFromWildernessLevelAtMost": [
+     16,
+     20
     ]
-   }
+   },
+   "note": "the range of the Hitpoints is the range in which the two samples of the other accounts ended; level 16 is the post and level 20 the last level of a teleport"
   },
   "prayedAgainst": {
    "value": {
@@ -773,7 +793,7 @@
    }
   },
   "status": "measured",
-  "n": 12295,
+  "n": 12349,
   "evidence": "the traces of `sources`: roster frames with the name, of all roster frames of that hour"
  }
 }

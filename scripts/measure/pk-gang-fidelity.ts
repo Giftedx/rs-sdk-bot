@@ -2,7 +2,10 @@
 // measure by measure with the error of each (research/gang-clones.md, "Fidelity").
 //   bun scripts/measure/pk-gang-fidelity.ts live <trace.jsonl> <our account>     the measures of the live meeting
 //   bun scripts/measure/pk-gang-fidelity.ts table <trace.jsonl> <our account> <bench output> [...]
-//     the same beside the mean of the `GANG {json}` lines of the bench outputs (scripts/pk-gang.ts), as a table
+//     the same beside the mean of the bench feed files (`*.feed.jsonl`, scripts/pk-gang.ts SPAR_FEED), as a table
+// A meeting is the gang attacks on our account with no gap of 300 ticks. By default a trace gives its meeting with the
+// most gang attacks, from the first gang attack to the last: poison after the last attack and a later meeting are not
+// counted. `--all` counts every meeting of a trace as one.
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { decodeAppearance } from './pk-rival-feed';
@@ -23,7 +26,8 @@ export type Meeting = {
 // last one. A gap of `GAP` ticks with no gang attack on it ends a meeting; the result is the meeting with the most gang
 // attacks. `obj` names a worn object and `seq` an animation.
 const GAP = 300;
-export function liveMeeting(lines: Iterable<string>, ours: string, obj: (id: number) => string, seq: (id: number) => string = id => String(id), gang: readonly string[] = GANG): Meeting {
+// `all`: every meeting of the trace as one (an account that walked out and came back has two).
+export function liveMeeting(lines: Iterable<string>, ours: string, obj: (id: number) => string, seq: (id: number) => string = id => String(id), gang: readonly string[] = GANG, all = false): Meeting {
     type E = { slot: number; name: string; x: number; z: number; head: number; weapon: string; fe?: number };
     const by = new Map<number, E>(), isGang = (n: string) => gang.includes(n);
     const fresh = (): Meeting => ({ ticks: 0, kills: 0, ourDeaths: 0, hpLost: 0, byAttack: 0, bySpecial: 0, byPoison: 0, ourEats: 0, ourAttacks: 0, ourAttacksOnTheRightPrayer: 0, gangAttacks: 0, gangSpecials: 0, gangEats: 0, gangEatsEach: {}, damageOnGang: 0 });
@@ -77,19 +81,34 @@ export function liveMeeting(lines: Iterable<string>, ours: string, obj: (id: num
     m.kills += tail.kills; m.damageOnGang += tail.onGang;
     m.ticks = first < 0 ? 0 : last - first;
     done.push(m);
-    return done.sort((a, b) => b.gangAttacks - a.gangAttacks)[0]!;
+    if (!all) return done.sort((a, b) => b.gangAttacks - a.gangAttacks)[0]!;
+    const one = fresh();
+    for (const x of done) { for (const key of MEASURES) one[key] += x[key]; for (const [n, c] of Object.entries(x.gangEatsEach)) one.gangEatsEach[n] = (one.gangEatsEach[n] ?? 0) + c; }
+    return one;
 }
 // The meetings of a bench feed file (scripts/pk-gang.ts SPAR_FEED): one for each group that its first line names.
-export function feedMeetings(text: string, obj: (id: number) => string, seq: (id: number) => string): Meeting[] {
+export function feedMeetings(text: string, obj: (id: number) => string, seq: (id: number) => string, all = false): Meeting[] {
     const lines = text.split('\n'); let names: any; try { names = JSON.parse(lines[0] ?? ''); } catch { return []; }
     if (names?.t !== 'names') return [];
-    return (names.groups as { ours: string; gang: string[] }[]).map(g => liveMeeting(lines, g.ours, obj, seq, g.gang)).filter(m => m.gangAttacks > 0);
+    return (names.groups as { ours: string; gang: string[] }[]).map(g => liveMeeting(lines, g.ours, obj, seq, g.gang, all)).filter(m => m.gangAttacks > 0);
 }
 export const MEASURES = ['ticks', 'kills', 'ourDeaths', 'hpLost', 'byAttack', 'bySpecial', 'byPoison', 'ourEats', 'ourAttacks', 'ourAttacksOnTheRightPrayer', 'gangAttacks', 'gangSpecials', 'gangEats', 'damageOnGang'] as const;
 export function meanMeeting(each: readonly Meeting[]): Partial<Meeting> {
     const mean: Partial<Meeting> = {};
     for (const key of MEASURES) if (each.length) mean[key] = Math.round((10 * each.reduce((a, e) => a + e[key], 0)) / each.length) / 10;
     return mean;
+}
+// The names of the content: a worn object and an animation by its id.
+export function contentNames(): { obj: (id: number) => string; seq: (id: number) => string } {
+    const pack = (file: string) => new Map(readFileSync(join(resolve(import.meta.dir, '..', '..'), 'vendor/rs-sdk/server/content/pack', file), 'utf8').split(/\r?\n/).flatMap(l => { const x = l.match(/^(\d+)=(.+)$/); return x ? [[Number(x[1]), x[2]!] as const] : []; }));
+    const objs = pack('obj.pack'), seqs = pack('seq.pack');
+    return { obj: id => objs.get(id) ?? '', seq: id => seqs.get(id) ?? String(id) };
+}
+// The meetings that scripts/pk-gang.ts printed into a case log from its bench feed: `FEED_MEETING {json}` (the meeting
+// with the most gang attacks of each group) or `FEED_MEETING_ALL {json}` (every meeting of a group as one).
+export function logMeetings(text: string, all = false): Meeting[] {
+    const tag = all ? 'FEED_MEETING_ALL ' : 'FEED_MEETING ';
+    return text.split(/\r?\n/).flatMap(l => { const i = l.indexOf(tag); if (i < 0) return []; try { return [JSON.parse(l.slice(i + tag.length)) as Meeting]; } catch { return []; } });
 }
 // The mean of each measure over the `GANG {json}` lines of bench outputs.
 export function benchMeetings(texts: readonly string[]): { n: number; mean: Partial<Meeting>; each: Partial<Meeting>[] } {
@@ -120,16 +139,19 @@ export function fidelityRows(live: Meeting, bench: Partial<Meeting>): { measure:
 }
 
 if (import.meta.main) {
-    const [mode, trace, ours, ...outputs] = process.argv.slice(2);
+    const argv = process.argv.slice(2), all = argv.includes('--all');
+    const [mode, trace, ours, ...outputs] = argv.filter(a => a !== '--all');
     if ((mode !== 'live' && mode !== 'table') || !trace || !ours) { console.log('usage: bun scripts/measure/pk-gang-fidelity.ts live|table <trace.jsonl> <our account> [bench output ...]'); process.exit(2); }
     const pack = new Map(readFileSync(join(resolve(import.meta.dir, '..', '..'), 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8').split(/\r?\n/).flatMap(l => { const x = l.match(/^(\d+)=(.+)$/); return x ? [[Number(x[1]), x[2]!] as const] : []; }));
     const seqs = new Map(readFileSync(join(resolve(import.meta.dir, '..', '..'), 'vendor/rs-sdk/server/content/pack/seq.pack'), 'utf8').split(/\r?\n/).flatMap(l => { const x = l.match(/^(\d+)=(.+)$/); return x ? [[Number(x[1]), x[2]!] as const] : []; }));
-    const live = liveMeeting(readFileSync(trace, 'utf8').split('\n'), ours.toLowerCase(), id => pack.get(id) ?? '', id => seqs.get(id) ?? String(id));
+    const live = liveMeeting(readFileSync(trace, 'utf8').split('\n'), ours.toLowerCase(), id => pack.get(id) ?? '', id => seqs.get(id) ?? String(id), GANG, all);
+    console.log(all ? 'MEETINGS every meeting of each trace as one; a meeting ends at a gap of 300 ticks with no gang attack on our account' : 'MEETINGS the meeting with the most gang attacks of each trace, from its first gang attack to its last; what comes after the last attack (poison, a later meeting) is not counted; --all counts every meeting');
     console.log(`LIVE ${JSON.stringify(live)}`);
     if (mode === 'table') {
         // A bench feed file is read as the live trace is; another output gives the measures of its GANG lines.
-        const feeds = outputs.filter(f => f.endsWith('.feed.jsonl')), each = feeds.flatMap(f => feedMeetings(readFileSync(f, 'utf8'), id => pack.get(id) ?? '', id => seqs.get(id) ?? String(id)));
-        const bench = feeds.length ? { n: each.length, mean: meanMeeting(each) } : benchMeetings(outputs.map(f => readFileSync(f, 'utf8')));
+        // A case log holds the meetings that the driver read from its bench feed.
+        const feeds = outputs.filter(f => f.endsWith('.feed.jsonl')), each = [...feeds.flatMap(f => feedMeetings(readFileSync(f, 'utf8'), id => pack.get(id) ?? '', id => seqs.get(id) ?? String(id), all)), ...outputs.filter(f => !f.endsWith('.feed.jsonl')).flatMap(f => logMeetings(readFileSync(f, 'utf8'), all))];
+        const bench = each.length ? { n: each.length, mean: meanMeeting(each) } : benchMeetings(outputs.map(f => readFileSync(f, 'utf8')));
         console.log(`BENCH ${JSON.stringify({ n: bench.n, mean: bench.mean })}`);
         for (const e of each) console.log(`BENCH_MEETING ${JSON.stringify(e)}`);
         console.log('| Measure | Live | Bench mean | Error |\n|---|---|---|---|');
