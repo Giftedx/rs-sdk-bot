@@ -6,7 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {startStack,type StackOptions} from './stack';
 import {canBind} from './ports';
 import {rsSdkRoot} from './paths';
-import {applyPreset} from './presets';
+import {applyPreset,type SaveConfig} from './presets';
 import {createBot} from './bots';
 import {runBotName} from './prove';
 import {killTree} from './proc';
@@ -86,7 +86,13 @@ export async function runQuestSweepProofCase(o:{dir:string;record:CaseRecord;sav
   out?.cancel();err?.cancel();
   writeFileSync(join(o.dir,record.id+'.log'),(out?.text()??'')+'\n--stderr--\n'+(err?.text()??'')+(failure?'\n--proof--\n'+failure:''));
   try{record.saveMatched=await o.matched();}catch(error){failure||=String(error);}
-  try{copyFileSync(o.save,join(o.dir,record.id+'-after.sav'));}catch(error){failure||=String(error);}
+  try{
+   copyFileSync(o.save,join(o.dir,record.id+'-after.sav'));
+   if(record.id==='elena-heckel-dust'){
+    const observed=(s:Save)=>({position:s.position,magic:s.skills[6],pack:s.inventories[93],bank:s.inventories[95]});
+    console.log('QUEST_SWEEP_ELENA_OBSERVED '+JSON.stringify({before:observed(readPracticeSave(join(o.dir,record.id+'-before.sav'))),after:observed(readPracticeSave(o.save))}));
+   }
+  }catch(error){failure||=String(error);}
   record.seconds=Math.round((Date.now()-t)/1000);o.retain();
  }
  const expected=questSweepExpectedExit(record.id);
@@ -194,7 +200,24 @@ function elenaAssets(before:Save,after:Save){
  const mask=worn.filter(i=>i.id===1506);
  normalized.inventories[94]=worn.filter(i=>i.id!==1506);
  normalized.inventories[93]=[...(normalized.inventories[93]??[]),...mask];
- return mask.length===1&&mask[0]!.slot===0&&sameAssets(before,normalized,{995:-2,2126:-1,1929:-4,1925:4,954:-1,1927:-1,231:-1,1505:1,1506:1});
+ // Staged water becomes four empty buckets. A normal acquisition buys those buckets for eight coins first.
+ const water=total(before,1929);
+ const upstairs=before.position.x===ELENA_DUST_ENTRY.x&&before.position.z===ELENA_DUST_ENTRY.z&&before.position.level===ELENA_DUST_ENTRY.level;
+ const cost:Record<number,number>={995:water===4?-2:-10,1929:-water,2126:-1,1925:4,954:-1,1927:-1,231:-1,1505:1,1506:1};
+ if(upstairs)Object.assign(cost,{563:-1,556:-3,555:-1});
+ return mask.length===1&&mask[0]!.slot===0&&sameAssets(before,normalized,cost);
+}
+
+const ELENA_DUST_ENTRY={x:2529,z:3162,level:1},ELENA_DUST_DOWN={x:2525,z:3162,level:0};
+// shopPlan reserves 124 coins for four buckets across its sellers, plus Heckel's 106-coin reserve.
+const ELENA_COINS=230;
+const ELENA_DUST_FUNDS=[{id:995,count:82904},{id:563,count:1},{id:556,count:4},{id:555,count:2}];
+const ELENA_DUST_BANK=[{id:995,count:1680},{id:1929,count:4}];
+export function questSweepElenaPreset():SaveConfig{
+ // The funded live entry has maxed combat and one Falador teleport (four Air runes cannot cast Camelot).
+ // Water is staged in the bank, so the missing-input pass must still reach a bank before Heckel's shop.
+ return{position:{...ELENA_DUST_ENTRY},skills:{Attack:99,Defence:99,Strength:99,Hitpoints:99,Ranged:99,Prayer:99,Magic:99},bank:ELENA_DUST_BANK.map(i=>({...i})),
+  inventory:[...ELENA_DUST_FUNDS.map(i=>({...i})),...[2126,952,954,1927,231].map(id=>({id,count:1}))]};
 }
 
 const DORIC_ORES=[{id:434,count:6},{id:436,count:4},{id:440,count:2}],PICKAXES=[1265,1267,1269,1271,1273,1275];
@@ -222,10 +245,10 @@ export function questSweepChecks(id:string,before:Save,after:Save,log:string,rec
   oneLogin:(log.match(/^START /gm)??[]).length===1,
   logout:(log.match(/^LOGOUT logged-out$/gm)??[]).length===1&&!/^WARN .*?(?:logout|session close)/m.test(log),
   alive:after.skills[3]!.level>0&&!/\bdied=true\b|^RESULT fail .*died/m.test(log),
-  entryHp:before.skills[3]!.level===(scorpion||scorpionRefused?69:ball||ballMissing?77:imp||elena||rj||clock||totem||hunt?40:ernest||vampire?75:ghost?26:fishing?47:10),
+  entryHp:before.skills[3]!.level===(scorpion||scorpionRefused?69:ball||ballMissing?77:elena&&before.position.level===1?99:imp||elena||rj||clock||totem||hunt?40:ernest||vampire?75:ghost?26:fishing?47:10),
   assets:blackknight?sameAssets(before,after,{995:2500}):elena?elenaAssets(before,after):ball?ballAssets(before,after,{1985:-1,2409:1,2411:1,379:-eaten}):hunt?huntAssets(before,after,eaten):sameAssets(before,after,rj?{753:-1}:totem?{995:-90,373:5,1891:-bites1,1893:bites1-bites2,1895:bites2-bites3}:clock?{995:440,1929:-1,1925:1,379:-eaten}:ernest?{995:300,273:-1,275:1,379:-eaten}:vampire?{1917:-1,379:-eaten}:ghost?{553:-1}:fishing?{995:-5,313:-2,1550:-1,27:1}:success?{1759:-20,995:0}:doric?{995:179,1265:1}:{},doric?MINING_GEM_BYPRODUCTS:[]),
   // The Count fight trains Attack (accurate style), Hitpoints, and Strength or Defence on another style.
-  unrelatedXp:before.skills.every((s,i)=>(elena||doric)&&i===14||success&&i===12||fishing&&i===10||totem&&i===17||ghost&&i===5||(ball||vampire||hunt)&&i<=3||s.rawExperience===after.skills[i]!.rawExperience),
+  unrelatedXp:before.skills.every((s,i)=>(elena||doric)&&i===14||elena&&before.position.level===1&&i===6||success&&i===12||fishing&&i===10||totem&&i===17||ghost&&i===5||(ball||vampire||hunt)&&i<=3||s.rawExperience===after.skills[i]!.rawExperience),
  };
  if(scorpion||scorpionRefused){
   const entry=(scorpionMelee?before.position.x===2655&&before.position.z===3283:before.position.x===3185&&before.position.z===3436)&&before.position.level===0;
@@ -312,17 +335,77 @@ export function questSweepChecks(id:string,before:Save,after:Save,log:string,rec
   skipped:!/^QUEST_SWEEP_(?:BANK|WITHDRAW|BUY|FARE) |^MILESTONE /m.test(log),
   location:after.position.level===2&&Math.max(Math.abs(after.position.x-2960),Math.abs(after.position.z-3336))<=4,
  };
- if(elena)return{...checks,
-  entry:before.position.x===2615&&before.position.z===3332&&before.position.level===0&&total(before,1975)===0&&(before.vars[165]??0)===0&&before.skills[6]!.level===1,
-  bought:lines(log,'QUEST_SWEEP_HECKEL').some(r=>r.item===1975&&r.before===0&&r.after===1&&r.coinsBefore-r.coins===2&&r.observed),
-  treeExit:lines(log,'QUEST_SWEEP_TREE_EXIT').some(r=>r.ok&&r.at?.x===2466&&r.at?.z===3491&&r.at?.level===0),
-  staged:/^MILESTONE quest-sweep elena staged at /m.test(log)&&lines(log,'QUEST_SWEEP_GATE').some(r=>r.ok),
+ if(elena){
+  const dust=lines(log,'QUEST_SWEEP_HECKEL'),approaches=lines(log,'QUEST_SWEEP_HECKEL_APPROACH'),buys=lines(log,'QUEST_SWEEP_BUY');
+  const exact=(p:any,to:{x:number;z:number;level:number})=>p?.x===to.x&&p?.z===to.z&&p?.level===to.level;
+  const near=(p:any,to:{x:number;z:number;level:number},tol:number)=>p?.level===to.level&&Number.isSafeInteger(p.x)&&Number.isSafeInteger(p.z)
+   &&Math.max(Math.abs(p.x-to.x),Math.abs(p.z-to.z))<=tol;
+  const approach=approaches[0],south={x:2461,z:3382,level:0},upstairs=exact(before.position,ELENA_DUST_ENTRY);
+  const downs=lines(log,'QUEST_SWEEP_DOWN'),exits=lines(log,'QUEST_SWEEP_TREE_EXIT'),gates=lines(log,'QUEST_SWEEP_GATE');
+  const treeExit=exits.length===1&&exits[0].ok===true&&exact(exits[0].at,{x:2466,z:3491,level:0});
+  const common={...checks,
+  bought:dust.length===1&&dust[0].item===1975&&dust[0].before===0&&dust[0].after===1&&dust[0].coinsBefore-dust[0].coins===2&&dust[0].observed===true,
   result:/^RESULT ok(?: |$)/m.test(log),
   quest:after.vars[165]===29&&(after.vars[101]??0)===(before.vars[101]??0)+1,
   questList:lines(log,'QUEST_SWEEP_FLAG').some(q=>q.name==='Plague City'&&q.state==='complete'),
   reward:after.skills[14]!.rawExperience-before.skills[14]!.rawExperience===606250,
-  budget:boats.length===0&&!/^QUEST_SWEEP_(?:BUY|FARE) /m.test(log),
- };
+  };
+  const entryInputs=[1925,1975].every(id=>total(before,id)===0)&&[2126,952,954,1927,231].every(id=>carried(before,id)===1)
+   &&(before.vars[165]??0)===0&&before.skills[6]!.level===(upstairs?99:1);
+  const approached=approaches.length===1&&exact(approach.to,south)&&exact(approach.at,south)&&approach.observed===true;
+  if(upstairs){
+   const banks=lines(log,'QUEST_SWEEP_BANK'),done=lines(log,'QUEST_SWEEP_BANK_DONE'),withdraw=lines(log,'QUEST_SWEEP_WITHDRAW');
+   const bankWalk=lines(log,'QUEST_SWEEP_BANK_WALK').find(r=>r.outcome?.ok===true);
+   const spells=lines(log,'QUEST_SWEEP_SPELL'),spell=spells[0];
+   const gate=lines(log,'AGILITY_ENTRY_GATE'),ground={x:2493,z:3488,level:0};
+   const arrival=lines(log,'QUEST_SWEEP_CORRIDOR').find(r=>r.to?.x===ground.x&&r.to?.z===ground.z&&r.ok===true);
+   const staged=lines(log,'MILESTONE quest-sweep elena staged at');
+   const phase=(prefix:string,row:any)=>row?log.indexOf(prefix+' '+JSON.stringify(row)):-1;
+   const order=[phase('QUEST_SWEEP_DOWN',downs[0]),phase('QUEST_SWEEP_BANK',banks[0]),phase('QUEST_SWEEP_BANK_DONE',done[0]),
+    phase('QUEST_SWEEP_HECKEL_APPROACH',approach),phase('AGILITY_ENTRY_GATE',gate[0]),phase('QUEST_SWEEP_CORRIDOR',arrival),
+    phase('QUEST_SWEEP_HECKEL',dust[0]),phase('QUEST_SWEEP_TREE_EXIT',exits[0]),phase('QUEST_SWEEP_GATE',gates[0]),
+    phase('MILESTONE quest-sweep elena staged at',staged[0])];
+   return{...common,
+    entry:entryInputs&&/^START 2529 3162 1$/m.test(log)&&carried(before,1929)===0&&bankCount(before,1929)===4
+     &&ELENA_DUST_FUNDS.every(i=>carried(before,i.id)===i.count)&&bankCount(before,995)===1680
+     &&[0,1,2,3,4,5,6].every(i=>before.skills[i]!.level===99),
+    descent:downs.length===1&&exact(downs[0].from,ELENA_DUST_ENTRY)&&exact(downs[0].to,ELENA_DUST_DOWN)
+     &&near(banks[0]?.from,ELENA_DUST_DOWN,2)&&bankWalk?.at?.level===0,
+    approach:approached&&done.length===1&&done[0].at?.level===0&&exact(approach.from,done[0].at),
+    gate:gate.length===1&&gate[0].at==='2461,3385,0',
+    ground:!!arrival&&near(arrival.at,ground,2)&&Number.isSafeInteger(arrival.try)&&arrival.try>=1&&arrival.try<=3,
+    route:order.every((n,i)=>n>=0&&(i===0||n>order[i-1]!)),
+    treeExit,
+    staged:withdraw.length===1&&withdraw[0].id===1929&&withdraw[0].count===4&&withdraw[0].before===0&&withdraw[0].after===4
+     &&withdraw[0].bankBefore===4&&withdraw[0].bankAfter===0&&withdraw[0].observed===true&&bankCount(after,995)===bankCount(before,995)
+     &&done[0]?.buys?.length===0&&done[0]?.gathers?.length===0
+     &&gates.length===1&&gates[0].ok===true&&exact(gates[0].at,south)&&staged.length===1&&near(staged[0],{x:2569,z:3333,level:0},3),
+    // Falador's one cast costs 1 Law, 3 Air and 1 Water rune and 480 raw XP before the proof's 25x multiplier.
+    travel:spells.length===1&&spell.planned===true&&spell.spell==='Falador teleport'&&!!banks[0]&&!!bankWalk
+     &&exact(spell.from,banks[0].from)&&exact(spell.to,banks[0].to)&&exact(bankWalk.to,banks[0].to)
+     &&phase('QUEST_SWEEP_BANK',banks[0])<phase('QUEST_SWEEP_SPELL',spell)
+     &&phase('QUEST_SWEEP_SPELL',spell)<phase('QUEST_SWEEP_BANK_WALK',bankWalk)
+     &&after.skills[6]!.rawExperience-before.skills[6]!.rawExperience===480*25,
+    budget:eaten===0&&boats.length===0&&buys.length===0&&!/^QUEST_SWEEP_(?:FARE|GATHER|USE) /m.test(log)
+     &&dust.length===1&&dust[0].coinsBefore===82904&&dust[0].coins===82902,
+   };
+  }
+  // Normal acquisition may finish its bucket shopping on either floor. Its descent belongs to that seller leg,
+  // not to START. Gathering water after Heckel also proves arrival outside the tree before quest handover.
+  const water=lines(log,'QUEST_SWEEP_USE').filter(r=>r.item===1929);
+  const gathered=water.length===4&&water.every((r,i)=>r.held===i+1&&r.target===4&&near(r.at,{x:2639,z:3369,level:0},1));
+  return{...common,
+  entry:entryInputs&&exact(before.position,{x:2615,z:3332,level:0})&&total(before,1929)===0&&total(before,995)===ELENA_COINS,
+  descent:approach?.from?.level===0?downs.length===0:downs.some(r=>exact(r.from,ELENA_DUST_ENTRY)&&exact(r.to,ELENA_DUST_DOWN)),
+  approach:approaches.length===1&&(approach.from?.level===0||exact(approach.from,ELENA_DUST_ENTRY))&&exact(approach.to,south)
+   &&near(approach.at,south,1)&&approach.observed===true,
+  treeExit:exits.length?treeExit:gathered,
+  staged:/^MILESTONE quest-sweep elena staged at /m.test(log)&&(gathered||gates.some(r=>r.ok)),
+  budget:boats.length===0&&!/^QUEST_SWEEP_FARE /m.test(log)&&buys.length>0&&buys.every(r=>r.item===1925
+   &&Number.isSafeInteger(r.after-r.before)&&r.after>=r.before&&r.coinsBefore-r.coins===2*(r.after-r.before))
+   &&buys.reduce((n,r)=>n+r.after-r.before,0)===4&&buys.at(-1).after>buys.at(-1).before
+   &&(approach?.from?.level!==1||buys.at(-1).npc==='Bolkoy'),
+ };}
  if(ball||ballMissing)return{...checks,
   entry:before.position.x===2947&&before.position.z===3368&&before.position.level===0&&(before.vars[226]??0)===0
    &&!(before.inventories[94]??[]).some(i=>i.id===1059)&&total(before,1059)===(ball?1:0)
@@ -540,7 +623,7 @@ async function run(dir:string,selected:readonly string[]=QUEST_SWEEP_PROOF_CASE_
  try{
   endpoints=selectQuestSweepProofEndpoints();
   stack=await startQuestSweepProofStack(endpoints);
-  for(const c of ([{id:'scorpion-barcrawl',quest:'scorpion',bank:SCORPION_BANK},{id:'scorpion-ranged-barcrawl',quest:'scorpion',bank:[...SCORPION_BANK,{id:882,count:40}]},{id:'scorpion-complete-refusal',quest:'scorpion',bank:[]},{id:'imp-surplus-beads',quest:'imp',bank:[...IMP_BEADS.map(id=>({id,count:3})),{id:995,count:723},{id:1478,count:1}]},{id:'ball-worn-kit',quest:'ball',bank:[{id:995,count:183752},{id:1059,count:1},{id:1331,count:1}]},{id:'ball-missing-gloves',quest:'ball',bank:[]},...['rj-pirate-letter','rj-pirate-started'].map(id=>({id,quest:'rj',bank:[{id:995,count:183752},{id:1891,count:7},{id:373,count:5}]})),{id:'hunt-crowded',quest:'hunt',bank:[{id:995,count:183752},{id:1891,count:7}]},{id:'totem-started-cakes',quest:'totem',bank:[{id:995,count:183752},{id:1891,count:15},{id:1893,count:1},{id:1895,count:2}]},{id:'clock-stage',quest:'cog',bank:[{id:995,count:183752},{id:1436,count:243}]},{id:'ernest-fortress',quest:'haunted',bank:[{id:273,count:1},{id:952,count:1},{id:379,count:4}]},{id:'vampire-started',quest:'vampire',bank:[{id:379,count:6}]},{id:'fishing-stage',quest:'fishingcompo',bank:[{id:952,count:1},{id:307,count:1},{id:313,count:2},{id:1550,count:1},{id:556,count:5}]},{id:'bank-stage',quest:'sheep',bank:[{id:1759,count:20}]},...['doric-self-supply','doric-no-cash'].map(id=>({id,quest:'doric',bank:[]})),...['retained-ghost','banked-ghost'].map(id=>({id,quest:'priest',bank:[{id:995,count:1127309},{id:1436,count:243},{id:1446,count:1},...(id==='banked-ghost'?[{id:553,count:1}]:[])]})),{id:'elena-heckel-dust',quest:'elena',bank:[{id:995,count:106}]},{id:'blackknight-finish',quest:'blackknight',bank:[]},{id:'fluffs-yard-exit',quest:'fluffs',bank:[]}] as {id:string;quest:string;bank:{id:number;count:number}[]}[]).filter(c=>selected.includes(c.id))){
+  for(const c of ([{id:'scorpion-barcrawl',quest:'scorpion',bank:SCORPION_BANK},{id:'scorpion-ranged-barcrawl',quest:'scorpion',bank:[...SCORPION_BANK,{id:882,count:40}]},{id:'scorpion-complete-refusal',quest:'scorpion',bank:[]},{id:'imp-surplus-beads',quest:'imp',bank:[...IMP_BEADS.map(id=>({id,count:3})),{id:995,count:723},{id:1478,count:1}]},{id:'ball-worn-kit',quest:'ball',bank:[{id:995,count:183752},{id:1059,count:1},{id:1331,count:1}]},{id:'ball-missing-gloves',quest:'ball',bank:[]},...['rj-pirate-letter','rj-pirate-started'].map(id=>({id,quest:'rj',bank:[{id:995,count:183752},{id:1891,count:7},{id:373,count:5}]})),{id:'hunt-crowded',quest:'hunt',bank:[{id:995,count:183752},{id:1891,count:7}]},{id:'totem-started-cakes',quest:'totem',bank:[{id:995,count:183752},{id:1891,count:15},{id:1893,count:1},{id:1895,count:2}]},{id:'clock-stage',quest:'cog',bank:[{id:995,count:183752},{id:1436,count:243}]},{id:'ernest-fortress',quest:'haunted',bank:[{id:273,count:1},{id:952,count:1},{id:379,count:4}]},{id:'vampire-started',quest:'vampire',bank:[{id:379,count:6}]},{id:'fishing-stage',quest:'fishingcompo',bank:[{id:952,count:1},{id:307,count:1},{id:313,count:2},{id:1550,count:1},{id:556,count:5}]},{id:'bank-stage',quest:'sheep',bank:[{id:1759,count:20}]},...['doric-self-supply','doric-no-cash'].map(id=>({id,quest:'doric',bank:[]})),...['retained-ghost','banked-ghost'].map(id=>({id,quest:'priest',bank:[{id:995,count:1127309},{id:1436,count:243},{id:1446,count:1},...(id==='banked-ghost'?[{id:553,count:1}]:[])]})),{id:'elena-heckel-dust',quest:'elena',bank:ELENA_DUST_BANK},{id:'blackknight-finish',quest:'blackknight',bank:[]},{id:'fluffs-yard-exit',quest:'fluffs',bank:[]}] as {id:string;quest:string;bank:{id:number;count:number}[]}[]).filter(c=>selected.includes(c.id))){
    const before=join(dir,c.id+'-before.sav');
    if(existsSync(before))throw Error(`preserve before snapshot: ${before}`);
    const name=selectFreshQuestSweepProofName(cases.length);
@@ -549,14 +632,14 @@ async function run(dir:string,selected:readonly string[]=QUEST_SWEEP_PROOF_CASE_
    if(c.id==='scorpion-ranged-barcrawl')c.bank=SCORPION_RANGED_BANK;
    writeFileSync(envPath,questSweepProofAccountEnv(readFileSync(envPath,'utf8'),endpoints));
    const scorpionMelee=c.id==='scorpion-barcrawl',scorpion=c.quest==='scorpion',scorpionRefused=c.id==='scorpion-complete-refusal',imp=c.quest==='imp',blackknight=c.quest==='blackknight',elena=c.quest==='elena',ball=c.quest==='ball',ballMissing=c.id==='ball-missing-gloves',rj=c.quest==='rj',hunt=c.quest==='hunt',ghost=c.quest==='priest',banked=c.id==='banked-ghost',fishing=c.quest==='fishingcompo',clock=c.quest==='cog',ernest=c.quest==='haunted',vampire=c.quest==='vampire',totem=c.quest==='totem',doric=c.id==='doric-self-supply',doricRefused=c.id==='doric-no-cash',fluffs=c.quest==='fluffs',long=scorpion||fluffs||doric||ball||rj||fishing||clock||ernest||vampire||totem||hunt;
-   const save=await applyPreset(name,scorpion?{position:scorpionMelee?{x:2655,z:3283,level:0}:{x:3185,z:3436,level:0},skills:{Attack:65,Defence:10,Strength:scorpionMelee?65:11,Hitpoints:69,Ranged:99,Prayer:65,Magic:50},varps:{76:scorpionRefused?SCORPION_COMPLETE:0,77:0,101:scorpionRefused?1:0},equipment:[{id:1169,count:1,slot:0},{id:552,count:1,slot:2},{id:scorpionMelee?1333:861,count:1,slot:3},{id:1131,count:1,slot:4},{id:1097,count:1,slot:7},{id:1063,count:1,slot:9}],bank:c.bank,inventory:[]}:totem?{position:{x:2571,z:3250,level:0},skills:{Thieving:99,Hitpoints:40,Magic:1},varps:{200:1,10:8,101:1},bank:c.bank,inventory:[{id:995,count:552}]}:fluffs?{position:FLUFFS_ENTRY,skills:{Hitpoints:10,Magic:1},varps:{180:5},bank:c.bank,inventory:[{id:995,count:25}]}:imp?{position:{x:3104,z:3163,level:2},skills:{Hitpoints:40,Magic:1},bank:c.bank,inventory:[{id:1470,count:1},{id:1470,count:1},{id:1472,count:1},{id:1474,count:1},{id:1476,count:1},{id:995,count:91},{id:433,count:1},{id:1351,count:1}]}:blackknight?{position:{x:3016,z:3512,level:0},skills:{Hitpoints:10,Magic:1},varps:{130:3,101:12,144:100,226:7,178:3},bank:c.bank,inventory:[{id:995,count:490},{id:433,count:1}]}:elena?{position:{x:2615,z:3332,level:0},skills:{Hitpoints:40,Magic:1},bank:c.bank,inventory:[2126,1929,1929,1929,1929,952,954,1927,231].map(id=>({id,count:1}))}:ball?{position:{x:2947,z:3368,level:0},skills:{Attack:94,Strength:83,Defence:76,Hitpoints:77,Magic:1},equipment:[{id:589,count:1,slot:2},{id:1381,count:1,slot:3}],bank:c.bank,inventory:[{id:1985,count:1},...Array.from({length:4},()=>({id:379,count:1}))]}:rj?{position:c.id==='rj-pirate-started'?{x:3210,z:3423,level:0}:{x:2999,z:3383,level:0},skills:{Attack:55,Hitpoints:40,Magic:1},varps:{144:c.id==='rj-pirate-started'?30:0},equipment:[{id:1005,count:1,slot:4}],bank:c.bank,inventory:[{id:995,count:754},{id:433,count:1},{id:753,count:1},{id:555,count:2},{id:556,count:6},{id:952,count:1},{id:1635,count:1},{id:1605,count:1},...Array.from({length:8},()=>({id:1891,count:1})),{id:1893,count:1},{id:1895,count:1},{id:1895,count:1}]}:hunt?{position:{x:2907,z:3147,level:0},skills:{Attack:55,Hitpoints:40,Magic:1,Thieving:99,Cooking:30,Fishing:20,Crafting:51},varps:{200:5,10:8,101:2},bank:c.bank,inventory:[{id:995,count:402},{id:1925,count:1},{id:555,count:2},...Array.from({length:8},()=>({id:1891,count:1})),{id:1893,count:1},...Array.from({length:2},()=>({id:1895,count:1})),...Array.from({length:5},()=>({id:373,count:1})),{id:952,count:1},{id:556,count:6},...Array.from({length:7},()=>({id:1963,count:1}))]}:vampire?{position:{x:3097,z:3267,level:0},skills:{Attack:94,Strength:83,Defence:76,Hitpoints:75,Magic:1},varps:{178:1},equipment:[[1139,0],[552,2],[2402,3],[1101,4],[1171,5]].map(([id,slot])=>({id:id!,count:1,slot:slot!})),bank:c.bank,inventory:[{id:1917,count:1},{id:2347,count:1},{id:1550,count:1},{id:563,count:2}]}:ernest?{position:{x:3029,z:3505,level:1},skills:{Attack:94,Strength:83,Defence:76,Hitpoints:75,Magic:1},varps:{130:2},equipment:[[1139,0],[552,2],[2402,3],[1101,4],[1171,5]].map(([id,slot])=>({id:id!,count:1,slot:slot!})),bank:c.bank,inventory:[{id:995,count:490}]}:clock?{position:{x:3239,z:3275,level:0},skills:{Magic:1,Hitpoints:40,Attack:55},bank:c.bank,inventory:[{id:995,count:112},{id:1929,count:1},{id:1351,count:1},...Array.from({length:4},()=>({id:379,count:1}))]}:fishing?{position:{x:2615,z:3332,level:0},skills:{Fishing:20,Magic:1,Hitpoints:47,Attack:62,Defence:10,Strength:12},bank:c.bank,inventory:[{id:995,count:7350},{id:1351,count:1}]}:ghost?{position:banked?{x:3094,z:3491,level:0}:{x:3113,z:9555,level:0},skills:{Hitpoints:26,Attack:37,Magic:1,Prayer:1},varps:{107:4},equipment:[{id:552,count:1,slot:2}],bank:c.bank,inventory:[...(!banked?[{id:553,count:1}]:[]),{id:556,count:3},{id:557,count:1}]}:{position:c.id==='bank-stage'?{x:2459,z:3385,level:0}:{x:2965,z:3380,level:0},skills:{Hitpoints:10},bank:c.bank,inventory:[...(doricRefused?[]:[{id:995,count:362}]),{id:1351,count:1}]});
+   const save=await applyPreset(name,scorpion?{position:scorpionMelee?{x:2655,z:3283,level:0}:{x:3185,z:3436,level:0},skills:{Attack:65,Defence:10,Strength:scorpionMelee?65:11,Hitpoints:69,Ranged:99,Prayer:65,Magic:50},varps:{76:scorpionRefused?SCORPION_COMPLETE:0,77:0,101:scorpionRefused?1:0},equipment:[{id:1169,count:1,slot:0},{id:552,count:1,slot:2},{id:scorpionMelee?1333:861,count:1,slot:3},{id:1131,count:1,slot:4},{id:1097,count:1,slot:7},{id:1063,count:1,slot:9}],bank:c.bank,inventory:[]}:totem?{position:{x:2571,z:3250,level:0},skills:{Thieving:99,Hitpoints:40,Magic:1},varps:{200:1,10:8,101:1},bank:c.bank,inventory:[{id:995,count:552}]}:fluffs?{position:FLUFFS_ENTRY,skills:{Hitpoints:10,Magic:1},varps:{180:5},bank:c.bank,inventory:[{id:995,count:25}]}:imp?{position:{x:3104,z:3163,level:2},skills:{Hitpoints:40,Magic:1},bank:c.bank,inventory:[{id:1470,count:1},{id:1470,count:1},{id:1472,count:1},{id:1474,count:1},{id:1476,count:1},{id:995,count:91},{id:433,count:1},{id:1351,count:1}]}:blackknight?{position:{x:3016,z:3512,level:0},skills:{Hitpoints:10,Magic:1},varps:{130:3,101:12,144:100,226:7,178:3},bank:c.bank,inventory:[{id:995,count:490},{id:433,count:1}]}:elena?questSweepElenaPreset():ball?{position:{x:2947,z:3368,level:0},skills:{Attack:94,Strength:83,Defence:76,Hitpoints:77,Magic:1},equipment:[{id:589,count:1,slot:2},{id:1381,count:1,slot:3}],bank:c.bank,inventory:[{id:1985,count:1},...Array.from({length:4},()=>({id:379,count:1}))]}:rj?{position:c.id==='rj-pirate-started'?{x:3210,z:3423,level:0}:{x:2999,z:3383,level:0},skills:{Attack:55,Hitpoints:40,Magic:1},varps:{144:c.id==='rj-pirate-started'?30:0},equipment:[{id:1005,count:1,slot:4}],bank:c.bank,inventory:[{id:995,count:754},{id:433,count:1},{id:753,count:1},{id:555,count:2},{id:556,count:6},{id:952,count:1},{id:1635,count:1},{id:1605,count:1},...Array.from({length:8},()=>({id:1891,count:1})),{id:1893,count:1},{id:1895,count:1},{id:1895,count:1}]}:hunt?{position:{x:2907,z:3147,level:0},skills:{Attack:55,Hitpoints:40,Magic:1,Thieving:99,Cooking:30,Fishing:20,Crafting:51},varps:{200:5,10:8,101:2},bank:c.bank,inventory:[{id:995,count:402},{id:1925,count:1},{id:555,count:2},...Array.from({length:8},()=>({id:1891,count:1})),{id:1893,count:1},...Array.from({length:2},()=>({id:1895,count:1})),...Array.from({length:5},()=>({id:373,count:1})),{id:952,count:1},{id:556,count:6},...Array.from({length:7},()=>({id:1963,count:1}))]}:vampire?{position:{x:3097,z:3267,level:0},skills:{Attack:94,Strength:83,Defence:76,Hitpoints:75,Magic:1},varps:{178:1},equipment:[[1139,0],[552,2],[2402,3],[1101,4],[1171,5]].map(([id,slot])=>({id:id!,count:1,slot:slot!})),bank:c.bank,inventory:[{id:1917,count:1},{id:2347,count:1},{id:1550,count:1},{id:563,count:2}]}:ernest?{position:{x:3029,z:3505,level:1},skills:{Attack:94,Strength:83,Defence:76,Hitpoints:75,Magic:1},varps:{130:2},equipment:[[1139,0],[552,2],[2402,3],[1101,4],[1171,5]].map(([id,slot])=>({id:id!,count:1,slot:slot!})),bank:c.bank,inventory:[{id:995,count:490}]}:clock?{position:{x:3239,z:3275,level:0},skills:{Magic:1,Hitpoints:40,Attack:55},bank:c.bank,inventory:[{id:995,count:112},{id:1929,count:1},{id:1351,count:1},...Array.from({length:4},()=>({id:379,count:1}))]}:fishing?{position:{x:2615,z:3332,level:0},skills:{Fishing:20,Magic:1,Hitpoints:47,Attack:62,Defence:10,Strength:12},bank:c.bank,inventory:[{id:995,count:7350},{id:1351,count:1}]}:ghost?{position:banked?{x:3094,z:3491,level:0}:{x:3113,z:9555,level:0},skills:{Hitpoints:26,Attack:37,Magic:1,Prayer:1},varps:{107:4},equipment:[{id:552,count:1,slot:2}],bank:c.bank,inventory:[...(!banked?[{id:553,count:1}]:[]),{id:556,count:3},{id:557,count:1}]}:{position:c.id==='bank-stage'?{x:2459,z:3385,level:0}:{x:2965,z:3380,level:0},skills:{Hitpoints:10},bank:c.bank,inventory:[...(doricRefused?[]:[{id:995,count:362}]),{id:1351,count:1}]});
    copyFileSync(save,before);
    if(freemem()/2**30<FREE_FLOOR_GB)throw Error('practice free memory below floor');
    const stamp=statSync(save).mtimeMs;
    const record:CaseRecord={id:c.id,exit:-1,timedOut:false,saveMatched:false,seconds:0};cases.push(record);retain();
    await runQuestSweepProofCase({dir,record,save,retain,
     // CAP 6000 ticks at 150 ms is 900 s: the Vampire child must reach its own tick-cap failure before this kill.
-    timeoutMs:elena?300000:scorpion&&!scorpionRefused||fluffs||ball||rj||hunt?5400000:vampire||totem||doric?1200000:long?900000:300000,
+    timeoutMs:elena?600000:scorpion&&!scorpionRefused||fluffs||ball||rj||hunt?5400000:vampire||totem||doric?1200000:long?900000:300000,
     spawn:()=>Bun.spawn({...questSweepChildConfiguration(name,c.quest,endpoints!,long||elena?{...process.env,CAP:'6000'}:process.env),windowsHide:true,stdout:'pipe',stderr:'pipe'}),
     matched:async()=>(await waitPracticeSave(save,s=>statSync(save).mtimeMs>stamp&&(scorpionRefused||doricRefused||ballMissing||(scorpion?s.vars[76]===SCORPION_COMPLETE&&s.vars[77]===2:fluffs?s.vars[180]===6:imp?s.vars[160]===2:doric?s.vars[31]===100:blackknight?s.vars[130]===4:elena?s.vars[165]===29:ball?s.vars[226]===7:rj?s.vars[144]===100:hunt?s.vars[71]===4:totem?s.vars[200]===5:clock?((s.vars[10]??0)&15)===8:ernest?s.vars[32]===3:vampire?s.vars[178]===3:ghost?s.vars[107]===5:fishing?s.vars[11]===5:s.vars[179]===22)),{timeoutMs:6000})).matched});
   }

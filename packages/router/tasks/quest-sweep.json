@@ -32,7 +32,7 @@
     "scripts/generated/quest-barcrawl.ts",
     "scripts/shop-buyer.test.ts"
   ],
-  "consumer": "run-biohazard-mightyrod-after-catch-approach completes the missing Biohazard quest on ordinary Mightyrod with args biohazard and unchanged quest-only acceptance, then opens the Underground Pass route gate. Qualification exercises the Scorpion catch-C fault through both real account-parameterized melee and ranged worker CLIs: complete Barcrawl, pass the outpost, catch all three scorpions, complete Scorpion Catcher, reconcile assets, refuse a completed entry and confirm logout. Preserve existing callers. Bigchopper's retained Scorpion consumer requires separate accepted session recovery.",
+  "consumer": "run-plague-mmsmk-teleport-bank-entry completes Plague City on ordinary local mmsmk1232 from its observed funded upstairs entry. The sweep reaches a bank through an owned permitted teleport before Stronghold dust acquisition. run-biohazard-mmsmk-teleport-bank-entry then completes Biohazard and opens the Underground Pass route gate. The real worker CLI practice proves the exact entry, useful quest completion, reconciled assets and logout through elena-heckel-dust. Preserve existing Scorpion completion and completed-entry refusal checks and all existing callers.",
   "checks": [
     {
       "id": "quest-sweep-regressions",
@@ -63,7 +63,8 @@
         "bun",
         "packages/practice/src/quest-sweep-proof.ts",
         "--case=scorpion-barcrawl",
-        "--case=scorpion-complete-refusal"
+        "--case=scorpion-complete-refusal",
+        "--case=elena-heckel-dust"
       ],
       "timeoutMs": 1800000
     },
@@ -75,7 +76,8 @@
         "packages/practice/src/quest-sweep-proof.ts",
         "--verify",
         "--case=scorpion-barcrawl",
-        "--case=scorpion-complete-refusal"
+        "--case=scorpion-complete-refusal",
+        "--case=elena-heckel-dust"
       ],
       "timeoutMs": 30000
     }

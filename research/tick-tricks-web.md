@@ -182,7 +182,7 @@ Fastest Crafting here: battlestaves or gems at 5 per tick. Supply is the limit. 
 | Item | Evidence | Status |
 |---|---|---|
 | Unfinished and finished potions, grinding, identify: no delay | `c/skill_herblore/scripts/brewing/brew_potion.rs2`, `grinding/grind_ingredient.rs2`, `identifying/identify.rs2` (no `p_delay` or queue; grep result) | code: 5 per tick |
-| OSRS tick-manipulation tar | swamp tar did not exist in 2004; the knife gives the same 2-tick timer | not needed |
+| OSRS tick-manipulation tar | herb tar mixing did not exist in rev 289 (`swamp_tar` exists only as a quest/boat item); the knife gives the same 2-tick timer | not needed |
 
 ## 8. Agility
 

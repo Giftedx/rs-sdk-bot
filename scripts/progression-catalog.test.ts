@@ -2,7 +2,7 @@ import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {aioRoutes} from './script-index';
-import {progressiveSkillerAlternatives} from './aio-skiller';
+import {planProgressiveSkiller,progressiveSkillerAlternatives} from './aio-skiller';
 import {buildProgressionCatalog} from './progression-catalog';
 import {aioRouteKeys} from './measure/aio-bench-cases';
 import {catalogue} from '../packages/planner/src/autopilot';
@@ -31,6 +31,13 @@ test('generated runtime metadata matches its real catalog source',()=>{
  expect(JSON.parse(readFileSync(resolve(root,'packages/planner/data/progression-routes.json'),'utf8'))).toEqual(buildProgressionCatalog(root));
  const runtime=readFileSync(resolve(root,'packages/planner/src/progression-catalog.ts'),'utf8');
  expect(runtime).not.toMatch(/from\s+['"][^'"]*(?:scripts\/aio|scripts\/microbot|scripts\/gather)/);
+});
+
+test('native GE fixture modes are classified only for local practice without a live route',()=>{
+ const c=buildProgressionCatalog(),script='packages/practice/src/ge-bulk-order-proof.ts';
+ expect(c.entries.find(e=>e.script===script)).toEqual({script,intents:['service','observe'],skills:[],routeIds:[],practiceOnly:true});
+ expect(c.routes.some(r=>r.script===script)).toBe(false);
+ expect(c.methods.some(m=>m.step.script===script)).toBe(false);
 });
 
 test('skiller alternatives retain lower unlocked methods and finite targets',()=>{
@@ -67,4 +74,22 @@ test('shipped trainer and quest templates preserve their declared consumer throu
  for(const work of [{script:'scripts/shop-buyer.ts',args:['dargaud','1600'],env:{ITEMS:'mithril.arrow|bronze.arrow',STOCK_TARGET:'500'}},
   {script:'scripts/fleet-trade.ts',args:['.practice/fleet-data/fleet/orders/one.json'],env:{}},
   {script:'scripts/microbot-production.ts',args:['cut-sapphire'],env:{MAX_MAKE:'10'}}])expect(intentForEntry(work.script,work.args,work.env,undefined,c)).not.toBeNull();
+});
+
+test('progressive skiller covers smithing anvil, thieving sub-55, magic splash, runecraft early, agility barb XP, and prayer dragon bones',()=>{
+ expect(planProgressiveSkiller('smithing',48,99).map(b=>b.step.env.PRODUCT_ID).filter(Boolean)).toEqual(['1119','1121','1123']);
+ expect(planProgressiveSkiller('thieving',1,55).map(b=>b.unlockLevel)).toEqual([1,5,40]);
+ expect(planProgressiveSkiller('magic',1,21).map(b=>`${b.method}:${b.step.args[0]??'-'}`)).toEqual(['order:-','splash:11','splash:19','splash:21']);
+ expect(planProgressiveSkiller('runecraft',1,44).map(b=>b.unlockLevel)).toEqual([1,2,5,9,14,20]);
+ expect(planProgressiveSkiller('agility',35,52,1)[0]!.xpPerUnit).toBe(114.5);
+ expect(planProgressiveSkiller('prayer',44,99)[0]!.step.env.BONE_ID).toBe('536');
+});
+
+test('catalog maps smithing anvil, magic, runecraft F2P altars, fletching, woodcutting, and pickpocket rungs',()=>{
+ const c=buildProgressionCatalog();
+ expect((c.unmapped??[]).length).toBeLessThan(160);
+ expect(c.methods.length).toBeGreaterThan(700);
+ const coveredIds=new Set(c.methods.flatMap(m=>[m.id,...(m.ladderIds??[])]));
+ for(const id of ['smithing/anvil-steel-platebody','magic/high-alch','magic/npc-wind-strike','runecraft/nature','fletching/arrows-rune','woodcutting/yew','thieving/pickpocket-knight-of-ardougne','prayer/bury-dragon_bones'])
+  expect(coveredIds.has(id),id).toBe(true);
 });

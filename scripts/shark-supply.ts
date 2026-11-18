@@ -63,8 +63,11 @@ export function sharkAssetCheck(before:Record<number,number>,after:Record<number
         const id=Number(k);return (after[id]??0)-(before[id]??0)===(delta[id]??0);
     });
 }
-export function harpoonPurchase(price:number,stock:number,cash:number,maxCost=200,reserve=1000) {
+export function fishingToolPurchase(price:number,stock:number,cash:number,maxCost=200,reserve=1000) {
     return Number.isSafeInteger(price)&&price>0&&price<=maxCost&&Number.isSafeInteger(stock)&&stock>0&&cash-price>=reserve;
+}
+export function harpoonPurchase(price:number,stock:number,cash:number,maxCost=200,reserve=1000) {
+    return fishingToolPurchase(price,stock,cash,maxCost,reserve);
 }
 export type SharkOptions={target:number;maxTicks:number;consumer:string;stop?:()=>boolean;recoveryTicks?:number;walker?:(s:Session)=>Promise<PathDeps>};
 export async function supplySharks(s:Session,o:SharkOptions) {

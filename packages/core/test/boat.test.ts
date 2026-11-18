@@ -122,3 +122,15 @@ test('a walk that starts on a ship deck crosses the gangplank first, and nothing
     const held = fake({ deck: { x: 2775, z: 3234 } });
     try { Object.assign(held.player, { worldX: 2775, worldZ: 3234, level: 1 }); expect(await leaveDeck(held.s as any, () => true)).toBe('stuck'); } finally { held.stop(); }
 });
+
+test('disembark queries findNearbyLoc for a reachable Cross gangplank', async () => {
+    const calls: unknown[] = [];
+    const deck = fake({ deck: { x: 2775, z: 3234 } });
+    const orig = deck.s.sdk.findNearbyLoc;
+    deck.s.sdk.findNearbyLoc = (pattern: RegExp, options?: unknown) => { calls.push([pattern, options]); return orig(pattern); };
+    try {
+        Object.assign(deck.player, { worldX: 2775, worldZ: 3234, level: 1 });
+        expect(await disembark(deck.s as any)).toMatchObject({ ok: true });
+        expect(calls[0]).toEqual([/^gangplank$/i, { withOption: /^cross$/i, reachable: true }]);
+    } finally { deck.stop(); }
+});

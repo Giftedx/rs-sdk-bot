@@ -1629,6 +1629,12 @@ test('an army account under the Magic Guild level buys curse runes, then water a
     const betty = run([soldier('Kilt', { ...stocked, 'water rune': 6 })], { pilots: new Set([...pilots, 'army-water-betty']), capacity: { ...CAPACITY, 'shop:aubury': 0 } })[0]!;
     expect(jobFor(betty, side)).toMatchObject({ script: 'scripts/chain.ts', resources: ['shop:betty'] });
     expect(betty.template!.args![0]).toContain(`scripts/shop-buyer.ts betty 3000 ITEMS=water.rune STOCK_TARGET=${SPLASH_KIT['water rune']} `);
+    // With earth and water runes held and body runes short (absent from market or buy retired): Aubury's body-rune shop run.
+    const noBody = run([soldier('Kilt', { 'earth rune': SPLASH_KIT['earth rune'], 'water rune': SPLASH_KIT['water rune'], 'body rune': 6 })],
+        { pilots: new Set([...pilots, 'army-body-aubury']), market: { 'earth rune': runes['earth rune']! } })[0]!;
+    expect(noBody.template!.id).toBe('army-body-aubury');
+    expect(jobFor(noBody, side)).toMatchObject({ script: 'scripts/chain.ts', resources: ['shop:aubury'] });
+    expect(noBody.template!.args![0]).toContain(`scripts/shop-buyer.ts aubury 3000 ITEMS=body.rune STOCK_TARGET=${SPLASH_KIT['body rune']} `);
     // With the whole kit: the band, to the Magic Guild's level, on the fence tile.
     const full = { ...stocked, 'water rune': SPLASH_KIT['water rune'] };
     const [cast] = run([soldier('Kilt', full)]);
@@ -2113,7 +2119,7 @@ test('the halberd build trains Thieving and Agility, then takes Underground Pass
     expect(first({ Thieving: 50, Agility: 68 }, { ...kit, coin: 2_000_000, 'magic shortbow': 0, 'rune arrow': 100 }, [], { market })).toBe(KIT_BUY + 'army-quest-upass');
 });
 
-import { ARMY_BANK, FERRY_FARE, KNIGHT_BANK, PLACES, TOLL, meetFor, onKaramja, placeOf, wayCost } from '../src/autopilot';
+import { ARMY_BANK, FERRY_FARE, KNIGHT_BANK, PLACES, TOLL, inWestArdougne, meetFor, onKaramja, placeOf, wayCost } from '../src/autopilot';
 
 const TAVERLEY = { x: 2877, z: 3501, level: 0 }, DRAYNOR = { x: 3092, z: 3242, level: 0 }, ARDOUGNE = { x: 2654, z: 3283, level: 0 }, SEERS = { x: 2727, z: 3493, level: 0 };
 const MUSA_POINT = { x: 2920, z: 3160, level: 0 }, TUTORIAL = { x: 3094, z: 3106, level: 0 }, TOLL_SIDE = { x: 3269, z: 3164, level: 0 };
@@ -2449,4 +2455,158 @@ test('remote shortage preparation spends a remote cash donor once and retains it
     const out=plan(inputs(accounts,extra));expect(out.filter(x=>x.fund)).toHaveLength(1);
     expect(out.find(x=>x.fund)!.fund).toMatchObject({from:'CloudCash',coins:15000});
     expect(plan(inputs(accounts,{...extra,stock:[{name:'CloudCash',side:'local',items:{coin:64999}},extra.stock![1]!]})).some(x=>!!x.fund)).toBe(false);
+});
+
+test('plan stays fast with an expanded army roster, pilot allowlist and full supply bill',()=>{
+    const templates=catalogue(),pilots=new Set(templates.filter(t=>t.pilot&&t.id!=='aio-ore').map(t=>t.id));
+    const spots=[{x:2582,z:3297,level:0},{x:3185,z:3436,level:0},{x:2653,z:3300,level:0},{x:3269,z:3166,level:0}];
+    const accounts=Array.from({length:28},(_,i)=>({...acct(`Helper${i}`,{Thieving:70,Cooking:50,Crafting:50,Smithing:70,Woodcutting:60,Magic:30},{coin:100_000,flax:56,'yew logs':20}),pos:spots[i%4]}));
+    const army=new Set(accounts.map(a=>a.name.toLowerCase()));
+    const names=['sapphire ring','emerald ring','ruby ring','diamond ring','mithril bar','adamantite bar','yew shortbow','uncooked stew','unicorn horn dust','dragon scale dust'];
+    const bill=Array.from({length:30},(_,i)=>row(names[i%10]!,50));
+    const started=performance.now();
+    const out=plan(inputs(accounts,{templates,pilots,army,bill,capacity:CAPACITY,prices:{...prices,'bow string':200,'yew shortbow':800,flax:50,'mithril bar':500},donors:accounts.map(a=>({name:a.name,coins:100_000}))}));
+    expect(performance.now()-started).toBeLessThan(5000);
+    expect(out.filter(x=>x.template).length).toBeGreaterThan(0);
+});
+
+test('accounts trapped inside West Ardougne cannot reach outside targets, donors or kit-buy GE trips',()=>{
+    const west={x:2547,z:3325,level:0};
+    expect(inWestArdougne(west)).toBe(true);
+    expect(inWestArdougne(ARDOUGNE)).toBe(false);
+    expect(inWestArdougne({x:2525,z:3242,level:0})).toBe(false);
+    expect(wayCost(west,KNIGHT_BANK,true)).toBeNull();
+    expect(wayCost(west,{x:3185,z:3436},true)).toBeNull();
+    expect(meetFor(west)).toBeNull();
+    const dragon=catalogue().find(t=>t.id==='army-hunt-black-dragons')!;
+    const trapped={...acct('Mightyrod',{Attack:99,Strength:99,Defence:99,Ranged:99,Magic:99,Prayer:99,Hitpoints:99},{coin:500_000,'law rune':4}),pos:west};
+    const out=plan(inputs([trapped],{templates:[dragon],army:new Set(['mightyrod']),pilots:new Set([dragon.id]),donors:[{name:'Rich',coins:500_000}]}))[0]!;
+    expect(out.template).toBeUndefined();expect(out.fund).toBeUndefined();expect(out.send).toBeUndefined();
+});
+
+test('assess keeps a single preparation/acquire block as drain but retires RETIRE_FAILS consecutive blocks',()=>{
+    const prep='RESULT fail no Ranged progress: {"ok":false,"stop":"preparation","failure":"progression requires acquire"}';
+    expect(assess([prep])).toMatchObject({retire:false,drains:1});
+    expect(assess([prep,prep])).toMatchObject({retire:true,drains:2});
+    expect(assess([prep,'RESULT ok xpGain=50',prep])).toMatchObject({retire:false,drains:2});
+});
+
+import { ARMOUR_BAND, ARMOUR_MARKET, RANGED_ARMOUR_BAND, WEAPON_BAND } from '../src/autopilot';
+
+test('progressive weapon and armour ladder stages Zeke, Adamant, Rune, Dragon, and Green Dhide tiers', () => {
+    const all = catalogue();
+    const zekeIron = all.find(t => t.id === 'army-weapon-zeke-iron')!;
+    const zekeMith = all.find(t => t.id === 'army-weapon-zeke-mithril')!;
+    const scavvo = all.find(t => t.id === 'army-armour-scavvo')!;
+    expect(zekeIron.resources).toEqual(['shop:zeke']);
+    expect(zekeMith.needs?.skills).toEqual({ Attack: 20 });
+    expect(scavvo.resources).toEqual(['shop:scavvo']);
+    expect(scavvo.needs?.questPoints).toBe(32);
+
+    const army = new Set(['fighter']);
+    const cowOnly = all.filter(t => t.id === 'army-cow-strength-45');
+    const mk = (skills: Record<string, number>, items: Record<string, number>, quests: string[] = []): Acct =>
+        ({ ...acct('Fighter', { Hitpoints: 70, ...skills }, { shark: 40, coin: 1_000_000, ...items }), quests: new Set(quests) });
+    const runeMkt = {
+        'rune scimitar': { id: 1333, name: 'Rune scimitar', limit: KIT_PRICE_CAPS['rune scimitar']! },
+        'rune longsword': { id: 1303, name: 'Rune longsword', limit: KIT_PRICE_CAPS['rune longsword']! },
+        'dragon dagger': { id: 1215, name: 'Dragon dagger', limit: KIT_PRICE_CAPS['dragon dagger']! },
+        'rune chainbody': { id: 1113, name: 'Rune chainbody', limit: KIT_PRICE_CAPS['rune chainbody']! },
+        'rune platebody': { id: 1127, name: 'Rune platebody', limit: KIT_PRICE_CAPS['rune platebody']! },
+        'rune plateleg': { id: 1079, name: 'Rune platelegs', limit: KIT_PRICE_CAPS['rune plateleg']! },
+        'rune full helm': { id: 1163, name: 'Rune full helm', limit: KIT_PRICE_CAPS['rune full helm']! },
+        'rune kiteshield': { id: 1201, name: 'Rune kiteshield', limit: KIT_PRICE_CAPS['rune kiteshield']! },
+        'dragonhide body': { id: 1135, name: 'Dragonhide body', limit: KIT_PRICE_CAPS['dragonhide body']! },
+        'dragonhide chap': { id: 1099, name: 'Dragonhide chaps', limit: KIT_PRICE_CAPS['dragonhide chap']! },
+        'dragon vambrace': { id: 1065, name: 'Dragon vambraces', limit: KIT_PRICE_CAPS['dragon vambrace']! },
+    };
+
+    const at40 = plan(inputs([mk({ Attack: 40, Strength: 30 }, {})], { templates: cowOnly, army, market: runeMkt }))[0]!;
+    expect(at40.template!.id).toBe(KIT_BUY + 'army-weapon-rune');
+    expect(at40.resources).toEqual([WEAPON_MARKET]);
+    expect(WEAPON_BAND).toBe(3.5);
+
+    const longFallback = plan(inputs([mk({ Attack: 40, Strength: 30 }, {})], {
+        templates: cowOnly, army, market: { 'rune longsword': runeMkt['rune longsword'] },
+    }))[0]!;
+    expect(longFallback.template!.id).toBe(KIT_BUY + 'army-weapon-rune');
+    expect(longFallback.reason).toContain('Rune longsword');
+
+    const dragonPreQuest = plan(inputs([mk({ Attack: 60, Strength: 60 }, { 'rune scimitar': 1 })], {
+        templates: cowOnly, army, market: runeMkt,
+    }))[0]!;
+    expect(dragonPreQuest.template?.id).not.toBe(KIT_BUY + 'army-weapon-dragon');
+
+    const dragonReady = plan(inputs([mk({ Attack: 60, Strength: 60 }, { 'rune scimitar': 1 }, ['lost city'])], {
+        templates: cowOnly, army, market: runeMkt,
+    }))[0]!;
+    expect(dragonReady.template!.id).toBe(KIT_BUY + 'army-weapon-dragon');
+
+    const runeArmourPreDs = plan(inputs([mk({ Attack: 60, Defence: 40, Strength: 60 }, { 'dragon dagger': 1 }, ['lost city'])], {
+        templates: cowOnly, army, market: runeMkt,
+    }))[0]!;
+    expect(runeArmourPreDs.template!.id).toBe(KIT_BUY + 'army-armour-rune');
+    expect(runeArmourPreDs.resources).toEqual([ARMOUR_MARKET]);
+    expect(runeArmourPreDs.reason).toContain(`army band ${ARMOUR_BAND}`);
+    expect(runeArmourPreDs.reason).toContain('Rune chainbody');
+    expect(runeArmourPreDs.reason).not.toContain('Rune platebody');
+
+    const dhideAt40 = plan(inputs([mk({ Attack: 60, Defence: 1, Ranged: 40, Strength: 60 }, { 'dragon dagger': 1 }, ['lost city'])], {
+        templates: cowOnly, army, market: runeMkt,
+    }))[0]!;
+    expect(dhideAt40.template!.id).toBe(KIT_BUY + 'army-armour-dhide');
+    expect(dhideAt40.reason).toContain(`army band ${RANGED_ARMOUR_BAND}`);
+    expect(dhideAt40.reason).toContain('Dragonhide chaps');
+    expect(dhideAt40.reason).not.toContain('Dragonhide body');
+});
+
+test('Nurmof pickaxe shop tiers upgrade miners only up to their Mining level threshold', () => {
+    const all = catalogue().filter(t => t.id.startsWith('tool-pickaxe-'));
+    expect(all.map(t => [t.id, t.resources?.[0]])).toEqual([
+        ['tool-pickaxe-rune', 'shop:nurmof'],
+        ['tool-pickaxe-adamant', 'shop:nurmof'],
+        ['tool-pickaxe-mithril', 'shop:nurmof'],
+        ['tool-pickaxe-steel', 'shop:nurmof'],
+        ['tool-pickaxe-iron', 'shop:nurmof'],
+    ]);
+    const miner = acct('Miner', { Mining: 41 }, { coin: 50_000, 'bronze pickaxe': 1 });
+    const next = plan(inputs([miner], { templates: all, army: new Set(['miner']), bill: [row('iron ore', 10)], prices: { 'iron ore': 100 } }))[0]!;
+    expect(next.template!.id).toBe('tool-pickaxe-rune');
+
+    const alreadyRune = acct('Miner', { Mining: 41 }, { coin: 50_000, 'rune pickaxe': 1 });
+    const none = plan(inputs([alreadyRune], { templates: all, army: new Set(['miner']), bill: [row('iron ore', 10)], prices: { 'iron ore': 100 } }))[0]!;
+    expect(none.template).toBeUndefined();
+});
+
+test('autopilot sets ranged MAX_SPEND, excludes rune platebody holders from Scavvo, normalizes wc tool demand, and narrows ranged jobResources', () => {
+    const ranged = catalogue().find(t => t.id === 'army-trooper-ranged-99')!;
+    expect(ranged.env?.MAX_SPEND).toBe('55000');
+
+    const scavvo = catalogue().find(t => t.id === 'army-armour-scavvo')!;
+    const mkScavvo = (items: Record<string, number>) => ({ ...acct('Tank', { Defence: 40 }, { coin: 120_000, ...items }), questPoints: 32 });
+    const needScavvo = plan(inputs([mkScavvo({})], { templates: [scavvo], army: new Set(['tank']) }))[0]!;
+    expect(needScavvo.template?.id).toBe('army-armour-scavvo');
+    const skipScavvo = plan(inputs([mkScavvo({ 'rune platebody': 1, 'rune plateleg': 1 })], { templates: [scavvo], army: new Set(['tank']) }))[0]!;
+    expect(skipScavvo.template).toBeUndefined();
+
+    const zekeIron = catalogue().find(t => t.id === 'army-weapon-zeke-iron')!;
+    const freshBlade = acct('NewBlade', { Attack: 1 }, { coin: 500 });
+    expect(plan(inputs([freshBlade], { templates: [zekeIron], army: new Set(['newblade']) }))[0]?.template?.id).toBe('army-weapon-zeke-iron');
+
+    const goldfarm = catalogue().find(t => t.id === 'goldfarm@2652,3318')!;
+    const lumber = acct('Lumber', { Woodcutting: 60, Attack: 1 }, { 'bronze axe': 1 });
+    const thief = acct('Helper', { Thieving: 60 }, {});
+    const withDemand = plan(inputs([lumber, thief], {
+        templates: [goldfarm], army: new Set(['lumber']), bill: [row('yew log', 10)], prices: {},
+    }));
+    expect(withDemand.find(x => x.account === 'Helper')?.template?.id).toBe('goldfarm@2652,3318');
+    const noDemand = plan(inputs([lumber, thief], {
+        templates: [goldfarm], army: new Set(['lumber']), bill: [], prices: {},
+    }));
+    expect(noDemand.find(x => x.account === 'Helper')?.template).toBeUndefined();
+
+    expect(jobResources({ script: 'scripts/ranged-train.ts', env: { PROGRESSION_METHOD: 'ranged/chickens-oak' } })).toEqual(['pen:3229,3298']);
+    for (const m of ['ranged/troopers-oak', 'ranged/troopers-willow', 'ranged/troopers-maple']) {
+        expect(jobResources({ script: 'scripts/ranged-train.ts', env: { PROGRESSION_METHOD: m } })).toEqual(['trooper:battlefield']);
+    }
 });

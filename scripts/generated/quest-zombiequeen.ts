@@ -73,7 +73,7 @@ try {
     // (trial t6: 4 rubble searches, the choice never opened), so the bot kills any within 5 tiles that has a target first.
     const clearUndead = async (label: string) => {
         for (let k = 0; k < 6; k++) {
-            const n = (q.st()?.nearbyNpcs ?? []).filter((m: any) => /^undead one$/i.test(m.name) && m.distance <= 5 && (m.targetIndex ?? -1) >= 0).sort((a: any, b: any) => a.distance - b.distance)[0];
+            const n = (q.st()?.nearbyNpcs ?? []).filter((m: any) => /^undead one$/i.test(m.name) && m.reachable !== false && m.distance <= 5 && (m.targetIndex ?? -1) >= 0).sort((a: any, b: any) => a.distance - b.distance)[0];
             if (!n) return;
             for (let j = 0; j < 8 && (q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index); j++) {
                 await q.guard(label);
@@ -339,16 +339,17 @@ try {
                 if (!n) return;
                 await q.attack(n);
                 await q.waitUntil(() => !(q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index), 6);
-                if (q.dialogOpen()) await q.converse([], () => !q.dialogOpen(), 6);
+                if (q.dialogOpen()) await q.converse([], () => !q.dialogOpen(), 6, false);
             }
         };
         for (let f = 1; f <= 3; f++) {
             await kill(`nazastarool ${f}`);
-            await q.converse([], () => !!q.npc(/^nazastarool$/i) || q.sawText(/something appear on the dolmen/i) || msgSince(/something appear on the dolmen/i, 0), 20);
+            // Single-step phase-transition mesboxes so @summon_nazastarool and its npc_delay(1) settle cleanly.
+            await q.converse([], () => !!q.npc(/^nazastarool$/i) || q.sawText(/something appear on the dolmen/i) || msgSince(/something appear on the dolmen/i, 0), 20, false);
             q.milestone(`naza${f}`);
             if (q.sawText(/something appear on the dolmen/i) || msgSince(/something appear on the dolmen/i, 0)) break;
         }
-        await q.converse([], () => !q.dialogOpen(), 10);
+        await q.converse([], () => !q.dialogOpen(), 10, false);
         // After the fight the bot can stand outside the door on 2893,9480 (2 of 3 runs), where the dolmen answers "I can't
         // reach that!": the door moves it back in (:1359-1364). No undead chase here: that is a way out of the room.
         for (let i = 0; i < 8 && !q.has(ITEM.corpse); i++) {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { bankNear, leaveWilderness, openSquad, rescueDropped, squadPaused, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
+import { bankNear, leaveWilderness, openSquad, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
 import { assertActionScope } from '../packages/core/src/action-scope';
 
@@ -171,8 +171,37 @@ describe('escapeCastable', () => {
     });
 });
 
+describe('squadEscapeSpell', () => {
+    test('picks Camelot with worn Staff of air, falls back to Varrock below Magic 45, and skips deep Wilderness', () => {
+        expect(squadEscapeSpell(3632, [{ id: 563, count: 1 }], [1381], 45)).toBe(1174);
+        expect(squadEscapeSpell(3632, [{ id: 563, count: 1 }, { id: 556, count: 3 }, { id: 554, count: 1 }], [], 25)).toBe(1164);
+        expect(squadEscapeSpell(3632, [{ id: 563, count: 1 }, { id: 556, count: 3 }], [1387], 30)).toBe(1164);
+        expect(squadEscapeSpell(3715, [{ id: 563, count: 1 }], [1381], 99)).toBeNull();
+        expect(squadEscapeSpell(3632, [{ id: 563, count: 1 }], [], 99)).toBeNull();
+    });
+});
+
 test('bankNear: Varrock West for the east multi-way zone, Edgeville west of it', () => {
     expect(bankNear(3200)).toEqual(VARROCK_WEST_BANK);
     expect(bankNear(3136)).toEqual(VARROCK_WEST_BANK);
     expect(bankNear(3067)).toEqual({ x: 3092, z: 3496 });
+});
+
+test('pickSquadFocus prioritizes stunned targets, skips single-way PJ fights, and squadFallbackPlan handles multi/dry retreats', () => {
+    const view = [
+        { name: 'Goondelf', index: 1, distance: 2, x: 3067, z: 3640, combatLevel: 120, inCombat: true },
+        { name: 'Ligma', index: 2, distance: 3, x: 3067, z: 3641, combatLevel: 120, inCombat: false },
+        { name: 'Sugma', index: 3, distance: 1, x: 3067, z: 3642, combatLevel: 120, inCombat: true },
+    ];
+    const targets = new Set(['goondelf', 'ligma', 'sugma']);
+    const hp: Record<number, number> = { 1: 0.3, 2: 0.7, 3: 0.6 };
+    // In single-way combat, Goondelf/Sugma already inCombat are skipped for anti-PJ unless it's activeFocus.
+    expect(pickSquadFocus({ view, targets, health: p => hp[p.index]!, inMulti: false, stunned: new Set(['sugma']) })?.name).toBe('Ligma');
+    // In multi-way combat, stunned Sugma takes priority focus pile over un-stunned Goondelf.
+    expect(pickSquadFocus({ view, targets, health: p => hp[p.index]!, inMulti: true, stunned: new Set(['sugma']) })?.name).toBe('Sugma');
+
+    expect(squadFallbackPlan({ z: 3640, hp: 50, maxHp: 99, foodCount: 4, enemyCount: 4, allyCount: 1, inMulti: true, hasGlory: true, hasTeleport: true })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3640, hp: 50, maxHp: 99, foodCount: 0, enemyCount: 1, allyCount: 0, inMulti: false, hasGlory: false, hasTeleport: true })).toBe('teleport');
+    expect(squadFallbackPlan({ z: 3880, hp: 50, maxHp: 99, foodCount: 0, enemyCount: 3, allyCount: 0, inMulti: true, hasGlory: true, hasTeleport: true })).toBe('run');
+    expect(squadFallbackPlan({ z: 3640, hp: 90, maxHp: 99, foodCount: 6, enemyCount: 2, allyCount: 1, inMulti: true, hasGlory: true, hasTeleport: true })).toBe('hold');
 });

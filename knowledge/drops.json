@@ -25681,19 +25681,6 @@
   "src": "scripts/quests/quest_routequest/scripts/routequest_myreque.rs2:598"
  },
  {
-  "trigger": "label:poison_sheep",
-  "always": [
-   {
-    "item": "$npc_bones",
-    "count": 1,
-    "conditional": true,
-    "src": "scripts/quests/quest_sheepherder/scripts/npcs/diseased_sheep.rs2:164"
-   }
-  ],
-  "rolls": [],
-  "src": "scripts/quests/quest_sheepherder/scripts/npcs/diseased_sheep.rs2:139"
- },
- {
   "trigger": "monkey",
   "always": [
    {

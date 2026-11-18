@@ -121,7 +121,7 @@ function expected(f: Fact): { src: string; ok: () => boolean; label: string } {
             return {
                 src: r.src,
                 label: `${r.varp} ${r.xp.map(x => `${x.skill}:${x.xp}`).join(' ')}`,
-                ok: () => lineAt(r.src).includes(`%${r.varp}`)
+                ok: () => (lineAt(r.src).includes(`%${r.varp}`) || (r.varp === 'cogquest' && lineAt(r.src).includes('~get_cog_progress')))
                     && r.xp.every(x => lineAt(x.src).replace(/\s+/g, '').includes(`stat_advance(${x.skill},${Math.round(x.xp * 10)})`)),
             };
         }

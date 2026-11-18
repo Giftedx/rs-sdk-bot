@@ -31,6 +31,20 @@ test('learned rates separate boosts, combat levels, active prayers and attack st
  expect(progressionRateConditions({...status,progressionContext:{style:'accurate',prayers:[false]}})).not.toBe(key);
 });
 
+test('Prayer99 with a six-bone reserve is not complete at the actual Prayer96 entry',()=>{
+ const base=mkdtempSync(join(tmpdir(),'progression-prayer-reserve-')),now=Date.now();
+ const work={script:'scripts/train-prayer.ts',args:['99'],env:{BONE_ID:'536',MAX_BURY:'105',BONE_RESERVE:'6',CAP:'1500',COORDINATOR_RUN_ID:'prayer-run'}};
+ const status={name:'Fixture',server:'rs-sdk-demo.fly.dev',at:now,bankAt:now,questsAt:now,equipmentObserved:true,skills:[{name:'Prayer',level:96,xp:811012},{name:'Hitpoints',level:99,xp:1115790}],inventory:[],equipment:[],bank:[{id:536,count:111}],quests:[]};
+ try{
+  mkdirSync(join(base,'.practice/coordinator'),{recursive:true});
+  writeFileSync(join(base,'.practice/coordinator/state.json'),JSON.stringify({tasks:[{runId:'prayer-run',spec:{account:'Fixture',accept:{skills:{Prayer:99},bank:{536:6}}}}]}));
+  const live=evaluateProgressionWork(work,status,{base,now,requireQualification:true});
+  expect(live.intent).toEqual({kind:'train',skill:'prayer',targetLevel:99});expect(live.decision?.state).not.toBe('complete');expect(live.supported).toBe(true);
+  const done=evaluateProgressionWork(work,{...status,skills:[{name:'Prayer',level:99,xp:1000012},{name:'Hitpoints',level:99,xp:1115790}],bank:[{id:536,count:6}]},{base,now,requireQualification:true});
+  expect(done.decision?.state).toBe('complete');
+ }finally{rmSync(base,{recursive:true,force:true});}
+});
+
 test('source-qualified admission survives a spent arrow but stays bound to its finite intent',()=>{
  const base=mkdtempSync(join(tmpdir(),'progression-stock-')),now=Date.now(),source='native-source';
  const work={script:'scripts/ranged-train.ts',args:['85'],env:{WORKER_RELEASE:source}};

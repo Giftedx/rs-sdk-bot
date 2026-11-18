@@ -3,9 +3,10 @@
 // time counts as 90 s. Cases are packed longest first onto PARALLEL engines until a batch's estimate (the busiest
 // engine) reaches the budget; each batch runs with a hard limit of the budget plus 90 s, and a case it did not reach
 // goes into the next batch. Prints one line for each batch and one PVP_SWEEP total.
-// Usage: bun scripts/measure/pvp-sweep.ts [pattern] [--parallel 6] [--budget 3.5] [--seed n] [--quick] [--batch k]
+// Usage: bun scripts/measure/pvp-sweep.ts [pattern] [--parallel 6] [--budget 3.5] [--seed n] [--quick] [--batch k] [--shard k/n]
 // A batch's hard limit is the budget plus 90 s: with the default 3.5 minutes no batch runs past 5 minutes. --batch k
-// runs only the k-th batch of the packing (1-based), one bench of 5 minutes or less.
+// runs only the k-th batch of the packing (1-based), one bench of 5 minutes or less. --shard k/n selects every n-th
+// packed batch starting from k (1-based).
 // Default pattern: every pvp: case and every extra: spar, gang, kite, army, team and hunt-trip case (233 cases, about
 // 32 minutes in four batches on 4 cores; 10 engines at once are no faster than 6). --quick: every pvp: route case and
 // one case of each climb (QUICK_CASES), a few minutes, for the turns of a change; the full sweep before a merge.
@@ -36,10 +37,92 @@ export function packBatches(cases: readonly { key: string; ms: number }[], engin
     return batches;
 }
 
+export const DEFAULT_PATTERN = '^(pvp:|extra:(spar|gang|kite|army|team|hunt-trip))';
+
+export type SweepArgs = {
+    pattern: RegExp;
+    engines: number;
+    budgetMs: number;
+    seed?: string;
+    only?: number;
+    shard?: { index: number; total: number };
+    shardError?: string;
+};
+
+const VALUE_FLAGS = new Set(['--parallel', '--budget', '--seed', '--batch', '--shard']);
+
+// Parse flags cleanly so flag values (such as decimal `--budget 3.5` or `--shard 1/4`) are never taken as `pattern`.
+export function parseSweepArgs(argv: readonly string[]): SweepArgs {
+    const flags = new Map<string, string>();
+    let quick = false;
+    let positional: string | undefined;
+    for (let i = 0; i < argv.length; i++) {
+        const arg = argv[i]!;
+        if (arg === '--quick') { quick = true; continue; }
+        if (arg.startsWith('--')) {
+            const eq = arg.indexOf('=');
+            if (eq > 0) {
+                const name = arg.slice(0, eq);
+                if (VALUE_FLAGS.has(name)) flags.set(name, arg.slice(eq + 1));
+            } else if (VALUE_FLAGS.has(arg) && i + 1 < argv.length) {
+                flags.set(arg, argv[++i]!);
+            }
+            continue;
+        }
+        if (positional === undefined && !/^\d+$/.test(arg)) positional = arg;
+    }
+    const rawShard = flags.get('--shard');
+    let shard: { index: number; total: number } | undefined;
+    let shardError: string | undefined;
+    if (rawShard !== undefined) {
+        const m = /^([1-9]\d*)\/([1-9]\d*)$/.exec(rawShard);
+        const index = m ? Number(m[1]) : NaN, total = m ? Number(m[2]) : NaN;
+        if (!m || index < 1 || index > total) shardError = `PVP_SWEEP --shard needs k/n with 1 <= k <= n (got ${rawShard})`;
+        else shard = { index, total };
+    }
+    const batchRaw = flags.get('--batch');
+    return {
+        pattern: quick ? quickPattern() : new RegExp(positional ?? DEFAULT_PATTERN),
+        engines: Number(flags.get('--parallel') ?? 6),
+        budgetMs: Number(flags.get('--budget') ?? 3.5) * 60_000,
+        seed: flags.get('--seed'),
+        only: batchRaw !== undefined ? Number(batchRaw) : undefined,
+        shard,
+        shardError,
+    };
+}
+
+// Round-robin over packed batches (already ordered longest-first) balances heavy batches evenly across shards.
+export function shardBatches<T>(batches: readonly T[], index: number, total: number): T[] {
+    return batches.filter((_, i) => i % total === index - 1);
+}
+
+// Cross-platform timeout wrapper replacing POSIX `timeout` so Windows, WSL, and Linux honor batch deadlines identically.
+export async function runWithTimeout(
+    cmd: readonly string[],
+    opts: { cwd: string; env: Record<string, string | undefined>; timeoutMs: number },
+): Promise<{ stdout: string; stderr: string; exitCode: number | null; timedOut: boolean }> {
+    const child = Bun.spawn([...cmd], { cwd: opts.cwd, env: opts.env, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+    let timedOut = false;
+    const timer = setTimeout(() => {
+        timedOut = true;
+        try { child.kill(); } catch { /* process already exited */ }
+    }, Math.max(100, opts.timeoutMs));
+    try {
+        const [stdout, stderr, exitCode] = await Promise.all([
+            new Response(child.stdout).text(),
+            new Response(child.stderr).text(),
+            child.exited,
+        ]);
+        return { stdout, stderr, exitCode, timedOut };
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 if (import.meta.main) {
-    const argv = process.argv.slice(2), value = (k: string) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : undefined; };
-    const pattern = argv.includes('--quick') ? quickPattern() : new RegExp(argv.find(a => !a.startsWith('--') && !/^\d+$/.test(a)) ?? '^(pvp:|extra:(spar|gang|kite|army|team|hunt-trip))');
-    const engines = Number(value('--parallel') ?? 6), budgetMs = Number(value('--budget') ?? 3.5) * 60_000, seed = value('--seed');
+    const { pattern, engines, budgetMs, seed, only, shard, shardError } = parseSweepArgs(process.argv.slice(2));
+    if (shardError) { console.log(shardError); process.exit(2); }
     mkdirSync(dir, { recursive: true });
     const times: Record<string, number> = existsSync(timesFile) ? JSON.parse(readFileSync(timesFile, 'utf8')) : {};
     const keys = benchCases().filter(c => pattern.test(c.key) && !c.known).map(c => c.key);
@@ -49,22 +132,29 @@ if (import.meta.main) {
     let todo = keys.map(key => ({ key, ms: times[key] ?? DEFAULT_MS }));
     const results = new Map<string, boolean>();
     let n = 0;
-    const only = value('--batch') ? Number(value('--batch')) : undefined;
     if (only !== undefined) {
         const all = packBatches(todo.map(c => ({ ...c, ms: c.ms * scale })), engines, budgetMs);
         if (!(only >= 1 && only <= all.length)) { console.log(`PVP_SWEEP --batch needs 1..${all.length}`); process.exit(2); }
         todo = todo.filter(c => all[only - 1]!.includes(c.key));
         console.log(`PVP_SWEEP batch ${only} of ${all.length}: ${todo.length} cases`);
+    } else if (shard) {
+        const all = packBatches(todo.map(c => ({ ...c, ms: c.ms * scale })), engines, budgetMs);
+        const picked = new Set(shardBatches(all, shard.index, shard.total).flat());
+        todo = todo.filter(c => picked.has(c.key));
+        console.log(`PVP_SWEEP shard ${shard.index}/${shard.total}: ${todo.length} cases (${shardBatches(all, shard.index, shard.total).length}/${all.length} batches)`);
     }
+    const targetCount = todo.length;
     while (todo.length) {
         const [batch] = packBatches(todo.map(c => ({ ...c, ms: c.ms * scale })), engines, budgetMs);
         const estimate = (() => { const load = Array.from({ length: engines }, () => 0); for (const c of todo.filter(c => batch!.includes(c.key)).sort((a, b) => b.ms - a.ms)) load[load.indexOf(Math.min(...load))]! += c.ms; return Math.max(...load); })();
         const re = `^(${batch!.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})$`;
         const t0 = Date.now();
-        const p = Bun.spawnSync(['timeout', String(Math.round((budgetMs + 90_000) / 1000)), 'bun', 'scripts/measure/aio-practice-bench.ts', re, '--parallel', String(engines), '--no-keep', ...(seed ? ['--seed', seed] : [])],
+        const p = await runWithTimeout(
+            ['bun', 'scripts/measure/aio-practice-bench.ts', re, '--parallel', String(engines), '--no-keep', '--wait', '2', ...(seed ? ['--seed', seed] : [])],
             // Bench accounts (aiob*) are the local side's (fleet/owners.json names no other), whatever this machine's side.
-            { cwd: root, env: { ...process.env, FLEET_SIDE: 'local' }, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
-        for (const l of p.stdout.toString().split('\n')) {
+            { cwd: root, env: { ...process.env, FLEET_SIDE: 'local' }, timeoutMs: budgetMs + 90_000 },
+        );
+        for (const l of p.stdout.split('\n')) {
             if (!l.startsWith('AIO_BENCH_RESULT ')) continue;
             const r = JSON.parse(l.slice(17)) as { case: string; ok: boolean; elapsedMs: number; result?: string };
             results.set(r.case, r.ok); times[r.case] = r.elapsedMs;
@@ -77,9 +167,9 @@ if (import.meta.main) {
         // A case that a batch did not reach goes again; one that two batches missed is counted as failed.
         for (const k of missed) { if ((todo.find(c => c.key === k) as { tries?: number } | undefined)?.tries) results.set(k, false); }
         todo = todo.filter(c => !results.has(c.key)).map(c => missed.includes(c.key) ? { ...c, tries: 1, ms: Math.max(c.ms, budgetMs / 2) } : c);
-        console.log(`PVP_SWEEP_BATCH ${++n}: ${batch!.length} cases, ${Math.round((Date.now() - t0) / 1000)} s, ${batch!.length - missed.length} reported`);
+        console.log(`PVP_SWEEP_BATCH ${++n}: ${batch!.length} cases, ${Math.round((Date.now() - t0) / 1000)} s, ${batch!.length - missed.length} reported${p.timedOut ? ' (timeout)' : ''}`);
     }
     const failed = [...results].filter(([, ok]) => !ok).map(([k]) => k);
-    console.log(`PVP_SWEEP ${JSON.stringify({ cases: keys.length, passed: keys.length - failed.length, failed, batches: n })}`);
+    console.log(`PVP_SWEEP ${JSON.stringify({ cases: targetCount, passed: targetCount - failed.length, failed, batches: n })}`);
     process.exitCode = failed.length ? 1 : 0;
 }

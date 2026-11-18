@@ -208,25 +208,32 @@ export function chooseVariants(activities: Activity[], opts: ScheduleOptions): A
 // At most this many combinations are searched exhaustively; above it, coordinate descent per group.
 export const ROUTE_EXHAUSTIVE_MAX = 64;
 
-// Route score, smaller is better: Overall finish (never = Infinity), then minus the slack sum over the clock boards,
-// then the raw ticks of the chosen options (so a tie keeps the raw-tick choice).
-function routeScore(r: ScheduleResult, boards: Board[], raw: number): number[] {
+// Route score, smaller is better: when Overall is sacrificed (specialist schedules or bestSet without Overall),
+// minimize the active unsacrificed clock boards first; otherwise Overall finish first, then minus slack sum, then raw ticks.
+function routeScore(r: ScheduleResult, boards: Board[], raw: number, sacrificed?: ReadonlySet<BoardId>): number[] {
     const overall = r.overallFinish ?? Infinity;
-    const slack = r.boards.filter(b => boards.find(x => x.id === b.id)?.rule.kind === 'clock' && b.slack !== null).reduce((s, b) => s + b.slack!, 0);
+    const isClock = (id: BoardId) => boards.find(x => x.id === id)?.rule.kind === 'clock';
+    if (sacrificed?.has('overall')) {
+        const active = r.boards.filter(b => !sacrificed.has(b.id) && b.id !== 'overall' && isClock(b.id));
+        const activeFinish = active.reduce((m, b) => Math.max(m, b.finish ?? Infinity), 0);
+        const activeSlack = active.reduce((s, b) => s + (b.slack ?? -1_000_000), 0);
+        return [activeFinish, -activeSlack, overall, raw];
+    }
+    const slack = r.boards.filter(b => isClock(b.id) && b.slack !== null).reduce((s, b) => s + b.slack!, 0);
     return [overall, -slack, raw];
 }
 const better = (x: number[], y: number[]) => { for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i]! < y[i]!; return false; };
 
 // The variant combination with the earliest Overall finish for opts.mode (see routeScore). Deterministic: groups and
 // options in table order, a candidate replaces the best only when strictly better.
-export function chooseRoute(boards: Board[], activities: Activity[], opts: ScheduleOptions): { route: Record<string, string>; evaluated: number } {
+export function chooseRoute(boards: Board[], activities: Activity[], opts: ScheduleOptions, prerequisiteFirst = false): { route: Record<string, string>; evaluated: number } {
     const groups = variantGroups(applyLevers(activities, opts), opts);
     const start = rawRoute(groups, opts);
     const multi = [...groups].filter(([, o]) => o.size > 1).map(([g, o]) => ({ group: g, options: [...o.keys()] }));
     if (multi.length === 0) return { route: start, evaluated: 0 };
     let evaluated = 0;
     const raw = (route: Record<string, string>) => [...groups].reduce((s, [g, o]) => s + o.get(route[g]!)!.reduce((t, a) => t + roughTicks(a, opts), 0), 0);
-    const score = (route: Record<string, string>) => { evaluated++; return routeScore(scheduleRoute(boards, activities, { ...opts, force: { ...opts.force, ...route } }), boards, raw(route)); };
+    const score = (route: Record<string, string>) => { evaluated++; return routeScore(scheduleRoute(boards, activities, { ...opts, force: { ...opts.force, ...route } }, prerequisiteFirst), boards, raw(route), opts.sacrificed); };
     let best = start;
     let bestScore = score(start);
     const combos = multi.reduce((n, g) => n * g.options.length, 1);
@@ -305,11 +312,11 @@ export function schedule(boards: Board[], allActivities: Activity[], opts: Sched
 // Candidate from the deadline search in research/haggis-run.md. Relaxed deadlines
 // affect placement only. The result still scores each board against its record.
 const OVERALL_RELAXED_DEADLINES: ReadonlySet<BoardId> = new Set([
-    'crafting', 'herblore', 'hitpoints', 'magic', 'runecraft', 'woodcutting',
+    'crafting', 'herblore', 'hitpoints', 'magic', 'runecraft', 'smithing', 'woodcutting',
 ]);
 // Travel comparison in research/haggis-run.md, with prerequisite-first ties.
 const OVERALL_TRAVEL_DEADLINES: ReadonlySet<BoardId> = new Set([
-    'crafting', 'fishing', 'herblore', 'hitpoints', 'magic', 'prayer',
+    'cooking', 'crafting', 'fishing', 'fletching', 'herblore', 'hitpoints', 'magic', 'prayer', 'smithing', 'thieving',
 ]);
 
 export function scheduleOverall(boards: Board[], activities: Activity[], opts: ScheduleOptions): ScheduleResult {
@@ -318,22 +325,41 @@ export function scheduleOverall(boards: Board[], activities: Activity[], opts: S
     const relaxed = schedule(boards, activities, { ...opts, sacrificed: OVERALL_RELAXED_DEADLINES });
     const finish = (plan: ScheduleResult) => plan.overallFinish ?? Infinity;
     const useRelaxed = finish(relaxed) < finish(baseline);
-    const best = useRelaxed ? relaxed : baseline;
+    let best = useRelaxed ? relaxed : baseline;
     if (!opts.travel) return best;
-    // Keep the selected variants while comparing travel orders.
-    const fixedRoute = { ...opts, force: { ...opts.force, ...best.route } };
-    const prerequisiteFirst = scheduleRoute(boards, activities, {
-        ...fixedRoute, sacrificed: useRelaxed ? OVERALL_RELAXED_DEADLINES : undefined,
-    }, true);
-    const ordered = finish(prerequisiteFirst) < finish(best) ? prerequisiteFirst : best;
-    const travelOrder = scheduleRoute(boards, activities, { ...fixedRoute, sacrificed: OVERALL_TRAVEL_DEADLINES }, true);
-    return finish(travelOrder) < finish(ordered) ? travelOrder : ordered;
+    const candidates: ScheduleResult[] = [best];
+    const travelOpts = { ...opts, sacrificed: OVERALL_TRAVEL_DEADLINES };
+    const travelChosen = chooseRoute(boards, activities, travelOpts, true).route;
+    for (const [routeMap, dlSet] of [
+        [best.route, useRelaxed ? OVERALL_RELAXED_DEADLINES : undefined] as const,
+        [travelChosen, OVERALL_TRAVEL_DEADLINES] as const,
+    ]) {
+        const fixed = { ...opts, force: { ...opts.force, ...routeMap } };
+        candidates.push(scheduleRoute(boards, activities, { ...fixed, sacrificed: dlSet }, true));
+        candidates.push(scheduleRoute(boards, activities, { ...fixed, sacrificed: OVERALL_TRAVEL_DEADLINES }, true));
+    }
+    for (const c of candidates) if (finish(c) < finish(best)) best = c;
+    return best;
 }
 
 // Schedule with opts.force where given and the raw-tick choice for the other variant groups.
 function scheduleRoute(boards: Board[], allActivities: Activity[], opts: ScheduleOptions, prerequisiteFirst = false): ScheduleResult {
     const sacrificed = opts.sacrificed ?? new Set<BoardId>();
-    const activities = chooseVariants(allActivities, opts);
+    const chosen = chooseVariants(allActivities, opts);
+    const hasTouristTrapAgility = chosen.some(a => a.id === 'tourist-trap-agility');
+    const activities = chosen.map(a => {
+        let next = a;
+        if (sacrificed.has('defence') && next.id === 'agility-52' && next.requires?.includes('def-top')) {
+            next = { ...next, requires: next.requires.filter(r => r !== 'def-top') };
+        }
+        if (sacrificed.has('fletching') && !opts.disable?.has('stun-guests') && next.id === 'fletch' && !next.inside) {
+            next = { ...next, inside: 'thieve' };
+        }
+        if (hasTouristTrapAgility && (next.id === 'agility-25' || next.id === 'grandtree')) {
+            next = { ...next, serves: next.serves.filter(s => s !== 'agility') };
+        }
+        return next;
+    });
     const ids = new Set(activities.map(a => a.id));
     const dependants = new Map<string, number>();
     if (prerequisiteFirst) {
@@ -345,15 +371,24 @@ function scheduleRoute(boards: Board[], allActivities: Activity[], opts: Schedul
     const overallDeadline = overall && overall.rule.kind === 'clock' ? overall.rule.deadline : Infinity;
     const dl = new Map<BoardId, number>(boards.map(b => [b.id, boardDeadline(b, sacrificed, overallDeadline)]));
 
-    // Effective deadline: own (earliest served board) propagated back through prerequisites.
+    // Effective deadline: own (earliest served board) propagated back through prerequisites and required skill trainers.
     const eff = new Map<string, number>();
     for (const a of activities) eff.set(a.id, Math.min(...a.serves.map(s => dl.get(s) ?? Infinity), Infinity));
     for (let changed = true; changed;) {
         changed = false;
-        for (const a of activities) for (const r of a.requires ?? []) {
-            if (!ids.has(r)) continue;
-            const v = Math.min(eff.get(r)!, eff.get(a.id)!);
-            if (v < eff.get(r)!) { eff.set(r, v); changed = true; }
+        for (const a of activities) {
+            for (const r of a.requires ?? []) {
+                if (!ids.has(r)) continue;
+                const v = Math.min(eff.get(r)!, eff.get(a.id)!);
+                if (v < eff.get(r)!) { eff.set(r, v); changed = true; }
+            }
+            for (const [s, lvl] of Object.entries(a.minLevel ?? {})) {
+                for (const p of activities) {
+                    if (p.inside !== undefined || p.train?.skill !== s || p.train.toLevel > lvl!) continue;
+                    const v = Math.min(eff.get(p.id)!, eff.get(a.id)!);
+                    if (v < eff.get(p.id)!) { eff.set(p.id, v); changed = true; }
+                }
+            }
         }
     }
 
@@ -372,6 +407,82 @@ function scheduleRoute(boards: Board[], allActivities: Activity[], opts: Schedul
     const placed = new Set<string>();
     let here: string | undefined;
     let travelTotal = 0;
+    const bestLeg = (m: TravelModel, from: string, to: string): { ticks: number; method: string } => {
+        const direct = leg(m, from, to);
+        if (!HAGGIS_TRAVEL_MODELS.has(m) || opts.disable?.has('magic-teleports') || from === to) return direct;
+        let best: { ticks: number; method: string } = direct;
+        const magicLevel = levelForXp(xpNow('magic', clock));
+        const unlocked = STANDARD_TELEPORTS.filter(tp => magicLevel >= tp.magicLevel && (!tp.requiresDone || doneAt.has(tp.requiresDone)) && !!m.places[tp.place]);
+        const fromPlace = m.places[from] ?? m.cache.banks[from];
+        const hasLever = !!m.places[WILDY_LEVER_IN] && !!m.places[WILDY_LEVER_OUT];
+        const treeHubs: string[] = [];
+        if (doneAt.has('tree') && m.places['spirit-tree-village']) treeHubs.push('spirit-tree-village');
+        if (doneAt.has('grandtree') && m.places['spirit-tree-stronghold']) treeHubs.push('spirit-tree-stronghold');
+        const treeDests = treeHubs.length > 0
+            ? SPIRIT_TREE_DESTS.filter(p => !!m.places[p])
+            : [];
+        const gliderUnlocked = doneAt.has('grandtree') && !!m.places['glider-grandtree'];
+        if (!inDeepWilderness(fromPlace)) {
+            for (const tp of unlocked) {
+                const ticks = tp.castTicks + leg(m, tp.place, to).ticks;
+                if (ticks < best.ticks) best = { ticks, method: `teleport:${tp.id}` };
+            }
+            for (const hub of treeHubs) {
+                let toHub = leg(m, from, hub).ticks;
+                for (const tp of unlocked) toHub = Math.min(toHub, tp.castTicks + leg(m, tp.place, hub).ticks);
+                for (const dest of treeDests) {
+                    if (dest === hub) continue;
+                    const t = toHub + SPIRIT_TREE_TICKS + leg(m, dest, to).ticks;
+                    if (t < best.ticks) best = { ticks: t, method: 'spirit-tree' };
+                }
+            }
+            if (gliderUnlocked) {
+                const toTree = Math.min(
+                    leg(m, from, 'glider-grandtree').ticks,
+                    ...unlocked.map(tp => tp.castTicks + leg(m, tp.place, 'glider-grandtree').ticks),
+                    ...treeHubs.map(h => {
+                        let toHub = leg(m, from, h).ticks;
+                        for (const tp of unlocked) toHub = Math.min(toHub, tp.castTicks + leg(m, tp.place, h).ticks);
+                        return toHub + SPIRIT_TREE_TICKS + leg(m, 'spirit-tree-stronghold', 'glider-grandtree').ticks;
+                    }),
+                );
+                for (const dest of GLIDER_OUTPOSTS) {
+                    if (!m.places[dest]) continue;
+                    const t = toTree + GLIDER_TICKS + leg(m, dest, to).ticks;
+                    if (t < best.ticks) best = { ticks: t, method: 'gnome-glider' };
+                }
+                for (const src of GLIDER_OUTPOSTS) {
+                    if (!m.places[src]) continue;
+                    let toSrc = leg(m, from, src).ticks;
+                    for (const tp of unlocked) toSrc = Math.min(toSrc, tp.castTicks + leg(m, tp.place, src).ticks);
+                    const t = toSrc + GLIDER_TICKS + leg(m, 'glider-grandtree', to).ticks;
+                    if (t < best.ticks) best = { ticks: t, method: 'gnome-glider' };
+                }
+            }
+            if (hasLever) {
+                let toLever = leg(m, from, WILDY_LEVER_IN).ticks;
+                for (const tp of unlocked) toLever = Math.min(toLever, tp.castTicks + leg(m, tp.place, WILDY_LEVER_IN).ticks);
+                const leverTicks = toLever + WILDY_LEVER_TICKS + leg(m, WILDY_LEVER_OUT, to).ticks;
+                if (leverTicks < best.ticks) best = { ticks: leverTicks, method: 'wildy-lever' };
+            }
+        } else if (hasLever) {
+            const exitTicks = leg(m, from, WILDY_LEVER_OUT).ticks + WILDY_LEVER_TICKS;
+            let fromArdy = leg(m, WILDY_LEVER_IN, to).ticks;
+            for (const tp of unlocked) fromArdy = Math.min(fromArdy, tp.castTicks + leg(m, tp.place, to).ticks);
+            for (const hub of treeHubs) {
+                const toHub = Math.min(
+                    leg(m, WILDY_LEVER_IN, hub).ticks,
+                    ...unlocked.map(tp => tp.castTicks + leg(m, tp.place, hub).ticks),
+                );
+                for (const dest of treeDests) {
+                    if (dest === hub) continue;
+                    fromArdy = Math.min(fromArdy, toHub + SPIRIT_TREE_TICKS + leg(m, dest, to).ticks);
+                }
+            }
+            if (exitTicks + fromArdy < best.ticks) best = { ticks: exitTicks + fromArdy, method: 'wildy-exit-lever' };
+        }
+        return best;
+    };
     // Walk to the activity's place; returns the walk ticks and moves `here`. The via legs and bank trips are inner ticks.
     const move = (a: Activity): { walk: number; inner: number; from?: string; to?: string; method?: string } => {
         const m = opts.travel;
@@ -380,10 +491,10 @@ function scheduleRoute(boards: Board[], allActivities: Activity[], opts: Schedul
         if (here === 'bank') return { walk: 0, inner: 0 };
         const from = here;
         const to = resolve(m, here, a.at);
-        const l = leg(m, from, to);
+        const l = bestLeg(m, from, to);
         let inner = 0;
         let cur = to;
-        for (const v of a.via ?? []) { inner += leg(m, cur, v).ticks; cur = v; }
+        for (const v of a.via ?? []) { inner += bestLeg(m, cur, v).ticks; cur = v; }
         if (a.bankTrips) inner += bankTrips(m, to, a.bankTrips).ticks;
         here = a.endAt ?? cur;
         return { walk: l.ticks, inner, from, to, method: l.method };
@@ -425,8 +536,14 @@ function scheduleRoute(boards: Board[], allActivities: Activity[], opts: Schedul
             for (const a of pending) blocked.push(a.id);
             break;
         }
+        const walkCost = (act: Activity) => {
+            if (!opts.travel || !here || act.at === undefined || act.at === ANYWHERE) return 0;
+            const to = resolve(opts.travel, here, act.at);
+            return bestLeg(opts.travel, here, to).ticks;
+        };
         ready.sort((x, y) => eff.get(x.id)! - eff.get(y.id)!
             || (prerequisiteFirst ? (dependants.get(y.id) ?? 0) - (dependants.get(x.id) ?? 0) : 0)
+            || (prerequisiteFirst && opts.travel ? walkCost(x) - walkCost(y) : 0)
             || activities.indexOf(x) - activities.indexOf(y));
         const a = ready[0]!;
         pending.splice(pending.indexOf(a), 1);
@@ -439,10 +556,53 @@ function scheduleRoute(boards: Board[], allActivities: Activity[], opts: Schedul
         const c = cost(a, start);
         const xp = c.xp;
         let fg = c.fg + mv.inner;
-        // Guests that can start with the host. They fill its dead ticks in table order.
-        const guests = pending.filter(g => g.inside === a.id && canStart(g, start));
-        const guestCost = guests.map(g => cost(g, start));
+        // Guests that can start with the host (including chained guests unlocked by earlier fully-absorbed guests).
         let cap = a.deadTicks ? pick(a.deadTicks, opts.mode) : 0;
+        const guests: Activity[] = [];
+        const guestCost: ReturnType<typeof cost>[] = [];
+        const extraXp: Partial<Record<Skill, number>> = {};
+        let usedCap = 0;
+        const canStartInHost = (g: Activity) =>
+            (g.requires ?? []).every(r => !ids.has(r) || (doneAt.has(r) && doneAt.get(r)! <= start) || guests.some(prev => prev.id === r)) &&
+            Object.entries(g.minLevel ?? {}).every(([s, l]) => levelForXp(xpNow(s as Skill, start) + (extraXp[s as Skill] ?? 0)) >= l!) &&
+            (g.minQp === undefined || qpAt(start) >= g.minQp);
+        for (let added = true; added;) {
+            added = false;
+            for (const g of pending) {
+                if (g.inside !== a.id || guests.includes(g) || !canStartInHost(g)) continue;
+                const gc = {
+                    fg: (g.ticks ? pick(g.ticks, opts.mode) : 0) + (g.train ? (() => {
+                        const cur = xpNow(g.train.skill, start) + (extraXp[g.train.skill] ?? 0);
+                        const need = Math.max(0, xpForLevel(g.train.toLevel) - cur);
+                        return need > 0 ? Math.ceil(need / pick(g.train.xpPerTick, opts.mode)) : 0;
+                    })() : 0),
+                    xp: (() => {
+                        const gxp: Partial<Record<Skill, number>> = {};
+                        if (g.train) {
+                            const cur = xpNow(g.train.skill, start) + (extraXp[g.train.skill] ?? 0);
+                            const need = Math.max(0, xpForLevel(g.train.toLevel) - cur);
+                            if (need > 0) {
+                                gxp[g.train.skill] = need;
+                                for (const [s, k] of Object.entries(g.train.side ?? {})) gxp[s as Skill] = (gxp[s as Skill] ?? 0) + need * k!;
+                            }
+                        }
+                        for (const [s, v] of Object.entries(g.xp ?? {})) {
+                            const cur = xpNow(s as Skill, start) + (extraXp[s as Skill] ?? 0);
+                            const amount = v === 'to99' ? Math.max(0, XP99 - cur) : v!;
+                            gxp[s as Skill] = (gxp[s as Skill] ?? 0) + amount;
+                        }
+                        return gxp;
+                    })(),
+                };
+                guests.push(g);
+                guestCost.push(gc);
+                if (usedCap + gc.fg <= cap) {
+                    usedCap += gc.fg;
+                    for (const [s, v] of Object.entries(gc.xp)) extraXp[s as Skill] = (extraXp[s as Skill] ?? 0) + v!;
+                }
+                added = true;
+            }
+        }
         const absorbable = guestCost.reduce((s, g) => s + g.fg, 0);
         // A speedup trick (stun relog) removes the dead ticks. Use it only if it saves more than the guests absorb.
         const sp = speed(a, opts);
@@ -626,7 +786,7 @@ export const CRAFTING_TIERS: Tier[] = [
     { id: 'dragonstone', level: 55, xpPerAction: 137.5 * X, items: [each('uncut dragonstone')] },
 ];
 export const HERBLORE_TIERS: Tier[] = [
-    // brew_potion.struct brew_potion_level / brew_potion_exp (tenths); secondaries are the OSRS recipes (ESTIMATE)
+    // brew_potion.struct brew_potion_ingredient, brew_potion_level / brew_potion_exp (tenths)
     { id: 'attack', level: 1, xpPerAction: 25 * X, items: [each('guam potion (unf)'), each("eye of newt")] },
     { id: 'antipoison', level: 5, xpPerAction: 37.5 * X, items: [each('marrentill potion (unf)'), each('unicorn horn dust')] },
     { id: 'strength', level: 12, xpPerAction: 50 * X, items: [each('tarromin potion (unf)'), each('limpwurt root')] },
@@ -665,7 +825,7 @@ export const SMITHING_TIERS: Tier[] = [
     { id: 'adamant platebody', level: 88, xpPerAction: 312.5 * X, items: [each('adamantite bar', 5)] },
 ];
 export const MAGIC_TIERS: Tier[] = [
-    // enchant XP from magic_spells.dbrow (research/xp-per-tick.md); rune costs are the OSRS ones (ESTIMATE)
+    // enchant XP from magic_spells.dbrow (research/xp-per-tick.md); rune costs from skill_magic/interfaces/magic.if
     { id: 'wind strike', level: 1, xpPerAction: 5.5 * X, items: [each('air rune'), each('mind rune')] },
     { id: 'enchant 1 (sapphire ring)', level: 7, xpPerAction: 17.5 * X, items: [each('cosmic rune'), each('water rune'), each('sapphire ring', 1, 1637)] },
     { id: 'enchant 2 (emerald ring)', level: 27, xpPerAction: 37 * X, items: [each('cosmic rune'), each('air rune', 3), each('emerald ring', 1, 1639)] },
@@ -724,15 +884,48 @@ export function haggisActivities(path = BOARDS_FILE): Activity[] {
     });
 }
 
+interface TeleportSite {
+    id: string;
+    place: string;
+    magicLevel: number;
+    castTicks: number;
+    requiresDone?: string;
+}
+// Standard Magic teleports (magic_spells.dbrow:62-105; teleport.rs2:17-35) and the East Ardougne / Deserted Keep
+// Wilderness lever (wilderness_lever.constant:1-2, wilderness_lever.rs2:24-44).
+const STANDARD_TELEPORTS: readonly TeleportSite[] = [
+    { id: 'varrock', place: 'varrock-teleport', magicLevel: 25, castTicks: 4 },
+    { id: 'lumbridge', place: 'lumbridge-spawn', magicLevel: 31, castTicks: 4 },
+    { id: 'falador', place: 'falador-teleport', magicLevel: 37, castTicks: 4 },
+    { id: 'camelot', place: 'camelot-teleport', magicLevel: 45, castTicks: 4 },
+    { id: 'ardougne', place: 'ardougne-market', magicLevel: 51, castTicks: 4, requiresDone: 'plague-city' },
+];
+const WILDY_LEVER_IN = 'ardougne-lever';
+const WILDY_LEVER_OUT = 'deserted-keep-lever';
+const WILDY_LEVER_TICKS = 6;
+const SPIRIT_TREE_DESTS = ['spirit-tree-village', 'spirit-tree-stronghold', 'spirit-tree-khazard', 'spirit-tree-varrock'] as const;
+const SPIRIT_TREE_TICKS = 8;
+const GLIDER_OUTPOSTS = ['glider-digsite', 'glider-al-kharid', 'glider-karamja'] as const;
+const GLIDER_TICKS = 6;
+const HAGGIS_TRAVEL_MODELS = new WeakSet<TravelModel>();
+const inDeepWilderness = (p: Place | undefined) => !!p && p.x >= 2944 && p.x <= 3391 && p.z >= 3680 && p.z <= 3967;
+
 // Places of haggis-boards.json and the leg cache haggis-travel.json. The run starts where the tutorial skip lands.
 export function haggisTravel(path = BOARDS_FILE): TravelModel {
     const data = JSON.parse(readFileSync(path, 'utf8')) as { places?: Record<string, Place> };
-    return { ...loadTravel(data.places ?? {}), start: 'lumbridge-spawn' };
+    const model = { ...loadTravel(data.places ?? {}), start: 'lumbridge-spawn' };
+    HAGGIS_TRAVEL_MODELS.add(model);
+    return model;
 }
 
 export const TRICKS: Trick[] = ['loginWine', 'stunRelog', 'sacredOil'];
 // Gap-closer choices. All techniques are authorized; retired slower variants remain available for comparison.
 export const LEVERS: { id: string; owner: boolean; label: string; retired?: boolean }[] = [
+    { id: 'magic-teleports', owner: false, label: 'Standard Magic teleports (Varrock 25, Lumbridge 31, Falador 37, Camelot 45, Ardougne 51) and Deserted Keep lever' },
+    { id: 'spiders-combat', owner: false, label: 'Wilderness Poison Spiders progressive Ranged 1->55->99, pre-Overall Dragon Slayer, Doric/Plague City + Zoo mining, Air->Body altar RC' },
+    { id: 'woodcut-givers', owner: false, label: 'Woodcutting 1->99 + Prayer 1->99 with bone givers at the trees (extra:woodcut-givers-block5)' },
+    { id: 'superheat-stun', owner: false, label: 'Superheat inside pickpocket stuns (Magic 76->80 and Smithing XP in unused stun deadTicks)' },
+    { id: 'q-burst', owner: false, label: 'Q_BURST=1 dialogue burst on non-talk-plans quests (0.7% measured seed-7 saving)' },
     { id: 'magic-enchant', owner: false, label: 'Enchant ladder rather than teleport ladder; compare by disabling this option' },
     { id: 'combat-hp-bound', owner: false, label: "Melee by combat (HP-bound); melee-only quests after Overall; Witch's House split out" },
     // Retired: measured, it slows Defence to 86.7 style XP/tick and loses ticks in every table

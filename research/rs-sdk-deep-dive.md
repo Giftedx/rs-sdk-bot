@@ -246,7 +246,7 @@ Index traps the docs call out:
   104x104 build area.
 - **Limits:**
   - No plane transitions: stairs, ladders and trapdoors must be scripted.
-  - No transports: boats, ferries (`sdk/test/karamja-ferry.ts`), gnome gliders, fairy rings, carpets.
+  - No transports: boats, ferries (`sdk/test/karamja-ferry.ts`), gnome gliders, spirit trees (fairy rings and magic carpets do not exist in rev 289).
   - No agility shortcuts.
   - No teleport planning.
   - No danger or wilderness avoidance, no aggro awareness, no cost for closed gates or tolls (the Al

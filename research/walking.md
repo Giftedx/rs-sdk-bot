@@ -1,5 +1,17 @@
 # Walking without stalls
 
+## Bank entry for quest staging
+
+The quest sweep ranks bank candidates by direct distance and currently permitted global travel landings. The actor supplies observed carried items, worn gear, skills and quest state. Banked runes do not fund the first trip. Candidate order is an estimate; the router and walker still confirm access and arrival. A failed leg or fare acquisition refreshes the ranking, within the existing four-candidate limit.
+
+Source -> local consumer -> reuse/adapt/reject -> check: pinned Falador spell requirements in `magic_spells.dbrow` and existing `loadTravel`/`travelAllowed` -> funded upstairs Plague City staging -> reuse owned travel admission, adapt bank order, reject an unavailable Elkoy shortcut or more blind maze walks -> `scripts/quest-sweep.test.ts`, `extra:sweep-elena-upstairs-funded` and the `elena-heckel-dust` saved-state proof. The bench fixture carries one Law, four Air and two Water runes at Magic99. The proof requires the bank cast's endpoints and order, exact costs, quest effects and logout. Evidence: `.practice/quest-entry-bank/`. Gap: practice and a selected entry do not establish every location, supply state or live result.
+
+## McGrubor railing completion
+
+The loose railing's inside tile is `x=2662`; a westward exit requires `x<2662`. Its native entry lands at `x=2662`, even though the route's inward landing is `2663`. The shared walker keeps its floor and landing-distance checks and adds this side check for `mcgruborlooserailing` only. A completed crossing needs no second squeeze. The next walk starts after the observed exit, so it cannot cancel the pending railing action.
+
+Source -> local consumer -> reuse/adapt/reject -> check: pinned `mcgrubors_wood.rs2` and the Fishing Contest side predicates -> dwellberries followed by Snape grass acquisition for Plague City -> reuse the native sided outcome in the shared walker; reject a quest-only duplicate or a global exact-landing rule -> five `McGrubor` walker regressions and `extra:sweep-elena-draynor-partial`. Evidence: `.practice/quest-entry-bank/red-railing.log`, `green-railing.log`, `baseline-comparison.json` and `partial-fixed.log`. Conditions: loose railing51 at2662,3500 and its pinned handler. Gap: other passage handlers keep their own arrival rules; this is no speed comparison or live crossing proof.
+
 ## Zanaris shop entry
 
 Zanaris includes map squares 49,149 and 50,149. A walk between its western bank and market remains inside the realm. A walk outside those squares uses the entrance exit to the swamp shed. The shop buyer pays its configured market toll before searching for the NPC behind the closed gate. It skips payment on the shop side and starts no new toll or NPC approach after its budget ends.

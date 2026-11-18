@@ -3,10 +3,12 @@
 // Usage: bun scripts/gather-fish.ts <botName> [method: cage | harpoon, default cage] [CAP ticks, default 15000]
 // Environment: DEMO_OK=1 for live server.
 import { openBot, finish, countItems } from '../packages/core/src/bot';
+import { depositObserved } from '../packages/core/src/deposit';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import type { Session } from '../packages/core/src/inprocess';
 import type { NearbyNpc } from '../vendor/rs-sdk/sdk/types';
+import { executeShopToolPurchase, sessionToolHooks } from '../packages/planner/src/gear-progression';
 
 // Pinned rev289 npc.pack 322=0_44_53_memberfish; memberfish.rs2 opnpc3.
 export function sharkSpot(n: { id: number; name: string; optionsWithIndex: readonly { text: string; opIndex: number }[] }) {
@@ -134,6 +136,60 @@ export async function catchSharks(s: Session, amount: number, stop: () => boolea
 const CATHERBY_BANK = { x: 2809, z: 3441 };
 const BEACH_SPOT = { x: 2838, z: 3432 };
 
+export async function ensureCatherbyFishingTool(
+    s: Session,
+    options: {
+        toolId: number;
+        maxCost?: number;
+        coinReserve?: number;
+        bankSpot?: { x: number; z: number; level?: number };
+        walkTo: (spot: { x: number; z: number; level?: number }) => Promise<boolean>;
+        openBank: () => Promise<unknown>;
+        stop: () => boolean;
+    },
+): Promise<{ ok: boolean; bought: boolean; coinsSpent: number; reason?: string }> {
+    const heldTool = () => s.sdk.getInventory().some(i => i.id === options.toolId);
+    if (heldTool()) return { ok: true, bought: false, coinsSpent: 0 };
+
+    await options.openBank();
+    if (!await waitUntil(s, () => options.stop() || !!s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 10 }) || options.stop()) {
+        return { ok: false, bought: false, coinsSpent: 0, reason: 'bank unavailable' };
+    }
+    const bankItem = s.sdk.getState()?.bank?.items.find(i => i.id === options.toolId && i.count > 0);
+    if (bankItem) {
+        await s.bot.withdrawItem(bankItem, 1, { asNote: false });
+        if (await waitUntil(s, () => options.stop() || heldTool(), { timeoutTicks: 8 }) && heldTool()) {
+            return { ok: true, bought: false, coinsSpent: 0 };
+        }
+    }
+
+    const maxCost = options.maxCost ?? 50;
+    const reserve = options.coinReserve ?? 0;
+    const bankSpot = options.bankSpot ?? CATHERBY_BANK;
+    const hooks = sessionToolHooks(s, {
+        openBank: options.openBank,
+        walkTo: options.walkTo,
+        waitUntil: (pred, timeoutTicks) => waitUntil(s, pred, { timeoutTicks }),
+        stop: options.stop,
+    });
+    const res = await executeShopToolPurchase(hooks, {
+        targetId: options.toolId,
+        shop: 'fishingshop2',
+        maxBudget: maxCost + reserve,
+        coinReserve: reserve,
+        returnBankSpot: bankSpot,
+    });
+    if (!res.bought) {
+        return { ok: false, bought: false, coinsSpent: 0, reason: res.reason };
+    }
+    await options.openBank();
+    if (await waitUntil(s, () => options.stop() || !!s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 10 }) && !options.stop()) {
+        const spareCoins = s.sdk.getInventory().find(i => i.id === 995);
+        if (spareCoins) await depositObserved(s, spareCoins);
+    }
+    return { ok: heldTool(), bought: true, coinsSpent: res.coinsSpent };
+}
+
 if (import.meta.main) {
 const botName = process.argv[2] ?? 'Mightyrod';
 const method = (process.argv[3] ?? process.env.METHOD ?? 'cage').toLowerCase();
@@ -196,14 +252,21 @@ try {
             }
         }
 
-        // Ensure we have the required tool
+        // Ensure we have the required tool (withdraw from bank or buy from Harry in Catherby if funded)
         if (!inv().some(i => requiredTool.test(i.name))) {
+            const toolId = isCage ? 301 : 311;
             const toolName = isCage ? 'Lobster pot' : 'Harpoon';
-            console.log(`Withdrawing ${toolName}...`);
-            await s.bot.withdrawItem(requiredTool, 1);
-            // No tool in the pack or the bank: stop now instead of banking for the whole cap.
-            if (!await waitUntil(s, () => inv().some(i => requiredTool.test(i.name)), { timeoutTicks: 5 }))
-                await finish([s], false, `no ${toolName} in the pack or the bank`);
+            const ensured = await ensureCatherbyFishingTool(s, {
+                toolId,
+                maxCost: 50,
+                bankSpot: CATHERBY_BANK,
+                walkTo: async spot => walk(spot.x, spot.z, 2),
+                openBank: () => s.bot.openBank(),
+                stop: over,
+            });
+            if (!ensured.ok || !inv().some(i => requiredTool.test(i.name))) {
+                await finish([s], false, `no ${toolName} in the pack, bank, or Harry's shop (${ensured.reason ?? 'unavailable'})`);
+            }
         }
 
         await waitTicks(s, 1);

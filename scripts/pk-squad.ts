@@ -23,10 +23,10 @@ import type { Session } from '../packages/core/src/inprocess';
 import { closeWithin } from '../packages/core/src/bot';
 import { bindActionScope } from '../packages/core/src/action-scope';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, wildernessLevel, type FightOptions } from './pk';
+import { attackable, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, STUNNED_SHOVE_SPOTANIM, wildernessLevel, type FightOptions } from './pk';
 import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { EDGEVILLE_BANK } from './pk-hunt';
-import { connectRadar, kitFrom, Radar } from './pk-roam';
+import { connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './pk-roam';
 import { sparOptions } from './pk-spar';
 
 export const GANG = ['goondelf', 'ligma', 'sugma'];
@@ -119,8 +119,15 @@ export function watchSquadTicks(squad: readonly Session[], dropped: (name: strin
     }));
     return () => { for (const stop of off) stop(); };
 }
-// A dropped account logged in again: eat to near full, then Camelot Teleport where it can (Magic 45, a law rune and
-// 5 air runes, Wilderness 20 or less), else walk to the nearer bank (bankNear). The session when it ends out of the Wilderness, else null.
+// Best teleport escape below Wilderness 20: Camelot Teleport (1174), else Varrock Teleport (1164), counting worn staves.
+export function squadEscapeSpell(z: number, carried: readonly { id: number; count: number }[], wornIds: readonly number[], magic: number): number | null {
+    if (wildernessLevel(z) > 20) return null;
+    for (const spell of [1174, 1164]) if (escapeCastable(spell, carried, wornIds, magic)) return spell;
+    return null;
+}
+
+// A dropped account logged in again: eat to near full, then teleport where it can (Camelot or Varrock below Wilderness
+// 20, counting worn staves), else walk to the nearer bank (bankNear). The session when it ends out of the Wilderness, else null.
 export async function rescue(s: Session, log: (l: string) => void, stopped: () => boolean = () => false): Promise<Session | null> {
     const me = () => s.sdk.getState()?.player;
     const tick = async () => !stopped() && await nextTick(s) && !stopped();
@@ -137,9 +144,9 @@ export async function rescue(s: Session, log: (l: string) => void, stopped: () =
             for (let t = 0; t < 3; t++) if (!await tick()) return null;
         }
         const st = s.sdk.getState(), magic = st?.skills.find(k => k.name === 'Magic')?.level ?? 1;
-        const held = (id: number) => (st?.inventory ?? []).filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
-        if (st && wildernessLevel(start.worldZ) <= 20 && magic >= 45 && held(ITEMS.lawRune) >= 1 && held(ITEMS.airRune) >= 5)
-            for (let i = 0; i < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; i++) { if (stopped()) return null; await s.direct({ type: 'clickComponent', componentId: 1174, reason: 'SDK' }); for (let t = 0; t < 6; t++) if (!await tick()) return null; }
+        const escapeSpell = st ? squadEscapeSpell(start.worldZ, st.inventory ?? [], s.sdk.getEquipment().map(e => e.id), magic) : null;
+        if (escapeSpell !== null)
+            for (let i = 0; i < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; i++) { if (stopped()) return null; await s.direct({ type: 'clickComponent', componentId: escapeSpell, reason: 'SDK' }); for (let t = 0; t < 6; t++) if (!await tick()) return null; }
         if (stopped()) return null;
         if (wildernessLevel(me()?.worldZ ?? 0) > 0) await walkPath(await sessionWalker(s), [{ ...bankNear(me()?.worldX ?? start.worldX), tol: 2 }], { maxTicks: 500, idleMs: 9000, stop: stopped });
     }
@@ -199,8 +206,62 @@ export function squadTarget<P extends { name: string; index: number; distance: n
         .sort((a, b) => health(a) - health(b) || a.distance - b.distance)[0];
 }
 
+// Multi-way pile & anti-PJ target focus: prioritizes stunned targets, then lowest HP%, scouted priority target, and filters out busy single-way fights.
+export function pickSquadFocus<P extends { name: string; index: number; distance: number; x?: number; z?: number; combatLevel?: number; inCombat?: boolean }>(opts: {
+    view: readonly P[];
+    targets: ReadonlySet<string>;
+    health: (p: P) => number;
+    skip?: ReadonlySet<string>;
+    me?: { x: number; z: number; combatLevel: number };
+    inMulti?: boolean;
+    stunned?: ReadonlySet<string>;
+    activeFocus?: string;
+    scoutTarget?: string;
+}): P | undefined {
+    const { view, targets, health, skip = new Set(), me, inMulti, stunned = new Set(), activeFocus, scoutTarget } = opts;
+    const active = activeFocus?.toLowerCase();
+    const scout = scoutTarget?.toLowerCase();
+    const eligible = view.filter(p => {
+        const key = p.name.toLowerCase();
+        if (!targets.has(key) || skip.has(key)) return false;
+        if (me && p.z !== undefined && !attackable(me, { z: p.z, combatLevel: p.combatLevel ?? me.combatLevel })) return false;
+        // Anti-PJ in single-way: avoid hopping onto someone already actively engaged by another attacker unless it's our own active focus.
+        const multiTile = inMulti !== undefined ? inMulti : (p.x !== undefined && p.z !== undefined ? isMulti(p.x, p.z) : true);
+        if (!multiTile && p.inCombat && key !== active) return false;
+        return true;
+    });
+    return eligible.sort((a, b) => {
+        const ak = a.name.toLowerCase(), bk = b.name.toLowerCase();
+        return Number(stunned.has(bk)) - Number(stunned.has(ak))
+            || health(a) - health(b)
+            || Number(bk === scout) - Number(ak === scout)
+            || a.distance - b.distance;
+    })[0];
+}
+
+// Coordinated squad escape fallback when outnumbered in multi-combat or out of food below threshold.
+export function squadFallbackPlan(opts: {
+    z: number;
+    hp: number;
+    maxHp: number;
+    foodCount: number;
+    enemyCount: number;
+    allyCount: number;
+    inMulti: boolean;
+    hasGlory: boolean;
+    hasTeleport: boolean;
+}): 'hold' | 'out' | 'glory' | 'teleport' | 'run' {
+    const wild = wildernessLevel(opts.z);
+    if (wild === 0) return 'out';
+    const outnumbered = opts.inMulti && opts.enemyCount - opts.allyCount >= 2 && opts.hp <= opts.maxHp * 0.55;
+    const dry = opts.foodCount <= 0 && opts.hp <= opts.maxHp * 0.6;
+    if (!outnumbered && !dry) return 'hold';
+    return escapeStep(wild, { glory: opts.hasGlory, teleport: opts.hasTeleport });
+}
+
 // One account of the squad: hold the post, fight the squad's target, pick up, bank and come back.
 export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: { x: number; z: number }; aim?: { x: number; z: number }; options: FightOptions; allies: readonly string[]; pickup: boolean; pull?: boolean;
+    stunShareFor?: (target: string) => FightOptions['stunShare']; burstOnStun?: boolean; stunSpec?: FightOptions['stunSpec'];
     trips: number; deadline: number; stopped: () => boolean; killsLeft: () => boolean; log: (l: string) => void }): Promise<SquadStats> {
     const stats: SquadStats = { name: s.name, fights: 0, pulls: 0, kills: 0, trips: 0, died: false, picked: {}, taken: 0 };
     const st = s.sdk.getState(), me = () => s.sdk.getState()?.player, life0 = st?.player?.lifeId;
@@ -243,8 +304,26 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             for (const [k, until] of skip) if (until <= now) skip.delete(k);
             const view = s.sdk.getState()?.nearbyPlayers ?? [];
             const health = (q: { index: number }) => { const seen = observePlayer(s.client, q.index); return seen && seen.totalHealth > 0 ? seen.health / seen.totalHealth : 1; };
-            const self = { z: p.worldZ, combatLevel: p.combatLevel };
-            const target = squadTarget(view, o.targets, health, new Set(skip.keys()), self);
+            const stunned = new Set(view.filter(q => observePlayer(s.client, q.index)?.spotanim === STUNNED_SHOVE_SPOTANIM).map(q => q.name.toLowerCase()));
+            const self = { x: p.worldX, z: p.worldZ, combatLevel: p.combatLevel };
+            const alliesSet = new Set(o.allies.map(a => a.toLowerCase()));
+            const enemyCount = view.filter(q => !alliesSet.has(q.name.toLowerCase()) && q.distance <= 10 && attackable(self, { z: q.z, combatLevel: q.combatLevel })).length;
+            const allyCount = view.filter(q => alliesSet.has(q.name.toLowerCase()) && q.distance <= 10).length;
+            const inv = s.sdk.getInventory();
+            const fallback = squadFallbackPlan({
+                z: p.worldZ, hp: p.hp, maxHp: p.maxHp,
+                foodCount: inv.filter(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text))).length,
+                enemyCount, allyCount, inMulti: isMulti(p.worldX, p.worldZ),
+                hasGlory: [...inv, ...s.sdk.getEquipment()].some(i => /^amulet of glory\([1-4]\)$/i.test(i.name)),
+                hasTeleport: !!squadEscapeSpell(p.worldZ, inv, s.sdk.getEquipment().map(e => e.id), s.sdk.getSkill('Magic')?.level ?? 1),
+            });
+            if (fallback !== 'hold' && fallback !== 'out') {
+                o.log(`[${s.name}] SQUAD coordinated fallback (${fallback}) hp=${p.hp} enemies=${enemyCount} allies=${allyCount}`);
+                const retreated = await rescue(s, o.log, o.stopped);
+                if (!retreated) { stats.died = true; break; }
+                continue;
+            }
+            const target = pickSquadFocus({ view, targets: o.targets, health, skip: new Set(skip.keys()), me: self, inMulti: isMulti(p.worldX, p.worldZ), stunned });
             if (!target) {
                 // No prayer while it waits: an active prayer drains with no fight loop to flick it (in one live meeting
                 // our prayer ran out at about tick 730), and the fight loop puts them on again. One input each 3 ticks.
@@ -279,8 +358,15 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             }
             const began = s.tick();
             stats.fights++;
-            const r = await fightPlayer(s, target.name, { ...o.options, allies: o.allies, cap: Math.max(1, o.deadline - s.tick()), stop: () => !going() || refusedAt > began,
-                log: l => o.log(`[${s.name}] ${l}`) });
+            const stunShare = o.stunShareFor?.(target.name.toLowerCase());
+            const r = await fightPlayer(s, target.name, {
+                ...o.options,
+                ...(stunShare ? { stunShare } : {}),
+                ...(o.burstOnStun !== undefined ? { burstOnStun: o.burstOnStun } : {}),
+                ...(o.stunSpec ? { stunSpec: o.stunSpec } : {}),
+                allies: o.allies, cap: Math.max(1, o.deadline - s.tick()), stop: () => !going() || refusedAt > began,
+                log: l => o.log(`[${s.name}] ${l}`),
+            });
             if (refusedAt > began) skip.set(target.name.toLowerCase(), s.tick() + 8);
             const gone = !(s.sdk.getState()?.nearbyPlayers ?? []).some(q => q.name.toLowerCase() === target.name.toLowerCase());
             if (r.outcome === 'kill') stats.kills++;
@@ -416,12 +502,21 @@ if (import.meta.main) {
             const seen = squad.some(s => (s.sdk.getState()?.nearbyPlayers ?? []).some(q => targets.has(q.name.toLowerCase())));
             unseen = seen ? 0 : unseen + 1;
             if (process.env.FOLLOW_TRACE === '1' && tick % 100 === 0) log(`SQUAD follow trace unseen=${unseen} fresh=${radar.fresh()} tracks=${radar.tracks.size}`);
-            if (unseen < wait || !radar.fresh() || tick % 10 !== 0) return;
-            const where = [...radar.tracks.values()].filter(t => targets.has(t.name.toLowerCase()) && wildernessLevel(t.z) > 0);
-            const tile = meetTile(where, maxWild);
+            if (unseen < wait || tick % 10 !== 0) return;
+            const where = radar.fresh() ? [...radar.tracks.values()].filter(t => targets.has(t.name.toLowerCase()) && wildernessLevel(t.z) > 0) : [];
+            let tile = meetTile(where, maxWild);
+            if (!tile && get('SCOUT_INTEL', '1') === '1') {
+                const lead = squad.find(q => !dropped.has(q.name) && q.sdk.getState()?.player)?.sdk.getState()?.player;
+                const intelPick = lead ? pickScoutTargetForSquad({ me: { x: lead.worldX, z: lead.worldZ, combat: lead.combatLevel }, intel: readScoutIntel(), maxWild, friends: new Set(ours.map(n => n.toLowerCase())) }) : null;
+                if (intelPick) {
+                    targets.add(intelPick.target.toLowerCase());
+                    tile = { x: intelPick.x, z: intelPick.z };
+                    log(`SQUAD follow scout intel: ${intelPick.target} at ${intelPick.x},${intelPick.z} (multi=${intelPick.multi}) from ${intelPick.scout}`);
+                }
+            }
             if (!tile || (goal && Math.max(Math.abs(goal.x - tile.x), Math.abs(goal.z - tile.z)) <= 4)) return;
             goal = tile;
-            log(`SQUAD follow: targets at ${where.map(t => `${t.name} ${t.x},${t.z}`).join(' ')}`);
+            if (where.length) log(`SQUAD follow: targets at ${where.map(t => `${t.name} ${t.x},${t.z}`).join(' ')}`);
             march(tile);
         });
     }
@@ -431,9 +526,26 @@ if (import.meta.main) {
     // Our accounts walk to the post first.
     // Far from the post (MARCH=1, the default): march there; hold() walks each account to the post's current step.
     { const c = centroid(); if (get('MARCH', '1') === '1' && Math.max(Math.abs(c.x - post.x), Math.abs(c.z - post.z)) > step) march({ ...post }); }
-    const results = await Promise.all(squad.map(s => hold(s, { targets, post, options: sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []), 1200),
-        allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), deadline,
-        stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (/PK kill /.test(l)) kills++; log(l); } })));
+    const squadHasSpear = squad.some(s => [...(s.sdk.getState()?.equipment ?? []), ...(s.sdk.getState()?.inventory ?? [])].some(i => /^dragon spear/i.test(i.name)));
+    const spearLock = get('SPEAR_LOCK', squadHasSpear ? '1' : '0') === '1';
+    const stunShares = new Map<string, NonNullable<FightOptions['stunShare']>>();
+    const stunShareFor = (t: string) => {
+        const key = t.toLowerCase();
+        let share = stunShares.get(key);
+        if (!share) { share = { clock: () => squad[0]!.tick(), until: -1, stunnedUntil: -1, overlap: 1 }; stunShares.set(key, share); }
+        return share;
+    };
+    const results = await Promise.all(squad.map(s => {
+        const kit = kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []);
+        const stunSpec = defaultStunSpec(kit);
+        return hold(s, {
+            targets, post,
+            options: sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200),
+            ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
+            allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), deadline,
+            stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (/PK kill /.test(l)) kills++; log(l); },
+        });
+    }));
     squadDone = true;
     await Promise.all(gangRuns);
     unwatchMarch(); unwatchRadar?.(); unwatchFollow?.();

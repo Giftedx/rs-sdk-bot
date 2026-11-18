@@ -1,4 +1,4 @@
-/* OSRS game chrome and RuneLite plugin workspace. All game data is observed. */
+/* 2004 RuneScape (rev 289) game chrome and RuneLite plugin workspace. All game data is observed. */
 (() => {
   const app=document.querySelector('.app'),asset=n=>'/client-assets/'+n;
   // The plugin panel and the toolbar stay hidden until operations.js has added its parts and chosen the first plugin,
@@ -20,11 +20,11 @@
   window.atlasPluginIdle=id=>id==='xp'&&!window.atlasOperator()&&typeof S!=='undefined'&&!!S&&!S.bots.some(b=>b.fresh&&!b.practice&&!b.reserved&&!b.remote);
   // Only the tabs with observed data and no plugin that shows the same: Fleet holds the stopped accounts (the old
   // Ignore List) and Account overview the account summary (the old Account Management tab).
-  const tabs=[['skills','Skills'],['quests','Quest Journal'],['inventory','Inventory'],['equipment','Worn Equipment'],['friends','Friends List'],['logout','Logout'],['settings','Game Options']];
+  const tabs=[['skills','Skills'],['quests','Quest Journal'],['inventory','Inventory'],['equipment','Worn Equipment'],['prayer','Prayer'],['magic','Magic'],['friends','Friends List'],['logout','Logout'],['settings','Game Options']];
   // The 2004 client's side icons (client-assets/sideicons.png, 30 px each): the place of each tab's icon in the strip.
-  const TAB_ICON={skills:1,quests:2,inventory:3,equipment:4,friends:7,logout:9,settings:10};
+  const TAB_ICON={skills:1,quests:2,inventory:3,equipment:4,prayer:5,magic:6,friends:7,logout:9,settings:10};
   const realSkill=k=>!/^Stat\d+$/.test(k.name)&&k.name!=='Overall';const reported=(acct,n)=>{const set=acct?.skills?.length?acct.skills:S?.bots?.flatMap(x=>x.skills||[])||[];return !set.length||set.some(k=>k.name===n||(n==='Runecraft'&&/runecraft/i.test(k.name)));};
-const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Defence','Herblore','Fishing','Ranged','Thieving','Cooking','Prayer','Crafting','Firemaking','Magic','Fletching','Woodcutting','Runecraft','Slayer','Farming','Construction','Hunter','Sailing'];
+const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Defence','Herblore','Fishing','Ranged','Thieving','Cooking','Prayer','Crafting','Firemaking','Magic','Fletching','Woodcutting','Runecraft'];
   const skillFile=n=>n.toLowerCase()==='runecraft'?'runecraft':n.toLowerCase();
   const hud=document.createElement('div');hud.className='game-hud';
   // A phone has no room for the chat beside the inventory: it starts hidden behind its toggle.
@@ -33,18 +33,18 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // A visitor on a phone starts on the world. The inventory opens from its tab buttons.
   if(phoneWidth.matches&&!window.atlasOperator())hud.classList.add('game-panel-hidden');
   phoneWidth.addEventListener('change',e=>hud.classList.toggle('chat-hidden',e.matches));
-  hud.innerHTML=`<button class="game-xp" title="XP Tracker" aria-label="XP Tracker">XP</button><div class="game-orbs" aria-label="Player status"></div><div class="xp-drops" aria-hidden="true"></div><div class="xp-globes" aria-label="XP globes"></div><div class="game-overlay" aria-label="Overlay"></div><div class="game-infoboxes" aria-label="Infoboxes"></div><div class="game-tip" hidden></div><div class="game-screen" id="game-loading"><div class="game-screen-box"><h2>Welcome to RuneScape</h2><p>Loading - please wait.</p></div></div><div class="game-screen" id="game-lost" hidden><div class="game-screen-box"><p>Connection lost.</p><p>Please wait - attempting to reestablish.</p></div></div><div class="game-minimap" aria-label="Minimap"><canvas width="146" height="151"></canvas><img class="minimap-compass" src="${asset('compass.png')}" alt="" title="Compass: face north"><canvas class="minimap-frame" width="249" height="168" aria-hidden="true"></canvas><button class="game-worldmap" data-places title="Places: move the camera" aria-label="Places"><img src="${asset('worldmap-icon.png')}" alt=""></button></div><section class="game-tabs" aria-label="Game interface"><nav class="tab-row" aria-label="Primary game tabs"></nav><div class="game-panel" id="game-panel"></div><nav class="tab-row" aria-label="Social and settings tabs"></nav></section><button class="chat-toggle" aria-label="Toggle chat">▾ Chat</button><section class="game-chat" aria-label="In-game chat"><div class="game-chat-lines" role="log" aria-live="polite"></div><form class="chat-input"><span id="chat-name">Spectator:</span><input aria-label="Chat message or local command" autocomplete="off" placeholder="*"></form><nav class="chat-channels" aria-label="Chat channels"></nav></section>`;
+  hud.innerHTML=`<button class="game-xp" title="XP Tracker" aria-label="XP Tracker">XP</button><div class="game-orbs" aria-label="Player status"></div><div class="xp-drops" aria-hidden="true"></div><div class="xp-globes" aria-label="XP globes"></div><div class="game-overlay" aria-label="Overlay"></div><div class="game-infoboxes" aria-label="Infoboxes"></div><div class="game-pvp-hud" aria-label="Wilderness and PvP combat HUD" hidden></div><div class="game-tip" hidden></div><div class="game-screen" id="game-loading"><div class="game-screen-box"><h2>Welcome to RuneScape</h2><p>Loading - please wait.</p></div></div><div class="game-screen" id="game-lost" hidden><div class="game-screen-box"><p>Connection lost.</p><p>Please wait - attempting to reestablish.</p></div></div><div class="game-minimap" aria-label="Minimap"><canvas width="146" height="151"></canvas><img class="minimap-compass" src="${asset('compass.png')}" alt="" title="Compass: face north"><canvas class="minimap-frame" width="249" height="168" aria-hidden="true"></canvas><button class="game-worldmap" data-places title="Places: move the camera" aria-label="Places"><img src="${asset('worldmap-icon.png')}" alt=""></button></div><section class="game-tabs" aria-label="Game interface"><nav class="tab-row" aria-label="Primary game tabs"></nav><div class="game-panel" id="game-panel"></div><nav class="tab-row" aria-label="Social and settings tabs"></nav></section><button class="chat-toggle" aria-label="Toggle chat">▾ Chat</button><section class="game-chat" aria-label="In-game chat"><div class="game-chat-lines" role="log" aria-live="polite"></div><form class="chat-input"><span id="chat-name">Spectator:</span><input aria-label="Chat message or local command" autocomplete="off" placeholder="*"></form><nav class="chat-channels" aria-label="Chat channels"></nav></section>`;
   app.append(hud);
-  const title=document.createElement('div');title.className='client-title';title.innerHTML=`<img src="${asset('runelite.png')}" alt=""><span>RuneLite — Swarm</span><span class="connection">● Live world</span><div class="focus" id="client-focus" role="group" aria-label="3D camera focus" data-state="free"><button class="focus-step" data-focus-step="-1" aria-label="Previous account in the world" title="Previous account in the world · [">‹</button><button class="focus-now" aria-haspopup="listbox" aria-expanded="false"><i class="focus-dot"></i><span class="focus-name">Free camera</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></button><button class="focus-step" data-focus-step="1" aria-label="Next account in the world" title="Next account in the world · ]">›</button><button class="focus-wall" aria-pressed="false" hidden title="Fleet wall: up to 16 of our accounts in the world, each in its own 3D view, tiled. Click a view to focus it, double click to follow that account. · \\">Wall</button><div class="focus-menu"><input class="focus-find" aria-label="Find an account" placeholder="Find an account…" autocomplete="off" spellcheck="false"><div class="focus-list" role="listbox" aria-label="Accounts"></div></div></div><button id="client-sidebar" title="Toggle plugin sidebar" aria-label="Toggle plugin sidebar" aria-expanded="true">❯</button>`;app.append(title);
+  const title=document.createElement('div');title.className='client-title';title.innerHTML=`<img src="${asset('runelite.png')}" alt=""><span>RuneLite — Swarm</span><span class="connection">● Live world</span><div class="focus" id="client-focus" role="group" aria-label="3D camera focus" data-state="free"><button class="focus-step" data-focus-step="-1" aria-label="Previous account in the world" title="Previous account in the world · [">‹</button><button class="focus-now" aria-haspopup="listbox" aria-expanded="false"><i class="focus-dot"></i><span class="focus-name">Free camera</span><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg></button><button class="focus-step" data-focus-step="1" aria-label="Next account in the world" title="Next account in the world · ]">›</button><button class="focus-wall" aria-pressed="false" hidden title="Fleet wall: up to 16 of our accounts in the world, each in its own 3D view, tiled. Click a view to focus it, double click to follow that account. · \\">Wall</button><div class="focus-menu"><input class="focus-find" aria-label="Find an account" placeholder="Find an account…" autocomplete="off" spellcheck="false"><div class="focus-list" role="listbox" aria-label="Accounts"></div></div></div><div class="title-diag" id="client-diag" hidden></div><button id="client-sidebar" title="Toggle plugin sidebar" aria-label="Toggle plugin sidebar" aria-expanded="true">❯</button>`;app.append(title);
   const followTitle=()=>{const name=document.getElementById('client-plugin-name')?.textContent;document.title='RuneLite — Swarm'+(name?' · '+name:'');writeLink();};
   const plugin=document.createElement('aside');plugin.className='client-plugin';plugin.setAttribute('aria-label','RuneLite plugins');plugin.innerHTML='<div class="client-plugin-title"><span id="client-plugin-name">Fleet</span><select id="client-more" aria-label="More plugins" hidden><option value="">⋮</option><option value="raw">Raw evidence</option></select><button id="client-share" aria-label="Copy a link to this view" title="Copy a link to this view">⧉</button><button aria-label="Close plugin">×</button></div><div class="client-plugin-body"></div>';app.append(plugin);
   const body=plugin.querySelector('.client-plugin-body'),rail=document.createElement('nav');rail.className='client-rail';rail.setAttribute('aria-label','RuneLite plugin toolbar');
   const oldRail=document.querySelector('.plugin-rail');
-  const plugins=[['fleet','Fleet'],['xp','XP Tracker'],['boards','Hiscores'],['world','World'],['ge','Grand Exchange'],['prs','Pull requests'],['jobs','Agents & jobs'],['goals','Project goals'],['account','Account overview'],['stock','Supply ledger'],['activity','Activity'],['machine','Host resources'],['info','Info']];
+  const plugins=[['fleet','Fleet'],['xp','XP Tracker'],['gear','Gear Advisor'],['boards','Hiscores'],['world','World'],['ge','Grand Exchange'],['prs','Pull requests'],['jobs','Agents & jobs'],['goals','Project goals'],['account','Account overview'],['stock','Supply ledger'],['activity','Activity'],['machine','Host resources'],['info','Info']];
   const fallback='<svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9h8m-8 5h8"/></svg>';
   // RuneLite's own sidebar icons (client-assets/rl-*.png, see ATTRIBUTION.txt), one per plugin.
   const RAIL_ICONS=['fleet','xp','hiscore','loot','worlds','ge','prs','jobs','goals','account','boards','activity','world','machine','settings','operations','dispatch','alerts','library'],RAIL_FILE={boards:'hiscore',info:'machine',machine:'library',activity:'loot'};
-  const railIcon=id=>{const f=RAIL_FILE[id]||id;return RAIL_ICONS.includes(f)?`<img src="${asset('rl-'+f+'.png')}" alt="">`:null;};window.atlasRailIcon=railIcon;
+  const railIcon=id=>{if(id==='gear')return `<img src="${asset('tab-equipment.png')}" alt="">`;const f=RAIL_FILE[id]||id;return RAIL_ICONS.includes(f)?`<img src="${asset('rl-'+f+'.png')}" alt="">`:null;};window.atlasRailIcon=railIcon;
   const icons={xp:railIcon('xp')};
   rail.innerHTML=plugins.filter(([id])=>window.atlasOperator()||!(OPERATOR_PLUGINS.includes(id)||PUBLIC_HIDDEN.includes(id))).map(([id,label])=>`<button data-client-plugin="${id}" aria-label="${label}" title="${label}">${railIcon(id)||oldRail.querySelector(`[data-plugin="${id}"]`)?.innerHTML||fallback}</button>`).join('')+'<span class="rail-gap"></span><button data-client-plugin="manager" aria-label="Configuration" title="Configuration">'+railIcon('settings')+'</button>';app.append(rail);
   const fleet=$('#fleet-panel'),inspect=$('#inspect-panel'),boards=$('.boards'),allocation=$('#allocation-panel'),journal=$('.map-dock'),places=$('.map-place');
@@ -67,7 +67,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Game: fleet events and finished jobs. Private: stopped jobs and deaths. Public: chat the 3D viewer overhears.
   const channels=['Public','Private','Game'],chatOff=new Set(),CHAT_LABEL={Public:'Public chat',Private:'Private chat',Game:'Game'};
   hud.querySelector('.chat-channels').innerHTML=channels.map(c=>`<button data-chat="${c}" aria-pressed="true" title="${CHAT_LABEL[c]}: show or hide these lines">${CHAT_LABEL[c]}<small>On</small></button>`).join('');
-  const rows=hud.querySelectorAll('.tab-row');tabs.forEach(([id,label],i)=>rows[i<4?0:1].insertAdjacentHTML('beforeend',`<button data-game-tab="${id}" aria-label="${label}" title="${label}" class="${id===selectedTab?'active':''}"><span class="tab-sprite" style="background-position:-${30*TAB_ICON[id]}px 0"></span></button>`));
+  const rows=hud.querySelectorAll('.tab-row');tabs.forEach(([id,label],i)=>rows[i<5?0:1].insertAdjacentHTML('beforeend',`<button data-game-tab="${id}" aria-label="${label}" title="${label}" class="${id===selectedTab?'active':''}"><span class="tab-sprite" style="background-position:-${30*TAB_ICON[id]}px 0"></span></button>`));
   function level(name){return account()?.skills?.find(s=>s.name.toLowerCase()===name.toLowerCase()||(name==='Runecraft'&&/runecraft/i.test(s.name)));}
   const qty=n=>n>=10000000?`<span class="qty qty-m">${Math.floor(n/1e6)}M</span>`:n>=100000?`<span class="qty qty-k">${Math.floor(n/1000)}K</span>`:`<span class="qty">${n}</span>`;
   // Item prices (RuneLite itemprices, bank value): the server's item value (the vault's: 7-day VWAP after 3 trades,
@@ -130,7 +130,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const chargeTag=item=>{const c=item&&!(item.count>1)?itemCharges(item.name):null;return c==null?'':`<span class="qty item-charge">${c}</span>`;};
   // Inventory Tags (RuneLite's Inventory Tags): an outline in the colour of the item's group: food green, potions blue,
   // teleports purple, runes orange (item-stats.json for food and potions).
-  const invTag=item=>{if(!item||typeof hl==='undefined'||!hl.invTags)return '';const n=item.name||'',st=itemStats[n]||'';return /\bheals\b/i.test(st)?' tag-food':/\(\d\)$/.test(n)&&st?' tag-potion':/teleport|^Amulet of glory|^Ring of dueling|^Games necklace|^Skills necklace|^Combat bracelet/i.test(n)?' tag-tele':/ rune$/i.test(n)?' tag-rune':'';};
+  const invTag=item=>{if(!item||typeof hl==='undefined'||!hl.invTags)return '';const n=item.name||'',st=itemStats[n]||'';return /\bheals\b/i.test(st)?' tag-food':/\(\d\)$/.test(n)&&st?' tag-potion':/teleport|^Amulet of glory|^Ring of dueling|^Games necklace|^Enchanted lyre/i.test(n)?' tag-tele':/ rune$/i.test(n)?' tag-rune':'';};
   // Equipment Stats (the game's Equipment Stats screen): the sum of the worn items' bonuses (client-assets/item-bonuses.json,
   // from the server's .obj params) and the max hits by the server's formula (combat.rs2, player_combat_stat.rs2):
   // effective level = current level + 8 + the attack style bonus (0 to 3); max hit = floor((effective × (bonus + 64) + 320) / 640).
@@ -164,9 +164,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const sg=v=>(v>0?'+':'')+v,cells=(from,names)=>names.map((n,i)=>'<i title="'+n+'">'+sg(t[from+i])+'</i>').join('');
     const str=curLevel(b,'Strength'),rng=curLevel(b,'Ranged'),weapon=b.equipment.find(e=>e.slot===3),ranged=(equipmentValue(itemBonusData,weapon)?.[4]||0)>0;
     const hits=[Number.isFinite(str)&&!ranged?'Melee '+maxHit(str,t[10],0)+'–'+maxHit(str,t[10],3)+' · prayer '+maxHit(str,t[10],3,115):'',ranged&&Number.isFinite(rng)?'Ranged '+maxHit(rng,t[11],0)+'–'+maxHit(rng,t[11],3):''].filter(Boolean);
-    {const sp=bestSpell(b);if(sp)hits.push('Magic '+sp.name+' '+sp.max+' ×'+sp.casts);}
+    {const sp=bestSpell(b);if(sp)hits.push('Magic '+sp.name+' '+sp.max+(sp.charge?' (30 charged)':'')+' ×'+sp.casts);}
     const names=['Stab','Slash','Crush','Magic','Range'];
-    return '<div class="equip-stats"><div class="es-title">Equipment Stats</div><div class="es-head"><span></span>'+names.map(n=>'<i title="'+n+'">'+n.slice(0,3)+'</i>').join('')+'</div><div><span>Attack</span>'+cells(0,names)+'</div><div><span>Defence</span>'+cells(5,names)+'</div><div class="es-other"><span>Other</span><i title="Strength">Str '+sg(t[10])+'</i><i title="Ranged strength">Rng '+sg(t[11])+'</i><i title="Prayer">Pray '+sg(t[12])+'</i></div>'+(hits.length?'<div class="es-hit" title="Without a prayer, from no attack style bonus to +3; the active prayer is not reported"><span>Max hit</span><b>'+hits.join('<br>')+'</b></div>':'')+'</div>';
+    const speed=typeof weaponSpeedData!=='undefined'&&weapon?equipmentValue(weaponSpeedData,weapon):null;
+    const tickSec=((typeof S!=='undefined'&&S?.world?.tickMs)||600)/1000;
+    const specCost=/\bdragon dagger\b/i.test(weapon?.name||'')?25:/\bmagic (shortbow|longbow)\b/i.test(weapon?.name||'')?35:/\bdragon (longsword|mace|spear)\b/i.test(weapon?.name||'')?25:/\bdragon halberd\b/i.test(weapon?.name||'')?30:/\brune claws\b/i.test(weapon?.name||'')?25:/\brune thrownaxe\b/i.test(weapon?.name||'')?10:/\b(dragon battleaxe|excalibur)\b/i.test(weapon?.name||'')?100:null;
+    const adv=typeof equipAdvisorHtml==='function'?equipAdvisorHtml(b):'';
+    return '<div class="equip-stats"><div class="es-title">Equipment Stats</div><div class="es-head"><span></span>'+names.map(n=>'<i title="'+n+'">'+n.slice(0,3)+'</i>').join('')+'</div><div><span>Attack</span>'+cells(0,names)+'</div><div><span>Defence</span>'+cells(5,names)+'</div><div class="es-other"><span>Other</span><i title="Strength">Str '+sg(t[10])+'</i><i title="Ranged strength">Rng '+sg(t[11])+'</i><i title="Prayer">Pray '+sg(t[12])+'</i></div>'+(speed!=null?'<div class="es-hit"><span>Speed</span><b>'+speed+' ticks ('+(speed*tickSec).toFixed(1)+'s)</b></div>':'')+(specCost!=null?'<div class="es-hit"><span>Special</span><b>'+E(weapon.name)+' ('+specCost+'%)</b></div>':'')+(hits.length?'<div class="es-hit" title="Without a prayer, from no attack style bonus to +3; the active prayer is not reported"><span>Max hit</span><b>'+hits.join('<br>')+'</b></div>':'')+'</div>'+adv;
   }
   // Teleport casts: how many casts of each teleport spell the pack's runes give (a wielded staff gives its rune without
   // limit; client-assets/spellbook.json); a spell above the account's current Magic level is dim.
@@ -179,7 +183,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!spellbookData?.combat?.length||!Array.isArray(b?.inventory))return null;
     const mg=curLevel(b,'Magic');if(!Number.isFinite(mg))return null;
     const worn=new Set((b.equipmentObserved===false?[]:b.equipment||[]).map(e=>e?.name));
-    let best=null;for(const [name,lv,max,runes,staff,exp] of spellbookData.combat){if(lv>mg||(staff&&!worn.has(staff)))continue;const casts=runeCasts(b,runes);if(casts>0&&Number.isFinite(casts)&&(!best||max>best.max))best={name,max,casts,xp:(exp||0)*2.5};}
+    let best=null;for(const [name,lv,max,runes,staff,exp] of spellbookData.combat){if(lv>mg||(staff&&!worn.has(staff)))continue;const casts=runeCasts(b,runes);if(casts>0&&Number.isFinite(casts)&&(!best||max>best.max)){const charge=mg>=80&&/^(Saradomin Strike|Claws of Guthix|Flames of Zamorak)$/.test(name)&&runeCasts(b,[['Blood rune',3],['Fire rune',3],['Air rune',3]])>=1;best={name,max,casts,charge,xp:(exp||0)*2.5};}}
     return best;
   }
   function teleCasts(b){
@@ -206,7 +210,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // unidentified_*), so the item id gives its short name; a potion (a name ending in its doses, "(3)") shows its type:
   // Str, Pra, SAtt for a super attack.
   const HERB_IDS={199:'Gua',201:'Mar',203:'Tar',205:'Har',207:'Ran',209:'Iri',211:'Ava',213:'Kwu',215:'Cad',217:'Dwa',219:'Tor',2485:'Lan',3049:'Toa',3051:'Sna'};
-  const POTION_IDS={attack:'Att',strength:'Str',defence:'Def',prayer:'Pra',restore:'Res',energy:'Ene',ranging:'Rng',magic:'Mag',antipoison:'AP',superantipoison:'SAP',fishing:'Fsh',agility:'Agi',combat:'Cmb',zamorak:'Zam',saradomin:'Sar',antifire:'AF',weapon:'WP'};
+  const POTION_IDS={attack:'Att',strength:'Str',defence:'Def',prayer:'Pra',restore:'Res',energy:'Ene',ranging:'Rng',magic:'Mag',antipoison:'AP',superantipoison:'SAP',fishing:'Fsh',agility:'Agi',zamorak:'Zam',antifire:'AF',weapon:'WP'};
   function idLabel(item){
     if(!item||typeof hl==='undefined'||hl.itemIds===false)return '';
     const id=item.baseId??item.id,n=String(item.name||'');
@@ -314,6 +318,47 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       html='<h3>Friends List</h3><p style="text-align:center">Friends: '+bots.filter(x=>x.inWorld).length+' online / '+bots.length+'</p><div class="game-list friends-list">'+bots.map(x=>`<button data-friend="${E(x.name)}" title="${E(safeName(x.name))}${x.goal?' · '+E(x.goal):''}"><span>${E(safeName(x.name))}</span><span class="${x.inWorld?'friend-on':'friend-off'}">${x.inWorld?(window.atlasOperator()?E(x.side||'local'):'Online'):'Offline'}</span></button>`).join('')+'</div><button class="game-control" data-open-plugin="fleet">Fleet plugin</button>';}}
     if(selectedTab==='settings')html='<h3 class="cyan">Game Options</h3><label>Display mode<select id="game-display"><option value="open">Sidebar open</option><option value="closed" '+(app.classList.contains('client-collapsed')?'selected':'')+'>Game only</option></select></label><label>Render quality<select id="game-quality"><option value="1">Sharp</option><option value="0.75">Balanced</option><option value="0.5">Light</option></select></label>'+(window.FleetShim?'<label>Roofs<select id="game-roofs"><option value="off">Removed</option><option value="on" '+(window.atlasRoofsOff()?'':'selected')+'>Shown</option></select></label>':'')+'<button class="game-control" data-toggle-chat>Show / hide chatbox</button><button class="game-control" data-places>Places & camera</button>'+(window.atlasOperator()?'<button class="game-control" data-open-plugin="machine">Performance</button>':'');
     if(selectedTab==='logout'){const owner=window.FleetShim?.signedIn?.();html='<p style="text-align:center">'+(owner?'Logged in as '+E(owner)+'.':'You are watching as a spectator.')+'</p><p class="game-muted">Account sessions belong to their workers; logging out here never logs a bot out.</p><button class="game-control" data-logout>Click here to logout</button><button class="game-control" data-open-plugin="fleet">View active sessions</button>';}
+    if(selectedTab==='prayer'){
+      const pr=level('Prayer'),lv=pr?.level??0,cur=pr?.currentLevel??lv,bon=wornBonuses(b)?.[12]??0,active=Array.isArray(b?.progressionContext?.prayers)?b.progressionContext.prayers:null;
+      const prayers=[['Thick Skin',1,'thick-skin',1,'+5% Defence'],['Burst of Strength',4,'burst-of-strength',1,'+5% Strength'],['Clarity of Thought',7,'clarity-of-thought',1,'+5% Attack'],['Rock Skin',10,'rock-skin',6,'+10% Defence'],['Superhuman Strength',13,'superhuman-strength',6,'+10% Strength'],['Improved Reflexes',16,'improved-reflexes',6,'+10% Attack'],['Rapid Restore',19,'rapid-restore',1,'2× stat restore'],['Rapid Heal',22,'rapid-heal',2,'2× HP restore'],['Protect Item',25,'protect-item',2,'Keep +1 item on death'],['Steel Skin',28,'steel-skin',12,'+15% Defence'],['Ultimate Strength',31,'ultimate-strength',12,'+15% Strength'],['Incredible Reflexes',34,'incredible-reflexes',12,'+15% Attack'],['Protect from Magic',37,'protect-from-magic',12,'Blocks magic hits'],['Protect from Missiles',40,'protect-from-missiles',12,'Blocks ranged hits'],['Protect from Melee',43,'protect-from-melee',12,'Blocks melee hits']];
+      const onList=active?prayers.filter((_,i)=>active[i]):[],drainSum=onList.reduce((n,x)=>n+x[3],0),tickMs=(typeof S!=='undefined'&&S?.world?.tickMs)||600;
+      html='<h3>Prayer</h3><div class="game-grid-icons">'+prayers.map(([name,req,file,drain,desc],idx)=>{const on=!!active?.[idx];return `<button class="prayer-icon${on?' active':''}${lv>=req?'':' prayer-locked'}" title="${E(name)} (level ${req}) · ${E(desc)} · drain ${drain}/5t${on?' · ACTIVE':''}"><img src="${asset('prayer-'+file+'.png')}" alt="${E(name)}"></button>`;}).join('')+'</div><p style="text-align:center">Prayer: '+(pr?cur+' / '+lv:'—')+(bon?' · Bonus +'+bon:'')+'</p>'+(onList.length?'<p class="game-muted" style="text-align:center">Active: '+E(onList.map(x=>x[0]).join(', '))+(pr&&typeof prayerLasts==='function'&&cur>0?' · lasts '+dur(prayerLasts(cur,bon,drainSum)*tickMs):'')+'</p>':(pr&&typeof prayerLasts==='function'&&cur>0?'<p class="game-muted" style="text-align:center">Protect lasts '+dur(prayerLasts(cur,bon,12)*tickMs)+'</p>':''));
+    }
+    if(selectedTab==='magic'){
+      const mg=curLevel(b,'Magic'),worn=new Set((b?.equipmentObserved===false?[]:b?.equipment||[]).map(e=>e?.name));
+      const list=(spellbookData?.combat||[]).map(([name,req,max,runes,staff])=>({name,req,runes,staff,info:'max '+max}));
+      const util=[
+        ['Confuse',3,[['Water rune',3],['Earth rune',2],['Body rune',1]],'-5% attack'],
+        ['Enchant Lvl-1 Jewelry',7,[['Water rune',1],['Cosmic rune',1]],'enchant sapphire'],
+        ['Weaken',11,[['Water rune',3],['Earth rune',2],['Body rune',1]],'-5% strength'],
+        ['Bones to Bananas',15,[['Earth rune',2],['Water rune',2],['Nature rune',1]],'food'],
+        ['Curse',19,[['Water rune',2],['Earth rune',3],['Body rune',1]],'-5% defence'],
+        ['Bind',20,[['Earth rune',3],['Water rune',3],['Nature rune',2]],'hold 5s'],
+        ['Low Level Alchemy',21,[['Fire rune',3],['Nature rune',1]],'alch'],
+        ['Enchant Lvl-2 Jewelry',27,[['Air rune',3],['Cosmic rune',1]],'enchant emerald'],
+        ['Telekinetic Grab',33,[['Air rune',1],['Law rune',1]],'grab'],
+        ['Crumble Undead',39,[['Earth rune',2],['Air rune',2],['Chaos rune',1]],'max 15 undead'],
+        ['Superheat Item',43,[['Fire rune',4],['Nature rune',1]],'smelt'],
+        ['Enchant Lvl-3 Jewelry',49,[['Fire rune',5],['Cosmic rune',1]],'enchant ruby'],
+        ['High Level Alchemy',55,[['Fire rune',5],['Nature rune',1]],'alch'],
+        ['Charge Water Orb',56,[['Water rune',30],['Cosmic rune',3],['Unpowered orb',1]],'charge orb'],
+        ['Enchant Lvl-4 Jewelry',57,[['Earth rune',10],['Cosmic rune',1]],'enchant diamond'],
+        ['Charge Earth Orb',60,[['Earth rune',30],['Cosmic rune',3],['Unpowered orb',1]],'charge orb'],
+        ['Charge Fire Orb',63,[['Fire rune',30],['Cosmic rune',3],['Unpowered orb',1]],'charge orb'],
+        ['Vulnerability',66,[['Earth rune',5],['Water rune',5],['Soul rune',1]],'-10% defence'],
+        ['Charge Air Orb',66,[['Air rune',30],['Cosmic rune',3],['Unpowered orb',1]],'charge orb'],
+        ['Enchant Lvl-5 Jewelry',68,[['Water rune',15],['Earth rune',15],['Cosmic rune',1]],'enchant dragonstone'],
+        ['Enfeeble',73,[['Earth rune',8],['Water rune',8],['Soul rune',1]],'-10% strength'],
+        ['Stun',80,[['Earth rune',12],['Water rune',12],['Soul rune',1]],'-10% attack'],
+        ['Charge',80,[['Blood rune',3],['Fire rune',3],['Air rune',3]],'god spells max 30'],
+      ].map(([name,req,runes,info])=>({name,req,runes,staff:null,info}));
+      const teles=(spellbookData?.spells||[]).map(([name,req,runes])=>({name,req,runes,staff:null,info:'teleport'}));
+      const allSpells=[...list,...util,...teles];
+      const spellSlug=n=>n.toLowerCase().replace(/\blvl-(\d+)\b/g,'level-$1').replace(/\bjewelry\b/g,'jewellery').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+      const spellSprites={'charge-air-orb':['',-180,-20],'fire-wave':['',-240,-20],'vulnerability':['',-440,-20],'enfeeble':['',-460,-20],'stun':['',-480,-20],'entangle':['2',-40,0]};
+      const spellIcon=(name,ok)=>{const slug=spellSlug(name),sp=spellSprites[slug];if(sp)return `<span class="spell-sprite" style="background-image:url('${asset((ok?'magicon':'magicoff')+sp[0]+'.png')}');background-position:${sp[1]}px ${sp[2]}px" role="img" aria-label="${E(name)}"></span>`;return `<img src="${asset('spell-'+slug+'.png')}" alt="${E(name)}">`;};
+      html='<h3>Magic</h3><div class="game-grid-icons spell-grid">'+allSpells.map(sp=>{const casts=Array.isArray(b?.inventory)?runeCasts(b,sp.runes):0,ok=Number.isFinite(mg)&&mg>=sp.req&&(!sp.staff||worn.has(sp.staff))&&casts>0;return `<button class="spell-icon${ok?'':' spell-locked'}" title="${E(sp.name)} (Magic ${sp.req}) · ${E(sp.info)}${sp.staff?' · needs '+E(sp.staff):''}${casts>0&&Number.isFinite(casts)?' · ×'+casts:''}">${spellIcon(sp.name,ok)}</button>`;}).join('')+'</div>'+teleLine(b);
+    }
     const active=document.activeElement,sameAccount=panel._account===(b?.name??null),key=panel.contains(active)?['questSearch','questFilter','questScope','quest','questBack','setupKit','friend'].find(k=>active.dataset?.[k]!=null):null;
     const selector=key?'[data-'+key.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())+'="'+CSS.escape(active.dataset[key])+'"]':null;
     const restore=key==='quest'&&questDetail?'[data-quest-back]':key==='questBack'&&!questDetail&&panel._questDetail?'[data-quest="'+CSS.escape(panel._questDetail)+'"]':selector;
@@ -529,20 +574,26 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const inputText=l=>{const m=new Map();for(const x of l)m.set(x,(m.get(x)||0)+1);return [...m].map(([x,c])=>(c>1?c+' × ':'')+x).join(', ');};
     const list=acts.map(([name,level,xp,inputs,outputs])=>{const n=Math.ceil(left/xp),can=level<=lvl;return `<div class="calc-row${can?'':' calc-locked'}" title="${E(name+' · level '+level+' · '+xp+' xp each'+(inputs.length?' · uses '+inputText(inputs):''))}">${icon(outputs?.[0]||name,24)}<span class="calc-name">${E(name)}<small>Level ${level} · ${xp} xp${inputs.length?' · '+E(inputText(inputs)):''}</small></span><span class="calc-count">${nf(n)}</span></div>`;}).join('');
     const targetLabel=lvl>=99?'<span>Target <b>99 · complete</b></span>':`<label>Target <input type="number" min="${lvl+1}" max="99" value="${target}" data-calc-target aria-label="Target level"></label>`;
-    return `<div class="xp-box calc" id="xp-calculator"><div class="xp-head"><span>Skill Calculator · ${E(calcSkill)}</span><button class="xp-reset" data-calc-close>Close</button></div><div class="calc-levels"><span>Current <b>${lvl}</b> <i class="xp-muted">${nf(k.xp)} xp</i></span>${targetLabel}</div>${bestSpotLine(b,lvl)}<div class="xp-meta"><span><b>${nf(left)}</b> xp left</span><span>${left&&rate?'TTL '+dur(left/rate*3.6e6)+' at '+nf(Math.round(rate))+'/hr':left?'no rate yet':'done'}</span></div>${acts.length?'<div class="calc-list">'+list+'</div>':'<span class="xp-muted">The server has no action table for this skill.</span>'}</div>`;
+    const tickMs=(typeof S!=='undefined'&&S?.world?.tickMs)||400,ehpRem=X.remainingEhp?.(calcSkill,k.xp,target,tickMs);
+    return `<div class="xp-box calc" id="xp-calculator"><div class="xp-head"><span>Skill Calculator · ${E(calcSkill)}</span><button class="xp-reset" data-calc-close>Close</button></div><div class="calc-levels"><span>Current <b>${lvl}</b> <i class="xp-muted">${nf(k.xp)} xp</i></span>${targetLabel}</div>${bestSpotLine(b,lvl)}<div class="xp-meta"><span><b>${nf(left)}</b> xp left</span><span>${left&&rate?'TTL '+dur(left/rate*3.6e6)+' at '+nf(Math.round(rate))+'/hr':left?'no rate yet':'done'}</span></div>${ehpRem?`<div class="xp-meta"><span>EHP <b>${ehpRem.ehpHours.toFixed(2)}h</b> remaining</span><span>@${nf(Math.round(ehpRem.ehpRate))}/hr</span></div>`:''}${acts.length?'<div class="calc-list">'+list+'</div>':'<span class="xp-muted">The server has no action table for this skill.</span>'}</div>`;
   }
   const XP_STORE='atlas-xp-baselines';
   let xpPointer=null,xpDeferred=null,xpReleaseFrame=0;
   function finishXpPointer(){if(xpPointer==null)return;xpPointer=null;cancelAnimationFrame(xpReleaseFrame);xpReleaseFrame=0;const pending=xpDeferred;xpDeferred=null;if(pending)refreshXp(pending.forceCalc,pending.focusSkill);}
-  const xpStore=()=>{try{return JSON.parse(localStorage.getItem(XP_STORE)||'{}')||{};}catch{return {};}},saveXpStore=store=>{try{localStorage.setItem(XP_STORE,JSON.stringify(store));}catch{/* private window */}};
+  const xpStore=()=>{try{const raw=JSON.parse(localStorage.getItem(XP_STORE)||'{}');return raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};}catch{return {};}},saveXpStore=store=>{try{localStorage.setItem(XP_STORE,JSON.stringify(store));}catch{/* private window */}};
+  function xpHistoryBox(store,b){
+    const list=b&&store.__history?.[safeName(b.name)];
+    if(!Array.isArray(list)||!list.length)return '';
+    return `<div class="xp-box xp-history"><div class="xp-head"><span>Recent sessions</span><button class="xp-reset" data-xp-clear-history title="Clear saved session history for this account">Clear</button></div>${list.map(h=>{const top=(h.skills||[]).map(s=>`${E(s.skill)} +${nf(s.gained)}`).join(', ');return `<div class="xp-hist-row" title="${E(top?top+' · ':'')}${dur(h.elapsedMs||0)}"><span class="xp-hist-main"><b>+${nf(h.gainedXp)} xp</b>${h.gainedEhp>0?` · ${h.gainedEhp.toFixed(2)} EHP`:''}</span><span class="xp-meta"><span>${h.xpPerHour?nf(h.xpPerHour)+'/hr':'—'}</span><span>${dur(h.elapsedMs||0)}</span></span>${top?`<span class="xp-hist-skills">${top}</span>`:''}</div>`;}).join('')}</div>`;
+  }
   function refreshXp(forceCalc=false,focusSkill=null){
     const panel=body.querySelector('.xp-tracker');
     if(!panel)return;
     // A blur commit must leave the pressed control in place until its click has run.
     if(xpPointer!=null){xpDeferred={forceCalc:forceCalc||xpDeferred?.forceCalc||false,focusSkill:focusSkill||xpDeferred?.focusSkill||null};return;}
-    const b=account(),now=Date.now(),X=window.atlasXp;
+    const b=account(),now=Date.now(),X=window.atlasXp,tickMs=(typeof S!=='undefined'&&S?.world?.tickMs)||400;
     const active=document.activeElement,owned=panel.contains(active),sameAccount=calcAccount===(b?.name||null);
-    const attribute=owned?['data-calc-skill','data-calc-close','data-calc-target','data-best-pin','data-xp-pause','data-xp-reset','data-xp-hide-maxed','data-xp-sort','data-xp-focus'].find(k=>active.hasAttribute(k)):null,value=attribute?active.getAttribute(attribute):null;
+    const attribute=owned?['data-calc-skill','data-calc-close','data-calc-target','data-best-pin','data-xp-pause','data-xp-reset','data-xp-clear-history','data-xp-hide-maxed','data-xp-sort','data-xp-focus'].find(k=>active.hasAttribute(k)):null,value=attribute?active.getAttribute(attribute):null;
     const selected=(b?.skills||[]).find(k=>k.name===calcSkill),known=Number.isFinite(selected?.xp);
     if(!sameAccount)calcTarget=null;if(calcSkill&&!known){calcSkill=null;calcTarget=null;}calcAccount=b?.name||null;
     const calcEditing=!forceCalc&&sameAccount&&known&&X.levelForXp(selected.xp)<99&&active?.matches?.('[data-calc-target]')&&owned;
@@ -552,20 +603,25 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       live.sort(xpSort==='waste'?(x,y)=>idle(y)-idle(x):(x,y)=>(y.xpPerHour||0)-(x.xpPerHour||0));
       const sort=live.length?`<div class="xp-buttons"><span class="xp-muted">Sort</span><button class="xp-reset${xpSort==='rate'?' on':''}" data-xp-sort="rate">XP/hr</button><button class="xp-reset${xpSort==='waste'?' on':''}" data-xp-sort="waste">Most idle</button></div>`:'';
       put(panel,'<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>'+(b?E(safeName(b.name)):'XP Tracker')+'</span></div><span class="xp-muted">'+(!b?'Choose an account in the title bar, or one below.':window.atlasOperator()?'The '+E(b.side)+' side shares levels, not XP.':'No XP data for this account.')+'</span>'+sort+'</div>'+(live.map(x=>{const e=window.atlasXp.efficiency(x.timeline);return `<button class="xp-box xp-row xp-pick" data-xp-focus="${E(x.name)}"><img src="${asset(trainedSkill(x)?'skill-'+skillFile(trainedSkill(x))+'.png':'rl-xp.png')}" alt=""><span class="xp-pick-main"><span class="xp-pick-line"><span class="xp-name">${E(safeName(x.name))}</span><span class="xp-gain">${x.xpPerHour?nf(Math.round(x.xpPerHour))+' XP/hr':'—'}</span></span>${e?tickStrip(x.timeline.slice(-100),'xp-ticks xp-ticks-small')+`<span class="xp-meta"><span class="${e.idle>=25?'xp-bad':''}">${Math.round(e.idle)}% idle</span><span>${e.waste?TICK_LABEL[e.waste.kind]+' '+Math.round(e.waste.share)+'%':''}</span></span>`:''}</span></button>`;}).join('')||(b?'':'<div class="xp-box"><span class="xp-muted">No account with XP data is playing now.</span></div>'))+'</div>');restore();return;}
-    const store=xpStore(),base=X.baseline(store,b,now);
+    const store=xpStore(),prevBase=store[b.name];
+    if(prevBase&&prevBase.started!==(b.started??null)&&prevBase.xp&&X.archiveSession){const entry=X.archiveSession(store,b,now,{tickMs});if(entry)store.__history=X.recordSessionHistory?.(store.__history,safeName(b.name),entry);}
+    const base=X.baseline(store,b,now);
     // Paused: the rows and the clock stay as they were at the pause (RuneLite xptracker pause).
     const at=base.paused?.at??now,seen=base.paused?{...b,skills:(b.skills||[]).map(k=>({...k,xp:base.paused.xp[k.name]??k.xp}))}:b;
     const all=X.rows(seen,base,at,b.goalSkill&&!base.paused?{skill:b.goalSkill,xpPerHour:b.xpPerHour}:null),rows=xpHideMaxed?all.filter(r=>r.level<99):all,total=X.total(all),hours=(at-base.at)/3.6e6;
     saveXpStore(store);
     // Keep an uncommitted target only for this account's known, non-maxed skill.
-    if(!calcEditing)put(panel,'<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>Overall</span><span class="xp-account"></span></div><div class="xp-stats"></div><div class="xp-buttons"><button class="xp-reset" data-xp-pause>Pause</button><button class="xp-reset" data-xp-reset>Reset</button><label class="xp-hide"><input type="checkbox" data-xp-hide-maxed> Hide maxed</label></div></div>'+efficiencyBox(b)+'<div class="xp-calc"></div><div class="xp-results"></div></div>');
+    if(!calcEditing)put(panel,'<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>Overall</span><span class="xp-account"></span></div><div class="xp-stats"></div><div class="xp-buttons"><button class="xp-reset" data-xp-pause>Pause</button><button class="xp-reset" data-xp-reset>Reset</button><label class="xp-hide"><input type="checkbox" data-xp-hide-maxed> Hide maxed</label></div></div>'+efficiencyBox(b)+'<div class="xp-calc"></div><div class="xp-results"></div><div class="xp-history"></div></div>');
     if(!calcEditing)put(panel.querySelector('.xp-calc'),calcBox(b,all.find(r=>r.skill===calcSkill)));
     if(forceCalc){const input=panel.querySelector('[data-calc-target]');if(input)input.value=input.defaultValue;}
+    const ehpSum=X.sessionEhp?.(all,tickMs);
     panel.querySelector('.xp-account').textContent=safeName(b.name);
-    put(panel.querySelector('.xp-stats'),`<span>XP gained <b>${nf(total)}</b></span><span>XP/hr <b>${nf(Math.round(hours>0.001?total/hours:0))}</b></span><span>Tracked <b>${dur(at-base.at)}</b>${base.paused?' (paused)':''}</span>`);
+    put(panel.querySelector('.xp-stats'),`<span>XP gained <b>${nf(total)}</b></span><span>XP/hr <b>${nf(Math.round(hours>0.001?total/hours:0))}</b></span>${ehpSum?`<span>EHP <b>${ehpSum.gainedEhp.toFixed(2)}</b> (${ehpSum.ehpPerHour.toFixed(2)}/hr)</span>`:''}<span>Tracked <b>${dur(at-base.at)}</b>${base.paused?' (paused)':''}</span>`);
     panel.querySelector('[data-xp-pause]').textContent=base.paused?'Resume':'Pause';
     panel.querySelector('[data-xp-hide-maxed]').checked=xpHideMaxed;
-    put(panel.querySelector('.xp-results'),rows.length?rows.map(r=>{const g=r.skill===b.goalSkill?X.goalBar(r,b.goalLevel):null,v=g||r;return `<div class="xp-box xp-row" data-calc-skill="${E(r.skill)}" role="button" tabindex="0" aria-expanded="${calcSkill===r.skill}" aria-controls="xp-calculator" title="Open the Skill Calculator"><img src="${asset('skill-'+skillFile(r.skill)+'.png')}" alt="" title="${E(r.skill)}"><div class="xp-main"><div class="xp-head"><span>${E(r.skill)}</span><span class="xp-gain">+${nf(r.gained)} xp</span></div><div class="xp-bar"${g?' title="To the goal level '+g.goal+'. Each mark is a level."':''}><i style="width:${Math.round(v.progress*100)}%"></i>${g?g.marks.map(m=>'<u style="left:'+m+'%"></u>').join(''):''}<span>${r.level} → ${g?g.goal:r.next} · ${Math.round(v.progress*100)}%</span></div><div class="xp-meta"><span>${nf(r.rate)} XP/hr</span><span>${v.ttl!=null?'TTL '+dur(v.ttl):nf(v.left)+' xp to level'}</span></div></div></div>`;}).join(''):'<div class="xp-box"><span class="xp-muted">'+(xpHideMaxed&&all.length?'Maxed skills are hidden.':window.atlasOperator()?'No XP gained since tracking started.':'No XP gained since you opened the page.')+'</span></div>');restore();
+    put(panel.querySelector('.xp-results'),rows.length?rows.map(r=>{const g=r.skill===b.goalSkill?X.goalBar(r,b.goalLevel):null,v=g||r,er=X.ehpRate?.(r.skill,tickMs),epct=er&&r.rate>0?Math.round(r.rate*100/er):null;return `<div class="xp-box xp-row" data-calc-skill="${E(r.skill)}" role="button" tabindex="0" aria-expanded="${calcSkill===r.skill}" aria-controls="xp-calculator" title="Open the Skill Calculator${er?' · Rev 289 EHP '+nf(Math.round(er))+'/hr':''}"><img src="${asset('skill-'+skillFile(r.skill)+'.png')}" alt="" title="${E(r.skill)}"><div class="xp-main"><div class="xp-head"><span>${E(r.skill)}</span><span class="xp-gain">+${nf(r.gained)} xp</span></div><div class="xp-bar"${g?' title="To the goal level '+g.goal+'. Each mark is a level."':''}><i style="width:${Math.round(v.progress*100)}%"></i>${g?g.marks.map(m=>'<u style="left:'+m+'%"></u>').join(''):''}<span>${r.level} → ${g?g.goal:r.next} · ${Math.round(v.progress*100)}%</span></div><div class="xp-meta"><span>${nf(r.rate)} XP/hr${epct!=null?' ('+epct+'% EHP)':''}</span><span>${v.ttl!=null?'TTL '+dur(v.ttl):nf(v.left)+' xp to level'}</span></div></div></div>`;}).join(''):'<div class="xp-box"><span class="xp-muted">'+(xpHideMaxed&&all.length?'Maxed skills are hidden.':window.atlasOperator()?'No XP gained since tracking started.':'No XP gained since you opened the page.')+'</span></div>');
+    const histNode=panel.querySelector('.xp-history');if(histNode)put(histNode,xpHistoryBox(store,b));
+    restore();
   }
   function commitCalcTarget(input){const v=input.value.trim()?Number(input.value):null;calcTarget=Number.isInteger(v)?Math.max(2,Math.min(99,v)):null;refreshXp(true);}
   // Hiscore plugin (RuneLite's layout): any fleet account's levels per skill with rank and XP on hover.
@@ -579,7 +635,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const overall=b?.ranks?.find(r=>r.board==='Overall');const total=reportedTotal(b);
     const extra=(b?.ranks||[]).filter(r=>['Quest Points','Equipment','Bank','Runite'].includes(r.board)).map(r=>`<div class="hs-row"><span>${E(r.board)}</span><span>Rank ${nf(r.rank)}</span><span>${E(r.level)}${r.board==='Quest Points'?' QP':''}</span></div>`).join('');
     return b?`<div class="hs-head"><span>${E(safeName(b.name))}</span><span>${overall?'Rank '+nf(overall.rank):''}</span></div><div class="hs-grid">${grid}<div class="hs-cell hs-overall" title="${E('Overall\nTotal level: '+(total??'not reported')+(overall?'\nRank: '+nf(overall.rank)+'\nTime: '+overall.time:''))}"><img src="${asset('rl-xp.png')}" alt="Overall"><span>${total??'--'}</span></div></div>${extra?'<div class="hs-extra">'+extra+'</div>':''}`
-        :worldLookup&&worldLookup.name.toLowerCase()===name.toLowerCase()?lookupCard(worldLookup):'<p class="xp-muted">'+(name?'Press Enter to look up '+E(name)+'.':'Type a player name.')+'</p>';
+        :worldLookup&&worldLookup.name.toLowerCase()===name.toLowerCase()?lookupCard(worldLookup):'<p class="xp-muted">'+(name?'Press Enter to look up '+E(typeof safeName==='function'?safeName(name):name)+'.':'Type a player name.')+'</p>';
   }
   function refreshHiscoreAccount(){
     const panel=body.querySelector('.hs-wrap');
@@ -715,8 +771,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   //   tiles    red: the death tile of the open recap; pies: the respawn timers
   //   marks    the Ground markers that the viewer placed; fails: orange, where an account's last run failed
   //   finder   pink: the spawns of the NPC that the NPC finder shows
-  const HL_KEY='atlas-highlights',HL_DEFAULT={players:true,npcs:true,ground:true,groundMin:1000,multi:true,tiles:true,skilling:true,trail:true,marks:true,fails:true,icons:true,items:true,invTags:true,idle:true,busy:true,itemIds:true};
+  const HL_KEY='atlas-highlights',HL_DEFAULT={players:true,npcs:true,ground:true,groundMin:1000,multi:true,wildOverlay:true,tiles:true,skilling:true,trail:true,marks:true,fails:true,icons:true,items:true,invTags:true,idle:true,busy:true,itemIds:true};
   const hl=(()=>{try{return {...HL_DEFAULT,...JSON.parse(localStorage.getItem(HL_KEY)||'{}')};}catch{return {...HL_DEFAULT};}})();
+  if(typeof window!=='undefined')window.atlasWildVisible=!!hl.wildOverlay;
   const saveHl=()=>{try{localStorage.setItem(HL_KEY,JSON.stringify(hl));}catch{/* private window */}};
   // recentTargets belong to one watched account (targetsFor); another account starts an empty list.
   let multiLines=null,recentTargets=[],targetsFor=null,sentOverlay='',sentOverlayAt=0;
@@ -823,6 +880,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Position trail: the last 60 places of each of our accounts, from the live roster and the status files. The watched
   // account's trail is a line on the ground (yellow for its last 20 steps); every trail shows on the minimap.
   const trails=new Map();
+  if(typeof window!=='undefined')window.atlasTrailsFor=name=>trails.get(name)||[];
   // Idle markers (RuneLite's Idle Notifier, for every account): an account in the world that stays on one tile with an
   // idle last action for 3 minutes or more gets a yellow label in 3D and a yellow ring on the minimap.
   const idleSince=new Map();
@@ -860,6 +918,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     }
     if(hl.skilling&&b?.inWorld&&b.pos&&agilityTiles&&agilityFor(b))for(const [x,z,l,label,roll] of agilityTiles)if(l===(b.pos.level||0)&&Math.abs(x-b.pos.x)<=15&&Math.abs(z-b.pos.z)<=15)o.tiles.push({x,z,l,colour:'#00ff00',label:agilityLabel(label,roll,b)});
     if(hl.trail&&b){const t=trails.get(b.name)||[];for(let i=1;i<t.length;i++)if(t[i].l===t[i-1].l)o.lines.push({x0:t[i-1].x,z0:t[i-1].z,x1:t[i].x,z1:t[i].z,l:t[i].l,colour:t.length-i<=20?'#ffff00':'#9a9a00'});}
+    if(hl.wildOverlay&&at&&typeof window!=='undefined'&&window.atlasWildOverlay?.resolveTarget){const bp=b?.live||b?.pos,dest=bp?window.atlasWildOverlay.resolveTarget(b):null;if(dest&&(dest.level||0)===(bp.level||0)&&(dest.x!==bp.x||dest.z!==bp.z)){const c=clipLine(bp.x,bp.z,dest.x,dest.z,at.x,at.z,60);if(c)o.lines.push({x0:c[0],z0:c[1],x1:c[2],z1:c[3],l:dest.level||0,colour:'#58d5ff',label:dest.label});}}
     if(hl.tiles){
       if(typeof recap!=='undefined'&&recap.state==='ok'&&recap.data?.pos&&b&&recap.name===b.name)o.tiles.push({x:recap.data.pos.x,z:recap.data.pos.z,l:recap.data.pos.level||0,colour:'#ff0000',fill:true,label:'Death'});
       for(const r of respawnRows())if(r.left!=null&&r.total)o.pies.push({x:r.x,z:r.z,l:r.l,p:Math.max(0,Math.min(1,1-r.left/r.total))});
@@ -878,7 +937,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   function highlightsBox(){
     const box=(k,label)=>`<label class="hl-row"><input type="checkbox" data-hl="${k}" ${hl[k]?'checked':''}> ${label}</label>`;
-    return `<div class="xp-box"><div class="xp-head"><span>Highlights</span><span class="xp-muted">in the 3D view</span></div><div class="hl-grid">${box('players','Players: red can attack, cyan rivals')}${box('npcs','NPCs the account fought')}${box('ground','Floor item labels')}${box('multi','Multi-combat and Wilderness lines')}${box('tiles','Death tile and respawn pies')}${box('skilling','Trees, rocks, fishing spots and agility obstacles of the account')}${box('trail','Walked path')}${box('marks','Ground markers')}${box('fails','Where runs failed (orange)')}${box('idle','Idle 3+ minutes (yellow)')}${box('icons','Minimap: teleports, shortcuts, shop names')}${box('items','Minimap: floor items (red)')}${box('busy','Minimap: busy areas (5+ players)')}${box('invTags','Inventory tags: food, potions, teleports, runes')}${box('itemIds','Item labels: herbs and potions')}<label class="hl-row">Hide labels below <select data-hl-min>${[0,1000,10000,100000].map(v=>`<option value="${v}" ${hl.groundMin===v?'selected':''}>${v?nf(v)+' gp':'nothing'}</option>`).join('')}</select></label></div></div>`;
+    return `<div class="xp-box"><div class="xp-head"><span>Highlights</span><span class="xp-muted">in the 3D &amp; 2D view</span></div><div class="hl-grid">${box('players','Players: red can attack, cyan rivals')}${box('npcs','NPCs the account fought')}${box('ground','Floor item labels')}${box('multi','Multi-combat and Wilderness lines')}${box('wildOverlay','Wilderness hotspots, danger bands &amp; bot pathing')}${box('tiles','Death tile and respawn pies')}${box('skilling','Trees, rocks, fishing spots and agility obstacles of the account')}${box('trail','Walked path')}${box('marks','Ground markers')}${box('fails','Where runs failed (orange)')}${box('idle','Idle 3+ minutes (yellow)')}${box('icons','Minimap: teleports, shortcuts, shop names')}${box('items','Minimap: floor items (red)')}${box('busy','Minimap: busy areas (5+ players)')}${box('invTags','Inventory tags: food, potions, teleports, runes')}${box('itemIds','Item labels: herbs and potions')}<label class="hl-row">Hide labels below <select data-hl-min>${[0,1000,10000,100000].map(v=>`<option value="${v}" ${hl.groundMin===v?'selected':''}>${v?nf(v)+' gp':'nothing'}</option>`).join('')}</select></label></div></div>`;
   }
   function markersBox(){
     const b=account(),p=b?.live||b?.pos||null,colours=MARK_COLOURS.map(([c,n])=>'<option value="'+c+'" '+(c===markColour?'selected':'')+'>'+n+'</option>').join('');
@@ -1059,9 +1118,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function partyMembers(){return (S?.bots||[]).filter(x=>!x.practice&&!x.reserved&&x.inWorld&&(wildLevel(x.pos)||PK_GOAL.test(String(x.currentGoal||x.goal||''))||PK_GOAL.test(String(x.role||''))));}
   function partyCard(x){
     const sk=n=>x.skills?.find(s=>s.name===n),pr=sk('Prayer'),hp=recordedHp(x),current=currentHp(x),food=(x.inventory||[]).filter(i=>i&&/\bheals\b/i.test(itemStats[i.name]||'')).reduce((n,i)=>n+(i.count||1),0);
-    const w=wildLevel(x.pos),threats=w?pvpState(x)?.threats.length??0:0,low=current?current.now/current.max<0.4:false;
+    const w=wildLevel(x.pos),p=w?pvpState(x):null,threats=p?.threats.length??0,multi=!!p?.multi,outOfFood=w>0&&x.inventoryObserved!==false&&!food,low=current?current.now/current.max<0.4:false;
     const bar=(now,max,cls)=>`<div class="party-bar ${cls}"><i style="width:${max?Math.max(0,Math.min(100,Math.round(100*now/max))):0}%"></i><span>${now??'?'} / ${max??'?'}</span></div>`;
-    return `<button class="party-card${threats||low?' party-alert':''}" data-world-follow="${E(x.name)}" title="Watch ${E(safeName(x.name))}"><div class="xp-head"><span>${E(safeName(x.name))}</span><span class="xp-muted">combat ${x.combat??'?'}${w?' · wildy '+w:''}</span></div>${bar(hp?.now,hp?.max,'party-hp')}${hp&&!current?'<small class="xp-muted">Hitpoints'+E(healthNote(x))+'</small>':''}${bar(pr?.currentLevel??pr?.level,pr?.level,'party-prayer')}<div class="xp-meta"><span>Run <b>${x.runEnergy??'?'}%</b></span><span>Food <b>${food}</b></span><span class="${threats?'xp-bad':''}">${threats} can attack</span></div></button>`;
+    return `<button class="party-card${threats||low||outOfFood?' party-alert':''}" data-world-follow="${E(x.name)}" title="Watch ${E(safeName(x.name))}"><div class="xp-head"><span>${E(safeName(x.name))}</span><span class="xp-muted">combat ${x.combat??'?'}${w?' · wildy '+w+(multi?' · multi':''):''}</span></div>${bar(hp?.now,hp?.max,'party-hp')}${hp&&!current?'<small class="xp-muted">Hitpoints'+E(healthNote(x))+'</small>':''}${bar(pr?.currentLevel??pr?.level,pr?.level,'party-prayer')}<div class="xp-meta"><span>Run <b>${x.runEnergy??'?'}%</b></span><span class="${outOfFood?'xp-bad':''}">Food <b>${food}</b></span><span class="${threats?'xp-bad':''}">${threats} can attack</span></div></button>`;
   }
   function partyBox(){const m=partyMembers();return m.length?`<div class="xp-box"><div class="xp-head"><span>Party</span><span class="xp-muted">${m.length} PK account${m.length===1?'':'s'}</span></div><div class="party-grid">${m.map(partyCard).join('')}</div></div>`:'';}
   function worldPanel(){
@@ -1079,10 +1138,25 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // PvP Tools: each of our accounts in the Wilderness, with its risk and the players who can attack it now.
     const wild=S.bots.filter(x=>!x.practice&&!x.reserved&&x.inWorld&&wildLevel(x.pos)).map(x=>({b:x,p:pvpState(x)})).filter(v=>v.p);
     const party=partyBox();
-    const pvp=wild.length?`<div class="xp-box"><div class="xp-head"><span>Attackable now</span><span class="xp-muted">in the Wilderness</span></div>${wild.map(({b:x,p})=>`<details class="spot-row" data-k="pvp:${E(x.name)}"><summary title="${E('Wilderness '+p.wild+' · '+(p.incomplete?'known risk ':'risk ')+gp(p.risk)+(p.unpriced?' + '+p.unpriced+' unpriced':'')+(p.unobserved?' · '+p.unobserved+' not reported':'')+(p.incomplete?' · kept unknown':' · kept '+gp(p.keptValue)))}"><span class="xp-name">${E(safeName(x.name))} <i class="xp-muted">lvl ${p.wild}</i></span><span class="${p.threats.length?'xp-bad':'xp-muted'}">${p.threats.length} can attack · ${p.incomplete?'known risk':'risk'} ${gp(p.risk)}${p.unpriced?' + '+p.unpriced+' unpriced':''}${p.unobserved?' · '+E(p.unobserved)+' not reported':''}</span></summary>${p.threats.map(t=>`<div class="xp-meta"><span>${E(t.name)}</span><span>combat ${t.combat} · ${t.dist} tiles</span></div>`).join('')||'<div class="xp-meta"><span>Nobody in attack range within 30 tiles.</span></div>'}</details>`).join('')}</div>`:'';
-    return `<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>${current?'Online now':'Last observed players'}</span><span class="xp-gain">${nf(roster.length)}</span></div><div class="xp-meta"><span>${ours} of them are ours</span><span>${E(when)}</span></div><div class="${disconnected?'xp-bad':'xp-muted'}">${E(feedNote)}</div></div>`+party+pvp+respawnBox()+highlightsBox()+markersBox()+finderBox()+(typeof trainBox==='function'?trainBox():'')+
+    const pvp=wild.length?`<div class="xp-box"><div class="xp-head"><span>Attackable now</span><span class="xp-muted">in the Wilderness</span></div>${wild.map(({b:x,p})=>`<details class="spot-row" data-k="pvp:${E(x.name)}"><summary title="${E('Wilderness '+p.wild+(p.multi?' (multi-way)':'')+' · '+(p.incomplete?'known risk ':'risk ')+gp(p.risk)+(p.unpriced?' + '+p.unpriced+' unpriced':'')+(p.unobserved?' · '+p.unobserved+' not reported':'')+(p.incomplete?' · kept unknown':' · kept '+gp(p.keptValue)))}"><span class="xp-name">${E(safeName(x.name))} <i class="xp-muted">lvl ${p.wild}${p.multi?' · multi':''}</i></span><span class="${p.threats.length?'xp-bad':'xp-muted'}">${p.threats.length} can attack · ${p.incomplete?'known risk':'risk'} ${gp(p.risk)}${p.unpriced?' + '+p.unpriced+' unpriced':''}${p.unobserved?' · '+E(p.unobserved)+' not reported':''}</span></summary>${p.threats.map(t=>`<div class="xp-meta"><span>${E(t.name)}</span><span>combat ${t.combat} · ${t.dist} tiles</span></div>`).join('')||'<div class="xp-meta"><span>Nobody in attack range within 30 tiles.</span></div>'}${!p.incomplete&&p.kept.length?`<div class="xp-meta"><span class="xp-muted">Kept on death</span><span>${E(p.kept.map(k=>k.name).join(', '))}</span></div>`:''}</details>`).join('')}</div>`:'';
+    return `<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>${current?'Online now':'Last observed players'}</span><span class="xp-gain">${nf(roster.length)}</span></div><div class="xp-meta"><span>${ours} of them are ours</span><span>${E(when)}</span></div><div class="${disconnected?'xp-bad':'xp-muted'}">${E(feedNote)}</div></div>`+party+pvp+wildernessHotspotsBox()+wildernessWatchBox()+respawnBox()+highlightsBox()+markersBox()+finderBox()+(typeof trainBox==='function'?trainBox():'')+
       `<div class="xp-box"><div class="xp-head" title="Other players within 10 tiles of a tile our accounts use, on the ground floor."><span>Our spots</span><span class="xp-muted">other players</span></div>${spots.map(s=>`<details class="spot-row" data-k="spot:${owner?s.x+','+s.z+':'+E(s.side):E(s.label)}"><summary title="${E(s.others.length+' other players, '+s.ours.length+' of ours'+(owner?' · '+s.x+', '+s.z:''))}"><span>${E(s.label)}</span><span class="spot-ours" title="${s.ours.length} of our accounts here">${'<i></i>'.repeat(Math.min(s.ours.length,6))}</span><span class="spot-bar"><i style="width:${Math.round(s.others.length/most*100)}%"></i></span><b>${s.others.length}</b></summary>${owner?`<div class="xp-meta"><span>claimed by ${E(s.side)}</span><span>${s.x}, ${s.z}</span></div>`:''}<div class="spot-names">${nameButtons(s.others,24)||'<span class="xp-muted">No other player is here.</span>'}</div></details>`).join('')||`<span class="xp-muted">${owner?'No claimed spot has a tile.':'No spot is in use.'}</span>`}${named.length&&owner?`<p class="xp-muted">Claimed without a tile: ${named.map(s=>E(s.resource)).join(', ')}</p>`:''}</div>`+
       farmsBox(spots)+'</div>';
+  }
+  function wildernessHotspotsBox(){
+    const wo=S?.wildernessOverlay||(typeof window!=='undefined'&&window.atlasWildOverlay)||{bands:[],hotspots:[]};
+    const bandsHtml=(wo.bands||[]).length?`<div class="wild-bands">${wo.bands.map(b=>`<span class="wild-band" style="--wb:${E(b.colour)}" title="${E(b.note||b.label)}"><i></i><b>${E(b.label)}</b></span>`).join('')}</div>`:'';
+    const hotspotsHtml=(wo.hotspots||[]).length?`<div class="wild-spots">${wo.hotspots.map(h=>`<button class="xp-reset wild-spot-btn" data-wild-go="${h.x},${h.z}" title="${E((h.note||h.label)+' · '+h.x+', '+h.z)}">${E(h.label)} <small>Lvl ${h.wild}</small></button>`).join('')}</div>`:'';
+    const resolve=wo.resolveTarget||(typeof window!=='undefined'&&window.atlasWildOverlay?.resolveTarget);
+    const routes=(S?.bots||[]).filter(x=>!x.practice&&!x.reserved&&x.inWorld&&(x.live||x.pos)).map(x=>{const p=x.live||x.pos,t=resolve?.(x);return t&&(t.x!==p.x||t.z!==p.z)?`<div class="xp-meta"><span>${E(typeof safeName==='function'?safeName(x.name):x.name)}</span><span>→ ${E(t.label)} (${t.x}, ${t.z})</span></div>`:'';}).filter(Boolean).join('');
+    if(!bandsHtml&&!hotspotsHtml&&!routes)return '';
+    return `<div class="xp-box"><div class="xp-head" title="Rev 289 Wilderness danger cutoffs (Lvl 20 standard tele, Lvl 30 glory, Lvl 31+ blocked) and PvP/resource hotspots."><span>Wilderness hotspots &amp; bands</span><span class="xp-muted">click to pan 2D</span></div>${bandsHtml}${hotspotsHtml}${routes}</div>`;
+  }
+  function wildernessWatchBox(){
+    const list=S.wilderness||[];
+    if(!list.length)return '';
+    const rivals=list.filter(w=>!w.fleet),ourWild=(S.bots||[]).filter(b=>!b.practice&&!b.reserved&&b.inWorld&&wildLevel(b.pos));
+    return `<div class="xp-box"><div class="xp-head" title="Online players spotted inside the Wilderness rectangle in the last 30 seconds."><span>Wilderness watch</span><span class="${rivals.length?'xp-bad':'xp-muted'}">${rivals.length} rival${rivals.length===1?'':'s'} · ${list.length} total</span></div>`+list.slice(0,12).map(w=>{const hit=!w.fleet&&ourWild.some(b=>canAttack({pos:{x:w.x,z:w.z,level:w.plane??0},combat:w.combat},b)),multi=inMulti({x:w.x,z:w.z,level:w.plane??0});return `<div class="xp-meta"><span class="spot-names">${nameButtons([w.name],1)}${w.fleet?' <i class="xp-muted">ours</i>':''}${hit?' <b class="xp-bad" title="Within combat bracket of our Wilderness account">· can attack ours</b>':''}</span><span>cb ${w.combat} · wildy ${w.wild}${multi?' · multi':''}${w.minCombat?' ('+w.minCombat+'-'+w.maxCombat+')':''} · ${E(placeOf(w.x,w.z))}</span></div>`;}).join('')+(list.length>12?`<div class="xp-meta"><span class="xp-muted">+${list.length-12} more in Wilderness</span></div>`:'')+'</div>';
   }
   // A new snapshot rewrites the panel; the rows a viewer opened stay open.
   function refreshWorld(){
@@ -1136,8 +1210,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // Our best level per skill beside theirs: a red level is one where this player is ahead of every fleet account.
     const ours=n=>{let best=null;for(const b of S.bots){if(b.practice||b.reserved)continue;const s=b.skills?.find(k=>k.name===n);if(s&&(!best||s.level>best.level))best={level:s.level,name:safeName(b.name)};}return best;};
     const grid=l.rows?skills.filter(n=>reported(null,n)).map(n=>{const r=rank(n),o=ours(n);return `<div class="hs-cell${r&&o&&r.level>o.level?' hs-ahead':''}" title="${E(n+(r?'\nLevel: '+r.level+'\nRank: '+nf(r.rank)+'\nTime: '+r.time:'\nNot ranked')+(o?'\nOur best: '+o.level+' ('+o.name+')':''))}"><img src="${asset('skill-'+skillFile(n)+'.png')}" alt="${E(n)}"><span>${r?r.level:'--'}</span></div>`;}).join(''):'';
-    const overall=rank('Overall'),qp=rank('Quest Points');
-    return `<div class="lookup-card"><div class="xp-head"><span${l.at?' title="Hiscores read '+age(Math.min(l.at,S.now))+' ago"':''}>${E(l.name)}</span><span class="${l.online?'friend-on':'friend-off'}">${l.online?('online '+E(whereIs(l.x,l.z))).trim():l.online==null?'presence not loaded':l.lastSeen?'last seen '+age(Math.min(l.lastSeen,S.now))+' ago':'not seen online'}</span></div><div class="xp-stats">${l.combat!=null?`<span>Combat <b>${E(l.combat)}</b></span>`:''}${overall?`<span>Overall <b>#${nf(overall.rank)} · ${overall.level}</b></span>`:''}${qp?`<span>QP <b>${qp.level}</b></span>`:''}</div>`+
+    const overall=rank('Overall'),qp=rank('Quest Points'),whoName=typeof safeName==='function'?safeName(l.name):l.name;
+    return `<div class="lookup-card"><div class="xp-head"><span${l.at?' title="Hiscores read '+age(Math.min(l.at,S.now))+' ago"':''}>${E(whoName)}</span><span class="${l.online?'friend-on':'friend-off'}">${l.online?('online '+E(whereIs(l.x,l.z))).trim():l.online==null?'presence not loaded':l.lastSeen?'last seen '+age(Math.min(l.lastSeen,S.now))+' ago':'not seen online'}</span></div><div class="xp-stats">${l.combat!=null?`<span>Combat <b>${E(l.combat)}</b></span>`:''}${overall?`<span>Overall <b>#${nf(overall.rank)} · ${overall.level}</b></span>`:''}${qp?`<span>QP <b>${qp.level}</b></span>`:''}</div>`+
       (l.rows?(l.rows.length?`<div class="hs-grid">${grid}</div>`:'<p class="xp-muted">Not on the demo hiscores.</p>'):`<p class="xp-muted">${E(l.note||'Hiscores not loaded.')}</p>`)+
       // Worn items from the player's appearance in the world feed, read with the lookup (online players only).
       (Array.isArray(l.worn)?`<div class="xp-head lookup-worn-head"><span>Worn items</span>${l.wornAt?`<span class="xp-muted">${age(Math.min(l.wornAt,S.now))} ago</span>`:''}</div>`+(l.worn.length?`<div class="lookup-worn">${l.worn.map(w=>`<span class="lookup-worn-item" title="${E(w.slot+': '+w.name)}">${icon(w,32)}</span>`).join('')}</div>`:'<p class="xp-muted">Wears nothing.</p>'):'')+
@@ -1164,6 +1238,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // server's (pvp_combat.rs2): both in the Wilderness, combat levels apart by at most the lower Wilderness level.
   // Roster rows are [name, x, z, level, combat]. Players up to 30 tiles away count.
   const canAttack=(a,b)=>{const w=Math.min(wildLevel(a.pos),wildLevel(b.pos));return w>=1&&Number.isFinite(a.combat)&&Number.isFinite(b.combat)&&Math.abs(a.combat-b.combat)<=w;};
+  const inMulti=p=>!p||typeof multiLines==='undefined'||!multiLines.length?false:multiLines.reduce((n,[x0,z0,x1,z1,l])=>(l===(p.level||0)&&x0===x1&&x0>p.x&&p.z>=z0&&p.z<z1?n+1:n),0)%2===1;
   function pvpState(b){
     if(!b?.inWorld||!b.pos)return null;
     const gearKnown=Array.isArray(b.equipment)&&b.equipmentObserved!==false,packKnown=Array.isArray(b.inventory),unobserved=[!gearKnown?'equipment':'',!packKnown?'inventory':''].filter(Boolean).join(' and ');
@@ -1173,7 +1248,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const keptValue=incomplete?null:kept.reduce((n,i)=>n+i.value,0),fleet=new Set(S.bots.map(x=>x.name.toLowerCase()));
     const threats=(S.roster||[]).filter(r=>r[3]===(b.pos.level||0)&&String(r[0]).toLowerCase()!==b.name.toLowerCase()).map(r=>({name:String(r[0]),pos:{x:r[1],z:r[2]},combat:r[4],dist:Math.max(Math.abs(r[1]-b.pos.x),Math.abs(r[2]-b.pos.z)),ours:fleet.has(String(r[0]).toLowerCase())}))
       .filter(p=>p.dist<=30&&!p.ours&&canAttack({pos:b.pos,combat:b.combat},p)).sort((x,y)=>x.dist-y.dist);
-    return {wild:wildLevel(b.pos),risk,kept,keptValue,lost:incomplete?null:Math.max(0,risk-keptValue),unpriced,unobserved,incomplete,threats};
+    return {wild:wildLevel(b.pos),multi:inMulti(b.pos),risk,kept,keptValue,lost:incomplete?null:Math.max(0,risk-keptValue),unpriced,unobserved,incomplete,threats};
   }
   // NPC aggression timer (RuneLite's NPC Aggression Timer, with the server's rule, Player.ts zonesAfk): a player who stays
   // in two 21 x 21 areas for 1,000 ticks is no longer hunted. A step out of both areas makes a new area at the player
@@ -1261,8 +1336,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const box=(img,text,title,name)=>`<button class="infobox" title="${E(title)}" ${name?'data-xp-focus="'+E(name)+'"':''}><img src="${img}" alt=""><span>${E(text)}</span></button>`;
     const short=ms=>ms==null?'':ms<3600e3?Math.floor(ms/6e4)+'m':Math.floor(ms/36e5)+'h'+String(Math.floor(ms%36e5/6e4)).padStart(2,'0');
     // Nearby players (RuneLite's member counter): how many players stand within 15 tiles on the account's plane, and how many of them are ours.
-    const nearby=b=>!b?.inWorld||!b.pos?[]:(S.roster||[]).filter(r=>r[3]===(b.pos.level||0)&&Math.max(Math.abs(r[1]-b.pos.x),Math.abs(r[2]-b.pos.z))<=15&&String(r[0]).toLowerCase()!==b.name.toLowerCase());
-    const nearBox=b=>{const near=nearby(b);if(!near.length)return '';const fleet=new Set(S.bots.map(x=>x.name.toLowerCase())),ours=near.filter(r=>fleet.has(String(r[0]).toLowerCase())).length;return box(asset('rl-fleet.png'),String(near.length),near.length+(near.length===1?' player':' players')+' within 15 tiles'+(ours?' · '+ours+' ours':''));};
+    const nearPos=b=>(typeof aggroPos==='function'?aggroPos(b):null)||(b?.live&&Number.isFinite(b.live.x)&&Number.isFinite(b.live.z)?b.live:b?.pos);
+    const nearby=b=>{const bp=nearPos(b),rows=typeof S!=='undefined'?S?.roster||[]:[];return !b?.inWorld||!bp?[]:rows.filter(r=>r[3]===(bp.level||0)&&Math.max(Math.abs(r[1]-bp.x),Math.abs(r[2]-bp.z))<=15&&String(r[0]).toLowerCase()!==b.name.toLowerCase());};
+    const nearBox=b=>{const near=nearby(b);if(!near.length)return '';const fleet=new Set((typeof S!=='undefined'?S?.bots||[]:[]).map(x=>x.name.toLowerCase())),ours=near.filter(r=>fleet.has(String(r[0]).toLowerCase())).length;return box(asset('rl-fleet.png'),String(near.length),near.length+(near.length===1?' player':' players')+' within 15 tiles'+(ours?' · '+ours+' ours':''));};
     // Ammo (RuneLite's ammo plugin): the stack in the ammo slot (13) with its count.
     // Food (RuneLite's supplies count): the food in the pack (item-stats.json: what heals) with its count; red at 2 or fewer.
     const foodBox=b=>{const f=typeof foodOf==='function'?foodOf(b):{total:0};if(!f.total)return '';const top=f.items[0],hp=f.items.reduce((n,i)=>n+(Number(String(itemStats[i.name]||'').match(/heals (\d+)/)?.[1])||0)*i.count,0);return `<button class="infobox${f.total<=2?' boost-down':''}" title="${E('Food: '+f.items.map(i=>i.name+' × '+i.count).join(', ')+(hp?' · heals '+hp+' hitpoints in all':''))}">${icon(top.name,24)}<span>${f.total}</span></button>`;};
@@ -1273,7 +1349,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       // Item charges: teleport jewellery on its last charge, or used up (an amulet of glory with no charges has no number).
       +(()=>{const l=[...(b.inventory||[]),...(b.equipmentObserved===false?[]:b.equipment||[])].filter(i=>i&&/^(Amulet of glory|Ring of dueling|Games necklace)(\(1\))?$/.test(i.name)&&i.name!=='Ring of dueling'&&i.name!=='Games necklace');return l.length?`<button class="infobox boost-down" title="${E('Last charge: '+l.map(i=>i.name).join(', '))}">${icon(l[0],24)}<span>${l.length}</span></button>`:'';})()
       // PvP Tools: in the Wilderness, a red count of the players who can attack the account now.
-      +(()=>{const p=b.inWorld&&b.pos&&wildLevel(b.pos)?pvpState(b):null;return p?.threats.length?box(asset('prayer-protect-item.png'),String(p.threats.length),p.threats.length+(p.threats.length===1?' player':' players')+' can attack: '+p.threats.slice(0,6).map(t=>t.name+' ('+t.combat+', '+t.dist+' tiles)').join(', ')).replace('class="infobox"','class="infobox boost-down"'):'';})()
+      +(()=>{const p=b.inWorld&&b.pos&&wildLevel(b.pos)?pvpState(b):null,who=n=>typeof safeName==='function'?safeName(n):n;return p?.threats.length?box(asset('prayer-protect-item.png'),String(p.threats.length),p.threats.length+(p.threats.length===1?' player':' players')+' can attack'+(p.multi?' (multi-way)':'')+': '+p.threats.slice(0,6).map(t=>who(t.name)+' ('+t.combat+', '+t.dist+' tiles)').join(', ')).replace('class="infobox"','class="infobox boost-down"'):'';})()
       // Boosts (RuneLite boosts): a skill whose current level differs from its base; Hitpoints and Prayer are the orbs.
       +(b.skills||[]).filter(s=>realSkill(s)&&s.name!=='Hitpoints'&&s.name!=='Prayer'&&s.currentLevel!=null&&s.currentLevel!==s.level).map(s=>box(asset('skill-'+skillFile(s.name)+'.png'),s.currentLevel+'/'+s.level,s.name+(s.currentLevel>s.level?' boosted':' drained')+': '+s.currentLevel+' / '+s.level+(typeof regenStatText==='function'?regenStatText(b,s,Date.now()):'')).replace('class="infobox"','class="infobox '+(s.currentLevel>s.level?'boost-up':'boost-down')+'"')).join(''));return;}
     set(S.bots.filter(x=>x.fresh&&!x.practice&&!x.reserved).slice(0,12).map(x=>{const t=trainedSkill(x);return box(asset(t?'skill-'+skillFile(t)+'.png':'rl-activity.png'),short(x.uptime),safeName(x.name)+(t?' · '+t+(x.goalNow!=null&&t===x.goalSkill?' '+x.goalNow:''):'')+(x.phaseShort?' · '+String(x.phaseShort).slice(0,60):'')+' · '+dur(x.uptime||0),x.name);}).join(''));
@@ -1374,6 +1450,324 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const chipFor=r=>r.state==='MERGED'?'<span class="pr-chip merged">merged</span>':r.draft?'<span class="pr-chip draft">draft</span>':'<span class="pr-chip open">open</span>';
     return '<div class="xp-panel">'+[...groups].map(([agent,list])=>`<div class="xp-box"><div class="xp-head"><span>${E(agent)}</span><span class="xp-gain">${list.filter(r=>r.state==='OPEN').length} open</span></div>${list.sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))).slice(0,12).map(r=>`<a class="pr-row" href="${E(r.url)}" target="_blank" rel="noopener"><span class="pr-num">#${r.number}</span><span class="pr-title">${E(r.title)}</span>${chipFor(r)}<span class="pr-age">${r.updatedAt?age(Date.parse(r.updatedAt))+' ago':''}</span></a>`).join('')}</div>`).join('')+'</div>';
   }
+  // Gear & Upgrade Advisor: rev-289 equipment bonuses, weapon speed, special cost, and unlocked gear/tool tiers.
+  let gearCatalogData=null;
+  window.atlasGearCatalog=rows=>{gearCatalogData=Array.isArray(rows)?rows:null;};
+  if(typeof fetch==='function')fetch('/api/gear-catalog').then(r=>r.ok?r.json():null).then(j=>{if(Array.isArray(j))gearCatalogData=j;},()=>{});
+  const GEAR_LADDERS=[
+    {id:'melee-weapon',label:'Melee weapon',items:[
+      {id:1321,name:'Bronze scimitar',slot:3,skills:{Attack:1},quest:null},
+      {id:1323,name:'Iron scimitar',slot:3,skills:{Attack:1},quest:null},
+      {id:1325,name:'Steel scimitar',slot:3,skills:{Attack:5},quest:null},
+      {id:1327,name:'Black scimitar',slot:3,skills:{Attack:10},quest:null},
+      {id:1329,name:'Mithril scimitar',slot:3,skills:{Attack:20},quest:null},
+      {id:1331,name:'Adamant scimitar',slot:3,skills:{Attack:30},quest:null},
+      {id:1333,name:'Rune scimitar',slot:3,skills:{Attack:40},quest:null},
+      {id:1231,name:'Dragon dagger(p)',slot:3,skills:{Attack:60},quest:'Lost City',also:[1215]},
+      {id:1305,name:'Dragon longsword',slot:3,skills:{Attack:60},quest:'Lost City'},
+      {id:1434,name:'Dragon mace',slot:3,skills:{Attack:60},quest:"Heroes' Quest"},
+      {id:3204,name:'Dragon halberd',slot:3,skills:{Attack:60,Strength:30},quest:'Regicide'}
+    ]},
+    {id:'ranged-weapon',label:'Ranged bow',items:[
+      {id:841,name:'Shortbow',slot:3,skills:{Ranged:1},quest:null},
+      {id:843,name:'Oak shortbow',slot:3,skills:{Ranged:5},quest:null},
+      {id:849,name:'Willow shortbow',slot:3,skills:{Ranged:20},quest:null},
+      {id:853,name:'Maple shortbow',slot:3,skills:{Ranged:30},quest:null},
+      {id:857,name:'Yew shortbow',slot:3,skills:{Ranged:40},quest:null},
+      {id:861,name:'Magic shortbow',slot:3,skills:{Ranged:50},quest:null}
+    ]},
+    {id:'ammo',label:'Ranged ammo',items:[
+      {id:882,name:'Bronze arrow',slot:13,skills:{Ranged:1},quest:null},
+      {id:884,name:'Iron arrow',slot:13,skills:{Ranged:1},quest:null},
+      {id:886,name:'Steel arrow',slot:13,skills:{Ranged:5},quest:null},
+      {id:888,name:'Mithril arrow',slot:13,skills:{Ranged:20},quest:null},
+      {id:890,name:'Adamant arrow',slot:13,skills:{Ranged:30},quest:null},
+      {id:892,name:'Rune arrow',slot:13,skills:{Ranged:40},quest:null}
+    ]},
+    {id:'magic-weapon',label:'Magic staff',items:[
+      {id:1387,name:'Staff of fire',slot:3,skills:{Magic:1},quest:null,also:[1381,1383,1385]},
+      {id:1391,name:'Battlestaff',slot:3,skills:{Magic:30,Attack:30},quest:null,also:[1393,1395,1397,1399]},
+      {id:1401,name:'Mystic fire staff',slot:3,skills:{Magic:40,Attack:40},quest:null,also:[1403,1405,1407]},
+      {id:1409,name:'Staff of iban',slot:3,skills:{Magic:50,Attack:50},quest:'Underground Pass'},
+      {id:2417,name:'Staff of zamorak',slot:3,skills:{Magic:60},quest:null,also:[2415,2416],note:'Mage Arena'}
+    ]},
+    {id:'helm',label:'Headgear',items:[
+      {id:1155,name:'Bronze full helm',slot:0,skills:{Defence:1},quest:null},
+      {id:1153,name:'Iron full helm',slot:0,skills:{Defence:1},quest:null},
+      {id:1157,name:'Steel full helm',slot:0,skills:{Defence:5},quest:null},
+      {id:1165,name:'Black full helm',slot:0,skills:{Defence:10},quest:null},
+      {id:1159,name:'Mithril full helm',slot:0,skills:{Defence:20},quest:null},
+      {id:1161,name:'Adamant full helm',slot:0,skills:{Defence:30},quest:null},
+      {id:1163,name:'Rune full helm',slot:0,skills:{Defence:40},quest:null},
+      {id:3751,name:'Berserker helm',slot:0,skills:{Defence:45},quest:'The Fremennik Trials',also:[3753,3749,3755]},
+      {id:1149,name:'Dragon med helm',slot:0,skills:{Defence:60},quest:null}
+    ]},
+    {id:'body-melee',label:'Body armour (Melee)',items:[
+      {id:1117,name:'Bronze platebody',slot:4,skills:{Defence:1},quest:null},
+      {id:1115,name:'Iron platebody',slot:4,skills:{Defence:1},quest:null},
+      {id:1119,name:'Steel platebody',slot:4,skills:{Defence:5},quest:null},
+      {id:1125,name:'Black platebody',slot:4,skills:{Defence:10},quest:null},
+      {id:1121,name:'Mithril platebody',slot:4,skills:{Defence:20},quest:null},
+      {id:1123,name:'Adamant platebody',slot:4,skills:{Defence:30},quest:null},
+      {id:1113,name:'Rune chainbody',slot:4,skills:{Defence:40},quest:null},
+      {id:1127,name:'Rune platebody',slot:4,skills:{Defence:40},quest:'Dragon Slayer'},
+      {id:3140,name:'Dragon chainbody',slot:4,skills:{Defence:60},quest:null}
+    ]},
+    {id:'body-ranged',label:'Body armour (Ranged)',items:[
+      {id:1129,name:'Leather body',slot:4,skills:{Ranged:1},quest:null},
+      {id:1131,name:'Hardleather body',slot:4,skills:{Defence:10},quest:null},
+      {id:1133,name:'Studded body',slot:4,skills:{Ranged:20,Defence:20},quest:null},
+      {id:1135,name:'Dragonhide body (Green)',slot:4,skills:{Ranged:40,Defence:40},quest:'Dragon Slayer'},
+      {id:2499,name:'Dragonhide body (Blue)',slot:4,skills:{Ranged:50,Defence:40},quest:null},
+      {id:2501,name:'Dragonhide body (Red)',slot:4,skills:{Ranged:60,Defence:40},quest:null},
+      {id:2503,name:'Dragonhide body (Black)',slot:4,skills:{Ranged:70,Defence:40},quest:null}
+    ]},
+    {id:'legs-melee',label:'Leg armour (Melee)',items:[
+      {id:1075,name:'Bronze platelegs',slot:7,skills:{Defence:1},quest:null},
+      {id:1067,name:'Iron platelegs',slot:7,skills:{Defence:1},quest:null},
+      {id:1069,name:'Steel platelegs',slot:7,skills:{Defence:5},quest:null},
+      {id:1077,name:'Black platelegs',slot:7,skills:{Defence:10},quest:null},
+      {id:1071,name:'Mithril platelegs',slot:7,skills:{Defence:20},quest:null},
+      {id:1073,name:'Adamant platelegs',slot:7,skills:{Defence:30},quest:null},
+      {id:1079,name:'Rune platelegs',slot:7,skills:{Defence:40},quest:null,also:[1093]},
+      {id:4087,name:'Dragon platelegs',slot:7,skills:{Defence:60},quest:null}
+    ]},
+    {id:'legs-ranged',label:'Leg armour (Ranged)',items:[
+      {id:1095,name:'Leather chaps',slot:7,skills:{Ranged:1},quest:null},
+      {id:1097,name:'Studded chaps',slot:7,skills:{Ranged:20},quest:null},
+      {id:1099,name:'Dragonhide chaps (Green)',slot:7,skills:{Ranged:40},quest:null},
+      {id:2493,name:'Dragonhide chaps (Blue)',slot:7,skills:{Ranged:50},quest:null},
+      {id:2495,name:'Dragonhide chaps (Red)',slot:7,skills:{Ranged:60},quest:null},
+      {id:2497,name:'Dragonhide chaps (Black)',slot:7,skills:{Ranged:70},quest:null}
+    ]},
+    {id:'shield',label:'Shield',items:[
+      {id:1171,name:'Wooden shield',slot:5,skills:{},quest:null},
+      {id:1193,name:'Steel kiteshield',slot:5,skills:{Defence:5},quest:null},
+      {id:1197,name:'Mithril kiteshield',slot:5,skills:{Defence:20},quest:null},
+      {id:1199,name:'Adamant kiteshield',slot:5,skills:{Defence:30},quest:null},
+      {id:1201,name:'Rune kiteshield',slot:5,skills:{Defence:40},quest:null},
+      {id:1187,name:'Dragon sq shield',slot:5,skills:{Defence:60},quest:"Legends' Quest"}
+    ]},
+    {id:'neck',label:'Necklace / Amulet',items:[
+      {id:1478,name:'Amulet of accuracy',slot:2,skills:{},quest:null},
+      {id:1725,name:'Amulet of strength',slot:2,skills:{},quest:null,also:[1727]},
+      {id:1731,name:'Amulet of power',slot:2,skills:{},quest:null},
+      {id:1712,name:'Amulet of glory(4)',slot:2,skills:{},quest:null,also:[1704,1706,1708,1710]}
+    ]},
+    {id:'pickaxe',label:'Pickaxe (Mining tool)',tool:'Mining',items:[
+      {id:1265,name:'Bronze pickaxe',slot:3,skills:{Mining:1},wield:{Attack:1},quest:null},
+      {id:1267,name:'Iron pickaxe',slot:3,skills:{Mining:1},wield:{Attack:1},quest:null},
+      {id:1269,name:'Steel pickaxe',slot:3,skills:{Mining:6},wield:{Attack:5},quest:null},
+      {id:1273,name:'Mithril pickaxe',slot:3,skills:{Mining:21},wield:{Attack:20},quest:null},
+      {id:1271,name:'Adamant pickaxe',slot:3,skills:{Mining:31},wield:{Attack:30},quest:null},
+      {id:1275,name:'Rune pickaxe',slot:3,skills:{Mining:41},wield:{Attack:40},quest:null}
+    ]},
+    {id:'axe',label:'Axe (Woodcutting tool)',tool:'Woodcutting',items:[
+      {id:1351,name:'Bronze axe',slot:3,skills:{},wield:{Attack:1},quest:null},
+      {id:1349,name:'Iron axe',slot:3,skills:{},wield:{Attack:1},quest:null},
+      {id:1353,name:'Steel axe',slot:3,skills:{},wield:{Attack:5},quest:null},
+      {id:1361,name:'Black axe',slot:3,skills:{},wield:{Attack:10},quest:null},
+      {id:1355,name:'Mithril axe',slot:3,skills:{},wield:{Attack:20},quest:null},
+      {id:1357,name:'Adamant axe',slot:3,skills:{},wield:{Attack:30},quest:null},
+      {id:1359,name:'Rune axe',slot:3,skills:{},wield:{Attack:40},quest:null}
+    ]}
+  ];
+  function skillBaseOf(b,name){
+    const s=b?.skills?.find(x=>String(x?.name||'').toLowerCase()===name.toLowerCase());
+    if(!s)return null;
+    return Number.isFinite(s.level)?s.level:Number.isFinite(s.currentLevel)?s.currentLevel:null;
+  }
+  function questStatusOf(b,qName){
+    if(!qName)return true;
+    if(!Array.isArray(b?.quests))return null;
+    const row=b.quests.find(q=>String(q?.name||'').toLowerCase()===qName.toLowerCase());
+    if(!row)return null;
+    if(row.state==='complete'||row.state==='completed')return true;
+    if(row.state==='not started'||row.state==='started')return false;
+    return null;
+  }
+  function mergedTierSkills(tier,cat,isTool){
+    const out={...(tier.skills||{})};
+    if(!isTool&&cat?.requires?.skills){
+      for(const [k,v] of Object.entries(cat.requires.skills)){
+        if(!Number.isFinite(v)||v<=0)continue;
+        const sk=k[0].toUpperCase()+k.slice(1).toLowerCase();
+        out[sk]=Math.max(out[sk]||0,v);
+      }
+    }
+    return out;
+  }
+  function tierRequirements(b,tier,isTool=false){
+    const cat=Array.isArray(gearCatalogData)?gearCatalogData.find(g=>g.id===tier.id):null;
+    const reqSkills=mergedTierSkills(tier,cat,isTool);
+    const reqQuest=cat?.requires?.quest||tier.quest||null;
+    const unmet=[];let unknown=false;
+    for(const [sk,req] of Object.entries(reqSkills)){
+      const lv=skillBaseOf(b,sk);
+      if(lv==null)unknown=true;
+      else if(lv<req)unmet.push(sk+' '+req);
+    }
+    const qState=questStatusOf(b,reqQuest);
+    if(reqQuest){
+      if(qState===false)unmet.push(reqQuest);
+      else if(qState===null)unknown=true;
+    }
+    return {ok:!unmet.length&&!unknown,unknown:!unmet.length&&unknown,unmet,quest:reqQuest,skills:reqSkills};
+  }
+  function matchesTier(item,tier){
+    if(!item)return false;
+    const id=Number.isSafeInteger(item.baseId)?item.baseId:Number.isSafeInteger(item.id)?item.id:null;
+    const ids=[tier.id,...(tier.also||[])];
+    if(id!==null)return ids.includes(id);
+    const bare=String(tier.name||'').replace(/\s+\((?:Green|Blue|Red|Black)\)$/i,'').toLowerCase();
+    return String(item.name||'').toLowerCase()===bare;
+  }
+  function gearAdvisorFor(b){
+    if(!b)return null;
+    const allowBank=typeof window!=='undefined'&&typeof window.atlasOperator==='function'?!!window.atlasOperator():false;
+    const gearKnown=Array.isArray(b.equipment)&&b.equipmentObserved!==false;
+    const packKnown=Array.isArray(b.inventory);
+    const bankKnown=allowBank&&Array.isArray(b.bank);
+    const rows=GEAR_LADDERS.map(ladder=>{
+      const isTool=!!ladder.tool;
+      let bestWorn=-1,bestHeld=-1,bestHeldPlace=null,bestUnlocked=-1,nextLocked=-1;
+      for(let i=0;i<ladder.items.length;i++){
+        const tier=ladder.items[i],req=tierRequirements(b,tier,isTool);
+        if(gearKnown&&b.equipment.some(e=>matchesTier(e,tier)))bestWorn=i;
+        if(packKnown&&b.inventory.some(e=>matchesTier(e,tier))){bestHeld=i;bestHeldPlace='pack';}
+        else if(bankKnown&&b.bank.some(e=>matchesTier(e,tier))&&i>bestHeld){bestHeld=i;bestHeldPlace='bank';}
+        if(req.ok)bestUnlocked=i;
+        else if(nextLocked<0&&i>(Math.max(bestWorn,bestUnlocked)))nextLocked=i;
+      }
+      const currentIdx=Math.max(bestWorn,isTool?bestHeld:-1);
+      const current=currentIdx>=0?ladder.items[currentIdx]:null;
+      const currentPlace=bestWorn>=0&&(bestWorn>=bestHeld||!isTool)?'worn':bestHeld>=0?bestHeldPlace:null;
+      let targetIdx=-1,status='bis',reason='';
+      if(bestHeld>currentIdx&&tierRequirements(b,ladder.items[bestHeld],isTool).ok){
+        targetIdx=bestHeld;status='owned';reason='Held in '+bestHeldPlace;
+      }else if(bestUnlocked>currentIdx){
+        targetIdx=bestUnlocked;status='ready';
+        if(bestHeld===bestUnlocked)reason='Held in '+bestHeldPlace;
+        else{
+          const req=tierRequirements(b,ladder.items[bestUnlocked],isTool);
+          const skillTxt=Object.entries(req.skills||{}).map(([s,n])=>s+' '+n).join(', ');
+          reason=skillTxt?(req.quest?skillTxt+' · '+req.quest:skillTxt):(req.quest||'Unlocked');
+        }
+      }else if(nextLocked>=0){
+        targetIdx=nextLocked;status='locked';
+        const req=tierRequirements(b,ladder.items[nextLocked],isTool);
+        reason=req.unmet.length?'Needs '+req.unmet.join(', '):'Needs quest/level check';
+      }else{
+        targetIdx=ladder.items.length-1;status=currentIdx===ladder.items.length-1?'bis':'locked';
+        reason=currentIdx===ladder.items.length-1?'Top rev-289 tier':(!gearKnown?'Equipment not reported':'');
+      }
+      const target=targetIdx>=0?ladder.items[targetIdx]:null;
+      return {id:ladder.id,label:ladder.label,tool:ladder.tool||null,current,currentPlace,target,status,reason};
+    });
+    return {gearKnown,packKnown,bankKnown,rows};
+  }
+  function equipAdvisorHtml(b){
+    const adv=gearAdvisorFor(b);if(!adv)return '';
+    const pick=adv.rows.find(r=>r.status==='owned'||r.status==='ready');
+    const summary=pick?'<b>Upgrade:</b> '+E(pick.target.name)+' <small>('+E(pick.reason)+')</small>':(adv.gearKnown?'<b>Advisor:</b> Worn tiers unlocked':'<b>Advisor:</b> Equipment not reported');
+    return '<div class="equip-advisor">'+summary+'<button class="game-control" data-open-plugin="gear">Open Gear Advisor</button></div>';
+  }
+  function gearAdvisorInner(){
+    const b=account();
+    if(!b)return '<div class="xp-box"><div class="xp-head"><span>Gear &amp; Upgrade Advisor</span></div><span class="xp-muted">Select an account in the title bar to inspect its rev-289 equipment, combat stats, and next upgrades.</span></div>';
+    const adv=gearAdvisorFor(b),t=wornBonuses(b),weapon=adv.gearKnown?b.equipment.find(e=>e.slot===3):null;
+    const speed=weapon?equipmentValue(weaponSpeedData,weapon):null,tickMs=(typeof S!=='undefined'&&S?.world?.tickMs)||600;
+    const str=curLevel(b,'Strength'),rng=curLevel(b,'Ranged'),ranged=(equipmentValue(itemBonusData,weapon)?.[4]||0)>0;
+    const hits=[];
+    if(t){
+      if(Number.isFinite(str)&&!ranged)hits.push('Melee '+maxHit(str,t[10],0)+'–'+maxHit(str,t[10],3));
+      if(ranged&&Number.isFinite(rng))hits.push('Ranged '+maxHit(rng,t[11],0)+'–'+maxHit(rng,t[11],3));
+      const sp=bestSpell(b);if(sp)hits.push(sp.name+' '+sp.max+(sp.charge?' (30)':''));
+    }
+    const specCost=weapon?(/\bdragon dagger\b/i.test(weapon.name)?25:/\bmagic (shortbow|longbow)\b/i.test(weapon.name)?35:/\bdragon (longsword|mace|spear)\b/i.test(weapon.name)?25:/\bdragon halberd\b/i.test(weapon.name)?30:/\brune claws\b/i.test(weapon.name)?25:/\brune thrownaxe\b/i.test(weapon.name)?10:/\b(dragon battleaxe|excalibur)\b/i.test(weapon.name)?100:null):null;
+    const sg=v=>(v>0?'+':'')+v;
+    const head='<div class="xp-box"><div class="xp-head"><span>'+E(safeName(b.name))+'</span><span class="xp-gain">'+(b.combat?'Combat '+b.combat:'Gear')+'</span></div>'+
+      (adv.gearKnown
+        ?'<div class="xp-meta"><span>Worn <b>'+b.equipment.length+'</b> slots</span><span>'+(weapon?E(weapon.name)+(speed?' · '+speed+'t ('+(speed*tickMs/1000).toFixed(1)+'s)':''):'Unarmed')+'</span></div>'+(specCost!=null||hits.length?'<div class="xp-meta"><span>'+(hits.length?E(hits.join(' · ')):'—')+'</span><span>'+(specCost!=null?'Spec '+specCost+'%':'')+'</span></div>':'')
+        :'<p class="xp-muted" style="margin-top:4px">Equipment is not reported for this account; only observed pack/skills/quests are checked.</p>')+
+      (t?'<div class="gear-bonuses"><div class="gear-bonus"><span>Attack</span><b>'+sg(t[0])+' / '+sg(t[1])+' / '+sg(t[2])+'</b><small>Stab/Sl/Cr</small></div><div class="gear-bonus"><span>Mag / Rng</span><b>'+sg(t[3])+' / '+sg(t[4])+'</b><small>Accuracy</small></div><div class="gear-bonus"><span>Str / Pray</span><b>'+sg(t[10])+' / '+sg(t[12])+'</b><small>Rng '+sg(t[11])+'</small></div></div>':'')+
+      '</div>';
+    const order={owned:0,ready:1,locked:2,bis:3};
+    const list=[...adv.rows].sort((x,y)=>(order[x.status]??9)-(order[y.status]??9));
+    const tagLabel={owned:'Equip / carry',ready:'Unlocked',locked:'Next tier',bis:'Top tier'};
+    return head+'<div class="xp-box"><div class="xp-head"><span>Upgrade tiers (rev 289)</span><span class="xp-muted">'+list.filter(r=>r.status==='owned'||r.status==='ready').length+' ready</span></div><div class="gear-list">'+
+      list.map(r=>`<div class="gear-row">${icon({id:r.target?.id,name:r.target?.name},24)}<div class="gear-row-main"><div class="gear-row-title"><span>${E(r.label)}</span><span class="gear-tag ${r.status}">${tagLabel[r.status]}</span></div><div class="gear-row-sub">${r.current?E(r.current.name)+' ('+E(r.currentPlace||'worn')+') → ':''}<b>${E(r.target?.name||'—')}</b>${r.reason?' · '+E(r.reason):''}</div></div></div>`).join('')+
+      '</div></div>';
+  }
+  function gearAdvisorPanel(){return '<div class="xp-panel gear-panel"><div class="gear-advisor">'+gearAdvisorInner()+'</div></div>';}
+
+  // Wilderness & PvP Combat HUD: 2004 multiway crossed-swords, Wilderness bracket, 2004 sa_energy bar, active overhead prayer, freeze/immunity timers.
+  const MULTIWAY_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l5-5m-3 7l-4-4m14-12l4-2-2 4-9 9-2-2z" fill="#d9d2be" stroke="#000" stroke-width="1"/><path d="M20 20l-5-5m3 7l4-4M8 6L4 4l2 4 9 9 2-2z" fill="#e6533c" stroke="#000" stroke-width="1"/></svg>';
+  const SKULL_SVG='<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h8l2 3v5l-2 2v2H4v-2l-2-2V5z" fill="#ece6d4" stroke="#000" stroke-width="1"/><rect x="4" y="6" width="3" height="3" fill="#1a120b"/><rect x="9" y="6" width="3" height="3" fill="#1a120b"/><path d="M6 12v2M8 12v2M10 12v2" stroke="#000" stroke-width="1"/></svg>';
+  function pvpHudData(b,now=Date.now()){
+    if(!b)return null;
+    const pos=b.inWorld?(b.live||b.pos):null;
+    const w=pos?wildLevel(pos):0;
+    const multi=pos?inMulti(pos):false;
+    const cb=Number.isFinite(b.combat)?b.combat:null;
+    const minCb=w>0&&cb!=null?Math.max(3,cb-w):null,maxCb=w>0&&cb!=null?Math.min(126,cb+w):null;
+    const p=w>0?pvpState(b):null;
+    const gearKnown=Array.isArray(b.equipment)&&b.equipmentObserved!==false;
+    const weapon=gearKnown?b.equipment.find(e=>e.slot===3):null;
+    const specCost=weapon?(/\bdragon dagger\b/i.test(weapon.name)?25:/\bmagic (shortbow|longbow)\b/i.test(weapon.name)?35:/\bdragon (longsword|mace|spear)\b/i.test(weapon.name)?25:/\bdragon halberd\b/i.test(weapon.name)?30:/\brune claws\b/i.test(weapon.name)?25:/\brune thrownaxe\b/i.test(weapon.name)?10:/\b(dragon battleaxe|excalibur)\b/i.test(weapon.name)?100:null):null;
+    const rawSa=Number.isFinite(b.saEnergy)?Math.round(b.saEnergy/10):Number.isFinite(b.specialEnergy)?Math.round(b.specialEnergy):null;
+    const saPct=rawSa!=null?Math.max(0,Math.min(100,rawSa)):null;
+    const prayers=Array.isArray(b.progressionContext?.prayers)?b.progressionContext.prayers:null;
+    const overhead=prayers?(prayers[14]?{name:'Protect from Melee',file:'protect-from-melee'}:prayers[13]?{name:'Protect from Missiles',file:'protect-from-missiles'}:prayers[12]?{name:'Protect from Magic',file:'protect-from-magic'}:null):null;
+    const protectItem=!!prayers?.[8];
+    const tickMs=(typeof S!=='undefined'&&S?.world?.tickMs)||600;
+    const remSec=(ticks,until)=>Number.isFinite(ticks)&&ticks>0?Math.ceil(ticks*tickMs/1000)+'s':(Number.isFinite(until)&&until>now?Math.ceil((until-now)/1000)+'s':null);
+    const stunned=b.action==='stun'||String(b.timeline||'').slice(-1)==='s'||(Number.isFinite(b.stunTicks)&&b.stunTicks>0);
+    const stunLeft=remSec(b.stunTicks,b.stunUntil);
+    const freezeLeft=remSec(b.freezeTicks,b.frozenUntil);
+    const immuneLeft=remSec(b.freezeImmunityTicks,b.freezeImmunityUntil);
+    const tbLeft=remSec(b.teleblockTicks,b.teleblockUntil);
+    const antiFireLeft=remSec(b.antifireTicks,b.antifireUntil);
+    const antiPoisonLeft=remSec(b.antipoisonTicks,b.antipoisonUntil);
+    const timers=[];
+    if(stunned)timers.push({cls:'stun',text:'STUNNED'+(stunLeft?' '+stunLeft:''),title:'Bot is stunned on latest tick'});
+    if(freezeLeft)timers.push({cls:'freeze',text:'FROZEN '+freezeLeft,title:'Snared / Entangled freeze timer'});
+    if(immuneLeft)timers.push({cls:'immune',text:'IMMUNE '+immuneLeft,title:'Freeze immunity active'});
+    if(tbLeft)timers.push({cls:'tb',text:'TB '+tbLeft,title:'Teleblock active'});
+    if(antiFireLeft)timers.push({cls:'immune',text:'ANTIFIRE '+antiFireLeft,title:'Antifire protection timer'});
+    if(antiPoisonLeft)timers.push({cls:'immune',text:'ANTIPOISON '+antiPoisonLeft,title:'Antipoison immunity timer'});
+    const visible=w>0||multi||saPct!==null||specCost!==null||overhead!==null||protectItem||timers.length>0;
+    return {visible,wild:w,multi,minCb,maxCb,threats:p?.threats?.length??0,saPct,specialActive:!!b.specialActive,weapon,specCost,prayersReported:!!prayers,overhead,protectItem,timers};
+  }
+  function pvpHud(){
+    const el=hud.querySelector('.game-pvp-hud');if(!el)return;
+    const d=pvpHudData(account(),Date.now());
+    if(!d||!d.visible){el.hidden=true;if(el._h!==''){el._h='';el.innerHTML='';}return;}
+    el.hidden=false;
+    const top=d.wild>0||d.multi?`<div class="pvp-top">${d.wild>0?`<span class="pvp-skull" title="Wilderness level ${d.wild}">${SKULL_SVG}Level: ${d.wild}</span><span class="pvp-bracket" title="Attackable combat level range">Lvl ${d.minCb??'?'}-${d.maxCb??'?'}</span>`:'<span class="pvp-bracket">Safe area</span>'}${d.multi?`<span class="pvp-multi" title="Multi-way combat zone">${MULTIWAY_SVG}</span>`:(d.wild>0?'<span class="pvp-single" title="Single-way combat">Single</span>':'')}${d.threats?`<span class="pvp-threat" title="Attackable non-fleet players in 30 tiles">${d.threats} in range</span>`:''}</div>`:'';
+    const specBar=d.saPct!==null||d.specCost!==null||d.wild>0?`<div class="pvp-spec-bar${d.specialActive?' active':''}${d.saPct===null?' unknown':''}" title="${E(d.saPct!==null?'Special attack energy (sa_energy): '+d.saPct+'%':(d.weapon&&d.specCost!=null?d.weapon.name+' costs '+d.specCost+'% · ':'')+'sa_energy is not reported by current bot status')}">${d.saPct!==null?`<div class="pvp-spec-fill" style="width:${d.saPct}%"></div>`:''}<div class="pvp-spec-ticks"></div><span class="pvp-spec-text">${d.saPct!==null?'Special Attack: '+d.saPct+'%':(d.specCost!=null?E(d.weapon.name)+' ('+d.specCost+'% spec · n/r)':'Special Attack: n/r')}</span></div>`:'';
+    const prayerBadge=d.overhead?`<span class="pvp-prayer" title="Active overhead: ${E(d.overhead.name)}"><img src="${asset('prayer-'+d.overhead.file+'.png')}" alt="">${E(d.overhead.name.replace('Protect from ',''))}</span>`:(d.protectItem?`<span class="pvp-prayer" title="Protect Item active"><img src="${asset('prayer-protect-item.png')}" alt="">+1 Item</span>`:(d.wild>0?(d.prayersReported?'<span class="pvp-chip">Overhead: off</span>':'<span class="pvp-chip" title="No activePrayers array in bot status">Overhead: n/r</span>'):''));
+    const timerRow=(prayerBadge||d.timers.length||d.wild>0)?`<div class="pvp-status-row">${prayerBadge}<div class="pvp-timers">${d.timers.length?d.timers.map(t=>`<span class="pvp-chip ${t.cls}" title="${E(t.title)}">${E(t.text)}</span>`).join(''):(d.wild>0?'<span class="pvp-chip" title="Stun is read from tick timeline; freeze and immunity timers require bot telemetry">Timers: stun obs · freeze n/r</span>':'')}</div></div>`:'';
+    const html=top+specBar+timerRow;
+    if(el._h!==html){el._h=html;el.innerHTML=html;}
+  }
+  function titleDiag(){
+    const el=$('#client-diag');if(!el)return;
+    const isOwner=typeof window!=='undefined'&&typeof window.atlasOperator==='function'&&window.atlasOperator();
+    if(!isOwner||!S){el.hidden=true;return;}
+    const cap=S.capacity||{},diag=S.diagnostics||{},loops=Array.isArray(diag.failLoops)?diag.failLoops:[],leases=Array.isArray(diag.leases)?diag.leases:[];
+    const active=cap.fresh===true&&Number.isFinite(cap.active)?cap.active:null,capMax=Number.isFinite(cap.cap)?cap.cap:null,unused=active!==null&&capMax!==null?Math.max(0,capMax-active):null;
+    const headroom=cap.fresh===true&&Number.isFinite(cap.headroomGB)?cap.headroomGB:null;
+    const staleLeases=leases.filter(l=>l.stale===true);
+    const chips=[];
+    if(capMax!=null)chips.push(`<button class="title-chip" data-open-plugin="operations" title="Active / cap bot slots (${unused!=null?unused+' unused':'controller stale'}${cap.queued!=null?', '+cap.queued+' queued':''})">Bots <b>${active??'?'}/${capMax}</b>${unused!=null?' <span class="diag-hide-sm">('+unused+' free)</span>':''}</button>`);
+    if(headroom!=null)chips.push(`<button class="title-chip ${headroom<0?'bad':headroom<1?'warn':'good'}" data-open-plugin="machine" title="RAM headroom above host floor and startup reserves (free ${Number.isFinite(cap.freeGB)?cap.freeGB.toFixed(1):'?'} GiB)">RAM <b>${headroom>=0?'+':''}${headroom.toFixed(1)}G</b></button>`);
+    if(loops.length)chips.push(`<button class="title-chip bad" data-open-plugin="operations" title="${E(loops.slice(0,4).map(l=>safeName(l.name)+' '+l.runs+'×: '+l.error).join('\n'))}"><b>${loops.length}</b> loop${loops.length===1?'':'s'}</button>`);
+    if(staleLeases.length)chips.push(`<button class="title-chip warn" data-open-plugin="operations" title="Stale controller leases: ${E(staleLeases.map(l=>l.side+' ('+ago(l.ageMs)+')').join(', '))}"><b>${staleLeases.length}</b> stale lease${staleLeases.length===1?'':'s'}</button>`);
+    const html=chips.join('');
+    el.hidden=!html;
+    if(el._h!==html){el._h=html;el.innerHTML=html;}
+  }
   new MutationObserver(followTitle).observe(plugin.querySelector('#client-plugin-name'),{childList:true,characterData:true,subtree:true});
   function renderSnapshotPlugin(id){
     if(!S){
@@ -1382,6 +1776,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     }
     if(id==='boards')hiscores();
     else if(id==='xp'){body.innerHTML='<div class="xp-tracker"></div>';refreshXp();}
+    else if(id==='gear'){body.innerHTML=gearAdvisorPanel();}
     else body.innerHTML=infoPanel();
   }
   // Starts the enter animation of a container again (client-shell.css .enter-a and .enter-b: the same keyframes under
@@ -1396,7 +1791,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const priorPlugin=selectedPlugin;window.atlasBeforePluginChange?.(priorPlugin,id);selectedPlugin=id;app.classList.remove('client-collapsed');app.classList.add('mobile-plugin');for(const el of [fleet,inspect,boards,allocation,journal])parked.append(el);body.replaceChildren();body._h=null;if(priorPlugin!==id)enter(body);$('#client-plugin-name').textContent=window.atlasPlugins?.[id]?.label||window.atlasPluginNames?.[id]||plugins.find(p=>p[0]===id)?.[1]||({raw:'Raw evidence'}[id]||'Settings');
     // Activity opens with the death recap of the watched account when it died.
     if(id==='activity'){const da=account();if(recapStale(da))loadRecap(da.name);}
-    body.dataset.plugin=id;plugin.dataset.plugin=id;if(window.atlasPlugins?.[id]){window.atlasPlugins[id].render(body);}else if(['xp','boards','info'].includes(id))renderSnapshotPlugin(id);else if(id==='ge')body.innerHTML=gePanel();else if(id==='prs')body.innerHTML=prsPanel();else if(id==='fleet')body.append(fleet);else if(id==='world')body.innerHTML=worldPanel();else if(id==='activity'){body.append(journal);journal.style.setProperty('display','block','important');journal.style.position='static';journal.style.width='100%';journal.style.height='auto';}else{body.append(inspect);choose(id==='settings'?'machine':id);if(id==='goals'&&window.atlasOperator()){const form=document.createElement('form');form.className='goal-request';form.innerHTML='<input name="text" maxlength="500" placeholder="Tell the agents what you want next..." aria-label="New owner request"><button>Send</button><small>Goes to research/owner-requests.md as the next numbered row.</small>';body.prepend(form);}}
+    body.dataset.plugin=id;plugin.dataset.plugin=id;if(window.atlasPlugins?.[id]){window.atlasPlugins[id].render(body);}else if(['xp','gear','boards','info'].includes(id))renderSnapshotPlugin(id);else if(id==='ge')body.innerHTML=gePanel();else if(id==='prs')body.innerHTML=prsPanel();else if(id==='fleet')body.append(fleet);else if(id==='world')body.innerHTML=worldPanel();else if(id==='activity'){body.append(journal);journal.style.setProperty('display','block','important');journal.style.position='static';journal.style.width='100%';journal.style.height='auto';}else{body.append(inspect);choose(id==='settings'?'machine':id);if(id==='goals'&&window.atlasOperator()){const form=document.createElement('form');form.className='goal-request';form.innerHTML='<input name="text" maxlength="500" placeholder="Tell the agents what you want next..." aria-label="New owner request"><button>Send</button><small>Goes to research/owner-requests.md as the next numbered row.</small>';body.prepend(form);}}
     rail.querySelectorAll('[data-client-plugin]').forEach(b=>{b.classList.toggle('on',b.dataset.clientPlugin===id);b.setAttribute('aria-pressed',String(b.dataset.clientPlugin===id));});syncSidebar();if(S&&id==='fleet')roster();window.atlasAfterPluginChange?.(priorPlugin,id);
   }
   function openBank(){
@@ -1531,6 +1926,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(p&&typeof hl!=='undefined'&&hl.trail&&typeof trails!=='undefined'){g.strokeStyle='#00c000';g.lineWidth=1;const tp=(qx,qz)=>{const dx=(qx-cx)*PX,dy=(cz-qz)*PX;return [OX+dx*cos-dy*sin,OY+dx*sin+dy*cos];};for(const t of trails.values()){if(t.length<2)continue;g.beginPath();let drawing=false;for(const q of t){if((q.l||0)!==floor||(q.z>6400)!==(cz>6400)){drawing=false;continue;}const [x,y]=tp(q.x,q.z);if(drawing)g.lineTo(x,y);else g.moveTo(x,y);drawing=true;}g.stroke();}}
     // Multi-Lines on the minimap: the red multi-combat edges near the minimap's centre, turned and scaled as the dots are.
     if(p&&typeof hl!=='undefined'&&hl.multi&&typeof multiLines!=='undefined'&&multiLines){g.strokeStyle='#ff0000';g.lineWidth=1;const px=(qx,qz)=>{const dx=(qx-cx)*PX,dy=(cz-qz)*PX;return [OX+dx*cos-dy*sin,OY+dx*sin+dy*cos];};for(const [x0,z0,x1,z1,l] of multiLines){if(l!==floor)continue;const k=clipLine(x0,z0,x1,z1,cx,cz,80);if(!k)continue;const a=px(k[0],k[1]),c=px(k[2],k[3]);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(c[0],c[1]);g.stroke();}}
+    if(p&&typeof hl!=='undefined'&&hl.wildOverlay&&typeof window!=='undefined'&&window.atlasWildOverlay&&floor===0&&cz<6400){
+      const px=(qx,qz)=>{const dx=(qx-cx)*PX,dy=(cz-qz)*PX;return [OX+dx*cos-dy*sin,OY+dx*sin+dy*cos];};
+      for(const [z,col] of [[3520,'#86c862'],[3680,'#e8a844'],[3760,'#e05347']]){const k=clipLine(2944,z,3392,z,cx,cz,80);if(!k)continue;const a=px(k[0],k[1]),c2=px(k[2],k[3]);g.save();g.strokeStyle=col;g.lineWidth=1;g.setLineDash([3,2]);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(c2[0],c2[1]);g.stroke();g.restore();}
+      for(const hs of window.atlasWildOverlay.hotspots||[])dot(hs.x,hs.z,hs.band==='deep'?'#e05347':hs.band==='glory'?'#e8a844':'#86c862','#101411',hs.label+' (Wildy '+hs.wild+')',2);
+      const dest=b&&window.atlasWildOverlay.resolveTarget?.(b);
+      if(dest&&(dest.level||0)===floor&&(dest.z>6400)===(cz>6400)&&(dest.x!==p.x||dest.z!==p.z)){const a=px(p.x,p.z),c2=px(dest.x,dest.z);g.save();g.strokeStyle='#58d5ff';g.lineWidth=1.2;g.setLineDash([3,2]);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(c2[0],c2[1]);g.stroke();g.restore();dot(dest.x,dest.z,'#58d5ff','#16455a','Target: '+dest.label,2);}
+    }
     // Ground markers, failure markers and the NPC finder's spawns on the minimap.
     const mp=(qx,qz)=>{const dx=(qx-cx)*PX,dy=(cz-qz)*PX;return [Math.round(OX+dx*cos-dy*sin),Math.round(OY+dx*sin+dy*cos)];},sameSide=qz=>(qz>6400)===(cz>6400);
     if(typeof hl!=='undefined'&&hl.marks&&typeof marks!=='undefined'){const s=Math.max(3,Math.round(PX));for(const m of marks){if(!sameSide(m.z)||(m.l||0)!==floor)continue;const [x,y]=mp(m.x,m.z);if(x<-s||y<-s||x>W+s||y>H+s)continue;g.strokeStyle=m.c||'#ffff00';g.lineWidth=1;g.strokeRect(x-(s>>1)+0.5,y-(s>>1)+0.5,s,s);}}
@@ -1563,8 +1965,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   miniCanvas?.addEventListener('mouseleave',()=>{hud.querySelector('.game-tip').hidden=true;});
   // A narrow view has no room for the orbs beside the minimap: they go in a row under it, and the XP button goes to
   // the top right of the ring (client-shell.css, hud-narrow).
-  if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>hud.classList.toggle('hud-narrow',hud.clientWidth<500)).observe(hud);
-  // XP drops (OSRS): each skill gain since the last observation floats up under the XP orb with its icon.
+  const syncInfoboxTop=()=>{const el=hud.querySelector('.game-overlay'),ib=hud.querySelector('.game-infoboxes');if(!el||!ib)return;const top=el.offsetHeight?(el.offsetTop+el.offsetHeight+4+'px'):'';if(ib.style.top!==top)ib.style.top=top;};
+  if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>{hud.classList.toggle('hud-narrow',hud.clientWidth<500);syncInfoboxTop();}).observe(hud);
+  // XP drops (2004): each skill gain since the last observation floats up under the XP orb with its icon.
   let dropsFor=null,dropsXp={};
   function xpDrops(b){
     if(!b||b.name!==dropsFor){dropsFor=b?.name??null;dropsXp=Object.fromEntries((b?.skills||[]).map(k=>[k.name,k.xp]));return;}
@@ -1576,7 +1979,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function overlay(){
     const b=account(),el=hud.querySelector('.game-overlay');
     // The box is written only when its text changes. The infoboxes sit below the box, whatever its height.
-    const set=html=>{if(el._h!==html){el._h=html;el.innerHTML=html;const ib=hud.querySelector('.game-infoboxes');if(ib&&el.offsetHeight)ib.style.top=el.offsetTop+el.offsetHeight+4+'px';}};
+    const set=html=>{if(el._h!==html){el._h=html;el.innerHTML=html;}const ib=hud.querySelector('.game-infoboxes');if(ib&&el.offsetHeight){const top=el.offsetTop+el.offsetHeight+4+'px';if(ib.style.top!==top)ib.style.top=top;}};
     const line=(k,v)=>`<div><span>${E(k)}</span><b>${E(v)}</b></div>`;
     // Owner targets come from the goal ledger. Public hiscores describe observations without an all-board target.
     const ranked=(S.boards||[]).filter(x=>x.best?.rank),near=ranked.filter(x=>x.gap&&!x.gap.ahead&&x.best.rank>1).sort((a,b)=>(b.gap.close||0)-(a.gap.close||0))[0];
@@ -1587,7 +1990,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // The 3D camera on another player (a lookup's Follow in 3D): what the page knows of them, from the lookup.
     const other=window.atlasFollowOther;
     if(other){const l=S.lookups?.[other.toLowerCase()],ov=l?.rows?.find(r=>r.board==='Overall'),seen=S.roster?.find(r=>String(r[0]).toLowerCase()===other.toLowerCase());
-      set('<h4>'+E(other)+'</h4>'+line('Status',seen?'online':'not in the roster')+line('Combat',String(l?.combat??seen?.[4]??'—'))+(ov?line('Overall','#'+nf(ov.rank)+' · '+ov.level):'')+(l?.worn?.length?line('Wears',l.worn.map(w=>w.name).join(', ').slice(0,60)):'')+line('Account','not ours')+race);return;}
+      set('<h4>'+E(other)+'</h4>'+line('Status',seen?'online':'not in the roster')+line('Combat',String(l?.combat??seen?.[4]??'—'))+(l?.wild?.wild?line('Wilderness','Level '+l.wild.wild+(l.wild.minCombat?' · '+l.wild.minCombat+'-'+l.wild.maxCombat:'')+(l.wild.x!=null&&l.wild.z!=null?(inMulti({x:l.wild.x,z:l.wild.z,level:l.wild.plane??0})?' · multi-way':' · single-way'):'')):'')+(ov?line('Overall','#'+nf(ov.rank)+' · '+ov.level):'')+(l?.worn?.length?line('Wears',l.worn.map(w=>w.name).join(', ').slice(0,60)):'')+line('Account','not ours')+race);return;}
     if(!b){const fleet=S.bots.filter(x=>!x.practice&&!x.reserved),live=fleet.filter(x=>x.operation==='observed'),stuck=fleet.filter(x=>['blocked','failed','died','active-stale'].includes(x.operation)),c=S.coordination?.counts;set('<h4>Fleet</h4>'+line('Playing',live.length+' / '+fleet.length)+line('Stopped',String(stuck.length))+(c&&window.atlasOperator()?line('AI jobs',(c.running??0)+' marked running · '+(c.pending??0)+' queued'):'')+(window.atlasOperator()&&(S.vault?.coins||S.vault?.countsComplete===false)?line(S.vault.countsComplete===false?'Known vault coins':'Vault coins',gp(S.vault.coins)+(S.vault.countsComplete===false?' · partial':'')):'')+(S.worldPlayers?line('Online',nf(S.worldPlayers)):'')+race);return;}
     const [,state]=st(b);
     // Attack range (RuneLite's combat level plugin): in the Wilderness, the combat levels that can fight the account (pvp_combat.rs2: the difference is at most the Wilderness level).
@@ -1597,11 +2000,11 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const sessionLine=b=>{const t=(b.flow?.loot||[]).slice().sort((x,y)=>y.count-x.count)[0];if(!t)return '';const hours=Math.max(1/60,((b.flow.at??Date.now())-b.flow.since)/3.6e6);const burnt=(b.flow?.loot||[]).filter(i=>/^burnt /i.test(i.name)).reduce((n,i)=>n+i.count,0),cooked=new Set(Object.values(typeof cookData==='object'?cookData:{}).map(r=>r.c)),made=burnt?(b.flow?.loot||[]).filter(i=>cooked.has(i.name)).reduce((n,i)=>n+i.count,0):0;
       return line(SESSION_VERB[String(b.goalSkill||'').toLowerCase()]||'Gained',t.name+' '+nf(t.count)+' · '+nf(Math.round(t.count/hours))+'/hr')+(burnt&&made?line('Burnt',nf(burnt)+' · '+Math.round(burnt*100/(burnt+made))+'% burn rate'):'');};
     // PvP Tools lines: in the Wilderness, the risk, what a death keeps and loses, and the players who can attack now.
-    const wildLine=b=>{const w=b.inWorld?wildLevel(b.pos):0;if(!w)return '';const p=pvpState(b),names=p.threats.slice(0,3).map(t=>t.name+' ('+t.combat+')').join(', ');return line('Wilderness','Level '+w+(b.combat?' · '+Math.max(3,b.combat-w)+'-'+Math.min(126,b.combat+w):''))+line(p.incomplete?'Known risk':'Risk',gp(p.risk)+(p.unpriced?' + '+p.unpriced+' unpriced':'')+(p.unobserved?' · '+p.unobserved+' not reported':''))+line('Kept · lost',p.incomplete?'unknown':gp(p.keptValue)+' · '+gp(p.lost))+line('Can attack',p.threats.length?p.threats.length+': '+names.slice(0,60):'nobody in 30 tiles');};
+    const wildLine=b=>{const w=b.inWorld?wildLevel(b.pos):0;if(!w)return '';const p=pvpState(b),names=p.threats.slice(0,3).map(t=>t.name+' ('+t.combat+')').join(', ');return line('Wilderness','Level '+w+(b.combat?' · '+Math.max(3,b.combat-w)+'-'+Math.min(126,b.combat+w):'')+(p.multi?' · multi-way':' · single-way'))+line(p.incomplete?'Known risk':'Risk',gp(p.risk)+(p.unpriced?' + '+p.unpriced+' unpriced':'')+(p.unobserved?' · '+p.unobserved+' not reported':''))+line('Kept · lost',p.incomplete?'unknown':gp(p.keptValue)+' · '+gp(p.lost))+line('Can attack',p.threats.length?p.threats.length+': '+names.slice(0,60):'nobody in 30 tiles');};
     const goalText=(b.goalSkill&&!(b.goalNow>=b.goalLevel)?b.goalSkill+' '+b.goalLevel:'')||String(b.goal||'').slice(0,60);
     set('<h4>'+E(safeName(b.name))+'</h4>'+(b.practice?line('World','practice · 2D'):'')+line('Status',state)+(goalText||window.atlasOperator()?line('Goal',goalText||'—'):'')+(b.phaseShort?line('Phase',String(b.phaseShort).slice(0,60)):'')+(b.xpPerHour?line('XP/hr',nf(Math.round(b.xpPerHour))):'')+(b.eta&&b.xpLeft>0?line('To target',b.eta):'')+(b.uptime&&b.inWorld?line('Session',dur(b.uptime)):'')+(!b.inWorld&&b.at?line('Last seen',age(b.at)+' ago'):'')+sessionLine(b)+wildLine(b)+race);
   }
-  // Skills tab tooltip (OSRS): XP, next level at, remaining.
+  // Skills tab tooltip (2004): XP, next level at, remaining.
   hud.addEventListener('mouseover',e=>{const sk=e.target.closest('[data-skill]');const tip=hud.querySelector('.game-tip');if(!sk){tip.hidden=true;return;}const s=level(sk.dataset.skill),X=window.atlasXp;if(!s||!X){tip.hidden=true;return;}const lvl=Math.min(99,s.level),next=X.xpForLevel(Math.min(99,lvl+1));
     if(s.xp==null){tip.innerHTML=`<div>${E(sk.dataset.skill)} level <b>${s.level}</b></div><div>XP is not reported for this side.</div>`;}else tip.innerHTML=`<div>${E(sk.dataset.skill)} XP: <b>${nf(s.xp)}</b></div>`+(lvl<99?`<div>Next level at: <b>${nf(next)}</b></div><div>Remaining XP: <b>${nf(Math.max(0,next-s.xp))}</b></div>`:X.virtualLevel(s.xp)>99?`<div>Virtual level: <b>${X.virtualLevel(s.xp)}</b></div>`:'');
     {const g=s.xp!=null?skillGuide(sk.dataset.skill,s.xp):null;if(g){if(g.best){const ch=typeof gatherText==='function'&&/^(fishing|mining|woodcutting)$/i.test(sk.dataset.skill)?gatherText(account(),g.best.item,lvl,sk.dataset.skill):/^runecraft/i.test(sk.dataset.skill)&&typeof perEssence==='function'?perEssence(g.best.item,typeof curLevel==='function'&&Number.isFinite(curLevel(account(),s.name))?curLevel(account(),s.name):lvl):'';tip.innerHTML+=`<div>To level: <b>${nf(g.best.count)}</b> × ${E(g.best.name)}${ch?' · '+E(ch):''}</div>`;}if(g.next.length)tip.innerHTML+=`<div>Unlocks: ${g.next.map(n=>E(n.name)+' ('+n.level+')').join(', ')}</div>`;}
@@ -1796,13 +2199,14 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function refresh(){if(!S)return;followLinkedAccount();wallSync();writeLink();
     const b=account(),name=b?.name??null;
     if(name!==questAccount){questAccount=name;questDetail=null;}
-    app.classList.toggle('public-view',!window.atlasOperator());if(body.firstElementChild?.hasAttribute('data-snapshot-loading'))renderSnapshotPlugin(selectedPlugin);syncNotifyControls();$('#client-more').hidden=!window.atlasOperator();hud.querySelector('.game-bank')?.refreshObservation?.();camUpdate();screens();minimap();xpDrops(b);overlay();chatFeed();idleNotifier(b);levelUps();deaths();moments();if(selectedPlugin==='xp')refreshXp();if(selectedPlugin==='boards'&&body.dataset.plugin==='boards'){const head=body.querySelector('.progress-head');if(head)put(head,boardSummary()+progressPanel());const rw=body.querySelector('.rivals-wrap');if(rw&&!rw.contains(document.activeElement))put(rw,rivalsPanel());refreshHiscoreAccount();}const data=body.querySelector('.info-data');if(data)put(data,infoData());if(selectedPlugin==='ge')refreshGe();if(selectedPlugin==='world'&&body.dataset.plugin==='world')refreshWorld();infoboxes();focusPaint();warmPlaces();respawnSync();trackTrails();overlaySync();lootShots();welcomeCard();setText($('#chat-name'),(b?safeName(b.name):'Spectator')+':');
+    app.classList.toggle('public-view',!window.atlasOperator());if(body.firstElementChild?.hasAttribute('data-snapshot-loading'))renderSnapshotPlugin(selectedPlugin);syncNotifyControls();$('#client-more').hidden=!window.atlasOperator();hud.querySelector('.game-bank')?.refreshObservation?.();camUpdate();screens();minimap();xpDrops(b);overlay();chatFeed();idleNotifier(b);levelUps();deaths();moments();if(selectedPlugin==='xp')refreshXp();if(selectedPlugin==='gear'&&body.dataset.plugin==='gear'){const ga=body.querySelector('.gear-advisor');if(ga)put(ga,gearAdvisorInner());}if(selectedPlugin==='boards'&&body.dataset.plugin==='boards'){const head=body.querySelector('.progress-head');if(head)put(head,boardSummary()+progressPanel());const rw=body.querySelector('.rivals-wrap');if(rw&&!rw.contains(document.activeElement))put(rw,rivalsPanel());refreshHiscoreAccount();}const data=body.querySelector('.info-data');if(data)put(data,infoData());if(selectedPlugin==='ge')refreshGe();if(selectedPlugin==='world'&&body.dataset.plugin==='world')refreshWorld();infoboxes();pvpHud();titleDiag();focusPaint();warmPlaces();respawnSync();trackTrails();overlaySync();lootShots();welcomeCard();setText($('#chat-name'),(b?safeName(b.name):'Spectator')+':');
     const health=recordedHp(b),healthCurrent=currentHp(b);
     const orbBox=hud.querySelector('.game-orbs'),orbHtml=!b?'':[['hp','Hitpoints',health?.now,health?.max],['prayer','Prayer',level('Prayer')?.currentLevel,level('Prayer')?.level],['run','Run energy',b.runEnergy,100]].filter(o=>o[2]!=null).map(([id,label,value,max])=>`<div class="game-orb orb-${id}" title="${label}: ${Math.floor(value)} / ${max}${id==='hp'?healthNote(b)+(typeof regenHpText==='function'?regenHpText(b,Date.now()):''):''}${id==='prayer'&&typeof prayerText==='function'?E(prayerText(b)):''}"><canvas class="orb-art" width="60" height="34" data-orb="${id}" data-frac="${value!=null&&max?Math.max(0,Math.min(1,value/max)):0}"></canvas><span class="orb-num" style="color:${id==='hp'&&!healthCurrent?'#b8b8b8':orbColour(value,max)}">${Math.floor(value)}</span></div>`).join('');if(orbBox._h!==orbHtml){orbBox._h=orbHtml;orbBox.innerHTML=orbHtml;orbBox.querySelectorAll('canvas').forEach(drawOrb);}if(!(selectedTab==='settings'&&$('#game-panel').contains(document.activeElement)))gamePanel();}
   const previousRender=render;render=function(){previousRender();refresh();};
   const previousDrawMap=drawMap;drawMap=function(){previousDrawMap();minimap();};
   const previousPick=pick;pick=function(name){if(name)linkRead=true;wallEnd(false);if(!touring)tourSet(false);const from=focusTarget(),b=S?.bots?.find(b=>b.name===name);previousPick(name);cam.user=false;if(mode==='2d'&&window.atlasFreeCamera&&b?.pos)window.atlasCamera.goto(b.pos.x,b.pos.z);focusMoved(from,name);refresh();};
   rail.onclick=e=>{const b=e.target.closest('[data-client-plugin]');if(b){showPlugin(b.dataset.clientPlugin);writeLink();}};
+  title.addEventListener('click',e=>{const p=e.target.closest('[data-open-plugin]');if(p){showPlugin(p.dataset.openPlugin);writeLink();}});
   $('#client-share').onclick=async()=>{writeLink();try{await navigator.clipboard.writeText(location.href);toast('Link copied.');}catch{toast('Copy this link from the address bar.');}};
   const togglePlugin=()=>{app.classList.toggle('client-collapsed');app.classList.toggle('mobile-plugin',!app.classList.contains('client-collapsed'));syncSidebar();};$('#client-sidebar').onclick=togglePlugin;plugin.querySelector('[aria-label="Close plugin"]').onclick=togglePlugin;
   $('#client-more').onchange=e=>{if(e.target.value)showPlugin(e.target.value);e.target.value='';};
@@ -2093,7 +2497,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       if(wallLocked(d.name)){wallDrag=null;focusSay('This view is pinned. Unpin it to move it.',2200);return;}
       d.on=true;wallGhost.textContent=safeName(d.name);wallGhost.hidden=false;wallRoot.classList.add('dragging');
     }
-    const box=wallRoot.getBoundingClientRect();wallGhost.style.left=Math.round(e.clientX-box.left+12)+'px';wallGhost.style.top=Math.round(e.clientY-box.top+14)+'px';
+    const box=wallRoot.getBoundingClientRect();wallGhost.style.left=Math.round(Math.max(4,Math.min(Math.max(4,box.width-120),e.clientX-box.left+12)))+'px';wallGhost.style.top=Math.round(Math.max(4,Math.min(Math.max(4,box.height-28),e.clientY-box.top+14)))+'px';
     const over=wallDragOver(e.clientX,e.clientY);if(over!==d.over||!d.marked){d.over=over;d.marked=true;wallPaint();}
   }
   function wallDragEnd(e,drop){
@@ -2180,10 +2584,11 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       if(String(shares)===String(wall.shares[wall.layout][g.kind]))return;
       wall.shares[wall.layout][g.kind]=shares;d.el.pressed=0;d.el.dataset.share=Math.round(shares[g.i]*100)+' : '+Math.round(shares[g.i+1]*100);
     }
-    if(!d.wait){d.wait=true;const kind=g.kind;requestAnimationFrame(()=>{d.wait=false;if(wall)wallPost({multiLayout:wallEdgeValue(kind)});});}
+    if(!d.wait){const kind=g.kind;d.wait=requestAnimationFrame(()=>{if(!wallEdge||wallEdge.id!==d.id)return;d.wait=0;if(wall)wallPost({multiLayout:wallEdgeValue(kind)});});}
   }
   function wallEdgeEnd(e){
     const d=wallEdge;if(!d||e&&e.pointerId!==d.id)return;
+    if(d.wait){cancelAnimationFrame(d.wait);d.wait=0;}
     wallEdge=null;d.el.classList.remove('sizing');
     if(wall){wallPost({multiLayout:{...wallEdgeValue(d.gap.kind),animate:!wallStill()}});wallKeep();}
   }
@@ -2191,7 +2596,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function wallSizeTo(ratio){
     if(!wall||ratio===wall.ratio)return;
     wall.ratio=ratio;wallGrip.dataset.share=Math.round(ratio*100)+'%';if(wallSize)wallGrip.pressed=0;
-    if(wallSize&&!wallSize.wait){wallSize.wait=true;requestAnimationFrame(()=>{if(wallSize)wallSize.wait=false;if(wall)wallPost({multiLayout:{ratio:wall.ratio}});});}
+    if(wallSize&&!wallSize.wait){wallSize.wait=requestAnimationFrame(()=>{if(!wallSize)return;wallSize.wait=0;if(wall)wallPost({multiLayout:{ratio:wall.ratio}});});}
     else if(!wallSize)wallPost({multiLayout:{ratio}});
   }
   function wallSizeStart(e){
@@ -2199,7 +2604,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // A second press within the double click time gives the first share back.
     const now=Date.now(),twice=wallGrip.pressed&&now-wallGrip.pressed<=WALL_DOUBLE_MS;wallGrip.pressed=twice?0:now;
     if(twice){wallSizeTo(WALL_RATIO);wallKeep();return;}
-    wallSize={id:e.pointerId,wait:false};wallGrip.setPointerCapture?.(e.pointerId);wallGrip.classList.add('sizing');wallGrip.dataset.share=Math.round(wall.ratio*100)+'%';
+    wallSize={id:e.pointerId,wait:0};wallGrip.setPointerCapture?.(e.pointerId);wallGrip.classList.add('sizing');wallGrip.dataset.share=Math.round(wall.ratio*100)+'%';
     // The views follow the pointer with no move of their own.
     wallPost({multiLayout:{animate:false}});
   }
@@ -2210,6 +2615,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   function wallSizeEnd(e){
     if(!wallSize||e&&e.pointerId!==wallSize.id)return;
+    if(wallSize.wait){cancelAnimationFrame(wallSize.wait);wallSize.wait=0;}
     wallSize=null;wallGrip.classList.remove('sizing');
     if(wall){wallPost({multiLayout:{ratio:wall.ratio,animate:!wallStill()}});wallKeep();}
   }
@@ -2412,7 +2818,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   body.addEventListener('click',e=>{if(e.target.closest('[data-notify-test]'))testNotify();if(e.target.closest('[data-notify-cancel]'))void setNotify(false);});
   hud.onclick=e=>{const t=e.target.closest('[data-game-tab]');if(t){if(t.dataset.gameTab===selectedTab)hud.classList.toggle('game-panel-hidden');else{selectedTab=t.dataset.gameTab;hud.classList.remove('game-panel-hidden');gamePanel();enter($('#game-panel'));}}const c=e.target.closest('[data-chat]');if(c){const k=c.dataset.chat;if(chatOff.has(k))chatOff.delete(k);else chatOff.add(k);const on=!chatOff.has(k),s=c.querySelector('small');c.setAttribute('aria-pressed',String(on));s.textContent=on?'On':'Off';s.className=on?'':'off';renderChat();}if(e.target.closest('.chat-toggle,[data-toggle-chat]'))hud.classList.toggle('chat-hidden');const to3d=msg=>$('#rsw')?.contentWindow?.postMessage(msg,location.origin);if(e.target.closest('.minimap-compass')){if(typeof mode!=='undefined'&&mode==='3d')to3d({atlasCompass:true});else toast('The 2D map always faces north.');}if(e.target.closest('[data-viewer-worldmap]')){to3d({atlasOpenWorldMap:true});placesBox.hidden=true;}else if(e.target.closest('[data-places]')){placesBox.hidden=!placesBox.hidden;placesBox.querySelector('[data-viewer-worldmap]').hidden=!(typeof mode!=='undefined'&&mode==='3d');}else if(!e.target.closest('.game-places'))placesBox.hidden=true;const p=e.target.closest('[data-open-plugin]');if(p)showPlugin(p.dataset.openPlugin);if(e.target.closest('.game-logout')){selectedTab='logout';hud.classList.remove('game-panel-hidden');gamePanel();}if(e.target.closest('[data-logout]')){if(window.FleetShim?.signedIn?.())window.FleetShim.signOut();else toast('Nothing to log out of: this is the spectator view.');}if(e.target.closest('.game-xp'))showPlugin('xp');const a=e.target.closest('[data-view-action]');if(a)toast(a.dataset.viewAction+' · spectator view; no game input sent');const q=e.target.closest('[data-quest]');if(q){questDetail=q.dataset.quest;gamePanel();}const fr=e.target.closest('[data-friend]');if(fr){pick(fr.dataset.friend);}if(e.target.closest('[data-quest-back]')){questDetail=null;gamePanel();}const qf=e.target.closest('[data-quest-filter]');if(qf){questFilter=qf.dataset.questFilter;gamePanel();}const qs=e.target.closest('[data-quest-scope]');if(qs){questScope=qs.dataset.questScope;questDetail=null;questFilter='all';gamePanel();}const sk=e.target.closest('[data-skill]');if(sk){const st=level(sk.dataset.skill);toast(sk.dataset.skill+(st?' · Level '+st.level+(st.xp!=null?' · '+st.xp.toLocaleString()+' XP':''):' · not reported by this game'));}};
   body.addEventListener('submit',e=>{if(e.target.id==='hs-form'){e.preventDefault();lookup(e.target.querySelector('#hs-name').value);return;}const f=e.target.closest('.goal-request');if(!f)return;e.preventDefault();const text=f.text.value.trim();if(!text)return;if(!window.atlasCommand){notify('The command desk is not loaded.');return;}f.querySelector('button').disabled=true;window.atlasCommand('request',{text}).then(r=>{notify('request: '+String(r?.status||'sent').replaceAll('-',' '));f.text.value='';},err=>notify('Refused: '+(err?.message||err))).finally(()=>{f.querySelector('button').disabled=false;});});
-  body.addEventListener('change',e=>{if(e.target.matches?.('[data-mark-colour]')){markColour=e.target.value;return;}const sc=e.target.dataset?.shotCfg;if(sc&&sc in shotCfg){shotCfg[sc]=sc==='loot'?Number(e.target.value)||0:e.target.checked;saveShotCfg();return;}if(e.target.matches?.('[data-calc-target]')){commitCalcTarget(e.target);return;}const hk=e.target.dataset?.hl;if(hk&&hk in hl){hl[hk]=e.target.checked;saveHl();overlaySync(true);return;}if(e.target.matches?.('[data-hl-min]')){hl.groundMin=Number(e.target.value)||0;saveHl();overlaySync(true);return;}if(e.target.id==='rival-board'){rivalBoard=e.target.value;const w=body.querySelector('.rivals-wrap'),focused=document.activeElement===e.target;if(w){w.innerHTML=rivalsPanel();if(focused)w.querySelector('#rival-board')?.focus();}return;}if(e.target.dataset.notify!==undefined){void setNotify(e.target.checked);}});
+  body.addEventListener('change',e=>{if(e.target.matches?.('[data-mark-colour]')){markColour=e.target.value;return;}const sc=e.target.dataset?.shotCfg;if(sc&&sc in shotCfg){shotCfg[sc]=sc==='loot'?Number(e.target.value)||0:e.target.checked;saveShotCfg();return;}if(e.target.matches?.('[data-calc-target]')){commitCalcTarget(e.target);return;}const hk=e.target.dataset?.hl;if(hk&&hk in hl){hl[hk]=e.target.checked;saveHl();if(hk==='wildOverlay'){if(typeof window!=='undefined')window.atlasWildVisible=!!hl.wildOverlay;if(typeof drawMap==='function')drawMap();minimap();}overlaySync(true);return;}if(e.target.matches?.('[data-hl-min]')){hl.groundMin=Number(e.target.value)||0;saveHl();overlaySync(true);return;}if(e.target.id==='rival-board'){rivalBoard=e.target.value;const w=body.querySelector('.rivals-wrap'),focused=document.activeElement===e.target;if(w){w.innerHTML=rivalsPanel();if(focused)w.querySelector('#rival-board')?.focus();}return;}if(e.target.dataset.notify!==undefined){void setNotify(e.target.checked);}});
   body.addEventListener('pointerdown',e=>{if(e.button===0&&e.isPrimary!==false&&e.target.closest?.('.xp-tracker')){cancelAnimationFrame(xpReleaseFrame);xpReleaseFrame=0;xpPointer=e.pointerId;}},true);
   document.addEventListener('pointerup',e=>{if(xpPointer!=null&&e.pointerId===xpPointer)xpReleaseFrame=requestAnimationFrame(finishXpPointer);});
   document.addEventListener('pointercancel',e=>{if(e.pointerId===xpPointer)finishXpPointer();});
@@ -2430,14 +2836,14 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(e.target.closest('[data-ge-more]')){geLimit+=80;refreshGe();return;}
     const gs=e.target.closest('[data-ge-sort]');if(gs){geSort=gs.dataset.geSort;geLimit=80;refreshGe();return;}
     const gr=e.target.closest('[data-ge-src]');if(gr){geOpen=geOpen===gr.dataset.geSrc?null:gr.dataset.geSrc;geOpenName=gr.dataset.geName||'';refreshGe();return;}},true);
-  body.addEventListener('click',e=>{const mk=e.target.closest('[data-mark-here],[data-mark-del],[data-mark-go],[data-mark-clear],[data-finder-pick],[data-finder-player],[data-finder-clear],[data-finder-go]');if(mk){const d=mk.dataset,b=account(),p=b?.live||b?.pos;
+  body.addEventListener('click',e=>{const mk=e.target.closest('[data-mark-here],[data-mark-del],[data-mark-go],[data-mark-clear],[data-finder-pick],[data-finder-player],[data-finder-clear],[data-finder-go],[data-wild-go]');if(mk){const d=mk.dataset,b=account(),p=b?.live||b?.pos;
       if('markHere' in d){if(p)toggleMark(p.x,p.z,p.level||0);}else if('markDel' in d){marks.splice(Number(d.markDel),1);saveMarks();marksChanged();}else if('markClear' in d){marks=[];saveMarks();marksChanged();}
-      else if('markGo' in d||'finderGo' in d){const [x,z]='markGo' in d?[marks[Number(d.markGo)]?.x,marks[Number(d.markGo)]?.z]:d.finderGo.split(',').map(Number);if(Number.isInteger(x)&&Number.isInteger(z)){if(typeof mode!=='undefined'&&mode==='3d')toast('In 3D, drag the view to move the camera.');else window.atlasCamera.goto(x,z);}}
+      else if('markGo' in d||'finderGo' in d||'wildGo' in d){const [x,z]='markGo' in d?[marks[Number(d.markGo)]?.x,marks[Number(d.markGo)]?.z]:(d.finderGo||d.wildGo).split(',').map(Number);if(Number.isInteger(x)&&Number.isInteger(z)){if(typeof mode!=='undefined'&&mode==='3d')toast('Switch to 2D map to pan to '+x+', '+z+'.');else window.atlasCamera.goto(x,z);}}
       else if('finderPlayer' in d){finderPlayer=d.finderPlayer.toLowerCase();finderPick=null;sourcePin=null;finderResults('pick');overlaySync(true);minimap();}else if('finderPick' in d){finderPick=d.finderPick;finderSafe='finderSafe' in d;finderPlayer=null;sourcePin=null;finderResults('pick');overlaySync(true);minimap();}else if('finderClear' in d){finderPick=null;finderPlayer=null;finderResults('clear');overlaySync(true);minimap();}
       return;}
-    const sh=e.target.closest('[data-shot]');if(sh){const s=shots.find(x=>x.id===sh.dataset.shot);if(s)openShot(s,sh);return;}const lk=e.target.closest('[data-lookup]');if(lk){lookup(lk.dataset.lookup);return;}const fw=e.target.closest('[data-world-follow]');if(fw){const name=fw.dataset.worldFollow,ours=S.bots.find(b=>b.name.toLowerCase()===name.toLowerCase()&&!b.practice),from=focusTarget();if(ours)pick(ours.name);else if(window.atlasFollow3d?.(name))focusMoved(from,name);else toast('The 3D view is not ready, so the camera cannot watch a player.');return;}if(e.target.closest('[data-ge-all]')){geAll=!geAll;geLimit=80;refreshGe();return;}const hm=e.target.closest('[data-hs-mode]');if(hm){hiscoresMode=hm.dataset.hsMode;hiscores();return;}if(e.target.closest('[data-xp-reset]')){const store=xpStore();delete store[sel];saveXpStore(store);refreshXp();}if(e.target.closest('[data-xp-pause]')){const store=xpStore(),b=account(),base=b&&store[b.name];if(base){if(base.paused){const gap=Date.now()-base.paused.at;base.at+=gap;for(const k of b.skills||[])if(typeof k.xp==='number'&&base.paused.xp[k.name]!=null)base.xp[k.name]=(base.xp[k.name]??base.paused.xp[k.name])+(k.xp-base.paused.xp[k.name]);delete base.paused;}else base.paused={at:Date.now(),xp:Object.fromEntries((b.skills||[]).map(k=>[k.name,k.xp]))};saveXpStore(store);}refreshXp();}const hm2=e.target.closest('[data-xp-hide-maxed]');if(hm2){xpHideMaxed=hm2.checked;refreshXp();}if(e.target.closest('[data-calc-close]')){const skill=calcSkill;calcSkill=null;calcTarget=null;refreshXp(false,skill);return;}const cs=e.target.closest('[data-calc-skill]');if(cs&&!e.target.closest('input')){calcSkill=cs.dataset.calcSkill===calcSkill?null:cs.dataset.calcSkill;calcTarget=null;refreshXp();return;}const xs=e.target.closest('[data-xp-sort]');if(xs){xpSort=xs.dataset.xpSort;refreshXp();return;}const f=e.target.closest('[data-xp-focus]');if(f){pick(f.dataset.xpFocus);showPlugin('xp');}});
+    const sh=e.target.closest('[data-shot]');if(sh){const s=shots.find(x=>x.id===sh.dataset.shot);if(s)openShot(s,sh);return;}const lk=e.target.closest('[data-lookup]');if(lk){lookup(lk.dataset.lookup);return;}const fw=e.target.closest('[data-world-follow]');if(fw){const name=fw.dataset.worldFollow,ours=S.bots.find(b=>b.name.toLowerCase()===name.toLowerCase()&&!b.practice),from=focusTarget();if(ours)pick(ours.name);else if(window.atlasFollow3d?.(name))focusMoved(from,name);else toast('The 3D view is not ready, so the camera cannot watch a player.');return;}if(e.target.closest('[data-ge-all]')){geAll=!geAll;geLimit=80;refreshGe();return;}const hm=e.target.closest('[data-hs-mode]');if(hm){hiscoresMode=hm.dataset.hsMode;hiscores();return;}if(e.target.closest('[data-xp-reset]')){const store=xpStore(),b=account(),key=b?.name||sel,tickMs=(typeof S!=='undefined'&&S?.world?.tickMs)||400,entry=b&&window.atlasXp?.archiveSession?.(store,b,Date.now(),{tickMs});if(entry)store.__history=window.atlasXp.recordSessionHistory?.(store.__history,safeName(b.name),entry);delete store[key];saveXpStore(store);refreshXp();}if(e.target.closest('[data-xp-clear-history]')){const store=xpStore(),b=account();if(store.__history&&b)delete store.__history[safeName(b.name)];saveXpStore(store);refreshXp();}if(e.target.closest('[data-xp-pause]')){const store=xpStore(),b=account(),base=b&&store[b.name];if(base){if(base.paused){const gap=Date.now()-base.paused.at;base.at+=gap;for(const k of b.skills||[])if(typeof k.xp==='number'&&base.paused.xp[k.name]!=null)base.xp[k.name]=(base.xp[k.name]??base.paused.xp[k.name])+(k.xp-base.paused.xp[k.name]);delete base.paused;}else base.paused={at:Date.now(),xp:Object.fromEntries((b.skills||[]).map(k=>[k.name,k.xp]))};saveXpStore(store);}refreshXp();}const hm2=e.target.closest('[data-xp-hide-maxed]');if(hm2){xpHideMaxed=hm2.checked;refreshXp();}if(e.target.closest('[data-calc-close]')){const skill=calcSkill;calcSkill=null;calcTarget=null;refreshXp(false,skill);return;}const cs=e.target.closest('[data-calc-skill]');if(cs&&!e.target.closest('input')){calcSkill=cs.dataset.calcSkill===calcSkill?null:cs.dataset.calcSkill;calcTarget=null;refreshXp();return;}const xs=e.target.closest('[data-xp-sort]');if(xs){xpSort=xs.dataset.xpSort;refreshXp();return;}const f=e.target.closest('[data-xp-focus]');if(f){pick(f.dataset.xpFocus);showPlugin('xp');}});
   hud.onchange=e=>{if(e.target.id==='game-display'){app.classList.toggle('client-collapsed',e.target.value==='closed');app.classList.toggle('mobile-plugin',e.target.value!=='closed');syncSidebar();}if(e.target.id==='game-quality'){$('#atlas-quality').value=e.target.value;$('#atlas-quality').onchange();}if(e.target.id==='game-roofs')window.atlasSetRoofsOff(e.target.value==='off');};
-  hud.addEventListener('contextmenu',e=>{const cell=e.target.closest('[data-item],[data-equipment],.inventory-cell');if(!cell)return;e.preventDefault();context?.remove();const b=account(),it=cell.dataset.item!==undefined?b?.inventory?.[Number(cell.dataset.item)]:b?.equipmentObserved===false?null:b?.equipment?.find(i=>i.slot===Number(cell.dataset.equipment));if(!it)return;context=document.createElement('div');context.className='game-context';context.style.left=Math.min(e.clientX,innerWidth-220)+'px';context.style.top=Math.min(e.clientY,innerHeight-110)+'px';const worn=cell.dataset.equipment!==undefined,n=String(it.name),verb=worn?'Remove':/\b(sword|axe|bow|dagger|mace|staff|scimitar|pickaxe|harpoon|rod|net|hammer|chisel|knife|spear|halberd|whip|wand|crossbow|blade|club|warhammer)\b/i.test(n)?'Wield':/\b(helm|hat|cape|amulet|body|chainbody|platebody|platelegs|plateskirt|legs|boots|gloves|shield|ring|coif|robe|hood|vambraces|chaps|mask|kiteshield|sq shield|necklace)\b/i.test(n)?'Wear':/\b(potion|brew|beer|wine|tea|milk|juice|water)\b/i.test(n)?'Drink':/\b(bread|cake|pie|stew|fish|shark|lobster|trout|salmon|tuna|swordfish|shrimps|anchovies|sardine|herring|pike|cod|bass|meat|chicken|kebab|pizza|cheese|apple|banana|bananas|peach|onion|tomato|cabbage|potato|egg|monkfish)\b/i.test(n)?'Eat':null;
+  hud.addEventListener('contextmenu',e=>{const cell=e.target.closest('[data-item],[data-equipment],.inventory-cell');if(!cell)return;e.preventDefault();context?.remove();const b=account(),it=cell.dataset.item!==undefined?b?.inventory?.[Number(cell.dataset.item)]:b?.equipmentObserved===false?null:b?.equipment?.find(i=>i.slot===Number(cell.dataset.equipment));if(!it)return;context=document.createElement('div');context.className='game-context';context.style.left=Math.min(e.clientX,innerWidth-220)+'px';context.style.top=Math.min(e.clientY,innerHeight-110)+'px';    const worn=cell.dataset.equipment!==undefined,n=String(it.name),verb=worn?'Remove':/\b(sword|axe|bow|dagger|mace|staff|scimitar|pickaxe|harpoon|rod|net|hammer|chisel|knife|spear|halberd|crossbow|blade|club|warhammer)\b/i.test(n)?'Wield':/\b(helm|hat|cape|amulet|body|chainbody|platebody|platelegs|plateskirt|legs|boots|gloves|shield|ring|coif|robe|hood|vambraces|chaps|mask|kiteshield|sq shield|necklace)\b/i.test(n)?'Wear':/\b(potion|beer|wine|tea|milk|juice|water)\b/i.test(n)?'Drink':/\b(bread|cake|pie|stew|fish|shark|lobster|trout|salmon|tuna|swordfish|shrimps|anchovies|sardine|herring|pike|cod|bass|meat|chicken|kebab|pizza|cheese|apple|banana|bananas|peach|onion|tomato|cabbage|potato|egg|karambwan)\b/i.test(n)?'Eat':null;
     const options=worn?[['Remove',null]]:[['Use',null],...(verb?[[verb,null]]:[]),['Drop',null]];
     context.innerHTML='<strong>Choose Option</strong>'+options.map(([o])=>'<button data-view-action="'+E(o)+'">'+E(o)+' <span>'+E(n)+'</span></button>').join('')+'<button data-examine>Examine <span>'+E(n)+'</span></button><button data-cancel>Cancel</button>';context.onclick=e=>{if(e.target.closest('[data-examine]')){const p=price(it),desc=examineOf(it);notify((desc||n)+(p&&!/^coins$/i.test(n)?' Price of '+(it.count>1?nf(it.count)+' x ':'')+n+': '+gp(Math.round(p.value*(it.count||1)))+' gp'+(it.count>1?' ('+nf(Math.round(p.value))+' each)':'')+'.':''));}else{const v=e.target.closest('[data-view-action]');if(v)toast(v.dataset.viewAction+' · spectator view; no game input sent');}context.remove();};document.body.append(context);});
   document.addEventListener('click',e=>{if(context&&!context.contains(e.target))context.remove();});
