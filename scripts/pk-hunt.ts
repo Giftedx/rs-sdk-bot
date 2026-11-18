@@ -186,10 +186,12 @@ export async function restock(s: Session, food: number, trip: readonly TripItem[
     }
     if (switched && typeof s.onTick === 'function') await nextTick(s);
     if (!(await s.bot.openBank()).success) return 'bank did not open';
-    for (const item of [...s.sdk.getInventory()]) await s.bot.depositItem(item, -1);
-    let selected: RequirementResolution | undefined;
-    if (choose) { const pick = choose(s.sdk.getBankItems(), equip()); trip = pick.trip; food += pick.moreFood; selected = pick.resolution; }
+    // What the bank holds once the pack is deposited: the bank and the pack together. The trip is resolved against it
+    // before the deposit, so a trip that cannot be filled leaves the pack in the pack (a deposit with no way back
+    // stranded an account with an empty pack at the bank).
     const stock = () => [...s.sdk.getBankItems(), ...s.sdk.getInventory()];
+    let selected: RequirementResolution | undefined;
+    if (choose) { const pick = choose(stock(), equip()); trip = pick.trip; food += pick.moreFood; selected = pick.resolution; }
     const fail = async (r: RequirementResolution) => { await s.bot.closeBank(); return 'bank lacks trip requirements ' + JSON.stringify(r.shortages); };
     selected ??= resolveTrip(stock(), trip, equip());
     if (!selected.ok) return fail(selected);
@@ -210,6 +212,7 @@ export async function restock(s: Session, food: number, trip: readonly TripItem[
     const total = (id: number) => stock().filter(r => r.id === id).reduce((n, r) => n + r.count, 0);
     const target = resolveItemRequirements([...selected.items, ...boosts, ...planFood(total, food)], stock(), nativeRequirementMetadata);
     if (!target.ok) return fail(target);
+    for (const item of [...s.sdk.getInventory()]) await s.bot.depositItem(item, -1);
     for (const want of target.items) {
         let left = want.count - held(s, want.id);
         for (const row of s.sdk.getBankItems().filter(row => row.id === want.id && row.count > 0)) {

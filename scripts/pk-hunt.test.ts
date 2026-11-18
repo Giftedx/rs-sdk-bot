@@ -152,6 +152,29 @@ function supplyBank(rows: { id: number; count: number }[], worn: any[] = []) {
     return { s, inventory, withdrawals };
 }
 
+test('a restock that the bank and the pack together cannot fill deposits nothing, and one they can fill deposits the pack', async () => {
+    // Live: an account at the bank with 20 sharks and none in the bank asked for 21, deposited its pack, and then
+    // ended `bank lacks trip requirements` with an empty pack.
+    const session = (carried: number, banked: number) => {
+        const inventory: any[] = Array.from({ length: carried }, (_, slot) => ({ id: 385, count: 1, slot })), bank: any[] = banked ? [{ id: 385, count: banked }] : [], deposits: number[] = [];
+        const s: any = {
+            sdk: { getInventory: () => inventory, getEquipment: () => [], getBankItems: () => bank, sendUseItem: async () => {} },
+            bot: {
+                openBank: async () => ({ success: true }), closeBank: async () => {},
+                depositItem: async (item: any) => { deposits.push(item.slot); const at = inventory.indexOf(item); if (at >= 0) { inventory.splice(at, 1); const row = bank.find(b => b.id === item.id); if (row) row.count += item.count; else bank.push({ id: item.id, count: item.count }); } },
+                withdrawItem: async (row: any, count: number) => { row.count -= count; for (let i = 0; i < count; i++) inventory.push({ id: row.id, count: 1, slot: inventory.length }); },
+            },
+        };
+        return { s, inventory, deposits };
+    };
+    const short = session(20, 0);
+    expect(await restock(short.s, 21, [])).toContain('bank lacks trip requirements');
+    expect([short.deposits, short.inventory.length]).toEqual([[], 20]);
+    const enough = session(20, 1);
+    expect(await restock(enough.s, 21, [])).toBeNull();
+    expect([enough.deposits.length, enough.inventory.length]).toEqual([20, 21]);
+});
+
 test('restock refuses two partial prayer bottles before any withdrawal for an eight-dose trip', async () => {
     const f = supplyBank([{ id: 139, count: 2 }, { id: 385, count: 20 }]);
     expect(await restock(f.s, 2, [{ id: 2434, count: 2 }])).toContain('lacks');
