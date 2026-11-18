@@ -3,7 +3,14 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { bestDamageSpell, bestFireSpell, canAttack, canCastCharge, castableFreeze, clearScoutIntel, hasVarrockTeleport, multiPileThreat, outclasses, pickScoutTargetForSquad, publishScoutIntel, readScoutIntel, restockLimit, restockMarket, restockPlan, RESTOCK_MARGIN_PERCENT, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, lootAt, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
-import { RESTOCK_LIMITS, RESTOCK_MARKET } from './measure/pk-restock-fixture';
+import marketRows from './measure/pk-restock-market.json';
+import type { RestockMarket } from './pk-roam';
+// Rows of the market cache (.practice/market-all.json) for the items of the PK restock: the lowest ask and the units offered
+// (scripts/measure/pk-restock-market.json). The prayer potion, the glory and the super potions are dear, the superantipoison and
+// the antipoison have no seller, and the nature rune asks more than twice the hand limit that the plan once used. The limit of
+// each item is the ask plus RESTOCK_MARGIN_PERCENT (10).
+const RESTOCK_MARKET: RestockMarket = marketRows;
+const RESTOCK_LIMITS = { 563: 770, 561: 698, 385: 974, 2434: 354_864, 1712: 4_675_000, 2440: 110_000, 2436: 110_000, 861: 104_500, 1113: 231_404 } as const;
 
 test('roam pickup joins one native stack without eating combat food',async()=>{
  const inventory=Array.from({length:28},(_,slot)=>({id:slot===0?884:385,slot,count:1,optionsWithIndex:[{text:'Eat'}]}));const ground=[{id:884,name:'Iron arrow',count:5,x:1,z:1}];let eaten=0;

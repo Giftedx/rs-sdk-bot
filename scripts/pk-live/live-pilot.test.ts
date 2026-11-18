@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { GOD_LOADOUTS } from '../pk-kits';
 import { restockPlan } from '../pk-roam';
-import { RESTOCK_MARKET } from '../measure/pk-restock-fixture';
+import marketRows from '../measure/pk-restock-market.json';
+import type { RestockMarket } from '../pk-roam';
 import {
     ANTIPOISON,
     assessPilotEscapePreflight,
@@ -125,6 +126,7 @@ test('selectLivePilotLoadout prefers worn higher-rank weapon, detects cape/staff
         .armourTiers[3]!.some(([re]) => /dragon/.test(re.source))).toBe(false);
 });
 
+const RESTOCK_MARKET: RestockMarket = marketRows;
 const SKILLS = { attack: 70, ranged: 70, defence: 70, magic: 82 };
 
 test('ANTIPOISON matches the antipoison and the superantipoison of each dose and nothing else', () => {

@@ -3,7 +3,14 @@ import { BOW_TRIP, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget
 import { assessWildernessThreat, planWildernessEscape, restockPlan, restockPlanFromStock, slashWebThrough, WILDERNESS_ESCAPES, wildernessCombatMargin, wildernessDepth } from './pk-roam';
 import { pvpCombatBracket } from './aio-pvp';
 import * as pk from './pk';
-import { RESTOCK_LIMITS, RESTOCK_MARKET } from './measure/pk-restock-fixture';
+import marketRows from './measure/pk-restock-market.json';
+import type { RestockMarket } from './pk-roam';
+// Rows of the market cache (.practice/market-all.json) for the items of the PK restock: the lowest ask and the units offered
+// (scripts/measure/pk-restock-market.json). The prayer potion, the glory and the super potions are dear, the superantipoison and
+// the antipoison have no seller, and the nature rune asks more than twice the hand limit that the plan once used. The limit of
+// each item is the ask plus RESTOCK_MARGIN_PERCENT (10).
+const RESTOCK_MARKET: RestockMarket = marketRows;
+const RESTOCK_LIMITS = { 563: 770, 561: 698, 385: 974, 2434: 354_864, 1712: 4_675_000, 2440: 110_000, 2436: 110_000, 861: 104_500, 1113: 231_404 } as const;
 import * as walking from '../packages/core/src/walk';
 
 const me = { z: 3556, combatLevel: 126 };
