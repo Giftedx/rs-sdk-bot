@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795042702013-thefullmonty-undermykilt-a160293ac74deda9",
+ "account": "TheFullMonty",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 4,
+ "claim": "dd38f52d-b920-4f28-a333-93377ac8e08a",
+ "count": 0,
+ "ok": false,
+ "at": 1795042912391,
+ "detail": "Error: route to 3183, 3440: precondition bank stop at 3094,3491: withdraw outcome unknown 554:0/1",
+ "logout": {
+  "attemptId": "1795042890892-0000024464-0000000001",
+  "at": 1795042912379,
+  "sha256": "eb21eb4197c44c8edfd961d44ac7f0d7043c56d0c0e8459c9de8333547233fb3"
+ },
+ "screen": false
+}
