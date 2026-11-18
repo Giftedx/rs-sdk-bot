@@ -96,6 +96,13 @@ export function matchingProgressionRoutes(script:string,args:readonly string[]=[
 export function intentForEntry(script:string,args:readonly string[]=[],env:Readonly<Record<string,string|undefined>>={},accept?:CatalogAccept,catalog?:ProgressionCatalog):WorkIntent|null{
  script=scriptPath(script);
  const consumer=setting(env,args,'CONSUMER')??setting(env,args,'GOAL')??script;
+ if(script==='scripts/make-wine-order.ts'){
+  const maximum=Number(args[0]),cap=Number(args[1]??1000),reserve=Number(args[2]??0);
+  if(args.length<1||args.length>3||![maximum,cap,reserve].every(whole)||maximum<1||cap<1)return null;
+  // This is a new-notes delta, not an existing bank balance or incidental Cooking XP.
+  if(accept&&(Object.keys(accept).length!==1||Object.keys(accept.counters??{}).length!==1||accept.counters?.preservedWine!==maximum))return null;
+  return{kind:'service',objective:`preserve ${maximum} new unfermented wine notes (1996) from owned grapes (1987) and jugs of water (1937); reconcile assets; input reserve ${reserve}; CAP ${cap}`,units:1};
+ }
  const requestedItems=positiveItems(accept?.bank);
  if(requestedItems)return{kind:'acquire',items:{...requestedItems},consumer};
  if(accept?.quests?.length===1&&accept.quests[0]?.trim())return{kind:'quest',quest:accept.quests[0]};

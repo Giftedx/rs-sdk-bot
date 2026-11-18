@@ -24,7 +24,7 @@ function intents(category:string,name:string):CatalogIntent[]{
  if(category==='boss')return ['acquire'];
  if(category==='pvp')return name==='monitor'?['observe']:name==='stage-kit'?['acquire']:name==='standby'?['service']:['pvp'];
  if(category==='market')return name==='ge-plan'?['observe']:['acquire'];
- return ['banker','supply-holder','food-chain','supply-chain','bank-sort','loadout-import','restore-prayer','walk-to','walk-edge','relocate-bank','relocate-knight','arrive-draynor','loadout'].includes(name)?['service']:['acquire'];
+ return ['banker','supply-holder','wine-stock','food-chain','supply-chain','bank-sort','loadout-import','restore-prayer','walk-to','walk-edge','relocate-bank','relocate-knight','arrive-draynor','loadout'].includes(name)?['service']:['acquire'];
 }
 function knownStep(category:string,name:string,script:string):Step{
  try{return resolveAioStep(category,name.split(':'));}catch{return{script,args:[],env:{}};}
@@ -174,6 +174,7 @@ export function buildProgressionCatalog(base=root):ProgressionCatalog{
  for(const script of ['scripts/claim-account.ts','packages/core/src/session-recovery.ts'])entries.set(script,{script,intents:['service'],skills:[],routeIds:[]});
  entries.set('scripts/courier-handoff.ts',{script:'scripts/courier-handoff.ts',intents:['service'],skills:[],routeIds:[]});
  entries.set('scripts/handoff-inputs.ts',{script:'scripts/handoff-inputs.ts',intents:['acquire','produce','service'],skills:['fletching'],routeIds:[]});
+ entries.set('packages/practice/src/wine-stock-order-proof.ts',{script:'packages/practice/src/wine-stock-order-proof.ts',intents:['service'],skills:[],routeIds:[],practiceOnly:true});
  const probes=resolve(base,'scripts/measure');if(existsSync(probes))for(const file of readdirSync(probes).filter(f=>f.endsWith('.ts')&&!f.endsWith('.test.ts')))entries.set('scripts/measure/'+file,{script:'scripts/measure/'+file,intents:['observe'],skills:[],routeIds:[],practiceOnly:true});
  // Direct gameplay entry files must be classified; helper modules without a login remain libraries.
  for(const folder of CATALOG_FOLDERS)for(const file of readdirSync(resolve(base,folder)).filter(f=>f.endsWith('.ts')&&!f.endsWith('.test.ts'))){const path=folder+'/'+file;if(entries.has(path))continue;
