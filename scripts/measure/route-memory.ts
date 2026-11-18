@@ -16,4 +16,5 @@ await step('route Lumbridge-Catherby',()=>w.route({x:3222,z:3218,level:0},{x:280
 await step('spawn index',async()=>{const {objSpawns}=await import('../../packages/core/src/spawn-index');objSpawns();});
 await step('shop index',async()=>{const {shopSellers}=await import('../../packages/core/src/shop-index');shopSellers();});
 await step('route worker plan',async()=>{const {planTripOffThread}=await import('../../packages/core/src/route-plan') as any; if(planTripOffThread) await planTripOffThread({x:3222,z:3218,level:0},{x:2809,z:3441,level:0},acct).catch((e:any)=>console.log('worker err',String(e).slice(0,120)));});
+{const {searchStats}=await import('../../packages/core/src/world');console.log('search stats',JSON.stringify({...searchStats,lbMs:Math.round(searchStats.lbMs)}));}
 process.exit(0);

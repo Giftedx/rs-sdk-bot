@@ -215,6 +215,9 @@ export async function interactionApproach(sdk:any,at:Tile,q:InteractionTarget):P
     });
 }
 
+// Counts of the route search, for scripts/measure/route-memory.ts: how often the lower bounds are solved and what they
+// scan, and how many entries the main search pushes, pops and drops as done or dominated.
+export const searchStats = { lbCalls: 0, lbMs: 0, lbPops: 0, lbScans: 0, pushes: 0, pops: 0, skipped: 0, walkMeasured: 0 };
 class MinHeap<T> {
     private a: T[] = [];
     constructor(private score: (t: T) => number) {}
@@ -222,6 +225,7 @@ class MinHeap<T> {
     clear() { this.a = []; }
     push(t: T) {
         const a = this.a;
+        searchStats.pushes++;
         a.push(t);
         for (let i = a.length - 1; i > 0;) {
             const p = (i - 1) >> 1;
@@ -403,6 +407,11 @@ function buildLowerBoundGraph(
 // (OlZe PathfinderDijkstra). Collision-free walk costs only underestimate the
 // real walks, retaining lazy path measurements without pruning cheap detours.
 function solveLowerBounds(graph: LowerBoundGraph, goalBoundIdx: number, goalTile: Tile, relaxedRadius: number): Float64Array {
+    const began = performance.now();
+    searchStats.lbCalls++;
+    try { return solveLowerBoundsOnce(graph, goalBoundIdx, goalTile, relaxedRadius); } finally { searchStats.lbMs += performance.now() - began; }
+}
+function solveLowerBoundsOnce(graph: LowerBoundGraph, goalBoundIdx: number, goalTile: Tile, relaxedRadius: number): Float64Array {
     const baseN = graph.nodeCount;
     const totalN = goalBoundIdx < baseN ? baseN : baseN + 1;
     const best = new Float64Array(totalN).fill(Infinity);
@@ -420,6 +429,7 @@ function solveLowerBounds(graph: LowerBoundGraph, goalBoundIdx: number, goalTile
         const e = queue.popIndex();
         const u = e.index;
         if (e.cost !== best[u]) continue;
+        searchStats.lbPops++;
         settled[u] = 1;
         const isGoal = u === goalBoundIdx;
         const tx = u < baseN ? xs[u]! : goalTile.x;
@@ -428,6 +438,7 @@ function solveLowerBounds(graph: LowerBoundGraph, goalBoundIdx: number, goalTile
         const tolerance = isGoal ? GOAL_TOL : Math.max(relaxedRadius, u < baseN ? radii[u]! : PORTAL_TOL);
         if (tLvl >= 0 && tLvl < 4) {
             const peers = levelNodes[tLvl]!;
+            searchStats.lbScans += peers.length;
             for (let k = 0; k < peers.length; k++) {
                 const i = peers[k]!;
                 if (settled[i] || best[i]! <= e.cost) continue;
@@ -772,8 +783,10 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
                 try {
                 while (heap.size) {
                     const e = heap.pop()!;
-                    if (isDone(e.id) || dominated(e.stateBase, e.fare, e.g)) continue;
+                    searchStats.pops++;
+                    if (isDone(e.id) || dominated(e.stateBase, e.fare, e.g)) { searchStats.skipped++; continue; }
                     if (e.walkToTile) {
+                        searchStats.walkMeasured++;
                         // Both orientations measure the original FORWARD edge,
                         // under the same synchronous policy and shared cache.
                         const c = walk(e.walkFromIdx!, e.walkFromTile!, e.walkToIdx!, e.walkToTile, e.tol!, e.interaction, e.qId);
