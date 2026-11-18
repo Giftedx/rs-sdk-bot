@@ -156,6 +156,7 @@ export function createAutopilotProgression(o:AutopilotProgressionOptions){
    }});
   result.assignments=result.assignments.map(a=>{
    const change=result.changes.find(x=>key(x.account)===key(a.account)),r=byAccount.get(key(a.account));
+   if(a.template&&entry(a.template.script)==='scripts/ranged-train.ts'&&!(r&&activeMethod(a.template,a.account,r))&&result.requests.some(q=>key(q.account)===key(a.account)&&['observe','qualify','measure'].includes(q.action)&&Object.keys(q.consumer?.accept.skills??{}).length===1))return{...a,template:undefined,resources:[],reason:'Owned observation or qualification required for the selected finite consumer; coordinator request retained.'};
    if(change?.ready&&a.template){const m=r?.evaluation.methods?.find(m=>m.id===change.method);if(m){const t=bind({...a.template,resources:a.resources,repeats:false},m,r!.intent,r!.accept);return{...a,template:t,resources:t.resources??a.resources};}}
    if(!change||change.ready||!a.template)return a;
    const transfers=result.requests.filter(q=>key(q.account)===key(a.account)&&q.method===change.method&&q.action==='transfer'&&q.holder&&q.item&&q.count);

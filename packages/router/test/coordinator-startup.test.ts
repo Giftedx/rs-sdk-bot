@@ -6,6 +6,7 @@ import {join} from 'node:path';
 import {withPlanWrite} from '../../core/src/plan-lock';
 import {addTasks,initialState} from '../src/coordinator';
 import {claimCoordinatorState} from '../src/coordinator-cli';
+import * as coordinatorCli from '../src/coordinator-cli';
 import {saveState} from '../src/coordinator-store';
 
 const directories:string[]=[];
@@ -23,6 +24,20 @@ function queuedState(){
  addTasks(state,[{id:'saved-order',goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:2,estimatedMs:1,why:'qualify a finite order'}]);
  return state;
 }
+
+test('the planner respects configured agents and retains the Codex-first default',()=>{
+ expect(coordinatorCli.plannerAgent(['claude'],[])).toBe('claude');
+ expect(coordinatorCli.plannerAgent(['codex'],[{status:'running',agent:'codex',spec:{kind:'build'}}])).toBe('codex');
+ expect(coordinatorCli.plannerAgent(undefined,[])).toBe('codex');
+ expect(coordinatorCli.plannerAgent([],[])).toBeNull();
+});
+
+test('the planner prefers a configured agent without a current model build',()=>{
+ expect(coordinatorCli.plannerAgent(['codex','claude'],[{status:'running',agent:'codex',spec:{kind:'build'}}])).toBe('claude');
+ expect(coordinatorCli.plannerAgent(['claude','codex'],[{status:'running',agent:'claude',spec:{kind:'build'}}])).toBe('codex');
+ expect(coordinatorCli.plannerAgent(['codex','claude'],[{status:'succeeded',agent:'codex',spec:{kind:'build'}}])).toBe('codex');
+ expect(coordinatorCli.plannerAgent(['codex','claude'],[{status:'running',agent:'codex',spec:{kind:'qualify'}}])).toBe('codex');
+});
 
 test('coordinator ownership recovers a dead plan writer before loading the saved queue',async()=>{
  const directory=fixture(),state=queuedState();saveState(state,directory);

@@ -38,6 +38,7 @@ import { tickWaste, wasteShare } from './tick-waste';
 import { kitSkills, levelsBeforeRoute } from './pk-kits';
 import { createAutopilotProgression } from './autopilot-progression';
 import { accountFromStatus } from '../packages/planner/src/progression-catalog';
+import {boundAccounts,type AccountBindingState} from '../packages/core/src/coordinator-accounts';
 
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
 const PASS_EVERY_MS = 10 * 60_000, TRAINER_POLL_MS = 30_000;
@@ -374,9 +375,10 @@ export function mountainWalk(hunters: readonly Hunter[] = loadHunters()): (a: Ac
     };
 }
 
-export function planningOwnership(ownerJobs: readonly any[], coordinatorJobs: readonly any[], paused: ReadonlySet<string>) {
+export function planningOwnership(ownerJobs: readonly any[], coordinatorJobs: readonly any[], paused: ReadonlySet<string>,queue?:AccountBindingState) {
     // A parked coordinator job still shadows its owner job until the coordinator releases it.
     const held = new Set(coordinatorJobs.flatMap(jobAccounts).map(account => account.toLowerCase()));
+    for(const record of queue?.tasks??[])if(record.status==='pending'||record.status==='running')for(const account of boundAccounts(record.spec,queue!)??[])held.add(account.toLowerCase());
     const keep = new Set([...paused, ...held]);
     const busy = enabledAccounts(withCoordinatorJobs(ownerJobs, coordinatorJobs));
     for (const account of held) busy.add(account);
@@ -464,7 +466,9 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         if (!activeAccounts.has(acctLower) && /^died\b/.test(rec.reason ?? '')) diedAccounts.add(acctLower);
     }
     const { paused, swarmStopped } = pauses(new Map(listedNames.flatMap(n => { const t = stopText(n); return t === undefined ? [] : [[n, t] as const]; })));
-    const { held, keep, busy } = planningOwnership(swarm.jobs, readCoordinatorJobs(root).jobs, paused);
+    const queue=readJson(join(prac,'coordinator/state.json'),null);
+    if(swarm.coordination?.enabled&&(!queue||queue.version!==1||!Array.isArray(queue.tasks)))return['AUTOPILOT hold: owning coordinator queue is unavailable'];
+    const { held, keep, busy } = planningOwnership(swarm.jobs, readCoordinatorJobs(root).jobs, paused,queue?.version===1&&Array.isArray(queue.tasks)?queue:undefined);
     const templates=catalogue(),finiteMakers=new Set(templates.filter(t=>t.production).map(t=>t.id));
     for (const j of swarm.jobs.filter(mineMarked)) if (typeof j.account === 'string'
         && !diedAccounts.has(j.account.toLowerCase())

@@ -18,7 +18,7 @@ function setup(methods:ProgressionMethod[]=[slow,fast],extra:any={}){
  const calls:{accept?:CatalogAccept;status:any}[]=[];
  const planner=createAutopilotProgression({now,observed:()=>status,itemId:(name:string)=>name==='dragon bones'?536:undefined,itemName:(id:number)=>id===536?'dragon bones':undefined,
   catalog:{version:1,generatedBy:'fixture',skills:['ranged'],routes:[],methods:[],quests:[],entries:[]} as ProgressionCatalog,
-  evaluate:(work:any,s:any,o:any)=>{calls.push({accept:o.accept,status:s});const account=accountFromStatus(s.name,s,now),intent=o.accept?.bank?{kind:'acquire' as const,items:o.accept.bank,consumer:'army bones'}:{kind:'train' as const,skill:'ranged',targetLevel:o.accept?.skills?.Ranged??50};
+  evaluate:(work:any,s:any,o:any)=>{calls.push({accept:o.accept,status:s});const account=accountFromStatus(s.name,s,now),[skill,target]=Object.entries(o.accept?.skills??{})[0]??['ranged',50],intent=o.accept?.bank?{kind:'acquire' as const,items:o.accept.bank,consumer:'army bones'}:{kind:'train' as const,skill:String(skill).toLowerCase(),targetLevel:Number(target)};
    return{supported:true,intent,account,methods,decision:chooseProgression(intent,account,methods,{now,requireQualification:true})};},...extra});
  return{planner,calls};
 }
@@ -29,6 +29,26 @@ test('AP refines its actual finite assignment through the shared measured select
  expect(JSON.parse(r.assignments[0]?.template?.env?.PROGRESSION_CONSUMER??'null')).toEqual({skills:{Ranged:50}});
  expect(r.assignments[0]?.template?.env?.PROGRESSION_METHOD).toBe('fast');expect(r.assignments[0]?.template?.env?.PROGRESSION_SOURCE).toBe('proof-fast');
  expect(calls).toHaveLength(1);expect(calls[0]?.accept).toEqual({skills:{Ranged:50}});
+});
+
+test('AP leaves a selected stale Ranged consumer as an executable coordinator request instead of logging it in',()=>{
+ const t=template('scripts/ranged-train.ts'),m={...slow,step:{script:t.script,args:t.args!,env:{}}};
+ const {planner}=setup([m],{observed:()=>({...status,at:0})}),result=planner.refine([assignment(t)]);
+ expect(result.requests.find(r=>r.action==='observe')?.consumer).toEqual({work:{script:t.script,args:['50'],env:{PROGRESSION_CONSUMER:JSON.stringify({skills:{Ranged:50}})}},accept:{skills:{Ranged:50}}});
+ expect(result.assignments[0]?.template).toBeUndefined();expect(result.assignments[0]?.resources).toEqual([]);
+});
+
+test('Prayer keeps its existing finite admitted path for unknown comparisons while supported Ranged waits for a method proof',()=>{
+ const prayer:Template={...template('scripts/train-prayer.ts'),id:'army-prayer',args:['99'],env:{BONE_ID:'536',BONE_RESERVE:'6',CAP:'4000'},trains:{skill:'Prayer',to:99,unlocks:[]}};
+ const prayerMethod=method('prayer-bones',1,{step:{script:prayer.script,args:prayer.args!,env:prayer.env!},effects:{xp:{Prayer:1800}},qualification:undefined,rate:{unitsPerTick:1,basis:'model',evidence:'unqualified comparison'}});
+ // The real catalog: its Prayer route maps the trainer to a train intent. A catalog with no route gives the bounded-service intent.
+ const prayerPlanner=setup([prayerMethod],{catalog:loadProgressionCatalog(),observed:()=>({...status,skills:[{name:'Prayer',level:96,xp:xpForLevel(96)}]})}).planner,result=prayerPlanner.refine([assignment(prayer)]),kept=result.assignments[0]!.template;
+ expect(result.requests.some(r=>r.action==='qualify'&&r.consumer?.accept.skills?.Prayer===99)).toBe(true);
+ expect(kept?.script).toBe(prayer.script);expect(kept?.args).toEqual(['99']);expect(kept?.env).toEqual({...prayer.env,PROGRESSION_CONSUMER:JSON.stringify({skills:{Prayer:99}})});
+ expect(kept?.env?.PROGRESSION_METHOD).toBeUndefined();expect(kept?.env?.PROGRESSION_SOURCE).toBeUndefined();
+ expect(()=>preflightProgressionWork({script:kept!.script,args:kept!.args!,env:kept!.env!},server,loadProgressionCatalog(),'Archer')).not.toThrow();
+ const ranged=template('scripts/ranged-train.ts'),rangedMethod={...slow,qualification:undefined,step:{script:ranged.script,args:ranged.args!,env:{}}},held=setup([rangedMethod]).planner.refine([assignment(ranged)]);
+ expect(held.requests.some(r=>r.action==='qualify'&&r.consumer?.accept.skills?.Ranged===50)).toBe(true);expect(held.assignments[0]?.template).toBeUndefined();
 });
 test('AP retains modeled or unqualified rivals as evidence work and honors build caps and holds',()=>{
  const modeled=method('fast',10,{rate:{unitsPerTick:10,basis:'model',evidence:'estimate'}});
@@ -102,6 +122,7 @@ test('AP keeps only the exact active finite mission after its admitted arrows ar
  const active={...status,bank:[{id:882,count:148}],started:now-1000,sessionAttemptId:'attempt',workEntry:job.script,workRevision:m.source,progression:{executing:m.id,boundMethod:m.id,source:m.source,consumer:{skills:{Ranged:50}}}};
  const p=setup([m],{observed:()=>active,jobs:[job]}).planner,kept=p.templateFor(t,{name:'Archer',side:'local',skills:{Ranged:40},items:{}});
  expect(kept.env).toEqual(env);expect(kept.args).toEqual(job.args);expect(kept.resources).toEqual(['trooper:battlefield']);
+ expect(p.refine([assignment(t)]).assignments[0]?.template?.env).toEqual(env);
  const ended=setup([m],{observed:()=>({...active,result:'RESULT ok'}),jobs:[job]}).planner.templateFor(t,{name:'Archer',side:'local',skills:{Ranged:40},items:{}});
  expect(ended.env).toEqual({...t.env,PROGRESSION_CONSUMER:JSON.stringify({skills:{Ranged:50}})});expect(ended.env?.PROGRESSION_METHOD).toBeUndefined();expect(ended.env?.PROGRESSION_SOURCE).toBeUndefined();
  const changed={...t,trains:{...t.trains!,to:51}},fresh=p.templateFor(changed,{name:'Archer',side:'local',skills:{Ranged:40},items:{}});

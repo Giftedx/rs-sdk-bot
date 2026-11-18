@@ -1,6 +1,8 @@
 // Durable orchestration above the existing author, delivery and swarm paths.
 // Task counts are coordination metrics, never percentages of game completion.
 import type {DeliveryTask} from './delivery';
+import {boundAccounts,COORDINATOR_ACCOUNT_PATTERN as ACCOUNT} from '../../core/src/coordinator-accounts';
+export {boundAccounts} from '../../core/src/coordinator-accounts';
 
 export const GOALS=['wealth','skills','quests','gear','specialists','main24'] as const;
 export type GoalId=typeof GOALS[number];
@@ -194,7 +196,6 @@ export function buildWorkOrder(task:CoordTask,dependencies:Record<string,unknown
 export function initialState():CoordinatorState{
  return{version:1,sequence:0,tasks:[],goals:GOALS.map(id=>({id,lastStartedAt:0,lastSucceededAt:0,completedTasks:0})),lastPlanAt:0,lastPlanReason:'bootstrap'};
 }
-const ACCOUNT=/^[A-Za-z0-9_ -]{1,12}$/;
 const TASK_ID=/^[-a-z0-9]+$/;
 export function provisionRefs(task:CoordTask):string[]{
  return [...(task.accountFrom?[task.accountFrom]:[]),...(task.participants??[]).filter(n=>n.startsWith('@')).map(n=>n.slice(1))];
@@ -263,18 +264,6 @@ export function preparedNativeDelivery(state:CoordinatorState,capability:string,
   .sort((a,b)=>b.receipt!.at-a.receipt!.at)
   .map(r=>r.receipt!.output?.delivery)
   .find(d=>d?.ok===true&&d.stage==='delivered'&&d.evidence==='native'&&!d.diagnostic&&d.source===source)??null;
-}
-/** Null means a referenced identity is unproved, invalid, or aliases another participant. */
-export function boundAccounts(task:CoordTask,state:CoordinatorState):string[]|null{
- const bindings=task.participants??(task.accountFrom?['@'+task.accountFrom]:task.account?[task.account]:[]);
- const names:string[]=[];
- for(const binding of bindings){
-  const record=binding.startsWith('@')?state.tasks.find(r=>r.spec.id===binding.slice(1)):undefined;
-  const name=binding.startsWith('@')?(record?.status==='succeeded'&&record.receipt?.ok?record.receipt.output?.account:undefined):binding;
-  if(typeof name!=='string'||!ACCOUNT.test(name))return null;
-  names.push(name);
- }
- return new Set(names.map(n=>n.toLowerCase())).size===names.length?names:null;
 }
 // Consecutive failed builds of one capability, newest first. A focus that keeps failing starves every other lane:
 // a shark-supply-order focus held all development 11.2 h through 19 failed builds (research/bot-host.md "Isolated build workspaces").
