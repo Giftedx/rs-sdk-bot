@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795002124249-mineyourbiz-billionaire-naturerune",
  "account": "Billionaire",
  "partner": "MineYourBiz",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 40,
  "claim": "1fdaa896-3a7a-4c2e-be12-b595db0a2004",
- "count": 0,
- "ok": false,
- "at": 1795002229486,
- "detail": "trade claimed"
+ "count": 40,
+ "ok": true,
+ "at": 1795002250422,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 7,
+  "after": 47
+ },
+ "bank": {
+  "count": 40,
+  "at": 1795002249679
+ },
+ "logout": {
+  "attemptId": "1795002229493-0000024268-0000000001",
+  "at": 1795002250413,
+  "sha256": "24351d1f01d7ca780e5356bcfd56a1c25efbfbfe045f19e3f855c5d182c8e2b9"
+ },
+ "screen": true
 }
