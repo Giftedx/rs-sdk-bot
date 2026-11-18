@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795008246561-bigchopper-moneyshot-naturerune",
  "account": "Bigchopper",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 46,
  "claim": "90e7a26d-2b0c-4f41-b023-9b0609ba3d6f",
- "count": 0,
- "ok": false,
- "at": 1795008349219,
- "detail": "trade claimed"
+ "count": 46,
+ "ok": true,
+ "at": 1795008373340,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 46,
+  "after": 0
+ },
+ "bank": {
+  "count": 46,
+  "at": 1795008358595
+ },
+ "logout": {
+  "attemptId": "1795008349227-0000022348-0000000001",
+  "at": 1795008373331,
+  "sha256": "c8addfe12d0e7f13f6ea5196457feeb7da6b27655ab771f9b6443b490fad0c8d"
+ },
+ "screen": true
 }
