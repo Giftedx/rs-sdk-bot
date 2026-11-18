@@ -17,7 +17,7 @@ import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { validateBankRouteJob, type BankRouteJob } from '../../core/src/bank-trip';
 import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-route-step';
 import { ownsWearableMeleeWeapon, type CombatFocus } from './gear-progression';
-import { GEAR_GE_ID, gearJobFor, gearShopId, type GearWantRow } from './gear-want-jobs';
+import { GEAR_GE_ID, GEAR_GE_PILOT, GEAR_SHOP_PILOT, gearJobFor, gearShopId, type GearWantRow } from './gear-want-jobs';
 import { cowFoodIds, foodTotalHeal } from '../../core/src/sustain';
 import { ORDER_COIN_MARGIN, REFUSAL_ANY_SOURCE } from '../../core/src/order-refusal';
 import { readFileSync } from 'node:fs';
@@ -1187,8 +1187,11 @@ export function plan(inp: Inputs): Assignment[] {
     for (const a of mine) {
         const lower = a.name.toLowerCase(), rows = inp.gearWants?.get(lower);
         if (!rows?.length || done.has(a.name) || gave.has(a.name) || gaveItems.has(a.name) || vacated.has(a.name)) continue;
-        const job = gearJobFor(rows, { coins: a.items.coin ?? 0, room: KIT_CASH_RESERVE + KIT_COIN_MARGIN, running: !!inp.running?.has(lower),
-            held: id => !!inp.retired?.has(pairKey(a.name, id === GEAR_GE_ID ? KIT_BUY + id : id)) });
+        // Both jobs are pilots: nothing starts live until the `aio` list of swarm.json names `gear-ge` or `gear-shop` (Inputs.pilots).
+        // The room keeps what the account's bands keep (keepCoins), as the kit buy of a band does.
+        const keepCoins = Math.max(0, ...inp.templates.filter(t => t.tier === 'goal' && bandLeft(t, a) > 0 || t.id === inp.current?.get(lower)).map(t => t.keepCoins?.(a) ?? 0));
+        const job = gearJobFor(rows, { coins: a.items.coin ?? 0, room: KIT_CASH_RESERVE + KIT_COIN_MARGIN + keepCoins, running: !!inp.running?.has(lower),
+            held: id => !inp.pilots?.has(id === GEAR_GE_ID ? GEAR_GE_PILOT : GEAR_SHOP_PILOT) || !!inp.retired?.has(pairKey(a.name, id === GEAR_GE_ID ? KIT_BUY + id : id)) });
         if (!job) continue;
         const place = job.kind === 'ge' ? ARMOUR_MARKET : `shop:${job.profile}`;
         if ((used.get(place) ?? 0) >= (inp.capacity?.[place] ?? 1)) continue;

@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
-import { GEAR_GAIN_FLOOR, GEAR_GE_ID, bonusGain, gearJobFor, gearShopId, type GearWantRow } from '../packages/planner/src/gear-want-jobs';
+import { GEAR_GAIN_FLOOR, GEAR_GE_ID, GEAR_SHOP_PILOT, bonusGain, gearJobFor, gearShopId, type GearWantRow } from '../packages/planner/src/gear-want-jobs';
 import { KIT_BUY, KIT_BUY_SCRIPT, accountStyle, catalogue, plan, type Acct } from '../packages/planner/src/autopilot';
 import { shopProfileFor } from './gear-wants';
-import { gearWantsOf } from './autopilot';
+import { gearWantsOf, kitBuyRunning } from './autopilot';
 import { PROFILES } from './shop-buyer';
 import { DATA_PROFILE, dataProfile, derivedProfile } from './shop-profiles';
 
@@ -12,7 +12,7 @@ const geWant = (id: number, name: string, current: number | null, ask: number): 
 const shopWant = (id: number, name: string, current: number | null, cost: number, profile = 'zeke'): GearWantRow =>
     ({ style: 'melee', slot: 'weapon', id, name, current, source: { kind: 'shop', shop: 'scimitarshop', cost, distance: 10 }, profile });
 const acct = (coin: number): Acct => ({ name: 'Fighter', side, skills: { Hitpoints: 10, Attack: 40 }, items: { coin } });
-const run = (a: Acct, wants: GearWantRow[]) => plan({ side, accounts: [a], owners: new Map([[a.name.toLowerCase(), { side }]]), templates: [], bill: [], prices: {},
+const run = (a: Acct, wants: GearWantRow[], pilots: string[] = [GEAR_GE_ID, GEAR_SHOP_PILOT]) => plan({ side, accounts: [a], owners: new Map([[a.name.toLowerCase(), { side }]]), templates: [], bill: [], prices: {}, pilots: new Set(pilots),
     gearWants: new Map([[a.name.toLowerCase(), wants]]) })[0]!;
 
 test('a gain is in points of the style bonuses, and a want under the floor is no job', () => {
@@ -73,9 +73,9 @@ test('the style comes from the running band, else from the next army band, else 
 test('the wants come from the status, with the profile of each shop want', () => {
     const status = { skills: [{ name: 'Attack', level: 40 }, { name: 'Strength', level: 40 }, { name: 'Defence', level: 40 }], inventory: [{ id: 995, count: 300_000 }], equipment: [{ id: IRON_SCIMITAR, count: 1 }], bank: [], quests: [] };
     const asks = { [RUNE_SCIMITAR]: { ask: 15_000, sell: 5 } };
-    const wants = gearWantsOf(['Fighter'], () => status, () => 'melee', {}, asks, Date.now());
+    const wants = gearWantsOf(['Fighter'], () => status, () => 'melee', () => undefined, {}, asks, Date.now());
     expect(wants.get('fighter')?.some(w => w.source.kind === 'ge' || w.source.kind === 'shop')).toBe(true);
-    expect(gearWantsOf(['Fighter'], () => status, () => null, {}, asks, Date.now()).size).toBe(0);
+    expect(gearWantsOf(['Fighter'], () => status, () => null, () => undefined, {}, asks, Date.now()).size).toBe(0);
     expect(shopProfileFor('scimitarshop', 'Mithril scimitar')).toBe('zeke');
 });
 
@@ -93,4 +93,30 @@ test('a shop that has no hand profile gets one from the content', () => {
     expect(dataProfile('data:armourshop')).toEqual(armour);
     expect(derivedProfile('dragonswordshop')).toBeUndefined();
     expect(PROFILES.jukat?.realm).toBeDefined();
+});
+
+test('no gear job starts until its pilot id is listed', () => {
+    const ge = [geWant(RUNE_SCIMITAR, 'Rune scimitar', IRON_SCIMITAR, 15_000)], shop = [shopWant(RUNE_SCIMITAR, 'Rune scimitar', IRON_SCIMITAR, 14_080)];
+    expect(run(acct(300_000), ge, []).template).toBeUndefined();
+    expect(run(acct(300_000), shop, [GEAR_GE_ID]).template).toBeUndefined();
+    expect(run(acct(300_000), ge, [GEAR_GE_ID]).template?.id).toBe(KIT_BUY + GEAR_GE_ID);
+    expect(run(acct(300_000), shop, [GEAR_SHOP_PILOT]).template?.id).toBe(gearShopId('zeke'));
+});
+
+test('a want whose coins for each point are far above the fleet norm gives no job', () => {
+    expect(run(acct(5_000_000), [geWant(LEATHER_COWL, 'Leather cowl', null, 100_000)]).template).toBeUndefined();
+});
+
+test('a gear shop trip keeps its account while it runs, and frees it at its RESULT (two passes)', () => {
+    const first = run(acct(40_000), [shopWant(RUNE_SCIMITAR, 'Rune scimitar', IRON_SCIMITAR, 14_080)]);
+    expect(first.template?.id).toBe(gearShopId('zeke'));
+    const job = { enabled: true, template: first.template!.id, account: 'Fighter' }, assigned = { template: first.template!.id, offset: 0, at: 1 };
+    expect(kitBuyRunning(job, assigned, () => [], false, { active: true })).toBe(true);
+    expect(kitBuyRunning(job, assigned, () => ['RESULT ok shop-buyer boughtTotal=1'], false, { active: true })).toBe(false);
+});
+
+test('the ranged account gets no weapon or ammunition want, and the skill comes from the band id', () => {
+    const status = { skills: [{ name: 'Ranged', level: 50 }, { name: 'Defence', level: 40 }], inventory: [{ id: 995, count: 300_000 }], equipment: [], bank: [], quests: [] };
+    const wants = gearWantsOf(['Fighter'], () => status, () => 'ranged', () => 'army-trooper-ranged-99', {}, {}, Date.now()).get('fighter') ?? [];
+    expect(wants.every(w => w.slot !== 'weapon' && w.slot !== 'ammo')).toBe(true);
 });

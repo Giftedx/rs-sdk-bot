@@ -1542,6 +1542,17 @@ const EXTRA_CASES: BenchCase[] = [
   {key: 'extra:shop-jiminua-restock', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-buy', 'jiminua', '6000', 'ITEMS=antipoison', 'STOCK_TARGET=12', 'STOP_AT_TARGET=1', 'MAX_ITEMS=12', 'MAX_SPEND=10000', 'COIN_RESERVE=1000', 'NO_BUY_TICKS=400', 'STALL_TICKS=0', 'BLIND_BUY=1'],
     pass: s => ok(s) && /boughtTotal=12 bankedTotal=12 /.test(s), timeoutMs: 600_000,
     presetConfig: {position: {x: 2654, z: 3283, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99}, bank: [{id: 995, count: 20000}]}},
+  // One gear shop trip as the planner's gear pass plans it (packages/planner/src/autopilot.ts, template gear-shop-zeke): the
+  // scripts/shop-buyer.ts env of that template (ITEMS, STOCK_TARGET=1, STOP_AT_TARGET, BANK_PACK, MAX_SPEND, FLOAT, COIN_RESERVE)
+  // for one iron scimitar from Zeke, the coins from the Al Kharid bank, the sword banked. The `gear-ge` buy has no case: it needs the Grand Exchange service (market:ge-buy).
+  {key: 'extra:gear-shop-zeke', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-buy', 'zeke', '1200', 'ITEMS=Iron scimitar', 'STOCK_TARGET=1', 'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', 'NO_BUY_TICKS=25', 'FLOAT=1100', 'COIN_RESERVE=200', 'MAX_SPEND=900'],
+    pass: s => ok(s) && /boughtTotal=1 bankedTotal=1 /.test(s), timeoutMs: 600_000,
+    presetConfig: {position: {x: 3269, z: 3167, level: 0}, bank: [{id: 995, count: 5000}]}},
+  // The same trip with a profile derived from the content (scripts/shop-profiles.ts, template gear-shop-data:armourshop): one iron
+  // platebody from Horvik in Varrock, the coins from the Varrock east bank, the platebody banked.
+  {key: 'extra:gear-shop-data', script: 'scripts/aio-market.ts', preset: 'fresh_lumbridge', scriptArgs: ['shop-buy', 'data:armourshop', '1200', 'ITEMS=Iron platebody', 'STOCK_TARGET=1', 'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', 'NO_BUY_TICKS=25', 'FLOAT=1400', 'COIN_RESERVE=200', 'MAX_SPEND=1200'],
+    pass: s => ok(s) && /boughtTotal=1 bankedTotal=1 /.test(s), timeoutMs: 600_000,
+    presetConfig: {position: {x: 3253, z: 3420, level: 0}, bank: [{id: 995, count: 5000}]}},
   // Jakut's dragon longswords in Zanaris (scripts/shop-buyer.ts profile jukat) from Ardougne with Lost City done: the
   // Dramen staff, the coins and the doorman's diamond from the bank, the Lumbridge swamp shed door, the shelf of 2 and one restock for the
   // third sword, the ladder out, the rune scimitar it wore wielded again and the Al Kharid bank.
