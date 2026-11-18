@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { validateOwnedKit } from './microbot-owned-loadout';
-import { accountOf, loadoutOf, meetNear, orderCommands, pickKit, report, RULES, shopSource, stagingPlan, type Account, type Gear, type Item, type Shop, type Worn } from './squad-ready';
+import { accountOf, loadoutOf, receiptOf, meetNear, orderCommands, pickKit, report, RULES, shopSource, stagingPlan, type Account, type Gear, type Item, type Shop, type Worn } from './squad-ready';
 
 const root = join(import.meta.dir, '..');
 const gear = new Map((JSON.parse(readFileSync(join(root, 'knowledge', 'gear.json'), 'utf8')) as Gear[]).map(g => [g.id, g]));
@@ -175,5 +176,19 @@ describe('sources', () => {
             equipment: [{ slot: 3, id: 1215, baseId: 1215, name: 'Dragon dagger', count: 1 }], inventory: [{ id: 386, baseId: 385, name: 'Shark', count: 40, slot: 0 }], bank: [{ id: 563, baseId: 563, name: 'Law rune', count: 3 }] }, { side: 'local', reservation: 'task-1' })!;
         expect([a.levels.magic, [...a.quests], a.pack, a.reservation]).toEqual([45, ['lost city'], [{ id: 385, name: 'Shark', count: 40 }], 'task-1']);
         expect(accountOf({ name: 'B' })).toBeNull();
+    });
+});
+
+describe('receiptOf', () => {
+    test('a ready account gets a passing receipt that binds the status bytes, and an account with a gap gets a failing one', () => {
+        const bytes = new TextEncoder().encode('{"name":"A"}');
+        const ready = receiptOf(pickKit(full('A'), gear, rule, NOW), full('A'), rule.name, NOW, bytes);
+        expect(ready).toMatchObject({ schema: 'squad-ready/1', account: 'A', ok: true, rule: rule.name, at: NOW, reasons: [] });
+        expect(ready.statusSha256).toBe(createHash('sha256').update(bytes).digest('hex'));
+        const gap = receiptOf(pickKit(full('B', { worn: without(KIT_WORN, 1079) as Worn[] }), gear, rule, NOW), full('B'), rule.name, NOW, bytes);
+        expect(gap.ok).toBe(false);
+        expect(gap.reasons.length).toBeGreaterThan(0);
+        // A different snapshot gives a different hash.
+        expect(receiptOf(pickKit(full('A'), gear, rule, NOW), full('A'), rule.name, NOW, new TextEncoder().encode('{"name":"A","x":1}')).statusSha256).not.toBe(ready.statusSha256);
     });
 });

@@ -269,10 +269,11 @@ export function squadFallbackPlan(opts: {
 
 // The end of a squad run: its ok and the detail of its RESULT line. A squad with a death is not a finished squad: the supervisor reads
 // `RESULT fail died` as a death and does not start the squad again with an account that holds no kit (packages/practice/src/supervise.ts and
-// supervise-host.ts classify), and scripts/squad-watch.ts reads it as a death.
-export function squadEnd(o: { accounts: number; kills: number; gangDied?: number; deaths: number; taken: number; trips: number; fights: number; picked: Record<string, number>; dropped: readonly string[]; stranded: readonly string[]; halted?: string; receiptProof?: string; rekits?: number }): { ok: boolean; detail: string } {
+// supervise-host.ts classify), and scripts/squad-watch.ts reads it as a death. `diedAccounts=A,B` names the accounts that died, early in the line
+// (the supervisor logs 200 characters of it): scripts/swarm.ts gives the died end to those accounts only.
+export function squadEnd(o: { accounts: number; kills: number; gangDied?: number; deaths: number; taken: number; trips: number; fights: number; picked: Record<string, number>; dropped: readonly string[]; stranded: readonly string[]; halted?: string; receiptProof?: string; rekits?: number; diedAccounts?: readonly string[] }): { ok: boolean; detail: string } {
     const ok = o.halted === undefined && o.stranded.length === 0 && o.fights > 0 && o.deaths === 0;
-    return { ok, detail: `${o.deaths > 0 ? 'died ' : ''}squad accounts=${o.accounts} kills=${o.kills}${o.receiptProof ? ` ${o.receiptProof}` : ''}${o.gangDied !== undefined ? ` gangDied=${o.gangDied}` : ''} died=${o.deaths}${o.rekits ? ` rekits=${o.rekits}` : ''} taken=${o.taken} trips=${o.trips} picked=${JSON.stringify(o.picked)}${o.dropped.length ? ` dropped=${o.dropped.join(',')}` : ''}${o.stranded.length ? ` stranded=${o.stranded.join(',')}` : ''}${o.halted ? ` halted=${o.halted}` : ''}` };
+    return { ok, detail: `${o.deaths > 0 ? 'died ' : ''}squad accounts=${o.accounts}${o.deaths > 0 && o.diedAccounts?.length ? ` diedAccounts=${o.diedAccounts.map(n => n.replace(/ /g, '_')).join(',')}` : ''} kills=${o.kills}${o.receiptProof ? ` ${o.receiptProof}` : ''}${o.gangDied !== undefined ? ` gangDied=${o.gangDied}` : ''} died=${o.deaths}${o.rekits ? ` rekits=${o.rekits}` : ''} taken=${o.taken} trips=${o.trips} picked=${JSON.stringify(o.picked)}${o.dropped.length ? ` dropped=${o.dropped.join(',')}` : ''}${o.stranded.length ? ` stranded=${o.stranded.join(',')}` : ''}${o.halted ? ` halted=${o.halted}` : ''}` };
 }
 // One account of the squad: hold the post, fight the squad's target, pick up, bank and come back.
 export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: { x: number; z: number }; aim?: { x: number; z: number }; options: FightOptions; allies: readonly string[]; pickup: boolean; pull?: boolean;
@@ -622,7 +623,7 @@ if (import.meta.main) {
     if (get('RESCUE', '1') === '1') stranded.push(...await rescueDropped(dropped.keys(), all, (name, onStop) => openBot(name, { onStop, onSessionEnd: (s, detail) => onStop(s, detail) }), log));
     else stranded.push(...dropped.keys());
     const end = squadEnd({ accounts: results.length, kills: sum(r => r.kills), gangDied: gang.length ? gang.filter(gangDead).length : undefined, deaths: results.filter(r => r.died).length,
-        taken: sum(r => r.taken), trips: sum(r => r.trips), fights: sum(r => r.fights), picked, dropped: [...dropped.keys()], stranded, halted, rekits: results.reduce((n, r) => n + r.rekits, 0), receiptProof: killReceiptProof(results.flatMap(r => r.receipts)) });
+        taken: sum(r => r.taken), trips: sum(r => r.trips), fights: sum(r => r.fights), picked, dropped: [...dropped.keys()], stranded, halted, rekits: results.reduce((n, r) => n + r.rekits, 0), receiptProof: killReceiptProof(results.flatMap(r => r.receipts)), diedAccounts: results.filter(r => r.died).map(r => r.name) });
     await settleKillFeed();
     await finish(all, end.ok, end.detail);
 }
