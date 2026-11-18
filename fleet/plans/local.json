@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794998849498,
+ "at": 1794999101101,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -244,24 +244,6 @@
    "resources": []
   },
   {
-   "account": "Sausagefest",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit6-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "OreElse",
    "script": "scripts/chain.ts",
    "args": [
@@ -307,45 +289,48 @@
   },
   {
    "account": "Moneyshot",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "local",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "PickpockDick",
    "script": "scripts/alch-train.ts",
    "args": [
     "99",
     "5000"
    ],
    "env": {
-    "ALCH_ITEM": "airrune",
     "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
    "role": "combat",
-   "template": "army-alch-air-magic-99",
+   "template": "army-alch-magic-99",
    "autopilot": "local",
    "resources": []
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
-    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
-   "role": "supply",
-   "template": "army-hunt-supply",
-   "autopilot": "local",
-   "resources": [
-    "shop:lowe",
-    "shop:aubury"
-   ]
   },
   {
    "account": "Billionaire",
@@ -379,20 +364,40 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/chain.ts",
+   "script": "scripts/alch-train.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=ballspinner-kit8-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "99",
+    "5000"
    ],
    "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"554\":250}}"
+    "ALCH_ITEM": "airrune",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-air-magic-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
    "autopilot": "local",
    "resources": []
   }
