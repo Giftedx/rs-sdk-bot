@@ -1736,6 +1736,10 @@ const EXTRA_CASES: BenchCase[] = [
       presetConfig: {...preset, skills: before, ...(KITS[kit]!.noRoute ? {inventory: sharks} : {})}};
   }),
   ...SAME_JOB_CASES,
+  // From the Varrock West bank to the Ardougne north bank with the 60-coin fare of the two ferries (scripts/walk-to.ts
+  // ferryWalk). The wall time of the case and the ms of each WALK_NO_ROUTE line give the plan time.
+  {key: 'extra:walk-varrock-ardougne', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '2619', '3332', '0'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {position: {x: 3185, z: 3436, level: 0}, inventory: [{id: 995, count: 60}]}},
 ];
 
 const KNOWN_QUEST: Readonly<Record<string, string>> = {
@@ -1753,10 +1757,6 @@ export const SMOKE_KEYS: readonly string[] = [
   'quester:quest:cook', 'quester:quest:imp', 'quester:quest:doric', 'quester:quest:gobdip', 'quester:quest:sheep',
   'quester:quest:hetty', 'quester:quest:rj', 'quester:quest:druid', 'quester:quest:blackknight', 'quester:quest:elemental',
   'quester:mode:sweep', 'logistics:walk-to', 'skiller:runecraft:air', 'extra:bank-job-cook-lobster', 'extra:bank-job-cut-dragonstone',
-  // From the Varrock West bank to the Ardougne north bank with the 60-coin fare of the two ferries (scripts/walk-to.ts
-  // ferryWalk). The wall time of the case and the ms of each WALK_NO_ROUTE line give the plan time.
-  {key: 'extra:walk-varrock-ardougne', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '2619', '3332', '0'], pass: ok, timeoutMs: 600_000,
-    presetConfig: {position: {x: 3185, z: 3436, level: 0}, inventory: [{id: 995, count: 60}]}},
 ];
 
 // One case per generated quest that has a quest_<slug> start preset: the quest script through the AIO quester.
