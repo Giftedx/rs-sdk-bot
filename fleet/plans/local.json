@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795003515199,
+ "at": 1795003576817,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -252,32 +252,6 @@
    ]
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "Woodpecker",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -302,6 +276,25 @@
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "NabTheKnob",

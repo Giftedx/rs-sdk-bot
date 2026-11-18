@@ -1,0 +1,22 @@
+{
+ "id": "1795003564777-fingersmith-yewfirst-cake",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingersmith",
+ "to": "YewFirst",
+ "item": "Cake",
+ "count": 4,
+ "start": 1795003564777,
+ "end": 1795005964777,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
