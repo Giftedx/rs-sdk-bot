@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795001133921-mineyourbiz-yewfirst-firerune",
  "account": "MineYourBiz",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Fire rune",
  "requested": 250,
  "claim": "9c595468-d0bb-4eea-bc49-33cd11e2ac5f",
- "count": 0,
- "ok": false,
- "at": 1795001334649,
- "detail": "trade claimed"
+ "count": 250,
+ "ok": true,
+ "at": 1795001369902,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 250,
+  "after": 0
+ },
+ "bank": {
+  "count": 250,
+  "at": 1795001346501
+ },
+ "logout": {
+  "attemptId": "1795001334658-0000011596-0000000001",
+  "at": 1795001369674,
+  "sha256": "fb308b681272c9a31a7f86654239d0428550119b5776b5c618ed1f23673b36fa"
+ },
+ "screen": true
 }

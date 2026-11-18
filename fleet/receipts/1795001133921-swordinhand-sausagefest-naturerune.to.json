@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795001133921-swordinhand-sausagefest-naturerune",
  "account": "Sausagefest",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 50,
  "claim": "a3262e17-daab-4002-84ff-e7e821f77b27",
- "count": 0,
- "ok": false,
- "at": 1795001349058,
- "detail": "trade claimed"
+ "count": 50,
+ "ok": true,
+ "at": 1795001371649,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 50
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795001370499
+ },
+ "logout": {
+  "attemptId": "1795001349067-0000010948-0000000001",
+  "at": 1795001371639,
+  "sha256": "65553f78f5374521a60e49caf0aed38c4bd5ec454729d65e09b3858108372b3d"
+ },
+ "screen": true
 }
