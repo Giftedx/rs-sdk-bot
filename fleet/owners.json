@@ -246,8 +246,9 @@
    "reservation": "task-668f79d3-8846-40af-8f7d-039b215124b5"
   },
   "Fingersmith": {
-   "side": "claude-cloud",
-   "server": "rs-sdk-demo.fly.dev"
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
   },
   "Dipstick": {
    "side": "local",
