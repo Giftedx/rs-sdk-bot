@@ -497,8 +497,8 @@ export function applyScriptQualification(request: any, holds: ScriptHold[], acti
     if (!logout.ok) return { changed: false, reason: logout.reason };
     return { changed:false,reason:'script qualification unsupported: caller receipt has no producer-bound work result' };
 }
-// The scripts whose death is a PvP death (a risk of the work, not a fault of the route): the hold of such a death can be cleared by
-// applyKitRestored when the account's kit is back. No other hold kind is cleared there.
+// The scripts whose died hold applyKitRestored can clear when the account's kit is back. The hold does not record the cause of the death:
+// a death that the route or the food plan caused is cleared the same way as a kill by a player. No other hold kind is cleared there.
 export const PVP_DEATH_SCRIPTS: ReadonlySet<string> = new Set(['scripts/aio-pvp.ts', 'scripts/pk-squad.ts', 'scripts/pk-hunt.ts', 'scripts/pk-roam.ts', 'scripts/pk-army.ts']);
 export const KIT_RECEIPT_MAX_AGE_MS = 15 * 60_000;
 // Clears the hold of a PvP death for the one account that died, on evidence in the same call that its kit is back: a receipt of
@@ -632,18 +632,22 @@ export function supervisorEndLine(line: string): string | undefined {
     return line.match(/^SUPERVISE end ([\w-]+ after \d+ runs)\s*$/)?.[1];
 }
 // The accounts that a squad run names as dead on its RESULT line (`RESULT fail died squad accounts=4 diedAccounts=A,B ...`,
-// scripts/pk-squad.ts squadEnd). The supervisor logs the line, cut at 200 characters, so the names come early.
+// scripts/pk-squad.ts squadEnd). The supervisor logs the line, cut at 200 characters, so the names come early. A name list counts only when
+// another `key=` field follows it: a list that the cut ends is not read. Spaces in an account name are written as underscores
+// (accountKey compares both forms as one name).
 export function diedAccountsOf(line: string): string[] | undefined {
-    const m = line.match(/\bRESULT fail died .*?\bdiedAccounts=([A-Za-z0-9_,-]+)/);
+    const m = line.match(/\bRESULT fail died .*?\bdiedAccounts=([A-Za-z0-9_,-]+)(?= \w+=)/);
     return m ? m[1]!.split(',').filter(Boolean) : undefined;
 }
+const accountKey = (a: string) => a.toLowerCase().replace(/ /g, '_');
 // The end of each account of a non-host run. A died end goes to the accounts that died when the run names them. The others are
 // released: `released after N runs`, which startable treats as resumable, and which holds no script (applyEndRepair holds a script
-// only for /^died/). Without names every account takes the run's end, as before.
+// only for /^died/). When the run names no account, or no named account belongs to the job, every account takes the run's end.
 export function endsOfRun(accounts: readonly string[], reason: string, died: readonly string[] | undefined): Map<string, string> {
-    const named = new Set((died ?? []).map(a => a.toLowerCase()));
-    const released = /^died\b/.test(reason) && named.size > 0 ? `released${reason.slice('died'.length)}` : reason;
-    return new Map(accounts.map(a => [a, /^died\b/.test(reason) && named.size > 0 && !named.has(a.toLowerCase()) ? released : reason]));
+    const named = new Set((died ?? []).map(accountKey));
+    const split = /^died\b/.test(reason) && accounts.some(a => named.has(accountKey(a)));
+    const released = `released${reason.slice('died'.length)}`;
+    return new Map(accounts.map(a => [a, split && !named.has(accountKey(a)) ? released : reason]));
 }
 
 // Which accounts of a job may start now, and the state of each one that may not.

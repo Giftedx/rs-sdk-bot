@@ -248,6 +248,8 @@ test('the squad end line names the accounts that died, right after the account c
     const base = { accounts: 4, kills: 3, taken: 500, trips: 1, fights: 6, picked: {}, dropped: [], stranded: [] };
     expect(squadEnd({ ...base, deaths: 1, diedAccounts: ['Squad3'] }).detail).toBe('died squad accounts=4 diedAccounts=Squad3 kills=3 died=1 taken=500 trips=1 picked={}');
     expect(squadEnd({ ...base, deaths: 2, diedAccounts: ['Squad1', 'Squad3'] }).detail.startsWith('died squad accounts=4 diedAccounts=Squad1,Squad3 kills=3')).toBe(true);
+    // A space in an account name is written as an underscore, so that the name stays one token on the line.
+    expect(squadEnd({ ...base, deaths: 1, diedAccounts: ['Sq 3'] }).detail.startsWith('died squad accounts=4 diedAccounts=Sq_3 kills=3')).toBe(true);
     expect(squadEnd({ ...base, deaths: 0, diedAccounts: [] }).detail).toBe('squad accounts=4 kills=3 died=0 taken=500 trips=1 picked={}');
     // The supervisor logs 200 characters of the RESULT line: the names are in them even for a long line.
     const long = squadEnd({ ...base, deaths: 1, diedAccounts: ['Squad3'], picked: { 884: 3, 1231: 2, 385: 40, 995: 99999 }, dropped: ['A', 'B'], stranded: ['C'] });

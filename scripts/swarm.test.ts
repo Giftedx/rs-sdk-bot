@@ -986,7 +986,7 @@ test('a squad job that ends in a death holds every member and a repeating job do
     expect(startable(accounts, true, done, () => Infinity).start).toEqual(accounts);
 });
 
-// Part 3: a squad job with one death holds one account. The other members end `released` and start again.
+// A squad job with one death holds the account that died. The other members end `released` and start again.
 test('a five-member squad job with one death holds one account, and the others are released with no hold', () => {
     const accounts = ['Squad1', 'Squad2', 'Squad3', 'Squad4', 'Squad5'];
     // The supervisor logs the RESULT line cut at 200 characters, so the names come early in it.
@@ -1003,11 +1003,13 @@ test('a five-member squad job with one death holds one account, and the others a
         expect(s.start).toEqual(['Squad1', 'Squad2', 'Squad4', 'Squad5']);
         expect(s.blocked).toEqual({ Squad3: 'ended: died after 1 runs' });
     }
-    // Names in any case; a death that the run does not name, or a run with no names, ends every account as before; other ends are not split.
+    // Names in any case. A run that names no account of the job, or no account at all, gives every account the run's end. Other ends are not split.
     expect(endsOfRun(accounts, 'died after 1 runs', ['squad3']).get('Squad3')).toBe('died after 1 runs');
     expect([...endsOfRun(accounts, 'died after 1 runs', undefined).values()]).toEqual(Array(5).fill('died after 1 runs'));
     expect([...endsOfRun(accounts, 'died after 1 runs', []).values()]).toEqual(Array(5).fill('died after 1 runs'));
     expect([...endsOfRun(accounts, 'blocked after 1 runs', ['Squad3']).values()]).toEqual(Array(5).fill('blocked after 1 runs'));
+    // The named account is not in the job: nothing matches, so every member is held.
+    expect([...endsOfRun(accounts, 'died after 1 runs', ['Other']).values()]).toEqual(Array(5).fill('died after 1 runs'));
     // Repairing a released member holds no script (only a death does); repairing the dead one does.
     const holds: ScriptHold[] = [];
     expect(applyEndRepair({ account: 'Squad1', endedAt: 1000, ...proofRef }, ended, [], confirmed, holds).changed).toBe(true);
@@ -1016,7 +1018,40 @@ test('a five-member squad job with one death holds one account, and the others a
     expect(holds.map(h => [h.account, h.script, h.reason])).toEqual([['Squad3', 'scripts/aio-pvp.ts', 'died after 1 runs']]);
 });
 
-// Part 4: the kit-restored repair clears the hold of a PvP death for the account that died, on a passing kit receipt.
+test('a name with a space is one account: the line writes an underscore and the end compares both forms', () => {
+    const accounts = ['Sq 1', 'Sq 2', 'Sq 3'];
+    const line = 'SUPERVISE run 1 exit 1: RESULT fail died squad accounts=3 diedAccounts=Sq_3 kills=1 died=1 taken=0 trips=0 picked={}';
+    expect(diedAccountsOf(line)).toEqual(['Sq_3']);
+    expect([...endsOfRun(accounts, 'died after 1 runs', diedAccountsOf(line))]).toEqual([['Sq 1', 'released after 1 runs'], ['Sq 2', 'released after 1 runs'], ['Sq 3', 'died after 1 runs']]);
+});
+
+test('a name list that the 200-character cut ends is not read, so every member is held', () => {
+    const names = Array.from({ length: 14 }, (_, i) => `LongName${String(i).padStart(4, '0')}`);
+    const full = `SUPERVISE run 1 exit 1: RESULT fail died squad accounts=14 diedAccounts=${names.join(',')} kills=1 died=14 taken=0 trips=0 picked={}`;
+    const cut = full.slice(0, 200);
+    expect(cut.length).toBe(200);
+    expect(diedAccountsOf(cut)).toBeUndefined();
+    expect([...endsOfRun(names, 'died after 1 runs', diedAccountsOf(cut)).values()]).toEqual(Array(14).fill('died after 1 runs'));
+    // A cut inside a name before the end of the list is not read either, and the full line is.
+    expect(diedAccountsOf(full.slice(0, 150))).toBeUndefined();
+    expect(diedAccountsOf(full)).toEqual(names);
+});
+
+test('a squad is one orchestrate job: the released members do not start while the dead one is held', () => {
+    const accounts = ['Squad1', 'Squad2', 'Squad3'];
+    const job: Job = { accounts, orchestrate: true, host: false, script: 'scripts/pk-squad.ts', enabled: true, repeat: true };
+    const parsed = parseJob(job);
+    if ('error' in parsed) throw Error(parsed.error);
+    const ends = endsOfRun(accounts, 'died after 1 runs', ['Squad3']);
+    const ended = new Map([...ends].map(([a, reason]) => [a, { reason, at: 1000, revision: rev('scripts/pk-squad.ts') }]));
+    const selection = startable(accounts, true, ended, () => Infinity);
+    expect(selection.start).toEqual(['Squad1', 'Squad2']);
+    const gated = completeJobCandidates(parsed, selection);
+    expect(gated.start).toEqual([]);
+    expect(gated.blocked).toEqual({ Squad1: 'waiting: all orchestrator participants required', Squad2: 'waiting: all orchestrator participants required', Squad3: 'ended: died after 1 runs' });
+});
+
+// The kit-restored repair clears the died hold of a PvP script for the account that died, on a passing kit receipt.
 describe('kit-restored repair', () => {
     const NOW = 1_800_000_000_000, STATUS = 'a'.repeat(64);
     const dirs: string[] = [];

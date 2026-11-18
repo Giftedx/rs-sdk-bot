@@ -1600,14 +1600,24 @@ before a pilot run (`bun scripts/market-cache.ts`), which the fleet agent does w
 
 The squad end line names the accounts that died (`diedAccounts=A,B`, `squadEnd` in `scripts/pk-squad.ts`). `scripts/swarm.ts` gives the
 `died after N runs` end to those accounts only (`endsOfRun`). The other members end `released after N runs`, which `startable` treats as
-resumable and which holds no script. A run that names no account gives every member the run's end.
+resumable and which holds no script. A run that names no account of the job gives every member the run's end. A space in an account name is
+written as an underscore on the line, and the swarm compares both forms as one name. A name list that the supervisor's 200-character log cut
+ends is not read. A member that disconnected or was stranded, and did not die, is released and not held. A controller restart between the
+RESULT line and the supervisor's end line loses the names, so every member is held.
 
-The repair `kit-restored` (`applyKitRestored`) clears the script hold of a PvP death for the account that died. A PvP death is a hold of
-`aio-pvp.ts`, `pk-squad.ts`, `pk-hunt.ts`, `pk-roam.ts` or `pk-army.ts` with a `died` reason. The request must hold a passing receipt of
+The repair `kit-restored` (`applyKitRestored`) clears the script hold of a `died` end for the account that died. The scripts are
+`aio-pvp.ts`, `pk-squad.ts`, `pk-hunt.ts`, `pk-roam.ts` and `pk-army.ts`. The hold does not record the cause of the death: a death that the
+route or the food plan caused is cleared the same way as a kill by a player. The request must hold a passing receipt of
 `bun scripts/squad-ready.ts <account> --receipt <dir>`: newer than the death, at most 15 minutes old, and bound by its hash to the
 account's status file as it is now (the fresh bank and worn snapshot). The account must be inactive with a current logout proof. The hold
-stays in the history (`restored`) and does not block. No other hold kind is cleared. Proof: `scripts/swarm.test.ts`, a five-member job with
-one death.
+stays in the history (`restored`) and does not block. No other hold kind is cleared.
+
+The receipt is a JSON file with a plain sha256 and no signature: it has the same trust as writing `.practice/swarm-repair.json` by hand. The
+swarm checks that `ok` is true, that `at` is recent and that the status file bytes are unchanged. It does not derive `ok` again from the status
+file, and it does not check `rule`, `bankAt` or `statusAt`: `squad-ready.ts --max-age 99999` gives an ok receipt on an old bank snapshot.
+
+Proof: `scripts/swarm.test.ts` (a five-member job with one death, a name with a space, a cut name list, a squad as an orchestrate job) and
+`scripts/pk-squad.test.ts` (the end line).
 
 ## Server rules the loop follows
 
