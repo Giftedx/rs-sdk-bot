@@ -1,0 +1,22 @@
+{
+ "id": "1795038415291-oreelse-woodpecker-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "Woodpecker",
+ "item": "Nature rune",
+ "count": 46,
+ "start": 1795038415291,
+ "end": 1795040815291,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
