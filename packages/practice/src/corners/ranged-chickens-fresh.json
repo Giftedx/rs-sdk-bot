@@ -143,7 +143,12 @@
    "xp": 0
   }
  ],
- "inventory": [],
+ "inventory": [
+  {
+   "id": 995,
+   "count": 25
+  }
+ ],
  "equipment": [
   {
    "id": 841,
