@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794999333199-masterbaiter-pocketrocket-bronzesword",
  "account": "Pocketrocket",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Bronze sword",
  "requested": 1,
  "claim": "31b36951-7106-41db-b9d9-13468db602dc",
- "count": 0,
- "ok": false,
- "at": 1794999420521,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794999590548,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794999589740
+ },
+ "logout": {
+  "attemptId": "1794999420529-0000023784-0000000001",
+  "at": 1794999590498,
+  "sha256": "62bda6cfa5a4320f2ffff568156881567fc922aae7507e148140e75bab68bc62"
+ },
+ "screen": true
 }
