@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794988212208-kiltlifter-undermykilt-e9e8d3553ac37643",
+ "account": "UnderMyKilt",
+ "partner": "Kiltlifter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 30,
+ "claim": "b2f1769c-0898-4cad-9ee3-d2383db5fb62",
+ "count": 0,
+ "ok": false,
+ "at": 1794988484628,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Water rune",
+   "requested": 30,
+   "count": 0
+  }
+ ]
+}
