@@ -259,6 +259,13 @@ const cloneSquad = (key: string, kit: string, n: number, args: string[], mode: C
   const c = squadCase(key, kit, 'ganker-dds-skull', n, [`SPAR_B_OPTS=${JSON.stringify(pooledProfile(mode))}`, ...args], food, start);
   return {...c, companions: c.companions!.map((comp, i) => (i < n - 1 ? comp : {...comp, presetConfig: cloneFixture(CLONE_NAMES[i - (n - 1)]!, mode, GANKER_POST.x, GANKER_POST.z)}))};
 };
+// A change of the pack of the first `members` of ours in a clone squad case (all by default): lobsters for the sharks
+// (the fleet holds lobsters), or no bow and no arrows (an account with an unstrung bow).
+const SHARK = 385, LOBSTER = 379, MAGIC_SHORTBOW = 861, IRON_ARROW = 884;
+const withPack = (c: BenchCase, n: number, change: (cfg: SaveConfig) => SaveConfig, members = n): BenchCase => ({...c, presetConfig: change(c.presetConfig!),
+  companions: c.companions!.map((comp, i) => (i < Math.min(n, members) - 1 ? {...comp, presetConfig: change(comp.presetConfig!)} : comp))});
+const lobsters = (cfg: SaveConfig): SaveConfig => ({...cfg, inventory: cfg.inventory!.map(i => (i.id === SHARK ? {...i, id: LOBSTER} : i))});
+const noBow = (cfg: SaveConfig): SaveConfig => ({...cfg, inventory: cfg.inventory!.map(i => (i.id === MAGIC_SHORTBOW ? {id: SHARK, count: 1} : i)), equipment: cfg.equipment?.filter(e => e.id !== IRON_ARROW)});
 // `sizeB`: side B's accounts when it is not `size` (scripts/pk-team.ts SPAR_TEAM_B).
 const teamCase = (key: string, kitA: string, kitB: string, groups: number, at: {x: number; z: number}, size = 2, args: string[] = [], sizeB = size): BenchCase => {
   const group = size + sizeB, letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * group - 1).split('');
@@ -1041,6 +1048,19 @@ const ROUTE_CASES: BenchCase[] = [
   // The same against each mode of the clones: every clone walks out with its food gone (retreat), none does (stand),
   // the fewest sharks of the record's range (lean), the most (full).
   ...([4, 5] as const).flatMap(n => (['retreat', 'stand', 'lean', 'full'] as const).map(mode => cloneSquad(`extra:clone-squad-${n}-chainbind-${mode}-x1`, 'live-walker-iron-rune-chain-bind', n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1'], mode))),
+  // One change at a time from four of ours in the kit that the accounts hold (extra:clone-squad-4-chainbind-x1).
+  // The pack: lobsters, no bow on two members, no bow on any.
+  ...([4, 5] as const).map(n => withPack(cloneSquad(`extra:clone-squad-${n}-chainbind-lobster-x1`, 'live-walker-iron-rune-chain-bind', n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), n, lobsters)),
+  withPack(cloneSquad('extra:clone-squad-4-chainbind-nobow2-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), 4, noBow, 2),
+  withPack(cloneSquad('extra:clone-squad-4-chainbind-nobow-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), 4, noBow),
+  // The approach: no march and no pull; the gang's own single-way post; the east multi-way post from Varrock.
+  cloneSquad('extra:clone-squad-4-chainbind-nomarch-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'MARCH=0', 'PULL=0']),
+  cloneSquad('extra:clone-squad-4-chainbind-single-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'POST=3075,3640', 'ALLOW_SINGLE=1']),
+  cloneSquad('extra:clone-squad-4-chainbind-east-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'POST=3160,3540'], 'seen', {x: 3160, z: 3512}),
+  // The fight options, each one change of the squad's default set (scripts/pk-squad.ts SQUAD_OPTS).
+  ...([['nofreeze', {freeze: false}], ['freezelow', {freeze: 'low'}], ['spec1', {specBelow: 1}], ['eat50', {eatAt: 50}], ['eat70', {eatAt: 70}], ['melee', {rotation: ['melee']}], ['ranged', {rotation: ['ranged']}], ['nochase', {chaseBelow: 0}], ['focus7', {focusRunner: 0.7}]] as const)
+    .map(([tag, change]) => cloneSquad(`extra:clone-squad-4-chainbind-${tag}-x1`, 'live-walker-iron-rune-chain-bind', 4,
+      ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', `SQUAD_OPTS=${JSON.stringify({cureNow: true, eatAt: 60, freeze: 'flee', focusRunner: 0.4, chaseBelow: 0.4, freezeMagicCap: 49, dropForStrip: null, specBelow: 0.45, ...change})}`])),
   // The repeat cycle of one account for 30 game minutes: kill, pick up, bank trip, return, next kill. A clone that
   // walks out comes back from the bank; a dead clone does not come back.
   atBank(cloneGang('extra:clone-cycle-solo-x1', 'live-walker-iron-snare-rune-nopot', CLONE_NAMES, 1, ['SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=3000', 'SPAR_TRIPS=6', 'SPAR_PICKUP=1', 'SPAR_B_TRIPS=4', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000', 'SPAR_B_OPTS={"protectItem":false}'], 'seen', EDGE_BANK_SNARE), GANKER_POST),
