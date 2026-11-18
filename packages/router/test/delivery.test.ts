@@ -67,3 +67,42 @@ test('diagnostic failure, timeout and source drift retain failure and never reac
   const r=await deliver(task,h.deps,'native');expect(r.diagnostic?.complete).toBe(false);expect(r.ok).toBe(false);expect(h.calls).toEqual(['regression','native']);
  }
 });
+
+import {checkBatches, validateDelivery} from '../src/delivery';
+const grouped:DeliveryTask={...task,checks:[
+    {id:'regression',phase:'regression',command:['bun','test'],timeoutMs:1000},
+    {id:'native-a',phase:'practice',command:['bun','a.ts'],timeoutMs:1000,group:'practice'},
+    {id:'native-b',phase:'practice',command:['bun','b.ts'],timeoutMs:1000,group:'practice'},
+    {id:'banked',phase:'consumer',command:['bun','verify.ts'],timeoutMs:1000},
+]};
+test('the checks of one group run at one time, inside one batch wrapper, and report in task order',async()=>{
+    const events:string[]=[];let release!:()=>void;const both=new Promise<void>(r=>{release=r;});let started=0;
+    const deps:DeliveryDeps={fingerprint:()=>'source',
+        run:async c=>{events.push('start '+c.id);if(c.group){if(++started===2)release();await both;}events.push('end '+c.id);return{exitCode:0,detail:c.id};},
+        batch:async(checks,work)=>{events.push('batch '+checks.map(c=>c.id).join('+'));try{return await work();}finally{events.push('batch end');}}};
+    const r=await deliver(grouped,deps);
+    expect(r.ok).toBe(true);
+    // native-b started before native-a ended: a serial run would wait for ever on `both`.
+    expect(events).toEqual(['start regression','end regression','batch native-a+native-b','start native-a','start native-b','end native-a','end native-b','batch end','start banked','end banked']);
+    expect(r.checks.map(c=>c.id)).toEqual(['regression','native-a','native-b','banked']);
+    expect(checkBatches(grouped.checks).map(b=>b.map(c=>c.id))).toEqual([['regression'],['native-a','native-b'],['banked']]);
+});
+test('a failed check of a group fails the delivery after every check of the group ended, and the consumer does not run',async()=>{
+    const calls:string[]=[];
+    const deps:DeliveryDeps={fingerprint:()=>'source',run:async c=>{calls.push(c.id);return c.id==='native-b'?{exitCode:1,detail:'x'}:{exitCode:0,detail:'x'};}};
+    const r=await deliver(grouped,deps);
+    expect(r).toMatchObject({ok:false,stage:'failed',failedCheck:'native-b',reason:'check failed'});
+    expect(calls).toEqual(['regression','native-a','native-b']);
+    expect(r.checks.map(c=>[c.id,c.exitCode])).toEqual([['regression',0],['native-a',0],['native-b',1]]);
+    const thrown=await deliver(grouped,{fingerprint:()=>'source',run:async c=>{if(c.id==='native-a')throw Error('host fault');return{exitCode:0,detail:'x'};}});
+    expect(thrown).toMatchObject({ok:false,failedCheck:'native-a',reason:'Error: host fault'});
+});
+test('a diagnostic runs the checks one by one, and a group must be neighbours of one phase with a plain name',async()=>{
+    const calls:string[]=[];
+    const r=await deliver(grouped,{fingerprint:()=>'source',run:async c=>{calls.push(c.id);return{exitCode:0,detail:'x'};},batch:async()=>{throw Error('no batch in a diagnostic');}},'native-a');
+    expect(r.diagnostic).toEqual({checkId:'native-a',complete:true});expect(calls).toEqual(['regression','native-a']);
+    const split={...grouped,checks:[grouped.checks[0]!,grouped.checks[1]!,{...grouped.checks[3]!,phase:'practice' as const,id:'plain'},grouped.checks[2]!,grouped.checks[3]!]};
+    expect(()=>validateDelivery(split)).toThrow('neighbours of one phase');
+    expect(()=>validateDelivery({...grouped,checks:grouped.checks.map(c=>c.group?{...c,group:'Bad Name'}:c)})).toThrow('invalid delivery check group');
+    expect(()=>validateDelivery(grouped)).not.toThrow();
+});
