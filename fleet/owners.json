@@ -111,8 +111,9 @@
    "home": "cloud-kit"
   },
   "Unsheathed": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "cloud"
   },
   "Quickhandjob": {
    "side": "claude-cloud",
