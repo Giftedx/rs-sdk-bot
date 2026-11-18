@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795041883383-bigchopper-mmtha0205-naturerune",
  "account": "mmtha0205",
  "partner": "Bigchopper",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 20,
  "claim": "b2225029-cf95-44db-8012-dd6578008432",
- "count": 0,
- "ok": false,
- "at": 1795042006682,
- "detail": "trade claimed"
+ "count": 20,
+ "ok": true,
+ "at": 1795042216428,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 20
+ },
+ "bank": {
+  "count": 20,
+  "at": 1795042215669
+ },
+ "logout": {
+  "attemptId": "1795042006691-0000025980-0000000001",
+  "at": 1795042216384,
+  "sha256": "93b91a247d03c95319bd27e136dd1c16dcb09ec0d5adfc200deada665075841e"
+ },
+ "screen": true
 }
