@@ -66,9 +66,9 @@
       "took": 206,
       "ours": [],
       "scripts": [
-        "scripts/generated/rcair.ts"
+        "scripts/rune-carriers.ts"
       ],
-      "note": "our runecraft row is priced under body-altar"
+      "pricedWith": "body-altar"
     },
     {
       "id": "woodcut",
@@ -90,7 +90,9 @@
       "skills": "Mining 49-64",
       "plan": 591,
       "took": 595,
-      "ours": [],
+      "ours": [
+        "plague-city"
+      ],
       "scripts": [
         "scripts/generated/quest-elena.ts"
       ]
@@ -105,7 +107,8 @@
         "mine"
       ],
       "scripts": [
-        "scripts/gather-ore.ts"
+        "scripts/microbot-b-mining.ts",
+        "scripts/mining-rotation.ts"
       ]
     },
     {
@@ -169,11 +172,12 @@
       "skills": "Ranged 1-50",
       "plan": 488,
       "took": 511,
-      "ours": [],
+      "ours": [
+        "ranged-entry-melee"
+      ],
       "scripts": [
         "scripts/cannon-fight.ts"
-      ],
-      "note": "our ranged row is priced under spiders-2"
+      ]
     },
     {
       "id": "monkey-madness",
@@ -240,9 +244,9 @@
         "runecraft"
       ],
       "scripts": [
-        "scripts/generated/rcair.ts"
+        "scripts/rune-carriers.ts"
       ],
-      "note": "rcair.ts is the air altar only"
+      "note": "our runecraft row is Runecraft 1-99 with the air altar in it"
     },
     {
       "id": "fly-fish",
@@ -254,7 +258,7 @@
         "fish"
       ],
       "scripts": [
-        "scripts/fishcook.ts"
+        "scripts/microbot-b-fishing.ts"
       ]
     },
     {
