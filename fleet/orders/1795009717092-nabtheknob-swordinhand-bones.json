@@ -1,0 +1,22 @@
+{
+ "id": "1795009717092-nabtheknob-swordinhand-bones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "NabTheKnob",
+ "to": "Swordinhand",
+ "item": "Bones",
+ "count": 24,
+ "start": 1795009717092,
+ "end": 1795012117092,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
