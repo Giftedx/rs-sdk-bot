@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794984964991,
+ "at": 1794985529788,
  "jobs": [
   {
    "account": "AFKnight",
@@ -337,6 +337,27 @@
    ]
   },
   {
+   "account": "mmtha0205",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=422 EXPECTED_OWNED=3 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit0-557-3to425 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=300 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit0-555-0to300 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=2 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit0-558-0to2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"558\":2}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 422 Earth rune, 300 Water rune, 2 Mind rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "PickpockDick",
    "script": "scripts/alch-train.ts",
    "args": [
@@ -514,19 +535,6 @@
    "resources": [
     "shop:zaff"
    ]
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-6858519f-46fc-43fa-a2c6-bc8b5f70f7ae"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "local-recover-mmtha0205-20261118t041345z [task-6858519f-46fc-43fa-a2c6-bc8b5f70f7ae]",
-   "role": "supply"
   }
  ],
  "army": [
