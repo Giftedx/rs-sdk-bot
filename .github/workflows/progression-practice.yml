@@ -61,14 +61,15 @@ jobs:
       # The pathfinder snapshot, the area labels and the measured walk lengths (.practice/cache). Each file is bound to
       # the data named in the key and is checked on read. Without them each route search measures every leg again.
       - name: Restore the route caches
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             .practice/cache/rsmod-pathfinding.snap
             .practice/cache/route-areas.bin
             .practice/cache/route-legs-v2.sqlite*
-          key: route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
+          key: route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ matrix.capability }}-${{ github.run_id }}
           restore-keys: |
+            route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ matrix.capability }}-
             route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
       - name: Pack game assets
         working-directory: vendor/rs-sdk/server/engine
@@ -87,6 +88,17 @@ jobs:
         env:
           CAPABILITY: ${{ matrix.capability }}
           EXTRA_ENV: ${{ inputs.env }}
+      # The cache is saved when the job fails too: a capability whose routes are cold fails on its first runs (a search of
+      # 45 s is 300 ticks of a native 150 ms engine), and a cache that only a green job saves is never made for it.
+      - name: Save the route caches
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .practice/cache/rsmod-pathfinding.snap
+            .practice/cache/route-areas.bin
+            .practice/cache/route-legs-v2.sqlite*
+          key: route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ matrix.capability }}-${{ github.run_id }}
       - name: Retain the delivery evidence
         if: always()
         uses: actions/upload-artifact@v4
