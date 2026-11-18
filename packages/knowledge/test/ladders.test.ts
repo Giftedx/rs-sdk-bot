@@ -65,7 +65,10 @@ test('a worker is a scripts/*.ts file or a capability with an existing entry', (
 
 test('the written ladders.json matches a fresh build', () => {
     const written = JSON.parse(readFileSync(join(knowledgeDir(), 'ladders.json'), 'utf8'));
-    expect(written.counts).toEqual(out.counts);
+    // The whole build, not only the counts: a stale file fails here. Fix it with `bun packages/knowledge/src/ladders.ts`.
+    // The build reads only knowledge/*.json, router tasks and the pinned SDK content, so it is the same on every machine.
+    // The JSON round trip drops undefined fields in the same way that the file writer does.
+    expect(written).toEqual(JSON.parse(JSON.stringify(out)));
 });
 
 test('all eight native smelting rungs name both existing workers', () => {

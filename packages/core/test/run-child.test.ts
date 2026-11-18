@@ -86,3 +86,43 @@ test('synthesized failures start at column zero after unterminated child output'
         expect(writes.join('')).toBe('RESULT ok credited=1\nRESULT fail child exit 7: RESULT ok credited=1\n');
     } finally { out.mockRestore(); log.mockRestore(); }
 });
+
+test('a child that crashes with no result line gives its error line as the result, in both dispatch modes', async () => {
+    const crash = child("console.log('START worker'); throw Error('fleet swarm claim authority unavailable or changed: spawnSync git ETIMEDOUT');");
+    const writes: string[] = [];
+    const out = spyOn(process.stdout, 'write').mockImplementation(((text: string) => { writes.push(String(text)); return true; }) as any);
+    const err = spyOn(process.stderr, 'write').mockImplementation((() => true) as any);
+    const log = spyOn(console, 'log').mockImplementation(text => { writes.push(String(text) + '\n'); });
+    try {
+        const expected = 'RESULT fail fleet swarm claim authority unavailable or changed: spawnSync git ETIMEDOUT';
+        expect(await runChild([crash])).toBe(expected);
+        expect(await runDirectChild([crash])).toBe(expected);
+        expect(writes.join('')).toContain(expected + '\n');
+        // The result line of the child wins over an error line. A clean exit with no result stays "no result".
+        expect(await runChild([child("console.log('RESULT fail supplies'); throw Error('later crash');")])).toBe('RESULT fail supplies');
+        expect(await runChild([child("console.error('error: a diagnostic, not a crash');")])).toBe('RESULT fail no result');
+        // An exit code with no error line stays "no result".
+        expect(await runChild([child("process.exit(3);")])).toBe('RESULT fail no result');
+    } finally { out.mockRestore(); err.mockRestore(); log.mockRestore(); }
+}, 30_000);
+
+test('the error line of a crashed child loses the credentials of each URL before it is a result', async () => {
+    const out = spyOn(process.stdout, 'write').mockImplementation((() => true) as any);
+    const err = spyOn(process.stderr, 'write').mockImplementation((() => true) as any);
+    try {
+        const result = await runChild([child("throw Error('fleet swarm claim authority unavailable or changed: fatal: unable to access https://fleet-user:s3cr3t-token@github.com/owner/repo.git/: Could not resolve host');")]);
+        expect(result).toBe('RESULT fail fleet swarm claim authority unavailable or changed: fatal: unable to access https://github.com/owner/repo.git/: Could not resolve host');
+        expect(result).not.toContain('s3cr3t-token');
+    } finally { out.mockRestore(); err.mockRestore(); }
+}, 30_000);
+
+test('a crash line loses tokens and secret values, not only URL credentials', async () => {
+    const out = spyOn(process.stdout, 'write').mockImplementation((() => true) as any);
+    const err = spyOn(process.stderr, 'write').mockImplementation((() => true) as any);
+    try {
+        const result = await runChild([child("throw Error('request failed: Authorization: Bearer abc.def-123 FLEET_VAULT_KEY=topsecret password=\"hunter2\" for https://u:p@host.example/x');")]);
+        for (const secret of ['abc.def-123', 'topsecret', 'hunter2', 'u:p@']) expect(result, secret).not.toContain(secret);
+        expect(result).toContain('RESULT fail request failed:');
+        expect(result).toContain('https://host.example/x');
+    } finally { out.mockRestore(); err.mockRestore(); }
+}, 30_000);
