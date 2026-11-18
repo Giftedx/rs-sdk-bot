@@ -664,12 +664,12 @@ if (import.meta.main) {
         return share;
     };
     // SQUAD_THREAT=1: the threat radar (scripts/pk-threat.ts) reads every member's view and the world feed, logs each threat and decision,
-    // and records each attacker. SQUAD_THREAT_ACT=0 only logs and records. The targets of the squad are expected: they get a protect prayer but no retreat.
+    // and records each attacker. SQUAD_THREAT_ACT=0 only logs and records. The targets of the squad are expected: they get a protect prayer but no retreat (SQUAD_THREAT_EXPECTED=0: a target is a stranger too, for a bench whose attackers are also the targets).
     let closeThreatRadar: (() => void) | undefined, threats: ThreatWatch | undefined;
     if (get('SQUAD_THREAT', '0') === '1') {
         const radar = new Radar();
         if (!gang.length) closeThreatRadar = connectRadar(squadServer, radar);
-        threats = new ThreatWatch({ sessions: () => squad, server: squadServer, friends: new Set(ours.map(n => n.toLowerCase())), radar, log, act: get('SQUAD_THREAT_ACT', '1') !== '0', cooldown: Number(get('SQUAD_THREAT_COOLDOWN', '600')), decide: { expected: targets } });
+        threats = new ThreatWatch({ sessions: () => squad, server: squadServer, friends: new Set(ours.map(n => n.toLowerCase())), radar, log, act: get('SQUAD_THREAT_ACT', '1') !== '0', cooldown: Number(get('SQUAD_THREAT_COOLDOWN', '600')), decide: { expected: get('SQUAD_THREAT_EXPECTED', '1') === '1' ? targets : new Set<string>() } });
     }
     const results = await Promise.all(squad.map(s => {
         const kit = kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []);
