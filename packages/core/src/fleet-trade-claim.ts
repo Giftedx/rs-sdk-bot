@@ -225,7 +225,14 @@ export function acquireFleetTradeClaim(root: string, input: TradeClaimInput, now
     }
     const key = createHash('sha256').update(JSON.stringify([orderId.toLowerCase(), role])).digest('hex');
     const subject = 'Fleet trade attempt ' + key;
-    if (head && git(['log', '-1', '--format=%H', '--fixed-strings', '--grep=' + subject, head])) throw Error('fleet trade order role already claimed');
+    // One attempt for each order role, so that no order is traded two times. The one exception: the head is the claim
+    // of this checkout for the same order role, and it never reached the network (its marker from before the push is
+    // there and its process is gone). That attempt traded nothing. A claim push that times out for its client can
+    // reach the remote: with no exception, each later try of the order reads "already claimed" to the end of its window.
+    const sameAbandoned = !!pending && !pending.inherited && !!claim && !isSwarmClaim(claim)
+        && claim.orderId.toLowerCase() === orderId.toLowerCase() && claim.role === role;
+    const earlier = head ? git(['log', '-1', '--format=%H', '--fixed-strings', '--grep=' + subject, head]) : '';
+    if (earlier && !(sameAbandoned && earlier === head)) throw Error('fleet trade order role already claimed');
     const record: FleetTradeClaim = { account, server, side, orderId, role, nonce: randomUUID(), phase: 'held', at: now(), ...claimOwner(root) };
     writePending(root, record);
     appendClaim(git, ref, head, subject, record);
