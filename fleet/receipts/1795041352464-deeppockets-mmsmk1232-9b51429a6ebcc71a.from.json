@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795041352464-deeppockets-mmsmk1232-9b51429a6ebcc71a",
+ "account": "Deeppockets",
+ "partner": "mmsmk1232",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "2d86b54c-45a8-4a50-98c1-6736d30456a1",
+ "count": 0,
+ "ok": false,
+ "at": 1795041362470,
+ "detail": "trade claimed"
+}
