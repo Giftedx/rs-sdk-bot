@@ -8397,6 +8397,34 @@
   }
  },
  {
+  "locName": "death_hermitcave_exit",
+  "option": "op1",
+  "from": {
+   "x": 2268,
+   "z": 4750,
+   "level": 0
+  },
+  "to": {
+   "x": 2858,
+   "z": 3577,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m35_74.jm2:1570",
+  "toSrc": "scripts/quests/quest_death/scripts/quest_death.rs2:7",
+  "handler": "scripts/quests/quest_death/scripts/quest_death.rs2:5",
+  "interaction": {
+   "id": 3736,
+   "shape": 10,
+   "angle": 2,
+   "width": 3,
+   "height": 2,
+   "blockAccessFlags": 0,
+   "src": "maps/m35_74.jm2:1570",
+   "configSrc": "scripts/quests/quest_death/configs/quest_death.loc:734"
+  }
+ },
+ {
   "locName": "ladder",
   "option": "op1",
   "from": {
@@ -8789,6 +8817,34 @@
   }
  },
  {
+  "locName": "gnome_caveladder",
+  "option": "op1",
+  "from": {
+   "x": 2409,
+   "z": 9818,
+   "level": 0
+  },
+  "to": {
+   "x": 2410,
+   "z": 3421,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m37_153.jm2:4644",
+  "toSrc": "scripts/areas/area_gnome/scripts/brimstail_cave.rs2:5",
+  "handler": "scripts/areas/area_gnome/scripts/brimstail_cave.rs2:4",
+  "interaction": {
+   "id": 195,
+   "shape": 10,
+   "angle": 0,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 11,
+   "src": "maps/m37_153.jm2:4644",
+   "configSrc": "scripts/areas/area_gnome/configs/brimstail_cave.loc:11"
+  }
+ },
+ {
   "locName": "castlewars_ladder_cellar_directional",
   "option": "op1",
   "from": {
@@ -9038,6 +9094,34 @@
    "blockAccessFlags": 0,
    "src": "maps/m37_53.jm2:5256",
    "configSrc": "scripts/_unpack/225/all.loc:9745"
+  }
+ },
+ {
+  "locName": "gnome_caveentrance",
+  "option": "op1",
+  "from": {
+   "x": 2408,
+   "z": 3417,
+   "level": 0
+  },
+  "to": {
+   "x": 2409,
+   "z": 9819,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m37_53.jm2:5456",
+  "toSrc": "scripts/areas/area_gnome/scripts/brimstail_cave.rs2:2",
+  "handler": "scripts/areas/area_gnome/scripts/brimstail_cave.rs2:1",
+  "interaction": {
+   "id": 194,
+   "shape": 10,
+   "angle": 1,
+   "width": 4,
+   "height": 4,
+   "blockAccessFlags": 7,
+   "src": "maps/m37_53.jm2:5456",
+   "configSrc": "scripts/areas/area_gnome/configs/brimstail_cave.loc:1"
   }
  },
  {
@@ -11169,6 +11253,34 @@
   }
  },
  {
+  "locName": "horror_lighthouse_spiralstairs_base",
+  "option": "op1",
+  "from": {
+   "x": 2442,
+   "z": 4600,
+   "level": 0
+  },
+  "to": {
+   "x": 2441,
+   "z": 4601,
+   "level": 1
+  },
+  "exact": false,
+  "src": "maps/m38_71.jm2:5104",
+  "toSrc": "scripts/quests/quest_horror/scripts/quest_horror.rs2:188",
+  "handler": "scripts/quests/quest_horror/scripts/quest_horror.rs2:186",
+  "interaction": {
+   "id": 4568,
+   "shape": 10,
+   "angle": 2,
+   "width": 2,
+   "height": 2,
+   "blockAccessFlags": 0,
+   "src": "maps/m38_71.jm2:5104",
+   "configSrc": "scripts/quests/quest_horror/configs/quest_horror.loc:299"
+  }
+ },
+ {
   "locName": "ladder_from_cellar_directional",
   "option": "op1",
   "from": {
@@ -11278,6 +11390,62 @@
    "blockAccessFlags": 0,
    "src": "maps/m39_155.jm2:2875",
    "configSrc": "scripts/_unpack/225/all.loc:9862"
+  }
+ },
+ {
+  "locName": "horror_ladder_base2",
+  "option": "op1",
+  "from": {
+   "x": 2515,
+   "z": 10007,
+   "level": 0
+  },
+  "to": {
+   "x": 2515,
+   "z": 10005,
+   "level": 1
+  },
+  "exact": false,
+  "src": "maps/m39_156.jm2:1676",
+  "toSrc": "scripts/quests/quest_horror/scripts/quest_horror.rs2:477",
+  "handler": "scripts/quests/quest_horror/scripts/quest_horror.rs2:475",
+  "interaction": {
+   "id": 4413,
+   "shape": 10,
+   "angle": 2,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m39_156.jm2:1676",
+   "configSrc": "scripts/quests/quest_horror/configs/quest_horror.loc:44"
+  }
+ },
+ {
+  "locName": "horror_ladder_top2",
+  "option": "op1",
+  "from": {
+   "x": 2515,
+   "z": 10006,
+   "level": 1
+  },
+  "to": {
+   "x": 2515,
+   "z": 10008,
+   "level": 0
+  },
+  "exact": false,
+  "src": "maps/m39_156.jm2:2482",
+  "toSrc": "scripts/quests/quest_horror/scripts/quest_horror.rs2:473",
+  "handler": "scripts/quests/quest_horror/scripts/quest_horror.rs2:471",
+  "interaction": {
+   "id": 4485,
+   "shape": 10,
+   "angle": 2,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m39_156.jm2:2482",
+   "configSrc": "scripts/quests/quest_horror/configs/quest_horror.loc:52"
   }
  },
  {
@@ -11869,6 +12037,34 @@
   }
  },
  {
+  "locName": "horror_lighthouse_spiralstairs_base",
+  "option": "op1",
+  "from": {
+   "x": 2506,
+   "z": 3640,
+   "level": 0
+  },
+  "to": {
+   "x": 2505,
+   "z": 3641,
+   "level": 1
+  },
+  "exact": false,
+  "src": "maps/m39_56.jm2:5104",
+  "toSrc": "scripts/quests/quest_horror/scripts/quest_horror.rs2:188",
+  "handler": "scripts/quests/quest_horror/scripts/quest_horror.rs2:186",
+  "interaction": {
+   "id": 4568,
+   "shape": 10,
+   "angle": 2,
+   "width": 2,
+   "height": 2,
+   "blockAccessFlags": 0,
+   "src": "maps/m39_56.jm2:5104",
+   "configSrc": "scripts/quests/quest_horror/configs/quest_horror.loc:299"
+  }
+ },
+ {
   "locName": "spiralstairs_wooden",
   "option": "op1",
   "from": {
@@ -11978,6 +12174,90 @@
    "blockAccessFlags": 13,
    "src": "maps/m39_60.jm2:8685",
    "configSrc": "scripts/_unpack/225/all.loc:9769"
+  }
+ },
+ {
+  "locName": "horror_ladder_base2",
+  "option": "op1",
+  "from": {
+   "x": 2515,
+   "z": 4631,
+   "level": 0
+  },
+  "to": {
+   "x": 2515,
+   "z": 4629,
+   "level": 1
+  },
+  "exact": false,
+  "src": "maps/m39_72.jm2:1678",
+  "toSrc": "scripts/quests/quest_horror/scripts/quest_horror.rs2:477",
+  "handler": "scripts/quests/quest_horror/scripts/quest_horror.rs2:475",
+  "interaction": {
+   "id": 4413,
+   "shape": 10,
+   "angle": 2,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m39_72.jm2:1678",
+   "configSrc": "scripts/quests/quest_horror/configs/quest_horror.loc:44"
+  }
+ },
+ {
+  "locName": "horror_ladder_top2",
+  "option": "op1",
+  "from": {
+   "x": 2515,
+   "z": 4630,
+   "level": 1
+  },
+  "to": {
+   "x": 2515,
+   "z": 4632,
+   "level": 0
+  },
+  "exact": false,
+  "src": "maps/m39_72.jm2:2484",
+  "toSrc": "scripts/quests/quest_horror/scripts/quest_horror.rs2:473",
+  "handler": "scripts/quests/quest_horror/scripts/quest_horror.rs2:471",
+  "interaction": {
+   "id": 4485,
+   "shape": 10,
+   "angle": 2,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m39_72.jm2:2484",
+   "configSrc": "scripts/quests/quest_horror/configs/quest_horror.loc:52"
+  }
+ },
+ {
+  "locName": "magearena_ladder_from_cellar",
+  "option": "op1",
+  "from": {
+   "x": 2542,
+   "z": 4713,
+   "level": 0
+  },
+  "to": {
+   "x": 3091,
+   "z": 3957,
+   "level": 0
+  },
+  "exact": false,
+  "src": "maps/m39_73.jm2:5665",
+  "toSrc": "scripts/areas/area_mage_arena/scripts/mage_arena.rs2:11",
+  "handler": "scripts/areas/area_mage_arena/scripts/mage_arena.rs2:9",
+  "interaction": {
+   "id": 2872,
+   "shape": 10,
+   "angle": 1,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m39_73.jm2:5665",
+   "configSrc": "scripts/_unpack/225/all.loc:13582"
   }
  },
  {
@@ -12342,6 +12622,34 @@
    "blockAccessFlags": 0,
    "src": "maps/m40_152.jm2:4386",
    "configSrc": "scripts/_unpack/225/all.loc:9862"
+  }
+ },
+ {
+  "locName": "baxtorian_door_waterfall_quest",
+  "option": "op1",
+  "from": {
+   "x": 2575,
+   "z": 9861,
+   "level": 0
+  },
+  "to": {
+   "x": 2511,
+   "z": 3463,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m40_154.jm2:5279",
+  "toSrc": "scripts/quests/quest_waterfall/scripts/quest_waterfall.rs2:289",
+  "handler": "scripts/quests/quest_waterfall/scripts/quest_waterfall.rs2:287",
+  "interaction": {
+   "id": 2000,
+   "shape": 0,
+   "angle": 3,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m40_154.jm2:5279",
+   "configSrc": "scripts/quests/quest_waterfall/configs/waterfall.loc:100"
   }
  },
  {
@@ -13802,6 +14110,118 @@
    "blockAccessFlags": 11,
    "src": "maps/m40_71.jm2:5667",
    "configSrc": "scripts/_unpack/225/all.loc:846"
+  }
+ },
+ {
+  "locName": "karam_dungeon_cavestairs2",
+  "option": "op1",
+  "from": {
+   "x": 2635,
+   "z": 9514,
+   "level": 0
+  },
+  "to": {
+   "x": 2636,
+   "z": 9510,
+   "level": 2
+  },
+  "exact": true,
+  "src": "maps/m41_148.jm2:8038",
+  "toSrc": "scripts/areas/area_karamja/scripts/karam_dungeon.rs2:241",
+  "handler": "scripts/areas/area_karamja/scripts/karam_dungeon.rs2:240",
+  "interaction": {
+   "id": 5097,
+   "shape": 10,
+   "angle": 2,
+   "width": 4,
+   "height": 3,
+   "blockAccessFlags": 0,
+   "src": "maps/m41_148.jm2:8038",
+   "configSrc": "scripts/areas/area_karamja/configs/karam_dungeon.loc:240"
+  }
+ },
+ {
+  "locName": "karam_dungeon_cavestairs_lev2_down2",
+  "option": "op1",
+  "from": {
+   "x": 2635,
+   "z": 9511,
+   "level": 2
+  },
+  "to": {
+   "x": 2636,
+   "z": 9517,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m41_148.jm2:11923",
+  "toSrc": "scripts/areas/area_karamja/scripts/karam_dungeon.rs2:244",
+  "handler": "scripts/areas/area_karamja/scripts/karam_dungeon.rs2:243",
+  "interaction": {
+   "id": 5098,
+   "shape": 10,
+   "angle": 2,
+   "width": 4,
+   "height": 3,
+   "blockAccessFlags": 0,
+   "src": "maps/m41_148.jm2:11923",
+   "configSrc": "scripts/areas/area_karamja/configs/karam_dungeon.loc:249"
+  }
+ },
+ {
+  "locName": "karam_dungeon_cavestairs",
+  "option": "op1",
+  "from": {
+   "x": 2648,
+   "z": 9592,
+   "level": 0
+  },
+  "to": {
+   "x": 2643,
+   "z": 9595,
+   "level": 2
+  },
+  "exact": true,
+  "src": "maps/m41_149.jm2:7645",
+  "toSrc": "scripts/areas/area_karamja/scripts/karam_dungeon.rs2:235",
+  "handler": "scripts/areas/area_karamja/scripts/karam_dungeon.rs2:234",
+  "interaction": {
+   "id": 5094,
+   "shape": 10,
+   "angle": 0,
+   "width": 4,
+   "height": 3,
+   "blockAccessFlags": 0,
+   "src": "maps/m41_149.jm2:7645",
+   "configSrc": "scripts/areas/area_karamja/configs/karam_dungeon.loc:214"
+  }
+ },
+ {
+  "locName": "karam_dungeon_cavestairs_lev2_down",
+  "option": "op1",
+  "from": {
+   "x": 2644,
+   "z": 9593,
+   "level": 2
+  },
+  "to": {
+   "x": 2649,
+   "z": 9591,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m41_149.jm2:11442",
+  "toSrc": "scripts/areas/area_karamja/scripts/karam_dungeon.rs2:238",
+  "handler": "scripts/areas/area_karamja/scripts/karam_dungeon.rs2:237",
+  "interaction": {
+   "id": 5096,
+   "shape": 10,
+   "angle": 3,
+   "width": 4,
+   "height": 3,
+   "blockAccessFlags": 0,
+   "src": "maps/m41_149.jm2:11442",
+   "configSrc": "scripts/areas/area_karamja/configs/karam_dungeon.loc:231"
   }
  },
  {
@@ -15426,6 +15846,34 @@
    "blockAccessFlags": 0,
    "src": "maps/m41_73.jm2:6722",
    "configSrc": "scripts/_unpack/225/all.loc:9790"
+  }
+ },
+ {
+  "locName": "karam_dungeon_exit",
+  "option": "op1",
+  "from": {
+   "x": 2714,
+   "z": 9564,
+   "level": 0
+  },
+  "to": {
+   "x": 2745,
+   "z": 3152,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m42_149.jm2:5830",
+  "toSrc": "scripts/areas/area_karamja/scripts/karam_dungeon.rs2:77",
+  "handler": "scripts/areas/area_karamja/scripts/karam_dungeon.rs2:76",
+  "interaction": {
+   "id": 5084,
+   "shape": 0,
+   "angle": 0,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m42_149.jm2:5830",
+   "configSrc": "scripts/areas/area_karamja/configs/karam_dungeon.loc:147"
   }
  },
  {
@@ -17081,6 +17529,34 @@
   }
  },
  {
+  "locName": "climbing_rope2",
+  "option": "op1",
+  "from": {
+   "x": 2856,
+   "z": 9569,
+   "level": 0
+  },
+  "to": {
+   "x": 2856,
+   "z": 3166,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m44_149.jm2:6490",
+  "toSrc": "scripts/areas/area_karamja/scripts/misc_locs.rs2:13",
+  "handler": "scripts/areas/area_karamja/scripts/misc_locs.rs2:9",
+  "interaction": {
+   "id": 1764,
+   "shape": 10,
+   "angle": 0,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m44_149.jm2:6490",
+   "configSrc": "scripts/_unpack/225/all.loc:9928"
+  }
+ },
+ {
   "locName": "ladder_from_cellar",
   "option": "op1",
   "from": {
@@ -17750,6 +18226,34 @@
    "blockAccessFlags": 0,
    "src": "maps/m44_46.jm2:8875",
    "configSrc": "scripts/_unpack/225/all.loc:9790"
+  }
+ },
+ {
+  "locName": "volcano_entrance",
+  "option": "op1",
+  "from": {
+   "x": 2856,
+   "z": 3168,
+   "level": 0
+  },
+  "to": {
+   "x": 2856,
+   "z": 9568,
+   "level": 0
+  },
+  "exact": false,
+  "src": "maps/m44_49.jm2:5005",
+  "toSrc": "scripts/areas/area_karamja/scripts/misc_locs.rs2:6",
+  "handler": "scripts/areas/area_karamja/scripts/misc_locs.rs2:2",
+  "interaction": {
+   "id": 492,
+   "shape": 10,
+   "angle": 0,
+   "width": 2,
+   "height": 2,
+   "blockAccessFlags": 0,
+   "src": "maps/m44_49.jm2:5005",
+   "configSrc": "scripts/_unpack/225/all.loc:2419"
   }
  },
  {
@@ -18481,6 +18985,34 @@
   }
  },
  {
+  "locName": "death_hermitcave_entrance",
+  "option": "op1",
+  "from": {
+   "x": 2857,
+   "z": 3578,
+   "level": 0
+  },
+  "to": {
+   "x": 2269,
+   "z": 4752,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m44_55.jm2:5537",
+  "toSrc": "scripts/quests/quest_death/scripts/quest_death.rs2:3",
+  "handler": "scripts/quests/quest_death/scripts/quest_death.rs2:1",
+  "interaction": {
+   "id": 3735,
+   "shape": 10,
+   "angle": 0,
+   "width": 3,
+   "height": 2,
+   "blockAccessFlags": 0,
+   "src": "maps/m44_55.jm2:5537",
+   "configSrc": "scripts/quests/quest_death/configs/quest_death.loc:715"
+  }
+ },
+ {
   "locName": "ladder_from_cellar",
   "option": "op1",
   "from": {
@@ -18758,6 +19290,34 @@
    "blockAccessFlags": 0,
    "src": "maps/m45_50.jm2:5807",
    "configSrc": "scripts/_unpack/225/all.loc:9798"
+  }
+ },
+ {
+  "locName": "funladdertop",
+  "option": "op1",
+  "from": {
+   "x": 2932,
+   "z": 3240,
+   "level": 0
+  },
+  "to": {
+   "x": 2932,
+   "z": 9640,
+   "level": 0
+  },
+  "exact": false,
+  "src": "maps/m45_50.jm2:5968",
+  "toSrc": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:35",
+  "handler": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:33",
+  "interaction": {
+   "id": 2605,
+   "shape": 10,
+   "angle": 1,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m45_50.jm2:5968",
+   "configSrc": "scripts/quests/quest_dragon/configs/quest_dragon.loc:164"
   }
  },
  {
@@ -21589,6 +22149,62 @@
   }
  },
  {
+  "locName": "loc_1768",
+  "option": "op1",
+  "from": {
+   "x": 3017,
+   "z": 10249,
+   "level": 0
+  },
+  "to": {
+   "x": 3070,
+   "z": 3856,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m47_160.jm2:3579",
+  "toSrc": "scripts/areas/area_wilderness/scripts/lava_maze.rs2:35",
+  "handler": "scripts/areas/area_wilderness/scripts/lava_maze.rs2:34",
+  "interaction": {
+   "id": 1768,
+   "shape": 10,
+   "angle": 2,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m47_160.jm2:3579",
+   "configSrc": "scripts/_unpack/225/all.loc:9955"
+  }
+ },
+ {
+  "locName": "loc_1766",
+  "option": "op1",
+  "from": {
+   "x": 3069,
+   "z": 10256,
+   "level": 0
+  },
+  "to": {
+   "x": 3016,
+   "z": 3849,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m47_160.jm2:5275",
+  "toSrc": "scripts/areas/area_wilderness/scripts/lava_maze.rs2:29",
+  "handler": "scripts/areas/area_wilderness/scripts/lava_maze.rs2:28",
+  "interaction": {
+   "id": 1766,
+   "shape": 10,
+   "angle": 2,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m47_160.jm2:5275",
+   "configSrc": "scripts/_unpack/225/all.loc:9941"
+  }
+ },
+ {
   "locName": "ladder_cellar_inside_down",
   "option": "op1",
   "from": {
@@ -24033,6 +24649,34 @@
   }
  },
  {
+  "locName": "wildymirrorladdertop2",
+  "option": "op1",
+  "from": {
+   "x": 3069,
+   "z": 3856,
+   "level": 0
+  },
+  "to": {
+   "x": 3016,
+   "z": 10249,
+   "level": 0
+  },
+  "exact": true,
+  "src": "maps/m47_60.jm2:5191",
+  "toSrc": "scripts/areas/area_wilderness/scripts/lava_maze.rs2:32",
+  "handler": "scripts/areas/area_wilderness/scripts/lava_maze.rs2:31",
+  "interaction": {
+   "id": 1767,
+   "shape": 10,
+   "angle": 3,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m47_60.jm2:5191",
+   "configSrc": "scripts/_unpack/225/all.loc:9948"
+  }
+ },
+ {
   "locName": "ladder",
   "option": "op1",
   "from": {
@@ -24786,6 +25430,34 @@
    "blockAccessFlags": 13,
    "src": "maps/m48_55.jm2:4786",
    "configSrc": "scripts/_unpack/225/all.loc:9896"
+  }
+ },
+ {
+  "locName": "magearena_ladder_to_cellar",
+  "option": "op1",
+  "from": {
+   "x": 3091,
+   "z": 3957,
+   "level": 0
+  },
+  "to": {
+   "x": 2542,
+   "z": 4713,
+   "level": 0
+  },
+  "exact": false,
+  "src": "maps/m48_61.jm2:5538",
+  "toSrc": "scripts/areas/area_mage_arena/scripts/mage_arena.rs2:6",
+  "handler": "scripts/areas/area_mage_arena/scripts/mage_arena.rs2:1",
+  "interaction": {
+   "id": 2871,
+   "shape": 10,
+   "angle": 0,
+   "width": 1,
+   "height": 1,
+   "blockAccessFlags": 0,
+   "src": "maps/m48_61.jm2:5538",
+   "configSrc": "scripts/_unpack/225/all.loc:13562"
   }
  },
  {

@@ -1,22 +1,38 @@
 // Where an item lies on the ground and respawns: the OBJ section of each map square file. A line is
 // `<level> <localX> <localZ>: <obj id> <count>`; the file m<X>_<Z>.jm2 holds world x = X*64 + localX, z = Z*64 + localZ.
-import { readdirSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import type { Tile } from './world';
 
-const maps = join(resolve(import.meta.dir, '..', '..', '..'), 'vendor', 'rs-sdk', 'server', 'content', 'maps');
+const repoRoot = resolve(import.meta.dir, '..', '..', '..');
+const maps = join(repoRoot, 'vendor', 'rs-sdk', 'server', 'content', 'maps');
+export const DEFAULT_SPAWN_CACHE = join(repoRoot, '.practice', 'cache', 'obj-spawns.json');
 
 export function parseObjSpawns(file: string, text: string, out = new Map<number, Tile[]>()): Map<number, Tile[]> {
-    const square = file.match(/^m(\d+)_(\d+)\.jm2$/);
+    const square = /^m(\d+)_(\d+)\.jm2$/.exec(file);
+    if (!square) return out;
     const at = text.indexOf('==== OBJ');
-    if (!square || at < 0) return out;
+    if (at < 0) return out;
+    const nl0 = text.indexOf('\n', at);
+    if (nl0 < 0) return out;
     const baseX = Number(square[1]) * 64, baseZ = Number(square[2]) * 64;
-    for (const line of text.slice(at).split(/\r?\n/).slice(1)) {
-        if (line.startsWith('====')) break;
-        const m = line.match(/^(\d+) (\d+) (\d+): (\d+)/);
-        if (!m) continue;
-        const id = Number(m[4]), tile = { x: baseX + Number(m[2]), z: baseZ + Number(m[3]), level: Number(m[1]) };
-        out.set(id, [...(out.get(id) ?? []), tile]);
+    let pos = nl0 + 1;
+    const len = text.length;
+    while (pos < len) {
+        let nl = text.indexOf('\n', pos);
+        if (nl < 0) nl = len;
+        const lineEnd = nl > pos && text.charCodeAt(nl - 1) === 13 ? nl - 1 : nl;
+        if (text.startsWith('====', pos)) break;
+        const m = /^(\d+) (\d+) (\d+): (\d+)/.exec(text.slice(pos, lineEnd));
+        if (m) {
+            const id = Number(m[4]);
+            const tile: Tile = { x: baseX + Number(m[2]), z: baseZ + Number(m[3]), level: Number(m[1]) };
+            let list = out.get(id);
+            if (!list) { list = []; out.set(id, list); }
+            list.push(tile);
+        }
+        pos = nl + 1;
     }
     return out;
 }
@@ -35,12 +51,73 @@ export const rank = (list: Tile[], at: Tile): Tile[] => {
 };
 export const locsByDistance = (locId: number, at: Tile, list?: Map<number, Tile[]>): Tile[] => rank(list ? list.get(locId) ?? [] : pickableTiles(locId), at);
 
+type SpawnCache = { v: 1; key: string; entries: [number, number[]][] };
+
+function spawnCacheKey(mapsDir: string, files: string[]): string {
+    const h = createHash('sha256').update('v1:');
+    for (const f of files) {
+        const st = statSync(join(mapsDir, f));
+        h.update(`${f}:${st.size}:${Math.trunc(st.mtimeMs)}\n`);
+    }
+    return h.digest('hex');
+}
+
+function loadCachedSpawns(cacheFile: string, key: string): Map<number, Tile[]> | null {
+    try {
+        const parsed = JSON.parse(readFileSync(cacheFile, 'utf8')) as SpawnCache;
+        if (parsed?.v !== 1 || parsed.key !== key || !Array.isArray(parsed.entries)) return null;
+        const out = new Map<number, Tile[]>();
+        for (const [id, coords] of parsed.entries) {
+            const list: Tile[] = [];
+            for (let i = 0; i < coords.length; i += 3) {
+                list.push({ x: coords[i]!, z: coords[i + 1]!, level: coords[i + 2]! });
+            }
+            out.set(id, list);
+        }
+        return out;
+    } catch {
+        return null;
+    }
+}
+
+function saveCachedSpawns(cacheFile: string, key: string, map: Map<number, Tile[]>): void {
+    try {
+        mkdirSync(dirname(cacheFile), { recursive: true });
+        const entries: [number, number[]][] = [];
+        for (const [id, tiles] of map) {
+            const coords = new Array<number>(tiles.length * 3);
+            for (let i = 0; i < tiles.length; i++) {
+                const t = tiles[i]!;
+                coords[i * 3] = t.x;
+                coords[i * 3 + 1] = t.z;
+                coords[i * 3 + 2] = t.level;
+            }
+            entries.push([id, coords]);
+        }
+        const tmp = `${cacheFile}.${process.pid}.${Date.now()}.tmp`;
+        writeFileSync(tmp, JSON.stringify({ v: 1, key, entries }));
+        renameSync(tmp, cacheFile);
+    } catch {
+        // Ignore cache write contention or read-only filesystems.
+    }
+}
+
 let index: Map<number, Tile[]> | undefined;
-export function objSpawns(): Map<number, Tile[]> {
-    if (index) return index;
-    index = new Map();
-    for (const f of readdirSync(maps)) if (f.endsWith('.jm2')) parseObjSpawns(f, readFileSync(join(maps, f), 'utf8'), index);
-    return index;
+export function objSpawns(mapsDir = maps, cacheFile = DEFAULT_SPAWN_CACHE): Map<number, Tile[]> {
+    const isDefault = mapsDir === maps && cacheFile === DEFAULT_SPAWN_CACHE;
+    if (isDefault && index) return index;
+    const files = readdirSync(mapsDir).filter(f => f.endsWith('.jm2')).sort();
+    const key = cacheFile ? spawnCacheKey(mapsDir, files) : '';
+    const cached = cacheFile ? loadCachedSpawns(cacheFile, key) : null;
+    if (cached) {
+        if (isDefault) index = cached;
+        return cached;
+    }
+    const built = new Map<number, Tile[]>();
+    for (const f of files) parseObjSpawns(f, readFileSync(join(mapsDir, f), 'utf8'), built);
+    if (cacheFile) saveCachedSpawns(cacheFile, key, built);
+    if (isDefault) index = built;
+    return built;
 }
 
 // Spawn tiles of `id`, nearest first by straight-line distance with LEVEL_STEP tiles for each floor between (the route

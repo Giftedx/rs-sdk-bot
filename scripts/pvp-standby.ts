@@ -4,6 +4,7 @@ import type { Session } from '../packages/core/src/inprocess';
 import { componentId } from '../packages/core/src/logout';
 import { waitUntil } from '../packages/core/src/ticks';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
+import { escapeStep, hasVarrockTeleport, wearGlory, wildLevel } from './pk-roam';
 
 const bank = { x: 3252, z: 3420, level: 0 };
 const edge = { x: 3135, z: 3519, level: 0 };
@@ -80,6 +81,26 @@ export function shallowStandbyThreat(
         (!Number.isSafeInteger(player.combatLevel) || player.combatLevel < 3 || player.combatLevel > 126 ||
             Math.abs(player.combatLevel - combat) <= 1);
 }
+
+const STANDBY_FOOD_RE = /^(cheese|shark|swordfish|lobster|tuna|salmon|trout|cooked karambwan)$/i;
+const STANDBY_GLORY_RE = /^amulet of glory\([1-4]\)$/i;
+
+export function standbyEscapePlan(input: {
+    x: number;
+    z: number;
+    hp: number;
+    maxHp: number;
+    magic: number;
+    inventory: readonly { id: number; name: string; count: number }[];
+    equipment: readonly { id: number; name: string }[];
+}): { action: 'out' | 'glory' | 'teleport' | 'run'; eatFirst: boolean; wild: number; destination: typeof edge } {
+    const wild = wildLevel(input.x, input.z);
+    const hasGlory = input.inventory.some(i => STANDBY_GLORY_RE.test(i.name)) || input.equipment.some(i => STANDBY_GLORY_RE.test(i.name));
+    const hasTele = hasVarrockTeleport(input.magic, input.inventory, input.equipment);
+    const action = escapeStep(wild, { glory: hasGlory, teleport: hasTele });
+    const eatFirst = input.hp > 0 && input.hp < input.maxHp && input.inventory.some(i => STANDBY_FOOD_RE.test(i.name));
+    return { action, eatFirst, wild, destination: edge };
+}
 export async function runWildernessStandby(
     session: Session,
     mode: 'stage' | 'verify',
@@ -152,12 +173,31 @@ export async function runWildernessStandby(
         return { ok: true, final };
     } catch (error) {
         failure = String(error);
-        if ((position()?.z ?? 0) >= 3520) {
+        const pos = position();
+        if (pos && pos.z >= 3520) {
             try {
-                const retreat = await walkPath(await sessionWalker(session), [{ ...edge, tol: 0 }], {
-                    maxTicks: 20, idleMs: 9000, stop: () => hp() < Math.ceil((profile?.hp ?? 24) / 2),
+                const st = session.sdk.getState();
+                const plan = standbyEscapePlan({
+                    x: pos.x, z: pos.z,
+                    hp: st?.player?.hp ?? hp(),
+                    maxHp: st?.player?.maxHp ?? profile?.hp ?? 24,
+                    magic: session.sdk.getSkill('Magic')?.baseLevel ?? 1,
+                    inventory: session.sdk.getInventory(),
+                    equipment: session.sdk.getEquipment(),
                 });
-                failure += ' | edge exit ' + JSON.stringify(retreat);
+                if (plan.eatFirst) {
+                    const foodItem = session.sdk.getInventory().find(i => STANDBY_FOOD_RE.test(i.name));
+                    if (foodItem) await session.bot.eatFood(foodItem).catch(() => {});
+                }
+                if (plan.action === 'glory' && plan.wild > 1) {
+                    await wearGlory(session).catch(() => {});
+                }
+                if ((position()?.z ?? 0) >= 3520) {
+                    const retreat = await walkPath(await sessionWalker(session), [{ ...plan.destination, tol: 0 }], {
+                        maxTicks: 20, idleMs: 9000, stop: () => hp() < Math.ceil((profile?.hp ?? 24) / 2),
+                    });
+                    failure += ' | edge exit ' + JSON.stringify(retreat);
+                }
             } catch (retreatError) {
                 failure += ' | edge exit failed ' + String(retreatError);
             }

@@ -8,7 +8,7 @@ import { buildItems } from './items';
 import { buildGear, paramDefaults, parsePvpSpecials, parseRequirements, parseStaffItems } from './gear';
 import { buildNpcs } from './npcs';
 import { buildShops } from './shops';
-import { buildTransports, parseTransportHandlers, monkLadderSpawn, type Handler } from './transports';
+import { buildTransports, parseTransportHandlers, monkLadderSpawn, NAMED_TRANSPORT_FILES, type Handler } from './transports';
 import { classifyDoor, parseTriggers, openedTeamDoor,type OpenDoorVariant,type DoorKind, type DoorNeed } from './doors';
 import { buildDbTables } from './dbtables';
 import { buildSkillActions } from './skills';
@@ -31,13 +31,13 @@ const gear = buildGear(blocksOf('.obj'), objPack, parseRequirements(requireFiles
 
 const npcSpawns: Spawn[] = [];
 const locSpawns: LocSpawn[] = [];
-for (const f of readdirSync(join(root, 'maps')).filter(f => f.endsWith('.jm2'))) {
+for (const f of readdirSync(join(root, 'maps')).filter(f => f.endsWith('.jm2')).sort()) {
     const r = parseJm2(f, read(`maps/${f}`));
     npcSpawns.push(...r.npcs);
     locSpawns.push(...r.locs);
 }
 const npcs = buildNpcs(blocksOf('.npc'), pack('npc'), npcSpawns);
-const shops = buildShops(blocksOf('.inv'));
+const shops = buildShops(blocksOf('.inv').filter(b => !b.file.endsWith('/skill_guide.inv') && !b.file.includes('/skill_crafting/') && !b.file.includes('/skill_smithing/')));
 
 const handlers: Handler[] = [];
 const skipped: { locName: string; handler: string }[] = [];
@@ -45,7 +45,7 @@ const scriptFiles = listConfigFiles('.rs2').map(f => ({ text: read(f), file: f }
 const triggers = parseTriggers(scriptFiles);
 const classified:{locName:string;handler:string;kind:string;reason:string}[]=[];
 const ladderDir = 'scripts/ladders+stairs/scripts';
-for (const f of readdirSync(join(root, ladderDir)).filter(f => f.endsWith('.rs2'))) {
+for (const f of readdirSync(join(root, ladderDir)).filter(f => f.endsWith('.rs2')).sort()) {
     const r = parseTransportHandlers(read(`${ladderDir}/${f}`), `${ladderDir}/${f}`,{triggers});
     handlers.push(...r.handlers);
     skipped.push(...r.skipped);
@@ -55,13 +55,7 @@ for (const f of readdirSync(join(root, ladderDir)).filter(f => f.endsWith('.rs2'
 // ladder (domeladderdown) goes down to the cavern, and two cavern ladders go up to the observatory (loc_2189) and to the
 // reception (loc_2188). Each of the three moves with no condition. The reception ladder down (obs_dungeonladderdown) is
 // not here: before the quest ends it opens a dialogue first, and a transport leg cannot answer one.
-const namedLadders:Record<string,string[]>={
-    'scripts/areas/area_falador/scripts/mining_guild.rs2':['miningguildladder'],
-    'scripts/areas/monastery/scripts/prayer_guild.rs2':['monasteryladder'],
-    'scripts/minigames/game_ranging/scripts/ranging_guild_door.rs2':['ranging_guild_door'],
-    'scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2':['loc_2188','loc_2189','domeladderdown'],
-};
-for(const [file,names] of Object.entries(namedLadders)){
+for(const [file,names] of Object.entries(NAMED_TRANSPORT_FILES)){
     const r=parseTransportHandlers(read(file),file,{triggers});
     handlers.push(...r.handlers.filter(h=>names.includes(h.locName)));
 }
@@ -110,8 +104,13 @@ for (const s of scriptFiles.filter(s => s.file.startsWith('scripts/quests/'))) {
     questScripts.set(k, [...(questScripts.get(k) ?? []), s]);
 }
 const questFile = 'scripts/general/configs/quest.constant';
+const questConstants = parseConstants(read(questFile), questFile);
+for (const cf of listConfigFiles('.constant')) {
+    if (cf === questFile) continue;
+    for (const [k, v] of parseConstants(read(cf), cf)) if (!questConstants.has(k)) questConstants.set(k, v);
+}
 const procFile = 'scripts/general/scripts/quests.rs2';
-const quests = buildQuests({ constants: parseConstants(read(questFile), questFile), proc: { text: read(procFile), file: procFile }, varpFolders: questVarpFolders, folderScripts: questScripts });
+const quests = buildQuests({ constants: questConstants, proc: { text: read(procFile), file: procFile }, varpFolders: questVarpFolders, folderScripts: questScripts });
 const drops = scriptFiles.flatMap(s => parseDrops(s.text, s.file));
 // Items a roll on a shared drop proc (~randomherb, ~randomjewel, ~ultrarare_getitem, then ~megararetable) can give.
 const dropProcs = new Map(scriptFiles.flatMap(s => [...parseDropProcs(s.text, s.file)]));
@@ -183,7 +182,7 @@ writeFileSync(join(out, 'BUILD.md'), [
     '- `doors.json`: wall-layer locs with an Open option, classified from their trigger. About 1459 of the `locked` doors are `macro_maze_wallhigh` walls in the sealed random-event maze (random events are off on this server). `unknown` means the trigger shape was not understood; the router treats those as blocked.',
     '',
     '- `skills.json`: one row per skill action from the skill dbtables; `xp` is whole XP (content stores tenths). Smithing XP lives in structs and is `null` for now.',
-    '- `quests.json`: varp, complete value, quest points, and XP only from blocks that set the quest complete. The live Quest Points #1 has 141 QP; this build finds fewer (see questLinesSkipped).',
+    '- `quests.json`: varp, complete value, quest points, and XP only from blocks that set the quest complete across all 68 quests.',
     '- `drops.json`: ai_queue3 tables and shared `label:` tables. Chances are per kill out of the roll die. Tables with two rolls are known to sum over 1.',
     '',
     '## Skipped quest lines (condition form not understood)',

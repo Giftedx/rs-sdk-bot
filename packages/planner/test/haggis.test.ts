@@ -32,18 +32,25 @@ test.each([
     expect(usableStock).toMatchObject([{ itemId, ids: [itemId], owned: demand.count, short: 0 }]);
 });
 
-test('selected air-to-nature route supplies enough full essence packs for 99', () => {
-    const supplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set() });
-    // Current altar source: air 5 XP, nature 9 XP, server multiplier 25.
-    // Carry XP across the level-44 transition; round each 27-essence pack.
-    let xp = 0, used = 0;
-    while (xp < xpForLevel(99)) {
-        xp += 27 * (xp < xpForLevel(44) ? 125 : 225);
-        used += 27;
+test('selected runecraft route supplies enough full essence packs for 99', () => {
+    const bodySupplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set() });
+    const natureSupplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set(), disable: new Set(['spiders-combat']) });
+    let natureXp = 0, natureUsed = 0;
+    while (natureXp < xpForLevel(99)) {
+        natureXp += 27 * (natureXp < xpForLevel(44) ? 125 : 225);
+        natureUsed += 27;
     }
-    expect(supplies.find(s => s.item === 'rune essence')!.count).toBeGreaterThanOrEqual(used);
-    expect(supplies).toContainEqual({ item: 'air talisman', count: 1 });
-    expect(supplies).toContainEqual({ item: 'nature talisman', count: 1 });
+    let bodyXp = 0, bodyUsed = 0;
+    while (bodyXp < xpForLevel(99)) {
+        bodyXp += 27 * (bodyXp < xpForLevel(20) ? 125 : 187.5);
+        bodyUsed += 27;
+    }
+    expect(bodySupplies.find(s => s.item === 'rune essence')!.count).toBeGreaterThanOrEqual(bodyUsed);
+    expect(bodySupplies).toContainEqual({ item: 'air talisman', count: 1 });
+    expect(bodySupplies).toContainEqual({ item: 'body talisman', count: 1 });
+    expect(natureSupplies.find(s => s.item === 'rune essence')!.count).toBeGreaterThanOrEqual(natureUsed);
+    expect(natureSupplies).toContainEqual({ item: 'air talisman', count: 1 });
+    expect(natureSupplies).toContainEqual({ item: 'nature talisman', count: 1 });
 });
 
 const clock = (id: Board['id'], deadline: number): Board => ({ id, label: id, rule: { kind: 'clock', deadline } });
@@ -494,4 +501,59 @@ test('anvil route finishes Magic and Smithing and beats Family Crest plus superh
     // Magic trains in the foreground: as a stun guest it would wait on thieving, which waits on Magic 75.
     expect(haggisActivities().find(a => a.id === 'magic-anvil')!.inside).toBeUndefined();
     expect(anvil.overallFinish!).toBeLessThan(superheat.overallFinish!);
+});
+
+test('specialist ranged and agility routes beat live targets without double-counting', () => {
+    const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-live.json'));
+    const acts = haggisActivities();
+    const travel = haggisTravel();
+    const only = (id: string) => new Set(boards.filter(b => b.id !== id).map(b => b.id));
+    const soloRanged = schedule(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel, sacrificed: only('ranged') });
+    const soloAgility = schedule(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), sacrificed: only('agility') });
+    expect(soloRanged.blocked).toEqual([]);
+    expect(finish(soloRanged, 'ranged').status).toBe('WIN');
+    expect(finish(soloRanged, 'ranged').finish!).toBeLessThanOrEqual(5483);
+    expect(soloAgility.blocked).toEqual([]);
+    expect(finish(soloAgility, 'agility').status).toBe('WIN');
+    expect(finish(soloAgility, 'agility').finish!).toBeLessThanOrEqual(6031);
+});
+
+test('overall route uses teleports, spirit trees, stun-guest chaining, and keeps 145 QP', () => {
+    const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-live.json'));
+    const acts = haggisActivities();
+    const travel = haggisTravel();
+    const floor = scheduleOverall(boards, acts, { mode: 'floor', tricks: new Set(TRICKS), travel });
+    const real = scheduleOverall(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel });
+    expect(floor.blocked).toEqual([]);
+    expect(real.blocked).toEqual([]);
+    expect(floor.qp).toBe(145);
+    expect(real.qp).toBe(145);
+    expect(floor.overallFinish!).toBeLessThanOrEqual(33500);
+    expect(real.overallFinish!).toBeLessThanOrEqual(35000);
+    expect(real.route['agility-route']).toBe('grandtree');
+    // Superheat inside thieve unlocks Magic 80 so charge absorbs inside the same thieve host without blocking.
+    expect(real.order.find(p => p.id === 'superheat-stun')!.ticks).toBe(0);
+    expect(real.order.find(p => p.id === 'charge')!.ticks).toBe(0);
+    // Spirit tree cuts travel after tree completes, and deep Wildy exits via lever rather than teleporting.
+    expect(real.order.some(p => p.method === 'spirit-tree')).toBe(true);
+    const arenaExit = real.order.find(p => p.from === 'mage-arena-lever')!;
+    expect(arenaExit.method).toBe('wildy-exit-lever');
+});
+
+test('superheat-stun and q-burst levers reduce smithing and burst quests cleanly', () => {
+    const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-live.json'));
+    const acts = haggisActivities();
+    const travel = haggisTravel();
+    const force = {
+        cooking: 'loginWine', 'fletching-method': 'fletch', 'crafting-method': 'craft',
+        'herblore-method': 'herb', firemaking: 'burn', 'magic-smithing': 'anvil',
+        'agility-route': 'grandtree', 'ranged-entry-method': 'melee-cannon',
+    };
+    const real = scheduleOverall(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel, force });
+    const noSuperheat = scheduleOverall(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel, force, disable: new Set(['superheat-stun']) });
+    const noBurst = scheduleOverall(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel, force, disable: new Set(['q-burst']) });
+    expect(real.order.find(p => p.id === 'smith-anvil')!.ticks).toBeLessThan(noSuperheat.order.find(p => p.id === 'smith-anvil')!.ticks);
+    expect(real.order.find(p => p.id === 'tree')!.ticks).toBe(noBurst.order.find(p => p.id === 'tree')!.ticks - 114);
+    expect(real.order.find(p => p.id === 'druid')!.ticks).toBe(noBurst.order.find(p => p.id === 'druid')!.ticks - 31);
+    expect(real.order.find(p => p.id === 'imp-catcher')!.ticks).toBe(noBurst.order.find(p => p.id === 'imp-catcher')!.ticks - 29);
 });

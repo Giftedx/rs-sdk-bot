@@ -125,7 +125,7 @@
   "x": 2207,
   "z": 4943,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/doors/scripts/doubledoors.rs2:13",
   "src": "maps/m34_77.jm2:8290"
  },
@@ -135,7 +135,7 @@
   "x": 2207,
   "z": 4946,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/doors/scripts/doubledoors.rs2:16",
   "src": "maps/m34_77.jm2:8291"
  },
@@ -155,7 +155,7 @@
   "x": 2208,
   "z": 4943,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/doors/scripts/doubledoors.rs2:16",
   "src": "maps/m34_77.jm2:8314"
  },
@@ -165,7 +165,7 @@
   "x": 2208,
   "z": 4946,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/doors/scripts/doubledoors.rs2:13",
   "src": "maps/m34_77.jm2:8315"
  },
@@ -1612,7 +1612,11 @@
   "x": 2545,
   "z": 3569,
   "level": 0,
-  "kind": "unknown",
+  "kind": "quest",
+  "need": {
+   "varp": "barcrawl",
+   "minimum": 2
+  },
   "trigger": "scripts/areas/area_barbarian_outpost/scripts/outpost_gate.rs2:1",
   "src": "maps/m39_55.jm2:5393"
  },
@@ -1622,7 +1626,11 @@
   "x": 2545,
   "z": 3570,
   "level": 0,
-  "kind": "unknown",
+  "kind": "quest",
+  "need": {
+   "varp": "barcrawl",
+   "minimum": 2
+  },
   "trigger": "scripts/areas/area_barbarian_outpost/scripts/outpost_gate.rs2:1",
   "src": "maps/m39_55.jm2:5395"
  },
@@ -4346,7 +4354,7 @@
   "x": 2627,
   "z": 3656,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_vt/scripts/viking_door.rs2:1",
   "src": "maps/m41_57.jm2:6257"
  },
@@ -4356,7 +4364,7 @@
   "x": 2627,
   "z": 3675,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_vt/scripts/viking_door.rs2:1",
   "src": "maps/m41_57.jm2:6266"
  },
@@ -4389,7 +4397,7 @@
   "x": 2638,
   "z": 3652,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_vt/scripts/viking_door.rs2:1",
   "src": "maps/m41_57.jm2:6631"
  },
@@ -4409,7 +4417,7 @@
   "x": 2655,
   "z": 3654,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_vt/scripts/viking_door.rs2:1",
   "src": "maps/m41_57.jm2:7378"
  },
@@ -4419,7 +4427,7 @@
   "x": 2664,
   "z": 3652,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_vt/scripts/viking_door.rs2:1",
   "src": "maps/m41_57.jm2:7868"
  },
@@ -4429,7 +4437,7 @@
   "x": 2665,
   "z": 3702,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_vt/scripts/viking_door.rs2:1",
   "src": "maps/m41_57.jm2:7958"
  },
@@ -4452,7 +4460,7 @@
   "x": 2671,
   "z": 3652,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_vt/scripts/viking_door.rs2:1",
   "src": "maps/m41_57.jm2:8234"
  },
@@ -4462,7 +4470,7 @@
   "x": 2671,
   "z": 3665,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_vt/scripts/viking_door.rs2:1",
   "src": "maps/m41_57.jm2:8247"
  },
@@ -4472,7 +4480,7 @@
   "x": 2672,
   "z": 3675,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_vt/scripts/viking_door.rs2:1",
   "src": "maps/m41_57.jm2:8303"
  },
@@ -4482,7 +4490,7 @@
   "x": 2677,
   "z": 3690,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_vt/scripts/viking_door.rs2:1",
   "src": "maps/m41_57.jm2:8606"
  },
@@ -4492,7 +4500,7 @@
   "x": 2678,
   "z": 3665,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_vt/scripts/viking_door.rs2:1",
   "src": "maps/m41_57.jm2:8642"
  },
@@ -4502,7 +4510,11 @@
   "x": 2681,
   "z": 3697,
   "level": 0,
-  "kind": "unknown",
+  "kind": "quest",
+  "need": {
+   "varp": "viking",
+   "minimum": 10
+  },
   "trigger": "scripts/quests/quest_viking/scripts/quest_viking.rs2:1",
   "src": "maps/m41_57.jm2:8858"
  },
@@ -4512,7 +4524,7 @@
   "x": 2682,
   "z": 3685,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_vt/scripts/viking_door.rs2:1",
   "src": "maps/m41_57.jm2:8912"
  },
@@ -4522,7 +4534,11 @@
   "x": 2682,
   "z": 3697,
   "level": 0,
-  "kind": "unknown",
+  "kind": "quest",
+  "need": {
+   "varp": "viking",
+   "minimum": 10
+  },
   "trigger": "scripts/quests/quest_viking/scripts/quest_viking.rs2:2",
   "src": "maps/m41_57.jm2:8924"
  },
@@ -4532,7 +4548,7 @@
   "x": 2683,
   "z": 3679,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_vt/scripts/viking_door.rs2:1",
   "src": "maps/m41_57.jm2:8963"
  },
@@ -4542,7 +4558,7 @@
   "x": 2683,
   "z": 3680,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_vt/scripts/viking_door.rs2:1",
   "src": "maps/m41_57.jm2:8964"
  },
@@ -4552,7 +4568,7 @@
   "x": 2684,
   "z": 3673,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_vt/scripts/viking_door.rs2:1",
   "src": "maps/m41_57.jm2:9009"
  },
@@ -4757,7 +4773,7 @@
   "z": 2767,
   "level": 0,
   "kind": "locked",
-  "trigger": "scripts/quests/quest_mm/scripts/quest_mm.rs2:1019",
+  "trigger": "scripts/quests/quest_mm/scripts/quest_mm.rs2:1030",
   "src": "maps/m42_43.jm2:5740"
  },
  {
@@ -5247,7 +5263,7 @@
   "z": 2748,
   "level": 0,
   "kind": "locked",
-  "trigger": "scripts/quests/quest_mm/scripts/quest_mm.rs2:1019",
+  "trigger": "scripts/quests/quest_mm/scripts/quest_mm.rs2:1030",
   "src": "maps/m43_42.jm2:5440"
  },
  {
@@ -5257,7 +5273,7 @@
   "z": 2764,
   "level": 0,
   "kind": "open",
-  "trigger": "scripts/quests/quest_mm/scripts/quest_mm.rs2:831",
+  "trigger": "scripts/quests/quest_mm/scripts/quest_mm.rs2:842",
   "src": "maps/m43_43.jm2:6397"
  },
  {
@@ -6208,7 +6224,13 @@
   "x": 2924,
   "z": 9654,
   "level": 0,
-  "kind": "conditional",
+  "angle": 0,
+  "shape": 0,
+  "kind": "one_way",
+  "need": {
+   "side": "refuses when check_axis_locactive is false",
+   "whenAxis": false
+  },
   "trigger": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:20",
   "src": "maps/m45_150.jm2:1916"
  },
@@ -6218,7 +6240,13 @@
   "x": 2927,
   "z": 9649,
   "level": 0,
-  "kind": "conditional",
+  "angle": 0,
+  "shape": 0,
+  "kind": "one_way",
+  "need": {
+   "side": "refuses when check_axis_locactive is false",
+   "whenAxis": false
+  },
   "trigger": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:20",
   "src": "maps/m45_150.jm2:1975"
  },
@@ -6238,7 +6266,13 @@
   "x": 2931,
   "z": 9640,
   "level": 0,
-  "kind": "conditional",
+  "angle": 0,
+  "shape": 0,
+  "kind": "one_way",
+  "need": {
+   "side": "refuses when check_axis_locactive is false",
+   "whenAxis": false
+  },
   "trigger": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:20",
   "src": "maps/m45_150.jm2:2064"
  },
@@ -6533,7 +6567,13 @@
   "x": 2938,
   "z": 3252,
   "level": 0,
-  "kind": "conditional",
+  "angle": 0,
+  "shape": 0,
+  "kind": "one_way",
+  "need": {
+   "side": "refuses when check_axis_locactive is false",
+   "whenAxis": false
+  },
   "trigger": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:20",
   "src": "maps/m45_50.jm2:6253"
  },
@@ -24295,7 +24335,7 @@
   "x": 3119,
   "z": 3105,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_alkharid/scripts/misc_locs.rs2:6",
   "src": "maps/m48_48.jm2:6988"
  },
@@ -24305,7 +24345,7 @@
   "x": 3119,
   "z": 3108,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_alkharid/scripts/misc_locs.rs2:6",
   "src": "maps/m48_48.jm2:6993"
  },
@@ -24946,7 +24986,7 @@
   "x": 3165,
   "z": 2982,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_alkharid/scripts/misc_locs.rs2:6",
   "src": "maps/m49_46.jm2:4596"
  },
@@ -24956,7 +24996,7 @@
   "x": 3165,
   "z": 2983,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_alkharid/scripts/misc_locs.rs2:6",
   "src": "maps/m49_46.jm2:4597"
  },
@@ -24966,7 +25006,7 @@
   "x": 3172,
   "z": 2977,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_alkharid/scripts/misc_locs.rs2:6",
   "src": "maps/m49_46.jm2:4706"
  },
@@ -24976,7 +25016,7 @@
   "x": 3182,
   "z": 2984,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_alkharid/scripts/misc_locs.rs2:6",
   "src": "maps/m49_46.jm2:4837"
  },
@@ -26120,7 +26160,7 @@
   "x": 3259,
   "z": 3391,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_alkharid/scripts/misc_locs.rs2:6",
   "src": "maps/m50_52.jm2:7201"
  },
@@ -26806,7 +26846,7 @@
   "x": 3291,
   "z": 3031,
   "level": 0,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_alkharid/scripts/misc_locs.rs2:6",
   "src": "maps/m51_47.jm2:4536"
  },
@@ -26906,7 +26946,7 @@
   "x": 3288,
   "z": 3173,
   "level": 1,
-  "kind": "unknown",
+  "kind": "open",
   "trigger": "scripts/areas/area_alkharid/scripts/misc_locs.rs2:6",
   "src": "maps/m51_49.jm2:7952"
  },
@@ -27046,10 +27086,7 @@
   "x": 3264,
   "z": 3405,
   "level": 0,
-  "kind": "quest",
-  "need": {
-   "varp": "biohazard"
-  },
+  "kind": "open",
   "trigger": "scripts/areas/area_varrock/scripts/east_gate.rs2:4",
   "src": "maps/m51_53.jm2:4593"
  },
@@ -27059,10 +27096,7 @@
   "x": 3264,
   "z": 3406,
   "level": 0,
-  "kind": "quest",
-  "need": {
-   "varp": "biohazard"
-  },
+  "kind": "open",
   "trigger": "scripts/areas/area_varrock/scripts/east_gate.rs2:4",
   "src": "maps/m51_53.jm2:4594"
  },

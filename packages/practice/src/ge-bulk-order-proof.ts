@@ -19,6 +19,7 @@ import {waitUntil} from '../../core/src/ticks';
 import {orderPaths,orderQuantity,orderEscrow,orderAccounting,bankTotals,type ItemOrder} from '../../../scripts/buy-owned-ge-item';
 import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 import {runShopSupplyNative,verifyShopSupply,waitFreeMemory} from './shop-supply-order-proof';
+import {intentForEntry} from '../../planner/src/progression-catalog';
 
 // Native bulk GE order: an owned seller lists noted grapes, then the actual worker buys the exact
 // quantity, banks it and reruns the same order key. The consumer stage reads the saved bank.
@@ -266,9 +267,9 @@ async function run(directory:string){
   }
   copyFileSync(paths[buyer]!,join(directory,'before.sav'));
   const sell=await command(['packages/practice/src/ge-bulk-order-proof.ts','--sell',seller,String(order.item),String(order.quantity),String(order.ask)],{},'sell');
+  if(sell.code!==0)throw Error('native GE seller failed before buyer; inspect sell.log and sell.err');
   const env={ORDER_KEY:orderKey,ITEM_ID:String(order.item),QUANTITY:String(order.quantity),LIMIT_PRICE:String(order.limit),CASH_RESERVE:String(order.reserve),ORDER_MS:'600000',FILL_WAIT_TICKS:'20'};
-  const buy=sell.code===0?await command(['scripts/buy-owned-ge-item.ts',buyer],env,'buy',remote?330000:150000):{code:1,log:''};
-  if(sell.code!==0){writeFileSync(join(directory,'buy.log'),'');writeFileSync(join(directory,'buy.err'),'seller failed');}
+  const buy=await command(['scripts/buy-owned-ge-item.ts',buyer],env,'buy',remote?330000:150000);
   const saved=await waitPracticeSave(paths[buyer]!,s=>held(s,95,id=>id===order.item)===order.quantity);
   copyFileSync(paths[buyer]!,join(directory,'after.sav'));if(!saved.matched)throw Error('exact purchased bank stock not saved');
   const journalPath=orderPaths(serverFromEnv(readFileSync(join(rsSdkRoot(),'bots',buyer,'bot.env'),'utf8')),buyer,orderKey).journal;
@@ -331,9 +332,15 @@ async function run(directory:string){
  }
 }
 
+export function geProofFixtureRecord(argv:readonly string[]){
+ const script='packages/practice/src/ge-bulk-order-proof.ts';
+ if(!intentForEntry(script,argv,{}))throw Error('finite native GE fixture arguments required');
+ return{script,argv:[...argv]};
+}
+
 // Seller fixture: list the owned stock as banknotes at one exact ask, then log out. The offer stays on the book.
-async function sell(name:string,item:number,quantity:number,price:number){
- const s=await openBot(name);let ok=false,detail='';
+async function sell(name:string,item:number,quantity:number,price:number,record:ReturnType<typeof geProofFixtureRecord>){
+ const s=await openBot(name,{record});let ok=false,detail='';
  try{
   if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!s.sdk.getState()?.bank.isOpen,{timeoutTicks:15}))throw Error('seller bank open unproved');
   const stock=s.sdk.getState()!.bank.items.find(i=>i.id===item);if(!stock||stock.count<quantity)throw Error('seller stock missing');
@@ -350,25 +357,23 @@ async function sell(name:string,item:number,quantity:number,price:number){
  await finish([s],ok,detail);
 }
 
-if(import.meta.main){
- try{
-  if(process.argv[2]==='--snapshot'){
-   const name=process.argv[3]!;
-   if(!name)throw Error('practice snapshot required');
-   assertGeProofAccount(readFileSync(join(rsSdkRoot(),'bots',name,'bot.env'),'utf8'));
-   const s=await openBot(name);let ok=false,detail='';
-   try{
-    const generation=s.bankObservation?.()?.generation??0;
-    if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!s.sdk.getState()?.bank.isOpen&&(s.bankObservation?.()?.generation??0)>generation,{timeoutTicks:15}))throw Error('snapshot fresh bank unproved');
-    const bank=s.bankObservation?.();if(!bank)throw Error('snapshot bank unavailable');bankTotals(bank.items);
-    ok=true;detail='observed rescue bank baseline';
-   }catch(error){detail=String(error);}
-   await finish([s],ok,detail);
-  }else if(process.argv[2]==='--sell'){
-   const [name,item,quantity,price]=process.argv.slice(3);
-   if(!name)throw Error('practice seller required');
-   assertGeProofAccount(readFileSync(join(rsSdkRoot(),'bots',name,'bot.env'),'utf8'));
-   await sell(name,Number(item),Number(quantity),Number(price));
+ if(import.meta.main){
+  try{
+   if(process.argv[2]==='--snapshot'){
+    const record=geProofFixtureRecord(process.argv.slice(2)),name=record.argv[1]!;
+    assertGeProofAccount(readFileSync(join(rsSdkRoot(),'bots',name,'bot.env'),'utf8'));
+    const s=await openBot(name,{record});let ok=false,detail='';
+    try{
+     const generation=s.bankObservation?.()?.generation??0;
+     if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!s.sdk.getState()?.bank.isOpen&&(s.bankObservation?.()?.generation??0)>generation,{timeoutTicks:15}))throw Error('snapshot fresh bank unproved');
+     const bank=s.bankObservation?.();if(!bank)throw Error('snapshot bank unavailable');bankTotals(bank.items);
+     ok=true;detail='observed rescue bank baseline';
+    }catch(error){detail=String(error);}
+    await finish([s],ok,detail);
+   }else if(process.argv[2]==='--sell'){
+    const record=geProofFixtureRecord(process.argv.slice(2)),name=record.argv[1]!,[item,quantity,price]=record.argv.slice(2);
+    assertGeProofAccount(readFileSync(join(rsSdkRoot(),'bots',name,'bot.env'),'utf8'));
+    await sell(name,Number(item),Number(quantity),Number(price),record);
   }else{
    if(!process.env.DELIVERY_DIR)throw Error('run through bun run deliver ge-bulk-order');
    const directory=resolve(process.env.DELIVERY_DIR);

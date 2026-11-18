@@ -1,5 +1,8 @@
 import { test, expect } from 'bun:test';
-import { bestFireSpell, canAttack, castableFreeze, outclasses, restockPlan, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, lootAt, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { rmSync } from 'node:fs';
+import { bestDamageSpell, bestFireSpell, canAttack, canCastCharge, castableFreeze, clearScoutIntel, hasVarrockTeleport, multiPileThreat, outclasses, pickScoutTargetForSquad, publishScoutIntel, readScoutIntel, restockPlan, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, lootAt, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
 
 test('roam pickup joins one native stack without eating combat food',async()=>{
  const inventory=Array.from({length:28},(_,slot)=>({id:slot===0?884:385,slot,count:1,optionsWithIndex:[{text:'Eat'}]}));const ground=[{id:884,name:'Iron arrow',count:5,x:1,z:1}];let eaten=0;
@@ -283,4 +286,78 @@ test('outclasses: higher combat, or a far better weapon at about our level', () 
     expect(outclasses(me, { combatLevel: 126, weapon: 1331 })).toBe(false);
     expect(outclasses(me, { combatLevel: 110, weapon: 1215 })).toBe(false);  // much lower combat
     expect(outclasses({ combat: 126 }, { combatLevel: 126, weapon: 1215 })).toBe(false); // our weapon unknown
+});
+
+test('hasVarrockTeleport recognizes Mystic/battlestaff air and fire staves alongside rune stacks', () => {
+    const runes = (law: number, air: number, fire: number) => [
+        ...(law ? [{ name: 'Law rune', count: law }] : []),
+        ...(air ? [{ name: 'Air rune', count: air }] : []),
+        ...(fire ? [{ name: 'Fire rune', count: fire }] : []),
+    ];
+    expect(hasVarrockTeleport(24, runes(1, 3, 1), [])).toBe(false);
+    expect(hasVarrockTeleport(25, runes(0, 3, 1), [])).toBe(false);
+    expect(hasVarrockTeleport(25, runes(1, 2, 1), [])).toBe(false);
+    expect(hasVarrockTeleport(25, runes(1, 3, 0), [])).toBe(false);
+    expect(hasVarrockTeleport(25, runes(1, 3, 1), [])).toBe(true);
+    expect(hasVarrockTeleport(70, runes(1, 3, 0), [{ name: 'Mystic fire staff' }])).toBe(true);
+    expect(hasVarrockTeleport(70, runes(1, 0, 1), [{ name: 'Mystic air staff' }])).toBe(true);
+    expect(hasVarrockTeleport(70, runes(1, 0, 1), [{ name: 'Air battlestaff' }])).toBe(true);
+});
+
+test('multiPileThreat flags 2+ attackable strangers near us only in multi-combat', () => {
+    const me = { x: 3040, z: 3900, combat: 100 }; // wildy 48
+    const single = () => false, multi = () => true;
+    const foes = [
+        { name: 'PkerA', combatLevel: 100, distance: 4 },
+        { name: 'PkerB', combatLevel: 102, distance: 7 },
+    ];
+    expect(multiPileThreat(me, foes, new Set(), single)).toBeNull();
+    expect(multiPileThreat(me, foes, new Set(), multi)).toContain('multi pile: 2 attackable enemies');
+    expect(multiPileThreat(me, foes, new Set(['pkera']), multi)).toBeNull(); // ally excluded
+    expect(multiPileThreat(me, [foes[0]!, { name: 'Far', combatLevel: 100, distance: 9 }], new Set(), multi)).toBeNull();
+    expect(multiPileThreat({ x: 3094, z: 3555, combat: 100 }, [{ name: 'PkerA', combatLevel: 100, distance: 3 }, { name: 'LowScout', combatLevel: 60, distance: 3 }], new Set(), multi)).toBeNull(); // wildy 5: cb 60 cannot attack 100
+});
+
+test('pickTrack skips attackable piles while ignoring non-attackable bystanders', () => {
+    const me = { x: 3060, z: 3880, combat: 100 };
+    const target = { name: 'Prey', x: 3064, z: 3880, combatLevel: 100, vx: 0, vz: 0 };
+    const pile = [target, { name: 'Friend1', x: 3065, z: 3881, combatLevel: 100, vx: 0, vz: 0 }, { name: 'Friend2', x: 3066, z: 3882, combatLevel: 100, vx: 0, vz: 0 }];
+    expect(pickTrack(me, pile, new Set(), 56, new Set(), 40, new Map(), 0, () => true)).toBeNull();
+    const lowPile = [target, { name: 'Skiller1', x: 3065, z: 3881, combatLevel: 3, vx: 0, vz: 0 }, { name: 'Skiller2', x: 3066, z: 3882, combatLevel: 3, vx: 0, vz: 0 }];
+    expect(pickTrack(me, lowPile, new Set(), 56, new Set(), 40, new Map(), 0, () => true)?.track.name).toBe('Prey');
+});
+
+test('bestDamageSpell picks matching 2004 God Spell and canCastCharge gates on 80 Magic and runes', () => {
+    const runes = (fire: number, blood: number, air: number) => [{ id: 554, count: fire }, { id: 565, count: blood }, { id: 556, count: air }];
+    expect(spellId('FLAMES_OF_ZAMORAK')).toBe(1192);
+    expect(spellId('CLAWS_OF_GUTHIX')).toBe(1191);
+    expect(spellId('SARADOMIN_STRIKE')).toBe(1190);
+    expect(bestDamageSpell(80, runes(4, 2, 1), [{ id: 2417 }])).toBe(1192);
+    expect(bestDamageSpell(80, runes(1, 2, 4), [{ id: 2416 }])).toBe(1191);
+    expect(bestDamageSpell(80, runes(2, 2, 4), [{ id: 2415 }])).toBe(1190);
+    expect(bestDamageSpell(59, runes(4, 2, 1), [{ id: 2417 }])).toBe(1158);
+    expect(bestDamageSpell(80, runes(3, 2, 1), [{ id: 2417 }])).toBe(1189); // short 1 fire for Flames -> Fire Wave
+    expect(canCastCharge(80, runes(3, 3, 3), 1192)).toBe(true);
+    expect(canCastCharge(79, runes(3, 3, 3), 1192)).toBe(false);
+    expect(canCastCharge(80, runes(2, 3, 3), 1192)).toBe(false);
+    expect(canCastCharge(80, runes(3, 3, 3), 1189)).toBe(false);
+});
+
+test('shared scout intel publishes, filters by TTL/bracket/maxWild, prioritizes multi-way skulled prey, and clears', () => {
+    const file = join(tmpdir(), `pk-roam-intel-${Date.now()}-${Math.random()}.json`);
+    const now = 1_000_000;
+    try {
+        publishScoutIntel({ target: 'SingleGuy', x: 3090, z: 3600, combatLevel: 120, hpFrac: 0.9, skulled: false, multi: false, wild: 11, scout: 'ScoutA', at: now }, file);
+        publishScoutIntel({ target: 'MultiSkull', x: 3067, z: 3640, combatLevel: 120, hpFrac: 0.5, skulled: true, multi: true, wild: 16, scout: 'ScoutB', at: now }, file);
+        publishScoutIntel({ target: 'TooDeep', x: 3060, z: 3880, combatLevel: 120, hpFrac: 0.2, skulled: true, multi: true, wild: 46, scout: 'ScoutC', at: now }, file);
+        publishScoutIntel({ target: 'StaleGuy', x: 3067, z: 3640, combatLevel: 120, hpFrac: 0.1, skulled: true, multi: true, wild: 16, scout: 'ScoutD', at: now - 30_000 }, file);
+        const intel = readScoutIntel(file, now);
+        expect(intel.map(i => i.target)).toEqual(['SingleGuy', 'MultiSkull', 'TooDeep']);
+        const picked = pickScoutTargetForSquad({ me: { x: 3070, z: 3630, combat: 126 }, intel, maxWild: 20, now });
+        expect(picked?.target).toBe('MultiSkull');
+        clearScoutIntel('MultiSkull', file, now);
+        expect(readScoutIntel(file, now).map(i => i.target)).toEqual(['SingleGuy', 'TooDeep']);
+    } finally {
+        rmSync(file, { force: true });
+    }
 });

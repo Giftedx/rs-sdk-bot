@@ -1546,7 +1546,7 @@ Each lever of a meeting, with what is measured. A lever with no result is a test
 - **Supplies.** Measured: super defence, super antipoison, the three boosts, no prayer potion, sharks. A pineapple
   pizza heals 20 a slot in two bites, as a shark does in one (`consume_normal.dbrow`).
 - **Prayer.** Measured: Protect from Melee, the Defence prayer, the melee prayers on melee turns, the flick each 2
-  ticks, no Protect Item. Smite in place of Protect from Melee is not measured: it gives up the 40% cut.
+  ticks, no Protect Item (rev 289 ends at prayer index 14, Protect from Melee).
 - **The way out.** Measured: the worn glory, a glory in the pack, Camelot Teleport (2 pack slots) and the walk over
   the edge. Varrock Teleport takes 3 pack slots.
 - **A second account.** On a single-way tile an account that hits ours each 8 ticks keeps every other attacker off
@@ -2137,7 +2137,7 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     lands 13 specials, and it still leaves with 54 to 70 HP: three dragon dagger specials into Protect from Melee
     and rune armour deal less than the target heals from its sharks. Escape HP (three accounts, mean of 6): none 78,
     `OPEN_FREEZE` set 61, all five with the graphic read 76. The army's prey stays the target with no food or no
-    escape (findings 52 to 56). Gap: no kit with another special weapon (`pvp_special_attack.rs2` also has the dragon longsword, dragon mace, rune claws and dragon halberd) was tried; 6 seeds a setup.
+    escape (findings 52 to 56). `defaultSpec` handles dragon dagger, dragon longsword, dragon mace, dragon halberd, rune claws, dragon spear, magic longbow and magic shortbow. Gap: no kit with dragon longsword, dragon mace, rune claws or dragon halberd has been bench-compared against the dagger kit across 6 seeds.
 66. **The roam and the army left the Wilderness on foot with their glory worn.** The game rubs a glory only from the
     pack (`amulet_of_glory.rs2` has no worn option). The roam's escape rubbed only a glory in the pack, so with the
     glory worn it ran south; on `extra:army-route-defend-deep` seed 1 a blocked walk stood 908 ticks at level 14 and the
@@ -2146,7 +2146,9 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     full, take the glory off (three tries), rub it, and else walk, stepping 10 tiles to the side when a walk moves
     them nowhere. `extra:army-route-defend-deep` seeds 1-6: the leader and both followers reach Edgeville at the end
     of the hunt in all six, from levels 3 to 33, with no stand longer than 9 ticks. The fight loop's full-pack glory
-    escape has the native case `extra:spar-escape-full-pack` (Fight input and escape). Gap: live survival under an attack.
+    escape has the native case `extra:spar-escape-full-pack` (Fight input and escape). `fightLoop` also drops a vial or
+    eats a food item before taking off a worn glory when the pack holds 28 items (unit-tested in `scripts/pk.test.ts`).
+    Gap: live survival under an attack.
 67. **Spears on a melee tile at the opening kill the target that eats and leaves a crowd at level 34: 18 of 18.**
     The dragon spear's special has no hit roll: it pushes the target a tile and holds it with `p_delay(4)`, no
     move, no eat and no glory rub, for 25% energy (`pvp_dragon_spear.rs2`). `extra:army-route-defend-deep-x5` (the
@@ -2274,3 +2276,114 @@ auto-retaliates with a dragon dagger (p). Times are ticks from the first tick to
     the dragon med helm from the King Black Dragon 1 in 128 (`king_black_dragon.rs2`) and the shared rare table, the
     left half of the dragon square shield (`dragonshield_a`) 4 in 128 rolls of the mega-rare table. Gap: the roam and
     the army in dragon armour; the square shield's other half is not traced.
+74. **Rev 289 5-tick zero-drain prayer cycling and 1-tick offensive flicking keep overhead protection up without
+    draining points inside the 5-packet tick cap.** Claim: tracking `prayerDrainAt` from the first active prayer
+    (`settimer(prayer_drain, 5)` in `vendor/rs-sdk/server/content/scripts/skill_prayer/scripts/prayer.rs2:30-43`)
+    lets `planPrayerTick` reset all active prayers within 4 ticks (stepping 5 active prayers down to 3 one tick
+    early when `zeroDrainFlick: true`) with overhead prioritized first back on in the same tick, while
+    `offensiveFlick: true` limits Strength/Attack prayers to melee attack ticks (`tribrid-combo-flick` preset).
+    Conditions: in-process client mock and pure unit checks at Prayer 99 (`scripts/pk.test.ts`). Evidence:
+    `scripts/pk.ts` (`planPrayerTick`, `OFFENSIVE_MELEE_PRAYERS`), `scripts/pk-kits.ts` (`tribrid-combo-flick`). Gap:
+    not yet benched on multi-seed live practice spars.
+75. **Zero-gap Dragon Spear stun-lock chains `p_delay(4)` queues while squadmates burst stunned targets.** Claim:
+    `defaultSpec`/`defaultStunSpec` recognize `dragon_spear`, `dragon_spear_p`, and `tbwt_dragon_spear_kp` at speed
+    6; `stunShare` (`overlap: 1`) queues follow-up `.queue(pvp_dragon_spear_push_*, 0, 0)` on tick 4 of `.p_delay(4)`
+    (`pvp_dragon_spear.rs2`), while `burstOnStun: true` and `STUNNED_SHOVE_SPOTANIM = 254` observation trigger ally
+    DDS/bow burst specials across `pk-squad.ts` (`SPEAR_LOCK`), `pk-army.ts` (`STUN_SHARE=chain`), and
+    `tribrid-spear-dds`. Conditions: synthetic stun/shove spotanim unit runs in `scripts/pk.test.ts`. Evidence:
+    `scripts/pk.ts`, `scripts/pk-kits.ts`, `scripts/pk-squad.ts`, `scripts/pk-army.ts`. Gap: live multi-account
+    spear-chain timing requires multi-client spar qualification.
+76. **1-tick fakie switches, same-tile freeze step-under, 4-corner diagonal kite, 10-tile freeze leash clamping,
+    and KO-threshold-only combo-eating close fight-loop gaps.** Claim: `pickFakieWeapon` holds a decoy weapon style on
+    cooldown and swaps back 1-tick on attack ticks; `pickFrozenKiteTile` supports same-tile `stepUnderFrozen` against
+    frozen melee fighters (`rsmod.reached` is false while line of sight stays true), falls back across all four
+    diagonal corners when blocked, and clamps freeze kites to 10 tiles (`pvp_magic.rs2:258`); `shouldComboEat` limits
+    `tbwt_cooked_karambwan` (`p_delay(2)`) pairing strictly to lethal KO HP and drops the spurious `+2` attack
+    timer penalty (`consume.rs2:38`). Conditions: unit tests in `scripts/pk.test.ts`. Evidence: `scripts/pk.ts`,
+    `scripts/pk.test.ts`. Gap: multi-seed spar win-rate comparison against `champion` stays open.
+77. **Wilderness escape waypoints, single/multi PJ threat scoring, and native glory/potion GE restocking strengthen
+    patrol survival across shallow and deep hotspots.** Claim: `planWildernessEscape` selects glory at level 30 or
+    under, teleport spell at 20 or under, Deserted Keep lever (`1815`), Mage Bank cellar ladder (`2871` behind web
+    `733`), or member gates (`1596`/`1597`), paired with `assessWildernessThreat` / `wildernessCombatMargin` and GE
+    restocking for charged glories (`1712`), Prayer (`2434`), super boosts (`2440`/`2436`), and superantipoison
+    (`2448`). Conditions: unit tests in `scripts/pk-hunt.test.ts`. Evidence: `scripts/pk-roam.ts`, `scripts/pk-hunt.ts`,
+    `scripts/aio-pvp.ts`. Gap: deep-Wilderness lever and ladder recovery on live practice bots stays unbenched.
+78. **Wilderness Green Dragons farmer integrates Dragonfire shield preflight, loot banking, and level-aware
+    escape.** Claim: `scripts/wild-dragons.ts` (`boss:green-dragon`) verifies worn Dragonfire shield (`1540`), melee
+    weapon, and food before engaging Green dragons (`941` at `3092,3810`), retreats on PKer threat/low HP/full pack
+    via `wildDragonEscapeAction` (running south to level 30/20 for glory or Varrock Teleport), and restocks across
+    all `DRAGON_FOOD_IDS` at Edgeville bank. Conditions: unit tests in `scripts/wild-dragons.test.ts` and catalog checks
+    in `scripts/progression-catalog.test.ts`. Evidence: `scripts/wild-dragons.ts`, `scripts/aio-boss.ts`,
+    `scripts/measure/aio-bench-cases.ts`, `packages/planner/data/progression-routes.json`. Gap: full multi-trip
+    practice run (`boss:green-dragon`) waits dedicated bench time.
+79. **Mage Arena workflow supports all three god spells, Charge varp gating (`varp 272`), god gear conflict checks,
+    and rev-289 Dragon Battleaxe (`1377`) vs Dragon Mace (`1434`) special comparison.** Claim: `GOD_LOADOUTS` defines
+    Saradomin Strike (`1190`, `2412`/`2415`, statue `2873` at `2500,4721`, Prayer drain 1, varp `268`), Claws of
+    Guthix (`1191`, `2413`/`2416`, statue `2875` at `2507,4724`, 5% Defence drain, varp `269`), and Flames of Zamorak
+    (`1192`, `2414`/`2417`, statue `2874` at `2516,4721`, 5% Magic drain, varp `270`); `godCapeStaffConflict` rejects
+    mismatched god capes and staves (`god_gear.rs2`); `fightPlayer` gates Charge (`1193`) on `varp 272`
+    (`%magearena_charge`) and rune counts (`>= 3` fire/blood/air), and triggers Dragon Battleaxe (`1377`)
+    `combat_axe:specbar` warcry self-buff (`battleaxeWarcryMath` boosts Strength by `10 + sum(floor(stat/10))/4` while
+    draining Attack/Defence/Ranged/Magic by 10%; `specwep.rs2:61-78`) separately from Dragon Mace (`1434`, 150% damage,
+    125% crush accuracy, 5 ticks; `pvp_dragon_mace.rs2`) and Dragon Dagger(p) (`1231`). Conditions: rev-289 server
+    scripts plus unit checks (`scripts/pk.test.ts`, `scripts/pk-kits.test.ts`, `scripts/lava-maze-escorted-ore.test.ts`).
+    Evidence: `scripts/generated/quest-magearena.ts`, `scripts/pk-kits.ts`, `scripts/pk.ts`, `scripts/aio-pvp.ts`.
+    Gap: live multi-god unlock casts (`MA_GOD=saradomin|guthix`) and Dragon Mace vs DDS paired spar runs remain unbenched.
+80. **Shared scout-to-squad intel handoffs, multi-way stun-focus pile switching, and coordinated fallback align roamers,
+    squads, and armies.** Claim: `publishScoutIntel`, `readScoutIntel`, and `pickScoutTargetForSquad` pass fresh
+    Wilderness target records (`SCOUT_INTEL_TTL_MS = 25_000`) from `pk-roam.ts` to `pk-squad.ts` (`FOLLOW=1`) and
+    `pk-army.ts` (`pickArmyScoutHandoff`); `pickSquadFocus` and `armyFocusTarget` prioritize stunned targets
+    (`STUNNED_SHOVE_SPOTANIM = 254`), skip busy single-way fights for anti-PJ safety, and trigger `squadFallbackPlan`
+    retreats when outnumbered or out of food. Conditions: mocked-roster unit suites (`scripts/pk-roam.test.ts`,
+    `scripts/pk-squad.test.ts`, `scripts/pk-army.test.ts`). Evidence: `scripts/pk-roam.ts`, `scripts/pk-squad.ts`,
+    `scripts/pk-army.ts`. Gap: live multi-account squad interception on `extra:squad-*` requires multi-client engine headroom.
+81. **Wilderness Runite escort recovery and Wilderness Agility obstacle-delay anti-PK guards enforce depth-aware
+    retreats.** Claim: `scripts/lava-maze-escorted-ore.ts` provides configurable combat brackets (`ESCORT_COMBAT`,
+    `MINER_COMBAT`), south-heading waypoint recovery (`selectInboundRecovery`), glory/Varrock Teleport retreat fallback
+    (`retreatOrTeleportPlan`), and escort screening (`escortInterceptDecision`); `wildernessAgilityEscapeGuard`
+    (`scripts/aio-pvp.ts`) evaluates `attackable` combat-bracket hostiles across `COURSES.wilderness`
+    (`x 2988..3012, z 3916..3972`) and its underground pit (`3005,10363`), deferring eat/teleport packets during
+    `inObstacleDelay` before routing pit ladder exits or Edgeville/lever/glory escapes with protect prayers. Conditions:
+    unit tests in `scripts/lava-maze-escorted-ore.test.ts`. Evidence: `scripts/lava-maze-escorted-ore.ts`,
+    `scripts/aio-pvp.ts`, `scripts/lava-maze-escorted-ore.test.ts`. Gap: end-to-end live Wilderness Agility lap
+    interruption and Lava Maze escort interception runs remain unexecuted.
+82. **Paired `extra:spar-x8` climb runs evaluate four Wave 1 combat options against `champion` across 64 paired
+    500-tick mirror fights and keep `scripts/pk-champion.json` unchanged (`verdict !== 'accept'`).** Claim: none
+    of the four standalone options clears `verdict()` acceptance (`n >= 16 && t >= 2`) against `champion` on
+    `tribrid`: `zeroDrainFlick: true` scores `mean -7.48` (`sd 16.39`, `t -1.82`, `n = 16`, `reject`),
+    `offensiveFlick: true` scores `mean -5.67` (`sd 20.54`, `t -1.10`, `n = 16`, `reject`), `fakieSwitch: true`
+    scores `mean -3.86` (`sd 19.74`, `t -0.78`, `n = 16`, `reject`), and `{ freeze: "low", stepUnderFrozen: true }`
+    scores `mean +3.20` (`sd 18.76`, `t +0.68`, `n = 16`, `reject`). Early prayer step-downs and decoy switches trade
+    active buff/cooldown packets inside 500-tick supplies where `champion` does not exhaust prayer, while
+    `stepUnderFrozen` shows a small positive mean against ranged/melee tribrids short of `t >= 2`. Conditions:
+    `extra:spar-x8`, seeds `1` and `2` (`SPAR_A=champion`, `SPAR_B=champion`, `SPAR_SWAP=1`, `SPAR_CAP=500`, raw nets
+    in `.practice/pvp-wave2/climb-results.jsonl`). Evidence: `scripts/measure/pk-spar-climb.ts`,
+    `.practice/pvp-wave2/climb-results.jsonl`. Gap: `comboFood: true` on karambwan kits (`tribrid-combo`) and
+    multi-client Dragon Spear / God-Spell Charge matchup matrices await dedicated bench headroom.
+83. **Root-cause trace and paired `extra:spar-x8` evaluation of `zeroDrainFlick`, `offensiveFlick`, and `comboFood` keep
+    `scripts/pk-champion.json` unchanged.** Claim: forcing `nextIsMelee = false` on `nextAttack - 1` leaves
+    `Ultimate Strength` and `Incredible Reflexes` unactivated when melee/DDS switches exhaust the 5-packet tick budget
+    (`mean -5.67`, `t -1.10`); pre-enabling melee prayers on `nextAttack - 1` while dropping `OFFENSIVE_MELEE_PRAYERS`
+    only on cooldown (`now < nextAttack - 1`) lifts `offensiveFlick: true` to `mean +7.42` (`sd 15.94`, `t +1.86`,
+    `n = 16`, seeds `1`–`2`) and `mean +5.08` (`sd 17.98`, `t +1.38`, `n = 24`, seeds `1`–`3`, `reject` under
+    `t >= 2`). Enforcing `active.length * 2 <= budget` (`maxFlick = 2` keeping overhead and `Steel Skin`, stepping down
+    excess prayers only at `now <= nextAttack - 3`) prevents truncated off+on toggles from leaving `Steel Skin` off, yet
+    `zeroDrainFlick: true` scores `mean -14.75` (`sd 13.25`, `t -3.15`, `n = 8`, `reject`) because step-down churn
+    sheds active prayers inside 500-tick supplies where Prayer points do not run out; `comboFood: true` on
+    `tribrid-combo` scores `mean -5.50` (`sd 19.22`, `t -1.14`, `n = 16`, `reject`). Conditions: lockstep
+    `extra:spar-x8` and `extra:spar-kit-tribrid-combo-x8`, `SPAR_A=champion`, `SPAR_B=champion`, `SPAR_SWAP=1`,
+    `SPAR_CAP=500`, seeds `1`–`3`. Evidence: `scripts/pk.ts` (`planPrayerTick`), `scripts/pk.test.ts`,
+    `.practice/pvp-wave3/climb-fixed.jsonl`. Gap: multi-seed `tribrid-food`, `tribrid-lean`, `hybrid`,
+    `tribrid-spear-dds`, and pure-vs-`melee` matrix runs await dedicated bench headroom.
+84. **Live pilot, staging, standby, and sweep/matrix hardening enforce Rev 289 parity and cross-platform execution.**
+    Claim: `scripts/pk-live/live-pilot.ts` selects matching Mage Arena god gear (`detectGodGearForPilot`, rejecting
+    `godCapeStaffConflict`), gates `PK_RISK_DSQ=1` on Rev 289 `dragon sq shield` (`shields.obj:217`, Defence 60 rather
+    than 1-Defence `antidragonbreathshield`), checks full Varrock Teleport runes (`hasVarrockTeleport` via
+    `assessPilotEscapePreflight`), forwards glory/prayer/boost/antipoison counts (`buildPilotRestockInput`), and exits
+    Wilderness (`z >= 3520`) before `settle`; `scripts/pvp-kit-stage.ts` exports `verifyPvpStageSupplies` and
+    `stageSupplyDeficit`; `scripts/pvp-standby.ts` adds `standbyEscapePlan`; `scripts/measure/pvp-sweep.ts` replaces
+    POSIX `timeout` with `Bun.spawn` timer termination (`runWithTimeout`) and `scripts/measure/pk-spar-matrix.ts` adds
+    `parseMatrixArgs` (`--wait`, `--kits`, `--a-opts`, `--b-opts`). Conditions: offline unit checks and Rev 289
+    configs. Evidence: `scripts/pk-live/live-pilot.test.ts`, `scripts/pvp-kit-stage.test.ts`,
+    `scripts/pvp-standby.test.ts`, `scripts/measure/pvp-sweep.test.ts`. Gap: live pilot Wilderness run and multi-batch
+    `pvp-sweep.ts --quick` remain unexecuted on live worlds.

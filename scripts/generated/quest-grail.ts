@@ -138,7 +138,9 @@ try {
     // 5. Draynor Manor level 2: the whistle door spawns two whistles while the napkin is in the pack.
     if (FROM < 5) {
         if (FROM < 4) await tele('falador teleport 2', 'magic:falador_teleport', 2965, 3378);
-        await q.walk('to manor door', [{ x: MANOR_DOOR.x, z: MANOR_DOOR.z - 1, tol: 0 }]);
+        // Stop south of the Draynor Manor dead-tree avoid corridor, then click directly up the path to the front door.
+        await q.walk('to manor gate', [{ x: MANOR_DOOR.x, z: 3326, tol: 2 }]);
+        await q.dash('to manor door', MANOR_DOOR.x, MANOR_DOOR.z - 1, 0, 35);
         const front = () => q.findLoc(l => l.id === 134 && l.x === MANOR_DOOR.x && l.z === MANOR_DOOR.z) ?? { id: 134, x: MANOR_DOOR.x, z: MANOR_DOOR.z };
         await q.step('manor door', () => q.opLoc(front(), 1), () => (q.pos()?.worldZ ?? 0) > MANOR_DOOR.z, 6, 4);
         await q.walk('to manor stairs', [{ x: 3108, z: 3362, tol: 1 }]);

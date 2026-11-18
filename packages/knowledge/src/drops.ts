@@ -22,6 +22,7 @@ function parseObj(line: string): { item?: string; table?: string; count?: number
     if (!m) return null;
     const what = m[1]!.trim();
     if (what.startsWith('~')) return { table: what.slice(1) };
+    if (what.startsWith('$')) return null;
     const item = what === 'npc_param(death_drop)' ? 'death_drop' : what;
     // DropParser.parse_quantity in jaidenw/2004scape-drop-search recognizes
     // this form. Re-derive its upper bound from pinned NumberOps.RANDOM:

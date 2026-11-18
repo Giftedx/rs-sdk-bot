@@ -2,7 +2,8 @@ import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {validateSmeltOrder} from '../../../scripts/smelt-batch';
-import {accountFromStatus,catalogCoverage,intentForEntry,matchingProgressionRoutes,progressionMethods,progressionStep,type ProgressionCatalog} from '../src/progression-catalog';
+import {accountFromStatus,catalogCoverage,intentForEntry,loadProgressionCatalog,matchingProgressionRoutes,progressionMethods,progressionStep,type ProgressionCatalog} from '../src/progression-catalog';
+import {preflightProgressionWork} from '../../core/src/progression-session';
 
 const now=10_000;
 const status={name:'Example',at:now,server:'rs-sdk-demo.fly.dev',bankAt:9000,equipmentObserved:true,
@@ -46,6 +47,55 @@ test('an explicit item or quest consumer outranks incidental training targets',(
 test('unknown scripts and missing finite goals remain explicit',()=>{
  expect(intentForEntry('scripts/not-a-route.ts',[],{})).toBeNull();
  expect(intentForEntry('scripts/gather-combat.ts',['1500','trooper'],{})).toBeNull();
+});
+
+test('the finite Prayer trainer keeps its matching skill goal above retained bone postconditions',()=>{
+ const env={BONE_ID:'536',MAX_BURY:'105',BONE_RESERVE:'6',CAP:'1500'};
+ const accept={skills:{Prayer:99},bank:{536:6}};
+ expect(intentForEntry('scripts/train-prayer.ts',['99'],env,accept)).toEqual({kind:'train',skill:'prayer',targetLevel:99});
+ expect(intentForEntry('scripts/train-prayer.ts',['96'],{...env,BONE_ID:'526',MAX_BURY:'469'},{skills:{Prayer:96},bank:{526:44,536:6}})).toEqual({kind:'train',skill:'prayer',targetLevel:96});
+ expect(intentForEntry('scripts/train-prayer.ts',[],{TARGET_LEVEL:'60',BONE_RESERVE:'384'},{skills:{prayer:60},bank:{526:384}})).toEqual({kind:'train',skill:'prayer',targetLevel:60});
+ for(const [args,changed,goal] of [
+  [['98'],{},accept], [['99'],{BONE_ID:'999'},accept], [['99'],{BONE_RESERVE:'5'},accept],
+  [['99'],{BONE_RESERVE:'7'},accept], [['99'],{BURY_HELD:'1'},accept], [['99'],{CAP:'0'},accept],
+  [['99'],{MAX_BURY:'0'},accept], [['99','extra'],{},accept], [['99'],{},{skills:{Ranged:99},bank:{536:6}}],
+  [['99'],{},{skills:{Prayer:99,prayer:99},bank:{536:6}}], [['99'],{},{skills:{Prayer:99},bank:{526:6}}],
+ ] as const)expect(intentForEntry('scripts/train-prayer.ts',args,{...env,...changed},goal)).toMatchObject({kind:'acquire'});
+ expect(intentForEntry('scripts/train-prayer.ts',['99'],env,{bank:{536:6}})).toMatchObject({kind:'acquire'});
+ expect(intentForEntry('scripts/gather-combat.ts',['1500','giant'],{TRAIN_SKILL:'Prayer',TARGET_LEVEL:'99'},accept)).toMatchObject({kind:'acquire',items:{536:6}});
+});
+
+test('bounded earth shop refill and splash training preserve finite intents',()=>{
+ expect(intentForEntry('scripts/earth-shop.ts',['betty','16000','2000'],{STOCK_TARGET:'53',MAX_ITEMS:'50',MAX_SPEND:'2000',COIN_RESERVE:'30000',EARTH_SEED_USED:'0'})).toMatchObject({kind:'acquire',items:{557:53}});
+ expect(intentForEntry('scripts/aio-market.ts',['earth-shop','aubury','1600','STOCK_TARGET=53','MAX_ITEMS=50','MAX_SPEND=2000','COIN_RESERVE=30000'],{})).toMatchObject({kind:'acquire',items:{557:53}});
+ expect(intentForEntry('scripts/earth-shop.ts',['catherby','1600'],{STOCK_TARGET:'53',MAX_ITEMS:'50',MAX_SPEND:'2000',COIN_RESERVE:'30000'})).toBeNull();
+ expect(intentForEntry('scripts/splash-train.ts',['66','6000'],{})).toEqual({kind:'train',skill:'magic',targetLevel:66});
+});
+
+const geFixtureEntry='packages/practice/src/ge-bulk-order-proof.ts';
+test('native GE seller has a truthful finite offer intent through its actual helper entry',()=>{
+ const intent=intentForEntry(geFixtureEntry,['--sell','flgesell1','2357','2','4900']);
+ expect(intent).toMatchObject({kind:'service',units:1});
+ for(const value of ['2','2357','4900'])expect(intent?.kind==='service'&&intent.objective).toContain(value);
+});
+test('native snapshot is an observation instead of a claimed purchase or sale',()=>{
+ expect(intentForEntry(geFixtureEntry,['--snapshot','flgebuy1'])).toMatchObject({kind:'observe',units:1});
+});
+test('helper intent never authorizes the practice-only program on the live server',()=>{
+ const c=loadProgressionCatalog();
+ for(const args of [['--sell','flgesell1','2357','2','4900'],['--snapshot','flgebuy1']]){
+  const work={script:geFixtureEntry,args,env:{}};
+  expect(()=>preflightProgressionWork(work,'rs-sdk-demo.fly.dev',c,args[1])).toThrow('local practice only');
+  expect(()=>preflightProgressionWork(work,'127.0.0.1:28888',c,args[1])).not.toThrow();
+ }
+});
+test('malformed or unbounded seller and snapshot arguments stay unsupported',()=>{
+ for(const args of [[],['--sell'],['--sell','flgesell1','2357','0','4900'],['--sell','flgesell1','2357','2','0'],
+  ['--sell','flgesell1','995','2','4900'],['--sell','flgesell1','2357','1.5','4900'],
+  ['--sell','flgesell1','2357','2','2147483647'],['--sell','flgesell1','2147483648','1','1'],
+  ['--sell','flgesell1','2357','2','4900','extra'],['--sell','bad/name','2357','2','4900'],
+  ['--snapshot'],['--snapshot','flgebuy1','extra'],['--snapshot','bad/name'],['--unknown','flgebuy1']])
+  expect(intentForEntry(geFixtureEntry,args)).toBeNull();
 });
 
 test('catalog coverage counts executable mapping separately from rate and qualification',()=>{
@@ -226,4 +276,28 @@ test('native cannonball quantities and bounds match the actual smelting order co
   expect(()=>validateSmeltOrder({bar:'cannonballs',maximum:bars!,cap:cap!,xpRate:xpRate!,reserve:reserve!,mode:'exact'})).toThrow();
   expect(intentForEntry('scripts/microbot-a-cannonballs.ts',[String(bars),String(cap)],{CANNON_XP_RATE:String(xpRate),CANNON_RESERVE:String(reserve)})).toBeNull();
  }
+});
+
+test('owned earth production retains its finite acquisition intent and bounds',()=>{
+ expect(intentForEntry('scripts/earth-production.ts',['talismans','20000'],{STOCK_TARGET:'103',COIN_RESERVE:'30000',HUNT_KILLS_PER_TARGET:'1'})).toMatchObject({kind:'acquire',items:{557:103}});
+ expect(intentForEntry('scripts/earth-production.ts',['craft','20000'],{STOCK_TARGET:'103',COIN_RESERVE:'30000'})).toMatchObject({kind:'acquire',items:{557:103}});
+ expect(intentForEntry('scripts/aio-skiller.ts',['magic','earth-production','craft','1400','STOCK_TARGET=1','COIN_RESERVE=0'],{})).toMatchObject({kind:'acquire',items:{557:1}});
+ for(const [args,env]of [[['bad','20000'],{STOCK_TARGET:'103',COIN_RESERVE:'30000'}],[['talismans','0'],{STOCK_TARGET:'103',COIN_RESERVE:'30000'}],[['craft','20001'],{STOCK_TARGET:'103',COIN_RESERVE:'30000'}],[['craft','2000'],{STOCK_TARGET:'0',COIN_RESERVE:'30000'}],[['talismans','2000'],{STOCK_TARGET:'103',COIN_RESERVE:'30000',HUNT_KILLS_PER_TARGET:'4'}]] as const)
+  expect(intentForEntry('scripts/earth-production.ts',args,env)).toBeNull();
+});
+
+test('edgeville woodcutting, magic-items, smelt-bars, staged runes and bounded service scripts enforce finite bounds',()=>{
+ expect(intentForEntry('scripts/edgeville-woodcut-order.ts',['3000'],{STALL_TICKS:'0'})).toEqual({kind:'train',skill:'woodcutting',targetLevel:36});
+ for(const stall of ['-1','1.5','NaN','Infinity'])expect(intentForEntry('scripts/edgeville-woodcut-order.ts',['3000'],{STALL_TICKS:stall})).toBeNull();
+ expect(intentForEntry('scripts/microbot-magic-items.ts',['enchant:sapphire_ring','-','3','200'],{})).toEqual({kind:'service',objective:'magic-items:enchant:sapphire_ring:3',units:1});
+ expect(intentForEntry('scripts/microbot-magic-items.ts',['superheat:mithril','-','10','400'],{})).toEqual({kind:'service',objective:'magic-items:superheat:mithril:10',units:1});
+ for(const args of [['bad-mode','-','3','200'],['high-alch','-','0','200'],['high-alch','-','10001','200'],['high-alch','-','1','0'],['high-alch','-','1','100001']])
+  expect(intentForEntry('scripts/microbot-magic-items.ts',args,{})).toBeNull();
+ expect(intentForEntry('scripts/smelt-bars.ts',[],{ORDER_ACTION:'smith',PRODUCT_ID:'1119',MAX_MAKE:'1'})).toMatchObject({kind:'service'});
+ expect(intentForEntry('scripts/rune-bank-craft.ts',['--staged=/tmp/run.json'],{})).toEqual({kind:'service',objective:'rune-carriers',units:1});
+ expect(intentForEntry('scripts/microbot-mining-progressive.ts',['job.json'],{})).toEqual({kind:'service',objective:'scripts/microbot-mining-progressive.ts:job.json',units:1});
+ expect(intentForEntry('scripts/gather-combat.ts',['1500','giant'],{})).toEqual({kind:'service',objective:'gather-combat:giant',units:1});
+ expect(intentForEntry('scripts/gather-combat.ts',['1500','trooper'],{})).toBeNull();
+ expect(intentForEntry('scripts/fletch-arrows.ts',['bronze','10'],{CAP:'600'})).toEqual({kind:'service',objective:'fletch-arrows:bronze',units:1});
+ expect(intentForEntry('scripts/fletch-arrows.ts',['bronze','10'],{CAP:'Infinity'})).toBeNull();
 });

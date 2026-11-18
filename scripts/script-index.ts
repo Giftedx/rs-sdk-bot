@@ -19,6 +19,7 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/autopilot-progression.ts': 'fleet control helper: compares finite assignments through the shared progression selector',
  'scripts/check-no-diary.ts': 'developer tool: checks the docs for history wording',
  'scripts/check-pin.ts': 'developer tool: checks the commit of vendor/rs-sdk',
+ 'scripts/check-rev289-parity.ts': 'developer tool: validates rev 289 parity across knowledge, dashboard assets and scripts',
  'scripts/gear.ts': 'developer tool: looks up each wearable item and its bonuses in knowledge/gear.json',
  'scripts/ci-gate.ts': 'developer tool: runs the CI checks on this PC',
  'scripts/claim-account.ts': 'fleet control: registers a new account name',

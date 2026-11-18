@@ -91,7 +91,7 @@ export function freshRuneSupplyChecks(p:{before:Save;interrupted:Save;after:Save
  return {
   defaultSkills:freshRuneDefaultSkills(before),
   defaultQuest:(before.vars[63]??0)===0&&(before.vars[101]??0)===0,
-  noSeededEssence:sum(before,1436)===0&&sum(before,7936)===0,
+  noSeededEssence:sum(before,1436)===0,
   tutorial:after.vars[281]===1000,
   quest:after.vars[63]===6&&(after.vars[101]??0)===(before.vars[101]??0)+1,
   reward:sum(after,1438)===1,
@@ -302,7 +302,7 @@ export function freshRuneAirRecoveryChecks(before:Save,after:Save,run:Run,target
  return {child:run.code===0&&r?.ok===true&&r?.target===target,logout:logout(run),savedResult:freshRuneSavedResult(after,run),
   entry:before.vars[63]===6&&before.vars[101]===1&&before.vars[281]===1000&&sum(before,556)===51
    &&before.skills[20]!.level===20&&raw(before,20)===32500
-   &&sum(before,1436)===0&&sum(before,7936)===0&&[1438,1265,1171].every(id=>sum(before,id)===1),
+   &&sum(before,1436)===0&&[1438,1265,1171].every(id=>sum(before,id)===1),
   quest:after.vars[63]===6&&after.vars[101]===1&&after.vars[281]===1000,
   target:after.skills[20]!.level>=target,
   inherited:target===20?r?.inheritedBanked===26&&r?.banked===26&&r?.newBanked===0&&r?.crafted===0&&r?.consumed===0&&r?.mined===0
@@ -333,11 +333,11 @@ export function freshRunePostCraftChecks(before:Save,after:Save,run:Run){
  return {child:run.code===0&&r?.ok===true&&r?.target===20,logout:logout(run),savedResult:freshRuneSavedResult(after,run),
   entry:same(before.position,airRecoveryPositions[0])&&before.vars[63]===6&&before.vars[101]===1&&before.vars[281]===1000
    &&before.skills[20]!.level===20&&before.skills[20]!.rawExperience===32500&&sum(before,1436,93)===1&&sum(before,1436)===1
-   &&sum(before,7936)===0&&sum(before,556,93)===26&&sum(before,556,95)===25&&[1438,1265,1171].every(id=>sum(before,id)===1),
+   &&sum(before,556,93)===26&&sum(before,556,95)===25&&[1438,1265,1171].every(id=>sum(before,id)===1),
   quest:after.vars[63]===6&&after.vars[101]===1&&after.vars[281]===1000,
   production:r?.consumed===1&&r?.crafted===2&&r?.mined===0&&r?.stages?.resumedCraft?.ok===true
    &&r?.stages?.resumedCraft?.consumed===1&&r?.stages?.resumedCraft?.runes===2&&r?.stages?.resumedCraft?.xp===125
-   &&sum(after,1436)===0&&sum(after,7936)===0&&sum(after,556)-sum(before,556)===2
+   &&sum(after,1436)===0&&sum(after,556)-sum(before,556)===2
    &&after.skills[20]!.rawExperience-before.skills[20]!.rawExperience===1250&&after.skills[20]!.level===20,
   banked:r?.inheritedBanked===26&&r?.newBanked===2&&r?.banked===28&&sum(after,556,93)===0&&sum(after,556,95)===53,
   craftThenExit:craft>=0&&selected>craft&&events[selected].tick-events[craft].tick>=0&&events[selected].tick-events[craft].tick<=1
@@ -554,7 +554,7 @@ function stagedChecks(directory:string,stage:FreshRuneStage,codes:Record<string,
  const before=readPracticeSave(join(directory,'before.sav')),interrupted=readPracticeSave(join(directory,'interrupted.sav'));
  const first=readRun(directory,'interrupted',codes.interrupted!);
  if(stage==='start')return {defaultSkills:freshRuneDefaultSkills(before),defaultQuest:(before.vars[63]??0)===0&&(before.vars[101]??0)===0,
-  noSeededEssence:sum(before,1436)===0&&sum(before,7936)===0,registration:codes.registration===0&&logout(readRun(directory,'registration',codes.registration)),
+  noSeededEssence:sum(before,1436)===0,registration:codes.registration===0&&logout(readRun(directory,'registration',codes.registration)),
   stopped:freshRuneSupportedInterruption(first),progress:retainedProgress(before,interrupted),logout:logout(first)};
  const bank=readRun(directory,'first-bank',codes['first-bank']!);
  const target=stage==='first-bank'?2:stage==='target'?20:21;
@@ -621,7 +621,7 @@ export async function proveFreshRuneStage(directory:string,stage:FreshRuneStage,
   const command=async(label:string,args:string[],env:Record<string,string>={})=>codes[label]=await deps.command(directory,budget,label,args,save,env);
   if(stage==='start'){
    if(await command('registration',['packages/practice/src/register-proof-account.ts',binding!.name])!==0)throw Error('default registration failed');
-   const observed=await deps.wait(save,s=>freshRuneDefaultSkills(s)&&(s.vars[63]??0)===0&&(s.vars[101]??0)===0&&sum(s,1436)===0&&sum(s,7936)===0);
+   const observed=await deps.wait(save,s=>freshRuneDefaultSkills(s)&&(s.vars[63]??0)===0&&(s.vars[101]??0)===0&&sum(s,1436)===0);
    copyFileSync(save,join(directory,'before.sav'));if(!observed.matched)throw Error('default registration save unobserved');
    await command('interrupted',['scripts/rune-supply.ts',binding!.name,'20'],{CAP:'1000'});
   }else{
@@ -705,7 +705,7 @@ export async function proveFreshRuneSupply(directory:string){
  if(registrationCode!==0)throw Error('normal registration failed; retain registration logs');
  await waitPracticeSave(save,()=>true);copyFileSync(save,join(directory,'before.sav'));
  const before=readPracticeSave(save);
- if(!freshRuneDefaultSkills(before)||(before.vars[63]??0)!==0||(before.vars[101]??0)!==0||sum(before,1436)>0||sum(before,7936)>0)throw Error('registration was not default; do not seed a replacement');
+ if(!freshRuneDefaultSkills(before)||(before.vars[63]??0)!==0||(before.vars[101]??0)!==0||sum(before,1436)>0)throw Error('registration was not default; do not seed a replacement');
  const interruptedCode=await command('interrupted',['scripts/rune-supply.ts',name,'20'],{CAP:'1000'});
  await waitPracticeSave(save,()=>true);copyFileSync(save,join(directory,'interrupted.sav'));
  const interrupted={code:interruptedCode,log:readFileSync(join(directory,'interrupted.log'),'utf8')+readFileSync(join(directory,'interrupted.err'),'utf8')};

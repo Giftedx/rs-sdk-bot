@@ -71,3 +71,48 @@ test('XP is found when completion is set through a setter proc that takes the co
     });
     expect(q.quests[0]!.xp).toEqual([{ skill: 'attack', xp: 4825, src: 'v.rs2:2' }]);
 });
+
+test('testbit(^true), ~get_cog_progress, folder fallback, and completion-queue XP are parsed cleanly', () => {
+    const q = buildQuests({
+        constants: parseConstants([
+            '^elemental_workshop_complete = 20',
+            '^elemental_workshop_questpoints = 1',
+            '^quest_cog_complete = 8',
+            '^cog_questpoints = 1',
+            '^priestperil_complete = 60',
+            '^priestperil_questpoints = 1',
+            '^horror_complete = 10',
+            '^horror_questpoints = 2',
+        ].join('\n'), 'c'),
+        proc: {
+            text: [
+                'if (testbit(%elemental_workshop_bits, ^elemental_workshop_complete) = ^true) {',
+                '    $questpoints = add($questpoints, ^elemental_workshop_questpoints);',
+                '}',
+                'if (~get_cog_progress = ^quest_cog_complete) {',
+                '    $questpoints = add($questpoints, ^cog_questpoints);',
+                '}',
+                'if (%priestperil = ^priestperil_complete) {',
+                '    $questpoints = add($questpoints, ^priestperil_questpoints);',
+                '}',
+                'if (%horrorquest = ^horror_complete) {',
+                '    $questpoints = add($questpoints, ^horror_questpoints);',
+                '}',
+            ].join('\n'),
+            file: 'q',
+        },
+        varpFolders: new Map([['priestperil', 'quest_priestperil']]),
+        folderScripts: new Map([
+            ['quest_elemental_workshop', [{ text: 'setbit(%elemental_workshop_bits, ^elemental_workshop_complete);\nstat_advance(crafting, 50000);\n', file: 'ew.rs2' }]],
+            ['quest_priestperil', [{ text: '[queue,priestperil_complete]\nstat_advance(prayer, 14060);\n~send_quest_complete(questlist:priestperil, x, 250, ^priestperil_questpoints, "done");\n', file: 'pp.rs2' }]],
+            ['quest_horror', [{ text: '[queue,horror_complete]\nstat_advance(magic, 46620);\n%horrorquest = ^horror_complete;\n~send_quest_complete(questlist:horror, x, 225, ^horror_questpoints, "done");\n', file: 'hh.rs2' }]],
+        ]),
+    });
+    expect(q.skipped).toEqual([]);
+    expect(q.quests.map(x => [x.varp, x.folder, x.complete, x.xp.map(r => [r.skill, r.xp])])).toEqual([
+        ['elemental_workshop_bits', 'quest_elemental_workshop', 1 << 20, [['crafting', 5000]]],
+        ['cogquest', null, 8, []],
+        ['priestperil', 'quest_priestperil', 60, [['prayer', 1406]]],
+        ['horrorquest', 'quest_horror', 10, [['magic', 4662]]],
+    ]);
+});

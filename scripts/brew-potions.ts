@@ -83,6 +83,17 @@ export function supplyPlan(herbs:number,vials:number,eyes:number,coins:number,vi
 // where no eye seller leg moved. A trip starts only when the next potion lacks a supply.
 // The loop brews one potion at a time, so the owned secondaries limit the batch: buying vials past them strands coins.
 export const workingBatch=(herbs:number,unf:number,secondaries:number)=>Math.min(27,herbs+unf,secondaries);
+export function brewTripPlan(r:Recipe,bankStock:Stock,mode:string):{input:number;count:number;needsVial:boolean;needsSec:boolean}{
+ if(mode==='unf'){
+  const input=(bankStock[r.clean]??0)>0?r.clean:r.dirty;
+  return {input,count:Math.min(14,bankStock[input]??0,bankStock[227]??0),needsVial:true,needsSec:false};
+ }
+ if((bankStock[r.unf]??0)>0){
+  return {input:r.unf,count:Math.min(14,bankStock[r.unf]??0,bankStock[r.sec]??0),needsVial:false,needsSec:true};
+ }
+ const input=(bankStock[r.clean]??0)>0?r.clean:r.dirty;
+ return {input,count:Math.min(9,bankStock[input]??0,bankStock[227]??0,bankStock[r.sec]??0),needsVial:true,needsSec:true};
+}
 export function supplyPurchases(o:{batch:number;make:number;vials:number;eyes:number;buyEyes:boolean}):[227|221,number][]{
  if(!(o.make>0&&o.vials<1)&&!(o.buyEyes&&o.eyes<1))return [];
  return ([[221,o.buyEyes?Math.max(0,o.batch-o.eyes):0],[227,Math.max(0,o.make-o.vials)]] as [227|221,number][]).filter(([,n])=>n>0);
@@ -186,16 +197,25 @@ export async function brew(s:Session,o:ReturnType<typeof options>){
    if(secondaries<1)throw Error(`secondary missing ${r.sec}`);
    for(const [id,n] of purchases)await buy(id,n);
    // Each completed potion is banked before checking the next recipe and target.
-   const current=totals();let input=r.unf;
-   if(!(current[r.unf]??0))input=(current[r.clean]??0)?r.clean:r.dirty;
-   await withdraw(input,1);
-   if(input!==r.unf)await withdraw(227,1);
-   if(o.recipe!=='unf')await withdraw(r.sec,1);
+   const current=stock(bankRows()),plan=brewTripPlan(r,current,o.recipe),input=plan.input,n=plan.count;
+   if(n<1)throw Error(`bank missing supplies for ${r.key}`);
+   await withdraw(input,n);
+   if(plan.needsVial)await withdraw(227,n);
+   if(plan.needsSec)await withdraw(r.sec,n);
    await s.bot.closeBank();
-   if(input===r.dirty){const c=held(r.clean);await s.sdk.sendUseItem(inv().find(i=>i.id===r.dirty)!.slot,1);
-    await observed(()=>held(r.dirty)===0&&held(r.clean)===c+1,`clean ${r.dirty}`);add(r.dirty,-1);add(r.clean,1);}
-   if(input!==r.unf)await combine(r.clean,227,r.unf);
-   if(o.recipe!=='unf'){await combine(r.unf,r.sec,r.pot);brewed++;}
+   if(input===r.dirty){
+    while(held(r.dirty)>0&&level()<o.target){
+     check();const d0=held(r.dirty),c0=held(r.clean);
+     await s.sdk.sendUseItem(inv().find(i=>i.id===r.dirty)!.slot,1);
+     await observed(()=>held(r.dirty)===d0-1&&held(r.clean)===c0+1,`clean ${r.dirty}`);add(r.dirty,-1);add(r.clean,1);
+    }
+   }
+   if(plan.needsVial){
+    while(held(r.clean)>0&&held(227)>0&&level()<o.target)await combine(r.clean,227,r.unf);
+   }
+   if(plan.needsSec){
+    while(held(r.unf)>0&&held(r.sec)>0&&level()<o.target){await combine(r.unf,r.sec,r.pot);brewed++;}
+   }
    await openBank();await deposit();
    if(o.recipe==='unf')throw Error('unfinished-only output does not meet a Herblore target');
   }

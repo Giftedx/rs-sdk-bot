@@ -2,8 +2,10 @@ import {test,expect} from 'bun:test';
 import {readFileSync,writeFileSync,mkdtempSync,existsSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {questSweepProofAccountEnv,questSweepProofEndpoints,questSweepChecks,questSweepChildConfiguration,runQuestSweepProofCase,selectFreshQuestSweepProofName,selectQuestSweepProofCases,QUEST_SWEEP_PROOF_CASE_IDS} from '../src/quest-sweep-proof';
+import {questSweepProofAccountEnv,questSweepProofEndpoints,questSweepChecks,questSweepChildConfiguration,questSweepElenaPreset,runQuestSweepProofCase,selectFreshQuestSweepProofName,selectQuestSweepProofCases,QUEST_SWEEP_PROOF_CASE_IDS} from '../src/quest-sweep-proof';
 import {converseDialogue,createBurstPageRecorder,dialogueTransition,liveDialoguePage,type ConverseIO} from '../../../scripts/generated/quest-lib';
+import {needs,plan,presetFor,shopCoinTake} from '../../../scripts/quest-sweep';
+import {castable} from '../../../scripts/teleport-runes';
 
 test('the Seer conversation waits through an observed closure or pending continue and fails a refused live page',async()=>{
  // seer.rs2 seer_looking_glass: "Let me look into my looking glass.", if_close, three mes + p_delay(3), then the hint pages.
@@ -102,6 +104,115 @@ test('the started Totem fixture credits the completed Clock Tower before the ser
 const doricSave=(coins:number):Parameters<typeof questSweepChecks>[1]=>({version:10,position:{x:2965,z:3380,level:0},vars:{31:0,101:0},
  inventories:{93:[...(coins?[{slot:0,id:995,count:coins}]:[]),{slot:1,id:1351,count:1}]},
  skills:Array.from({length:21},(_,index)=>({index,rawExperience:index===3?9800:0,xp:index===3?980:0,level:index===3?10:1}))});
+test('Elena upstairs funding includes the live teleport inputs and keeps bank coins out of the staging withdrawal',()=>{
+ const preset=questSweepElenaPreset(),pack=preset.inventory!,bank=preset.bank!;
+ const held=(id:number)=>pack.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+ expect(held(995)).toBe(82904);
+ expect(bank.find(i=>i.id===995)?.count).toBe(1680);
+ expect([held(563),held(556),held(555)]).toEqual([1,4,2]);
+ expect(preset.skills?.Magic).toBe(99);
+ expect(castable('magic:falador_teleport',held,[],preset.skills?.Magic)).toBe(true);
+ // Coins alone cannot supply the spell. Four Air runes also cannot fund Camelot Teleport.
+ expect(castable('magic:falador_teleport',held,[],1)).toBe(false);
+ expect(castable('magic:falador_teleport',id=>id===995?82904:0,[],99)).toBe(false);
+ expect(castable('magic:camelot_teleport',held,[],99)).toBe(false);
+ expect(plan(needs(presetFor('elena'),false,'elena'),pack,bank)).toEqual({
+  withdraw:[{id:1929,count:4}],missing:[{id:1975,count:1}]});
+ expect(shopCoinTake(106,held(995),0,0)).toBe(0);
+});
+test('Elena upstairs fixture and checks agree on descent, staged water and the observed Heckel route',()=>{
+ const preset=questSweepElenaPreset();
+ expect(preset).toEqual({position:{x:2529,z:3162,level:1},skills:{Attack:99,Defence:99,Strength:99,Hitpoints:99,Ranged:99,Prayer:99,Magic:99},
+  inventory:[{id:995,count:82904},{id:563,count:1},{id:556,count:4},{id:555,count:2},...[2126,952,954,1927,231].map(id=>({id,count:1}))],
+  bank:[{id:995,count:1680},{id:1929,count:4}]});
+ expect(readFileSync(new URL('../src/quest-sweep-proof.ts',import.meta.url),'utf8')).toContain(':elena?questSweepElenaPreset()');
+ const before=doricSave(0);before.position={x:2529,z:3162,level:1};before.vars={165:0,101:0};
+ for(const i of [0,1,2,3,4,5,6])before.skills[i]!.level=99;
+ before.position={...preset.position!,level:preset.position!.level!};
+ before.inventories={93:preset.inventory!.map((i,slot)=>({...i,slot})),95:preset.bank!.map((i,slot)=>({...i,slot}))};
+ const after=structuredClone(before);after.position={x:2567,z:3336,level:0};after.vars={165:29,101:1};after.skills[14]!.rawExperience=606250;
+ after.skills[6]!.rawExperience+=12000;
+ after.inventories={93:[{id:995,slot:0,count:82902},{id:952,slot:1,count:1},{id:1925,slot:2,count:4},{id:1505,slot:6,count:1},
+  {id:556,slot:7,count:1},{id:555,slot:8,count:1}],94:[{id:1506,slot:0,count:1}],95:[{id:995,slot:0,count:1680}]};
+ const log=`START 2529 3162 1
+QUEST_SWEEP_DOWN {"from":{"x":2529,"z":3162,"level":1},"to":{"x":2525,"z":3162,"level":0}}
+QUEST_SWEEP_BANK {"from":{"x":2525,"z":3162,"level":0},"to":{"x":2809,"z":3441,"level":0}}
+QUEST_SWEEP_SPELL {"from":{"x":2525,"z":3162,"level":0},"to":{"x":2809,"z":3441,"level":0},"planned":true,"spell":"Falador teleport"}
+QUEST_SWEEP_BANK_WALK {"at":{"x":2809,"z":3441,"level":0},"to":{"x":2809,"z":3441,"level":0},"outcome":{"ok":true}}
+QUEST_SWEEP_WITHDRAW {"id":1929,"count":4,"before":0,"after":4,"bankBefore":4,"bankAfter":0,"observed":true}
+QUEST_SWEEP_BANK_DONE {"at":{"x":2809,"z":3441,"level":0},"buys":[],"gathers":[]}
+QUEST_SWEEP_HECKEL_APPROACH {"from":{"x":2809,"z":3441,"level":0},"to":{"x":2461,"z":3382,"level":0},"at":{"x":2461,"z":3382,"level":0},"observed":true}
+AGILITY_ENTRY_GATE {"at":"2461,3385,0","tick":200,"opens":2}
+QUEST_SWEEP_CORRIDOR {"to":{"x":2493,"z":3488},"try":1,"ok":true,"at":{"x":2491,"z":3488,"level":0}}
+QUEST_SWEEP_HECKEL {"item":1975,"before":0,"after":1,"coinsBefore":82904,"coins":82902,"observed":true}
+QUEST_SWEEP_TREE_EXIT {"ok":true,"at":{"x":2466,"z":3491,"level":0}}
+QUEST_SWEEP_GATE {"ok":true,"at":{"x":2461,"z":3382,"level":0}}
+MILESTONE quest-sweep elena staged at {"x":2572,"z":3333,"level":0}
+QUEST_SWEEP_FLAG {"name":"Plague City","state":"complete"}
+RESULT ok qp=1 eats=0 died=false
+LOGOUT logged-out
+`;
+ const record={id:'elena-heckel-dust',exit:0,timedOut:false,saveMatched:true,seconds:223};
+ const check=(text=log):Record<string,boolean>=>questSweepChecks(record.id,before,after,text,record);
+ expect(Object.entries(check()).filter(([,ok])=>!ok)).toEqual([]);
+ expect(check(log.replace(/^QUEST_SWEEP_DOWN .*\n/m,''))).toMatchObject({descent:false});
+ expect(check(log.replace('"from":{"x":2809,"z":3441','"from":{"x":2529,"z":3162'))).toMatchObject({approach:false});
+ expect(check(log.replace('"at":"2461,3385,0"','"at":"2461,3384,0"'))).toMatchObject({gate:false});
+ expect(check(log.replace(/^AGILITY_ENTRY_GATE .*\n/m,''))).toMatchObject({gate:false,route:false});
+ expect(check(log.replace('"x":2491,"z":3488','"x":2490,"z":3488'))).toMatchObject({ground:false});
+ expect(check(log.replace('"x":2491,"z":3488,"level":0','"x":2491,"z":3488,"level":1'))).toMatchObject({ground:false});
+ expect(check(log.replace('"try":1','"try":4'))).toMatchObject({ground:false});
+ expect(check(log.replace(/^QUEST_SWEEP_CORRIDOR .*\n/m,''))).toMatchObject({ground:false});
+ expect(check(log.replace(/^QUEST_SWEEP_HECKEL (.*)\nQUEST_SWEEP_TREE_EXIT (.*)$/m,'QUEST_SWEEP_TREE_EXIT $2\nQUEST_SWEEP_HECKEL $1'))).toMatchObject({route:false});
+ expect(check(log.replace('"coins":82902','"coins":82901'))).toMatchObject({bought:false,budget:false});
+ expect(check(log.replace(/^QUEST_SWEEP_SPELL .*\n/m,''))).toMatchObject({travel:false});
+ expect(check(log.replace('Falador teleport','Camelot teleport'))).toMatchObject({travel:false});
+ const spell=log.split('\n').find(line=>line.startsWith('QUEST_SWEEP_SPELL '))!;
+ expect(check(log.replace(spell,spell.replace('"x":2525','"x":2526')))).toMatchObject({travel:false});
+ expect(check(log.replace(spell,spell.replace('"x":2809','"x":2810')))).toMatchObject({travel:false});
+ expect(check(log.replace(spell+'\n','')+spell+'\n')).toMatchObject({travel:false});
+ expect(check(log.replace(spell,spell+'\n'+spell))).toMatchObject({travel:false});
+ expect(check(log.replace('"bankAfter":0,"observed":true','"bankAfter":1,"observed":true'))).toMatchObject({staged:false});
+ expect(check(log.replace(/^QUEST_SWEEP_TREE_EXIT .*\n/m,''))).toMatchObject({treeExit:false});
+ expect(check(log.replace('"ok":true,"at":{"x":2461,"z":3382','"ok":true,"at":{"x":2461,"z":3381'))).toMatchObject({staged:false});
+ expect(check(log.replace('LOGOUT logged-out',''))).toMatchObject({logout:false});
+ expect(check(log.replace('"state":"complete"','"state":"started"'))).toMatchObject({questList:false});
+ after.vars[165]=28;expect(check().quest).toBe(false);after.vars[165]=29;
+ after.inventories[93]![0]!.count--;expect(check().assets).toBe(false);after.inventories[93]![0]!.count++;
+ after.skills[14]!.rawExperience--;expect(check().reward).toBe(false);after.skills[14]!.rawExperience++;
+ after.skills[6]!.rawExperience--;expect(check().travel).toBe(false);after.skills[6]!.rawExperience++;
+ after.inventories[93]!.find(i=>i.id===556)!.count++;expect(check().assets).toBe(false);after.inventories[93]!.find(i=>i.id===556)!.count--;
+ after.inventories[95]![0]!.count--;expect(check()).toMatchObject({assets:false,staged:false});after.inventories[95]![0]!.count++;
+ before.inventories[93]!.find(i=>i.id===995)!.count=0;expect(check().entry).toBe(false);before.inventories[93]!.find(i=>i.id===995)!.count=82904;
+ before.skills[6]!.level=1;expect(check().entry).toBe(false);before.skills[6]!.level=99;
+ before.position={x:2615,z:3332,level:0};expect(check().entry).toBe(false);
+});
+
+test('Elena normal acquisition accepts ground-floor bucket sellers and its observed water-gathering exit',()=>{
+ const before=doricSave(0);before.position={x:2615,z:3332,level:0};before.vars={165:0,101:0};before.skills[3]!.level=40;
+ before.inventories={93:[2126,952,954,1927,231].map((id,slot)=>({id,slot,count:1})),95:[{id:995,slot:0,count:230}]};
+ const after=structuredClone(before);after.vars={165:29,101:1};after.skills[14]!.rawExperience=606250;
+ after.inventories={93:[{id:995,slot:0,count:220},{id:952,slot:1,count:1},{id:1925,slot:2,count:4},{id:1505,slot:6,count:1}],
+  94:[{id:1506,slot:0,count:1}],95:[]};
+ const log=`START 2615 3332 0
+QUEST_SWEEP_BUY {"item":1925,"npc":"Shop keeper","before":0,"after":3,"coinsBefore":230,"coins":224}
+QUEST_SWEEP_BUY {"item":1925,"npc":"Shop keeper","before":3,"after":4,"coinsBefore":224,"coins":222}
+QUEST_SWEEP_HECKEL_APPROACH {"from":{"x":2657,"z":3153,"level":0},"to":{"x":2461,"z":3382,"level":0},"at":{"x":2461,"z":3382,"level":0},"observed":true}
+QUEST_SWEEP_HECKEL {"item":1975,"before":0,"after":1,"coinsBefore":222,"coins":220,"observed":true}
+${[1,2,3,4].map(held=>'QUEST_SWEEP_USE '+JSON.stringify({item:1929,at:{x:2639,z:3369,level:0},held,target:4})).join('\n')}
+MILESTONE quest-sweep elena staged at {"x":2572,"z":3333,"level":0}
+QUEST_SWEEP_FLAG {"name":"Plague City","state":"complete"}
+RESULT ok qp=1 eats=0 died=false
+LOGOUT logged-out
+`;
+ const record={id:'elena-heckel-dust',exit:0,timedOut:false,saveMatched:true,seconds:223};
+ const check=(text=log):Record<string,boolean>=>questSweepChecks(record.id,before,after,text,record);
+ expect(Object.entries(check()).filter(([,ok])=>!ok)).toEqual([]);
+ expect(check(log.replace(/^QUEST_SWEEP_USE .*\n/gm,''))).toMatchObject({treeExit:false,staged:false});
+ expect(check(log.replace('"coins":222','"coins":221')).budget).toBe(false);
+ expect(check(log.replace('"held":4','"held":3')).staged).toBe(false);
+});
+
 test('Imp saved effects require one debit per colour, carried surplus, banked extras, exact rewards and logout',()=>{
  const beads=[1470,1472,1474,1476],before=doricSave(91);
  before.position={x:3104,z:3163,level:2};before.vars={160:0,101:0};before.skills[3]!.level=40;
@@ -351,7 +462,7 @@ test('explicit --case selection picks named cases, keeps the full default and re
  expect(()=>selectQuestSweepProofCases(['--case=scorpion-barcrawl','--case=scorpion-barcrawl'])).toThrow('repeated');
  const definition=JSON.parse(readFileSync(new URL('../../router/tasks/quest-sweep.json',import.meta.url),'utf8'));
  for(const c of definition.checks.filter((c:any)=>c.command.includes('packages/practice/src/quest-sweep-proof.ts')))
-  expect(selectQuestSweepProofCases(c.command.slice(2))).toEqual(['scorpion-barcrawl','scorpion-ranged-barcrawl','scorpion-complete-refusal']);
+  expect(selectQuestSweepProofCases(c.command.slice(2))).toEqual(['scorpion-barcrawl','scorpion-ranged-barcrawl','scorpion-complete-refusal','elena-heckel-dust']);
  const source=readFileSync(new URL('../src/quest-sweep-proof.ts',import.meta.url),'utf8');
  expect(source).toContain('.filter(c=>selected.includes(c.id))');
  expect(source).toContain('missing retained evidence');

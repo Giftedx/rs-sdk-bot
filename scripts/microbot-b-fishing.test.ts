@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {FISH_PROFILES,FISH_KNIFE_RESET,fishSpotIds,pickFishSpot,runStagedFishing,searchNativeCatherbyFishing,catherbyFishingSearchPoints,karambwanLoadEffect,karambwanAttemptEffect,bigNetSnapshot,bigNetReceipt as nativeBigNetReceipt,fishingByproducts,fishingOutputs,fishingCapacityOutputs,type FishDriver,type FishAction,type FishMethod} from './microbot-b-fishing';
+import {FISH_PROFILES,FISH_KNIFE_RESET,bestFishingMethod,fishingMethodRequirements,fishSpotIds,pickFishSpot,runStagedFishing,searchNativeCatherbyFishing,catherbyFishingSearchPoints,karambwanLoadEffect,karambwanAttemptEffect,bigNetSnapshot,bigNetReceipt as nativeBigNetReceipt,fishingByproducts,fishingOutputs,fishingCapacityOutputs,type FishDriver,type FishAction,type FishMethod} from './microbot-b-fishing';
 import {knifeDelay,knifeCut,KNIFE,NORMAL_LOGS} from './knife-reset';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
@@ -139,4 +139,13 @@ test('knife reset refuses karambwan, a missing log and a driver without send',as
  w.inv=w.inv.filter(i=>i.id!==NORMAL_LOGS);await expect(runStagedFishing(d,{...base,method:'fly'})).rejects.toThrow('knife and logs');
  const k=knifeServer('karambwan',{x:2899,z:3118},{x:2900,z:3118});k.w.inv.push(item(3159,1,9));
  await expect(runStagedFishing(k.d,{...base,method:'karambwan'})).rejects.toThrow('no knife reset');
+});
+
+test('bestFishingMethod selects highest unlocked owned method and resolves shop sources cleanly',()=>{
+ const cageHarpoon=[{id:301,count:1},{id:311,count:1},{id:303,count:1},{id:309,count:1},{id:314,count:50}];
+ expect(bestFishingMethod(20,cageHarpoon,{members:false})?.method).toBe('fly');
+ expect(bestFishingMethod(35,cageHarpoon,{members:false})?.method).toBe('harpoon');
+ expect(bestFishingMethod(40,cageHarpoon,{members:false})?.method).toBe('cage');
+ expect(bestFishingMethod(40,[],{members:false,requireTool:false})).toMatchObject({method:'cage',toolId:301,shop:'fishingshop2',hasTool:false});
+ expect(fishingMethodRequirements('harpoon').shop).toBe('fishingshop2');
 });

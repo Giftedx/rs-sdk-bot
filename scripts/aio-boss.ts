@@ -27,6 +27,7 @@ export interface BossEncounterSpec {
 export const BOSS_ENCOUNTERS: readonly BossEncounterSpec[] = [
  {boss:'kbd',script:'scripts/microbot-b-kbd.ts',description:'King Black Dragon full trip: KBD_KIT withdraw, Lava Maze lever entry, antifire/prayer/melee fight, loot, and escape'},
  {boss:'black-dragon',script:'scripts/black-dragon-camp.ts',description:'Taverley black dragons from the corridor south of their cave: BLACK_KIT withdraw, dusty key gate, ranged camp that takes no melee, hides and bones banked'},
+ {boss:'green-dragon',script:'scripts/wild-dragons.ts',description:'Wilderness Green Dragons (rev 289): Dragonfire shield preflight, bone/dhide loot, PKer threat retreat, and Edgeville bank'},
  {boss:'trawler',script:'scripts/microbot-trawler-trip.ts',description:'Port Khazard Fishing Trawler minigame trip (paste/bailing/net inspection)'},
  {boss:'trawler-at-site',script:'scripts/microbot-b-trawler.ts',description:'At-dock Fishing Trawler minigame loop'},
 ];

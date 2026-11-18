@@ -1,7 +1,7 @@
 import {test,expect} from 'bun:test';
 import {existsSync,mkdirSync,writeFileSync,unlinkSync} from 'node:fs';
 import {fakeSession,at} from '../packages/core/test/fake';
-import {supplyPlan,runWoodSupply,takeOwnedSupplyKnife} from './woodcut-supply';
+import {supplyPlan,runWoodSupply,takeOwnedSupplyKnife,selectWoodSupplyAxe,reconcileWoodSupplyAxe} from './woodcut-supply';
 test('retained log supply admits only a finite accounting-compatible headless batch',()=>{
  expect(supplyPlan(25,165,3000)).toEqual({logs:25,headless:165,shafts:375});
  for(const args of [[0,0,3000],[26,0,3000],[25,180,3000],[25,164,3000],[25,165,0],[NaN,0,3000]])expect(()=>supplyPlan(...args as [number,number,number])).toThrow();
@@ -78,4 +78,27 @@ test('a stop that lands while the bank opens permits no deposit',async()=>{
   bot:{openBank:async()=>{writeFileSync(file,'unit-owned stop',{flag:'wx'});return {success:true};},depositItem:async()=>{deposits++;return {success:true};},closeBank:async()=>({success:true})}};
  try{const r=await runWoodSupply(session,1,0,3000);expect(r.ok).toBe(false);expect(r).toHaveProperty('error','Error: supply stopped, capped or damaged');expect(deposits).toBe(0);}
  finally{if(existsSync(file))unlinkSync(file);}
+});
+
+test('reconcileWoodSupplyAxe swaps starter Bronze for higher owned/Bob axe and equips when Attack permits',async()=>{
+ let open=true,shopOpen=false,gen=1;const ticks=fakeSession([at(3092,3243)]);
+ const pack:any[]=[{id:1351,name:'Bronze axe',count:1}],eq:any[]=[];
+ const bank:any[]=[{id:1359,name:'Rune axe',count:1},{id:995,name:'Coins',count:500}];
+ const shopItems=[{id:1353,name:'Steel axe',count:3,buyPrice:200}];
+ let attack=1;
+ const s:any={...ticks,name:'Supplyaxe',bankObservation:()=>open?{generation:gen,items:bank}:null,
+  sdk:{getInventory:()=>pack,getEquipment:()=>eq,getSkill:(n:string)=>({level:n==='Attack'?attack:15,baseLevel:n==='Attack'?attack:15}),getState:()=>({player:{worldX:3092,worldZ:3243,level:0,isDead:false},bank:{isOpen:open,items:bank},shop:{isOpen:shopOpen,shopItems}})},
+  bot:{openBank:async()=>{open=true;gen++;return{success:true};},closeBank:async()=>{open=false;return{success:true};},
+   withdrawItem:async(item:any,n:number)=>{const r=bank.find(v=>v.id===item.id);r.count-=n;if(r.count<=0)bank.splice(bank.indexOf(r),1);pack.push({id:item.id,name:item.name,count:n});gen++;return{success:true};},
+   depositItem:async(item:any)=>{const idx=pack.findIndex(v=>v.id===item.id);const[rm]=pack.splice(idx,1);const r=bank.find(v=>v.id===rm.id);if(r)r.count+=rm.count;else bank.push({...rm});gen++;return{success:true};},
+   equipItem:async(item:any)=>{open=false;const idx=pack.findIndex(v=>v.id===item.id);const[rm]=pack.splice(idx,1);eq.push({...rm,slot:3});return{success:true};},
+   openShop:async()=>{shopOpen=true;return{success:true};},buyFromShop:async()=>({success:true}),closeShop:async()=>{shopOpen=false;return{success:true};}}};
+
+ expect(selectWoodSupplyAxe(bank,{Woodcutting:1,Attack:1}).current?.item.id).toBe(1359);
+ const lowId=await reconcileWoodSupplyAxe(s,{check:()=>{},allowShop:false});
+ expect(lowId).toBe(1359);expect(pack.map(i=>i.id)).toEqual([1359]);expect(eq).toHaveLength(0);expect(bank.find(i=>i.id===1351)?.count).toBe(1);
+
+ attack=40;
+ const highId=await reconcileWoodSupplyAxe(s,{check:()=>{},allowShop:false});
+ expect(highId).toBe(1359);expect(eq[0]?.id).toBe(1359);expect(pack).toHaveLength(0);
 });

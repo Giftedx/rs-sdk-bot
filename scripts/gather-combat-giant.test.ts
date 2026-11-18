@@ -1,5 +1,7 @@
 import {test,expect} from 'bun:test';
 import {GIANT,CONFIGS,TROOPER_FOODS,giantStyle,giantTraining,giantCredit,giantKillLimit,runGiants,selectGiantWeapon,selectGiantBow,selectGiantArrows,selectedGiantRangedKit,roamTarget,anothersFight,ammoPiles,AMMO_REACH,AMMO_WORTH} from './gather-combat';
+import {questDefinitions} from '../packages/core/src/quest-status';
+import {gearById} from '../packages/planner/src/gear-progression';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
 
@@ -420,4 +422,116 @@ test('every eat of a run waits out the game\'s eat delay: a low-HP account on co
         expect(bites.length).toBe(3);expect(bites.every((t,i)=>i===0||t-bites[i-1]!>=3)).toBe(true);
         expect(r.eaten).toBe(3);expect(r.foodAccounted).toBe(true);
     }finally{f.dispose();}
+});
+
+test('runGiants equips quest-gated melee armour on startup and weapon upgrades on mid-run bank trips',async()=>{
+    let tick=0,open=false,generation=0,style=0,hp=75,attacks=0,lostCityDone=false,attackLevel=40;
+    let pos={x:2655,z:3283};
+    const xp:Record<string,number>={Attack:0,Strength:0,Defence:0,Hitpoints:0};
+    const listeners=new Set<()=>void>();
+    const defs=questDefinitions();
+    const dragonId=defs.find(d=>d.name==='Dragon Slayer')!.id;
+    const fremId=defs.find(d=>d.name==='The Fremennik Trials')!.id;
+    const lostId=defs.find(d=>d.name==='Lost City')!.id;
+    const legendsId=defs.find(d=>/legends/i.test(d.name))!.id;
+    const inv:any[]=[{id:385,name:'Shark',count:1,slot:0,optionsWithIndex:[{text:'Eat',opIndex:1}]}];
+    const equipment:any[]=[{id:2402,name:'Silverlight',count:1,slot:3}];
+    const bank:any[]=[
+        {id:385,name:'Shark',count:10,slot:0},
+        {id:1333,name:'Rune scimitar',count:1,slot:1},
+        {id:1305,name:'Dragon longsword',count:1,slot:2},
+        {id:3751,name:'Berserker helm',count:1,slot:3},
+        {id:1163,name:'Rune full helm',count:1,slot:4},
+        {id:1127,name:'Rune platebody',count:1,slot:5},
+        {id:1113,name:'Rune chainbody',count:1,slot:6},
+        {id:1079,name:'Rune platelegs',count:1,slot:7},
+        {id:1201,name:'Rune kiteshield',count:1,slot:8},
+        {id:1052,name:'Cape of legends',count:1,slot:9},
+    ];
+    let ground:any[]=[];
+    const spawn=()=>({id:117,index:9,name:'Giant',x:2545,z:3144,tileX:2545,tileZ:3144,hp:35,maxHp:35,inCombat:false,reachable:true});
+    let npc:any=spawn();
+    const wearPosFor=(id:number)=>({righthand:3,lefthand:5,hat:0,torso:4,legs:7,front:2,back:1,hands:9,feet:10}[gearById(id)?.slot??'righthand']??3);
+    const wornWeapon=()=>equipment.find(i=>i.slot===3);
+    const startupWeapons:number[]=[];
+    const timer=setInterval(()=>{tick++;for(const f of [...listeners])f();},1);
+    const client={
+        ingame:true,
+        ifType:(id:number)=>{
+            if(id===dragonId||id===fremId)return{colour:0x00f800};
+            if(id===lostId)return{colour:lostCityDone?0x00f800:0xf80000};
+            if(id===legendsId)return{colour:0xf80000};
+            return{colour:0xf80000};
+        },
+    };
+    const session:any={
+        name:'giant-gear-prog',client,tick:()=>tick,
+        onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f);},
+        ended:new Promise(()=>{}),
+        bankObservation:()=>open?{generation,at:Date.now(),items:bank}:null,
+        direct:async()=>{const item=inv.find(i=>i.id===385);if(!item)return{success:false};item.count--;if(!item.count)inv.splice(inv.indexOf(item),1);hp=75;return{success:true};},
+        sdk:{
+            getInventory:()=>inv,getEquipment:()=>equipment,getSkillXp:(n:string)=>xp[n]??0,
+            sendSetCombatStyle:async(n:number)=>{style=n;return{success:true};},
+            getSkill:(n:string)=>{
+                if(n==='Hitpoints')return{level:hp,baseLevel:75};
+                if(n==='Attack')return{level:attackLevel,baseLevel:attackLevel};
+                if(n==='Defence')return{level:45,baseLevel:45};
+                return{level:60,baseLevel:60};
+            },
+            getState:()=>({
+                player:{worldX:pos.x,worldZ:pos.z,level:0,lifeId:1,respawnCount:0,hp},
+                inventory:inv,equipment,nearbyPlayers:[],nearbyNpcs:npc&&pos.x<2560?[npc]:[],nearbyLocs:[],groundItems:ground,
+                bank:{isOpen:open,items:bank},
+                combatStyle:{known:true,currentStyle:style,weaponName:wornWeapon()?.name??'',styles:[{index:0,name:'Chop',trainsSkills:['Attack']},{index:1,name:'Slash',trainsSkills:['Strength']},{index:3,name:'Block',trainsSkills:['Defence']}]},
+            }),
+        },
+        bot:{
+            openBank:async()=>{open=true;generation++;return{success:true};},
+            closeBank:async()=>{open=false;return{success:true};},
+            equipItem:async(item:any)=>{
+                const slot=wearPosFor(item.id);
+                const oldIdx=equipment.findIndex(i=>i.slot===slot);
+                if(oldIdx>=0)inv.push(...equipment.splice(oldIdx,1));
+                inv.splice(inv.indexOf(item),1);
+                equipment.push({...item,slot});
+                return{success:true};
+            },
+            eatFood:async(item:any)=>{
+                item.count--;if(!item.count)inv.splice(inv.indexOf(item),1);
+                hp=75;
+                return{success:true};
+            },
+            attack:async()=>{
+                attacks++;startupWeapons.push(wornWeapon()?.id??0);
+                if(attacks===1)hp=30;
+                xp.Strength+=3500;
+                ground=[{id:532,name:'Big bones',count:1,x:2545,z:3144}];
+                npc=null;
+                return{success:true};
+            },
+            pickupItem:async(item:any)=>{
+                ground=ground.filter(i=>i!==item);
+                inv.push({id:item.id,name:item.name,count:1,slot:inv.length});
+                if(attacks===1){hp=30;attackLevel=60;lostCityDone=true;}
+                if(!ground.length)npc=spawn();
+                return{success:true};
+            },
+            depositItem:async(item:any)=>{for(const i of inv.filter(x=>x.id===item.id)){const row=bank.find(r=>r.id===i.id);if(row)row.count+=i.count;else bank.push({...i,slot:bank.length});inv.splice(inv.indexOf(i),1);}generation++;return{success:true};},
+            withdrawItem:async(item:any,n:number)=>{item.count-=n;if(item.count<=0)bank.splice(bank.indexOf(item),1);const row=inv.find(i=>i.id===item.id);if(row)row.count+=n;else inv.push({id:item.id,name:item.name,count:n,slot:inv.length,optionsWithIndex:item.id===385?[{text:'Eat',opIndex:1}]:undefined});generation++;return{success:true};},
+        },
+    };
+    const walk=async(x:number,z:number)=>{pos={x,z};await waitTicks(session,1);return true;};
+    try{
+        const r=await runGiants(session,{cap:500,trainSkill:'Strength',targetLevel:99,maximum:2,food:1,walk});
+        expect(r.failure).toBe('-');
+        expect(r.ok).toBe(true);expect(r.creditedKills).toBe(2);expect(r.bankTrips).toBeGreaterThanOrEqual(3);
+        expect(r.preserved).toBe(true);expect(r.foodAccounted).toBe(true);
+        // Startup (Attack 40, Dragon Slayer + Fremennik Trials): Rune scimitar + Berserker helm + Rune platebody + Rune platelegs + Rune kiteshield.
+        expect(startupWeapons[0]).toBe(1333);
+        // Mid-run trip after Attack 60 & Lost City: upgrades to Dragon longsword (1305) while Legends Cape (1052) stays locked.
+        expect(startupWeapons[1]).toBe(1305);
+        expect(equipment.map(i=>i.id).sort((a,b)=>a-b)).toEqual([1079,1127,1201,1305,3751]);
+        expect(equipment.some(i=>i.id===1052)).toBe(false);
+    }finally{clearInterval(timer);}
 });

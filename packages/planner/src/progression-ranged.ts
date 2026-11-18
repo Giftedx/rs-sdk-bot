@@ -28,13 +28,24 @@ export function rangedKit(a:ObservedAccount){
  })));
  return options.sort((x,y)=>rangedModelRate(level,y,22,12)-rangedModelRate(level,x,22,12)||y.strength-x.strength||x.bow-y.bow||x.arrow-y.arrow)[0]??null;
 }
-// Stop only at an owned unlock that actually changes the modeled usable kit.
+// Stop at the next owned or acquirable Ranged tier unlock before target.
+const tierUpgrades:Record<number,{bow:number;arrow:number;minCoins:number}>={
+ 5:{bow:843,arrow:886,minCoins:100},
+ 20:{bow:849,arrow:888,minCoins:2500},
+ 30:{bow:853,arrow:888,minCoins:5000},
+ 40:{bow:857,arrow:892,minCoins:3000},
+};
 export function rangedBandTarget(a:ObservedAccount,target:number){
- const current=rangedKit(a),level=ranged(a);if(!current)return target;
+ const current=rangedKit(a),level=ranged(a);
  const skill=Object.keys(a.skills).find(name=>name.toLowerCase()==='ranged')!;
+ const heldCoins=Math.max(0,[a.inventory,a.bank,a.equipment].reduce((n,b)=>n+(b?.value[995]??0),0)-(a.reservations?.[995]??0));
  for(const boundary of [...new Set(bows.map(b=>b.level))].filter(n=>n>level&&n<target).sort((x,y)=>x-y)){
-  const next=rangedKit({...a,skills:{...a.skills,[skill]:{...a.skills[skill]!,level:boundary}}});
-  if(next&&(next.bow!==current.bow||next.arrow!==current.arrow))return boundary;
+  if(current){
+   const next=rangedKit({...a,skills:{...a.skills,[skill]:{...a.skills[skill]!,level:boundary}}});
+   if(next&&(next.bow!==current.bow||next.arrow!==current.arrow))return boundary;
+  }
+  const upgrade=tierUpgrades[boundary];
+  if(upgrade&&heldCoins>=upgrade.minCoins&&(!current||current.bowLevel<boundary||(boundary===5&&current.arrow===882)))return boundary;
  }
  return target;
 }
@@ -50,8 +61,12 @@ export function rangedModelRate(level:number,kit:Kit,hp:number,defence:number,ex
  return hp*100/(shots[hp]!*kit.interval+extraTicks);
 }
 export function rangedProgressionMethods(a:RangedProgressionAccount,targetLevel:number,goalItems?:Record<number,number>):ProgressionMethod[]{
- const kit=rangedKit(a),owned=stock(a),level=ranged(a),at=a.position?.value;
+ const kit=rangedKit(a),owned=stock(a),level=ranged(a),at=a.position?.value,observed=!!(a.bank&&a.inventory&&a.equipment);
  const physical=stock({...a,reservations:{}});
+ const gearMap=items();
+ const kitStats=(bow:number,arrow:number):Kit=>({bow,arrow,attack:gearMap.get(bow)?.bonuses.rangeAttack??8,
+  strength:gearMap.get(arrow)?.bonuses.rangeStrength??7,interval:Math.max(1,(gearMap.get(bow)?.attackRate??4)-1)});
+ const activeKit=kit??(observed?kitStats(841,882):null);
  const step={script:'scripts/ranged-train.ts',args:[String(targetLevel)],env:{TARGET_LEVEL:String(targetLevel)}};
  const travel=(x:number,z:number)=>!at?null:Math.max(Math.abs(at.x-x),Math.abs(at.z-z))<=6?0:
   // Cross-region transport is deliberately priced above its geometric lower bound.
@@ -66,13 +81,13 @@ export function rangedProgressionMethods(a:RangedProgressionAccount,targetLevel:
  const food=foods.find(id=>(owned[id]??0)>=3);
  const chickenFood=[329,333,1985].find(id=>(owned[id]??0)>=3);
  const chicken=base('ranged/chickens',{levels:{Ranged:1},items:{...required,...chickenFood?{[chickenFood]:3}:{995:20}}},
-  model(kit?rangedModelRate(level,kit,3,1,8+210/8):null,'Model: HP3 chickens, native rapid attack roll; eight kills per210-tick bank journey; pickup and targeting8ticks/kill. Validate on the current state.'),travel(3253,3421));
+  model(activeKit?rangedModelRate(Math.max(1,level),activeKit,3,1,8+210/8):null,'Model: HP3 chickens, native rapid attack roll; eight kills per210-tick bank journey; pickup and targeting8ticks/kill. Validate on the current state.'),travel(3253,3421));
  if(!chickenFood)chicken.costs.acquisitionTicks=650;
  methods.push(chicken);
  const trooper=base('ranged/troopers',{levels:{Hitpoints:40},items:{...required,...food?{[food]:3}:{2142:3}}},
-  model(kit?rangedModelRate(level,kit,22,12):null,'Model: HP22, Defence12 Khazard troopers, native rapid attack roll; targeting and ammo pickup8ticks/kill. Bank and approach included separately. Validate on the current state.'),travel(2619,3332));
+  model(activeKit?rangedModelRate(Math.max(1,level),activeKit,22,12):null,'Model: HP22, Defence12 Khazard troopers, native rapid attack roll; targeting and ammo pickup8ticks/kill. Bank and approach included separately. Validate on the current state.'),travel(2619,3332));
  trooper.costs.setupTicks=220;methods.push(trooper);
- const willow:Kit={bow:849,arrow:888,attack:20,strength:22,interval:3};
+ const willow=kitStats(849,888);
  const guild=base('ranged/guild-willow-mithril',{levels:{Ranged:40,Hitpoints:40},items:{849:1,888:500,...food?{[food]:3}:{2142:3}}},
   model(rangedModelRate(Math.max(1,level),willow,22,12),'Model of the owned willow/mithril trooper route. Missing kit is supplied by the existing Dargaud shop jobs; observe shelf, price and complete bank credit before training.'),travel(2619,3332));
  guild.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(guild);
@@ -83,6 +98,68 @@ export function rangedProgressionMethods(a:RangedProgressionAccount,targetLevel:
   rate:model(1/600,'Model: one finite Dargaud shop order including banked credit; observe shelf/price and measure the actual approach.'),
   costs:{setupTicks:0,travelTicks:travel(2673,3434),acquisitionTicks:0,unlockTicks:0},maxUnits:1,repeatable:false,
  });
+ const loweBow=(id:string,item:number,reqLevel:number,budget:number):ProgressionMethod=>({
+  id,source:'scripts/ranged-train.ts; vendor/rs-sdk/server/content/scripts/areas/area_varrock/configs/varrock.inv archeryshop; vendor/rs-sdk/server/content/scripts/areas/area_catherby/configs/catherby.inv archeryshop2',
+  step:{script:'scripts/ranged-train.ts',args:[String(Math.min(targetLevel,reqLevel===1?5:20)),'1500'],env:{TARGET_LEVEL:String(Math.min(targetLevel,reqLevel===1?5:20)),BUY_BOW_ID:String(item),BUY_ARROW_ID:'882'}},
+  effects:{items:{[item]:Math.max(0,1-(owned[item]??0))}},inputs:{995:budget},requirements:{levels:{Ranged:reqLevel}},
+  rate:model(1/80,'Model: one Lowe Archery Emporium (archeryshop) or Hickton (archeryshop2) starter bow purchase within budget; rev-289 Rimmington has no archery shop.'),
+  costs:{setupTicks:0,travelTicks:travel(3232,3423),acquisitionTicks:0,unlockTicks:0},maxUnits:1,repeatable:false,
+ });
+ const loweArrow=(id:string,item:number,count:number,pattern:string,reqLevel:number,budget:number):ProgressionMethod=>({
+  id,source:'scripts/shop-buyer.ts lowe; vendor/rs-sdk/server/content/scripts/areas/area_varrock/configs/varrock.inv archeryshop',
+  step:{script:'scripts/shop-buyer.ts',args:['lowe','1200'],env:{ITEMS:pattern,STOCK_TARGET:String((physical[item]??0)+Math.max(0,count-(owned[item]??0))),MAX_ITEMS:String(Math.max(0,count-(owned[item]??0))),STOP_AT_TARGET:'1',BANK_PACK:'1',BANK_AT:'0',NO_BUY_TICKS:'25',MAX_SPEND:String(budget),FLOAT:String(budget+1000),COIN_RESERVE:'500'}},
+  effects:{items:{[item]:Math.max(0,count-(owned[item]??0))}},inputs:{995:budget},requirements:{levels:{Ranged:reqLevel}},
+  rate:model(Math.max(1,count)/180,'Model: one Lowe Archery Emporium (archeryshop) arrow purchase.'),
+  costs:{setupTicks:0,travelTicks:travel(3232,3423),acquisitionTicks:0,unlockTicks:0},maxUnits:1,repeatable:false,
+ });
+ const geAcquire=(id:string,item:number,count:number,limitPrice:number,reqLevel:number,note:string):ProgressionMethod=>{
+  const missing=Math.max(0,count-(owned[item]??0)),ownedQty=physical[item]??0;
+  return{
+   id,source:'scripts/buy-owned-ge-item.ts; knowledge/gear.json',
+   step:{script:'scripts/buy-owned-ge-item.ts',args:[],env:{ITEM_ID:String(item),QUANTITY:String(missing),...(ownedQty>0?{EXPECTED_OWNED:String(ownedQty)}:{}),LIMIT_PRICE:String(limitPrice),CASH_RESERVE:'500',ORDER_MS:'900000',FILL_WAIT_TICKS:'200'}},
+   effects:{items:{[item]:missing}},inputs:{995:limitPrice*missing},requirements:{levels:{Ranged:reqLevel}},
+   rate:model(Math.max(1,missing)/180,note),
+   costs:{setupTicks:0,travelTicks:travel(3164,3487),acquisitionTicks:0,unlockTicks:0},maxUnits:1,repeatable:false,
+  };
+ };
+ // Progressive 1-39 acquisition routes verified against rev-289 shops.json (archeryshop, archeryshop2, ranging_guild_bowshop).
+ // Maple shortbow (853) is absent from all rev-289 NPC shops and Willow (849) shop access at Dargaud requires Ranged 40.
+ if((!goalItems||goalItems[841]!==undefined)&&(owned[841]??0)<(goalItems?.[841]??1))
+  methods.push(loweBow('ranged/lowe-buy-shortbow',841,1,100));
+ const bronzeTarget=goalItems?.[882]??100,ironTarget=goalItems?.[884]??250,steelTarget=goalItems?.[886]??250;
+ if((!goalItems||goalItems[882]!==undefined)&&(owned[882]??0)<bronzeTarget)
+  methods.push(loweArrow('ranged/lowe-buy-bronze',882,bronzeTarget,'^bronze arrow$',1,goalItems?3*(bronzeTarget-(owned[882]??0)):300));
+ if((!goalItems||goalItems[884]!==undefined)&&(owned[884]??0)<ironTarget)
+  methods.push(loweArrow('ranged/lowe-buy-iron',884,ironTarget,'^iron arrow$',1,goalItems?8*(ironTarget-(owned[884]??0)):2000));
+ if((!goalItems||goalItems[843]!==undefined)&&(owned[843]??0)<(goalItems?.[843]??1))
+  methods.push(loweBow('ranged/lowe-buy-oak',843,5,200));
+ if((!goalItems||goalItems[886]!==undefined)&&(owned[886]??0)<steelTarget)
+  methods.push(loweArrow('ranged/lowe-buy-steel',886,steelTarget,'^steel arrow$',5,goalItems?24*(steelTarget-(owned[886]??0)):6000));
+ const earlyWillowTarget=goalItems?.[849]??1,earlyMithrilTarget=goalItems?.[888]??250,mapleTarget=goalItems?.[853]??1;
+ if(((!goalItems&&level<40)||goalItems?.[849]!==undefined)&&(owned[849]??0)<earlyWillowTarget)
+  methods.push(geAcquire('ranged/ge-buy-willow',849,earlyWillowTarget,2500,20,'Model: GE purchase of Willow shortbow before Ranging Guild entry at Ranged 40.'));
+ if(((!goalItems&&level<40)||goalItems?.[888]!==undefined)&&(owned[888]??0)<earlyMithrilTarget)
+  methods.push(geAcquire('ranged/ge-buy-mithril',888,earlyMithrilTarget,120,20,'Model: GE purchase of Mithril arrows before Ranging Guild entry at Ranged 40.'));
+ if((!goalItems||goalItems[853]!==undefined)&&(owned[853]??0)<mapleTarget)
+  methods.push(geAcquire('ranged/ge-buy-maple',853,mapleTarget,4000,30,'Model: GE purchase of Maple shortbow (no rev-289 NPC shop sells Maple shortbow).'));
+ if(!goalItems&&level<40){
+  const oak=kitStats(843,886);
+  if((!kit||kit.bowLevel<5)&&targetLevel>=5){
+   const mChick=base('ranged/chickens-oak',{levels:{Ranged:5},items:{843:1,886:50}},model(rangedModelRate(Math.max(5,level),oak,3,0),'Model: HP 3 chickens with Oak shortbow and Steel arrows.'),travel(3253,3421));
+   mChick.costs={setupTicks:20,travelTicks:travel(3253,3421),acquisitionTicks:0,unlockTicks:0};methods.push(mChick);
+   const mTroop=base('ranged/troopers-oak',{levels:{Ranged:5,Hitpoints:40},items:{843:1,886:250,...food?{[food]:3}:{2142:3}}},model(rangedModelRate(Math.max(5,level),oak,22,12),'Model: troopers with Oak shortbow and Steel arrows.'),travel(2619,3332));
+   mTroop.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(mTroop);
+  }
+  if((!kit||kit.bowLevel<20)&&targetLevel>=20){
+   const mWillow=base('ranged/troopers-willow',{levels:{Ranged:20,Hitpoints:40},items:{849:1,888:250,...food?{[food]:3}:{2142:3}}},model(rangedModelRate(Math.max(20,level),willow,22,12),'Model: troopers with Willow shortbow and Mithril arrows before Ranging Guild.'),travel(2619,3332));
+   mWillow.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(mWillow);
+  }
+  const maple=kitStats(853,888);
+  if((!kit||kit.bowLevel<30)&&targetLevel>=30){
+   const mMaple=base('ranged/troopers-maple',{levels:{Ranged:30,Hitpoints:40},items:{853:1,888:250,...food?{[food]:3}:{2142:3}}},model(rangedModelRate(Math.max(30,level),maple,22,12),'Model: troopers with Maple shortbow and Mithril arrows.'),travel(2619,3332));
+   mMaple.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(mMaple);
+  }
+ }
  const bowTarget=goalItems?.[849]??1,arrowTarget=goalItems?.[888]??500;
  if((!goalItems||goalItems[849]!==undefined)&&(owned[849]??0)<bowTarget)
   methods.push(shop('ranged/guild-buy-willow',849,bowTarget,'willow shortbow',goalItems?1200*(bowTarget-(owned[849]??0)):3000));

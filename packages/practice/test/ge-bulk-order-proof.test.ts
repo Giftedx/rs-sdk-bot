@@ -8,7 +8,22 @@ import {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import type {ItemOrder} from '../../../scripts/buy-owned-ge-item';
 import {verifyCase} from '../src/ge-bulk-order-proof';
 import {capabilityRevision} from '../../core/src/worker-release';
-import {geProofRuntime} from '../src/ge-bulk-order-proof';
+import {geProofRuntime,geProofFixtureRecord} from '../src/ge-bulk-order-proof';
+import {evaluateProgressionWork} from '../../core/src/progression-session';
+
+test('actual native GE fixture descriptors reach progression without an unmapped handoff',()=>{
+ for(const [argv,kind]of [[['--sell','flgesell1','2357','2','4900'],'service'],[['--snapshot','flgebuy1'],'observe']] as const){
+  const record=geProofFixtureRecord(argv),name=argv[1],now=10000;
+  expect(record).toEqual({script:'packages/practice/src/ge-bulk-order-proof.ts',argv:[...argv]});
+  const work={script:record.script,args:record.argv,env:{}};
+  const evaluation=evaluateProgressionWork(work,{name,at:now,server:'127.0.0.1:28888',inventory:[],equipment:[],skills:[]},{now});
+  expect(evaluation.intent).toMatchObject({kind,units:1});
+  expect(evaluation.supported).toBe(true);
+  expect(evaluation.reason).toBeUndefined();
+ }
+ expect(()=>geProofFixtureRecord(['--sell','flgesell1','2357','2','0'])).toThrow('finite native GE fixture');
+ expect(()=>geProofFixtureRecord(['--snapshot','flgebuy1','extra'])).toThrow('finite native GE fixture');
+});
 test('native GE proof binds the acquired worker closure',()=>{expect(geProofRuntime()).toBe(capabilityRevision(['scripts/buy-owned-ge-item.ts']));});
 
 const save=(bank:{id:number;count:number}[],pack:{id:number;count:number}[]=[])=>({version:9,position:{x:3185,z:3436,level:0},vars:{},

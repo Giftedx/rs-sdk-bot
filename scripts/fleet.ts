@@ -79,10 +79,10 @@ export const FLEET: FleetAccount[] = [
     },
     {
         name: 'Shaftsinker', server: 'rs-sdk-demo.fly.dev', role: 'mining',
-        goal: 'Mine rune essence and pure essence via Aubury, bank at Varrock East forever',
+        goal: 'Mine rune essence via Aubury, bank at Varrock East forever',
         script: 'scripts/gather-essence.ts', enabled: true, repeat: true,
         env: { CAP: '15000', BANK_AT: '28' },
-        note: 'Mine rune essence (and pure essence 30+) in the Rune Essence Mine via Aubury teleport, bank at Varrock East bank, and loop forever.',
+        note: 'Mine rune essence in the Rune Essence Mine via Aubury teleport, bank at Varrock East bank, and loop forever.',
     },
     {
         name: 'Bigpackage', server: 'rs-sdk-demo.fly.dev', role: 'courier',
@@ -142,7 +142,7 @@ export const FLEET: FleetAccount[] = [
     { name: 'OreElse', server: 'rs-sdk-demo.fly.dev', role: 'mining', goal: 'Gather and bank mixed ores at Varrock East in three-load batches', script: 'scripts/gather-ore.ts', enabled: true, repeat: true, env: { CAP: '1800', BANK_AT: '25', MAX_TRIPS: '3' }, note: 'Qualified at combat13. Live three-load trial banked75ores in1169ticks, hpMin=16, died=false on 2026-10-25. The mixed-mine entry guard requires combat13; emergency owned-load recovery remains available.' },
     { name: 'FishAndChips', server: 'rs-sdk-demo.fly.dev', role: 'fishing', goal: 'Fish, cook and supply the food courier from Draynor', script: 'scripts/fishcook.ts', enabled: true, repeat: true, env: { TICKS: '9000', GIVE_TO: 'Bigpackage', TARGETED_COLLECTION: '1' } },
     { name: 'BowBeforeMe', server: 'rs-sdk-demo.fly.dev', role: 'fletching', goal: 'Gather25 normal logs and bank375 arrow shafts in each production batch', script: 'scripts/fletch-worker.ts', enabled: true, repeat: true, env: { RANDOM_EVENTS: '1',BANK_KNIFE:'1',NORMAL_GROVE:'north' }, note: 'Separate northern normal-tree grove passed the two-client practice trial with full health and preserved kit; live recovery qualification follows before the failed epoch is cleared.' },
-    { name: 'MineYourBiz', server: 'rs-sdk-demo.fly.dev', role: 'mining', goal: 'Essence supply: mine rune/pure essence via Aubury', script: 'scripts/gather-essence.ts', enabled: false },
+    { name: 'MineYourBiz', server: 'rs-sdk-demo.fly.dev', role: 'mining', goal: 'Essence supply: mine rune essence via Aubury', script: 'scripts/gather-essence.ts', enabled: false },
     { name: 'YewFirst', server: 'rs-sdk-demo.fly.dev', role: 'woodcutting', goal: 'Gather and bank normal logs at Draynor in two-load batches', script: 'scripts/gather-yews.ts', enabled: true, repeat: true, env: { REGION: 'draynor', TREE: 'normal', MAX_TRIPS: '2', BANK_AT: '25', CAP: '1800' }, note: 'Live pilot banked 50 logs in 1144 ticks, hpMin=10, died=false on 2026-10-25.' },
 ];
 
