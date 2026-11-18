@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795003084613-ballspinner-moneyshot-staffoffire",
+ "account": "Ballspinner",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "6315e560-afd2-42d4-905a-33aacaef7e31",
+ "count": 0,
+ "ok": false,
+ "at": 1795003175850,
+ "detail": "trade claimed"
+}
