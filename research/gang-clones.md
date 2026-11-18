@@ -571,35 +571,60 @@ two dragonhide loadouts last.
 
 Other teams run bots on this server. The attacker library puts attackers of a given kind on the post in place of the
 clones (`extra:attack-*`). `SQUAD_GANG_KIT=<kit>+<kit>` gives gang account i the kit `list[i]` of `scripts/pk-kits.ts`,
-and `SQUAD_GANG_PROFILE` its fight profile (here `champion`, the profile of the hill climb). The squad is the four members
-of live run 1 in their own loadouts, with full prayer points unless the case says no prayer. The attackers hunt the
-nearest member. A cell is what the squad run prints: kills of the attackers, deaths of ours, Hitpoints lost.
+`SQUAD_GANG_PROFILE` its fight profile (here `champion`, the profile of the hill climb) and `SPAR_B_OPTS` its options.
+`SQUAD_GANG_PREY=<member index>` sends each attacker to one member. The squad is the four members of live run 1 in their
+own loadouts, with full prayer points unless the case says no prayer. A cell is what the squad run prints: attackers
+killed, deaths of ours, Hitpoints lost.
 
-First cells (hosted runs 44416402781, 44417085194, 44417511041; seeds 1, 2 and 3; raw Hitpoints lost by seed):
+The variants of an attacker, the climb of its own rules:
 
-| Attacker | Kit | Kills | Deaths of ours | Hitpoints lost by seed |
+- **plain**: the champion's options. The attacker leaves when it is outnumbered (`escapeOutnumbered`).
+- **fight**: `escapeOutnumbered: null`, the attacker fights to its death.
+- **pile**: fight, and every attacker hunts member 1 (`SQUAD_GANG_PREY=1`). A real team does this.
+
+### The matrix: our squad of four on the multi-way post
+
+Hosted run 44418140982, seeds 1, 2 and 3. Raw Hitpoints lost by seed. "D1" is a death of ours in that seed.
+
+| Attacker | plain | fight | pile | pile, squad with no prayer points |
 |---|---|---|---|---|
-| mage | `mage` | 0 | 0 | 0, 6, 0 |
-| ranger | `ranger` | 0 | 0 | 89, 33, 77 |
-| tribrid | `tribrid-snare` | 0 | 0 | 13, 0, 27 |
-| Iban mage, god mage, pure with a bow, pure with a dagger | `pure-iban`, `pure-god`, `pure-ranger`, `pure-dds` | 0 | 0 | 0, 0, 0 in each |
-| team of 3 (mage, ranger, tribrid) | `mage+ranger+tribrid-snare` | 1 | 1 | 375, 357, 314 |
-| team of 3, squad with no prayer points | the same | 0 | 0 | 142, 121, 85 |
-| team of 5 (2 mages, a ranger, 2 tribrids) | `mage+ranger+tribrid-snare+tribrid-snare+mage` | 3 | 0 | 639, 569, 1261 |
-| team of 5, squad with no prayer points | the same | 0 | 2 | 571, 264, 223 |
+| mage | 0 killed; 0, 1, 28 | 3 killed; 8, 5, 34 | 3 killed; 13, 5, 11 | 3 killed; 35, 13, 10 |
+| ranger | 0 killed; 89, 33, 64 | 3 killed; 185, 90, 78 | 3 killed; 173, 130, 111 | 3 killed; 259, 210, 285 |
+| tribrid | 2 killed; 8, 18, 16 | 3 killed; 8, 63, 56 | 3 killed; 8, 63, 60 | 3 killed; 101, 98, 208 |
+| tribrid with the dragon spear | 0 killed; 0, 11, 53 | 3 killed; 10, 75, 61 | 3 killed; 74, 30, 184 | 3 killed; 142, 252, 143 |
+| team of 3 (mage, ranger, tribrid) | 2 of 9 killed; 850, 490, 161 | 6 of 9; 419, 793, 968 | 6 of 9; 780, 689, 891 | 3 of 9; 1014 D1, 976 D1, 916 D1 |
+| team of 5 (2 mages, ranger, 2 tribrids) | 1 of 15; 1055, 513, 1255 | 0 of 15; 283, 921, 490 | 1 of 15; 535, 486, 704 | 0 of 15; 158 D1, 1, 257 |
 
-- **A lone attacker does not beat the squad here.** The mage, the ranger and the tribrid ended with 0 to 89 Hitpoints lost: the
-  squad stays together and the attacker with the champion's rules leaves when it is outnumbered (the log of the mage
-  case: `PK escaped ... after 104 ticks`).
-- **The four pure kits had no fight in 3 seeds.** Their combat levels are far under ours. The cause is not measured. A
-  combat range of the Wilderness is a candidate.
-- **A team of 5 is the one that kills our accounts when they have no prayer points:** 2 deaths in 3 seeds, and 223 to 571
-  Hitpoints lost with no kill. With prayer points the squad lost 569 to 1,261 Hitpoints and killed 3 attackers.
-- **The attackers do not yet play at their best.** They use the champion's options. The hill climb of an attacker's own rules
-  (target choice, when to pile on one member, when to leave) is not done. A third party that arrives in the middle of the
-  fight with the clones is not built.
+### Our setups against the two teams (pile variant, full prayer points)
 
-Not done: the matrix of our setups against each attacker, the policy table, and the third party during the gang fight.
+Hosted run 44419714637 (seeds 1, 2, 3), compared with the pile column above.
+
+| Our setup | Team of 3: killed of 9; Hitpoints lost | Team of 5: killed of 15; Hitpoints lost |
+|---|---|---|
+| four members, multi-way post (the base) | 6; 780, 689, 891 | 1; 535, 486, 704 |
+| four members, the gang's single-way post | 5; 557, 538, 426 | 3; 542, 759, 938 |
+| six members (the four loadouts and two more rune) | 9; 417, 357, 381 | 10; 1113, 1030 D1, 944 |
+
+### The policy table
+
+What the cells support. Each row is evidence from three seeds, not a rule that has run live.
+
+| Threat seen | Setup | Move |
+|---|---|---|
+| one mage, ranger, tribrid or spear tribrid | the squad of four | Stay and fight. The attacker dies when it fights on (3 of 3 in every variant), at 5 to 34 Hitpoints lost for a mage, 78 to 285 for a ranger, 8 to 208 for a tribrid and 10 to 252 for a spear tribrid. A lone attacker that is outnumbered leaves. |
+| a team of 3 piling one member | full prayer points | Fight. 689 to 891 Hitpoints lost, 6 of 9 attackers killed. With six members all 9 are killed at 357 to 417. |
+| a team of 3 and the squad has no prayer points | the squad of four | Do not stay. One of ours died in each of the 3 seeds (916 to 1,014 Hitpoints lost). |
+| a team of 5 | the squad of four | Do not fight it: 1 of 15 killed at 486 to 704 Hitpoints lost, and with no prayer points 1 death in 3 seeds. |
+| a team of 5 | the squad of six | It kills 10 of 15 at 944 to 1,113 Hitpoints lost and 1 of ours died in 3 seeds. |
+| any team | the gang's single-way post | No gain on the team of 5 (3 of 15 killed, 542 to 938). The team of 3 costs fewer Hitpoints there (426 to 557) and 5 of 9 die. |
+
+Prayer points are the first rule of every row: a squad with none lost accounts to a team of 3 and 5.
+
+Not done: the third party that arrives in the middle of the gang fight, a retreat rule (walk out) against a team, the
+kit of each member against a mage (rune against dragonhide), and the climb of an attacker's own choice of target. The four
+pure kits (`pure-iban`, `pure-god`, `pure-ranger`, `pure-dds`) had no fight in 3 seeds in the first run of these cases; the
+first cells of that run also gave the attackers the clones' melee rotation, and are not kept. The attackers do not
+yet choose a member by armour or by Hitpoints.
 
 ## Keep it true
 
