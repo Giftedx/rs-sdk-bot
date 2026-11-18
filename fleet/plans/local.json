@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795005117487,
+ "at": 1795005165139,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -258,8 +258,7 @@
     "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=144 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=swordinhand-kit13-536-0to144 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"536\":144}}"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
@@ -272,25 +271,29 @@
   },
   {
    "account": "Woodpecker",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99"
+    "3000",
+    "cow"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "10",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+    "TRAIN_SKILL": "Defence",
+    "TARGET_LEVEL": "60",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying the held bones",
+   "repeat": true,
+   "goal": "train Defence to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-bury-prayer-99",
+   "template": "army-cow-defence-60",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "cow:ardougne-north"
+   ]
   }
  ],
  "army": [
