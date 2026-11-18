@@ -63,6 +63,12 @@ Order of sources for a missing piece: an owned account's spare stock, then a sho
    holds. A squad account gives only gear over its own kit and keeps its food, runes and arrows. An order's window
    starts when the command runs, so the commands run after the pause is lifted. `--orders <dir>` writes the same
    orders as files for review. The tool refuses the fleet's own orders folder.
+   Place the orders of one account one at a time, each after the order before has both receipts. The fleet agent
+   gives an account its earliest open order with no receipt from the account (`scripts/fleet-trade.ts` `pickOrder`),
+   and an account takes an order role one time (`packages/core/src/fleet-trade-claim.ts` `acquireFleetTradeClaim`).
+   An order whose role the account has used with no receipt holds each later order of that account until its window
+   ends: the login ends `fleet trade order role already claimed`. A released claim does not free the order. Place a
+   new order after the window.
 2. **Shops** (`scripts/shop-buyer.ts`, through `bun scripts/aio-market.ts <account> shop-buy <profile> <cap>
    ITEMS=<pattern> STOCK_TARGET=<count> STOP_AT_TARGET=1`. A run with no `ITEMS` and no stock target is refused as
    no finite order):
@@ -213,9 +219,11 @@ hour, the high number the pilot cost at 33 kills an hour (estimates).
   that rate. Recipe (`brew_potion.struct`): marrentill and a vial of water give an unfinished potion, a unicorn horn
   ground with a pestle and mortar gives the dust, and the two give antipoison(3) at Herblore 5 (Druidic Ritual).
   Conditions: the two unicorns south of Edgeville (npc 89 at 3084,3454 and 3090,3450, 45 tiles from the Edgeville
-  bank), an account with Attack and Strength 60 and a rune scimitar; a unicorn always drops one horn, comes back 180 ticks after its death (`respawnrate=180`), does not
-  attack first and runs at 6 Hitpoints or less (`retreat,6`). The two tiles are outside the Wilderness and inside a
-  multi-way zone (`scripts/pk.ts` `isMulti`), where no player can attack. Evidence, seeds
+  bank). The bench account has Attack and Strength 60 and a rune scimitar; the code asks for no level and no weapon
+  for the unicorn target. A unicorn always drops one horn, comes back 180 ticks after its death
+  (`respawnrate=180`), does not attack first and runs at 6 Hitpoints or less (`retreat,6`). The two tiles are
+  outside the Wilderness (z under 3520), so no player can attack there. The zone is multi-way (`scripts/pk.ts`
+  `isMulti`), which gives no protection. Evidence, seeds
   7 to 9: `fighter:unicorn` (`scripts/gather-combat.ts` `TARGET=unicorn MAX_KILLS=4`) makes 4 kills and banks 4 horns
   in 293, 297 and 301 ticks, with one wait of 138 ticks for the two to come back; `extra:antipoison-grind`, `-unf` and
   `-brew` (`scripts/microbot-production.ts` recipes `grind:unicorn_horn`, `brew:unf_marrentill_potion`,

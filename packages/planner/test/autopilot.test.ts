@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { DRAIN_RESULT } from '../src/autopilot';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
 import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable, norm, usableTool } from '../src/autopilot';
 
@@ -2688,4 +2689,117 @@ test('a vacant slot names the nearest template and the first gate that stopped i
     expect(reason(acct('Rookie'), [supply('crowded-job', { resources: ['pen:1,1'] })], { taken: { 'pen:1,1': 1 } })).toBe('vacant: crowded-job has no free place on pen:1,1');
     // No demand at all, with no bill.
     expect(reason(acct('Rookie'), [supply('any-job')], { bill: [] })).toBe('vacant: no finite route or army supply demand');
+});
+
+test('plan fills at most the free bot slots, best band first, and names the rest', () => {
+    const band = catalogue().filter(t => t.family === 'combat-train' && t.tier === 'goal' && t.id.startsWith('army-cow-'));
+    const kit = { 'bronze sword': 1, 'wooden shield': 1, trout: 20 };
+    const crew = ['A', 'B', 'C', 'D'].map(n => acct(n, { Strength: 10, Attack: 10, Defence: 10, Hitpoints: 30 }, kit));
+    const army = new Set(crew.map(a => a.name.toLowerCase()));
+    const run = (slots?: number) => plan(inputs(crew, { templates: band, army, capacity: { 'cow:ardougne-north': 6 }, ...(slots === undefined ? {} : { slots }) }));
+    const open = run();
+    expect(open.filter(x => x.template).length).toBe(4);
+    const two = run(2);
+    expect(two.filter(x => x.template).map(x => x.account)).toEqual(open.filter(x => x.template).slice(0, 2).map(x => x.account));
+    const waiting = two.filter(x => !x.template);
+    expect(waiting.length).toBe(2);
+    for (const x of waiting) expect(x.reason).toMatch(/^vacant: waits for a bot slot \(2 free, 0 held by running bots\): army-cow-\w+-45 ranks below/);
+    expect(run(0).every(x => !x.template && /waits for a bot slot \(0 free, 0 held/.test(x.reason))).toBe(true);
+    // A job that runs now keeps its slot over a better new band.
+    const running = plan(inputs(crew, { templates: band, army, capacity: { 'cow:ardougne-north': 6 }, slots: 1, running: new Set(['d']), current: new Map([['d', open.find(x => x.account === 'D')!.template!.id]]) }));
+    expect(running.filter(x => x.template).map(x => x.account)).toEqual(['D']);
+});
+
+test('a running bot keeps its slot whatever the count, including a kit buy that replaces its band', () => {
+    const band = catalogue().filter(t => t.id === 'army-cow-strength-45');
+    const kit = { 'bronze sword': 1, 'wooden shield': 1, trout: 20 };
+    const crew = ['A', 'B', 'C'].map(n => acct(n, { Strength: 10, Attack: 10, Defence: 10, Hitpoints: 30 }, kit));
+    const army = new Set(['a', 'b', 'c', 'd']);
+    // D lost its sword: a market buy replaces its running band (template kit-buy:army-cow-strength-45).
+    const d = acct('D', { Strength: 10, Attack: 10, Defence: 10, Hitpoints: 30 }, { 'wooden shield': 1, trout: 20, coin: 50_000 });
+    const market = { 'bronze sword': { id: 1277, name: 'Bronze sword', limit: 100 } };
+    const base = { templates: band, army, market, capacity: { 'cow:ardougne-north': 6 }, current: new Map([['d', 'army-cow-strength-45']]) };
+    const open = plan(inputs([...crew, d], base));
+    expect(open.find(x => x.account === 'D')!.template?.id).toBe('kit-buy:army-cow-strength-45');
+    // Fewer slots than jobs: the running account D keeps its buy, by the account, not by the template it ran.
+    const two = plan(inputs([...crew, d], { ...base, slots: 2, running: new Set(['d']) }));
+    expect(two.filter(x => x.template).map(x => x.account)).toContain('D');
+    expect(two.filter(x => x.template)).toHaveLength(2);
+    // A run in the swarm's list holds its slot as a confirmed session does (a start inside its window included).
+    expect(plan(inputs([...crew, d], { ...base, slots: 2, holding: new Set(['d']) })).find(x => x.account === 'D')!.template?.id).toBe('kit-buy:army-cow-strength-45');
+    // Zero slots, or fewer than the running bots: every running job stays and nothing else starts.
+    const none = plan(inputs([...crew, d], { ...base, slots: 0, running: new Set(['a', 'd']) }));
+    expect(none.filter(x => x.template).map(x => x.account).sort()).toEqual(['A', 'D']);
+    expect(none.filter(x => !x.template && /waits for a bot slot \(0 free, 2 held by running bots\)/.test(x.reason))).toHaveLength(2);
+});
+
+test('an order costs two slots: the plan never holds more bots than the slots, donors included', () => {
+    const shops = catalogue().filter(t => t.id === 'shop-feathers');
+    const accounts = [acct('Poor'), acct('Zed', {}, { coin: 900_000 })];
+    const run = (slots?: number) => plan(inputs(accounts, { templates: shops, capacity: { 'shop:sarim': 2 }, donors: [{ name: 'Zed', coins: 900_000 }], ...(slots === undefined ? {} : { slots }) }));
+    // No cap: Zed funds Poor, an order that logs in both accounts.
+    expect(run().find(x => x.account === 'Poor')!.fund).toMatchObject({ from: 'Zed', to: 'Poor' });
+    // Two slots hold the order (recipient and donor); one slot cannot, so the order waits and the donor is free again.
+    expect(run(2).find(x => x.account === 'Poor')!.fund).toBeDefined();
+    const one = run(1);
+    expect(one.find(x => x.account === 'Poor')!.reason).toMatch(/^vacant: waits for a bot slot \(1 free, 0 held by running bots\)/);
+    expect(one.find(x => x.account === 'Zed')!.reason).not.toBe('vacant: gives coins this pass');
+    for (const slots of [0, 1, 2, 3]) expect([slots, run(slots).filter(x => x.template).reduce((n, x) => n + (x.fund || x.send ? 2 : 1), 0) <= slots]).toEqual([slots, true]);
+});
+
+test('a vacant reason names an observation too old to offer stock, and accountFrom keeps the observation time', () => {
+    const band = catalogue().filter(t => t.id === 'army-cow-strength-45');
+    const now = 100 * 3_600_000, old = { ...acct('Rookie'), observedAt: now - 52 * 3_600_000 };
+    const reason = (a: Acct, extra: Partial<Inputs> = {}) => plan(inputs([a], { templates: band, army: new Set(['rookie']), ...extra }))[0]!.reason;
+    expect(reason(old)).toMatch(/and no source gives them$/);
+    expect(reason(old, { now, unobserved: ['Idle1', 'Idle2'] })).toMatch(/and no source gives them \(its own observation is 52 h old; 2 free accounts have no observation under 30 minutes old, so their stock is not offered\)$/);
+    // A fresh observation and no unobserved donor add nothing.
+    expect(reason({ ...old, observedAt: now - 60_000 }, { now, unobserved: [] })).toMatch(/and no source gives them$/);
+    expect(accountFrom('Seen', side, { at: 1234, skills: [] }, () => undefined).observedAt).toBe(1234);
+    expect(accountFrom('Unseen', side, null, () => undefined).observedAt).toBeUndefined();
+});
+
+test('the stale-observation note follows only a missing source, not a coin lack', () => {
+    const band = catalogue().filter(t => t.id === 'army-cow-strength-45');
+    const now = 100 * 3_600_000, old = { ...acct('Rookie'), observedAt: now - 52 * 3_600_000 };
+    const run = (templates: Template[], a: Acct = old) => plan(inputs([a], { templates, army: new Set(['rookie']), now, unobserved: ['Idle1'] }))[0]!.reason;
+    expect(run(band)).toMatch(/and no source gives them \(its own observation is 52 h old/);
+    const poor = catalogue().filter(t => t.id === 'goldfarm@2652,3318');
+    const coin = plan(inputs([acct('Thief', { Thieving: 70, Hitpoints: 54 }, { coin: 1 })], { templates: poor, now, unobserved: ['Idle1'], taken: {} }))[0]!;
+    expect(coin.reason).toMatch(/coins/);
+    expect(coin.reason).not.toMatch(/observation/);
+});
+
+test('a ring maker that lacks only the mould gets the Dommik shop trip first, behind the pilot gate and the other needs', () => {
+    const rings = [...aioTemplates().filter(t => /^aio-\w+-rings$/.test(t.id)), ...catalogue().filter(t => t.id === 'shop-ring-mould')];
+    const diamond = { Crafting: 43 }, kit = { 'gold bar': RING_BATCH, diamond: RING_BATCH, coin: 5_000 };
+    const bill = [row('diamond ring', 81), row('emerald ring', 46)];
+    const run = (a: Acct, pilots: string[] = ['aio-diamond-rings'], extra: Partial<Inputs> = {}) => plan(inputs([a], { templates: rings, bill, prices: { 'diamond ring': 3525, 'emerald ring': 1275 }, capacity: CAPACITY, pilots: new Set(pilots), ...extra }))[0]!;
+    // The three makers of the finding: each holds the bars, the gems and the Crafting level, and no mould.
+    for (const name of ['TrouserSnake', 'UnderMyKilt', 'TheFullMonty']) {
+        const out = run(acct(name, { Attack: 99, Strength: 99, Defence: 99, ...diamond }, kit));
+        expect(`${name} ${out.template?.id} ${out.reason}`).toBe(`${name} shop-ring-mould buys a ring mould for aio-diamond-rings`);
+        expect(out.resources).toEqual(['shop:dommik']);
+        expect(jobFor(out, side).args).toEqual(['dommik', '600']);
+    }
+    // Holding the mould, the maker itself runs and the shop is skipped.
+    expect(run(acct('A', diamond, { ...kit, 'ring mould': 1 })).template?.id).toBe('aio-diamond-rings');
+    // A maker the aio list does not name is not unlocked, so no shop trip; a missing bar or gem means the trip alone does not unlock it.
+    expect(run(acct('A', diamond, kit), []).template).toBeUndefined();
+    expect(run(acct('A', diamond, { ...kit, 'gold bar': 0 })).template).toBeUndefined();
+    expect(run(acct('A', { Crafting: 42 }, kit)).template).toBeUndefined();
+    // Without the 100 coins the trip needs there is no shop job, and the reason names the coins.
+    expect(run(acct('A', diamond, { ...kit, coin: 10 })).template).toBeUndefined();
+    // Dommik's shelf serves one account at a time.
+    const two = plan(inputs([acct('A', diamond, kit), acct('B', diamond, kit)], { templates: rings, bill, prices: { 'diamond ring': 3525 }, capacity: CAPACITY, pilots: new Set(['aio-diamond-rings']) }));
+    expect(two.filter(x => x.template?.id === 'shop-ring-mould')).toHaveLength(1);
+});
+
+test('a claim authority timeout is a drain, like an unavailable authority', () => {
+    for (const line of ['RESULT fail login: Error: fleet swarm claim authority timed out', 'RESULT fail fleet swarm claim authority timed out chain rounds=1 ok=0 failed=1',
+        'RESULT fail login: Error: fleet swarm claim authority unavailable or changed', 'RESULT fail fleet account claim held by swarm']) {
+        expect([line, DRAIN_RESULT.test(line)]).toEqual([line, true]);
+        expect(assess([line, line])).toMatchObject({ retire: false, drains: 2, fail: 0 });
+    }
+    expect(DRAIN_RESULT.test('RESULT fail fleet swarm claim authority exploded')).toBe(false);
 });

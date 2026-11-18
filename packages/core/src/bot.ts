@@ -14,6 +14,7 @@ import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { startStatus } from './status';
 import { loadDanger, watchRandomEvents, type RandomEventWatch } from './randomevents';
 import { GUARD_VALUE, recordRun, sellsItems, sharedLootTables } from './loot';
+import { runShutdownTasks } from './shutdown';
 import { FLEE_HP, damageLog, deathLine, recoverDeath, snapshot, type DeathSnapshot } from './death-recovery';
 import { protectByStyle, startPrayerGuard } from './prayer-guard';
 import { noGuardScript, startEatGuard } from './eat-guard';
@@ -52,6 +53,24 @@ export const releaseLine = (release: string | undefined) => `RELEASE ${/^[0-9a-f
 export function sessionDied(initial: any, now: any): boolean {
     return !!now && (now.isDead === true || (now.respawnCount ?? 0) > (initial?.respawnCount ?? 0)
         || (initial?.lifeId !== undefined && now.lifeId !== undefined && now.lifeId !== initial.lifeId));
+}
+
+type LifeFields = { isDead?: boolean; respawnCount?: number; lifeId?: number } | undefined;
+// One tick of the death check of openBot. With `keep` (opts.continueAfterDeath) the caller handles its own death: the first tick of a
+// death asks for one DEATH line, the new life becomes the baseline once the account is alive in it, and `died` is false, so
+// every other stop reason stays live. Without it a death is a stop (the default).
+export function deathStep(born: LifeFields, now: LifeFields, keep: boolean, seen: boolean): { died: boolean; born: LifeFields; seen: boolean; announce: boolean } {
+    const dead = sessionDied(born, now);
+    if (!dead || !keep) return { died: dead, born, seen: false, announce: false };
+    const alive = !!now && now.isDead !== true;
+    return { died: false, born: alive ? now : born, seen: !alive, announce: !seen };
+}
+// The reason that a tick ends the session, or null: a death, a stop file, a lost fleet lease or no progress. The checks of
+// the stop file and the lease run every 25 ticks and the stall check every 50.
+export function stopReasonOf(o: { died: boolean; stopTicks: number; stopFile: () => boolean; leaseLost: () => boolean; stalled: () => boolean; stallTicks: number }): string | null {
+    return o.died ? 'died' : o.stopTicks % 25 === 0 && o.stopFile() ? 'stop file'
+        : o.stopTicks % 25 === 0 && o.leaseLost() ? 'fleet controller lease unavailable'
+        : o.stopTicks % 50 === 0 && o.stalled() ? `no progress: ${o.stallTicks} ticks without xp, items, dialog or a journey` : null;
 }
 
 export function watchUnexpectedEnd(s: Pick<Session,'ended'>, isSettling:()=>boolean, stopRequested:()=>boolean,
@@ -101,7 +120,10 @@ export function botWork(name: string, record?: BotRecord, argv: readonly string[
 // `opts.log` receives the START and LOGOUT lines; the bot host (host.ts) passes a per-bot log. Default console.log.
 // `opts.record` names the worker script and its arguments for the run record (tick-record.ts); the bot host passes
 // the hosted script, a standalone worker uses its own process arguments.
-export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown>; onSessionEnd?: (s: Session, detail: string) => Promise<unknown>; record?: BotRecord; trade?: Parameters<typeof connectInProcess>[0]['trade'] } = {}): Promise<Session> {
+export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown>;
+    // The caller handles a death itself (scripts/pk-hunt.ts re-kits): a death prints one DEATH line and starts a new baseline
+    // instead of ending the session, and the stop file, the lease and the stall checks stay live.
+    continueAfterDeath?: boolean; onSessionEnd?: (s: Session, detail: string) => Promise<unknown>; record?: BotRecord; trade?: Parameters<typeof connectInProcess>[0]['trade'] } = {}): Promise<Session> {
     if (executionContext.getStore()?.signal.aborted) return new Promise(() => {});
     // An in-process runner in a bot host routes this account's logins through the host's own openBot, so the host
     // tracks the session and logs it out when the runner ends. The hook is lifted for the call it makes back here.
@@ -149,8 +171,8 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // Life fields copied while connected: after a disconnect the state's player is no evidence of a death (a run
     // whose logout timed out ended the next login, and the stale player read as a new life).
     const life = (q: any) => q ? { isDead: q.isDead, respawnCount: q.respawnCount, lifeId: q.lifeId } : undefined;
-    const born = life(p);
-    let lastLife = born;
+    let born: LifeFields = life(p);
+    let lastLife: LifeFields = born, deathSeen = false;
     s.lifecycle?.record('ready', `${p.worldX} ${p.worldZ} ${p.level}`);
     log(`START ${p.worldX} ${p.worldZ} ${p.level}`);
     // The worker release of this run (WORKER_RELEASE, which the swarm sets from the files the job runs): reports such as
@@ -199,12 +221,14 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     s.onTick(() => {
         const st = s.sdk.getState();
         lastLife = life(st?.player) ?? lastLife;
-        const died = sessionDied(born,lastLife);
+        const step = deathStep(born, lastLife, opts.continueAfterDeath === true, deathSeen), died = step.died;
+        born = step.born; deathSeen = step.seen;
         damage.read(st);
+        if (step.announce) log(`${deathLine(lastAlive, lastHp, damage.cause(), scriptFile)} bot=${name}`);
         if (!died) { lastAlive = snapshot(st) ?? lastAlive; if (st?.player) lastHp = `${st.player.hp}/${st.player.maxHp}`; }
-        const reason = died ? 'died' : ++stopTicks % 25 === 0 && existsSync(join(repoRoot, '.practice', `stop-${name}`)) ? 'stop file'
-            : stopTicks % 25 === 0 && !isLocalServer(server) && !fleetLeaseAllowsWorker(repoRoot) ? 'fleet controller lease unavailable'
-            : stopTicks % 50 === 0 && stalled(led.rows, STALL_TICKS) ? `no progress: ${STALL_TICKS} ticks without xp, items, dialog or a journey` : null;
+        stopTicks += died ? 0 : 1;
+        const reason = stopReasonOf({ died, stopTicks, stallTicks: STALL_TICKS, stopFile: () => existsSync(join(repoRoot, '.practice', `stop-${name}`)),
+            leaseLost: () => !isLocalServer(server) && !fleetLeaseAllowsWorker(repoRoot), stalled: () => stalled(led.rows, STALL_TICKS) });
         if (!stopping && !settling.has(s) && reason) {
             stopping = true;
             if (reason === 'died') log(`${deathLine(lastAlive, lastHp, damage.cause(), scriptFile)} bot=${name}`);
@@ -326,6 +350,8 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
     // A script that ends during a death recovery does not log the account out under it.
     await Promise.all(sessions.map(s => deathRecoveries.get(s)));
     for (const s of sessions) settling.add(s);
+    // The tasks of shutdown.ts (an open kill-feed check and its socket) finish before the logout and the exit.
+    await runShutdownTasks();
     // A settling script waits for nothing more, and logout needs ticks: count as waiting so a lockstep tick is not held.
     tickWaits.active++;
     const log = opts.log ?? ((l: string) => console.log(l));

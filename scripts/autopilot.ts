@@ -22,14 +22,18 @@ import { createHash } from 'node:crypto';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { fleetStatusRows, readSnapshotFiles, type SnapshotFile } from '../packages/core/src/fleet-snapshots';
 import { publishedSideHold } from '../packages/core/src/fleet-side-card';
-import { clearSwarmStop, swarmWroteStop } from './swarm';
+import { START_BUDGET_GB, activeExternalLive, clearSwarmStop, pendingStartupCount, swarmWroteStop } from './swarm';
+import { freemem } from 'node:os';
+import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
-import { ARMOUR_IDS, BOW_IDS, CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, kitReserve, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock, type Template } from '../packages/planner/src/autopilot';
+import { admittedByLevels, armyBatchOf, meleeTotal } from '../packages/core/src/army-roster';
+import { exempt } from '../packages/core/src/fleet-assign';
+import { OBSERVATION_FRESH_MS, reservedAccounts, ARMOUR_IDS, BOW_IDS, CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, kitReserve, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock, type Template } from '../packages/planner/src/autopilot';
 import { deadlyTo, loadHunters, type Hunter } from '../packages/core/src/danger';
-import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
+import { jobAccounts, mergeJobs as withCoordinatorJobs, mergedPlan, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
 import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
@@ -41,6 +45,7 @@ import { kitSkills, levelsBeforeRoute } from './pk-kits';
 import { createAutopilotProgression } from './autopilot-progression';
 import { accountFromStatus } from '../packages/planner/src/progression-catalog';
 import {boundAccounts,type AccountBindingState} from '../packages/core/src/coordinator-accounts';
+import { COORDINATOR_JOBS_FILE } from '../packages/core/src/coordinator-jobs';
 
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
 const PASS_EVERY_MS = 10 * 60_000, TRAINER_POLL_MS = 30_000;
@@ -145,7 +150,7 @@ export function itemOrder(from: string, to: string, item: string, count: number,
 // published a plan within `maxAgeMs` (SIDE_STOCK_MAX_AGE_MS: its fleet agent syncs every 10 minutes, so it runs and
 // will trade), and the account has no enabled job, open order or published owner hold. Registered and observed
 // servers must match the live recipient's server. That side's planner keeps an open order's parties vacant.
-export const SIDE_STOCK_MAX_AGE_MS = 30 * 60_000;
+export const SIDE_STOCK_MAX_AGE_MS = OBSERVATION_FRESH_MS;
 // Transfer stock is observed pack or bank stock, never worn kit. A retained bank observation can describe the same
 // units before a withdrawal, so the two observations contribute their maximum rather than their sum.
 export function donorStock(name:string,side:string,status:any,now:number,maxAgeMs:number,itemName:(id:number)=>string|undefined,server='rs-sdk-demo.fly.dev'):Stock|undefined {
@@ -451,11 +456,70 @@ function originClaims(fleetDir: string): any[] {
     });
 }
 
-// The side's army roster: the plan's `army` array of account names (README "Claude Code cloud fleet side"). Only these
-// accounts take the planner's goal bands (combat training toward the PK army); Haggis never does.
-export function armyRoster(plan: any): Set<string> {
+// The side's army roster. Only these accounts take the planner's goal bands (combat training toward the PK army);
+// Haggis never does. It is the plan's `army` array of account names (README "Claude Code cloud fleet side"), plus the
+// plannable accounts that the rule of packages/core/src/army-roster.ts admits: Attack, Strength and Defence all 90 or
+// more, then the plan's `armyBatch` count of the best accounts below that. `accounts` holds only accounts that this
+// side runs and that no hand job, owner pause or coordinator job holds (plannableAccounts), so a hand job or a
+// specialist plan keeps its account; `guarded` accounts never join by rule.
+// The members of the plan's active `squad` block, in lower case. Nothing writes the block: it is read when someone adds it to swarm.json.
+export function activeSquadMembers(plan: any): Set<string> {
+    return new Set(plan?.squad?.active === true && Array.isArray(plan.squad.members) ? plan.squad.members.filter((n: unknown): n is string => typeof n === 'string').map((n: string) => n.toLowerCase()) : []);
+}
+export function armyRoster(plan: any, accounts: readonly Pick<Acct, 'name' | 'skills'>[] = [], guarded: ReadonlySet<string> = OFFLINE_GUARDED, reserved: ReadonlySet<string> = new Set()): Set<string> {
     const names = Array.isArray(plan?.army) ? plan.army.filter((n: unknown): n is string => typeof n === 'string') : [];
-    return new Set(names.map((n: string) => n.toLowerCase()).filter((n: string) => n !== 'haggis'));
+    const roster = new Set<string>(names.map((n: string) => n.toLowerCase()).filter((n: string) => n !== 'haggis'));
+    // The members of an active squad (the plan's `squad` block) stay with the squad: no rule or batch admission for them.
+    const squad = activeSquadMembers(plan);
+    const open = accounts.filter(a => !guarded.has(a.name.toLowerCase()) && !exempt(a.name) && !roster.has(a.name.toLowerCase()) && !squad.has(a.name.toLowerCase()) && !reserved.has(a.name.toLowerCase()));
+    for (const a of open) if (admittedByLevels(a.name, a.skills)) roster.add(a.name.toLowerCase());
+    const batch = open.filter(a => !roster.has(a.name.toLowerCase())).sort((x, y) => meleeTotal(y.skills) - meleeTotal(x.skills) || x.name.localeCompare(y.name));
+    for (const a of batch.slice(0, armyBatchOf(plan))) roster.add(a.name.toLowerCase());
+    return roster;
+}
+// The accounts whose observation is missing or not under OBSERVATION_FRESH_MS old at `now`: their stock is not offered to a
+// kit. It reads the observation time alone, so an empty bank or a name mismatch does not make an account unobserved.
+export function unobservedAccounts(names: readonly string[], observedAt: (name: string) => unknown, now: number): string[] {
+    return names.filter(n => { const at = observedAt(n); return !(typeof at === 'number' && Number.isFinite(at) && at > 0 && at <= now && now - at < OBSERVATION_FRESH_MS); });
+}
+// The bots that jobs outside this side's planner hold on the swarm: every enabled job of the merged plan that is not a
+// planner job of this side, and every planner job that an owner pause keeps as it is. A host job counts its accounts.
+export function handBots(jobs: readonly any[], side: string, keep: ReadonlySet<string>): number {
+    return jobs.filter(j => j?.enabled !== false && (j?.autopilot !== side || jobAccounts(j).some(a => keep.has(a.toLowerCase()))))
+        .reduce((n, j) => n + Math.max(1, jobAccounts(j).length), 0);
+}
+// Memory is the tighter limit in practice: the swarm admits a bot only while the projected free RAM keeps
+// max(FREE_FLOOR_GB, minFreeGB) (admissionDecision), and each start reserves START_BUDGET_GB. `memory` caps the planner's
+// jobs at the bots that already run plus the starts that headroom allows, so the plan adds no bot that admission would refuse
+// ("waiting: memory"); the swarm still enforces the floor at each start.
+export function memoryHeadroom(freeGB: number, minFreeGB: number, pending: number): number {
+    const floor = Math.max(FREE_FLOOR_GB, Number.isFinite(minFreeGB) ? minFreeGB : 0);
+    return Math.max(0, Math.floor((freeGB - floor - START_BUDGET_GB * pending) / START_BUDGET_GB));
+}
+// The fleet trade sessions that will start: each party of an open fleet order (`open`) with no live session yet. The fleet agent logs
+// such an account in for the trade, so each reserves a start (START_BUDGET_GB) beside the swarm's own pending starts. A trade
+// that already runs shows as a live external status: it counts against maxBots (`external`) and its RAM is in the free memory.
+// A planner job that is written and enabled but has no run (the swarm answered `waiting: memory`, or it has not started yet)
+// keeps one start of margin, so a dip in free memory of under one start does not drop it and add it back on the next pass.
+export const HYSTERESIS_STARTS = 1;
+export function writtenNotRunning(jobs: readonly any[], running: ReadonlySet<string>): boolean {
+    return jobs.some(j => j?.enabled !== false && jobAccounts(j).length > 0 && !jobAccounts(j).some(n => running.has(n.toLowerCase())));
+}
+// The headroom with the margin of one start for a written, not yet running planner job.
+export function headroomWithMargin(headroom: number, written: boolean): number { return headroom + (written ? HYSTERESIS_STARTS : 0); }
+export function tradeStarts(open: ReadonlySet<string>, externalLive: readonly string[], managed: ReadonlySet<string>): number {
+    const live = new Set(externalLive.map(n => n.toLowerCase()));
+    return [...open].filter(n => !live.has(n.toLowerCase()) && !managed.has(n.toLowerCase())).length;
+}
+// The bot slots left for planner jobs, as the swarm's admission counts them (admissionDecision in scripts/swarm.ts):
+// the limit of the merged plan (mergedPlan: the coordinator's expansion replaces `maxBots` when it grants one), less the
+// hand jobs and the live bots that no swarm run owns (`external`: manual or other-controller sessions that
+// activeExternalLive counts). Undefined when the plan names no usable limit. `memory` caps the result at the planner's running
+// bots plus the starts that headroom allows.
+export function freeSlots(merged: any, jobs: readonly any[], side: string, keep: ReadonlySet<string>, external = 0, memory?: { running: number; headroom: number }): number | undefined {
+    if (!(Number.isSafeInteger(merged?.maxBots) && merged.maxBots > 0)) return undefined;
+    const bySlots = Math.max(0, merged.maxBots - handBots(jobs, side, keep) - external);
+    return memory ? Math.min(bySlots, memory.running + memory.headroom) : bySlots;
 }
 
 // The PK builds of the side's army accounts: the plan's `builds` object, account name -> kit name of
@@ -493,10 +557,39 @@ export function jobRate(x: Pick<Assignment, 'template' | 'value'>): string {
     return t?.tier === 'goal' ? `band ${t.band ?? 0}` : t?.family === 'kit-buy' ? 'kit buy' : `${x.value.toFixed(2)}/tick`;
 }
 
-export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): string[] {
+// Whether this side's planner may give an account a job or take stock and coins from it: the side owns it, and it is no main or
+// specialist account (OFFLINE_GUARDED), no reserved account (the gang squad) and no account that died.
+export function plannerOwns(owners: ReturnType<typeof loadOwners>, side: string, lower: string, reserved: ReadonlySet<string>, died: ReadonlySet<string>): boolean {
+    return owners.get(lower)?.side === side && !OFFLINE_GUARDED.has(lower) && !reserved.has(lower) && !died.has(lower);
+}
+
+// The write step of a pass: `unchanged` is true while the files that the plan came from hold the text that the plan
+// read, and the coordinator queue binds the same accounts.
+export interface PassWrite { unchanged(): boolean; write(): string[] }
+// The files of a plan that another writer changes: the plan file and the coordinator jobs file (under the plan lock),
+// the owner list of the fleet (fleet-sync moves an account to another side) and the planner state of this side.
+export const passInputFiles = (planFile: string): string[] =>
+    [planFile, join(root, COORDINATOR_JOBS_FILE), join(FLEET_DIR(), 'owners.json'), join(prac, 'autopilot', `${mySide()}.json`)];
+// The accounts that the open tasks of the coordinator queue bind, as one text. The coordinator saves its state with no
+// plan lock and for many reasons, so the write step compares this answer and not the text of the state file.
+export function queueBoundAccounts(queue: any): string {
+    if (queue?.version !== 1 || !Array.isArray(queue.tasks)) return 'unavailable';
+    const open = queue.tasks.filter((r: any) => r?.status === 'pending' || r?.status === 'running');
+    return JSON.stringify([...new Set<string>(open.flatMap((r: any) => boundAccounts(r.spec, queue) ?? []).map((a: string) => a.toLowerCase()))].sort());
+}
+// With `defer`, a pass that has something to write does not write: it gives its write step to `defer` (lockedPass).
+export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, defer?: (step: PassWrite) => void): string[] {
     if (!dry && isPaused()) return [PAUSED];
+    // The text of each input file before the plan reads it.
+    const inputFiles = passInputFiles(planFile);
+    const inputText = (f: string) => { try { return readFileSync(f, 'utf8'); } catch { return null; } };
+    const inputBefore = inputFiles.map(inputText);
     const side = mySide(), owners = loadOwners(), swarm = readJson(planFile, null);
     if (!swarm || !Array.isArray(swarm.jobs)) throw Error(`autopilot: ${planFile} has no jobs list`);
+    // The accounts that a swarm.json reservation holds (a job with no script: the main and specialist accounts, the gang squad) and the
+    // members of an active `squad` block (a block that only a hand edit writes): no job (plannableAccounts), no coin or item donor, no
+    // roster by rule. A fleet order that gives TO one still runs (the fleet agent logs in an account with no enabled job).
+    const reserved = new Set([...reservedAccounts(swarm.jobs, side), ...activeSquadMembers(swarm)]);
     const stateFile = join(prac, 'autopilot', `${side}.json`), state = loadState(side);
     const items: any[] = readJson(join(root, 'knowledge/items.json'), []), byId = new Map(items.map(i => [i.id, i.name]));
     const mineMarked = (j: any) => j?.autopilot === side;
@@ -594,7 +687,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     };
     const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => {
         const lower = n.toLowerCase();
-        return owners.get(lower)?.side === side && !OFFLINE_GUARDED.has(lower) && !diedAccounts.has(lower);
+        return plannerOwns(owners, side, lower, reserved, diedAccounts);
     }), keep).map(n => offlinePlace(accountFrom(n, side, observed(n), id => byId.get(id)), observed(n), now));
     // Coin donors: this side's accounts with no enabled swarm or coordinator job, no stop file and no open order, as
     // their last status reports them. The fleet agent runs a trade only for such accounts.
@@ -618,12 +711,12 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
     const stranded = strandedAccounts(listed, n => readLogoutProof(n, owners.get(n.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev').state);
     const donors = listed.filter(n => {
         const lower = n.toLowerCase();
-        return owners.get(lower)?.side === side && !OFFLINE_GUARDED.has(lower) && !diedAccounts.has(lower) && ![busy, keep, open, stranded].some(s => s.has(lower));
+        return plannerOwns(owners, side, lower, reserved, diedAccounts) && ![busy, keep, open, stranded].some(s => s.has(lower));
     }).map(n => ({ name: n, coins: accountFrom(n, side, observed(n), id => byId.get(id)).items.coin ?? 0 })).filter(d => d.coins > 0);
     // Kit donors: this side's free accounts (the coin donors' rule), then each other side's, on the same server.
     const free = (n: string) => {
         const lower = n.toLowerCase();
-        return owners.get(lower)?.side === side && !OFFLINE_GUARDED.has(lower) && !diedAccounts.has(lower) && ![busy, keep, open, stranded].some(s => s.has(lower));
+        return plannerOwns(owners, side, lower, reserved, diedAccounts) && ![busy, keep, open, stranded].some(s => s.has(lower));
     };
     const stock: Stock[] = listed.filter(free).flatMap(n => {const row=donorStock(n,side,observed(n),now,SIDE_STOCK_MAX_AGE_MS,id=>byId.get(id),owners.get(n.toLowerCase())?.server);return row?[row]:[];});
     const snapshotDir = join(fleetDir, 'snapshots'), silent = silentSides(orders, receipts, n => owners.get(n.toLowerCase())?.side, now);
@@ -656,7 +749,11 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         busy:new Set([...keep,...open,...stranded,...diedAccounts,...swarm.jobs.filter((j:any)=>!mineMarked(j)&&j?.enabled!==false).flatMap(jobAccounts).map((n:string)=>n.toLowerCase())]),paused,protected:new Set(OFFLINE_GUARDED),
         stocks:progressionStocks,sourcesFor:(account,_method,_item)=>[account,...stock.filter(s=>!newlyWorking.has(s.name.toLowerCase())&&owners.get(s.name.toLowerCase())?.server===owners.get(account.toLowerCase())?.server).map(s=>s.name)],
         canTransfer:(from,to)=>sourceAllowed.has(from.toLowerCase())&&!newlyWorking.has(from.toLowerCase())&&free(from)&&free(to)&&owners.get(from.toLowerCase())?.server===owners.get(to.toLowerCase())?.server});
-    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
+    const externalLive = activeExternalLive(statusFiles.map(f => readJson(join(statusDir, f), null)).filter(Boolean), [...activeAccounts], now);
+    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm, accounts, OFFLINE_GUARDED, reserved), now, unobserved: unobservedAccounts(listed.filter(free), n => observed(n)?.at, now), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
+            externalLive.length,
+            { running: swarm.jobs.filter((j: any) => mineMarked(j) && j.enabled !== false).flatMap(jobAccounts).filter((n: string) => activeAccounts.has(n.toLowerCase())).length,
+                headroom: headroomWithMargin(memoryHeadroom(freemem() / 2 ** 30, swarm.minFreeGB, pendingStartupCount(readJson(join(prac, 'swarm-runs.json'), []), now) + tradeStarts(open, externalLive, activeAccounts)), writtenNotRunning(swarm.jobs.filter(mineMarked), activeAccounts)) }), holding: activeAccounts, builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     for(const assignment of planned)if(assignment.template||assignment.fund||assignment.send)newlyWorking.add(assignment.account.toLowerCase());
     const refined=progression.refine(planned);
@@ -668,6 +765,8 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
             lead(s.from,s.to)));
     const out = funding.assignments;
     log.push(...funding.log);
+    const goalOf = (n: string) => String(swarm.jobs.find((j: any) => j?.autopilot !== side && !j?.script && [j?.account, ...(j?.accounts ?? [])].some((x: any) => String(x).toLowerCase() === n.toLowerCase()))?.goal ?? 'reserved by a swarm.json reservation');
+    for (const n of listedNames.filter(n => reserved.has(n.toLowerCase())).sort()) if (!out.some(x => x.account.toLowerCase() === n.toLowerCase())) log.push(`AUTOPILOT vacant ${n}: ${goalOf(n)}`);
 
     const { jobs, fresh } = mergeJobs(swarm.jobs, side, out, keep);
     for (const x of out) {
@@ -682,27 +781,50 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         log.push(`AUTOPILOT ${fresh.includes(x.account) ? 'assign' : 'keep'} ${x.account} ${x.template.id} ${jobRate(x)} ${x.reason}`);
     }
     if (dry) return [...log, 'AUTOPILOT dry run: nothing written'];
-    if (isPaused()) return [PAUSED];
-    writeAtomic(planFile, JSON.stringify({ ...swarm, jobs }, null, 2) + '\n');
-    if (heldResources(swarm.jobs) !== heldResources(jobs)) log.push(CLAIM_CHANGED);
-    // The controller's own stop file goes once this pass hands the account work (a job, new or kept, or a coin order
-    // the fleet agent will log it in for) and the account is offline: a run still ending on that file must find it. A
-    // kept job counts: the pass that assigns a job may find the last run still ending, and every later pass keeps it
-    // (live: an account stood 40 minutes behind such a file, its job enabled and never started).
-    const handed = handedAccounts(out, funding.orders);
-    for (const n of listedNames) if (handed.has(n.toLowerCase()) && swarmStopped.has(n.toLowerCase())) {
-        const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
-        if (!stopClearable(f ? readJson(join(statusDir, f), null) : null, now)) { log.push(`AUTOPILOT hold ${n}: its last run is still ending on the controller's stop file`); continue; }
-        if (!clearSwarmStop(join(prac, 'stop-'+n))) continue;
-        log.push(`AUTOPILOT clear ${n}: the controller's stop file from its removed job`);
-    }
-    mkdirSync(join(prac, 'autopilot'), { recursive: true });
-    writeAtomic(stateFile, JSON.stringify(state, null, 1) + '\n');
-    mkdirSync(join(prac,'progression-system'),{recursive:true});
-    writeAtomic(join(prac,'progression-system',`fleet-${side}.json`),JSON.stringify({version:1,side,at:now,decisions:progression.decisions(),requests:refined.requests,gaps:refined.gaps,reservations:refined.reservations,search:refined.search},null,1)+'\n');
-    if (funding.orders.length) mkdirSync(join(fleetDir, 'orders'), { recursive: true });
-    for (const o of funding.orders) writeAtomic(join(fleetDir, 'orders', `${o.id}.json`), JSON.stringify(o, null, 1) + '\n');
+    const write = (): string[] => {
+        if (isPaused()) return [PAUSED];
+        writeAtomic(planFile, JSON.stringify({ ...swarm, jobs }, null, 2) + '\n');
+        if (heldResources(swarm.jobs) !== heldResources(jobs)) log.push(CLAIM_CHANGED);
+        // The controller's own stop file goes once this pass hands the account work (a job, new or kept, or a coin order
+        // the fleet agent will log it in for) and the account is offline: a run still ending on that file must find it. A
+        // kept job counts: the pass that assigns a job may find the last run still ending, and every later pass keeps it
+        // (live: an account stood 40 minutes behind such a file, its job enabled and never started).
+        const handed = handedAccounts(out, funding.orders);
+        for (const n of listedNames) if (handed.has(n.toLowerCase()) && swarmStopped.has(n.toLowerCase())) {
+            const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
+            if (!stopClearable(f ? readJson(join(statusDir, f), null) : null, now)) { log.push(`AUTOPILOT hold ${n}: its last run is still ending on the controller's stop file`); continue; }
+            if (!clearSwarmStop(join(prac, 'stop-'+n))) continue;
+            log.push(`AUTOPILOT clear ${n}: the controller's stop file from its removed job`);
+        }
+        mkdirSync(join(prac, 'autopilot'), { recursive: true });
+        writeAtomic(stateFile, JSON.stringify(state, null, 1) + '\n');
+        mkdirSync(join(prac,'progression-system'),{recursive:true});
+        writeAtomic(join(prac,'progression-system',`fleet-${side}.json`),JSON.stringify({version:1,side,at:now,decisions:progression.decisions(),requests:refined.requests,gaps:refined.gaps,reservations:refined.reservations,search:refined.search},null,1)+'\n');
+        if (funding.orders.length) mkdirSync(join(fleetDir, 'orders'), { recursive: true });
+        for (const o of funding.orders) writeAtomic(join(fleetDir, 'orders', `${o.id}.json`), JSON.stringify(o, null, 1) + '\n');
+        return log;
+    };
+    if (!defer) return write();
+    const queueBefore = queueBoundAccounts(queue);
+    defer({ unchanged: () => inputFiles.every((f, i) => inputText(f) === inputBefore[i]) && queueBoundAccounts(readJson(join(prac, 'coordinator/state.json'), null)) === queueBefore, write });
     return log;
+}
+
+// One planning pass. The plan is made with no lock. On the live state a plan takes longer than the 15 s that another
+// writer waits for the plan lock (packages/core/src/plan-lock.ts), and a coordinator start ended on that wait. The lock
+// is held only to compare the files that the plan read with the files on disk, and to write. A changed file means that
+// another writer got the lock after the plan read it, so the pass plans again from the new files.
+export const PLAN_ATTEMPTS = 3;
+export async function lockedPass(planFile: string, dry: boolean, lock: <T>(action: () => T) => Promise<T>, isPaused = swarmPaused): Promise<string[]> {
+    for (let attempt = 1; ; attempt++) {
+        let step: PassWrite | undefined;
+        const lines = pass(planFile, dry, isPaused, s => { step = s; });
+        if (!step) return lines;
+        const write = step;
+        const written = await lock(() => write.unchanged() ? write.write() : null);
+        if (written) return written;
+        if (attempt >= PLAN_ATTEMPTS) return [`AUTOPILOT hold: another writer changed the account plan during each of ${PLAN_ATTEMPTS} plans`];
+    }
 }
 
 // The assignments (account, template and log offset) whose trainer reached its target. A pass that re-plans the account
@@ -727,30 +849,42 @@ export function trainersDone(planFile: string): string[] {
         .map(a => `${a}:${state.assigned[a]!.template}:${state.assigned[a]!.offset}`);
 }
 
+// What the lines of a pass mean for the daemon. A first line "AUTOPILOT hold: ..." is a hold of the whole pass: it
+// wrote nothing. Such a pass is "held", so the trainer poll passes again for the trainers that it found finished. Only
+// a pause is a hold that is in order.
+export function passOutcome(lines: readonly string[]): { outcome: 'applied' | 'held'; result: string } {
+    const whole = 'AUTOPILOT hold: ', first = lines[0] ?? '';
+    if (first === PAUSED) return { outcome: 'held', result: 'RESULT ok autopilot held: swarm is paused' };
+    if (first.startsWith(whole)) return { outcome: 'held', result: `RESULT fail autopilot held, nothing written: ${first.slice(whole.length)}` };
+    return { outcome: 'applied', result: `RESULT ok autopilot jobs=${lines.filter(x => / (assign|keep) /.test(x)).length} retired=${lines.filter(x => / retire /.test(x)).length}` };
+}
+
 if (import.meta.main) {
     const args = process.argv.slice(2), planFile = resolve(args.find(a => !a.startsWith('--')) ?? join(root, 'swarm.json'));
-    // The whole pass runs under the account-plan lock: the coordinator installs jobs into its overlay under the same lock.
-    // The timer and the trainer check share one pass at a time: a second call joins the pass in flight.
+    // The write step of a pass runs under the account-plan lock (lockedPass): the coordinator installs jobs into its
+    // overlay under the same lock. The timer and the trainer check share one pass at a time: a second call joins the
+    // pass in flight.
     const dry = args.includes('--dry');
     let inFlight: Promise<'applied' | 'held' | 'failed'> | null = null;
-    const hold = () => {
-        console.log(PAUSED);
-        console.log('RESULT ok autopilot held: swarm is paused');
+    const hold = (lines: readonly string[] = [PAUSED]) => {
+        console.log(lines[0]);
+        console.log(passOutcome(lines).result);
         return 'held' as const;
     };
     const once = () => {
         if (!dry && swarmPaused()) return Promise.resolve(hold());
         return inFlight ??= (async () => {
             try {
-                const lines = await withPlanWrite(() => pass(planFile, dry), join(prac, 'coordinator'));
-                if (lines[0] === PAUSED) return hold();
+                const lines = await lockedPass(planFile, dry, action => withPlanWrite(action, join(prac, 'coordinator')));
+                const { outcome, result } = passOutcome(lines);
+                if (outcome === 'held') return hold(lines);
                 console.log(lines.join('\n'));
                 // Outside the plan lock: fleet-sync takes the fleet-data write lock, so it queues behind the agent's sync.
                 // A sync that fails to start leaves the claim to the agent's next sync.
                 if (lines.includes(CLAIM_CHANGED)) try {
                     Bun.spawn([process.execPath, 'scripts/fleet-sync.ts'], { cwd: root, env: process.env, stdin: 'ignore', stdout: 'ignore', stderr: 'ignore', windowsHide: true }).unref();
                 } catch { /* the fleet agent's next sync publishes it */ }
-                console.log(`RESULT ok autopilot jobs=${lines.filter(x => / (assign|keep) /.test(x)).length} retired=${lines.filter(x => / retire /.test(x)).length}`);
+                console.log(result);
                 return 'applied';
             } catch (e) {
                 console.log(`RESULT fail autopilot ${String(e)}`);

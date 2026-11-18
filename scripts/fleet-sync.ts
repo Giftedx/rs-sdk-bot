@@ -25,6 +25,7 @@ import { canonicalRows, readSnapshotFiles, type SnapshotFile } from '../packages
 import { listAttempts, readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { savedProcessAlive } from '../packages/core/src/session-takeover';
 import { loadEnded, swarmWroteStop } from './swarm';
+import { handNamed, ruleRoster } from '../packages/core/src/army-roster';
 import { terminalTradeReceipt, validOrder, type TradeReceipt } from './fleet-trade-settlement';
 
 const root = resolve(import.meta.dir, '..');
@@ -131,13 +132,18 @@ export function activeAccounts(rows: readonly any[], now = Date.now()): (account
 // The jobs of this side's own accounts, without the main account and without job notes. The swarm plan file stays
 // uncommitted while it runs; this copy is what other sides read.
 const PLAN_FIELDS = ['account', 'accounts', 'script', 'args', 'env', 'enabled', 'standing', 'repeat', 'goal', 'role', 'template', 'autopilot', 'resources'] as const;
-export function planView(jobs: readonly any[], side = mySide(), owners = loadOwners(), now = Date.now(), goals?: {army?: unknown;builds?: unknown}) {
+// `goals.observed`: this side's observed rows (the snapshot's accounts): the accounts that the army roster rule admits
+// (packages/core/src/army-roster.ts) join the published `army`, so a side that adopts or reads this plan agrees on them.
+export function planView(jobs: readonly any[], side = mySide(), owners = loadOwners(), now = Date.now(), goals?: {army?: unknown;builds?: unknown;observed?: readonly unknown[]}) {
     const names = (j: any) => [j?.account, ...(j?.accounts ?? [])].filter((n: unknown): n is string => typeof n === 'string');
     const own = jobs.filter(j => j?.role !== 'main' && names(j).length > 0 && names(j).every(n => owners.get(n.toLowerCase())?.side === side));
-    const army = Array.isArray(goals?.army) ? goals.army.filter(entry => {
+    const listed = Array.isArray(goals?.army) ? goals.army.filter(entry => {
         const account=typeof entry==='string'?entry:entry?.account;
         return typeof account==='string' && account.toLowerCase()!=='haggis' && owners.get(account.toLowerCase())?.side===side;
     }) : undefined;
+    const have = new Set((listed ?? []).map(entry => String(typeof entry==='string'?entry:entry.account).toLowerCase()));
+    const byRule = ruleRoster(goals?.observed ?? [], n => owners.get(n.toLowerCase())?.side === side, handNamed(jobs, side)).filter(n => !have.has(n));
+    const army = listed || byRule.length ? [...(listed ?? []), ...byRule] : undefined;
     const roster=new Set((army??[]).map(entry=>String(typeof entry==='string'?entry:entry.account).toLowerCase()));
     const builds=goals?.builds&&typeof goals.builds==='object'&&!Array.isArray(goals.builds)
         ? Object.fromEntries(Object.entries(goals.builds).filter(([account,build])=>roster.has(account.toLowerCase())&&typeof build==='string')) : undefined;
@@ -393,7 +399,7 @@ export function runSync(push = true): string {
         const coordinatorJobs = readCoordinatorJobs(root).jobs, merged = mergeJobs(jobs, coordinatorJobs);
         claim = claimFor([...merged, ...recoveringOwnerJobs(jobs, coordinatorJobs)], snap.side, a => owners.get(a.toLowerCase())?.side ?? 'local', Date.now(), activeAccounts(snap.accounts));
         mkdirSync(join(dir, 'fleet', 'claims'), { recursive: true }); writeFileSync(claimFile, JSON.stringify(claim) + '\n');
-        const view = planView(merged, snap.side, owners, Date.now(), sourcePlan);
+        const view = planView(merged, snap.side, owners, Date.now(), { ...sourcePlan, observed: snap.accounts });
         mkdirSync(join(dir, 'fleet', 'plans'), { recursive: true });
         const prior=published(out), was = JSON.stringify([prior?.jobs,prior?.army,prior?.builds]);
         if (was !== JSON.stringify([view.jobs,view.army,view.builds])) writeFileSync(out, JSON.stringify(view, null, 1) + '\n');

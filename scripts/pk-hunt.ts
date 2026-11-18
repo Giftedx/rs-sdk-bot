@@ -9,13 +9,15 @@
 // id (scripts/pk.ts SPELLS) used where no glory is carried, both to reach Edgeville and to escape. An account that starts
 // more than 60 tiles from Edgeville rubs a carried glory there first, or casts PK_TELE and walks on. PK_SPOTS replaces
 // the hunt spots as JSON [{"x":n,"z":n,"dwell":ticks}], visited in order (dwell 0 makes a waypoint), so a route can
-// reach the deep Wilderness; PK_OBSERVE=1 only watches and logs (it still fights back when attacked). Every player seen
+// reach the deep Wilderness; HUNT_MAX_DEATHS the deaths that the hunt re-kits after (default 1; a PvP death sends the account to
+// Lumbridge with 1 Hitpoints: it walks to the bank, eats up and wears its starting kit again); PK_OBSERVE=1 only watches and logs (it still fights back when attacked). Every player seen
 // is logged as `HUNT seen` when first seen and whenever its verdict changes. openBot refuses a non-local server without DEMO_OK=1.
 import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadOwners } from '../packages/core/src/fleet';
+import { PVP_DEATH_LIMITS, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
+import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, packGain, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
 import { armourDefence } from './pk-read';
 import { assessWildernessThreat, hasVarrockTeleport, itemCost, planWildernessEscape, slashWebThrough, wildernessCombatMargin, wildernessDepth } from './pk-roam';
 import { nativeRequirementMetadata, resolveItemRequirements, type ItemCount, type ItemRequirement, type RequirementResolution } from '../packages/core/src/item-requirements';
@@ -223,12 +225,113 @@ export async function restock(s: Session, food: number, trip: readonly TripItem[
     return observed.ok && foodHeld(s) >= food ? null : 'trip withdrawal short ' + JSON.stringify(observed.shortages);
 }
 
+// What the hunt knows about one death. A death in the Wilderness by a player (pvp_death_lose_items in death.rs2) drops the
+// pack and the worn items to the killer, except the 3 most valuable items of an unskulled player, and one more with Protect
+// Item (a skulled player keeps only that one). The account respawns at Lumbridge with 1 Hitpoints (death.rs2: a death to a
+// player leaves 1 Hitpoints) and no skull. The bank is not touched.
+export type DeathRecord = {
+    diedNear: { x: number; z: number } | null; respawnAt: { x: number; z: number } | null; hpAtRespawn: number | null;
+    lifeBefore: number | undefined; lifeAfter: number | undefined; packAtRespawn: number[]; ticks: number;
+    // `ok`, or the step that stopped the re-kit: `no respawn`, `walk to the bank` and the walk's outcome, `bank did not open`, `no food in the bank`,
+    // `kit lacks <ids>` (pieces of the starting kit that the bank does not hold).
+    rekit: string; missing: number[];
+};
+export const RESPAWN_TICKS = 40;
+// Deaths that the hunt re-kits after: the run stops at its PVP_DEATH_LIMITS.perRun-th death (packages/core/src/pvp-deaths.ts).
+export const DEFAULT_MAX_DEATHS = PVP_DEATH_LIMITS.perRun - 1;
+// The death limit of HUNT_MAX_DEATHS: a whole number of 0 or more, else the default.
+export const maxDeathsOf = (value: string | undefined, fallback = DEFAULT_MAX_DEATHS): number => { const n = Number(value); return value !== undefined && value.trim() !== '' && Number.isSafeInteger(n) && n >= 0 ? n : fallback; };
+const WEAR_OPTION = /^(Wield|Wear)$/i;
+const isFood = (i: { optionsWithIndex?: { text: string }[] }) => !!i.optionsWithIndex?.some(op => /^eat$/i.test(op.text));
+// Eats until the Hitpoints are within a tenth of the maximum (at most 10) of full, or no food is left. Returns the Hitpoints.
+export async function eatUp(s: Session, stop: () => boolean): Promise<number> {
+    for (let i = 0; i < 12 && !stop(); i++) {
+        const p = s.sdk.getState()?.player, meal = s.sdk.getInventory().find(isFood), op = meal?.optionsWithIndex.find(x => /^eat$/i.test(x.text));
+        if (!p || !meal || !op || p.hp >= p.maxHp - Math.min(10, Math.floor(p.maxHp / 10))) break;
+        await s.sdk.sendUseItem(meal.slot, op.opIndex);
+        for (let t = 0; t < 3; t++) if (!await nextTick(s)) break;
+    }
+    return s.sdk.getState()?.player?.hp ?? 0;
+}
+// After a death: wait for the new life, walk to the bank, take sharks and the pieces that the account wore when the hunt began
+// (what the bank holds), wear them and eat up from 1 Hitpoints. The caller then restocks the trip. A piece that the bank lacks
+// is named in `missing`: the trip check of the restock ends the run when the trip cannot be filled.
+export async function rekitAfterDeath(s: Session, o: { lifeBefore: number | undefined; diedNear: { x: number; z: number } | null; wornAtStart: readonly ItemCount[]; stop: () => boolean; log: (l: string) => void; bank?: { x: number; z: number };
+    // Only record the death: no walk and no bank (the death limit of the hunt).
+    recordOnly?: boolean }): Promise<DeathRecord> {
+    const begin = s.tick(), player = () => s.sdk.getState()?.player;
+    const record: DeathRecord = { diedNear: o.diedNear, respawnAt: null, hpAtRespawn: null, lifeBefore: o.lifeBefore, lifeAfter: undefined, packAtRespawn: [], ticks: 0, rekit: 'ok', missing: [] };
+    const end = (rekit: string): DeathRecord => { record.rekit = rekit; record.ticks = s.tick() - begin; o.log(`HUNT death ${JSON.stringify(record)}`); return record; };
+    let alive = false;
+    for (let t = 0; t < RESPAWN_TICKS && !o.stop(); t++) {
+        const p = player();
+        if (p && !p.isDead && p.hp > 0 && (o.lifeBefore === undefined || p.lifeId !== o.lifeBefore)) { alive = true; break; }
+        if (!await nextTick(s)) break;
+    }
+    const p0 = player();
+    if (!alive || !p0) return end('no respawn');
+    record.respawnAt = { x: p0.worldX, z: p0.worldZ }; record.hpAtRespawn = p0.hp; record.lifeAfter = p0.lifeId;
+    record.packAtRespawn = s.sdk.getInventory().map(i => i.id);
+    if (o.recordOnly) return end('death limit');
+    // Food in the pack first (a kept item can be food): the walk to the bank is long at 1 Hitpoints.
+    await eatUp(s, o.stop);
+    const back = await walk(s, o.bank ?? EDGEVILLE_BANK, o.stop, 900);
+    if (!back.ok) return end('walk to the bank ' + JSON.stringify(back).slice(0, 160));
+    if (!(await s.bot.openBank()).success) return end('bank did not open');
+    const take = async (id: number, count: number) => {
+        let left = count;
+        for (const row of s.sdk.getBankItems().filter(r => r.id === id && r.count > 0)) {
+            if (left <= 0) break;
+            const n = Math.min(left, row.count);
+            await s.bot.withdrawItem(row, n, { asNote: false });
+            left -= n;
+        }
+        return count - left;
+    };
+    const wornNow = () => (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : s.sdk.getState()?.equipment ?? []);
+    const have = (id: number) => wornNow().some(e => e.id === id) || held(s, id) > 0;
+    const hp = player()?.hp ?? 1, maxHp = player()?.maxHp ?? 99;
+    // Food to eat up with: sharks first, then lobsters (FOOD_LIST), enough pieces to heal the missing Hitpoints and one more.
+    let missingHp = maxHp - hp, pieces = 0;
+    for (const kind of FOOD_LIST) {
+        if (missingHp <= 0 && pieces > 0) break;
+        const want = Math.max(1, Math.ceil(missingHp / kind.heal)) + 1, got = await take(kind.id, want);
+        pieces += got; missingHp -= got * kind.heal;
+    }
+    const taken: number[] = [];
+    for (const piece of o.wornAtStart) {
+        if (have(piece.id)) continue;
+        if (await take(piece.id, Math.max(1, piece.count)) > 0) taken.push(piece.id); else record.missing.push(piece.id);
+    }
+    await s.bot.closeBank();
+    for (const id of taken) {
+        const item = s.sdk.getInventory().find(i => i.id === id), op = item?.optionsWithIndex?.find(x => WEAR_OPTION.test(x.text));
+        if (item && op) { await s.sdk.sendUseItem(item.slot, op.opIndex); await nextTick(s); }
+    }
+    if (!s.sdk.getInventory().some(isFood)) return end('no food in the bank');
+    await eatUp(s, o.stop);
+    // The pieces of the starting kit that the bank lacks: the account does not go back to the Wilderness without them.
+    if (record.missing.length) return end(`kit lacks ${record.missing.join(',')}`);
+    return end('ok');
+}
+
+// The end of a hunt run: its ok and the detail of its RESULT line. A run that ended in a death starts with `died `, so that the
+// supervisor reads `RESULT fail died` as a death (packages/practice/src/supervise.ts, supervise-host.ts classify) and does not log the
+// account in again. Its record (the respawn, the kept pack, the step that stopped the re-kit) is the receipt of the end.
+export function huntEnd(r: { end: string; kills: number; deaths: number; rekits: number; death?: DeathRecord }): { ok: boolean; detail: string } {
+    const died = /^died/.test(r.end), ok = !died && !/failed|lacks|short|invalid|did not open/.test(r.end);
+    return { ok, detail: `${died ? 'died ' : ''}hunt ${r.end} kills ${r.kills} deaths ${r.deaths} rekits ${r.rekits}${r.death ? ` death=${JSON.stringify(r.death)}` : ''}` };
+}
+
 export type HuntOptions = { cap: number; food: number; minFood: number; escapeAt: number; stop: () => boolean; log?: (l: string) => void;
     kit?: Kit; trip?: readonly TripItem[]; damageSpell?: number; rotation?: Style[]; teleSpell?: number;
-    spots?: readonly Spot[]; observe?: boolean };
+    spots?: readonly Spot[]; observe?: boolean;
+    // Deaths that the hunt re-kits after (default 1, DEFAULT_MAX_DEATHS). The death after that ends the run with its record.
+    // `onDeath` is called for each death, at its tile (the death ledger of packages/core/src/pvp-deaths.ts).
+    maxDeaths?: number; onDeath?: (near: { x: number; z: number } | null) => void };
 export async function hunt(s: Session, o: HuntOptions) {
     const log = o.log ?? ((l: string) => console.log(l)), start = s.tick(), ours = fleetNames();
-    const tally = { kills: 0, deaths: 0, escapes: 0, fights: 0, looted: 0, trips: 0 };
+    const tally = { kills: 0, deaths: 0, rekits: 0, retreatsFailed: 0, escapes: 0, fights: 0, looted: 0, trips: 0 };
     if (o.trip !== undefined) { const invalid = invalidTrip(o.trip); if (invalid.length) return { ...tally, end: 'invalid trip requirements ' + JSON.stringify(invalid) }; }
     let ended = false;
     void s.ended.then(() => { ended = true; });
@@ -244,6 +347,26 @@ export async function hunt(s: Session, o: HuntOptions) {
         : { ...k, melee: (k.melee ?? []).map(id => (id === KIT_IDS.runeKiteshield ? startShield : id)) });
     const shallow = (o.spots ?? HUNT_SPOTS).every(sp => wildernessLevel(sp.z) <= 30);
     let spot = 0, needsRestock = false;
+    // A death: the account respawns at Lumbridge with 1 Hitpoints and what it kept. `afterDeath` re-kits it from the bank and
+    // the next pass restocks the trip, or it returns the end of the run with the record of the death (rekitAfterDeath).
+    const wornAtStart = (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : s.sdk.getState()?.equipment ?? []).map(e => ({ id: e.id, count: e.count ?? 1 }));
+    let life = s.sdk.getState()?.player?.lifeId, lastTile: { x: number; z: number } | null = null;
+    const died = () => { const p = s.sdk.getState()?.player; return !!p && life !== undefined && p.lifeId !== undefined && p.lifeId !== life; };
+    const afterDeath = async (near: { x: number; z: number } | null | undefined): Promise<{ end: string; death: DeathRecord } | null> => {
+        tally.deaths++;
+        try { o.onDeath?.(near ?? lastTile); } catch (error) { log(`HUNT death ledger write failed: ${String(error)}`); }
+        const record = await rekitAfterDeath(s, { lifeBefore: life, diedNear: near ?? lastTile, wornAtStart, stop: over, log, recordOnly: tally.deaths > (o.maxDeaths ?? DEFAULT_MAX_DEATHS) });
+        life = record.lifeAfter ?? life;
+        if (record.rekit !== 'ok') return { end: record.rekit === 'death limit' ? 'died' : 'died: ' + record.rekit, death: record };
+        tally.rekits++; needsRestock = true;
+        return null;
+    };
+    // The end of the run when nothing else ends it: a death on the way (a bank walk, a retreat, the last tick) is recovered or ends the run
+    // as died, never as a plain failure, a stop or the cap. `openBot` no longer ends a death (continueAfterDeath), so each end checks it.
+    const ending = async (end: string): Promise<{ end: string; death?: DeathRecord }> => {
+        if (died()) { const d = await afterDeath(lastTile); if (d) return d; }
+        return { end };
+    };
     const far = () => { const p = s.sdk.getState()?.player; return !p || Math.max(Math.abs(p.worldX - EDGEVILLE_BANK.x), Math.abs(p.worldZ - EDGEVILLE_BANK.z)) > 60; };
     const exitWilderness = async (why: string): Promise<'out' | 'died' | 'failed'> => {
         const position = () => { const p = s.sdk.getState()?.player; return p ? `${p.worldX},${p.worldZ}` : ''; };
@@ -303,23 +426,26 @@ export async function hunt(s: Session, o: HuntOptions) {
     };
     if (far()) {
         const res = await exitWilderness('retreat to Edgeville');
-        if (res === 'died') return { ...tally, end: 'died' };
-        if (res === 'failed') {
+        if (res === 'died') { const d = await afterDeath(null); if (d) return { ...tally, ...d }; }
+        else if (res === 'failed') {
             const p = s.sdk.getState()?.player;
             const magicLv = s.sdk.getState()?.skills?.find(k => k.name === 'Magic')?.level ?? 1;
             const hasTele = o.teleSpell !== undefined || hasVarrockTeleport(magicLv, s.sdk.getInventory(), s.sdk.getEquipment());
             if (p && wildernessDepth(p.worldX, p.worldZ) === 0 && !hasTele && !s.sdk.getInventory().some(i => (ITEMS.glory as readonly number[]).includes(i.id))) {
-                return { ...tally, end: 'far from Edgeville with no glory or PK_TELE' };
+                return { ...tally, ...await ending('far from Edgeville with no glory or PK_TELE') };
             }
-            return { ...tally, end: hasTele ? 'travel teleport did not move the account' : 'glory to Edgeville failed' };
+            return { ...tally, ...await ending(hasTele ? 'travel teleport did not move the account' : 'glory to Edgeville failed') };
         }
     }
     while (!over()) {
+        if (died()) { const d = await afterDeath(lastTile); if (d) return { ...tally, ...d }; }
         if (needsRestock || foodHeld(s) < o.minFood) {
             const back = await walk(s, EDGEVILLE_BANK, over, 600);
+            // A death on the walk to the bank is recovered (the next pass restocks) or ends the run as died, whether or not the walk failed.
+            if (died()) { const d = await afterDeath(lastTile); if (d) return { ...tally, ...d }; continue; }
             if (!back.ok) return { ...tally, end: 'bank walk failed ' + JSON.stringify(back) };
             const missing = await restock(s, o.food, o.trip, kit, auto ? (bank, worn) => { const pick = pickTrip(bank, shallow, worn); kit = pick.kit; log(`HUNT trip ${pick.name}`); return pick; } : undefined);
-            if (missing) return { ...tally, end: missing };
+            if (missing) return { ...tally, ...await ending(missing) };
             needsRestock = false;
             tally.trips++;
         }
@@ -334,6 +460,8 @@ export async function hunt(s: Session, o: HuntOptions) {
             await nextTick(s);
             const state = s.sdk.getState(), me = state?.player;
             if (!state || !me) continue;
+            if (died()) { const d = await afterDeath(lastTile); if (d) return { ...tally, ...d }; break; }
+            lastTile = { x: me.worldX, z: me.worldZ };
             let maxSeen = seen;
             for (const e of state.combatEvents) {
                 const id = e.observationId ?? e.tick;
@@ -370,7 +498,13 @@ export async function hunt(s: Session, o: HuntOptions) {
                 const margin = wildernessCombatMargin({ z: me.worldZ, combat: me.combatLevel }, me.combatLevel);
                 log(`HUNT threat retreat (${threat.retreatReason}, bracket=${margin.minCombat}-${margin.maxCombat}): ${threat.escapePlan.detail}`);
                 needsRestock = true;
-                if (wildernessLevel(me.worldZ) > 30 || threat.multiPile) await exitWilderness(threat.retreatReason);
+                if (wildernessLevel(me.worldZ) > 30 || threat.multiPile) {
+                    // The result of the retreat: a death is handled, and a retreat that did not leave the Wilderness is counted
+                    // and logged. The restock walk that follows goes on south either way.
+                    const out = await exitWilderness(threat.retreatReason);
+                    if (out === 'died') { const d = await afterDeath(lastTile); if (d) return { ...tally, ...d }; }
+                    else if (out === 'failed' && !died()) { tally.retreatsFailed++; log(`HUNT threat retreat did not leave the Wilderness (${threat.retreatReason})`); }
+                }
                 break;
             }
             if (attackerIndex === null && (o.observe || me.hp < me.maxHp - 20 || foodLeft < Number(process.env.HUNT_MIN_FOOD ?? 0))) continue;
@@ -402,7 +536,9 @@ export async function hunt(s: Session, o: HuntOptions) {
             });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
             if (r.outcome === 'kill') {
-                tally.kills++; const n = await loot(s, r.targetAt ?? target, over); tally.looted += n;
+                tally.kills++; const pack = s.sdk.getInventory().map(i => ({ id: i.id, count: i.count }));
+                const n = await loot(s, r.targetAt ?? target, over); tally.looted += n;
+                recordKillLoot(r, packGain(pack, s.sdk.getInventory()));
                 log(`HUNT looted ${n} piles at ${JSON.stringify(r.targetAt ?? target)}`);
             }
             // A danger exit (no food, two attackers) leaves the fight but not the place: the escape (glory, teleport or a
@@ -417,23 +553,23 @@ export async function hunt(s: Session, o: HuntOptions) {
                     predictPrayer: true, snapPrayer: true, flee: true });
                 log(`HUNT escape after danger: ${e.outcome}`);
                 if (e.outcome === 'escaped') { tally.escapes++; needsRestock = true; }
-                else if (e.outcome === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
+                else if (e.outcome === 'died') { const d = await afterDeath(r.targetAt ?? lastTile); if (d) return { ...tally, ...d }; }
                 else {
                     const postP = s.sdk.getState()?.player;
                     if (postP && wildernessDepth(postP.worldX, postP.worldZ) > 0) {
                         const outRes = await exitWilderness('post-fight retreat');
-                        if (outRes === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
+                        if (outRes === 'died') { const d = await afterDeath(lastTile); if (d) return { ...tally, ...d }; }
                         if (outRes === 'out') { tally.escapes++; needsRestock = true; }
                     }
                 }
             }
-            if (r.outcome === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
+            if (r.outcome === 'died') { const d = await afterDeath(r.targetAt ?? lastTile); if (d) return { ...tally, ...d }; break; }
             if (r.outcome === 'session ended') return { ...tally, end: 'session ended' };
             if (r.outcome === 'escaped') { tally.escapes++; needsRestock = true; }
             break;
         }
     }
-    return { ...tally, end: ended ? 'session ended' : o.stop() ? 'stopped' : 'cap' };
+    return { ...tally, ...await ending(ended ? 'session ended' : o.stop() ? 'stopped' : 'cap') };
 }
 
 // Pick up what the loser dropped near where it stood, most valuable stacks first, bones aside; eat food to free a slot for valuable drops.
@@ -468,15 +604,28 @@ if (import.meta.main) {
     const [bot, capArg] = process.argv.slice(2);
     if (!bot) { console.log('usage: bun scripts/pk-hunt.ts <bot> [CAP ticks]'); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
+    // The death ledger: an account that died too often in the last 24 h on a live server does not start (RESULT fail died).
+    // The server comes from bot.env, which openBot restores from the vault later: the ledger restores it first. An unreadable bot.env is a fail line.
+    const { accountServerBeforeLogin } = await import('./pk-roam');
+    let server = '';
+    try { server = accountServerBeforeLogin(bot); } catch (e) { console.log(`RESULT fail no server for ${bot}: ${String(e).replace(/\s+/g, ' ').slice(0, 160)}`); process.exit(2); }
+    const ledgerRefusal = pvpDeathRefusal({ accounts: [bot], server });
+    if (ledgerRefusal) { console.log(`RESULT fail died ${ledgerRefusal}`); process.exit(1); }
     const stop = () => existsSync(`.practice/stop-${bot}`) || existsSync('.practice/stop-pk-hunt');
-    const s = await openBot(bot);
+    // A death ends a bot session by default (packages/core/src/bot.ts: the DEATH line, then finish). The hunt handles its own death
+    // (rekitAfterDeath): continueAfterDeath prints the DEATH line and goes on, and the stop file, the lease and the stall checks stay live.
+    const s = await openBot(bot, { continueAfterDeath: true });
     const env = process.env;
     const r = await hunt(s, { cap: Number(capArg ?? 6000), food: Number(env.HUNT_FOOD ?? 18), minFood: Number(env.MIN_FOOD ?? 6), escapeAt: Number(env.ESCAPE_AT ?? 35), stop,
         kit: env.PK_KIT === 'snare' ? SNARE_KIT : env.PK_KIT ? JSON.parse(env.PK_KIT) as Kit : undefined, trip: env.PK_TRIP ? JSON.parse(env.PK_TRIP) : env.PK_KIT === 'snare' ? SNARE_TRIP : undefined, damageSpell: env.PK_SPELL ? Number(env.PK_SPELL) : undefined,
         rotation: env.PK_ROTATION ? env.PK_ROTATION.split(',') as Style[] : undefined, teleSpell: env.PK_TELE ? Number(env.PK_TELE) : undefined,
-        spots: resolveHuntSpots(env), observe: env.PK_OBSERVE === '1' });
+        spots: resolveHuntSpots(env), observe: env.PK_OBSERVE === '1', maxDeaths: maxDeathsOf(env.HUNT_MAX_DEATHS),
+        onDeath: near => { recordPvpDeath({ account: bot, server, at: Date.now(), script: 'scripts/pk-hunt.ts', near }); } });
     console.log('HUNT ' + JSON.stringify(r));
     // A dropped session reports the swarm's drain wording (planner DRAIN_RESULT), not a hunt outcome.
     if (r.end === 'session ended') await finish([s], false, 'session ended: disconnected');
-    await finish([s], r.end !== 'died' && !/failed|lacks|short|invalid|did not open/.test(r.end), `hunt ${r.end} kills ${r.kills}`);
+    // A run that ended in a death is not ok. Its record (the respawn, the pack that it kept, the re-kit step that stopped it)
+    // is the receipt of the end. A death that the hunt re-kitted after is in `deaths` and `rekits`.
+    const end = huntEnd(r);
+    await finish([s], end.ok, end.detail);
 }

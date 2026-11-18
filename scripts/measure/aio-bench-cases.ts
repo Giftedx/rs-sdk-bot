@@ -6,6 +6,7 @@ import {PRESETS, type SaveConfig} from '../../packages/practice/src/presets';
 import {firemakingFixture} from '../../packages/practice/src/firemaking-order-proof';
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
 import {KITS, kitItems, kitSkills, kitVarps, levelsBeforeRoute, overBuild} from '../pk-kits';
+import { CLONE_NAMES, cloneProfileName, cloneSpec, pooledProfile, type CloneMode, type CloneName } from '../pk-gang-clone';
 import {carrierAltar, type CarrierAltarName} from '../rune-carrier-altar';
 import {PROGRESSION_BENCH_CASES} from './progression-bench-cases';
 import {questSweepElenaPreset} from '../../packages/practice/src/quest-sweep-proof';
@@ -236,14 +237,51 @@ const gangCase = (key: string, kit: string, gangKit: string, groups: number, at:
 // `food`: the sharks of each of ours at the start (the kit's own count by default), with EDGE_BANK_SNARE in its bank: a
 // low count sends it to the bank and back mid-meeting. `foodId`: the food item in place of each shark of the kit
 // (379 is the lobster, which heals 12 where the shark heals 20).
+// Each kill of a run has one kill receipt on the disk, and a practice engine gives practice receipts only
+// (packages/core/src/kill-receipt.ts killReceiptProof): `kills=N` and `killReceipts=N` of the RESULT line agree.
+export const killReceiptsMatch = (s: string) => {
+  const m = s.match(/^RESULT .*\bkills=(\d+) killReceipts=(\d+) receiptDomain=(\w+)/m);
+  return !!m && m[1] === m[2] && m[3] === (m[1] === '0' ? 'none' : 'practice');
+};
 const squadCase = (key: string, kit: string, gangKit: string, n: number, args: string[] = [], food?: number, start = {x: 3066, z: 3641}, foodId = 385): BenchCase => {
   const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, n + 2).split('');
   const ours = (x: number, z: number): SaveConfig => { const c = kitFixture(kit, x, z), pack = (count: number) => [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: count}, () => ({id: foodId, count: 1}))];
     return food !== undefined ? {...c, bank: [...EDGE_BANK_SNARE, {id: 884, count: 2000}], inventory: pack(food)} : foodId === 385 ? c : {...c, inventory: pack(c.inventory!.filter(i => i.id === 385).length)}; };
-  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: ours(start.x + 1, start.z - 1), output: /kills=(\d+)/,
+  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: s => ok(s) && killReceiptsMatch(s), presetConfig: ours(start.x + 1, start.z - 1), output: /kills=(\d+)/,
     scriptArgs: ['squad', ...letters.map(l => `{bot:${l}}`), 'SQUAD_GANG=3', 'MAX_MINUTES=6', 'STALL_TICKS=3000', ...args],
     companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < n - 1 ? ours(start.x + (i % 3), start.z) : kitFixture(gangKit, 3078, 3640)}))};
 };
+// The clones of the dagger gang (scripts/pk-gang-clone.ts, research/gang-clones.md): the start state of a gang account
+// is the skulled gang kit with the levels and the sharks of its behaviour record.
+const cloneFixture = (name: CloneName, mode: CloneMode, x: number, z: number): SaveConfig => { const spec = cloneSpec(name, mode), c = kitFixture('ganker-dds-skull', x, z);
+  return {...c, skills: {...c.skills, ...spec.skills}, inventory: [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: spec.sharks}, () => ({id: 385, count: 1}))], bank: GANG_BANK}; };
+// One of ours against the clones `names` on the gang's post (scripts/pk-gang.ts): each clone has its own profile.
+const cloneGang = (key: string, kit: string, names: readonly CloneName[], groups: number, args: string[], mode: CloneMode = 'seen', bank?: {id: number; count: number}[]): BenchCase => {
+  const size = names.length, c = gangCase(key, kit, 'ganker-dds-skull', groups, GANKER_POST, [`SPAR_B_PROFILES=${names.map(n => cloneProfileName(n, mode)).join('+')}`, ...args], size, undefined, bank);
+  // The engine serves the world feed, and the driver writes it beside the output: the instrument of the live record.
+  return {...c, engineEnv: {...c.engineEnv, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, scriptArgs: [...c.scriptArgs!, `SPAR_FEED=${key.replace(/[^a-z0-9-]/gi, '_')}`], companions: c.companions!.map((comp, i) => ((i + 1) % (size + 1) === 0 ? comp : {...comp, presetConfig: cloneFixture(names[(i + 1) % (size + 1) - 1]!, mode, GANKER_POST.x, GANKER_POST.z)}))};
+};
+// The squad (scripts/pk-squad.ts) against the three clones. The squad script gives every gang account one set of
+// options, so the clones fight with the pooled options of the record; each has its own levels and sharks.
+const cloneSquad = (key: string, kit: string, n: number, args: string[], mode: CloneMode = 'seen', start = {x: 3093, z: 3501}, food?: number): BenchCase => {
+  const c = squadCase(key, kit, 'ganker-dds-skull', n, [`SPAR_B_OPTS=${JSON.stringify(pooledProfile(mode))}`, ...args], food, start);
+  return {...c, companions: c.companions!.map((comp, i) => (i < n - 1 ? comp : {...comp, presetConfig: cloneFixture(CLONE_NAMES[i - (n - 1)]!, mode, GANKER_POST.x, GANKER_POST.z)}))};
+};
+// A change of the pack of the first `members` of ours in a clone squad case (all by default): lobsters for the sharks
+// (the fleet holds lobsters), or no bow and no arrows (an account with an unstrung bow).
+const SHARK = 385, LOBSTER = 379, MAGIC_SHORTBOW = 861, IRON_ARROW = 884;
+const withPack = (c: BenchCase, n: number, change: (cfg: SaveConfig) => SaveConfig, members = n): BenchCase => ({...c, presetConfig: change(c.presetConfig!),
+  companions: c.companions!.map((comp, i) => (i < Math.min(n, members) - 1 ? {...comp, presetConfig: change(comp.presetConfig!)} : comp))});
+const lobsters = (cfg: SaveConfig): SaveConfig => ({...cfg, inventory: cfg.inventory!.map(i => (i.id === SHARK ? {...i, id: LOBSTER} : i))});
+const noBow = (cfg: SaveConfig): SaveConfig => ({...cfg, inventory: cfg.inventory!.map(i => (i.id === MAGIC_SHORTBOW ? {id: SHARK, count: 1} : i)), equipment: cfg.equipment?.filter(e => e.id !== IRON_ARROW)});
+// The same change for the members of ours from member `from` on (member 0 is the account of the run). In a clone squad
+// case gang account i hunts member i, so the first three members are the ones that the gang hits first.
+const ANTIPOISON_3 = 175;
+const withPackFrom = (c: BenchCase, n: number, change: (cfg: SaveConfig) => SaveConfig, from: number): BenchCase => ({...c, presetConfig: from <= 0 ? change(c.presetConfig!) : c.presetConfig,
+  companions: c.companions!.map((comp, i) => (i < n - 1 && i + 1 >= from ? {...comp, presetConfig: change(comp.presetConfig!)} : comp))});
+const noAntipoison = (cfg: SaveConfig): SaveConfig => ({...cfg, inventory: cfg.inventory!.filter(i => i.id !== ANTIPOISON_3)});
+// No antipoison, and sharks in the free slots of the pack: 4 more at the most.
+const foodForAntipoison = (cfg: SaveConfig): SaveConfig => { const inv = cfg.inventory!.filter(i => i.id !== ANTIPOISON_3); return {...cfg, inventory: [...inv, ...Array.from({length: Math.max(0, Math.min(4, 28 - inv.length))}, () => ({id: SHARK, count: 1}))]}; };
 // `sizeB`: side B's accounts when it is not `size` (scripts/pk-team.ts SPAR_TEAM_B).
 const teamCase = (key: string, kitA: string, kitB: string, groups: number, at: {x: number; z: number}, size = 2, args: string[] = [], sizeB = size): BenchCase => {
   const group = size + sizeB, letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * group - 1).split('');
@@ -465,6 +503,9 @@ const ROUTE_CASES: BenchCase[] = [
   // Body altar, the row `runecraft` of the planner (Runecraft 44 to 99 on the record route): 7 carriers with one pack each, so 7
   // trades in a row from Runecraft 44 (7.5 XP an essence: a pack is 5,062 XP at the rate of 25), no bank trip.
   carrierCase('body', 44, 56, 7),
+  // The same trade at a high level: Runecraft 80 to 82 in 8 packs, about 2 level-ups in all (0.25 a pack, as from 56 to 99
+  // on this server's curve), against about 2 level-ups a pack in the window above.
+  carrierCase('body', 80, 82, 8),
   // Fire with 2 carriers and 27 more essence in each bank: 3 packs, so one carrier banks at Al Kharid and returns.
   carrierCase('fire', 14, 40, 2, [{id: 1436, count: 27}]),
   skiller('thieving', 'knights', 'goldfarm_knights', ['TICKS=1500'], {output: /coinsGained=(\d+)/}),
@@ -610,11 +651,25 @@ const ROUTE_CASES: BenchCase[] = [
   // The same with the mage kit (splitbark, mystic fire staff, freeze runes): a magic attack bonus above 0, where rune
   // armour leaves the freeze's attack roll near 0 (player_combat_stat.rs2: (Magic + 9) x (bonus + 64)).
   gangCase('extra:kite-chase-mage-x4', 'mage', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A=champion', 'SPAR_CAP=1500', 'SPAR_WAIT=60'], 1),
+  // A death and the re-kit (scripts/pk-hunt.ts rekitAfterDeath, research/pvp-fight-loop.md "Death, skull and re-kit"): a hunter
+  // that wears a rune full helm and a bronze dagger and holds the same pieces and sharks in its bank meets a target in full rune
+  // armour that fights back with the champion profile. The hunter fights on to its death (no danger exit, no escape), respawns at
+  // Lumbridge with 1 Hitpoints, walks to the Edgeville bank, eats up and wears its starting pieces again, and goes on until its cap.
+  {key: 'extra:hunt-death-rekit', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'hunt', '900', 'PK_KIT={"melee":[1205]}', 'PK_TRIP=[{"id":385,"count":1}]', 'HUNT_FOOD=3', 'MIN_FOOD=1', 'ESCAPE_AT=0', 'HUNT_EXIT=0', 'HUNT_MAX_DEATHS=9', 'TARGET_PROFILE=champion'],
+    pass: s => ok(s) && /\bhunt cap kills \d+ deaths [1-9]\d* rekits [1-9]\d*/.test(s), output: /deaths (\d+)/,
+    presetConfig: {...sparFixture(3092, 3496), equipment: [{id: 1163, count: 1, slot: 0}, {id: 1205, count: 1, slot: 3}], inventory: [], bank: [{id: 385, count: 40}, {id: 1163, count: 1}, {id: 1205, count: 1}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540)}]},
   // The routes that need a player to fight, through scripts/measure/pvp-with-targets.ts: the target is a second account
   // of the run with no food that stands on its tile and hits back by auto-retaliate. Each passes on a kill.
   // fight: scripts/pk.ts with its own kit (staff, bow, dagger(p) and kiteshield: sparFixture) at Wilderness level 3.
   {key: 'pvp:fight', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}', 'fight', '{targets}', '600'],
-    pass: s => ok(s) && /"outcome":"kill"/.test(s), presetConfig: sparFixture(3094, 3540), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3096, 3540, {food: 0})}]},
+    pass: s => ok(s) && /"outcome":"kill"/.test(s) && /\bkill killReceipts=1 receiptDomain=practice\b/.test(s), presetConfig: sparFixture(3094, 3540), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3096, 3540, {food: 0})}]},
+  // The same fight with the world feed of the engine on (KILL_FEED=1, scripts/pk-kill-feed.ts): the receipt of the kill
+  // holds the feed's death of the target.
+  {key: 'extra:fight-kill-feed', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'fight', '{targets}', '600', 'KILL_FEED=1'],
+    pass: s => ok(s) && /\bkill killReceipts=1 receiptDomain=practice feedMatched=1\b/.test(s), presetConfig: sparFixture(3094, 3540), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3096, 3540, {food: 0})}]},
   // hunt: scripts/pk-hunt.ts from the Edgeville bank with an empty pack and the staff trip in the bank; the target
   // stands at the first hunt spot.
   {key: 'pvp:hunt', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}', 'hunt', '900'],
@@ -1041,6 +1096,59 @@ const ROUTE_CASES: BenchCase[] = [
   gangCase('extra:gang-live-check-x2', 'live-walker-iron', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK),
   // The same with one group: half the accounts, for a PC with little memory free.
   gangCase('extra:gang-live-check-x1', 'live-walker-iron', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK),
+  // The ring slot (research/pvp-fight-loop.md, "Rings"): the live-check meeting with a ring of recoil and with a ring of life, and
+  // the same meeting with no escape (escapeAt 0), where our account fights on to a death that a ring of life can prevent.
+  ...(['', '-recoil', '-life'] as const).flatMap(ring => [
+    ...(ring ? [gangCase(`extra:gang-live-check${ring}-x1`, `live-walker-iron${ring}`, 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK)] : []),
+    gangCase(`extra:gang-live-check-noescape${ring}-x1`, `live-walker-iron${ring}`, 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_A_OPTS={"escapeAt":0}', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK)]),
+  // The live-check meeting with the two prayer potions of the live pilot (kit live-walker-iron-pray).
+  gangCase('extra:gang-live-check-pray-x1', 'live-walker-iron-pray', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK),
+  // The clones of the dagger gang (research/gang-clones.md). The fidelity case: the live meeting of the kit
+  // live-walker-iron with the three at the post, as extra:gang-live-check-x1 with each clone in place of ganker-live.
+  cloneGang('extra:clone-live-check-x1', 'live-walker-iron', CLONE_NAMES, 1, ['SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 'seen', EDGE_BANK),
+  // The same with no antipoison in the pack: in the live meeting our account did not drink its antipoison, and 150
+  // of the 514 Hitpoints that it lost were poison.
+  cloneGang('extra:clone-live-check-noanti-x1', 'live-walker-iron-snare-noanti', CLONE_NAMES, 1, ['SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 'seen', EDGE_BANK_SNARE),
+  // One of ours in the kit of the squad pilots (rune chainbody, no antipoison) against one clone: the fight that the
+  // live split on the walk in gave each of ours.
+  ...CLONE_NAMES.map(name => atBank(cloneGang(`extra:clone-solo-${name}-x2`, 'live-walker-iron-rune-chain-bare', [name], 2, ['SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 'seen', [...EDGE_BANK_SNARE, {id: 884, count: 2000}]), GANKER_POST)),
+  // Three and four of ours in that kit from the Edgeville bank to the multi-way post, the clones hunting them, each
+  // clone on its own one of ours: single-way tiles first, then multi-way.
+  cloneSquad('extra:clone-3v3-walkin-x1', 'live-walker-iron-rune-chain-bare', 3, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']),
+  cloneSquad('extra:clone-4v3-walkin-x1', 'live-walker-iron-rune-chain-bare', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']),
+  // The climb against the clones (research/gang-clones.md, "The climb"): `n` of ours from the Edgeville bank, the
+  // clones hunting them, each clone on its own one of ours. The kits are the ones the accounts hold: rune helm,
+  // chainbody and legs with Bind runes (chainbind) or with no rune and no antipoison (chainbare), full rune with
+  // snare runes (rune), dragonhide (dhide).
+  ...([3, 4, 5, 6] as const).flatMap(n => ([['chainbind', 'live-walker-iron-rune-chain-bind'], ['chainbare', 'live-walker-iron-rune-chain-bare'], ['rune', 'live-walker-iron-snare-rune-nopot'], ['dhide', 'tribrid-snare-dhide']] as const)
+    .map(([tag, kit]) => cloneSquad(`extra:clone-squad-${n}-${tag}-x1`, kit, n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']))),
+  // The same against each mode of the clones: every clone walks out with its food gone (retreat), none does (stand),
+  // the fewest sharks of the record's range (lean), the most (full).
+  ...([4, 5] as const).flatMap(n => (['retreat', 'stand', 'lean', 'full'] as const).map(mode => cloneSquad(`extra:clone-squad-${n}-chainbind-${mode}-x1`, 'live-walker-iron-rune-chain-bind', n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1'], mode))),
+  // One change at a time from four of ours in the kit that the accounts hold (extra:clone-squad-4-chainbind-x1).
+  // The pack: lobsters, no bow on two members, no bow on any.
+  ...([4, 5] as const).map(n => withPack(cloneSquad(`extra:clone-squad-${n}-chainbind-lobster-x1`, 'live-walker-iron-rune-chain-bind', n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), n, lobsters)),
+  withPack(cloneSquad('extra:clone-squad-4-chainbind-nobow2-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), 4, noBow, 2),
+  withPack(cloneSquad('extra:clone-squad-4-chainbind-nobow-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), 4, noBow),
+  // The antipoison: five of ours in the kit, with a potion on the first two members, on the first one, on none
+  // (extra:clone-squad-5-chainbind-x1 has one on each), and with sharks in the free slots of a pack with no potion.
+  ...([['anti2', noAntipoison, 2], ['anti1', noAntipoison, 1], ['anti0', noAntipoison, 0], ['anti2-food', foodForAntipoison, 2], ['anti0-food', foodForAntipoison, 0]] as const)
+    .map(([tag, change, from]) => withPackFrom(cloneSquad(`extra:clone-squad-5-chainbind-${tag}-x1`, 'live-walker-iron-rune-chain-bind', 5, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), 5, change, from)),
+  // The approach: no march and no pull; the gang's own single-way post; the east multi-way post from Varrock.
+  cloneSquad('extra:clone-squad-4-chainbind-nomarch-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'MARCH=0', 'PULL=0']),
+  // The first squad pilot again: its kit (no antipoison, no rune), no march and no pull, 10 game minutes. Live: 4
+  // kills, 249 Hitpoints lost a kill. The second line holds the squad on the gang's single-way post.
+  cloneSquad('extra:clone-pilot-4-chainbare-nomarch-x1', 'live-walker-iron-rune-chain-bare', 4, ['MAX_MINUTES=10', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'MARCH=0', 'PULL=0']),
+  cloneSquad('extra:clone-pilot-4-chainbare-single-x1', 'live-walker-iron-rune-chain-bare', 4, ['MAX_MINUTES=10', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'MARCH=0', 'PULL=0', 'POST=3075,3640', 'ALLOW_SINGLE=1']),
+  cloneSquad('extra:clone-squad-4-chainbind-single-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'POST=3075,3640', 'ALLOW_SINGLE=1']),
+  cloneSquad('extra:clone-squad-4-chainbind-east-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'POST=3160,3540'], 'seen', {x: 3160, z: 3512}),
+  // The fight options, each one change of the squad's default set (scripts/pk-squad.ts SQUAD_OPTS).
+  ...([['nofreeze', {freeze: false}], ['freezelow', {freeze: 'low'}], ['spec1', {specBelow: 1}], ['eat50', {eatAt: 50}], ['eat70', {eatAt: 70}], ['melee', {rotation: ['melee']}], ['ranged', {rotation: ['ranged']}], ['nochase', {chaseBelow: 0}], ['focus7', {focusRunner: 0.7}]] as const)
+    .map(([tag, change]) => cloneSquad(`extra:clone-squad-4-chainbind-${tag}-x1`, 'live-walker-iron-rune-chain-bind', 4,
+      ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', `SQUAD_OPTS=${JSON.stringify({cureNow: true, eatAt: 60, freeze: 'flee', focusRunner: 0.4, chaseBelow: 0.4, freezeMagicCap: 49, dropForStrip: null, specBelow: 0.45, ...change})}`])),
+  // The repeat cycle of one account for 30 game minutes: kill, pick up, bank trip, return, next kill. A clone that
+  // walks out comes back from the bank; a dead clone does not come back.
+  atBank(cloneGang('extra:clone-cycle-solo-x1', 'live-walker-iron-snare-rune-nopot', CLONE_NAMES, 1, ['SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=3000', 'SPAR_TRIPS=6', 'SPAR_PICKUP=1', 'SPAR_B_TRIPS=4', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000', 'SPAR_B_OPTS={"protectItem":false}'], 'seen', EDGE_BANK_SNARE), GANKER_POST),
   // The fast case of the hill climb: the same fight with short waits (the gang rests 150 ticks, our account waits 60,
   // a cap of 1,200 ticks). It holds the first walk out of a gang account and the drain of our prayer.
   atBank(gangCase('extra:gang-live-fast-x1', 'live-walker-iron', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK), GANKER_POST),
