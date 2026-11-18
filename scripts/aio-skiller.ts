@@ -361,8 +361,11 @@ export function planProgressiveSkiller(skillInput: string, currentLevel: number,
  const bands: ProgressiveBand[] = [];
  let cursor = currentLevel;
  while (cursor < targetLevel) {
-  const active = [...tiers].filter(t => t.level <= cursor).at(-1) ?? tiers[0]!;
-  const nextUnlock = tiers.find(t => t.level > cursor && t.level < targetLevel)?.level ?? targetLevel;
+  // The unlocked tier with the most XP for each unit, the later tier on a tie. A later tier is not always the better
+  // one: a smelt and an anvil action both take 5 ticks (knowledge/ladders.json), and a platebody gives more XP than
+  // each bar that the levels above it smelt. A band ends at the next tier that gives more.
+  const active = tiers.filter(t => t.level <= cursor).reduce((best, t) => t.xp >= best.xp ? t : best, tiers[0]!);
+  const nextUnlock = tiers.find(t => t.level > cursor && t.level < targetLevel && t.xp >= active.xp)?.level ?? targetLevel;
   bands.push(progressiveTierBand(skill,active,cursor,nextUnlock,xpRate));
   cursor = nextUnlock;
  }
