@@ -199,7 +199,9 @@ export async function walkWithFerryFallback(from: Tile, to: Tile, walk: (to: Til
         const staged = await stageFare(need); ticks += staged.ticks;
         if (!staged.ok) return { ...staged, ticks };
     }
-    const direct = await walk(to);
+    // With both ferries known, a plan that finds no route in FERRY_LEG_PLAN_MS leads to the same two ferries below. The
+    // full budget (45 s) was spent on the plan first (Kiltlifter: 45,047 ms from 3185,3436 to 2619,3332).
+    const direct = await walk(to, need && first?.from && second?.from ? FERRY_LEG_PLAN_MS : undefined);
     if (direct.ok || direct.reason !== 'precondition' || !direct.detail.startsWith('no route to ') || !need || !first?.from || !second?.from)
         return ticks ? { ...direct, ticks: ticks + direct.ticks } : direct;
     ticks += direct.ticks;
