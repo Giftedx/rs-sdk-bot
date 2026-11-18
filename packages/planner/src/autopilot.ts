@@ -1164,16 +1164,20 @@ export function plan(inp: Inputs): Assignment[] {
     // others wait for a slot (the swarm admits no more).
     const waits = new Map<string, string>();
     if (inp.slots !== undefined) {
+        // A fund or send assignment starts an order that logs in two accounts (the recipient and the donor): it costs two bots.
+        const cost = (x: Assignment) => x.fund || x.send ? 2 : 1;
         const jobs = [...done.values()].filter(x => x.template);
-        if (jobs.length > inp.slots) {
+        if (jobs.reduce((n, x) => n + cost(x), 0) > inp.slots) {
             const holds = (x: Assignment) => !!inp.running?.has(x.account.toLowerCase()) || !!inp.holding?.has(x.account.toLowerCase());
             const rank = (x: Assignment): number[] => {
                 const id = x.template!.id, c = cands.find(k => k.account === x.account && (k.template.id === id || KIT_BUY + k.template.id === id));
                 return c?.goal ? [0, c.goal.band, c.goal.left] : c ? [1, -worth(c), 0] : [2, 0, 0];
             };
-            const holders = jobs.filter(holds), room = Math.max(0, inp.slots - holders.length);
+            const holders = jobs.filter(holds);
+            let room = Math.max(0, inp.slots - holders.reduce((n, x) => n + cost(x), 0));
             const others = jobs.filter(x => !holds(x)).map(x => ({ x, r: rank(x) })).sort((p, q) => { for (let i = 0; i < 3; i++) if (p.r[i] !== q.r[i]) return p.r[i]! - q.r[i]!; return p.x.account.localeCompare(q.x.account); });
-            for (const { x } of others.slice(room)) {
+            for (const { x } of others) {
+                if (cost(x) <= room) { room -= cost(x); continue; }
                 done.delete(x.account);
                 if (x.fund) gave.delete(x.fund.from);
                 if (x.send) gaveItems.delete(x.send.from);

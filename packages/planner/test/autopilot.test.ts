@@ -2725,9 +2725,23 @@ test('a running bot keeps its slot whatever the count, including a kit buy that 
     expect(two.filter(x => x.template).map(x => x.account)).toContain('D');
     expect(two.filter(x => x.template)).toHaveLength(2);
     // A run in the swarm's list holds its slot as a confirmed session does (a start inside its window included).
-    expect(plan(inputs([...crew, d], { ...base, slots: 2, holding: new Set(['d']) })).find(x => x.account === 'D')!.template).toBeDefined();
+    expect(plan(inputs([...crew, d], { ...base, slots: 2, holding: new Set(['d']) })).find(x => x.account === 'D')!.template?.id).toBe('kit-buy:army-cow-strength-45');
     // Zero slots, or fewer than the running bots: every running job stays and nothing else starts.
     const none = plan(inputs([...crew, d], { ...base, slots: 0, running: new Set(['a', 'd']) }));
     expect(none.filter(x => x.template).map(x => x.account).sort()).toEqual(['A', 'D']);
     expect(none.filter(x => !x.template && /waits for a bot slot \(0 free, 2 held by running bots\)/.test(x.reason))).toHaveLength(2);
+});
+
+test('an order costs two slots: the plan never holds more bots than the slots, donors included', () => {
+    const shops = catalogue().filter(t => t.id === 'shop-feathers');
+    const accounts = [acct('Poor'), acct('Zed', {}, { coin: 900_000 })];
+    const run = (slots?: number) => plan(inputs(accounts, { templates: shops, capacity: { 'shop:sarim': 2 }, donors: [{ name: 'Zed', coins: 900_000 }], ...(slots === undefined ? {} : { slots }) }));
+    // No cap: Zed funds Poor, an order that logs in both accounts.
+    expect(run().find(x => x.account === 'Poor')!.fund).toMatchObject({ from: 'Zed', to: 'Poor' });
+    // Two slots hold the order (recipient and donor); one slot cannot, so the order waits and the donor is free again.
+    expect(run(2).find(x => x.account === 'Poor')!.fund).toBeDefined();
+    const one = run(1);
+    expect(one.find(x => x.account === 'Poor')!.reason).toMatch(/^vacant: waits for a bot slot \(1 free, 0 held by running bots\)/);
+    expect(one.find(x => x.account === 'Zed')!.reason).not.toBe('vacant: gives coins this pass');
+    for (const slots of [0, 1, 2, 3]) expect([slots, run(slots).filter(x => x.template).reduce((n, x) => n + (x.fund || x.send ? 2 : 1), 0) <= slots]).toEqual([slots, true]);
 });

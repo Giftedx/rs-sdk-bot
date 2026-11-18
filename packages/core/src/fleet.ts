@@ -16,7 +16,9 @@ const root = resolve(import.meta.dir, '..', '..', '..');
 export const FLEET_WORKTREE = join(root, '.practice', 'fleet-data');
 export const FLEET_DIR = () => resolve(process.env.FLEET_DIR ?? (existsSync(join(FLEET_WORKTREE, 'fleet', 'owners.json')) ? join(FLEET_WORKTREE, 'fleet') : join(root, 'fleet')));
 export type Side = string;
-export type Owner = { side: Side; server: string };
+// `reservation`: the owner's marking of an account that a run holds for itself (a gang squad member): no planner job and no
+// army roster by rule, and never moved by adoption (fleet-assign).
+export type Owner = { side: Side; server: string; reservation?: string };
 export const SIDE_NAME = /^[a-z][a-z0-9-]{0,23}$/;
 export function mySide(): Side {
     const side = process.env.FLEET_SIDE || 'local';
@@ -30,7 +32,7 @@ export function loadOwners(file = join(FLEET_DIR(), 'owners.json')): Map<string,
     const out = new Map<string, Owner>();
     for (const [name, o] of Object.entries(raw.accounts ?? {})) {
         if (!/^[A-Za-z0-9]{1,12}$/.test(name) || typeof o?.side !== 'string' || !SIDE_NAME.test(o.side) || typeof o.server !== 'string') throw Error(`fleet owners: bad entry ${name}`);
-        out.set(name.toLowerCase(), { side: o.side, server: o.server.toLowerCase() });
+        out.set(name.toLowerCase(), { side: o.side, server: o.server.toLowerCase(), ...(typeof (o as any).reservation === 'string' && (o as any).reservation ? { reservation: (o as any).reservation } : {}) });
     }
     return out;
 }

@@ -163,7 +163,7 @@ export function buildOwnerGoals({root,now,statuses,questNames,fleetDir=join(root
  // more, not held by an enabled hand job of this side's plan, never the main account or a specialist. Another side's rule
  // accounts count when that side publishes them in its plan's `army` (scripts/fleet-sync.ts planView).
  const handJobs=handNamed(Array.isArray(plans[0]?.value?.jobs)?plans[0]!.value.jobs:[],side);
- for(const account of ruleRoster(rows.filter((s:any)=>owners.get(key(s.name))?.server===SERVER),n=>owners.get(key(n))?.side===side,handJobs))roster.add(account);
+ for(const account of ruleRoster(rows.filter((s:any)=>owners.get(key(s.name))?.server===SERVER),n=>owners.get(key(n))?.side===side&&!owners.get(key(n))?.reservation,handJobs))roster.add(account);
  const accounts:ArmyAccount[]=[...roster].sort().map(account=>{
   const s=byName.get(account),levels=Object.fromEntries(COMBAT_SKILLS.map(name=>{
    const observations=(Array.isArray(s?.skills)?s.skills:[]).filter((k:any)=>key(String(k?.name))===key(name));

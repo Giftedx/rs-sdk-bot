@@ -14,8 +14,11 @@ export const ARMY_MELEE = ['Attack', 'Strength', 'Defence'] as const;
 export const meleeTotal = (skills: Readonly<Record<string, number>>): number => ARMY_MELEE.reduce((n, s) => n + (skills[s] ?? 1), 0);
 
 // Whether the rule admits an account from its levels alone.
+// Accounts that stay out of the rule beside `exempt`: the accounts that the swarm and the cloud recovery never recover
+// (PROTECTED_ACCOUNTS in scripts/swarm.ts, NEVER_RECOVERED in scripts/cloud-recover.ts) that `exempt` does not name.
+export const RULE_PROTECTED: ReadonlySet<string> = new Set(['afknight']);
 export const admittedByLevels = (name: string, skills: Readonly<Record<string, number>>): boolean =>
-    !exempt(name) && ARMY_MELEE.every(s => (skills[s] ?? 1) >= ARMY_MELEE_MIN);
+    !exempt(name) && !RULE_PROTECTED.has(name.toLowerCase()) && ARMY_MELEE.every(s => (skills[s] ?? 1) >= ARMY_MELEE_MIN);
 
 // The `armyBatch` count of a swarm plan: 0 unless the plan names a positive whole number.
 export const armyBatchOf = (plan: unknown): number => {
