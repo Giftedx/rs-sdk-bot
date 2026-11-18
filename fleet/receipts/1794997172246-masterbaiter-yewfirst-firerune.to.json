@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794997172246-masterbaiter-yewfirst-firerune",
  "account": "YewFirst",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Fire rune",
  "requested": 250,
  "claim": "c1b1807e-c4e3-49bd-a9aa-5436f10ce656",
- "count": 0,
- "ok": false,
- "at": 1794997527669,
- "detail": "trade claimed"
+ "count": 250,
+ "ok": true,
+ "at": 1794997796174,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 250
+ },
+ "bank": {
+  "count": 250,
+  "at": 1794997795398
+ },
+ "logout": {
+  "attemptId": "1794997527676-0000017676-0000000001",
+  "at": 1794997796148,
+  "sha256": "4938d66f19ebe2018a74af47ee6048b1371198ca0aa2d60aa84fe1b2bdbd3c3e"
+ },
+ "screen": true
 }
