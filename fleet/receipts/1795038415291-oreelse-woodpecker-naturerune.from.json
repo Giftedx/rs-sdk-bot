@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795038415291-oreelse-woodpecker-naturerune",
+ "account": "OreElse",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 46,
+ "claim": "0bed4385-e219-4a09-8454-12b581f04b9b",
+ "count": 0,
+ "ok": false,
+ "at": 1795038568466,
+ "detail": "trade claimed"
+}
