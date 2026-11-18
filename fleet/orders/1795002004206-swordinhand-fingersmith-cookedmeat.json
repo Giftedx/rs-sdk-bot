@@ -1,0 +1,22 @@
+{
+ "id": "1795002004206-swordinhand-fingersmith-cookedmeat",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordinhand",
+ "to": "Fingersmith",
+ "item": "Cooked meat",
+ "count": 3,
+ "start": 1795002004206,
+ "end": 1795004404206,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
