@@ -1,0 +1,22 @@
+{
+ "id": "1795005635582-pickpockdick-moneyshot-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PickpockDick",
+ "to": "Moneyshot",
+ "item": "Nature rune",
+ "count": 50,
+ "start": 1795005635582,
+ "end": 1795008035582,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
