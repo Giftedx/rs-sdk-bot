@@ -40,6 +40,7 @@ import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { liveHelperStatuses, overallSupplyDemand, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
 import { gearById } from '../packages/planner/src/gear-progression';
+import { GEAR_ASK_LIMIT } from '../packages/planner/src/gear-sources';
 import { MARKET_FILE, marketQuotes } from './market-cache';
 import { tickWaste, wasteShare } from './tick-waste';
 import { kitSkills, levelsBeforeRoute } from './pk-kits';
@@ -223,7 +224,8 @@ export const UNSOLD_RETRY_MS = 24 * 3600_000;
 // the item's shop value in the content (knowledge/gear.json `cost`). Over that bound the hand cap stands, and a shop,
 // a quest or a smith is the source. Arrows, runes and food keep their hand caps: they are bought in stacks, and their
 // caps bound a whole batch.
-export const GEAR_ASK_MARGIN = 1.05, GEAR_ASK_LIMIT = 5, FOLLOWED_RETRY_MS = 3600_000;
+export const GEAR_ASK_MARGIN = 1.05, FOLLOWED_RETRY_MS = 3600_000;
+export { GEAR_ASK_LIMIT };
 export type Asks = Readonly<Record<number, { ask: number | null; sell: number }>>;
 export function gearLimit(id: number, cap: number, quote: Asks[number] | undefined): number {
     const gear = gearById(id), ask = quote && quote.sell > 0 ? quote.ask : null;
