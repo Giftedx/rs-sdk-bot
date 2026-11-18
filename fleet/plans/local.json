@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795000273677,
+ "at": 1795000334508,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -322,8 +322,7 @@
     "5000"
    ],
    "env": {
-    "ALCH_ITEM": "airrune",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+    "ALCH_ITEM": "airrune"
    },
    "enabled": true,
    "standing": true,
