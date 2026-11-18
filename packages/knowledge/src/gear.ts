@@ -40,7 +40,7 @@ export function parseStaffItems(files: readonly { text: string }[]): Set<string>
 
 // The quests the levelrequire labels name (levelrequire.rs2: each checks that quest's varp before the levels).
 const QUESTS: Record<string, string> = {
-    zanaris: 'Lost City', heroes: "Heroes' Quest", regicide: 'Regicide', legends: "Legends' Quest", dragon_slayer: 'Dragon Slayer', viking: 'The Fremennik Trials',
+    zanaris: 'Lost City', heroes: "Hero's Quest", regicide: 'Regicide', legends: "Legends Quest", dragon_slayer: 'Dragon Slayer', viking: 'The Fremennik Trials',
 };
 const SKILLS: readonly Skill[] = ['attack', 'strength', 'defence', 'ranged', 'magic'];
 

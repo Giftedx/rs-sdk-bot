@@ -47,7 +47,7 @@ const nameKey=(s:string)=>s.trim().toLowerCase().replace(/\s*\(noted\)$/,'').rep
 const boardKey=(s:string)=>s.toLowerCase().replace(/^lava maze /,'').replace(/[^a-z]/g,'');
 const num=(v:number)=>Number.isFinite(v)?Number(v.toFixed(2)).toLocaleString('en-US'):'?';
 // Pinned catalog debug names distinguish tutorial/fake items and unstrung bows.
-const supplyAliases:Record<string,string>={'pot of flour':'pot_flour','raw shrimps':'raw_shrimp',coins:'coins',logs:'logs','magic shortbow':'magic_shortbow','yew shortbow':'yew_shortbow','anti-dragon shield (quest)':'antidragonbreathshield',...Object.fromEntries(['guam','harralander','ranarr','irit','avantoe','kwuarm'].map(h=>[h+' potion (unf)',h+'vial']))};
+const supplyAliases:Record<string,string>={'pot of flour':'pot_flour','raw shrimps':'raw_shrimp',coins:'coins',logs:'logs','magic shortbow':'magic_shortbow','yew shortbow':'yew_shortbow','dragonfire shield (quest)':'antidragonbreathshield',...Object.fromEntries(['guam','harralander','ranarr','irit','avantoe','kwuarm'].map(h=>[h+' potion (unf)',h+'vial']))};
 export const GOAL_RECEIPTS={
  ...COST_RECEIPTS,
  delivery:'.practice/joined-plan/batch-native-proof.json',

@@ -19364,7 +19364,7 @@
     "timing": {
      "basis": "roll",
      "ticksPerTry": 5,
-     "note": "a roll every 5 ticks with any usable axe. Needs the Legends' Quest Kharazi map ([label,start_chop_jungle]); a cut moves the player one tile.",
+     "note": "a roll every 5 ticks with any usable axe. Needs the Legends Quest Kharazi map ([label,start_chop_jungle]); a cut moves the player one tile.",
      "src": [
       "scripts/quests/quest_legends/scripts/jungle_tree.rs2:116",
       "scripts/quests/quest_legends/scripts/jungle_tree.rs2:124"

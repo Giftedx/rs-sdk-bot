@@ -7948,7 +7948,7 @@
     "defence": 60
    },
    "src": "scripts/levelrequire/scripts/tier60.rs2:13",
-   "quest": "Legends' Quest"
+   "quest": "Legends Quest"
   },
   "members": true,
   "tradeable": true,
@@ -11148,7 +11148,7 @@
     "attack": 60
    },
    "src": "scripts/levelrequire/scripts/tier60.rs2:6",
-   "quest": "Heroes' Quest"
+   "quest": "Hero's Quest"
   },
   "members": true,
   "tradeable": true,
@@ -11994,7 +11994,7 @@
     "attack": 60
    },
    "src": "scripts/levelrequire/scripts/tier60.rs2:4",
-   "quest": "Heroes' Quest"
+   "quest": "Hero's Quest"
   },
   "members": true,
   "tradeable": true,

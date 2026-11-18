@@ -19,7 +19,8 @@ test('every refusal text matches its own pattern and no other', () => {
 
 test('one source: the supervisor, the drain rule and the planner mark read the same causes', () => {
     for (const cause of Object.keys(texts) as RefusalCause[]) {
-        expect([cause, isPrerequisiteFailure(result(texts[cause]))]).toEqual([cause, true]);
+        // A stop can differ at the next login, so the supervisor restarts it; every other cause fails the same way again.
+        expect([cause, isPrerequisiteFailure(result(texts[cause]))]).toEqual([cause, cause !== 'stop']);
         expect([cause, DRAIN_RESULT.test(result(texts[cause]))]).toEqual([cause, true]);
     }
     // A buy that placed an offer, or a failure of another kind, is none of them.

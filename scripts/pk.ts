@@ -542,6 +542,12 @@ export function pickFakieWeapon(opts: {
 // Default special-attack config from a staged kit (content specwep=true: dragon dagger 25%, longsword 25%, mace 25%,
 // rune claws 25%, magic shortbow 35% in bows.obj:343, dragon spear/_p/kp 25%).
 export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undefined {
+    // A kit that carries rune throwing axes uses their special: it chains from the target to up to 4 more players within 3
+    // tiles when our account and each target stand in multi-way combat (pvp_rune_thrownaxe.rs2 pvp_rune_thrownaxe_hunt),
+    // each hit a ranged roll with +10 Ranged levels, and costs 10% (sa_energy 100). It replaces the melee special: a fight
+    // has one special config. The kit option is a thrown axe stack among `ranged` (scripts/pk-kits.ts).
+    const axe = (kit.ranged ?? []).find(id => names.get(id) === 'rune_thrownaxe');
+    if (axe !== undefined) return { kit: [axe], bar: 'combat_thrown:specbar', cost: 100, below: 1, style: 'ranged' };
     for (const id of kit.melee ?? []) {
         const n = names.get(id) ?? '';
         if (/^dragon_dagger/.test(n)) return { kit: kit.melee!, bar: 'combat_stabsword:specbar', cost: 250, below: 0.65, style: 'melee' };
@@ -581,7 +587,8 @@ export function bowSpec(kit: Kit, names = getObjNames()): SpecConfig | undefined
 // A turn's ranged weapons: the magic shortbow when the kit carries it with the longbow (4 ticks, 3 on rapid, against
 // the longbow's 6); the longbow is the special's.
 export function shootingKit(kit: Kit, names = getObjNames()): number[] {
-    const ids = kit.ranged ?? [];
+    // The thrown axe is the special's weapon only: a plain turn with it would be a slow throw (attack rate 5).
+    const ids = (kit.ranged ?? []).filter(id => names.get(id) !== 'rune_thrownaxe');
     return ids.some(id => names.get(id) === 'magic_shortbow') ? ids.filter(id => names.get(id) !== 'magic_longbow') : ids;
 }
 
