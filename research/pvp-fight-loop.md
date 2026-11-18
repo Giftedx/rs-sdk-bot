@@ -22,7 +22,7 @@ Evidence: `.practice/pvp-escape/escape-final-source.log` and the seed reports in
 
 The finite live consumer is a 900-tick hunter trip through `aio-pvp.ts hunt` after the owning controller qualifies
 the source and observes a complete owned kit. Existing account assignments, supply reservations and stops apply.
-Saved local stock does not establish a complete hunter kit. Credited live kills and Wilderness control remain unknown.
+Saved local stock does not establish a complete hunter kit. No credited live kill receipt exists ([Kill receipts](#kill-receipts)). Wilderness control remains unknown.
 
 The separate starter-kit stage has a fixed acquisition intent: two cheese, with its existing 1..2000 tick cap.
 The native `pvp:stage-kit` case buys and banks both cheese for 68 GP, keeps HP10, XP and protected stock, and logs out.
@@ -56,6 +56,42 @@ Source -> local consumer -> reuse -> check: the pinned server's PvP scripts (`ve
 in-process client's player entities (`webclient/src/dash3d/ClientPlayer.ts`, `ClientEntity.ts`) -> `scripts/pk.ts` -> reuse the SDK sends
 (`sendInteractPlayer`, `sendSpellOnPlayer`, `sendTogglePrayer`, `sendUseItem`) and read head icons, worn items and the health bar from
 `Session.client`, which leaves the SDK state and the swarm's launch release unchanged -> `scripts/pk.test.ts` and the duels below.
+
+## Kill receipts
+
+Source -> local consumer -> adapt -> check: the session lifecycle receipts (`packages/core/src/session-lifecycle.ts`: separate
+practice and live trees, one file for each event) and the feed reader `scripts/measure/pk-rival-feed.ts` -> `fightPlayer` and
+`packages/router/src/goal-scoreboard.ts` -> adapt the tree layout, reuse the appearance decoder and the trace digest ->
+`packages/core/test/kill-receipt.test.ts`, `scripts/pk-kill-feed.test.ts`, `packages/router/test/goal-scoreboard.test.ts`,
+`pvp:fight`, `pvp:squad` and `extra:fight-kill-feed`.
+
+`fightPlayer` writes one receipt in the tick of the killer's message for its target (`pvp_combat.rs2` `pvp_death_message`).
+The file is `.practice/kill-receipts/<practice|live>/<server>/<account>/<id>.json` (`packages/core/src/kill-receipt.ts`).
+The receipt holds these fields:
+
+- the killer account, the victim, the server and the session attempt
+- the wall clock, the session tick, the tile, the Wilderness level and single-way or multi-way combat
+- the server message, the worn items, the switch items of the kit and the fight totals
+- the loot, which the pickup of the squad, gang, team, hunt or roam adds after the kill
+- the world-feed match: the death animation of the victim within 6 s of the kill (`scripts/pk-kill-feed.ts`)
+
+A session on this machine gives a practice receipt. A session with no lifecycle identity gives a practice receipt.
+The feed check is on for a live server and off for a practice engine. `KILL_FEED=1` starts it on an engine that has
+`WORLD_FEED` set. `bun scripts/pk-kill-feed.ts <receipt.json> <trace.jsonl>` adds the match from a recorded trace.
+
+The scoreboard field `goals.army.creditedKills` counts receipts from the live tree of the live server. A receipt gives
+credit only when these conditions are true:
+
+- its own fields say live and name the live server
+- the killer is an own account and the victim is not an own account
+- the Wilderness level is 1 or more
+- the server message is a kill message for the victim
+- its time is not after the observation
+
+With no credited receipt the field is `null`. The metric `army.creditedKills` is the count, 0 included.
+
+Gap: no live receipt exists, because no live fight ran after this change. The feed match is not a condition of credit.
+The receipts of other fleet sides are not read. The Wilderness level of a receipt comes from z only.
 
 ## Spar and ladder
 

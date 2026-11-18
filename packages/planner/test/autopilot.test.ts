@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { DRAIN_RESULT } from '../src/autopilot';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
 import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable, norm, usableTool } from '../src/autopilot';
 
@@ -2792,4 +2793,13 @@ test('a ring maker that lacks only the mould gets the Dommik shop trip first, be
     // Dommik's shelf serves one account at a time.
     const two = plan(inputs([acct('A', diamond, kit), acct('B', diamond, kit)], { templates: rings, bill, prices: { 'diamond ring': 3525 }, capacity: CAPACITY, pilots: new Set(['aio-diamond-rings']) }));
     expect(two.filter(x => x.template?.id === 'shop-ring-mould')).toHaveLength(1);
+});
+
+test('a claim authority timeout is a drain, like an unavailable authority', () => {
+    for (const line of ['RESULT fail login: Error: fleet swarm claim authority timed out', 'RESULT fail fleet swarm claim authority timed out chain rounds=1 ok=0 failed=1',
+        'RESULT fail login: Error: fleet swarm claim authority unavailable or changed', 'RESULT fail fleet account claim held by swarm']) {
+        expect([line, DRAIN_RESULT.test(line)]).toEqual([line, true]);
+        expect(assess([line, line])).toMatchObject({ retire: false, drains: 2, fail: 0 });
+    }
+    expect(DRAIN_RESULT.test('RESULT fail fleet swarm claim authority exploded')).toBe(false);
 });

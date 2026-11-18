@@ -259,3 +259,21 @@ test('rules notice a new receipt even when archive and settlement leave the same
  expect(rulePassDue(state,current,300011)).toBe(false);
  expect(rulePassDue(state,current,300012)).toBe(true);
 });
+test('the start step waits again when a live writer holds the plan lock for longer than one wait',async()=>{
+ const base=fixture(),directory=join(base,'.practice/coordinator');
+ writeFileSync(join(base,'swarm.json'),JSON.stringify({maxBots:17,minFreeGB:4,jobs:[owner[0],coordinatorJob('Rod','run-1')],coordination:{enabled:true}},null,2)+'\n');
+ // A live writer (this process) holds the lock for 400 ms. One wait of the start step is 50 ms.
+ const {withPlanWrite}=await import('../../core/src/plan-lock');
+ let release!:()=>void;const holder=withPlanWrite(()=>new Promise<void>(resolve=>{release=resolve;}),directory);
+ setTimeout(()=>release(),400);
+ const waits:string[]=[];
+ expect(await migrateJobsAtStart(base,5000,50,line=>waits.push(line))).toMatchObject({jobs:1});
+ await holder;
+ expect(waits.length).toBeGreaterThan(0);
+ expect(waits[0]).toContain('account plan writer waits for its existing owner');
+ expect(readCoordinatorJobs(base).jobs).toEqual([coordinatorJob('Rod','run-1')]);
+ // After the bound the start step fails as before.
+ let free!:()=>void;const second=withPlanWrite(()=>new Promise<void>(resolve=>{free=resolve;}),directory);
+ await expect(migrateJobsAtStart(base,120,50,()=>{})).rejects.toThrow('account plan writer waits for its existing owner');
+ free();await second;
+});
