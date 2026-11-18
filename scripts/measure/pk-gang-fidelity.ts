@@ -98,6 +98,18 @@ export function meanMeeting(each: readonly Meeting[]): Partial<Meeting> {
     for (const key of MEASURES) if (each.length) mean[key] = Math.round((10 * each.reduce((a, e) => a + e[key], 0)) / each.length) / 10;
     return mean;
 }
+// The names of the content: a worn object and an animation by its id.
+export function contentNames(): { obj: (id: number) => string; seq: (id: number) => string } {
+    const pack = (file: string) => new Map(readFileSync(join(resolve(import.meta.dir, '..', '..'), 'vendor/rs-sdk/server/content/pack', file), 'utf8').split(/\r?\n/).flatMap(l => { const x = l.match(/^(\d+)=(.+)$/); return x ? [[Number(x[1]), x[2]!] as const] : []; }));
+    const objs = pack('obj.pack'), seqs = pack('seq.pack');
+    return { obj: id => objs.get(id) ?? '', seq: id => seqs.get(id) ?? String(id) };
+}
+// The meetings that scripts/pk-gang.ts printed into a case log from its bench feed: `FEED_MEETING {json}` (the meeting
+// with the most gang attacks of each group) or `FEED_MEETING_ALL {json}` (every meeting of a group as one).
+export function logMeetings(text: string, all = false): Meeting[] {
+    const tag = all ? 'FEED_MEETING_ALL ' : 'FEED_MEETING ';
+    return text.split(/\r?\n/).flatMap(l => { const i = l.indexOf(tag); if (i < 0) return []; try { return [JSON.parse(l.slice(i + tag.length)) as Meeting]; } catch { return []; } });
+}
 // The mean of each measure over the `GANG {json}` lines of bench outputs.
 export function benchMeetings(texts: readonly string[]): { n: number; mean: Partial<Meeting>; each: Partial<Meeting>[] } {
     const each: Partial<Meeting>[] = [];
@@ -137,8 +149,9 @@ if (import.meta.main) {
     console.log(`LIVE ${JSON.stringify(live)}`);
     if (mode === 'table') {
         // A bench feed file is read as the live trace is; another output gives the measures of its GANG lines.
-        const feeds = outputs.filter(f => f.endsWith('.feed.jsonl')), each = feeds.flatMap(f => feedMeetings(readFileSync(f, 'utf8'), id => pack.get(id) ?? '', id => seqs.get(id) ?? String(id), all));
-        const bench = feeds.length ? { n: each.length, mean: meanMeeting(each) } : benchMeetings(outputs.map(f => readFileSync(f, 'utf8')));
+        // A case log holds the meetings that the driver read from its bench feed.
+        const feeds = outputs.filter(f => f.endsWith('.feed.jsonl')), each = [...feeds.flatMap(f => feedMeetings(readFileSync(f, 'utf8'), id => pack.get(id) ?? '', id => seqs.get(id) ?? String(id), all)), ...outputs.filter(f => !f.endsWith('.feed.jsonl')).flatMap(f => logMeetings(readFileSync(f, 'utf8'), all))];
+        const bench = each.length ? { n: each.length, mean: meanMeeting(each) } : benchMeetings(outputs.map(f => readFileSync(f, 'utf8')));
         console.log(`BENCH ${JSON.stringify({ n: bench.n, mean: bench.mean })}`);
         for (const e of each) console.log(`BENCH_MEETING ${JSON.stringify(e)}`);
         console.log('| Measure | Live | Bench mean | Error |\n|---|---|---|---|');

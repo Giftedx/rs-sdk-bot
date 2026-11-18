@@ -401,6 +401,10 @@ if (import.meta.main) {
         { wait: env.SPAR_WAIT === undefined ? undefined : Number(env.SPAR_WAIT), gangTrips: gangTripsOf[i], idlePrayerOff: env.SPAR_IDLE_PRAYER_OFF === '1', pickup: pickupOf[i] })));
     for (const r of results) console.log(`GANG ${JSON.stringify({ profiles: { a: nameA, b: gangProfiles.length ? gangProfiles.join('+') : nameB }, kits: { a: kitA, b: kitList }, ...r })}`);
     stopFeed?.();
+    // The measures of each group's meeting from the bench feed go into the case log, which a hosted run keeps.
+    if (feedFile) try { const { contentNames, feedMeetings } = await import('./measure/pk-gang-fidelity'), names = contentNames(), text = readFileSync(feedFile, 'utf8');
+        for (const m of feedMeetings(text, names.obj, names.seq)) console.log(`FEED_MEETING ${JSON.stringify(m)}`);
+        for (const m of feedMeetings(text, names.obj, names.seq, true)) console.log(`FEED_MEETING_ALL ${JSON.stringify(m)}`); } catch (e) { console.log(`FEED_MEETING none: ${e instanceof Error ? e.message : e}`); }
     const s = gangSummary(results), ok = results.every(gangValid) && halted === undefined;
     await finish(groups.flat(), ok, `gang groups=${s.groups} cleared=${s.cleared} died=${s.died} escaped=${s.escaped} away=${s.away} cap=${s.cap} kills=${s.kills} ticks=${s.ticks} a=${nameA} b=${nameB} `
         + `picked=${results.map(r => Object.values(r.picked ?? {}).reduce((n, c) => n + c, 0)).join(',')} valid=${results.filter(gangValid).length} killsEach=${s.killsEach.join(',')} taken=${results.map(r => r.taken).join(',')} eaten=${results.map(r => r.eaten).join(',')} `
