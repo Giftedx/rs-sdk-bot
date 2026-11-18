@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795036460816-pocketpool-mmsmk1232-2099293f1fe6fbdf",
+ "account": "PocketPool",
+ "partner": "mmsmk1232",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "3a1296a7-fda4-4c35-9665-536428025f7b",
+ "count": 0,
+ "ok": false,
+ "at": 1795036470229,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Law rune",
+   "requested": 2,
+   "count": 0
+  },
+  {
+   "item": "Shark",
+   "requested": 10,
+   "count": 0
+  }
+ ]
+}
