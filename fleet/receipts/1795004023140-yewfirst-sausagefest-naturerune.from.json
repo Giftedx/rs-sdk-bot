@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795004023140-yewfirst-sausagefest-naturerune",
+ "account": "YewFirst",
+ "partner": "Sausagefest",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "fd58ca05-9387-49a1-bdcf-22fb3d495451",
+ "count": 0,
+ "ok": false,
+ "at": 1795004152639,
+ "detail": "trade claimed"
+}
