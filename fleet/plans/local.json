@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795015894946,
+ "at": 1795015919521,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -205,6 +205,24 @@
    ]
   },
   {
+   "account": "Swordinhand",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=23 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=swordinhand-kit23-532-6to29 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 23 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-big-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Bigpackage",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -276,6 +294,25 @@
    "resources": [
     "shop:dargaud"
    ]
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=63 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit7-536-0to63 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"536\":63}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 63 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "OreElse",
@@ -354,24 +391,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=23 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=swordinhand-kit23-532-6to29 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 23 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Woodpecker",
