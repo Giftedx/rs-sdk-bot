@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795041352464-deeppockets-mmsmk1232-9b51429a6ebcc71a",
  "account": "Deeppockets",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "2d86b54c-45a8-4a50-98c1-6736d30456a1",
- "count": 0,
- "ok": false,
- "at": 1795041362470,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795041528025,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795041405282
+ },
+ "logout": {
+  "attemptId": "1795041362483-0000019076-0000000001",
+  "at": 1795041528017,
+  "sha256": "4e8cfd026af60eb45068c0a67eb636fa2ec079955adc09343d460beae9856a53"
+ },
+ "screen": true
 }

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795041352464-deeppockets-mmsmk1232-9b51429a6ebcc71a",
+ "account": "mmsmk1232",
+ "partner": "Deeppockets",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "dd2c636b-9cd6-4fbb-aee2-9993a63cfd70",
+ "count": 1,
+ "ok": true,
+ "at": 1795041529641,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795041528849
+ },
+ "logout": {
+  "attemptId": "1795041509118-0000018308-0000000001",
+  "at": 1795041529605,
+  "sha256": "d0352ceb0acc69eb926e757246072b950bfd00ac11e2410b00e29bbf2099023e"
+ },
+ "screen": true
+}
