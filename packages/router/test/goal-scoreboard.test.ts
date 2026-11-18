@@ -4,6 +4,7 @@ import {tmpdir} from 'node:os';
 import {join,dirname} from 'node:path';
 import {buildOwnerGoals,COMBAT_SKILLS} from '../src/goal-scoreboard';
 import {improved,type Progress} from '../src/coverage';
+import {writeKillReceipt,type KillInput} from '../../core/src/kill-receipt';
 
 const NOW=1_800_000_000_000,SERVER='rs-sdk-demo.fly.dev';
 const roots:string[]=[];
@@ -183,4 +184,37 @@ test('first stock observations from an already owned holder change the baseline 
  expect(moved(before,observed)).toBe(false);
  expect(collectionKey(observed,target)).toBe(collectionKey(gained,target));
  expect(moved(observed,gained)).toBe(true);
+});
+
+test('only a live kill receipt of an own account for a stranger gives a credited player kill',()=>{
+ const root=fixture(),killRoot=join(root,'.practice/kill-receipts');put(root,'swarm.json',{army:['First'],jobs:[]});
+ const statuses=[status('First'),status('Second')];
+ const build=()=>buildOwnerGoals({root,now:NOW,questNames:[],statuses});
+ const kill=(patch:Partial<KillInput>={}):KillInput=>({session:{server:SERVER},account:'First',victim:'Goondelf',tick:730,tile:{x:3078,z:3640,level:0},wilderness:16,multi:true,
+  message:'You have defeated Goondelf.',victimCombat:90,victimTile:{x:3079,z:3640},kit:{worn:[{slot:3,id:1215}],switches:{magic:[],ranged:[],melee:[1215]}},fight:{ticks:41,dealt:99,taken:30,eaten:2,specs:1},...patch});
+ const none=build();
+ expect(none.army.creditedKills).toBeNull();expect(none.army.kills).toEqual([]);expect(none.metrics['army.creditedKills']).toBe(0);
+ expect(none.remaining).toContain('Credited player kills unknown');
+ // A practice receipt stays in the practice tree. The same file copied into the live tree is refused by its own marks.
+ const practice=writeKillReceipt(kill({session:{server:'localhost:43594'}}),{root:killRoot,now:()=>NOW-9000});
+ expect(build().army.creditedKills).toBeNull();
+ put(root,`.practice/kill-receipts/live/${SERVER}/first/${practice.receipt.id}.json`,practice.receipt);
+ // A kill of an own account is a spar, and a receipt with a time after the observation is not accepted.
+ writeKillReceipt(kill({victim:'Second',message:'You have defeated Second.'}),{root:killRoot,now:()=>NOW-8000});
+ writeKillReceipt(kill(),{root:killRoot,now:()=>NOW+1});
+ const refused=build();
+ expect(refused.army.creditedKills).toBeNull();expect(refused.metrics['army.creditedKills']).toBe(0);
+ expect(refused.army.evidence.find(e=>e.source==='.practice/kill-receipts/live')?.gap).toBe('No credited live player-kill receipt on this machine; 3 refused (practice receipt, time is not in the past, victim is an own account); receipts of other fleet sides are not read');
+ const live=writeKillReceipt(kill(),{root:killRoot,now:()=>NOW-7000});
+ writeKillReceipt(kill({account:'Second',victim:'Ligma',message:'Ligma falls before your might.',multi:false,wilderness:3}),{root:killRoot,now:()=>NOW-6000});
+ const credited=build();
+ expect(credited.army.creditedKills).toBe(2);expect(credited.metrics['army.creditedKills']).toBe(2);
+ expect(credited.army.kills).toEqual([
+  {account:'first',victim:'Goondelf',at:NOW-7000,wilderness:16,multi:true,feedMatched:null,receipt:`.practice/kill-receipts/live/${SERVER}/first/${live.receipt.id}.json`},
+  expect.objectContaining({account:'second',victim:'Ligma',at:NOW-6000,wilderness:3,multi:false}),
+ ]);
+ expect(credited.army.evidence.find(e=>e.source==='.practice/kill-receipts/live')).toMatchObject({at:NOW-6000,ageMs:6000});
+ expect(credited.remaining).not.toContain('Credited player kills unknown');expect(credited.remaining).toContain('Wilderness control unknown');
+ expect(credited.army.wildernessControl).toBeNull();expect(credited.done).toBe(false);
+ expect(moved(refused,credited)).toBe(true);
 });
