@@ -193,10 +193,18 @@ export function mergeText(base:string,main:string,build:string):{ok:true;text:st
  }finally{rmSync(dir,{recursive:true,force:true});}
 }
 
+// The committed text of a main checkout file (HEAD), or null with no such file or no repository.
+export function committedText(mainRoot:string,path:string):string|null{
+ const p=spawnSync('git',['-C',mainRoot,'show','HEAD:'+path.replaceAll('\\','/')],{encoding:'utf8',windowsHide:true,timeout:15000,maxBuffer:64*1024*1024});
+ return p.status===0&&typeof p.stdout==='string'?p.stdout:null;
+}
 // Copies the declared files into the main checkout. A main file that differs from the build's base is a conflict,
-// except when an earlier delivery wrote it (deliveredLedger): then the build's change merges onto it, and only
-// overlapping edits refuse the publish. A stale build never overwrites newer source.
-export function publishWorkspace(mainRoot:string,capability:string,files:string[],ledgerFile=deliveredLedger(mainRoot),replace:(path:string,state:FileState)=>void=replaceFile):{published:string[];unchanged:string[];merged:string[]}{
+// except when it holds a version that is not a hand edit: the bytes of an earlier delivery (deliveredLedger), or the
+// committed bytes of the main checkout (`committed`: a change of master that a live update pulled). The build's change
+// then merges onto it, and only overlapping edits refuse the publish. A carried attempt keeps the base that it started
+// from, so without this a change of master to its file refused the publish for good. A stale build never overwrites
+// newer source, and a hand edit of the main checkout is still a conflict.
+export function publishWorkspace(mainRoot:string,capability:string,files:string[],ledgerFile=deliveredLedger(mainRoot),replace:(path:string,state:FileState)=>void=replaceFile,committed:(path:string)=>string|null=path=>committedText(mainRoot,path)):{published:string[];unchanged:string[];merged:string[]}{
  const root=workspaceRoot(mainRoot,capability),marker=join(root,'.workspace.json');
  recoverPublish(mainRoot,root,files,ledgerFile);
  if(!existsSync(marker))throw Error('publish: workspace missing');
@@ -217,7 +225,8 @@ export function publishWorkspace(mainRoot:string,capability:string,files:string[
    continue;
   }
   const baseText=meta.base[f]===null?'':existsSync(snapshot)&&fileHash(snapshot)===meta.base[f]?readFileSync(snapshot,'utf8'):null;
-  if(now===null||baseText===null||!ledger[f]?.includes(now)){conflicts.push(f);continue;}
+  const lf=(s:string)=>s.replaceAll('\r\n','\n'),isCommitted=()=>{const text=committed(f);return text!==null&&lf(text)===lf(Buffer.from(original!.bytes,'base64').toString());};
+  if(now===null||baseText===null||!(ledger[f]?.includes(now)||isCommitted())){conflicts.push(f);continue;}
   const merge=mergeText(baseText,Buffer.from(original!.bytes,'base64').toString(),Buffer.from(build.bytes,'base64').toString());
   if(merge.ok)mergedText.set(f,merge.text);else conflicts.push(f+' ('+merge.conflicts.join('; ')+')');
  }
