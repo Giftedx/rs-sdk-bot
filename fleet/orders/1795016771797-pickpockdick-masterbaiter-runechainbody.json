@@ -1,0 +1,22 @@
+{
+ "id": "1795016771797-pickpockdick-masterbaiter-runechainbody",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PickpockDick",
+ "to": "Masterbaiter",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795016771797,
+ "end": 1795019171797,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
