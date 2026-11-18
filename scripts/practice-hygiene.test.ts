@@ -100,7 +100,10 @@ test('a read-back that misses a name deletes nothing, and a missing archive driv
   const failing=((cmd:string,args:string[],opts:any)=>args[0]==='-czf'?{status:2,stdout:'',stderr:'no space'}:real(cmd,args,opts)) as typeof spawnSync;
   expect(()=>archiveThenDelete(root,entries,archiveDir,'f',failing)).toThrow('archive failed');
   expect(readdirSync(join(root,'.practice')).sort()).toEqual(before);
-  expect(()=>archiveThenDelete(root,entries,'Q:/no-such-drive/x','d')).toThrow('archive drive is missing');
+  // The root check runs through an injected exists, so it does not depend on the system's drive letters.
+  const seen:string[]=[];
+  expect(()=>archiveThenDelete(root,entries,join(root,'no-such-drive','x'),'d',real,p=>{seen.push(p);return false;})).toThrow('archive drive is missing');
+  expect(seen).toHaveLength(1);
   expect(readdirSync(join(root,'.practice')).sort()).toEqual(before);
  }finally{rmSync(root,{recursive:true,force:true});}
 });

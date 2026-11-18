@@ -72,8 +72,8 @@ export function counts(entries:Entry[]){
  return by;
 }
 
-export function archiveThenDelete(root:string,entries:Entry[],archiveDir:string,stamp=new Date().toISOString().replace(/[:.]/g,'-'),run:typeof spawnSync=spawnSync){
- if(!existsSync(parse(resolve(archiveDir)).root))throw Error('archive drive is missing: '+archiveDir);
+export function archiveThenDelete(root:string,entries:Entry[],archiveDir:string,stamp=new Date().toISOString().replace(/[:.]/g,'-'),run:typeof spawnSync=spawnSync,exists:(path:string)=>boolean=existsSync){
+ if(!exists(parse(resolve(archiveDir)).root))throw Error('archive drive is missing: '+archiveDir);
  mkdirSync(archiveDir,{recursive:true});
 
  const prac=join(root,'.practice'),archive=join(archiveDir,`practice-hygiene-${stamp}.tar.gz`),list=join(archiveDir,`practice-hygiene-${stamp}.list`);
