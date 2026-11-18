@@ -3,6 +3,7 @@ import { BOW_TRIP, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget
 import { assessWildernessThreat, planWildernessEscape, restockPlan, restockPlanFromStock, slashWebThrough, WILDERNESS_ESCAPES, wildernessCombatMargin, wildernessDepth } from './pk-roam';
 import { pvpCombatBracket } from './aio-pvp';
 import * as pk from './pk';
+import { RESTOCK_LIMITS, RESTOCK_MARKET } from './pk-restock-fixture';
 import * as walking from '../packages/core/src/walk';
 
 const me = { z: 3556, combatLevel: 126 };
@@ -318,16 +319,26 @@ test('planWildernessEscape, wildernessCombatMargin, and assessWildernessThreat h
 });
 
 test('restockPlan and restockPlanFromStock restock glory(4), prayer potions, super pots, and antipoison alongside runes and sharks', () => {
-    const withPots = restockPlan({ law: 5, nature: 10, water: 20, magic: 80, coins: 120_000, food: 18, glory: false, prayerPots: 1, superPots: true, antipoison: true });
-    expect(withPots).toEqual(expect.arrayContaining([
-        { kind: 'ge', item: 1712, quantity: 1, limit: 50_000, owned: 0 },
-        { kind: 'ge', item: 2434, quantity: 3, limit: 3500, owned: 1 },
-        { kind: 'ge', item: 2440, quantity: 1, limit: 2500, owned: 0 },
-        { kind: 'ge', item: 2436, quantity: 1, limit: 2500, owned: 0 },
-        { kind: 'ge', item: 2448, quantity: 1, limit: 2500, owned: 0 },
-    ]));
-    const stockSteps = restockPlanFromStock([{ id: 563, count: 5 }, { id: 561, count: 10 }, { id: 555, count: 20 }, { id: 385, count: 20 }, { id: 139, count: 1 }], { magic: 85 }, 100_000);
-    expect(stockSteps.map(s => (s.kind === 'ge' ? s.item : 0))).toEqual([1712, 2434]);
+    const M = RESTOCK_MARKET, L = RESTOCK_LIMITS;
+    const rich = { law: 5, nature: 10, water: 20, magic: 80, coins: 20_000_000, food: 18, glory: false, prayerPots: 1, superPots: true, antipoison: true };
+    // No superantipoison and no antipoison is for sale, so the plan has no step for it.
+    expect(restockPlan(rich, M)).toEqual([
+        { kind: 'ge', item: 1712, quantity: 1, limit: L[1712], owned: 0 },
+        { kind: 'ge', item: 2434, quantity: 3, limit: L[2434], owned: 1 },
+        { kind: 'ge', item: 2440, quantity: 1, limit: L[2440], owned: 0 },
+        { kind: 'ge', item: 2436, quantity: 1, limit: L[2436], owned: 0 },
+    ]);
+    // The super antipoison comes first. The plain one is the fallback. Each is bought at its ask plus 10 percent.
+    expect(restockPlan(rich, { ...M, 2448: { ask: 2500, sell: 40 }, 2446: { ask: 14_000, sell: 5 } }).at(-1)).toEqual({ kind: 'ge', item: 2448, quantity: 1, limit: 2750, owned: 0 });
+    expect(restockPlan(rich, { ...M, 2446: { ask: 14_000, sell: 5 } }).at(-1)).toEqual({ kind: 'ge', item: 2446, quantity: 1, limit: 15_400, owned: 0 });
+    // With the coins of a small bank the dear items drop out and the rest stays within the coins.
+    const small = restockPlan({ ...rich, coins: 120_000 }, M);
+    expect(small).toEqual([{ kind: 'ge', item: 2440, quantity: 1, limit: L[2440], owned: 0 }]);
+    const spent = small.reduce((n, s) => n + (s.kind === 'ge' ? s.quantity * s.limit : 0), 0);
+    expect(spent).toBeLessThanOrEqual(120_000 - 1000);
+    const stock = [{ id: 563, count: 5 }, { id: 561, count: 10 }, { id: 555, count: 20 }, { id: 385, count: 20 }, { id: 139, count: 1 }];
+    expect(restockPlanFromStock(stock, { magic: 85 }, 100_000, M)).toEqual([]);
+    expect(restockPlanFromStock(stock, { magic: 85 }, 20_000_000, M).map(s => (s.kind === 'ge' ? s.item : 0))).toEqual([1712, 2434]);
 });
 
 test('wildernessDepth treats Mage Bank cellar as level 0, slashWebThrough retries 50%-fail webs, and hunt uses Varrock tele fallback', async () => {
