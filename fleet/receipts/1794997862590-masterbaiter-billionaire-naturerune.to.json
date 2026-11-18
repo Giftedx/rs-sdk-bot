@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794997862590-masterbaiter-billionaire-naturerune",
+ "account": "Billionaire",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "39ac7673-11eb-4a20-9b0f-aa0eeda183ae",
+ "count": 50,
+ "ok": true,
+ "at": 1794997965922,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 50
+ },
+ "bank": {
+  "count": 50,
+  "at": 1794997965055
+ },
+ "logout": {
+  "attemptId": "1794997946082-0000018028-0000000001",
+  "at": 1794997965875,
+  "sha256": "ecdd310b6667f91f324d908a6dceffe33a055124355d820f16f841b647e02139"
+ },
+ "screen": true
+}
