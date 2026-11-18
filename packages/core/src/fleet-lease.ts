@@ -26,6 +26,12 @@ type RemoteLease = { side: string; host: string; holder: string; epoch: string; 
 export const TRANSIENT_GIT = /Could not resolve host|Failed to connect|Connection (?:reset|refused|timed out)|Operation timed out|early EOF|unexpected disconnect|RPC failed|The requested URL returned error: 5\d\d|gnutls|SSL|TLS|schannel/i;
 export const NETWORK_RETRIES = 2;
 const REF_REJECTION = /\b(?:non-fast-forward|fetch first|stale info|cannot lock ref|cannot update ref|reference already exists)\b/i;
+// True for a failure that says nothing about the ref: the time budget ended, the Git process timed out or the network
+// failed. A rejected push is never one, so a caller that tries again keeps exactly one winner.
+export const fleetGitRetryable = (error: unknown): boolean => {
+    const text = String((error as Error)?.message ?? error);
+    return !REF_REJECTION.test(text) && (/ timed out$|\bETIMEDOUT\b/.test(text) || TRANSIENT_GIT.test(text));
+};
 const sanitizeGitError = (text: string) => text.replace(/(https?:\/\/)[^\s/@]+@/gi, '$1');
 // Keep the first cause and bounded tail after removing URL credentials. Classification uses the complete text.
 export function gitErrorDetail(text: string): string {

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { acquireFleetLease, fleetGitWindow, fleetLeaseAllowsWorker, gitErrorDetail, FLEET_LEASE_RENEW_MS, FLEET_LEASE_TTL_MS } from '../src/fleet-lease';
+import { acquireFleetLease, fleetGitRetryable, fleetGitWindow, fleetLeaseAllowsWorker, gitErrorDetail, FLEET_LEASE_RENEW_MS, FLEET_LEASE_TTL_MS } from '../src/fleet-lease';
 
 const git = (cwd: string, ...args: string[]) => fleetGitWindow(cwd, 'fleet lease fixture', 5000)(args);
 
@@ -270,3 +270,13 @@ test('a record that lands after the ref was checked is taken up at the next rene
         if (dirname(base) === tmpdir()) rmSync(base, { recursive: true, force: true, maxRetries: 5 });
     }
 }, 30_000);
+
+test('a caller may try again after a timeout or a network fault, never after a rejected push', () => {
+    for (const text of ['fleet swarm claim authority unavailable or changed: spawnSync git ETIMEDOUT', 'fleet swarm claim authority timed out',
+        'fleet swarm claim authority unavailable or changed: fatal: unable to access: Could not resolve host: github.com'])
+        expect(fleetGitRetryable(Error(text)), text).toBe(true);
+    for (const text of ['fleet swarm claim authority unavailable or changed: ! [rejected] abc -> refs/heads/fleet-trade-claim/x (fetch first)',
+        'fleet swarm claim authority unavailable or changed: error: failed to push some refs (non-fast-forward) after Connection timed out',
+        'fleet account claim held by swarm', 'fleet swarm claim authority unavailable or changed: fatal: Authentication failed'])
+        expect(fleetGitRetryable(Error(text)), text).toBe(false);
+});

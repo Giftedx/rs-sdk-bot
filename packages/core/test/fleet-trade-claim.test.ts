@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { acquireFleetSwarmClaim, acquireFleetTradeClaim, readFleetAccountClaim, readFleetTradeClaim, readHeldFleetTradeClaims, releaseFleetTradeClaim } from '../src/fleet-trade-claim';
 import { beginSessionAttempt, lifecycleOwner } from '../src/session-lifecycle';
-import { acquireFleetLease } from '../src/fleet-lease';
+import { acquireFleetLease, fleetGitWindow } from '../src/fleet-lease';
 import { ORPHAN_CLAIM_MS } from '../src/fleet-trade-claim';
 import * as claimApi from '../src/fleet-trade-claim';
 
@@ -308,3 +308,70 @@ test('the older fleet-data heartbeat counts as the dead side\'s lease, and a hel
         expect(() => acquireFleetSwarmClaim(b, { account: 'Trader2', server, side: 'claude-cloud' }, { now: () => T0 + 19 * ORPHAN_CLAIM_MS })).toThrow('fleet trade claim held');
     });
 }, 30_000);
+
+// A fleet Git window whose `git push` (or another named command) fails as a spawn timeout for its first calls. With
+// `landed` the first push reaches the remote before the timeout is reported: the caller cannot know its outcome.
+function slowGit(command: string, failures: number, landed = false) {
+    const calls = { n: 0 };
+    const window = ((root: string, authority?: string, budgetMs?: number) => fleetGitWindow(root, authority, budgetMs, (args, { input, timeout }) => {
+        const real = () => execFileSync('git', args, { cwd: root, input, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout, windowsHide: true });
+        if (!args.includes(command)) return real();
+        if (++calls.n > failures) return real();
+        if (landed && calls.n === 1) real();
+        throw Object.assign(Error('spawnSync git ETIMEDOUT'), { code: 'ETIMEDOUT', stdout: '', stderr: '' });
+    })) as typeof fleetGitWindow;
+    return { window, calls };
+}
+const swarmInput = { account: 'Trader', server, side: 'local' };
+const claimLog = (cwd: string) => git(cwd, 'log', '--format=%s', git(cwd, 'ls-remote', 'origin', 'refs/heads/fleet-trade-claim/trader').toString().split(/\s/)[0]!).toString().trim().split('\n');
+
+test('a swarm login claim holds when its push times out: the same record is pushed again', async () => {
+    await withRepos((a, b) => {
+        // Two timed-out push calls cover the retry that one Git window makes on Windows.
+        const slow = slowGit('push', 2), waits: number[] = [];
+        const claim = acquireFleetSwarmClaim(a, swarmInput, { patient: true, gitWindow: slow.window, wait: ms => waits.push(ms) });
+        expect(slow.calls.n).toBe(3);
+        expect(waits.length).toBeGreaterThan(0);
+        expect(readFleetAccountClaim(b, swarmInput)?.nonce).toBe(claim.nonce);
+        git(a, 'fetch', '--quiet', 'origin', 'refs/heads/fleet-trade-claim/trader');
+        expect(claimLog(a)).toEqual(['Fleet swarm attempt']);
+        // The other side still finds the account held.
+        expect(() => acquireFleetSwarmClaim(b, { ...swarmInput, side: 'cloud' })).toThrow('held');
+    });
+}, 60_000);
+
+test('a push that reached the remote before its timeout is not a second record', async () => {
+    await withRepos((a, b) => {
+        const slow = slowGit('push', 2, true);
+        const claim = acquireFleetSwarmClaim(a, swarmInput, { patient: true, gitWindow: slow.window, wait: () => {} });
+        expect(readFleetAccountClaim(b, swarmInput)?.nonce).toBe(claim.nonce);
+        git(a, 'fetch', '--quiet', 'origin', 'refs/heads/fleet-trade-claim/trader');
+        expect(claimLog(a)).toEqual(['Fleet swarm attempt']);
+    });
+}, 60_000);
+
+test('a slow read of the claim is read again, and a rejected push is never pushed again', async () => {
+    await withRepos((a, b) => {
+        const slowRead = slowGit('ls-remote', 2);
+        const first = acquireFleetSwarmClaim(a, swarmInput, { patient: true, gitWindow: slowRead.window, wait: () => {} });
+        expect(slowRead.calls.n).toBeGreaterThanOrEqual(3);
+        first.abortBeforeNetwork();
+        // Another side takes the released account between the read and the push of this side: the push is rejected.
+        let pushes = 0, raced = false;
+        const racing = ((root: string, authority?: string, budgetMs?: number) => fleetGitWindow(root, authority, budgetMs, (args, { input, timeout }) => {
+            if (args.includes('push')) { pushes++; if (!raced) { raced = true; acquireFleetSwarmClaim(b, { ...swarmInput, side: 'cloud' }); } }
+            return execFileSync('git', args, { cwd: root, input, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout, windowsHide: true });
+        })) as typeof fleetGitWindow;
+        expect(() => acquireFleetSwarmClaim(a, swarmInput, { patient: true, gitWindow: racing, wait: () => {} })).toThrow('unavailable or changed');
+        expect(pushes).toBe(1);
+        expect(readFleetAccountClaim(a, swarmInput)?.side).toBe('cloud');
+    });
+}, 60_000);
+
+test('a login under the plan lock keeps one Git window: a timed-out push fails at once', async () => {
+    await withRepos((a) => {
+        const slow = slowGit('push', 2);
+        expect(() => acquireFleetSwarmClaim(a, swarmInput, { gitWindow: slow.window, wait: () => {} })).toThrow('fleet swarm claim authority unavailable or changed: spawnSync git ETIMEDOUT');
+        expect(slow.calls.n).toBeLessThanOrEqual(2);
+    });
+}, 60_000);

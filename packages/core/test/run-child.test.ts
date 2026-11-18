@@ -86,3 +86,22 @@ test('synthesized failures start at column zero after unterminated child output'
         expect(writes.join('')).toBe('RESULT ok credited=1\nRESULT fail child exit 7: RESULT ok credited=1\n');
     } finally { out.mockRestore(); log.mockRestore(); }
 });
+
+test('a child that crashes with no result line gives its error line as the result, in both dispatch modes', async () => {
+    const crash = child("console.log('START worker'); throw Error('fleet swarm claim authority unavailable or changed: spawnSync git ETIMEDOUT');");
+    const writes: string[] = [];
+    const out = spyOn(process.stdout, 'write').mockImplementation(((text: string) => { writes.push(String(text)); return true; }) as any);
+    const err = spyOn(process.stderr, 'write').mockImplementation((() => true) as any);
+    const log = spyOn(console, 'log').mockImplementation(text => { writes.push(String(text) + '\n'); });
+    try {
+        const expected = 'RESULT fail fleet swarm claim authority unavailable or changed: spawnSync git ETIMEDOUT';
+        expect(await runChild([crash])).toBe(expected);
+        expect(await runDirectChild([crash])).toBe(expected);
+        expect(writes.join('')).toContain(expected + '\n');
+        // The result line of the child wins over an error line. A clean exit with no result stays "no result".
+        expect(await runChild([child("console.log('RESULT fail supplies'); throw Error('later crash');")])).toBe('RESULT fail supplies');
+        expect(await runChild([child("console.error('error: a diagnostic, not a crash');")])).toBe('RESULT fail no result');
+        // An exit code with no error line stays "no result".
+        expect(await runChild([child("process.exit(3);")])).toBe('RESULT fail no result');
+    } finally { out.mockRestore(); err.mockRestore(); log.mockRestore(); }
+}, 30_000);

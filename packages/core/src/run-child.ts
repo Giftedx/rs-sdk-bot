@@ -55,20 +55,39 @@ export async function streamChildOutput(chunks: AsyncIterable<Uint8Array>, write
     return reader.finish();
 }
 
+// A child that ends on an uncaught error prints `error: <message>` on stderr and no RESULT line. That message is the
+// cause, so it becomes the result: the planner and the supervisor then tell an infrastructure fault (a claim authority
+// that timed out) from a worker with no result. Stderr still goes to the parent's stderr.
+async function lastErrorLine(chunks: AsyncIterable<Uint8Array>): Promise<string | undefined> {
+    const decoder = new TextDecoder();
+    let line = '', found: string | undefined;
+    const end = () => { const m = line.match(/^error: (\S.*?)\r?$/); if (m) found = m[1]; line = ''; };
+    const push = (text: string) => {
+        let start = 0, newline: number;
+        while ((newline = text.indexOf('\n', start)) >= 0) { if (line.length < 4096) line += text.slice(start, newline); end(); start = newline + 1; }
+        if (line.length < 4096) line += text.slice(start);
+    };
+    for await (const chunk of chunks) { process.stderr.write(chunk); push(decoder.decode(chunk, { stream: true })); }
+    push(decoder.decode()); end();
+    return found;
+}
+const crashResult = (code: number, reported: string | undefined, error: string | undefined) =>
+    reported ?? (code !== 0 && error ? `RESULT fail ${error.slice(0, 300)}` : NO_RESULT);
+
 export async function runChild(args: string[], env: Record<string, string | undefined> = process.env): Promise<string> {
-    const p = Bun.spawn(['bun', ...args], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env });
-    const reported = await streamChildOutput(p.stdout, text => process.stdout.write(text), true);
-    const code = await p.exited, result = reported ?? NO_RESULT;
+    const p = Bun.spawn(['bun', ...args], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env });
+    const [reported, error] = await Promise.all([streamChildOutput(p.stdout, text => process.stdout.write(text), true), lastErrorLine(p.stderr)]);
+    const code = await p.exited, result = crashResult(code, reported, error);
     return code !== 0 && /^RESULT ok(?: |$)/.test(result) ? `RESULT fail child exit ${code}: ${result}` : result;
 }
 
 // Streams child output at column 0 so START, LEDGER, MILESTONE, RATE, LOGOUT and RESULT lines
 // satisfy proveInProcess and supervise.ts directly when an AIO dispatcher delegates to a single worker.
 export async function runDirectChild(args: string[], env: Record<string, string | undefined> = process.env): Promise<string> {
-    const p = Bun.spawn(['bun', ...args], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env });
+    const p = Bun.spawn(['bun', ...args], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env });
     let lineStart = true;
-    const reported = await streamChildOutput(p.stdout, text => { process.stdout.write(text); lineStart = text.endsWith('\n'); });
-    const code = await p.exited, result = reported ?? NO_RESULT;
+    const [reported, error] = await Promise.all([streamChildOutput(p.stdout, text => { process.stdout.write(text); lineStart = text.endsWith('\n'); }), lastErrorLine(p.stderr)]);
+    const code = await p.exited, result = crashResult(code, reported, error);
     const finalResult = code !== 0 && /^RESULT ok(?: |$)/.test(result) ? `RESULT fail child exit ${code}: ${result}` : result;
     if (reported !== finalResult) { if (!lineStart) process.stdout.write('\n'); console.log(finalResult); }
     return finalResult;

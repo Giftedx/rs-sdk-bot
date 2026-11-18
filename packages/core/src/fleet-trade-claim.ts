@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { SIDE_NAME } from './fleet';
-import { appendFleetGitRecord, commitFleetGitRecord, fleetCheckoutId, fleetCheckoutLastSeen, fleetGitWindow, fleetLeaseLastSeen, readFleetGitRefs,recoveryHostLease,fleetLeaseAllowsWorker,FLEET_LEASE_TTL_MS } from './fleet-lease';
+import { appendFleetGitRecord, commitFleetGitRecord, fleetGitRetryable, pushFleetGitRecord, fleetCheckoutId, fleetCheckoutLastSeen, fleetGitWindow, fleetLeaseLastSeen, readFleetGitRefs,recoveryHostLease,fleetLeaseAllowsWorker,FLEET_LEASE_TTL_MS } from './fleet-lease';
 import {assertSpentRecoveryConnection,type RecoveryConnectionAdmission} from './session-recovery-permit';
 import { listAttempts, readLogoutProof } from './session-lifecycle';
 import { pidAlive, savedProcessAlive } from './session-takeover';
@@ -118,6 +118,10 @@ export function readAllFleetAccountClaims(git: ReturnType<typeof fleetGitWindow>
 function appendClaim(git: ReturnType<typeof gitForTrade>, ref: string, head: string | undefined, subject: string, claim: FleetAccountClaim) {
     const tree = git(['hash-object', '-w', '-t', 'tree', '--stdin'], '');
     return appendFleetGitRecord(git, ref, head, tree, subject + '\n\n' + JSON.stringify(claim));
+}
+function commitClaim(git: ReturnType<typeof gitForTrade>, head: string | undefined, subject: string, claim: FleetAccountClaim) {
+    const tree = git(['hash-object', '-w', '-t', 'tree', '--stdin'], '');
+    return commitFleetGitRecord(git, head, tree, subject + '\n\n' + JSON.stringify(claim));
 }
 
 const pendingDir = (root: string) => join(root, '.practice', 'fleet-account-pending');
@@ -296,46 +300,74 @@ function pendingHostWitness(root:string,head:string,inherited:FleetSwarmClaim,wi
     if(cursor===witness)return witness;
 }
 
-export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { recover = false, admission=undefined as RecoveryConnectionAdmission|undefined, now = Date.now, ownerAlive = savedProcessAlive as (pid: number, savedAt: number) => boolean } = {}) {
+// The budgets of a swarm login claim. The claim is a child commit on the account's ref, so two fleet sides cannot both
+// hold one account. One 11 s window for three network calls did not last under load: six logins failed at the push with
+// `spawnSync git ETIMEDOUT` while the CPU was at 100%. A patient claim gives the reads and the push their own windows
+// and tries each again, SWARM_CLAIM_TRIES times at most, after a failure that says nothing about the ref.
+export const SWARM_CLAIM_READ_MS = 15_000, SWARM_CLAIM_PUSH_MS = 20_000, SWARM_CLAIM_TRIES = 3, SWARM_CLAIM_PAUSE_MS = 1000;
+const claimPause = (ms: number) => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); };
+export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { recover = false, admission=undefined as RecoveryConnectionAdmission|undefined, now = Date.now, ownerAlive = savedProcessAlive as (pid: number, savedAt: number) => boolean,
+    patient = false, gitWindow = fleetGitWindow, wait = claimPause } = {}) {
     const { account, server } = identity(input), { side } = input;
     if (!SIDE_NAME.test(side)) throw Error('invalid fleet swarm claim side');
     const authorized=admission?assertSpentRecoveryConnection(admission,account,server,root):undefined;
-    const git = fleetGitWindow(root, 'fleet swarm claim authority');
-    const { ref, head, claim: current } = loadClaim(git, account, server);
-    let pending = current?.phase === 'held' ? abandonedPending(root, current, input) : undefined;
-    // A qualified child may die after pushing its claim but before recording intent.
-    // Only its exact durable marker and linear Git witness can carry the foreign-host hold
-    // forward; the spent admission and retired host lease must still authorize it.
-    if(!pending&&recover&&authorized&&current?.phase==='held'&&isSwarmClaim(current)){
-        const marker=abandonedBeforeNetwork(root,current,input);
-        if(marker?.inherited){
-            const inherited=parseClaim(JSON.stringify(marker.inherited),account,server);
-            if(head&&isSwarmClaim(inherited)&&inherited.phase==='held'&&inherited.nonce!==current.nonce
-                &&qualifiedHostProof(root,inherited,input,authorized,git,now())){
-                const inheritedHead=pendingHostWitness(root,head,inherited,marker.inheritedHead,input,git);
-                if(inheritedHead)pending={inherited,inheritedHead};
+    const authority = 'fleet swarm claim authority', tries = patient ? SWARM_CLAIM_TRIES : 1;
+    // An action that changes nothing, or changes the same thing, is tried again after a failure that says nothing about the ref.
+    const again = <T>(action: () => T): T => {
+        for (let n = 1; ; n++) {
+            try { return action(); }
+            catch (error) { if (n >= tries || !fleetGitRetryable(error)) throw error; wait(SWARM_CLAIM_PAUSE_MS * (2 * n - 1)); }
+        }
+    };
+    // A login under the plan lock keeps the one short window for its reads and its push.
+    let git = gitWindow(root, authority, patient ? SWARM_CLAIM_READ_MS : undefined);
+    const read = (git: ReturnType<typeof gitForTrade>) => {
+        const { ref, head, claim: current } = loadClaim(git, account, server);
+        let pending = current?.phase === 'held' ? abandonedPending(root, current, input) : undefined;
+        // A qualified child may die after pushing its claim but before recording intent.
+        // Only its exact durable marker and linear Git witness can carry the foreign-host hold
+        // forward; the spent admission and retired host lease must still authorize it.
+        if(!pending&&recover&&authorized&&current?.phase==='held'&&isSwarmClaim(current)){
+            const marker=abandonedBeforeNetwork(root,current,input);
+            if(marker?.inherited){
+                const inherited=parseClaim(JSON.stringify(marker.inherited),account,server);
+                if(head&&isSwarmClaim(inherited)&&inherited.phase==='held'&&inherited.nonce!==current.nonce
+                    &&qualifiedHostProof(root,inherited,input,authorized,git,now())){
+                    const inheritedHead=pendingHostWitness(root,head,inherited,marker.inheritedHead,input,git);
+                    if(inheritedHead)pending={inherited,inheritedHead};
+                }
             }
         }
-    }
-    const claim = pending ? pending.inherited : current;
-    let inheritedHold: FleetSwarmClaim | undefined, inheritedHead:string|undefined, orphan: FleetSwarmClaim | undefined;
-    if (claim?.phase === 'held') {
-        if (!isSwarmClaim(claim)) throw Error('fleet trade claim held for order ' + claim.orderId);
-        let prior = matchedWorkerProof(root, claim, input),continuedHost=false;
-        if(!prior&&recover&&authorized){prior=qualifiedHostProof(root,claim,input,authorized,git,now());continuedHost=!!prior;}
-        if(authorized&&!prior)throw Error('qualified recovery claim identity or host continuation unavailable');
-        if (!prior && orphanedSwarmClaim(git, claim, side, now(), fleetCheckoutId(root))) orphan = claim;
-        // A recovery takes a held claim only from an owner that is gone. The claim's time tells its owner from a later
-        // process with the same id (savedProcessAlive).
-        else if (!prior || (prior.state !== 'confirmed' && !(recover && (continuedHost||!ownerAlive(claim.pid, claim.at))))) {
-            throw Error('fleet account claim held by swarm');
+        const claim = pending ? pending.inherited : current;
+        let inheritedHold: FleetSwarmClaim | undefined, inheritedHead:string|undefined, orphan: FleetSwarmClaim | undefined;
+        if (claim?.phase === 'held') {
+            if (!isSwarmClaim(claim)) throw Error('fleet trade claim held for order ' + claim.orderId);
+            let prior = matchedWorkerProof(root, claim, input),continuedHost=false;
+            if(!prior&&recover&&authorized){prior=qualifiedHostProof(root,claim,input,authorized,git,now());continuedHost=!!prior;}
+            if(authorized&&!prior)throw Error('qualified recovery claim identity or host continuation unavailable');
+            if (!prior && orphanedSwarmClaim(git, claim, side, now(), fleetCheckoutId(root))) orphan = claim;
+            // A recovery takes a held claim only from an owner that is gone. The claim's time tells its owner from a later
+            // process with the same id (savedProcessAlive).
+            else if (!prior || (prior.state !== 'confirmed' && !(recover && (continuedHost||!ownerAlive(claim.pid, claim.at))))) {
+                throw Error('fleet account claim held by swarm');
+            }
+            if (prior?.state === 'held') inheritedHold = claim;
+            if(continuedHost)inheritedHead=pending?.inheritedHead??head;
         }
-        if (prior?.state === 'held') inheritedHold = claim;
-        if(continuedHost)inheritedHead=pending?.inheritedHead??head;
-    }
+        return { ref, head, current, pending, orphan, inheritedHold, inheritedHead };
+    };
+    const { ref, head, current, pending, orphan, inheritedHold, inheritedHead } = again(() => { try { return read(git); } catch (error) { git = gitWindow(root, authority, SWARM_CLAIM_READ_MS); throw error; } });
     const record: FleetSwarmClaim = { kind: 'swarm', account, server, side, ...claimOwner(root), nonce: randomUUID(), phase: 'held', at: now() };
     writePending(root, record, inheritedHold,inheritedHead);
-    const owned = appendClaim(git, ref, head, orphan ? `Fleet swarm attempt, replacing the orphaned ${orphan.side} claim ${orphan.nonce}` : 'Fleet swarm attempt', record);
+    const subject = orphan ? `Fleet swarm attempt, replacing the orphaned ${orphan.side} claim ${orphan.nonce}` : 'Fleet swarm attempt';
+    let owned: string;
+    if (!patient) owned = appendClaim(git, ref, head, subject, record);
+    else {
+        // One record, made one time. A push that timed out can have reached the remote, and the same commit pushed again
+        // is then no change. A rejected push means that another writer has the ref: it is never pushed again.
+        owned = commitClaim(gitWindow(root, authority, SWARM_CLAIM_READ_MS), head, subject, record);
+        again(() => pushFleetGitRecord(gitWindow(root, authority, SWARM_CLAIM_PUSH_MS), ref, owned));
+    }
     if (pending && current) cleanPending(root, current.nonce);
     let released = false;
     const release = (restore?: FleetSwarmClaim) => {

@@ -653,7 +653,8 @@ export async function startInProcessSession(opts: { name: string; password: stri
             const { root, side, recover, admission, trade } = deps.sharedAccount;
             const target = { account: opts.name, server: host, side };
             if (trade) tradeClaim = acquireFleetTradeClaim(root, {...target, orderId: trade.orderId, role: trade.role});
-            else sharedClaim = acquireFleetSwarmClaim(root, target, { recover,admission });
+            // A login outside the plan lock waits for a slow Git authority. One under the lock keeps its short window.
+            else sharedClaim = acquireFleetSwarmClaim(root, target, { recover,admission, patient: !deps.planLock });
             deps.beforeConnect?.(); // A stop or expired permit can land during the Git call.
             if (trade && tradeClaim) trade.prepare(tradeClaim);
         }
