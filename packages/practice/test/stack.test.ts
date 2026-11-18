@@ -67,3 +67,12 @@ test('waitReady reports a child that exits before its ready line, with log tail'
     });
     await expect(waitReady(proc, 'engine', log, 10_000)).rejects.toThrow(/engine exited with code 3[\s\S]*boot failed/);
 });
+
+test('a lockstep engine on Windows preloads the fine timers; other engines and platforms do not', () => {
+    const timers = join(import.meta.dir, '../../core/src/timer-resolution.ts');
+    expect(engineCommand({ lockstep: { seed: 7 } }, 8888, 'win32').cmd).toEqual(['bun', '--preload', timers, MARKERS.engine]);
+    expect(engineCommand({ lockstep: { seed: 7 } }, 8888, 'linux').cmd).toEqual(['bun', MARKERS.engine]);
+    expect(engineCommand({}, 8888, 'win32').cmd).toEqual(['bun', MARKERS.engine]);
+    const module = join(import.meta.dir, '../src/shark-fishing-diagnostic.ts');
+    expect(engineCommand({ lockstep: {}, enginePreload: { module, env: {} } }, 8888, 'win32').cmd).toEqual(['bun', '--preload', timers, '--preload', module, MARKERS.engine]);
+});

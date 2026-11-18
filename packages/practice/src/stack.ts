@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
-import { isAbsolute, join } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import type { Subprocess } from 'bun';
 import { practiceDir, rsSdkRoot } from './paths';
 import { canBind, portInUse } from './ports';
@@ -38,7 +38,7 @@ export interface StackOptions {
 }
 
 // The engine command line keeps MARKERS.engine, so safeKill still identifies the server.
-export function engineCommand(opts: StackOptions, port: number): { cmd: string[]; env: Record<string, string> } {
+export function engineCommand(opts: StackOptions, port: number, platform: string = process.platform): { cmd: string[]; env: Record<string, string> } {
     const env: Record<string, string> = {
         NODE_TICKRATE: String(opts.tickMs ?? PROOF_TICK_MS),
         NODE_XPRATE: String(opts.xpRate ?? 25),
@@ -57,12 +57,16 @@ export function engineCommand(opts: StackOptions, port: number): { cmd: string[]
         if (key in env) throw new Error(`engineEnv cannot replace ${key}`);
         env[key] = value;
     }
+    // A lockstep engine on Windows polls with 1 ms timers that take 15 ms each by default: the preload sets 1 ms
+    // timers for the engine process (packages/core/src/timer-resolution.ts).
+    const timers = opts.lockstep && platform === 'win32' && process.env.SIM_FINE_TIMERS !== '0' ? ['--preload', FINE_TIMERS] : [];
     const pre = opts.enginePreload;
-    if (!pre) return { cmd: ['bun', MARKERS.engine], env };
+    if (!pre) return { cmd: ['bun', ...timers, MARKERS.engine], env };
     if (!isAbsolute(pre.module) || !existsSync(pre.module)) throw new Error(`engine preload not found: ${pre.module}`);
     for (const key of Object.keys(pre.env)) if (key in env) throw new Error(`engine preload cannot replace ${key}`);
-    return { cmd: ['bun', '--preload', pre.module, MARKERS.engine], env: { ...env, ...pre.env } };
+    return { cmd: ['bun', ...timers, '--preload', pre.module, MARKERS.engine], env: { ...env, ...pre.env } };
 }
+const FINE_TIMERS = resolve(import.meta.dir, '..', '..', 'core', 'src', 'timer-resolution.ts');
 
 const DEFAULT_PORTS = { engine: 8888, gateway: 7780 };
 

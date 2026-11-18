@@ -16,6 +16,7 @@ import { ServerProt } from '../../../vendor/rs-sdk/server/webclient/src/io/Serve
 import { ClientProt } from '../../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import { tickWaits } from './tick-stream';
 import {pendingRouteWork} from './route-plan';
+import {fineTimers} from './timer-resolution';
 import { executionWait } from '../../../vendor/rs-sdk/sdk/execution-context';
 import { setEquipmentObserved } from './container-observation';
 import { beginSessionAttempt, lifecycleOwner, type SessionAttempt } from './session-lifecycle';
@@ -167,6 +168,8 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     // these, so it holds the tick until it waits. SIM_BUSY_MS (default 2000) bounds the hold, for a script that ends
     // without a wait. SIM_ACK_FILE receives one line per held tick and a total at the end.
     const lockstep = process.env.SIM_LOCKSTEP === '1';
+    // The acknowledgement below polls with 1 ms timers; on Windows they take 15 ms each without this.
+    if (lockstep) fineTimers();
     const busyMs = Number(process.env.SIM_BUSY_MS ?? 2000);
     const scriptMs = Math.min(busyMs, Number(process.env.SIM_SCRIPT_MS ?? 500));
     const ackFile = process.env.SIM_ACK_FILE;

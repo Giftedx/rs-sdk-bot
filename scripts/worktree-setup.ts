@@ -2,12 +2,14 @@
 // steps do (.github/workflows/ci.yml): the SDK submodule, the SDK patch and the installs. It also carries the owner's
 // hook switch (disableAllHooks) of the main checkout's local settings into the worktree.
 // Usage: bun scripts/worktree-setup.ts [--bench] [--reset-vendor] [--check]
-//   --bench         also install the engine packages, which a practice bench needs
+//   --bench         also install the engine packages, which a practice bench needs, and copy the route caches of the
+//                   main checkout that this worktree does not hold
 //   --reset-vendor  when vendor/rs-sdk has the patch of a different commit, restore its tracked files and apply the
 //                   patch of this commit. Without the flag the script reports the mismatch and changes nothing there.
 //   --check         print what each step would do and change nothing
 // Each step is skipped when its result is there already, so the script is safe to run again.
-import {existsSync,mkdirSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
+import {copyFileSync,existsSync,mkdirSync,readFileSync,renameSync,rmSync,writeFileSync} from 'node:fs';
+import {Database} from 'bun:sqlite';
 import {dirname,join,resolve} from 'node:path';
 
 export type PatchState='applied'|'clean'|'other';
@@ -43,6 +45,29 @@ export function hookSwitchText(mainLocal:string|null,worktreeLocal:string|null):
     if(!mine||typeof mine!=='object'||Array.isArray(mine))throw Error('the .claude/settings.local.json of this worktree is not a JSON object');
     if((mine as Record<string,unknown>).disableAllHooks===true)return null;
     return JSON.stringify({...mine as Record<string,unknown>,disableAllHooks:true},null,2)+'\n';
+}
+
+// Copies the route caches that `to` does not hold from `from`. The walk lengths are an SQLite file that other
+// processes write: VACUUM INTO gives a whole copy of it. A failed copy leaves no file and is not a setup failure,
+// because every cache is optional. Returns one line for each cache.
+export const ROUTE_CACHES=['rsmod-pathfinding.snap','route-areas.bin','route-legs.sqlite'] as const;
+export function seedRouteCaches(from:string,to:string,dry=false):[string,string][]{
+    return ROUTE_CACHES.map(name=>{
+        const source=join(from,name),target=join(to,name);
+        if(existsSync(target))return [name,'present'];
+        if(!existsSync(source))return [name,'not in the main checkout'];
+        if(dry)return [name,'would copy from the main checkout'];
+        const part=target+'.'+process.pid+'.part';
+        try{
+            mkdirSync(to,{recursive:true});rmSync(part,{force:true});
+            if(name.endsWith('.sqlite')){
+                const db=new Database(source,{readonly:true});
+                try{db.query('VACUUM INTO ?').run(part);}finally{db.close();}
+            }else copyFileSync(source,part);
+            renameSync(part,target);
+            return [name,'copied from the main checkout'];
+        }catch(e){rmSync(part,{force:true});return [name,'not copied: '+String((e as Error).message).split('\n')[0]];}
+    });
 }
 
 if(import.meta.main){
@@ -111,6 +136,14 @@ if(import.meta.main){
             else if(dry)step('hook switch','would set disableAllHooks in .claude/settings.local.json');
             else{mkdirSync(join(root,'.claude'),{recursive:true});writeFileSync(local(root),text);step('hook switch','done');}
         }catch(e){step('hook switch','FAILED: '+(e as Error).message);failed=true;}
+    }
+    // 5. With --bench, the route caches of the main checkout (.practice/cache): the pathfinder snapshot, the area labels
+    // and the measured walk lengths. Without them the first route search of each trip in a new worktree measures every
+    // leg again (minutes for one search). Each cache is bound to its source data and is checked on read, so a copy from
+    // an older checkout is ignored, not trusted. A file that is here already is kept.
+    if(flags.has('--bench')){
+        if(resolve(main)===resolve(root))step('route caches','main checkout, nothing to copy');
+        else for(const [name,result] of seedRouteCaches(join(main,'.practice','cache'),join(root,'.practice','cache'),dry))step('route cache '+name,result);
     }
     console.log('worktree-setup: '+(failed?'NOT ready':dry?'check only, nothing changed':'ready'));
     process.exit(failed?1:0);
