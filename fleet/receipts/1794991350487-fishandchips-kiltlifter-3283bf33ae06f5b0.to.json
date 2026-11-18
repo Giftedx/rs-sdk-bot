@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794991350487-fishandchips-kiltlifter-3283bf33ae06f5b0",
+ "account": "Kiltlifter",
+ "partner": "FishAndChips",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 750,
+ "claim": "d5afedde-e02b-4dc4-87fc-4195dcfd9b40",
+ "count": 0,
+ "ok": false,
+ "at": 1794992037540,
+ "detail": "trade claimed"
+}
