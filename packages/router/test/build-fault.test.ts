@@ -2,7 +2,9 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {buildFailureEvidence,buildFault,faultOf} from '../src/build-fault';
+import {buildFailureEvidence,buildFault,faultOf,HOST_MEMORY_REFUSAL} from '../src/build-fault';
+import {readdirSync,readFileSync} from 'node:fs';
+import {resolve} from 'node:path';
 
 test('a fault names the failed proof cases from either report shape',()=>{
  const cases=JSON.stringify({ok:false,cases:[{id:'vial-shortfall',ok:false},{id:'vial-budget',ok:true}]});
@@ -66,4 +68,42 @@ test('a passed build, a timeout, no checks and an unreadable detail give no faul
  expect(buildFault({ok:false,error:'worker ended'})).toBeNull();
  expect(buildFault(null)).toBeNull();
  expect(buildFault({ok:false,delivery:{checks:[{id:'a',exitCode:1,detail:'not json'}]}})).toBeNull();
+});
+
+// The messages that the native proofs throw when the host has too little memory, read from their sources: a message
+// that the host-fault pattern misses becomes a build fault, and two in a row hold the capability's builds.
+function memoryRefusals(): { file: string; message: string }[] {
+ const dir = resolve(import.meta.dir, '../../practice/src'), out: { file: string; message: string }[] = [];
+ for (const file of readdirSync(dir).filter(f => f.endsWith('.ts') && !f.endsWith('.test.ts'))) {
+  for (const line of readFileSync(join(dir, file), 'utf8').split(/\r?\n/)) {
+   if (!/throw\s+(?:new\s+)?Error\(/.test(line) || !/freemem\(|freeGiB\(|startFreeGiB|\.free\(\)|lowMemory|waitFreeMemory|\bfree</.test(line)) continue;
+   const text = /Error\((`[^`]*`|'[^']*'|"[^"]*")/.exec(line)?.[1];
+   const message = text?.slice(1, -1).replace(/\$\{[^}]*\}/g, '4');
+   if (message && /memory|GiB|headroom|reserve|floor/i.test(message)) out.push({ file, message });
+  }
+ }
+ return out;
+}
+test('every memory refusal message of the native proofs is a host fault, never a build fault', () => {
+ const found = memoryRefusals();
+ // A guard against a scan that finds nothing: the proofs hold about 35 such messages.
+ expect(found.length).toBeGreaterThan(25);
+ expect(found.filter(f => !HOST_MEMORY_REFUSAL.test(f.message)), 'a memory refusal that the host-fault pattern misses').toEqual([]);
+ for (const { message } of found) expect(faultOf('native', '', 'Error: ' + message), message).toBeNull();
+ // The text of a real session recovery refusal, and a bench refusal, are host faults too.
+ for (const error of ['native recovery needs6.5GiB startup reserve; observed 6.40', 'practice needs 4GiB floor plus 2.5GiB startup reserve',
+  'HOST_DEFERRED_NATIVE_HEADROOM: native startup headroom wait expired; no child started'])
+  expect(faultOf('native', '', 'Error: ' + error), error).toBeNull();
+ // A code fault that does not name memory stays a fault.
+ expect(faultOf('native', '', 'Error: bank quantities differ')).toBe('native: Error: bank quantities differ');
+});
+test('a native practice check that ends on any memory refusal is a host interruption, not a source fault', () => {
+ const dir = mkdtempSync(join(tmpdir(), 'native-refusal-fault-')), stderr = join(dir, 'e.log');
+ const failure = { id: 'native-recovery', phase: 'practice', exitCode: 1, detail: JSON.stringify({ stderr }) };
+ for (const stop of ['Error: native recovery needs6.5GiB startup reserve; observed 6.40', 'Error: practice needs 4GiB floor plus 2.5GiB startup reserve', 'Error: native shop startup headroom unavailable']) {
+  writeFileSync(stderr, '08:11:02 ERROR logger thread exited with code 0\n' + stop + '\n');
+  const output = { ok: false, delivery: { checks: [failure] } };
+  expect(buildFailureEvidence(output), stop).toEqual({ hostInterrupted: 'memory-floor' });
+  expect(buildFault(output), stop).toBeNull();
+ }
 });
