@@ -89843,6 +89843,24 @@
    "practiceOnly": true
   },
   {
+   "script": "packages/practice/src/quest-order-proof.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "packages/practice/src/register-proof-account.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "packages/practice/src/wine-stock-order-proof.ts",
    "intents": [
     "service"
