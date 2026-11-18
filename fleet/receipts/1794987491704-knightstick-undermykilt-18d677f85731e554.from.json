@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794987491704-knightstick-undermykilt-18d677f85731e554",
  "account": "Knightstick",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 2,
  "claim": "03a16b07-3886-412a-bd1c-6f2e9f95eb61",
- "count": 0,
- "ok": false,
- "at": 1794987504685,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1794987570149,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1794987521492
+ },
+ "logout": {
+  "attemptId": "1794987504692-0000025480-0000000001",
+  "at": 1794987569794,
+  "sha256": "7fe51f992326694b7124994942b0997f7573e0a5b286933861d84e34ee6bdf4f"
+ },
+ "screen": true
 }
