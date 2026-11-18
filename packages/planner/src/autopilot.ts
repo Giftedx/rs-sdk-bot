@@ -2227,7 +2227,7 @@ export function catalogue(): Template[] {
     });
     const ardyIronAxe: Template = {
         id: 'tool-axe-iron', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['ardy', '1200'],
-        env: { ITEMS: '^iron axe$', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '300', COIN_RESERVE: '100', MAX_SPEND: '200' },
+        env: { ITEMS: 'iron axe', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '300', COIN_RESERVE: '100', MAX_SPEND: '200' },
         role: 'woodcutting', goal: "buy iron axe from Aemad in East Ardougne (Bob's Axes has no profile)", repeats: false,
         resources: ['shop:ardy'], yields: () => [{ item: 'iron axe', perTick: 0.01 }],
         needs: { items: { coins: 300 }, holdsUnder: holdsUnderKeys(['iron axe', 'steel axe', 'black axe', 'mithril axe', 'adamant axe', 'rune axe']) },
