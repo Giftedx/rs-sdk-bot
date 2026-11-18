@@ -328,6 +328,6 @@
    1,
    4
   ],
-  "note": "Live 56 Hitpoints a kill (5 kills) with 2 members hit. The replay gave 64, 61 and 91 (run 44411582416) and 273, 200 and 248 Hitpoints for 3 kills each (run 44414128854): the spread of one condition is wide, and 1 to 4 of the 4 members can lose Hitpoints. The band is 0.5 to 2 times the live Hitpoints a kill."
+  "note": "Live 56 Hitpoints a kill (5 kills), 2 members hit. The replay on 12 seeds: 3 kills at 64, 61 and 91 (run 44411582416); 273, 200 and 248 Hitpoints for 3 kills each (run 44414128854); and on six seeds 206, 385 (1 kill), 150, 257, 215 and 204 Hitpoints (run 44415206897). The band is 0.5 to 2 times the live Hitpoints a kill, for a run with 2 kills or more."
  }
 }

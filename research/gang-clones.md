@@ -462,6 +462,73 @@ Not measured:
   march and 1 kill of 9 on the single-way post. The pilots lost 249 and 260. The first live squad run is the check of
   the clones at squad size (`scripts/measure/pk-gang-drift.ts squad`).
 
+## Fidelity of the first live squad run
+
+The replay: `extra:clone-run1-*` (`scripts/pk-gang-record/run-1.json`). The four members start in the loadouts that the
+run started with (the wear and pack of the loadout files of the run), at the Edgeville bank, and march to the post as
+the squad script does. The three clones are the base clones. `SQUAD_GANG_PREY=0,1,0` sends the gang to the first two
+members, as the feed shows it in the live run. The members had Prayer level 99 and current level 0 (status files of the
+four, and `PRAYER_GUARD` points [0,0]): the replay gives them Prayer level 1, the nearest state the bench has to no
+points. That state changes the combat level of a member from 126 to 113.
+
+Hosted runners, seeds 1, 2 and 3 (run 44411582416). Live: 5 kills, 279 Hitpoints lost, kills 22 to 54 ticks after the
+first attack (mean 34), 2 members lost Hitpoints, no death.
+
+| Measure | Live | Replay | Error |
+|---|---|---|---|
+| Kills a run (the clones do not come back) | 5 | 3 | not comparable |
+| Hitpoints lost a kill | 56 | 72 | +29% |
+| Ticks of a fight to its kill | 34 | 62 | +82% |
+| Members that lost Hitpoints | 2 | 2.3 | +15% |
+| Deaths of ours | 0 | 0 | none |
+
+The raw values by seed (kills, Hitpoints lost by member in the order UnderMyKilt, mmsmk1232, TrouserSnake, TheFullMonty):
+3 kills, 74, 117, 0, 0; 3 kills, 79, 104, 0, 0; 3 kills, 94, 178, 1, 0. The replay on six more seeds (run 44415206897)
+lost 206, 385 (1 kill), 150, 257, 215 and 204 Hitpoints; the pooled value of those 16 kills is 89 a kill.
+
+What the replay shows:
+
+- **With the live state the bench is as hard as the live run, not softer.** 72 to 89 Hitpoints a kill against 56, with one
+  live run of 5 kills. The earlier clone numbers (16 to 21 Hitpoints a kill) came from members with full prayer points
+  and one kit.
+- **Prayer points halve the Hitpoints lost a kill.** The same replay with full prayer points lost 51, 22 and 37 Hitpoints a
+  kill (mean 37, 9 kills; `extra:clone-run1-prayer-x1`).
+- **The target pick decides who takes the damage.** With the gang on the nearest member (`extra:clone-run1-nearest-x1`),
+  one member took 108 to 225 Hitpoints and the others none: 57 Hitpoints a kill, 1.3 members hit. With the gang on the
+  first two members, 2.3 members lost Hitpoints, as live. The live rule that picks among members at the same distance is
+  `unknown`: the live gang attacked the two members in dragonhide, in 6 fights, with all four within 1 to 3 tiles in 4
+  of them.
+- **Two clone behaviours do not explain the length of a fight.** A gang that never eats and a gang with no protect prayer
+  have kill times of 57 and 51 ticks against 62 for the base. The live fights are 22 to 54 ticks. The cause is open.
+
+### The fidelity case
+
+`extra:clone-run1-fidelity-x1` passes only when the run has 1 kill or more, 1 to 4 members lose Hitpoints, and a run with 2
+kills or more loses 28 to 112 Hitpoints a kill (half to twice the live 56). The band stops a bench that goes soft by
+half again, or hard by twice. It is wide because one condition has a spread of 50 to 385 Hitpoints a kill from seed to
+seed. A band of 15% is not a test that one seed can pass: the live value is one run of 5 kills, and the replay of the
+same condition on two runs of the same seeds also differs.
+
+### The climb on the live state
+
+Seeds 1, 2 and 3, hosted runs 44411582416 and 44413797291. "Rune" is the loadout of TrouserSnake and TheFullMonty
+for all four members. "Rune first" puts the two rune loadouts in the members that the gang attacks first, and the
+two dragonhide loadouts last.
+
+| Condition | Kills | Deaths of ours | Hitpoints lost a kill | Ticks of a fight | Hitpoints lost by seed |
+|---|---|---|---|---|---|
+| live loadouts, no prayer points | 9 of 9 | 0 | 72 | 62 | 191, 183, 273 |
+| live loadouts, full prayer points | 9 of 9 | 0 | 37 | 52 | 153, 65, 112 |
+| rune first, no prayer points | 7 of 9 | 0 | 51 | 82 | 120, 157, 82 |
+| rune first, full prayer points | 9 of 9 | 0 | 32 | 56 | 81, 119, 84 |
+| all rune, no prayer points | 9 of 9 | 0 | 74 | 71 | 163, 384, 121 |
+| all rune, full prayer points | 9 of 9 | 0 | 26 | 47 | 67, 69, 100 |
+
+- **Prayer points are the one lever outside the spread.** Each pair of rows with the same loadouts loses 2 to 3 times the Hitpoints
+  without them.
+- **The loadouts and the member order are not separated** by three seeds: 37, 32 and 26 Hitpoints a kill with prayer,
+  72, 51 and 74 without, with a spread of 2 to 3 times inside a row.
+
 ## Keep it true
 
 `scripts/measure/pk-gang-drift.ts` compares new observations with the record:

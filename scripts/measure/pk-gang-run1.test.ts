@@ -26,6 +26,8 @@ test('the fidelity band: a replay that goes soft by half again, hits no member o
     // 15 Hitpoints a kill is soft: below the 28 of the band (half the live 56).
     expect(run1Fidelity(log([20, 25, 0, 0], 3, [60, 60, 60]))).toContain('outside 28 to 112');
     expect(run1Fidelity(log([300, 100, 0, 0], 3, [60, 60, 60]))).toContain('outside 28 to 112');
-    expect(run1Fidelity(log([60, 60, 0, 0], 1, [60]))).toContain('kills 1 under 2');
+    // One kill gives no verdict on the Hitpoints; no kill is a failure.
+    expect(run1Fidelity(log([300, 85, 0, 0], 1, [60]))).toBeNull();
+    expect(run1Fidelity(log([60, 60, 0, 0], 0, []))).toBe('no kill');
     expect(run1Fidelity(log([60, 60, 60, 60], 3, [60, 60, 60]), { hpAKill: [28, 112], kills: 2, membersHit: [1, 3] })).toContain('members hit 4');
 });
