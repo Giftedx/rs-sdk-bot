@@ -238,6 +238,14 @@ function literalText(n: ts.Node): { text: string; regex: boolean; flags: string 
     return null;
 }
 
+/** Callees whose options object holds a `label` that is error text for a log, not a game name (scripts/gear-reconcile.ts reconcileLoadout). */
+export const LABEL_OPTION_CALLEES = new Set(['reconcileLoadout']);
+function isLabelOption(n: ts.Node): boolean {
+    const p = n.parent, o = p?.parent, c = o?.parent;
+    return !!p && ts.isPropertyAssignment(p) && p.initializer === n && ts.isIdentifier(p.name) && p.name.text === 'label'
+        && !!o && ts.isObjectLiteralExpression(o) && !!c && ts.isCallExpression(c) && LABEL_OPTION_CALLEES.has(calleeName(c.expression) ?? '');
+}
+
 interface Lit { node: ts.Node; text: string; regex: boolean; flags: string; callee: string | null; argIndex: number; container: ts.Node | null }
 
 function collect(sf: ts.SourceFile): { lits: Lit[]; calls: ts.CallExpression[] } {
@@ -246,7 +254,7 @@ function collect(sf: ts.SourceFile): { lits: Lit[]; calls: ts.CallExpression[] }
     const visit = (n: ts.Node, container: ts.Node | null) => {
         if (ts.isCallExpression(n)) calls.push(n);
         const lt = literalText(n);
-        if (lt) {
+        if (lt && !isLabelOption(n)) {
             const p = n.parent;
             let callee: string | null = null;
             let argIndex = -1;
