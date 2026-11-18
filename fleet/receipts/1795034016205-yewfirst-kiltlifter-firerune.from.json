@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795034016205-yewfirst-kiltlifter-firerune",
+ "account": "YewFirst",
+ "partner": "Kiltlifter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 250,
+ "claim": "56410a97-6006-4bd2-aa8b-44f613a57a35",
+ "count": 0,
+ "ok": false,
+ "at": 1795034142411,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "bank": {
+  "count": 250,
+  "at": 1795034132355
+ },
+ "logout": {
+  "attemptId": "1795034121224-0000005876-0000000001",
+  "at": 1795034140765,
+  "sha256": "5cfe70a3b3e84889a23a0d700fabe6ce8a2525ff452cf37f48a29692387111f8"
+ },
+ "screen": false
+}
