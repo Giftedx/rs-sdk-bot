@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795003564777-fingersmith-yewfirst-cake",
+ "account": "YewFirst",
+ "partner": "Fingersmith",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cake",
+ "requested": 4,
+ "claim": "279a97da-402a-467c-aac1-b02b16961749",
+ "count": 0,
+ "ok": false,
+ "at": 1795003646988,
+ "detail": "trade claimed"
+}

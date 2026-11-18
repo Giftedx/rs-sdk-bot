@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795003505725-wandwaver-ballspinner-airrune",
+ "account": "Ballspinner",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 3,
+ "claim": "a7540989-b378-4261-8dbd-87d6b83f263d",
+ "count": 0,
+ "ok": false,
+ "at": 1795003643169,
+ "detail": "trade claimed"
+}
