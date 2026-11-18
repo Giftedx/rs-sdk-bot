@@ -52,16 +52,6 @@ export function bonusGain(style: CombatFocus, wanted: number, current: number | 
     return points(style, gearById(wanted)) - (current === null ? 0 : points(style, gearById(current)));
 }
 
-/**
- * The combat style an account trains, from its template id; null for any other job. Only the templates of scripts/gather-combat.ts
- * count: that worker wears the choice of the reconcile at its bank (scripts/gear-reconcile.ts reconcileLoadout), so a buy is worn on its next run.
- * The workers that wear with their own code (ranged-train, alch-train, splash-train, gather-fire-combat) are the next consumers.
- */
-export function trainingStyle(templateId: string | undefined): CombatFocus | null {
-    if (!templateId || !/^army-(?:cow|trooper)-/.test(templateId)) return null;
-    return /-ranged-/.test(templateId) ? 'ranged' : 'melee';
-}
-
 export type GearJob =
     | { kind: 'ge'; lines: { id: number; name: string; limit: number; gain: number }[]; cost: number; gain: number; value: number }
     | { kind: 'shop'; shop: string; profile: string; items: { id: number; name: string; cost: number; gain: number }[]; cost: number; spend: number; gain: number; value: number };
