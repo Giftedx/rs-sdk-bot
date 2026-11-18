@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795015791632,
+ "at": 1795015844637,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -516,7 +516,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-62bc76f5-eb37-4cb8-ba87-2869475ee265"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-bow-trooper-prayer76-band [task-62bc76f5-eb37-4cb8-ba87-2869475ee265]",
    "role": "helper"
