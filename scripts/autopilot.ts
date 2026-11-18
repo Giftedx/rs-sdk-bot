@@ -161,8 +161,21 @@ export function itemOrder(from: string, to: string, item: string, count: number,
 export const SIDE_STOCK_MAX_AGE_MS = OBSERVATION_FRESH_MS;
 // Transfer stock is observed pack or bank stock, never worn kit. A retained bank observation can describe the same
 // units before a withdrawal, so the two observations contribute their maximum rather than their sum.
-export function donorStock(name:string,side:string,status:any,now:number,maxAgeMs:number,itemName:(id:number)=>string|undefined,server='rs-sdk-demo.fly.dev'):Stock|undefined {
-    const recent=(at:unknown)=>typeof at==='number'&&Number.isFinite(at)&&at>0&&at<=now&&now-at<maxAgeMs;
+// An account that is confirmed offline holds what its last observation showed: its bank cannot change until a session or a trade
+// touches it. So its observation stays good for OFFLINE_STOCK_MAX_AGE_MS when the logout proof (packages/core/src/session-lifecycle.ts)
+// is confirmed, the session that it closes started no later than the observation (the attempt id begins with its start time, so a
+// later session that never wrote a status cannot pass) and ended no earlier than the observation, and no fleet order that names
+// the account ended after it.
+export const OFFLINE_STOCK_MAX_AGE_MS = 24 * 3_600_000;
+export type OfflineProof = { confirmed: boolean; loggedOutAt?: number; startedAt?: number; ordersEnd?: number };
+const LOGOUT_SKEW_MS = 60_000;
+export function offlineStockFresh(at: unknown, proof: OfflineProof | undefined, now: number): boolean {
+    return typeof at === 'number' && Number.isFinite(at) && at > 0 && at <= now && now - at < OFFLINE_STOCK_MAX_AGE_MS && !!proof?.confirmed
+        && typeof proof.loggedOutAt === 'number' && proof.loggedOutAt >= at - LOGOUT_SKEW_MS
+        && typeof proof.startedAt === 'number' && proof.startedAt <= at && !(typeof proof.ordersEnd === 'number' && proof.ordersEnd > at);
+}
+export function donorStock(name:string,side:string,status:any,now:number,maxAgeMs:number,itemName:(id:number)=>string|undefined,server='rs-sdk-demo.fly.dev',offline?:OfflineProof):Stock|undefined {
+    const recent=(at:unknown)=>(typeof at==='number'&&Number.isFinite(at)&&at>0&&at<=now&&now-at<maxAgeMs)||offlineStockFresh(at,offline,now);
     if(!status||typeof status.name!=='string'||status.name.toLowerCase()!==name.toLowerCase()||status.practice||typeof status.server!=='string'||status.server.toLowerCase()!==server.toLowerCase()||!recent(status.at))return;
     const valid=(rows:unknown)=>Array.isArray(rows)&&rows.every(r=>r&&Number.isSafeInteger(r.count)&&r.count>0&&(typeof r.name==='string'||Number.isSafeInteger(r.baseId??r.id)));
     const inventory=valid(status.inventory)?status.inventory:[];
@@ -547,8 +560,8 @@ export function armyRoster(plan: any, accounts: readonly Pick<Acct, 'name' | 'sk
 }
 // The accounts whose observation is missing or not under OBSERVATION_FRESH_MS old at `now`: their stock is not offered to a
 // kit. It reads the observation time alone, so an empty bank or a name mismatch does not make an account unobserved.
-export function unobservedAccounts(names: readonly string[], observedAt: (name: string) => unknown, now: number): string[] {
-    return names.filter(n => { const at = observedAt(n); return !(typeof at === 'number' && Number.isFinite(at) && at > 0 && at <= now && now - at < OBSERVATION_FRESH_MS); });
+export function unobservedAccounts(names: readonly string[], observedAt: (name: string) => unknown, now: number, offline: (name: string) => OfflineProof | undefined = () => undefined): string[] {
+    return names.filter(n => { const at = observedAt(n); return !((typeof at === 'number' && Number.isFinite(at) && at > 0 && at <= now && now - at < OBSERVATION_FRESH_MS) || offlineStockFresh(at, offline(n), now)); });
 }
 // The bots that jobs outside this side's planner hold on the swarm: every enabled job of the merged plan that is not a
 // planner job of this side, and every planner job that an owner pause keeps as it is. A host job counts its accounts.
@@ -810,7 +823,22 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
         const lower = n.toLowerCase();
         return plannerOwns(owners, side, lower, reserved, diedAccounts) && ![busy, keep, open, stranded].some(s => s.has(lower));
     };
-    const stock: Stock[] = listed.filter(free).flatMap(n => {const row=donorStock(n,side,observed(n),now,SIDE_STOCK_MAX_AGE_MS,id=>byId.get(id),owners.get(n.toLowerCase())?.server);return row?[row]:[];});
+    // The logout proof of a free account whose observation is older than the freshness window, and the end of its latest fleet order.
+    const offlineProofs = new Map<string, OfflineProof | undefined>();
+    const offlineOf = (n: string): OfflineProof | undefined => {
+        const lower = n.toLowerCase();
+        if (!offlineProofs.has(lower)) {
+            const at = observed(n)?.at;
+            if (typeof at === 'number' && now - at < SIDE_STOCK_MAX_AGE_MS) offlineProofs.set(lower, undefined);
+            else {
+                const proof = readLogoutProof(n, owners.get(lower)?.server ?? 'rs-sdk-demo.fly.dev');
+                const ends = orders.filter(o => o.from.toLowerCase() === lower || o.to.toLowerCase() === lower).map(o => o.end);
+                offlineProofs.set(lower, { confirmed: proof.state === 'confirmed', loggedOutAt: proof.state === 'confirmed' ? proof.loggedOutAt : undefined, startedAt: proof.state === 'confirmed' ? Number(proof.attemptId.split('-')[0]) : undefined, ordersEnd: ends.length ? Math.max(...ends) : undefined });
+            }
+        }
+        return offlineProofs.get(lower);
+    };
+    const stock: Stock[] = listed.filter(free).flatMap(n => {const row=donorStock(n,side,observed(n),now,SIDE_STOCK_MAX_AGE_MS,id=>byId.get(id),owners.get(n.toLowerCase())?.server,offlineOf(n));return row?[row]:[];});
     const snapshotDir = join(fleetDir, 'snapshots'), silent = silentSides(orders, receipts, n => owners.get(n.toLowerCase())?.side, now);
     for (const f of existsSync(snapshotDir) ? readdirSync(snapshotDir).filter(f => f.endsWith('.json')) : []) {
         const other = f.slice(0, -'.json'.length);
@@ -845,7 +873,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     const army = armyRoster(swarm, accounts, OFFLINE_GUARDED, reserved);
     const gearWants = gearWantsOf(accounts.map(a => a.name), observed, name => { const a = accounts.find(x => x.name === name)!; return accountStyle(a, templates, state.assigned[name]?.template, army.has(name.toLowerCase())); }, name => state.assigned[name]?.template, state.unsold ?? {}, marketQuotes(readJson(join(root, MARKET_FILE), null), now), now);
     const questsDone = questsDoneIn([...statusFiles.map(f => readJson(join(statusDir, f), null)), ...published.flatMap(f => f.accounts ?? [])]);
-    const planned = plan({ side, accounts, questsDone, owners, gearWants, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set([...Object.keys(state.retired), ...unplacedHeld(state.unplaced, now)]), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army, now, unobserved: unobservedAccounts(listed.filter(free), n => observed(n)?.at, now), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
+    const planned = plan({ side, accounts, questsDone, owners, gearWants, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set([...Object.keys(state.retired), ...unplacedHeld(state.unplaced, now)]), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army, now, unobserved: unobservedAccounts(listed.filter(free), n => observed(n)?.at, now, offlineOf), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
             externalLive.length,
             { running: swarm.jobs.filter((j: any) => mineMarked(j) && j.enabled !== false).flatMap(jobAccounts).filter((n: string) => activeAccounts.has(n.toLowerCase())).length,
                 headroom: headroomWithMargin(memoryHeadroom(freemem() / 2 ** 30, swarm.minFreeGB, pendingStartupCount(readJson(join(prac, 'swarm-runs.json'), []), now) + tradeStarts(open, externalLive, activeAccounts)), writtenNotRunning(swarm.jobs.filter(mineMarked), activeAccounts)) }), holding: activeAccounts, squad: squadInput(swarm, side, owners, n => observed(n)?.at > 0 ? accountFrom(n, side, observed(n), id => byId.get(id)).items : undefined, n => !stopClearable(observed(n), now) || existsSync(join(prac, 'stop-pk-squad'))), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
