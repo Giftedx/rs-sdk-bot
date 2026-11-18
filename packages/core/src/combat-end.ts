@@ -90,6 +90,9 @@ type EatPolicy = {
     eatAt?: number | ((maxHp: number) => number);
 };
 type LeaveDeps = EatPolicy & {
+    // Receives the eater of the step when the account is under attack, and the step then leaves it running: the caller
+    // stops it (finishCombat stops it after the logout). Without it the step stops its eater when it returns.
+    keepEater?: (eater: EndEater) => void;
     // Walks to the tile and says if the account stands within 2 tiles of it. The default is the session walker.
     walk?: (to: Tile) => Promise<boolean>;
     pathLength?: (from: Tile, to: Tile) => number | null;
@@ -107,7 +110,8 @@ export const RETALIATE_ON = 150, RETALIATE_OFF = 151;
 // an Eat option, and the food delay of the last eat (3 ticks) is over. It holds the eat guard while it runs, so one
 // tick never gets two eats.
 const EAT_TICKS = 3;
-export function startEndEater(s: Pick<Session, 'sdk' | 'tick' | 'onTick' | 'direct'>, o: EatPolicy = {}) {
+export type EndEater = { eats(): number; stop(): void };
+export function startEndEater(s: Pick<Session, 'sdk' | 'tick' | 'onTick' | 'direct'> & { ended?: Promise<unknown> }, o: EatPolicy = {}): EndEater {
     const food = o.food ?? [...questFoodDefinitions().keys()], held = holdSessionEater(s.sdk);
     const eatOption = (i: FoodItem) => i.optionsWithIndex?.find(v => /^eat$/i.test(v.text));
     let stopped = false, sentAt = held.ateAt, eats = 0;
@@ -120,7 +124,9 @@ export function startEndEater(s: Pick<Session, 'sdk' | 'tick' | 'onTick' | 'dire
         sentAt = s.tick(); eats++;
         try { void Promise.resolve(s.direct({ type: 'useInventoryItem', slot: choice.item.slot, optionIndex: eatOption(choice.item)!.opIndex, reason: 'SDK' })).catch(() => {}); } catch { /* the session ended */ }
     });
-    return { eats: () => eats, stop() { if (stopped) return; stopped = true; off(); held.release(); } };
+    const eater = { eats: () => eats, stop() { if (stopped) return; stopped = true; off(); held.release(); } };
+    void s.ended?.then(() => eater.stop());
+    return eater;
 }
 
 // Takes an account that is under attack off the monsters' ground and waits until the logout window is open. An account
@@ -157,6 +163,7 @@ export async function leaveCombat(s: Session, deps: LeaveDeps = {}): Promise<Com
         // A tile that a walk of this step did not reach is not chosen again.
         const failed: Tile[] = [], untried = (a: Tile, b: Tile) => failed.some(f => f.x === b.x && f.z === b.z) ? null : length(a, b);
         const eater = startEndEater(s, deps);
+        deps.keepEater?.(eater);
         try {
             await retaliate(false);
             // A second walk if a hit lands after the first: a different kind of monster was in reach of the first tile.
@@ -173,7 +180,7 @@ export async function leaveCombat(s: Session, deps: LeaveDeps = {}): Promise<Com
                 const waited = await awaitLogoutQuiet(s, { lastHit: () => lastHit, retreat: async () => {}, between: async () => {}, timeoutTicks: deps.quietTicks ?? 60 });
                 if (waited.quiet) break;
             }
-        } finally { eater.stop(); if (retaliated !== undefined) await retaliate(retaliated).catch(() => {}); }
+        } finally { if (!deps.keepEater) eater.stop(); if (retaliated !== undefined) await retaliate(retaliated).catch(() => {}); }
         return { underAttack: true, left, quiet: quiet(), ticks: s.tick() - start, from, ...(to ? { to } : {}), moves, tiles: cheb(from, me() ?? from), eats: eater.eats(), ...(detail ? { detail } : {}) };
     } finally { off(); }
 }
@@ -199,15 +206,17 @@ export async function confirmedLogout(s: Session, o: { tries?: number; windowMs?
 // 15 s. A stop file or a lost lease that comes in that time does not end it sooner.
 export async function finishCombat(s: Session, ok: boolean, detail: string | ((ok: boolean) => string),
     deps: EatPolicy & { leave?: typeof leaveCombat; logout?: typeof confirmedLogout; finish?: typeof finish; recovery?: typeof deathRecoveryOf } = {}): Promise<never> {
-    let end: CombatLeave;
+    let end: CombatLeave, eater: EndEater | undefined;
     try {
         // A death recovery walks the account by itself (bot.ts): the end step starts after it.
         await (deps.recovery ?? deathRecoveryOf)(s);
-        end = await (deps.leave ?? leaveCombat)(s, { food: deps.food, eatAt: deps.eatAt });
+        // An account under attack keeps its eater through the logout windows too: the server takes no logout for 16
+        // ticks after each hit, and the logout presses for up to 3 windows of 15 s.
+        end = await (deps.leave ?? leaveCombat)(s, { food: deps.food, eatAt: deps.eatAt, keepEater: e => { eater = e; } });
     } catch (error) { end = { underAttack: true, left: false, quiet: false, ticks: 0, moves: 0, tiles: 0, eats: 0, detail: String(error).slice(0, 120) }; }
     let logged = { out: 'none', tries: 0 };
-    return (deps.finish ?? finish)([s], ok, okNow => `${typeof detail === 'function' ? detail(okNow) : detail} ${combatEndText(end, logged)}`,
-        { logout: async session => (logged = await (deps.logout ?? confirmedLogout)(session)).out });
+    return (deps.finish ?? finish)([s], ok, okNow => `${typeof detail === 'function' ? detail(okNow) : detail} ${combatEndText(eater ? { ...end, eats: eater.eats() } : end, logged)}`,
+        { logout: async session => { try { logged = await (deps.logout ?? confirmedLogout)(session); } finally { eater?.stop(); } return logged.out; } });
 }
 export const combatEndText = (end: CombatLeave, logged: { out: string; tries: number }) =>
     `endTicks=${end.ticks} endUnderAttack=${end.underAttack} endLeft=${end.left} endQuiet=${end.quiet} endTiles=${end.tiles} endEats=${end.eats}${end.detail ? ` endDetail=${JSON.stringify(end.detail)}` : ''} logout=${logged.out === 'logged-out' ? 'confirmed' : logged.out} logoutTries=${logged.tries}`;

@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { loadRoamers, parseRoamer } from '../src/danger';
 import { LOGOUT_QUIET_TICKS, combatEndText, combatSquares, confirmedLogout, finishCombat, leaveCombat, nearestSafeTile, outside, safeCandidates, type CombatLeave } from '../src/combat-end';
 import { defaultEatAt, questFoodDefinitions, registerSessionEater } from '../src/sustain';
+import { waitTicks } from '../src/ticks';
 
 const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 // The Gnome battlefield: the camp tile of the trooper trainer (scripts/gather-combat.ts TROOPER_SITE) and a trooper that fights.
@@ -55,7 +56,7 @@ test('the safe tile is outside the square of each spawn of each kind that fights
 // `hp`: the Hitpoints at the start, of 60. `pack`: the item id of each pack slot. An eat takes the item of its slot and
 // heals by the content's amount. `walkTicks`: the ticks of a walk, 0 for a walk that arrives at once.
 const TROUT = 333, LOBSTER_POT = 301;
-function underAttack(o: { attacked?: boolean; walkArrives?: boolean; hp?: number; pack?: number[]; walkTicks?: number } = {}) {
+function underAttack(o: { attacked?: boolean; walkArrives?: boolean; hp?: number; pack?: number[]; walkTicks?: number; damage?: number } = {}) {
     let tick = 100, at = { ...FIELD }, retaliate = true, lastHit = o.attacked === false ? -Infinity : 100, hp = o.hp ?? 60;
     const pack = new Map((o.pack ?? []).map((id, slot) => [slot, id])), eatTicks: number[] = [];
     const callbacks = new Set<() => void>(), actions: string[] = [], squares = combatSquares(FIELD, [trooper()], SKILLS);
@@ -72,7 +73,7 @@ function underAttack(o: { attacked?: boolean; walkArrives?: boolean; hp?: number
             if (a.type === 'useInventoryItem' && a.optionIndex === 1 && pack.get(a.slot!) === TROUT) { pack.delete(a.slot!); hp = Math.min(60, hp + questFoodDefinitions().get(TROUT)!.heal); eatTicks.push(tick); }
             return { success: true };
         } };
-    const timer = setInterval(() => { tick++; if (o.attacked !== false && inside() && tick % 4 === 0) lastHit = tick; for (const cb of [...callbacks]) cb(); }, 1);
+    const timer = setInterval(() => { tick++; if (o.attacked !== false && inside() && tick % 4 === 0) { lastHit = tick; hp = Math.max(1, hp - (o.damage ?? 0)); } for (const cb of [...callbacks]) cb(); }, 1);
     const walk = async (to: { x: number; z: number }) => {
         actions.push(`walk:${to.x},${to.z}`); if (o.walkArrives === false) return false;
         const until = tick + (o.walkTicks ?? 0); while (tick < until) await new Promise(r => setTimeout(r, 1));
@@ -204,6 +205,47 @@ test('logout is pressed in windows until the server confirms it, and the receipt
     // An end that is not a logout (the server dropped the session) ends the tries: no click can follow it.
     const dropped = session();
     try { expect(await confirmedLogout(dropped.s, { press: answers(['disconnected']) as any })).toEqual({ out: 'disconnected', tries: 1 }); } finally { dropped.end(); }
+}, 30_000);
+
+test('an account that stays under attack keeps eating through the logout windows, and the eater is held and released once', async () => {
+    const heal = questFoodDefinitions().get(TROUT)!.heal, eatAt = defaultEatAt(60);
+    // No safe tile is reached (the walk fails), a hit lands each 4 ticks for 5 Hitpoints, and the logout windows time out.
+    const f = underAttack({ hp: 60, damage: 5, walkArrives: false, pack: [LOBSTER_POT, TROUT, TROUT, TROUT, TROUT, TROUT, TROUT, TROUT] });
+    let holds = 0, releases = 0, leaveEnded = 0, eatsBeforeLogout = 0, line = '', releasedInLogout = -1;
+    registerSessionEater(f.s.sdk, () => { holds++; return { ateAt: -Infinity, release() { releases++; } }; });
+    const fakeFinish = (async (sessions: unknown[], ok: boolean, detail: (ok: boolean) => string, opts: { logout: (s: unknown) => Promise<string> }) => {
+        const out = await opts.logout(sessions[0]); line = `RESULT ${ok && out === 'logged-out' ? 'ok' : 'fail'} ${detail(ok)}`; return undefined as never;
+    }) as any;
+    try {
+        await finishCombat(f.s, true, 'mode=giant', {
+            recovery: () => undefined, finish: fakeFinish,
+            leave: async (s, deps) => { const end = await leaveCombat(s, { ...deps, walk: f.walk, pathLength: straight, log: () => {}, moves: 1 }); leaveEnded = f.tick(); eatsBeforeLogout = f.eatTicks.length; return end; },
+            // The logout presses for 60 ticks under attack and gets no answer.
+            logout: async s => { await waitTicks(s as any, 60); releasedInLogout = releases; return { out: 'timeout', tries: 3 }; },
+        });
+        // The step ended with the account still under attack, and the eater was still held while the logout ran.
+        expect(leaveEnded).toBeGreaterThan(0);
+        expect(releasedInLogout).toBe(0);
+        // It ate during the logout windows, 3 ticks or more apart, and the Hitpoints stay over the eat level after each eat.
+        const during = f.eatTicks.filter(t => t > leaveEnded);
+        expect(during.length).toBeGreaterThan(0);
+        expect(f.eatTicks.length).toBeGreaterThan(eatsBeforeLogout);
+        for (let i = 1; i < f.eatTicks.length; i++) expect(f.eatTicks[i]! - f.eatTicks[i - 1]!).toBeGreaterThanOrEqual(3);
+        expect(f.hp()).toBeGreaterThan(eatAt - 5 * 1);
+        expect(heal).toBeGreaterThan(5);
+        // Held once, released once, after the logout returned; the RESULT line counts the eats of the whole step.
+        expect([holds, releases]).toEqual([1, 1]);
+        expect(line).toContain(`endEats=${f.eatTicks.length}`);
+        expect(line).toContain('logout=timeout');
+    } finally { f.end(); }
+    // A calm account creates no eater at all: nothing is held and nothing is eaten.
+    const calm = underAttack({ attacked: false, hp: 5, pack: [TROUT] });
+    let calmHolds = 0;
+    registerSessionEater(calm.s.sdk, () => { calmHolds++; return { ateAt: -Infinity, release() {} }; });
+    try {
+        await finishCombat(calm.s, true, 'mode=cow', { recovery: () => undefined, finish: fakeFinish, logout: async () => ({ out: 'logged-out', tries: 1 }) });
+        expect([calmHolds, calm.pack()]).toEqual([0, [TROUT]]);
+    } finally { calm.end(); }
 }, 30_000);
 
 test('the result line of a combat worker ends with the ticks of the end step and the result of the logout', async () => {
