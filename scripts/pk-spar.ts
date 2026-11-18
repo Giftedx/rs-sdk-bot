@@ -17,7 +17,7 @@ import type { Session } from '../packages/core/src/inprocess';
 import { waitUntil } from '../packages/core/src/ticks';
 import { defaultSpec, fightPlayer, nextTick, PRAYER, weaponStyle, type FightOptions, type FightResult, type Kit } from './pk';
 import { TRIBRID_KIT } from './pk-hunt';
-import { cloneProfiles } from './pk-gang-clone';
+import { cloneProfileByName } from './pk-gang-clone';
 import { kitOptions, kitSwitches } from './pk-kits';
 
 // `specBelow` moves the health fraction at which the kit's special fires.
@@ -86,10 +86,6 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
     // 74 HP or less; a protect prayer that turns later than the bench's in some changes; with the food gone it fights
     // on to 30 HP, then runs south out of the Wilderness. SPAR_B_TRIPS gives the bank trip and the return.
     'ganker-live': { rotation: ['melee'], specBelow: 1, eatAt: 74, prayerFlick: false, readOverheads: false, prayerLag: [48, 35, 11, 5], escapeAt: 30, escapeWalk: 20 },
-    // One clone for each gang account, with its options read from its behaviour record (scripts/pk-gang-clone.ts,
-    // research/gang-clones.md): clone-goondelf, clone-ligma and clone-sugma, and each with -retreat and -stand for the
-    // two ends that the record shows with the food gone.
-    ...(cloneProfiles() as Record<string, Profile>),
 };
 const GOD_HUNTER: Profile = { kit: { ...TRIBRID_KIT, magic: [2417] }, damageSpell: 1192, charge: true };
 // Options a scenario gives a side under its profile. In `escape` side B is the runner: with its food gone at 60 HP or
@@ -108,7 +104,10 @@ export const SCENARIOS: Readonly<Record<string, { a?: Profile; b?: Profile }>> =
 };
 
 export function sparOptions(name: string, extraJson: string | undefined, kit: Kit, cap: number, scenario: Profile = {}): FightOptions {
-    const profile = PROFILES[name];
+    // A clone of a gang account (clone-goondelf, clone-ligma, clone-sugma, and each with -retreat or -stand) takes its
+    // options from its behaviour record (scripts/pk-gang-clone.ts, research/gang-clones.md). The record is read here,
+    // on the first use of such a name, and by no script that names no clone.
+    const profile = PROFILES[name] ?? (cloneProfileByName(name) as Profile | undefined);
     if (!profile) throw Error(`pk-spar: unknown profile "${name}"; known: ${Object.keys(PROFILES).join(', ')}`);
     const extra = extraJson ? JSON.parse(extraJson) as Profile : {};
     const { specBelow, ...options } = { ...scenario, ...profile, ...extra };

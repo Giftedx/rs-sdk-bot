@@ -17,7 +17,7 @@ test('a row sums its runs: the cost of a kill, and the kills of an hour with the
         { seed: 1, accounts: 4, kills: 3, gangDied: 3, died: 0, taken: 120, trips: 4, ticks: 600 },
         { seed: 2, accounts: 4, kills: 2, gangDied: 2, died: 0, taken: 180, trips: 4, ticks: 800 },
         { seed: 3, accounts: 4, kills: 3, gangDied: 3, died: 1, taken: 100, trips: 4, ticks: 700 },
-    ]);
+    ], 1154);
     expect(r).toMatchObject({ kills: 8, gang: 9, deaths: 1, hpAKill: 50, ticksARun: 700, accountTicksAKill: 1050, coinsAKill: 750 });
     // 8 kills in 3 runs, each run 700 ticks and a wait of 1,154 ticks: 9,000 * (8 / 3) / 1,854.
     expect(r.killsAnHour).toBe(12.9);

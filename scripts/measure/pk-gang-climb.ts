@@ -3,12 +3,18 @@
 //   bun scripts/measure/pk-gang-climb.ts <batch folder> [...]
 // A batch folder holds `bench.txt` (the output of `bun run bench <pattern> --seeds 1,2,3`) and `seed-<n>/<case>.log`
 // (the case logs, each with the RESULT line of scripts/pk-squad.ts). A condition is a case of a batch.
-// The cycle: a dead gang account is back on its post after `RETURN_TICKS` (the record, `death`), so a squad that holds
+// The cycle: a dead gang account is back on its post after the ticks of the record (group.json `returnToPost`), so a squad that holds
 // the post kills each of the three once in the ticks of a run plus that wait. A server hour has 9,000 ticks of 400 ms.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
 export const HOUR_TICKS = 9000, SHARK_COINS = 300, SHARK_HEAL = 20;
+// The wait for a dead gang account: the median of the record's ticks from a death to the post (group.json).
+export function returnTicks(file = join(import.meta.dir, '..', 'pk-gang-record', 'group.json')): number {
+    const f = JSON.parse(readFileSync(file, 'utf8')).returnToPost, a = [...((f?.value?.ticksAfterADeath ?? []) as number[])].sort((x, y) => x - y);
+    if (!a.length) throw Error('pk-gang-climb: the record holds no return of a dead gang account (group.json returnToPost)');
+    return a[Math.floor(a.length / 2)]!;
+}
 export type Run = { seed: number; accounts: number; kills: number; gangDied: number; died: number; taken: number; trips: number; ticks: number | null };
 export type Row = { batch: string; condition: string; runs: Run[]; kills: number; gang: number; deaths: number; hpAKill: number | null; ticksARun: number | null; killsAnHour: number | null; accountTicksAKill: number | null; coinsAKill: number | null };
 
@@ -26,7 +32,7 @@ export function parseTicks(bench: string): Map<string, (number | null)[]> {
     return out;
 }
 // One row: the sums over the runs. `gangSize` is the gang accounts of a run, `returnTicks` the wait for a dead one.
-export function row(batch: string, condition: string, runs: Run[], gangSize = 3, returnTicks = 1154): Row {
+export function row(batch: string, condition: string, runs: Run[], returnTicks: number, gangSize = 3): Row {
     const sum = (pick: (r: Run) => number) => runs.reduce((a, r) => a + pick(r), 0), kills = sum(r => r.kills), timed = runs.filter(r => r.ticks !== null);
     const ticksARun = timed.length ? sum(r => r.ticks ?? 0) / timed.length : null, hpAKill = kills ? sum(r => r.taken) / kills : null, accounts = runs[0]?.accounts ?? 0;
     return { batch, condition, runs, kills, gang: runs.length * gangSize, deaths: sum(r => r.died), hpAKill: hpAKill === null ? null : Math.round(hpAKill), ticksARun: ticksARun === null ? null : Math.round(ticksARun),
@@ -41,7 +47,7 @@ export function batchRows(dir: string): Row[] {
         const run = parseRun(readFileSync(join(dir, `seed-${seed}`, file), 'utf8'), seed, ticks.get(key)?.[at] ?? null);
         if (run) (byCase.get(key) ?? byCase.set(key, []).get(key)!).push(run);
     }
-    return [...byCase].sort((a, b) => a[0].localeCompare(b[0])).map(([key, runs]) => row(basename(dir), key, runs));
+    return [...byCase].sort((a, b) => a[0].localeCompare(b[0])).map(([key, runs]) => row(basename(dir), key, runs, returnTicks()));
 }
 
 if (import.meta.main) {
