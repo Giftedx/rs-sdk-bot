@@ -34,6 +34,8 @@ test('owned magic endpoints reach the stack, new profiles, registration and ever
  expect(registration[1]).toContain(JSON.stringify(`SERVER=${p.server}`));
  expect(registration[1]).toContain(JSON.stringify(`GATEWAY_URL=${p.gateway}`));
  expect(registration[1]).toContain('openBot(');
+ // The registration is the mapped observe entry: with no script the progression session ends it as unmapped.
+ expect(registration[1]).toContain("record:{script:'scripts/session-check.ts',argv:["+JSON.stringify('fixture')+"]}");
  expect(registration[1]).toContain('finish([session]');
  for(const args of [registration,['scripts/magic-order.ts','fixture']]){
   const child=magicChildConfiguration(args,{TARGET_LEVEL:'37',MAX_CASTS:'5',CAP:'1500'},p,{GATEWAY_URL:'ws://localhost:7780',WEB_MANAGEMENT_PORT:'8898',NODE_PORT:'43594'});
