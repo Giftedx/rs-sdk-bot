@@ -1,0 +1,22 @@
+{
+ "id": "1794999183162-yewfirst-moneyshot-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "Moneyshot",
+ "item": "Nature rune",
+ "count": 19,
+ "start": 1794999183162,
+ "end": 1795001583162,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
