@@ -1,0 +1,22 @@
+{
+ "id": "1795008936820-shaftsinker-pocketrocket-woodenshield",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftsinker",
+ "to": "Pocketrocket",
+ "item": "Wooden shield",
+ "count": 1,
+ "start": 1795008936820,
+ "end": 1795011336820,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
