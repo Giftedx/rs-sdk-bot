@@ -238,6 +238,8 @@ export type FightOptions = {
     readOverheads?: boolean;
     // false: no protect prayer over the head, whatever the opponent holds.
     overheadPrayer?: boolean;
+    // The style that the threat radar wants covered when no player hits us yet (scripts/pk-threat.ts), read each tick.
+    threatPrayer?: () => Style | null;
     // Ticks for which a protect prayer stays once it is on, whatever the opponent holds then (default 0: the prayer
     // follows the opponent each tick).
     overheadHold?: number;
@@ -1347,7 +1349,10 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             for (const p of facers) { const w = observePlayer(s.client, p.index); const st = weaponStyle(w?.worn[3]); n.set(st, (n.get(st) ?? 0) + 1); }
             return [...n].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
         })() : null;
-        let wantedOverhead = o.overheadPrayer === false ? null : crowdStyle ? PROTECT_FROM[crowdStyle] : hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
+        // threatPrayer: the style of a threat that is not the opponent (the threat radar of scripts/pk-threat.ts). A hitter, the opponent's
+        // own hits, still come first.
+        const threatStyle = o.threatPrayer?.() ?? null;
+        let wantedOverhead = o.overheadPrayer === false ? null : crowdStyle ? PROTECT_FROM[crowdStyle] : hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : threatStyle ? PROTECT_FROM[threatStyle] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
         if (o.prayerLag?.length) {
             if (lagHas === undefined) lagWant = lagHas = wantedOverhead;
             else if (wantedOverhead !== lagWant) { lagWant = wantedOverhead; lagAt = now + pickWeighted(o.prayerLag, rand); }

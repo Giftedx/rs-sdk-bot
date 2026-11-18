@@ -294,7 +294,16 @@ export function unfilledItems(lines: readonly string[]): number[] {
     return [...out];
 }
 export type EndedRecord = { at?: number; reason?: string };
-export type JobRunStatus = { active?: boolean; ended?: EndedRecord };
+// `logSize` and `now`: the size of the job's log file and the clock. A job that is not active and whose log has not grown since
+// its assignment never started (the swarm writes a header into the log at each start), so no process can hold an offer for it.
+export type JobRunStatus = { active?: boolean; ended?: EndedRecord; logSize?: number; now?: number };
+// How long a written job may wait for the swarm to start it before a pass counts it as never started: the swarm starts a job within
+// its next ticks, and a start that waits for memory or a stop file is no start.
+export const JOB_START_GRACE_MS = 10 * 60_000;
+export function neverStarted(assigned: { offset: number; at?: number } | undefined, status?: JobRunStatus): boolean {
+    return !!assigned && !!status && !status.active && status.logSize !== undefined && status.now !== undefined && typeof assigned.at === 'number'
+        && status.logSize <= assigned.offset && status.now - assigned.at > JOB_START_GRACE_MS;
+}
 export function readSwarmActiveAccounts(file: string): Set<string> {
     const runs = readJson(file, null);
     if (!Array.isArray(runs)) return new Set();
@@ -332,6 +341,7 @@ export function kitBuyRunning(job: any, assigned: { template: string; offset: nu
     // A gear shop trip (scripts/shop-buyer.ts through the gear pass) is finite like a maker: it holds its account until its RESULT.
     const finite = finiteMaker || isGearShop(job?.template);
     if (!job?.enabled || typeof job.template !== 'string' || (!job.template.startsWith(KIT_BUY) && !finite) || !assigned || assigned.template !== job.template) return false;
+    if (neverStarted(assigned, ctx)) return false;
     const lines=linesSince(assigned.offset);
     const r = assess(finite?lines.filter(l=>l.startsWith('RESULT ')):lines);
     if (r.ok + r.fail + r.drains > 0) return false;
@@ -654,7 +664,8 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     const fleetDir = FLEET_DIR(), now = Date.now();
     const activeAccounts = readSwarmActiveAccounts(join(prac, 'swarm-runs.json'));
     const endedAccounts = readSwarmEnded(join(prac, 'swarm-deaths.json'));
-    const ctxFor = (acct: string): JobRunStatus => ({ active: activeAccounts.has(acct.toLowerCase()), ended: endedAccounts.get(acct.toLowerCase()) });
+    const logSizeOf = (acct: string): number | undefined => { try { return statSync(join(prac, 'swarm-logs', `${acct}.log`)).size; } catch { return undefined; } };
+    const ctxFor = (acct: string): JobRunStatus => ({ active: activeAccounts.has(acct.toLowerCase()), ended: endedAccounts.get(acct.toLowerCase()), logSize: logSizeOf(acct), now });
     const diedAccounts = new Set<string>();
     for (const [acctLower, rec] of endedAccounts) {
         if (!activeAccounts.has(acctLower) && /^died\b/.test(rec.reason ?? '')) diedAccounts.add(acctLower);
@@ -904,6 +915,8 @@ export function trainersDone(planFile: string): string[] {
         && j.enabled && state.assigned[j.account]?.template === j.template && !kitBuyRunning(j, state.assigned[j.account], offset => since(j.account, offset, j), false, {
             active: activeAccounts.has(j.account.toLowerCase()),
             ended: endedAccounts.get(j.account.toLowerCase()),
+            logSize: (() => { try { return statSync(join(prac, 'swarm-logs', `${j.account}.log`)).size; } catch { return undefined; } })(),
+            now: Date.now(),
         })).map(j => j.account as string);
     return [...finishedTrainers(effectiveJobs, side, state.assigned, catalogue(), since), ...buys]
         .map(a => `${a}:${state.assigned[a]!.template}:${state.assigned[a]!.offset}`);

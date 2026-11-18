@@ -33,6 +33,7 @@ import type { NearbyNpc } from '../vendor/rs-sdk/sdk/types';
 import { giantStyle } from './gather-combat';
 import { BLACK_BANK, blackKit, combatTrip, varrockTeleport } from './microbot-combat-trip';
 import { walkTargetPersist } from './walk-to';
+import { reconcileLoadout } from './gear-reconcile';
 
 export type Tile = { x: number; z: number };
 export const BLACK_DRAGON = { npc: 54, size: 4, hitpoints: 190, hide: 1747, bones: 536, safe: { x: 2835, z: 9820 } as Tile, range: 5, spawns: [{ x: 2829, z: 9826 }, { x: 2835, z: 9824 }] as Tile[] } as const;
@@ -140,7 +141,8 @@ export async function runBlackDragonCamp(s: Session, o: { cap: number; kills: nu
             if (alive()) { await backToSafe(); strays--; await pray(false); }
         }
         const picked = inv().find(i => i.id === ammo);
-        if (picked) { await s.bot.equipItem(picked); await waitUntil(s, () => held(ammo) === 0, { timeoutTicks: 5 }); }
+        // The one kit path (scripts/gear-reconcile.ts): the bow and the arrow kind are the camp's (pin), the picked arrows are worn into the quiver stack.
+        if (picked) { await reconcileLoadout(s, { style: 'ranged', trainSkill: 'ranged', pin: { weapon: eq().find(i => i.slot === 3)!.id, ammo }, label: 'camp ammo' }); await waitUntil(s, () => held(ammo) === 0, { timeoutTicks: 5 }); }
     };
     try {
         if (initialRetaliate) { await s.direct({ type: 'clickComponent', componentId: 151, reason: 'camp holds its tile' }); if (!await waitUntil(s, () => st()?.autoRetaliateEnabled === false, { timeoutTicks: 8 })) throw Error('auto-retaliate off unobserved'); }

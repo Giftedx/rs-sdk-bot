@@ -69,6 +69,13 @@ describe('rev289 name sweep', () => {
         expect(faults.map(f => f.text)).toEqual(['/^zulrah$/i']);
     });
 
+    test('the label of a reconcileLoadout call is error text, not a name', () => {
+        const faults = scanText(`await reconcileLoadout(s, { style: 'magic', pin: {}, label: 'alch stage' });
+await other(s, { label: 'alch stage', a: 'Bronze axe', b: 'Shark', c: 'Rune scimitar' });`);
+        expect(faults.filter(f => f.file.endsWith(':1'))).toEqual([]);
+        expect(faults.some(f => f.file.endsWith(':2') && f.text === 'alch stage')).toBe(true);
+    });
+
     test('scripts and packages hold no name that the revision-289 content lacks', () => {
         const scan = scanNames();
         expect(scan.namesChecked).toBeGreaterThan(500);

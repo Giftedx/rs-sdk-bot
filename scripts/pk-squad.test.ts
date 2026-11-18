@@ -429,3 +429,32 @@ test('the squad end line names the accounts that died, right after the account c
     const long = squadEnd({ ...base, deaths: 1, diedAccounts: ['Squad3'], picked: { 884: 3, 1231: 2, 385: 40, 995: 99999 }, dropped: ['A', 'B'], stranded: ['C'] });
     expect(('SUPERVISE run 1 exit 1: RESULT fail ' + long.detail).slice(0, 200)).toContain('diedAccounts=Squad3');
 });
+
+// The threat radar in the hold loop: with no target, a member that a threat can hit holds the protect prayer of the threat's style.
+async function holdWithThreats(act: boolean) {
+    const w = squadWorld(), toggles: number[] = [];
+    let t = 0;
+    w.s.tick = () => t;
+    w.s.sdk.sendTogglePrayer = async (i: number) => { toggles.push(i); };
+    const threats: any = { act, step: () => ({ classes: [], actions: [{ kind: 'protect', member: 'Soldier', style: 'magic', reason: 'Mage magic by weapon, 4 tiles' }] }) };
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockResolvedValue({ ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { t++; return true; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+    ];
+    try {
+        await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3066, z: 3641 }, options: { kit: {} }, allies: [], pickup: false, trips: 3, deadline: 400, stopped: () => t >= 12, killsLeft: () => true, log: () => {}, threats });
+        return toggles;
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+}
+
+test('with a threat that can hit it and no target, a member holds the protect prayer of the threat style (Protect from Magic is prayer 12)', async () => {
+    const toggles = await holdWithThreats(true);
+    expect(toggles.length).toBeGreaterThan(0);
+    expect(new Set(toggles)).toEqual(new Set([12]));
+});
+
+test('with act off the threat watch changes nothing in the hold loop', async () => {
+    expect(await holdWithThreats(false)).toEqual([]);
+});

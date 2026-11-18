@@ -189,3 +189,14 @@ test('printWants prints a want once, and again only when its item or source chan
     expect(lines.length).toBe(4);
     expect(lines[0]).toStartWith('GEAR_WANT ');
 });
+
+test('only names the slots that are worn: the weapon of a splash kit without the armour that the loadout also holds',async()=>{
+    const f=fixture({inv:[1333,1115]});
+    try{
+        const r=await reconcileLoadout(f.session,{style:'melee',levels:LEVELS,only:['weapon']});
+        expect(f.worn(1333)).toBe(true);expect(f.worn(1115)).toBe(false);
+        expect(r.targets.map(t=>t.slot)).toEqual(['weapon']);
+        const all=fixture({inv:[1333,1115]});
+        try{await reconcileLoadout(all.session,{style:'melee',levels:LEVELS});expect(all.worn(1115)).toBe(true);}finally{all.dispose();}
+    }finally{f.dispose();}
+});

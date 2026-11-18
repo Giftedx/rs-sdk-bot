@@ -103,6 +103,22 @@ test('a finished repeating job that a hold keeps stops repeating; every other jo
     expect(mergeJobs([job('Held')],side,[],new Set(),finished).jobs).toEqual([]);
 });
 
+test('a kit buy that never started is not running: no process ran since its assignment, so no offer is open',()=>{
+    const job={account:'Idle',enabled:true,template:'kit-buy:army-weapon'},assigned={template:'kit-buy:army-weapon',offset:500,at:1_000_000};
+    const late=1_000_000+JOB_START_GRACE_MS+1;
+    // The log has not grown since the assignment, no run is active, and the grace has passed: not running (a stop file kept the swarm from starting it).
+    expect(kitBuyRunning(job,assigned,()=>[],false,{active:false,logSize:500,now:late})).toBe(false);
+    expect(neverStarted(assigned,{active:false,logSize:500,now:late})).toBe(true);
+    // Inside the grace, a grown log, an active run or an unknown log size: still running.
+    expect(kitBuyRunning(job,assigned,()=>[],false,{active:false,logSize:500,now:1_000_000+JOB_START_GRACE_MS})).toBe(true);
+    expect(kitBuyRunning(job,assigned,()=>[],false,{active:false,logSize:640,now:late})).toBe(true);
+    expect(kitBuyRunning(job,assigned,()=>[],false,{active:true,logSize:500,now:late})).toBe(true);
+    expect(kitBuyRunning(job,assigned,()=>[],false,{active:false,now:late})).toBe(true);
+    expect(kitBuyRunning(job,{...assigned,at:undefined},()=>[],false,{active:false,logSize:500,now:late})).toBe(true);
+    // The old end record of an earlier job (before the assignment) does not make a started job look ended.
+    expect(kitBuyRunning(job,assigned,()=>[],false,{active:false,logSize:640,now:late,ended:{at:900_000,reason:'exit 4'}})).toBe(true);
+});
+
 test('a declared finite maker keeps its exact pending mission until its own terminal result',()=>{
     const t=aioTemplates().find(t=>t.id==='aio-sapphire-rings')!,side='local';
     const job=jobFor({account:'Crafter',template:t,value:1,reason:'useful ring',resources:[]},side),assigned={template:t.id,offset:12};
@@ -646,7 +662,7 @@ test('a fresh side plan cannot refresh stale donor bank stock or count worn kit 
     expect(stock.find(s=>s.name==='Future')?.items).toEqual({'mind rune':10});
 });
 
-import { failedSends, kitBuyRunning, SEND_RETRY_MS } from './autopilot';
+import { failedSends, JOB_START_GRACE_MS, kitBuyRunning, neverStarted, SEND_RETRY_MS } from './autopilot';
 test('a failed item order stops new orders for that pair for a day; coin orders and old orders do not', () => {
     const order = (id: string, item: string, start: number) => ({ id, server: 'rs-sdk-demo.fly.dev', from: 'Near', to: 'Needy', item, count: 20, start, end: start + 40 * 60_000 });
     const now = 10 * 3600_000;
