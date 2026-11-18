@@ -209,6 +209,25 @@ hour, the high number the pilot cost at 33 kills an hour (estimates).
 | Antipoison(3) | 3 to 5 potions; one in each pack at each trip | the cure of each squad account | `jiminua`: 10 potions for 4,575 coins and 60 coins of fares in 250 ticks from the Ardougne south bank (`extra:shop-jiminua`) |
 | Law rune, air rune | 1 law and 5 air for each escape; 2 and 10 in each pack | Camelot Teleport | owned stock; `magic_guild`, `aubury` |
 
+- **Antipoison by Herblore.** Claim: one account makes antipoison(3) at about 65 an hour, and the unicorn horns set
+  that rate. Recipe (`brew_potion.struct`): marrentill and a vial of water give an unfinished potion, a unicorn horn
+  ground with a pestle and mortar gives the dust, and the two give antipoison(3) at Herblore 5 (Druidic Ritual).
+  Conditions: the two unicorns south of Edgeville (npc 89 at 3084,3454 and 3090,3450, 45 tiles from the Edgeville
+  bank), an account with Attack and Strength 60 and a rune scimitar; a unicorn always drops one horn, comes back 180 ticks after its death (`respawnrate=180`), does not
+  attack first and runs at 6 Hitpoints or less (`retreat,6`). The two tiles are outside the Wilderness and inside a
+  multi-way zone (`scripts/pk.ts` `isMulti`), where no player can attack. Evidence, seeds
+  7 to 9: `fighter:unicorn` (`scripts/gather-combat.ts` `TARGET=unicorn MAX_KILLS=4`) makes 4 kills and banks 4 horns
+  in 293, 297 and 301 ticks, with one wait of 138 ticks for the two to come back; `extra:antipoison-grind`, `-unf` and
+  `-brew` (`scripts/microbot-production.ts` recipes `grind:unicorn_horn`, `brew:unf_marrentill_potion`,
+  `brew:3doseantipoison`) each make and bank 3 units in 18, 21 and 24 ticks, so a potion costs about 21 ticks at the
+  bank. Two horns each 180 ticks are about 65 an hour. Gap: the rate is an estimate from the respawn rate and one wait in each run; no
+  live run; another player at the two unicorns takes kills.
+- **Marrentill.** The Grand Exchange is the short source: a chaos druid gives a herb in 35 of 128 kills and the herb
+  is marrentill in 24 of 128 (`chaos_druid.rs2`, `shared_droptables.rs2` `randomherb`), one marrentill in about 20
+  kills. The pestle and mortar and the vials of water have shop lines (`taverley`, `jiminua`).
+- **Jiminua's shelf.** Other players empty it: the shelf held 0 antipoisons and, about 650 ticks later, 1, where
+  the content gives one back each 150 ticks. The last unit costs 483 coins (cost 288, `shop_sell_multiplier` 1500, `shop_delta` 20, normal stock 10).
+
 The kit holds no prayer potion and no boost: the cheapest measured method uses none
 ([pvp-fight-loop](pvp-fight-loop.md), "The cost of a kill").
 
