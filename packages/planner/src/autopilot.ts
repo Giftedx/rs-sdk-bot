@@ -68,6 +68,10 @@ export type Template = {
     // A quest run: a candidate until the account's status reports the quest complete, and worth a share of each job
     // the quest unlocks (as a trainer is). It does not repeat.
     quest?: { name: string; unlocks: string[] };
+    // A shop step for a maker: it buys one `item` that a shop sells and no market lists (a ring mould), and is a candidate
+    // only for an account that lacks the item and meets every other need of an admitted maker of `unlocks`. It is worth
+    // a share of that maker, as a trainer is worth a share of the job it unlocks.
+    provides?: { item: string; unlocks: string[] };
     // A goal band whose target is a holding: it stands while the account holds fewer than `to` of `item`.
     stock?: { item: string; to: number };
     // Kit lines the band's own supply job buys instead of the market.
@@ -866,6 +870,19 @@ export function plan(inp: Inputs): Assignment[] {
             }
             continue;
         }
+        if (t.provides) {
+            // A shop step for a maker. The item is the one input the maker lacks: every other need is met.
+            const item = norm(t.provides.item), held: Acct = { ...a, items: { ...a.items, [item]: Math.max(1, a.items[item] ?? 0) } }, before = cands.length;
+            if ((a.items[item] ?? 0) >= 1) continue;
+            if (coinShort(a, t.needs) > 0 || !meets(a, withoutCoins(t.needs))) { miss(a, t, coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)) ? 'coins' : 'needs'); continue; }
+            for (const u of t.provides.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
+                if (!meets(held, u.needs)) continue;
+                const value = TRAIN_SHARE * valueOf(u, held);
+                if (value > 0) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `buys a ${t.provides.item} for ${u.id}`, supply: { template: u, account: held, share: TRAIN_SHARE } });
+            }
+            if (cands.length === before) miss(a, t, 'demand');
+            continue;
+        }
         if (t.trains) {
             if ((a.skills[t.trains.skill] ?? 1) >= t.trains.to) continue;
             if (!meets(a, t.needs)) { miss(a, t, 'needs'); continue; }
@@ -1457,7 +1474,7 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     'catherby:lobster': CATHERBY_BANK, [AIO_PLACES.flax]: { x: 2744, z: 3445 }, [AIO_PLACES.yews]: SEERS_BANK,
     'shop:ardy': { x: 2654, z: 3283 }, 'shop:catherby': CATHERBY_BANK, 'shop:catherby_arrows': CATHERBY_BANK, 'shop:dargaud': SEERS_BANK, 'shop:magic_guild': { x: 2612, z: 3093 },
     'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
-    'shop:zeke': { x: 3269, z: 3167 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
+    'shop:zeke': { x: 3269, z: 3167 }, 'shop:dommik': { x: 3269, z: 3167 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
 };
 // A template's place: its first resource with one. A chicken pen carries its tile, and a knight spot has the bank.
 export function placeOf(t: Pick<Template, 'resources'>): Spot | undefined {
@@ -1818,6 +1835,20 @@ export function aioTemplates(): Template[] {
 //   the potato goes in first, then the meat. One run makes up to STEW_BATCH useful stews, bounded by complete owned
 //   recipes; both steps receive that count. The rate is half that of one recipe, as a stew takes two. Gaps: no
 //   practice run makes this chain, and no template finishes an incomplete stew left by a failed second step.
+// The shop step of a maker whose only missing input is a ring mould: Dommik's Crafting Store in Al Kharid sells it
+// (scripts/shop-buyer.ts profile dommik: ring mould, shelf 4). The mould costs 5 coins in the item data and the run
+// stops at the first one held (STOCK_TARGET 1). It unlocks the four gem ring makers (GEM_RINGS); a ring maker that the
+// plan's `aio` list does not name is not unlocked.
+export const RING_MOULD_COINS = 100;
+export function makerShopSteps(): Template[] {
+    return [{
+        id: 'shop-ring-mould', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['dommik', '600'],
+        env: { ITEMS: 'ring mould', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(RING_MOULD_COINS), COIN_RESERVE: '50', MAX_SPEND: '50' },
+        role: 'supply', goal: "buy a ring mould from Dommik's Crafting Store in Al Kharid for the ring makers", repeats: false,
+        resources: ['shop:dommik'], yields: () => [], provides: { item: 'ring mould', unlocks: GEM_RINGS.map(([gem]) => `aio-${gem}-rings`) },
+        needs: { items: { coins: RING_MOULD_COINS }, holdsUnder: { 'ring mould': 1 } },
+    }];
+}
 export function makerChains(): Template[] {
     const step = (recipe: string, max: number, cap = 1500) => `scripts/aio.ts skiller crafting inventory ${recipe} MAX_MAKE=${max} CAP=${cap} MEMBERS=1 ORDER_MODE=best-effort`;
     const chain = (id: string, steps: string[], rest: Pick<Template, 'role' | 'goal' | 'needs' | 'yields' | 'repeats'|'production'>): Template =>
@@ -2367,6 +2398,7 @@ export function catalogue(): Template[] {
             yields: () => [{ item: 'rune arrow', perTick: ARROW_LOW / 800 }], spends: () => [{ item: 'coins', perTick: RUNE_ARROW_COST / 800 }] },
         ...aioTemplates(),
         ...makerChains(),
+        ...makerShopSteps(),
     ];
 }
 

@@ -2768,3 +2768,28 @@ test('the stale-observation note follows only a missing source, not a coin lack'
     expect(coin.reason).toMatch(/coins/);
     expect(coin.reason).not.toMatch(/observation/);
 });
+
+test('a ring maker that lacks only the mould gets the Dommik shop trip first, behind the pilot gate and the other needs', () => {
+    const rings = [...aioTemplates().filter(t => /^aio-\w+-rings$/.test(t.id)), ...catalogue().filter(t => t.id === 'shop-ring-mould')];
+    const diamond = { Crafting: 43 }, kit = { 'gold bar': RING_BATCH, diamond: RING_BATCH, coin: 5_000 };
+    const bill = [row('diamond ring', 81), row('emerald ring', 46)];
+    const run = (a: Acct, pilots: string[] = ['aio-diamond-rings'], extra: Partial<Inputs> = {}) => plan(inputs([a], { templates: rings, bill, prices: { 'diamond ring': 3525, 'emerald ring': 1275 }, capacity: CAPACITY, pilots: new Set(pilots), ...extra }))[0]!;
+    // The three makers of the finding: each holds the bars, the gems and the Crafting level, and no mould.
+    for (const name of ['TrouserSnake', 'UnderMyKilt', 'TheFullMonty']) {
+        const out = run(acct(name, { Attack: 99, Strength: 99, Defence: 99, ...diamond }, kit));
+        expect(`${name} ${out.template?.id} ${out.reason}`).toBe(`${name} shop-ring-mould buys a ring mould for aio-diamond-rings`);
+        expect(out.resources).toEqual(['shop:dommik']);
+        expect(jobFor(out, side).args).toEqual(['dommik', '600']);
+    }
+    // Holding the mould, the maker itself runs and the shop is skipped.
+    expect(run(acct('A', diamond, { ...kit, 'ring mould': 1 })).template?.id).toBe('aio-diamond-rings');
+    // A maker the aio list does not name is not unlocked, so no shop trip; a missing bar or gem means the trip alone does not unlock it.
+    expect(run(acct('A', diamond, kit), []).template).toBeUndefined();
+    expect(run(acct('A', diamond, { ...kit, 'gold bar': 0 })).template).toBeUndefined();
+    expect(run(acct('A', { Crafting: 42 }, kit)).template).toBeUndefined();
+    // Without the 100 coins the trip needs there is no shop job, and the reason names the coins.
+    expect(run(acct('A', diamond, { ...kit, coin: 10 })).template).toBeUndefined();
+    // Dommik's shelf serves one account at a time.
+    const two = plan(inputs([acct('A', diamond, kit), acct('B', diamond, kit)], { templates: rings, bill, prices: { 'diamond ring': 3525 }, capacity: CAPACITY, pilots: new Set(['aio-diamond-rings']) }));
+    expect(two.filter(x => x.template?.id === 'shop-ring-mould')).toHaveLength(1);
+});

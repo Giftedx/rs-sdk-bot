@@ -1076,10 +1076,12 @@ test('the fare of the reach rule is the fare the shared walker asks for', async 
     expect(fare('npc:borderguard2:lumbridge-side-west-of-the-toll-gate@3268,3226')).toBe(TOLL);
 });
 
-test('the place of each shop job is the bank of its shop profile, and the reach rule covers 65 of the 123 templates', () => {
+test('the place of each shop job is the bank of its shop profile, and the reach rule covers each template with a place resource', () => {
     for (const [resource, spot] of Object.entries(PLACES)) if (resource.startsWith('shop:')) expect([resource, spot]).toEqual([resource, PROFILES[resource.slice(5)]!.bankSpot]);
     // The templates the reach rule covers, of the whole catalogue.
-    expect([catalogue().filter(t => placeOf(t)).length, catalogue().length]).toEqual([65, 123]);
+    // A template has a place when one of its resources is a knight spot, a chicken pen or a place of PLACES: the count follows the data.
+    const hasPlace = (t: { resources?: string[] }) => (t.resources ?? []).some(r => r.startsWith('knight:') || /^pen:\d+,\d+$/.test(r) || r in PLACES);
+    expect(catalogue().filter(t => placeOf(t)).map(t => t.id)).toEqual(catalogue().filter(hasPlace).map(t => t.id));
     // The knight job's first walk from far away is to the bank that the planner names for each knight spot.
     const goldfarm = readFileSync(resolve(import.meta.dir, 'goldfarm.ts'), 'utf8');
     expect(goldfarm).toContain(`walkTargetPersist(s, { x: ${KNIGHT_BANK.x}, z: ${KNIGHT_BANK.z}, level: 0 })`);
@@ -1338,4 +1340,9 @@ test('the stock freshness of the donor rule is the one OBSERVATION_FRESH_MS', ()
 test('unobservedAccounts reads the observation time alone', () => {
     const now = 10 * 3_600_000, at: Record<string, unknown> = { Fresh: now - 60_000, Old: now - 31 * 60_000, Edge: now - 30 * 60_000, Future: now + 1, Missing: undefined, Text: 'x', Zero: 0, Empty: now - 1000 };
     expect(unobservedAccounts(Object.keys(at), n => at[n], now)).toEqual(['Old', 'Edge', 'Future', 'Missing', 'Text', 'Zero']);
+});
+
+test('the ring mould shop step selects the Dommik mould line with the real selectItems', () => {
+    const t = catalogue().find(x => x.id === 'shop-ring-mould')!;
+    expect(selectItems(PROFILES[t.args![0]!]!.items, t.env!.ITEMS).map(i => i.re.source)).toEqual(['^ring mould$']);
 });
