@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { hostNames, parseOptions, separateNames, summarize } from './host-memory';
+import { hostNames, lastLines, parseOptions, separateNames, summarize } from './host-memory';
 
 test('the options read the bot, the worker, the env pairs, the limits and the worker args after --', () => {
     expect(parseOptions(['Bot', 'scripts/x.ts', '--env', 'A=1', '--env', 'B=two=2', '--max-s', '100', '--stagger-ms', '500', '--', '300', 'druid'])).toEqual({
@@ -20,4 +20,10 @@ test('the summary sums the processes, takes the peak of the sum and a steady mea
     const samples = [{ at: 1000, rss: [102400, 102400] }, { at: 31_000, rss: [204800, 102400] }, { at: 32_000, rss: [204800, 204800] }];
     expect(summarize(samples)).toEqual({ samples: 3, meanMB: 300, peakSumMB: 400, steadyMeanMB: 350 });
     expect(summarize([])).toEqual({ samples: 0, meanMB: 0, peakSumMB: 0, steadyMeanMB: 0 });
+});
+
+test('the last lines of an output are the non-empty ones, joined and cut', () => {
+    expect(lastLines('a\n\nb\r\nc\nd\n', 3)).toBe('b | c | d');
+    expect(lastLines('x'.repeat(300), 1)).toBe('x'.repeat(200));
+    expect(lastLines('', 3)).toBe('');
 });

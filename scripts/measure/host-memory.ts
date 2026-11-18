@@ -43,13 +43,22 @@ export function parseOptions(argv: readonly string[]): Options {
     if (!Number.isFinite(maxS) || maxS <= 0 || !Number.isFinite(staggerMs) || staggerMs < 0) throw Error('--max-s and --stagger-ms need numbers');
     return { bot, worker, env, maxS, staggerMs, args: rest.slice(i + 1) };
 }
+// The last `n` non-empty lines, joined with ` | `, each cut to 200 characters.
+export const lastLines = (text: string, n: number) => text.split(/\r?\n/).filter(l => l.trim()).slice(-n).map(l => l.trim().slice(0, 200)).join(' | ');
 export const hostNames = (bot: string) => [bot, `${bot}b`, `${bot}c`, `${bot}d`];
 export const separateNames = (bot: string) => ['e', 'f', 'g', 'h'].map(s => `${bot}${s}`);
 
 async function measure(mode: 'host' | 'separate', o: Options): Promise<{ line: string; ok: boolean }> {
     const env = { ...process.env, ...o.env } as Record<string, string>;
     const start = Date.now(), procs: ReturnType<typeof Bun.spawn>[] = [];
-    const spawn = (cmd: string[]) => Bun.spawn(cmd, { env, stdout: 'ignore', stderr: 'ignore', windowsHide: true });
+    const tails: Promise<string>[] = [];
+    // The last lines of a process's output tell why a bot ended early (a login failure prints one RESULT line and exits).
+    const spawn = (cmd: string[]) => {
+        const p = Bun.spawn(cmd, { env, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+        tails.push(Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text()]).then(([a, b]) => lastLines(`${a}
+${b}`, 3)));
+        return p;
+    };
     if (mode === 'host') procs.push(spawn(['bun', 'packages/core/src/host.ts', o.worker, ...hostNames(o.bot), '--stagger-ms', String(o.staggerMs), ...o.args.flatMap(a => ['--arg', a])]));
     const samples: Sample[] = [], peak: number[] = [];
     const sample = () => {
@@ -63,6 +72,7 @@ async function measure(mode: 'host' | 'separate', o: Options): Promise<{ line: s
     const codes = await Promise.all(procs.map(p => p.exited));
     clearInterval(timer); clearTimeout(deadline); sample();
     const sum = summarize(samples);
+    for (const [i, tail] of (await Promise.all(tails)).entries()) console.log(`HOSTMEM-OUT mode=${mode} process=${i} ${tail}`);
     const line = `HOSTMEM worker=${o.worker} mode=${mode} bots=4 processes=${procs.length} samples=${sum.samples} meanMB=${sum.meanMB} peakSumMB=${sum.peakSumMB} peakEachMB=${peak.map(mb).join(',')} steadyMeanMB=${sum.steadyMeanMB} seconds=${Math.round((Date.now() - start) / 1000)} exits=${codes.join(',')}`;
     return { line, ok: sum.samples > 0 };
 }

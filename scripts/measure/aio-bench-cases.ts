@@ -1579,7 +1579,7 @@ const EXTRA_CASES: BenchCase[] = [
   // The resident memory of 4 bots of one worker in one host process against 4 separate processes (scripts/measure/host-memory.ts,
   // linux only). The accounts <bot>b to <bot>h take the preset of the main account: <bot>, b, c and d run in the host, e to h apart.
   {key: 'extra:host-memory-gather', script: 'scripts/measure/host-memory.ts', preset: 'gather_combat_druid',
-    scriptArgs: ['scripts/gather-combat.ts', '--env', 'TARGET=druid', '--env', 'CAP=6000', '--max-s', '200', '--', '250', 'druid'],
+    scriptArgs: ['scripts/gather-combat.ts', '--env', 'TARGET=druid', '--env', 'CAP=6000', '--max-s', '300', '--', '250', 'druid'],
     pass: hostMemoryPass, timeoutMs: 600_000, companions: HOST_MEMORY_COMPANIONS.map(suffix => ({suffix, preset: 'gather_combat_druid'}))},
   {key: 'extra:host-memory-shop', script: 'scripts/measure/host-memory.ts', preset: 'fresh_lumbridge',
     scriptArgs: ['scripts/shop-buyer.ts', '--env', 'ITEMS=Iron scimitar', '--env', 'STOCK_TARGET=1', '--env', 'STOP_AT_TARGET=1', '--env', 'BANK_PACK=1', '--env', 'BANK_AT=0', '--env', 'NO_BUY_TICKS=25',
