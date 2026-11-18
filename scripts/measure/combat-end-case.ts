@@ -29,7 +29,9 @@ if (import.meta.main) {
             },
         });
         console.log(`COMBAT_END_CASE ${JSON.stringify({ stop: r.stop, failure: r.failure, creditedKills: r.creditedKills, at: at() })}`);
-        // The run failed on purpose (its retreat was refused). The case passes on the end step of the result line.
-        await finishCombat(s, false, `mode=combat-end-case stop=${r.stop} creditedKills=${r.creditedKills} runFailure=${JSON.stringify(r.failure)}`);
+        // The trainer's retreat was refused on purpose, so its failure is the fixture and not the result. The worker
+        // ends with ok=true: the settlement turns it into a failure (exit 1) when the logout is not confirmed, and the
+        // bench harness takes only an exit code of 0 as a pass.
+        await finishCombat(s, true, `mode=combat-end-case stop=${r.stop} creditedKills=${r.creditedKills} runFailure=${JSON.stringify(r.failure)}`);
     } catch (e) { await finishCombat(s, false, `mode=combat-end-case error=${JSON.stringify(String(e).slice(0, 160))}`); }
 }
