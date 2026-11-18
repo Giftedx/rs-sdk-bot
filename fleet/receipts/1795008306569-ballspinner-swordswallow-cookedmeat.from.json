@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795008306569-ballspinner-swordswallow-cookedmeat",
+ "account": "Ballspinner",
+ "partner": "Swordswallow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "9d2d540e-a3d2-44ee-b30e-2d58c5e4c612",
+ "count": 0,
+ "ok": false,
+ "at": 1795008436855,
+ "detail": "trade claimed"
+}

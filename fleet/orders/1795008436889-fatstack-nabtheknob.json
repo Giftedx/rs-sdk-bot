@@ -1,0 +1,22 @@
+{
+ "id": "1795008436889-fatstack-nabtheknob",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "NabTheKnob",
+ "item": "coins",
+ "count": 150288,
+ "start": 1795008436889,
+ "end": 1795010836889,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
