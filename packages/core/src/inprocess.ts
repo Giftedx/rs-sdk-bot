@@ -28,6 +28,7 @@ import {attachProgressionSession,preflightProgressionWork,processWork,type Progr
 import type {WorkDescriptor} from './progression-policy';
 // The longest single hold of a lockstep tick for a route search, under the 60 s idle limit of the client session.
 export const ROUTE_HOLD_MS = 45_000;
+export const routeHold = (routeMs: number): number => Math.min(routeMs, ROUTE_HOLD_MS);
 // The wait checks of every lockstep session of this process (selfWaiting in createShim).
 const waitingSessions = new Set<() => boolean>();
 // The executors that wait for the server to open a count dialog (a withdraw or deposit of X): the dialog comes in
@@ -175,14 +176,14 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     const busyMs = Number(process.env.SIM_BUSY_MS ?? 2000);
     const scriptMs = Math.min(busyMs, Number(process.env.SIM_SCRIPT_MS ?? 500));
     // A route search off the game thread (route-plan.ts) holds the tick until it ends: no game tick passes in a search,
-    // so a case gives the same ticks with empty and with full route caches. With the SIM_SCRIPT_MS bound the game went
-    // on one tick for each 500 ms of a search, and one case at one seed gave 1,901, 2,072 and 2,238 ticks.
+    // so a case gives the same ticks with empty and with full route caches. A tick that runs on a wall-clock bound
+    // during a search makes the tick count of a case follow the wall time of its searches.
     // SIM_ROUTE_MS bounds the hold for a search that never answers: a search older than the bound holds no tick.
     const routeMs = Math.max(busyMs, Number(process.env.SIM_ROUTE_MS || 180_000));
-    // One hold is ROUTE_HOLD_MS at most. The client ends a session after 60 s with no packet (IDLE_CYCLES of the lite
-    // session), and a held tick sends none: a search of over a minute with empty caches ended the session as "idle"
-    // (pvp:stage-kit on a hosted runner). A longer search lets one tick pass each 45 s and holds the next one.
-    const routeHoldMs = Math.min(routeMs, ROUTE_HOLD_MS);
+    // One hold is ROUTE_HOLD_MS at most: the client ends a session as idle after 60 s with no packet (IDLE_CYCLES of
+    // the lite session), and a held tick sends none. A longer search lets one tick pass each ROUTE_HOLD_MS and holds
+    // the next one.
+    const routeHoldMs = routeHold(routeMs);
     const ackFile = process.env.SIM_ACK_FILE;
     // pumpMs: the packet reads of the client; stateMs: the state of a tick; scriptMs: the tick listeners (the script).
     const ackStat = { ticks: 0, held: 0, heldMs: 0, capped: 0, pumpMs: 0, stateMs: 0, scriptMs: 0 };

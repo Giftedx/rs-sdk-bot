@@ -31,7 +31,8 @@
 // localhost quirk: in this Windows sandbox `localhost` resolves to ::1 first
 // while the practice engine listens on IPv4 only, so fetch('http://localhost:8888/crc')
 // resets. Bench bots are therefore pinned to 127.0.0.1 after createBot.
-import {simStatFile, startStack} from '../../packages/practice/src/stack';
+import {simStatFile, startStack, stopStack} from '../../packages/practice/src/stack';
+import {runTracker} from './bench-stop';
 import {proveInProcess} from '../../packages/practice/src/prove';
 import {createBot} from '../../packages/practice/src/bots';
 import {applyPreset, preparePresetDirectory, PRESETS} from '../../packages/practice/src/presets';
@@ -349,9 +350,9 @@ function report(rows: Row[]) {
   }
 }
 
-// The worker processes and engines of the cases in flight: a bench that stops for the live fleet ends them first.
-// An engine is in `startingStacks` from its spawn to its ready line, so a stop that comes in that time ends it too.
-const activeProcs = new Set<{pid: number; kill(): void}>(), activeStacks = new Set<{stop(): Promise<void>}>(), startingStacks = new Set<Promise<{stop(): Promise<void>}>>();
+// The worker processes and engines of the cases in flight (bench-stop.ts): a bench that stops for the live fleet ends
+// them first, and after the stop no engine and no worker of this run is left.
+const tracker = runTracker(proc => { if (process.platform === 'win32') Bun.spawnSync(['taskkill', '/PID', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true }); else proc.kill(); });
 // Where the wall time of the last case went, for AIO_BENCH_TIMING.
 const phase = { prepareMs: 0, scriptMs: 0, cleanupMs: 0 };
 const timed = async <T>(key: keyof typeof phase, work: () => Promise<T>): Promise<T> => { const t = Date.now(); try { return await work(); } finally { phase[key] += Date.now() - t; } };
@@ -407,7 +408,8 @@ console.log('SAVES_DONE');`;
           .replaceAll('{save}', `vendor/rs-sdk/server/engine/data/players/main/${name.toLowerCase()}.sav`);
         for (const [path, value] of Object.entries(c.jobFiles ?? {})) { mkdirSync(dirname(fill(path)), { recursive: true }); writeFileSync(fill(path), fill(JSON.stringify(value, null, 1))); }
         const proc = Bun.spawn(['bun', resolve(script), name, ...args.map(fill)], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: { ...process.env } }); // Bun.spawn does not pass env set at run time unless given
-        activeProcs.add(proc);
+        // A stop for the fleet between the engine start and this spawn: the worker is ended at once.
+        tracker.worker(proc);
         // An AIO dispatcher owns a worker child; a timeout must stop the whole tree or the worker keeps its session.
         const timer = setTimeout(() => {
           if (process.platform === 'win32') Bun.spawn(['taskkill', '/PID', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true });
@@ -415,7 +417,7 @@ console.log('SAVES_DONE');`;
         }, timeoutMs);
         const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
         const exitCode = await proc.exited;
-        activeProcs.delete(proc);
+        tracker.done(proc);
         clearTimeout(timer);
         // The whole output of the last run of each case, for a failure the tail does not explain.
         mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -499,21 +501,18 @@ async function main() {
   const profileDir = process.env.BENCH_PROFILE_DIR ?? join(dirname(OUT), 'profile');
   if (profile) mkdirSync(profileDir, { recursive: true });
   let stack = FRESH ? null : await start();
-  if (stack) activeStacks.add(stack);
+
   const rows: Awaited<ReturnType<typeof runCase>>[] = [];
   // Beside a live fleet the bench reads the free memory each 5 s. Under the floor and the swarm's reserve it ends its
   // workers and engines and exits: the memory goes back to the fleet within one read.
-  let stopping = false;
   const watch = setInterval(() => {
-    const reason = stopping ? null : fleetStop(readFleetFacts(root, liveBots));
+    const reason = tracker.stopping ? null : fleetStop(readFleetFacts(root, liveBots));
     if (!reason) return;
-    stopping = true;
     console.error(reason);
     void (async () => {
-      for (const proc of activeProcs) { if (process.platform === 'win32') Bun.spawnSync(['taskkill', '/PID', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true }); else proc.kill(); }
-      // An engine that is starting now has no handle yet: wait for its start, then stop it with the others.
-      for (const started of await Promise.allSettled([...startingStacks])) if (started.status === 'fulfilled') activeStacks.add(started.value);
-      await Promise.allSettled([...activeStacks].map(s => s.stop()));
+      // Workers first, then every engine: a ready one by its handle, a starting one by its instance name at once.
+      await tracker.stop();
+      await stack?.stop();
       try { writeFileSync(OUT, JSON.stringify({ coverage, concurrency: CONCURRENCY, runs: RUNS, rows, stopped: reason }, null, 2)); } catch { /* the log holds the rows of the cases that ended */ }
       process.exit(FLEET_STOP_EXIT);
     })();
@@ -525,7 +524,7 @@ async function main() {
       for (;;) {
         const i = next++;
         const c = cases[i];
-        if (!c || stopping) return; // no new case, and so no new engine, after the stop for the fleet
+        if (!c || tracker.stopping) return; // no new case, and so no new engine, after the stop for the fleet
         let own: Awaited<ReturnType<typeof start>> | null = null;
         const kept = CACHE ? join(CACHE_DIR, `${caseHash(c)}.json`) : null;
         try {
@@ -542,10 +541,10 @@ async function main() {
           } else {
             const engineAt = Date.now();
             if (FRESH) {
-              const starting = start(c.key, slot, c.engineEnv);
-              startingStacks.add(starting);
-              try { own = await starting; activeStacks.add(own); } finally { startingStacks.delete(starting); }
+              own = await tracker.engine(() => start(c.key, slot, c.engineEnv), () => stopStack(instanceOf(slot)));
+              if (!own) return; // the run stopped for the fleet while this engine started: the engine is ended, no account is made and no worker starts
             }
+            if (tracker.stopping) return;
             const engineStartMs = Date.now() - engineAt;
             // --profile: the bots of this case write their ACK_STAT lines here; the engine's wait lines are read from
             // the bytes its stat file gains during the case.
@@ -567,7 +566,7 @@ async function main() {
           }
         }
         catch (e) { const row = { case: c.key, ok: false, passes: 0, runs: RUNS, elapsedMs: 0, ledgerTicks: [], rivalTicks: null, output: null, xp: null, result: `bench error ${String((e as Error)?.message ?? e).slice(0, 300)}` }; console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`); rows.push(row); }
-        if (own) { activeStacks.delete(own); await own.stop(); }
+        if (own) await tracker.release(own);
         writeFileSync(OUT, JSON.stringify({ coverage, concurrency: CONCURRENCY, runs: RUNS, rows }, null, 2));
       }
     };

@@ -200,6 +200,8 @@ jobs:
   # The key of the saved walk lengths: a set of real trips planned alone and with shared lengths gives equal plans
   # (scripts/measure/route-key-parity.ts).
   route-key-parity:
+    # A dispatch for bench cases alone does not need it.
+    if: inputs.bench_pattern == ''
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

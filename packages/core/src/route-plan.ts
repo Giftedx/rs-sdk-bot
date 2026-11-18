@@ -11,8 +11,8 @@ let worker: BunWorker | null = null, next = 0, idle: ReturnType<typeof setTimeou
 export const WORKER_IDLE_MS = 30_000;
 const pending = new Map<number, { started: number; resolve(p: TripPlan | null): void; reject(e: unknown): void }>();
 // The searches in flight that started under `youngerThanMs` ago. A lockstep bot holds its tick for these only: a
-// search past the bound is hung, and a hung search that held every later tick for the whole bound again stopped the
-// case until its timeout.
+// search past the bound is hung and holds no tick, so one hung search costs a case one bound and not one bound for
+// each later tick.
 export const pendingRouteWork = (youngerThanMs = Infinity): number => {
     if (youngerThanMs === Infinity) return pending.size;
     const now = performance.now();

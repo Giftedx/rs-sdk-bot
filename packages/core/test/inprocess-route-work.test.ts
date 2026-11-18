@@ -43,3 +43,15 @@ test('lockstep distinguishes route work from persistent listeners and real serve
  const timer=setTimeout(()=>p.kill(),12000);
  try{const [code,stderr]=await Promise.all([p.exited,new Response(p.stderr).text()]);expect(stderr).toBe('');expect(code).toBe(0);}finally{clearTimeout(timer);}
 },14000);
+
+import {readFileSync} from 'node:fs';
+import {ROUTE_HOLD_MS,routeHold} from '../src/inprocess';
+test('one hold for a route search stays under the idle limit of the client session',()=>{
+ const session=readFileSync(resolve(import.meta.dir,'../../../vendor/rs-sdk/server/webclient/src/lite/session.ts'),'utf8');
+ const loop=Number(/const LOOP_MS = (\d+);/.exec(session)?.[1]),cycles=Number(/const IDLE_CYCLES = (\d+);/.exec(session)?.[1]);
+ expect(loop*cycles).toBe(60000);
+ // A margin for the slow turn of a loaded machine: three quarters of the limit at most.
+ expect(ROUTE_HOLD_MS).toBeLessThanOrEqual(loop*cycles*0.75);
+ expect(routeHold(180000)).toBe(ROUTE_HOLD_MS);
+ expect(routeHold(400)).toBe(400);
+});

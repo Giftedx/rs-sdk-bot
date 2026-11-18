@@ -11,11 +11,11 @@ import { pathfindingSourceKey } from './pathcache';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 // The file name holds the format of the keys: v2 keys name the closed danger ground alone (danger.ts withDanger).
-// The first file (route-legs.sqlite) took one set of rows for each start and end tile of a trip and had grown to
-// 1.5 GB in one checkout. Almost none of its rows has a key that a search asks for; the ones that do are right, because
-// a key names the closed ground exactly in both formats. So the first file is read, never written: a length found in
-// it is copied into the v2 file. The first file is removed when nothing wrote it for PRIOR_KEEP_MS (no process of a
-// release before v2 runs), and its JSON form and temporary files, which no code reads, are removed at once.
+// The first file (route-legs.sqlite) holds one set of rows for each start and end tile of a trip, so it has no size
+// bound. A row of it whose key a search asks for is right, because a key names the closed ground exactly in both
+// formats. The first file is read, never written: a length found in it is copied into the v2 file. The first file
+// is removed when nothing wrote it for PRIOR_KEEP_MS (no process of a release before v2 runs). Its JSON form and
+// temporary files, which no code reads, are removed at an open.
 export const LEG_CACHE_FILE = join(repoRoot, '.practice', 'cache', 'route-legs-v2.sqlite');
 export const PRIOR_KEEP_MS = 7 * 24 * 3_600_000;
 const PRIOR = 'route-legs.sqlite', UNREAD = /^route-legs\.json(?:\..*\.tmp)?$/;

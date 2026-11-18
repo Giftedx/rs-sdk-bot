@@ -94,3 +94,18 @@ test('seedRouteCaches copies the caches a worktree lacks, keeps the ones it hold
         expect(ROUTE_CACHES).toHaveLength(3);
     }finally{rmSync(dir,{recursive:true,force:true});}
 });
+
+test('seedRouteCaches does not read the walk lengths of a main checkout whose fleet runs, and still copies the files written once',()=>{
+    const dir=mkdtempSync(join(tmpdir(),'seed-live-')),from=join(dir,'main'),to=join(dir,'tree');
+    try{
+        mkdirSync(from);
+        writeFileSync(join(from,'rsmod-pathfinding.snap'),'snapshot');
+        writeFileSync(join(from,'route-legs-v2.sqlite'),'not opened');
+        expect(seedRouteCaches(from,to,false,true)).toEqual([['rsmod-pathfinding.snap','copied from the main checkout'],['route-areas.bin','not in the main checkout'],
+            ['route-legs-v2.sqlite','not copied: the live fleet writes it; run the setup again when no swarm runs']]);
+        expect(existsSync(join(to,'route-legs-v2.sqlite'))).toBe(false);
+        // A worktree that holds the file keeps it, with or without a fleet.
+        writeFileSync(join(to,'route-legs-v2.sqlite'),'mine');
+        expect(seedRouteCaches(from,to,false,true).map(r=>r[1])).toEqual(['present','not in the main checkout','present']);
+    }finally{rmSync(dir,{recursive:true,force:true});}
+});
