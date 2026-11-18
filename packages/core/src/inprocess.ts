@@ -231,10 +231,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             const routes=pendingRouteWork(routeMs);
             // Persistent state listeners do not make an off-tick route a game-input wait.
             // Actual tick/actions/dialog waits still advance; SIM_ROUTE_MS bounds this hold.
-            // A script that waits for ticks (waitUntil, waitTicks) while a search runs in the background asked for the
-            // ticks: the hold is for a script that waits for the search itself. With the hold, the 20-tick wait of
-            // scripts/earth-production.ts for its exit ended on the wall clock with no tick ("earth exit unobserved").
-            const routeBusy=routes>0&&waitLeft===0&&tickWaits.active===0&&!serverWait&&!inDialogWait();
+            const routeBusy=routes>0&&waitLeft===0&&!serverWait&&!inDialogWait();
             const busy = routeBusy || (running && waitLeft === 0 && !serverWait && !(inDialogWait() && !dialogOpen)) || !waiting;
             // A script that ended after its last tick wait leaves no wait: SIM_SCRIPT_MS (500) bounds that hold.
             if (busy && performance.now() - since < (routeBusy ? routeHoldMs : scriptTick ? scriptMs : busyMs)) { if (turns++ < 20) setImmediate(check); else setTimeout(check, 1); return; }

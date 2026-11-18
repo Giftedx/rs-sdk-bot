@@ -10,9 +10,8 @@ test('lockstep distinguishes route work from persistent listeners and real serve
  const workers=[];
  globalThis.Worker=class{constructor(){workers.push(this);}ref(){}unref(){}terminate(){}postMessage(request){this.request=request;}reply(){this.onmessage({data:{id:this.request.id,plan:null}});}};
  const {planTripOffThread}=await import('./packages/core/src/route-plan');
- const {tickWaits}=await import('./packages/core/src/tick-stream');
  const until=async(f,ms=1500)=>{const end=performance.now()+ms;while(!f()&&performance.now()<end)await Bun.sleep(2);assert.ok(f(),'fixture event deadline');};
- for(const mode of ['reply','cancel','error','cap','hung','hold','server','tick-wait','script-wait']){
+ for(const mode of ['reply','cancel','error','cap','hung','hold','server','tick-wait']){
   process.env.SIM_LOCKSTEP='1';process.env.SIM_BUSY_MS=mode==='hold'||mode==='hung'?'100':'400';
   if(mode==='cap')process.env.SIM_ROUTE_MS='400';else if(mode==='hung')process.env.SIM_ROUTE_MS='600';else delete process.env.SIM_ROUTE_MS;
   let fire,resolveServer;const acks=[];
@@ -27,10 +26,8 @@ test('lockstep distinguishes route work from persistent listeners and real serve
   try{
    if(mode==='server'){action=sdk.sendAction({type:'clickButton',componentId:1});await until(()=>!!resolveServer);}
    if(mode==='tick-wait'){action=sdk.sendAction({type:'wait',ticks:2});await Bun.sleep(2);}
-   // A script in waitUntil or waitTicks (tick-stream.ts counts it) with a search in the background gets its ticks.
-   if(mode==='script-wait')tickWaits.active++;
    const started=performance.now();fire();
-   if(mode==='server'||mode==='tick-wait'||mode==='script-wait'){await until(()=>acks.length>0);assert.ok(acks[0]-started<250,'real game input wait must advance');if(mode==='script-wait')tickWaits.active--;}
+   if(mode==='server'||mode==='tick-wait'){await until(()=>acks.length>0);assert.ok(acks[0]-started<250,'real game input wait must advance');}
    else{
     await Bun.sleep(20);assert.equal(acks.length,0,'pending off-tick route must hold ACK despite persistent listener');
     if(mode==='cap'){await until(()=>acks.length>0);assert.ok(acks[0]-started>=300&&acks[0]-started<1500,'SIM_ROUTE_MS must bound route hold');}
