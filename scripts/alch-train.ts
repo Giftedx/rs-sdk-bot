@@ -15,6 +15,7 @@ import {itemMagicRecipe,runItemMagic} from './microbot-magic-items';
 import {COW_NORTH_BANK,atNorthBank} from './cow-stage';
 import {walkPath,sessionWalker} from '../packages/core/src/walk';
 import {componentId} from '../packages/core/src/logout';
+import {reconcileLoadout} from './gear-reconcile';
 
 type Item={id:number;count:number};
 export const NATURE=561,FIRE=554,HIGH_LEVEL=55;
@@ -79,15 +80,15 @@ export async function stageAlch(s:Session,o:{target:number;item:number;walk:(x:n
         if(!row||!(await s.bot.withdrawItem(row,want.count,{asNote:false})).success||!await waitUntil(s,()=>count(inv(),want.id)>=before+want.count,{timeoutTicks:10}))
             throw new Error(`alch stage: withdraw ${want.count}x${want.id} failed`);
     }
+    // The one kit path (scripts/gear-reconcile.ts): the fire staff that the plan took is the weapon, the rest of the best magic kit is worn from the bank.
+    // The pack holds the alchemy stock, so a piece that does not fit stays banked (not strict); the staff is checked below.
+    await reconcileLoadout(s,{style:'magic',trainSkill:'magic',bankOpen:true,leaveBankOpen:true,runeIds:[FIRE],pin:plan.staff!==undefined?{weapon:plan.staff}:{},stop:o.stop,label:'alch stage'});
     await s.bot.closeBank();
     // The spell needs the side tabs back; a cast sent while the bank's inventory panel shows is dropped.
     if(!await waitUntil(s,()=>!state()?.bank?.isOpen,{timeoutTicks:10}))throw new Error('alch stage: bank did not close');
     await waitTicks(s,1);
     const worn=()=>(state()?.equipment??[]).some(i=>FIRE_STAVES.includes(i.id));
-    if(plan.staff!==undefined&&!worn()){
-        const row=inv().find(i=>i.id===plan.staff);
-        if(!row||!(await s.bot.equipItem(row)).success||!await waitUntil(s,worn,{timeoutTicks:5}))throw new Error('alch stage: fire staff not wielded');
-    }
+    if(plan.staff!==undefined&&!worn())throw new Error('alch stage: fire staff not wielded');
     return{took:plan.take,staff:worn()};
 }
 
