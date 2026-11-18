@@ -80,6 +80,8 @@ test('saved entry verification refuses tampered frozen bytes or detached skill a
  expect(Object.values(band.levels).every(range=>!('max' in range))).toBe(true);
  // The step bound is the Ranged XP of the proof run, not its levels.
  expect(band.gainXp).toEqual({Ranged:123160});
+ // The bow and the arrow of the run are named, so the method must use them for the account.
+ expect(band.kit).toEqual([841,882]);
  expect(rangedSupportedMethods(loaded.entry,{...result,xpGain:undefined},report.source,85)[0]!.bands[0]!.gainXp).toEqual({Ranged:0});
  // Every Ranged training method the worker reports gets a band; an acquire step and a foreign id get none.
  expect(rangedSupportedMethods(loaded.entry,{...result,method:'ranged/troopers-maple'},report.source,85)[0]!.id).toBe('ranged/troopers-maple');

@@ -6,6 +6,11 @@ on:
   # `bun packages/router/src/adopt-proofs.ts` and runs no practice engine for them.
   push:
     branches: [master]
+# A burst of merges: the proof of the newest commit of master is the one the PC adopts, so a newer push ends the run
+# of the commit before it. A dispatch never ends another run.
+concurrency:
+  group: ${{ github.event_name == 'push' && 'progression-proofs-master' || format('progression-{0}', github.run_id) }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

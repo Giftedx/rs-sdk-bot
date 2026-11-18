@@ -83,7 +83,7 @@ export function rangedComparisonPreset(entry:RangedComparisonEntry):SaveConfig{r
 };}
 export const RANGED_COMPARISON_PRESET=rangedComparisonPreset(entry);
 const foodIds=new Set([329,333,1985,385,373,379,2142,2309,1901,1895,1893,1891]);
-type SupportedRangedMethod={id:string;source:string;bands:{levels:Record<string,{min:number}>;gainXp:Record<string,number>;items:Record<string,number>;loadout:number[]}[]};
+type SupportedRangedMethod={id:string;source:string;bands:{levels:Record<string,{min:number}>;gainXp:Record<string,number>;kit:number[];items:Record<string,number>;loadout:number[]}[]};
 // A Ranged training method of the worker: the id the worker reports for the kill loop it ran. An acquire step
 // (a shop or market buy) trains nothing and gets no proof here.
 export const rangedTrainingMethod=(id:unknown):id is string=>typeof id==='string'&&/^ranged\/[a-z0-9-]+$/.test(id)&&!/^ranged\/(?:lowe|guild|ge)-buy-/.test(id);
@@ -99,13 +99,15 @@ export const rangedTrainingMethod=(id:unknown):id is string=>typeof id==='string
 // - One run: `gainXp` is the Ranged XP that the proof run made. A planned step adds that much XP at most, so no
 //   step is more work than the run that was proved. Levels are not the bound: 5 levels at Ranged 90 are about 500
 //   times the XP of 5 levels at Ranged 1.
-// A different bow or arrow is a different method id or a different worn item, and needs its own entry.
+// - The kit: `kit` is the bow and the arrow that the proof run fought with. The worker takes the best pair that
+//   the account owns (rangedKit), so the method must name this same pair for the account. An account that owns a
+//   better bow runs another kit and needs a proof from an entry with that kit.
 export function rangedSupportedMethods(entry:RangedComparisonEntry,result:any,source:string,target:number):SupportedRangedMethod[]{
  if(!rangedTrainingMethod(result?.method))return[];
  const stock=new Map<number,number>();for(const i of [...entry.inventory,...entry.equipment,...entry.bank])stock.set(i.id,(stock.get(i.id)??0)+i.count);
  const items=Object.fromEntries([...stock].filter(([id])=>id===result.bow||id===result.arrow||foodIds.has(id)));
  const levels=Object.fromEntries(entry.skills.filter(s=>['Attack','Strength','Defence','Hitpoints','Magic','Prayer','Ranged'].includes(s.name)).map(s=>[s.name,{min:s.level}]));
- return[{id:result.method,source,bands:[{levels,gainXp:{Ranged:Math.max(0,Math.floor(Number(result.xpGain)||0))},items,loadout:entry.equipment.map(i=>i.id)}]}];
+ return[{id:result.method,source,bands:[{levels,gainXp:{Ranged:Math.max(0,Math.floor(Number(result.xpGain)||0))},kit:[result.bow,result.arrow].filter(id=>Number.isSafeInteger(id)&&id>0),items,loadout:entry.equipment.map(i=>i.id)}]}];
 }
 export function rangedEntryProofChecks(bytes:Uint8Array,report:{entrySha256:string;source:string;target:number;supportedMethods:unknown},result:any){
  const loaded=parseRangedEntry(bytes);if(loaded.sha256!==report.entrySha256)throw Error('frozen Ranged entry SHA-256 differs');

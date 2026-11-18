@@ -11,6 +11,10 @@
 import {createHash} from 'node:crypto';
 import type TS from 'typescript';
 
+// Give this a new value with every change to what a digest covers (normalizedCode, releaseFileDigest, the file kinds):
+// the digest store and the release cache keep a digest under the bytes of its file and this value, so a change of the
+// rule with the old value would serve digests of the old rule. The store also holds the TypeScript version, because
+// the node kinds in a digest are numbers of that version.
 export const RELEASE_DIGEST_VERSION = 'release-digest-2';
 const code = /\.(?:ts|tsx|js|mjs|cjs)$/, json = /\.json$/;
 const sha = (domain: string, data: string | Uint8Array) => createHash('sha256').update(domain + '\0').update(data).digest('hex');

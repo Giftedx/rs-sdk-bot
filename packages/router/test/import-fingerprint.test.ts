@@ -28,6 +28,9 @@ test('delivery fingerprints hold the program digest of each source with one fres
  try{
   const first=deliveryFingerprint(task,base);
   expect(first).toBe(expected);
+  // One value that this file does not compute with the function under test: the fingerprint of the fixture under
+  // release-digest-2 and TypeScript 5.8. A change of the digest rule changes it, and RELEASE_DIGEST_VERSION with it.
+  expect(first).toBe('ceb8c504c062d33cd9b25df9f5fe585ddb3b74a381a1b6bb9a7b84fe10f05aef');
   for(const file of sources)expect(counts.get(join(base,file))).toBe(1);
   fs.writeFileSync(join(base,'scripts/shared.ts'),'export const shared = 2;');
   expect(deliveryFingerprint(task,base)).not.toBe(first);

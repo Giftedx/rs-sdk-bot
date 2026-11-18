@@ -210,12 +210,13 @@ export function releaseFiles(entries:readonly string[],base=root,memo:ReleaseMem
 // line-ending edit keeps a release, and a Windows and a Linux checkout of one commit give one release.
 // The digests are kept on disk under the hash of the file's bytes, so only a changed file is parsed again.
 const digestStore=(base:string)=>join(base,'.practice','cache','release','digests.json');
+const digestStoreVersion=()=>RELEASE_DIGEST_VERSION+':typescript-'+ts.version;
 function revisionOf(base:string,files:readonly string[],memo:ReleaseMemo):string{
     const hash=createHash('sha256');
     let kept=memo.get('digests') as Record<string,string>|undefined,added=false;
     if(!kept){
         kept={};
-        try{const disk=JSON.parse(readFileSync(digestStore(base),'utf8'));if(disk?.version===RELEASE_DIGEST_VERSION&&disk.digests&&typeof disk.digests==='object')kept=disk.digests as Record<string,string>;}catch{/* no store yet */}
+        try{const disk=JSON.parse(readFileSync(digestStore(base),'utf8'));if(disk?.version===digestStoreVersion()&&disk.digests&&typeof disk.digests==='object')kept=disk.digests as Record<string,string>;}catch{/* no store yet */}
         memo.set('digests',kept);
     }
     for(const p of files){
@@ -228,7 +229,7 @@ function revisionOf(base:string,files:readonly string[],memo:ReleaseMemo):string
         }
         hash.update(p+'\0'+digest+'\0');
     }
-    if(added)try{const file=digestStore(base);mkdirSync(dirname(file),{recursive:true});const tmp=file+'.'+process.pid+'.tmp';writeFileSync(tmp,JSON.stringify({version:RELEASE_DIGEST_VERSION,digests:kept}));renameSync(tmp,file);}catch{/* the store is optional */}
+    if(added)try{const file=digestStore(base);mkdirSync(dirname(file),{recursive:true});const tmp=file+'.'+process.pid+'.tmp';writeFileSync(tmp,JSON.stringify({version:digestStoreVersion(),digests:kept}));renameSync(tmp,file);}catch{/* the store is optional */}
     return hash.digest('hex');
 }
 export function releaseRevision(entries:readonly string[],base=root,memo:ReleaseMemo=new Map()):string{
