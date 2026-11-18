@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795003505725-wandwaver-ballspinner-airrune",
  "account": "Wandwaver",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 3,
  "claim": "cc748275-fd86-4f8f-bc66-bcc7018a0c89",
- "count": 0,
- "ok": false,
- "at": 1795003652734,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795003678338,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795003664394
+ },
+ "logout": {
+  "attemptId": "1795003652743-0000006584-0000000001",
+  "at": 1795003678327,
+  "sha256": "faa6ae6dcdbee54ebfdef504cdd8aa5f876c7ea35626a13bd85430b598cc893a"
+ },
+ "screen": true
 }
