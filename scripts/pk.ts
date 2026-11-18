@@ -510,7 +510,8 @@ export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undef
         if (/^dragon_dagger/.test(n)) return { kit: kit.melee!, bar: 'combat_stabsword:specbar', cost: 250, below: 0.65, style: 'melee' };
         if (n === 'dragon_longsword') return { kit: kit.melee!, bar: 'combat_hacksword:specbar', cost: 250, below: 0.6, style: 'melee' };
         if (n === 'dragon_mace') return { kit: kit.melee!, bar: 'combat_spiked:specbar', cost: 250, below: 0.6, style: 'melee' };
-        if (n === 'dragon_halberd') return { kit: kit.melee!, bar: 'combat_halberd:specbar', cost: 300, below: 0.6, style: 'melee' };
+        // The halberd is a weapon_polearm (polearms.obj): its tab is combat_polearm.
+        if (n === 'dragon_halberd') return { kit: kit.melee!, bar: 'combat_polearm:specbar', cost: 300, below: 0.6, style: 'melee' };
         if (n === 'rune_claws') return { kit: kit.melee!, bar: 'combat_claw:specbar', cost: 250, below: 0.6, style: 'melee' };
         // The dragon spear's special does no damage: it holds the target 5 ticks with no input (pvp_dragon_spear.rs2
         // p_delay(4)), so it cannot eat or change its prayer: it goes out when the target is low enough to want food.
