@@ -422,7 +422,10 @@ export function kitFrom(worn: readonly Item[], carried: readonly Item[], ranged 
     const melee = [wep?.id, shield?.id].filter((id): id is number => id !== undefined);
     if (melee.length) kit.melee = melee;
     const bow = [...worn, ...carried].find(i => ranged.test(i.name));
-    if (bow) kit.ranged = [bow.id];
+    // PK_AXE=1: a rune throwing axe stack among the items is part of the ranged kit, so `defaultSpec` (scripts/pk.ts) gives
+    // the account the axe special. Off by default: no live account changes its special.
+    const axe = process.env.PK_AXE === '1' ? [...worn, ...carried].find(i => /^rune thrownaxe$/i.test(i.name)) : undefined;
+    if (bow || axe) kit.ranged = [...(bow ? [bow.id] : []), ...(axe ? [axe.id] : [])];
     const staff = [...worn, ...carried].find(i => /staff/i.test(i.name));
     if (staff) kit.magic = [staff.id];
     return kit;
