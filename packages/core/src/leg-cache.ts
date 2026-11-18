@@ -55,14 +55,17 @@ export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
             return connection;
         } catch { connection?.close(); return undefined; }
     };
-    let db = existsSync(file) ? open() : undefined;
+    // ROUTE_LEG_CACHE=0: this process reads and writes no saved lengths, so each search measures its legs (a run with
+    // empty caches, for the check that a bench case gives the same ticks with empty and with full caches).
+    const stored = process.env.ROUTE_LEG_CACHE !== '0';
+    let db = stored && existsSync(file) ? open() : undefined;
     const get = (key: string) => {
         if (fresh.has(key)) return fresh.get(key);
         try {
             const row = db?.query<{ value: number | null }, [string, string]>('SELECT value FROM legs WHERE source = ? AND key = ?').get(namespace, key);
             if (row) return row.value;
         } catch { /* Compute the leg when the cache is unavailable. */ }
-        return old[key];
+        return stored ? old[key] : undefined;
     };
     const c: LegCache = {
         has: k => get(k) !== undefined,
@@ -70,7 +73,7 @@ export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
         set: (k, v) => { fresh.set(k, v); },
         hash: value => createHash('sha1').update(JSON.stringify(value)).digest('hex').slice(0, 12),
         save: () => {
-            if (!fresh.size) return;
+            if (!fresh.size || !stored) return;
             const connection = db ??= open();
             if (!connection) return;
             try {

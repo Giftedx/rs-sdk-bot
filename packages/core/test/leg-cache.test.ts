@@ -56,3 +56,16 @@ test('danger cache scopes include every opened tile and ignore set insertion ord
  expect(routeDangerHash(a,cache)).not.toBe(routeDangerHash(b,cache));
  expect(routeDangerHash(a,cache)).toBe(routeDangerHash({...a,kept:new Set([...a.kept].reverse())},cache));
 });
+test('ROUTE_LEG_CACHE=0 reads and writes no saved length; a length measured in the process stays for the process',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'route-leg-off-')),file=join(dir,'legs.sqlite'),prior=process.env.ROUTE_LEG_CACHE;
+ try{
+  const warm=legCache(file,'source');warm.set('a>b',12);warm.save();warm.close();
+  process.env.ROUTE_LEG_CACHE='0';
+  const cold=legCache(file,'source');
+  expect(cold.get('a>b')).toBeUndefined();
+  cold.set('c>d',7);expect(cold.get('c>d')).toBe(7);cold.save();cold.close();
+  delete process.env.ROUTE_LEG_CACHE;
+  const again=legCache(file,'source');
+  try{expect(again.get('a>b')).toBe(12);expect(again.get('c>d')).toBeUndefined();}finally{again.close();}
+ }finally{if(prior===undefined)delete process.env.ROUTE_LEG_CACHE;else process.env.ROUTE_LEG_CACHE=prior;rmSync(dir,{recursive:true,force:true});}
+});
