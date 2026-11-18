@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795044617416,
+ "at": 1795044765739,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -206,7 +206,8 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":99}}"
    },
    "enabled": true,
    "standing": true,
@@ -292,26 +293,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/alch-train.ts",
-   "args": [
-    "99",
-    "5000"
-   ],
-   "env": {
-    "ALCH_ITEM": "airrune",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-air-magic-99",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "CoinCock",
