@@ -733,6 +733,17 @@ const ROUTE_CASES: BenchCase[] = [
     pass: ok, timeoutMs: 600_000, output: /rangedXp=(\d+)/,
     presetConfig: {...PRESETS.cannon_spiders_h!, skills: {Attack: 99, Strength: 99, Defence: 98, Hitpoints: 97, Prayer: 99, Ranged: 55},
       inventory: PRESETS.cannon_spiders_h!.inventory!.map((item, i, all) => i === all.findIndex(x => x.id === 385) ? {id: 1333, count: 1} : item)}})),
+  // Biohazard from step 7 inside West Ardougne with no Water runes: the state of a live account that stood on the
+  // ground floor of the Mourner HQ (2555,3324) with the distillator. The Ardougne teleport is not castable, the city
+  // doors stay shut until the quest is complete, and the way out is Kilron's ladder (%biohazard 68 = 7). The coins pay
+  // the ferries of the quest and of the walk back from Varrock.
+  {key: 'extra:biohazard-step7-kilron', script: 'scripts/aio-quester.ts', preset: 'quest_biohazard', scriptArgs: ['biohazard'],
+    pass: s => ok(s) && /^QUEST_EXIT \{"label":"kilron ladder","at":\{"x":25(59|6\d)/m.test(s) && !/^QUEST_TELEPORT \{[^\n]*ardougne teleport 1/m.test(s),
+    timeoutMs: 600_000,
+    presetConfig: {...PRESETS.quest_biohazard!, position: {x: 2555, z: 3324, level: 0}, coins: 300,
+      varps: {...PRESETS.quest_biohazard!.varps, 68: 7},
+      equipment: [...PRESETS.quest_biohazard!.equipment!.filter(item => item.slot !== 4), {id: 430, count: 1, slot: 4}],
+      inventory: [{id: 426, count: 1}, {id: 428, count: 1}, {id: 420, count: 1}, {id: 423, count: 1}, {id: 563, count: 4}, {id: 379, count: 1}, {id: 379, count: 1}]}},
   EARLY_DRAGON_CASE,
   {...EARLY_DRAGON_CASE, key: 'extra:dragon-post-mm-return', scriptArgs: ['dragon', 'DS_RETURN=varrock'],
     pass: earlyDragonReturnPass,
