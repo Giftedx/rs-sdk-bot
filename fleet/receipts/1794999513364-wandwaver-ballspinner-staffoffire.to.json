@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794999513364-wandwaver-ballspinner-staffoffire",
  "account": "Ballspinner",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "620402af-d849-4a24-81ee-87b614f7f784",
- "count": 0,
- "ok": false,
- "at": 1794999633389,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794999831348,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794999830531
+ },
+ "logout": {
+  "attemptId": "1794999633398-0000004584-0000000001",
+  "at": 1794999831338,
+  "sha256": "6d61952075545c88d7d4e561147057e6badf7fa2e4ace35f347667c62fe65d86"
+ },
+ "screen": true
 }
