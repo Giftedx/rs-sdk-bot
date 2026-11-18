@@ -1,0 +1,22 @@
+{
+ "id": "1795004465028-masterbaiter-nabtheknob-runechainbody",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "NabTheKnob",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795004465028,
+ "end": 1795006865028,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

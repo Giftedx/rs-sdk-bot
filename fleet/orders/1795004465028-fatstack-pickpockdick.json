@@ -1,0 +1,22 @@
+{
+ "id": "1795004465028-fatstack-pickpockdick",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "PickpockDick",
+ "item": "coins",
+ "count": 183326,
+ "start": 1795004465028,
+ "end": 1795006865028,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
