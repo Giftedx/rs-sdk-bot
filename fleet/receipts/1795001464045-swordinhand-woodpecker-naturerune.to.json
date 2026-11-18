@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795001464045-swordinhand-woodpecker-naturerune",
  "account": "Woodpecker",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 50,
  "claim": "834e4b8e-d117-4c13-85ba-7a89d813e93d",
- "count": 0,
- "ok": false,
- "at": 1795001562437,
- "detail": "trade claimed"
+ "count": 50,
+ "ok": true,
+ "at": 1795001592028,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 50
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795001591244
+ },
+ "logout": {
+  "attemptId": "1795001562457-0000022556-0000000001",
+  "at": 1795001592015,
+  "sha256": "7360524ee11dc482a8cdff221a01e150e6fafd566dad4963f32e1d39836d04b8"
+ },
+ "screen": true
 }
