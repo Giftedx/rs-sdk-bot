@@ -33,7 +33,8 @@ export interface ObservedAccount{
  reservations?:Record<number,number>;facts?:Record<string,Truth>;
  build?:{maxLevels?:Record<string,number>};clock?:{protected:boolean;fresh:boolean;authorized:boolean};
 }
-export interface StateBand{levels?:Record<string,{min?:number;max?:number}>;items?:Record<number,number>;quests?:string[];server?:string;loadout?:number[];maxCrowding?:number}
+// gain: the levels of a skill that one step may add to the account's level now (the span of the run that was proved).
+export interface StateBand{levels?:Record<string,{min?:number;max?:number}>;gain?:Record<string,number>;items?:Record<number,number>;quests?:string[];server?:string;loadout?:number[];maxCrowding?:number}
 export interface ConditionalMeasuredSample{xp?:Record<string,number>;units:number;ticks:number;elapsedMs?:number;evidence:string;source:string;conditions:StateBand;setupTicks?:number}
 export interface ProgressionMethod{
  id:string;step:Step;source:string;
@@ -113,6 +114,10 @@ function bandUnits(b:StateBand,m:ProgressionMethod,s:SearchState):number{
  for(const [skill,range]of Object.entries(b.levels??{}))if(range.max!==undefined&&range.max<99){
   const gain=entries(m.effects.xp).find(([name])=>key(name)===key(skill))?.[1]??0;
   if(gain>0)cap=Math.min(cap,Math.max(1,Math.ceil((xpForLevel(range.max+1)-(skillXp(s,skill)??0))/gain)));
+ }
+ for(const [skill,levels]of Object.entries(b.gain??{})){
+  const gain=entries(m.effects.xp).find(([name])=>key(name)===key(skill))?.[1]??0,xp=skillXp(s,skill)??0,top=levelForXp(xp)+Math.max(1,levels);
+  if(gain>0&&top<=99)cap=Math.min(cap,Math.max(1,Math.ceil((xpForLevel(top)-xp)/gain)));
  }
  return cap;
 }

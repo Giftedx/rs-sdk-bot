@@ -72,7 +72,16 @@ test('saved entry verification refuses tampered frozen bytes or detached skill a
  const loaded=parseRangedEntry(bytes(changed)),result={method:'ranged/troopers',bow:841,arrow:882};
  const report={entrySha256:loaded.sha256,source:'a'.repeat(64),target:85,supportedMethods:rangedSupportedMethods(loaded.entry,result,'a'.repeat(64),85)};
  expect(rangedEntryProofChecks(loaded.bytes,report,result).supportedMethods).toBe(true);
- expect(report.supportedMethods[0]!.bands[0]!.levels.Prayer).toEqual({min:96,max:96});
+ // The band is an envelope: a minimum for each combat level and for Ranged, and the Ranged levels of the proof run.
+ const band=report.supportedMethods[0]!.bands[0]!;
+ expect(band.levels.Prayer).toEqual({min:96});
+ expect(band.levels.Ranged).toEqual({min:loaded.entry.skills[4]!.level});
+ expect(Object.values(band.levels).every(range=>!('max' in range))).toBe(true);
+ expect(band.gain).toEqual({Ranged:85-loaded.entry.skills[4]!.level});
+ // Every Ranged training method the worker reports gets a band; an acquire step and a foreign id get none.
+ expect(rangedSupportedMethods(loaded.entry,{...result,method:'ranged/troopers-maple'},report.source,85)[0]!.id).toBe('ranged/troopers-maple');
+ for(const method of ['ranged/lowe-buy-oak','ranged/ge-buy-maple','ranged/guild-buy-willow','magic/splash','Ranged/x',null])
+  expect(rangedSupportedMethods(loaded.entry,{...result,method},report.source,85)).toEqual([]);
  expect(report.supportedMethods[0]!.bands[0]!.items).toMatchObject({882:147,2142:40});
  const stale={...report,supportedMethods:rangedSupportedMethods(parseRangedEntry(bytes(fixture)).entry,result,report.source,85)};
  expect(rangedEntryProofChecks(loaded.bytes,stale,result).supportedMethods).toBe(false);
