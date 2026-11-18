@@ -109,6 +109,24 @@ export const hitByPlayer = (e: { type: string; sourceType: string; targetType: s
     e.type === 'damage_taken' && e.sourceType === 'other_player' && e.targetType === 'player' && e.sourceIndex >= 0;
 
 const held = (s: Session, id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+// The food of a trip, best first, with the Hitpoints that one piece heals (content consume_effects.dbrow: shark 20, lobster 12).
+// The restock and the bank trips take sharks first and fill what the bank lacks with lobsters.
+export const FOOD_LIST: readonly { id: number; heal: number }[] = [{ id: ITEMS.shark, heal: 20 }, { id: 379, heal: 12 }];
+export const healOf = (id: number): number => FOOD_LIST.find(f => f.id === id)?.heal ?? 12;
+// The pieces of food in a pack.
+export const foodHeld = (s: Session) => FOOD_LIST.reduce((n, f) => n + held(s, f.id), 0);
+// `want` pieces of food from what `have` counts (the bank and the pack): sharks first, then lobsters. A shortfall is a row of sharks
+// for the rest, so that the requirement check names it.
+export function planFood(have: (id: number) => number, want: number): ItemCount[] {
+    const out: ItemCount[] = [];
+    let left = want;
+    for (const f of FOOD_LIST) {
+        const n = Math.min(left, have(f.id));
+        if (n > 0) { out.push({ id: f.id, count: n }); left -= n; }
+    }
+    if (left > 0) { const shark = out.find(r => r.id === ITEMS.shark); if (shark) shark.count += left; else out.push({ id: ITEMS.shark, count: left }); }
+    return out;
+}
 
 async function walk(s: Session, to: { x: number; z: number }, stop: () => boolean, maxTicks = 400) {
     return walkPath(await sessionWalker(s), [{ ...to, tol: 2 }], { maxTicks, idleMs: 9000, stop });
@@ -187,7 +205,8 @@ export async function restock(s: Session, food: number, trip: readonly TripItem[
         for (const row of boost.items) { boosts.push(row); reserved.set(row.id, (reserved.get(row.id) ?? 0) + row.count); }
     }
     food -= boosts.length;
-    const target = resolveItemRequirements([...selected.items, ...boosts, { id: ITEMS.shark, count: food }], stock(), nativeRequirementMetadata);
+    const total = (id: number) => stock().filter(r => r.id === id).reduce((n, r) => n + r.count, 0);
+    const target = resolveItemRequirements([...selected.items, ...boosts, ...planFood(total, food)], stock(), nativeRequirementMetadata);
     if (!target.ok) return fail(target);
     for (const want of target.items) {
         let left = want.count - held(s, want.id);
@@ -201,7 +220,7 @@ export async function restock(s: Session, food: number, trip: readonly TripItem[
     }
     await s.bot.closeBank();
     const observed = resolveTrip(s.sdk.getInventory(), trip, equip());
-    return observed.ok && held(s, ITEMS.shark) >= food ? null : 'trip withdrawal short ' + JSON.stringify(observed.shortages);
+    return observed.ok && foodHeld(s) >= food ? null : 'trip withdrawal short ' + JSON.stringify(observed.shortages);
 }
 
 export type HuntOptions = { cap: number; food: number; minFood: number; escapeAt: number; stop: () => boolean; log?: (l: string) => void;
@@ -296,7 +315,7 @@ export async function hunt(s: Session, o: HuntOptions) {
         }
     }
     while (!over()) {
-        if (needsRestock || held(s, ITEMS.shark) < o.minFood) {
+        if (needsRestock || foodHeld(s) < o.minFood) {
             const back = await walk(s, EDGEVILLE_BANK, over, 600);
             if (!back.ok) return { ...tally, end: 'bank walk failed ' + JSON.stringify(back) };
             const missing = await restock(s, o.food, o.trip, kit, auto ? (bank, worn) => { const pick = pickTrip(bank, shallow, worn); kit = pick.kit; log(`HUNT trip ${pick.name}`); return pick; } : undefined);

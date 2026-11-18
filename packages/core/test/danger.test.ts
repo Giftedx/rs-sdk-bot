@@ -146,3 +146,20 @@ test('a live melee-only hunter has no square only while the account is protected
     // Protected now: the melee-only dog is dropped, the ranged archer stays.
     expect(liveHunters(seen, prayer99, 2, [dog, archer], styles, true).map(h => h.name)).toEqual(['Archer']);
 });
+
+import { activeDanger, withDanger } from '../src/danger';
+test('the danger scope names only the keep tiles inside the closed ground', () => {
+    const closed = new Set<string>();
+    const grid = { isFlagged: () => false, changeFloor: (x: number, z: number, level: number, add: boolean) => { const k = `${level},${x},${z}`; if (add) closed.add(k); else closed.delete(k); } };
+    const tiles = [{ x: 10, z: 10, level: 0 }, { x: 11, z: 10, level: 0 }];
+    // A trip whose start and end are outside the closed ground: the same scope as a trip with other ends.
+    const far = withDanger(grid, tiles, [{ x: 50, z: 50, level: 0 }, { x: 90, z: 90, level: 0 }], () => ({ kept: [...activeDanger()!.kept], closed: [...closed].sort() }), 'k');
+    const other = withDanger(grid, tiles, [{ x: 51, z: 50, level: 0 }, { x: 90, z: 91, level: 0 }], () => ({ kept: [...activeDanger()!.kept], closed: [...closed].sort() }), 'k');
+    expect(far).toEqual({ kept: [], closed: ['0,10,10', '0,11,10'] });
+    expect(other).toEqual(far);
+    // An end inside the closed ground stays open, and the scope names it.
+    const inside = withDanger(grid, tiles, [{ x: 50, z: 50, level: 0 }, { x: 11, z: 10, level: 0 }], () => ({ kept: [...activeDanger()!.kept], closed: [...closed].sort() }), 'k');
+    expect(inside).toEqual({ kept: ['0,11,10'], closed: ['0,10,10'] });
+    expect(closed.size).toBe(0);
+    expect(activeDanger()).toBeNull();
+});
