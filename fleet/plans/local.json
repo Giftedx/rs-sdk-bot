@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795017098524,
+ "at": 1795017162623,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -241,6 +241,25 @@
    "resources": []
   },
   {
+   "account": "Moneyshot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=17 EXPECTED_OWNED=6 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit8-536-6to23 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"536\":23}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 17 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Hocuspokeus",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -317,25 +336,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=17 EXPECTED_OWNED=6 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit8-536-6to23 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"536\":23}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 17 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "OreElse",
