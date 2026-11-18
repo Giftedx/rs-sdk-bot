@@ -123,3 +123,13 @@ test('a player in view with a bow: ranged cover for the members that it can hit,
     expect(classes[0]).toMatchObject({ style: 'ranged', canHit: [], dangerous: false });
     expect(actions).toEqual([]);
 });
+
+test('a decision is logged once while only its distances change, and again when its style changes', () => {
+    const { w, lines } = watch([MAGE], [9]);
+    w.step(5);
+    w.step(6);
+    expect(lines.filter(l => l.startsWith('ADAPT protect Ours1'))).toHaveLength(1);
+    const { w: w2, lines: lines2 } = watch([{ ...MAGE, anim: SHOOT }], [9]);
+    w2.step(5);
+    expect(lines2.filter(l => l.startsWith('ADAPT protect Ours1 ranged'))).toHaveLength(1);
+});

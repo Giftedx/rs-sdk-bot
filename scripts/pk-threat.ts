@@ -108,7 +108,8 @@ export class ThreatWatch {
             this.record(tick, c);
         }
         for (const a of actions) {
-            const key = `adapt:${a.kind}:${'member' in a ? a.member : ''}`, sig = JSON.stringify(a);
+            // The reason holds distances that change each tick: a decision is logged again only when its kind, member, style, kit or tile changes.
+            const key = `adapt:${a.kind}:${'member' in a ? a.member : ''}`, sig = JSON.stringify({ ...a, reason: undefined });
             if (this.logged.get(key) !== sig) { this.logged.set(key, sig); this.o.log(`ADAPT ${a.kind}${'member' in a ? ` ${a.member}` : ''}${'style' in a ? ` ${a.style}` : ''}${'kit' in a ? ` ${a.kit}` : ''}: ${a.reason}`); }
         }
         // A decision that no longer holds is forgotten, so that its next time is logged again.
