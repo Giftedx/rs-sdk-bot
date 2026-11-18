@@ -29,7 +29,13 @@ test('a login claim waits for a slow Git authority only in a process that is dec
     const open = (name: string, extra: Record<string, unknown> = {}, fail = false): Promise<Session> => startInProcessSession({ name, password: SECRET, server: 'localhost:8888' }, {
         startSession: fakeStart(fail), sdk: new BotSDK({ botUsername: name, password: SECRET, autoLaunchBrowser: false, autoReconnect: false } as any), Actions: FakeActions as any,
         cacheDir: base, lifecycle: { root: join(base, 'lifecycle') }, recordOwned: () => {}, sharedAccount: { root: base, side: 'local' }, claimSwarm, ...extra });
-    const end = async (s: Session) => { (s.client as any).end('logged-out'); await Bun.sleep(1); };
+    // The count of the bots of the process falls when the session end is handled: wait for that, not for a time.
+    const end = async (s: Session) => {
+        const was = botsInThisProcess();
+        (s.client as any).end('logged-out');
+        for (let i = 0; i < 500 && botsInThisProcess() >= was; i++) await Bun.sleep(1);
+        expect(botsInThisProcess()).toBeLessThan(was);
+    };
     const last = () => asked.at(-1);
     try {
         const before = botsInThisProcess();
