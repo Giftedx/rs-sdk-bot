@@ -65,6 +65,9 @@ export function cowEntry(before:Save,kind:Kind){
   &&total(before,TROUT)===expectedTrout&&count(before,93,TROUT)===expectedTrout&&count(before,95,TROUT)===0
   &&total(before,SWORD)===(kind==='nokit'?0:2)&&total(before,SHIELD)===2&&total(before,995)===165&&DROPS.every(id=>count(before,95,id)===8&&count(before,93,id)===0);
 }
+// A refusal ends before any cow work. The worker reports it either as no result or as a result of 0 kills and 0 XP whose
+// failure is a prerequisite error (the worker reports its own failure in COW_RESULT).
+export const refusedCow=(result:any)=>result===null||result?.ok===false&&result.creditedKills===0&&result.selectedXp===0&&result.attackXp===0&&result.preserved===true&&/^Error: cow prerequisite/.test(String(result.failure??''));
 export function cowSaveChecks(before:Save,after:Save,result:any,kind:Kind){
  const p=after.position,ids=new Set([...Object.values(before.inventories).flat(),...Object.values(after.inventories).flat()].map(i=>i.id));
  const atBank=p.level===0&&Math.max(Math.abs(p.x-BANK.x),Math.abs(p.z-BANK.z))<=4&&DROPS.every(id=>count(after,93,id)===0);
@@ -72,7 +75,7 @@ export function cowSaveChecks(before:Save,after:Save,result:any,kind:Kind){
  const assets=(food:number,loot:number)=>[...ids].every(id=>total(after,id)===total(before,id)+(DROPS.includes(id)?loot:id===TROUT?-food:0))
   &&[93,94].every(inv=>(before.inventories[inv]??[]).filter(i=>!DROPS.includes(i.id)&&i.id!==TROUT).every(i=>count(after,inv,i.id)===count(before,inv,i.id)));
  if(refusal[kind])return {
-  entry:cowEntry(before,kind),bank:atBank&&p.x===before.position.x&&p.z===before.position.z,refused:result===null,
+  entry:cowEntry(before,kind),bank:atBank&&p.x===before.position.x&&p.z===before.position.z,refused:refusedCow(result),
   // Natural regeneration may restore one HP during the refusal session.
   skills:skillsSame([]),assets:assets(0,0),health:after.skills[3]!.level>=before.skills[3]!.level&&after.skills[3]!.level<=20};
  const kills=result?.creditedKills,gain=after.skills[0]!.xp-before.skills[0]!.xp;
