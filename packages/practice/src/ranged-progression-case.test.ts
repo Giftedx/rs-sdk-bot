@@ -69,7 +69,7 @@ test('the outer benchmark checks the captured start tile after reading an overri
 
 test('saved entry verification refuses tampered frozen bytes or detached skill and stock bands',()=>{
  const changed=fresh();changed.bank.find(i=>i.id===882)!.count=147;changed.bank.find(i=>i.id===2142)!.count=40;
- const loaded=parseRangedEntry(bytes(changed)),result={method:'ranged/troopers',bow:841,arrow:882};
+ const loaded=parseRangedEntry(bytes(changed)),result={method:'ranged/troopers',bow:841,arrow:882,xpGain:123160};
  const report={entrySha256:loaded.sha256,source:'a'.repeat(64),target:85,supportedMethods:rangedSupportedMethods(loaded.entry,result,'a'.repeat(64),85)};
  expect(rangedEntryProofChecks(loaded.bytes,report,result).supportedMethods).toBe(true);
  // The band is an envelope: a minimum for each combat level and for Ranged, and the Ranged levels of the proof run.
@@ -77,7 +77,9 @@ test('saved entry verification refuses tampered frozen bytes or detached skill a
  expect(band.levels.Prayer).toEqual({min:96});
  expect(band.levels.Ranged).toEqual({min:loaded.entry.skills[4]!.level});
  expect(Object.values(band.levels).every(range=>!('max' in range))).toBe(true);
- expect(band.gain).toEqual({Ranged:85-loaded.entry.skills[4]!.level});
+ // The step bound is the Ranged XP of the proof run, not its levels.
+ expect(band.gainXp).toEqual({Ranged:123160});
+ expect(rangedSupportedMethods(loaded.entry,{...result,xpGain:undefined},report.source,85)[0]!.bands[0]!.gainXp).toEqual({Ranged:0});
  // Every Ranged training method the worker reports gets a band; an acquire step and a foreign id get none.
  expect(rangedSupportedMethods(loaded.entry,{...result,method:'ranged/troopers-maple'},report.source,85)[0]!.id).toBe('ranged/troopers-maple');
  for(const method of ['ranged/lowe-buy-oak','ranged/ge-buy-maple','ranged/guild-buy-willow','magic/splash','Ranged/x',null])

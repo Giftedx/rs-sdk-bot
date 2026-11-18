@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {chooseProgression,progressionFingerprint,type ObservedAccount,type ProgressionMethod,type WorkIntent} from '../src/progression';
-import {xpForLevel} from '../src/curve';
+import {levelForXp,xpForLevel} from '../src/curve';
 const now=100000,obs=<T>(value:T)=>({at:now,value});
 const account=(over:Partial<ObservedAccount>={}):ObservedAccount=>({account:'Trainee',at:now,skills:{Ranged:{level:40,xp:xpForLevel(40)}},inventory:obs({}),equipment:obs({}),bank:obs({}),quests:obs({}),...over});
 const intent:WorkIntent={kind:'train',skill:'Ranged',targetLevel:50};
@@ -153,17 +153,21 @@ test('measured work rates do not turn modeled setup and resupply costs into meas
  const resupply={...m,costs:{setupTicks:0,travelTicks:0,acquisitionTicks:0,unlockTicks:0,resupply:{everyUnits:100,ticks:5}}};
  expect(chooseProgression(intent,account(),[resupply],{now}).basis).toBe('model');
 });
-test('an envelope proof admits an account at or above its entry, refuses one below, and bounds a step to the proved gain',()=>{
- // One proof run from Ranged 40 with the smallest kit, 5 levels long.
- const envelope={levels:{Ranged:{min:40},Hitpoints:{min:30}},gain:{Ranged:5},items:{882:100},loadout:[841]};
+test('an envelope proof admits an account at or above its entry, refuses one below, and bounds a step to the proved XP',()=>{
+ // One proof run from Ranged 40 with the smallest kit that made 5,000 Ranged XP.
+ const envelope={levels:{Ranged:{min:40},Hitpoints:{min:30}},gainXp:{Ranged:5000},items:{882:100},loadout:[841]};
  const m=method('ranged',10,{qualification:{source:'s1',bands:[envelope]}});
  const at=(ranged:number,hitpoints:number,arrows=100,worn:Record<number,number>={841:1})=>account({skills:{Ranged:{level:ranged,xp:xpForLevel(ranged)},Hitpoints:{level:hitpoints,xp:xpForLevel(hitpoints)}},bank:obs({882:arrows}),equipment:obs(worn)});
- const choose=(a:ObservedAccount,levels=5)=>chooseProgression({kind:'train',skill:'Ranged',targetLevel:a.skills.Ranged!.level+levels},a,[m],{now,requireQualification:true});
+ const choose=(a:ObservedAccount,xp=5000)=>{const from=a.skills.Ranged!;return chooseProgression({kind:'train',skill:'Ranged',targetLevel:levelForXp(from.xp+xp)+1},a,[m],{now,requireQualification:true});};
  // The entry state and every stronger state execute: higher levels, more arrows, more worn items.
  for(const a of [at(40,30),at(63,30),at(40,99),at(70,70,5000,{841:1,1129:1})])expect(choose(a).state).toBe('execute');
  // A weaker state in one dimension is not admitted: the proof never ran from it.
  for(const a of [at(39,30),at(40,29),at(40,30,99),at(40,30,100,{})]){const r=choose(a);expect(r.state).not.toBe('execute');expect(r.selected).toBeNull();}
- // One step adds the proved 5 levels at most, from the level the account has now. A longer goal is more steps.
- expect(choose(at(40,30)).path.map(s=>s.units)).toEqual([xpForLevel(45)-xpForLevel(40)]);
- expect(choose(at(63,30),8).path.map(s=>s.units)).toEqual([xpForLevel(68)-xpForLevel(63),xpForLevel(71)-xpForLevel(68)]);
+ // No step is more XP than the proof run made, at a low and at a high level. A longer goal is more steps.
+ for(const a of [at(40,30),at(63,30)]){
+  const from=a.skills.Ranged!,goal=levelForXp(from.xp+9000),need=xpForLevel(goal)-from.xp;
+  expect(need).toBeGreaterThan(5000);
+  const steps=chooseProgression({kind:'train',skill:'Ranged',targetLevel:goal},a,[m],{now,requireQualification:true}).path.map(s=>s.units);
+  expect(steps).toEqual([5000,need-5000]);
+ }
 });
