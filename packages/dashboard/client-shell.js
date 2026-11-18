@@ -408,7 +408,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   fetch(asset('quest-rewards.json')).then(r=>r.ok?r.json():null).then(j=>{if(j&&typeof j==='object')questRewardData=j;},()=>{});
   // Quest requirements (RuneLite's Quest Helper): client-assets/quest-reqs.json (gen-quest-reqs.ts) has each quest's
   // skills [skill, level, src], quest points [n, src] and quests [name, src]; src 1 the server checks it and the wiki
-  // lists it, 0 only the wiki lists it, 2 only the quest's scripts check it. A skill counts its base level.
+  // lists it, 2 only the quest's scripts check it (the generator writes no row that only the wiki lists; 0 stays for old files). A skill counts its base level.
   let questReqData=null;
   fetch(asset('quest-reqs.json')).then(r=>r.ok?r.json():null).then(j=>{if(j&&typeof j==='object')questReqData=j;},()=>{});
   const REQ_SRC=['only the wiki lists this','the server checks this','the quest scripts check this; the wiki does not list it'];
