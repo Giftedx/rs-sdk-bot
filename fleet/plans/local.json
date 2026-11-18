@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795012954367,
+ "at": 1795012975482,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -559,7 +559,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-ce0e9cea-49fc-4bb4-9e3d-c1129978172d"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-bow-trooper-ranged99-band [task-ce0e9cea-49fc-4bb4-9e3d-c1129978172d]",
    "role": "helper"
