@@ -41,7 +41,7 @@ import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { liveHelperStatuses, overallSupplyDemand, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
 import { gearById } from '../packages/planner/src/gear-progression';
 import { GEAR_ASK_LIMIT, type MarketAsks } from '../packages/planner/src/gear-sources';
-import { GEAR_ASK_MARGIN, trainingStyle, type GearWantRow } from '../packages/planner/src/gear-want-jobs';
+import { GEAR_ASK_MARGIN, isGearShop, trainingStyle, type GearWantRow } from '../packages/planner/src/gear-want-jobs';
 import { wantRowsFromStatus } from './gear-wants';
 import { MARKET_FILE, marketQuotes } from './market-cache';
 import { tickWaste, wasteShare } from './tick-waste';
@@ -265,7 +265,10 @@ export function gearWantsOf(names: readonly string[], status: (name: string) => 
     for (const name of names) {
         const style = trainingStyle(templateOf(name)), st = status(name);
         if (!style || !st) continue;
-        try { const rows = wantRowsFromStatus(name, st, style, live); if (rows.length) out.set(name.toLowerCase(), rows); } catch { /* a status that the choice cannot read gives no wants */ }
+        // The skill that the worker passes (gather-combat.ts trainSkill): the band id names it. A ranged worker pins its own bow and arrows
+        // (gather-combat.ts pin), which the planner does not mirror, so a ranged account gets no weapon or ammunition want.
+        const skill = templateOf(name)?.match(/^army-(?:cow|trooper)-([a-z]+)-\d+$/)?.[1];
+        try { const rows = wantRowsFromStatus(name, st, style, live, skill).filter(w => !(style === 'ranged' && (w.slot === 'weapon' || w.slot === 'ammo'))); if (rows.length) out.set(name.toLowerCase(), rows); } catch { /* a status that the choice cannot read gives no wants */ }
     }
     return out;
 }
@@ -325,9 +328,11 @@ export function isJobEnded(assigned: { at?: number } | undefined, status?: JobRu
 // orphaned or fatal exit without printing RESULT), release the job so the account and resource lock are freed.
 export function kitBuyRunning(job: any, assigned: { template: string; offset: number; at?: number } | undefined, linesSince: (offset: number) => readonly string[], finiteMaker = false,
     ctx?: JobRunStatus): boolean {
-    if (!job?.enabled || typeof job.template !== 'string' || (!job.template.startsWith(KIT_BUY) && !finiteMaker) || !assigned || assigned.template !== job.template) return false;
+    // A gear shop trip (scripts/shop-buyer.ts through the gear pass) is finite like a maker: it holds its account until its RESULT.
+    const finite = finiteMaker || isGearShop(job?.template);
+    if (!job?.enabled || typeof job.template !== 'string' || (!job.template.startsWith(KIT_BUY) && !finite) || !assigned || assigned.template !== job.template) return false;
     const lines=linesSince(assigned.offset);
-    const r = assess(finiteMaker?lines.filter(l=>l.startsWith('RESULT ')):lines);
+    const r = assess(finite?lines.filter(l=>l.startsWith('RESULT ')):lines);
     if (r.ok + r.fail + r.drains > 0) return false;
     return !isJobEnded(assigned, ctx);
 }
@@ -653,7 +658,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     const log: string[] = [];
     const scripts = new Map(catalogue().map(t => [t.id, t.worker ?? t.script])), hashes = new Map<string, string>();
     const scriptOf = (template: string) => {
-        const file = template.startsWith(KIT_BUY) ? KIT_BUY_SCRIPT : scripts.get(template);
+        const file = template.startsWith(KIT_BUY) ? KIT_BUY_SCRIPT : isGearShop(template) ? 'scripts/shop-buyer.ts' : scripts.get(template);
         if (file && !hashes.has(file)) try { hashes.set(file, createHash('sha1').update(readFileSync(join(root, file))).digest('hex')); } catch { /* missing: no hash */ }
         return file ? hashes.get(file) : undefined;
     };
@@ -878,7 +883,7 @@ export function trainersDone(planFile: string): string[] {
     const endedAccounts = readSwarmEnded(join(prac, 'swarm-deaths.json'));
     // A kit buy with a RESULT, ok or fail, or an ended/orphaned run, also wants its next pass now: the band waits for
     // the kit, and a failed buy must not be restarted by the controller until the 10-minute timer.
-    const buys = effectiveJobs.filter(j => j?.autopilot === side && typeof j.account === 'string' && typeof j.template === 'string' && j.template.startsWith(KIT_BUY)
+    const buys = effectiveJobs.filter(j => j?.autopilot === side && typeof j.account === 'string' && typeof j.template === 'string' && (j.template.startsWith(KIT_BUY) || isGearShop(j.template))
         && j.enabled && state.assigned[j.account]?.template === j.template && !kitBuyRunning(j, state.assigned[j.account], offset => since(j.account, offset, j), false, {
             active: activeAccounts.has(j.account.toLowerCase()),
             ended: endedAccounts.get(j.account.toLowerCase()),

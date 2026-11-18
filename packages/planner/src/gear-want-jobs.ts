@@ -23,13 +23,21 @@ export const GEAR_TICKS_PER_TILE = 0.6;
 export const GEAR_GE_TICKS = 250;
 /** The planner's ids of the two jobs. */
 export const GEAR_GE_ID = 'gear-ge';
-export const gearShopId = (profile: string) => `gear-shop-${profile}`;
+export const GEAR_SHOP_PREFIX = 'gear-shop-';
+export const gearShopId = (profile: string) => `${GEAR_SHOP_PREFIX}${profile}`;
+export const isGearShop = (templateId: string | undefined) => !!templateId?.startsWith(GEAR_SHOP_PREFIX);
+/** The ids that the `aio` list of swarm.json names to admit each job live (Inputs.pilots): nothing starts before its id is listed. */
+export const GEAR_GE_PILOT = GEAR_GE_ID;
+export const GEAR_SHOP_PILOT = 'gear-shop';
+/** The most coins that one point of bonus may cost. The dry run's fleet runs from 40 (iron platebody) to 4,400 (rune platelegs) coins a point; a want above this is skipped. */
+export const GEAR_MAX_COINS_PER_POINT = 5_000;
 
 /** One GEAR_WANT of the account, with the shop-buyer profile of its shop when one serves it. */
 export type GearWantRow = {
     style: CombatFocus; slot: string; id: number; name: string; current: number | null; source: GearSource; profile?: string;
 };
 
+const sourceCost = (s: GearSource): number => s.kind === 'ge' ? Math.ceil(s.ask * GEAR_ASK_MARGIN) : s.kind === 'shop' ? s.cost : 0;
 const mean = (...n: number[]) => n.reduce((s, x) => s + x, 0) / n.length;
 /** The points of a style's main bonuses of an item: its offence (attack and strength, or ranged, or magic) and the mean of its five defences. */
 function points(style: CombatFocus, g: Gear | undefined): number {
@@ -77,7 +85,8 @@ const valueOf = (gain: number, cost: number, ticks: number) => gain / (cost / GE
  */
 export function gearJobFor(wants: readonly GearWantRow[], o: GearJobOptions): GearJob | null {
     const rows = wants.map(w => ({ w, gain: bonusGain(w.style, w.id, w.current) }))
-        .filter(r => r.gain >= GEAR_GAIN_FLOOR && r.w.slot !== 'ammo');
+        .filter(r => r.gain >= GEAR_GAIN_FLOOR && r.w.slot !== 'ammo')
+        .filter(r => r.w.source.kind !== 'ge' && r.w.source.kind !== 'shop' || sourceCost(r.w.source) / r.gain <= GEAR_MAX_COINS_PER_POINT);
     const jobs: GearJob[] = [];
     // The market: one chain of orders, the best value first, while the limits and the room fit the coins.
     const ge = rows.filter(r => r.w.source.kind === 'ge').map(r => {

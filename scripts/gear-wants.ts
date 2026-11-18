@@ -28,15 +28,15 @@ export function shopProfileFor(shop:string,itemName:string):string|undefined{
 }
 
 /** The wants of the account for its training style, from a status file, with the profile of each shop want. A status with no skills gives none. */
-export function wantRowsFromStatus(account:string,status:any,style:CombatFocus,market?:MarketAsks):GearWantRow[]{
-    return wantsFromStatus(account,status,style,market).map(w=>{
+export function wantRowsFromStatus(account:string,status:any,style:CombatFocus,market?:MarketAsks,trainSkill?:string):GearWantRow[]{
+    return wantsFromStatus(account,status,style,market,trainSkill).map(w=>{
         const profile=w.source.kind==='shop'?shopProfileFor(w.source.shop,w.name):undefined;
         return{style:w.style,slot:w.slot,id:w.id,name:w.name,current:w.current,source:w.source,...profile?{profile}:{}};
     });
 }
 
 /** The wants of the account for its training style, from a status file. A status with no skills gives none. */
-export function wantsFromStatus(account:string,status:any,style:CombatFocus,market:MarketAsks=marketAsks()):GearWant[]{
+export function wantsFromStatus(account:string,status:any,style:CombatFocus,market:MarketAsks=marketAsks(),trainSkill?:string):GearWant[]{
     const skills:{name:string;level:number}[]=Array.isArray(status?.skills)?status.skills.filter((k:any)=>typeof k?.name==='string'&&Number.isFinite(k.level)):[];
     if(!skills.length)return[];
     const level=(name:string)=>skills.find(k=>k.name===name);
@@ -47,7 +47,7 @@ export function wantsFromStatus(account:string,status:any,style:CombatFocus,mark
     const quests=Array.isArray(status?.quests)?status.quests:null;
     const qp=status?.guildFacts?.varps?.qp,floor=questPointsFloor(quests);
     const p=status?.pos;
-    const loadout=loadoutFor(style,stock,levels,quests,{market,questPoints:Number.isInteger(qp)&&qp>floor?qp:floor,
+    const loadout=loadoutFor(style,stock,levels,quests,{trainSkill,market,questPoints:Number.isInteger(qp)&&qp>floor?qp:floor,
         position:Number.isFinite(p?.x)&&Number.isFinite(p?.z)?{x:p.x,z:p.z}:null});
     return gearWants(account,loadout);
 }
