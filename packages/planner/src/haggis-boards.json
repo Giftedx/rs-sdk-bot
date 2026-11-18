@@ -1755,10 +1755,10 @@
        }
       ],
       "ticks": {
-       "floor": 1196,
-       "realistic": 1330,
+       "floor": 2543,
+       "realistic": 2660,
        "evidence": "ESTIMATE",
-       "source": "rival: air 1-44 in 60 + nature/body 44-99 in 1,136 = 1,196 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S06, S21, lab 7-tick cycle, 22 givers); realistic adds their legs T05-06 64 + T20-21 160 = 1,554 (docs/speedrun/skills/runecraft.md section 1: about 1,330 from 1); realistic 1,330 = 1,554 - 224 legs, because the travel model prices the air -> nature leg"
+       "source": "our measured pack cycle times the packs, plus the rival air leg: body altar 44 -> 99 needs 194 packs of 27 essence (977,286 XP at 5,062.5 XP a pack); bench case extra:rune-carriers-body-44-56 (7 carriers, 6 packs from Runecraft 44, seeds 7, 8, 9) takes 12.8, 13.4, 13.2 ticks a pack after the first, which takes 9 or 10 (research/runecraft-ladder.md); floor 194 x 12.8, realistic 194 x 13.4, each plus 60 for air 1-44 (rival, bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S06); the model adds the walks and bank trips (via). Not measured: a run with banking and 22 carriers"
       },
       "via": [
        "nature-ruins"
