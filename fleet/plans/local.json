@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795015399150,
+ "at": 1795015460710,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -258,28 +258,23 @@
   },
   {
    "account": "mmthv2350",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000",
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "goal": "buy a willow shortbow and arrows up to mithril at the Ranging Guild for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-guild",
    "autopilot": "local",
    "resources": [
-    "trooper:battlefield"
+    "shop:dargaud"
    ]
   },
   {
@@ -362,26 +357,29 @@
   },
   {
    "account": "Swordinhand",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "532",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "21",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying bought big bones",
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-bury-big-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Woodpecker",
