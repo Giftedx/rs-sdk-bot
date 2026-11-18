@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794988883882-undermykilt-mmsmk1232-bd666c40fbf94fab",
+ "account": "UnderMyKilt",
+ "partner": "mmsmk1232",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragonhide body",
+ "requested": 1,
+ "claim": "75c1d658-c9e8-457e-b668-9f07164980a8",
+ "count": 0,
+ "ok": false,
+ "at": 1794989081855,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Dragonhide chaps",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Nature rune",
+   "requested": 20,
+   "count": 0
+  }
+ ]
+}
