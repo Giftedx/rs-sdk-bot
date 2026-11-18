@@ -1,5 +1,7 @@
 // Combat Monster Gatherer: fights Chaos Druids (herbs, runes) or Hill Giants (big bones, limpwurt) and banks drops.
-// Usage: bun scripts/gather-combat.ts <bot> [CAP ticks, default 15000] [TARGET: druid | giant | trooper | cow]
+// Usage: bun scripts/gather-combat.ts <bot> [CAP ticks, default 15000] [TARGET: druid | giant | trooper | cow | unicorn]
+// TARGET=unicorn kills the two unicorns south of Edgeville and banks each horn (a unicorn always drops one, drop
+// tables/scripts/unicorn.rs2); with MAX_KILLS the run ends at that count and banks.
 // COW_STAGE=1 with cow first walks to the Ardougne north bank and takes the cow kit and food (scripts/cow-stage.ts).
 // Environment: DEMO_OK=1 for live server. TARGET=giant with TRAIN_SKILL and TARGET_LEVEL trains one combat skill
 // with the wielded weapon to a finite level (GIANT_FOOD sharks carried, default 5); without them giant keeps the
@@ -96,7 +98,7 @@ export async function bankCombatLoot(s:Session,drops:RegExp,extraIds:readonly nu
     if(s.sdk.getInventory().some(i=>matches.test(i.name)||extraIds.includes(i.id)))throw Error('combat outputs not banked');
 }
 export function genericCombatNpc<T extends {id:number;distance:number;reachable?:boolean;inCombat?:boolean;targetIndex?:number}>(target:string,npcs:readonly T[],selfSlot?:number):T|undefined{
-    const id=target==='giant'?117:target==='druid'?181:undefined;
+    const id=target==='giant'?117:target==='druid'?181:target==='unicorn'?89:undefined;
     const owned = (n:T) => selfSlot !== undefined && Number.isSafeInteger(selfSlot) && selfSlot >= 0 &&
         n.inCombat === true && n.targetIndex === 32768 + selfSlot;
     return npcs.filter(n => n.id === id && n.reachable === true &&
@@ -864,6 +866,14 @@ export const CONFIGS: Record<string, {
         bankSpot: { x: 2619, z: 3332 },
         drops: /$^/,
     },
+    // Unicorn (npc 89, combat 15): spawns at 3084,3454 and 3090,3450 (maps/m48_53.jm2), 45 tiles south of the
+    // Edgeville bank and outside the Wilderness. The horn is the second input of an antipoison.
+    unicorn: {
+        npc: /^unicorn$/i,
+        spot: { x: 3087, z: 3452 },
+        bankSpot: { x: 3092, z: 3496 }, // Edgeville Bank
+        drops: /^unicorn horn$/i,
+    },
     giant: {
         npc: /^(?:hill )?giant$/i,
         spot: { x: 2545, z: 3144 }, // Surface Giant117 camp
@@ -892,7 +902,7 @@ const baseConf=dungeonGiant?{...targetConf,spot:{x:3117,z:9850},bankSpot:{x:3092
 const conf=alch?.route?{...baseConf,spot:alch.route.site,bankSpot:alch.route.bank}:baseConf;
 
 if (!botName) {
-    console.error('Usage: bun scripts/gather-combat.ts <botName> [CAP] [TARGET: druid | giant | trooper | cow]');
+    console.error('Usage: bun scripts/gather-combat.ts <botName> [CAP] [TARGET: druid | giant | trooper | cow | unicorn]');
     process.exit(1);
 }
 
