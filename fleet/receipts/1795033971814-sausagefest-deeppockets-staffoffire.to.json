@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795033971814-sausagefest-deeppockets-staffoffire",
+ "account": "Deeppockets",
+ "partner": "Sausagefest",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "d8208b3c-3959-45f2-81b7-4fec93e96cd9",
+ "count": 0,
+ "ok": false,
+ "at": 1795034748316,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795034733792-0000002220-0000000001",
+  "at": 1795034748303,
+  "sha256": "c865a6cf5249e7525a6c38cffb38fa3eca5bfdbcfea69573d038a43a9eff74ad"
+ },
+ "screen": false
+}
