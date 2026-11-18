@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795036065975-trousersnake-undermykilt-9bc63c203f99c468",
+ "account": "TrouserSnake",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 20,
+ "claim": "3ef1b9bf-ed8c-42f5-9850-756ffcc29bea",
+ "count": 20,
+ "ok": true,
+ "at": 1795036113840,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795036076604-0000022576-0000000001",
+  "at": 1795036113828,
+  "sha256": "cf5dd7bf107fab37dcc0a77ca3b65bbc1f3052035d2069243d488322e0d3cfce"
+ },
+ "screen": true
+}
