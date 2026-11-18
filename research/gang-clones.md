@@ -11,6 +11,7 @@ The counts in this file are those of the committed data files.
 |---|---|
 | `scripts/pk-gang-record/goondelf.json`, `ligma.json`, `sugma.json` | One gang account: levels, kit, attack, prayer, eating, movement, choice of player, retreat, death, schedule |
 | `scripts/pk-gang-record/group.json` | The three as a group: the post, the pile-on, the chase of our accounts, the unknowns |
+| `scripts/pk-gang-record/squad-candidate.json` | The squad that the climb ranks first, as arguments of `scripts/pk-squad.ts` |
 | `scripts/measure/pk-gang-record.ts` | Builds the four files from the sources (`build`), lists the tick records (`scan`), saves the hiscore pages (`hiscores`) |
 | `scripts/measure/pk-gang-collect.ts` | Records the gang from the public world feed: one socket, the roster and one rectangle that follows the gang |
 
@@ -227,6 +228,74 @@ live range of 114 to 386 ticks.
 
 The offline simulator `scripts/pk-sim.ts` is not used for these numbers. It has no model of the walk out, of the
 prayer wait or of poison. Each of the three moves the cost of a kill.
+
+## The climb
+
+The squad (`scripts/pk-squad.ts`) walks from the Edgeville bank to the multi-way post (3067, 3640). The three clones
+hunt it, each clone on its own one of ours (`extra:clone-squad-*`). `scripts/measure/pk-gang-climb.ts` makes the table
+from the case logs.
+
+Conditions of the table: one hosted bench run a condition, lockstep seed 7. One run does not separate two conditions,
+so the table ranks candidates and makes no win claim. The hosted bench takes no seed input. Three matched seeds a
+condition are the next step.
+
+A dead gang account is back on its post after 1,154 ticks (`death`). So the kills of an hour are 9,000 ticks times
+the kills of a run, over the ticks of a run plus 1,154. That wait bounds each squad that kills all three.
+
+No account of ours died in any of the 42 conditions.
+
+| Condition | Kills of 3 | Hitpoints lost a kill | Ticks a run | Kills an hour | Account ticks a kill |
+|---|---|---|---|---|---|
+| 3 of ours, rune chainbody kit with Bind and antipoison (`chainbind`) | 3 | 34 | 589 | 15.5 | 589 |
+| 4 of ours, `chainbind` (the base) | 3 | 39 | 543 | 15.9 | 724 |
+| 5 of ours, `chainbind` | 3 | 16 | 459 | 16.7 | 765 |
+| 6 of ours, `chainbind` | 3 | 12 | 445 | 16.9 | 890 |
+| 4 of ours, no rune and no antipoison (`chainbare`) | 1 | 83 | 603 | 5.1 | 2,412 |
+| 5 of ours, `chainbare` | 2 | 160 | 792 | 9.2 | 1,980 |
+| 4 of ours, full rune | 3 | 42 | 570 | 15.7 | 760 |
+| 4 of ours, dragonhide | 3 | 17 | 464 | 16.7 | 619 |
+| 4 of ours, two members with no bow | 3 | 42 | 549 | 15.9 | 732 |
+| 4 of ours, no member with a bow | 3 | 52 | 661 | 14.9 | 881 |
+| 4 of ours, the gang's single-way post | 2 | 121 | 688 | 9.8 | 1,376 |
+| 4 of ours, the east multi-way post | 3 | 38 | 715 | 14.4 | 953 |
+| 4 of ours, melee only | 3 | 41 | 669 | 14.8 | 892 |
+| 4 of ours, ranged only | 3 | 51 | 614 | 15.3 | 819 |
+| 4 of ours, no freeze | 3 | 26 | 545 | 15.9 | 727 |
+| 4 of ours, no chase | 2 | 22 | 553 | 10.5 | 1,106 |
+| 4 of ours, eat at 50 | 3 | 35 | 561 | 15.7 | 748 |
+| 4 of ours, eat at 70 | 2 | 190 | 716 | 9.6 | 1,432 |
+| 4 of ours, the special from the first health bar | 3 | 35 | 518 | 16.1 | 691 |
+| 4 of ours against clones that all walk out (`retreat`) | 3 | 14 | 520 | 16.1 | 693 |
+| 4 of ours against clones that all stand (`stand`) | 3 | 38 | 559 | 15.8 | 745 |
+| 4 of ours against clones with 6 sharks (`lean`) | 2 | 25 | 519 | 10.8 | 1,038 |
+| 4 of ours against clones with 23 sharks (`full`) | 3 | 25 | 501 | 16.3 | 668 |
+| 5 of ours against each of the four modes | 3 | 14 | 439 | 16.9 | 732 |
+
+What the table shows on this seed:
+
+- **The freeze runes and the antipoison decide a small squad.** Four in the kit with neither kill 1 of 3. Four with both kill 3 of 3.
+- **Five of ours kill all three in each mode of the clones.** Four lose one kill against the clones with 6 sharks.
+- **The multi-way post is cheaper than the gang's own post.** 39 Hitpoints a kill against 121.
+- **Bow and dagger in turns is not worse than one style.** 39 Hitpoints a kill against 41 for melee only and 51 for ranged only.
+- **More accounts cut the Hitpoints of a kill and not its account ticks.** Three of ours need 589 account ticks a kill and six need 890.
+
+The candidate squad is `scripts/pk-gang-record/squad-candidate.json`: five of ours in the kit rule `gang-chain-bind`,
+the multi-way post, the default options of the squad script.
+
+The pilot again: four of ours in the pilots' kit with no march and no pull lose 46 Hitpoints a kill on the bench
+(`extra:clone-pilot-4-chainbare-nomarch-x1`), against 249 live. On the gang's single-way post the same four kill
+none and lose 631 Hitpoints (`extra:clone-pilot-4-chainbare-single-x1`). The live pilot lies between the two: it
+fought on single-way tiles on the walk in. The squad script of the pilot had no rule that leaves a refused fight;
+the script of the bench has it. So the squad cases do not copy the pilots, and the first live squad run is the check
+of the clones at squad size (`scripts/measure/pk-gang-drift.ts squad`).
+
+Not measured:
+
+- Three matched seeds a condition, and the winner over more seeds.
+- Lobsters: the two cases end with no fight. The bank trip of the squad takes sharks only.
+- A style rule for each gang account, and a kill order. The squad script has one option set and takes the lowest health bar.
+- Arrows and runes a kill: the RESULT line of the squad does not hold them.
+- The repeat cycle of 30 minutes: a dead clone does not come back.
 
 ## Keep it true
 

@@ -1,0 +1,17 @@
+{
+ "what": "The squad that the climb against the gang clones ranks first, as arguments of scripts/pk-squad.ts",
+ "status": "candidate",
+ "evidence": "research/gang-clones.md \"The climb\": one hosted bench run a condition on lockstep seed 7 (runs 44256273365, 44256278024, 44256282560, 44256535675). No condition has three matched seeds, so this file makes no win claim.",
+ "confirm": "bun run bench '^extra:clone-squad-5-chainbind(-retreat|-stand|-lean|-full)?-x1$' --seeds 1,2,3,4,5,6 on the hosted CI, when its workflow takes a seed input",
+ "members": {
+  "count": 5,
+  "kitRule": "gang-chain-bind (scripts/squad-ready.ts): the bench kit live-walker-iron-rune-chain-bind",
+  "note": "Four of ours kill the three clones in each mode but one (the clones with 6 sharks each: 2 of 3). Five kill the three in each of the five modes. A member with no strung bow fights with the dagger and Bind: two such members of four cost 42 Hitpoints a kill against 39."
+ },
+ "arguments": ["TARGETS=goondelf,ligma,sugma", "POST=3067,3640", "TRIPS=1", "RESCUE=1", "PICKUP=1"],
+ "options": "the default SQUAD_OPTS of scripts/pk-squad.ts: no single change of one option gave more kills or a lower cost on seed 7 beyond the spread of like conditions",
+ "post": { "tile": [3067, 3640], "kind": "multi-way", "reason": "the gang's own single-way post cost 121 Hitpoints a kill (2 of 3 kills) against 39 (3 of 3)" },
+ "cycle": { "ticksOfARun": 459, "waitForADeadGangAccount": 1154, "killsAnHour": 16.7, "note": "the wait for a dead gang account bounds the kills of an hour for each squad that kills all three" },
+ "cost": { "hitpointsLostAKill": 16, "foodCoinsAKill": 240, "deathsOfOurs": 0 },
+ "notMeasured": ["three matched seeds a condition", "lobsters (the bank trip takes sharks only)", "a style rule for each gang account and a kill order (one option set and the lowest health bar in scripts/pk-squad.ts)", "arrows and runes a kill (not in the RESULT line)", "the repeat cycle of 30 minutes (a dead clone does not come back)"]
+}
