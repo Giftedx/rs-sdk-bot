@@ -131,13 +131,7 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
     const si=index(h,s.name),hi=index(s,h.name);
     if(si!==undefined&&hi!==undefined){
      incomingCursor=cursor(s);busyCursor=cursor(h);
-     // The crafter asks the helper in the same tick: two requests that cross open the trade at once, as in the pipeline
-     // opening below, so the crafter does not wait a tick to see the helper's request before it answers. A request
-     // that the crafter's delay or window refuses is sent again; RUNE_RECIPROCAL=0 sends the helper's request only.
-     mark('helper-request');
-     const ask=direct(h,{type:'interactPlayer',playerIndex:si,optionIndex:4,reason:'SDK'});
-     if(process.env.RUNE_RECIPROCAL!=='0')await Promise.all([ask,direct(s,{type:'interactPlayer',playerIndex:hi,optionIndex:4,reason:'SDK'})]);else await ask;
-     mark('control');requestPending=true;
+     mark('helper-request');await direct(h,{type:'interactPlayer',playerIndex:si,optionIndex:4,reason:'SDK'});mark('control');requestPending=true;
     }
    }
    if(requestPending&&ready()&&!stop()){
