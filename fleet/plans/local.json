@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795018734209,
+ "at": 1795018772835,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -310,29 +310,22 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=5 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit11-385-0to5 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":5}}"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "repeat": false,
+   "goal": "buy 5 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "supply",
+   "template": "kit-buy:aio-blood-chest",
    "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "resources": []
   },
   {
    "account": "OreElse",
@@ -423,7 +416,7 @@
     "BONE_ID": "532",
     "BONE_RESERVE": "6",
     "CAP": "4000",
-    "AUTOPILOT_ORDER": "27",
+    "AUTOPILOT_ORDER": "28",
     "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
    },
    "enabled": true,
@@ -448,7 +441,8 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":99}}"
    },
    "enabled": true,
    "standing": true,
