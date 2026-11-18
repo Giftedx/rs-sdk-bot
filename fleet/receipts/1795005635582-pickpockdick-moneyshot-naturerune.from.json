@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795005635582-pickpockdick-moneyshot-naturerune",
  "account": "PickpockDick",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 50,
  "claim": "7d4091f8-dd55-47b2-894e-e9b0fd1b4d93",
- "count": 0,
- "ok": false,
- "at": 1795005778719,
- "detail": "trade claimed"
+ "count": 50,
+ "ok": true,
+ "at": 1795005805633,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 50,
+  "after": 0
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795005790715
+ },
+ "logout": {
+  "attemptId": "1795005778728-0000021336-0000000001",
+  "at": 1795005805473,
+  "sha256": "7d3c4521bf8dc55c3442c76e3e3c44fc79f4b971c427a30d014ed34eded52f9a"
+ },
+ "screen": true
 }
