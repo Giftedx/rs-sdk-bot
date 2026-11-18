@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794987491704-knightstick-undermykilt-18d677f85731e554",
+ "account": "Knightstick",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "03a16b07-3886-412a-bd1c-6f2e9f95eb61",
+ "count": 0,
+ "ok": false,
+ "at": 1794987504685,
+ "detail": "trade claimed"
+}
