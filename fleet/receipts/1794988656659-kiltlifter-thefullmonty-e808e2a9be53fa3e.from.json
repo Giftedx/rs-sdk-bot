@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794988656659-kiltlifter-thefullmonty-e808e2a9be53fa3e",
+ "account": "Kiltlifter",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron arrow",
+ "requested": 41,
+ "claim": "637e6363-7436-45ad-9eba-dbcde3b17fda",
+ "count": 0,
+ "ok": false,
+ "at": 1794988809325,
+ "detail": "trade claimed"
+}
