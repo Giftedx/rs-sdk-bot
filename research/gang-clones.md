@@ -228,8 +228,7 @@ The bench fight is one of ours in the pilots' kit against one clone (`extra:clon
 | All three | 9 of 18 | 1,671: 186 a kill | 558 | 150 to 250 |
 
 The bench gives 186 Hitpoints a kill against 249 and 260 reported: -25% and -28%. Each bench fight is inside the
-reported range. Four of ours in the pilots' kit on the gang's single-way post, where each fight is one-on-one, lose
-297 Hitpoints a kill (`extra:clone-pilot-4-chainbare-single-x1`, seeds 1, 2 and 3, 3 kills of 9): +14% and +19%.
+reported range.
 
 ### What the bench does not copy
 
