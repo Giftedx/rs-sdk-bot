@@ -536,6 +536,12 @@ const ROUTE_CASES: BenchCase[] = [
     pass: s => ok(s) && /stop=target-level/.test(s) && wears(s, [853, 890, 1133, 1097]),
     presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Ranged: 29, Defence: 20, Hitpoints: 50},
       bank: [{id: 849, count: 1}, {id: 853, count: 1}, {id: 888, count: 300}, {id: 890, count: 300}, {id: 1133, count: 1}, {id: 1097, count: 1}, {id: 333, count: 30}]}},
+  // The army's Ranged method (research/combat-measure.md "Ranged on the troopers"): the plain trooper trainer with
+  // a shortbow, iron arrows and sharks from the Ardougne north bank. Passes on the target level with no progression handoff.
+  {key: 'fighter:trooper-ranged', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['trooper', 'TRAIN_SKILL=Ranged', 'TARGET_LEVEL=30', 'GIANT_FOOD=10', 'LOOT_WATCH=0'],
+    pass: s => ok(s) && /stop=target-level/.test(s) && !/handoff/i.test(s),
+    presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 69, Strength: 61, Defence: 62, Hitpoints: 62, Ranged: 1, Prayer: 43},
+      bank: [{id: 841, count: 1}, {id: 884, count: 600}, {id: 385, count: 30}]}},
   {key: 'fighter:chompy', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['chompy', '1', '1', '1500'], pass: ok, timeoutMs: 900_000,
     presetConfig: {position: {x: 2614, z: 3093, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Prayer: 99}, varps: {293: 65},
       equipment: [{id: 1718, count: 1, slot: 2}, {id: 544, count: 1, slot: 4}, {id: 542, count: 1, slot: 7}],

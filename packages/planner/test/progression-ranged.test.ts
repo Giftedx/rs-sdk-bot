@@ -135,3 +135,29 @@ test('rangedBandTarget stops at a tier only when the bow and arrows have a sourc
     // No coins for the purchase: no stop.
     expect(rangedBandTarget(mk(1,{841:1,882:100},50),99)).toBe(99);
 });
+
+import {methodSupportsWork} from '../../core/src/progression-policy';
+
+test('the ranged/troopers methods also support the plain trooper trainer, and no other worker',()=>{
+    const now=Date.now();
+    const obs=(value:any)=>({at:now,value,source:'test'});
+    const a:ObservedAccount={
+        account:'army',at:now,
+        skills:{Ranged:{level:1,xp:0},Hitpoints:{level:62,xp:xpForLevel(62)},Defence:{level:62,xp:xpForLevel(62)}},
+        inventory:obs({}),equipment:obs({}),bank:obs({841:1,884:600,385:30}),quests:obs({}),position:obs({x:2619,z:3332,level:0}),
+    };
+    const methods=rangedProgressionMethods(a,30);
+    const trooper={script:'scripts/gather-combat.ts',args:['1500','trooper'],env:{TARGET:'trooper',TRAIN_SKILL:'Ranged',TARGET_LEVEL:'30',GIANT_FOOD:'10',LOOT_WATCH:'0'}};
+    for(const id of ['ranged/troopers','ranged/troopers-oak','ranged/troopers-willow','ranged/troopers-maple']){
+        const m=methods.find(x=>x.id===id);
+        if(!m)continue;
+        expect(methodSupportsWork(m.step,trooper)).toBe(true);
+        // The method still supports its own worker, and not the cows or another skill's trooper run.
+        expect(methodSupportsWork(m.step,{script:m.step.script,args:m.step.args,env:m.step.env})).toBe(true);
+        expect(methodSupportsWork(m.step,{...trooper,args:['1500','cow'],env:{...trooper.env,TARGET:'cow'}})).toBe(false);
+        expect(methodSupportsWork(m.step,{...trooper,env:{...trooper.env,TRAIN_SKILL:'Strength'}})).toBe(false);
+    }
+    expect(methods.some(m=>m.id==='ranged/troopers')).toBe(true);
+    // The chickens method is another worker's job: the trooper trainer is not its work.
+    expect(methodSupportsWork(methods.find(m=>m.id==='ranged/chickens')!.step,trooper)).toBe(false);
+});

@@ -2,6 +2,7 @@ import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import type {ObservedAccount,ProgressionMethod} from './progression';
 import type {Gear} from '../../knowledge/src/gear';
+import type {Step} from '../../core/src/chain-step';
 import {standardBowTiers,standardArrowTiers} from './gear-progression';
 
 export type RangedProgressionAccount=ObservedAccount;
@@ -91,13 +92,16 @@ export function rangedProgressionMethods(a:RangedProgressionAccount,targetLevel:
   model(activeKit?rangedModelRate(Math.max(1,level),activeKit,3,1,8+210/8):null,'Model: HP3 chickens, native rapid attack roll; eight kills per210-tick bank journey; pickup and targeting8ticks/kill. Validate on the current state.'),travel(3253,3421));
  if(!chickenFood)chicken.costs.acquisitionTicks=650;
  methods.push(chicken);
+ // The plain trooper trainer does the same work as the method's own worker: the army runs it for the Ranged band.
+ const plainTrooper=(target:number):Step=>({script:'scripts/gather-combat.ts',args:['1500','trooper'],env:{TARGET:'trooper',TRAIN_SKILL:'Ranged',TARGET_LEVEL:String(target)}});
+ const onTroopers=<M extends ProgressionMethod>(m:M):M=>{m.step={...m.step,alsoRuns:[plainTrooper(targetLevel)]};return m;};
  const trooper=base('ranged/troopers',{levels:{Hitpoints:40},items:{...required,...food?{[food]:3}:{2142:3}}},
   model(activeKit?rangedModelRate(Math.max(1,level),activeKit,22,12):null,'Model: HP22, Defence12 Khazard troopers, native rapid attack roll; targeting and ammo pickup8ticks/kill. Bank and approach included separately. Validate on the current state.'),travel(2619,3332));
- trooper.costs.setupTicks=220;methods.push(trooper);
+ trooper.costs.setupTicks=220;methods.push(onTroopers(trooper));
  const willow=kitStats(849,888);
  const guild=base('ranged/guild-willow-mithril',{levels:{Ranged:40,Hitpoints:40},items:{849:1,888:500,...food?{[food]:3}:{2142:3}}},
   model(rangedModelRate(Math.max(1,level),willow,22,12),'Model of the owned willow/mithril trooper route. Missing kit is supplied by the existing Dargaud shop jobs; observe shelf, price and complete bank credit before training.'),travel(2619,3332));
- guild.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(guild);
+ guild.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(onTroopers(guild));
  const shop=(id:string,item:number,count:number,pattern:string,budget:number):ProgressionMethod=>({
   id,source:'scripts/shop-buyer.ts dargaud; vendor/rs-sdk/server/content/scripts/minigames/game_ranging/configs/ranging.inv',
   step:{script:'scripts/shop-buyer.ts',args:['dargaud','1600'],env:{ITEMS:pattern,STOCK_TARGET:String((physical[item]??0)+Math.max(0,count-(owned[item]??0))),MAX_ITEMS:String(Math.max(0,count-(owned[item]??0))),STOP_AT_TARGET:'1',BANK_PACK:'1',BANK_AT:'0',NO_BUY_TICKS:'25',MAX_SPEND:String(budget),FLOAT:String(budget+1000),COIN_RESERVE:'500'}},
@@ -155,16 +159,16 @@ export function rangedProgressionMethods(a:RangedProgressionAccount,targetLevel:
    const mChick=base('ranged/chickens-oak',{levels:{Ranged:5},items:{843:1,886:50}},model(rangedModelRate(Math.max(5,level),oak,3,0),'Model: HP 3 chickens with Oak shortbow and Steel arrows.'),travel(3253,3421));
    mChick.costs={setupTicks:20,travelTicks:travel(3253,3421),acquisitionTicks:0,unlockTicks:0};methods.push(mChick);
    const mTroop=base('ranged/troopers-oak',{levels:{Ranged:5,Hitpoints:40},items:{843:1,886:250,...food?{[food]:3}:{2142:3}}},model(rangedModelRate(Math.max(5,level),oak,22,12),'Model: troopers with Oak shortbow and Steel arrows.'),travel(2619,3332));
-   mTroop.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(mTroop);
+   mTroop.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(onTroopers(mTroop));
   }
   if((!kit||kit.bowLevel<20)&&targetLevel>=20){
    const mWillow=base('ranged/troopers-willow',{levels:{Ranged:20,Hitpoints:40},items:{849:1,888:250,...food?{[food]:3}:{2142:3}}},model(rangedModelRate(Math.max(20,level),willow,22,12),'Model: troopers with Willow shortbow and Mithril arrows before Ranging Guild.'),travel(2619,3332));
-   mWillow.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(mWillow);
+   mWillow.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(onTroopers(mWillow));
   }
   const maple=kitStats(853,888);
   if((!kit||kit.bowLevel<30)&&targetLevel>=30){
    const mMaple=base('ranged/troopers-maple',{levels:{Ranged:30,Hitpoints:40},items:{853:1,888:250,...food?{[food]:3}:{2142:3}}},model(rangedModelRate(Math.max(30,level),maple,22,12),'Model: troopers with Maple shortbow and Mithril arrows.'),travel(2619,3332));
-   mMaple.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(mMaple);
+   mMaple.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(onTroopers(mMaple));
   }
  }
  const bowTarget=goalItems?.[849]??1,arrowTarget=goalItems?.[888]??500;
