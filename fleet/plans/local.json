@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795033648468,
+ "at": 1795033848333,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -663,7 +663,17 @@
   "CoinCock",
   "Ballspinner",
   "SporranBulge",
-  "Sausagefest"
+  "Sausagefest",
+  "deeppockets",
+  "dipstick",
+  "fatstack",
+  "fingerblastr",
+  "fingersmith",
+  "kiltlifter",
+  "knightrider",
+  "knightstick",
+  "quickhandjob",
+  "sporrandip"
  ],
  "builds": {
   "NabTheKnob": "tribrid",
