@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794989244283-trousersnake-mmsmk1232-90949c8411a01875",
+ "account": "mmsmk1232",
+ "partner": "TrouserSnake",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 28,
+ "claim": "4e85601f-e795-4c9b-9aa6-abf5b307060e",
+ "count": 28,
+ "ok": true,
+ "at": 1794991017566,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 28
+ },
+ "bank": {
+  "count": 28,
+  "at": 1794991016157
+ },
+ "logout": {
+  "attemptId": "1794990990773-0000024744-0000000001",
+  "at": 1794991016996,
+  "sha256": "f8d5d7fdc6b7b32823e1d6821c965703b1c5448f50e81bc53fae57944965edc0"
+ },
+ "screen": true
+}

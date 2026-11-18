@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794990877666-undermykilt-woodpecker-naturerune",
+ "account": "Woodpecker",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "c939b133-e4a3-42c9-809a-cc7ca30ca9c1",
+ "count": 0,
+ "ok": false,
+ "at": 1794990999166,
+ "detail": "trade claimed"
+}
