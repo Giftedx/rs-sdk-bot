@@ -556,7 +556,7 @@ test('donor stock keeps unstrung bow names apart from usable and noted gear', ()
     expect(stock?.items['unstrung magic shortbow']).toBe(3);
 });
 
-import { ARMY_MEET, OFFLINE_STOCK_MAX_AGE_MS, itemOrder, offlineStockFresh, sideStock, unobservedAccounts } from './autopilot';
+import { ARMY_MEET, OFFLINE_STOCK_MAX_AGE_MS, itemOrder, offlineStockFresh, sideStock } from './autopilot';
 import { meetingTiles } from './coin-courier';
 import { validOrder } from './fleet-trade-settlement';
 test('a kit item order fits the fleet order format and meets at the army bank', () => {
