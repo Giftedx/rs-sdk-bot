@@ -437,13 +437,13 @@ test('restock with too little food in the bank fails and names the sharks that a
 });
 
 // A world for the death path: the account dies, respawns at Lumbridge with 1 Hitpoints and nothing worn, and the bank holds the rest.
-function deathWorld(bankRows: { id: number; count: number }[], o: { respawnAfter?: number; worn?: number[] } = {}) {
+function deathWorld(bankRows: { id: number; count: number }[], o: { respawnAfter?: number; worn?: number[]; loseKit?: boolean } = {}) {
     const wornAtStart = o.worn ?? [1163, 1201, 1231];
     const inventory: any[] = [], equipment: any[] = [], bank = bankRows.map(r => ({ ...r }));
     let tick = 0, deadSince = 0, eaten = 0, slots = 0;
     const player: any = { worldX: 3094, worldZ: 3540, combatLevel: 100, hp: 0, maxHp: 99, isDead: true, lifeId: 1 };
     const state: any = { player, inventory, equipment, skills: [], combatEvents: [], nearbyPlayers: [] };
-    const respawn = () => { Object.assign(player, { worldX: 3222, worldZ: 3218, hp: 1, isDead: false, lifeId: 2 }); };
+    const respawn = () => { Object.assign(player, { worldX: 3222, worldZ: 3218, hp: 1, isDead: false, lifeId: 2 }); if (o.loseKit) { equipment.length = 0; inventory.length = 0; } };
     const s: any = {
         tick: () => tick, ended: new Promise(() => {}), client: {},
         sdk: {
@@ -468,7 +468,7 @@ function deathWorld(bankRows: { id: number; count: number }[], o: { respawnAfter
     };
     // The next tick: the account is dead for `respawnAfter` ticks (default 3) and then stands at the respawn point.
     const next = async () => { tick++; if (player.isDead && ++deadSince > (o.respawnAfter ?? 3)) respawn(); return true; };
-    return { s, state, player, inventory, equipment, bank, wornAtStart: wornAtStart.map(id => ({ id, count: 1 })), next, eaten: () => eaten };
+    return { s, state, player, inventory, equipment, bank, wornAtStart: wornAtStart.map(id => ({ id, count: 1 })), next, eaten: () => eaten, tick: () => tick };
 }
 
 async function withDeathMocks<T>(w: ReturnType<typeof deathWorld>, run: () => Promise<T>): Promise<T> {
@@ -573,10 +573,64 @@ test('a hunt that ends in a death ends with RESULT fail died, which the supervis
     expect(huntEnd({ end: 'bank lacks trip requirements []', kills: 0, deaths: 0, rekits: 0 }).ok).toBe(false);
 });
 
-test('rekitAfterDeath ends the run when a piece of the starting kit is not in the bank', async () => {
-    const lacks = deathWorld([{ id: 385, count: 20 }, { id: 1201, count: 1 }, { id: 1231, count: 1 }]);
-    const r = await withDeathMocks(lacks, () => rekitAfterDeath(lacks.s, { lifeBefore: 1, diedNear: null, wornAtStart: lacks.wornAtStart, stop: () => false, log: () => {} }));
-    expect(r).toMatchObject({ rekit: 'kit lacks 1163', missing: [1163] });
+test('a hunt whose kit lost a piece that the bank lacks ends as died: kit lacks, which the supervisor reads as a death', async () => {
+    const w = deathWorld([{ id: 385, count: 40 }, { id: 1201, count: 1 }, { id: 1231, count: 1 }], { loseKit: true });
+    w.equipment.push(...[1163, 1201, 1231].map(id => ({ id, count: 1, slot: 0, name: 'Piece', optionsWithIndex: [] })));
+    Object.assign(w.player, { worldX: 3222, worldZ: 3218, hp: 0, isDead: true, lifeId: 1 });
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_deps, path) => { w.player.worldX = path[0]!.x; w.player.worldZ = path[0]!.z; return { ok: true, ticks: 5, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 }; }),
+        spyOn(pk, 'nextTick').mockImplementation(w.next), spyOn(pk, 'observePlayer').mockReturnValue(null),
+    ];
+    try {
+        const result: any = await hunt(w.s, { cap: 300, food: 2, minFood: 1, escapeAt: 35, stop: () => false, log: () => {}, kit: {}, trip: [{ id: 385, count: 1 }], spots: [{ x: 3094, z: 3540, dwell: 3 }] });
+        expect(result.end).toBe('died: kit lacks 1163');
+        expect(result.death).toMatchObject({ rekit: 'kit lacks 1163', missing: [1163] });
+        const end = huntEnd(result);
+        expect(end.ok).toBe(false);
+        expect(classify(`RESULT fail ${end.detail}`, false)).toBe('died');
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+});
+
+// A death on the walk to the bank, and on the last tick, is read as a death and not as a failed walk, a stop or the cap.
+async function huntWithDeath(when: 'bank-walk' | 'last-tick') {
+    const w = deathWorld([{ id: 385, count: 40 }, { id: 1163, count: 1 }]);
+    w.player.hp = 99; w.player.isDead = false; w.player.worldX = 3094; w.player.worldZ = 3540;
+    let stopped = false, walks = 0;
+    // The account dies and respawns within the walk or the tick: a new life at Lumbridge with 1 Hitpoints and nothing worn.
+    const kill = () => { Object.assign(w.player, { worldX: 3222, worldZ: 3218, hp: 1, isDead: false, lifeId: 2 }); w.equipment.length = 0; w.inventory.length = 0; };
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_deps, path) => {
+            walks++;
+            if (when === 'bank-walk' && walks === 1) { kill(); return { ok: false, ticks: 5, still: 0, clicks: 0, repaths: 0, doors: 0, next: 0, detail: 'died on the way' } as any; }
+            w.player.worldX = path[0]!.x; w.player.worldZ = path[0]!.z; return { ok: true, ticks: 5, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 };
+        }),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { const r = await w.next(); if (when === 'last-tick' && w.tick() === 10) { kill(); stopped = true; } return r; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+    ];
+    try {
+        const lines: string[] = [];
+        // No food held, so the first pass walks to the bank to restock.
+        const result: any = await hunt(w.s, { cap: 400, food: 2, minFood: 1, escapeAt: 35, stop: () => stopped, log: l => lines.push(l), kit: {}, trip: [{ id: 385, count: 1 }], spots: [{ x: 3094, z: 3540, dwell: 3 }], maxDeaths: 0 });
+        return { result, lines };
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+}
+
+test('a death on the walk to the bank ends the run as died (over the limit), not as a failed walk', async () => {
+    const { result } = await huntWithDeath('bank-walk');
+    expect(result.deaths).toBe(1);
+    expect(result.end).toBe('died');
+    expect(result.death).toMatchObject({ rekit: 'death limit' });
+    expect(classify(`RESULT fail ${huntEnd(result).detail}`, false)).toBe('died');
+});
+
+test('a death on the tick that a stop or the cap ends the run is read as a death, not as stopped or cap', async () => {
+    const { result } = await huntWithDeath('last-tick');
+    expect(result.deaths).toBe(1);
+    // The stop is set, so the respawn wait does not run: the end is a death with no respawn, not 'stopped'.
+    expect(result.end).toBe('died: no respawn');
+    expect(classify(`RESULT fail ${huntEnd(result).detail}`, false)).toBe('died');
 });
 
 test('hunt goes on after a re-kit that worked in its first retreat, and does not end the run as died', async () => {

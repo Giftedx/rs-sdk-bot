@@ -1308,7 +1308,7 @@ seed 2 / seed 3. `prayerOut` is the tick at which our prayer points reached 0.
 - **The original case with the defaults.** `extra:gang-live-check-x1` (no prayer potion in the kit) with the prayers off while it
   waits and `cureNow`: prayerOut 1184 / 1153 / 1330 against 1223 / 976 / 739, kills 0 / 1 / 0, damage taken 208 / 309 / 521,
   prayer 0 at the end in each seed. The prayer lasts longer, and with no potion it still ends at 0.
-- **Poison.** `cureNow` is now the default: an antipoison goes down in the first tick after the poison message. It is not
+- **Poison.** `cureNow` is on by default: an antipoison goes down in the first tick after the poison message. It is not
   measured apart from the other changes. Gap: `poisoned` is set from the message of the current fight only, so a poison
   taken between two fights is not seen.
 

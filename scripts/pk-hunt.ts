@@ -351,6 +351,12 @@ export async function hunt(s: Session, o: HuntOptions) {
         tally.rekits++; needsRestock = true;
         return null;
     };
+    // The end of the run when nothing else ends it: a death on the way (a bank walk, a retreat, the last tick) is recovered or ends the run
+    // as died, never as a plain failure, a stop or the cap. `openBot` no longer ends a death (continueAfterDeath), so each end checks it.
+    const ending = async (end: string): Promise<{ end: string; death?: DeathRecord }> => {
+        if (died()) { const d = await afterDeath(lastTile); if (d) return d; }
+        return { end };
+    };
     const far = () => { const p = s.sdk.getState()?.player; return !p || Math.max(Math.abs(p.worldX - EDGEVILLE_BANK.x), Math.abs(p.worldZ - EDGEVILLE_BANK.z)) > 60; };
     const exitWilderness = async (why: string): Promise<'out' | 'died' | 'failed'> => {
         const position = () => { const p = s.sdk.getState()?.player; return p ? `${p.worldX},${p.worldZ}` : ''; };
@@ -416,18 +422,20 @@ export async function hunt(s: Session, o: HuntOptions) {
             const magicLv = s.sdk.getState()?.skills?.find(k => k.name === 'Magic')?.level ?? 1;
             const hasTele = o.teleSpell !== undefined || hasVarrockTeleport(magicLv, s.sdk.getInventory(), s.sdk.getEquipment());
             if (p && wildernessDepth(p.worldX, p.worldZ) === 0 && !hasTele && !s.sdk.getInventory().some(i => (ITEMS.glory as readonly number[]).includes(i.id))) {
-                return { ...tally, end: 'far from Edgeville with no glory or PK_TELE' };
+                return { ...tally, ...await ending('far from Edgeville with no glory or PK_TELE') };
             }
-            return { ...tally, end: hasTele ? 'travel teleport did not move the account' : 'glory to Edgeville failed' };
+            return { ...tally, ...await ending(hasTele ? 'travel teleport did not move the account' : 'glory to Edgeville failed') };
         }
     }
     while (!over()) {
         if (died()) { const d = await afterDeath(lastTile); if (d) return { ...tally, ...d }; }
         if (needsRestock || foodHeld(s) < o.minFood) {
             const back = await walk(s, EDGEVILLE_BANK, over, 600);
+            // A death on the walk to the bank is recovered (the next pass restocks) or ends the run as died, whether or not the walk failed.
+            if (died()) { const d = await afterDeath(lastTile); if (d) return { ...tally, ...d }; continue; }
             if (!back.ok) return { ...tally, end: 'bank walk failed ' + JSON.stringify(back) };
             const missing = await restock(s, o.food, o.trip, kit, auto ? (bank, worn) => { const pick = pickTrip(bank, shallow, worn); kit = pick.kit; log(`HUNT trip ${pick.name}`); return pick; } : undefined);
-            if (missing) return { ...tally, end: missing };
+            if (missing) return { ...tally, ...await ending(missing) };
             needsRestock = false;
             tally.trips++;
         }
@@ -551,7 +559,7 @@ export async function hunt(s: Session, o: HuntOptions) {
             break;
         }
     }
-    return { ...tally, end: ended ? 'session ended' : o.stop() ? 'stopped' : 'cap' };
+    return { ...tally, ...await ending(ended ? 'session ended' : o.stop() ? 'stopped' : 'cap') };
 }
 
 // Pick up what the loser dropped near where it stood, most valuable stacks first, bones aside; eat food to free a slot for valuable drops.
