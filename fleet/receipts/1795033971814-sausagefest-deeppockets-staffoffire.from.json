@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795033971814-sausagefest-deeppockets-staffoffire",
  "account": "Sausagefest",
  "partner": "Deeppockets",
@@ -12,6 +12,16 @@
  "claim": "2e62cda9-2b55-4781-880d-fbe74cacae16",
  "count": 0,
  "ok": false,
- "at": 1795034115732,
- "detail": "trade claimed"
+ "at": 1795034275137,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795034274011
+ },
+ "logout": {
+  "attemptId": "1795034115793-0000028508-0000000001",
+  "at": 1795034275121,
+  "sha256": "ba47a9d41d43b5644b25f6c410f49dfaddbc2934ece834b1eb48fa54f4ad19fe"
+ },
+ "screen": false
 }
