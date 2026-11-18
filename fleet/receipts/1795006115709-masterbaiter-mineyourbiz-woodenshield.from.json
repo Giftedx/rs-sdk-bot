@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795006115709-masterbaiter-mineyourbiz-woodenshield",
+ "account": "Masterbaiter",
+ "partner": "MineYourBiz",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Wooden shield",
+ "requested": 1,
+ "claim": "a8654bbe-55a2-4b5a-9a3c-9153b6d9812d",
+ "count": 0,
+ "ok": false,
+ "at": 1795006284482,
+ "detail": "trade claimed"
+}

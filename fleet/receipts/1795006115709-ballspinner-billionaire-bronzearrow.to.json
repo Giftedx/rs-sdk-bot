@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795006115709-ballspinner-billionaire-bronzearrow",
  "account": "Billionaire",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "Bronze arrow",
  "requested": 244,
  "claim": "30edda73-26e5-42d7-80cb-388a424ec53c",
- "count": 0,
- "ok": false,
- "at": 1795006209655,
- "detail": "trade claimed"
+ "count": 244,
+ "ok": true,
+ "at": 1795006313161,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 244
+ },
+ "bank": {
+  "count": 244,
+  "at": 1795006312292
+ },
+ "logout": {
+  "attemptId": "1795006209664-0000024892-0000000001",
+  "at": 1795006313122,
+  "sha256": "486095299fe5b6e121182a44123b078b45d336984596a837f43462f34c6cd628"
+ },
+ "screen": true
 }
