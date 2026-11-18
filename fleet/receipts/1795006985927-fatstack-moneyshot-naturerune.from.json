@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795006985927-fatstack-moneyshot-naturerune",
  "account": "Fatstack",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 22,
  "claim": "042c520a-967f-4b64-8e5b-49381e8e072d",
- "count": 0,
- "ok": false,
- "at": 1795007170366,
- "detail": "trade claimed"
+ "count": 22,
+ "ok": true,
+ "at": 1795007199789,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 22,
+  "after": 0
+ },
+ "bank": {
+  "count": 22,
+  "at": 1795007178645
+ },
+ "logout": {
+  "attemptId": "1795007170373-0000016780-0000000001",
+  "at": 1795007199776,
+  "sha256": "b2c78a3e4a4b259a3a9803ce7f8febe988d2586a4f8e872d93877bd2c9e60e8a"
+ },
+ "screen": true
 }

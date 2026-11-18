@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795007127413,
+ "at": 1795007217179,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -227,23 +227,19 @@
    "account": "Masterbaiter",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
-    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=5 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=masterbaiter-kit18-385-0to5 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
+   "repeat": false,
+   "goal": "buy 5 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "supply",
-   "template": "army-hunt-supply",
+   "template": "kit-buy:aio-blood-chest",
    "autopilot": "local",
-   "resources": [
-    "shop:lowe",
-    "shop:aubury"
-   ]
+   "resources": []
   },
   {
    "account": "MineYourBiz",
@@ -258,7 +254,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
    },
    "enabled": true,
    "standing": true,
@@ -362,7 +359,8 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
    },
    "enabled": true,
    "standing": true,
