@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { SIDE_NAME } from './fleet';
-import { appendFleetGitRecord, commitFleetGitRecord, fleetGitRetryable, pushFleetGitRecord, fleetCheckoutId, fleetCheckoutLastSeen, fleetGitWindow, fleetLeaseLastSeen, readFleetGitRefs,recoveryHostLease,fleetLeaseAllowsWorker,FLEET_LEASE_TTL_MS } from './fleet-lease';
+import { appendFleetGitRecord, commitFleetGitRecord, fleetGitRetryable, fleetPushRetryable, pushFleetGitRecord, fleetCheckoutId, fleetCheckoutLastSeen, fleetGitWindow, fleetLeaseLastSeen, readFleetGitRefs,recoveryHostLease,fleetLeaseAllowsWorker,FLEET_LEASE_TTL_MS } from './fleet-lease';
 import {assertSpentRecoveryConnection,type RecoveryConnectionAdmission} from './session-recovery-permit';
 import { listAttempts, readLogoutProof } from './session-lifecycle';
 import { pidAlive, savedProcessAlive } from './session-takeover';
@@ -313,10 +313,10 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
     const authorized=admission?assertSpentRecoveryConnection(admission,account,server,root):undefined;
     const authority = 'fleet swarm claim authority', tries = patient ? SWARM_CLAIM_TRIES : 1;
     // An action that changes nothing, or changes the same thing, is tried again after a failure that says nothing about the ref.
-    const again = <T>(action: () => T): T => {
+    const again = <T>(action: () => T, retryable = fleetGitRetryable): T => {
         for (let n = 1; ; n++) {
             try { return action(); }
-            catch (error) { if (n >= tries || !fleetGitRetryable(error)) throw error; wait(SWARM_CLAIM_PAUSE_MS * (2 * n - 1)); }
+            catch (error) { if (n >= tries || !retryable(error)) throw error; wait(SWARM_CLAIM_PAUSE_MS * (2 * n - 1)); }
         }
     };
     // A login under the plan lock keeps the one short window for its reads and its push.
@@ -364,9 +364,10 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
     if (!patient) owned = appendClaim(git, ref, head, subject, record);
     else {
         // One record, made one time. A push that timed out can have reached the remote, and the same commit pushed again
-        // is then no change. A rejected push means that another writer has the ref: it is never pushed again.
+        // is then no change. A push that the fast-forward rule rejected means that another writer has the ref: it is
+        // never pushed again. A remote that was busy is not that rejection (fleetPushRetryable).
         owned = commitClaim(gitWindow(root, authority, SWARM_CLAIM_READ_MS), head, subject, record);
-        again(() => pushFleetGitRecord(gitWindow(root, authority, SWARM_CLAIM_PUSH_MS), ref, owned));
+        again(() => pushFleetGitRecord(gitWindow(root, authority, SWARM_CLAIM_PUSH_MS), ref, owned), fleetPushRetryable);
     }
     if (pending && current) cleanPending(root, current.nonce);
     let released = false;

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { acquireFleetLease, fleetGitRetryable, fleetGitWindow, fleetLeaseAllowsWorker, gitErrorDetail, FLEET_LEASE_RENEW_MS, FLEET_LEASE_TTL_MS } from '../src/fleet-lease';
+import { acquireFleetLease, fleetGitRetryable, fleetPushRetryable, fleetGitWindow, fleetLeaseAllowsWorker, gitErrorDetail, FLEET_LEASE_RENEW_MS, FLEET_LEASE_TTL_MS } from '../src/fleet-lease';
 
 const git = (cwd: string, ...args: string[]) => fleetGitWindow(cwd, 'fleet lease fixture', 5000)(args);
 
@@ -279,4 +279,18 @@ test('a caller may try again after a timeout or a network fault, never after a r
         'fleet swarm claim authority unavailable or changed: error: failed to push some refs (non-fast-forward) after Connection timed out',
         'fleet account claim held by swarm', 'fleet swarm claim authority unavailable or changed: fatal: Authentication failed'])
         expect(fleetGitRetryable(Error(text)), text).toBe(false);
+});
+
+test('the same commit is pushed again after a remote that was busy, never after a final rejection', () => {
+    // Live, Sausagefest: the push after a timed-out push of the same account.
+    const busy = 'fleet swarm claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] ea11789128b8337ca211d92c0c94a1c4b8682222 -> fleet-trade-claim/sausagefest (failed)';
+    expect(fleetGitRetryable(Error(busy))).toBe(false);
+    expect(fleetPushRetryable(Error(busy))).toBe(true);
+    for (const reason of ['failed to lock', 'failed to update ref'])
+        expect(fleetPushRetryable(Error(`x unavailable or changed: ! [remote rejected] abc -> fleet-trade-claim/x (${reason})`)), reason).toBe(true);
+    expect(fleetPushRetryable(Error('fleet swarm claim authority unavailable or changed: spawnSync git ETIMEDOUT'))).toBe(true);
+    for (const text of ['x unavailable or changed: ! [rejected] abc -> fleet-trade-claim/x (fetch first)', 'x unavailable or changed: ! [rejected] abc -> fleet-trade-claim/x (non-fast-forward)',
+        'x unavailable or changed: ! [remote rejected] abc -> fleet-trade-claim/x (pre-receive hook declined)', 'x unavailable or changed: ! [remote rejected] abc -> x (protected branch hook declined)',
+        'fleet account claim held by swarm'])
+        expect(fleetPushRetryable(Error(text)), text).toBe(false);
 });

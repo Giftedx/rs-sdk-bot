@@ -375,3 +375,19 @@ test('a login under the plan lock keeps one Git window: a timed-out push fails a
         expect(slow.calls.n).toBeLessThanOrEqual(2);
     });
 }, 60_000);
+
+test('a claim push that the remote did not take while it was busy is pushed again as the same record', async () => {
+    await withRepos((a, b) => {
+        let pushes = 0;
+        const busy = ((root: string, authority?: string, budgetMs?: number) => fleetGitWindow(root, authority, budgetMs, (args, { input, timeout }) => {
+            if (args.includes('push') && ++pushes === 1) throw Object.assign(Error('Command failed: git push'), { status: 1, stdout: '',
+                stderr: 'To https://github.com/Giftedx/rs-sdk-bot.git\n ! [remote rejected] ea11789128b8337ca211d92c0c94a1c4b8682222 -> fleet-trade-claim/trader (failed)\nerror: failed to push some refs to \'https://github.com/Giftedx/rs-sdk-bot.git\'' });
+            return execFileSync('git', args, { cwd: root, input, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout, windowsHide: true });
+        })) as typeof fleetGitWindow;
+        const claim = acquireFleetSwarmClaim(a, swarmInput, { patient: true, gitWindow: busy, wait: () => {} });
+        expect(pushes).toBe(2);
+        expect(readFleetAccountClaim(b, swarmInput)?.nonce).toBe(claim.nonce);
+        git(a, 'fetch', '--quiet', 'origin', 'refs/heads/fleet-trade-claim/trader');
+        expect(claimLog(a)).toEqual(['Fleet swarm attempt']);
+    });
+}, 60_000);
