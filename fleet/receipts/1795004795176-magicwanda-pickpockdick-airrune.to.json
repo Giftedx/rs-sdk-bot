@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795004795176-magicwanda-pickpockdick-airrune",
+ "account": "PickpockDick",
+ "partner": "Magicwanda",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 3,
+ "claim": "ffedc5a0-29bb-48e9-b30a-3937a002e96e",
+ "count": 0,
+ "ok": false,
+ "at": 1795004914874,
+ "detail": "trade claimed"
+}

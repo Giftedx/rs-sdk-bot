@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795004795176-ballspinner-yewfirst-firerune",
+ "account": "Ballspinner",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 1,
+ "claim": "633ad35c-7f9c-443c-a1be-7c257dc14b62",
+ "count": 1,
+ "ok": true,
+ "at": 1795004949943,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 75,
+  "after": 74
+ },
+ "logout": {
+  "attemptId": "1795004919690-0000001756-0000000001",
+  "at": 1795004949933,
+  "sha256": "fc5c1c121e8628cd54f2e2d2d344839db60471c97579cb0aa7b586e5ea7a377e"
+ },
+ "screen": true
+}

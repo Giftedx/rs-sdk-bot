@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795004795176-swordinhand-sporrandip-cookedmeat",
+ "account": "SporranDip",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 1,
+ "claim": "582880cc-cd67-447b-a035-28730f7da650",
+ "count": 1,
+ "ok": true,
+ "at": 1795004952681,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 3
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795004951667
+ },
+ "logout": {
+  "attemptId": "1795004923480-0000019252-0000000001",
+  "at": 1795004952670,
+  "sha256": "6f9dcf189d8306ab229a64e01310d4df2fb5d6b5f992495fb11ab68575d95a37"
+ },
+ "screen": true
+}
