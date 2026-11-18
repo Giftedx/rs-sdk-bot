@@ -1,0 +1,22 @@
+{
+ "id": "1795002394311-swordinhand-woodpecker-woodenshield",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordinhand",
+ "to": "Woodpecker",
+ "item": "Wooden shield",
+ "count": 1,
+ "start": 1795002394311,
+ "end": 1795004794311,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
