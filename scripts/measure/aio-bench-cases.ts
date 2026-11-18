@@ -266,6 +266,14 @@ const withPack = (c: BenchCase, n: number, change: (cfg: SaveConfig) => SaveConf
   companions: c.companions!.map((comp, i) => (i < Math.min(n, members) - 1 ? {...comp, presetConfig: change(comp.presetConfig!)} : comp))});
 const lobsters = (cfg: SaveConfig): SaveConfig => ({...cfg, inventory: cfg.inventory!.map(i => (i.id === SHARK ? {...i, id: LOBSTER} : i))});
 const noBow = (cfg: SaveConfig): SaveConfig => ({...cfg, inventory: cfg.inventory!.map(i => (i.id === MAGIC_SHORTBOW ? {id: SHARK, count: 1} : i)), equipment: cfg.equipment?.filter(e => e.id !== IRON_ARROW)});
+// The same change for the members of ours from member `from` on (member 0 is the account of the run). In a clone squad
+// case gang account i hunts member i, so the first three members are the ones that the gang hits first.
+const ANTIPOISON_3 = 175;
+const withPackFrom = (c: BenchCase, n: number, change: (cfg: SaveConfig) => SaveConfig, from: number): BenchCase => ({...c, presetConfig: from <= 0 ? change(c.presetConfig!) : c.presetConfig,
+  companions: c.companions!.map((comp, i) => (i < n - 1 && i + 1 >= from ? {...comp, presetConfig: change(comp.presetConfig!)} : comp))});
+const noAntipoison = (cfg: SaveConfig): SaveConfig => ({...cfg, inventory: cfg.inventory!.filter(i => i.id !== ANTIPOISON_3)});
+// No antipoison, and sharks in the free slots of the pack: 4 more at the most.
+const foodForAntipoison = (cfg: SaveConfig): SaveConfig => { const inv = cfg.inventory!.filter(i => i.id !== ANTIPOISON_3); return {...cfg, inventory: [...inv, ...Array.from({length: Math.max(0, Math.min(4, 28 - inv.length))}, () => ({id: SHARK, count: 1}))]}; };
 // `sizeB`: side B's accounts when it is not `size` (scripts/pk-team.ts SPAR_TEAM_B).
 const teamCase = (key: string, kitA: string, kitB: string, groups: number, at: {x: number; z: number}, size = 2, args: string[] = [], sizeB = size): BenchCase => {
   const group = size + sizeB, letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, groups * group - 1).split('');
@@ -1053,6 +1061,10 @@ const ROUTE_CASES: BenchCase[] = [
   ...([4, 5] as const).map(n => withPack(cloneSquad(`extra:clone-squad-${n}-chainbind-lobster-x1`, 'live-walker-iron-rune-chain-bind', n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), n, lobsters)),
   withPack(cloneSquad('extra:clone-squad-4-chainbind-nobow2-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), 4, noBow, 2),
   withPack(cloneSquad('extra:clone-squad-4-chainbind-nobow-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), 4, noBow),
+  // The antipoison: five of ours in the kit, with a potion on the first two members, on the first one, on none
+  // (extra:clone-squad-5-chainbind-x1 has one on each), and with sharks in the free slots of a pack with no potion.
+  ...([['anti2', noAntipoison, 2], ['anti1', noAntipoison, 1], ['anti0', noAntipoison, 0], ['anti2-food', foodForAntipoison, 2], ['anti0-food', foodForAntipoison, 0]] as const)
+    .map(([tag, change, from]) => withPackFrom(cloneSquad(`extra:clone-squad-5-chainbind-${tag}-x1`, 'live-walker-iron-rune-chain-bind', 5, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), 5, change, from)),
   // The approach: no march and no pull; the gang's own single-way post; the east multi-way post from Varrock.
   cloneSquad('extra:clone-squad-4-chainbind-nomarch-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'MARCH=0', 'PULL=0']),
   // The first squad pilot again: its kit (no antipoison, no rune), no march and no pull, 10 game minutes. Live: 4
