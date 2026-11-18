@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794991267766-undermykilt-deeppockets-cookedmeat",
+ "account": "Deeppockets",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "5f8dcee9-24c6-4698-b34b-7a745df108ea",
+ "count": 0,
+ "ok": false,
+ "at": 1794991858563,
+ "detail": "trade claimed"
+}

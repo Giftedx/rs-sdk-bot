@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794989069422-fishandchips-kiltlifter-72e1e24171fb514c",
+ "account": "Kiltlifter",
+ "partner": "FishAndChips",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 750,
+ "claim": "080d0d13-3f67-403b-864e-49769ea50b8e",
+ "count": 0,
+ "ok": false,
+ "at": 1794991918029,
+ "detail": "Error: route to 2810, 3440: precondition no route to 2810,3440,0",
+ "logout": {
+  "attemptId": "1794991863699-0000005212-0000000001",
+  "at": 1794991918013,
+  "sha256": "07d576ae24435c5d2fce73357566e1f44bed169b05a19118ce02b4fbf6b90d9e"
+ },
+ "screen": false
+}
