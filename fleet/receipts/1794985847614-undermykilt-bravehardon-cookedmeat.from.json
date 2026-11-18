@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794985847614-undermykilt-bravehardon-cookedmeat",
  "account": "UnderMyKilt",
  "partner": "BraveHardon",
@@ -10,8 +10,22 @@
  "item": "Cooked meat",
  "requested": 3,
  "claim": "386b4366-53e3-47d5-b270-ce5e2f9b3b2a",
- "count": 0,
- "ok": false,
- "at": 1794985933169,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1794985985858,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1794985967112
+ },
+ "logout": {
+  "attemptId": "1794985933179-0000017660-0000000001",
+  "at": 1794985985841,
+  "sha256": "2948214076c1241ac65e93fb053c5970c801c0df3ac3753b6e936464a2de63bb"
+ },
+ "screen": true
 }
