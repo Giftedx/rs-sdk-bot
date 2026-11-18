@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { classifyThreat, decideAdapt, threatLine, ThreatBook, type Member, type Sighting } from '../src/pvp-threat';
+import { canProtect, classifyThreat, decideAdapt, threatLine, ThreatBook, type Member, type Sighting } from '../src/pvp-threat';
 import type { CombatStyle } from '../src/opponent';
 
 // Style by weapon id for the tests: 1 staff, 2 bow, 3 whip. Animation 10 casts, 11 shoots, 12 hits.
@@ -143,12 +143,41 @@ test('a team of 3 and no prayer points in the squad is a retreat at once, on sin
     const single = { outclasses, multiAt: () => false };
     const retreat = decideAdapt(team, dry, single)[0]!;
     expect(retreat).toMatchObject({ kind: 'retreat' });
-    expect((retreat as { reason: string }).reason).toContain('team of 3 and no prayer points');
+    expect((retreat as { reason: string }).reason).toContain('team of 3 that no member can protect against');
     // One member has prayer points, or the points are not known: not dry.
     expect(decideAdapt(team, [{ ...dry[0]!, prayer: 12 }, ...dry.slice(1)], single).some(a => a.kind === 'retreat')).toBe(false);
     expect(decideAdapt(team, squad4, single).some(a => a.kind === 'retreat')).toBe(false);
     // Two attackers are not a team, dry or not.
     expect(decideAdapt(classes4(attackers(2)), dry, single).some(a => a.kind === 'retreat')).toBe(false);
+});
+
+test('canProtect: the points and the Prayer level of the protect prayer that covers the style', () => {
+    const m = (o: Partial<Member>): Member => ({ name: 'M', x: 0, z: 0, combat: 126, ...o });
+    expect(canProtect(m({}), 'melee')).toBe(true);
+    expect(canProtect(m({ prayer: 0, prayerLevel: 99 }), 'magic')).toBe(false);
+    expect(canProtect(m({ prayer: 40, prayerLevel: 36 }), 'magic')).toBe(false);
+    expect(canProtect(m({ prayer: 40, prayerLevel: 37 }), 'magic')).toBe(true);
+    expect(canProtect(m({ prayer: 40, prayerLevel: 40 }), 'ranged')).toBe(true);
+    expect(canProtect(m({ prayer: 40, prayerLevel: 40 }), 'melee')).toBe(false);
+    expect(canProtect(m({ prayer: 40, prayerLevel: 43 }), 'melee')).toBe(true);
+});
+
+test('a team that no member can protect against is a retreat at once, by the protect prayer of each attacker style', () => {
+    const at = (level: number) => squad4.map(m => ({ ...m, prayer: 50, prayerLevel: level }));
+    const single = { outclasses, multiAt: () => false };
+    const melee = classes4(attackers(3).map(s => ({ ...s, worn: { weapon: 3 } })));
+    const mage = classes4(attackers(3));
+    // Prayer 40: Magic (37) and Missiles (40) are open, Melee (43) is not.
+    expect(decideAdapt(melee, at(40), single)[0]).toMatchObject({ kind: 'retreat' });
+    expect((decideAdapt(melee, at(40), single)[0] as { reason: string }).reason).toContain('that no member can protect against');
+    expect(decideAdapt(mage, at(40), single).some(a => a.kind === 'retreat')).toBe(false);
+    // Prayer 43 covers all three; Prayer 30 covers none.
+    expect(decideAdapt(melee, at(43), single).some(a => a.kind === 'retreat')).toBe(false);
+    expect(decideAdapt(mage, at(30), single)[0]).toMatchObject({ kind: 'retreat' });
+    // One member that can protect is enough, and a mixed team with one protectable attacker is not unprotected.
+    expect(decideAdapt(melee, [...at(40).slice(1), { ...at(43)[0]! }], single).some(a => a.kind === 'retreat')).toBe(false);
+    const mixed = classes4([near('A', { worn: { weapon: 3 } }), near('B', { x: 3075 }), near('C', { x: 3076, z: 3643 })]);
+    expect(decideAdapt(mixed, at(40), single).some(a => a.kind === 'retreat')).toBe(false);
 });
 
 test('a lone attacker of any style is met with the protect prayer and no retreat, dry or not', () => {

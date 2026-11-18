@@ -1800,7 +1800,8 @@ the log and the record) -> `packages/core/test/pvp-threat.test.ts`, `scripts/pk-
   the Wilderness with the rescue, and the bank trip brings it back. Three or more unexpected dangerous players (the squad's targets are
   expected) are a team (policy of the attacker benches, `research/gang-clones.md` "The attackers"): attackers at once that outnumber the squad
   (members + 1, at least 3: five against four) are a retreat, also on single-way ground, because the gang's single-way post did not help against five;
-  a team of 3 or more against a squad with no prayer points is a retreat at once; a lone mage, ranger or tribrid is met with the protect prayer and the
+  a team of 3 or more that no member can protect against is a retreat at once: for each attacker the protect prayer of its style needs points and the Prayer level
+  of the content (`prayers.dbrow`: Magic 37, Missiles 40, Melee 43), so a melee team against members with Prayer 40 is unprotected; a lone mage, ranger or tribrid is met with the protect prayer and the
   fight, no retreat. A team that is smaller than that: on a multi-way tile the squad walks to the nearest single-way tile, away from them (`nearestSingleWay`), and holds it
   for 120 ticks after the last team decision (no pull, no walk back to the post); a walk that fails is the rescue. On a single-way tile the team
   is held there, because one attacker at a time can hit each member (`pvp_combat.rs2:103-133`). Each decision is logged as

@@ -8,7 +8,7 @@ import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renam
 import { join } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { decodeHeadicons, decodeWorn, wornWeaponStyle, type CombatStyle } from '../packages/core/src/opponent';
-import { classifyThreat, decideAdapt, threatLine, ThreatBook, type Adapt, type DecideOptions, type Member, type Sighting, type ThreatClass, type ThreatRecord } from '../packages/core/src/pvp-threat';
+import { classifyThreat, decideAdapt, threatLine, ThreatBook, type Adapt, type DecideOptions, type Member, type ProtectLevels, type Sighting, type ThreatClass, type ThreatRecord } from '../packages/core/src/pvp-threat';
 import { parsePack } from '../packages/knowledge/src/pack';
 import { contentRoot } from '../packages/knowledge/src/paths';
 import { PRAYER } from './pk';
@@ -84,7 +84,7 @@ export class ThreatWatch {
     // The members now in the Wilderness, from the sessions that are logged in.
     private members(): { sessions: Session[]; members: Member[] } {
         const sessions = this.o.sessions().filter(s => { const p = s.sdk.getState()?.player; return !!p && !p.isDead && wildLevel(p.worldX, p.worldZ) > 0; });
-        return { sessions, members: sessions.map(s => { const p = s.sdk.getState()!.player!; return { name: s.name, x: p.worldX, z: p.worldZ, combat: p.combatLevel, prayer: protectionPoints(s) }; }) };
+        return { sessions, members: sessions.map(s => { const p = s.sdk.getState()!.player!; return { name: s.name, x: p.worldX, z: p.worldZ, combat: p.combatLevel, prayer: s.sdk.getState()!.prayers?.prayerPoints, prayerLevel: s.sdk.getSkill('Prayer')?.level }; }) };
     }
 
     // The threats, their classes and the decisions of this tick. One reading for the squad each tick, whichever member asks.
@@ -109,6 +109,7 @@ export class ThreatWatch {
         const decided = decideAdapt(classes, members, {
             outclasses: (m, t) => outclasses({ combat: m.combat }, { combatLevel: t.combat }),
             multiAt: isMulti,
+            protectLevels: protectLevels(),
             // The nearest single-way tile, away from the dangerous players.
             singleWayFrom: at => nearestSingleWay(at, { multiAt: isMulti, wildAt: wildLevel, avoid: classes.filter(c => c.dangerous).map(c => ({ x: c.record.x, z: c.record.z })) }),
             // The armour of the pack that defends better against the threat's style (scripts/pk-threat-kit.ts).
@@ -200,16 +201,22 @@ export const protectOf = (actions: readonly Adapt[], member: string): CombatStyl
 export const retreatOf = (actions: readonly Adapt[]): string | null => (actions.find(a => a.kind === 'retreat') as Extract<Adapt, { kind: 'retreat' }> | undefined)?.reason ?? null;
 
 // Protect from `style` for an account that waits (no fight loop to hold it): other protect prayers off, then the one on, one input each 3 ticks.
-// The levels are the prayer requirements (pk.ts PRAYER_REQ: 37, 40, 43).
-const PROTECT_LEVEL = { magic: 37, ranged: 40, melee: 43 } as const;
 const PROTECT_PRAYER = { magic: PRAYER.magic, ranged: PRAYER.missiles, melee: PRAYER.melee } as const;
-// The prayer points that can pay for a protect prayer: 0 below the level of the lowest one (37), else the points now (undefined when not known).
-export const protectionPoints = (s: Session): number | undefined => (s.sdk.getSkill('Prayer')?.level ?? 99) >= PROTECT_LEVEL.magic ? s.sdk.getState()?.prayers?.prayerPoints : 0;
+// The Prayer level of each protect prayer, read from the content (scripts/skill_prayer/configs/prayers.dbrow).
+let levelCache: ProtectLevels | undefined;
+export function protectLevels(): ProtectLevels {
+    if (levelCache) return levelCache;
+    const text = readFileSync(join(contentRoot(), 'scripts/skill_prayer/configs/prayers.dbrow'), 'utf8');
+    const of = (row: string) => Number(text.match(new RegExp(`\\[prayer_protect_from_${row}\\][^\\[]*?data=level,(\\d+)`))?.[1]);
+    const levels = { magic: of('magic'), ranged: of('missiles'), melee: of('melee') };
+    if (!Object.values(levels).every(Number.isFinite)) throw new Error('prayers.dbrow: the protect prayer levels are not there');
+    return (levelCache = levels);
+}
 export function holdProtect(s: Session, style: CombatStyle, tick: number): void {
     if (tick % 3 !== 0) return;
     const active = s.sdk.getState()?.prayers.activePrayers ?? [], want = PROTECT_PRAYER[style];
     for (const i of Object.values(PROTECT_PRAYER)) if (i !== want && active[i]) { void s.sdk.sendTogglePrayer(i); return; }
-    if (!active[want] && (s.sdk.getSkill('Prayer')?.level ?? 0) >= PROTECT_LEVEL[style]) void s.sdk.sendTogglePrayer(want);
+    if (!active[want] && (s.sdk.getSkill('Prayer')?.level ?? 0) >= protectLevels()[style]) void s.sdk.sendTogglePrayer(want);
 }
 
 // The armour swap of one account, for the squad's hold loop and the hunt: wears what the radar decides (the `kit` action of the account) from the
