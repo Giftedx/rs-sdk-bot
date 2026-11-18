@@ -1,6 +1,7 @@
 import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,existsSync,rmSync,utimesSync,readdirSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
+import {spawnSync} from 'node:child_process';
 import {join} from 'node:path';
 import {classify,scan,counts,archiveThenDelete,GRACE_MS,scanFleetOrders,applyFleetMoves} from './practice-hygiene';
 
@@ -30,6 +31,11 @@ test('a stop file goes only for a generated fixture account with plain test text
  expect(classify('stop-coordinator',true,'owner pause',old,now,named)).toBeNull();
  expect(classify('stop-swarm',true,'owner pause',old,now,named)).toBeNull();
  expect(classify('stop-flrcvx04wf16',false,undefined,old,now,named)).toBeNull();
+ // Owner text on a fixture-pattern name stays: only a proof-generated first string goes.
+ for(const [n,t] of [['stop-flrngxtry01','Owner stops this isolated qualification fixture because the run is obsolete'],['stop-flrcxf4g00','Root ends obsolete private PR163 proof'],['stop-flprocxtd001','Practice route defect: already at target'],['stop-fb1x28k11','native fixture allocation mismatch; stop owned test']])
+  expect(classify(n!,true,t!,old,now,named)).toBeNull();
+ for(const [n,t] of [['stop-flcowx14g34','cow-progress-order proof stop F:\\x'],['stop-flrcvx070j16','native recovery proof stop 12 id'],['stop-flrcvx0a1f16','native completed stop id']])
+  expect(classify(n!,true,t!,old,now,named)).toBe('fixture-stop');
 });
 
 function fixtureRoot(){
@@ -82,4 +88,19 @@ test('fleet orders past their window move by month with their receipts; open and
   expect(readdirSync(join(dir,'orders')).sort()).toEqual(['broken.json','open.json','recent.json']);
   expect(readdirSync(join(dir,'archive','2026-10','receipts')).sort()).toEqual(['old.from.json','old.to.json']);
  }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('a read-back that misses a name deletes nothing, and a missing archive drive throws before any delete',()=>{
+ const root=fixtureRoot(),archiveDir=join(root,'archive'),entries=scan(root,Date.now()),before=readdirSync(join(root,'.practice')).sort();
+ try{
+  const real=spawnSync;
+  const lying=((cmd:string,args:string[],opts:any)=>args[0]==='-tzf'?{status:0,stdout:'recovery-permit-aaaaaa/\n',stderr:''}:real(cmd,args,opts)) as typeof spawnSync;
+  expect(()=>archiveThenDelete(root,entries,archiveDir,'m',lying)).toThrow('archive misses');
+  expect(readdirSync(join(root,'.practice')).sort()).toEqual(before);
+  const failing=((cmd:string,args:string[],opts:any)=>args[0]==='-czf'?{status:2,stdout:'',stderr:'no space'}:real(cmd,args,opts)) as typeof spawnSync;
+  expect(()=>archiveThenDelete(root,entries,archiveDir,'f',failing)).toThrow('archive failed');
+  expect(readdirSync(join(root,'.practice')).sort()).toEqual(before);
+  expect(()=>archiveThenDelete(root,entries,'Q:/no-such-drive/x','d')).toThrow('archive drive is missing');
+  expect(readdirSync(join(root,'.practice')).sort()).toEqual(before);
+ }finally{rmSync(root,{recursive:true,force:true});}
 });

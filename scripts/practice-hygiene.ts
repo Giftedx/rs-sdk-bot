@@ -4,7 +4,7 @@
 //                                                       (6 random characters after the prefix; mkdtemp)
 //   stop-<generated fixture account>                    stop files that native proofs retain for a retired identity
 // A stop file stays when: its name is not a generated fixture account (fl..x.., fb<n>.., rngex..: all lower case),
-// its text is JSON, a swarm.json or jobs.json job names the account, or fleet/owners.json names it. An entry written in
+// its text does not begin with a proof-generated string (PROOF_STOP_TEXT), a swarm.json or jobs.json job names the account, or fleet/owners.json names it. An entry written in
 // the last GRACE_MS stays, because a run may still own it.
 // --fleet-orders: the orders and receipts in .practice/fleet-data/fleet that every agent cycle reads whole. An order whose
 // window ended more than FLEET_KEEP_DAYS ago, with its receipts (<id>.from.json, <id>.to.json), moves to
@@ -13,12 +13,15 @@
 // Usage: bun scripts/practice-hygiene.ts [--root DIR] [--apply --archive-dir D:/rs-sdk-bot-archive]
 //        bun scripts/practice-hygiene.ts --fleet-orders [--keep-days 7] [--apply]
 import {existsSync,lstatSync,mkdirSync,readdirSync,readFileSync,renameSync,rmSync,statSync,writeFileSync} from 'node:fs';
-import {join,resolve} from 'node:path';
+import {join,parse,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 
 export const GRACE_MS=3600_000;
 export const DEFAULT_ARCHIVE_DIR='D:/rs-sdk-bot-archive';
 const SCRATCH_DIRS=/^(recovery-permit|session-recovery|recovery-cli-[a-z]+|recovery-stop)-[A-Za-z0-9]{6}$/;
+// The first words of the stop files that the native proofs write themselves (session-recovery-proof.ts, cow-progress-order-proof.ts).
+// Any other text is an owner's or an agent's note and stays.
+export const PROOF_STOP_TEXT=/^(native recovery proof stop |native completed stop |cow-progress-order proof stop )/;
 const FIXTURE_STOP=/^stop-(fl[a-z]*x[a-z0-9]+|fb\d[a-z0-9]*|rngex[a-z0-9]+)$/;
 
 export type Kind='scratch-dir'|'fixture-stop';
@@ -41,7 +44,7 @@ export function classify(name:string,isFile:boolean,text:string|undefined,mtimeM
  if(now-mtimeMs<GRACE_MS)return null;
  if(!isFile&&SCRATCH_DIRS.test(name))return 'scratch-dir';
  if(isFile&&FIXTURE_STOP.test(name)){
-  if(text===undefined||/^\s*[{[]/.test(text))return null;
+  if(text===undefined||!PROOF_STOP_TEXT.test(text))return null;
   if(named.has(name.slice('stop-'.length).toLowerCase()))return null;
   return 'fixture-stop';
  }
@@ -69,16 +72,16 @@ export function counts(entries:Entry[]){
  return by;
 }
 
-export function archiveThenDelete(root:string,entries:Entry[],archiveDir:string,stamp=new Date().toISOString().replace(/[:.]/g,'-')){
- if(!existsSync(resolve(archiveDir,'..')))throw Error('archive drive is missing: '+archiveDir);
+export function archiveThenDelete(root:string,entries:Entry[],archiveDir:string,stamp=new Date().toISOString().replace(/[:.]/g,'-'),run:typeof spawnSync=spawnSync){
+ if(!existsSync(parse(resolve(archiveDir)).root))throw Error('archive drive is missing: '+archiveDir);
  mkdirSync(archiveDir,{recursive:true});
 
  const prac=join(root,'.practice'),archive=join(archiveDir,`practice-hygiene-${stamp}.tar.gz`),list=join(archiveDir,`practice-hygiene-${stamp}.list`);
  writeFileSync(list,entries.map(e=>e.name).join('\n')+'\n');
- const base=`practice-hygiene-${stamp}.tar.gz`,made=spawnSync('tar',['-czf',base,'-C',prac,'-T',`practice-hygiene-${stamp}.list`],{cwd:archiveDir,encoding:'utf8',windowsHide:true,maxBuffer:1<<28});
+ const base=`practice-hygiene-${stamp}.tar.gz`,made=run('tar',['-czf',base,'-C',prac,'-T',`practice-hygiene-${stamp}.list`],{cwd:archiveDir,encoding:'utf8',windowsHide:true,maxBuffer:1<<28});
  if(made.status!==0)throw Error('archive failed: '+(made.stderr||made.error));
  // Read the archive back: every top-level name must be a member before anything is deleted.
- const listing=spawnSync('tar',['-tzf',base],{cwd:archiveDir,encoding:'utf8',windowsHide:true,maxBuffer:1<<28});
+ const listing=run('tar',['-tzf',base],{cwd:archiveDir,encoding:'utf8',windowsHide:true,maxBuffer:1<<28});
  if(listing.status!==0)throw Error('archive read-back failed: '+listing.stderr);
  const members=new Set(listing.stdout.split(/\r?\n/).map(l=>l.replace(/\/.*$/,'')));
  const missing=entries.filter(e=>!members.has(e.name));

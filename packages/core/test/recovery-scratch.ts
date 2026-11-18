@@ -1,5 +1,6 @@
 // Scratch folders of the recovery tests. They sit under the repository (the native fixture check refuses a folder
-// outside it) but in one subfolder, and each test file removes its own folders when it ends.
+// outside it) but in one subfolder, and each test file removes its own folders when it ends. A killed test leaves its
+// folders: delete .practice/recovery-tmp by hand when no test runs (scripts/practice-hygiene.ts does not sweep it).
 import {mkdirSync,mkdtempSync,rmSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {afterAll} from 'bun:test';
