@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795034905596,
+ "at": 1795035097938,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -278,8 +278,7 @@
     "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
    ],
    "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"556\":600}}"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
@@ -305,7 +304,8 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":99}}"
    },
    "enabled": true,
    "standing": true,
