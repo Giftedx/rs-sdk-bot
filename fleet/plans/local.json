@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794966083196,
+ "at": 1794966117076,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -195,7 +195,8 @@
     "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"556\":600}}"
    },
    "enabled": true,
    "standing": true,
@@ -343,8 +344,7 @@
     "5000"
    ],
    "env": {
-    "ALCH_ITEM": "airrune",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+    "ALCH_ITEM": "airrune"
    },
    "enabled": true,
    "standing": true,
