@@ -2805,6 +2805,21 @@ test('a claim authority timeout is a drain, like an unavailable authority', () =
     expect(DRAIN_RESULT.test('RESULT fail fleet swarm claim authority exploded')).toBe(false);
 });
 
+test('the game facts of the planner read from the revision-289 content', async () => {
+    const a = await import('../src/autopilot');
+    expect(a.WEAPON.attack).toBe(30);
+    expect(a.GRAIL_RUNES).toEqual({ 'law rune': 12, 'air rune': 46, 'water rune': 6, 'fire rune': 1 });
+    expect(a.REGICIDE_RUNES).toEqual({ 'law rune': 5, 'air rune': 3, 'water rune': 5 });
+    expect(a.BOUGHT_BONE_XP).toEqual({ 536: 1800, 532: 375 });
+    expect([a.CURSE_LEVEL, a.CURSE_XP]).toEqual([19, 725]);
+    expect(a.BOW_IDS).toMatchObject({ shortbow: 841, 'yew longbow': 855, 'magic shortbow': 861 });
+    expect(a.ARMOUR_IDS).toEqual({ 'dragonhide body': 1135, 'dragonhide chap': 1099, 'dragon vambrace': 1065 });
+    expect(a.RANGED_KIT.filter(k => k.skills?.Ranged === 40).map(k => Object.keys(k.items ?? {}).join('+'))).toContain('yew shortbow+rune arrow');
+    expect(a.usableTool({ skills: { Mining: 40 } }, 'rune pickaxe')).toBe(false);
+    expect(a.usableTool({ skills: { Mining: 41 } }, 'rune pickaxe')).toBe(true);
+    expect(a.usableTool({ skills: { Woodcutting: 6 } }, 'steel axe')).toBe(true);
+});
+
 test('a kit buy is planned only with the margin above the escrow and reserve: 16 dragon bones at 10,000 need 161,500 coins, not 161,000', () => {
     const band = catalogue().filter(t => t.id === 'army-bury-dragon-99');
     const market = { 'dragon bone': { id: 536, name: 'Dragon bones', limit: 10_000 } };
