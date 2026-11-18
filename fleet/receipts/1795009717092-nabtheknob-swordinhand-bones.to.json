@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795009717092-nabtheknob-swordinhand-bones",
  "account": "Swordinhand",
  "partner": "NabTheKnob",
@@ -12,6 +12,16 @@
  "claim": "1c43f9f2-e9d6-421f-ab2d-7ad9b8229226",
  "count": 0,
  "ok": false,
- "at": 1795009770442,
- "detail": "trade claimed"
+ "at": 1795012117610,
+ "detail": "Error: no matching trade completed: player_not_found: Player not found nearby: /^NabTheKnob$/i",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795009770451-0000026352-0000000001",
+  "at": 1795012117598,
+  "sha256": "8a9c63b477958826b73af5bec464916475164370855ba73f3e6536c562d02d67"
+ },
+ "screen": false
 }

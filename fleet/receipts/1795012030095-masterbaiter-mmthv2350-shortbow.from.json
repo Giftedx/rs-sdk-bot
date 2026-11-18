@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795012030095-masterbaiter-mmthv2350-shortbow",
+ "account": "Masterbaiter",
+ "partner": "mmthv2350",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shortbow",
+ "requested": 1,
+ "claim": "03a779d6-119a-4e6e-a15b-1a8103e23ab8",
+ "count": 0,
+ "ok": false,
+ "at": 1795012104636,
+ "detail": "trade claimed"
+}
