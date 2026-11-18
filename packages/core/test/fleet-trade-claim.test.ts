@@ -482,3 +482,32 @@ test('an unreadable claim record maps to null while the other accounts are still
         expect(read.calls['show']).toBe(1);
     });
 }, 60_000);
+
+test('a failed batch read falls back to one read for each record, and a failed local check fetches every head', async () => {
+    await withRepos(async (a, b) => {
+        const names = ['Alpha', 'Bravo', 'Charlie'];
+        for (const [i, account] of names.entries()) acquireFleetTradeClaim(a, { ...input, account, orderId: 'order-' + i }, () => T0);
+        const expected = readAllFleetAccountClaims(fleetGitWindow(a));
+        expect([...expected.values()].every(c => c?.phase === 'held')).toBe(true);
+        // The batch `show` is refused: each record is read on its own, and the answer is the same.
+        const calls: Record<string, number> = {}, fetched: string[][] = [];
+        const refusing = ((args: string[], text?: string) => {
+            const name = args.find(arg => !arg.startsWith('-')) ?? args[0]!;
+            calls[name] = (calls[name] ?? 0) + 1;
+            if (name === 'show' && args.some(arg => arg.includes('%H'))) throw Error('batch refused');
+            return fleetGitWindow(b)(args, text);
+        }) as ReturnType<typeof fleetGitWindow>;
+        expect(readAllFleetAccountClaims(refusing)).toEqual(expected);
+        expect(calls['show']).toBe(1 + names.length);
+        // The local check fails: every head is fetched (as before this check existed), and the answer is the same.
+        const noCheck = ((args: string[], text?: string) => {
+            const name = args.find(arg => !arg.startsWith('-')) ?? args[0]!;
+            if (name === 'cat-file') throw Error('cat-file refused');
+            if (name === 'fetch') fetched.push(args.slice(args.indexOf('origin') + 1));
+            return fleetGitWindow(b)(args, text);
+        }) as ReturnType<typeof fleetGitWindow>;
+        expect(readAllFleetAccountClaims(noCheck)).toEqual(expected);
+        expect(fetched).toHaveLength(1);
+        expect(fetched[0]).toHaveLength(names.length);
+    });
+}, 60_000);
