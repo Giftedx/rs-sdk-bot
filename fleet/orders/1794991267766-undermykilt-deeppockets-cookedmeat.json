@@ -1,0 +1,22 @@
+{
+ "id": "1794991267766-undermykilt-deeppockets-cookedmeat",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "UnderMyKilt",
+ "to": "Deeppockets",
+ "item": "Cooked meat",
+ "count": 3,
+ "start": 1794991267766,
+ "end": 1794993667766,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
