@@ -167,8 +167,9 @@
    "home": "claude-cloud"
   },
   "Fingerblastr": {
-   "side": "claude-cloud",
-   "server": "rs-sdk-demo.fly.dev"
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
   },
   "Porksword": {
    "side": "local",
