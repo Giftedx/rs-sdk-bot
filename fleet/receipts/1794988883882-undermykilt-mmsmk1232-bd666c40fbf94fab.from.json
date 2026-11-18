@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794988883882-undermykilt-mmsmk1232-bd666c40fbf94fab",
  "account": "UnderMyKilt",
  "partner": "mmsmk1232",
@@ -10,20 +10,50 @@
  "item": "Dragonhide body",
  "requested": 1,
  "claim": "75c1d658-c9e8-457e-b668-9f07164980a8",
- "count": 0,
- "ok": false,
- "at": 1794989081855,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1794990692074,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Dragonhide chaps",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794989096173
+   }
   },
   {
    "item": "Nature rune",
    "requested": 20,
-   "count": 0
+   "count": 20,
+   "inventory": {
+    "before": 20,
+    "after": 0
+   },
+   "bank": {
+    "count": 20,
+    "at": 1794989097795
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794989095791
+ },
+ "logout": {
+  "attemptId": "1794989081865-0000024040-0000000001",
+  "at": 1794990692062,
+  "sha256": "582fa8506d0bae72ee9ae133420b86469f33cf93d7861297010cbfb8b9eddad0"
+ },
+ "screen": true
 }

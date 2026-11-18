@@ -1,0 +1,59 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794988883882-undermykilt-mmsmk1232-bd666c40fbf94fab",
+ "account": "mmsmk1232",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragonhide body",
+ "requested": 1,
+ "claim": "2c60b334-2438-4bf2-941e-d6d467454adf",
+ "count": 1,
+ "ok": true,
+ "at": 1794990695265,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Dragonhide chaps",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1794990693950
+   }
+  },
+  {
+   "item": "Nature rune",
+   "requested": 20,
+   "count": 20,
+   "inventory": {
+    "before": 0,
+    "after": 20
+   },
+   "bank": {
+    "count": 20,
+    "at": 1794990694505
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794990692906
+ },
+ "logout": {
+  "attemptId": "1794990675898-0000017696-0000000001",
+  "at": 1794990695246,
+  "sha256": "fdb2a7e3df5409ceb879ba5516097f46d6f86fcac8745245430f6f6452ffb579"
+ },
+ "screen": true
+}
