@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795039257222,
+ "at": 1795039282198,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -235,27 +235,6 @@
    ]
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1113 QUANTITY=1 LIMIT_PRICE=220887 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit1-1113-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1113\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Rune chainbody on the Grand Exchange to wear rune armour",
-   "role": "supply",
-   "template": "kit-buy:army-armour-rune",
-   "autopilot": "local",
-   "resources": [
-    "ge:armour"
-   ]
-  },
-  {
    "account": "mmtha0205",
    "script": "scripts/chain.ts",
    "args": [
@@ -289,8 +268,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -302,6 +280,25 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=303 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit1-536-0to303 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"536\":303}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 303 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
   }
  ],
  "army": [
