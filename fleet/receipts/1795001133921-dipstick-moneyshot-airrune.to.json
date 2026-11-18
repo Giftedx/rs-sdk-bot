@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795001133921-dipstick-moneyshot-airrune",
+ "account": "Moneyshot",
+ "partner": "Dipstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 50,
+ "claim": "2fd754c1-de0c-4619-b85b-82abab5da1e1",
+ "count": 0,
+ "ok": false,
+ "at": 1795001213537,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795001145006,
+ "at": 1795001221415,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -366,6 +366,29 @@
    "template": "army-alch-air-magic-99",
    "autopilot": "local",
    "resources": []
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "2000",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "50",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-932709bc-8cb6-44da-97c6-ff9fbf374b8d"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-bow-trooper-ranged50 [task-932709bc-8cb6-44da-97c6-ff9fbf374b8d]",
+   "role": "helper"
   }
  ],
  "army": [

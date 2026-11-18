@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795001133921-swordinhand-sausagefest-naturerune",
+ "account": "Swordinhand",
+ "partner": "Sausagefest",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "18e38277-788d-4b20-9851-43e8e3867e42",
+ "count": 0,
+ "ok": false,
+ "at": 1795001218352,
+ "detail": "trade claimed"
+}
