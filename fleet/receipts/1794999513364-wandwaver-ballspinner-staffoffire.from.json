@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794999513364-wandwaver-ballspinner-staffoffire",
+ "account": "Wandwaver",
+ "partner": "Ballspinner",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "2a985c0b-7f01-4e9a-b192-744ad937b226",
+ "count": 0,
+ "ok": false,
+ "at": 1794999648112,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,22 @@
+{
+ "id": "1794999633423-yewfirst-fatstack-cookedmeat",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "Fatstack",
+ "item": "Cooked meat",
+ "count": 3,
+ "start": 1794999633423,
+ "end": 1795002033423,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

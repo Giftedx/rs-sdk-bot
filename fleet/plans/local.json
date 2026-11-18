@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794999542682,
+ "at": 1794999649115,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -226,10 +226,10 @@
    ]
   },
   {
-   "account": "OreElse",
+   "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=30 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=oreelse-kit9-532-6to36 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=95 EXPECTED_OWNED=155 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit5-554-155to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -237,9 +237,28 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 30 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "goal": "buy 95 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
    "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
+   "template": "kit-buy:army-alch-magic-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=50 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit7-561-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit7-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 50 Nature rune, 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
    "autopilot": "local",
    "resources": []
   },
@@ -296,20 +315,25 @@
    ]
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
+   "account": "OreElse",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=95 EXPECTED_OWNED=155 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit5-554-155to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "99"
    ],
    "env": {
-    "ROUNDS": "1"
+    "BURY_HELD": "1",
+    "BONE_ID": "532",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "9",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 95 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
+   "goal": "train Prayer to 99 burying bought big bones",
+   "role": "combat",
+   "template": "army-bury-big-99",
    "autopilot": "local",
    "resources": []
   },
@@ -346,25 +370,6 @@
    "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
    "role": "combat",
    "template": "army-alch-air-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "Sausagefest",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=50 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit7-561-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit7-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 50 Nature rune, 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
    "autopilot": "local",
    "resources": []
   }
