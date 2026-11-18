@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794999363207-mineyourbiz-pickpockdick-airrune",
  "account": "MineYourBiz",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 30,
  "claim": "281be4ca-6e98-409c-8ff7-d28dc87b5238",
- "count": 0,
- "ok": false,
- "at": 1794999527299,
- "detail": "trade claimed"
+ "count": 30,
+ "ok": true,
+ "at": 1794999551699,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 30,
+  "after": 0
+ },
+ "bank": {
+  "count": 30,
+  "at": 1794999539458
+ },
+ "logout": {
+  "attemptId": "1794999527307-0000017692-0000000001",
+  "at": 1794999551687,
+  "sha256": "9e83560b5a2579d71cbcfc116bd7d96dade2a62b031dea155701421ab0b186d1"
+ },
+ "screen": true
 }
