@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795039126888,
+ "at": 1795039168148,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -235,19 +235,39 @@
    ]
   },
   {
-   "account": "Knightstick",
+   "account": "Fatstack",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=37 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=knightstick-kit1-532-0to37 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1113 QUANTITY=1 LIMIT_PRICE=220887 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit1-1113-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"532\":37}}"
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1113\":1}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 37 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "goal": "buy 1 Rune chainbody on the Grand Exchange to wear rune armour",
+   "role": "supply",
+   "template": "kit-buy:army-armour-rune",
+   "autopilot": "local",
+   "resources": [
+    "ge:armour"
+   ]
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=32 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=knightrider-kit0-532-0to32 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 32 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
    "role": "supply",
    "template": "kit-buy:army-bury-big-99",
    "autopilot": "local",
@@ -299,45 +319,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1113 QUANTITY=1 LIMIT_PRICE=220887 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit1-1113-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1113\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Rune chainbody on the Grand Exchange to wear rune armour",
-   "role": "supply",
-   "template": "kit-buy:army-armour-rune",
-   "autopilot": "local",
-   "resources": [
-    "ge:armour"
-   ]
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=32 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=knightrider-kit0-532-0to32 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 32 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
-   "autopilot": "local",
-   "resources": []
   }
  ],
  "army": [
