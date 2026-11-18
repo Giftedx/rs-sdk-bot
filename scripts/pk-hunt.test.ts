@@ -1,5 +1,5 @@
 import { expect, spyOn, test } from 'bun:test';
-import { BOW_TRIP, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget, pickTrip, resolveHuntSpots, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
+import { BOW_TRIP, FOOD_LIST, foodHeld, healOf, planFood, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget, pickTrip, resolveHuntSpots, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
 import { assessWildernessThreat, planWildernessEscape, restockPlan, restockPlanFromStock, slashWebThrough, WILDERNESS_ESCAPES, wildernessCombatMargin, wildernessDepth } from './pk-roam';
 import { pvpCombatBracket } from './aio-pvp';
 import * as pk from './pk';
@@ -379,4 +379,38 @@ test('wildernessDepth treats Mage Bank cellar as level 0, slashWebThrough retrie
         expect(clickedSpells).toEqual([pk.SPELLS.varrockTeleport]);
         expect(res.end).toBe('bank did not open');
     } finally { for (const m of mocks) m.mockRestore(); }
+});
+
+// The food of a trip: sharks first (heal 20), then lobsters (heal 12), from the bank.
+test('planFood takes sharks first and fills the rest with lobsters, and names a shortfall as sharks', () => {
+    const have = (sharks: number, lobsters: number) => (id: number) => (id === 385 ? sharks : id === 379 ? lobsters : 0);
+    expect(planFood(have(30, 99), 18)).toEqual([{ id: 385, count: 18 }]);
+    expect(planFood(have(5, 99), 18)).toEqual([{ id: 385, count: 5 }, { id: 379, count: 13 }]);
+    expect(planFood(have(0, 99), 18)).toEqual([{ id: 379, count: 18 }]);
+    expect(planFood(have(2, 3), 18)).toEqual([{ id: 385, count: 15 }, { id: 379, count: 3 }]);
+    expect(planFood(have(0, 0), 4)).toEqual([{ id: 385, count: 4 }]);
+    expect(FOOD_LIST.map(f => [f.id, f.heal])).toEqual([[385, 20], [379, 12]]);
+    expect(healOf(385)).toBe(20);
+    expect(healOf(379)).toBe(12);
+});
+
+test('restock withdraws sharks first and lobsters for the rest, and counts both as food', async () => {
+    const mixed = supplyBank([{ id: 385, count: 2 }, { id: 379, count: 20 }]);
+    expect(await restock(mixed.s, 5, [])).toBeNull();
+    expect([...mixed.withdrawals].sort((x, y) => x.id - y.id)).toEqual([{ id: 379, count: 3 }, { id: 385, count: 2 }]);
+    const lobsters = supplyBank([{ id: 379, count: 20 }]);
+    expect(await restock(lobsters.s, 6, [])).toBeNull();
+    expect(lobsters.withdrawals).toEqual([{ id: 379, count: 6 }]);
+    expect(foodHeld(lobsters.s)).toBe(6);
+    const sharks = supplyBank([{ id: 385, count: 30 }, { id: 379, count: 20 }]);
+    expect(await restock(sharks.s, 4, [])).toBeNull();
+    expect(sharks.withdrawals).toEqual([{ id: 385, count: 4 }]);
+});
+
+test('restock with too little food in the bank fails and names the sharks that are lacking', async () => {
+    const f = supplyBank([{ id: 385, count: 2 }, { id: 379, count: 3 }]);
+    const err = await restock(f.s, 10, []);
+    expect(err).toContain('lacks');
+    expect(err).toContain('385');
+    expect(f.withdrawals).toEqual([]);
 });
