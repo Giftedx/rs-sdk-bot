@@ -147,6 +147,14 @@ What the swarm does with this job, from `scripts/swarm.ts` and `packages/practic
   it out by teleport or on foot (`RESCUE=1`), and the RESULT names it (`dropped=`, `stranded=`).
 - **Logout.** The last lines of a run are `LOGOUT` with one word for each account, then the RESULT. Each word must
   be `logged-out`.
+- **Start.** Each member stands at the Edgeville bank, which `pk-squad.ts` reads as a trip. The first trip eats to
+  within a tenth of full Hitpoints (`eatUp`) and keeps the pack that the member logged in with (`bankTrip` `fresh`):
+  a member one meal short starts with what it holds, and one under half of its pack food (`SQUAD_FOOD_FLOOR`) stays
+  out. A later trip restocks the pack, and a restock that the bank and the pack together cannot fill deposits nothing.
+- **Stall.** The stall guard (`packages/core/src/bot.ts`) ends a session with no xp, item, dialog or journey for
+  `STALL_TICKS`. `scripts/pk-squad-stall.ts` sets it for the squad to the longest return of a gang account in the
+  clone record (`group.returnToPost`) times 1.25, so a hold at the post while the gang is away is not a stall. A stalled
+  member ends its own session only (`stopSquadSession`); the rescue at the end takes it out.
 
 ## The watcher
 

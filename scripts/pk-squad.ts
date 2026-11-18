@@ -20,6 +20,8 @@
 // Bench only: SQUAD_GANG=<n> drives the last n accounts as the gang (profile ganker-live against our accounts).
 // Live: openBot refuses a non-local server without DEMO_OK=1 and an account of another fleet side. The main account
 // is refused. Stop: touch .practice/stop-<account> for one account, or .practice/stop-pk-squad for all.
+// First: it sets STALL_TICKS before packages/core/src/bot.ts loads (see the file).
+import './pk-squad-stall';
 import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { closeWithin } from '../packages/core/src/bot';
@@ -29,13 +31,17 @@ import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { attackable, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, recordKillLoot, STUNNED_SHOVE_SPOTANIM, wildernessLevel, type FightOptions } from './pk';
 import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { settleKillFeed } from './pk-kill-feed';
-import { EDGEVILLE_BANK, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
+import { EDGEVILLE_BANK, eatUp, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
 import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
 import { connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './pk-roam';
 import { sparOptions } from './pk-spar';
 
 export const GANG = ['goondelf', 'ligma', 'sugma'];
 export const SQUAD_POST = { x: 3067, z: 3640 };
+// A member starts the run with at least this share of the food of its pack (live: a member with 20 of 21 sharks is fit
+// to fight; one with a few is not). Under it the member stays at the bank and its part of the run ends.
+export const SQUAD_FOOD_FLOOR = 0.5;
+export const squadStartFood = (held: number, packFood: number): { ok: boolean; floor: number } => { const floor = Math.ceil(packFood * SQUAD_FOOD_FLOOR); return { ok: held >= floor, floor }; };
 const MAIN = new Set(['haggis']);
 // dropForStrip off: the profile's champion base drops a shark before a freeze to free slots for its armour strip.
 // specBelow 0.45: the special waits for a gang account at 45% or less (one-on-one in the pilot's kit with Bind: 13 kills
@@ -337,21 +343,29 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             if (wildernessLevel(p.worldZ) === 0) {
                 if (stats.trips >= o.trips) { o.log(`[${s.name}] SQUAD no trips left`); break; }
                 stats.trips++;
+                // The first visit, before any fight, is at the pack that the account logged in with: nothing is banked, so
+                // no shark of the pack has to come back from the bank (`fresh`). A restock there asked for the whole pack
+                // again after one meal of the eat-up. The member eats to full first (`eatUp`), and the fresh trip fills
+                // the slots of the meals from the bank.
+                const first = stats.fights === 0 && stats.trips === 1;
+                if (first) await eatUp(s, () => o.stopped());
                 // Eat up first: a teleport out (Camelot) leaves a long walk, and the gang's daggers poison.
-                for (let i = 0; i < 12 && !o.stopped(); i++) {
+                else for (let i = 0; i < 12 && !o.stopped(); i++) {
                     const q = me(), food = s.sdk.getInventory().find(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text)));
                     const op = food?.optionsWithIndex.find(x => /^eat$/i.test(x.text));
                     if (!q || !food || !op || q.hp >= q.maxHp - 20) break;
                     await s.sdk.sendUseItem(food.slot, op.opIndex);
                     for (let t = 0; t < 3; t++) if (!await nextTick(s)) break;
                 }
-                // The first visit, before any fight, is at the pack that the account logged in with: nothing is banked, so
-                // no shark of the pack has to come back from the bank (`fresh`). A restock there asked for the whole pack
-                // again after one meal of the eat-up above.
-                const fault = await trip(s, stats.fights === 0 && stats.trips === 1);
+                const fault = await trip(s, first);
                 const after = me();
                 if (after && ((life0 !== undefined && after.lifeId !== life0) || Math.max(Math.abs(after.worldX - 3222), Math.abs(after.worldZ - 3218)) <= 40)) { o.log(`[${s.name}] SQUAD died on a bank trip`); if (await recover()) continue; stats.died = true; break; }
                 if (fault) { o.log(`[${s.name}] SQUAD bank trip: ${fault}`); break; }
+                if (first) {
+                    // A member one meal short starts with what it holds; one under the floor stays out of the Wilderness.
+                    const held = s.sdk.getInventory().filter(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text))).length, start = squadStartFood(held, pack.food);
+                    if (!start.ok) { o.log(`[${s.name}] SQUAD start: ${held} food held, under the floor of ${start.floor} of ${pack.food}`); break; }
+                }
                 continue;
             }
             const now = s.tick();

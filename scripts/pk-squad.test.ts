@@ -2,7 +2,7 @@ import { describe, expect, spyOn, test } from 'bun:test';
 import * as walking from '../packages/core/src/walk';
 import * as pk from './pk';
 import { maxDeathsOf } from './pk-hunt';
-import { bankNear, leaveWilderness, openSquad, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
+import { bankNear, leaveWilderness, openSquad, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
 import { hold, squadEnd } from './pk-squad';
 import { newWatch, readLine } from './squad-watch';
@@ -81,6 +81,13 @@ test('a tick-stalled squad waiter ends even if close hangs while another member 
     expect(await Promise.all([waiting, completing, stopping])).toEqual([false, true, undefined]);
     expect(halted).toEqual(['tick stream stalled: 120 s without a game tick']);
     expect(stalled.listeners.size).toBe(0);
+});
+
+test('a member one meal short starts, and one under half of its pack food does not', () => {
+    expect(squadStartFood(20, 21)).toEqual({ ok: true, floor: 11 });
+    expect(squadStartFood(11, 21).ok).toBe(true);
+    expect(squadStartFood(10, 21)).toEqual({ ok: false, floor: 11 });
+    expect(squadStartFood(0, 0).ok).toBe(true);
 });
 
 test('an idle-stalled squad member ends its own session and halts no one', async () => {
