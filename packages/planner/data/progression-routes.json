@@ -92546,6 +92546,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/pk-gang-climb.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/pk-gang-collect.ts",
    "intents": [
     "observe"
