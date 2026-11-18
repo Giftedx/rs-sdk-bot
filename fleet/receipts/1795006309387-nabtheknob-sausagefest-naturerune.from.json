@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795006309387-nabtheknob-sausagefest-naturerune",
  "account": "NabTheKnob",
  "partner": "Sausagefest",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 50,
  "claim": "6858cc59-0634-4eb4-866b-8037aa3d9281",
- "count": 0,
- "ok": false,
- "at": 1795006383208,
- "detail": "trade claimed"
+ "count": 50,
+ "ok": true,
+ "at": 1795006407511,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 50,
+  "after": 0
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795006391480
+ },
+ "logout": {
+  "attemptId": "1795006383216-0000026384-0000000001",
+  "at": 1795006407427,
+  "sha256": "2d94d4194f8221f22ea8fcef4df535682d959434357b01499db03e5ce261b0ab"
+ },
+ "screen": true
 }
