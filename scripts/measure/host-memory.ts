@@ -8,7 +8,8 @@
 // with the same environment and arguments. Each process's VmRSS is read from /proc every second; a sample counts when every
 // process of the condition is alive. The result lines carry the mean and the peak of the SUM of the processes (megabytes) and
 // the peak of each process (VmHWM, the kernel's high-water mark of its resident set):
-//   HOSTMEM worker=<script> mode=<host|separate> bots=4 samples=<n> meanMB=<n> peakSumMB=<n> peakEachMB=<a,b,...> steadyMeanMB=<n> seconds=<n>
+//   HOSTMEM worker=<script> mode=<host|separate> bots=4 samples=<n> meanMB=<n> peakSumMB=<n> peakEachMB=<a,b,...> steadyMeanMB=<n> series=<5s:MB,...> seconds=<n>
+// `series` is the summed resident set at 5, 10, 15, 20, 30, 60 and 100 s (`-` when the processes had ended or were not all alive).
 // `steadyMeanMB` leaves out the first 30 s (the logins and the first walk). The script ends with `RESULT ok host-memory` when
 // both conditions ran and every bot process exited by itself or at the time limit.
 import { readFileSync } from 'node:fs';
@@ -27,6 +28,11 @@ export function summarize(samples: readonly Sample[], steadyFrom = 30_000): Summ
     const mean = (xs: readonly { sum: number }[]) => xs.length ? xs.reduce((a, x) => a + x.sum, 0) / xs.length : 0;
     return { samples: sums.length, meanMB: mb(mean(sums)), peakSumMB: mb(Math.max(0, ...sums.map(s => s.sum))), steadyMeanMB: mb(mean(steady)) };
 }
+
+// The summed resident set (megabytes) at each of `times` seconds: the last sample at or before it, or undefined before the first.
+export const seriesAt = (samples: readonly Sample[], times: readonly number[]): (number | undefined)[] =>
+    times.map(t => { const last = [...samples].reverse().find(s => s.at <= t * 1000); return last ? mb(last.rss.reduce((a, b) => a + b, 0)) : undefined; });
+export const SERIES_SECONDS = [5, 10, 15, 20, 30, 60, 100];
 
 type Options = { bot: string; worker: string; env: Record<string, string>; maxS: number; staggerMs: number; args: string[] };
 export function parseOptions(argv: readonly string[]): Options {
@@ -73,7 +79,7 @@ ${b}`, 3)));
     clearInterval(timer); clearTimeout(deadline); sample();
     const sum = summarize(samples);
     for (const [i, tail] of (await Promise.all(tails)).entries()) console.log(`HOSTMEM-OUT mode=${mode} process=${i} ${tail}`);
-    const line = `HOSTMEM worker=${o.worker} mode=${mode} bots=4 processes=${procs.length} samples=${sum.samples} meanMB=${sum.meanMB} peakSumMB=${sum.peakSumMB} peakEachMB=${peak.map(mb).join(',')} steadyMeanMB=${sum.steadyMeanMB} seconds=${Math.round((Date.now() - start) / 1000)} exits=${codes.join(',')}`;
+    const line = `HOSTMEM worker=${o.worker} mode=${mode} bots=4 processes=${procs.length} samples=${sum.samples} meanMB=${sum.meanMB} peakSumMB=${sum.peakSumMB} peakEachMB=${peak.map(mb).join(',')} steadyMeanMB=${sum.steadyMeanMB} series=${seriesAt(samples, SERIES_SECONDS).map((m, i) => `${SERIES_SECONDS[i]}s:${m ?? '-'}`).join(',')} seconds=${Math.round((Date.now() - start) / 1000)} exits=${codes.join(',')}`;
     return { line, ok: sum.samples > 0 };
 }
 
