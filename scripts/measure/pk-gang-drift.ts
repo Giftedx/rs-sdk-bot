@@ -3,12 +3,14 @@
 // options are built again from data (research/gang-clones.md, "Keep it true").
 //   bun scripts/measure/pk-gang-drift.ts feed [--data <checkout root>] <trace.jsonl> [...]
 //     builds the measures of the new traces (files of scripts/measure/pk-gang-collect.ts) and compares each with the record
-//   bun scripts/measure/pk-gang-drift.ts squad <kills> <Hitpoints lost> <ticks> <bench output> [...]
-//     compares one live squad run with the clone's prediction: the mean of the `kills=` RESULT lines of the bench outputs
+//   bun scripts/measure/pk-gang-drift.ts squad <kills> <Hitpoints lost> <case log> [...]
+//     compares one live squad run with the clone's prediction: the `RESULT ... squad ... kills= ... taken=` lines of the
+//     case logs of clone squad cases (scripts/pk-squad.ts prints the Hitpoints lost as `taken`)
 // Exit 1 when a DRIFT line is printed.
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { addTrace, GANG, newRecord, targetFile } from './pk-gang-record';
+import { parseRun } from './pk-gang-climb';
+import { addTrace, GANG, hiscoreLevels, newRecord, targetFile } from './pk-gang-record';
 
 type Hist = Record<string, number>;
 const total = (h: Hist) => Object.values(h ?? {}).reduce((a, b) => a + b, 0);
@@ -50,13 +52,15 @@ export function driftChecks(rec: any, now: any, minN = 20, points = 15): Check[]
         if (path?.status === 'measured') out.push({ measure: `new sample: ${key}`, record: '-', now: `${path.n} in the new traces`, n: path.n, drift: false, why: 'build the record again with these traces' });
     return out;
 }
-// A live squad run against the clone's prediction: the Hitpoints lost a kill and the ticks a kill. `tolerance` is the
-// error that the fidelity table of research/gang-clones.md states.
-export function squadDrift(live: { kills: number; hpLost: number; ticks: number }, bench: { kills: number; hpLost: number; ticks: number }[], tolerance = 0.5): Check[] {
-    const mean = (pick: (b: { kills: number; hpLost: number; ticks: number }) => number) => bench.reduce((a, b) => a + pick(b), 0) / Math.max(1, bench.length);
-    const kills = mean(b => b.kills), per = (a: number, k: number) => (k ? a / k : Infinity);
-    const row = (measure: string, l: number, b: number): Check => ({ measure, record: Math.round(b), now: Math.round(l), n: bench.length, drift: bench.length >= 3 && Number.isFinite(l) && Number.isFinite(b) && Math.abs(l - b) > tolerance * b });
-    return [row('Hitpoints lost a kill (clone prediction against the live run)', per(live.hpLost, live.kills), per(mean(b => b.hpLost), kills)), row('ticks a kill', per(live.ticks, live.kills), per(mean(b => b.ticks), kills))];
+// The runs of clone squad cases in the text of their case logs: the kills and the Hitpoints lost of each RESULT line.
+export function squadRuns(texts: readonly string[]): { kills: number; hpLost: number }[] {
+    return texts.flatMap(t => { const r = parseRun(t, 0, null); return r ? [{ kills: r.kills, hpLost: r.taken }] : []; });
+}
+// A live squad run against the clone's prediction: the Hitpoints lost a kill. `tolerance` is the share of the
+// prediction by which a live run may differ. It needs 3 bench runs or more.
+export function squadDrift(live: { kills: number; hpLost: number }, bench: { kills: number; hpLost: number }[], tolerance = 0.5): Check[] {
+    const kills = bench.reduce((a, b) => a + b.kills, 0), per = (a: number, k: number) => (k ? a / k : Infinity), l = per(live.hpLost, live.kills), b = per(bench.reduce((a, x) => a + x.hpLost, 0), kills);
+    return [{ measure: 'Hitpoints lost a kill (clone prediction against the live run)', record: Math.round(b), now: Math.round(l), n: bench.length, drift: bench.length >= 3 && Number.isFinite(l) && Number.isFinite(b) && Math.abs(l - b) > tolerance * b, ...(bench.length < 3 ? { why: 'under 3 bench runs' } : {}) }];
 }
 
 if (import.meta.main) {
@@ -69,14 +73,15 @@ if (import.meta.main) {
         const rec = newRecord();
         for (const t of argv) addTrace(rec, t, readFileSync(resolve(data, t), 'utf8').split('\n'), p => zones.has([0, p.x >> 6, p.z >> 6, p.x & 56, p.z & 56].join('_')), id => seqs.get(id) ?? `seq${id}`, id => objs.get(id) ?? (id < 0 ? '' : `obj${id}`));
         let drift = 0;
-        for (const n of GANG) drift += print(n, driftChecks(JSON.parse(readFileSync(join(root, 'scripts', 'pk-gang-record', `${n}.json`), 'utf8')), JSON.parse(JSON.stringify(targetFile(n, rec.acc[n]!, rec.group, undefined, 'none')))));
+        for (const n of GANG) drift += print(n, driftChecks(JSON.parse(readFileSync(join(root, 'scripts', 'pk-gang-record', `${n}.json`), 'utf8')), JSON.parse(JSON.stringify(targetFile(n, rec.acc[n]!, rec.group, hiscoreLevels(data, n).rows, 'the newest hiscore page')))));
         console.log(`RESULT ${drift ? 'fail' : 'ok'} gang drift traces=${argv.length} drift=${drift}`);
         process.exit(drift ? 1 : 0);
-    } else if (mode === 'squad' && argv.length >= 4) {
-        const [kills, hpLost, ticks] = argv.slice(0, 3).map(Number), bench: { kills: number; hpLost: number; ticks: number }[] = [];
-        for (const f of argv.slice(3)) for (const line of readFileSync(f, 'utf8').split(/\r?\n/)) { const k = line.match(/RESULT ok.*?kills=(\d+)/), hp = line.match(/hpLost=(\d+)/), t = line.match(/ticks=(\d+)/); if (k && hp && t) bench.push({ kills: Number(k[1]), hpLost: Number(hp[1]), ticks: Number(t[1]) }); }
-        const drift = print('squad', squadDrift({ kills: kills!, hpLost: hpLost!, ticks: ticks! }, bench));
+    } else if (mode === 'squad' && argv.length >= 3) {
+        const [kills, hpLost] = argv.slice(0, 2).map(Number), bench = squadRuns(argv.slice(2).map(f => readFileSync(f, 'utf8')));
+        // No bench run read is a fault of the inputs, not a pass.
+        if (!bench.length) { console.log('RESULT fail gang drift: no RESULT line of a squad case in the case logs'); process.exit(2); }
+        const drift = print('squad', squadDrift({ kills: kills!, hpLost: hpLost! }, bench));
         console.log(`RESULT ${drift ? 'fail' : 'ok'} gang drift bench runs=${bench.length} drift=${drift}`);
         process.exit(drift ? 1 : 0);
-    } else { console.log('usage: bun scripts/measure/pk-gang-drift.ts feed [--data <root>] <trace.jsonl> [...] | squad <kills> <Hitpoints lost> <ticks> <bench output> [...]'); process.exit(2); }
+    } else { console.log('usage: bun scripts/measure/pk-gang-drift.ts feed [--data <root>] <trace.jsonl> [...] | squad <kills> <Hitpoints lost> <case log> [...]'); process.exit(2); }
 }

@@ -84,13 +84,16 @@ export function cloneProfile(name: CloneName, mode: CloneMode = 'seen', records:
     };
 }
 // The options of the three clones as one: for a harness that gives every gang account the same options. The eat level
-// is the median of the three histograms as one, and the walk out is that of the first account that has one.
+// is the median of the three histograms as one. The walk out is the highest Hitpoints at which one of the three walks
+// out in this mode, so each clone of such a harness walks out, also one that stood live: the harness is then harder
+// to clear than three clones of their own would be. No walk out is the value 0 for both options: the harness lays
+// these options over a profile that has a walk out, and a key with no value would leave that one in place.
 export function pooledProfile(mode: CloneMode = 'seen', records: (n: CloneName) => CloneRecord = cloneRecord, level: number = postLevel()): Record<string, unknown> {
     const each = CLONE_NAMES.map(n => cloneProfile(n, mode, records, level)), waits = CLONE_NAMES.map(n => records(n).prayer.ticksFromWeaponChangeToPrayer!.value as Wait);
-    const escape = each.find(p => p.escapeAt !== undefined);
+    const walkers = each.filter(p => p.escapeAt !== undefined), none = mode === 'stand' || !walkers.length;
     return { ...each[0], eatAt: median(CLONE_NAMES.map(n => records(n).eating.hpAtEat!.value as Hist).reduce(sum, {})),
         prayerLag: prayerLagOf(waits.map(w => w.whenTheOpponentFacesIt).reduce(sum, {}), waits.reduce((a, w) => a + w.noChangeIn8Ticks.whenTheOpponentFacesIt, 0), waits[0]!.windowTicks),
-        escapeAt: mode === 'stand' ? undefined : escape?.escapeAt, escapeWalk: mode === 'stand' ? undefined : escape?.escapeWalk };
+        escapeAt: none ? 0 : Math.max(...walkers.map(p => p.escapeAt as number)), escapeWalk: none ? 0 : Math.max(...walkers.map(p => p.escapeWalk as number)) };
 }
 // The start state of a clone: its levels, its sharks and its skull. A level with no hiscore row is 1.
 export function cloneSpec(name: CloneName, mode: CloneMode = 'seen', records: (n: CloneName) => CloneRecord = cloneRecord): { skills: Record<string, number>; sharks: number; skulled: boolean } {

@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { sparOptions } from './pk-spar';
 import { CLONE_NAMES, cloneProfile, cloneProfileByName, cloneProfileName, cloneSpec, median, pooledProfile, prayerLagOf, type CloneName, type CloneRecord } from './pk-gang-clone';
 
 // A record with the fields that a clone reads.
@@ -56,8 +57,21 @@ test('a flick is on only when half of the holds of a protect prayer are 2 ticks 
 });
 
 test('the pooled options sum the prayer waits and the eat histograms of the three', () => {
-    expect(pooledProfile('seen', records, 16)).toMatchObject({ eatAt: 71, prayerLag: [41, 9, 1, 5, 0, 0, 0, 0, 56], escapeAt: 28 });
-    expect(pooledProfile('stand', records, 16).escapeAt).toBeUndefined();
+    // The walk out of the pool is the highest of the three: Goondelf 28 from its sample, Ligma 30 and 40 from its range.
+    expect(pooledProfile('seen', records, 16)).toMatchObject({ eatAt: 71, prayerLag: [41, 9, 1, 5, 0, 0, 0, 0, 56], escapeAt: 30, escapeWalk: 20 });
+    expect(pooledProfile('retreat', records, 16)).toMatchObject({ escapeAt: 40, escapeWalk: 20 });
+    expect(pooledProfile('stand', records, 16)).toMatchObject({ escapeAt: 0, escapeWalk: 0 });
+});
+
+test('the pooled options of each mode reach the fight options of a gang account through the JSON of SPAR_B_OPTS', () => {
+    // The squad script lays SPAR_B_OPTS over the profile ganker-live, which walks out at 30 Hitpoints.
+    const through = (mode: 'seen' | 'retreat' | 'stand') => sparOptions('ganker-live', JSON.stringify(pooledProfile(mode, records, 16)), {} as never, 900);
+    expect(sparOptions('ganker-live', undefined, {} as never, 900)).toMatchObject({ escapeAt: 30, escapeWalk: 20 });
+    expect(through('stand')).toMatchObject({ escapeAt: 0, escapeWalk: 0 });
+    expect(through('retreat')).toMatchObject({ escapeAt: 40, escapeWalk: 20 });
+    expect(through('seen')).toMatchObject({ escapeAt: 30, eatAt: 71 });
+    // The committed record: the three modes give three different walk outs.
+    expect(new Set((['seen', 'retreat', 'stand'] as const).map(m => sparOptions('ganker-live', JSON.stringify(pooledProfile(m)), {} as never, 900).escapeAt)).size).toBe(3);
 });
 
 test('the committed record gives each clone a profile, and a name that is no clone gives none', () => {

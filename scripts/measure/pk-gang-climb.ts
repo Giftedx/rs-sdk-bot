@@ -34,10 +34,12 @@ export function parseTicks(bench: string): Map<string, (number | null)[]> {
 // One row: the sums over the runs. `gangSize` is the gang accounts of a run, `returnTicks` the wait for a dead one.
 export function row(batch: string, condition: string, runs: Run[], returnTicks: number, gangSize = 3): Row {
     const sum = (pick: (r: Run) => number) => runs.reduce((a, r) => a + pick(r), 0), kills = sum(r => r.kills), timed = runs.filter(r => r.ticks !== null);
+    // The rates use the runs with a tick count only, so the kills and the ticks of a rate are of the same runs.
+    const timedKills = timed.reduce((a, r) => a + r.kills, 0);
     const ticksARun = timed.length ? sum(r => r.ticks ?? 0) / timed.length : null, hpAKill = kills ? sum(r => r.taken) / kills : null, accounts = runs[0]?.accounts ?? 0;
     return { batch, condition, runs, kills, gang: runs.length * gangSize, deaths: sum(r => r.died), hpAKill: hpAKill === null ? null : Math.round(hpAKill), ticksARun: ticksARun === null ? null : Math.round(ticksARun),
-        killsAnHour: ticksARun === null || !runs.length ? null : Math.round((10 * HOUR_TICKS * (kills / runs.length)) / (ticksARun + returnTicks)) / 10,
-        accountTicksAKill: ticksARun === null || !kills ? null : Math.round((accounts * ticksARun * runs.length) / kills), coinsAKill: hpAKill === null ? null : Math.round((hpAKill / SHARK_HEAL) * SHARK_COINS) };
+        killsAnHour: ticksARun === null ? null : Math.round((10 * HOUR_TICKS * (timedKills / timed.length)) / (ticksARun + returnTicks)) / 10,
+        accountTicksAKill: ticksARun === null || !timedKills ? null : Math.round((accounts * ticksARun * timed.length) / timedKills), coinsAKill: hpAKill === null ? null : Math.round((hpAKill / SHARK_HEAL) * SHARK_COINS) };
 }
 export function batchRows(dir: string): Row[] {
     const bench = existsSync(join(dir, 'bench.txt')) ? readFileSync(join(dir, 'bench.txt'), 'utf8') : '', ticks = parseTicks(bench), byCase = new Map<string, Run[]>();
