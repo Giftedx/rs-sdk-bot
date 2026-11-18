@@ -368,3 +368,29 @@ test('edgeville woodcutting, magic-items, smelt-bars, staged runes and bounded s
  expect(intentForEntry('scripts/fletch-arrows.ts',['bronze','10'],{CAP:'600'})).toEqual({kind:'service',objective:'fletch-arrows:bronze',units:1});
  expect(intentForEntry('scripts/fletch-arrows.ts',['bronze','10'],{CAP:'Infinity'})).toBeNull();
 });
+
+test('an entry with a missing order file, an unknown recipe, a bad count or no stated bound has no finite goal',()=>{
+ const c=loadProgressionCatalog(),job=(o:unknown)=>['bank-job','--job='+encodeURIComponent(JSON.stringify(o))];
+ const known=c.methods.find(m=>m.execution?.bankJob&&Object.keys(m.effects.items??{}).length===1&&!m.effects.xp)!.execution!.bankJob!;
+ expect(intentForEntry('scripts/aio-skiller.ts',['bank-job','no-such-order.json'],{},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/aio-skiller.ts',job({family:'nope',recipe:'nope'}),{},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/aio-skiller.ts',job({family:'nope',recipe:'nope',target:5}),{},undefined,c)).toBeNull();
+ for(const target of [-5,0,1.5,undefined])expect(intentForEntry('scripts/aio-skiller.ts',job({family:known.family,recipe:known.recipe,target}),{},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/aio-skiller.ts',job({family:known.family,recipe:known.recipe,target:5}),{},undefined,c)).toMatchObject({kind:'produce'});
+ expect(intentForEntry('scripts/microbot-jewellery-trip.ts',['no-such-order.json'],{},undefined,c)).toBeNull();
+ for(const entry of ['sell-owned-ge-item','buy-owned-sword','goldfarm-stable','alch-train','splash-train','quest-order','foodcourier'])
+  expect(intentForEntry(`scripts/${entry}.ts`,[],{},undefined,c),entry).toBeNull();
+ expect(intentForEntry('scripts/fletch-arrows.ts',['0','bronze'],{},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/goldfarm-stable.ts',[],{TICKS:'0'},undefined,c)).toBeNull();
+ // A stated bound keeps the entry, and the nine workers with their own default tick cap run bare.
+ expect(intentForEntry('scripts/goldfarm-stable.ts',[],{TICKS:'9000'},undefined,c)).toMatchObject({kind:'service'});
+ expect(intentForEntry('scripts/fletch-arrows.ts',['600','shafts'],{MAX_MAKE:'1'},undefined,c)).toMatchObject({kind:'service'});
+ expect(intentForEntry('scripts/gather-ore.ts',[],{},undefined,c)).toMatchObject({kind:'service'});
+});
+
+test('a smelt order with a bar count keeps its produce intent; a smelt order with only a tick cap is a service',()=>{
+ const c=loadProgressionCatalog();
+ expect(intentForEntry('scripts/smelt-bars.ts',['1500','steel'],{MAX_MAKE:'28'},undefined,c)).toEqual({kind:'produce',items:{2353:28},consumer:'scripts/smelt-bars.ts'});
+ expect(intentForEntry('scripts/smelt-bars.ts',['600','steel'],{},undefined,c)).toEqual({kind:'service',objective:'smelt:steel',units:1});
+ expect(intentForEntry('scripts/smelt-bars.ts',['0','steel'],{},undefined,c)).toBeNull();
+});
