@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794989459958-wandwaver-mmthv2350-bronzesword",
+ "account": "mmthv2350",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze sword",
+ "requested": 1,
+ "claim": "8eed78f1-4e7e-4171-86f4-fc03cd4f6dfc",
+ "count": 0,
+ "ok": false,
+ "at": 1794989563551,
+ "detail": "trade claimed"
+}
