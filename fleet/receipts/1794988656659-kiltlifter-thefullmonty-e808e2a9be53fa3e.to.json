@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794988656659-kiltlifter-thefullmonty-e808e2a9be53fa3e",
+ "account": "TheFullMonty",
+ "partner": "Kiltlifter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron arrow",
+ "requested": 41,
+ "claim": "002af618-89d5-4877-a940-aefea2a1dfbb",
+ "count": 0,
+ "ok": false,
+ "at": 1794988932141,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794988919844-0000012352-0000000001",
+  "at": 1794988932130,
+  "sha256": "0ed91148b9c7f11b4480c0411dd29abc14408f220b8d77abd7f7e8bee6ef8feb"
+ },
+ "screen": false
+}
