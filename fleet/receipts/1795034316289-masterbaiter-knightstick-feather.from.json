@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795034316289-masterbaiter-knightstick-feather",
+ "account": "Masterbaiter",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 50,
+ "claim": "da5bf595-ad5d-4660-8bfd-7b8f329d7ed0",
+ "count": 0,
+ "ok": false,
+ "at": 1795034436002,
+ "detail": "trade claimed"
+}
