@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795037998256-yewfirst-knightstick-airrune",
+ "account": "Knightstick",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 50,
+ "claim": "f8ebe794-b736-4fed-a2fa-6d30ac09a018",
+ "count": 50,
+ "ok": true,
+ "at": 1795038095459,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 50
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795038094428
+ },
+ "logout": {
+  "attemptId": "1795038068417-0000027180-0000000001",
+  "at": 1795038095417,
+  "sha256": "d4f58be3a726632fee2c947ef43205dbb6e96c50053740f371b626e8ec436e7d"
+ },
+ "screen": true
+}
