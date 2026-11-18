@@ -153,8 +153,10 @@ What the swarm does with this job, from `scripts/swarm.ts` and `packages/practic
   out. A later trip restocks the pack, and a restock that the bank and the pack together cannot fill deposits nothing.
 - **Stall.** The stall guard (`packages/core/src/bot.ts`) ends a session with no xp, item, dialog or journey for
   `STALL_TICKS`. `scripts/pk-squad-stall.ts` sets it for the squad to the longest return of a gang account in the
-  clone record (`group.returnToPost`) times 1.25, so a hold at the post while the gang is away is not a stall. A stalled
-  member ends its own session only (`stopSquadSession`); the rescue at the end takes it out.
+  clone record (`group.returnToPost`) times 1.25 (`STALL_MARGIN`: the spread of the two recorded returns, 1431 over
+  1154, rounded up), so a hold at the post while the gang is away is not a stall. A stalled member ends its own
+  session only. `stopSquadSession` records it as dropped, so the rescue at the end (`RESCUE=1`) logs it in again and
+  takes it out of the Wilderness, and the RESULT names it (`dropped=`).
 
 ## The watcher
 

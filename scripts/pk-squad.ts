@@ -108,14 +108,17 @@ export function squadWorkSession(raw: Session): Session {
 }
 const cancelSquadWork = (raw: Session, reason: string) => { squadWorkSession(raw); workSessions.get(raw)!.cancel(reason); };
 
-export async function stopSquadSession(raw: Session, reason: string, halt: (reason: string) => void, closeMs = 1000): Promise<void> {
+export async function stopSquadSession(raw: Session, reason: string, halt: (reason: string) => void, closeMs = 1000, ended?: (raw: Session, reason: string) => unknown): Promise<void> {
     if (reason === 'died') return;
     // A member with no progress for the stall limit (no xp, items, dialog or journey: one whose bank trip failed stands
-    // idle at the bank) ends its own session only. The others go on, and the rescue at the end takes the member out
-    // like a dropped one. Live: one idle member halted a squad of four that was killing.
+    // idle at the bank) ends its own session only. The others go on. The session is closed with a stop already asked
+    // for, so openBot reports no session end (packages/core/src/bot.ts watchUnexpectedEnd): `ended` records the member
+    // as dropped, and the rescue at the end takes it out of the Wilderness. Live: one idle member halted a squad of
+    // four that was killing.
     if (/^no progress:/.test(reason)) {
         cancelSquadWork(raw, reason);
         await closeWithin([raw], closeMs);
+        await ended?.(raw, reason);
         return;
     }
     halt(reason);
@@ -124,6 +127,15 @@ export async function stopSquadSession(raw: Session, reason: string, halt: (reas
         await closeWithin([raw], closeMs);
     }
 }
+// The stop handlers of a squad: a member whose session ends with no logout of ours (a dropped connection, or a stall
+// that ends its own session) goes into `dropped`, and the rescue at the end takes it out of the Wilderness.
+export function squadStopHandlers(halt: (detail: string) => void, dropped: Map<string, string>, log: (line: string) => void = line => console.log(line)) {
+    const onSessionEnd = async (s: Session, detail: string) => { if (!dropped.has(s.name)) { dropped.set(s.name, detail); log(`[${s.name}] SQUAD session ended: ${detail}`); } };
+    const onStop = (s: Session, reason: string) => stopSquadSession(s, reason, halt, 1000, onSessionEnd);
+    return { onStop, onSessionEnd };
+}
+// A kill line of the fight loop, not its proof lines (`PK kill receipt ...`, `PK kill feed ...`).
+export const isKillLine = (line: string) => /PK kill (?!receipt |feed )\S+ after \d+ ticks/.test(line);
 export const squadPaused = (name: string, exists: (path: string) => boolean = existsSync) => exists('.practice/stop-pk-squad') || exists(`.practice/stop-${name}`);
 
 // Connected members share one monotonic coordination clock after a member disconnects.
@@ -503,11 +515,10 @@ if (import.meta.main) {
     if (existsSync('.practice/stop-pk-squad') || paused.length) { console.log(`RESULT fail stop file present: ${existsSync('.practice/stop-pk-squad') ? 'stop-pk-squad' : paused.map(n => `stop-${n}`).join(' ')}`); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
     let halted: string | undefined;
-    const onStop = (s: Session, reason: string) => stopSquadSession(s, reason, detail => { halted ??= detail; });
     // A session that ends with no logout of ours (a dropped connection) stops that account only. openBot's default
     // finishes the process, and in the third live pilot one account's drop logged the other three out in the Wilderness.
     const dropped = new Map<string, string>();
-    const onSessionEnd = async (s: Session, detail: string) => { if (!dropped.has(s.name)) { dropped.set(s.name, detail); console.log(`[${s.name}] SQUAD session ended: ${detail}`); } };
+    const { onStop, onSessionEnd } = squadStopHandlers(detail => { halted ??= detail; }, dropped);
     const all = await openSquad(names, name => openBot(name, { onStop, onSessionEnd, continueAfterDeath: true }), (sessions, detail) => finish(sessions, false, detail));
     const squad = all.slice(0, ours.length).map(squadWorkSession), gang = all.slice(ours.length).map(squadWorkSession);
     // Bench: a gang account is out when it died (a new life, or at the Lumbridge spawn) or left the Wilderness.
@@ -626,7 +637,7 @@ if (import.meta.main) {
             ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
             allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), run: runDeaths,
             onDeath: near => { recordPvpDeath({ account: s.name, server: squadServer, at: Date.now(), script: 'scripts/pk-squad.ts', near }); }, deadline,
-            stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (/PK kill /.test(l)) kills++; log(l); },
+            stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (isKillLine(l)) kills++; log(l); },
         });
     }));
     squadDone = true;

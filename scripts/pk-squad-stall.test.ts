@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { readGangRecord, recordedReturns, squadStallTicks, STALL_DEFAULT_TICKS } from './pk-squad-stall';
+import { readGangRecord, recordedReturns, squadStallTicks, STALL_DEFAULT_TICKS, STALL_MARGIN } from './pk-squad-stall';
 
 describe('squad stall bound', () => {
     test('the bound is the longest recorded return of a gang account times the margin, never under the default', () => {
@@ -18,6 +18,11 @@ describe('squad stall bound', () => {
         const longest = recordedReturns(group)[0]!;
         expect(longest).toBeGreaterThan(1000);
         expect(squadStallTicks(readGangRecord())).toBeGreaterThan(longest);
+    });
+    test('the margin covers the spread of the committed record: the longest return over the shortest', () => {
+        const returns = recordedReturns(JSON.parse(readFileSync(join(import.meta.dir, 'pk-gang-record', 'group.json'), 'utf8')));
+        expect(returns.length).toBeGreaterThan(1);
+        expect(STALL_MARGIN).toBeGreaterThanOrEqual(returns[0]! / returns[returns.length - 1]!);
     });
     test('importing the module in a test leaves STALL_TICKS alone', () => {
         expect(process.env.STALL_TICKS).toBeUndefined();

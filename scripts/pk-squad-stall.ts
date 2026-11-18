@@ -7,6 +7,9 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 export const STALL_DEFAULT_TICKS = 900;
+// The record holds two returns: 1154 ticks after a death and 1431 after a walk out, which is 1.24 times as long. The
+// margin is that spread rounded up: a return as much longer than the longest recorded one as the longest is longer
+// than the shortest. The test of this file fails when a new record has a wider spread than the margin.
 export const STALL_MARGIN = 1.25;
 
 // The returns of a gang account to its post in the record (ticks after a death, ticks after a walk out), longest first.
