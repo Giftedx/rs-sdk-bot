@@ -95,7 +95,7 @@ A hand run, bounded, from the main checkout (PowerShell):
 ```powershell
 $env:DEMO_OK='1'; $env:FLEET_SIDE='local'; $env:WORKER_ENTRY='scripts/pk-squad.ts'
 $env:WORKER_RELEASE=(bun packages/core/src/worker-release.ts scripts/pk-squad.ts | Select-Object -Last 1)
-bun scripts/pk-squad.ts <a1> <a2> <a3> <a4> TARGETS=goondelf,ligma,sugma POST=3067,3640 MAX_MINUTES=10 TRIPS=1 FOLLOW=1 MARCH=1 PULL=1 RESCUE=1 PICKUP=1 *> .practice/gang-hunt/run.log
+bun scripts/pk-squad.ts <a1> <a2> <a3> <a4> TARGETS=goondelf,ligma,sugma POST=3067,3640 MAX_MINUTES=10 TRIPS=1 FOLLOW=1 MARCH=1 PULL=1 RESCUE=1 PICKUP=1 *> .practice/swarm-logs/squad-hand-run.log
 ```
 
 The same run as a `swarm.json` job. A job with several accounts in one process is an orchestrate job
@@ -117,7 +117,9 @@ The same run as a `swarm.json` job. A job with several accounts in one process i
 }
 ```
 
-The repeating run changes `MAX_MINUTES` to 60 and `TRIPS` to 10. It keeps `"repeat": false` until a death ends
+The repeating run changes `MAX_MINUTES` to 60 and `TRIPS` to 10. A job that ended `done` with `"repeat": false`
+starts again only as a new mission: change an argument, or an env value such as `"env": {"SQUAD_RUN": "2"}`
+(`missionSignature` holds the script, the accounts, the arguments and the env). It keeps `"repeat": false` until a death ends
 the job as a death. The lead starts each next run after it reads the watcher's line.
 
 What the swarm does with this job, from `scripts/swarm.ts` and `packages/practice/src/supervise.ts`:
