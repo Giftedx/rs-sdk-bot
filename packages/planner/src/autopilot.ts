@@ -16,6 +16,7 @@ import { ammoTier, boneXp, castRunes, objId, spellFact, toolLevel, wearLevel } f
 import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { validateBankRouteJob, type BankRouteJob } from '../../core/src/bank-trip';
 import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-route-step';
+import { SQUAD_FOOD_HEAL, squadKeeps, squadRows, type SquadInput } from './squad';
 import { ownsWearableMeleeWeapon } from './gear-progression';
 import { cowFoodIds, foodTotalHeal } from '../../core/src/sustain';
 import { ORDER_COIN_MARGIN, REFUSAL_ANY_SOURCE } from '../../core/src/order-refusal';
@@ -66,7 +67,7 @@ export type Template = {
     repeats?: boolean;
     // Declared finite makers only. Counts are input actions; outputPerUnit keeps native recipe multiples explicit.
     production?: { output: string; outputPerUnit: number; maximum: number; inputs: Readonly<Record<string, number>>;
-        reserves?: Readonly<Record<string, number>>; resize: (units: number) => { args: string[]; env?: Record<string, string> } };
+        reserves?: Readonly<Record<string, number>>; resize: (units: number, held?: number) => { args: string[]; env?: Record<string, string> } };
     // The stock a kit buy brings an item up to, by item name: more than the start minimum in `needs`, so one login
     // buys a batch (nature runes for many alchemy casts) and not one start's worth.
     batch?: Record<string, number>;
@@ -79,6 +80,8 @@ export type Template = {
     // A quest run: a candidate until the account's status reports the quest complete, and worth a share of each job
     // the quest unlocks (as a trainer is). It does not repeat.
     quest?: { name: string; unlocks: string[] };
+    // A supply job for the gang squad: a candidate only while the plan's squad is active (Inputs.squad).
+    squadOnly?: true;
     // A shop step for a maker: it buys one `item` that a shop sells and no market lists (a ring mould), and is a candidate
     // only for an account that lacks the item and meets every other need of an admitted maker of `unlocks`. It is worth
     // a share of that maker, as a trainer is worth a share of the job it unlocks.
@@ -146,6 +149,9 @@ export type Inputs = {
     // Lower-case names of the accounts on this side's army roster: only they take goal bands. A specialist's board
     // time counts every tick it plays, so combat training is opt-in per account, never global.
     army?: ReadonlySet<string>;
+    // The gang squad's supply demand (packages/planner/src/squad.ts): an active squad adds a stock target of its members'
+    // consumption as demand rows, and a donor's spare stock moves to a member that is short. Absent or inactive: none.
+    squad?: SquadInput;
     // The time of this pass (ms). With it a vacant reason names an observation older than OBSERVATION_FRESH_MS.
     now?: number;
     // The free accounts of this side that no donor stock was read for: their observation is older than
@@ -190,6 +196,8 @@ export type Inputs = {
     mountain?: (a: Acct) => boolean;
 };
 export const FUND_RESERVE = 50_000;
+// The pseudo template of an item order that restocks a gang squad member (the order is the whole job).
+export const SQUAD_RESTOCK: Template = { id: 'squad-restock', family: 'kit-buy', script: 'scripts/buy-owned-ge-item.ts', role: 'supply', goal: 'restock the gang squad', yields: () => [] };
 // An account's stock is offered to another account's kit only from an observation younger than this
 // (scripts/autopilot.ts SIDE_STOCK_MAX_AGE_MS equals it; scripts/autopilot.test.ts checks).
 export const OBSERVATION_FRESH_MS = 30 * 60_000;
@@ -642,6 +650,9 @@ export function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
         const cost = Math.max(0, ...need.names.map(item => inp.market?.[item]?.limit ?? inp.prices[item] ?? 0));
         if (cost > 0) budget(need.consumer, () => (need.short + (need.bought ?? 0)) * cost);
     }
+    // The gang squad's stock targets, after every kit line: a row has no coin budget, so it never takes coins that a
+    // member's own kit buy or a route purchase needs, and it never counts toward their funding.
+    for (const row of squadRows(inp.squad, item => inp.prices[item] ?? inp.market?.[item]?.limit, SQUAD_UNIT_COST)) needs.push({ names: row.names, short: row.short, consumer: row.consumer, account: row.account });
     return needs;
 }
 
@@ -709,10 +720,19 @@ export function buildBand(t: Template, a: Acct, build?: Readonly<Record<string, 
 }
 
 export function plan(input: Inputs): Assignment[] {
-    const inp: Inputs = { ...input, templates: input.templates.filter(t => !t.once || (!!input.questsDone && !!t.quest && !input.questsDone.has(norm(t.quest.name)))) };
+    let inp: Inputs = { ...input, templates: input.templates.filter(t => !t.once || (!!input.questsDone && !!t.quest && !input.questsDone.has(norm(t.quest.name)))) };
+    // An active squad's members never give their kit or supplies to another account's order: they leave the donor stock
+    // and the coin donors, and only the squad's own restock (below) reads their stock, above their squad reserve.
+    const squadNames = new Set(inp.squad?.active ? (inp.squad.all ?? inp.squad.members.map(m => m.name)).map(n => n.toLowerCase()) : []);
+    const memberStock = (inp.stock ?? []).filter(s => squadNames.has(s.name.toLowerCase()));
+    // Only the members that are free (`members`: observed, with no live session or stop file) may send each other stock: a held member is in `all`, not here.
+    const freeMembers = new Set((inp.squad?.active ? inp.squad.members : []).map(m => m.name.toLowerCase()));
+    if (squadNames.size) inp = { ...inp, stock: (inp.stock ?? []).filter(s => !squadNames.has(s.name.toLowerCase())), donors: (inp.donors ?? []).filter(d => !squadNames.has(d.name.toLowerCase())) };
     const byId = new Map(inp.templates.map(t => [t.id, t]));
     const mine = inp.accounts.filter(a => (inp.owners.get(a.name.toLowerCase())?.side ?? 'local') === inp.side && a.side === inp.side);
-    const demand = goalNeeds(inp, mine), fed = new Map<string, number>();
+    // An active squad's members take no band, kit buy or supply job: they are held for the squad's staging, and only its restock
+    // (below) gives them anything.
+    const demand = goalNeeds(inp, mine.filter(a => !squadNames.has(a.name.toLowerCase()))), fed = new Map<string, number>();
     const values = { ...inp, coinValue: 1, bill: demand.map(d => ({ item: d.names[0]!, aliases: d.names.slice(1), short: d.short, need: d.short, owned: 0, ids: [], holders: [] })) };
     const localByName = new Map(mine.map(a => [a.name.toLowerCase(), a]));
     const earnedCoins = new Map<string, number>();
@@ -821,7 +841,7 @@ export function plan(input: Inputs): Assignment[] {
         const available=Math.min(...Object.entries(p.inputs).map(([item,n])=>Math.max(0,Math.floor(((a.items[norm(item)]??0)-(p.reserves?.[item]??0))/n))));
         const units=Math.min(p.maximum,demand,available>0?available:Infinity),items={...t.needs?.items};
         for(const [item,n]of Object.entries(p.inputs))items[item]=n*units+(p.reserves?.[item]??0);
-        const resized=p.resize(units);
+        const resized=p.resize(units,a.items[norm(p.output)]??0);
         const baseline=JSON.stringify([a.items[norm(p.output)]??0,...Object.keys(p.inputs).sort().map(item=>[norm(item),a.items[norm(item)]??0])]);
         return{...t,...resized,env:{...t.env,...resized.env,AUTOPILOT_ORDER:baseline},repeats:false,
             needs:{...t.needs,items},production:{...p,maximum:units}};
@@ -868,6 +888,8 @@ export function plan(input: Inputs): Assignment[] {
     const misses = new Map<string, Miss[]>();
     const miss = (a: Acct, template: Template, gate: Miss['gate']) => { const list = misses.get(a.name); if (list) list.push({ template, gate }); else misses.set(a.name, [{ template, gate }]); };
     for (const a of mine) for (const listed of inp.templates) {
+        if (listed.squadOnly && !inp.squad?.active) continue;
+        if (squadNames.has(a.name.toLowerCase())) continue;
         const band = buildBand(listed, a, inp.builds?.get(a.name.toLowerCase()), inp.buildQuests?.get(a.name.toLowerCase()), inp.buildBefore?.get(a.name.toLowerCase()));
         if (!band) continue;
         if (inp.retired?.has(pairKey(a.name, band.id))) { miss(a, band, 'retired'); continue; }
@@ -973,7 +995,7 @@ export function plan(input: Inputs): Assignment[] {
     // Progressive weapon & armour kit buys precede combat bands. Owned stock can supply them without a market quote.
     for (const a of mine) {
         const lower = a.name.toLowerCase();
-        if (!inp.army?.has(lower)) continue;
+        if (!inp.army?.has(lower) || squadNames.has(lower)) continue;
         const wStage = weaponStageFor(a, inp);
         if (wStage) {
             const template: Template = { id: wStage.id, item: wStage.item, attack: 30, goal: wStage.goal, family: 'kit-buy', script: KIT_BUY_SCRIPT, role: 'supply', yields: () => [], kitFirst: true, needs: { items: { [wStage.item]: 1 } } } as Template & { item: string; attack: number };
@@ -1035,13 +1057,15 @@ export function plan(input: Inputs): Assignment[] {
     // bones, 1,900 nature runes and 29,000 feathers while others waited for a donor of another side). The levels of
     // another side's account are not read here: it keeps the reserve of every band.
     const ownReserve = new Map<string, Record<string, number>>();
+    const squadKeep = inp.squad?.active ? squadKeeps(inp.squad.hours) : undefined, squadMember = new Set((inp.squad?.all ?? inp.squad?.members.map(m => m.name) ?? []).map(n => n.toLowerCase()));
     const keepsOf = (s: Stock) => {
+        if (squadKeep && squadMember.has(s.name.toLowerCase())) return { ...reserve, ...Object.fromEntries(Object.entries(squadKeep).map(([i, n]) => [i, Math.max(n, reserve[i] ?? 0)])) };
         const a = s.side === inp.side ? byName.get(s.name) : undefined;
         if (!a || !inp.army?.has(a.name.toLowerCase())) return reserve;
         if (!ownReserve.has(a.name)) ownReserve.set(a.name, kitReserve(inp.templates.filter(t => t.tier !== 'goal' || bandLeft(t, a) > 0), a));
         return ownReserve.get(a.name)!;
     };
-    const spare = (s: Stock, item: string) => (s.items[item] ?? 0) - (keepsOf(s)[item] ?? 0);
+    const spare = (s: Stock, item: string) => Math.max(0, (s.items[item] ?? 0) - (keepsOf(s)[item] ?? 0));
     // Remote stock has already passed the publishing side's freshness, ownership and free-account checks. Its
     // cash keeps the same reserve as local donors and is used only by the idle-recipient fallback below.
     const cashSource=(recipient:string,coins:number,far:boolean):string|undefined=>{
@@ -1186,6 +1210,25 @@ export function plan(input: Inputs): Assignment[] {
     for (const c of kits) acquire(c, 'send', false);
     for (const c of kits) acquire(c, 'buy', false);
     for (const step of ['buy', 'send'] as const) for (const c of kits) acquire(c, step, true);
+    // The gang squad's restock, after every kit order: a free donor of this side sends a member that is short a line it
+    // holds above its own reserve, one order for a member in a pass. The member must be a plannable, offline account
+    // that no kit order or job took; a member that runs a hand job is restocked when it is free.
+    if (inp.squad?.active) for (const row of squadRows(inp.squad, item => inp.prices[item] ?? inp.market?.[item]?.limit, SQUAD_UNIT_COST)) {
+        const member = byName.get([...byName.keys()].find(n => n.toLowerCase() === row.account) ?? '');
+        if (!member || done.has(member.name) || gave.has(member.name) || gaveItems.has(member.name) || vacated.has(member.name) || inp.unfundable?.has(row.account)) continue;
+        const cost = (p: Acct | undefined) => cachedWayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true);
+        for (const item of row.names) {
+            const from = [...stock, ...memberStock.filter(s => freeMembers.has(s.name.toLowerCase()))].find(s => s.side === inp.side && s.name.toLowerCase() !== row.account && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= 1
+                && !inp.noSend?.has(`${s.name}>${member.name}`.toLowerCase()) && (cost(byName.get(s.name)) ?? -1) >= 0 && (cost(member) ?? -1) >= 0);
+            if (!from) continue;
+            // A food row is in lobsters (squad.ts): a donor's item is counted by the HP it heals against the lobster's.
+            const count = Math.min(spare(from, item), item in SQUAD_FOOD_HEAL ? Math.ceil(row.short * SQUAD_FOOD_HEAL.lobster! / SQUAD_FOOD_HEAL[item]!) : row.short);
+            gaveItems.add(from.name); pool.delete(from.name); pool.delete(member.name);
+            done.set(member.name, { account: member.name, template: SQUAD_RESTOCK, value: 0, reason: `restocks ${count} ${item} for the gang squad, sent by ${from.name}`, resources: [],
+                send: { from: from.name, to: member.name, item, count, template: SQUAD_RESTOCK.id } });
+            break;
+        }
+    }
     // Then the filler bands, for an army account that no band and no kit took.
     for (const c of cands.filter(c => c.goal && !c.lacks && c.template.filler).sort(goalOrder)) take(c, 0);
     // A recipient that cannot earn its kit may need a helper to become a donor. Reserve one helper for one finite
@@ -1569,7 +1612,7 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     'catherby:lobster': CATHERBY_BANK, [AIO_PLACES.flax]: { x: 2744, z: 3445 }, [AIO_PLACES.yews]: SEERS_BANK,
     'shop:ardy': { x: 2654, z: 3283 }, 'shop:catherby': CATHERBY_BANK, 'shop:catherby_arrows': CATHERBY_BANK, 'shop:dargaud': SEERS_BANK, 'shop:magic_guild': { x: 2612, z: 3093 },
     'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
-    'shop:zeke': { x: 3269, z: 3167 }, 'shop:dommik': { x: 3269, z: 3167 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
+    'shop:zeke': { x: 3269, z: 3167 }, 'shop:dommik': { x: 3269, z: 3167 }, 'shop:jiminua': { x: 2654, z: 3283 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
 };
 // A template's place: its first resource with one. A chicken pen carries its tile, and a knight spot has the bank.
 export function placeOf(t: Pick<Template, 'resources'>): Spot | undefined {
@@ -1948,6 +1991,37 @@ export function aioTemplates(): Template[] {
 //   the potato goes in first, then the meat. One run makes up to STEW_BATCH useful stews, bounded by complete owned
 //   recipes; both steps receive that count. The rate is half that of one recipe, as a stew takes two. Gaps: no
 //   practice run makes this chain, and no template finishes an incomplete stew left by a failed second step.
+// Supply jobs for the gang squad's lines that no template filled (packages/planner/src/squad.ts). Each is a finite shop
+// run of scripts/shop-buyer.ts for one item: the run buys up to the stock the squad rows still lack (STOCK_TARGET is the
+// supplier's holding plus that demand, STOP_AT_TARGET ends the run there) and spends at most twice the shop cost of it
+// (MAX_SPEND, with FLOAT and COIN_RESERVE). A template is `squadOnly`: it is a candidate only while the plan's squad is
+// active, so a plan with no squad block never values it. Lines that already have a template: earth and air runes
+// (shop-runes), lobsters (lobster-chain). No template: sharks, since no script fishes them. Antipoison(3): the shop run is a
+// fallback with a small cap, and a maker (Herblore) takes the line by yielding `antipoison(3)`.
+export const SQUAD_RUN_MAX: Readonly<Record<string, number>> = { 'iron arrow': 2000, 'water rune': 1500, 'nature rune': 1000, 'law rune': 200, 'antipoison(3)': 12 };
+// The shop cost of one unit (knowledge/items.json), the fallback of a run's spend cap: the rows are priced from the plan's
+// price table (`prices`, from priceTable) when it holds the item.
+export const SQUAD_UNIT_COST: Readonly<Record<string, number>> = { 'iron arrow': 3, 'water rune': 4, 'nature rune': 20, 'law rune': 40, 'antipoison(3)': 288 };
+export function squadSupplies(): Template[] {
+    const shop = (id: string, profile: string, item: string, items: string, perTick: number, goal: string, needs: Needs): Template => {
+        const cost = SQUAD_UNIT_COST[item]!, max = SQUAD_RUN_MAX[item]!;
+        const sized = (units: number, held = 0) => {
+            const spend = Math.ceil(units * cost * 2);
+            return { args: [profile, '1200'], env: { ITEMS: items, STOCK_TARGET: String(held + units), STOP_AT_TARGET: '1', BANK_PACK: '1', NO_BUY_TICKS: '25', FLOAT: String(spend + 200), COIN_RESERVE: '200', MAX_SPEND: String(spend) } };
+        };
+        return { id, family: 'shop-buyer', script: 'scripts/shop-buyer.ts', ...sized(max), role: 'bank', goal, resources: [`shop:${profile}`], needs, squadOnly: true,
+            yields: () => [{ item, perTick }], spends: () => [{ item: 'coins', perTick: perTick * cost }], repeats: false,
+            production: { output: item, outputPerUnit: 1, maximum: max, inputs: {}, resize: sized } };
+    };
+    return [
+        shop('squad-arrows-lowe', 'lowe', 'iron arrow', 'iron arrow', 0.5, "buy iron arrows at Lowe's in Varrock for the gang squad", { items: { coins: 6000 } }),
+        shop('squad-water-betty', 'betty', 'water rune', 'water rune', 0.7, "buy water runes at Betty's in Port Sarim for the gang squad", { items: { coins: 6000 } }),
+        shop('squad-nature-guild', 'magic_guild', 'nature rune', 'nature rune', 0.4, 'buy nature runes at the Magic Guild for the gang squad', { skills: { Magic: 66 }, items: { coins: 40_000 } }),
+        shop('squad-law-guild', 'magic_guild', 'law rune', 'law rune', 0.4, 'buy law runes at the Magic Guild for the gang squad', { skills: { Magic: 66 }, items: { coins: 17_000 } }),
+        shop('squad-antipoison-jiminua', 'jiminua', 'antipoison(3)', 'antipoison', 0.02, "buy antipoison(3) at Jiminua's in Karamja for the gang squad", { items: { coins: 8000 } }),
+    ];
+}
+
 // The shop step of a maker whose only missing input is a ring mould: Dommik's Crafting Store in Al Kharid sells it
 // (scripts/shop-buyer.ts profile dommik: ring mould, shelf 4). The mould costs 5 coins in the item data and the run
 // stops at the first one held (STOCK_TARGET 1). It unlocks the four gem ring makers (GEM_RINGS); a ring maker that the
@@ -2512,6 +2586,7 @@ export function catalogue(): Template[] {
             yields: () => [{ item: 'rune arrow', perTick: ARROW_LOW / 800 }], spends: () => [{ item: 'coins', perTick: RUNE_ARROW_COST / 800 }] },
         ...aioTemplates(),
         ...makerChains(),
+        ...squadSupplies(),
         ...makerShopSteps(),
     ];
 }

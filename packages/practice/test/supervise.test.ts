@@ -23,7 +23,7 @@ test('Rune Mysteries qualification failures block instead of relogging an untrai
  expect(isPrerequisiteFailure('RESULT fail Error: Rune Mysteries prerequisite: combat13 required for guarded route')).toBe(true);
  expect(isPrerequisiteFailure('RESULT ok Rune Mysteries prerequisite: qualified')).toBe(false);
 });
-import { supervise, isPrerequisiteFailure, isTransportStall, isHeldClaimRefusal, HELD_CLAIM_TRIES, failureShape, repeatableFailure } from '../src/supervise';
+import { supervise, isPrerequisiteFailure, isTransportStall, isHeldClaimRefusal, isClaimAuthorityFault, isNoProgressFailure, isEntryRefusal, CLAIM_AUTHORITY_PAUSE_MS, HELD_CLAIM_TRIES, failureShape, repeatableFailure } from '../src/supervise';
 
 const out = (lines: string[], code: number) => async () => ({ stdout: lines.join('\n'), exitCode: code });
 
@@ -261,11 +261,36 @@ test('two runs in a row with the same failure and no work end as blocked; work, 
     }
 });
 
+test('a login claim authority that did not answer never ends a job as blocked, and the next run waits longer', async () => {
+    const brief = (result: string) => out(['LEDGER ticks=3 xp=0 inventory=0 move=0 anim=0 dialog=0 stun=0 idle=3 idlePct=100.0 ', result], 1);
+    // The text of a worker that caught the error, of a chain whose step ended on it, and of an ended time budget.
+    for (const result of ['RESULT fail login: Error: fleet swarm claim authority unavailable or changed: spawnSync git ETIMEDOUT',
+        'RESULT fail fleet swarm claim authority unavailable or changed: spawnSync git ETIMEDOUT chain rounds=1 ok=0 failed=1',
+        'RESULT fail fleet swarm claim authority timed out chain rounds=1 ok=0 failed=1']) {
+        expect(isClaimAuthorityFault(result), result).toBe(true);
+        expect(repeatableFailure(result), result).toBe(false);
+        // The crash text of this fault is no other rule's text.
+        expect([isNoProgressFailure(result), isPrerequisiteFailure(result), isEntryRefusal(result), isHeldClaimRefusal(result)], result).toEqual([false, false, false, false]);
+        let runs = 0; const pauses: number[] = [];
+        const end = await supervise({ run: () => { runs++; return brief(result)(); }, stopped: () => false, pause: async ms => { pauses.push(ms); }, maxRestarts: 3 });
+        expect(end, result).toEqual({ reason: 'gave-up', runs: 4 });
+        expect(pauses, result).toEqual([CLAIM_AUTHORITY_PAUSE_MS, CLAIM_AUTHORITY_PAUSE_MS, CLAIM_AUTHORITY_PAUSE_MS]);
+    }
+    // A held claim and an other failure are not this fault and keep the 10 s pause.
+    for (const result of ['RESULT fail fleet account claim held by swarm', 'RESULT fail bank did not open', 'RESULT fail no result chain rounds=1 ok=0 failed=1'])
+        expect(isClaimAuthorityFault(result), result).toBe(false);
+    const pauses: number[] = [];
+    await supervise({ run: () => brief('RESULT fail bank did not open')(), stopped: () => false, pause: async ms => { pauses.push(ms); }, maxRestarts: 3 });
+    expect(pauses).toEqual([10_000]);
+});
+
 test('a Grand Exchange buy that ended before it placed an offer is a blocked prerequisite, not a retry', () => {
  const unplaced = (failure: string) => `RESULT fail {"ok":false,"foodUsed":[],"phase":"unplaced","pending":false,"quantity":16,"acquired":0,"escrow":0,"refund":0,"spent":0,"ticks":3,"failure":"Error: ${failure}"}`;
  for (const failure of ['coins 160940 are under the escrow 160000 (16 x 10000) plus the reserve 1000: 60 short', 'pack holds 27 items, over 26: two collection slots unavailable',
   'order deadline passed 3 s ago (deadline 2000-01-01T00:00:00.000Z)', 'owned item baseline 68 differs from EXPECTED_OWNED 10']) expect([failure, isPrerequisiteFailure(unplaced(failure))]).toEqual([failure, true]);
  // An offer that was placed (escrow held) or an unknown failure is not.
  expect(isPrerequisiteFailure(unplaced('GE interface unavailable'))).toBe(false);
+ // A stop can differ at the next login.
+ expect(isPrerequisiteFailure(unplaced('order stopped: the session ended, died, was damaged, was told to stop or used its 500-tick budget'))).toBe(false);
  expect(isPrerequisiteFailure(unplaced('coins 1 are under the escrow 2 (1 x 2) plus the reserve 0: 1 short').replace('"escrow":0', '"escrow":2000'))).toBe(false);
 });

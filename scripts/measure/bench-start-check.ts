@@ -13,22 +13,21 @@
 //     engines and ends with FLEET_STOP_EXIT. A stalled tick disconnects real accounts; a stopped bench loses a run.
 // This file is tooling. No worker imports it, so a change here does not change a worker release.
 import { canBind } from '../../packages/practice/src/ports';
+import { BENCH_CASE_GB, BENCH_ENGINE_GB, BENCH_FLEET_STOP_EXIT, BENCH_START_REFUSED_EXIT, benchStartGB } from '../../packages/core/src/memory';
 import { fleet, floorGB, freeGB, type Fleet } from '../heavy-admission';
 import { FREE_FLOOR_GB } from '../../packages/core/src/memory';
 
 // The jobs that must not run two at a time on one machine (AGENTS.md, "Keep the loop fast").
 export const HEAVY_SCRIPTS = ['aio-practice-bench.ts', 'ci-gate.ts', 'test-shards.ts'] as const;
 export const BENCH_SCRIPT = 'aio-practice-bench.ts';
-// The memory of one practice engine of the bench. The start is refused under the floor plus this much for each engine.
-export const BENCH_ENGINE_GB = 0.9;
-// The memory that the bench leaves for one case (the engine, the worker and its account tools) when it sizes the
-// number of engines of a run.
-export const BENCH_CASE_GB = 1.5;
+// The memory of one practice engine of the bench and the memory that it leaves for one case beside a fleet, and the
+// rule for a start (packages/core/src/memory.ts: the delivery checks that run the bench read the same rule).
+export { BENCH_CASE_GB, BENCH_ENGINE_GB };
 // The exit code of a refused start. The bench exits with 0 when every case passes and with 1 when a case fails.
-export const START_REFUSED_EXIT = 2;
+export const START_REFUSED_EXIT = BENCH_START_REFUSED_EXIT;
 // The engines of one bench beside a live fleet, and the exit code of a bench that stopped to give the fleet its memory.
 export const LIVE_MAX_ENGINES = 4;
-export const FLEET_STOP_EXIT = 4;
+export const FLEET_STOP_EXIT = BENCH_FLEET_STOP_EXIT;
 export const WAIT_STEP_MS = 10_000;
 
 export type Proc = { pid: number; ppid: number; name: string; startedAt: number; commandLine: string };
@@ -122,7 +121,7 @@ export function startProblems(f: StartFacts): string[] {
 // The memory part of the check. Beside a live fleet it also holds with --force.
 export function memoryProblems(f: StartFacts): string[] {
     const out: string[] = [], each = f.fleet ? BENCH_CASE_GB : BENCH_ENGINE_GB, reserve = f.fleet?.reserveGB ?? 0;
-    const need = f.floorGB + reserve + f.engines * each;
+    const need = benchStartGB({ floorGB: f.floorGB, reserveGB: reserve, engines: f.engines, fleet: !!f.fleet });
     const beside = f.fleet ? `, beside ${f.fleet.bots} live ${f.fleet.bots === 1 ? 'bot' : 'bots'}${reserve ? ` with ${reserve.toFixed(1)} GiB held for bot starts` : ''}` : '';
     if (f.freeGB < need) out.push(`${f.freeGB.toFixed(1)} GiB is free and the run needs ${need.toFixed(1)} GiB (the floor of ${f.floorGB} GiB and ${f.engines} ${f.engines === 1 ? 'engine' : 'engines'} of ${each} GiB${beside})`);
     if (f.fleet && f.engines > LIVE_MAX_ENGINES) out.push(`${f.engines} engines beside the live fleet, ${LIVE_MAX_ENGINES} at most (--parallel ${LIVE_MAX_ENGINES})`);

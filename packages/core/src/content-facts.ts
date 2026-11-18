@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {parseConfigs,type ConfigBlock} from '../../knowledge/src/config';
+import {listConfigFiles,parseConfigs,type ConfigBlock} from '../../knowledge/src/config';
 import {parsePack} from '../../knowledge/src/pack';
 import {contentRoot,knowledgeDir} from '../../knowledge/src/paths';
 import {XP_RATE} from '../../knowledge/src/method-model';
@@ -35,6 +35,19 @@ export function npcId(name:string):number{
  return id;
 }
 export const objDebugName=(id:number)=>objPack().get(id);
+
+// Longbow ids from the .obj configs: an unstrung bow has category unstrung_bow and the display name of the strung bow
+// (the SDK matches names, so a worker finds a bow by id). The strung bow is the object without the unstrung_ prefix.
+export const longbowIds=lazy(()=>{
+ const unstrung:number[]=[],strung:number[]=[];
+ for(const file of listConfigFiles('.obj'))for(const b of blocks(file)){
+  if(b.props.category?.[0]!=='unstrung_bow'||!b.name.endsWith('longbow'))continue;
+  const u=objIdByDebugName(b.name),s=objIdByDebugName(b.name.replace(/^unstrung_/,''));
+  if(u===undefined||s===undefined)throw new Error(`content: no strung bow for ${b.name}`);
+  unstrung.push(u);strung.push(s);
+ }
+ return {unstrung,strung,string:objId('bow string')};
+});
 
 type GearRecord={id:number;debugname:string;tier?:number;special?:{energy:number};requires:{skills:Record<string,number>;quest?:string}};
 const gear=lazy(()=>new Map((JSON.parse(readFileSync(join(knowledgeDir(),'gear.json'),'utf8')) as GearRecord[]).map(g=>[g.debugname,g] as const)));

@@ -8,7 +8,7 @@
 // to host.ts as given, except that a restart passes only the env of the accounts it runs.
 // Prints `SUPERVISE-HOST account <name> <reason> after <n> runs` once per account, then `SUPERVISE-HOST end`.
 
-import { failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal, isNoProgressFailure, isPrerequisiteFailure, isTransportStall, madeProgress, repeatableFailure } from './supervise';
+import { CLAIM_AUTHORITY_PAUSE_MS, isClaimAuthorityFault, failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal, isNoProgressFailure, isPrerequisiteFailure, isTransportStall, madeProgress, repeatableFailure } from './supervise';
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
 import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
 
@@ -66,7 +66,7 @@ export async function superviseHost(accounts: string[], d: SuperviseHostDeps): P
             const match = line.match(/^\[([^\]]+)\] (LEDGER ticks=\d+.*)$/);
             if (match) ledgers.set(match[1]!, match[2]!);
         }
-        let retry = 0;
+        let retry = 0, slowAuthority = false;
         for (const a of active) {
             const res = results.get(a);
             d.log?.(`SUPERVISE-HOST run ${runs} exit ${r.exitCode} ${a}: ${(res ?? '(no RESULT)').slice(0, 200)}`);
@@ -82,10 +82,11 @@ export async function superviseHost(accounts: string[], d: SuperviseHostDeps): P
             const failures = worked ? 1 : (fails.get(a) ?? 0) + 1;
             fails.set(a, failures);
             if (failures > d.maxRestarts) { end(a, 'gave-up', runs); continue; }
+            if (res && isClaimAuthorityFault(res)) slowAuthority = true;
             retry++;
         }
         if (retry === 0) return { ends, runs };
-        await d.pause(10_000);
+        await d.pause(slowAuthority ? CLAIM_AUTHORITY_PAUSE_MS : 10_000);
     }
 }
 

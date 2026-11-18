@@ -52,10 +52,12 @@ export function isPrerequisiteFailure(result: string): boolean {
     // do not change between two logins, so a restart fails the same way.
     // The walker names a missing fare at the dock (`in the pack`) and at the bank that does not hold the coins.
     if (/\bprecondition (?:no route to \d+,\d+,\d+|(?:(?:westbound|eastbound) )?ferry needs \d+ coins (?:in the pack|and the bank holds \d+))/.test(result)) return true;
-    // A Grand Exchange buy that ended before it placed an offer (packages/core/src/order-refusal.ts): the coins, the pack and the count
-    // of what the account holds do not change between two logins, so the same order fails the same way. The next planner pass sizes a
-    // new order from the fresh status that this run leaves.
-    if (unplacedCause(result) !== undefined) return true;
+    // A Grand Exchange buy that ended before it placed an offer (packages/core/src/order-refusal.ts): the coins, the pack, the count
+    // of what the account holds and the order deadline do not change between two logins of the same job, so the same order fails the
+    // same way. A stop (the session ended, died or was told to stop) can differ at the next login. The next planner pass sizes a new
+    // order from the fresh status that this run leaves.
+    const cause = unplacedCause(result);
+    if (cause !== undefined && cause !== 'stop') return true;
     // A finite combat pilot that retreats or refuses a target needs review;
     // twenty fresh logins do not change its route, food, gear or attribution.
     return result.startsWith('RESULT fail Fire-pilot ')
@@ -96,9 +98,16 @@ export const isHeldClaimRefusal = (result: string) => /^RESULT fail (?:login: )?
 // in either, fail the same way on every next login, so the job ends as blocked after the second: a failure that no
 // rule above names (a "no route" or "feathers=2000 gained=0" result without its own rule) would otherwise log in
 // maxRestarts times. Failures that a later login can repair keep the retry streak: a login error, a dropped session,
-// a transport stall and a held claim (it has its own limit).
+// a transport stall, a held claim (it has its own limit) and a claim authority that did not answer.
+// The Git authority of the login claim did not answer in its time (packages/core/src/fleet-trade-claim.ts). The account
+// did not log in, and a later login can pass. Such a result keeps the retry streak and never ends a job as blocked, and
+// the next run waits CLAIM_AUTHORITY_PAUSE_MS, because the authority was slow. A chain whose step ended on the error
+// gives the text with no "login:" (packages/core/src/run-child.ts).
+export const CLAIM_AUTHORITY_PAUSE_MS = 30_000;
+export const isClaimAuthorityFault = (result: string) => /^RESULT fail (?:login: )?(?:Error: )?fleet swarm claim authority (?:unavailable or changed|timed out)\b/.test(result);
+
 export const failureShape = (result: string) => result.replace(/\d+/g, 'N').replace(/\s+/g, ' ').trim();
-export const repeatableFailure = (result: string) => /^RESULT fail\b/.test(result) && !isTransportStall(result) && !isHeldClaimRefusal(result)
+export const repeatableFailure = (result: string) => /^RESULT fail\b/.test(result) && !isTransportStall(result) && !isHeldClaimRefusal(result) && !isClaimAuthorityFault(result)
     && !/^RESULT fail (?:login:|session ended|.*TickStallError)/.test(result);
 
 export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused' | 'refused'; runs: number }> {
@@ -127,7 +136,7 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
         // A run with real work behind it is one failure, not one more: the streak toward gave-up restarts at it.
         fails = worked ? 1 : fails + 1;
         if (fails > d.maxRestarts) return { reason: 'gave-up', runs };
-        await d.pause(10_000);
+        await d.pause(isClaimAuthorityFault(result) ? CLAIM_AUTHORITY_PAUSE_MS : 10_000);
     }
 }
 
