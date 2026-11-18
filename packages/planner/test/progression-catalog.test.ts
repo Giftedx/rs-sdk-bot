@@ -278,3 +278,19 @@ test('owned earth production retains its finite acquisition intent and bounds',(
  for(const [args,env]of [[['bad','20000'],{STOCK_TARGET:'103',COIN_RESERVE:'30000'}],[['talismans','0'],{STOCK_TARGET:'103',COIN_RESERVE:'30000'}],[['craft','20001'],{STOCK_TARGET:'103',COIN_RESERVE:'30000'}],[['craft','2000'],{STOCK_TARGET:'0',COIN_RESERVE:'30000'}],[['talismans','2000'],{STOCK_TARGET:'103',COIN_RESERVE:'30000',HUNT_KILLS_PER_TARGET:'4'}]] as const)
   expect(intentForEntry('scripts/earth-production.ts',args,env)).toBeNull();
 });
+
+test('edgeville woodcutting, magic-items, smelt-bars, staged runes and bounded service scripts enforce finite bounds',()=>{
+ expect(intentForEntry('scripts/edgeville-woodcut-order.ts',['3000'],{STALL_TICKS:'0'})).toEqual({kind:'train',skill:'woodcutting',targetLevel:36});
+ for(const stall of ['-1','1.5','NaN','Infinity'])expect(intentForEntry('scripts/edgeville-woodcut-order.ts',['3000'],{STALL_TICKS:stall})).toBeNull();
+ expect(intentForEntry('scripts/microbot-magic-items.ts',['enchant:sapphire_ring','-','3','200'],{})).toEqual({kind:'service',objective:'magic-items:enchant:sapphire_ring:3',units:1});
+ expect(intentForEntry('scripts/microbot-magic-items.ts',['superheat:mithril','-','10','400'],{})).toEqual({kind:'service',objective:'magic-items:superheat:mithril:10',units:1});
+ for(const args of [['bad-mode','-','3','200'],['high-alch','-','0','200'],['high-alch','-','10001','200'],['high-alch','-','1','0'],['high-alch','-','1','100001']])
+  expect(intentForEntry('scripts/microbot-magic-items.ts',args,{})).toBeNull();
+ expect(intentForEntry('scripts/smelt-bars.ts',[],{ORDER_ACTION:'smith',PRODUCT_ID:'1119',MAX_MAKE:'1'})).toMatchObject({kind:'service'});
+ expect(intentForEntry('scripts/rune-bank-craft.ts',['--staged=/tmp/run.json'],{})).toEqual({kind:'service',objective:'rune-carriers',units:1});
+ expect(intentForEntry('scripts/microbot-mining-progressive.ts',['job.json'],{})).toEqual({kind:'service',objective:'scripts/microbot-mining-progressive.ts:job.json',units:1});
+ expect(intentForEntry('scripts/gather-combat.ts',['1500','giant'],{})).toEqual({kind:'service',objective:'gather-combat:giant',units:1});
+ expect(intentForEntry('scripts/gather-combat.ts',['1500','trooper'],{})).toBeNull();
+ expect(intentForEntry('scripts/fletch-arrows.ts',['bronze','10'],{CAP:'600'})).toEqual({kind:'service',objective:'fletch-arrows:bronze',units:1});
+ expect(intentForEntry('scripts/fletch-arrows.ts',['bronze','10'],{CAP:'Infinity'})).toBeNull();
+});

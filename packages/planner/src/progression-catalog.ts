@@ -162,7 +162,8 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  const data=catalog??(existsSync(resolve(root,'packages/planner/data/progression-routes.json'))?loadProgressionCatalog():undefined);
  if(script==='scripts/microbot-jewellery-trip.ts'){
   try{
-   const order=args[0]?JSON.parse(readFileSync(args[0],'utf8')):{recipe:env.RECIPE,target:Number(env.TARGET),stringAmulet:env.STRING_AMULET==='1'};
+   const raw=args[0];if(raw&&raw.endsWith('.json')&&!existsSync(raw))return{kind:'service',objective:'jewellery-trip:'+raw,units:1};
+   const order=raw?JSON.parse(readFileSync(raw,'utf8')):{recipe:env.RECIPE,target:Number(env.TARGET),stringAmulet:env.STRING_AMULET==='1'};
    if(typeof order.recipe!=='string'||!whole(order.target)||order.target<1||order.target>10000)return null;
    const native=data?.methods.find(m=>{const job=m.execution?.bankJob;return!!job&&job.family==='jewellery'&&job.recipe===order.recipe;});
    let products=native&&Object.keys(native.effects.items??{});if(products?.length!==1)return null;
@@ -213,9 +214,16 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  if(['scripts/fleet-trade.ts','scripts/courier-handoff.ts'].includes(script)){
   const file=args.find(a=>a.endsWith('.json')&&!a.includes('='));return file?{kind:'service',objective:'finite owned order '+file}:null;
  }
- if(script==='scripts/smelt-bars.ts'&&(setting(env,args,'ORDER_ACTION')==='smith'||setting(env,args,'PRODUCT_ID')!==undefined)){
-  const product=Number(setting(env,args,'PRODUCT_ID')),maximum=Number(setting(env,args,'MAX_MAKE'));
-  if(whole(product)&&product>0&&whole(maximum)&&maximum>0)return{kind:'service',objective:`smith-anvil:${product}:${maximum}`,units:1};
+ if(script==='scripts/smelt-bars.ts'){
+  if(setting(env,args,'ORDER_ACTION')==='smith'||setting(env,args,'PRODUCT_ID')!==undefined){
+   const product=Number(setting(env,args,'PRODUCT_ID')),maximum=Number(setting(env,args,'MAX_MAKE'));
+   if(whole(product)&&product>0&&whole(maximum)&&maximum>0)return{kind:'service',objective:`smith-anvil:${product}:${maximum}`,units:1};
+   return null;
+  }
+  const bar=setting(env,args,'BAR_TYPE')??args.find(a=>!/^\d+$/.test(a)&&!a.includes('='))??'bronze';
+  const capText=setting(env,args,'CAP')??args.find(a=>/^\d+$/.test(a));
+  const cap=capText===undefined?15000:Number(capText);
+  if(whole(cap)&&cap>0)return{kind:'service',objective:`smelt:${bar}`,units:1};
  }
  if(['scripts/microbot-production.ts','scripts/smelt-bars.ts'].includes(script)){
   const recipe=script==='scripts/microbot-production.ts'?args.find(a=>!a.includes('=')&&!/^\d+$/.test(a)):setting(env,args,'BAR_TYPE')??args[1];
@@ -225,10 +233,13 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   if(whole(maximum)&&maximum>0&&positiveItems(items))return{kind:'produce',items:items!,consumer};
  }
  if(script==='scripts/aio-skiller.ts'&&args[0]==='bank-job'){
-  try{const raw=args[1]??'',job=JSON.parse(raw.startsWith('--job=')?decodeURIComponent(raw.slice(6)):readFileSync(raw,'utf8'));
+  try{const raw=args[1]??'';
+   if(raw.endsWith('.json')&&!raw.startsWith('--job=')&&!existsSync(raw))return{kind:'service',objective:'bank-job:'+raw,units:1};
+   const job=JSON.parse(raw.startsWith('--job=')?decodeURIComponent(raw.slice(6)):readFileSync(raw,'utf8'));
    const method=data?.methods.find(m=>{const profile=m.execution?.bankJob;return!!profile&&profile.family===job.family&&profile.recipe===job.recipe;}),skill=method&&Object.keys(method.effects.xp??{})[0];
    if(skill&&finiteLevel(job.targetLevel))return{kind:'train',skill,targetLevel:job.targetLevel};
    const product=method&&Object.keys(method.effects.items??{})[0];if(product&&whole(job.target)&&job.target>0)return{kind:'produce',items:{[Number(product)]:job.target},consumer};
+   if(typeof job.family==='string'&&typeof job.recipe==='string')return{kind:'service',objective:`bank-job:${job.family}:${job.recipe}`,units:1};
   }catch{return null;}
  }
  if(script==='scripts/aio-skiller.ts'&&args[0]&&finiteLevel(target))return PROGRESSION_SKILLS.includes(key(args[0]) as typeof PROGRESSION_SKILLS[number])?{kind:'train',skill:key(args[0]),targetLevel:target}:null;
@@ -240,17 +251,54 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   target=Number(setting(env,args,'TARGET_LEVEL')??setting(env,args,'TARGET')??(/agility|runecraft|prayer|alch|splash/.test(positional??'')?args.find(a=>/^\d+$/.test(a)):undefined));
   if(finiteLevel(target))return{kind:'train',skill:singleSkill,targetLevel:target};
  }
- if(script==='scripts/dusty-key.ts')return{kind:'acquire',items:{1590:1},consumer};
- if(script==='scripts/quest-chain.ts'){const quests=(args[0]||'').split(',').filter(Boolean);if(quests.length)return{kind:'service',objective:'quest-chain:'+quests.join(','),units:quests.length};}
- if(script==='scripts/goldfarm.ts'){const ticks=Number(env.TICKS??9000);if(whole(ticks)&&ticks>0)return{kind:'service',objective:`goldfarm:${env.KNIGHT_SPOT??'2653,3302'}`,units:1};}
- if(script==='scripts/gather-feathers.ts'){const feathers=Number(env.TARGET??2000),ticks=Number(env.TICKS??3000);if(whole(feathers)&&feathers>0&&whole(ticks)&&ticks>0)return{kind:'acquire',items:{314:feathers},consumer};}
- if(script==='scripts/black-dragon-camp.ts'){const kills=Number(setting(env,args,'KILLS')??9);if(whole(kills)&&kills>0)return{kind:'service',objective:'black-dragon-camp',units:kills};}
- if(script==='scripts/black-dhide-sets.ts')return{kind:'service',objective:'black-dhide-sets',units:1};
- if(script==='scripts/gather-combat.ts'&&setting(env,args,'GIANT_BURY')==='1'){const kills=Number(setting(env,args,'GIANT_KILLS'));if(whole(kills)&&kills>0)return{kind:'service',objective:'trooper-bury',units:kills};}
- if(['scripts/gather-flax.ts','scripts/spin-bowstrings.ts','scripts/fletch-arrows.ts','scripts/gather-fish.ts','scripts/cook-food.ts','scripts/gather-yews.ts','scripts/gather-ore.ts','scripts/gather-essence.ts','scripts/blood-chest.ts'].includes(script)){
-  const capText=setting(env,args,'CAP')??args.find(a=>/^\d+$/.test(a));
-  const cap=capText===undefined?15000:Number(capText);
-  if(whole(cap)&&cap>0)return{kind:'service',objective:`${script.replace(/^scripts\/|\.ts$/g,'')}:${args.find(a=>!/^\d+$/.test(a)&&!a.includes('='))??'batch'}`,units:1};
+ const entryName=(script.startsWith('scripts/')||/^packages\/[^/]+\/src\//.test(script))&&script.endsWith('.ts')
+  ?script.replace(/^(?:scripts|packages\/[^/]+\/src)\/|\.ts$/g,''):'';
+ if(entryName==='edgeville-woodcut-order'){
+  const stall=env.STALL_TICKS===undefined?0:Number(env.STALL_TICKS);
+  return whole(stall)?{kind:'train',skill:'woodcutting',targetLevel:36}:null;
+ }
+ if(entryName==='microbot-magic-items'){
+  const mode=args[0]??'',count=Number(args[2]??1),cap=Number(args[3]??200);
+  return /^(?:low-alch|high-alch|enchant:\w+|superheat:(?:bronze|iron|silver|steel|gold|mithril|adamantite|runite))$/.test(mode)&&whole(count)&&count>=1&&count<=10000&&whole(cap)&&cap>=1&&cap<=100000
+   ?{kind:'service',objective:`magic-items:${mode}:${count}`,units:1}:null;
+ }
+ if(entryName==='dusty-key')return{kind:'acquire',items:{1590:1},consumer};
+ if(entryName==='quest-chain'){const quests=(args[0]||'').split(',').filter(Boolean);if(quests.length)return{kind:'service',objective:'quest-chain:'+quests.join(','),units:quests.length};}
+ if(entryName==='goldfarm'){const ticks=Number(env.TICKS??9000);if(whole(ticks)&&ticks>0)return{kind:'service',objective:`goldfarm:${env.KNIGHT_SPOT??'2653,3302'}`,units:1};}
+ if(entryName==='gather-feathers'){const feathers=Number(env.TARGET??2000),ticks=Number(env.TICKS??3000);if(whole(feathers)&&feathers>0&&whole(ticks)&&ticks>0)return{kind:'acquire',items:{314:feathers},consumer};}
+ if(entryName==='black-dragon-camp'){const kills=Number(setting(env,args,'KILLS')??9);if(whole(kills)&&kills>0)return{kind:'service',objective:'black-dragon-camp',units:kills};}
+ if(entryName==='black-dhide-sets')return{kind:'service',objective:'black-dhide-sets',units:1};
+ if(entryName==='gather-combat'&&setting(env,args,'GIANT_BURY')==='1'){const kills=Number(setting(env,args,'GIANT_KILLS'));if(whole(kills)&&kills>0)return{kind:'service',objective:'trooper-bury',units:kills};}
+ if(entryName==='gather-combat'){
+  const combatTarget=setting(env,args,'TARGET')??args[1];
+  const capText=setting(env,args,'CAP')??args[0];
+  const cap=capText===undefined?6000:Number(capText);
+  if(combatTarget&&combatTarget!=='trooper'&&whole(cap)&&cap>0)return{kind:'service',objective:'gather-combat:'+combatTarget,units:1};
+  return null;
+ }
+ if(['microbot-village-fishing','microbot-mining-progressive','microbot-production-progressive','microbot-magic-trip','microbot-pickpocket-trip','microbot-rune-trip','microbot-shade-trip','microbot-loot-trip','microbot-shop-trip','fletch-worker'].includes(entryName)){
+  const jobFile=args.find(a=>a.endsWith('.json'));
+  if(jobFile||entryName==='microbot-rune-trip')return{kind:'service',objective:`${scriptPath(script)}:${jobFile??'default'}`,units:1};
+ }
+ if(entryName==='rune-bank-craft'&&args.some(a=>a.startsWith('--staged=')))return{kind:'service',objective:'rune-carriers',units:1};
+ const boundedServiceEntries=new Set([
+  'gather-flax','spin-bowstrings','fletch-arrows','gather-fish','cook-food','gather-yews','gather-ore','gather-essence','blood-chest',
+  'craft-jewelry','shark-supply','cook-stock','cook-wine','microbot-b-cooking','microbot-glass','druid-meats','goldfarm-stable','microbot-c-stalls',
+  'collect-wool','fishcook','microbot-b-fishing','microbot-wine','microbot-b-mining','microbot-mining-drop','microbot-b-mining-loot','microbot-b-jewellery',
+  'microbot-c-tanner','soften-clay','microbot-magic-npc','microbot-magic-teleport','microbot-c-orbs','microbot-bones','microbot-a-pickpocket',
+  'microbot-b-nature-chest','microbot-c-care','microbot-misc-coffer','microbot-c-qol','grapes','agility-order','magic-order','alch-train','splash-train',
+  'train-prayer','microbot-prayer-flick','firemaking-order','firemaking-line','rune-bank-craft','rune-supply',
+  'cannon-fight','gather-fire-combat','gather-fire-giants','gather-imps','gather-ranged','microbot-a-ranged-camp','microbot-chompy-trip','microbot-a-chompy',
+  'microbot-b-kbd','microbot-trawler-trip','microbot-b-trawler','pvp-kit-stage','buy-owned-sword','sell-owned-ge-item','foodcourier','supply-bootstrap',
+  'microbot-c-clues','microbot-c-clue-guardian','microbot-c-clue-puzzle','quest-cook-job','quest-order','quest-items-order','quest-sweep',
+  'generated/quest-hero-owned','generated/quest-legends-owned','generated/quest-tbwt-owned','generated/quest-itwatchtower-owned',
+  'owned-logistics-entry','ranged-progression-case',
+ ]);
+ if(boundedServiceEntries.has(entryName)){
+  const capText=setting(env,args,'CAP')??setting(env,args,'TICKS');
+  if(capText!==undefined&&(!whole(Number(capText))||Number(capText)<=0))return null;
+  const label=args.find(a=>!/^\d+$/.test(a)&&!a.includes('=')&&!a.startsWith('-'))??routes[0]?.id??script;
+  return{kind:'service',objective:`${entryName}:${label}`,units:1};
  }
  if(matching?.intents.includes('pvp'))return{kind:'pvp',objective:routes[0]?.id??script};
  if(matching?.intents.length===1&&matching.intents[0]==='observe')return{kind:'observe',objective:routes[0]?.id??script};

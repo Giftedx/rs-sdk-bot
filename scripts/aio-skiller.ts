@@ -266,7 +266,14 @@ export const PROGRESSIVE_TIERS: Readonly<Record<string, readonly ProgressiveTier
   { level: 1, method: 'smelt', xp: 6.2, args: ['20000', 'bronze'] },
   { level: 15, method: 'smelt', xp: 12.5, args: ['20000', 'iron'] },
   { level: 30, method: 'smelt', xp: 17.5, args: ['20000', 'steel'] },
+  { level: 33, method: 'anvil', xp: 125, args: ['20000'], env: { ORDER_ACTION: 'smith', PRODUCT_ID: '1115', BAR_RESERVE: '0' } },
   { level: 40, method: 'smelt', xp: 22.5, args: ['20000', 'gold'] },
+  { level: 48, method: 'anvil', xp: 187.5, args: ['20000'], env: { ORDER_ACTION: 'smith', PRODUCT_ID: '1119', BAR_RESERVE: '0' } },
+  { level: 50, method: 'smelt', xp: 30, args: ['20000', 'mithril'] },
+  { level: 68, method: 'anvil', xp: 250, args: ['20000'], env: { ORDER_ACTION: 'smith', PRODUCT_ID: '1121', BAR_RESERVE: '0' } },
+  { level: 70, method: 'smelt', xp: 37.5, args: ['20000', 'adamantite'] },
+  { level: 85, method: 'smelt', xp: 50, args: ['20000', 'runite'] },
+  { level: 88, method: 'anvil', xp: 312.5, args: ['20000'], env: { ORDER_ACTION: 'smith', PRODUCT_ID: '1123', BAR_RESERVE: '0' } },
  ],
  crafting: [
   { level: 1, method: 'inventory', xp: 13.8, job: {family:'inventory',recipe:'leather:leather_gloves'} },
@@ -280,25 +287,36 @@ export const PROGRESSIVE_TIERS: Readonly<Record<string, readonly ProgressiveTier
   { level: 45, method: 'potions', xp: 100, env: { RECIPE: 'super_attack' } },
  ],
  magic: [
-  { level: 1, method: 'order', xp: 11.5 },
+  { level: 1, method: 'order', xp: 5.5 },
+  { level: 3, method: 'splash', xp: 13 },
+  { level: 11, method: 'splash', xp: 21 },
+  { level: 19, method: 'splash', xp: 29 },
   { level: 21, method: 'alch-train', xp: 31 },
   { level: 55, method: 'alch-train', xp: 65 },
  ],
  agility: [
   { level: 1, method: 'order', xp: 86.5, args: ['gnome'] },
-  { level: 35, method: 'order', xp: 153.2, args: ['barbarian'] },
+  { level: 35, method: 'order', xp: 114.5, args: ['barbarian'] },
   { level: 52, method: 'order', xp: 571.4, args: ['wilderness'] },
  ],
  thieving: [
   { level: 1, method: 'bootstrap55', xp: 8 },
+  { level: 5, method: 'bootstrap55', xp: 16 },
+  { level: 40, method: 'bootstrap55', xp: 46.8 },
   { level: 55, method: 'bootstrap55', xp: 84.3 },
  ],
  runecraft: [
   { level: 1, method: 'bank-craft', xp: 5 },
+  { level: 2, method: 'bank-craft', xp: 5.5, env: { RUNE_ALTAR: 'mind' } },
+  { level: 5, method: 'bank-craft', xp: 6, env: { RUNE_ALTAR: 'water' } },
+  { level: 9, method: 'bank-craft', xp: 6.5, env: { RUNE_ALTAR: 'earth' } },
+  { level: 14, method: 'bank-craft', xp: 7, env: { RUNE_ALTAR: 'fire' } },
+  { level: 20, method: 'bank-craft', xp: 7.5, env: { RUNE_ALTAR: 'body' } },
  ],
  prayer: [
   { level: 1, method: 'bury', xp: 4.5, env: { BONE_ID: '526' } },
   { level: 43, method: 'bury', xp: 15, env: { BONE_ID: '532' } },
+  { level: 44, method: 'bury', xp: 72, env: { BONE_ID: '536' } },
  ],
 };
 
@@ -316,11 +334,11 @@ export function readBankJobArgument(argument: string): BankJob {
 
 function progressiveTierBand(skill:string,active:ProgressiveTier,fromLevel:number,toLevel:number,xpRate:number):ProgressiveBand{
  const effectiveXp=active.xp*xpRate,unitsNeeded=Math.max(1,Math.ceil(Math.max(0,xpForLevel(toLevel)-xpForLevel(fromLevel))/effectiveXp));
- const extra=[...(active.args??[]),...(['agility','runecraft','cooking','magic'].includes(skill)&&(skill!=='magic'||active.method==='alch-train')?[String(toLevel)]:[]),
+ const extra=[...(active.args??[]),...(['agility','runecraft','cooking','magic'].includes(skill)&&(skill!=='magic'||active.method==='alch-train'||active.method==='splash')?[String(toLevel)]:[]),
   `TARGET_LEVEL=${toLevel}`,'CAP=20000',...(['woodcutting','fishing','thieving'].includes(skill)?[`TARGET=${toLevel}`]:[]),
   ...(skill==='fletching'?[`MAX_MAKE=${Math.min(25,unitsNeeded)}`,'LOG_RESERVE=0','BANK_KNIFE=1']:[]),
   ...(skill==='crafting'&&active.method==='bowstrings'?[`MAX_MAKE=${unitsNeeded}`,'RAW_RESERVE=0']:[]),
-  ...(skill==='smithing'?[`MAX_MAKE=${unitsNeeded}`,'ORE_RESERVE=0']:[]),...(skill==='prayer'?[`MAX_BURY=${unitsNeeded}`]:[]),
+  ...(skill==='smithing'?[`MAX_MAKE=${unitsNeeded}`,active.method==='anvil'?'BAR_RESERVE=0':'ORE_RESERVE=0']:[]),...(skill==='prayer'?[`MAX_BURY=${unitsNeeded}`]:[]),
   ...Object.entries(active.env??{}).map(([k,v])=>`${k}=${v}`)];
  return{skill,method:active.method,fromLevel,toLevel,unlockLevel:active.level,xpPerUnit:effectiveXp,unitsNeeded,
   step:active.job?bankJobStep({family:active.job.family,recipe:active.job.recipe,target:unitsNeeded,batch:13,cap:20000,returnTicks:300,members:active.job.members??false,reserve:0,
