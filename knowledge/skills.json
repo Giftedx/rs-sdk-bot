@@ -1738,7 +1738,7 @@
   "table": "smithing",
   "row": "bronze_dagger",
   "level": 1,
-  "xp": null,
+  "xp": 12.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -1748,6 +1748,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:6",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1"
   }
  },
@@ -1756,7 +1757,7 @@
   "table": "smithing",
   "row": "iron_dagger",
   "level": 15,
-  "xp": null,
+  "xp": 25,
   "inputs": [
    "iron_bar"
   ],
@@ -1766,6 +1767,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:17",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:12"
   }
  },
@@ -1774,7 +1776,7 @@
   "table": "smithing",
   "row": "steel_dagger",
   "level": 30,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "steel_bar"
   ],
@@ -1784,6 +1786,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:28",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:23"
   }
  },
@@ -1792,7 +1795,7 @@
   "table": "smithing",
   "row": "mithril_dagger",
   "level": 50,
-  "xp": null,
+  "xp": 50,
   "inputs": [
    "mithril_bar"
   ],
@@ -1802,6 +1805,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:39",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:34"
   }
  },
@@ -1810,7 +1814,7 @@
   "table": "smithing",
   "row": "adamant_dagger",
   "level": 70,
-  "xp": null,
+  "xp": 62.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -1820,6 +1824,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:50",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:45"
   }
  },
@@ -1828,7 +1833,7 @@
   "table": "smithing",
   "row": "rune_dagger",
   "level": 85,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "runite_bar"
   ],
@@ -1838,6 +1843,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:61",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:56"
   }
  },
@@ -1846,7 +1852,7 @@
   "table": "smithing",
   "row": "bronze_sword",
   "level": 4,
-  "xp": null,
+  "xp": 12.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -1856,6 +1862,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:72",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:67"
   }
  },
@@ -1864,7 +1871,7 @@
   "table": "smithing",
   "row": "iron_sword",
   "level": 19,
-  "xp": null,
+  "xp": 25,
   "inputs": [
    "iron_bar"
   ],
@@ -1874,6 +1881,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:83",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:78"
   }
  },
@@ -1882,7 +1890,7 @@
   "table": "smithing",
   "row": "steel_sword",
   "level": 34,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "steel_bar"
   ],
@@ -1892,6 +1900,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:94",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:89"
   }
  },
@@ -1900,7 +1909,7 @@
   "table": "smithing",
   "row": "mithril_sword",
   "level": 54,
-  "xp": null,
+  "xp": 50,
   "inputs": [
    "mithril_bar"
   ],
@@ -1910,6 +1919,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:105",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:100"
   }
  },
@@ -1918,7 +1928,7 @@
   "table": "smithing",
   "row": "adamant_sword",
   "level": 74,
-  "xp": null,
+  "xp": 62.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -1928,6 +1938,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:116",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:111"
   }
  },
@@ -1936,7 +1947,7 @@
   "table": "smithing",
   "row": "rune_sword",
   "level": 89,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "runite_bar"
   ],
@@ -1946,6 +1957,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:127",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:122"
   }
  },
@@ -1954,7 +1966,7 @@
   "table": "smithing",
   "row": "bronze_scimitar",
   "level": 5,
-  "xp": null,
+  "xp": 25,
   "inputs": [
    "bronze_bar"
   ],
@@ -1964,6 +1976,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:138",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:133"
   }
  },
@@ -1972,7 +1985,7 @@
   "table": "smithing",
   "row": "iron_scimitar",
   "level": 20,
-  "xp": null,
+  "xp": 50,
   "inputs": [
    "iron_bar"
   ],
@@ -1982,6 +1995,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:149",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:144"
   }
  },
@@ -1990,7 +2004,7 @@
   "table": "smithing",
   "row": "steel_scimitar",
   "level": 35,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "steel_bar"
   ],
@@ -2000,6 +2014,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:160",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:155"
   }
  },
@@ -2008,7 +2023,7 @@
   "table": "smithing",
   "row": "mithril_scimitar",
   "level": 55,
-  "xp": null,
+  "xp": 100,
   "inputs": [
    "mithril_bar"
   ],
@@ -2018,6 +2033,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:171",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:166"
   }
  },
@@ -2026,7 +2042,7 @@
   "table": "smithing",
   "row": "adamant_scimitar",
   "level": 75,
-  "xp": null,
+  "xp": 125,
   "inputs": [
    "adamantite_bar"
   ],
@@ -2036,6 +2052,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:182",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:177"
   }
  },
@@ -2044,7 +2061,7 @@
   "table": "smithing",
   "row": "rune_scimitar",
   "level": 90,
-  "xp": null,
+  "xp": 150,
   "inputs": [
    "runite_bar"
   ],
@@ -2054,6 +2071,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:193",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:188"
   }
  },
@@ -2062,7 +2080,7 @@
   "table": "smithing",
   "row": "bronze_longsword",
   "level": 6,
-  "xp": null,
+  "xp": 25,
   "inputs": [
    "bronze_bar"
   ],
@@ -2072,6 +2090,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:204",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:199"
   }
  },
@@ -2080,7 +2099,7 @@
   "table": "smithing",
   "row": "iron_longsword",
   "level": 21,
-  "xp": null,
+  "xp": 50,
   "inputs": [
    "iron_bar"
   ],
@@ -2090,6 +2109,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:215",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:210"
   }
  },
@@ -2098,7 +2118,7 @@
   "table": "smithing",
   "row": "steel_longsword",
   "level": 36,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "steel_bar"
   ],
@@ -2108,6 +2128,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:226",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:221"
   }
  },
@@ -2116,7 +2137,7 @@
   "table": "smithing",
   "row": "mithril_longsword",
   "level": 56,
-  "xp": null,
+  "xp": 100,
   "inputs": [
    "mithril_bar"
   ],
@@ -2126,6 +2147,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:237",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:232"
   }
  },
@@ -2134,7 +2156,7 @@
   "table": "smithing",
   "row": "adamant_longsword",
   "level": 76,
-  "xp": null,
+  "xp": 125,
   "inputs": [
    "adamantite_bar"
   ],
@@ -2144,6 +2166,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:248",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:243"
   }
  },
@@ -2152,7 +2175,7 @@
   "table": "smithing",
   "row": "rune_longsword",
   "level": 91,
-  "xp": null,
+  "xp": 150,
   "inputs": [
    "runite_bar"
   ],
@@ -2162,6 +2185,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:259",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:254"
   }
  },
@@ -2170,7 +2194,7 @@
   "table": "smithing",
   "row": "bronze_2h_sword",
   "level": 14,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -2180,6 +2204,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:270",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:265"
   }
  },
@@ -2188,7 +2213,7 @@
   "table": "smithing",
   "row": "iron_2h_sword",
   "level": 29,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "iron_bar"
   ],
@@ -2198,6 +2223,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:281",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:276"
   }
  },
@@ -2206,7 +2232,7 @@
   "table": "smithing",
   "row": "steel_2h_sword",
   "level": 44,
-  "xp": null,
+  "xp": 112.5,
   "inputs": [
    "steel_bar"
   ],
@@ -2216,6 +2242,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:292",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:287"
   }
  },
@@ -2224,7 +2251,7 @@
   "table": "smithing",
   "row": "mithril_2h_sword",
   "level": 64,
-  "xp": null,
+  "xp": 150,
   "inputs": [
    "mithril_bar"
   ],
@@ -2234,6 +2261,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:303",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:298"
   }
  },
@@ -2242,7 +2270,7 @@
   "table": "smithing",
   "row": "adamant_2h_sword",
   "level": 84,
-  "xp": null,
+  "xp": 187.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -2252,6 +2280,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:314",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:309"
   }
  },
@@ -2260,7 +2289,7 @@
   "table": "smithing",
   "row": "rune_2h_sword",
   "level": 99,
-  "xp": null,
+  "xp": 225,
   "inputs": [
    "runite_bar"
   ],
@@ -2270,6 +2299,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:325",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:320"
   }
  },
@@ -2278,7 +2308,7 @@
   "table": "smithing",
   "row": "bronze_axe",
   "level": 1,
-  "xp": null,
+  "xp": 12.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -2288,6 +2318,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:336",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:331"
   }
  },
@@ -2296,7 +2327,7 @@
   "table": "smithing",
   "row": "iron_axe",
   "level": 16,
-  "xp": null,
+  "xp": 25,
   "inputs": [
    "iron_bar"
   ],
@@ -2306,6 +2337,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:347",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:342"
   }
  },
@@ -2314,7 +2346,7 @@
   "table": "smithing",
   "row": "steel_axe",
   "level": 31,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "steel_bar"
   ],
@@ -2324,6 +2356,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:358",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:353"
   }
  },
@@ -2332,7 +2365,7 @@
   "table": "smithing",
   "row": "mithril_axe",
   "level": 51,
-  "xp": null,
+  "xp": 50,
   "inputs": [
    "mithril_bar"
   ],
@@ -2342,6 +2375,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:369",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:364"
   }
  },
@@ -2350,7 +2384,7 @@
   "table": "smithing",
   "row": "adamant_axe",
   "level": 71,
-  "xp": null,
+  "xp": 62.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -2360,6 +2394,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:380",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:375"
   }
  },
@@ -2368,7 +2403,7 @@
   "table": "smithing",
   "row": "rune_axe",
   "level": 86,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "runite_bar"
   ],
@@ -2378,6 +2413,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:391",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:386"
   }
  },
@@ -2386,7 +2422,7 @@
   "table": "smithing",
   "row": "bronze_mace",
   "level": 2,
-  "xp": null,
+  "xp": 12.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -2396,6 +2432,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:402",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:397"
   }
  },
@@ -2404,7 +2441,7 @@
   "table": "smithing",
   "row": "iron_mace",
   "level": 17,
-  "xp": null,
+  "xp": 25,
   "inputs": [
    "iron_bar"
   ],
@@ -2414,6 +2451,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:413",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:408"
   }
  },
@@ -2422,7 +2460,7 @@
   "table": "smithing",
   "row": "steel_mace",
   "level": 32,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "steel_bar"
   ],
@@ -2432,6 +2470,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:424",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:419"
   }
  },
@@ -2440,7 +2479,7 @@
   "table": "smithing",
   "row": "mithril_mace",
   "level": 52,
-  "xp": null,
+  "xp": 50,
   "inputs": [
    "mithril_bar"
   ],
@@ -2450,6 +2489,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:435",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:430"
   }
  },
@@ -2458,7 +2498,7 @@
   "table": "smithing",
   "row": "adamant_mace",
   "level": 72,
-  "xp": null,
+  "xp": 62.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -2468,6 +2508,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:446",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:441"
   }
  },
@@ -2476,7 +2517,7 @@
   "table": "smithing",
   "row": "rune_mace",
   "level": 87,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "runite_bar"
   ],
@@ -2486,6 +2527,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:457",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:452"
   }
  },
@@ -2494,7 +2536,7 @@
   "table": "smithing",
   "row": "bronze_warhammer",
   "level": 9,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -2504,6 +2546,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:468",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:463"
   }
  },
@@ -2512,7 +2555,7 @@
   "table": "smithing",
   "row": "iron_warhammer",
   "level": 24,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "iron_bar"
   ],
@@ -2522,6 +2565,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:479",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:474"
   }
  },
@@ -2530,7 +2574,7 @@
   "table": "smithing",
   "row": "steel_warhammer",
   "level": 39,
-  "xp": null,
+  "xp": 112.5,
   "inputs": [
    "steel_bar"
   ],
@@ -2540,6 +2584,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:490",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:485"
   }
  },
@@ -2548,7 +2593,7 @@
   "table": "smithing",
   "row": "mithril_warhammer",
   "level": 59,
-  "xp": null,
+  "xp": 150,
   "inputs": [
    "mithril_bar"
   ],
@@ -2558,6 +2603,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:501",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:496"
   }
  },
@@ -2566,7 +2612,7 @@
   "table": "smithing",
   "row": "adamant_warhammer",
   "level": 79,
-  "xp": null,
+  "xp": 187.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -2576,6 +2622,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:512",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:507"
   }
  },
@@ -2584,7 +2631,7 @@
   "table": "smithing",
   "row": "rune_warhammer",
   "level": 94,
-  "xp": null,
+  "xp": 225,
   "inputs": [
    "runite_bar"
   ],
@@ -2594,6 +2641,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:523",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:518"
   }
  },
@@ -2602,7 +2650,7 @@
   "table": "smithing",
   "row": "bronze_battleaxe",
   "level": 10,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -2612,6 +2660,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:534",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:529"
   }
  },
@@ -2620,7 +2669,7 @@
   "table": "smithing",
   "row": "iron_battleaxe",
   "level": 25,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "iron_bar"
   ],
@@ -2630,6 +2679,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:545",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:540"
   }
  },
@@ -2638,7 +2688,7 @@
   "table": "smithing",
   "row": "steel_battleaxe",
   "level": 40,
-  "xp": null,
+  "xp": 112.5,
   "inputs": [
    "steel_bar"
   ],
@@ -2648,6 +2698,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:556",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:551"
   }
  },
@@ -2656,7 +2707,7 @@
   "table": "smithing",
   "row": "mithril_battleaxe",
   "level": 60,
-  "xp": null,
+  "xp": 150,
   "inputs": [
    "mithril_bar"
   ],
@@ -2666,6 +2717,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:567",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:562"
   }
  },
@@ -2674,7 +2726,7 @@
   "table": "smithing",
   "row": "adamant_battleaxe",
   "level": 80,
-  "xp": null,
+  "xp": 187.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -2684,6 +2736,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:578",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:573"
   }
  },
@@ -2692,7 +2745,7 @@
   "table": "smithing",
   "row": "rune_battleaxe",
   "level": 95,
-  "xp": null,
+  "xp": 225,
   "inputs": [
    "runite_bar"
   ],
@@ -2702,6 +2755,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:589",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:584"
   }
  },
@@ -2710,7 +2764,7 @@
   "table": "smithing",
   "row": "bronze_chainbody",
   "level": 11,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -2720,6 +2774,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:600",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:595"
   }
  },
@@ -2728,7 +2783,7 @@
   "table": "smithing",
   "row": "iron_chainbody",
   "level": 26,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "iron_bar"
   ],
@@ -2738,6 +2793,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:611",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:606"
   }
  },
@@ -2746,7 +2802,7 @@
   "table": "smithing",
   "row": "steel_chainbody",
   "level": 41,
-  "xp": null,
+  "xp": 112.5,
   "inputs": [
    "steel_bar"
   ],
@@ -2756,6 +2812,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:622",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:617"
   }
  },
@@ -2764,7 +2821,7 @@
   "table": "smithing",
   "row": "mithril_chainbody",
   "level": 61,
-  "xp": null,
+  "xp": 150,
   "inputs": [
    "mithril_bar"
   ],
@@ -2774,6 +2831,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:633",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:628"
   }
  },
@@ -2782,7 +2840,7 @@
   "table": "smithing",
   "row": "adamant_chainbody",
   "level": 81,
-  "xp": null,
+  "xp": 187.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -2792,6 +2850,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:644",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:639"
   }
  },
@@ -2800,7 +2859,7 @@
   "table": "smithing",
   "row": "rune_chainbody",
   "level": 96,
-  "xp": null,
+  "xp": 225,
   "inputs": [
    "runite_bar"
   ],
@@ -2810,6 +2869,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:655",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:650"
   }
  },
@@ -2818,7 +2878,7 @@
   "table": "smithing",
   "row": "bronze_platelegs",
   "level": 16,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -2828,6 +2888,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:666",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:661"
   }
  },
@@ -2836,7 +2897,7 @@
   "table": "smithing",
   "row": "iron_platelegs",
   "level": 31,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "iron_bar"
   ],
@@ -2846,6 +2907,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:677",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:672"
   }
  },
@@ -2854,7 +2916,7 @@
   "table": "smithing",
   "row": "steel_platelegs",
   "level": 46,
-  "xp": null,
+  "xp": 112.5,
   "inputs": [
    "steel_bar"
   ],
@@ -2864,6 +2926,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:688",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:683"
   }
  },
@@ -2872,7 +2935,7 @@
   "table": "smithing",
   "row": "mithril_platelegs",
   "level": 66,
-  "xp": null,
+  "xp": 150,
   "inputs": [
    "mithril_bar"
   ],
@@ -2882,6 +2945,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:699",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:694"
   }
  },
@@ -2890,7 +2954,7 @@
   "table": "smithing",
   "row": "adamant_platelegs",
   "level": 86,
-  "xp": null,
+  "xp": 187.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -2900,6 +2964,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:710",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:705"
   }
  },
@@ -2908,7 +2973,7 @@
   "table": "smithing",
   "row": "rune_platelegs",
   "level": 99,
-  "xp": null,
+  "xp": 225,
   "inputs": [
    "runite_bar"
   ],
@@ -2918,6 +2983,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:721",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:716"
   }
  },
@@ -2926,7 +2992,7 @@
   "table": "smithing",
   "row": "bronze_plateskirt",
   "level": 16,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -2936,6 +3002,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:732",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:727"
   }
  },
@@ -2944,7 +3011,7 @@
   "table": "smithing",
   "row": "iron_plateskirt",
   "level": 31,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "iron_bar"
   ],
@@ -2954,6 +3021,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:743",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:738"
   }
  },
@@ -2962,7 +3030,7 @@
   "table": "smithing",
   "row": "steel_plateskirt",
   "level": 46,
-  "xp": null,
+  "xp": 112.5,
   "inputs": [
    "steel_bar"
   ],
@@ -2972,6 +3040,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:754",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:749"
   }
  },
@@ -2980,7 +3049,7 @@
   "table": "smithing",
   "row": "mithril_plateskirt",
   "level": 66,
-  "xp": null,
+  "xp": 150,
   "inputs": [
    "mithril_bar"
   ],
@@ -2990,6 +3059,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:765",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:760"
   }
  },
@@ -2998,7 +3068,7 @@
   "table": "smithing",
   "row": "adamant_plateskirt",
   "level": 86,
-  "xp": null,
+  "xp": 187.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -3008,6 +3078,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:776",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:771"
   }
  },
@@ -3016,7 +3087,7 @@
   "table": "smithing",
   "row": "rune_plateskirt",
   "level": 99,
-  "xp": null,
+  "xp": 225,
   "inputs": [
    "runite_bar"
   ],
@@ -3026,6 +3097,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:787",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:782"
   }
  },
@@ -3034,7 +3106,7 @@
   "table": "smithing",
   "row": "bronze_platebody",
   "level": 18,
-  "xp": null,
+  "xp": 62.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -3044,6 +3116,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:798",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:793"
   }
  },
@@ -3052,7 +3125,7 @@
   "table": "smithing",
   "row": "iron_platebody",
   "level": 33,
-  "xp": null,
+  "xp": 125,
   "inputs": [
    "iron_bar"
   ],
@@ -3062,6 +3135,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:809",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:804"
   }
  },
@@ -3070,7 +3144,7 @@
   "table": "smithing",
   "row": "steel_platebody",
   "level": 48,
-  "xp": null,
+  "xp": 187.5,
   "inputs": [
    "steel_bar"
   ],
@@ -3080,6 +3154,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:820",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:815"
   }
  },
@@ -3088,7 +3163,7 @@
   "table": "smithing",
   "row": "mithril_platebody",
   "level": 68,
-  "xp": null,
+  "xp": 250,
   "inputs": [
    "mithril_bar"
   ],
@@ -3098,6 +3173,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:831",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:826"
   }
  },
@@ -3106,7 +3182,7 @@
   "table": "smithing",
   "row": "adamant_platebody",
   "level": 88,
-  "xp": null,
+  "xp": 312.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -3116,6 +3192,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:842",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:837"
   }
  },
@@ -3124,7 +3201,7 @@
   "table": "smithing",
   "row": "rune_platebody",
   "level": 99,
-  "xp": null,
+  "xp": 375,
   "inputs": [
    "runite_bar"
   ],
@@ -3134,6 +3211,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:853",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:848"
   }
  },
@@ -3142,7 +3220,7 @@
   "table": "smithing",
   "row": "bronze_med_helm",
   "level": 3,
-  "xp": null,
+  "xp": 12.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -3152,6 +3230,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:864",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:859"
   }
  },
@@ -3160,7 +3239,7 @@
   "table": "smithing",
   "row": "iron_med_helm",
   "level": 18,
-  "xp": null,
+  "xp": 25,
   "inputs": [
    "iron_bar"
   ],
@@ -3170,6 +3249,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:875",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:870"
   }
  },
@@ -3178,7 +3258,7 @@
   "table": "smithing",
   "row": "steel_med_helm",
   "level": 33,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "steel_bar"
   ],
@@ -3188,6 +3268,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:886",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:881"
   }
  },
@@ -3196,7 +3277,7 @@
   "table": "smithing",
   "row": "mithril_med_helm",
   "level": 53,
-  "xp": null,
+  "xp": 50,
   "inputs": [
    "mithril_bar"
   ],
@@ -3206,6 +3287,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:897",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:892"
   }
  },
@@ -3214,7 +3296,7 @@
   "table": "smithing",
   "row": "adamant_med_helm",
   "level": 73,
-  "xp": null,
+  "xp": 62.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -3224,6 +3306,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:908",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:903"
   }
  },
@@ -3232,7 +3315,7 @@
   "table": "smithing",
   "row": "rune_med_helm",
   "level": 88,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "runite_bar"
   ],
@@ -3242,6 +3325,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:919",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:914"
   }
  },
@@ -3250,7 +3334,7 @@
   "table": "smithing",
   "row": "bronze_full_helm",
   "level": 7,
-  "xp": null,
+  "xp": 25,
   "inputs": [
    "bronze_bar"
   ],
@@ -3260,6 +3344,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:930",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:925"
   }
  },
@@ -3268,7 +3353,7 @@
   "table": "smithing",
   "row": "iron_full_helm",
   "level": 22,
-  "xp": null,
+  "xp": 50,
   "inputs": [
    "iron_bar"
   ],
@@ -3278,6 +3363,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:941",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:936"
   }
  },
@@ -3286,7 +3372,7 @@
   "table": "smithing",
   "row": "steel_full_helm",
   "level": 37,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "steel_bar"
   ],
@@ -3296,6 +3382,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:952",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:947"
   }
  },
@@ -3304,7 +3391,7 @@
   "table": "smithing",
   "row": "mithril_full_helm",
   "level": 57,
-  "xp": null,
+  "xp": 100,
   "inputs": [
    "mithril_bar"
   ],
@@ -3314,6 +3401,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:963",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:958"
   }
  },
@@ -3322,7 +3410,7 @@
   "table": "smithing",
   "row": "adamant_full_helm",
   "level": 77,
-  "xp": null,
+  "xp": 125,
   "inputs": [
    "adamantite_bar"
   ],
@@ -3332,6 +3420,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:974",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:969"
   }
  },
@@ -3340,7 +3429,7 @@
   "table": "smithing",
   "row": "rune_full_helm",
   "level": 92,
-  "xp": null,
+  "xp": 150,
   "inputs": [
    "runite_bar"
   ],
@@ -3350,6 +3439,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:985",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:980"
   }
  },
@@ -3358,7 +3448,7 @@
   "table": "smithing",
   "row": "bronze_sq_shield",
   "level": 8,
-  "xp": null,
+  "xp": 25,
   "inputs": [
    "bronze_bar"
   ],
@@ -3368,6 +3458,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:996",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:991"
   }
  },
@@ -3376,7 +3467,7 @@
   "table": "smithing",
   "row": "iron_sq_shield",
   "level": 23,
-  "xp": null,
+  "xp": 50,
   "inputs": [
    "iron_bar"
   ],
@@ -3386,6 +3477,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1007",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1002"
   }
  },
@@ -3394,7 +3486,7 @@
   "table": "smithing",
   "row": "steel_sq_shield",
   "level": 38,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "steel_bar"
   ],
@@ -3404,6 +3496,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1018",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1013"
   }
  },
@@ -3412,7 +3505,7 @@
   "table": "smithing",
   "row": "mithril_sq_shield",
   "level": 58,
-  "xp": null,
+  "xp": 100,
   "inputs": [
    "mithril_bar"
   ],
@@ -3422,6 +3515,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1029",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1024"
   }
  },
@@ -3430,7 +3524,7 @@
   "table": "smithing",
   "row": "adamant_sq_shield",
   "level": 78,
-  "xp": null,
+  "xp": 125,
   "inputs": [
    "adamantite_bar"
   ],
@@ -3440,6 +3534,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1040",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1035"
   }
  },
@@ -3448,7 +3543,7 @@
   "table": "smithing",
   "row": "rune_sq_shield",
   "level": 93,
-  "xp": null,
+  "xp": 150,
   "inputs": [
    "runite_bar"
   ],
@@ -3458,6 +3553,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1051",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1046"
   }
  },
@@ -3466,7 +3562,7 @@
   "table": "smithing",
   "row": "bronze_kiteshield",
   "level": 12,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -3476,6 +3572,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1062",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1057"
   }
  },
@@ -3484,7 +3581,7 @@
   "table": "smithing",
   "row": "iron_kiteshield",
   "level": 27,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "iron_bar"
   ],
@@ -3494,6 +3591,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1073",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1068"
   }
  },
@@ -3502,7 +3600,7 @@
   "table": "smithing",
   "row": "steel_kiteshield",
   "level": 42,
-  "xp": null,
+  "xp": 112.5,
   "inputs": [
    "steel_bar"
   ],
@@ -3512,6 +3610,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1084",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1079"
   }
  },
@@ -3520,7 +3619,7 @@
   "table": "smithing",
   "row": "mithril_kiteshield",
   "level": 62,
-  "xp": null,
+  "xp": 150,
   "inputs": [
    "mithril_bar"
   ],
@@ -3530,6 +3629,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1095",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1090"
   }
  },
@@ -3538,7 +3638,7 @@
   "table": "smithing",
   "row": "adamant_kiteshield",
   "level": 82,
-  "xp": null,
+  "xp": 187.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -3548,6 +3648,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1106",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1101"
   }
  },
@@ -3556,7 +3657,7 @@
   "table": "smithing",
   "row": "rune_kiteshield",
   "level": 97,
-  "xp": null,
+  "xp": 225,
   "inputs": [
    "runite_bar"
   ],
@@ -3566,6 +3667,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1117",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1112"
   }
  },
@@ -3574,7 +3676,7 @@
   "table": "smithing",
   "row": "bronze_dart_tip",
   "level": 4,
-  "xp": null,
+  "xp": 12.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -3584,6 +3686,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1128",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1123"
   }
  },
@@ -3592,7 +3695,7 @@
   "table": "smithing",
   "row": "iron_dart_tip",
   "level": 19,
-  "xp": null,
+  "xp": 25,
   "inputs": [
    "iron_bar"
   ],
@@ -3602,6 +3705,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1139",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1134"
   }
  },
@@ -3610,7 +3714,7 @@
   "table": "smithing",
   "row": "steel_dart_tip",
   "level": 34,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "steel_bar"
   ],
@@ -3620,6 +3724,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1150",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1145"
   }
  },
@@ -3628,7 +3733,7 @@
   "table": "smithing",
   "row": "mithril_dart_tip",
   "level": 54,
-  "xp": null,
+  "xp": 50,
   "inputs": [
    "mithril_bar"
   ],
@@ -3638,6 +3743,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1161",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1156"
   }
  },
@@ -3646,7 +3752,7 @@
   "table": "smithing",
   "row": "adamant_dart_tip",
   "level": 74,
-  "xp": null,
+  "xp": 62.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -3656,6 +3762,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1172",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1167"
   }
  },
@@ -3664,7 +3771,7 @@
   "table": "smithing",
   "row": "rune_dart_tip",
   "level": 89,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "runite_bar"
   ],
@@ -3674,6 +3781,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1183",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1178"
   }
  },
@@ -3682,7 +3790,7 @@
   "table": "smithing",
   "row": "bronze_arrowheads",
   "level": 5,
-  "xp": null,
+  "xp": 12.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -3692,6 +3800,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1194",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1189"
   }
  },
@@ -3700,7 +3809,7 @@
   "table": "smithing",
   "row": "iron_arrowheads",
   "level": 20,
-  "xp": null,
+  "xp": 25,
   "inputs": [
    "iron_bar"
   ],
@@ -3710,6 +3819,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1205",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1200"
   }
  },
@@ -3718,7 +3828,7 @@
   "table": "smithing",
   "row": "steel_arrowheads",
   "level": 35,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "steel_bar"
   ],
@@ -3728,6 +3838,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1216",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1211"
   }
  },
@@ -3736,7 +3847,7 @@
   "table": "smithing",
   "row": "mithril_arrowheads",
   "level": 55,
-  "xp": null,
+  "xp": 50,
   "inputs": [
    "mithril_bar"
   ],
@@ -3746,6 +3857,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1227",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1222"
   }
  },
@@ -3754,7 +3866,7 @@
   "table": "smithing",
   "row": "adamant_arrowheads",
   "level": 75,
-  "xp": null,
+  "xp": 62.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -3764,6 +3876,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1238",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1233"
   }
  },
@@ -3772,7 +3885,7 @@
   "table": "smithing",
   "row": "rune_arrowheads",
   "level": 90,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "runite_bar"
   ],
@@ -3782,6 +3895,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1249",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1244"
   }
  },
@@ -3790,7 +3904,7 @@
   "table": "smithing",
   "row": "bronze_knife",
   "level": 7,
-  "xp": null,
+  "xp": 12.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -3800,6 +3914,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1260",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1255"
   }
  },
@@ -3808,7 +3923,7 @@
   "table": "smithing",
   "row": "iron_knife",
   "level": 22,
-  "xp": null,
+  "xp": 25,
   "inputs": [
    "iron_bar"
   ],
@@ -3818,6 +3933,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1271",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1266"
   }
  },
@@ -3826,7 +3942,7 @@
   "table": "smithing",
   "row": "steel_knife",
   "level": 37,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "steel_bar"
   ],
@@ -3836,6 +3952,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1282",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1277"
   }
  },
@@ -3844,7 +3961,7 @@
   "table": "smithing",
   "row": "mithril_knife",
   "level": 57,
-  "xp": null,
+  "xp": 50,
   "inputs": [
    "mithril_bar"
   ],
@@ -3854,6 +3971,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1293",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1288"
   }
  },
@@ -3862,7 +3980,7 @@
   "table": "smithing",
   "row": "adamant_knife",
   "level": 77,
-  "xp": null,
+  "xp": 62.5,
   "inputs": [
    "adamantite_bar"
   ],
@@ -3872,6 +3990,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1304",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1299"
   }
  },
@@ -3880,7 +3999,7 @@
   "table": "smithing",
   "row": "rune_knife",
   "level": 92,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "runite_bar"
   ],
@@ -3890,6 +4009,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1315",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1310"
   }
  },
@@ -3898,7 +4018,7 @@
   "table": "smithing",
   "row": "bronze_wire",
   "level": 4,
-  "xp": null,
+  "xp": 12.5,
   "inputs": [
    "bronze_bar"
   ],
@@ -3908,6 +4028,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1326",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1321"
   }
  },
@@ -3916,7 +4037,7 @@
   "table": "smithing",
   "row": "steel_studs",
   "level": 36,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "steel_bar"
   ],
@@ -3926,6 +4047,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1337",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1332"
   }
  },
@@ -3934,7 +4056,7 @@
   "table": "smithing",
   "row": "nails",
   "level": 34,
-  "xp": null,
+  "xp": 37.5,
   "inputs": [
    "steel_bar"
   ],
@@ -3944,6 +4066,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1348",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1343"
   }
  },
@@ -3952,7 +4075,7 @@
   "table": "smithing",
   "row": "bronze_claws",
   "level": 13,
-  "xp": null,
+  "xp": 25,
   "inputs": [
    "bronze_bar"
   ],
@@ -3962,6 +4085,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1359",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:4",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1354"
   }
  },
@@ -3970,7 +4094,7 @@
   "table": "smithing",
   "row": "iron_claws",
   "level": 28,
-  "xp": null,
+  "xp": 50,
   "inputs": [
    "iron_bar"
   ],
@@ -3980,6 +4104,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1370",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:15",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1365"
   }
  },
@@ -3988,7 +4113,7 @@
   "table": "smithing",
   "row": "steel_claws",
   "level": 43,
-  "xp": null,
+  "xp": 75,
   "inputs": [
    "steel_bar"
   ],
@@ -3998,6 +4123,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1381",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:26",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1376"
   }
  },
@@ -4006,7 +4132,7 @@
   "table": "smithing",
   "row": "mithril_claws",
   "level": 63,
-  "xp": null,
+  "xp": 100,
   "inputs": [
    "mithril_bar"
   ],
@@ -4016,6 +4142,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1392",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:37",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1387"
   }
  },
@@ -4024,7 +4151,7 @@
   "table": "smithing",
   "row": "adamant_claws",
   "level": 83,
-  "xp": null,
+  "xp": 125,
   "inputs": [
    "adamantite_bar"
   ],
@@ -4034,6 +4161,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1403",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:48",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1398"
   }
  },
@@ -4042,7 +4170,7 @@
   "table": "smithing",
   "row": "rune_claws",
   "level": 98,
-  "xp": null,
+  "xp": 150,
   "inputs": [
    "runite_bar"
   ],
@@ -4052,6 +4180,7 @@
   "at": {},
   "src": {
    "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1414",
+   "xp": "scripts/skill_smithing/configs/smithing/smithing.struct:59",
    "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1409"
   }
  },
@@ -6912,6 +7041,1087 @@
    "level": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:48",
    "xp": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:49",
    "row": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:45"
+  }
+ },
+ {
+  "skill": "firemaking",
+  "table": "firemaking.obj",
+  "row": "logs",
+  "level": 1,
+  "xp": 40,
+  "inputs": [
+   "logs"
+  ],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_firemaking/configs/firemaking.obj:103",
+   "xp": "scripts/skill_firemaking/configs/firemaking.obj:104",
+   "row": "scripts/skill_firemaking/configs/firemaking.obj:88"
+  }
+ },
+ {
+  "skill": "firemaking",
+  "table": "firemaking.obj",
+  "row": "magic_logs",
+  "level": 75,
+  "xp": 303.8,
+  "inputs": [
+   "magic_logs"
+  ],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_firemaking/configs/firemaking.obj:123",
+   "xp": "scripts/skill_firemaking/configs/firemaking.obj:124",
+   "row": "scripts/skill_firemaking/configs/firemaking.obj:107"
+  }
+ },
+ {
+  "skill": "firemaking",
+  "table": "firemaking.obj",
+  "row": "yew_logs",
+  "level": 60,
+  "xp": 202.5,
+  "inputs": [
+   "yew_logs"
+  ],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_firemaking/configs/firemaking.obj:142",
+   "xp": "scripts/skill_firemaking/configs/firemaking.obj:143",
+   "row": "scripts/skill_firemaking/configs/firemaking.obj:127"
+  }
+ },
+ {
+  "skill": "firemaking",
+  "table": "firemaking.obj",
+  "row": "maple_logs",
+  "level": 45,
+  "xp": 135,
+  "inputs": [
+   "maple_logs"
+  ],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_firemaking/configs/firemaking.obj:161",
+   "xp": "scripts/skill_firemaking/configs/firemaking.obj:162",
+   "row": "scripts/skill_firemaking/configs/firemaking.obj:146"
+  }
+ },
+ {
+  "skill": "firemaking",
+  "table": "firemaking.obj",
+  "row": "willow_logs",
+  "level": 30,
+  "xp": 90,
+  "inputs": [
+   "willow_logs"
+  ],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_firemaking/configs/firemaking.obj:180",
+   "xp": "scripts/skill_firemaking/configs/firemaking.obj:181",
+   "row": "scripts/skill_firemaking/configs/firemaking.obj:165"
+  }
+ },
+ {
+  "skill": "firemaking",
+  "table": "firemaking.obj",
+  "row": "oak_logs",
+  "level": 15,
+  "xp": 60,
+  "inputs": [
+   "oak_logs"
+  ],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_firemaking/configs/firemaking.obj:199",
+   "xp": "scripts/skill_firemaking/configs/firemaking.obj:200",
+   "row": "scripts/skill_firemaking/configs/firemaking.obj:184"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "unf_guam_potion",
+  "level": 0,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "guam_leaf"
+  ],
+  "outputs": [
+   "guamvial"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:1",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:1"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "unf_marrentill_potion",
+  "level": 5,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "marentill"
+  ],
+  "outputs": [
+   "marrentillvial"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:10",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:7"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "unf_tarromin_potion",
+  "level": 12,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "tarromin"
+  ],
+  "outputs": [
+   "tarrominvial"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:17",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:14"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "unf_harralander_potion",
+  "level": 22,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "harralander"
+  ],
+  "outputs": [
+   "harralandervial"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:24",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:21"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "unf_ranarr_potion",
+  "level": 30,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "ranarr_weed"
+  ],
+  "outputs": [
+   "ranarrvial"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:31",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:28"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "unf_irit_potion",
+  "level": 45,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "irit_leaf"
+  ],
+  "outputs": [
+   "iritvial"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:38",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:35"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "unf_avantoe_potion",
+  "level": 50,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "avantoe"
+  ],
+  "outputs": [
+   "avantoevial"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:45",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:42"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "unf_kwuarm_potion",
+  "level": 55,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "kwuarm"
+  ],
+  "outputs": [
+   "kwuarmvial"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:52",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:49"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "unf_cadantine_potion",
+  "level": 66,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "cadantine"
+  ],
+  "outputs": [
+   "cadantinevial"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:59",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:56"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "unf_lantadyme_potion",
+  "level": 69,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "lantadyme"
+  ],
+  "outputs": [
+   "lantadymevial"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:66",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:63"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "unf_dwarf_weed_potion",
+  "level": 72,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "dwarf_weed"
+  ],
+  "outputs": [
+   "dwarfweedvial"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:73",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:70"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "unf_torstol_potion",
+  "level": 78,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "torstol"
+  ],
+  "outputs": [
+   "torstolvial"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:80",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:77"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dose1attack",
+  "level": 0,
+  "xp": 25,
+  "inputs": [
+   "guamvial",
+   "eye_of_newt"
+  ],
+  "outputs": [
+   "3dose1attack"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:84",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:87",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:84"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dose2attack",
+  "level": 45,
+  "xp": 100,
+  "inputs": [
+   "iritvial",
+   "eye_of_newt"
+  ],
+  "outputs": [
+   "3dose2attack"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:94",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:95",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:91"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dose1restore",
+  "level": 22,
+  "xp": 62.5,
+  "inputs": [
+   "harralandervial",
+   "red_spiders_eggs"
+  ],
+  "outputs": [
+   "3dosestatrestore"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:102",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:103",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:99"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dose1strength",
+  "level": 12,
+  "xp": 50,
+  "inputs": [
+   "tarrominvial",
+   "limpwurt_root"
+  ],
+  "outputs": [
+   "3dose1strength"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:111",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:112",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:108"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dose2strength",
+  "level": 55,
+  "xp": 125,
+  "inputs": [
+   "kwuarmvial",
+   "limpwurt_root"
+  ],
+  "outputs": [
+   "3dose2strength"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:119",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:120",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:116"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3doseprayerrestore",
+  "level": 38,
+  "xp": 87.5,
+  "inputs": [
+   "ranarrvial",
+   "snape_grass"
+  ],
+  "outputs": [
+   "3doseprayerrestore"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:127",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:128",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:124"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dosefisherspotion",
+  "level": 50,
+  "xp": 112.5,
+  "inputs": [
+   "avantoevial",
+   "snape_grass"
+  ],
+  "outputs": [
+   "3dosefisherspotion"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:135",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:136",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:132"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3doseantipoison",
+  "level": 5,
+  "xp": 37.5,
+  "inputs": [
+   "marrentillvial",
+   "unicorn_horn_dust"
+  ],
+  "outputs": [
+   "3doseantipoison"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:143",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:144",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:140"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dose2antipoison",
+  "level": 48,
+  "xp": 106.3,
+  "inputs": [
+   "iritvial",
+   "unicorn_horn_dust"
+  ],
+  "outputs": [
+   "3dose2antipoison"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:152",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:153",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:149"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dose1defense",
+  "level": 30,
+  "xp": 75,
+  "inputs": [
+   "ranarrvial",
+   "white_berries"
+  ],
+  "outputs": [
+   "3dose1defense"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:161",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:162",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:158"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dose2defense",
+  "level": 66,
+  "xp": 150,
+  "inputs": [
+   "cadantinevial",
+   "white_berries"
+  ],
+  "outputs": [
+   "3dose2defense"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:169",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:170",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:166"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "weapon_poison",
+  "level": 60,
+  "xp": 137.5,
+  "inputs": [
+   "kwuarmvial",
+   "dragon_scale_dust"
+  ],
+  "outputs": [
+   "weapon_poison"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:177",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:178",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:174"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dose1antidragon",
+  "level": 69,
+  "xp": 157.5,
+  "inputs": [
+   "lantadymevial",
+   "dragon_scale_dust"
+  ],
+  "outputs": [
+   "3dose1antidragon"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:185",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:186",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:182"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3doserangerspotion",
+  "level": 72,
+  "xp": 162.5,
+  "inputs": [
+   "dwarfweedvial",
+   "wine_of_zamorak"
+  ],
+  "outputs": [
+   "3doserangerspotion"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:193",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:194",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:190"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dosepotionofzamorak",
+  "level": 78,
+  "xp": 175,
+  "inputs": [
+   "torstolvial",
+   "jangerberries"
+  ],
+  "outputs": [
+   "3dosepotionofzamorak"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:202",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:203",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:199"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "blamish_oil",
+  "level": 25,
+  "xp": 80,
+  "inputs": [
+   "harralandervial",
+   "blamish_snail_slime"
+  ],
+  "outputs": [
+   "blamish_oil"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:210",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:211",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:207"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "snakeweed_mixture",
+  "level": 0,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "snake_weed"
+  ],
+  "outputs": [
+   "snakeweed_sol"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:218",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:215"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "ardrigal_mixture",
+  "level": 0,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "ardrigal"
+  ],
+  "outputs": [
+   "ardrigal_sol"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:225",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:222"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "unf_toadflax_potion",
+  "level": 34,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "toadflax"
+  ],
+  "outputs": [
+   "toadflaxvial"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:232",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:229"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "unf_snapdragon_potion",
+  "level": 63,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "snapdragon"
+  ],
+  "outputs": [
+   "snapdragonvial"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:239",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:236"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dose1agility",
+  "level": 34,
+  "xp": 80,
+  "inputs": [
+   "toadflaxvial",
+   "toads_legs"
+  ],
+  "outputs": [
+   "3dose1agility"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:247",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:246",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:243"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dose2restore",
+  "level": 63,
+  "xp": 142.5,
+  "inputs": [
+   "snapdragonvial",
+   "red_spiders_eggs"
+  ],
+  "outputs": [
+   "3dose2restore"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:255",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:254",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:251"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dose1energy",
+  "level": 26,
+  "xp": 67.5,
+  "inputs": [
+   "harralandervial",
+   "chocolate_dust"
+  ],
+  "outputs": [
+   "3dose1energy"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:263",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:264",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:260"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dose2energy",
+  "level": 52,
+  "xp": 117.5,
+  "inputs": [
+   "avantoevial",
+   "mortmyremushroom"
+  ],
+  "outputs": [
+   "3dose2energy"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:273",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:272",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:269"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "3dose1magic",
+  "level": 76,
+  "xp": 172.5,
+  "inputs": [
+   "lantadymevial",
+   "cactus_potato"
+  ],
+  "outputs": [
+   "3dose1magic"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:282",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:281",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:278"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "mort_serum3_tarrominvial",
+  "level": 15,
+  "xp": 50,
+  "inputs": [
+   "tarrominvial",
+   "ashes"
+  ],
+  "outputs": [
+   "mort_serum3"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:289",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:290",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:286"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "mort_serum3_ashesvial",
+  "level": 15,
+  "xp": 50,
+  "inputs": [
+   "ashesvial",
+   "tarromin"
+  ],
+  "outputs": [
+   "mort_serum3"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:297",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:298",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:294"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "ashesvial",
+  "level": 15,
+  "xp": null,
+  "inputs": [
+   "vial_water",
+   "ashes"
+  ],
+  "outputs": [
+   "ashesvial"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:305",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:302"
+  }
+ },
+ {
+  "skill": "herblore",
+  "table": "brew_potion.struct",
+  "row": "eadgar_ground_troll_thistle_potion",
+  "level": 31,
+  "xp": 77.5,
+  "inputs": [
+   "ranarrvial",
+   "eadgar_ground_troll_thistle"
+  ],
+  "outputs": [
+   "eadgar_ground_troll_thistle_potion"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_herblore/configs/brewing/brew_potion.struct:312",
+   "xp": "scripts/skill_herblore/configs/brewing/brew_potion.struct:313",
+   "row": "scripts/skill_herblore/configs/brewing/brew_potion.struct:309"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smelting.struct",
+  "row": "smelting_bronze_bar",
+  "level": 1,
+  "xp": 6.2,
+  "inputs": [
+   "copper_ore",
+   "tin_ore"
+  ],
+  "outputs": [
+   "bronze_bar"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smelting/smelting.struct:8",
+   "xp": "scripts/skill_smithing/configs/smelting/smelting.struct:9",
+   "row": "scripts/skill_smithing/configs/smelting/smelting.struct:1"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smelting.struct",
+  "row": "smelting_iron_bar",
+  "level": 15,
+  "xp": 12.5,
+  "inputs": [
+   "iron_ore"
+  ],
+  "outputs": [
+   "iron_bar"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smelting/smelting.struct:24",
+   "xp": "scripts/skill_smithing/configs/smelting/smelting.struct:25",
+   "row": "scripts/skill_smithing/configs/smelting/smelting.struct:17"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smelting.struct",
+  "row": "smelting_steel_bar",
+  "level": 30,
+  "xp": 17.5,
+  "inputs": [
+   "iron_ore",
+   "coal"
+  ],
+  "outputs": [
+   "steel_bar"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smelting/smelting.struct:36",
+   "xp": "scripts/skill_smithing/configs/smelting/smelting.struct:37",
+   "row": "scripts/skill_smithing/configs/smelting/smelting.struct:30"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smelting.struct",
+  "row": "smelting_silver_bar",
+  "level": 20,
+  "xp": 13.7,
+  "inputs": [
+   "silver_ore"
+  ],
+  "outputs": [
+   "silver_bar"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smelting/smelting.struct:51",
+   "xp": "scripts/skill_smithing/configs/smelting/smelting.struct:52",
+   "row": "scripts/skill_smithing/configs/smelting/smelting.struct:45"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smelting.struct",
+  "row": "smelting_gold_bar",
+  "level": 40,
+  "xp": 22.5,
+  "inputs": [
+   "gold_ore"
+  ],
+  "outputs": [
+   "gold_bar"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smelting/smelting.struct:63",
+   "xp": "scripts/skill_smithing/configs/smelting/smelting.struct:64",
+   "row": "scripts/skill_smithing/configs/smelting/smelting.struct:57"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smelting.struct",
+  "row": "smelting_mithril_bar",
+  "level": 50,
+  "xp": 30,
+  "inputs": [
+   "mithril_ore",
+   "coal"
+  ],
+  "outputs": [
+   "mithril_bar"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smelting/smelting.struct:76",
+   "xp": "scripts/skill_smithing/configs/smelting/smelting.struct:77",
+   "row": "scripts/skill_smithing/configs/smelting/smelting.struct:69"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smelting.struct",
+  "row": "smelting_adamantite_bar",
+  "level": 70,
+  "xp": 37.5,
+  "inputs": [
+   "adamantite_ore",
+   "coal"
+  ],
+  "outputs": [
+   "adamantite_bar"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smelting/smelting.struct:92",
+   "xp": "scripts/skill_smithing/configs/smelting/smelting.struct:93",
+   "row": "scripts/skill_smithing/configs/smelting/smelting.struct:85"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smelting.struct",
+  "row": "smelting_runite_bar",
+  "level": 85,
+  "xp": 50,
+  "inputs": [
+   "runite_ore",
+   "coal"
+  ],
+  "outputs": [
+   "runite_bar"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smelting/smelting.struct:108",
+   "xp": "scripts/skill_smithing/configs/smelting/smelting.struct:109",
+   "row": "scripts/skill_smithing/configs/smelting/smelting.struct:101"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smelting.struct",
+  "row": "smelting_perfect_gold_bar",
+  "level": 40,
+  "xp": 22.5,
+  "inputs": [
+   "perfect_gold_ore"
+  ],
+  "outputs": [
+   "perfect_gold_bar"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smelting/smelting.struct:123",
+   "xp": "scripts/skill_smithing/configs/smelting/smelting.struct:124",
+   "row": "scripts/skill_smithing/configs/smelting/smelting.struct:117"
   }
  }
 ]

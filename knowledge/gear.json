@@ -20264,7 +20264,11 @@
    "prayer": 0
   },
   "requires": {
-   "skills": {}
+   "skills": {
+    "defence": 30
+   },
+   "src": "scripts/levelrequire/scripts/tier30.rs2:40",
+   "quest": "The Fremennik Trials"
   },
   "members": true,
   "tradeable": false,
@@ -20434,7 +20438,11 @@
   },
   "attackRate": 4,
   "requires": {
-   "skills": {}
+   "skills": {
+    "attack": 30
+   },
+   "src": "scripts/levelrequire/scripts/tier30.rs2:24",
+   "quest": "The Fremennik Trials"
   },
   "members": true,
   "tradeable": false,
@@ -20463,7 +20471,11 @@
    "prayer": 0
   },
   "requires": {
-   "skills": {}
+   "skills": {
+    "defence": 30
+   },
+   "src": "scripts/levelrequire/scripts/tier30.rs2:47",
+   "quest": "The Fremennik Trials"
   },
   "members": true,
   "tradeable": false,
