@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795005365487-knightrider-billionaire-shark",
  "account": "KnightRider",
  "partner": "Billionaire",
@@ -12,6 +12,12 @@
  "claim": "896ce89d-5f62-4ed5-bbab-5703e3ab76d5",
  "count": 0,
  "ok": false,
- "at": 1795005466107,
- "detail": "trade claimed"
+ "at": 1795005524681,
+ "detail": "fled at low hitpoints: flee_guard id=376 at=3024,3206 ticks=11",
+ "logout": {
+  "attemptId": "1795005466115-0000020984-0000000001",
+  "at": 1795005524670,
+  "sha256": "524d48ebe2445f0c18d684fa4f937739808bbf6f1735931842546d88a3f2a749"
+ },
+ "screen": false
 }
