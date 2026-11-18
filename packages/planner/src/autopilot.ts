@@ -15,6 +15,7 @@ import { xpForLevel } from './curve';
 import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { validateBankRouteJob, type BankRouteJob } from '../../core/src/bank-trip';
 import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-route-step';
+import { ownsWearableMeleeWeapon } from './gear-progression';
 
 // `combat`: the combat level the account's status reports (absent: worked out from `skills`). `quests`: the quests its
 // status reports complete, by norm() name (absent: none known complete). `questPoints`: the quest points its status
@@ -35,6 +36,9 @@ export type Flow = { item: string; perTick: number };
 // `frail`: an account with fewer Hitpoints than `hitpoints` must hold `count` items of `of`; any other account needs none.
 // `hpAboveHalf`: observed current HP must exceed half the base Hitpoints, rounded up, as stall food staging requires.
 export type Needs = {
+    // `meleeWeapon`: one wearable melee weapon held, worn or banked (gear-progression ownsWearableMeleeWeapon: any weapon the
+    // account can wear at its levels and quests). A missing weapon is the kit line COW_WEAPONS, so a shop job or a donor fills it.
+    meleeWeapon?: true;
     combat?: number; quests?: readonly string[]; questPoints?: number; hpAboveHalf?: true; frail?: { hitpoints: number; of: readonly string[]; count: number };
     skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; shortOf?: Record<string, number>; holds?: Record<string, number>; food?: number;
     pieces?: { of: readonly string[]; count: number }; anyOf?: readonly Needs[];
@@ -337,6 +341,21 @@ export const bandLeft = (t: Template, a: Acct): number => t.trains ? t.trains.to
 const isShort = (a: Acct, needs: Template['needs']) => (!needs?.shortOf || Object.entries(needs.shortOf).some(([i, n]) => (a.items[norm(i)] ?? 0) < n))
     && Object.entries(needs?.holds ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n);
 // The items a frail account is short of for these needs: 0 for an account with the Hitpoints, or with no such need.
+// The cheap weapons that fill a missing melee weapon line, by the Attack level that wears each (the Varrock sword shop and
+// Zeke's scimitars), cheapest first.
+export const COW_WEAPONS: readonly (readonly [item: string, attack: number])[] = [['bronze sword', 1], ['iron scimitar', 1], ['steel scimitar', 5], ['mithril scimitar', 20]];
+// The gear check selects a whole loadout, so it is cached for the holdings object of an account (one per plan input) and
+// the levels and quests that it reads.
+const meleeCache = new WeakMap<object, Map<string, boolean>>();
+const ownsMelee = (a: Acct): boolean => {
+    const key = `${a.skills.Attack ?? 1}|${a.skills.Strength ?? 1}|${[...(a.quests ?? [])].join(',')}`;
+    let by = meleeCache.get(a.items);
+    if (!by) meleeCache.set(a.items, by = new Map());
+    let owned = by.get(key);
+    if (owned === undefined) by.set(key, owned = ownsWearableMeleeWeapon(a.items, a.skills, a.quests));
+    return owned;
+};
+const weaponLine = (a: Acct): Lack => ({ of: COW_WEAPONS.filter(([, attack]) => (a.skills.Attack ?? 1) >= attack).map(([item]) => item), count: 1 });
 const frailShort = (a: Acct, needs: Template['needs']) => !needs?.frail || (a.skills.Hitpoints ?? 10) >= needs.frail.hitpoints ? 0
     : Math.max(0, needs.frail.count - needs.frail.of.reduce((n, i) => n + (a.items[norm(i)] ?? 0), 0));
 const healthMet = (a: Acct, needs: Template['needs']) => !needs?.hpAboveHalf
@@ -344,6 +363,7 @@ const healthMet = (a: Acct, needs: Template['needs']) => !needs?.hpAboveHalf
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }): boolean =>
     (a.combat ?? combatLevel(a.skills)) >= (needs?.combat ?? 0)
     && healthMet(a, needs)
+    && (!needs?.meleeWeapon || ownsMelee(a))
     && (needs?.quests ?? []).every(q => questDone(a, q))
     && (a.questPoints ?? 0) >= (needs?.questPoints ?? 0)
     && frailShort(a, needs) === 0
@@ -375,6 +395,7 @@ export function unmet(a: Acct, needs: Template['needs']): string[] {
     for (const [i, n] of Object.entries(needs.holds ?? {})) if ((a.items[norm(i)] ?? 0) < n) out.push(`${n} ${norm(i)} from its own job`);
     if (needs.shortOf && !isShort(a, { shortOf: needs.shortOf })) out.push(`to be short of ${Object.keys(needs.shortOf).join(' or ')}`);
     if (needs.pieces) { const n = needs.pieces.count - needs.pieces.of.reduce((sum, i) => sum + (a.items[norm(i)] ?? 0), 0); if (n > 0) out.push(`${n} of ${needs.pieces.of.join('/')}`); }
+    if (needs.meleeWeapon && !ownsMelee(a)) out.push('a wearable melee weapon');
     if (foodHeal(a) < (needs.food ?? 0)) out.push(`${needs.food} HP of food`);
     if (!healthMet(a, needs)) out.push('current Hitpoints above half');
     if (frailShort(a, needs) > 0) out.push(`${frailShort(a, needs)} of ${needs.frail!.of.slice(0, 3).join('/')}`);
@@ -399,6 +420,7 @@ export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string, 
         const short = n - (a.items[norm(i)] ?? 0);
         if (norm(i) !== 'coin' && short > 0) out.push({ of: [norm(i)], count: short });
     }
+    if (needs?.meleeWeapon && !ownsMelee(a)) out.push(weaponLine(a));
     const hp = (needs?.food ?? 0) - foodHeal(a);
     if (hp > 0) out.push({ of: ['trout'], count: Math.ceil(hp / FOOD_HEAL.trout!) });
     const pieces = (needs?.pieces?.count ?? 0) - (needs?.pieces?.of ?? []).reduce((n, i) => n + (a.items[norm(i)] ?? 0), 0);
@@ -1796,7 +1818,7 @@ export function catalogue(): Template[] {
         id: `army-cow-${skill.toLowerCase()}-${to}`, family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['3000', 'cow'],
         env: { TRAIN_SKILL: skill, TARGET_LEVEL: String(to), COW_BANK_PROFILE: 'north', MAX_KILLS: '8', COW_STAGE: '1', LOOT_WATCH: '0' }, role: 'combat', goal: `train ${skill} to ${to} on the Ardougne cows`,
         tier: 'goal', band, repeats: true, trains: { skill, to, unlocks: [] }, resources: [COW_FIELD], yields: () => [],
-        needs: { food: 14, items: { 'bronze sword': 1, 'wooden shield': 1 } },
+        needs: { food: 14, meleeWeapon: true },
         // One trip to the Grand Exchange brings food for many runs, not the two trout one start needs.
         batch: { trout: 30 },
     }));

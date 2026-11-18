@@ -2668,7 +2668,7 @@ test('a vacant slot names the nearest template and the first gate that stopped i
     // Not on the army roster: the band's levels are met, so only the roster stops it.
     expect(reason(acct('Rookie'), band)).toBe('vacant: not on the army roster (1 bands, nearest army-cow-strength-45)');
     // On the roster with no sword in any source: the missing kit line.
-    expect(reason(acct('Rookie'), band, { army: new Set(['rookie']) })).toMatch(/^vacant: army-cow-strength-45 needs 1 bronze sword, 1 wooden shield.* and no source gives them$/);
+    expect(reason(acct('Rookie'), band, { army: new Set(['rookie']) })).toMatch(/^vacant: army-cow-strength-45 needs 1 bronze sword, 2 trout and no source gives them$/);
     // A level the template asks and the account lacks.
     expect(reason(acct('Rookie'), [supply('deep-mine', { needs: { skills: { Mining: 41 } } })])).toBe('vacant: deep-mine needs Mining 41');
     // A holding the template asks and no purchase fixes: the coin line is named as coins.
@@ -2688,4 +2688,25 @@ test('a vacant slot names the nearest template and the first gate that stopped i
     expect(reason(acct('Rookie'), [supply('crowded-job', { resources: ['pen:1,1'] })], { taken: { 'pen:1,1': 1 } })).toBe('vacant: crowded-job has no free place on pen:1,1');
     // No demand at all, with no bill.
     expect(reason(acct('Rookie'), [supply('any-job')], { bill: [] })).toBe('vacant: no finite route or army supply demand');
+});
+
+test('a cow band needs one wearable melee weapon, not a bronze sword by name; a missing weapon is a weapon step', () => {
+    const cow = catalogue().filter(t => t.id === 'army-cow-strength-45'), zeke = catalogue().filter(t => t.id.startsWith('army-weapon-zeke-'));
+    const base = { Strength: 10, Defence: 10, Hitpoints: 30 }, kit = { trout: 20 };
+    const run = (a: Acct, templates: Template[], extra: Partial<Inputs> = {}) => plan(inputs([a], { templates, army: new Set([a.name.toLowerCase()]), capacity: { 'cow:ardougne-north': 6, 'shop:zeke': 1 }, ...extra }))[0]!;
+    // A rune scimitar and no bronze sword (and no shield): the band runs.
+    expect(run(acct('Rune', { ...base, Attack: 40 }, { ...kit, 'rune scimitar': 1 }), cow).template?.id).toBe('army-cow-strength-45');
+    // A banked or worn weapon counts the same: the holdings are one map.
+    expect(run(acct('Dagger', { ...base, Attack: 1 }, { ...kit, 'bronze dagger': 1 }), cow).template?.id).toBe('army-cow-strength-45');
+    // A weapon the Attack level cannot wear is no weapon: Attack 1 with a rune scimitar gets none.
+    expect(run(acct('Weak', { ...base, Attack: 1 }, { ...kit, 'rune scimitar': 1 }), cow).template?.id).not.toBe('army-cow-strength-45');
+    // No weapon: the Zeke scimitar step, not a dead end.
+    const bare = acct('Bare', { ...base, Attack: 10 }, { ...kit, coin: 5_000 });
+    expect(run(bare, [...cow, ...zeke]).template?.id).toBe('army-weapon-zeke-steel');
+    // Food stays a need: a weapon and no food is no band start.
+    expect(run(acct('Hungry', { ...base, Attack: 40 }, { 'rune scimitar': 1 }), cow).template?.id).not.toBe('army-cow-strength-45');
+    // A donor with a cheap weapon fills the line (one item order), and the vacant reason names the line when no source has it.
+    const sent = run(bare, cow, { stock: [{ name: 'Spare', side, items: { 'iron scimitar': 1 } }] });
+    expect(sent.send).toMatchObject({ from: 'Spare', to: 'Bare', item: 'iron scimitar', count: 1 });
+    expect(run(bare, cow).reason).toMatch(/^vacant: army-cow-strength-45 needs 1 bronze sword and no source gives them$/);
 });
