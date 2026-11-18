@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794964837192,
+ "at": 1794965051478,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -188,6 +188,24 @@
    "resources": []
   },
   {
+   "account": "Ballspinner",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=247 EXPECTED_OWNED=3 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=ballspinner-kit1-554-3to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 247 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Bigpackage",
    "script": "scripts/chain.ts",
    "args": [
@@ -195,7 +213,8 @@
     "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"556\":600}}"
    },
    "enabled": true,
    "standing": true,
@@ -336,32 +355,6 @@
    ]
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
@@ -438,40 +431,29 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "5000"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "ALCH_ITEM": "airrune"
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-alch-air-magic-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=247 EXPECTED_OWNED=3 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=ballspinner-kit1-554-3to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 247 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "local",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   }
  ],
  "army": [
