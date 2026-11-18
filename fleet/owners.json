@@ -289,6 +289,66 @@
    "side": "local",
    "server": "rs-sdk-demo.fly.dev",
    "reservation": "task-5087c858-ec43-43be-ac52-98da72cf80f4"
+  },
+  "AFKnight": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Ballbag": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Packhorse": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "DropMyLoad": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "InTheSack": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "WellHung": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "BackdoorMan": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "PackageDeal": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "RearEntry": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "TackleBox": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Wandwanker": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Earlyshooter": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Pullmybow": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Quiverfull": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Nockitoff": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
   }
  }
 }
