@@ -4,7 +4,7 @@ import * as fs from 'node:fs';
 import {Database} from 'bun:sqlite';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {legCache,removeSupersededLegFiles,routeDangerHash} from '../src/leg-cache';
+import {legCache,PRIOR_KEEP_MS,removeSupersededLegFiles,routeDangerHash} from '../src/leg-cache';
 test('a legacy cache can supply a hit without being rewritten by incremental saves',()=>{
  const dir=mkdtempSync(join(tmpdir(),'route-leg-legacy-')),file=join(dir,'legs.sqlite'),legacy=join(dir,'legs.json');
  const bytes=JSON.stringify({source:'source',legs:{legacy:23}});writeFileSync(legacy,bytes);
@@ -69,12 +69,27 @@ test('ROUTE_LEG_CACHE=0 reads and writes no saved length; a length measured in t
   try{expect(again.get('a>b')).toBe(12);expect(again.get('c>d')).toBeUndefined();}finally{again.close();}
  }finally{if(prior===undefined)delete process.env.ROUTE_LEG_CACHE;else process.env.ROUTE_LEG_CACHE=prior;rmSync(dir,{recursive:true,force:true});}
 });
-test('the files of the first key format are removed; the v2 store and other files stay',()=>{
+test('the first store is read only and feeds the v2 store; it goes when nothing wrote it for 7 days, its unread forms at once',()=>{
  const dir=mkdtempSync(join(tmpdir(),'route-leg-old-')),file=join(dir,'route-legs-v2.sqlite');
  try{
-  for(const name of ['route-legs.sqlite','route-legs.sqlite-wal','route-legs.sqlite-shm','route-legs.json','route-legs.json.4752.1.zro24n.tmp','route-legs-v2.sqlite','route-areas.bin','route-legs.sqlite.bak'])writeFileSync(join(dir,name),'x');
-  expect(removeSupersededLegFiles(file).sort()).toEqual(['route-legs.json','route-legs.json.4752.1.zro24n.tmp','route-legs.sqlite','route-legs.sqlite-shm','route-legs.sqlite-wal']);
-  expect(fs.readdirSync(dir).sort()).toEqual(['route-areas.bin','route-legs-v2.sqlite','route-legs.sqlite.bak']);
+  const first=new Database(join(dir,'route-legs.sqlite'));
+  first.exec("CREATE TABLE legs (source TEXT, key TEXT, value INTEGER, PRIMARY KEY (source, key)) WITHOUT ROWID");
+  const ns=(source:string)=>require('node:crypto').createHash('sha256').update(source).digest('base64url');
+  first.query('INSERT INTO legs VALUES (?, ?, ?)').run(ns('source'),'a>b',12);first.query('INSERT INTO legs VALUES (?, ?, ?)').run(ns('other'),'c>d',5);first.close();
+  for(const name of ['route-legs.json','route-legs.json.4752.1.zro24n.tmp','route-areas.bin'])writeFileSync(join(dir,name),'x');
+  const cache=legCache(file,'source');
+  // The unread forms went at the open; the first store stays, because it was written now.
+  expect(fs.readdirSync(dir).filter(n=>!n.startsWith('route-legs-v2')).sort()).toEqual(['route-areas.bin','route-legs.sqlite']);
+  expect(cache.get('a>b')).toBe(12);expect(cache.get('c>d')).toBeUndefined();expect(cache.get('x>y')).toBeUndefined();
+  cache.set('x>y',3);cache.save();cache.close();
+  // The length that was found is in the v2 store now, and the first store has no new row.
+  const v2=new Database(file,{readonly:true}),again=new Database(join(dir,'route-legs.sqlite'),{readonly:true});
+  expect(v2.query('SELECT key FROM legs ORDER BY key').all()).toEqual([{key:'a>b'},{key:'x>y'}]);
+  expect(again.query('SELECT COUNT(*) AS n FROM legs').get()).toEqual({n:2});
+  v2.close();again.close();
+  expect(removeSupersededLegFiles(file,Date.now()+PRIOR_KEEP_MS-60_000)).toEqual([]);
+  expect(removeSupersededLegFiles(file,Date.now()+PRIOR_KEEP_MS+60_000)).toEqual(['route-legs.sqlite']);
+  expect(fs.readdirSync(dir).filter(n=>!n.startsWith('route-legs-v2')).sort()).toEqual(['route-areas.bin']);
   expect(removeSupersededLegFiles(join(dir,'missing','route-legs-v2.sqlite'))).toEqual([]);
  }finally{rmSync(dir,{recursive:true,force:true});}
 });

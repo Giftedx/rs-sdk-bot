@@ -11,20 +11,25 @@ import { pathfindingSourceKey } from './pathcache';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 // The file name holds the format of the keys: v2 keys name the closed danger ground alone (danger.ts withDanger).
-// Rows of the first format were kept under the start and end tile of each trip, are never read again, and had grown
-// to 1.5 GB in one checkout. A process that opens the v2 file removes the files of the first format when no other
-// process holds them, and the rows that another collision map or npc file measured.
+// The first file (route-legs.sqlite) took one set of rows for each start and end tile of a trip and had grown to
+// 1.5 GB in one checkout. Almost none of its rows has a key that a search asks for; the ones that do are right, because
+// a key names the closed ground exactly in both formats. So the first file is read, never written: a length found in
+// it is copied into the v2 file. The first file is removed when nothing wrote it for PRIOR_KEEP_MS (no process of a
+// release before v2 runs), and its JSON form and temporary files, which no code reads, are removed at once.
 export const LEG_CACHE_FILE = join(repoRoot, '.practice', 'cache', 'route-legs-v2.sqlite');
-const SUPERSEDED = /^route-legs\.(?:sqlite(?:-wal|-shm)?|json(?:\..*\.tmp)?)$/;
-// Removes the cache files of the first key format beside `file`. Returns the names it removed. A file that another
-// process holds stays (Windows refuses the delete) and goes at a later open.
-export function removeSupersededLegFiles(file = LEG_CACHE_FILE): string[] {
-    const removed: string[] = [];
+export const PRIOR_KEEP_MS = 7 * 24 * 3_600_000;
+const PRIOR = 'route-legs.sqlite', UNREAD = /^route-legs\.json(?:\..*\.tmp)?$/;
+// Removes the superseded cache files beside `file`. Returns the names it removed. A file that another process holds
+// stays (Windows refuses the delete) and goes at a later open.
+export function removeSupersededLegFiles(file = LEG_CACHE_FILE, now = Date.now()): string[] {
+    const removed: string[] = [], dir = dirname(file);
+    const remove = (name: string) => { try { rmSync(join(dir, name)); removed.push(name); } catch { /* held by another process */ } };
     try {
-        for (const name of readdirSync(dirname(file))) {
-            if (!SUPERSEDED.test(name)) continue;
-            try { rmSync(join(dirname(file), name)); removed.push(name); } catch { /* held by a process of an older release */ }
-        }
+        const names = readdirSync(dir);
+        for (const name of names) if (UNREAD.test(name)) remove(name);
+        const written = (name: string) => { try { return statSync(join(dir, name)).mtimeMs; } catch { return 0; } };
+        // The write-ahead file holds the newest writes of a store in WAL mode.
+        if (names.includes(PRIOR) && now - Math.max(written(PRIOR), written(PRIOR + '-wal')) >= PRIOR_KEEP_MS) for (const name of [PRIOR + '-wal', PRIOR + '-shm', PRIOR]) if (names.includes(name)) remove(name);
     } catch { /* no cache folder yet */ }
     return removed;
 }
@@ -76,9 +81,15 @@ export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
     // empty caches, for the check that a bench case gives the same ticks with empty and with full caches).
     const stored = process.env.ROUTE_LEG_CACHE !== '0';
     let db = stored && existsSync(file) ? open() : undefined;
+    // The first file, read only, beside a v2 store (see LEG_CACHE_FILE).
+    let prior: Database | undefined;
+    if (stored && /-v2\.sqlite$/.test(file)) {
+        removeSupersededLegFiles(file);
+        const first = join(dirname(file), PRIOR);
+        try { if (existsSync(first)) prior = new Database(first, { readonly: true }); } catch { prior = undefined; }
+    }
     // The shared store only: one checkout has one collision map, so rows of another source are of an older map.
     if (stored && file === LEG_CACHE_FILE && source === undefined) {
-        removeSupersededLegFiles(file);
         try { if (db?.query('SELECT 1 FROM legs WHERE source < ?1 OR source > ?1 LIMIT 1').get(namespace)) db.query('DELETE FROM legs WHERE source < ?1 OR source > ?1').run(namespace); } catch { /* another process prunes, or the store is busy */ }
     }
     const get = (key: string) => {
@@ -87,6 +98,10 @@ export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
             const row = db?.query<{ value: number | null }, [string, string]>('SELECT value FROM legs WHERE source = ? AND key = ?').get(namespace, key);
             if (row) return row.value;
         } catch { /* Compute the leg when the cache is unavailable. */ }
+        try {
+            const row = prior?.query<{ value: number | null }, [string, string]>('SELECT value FROM legs WHERE source = ? AND key = ?').get(namespace, key);
+            if (row) { fresh.set(key, row.value); return row.value; } // the next save writes it into the v2 file
+        } catch { /* The first file is optional. */ }
         return stored ? old[key] : undefined;
     };
     const c: LegCache = {
@@ -104,7 +119,7 @@ export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
                 fresh.clear();
             } catch { /* A busy or full store leaves these measurements available for retry. */ }
         },
-        close: () => { db?.close(); db = undefined; if (shared === c) shared = undefined; },
+        close: () => { db?.close(); db = undefined; prior?.close(); prior = undefined; if (shared === c) shared = undefined; },
     };
     if (file === LEG_CACHE_FILE && source === undefined) shared = c;
     return c;
