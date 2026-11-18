@@ -1055,6 +1055,10 @@ const ROUTE_CASES: BenchCase[] = [
   withPack(cloneSquad('extra:clone-squad-4-chainbind-nobow-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), 4, noBow),
   // The approach: no march and no pull; the gang's own single-way post; the east multi-way post from Varrock.
   cloneSquad('extra:clone-squad-4-chainbind-nomarch-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'MARCH=0', 'PULL=0']),
+  // The first squad pilot again: its kit (no antipoison, no rune), no march and no pull, 10 game minutes. Live: 4
+  // kills, 249 Hitpoints lost a kill. The second line holds the squad on the gang's single-way post.
+  cloneSquad('extra:clone-pilot-4-chainbare-nomarch-x1', 'live-walker-iron-rune-chain-bare', 4, ['MAX_MINUTES=10', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'MARCH=0', 'PULL=0']),
+  cloneSquad('extra:clone-pilot-4-chainbare-single-x1', 'live-walker-iron-rune-chain-bare', 4, ['MAX_MINUTES=10', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'MARCH=0', 'PULL=0', 'POST=3075,3640', 'ALLOW_SINGLE=1']),
   cloneSquad('extra:clone-squad-4-chainbind-single-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'POST=3075,3640', 'ALLOW_SINGLE=1']),
   cloneSquad('extra:clone-squad-4-chainbind-east-x1', 'live-walker-iron-rune-chain-bind', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'POST=3160,3540'], 'seen', {x: 3160, z: 3512}),
   // The fight options, each one change of the squad's default set (scripts/pk-squad.ts SQUAD_OPTS).
