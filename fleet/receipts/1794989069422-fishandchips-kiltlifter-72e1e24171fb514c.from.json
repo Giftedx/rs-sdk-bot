@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794989069422-fishandchips-kiltlifter-72e1e24171fb514c",
  "account": "FishAndChips",
  "partner": "Kiltlifter",
@@ -12,6 +12,16 @@
  "claim": "e6133308-1db7-45e6-8327-bd0beedce7c4",
  "count": 0,
  "ok": false,
- "at": 1794989241302,
- "detail": "trade claimed"
+ "at": 1794991308839,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "bank": {
+  "count": 750,
+  "at": 1794989255056
+ },
+ "logout": {
+  "attemptId": "1794989241332-0000024632-0000000001",
+  "at": 1794991308825,
+  "sha256": "1e51f10189d4b8d1779205b148c71d42c88f15aa1816896840c750b62ebb4dec"
+ },
+ "screen": false
 }
