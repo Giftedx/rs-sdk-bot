@@ -29,7 +29,8 @@ export const GEAR_QUESTS = [
     'Regicide',
 ] as const;
 
-export const TIER_BOUNDARIES = [5, 10, 20, 30, 40, 60] as const;
+// A run's worth of ammunition: a stack under this count does not carry a combat trip.
+export const RANGED_RUN_AMMO = 50;
 
 export const WEARPOS_BY_SLOT: Readonly<Record<RangedLoadoutSlotName, number>> = {
     helm: 0,
@@ -359,6 +360,36 @@ function isStandardArrow(g: Gear): boolean {
     return g.slot === 'quiver' && STANDARD_ARROW_RE.test(g.debugname);
 }
 
+/** The standard bows by Ranged wear level, the highest first. In a level the faster bow (the shortbow) is first. */
+export function standardBowTiers(): { level: number; ids: number[] }[] {
+    const byLevel = new Map<number, Gear[]>();
+    for (const g of gearCatalog()) {
+        if (!isStandardRangedBow(g)) continue;
+        const level = g.requires.skills.ranged ?? 1;
+        byLevel.set(level, [...(byLevel.get(level) ?? []), g]);
+    }
+    return [...byLevel].sort((a, b) => b[0] - a[0])
+        .map(([level, bows]) => ({ level, ids: bows.sort((a, b) => (a.attackRate ?? 4) - (b.attackRate ?? 4) || a.id - b.id).map(g => g.id) }));
+}
+
+/** The standard unpoisoned arrows, the strongest first, each with the Ranged level its levelrequire needs. */
+export function standardArrowTiers(): { level: number; id: number; strength: number }[] {
+    return gearCatalog()
+        .filter(g => isStandardArrow(g) && !g.debugname.endsWith('_p'))
+        .sort((a, b) => b.bonuses.rangeStrength - a.bonuses.rangeStrength || a.id - b.id)
+        .map(g => ({ level: g.tier ?? 1, id: g.id, strength: g.bonuses.rangeStrength }));
+}
+
+// A thrown weapon (knife, dart, javelin, throwing axe) is its own ammunition: the worn stack is spent by the shots.
+export function isThrownWeapon(g: Gear): boolean {
+    return g.slot === 'righthand' && g.bonuses.rangeStrength > 0 && !/bow/.test(g.debugname);
+}
+
+// The rapid style fires one tick sooner than the weapon's attackrate (player_ranged.rs2 ^style_ranged_rapid).
+function rapidRate(g: Gear): number {
+    return Math.max(1, (g.attackRate ?? 4) - 1);
+}
+
 function meleeDefenceMean(b: Record<Bonus, number>): number {
     return (b.stabDefence + b.slashDefence + b.crushDefence) / 3;
 }
@@ -496,6 +527,10 @@ export interface ProgressiveLoadout {
     style: CombatFocus;
     worn: Record<LoadoutSlotName, Gear | null>;
     ammo: Gear | null;
+    /** True when the weapon is a thrown stack: the weapon slot holds the ammunition. */
+    thrown: boolean;
+    /** Unreserved owned count of the ammunition: the quiver item, or the thrown weapon. 0 with none. */
+    ammoCount: number;
     items: { slot: RangedLoadoutSlotName; wearpos: number; item: Gear }[];
     gearSlots: GearSlot[];
     ownedLoadout: OwnedLoadout;
@@ -510,7 +545,12 @@ export interface ProgressiveLoadoutOptions {
     requireShield?: boolean;
     minWeaponStrength?: number;
     minShieldDefence?: number;
+    /** Ammunition count that carries a run (default RANGED_RUN_AMMO). A smaller stack is used only with no such stack. */
     arrowMinCount?: number;
+    /** False keeps thrown weapons out of the Ranged weapon choice (a worker that counts its shots by arrows). */
+    thrown?: boolean;
+    /** The account's quest points, for shops behind a quest-point gate. Unknown counts as 0. */
+    questPoints?: number;
     godAlign?: 'saradomin' | 'guthix' | 'zamorak';
     /** When specified, overrides bow/arrow scoring with current Ranged bow+arrow pairing. */
     preferFastShortbow?: boolean;
@@ -527,16 +567,30 @@ export function selectProgressiveLoadout(
     const done = normalizeCompletedQuests(quests);
     const avail = unreservedCounts(stock, options.reserved);
     const shops = shopCatalog();
-    const arrowMin = options.arrowMinCount ?? 1;
+    const arrowMin = Math.max(1, options.arrowMinCount ?? RANGED_RUN_AMMO);
+    const have = (g: Gear) => avail.get(g.id) ?? 0;
 
-    // For ranged, determine compatible ammo strength so bows outrank un-ammunitioned weapons cleanly.
-    const ownedArrows = style === 'ranged'
-        ? gearCatalog()
-            .filter(g => isStandardArrow(g) && (avail.get(g.id) ?? 0) >= arrowMin && (g.tier ?? 1) <= (skillMap.ranged ?? 1))
-            .sort((a, b) => b.bonuses.rangeStrength - a.bonuses.rangeStrength || a.id - b.id)
+    // The ammunition a weapon fires from the owned stock: the strongest kind with a run's worth (arrowMin), and with
+    // no such kind the largest stack. Three rune arrows never displace 300 mithril arrows.
+    const ownedAmmo = style === 'ranged'
+        ? gearCatalog().filter(g => g.slot === 'quiver' && have(g) > 0)
         : [];
-    const maxOwnedArrowForBow = (bow: Gear): Gear | null =>
-        ownedArrows.find(a => arrowCompatibility(bow, a)) ?? null;
+    const ammoFor = (weapon: Gear): Gear | null => {
+        const fits = ownedAmmo.filter(a => {
+            if (isStandardRangedBow(weapon)) return (a.tier ?? 1) <= (skillMap.ranged ?? 1) && arrowCompatibility(weapon, a);
+            return arrowCompatibility(weapon, a);
+        });
+        const byStrength = (a: Gear, b: Gear) => b.bonuses.rangeStrength - a.bonuses.rangeStrength || a.id - b.id;
+        return fits.filter(a => have(a) >= arrowMin).sort(byStrength)[0]
+            ?? [...fits].sort((a, b) => have(b) - have(a) || byStrength(a, b))[0]
+            ?? null;
+    };
+    // Owned ammunition count behind a Ranged weapon: the thrown stack itself, or the stack ammoFor picks.
+    const ammoCountFor = (weapon: Gear): number => {
+        if (isThrownWeapon(weapon)) return have(weapon);
+        const ammo = ammoFor(weapon);
+        return ammo ? have(ammo) : 0;
+    };
 
     const maxArrowStrengthForTier = (tier: number): number => {
         if (tier >= 40) return 49; // Rune arrow
@@ -546,14 +600,28 @@ export function selectProgressiveLoadout(
         return 10;                 // Iron arrow
     };
 
+    // Owned Ranged weapons are compared by the damage they do on rapid with the ammunition the account holds:
+    // (64 + ranged strength) * (64 + ranged attack) / rapid rate. A weapon with a run's worth of ammunition outranks
+    // one with a smaller stack, and that one outranks a weapon with none. A knife fires every 2 ticks on rapid and a
+    // shortbow every 3, so a full knife stack can beat a bow with weak arrows; five knives never do.
+    const AMMO_READY = 2_000_000, AMMO_SOME = 1_000_000;
+    const ownedRangedScore = (g: Gear): number => {
+        if (!isRangedWeapon(g)) return -1e9;
+        const ammo = isThrownWeapon(g) ? null : ammoFor(g);
+        const count = ammoCountFor(g);
+        // With no owned ammunition a bow is ranked as if it fired its tier's arrows, so the best bow is still named.
+        const strength = isThrownWeapon(g) ? g.bonuses.rangeStrength
+            : ammo ? g.bonuses.rangeStrength + ammo.bonuses.rangeStrength
+            : isStandardRangedBow(g) ? maxArrowStrengthForTier(g.tier ?? 1) : g.bonuses.rangeStrength;
+        const damage = ((64 + strength) * (64 + g.bonuses.rangeAttack)) / rapidRate(g);
+        return damage + (count >= arrowMin ? AMMO_READY : count > 0 ? AMMO_SOME : 0);
+    };
     const scoreOf = (g: Gear, useCatalogArrow: boolean) => {
         if (style === 'ranged' && g.slot === 'righthand') {
+            if (!useCatalogArrow) return ownedRangedScore(g);
             if (isStandardRangedBow(g)) {
-                const aStr = useCatalogArrow
-                    ? maxArrowStrengthForTier(Math.min(g.tier ?? 1, skillMap.ranged ?? 1))
-                    : (maxOwnedArrowForBow(g)?.bonuses.rangeStrength ?? maxArrowStrengthForTier(g.tier ?? 1));
-                // Bows have long attack range and sustainable arrow ammo (preferred over short-range thrown consumables unless thrown is owned without a bow).
-                return scoreGearForStyle(g, style, aStr) + (useCatalogArrow ? 500 : 300);
+                // The catalog choice (what to acquire) keeps a bow ahead of a thrown weapon: shops sell arrows.
+                return scoreGearForStyle(g, style, maxArrowStrengthForTier(Math.min(g.tier ?? 1, skillMap.ranged ?? 1))) + 500;
             }
             return scoreGearForStyle(g, style, 0);
         }
@@ -569,6 +637,7 @@ export function selectProgressiveLoadout(
                 if (!weaponSupportsTrainSkill(g, options.trainSkill)) return false;
                 if (options.minWeaponStrength !== undefined && g.bonuses.strength < options.minWeaponStrength) return false;
                 if (options.requireShield && g.covers.includes('lefthand')) return false;
+                if (style === 'ranged' && options.thrown === false && isThrownWeapon(g)) return false;
             }
             if (slot === 'shield' && options.minShieldDefence !== undefined) {
                 if (meleeDefenceMean(g.bonuses) < options.minShieldDefence) return false;
@@ -644,19 +713,9 @@ export function selectProgressiveLoadout(
         }
     }
 
-    let ammo: Gear | null = null;
-    if (style === 'ranged') {
-        const weapon = worn.weapon;
-        if (weapon && isStandardRangedBow(weapon)) {
-            ammo = maxOwnedArrowForBow(weapon);
-        } else if (weapon && weapon.debugname === 'ogre_bow') {
-            ammo = gearCatalog().find(g => g.debugname === 'ogre_arrow' && (avail.get(g.id) ?? 0) >= arrowMin) ?? null;
-        } else if (weapon && weapon.debugname.includes('crossbow')) {
-            ammo = gearCatalog()
-                .filter(g => g.slot === 'quiver' && /\bbolt/i.test(g.name) && (avail.get(g.id) ?? 0) >= arrowMin)
-                .sort((a, b) => b.bonuses.rangeStrength - a.bonuses.rangeStrength || a.id - b.id)[0] ?? null;
-        }
-    }
+    const thrown = style === 'ranged' && !!worn.weapon && isThrownWeapon(worn.weapon);
+    const ammo: Gear | null = style === 'ranged' && worn.weapon && !thrown ? ammoFor(worn.weapon) : null;
+    const ammoCount = style === 'ranged' && worn.weapon ? ammoCountFor(worn.weapon) : 0;
 
     const items: { slot: RangedLoadoutSlotName; wearpos: number; item: Gear }[] = [];
     for (const slot of LOADOUT_SLOTS) {
@@ -688,8 +747,17 @@ export function selectProgressiveLoadout(
         const currentScore = current ? upgradeScore(current, false) : -Infinity;
         const bestScore = bestWearable ? upgradeScore(bestWearable, false) : -Infinity;
 
-        const acquirableUpgrade = bestWearable && (!current || (bestWearable.id !== current.id && bestScore > currentScore))
-            ? { item: bestWearable, shops: [...(shops.get(bestWearable.id) ?? [])], tradeable: bestWearable.tradeable }
+        // The best wearable item that is better than the current one, not owned, and has a source in the content
+        // data: a shop the account can use sells it, or it is tradeable. An untradeable reward (a god cape, the
+        // Unholy book, the cooking gauntlets) with no shop is never named.
+        const openShops = (g: Gear) => (shops.get(g.id) ?? []).filter(sh => shopAccessible(sh, skillMap, done, undefined, options.questPoints));
+        const wanted = wearableList.find(g =>
+            g.id !== current?.id
+            && upgradeScore(g, false) > currentScore
+            && have(g) < (slot === 'ammo' ? arrowMin : 1)
+            && (g.tradeable || openShops(g).length > 0));
+        const acquirableUpgrade = wanted
+            ? { item: wanted, shops: openShops(wanted), tradeable: wanted.tradeable }
             : null;
 
         // Next unlock: items better than both current and bestWearable that fail at least one skill/quest req.
@@ -756,6 +824,8 @@ export function selectProgressiveLoadout(
         style,
         worn,
         ammo,
+        thrown,
+        ammoCount,
         items,
         gearSlots,
         ownedLoadout: solved,
@@ -960,16 +1030,18 @@ export function bestElementalStaffForRunes(
     return { current, bestUsable, nextAcquirable, nextUnlock };
 }
 
-function shopAccessible(
+/** True when the account can buy at the shop: its quest, skill and quest-point gates. Unknown quest points count as 0. */
+export function shopAccessible(
     shop: ShopSource,
     skills: Partial<Record<GearSkillName, number>>,
     done: Set<string>,
     allowedShops?: readonly string[],
+    questPoints?: number,
 ): boolean {
     if (allowedShops && !allowedShops.includes(shop.shop)) return false;
     if (shop.requiresQuest && !done.has(shop.requiresQuest)) return false;
     if (shop.requiresSkill && (skills[shop.requiresSkill.skill.toLowerCase() as GearSkillName] ?? 1) < shop.requiresSkill.level) return false;
-    if (shop.requiresQuestPoints && shop.requiresQuestPoints > 0) return false;
+    if (shop.requiresQuestPoints && (questPoints ?? 0) < shop.requiresQuestPoints) return false;
     return true;
 }
 
@@ -991,6 +1063,8 @@ export interface ToolShopUpgradeOptions {
     runeIds?: readonly number[];
     members?: boolean;
     quests?: QuestInput;
+    /** The account's quest points, for shops behind a quest-point gate. Unknown counts as 0. */
+    questPoints?: number;
 }
 
 /** Plan the best shop-purchasable tool or elemental staff upgrade strictly better than owned usable stock. */
@@ -1037,7 +1111,7 @@ export function planToolShopUpgrade(
 
     for (const candidate of betterCandidates) {
         const accessibleShops = candidate.shops
-            .filter(s => shopAccessible(s, skillMap, done, options.allowedShops))
+            .filter(s => shopAccessible(s, skillMap, done, options.allowedShops, options.questPoints))
             .sort((a, b) => a.cost - b.cost);
         for (const shop of accessibleShops) {
             const coinBudgetNeeded = Math.ceil(shop.cost * ratio) + reserve;
@@ -1594,24 +1668,138 @@ export function sessionToolHooks(
     };
 }
 
-export function tierBoundaryOf(level: number, tiers: readonly number[] = TIER_BOUNDARIES): number {
+export type GearUnlockKind = CombatFocus | 'woodcutting-axe' | 'mining-pickaxe';
+export type GearUnlockLevels = Readonly<Partial<Record<GearSkillName, readonly number[]>>>;
+export const GEAR_UNLOCK_KINDS: readonly GearUnlockKind[] = ['melee', 'ranged', 'magic', 'woodcutting-axe', 'mining-pickaxe'];
+
+interface SkillToolRow { id: number; wieldAttack?: number | null; paramLevelrequire?: number | null; woodcuttingLevel?: number | null; miningLevel?: number | null }
+let cachedSkillTools: { axes: SkillToolRow[]; pickaxes: SkillToolRow[] } | undefined;
+function skillTools() {
+    return cachedSkillTools ??= JSON.parse(readFileSync(resolve(ROOT, 'knowledge', 'skill-tools.json'), 'utf8')) as { axes: SkillToolRow[]; pickaxes: SkillToolRow[] };
+}
+
+const unlockCache = new Map<GearUnlockKind | 'all', GearUnlockLevels>();
+
+/**
+ * The levels above 1 at which a skill unlocks an item of the kind, ascending, by skill. A combat style reads the
+ * wear levels of every item the style scores (knowledge/gear.json, with an arrow's levelrequire as a Ranged level).
+ * A tool kind reads knowledge/skill-tools.json: the Attack level to wield, and the skill level to use.
+ */
+export function gearUnlockLevels(kind: GearUnlockKind): GearUnlockLevels {
+    const cached = unlockCache.get(kind);
+    if (cached) return cached;
+    const sets = new Map<GearSkillName, Set<number>>();
+    const add = (skill: GearSkillName, level: number | null | undefined) => {
+        if (typeof level !== 'number' || !Number.isSafeInteger(level) || level <= 1 || level > 99) return;
+        const set = sets.get(skill) ?? new Set<number>();
+        set.add(level);
+        sets.set(skill, set);
+    };
+    if (kind === 'woodcutting-axe' || kind === 'mining-pickaxe') {
+        const rows = kind === 'woodcutting-axe' ? skillTools().axes : skillTools().pickaxes;
+        const skill: GearSkillName = kind === 'woodcutting-axe' ? 'woodcutting' : 'mining';
+        for (const row of rows) {
+            add('attack', row.wieldAttack);
+            // An axe has no Woodcutting gate in rev 289 (woodcuttingLevel null); its levelrequire param serves a caller
+            // that enforces the axe level (bestWoodcuttingAxe enforceAxeLevel).
+            add(skill, kind === 'woodcutting-axe' ? row.woodcuttingLevel ?? row.paramLevelrequire : row.miningLevel);
+        }
+    } else {
+        for (const g of gearCatalog()) {
+            if (g.slot === 'quiver') {
+                if (kind === 'ranged' && isStandardArrow(g)) add('ranged', g.tier);
+                continue;
+            }
+            const score = scoreGearForStyle(g, kind);
+            if (g.slot === 'righthand' ? score <= -1e8 : score <= 0) continue;
+            for (const [skill, level] of Object.entries(g.requires.skills)) add(skill as GearSkillName, level);
+        }
+    }
+    const out: Partial<Record<GearSkillName, readonly number[]>> = {};
+    for (const [skill, set] of sets) out[skill] = [...set].sort((a, b) => a - b);
+    unlockCache.set(kind, out);
+    return out;
+}
+
+function allGearUnlockLevels(): GearUnlockLevels {
+    const cached = unlockCache.get('all');
+    if (cached) return cached;
+    const sets = new Map<GearSkillName, Set<number>>();
+    for (const kind of GEAR_UNLOCK_KINDS) {
+        for (const [skill, levels] of Object.entries(gearUnlockLevels(kind))) {
+            const set = sets.get(skill as GearSkillName) ?? new Set<number>();
+            for (const level of levels ?? []) set.add(level);
+            sets.set(skill as GearSkillName, set);
+        }
+    }
+    const out: Partial<Record<GearSkillName, readonly number[]>> = {};
+    for (const [skill, set] of sets) out[skill] = [...set].sort((a, b) => a - b);
+    unlockCache.set('all', out);
+    return out;
+}
+
+/** The highest boundary of `tiers` at or under the level, or 1. */
+export function tierBoundaryOf(level: number, tiers: readonly number[]): number {
     let highest = 1;
     for (const t of tiers) if (level >= t) highest = t;
     return highest;
 }
 
+/**
+ * True when one of the skills passed an unlock level between the two observations. `tiers` names the item kind whose
+ * unlock levels count (gearUnlockLevels), or gives a level list for every skill. Without it, every kind counts.
+ */
 export function crossedTierBoundary(
     previous: GearSkillLevels,
     current: GearSkillLevels,
     skills: readonly string[] = ['attack', 'strength', 'defence'],
-    tiers: readonly number[] = TIER_BOUNDARIES,
+    tiers?: GearUnlockKind | GearUnlockLevels | readonly number[],
 ): boolean {
     const prev = normalizeSkills(previous);
     const curr = normalizeSkills(current);
+    const isList = (t: typeof tiers): t is readonly number[] => Array.isArray(t);
+    const bySkill = isList(tiers) ? undefined : tiers === undefined ? allGearUnlockLevels() : typeof tiers === 'string' ? gearUnlockLevels(tiers) : tiers;
     return skills.some(s => {
         const key = s.toLowerCase() as GearSkillName;
-        return tierBoundaryOf(curr[key] ?? 1, tiers) > tierBoundaryOf(prev[key] ?? 1, tiers);
+        const levels = isList(tiers) ? tiers : bySkill?.[key] ?? [];
+        return tierBoundaryOf(curr[key] ?? 1, levels) > tierBoundaryOf(prev[key] ?? 1, levels);
     });
+}
+
+let cachedGearByName: Map<string, number> | undefined;
+/** The gear item id of a name ("Bronze sword", "bronze_sword") or numeric id string, or undefined. Not gear: undefined. */
+export function gearIdByName(name: string | number): number | undefined {
+    if (typeof name === 'number') return gearById(name) ? name : undefined;
+    const key = name.trim().toLowerCase().replace(/_/g, ' ');
+    if (/^\d+$/.test(key)) return gearById(Number(key)) ? Number(key) : undefined;
+    if (!cachedGearByName) {
+        cachedGearByName = new Map();
+        for (const g of gearCatalog()) {
+            for (const k of [g.name.toLowerCase(), g.debugname.toLowerCase().replace(/_/g, ' ')]) if (!cachedGearByName.has(k)) cachedGearByName.set(k, g.id);
+        }
+    }
+    return cachedGearByName.get(key);
+}
+
+/**
+ * True when the owned items hold a melee weapon that the levels and quests let the account wield (spears and
+ * halberds count only when `trainSkill` allows them). `owned` maps an item name or id to its count, e.g.
+ * { 'bronze sword': 1, 333: 5 }; a key that is not gear is ignored. The planner asks this for a stock of
+ * names; the worker side calls selectProgressiveLoadout.
+ */
+export function ownsWearableMeleeWeapon(
+    owned: Readonly<Record<string, number>> | readonly GearCount[],
+    levels?: GearSkillLevels,
+    quests?: QuestInput,
+    trainSkill?: string,
+): boolean {
+    const rows: GearCount[] = Array.isArray(owned)
+        ? [...owned as readonly GearCount[]]
+        : Object.entries(owned as Record<string, number>).flatMap(([key, count]) => {
+            const id = gearIdByName(key);
+            return id === undefined || !(count > 0) ? [] : [{ id, count }];
+        });
+    return hasOwnedWearableWeapon('melee', rows, levels, quests, trainSkill ?? 'all-melee');
 }
 
 export function hasOwnedWearableWeapon(

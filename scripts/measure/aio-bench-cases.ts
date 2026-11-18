@@ -35,6 +35,8 @@ export type BenchCase = {
 };
 
 const ok = (s: string) => /^RESULT ok\b/m.test(s);
+// True when the worker's result line lists every id in its worn gear (`worn=[...]`, scripts/gather-combat.ts).
+const wears = (s: string, ids: number[]) => { const worn = /worn=\[([^\]]*)\]/.exec(s)?.[1]?.split(',').map(Number) ?? []; return ids.every(id => worn.includes(id)); };
 const loggedOutOnce = (s: string) => {
   const lines = s.match(/^LOGOUT .*$/gm) ?? [];
   return lines.length === 1 && lines[0]!.trim() === 'LOGOUT logged-out';
@@ -315,6 +317,11 @@ const ROUTE_CASES: BenchCase[] = [
   skiller('thieving', 'stun-enchant', 'stun_enchant', ['600', 'MODE=enchant'], {presetConfig: {...PRESETS.stun_enchant!, skills: {...PRESETS.stun_enchant!.skills, Hitpoints: 99}}}),
   skiller('fletching', 'arrows', 'fletch_arrows_bank', ['600', 'arrows', 'rune']),
   skiller('mining', 'ore', 'gather_ore_varrock', ['1500', '27', 'MAX_TRIPS=3'], {presetConfig: {position: {x: 3286, z: 3368, level: 0}, skills: {Mining: 50, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1275, count: 1}]}}),
+  // A bronze pickaxe in the pack and the rune pickaxe in the bank: the start bank visit takes the rune pickaxe and
+  // wields it (Attack 40). The case passes only with the rune pickaxe worn at the end.
+  skiller('mining', 'ore', 'gather_ore_varrock', ['1500', '27', 'MAX_TRIPS=1'], {key: 'extra:ore-pick-banked',
+    presetConfig: {position: {x: 3253, z: 3421, level: 0}, skills: {Mining: 50, Attack: 40, Strength: 20, Defence: 20, Hitpoints: 30}, inventory: [{id: 1265, count: 1}], bank: [{id: 1275, count: 1}]},
+    pass: s => ok(s) && /pick=1275 pickWorn=true/.test(s)}),
   // scripts/measure/fleet-practice.ts `flax`
   skiller('crafting', 'bowstrings', 'spin_bowstrings_seers', ['1250', 'MAX_MAKE=56', 'RAW_RESERVE=50', 'MAX_TRIPS=4'], {presetConfig: {position: {x: 2727, z: 3492, level: 0}, skills: {Crafting: 13}, inventory: [{id: 1735, count: 1}, {id: 315, count: 1}, {id: 2309, count: 1}], bank: [{id: 1779, count: 106}, {id: 1737, count: 40}, {id: 1759, count: 25}, {id: 995, count: 5}]}}),
   skiller('crafting', 'legacy-jewelry', 'craft_jewelry_bank', ['300', 'cut', 'sapphire']),
@@ -515,6 +522,20 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'fighter:trooper', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['trooper', 'TARGET_LEVEL=61'], pass: s => ok(s) && /stop=target-level/.test(s),
     presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60, Prayer: 43, Thieving: 5},
       bank: [{id: 1277, count: 1}, {id: 1171, count: 1}, {id: 333, count: 30}]}},
+  // Gear unlocks (scripts/gear-reconcile.ts). Melee: the start wears the banked rune helm, legs and shield, and
+  // Attack 40 unlocks the rune scimitar in the pack. The case passes only with all four worn at the end.
+  {key: 'fighter:trooper-gear', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['trooper', 'TRAIN_SKILL=Attack', 'TARGET_LEVEL=43'],
+    pass: s => ok(s) && /stop=target-level/.test(s) && wears(s, [1333, 1163, 1079, 1201]),
+    presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 39, Strength: 45, Defence: 40, Hitpoints: 50},
+      equipment: [{id: 1329, count: 1, slot: 3}], inventory: [{id: 1333, count: 1}],
+      bank: [{id: 1163, count: 1}, {id: 1079, count: 1}, {id: 1201, count: 1}, {id: 333, count: 30}]}},
+  // Ranged: the start wears the banked willow shortbow, mithril arrows and studded armour. Ranged 30 unlocks the
+  // banked maple shortbow and adamant arrows: the run fetches them. It passes only with the bow, the arrows and the
+  // armour worn at the end.
+  {key: 'fighter:trooper-ranged-gear', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['trooper', 'TRAIN_SKILL=Ranged', 'TARGET_LEVEL=36'],
+    pass: s => ok(s) && /stop=target-level/.test(s) && wears(s, [853, 890, 1133, 1097]),
+    presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Ranged: 29, Defence: 20, Hitpoints: 50},
+      bank: [{id: 849, count: 1}, {id: 853, count: 1}, {id: 888, count: 300}, {id: 890, count: 300}, {id: 1133, count: 1}, {id: 1097, count: 1}, {id: 333, count: 30}]}},
   {key: 'fighter:chompy', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['chompy', '1', '1', '1500'], pass: ok, timeoutMs: 900_000,
     presetConfig: {position: {x: 2614, z: 3093, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Prayer: 99}, varps: {293: 65},
       equipment: [{id: 1718, count: 1, slot: 2}, {id: 544, count: 1, slot: 4}, {id: 542, count: 1, slot: 7}],

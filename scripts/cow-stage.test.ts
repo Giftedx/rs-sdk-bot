@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {atNorthBank,cowStageDeposits,cowStagePlan} from './cow-stage';
+import {atNorthBank,cowStageDeposits,cowStageKit,cowStagePlan} from './cow-stage';
 
 test('cow stage takes missing kit and tops held food up to 14 HP from the bank', () => {
     expect(cowStagePlan([{id:1895,count:1}],[{id:1277,count:1},{id:1171,count:1},{id:333,count:5}]))
@@ -10,8 +10,23 @@ test('cow stage takes missing kit and tops held food up to 14 HP from the bank',
 
 test('cow stage needs nothing when kit and food are held, and names the missing part', () => {
     expect(cowStagePlan([{id:1277,count:1},{id:1171,count:1},{id:1891,count:2}],[])).toEqual({take:[]});
-    expect(cowStagePlan([],[{id:1171,count:1},{id:333,count:2}])).toEqual({missing:'kit1277'});
+    // No wearable melee weapon, held or banked: the stage names the missing weapon (a shield alone is no kit).
+    expect(cowStagePlan([],[{id:1171,count:1},{id:333,count:2}])).toEqual({missing:'weapon'});
+    expect(cowStagePlan([],[{id:1333,count:1},{id:333,count:2}],{levels:{Attack:30}})).toEqual({missing:'weapon'});
     expect(cowStagePlan([{id:1277,count:1},{id:1171,count:1}],[{id:333,count:1}])).toEqual({missing:'food 7 HP'});
+});
+
+test('cow stage takes the best owned melee weapon, with no bronze sword needed, and the shield only when owned', () => {
+    // Rune scimitar needs Attack 40: at Attack 40 it is the kit, at Attack 30 the mithril scimitar is.
+    const bank=[{id:1333,count:1},{id:1329,count:1},{id:1171,count:1},{id:333,count:5}];
+    expect(cowStageKit(bank,{levels:{Attack:40}})).toEqual([1333,1171]);
+    expect(cowStageKit(bank,{levels:{Attack:30}})).toEqual([1329,1171]);
+    expect(cowStagePlan([],bank,{levels:{Attack:40}})).toEqual({take:[{id:1333,count:1},{id:1171,count:1},{id:333,count:2}]});
+    // A weapon alone starts the stage: the shield is optional.
+    expect(cowStagePlan([{id:1329,count:1},{id:333,count:2}],[],{levels:{Attack:30}})).toEqual({take:[]});
+    expect(cowStagePlan([],[{id:1329,count:1},{id:333,count:2}],{levels:{Attack:30}})).toEqual({take:[{id:1329,count:1},{id:333,count:2}]});
+    // The kit follows the stage's own kit: a held bronze sword is banked once a better weapon is the kit.
+    expect(cowStageDeposits([{id:1277,count:1},{id:1329,count:1}],[1329])).toEqual([{id:1277,count:1}]);
 });
 
 test('north bank means ground floor within 3 tiles of 2619,3332', () => {

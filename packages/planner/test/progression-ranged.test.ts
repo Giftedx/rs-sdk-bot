@@ -116,3 +116,22 @@ test('rangedBandTarget splits at acquirable bow and arrow tier unlocks before 40
     expect(rangedBandTarget(mk(20,{849:1,888:200}),40)).toBe(30);
     expect(rangedBandTarget(mk(30,{853:1,888:200}),40)).toBe(40);
 });
+
+test('rangedBandTarget stops at a tier only when the bow and arrows have a source: owned, or a method that acquires them',()=>{
+    const now=Date.now();
+    const obs=(value:any)=>({at:now,value,source:'test'});
+    const mk=(level:number,items:Record<number,number>,coins=50_000):ObservedAccount=>({
+        account:'tier',at:now,
+        skills:{Ranged:{level,xp:xpForLevel(level)},Hitpoints:{level:20,xp:xpForLevel(20)},Defence:{level:10,xp:xpForLevel(10)}},
+        inventory:obs({995:coins}),equipment:obs({}),bank:obs(items),quests:obs({}),
+    });
+    // Maple and mithril held at Ranged 30 with 50,000 coins: no method buys a yew shortbow or rune arrows, so
+    // the band runs on to the target instead of stopping at 40 with nothing to gain there.
+    expect(rangedBandTarget(mk(30,{853:1,888:200}),99)).toBe(99);
+    // The same account that owns the yew shortbow and rune arrows does change kit at 40.
+    expect(rangedBandTarget(mk(30,{853:1,857:1,888:200,892:200}),99)).toBe(40);
+    // A tier with an acquiring method still stops: the oak shortbow and steel arrows are bought at Lowe.
+    expect(rangedBandTarget(mk(1,{841:1,882:100}),99)).toBe(5);
+    // No coins for the purchase: no stop.
+    expect(rangedBandTarget(mk(1,{841:1,882:100},50),99)).toBe(99);
+});

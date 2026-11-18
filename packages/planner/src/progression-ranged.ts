@@ -28,7 +28,10 @@ export function rangedKit(a:ObservedAccount){
  })));
  return options.sort((x,y)=>rangedModelRate(level,y,22,12)-rangedModelRate(level,x,22,12)||y.strength-x.strength||x.bow-y.bow||x.arrow-y.arrow)[0]??null;
 }
-// Stop at the next owned or acquirable Ranged tier unlock before target.
+// Stop at the next owned or acquirable Ranged tier unlock before target. A tier is acquirable only when its bow and its
+// arrows each have a source: owned (three arrows, as rangedKit counts), or a method of rangedProgressionMethods that
+// acquires the item at that level. A stop with no source ends the band with nothing to gain there (no method buys a
+// yew shortbow or rune arrows).
 const tierUpgrades:Record<number,{bow:number;arrow:number;minCoins:number}>={
  5:{bow:843,arrow:886,minCoins:100},
  20:{bow:849,arrow:888,minCoins:2500},
@@ -39,13 +42,15 @@ export function rangedBandTarget(a:ObservedAccount,target:number){
  const current=rangedKit(a),level=ranged(a);
  const skill=Object.keys(a.skills).find(name=>name.toLowerCase()==='ranged')!;
  const heldCoins=Math.max(0,[a.inventory,a.bank,a.equipment].reduce((n,b)=>n+(b?.value[995]??0),0)-(a.reservations?.[995]??0));
+ const owned=stock(a),methods=rangedProgressionMethods(a,target);
+ const sourced=(id:number,need:number,boundary:number)=>(owned[id]??0)>=need||methods.some(m=>(m.effects.items?.[id]??0)>0&&(m.requirements?.levels?.Ranged??1)<=boundary);
  for(const boundary of [...new Set(bows.map(b=>b.level))].filter(n=>n>level&&n<target).sort((x,y)=>x-y)){
   if(current){
    const next=rangedKit({...a,skills:{...a.skills,[skill]:{...a.skills[skill]!,level:boundary}}});
    if(next&&(next.bow!==current.bow||next.arrow!==current.arrow))return boundary;
   }
   const upgrade=tierUpgrades[boundary];
-  if(upgrade&&heldCoins>=upgrade.minCoins&&(!current||current.bowLevel<boundary||(boundary===5&&current.arrow===882)))return boundary;
+  if(upgrade&&heldCoins>=upgrade.minCoins&&sourced(upgrade.bow,1,boundary)&&sourced(upgrade.arrow,3,boundary)&&(!current||current.bowLevel<boundary||(boundary===5&&current.arrow===882)))return boundary;
  }
  return target;
 }
