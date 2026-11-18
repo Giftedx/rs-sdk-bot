@@ -100,10 +100,10 @@
    "cloneRange": {
     "sharks": [
      6,
-     23
+     28
     ]
    },
-   "note": "the most eats against one opponent: 6; the food did not run out"
+   "note": "the low end is the most eats of the name against one opponent (6), in a fight in which its food did not run out; the high end is the 28 slots of a pack"
   },
   "consumesNotForHitpoints": {
    "value": [
@@ -694,15 +694,15 @@
    "closes": "the tick record of a bounded squad run (packages/core/src/tick-record.ts) that takes the name to 40 Hitpoints or less",
    "cloneRange": {
     "walkOutAtHp": [
-     20,
+     26,
      40
     ],
     "walkOutFromWildernessLevelAtMost": [
      16,
-     20
+     16
     ]
    },
-   "note": "the range of the Hitpoints is the range in which the two samples of the other accounts ended; level 16 is the post and level 20 the last level of a teleport"
+   "note": "the low end is the lowest Hitpoints at the last attack of an account that walked out, the high end the 40 Hitpoints at which this measure starts; the level is that of the post"
   },
   "prayedAgainst": {
    "value": {

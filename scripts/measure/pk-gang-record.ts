@@ -248,6 +248,22 @@ export function addTrace(rec: ReturnType<typeof newRecord>, path: string, lines:
     group.sources.push({ path, ticks: k1 - k0, from: iso(k0), to: iso(k1), frames });
 }
 
+// The hiscore row of a name: the newest page of the `hiscores` mode, else the page saved by .practice/rival-dds/hs.ts.
+export function hiscoreLevels(data: string, name: string): { rows?: Record<string, string>; file: string } {
+    const dir = join(data, '.practice', 'gang-record'), newer = existsSync(dir) ? readdirSync(dir).filter(x => x.startsWith(`hs-${name}-`)).sort().pop() : undefined;
+    const file = newer ? join(dir, newer) : join(data, '.practice', 'rival-dds', `hs-${name}.html`);
+    if (!existsSync(file)) return { file };
+    const t = readFileSync(file, 'utf8').replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]*>/g, '\n').split('\n').map(s => s.trim()).filter(Boolean), i = t.indexOf('Time'), rows: Record<string, string> = {};
+    for (let k = i + 1; k + 3 < t.length; k += 4) rows[t[k]!] = t[k + 2]!;
+    return { rows, file };
+}
+// The range of the Hitpoints at which an account with no sample walks out: from the lowest Hitpoints at the last
+// attack of an account that walked out, to the 40 Hitpoints at which the measure `at40HpOrLess` starts.
+export const LOW_HP = 40;
+export function walkRange(rec: ReturnType<typeof newRecord>): [number, number] {
+    const left = GANG.flatMap(n => rec.acc[n]!.lows).filter(l => l.out !== undefined && l.lastAttackHp !== undefined).map(l => l.lastAttackHp!);
+    return [left.length ? Math.min(...left) : 1, LOW_HP];
+}
 type Finding = { value?: unknown; status: 'measured' | 'reported' | 'unknown'; n?: number; evidence?: string; closes?: string; cloneRange?: unknown; note?: string };
 const M = (value: unknown, n: number, evidence: string, note?: string): Finding => ({ value, status: 'measured', n, evidence, ...(note ? { note } : {}) });
 const R = (value: unknown, n: number, evidence: string, note?: string): Finding => ({ value, status: 'reported', n, evidence, ...(note ? { note } : {}) });
@@ -256,7 +272,7 @@ const FEED = 'a longer run of scripts/measure/pk-gang-collect.ts', TICKS = 'the 
 const PILOTS = 'research/pvp-fight-loop.md "The cost of a kill" (two squad pilots of side claude-cloud; their logs are not on this PC)';
 
 // The data file of one gang account. `levels` is its hiscore row.
-export function targetFile(name: string, g: Acc, group: GroupAcc, levels: Record<string, string> | undefined, levelSource: string) {
+export function targetFile(name: string, g: Acc, group: GroupAcc, levels: Record<string, string> | undefined, levelSource: string, walkOutAtHp: [number, number] = [1, LOW_HP]) {
     const src = 'the traces of `sources`', fights = group.fights.filter(f => f.by === name), noEat = (f: Fight) => f.order.replace(/E/g, '');
     const specs = fights.map(f => (f.order.match(/S/g) ?? []).length), firstSpec = fights.map(f => noEat(f).indexOf('S')).filter(i => i >= 0);
     const eatsBy: Hist = {}; for (const x of fights) { const e = (x.order.match(/E/g) ?? []).length; if (e) bump(eatsBy, x.target, e); }
@@ -272,7 +288,7 @@ export function targetFile(name: string, g: Acc, group: GroupAcc, levels: Record
             weaponPoison: M(Object.keys(g.poisonOnTarget).length ? { poisonSplatsOnPlayers: g.poisonOnTarget } : 'no poison splat on a player', total(g.poisonOnTarget), `${src}: type 2 splats on a player in the tick of an attack or the 2 ticks after it`, 'the worn name says which dagger; the splat sizes say how strong the poison is'),
             food: M({ eats: g.eats, healOfOneEat: g.heal }, g.eats, `${src}: animation 829 (human_eat), and the Hitpoints of the splats before and after it`, 'a heal of 20 is a shark (consume_normal.dbrow)'),
             foodCount: ranDry ? M({ sharks: mostEats, eatsByOpponent: eatsBy }, 1, `${src}: the eat animations in the fights against one opponent, in a meeting that the name ended at 40 Hitpoints or less with no eat after it`, 'the food ran out in that meeting, so its eats are the pack; a refill at the bank between two fights would add to the count')
-                : U(`${TICKS} against the name, to its retreat: the eats of one fight are its pack`, { sharks: [6, 23] }, `the most eats against one opponent: ${mostEats}; the food did not run out`),
+                : U(`${TICKS} against the name, to its retreat: the eats of one fight are its pack`, { sharks: [Math.max(1, mostEats), 28] }, `the low end is the most eats of the name against one opponent (${mostEats}), in a fight in which its food did not run out; the high end is the 28 slots of a pack`),
             consumesNotForHitpoints: M(g.otherConsumes, g.otherConsumes.length, `${src}: animation 829 at 90 Hitpoints or more, or with no splat in the 20 ticks before`, 'a drink and an eat play the same animation (anti_poison.rs2:3); which item it was is not known'),
             potions: U('a splat over 22 with no Protect from Melee (a Strength boost), or a drink that restores no Hitpoints, in ' + FEED, { boosts: [false, true], prayerPotions: [0, 2] }, 'Herblore has no level on any of the three; a drink and an eat share animation 829'),
             runes: (() => { const casts = Object.entries(g.anims).filter(([n]) => /cast|spell|bow|crossbow|thrown/.test(n)); return casts.length ? M(Object.fromEntries(casts), casts.reduce((a, [, c]) => a + c, 0), `${src}: the animations of the name with a cast or a shot in their name`) : M('no cast and no shot', total(g.anims), `${src}: the names of all animations of the name`, 'the name attacks with melee only'); })(),
@@ -318,7 +334,7 @@ export function targetFile(name: string, g: Acc, group: GroupAcc, levels: Record
             frozen: g.freezes.length ? M(g.freezes.map(f => ({ spot: f.spot, protect: f.protect, ticksToFirstStep: f.ticksToFirstStep ?? 'none in 60', ticksToNextAttack: f.ticksToNextAttack ?? 'none in 60', trace: f.trace, tick: f.k })), g.freezes.length, `${src}: spot animations 179 to 181 (the impact of Entangle, Snare, Bind) on the name`) : U(`a Bind, Snare or Entangle on the name in ${FEED}, or ${TICKS} with Bind runes`, { whenFrozen: ['attacks a player beside it', 'stands'] }),
         },
         retreat: {
-            at40HpOrLess: g.lows.length ? M(g.lows.map(l => ({ hp: l.hp, lowestHp: l.minHp, eatsAfter: l.eatsAfter, ticksToLastAttack: l.lastAttack, hpAtTheLastAttack: l.lastAttackHp, wildernessLevel: l.wild, ticksToOutOfTheWilderness: l.out, ticksToBackOnPost: l.post, ticksToDeath: l.died, trace: l.trace })), g.lows.length, `${src}: from the first splat that left 40 or less`) : U(`${TICKS} that takes the name to 40 Hitpoints or less`, { walkOutAtHp: [20, 40], walkOutFromWildernessLevelAtMost: [16, 20] }, 'the range of the Hitpoints is the range in which the two samples of the other accounts ended; level 16 is the post and level 20 the last level of a teleport'),
+            at40HpOrLess: g.lows.length ? M(g.lows.map(l => ({ hp: l.hp, lowestHp: l.minHp, eatsAfter: l.eatsAfter, ticksToLastAttack: l.lastAttack, hpAtTheLastAttack: l.lastAttackHp, wildernessLevel: l.wild, ticksToOutOfTheWilderness: l.out, ticksToBackOnPost: l.post, ticksToDeath: l.died, trace: l.trace })), g.lows.length, `${src}: from the first splat that left 40 or less`) : U(`${TICKS} that takes the name to 40 Hitpoints or less`, { walkOutAtHp, walkOutFromWildernessLevelAtMost: [wild(POST), wild(POST)] }, 'the low end is the lowest Hitpoints at the last attack of an account that walked out, the high end the 40 Hitpoints at which this measure starts; the level is that of the post'),
             prayedAgainst: M(Object.fromEntries(Object.entries(g.prayedAgainst).sort((a, b) => b[1].attacks - a[1].attacks).slice(0, 14).map(([w, r]) => [w, { attackAnimations: r.attacks, withTheProtectPrayerForItOn: r.prayed, players: r.players.size }])), Object.values(g.prayedAgainst).reduce((a, r) => a + r.attacks, 0), `${src}: attack animations of players that face the name, by the weapon of the player`, 'the rule that turns a protect prayer on is not known; this table is its evidence'),
             hitBy: M({ players: Object.keys(g.hitters).length, attackAnimations: total(g.hitters) }, total(g.hitters), `${src}: attack animations of players that face the name`),
         },
@@ -398,13 +414,8 @@ if (import.meta.main) {
     }
     for (const t of traces) addTrace(rec, relative(data, t).replace(/\\/g, '/'), readFileSync(t, 'utf8').split('\n'), multi, id => seqs.get(id) ?? `seq${id}`, id => objs.get(id) ?? (id < 0 ? '' : `obj${id}`));
     if (existsSync(listFile)) for (const p of readFileSync(listFile, 'utf8').split(/\r?\n/).filter(Boolean)) if (existsSync(join(data, p))) addTickRecord(rec, p, inflate(join(data, p)), multi);
-    // The hiscore row of a name: the newest page of the `hiscores` mode, else the page saved by .practice/rival-dds/hs.ts.
-    const levelFile = (name: string) => { const newer = existsSync(feedDir) ? readdirSync(feedDir).filter(x => x.startsWith(`hs-${name}-`)).sort().pop() : undefined; return newer ? join(feedDir, newer) : join(data, '.practice', 'rival-dds', `hs-${name}.html`); };
-    const levels = (name: string) => { const file = levelFile(name); if (!existsSync(file)) return undefined;
-        const t = readFileSync(file, 'utf8').replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]*>/g, '\n').split('\n').map(s => s.trim()).filter(Boolean), i = t.indexOf('Time'), rows: Record<string, string> = {};
-        for (let k = i + 1; k + 3 < t.length; k += 4) rows[t[k]!] = t[k + 2]!; return rows; };
     mkdirSync(out, { recursive: true });
-    for (const n of GANG) writeFileSync(join(out, `${n}.json`), JSON.stringify(targetFile(n, rec.acc[n]!, rec.group, levels(n), relative(data, levelFile(n)).replace(/\\/g, '/')), null, 1) + '\n');
+    for (const n of GANG) writeFileSync(join(out, `${n}.json`), JSON.stringify(targetFile(n, rec.acc[n]!, rec.group, hiscoreLevels(data, n).rows, relative(data, hiscoreLevels(data, n).file).replace(/\\/g, '/'), walkRange(rec)), null, 1) + '\n');
     writeFileSync(join(out, 'group.json'), JSON.stringify(groupFile(rec), null, 1) + '\n');
     console.log(`RESULT ok gang record traces=${traces.length} fights=${rec.group.fights.length} attacks=${GANG.map(n => rec.acc[n]!.attacks).join('/')} eats=${GANG.map(n => rec.acc[n]!.eats).join('/')} deaths=${GANG.map(n => rec.acc[n]!.deaths.length).join('/')} tickRecords=${rec.group.sightings.length} out=${relative(root, out).replace(/\\/g, '/')}`);
 }

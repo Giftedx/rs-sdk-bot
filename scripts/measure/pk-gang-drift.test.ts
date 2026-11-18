@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { driftChecks, squadDrift } from './pk-gang-drift';
+import { driftChecks, squadDrift, squadRuns } from './pk-gang-drift';
 import { benchMeetings, fidelityRows, liveMeeting, type Meeting } from './pk-gang-fidelity';
 
 // A data file of a gang account with the fields that the drift check reads.
@@ -30,9 +30,22 @@ test('a share with few samples does not drift', () => {
 });
 
 test('a live squad run drifts when its cost a kill is more than the tolerance away from the clone prediction', () => {
-    const bench = [{ kills: 3, hpLost: 300, ticks: 600 }, { kills: 3, hpLost: 360, ticks: 660 }, { kills: 2, hpLost: 240, ticks: 500 }];
-    expect(squadDrift({ kills: 4, hpLost: 480, ticks: 900 }, bench).map(c => c.drift)).toEqual([false, false]);
-    expect(squadDrift({ kills: 4, hpLost: 1000, ticks: 900 }, bench).map(c => c.drift)).toEqual([true, false]);
+    const bench = [{ kills: 3, hpLost: 300 }, { kills: 3, hpLost: 360 }, { kills: 2, hpLost: 240 }];
+    expect(squadDrift({ kills: 4, hpLost: 480 }, bench).map(c => c.drift)).toEqual([false]);
+    expect(squadDrift({ kills: 4, hpLost: 1000 }, bench).map(c => c.drift)).toEqual([true]);
+    // Two bench runs are too few to name a drift.
+    expect(squadDrift({ kills: 4, hpLost: 1000 }, bench.slice(0, 2))[0]).toMatchObject({ drift: false, why: 'under 3 bench runs' });
+});
+
+test('the bench runs of the squad check come from the RESULT lines that scripts/pk-squad.ts prints', () => {
+    // Three case logs as a hosted run keeps them: a pass, a fail with its kills, and a log with no squad RESULT.
+    const logs = ['START 3093 3501 0\n[a] SQUAD march to 3067,3640 in 13 steps\nRESULT ok squad accounts=5 kills=3 gangDied=3 died=0 taken=48 trips=5 picked={"884":26,"1231":3}\n',
+        'RESULT fail squad accounts=6 kills=3 gangDied=3 died=0 taken=55 trips=6 picked={"884":26,"1231":3}\n', 'RESULT ok gang groups=1 cleared=0 died=0 kills=1 ticks=1991 taken=178\n'];
+    expect(squadRuns(logs)).toEqual([{ kills: 3, hpLost: 48 }, { kills: 3, hpLost: 55 }]);
+    const three = squadRuns([logs[0]!, logs[1]!, logs[0]!]);
+    // 151 Hitpoints for 9 kills is 17 a kill: a live run at 60 a kill drifts, one at 20 does not.
+    expect(squadDrift({ kills: 5, hpLost: 300 }, three)[0]).toMatchObject({ record: 17, now: 60, drift: true });
+    expect(squadDrift({ kills: 5, hpLost: 100 }, three)[0]!.drift).toBe(false);
 });
 
 test('the fidelity rows give the error of the bench in percent of the live value', () => {

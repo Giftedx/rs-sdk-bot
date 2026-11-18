@@ -253,7 +253,7 @@ const cloneFixture = (name: CloneName, mode: CloneMode, x: number, z: number): S
 const cloneGang = (key: string, kit: string, names: readonly CloneName[], groups: number, args: string[], mode: CloneMode = 'seen', bank?: {id: number; count: number}[]): BenchCase => {
   const size = names.length, c = gangCase(key, kit, 'ganker-dds-skull', groups, GANKER_POST, [`SPAR_B_PROFILES=${names.map(n => cloneProfileName(n, mode)).join('+')}`, ...args], size, undefined, bank);
   // The engine serves the world feed, and the driver writes it beside the output: the instrument of the live record.
-  return {...c, engineEnv: {...c.engineEnv, WORLD_FEED: 'true'}, scriptArgs: [...c.scriptArgs!, `SPAR_FEED=${key.replace(/[^a-z0-9-]/gi, '_')}`], companions: c.companions!.map((comp, i) => ((i + 1) % (size + 1) === 0 ? comp : {...comp, presetConfig: cloneFixture(names[(i + 1) % (size + 1) - 1]!, mode, GANKER_POST.x, GANKER_POST.z)}))};
+  return {...c, engineEnv: {...c.engineEnv, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, scriptArgs: [...c.scriptArgs!, `SPAR_FEED=${key.replace(/[^a-z0-9-]/gi, '_')}`], companions: c.companions!.map((comp, i) => ((i + 1) % (size + 1) === 0 ? comp : {...comp, presetConfig: cloneFixture(names[(i + 1) % (size + 1) - 1]!, mode, GANKER_POST.x, GANKER_POST.z)}))};
 };
 // The squad (scripts/pk-squad.ts) against the three clones. The squad script gives every gang account one set of
 // options, so the clones fight with the pooled options of the record; each has its own levels and sharks.

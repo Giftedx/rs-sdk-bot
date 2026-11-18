@@ -151,7 +151,9 @@ if (import.meta.main) {
         // A bench feed file is read as the live trace is; another output gives the measures of its GANG lines.
         // A case log holds the meetings that the driver read from its bench feed.
         const feeds = outputs.filter(f => f.endsWith('.feed.jsonl')), each = [...feeds.flatMap(f => feedMeetings(readFileSync(f, 'utf8'), id => pack.get(id) ?? '', id => seqs.get(id) ?? String(id), all)), ...outputs.filter(f => !f.endsWith('.feed.jsonl')).flatMap(f => logMeetings(readFileSync(f, 'utf8'), all))];
-        const bench = each.length ? { n: each.length, mean: meanMeeting(each) } : benchMeetings(outputs.map(f => readFileSync(f, 'utf8')));
+        // No meeting read from a feed is a fault of the inputs: the table has one reader and no other source.
+        if (!each.length) { console.log('RESULT fail fidelity: no meeting in the bench inputs (a *.feed.jsonl file, or a case log with FEED_MEETING lines)'); process.exit(2); }
+        const bench = { n: each.length, mean: meanMeeting(each) };
         console.log(`BENCH ${JSON.stringify({ n: bench.n, mean: bench.mean })}`);
         for (const e of each) console.log(`BENCH_MEETING ${JSON.stringify(e)}`);
         console.log('| Measure | Live | Bench mean | Error |\n|---|---|---|---|');
