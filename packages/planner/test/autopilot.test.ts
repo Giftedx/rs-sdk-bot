@@ -2706,7 +2706,7 @@ test('a cow band needs one wearable melee weapon, not a bronze sword by name; a 
     // Food stays a need: a weapon and no food is no band start.
     expect(run(acct('Hungry', { ...base, Attack: 40 }, { 'rune scimitar': 1 }), cow).reason).toBe('vacant: army-cow-strength-45 needs 2 trout and no source gives them');
     // A donor with a cheap weapon fills the line (one item order), and the vacant reason names the line when no source has it.
-    const sent = run(bare, cow, { stock: [{ name: 'Spare', side, items: { 'iron scimitar': 1 } }] });
+    const sent = run(bare, cow, { stock: [{ name: 'Spare', side, items: { 'iron scimitar': 2 } }] });
     expect(sent.send).toMatchObject({ from: 'Spare', to: 'Bare', item: 'iron scimitar', count: 1 });
     expect(run(bare, cow).reason).toMatch(/^vacant: army-cow-strength-45 needs 1 bronze sword and no source gives them$/);
 });
@@ -2731,4 +2731,16 @@ test('COW_WEAPONS levels are the Attack levels that wear each weapon in the gear
         expect([item, canWearGear(gear, { attack })]).toEqual([item, true]);
         if (attack > 1) expect([item, canWearGear(gear, { attack: attack - 1 })]).toEqual([item, false]);
     }
+});
+
+test('a donor of another side or outside the roster keeps the one cheap weapon: only its spare is sent', () => {
+    const cow = catalogue().filter(t => t.id === 'army-cow-strength-45');
+    const base = { Strength: 10, Defence: 10, Hitpoints: 30, Attack: 10 };
+    const run = (donorSide: string, swords: number) => plan(inputs([acct('Needy', base, { trout: 20, coin: 100 })], { templates: cow, army: new Set(['needy']), capacity: { 'cow:ardougne-north': 6 },
+        stock: [{ name: 'Far', side: donorSide, items: { 'bronze sword': swords } }] }))[0]!;
+    // A cloud-side account with one sword keeps it; with two it sends one.
+    expect(run('cloud', 1).send).toBeUndefined();
+    expect(run('cloud', 2)).toMatchObject({ send: { from: 'Far', item: 'bronze sword', count: 1 } });
+    // Same for a local account outside the army roster.
+    expect(run(side, 1).send).toBeUndefined();
 });

@@ -448,8 +448,10 @@ export function kitReserve(templates: readonly Template[], own?: Acct): Record<s
     for (const t of templates) if (t.tier === 'goal' && !t.buildOnly) {
         count(t.needs);
         if (own && t.batchFor) for (const [i, n] of Object.entries(t.batchFor(own))) reserve[norm(i)] = Math.max(reserve[norm(i)] ?? 0, n);
-        // An account whose band needs a melee weapon keeps the cheap weapon it holds: giving away its only one ends the band at once.
-        if (own && t.needs?.meleeWeapon) for (const [weapon] of COW_WEAPONS) if ((own.items[weapon] ?? 0) > 0) reserve[weapon] = Math.max(reserve[weapon] ?? 0, 1);
+        // A band that needs a melee weapon keeps the cheap weapon an account holds: giving away its only one ends the band at once. An
+        // account of known holdings (`own`) keeps the weapons it holds; every other donor (another side's, a local account outside the
+        // roster) keeps one of each, since its own band is not known here.
+        if (t.needs?.meleeWeapon) for (const [weapon] of COW_WEAPONS) if (!own || (own.items[weapon] ?? 0) > 0) reserve[weapon] = Math.max(reserve[weapon] ?? 0, 1);
     }
     delete reserve.coin;
     return reserve;
