@@ -2,7 +2,7 @@
 import {readFileSync,writeFileSync,existsSync,mkdirSync,renameSync,openSync,closeSync,unlinkSync} from 'node:fs';
 import {resolve} from 'node:path';import {createHash} from 'node:crypto';
 import {openBot,settle,serverFromEnv,getWorld,accountOf,randomEventsOf} from '../packages/core/src/bot';import type {Session} from '../packages/core/src/inprocess';
-import {waitUntil} from '../packages/core/src/ticks';import {depositObserved} from '../packages/core/src/deposit';import {sessionWalker,walkPath,expandPath,goTo} from '../packages/core/src/walk';
+import {orderRefusal} from '../packages/core/src/order-refusal';export {orderRefusal};import {waitUntil} from '../packages/core/src/ticks';import {depositObserved} from '../packages/core/src/deposit';import {sessionWalker,walkPath,expandPath,goTo} from '../packages/core/src/walk';
 import type {GEOffer,GEActionResult} from '../vendor/rs-sdk/sdk/ge-types';
 import {marketProgress,type MarketProgress} from '../packages/planner/src/market-progress';
 import {LUMBRIDGE_TO_DRAYNOR,DRAYNOR_BANK} from './courier-route';
@@ -426,7 +426,7 @@ export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:str
    const needsFunding=!journal||journal.phase==='entry'||journal.phase==='settled'||journal.phase==='placing'&&journal.submission==='prepared';
    if(needsFunding){
     if(cancel)throw Error('no submitted order to cancel');if(!journal)ownedBaseline(request,itemTotal());
-    if(Date.now()>=request.deadline||over()||coinsTotal()<roundEscrow+request.reserve||s.sdk.getInventory().length>26)throw Error('order expired,owned reserve missing or two collection slots unavailable');
+    {const failure=orderRefusal({now:Date.now(),deadline:request.deadline,over:over(),coins:coinsTotal(),escrow:roundEscrow,quantity:remaining,limit:request.limit,reserve:request.reserve,pack:s.sdk.getInventory().length});if(failure)throw Error(failure);}
     if(journal&&journal.phase==='placing'&&(coinsTotal()!==roundBaseline(journal).coins||itemTotal()!==roundBaseline(journal).items))throw Error('prepared order asset baseline changed');
     const coins=s.sdk.findBankItem(/^coins$/i),beforeBank=count(bankItems,i=>i.id===995),gen=bankObservation()?.generation??0;
     if(!coins||!(await s.bot.withdrawItem(coins,roundEscrow,{asNote:false})).success||!await waitUntil(s,()=>{const bank=bankObservation();return held(995)===roundEscrow&&(bank?.generation??0)>gen&&count(bank?.items??[],i=>i.id===995)===beforeBank-roundEscrow;},{timeoutTicks:10}))throw Error('owned order funding unobserved');

@@ -12,16 +12,25 @@
 import type { BillRow } from './supply-bill';
 import { missionSignature } from '../../core/src/session-admission';
 import { xpForLevel } from './curve';
+import { ammoTier, boneXp, castRunes, objId, spellFact, toolLevel, wearLevel } from '../../core/src/content-facts';
 import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { validateBankRouteJob, type BankRouteJob } from '../../core/src/bank-trip';
 import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-route-step';
+import { ownsWearableMeleeWeapon } from './gear-progression';
+import { cowFoodIds, foodTotalHeal } from '../../core/src/sustain';
+import { ORDER_COIN_MARGIN, REFUSAL_ANY_SOURCE } from '../../core/src/order-refusal';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 // `combat`: the combat level the account's status reports (absent: worked out from `skills`). `quests`: the quests its
 // status reports complete, by norm() name (absent: none known complete). `questPoints`: the quest points its status
 // reports (absent: none known, which counts as 0). `pos`: the tile where the account stands while it is offline
 // (absent: not known, and the reach rule does not apply).
 // `currentHP`: the observed current Hitpoints; absent means unknown, never the base level.
-export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; currentHP?: number; combat?: number; quests?: ReadonlySet<string>; questPoints?: number; pos?: { x: number; z: number; level: number } };
+// `exact`: the holdings of unnoted items by name, as the buy script counts them (its matcher takes the item id and skips banknotes); `items`
+// counts a banknote under its item's name. Absent: no observation.
+// `observedAt`: when the observation behind this account was taken (its status `at`); absent: no observation.
+export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; exact?: Record<string, number>; observedAt?: number; currentHP?: number; combat?: number; quests?: ReadonlySet<string>; questPoints?: number; pos?: { x: number; z: number; level: number } };
 export type Flow = { item: string; perTick: number };
 // `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
 // `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
@@ -35,6 +44,9 @@ export type Flow = { item: string; perTick: number };
 // `frail`: an account with fewer Hitpoints than `hitpoints` must hold `count` items of `of`; any other account needs none.
 // `hpAboveHalf`: observed current HP must exceed half the base Hitpoints, rounded up, as stall food staging requires.
 export type Needs = {
+    // `meleeWeapon`: one wearable melee weapon held, worn or banked (gear-progression ownsWearableMeleeWeapon: any weapon the
+    // account can wear at its levels and quests). A missing weapon is the kit line COW_WEAPONS, so a shop job or a donor fills it.
+    meleeWeapon?: true;
     combat?: number; quests?: readonly string[]; questPoints?: number; hpAboveHalf?: true; frail?: { hitpoints: number; of: readonly string[]; count: number };
     skills?: Record<string, number>; items?: Record<string, number>; under?: Record<string, number>; holdsUnder?: Record<string, number>; shortOf?: Record<string, number>; holds?: Record<string, number>; food?: number;
     pieces?: { of: readonly string[]; count: number }; anyOf?: readonly Needs[];
@@ -67,6 +79,10 @@ export type Template = {
     // A quest run: a candidate until the account's status reports the quest complete, and worth a share of each job
     // the quest unlocks (as a trainer is). It does not repeat.
     quest?: { name: string; unlocks: string[] };
+    // A shop step for a maker: it buys one `item` that a shop sells and no market lists (a ring mould), and is a candidate
+    // only for an account that lacks the item and meets every other need of an admitted maker of `unlocks`. It is worth
+    // a share of that maker, as a trainer is worth a share of the job it unlocks.
+    provides?: { item: string; unlocks: string[] };
     // A goal band whose target is a holding: it stands while the account holds fewer than `to` of `item`.
     stock?: { item: string; to: number };
     // Kit lines the band's own supply job buys instead of the market.
@@ -127,6 +143,17 @@ export type Inputs = {
     // Lower-case names of the accounts on this side's army roster: only they take goal bands. A specialist's board
     // time counts every tick it plays, so combat training is opt-in per account, never global.
     army?: ReadonlySet<string>;
+    // The time of this pass (ms). With it a vacant reason names an observation older than OBSERVATION_FRESH_MS.
+    now?: number;
+    // The free accounts of this side that no donor stock was read for: their observation is older than
+    // OBSERVATION_FRESH_MS or missing, so their stock is not offered to a kit (scripts/autopilot.ts donorStock).
+    unobserved?: readonly string[];
+    // The bot slots left for planner jobs (the swarm's limit less the hand jobs and the live bots that the swarm counts but
+    // does not run). plan() gives a job to at most this many accounts, best first, and names the rest "waits for a bot
+    // slot"; a running job always keeps its slot. Absent: no limit.
+    slots?: number;
+    // Lower-case accounts whose bot holds a slot now: a run in the swarm's run list, a start inside its window included.
+    holding?: ReadonlySet<string>;
     // Lower-case account name -> the levels of its PK build (scripts/pk-kits.ts kitSkills): an army account that
     // trains to those levels and no further (buildBand). An account with no entry trains every band to its end.
     builds?: ReadonlyMap<string, Readonly<Record<string, number>>>;
@@ -158,6 +185,9 @@ export type Inputs = {
     mountain?: (a: Acct) => boolean;
 };
 export const FUND_RESERVE = 50_000;
+// An account's stock is offered to another account's kit only from an observation younger than this
+// (scripts/autopilot.ts SIDE_STOCK_MAX_AGE_MS equals it; scripts/autopilot.test.ts checks).
+export const OBSERVATION_FRESH_MS = 30 * 60_000;
 // The template id of a kit buy for a goal band: `kit-buy:<band id>`. A retired pair (two fail RESULTs with no
 // progress: no stock under the cap) sends the account to the donors instead.
 export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.ts';
@@ -168,7 +198,7 @@ export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.t
 // scimitar on the Grand Exchange, as a kit buy, at WEAPON_BAND: before its Ranged band, so every account gets one now
 // (owner: all of them, until rune blades arrive), WEAPON_BUYERS accounts away for it at a time.
 // Progressive weapon, armour, and skilling-tool tiers (rev-289 equipment requirements and shop/GE sources).
-export const WEAPON = { id: 'army-weapon', item: 'adamant scimitar', attack: 30, goal: 'fight with an adamant scimitar' } as const;
+export const WEAPON = { id: 'army-weapon', item: 'adamant scimitar', attack: wearLevel('adamant scimitar', 'attack'), goal: 'fight with an adamant scimitar' } as const;
 export const WEAPON_HELD = ['adamant scimitar', 'adamant sword', 'adamant longsword', 'rune scimitar', 'rune sword', 'rune longsword', 'dragon longsword', 'dragon dagger'] as const;
 // WEAPON_BUYERS: a blade raises the damage of every later tick (max hit 12 with the bronze sword, 15 or 16 with the
 // adamant scimitar), and a buy may take an account from its running band, so four go at a time.
@@ -178,18 +208,17 @@ type WeaponStage = { id: string; item: string; fallbacks?: readonly string[]; at
 const RUNE_WEAPONS = ['rune scimitar', 'rune longsword', 'rune sword', 'dragon longsword', 'dragon dagger'] as const;
 const DRAGON_WEAPONS = ['dragon longsword', 'dragon dagger'] as const;
 const WEAPON_STAGES: readonly WeaponStage[] = [
-    { id: 'army-weapon-dragon', item: 'dragon dagger', attack: 60, quest: 'Lost City', goal: 'fight with a dragon dagger', held: DRAGON_WEAPONS },
-    { id: 'army-weapon-rune', item: 'rune scimitar', fallbacks: ['rune longsword'], attack: 40, goal: 'fight with a rune blade', held: RUNE_WEAPONS },
+    { id: 'army-weapon-dragon', item: 'dragon dagger', attack: wearLevel('dragon dagger', 'attack'), quest: 'Lost City', goal: 'fight with a dragon dagger', held: DRAGON_WEAPONS },
+    { id: 'army-weapon-rune', item: 'rune scimitar', fallbacks: ['rune longsword'], attack: wearLevel('rune scimitar', 'attack'), goal: 'fight with a rune blade', held: RUNE_WEAPONS },
     { id: WEAPON.id, item: WEAPON.item, attack: WEAPON.attack, goal: WEAPON.goal, held: WEAPON_HELD },
 ];
 const RUNE_ARMOUR_BAND = 'army-armour-rune';
 const DHIDE_ARMOUR_BAND = 'army-armour-dhide';
-const PICKAXE_LADDER: readonly (readonly [level: number, item: string, coins: number])[] = [
-    [41, 'rune pickaxe', 40_000], [31, 'adamant pickaxe', 5_000], [21, 'mithril pickaxe', 2_500], [6, 'steel pickaxe', 1_000], [1, 'iron pickaxe', 300],
-];
-const AXE_LADDER: readonly (readonly [level: number, item: string, coins: number])[] = [
-    [41, 'rune axe', 25_000], [31, 'adamant axe', 10_000], [21, 'mithril axe', 4_000], [6, 'steel axe', 1_500], [1, 'iron axe', 200],
-];
+// The levels come from the content (toolLevel); the coins are the price cap of a purchase, which is policy.
+const toolLadder = (rows: readonly (readonly [item: string, coins: number])[]): readonly (readonly [level: number, item: string, coins: number])[] =>
+    rows.map(([item, coins]) => [toolLevel(item), item, coins] as const);
+const PICKAXE_LADDER = toolLadder([['rune pickaxe', 40_000], ['adamant pickaxe', 5_000], ['mithril pickaxe', 2_500], ['steel pickaxe', 1_000], ['iron pickaxe', 300]]);
+const AXE_LADDER = toolLadder([['rune axe', 25_000], ['adamant axe', 10_000], ['mithril axe', 4_000], ['steel axe', 1_500], ['iron axe', 200]]);
 // A pickaxe or an axe over the account's level is no kit: the account cannot use it. The cheapest pickaxe with a
 // price cap is adamant (Mining 31), and a kit buy took it for an account with Mining 1.
 export const usableTool = (a: Pick<Acct, 'skills'>, item: string): boolean => {
@@ -203,9 +232,10 @@ export const usableTool = (a: Pick<Acct, 'skills'>, item: string): boolean => {
 export const QUEST_BAND = 3.6, LOST_CITY = 'quest:lostcity', LOST_CITY_PLACES = 1, LOST_CITY_MEALS = 10;
 // Holy Grail after Merlin's Crystal: 275,000 Prayer experience at the server's rate (quest_grail; research/quest-plan.md
 // 1k), what about 150 bought dragon bones give. One account at a time: Sir Mordred and the Black Knight Titan are
-// single fights. GRAIL_RUNES: the two quests' teleports (Falador five times, Camelot five, Varrock once).
+// single fights. GRAIL_RUNES: the two quests' teleports (Falador six times, Camelot five, Varrock once; the cast counts
+// are the route, the cost of a cast is the content's).
 export const GRAIL_BAND = QUEST_BAND + 0.1, GRAIL_PLACE = 'quest:camelot', GRAIL_PLACES = 1, GRAIL_MEALS = 12;
-export const GRAIL_RUNES: Readonly<Record<string, number>> = { 'law rune': 12, 'air rune': 46, 'water rune': 6, 'fire rune': 1 };
+export const GRAIL_RUNES: Readonly<Record<string, number>> = castRunes({ falador_teleport: 6, camelot_teleport: 5, varrock_teleport: 1 });
 export const LOST_CITY_FOOD = ['lobster', 'swordfish', 'shark'] as const;
 // The Fremennik Trials for a build with a Fremennik helm, just after Lost City. One account at a time: Koschei and
 // the Draugen are single fights. FREMENNIK_MEALS: the four sharks of the quest pack.
@@ -220,7 +250,7 @@ export const FREMENNIK_BAND = QUEST_BAND + 0.05, FREMENNIK = 'quest:rellekka', F
 export const UPASS_BAND = QUEST_BAND + 0.06, REGICIDE_BAND = QUEST_BAND + 0.07, UPASS = 'quest:upass', UPASS_PLACES = 1;
 export const UPASS_AGILITY = 68, UPASS_THIEVING = 50, UPASS_MEALS = 12, REGICIDE_MEALS = 30, QUEST_BOW_ARROWS = 600;
 // The runes of Regicide: the Falador and the Ardougne teleport (the quest pack of quest_regicide).
-export const REGICIDE_RUNES: Readonly<Record<string, number>> = { 'law rune': 5, 'air rune': 3, 'water rune': 5 };
+export const REGICIDE_RUNES: Readonly<Record<string, number>> = castRunes({ falador_teleport: 1, ardougne_teleport: 2 });
 // What the account holds for Regicide beside the bow pack, the items of the practice case
 // extra:sweep-regicide-pure-hally. The quest script takes the coal of the still, the rabbit and a second rope out of
 // the bank at Falador, and the sweep takes the first rope for the pack. No shop sells the limestone and the iron fire
@@ -242,6 +272,8 @@ export const LOST_CITY_BUILD: Needs = {
 // The coins a kit buy leaves in the bank (the buy script's CASH_RESERVE). A kit costs far less than FUND_RESERVE, which
 // guards a coin donor, so a buyer keeps only this.
 export const KIT_CASH_RESERVE = 1_000;
+// Coins the plan leaves above the reserve when it sizes a kit buy (see acquire): the observed coins are minutes old when the buy runs.
+export const KIT_COIN_MARGIN = ORDER_COIN_MARGIN;
 // Unit price caps for kit buys, in coins. Estimates: the owner's hand jobs cap a law rune at 1,600 (shop value 40) and
 // a shark at 810 to 1,200 (shop value 300), so a rune caps at about 40 times and food at about 4 times its shop value.
 // An offer fills at or under its cap, and scripts/buy-owned-ge-item.ts refunds what does not fill. Gap: no measured
@@ -295,11 +327,10 @@ const feedUnits = (item: string, output: string) => !(FEEDS[item] ?? []).include
     : item === 'log' ? 1 / 15 : item === 'steel bar' ? 1 / 4 : 1;
 export const norm = (s: string) => s.toLowerCase().replace(/\s*\((?:noted|quest)\)$/, '').trim().replace(/s$/, '');
 export const pairKey = (account: string, template: string) => `${account.toLowerCase()}:${template}`;
-// HP one held item heals over all its bites, by item name: scripts/gather-combat.ts COW_FOOD_BITES × COW_BITE_HEAL
-// (trout 7; a cake bite 4, a chocolate cake bite 5). scripts/autopilot.test.ts checks the two tables agree.
-export const FOOD_HEAL: Readonly<Record<string, number>> = {
-    trout: 7, cake: 12, '2/3 cake': 8, 'slice of cake': 4, 'chocolate cake': 15, '2/3 chocolate cake': 10, 'chocolate slice': 5,
-};
+// HP one held item heals over all its bites, by item name. The content gives it (consume_normal.dbrow heal of each
+// bite, cooking_inv next_obj_stage for the bites), for the cow farm's food of core/sustain.ts cowFoodIds.
+const itemNames = new Map((JSON.parse(readFileSync(resolve(import.meta.dir, '../../../knowledge/items.json'), 'utf8')) as { id: number; name: string }[]).map(i => [i.id, i.name]));
+export const FOOD_HEAL: Readonly<Record<string, number>> = Object.fromEntries(cowFoodIds().map(id => [norm(itemNames.get(id)!), foodTotalHeal(id)!]));
 export const foodHeal = (a: Acct) => Object.entries(FOOD_HEAL).reduce((n, [item, hp]) => n + (a.items[item] ?? 0) * hp, 0);
 
 const billUnits = (item: string, bill: readonly BillRow[]) => bill.reduce((n, r) => {
@@ -337,6 +368,21 @@ export const bandLeft = (t: Template, a: Acct): number => t.trains ? t.trains.to
 const isShort = (a: Acct, needs: Template['needs']) => (!needs?.shortOf || Object.entries(needs.shortOf).some(([i, n]) => (a.items[norm(i)] ?? 0) < n))
     && Object.entries(needs?.holds ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n);
 // The items a frail account is short of for these needs: 0 for an account with the Hitpoints, or with no such need.
+// The cheap weapons that fill a missing melee weapon line, by the Attack level that wears each (the Varrock sword shop and
+// Zeke's scimitars), cheapest first.
+export const COW_WEAPONS: readonly (readonly [item: string, attack: number])[] = [['bronze sword', 1], ['iron scimitar', 1], ['steel scimitar', 5], ['mithril scimitar', 20]];
+// The gear check selects a whole loadout, so it is cached for the holdings object of an account (one per plan input) and
+// the levels and quests that it reads.
+const meleeCache = new WeakMap<object, Map<string, boolean>>();
+const ownsMelee = (a: Acct): boolean => {
+    const key = `${a.skills.Attack ?? 1}|${a.skills.Strength ?? 1}|${[...(a.quests ?? [])].join(',')}`;
+    let by = meleeCache.get(a.items);
+    if (!by) meleeCache.set(a.items, by = new Map());
+    let owned = by.get(key);
+    if (owned === undefined) by.set(key, owned = ownsWearableMeleeWeapon(a.items, a.skills, a.quests));
+    return owned;
+};
+const weaponLine = (a: Acct): Lack => ({ of: COW_WEAPONS.filter(([, attack]) => (a.skills.Attack ?? 1) >= attack).map(([item]) => item), count: 1 });
 const frailShort = (a: Acct, needs: Template['needs']) => !needs?.frail || (a.skills.Hitpoints ?? 10) >= needs.frail.hitpoints ? 0
     : Math.max(0, needs.frail.count - needs.frail.of.reduce((n, i) => n + (a.items[norm(i)] ?? 0), 0));
 const healthMet = (a: Acct, needs: Template['needs']) => !needs?.hpAboveHalf
@@ -344,6 +390,7 @@ const healthMet = (a: Acct, needs: Template['needs']) => !needs?.hpAboveHalf
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }): boolean =>
     (a.combat ?? combatLevel(a.skills)) >= (needs?.combat ?? 0)
     && healthMet(a, needs)
+    && (!needs?.meleeWeapon || ownsMelee(a))
     && (needs?.quests ?? []).every(q => questDone(a, q))
     && (a.questPoints ?? 0) >= (needs?.questPoints ?? 0)
     && frailShort(a, needs) === 0
@@ -375,6 +422,7 @@ export function unmet(a: Acct, needs: Template['needs']): string[] {
     for (const [i, n] of Object.entries(needs.holds ?? {})) if ((a.items[norm(i)] ?? 0) < n) out.push(`${n} ${norm(i)} from its own job`);
     if (needs.shortOf && !isShort(a, { shortOf: needs.shortOf })) out.push(`to be short of ${Object.keys(needs.shortOf).join(' or ')}`);
     if (needs.pieces) { const n = needs.pieces.count - needs.pieces.of.reduce((sum, i) => sum + (a.items[norm(i)] ?? 0), 0); if (n > 0) out.push(`${n} of ${needs.pieces.of.join('/')}`); }
+    if (needs.meleeWeapon && !ownsMelee(a)) out.push('a wearable melee weapon');
     if (foodHeal(a) < (needs.food ?? 0)) out.push(`${needs.food} HP of food`);
     if (!healthMet(a, needs)) out.push('current Hitpoints above half');
     if (frailShort(a, needs) > 0) out.push(`${frailShort(a, needs)} of ${needs.frail!.of.slice(0, 3).join('/')}`);
@@ -399,6 +447,7 @@ export function kitLacks(a: Acct, needs: Template['needs'], can: (item: string, 
         const short = n - (a.items[norm(i)] ?? 0);
         if (norm(i) !== 'coin' && short > 0) out.push({ of: [norm(i)], count: short });
     }
+    if (needs?.meleeWeapon && !ownsMelee(a)) out.push(weaponLine(a));
     const hp = (needs?.food ?? 0) - foodHeal(a);
     if (hp > 0) out.push({ of: ['trout'], count: Math.ceil(hp / FOOD_HEAL.trout!) });
     const pieces = (needs?.pieces?.count ?? 0) - (needs?.pieces?.of ?? []).reduce((n, i) => n + (a.items[norm(i)] ?? 0), 0);
@@ -426,6 +475,10 @@ export function kitReserve(templates: readonly Template[], own?: Acct): Record<s
     for (const t of templates) if (t.tier === 'goal' && !t.buildOnly) {
         count(t.needs);
         if (own && t.batchFor) for (const [i, n] of Object.entries(t.batchFor(own))) reserve[norm(i)] = Math.max(reserve[norm(i)] ?? 0, n);
+        // A band that needs a melee weapon keeps the cheap weapon an account holds: giving away its only one ends the band at once. An
+        // account of known holdings (`own`) keeps the weapons it holds; every other donor (another side's, a local account outside the
+        // roster) keeps one of each, since its own band is not known here.
+        if (t.needs?.meleeWeapon) for (const [weapon] of COW_WEAPONS) if (!own || (own.items[weapon] ?? 0) > 0) reserve[weapon] = Math.max(reserve[weapon] ?? 0, 1);
     }
     delete reserve.coin;
     return reserve;
@@ -565,7 +618,7 @@ function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
         });
         budget(`army kit ${a.name}`, () => {
             const cost = lines.reduce((n, l) => n + (l.need.short + (l.need.bought ?? 0)) * l.price, 0);
-            return cash + keep + cost + (cost > 0 ? KIT_CASH_RESERVE : 0);
+            return cash + keep + cost + (cost > 0 ? KIT_CASH_RESERVE + KIT_COIN_MARGIN : 0);
         }, lower);
     }
     for (const need of route) if (!need.names.includes('coin')) {
@@ -851,6 +904,19 @@ export function plan(inp: Inputs): Assignment[] {
             }
             continue;
         }
+        if (t.provides) {
+            // A shop step for a maker. The item is the one input the maker lacks: every other need is met.
+            const item = norm(t.provides.item), held: Acct = { ...a, items: { ...a.items, [item]: Math.max(1, a.items[item] ?? 0) } }, before = cands.length;
+            if ((a.items[item] ?? 0) >= 1) continue;
+            if (coinShort(a, t.needs) > 0 || !meets(a, withoutCoins(t.needs))) { miss(a, t, coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)) ? 'coins' : 'needs'); continue; }
+            for (const u of t.provides.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
+                if (!meets(held, u.needs)) continue;
+                const value = TRAIN_SHARE * valueOf(u, held);
+                if (value > 0) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `buys a ${t.provides.item} for ${u.id}`, supply: { template: u, account: held, share: TRAIN_SHARE } });
+            }
+            if (cands.length === before) miss(a, t, 'demand');
+            continue;
+        }
         if (t.trains) {
             if ((a.skills[t.trains.skill] ?? 1) >= t.trains.to) continue;
             if (!meets(a, t.needs)) { miss(a, t, 'needs'); continue; }
@@ -1022,15 +1088,19 @@ export function plan(inp: Inputs): Assignment[] {
             // The batch when the account can pay for it, else only what the band needs to start. A one-line band with
             // `partBatch` takes as much of its batch as the account can pay for.
             const batchOf = c.template.batchFor?.(a) ?? c.template.batch;
-            const sized = (batch: boolean): KitLine[] => picks.map(p => { const held = a.items[p!.item] ?? 0, m = inp.market![p!.item]!; return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(p!.count, batch ? (batchOf?.[p!.item] ?? 0) - held : 0) }; });
+            // `held` is what the buy script will count (EXPECTED_OWNED, the order key): the unnoted units. The batch top-up counts every unit, notes included.
+            const sized = (batch: boolean): KitLine[] => picks.map(p => { const owned = a.items[p!.item] ?? 0, held = a.exact ? a.exact[p!.item] ?? 0 : owned, m = inp.market![p!.item]!; return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(p!.count, batch ? (batchOf?.[p!.item] ?? 0) - owned : 0) }; });
             const price = (ls: readonly KitLine[]) => ls.reduce((n, l) => n + l.quantity * l.limit, 0), coins = a.items.coin ?? 0;
             const keep = Math.max(c.template.keepCoins?.(a) ?? 0,...Object.entries(c.template.needs?.items??{}).filter(([item])=>norm(item)==='coin').map(([,count])=>count));
             const free = coins - keep;
-            const full = sized(true), start = sized(false), part = Math.floor((free - KIT_CASH_RESERVE) / (full[0]?.limit ?? 1));
+            // The buy script refuses a round whose escrow and reserve pass the coins it finds, and the status that sized the buy is older than
+            // the run: KIT_COIN_MARGIN keeps the planned buy under the coins by what a few minutes of fares, food and fees can take.
+            const room = KIT_CASH_RESERVE + KIT_COIN_MARGIN;
+            const full = sized(true), start = sized(false), part = Math.floor((free - room) / (full[0]?.limit ?? 1));
             const frailFood = c.template.id === FRAIL_FOOD_BUY_ID;
-            const lines = frailFood || price(full) + KIT_CASH_RESERVE <= free ? full
+            const lines = frailFood || price(full) + room <= free ? full
                 : c.template.partBatch && full.length === 1 && part > start[0]!.quantity ? [{ ...full[0]!, quantity: Math.min(full[0]!.quantity, part) }] : start;
-            const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0, KIT_CASH_RESERVE + keep), cost = price(lines), short = cost + KIT_CASH_RESERVE - free;
+            const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0, KIT_CASH_RESERVE + keep), cost = price(lines), short = cost + room - free;
             const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
             const purchaseResources=c.template.id===WEAPON.id||c.template.id.startsWith('army-weapon-')||c.template.id.startsWith('army-armour-')||frailFood?c.resources:[];
             const reservePurchase=()=>{for(const r of purchaseResources)used.set(r,(used.get(r)??0)+1);reserveKit(c.account,lines);if(c.supply)reserveOutput(c.supply.template,c.supply.account);};
@@ -1151,6 +1221,34 @@ export function plan(inp: Inputs): Assignment[] {
     // A vacant slot names its constraint: the fare it lacks for a job whose place is still free, when that is all it lacks.
     const noFare = (a: Acct) => { const x = fareShort.get(a.name)?.find(x => x.resources.every(r => (used.get(r) ?? 0) < (inp.capacity?.[r] ?? 1)));
         return x ? `vacant: lacks ${x.coins} coins for the way to ${x.id} (ferry fare ${x.fare}), and no free account can give them` : undefined; };
+    // More jobs than free bot slots: the best keep theirs. An account whose bot holds a slot now (a confirmed live session,
+    // or a run that the swarm lists, a start inside its window included) keeps a job whatever the count, so a hand job that
+    // the owner enables never stops a running planner job, and a kit buy that replaces a running band keeps its account's
+    // slot. The rest rank by goal band and the levels left, then supply jobs by worth, and fill the slots that remain. The
+    // others wait for a slot (the swarm admits no more).
+    const waits = new Map<string, string>();
+    if (inp.slots !== undefined) {
+        // A fund or send assignment starts an order that logs in two accounts (the recipient and the donor): it costs two bots.
+        const cost = (x: Assignment) => x.fund || x.send ? 2 : 1;
+        const jobs = [...done.values()].filter(x => x.template);
+        if (jobs.reduce((n, x) => n + cost(x), 0) > inp.slots) {
+            const holds = (x: Assignment) => !!inp.running?.has(x.account.toLowerCase()) || !!inp.holding?.has(x.account.toLowerCase());
+            const rank = (x: Assignment): number[] => {
+                const id = x.template!.id, c = cands.find(k => k.account === x.account && (k.template.id === id || KIT_BUY + k.template.id === id));
+                return c?.goal ? [0, c.goal.band, c.goal.left] : c ? [1, -worth(c), 0] : [2, 0, 0];
+            };
+            const holders = jobs.filter(holds);
+            let room = Math.max(0, inp.slots - holders.reduce((n, x) => n + cost(x), 0));
+            const others = jobs.filter(x => !holds(x)).map(x => ({ x, r: rank(x) })).sort((p, q) => { for (let i = 0; i < 3; i++) if (p.r[i] !== q.r[i]) return p.r[i]! - q.r[i]!; return p.x.account.localeCompare(q.x.account); });
+            for (const { x } of others) {
+                if (cost(x) <= room) { room -= cost(x); continue; }
+                done.delete(x.account);
+                if (x.fund) gave.delete(x.fund.from);
+                if (x.send) gaveItems.delete(x.send.from);
+                waits.set(x.account, `vacant: waits for a bot slot (${inp.slots} free, ${holders.length} held by running bots): ${x.template!.id} ranks below the jobs that hold them`);
+            }
+        }
+    }
     // The first gate that stopped the account's nearest template (see `misses`), or what its candidates met.
     const full = (c: Cand) => c.resources.find(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1));
     const vacancy = (a: Acct): string => {
@@ -1183,12 +1281,20 @@ export function plan(inp: Inputs): Assignment[] {
             return undefined;
         };
         // With no finite demand no supply job has value, whatever it lacks; a goal band still stands apart from demand.
-        const roster = has('roster')[0], other = demand.some(d => d.short > 0) ? job() : 'no finite route or army supply demand';
+        // An observation that is too old to offer stock is a cause of "no source", so the reason says so.
+        const sourceless = (text: string | undefined) => {
+            if (!text || !/ and no source/.test(text)) return text;
+            const notes: string[] = [];
+            if (inp.now !== undefined && a.observedAt !== undefined && inp.now - a.observedAt > OBSERVATION_FRESH_MS) notes.push(`its own observation is ${Math.round((inp.now - a.observedAt) / 3_600_000 * 10) / 10} h old`);
+            if (inp.unobserved?.length) notes.push(`${inp.unobserved.length} free accounts have no observation under ${OBSERVATION_FRESH_MS / 60_000} minutes old, so their stock is not offered`);
+            return notes.length ? `${text} (${notes.join('; ')})` : text;
+        };
+        const roster = has('roster')[0], other = sourceless(demand.some(d => d.short > 0) ? job() : 'no finite route or army supply demand');
         if (roster) return `vacant: not on the army roster (${has('roster').length} bands, nearest ${roster.template.id})${other ? `; otherwise ${other}` : ''}`;
         return `vacant: ${other ?? 'no template meets its skills and holdings'}`;
     };
     return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: gave.has(a.name) ? 'vacant: gives coins this pass'
-        : gaveItems.has(a.name) ? 'vacant: gives a kit item this pass' : vacated.get(a.name) ?? noFare(a) ?? vacancy(a) });
+        : gaveItems.has(a.name) ? 'vacant: gives a kit item this pass' : waits.get(a.name) ?? vacated.get(a.name) ?? noFare(a) ?? vacancy(a) });
 }
 
 // The swarm job for an assignment. `autopilot` marks it as this side's planner job; the CLI replaces only marked jobs.
@@ -1260,7 +1366,9 @@ export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked
 // logged two such fails, and the account's Lost City band was retired).
 // An offline login server or an unavailable swarm claim authority refuses the session before the worker runs.
 // Supervisor retry bounds and claim recovery still apply; neither refusal establishes a broken worker.
-export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|login: LoginError: Login server offline\b|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|(?:login: )?(?:Error: )?fleet swarm claim authority unavailable or changed\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|.*\bstop"?[=:]"?preparation\b|.*\bprogression requires acquire\b|stop file\b|.*\bworker finished: stop file\b)/;
+const DRAIN_BASE = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|login: LoginError: Login server offline\b|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|(?:login: )?(?:Error: )?fleet swarm claim authority (?:unavailable or changed|timed out)\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|.*\bstop"?[=:]"?preparation\b|.*\bprogression requires acquire\b|stop file\b|.*\bworker finished: stop file\b)/;
+// A buy that ends before it places an offer, on any refusal of packages/core/src/order-refusal.ts, is no failure of its job.
+export const DRAIN_RESULT = new RegExp(DRAIN_BASE.source.replace('^RESULT fail (?:', `^RESULT fail (?:.*"phase":"unplaced",.*"escrow":0,.*"failure":"Error: (?:${REFUSAL_ANY_SOURCE})|`));
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
     const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;
@@ -1358,13 +1466,14 @@ export const LEATHER_LEVEL = 84, SET_HIDES = 6, TAN_COIN = 20, SET_SHOP = 100, A
 // what the account keeps of its own runes.
 export const SPLASH_FENCE = 'splash:ardougne-cow-fence', SPLASH_PLACES = 2, SPLASH_TO = 66;
 export const SPLASH_KIT = { 'body rune': 150, 'earth rune': 425, 'water rune': 300 } as const;
-export const SPLASH_START = { 'body rune': 10, 'earth rune': 30, 'water rune': 30 } as const, CURSE_LEVEL = 19, CURSE_XP = 725;
+export const SPLASH_START = { 'body rune': 10, 'earth rune': 30, 'water rune': 30 } as const, CURSE_LEVEL = spellFact('curse').level, CURSE_XP = spellFact('curse').xp;
 export function splashKit(magic: number): Record<string, number> {
     const casts = Math.max(SPLASH_START['body rune'], Math.ceil((xpForLevel(SPLASH_TO) - xpForLevel(magic)) / CURSE_XP));
     return magic < CURSE_LEVEL ? { ...SPLASH_KIT } : { 'body rune': casts, 'earth rune': 3 * casts, 'water rune': Math.max(SPLASH_START['water rune'], 2 * casts) };
 }
 // The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
 export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar', blood: 'aio:ardougne-blood-chests' } as const;
+// CAPACITY: accounts at one resource at a time. Every number is policy (a place, a market or a spot holds this many), not a game fact.
 export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [ARMOUR_MARKET]: ARMOUR_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // The reach rule: a job goes only to an account that has a way to its place. One route query between the Varrock
@@ -1406,7 +1515,7 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     'catherby:lobster': CATHERBY_BANK, [AIO_PLACES.flax]: { x: 2744, z: 3445 }, [AIO_PLACES.yews]: SEERS_BANK,
     'shop:ardy': { x: 2654, z: 3283 }, 'shop:catherby': CATHERBY_BANK, 'shop:catherby_arrows': CATHERBY_BANK, 'shop:dargaud': SEERS_BANK, 'shop:magic_guild': { x: 2612, z: 3093 },
     'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
-    'shop:zeke': { x: 3269, z: 3167 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
+    'shop:zeke': { x: 3269, z: 3167 }, 'shop:dommik': { x: 3269, z: 3167 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
 };
 // A template's place: its first resource with one. A chicken pen carries its tile, and a knight spot has the bank.
 export function placeOf(t: Pick<Template, 'resources'>): Spot | undefined {
@@ -1492,7 +1601,7 @@ export const TROOPER_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence';
 export const MAGIC_BAND = 2, PRAYER_BAND = 3;
 // Bought bones: Prayer XP a bury (scripts/train-prayer.ts BONE_XP; a test keeps the two tables equal), the bones the
 // trainer keeps (its BONE_RESERVE floor) and the bones a bury band starts with.
-export const BOUGHT_BONE_XP: Readonly<Record<number, number>> = { 536: 1800, 532: 375 };
+export const BOUGHT_BONE_XP: Readonly<Record<number, number>> = { [objId('dragon bones')]: boneXp('dragon bones'), [objId('big bones')]: boneXp('big bones') };
 export const BONE_KEEP = 6, BONE_START = 16, BONE_PURSE = 100_000, BONE_SKILL = 90;
 // Prayer on the field, band 9, a filler: an account with every melee skill at 99 kills troopers only for their bones
 // and buries each on the spot (trooper mode with TRAIN_SKILL=Hitpoints, which takes any style, and GIANT_KILLS past the
@@ -1505,18 +1614,15 @@ export const PRAYER_FIELD_BAND = 9;
 // RESULT ok with bronze arrows: Ranged 1 to 59-62 in about 1,600 ticks, 41.1-46.7 XP a tick, 0.67-2.02 arrows lost
 // per 1,000 XP (research/combat-measure.md). It shares the battlefield with the melee trooper bands.
 export const RANGED_BAND = 4, GUILD_BAND = 3.9, RANGED_TROOPER_DEFENCE = 60;
-const BOWS: readonly (readonly [string, number])[] = [['shortbow', 1], ['longbow', 1], ['oak shortbow', 5], ['oak longbow', 5], ['willow shortbow', 20],
-    ['willow longbow', 20], ['maple shortbow', 30], ['maple longbow', 30], ['yew shortbow', 40], ['yew longbow', 40], ['magic shortbow', 50], ['magic longbow', 50]];
+// The level of a bow and of an arrow comes from the content (a bow fires arrows of its tier or lower); the order is the planner's.
+const BOWS: readonly (readonly [string, number])[] = ['shortbow', 'longbow', 'oak shortbow', 'oak longbow', 'willow shortbow', 'willow longbow',
+    'maple shortbow', 'maple longbow', 'yew shortbow', 'yew longbow', 'magic shortbow', 'magic longbow'].map(bow => [bow, wearLevel(bow, 'ranged')] as const);
 // Native bows and their unstrung inputs share display names. Only the strung base ID supplies a combat kit.
-const BOW_IDENTITIES: Readonly<Record<string, readonly [strung: number, unstrung: number]>> = {
-    shortbow: [841, 50], longbow: [839, 48], 'oak shortbow': [843, 54], 'oak longbow': [845, 56],
-    'willow shortbow': [849, 60], 'willow longbow': [847, 58], 'maple shortbow': [853, 64], 'maple longbow': [851, 62],
-    'yew shortbow': [857, 68], 'yew longbow': [855, 66], 'magic shortbow': [861, 72], 'magic longbow': [859, 70],
-};
+const BOW_IDENTITIES: Readonly<Record<string, readonly [strung: number, unstrung: number]>> = Object.fromEntries(BOWS.map(([bow]) => [bow, [objId(bow), objId(`unstrung ${bow}`)] as const]));
 export const BOW_IDS: Readonly<Record<string, number>> = Object.fromEntries(Object.entries(BOW_IDENTITIES).map(([name, [id]]) => [name, id]));
-export const ARMOUR_IDS: Readonly<Record<string, number>> = { 'dragonhide body': 1135, 'dragonhide chap': 1099, 'dragon vambrace': 1065 };
+export const ARMOUR_IDS: Readonly<Record<string, number>> = { 'dragonhide body': objId('dragonhide body'), 'dragonhide chap': objId('dragonhide chaps'), 'dragon vambrace': objId('dragon vambraces') };
 const bowStockNames = new Map(Object.entries(BOW_IDENTITIES).flatMap(([name, [strung, unstrung]]) => [[strung, name], [unstrung, `unstrung ${name}`]] as [number, string][]));
-const ARROWS: readonly (readonly [string, number])[] = [['bronze arrow', 1], ['iron arrow', 1], ['steel arrow', 5], ['mithril arrow', 20], ['adamant arrow', 30], ['rune arrow', 40]];
+const ARROWS: readonly (readonly [string, number])[] = ['bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow', 'adamant arrow', 'rune arrow'].map(arrow => [arrow, ammoTier(arrow)] as const);
 // A staff that stands for the fire runes of a cast.
 export const FIRE_STAFFS = ['staff of fire', 'fire battlestaff', 'mystic fire staff'] as const;
 // Kit items a goal-tier shop job brings (the alchemy supply jobs and the army-arrows jobs). A kit line of these that no market sells
@@ -1767,6 +1873,20 @@ export function aioTemplates(): Template[] {
 //   the potato goes in first, then the meat. One run makes up to STEW_BATCH useful stews, bounded by complete owned
 //   recipes; both steps receive that count. The rate is half that of one recipe, as a stew takes two. Gaps: no
 //   practice run makes this chain, and no template finishes an incomplete stew left by a failed second step.
+// The shop step of a maker whose only missing input is a ring mould: Dommik's Crafting Store in Al Kharid sells it
+// (scripts/shop-buyer.ts profile dommik: ring mould, shelf 4). The mould costs 5 coins in the item data and the run
+// stops at the first one held (STOCK_TARGET 1). It unlocks the four gem ring makers (GEM_RINGS); a ring maker that the
+// plan's `aio` list does not name is not unlocked.
+export const RING_MOULD_COINS = 100;
+export function makerShopSteps(): Template[] {
+    return [{
+        id: 'shop-ring-mould', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['dommik', '600'],
+        env: { ITEMS: 'ring mould', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(RING_MOULD_COINS), COIN_RESERVE: '50', MAX_SPEND: '50' },
+        role: 'supply', goal: "buy a ring mould from Dommik's Crafting Store in Al Kharid for the ring makers", repeats: false,
+        resources: ['shop:dommik'], yields: () => [], provides: { item: 'ring mould', unlocks: GEM_RINGS.map(([gem]) => `aio-${gem}-rings`) },
+        needs: { items: { coins: RING_MOULD_COINS }, holdsUnder: { 'ring mould': 1 } },
+    }];
+}
 export function makerChains(): Template[] {
     const step = (recipe: string, max: number, cap = 1500) => `scripts/aio.ts skiller crafting inventory ${recipe} MAX_MAKE=${max} CAP=${cap} MEMBERS=1 ORDER_MODE=best-effort`;
     const chain = (id: string, steps: string[], rest: Pick<Template, 'role' | 'goal' | 'needs' | 'yields' | 'repeats'|'production'>): Template =>
@@ -1796,7 +1916,7 @@ export function catalogue(): Template[] {
         id: `army-cow-${skill.toLowerCase()}-${to}`, family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['3000', 'cow'],
         env: { TRAIN_SKILL: skill, TARGET_LEVEL: String(to), COW_BANK_PROFILE: 'north', MAX_KILLS: '8', COW_STAGE: '1', LOOT_WATCH: '0' }, role: 'combat', goal: `train ${skill} to ${to} on the Ardougne cows`,
         tier: 'goal', band, repeats: true, trains: { skill, to, unlocks: [] }, resources: [COW_FIELD], yields: () => [],
-        needs: { food: 14, items: { 'bronze sword': 1, 'wooden shield': 1 } },
+        needs: { food: 14, meleeWeapon: true },
         // One trip to the Grand Exchange brings food for many runs, not the two trout one start needs.
         batch: { trout: 30 },
     }));
@@ -2046,7 +2166,7 @@ export function catalogue(): Template[] {
         aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, role: 'quest',
         goal: "complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience", tier: 'goal', band: GRAIL_BAND,
         quest: { name: 'Holy Grail', unlocks: [] }, resources: [GRAIL_PLACE], yields: () => [],
-        needs: { skills: { Prayer: 43, Magic: 45, Attack: 90, Strength: 90, Hitpoints: 90, Defence: 90 }, under: { Prayer: 99 }, items: { coins: 2000, 'rune scimitar': 1, ...GRAIL_RUNES },
+        needs: { skills: { Prayer: 43, Magic: spellFact('camelot_teleport').level, Attack: 90, Strength: 90, Hitpoints: 90, Defence: 90 }, under: { Prayer: 99 }, items: { coins: 2000, 'rune scimitar': 1, ...GRAIL_RUNES },
             pieces: { of: LOST_CITY_FOOD, count: GRAIL_MEALS } }, kitFirst: true,
     };
     // The Fremennik Trials for a build with a Fremennik helm (BUILD_QUESTS), through the same chain: Monk's Friend gives
@@ -2107,7 +2227,7 @@ export function catalogue(): Template[] {
         aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, buildOnly: true, role: 'quest', gives: ['Magic'],
         goal: 'complete Murder Mystery and Regicide to wield the dragon halberd', tier: 'goal', band: REGICIDE_BAND,
         quest: { name: 'Regicide', unlocks: [] }, resources: [UPASS], yields: () => [],
-        needs: { quests: ['Underground Pass'], skills: { Ranged: 99, Magic: 51, Prayer: 43, Hitpoints: 90, Agility: UPASS_AGILITY }, items: { coins: 2000, ...BOW_KIT, ...REGICIDE_RUNES, ...REGICIDE_PACK },
+        needs: { quests: ['Underground Pass'], skills: { Ranged: 99, Magic: spellFact('ardougne_teleport').level, Prayer: 43, Hitpoints: 90, Agility: UPASS_AGILITY }, items: { coins: 2000, ...BOW_KIT, ...REGICIDE_RUNES, ...REGICIDE_PACK },
             pieces: { of: LOST_CITY_FOOD, count: REGICIDE_MEALS } }, kitFirst: true,
     };
     // Thieving UPASS_THIEVING and Agility UPASS_AGILITY for those quests, before them. Thieving: the trainer of the
@@ -2316,6 +2436,7 @@ export function catalogue(): Template[] {
             yields: () => [{ item: 'rune arrow', perTick: ARROW_LOW / 800 }], spends: () => [{ item: 'coins', perTick: RUNE_ARROW_COST / 800 }] },
         ...aioTemplates(),
         ...makerChains(),
+        ...makerShopSteps(),
     ];
 }
 
@@ -2454,7 +2575,7 @@ export function freshest(...observations: readonly any[]): any {
 // state, a snapshot row the complete ones by name), and the tile it stands on (a status only). No status: a fresh
 // account at level 1 (Hitpoints 10).
 export function accountFrom(name: string, side: string, status: any, itemName: (id: number) => string | undefined): Acct {
-    const skills: Record<string, number> = { Hitpoints: 10 }, items: Record<string, number> = {};
+    const skills: Record<string, number> = { Hitpoints: 10 }, items: Record<string, number> = {}, exact: Record<string, number> = {};
     for (const k of Array.isArray(status?.skills) ? status.skills : []) if (typeof k?.name === 'string' && Number.isFinite(k.level)) skills[k.name] = k.level;
     const validHP = (hp: unknown): hp is number => Number.isSafeInteger(hp) && (hp as number) >= 0;
     const sharedHP = (Array.isArray(status?.skills) ? status.skills : []).find((k: any) => k?.name === 'Hitpoints')?.currentLevel;
@@ -2463,6 +2584,7 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
         const n = typeof r?.name === 'string' ? r.name : itemName(r?.baseId ?? r?.id);
         const bow = bowStockNames.get(r?.baseId ?? r?.id), key = bow ?? (n && !(norm(n) in BOW_IDS) ? norm(n) : undefined);
         if (key && Number.isFinite(r.count)) items[key] = (items[key] ?? 0) + r.count;
+        if (key && Number.isFinite(r.count) && (r?.baseId === undefined || r.baseId === r.id)) exact[key] = (exact[key] ?? 0) + r.count;
         // The held-bones Prayer worker deposits and buries only id526. Keep notes in generic stock for trades and
         // other consumers, while this availability key admits only the exact normal bones that worker can use.
         if (r?.id === 526 && Number.isFinite(r.count)) items['bone (unnoted)'] = (items['bone (unnoted)'] ?? 0) + r.count;
@@ -2470,7 +2592,7 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
     const quests = Array.isArray(status?.quests)
         ? new Set<string>(status.quests.flatMap((q: any) => typeof q === 'string' ? [norm(q)] : typeof q?.name === 'string' && q.state === 'complete' ? [norm(q.name)] : [])) : undefined;
     const questPoints = status?.guildFacts?.varps?.qp, p = status?.pos;
-    return { name, side, skills, items, ...(currentHP !== undefined ? { currentHP } : {}), ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}), ...(Number.isFinite(questPoints) ? { questPoints } : {}),
+    return { name, side, skills, items, ...(status ? { exact } : {}), ...(Number.isFinite(status?.at) && status.at > 0 ? { observedAt: status.at } : {}), ...(currentHP !== undefined ? { currentHP } : {}), ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}), ...(Number.isFinite(questPoints) ? { questPoints } : {}),
         ...(Number.isFinite(p?.x) && Number.isFinite(p?.z) ? { pos: { x: p.x, z: p.z, level: Number.isFinite(p.level) ? p.level : 0 } } : {}) };
 }
 
@@ -2481,6 +2603,12 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
 // script) keeps its account, and an owner pause (a stop file) keeps its account. An unmarked job that is off holds an
 // account only when no marked job names it: a finished coordinator run does not block a handover, but by itself it
 // frees nothing, since the coordinator may plan that account next.
+// The accounts that a swarm.json reservation holds: a job that is no planner job of `side` and has no script (the main and
+// specialist accounts, the gang squad). A reservation gives no job to its account (plannableAccounts) and no stock or coins to
+// another account (the donor filters of scripts/autopilot.ts); an order that gives TO it still runs.
+export function reservedAccounts(jobs: readonly any[], side: string): Set<string> {
+    return new Set(jobs.filter(j => j?.autopilot !== side && !j?.script).flatMap(j => [j?.account, ...(j?.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
+}
 export function plannableAccounts(jobs: readonly any[], side: string, listed: readonly string[], paused: ReadonlySet<string>): string[] {
     const names = (j: any) => [j?.account, ...(j?.accounts ?? [])].filter(Boolean).map((a: string) => a.toLowerCase());
     const mine = (j: any) => j?.autopilot === side;

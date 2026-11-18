@@ -12,6 +12,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { openBot, serverFromEnv, settle } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
+import { assertSideOwns } from '../packages/core/src/fleet';
+import { ensureCredential } from '../packages/core/src/fleet-vault';
 import { lootCapacity } from '../packages/core/src/loot-policy';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { RosterFeed } from '../packages/core/src/roster-feed';
@@ -21,7 +23,7 @@ import { tradePartners } from '../packages/core/src/tradeguard';
 import { readOpponent, readOpponents } from '../packages/core/src/opponent';
 import { componentId } from '../packages/core/src/logout';
 import { MARKET_FILE, marketQuotes } from './market-cache';
-import { bestFood, castableFreeze, dangerReason, defaultSpec, estMaxHit, fightPlayer, freezeSpell, getObjNames, isMulti, observePlayer, type FightOptions, type Kit } from './pk';
+import { bestFood, castableFreeze, dangerReason, defaultSpec, estMaxHit, fightPlayer, freezeSpell, getObjNames, isMulti, observePlayer, packGain, recordKillLoot, type FightOptions, type Kit } from './pk';
 export { castableFreeze, freezeSpell };
 import { armourDefence } from './pk-read';
 
@@ -475,6 +477,14 @@ export function accountServer(name: string, root = resolve(import.meta.dir, '..'
     return serverFromEnv(readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', name, 'bot.env'), 'utf8'));
 }
 
+// The account's server for a check that runs before openBot (the death ledger). A bot.env that this machine lacks comes from the
+// fleet vault the way openBot restores it: after the side check, before the read. A bot.env that stays unreadable throws.
+export function accountServerBeforeLogin(name: string, deps: { assertOwn: (n: string) => void; restore: (n: string) => void; read: (n: string) => string } = { assertOwn: assertSideOwns, restore: ensureCredential, read: n => accountServer(n) }): string {
+    deps.assertOwn(name);
+    deps.restore(name);
+    return deps.read(name);
+}
+
 export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolean, emit: (e: object) => void, server = accountServer(session.name)) {
     const { sdk, bot } = session;
     const me = () => { const p = sdk.getState()?.player; return p && { x: p.worldX, z: p.worldZ, level: p.level, combat: p.combatLevel, hp: p.hp, maxHp: p.maxHp }; };
@@ -794,7 +804,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                     stats.kills++;
                     const at = fight.targetAt ?? lastTile;
                     await sdk.waitForTicks(4);
-                    if (cfg.loot && at) await loot(at);
+                    if (cfg.loot && at) { const pack = sdk.getInventory().map(i => ({ id: i.id, count: i.count })); await loot(at); recordKillLoot(fight, packGain(pack, sdk.getInventory())); }
                     return "kill";
                 }
                 if (fight.outcome === "died") { stats.deaths++; return "dead"; }

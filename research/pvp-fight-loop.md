@@ -22,7 +22,7 @@ Evidence: `.practice/pvp-escape/escape-final-source.log` and the seed reports in
 
 The finite live consumer is a 900-tick hunter trip through `aio-pvp.ts hunt` after the owning controller qualifies
 the source and observes a complete owned kit. Existing account assignments, supply reservations and stops apply.
-Saved local stock does not establish a complete hunter kit. Credited live kills and Wilderness control remain unknown.
+Saved local stock does not establish a complete hunter kit. No credited live kill receipt exists ([Kill receipts](#kill-receipts)). Wilderness control remains unknown.
 
 The separate starter-kit stage has a fixed acquisition intent: two cheese, with its existing 1..2000 tick cap.
 The native `pvp:stage-kit` case buys and banks both cheese for 68 GP, keeps HP10, XP and protected stock, and logs out.
@@ -56,6 +56,42 @@ Source -> local consumer -> reuse -> check: the pinned server's PvP scripts (`ve
 in-process client's player entities (`webclient/src/dash3d/ClientPlayer.ts`, `ClientEntity.ts`) -> `scripts/pk.ts` -> reuse the SDK sends
 (`sendInteractPlayer`, `sendSpellOnPlayer`, `sendTogglePrayer`, `sendUseItem`) and read head icons, worn items and the health bar from
 `Session.client`, which leaves the SDK state and the swarm's launch release unchanged -> `scripts/pk.test.ts` and the duels below.
+
+## Kill receipts
+
+Source -> local consumer -> adapt -> check: the session lifecycle receipts (`packages/core/src/session-lifecycle.ts`: separate
+practice and live trees, one file for each event) and the feed reader `scripts/measure/pk-rival-feed.ts` -> `fightPlayer` and
+`packages/router/src/goal-scoreboard.ts` -> adapt the tree layout, reuse the appearance decoder and the trace digest ->
+`packages/core/test/kill-receipt.test.ts`, `scripts/pk-kill-feed.test.ts`, `packages/router/test/goal-scoreboard.test.ts`,
+`pvp:fight`, `pvp:squad` and `extra:fight-kill-feed`.
+
+`fightPlayer` writes one receipt in the tick of the killer's message for its target (`pvp_combat.rs2` `pvp_death_message`).
+The file is `.practice/kill-receipts/<practice|live>/<server>/<account>/<id>.json` (`packages/core/src/kill-receipt.ts`).
+The receipt holds these fields:
+
+- the killer account, the victim, the server and the session attempt
+- the wall clock, the session tick, the tile, the Wilderness level and single-way or multi-way combat
+- the server message, the worn items, the switch items of the kit and the fight totals
+- the loot, which the pickup of the squad, gang, team, hunt or roam adds after the kill
+- the world-feed match: the death animation of the victim within 6 s of the kill (`scripts/pk-kill-feed.ts`)
+
+A session on this machine gives a practice receipt. A session with no lifecycle identity gives a practice receipt.
+The feed check is on for a live server and off for a practice engine. `KILL_FEED=1` starts it on an engine that has
+`WORLD_FEED` set. `bun scripts/pk-kill-feed.ts <receipt.json> <trace.jsonl>` adds the match from a recorded trace.
+
+The scoreboard field `goals.army.creditedKills` counts receipts from the live tree of the live server. A receipt gives
+credit only when these conditions are true:
+
+- its own fields say live and name the live server
+- the killer is an own account and the victim is not an own account
+- the Wilderness level is 1 or more
+- the server message is a kill message for the victim
+- its time is not after the observation
+
+With no credited receipt the field is `null`. The metric `army.creditedKills` is the count, 0 included.
+
+Gap: no live receipt exists, because no live fight ran after this change. The feed match is not a condition of credit.
+The receipts of other fleet sides are not read. The Wilderness level of a receipt comes from z only.
 
 ## Spar and ladder
 
@@ -1186,6 +1222,120 @@ runs; only stacks worth 20,000 gp or more, 24 kills and about 2.23M; no loot (`L
 (`FREEZE=0`, seeds 1 to 4), 10 of 16 against the base's 11. The cheap stacks (sharks, runes) cost the ticks of a kill,
 so the roam's `LOOT_MIN` default is 20,000.
 
+### Death, skull and re-kit
+
+Source -> local consumer -> reuse/adapt -> check: the pinned server's `death.rs2` (`pvp_death_lose_items`,
+`move_priciest_item_on_hero_to_death`), `pvp_death_mark.rs2`, `pvp.constant`, `pk_skull.rs2` and `ring_of_life.rs2` -> `hunt`
+in `scripts/pk-hunt.ts` and `fightPlayer` in `scripts/pk.ts` -> adapt (the rules are read from the content, no upstream code)
+-> `scripts/pk-hunt.test.ts`, `scripts/pk.test.ts` and `extra:hunt-death-rekit`.
+
+What a death to a player does (`death.rs2`): the pack and the worn items drop where the account died. An account with no skull
+keeps its 3 dearest items (the highest content `cost`, one unit at a time, an item with cost 0 never), Protect Item keeps 1
+more, and a skulled account keeps only that one. The account respawns at Lumbridge with 1 Hitpoints and no skull, and a death
+mark of 1,000 ticks keeps any later death at 1 Hitpoint. The bank is not touched.
+
+- **Skull.** `ownSkull` reads the head icon of the client's local player. `fightPlayer` logs `PK skull on|off` with the
+  items a death keeps and loses at the start and at each change (`deathRisk`). `protectItem: 'skulled'` turns Protect Item on
+  only while the skull shows. The default stays on, as measured; no case measures `'skulled'` yet.
+- **A death in the hunt.** `hunt` detects the new life (`lifeId`), walks to the Edgeville bank at 1 Hitpoints, takes sharks and
+  the pieces that the account wore when the hunt began (what the bank holds), wears them and eats up
+  (`rekitAfterDeath`). The next pass restocks the trip. `HUNT_MAX_DEATHS` (default 1) bounds the re-kits: a later death ends
+  the run with its record (`death=`, the respawn tile, the Hitpoints, the pack that it kept, the step that stopped the
+  re-kit). A piece that the bank lacks is in `missing`, and the restock ends the run when the trip cannot be filled.
+- **The session.** A death ends a bot session by default: `openBot` (`packages/core/src/bot.ts`) prints the DEATH line and calls
+  `finish`. `pk-hunt.ts` opens its account with `continueAfterDeath`: `deathStep` prints one DEATH line and moves the life baseline
+  to the new life, and `stopReasonOf` keeps the stop file, the fleet lease and the stall checks live (a stop file ends the session
+  after a re-kit). With the default, `extra:hunt-death-rekit` ends in the walk to the bank with `session ended`.
+- **The end line.** A hunt that ends in a death ends as `RESULT fail died hunt died: ...` (`huntEnd`), which the supervisor reads as
+  a death (`supervise.ts`, `supervise-host.ts` `classify`: `RESULT fail died`). The roam and the army use the default
+  `openBot`, so a death ends them as `RESULT fail died`. The gang, team and spar meetings are practice only.
+- **The case.** `extra:hunt-death-rekit`: the hunter wears a rune full helm and a bronze dagger and holds both and sharks in its
+  bank. A target in full rune armour (profile `champion`) kills it in about 150 ticks. With `HUNT_MAX_DEATHS=9` the case ends
+  at its cap of 900 ticks with `deaths 2 rekits 2`: each death sends the account to (3222, 3218) with 1 Hitpoints, and the re-kit
+  takes about 200 ticks (the respawn wait, the walk to Edgeville, the sharks and the pieces). Seed 7, one run. A piece of the
+  starting kit that the bank lacks ends the run (`died: kit lacks <ids>`). `HUNT_MAX_DEATHS` is a whole number of 0 or more, else 1.
+- **A threat retreat.** `hunt` uses the result of the retreat: a death is handled, and a retreat that did not leave the
+  Wilderness is counted in `retreatsFailed` and logged.
+
+- **The squad.** `hold` in `scripts/pk-squad.ts` recovers a member's death with the same `rekitAfterDeath`, then the member's bank trip
+  (restock, eat up, walk back to the post). `SQUAD_MAX_DEATHS` (default 1) bounds the recoveries of each member in a run. A death over
+  the limit ends the member's part, and the run ends as `RESULT fail died squad ...`. A run with only recovered deaths ends ok with
+  `died=0 rekits=N`. The squad opens its accounts with `continueAfterDeath`.
+
+- **The death ledger.** `packages/core/src/pvp-deaths.ts` keeps `.practice/pvp-deaths.json`: the hunt and the squad record each
+  death on a live server (account, server, time, script, tile). A local server records nothing and is never refused. At its start a
+  run refuses with `RESULT fail died death ledger: ...` when an account in it has `PVP_MAX_DEATHS_PER_ACCOUNT` (default 2) deaths, or
+  its accounts together have `PVP_MAX_DEATHS_PER_DAY` (default 3), in the last 24 hours. A run stops at its `PVP_MAX_DEATHS_PER_RUN`-th death
+  (default 2): the squad shares one counter across its members, and the hunt re-kits `PVP_DEATH_LIMITS.perRun - 1` deaths. The three limits are
+  one constant, `PVP_DEATH_LIMITS`, with the reason beside it. They hold until a person or the lead reads the cause. The supervisor reads that line as a death, so
+  the swarm holds the job and a person clears the ledger (edit the file). A ledger that cannot be read refuses the run.
+
+Ledger limits of the file:
+
+- A write reads the file, adds one entry and renames a temporary file over it. Two deaths in the same millisecond from two processes can lose one entry.
+- A write that fails (a full disk, a locked file) logs the error and the run goes on. The ledger then misses that death, so it fails open.
+- The limits apply at the start of a run. A run that starts under the limit can end over it.
+- A rescue account that dies in the squad rescue is stranded and is not recorded.
+- A run on a local server records nothing.
+
+Gap: the hunt and the squad re-kit a death to a player in the Wilderness. The roam and the gang end their run at a death. The
+refusal at the start of the squad and hunt mains is not run by a test (the mains exit the process). The server read before it
+(`accountServerBeforeLogin`: side check, vault restore of a missing bot.env, then the read) and the ledger functions and the
+death hooks are.
+
+### Rings, prayer and poison in the gang meeting
+
+Source -> local consumer -> check: `ring_of_life.rs2`, `ring_of_recoil.rs2` and `pvp_combat.rs2` (both rings need a members
+world: `map_members`), `prayer.rs2` (the drain timer) and the live meeting above -> the `ring` slot of `scripts/pk-kits.ts`,
+`cureNow` and `idlePrayerOff` -> `extra:gang-live-check-x1` and its variants.
+
+Conditions: our kit `live-walker-iron` (variants `-recoil`, `-life`, `-pray`) with profile `gang-hunter` against the 3 accounts
+of `ganker-dds` with profile `ganker-live`, 2,400 ticks, lockstep engine, `--seeds 1,2,3 --seed-jobs 3`. Each cell is seed 1 /
+seed 2 / seed 3. `prayerOut` is the tick at which our prayer points reached 0.
+
+| Condition | kills | deaths | damage taken | prayerOut |
+|---|---|---|---|---|
+| base kit | 0 / 2 / 0 | 0 / 0 / 0 | 335 / 480 / 339 | 1223 / 976 / 739 |
+| base kit, prayers off while it waits | 2 / 1 / 1 | 0 / 0 / 0 | 444 / 302 / 226 | 554 / 1792 / 718 |
+| ring of recoil | 0 / 1 / 0 | 0 / 0 / 0 | 532 / 330 / 517 | 1054 / 816 / 540 |
+| ring of life | 0 / 3 / 1 | 0 / 0 / 0 | 448 / 424 / 520 | 1230 / 509 / 927 |
+| no escape (`escapeAt` 0) | 2 / 1 / 0 | 0 / 0 / 1 | 525 / 463 / 562 | 426 / 1200 / 740 |
+| no escape, ring of life | 1 / 1 / 1 | 1 / 0 / 0 | 571 / 463 / 181 | 399 / 1200 / 1159 |
+
+- **Recoil.** No gain: one kill against two, and 225 more damage taken in the 3 seeds. The ring breaks after 40 damage to the
+  attacker. Not kept.
+- **Life.** No gain that the numbers show. With no escape, one seed died without the ring and one seed died with it. The
+  seed with the ring that lived took 181 damage against 562. Seed 2 ends on the same ticks, damage and kills as its run with no
+  ring, so the ring changes nothing there. Seeds 1 and 3 differ from their runs with no ring (cause not found), so 3 seeds
+  cannot separate a ring from this spread. The log holds no game message, so it does not say whether the ring ever fired.
+  Not kept.
+- **Prayer.** `live-walker-iron` carries no prayer potion, so its prayer ends at 0 in every meeting. The pilot takes up to 3
+  prayer potions from its bank (`live-pilot.ts`), and the kit `live-walker-iron-pray` carries 3 in place of the defence
+  potion and 2 sharks. With it:
+
+| Condition (kit `-pray`) | prayer at the end | prayerOut |
+|---|---|---|
+| 2 potions | 0 / 0 / 0 | 1539 / 346 / 815 |
+| 2 potions, prayers off while it waits | 0 / 0 / 0 | 1814 / 1555 / 2008 |
+| 2 potions, `zeroDrainFlick` | 0 / 0 / 0 | 560 / 696 / 365 |
+| 2 potions, `defencePrayer` false | 0 / 0 / 0 | 745 / 1479 / 951 |
+| 2 potions, `zeroDrainFlick`, `defencePrayer` false, `offensiveFlick` | 0 / 30 / 0 | 821 / 969 / 785 |
+| 2 potions, prayers off while it waits, `defencePrayer` false | 0 / 0 / 0 | 1650 / 1682 / 2060 |
+| **3 potions, prayers off while it waits, `cureNow` (the defaults)** | **16 / 12 / 0** | never / 929 / 1655 |
+| the same with `defencePrayer` false | 0 / 0 / 0 | 2102 / 905 / 1844 |
+
+  Turning the prayers off while our account waits roughly doubles the ticks that the prayer lasts when potions are carried
+  (2,700 to 5,377 ticks summed over the 3 seeds). `zeroDrainFlick` and `defencePrayer` false do not help. The defaults end
+  the meeting with prayer left in 2 of 3 seeds (in seed 1 the prayer never ran out and 12 doses are left). Seed 3 ends at tick
+  2,400 with 0 and its prayer out at tick 1,655. Gap: 3 seeds,
+  and the third potion and the idle rule are not measured apart.
+- **The original case with the defaults.** `extra:gang-live-check-x1` (no prayer potion in the kit) with the prayers off while it
+  waits and `cureNow`: prayerOut 1184 / 1153 / 1330 against 1223 / 976 / 739, kills 0 / 1 / 0, damage taken 208 / 309 / 521,
+  prayer 0 at the end in each seed. The prayer lasts longer, and with no potion it still ends at 0.
+- **Poison.** `cureNow` is on by default: an antipoison goes down in the first tick after the poison message. It is not
+  measured apart from the other changes. Gap: `poisoned` is set from the message of the current fight only, so a poison
+  taken between two fights is not seen.
+
 ### The hunt's fight options against a defender
 
 `extra:hunt-defend` (the hunt route against a target in rune that defends on the champion with 18 sharks and a glory,
@@ -1595,6 +1745,29 @@ each bank row. This revision has no dragon scimitar: the melee list names the dr
 
 Gap: practice and unit proof only. No live restock ran after this change. The market file needs a refresh within 30 minutes
 before a pilot run (`bun scripts/market-cache.ts`), which the fleet agent does while it runs.
+
+## A squad death in the swarm
+
+The squad end line names the accounts that died (`diedAccounts=A,B`, `squadEnd` in `scripts/pk-squad.ts`). `scripts/swarm.ts` gives the
+`died after N runs` end to those accounts only (`endsOfRun`). The other members end `released after N runs`, which `startable` treats as
+resumable and which holds no script. A run that names no account of the job gives every member the run's end. A space in an account name is
+written as an underscore on the line, and the swarm compares both forms as one name. A name list that the supervisor's 200-character log cut
+ends is not read. A member that disconnected or was stranded, and did not die, is released and not held. A controller restart between the
+RESULT line and the supervisor's end line loses the names, so every member is held.
+
+The repair `kit-restored` (`applyKitRestored`) clears the script hold of a `died` end for the account that died. The scripts are
+`aio-pvp.ts`, `pk-squad.ts`, `pk-hunt.ts`, `pk-roam.ts` and `pk-army.ts`. The hold does not record the cause of the death: a death that the
+route or the food plan caused is cleared the same way as a kill by a player. The request must hold a passing receipt of
+`bun scripts/squad-ready.ts <account> --receipt <dir>`: newer than the death, at most 15 minutes old, and bound by its hash to the
+account's status file as it is now (the fresh bank and worn snapshot). The account must be inactive with a current logout proof. The hold
+stays in the history (`restored`) and does not block. No other hold kind is cleared.
+
+The receipt is a JSON file with a plain sha256 and no signature: it has the same trust as writing `.practice/swarm-repair.json` by hand. The
+swarm checks that `ok` is true, that `at` is recent and that the status file bytes are unchanged. It does not derive `ok` again from the status
+file, and it does not check `rule`, `bankAt` or `statusAt`: `squad-ready.ts --max-age 99999` gives an ok receipt on an old bank snapshot.
+
+Proof: `scripts/swarm.test.ts` (a five-member job with one death, a name with a space, a cut name list, a squad as an orchestrate job) and
+`scripts/pk-squad.test.ts` (the end line).
 
 ## Server rules the loop follows
 

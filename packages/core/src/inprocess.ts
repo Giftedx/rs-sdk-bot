@@ -26,6 +26,9 @@ import { assertActionScope } from './action-scope';
 import type { TickRecorder } from './tick-record';
 import {attachProgressionSession,preflightProgressionWork,processWork,type ProgressionSession} from './progression-session';
 import type {WorkDescriptor} from './progression-policy';
+// The longest single hold of a lockstep tick for a route search, under the 60 s idle limit of the client session.
+export const ROUTE_HOLD_MS = 45_000;
+export const routeHold = (routeMs: number): number => Math.min(routeMs, ROUTE_HOLD_MS);
 // The wait checks of every lockstep session of this process (selfWaiting in createShim).
 const waitingSessions = new Set<() => boolean>();
 // The executors that wait for the server to open a count dialog (a withdraw or deposit of X): the dialog comes in
@@ -173,10 +176,14 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     const busyMs = Number(process.env.SIM_BUSY_MS ?? 2000);
     const scriptMs = Math.min(busyMs, Number(process.env.SIM_SCRIPT_MS ?? 500));
     // A route search off the game thread (route-plan.ts) holds the tick until it ends: no game tick passes in a search,
-    // so a case gives the same ticks with empty and with full route caches. With the SIM_SCRIPT_MS bound the game went
-    // on one tick for each 500 ms of a search, and one case at one seed gave 1,901, 2,072 and 2,238 ticks.
-    // SIM_ROUTE_MS bounds the hold for a search that never answers.
+    // so a case gives the same ticks with empty and with full route caches. A tick that runs on a wall-clock bound
+    // during a search makes the tick count of a case follow the wall time of its searches.
+    // SIM_ROUTE_MS bounds the hold for a search that never answers: a search older than the bound holds no tick.
     const routeMs = Math.max(busyMs, Number(process.env.SIM_ROUTE_MS || 180_000));
+    // One hold is ROUTE_HOLD_MS at most: the client ends a session as idle after 60 s with no packet (IDLE_CYCLES of
+    // the lite session), and a held tick sends none. A longer search lets one tick pass each ROUTE_HOLD_MS and holds
+    // the next one.
+    const routeHoldMs = routeHold(routeMs);
     const ackFile = process.env.SIM_ACK_FILE;
     // pumpMs: the packet reads of the client; stateMs: the state of a tick; scriptMs: the tick listeners (the script).
     const ackStat = { ticks: 0, held: 0, heldMs: 0, capped: 0, pumpMs: 0, stateMs: 0, scriptMs: 0 };
@@ -222,13 +229,13 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             // The count-dialog wait counts as a wait only until the dialog is open; then the tick holds for the submit,
             // so the submit lands in the same tick on every run, whatever the executor's 50 ms poll meets.
             const dialogOpen = !!(client as { isChatBackInputOpen?(): boolean }).isChatBackInputOpen?.();
-            const routes=pendingRouteWork();
+            const routes=pendingRouteWork(routeMs);
             // Persistent state listeners do not make an off-tick route a game-input wait.
             // Actual tick/actions/dialog waits still advance; SIM_ROUTE_MS bounds this hold.
             const routeBusy=routes>0&&waitLeft===0&&!serverWait&&!inDialogWait();
             const busy = routeBusy || (running && waitLeft === 0 && !serverWait && !(inDialogWait() && !dialogOpen)) || !waiting;
             // A script that ended after its last tick wait leaves no wait: SIM_SCRIPT_MS (500) bounds that hold.
-            if (busy && performance.now() - since < (routeBusy ? routeMs : scriptTick ? scriptMs : busyMs)) { if (turns++ < 20) setImmediate(check); else setTimeout(check, 1); return; }
+            if (busy && performance.now() - since < (routeBusy ? routeHoldMs : scriptTick ? scriptMs : busyMs)) { if (turns++ < 20) setImmediate(check); else setTimeout(check, 1); return; }
             const held = performance.now() - since;
             ackStat.ticks++; if (busy) ackStat.capped++; if (held > 2) { ackStat.held++; ackStat.heldMs += held; }
             if (ackFile && held > 2) appendFileSync(ackFile, `ACK tick=${tick} bot=${(client as { loginUser?: string }).loginUser ?? "?"} waits=${tickWaits.active} state=${stateWaiters}/${stateWaitersLow} running=${running} pending=${actionPending} serverWait=${serverWait} routes=${routes} sdk=${[...inFlight].map(([k, n]) => `${k}${n > 1 ? `x${n}` : ''}`).join(',') || '-'} held=${held.toFixed(0)}ms${busy ? ' CAPPED' : ''}\n`);
@@ -642,14 +649,27 @@ export function connectFailedDetail(error: unknown, rows: FetchRow[], max = 300)
     return text();
 }
 
+// Bots of this process that log in or are logged in. A host job (packages/core/src/host.ts) and a squad job hold
+// several. Each Git call of a login claim is synchronous, so a claim that waits stalls each bot of its process.
+let botsInProcess = 0;
+export const botsInThisProcess = () => botsInProcess;
+// The swarm declares how many bots the job of a process holds (SWARM_BOTS, scripts/swarm.ts). The count above sees a
+// bot only when it logs in: the first bot of a host logs in before its second bot starts. So only a process that is
+// declared to hold one bot may wait. A process with no declaration (a manual run, a fleet trade) does not wait.
+export const soloProcess = (env: Record<string, string | undefined> = process.env) => env.SWARM_BOTS === '1';
 export type StartSession = (o: any) => Promise<{ client: unknown; stop(): void; stopped: Promise<unknown> }>;
 // The network part of connectInProcess. The lifecycle intent is written first; if it cannot be written, no
 // connection starts. Every later event comes from this session's own callbacks. Tests pass a fake startSession.
 export async function startInProcessSession(opts: { name: string; password: string; server?: string; members?: boolean; work?:WorkDescriptor },
-    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void; planLock?: string; sharedAccount?:{root:string;side:string;recover?:boolean;admission?:RecoveryConnectionAdmission;trade?:TradeAdmission} }): Promise<Session> {
+    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void; planLock?: string; sharedAccount?:{root:string;side:string;recover?:boolean;admission?:RecoveryConnectionAdmission;trade?:TradeAdmission}; claimSwarm?: typeof acquireFleetSwarmClaim; soloProcess?: boolean }): Promise<Session> {
     const { startSession, sdk, Actions, cacheDir } = deps;
     let endResolve!: (v: { reason: string }) => void;
     const ended = new Promise<{ reason: string }>(r => { endResolve = r; });
+    // This bot counts from here until its login fails or its session ends.
+    botsInProcess++;
+    let counted = true;
+    const leave = () => { if (counted) { counted = false; botsInProcess--; } };
+    void ended.then(leave);
     let shim: Shim | null = null;
     const host = opts.server ?? 'localhost:8888'; // host:port, same as SERVER in bot.env
     let sharedClaim: ReturnType<typeof acquireFleetSwarmClaim> | undefined;
@@ -661,7 +681,11 @@ export async function startInProcessSession(opts: { name: string; password: stri
             const { root, side, recover, admission, trade } = deps.sharedAccount;
             const target = { account: opts.name, server: host, side };
             if (trade) tradeClaim = acquireFleetTradeClaim(root, {...target, orderId: trade.orderId, role: trade.role});
-            else sharedClaim = acquireFleetSwarmClaim(root, target, { recover,admission });
+            // The one bot of a process, outside the plan lock, waits for a slow Git authority (about 130 s at most).
+            // A bot of a process with several bots and a login under the lock keep the short window: the wait would
+            // stall the other bots or hold the lock.
+            else sharedClaim = (deps.claimSwarm ?? acquireFleetSwarmClaim)(root, target, { recover,admission,
+                patient: !deps.planLock && (deps.soloProcess ?? soloProcess()) && botsInProcess === 1 });
             deps.beforeConnect?.(); // A stop or expired permit can land during the Git call.
             if (trade && tradeClaim) trade.prepare(tradeClaim);
         }
@@ -679,6 +703,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
     try { attempt = deps.planLock ? await withPlanWrite(admit, deps.planLock) : admit(); }
     catch (error) {
         // No call to startSession has run. A failed release leaves the shared hold in place.
+        leave();
         try {
             tradeClaim?.release();
             sharedClaim?.abortBeforeNetwork();
@@ -723,6 +748,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
     } catch (e) {
         attempt.record('connect-failed', connectFailedDetail(e, http.rows));
         releaseConfirmed();
+        leave();
         throw e;
     } finally { http.restore(); }
     // The bootstrap callback runs before startSession returns.
@@ -730,6 +756,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
     if (!sh) {
         attempt.record('connect-failed', 'no packet observer');
         releaseConfirmed();
+        leave();
         throw new Error('Session did not install its packet observer');
     }
     attempt.record('connected');

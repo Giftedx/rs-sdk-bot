@@ -145,7 +145,7 @@ function doorFixture(x:number,z:number){
 test('door gate starts in the recorded house tiles and outside, earns nothing and stays apart from the full proof',()=>{
  expect(doorCases.map(c=>[c.start.x,c.start.z])).toEqual([[2651,3304],[2650,3304],[2653,3302]]);
  expect(doorCases.every(c=>c.preset.position!.x===c.start.x&&c.preset.position!.z===c.start.z&&c.preset.skills!.Hitpoints===10)).toBe(true);
- expect(DOOR_ENV).toEqual({...WORKER_ENV,TICKS:'0'});
+ expect(DOOR_ENV).toEqual({...WORKER_ENV,TICKS:'0',PROGRESSION_CONSUMER:JSON.stringify({bank:{995:9900}})});
  expect(DOOR_DIR).toBe('door-repro');
  // Full delivery still requires every earning, restart, exhausted and error case.
  expect(doorCases.some(d=>cases.some(c=>c.id===d.id))).toBe(false);

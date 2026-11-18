@@ -81,7 +81,7 @@ test('failure to observe protection OFF cannot report goal fulfilled',async()=>{
 });
 test('BONE_ID=532 plans owned big bones at375XP and banks at Varrock West',()=>{
     expect(prayerOptions(['bun','script','any','90'],{BONE_ID:'532',MAX_BURY:'1500'})).toEqual({target:90,cap:1500,maximum:1500,reserve:6,bone:532});
-    expect(BONE_XP[532]).toBe(375);expect(BONE_XP[536]).toBe(1800);
+    expect(BONE_XP[526]).toBe(112.5);expect(BONE_XP[532]).toBe(375);expect(BONE_XP[536]).toBe(1800);
     expect(planPrayer(1400,xpForLevel(74),1500,6,90,375)).toBe(Math.ceil((xpForLevel(90)-xpForLevel(74))/375));
     expect(prayerBank({worldX:3186,worldZ:3437,level:0})).toEqual({x:3185,z:3436});
     expect(prayerBank({worldX:2620,worldZ:3330,level:0})).toEqual({x:2619,z:3332});
