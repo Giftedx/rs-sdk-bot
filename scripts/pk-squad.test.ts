@@ -243,3 +243,8 @@ describe('squad end with a death', () => {
         expect(w.deaths).toBe(2);
     });
 });
+
+test('the squad end line carries the kill receipt proof right after the kills, for the bench pass rule', () => {
+    const end = squadEnd({ accounts: 4, kills: 3, taken: 500, trips: 1, fights: 6, picked: {}, dropped: [], stranded: [], deaths: 0, gangDied: 3, receiptProof: 'killReceipts=3 receiptDomain=practice feedMatched=0' });
+    expect(`RESULT ok ${end.detail}`).toBe('RESULT ok squad accounts=4 kills=3 killReceipts=3 receiptDomain=practice feedMatched=0 gangDied=3 died=0 taken=500 trips=1 picked={}');
+});

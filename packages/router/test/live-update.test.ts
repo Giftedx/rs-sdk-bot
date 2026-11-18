@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
-import { applyUpdate, coordinatorHolds, gitIn, liveRuns, mergedDeliveryCopies, mergeText, parseStatus, rebasableDeliveryEdits, patchChangedFiles, patchCollisions, planUpdate, qualificationSource, readCheckout, reloadsFor, resetVendor, vendorExact, vendorReleaseFiles, vendorState, type UpdateInput } from '../src/live-update';
+import { TRADE_HOLD_MS, applyUpdate, coordinatorHolds, gitIn, liveRuns, mergedDeliveryCopies, mergeText, parseStatus, rebasableDeliveryEdits, patchChangedFiles, patchCollisions, planUpdate, qualificationSource, readCheckout, reloadsFor, resetVendor, vendorExact, vendorReleaseFiles, vendorState, type UpdateInput } from '../src/live-update';
 import { liveUpdateFile, reloadDue } from '../../core/src/live-reload';
 
 const base: UpdateInput = { branch: 'master', ahead: 0, behind: 2, incoming: ['scripts/swarm.ts', 'docs/a.md'], dirty: [], holds: [], heldFiles: [] };
@@ -474,5 +474,45 @@ test('a daemon reloads only for an update that is newer than its start and names
         writeFileSync(liveUpdateFile(dir), '{');
         expect(reloadDue(dir, 'autopilot', 50)).toBe(false);
         expect(existsSync(liveUpdateFile(dir))).toBe(true);
+    });
+});
+
+test('a fleet trade session holds an update that changes a file it loads: its entry is an absolute path', () => {
+    scratch('rsbot-live-trade-', dir => {
+        const status = join(dir, '.practice', 'status'), now = 10_000_000;
+        mkdirSync(status, { recursive: true });
+        writeFileSync(join(dir, 'swarm.json'), JSON.stringify({ jobs: [] }));
+        const row = (name: string, more: object) => writeFileSync(join(status, name + '.json'), JSON.stringify({ name, server: 'live', at: now - 1000, started: now - 60_000, workRevision: 'a'.repeat(64), ...more }));
+        // The fleet agent gives its trade workers the absolute path of the script (scripts/fleet-agent.ts tradeEnvironment).
+        row('Giver', { workEntry: join(dir, 'scripts', 'fleet-trade.ts') });
+        const asked: string[][] = [];
+        const closure = (entries: string[]) => { asked.push(entries); return entries.includes('scripts/fleet-trade.ts') ? ['scripts/fleet-trade.ts', 'packages/core/src/inprocess.ts'] : []; };
+        const runs = liveRuns(dir, 'live', closure, now);
+        expect(asked).toEqual([['scripts/fleet-trade.ts']]);
+        expect(runs).toEqual([{ name: 'Giver', files: ['scripts/fleet-trade.ts', 'packages/core/src/inprocess.ts'] }]);
+        expect(planUpdate({ ...base, incoming: ['packages/core/src/inprocess.ts'], liveRuns: runs })).toEqual({ action: 'wait', reason: 'the live run of Giver loads packages/core/src/inprocess.ts' });
+        // A trade session ends with its order window. One that still writes its status after TRADE_HOLD_MS holds no update.
+        row('Giver', { workEntry: join(dir, 'scripts', 'fleet-trade.ts'), started: now - TRADE_HOLD_MS + 1000 });
+        expect(liveRuns(dir, 'live', closure, now)).toHaveLength(1);
+        row('Giver', { workEntry: join(dir, 'scripts', 'fleet-trade.ts'), started: now - TRADE_HOLD_MS });
+        expect(liveRuns(dir, 'live', closure, now)).toEqual([]);
+        // The limit is for a trade only: a coordinator run of that age still holds.
+        row('Giver', { workEntry: 'scripts/a.ts', coordinatorRunId: 'task-1', started: now - 3 * TRADE_HOLD_MS });
+        expect(liveRuns(dir, 'live', entries => entries.map(e => e + '+imports'), now)).toEqual([{ name: 'Giver', files: ['scripts/a.ts+imports'] }]);
+    });
+});
+
+test('a live run whose entry gives no file holds each update: the files it loads are not known', () => {
+    scratch('rsbot-live-unknown-', dir => {
+        const status = join(dir, '.practice', 'status'), now = 10_000_000;
+        mkdirSync(status, { recursive: true });
+        writeFileSync(join(dir, 'swarm.json'), JSON.stringify({ jobs: [] }));
+        writeFileSync(join(status, 'Lost.json'), JSON.stringify({ name: 'Lost', server: 'live', at: now - 1000, workEntry: 'scripts/gone.ts', workRevision: 'a'.repeat(64) }));
+        const runs = liveRuns(dir, 'live', () => [], now);
+        expect(runs).toEqual([{ name: 'Lost', files: [], unknown: true }]);
+        expect(planUpdate({ ...base, liveRuns: runs })).toEqual({ action: 'wait', reason: 'the live run of Lost has an entry that this checkout cannot read: its files are not known' });
+        // A row with no entry is as before: it names no file.
+        writeFileSync(join(status, 'Lost.json'), JSON.stringify({ name: 'Lost', server: 'live', at: now - 1000, workRevision: 'a'.repeat(64) }));
+        expect(liveRuns(dir, 'live', () => [], now)).toEqual([{ name: 'Lost', files: [] }]);
     });
 });
