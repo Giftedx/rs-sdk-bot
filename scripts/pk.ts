@@ -94,7 +94,9 @@ export type FightOptions = {
     defencePrayer?: boolean;
     // false: no Protect Item. An account with no skull keeps its three best items without it, and a melee turn then
     // has four prayers on, the most that the prayer flick turns off and on again in one tick.
-    protectItem?: boolean;
+    // 'skulled': Protect Item only while our own skull shows. A skulled account keeps no item without it, so it is the one
+    // item that the prayer saves; an account with no skull keeps three without it and the prayer saves a fourth (deathRisk).
+    protectItem?: boolean | 'skulled';
     // Read the opponent, as a skilled player does. All off by default.
     // predictPrayer: pray against the style the opponent will use next, learnt from the order of its weapons, in place
     // of the weapon it holds now (which is its last attack, one step behind).
@@ -252,8 +254,8 @@ export type FightOptions = {
     // At this Wilderness level or under, the way out is a walk south over the edge of the Wilderness: no player can
     // attack a player outside it (pvp_combat.rs2:32-48). It needs no item.
     escapeWalk?: number;
-    // Drink an antipoison in the first tick after the poison shows, though the drink can cost a tick of the next
-    // attack. Without it the loop waits for a tick with 3 ticks to the next attack, and turns back to back give none.
+    // Drink an antipoison in the first tick after the poison shows (default), though the drink can cost a tick of the next
+    // attack. false: the loop waits for a tick with 3 ticks to the next attack, and turns back to back give none.
     cureNow?: boolean;
     // The wait of a protect prayer change, as weights of 0, 1, 2 ... ticks: [48, 35, 11, 5] waits 1 tick in 35 of 99
     // changes. The bench gang gets the wait that the world feed shows the dagger gang has (research/pvp-fight-loop.md,
@@ -299,6 +301,34 @@ export function protectedStyles(headicons: number | undefined): Set<Style> {
     return out;
 }
 export const skulled = (headicons: number | undefined) => ((headicons ?? 0) & 1) !== 0;
+// Our own skull: the head icon of the client's local player. Null when the client shows no local player (a test double).
+export const ownSkull = (client: unknown): boolean | null => {
+    const local = (client as { localPlayer?: { headicons?: number } } | undefined)?.localPlayer;
+    return local ? skulled(local.headicons) : null;
+};
+// What a death to a player in the Wilderness keeps and loses (content death.rs2 pvp_death_lose_items and
+// move_priciest_item_on_hero_to_death): an account with no skull keeps its 3 dearest items, Protect Item keeps 1 more, and a
+// skulled account keeps only that one. Each keep takes one unit of the item with the highest content cost (items with a cost of
+// 0 are never kept). `cost` gives the content cost of an item id (knowledge/items.json). `units` are the pack and the worn items.
+export function deathRisk(units: readonly { id: number; count: number }[], cost: (id: number) => number, skull: boolean, protect: boolean): { keeps: number; kept: number[]; keptValue: number; lostValue: number; lostUnits: number } {
+    const left = new Map<number, number>();
+    for (const u of units) if (u.count > 0) left.set(u.id, (left.get(u.id) ?? 0) + u.count);
+    const keeps = (skull ? 0 : 3) + (protect ? 1 : 0), kept: number[] = [];
+    for (let i = 0; i < keeps; i++) {
+        let best: number | undefined;
+        for (const id of left.keys()) if (cost(id) > (best === undefined ? 0 : cost(best))) best = id;
+        if (best === undefined) break;
+        kept.push(best);
+        left.set(best, left.get(best)! - 1);
+        if (left.get(best) === 0) left.delete(best);
+    }
+    let lostValue = 0, lostUnits = 0;
+    for (const [id, n] of left) { lostValue += cost(id) * n; lostUnits += n; }
+    return { keeps, kept, keptValue: kept.reduce((n, id) => n + cost(id), 0), lostValue, lostUnits };
+}
+let costTable: Map<number, number> | undefined;
+// The content cost of an item (knowledge/items.json). 0 for an item that the file does not know.
+export const itemCostOf = (id: number): number => (costTable ??= new Map((JSON.parse(readFileSync(join(resolve(import.meta.dir, '..'), 'knowledge/items.json'), 'utf8')) as { id: number; cost?: number }[]).map(i => [i.id, i.cost ?? 0]))).get(id) ?? 0;
 
 // The style a worn weapon attacks with, from its object name (content pack/obj.pack). No weapon is melee (fists).
 let objNames: Map<number, string> | undefined;
@@ -928,6 +958,13 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     // Tank torso worn or carried at fight start (unequipped for a cast/shot and re-equipped on melee turns).
     const names = getObjNames();
     const initState = sdk.getState();
+    // An antipoison in the first tick after the poison (default). false: only in a tick with 3 ticks to the next attack, which
+    // bow and dagger turns back to back do not give: in one live meeting 139 of 455 damage was poison and no antipoison was drunk.
+    const cureNow = o.cureNow !== false;
+    // Protect Item on or off for this tick: see FightOptions.protectItem.
+    const protectItemNow = () => o.protectItem === false ? false : o.protectItem === 'skulled' ? ownSkull(s.client) === true : true;
+    // Our skull and what a death would cost with it, logged at the start and at each change (the attacker takes a skull).
+    let lastSkull: boolean | null | undefined;
     // An account without Dragon Slayer cannot put its rune platebody back on after a cast ("You have not earned the
     // right to wear this yet."), so the loop leaves such a body on. The quest journal gives the state; where it does
     // not, the first refusal ends the removals.
@@ -945,6 +982,14 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         result.ticks = now - start;
         if (!state || !me || !at) continue;
         feedWatch?.aim(at.x, at.z);
+        const skullNow = ownSkull(s.client);
+        if (skullNow !== lastSkull) {
+            lastSkull = skullNow;
+            if (skullNow !== null) {
+                const risk = deathRisk([...state.inventory, ...state.equipment], itemCostOf, skullNow, protectItemNow());
+                log(`PK skull ${skullNow ? 'on' : 'off'}: a death keeps ${risk.kept.length} item${risk.kept.length === 1 ? '' : 's'} and loses ${risk.lostUnits} items worth ${risk.lostValue}`);
+            }
+        }
         const stoodStill = !!prevSelf && at.x === prevSelf.x && at.z === prevSelf.z;
         if (prevSelf && (at.x !== prevSelf.x || at.z !== prevSelf.z)) selfFrozenUntil = now;
         prevSelf = { x: at.x, z: at.z };
@@ -1216,7 +1261,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const prayers = state.prayers;
         // Drinking a potion triggers p_delay(1) in processClientsIn (consume_effects.rs2:167), blocking client input on
         // now+1 and now+2 (ready on now+3). Drink non-emergency potions only when now+3 <= nextAttack.
-        if (!castShield && now >= potionReady && (prayers.prayerPoints <= 5 || now + 3 <= nextAttack || (o.cureNow && poisoned && !!slotOf(ITEMS.antipoison)))) {
+        if (!castShield && now >= potionReady && (prayers.prayerPoints <= 5 || now + 3 <= nextAttack || (cureNow && poisoned && !!slotOf(ITEMS.antipoison)))) {
             let potion = prayers.prayerPoints <= restoreAt ? slotOf([...ITEMS.prayerPotion, ...ITEMS.superRestore]) : undefined;
             if (!potion && poisoned) {
                 potion = slotOf(ITEMS.antipoison);
@@ -1443,7 +1488,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                     upcomingStyle: upcomingTurn?.style ?? null,
                     specMeleeLikely: !!o.spec && lowHealth(seen, o.spec.below),
                     defencePrayer: o.defencePrayer !== false && !bursting,
-                    protectItem: o.protectItem !== false,
+                    protectItem: protectItemNow(),
                     budget,
                 });
                 for (const p of plan.toggles) { void sdk.sendTogglePrayer(p); budget--; }
@@ -1573,7 +1618,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             budget -= toWield.length;
             if (o.meleeStyle !== undefined && specStyle === 'melee' && state.combatStyle && state.combatStyle.currentStyle !== o.meleeStyle && budget > 0) { void sdk.sendSetCombatStyle?.(o.meleeStyle); budget--; }
             if (prayers.prayerPoints > 0 && budget > 0) {
-                const { want: wantPray } = combatPrayers(prayerBase, overhead, specStyle === 'melee', o.defencePrayer !== false && !bursting, o.protectItem !== false);
+                const { want: wantPray } = combatPrayers(prayerBase, overhead, specStyle === 'melee', o.defencePrayer !== false && !bursting, protectItemNow());
                 const orderedPray = [...wantPray].sort((a, b) => Number(b === overhead || isOverheadPrayer(b)) - Number(a === overhead || isOverheadPrayer(a)));
                 const hadPrayer = prayers.activePrayers.some(Boolean);
                 let turnedOn = 0;
@@ -1668,7 +1713,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             : [];
         budget -= toRemove.length;
         if (prayers.prayerPoints > 0 && budget > 0) {
-            const { want: wantPray, off: offPray } = combatPrayers(prayerBase, overhead, turn.style === 'melee', o.defencePrayer !== false, o.protectItem !== false);
+            const { want: wantPray, off: offPray } = combatPrayers(prayerBase, overhead, turn.style === 'melee', o.defencePrayer !== false, protectItemNow());
             const orderedPray = [...wantPray].sort((a, b) => Number(b === overhead || isOverheadPrayer(b)) - Number(a === overhead || isOverheadPrayer(a)));
             const hadPrayer = prayers.activePrayers.some(Boolean);
             let turnedOn = 0;

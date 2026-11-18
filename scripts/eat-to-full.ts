@@ -5,11 +5,12 @@
 import { openBot, finish } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { waitUntil } from '../packages/core/src/ticks';
+import { objIdByDebugName, questFoodDefinitions } from '../packages/core/src/sustain';
 
-// Meals by hitpoints healed (consume_effects.dbrow): trout 7, salmon 9, tuna 10, lobster 12, swordfish 14, shark 20.
-export const MEALS_BY_HEAL: readonly { id: number; heal: number }[] = [
-    { id: 333, heal: 7 }, { id: 329, heal: 9 }, { id: 361, heal: 10 }, { id: 379, heal: 12 }, { id: 373, heal: 14 }, { id: 385, heal: 20 },
-];
+// Cooked fish meals by hitpoints healed, the least first. The heal of each comes from the content
+// (consume_normal.dbrow, read by core/sustain.ts questFoodDefinitions).
+export const MEALS_BY_HEAL: readonly { id: number; heal: number }[] = ['trout', 'salmon', 'tuna', 'lobster', 'swordfish', 'shark']
+    .map(n => objIdByDebugName(n)!).map(id => ({ id, heal: questFoodDefinitions().get(id)!.heal })).sort((a, b) => a.heal - b.heal);
 
 // The next meal to eat: the cheapest one in the pack whose heal does not waste more than half of itself, else the
 // cheapest at all (the last bite to full).

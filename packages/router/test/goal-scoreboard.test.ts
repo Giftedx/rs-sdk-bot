@@ -112,9 +112,23 @@ test('canonical owner plans keep a former side from reassigning army or kit targ
  put(root,'fleet/owners.json',{accounts:{Moved:{side:'cloud',server:SERVER}}});
  put(root,'swarm.json',{army:['Moved'],builds:{Moved:'tribrid'},jobs:[]});
  put(root,'fleet/plans/cloud.json',{side:'cloud',army:[],builds:{},jobs:[]});
- const g=buildOwnerGoals({root,fleetDir,now:NOW,questNames:[],statuses:[status('Moved',{side:'cloud',skills:COMBAT_SKILLS.map(name=>({name,level:99}))})]});
+ // Levels under the roster rule (Attack, Strength, Defence 90): only a plan list could admit the account.
+ const g=buildOwnerGoals({root,fleetDir,now:NOW,questNames:[],statuses:[status('Moved',{side:'cloud',skills:COMBAT_SKILLS.map(name=>({name,level:50}))})]});
  expect(g.army.roster).toEqual([]);
  expect(g.collection.missing.every(m=>!m.consumer.startsWith('army:'))).toBe(true);
+});
+
+test('the roster rule counts the observed melee-90 accounts that no hand job holds, and other sides only as they publish',()=>{
+ const root=fixture(),fleetDir=join(root,'fleet');
+ put(root,'fleet/owners.json',{accounts:{Maxed:{side:'local',server:SERVER},Low:{side:'local',server:SERVER},Held:{side:'local',server:SERVER},Theirs:{side:'claude-cloud',server:SERVER},Published:{side:'claude-cloud',server:SERVER},Haggis:{side:'local',server:SERVER},Shaftshooter:{side:'local',server:SERVER},Reserved:{side:'local',server:SERVER}}});
+ put(root,'swarm.json',{army:[],jobs:[{account:'Held',script:'scripts/goldfarm.ts',enabled:true},{account:'Reserved',role:'pvp',enabled:false,goal:'reserved: gang squad'}]});
+ put(root,'fleet/plans/claude-cloud.json',{side:'claude-cloud',army:['Published'],jobs:[]});
+ const all=(level:number)=>COMBAT_SKILLS.map(name=>({name,level}));
+ const g=buildOwnerGoals({root,fleetDir,now:NOW,questNames:[],statuses:[status('Maxed',{side:'local',skills:all(99)}),status('Low',{side:'local',skills:all(89)}),status('Held',{side:'local',skills:all(99)}),
+  status('Theirs',{side:'claude-cloud',skills:all(99)}),status('Published',{side:'claude-cloud',skills:all(99)}),status('Haggis',{side:'local',skills:all(99)}),status('Shaftshooter',{side:'local',skills:all(99)}),status('Reserved',{side:'local',skills:all(99)})]});
+ expect(g.army.roster).toEqual(['maxed','published']);
+ expect(g.army.maxed).toBe(2);
+ expect(g.metrics['army.maxed:maxed']).toBe(1);
 });
 
 test('refreshing the same expired bank stock cannot reset the useful-progress watchdog',()=>{

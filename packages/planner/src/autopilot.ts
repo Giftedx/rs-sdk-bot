@@ -15,6 +15,9 @@ import { xpForLevel } from './curve';
 import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { validateBankRouteJob, type BankRouteJob } from '../../core/src/bank-trip';
 import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-route-step';
+import { cowFoodIds, foodTotalHeal } from '../../core/src/sustain';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 // `combat`: the combat level the account's status reports (absent: worked out from `skills`). `quests`: the quests its
 // status reports complete, by norm() name (absent: none known complete). `questPoints`: the quest points its status
@@ -23,7 +26,8 @@ import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-rou
 // `currentHP`: the observed current Hitpoints; absent means unknown, never the base level.
 // `exact`: the holdings of unnoted items by name, as the buy script counts them (its matcher takes the item id and skips banknotes); `items`
 // counts a banknote under its item's name. Absent: no observation.
-export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; exact?: Record<string, number>; currentHP?: number; combat?: number; quests?: ReadonlySet<string>; questPoints?: number; pos?: { x: number; z: number; level: number } };
+// `observedAt`: when the observation behind this account was taken (its status `at`); absent: no observation.
+export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; exact?: Record<string, number>; observedAt?: number; currentHP?: number; combat?: number; quests?: ReadonlySet<string>; questPoints?: number; pos?: { x: number; z: number; level: number } };
 export type Flow = { item: string; perTick: number };
 // `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
 // `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
@@ -69,6 +73,10 @@ export type Template = {
     // A quest run: a candidate until the account's status reports the quest complete, and worth a share of each job
     // the quest unlocks (as a trainer is). It does not repeat.
     quest?: { name: string; unlocks: string[] };
+    // A shop step for a maker: it buys one `item` that a shop sells and no market lists (a ring mould), and is a candidate
+    // only for an account that lacks the item and meets every other need of an admitted maker of `unlocks`. It is worth
+    // a share of that maker, as a trainer is worth a share of the job it unlocks.
+    provides?: { item: string; unlocks: string[] };
     // A goal band whose target is a holding: it stands while the account holds fewer than `to` of `item`.
     stock?: { item: string; to: number };
     // Kit lines the band's own supply job buys instead of the market.
@@ -129,6 +137,17 @@ export type Inputs = {
     // Lower-case names of the accounts on this side's army roster: only they take goal bands. A specialist's board
     // time counts every tick it plays, so combat training is opt-in per account, never global.
     army?: ReadonlySet<string>;
+    // The time of this pass (ms). With it a vacant reason names an observation older than OBSERVATION_FRESH_MS.
+    now?: number;
+    // The free accounts of this side that no donor stock was read for: their observation is older than
+    // OBSERVATION_FRESH_MS or missing, so their stock is not offered to a kit (scripts/autopilot.ts donorStock).
+    unobserved?: readonly string[];
+    // The bot slots left for planner jobs (the swarm's limit less the hand jobs and the live bots that the swarm counts but
+    // does not run). plan() gives a job to at most this many accounts, best first, and names the rest "waits for a bot
+    // slot"; a running job always keeps its slot. Absent: no limit.
+    slots?: number;
+    // Lower-case accounts whose bot holds a slot now: a run in the swarm's run list, a start inside its window included.
+    holding?: ReadonlySet<string>;
     // Lower-case account name -> the levels of its PK build (scripts/pk-kits.ts kitSkills): an army account that
     // trains to those levels and no further (buildBand). An account with no entry trains every band to its end.
     builds?: ReadonlyMap<string, Readonly<Record<string, number>>>;
@@ -160,6 +179,9 @@ export type Inputs = {
     mountain?: (a: Acct) => boolean;
 };
 export const FUND_RESERVE = 50_000;
+// An account's stock is offered to another account's kit only from an observation younger than this
+// (scripts/autopilot.ts SIDE_STOCK_MAX_AGE_MS equals it; scripts/autopilot.test.ts checks).
+export const OBSERVATION_FRESH_MS = 30 * 60_000;
 // The template id of a kit buy for a goal band: `kit-buy:<band id>`. A retired pair (two fail RESULTs with no
 // progress: no stock under the cap) sends the account to the donors instead.
 export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.ts';
@@ -299,11 +321,10 @@ const feedUnits = (item: string, output: string) => !(FEEDS[item] ?? []).include
     : item === 'log' ? 1 / 15 : item === 'steel bar' ? 1 / 4 : 1;
 export const norm = (s: string) => s.toLowerCase().replace(/\s*\((?:noted|quest)\)$/, '').trim().replace(/s$/, '');
 export const pairKey = (account: string, template: string) => `${account.toLowerCase()}:${template}`;
-// HP one held item heals over all its bites, by item name: scripts/gather-combat.ts COW_FOOD_BITES × COW_BITE_HEAL
-// (trout 7; a cake bite 4, a chocolate cake bite 5). scripts/autopilot.test.ts checks the two tables agree.
-export const FOOD_HEAL: Readonly<Record<string, number>> = {
-    trout: 7, cake: 12, '2/3 cake': 8, 'slice of cake': 4, 'chocolate cake': 15, '2/3 chocolate cake': 10, 'chocolate slice': 5,
-};
+// HP one held item heals over all its bites, by item name. The content gives it (consume_normal.dbrow heal of each
+// bite, cooking_inv next_obj_stage for the bites), for the cow farm's food of core/sustain.ts cowFoodIds.
+const itemNames = new Map((JSON.parse(readFileSync(resolve(import.meta.dir, '../../../knowledge/items.json'), 'utf8')) as { id: number; name: string }[]).map(i => [i.id, i.name]));
+export const FOOD_HEAL: Readonly<Record<string, number>> = Object.fromEntries(cowFoodIds().map(id => [norm(itemNames.get(id)!), foodTotalHeal(id)!]));
 export const foodHeal = (a: Acct) => Object.entries(FOOD_HEAL).reduce((n, [item, hp]) => n + (a.items[item] ?? 0) * hp, 0);
 
 const billUnits = (item: string, bill: readonly BillRow[]) => bill.reduce((n, r) => {
@@ -855,6 +876,19 @@ export function plan(inp: Inputs): Assignment[] {
             }
             continue;
         }
+        if (t.provides) {
+            // A shop step for a maker. The item is the one input the maker lacks: every other need is met.
+            const item = norm(t.provides.item), held: Acct = { ...a, items: { ...a.items, [item]: Math.max(1, a.items[item] ?? 0) } }, before = cands.length;
+            if ((a.items[item] ?? 0) >= 1) continue;
+            if (coinShort(a, t.needs) > 0 || !meets(a, withoutCoins(t.needs))) { miss(a, t, coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)) ? 'coins' : 'needs'); continue; }
+            for (const u of t.provides.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
+                if (!meets(held, u.needs)) continue;
+                const value = TRAIN_SHARE * valueOf(u, held);
+                if (value > 0) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `buys a ${t.provides.item} for ${u.id}`, supply: { template: u, account: held, share: TRAIN_SHARE } });
+            }
+            if (cands.length === before) miss(a, t, 'demand');
+            continue;
+        }
         if (t.trains) {
             if ((a.skills[t.trains.skill] ?? 1) >= t.trains.to) continue;
             if (!meets(a, t.needs)) { miss(a, t, 'needs'); continue; }
@@ -1159,6 +1193,34 @@ export function plan(inp: Inputs): Assignment[] {
     // A vacant slot names its constraint: the fare it lacks for a job whose place is still free, when that is all it lacks.
     const noFare = (a: Acct) => { const x = fareShort.get(a.name)?.find(x => x.resources.every(r => (used.get(r) ?? 0) < (inp.capacity?.[r] ?? 1)));
         return x ? `vacant: lacks ${x.coins} coins for the way to ${x.id} (ferry fare ${x.fare}), and no free account can give them` : undefined; };
+    // More jobs than free bot slots: the best keep theirs. An account whose bot holds a slot now (a confirmed live session,
+    // or a run that the swarm lists, a start inside its window included) keeps a job whatever the count, so a hand job that
+    // the owner enables never stops a running planner job, and a kit buy that replaces a running band keeps its account's
+    // slot. The rest rank by goal band and the levels left, then supply jobs by worth, and fill the slots that remain. The
+    // others wait for a slot (the swarm admits no more).
+    const waits = new Map<string, string>();
+    if (inp.slots !== undefined) {
+        // A fund or send assignment starts an order that logs in two accounts (the recipient and the donor): it costs two bots.
+        const cost = (x: Assignment) => x.fund || x.send ? 2 : 1;
+        const jobs = [...done.values()].filter(x => x.template);
+        if (jobs.reduce((n, x) => n + cost(x), 0) > inp.slots) {
+            const holds = (x: Assignment) => !!inp.running?.has(x.account.toLowerCase()) || !!inp.holding?.has(x.account.toLowerCase());
+            const rank = (x: Assignment): number[] => {
+                const id = x.template!.id, c = cands.find(k => k.account === x.account && (k.template.id === id || KIT_BUY + k.template.id === id));
+                return c?.goal ? [0, c.goal.band, c.goal.left] : c ? [1, -worth(c), 0] : [2, 0, 0];
+            };
+            const holders = jobs.filter(holds);
+            let room = Math.max(0, inp.slots - holders.reduce((n, x) => n + cost(x), 0));
+            const others = jobs.filter(x => !holds(x)).map(x => ({ x, r: rank(x) })).sort((p, q) => { for (let i = 0; i < 3; i++) if (p.r[i] !== q.r[i]) return p.r[i]! - q.r[i]!; return p.x.account.localeCompare(q.x.account); });
+            for (const { x } of others) {
+                if (cost(x) <= room) { room -= cost(x); continue; }
+                done.delete(x.account);
+                if (x.fund) gave.delete(x.fund.from);
+                if (x.send) gaveItems.delete(x.send.from);
+                waits.set(x.account, `vacant: waits for a bot slot (${inp.slots} free, ${holders.length} held by running bots): ${x.template!.id} ranks below the jobs that hold them`);
+            }
+        }
+    }
     // The first gate that stopped the account's nearest template (see `misses`), or what its candidates met.
     const full = (c: Cand) => c.resources.find(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1));
     const vacancy = (a: Acct): string => {
@@ -1191,12 +1253,20 @@ export function plan(inp: Inputs): Assignment[] {
             return undefined;
         };
         // With no finite demand no supply job has value, whatever it lacks; a goal band still stands apart from demand.
-        const roster = has('roster')[0], other = demand.some(d => d.short > 0) ? job() : 'no finite route or army supply demand';
+        // An observation that is too old to offer stock is a cause of "no source", so the reason says so.
+        const sourceless = (text: string | undefined) => {
+            if (!text || !/ and no source/.test(text)) return text;
+            const notes: string[] = [];
+            if (inp.now !== undefined && a.observedAt !== undefined && inp.now - a.observedAt > OBSERVATION_FRESH_MS) notes.push(`its own observation is ${Math.round((inp.now - a.observedAt) / 3_600_000 * 10) / 10} h old`);
+            if (inp.unobserved?.length) notes.push(`${inp.unobserved.length} free accounts have no observation under ${OBSERVATION_FRESH_MS / 60_000} minutes old, so their stock is not offered`);
+            return notes.length ? `${text} (${notes.join('; ')})` : text;
+        };
+        const roster = has('roster')[0], other = sourceless(demand.some(d => d.short > 0) ? job() : 'no finite route or army supply demand');
         if (roster) return `vacant: not on the army roster (${has('roster').length} bands, nearest ${roster.template.id})${other ? `; otherwise ${other}` : ''}`;
         return `vacant: ${other ?? 'no template meets its skills and holdings'}`;
     };
     return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: gave.has(a.name) ? 'vacant: gives coins this pass'
-        : gaveItems.has(a.name) ? 'vacant: gives a kit item this pass' : vacated.get(a.name) ?? noFare(a) ?? vacancy(a) });
+        : gaveItems.has(a.name) ? 'vacant: gives a kit item this pass' : waits.get(a.name) ?? vacated.get(a.name) ?? noFare(a) ?? vacancy(a) });
 }
 
 // The swarm job for an assignment. `autopilot` marks it as this side's planner job; the CLI replaces only marked jobs.
@@ -1414,7 +1484,7 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     'catherby:lobster': CATHERBY_BANK, [AIO_PLACES.flax]: { x: 2744, z: 3445 }, [AIO_PLACES.yews]: SEERS_BANK,
     'shop:ardy': { x: 2654, z: 3283 }, 'shop:catherby': CATHERBY_BANK, 'shop:catherby_arrows': CATHERBY_BANK, 'shop:dargaud': SEERS_BANK, 'shop:magic_guild': { x: 2612, z: 3093 },
     'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
-    'shop:zeke': { x: 3269, z: 3167 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
+    'shop:zeke': { x: 3269, z: 3167 }, 'shop:dommik': { x: 3269, z: 3167 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
 };
 // A template's place: its first resource with one. A chicken pen carries its tile, and a knight spot has the bank.
 export function placeOf(t: Pick<Template, 'resources'>): Spot | undefined {
@@ -1775,6 +1845,20 @@ export function aioTemplates(): Template[] {
 //   the potato goes in first, then the meat. One run makes up to STEW_BATCH useful stews, bounded by complete owned
 //   recipes; both steps receive that count. The rate is half that of one recipe, as a stew takes two. Gaps: no
 //   practice run makes this chain, and no template finishes an incomplete stew left by a failed second step.
+// The shop step of a maker whose only missing input is a ring mould: Dommik's Crafting Store in Al Kharid sells it
+// (scripts/shop-buyer.ts profile dommik: ring mould, shelf 4). The mould costs 5 coins in the item data and the run
+// stops at the first one held (STOCK_TARGET 1). It unlocks the four gem ring makers (GEM_RINGS); a ring maker that the
+// plan's `aio` list does not name is not unlocked.
+export const RING_MOULD_COINS = 100;
+export function makerShopSteps(): Template[] {
+    return [{
+        id: 'shop-ring-mould', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['dommik', '600'],
+        env: { ITEMS: 'ring mould', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(RING_MOULD_COINS), COIN_RESERVE: '50', MAX_SPEND: '50' },
+        role: 'supply', goal: "buy a ring mould from Dommik's Crafting Store in Al Kharid for the ring makers", repeats: false,
+        resources: ['shop:dommik'], yields: () => [], provides: { item: 'ring mould', unlocks: GEM_RINGS.map(([gem]) => `aio-${gem}-rings`) },
+        needs: { items: { coins: RING_MOULD_COINS }, holdsUnder: { 'ring mould': 1 } },
+    }];
+}
 export function makerChains(): Template[] {
     const step = (recipe: string, max: number, cap = 1500) => `scripts/aio.ts skiller crafting inventory ${recipe} MAX_MAKE=${max} CAP=${cap} MEMBERS=1 ORDER_MODE=best-effort`;
     const chain = (id: string, steps: string[], rest: Pick<Template, 'role' | 'goal' | 'needs' | 'yields' | 'repeats'|'production'>): Template =>
@@ -2324,6 +2408,7 @@ export function catalogue(): Template[] {
             yields: () => [{ item: 'rune arrow', perTick: ARROW_LOW / 800 }], spends: () => [{ item: 'coins', perTick: RUNE_ARROW_COST / 800 }] },
         ...aioTemplates(),
         ...makerChains(),
+        ...makerShopSteps(),
     ];
 }
 
@@ -2479,7 +2564,7 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
     const quests = Array.isArray(status?.quests)
         ? new Set<string>(status.quests.flatMap((q: any) => typeof q === 'string' ? [norm(q)] : typeof q?.name === 'string' && q.state === 'complete' ? [norm(q.name)] : [])) : undefined;
     const questPoints = status?.guildFacts?.varps?.qp, p = status?.pos;
-    return { name, side, skills, items, ...(status ? { exact } : {}), ...(currentHP !== undefined ? { currentHP } : {}), ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}), ...(Number.isFinite(questPoints) ? { questPoints } : {}),
+    return { name, side, skills, items, ...(status ? { exact } : {}), ...(Number.isFinite(status?.at) && status.at > 0 ? { observedAt: status.at } : {}), ...(currentHP !== undefined ? { currentHP } : {}), ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}), ...(Number.isFinite(questPoints) ? { questPoints } : {}),
         ...(Number.isFinite(p?.x) && Number.isFinite(p?.z) ? { pos: { x: p.x, z: p.z, level: Number.isFinite(p.level) ? p.level : 0 } } : {}) };
 }
 
@@ -2490,6 +2575,12 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
 // script) keeps its account, and an owner pause (a stop file) keeps its account. An unmarked job that is off holds an
 // account only when no marked job names it: a finished coordinator run does not block a handover, but by itself it
 // frees nothing, since the coordinator may plan that account next.
+// The accounts that a swarm.json reservation holds: a job that is no planner job of `side` and has no script (the main and
+// specialist accounts, the gang squad). A reservation gives no job to its account (plannableAccounts) and no stock or coins to
+// another account (the donor filters of scripts/autopilot.ts); an order that gives TO it still runs.
+export function reservedAccounts(jobs: readonly any[], side: string): Set<string> {
+    return new Set(jobs.filter(j => j?.autopilot !== side && !j?.script).flatMap(j => [j?.account, ...(j?.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
+}
 export function plannableAccounts(jobs: readonly any[], side: string, listed: readonly string[], paused: ReadonlySet<string>): string[] {
     const names = (j: any) => [j?.account, ...(j?.accounts ?? [])].filter(Boolean).map((a: string) => a.toLowerCase());
     const mine = (j: any) => j?.autopilot === side;
