@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795025064360,
+ "at": 1795025186902,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -235,26 +235,6 @@
    ]
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=58 EXPECTED_OWNED=10 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit1-555-10to68 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=1 EXPECTED_OWNED=1 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit1-558-1to2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"558\":2}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 58 Water rune, 1 Mind rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -353,6 +333,26 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=58 EXPECTED_OWNED=10 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=mmtha0205-kit2-555-10to68 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=1 EXPECTED_OWNED=1 LIMIT_PRICE=120 CASH_RESERVE=1060 ORDER_KEY=mmtha0205-kit2-558-1to2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"558\":2}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 58 Water rune, 1 Mind rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "mmthv2350",
@@ -608,6 +608,25 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=10 EXPECTED_OWNED=6 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit12-536-6to16 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"536\":16}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 10 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
   }
  ],
  "army": [
