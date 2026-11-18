@@ -61,10 +61,24 @@ export function batchRows(dir: string): Row[] {
     return [...byCase].sort((a, b) => a[0].localeCompare(b[0])).map(([key, runs]) => row(basename(dir), key, runs, returnTicks()));
 }
 
+// The rows of a run of scripts/hosted-bench.ts (.practice/hosted-bench/<run id>): one folder a pattern and a seed,
+// each as the artifact of hostedRows. The runs of one case at its seeds are one row.
+export function hostedRunRows(dir: string): Row[] {
+    const byCase = new Map<string, Run[]>();
+    for (const sub of readdirSync(dir).filter(d => /^bench-p\d+-s\d+/.test(d)).sort()) for (const r of hostedRows(join(dir, sub))) (byCase.get(r.condition) ?? byCase.set(r.condition, []).get(r.condition)!).push(...r.runs);
+    return [...byCase].sort((a, b) => a[0].localeCompare(b[0])).map(([key, runs]) => row(basename(dir), key, runs.sort((a, b) => a.seed - b.seed), returnTicks()));
+}
+// The bench against live: our attacks do `bias` times the live damage on the gang (the fidelity table of
+// research/gang-clones.md, "damage on the gang an attack of ours"), so a live run takes that many times the ticks and
+// loses that many times the Hitpoints. The kills of an hour with the bias applied.
+export const biased = (r: Row, bias: number, wait: number) => ({ hpAKill: r.hpAKill === null ? null : Math.round(r.hpAKill * bias),
+    killsAnHour: r.ticksARun === null || !r.runs.length ? null : Math.round((10 * HOUR_TICKS * (r.kills / r.runs.length)) / (r.ticksARun * bias + wait)) / 10 });
+
 if (import.meta.main) {
-    const dirs = process.argv.slice(2);
-    if (!dirs.length) { console.log('usage: bun scripts/measure/pk-gang-climb.ts <batch folder> [...]'); process.exit(2); }
-    console.log('| Batch | Condition | Kills | Deaths | Hitpoints lost a kill | Ticks a run | Kills an hour | Account ticks a kill | Food coins a kill | Raw: kills, Hitpoints lost, ticks by seed |\n|---|---|---|---|---|---|---|---|---|---|');
-    for (const d of dirs) for (const r of existsSync(join(d, 'bench.txt')) ? batchRows(d) : hostedRows(d))
-        console.log(`| ${r.batch} | \`${r.condition}\` | ${r.kills} of ${r.gang} | ${r.deaths} | ${r.hpAKill ?? '-'} | ${r.ticksARun ?? '-'} | ${r.killsAnHour ?? '-'} | ${r.accountTicksAKill ?? '-'} | ${r.coinsAKill ?? '-'} | ${r.runs.map(x => `${x.kills}, ${x.taken}, ${x.ticks ?? '-'}`).join('; ')} |`);
+    const argv = process.argv.slice(2), at = argv.indexOf('--bias'), bias = at >= 0 ? Number(argv.splice(at, 2)[1]) : 1, dirs = argv;
+    if (!dirs.length || !Number.isFinite(bias) || bias <= 0) { console.log('usage: bun scripts/measure/pk-gang-climb.ts [--bias <bench damage over live damage>] <batch folder> [...]'); process.exit(2); }
+    console.log(`| Batch | Condition | Kills | Deaths | Hitpoints lost a kill | With the bias ${bias} | Ticks a run | Kills an hour | With the bias | Account ticks a kill | Food coins a kill | Raw: kills, Hitpoints lost, ticks by seed |\n|---|---|---|---|---|---|---|---|---|---|---|---|`);
+    const rows = (d: string) => (existsSync(join(d, 'bench.txt')) ? batchRows(d) : readdirSync(d).some(x => /^bench-p\d+-s\d+/.test(x)) ? hostedRunRows(d) : hostedRows(d));
+    for (const d of dirs) for (const r of rows(d)) { const b = biased(r, bias, returnTicks());
+        console.log(`| ${r.batch} | \`${r.condition}\` | ${r.kills} of ${r.gang} | ${r.deaths} | ${r.hpAKill ?? '-'} | ${b.hpAKill ?? '-'} | ${r.ticksARun ?? '-'} | ${r.killsAnHour ?? '-'} | ${b.killsAnHour ?? '-'} | ${r.accountTicksAKill ?? '-'} | ${r.coinsAKill ?? '-'} | ${r.runs.map(x => `${x.kills}, ${x.taken}, ${x.ticks ?? '-'}`).join('; ')} |`); }
 }
