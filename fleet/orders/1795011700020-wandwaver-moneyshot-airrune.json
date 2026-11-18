@@ -1,0 +1,22 @@
+{
+ "id": "1795011700020-wandwaver-moneyshot-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Wandwaver",
+ "to": "Moneyshot",
+ "item": "Air rune",
+ "count": 3,
+ "start": 1795011700020,
+ "end": 1795014100020,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
