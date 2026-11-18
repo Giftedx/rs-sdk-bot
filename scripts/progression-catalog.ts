@@ -310,6 +310,8 @@ export function buildProgressionCatalog(base=root):ProgressionCatalog{
  entries.set('packages/practice/src/ge-bulk-order-proof.ts',{script:'packages/practice/src/ge-bulk-order-proof.ts',intents:['service','observe'],skills:[],routeIds:[],practiceOnly:true});
  // The practice proofs log a seeded account in once to register it (3 ticks, no game action): an observe entry.
  entries.set('packages/practice/src/register-proof-account.ts',{script:'packages/practice/src/register-proof-account.ts',intents:['observe'],skills:[],routeIds:[],practiceOnly:true});
+ // The quest order proof runs its own file as the runner of its fault-injection cases (--boundary): a practice service.
+ entries.set('packages/practice/src/quest-order-proof.ts',{script:'packages/practice/src/quest-order-proof.ts',intents:['service'],skills:[],routeIds:[],practiceOnly:true});
  entries.set('packages/practice/src/wine-stock-order-proof.ts',{script:'packages/practice/src/wine-stock-order-proof.ts',intents:['service'],skills:[],routeIds:[],practiceOnly:true});
  const probes=resolve(base,'scripts/measure');if(existsSync(probes))for(const file of readdirSync(probes).filter(f=>f.endsWith('.ts')&&!f.endsWith('.test.ts')))entries.set('scripts/measure/'+file,{script:'scripts/measure/'+file,intents:['observe'],skills:[],routeIds:[],practiceOnly:true});
  // Direct gameplay entry files must be classified; helper modules without a login remain libraries.
