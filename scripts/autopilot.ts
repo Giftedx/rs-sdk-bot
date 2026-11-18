@@ -40,7 +40,9 @@ import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { liveHelperStatuses, overallSupplyDemand, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
 import { gearById } from '../packages/planner/src/gear-progression';
-import { GEAR_ASK_LIMIT } from '../packages/planner/src/gear-sources';
+import { GEAR_ASK_LIMIT, type MarketAsks } from '../packages/planner/src/gear-sources';
+import { GEAR_ASK_MARGIN, trainingStyle, type GearWantRow } from '../packages/planner/src/gear-want-jobs';
+import { wantRowsFromStatus } from './gear-wants';
 import { MARKET_FILE, marketQuotes } from './market-cache';
 import { tickWaste, wasteShare } from './tick-waste';
 import { kitSkills, levelsBeforeRoute } from './pk-kits';
@@ -224,7 +226,8 @@ export const UNSOLD_RETRY_MS = 24 * 3600_000;
 // the item's shop value in the content (knowledge/gear.json `cost`). Over that bound the hand cap stands, and a shop,
 // a quest or a smith is the source. Arrows, runes and food keep their hand caps: they are bought in stacks, and their
 // caps bound a whole batch.
-export const GEAR_ASK_MARGIN = 1.05, FOLLOWED_RETRY_MS = 3600_000;
+export { GEAR_ASK_MARGIN };
+export const FOLLOWED_RETRY_MS = 3600_000;
 export { GEAR_ASK_LIMIT };
 export type Asks = Readonly<Record<number, { ask: number | null; sell: number }>>;
 export function gearLimit(id: number, cap: number, quote: Asks[number] | undefined): number {
@@ -252,6 +255,19 @@ export function kitMarket(items: readonly { id: number; name?: string; debugname
         market[norm(i.name)] = { id: i.id, name: i.name, limit };
     }
     return market;
+}
+// The gear wants of each account for the style that its current job trains (scripts/gear-wants.ts, the workers' reconcile choice).
+// An item that a buy got none of within FOLLOWED_RETRY_MS is left out of the asks, as kitMarket does for a limit that follows a seller.
+export function gearWantsOf(names: readonly string[], status: (name: string) => any, templateOf: (name: string) => string | undefined,
+    unsold: Readonly<Record<string, number>>, asks: Asks, now: number): Map<string, readonly GearWantRow[]> {
+    const live = Object.fromEntries(Object.entries(asks).filter(([id]) => now - (unsold[id] ?? -Infinity) >= FOLLOWED_RETRY_MS)) as MarketAsks;
+    const out = new Map<string, readonly GearWantRow[]>();
+    for (const name of names) {
+        const style = trainingStyle(templateOf(name)), st = status(name);
+        if (!style || !st) continue;
+        try { const rows = wantRowsFromStatus(name, st, style, live); if (rows.length) out.set(name.toLowerCase(), rows); } catch { /* a status that the choice cannot read gives no wants */ }
+    }
+    return out;
 }
 // A buy that ended before it placed an offer on a cause that a second login meets again (coins under the escrow and reserve, a
 // full pack: STABLE_CAUSES of packages/core/src/order-refusal.ts). A passed deadline and a count that differs from the planner's
@@ -771,7 +787,8 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
         stocks:progressionStocks,sourcesFor:(account,_method,_item)=>[account,...stock.filter(s=>!newlyWorking.has(s.name.toLowerCase())&&owners.get(s.name.toLowerCase())?.server===owners.get(account.toLowerCase())?.server).map(s=>s.name)],
         canTransfer:(from,to)=>sourceAllowed.has(from.toLowerCase())&&!newlyWorking.has(from.toLowerCase())&&free(from)&&free(to)&&owners.get(from.toLowerCase())?.server===owners.get(to.toLowerCase())?.server});
     const externalLive = activeExternalLive(statusFiles.map(f => readJson(join(statusDir, f), null)).filter(Boolean), [...activeAccounts], now);
-    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set([...Object.keys(state.retired), ...unplacedHeld(state.unplaced, now)]), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm, accounts, OFFLINE_GUARDED, reserved), now, unobserved: unobservedAccounts(listed.filter(free), n => observed(n)?.at, now), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
+    const gearWants = gearWantsOf(accounts.map(a => a.name), observed, name => state.assigned[name]?.template, state.unsold ?? {}, marketQuotes(readJson(join(root, MARKET_FILE), null), now), now);
+    const planned = plan({ side, accounts, owners, gearWants, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set([...Object.keys(state.retired), ...unplacedHeld(state.unplaced, now)]), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm, accounts, OFFLINE_GUARDED, reserved), now, unobserved: unobservedAccounts(listed.filter(free), n => observed(n)?.at, now), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
             externalLive.length,
             { running: swarm.jobs.filter((j: any) => mineMarked(j) && j.enabled !== false).flatMap(jobAccounts).filter((n: string) => activeAccounts.has(n.toLowerCase())).length,
                 headroom: headroomWithMargin(memoryHeadroom(freemem() / 2 ** 30, swarm.minFreeGB, pendingStartupCount(readJson(join(prac, 'swarm-runs.json'), []), now) + tradeStarts(open, externalLive, activeAccounts)), writtenNotRunning(swarm.jobs.filter(mineMarked), activeAccounts)) }), holding: activeAccounts, builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),

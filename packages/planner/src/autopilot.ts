@@ -17,6 +17,7 @@ import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { validateBankRouteJob, type BankRouteJob } from '../../core/src/bank-trip';
 import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-route-step';
 import { ownsWearableMeleeWeapon } from './gear-progression';
+import { GEAR_GE_ID, gearJobFor, gearShopId, type GearWantRow } from './gear-want-jobs';
 import { cowFoodIds, foodTotalHeal } from '../../core/src/sustain';
 import { ORDER_COIN_MARGIN, REFUSAL_ANY_SOURCE } from '../../core/src/order-refusal';
 import { readFileSync } from 'node:fs';
@@ -140,6 +141,8 @@ export type Inputs = {
     // Lower-case names of accounts with an enabled job. Funding one would remove its running job, and the stop file
     // scripts/swarm.ts writes for it would block the trade, so such an account is never funded.
     unfundable?: ReadonlySet<string>;
+    // Lower-case account -> its gear wants for the style it trains (scripts/gear-wants.ts). The gear pass buys them: market wants as a kit buy, shop wants as one shop trip.
+    gearWants?: ReadonlyMap<string, readonly GearWantRow[]>;
     // Lower-case names of the accounts on this side's army roster: only they take goal bands. A specialist's board
     // time counts every tick it plays, so combat training is opt-in per account, never global.
     army?: ReadonlySet<string>;
@@ -1168,6 +1171,32 @@ export function plan(inp: Inputs): Assignment[] {
     for (const step of ['buy', 'send'] as const) for (const c of kits) acquire(c, step, true);
     // Then the filler bands, for an army account that no band and no kit took.
     for (const c of cands.filter(c => c.goal && !c.lacks && c.template.filler).sort(goalOrder)) take(c, 0);
+    // The gear pass: an account that no band, kit or send took and that has a want above the gain floor (gear-want-jobs.ts)
+    // buys it before any coin job, from its own coins only. A running training session is replaced only for a larger gain.
+    const gearValue = new Map<string, number>();
+    for (const a of mine) {
+        const lower = a.name.toLowerCase(), rows = inp.gearWants?.get(lower);
+        if (!rows?.length || done.has(a.name) || gave.has(a.name) || gaveItems.has(a.name) || vacated.has(a.name)) continue;
+        const job = gearJobFor(rows, { coins: a.items.coin ?? 0, room: KIT_CASH_RESERVE + KIT_COIN_MARGIN, running: !!inp.running?.has(lower),
+            held: id => !!inp.retired?.has(pairKey(a.name, id === GEAR_GE_ID ? KIT_BUY + id : id)) });
+        if (!job) continue;
+        const place = job.kind === 'ge' ? ARMOUR_MARKET : `shop:${job.profile}`;
+        if ((used.get(place) ?? 0) >= (inp.capacity?.[place] ?? 1)) continue;
+        used.set(place, (used.get(place) ?? 0) + 1);
+        gearValue.set(a.name, job.value);
+        const bonus = `${job.gain.toFixed(1)} points of bonus`;
+        if (job.kind === 'ge') {
+            const lines: KitLine[] = job.lines.map(l => ({ item: l.name, id: l.id, quantity: 1, held: 0, limit: l.limit }));
+            const template = kitBuyTemplate({ id: GEAR_GE_ID, goal: 'wear better gear' } as Template, a.name, lines, inp.kitSeq?.get(lower) ?? 0, KIT_CASH_RESERVE);
+            done.set(a.name, { account: a.name, template, value: 0, resources: [place], reason: `gear: buys ${lines.map(l => l.item).join(', ')} on the market for ${bonus}, at most ${job.cost} coins` });
+        } else {
+            const items = job.items.map(i => i.name.replace(/[^a-zA-Z0-9 '-]/g, c => `\\${c}`)).join('|');
+            const template: Template = { id: gearShopId(job.profile), family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: [job.profile, '1500'],
+                env: { ITEMS: items, STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(job.spend + 200), COIN_RESERVE: '200', MAX_SPEND: String(job.spend) },
+                role: 'supply', goal: `buy ${job.items.map(i => i.name).join(', ')} from the ${job.shop} to wear better gear`, repeats: false, resources: [place], yields: () => [] };
+            done.set(a.name, { account: a.name, template, value: 0, resources: [place], reason: `gear: buys ${job.items.map(i => i.name).join(', ')} at ${job.shop} for ${bonus}, at most ${job.spend} coins` });
+        }
+    }
     // A recipient that cannot earn its kit may need a helper to become a donor. Reserve one helper for one finite
     // recipient, including the donor's retained cash. Compare full estimated ticks: earning on the recipient avoids
     // that reserve and wins whenever it costs less. Existing donors and kit orders have already had their turn.
@@ -1235,7 +1264,7 @@ export function plan(inp: Inputs): Assignment[] {
             const holds = (x: Assignment) => !!inp.running?.has(x.account.toLowerCase()) || !!inp.holding?.has(x.account.toLowerCase());
             const rank = (x: Assignment): number[] => {
                 const id = x.template!.id, c = cands.find(k => k.account === x.account && (k.template.id === id || KIT_BUY + k.template.id === id));
-                return c?.goal ? [0, c.goal.band, c.goal.left] : c ? [1, -worth(c), 0] : [2, 0, 0];
+                return c?.goal ? [0, c.goal.band, c.goal.left] : c ? [1, -worth(c), 0] : gearValue.has(x.account) ? [0, 1e6, -gearValue.get(x.account)!] : [2, 0, 0];
             };
             const holders = jobs.filter(holds);
             let room = Math.max(0, inp.slots - holders.reduce((n, x) => n + cost(x), 0));
