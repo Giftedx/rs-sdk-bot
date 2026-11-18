@@ -1,0 +1,22 @@
+{
+ "id": "1794964149482-nabtheknob-sausagefest-bodyrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "NabTheKnob",
+ "to": "Sausagefest",
+ "item": "Body rune",
+ "count": 1,
+ "start": 1794964149482,
+ "end": 1794966549482,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
