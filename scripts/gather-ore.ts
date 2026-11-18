@@ -81,7 +81,6 @@ export async function mineRock(s: Session, rock: NearbyLoc, over: () => boolean,
 
 export function oreStalled(waitTicks: number, limit: number): boolean { return waitTicks >= limit; }
 
-export const ORE_TOOL_TIERS = [5, 6, 20, 21, 30, 31, 40, 41] as const;
 
 export function selectActiveOrePickaxe(s: Session, extra: readonly { id: number; count: number }[] = []) {
     const mining = s.sdk.getSkill('Mining')?.level ?? 1;
@@ -346,6 +345,7 @@ try {
     cleanup=safetyExit;
 
     console.log(`START ore gatherer ${botName} at=${pos()?.worldX},${pos()?.worldZ}`);
+    const pickLine = () => { const worn = (s.sdk.getEquipment?.() ?? s.sdk.getState()?.equipment ?? []).find(e => e.slot === 3 && (MINING_PICKAXES_DESC as readonly number[]).includes(e.id)); return `pick=${worn?.id ?? selectActiveOrePickaxe(s).current?.item.id ?? 0} pickWorn=${!!worn}`; };
     // Admission protects new mining, while an already owned load may still be recovered by the bounded retreat.
     if(damage||requestedStop||hp()<(s.sdk.getSkill('Hitpoints')?.baseLevel??hp())||Number(process.env.MAX_TRIPS)===0)
         await safetyExit(damage?'damage':requestedStop||'owned-load recovery');
@@ -448,7 +448,7 @@ try {
             mined += r.ore;
             oreWaitTicks = 0;
             const curToolLevels = readSkillLevels(s.sdk);
-            if (crossedTierBoundary(toolLevels, curToolLevels, ['mining', 'attack'], ORE_TOOL_TIERS)) {
+            if (crossedTierBoundary(toolLevels, curToolLevels, ['mining', 'attack'], 'mining-pickaxe')) {
                 toolLevels = curToolLevels;
                 await bank(true);
             }
@@ -471,7 +471,7 @@ try {
     if (PROFILE === 'clay' && process.env.SOFTEN_CLAY === '1' && !ended && !died && stop !== 'no-progress') softClay = await runSoftenClay(s, { cap: Math.max(1, CAP - used()), maximum: Number(process.env.MAX_MAKE ?? 20), reserve: Number(process.env.RAW_RESERVE ?? 0) });
     const total = banked + oreCount();
     const perK = (mined * 1000 / Math.max(1, used())).toFixed(2);
-    await finish([s], total > 0 && oreCount() === 0 && !died && !ended && !requestedStop && !damage && stop !== 'no-progress' && (softClay?.ok ?? true), `ticks=${used()} died=${died} ${counters()} profile=${PROFILE} softMade=${softClay?.made ?? 0} softBanked=${softClay?.banked ?? 0} softPreserved=${softClay?.preserved ?? true} initialOre=${initialOre} recovered=${total} xpGain=${(s.sdk.getSkillXp('mining') ?? 0) - xp0} stop=${stop} ${requestedStop} oreWaitTicks=${oreWaitTicks} ${stop === 'no-progress' ? 'no ore progress: bounded mining wait exhausted' : ''} ${softClay && !softClay.ok ? `no soft clay progress: ${softClay.failure}` : ''} orePer1kTicks=${perK}`);
+    await finish([s], total > 0 && oreCount() === 0 && !died && !ended && !requestedStop && !damage && stop !== 'no-progress' && (softClay?.ok ?? true), `ticks=${used()} died=${died} ${counters()} ${pickLine()} profile=${PROFILE} softMade=${softClay?.made ?? 0} softBanked=${softClay?.banked ?? 0} softPreserved=${softClay?.preserved ?? true} initialOre=${initialOre} recovered=${total} xpGain=${(s.sdk.getSkillXp('mining') ?? 0) - xp0} stop=${stop} ${requestedStop} oreWaitTicks=${oreWaitTicks} ${stop === 'no-progress' ? 'no ore progress: bounded mining wait exhausted' : ''} ${softClay && !softClay.ok ? `no soft clay progress: ${softClay.failure}` : ''} orePer1kTicks=${perK}`);
 } catch (e) {
     offDamage();
     if(cleanup&&!safetyStarted&&(damage||requestedStop))await cleanup(damage?'damage':requestedStop);

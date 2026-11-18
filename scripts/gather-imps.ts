@@ -5,6 +5,7 @@ import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {walkPath,sessionWalker,expandPath,type PathDeps,type PathPoint,type PathTile} from '../packages/core/src/walk';
 import {equipCowKit} from './gather-combat';
+import {ownsWearableMeleeWeapon,readSkillLevels} from '../packages/planner/src/gear-progression';
 
 const IMP=708,ASH=592,FOOD=333;
 export const IMP_LOOT=[ASH,1470,1472,1474,1476] as const;
@@ -94,7 +95,8 @@ export async function runImps(s:Session,o:ImpOptions){
     if(!await waitUntil(s,()=>hp()>0&&(s.sdk.getSkill('Attack')?.baseLevel??0)>0,{timeoutTicks:15}))throw new Error('no imp progress: skills unknown');
     const initialPlayer=state()?.player,start=s.tick(),initialXp=xp(),foodHeldInitial=held(FOOD);
     if(!initialPlayer||initialPlayer.level!==0||Math.max(Math.abs(initialPlayer.worldX-BANK.x),Math.abs(initialPlayer.worldZ-BANK.z))>3||held(FOOD)<2)throw new Error('no imp progress: stage Ardy bank with2working Trout');
-    for(const id of [1277,1171])if(count([...inv(),...s.sdk.getEquipment()],id)<1)throw new Error(`no imp progress: missing kit ${id}`);
+    // Any melee weapon the Attack level lets the account wield serves (equipCowKit wears the best one held or worn).
+    if(!ownsWearableMeleeWeapon([...inv(),...s.sdk.getEquipment()],readSkillLevels(n=>s.sdk.getSkill(n)),null,'Attack'))throw new Error('no imp progress: missing a wearable melee weapon');
     let ended=false,died=false,hpMin=hp(),eaten=0,creditedKills=0,attacks=0,reengagements=0,failure='',stop='cap',activeIndex:number|undefined,activeX=0,activeZ=0;
     const loot:Record<number,number>={},banked:Record<number,number>={},diagnostics:Record<string,unknown>[]=[],credits:Record<string,unknown>[]=[],abandoned:Record<string,unknown>[]=[];
     const deferred=new Set<number>(initialDeferredNpcIndices);let activeBeforeXp:number|undefined;
@@ -180,7 +182,7 @@ export async function runImps(s:Session,o:ImpOptions){
         await equipCowKit(s,over);
         if(state()?.autoRetaliateEnabled===true)await s.direct({type:'clickComponent',componentId:151,reason:'imp auto-retaliate off'});
         if(!await waitUntil(s,()=>state()?.autoRetaliateEnabled===false,{timeoutTicks:10}))throw new Error('no imp progress: auto-retaliate OFF unobserved');
-        if(!(await s.sdk.sendSetCombatStyle(0)).success||!await waitUntil(s,()=>{const c=state()?.combatStyle;return !!c?.known&&c.weaponName==='Bronze sword'&&c.currentStyle===0&&c.styles.some(v=>v.index===0&&v.trainsSkills.length===1&&v.trainsSkills[0]==='Attack');},{timeoutTicks:10}))throw new Error('no imp progress: Attack style unobserved');
+        if(!(await s.sdk.sendSetCombatStyle(0)).success||!await waitUntil(s,()=>{const c=state()?.combatStyle;return !!c?.known&&c.weaponName===state()?.equipment?.find(i=>i.slot===3)?.name&&c.currentStyle===0&&c.styles.some(v=>v.index===0&&v.trainsSkills.length===1&&v.trainsSkills[0]==='Attack');},{timeoutTicks:10}))throw new Error('no imp progress: Attack style unobserved');
         await eat();await walk([{...TURN,tol:0},{...ENTRY,tol:0},{...HUNT,tol:0}]);
         let progress=s.tick(),dispatchFailures=0;
         while(creditedKills<o.maximum&&!over()){

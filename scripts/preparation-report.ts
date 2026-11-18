@@ -6,7 +6,8 @@ import {supplyRoute,routeGateRequirements,type SupplyRouteRequest} from '../pack
 import type {TravelModel} from '../packages/planner/src/travel';
 import {FLEET} from './fleet';
 import {goalReadiness} from './goal-readiness';
-import {ownedLoadout,fireKit,type GearSlot,type GearCount} from '../packages/planner/src/owned-loadout';
+import {ownedLoadout,type GearSlot,type GearCount} from '../packages/planner/src/owned-loadout';
+import {fireKit,meleeWeaponSlot} from '../packages/planner/src/gear-progression';
 import {orderAccounting,validateRequest,type ItemOrder} from './buy-owned-ge-item';
 import {observedRouteResources,type RouteActor} from './preparation-route-state';
 import {FLEET_DIR,loadOwners,mySide,sideOf} from '../packages/core/src/fleet';
@@ -131,7 +132,7 @@ export function preparationGear(jobs:GearJob[],statuses:any[],ownedNames:string[
   const name=job.account.toLowerCase();if(!owned.has(name))return[];
   const snapshot=snapshots.get(name)!;let slots:GearSlot[];
   if(job.script==='scripts/gather-fire-combat.ts')slots=fireKit(snapshot.skill('Attack'));
-  else if(job.script==='scripts/gather-combat.ts'&&job.env?.TARGET==='cow')slots=[exact('weapon',1277,1,snapshot.skill('Attack')===null?null:true),exact('shield',1171),exact('trout',333,2)];
+  else if(job.script==='scripts/gather-combat.ts'&&job.env?.TARGET==='cow')slots=[meleeWeaponSlot(snapshot.skill('Attack')),exact('trout',333,2)];
   else if(job.script==='scripts/gather-ranged.ts'){
    const ranged=snapshot.skill('Ranged');slots=[exact('weapon',841,1,ranged===null?null:ranged>=1),exact('ammo',884,Number(job.env?.AMMO??90)),exact('food',Number(job.env?.FOOD_ID??333),Number(job.env?.FOOD??3))];
   }else return[];

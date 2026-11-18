@@ -62,7 +62,14 @@ test('Fire weapon readiness requires actual Attack and unreserved owned quantity
 });
 test('a noted scimitar cannot be equipped and unknown weapons do not qualify',()=>{
  expect(selectFireWeapon(new Map([[1332,2],[1277,1]]))).toBe(1277);
- expect(selectFireWeapon(new Map([[1333,1],[1331,0]]))).toBe(0);
+ // The weapon list is the item data: a rune scimitar is worn from Attack 40, not before, and an id that is no
+ // weapon never qualifies.
+ expect(selectFireWeapon(new Map([[1333,1],[1331,0]]))).toBe(1333);
+ expect(selectFireWeapon(new Map([[1333,1]]),30)).toBe(0);
+ expect(selectFireWeapon(new Map([[99999,1],[1331,0]]))).toBe(0);
+ // A two-handed sword never serves: the pilot wears a shield.
+ expect(selectFireWeapon(new Map([[1319,1]]))).toBe(0);
+ expect(selectFireWeapon(new Map([[1319,1],[1277,1]]))).toBe(1277);
  expect(selectFireWeapon(new Map())).toBe(0);
 });
 test('prior sword ordering still applies when no normal scimitar is owned',()=>{

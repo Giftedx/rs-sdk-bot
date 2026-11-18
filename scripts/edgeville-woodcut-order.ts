@@ -119,7 +119,7 @@ export async function runEdgevilleWoodcut(s: Session, stopped: () => boolean) {
                         lastGain = s.tick();
                     }
                     const nowLevels = readSkillLevels(s.sdk);
-                    if (crossedTierBoundary(toolLevels, nowLevels, ['attack', 'woodcutting'])) {
+                    if (crossedTierBoundary(toolLevels, nowLevels, ['attack', 'woodcutting'], 'woodcutting-axe')) {
                         break;
                     }
                 } else await waitTicks(s, 4);

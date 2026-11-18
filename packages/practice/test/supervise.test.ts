@@ -128,6 +128,10 @@ for(const detail of [
     'Error: cow prerequisite: empty carried cow outputs',
     'Error: cow prerequisite: missing kit1277',
     'mode=cow ok=false failure=Error: cow kit equip failed 1171: no held item and not equipped',
+    // Any kit item, not only the bronze starter kit: a better weapon that will not equip or bank is no fresh-login fix.
+    'mode=cow ok=false failure=Error: cow kit equip failed 1333: Failed to equip Rune scimitar; equipped item not observed',
+    'mode=cow ok=false failure=Error: cow kit: replaced gear deposit failed (1329)',
+    'mode=cow ok=false failure=Error: cow kit withdraw failed 1333',
     'Error: oak PREPARE requires known Draynor bank start',
     'Error: cow needs positive CAP and MAX_KILLS1..5',
     'Error: oak needs CAP>0 and MAX_MAKE1..25',

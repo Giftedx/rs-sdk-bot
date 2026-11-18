@@ -6,10 +6,11 @@ import {walkPath,sessionWalker,expandPath,type PathOptions} from '../packages/co
 import {waterfallDialogue} from './generated/waterfall';
 import {withdrawFireOwned,fireHomeEntryPoints} from './gather-fire-giants';
 import type {NearbyNpc} from '../vendor/rs-sdk/sdk/types';
-import {ownedLoadout,fireWeaponSlot} from '../packages/planner/src/owned-loadout';
+import {ownedLoadout} from '../packages/planner/src/owned-loadout';
+import {meleeWeaponSlot} from '../packages/planner/src/gear-progression';
 const BANK={x:2619,z:3332},BONES=532,FOOD=329;
 export function selectFireWeapon(stock: ReadonlyMap<number,number>,attack:number|null=99,reserved:ReadonlyMap<number,number>=new Map()): number {
- const result=ownedLoadout([fireWeaponSlot(attack)],[...stock].map(([id,count])=>({id,count})),[...reserved].map(([id,count])=>({id,count})));
+ const result=ownedLoadout([meleeWeaponSlot(attack,{oneHanded:true,trainSkill:'Attack'})],[...stock].map(([id,count])=>({id,count})),[...reserved].map(([id,count])=>({id,count})));
  return result.state==='ready'?result.selected[0]!.id:0;
 }
 export function fireStartRoute(p:{worldX:number;worldZ:number;level:number}|null|undefined){
