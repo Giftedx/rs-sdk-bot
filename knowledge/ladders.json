@@ -48,7 +48,7 @@
   },
   "magic": {
    "methods": 52,
-   "withWorker": 5,
+   "withWorker": 6,
    "withXp": 52,
    "withTicks": 52,
    "withGaps": 0
@@ -111,7 +111,7 @@
   },
   "herblore": {
    "methods": 36,
-   "withWorker": 0,
+   "withWorker": 5,
    "withXp": 36,
    "withTicks": 36,
    "withGaps": 0
@@ -143,10 +143,7 @@
   "Strength and Hitpoints have no skill guide gear rows; their ladders hold only combat targets.",
   "Magic combat spells need a target; pick one from the Attack ladder targets.",
   "Prayer prayers (prayers dbtable) are unlocks, not XP methods, and are left out.",
-  "Prayer bones and combat targets have no level gate in the content; their rungs start at level 1.",
-  "worker rule unused: cap:magic-order: evidence \"casts wind strike\" not found",
-  "worker rule unused: cap:ranged-train: evidence \"Lumbridge chickens\" not found",
-  "worker rule unused: scripts/brew-potions.ts: evidence \"super_def:\" not found"
+  "Prayer bones and combat targets have no level gate in the content; their rungs start at level 1."
  ],
  "ladders": {
   "attack": [
@@ -4196,11 +4193,12 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/train-chickens.ts",
+    "worker": "ranged-train",
     "workers": [
+     "ranged-train",
      "scripts/train-chickens.ts"
     ],
-    "workerEvidence": "scripts/train-chickens.ts contains \"Train on Lumbridge chickens\"",
+    "workerEvidence": "scripts/ranged-train.ts contains \"PEN={x:3233,z:3297}\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -5359,11 +5357,12 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/gather-ranged.ts",
+    "worker": "ranged-train",
     "workers": [
+     "ranged-train",
      "scripts/gather-ranged.ts"
     ],
-    "workerEvidence": "scripts/gather-ranged.ts contains \"BOW=841\"",
+    "workerEvidence": "scripts/ranged-train.ts contains \"PEN={x:3233,z:3297}\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -7844,9 +7843,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": null,
-    "workers": [],
-    "workerEvidence": null,
+    "worker": "magic-order",
+    "workers": [
+     "magic-order"
+    ],
+    "workerEvidence": "scripts/magic-order.ts contains \"WIND_STRIKE={level:1\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "magic/magic_spell_wind_strike",
@@ -54810,9 +54811,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": null,
-    "workers": [],
-    "workerEvidence": null,
+    "worker": "scripts/brew-potions.ts",
+    "workers": [
+     "scripts/brew-potions.ts"
+    ],
+    "workerEvidence": "scripts/brew-potions.ts contains \"'super_def'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-energy-potion",
@@ -55123,9 +55126,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": null,
-    "workers": [],
-    "workerEvidence": null,
+    "worker": "scripts/brew-potions.ts",
+    "workers": [
+     "scripts/brew-potions.ts"
+    ],
+    "workerEvidence": "scripts/brew-potions.ts contains \"'super_def'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-prayer-restore-potion",
@@ -55281,9 +55286,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": null,
-    "workers": [],
-    "workerEvidence": null,
+    "worker": "scripts/brew-potions.ts",
+    "workers": [
+     "scripts/brew-potions.ts"
+    ],
+    "workerEvidence": "scripts/brew-potions.ts contains \"'super_def'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-super-attack-potion",
@@ -55747,9 +55754,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": null,
-    "workers": [],
-    "workerEvidence": null,
+    "worker": "scripts/brew-potions.ts",
+    "workers": [
+     "scripts/brew-potions.ts"
+    ],
+    "workerEvidence": "scripts/brew-potions.ts contains \"'super_def'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-super-strength-potion",
@@ -56133,9 +56142,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": null,
-    "workers": [],
-    "workerEvidence": null,
+    "worker": "scripts/brew-potions.ts",
+    "workers": [
+     "scripts/brew-potions.ts"
+    ],
+    "workerEvidence": "scripts/brew-potions.ts contains \"'super_def'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-super-defence-potion",
