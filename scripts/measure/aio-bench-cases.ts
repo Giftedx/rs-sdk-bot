@@ -290,11 +290,11 @@ type Run1 = {members: {name: string; wear: {id: number; count: number; slot: num
 // attacker its own kit), no clones. The attackers hunt the nearest member and fight with the champion's options.
 const attackerSquad = (key: string, kit: string, n: number, o: {prayer?: boolean; profile?: string; args?: string[]} = {}): BenchCase => {
   const c = run1Squad(key, {prayer: o.prayer ?? true, args: ['SQUAD_GANG=' + n, `SQUAD_GANG_KIT=${kit}`, `SQUAD_GANG_PROFILE=${o.profile ?? 'champion'}`, ...(o.args ?? [])]});
-  const kits = kit.split('+'), members = c.companions!.length - 3;
-  const companions = c.companions!.slice(0, members + n).map((comp, i) => (i < members ? comp : {...comp, presetConfig: kitFixture(kits[(i - members) % kits.length]!, GANKER_POST.x, GANKER_POST.z)}));
-  // The squad names every companion as an argument: the letters of the companions that exist, and the gang size n.
-  const bots = c.scriptArgs!.filter(x => /^{bot:/.test(x)).slice(0, companions.length), rest = c.scriptArgs!.filter(x => !/^{bot:/.test(x) && x !== 'squad' && !/^SQUAD_GANG=/.test(x));
-  return {...c, pass: (s: string) => /^RESULT (ok|fail)( died)? squad/m.test(s), scriptArgs: ['squad', ...bots, `SQUAD_GANG=${n}`, ...rest], companions};
+  // The members of ours are the first companions of the replay (all but the 3 clones); each attacker is a new companion.
+  const kits = kit.split('+'), members = c.companions!.length - 3, letters = 'bcdefghijklmnopqrstuvwxyz'.slice(0, members + n).split('');
+  const companions = letters.map((suffix, i) => (i < members ? {...c.companions![i]!, suffix} : {suffix, preset: 'fresh_lumbridge', presetConfig: kitFixture(kits[(i - members) % kits.length]!, GANKER_POST.x, GANKER_POST.z)}));
+  const rest = c.scriptArgs!.filter(x => !/^{bot:/.test(x) && x !== 'squad' && !/^SQUAD_GANG=/.test(x));
+  return {...c, pass: (s: string) => /^RESULT (ok|fail)( died)? squad/m.test(s), scriptArgs: ['squad', ...letters.map(l => `{bot:${l}}`), `SQUAD_GANG=${n}`, ...rest], companions};
 };
 const run1Squad = (key: string, o: {prayer: boolean; prey?: string; mode?: CloneMode; args?: string[]; gang?: Record<string, unknown>; order?: number[]}): BenchCase => {
   const run1 = JSON.parse(readFileSync(join(import.meta.dir, '..', 'pk-gang-record', 'run-1.json'), 'utf8')) as Run1, start = {x: 3093, z: 3501}, base = 'live-walker-iron-rune-chain-bind';
