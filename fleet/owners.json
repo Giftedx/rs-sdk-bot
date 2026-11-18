@@ -249,8 +249,9 @@
    "home": "claude-cloud"
   },
   "KnightRider": {
-   "side": "claude-cloud",
-   "server": "rs-sdk-demo.fly.dev"
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
   },
   "Familyjewel": {
    "side": "cloud-kit",
