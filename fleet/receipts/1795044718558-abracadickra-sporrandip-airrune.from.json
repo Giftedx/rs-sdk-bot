@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795044718558-abracadickra-sporrandip-airrune",
  "account": "Abracadickra",
  "partner": "SporranDip",
@@ -12,6 +12,16 @@
  "claim": "5c4f71ba-6869-4ba0-81c5-53826393ce83",
  "count": 0,
  "ok": false,
- "at": 1795044865286,
- "detail": "trade claimed"
+ "at": 1795045093867,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "bank": {
+  "count": 50,
+  "at": 1795045084715
+ },
+ "logout": {
+  "attemptId": "1795044865297-0000020904-0000000001",
+  "at": 1795045093857,
+  "sha256": "60e452970e867160261b4c956ae0d92652c68a3c098305ceb9f70a46f42b0b27"
+ },
+ "screen": false
 }
