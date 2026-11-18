@@ -3,7 +3,7 @@ import {existsSync,mkdirSync,mkdtempSync,readFileSync,rmSync,writeFileSync} from
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {assertAccountOwnership} from '../../../scripts/handoff-inputs';
-import {coordinatorStateFixture,EMPTY_COORDINATOR_STATE} from '../src/rune-carrier-stage-proof';
+import {coordinatorStateFixture,EMPTY_COORDINATOR_STATE} from '../src/coordinator-state-fixture';
 
 test('the empty coordinator state is made only where none exists, satisfies the ownership check, and goes when the proof ends',()=>{
  const base=mkdtempSync(join(tmpdir(),'stage-state-')),file=join(base,'.practice/coordinator/state.json');

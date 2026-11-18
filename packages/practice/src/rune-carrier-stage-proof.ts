@@ -1,5 +1,6 @@
-import {readFileSync,writeFileSync,copyFileSync,mkdirSync,existsSync,openSync,closeSync,unlinkSync,rmSync} from 'node:fs';
-import {join,resolve,basename,dirname} from 'node:path';
+import {readFileSync,writeFileSync,copyFileSync,mkdirSync,existsSync,openSync,closeSync,unlinkSync} from 'node:fs';
+import {join,resolve,basename} from 'node:path';
+import {coordinatorStateFixture} from './coordinator-state-fixture';
 import {freemem} from 'node:os';
 import {startStack} from './stack';
 import {ISOLATED,ISOLATED_ENGINE_ENV,pointBotAt} from './rehearse';
@@ -103,18 +104,6 @@ function verify(dir:string){
   leases:meta.names.every((n:string)=>!existsSync(join(root,'.practice/account-leases',n.toLowerCase()+'.lock')))};
  const report={ok:Object.values(checks).every(Boolean),checks,cohort,names:meta.names,phases:meta.phases,source:meta.source,tickMs:150,xpRate:25,scope:'Actual Rune worker CLI. Four authentic fresh carriers receive owned kits, bank and stage; repeat sends nothing; supplier stages the opening pack. Existing cohort exits the skull room, transfers162 essence and preserves307 with the supplier. Fresh reserve shortage refuses. All supplies are fixtures. No live claim.'};
  writeFileSync(join(dir,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
-}
-// The staging script refuses to start when the coordinator state is missing (it checks that no coordinator run owns
-// its accounts: scripts/handoff-inputs.ts assertAccountOwnership). A checkout with no coordinator (a hosted runner) has
-// no such file, so the proof gives it an empty state, only when the file is absent and only until the proof ends. A
-// state that exists, the live coordinator's, is never written, replaced or removed.
-export const EMPTY_COORDINATOR_STATE=JSON.stringify({version:1,tasks:[]});
-export function coordinatorStateFixture(base:string):()=>void{
- const file=join(base,'.practice/coordinator/state.json');
- if(existsSync(file))return()=>{};
- mkdirSync(dirname(file),{recursive:true});
- try{writeFileSync(file,EMPTY_COORDINATOR_STATE,{flag:'wx'});}catch{return()=>{};}
- return()=>{try{if(readFileSync(file,'utf8')===EMPTY_COORDINATOR_STATE)rmSync(file);}catch{/* a writer that changed it owns it */}};
 }
 async function run(dir:string){
  if(!existsSync(join(root,'.practice/delivery-native.lock')))throw Error('practice turn required: run through delivery');
