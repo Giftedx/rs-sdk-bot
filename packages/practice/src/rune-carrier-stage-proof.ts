@@ -1,5 +1,5 @@
-import {readFileSync,writeFileSync,copyFileSync,mkdirSync,existsSync,openSync,closeSync,unlinkSync} from 'node:fs';
-import {join,resolve,basename} from 'node:path';
+import {readFileSync,writeFileSync,copyFileSync,mkdirSync,existsSync,openSync,closeSync,unlinkSync,rmSync} from 'node:fs';
+import {join,resolve,basename,dirname} from 'node:path';
 import {freemem} from 'node:os';
 import {startStack} from './stack';
 import {ISOLATED,ISOLATED_ENGINE_ENV,pointBotAt} from './rehearse';
@@ -104,12 +104,25 @@ function verify(dir:string){
  const report={ok:Object.values(checks).every(Boolean),checks,cohort,names:meta.names,phases:meta.phases,source:meta.source,tickMs:150,xpRate:25,scope:'Actual Rune worker CLI. Four authentic fresh carriers receive owned kits, bank and stage; repeat sends nothing; supplier stages the opening pack. Existing cohort exits the skull room, transfers162 essence and preserves307 with the supplier. Fresh reserve shortage refuses. All supplies are fixtures. No live claim.'};
  writeFileSync(join(dir,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
+// The staging script refuses to start when the coordinator state is missing (it checks that no coordinator run owns
+// its accounts: scripts/handoff-inputs.ts assertAccountOwnership). A checkout with no coordinator (a hosted runner) has
+// no such file, so the proof gives it an empty state, only when the file is absent and only until the proof ends. A
+// state that exists, the live coordinator's, is never written, replaced or removed.
+export const EMPTY_COORDINATOR_STATE=JSON.stringify({version:1,tasks:[]});
+export function coordinatorStateFixture(base:string):()=>void{
+ const file=join(base,'.practice/coordinator/state.json');
+ if(existsSync(file))return()=>{};
+ mkdirSync(dirname(file),{recursive:true});
+ try{writeFileSync(file,EMPTY_COORDINATOR_STATE,{flag:'wx'});}catch{return()=>{};}
+ return()=>{try{if(readFileSync(file,'utf8')===EMPTY_COORDINATOR_STATE)rmSync(file);}catch{/* a writer that changed it owns it */}};
+}
 async function run(dir:string){
  if(!existsSync(join(root,'.practice/delivery-native.lock')))throw Error('practice turn required: run through delivery');
  if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('HOST_DEFERRED_NATIVE_HEADROOM: no stack started');
  const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,task:'rune-carrier-stage',directory:dir}));closeSync(fd);
- let stack:Awaited<ReturnType<typeof startStack>>|undefined;
+ let stack:Awaited<ReturnType<typeof startStack>>|undefined,restoreState=()=>{};
  try{
+  restoreState=coordinatorStateFixture(root);
   stack=await startStack({tickMs:150,xpRate:25,ports:ISOLATED,instance:'rune-carrier-stage',readyTimeoutMs:60000,enginePreload:{module:join(root,'packages/practice/src/save-endpoint.ts'),env:{...ISOLATED_ENGINE_ENV,BUILD_LIVE_RELOAD:'false',BUILD_STARTUP:'false',NODE_INFINITE_RUN:'true'}}});
   const name=runBotName('flrs',0),names=[name,...['b','c','d','e'].map(s=>name+s)],paths=names.map(n=>join(root,'vendor/rs-sdk/server/engine/data/players/main',n+'.sav'));
   if(paths.some(existsSync))throw Error('staging names already have saved state');
@@ -138,7 +151,7 @@ async function run(dir:string){
   }
   if(meta.phases.length===3&&meta.phases.every(p=>p.code===0&&!p.timedOut&&!p.lowMemory))await runCohort(dir,name);
   return verify(dir);
- }finally{try{await stack?.stop();}finally{if(stack)for(const [service,path]of Object.entries(stack.logs))if(existsSync(path))copyFileSync(path,join(dir,service+'.log'));if(existsSync(lock)&&JSON.parse(readFileSync(lock,'utf8')).pid===process.pid)unlinkSync(lock);}}
+ }finally{restoreState();try{await stack?.stop();}finally{if(stack)for(const [service,path]of Object.entries(stack.logs))if(existsSync(path))copyFileSync(path,join(dir,service+'.log'));if(existsSync(lock)&&JSON.parse(readFileSync(lock,'utf8')).pid===process.pid)unlinkSync(lock);}}
 }
 if(import.meta.main){try{
  if(!process.env.DELIVERY_DIR)throw Error('run through delivery (DELIVERY_DIR)');
