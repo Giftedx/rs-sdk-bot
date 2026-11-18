@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794964168123,
+ "at": 1794964235378,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -207,6 +207,25 @@
    "resources": []
   },
   {
+   "account": "Pocketpython",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=pocketpython-kit7-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"554\":250}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Bigpackage",
    "script": "scripts/chain.ts",
    "args": [
@@ -384,25 +403,6 @@
    ]
   },
   {
-   "account": "Pocketpython",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=pocketpython-kit7-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"554\":250}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
@@ -479,29 +479,22 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=50 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=billionaire-kit1-561-0to50 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"561\":50}}"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "repeat": false,
+   "goal": "buy 50 Nature rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
    "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "resources": []
   },
   {
    "account": "Ballspinner",
