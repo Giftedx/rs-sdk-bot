@@ -7,6 +7,7 @@
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { XP_RATE } from '../knowledge/src/method-model';
+import { CONFIG_SKILL_TABLES } from '../knowledge/src/skills';
 
 // counts: how many of each input one action uses (1 when absent), from the row's dbrow line (inputCounts).
 export type SkillRow = { skill: string; row: string; level: number; xp: number; inputs?: string[]; outputs?: string[]; counts?: number[] };
@@ -179,7 +180,10 @@ if (import.meta.main) {
     // Each knowledge row points at its dbrow line (src.row); the block from there holds the input counts.
     const content = join(root, 'vendor', 'rs-sdk', 'server', 'content'), fileCache = new Map<string, string[]>();
     const block = (src?: string) => { const m = src?.match(/^(.*):(\d+)$/); if (!m) return ''; const lines = fileCache.get(m[1]!) ?? readFileSync(join(content, m[1]!), 'utf8').split(/\r?\n/); fileCache.set(m[1]!, lines); const from = Number(m[2]) - 1, end = lines.findIndex((l, k) => k > from && l.startsWith('[')); return lines.slice(from, end < 0 ? undefined : end).join('\n'); };
-    const knowledge = (JSON.parse(readFileSync(join(root, 'knowledge', 'skills.json'), 'utf8')) as (SkillRow & { src?: { row?: string } })[]).map(r => withEssence({ ...r, counts: inputCounts(r.inputs ?? [], block(r.src?.row)) }));
+    // The firemaking, herblore and smelting rows of skills.json check the hand tables; the rows below name items, count bars and
+    // cover them with contentRows and objParamRows. The anvil rows (table smithing) now carry XP, so they would beat the rows
+    // below that hold the bar counts: the generator takes its anvil rows from contentRows only.
+    const knowledge = (JSON.parse(readFileSync(join(root, 'knowledge', 'skills.json'), 'utf8')) as (SkillRow & { table?: string; src?: { row?: string } })[]).filter(r => !CONFIG_SKILL_TABLES.has(r.table ?? '') && r.table !== 'smithing').map(r => withEssence({ ...r, counts: inputCounts(r.inputs ?? [], block(r.src?.row)) }));
     const scripts = join(root, 'vendor', 'rs-sdk', 'server', 'content', 'scripts'), read = (p: string) => readFileSync(join(scripts, p), 'utf8');
     const files = (d: string, ext: string): string[] => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? files(p, ext) : f.endsWith(ext) ? [readFileSync(p, 'utf8')] : []; });
     const objs = (d: string): [string, string][] => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? objs(p) : f.endsWith('.obj') ? [[p, readFileSync(p, 'utf8')] as [string, string]] : []; });
