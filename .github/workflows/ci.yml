@@ -30,6 +30,11 @@ on:
         type: string
         required: false
         default: ''
+      bench_seeds:
+        description: Seeds for the named bench cases, for example 1,2,3 (empty runs the default seed)
+        type: string
+        required: false
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -113,9 +118,17 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p .practice/bench-cases
-          bun run bench "$BENCH_PATTERN" --parallel 4 --budget 10 | tee .practice/bench-cases/bench.log
+          # A list of seeds runs each case once for each seed, three seeds at a time. The budget of the selection is
+          # shared by the seeds, so it is 20 minutes for a seed list.
+          if [ -n "$BENCH_SEEDS" ]; then
+            if ! printf '%s' "$BENCH_SEEDS" | grep -Eq '^[0-9]+(,[0-9]+){0,7}$'; then echo "bench_seeds must be 1 to 8 numbers with commas"; exit 2; fi
+            bun run bench "$BENCH_PATTERN" --seeds "$BENCH_SEEDS" --seed-jobs 3 --parallel 2 --budget 20 | tee .practice/bench-cases/bench.log
+          else
+            bun run bench "$BENCH_PATTERN" --parallel 4 --budget 10 | tee .practice/bench-cases/bench.log
+          fi
         env:
           BENCH_PATTERN: ${{ inputs.bench_pattern }}
+          BENCH_SEEDS: ${{ inputs.bench_seeds }}
           BENCH_OUT: .practice/bench-cases/cases.json
       - name: Retain the bench evidence
         if: always()
@@ -128,7 +141,9 @@ jobs:
           path: |
             .practice/bench-cases/**
             .practice/aio-bench/last.json
+            .practice/aio-bench/seed-*.json
             .practice/aio-bench/output/*.log
+            .practice/aio-bench/output-seed-*/*.log
   progression-practice:
     if: inputs.preparation_practice
     uses: ./.github/workflows/progression-practice.yml
