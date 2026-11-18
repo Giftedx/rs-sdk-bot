@@ -206,8 +206,9 @@
    "server": "rs-sdk-demo.fly.dev"
   },
   "Knightstick": {
-   "side": "claude-cloud",
-   "server": "rs-sdk-demo.fly.dev"
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
   },
   "PocketPool": {
    "side": "claude-cloud",
