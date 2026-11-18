@@ -169,11 +169,21 @@ Read in the server scripts; each is a knob of the fight loop or a build of `scri
   (`skill_prayer/scripts/prayer.rs2:30-43`). All prayers off and on again inside 5 ticks would cost no points. Not in
   the loop: gap.
 - The dragon spear special moves the target one tile and suspends it for 4 ticks (`pvp_dragon_spear.rs2`
-  `.p_delay(4)`): it cannot eat, walk or teleport. Not in the loop or a build: gap.
+  `.p_delay(4)`): it cannot eat, walk or teleport. The loop uses it: `defaultSpec` and `defaultStunSpec` (`scripts/pk.ts`)
+  give it a special config with `stun: 4`, and the stun options hold the target while the others hit.
 - The dragon mace special is 150% damage at 125% accuracy against crush defence; the dragon longsword 125% damage.
   Not measured: gap.
 - A freeze ends when its caster is more than 10 tiles from the target (`pvp_magic.rs2` walktrigger).
-- There is no Smite: the prayer list ends at Protect from Melee.
+- There is no Smite: the prayer list ends at Protect from Melee. The content has no Teleblock and no revenants.
+- The stat-drain spells (Curse, Weaken, Confuse, Vulnerability, Enfeeble, Stun) work on players: each has an
+  `applayert` handler (`pvp_magic.rs2:27-35`), and `pvp_debuff_allowed` (`pvp_magic.rs2:107`) refuses a cast only on a
+  stat that is already lowered. No build or loop casts them.
+- The rune throwing axe special (`pvp_rune_thrownaxe.rs2`) costs 10% of the special energy (`sa_energy` 100,
+  `thrownaxes.obj`) and throws at the target, then chains to a player within 3 tiles of the last target in line of
+  sight, up to 4 more players. A chain link needs our account and the next player both on multi-way tiles
+  (`pvp_rune_thrownaxe_hunt`): in single-way combat it hits one player. Each throw is a ranged roll with +10 Ranged
+  levels. The loop uses it for a kit that carries the axe (`defaultSpec`, kit `live-walker-iron-rune-chain-bind-axe`
+  in `scripts/pk-kits.ts`), in place of the melee special.
 
 Gap: in two batches of the mirror, side A won 7 of 8 with either profile on it; with the logins of a pair in order
 (side A first, then side B first) the kills were 5 to 3 and 3 to 5. The cause of a side's advantage is not found. The

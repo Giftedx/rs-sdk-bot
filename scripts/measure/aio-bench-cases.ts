@@ -1146,6 +1146,12 @@ const ROUTE_CASES: BenchCase[] = [
   ...([['nofreeze', {freeze: false}], ['freezelow', {freeze: 'low'}], ['spec1', {specBelow: 1}], ['eat50', {eatAt: 50}], ['eat70', {eatAt: 70}], ['melee', {rotation: ['melee']}], ['ranged', {rotation: ['ranged']}], ['nochase', {chaseBelow: 0}], ['focus7', {focusRunner: 0.7}]] as const)
     .map(([tag, change]) => cloneSquad(`extra:clone-squad-4-chainbind-${tag}-x1`, 'live-walker-iron-rune-chain-bind', 4,
       ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', `SQUAD_OPTS=${JSON.stringify({cureNow: true, eatAt: 60, freeze: 'flee', focusRunner: 0.4, chaseBelow: 0.4, freezeMagicCap: 49, dropForStrip: null, specBelow: 0.45, ...change})}`])),
+  // The rune throwing axe special (scripts/pk.ts defaultSpec): five of ours in the bind kit with the axe stack, whose
+  // special chains onto up to 4 more players in multi-way combat, against the same five with the dagger special. The
+  // squad's default holds the special for a target at 45% Hitpoints or less; `spec1` fires it from the first health bar.
+  ...([['', 'live-walker-iron-rune-chain-bind', {}], ['spec1-', 'live-walker-iron-rune-chain-bind', {specBelow: 1}], ['axe-', 'live-walker-iron-rune-chain-bind-axe', {}], ['axe-spec1-', 'live-walker-iron-rune-chain-bind-axe', {specBelow: 1}]] as const)
+    .map(([tag, kit, change]) => cloneSquad(`extra:clone-squad-5-chainbind-${tag}special-x1`, kit, 5,
+      ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', `SQUAD_OPTS=${JSON.stringify({cureNow: true, eatAt: 60, freeze: 'flee', focusRunner: 0.4, chaseBelow: 0.4, freezeMagicCap: 49, dropForStrip: null, specBelow: 0.45, ...change})}`])),
   // The repeat cycle of one account for 30 game minutes: kill, pick up, bank trip, return, next kill. A clone that
   // walks out comes back from the bank; a dead clone does not come back.
   atBank(cloneGang('extra:clone-cycle-solo-x1', 'live-walker-iron-snare-rune-nopot', CLONE_NAMES, 1, ['SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=3000', 'SPAR_TRIPS=6', 'SPAR_PICKUP=1', 'SPAR_B_TRIPS=4', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000', 'SPAR_B_OPTS={"protectItem":false}'], 'seen', EDGE_BANK_SNARE), GANKER_POST),
