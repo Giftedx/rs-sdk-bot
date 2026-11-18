@@ -100,3 +100,14 @@ test('catalog maps smithing anvil, magic, runecraft F2P altars, fletching, woodc
  for(const id of ['smithing/anvil-steel-platebody','magic/high-alch','magic/npc-wind-strike','runecraft/nature','fletching/arrows-rune','woodcutting/yew','thieving/pickpocket-knight-of-ardougne','prayer/bury-dragon_bones'])
   expect(coveredIds.has(id),id).toBe(true);
 });
+
+test('the registration script of the practice proofs is an observe entry, so the session does not hand it off',()=>{
+ const c=buildProgressionCatalog(),script='packages/practice/src/register-proof-account.ts';
+ expect(c.entries.find(e=>e.script===script)).toEqual({script,intents:['observe'],skills:[],routeIds:[],practiceOnly:true});
+ expect(c.routes.some(r=>r.script===script)).toBe(false);
+ expect(c.methods.some(m=>m.step.script===script)).toBe(false);
+ // A script that the catalog does not name gets no intent: the session ends it as unmapped (the refusal that stopped
+ // the registration of every practice fixture account).
+ expect(intentForEntry(script,['aiobfxfixture'],{},undefined,c)?.kind).toBe('observe');
+ expect(intentForEntry('packages/practice/src/not-in-the-catalog.ts',['aiobfxfixture'],{},undefined,c)).toBeNull();
+});

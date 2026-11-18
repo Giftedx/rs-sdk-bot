@@ -364,7 +364,8 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  if(boundedServiceEntries.has(entryName)){
   // The entry states its bound: a CAP or TICKS setting, or a count among its positional arguments. No number, a zero
   // or a fraction is no finite goal.
-  const stated=[setting(env,args,'CAP'),setting(env,args,'TICKS'),...args.filter(a=>/^-?\d+(?:\.\d+)?$/.test(a))].filter(v=>v!==undefined);
+  // A bound in a flag is a stated bound too: quest-order states its time limit as --timeout-ms=<ms>.
+  const stated=[setting(env,args,'CAP'),setting(env,args,'TICKS'),...args.filter(a=>/^-?\d+(?:\.\d+)?$/.test(a)),...args.flatMap(a=>/^--timeout-ms=(.*)$/.exec(a)?.[1]??[])].filter(v=>v!==undefined);
   // These nine workers run to their own default tick cap, so a bare entry is finite.
   const defaultCap=['gather-flax','spin-bowstrings','fletch-arrows','gather-fish','cook-food','gather-yews','gather-ore','gather-essence','blood-chest'].includes(entryName);
   if(!stated.length&&!defaultCap||stated.some(v=>!whole(Number(v))||Number(v)<=0))return null;

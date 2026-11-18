@@ -12,10 +12,12 @@
 import type { BillRow } from './supply-bill';
 import { missionSignature } from '../../core/src/session-admission';
 import { xpForLevel } from './curve';
+import { ammoTier, boneXp, castRunes, objId, spellFact, toolLevel, wearLevel } from '../../core/src/content-facts';
 import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { validateBankRouteJob, type BankRouteJob } from '../../core/src/bank-trip';
 import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-route-step';
 import { cowFoodIds, foodTotalHeal } from '../../core/src/sustain';
+import { ORDER_COIN_MARGIN, REFUSAL_ANY_SOURCE } from '../../core/src/order-refusal';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -24,8 +26,10 @@ import { resolve } from 'node:path';
 // reports (absent: none known, which counts as 0). `pos`: the tile where the account stands while it is offline
 // (absent: not known, and the reach rule does not apply).
 // `currentHP`: the observed current Hitpoints; absent means unknown, never the base level.
+// `exact`: the holdings of unnoted items by name, as the buy script counts them (its matcher takes the item id and skips banknotes); `items`
+// counts a banknote under its item's name. Absent: no observation.
 // `observedAt`: when the observation behind this account was taken (its status `at`); absent: no observation.
-export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; observedAt?: number; currentHP?: number; combat?: number; quests?: ReadonlySet<string>; questPoints?: number; pos?: { x: number; z: number; level: number } };
+export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; exact?: Record<string, number>; observedAt?: number; currentHP?: number; combat?: number; quests?: ReadonlySet<string>; questPoints?: number; pos?: { x: number; z: number; level: number } };
 export type Flow = { item: string; perTick: number };
 // `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
 // `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
@@ -190,7 +194,7 @@ export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.t
 // scimitar on the Grand Exchange, as a kit buy, at WEAPON_BAND: before its Ranged band, so every account gets one now
 // (owner: all of them, until rune blades arrive), WEAPON_BUYERS accounts away for it at a time.
 // Progressive weapon, armour, and skilling-tool tiers (rev-289 equipment requirements and shop/GE sources).
-export const WEAPON = { id: 'army-weapon', item: 'adamant scimitar', attack: 30, goal: 'fight with an adamant scimitar' } as const;
+export const WEAPON = { id: 'army-weapon', item: 'adamant scimitar', attack: wearLevel('adamant scimitar', 'attack'), goal: 'fight with an adamant scimitar' } as const;
 export const WEAPON_HELD = ['adamant scimitar', 'adamant sword', 'adamant longsword', 'rune scimitar', 'rune sword', 'rune longsword', 'dragon longsword', 'dragon dagger'] as const;
 // WEAPON_BUYERS: a blade raises the damage of every later tick (max hit 12 with the bronze sword, 15 or 16 with the
 // adamant scimitar), and a buy may take an account from its running band, so four go at a time.
@@ -200,18 +204,17 @@ type WeaponStage = { id: string; item: string; fallbacks?: readonly string[]; at
 const RUNE_WEAPONS = ['rune scimitar', 'rune longsword', 'rune sword', 'dragon longsword', 'dragon dagger'] as const;
 const DRAGON_WEAPONS = ['dragon longsword', 'dragon dagger'] as const;
 const WEAPON_STAGES: readonly WeaponStage[] = [
-    { id: 'army-weapon-dragon', item: 'dragon dagger', attack: 60, quest: 'Lost City', goal: 'fight with a dragon dagger', held: DRAGON_WEAPONS },
-    { id: 'army-weapon-rune', item: 'rune scimitar', fallbacks: ['rune longsword'], attack: 40, goal: 'fight with a rune blade', held: RUNE_WEAPONS },
+    { id: 'army-weapon-dragon', item: 'dragon dagger', attack: wearLevel('dragon dagger', 'attack'), quest: 'Lost City', goal: 'fight with a dragon dagger', held: DRAGON_WEAPONS },
+    { id: 'army-weapon-rune', item: 'rune scimitar', fallbacks: ['rune longsword'], attack: wearLevel('rune scimitar', 'attack'), goal: 'fight with a rune blade', held: RUNE_WEAPONS },
     { id: WEAPON.id, item: WEAPON.item, attack: WEAPON.attack, goal: WEAPON.goal, held: WEAPON_HELD },
 ];
 const RUNE_ARMOUR_BAND = 'army-armour-rune';
 const DHIDE_ARMOUR_BAND = 'army-armour-dhide';
-const PICKAXE_LADDER: readonly (readonly [level: number, item: string, coins: number])[] = [
-    [41, 'rune pickaxe', 40_000], [31, 'adamant pickaxe', 5_000], [21, 'mithril pickaxe', 2_500], [6, 'steel pickaxe', 1_000], [1, 'iron pickaxe', 300],
-];
-const AXE_LADDER: readonly (readonly [level: number, item: string, coins: number])[] = [
-    [41, 'rune axe', 25_000], [31, 'adamant axe', 10_000], [21, 'mithril axe', 4_000], [6, 'steel axe', 1_500], [1, 'iron axe', 200],
-];
+// The levels come from the content (toolLevel); the coins are the price cap of a purchase, which is policy.
+const toolLadder = (rows: readonly (readonly [item: string, coins: number])[]): readonly (readonly [level: number, item: string, coins: number])[] =>
+    rows.map(([item, coins]) => [toolLevel(item), item, coins] as const);
+const PICKAXE_LADDER = toolLadder([['rune pickaxe', 40_000], ['adamant pickaxe', 5_000], ['mithril pickaxe', 2_500], ['steel pickaxe', 1_000], ['iron pickaxe', 300]]);
+const AXE_LADDER = toolLadder([['rune axe', 25_000], ['adamant axe', 10_000], ['mithril axe', 4_000], ['steel axe', 1_500], ['iron axe', 200]]);
 // A pickaxe or an axe over the account's level is no kit: the account cannot use it. The cheapest pickaxe with a
 // price cap is adamant (Mining 31), and a kit buy took it for an account with Mining 1.
 export const usableTool = (a: Pick<Acct, 'skills'>, item: string): boolean => {
@@ -225,9 +228,10 @@ export const usableTool = (a: Pick<Acct, 'skills'>, item: string): boolean => {
 export const QUEST_BAND = 3.6, LOST_CITY = 'quest:lostcity', LOST_CITY_PLACES = 1, LOST_CITY_MEALS = 10;
 // Holy Grail after Merlin's Crystal: 275,000 Prayer experience at the server's rate (quest_grail; research/quest-plan.md
 // 1k), what about 150 bought dragon bones give. One account at a time: Sir Mordred and the Black Knight Titan are
-// single fights. GRAIL_RUNES: the two quests' teleports (Falador five times, Camelot five, Varrock once).
+// single fights. GRAIL_RUNES: the two quests' teleports (Falador six times, Camelot five, Varrock once; the cast counts
+// are the route, the cost of a cast is the content's).
 export const GRAIL_BAND = QUEST_BAND + 0.1, GRAIL_PLACE = 'quest:camelot', GRAIL_PLACES = 1, GRAIL_MEALS = 12;
-export const GRAIL_RUNES: Readonly<Record<string, number>> = { 'law rune': 12, 'air rune': 46, 'water rune': 6, 'fire rune': 1 };
+export const GRAIL_RUNES: Readonly<Record<string, number>> = castRunes({ falador_teleport: 6, camelot_teleport: 5, varrock_teleport: 1 });
 export const LOST_CITY_FOOD = ['lobster', 'swordfish', 'shark'] as const;
 // The Fremennik Trials for a build with a Fremennik helm, just after Lost City. One account at a time: Koschei and
 // the Draugen are single fights. FREMENNIK_MEALS: the four sharks of the quest pack.
@@ -242,7 +246,7 @@ export const FREMENNIK_BAND = QUEST_BAND + 0.05, FREMENNIK = 'quest:rellekka', F
 export const UPASS_BAND = QUEST_BAND + 0.06, REGICIDE_BAND = QUEST_BAND + 0.07, UPASS = 'quest:upass', UPASS_PLACES = 1;
 export const UPASS_AGILITY = 68, UPASS_THIEVING = 50, UPASS_MEALS = 12, REGICIDE_MEALS = 30, QUEST_BOW_ARROWS = 600;
 // The runes of Regicide: the Falador and the Ardougne teleport (the quest pack of quest_regicide).
-export const REGICIDE_RUNES: Readonly<Record<string, number>> = { 'law rune': 5, 'air rune': 3, 'water rune': 5 };
+export const REGICIDE_RUNES: Readonly<Record<string, number>> = castRunes({ falador_teleport: 1, ardougne_teleport: 2 });
 // What the account holds for Regicide beside the bow pack, the items of the practice case
 // extra:sweep-regicide-pure-hally. The quest script takes the coal of the still, the rabbit and a second rope out of
 // the bank at Falador, and the sweep takes the first rope for the pack. No shop sells the limestone and the iron fire
@@ -264,6 +268,8 @@ export const LOST_CITY_BUILD: Needs = {
 // The coins a kit buy leaves in the bank (the buy script's CASH_RESERVE). A kit costs far less than FUND_RESERVE, which
 // guards a coin donor, so a buyer keeps only this.
 export const KIT_CASH_RESERVE = 1_000;
+// Coins the plan leaves above the reserve when it sizes a kit buy (see acquire): the observed coins are minutes old when the buy runs.
+export const KIT_COIN_MARGIN = ORDER_COIN_MARGIN;
 // Unit price caps for kit buys, in coins. Estimates: the owner's hand jobs cap a law rune at 1,600 (shop value 40) and
 // a shark at 810 to 1,200 (shop value 300), so a rune caps at about 40 times and food at about 4 times its shop value.
 // An offer fills at or under its cap, and scripts/buy-owned-ge-item.ts refunds what does not fill. Gap: no measured
@@ -586,7 +592,7 @@ function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
         });
         budget(`army kit ${a.name}`, () => {
             const cost = lines.reduce((n, l) => n + (l.need.short + (l.need.bought ?? 0)) * l.price, 0);
-            return cash + keep + cost + (cost > 0 ? KIT_CASH_RESERVE : 0);
+            return cash + keep + cost + (cost > 0 ? KIT_CASH_RESERVE + KIT_COIN_MARGIN : 0);
         }, lower);
     }
     for (const need of route) if (!need.names.includes('coin')) {
@@ -1056,15 +1062,19 @@ export function plan(inp: Inputs): Assignment[] {
             // The batch when the account can pay for it, else only what the band needs to start. A one-line band with
             // `partBatch` takes as much of its batch as the account can pay for.
             const batchOf = c.template.batchFor?.(a) ?? c.template.batch;
-            const sized = (batch: boolean): KitLine[] => picks.map(p => { const held = a.items[p!.item] ?? 0, m = inp.market![p!.item]!; return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(p!.count, batch ? (batchOf?.[p!.item] ?? 0) - held : 0) }; });
+            // `held` is what the buy script will count (EXPECTED_OWNED, the order key): the unnoted units. The batch top-up counts every unit, notes included.
+            const sized = (batch: boolean): KitLine[] => picks.map(p => { const owned = a.items[p!.item] ?? 0, held = a.exact ? a.exact[p!.item] ?? 0 : owned, m = inp.market![p!.item]!; return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(p!.count, batch ? (batchOf?.[p!.item] ?? 0) - owned : 0) }; });
             const price = (ls: readonly KitLine[]) => ls.reduce((n, l) => n + l.quantity * l.limit, 0), coins = a.items.coin ?? 0;
             const keep = Math.max(c.template.keepCoins?.(a) ?? 0,...Object.entries(c.template.needs?.items??{}).filter(([item])=>norm(item)==='coin').map(([,count])=>count));
             const free = coins - keep;
-            const full = sized(true), start = sized(false), part = Math.floor((free - KIT_CASH_RESERVE) / (full[0]?.limit ?? 1));
+            // The buy script refuses a round whose escrow and reserve pass the coins it finds, and the status that sized the buy is older than
+            // the run: KIT_COIN_MARGIN keeps the planned buy under the coins by what a few minutes of fares, food and fees can take.
+            const room = KIT_CASH_RESERVE + KIT_COIN_MARGIN;
+            const full = sized(true), start = sized(false), part = Math.floor((free - room) / (full[0]?.limit ?? 1));
             const frailFood = c.template.id === FRAIL_FOOD_BUY_ID;
-            const lines = frailFood || price(full) + KIT_CASH_RESERVE <= free ? full
+            const lines = frailFood || price(full) + room <= free ? full
                 : c.template.partBatch && full.length === 1 && part > start[0]!.quantity ? [{ ...full[0]!, quantity: Math.min(full[0]!.quantity, part) }] : start;
-            const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0, KIT_CASH_RESERVE + keep), cost = price(lines), short = cost + KIT_CASH_RESERVE - free;
+            const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0, KIT_CASH_RESERVE + keep), cost = price(lines), short = cost + room - free;
             const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
             const purchaseResources=c.template.id===WEAPON.id||c.template.id.startsWith('army-weapon-')||c.template.id.startsWith('army-armour-')||frailFood?c.resources:[];
             const reservePurchase=()=>{for(const r of purchaseResources)used.set(r,(used.get(r)??0)+1);reserveKit(c.account,lines);if(c.supply)reserveOutput(c.supply.template,c.supply.account);};
@@ -1330,7 +1340,9 @@ export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked
 // logged two such fails, and the account's Lost City band was retired).
 // An offline login server or an unavailable swarm claim authority refuses the session before the worker runs.
 // Supervisor retry bounds and claim recovery still apply; neither refusal establishes a broken worker.
-export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|login: LoginError: Login server offline\b|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|(?:login: )?(?:Error: )?fleet swarm claim authority (?:unavailable or changed|timed out)\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|.*\bstop"?[=:]"?preparation\b|.*\bprogression requires acquire\b|stop file\b|.*\bworker finished: stop file\b)/;
+const DRAIN_BASE = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|login: LoginError: Login server offline\b|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|(?:login: )?(?:Error: )?fleet swarm claim authority (?:unavailable or changed|timed out)\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|.*\bstop"?[=:]"?preparation\b|.*\bprogression requires acquire\b|stop file\b|.*\bworker finished: stop file\b)/;
+// A buy that ends before it places an offer, on any refusal of packages/core/src/order-refusal.ts, is no failure of its job.
+export const DRAIN_RESULT = new RegExp(DRAIN_BASE.source.replace('^RESULT fail (?:', `^RESULT fail (?:.*"phase":"unplaced",.*"escrow":0,.*"failure":"Error: (?:${REFUSAL_ANY_SOURCE})|`));
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
     const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;
@@ -1428,13 +1440,14 @@ export const LEATHER_LEVEL = 84, SET_HIDES = 6, TAN_COIN = 20, SET_SHOP = 100, A
 // what the account keeps of its own runes.
 export const SPLASH_FENCE = 'splash:ardougne-cow-fence', SPLASH_PLACES = 2, SPLASH_TO = 66;
 export const SPLASH_KIT = { 'body rune': 150, 'earth rune': 425, 'water rune': 300 } as const;
-export const SPLASH_START = { 'body rune': 10, 'earth rune': 30, 'water rune': 30 } as const, CURSE_LEVEL = 19, CURSE_XP = 725;
+export const SPLASH_START = { 'body rune': 10, 'earth rune': 30, 'water rune': 30 } as const, CURSE_LEVEL = spellFact('curse').level, CURSE_XP = spellFact('curse').xp;
 export function splashKit(magic: number): Record<string, number> {
     const casts = Math.max(SPLASH_START['body rune'], Math.ceil((xpForLevel(SPLASH_TO) - xpForLevel(magic)) / CURSE_XP));
     return magic < CURSE_LEVEL ? { ...SPLASH_KIT } : { 'body rune': casts, 'earth rune': 3 * casts, 'water rune': Math.max(SPLASH_START['water rune'], 2 * casts) };
 }
 // The places the AIO routes hold (aioTemplates). Each takes one account until a live pilot measures two.
 export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore: 'aio:varrock-east-mine', essence: 'aio:essence-mine', air: 'aio:air-altar', blood: 'aio:ardougne-blood-chests' } as const;
+// CAPACITY: accounts at one resource at a time. Every number is policy (a place, a market or a spot holds this many), not a game fact.
 export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [ARMOUR_MARKET]: ARMOUR_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // The reach rule: a job goes only to an account that has a way to its place. One route query between the Varrock
@@ -1562,7 +1575,7 @@ export const TROOPER_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence';
 export const MAGIC_BAND = 2, PRAYER_BAND = 3;
 // Bought bones: Prayer XP a bury (scripts/train-prayer.ts BONE_XP; a test keeps the two tables equal), the bones the
 // trainer keeps (its BONE_RESERVE floor) and the bones a bury band starts with.
-export const BOUGHT_BONE_XP: Readonly<Record<number, number>> = { 536: 1800, 532: 375 };
+export const BOUGHT_BONE_XP: Readonly<Record<number, number>> = { [objId('dragon bones')]: boneXp('dragon bones'), [objId('big bones')]: boneXp('big bones') };
 export const BONE_KEEP = 6, BONE_START = 16, BONE_PURSE = 100_000, BONE_SKILL = 90;
 // Prayer on the field, band 9, a filler: an account with every melee skill at 99 kills troopers only for their bones
 // and buries each on the spot (trooper mode with TRAIN_SKILL=Hitpoints, which takes any style, and GIANT_KILLS past the
@@ -1575,18 +1588,15 @@ export const PRAYER_FIELD_BAND = 9;
 // RESULT ok with bronze arrows: Ranged 1 to 59-62 in about 1,600 ticks, 41.1-46.7 XP a tick, 0.67-2.02 arrows lost
 // per 1,000 XP (research/combat-measure.md). It shares the battlefield with the melee trooper bands.
 export const RANGED_BAND = 4, GUILD_BAND = 3.9, RANGED_TROOPER_DEFENCE = 60;
-const BOWS: readonly (readonly [string, number])[] = [['shortbow', 1], ['longbow', 1], ['oak shortbow', 5], ['oak longbow', 5], ['willow shortbow', 20],
-    ['willow longbow', 20], ['maple shortbow', 30], ['maple longbow', 30], ['yew shortbow', 40], ['yew longbow', 40], ['magic shortbow', 50], ['magic longbow', 50]];
+// The level of a bow and of an arrow comes from the content (a bow fires arrows of its tier or lower); the order is the planner's.
+const BOWS: readonly (readonly [string, number])[] = ['shortbow', 'longbow', 'oak shortbow', 'oak longbow', 'willow shortbow', 'willow longbow',
+    'maple shortbow', 'maple longbow', 'yew shortbow', 'yew longbow', 'magic shortbow', 'magic longbow'].map(bow => [bow, wearLevel(bow, 'ranged')] as const);
 // Native bows and their unstrung inputs share display names. Only the strung base ID supplies a combat kit.
-const BOW_IDENTITIES: Readonly<Record<string, readonly [strung: number, unstrung: number]>> = {
-    shortbow: [841, 50], longbow: [839, 48], 'oak shortbow': [843, 54], 'oak longbow': [845, 56],
-    'willow shortbow': [849, 60], 'willow longbow': [847, 58], 'maple shortbow': [853, 64], 'maple longbow': [851, 62],
-    'yew shortbow': [857, 68], 'yew longbow': [855, 66], 'magic shortbow': [861, 72], 'magic longbow': [859, 70],
-};
+const BOW_IDENTITIES: Readonly<Record<string, readonly [strung: number, unstrung: number]>> = Object.fromEntries(BOWS.map(([bow]) => [bow, [objId(bow), objId(`unstrung ${bow}`)] as const]));
 export const BOW_IDS: Readonly<Record<string, number>> = Object.fromEntries(Object.entries(BOW_IDENTITIES).map(([name, [id]]) => [name, id]));
-export const ARMOUR_IDS: Readonly<Record<string, number>> = { 'dragonhide body': 1135, 'dragonhide chap': 1099, 'dragon vambrace': 1065 };
+export const ARMOUR_IDS: Readonly<Record<string, number>> = { 'dragonhide body': objId('dragonhide body'), 'dragonhide chap': objId('dragonhide chaps'), 'dragon vambrace': objId('dragon vambraces') };
 const bowStockNames = new Map(Object.entries(BOW_IDENTITIES).flatMap(([name, [strung, unstrung]]) => [[strung, name], [unstrung, `unstrung ${name}`]] as [number, string][]));
-const ARROWS: readonly (readonly [string, number])[] = [['bronze arrow', 1], ['iron arrow', 1], ['steel arrow', 5], ['mithril arrow', 20], ['adamant arrow', 30], ['rune arrow', 40]];
+const ARROWS: readonly (readonly [string, number])[] = ['bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow', 'adamant arrow', 'rune arrow'].map(arrow => [arrow, ammoTier(arrow)] as const);
 // A staff that stands for the fire runes of a cast.
 export const FIRE_STAFFS = ['staff of fire', 'fire battlestaff', 'mystic fire staff'] as const;
 // Kit items a goal-tier shop job brings (the alchemy supply jobs and the army-arrows jobs). A kit line of these that no market sells
@@ -2130,7 +2140,7 @@ export function catalogue(): Template[] {
         aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, role: 'quest',
         goal: "complete Merlin's Crystal and Holy Grail for 275,000 Prayer experience", tier: 'goal', band: GRAIL_BAND,
         quest: { name: 'Holy Grail', unlocks: [] }, resources: [GRAIL_PLACE], yields: () => [],
-        needs: { skills: { Prayer: 43, Magic: 45, Attack: 90, Strength: 90, Hitpoints: 90, Defence: 90 }, under: { Prayer: 99 }, items: { coins: 2000, 'rune scimitar': 1, ...GRAIL_RUNES },
+        needs: { skills: { Prayer: 43, Magic: spellFact('camelot_teleport').level, Attack: 90, Strength: 90, Hitpoints: 90, Defence: 90 }, under: { Prayer: 99 }, items: { coins: 2000, 'rune scimitar': 1, ...GRAIL_RUNES },
             pieces: { of: LOST_CITY_FOOD, count: GRAIL_MEALS } }, kitFirst: true,
     };
     // The Fremennik Trials for a build with a Fremennik helm (BUILD_QUESTS), through the same chain: Monk's Friend gives
@@ -2191,7 +2201,7 @@ export function catalogue(): Template[] {
         aio: 'quester:mode:chain', worker: 'scripts/quest-chain.ts', pilot: true, buildOnly: true, role: 'quest', gives: ['Magic'],
         goal: 'complete Murder Mystery and Regicide to wield the dragon halberd', tier: 'goal', band: REGICIDE_BAND,
         quest: { name: 'Regicide', unlocks: [] }, resources: [UPASS], yields: () => [],
-        needs: { quests: ['Underground Pass'], skills: { Ranged: 99, Magic: 51, Prayer: 43, Hitpoints: 90, Agility: UPASS_AGILITY }, items: { coins: 2000, ...BOW_KIT, ...REGICIDE_RUNES, ...REGICIDE_PACK },
+        needs: { quests: ['Underground Pass'], skills: { Ranged: 99, Magic: spellFact('ardougne_teleport').level, Prayer: 43, Hitpoints: 90, Agility: UPASS_AGILITY }, items: { coins: 2000, ...BOW_KIT, ...REGICIDE_RUNES, ...REGICIDE_PACK },
             pieces: { of: LOST_CITY_FOOD, count: REGICIDE_MEALS } }, kitFirst: true,
     };
     // Thieving UPASS_THIEVING and Agility UPASS_AGILITY for those quests, before them. Thieving: the trainer of the
@@ -2539,7 +2549,7 @@ export function freshest(...observations: readonly any[]): any {
 // state, a snapshot row the complete ones by name), and the tile it stands on (a status only). No status: a fresh
 // account at level 1 (Hitpoints 10).
 export function accountFrom(name: string, side: string, status: any, itemName: (id: number) => string | undefined): Acct {
-    const skills: Record<string, number> = { Hitpoints: 10 }, items: Record<string, number> = {};
+    const skills: Record<string, number> = { Hitpoints: 10 }, items: Record<string, number> = {}, exact: Record<string, number> = {};
     for (const k of Array.isArray(status?.skills) ? status.skills : []) if (typeof k?.name === 'string' && Number.isFinite(k.level)) skills[k.name] = k.level;
     const validHP = (hp: unknown): hp is number => Number.isSafeInteger(hp) && (hp as number) >= 0;
     const sharedHP = (Array.isArray(status?.skills) ? status.skills : []).find((k: any) => k?.name === 'Hitpoints')?.currentLevel;
@@ -2548,6 +2558,7 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
         const n = typeof r?.name === 'string' ? r.name : itemName(r?.baseId ?? r?.id);
         const bow = bowStockNames.get(r?.baseId ?? r?.id), key = bow ?? (n && !(norm(n) in BOW_IDS) ? norm(n) : undefined);
         if (key && Number.isFinite(r.count)) items[key] = (items[key] ?? 0) + r.count;
+        if (key && Number.isFinite(r.count) && (r?.baseId === undefined || r.baseId === r.id)) exact[key] = (exact[key] ?? 0) + r.count;
         // The held-bones Prayer worker deposits and buries only id526. Keep notes in generic stock for trades and
         // other consumers, while this availability key admits only the exact normal bones that worker can use.
         if (r?.id === 526 && Number.isFinite(r.count)) items['bone (unnoted)'] = (items['bone (unnoted)'] ?? 0) + r.count;
@@ -2555,7 +2566,7 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
     const quests = Array.isArray(status?.quests)
         ? new Set<string>(status.quests.flatMap((q: any) => typeof q === 'string' ? [norm(q)] : typeof q?.name === 'string' && q.state === 'complete' ? [norm(q.name)] : [])) : undefined;
     const questPoints = status?.guildFacts?.varps?.qp, p = status?.pos;
-    return { name, side, skills, items, ...(Number.isFinite(status?.at) && status.at > 0 ? { observedAt: status.at } : {}), ...(currentHP !== undefined ? { currentHP } : {}), ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}), ...(Number.isFinite(questPoints) ? { questPoints } : {}),
+    return { name, side, skills, items, ...(status ? { exact } : {}), ...(Number.isFinite(status?.at) && status.at > 0 ? { observedAt: status.at } : {}), ...(currentHP !== undefined ? { currentHP } : {}), ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}), ...(Number.isFinite(questPoints) ? { questPoints } : {}),
         ...(Number.isFinite(p?.x) && Number.isFinite(p?.z) ? { pos: { x: p.x, z: p.z, level: Number.isFinite(p.level) ? p.level : 0 } } : {}) };
 }
 

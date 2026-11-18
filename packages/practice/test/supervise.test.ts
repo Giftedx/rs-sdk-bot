@@ -283,3 +283,12 @@ test('a login claim authority that did not answer never ends a job as blocked, a
     await supervise({ run: () => brief('RESULT fail bank did not open')(), stopped: () => false, pause: async ms => { pauses.push(ms); }, maxRestarts: 3 });
     expect(pauses).toEqual([10_000]);
 });
+
+test('a Grand Exchange buy that ended before it placed an offer is a blocked prerequisite, not a retry', () => {
+ const unplaced = (failure: string) => `RESULT fail {"ok":false,"foodUsed":[],"phase":"unplaced","pending":false,"quantity":16,"acquired":0,"escrow":0,"refund":0,"spent":0,"ticks":3,"failure":"Error: ${failure}"}`;
+ for (const failure of ['coins 160940 are under the escrow 160000 (16 x 10000) plus the reserve 1000: 60 short', 'pack holds 27 items, over 26: two collection slots unavailable',
+  'order deadline passed 3 s ago (deadline 2000-01-01T00:00:00.000Z)', 'owned item baseline 68 differs from EXPECTED_OWNED 10']) expect([failure, isPrerequisiteFailure(unplaced(failure))]).toEqual([failure, true]);
+ // An offer that was placed (escrow held) or an unknown failure is not.
+ expect(isPrerequisiteFailure(unplaced('GE interface unavailable'))).toBe(false);
+ expect(isPrerequisiteFailure(unplaced('coins 1 are under the escrow 2 (1 x 2) plus the reserve 0: 1 short').replace('"escrow":0', '"escrow":2000'))).toBe(false);
+});
