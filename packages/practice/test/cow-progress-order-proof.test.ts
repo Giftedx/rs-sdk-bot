@@ -160,3 +160,10 @@ test('CLI exit, RESULT line and a single confirmed logout are required per case'
  expect(cowChildChecks(1,false,'LOGOUT logged-out\nRESULT fail Error: cow prerequisite: stage2unnoted Trout\n','nokit').result).toBe(false);
  expect(cowResult('x\nCOW_RESULT {"creditedKills":4}\n')).toEqual({creditedKills:4});expect(cowResult('RESULT ok')).toBeNull();
 });
+
+test('the no-kit case holds no weapon that the worker could wield and expects its current refusal',()=>{
+ const f=cowFixture('nokit'),ids=[...f.inventory!,...f.equipment!,...f.bank!].map(i=>i.id);
+ for(const weapon of [1277,1205,1265,1351])expect(ids).not.toContain(weapon);
+ expect(Object.values(cowChildChecks(1,false,'LOGOUT logged-out\nRESULT fail Error: cow prerequisite: missing owned wearable melee weapon\n','nokit')).every(Boolean)).toBe(true);
+ expect(cowChildChecks(1,false,'LOGOUT logged-out\nRESULT fail Error: cow prerequisite: missing kit1277\n','nokit').result).toBe(false);
+});
