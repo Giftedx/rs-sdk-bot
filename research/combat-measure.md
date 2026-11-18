@@ -674,9 +674,9 @@ runes, asks Magic 66.
 
 ## Magic and Prayer from the army's home bank
 
-The tribrid target also needs Magic and Prayer at 99. The claude-cloud army holds Magic 48-62 and Prayer 47-76.
-TrouserSnake and UnderMyKilt hold about 15,000 feathers and 1,500-1,700 bones each, and every army account holds 1-4.7M coins
-(`fleet/snapshots/claude-cloud.json` on `fleet-data`).
+The tribrid target also needs Magic and Prayer at 99. The 14 accounts whose home side is `claude-cloud` hold Magic 78-99 and Prayer 78-99.
+TrouserSnake holds 13,450 feathers and 13 bones, UnderMyKilt holds 15,036 feathers and 40 bones, and the 14 accounts hold 71,780 to 6,793,116 coins each
+(`fleet/snapshots/local.json` on `fleet-data`: the `local` side holds these accounts while their home side is silent).
 
 - **Claim.** Alchemy on feathers is the fastest Magic the army can buy: 1,625 Magic XP per High Alchemy cast (65 base at
   xpRate 25) and 775 per Low Alchemy cast (31 base). From Magic 50 to 99 that is 18 Low and about 594 High Alchemy casts,
