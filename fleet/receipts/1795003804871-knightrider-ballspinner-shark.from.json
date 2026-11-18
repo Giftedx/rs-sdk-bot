@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795003804871-knightrider-ballspinner-shark",
  "account": "KnightRider",
  "partner": "Ballspinner",
@@ -12,6 +12,12 @@
  "claim": "e38b3a55-45dc-4979-a014-bbfc12cd915c",
  "count": 0,
  "ok": false,
- "at": 1795003904571,
- "detail": "trade claimed"
+ "at": 1795003991532,
+ "detail": "fled at low hitpoints: flee_guard id=917 at=3092,3242 ticks=5",
+ "logout": {
+  "attemptId": "1795003904917-0000004376-0000000001",
+  "at": 1795003991522,
+  "sha256": "872efe4e1ad5fc86e73b33b868370ae553c8322acd56adcccb256d04235a587e"
+ },
+ "screen": false
 }

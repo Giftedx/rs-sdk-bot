@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795003804871-knightrider-ballspinner-shark",
  "account": "Ballspinner",
  "partner": "KnightRider",
@@ -12,6 +12,12 @@
  "claim": "f52095be-b794-4bf4-aa41-da6afc14c6f9",
  "count": 0,
  "ok": false,
- "at": 1795003915086,
- "detail": "trade claimed"
+ "at": 1795003992362,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795003915096-0000024924-0000000001",
+  "at": 1795003992351,
+  "sha256": "7cec43f58451069da72c23a4158d90bff3467b7277d45017c6f3f0af6d4990ac"
+ },
+ "screen": false
 }
