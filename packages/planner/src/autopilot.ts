@@ -2141,7 +2141,8 @@ export function catalogue(): Template[] {
         needs: { skills: { Magic: 21 }, items: { 'nature rune': 50, feather: 50 }, anyOf: [{ items: { 'fire rune': 250 } }, ...FIRE_STAFFS.map(item => ({ items: { [item]: 1 } }))] },
         // One buy brings every consumable of the casts left to Magic 99 (alchSupplies: one nature rune and one item a cast, and fire
         // runes for the casts), as far as the account's coins reach (`partBatch`). Magic 21 to 99 is 642 casts: 642 nature runes, 642
-        // feathers and 3,098 fire runes. The 250 fire runes and 50 casts that a start needs were a round trip of about 900 ticks for 50 casts.
+        // feathers and 3,098 fire runes. A start's 250 fire runes cover 50 casts, so a band bought by starts returns to the shop many times.
+        // With no coins for the whole batch the buy takes the share they pay for, down to the cash reserve and margin (`keepCoins` is not set).
         batchFor: a => alchBatch(a, 'feather'), partBatch: true,
     };
     // Magic 1 to 21 for Low Alchemy: Wind Strike on the fenced Guard dog (scripts/alch-train.ts strikeStart). Practice,

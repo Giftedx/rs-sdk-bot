@@ -7,7 +7,7 @@ export const HIGH_LEVEL = 55;
 export const CAST_XP = { 'low-alch': 775, 'high-alch': 1625 } as const;
 // Fire runes a cast takes; a fire staff takes none.
 export const FIRE_PER = { 'low-alch': 3, 'high-alch': 5 } as const;
-// The level at which Wind Strike (the start below Low Alchemy) ends, and its XP a cast.
+// The level at which Wind Strike (the start below Low Alchemy) ends: alchCasts counts no cast for a target at or under it.
 export const STRIKE_LEVEL = 21;
 
 // Casts of each spell from this XP to the target level: Low Alchemy below Magic 55, High Alchemy from 55.
