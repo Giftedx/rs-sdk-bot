@@ -191,6 +191,8 @@ cycle, and 156 of 157 clicks ran (one refused at t=446, a spot about to move). C
 against 0.27 at Fishing 70. The low cage seeds are luck of the lockstep random seed or a cause not found: every
 click in the trace ran.
 
+Fishing 74-99 at Lumbridge (822,421 XP, the whole fly step): `extra:fishing-lumbridge-fly-74-99` (`FISH_KNIFE=1 FISH_DROP=1 FISH_UNTIL_LEVEL=99`, 1,000 feathers) takes 2,282, 2,309 and 2,286 ticks at seeds 7, 8, 9 (lockstep, `bun run bench extra:fishing-lumbridge-fly-74-99 --seeds 7,8,9 --seed-jobs 3`): 562 to 565 catches in 4.05 to 4.07 ticks each, 357.9 to 362.1 XP a tick, 8 to 14 stands beside a spot that moved. The cycle number below (about 2,000 from 78) holds 3.06 ticks a cycle and no stands; the run adds the stands and the catches that the roll misses. The 150 ms wall-clock engine gives 2,356, 2,305, 2,377.
+
 Fishing 78-99 at Lumbridge (765,957 XP, `packages/planner/src/curve.ts`): with one roll each 3 ticks, `stat_random`
 gives 1,957 ticks (652 rolls); at the measured 3.06 ticks a cycle, about 2,000. The record route plans 2,054 and took
 2,257. Gap: practice preset runs to Fishing 80, not a live run from 78 to 99; spot moves over 2,000 ticks are in the
