@@ -119,6 +119,11 @@ export function loadoutTargets(loadout:ProgressiveLoadout,pin:ReconcileOptions['
     return out.sort((a,b)=>Number(b.slot==='weapon')-Number(a.slot==='weapon'));
 }
 
+/** The loadout choice of an account: the one call that the reconcile and the planner's gear pass (scripts/gear-wants.ts) share. */
+export function loadoutFor(style:CombatFocus,stock:readonly Count[],levels:GearSkillLevels,quests:QuestInput,options:ProgressiveLoadoutOptions):ProgressiveLoadout{
+    return selectProgressiveLoadout(style,stock,levels,quests,options);
+}
+
 /** The GEAR_WANT rows of a loadout: for each slot, the best item that the account can obtain now (selectProgressiveLoadout), with its source. */
 export function gearWants(account:string,loadout:ProgressiveLoadout):GearWant[]{
     const out:GearWant[]=[];
@@ -202,7 +207,7 @@ export async function reconcileLoadout(s:Session,o:ReconcileOptions):Promise<Rec
     const quests=()=>o.quests??(s.client?questFlags(s.client):null);
     const choose=(stock:readonly Count[])=>{
         const done=quests(),player=state()?.player;
-        const loadout=selectProgressiveLoadout(o.style,stock,{...levels(),...craftLevels()},done,{...o.loadout,trainSkill:o.trainSkill,thrown:o.thrown,
+        const loadout=loadoutFor(o.style,stock,{...levels(),...craftLevels()},done,{...o.loadout,trainSkill:o.trainSkill,thrown:o.thrown,
             questPoints:o.questPoints??questPointsOf(s,questPointsFloor(done)),market:o.market??marketAsks(),
             position:player&&Number.isInteger(player.worldX)&&Number.isInteger(player.worldZ)?{x:player.worldX,z:player.worldZ}:null,...o.ammoMin===undefined?{}:{arrowMinCount:o.ammoMin}});
         const pin={...o.pin};
