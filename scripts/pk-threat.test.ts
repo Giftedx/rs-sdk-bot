@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readFileSync as read } from 'node:fs';
@@ -52,11 +52,12 @@ afterEach(() => { for (const r of roots.splice(0)) rmSync(r, { recursive: true, 
 const ME1: Fake = { index: 1, name: 'Ours1', combat: 126, x: 3070, z: 3640 }, ME2: Fake = { index: 2, name: 'Ours2', combat: 126, x: 3072, z: 3640 };
 const MAGE: Fake = { index: 9, name: 'Mage', combat: 120, x: 3075, z: 3644, weapon: STAFF };
 
-function watch(players: Fake[], view: number[], o: { act?: boolean; expected?: string[]; worn?: number[]; pack?: number[]; multi?: boolean } = {}) {
+function watch(players: Fake[], view: number[], o: { act?: boolean; expected?: string[]; worn?: number[]; pack?: number[]; multi?: boolean; outclass?: boolean; cooldown?: number; recordMaxBytes?: number; recordMaxFiles?: number } = {}) {
     const root = mkdtempSync(join(tmpdir(), 'threat-')); roots.push(root);
     const a = session('Ours1', ME1, [ME2, ...players], view, o), b = session('Ours2', ME2, [ME1, ...players], view);
     const lines: string[] = [];
-    const w = new ThreatWatch({ sessions: () => [a.s, b.s], server: 'demo.example:43594', friends: new Set(['ours1', 'ours2']), log: l => lines.push(l), recordRoot: root, act: o.act, decide: { expected: new Set(o.expected ?? []), ...(o.multi ? { multiAt: () => true, singleWayFrom: () => null } : {}) }, now: () => 1000 });
+    const w = new ThreatWatch({ sessions: () => [a.s, b.s], server: 'demo.example:43594', friends: new Set(['ours1', 'ours2']), log: l => lines.push(l), recordRoot: root, act: o.act, cooldown: o.cooldown, recordMaxBytes: o.recordMaxBytes, recordMaxFiles: o.recordMaxFiles,
+        decide: { expected: new Set(o.expected ?? []), ...(o.multi ? { multiAt: () => true, singleWayFrom: () => null } : {}), ...(o.outclass ? { outclasses: () => true } : {}) }, now: () => 1000 });
     return { w, lines, root, a, b };
 }
 
@@ -163,4 +164,41 @@ test('KitSwapper wears the swap once, keeps it while a threat needs it, and wear
     expect(lines).toEqual(['[Ours1] threat kit swap: Mage magic', '[Ours1] threat kit restore: wear 1127']);
     // A kit action for another member is not ours.
     expect(await new KitSwapper().step(s, [{ ...kit[0], member: 'Ours2' }], 1, tick, log)).toBe(false);
+});
+
+test('a retreat is not decided again for the same stranger during the cooldown, stays 30 ticks for the squad, and a new stranger causes one at once', () => {
+    const view = [9];
+    const { w, lines } = watch([MAGE, { ...MAGE, index: 10, name: 'Mage2' }], view, { outclass: true });
+    expect(retreatOf(w.step(5).actions)).toContain('outclassed by Mage');
+    // The other member of the squad acts 20 ticks later on the same decision.
+    expect(retreatOf(w.step(25).actions)).toContain('outclassed by Mage');
+    // The squad comes back: the same stranger, inside the cooldown (600 ticks from tick 5): no retreat, and the protect prayer stays.
+    const back = w.step(100);
+    expect(retreatOf(back.actions)).toBeNull();
+    expect(protectOf(back.actions, 'Ours1')).toBe('magic');
+    expect(lines.filter(l => l === 'THREAT retreat held, cooldown: mage')).toHaveLength(1);
+    // A second stranger that was not there: a retreat at once.
+    view.push(10);
+    expect(retreatOf(w.step(130).actions)).toContain('outclassed by');
+    // After the cooldown the first one counts again: both are cooled until 730, so a retreat only when a cooldown has ended.
+    view.length = 0; view.push(9);
+    expect(retreatOf(w.step(700).actions)).toBeNull();
+    expect(retreatOf(w.step(800).actions)).toContain('outclassed by Mage');
+});
+
+test('a record file moves aside at the size cap, and a full directory takes no new name', () => {
+    const { w, lines, root } = watch([MAGE, { ...MAGE, index: 10, name: 'Other' }], [9], { recordMaxBytes: 400, recordMaxFiles: 1 });
+    // One line each 25 ticks for 'Mage': the file passes 400 bytes after two lines, moves to .1, and a new file starts.
+    for (let tick = 5; tick <= 5 + 25 * 6; tick += 25) w.step(tick);
+    const dir = join(root, '.practice', 'threat-records', 'demo.example_43594');
+    const files = readdirSync(dir).sort();
+    expect(files).toEqual(['mage.jsonl', 'mage.jsonl.1']);
+    expect(readFileSync(join(dir, 'mage.jsonl.1'), 'utf8').length).toBeGreaterThanOrEqual(400);
+    expect(readFileSync(join(dir, 'mage.jsonl'), 'utf8').length).toBeLessThan(800);
+    // A second name when the directory holds its limit of one name: not recorded, said once.
+    const view2 = watch([MAGE, { ...MAGE, index: 10, name: 'Other' }], [9, 10], { recordMaxFiles: 1 });
+    view2.w.step(5); view2.w.step(40);
+    expect(readdirSync(join(view2.root, '.practice', 'threat-records', 'demo.example_43594'))).toHaveLength(1);
+    expect(view2.lines.filter(l => l.startsWith('THREAT record directory is full'))).toHaveLength(1);
+    expect(lines.some(l => l.startsWith('THREAT record write failed'))).toBe(false);
 });

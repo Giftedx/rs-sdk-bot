@@ -1812,6 +1812,12 @@ the log and the record) -> `packages/core/test/pvp-threat.test.ts`, `scripts/pk-
   `KitSwapper` for their one account: the protect prayer through `threatPrayer`, the armour swap, and the retreat (the hunt's threat retreat, the
   roam's escape) when the radar decides one. Each keeps its own threat check. They have no single-way move, and the hunt turns the world feed
   off on a local server.
+- **Cooldown.** A retreat or single-way decision is not made again for the same players for `cooldown` ticks (default 600, `SQUAD_THREAT_COOLDOWN` in the
+  squad): a stranger at the post would otherwise cause retreat, return, retreat until the trips run out. A decision stays for 30 ticks, so that each
+  member of the squad acts on it. During the cooldown the protect prayer and the armour swap stay and the squad holds its ground; a player that was
+  not there at the retreat causes a new one at once, and that one restarts the cooldown of all the players then in range.
+- **Record limits.** A record file moves to `<name>.jsonl.1` at 5 MB (the older `.1` goes), so a name keeps at most 10 MB, and a server directory takes at most
+  500 names (`MAX_RECORD_FILES`); the log says once that it is full.
 - **Attackers.** Each dangerous player or attacker is appended to `.practice/threat-records/<server>/<name>.jsonl` (schema
   `threat-sighting/1`, at most one line each 25 ticks, and one at each attack seen), for the behaviour record of the rivals.
 
