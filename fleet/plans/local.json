@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795036215993,
+ "at": 1795036279166,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -247,8 +247,7 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -319,8 +318,7 @@
     "BONE_ID": "532",
     "BONE_RESERVE": "6",
     "CAP": "4000",
-    "AUTOPILOT_ORDER": "15",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+    "AUTOPILOT_ORDER": "15"
    },
    "enabled": true,
    "standing": true,
