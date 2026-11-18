@@ -169,8 +169,9 @@
    "server": "rs-sdk-demo.fly.dev"
   },
   "Porksword": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "cloud"
   },
   "MeatNTwoVeg": {
    "side": "cloud",
