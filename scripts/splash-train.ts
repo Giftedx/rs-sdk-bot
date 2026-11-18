@@ -32,6 +32,7 @@ import { COW_NORTH_BANK, atNorthBank } from './cow-stage';
 import { approach, walkTargetPersist } from './walk-to';
 import { leaveRuneStarter, onStarterIsland } from './rune-starter';
 import { depositObserved } from '../packages/core/src/deposit';
+import { reconcileLoadout } from './gear-reconcile';
 import {
     ELEMENTAL_STAFF_RUNES,
     bestElementalStaffForRunes,
@@ -345,13 +346,9 @@ export async function runSplash(
         }
         await closeBank();
     } else if (typeof s.bot?.equipItem === 'function') {
-        const staff = bestElementalStaffForRunes([...inv(), ...eq().filter(e => e.slot === 3)], readSkillLevels(s.sdk), [], {
-            runeIds: selectSplashPriorityRunes(xp(), o.target),
-        }).current;
-        if (staff && !eq().some(e => e.slot === 3 && e.id === staff.item.id)) {
-            const held = inv().find(i => i.id === staff.item.id);
-            if (held) await s.bot.equipItem(held);
-        }
+        // The one kit path (scripts/gear-reconcile.ts). Splash casting wants no magic bonus from armour (a spell that lands is a
+        // kill, a splash is the XP), so `only` keeps the choice to the weapon: the staff that covers the most priority runes.
+        await reconcileLoadout(s, { style: 'magic', trainSkill: 'magic', only: ['weapon'], runeIds: selectSplashPriorityRunes(xp(), o.target), label: 'splash staff' });
     }
     if (!site.bank && onStarterIsland(st()?.player)) {
         await leaveRuneStarter(s,()=>ended||!!o.stop?.()||s.tick()-start>=o.cap);

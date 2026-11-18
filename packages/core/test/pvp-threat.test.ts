@@ -1,0 +1,113 @@
+import { expect, test } from 'bun:test';
+import { classifyThreat, decideAdapt, threatLine, ThreatBook, type Member, type Sighting } from '../src/pvp-threat';
+import type { CombatStyle } from '../src/opponent';
+
+// Style by weapon id for the tests: 1 staff, 2 bow, 3 whip. Animation 10 casts, 11 shoots, 12 hits.
+const weaponStyle = (id?: number): CombatStyle => id === 1 ? 'magic' : id === 2 ? 'ranged' : 'melee';
+const attackStyle = (anim: number): CombatStyle | null => anim === 10 ? 'magic' : anim === 11 ? 'ranged' : anim === 12 ? 'melee' : null;
+const book = (friends: string[] = []) => new ThreatBook({ friends: new Set(friends), weaponStyle, attackStyle, multiAt: (x, z) => x >= 3000 && z >= 3600, wildAt: (_x, z) => (z >= 3520 ? Math.floor((z - 3520) / 8) + 1 : 0) });
+// The combat-level rule of the Wilderness, reduced: a player can attack within 20 levels.
+const canAttack = (me: { combat: number }, them: { combatLevel: number }) => Math.abs(me.combat - them.combatLevel) <= 20;
+const squad: Member[] = [{ name: 'Ours1', x: 3070, z: 3640, combat: 126 }, { name: 'Ours2', x: 3072, z: 3640, combat: 126 }];
+const rival = (o: Partial<Sighting> = {}): Sighting => ({ name: 'Rival', combat: 120, x: 3075, z: 3650, inView: true, worn: { weapon: 1 }, ...o });
+const outclasses = (_me: Member, them: { combat: number }) => them.combat >= 145;
+
+test('the book gives one record for each player that is not ours or a friend, with the tile rules of the world', () => {
+    const b = book(['friend']);
+    const records = b.observe(1, squad, [rival(), rival({ name: 'Ours1' }), rival({ name: 'friend' })]);
+    expect(records.map(r => r.name)).toEqual(['Rival']);
+    expect(records[0]).toMatchObject({ combat: 120, wild: 17, multi: true, nearest: { member: 'Ours1', dist: 10 }, closing: false, weaponStyle: 'magic', targeting: null });
+});
+
+test('a player that gets closer to the nearest member is closing, with its speed in tiles for each tick', () => {
+    const b = book();
+    b.observe(10, squad, [rival({ x: 3082, z: 3650 })]);
+    const [r] = b.observe(12, squad, [rival({ x: 3078, z: 3648 })]);
+    expect(r!.closing).toBe(true);
+    expect(r!.speed).toBe(1);
+    const [away] = b.observe(13, squad, [rival({ x: 3084, z: 3650 })]);
+    expect(away!.closing).toBe(false);
+    expect(away!.speed).toBeLessThan(0);
+});
+
+test('an attack animation sets the style, two styles make a hybrid, and the memory ends', () => {
+    const b = book();
+    const look = (tick: number, anim: number) => classifyThreat(b.observe(tick, squad, [rival({ anim, worn: { weapon: 3 } })])[0]!, squad, { canAttack });
+    expect(look(1, -1)).toMatchObject({ style: 'melee', by: 'weapon', cover: 'melee' });
+    expect(look(2, 10)).toMatchObject({ style: 'magic', by: 'attack', cover: 'magic' });
+    expect(look(3, 11)).toMatchObject({ style: 'hybrid', by: 'attack', cover: 'ranged' });
+    // 60 ticks later with no attack: the memory (50) is over, so the weapon (a whip) tells again.
+    expect(look(63, -1)).toMatchObject({ style: 'melee', by: 'weapon', cover: 'melee' });
+});
+
+test('a player on the feed only has no known style, and no cover', () => {
+    const b = book();
+    const c = classifyThreat(b.observe(1, squad, [rival({ inView: false, worn: undefined })])[0]!, squad, { canAttack });
+    expect(c).toMatchObject({ style: 'unknown', by: 'none', cover: null });
+});
+
+test('dangerous: can attack a member and either fights one, or is in range and closing or very near', () => {
+    const b = book();
+    const far = classifyThreat(b.observe(1, squad, [rival({ x: 3100, z: 3700 })])[0]!, squad, { canAttack });
+    expect(far.dangerous).toBe(false);
+    const near = classifyThreat(b.observe(2, squad, [rival({ x: 3074, z: 3643 })])[0]!, squad, { canAttack });
+    expect(near).toMatchObject({ dangerous: true, canHit: ['Ours1', 'Ours2'] });
+    // Out of the combat-level range of both members: it cannot attack, however near.
+    const low = classifyThreat(book().observe(1, squad, [rival({ combat: 40, x: 3074, z: 3643 })])[0]!, squad, { canAttack });
+    expect(low).toMatchObject({ dangerous: false, canHit: [] });
+    // Fighting a member counts at any range.
+    const fighting = classifyThreat(book().observe(1, squad, [rival({ x: 3100, z: 3700, targeting: 'Ours2' })])[0]!, squad, { canAttack });
+    expect(fighting.dangerous).toBe(true);
+});
+
+const classes = (sightings: Sighting[], tick = 1, b = book()) => b.observe(tick, squad, sightings).map(r => classifyThreat(r, squad, { canAttack }));
+const near = (name: string, o: Partial<Sighting> = {}) => rival({ name, x: 3074, z: 3643, ...o });
+
+test('a mage that closes in: protect from magic for each member that it can hit, and the counter kit when the member does not wear it', () => {
+    const actions = decideAdapt(classes([near('Mage')]), squad, { outclasses, counterKit: { magic: 'rune-ranged' }, kitOf: name => name === 'Ours2' ? 'rune-ranged' : 'rune' });
+    expect(actions.filter(a => a.kind === 'protect')).toEqual([
+        { kind: 'protect', member: 'Ours1', style: 'magic', reason: 'Mage magic by weapon, 4 tiles' },
+        { kind: 'protect', member: 'Ours2', style: 'magic', reason: 'Mage magic by weapon, 3 tiles' },
+    ]);
+    expect(actions.filter(a => a.kind === 'kit')).toEqual([{ kind: 'kit', member: 'Ours1', kit: 'rune-ranged', reason: 'Mage magic' }]);
+    expect(actions.some(a => a.kind === 'retreat')).toBe(false);
+});
+
+test('the last attack decides the cover over the weapon', () => {
+    const b = book();
+    b.observe(1, squad, [near('Pure', { worn: { weapon: 3 } })]);
+    const actions = decideAdapt(b.observe(2, squad, [near('Pure', { worn: { weapon: 3 }, anim: 11 })]).map(r => classifyThreat(r, squad, { canAttack })), squad, { outclasses });
+    expect(actions[0]).toMatchObject({ kind: 'protect', member: 'Ours1', style: 'ranged' });
+});
+
+test('a player that outclasses the strongest member is a retreat, before any protect', () => {
+    const actions = decideAdapt(classes([near('Boss', { combat: 145 })]), squad, { outclasses });
+    expect(actions[0]).toEqual({ kind: 'retreat', reason: 'outclassed by Boss(145,magic) at 3 tiles' });
+});
+
+test('a team on a multi-way tile goes to a single-way tile when one is known, else retreats', () => {
+    const team = classes([near('A'), near('B', { x: 3075 }), near('C', { x: 3076 })]);
+    const to = { x: 3040, z: 3600 };
+    expect(decideAdapt(team, squad, { outclasses, singleWayFrom: () => to })[0]).toMatchObject({ kind: 'single-way', to });
+    const retreat = decideAdapt(team, squad, { outclasses })[0]!;
+    expect(retreat).toMatchObject({ kind: 'retreat' });
+    expect((retreat as { reason: string }).reason).toContain('team of 3');
+    // Two are not a team.
+    expect(decideAdapt(team.slice(0, 2), squad, { outclasses }).some(a => a.kind === 'retreat' || a.kind === 'single-way')).toBe(false);
+});
+
+test('a gang that the squad hunts on purpose is protected against but is not a reason to retreat', () => {
+    const gang = classes([near('A', { combat: 145 }), near('B', { x: 3075 }), near('C', { x: 3076 })]);
+    const actions = decideAdapt(gang, squad, { outclasses, expected: new Set(['a', 'b', 'c']) });
+    expect(actions.some(a => a.kind === 'retreat' || a.kind === 'single-way')).toBe(false);
+    expect(actions.filter(a => a.kind === 'protect')).toHaveLength(2);
+    // One stranger among them is still a stranger: it outclasses.
+    const mixed = classes([near('A'), near('Boss', { combat: 145 })]);
+    expect(decideAdapt(mixed, squad, { outclasses, expected: new Set(['a']) })[0]).toMatchObject({ kind: 'retreat' });
+});
+
+test('no danger, no action; the log line holds the record', () => {
+    expect(decideAdapt(classes([rival({ x: 3100, z: 3700 })]), squad, { outclasses })).toEqual([]);
+    const [c] = classes([near('Mage', { worn: { weapon: 1, torso: 577, legs: 1095, back: 1052 } })]);
+    expect(threatLine(c!)).toBe('THREAT Mage combat=120 style=magic by=weapon wild=16 multi dist=3 to=Ours2 hits=Ours1+Ours2 weapon=1 torso=577 legs=1095 back=1052');
+});

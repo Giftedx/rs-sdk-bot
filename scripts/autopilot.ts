@@ -161,8 +161,21 @@ export function itemOrder(from: string, to: string, item: string, count: number,
 export const SIDE_STOCK_MAX_AGE_MS = OBSERVATION_FRESH_MS;
 // Transfer stock is observed pack or bank stock, never worn kit. A retained bank observation can describe the same
 // units before a withdrawal, so the two observations contribute their maximum rather than their sum.
-export function donorStock(name:string,side:string,status:any,now:number,maxAgeMs:number,itemName:(id:number)=>string|undefined,server='rs-sdk-demo.fly.dev'):Stock|undefined {
-    const recent=(at:unknown)=>typeof at==='number'&&Number.isFinite(at)&&at>0&&at<=now&&now-at<maxAgeMs;
+// An account that is confirmed offline holds what its last observation showed: its bank cannot change until a session or a trade
+// touches it. So its observation stays good for OFFLINE_STOCK_MAX_AGE_MS when the logout proof (packages/core/src/session-lifecycle.ts)
+// is confirmed, the session that it closes started no later than the observation (the attempt id begins with its start time, so a
+// later session that never wrote a status cannot pass) and ended no earlier than the observation, and no fleet order that names
+// the account ended after it.
+export const OFFLINE_STOCK_MAX_AGE_MS = 24 * 3_600_000;
+export type OfflineProof = { confirmed: boolean; loggedOutAt?: number; startedAt?: number; ordersEnd?: number };
+const LOGOUT_SKEW_MS = 60_000;
+export function offlineStockFresh(at: unknown, proof: OfflineProof | undefined, now: number): boolean {
+    return typeof at === 'number' && Number.isFinite(at) && at > 0 && at <= now && now - at < OFFLINE_STOCK_MAX_AGE_MS && !!proof?.confirmed
+        && typeof proof.loggedOutAt === 'number' && proof.loggedOutAt >= at - LOGOUT_SKEW_MS
+        && typeof proof.startedAt === 'number' && proof.startedAt <= at && !(typeof proof.ordersEnd === 'number' && proof.ordersEnd > at);
+}
+export function donorStock(name:string,side:string,status:any,now:number,maxAgeMs:number,itemName:(id:number)=>string|undefined,server='rs-sdk-demo.fly.dev',offline?:OfflineProof):Stock|undefined {
+    const recent=(at:unknown)=>(typeof at==='number'&&Number.isFinite(at)&&at>0&&at<=now&&now-at<maxAgeMs)||offlineStockFresh(at,offline,now);
     if(!status||typeof status.name!=='string'||status.name.toLowerCase()!==name.toLowerCase()||status.practice||typeof status.server!=='string'||status.server.toLowerCase()!==server.toLowerCase()||!recent(status.at))return;
     const valid=(rows:unknown)=>Array.isArray(rows)&&rows.every(r=>r&&Number.isSafeInteger(r.count)&&r.count>0&&(typeof r.name==='string'||Number.isSafeInteger(r.baseId??r.id)));
     const inventory=valid(status.inventory)?status.inventory:[];
@@ -294,7 +307,16 @@ export function unfilledItems(lines: readonly string[]): number[] {
     return [...out];
 }
 export type EndedRecord = { at?: number; reason?: string };
-export type JobRunStatus = { active?: boolean; ended?: EndedRecord };
+// `logSize` and `now`: the size of the job's log file and the clock. A job that is not active and whose log has not grown since
+// its assignment never started (the swarm writes a header into the log at each start), so no process can hold an offer for it.
+export type JobRunStatus = { active?: boolean; ended?: EndedRecord; logSize?: number; now?: number };
+// How long a written job may wait for the swarm to start it before a pass counts it as never started: the swarm starts a job within
+// its next ticks, and a start that waits for memory or a stop file is no start.
+export const JOB_START_GRACE_MS = 10 * 60_000;
+export function neverStarted(assigned: { offset: number; at?: number } | undefined, status?: JobRunStatus): boolean {
+    return !!assigned && !!status && !status.active && status.logSize !== undefined && status.now !== undefined && typeof assigned.at === 'number'
+        && status.logSize <= assigned.offset && status.now - assigned.at > JOB_START_GRACE_MS;
+}
 export function readSwarmActiveAccounts(file: string): Set<string> {
     const runs = readJson(file, null);
     if (!Array.isArray(runs)) return new Set();
@@ -332,6 +354,7 @@ export function kitBuyRunning(job: any, assigned: { template: string; offset: nu
     // A gear shop trip (scripts/shop-buyer.ts through the gear pass) is finite like a maker: it holds its account until its RESULT.
     const finite = finiteMaker || isGearShop(job?.template);
     if (!job?.enabled || typeof job.template !== 'string' || (!job.template.startsWith(KIT_BUY) && !finite) || !assigned || assigned.template !== job.template) return false;
+    if (neverStarted(assigned, ctx)) return false;
     const lines=linesSince(assigned.offset);
     const r = assess(finite?lines.filter(l=>l.startsWith('RESULT ')):lines);
     if (r.ok + r.fail + r.drains > 0) return false;
@@ -482,17 +505,36 @@ export function newestClaims(synced: readonly any[], origin: readonly any[]): an
     }
     return [...bySide.values()];
 }
-// The claims on origin's fleet-data branch, or none when the fetch or a read fails (the synced claims then stand).
+// The text of each object that `git cat-file --batch` printed, in request order: null for a missing or unreadable one. Each object is a
+// header line `<oid> blob <size>` (or `<name> missing`), then `size` bytes and a newline.
+export function parseCatFileBatch(out: Uint8Array, count: number): (string | null)[] {
+    const buffer = Buffer.from(out), result: (string | null)[] = [];
+    let at = 0;
+    for (let i = 0; i < count; i++) {
+        const end = buffer.indexOf(10, at);
+        if (end < 0) { result.push(null); continue; }
+        const header = buffer.subarray(at, end).toString('utf8').match(/^[0-9a-f]+ blob (\d+)$/);
+        at = end + 1;
+        if (!header) { result.push(null); continue; }
+        const size = Number(header[1]);
+        result.push(buffer.subarray(at, at + size).toString('utf8'));
+        at += size + 1;
+    }
+    return result;
+}
+// The claims on origin's fleet-data branch, or none when the fetch or a read fails (the synced claims then stand). One `git cat-file
+// --batch` reads every claim file (a process for each file took 2 s of a 14 s pass).
 function originClaims(fleetDir: string): any[] {
     if (!existsSync(fleetDir)) return [];
-    const git = (...args: string[]) => Bun.spawnSync(['git', '-C', fleetDir, ...args], { stdout: 'pipe', stderr: 'ignore', timeout: 30_000, windowsHide: true });
-    if (git('fetch', '-q', 'origin', 'fleet-data').exitCode !== 0) return [];
-    const files = git('ls-tree', '--full-tree', '--name-only', 'origin/fleet-data', 'fleet/claims/');
+    const git = (args: string[], input?: string) => Bun.spawnSync(['git', '-C', fleetDir, ...args], { stdout: 'pipe', stderr: 'ignore', ...(input === undefined ? {} : { stdin: Buffer.from(input) }), timeout: 30_000, windowsHide: true });
+    if (git(['fetch', '-q', 'origin', 'fleet-data']).exitCode !== 0) return [];
+    const files = git(['ls-tree', '--full-tree', '--name-only', 'origin/fleet-data', 'fleet/claims/']);
     if (files.exitCode !== 0) return [];
-    return files.stdout.toString().split(/\r?\n/).filter(f => f.endsWith('.json')).flatMap(f => {
-        const shown = git('show', `origin/fleet-data:${f}`);
-        try { return shown.exitCode === 0 ? [JSON.parse(shown.stdout.toString())] : []; } catch { return []; }
-    });
+    const names = files.stdout.toString().split(/\r?\n/).filter(f => f.endsWith('.json'));
+    if (!names.length) return [];
+    const shown = git(['cat-file', '--batch'], names.map(f => `origin/fleet-data:${f}`).join('\n') + '\n');
+    if (shown.exitCode !== 0) return [];
+    return parseCatFileBatch(shown.stdout, names.length).flatMap(text => { try { return text === null ? [] : [JSON.parse(text)]; } catch { return []; } });
 }
 
 // The side's army roster. Only these accounts take the planner's goal bands (combat training toward the PK army);
@@ -518,8 +560,8 @@ export function armyRoster(plan: any, accounts: readonly Pick<Acct, 'name' | 'sk
 }
 // The accounts whose observation is missing or not under OBSERVATION_FRESH_MS old at `now`: their stock is not offered to a
 // kit. It reads the observation time alone, so an empty bank or a name mismatch does not make an account unobserved.
-export function unobservedAccounts(names: readonly string[], observedAt: (name: string) => unknown, now: number): string[] {
-    return names.filter(n => { const at = observedAt(n); return !(typeof at === 'number' && Number.isFinite(at) && at > 0 && at <= now && now - at < OBSERVATION_FRESH_MS); });
+export function unobservedAccounts(names: readonly string[], observedAt: (name: string) => unknown, now: number, offline: (name: string) => OfflineProof | undefined = () => undefined): string[] {
+    return names.filter(n => { const at = observedAt(n); return !((typeof at === 'number' && Number.isFinite(at) && at > 0 && at <= now && now - at < OBSERVATION_FRESH_MS) || offlineStockFresh(at, offline(n), now)); });
 }
 // The bots that jobs outside this side's planner hold on the swarm: every enabled job of the merged plan that is not a
 // planner job of this side, and every planner job that an owner pause keeps as it is. A host job counts its accounts.
@@ -654,7 +696,8 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     const fleetDir = FLEET_DIR(), now = Date.now();
     const activeAccounts = readSwarmActiveAccounts(join(prac, 'swarm-runs.json'));
     const endedAccounts = readSwarmEnded(join(prac, 'swarm-deaths.json'));
-    const ctxFor = (acct: string): JobRunStatus => ({ active: activeAccounts.has(acct.toLowerCase()), ended: endedAccounts.get(acct.toLowerCase()) });
+    const logSizeOf = (acct: string): number | undefined => { try { return statSync(join(prac, 'swarm-logs', `${acct}.log`)).size; } catch { return undefined; } };
+    const ctxFor = (acct: string): JobRunStatus => ({ active: activeAccounts.has(acct.toLowerCase()), ended: endedAccounts.get(acct.toLowerCase()), logSize: logSizeOf(acct), now });
     const diedAccounts = new Set<string>();
     for (const [acctLower, rec] of endedAccounts) {
         if (!activeAccounts.has(acctLower) && /^died\b/.test(rec.reason ?? '')) diedAccounts.add(acctLower);
@@ -737,9 +780,15 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     // account must not plan as a level-1 start).
     const statusDir = join(prac, 'status'), statusFiles = existsSync(statusDir) ? readdirSync(statusDir) : [];
     const published = readSnapshotFiles(join(fleetDir, 'snapshots'));
+    // One read of each status file for the whole pass: the account list, the donors, the stock and the notes ask for it about 8 times each.
+    const statusByName = new Map(statusFiles.map(f => [f.toLowerCase(), f] as const)), observedCache = new Map<string, ReturnType<typeof observedAccount>>();
     const observed = (n: string) => {
-        const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
-        return observedAccount(n, f ? readJson(join(statusDir, f), null) : null, published, owners, side);
+        const lower = n.toLowerCase();
+        if (!observedCache.has(lower)) {
+            const f = statusByName.get(`${lower}.json`);
+            observedCache.set(lower, observedAccount(n, f ? readJson(join(statusDir, f), null) : null, published, owners, side));
+        }
+        return observedCache.get(lower)!;
     };
     const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => {
         const lower = n.toLowerCase();
@@ -774,7 +823,22 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
         const lower = n.toLowerCase();
         return plannerOwns(owners, side, lower, reserved, diedAccounts) && ![busy, keep, open, stranded].some(s => s.has(lower));
     };
-    const stock: Stock[] = listed.filter(free).flatMap(n => {const row=donorStock(n,side,observed(n),now,SIDE_STOCK_MAX_AGE_MS,id=>byId.get(id),owners.get(n.toLowerCase())?.server);return row?[row]:[];});
+    // The logout proof of a free account whose observation is older than the freshness window, and the end of its latest fleet order.
+    const offlineProofs = new Map<string, OfflineProof | undefined>();
+    const offlineOf = (n: string): OfflineProof | undefined => {
+        const lower = n.toLowerCase();
+        if (!offlineProofs.has(lower)) {
+            const at = observed(n)?.at;
+            if (typeof at === 'number' && now - at < SIDE_STOCK_MAX_AGE_MS) offlineProofs.set(lower, undefined);
+            else {
+                const proof = readLogoutProof(n, owners.get(lower)?.server ?? 'rs-sdk-demo.fly.dev');
+                const ends = orders.filter(o => o.from.toLowerCase() === lower || o.to.toLowerCase() === lower).map(o => o.end);
+                offlineProofs.set(lower, { confirmed: proof.state === 'confirmed', loggedOutAt: proof.state === 'confirmed' ? proof.loggedOutAt : undefined, startedAt: proof.state === 'confirmed' ? Number(proof.attemptId.split('-')[0]) : undefined, ordersEnd: ends.length ? Math.max(...ends) : undefined });
+            }
+        }
+        return offlineProofs.get(lower);
+    };
+    const stock: Stock[] = listed.filter(free).flatMap(n => {const row=donorStock(n,side,observed(n),now,SIDE_STOCK_MAX_AGE_MS,id=>byId.get(id),owners.get(n.toLowerCase())?.server,offlineOf(n));return row?[row]:[];});
     const snapshotDir = join(fleetDir, 'snapshots'), silent = silentSides(orders, receipts, n => owners.get(n.toLowerCase())?.side, now);
     for (const f of existsSync(snapshotDir) ? readdirSync(snapshotDir).filter(f => f.endsWith('.json')) : []) {
         const other = f.slice(0, -'.json'.length);
@@ -809,7 +873,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     const army = armyRoster(swarm, accounts, OFFLINE_GUARDED, reserved);
     const gearWants = gearWantsOf(accounts.map(a => a.name), observed, name => { const a = accounts.find(x => x.name === name)!; return accountStyle(a, templates, state.assigned[name]?.template, army.has(name.toLowerCase())); }, name => state.assigned[name]?.template, state.unsold ?? {}, marketQuotes(readJson(join(root, MARKET_FILE), null), now), now);
     const questsDone = questsDoneIn([...statusFiles.map(f => readJson(join(statusDir, f), null)), ...published.flatMap(f => f.accounts ?? [])]);
-    const planned = plan({ side, accounts, questsDone, owners, gearWants, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set([...Object.keys(state.retired), ...unplacedHeld(state.unplaced, now)]), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army, now, unobserved: unobservedAccounts(listed.filter(free), n => observed(n)?.at, now), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
+    const planned = plan({ side, accounts, questsDone, owners, gearWants, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set([...Object.keys(state.retired), ...unplacedHeld(state.unplaced, now)]), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army, now, unobserved: unobservedAccounts(listed.filter(free), n => observed(n)?.at, now, offlineOf), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
             externalLive.length,
             { running: swarm.jobs.filter((j: any) => mineMarked(j) && j.enabled !== false).flatMap(jobAccounts).filter((n: string) => activeAccounts.has(n.toLowerCase())).length,
                 headroom: headroomWithMargin(memoryHeadroom(freemem() / 2 ** 30, swarm.minFreeGB, pendingStartupCount(readJson(join(prac, 'swarm-runs.json'), []), now) + tradeStarts(open, externalLive, activeAccounts)), writtenNotRunning(swarm.jobs.filter(mineMarked), activeAccounts)) }), holding: activeAccounts, squad: squadInput(swarm, side, owners, n => observed(n)?.at > 0 ? accountFrom(n, side, observed(n), id => byId.get(id)).items : undefined, n => !stopClearable(observed(n), now) || existsSync(join(prac, 'stop-pk-squad'))), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
@@ -903,6 +967,8 @@ export function trainersDone(planFile: string): string[] {
         && j.enabled && state.assigned[j.account]?.template === j.template && !kitBuyRunning(j, state.assigned[j.account], offset => since(j.account, offset, j), false, {
             active: activeAccounts.has(j.account.toLowerCase()),
             ended: endedAccounts.get(j.account.toLowerCase()),
+            logSize: (() => { try { return statSync(join(prac, 'swarm-logs', `${j.account}.log`)).size; } catch { return undefined; } })(),
+            now: Date.now(),
         })).map(j => j.account as string);
     return [...finishedTrainers(effectiveJobs, side, state.assigned, catalogue(), since), ...buys]
         .map(a => `${a}:${state.assigned[a]!.template}:${state.assigned[a]!.offset}`);
