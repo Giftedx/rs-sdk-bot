@@ -1,0 +1,22 @@
+{
+ "id": "1794969180999-nabtheknob-ballspinner-staffoffire",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "NabTheKnob",
+ "to": "Ballspinner",
+ "item": "Staff of fire",
+ "count": 1,
+ "start": 1794969180999,
+ "end": 1794971580999,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
