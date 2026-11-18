@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795005545543-fatstack-hocuspokeus",
+ "account": "Fatstack",
+ "partner": "Hocuspokeus",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 136757,
+ "claim": "fa367657-17d1-458b-ae77-ed3fd516395c",
+ "count": 0,
+ "ok": false,
+ "at": 1795005664751,
+ "detail": "trade claimed"
+}
