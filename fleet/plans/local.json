@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795005742454,
+ "at": 1795005777843,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -394,6 +394,29 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "2000",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "50",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-044e8f35-5285-4da6-b528-62a4326ddfa2"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-bow-trooper-ranged50-claim-retry [task-044e8f35-5285-4da6-b528-62a4326ddfa2]",
+   "role": "helper"
   }
  ],
  "army": [
