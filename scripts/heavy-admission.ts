@@ -92,6 +92,18 @@ export function swarmRuns(root: string, now = Date.now()): boolean {
     } catch { return false; }
 }
 export const floorGB = (root: string, now = Date.now()): number => swarmRuns(root, now) ? FREE_FLOOR_GB : TOOL_FLOOR_GB;
+// The live fleet of this machine, or null with no swarm: the bots that run and the memory the swarm holds back for
+// the bots that it starts now (pendingReserveGB of scripts/swarm.ts). A tool beside the fleet leaves the floor and
+// this reserve free.
+export type Fleet = { bots: number; reserveGB: number };
+export function fleet(root: string, now = Date.now()): Fleet | null {
+    try {
+        const state = JSON.parse(readFileSync(join(mainCheckout(root), '.practice', 'swarm-state.json'), 'utf8'));
+        if (!Number.isFinite(state.at) || now < state.at || now - state.at >= SWARM_FRESH_MS) return null;
+        const count = (v: unknown) => Array.isArray(v) ? v.length : Number.isFinite(v) ? Number(v) : 0;
+        return { bots: count(state.running) + count(state.externalRunning), reserveGB: Math.max(0, Number(state.pendingReserveGB) || 0) };
+    } catch { return null; }
+}
 
 // How many units of `perUnitGB` fit in the memory above the floor: `wanted` at most, and 1 at least.
 export function unitsThatFit(wanted: number, perUnitGB: number, free: number, floor: number): number {

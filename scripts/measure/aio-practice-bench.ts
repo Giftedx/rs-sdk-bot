@@ -42,8 +42,8 @@ import {readFileSync, writeFileSync, rmSync, mkdirSync, existsSync, watch} from 
 import {createHash} from 'node:crypto';
 import {dirname, join, resolve} from 'node:path';
 import {FREE_FLOOR_GB} from '../../packages/core/src/memory';
-import {freeGB, unitsThatFit} from '../heavy-admission';
-import {BENCH_CASE_GB, START_REFUSED_EXIT, admitStart} from './bench-start-check';
+import {fleet, freeGB, unitsThatFit} from '../heavy-admission';
+import {BENCH_CASE_GB, FLEET_STOP_EXIT, LIVE_MAX_ENGINES, START_REFUSED_EXIT, admitStart, fleetStop, readFleetFacts} from './bench-start-check';
 import {BUDGET_EXIT, BUDGET_MIN, budgetRefusal, estimateRun, parseAckStats, parseSimStat, readElapsed, readSince, recordElapsed} from './bench-budget';
 import {
   discoverBankedProduction,
@@ -81,7 +81,8 @@ export function seedArtifacts(seed: number, job: number, jobs: number, env: Reco
 // the stored baseline. --wall-clock runs the 150 ms engine with one shared world instead.
 // Before its first engine the run does the start check (bench-start-check.ts): it stops with one line and exit code 2
 // beside another heavy job, on a used engine port, or with too little free memory. --wait <minutes> waits for a safe
-// start for that long at most, and --force skips the check.
+// start for that long at most, and --force skips the check. Beside a live fleet the memory rule holds with --force
+// too, a run has 4 engines at most, and a run that would take the fleet's memory stops itself (exit code 4).
 // Time budget (scripts/measure/bench-budget.ts): a run is at most --budget <minutes> (default 10). The run estimates
 // its wall time from the last time of each case, refuses a selection over the budget before its first engine (exit
 // code 3, with the heaviest cases), and starts no case after the deadline. --over-budget runs it anyway. --seeds gives
@@ -186,7 +187,9 @@ if (import.meta.main) {
     env.BENCH_LOCKSTEP = '1';
     env.BENCH_FRESH ??= '1';
     env.BENCH_SEED = seed ?? env.BENCH_SEED ?? '7';
-    if (env.BENCH_FRESH === '1') env.BENCH_PARALLEL = parallel ?? env.BENCH_PARALLEL ?? String(unitsThatFit(6, BENCH_CASE_GB, freeGB(), FREE_FLOOR_GB));
+    // Beside a live fleet: LIVE_MAX_ENGINES at most, above the floor and the swarm's reserve for its bot starts.
+    const live = fleet(root);
+    if (env.BENCH_FRESH === '1') env.BENCH_PARALLEL = parallel ?? env.BENCH_PARALLEL ?? String(unitsThatFit(live ? LIVE_MAX_ENGINES : 6, BENCH_CASE_GB, freeGB(), FREE_FLOOR_GB + (live?.reserveGB ?? 0)));
   }
 }
 
@@ -346,6 +349,8 @@ function report(rows: Row[]) {
   }
 }
 
+// The worker processes and engines of the cases in flight: a bench that stops for the live fleet ends them first.
+const activeProcs = new Set<{pid: number; kill(): void}>(), activeStacks = new Set<{stop(): Promise<void>}>();
 // Where the wall time of the last case went, for AIO_BENCH_TIMING.
 const phase = { prepareMs: 0, scriptMs: 0, cleanupMs: 0 };
 const timed = async <T>(key: keyof typeof phase, work: () => Promise<T>): Promise<T> => { const t = Date.now(); try { return await work(); } finally { phase[key] += Date.now() - t; } };
@@ -401,6 +406,7 @@ console.log('SAVES_DONE');`;
           .replaceAll('{save}', `vendor/rs-sdk/server/engine/data/players/main/${name.toLowerCase()}.sav`);
         for (const [path, value] of Object.entries(c.jobFiles ?? {})) { mkdirSync(dirname(fill(path)), { recursive: true }); writeFileSync(fill(path), fill(JSON.stringify(value, null, 1))); }
         const proc = Bun.spawn(['bun', resolve(script), name, ...args.map(fill)], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: { ...process.env } }); // Bun.spawn does not pass env set at run time unless given
+        activeProcs.add(proc);
         // An AIO dispatcher owns a worker child; a timeout must stop the whole tree or the worker keeps its session.
         const timer = setTimeout(() => {
           if (process.platform === 'win32') Bun.spawn(['taskkill', '/PID', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true });
@@ -408,6 +414,7 @@ console.log('SAVES_DONE');`;
         }, timeoutMs);
         const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
         const exitCode = await proc.exited;
+        activeProcs.delete(proc);
         clearTimeout(timer);
         // The whole output of the last run of each case, for a failure the tail does not explain.
         mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -462,7 +469,8 @@ async function main() {
   const start = (label?: string, slot?: number, caseEnv: Record<string, string> = {}) => startStack({ tickMs: Number(process.env.BENCH_TICK_MS ?? 150), xpRate: 25, readyTimeoutMs: 120_000,
     ...(slot === undefined ? {} : { instance: instanceOf(slot), gateway: false as const, portWaitMs: 10_000, ports: { engine: slotPort(slot), gateway: slotPort(slot) + 1 },
       engineEnv: { WEB_MANAGEMENT_PORT: String(slotPort(slot) + 2), NODE_PORT: String(slotPort(slot) + 3), GE_DATABASE: `data/market-aiobench-${slot}.sqlite`, ...caseEnv } }),
-    ...(LOCKSTEP ? { lockstep: { seed: SEED, anchor: '^aiob', ...(TRACE_DIR && label ? { traceFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.trace`), actionFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.actions`) } : {}) } } : {}) });
+    // ackMs: the engine waits this long for a bot that holds its tick. A route search holds it up to SIM_ROUTE_MS (180 s).
+    ...(LOCKSTEP ? { lockstep: { seed: SEED, anchor: '^aiob', ackMs: 190_000, ...(TRACE_DIR && label ? { traceFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.trace`), actionFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.actions`) } : {}) } } : {}) });
   if (TRACE_DIR) mkdirSync(TRACE_DIR, { recursive: true });
   if (FRESH && CONCURRENCY !== 1) throw new Error('BENCH_FRESH=1 uses BENCH_PARALLEL, not BENCH_CONCURRENCY');
   if (!FRESH && PARALLEL !== 1) throw new Error('BENCH_PARALLEL needs BENCH_FRESH=1');
@@ -470,8 +478,9 @@ async function main() {
   // a run of kept results only has no check. The shared stack of a --wall-clock run checks its own two ports at its start.
   const toRun = cases.filter(c => !(CACHE && existsSync(join(CACHE_DIR, `${caseHash(c)}.json`)))).length;
   const engines = FRESH ? Math.min(PARALLEL, toRun) : Math.min(1, toRun);
-  if (engines > 0 && process.env.BENCH_FORCE !== '1') {
-    const refusal = await admitStart({ root, engines, ports: FRESH ? Array.from({ length: engines }, (_, slot) => slotPort(SLOT_BASE + slot)) : [] }, Number(process.env.BENCH_WAIT_MIN ?? 0) * 60_000);
+  if (engines > 0) {
+    // --force skips the check for another job and for the ports. The memory rule beside a live fleet stays.
+    const refusal = await admitStart({ root, engines, ports: FRESH ? Array.from({ length: engines }, (_, slot) => slotPort(SLOT_BASE + slot)) : [] }, Number(process.env.BENCH_WAIT_MIN ?? 0) * 60_000, { memoryOnly: process.env.BENCH_FORCE === '1' });
     if (refusal) { console.error(refusal); process.exit(START_REFUSED_EXIT); }
   }
   // The time budget: refuse a selection over it before the first engine, and start no case after the deadline.
@@ -487,7 +496,24 @@ async function main() {
   const profileDir = process.env.BENCH_PROFILE_DIR ?? join(dirname(OUT), 'profile');
   if (profile) mkdirSync(profileDir, { recursive: true });
   let stack = FRESH ? null : await start();
+  if (stack) activeStacks.add(stack);
   const rows: Awaited<ReturnType<typeof runCase>>[] = [];
+  // Beside a live fleet the bench reads the free memory each 5 s. Under the floor and the swarm's reserve it ends its
+  // workers and engines and exits: the memory goes back to the fleet within one read.
+  let stopping = false;
+  const watch = setInterval(() => {
+    const reason = stopping ? null : fleetStop(readFleetFacts(root));
+    if (!reason) return;
+    stopping = true;
+    console.error(reason);
+    void (async () => {
+      for (const proc of activeProcs) { if (process.platform === 'win32') Bun.spawnSync(['taskkill', '/PID', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true }); else proc.kill(); }
+      await Promise.allSettled([...activeStacks].map(s => s.stop()));
+      try { writeFileSync(OUT, JSON.stringify({ coverage, concurrency: CONCURRENCY, runs: RUNS, rows, stopped: reason }, null, 2)); } catch { /* the log holds the rows of the cases that ended */ }
+      process.exit(FLEET_STOP_EXIT);
+    })();
+  }, 5000);
+  (watch as { unref?(): void }).unref?.();
   try {
     let next = 0;
     const worker = async (slot: number) => {
@@ -510,7 +536,7 @@ async function main() {
             rows.push(row);
           } else {
             const engineAt = Date.now();
-            if (FRESH) own = await start(c.key, slot, c.engineEnv);
+            if (FRESH) { own = await start(c.key, slot, c.engineEnv); activeStacks.add(own); }
             const engineStartMs = Date.now() - engineAt;
             // --profile: the bots of this case write their ACK_STAT lines here; the engine's wait lines are read from
             // the bytes its stat file gains during the case.
@@ -532,7 +558,7 @@ async function main() {
           }
         }
         catch (e) { const row = { case: c.key, ok: false, passes: 0, runs: RUNS, elapsedMs: 0, ledgerTicks: [], rivalTicks: null, output: null, xp: null, result: `bench error ${String((e as Error)?.message ?? e).slice(0, 300)}` }; console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`); rows.push(row); }
-        await own?.stop();
+        if (own) { activeStacks.delete(own); await own.stop(); }
         writeFileSync(OUT, JSON.stringify({ coverage, concurrency: CONCURRENCY, runs: RUNS, rows }, null, 2));
       }
     };
