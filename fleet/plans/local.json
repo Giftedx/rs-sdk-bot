@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795024888407,
+ "at": 1795024928125,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -235,6 +235,26 @@
    ]
   },
   {
+   "account": "mmtha0205",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=58 EXPECTED_OWNED=10 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit1-555-10to68 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=1 EXPECTED_OWNED=1 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit1-558-1to2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"558\":2}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 58 Water rune, 1 Mind rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Bigpackage",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -299,7 +319,8 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":99}}"
    },
    "enabled": true,
    "standing": true,
@@ -311,26 +332,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=58 EXPECTED_OWNED=10 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit1-555-10to68 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=1 EXPECTED_OWNED=1 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit1-558-1to2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"558\":2}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 58 Water rune, 1 Mind rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "mmthv2350",
@@ -496,7 +497,8 @@
     "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"556\":600}}"
    },
    "enabled": true,
    "standing": true,
