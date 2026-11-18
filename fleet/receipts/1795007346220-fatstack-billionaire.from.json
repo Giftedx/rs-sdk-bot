@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795007346220-fatstack-billionaire",
+ "account": "Fatstack",
+ "partner": "Billionaire",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 17815,
+ "claim": "8c8d5d63-8299-40df-a02c-5df40c05df8b",
+ "count": 17815,
+ "ok": true,
+ "at": 1795007475790,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 17815,
+  "after": 0
+ },
+ "bank": {
+  "count": 17815,
+  "at": 1795007468249
+ },
+ "logout": {
+  "attemptId": "1795007461210-0000020492-0000000001",
+  "at": 1795007475781,
+  "sha256": "a8471999fa18ca9cb8497434d761a1d7c5daa7e2cbdd4e01d625624a1ae70ef7"
+ },
+ "screen": true
+}
