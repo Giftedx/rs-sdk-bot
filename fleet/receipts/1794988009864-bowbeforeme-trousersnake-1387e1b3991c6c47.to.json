@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794988009864-bowbeforeme-trousersnake-1387e1b3991c6c47",
  "account": "TrouserSnake",
  "partner": "BowBeforeMe",
@@ -10,8 +10,22 @@
  "item": "Rune arrow",
  "requested": 300,
  "claim": "4729ad4b-4e06-4913-8d5d-07023ca775bc",
- "count": 0,
- "ok": false,
- "at": 1794988476727,
- "detail": "trade claimed"
+ "count": 300,
+ "ok": true,
+ "at": 1794988511769,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 300
+ },
+ "bank": {
+  "count": 300,
+  "at": 1794988511024
+ },
+ "logout": {
+  "attemptId": "1794988476736-0000024572-0000000001",
+  "at": 1794988511756,
+  "sha256": "8fdf64982116404dd5ab3c3021a9cf10938004282130fee91a7388e1c98b41b6"
+ },
+ "screen": true
 }

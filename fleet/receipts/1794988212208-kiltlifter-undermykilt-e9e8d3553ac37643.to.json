@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794988212208-kiltlifter-undermykilt-e9e8d3553ac37643",
  "account": "UnderMyKilt",
  "partner": "Kiltlifter",
@@ -10,15 +10,37 @@
  "item": "Earth rune",
  "requested": 30,
  "claim": "b2f1769c-0898-4cad-9ee3-d2383db5fb62",
- "count": 0,
- "ok": false,
- "at": 1794988484628,
- "detail": "trade claimed",
+ "count": 30,
+ "ok": true,
+ "at": 1794988524186,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Water rune",
    "requested": 30,
-   "count": 0
+   "count": 30,
+   "inventory": {
+    "before": 0,
+    "after": 30
+   },
+   "bank": {
+    "count": 30,
+    "at": 1794988523398
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 30
+ },
+ "bank": {
+  "count": 30,
+  "at": 1794988522258
+ },
+ "logout": {
+  "attemptId": "1794988484821-0000007720-0000000001",
+  "at": 1794988524153,
+  "sha256": "2bb39631de877048780691b70f200aa370f1a51652ec3ea14c6aea2f80dad99d"
+ },
+ "screen": true
 }
