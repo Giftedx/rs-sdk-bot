@@ -494,13 +494,25 @@ export function jobRate(x: Pick<Assignment, 'template' | 'value'>): string {
     return t?.tier === 'goal' ? `band ${t.band ?? 0}` : t?.family === 'kit-buy' ? 'kit buy' : `${x.value.toFixed(2)}/tick`;
 }
 
-// The write step of a pass: `unchanged` is true while the files that the plan came from hold the text that the plan read.
+// The write step of a pass: `unchanged` is true while the files that the plan came from hold the text that the plan
+// read, and the coordinator queue binds the same accounts.
 export interface PassWrite { unchanged(): boolean; write(): string[] }
+// The files of a plan that another writer changes: the plan file and the coordinator jobs file (under the plan lock),
+// the owner list of the fleet (fleet-sync moves an account to another side) and the planner state of this side.
+export const passInputFiles = (planFile: string): string[] =>
+    [planFile, join(root, COORDINATOR_JOBS_FILE), join(FLEET_DIR(), 'owners.json'), join(prac, 'autopilot', `${mySide()}.json`)];
+// The accounts that the open tasks of the coordinator queue bind, as one text. The coordinator saves its state with no
+// plan lock and for many reasons, so the write step compares this answer and not the text of the state file.
+export function queueBoundAccounts(queue: any): string {
+    if (queue?.version !== 1 || !Array.isArray(queue.tasks)) return 'unavailable';
+    const open = queue.tasks.filter((r: any) => r?.status === 'pending' || r?.status === 'running');
+    return JSON.stringify([...new Set<string>(open.flatMap((r: any) => boundAccounts(r.spec, queue) ?? []).map((a: string) => a.toLowerCase()))].sort());
+}
 // With `defer`, a pass that has something to write does not write: it gives its write step to `defer` (lockedPass).
 export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, defer?: (step: PassWrite) => void): string[] {
     if (!dry && isPaused()) return [PAUSED];
-    // The files that other writers change under the plan lock, and this side's planner state, as text before the plan reads them.
-    const inputFiles = [planFile, join(root, COORDINATOR_JOBS_FILE), join(prac, 'autopilot', `${mySide()}.json`)];
+    // The text of each input file before the plan reads it.
+    const inputFiles = passInputFiles(planFile);
     const inputText = (f: string) => { try { return readFileSync(f, 'utf8'); } catch { return null; } };
     const inputBefore = inputFiles.map(inputText);
     const side = mySide(), owners = loadOwners(), swarm = readJson(planFile, null);
@@ -714,7 +726,8 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
         return log;
     };
     if (!defer) return write();
-    defer({ unchanged: () => inputFiles.every((f, i) => inputText(f) === inputBefore[i]), write });
+    const queueBefore = queueBoundAccounts(queue);
+    defer({ unchanged: () => inputFiles.every((f, i) => inputText(f) === inputBefore[i]) && queueBoundAccounts(readJson(join(prac, 'coordinator/state.json'), null)) === queueBefore, write });
     return log;
 }
 

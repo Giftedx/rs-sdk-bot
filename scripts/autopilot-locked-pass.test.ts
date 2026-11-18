@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { PLAN_ATTEMPTS, lockedPass, pass, passOutcome, type PassWrite } from './autopilot';
+import { PLAN_ATTEMPTS, lockedPass, pass, passInputFiles, passOutcome, queueBoundAccounts, type PassWrite } from './autopilot';
 
 // A plan file in a temporary folder. Each test ends its pass at the pause check of the write step, so no test writes
 // a plan, a planner state or an order. A plan takes about 2 s and a test makes up to four, so each test has a 60 s limit.
@@ -95,3 +95,36 @@ test('a pass that wrote nothing is held, so the trainer poll keeps the finished 
         .toEqual({ outcome: 'applied', result: 'RESULT ok autopilot jobs=2 retired=1' });
     expect(passOutcome(['AUTOPILOT dry run: nothing written']).outcome).toBe('applied');
 }, 60_000);
+
+test('the write step compares each file that another writer changes, not only the plan file', () => {
+    const f = fixture();
+    try {
+        // The plan file, the coordinator jobs file, the owner list of the fleet and the planner state of this side.
+        const files = passInputFiles(f.planFile).map(p => p.replace(/\\/g, '/'));
+        expect(files[0]).toBe(f.planFile.replace(/\\/g, '/'));
+        expect(files.filter(p => p.endsWith('/.practice/coordinator/jobs.json'))).toHaveLength(1);
+        expect(files.filter(p => p.endsWith('/owners.json'))).toHaveLength(1);
+        expect(files.filter(p => /\/\.practice\/autopilot\/[a-z0-9-]+\.json$/.test(p))).toHaveLength(1);
+        // A change of a listed file other than the plan file: the owner list is in the temporary fleet folder.
+        let step: PassWrite | undefined;
+        pass(f.planFile, false, () => false, s => { step = s; });
+        expect(step!.unchanged()).toBe(true);
+        writeFileSync(passInputFiles(f.planFile).find(p => p.endsWith('owners.json'))!, '{"accounts":{"Rod":{"side":"cloud"}}}');
+        expect(step!.unchanged()).toBe(false);
+    } finally { f.end(); }
+}, 60_000);
+
+test('the write step sees an account that the coordinator queue bound after the plan read the queue', () => {
+    const task = (id: string, status: string, account?: string) => ({ status, spec: { id, kind: 'run', ...(account ? { account } : {}) } });
+    const queue = (...tasks: unknown[]) => ({ version: 1, tasks });
+    const before = queueBoundAccounts(queue(task('a', 'running', 'Rod'), task('b', 'pending', 'Cod'), task('c', 'succeeded', 'Old')));
+    expect(before).toBe('["cod","rod"]');
+    // State that the coordinator saves for other reasons does not change the answer.
+    expect(queueBoundAccounts({ ...queue(task('b', 'pending', 'Cod'), task('a', 'running', 'Rod'), task('c', 'failed', 'Old')), sequence: 99 })).toBe(before);
+    // A new task with an account does, and so does a task that ends.
+    expect(queueBoundAccounts(queue(task('a', 'running', 'Rod'), task('b', 'pending', 'Cod'), task('d', 'pending', 'Bob')))).not.toBe(before);
+    expect(queueBoundAccounts(queue(task('a', 'succeeded', 'Rod'), task('b', 'pending', 'Cod')))).not.toBe(before);
+    // No readable queue is its own answer.
+    expect(queueBoundAccounts(null)).toBe('unavailable');
+    expect(queueBoundAccounts({ version: 2, tasks: [] })).toBe('unavailable');
+});
