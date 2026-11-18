@@ -1,0 +1,22 @@
+{
+ "id": "1795024544365-sausagefest-knightrider-cookedmeat",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Sausagefest",
+ "to": "KnightRider",
+ "item": "Cooked meat",
+ "count": 3,
+ "start": 1795024544365,
+ "end": 1795026944365,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
