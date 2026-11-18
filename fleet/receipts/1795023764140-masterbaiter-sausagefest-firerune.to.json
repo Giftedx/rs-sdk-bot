@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795023764140-masterbaiter-sausagefest-firerune",
+ "account": "Sausagefest",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 1,
+ "claim": "fe9ca8d9-af6a-499f-8c88-def859dcf7e7",
+ "count": 0,
+ "ok": false,
+ "at": 1795024213930,
+ "detail": "trade claimed"
+}
