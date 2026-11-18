@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { resolve } from 'node:path';
 import { benchCases } from './aio-bench-cases';
 import { parseMatrixArgs } from './pk-spar-matrix';
 import { DEFAULT_PATTERN, packBatches, parseSweepArgs, QUICK_CASES, quickPattern, runWithTimeout, shardBatches } from './pvp-sweep';
@@ -83,4 +84,27 @@ test('parseMatrixArgs parses --case, --seeds, --a-opts, --b-opts, --kits, and --
     expect(args.aOpts).toBe('{"zeroDrainFlick":true}');
     expect(args.wait).toBe('3');
     expect(args.parallel).toBe(2);
+});
+
+test('the CI call of the sweep keeps the default pattern: a decimal budget is a flag value', () => {
+    const args = parseSweepArgs(['--parallel', '4', '--budget', '3.5', '--shard', '2/4']);
+    expect(args.pattern.source).toBe(DEFAULT_PATTERN);
+    expect(args.pattern.test('extra:spar-escape-full-pack')).toBe(true);
+    expect(args.shard).toEqual({ index: 2, total: 4 });
+});
+
+test('a sweep with no matching case exits 2 and starts no bench', () => {
+    const run = (args: string[]) => Bun.spawnSync(['bun', 'scripts/measure/pvp-sweep.ts', ...args], {
+        cwd: resolve(import.meta.dir, '../..'),
+        stdout: 'pipe', stderr: 'pipe', windowsHide: true, timeout: 20_000,
+    });
+    const none = run(['^no-such-pvp-case$']);
+    expect(none.exitCode).toBe(2);
+    expect(none.stdout.toString()).toContain('PVP_SWEEP no runnable cases');
+    expect(none.stdout.toString()).not.toContain('PVP_SWEEP_BATCH');
+    // One case packs into one batch, so shard 2 of 2 holds no case.
+    const emptyShard = run(['^pvp:monitor$', '--shard', '2/2']);
+    expect(emptyShard.exitCode).toBe(2);
+    expect(emptyShard.stdout.toString()).toContain('in shard 2/2');
+    expect(emptyShard.stdout.toString()).not.toContain('PVP_SWEEP_BATCH');
 });

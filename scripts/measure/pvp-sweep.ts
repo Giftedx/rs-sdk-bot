@@ -144,6 +144,8 @@ if (import.meta.main) {
         console.log(`PVP_SWEEP shard ${shard.index}/${shard.total}: ${todo.length} cases (${shardBatches(all, shard.index, shard.total).length}/${all.length} batches)`);
     }
     const targetCount = todo.length;
+    // A sweep with no case proves nothing: exit 2, not a pass with 0 of 0.
+    if (!targetCount) { console.log(`PVP_SWEEP no runnable cases match ${pattern}${shard ? ` in shard ${shard.index}/${shard.total}` : ''}`); process.exit(2); }
     while (todo.length) {
         const [batch] = packBatches(todo.map(c => ({ ...c, ms: c.ms * scale })), engines, budgetMs);
         const estimate = (() => { const load = Array.from({ length: engines }, () => 0); for (const c of todo.filter(c => batch!.includes(c.key)).sort((a, b) => b.ms - a.ms)) load[load.indexOf(Math.min(...load))]! += c.ms; return Math.max(...load); })();
