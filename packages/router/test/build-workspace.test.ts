@@ -88,6 +88,32 @@ test('a hand edit of the main checkout is not an earlier delivery, so publish re
  expect(()=>publishWorkspace(main,'cap',[file])).toThrow('main source changed since the build started: scripts/worker.ts');
 });
 
+// The main checkout as a git repository: a change of master that a live update pulled is a commit.
+const gitIn=(main:string,...args:string[])=>{const r=spawnSync('git',['-C',main,'-c','user.name=t','-c','user.email=t@t','-c','commit.gpgsign=false',...args],{encoding:'utf8',windowsHide:true});if(r.status!==0)throw Error('git '+args.join(' ')+': '+r.stderr);return r.stdout;};
+const repoTree=(file:string,text:string)=>{const main=mainTree();writeFileSync(join(main,file),text);gitIn(main,'init','-q');gitIn(main,'add','-A');gitIn(main,'commit','-q','-m','base');return main;};
+test('a build merges onto a change of master that the main checkout committed, also for a carried attempt',()=>{
+ const file='scripts/worker.ts',main=repoTree(file,lines('a','b','c','d','e'));
+ const {root}=prepareWorkspace(main,'cap',[file]);writeFileSync(join(root,file),lines('A','b','c','d','e'));
+ // The first attempt did not publish. A live update pulls a change of master to the file: a commit that moves HEAD.
+ prepareWorkspace(main,'cap',[file]);
+ writeFileSync(join(main,file),lines('a','b','c','d','E'));gitIn(main,'commit','-q','-am','master change');
+ const carried=prepareWorkspace(main,'cap',[file]).root;
+ expect(readFileSync(join(carried,file),'utf8')).toBe(lines('A','b','c','d','e'));
+ expect(publishWorkspace(main,'cap',[file])).toEqual({published:[file],unchanged:[],merged:[file]});
+ expect(readFileSync(join(main,file),'utf8')).toBe(lines('A','b','c','d','E'));
+});
+test('a committed change of master that overlaps the build still refuses, and a hand edit of a git checkout is no change of master',()=>{
+ const file='scripts/worker.ts',main=repoTree(file,lines('a','b','c'));
+ const {root}=prepareWorkspace(main,'cap',[file]);writeFileSync(join(root,file),lines('a','B','c'));
+ writeFileSync(join(main,file),lines('a','x','c'));gitIn(main,'commit','-q','-am','master change');
+ expect(()=>publishWorkspace(main,'cap',[file])).toThrow('main source changed since the build started: scripts/worker.ts');
+ expect(readFileSync(join(main,file),'utf8')).toBe(lines('a','x','c'));
+ // A hand edit that is not committed is a conflict, as before.
+ const main2=repoTree(file,lines('a','b','c')),built=prepareWorkspace(main2,'cap2',[file]).root;
+ writeFileSync(join(built,file),lines('a','b','C'));writeFileSync(join(main2,file),lines('A','b','c'));
+ expect(()=>publishWorkspace(main2,'cap2',[file])).toThrow('main source changed since the build started: scripts/worker.ts');
+ expect(readFileSync(join(main2,file),'utf8')).toBe(lines('A','b','c'));
+});
 test('a carried repair attempt merges against the base it started from',()=>{
  const main=mainTree(),file='scripts/worker.ts';writeFileSync(join(main,file),lines('a','b','c'));
  let {root}=prepareWorkspace(main,'cap',[file]);writeFileSync(join(root,file),lines('a','b','C'));
