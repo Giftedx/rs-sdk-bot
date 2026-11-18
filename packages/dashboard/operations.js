@@ -381,7 +381,8 @@ if(activityFilter==='shots')return page(title('Events / screenshots','Activity j
  const OPERATOR_ONLY=['operations','dispatch','raw','jobs','machine','stock','goals','prs'];
  // A spectator's toolbar also leaves out the plugins that client-shell.js folds into Fleet.
  const hiddenHere=id=>!isOwner()&&(OPERATOR_ONLY.includes(id)||(window.atlasPublicHidden||[]).includes(id));
- window.atlasCommandPlugins=()=>Object.entries(pluginNames).filter(([id])=>!hiddenHere(id));window.atlasRecoveryRows=recoveryRows;
+ window.atlasCommandPlugins=()=>Object.entries(pluginNames).filter(([id])=>!hiddenHere(id));
+ window.atlasRecoveryRows=recoveryRows;
  const spectator=!(window.atlasOperator?.()??true);
  // Configuration is the wrench at the foot of the rail (client-shell.js), as in RuneLite.
  for(const id of ['operations','dispatch']){if(spectator&&OPERATOR_ONLY.includes(id))continue;const b=document.createElement('button');b.dataset.clientPlugin=id;b.setAttribute('aria-label',pluginNames[id]);b.title=pluginNames[id];b.innerHTML=window.atlasRailIcon?.(id)||'<svg viewBox="0 0 24 24"><path d="'+glyphs[id]+'"/></svg>';if(id==='operations')rail.prepend(b);else rail.insertBefore(b,rail.querySelector('.rail-gap'));}
