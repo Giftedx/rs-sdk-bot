@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795002709359-mineyourbiz-swordinhand-firerune",
+ "account": "Swordinhand",
+ "partner": "MineYourBiz",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 1,
+ "claim": "19989424-165d-450f-99a7-74b49af0e664",
+ "count": 1,
+ "ok": true,
+ "at": 1795002834856,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795002834039
+ },
+ "logout": {
+  "attemptId": "1795002818118-0000014924-0000000001",
+  "at": 1795002834774,
+  "sha256": "afd4595a4805a4b32968bbfb7178ae1295bdf0f846e37b602cd4a027a10c1969"
+ },
+ "screen": true
+}
