@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795003309361-mineyourbiz-sausagefest-naturerune",
  "account": "MineYourBiz",
  "partner": "Sausagefest",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 44,
  "claim": "ded080f0-4ec6-4de4-8c9c-948810075246",
- "count": 0,
- "ok": false,
- "at": 1795003505685,
- "detail": "trade claimed"
+ "count": 44,
+ "ok": true,
+ "at": 1795003528561,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 44,
+  "after": 0
+ },
+ "bank": {
+  "count": 44,
+  "at": 1795003514394
+ },
+ "logout": {
+  "attemptId": "1795003505694-0000025096-0000000001",
+  "at": 1795003528328,
+  "sha256": "eeecb6bd08b2f490e11719aeb8fb6db721ba7f3d47cf4546f3c661a4f2d736e5"
+ },
+ "screen": true
 }

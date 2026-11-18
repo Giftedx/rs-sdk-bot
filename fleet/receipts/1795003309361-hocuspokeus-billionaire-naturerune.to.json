@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795003309361-hocuspokeus-billionaire-naturerune",
+ "account": "Billionaire",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 47,
+ "claim": "f8ab5fe2-876c-4477-b2a3-4e56b4861e87",
+ "count": 0,
+ "ok": false,
+ "at": 1795003516339,
+ "detail": "trade claimed"
+}
