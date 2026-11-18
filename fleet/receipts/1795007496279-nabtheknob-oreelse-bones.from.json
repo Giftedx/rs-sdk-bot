@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795007496279-nabtheknob-oreelse-bones",
+ "account": "NabTheKnob",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 14,
+ "claim": "c718e508-30f9-423b-8c22-64fd4b01cde2",
+ "count": 0,
+ "ok": false,
+ "at": 1795007578042,
+ "detail": "trade claimed"
+}
