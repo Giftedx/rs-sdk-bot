@@ -1,0 +1,22 @@
+{
+ "id": "1795015121267-wandwaver-knightrider-cookedmeat",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Wandwaver",
+ "to": "KnightRider",
+ "item": "Cooked meat",
+ "count": 3,
+ "start": 1795015121267,
+ "end": 1795017521267,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
