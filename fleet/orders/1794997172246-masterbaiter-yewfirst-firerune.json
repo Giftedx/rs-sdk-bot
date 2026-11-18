@@ -1,0 +1,22 @@
+{
+ "id": "1794997172246-masterbaiter-yewfirst-firerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "YewFirst",
+ "item": "Fire rune",
+ "count": 250,
+ "start": 1794997172246,
+ "end": 1794999572246,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
