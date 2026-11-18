@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795027019266,
+ "at": 1795027187246,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -235,6 +235,24 @@
    ]
   },
   {
+   "account": "mmtha0205",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=19 EXPECTED_OWNED=11 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit3-555-11to30 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 19 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Bigpackage",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -333,24 +351,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=19 EXPECTED_OWNED=11 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit3-555-11to30 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 19 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
-   "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "mmthv2350",
