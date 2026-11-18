@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794990156449-wandwaver-mmthv2350-woodenshield",
  "account": "mmthv2350",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "Wooden shield",
  "requested": 1,
  "claim": "6084e33b-0387-4521-b3f9-90e41866671c",
- "count": 0,
- "ok": false,
- "at": 1794990288713,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1794990325720,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1794990324930
+ },
+ "logout": {
+  "attemptId": "1794990288723-0000023012-0000000001",
+  "at": 1794990325699,
+  "sha256": "d8ddc952b593849733499df59de1ab0ab7f2b7e6c3a17614258fab8a776f5f72"
+ },
+ "screen": true
 }
