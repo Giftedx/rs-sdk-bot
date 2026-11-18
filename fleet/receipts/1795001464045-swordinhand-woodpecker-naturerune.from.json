@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795001464045-swordinhand-woodpecker-naturerune",
+ "account": "Swordinhand",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "f3f34ef1-bc87-4570-b521-7deb1c7767bb",
+ "count": 0,
+ "ok": false,
+ "at": 1795001541989,
+ "detail": "trade claimed"
+}

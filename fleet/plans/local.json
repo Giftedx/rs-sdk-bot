@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795001482499,
+ "at": 1795001550119,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -352,8 +352,7 @@
     "5000"
    ],
    "env": {
-    "ALCH_ITEM": "airrune",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+    "ALCH_ITEM": "airrune"
    },
    "enabled": true,
    "standing": true,
@@ -375,8 +374,7 @@
     "BONE_ID": "532",
     "BONE_RESERVE": "6",
     "CAP": "4000",
-    "AUTOPILOT_ORDER": "9",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+    "AUTOPILOT_ORDER": "10"
    },
    "enabled": true,
    "standing": true,

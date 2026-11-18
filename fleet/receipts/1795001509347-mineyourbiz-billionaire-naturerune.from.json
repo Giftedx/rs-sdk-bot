@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795001509347-mineyourbiz-billionaire-naturerune",
+ "account": "MineYourBiz",
+ "partner": "Billionaire",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "e04862bd-75c6-4b6b-8823-ba7f341cfcfb",
+ "count": 0,
+ "ok": false,
+ "at": 1795001537953,
+ "detail": "trade claimed"
+}
