@@ -1,0 +1,22 @@
+{
+ "id": "1795004795176-swordinhand-sporrandip-cookedmeat",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordinhand",
+ "to": "SporranDip",
+ "item": "Cooked meat",
+ "count": 1,
+ "start": 1795004795176,
+ "end": 1795007195176,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
