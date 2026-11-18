@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794997873631,
+ "at": 1794997928520,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -263,32 +263,6 @@
    "resources": []
   },
   {
-   "account": "mmthv2350",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
@@ -346,39 +320,55 @@
    "resources": []
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/alch-train.ts",
+   "account": "mmthv2350",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "5000"
+    "1500",
+    "trooper"
    ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "goal": "train Strength to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-strength-99",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Swordinhand",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "local",
+   "resources": [
+    "trooper:battlefield"
    ]
   }
  ],
