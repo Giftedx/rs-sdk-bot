@@ -2048,10 +2048,15 @@ export function catalogue(): Template[] {
         needs: { skills: { Attack: 60, Strength: 60, Defence: 60, Hitpoints: 40 }, anyOf: TROOPER_FED },
         batch: { trout: 100 },
     };
+    // The Ranged band runs the trooper trainer itself, as the melee bands do. The adaptive worker
+    // (scripts/ranged-train.ts) starts only with a practice proof for the account's exact levels, kit and source
+    // release, one proof for each five Ranged levels, so no army account with a bow and arrows started the band, and its
+    // unbound job held the one chicken pen. The trooper method from Ranged 1 with a shortbow and iron arrows:
+    // research/combat-measure.md, "Ranged on the troopers".
     const ranged: Template = {
-        id: 'army-trooper-ranged-99', family: 'combat-train', script: 'scripts/ranged-train.ts', args: ['99', '1500'],
-        env: { TARGET_LEVEL: '99', FOOD: '3', AMMO: '100', MAX_TRIPS: '50', COIN_RESERVE: '0', MAX_SPEND: '55000' }, role: 'combat', goal: 'train Ranged to 99 with the fastest qualified current-kit route',
-        tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: ['pen:3229,3298',TROOPER_FIELD], yields: () => [],
+        id: 'army-trooper-ranged-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
+        env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1', LOOT_WATCH: '0' }, role: 'combat', goal: 'train Ranged to 99 on the Khazard troopers',
+        tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: [TROOPER_FIELD], yields: () => [],
         needs: { skills: { Hitpoints: 40 }, anyOf: RANGED_KIT.flatMap(kit => TROOPER_FED.map(fed => ({ ...kit, ...fed, skills: { ...kit.skills, ...fed.skills } }))) },
         batch: { trout: 100, ...Object.fromEntries(ARROWS.map(([arrow]) => [arrow, 1000])) },
     };
