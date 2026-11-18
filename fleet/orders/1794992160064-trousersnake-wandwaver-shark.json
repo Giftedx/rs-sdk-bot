@@ -1,0 +1,22 @@
+{
+ "id": "1794992160064-trousersnake-wandwaver-shark",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TrouserSnake",
+ "to": "Wandwaver",
+ "item": "Shark",
+ "count": 1,
+ "start": 1794992160064,
+ "end": 1794994560064,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
