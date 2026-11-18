@@ -1,0 +1,22 @@
+{
+ "id": "1794985998196-mmtha0205-pocketpython-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmtha0205",
+ "to": "Pocketpython",
+ "item": "Air rune",
+ "count": 36,
+ "start": 1794985998196,
+ "end": 1794988398196,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
