@@ -285,10 +285,11 @@ const cloneSquad = (key: string, kit: string, n: number, args: string[], mode: C
 // state has no prayer points field, so `prayer: false` gives them Prayer level 1 (no prayer can be turned on).
 // `prey` is SQUAD_GANG_PREY (scripts/pk-squad.ts): the live gang attacked only the first two members.
 type Run1 = {members: {name: string; wear: {id: number; count: number; slot: number}[]; pack: {id: number; count: number}[]}[]};
-const run1Squad = (key: string, o: {prayer: boolean; prey?: string; mode?: CloneMode; args?: string[]; gang?: Record<string, unknown>}): BenchCase => {
+const run1Squad = (key: string, o: {prayer: boolean; prey?: string; mode?: CloneMode; args?: string[]; gang?: Record<string, unknown>; order?: number[]}): BenchCase => {
   const run1 = JSON.parse(readFileSync(join(import.meta.dir, '..', 'pk-gang-record', 'run-1.json'), 'utf8')) as Run1, start = {x: 3093, z: 3501}, base = 'live-walker-iron-rune-chain-bind';
   // A stack of food is one slot with one count in a preset: a shark each (the loop eats one and the stack would go).
-  const member = (i: number): SaveConfig => { const m = run1.members[i]!, c = kitFixture(base, start.x + (i % 3), start.z);
+  // `order` names the loadout of each member in turn (default the live order: 0 to 3).
+  const member = (i: number): SaveConfig => { const m = run1.members[(o.order ?? [0, 1, 2, 3])[i]!]!, c = kitFixture(base, start.x + (i % 3), start.z);
     return {...c, skills: {...c.skills, ...(o.prayer ? {} : {Prayer: 1})}, equipment: m.wear, inventory: m.pack.flatMap(p => (p.id === 385 || p.id === 379 ? Array.from({length: p.count}, () => ({id: p.id, count: 1})) : [p]))}; };
   const mode = o.mode ?? 'seen', n = run1.members.length, letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, n + 2).split('');
   return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: s => ok(s) && killReceiptsMatch(s), presetConfig: member(0), output: /kills=(\d+)/,
@@ -1173,6 +1174,11 @@ const ROUTE_CASES: BenchCase[] = [
   run1Squad('extra:clone-run1-nearest-x1', {prayer: false}),
   // Which behaviour of the clones sets the length of a fight: a gang that never eats (eatAt 0), and a gang whose protect prayer
   // never comes on (every weapon change waits the whole window).
+  // Who stands where the gang goes first: the two rune members first, or all four in rune (the loadouts of TrouserSnake and TheFullMonty).
+  run1Squad('extra:clone-run1-order-x1', {prayer: false, prey: '0,1,0', order: [2, 3, 0, 1]}),
+  run1Squad('extra:clone-run1-order-prayer-x1', {prayer: true, prey: '0,1,0', order: [2, 3, 0, 1]}),
+  run1Squad('extra:clone-run1-rune-x1', {prayer: false, prey: '0,1,0', order: [2, 3, 2, 3]}),
+  run1Squad('extra:clone-run1-rune-prayer-x1', {prayer: true, prey: '0,1,0', order: [2, 3, 2, 3]}),
   run1Squad('extra:clone-run1-noeat-x1', {prayer: false, prey: '0,1,0', gang: {eatAt: 0}}),
   run1Squad('extra:clone-run1-nopray-x1', {prayer: false, prey: '0,1,0', gang: {prayerLag: [0, 0, 0, 0, 0, 0, 0, 0, 1]}}),
   // The antipoison: five of ours in the kit, with a potion on the first two members, on the first one, on none
