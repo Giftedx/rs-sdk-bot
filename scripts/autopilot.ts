@@ -30,6 +30,7 @@ import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
+import { squadBlock, type SquadInput } from '../packages/planner/src/squad';
 import { admittedByLevels, armyBatchOf, meleeTotal } from '../packages/core/src/army-roster';
 import { exempt } from '../packages/core/src/fleet-assign';
 import { OBSERVATION_FRESH_MS, reservedAccounts, ARMOUR_IDS, BOW_IDS, CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, kitReserve, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock, type Template } from '../packages/planner/src/autopilot';
@@ -574,6 +575,19 @@ export function jobRate(x: Pick<Assignment, 'template' | 'value'>): string {
     return t?.tier === 'goal' ? `band ${t.band ?? 0}` : t?.family === 'kit-buy' ? 'kit buy' : `${x.value.toFixed(2)}/tick`;
 }
 
+// The gang squad's input to plan(): the plan's `squad` block (`active`, `members`, `hours`), with the holdings of each
+// member that this side owns. A member of another side is that side's to restock. Undefined for an inactive squad.
+// A member is left out of the restock while it runs outside the swarm (`held`: a live session, or the squad's own stop file, so a
+// hunt in progress is never logged in for an order) and when it has no observation (`holdings` undefined: its rows would be
+// the full targets against no data).
+export function squadInput(plan: any, side: string, owners: ReturnType<typeof loadOwners>, holdings: (name: string) => Record<string, number> | undefined,
+    held: (name: string) => boolean = () => false): SquadInput | undefined {
+    const block = squadBlock(plan);
+    if (!block.active) return undefined;
+    const members = block.members.filter(n => owners.get(n.toLowerCase())?.side === side && !held(n)).flatMap(name => { const items = holdings(name); return items ? [{ name, items }] : []; });
+    return { active: true, hours: block.hours, maxCoins: block.maxCoins, all: block.members.filter(n => owners.get(n.toLowerCase())?.side === side), members };
+}
+
 // Whether this side's planner may give an account a job or take stock and coins from it: the side owns it, and it is no main or
 // specialist account (OFFLINE_GUARDED), no reserved account (the gang squad) and no account that died.
 export function plannerOwns(owners: ReturnType<typeof loadOwners>, side: string, lower: string, reserved: ReadonlySet<string>, died: ReadonlySet<string>): boolean {
@@ -774,7 +788,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set([...Object.keys(state.retired), ...unplacedHeld(state.unplaced, now)]), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm, accounts, OFFLINE_GUARDED, reserved), now, unobserved: unobservedAccounts(listed.filter(free), n => observed(n)?.at, now), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
             externalLive.length,
             { running: swarm.jobs.filter((j: any) => mineMarked(j) && j.enabled !== false).flatMap(jobAccounts).filter((n: string) => activeAccounts.has(n.toLowerCase())).length,
-                headroom: headroomWithMargin(memoryHeadroom(freemem() / 2 ** 30, swarm.minFreeGB, pendingStartupCount(readJson(join(prac, 'swarm-runs.json'), []), now) + tradeStarts(open, externalLive, activeAccounts)), writtenNotRunning(swarm.jobs.filter(mineMarked), activeAccounts)) }), holding: activeAccounts, builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
+                headroom: headroomWithMargin(memoryHeadroom(freemem() / 2 ** 30, swarm.minFreeGB, pendingStartupCount(readJson(join(prac, 'swarm-runs.json'), []), now) + tradeStarts(open, externalLive, activeAccounts)), writtenNotRunning(swarm.jobs.filter(mineMarked), activeAccounts)) }), holding: activeAccounts, squad: squadInput(swarm, side, owners, n => observed(n)?.at > 0 ? accountFrom(n, side, observed(n), id => byId.get(id)).items : undefined, n => !stopClearable(observed(n), now) || existsSync(join(prac, 'stop-pk-squad'))), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     for(const assignment of planned)if(assignment.template||assignment.fund||assignment.send)newlyWorking.add(assignment.account.toLowerCase());
     const refined=progression.refine(planned);

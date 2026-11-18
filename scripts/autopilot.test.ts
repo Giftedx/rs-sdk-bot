@@ -13,7 +13,7 @@ import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, st
 import { supervise } from '../packages/practice/src/supervise';
 import { assess } from '../packages/planner/src/autopilot';
 import { planView } from './fleet-sync';
-import { unplacedPrecondition, unplacedHeld, UNPLACED_RETRY_MS, SIDE_STOCK_MAX_AGE_MS, unobservedAccounts, headroomWithMargin, plannerOwns, writtenNotRunning, tradeStarts, memoryHeadroom, freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { squadInput, unplacedPrecondition, unplacedHeld, UNPLACED_RETRY_MS, SIDE_STOCK_MAX_AGE_MS, unobservedAccounts, headroomWithMargin, plannerOwns, writtenNotRunning, tradeStarts, memoryHeadroom, freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import { mergedPlan } from '../packages/core/src/coordinator-jobs';
 import { FOLLOWED_RETRY_MS, GEAR_ASK_LIMIT, GEAR_ASK_MARGIN, UNSOLD_RETRY_MS, gearLimit } from './autopilot';
 import { KIT_PRICE_CAPS } from '../packages/planner/src/autopilot';
@@ -1212,6 +1212,28 @@ test('every shop template of the catalogue selects at least one line of its prof
     }
     expect(empty).toEqual([]);
     expect(selectItems(PROFILES.ardy!.items, 'iron axe').map(i => i.re.source)).toEqual(['^iron axe$']);
+});
+
+test('the squad shop templates select their profile line with the real selectItems', () => {
+    for (const t of catalogue().filter(x => x.squadOnly)) {
+        const lines = selectItems(PROFILES[t.args![0]!]!.items, t.env!.ITEMS).map(i => i.re.source);
+        expect([t.id, lines.length]).toEqual([t.id, 1]);
+    }
+    const potion = catalogue().find(t => t.id === 'squad-antipoison-jiminua')!;
+    expect(selectItems(PROFILES.jiminua!.items, potion.env!.ITEMS).map(i => i.re.source)).toEqual([/^antipoison\(3\)$/i.source]);
+});
+
+test('squadInput holds a member that runs outside the swarm or has no observation, and reads maxCoins', () => {
+    const owners = new Map([['a', { side: 'local', server: 's' }], ['b', { side: 'local', server: 's' }], ['c', { side: 'local', server: 's' }], ['d', { side: 'cloud', server: 's' }]]);
+    const plan = { squad: { active: true, members: ['A', 'B', 'C', 'D'], hours: 4, maxCoins: 5000 } };
+    const items = (n: string) => n === 'C' ? undefined : { shark: 1 };
+    const got = squadInput(plan, 'local', owners as any, items, n => n === 'B');
+    expect(got?.members.map(m => m.name)).toEqual(['A']);
+    // Every member this side owns drives the hold-out, held or not; only the observed, free ones are restocked.
+    expect(got?.all).toEqual(['A', 'B', 'C']);
+    expect(got?.maxCoins).toBe(5000);
+    expect(squadInput({ squad: { active: false, members: ['A'] } }, 'local', owners as any, items)).toBeUndefined();
+    expect(squadInput({}, 'local', owners as any, items)).toBeUndefined();
 });
 
 const unplacedResult = (failure: string, extra = '') => `RESULT fail {"ok":false,"phase":"unplaced","pending":false,"quantity":16,"acquired":0${extra},"escrow":0,"refund":0,"spent":0,"ticks":3,"failure":"Error: ${failure}"}`;
