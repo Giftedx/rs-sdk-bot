@@ -22,10 +22,10 @@
   },
   {
    "path": ".practice/gang-record/feed-1794981300762.jsonl",
-   "ticks": 4010,
+   "ticks": 8460,
    "from": "2026-11-18T05:55:02.069Z",
-   "to": "2026-11-18T06:21:46.069Z",
-   "frames": 402
+   "to": "2026-11-18T06:51:26.069Z",
+   "frames": 847
   }
  ],
  "post": {
@@ -36,54 +36,54 @@
    ],
    "wilderness": 16,
    "percentOfFramesOnIt": {
-    "goondelf": 68.5,
-    "ligma": 64.8,
-    "sugma": 65
+    "goondelf": 68.1,
+    "ligma": 64.5,
+    "sugma": 64.8
    }
   },
   "status": "measured",
-  "n": 11850,
+  "n": 12295,
   "evidence": "the traces of `sources`: roster frames within 1 tile of the post"
  },
  "accountsOffThePostInOneFrame": {
   "value": {
-   "0": 5855,
-   "1": 2493,
-   "2": 941,
-   "3": 2561
+   "0": 6065,
+   "1": 2544,
+   "2": 981,
+   "3": 2705
   },
   "status": "measured",
-  "n": 11850,
+  "n": 12295,
   "evidence": "the traces of `sources`: roster frames with all three online"
  },
  "accountsOnOneTarget": {
   "value": {
-   "1": 100,
-   "2": 57,
+   "1": 109,
+   "2": 63,
    "3": 54
   },
   "status": "measured",
-  "n": 211,
+  "n": 226,
   "evidence": "the traces of `sources`: for each fight, the gang accounts with a fight on that player within 40 ticks"
  },
  "fights": {
   "value": {
-   "count": 211,
+   "count": 226,
    "ticks": {
-    "n": 211,
+    "n": 226,
     "min": 0,
     "median": 18,
     "max": 550
    },
    "ended": {
-    "target left": 98,
+    "target left": 113,
     "stopped": 77,
     "target died": 35,
     "attacker died": 1
    }
   },
   "status": "measured",
-  "n": 211,
+  "n": 226,
   "evidence": "the traces of `sources`: pk-rival-feed.ts digest"
  },
  "targets": {
@@ -92,16 +92,17 @@
     "78": 1,
     "85": 2,
     "96": 10,
+    "105": 1,
     "109": 15,
-    "113": 1,
+    "113": 2,
     "120": 14,
     "123": 3,
     "124": 22,
     "125": 6,
-    "126": 137
+    "126": 150
    },
    "status": "measured",
-   "n": 211,
+   "n": 226,
    "evidence": "the traces of `sources`: the first attack of each fight"
   },
   "wildernessLevelOfAttacked": {
@@ -117,28 +118,32 @@
     "10": 7,
     "11": 2,
     "12": 6,
-    "13": 10,
+    "13": 11,
     "14": 11,
     "15": 17,
     "16": 3,
-    "17": 6,
+    "17": 7,
     "18": 1,
-    "19": 4,
+    "19": 5,
     "20": 3,
     "21": 3,
     "22": 5,
-    "23": 16,
+    "23": 17,
     "24": 17,
-    "25": 3,
-    "26": 5,
+    "25": 4,
+    "26": 6,
+    "27": 2,
     "28": 1,
-    "30": 1,
+    "29": 1,
+    "30": 2,
     "32": 4,
-    "34": 3,
+    "33": 1,
+    "34": 4,
     "35": 1,
-    "37": 1,
+    "37": 2,
     "39": 1,
     "40": 3,
+    "41": 2,
     "42": 4,
     "43": 1,
     "44": 2,
@@ -150,7 +155,7 @@
     "55": 4
    },
    "status": "measured",
-   "n": 211,
+   "n": 226,
    "evidence": "the traces of `sources`: the tile of the player at the first attack"
   },
   "attackableAndNotAttacked": {
@@ -179,7 +184,7 @@
      "3": 278
     },
     "singleWayTile": {
-     "1": 2132,
+     "1": 2215,
      "2": 16
     }
    },
@@ -296,7 +301,7 @@
    }
   },
   "status": "measured",
-  "n": 3255,
+  "n": 3338,
   "evidence": "the traces of `sources`: attacks on one target, by vendor/rs-sdk/server/content/maps/multiway.csv"
  },
  "nearOurAccounts": {

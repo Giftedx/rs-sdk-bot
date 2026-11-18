@@ -29,7 +29,7 @@ export function liveMeeting(lines: Iterable<string>, ours: string, obj: (id: num
     const fresh = (): Meeting => ({ ticks: 0, kills: 0, ourDeaths: 0, hpLost: 0, byAttack: 0, bySpecial: 0, byPoison: 0, ourEats: 0, ourAttacks: 0, ourAttacksOnTheRightPrayer: 0, gangAttacks: 0, gangSpecials: 0, gangEats: 0, gangEatsEach: {}, damageOnGang: 0 });
     const done: Meeting[] = [];
     let m: Meeting = { ticks: 0, kills: 0, ourDeaths: 0, hpLost: 0, byAttack: 0, bySpecial: 0, byPoison: 0, ourEats: 0, ourAttacks: 0, ourAttacksOnTheRightPrayer: 0, gangAttacks: 0, gangSpecials: 0, gangEats: 0, gangEatsEach: {}, damageOnGang: 0 };
-    let first = -1, last = -1;
+    let first = -1, last = -1, specAt = -100;
     // What the window holds after its last gang attack is cut at the end: counts since that attack.
     let tail = { ourEats: 0, ourAttacks: 0, right: 0, gangEats: {} as Record<string, number>, onGang: 0, kills: 0 };
     const commit = () => { m.ourEats += tail.ourEats; m.ourAttacks += tail.ourAttacks; m.ourAttacksOnTheRightPrayer += tail.right; m.damageOnGang += tail.onGang; m.kills += tail.kills;
@@ -55,7 +55,10 @@ export function liveMeeting(lines: Iterable<string>, ours: string, obj: (id: num
         if (hits.length && first >= 0 && k - last > GAP) { m.kills += tail.kills; m.damageOnGang += tail.onGang; m.ticks = last - first; done.push(m); m = fresh(); first = -1; tail = { ourEats: 0, ourAttacks: 0, right: 0, gangEats: {}, onGang: 0, kills: 0 }; }
         if (hits.length) { if (first < 0) first = k; last = k; commit(); m.gangAttacks += hits.length; m.gangSpecials += hits.filter(o => o.r.an[0] === SPECIAL).length; }
         if (first < 0) continue;
-        if (us?.r.hm) for (const h of us.r.hm as number[][]) { m.hpLost += h[0]!; if (h[1] === 2) m.byPoison += h[0]!; else if (hits.some(o => o.r.an[0] === SPECIAL)) m.bySpecial += h[0]!; else m.byAttack += h[0]!; }
+        // The splats of a special land in the tick of its animation in the live feed, and 1 and 2 ticks after it on the
+        // bench: a splat within 2 ticks of a special on our account is its damage.
+        if (hits.some(o => o.r.an[0] === SPECIAL)) specAt = k;
+        if (us?.r.hm) for (const h of us.r.hm as number[][]) { m.hpLost += h[0]!; if (h[1] === 2) m.byPoison += h[0]!; else if (k - specAt <= 2) m.bySpecial += h[0]!; else m.byAttack += h[0]!; }
         for (const { e, r } of seen) {
             const an: number | undefined = r.an?.[0];
             if (e.name === ours) {

@@ -101,6 +101,7 @@ export function addTrace(rec: ReturnType<typeof newRecord>, path: string, lines:
     const st = Object.fromEntries(GANG.map(n => [n, {} as { lastAttack?: number; lastEat?: number; lowSince?: number; heal?: { k: number; hp: number }; prayAt?: number; skullAt?: number; pend?: { k: number; cls: Style; role: 'attacked' | 'waiting' };
         atPost?: boolean; trip?: Trip; low?: Low; dead?: { i: number }; altarAt?: number; monAt?: number; lastT?: { name: string; x: number; z: number; k: number }; lastTile?: Tile; frozen?: Acc['freezes'][number] }]));
     const gangEntity = (n: string) => [...bySlot.values()].find(e => e.name === n && !e.gone);
+    const windows: { k: number; g: Acc; target: Entity; left: number; key: string }[] = [];
     const hits: { k: number; by: string; target: string; multi: boolean }[] = [], attacked = new Set<string>(), near = new Map<string, { frames: number; combat: number; minD: number }>();
     let anchor: { at: number; tick: number } | undefined, k0 = 0, k1 = 0, frames = 0;
     const wall = (k: number) => (anchor ? anchor.at + (k - anchor.tick) * TICK_MS : undefined);
@@ -211,10 +212,9 @@ export function addTrace(rec: ReturnType<typeof newRecord>, path: string, lines:
                 if (s.lastT && s.lastT.name === target.name && k - s.lastT.k <= 8) bump(g.targetStep, Math.min(10, cheb(s.lastT, target)));
                 else if (s.lastT && s.lastT.name !== target.name && k - s.lastT.k <= 40) { const old = [...bySlot.values()].find(o => o.name === s.lastT!.name); bump(g.switches, old && !old.gone ? 'the old player was in view' : 'the old player was gone'); }
                 s.lastT = { name: target.name, x: target.x, z: target.z, k };
-                const same = seen.filter(o => o.e !== e && isGang(o.e.name) && o.e.fe === e.fe && (o.r.an?.[0] === SEQ.special || (SEQ.attack as readonly number[]).includes(o.r.an?.[0]))).length;
-                const trec = seen.find(o => o.e === target)?.r;
-                if (trec?.hm) { const own = (trec.hm as number[][]).filter(h => h[1] !== 2); for (const h of trec.hm as number[][]) if (h[1] === 2) bump(g.poisonOnTarget, h[0]!);
-                    if (own.length && !same && own.length <= (spec ? 2 : 1)) for (const h of own) bump((g.damage[`${spec ? 'special' : 'attack'} on a player ${target.head & 8 ? 'with' : 'without'} Protect from Melee`] ??= {}), h[0]!); else if (own.length) g.splatsAmbiguous++; }
+                // The splats of an attack show in the tick of its animation or in the next one, by the order in which the
+                // engine takes the two players; a special has a second hit one tick later (pvp_dragon_dagger.rs2 p_delay).
+                windows.push({ k, g, target, left: spec ? 2 : 1, key: `${spec ? 'special' : 'attack'} on a player ${target.head & 8 ? 'with' : 'without'} Protect from Melee` });
                 hits.push({ k, by: e.name, target: target.name, multi: multi(target) });
                 bump(multi(target) ? group.pile.multi : group.pile.single, 1 + new Set(hits.filter(h => h.target === target.name && h.by !== e.name && k - h.k <= 4).map(h => h.by)).size);
                 const tr = s.trip; if (tr) { tr.lastAttack = k; if (tr.firstAttack === undefined) { tr.firstAttack = k; tr.target = target.name; tr.targetD = cheb(target, POST); if (cheb(e, POST) >= 20) g.trips.pathOverLine.push(Math.round((100 * tr.tiles) / cheb(e, POST)) / 100);
@@ -232,6 +232,11 @@ export function addTrace(rec: ReturnType<typeof newRecord>, path: string, lines:
                 }
             }
         }
+        // A window lasts 2 ticks. A target with windows of two gang accounts is left out: its splats have no one owner.
+        for (const { e, r } of seen) { if (!r.hm) continue; const open = windows.filter(w => w.target === e && w.left > 0 && k - w.k <= 2); if (!open.length) continue;
+            const owners = new Set(open.map(w => w.g));
+            for (const hit of r.hm as number[][]) { if (hit[1] === 2) { bump(open[0]!.g.poisonOnTarget, hit[0]!); continue; } if (owners.size > 1) { open[0]!.g.splatsAmbiguous++; continue; } const w = open.find(x => x.left > 0); if (w) { bump((w.g.damage[w.key] ??= {}), hit[0]!); w.left--; } } }
+        for (let i = windows.length - 1; i >= 0; i--) if (k - windows[i]!.k >= 2 || windows[i]!.left <= 0) windows.splice(i, 1);
     }
     for (const n of GANG) { const s = st[n]!; if (s.low) acc[n]!.lows.push({ ...s.low, trace: path }); }
     for (const [name, n] of near) if (n.frames >= 5 && !attacked.has(name)) { bump(group.ignored, n.combat); if (group.ignoredExamples.length < 12) group.ignoredExamples.push(`${name} combat ${n.combat}, ${n.frames} frames, ${n.minD} tiles at the least`); }
@@ -263,7 +268,7 @@ export function targetFile(name: string, g: Acc, group: GroupAcc, levels: Record
         levels: { skills: levels ? M(levels, 1, levelSource) : U('the hiscore page of the name'), combat: M(name === 'goondelf' ? 126 : 125, g.frames, `${src}: the roster rows`) },
         kit: {
             worn: M(g.worn, total(g.worn), `${src}: each appearance block, by its worn objects`),
-            weaponPoison: M(Object.keys(g.poisonOnTarget).length ? { poisonSplatsOnPlayers: g.poisonOnTarget } : 'no poison splat on a player', total(g.poisonOnTarget), `${src}: type 2 splats on a player in a tick of an attack`, 'the worn name says which dagger; the splat sizes say how strong the poison is'),
+            weaponPoison: M(Object.keys(g.poisonOnTarget).length ? { poisonSplatsOnPlayers: g.poisonOnTarget } : 'no poison splat on a player', total(g.poisonOnTarget), `${src}: type 2 splats on a player in the tick of an attack or the 2 ticks after it`, 'the worn name says which dagger; the splat sizes say how strong the poison is'),
             food: M({ eats: g.eats, healOfOneEat: g.heal }, g.eats, `${src}: animation 829 (human_eat), and the Hitpoints of the splats before and after it`, 'a heal of 20 is a shark (consume_normal.dbrow)'),
             foodCount: ranDry ? M({ sharks: mostEats, eatsByOpponent: eatsBy }, 1, `${src}: the eat animations in the fights against one opponent, in a meeting that the name ended at 40 Hitpoints or less with no eat after it`, 'the food ran out in that meeting, so its eats are the pack; a refill at the bank between two fights would add to the count')
                 : U(`${TICKS} against the name, to its retreat: the eats of one fight are its pack`, { sharks: [6, 23] }, `the most eats against one opponent: ${mostEats}; the food did not run out`),
@@ -275,7 +280,7 @@ export function targetFile(name: string, g: Acc, group: GroupAcc, levels: Record
             ticksBetweenAttacks: M(g.intervals, total(g.intervals), `${src}: animations 376, 377 and 1062`),
             ticksBetweenAttacksWithAnEat: M(g.intervalsWithEat, total(g.intervalsWithEat), `${src}: the same, with an eat between the two attacks`),
             tilesToTarget: M(g.attackDist, total(g.attackDist), `${src}: the tiles of both at each attack`),
-            damage: M(g.damage, Object.values(g.damage).reduce((a, h) => a + total(h), 0), `${src}: the splats on the player in the tick of the attack, when no second gang account attacked it in that tick`, `each splat alone; ${g.splatsAmbiguous} ticks with a splat of a second attacker are left out`),
+            damage: M(g.damage, Object.values(g.damage).reduce((a, h) => a + total(h), 0), `${src}: the first splat on the player in the tick of the attack or the 2 ticks after it (two splats for a special), when no second gang account attacked it then`, `${g.splatsAmbiguous} splats with two gang accounts on the player are left out`),
             specials: M({ attacks: g.attacks, specials: g.specials, perFight: hist(specs), attacksBeforeTheFirst: hist(firstSpec) }, fights.length, `${src}: the order of each fight (pk-rival-feed.ts digest)`),
             specialAtTargetHp: M(g.specTargetHp, g.specials, `${src}: the Hitpoints of the player before the splats of the tick of the special`),
             specialAtOwnHp: M(g.specOwnHp, g.specials, `${src}: the last Hitpoints of the name that a splat showed`),
