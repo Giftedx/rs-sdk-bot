@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795002394311-swordinhand-woodpecker-woodenshield",
+ "account": "Swordinhand",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Wooden shield",
+ "requested": 1,
+ "claim": "9b84a39e-03b9-4698-8532-c66dc86d5532",
+ "count": 1,
+ "ok": true,
+ "at": 1795002499218,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795002490815
+ },
+ "logout": {
+  "attemptId": "1795002484488-0000023388-0000000001",
+  "at": 1795002499208,
+  "sha256": "49e27c7e0110b968cef754d7e1295c9faffa5a3090d051f083625649447f5bfc"
+ },
+ "screen": true
+}
