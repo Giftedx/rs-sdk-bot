@@ -3217,7 +3217,6 @@ test('the kit buy expects the unnoted count that the buy script reads, not the c
 
 import { proportionalLines, type KitLine } from '../src/autopilot';
 import { alchCasts, CAST_XP, FIRE_PER } from '../src/alch-plan';
-import { xpForLevel } from '../src/curve';
 describe('the alchemy band buys the consumables of the casts left, as far as the coins reach', () => {
     test('one rule gives the supplies from the XP left: a nature rune and an item a cast, fire runes by the spell', () => {
         for (const level of [21, 30, 54, 55, 66, 90, 98]) {
