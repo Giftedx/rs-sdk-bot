@@ -345,8 +345,10 @@ export function freshRunePostCraftChecks(before:Save,after:Save,run:Run){
   banked:r?.inheritedBanked===26&&r?.newBanked===2&&r?.banked===28&&sum(after,556,93)===0&&sum(after,556,95)===53,
   craftThenExit:craft>=0&&selected>craft&&events[selected].tick-events[craft].tick>=0&&events[selected].tick-events[craft].tick<=1
    &&events[craft].essence===0&&events[craft].air===28&&events[craft].runecraftXp===POSTCRAFT_XP+125,
+  // The worker (scripts/generated/rcair.ts) records the walk reply on 'approach-dispatched' and records 'approached' with the position alone.
   approach:exit.some(e=>e.phase==='path'&&e.reply?.path?.success===true&&e.reply?.path?.reachedDestination===true)
-   &&exit.some(e=>e.phase==='approached'&&e.reply?.success===true&&e.position?.level===0
+   &&exit.some(e=>e.phase==='approach-dispatched'&&e.reply?.success===true)
+   &&exit.some(e=>e.phase==='approached'&&e.position?.level===0
     &&Math.abs(e.position.worldX-2841)+Math.abs(e.position.worldZ-4828)===1),
   dispatch:exit.some(e=>e.phase==='dispatch'&&e.portal?.id===2465&&e.portal?.x===2841&&e.portal?.z===4828)
    &&exit.some(e=>e.phase==='action'&&e.reply?.success===true),

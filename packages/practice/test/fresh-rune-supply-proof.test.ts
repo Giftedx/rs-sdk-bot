@@ -513,14 +513,15 @@ test('post-craft proof requires exact new output, immediate portal action, arriv
  const line=(prefix:string,o:any)=>prefix+' '+JSON.stringify(o);
  const events=[line('RUNE_SUPPLY_ACTION',action),line('AIR_EXIT',{phase:'selected',tick:6,position:{animId:791,spotanimId:186}}),
   line('AIR_EXIT',{phase:'path',reply:{path:{success:true,reachedDestination:true}}}),
-  line('AIR_EXIT',{phase:'approached',position:{worldX:2841,worldZ:4829,level:0},reply:{success:true}}),
+  line('AIR_EXIT',{phase:'approach-dispatched',reply:{success:true,message:'Walking'}}),
+  line('AIR_EXIT',{phase:'approached',position:{worldX:2841,worldZ:4829,level:0}}),
   line('AIR_EXIT',{phase:'dispatch',portal:{id:2465,x:2841,z:4828},tick:9}),line('AIR_EXIT',{phase:'action',reply:{success:true}}),
   line('AIR_EXIT',{phase:'outside',position:{worldX:2983,worldZ:3288,level:0},tick:10})];
  const result={ok:true,target:20,inheritedBanked:26,banked:28,newBanked:2,crafted:2,consumed:1,mined:0,travelFoodEaten:0,
   stages:{resumedCraft:{ok:true,consumed:1,runes:2,xp:125}},final:{skills:after.skills.map(sk=>({experience:sk.xp,level:sk.level})),inventory:after.inventories[93],equipment:after.inventories[94]}};
  const run=(e=events,r=result,s=after)=>({code:0,log:[...e,line('RUNE_SUPPLY_RESULT',{...r,final:{...r.final,skills:s.skills.map(sk=>({experience:sk.xp,level:sk.level}))}}),'LOGOUT logged-out'].join('\n')});
  expect(Object.values(proof.freshRunePostCraftChecks(before,after,run())).every(Boolean)).toBe(true);
- for(const phase of ['selected','approached','dispatch','action','outside']){
+ for(const phase of ['selected','approach-dispatched','approached','dispatch','action','outside']){
   const reduced=events.filter(l=>!l.includes('"phase":"'+phase+'"'));
   expect(Object.values(proof.freshRunePostCraftChecks(before,after,run(reduced))).every(Boolean)).toBe(false);
  }
