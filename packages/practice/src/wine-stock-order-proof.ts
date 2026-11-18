@@ -129,7 +129,7 @@ export async function runWineStockNative(directory:string){
   const command=async(args:string[],label:string,env:Record<string,string>={})=>{
    if(stopped()||freemem()/2**30<FREE_FLOOR_GB)throw Error('native wine owner stopped or memory floor reached');
    const timeout=Math.min(120000,deadline-Date.now()-20000);if(timeout<1)throw Error('native wine deadline exhausted');
-   const at=Date.now(),child=Bun.spawn({...coinChildConfiguration(args,{DELIVERY_DIR:directory,STALL_TICKS:'0',PROGRESSION_CONSUMER:'',...env},endpoint,process.env,root),stdout:Bun.file(join(directory,label+'.log')),stderr:Bun.file(join(directory,label+'.err'))});
+   const at=Date.now(),child=Bun.spawn({...coinChildConfiguration(args,{DELIVERY_DIR:directory,STALL_TICKS:'0',PROGRESSION_CONSUMER:'',...env},endpoint,process.env,root),windowsHide:true,stdout:Bun.file(join(directory,label+'.log')),stderr:Bun.file(join(directory,label+'.err'))});
    let timedOut=false,termination:Promise<void>|undefined;
    const cancel=()=>{if(!termination){timedOut=true;termination=killTree(child.pid);}},timer=setTimeout(cancel,timeout),floor=setInterval(()=>{if(stopped()||freemem()/2**30<FREE_FLOOR_GB)cancel();},1000);
    try{const code=await child.exited;await termination;children.push({label,args,code,timedOut,elapsedMs:Date.now()-at});if(timedOut||code!==0)throw Error(`${label} failed code=${code} timedOut=${timedOut}`);}
