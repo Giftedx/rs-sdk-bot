@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794985529788,
+ "at": 1794985585393,
  "jobs": [
   {
    "account": "AFKnight",
@@ -187,69 +187,6 @@
    ]
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1113 QUANTITY=1 LIMIT_PRICE=220886 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit1-1113-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=110644 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit1-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1079\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Rune chainbody, 1 Rune platelegs on the Grand Exchange to wear rune armour",
-   "role": "supply",
-   "template": "kit-buy:army-armour-rune",
-   "autopilot": "local",
-   "resources": [
-    "ge:armour"
-   ]
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1113 QUANTITY=1 LIMIT_PRICE=220886 CASH_RESERVE=1000 ORDER_KEY=oreelse-kit3-1113-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=110644 CASH_RESERVE=1000 ORDER_KEY=oreelse-kit3-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1079\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Rune chainbody, 1 Rune platelegs on the Grand Exchange to wear rune armour",
-   "role": "supply",
-   "template": "kit-buy:army-armour-rune",
-   "autopilot": "local",
-   "resources": [
-    "ge:armour"
-   ]
-  },
-  {
-   "account": "Pocketpython",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=pocketpython-kit9-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"554\":250}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "supply",
-   "template": "kit-buy:army-alch-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Billionaire",
    "script": "scripts/chain.ts",
    "args": [
@@ -291,6 +228,47 @@
    "resources": []
   },
   {
+   "account": "mmtha0205",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=422 EXPECTED_OWNED=3 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit0-557-3to425 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=300 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit0-555-0to300 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=2 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit0-558-0to2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"558\":2}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 422 Earth rune, 300 Water rune, 2 Mind rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=110644 CASH_RESERVE=1000 ORDER_KEY=oreelse-kit3-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Rune platelegs on the Grand Exchange to wear rune armour",
+   "role": "supply",
+   "template": "kit-buy:army-armour-rune",
+   "autopilot": "local",
+   "resources": [
+    "ge:armour"
+   ]
+  },
+  {
    "account": "Masterbaiter",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -322,8 +300,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -337,21 +314,19 @@
    ]
   },
   {
-   "account": "mmtha0205",
+   "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=422 EXPECTED_OWNED=3 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit0-557-3to425 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=300 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit0-555-0to300 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=2 LIMIT_PRICE=120 CASH_RESERVE=1000 ORDER_KEY=mmtha0205-kit0-558-0to2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=396 EXPECTED_OWNED=9 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit1-557-9to405 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=254 EXPECTED_OWNED=16 LIMIT_PRICE=110 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit1-555-16to270 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"558\":2}}"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 422 Earth rune, 300 Water rune, 2 Mind rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "goal": "buy 396 Earth rune, 254 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
    "role": "supply",
    "template": "kit-buy:army-splash-magic-66",
    "autopilot": "local",
@@ -359,6 +334,23 @@
   },
   {
    "account": "PickpockDick",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "Pocketpython",
    "script": "scripts/alch-train.ts",
    "args": [
     "99",
@@ -378,29 +370,23 @@
   },
   {
    "account": "Shaftmaker",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1113 QUANTITY=1 LIMIT_PRICE=220886 CASH_RESERVE=1000 ORDER_KEY=shaftmaker-kit0-1113-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=110644 CASH_RESERVE=1000 ORDER_KEY=shaftmaker-kit0-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "repeat": false,
+   "goal": "buy 1 Rune chainbody, 1 Rune platelegs on the Grand Exchange to wear rune armour",
+   "role": "supply",
+   "template": "kit-buy:army-armour-rune",
    "autopilot": "local",
    "resources": [
-    "trooper:battlefield"
+    "ge:armour"
    ]
   },
   {
@@ -416,8 +402,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -465,8 +450,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -492,8 +476,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
