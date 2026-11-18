@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795044029712-bigchopper-mmtha0205-naturerune",
+ "account": "mmtha0205",
+ "partner": "Bigchopper",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "4f69b6b1-aad5-4db4-8095-2c5e562c0eed",
+ "count": 50,
+ "ok": true,
+ "at": 1795044207184,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 50
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795044206344
+ },
+ "logout": {
+  "attemptId": "1795044176365-0000026776-0000000001",
+  "at": 1795044207135,
+  "sha256": "9e1394cbd5872dd86bceb94bfc6531013dc80fe310dd148cfd5ef260141cdb4f"
+ },
+ "screen": true
+}
