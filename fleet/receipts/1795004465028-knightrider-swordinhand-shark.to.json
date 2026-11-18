@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795004465028-knightrider-swordinhand-shark",
  "account": "Swordinhand",
  "partner": "KnightRider",
@@ -12,6 +12,12 @@
  "claim": "a3f11d4f-5794-48b0-9d4a-c14fb50280c4",
  "count": 0,
  "ok": false,
- "at": 1795004594156,
- "detail": "trade claimed"
+ "at": 1795004663939,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795004594165-0000020584-0000000001",
+  "at": 1795004663918,
+  "sha256": "fefdc23ef31336d7fc7696c014f508bc63809d5def1e7e2eeba0abe9cf552acb"
+ },
+ "screen": false
 }

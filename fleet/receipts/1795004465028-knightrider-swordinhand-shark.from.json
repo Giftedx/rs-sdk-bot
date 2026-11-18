@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795004465028-knightrider-swordinhand-shark",
  "account": "KnightRider",
  "partner": "Swordinhand",
@@ -12,6 +12,12 @@
  "claim": "2204c693-899b-4b12-a39f-ccac568f90e1",
  "count": 0,
  "ok": false,
- "at": 1795004579584,
- "detail": "trade claimed"
+ "at": 1795004663506,
+ "detail": "fled at low hitpoints: flee_guard id=376 at=3026,3209 ticks=10",
+ "logout": {
+  "attemptId": "1795004579591-0000023732-0000000001",
+  "at": 1795004663497,
+  "sha256": "8ab042416a4781a1c1b2bf08671727d04d1c4ea2f38725a0ef64efabbe538449"
+ },
+ "screen": false
 }
