@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795011290192,
+ "at": 1795011428621,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -205,24 +205,6 @@
    ]
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=25 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=billionaire-kit13-532-6to31 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 25 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/chain.ts",
    "args": [
@@ -316,8 +298,8 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "99",
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
@@ -326,9 +308,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 99 on the Khazard troopers",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-trooper-defence-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
@@ -399,8 +381,7 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -438,6 +419,29 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "532",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "13",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying bought big bones",
+   "role": "combat",
+   "template": "army-bury-big-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Ballspinner",
