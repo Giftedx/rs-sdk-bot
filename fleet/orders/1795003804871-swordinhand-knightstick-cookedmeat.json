@@ -1,0 +1,22 @@
+{
+ "id": "1795003804871-swordinhand-knightstick-cookedmeat",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordinhand",
+ "to": "Knightstick",
+ "item": "Cooked meat",
+ "count": 3,
+ "start": 1795003804871,
+ "end": 1795006204871,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
