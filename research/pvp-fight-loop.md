@@ -59,13 +59,20 @@ in-process client's player entities (`webclient/src/dash3d/ClientPlayer.ts`, `Cl
 
 ## Spar and ladder
 
-**A pair teardown before logout makes spar batches fail.** Claim: a teardown of each finished pair (the retaliation
-OFF control, then a walk to the own tile until the target is released) leaves one fight winner whose logout times out.
-Conditions: the hosted `pvp-practice` sweep, 4 engines, `--budget 3.5`, 8 or 12 pairs in a batch. Evidence: run
-`44217966751` with the teardown: 174 of 287 spar cases end with `WARN logout did not complete`, each for one account
-whose opponent died, and each teardown printed `"ok":true`. Run `44222638380` on the same sweep code with no teardown,
-shards 1 and 2 of 4: 0 of 199 reported cases have that warning. Gap: the server-side cause is not traced.
-`scripts/pk-spar.ts` has no pair teardown.
+**The pair teardown runs only after a fight that ends at the cap.** Source -> consumer -> reuse/adapt -> check: the
+pinned `auto_retaliate.rs2`, the retained player Attack action and the `logout.rs2` combat window -> `pk-spar.ts`
+`stopSparPair`, gated by `needsSparTeardown` -> reuse the native retaliation OFF control's action cancellation, then
+require a fresh target release before the ordinary confirmed logout -> `pk-spar-cleanup.test.ts`.
+
+- Claim: a pair that ends at the cap has both accounts alive with a native Attack action still running, and it cannot
+  log out with no teardown. Conditions: the hosted `pvp-practice` sweep, 4 engines, `--budget 3.5`,
+  `extra:spar-kit-mage-tank-x8` (8 draws at the cap). Evidence: runs `44226828174` and `44230504511` with no teardown:
+  the two accounts of one pair time out at logout in each run. The teardown has a 16-tick and 4.5-second bound, and an
+  unobserved retaliation OFF or target release fails the run.
+- Claim: the same teardown after a kill leaves the winner unable to log out. Conditions: the same sweep, 8 or 12 pairs
+  in a batch. Evidence: run `44217966751` with a teardown of every pair: 174 of 287 spar cases end with
+  `WARN logout did not complete`, each for one account whose opponent died, and each teardown printed `"ok":true`.
+  Run `44226828174` with no teardown: 2 of 287. Gap: the server-side cause is not traced.
 
 `scripts/pk-spar.ts` puts the fight loop on both sides: two own accounts fight each other, each with a named profile
 (a set of fight options; `PROFILES`). The bench case `pvp:spar` stages a mirror: both sides get the duel conditions

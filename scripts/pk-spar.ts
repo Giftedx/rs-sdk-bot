@@ -14,6 +14,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
+import { waitUntil } from '../packages/core/src/ticks';
 import { defaultSpec, fightPlayer, nextTick, PRAYER, weaponStyle, type FightOptions, type FightResult, type Kit } from './pk';
 import { TRIBRID_KIT } from './pk-hunt';
 import { kitOptions, kitSwitches } from './pk-kits';
@@ -166,6 +167,50 @@ export async function spar(a: Session, b: Session, optionsA: FightOptions, optio
     return { ...sparScore(ra, rb), opening, ...(startGap === undefined ? {} : { startGap }) };
 }
 
+// The pairs that get a teardown: the fight ended at the tick cap, so both accounts are alive.
+export const needsSparTeardown = (result: Pick<SparResult, 'end'>): boolean => result.end === 'cap';
+
+// A finished practice fight can leave the server's Attack action running. Retire each owned pair before logout.
+export async function stopSparPair(sessions: readonly Session[]): Promise<{ ok: boolean; ticks: number; detail: string }> {
+    const ended = new Set<Session>(), starts = new Map(sessions.map(s => [s, s.tick()])), sent = new Map<Session, number>();
+    for (const s of sessions) void s.ended.then(() => { ended.add(s); });
+    await Promise.resolve();
+    const cancel = new AbortController(), timer = setTimeout(() => cancel.abort(), 4500);
+    const result = (ok: boolean, detail = '') => ({ ok, ticks: Math.max(0, ...sessions.map(s => s.tick() - starts.get(s)!)), detail });
+    try {
+        for (let turn = 0; turn < 16 && !cancel.signal.aborted; turn++) {
+            const active = sessions.filter(s => !ended.has(s));
+            if (!active.length) return result(true);
+            // Start on a fresh tick so the fight's last gear/prayer packets cannot consume the teardown's budget.
+            await Promise.all(active.map(s => {
+                const at = s.tick();
+                return waitUntil(s, () => ended.has(s) || s.tick() > at, { timeoutTicks: 1, signal: cancel.signal });
+            }));
+            if (cancel.signal.aborted) break;
+            let pending = false;
+            for (const s of sessions) {
+                if (ended.has(s)) continue;
+                const state = s.sdk.getState(), at = sent.get(s), p = state?.player;
+                // inCombat includes the last-hit window. Target release and the observed control prove cancellation.
+                if (at !== undefined && s.tick() > at && state?.autoRetaliateEnabled === false && p?.combat.targetType === 'none') continue;
+                pending = true;
+                if (!p || at !== undefined && s.tick() - at < 2) continue;
+                sent.set(s, s.tick());
+                // controls:com_3 stops the native action and sets retaliation OFF. Request a standstill as well.
+                void s.sdk.sendClickComponent(151).catch(() => {});
+                void s.sdk.sendWalk(p.worldX, p.worldZ, false).catch(() => {});
+            }
+            if (!pending) return result(true);
+        }
+        return result(false, 'spar teardown target release or retaliation OFF not observed');
+    } catch (error) {
+        return result(false, 'spar teardown: ' + String(error));
+    } finally {
+        clearTimeout(timer);
+        cancel.abort();
+    }
+}
+
 // The result of several spars that ran at once, from the A sides: kills, deaths, the B sides that got away, and draws.
 export function batchSummary(results: readonly SparResult[]) {
     const count = (f: (r: SparResult) => boolean) => results.filter(f).length;
@@ -287,9 +332,18 @@ if (import.meta.main) {
     // The place of a pair in the batch has a part of its own: with the same profile on both sides, side B won 11 of 16
     // even pairs and side A won 12 of 16 odd pairs. So the swap goes by two pairs at a time (pairs 2, 3, 6, 7, ...):
     // each profile then has side A of an even pair as often as side A of an odd pair.
-    const results = await Promise.all(pairs.map(async ([a, b], j) => { const i = j + offset; return (swap && (i >> 1) % 2
+    const results = await Promise.all(pairs.map(async ([a, b], j) => { const i = j + offset; const result = await (swap && (i >> 1) % 2
         ? flipped(await spar(a, b, options('b', i, 0), options('a', i, 1), undefined, () => halted !== undefined))
-        : spar(a, b, options('a', i, 0), options('b', i, 1), undefined, () => halted !== undefined)); }));
+        : spar(a, b, options('a', i, 0), options('b', i, 1), undefined, () => halted !== undefined));
+        // Only a fight that ends at the cap leaves both accounts alive with a native Attack action still running, and
+        // that pair cannot log out. After a kill the winner has no target: a teardown there made its logout time out.
+        if (needsSparTeardown(result)) {
+            const stopped = await stopSparPair([a, b]);
+            console.log('SPAR_STOP ' + JSON.stringify({ accounts: [a.name, b.name], ...stopped }));
+            if (!stopped.ok) halted ??= 'spar teardown not observed';
+        }
+        return result;
+    }));
     // Where the wall time of the run went: the logins, then the fights.
     console.log(`SPAR_TIMING bootMs=${bootMs} firstLoginMs=${firstMs} loginMs=${t1 - t0} fightMs=${Date.now() - t1} pairs=${pairs.length} ticks=${Math.max(...results.map(r => r.ticks))}`);
     for (const r of results) console.log(`SPAR ${JSON.stringify({ scenario: scenarioName, profiles: { a: nameA, b: nameB }, ...r })}`);
