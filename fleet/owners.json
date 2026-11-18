@@ -207,8 +207,9 @@
    "home": "cloud"
   },
   "Kiltlifter": {
-   "side": "claude-cloud",
-   "server": "rs-sdk-demo.fly.dev"
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
   },
   "Knightstick": {
    "side": "local",
