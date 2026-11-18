@@ -280,7 +280,7 @@
     "workers": [
      "scripts/gather-combat.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -574,7 +574,7 @@
     "workers": [
      "scripts/gather-combat.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -1730,7 +1730,7 @@
     "workers": [
      "scripts/gather-combat.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -2024,7 +2024,7 @@
     "workers": [
      "scripts/gather-combat.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -3036,7 +3036,7 @@
     "workers": [
      "scripts/gather-combat.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -3330,7 +3330,7 @@
     "workers": [
      "scripts/gather-combat.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -4126,7 +4126,7 @@
     "workers": [
      "scripts/gather-combat.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -4420,7 +4420,7 @@
     "workers": [
      "scripts/gather-combat.ts"
     ],
-    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?117:target==='druid'?181\"",
+    "workerEvidence": "scripts/gather-combat.ts contains \"target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
