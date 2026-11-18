@@ -1,0 +1,22 @@
+{
+ "id": "1795000203580-fatstack-yewfirst-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "YewFirst",
+ "item": "Air rune",
+ "count": 35,
+ "start": 1795000203580,
+ "end": 1795002603580,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
