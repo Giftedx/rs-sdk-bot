@@ -2,13 +2,23 @@ import { beforeAll, test, expect } from 'bun:test';
 import { readFileSync,mkdtempSync,mkdirSync,writeFileSync,existsSync,rmSync,lstatSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { parseCoins, exactCoinDelta, coinTradeObservation, meetingTiles, prepareCoinSlot, BANK_MEETS } from './coin-courier';
+import { parseCoins, exactCoinDelta, coinTradeObservation, meetingTiles, prepareCoinSlot, courierRecord, BANK_MEETS } from './coin-courier';
+import { botWork } from '../packages/core/src/bot';
+import { intentForEntry } from '../packages/planner/src/progression-catalog';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadPathfinding } from '../packages/core/src/pathcache';
 
 // initPathfinding() alone takes about 14 s for each process (packages/core/src/pathcache.ts). The snapshot loader makes
 // the same grid first, so the call in the test returns at once.
 beforeAll(async () => { await loadPathfinding(); }, 120_000);
+
+test('the session record of each courier account maps to the finite transfer intent', () => {
+    const argv = ['Donor', 'Receiver', '45000', '--reserve=5001'], record = courierRecord({ donor: 'Donor', receiver: 'Receiver' }, argv, {});
+    for (const name of ['Donor', 'Receiver']) {
+        const work = botWork(name, record);
+        expect(intentForEntry(work.script, work.args, work.env)).toEqual({ kind: 'service', objective: 'finite owned coin transfer Donor -> Receiver: 45000 coins; donor bank reserve 5001' });
+    }
+});
 
 test('full donor banks an unrelated item before exact 45000-coin withdrawal', async () => {
     let pack = [{ id: 1446, name: 'Body talisman', count: 1, slot: 0 },

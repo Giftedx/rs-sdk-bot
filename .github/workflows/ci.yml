@@ -184,6 +184,7 @@ jobs:
             .practice/fleet-trade-capacity-*/native.json
             .practice/fleet-trade-capacity-*/failure.json
             .practice/fleet-trade-capacity-*/transfer-observed.json
+            .practice/fleet-trade-capacity-*/order.json
             .practice/fleet-trade-capacity-*/transfer-result.json
             .practice/fleet-trade-capacity-*/before-*.sav
             .practice/fleet-trade-capacity-*/after-*.sav

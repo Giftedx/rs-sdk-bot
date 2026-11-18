@@ -194,6 +194,11 @@ export async function moveCoins(c: ReturnType<typeof parseCoins>, sessions: Sess
     return receipt;
 }
 
+// The session record names the catalog entry: the progression gate maps `scripts/coin-courier.ts`, not a bare file name.
+export function courierRecord(c: { donor: string; receiver: string }, argv: string[], env: Record<string, string | undefined>) {
+    return { script: 'scripts/coin-courier.ts', argv, env: { ...env, COORDINATOR_PARTICIPANTS: JSON.stringify([c.donor, c.receiver]) } };
+}
+
 export async function main() {
     const c = parseCoins(process.argv.slice(2)), root = resolve(import.meta.dir, '..'), dir = join(root, '.practice');
     const host = (name: string) => serverFromEnv(readFileSync(join(root, 'vendor/rs-sdk/bots', name, 'bot.env'), 'utf8'));
@@ -214,7 +219,7 @@ export async function main() {
     try {
         check(); release = acquireAccountLeases([c.donor, c.receiver], runId);
         process.on('SIGINT', cancel); process.on('SIGTERM', cancel);
-        const record={script:import.meta.file,argv:process.argv.slice(2),env:{...process.env,COORDINATOR_PARTICIPANTS:JSON.stringify([c.donor,c.receiver])}};
+        const record=courierRecord(c,process.argv.slice(2),process.env);
         for (const name of [c.donor, c.receiver]) { check(); sessions.push(await openBot(name, {record,onStop: async () => cancel(), onSessionEnd: async () => cancel() })); }
         await moveCoins(c, sessions, journal, server, check);
         ok = true; detail = `transferred ${c.amount} coins ${c.donor} -> ${c.receiver}`;
