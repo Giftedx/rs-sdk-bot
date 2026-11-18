@@ -2,6 +2,7 @@
 // supervisor reading the parent's output sees only the parent's own RESULT line. Shared by scripts/quest-chain.ts
 // (a quest outside a host) and scripts/chain.ts (several jobs in a row on one account).
 import { resolve } from 'node:path';
+import { maskUrlCredentials } from './url-mask';
 
 const root = resolve(import.meta.dir, '..', '..', '..');
 const NO_RESULT = 'RESULT fail no result';
@@ -57,7 +58,9 @@ export async function streamChildOutput(chunks: AsyncIterable<Uint8Array>, write
 
 // A child that ends on an uncaught error prints `error: <message>` on stderr and no RESULT line. That message is the
 // cause, so it becomes the result: the planner and the supervisor then tell an infrastructure fault (a claim authority
-// that timed out) from a worker with no result. Stderr still goes to the parent's stderr.
+// that timed out) from a worker with no result. The result holds no URL credential. The supervisor reads this text as it
+// reads the text of an error that a worker caught (packages/practice/src/supervise.ts). Stderr still goes to the
+// parent's stderr.
 async function lastErrorLine(chunks: AsyncIterable<Uint8Array>): Promise<string | undefined> {
     const decoder = new TextDecoder();
     let line = '', found: string | undefined;
@@ -72,7 +75,7 @@ async function lastErrorLine(chunks: AsyncIterable<Uint8Array>): Promise<string 
     return found;
 }
 const crashResult = (code: number, reported: string | undefined, error: string | undefined) =>
-    reported ?? (code !== 0 && error ? `RESULT fail ${error.slice(0, 300)}` : NO_RESULT);
+    reported ?? (code !== 0 && error ? `RESULT fail ${maskUrlCredentials(error).slice(0, 300)}` : NO_RESULT);
 
 export async function runChild(args: string[], env: Record<string, string | undefined> = process.env): Promise<string> {
     const p = Bun.spawn(['bun', ...args], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env });

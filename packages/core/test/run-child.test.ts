@@ -105,3 +105,13 @@ test('a child that crashes with no result line gives its error line as the resul
         expect(await runChild([child("process.exit(3);")])).toBe('RESULT fail no result');
     } finally { out.mockRestore(); err.mockRestore(); log.mockRestore(); }
 }, 30_000);
+
+test('the error line of a crashed child loses the credentials of each URL before it is a result', async () => {
+    const out = spyOn(process.stdout, 'write').mockImplementation((() => true) as any);
+    const err = spyOn(process.stderr, 'write').mockImplementation((() => true) as any);
+    try {
+        const result = await runChild([child("throw Error('fleet swarm claim authority unavailable or changed: fatal: unable to access https://fleet-user:s3cr3t-token@github.com/owner/repo.git/: Could not resolve host');")]);
+        expect(result).toBe('RESULT fail fleet swarm claim authority unavailable or changed: fatal: unable to access https://github.com/owner/repo.git/: Could not resolve host');
+        expect(result).not.toContain('s3cr3t-token');
+    } finally { out.mockRestore(); err.mockRestore(); }
+}, 30_000);

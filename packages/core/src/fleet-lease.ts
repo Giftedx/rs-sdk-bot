@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFile
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { LEASE_MAX_AGE_MS, SIDE_NAME } from './fleet';
+import { maskUrlCredentials } from './url-mask';
 
 export const FLEET_LEASE_TTL_MS = 10 * 60_000;
 export const FLEET_LEASE_RENEW_MS = 3 * 60_000;
@@ -32,7 +33,7 @@ export const fleetGitRetryable = (error: unknown): boolean => {
     const text = String((error as Error)?.message ?? error);
     return !REF_REJECTION.test(text) && (/ timed out$|\bETIMEDOUT\b/.test(text) || TRANSIENT_GIT.test(text));
 };
-const sanitizeGitError = (text: string) => text.replace(/(https?:\/\/)[^\s/@]+@/gi, '$1');
+const sanitizeGitError = maskUrlCredentials;
 // Keep the first cause and bounded tail after removing URL credentials. Classification uses the complete text.
 export function gitErrorDetail(text: string): string {
     const clean = sanitizeGitError(text), flat = clean.replace(/\s+/g, ' ').trim();

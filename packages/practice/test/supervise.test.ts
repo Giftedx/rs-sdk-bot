@@ -23,7 +23,7 @@ test('Rune Mysteries qualification failures block instead of relogging an untrai
  expect(isPrerequisiteFailure('RESULT fail Error: Rune Mysteries prerequisite: combat13 required for guarded route')).toBe(true);
  expect(isPrerequisiteFailure('RESULT ok Rune Mysteries prerequisite: qualified')).toBe(false);
 });
-import { supervise, isPrerequisiteFailure, isTransportStall, isHeldClaimRefusal, HELD_CLAIM_TRIES, failureShape, repeatableFailure } from '../src/supervise';
+import { supervise, isPrerequisiteFailure, isTransportStall, isHeldClaimRefusal, isClaimAuthorityFault, isNoProgressFailure, isEntryRefusal, CLAIM_AUTHORITY_PAUSE_MS, HELD_CLAIM_TRIES, failureShape, repeatableFailure } from '../src/supervise';
 
 const out = (lines: string[], code: number) => async () => ({ stdout: lines.join('\n'), exitCode: code });
 
@@ -259,4 +259,27 @@ test('two runs in a row with the same failure and no work end as blocked; work, 
         expect(r.reason).toBe('gave-up');
         expect(k).toBe(4);
     }
+});
+
+test('a login claim authority that did not answer never ends a job as blocked, and the next run waits longer', async () => {
+    const brief = (result: string) => out(['LEDGER ticks=3 xp=0 inventory=0 move=0 anim=0 dialog=0 stun=0 idle=3 idlePct=100.0 ', result], 1);
+    // The text of a worker that caught the error, of a chain whose step ended on it, and of an ended time budget.
+    for (const result of ['RESULT fail login: Error: fleet swarm claim authority unavailable or changed: spawnSync git ETIMEDOUT',
+        'RESULT fail fleet swarm claim authority unavailable or changed: spawnSync git ETIMEDOUT chain rounds=1 ok=0 failed=1',
+        'RESULT fail fleet swarm claim authority timed out chain rounds=1 ok=0 failed=1']) {
+        expect(isClaimAuthorityFault(result), result).toBe(true);
+        expect(repeatableFailure(result), result).toBe(false);
+        // The crash text of this fault is no other rule's text.
+        expect([isNoProgressFailure(result), isPrerequisiteFailure(result), isEntryRefusal(result), isHeldClaimRefusal(result)], result).toEqual([false, false, false, false]);
+        let runs = 0; const pauses: number[] = [];
+        const end = await supervise({ run: () => { runs++; return brief(result)(); }, stopped: () => false, pause: async ms => { pauses.push(ms); }, maxRestarts: 3 });
+        expect(end, result).toEqual({ reason: 'gave-up', runs: 4 });
+        expect(pauses, result).toEqual([CLAIM_AUTHORITY_PAUSE_MS, CLAIM_AUTHORITY_PAUSE_MS, CLAIM_AUTHORITY_PAUSE_MS]);
+    }
+    // A held claim and an other failure are not this fault and keep the 10 s pause.
+    for (const result of ['RESULT fail fleet account claim held by swarm', 'RESULT fail bank did not open', 'RESULT fail no result chain rounds=1 ok=0 failed=1'])
+        expect(isClaimAuthorityFault(result), result).toBe(false);
+    const pauses: number[] = [];
+    await supervise({ run: () => brief('RESULT fail bank did not open')(), stopped: () => false, pause: async ms => { pauses.push(ms); }, maxRestarts: 3 });
+    expect(pauses).toEqual([10_000]);
 });
