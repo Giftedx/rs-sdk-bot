@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794988013343-fatstack-wandwaver",
  "account": "Fatstack",
  "partner": "Wandwaver",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 92980,
  "claim": "a5666581-a53e-49a8-bc67-37b961b26520",
- "count": 0,
- "ok": false,
- "at": 1794988118494,
- "detail": "trade claimed"
+ "count": 92980,
+ "ok": true,
+ "at": 1794988380604,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 92980,
+  "after": 0
+ },
+ "bank": {
+  "count": 92980,
+  "at": 1794988354675
+ },
+ "logout": {
+  "attemptId": "1794988118504-0000018708-0000000001",
+  "at": 1794988380593,
+  "sha256": "178d545c0d65e34fa4b011fdee597314693b5a7e9cd150ed5c46e1d31ac44b98"
+ },
+ "screen": true
 }
