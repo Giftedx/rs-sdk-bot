@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795002881832,
+ "at": 1795002920497,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -226,24 +226,6 @@
    ]
   },
   {
-   "account": "PickpockDick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=17 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=pickpockdick-kit11-532-0to17 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 17 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "YewFirst",
    "script": "scripts/chain.ts",
    "args": [
@@ -315,6 +297,25 @@
    ]
   },
   {
+   "account": "PickpockDick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=17 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=pickpockdick-kit11-532-0to17 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"532\":17}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 17 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-big-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Woodpecker",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -338,32 +339,6 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
    ]
   },
   {
