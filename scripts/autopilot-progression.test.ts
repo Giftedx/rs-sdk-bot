@@ -41,7 +41,8 @@ test('AP leaves a selected stale Ranged consumer as an executable coordinator re
 test('Prayer keeps its existing finite admitted path for unknown comparisons while supported Ranged waits for a method proof',()=>{
  const prayer:Template={...template('scripts/train-prayer.ts'),id:'army-prayer',args:['99'],env:{BONE_ID:'536',BONE_RESERVE:'6',CAP:'4000'},trains:{skill:'Prayer',to:99,unlocks:[]}};
  const prayerMethod=method('prayer-bones',1,{step:{script:prayer.script,args:prayer.args!,env:prayer.env!},effects:{xp:{Prayer:1800}},qualification:undefined,rate:{unitsPerTick:1,basis:'model',evidence:'unqualified comparison'}});
- const prayerPlanner=setup([prayerMethod],{observed:()=>({...status,skills:[{name:'Prayer',level:96,xp:xpForLevel(96)}]})}).planner,result=prayerPlanner.refine([assignment(prayer)]),kept=result.assignments[0]!.template;
+ // The real catalog: its Prayer route maps the trainer to a train intent. A catalog with no route gives the bounded-service intent.
+ const prayerPlanner=setup([prayerMethod],{catalog:loadProgressionCatalog(),observed:()=>({...status,skills:[{name:'Prayer',level:96,xp:xpForLevel(96)}]})}).planner,result=prayerPlanner.refine([assignment(prayer)]),kept=result.assignments[0]!.template;
  expect(result.requests.some(r=>r.action==='qualify'&&r.consumer?.accept.skills?.Prayer===99)).toBe(true);
  expect(kept?.script).toBe(prayer.script);expect(kept?.args).toEqual(['99']);expect(kept?.env).toEqual({...prayer.env,PROGRESSION_CONSUMER:JSON.stringify({skills:{Prayer:99}})});
  expect(kept?.env?.PROGRESSION_METHOD).toBeUndefined();expect(kept?.env?.PROGRESSION_SOURCE).toBeUndefined();
