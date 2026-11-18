@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795022963867,
+ "at": 1795023559716,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -224,24 +224,6 @@
    "resources": []
   },
   {
-   "account": "mmthv2350",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=59 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=mmthv2350-kit15-536-0to59 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 59 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Bigpackage",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -340,6 +322,29 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "16",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Moneyshot",
@@ -569,28 +574,6 @@
    ]
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "2000",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "50",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-d9b1e6c6-b67f-447c-8b14-391b079ddd2c"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-mmtha-trooper-strength50 [task-d9b1e6c6-b67f-447c-8b14-391b079ddd2c]",
-   "role": "helper"
-  },
-  {
    "account": "Pocketpython",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -598,18 +581,18 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
+    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "50",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
     "LOOT_WATCH": "0",
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-c2f6ffe9-1a66-4aaf-9d42-1121c46b4a2b"
+    "COORDINATOR_RUN_ID": "task-1a6cd4b4-ca9e-4220-b168-8d3d29da9dda"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-pocketpython-trooper-strength50 [task-c2f6ffe9-1a66-4aaf-9d42-1121c46b4a2b]",
+   "goal": "run-pocketpython-trooper-defence50 [task-1a6cd4b4-ca9e-4220-b168-8d3d29da9dda]",
    "role": "helper"
   }
  ],
