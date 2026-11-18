@@ -37,10 +37,11 @@ import {resolve} from 'node:path';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { goTo, walkPath, sessionWalker, expandPath, type PathDeps, type PathPoint, type PathTile } from '../packages/core/src/walk';
 import { ferryWalk } from './walk-to';
+import { npcId, objId } from '../packages/core/src/content-facts';
 
 // Local bear spawn clusters from rev289 maps / cow-path-probe.json. Expand by7:
 // actual Bear105 wander4 + hunt1 + size2 footprint1 + one tile margin.
-const COW_BEAR_BOXES=[[2632,3274,2633,3280],[2691,3341,2694,3344],[2692,3331,2698,3333],
+export const COW_BEAR_BOXES=[[2632,3274,2633,3280],[2691,3341,2694,3344],[2692,3331,2698,3333],
     [2702,3344,2702,3344],[2706,3330,2708,3336],[2716,3330,2718,3336]] as const;
 const cowBearTile=(p:PathTile)=>COW_BEAR_BOXES.some(([x1,z1,x2,z2])=>Math.max(Math.max(x1-p.x,0,p.x-x2),Math.max(z1-p.z,0,p.z-z2))<=7);
 export function cowProfile(bankProfile='south',foodMode='held',maximum=5){
@@ -99,7 +100,7 @@ export async function bankCombatLoot(s:Session,drops:RegExp,extraIds:readonly nu
     if(s.sdk.getInventory().some(i=>matches.test(i.name)||extraIds.includes(i.id)))throw Error('combat outputs not banked');
 }
 export function genericCombatNpc<T extends {id:number;distance:number;reachable?:boolean;inCombat?:boolean;targetIndex?:number}>(target:string,npcs:readonly T[],selfSlot?:number):T|undefined{
-    const id=target==='giant'?117:target==='druid'?181:target==='unicorn'?89:undefined;
+    const id=target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid'):target==='unicorn'?npcId('unicorn'):undefined;
     const owned = (n:T) => selfSlot !== undefined && Number.isSafeInteger(selfSlot) && selfSlot >= 0 &&
         n.inCombat === true && n.targetIndex === 32768 + selfSlot;
     return npcs.filter(n => n.id === id && n.reachable === true &&
@@ -415,8 +416,8 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
 }
 
 // Surface Giant117 camp and its reachable Ardougne south bank.
-export const GIANT={npc:117,food:385,bigBones:532,limpwurt:225,bank:{x:2655,z:3283},spot:{x:2545,z:3144},room:[2537,3136,2556,3155]} as const;
-export const GIANT_HERBS:readonly number[]=[199,201,203,205,207,209,211,213,215,217,219];
+export const GIANT={npc:npcId('giant'),food:objId('shark'),bigBones:objId('big bones'),limpwurt:objId('limpwurt root'),bank:{x:2655,z:3283},spot:{x:2545,z:3144},room:[2537,3136,2556,3155]} as const;
+export const GIANT_HERBS:readonly number[]=['guam','marentill','tarromin','harralander','ranarr','irit','avantoe','kwuarm','cadantine','dwarf weed','torstol'].map(herb=>objId(`unidentified ${herb}`));
 const GIANT_DROPS:readonly number[]=[GIANT.bigBones,GIANT.limpwurt,...GIANT_HERBS];
 // A melee training site for runGiants: the NPCs, their room, the bank the trainer returns to, the one-bite foods it
 // carries (first owned in order), the drops it banks, and the drop that credits a kill. A site with no credit drop
@@ -429,8 +430,8 @@ export const GIANT_SITE:CombatSite={label:'giant',npcs:[GIANT.npc],foods:[GIANT.
 // 137 at band 70 in rune gear (research/combat-measure.md section 1), against 16 at the cows.
 // Trooper food in pick order: the four fish, cooked meat, then the Ardougne baker's stall food (bread, chocolate slice,
 // and cake by its smallest piece first, so a started cake is finished and its slot freed).
-export const TROOPER_FOODS:readonly number[]=[385,373,379,333,2142,2309,1901,1895,1893,1891];
-export const TROOPER_SITE:CombatSite={label:'trooper',npcs:[475,476],foods:TROOPER_FOODS,bank:{x:2619,z:3332},spot:{x:2525,z:3242},room:[2493,3223,2553,3264],drops:[]};
+export const TROOPER_FOODS:readonly number[]=['shark','swordfish','lobster','trout','cooked meat','bread','chocolate slice','cake slice','partial cake','cake'].map(objId);
+export const TROOPER_SITE:CombatSite={label:'trooper',npcs:[npcId('khazard troop'),npcId('khazard troop spearmen')],foods:TROOPER_FOODS,bank:{x:2619,z:3332},spot:{x:2525,z:3242},room:[2493,3223,2553,3264],drops:[]};
 const GIANT_ARMOUR_SLOT_ORDER = [2, 10, 0, 4, 7, 5, 1, 9] as const;
 
 // Reuse progressive rev-289 loadout selection with exact skill and quest gates.
