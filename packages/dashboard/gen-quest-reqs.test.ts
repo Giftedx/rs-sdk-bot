@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { dropCycles, joinReqs, parseConstants, serverLevels, serverPrereqs, serverQuestPoints, wikiItems, wikiReqs, type Reqs } from './gen-quest-reqs';
+import { dropCycles, joinReqs, journalLevels, parseConstants, serverLevels, serverPrereqs, serverQuestPoints, wikiItems, wikiReqs, type Reqs } from './gen-quest-reqs';
 
 test('the server checks: the highest level of each skill, quest points and completion gates, with ^constants', () => {
     const constants = parseConstants(['^hero_required_questpoints = 55\n^zanaris_complete = 6\n']);
@@ -39,6 +39,14 @@ test('the wiki items: real item names with counts; plurals fall back to the sing
     const items = new Map([['silk', { name: 'Silk', debugname: 'silk' }], ["wizard's mind bomb", { name: "Wizard's mind bomb", debugname: 'wizards_mind_bomb' }],
         ['plank', { name: 'Plank', debugname: 'plank' }], ['anti-dragon shield', { name: 'Anti-dragon shield', debugname: 'antidragonbreathshield' }]]);
     expect(wikiItems(page, items)).toEqual([['Silk', 1, 'silk'], ["Wizard's mind bomb", 1, 'wizards_mind_bomb'], ['Plank', 3, 'plank']]);
+});
+
+test('wiki requirements ignore ### Recommended subheadings, and journalLevels excludes advantage phrasing', () => {
+    const page = `# Underground Pass\n\n## Requirements\n\n### Quest Prerequisites\n\n- Biohazard\n\n### Skill Requirements\n\n- 25 Ranged\n\n### Recommended\n\n- 50 Agility\n- 43 Prayer\n`;
+    expect(wikiReqs(page, ['Biohazard'])).toEqual({ s: new Map([['Ranged', 25]]), qp: null, q: ['Biohazard'] });
+    expect(journalLevels(['Level 35 agility|Level 13 or higher magic will be an advantage'])).toEqual(new Map([['Agility', 35]]));
+    expect(journalLevels(['It would be an advantage to have at least one of Level 35 Herblore'])).toEqual(new Map());
+    expect(journalLevels(['Level 30 Ranging|Level 30 Cooking'])).toEqual(new Map([['Ranged', 30], ['Cooking', 30]]));
 });
 
 test('a server-only prerequisite that needs the quest back is dropped', () => {

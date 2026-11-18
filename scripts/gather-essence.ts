@@ -1,15 +1,26 @@
-// Universal Rune & Pure Essence Gatherer:
-// Mines Rune essence (and Pure essence from Mining 30+ on supported worlds) via Aubury teleport and banks at Varrock East.
+// Universal Rune Essence Gatherer:
+// Mines Rune essence via Aubury teleport and banks at Varrock East.
 // Usage: bun scripts/gather-essence.ts <bot> [CAP ticks, default 15000] [BANK_AT essence, default 28]
 // Environment: DEMO_OK=1 for live server.
 import { openBot, finish, randomEventsOf, sessionDied } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import type { Session } from '../packages/core/src/inprocess';
-import { existsSync,readFileSync } from 'node:fs';
-import {resolve} from 'node:path';
-import {eligiblePickaxe} from './microbot-b-mining';
-import {depositObserved} from '../packages/core/src/deposit';
+import { existsSync } from 'node:fs';
+import { depositObserved } from '../packages/core/src/deposit';
+import { approach, walkTargetPersist } from './walk-to';
+import {
+    MINING_PICKAXES_DESC,
+    type ShopRetryGate,
+    bestMiningPickaxe,
+    executeShopToolPurchase,
+    gearById,
+    planToolShopUpgrade,
+    recordShopAttempt,
+    sessionToolHooks,
+    shouldAttemptShopUpgrade,
+    tierBoundaryOf,
+} from '../packages/planner/src/gear-progression';
 
 const BANK_SPOT = { x: 3253, z: 3420 };
 const AUBURY_OUTSIDE = { x: 3253, z: 3398 };
@@ -32,27 +43,26 @@ const EXIT_PORTALS = [
 ];
 
 const RUNE_ESSENCE = 1436;
-const PURE_ESSENCE = 7936;
-const ESSENCE_IDS = [RUNE_ESSENCE, PURE_ESSENCE];
-const PICKAXES = [1275, 1271, 1273, 1269, 1267, 1265]; // Rune down to Bronze
+const PICKAXES: readonly number[] = MINING_PICKAXES_DESC; // Rune down to Bronze
 
 // Retries are activity, not output. Bound a broken rock even when clicks succeed.
 const refusedPickWields=new WeakMap<Session,Set<number>>();
-let nativePickWieldLevels:Map<number,number>|undefined;
-export function essencePickWieldLevel(id:number){
- if(!nativePickWieldLevels){const root=resolve(import.meta.dir,'../vendor/rs-sdk/server/content'),pack=new Map(readFileSync(resolve(root,'pack/obj.pack'),'utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=(.+)$/);return m?[[m[2]!,Number(m[1])]as const]:[];}));nativePickWieldLevels=new Map();
-  for(const tier of[1,5,20,30,40])for(const m of readFileSync(resolve(root,'scripts/levelrequire/scripts/tier'+tier+'.rs2'),'utf8').matchAll(/\[opheld2,(\w+_pickaxe)\]\s*@levelrequire_attack\((\d+),/g)){const item=pack.get(m[1]!);if(item!==undefined)nativePickWieldLevels.set(item,Number(m[2]));}
-  const bronze=pack.get('bronze_pickaxe'),tier1=readFileSync(resolve(root,'scripts/levelrequire/scripts/tier1.rs2'),'utf8'),tutorial=readFileSync(resolve(root,'scripts/tutorial/scripts/tutorial.rs2'),'utf8');if(bronze!==undefined&&tier1.includes('[opheld2,bronze_pickaxe] @tutorial_island_equip(last_slot);')&&/@levelrequire_attack\(1,\s*\$slot\)/.test(tutorial))nativePickWieldLevels.set(bronze,1);
- }return nativePickWieldLevels.get(id);
+export function essencePickWieldLevel(id:number):number|undefined{
+ if(!PICKAXES.includes(id))return undefined;
+ return gearById(id)?.requires.skills.attack??1;
 }
-// Native Mining eligibility/rate comes from the existing pickaxe table consumer.
+// Native Mining eligibility/rate comes from the progressive gear engine.
 // Called only during the worker's own bank visit; never buys or discards a tool.
 export async function upgradeOwnedEssencePick(s:Session,o:{openBank:()=>Promise<void>;stop:()=>boolean}){
  const p=s.sdk.getState()?.player,life=p?.lifeId,respawns=p?.respawnCount??0,hp0=s.sdk.getSkill('Hitpoints')?.level??0;
  const stop=()=>{const at=s.sdk.getState()?.player;return o.stop()||!at||at.isDead||at.lifeId!==life||(at.respawnCount??0)!==respawns||(s.sdk.getSkill('Hitpoints')?.level??0)<hp0||hp0<1;};
  if(stop())throw Error('essence pick upgrade stopped');await o.openBank();
  if(!await waitUntil(s,()=>stop()||!!s.bankObservation?.(),{timeoutTicks:10})||stop()||!s.sdk.getState()?.bank.isOpen)throw Error('essence pick bank observation absent');
- const state=s.sdk.getState()!,bank=s.bankObservation!()!,candidate=eligiblePickaxe({...state,inventory:[...s.sdk.getInventory(),...bank.items.filter(i=>i.count>0)],equipment:s.sdk.getEquipment()});
+ const state=s.sdk.getState()!,bank=s.bankObservation!()!;
+ const miningStat=s.sdk.getSkill('Mining')?.level??state.skills?.find(k=>k.name==='Mining')?.level??1;
+ const attackStat=s.sdk.getSkill('Attack')?.baseLevel??1;
+ const rec=bestMiningPickaxe([...s.sdk.getInventory(),...s.sdk.getEquipment().filter(e=>e.slot===3),...bank.items.filter(i=>i.count>0)],{mining:miningStat,attack:attackStat});
+ const candidate=rec.current?.item;
  if(!candidate)throw Error('no eligible owned native pickaxe');
  const inv=()=>s.sdk.getInventory(),eq=()=>s.sdk.getEquipment(),count=(id:number,rows:readonly{id:number;count:number}[])=>rows.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  const totals=()=>{const b=s.bankObservation?.();if(!b||!s.sdk.getState()?.bank.isOpen)throw Error('essence pick current bank receipt missing');const m=new Map<number,number>();for(const i of [...inv(),...eq(),...b.items])m.set(i.id,(m.get(i.id)??0)+i.count);return m;},before=totals(),weapon=eq().find(i=>i.slot===3);
@@ -62,8 +72,8 @@ export async function upgradeOwnedEssencePick(s:Session,o:{openBank:()=>Promise<
   const matched=()=>{const b=s.bankObservation?.();return !!b&&b.generation>old.generation&&count(candidate.id,inv())===held+1&&count(candidate.id,b.items)===stored-1;};
   if(!await waitUntil(s,()=>stop()||matched(),{timeoutTicks:10})||stop()||!matched())throw Error('essence upgrade withdrawal does not reconcile');
  }
- const requiredAttack=essencePickWieldLevel(candidate.id),attack=s.sdk.getSkill('Attack')?.baseLevel,refused=refusedPickWields.get(s)??new Set<number>();refusedPickWields.set(s,refused);
- if(!eq().some(i=>i.slot===3&&i.id===candidate.id)&&(!weapon||PICKAXES.includes(weapon.id))&&requiredAttack!==undefined&&attack!==undefined&&attack>=requiredAttack&&!refused.has(candidate.id)){
+ const requiredAttack=essencePickWieldLevel(candidate.id),refused=refusedPickWields.get(s)??new Set<number>();refusedPickWields.set(s,refused);
+ if(!eq().some(i=>i.slot===3&&i.id===candidate.id)&&(!weapon||PICKAXES.includes(weapon.id))&&requiredAttack!==undefined&&attackStat>=requiredAttack&&!refused.has(candidate.id)){
   if(stop())throw Error('essence stopped before pick equip');const item=inv().find(i=>i.id===candidate.id);if(!item)throw Error('owned pick vanished');const generation=s.bankObservation!()!.generation;
   await s.bot.closeBank();if(!await waitUntil(s,()=>stop()||!s.sdk.getState()?.bank.isOpen&&!s.bankObservation?.(),{timeoutTicks:8})||stop()||s.sdk.getState()?.bank.isOpen)throw Error('essence upgrade bank close unobserved');
   // SDK equip dismisses modal UI. A closed bank has no bankObservation receipt.
@@ -76,7 +86,8 @@ export async function upgradeOwnedEssencePick(s:Session,o:{openBank:()=>Promise<
  const worn=eq().some(i=>i.slot===3&&i.id===candidate.id);
  if(worn)for(const item of [...inv()].filter(i=>PICKAXES.includes(i.id)&&i.id!==candidate.id)){if(stop())throw Error('essence stopped before inferior pick bank');await depositObserved(s,item);}
  const after=totals();if([...new Set([...before.keys(),...after.keys()])].some(id=>(before.get(id)??0)!==(after.get(id)??0)))throw Error('essence pick upgrade changed owned assets');
- const active=eligiblePickaxe({...s.sdk.getState()!,inventory:inv(),equipment:eq()});if(active?.id!==candidate.id)throw Error('best owned eligible pick not active');
+ const active=bestMiningPickaxe([...inv(),...eq().filter(e=>e.slot===3)],{mining:miningStat,attack:attackStat}).current?.item;
+ if(active?.id!==candidate.id)throw Error('best owned eligible pick not active');
  console.log('ESSENCE_PICK '+JSON.stringify({id:candidate.id,worn,preserved:true}));return{id:candidate.id,worn,preserved:true};
 }
 
@@ -96,7 +107,7 @@ export async function mineEssenceBatch(s: Session, o: {count:()=>number;full:()=
 }
 
 export function isEssence(id: number): boolean {
-    return ESSENCE_IDS.includes(id);
+    return id === RUNE_ESSENCE;
 }
 
 type EssenceMessage = { text: string; tick: number; observationId?: number };
@@ -113,7 +124,7 @@ export function dist(a: { x: number; z: number }, b: { worldX: number; worldZ: n
     return Math.max(Math.abs(a.x - bx), Math.abs(a.z - bz));
 }
 
-export async function runEssenceGatherer(s: Session, o: { cap: number; bankAt: number; maxTrips?:number; stop?: () => boolean }) {
+export async function runEssenceGatherer(s: Session, o: { cap: number; bankAt: number; maxTrips?:number; allowShopUpgrade?: boolean; stop?: () => boolean }) {
     if(!Number.isSafeInteger(o.cap)||o.cap<1||!Number.isSafeInteger(o.bankAt)||o.bankAt<1||o.bankAt>28
         ||(o.maxTrips!==undefined&&(!Number.isSafeInteger(o.maxTrips)||o.maxTrips<1)))throw Error('invalid essence limits');
     const start = s.tick();
@@ -230,8 +241,56 @@ export async function runEssenceGatherer(s: Session, o: { cap: number; bankAt: n
 
     };
 
+    const shopGate: ShopRetryGate = {};
+    const maybeBuyShopPickaxe = async () => {
+        if (!o.allowShopUpgrade || over()) return;
+        const tierNow = tierBoundaryOf(miningLevel(), [1, 6, 21, 31, 41]);
+        if (!shouldAttemptShopUpgrade(shopGate, tierNow, s.tick())) return;
+        if (!await walk(BANK_SPOT.x, BANK_SPOT.z, 2) || over()) return;
+        await openBank();
+        if (!await waitUntil(s, () => over() || !!s.bankObservation?.(), { timeoutTicks: 10 }) || over()) {
+            throw Error('essence shop check bank observation absent');
+        }
+        const bankItems = s.bankObservation!()!.items;
+        const stock = [...inv(), ...eq().filter(e => e.slot === 3), ...bankItems];
+        const totalCoins = stock.filter(i => i.id === 995).reduce((n, i) => n + i.count, 0);
+        const plan = planToolShopUpgrade(
+            'mining-pickaxe',
+            stock,
+            totalCoins,
+            { mining: miningLevel(), attack: s.sdk.getSkill('Attack')?.baseLevel ?? 1 },
+            { allowedShops: ['pickaxeshop'], onlyWhenStarterOrMissing: true },
+        );
+        if (plan) {
+            const res = await executeShopToolPurchase(sessionToolHooks(s, {
+                openBank,
+                walkTo: async spot => (await walkTargetPersist(s, { x: spot.x, z: spot.z, level: spot.level ?? 0 }, 4, t => approach(s, t, over))).ok,
+                waitUntil: (pred, timeoutTicks) => waitUntil(s, pred, { timeoutTicks }),
+                stop: over,
+            }), {
+                targetId: plan.target.id,
+                shop: 'pickaxeshop',
+                maxBudget: plan.coinBudgetNeeded,
+                returnBankSpot: BANK_SPOT,
+            });
+            recordShopAttempt(shopGate, tierNow, s.tick(), res.bought);
+            if (res.bought) {
+                console.log(`ESSENCE_SHOP_PICKAXE ${JSON.stringify(res)}`);
+                await openBank();
+                const spareCoins = inv().find(i => i.id === 995);
+                if (spareCoins && !over()) await depositObserved(s, spareCoins);
+                await upgradeOwnedEssencePick(s, { openBank, stop: over });
+            }
+        } else {
+            recordShopAttempt(shopGate, tierNow, s.tick(), true);
+        }
+        await action('close-shop-bank', () => s.bot.closeBank());
+        await waitUntil(s, () => over() || !st()?.bank.isOpen, { timeoutTicks: 5 });
+    };
+
     const checkPickaxe = async () => {
-        active();await upgradeOwnedEssencePick(s,{openBank,stop:over});active();
+        active();
+        await upgradeOwnedEssencePick(s,{openBank,stop:over});active();
         await action('close-upgrade-bank',()=>s.bot.closeBank());
         if(!await waitUntil(s,()=>over()||!st()?.bank.isOpen,{timeoutTicks:5})||over()||st()?.bank.isOpen)throw Error('essence pick bank close unobserved');
     };
@@ -372,12 +431,14 @@ export async function runEssenceGatherer(s: Session, o: { cap: number; bankAt: n
         console.log(`ESSENCE_START level=${miningLevel()} xp=${miningXp()} cap=${o.cap}`);
         
         const initialTrips=trips;
+        if (!isInMine() && essenceCount() === 0) await maybeBuyShopPickaxe();
         if (!isInMine() || freeSlots() === 0) await action('initial-bank-load',bankLoad);
         while (!over() && (o.maxTrips===undefined||trips-initialTrips<o.maxTrips)) {
             if (freeSlots() === 0 || essenceCount() >= o.bankAt) {
                 await action('bank-load',bankLoad);
             } else {
                 if (!isInMine()) {
+                    await maybeBuyShopPickaxe();
                     await action('teleport',teleportToMine);
                 }
                 await action('mine',mineEssence);
@@ -427,6 +488,7 @@ if (import.meta.main) {
         const r = await runEssenceGatherer(s, {
             cap,
             bankAt,
+            allowShopUpgrade: process.env.ALLOW_SHOP_UPGRADE !== '0',
             stop: () => stopped || existsSync(stopFile)
         });
         await finish([s], r.ok, `essence ${JSON.stringify(r)}`);

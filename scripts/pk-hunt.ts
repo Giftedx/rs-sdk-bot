@@ -15,9 +15,9 @@ import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadOwners } from '../packages/core/src/fleet';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
+import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
 import { armourDefence } from './pk-read';
-import { itemCost } from './pk-roam';
+import { assessWildernessThreat, hasVarrockTeleport, itemCost, planWildernessEscape, slashWebThrough, wildernessCombatMargin, wildernessDepth } from './pk-roam';
 import { nativeRequirementMetadata, resolveItemRequirements, type ItemCount, type ItemRequirement, type RequirementResolution } from '../packages/core/src/item-requirements';
 import { lootCapacity } from '../packages/core/src/loot-policy';
 
@@ -226,25 +226,74 @@ export async function hunt(s: Session, o: HuntOptions) {
     const shallow = (o.spots ?? HUNT_SPOTS).every(sp => wildernessLevel(sp.z) <= 30);
     let spot = 0, needsRestock = false;
     const far = () => { const p = s.sdk.getState()?.player; return !p || Math.max(Math.abs(p.worldX - EDGEVILLE_BANK.x), Math.abs(p.worldZ - EDGEVILLE_BANK.z)) > 60; };
-    if (far()) {
-        const glory = s.sdk.getInventory().find(i => (ITEMS.glory as readonly number[]).includes(i.id));
+    const exitWilderness = async (why: string): Promise<'out' | 'died' | 'failed'> => {
         const position = () => { const p = s.sdk.getState()?.player; return p ? `${p.worldX},${p.worldZ}` : ''; };
-        if (glory) {
-            const op = glory.optionsWithIndex.find(x => /^Rub$/i.test(x.text));
-            if (op) await s.sdk.sendUseItem(glory.slot, op.opIndex);
-            for (let t = 0; t < 20 && far() && !over(); t++) {
-                await nextTick(s);
-                if (s.sdk.getState()?.dialog?.isOpen) await s.sdk.clickDialogByText(/^Edgeville/i);
+        for (let step = 0; step < 30 && !over(); step++) {
+            const p = s.sdk.getState()?.player;
+            if (!p) break;
+            if (p.isDead || p.hp <= 0) return 'died';
+            const wild = wildernessDepth(p.worldX, p.worldZ);
+            if (wild === 0 && !far()) return 'out';
+            const magicLv = s.sdk.getState()?.skills?.find(k => k.name === 'Magic')?.level ?? 1;
+            const glory = s.sdk.getInventory().find(i => (ITEMS.glory as readonly number[]).includes(i.id));
+            const teleSpell = o.teleSpell ?? (hasVarrockTeleport(magicLv, s.sdk.getInventory(), s.sdk.getEquipment()) ? SPELLS.varrockTeleport : undefined);
+            const plan = wild === 0
+                ? (glory ? { kind: 'glory' as const } : teleSpell !== undefined ? { kind: 'teleport' as const } : { kind: 'out' as const })
+                : planWildernessEscape({ x: p.worldX, z: p.worldZ }, { glory: !!glory, teleport: teleSpell !== undefined });
+            if (plan.kind === 'glory' && glory) {
+                const op = glory.optionsWithIndex.find(x => /^Rub$/i.test(x.text));
+                if (op) await s.sdk.sendUseItem(glory.slot, op.opIndex);
+                for (let t = 0; t < 20 && far() && !over(); t++) {
+                    await nextTick(s);
+                    if (s.sdk.getState()?.dialog?.isOpen) await s.sdk.clickDialogByText(/^Edgeville/i);
+                }
+                if (!far()) return 'out';
+                return 'failed';
             }
-            if (far()) return { ...tally, end: 'glory to Edgeville failed' };
-        } else if (o.teleSpell !== undefined) {
-            const from = position();
-            await s.sdk.sendClickComponent(o.teleSpell);
-            for (let t = 0; t < 12 && position() === from && !over(); t++) await nextTick(s);
-            if (position() === from) return { ...tally, end: 'travel teleport did not move the account' };
-            const walked = await walk(s, EDGEVILLE_BANK, over, 600);
-            if (!walked.ok) return { ...tally, end: 'walk from the teleport to Edgeville failed ' + JSON.stringify(walked) };
-        } else return { ...tally, end: 'far from Edgeville with no glory or PK_TELE' };
+            if (plan.kind === 'teleport' && teleSpell !== undefined) {
+                const from = position();
+                await s.sdk.sendClickComponent(teleSpell);
+                for (let t = 0; t < 12 && position() === from && !over(); t++) await nextTick(s);
+                if (position() !== from) {
+                    const walked = await walk(s, EDGEVILLE_BANK, over, 600);
+                    return walked.ok ? 'out' : 'failed';
+                }
+                return 'failed';
+            }
+            if ((plan.kind === 'lever' || plan.kind === 'ladder') && plan.loc) {
+                const findLoc = (loc: { id: number; x: number; z: number }) => s.sdk.getState()?.nearbyLocs.find(l => l.id === loc.id && Math.max(Math.abs(l.x - loc.x), Math.abs(l.z - loc.z)) <= 2)
+                    ?? s.sdk.getState()?.nearbyLocs.find(l => l.id === loc.id);
+                log(`HUNT ${why} via ${plan.detail}`);
+                if (plan.web) await slashWebThrough(s, plan.web, over);
+                await walk(s, { x: plan.loc.x, z: plan.loc.z }, over, 120);
+                const exitLoc = findLoc(plan.loc);
+                if (exitLoc && typeof s.bot?.interactLoc === 'function') {
+                    await s.bot.interactLoc(exitLoc, plan.loc.option).catch(() => {});
+                    await nextTick(s);
+                    continue;
+                }
+            }
+            if (wild > 0) {
+                log(`HUNT ${why} walking south from level ${wild}`);
+                await walk(s, { x: p.worldX, z: Math.max(3518, p.worldZ - 24) }, over, 80);
+                continue;
+            }
+            return 'failed';
+        }
+        return far() ? 'failed' : 'out';
+    };
+    if (far()) {
+        const res = await exitWilderness('retreat to Edgeville');
+        if (res === 'died') return { ...tally, end: 'died' };
+        if (res === 'failed') {
+            const p = s.sdk.getState()?.player;
+            const magicLv = s.sdk.getState()?.skills?.find(k => k.name === 'Magic')?.level ?? 1;
+            const hasTele = o.teleSpell !== undefined || hasVarrockTeleport(magicLv, s.sdk.getInventory(), s.sdk.getEquipment());
+            if (p && wildernessDepth(p.worldX, p.worldZ) === 0 && !hasTele && !s.sdk.getInventory().some(i => (ITEMS.glory as readonly number[]).includes(i.id))) {
+                return { ...tally, end: 'far from Edgeville with no glory or PK_TELE' };
+            }
+            return { ...tally, end: hasTele ? 'travel teleport did not move the account' : 'glory to Edgeville failed' };
+        }
     }
     while (!over()) {
         if (needsRestock || held(s, ITEMS.shark) < o.minFood) {
@@ -290,13 +339,27 @@ export async function hunt(s: Session, o: HuntOptions) {
             // HUNT_MIN_FOOD=<n>: no new fight of our own choosing with fewer than n pieces of food (an attacker is still
             // fought): a hunter that has spent its food on one kill does not take on the next target.
             const foodLeft = state.inventory.filter(i => i.optionsWithIndex?.some(op => /^eat$/i.test(op.text))).reduce((n, i) => n + i.count, 0);
+            const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
+            const hasGlory = state.inventory.some(i => (ITEMS.glory as readonly number[]).includes(i.id)) || s.sdk.getEquipment().some(i => (ITEMS.glory as readonly number[]).includes(i.id));
+            const hasTele = o.teleSpell !== undefined || hasVarrockTeleport(magicLevel, state.inventory, s.sdk.getEquipment());
+            const threat = attackerIndex === null ? assessWildernessThreat(
+                { x: me.worldX, z: me.worldZ, combat: me.combatLevel, foodCount: foodLeft, glory: hasGlory, teleport: hasTele },
+                state.nearbyPlayers.map(p => ({ ...p, wornWeapon: observePlayer(s.client, p.index)?.worn[3] })),
+                ours,
+            ) : null;
+            if (threat?.retreatReason) {
+                const margin = wildernessCombatMargin({ z: me.worldZ, combat: me.combatLevel }, me.combatLevel);
+                log(`HUNT threat retreat (${threat.retreatReason}, bracket=${margin.minCombat}-${margin.maxCombat}): ${threat.escapePlan.detail}`);
+                needsRestock = true;
+                if (wildernessLevel(me.worldZ) > 30 || threat.multiPile) await exitWilderness(threat.retreatReason);
+                break;
+            }
             if (attackerIndex === null && (o.observe || me.hp < me.maxHp - 20 || foodLeft < Number(process.env.HUNT_MIN_FOOD ?? 0))) continue;
             const target = pickTarget(self, state.nearbyPlayers, ours, attackerIndex, process.env.HUNT_PICK !== 'near'
                 ? p => { const o = observePlayer(s.client, p.index); return o ? armourDefence(o.worn.map(id => objNames().get(id) ?? '')).melee : 0; } : undefined, multi);
             if (!target) continue;
             log(`HUNT engage ${target.name} (combat ${target.combatLevel}) at ${target.x},${target.z}`);
             tally.fights++;
-            const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
             const r: FightResult = await fightPlayer(s, target.name, {
                 // The freeze goes out when the target runs: cast whenever the target was free, it lost a stand-up spar (2 wins,
                 // 4 losses), and a hunter with it killed no more runners (research/pvp-fight-loop.md).
@@ -329,12 +392,21 @@ export async function hunt(s: Session, o: HuntOptions) {
             // So does a fight that the hunt's tick cap or stop ended (timeout): the hunt ends, and an account left
             // standing beside its attacker dies there. This escape has its own 200-tick cap and stops only out of the
             // Wilderness.
-            if (r.outcome === 'danger' || (r.outcome === 'timeout' && wildernessLevel(s.sdk.getState()?.player?.worldZ ?? 0) > 0)) {
+            const curP = s.sdk.getState()?.player;
+            if (r.outcome === 'danger' || (r.outcome === 'timeout' && curP && wildernessDepth(curP.worldX, curP.worldZ) > 0)) {
                 const e = await fightPlayer(s, target.name, { kit: ownKit(kit), exitOnDanger: false, escapeSpell: o.teleSpell, cap: 200, log,
                     predictPrayer: true, snapPrayer: true, flee: true });
                 log(`HUNT escape after danger: ${e.outcome}`);
                 if (e.outcome === 'escaped') { tally.escapes++; needsRestock = true; }
-                if (e.outcome === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
+                else if (e.outcome === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
+                else {
+                    const postP = s.sdk.getState()?.player;
+                    if (postP && wildernessDepth(postP.worldX, postP.worldZ) > 0) {
+                        const outRes = await exitWilderness('post-fight retreat');
+                        if (outRes === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
+                        if (outRes === 'out') { tally.escapes++; needsRestock = true; }
+                    }
+                }
             }
             if (r.outcome === 'died') { tally.deaths++; return { ...tally, end: 'died' }; }
             if (r.outcome === 'session ended') return { ...tally, end: 'session ended' };

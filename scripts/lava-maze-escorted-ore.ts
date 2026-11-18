@@ -10,6 +10,9 @@ import { waitUntil, type TickSource } from '../packages/core/src/ticks';
 import { sessionWalker, walkPath, type PathDeps } from '../packages/core/src/walk';
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { mineRock } from './gather-ore';
+import { componentId } from '../packages/core/src/logout';
+import { attackable, defaultSpec, fightPlayer } from './pk';
+import { escapeStep, hasVarrockTeleport, kitFrom } from './pk-roam';
 
 export type Tile = readonly [number, number];
 export type RosterPlayer = [number, string, number, number, number, number];
@@ -58,14 +61,57 @@ export async function waitForRosterEntry(s:TickSource,read:()=>Frame|undefined,p
     const ready=()=>entryRosterReady(read(),participants());
     return await waitUntil(s,()=>refused()||ready(),{timeoutTicks:40})&&!refused()&&ready();
 }
-export function stageRelease(escort:string,miner:string) {
+export function stageRelease(escort:string,miner:string,escortCombat=75,minerCombat=29) {
     let previous:number|undefined,frames=0;
     return (frame:Frame|undefined,localReady:boolean) => {
         const at=(name:string,t:Tile,combat:number)=>frame?.roster.some(p=>p[1].toLowerCase()===name.toLowerCase()&&p[4]===0&&p[5]===combat&&distance([p[2],p[3]],t)===0);
-        if(!frame||!localReady||!at(escort,STAGE,75)||!at(miner,BANK,29)){frames=0;previous=undefined;return false;}
+        if(!frame||!localReady||!at(escort,STAGE,escortCombat)||!at(miner,BANK,minerCombat)){frames=0;previous=undefined;return false;}
         if(frame.tick!==previous){frames=previous===undefined||frame.tick===previous+10?frames+1:1;previous=frame.tick;}
         return frames>=3;
     };
+}
+
+// Select the nearest south-heading inbound recovery waypoint so retreat never backtracks deeper into multi-combat.
+export function selectInboundRecovery(from: Tile, inbound: readonly Tile[]): number {
+    let bestSouth = -1, bestSouthDist = Infinity, bestAny = 0, bestAnyDist = Infinity;
+    for (let i = 0; i < inbound.length; i++) {
+        const t = inbound[i]!, d = distance(from, t);
+        if (t[1] <= from[1] + 2 && d < bestSouthDist) { bestSouth = i; bestSouthDist = d; }
+        if (d < bestAnyDist) { bestAny = i; bestAnyDist = d; }
+    }
+    return bestSouth >= 0 ? bestSouth : bestAny;
+}
+
+// Wilderness depth-aware retreat step for escorted gatherers: glory <= 30, Varrock Teleport <= 20, else inbound south path.
+export function retreatOrTeleportPlan(opts: {
+    tile: Tile;
+    magic: number;
+    inventory: readonly { name: string; count?: number }[];
+    equipment: readonly { name: string }[];
+}): 'out' | 'glory' | 'teleport' | 'run' {
+    const level = depth(opts.tile[0], opts.tile[1]);
+    if (level === 0) return 'out';
+    const gloryRe = /^amulet of glory\([1-4]\)$/i;
+    const hasGlory = opts.inventory.some(i => gloryRe.test(i.name)) || opts.equipment.some(e => gloryRe.test(e.name));
+    const hasTele = hasVarrockTeleport(opts.magic, opts.inventory, opts.equipment);
+    return escapeStep(level, { glory: hasGlory, teleport: hasTele });
+}
+
+// Decide whether an escort screens/delays an approaching PKer while the miner retreats, or both retreat immediately.
+export function escortInterceptDecision(opts: {
+    escortTile: Tile;
+    escortCombat: number;
+    threat: { name: string; x: number; z: number; combatLevel: number };
+    hasWeapon: boolean;
+    hasFood: boolean;
+    prayerPoints: number;
+}): { action: 'intercept' | 'screen-retreat'; reason: string } {
+    const canHit = attackable({ z: opts.escortTile[1], combatLevel: opts.escortCombat }, { z: opts.threat.z, combatLevel: opts.threat.combatLevel });
+    const dist = distance(opts.escortTile, [opts.threat.x, opts.threat.z]);
+    if (canHit && dist <= 12 && opts.hasWeapon && opts.hasFood && opts.prayerPoints >= 10 && opts.threat.combatLevel <= opts.escortCombat + 5) {
+        return { action: 'intercept', reason: `escort intercepts ${opts.threat.name} (combat ${opts.threat.combatLevel}) at ${dist} tiles` };
+    }
+    return { action: 'screen-retreat', reason: `retreat from ${opts.threat.name} (combat ${opts.threat.combatLevel}) at ${dist} tiles` };
 }
 export function readEscortRoute() {
     const r=JSON.parse(readFileSync(resolve(root,'scripts/lava-maze-escort-route.json'),'utf8')) as {out:MeasuredRoute;back:MeasuredRoute};
@@ -193,7 +239,40 @@ export async function runEscortedOre(names:readonly string[],cap=Number(process.
     const home=async(s:Session)=>{
         if(at(s,BANK))return;
         const from=tile(s);requireThat(from,'Retreat position unknown '+s.name);
-        const near=route.inbound.reduce((a,t,i)=>distance(from,t)<distance(from,route.inbound[a]!)?i:a,0);
+        if(process.env.LAVA_ESCORT_TELE_RETREAT==='1'){
+            for(let tryTele=0;tryTele<6;tryTele++){
+                const cur=tile(s);if(!cur||depth(cur[0],cur[1])===0)break;
+                const magic=s.sdk.getSkill('Magic')?.level??1;
+                const step=retreatOrTeleportPlan({tile:cur,magic,inventory:s.sdk.getInventory(),equipment:s.sdk.getEquipment()});
+                if(step==='run'||step==='out')break;
+                if(step==='glory'){
+                    const gloryRe=/^amulet of glory\([1-4]\)$/i;
+                    const packed=s.sdk.getInventory().find(i=>gloryRe.test(i.name));
+                    const worn=s.sdk.getEquipment().find(e=>gloryRe.test(e.name));
+                    if(!packed&&worn){
+                        if(s.sdk.getInventory().length>=28)await heal(s);
+                        await s.sdk.sendUseEquipmentItem?.(worn.slot,1);
+                        await waitUntil(s,()=>false,{timeoutTicks:1});continue;
+                    }
+                    if(packed){
+                        const op=packed.optionsWithIndex?.find(o=>/^rub$/i.test(o.text));
+                        await s.sdk.sendUseItem(packed.slot,op?.opIndex??4);
+                        await waitUntil(s,()=>!!s.sdk.getDialog()?.isOpen,{timeoutTicks:5});
+                        await s.sdk.clickDialogByText(/^Edgeville/i);
+                        await waitUntil(s,()=>!tile(s)||depth(tile(s)![0],tile(s)![1])===0,{timeoutTicks:6});
+                    }
+                }else if(step==='teleport'){
+                    await s.sdk.sendClickComponent(componentId('magic:varrock_teleport'));
+                    await waitUntil(s,()=>!tile(s)||depth(tile(s)![0],tile(s)![1])===0,{timeoutTicks:6});
+                }
+            }
+            const postTele=tile(s);
+            if(postTele&&depth(postTele[0],postTele[1])===0){
+                await walkPath(walkers.get(s)!, [{x:BANK[0],z:BANK[1],tol:0}],{maxTicks:180,idleMs:8000});
+                if(at(s,BANK)&&alive(s))return;
+            }
+        }
+        const near=selectInboundRecovery(from,route.inbound);
         const start=s.tick(),wall=Date.now();
         await move(s,route.inbound.slice(near),true,()=>s.tick()-start>=650||Date.now()-wall>=300000);
         requireThat(at(s,BANK)&&alive(s),'Safe bank return unconfirmed '+s.name);
@@ -225,7 +304,11 @@ export async function runEscortedOre(names:readonly string[],cap=Number(process.
             }
         }
         [escort,miner]=sessions;
-        requireThat(player(escort!)?.combatLevel===75&&player(miner!)?.combatLevel===29,'Expected combat75 escort and combat29 miner');
+        const wantEscortCombat = process.env.ESCORT_COMBAT === 'any' ? null : Number(process.env.ESCORT_COMBAT ?? 75);
+        const wantMinerCombat = process.env.MINER_COMBAT === 'any' ? null : Number(process.env.MINER_COMBAT ?? 29);
+        const escortCombat = player(escort!)?.combatLevel ?? 0, minerCombat = player(miner!)?.combatLevel ?? 0;
+        requireThat((wantEscortCombat === null || escortCombat === wantEscortCombat) && (wantMinerCombat === null || minerCombat === wantMinerCombat),
+            `Expected combat${wantEscortCombat ?? 'any'} escort and combat${wantMinerCombat ?? 'any'} miner`);
         requireThat((miner!.sdk.getSkill('Mining')?.baseLevel??0)>=85&&hp(miner!)>=30&&hp(escort!)>=47,'Mining or HP prerequisite missing');
         requireThat(held(miner!,ORE)===0,'Miner must start without carried Runite');
         let bankBaseline=0;
@@ -256,7 +339,7 @@ export async function runEscortedOre(names:readonly string[],cap=Number(process.
         await move(escort!,route.outbound);
         requireThat(at(escort!,STAGE),'Exact escort stage unconfirmed');
         holding=true;previousEscortHp=hp(escort!);
-        const release=stageRelease(escort!.name,miner!.name);
+        const release=stageRelease(escort!.name,miner!.name,escortCombat,minerCombat);
         requireThat(await waitUntil(miner!,()=>checkOutbound()||release(feed!.fresh(),at(miner!,BANK)&&at(escort!,STAGE)),{timeoutTicks:45})&&
             !checkOutbound()&&release(feed.fresh(),at(miner!,BANK)&&at(escort!,STAGE)),'Three fresh stage frames unconfirmed');
         report.stage={tick:feed.fresh()!.tick,hp:hp(escort!),prayer:prayer(escort!),frames:3};
@@ -298,8 +381,34 @@ export async function runEscortedOre(names:readonly string[],cap=Number(process.
         }
     } catch(error) {
         failure=String(error);holding=false;
-        const returned=await Promise.allSettled(sessions.map(async s=>{if(walkers.has(s)&&alive(s))await home(s);}));
-        returned.forEach((r,i)=>{if(r.status==='rejected')failure+=' | retreat '+sessions[i]!.name+': '+String(r.reason);});
+        const escortWork = async () => {
+            if (process.env.LAVA_ESCORT_DEFEND === '1' && escort && walkers.has(escort) && alive(escort) && miner) {
+                const et = tile(escort);
+                const localFoe = (escort.sdk.getState()?.nearbyPlayers ?? []).find(p => !own.has(p.name.toLowerCase()));
+                if (et && localFoe) {
+                    const kit = kitFrom(escort.sdk.getEquipment(), escort.sdk.getInventory());
+                    const decision = escortInterceptDecision({
+                        escortTile: et,
+                        escortCombat: player(escort)?.combatLevel ?? 75,
+                        threat: { name: localFoe.name, x: localFoe.x, z: localFoe.z, combatLevel: localFoe.combatLevel },
+                        hasWeapon: Boolean(kit.melee?.length || kit.ranged?.length || kit.magic?.length),
+                        hasFood: held(escort, FOOD) > 0,
+                        prayerPoints: prayer(escort),
+                    });
+                    if (decision.action === 'intercept') {
+                        await fightPlayer(escort, localFoe.name, {
+                            kit, spec: defaultSpec(kit), freeze: 'flee', cap: 30, exitOnDanger: true,
+                            eatAt: 45, escapeAt: 35, maxWild: 56, allies: [miner.name.toLowerCase()],
+                            stop: () => !alive(escort!) || depth(tile(miner!)?.[0] ?? 0, tile(miner!)?.[1] ?? 0) === 0,
+                        }).catch(() => {});
+                    }
+                }
+            }
+            if (escort && walkers.has(escort) && alive(escort)) await home(escort);
+        };
+        const minerWork = async () => { if (miner && walkers.has(miner) && alive(miner)) await home(miner); };
+        const returned=await Promise.allSettled([minerWork(), escortWork()]);
+        returned.forEach((r,i)=>{if(r.status==='rejected')failure+=' | retreat '+(i===0?miner?.name:escort?.name)+': '+String(r.reason);});
     } finally {
         holding=false;offs.forEach(off=>off());feed?.close();
     }

@@ -70,3 +70,10 @@ test('skill, quest and drop facts are checked against their source lines', () =>
     ] as any[];
     expect(checkFacts(bad).wrong.length).toBe(3);
 });
+
+test('every generated quest, drop roll item, and clean shop passes spotcheck', () => {
+    const load = (n: string) => JSON.parse(readFileSync(join(knowledgeDir(), n), 'utf8'));
+    const quests = load('quests.json');
+    expect(quests.length).toBe(68);
+    expect(checkFacts(quests.map((record: unknown) => ({ kind: 'quest', record })) as any[]).wrong).toEqual([]);
+});

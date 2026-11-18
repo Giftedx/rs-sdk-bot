@@ -14,12 +14,58 @@ import { openBot, settle } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { componentId } from '../packages/core/src/logout';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { bestFood, fightPlayer, newVolley, nextTick, wildernessLevel, type FightOptions, type VolleyState } from './pk';
-import { escapeStep, hasVarrockTeleport, huntOnce, kitFrom, wearGlory, type Cfg } from './pk-roam';
+import { attackable, bestFood, defaultSpec, defaultStunSpec, fightPlayer, isMulti, newVolley, nextTick, observePlayer, STUNNED_SHOVE_SPOTANIM, wildernessLevel, type FightOptions, type VolleyState } from './pk';
+import { escapeStep, hasVarrockTeleport, huntOnce, kitFrom, pickScoutTargetForSquad, readScoutIntel, wearGlory, type Cfg, type ScoutIntel } from './pk-roam';
 import { sparOptions } from './pk-spar';
 
 export type FollowerStats = { name: string; fights: number; kills: number; died: boolean; escaped: boolean; attacks: number };
 const GLORY = /^amulet of glory\([1-4]\)$/i;
+
+// Handoff from roamers' shared scout intel when local army targets are clear.
+export function pickArmyScoutHandoff(opts: {
+    leader: { x: number; z: number; combat: number };
+    maxWild: number;
+    friends: ReadonlySet<string>;
+    skipped?: ReadonlySet<string>;
+    intel?: readonly ScoutIntel[];
+    now?: number;
+}): ScoutIntel | null {
+    const friends = new Set([...opts.friends, ...(opts.skipped ?? [])].map(s => s.toLowerCase()));
+    return pickScoutTargetForSquad({
+        me: opts.leader,
+        intel: opts.intel ?? readScoutIntel(),
+        maxWild: opts.maxWild,
+        friends,
+        now: opts.now,
+    });
+}
+
+// Multi-way focus selection for army followers: follow leader's pile, switch to stunned/low-HP enemies in multi, respect single-way PJ lock.
+export function armyFocusTarget<P extends { name: string; x: number; z: number; distance: number; combatLevel: number; inCombat?: boolean }>(opts: {
+    me: { x: number; z: number; combatLevel: number };
+    sharedTarget: string | null;
+    view: readonly P[];
+    friends: ReadonlySet<string>;
+    stunned?: ReadonlySet<string>;
+    healthFrac?: (p: P) => number;
+}): P | undefined {
+    const { me, sharedTarget, view, friends, stunned = new Set(), healthFrac = () => 1 } = opts;
+    const sharedLower = sharedTarget?.toLowerCase();
+    const inMultiZone = isMulti(me.x, me.z);
+    const eligible = view.filter(p => {
+        const key = p.name.toLowerCase();
+        if (friends.has(key) || !attackable(me, p)) return false;
+        if (!inMultiZone && p.inCombat && key !== sharedLower) return false;
+        return key === sharedLower || (inMultiZone && p.distance <= 15);
+    });
+    return eligible.sort((a, b) => {
+        const ak = a.name.toLowerCase(), bk = b.name.toLowerCase();
+        return Number(bk === sharedLower) - Number(ak === sharedLower)
+            || Number(stunned.has(bk)) - Number(stunned.has(ak))
+            || healthFrac(a) - healthFrac(b)
+            || a.distance - b.distance;
+    })[0];
+}
 
 // One follower: keep with the leader, fight its target, leave when the army leaves.
 export async function follow(s: Session, leader: Session, shared: { target: string | null; over: boolean; killed: Set<string> }, allies: readonly string[],
@@ -35,11 +81,22 @@ export async function follow(s: Session, leader: Session, shared: { target: stri
         if (!p) { if (!await nextTick(s)) break; continue; }
         if (wildernessLevel(p.worldZ) > 0) wentIn = true;
         if (dead()) { stats.died = true; emit({ e: 'follower-died', name: s.name }); return stats; }
-        const target = shared.target;
-        const seen = target ? (s.sdk.getState()?.nearbyPlayers ?? []).find(x => x.name.toLowerCase() === target.toLowerCase()) : undefined;
+        const view = s.sdk.getState()?.nearbyPlayers ?? [];
+        const friendsSet = new Set([...allies, leader.name.toLowerCase(), s.name.toLowerCase()]);
+        const stunnedSet = new Set(view.filter(q => observePlayer(s.client, q.index)?.spotanim === STUNNED_SHOVE_SPOTANIM).map(q => q.name.toLowerCase()));
+        const focus = armyFocusTarget({
+            me: { x: p.worldX, z: p.worldZ, combatLevel: p.combatLevel },
+            sharedTarget: shared.target,
+            view,
+            friends: friendsSet,
+            stunned: stunnedSet,
+            healthFrac: q => { const o = observePlayer(s.client, q.index); return o && o.totalHealth > 0 ? o.health / o.totalHealth : 1; },
+        });
+        const target = focus?.name ?? shared.target;
+        const seen = focus ?? (target ? view.find(x => x.name.toLowerCase() === target.toLowerCase()) : undefined);
         if (target && seen && seen.distance <= 15) {
             stats.fights++;
-            const r = await fightPlayer(s, target, { ...options, allies, stop: () => stopped() || shared.over || shared.target !== target,
+            const r = await fightPlayer(s, target, { ...options, allies, stop: () => stopped() || shared.over || (shared.target !== null && shared.target.toLowerCase() !== target.toLowerCase() && !isMulti(p.worldX, p.worldZ)),
                 log: l => emit({ e: 'follower-fight', name: s.name, line: l }) });
             stats.attacks += r.attacks.magic + r.attacks.ranged + r.attacks.melee;
             if (r.outcome === 'kill') { stats.kills++; shared.killed.add(target.toLowerCase()); }
@@ -163,12 +220,19 @@ if (import.meta.main) {
     // OPEN_RANGE: the tiles from the target at which an account counts as near and holds (default 3; 1 puts each
     // account on a melee tile, for a spear's opening special).
     // Two or more followers on the dragon spear: the spear lock is the default (finding 67), each setting still its own.
-    const spears = followers.filter(f => f.sdk.getEquipment().some(i => /^dragon spear/i.test(i.name))).length, lock = spears >= 2;
+    const hasSpear = (s: Session) => [...s.sdk.getEquipment(), ...s.sdk.getInventory()].some(i => /^dragon spear/i.test(i.name));
+    const spears = sessions.filter(hasSpear).length, followerSpears = followers.filter(hasSpear).length, lock = followerSpears >= 2;
     if (lock) emit({ e: 'spear-lock', spears });
-    // STUN_SHARE=1: the army's spears stun in turn, one hold at a time. Off: spears that stun as soon as they can
-    // overlap their holds and leave no gap to eat in (finding 67: 0 of 6 with it, 18 of 18 without).
-    const stunShare = arg(args, 'STUN_SHARE', '0') === '1' ? { clock: () => leader!.tick(), until: -1 } : undefined;
+    // STUN_SHARE=chain (default when spears are carried, or 1): chain 4-tick spear stuns with 1-tick overlap so the
+    // queued push script lands right when p_delay(4) clears with zero eat/teleport gap.
+    const stunArg = arg(args, 'STUN_SHARE', spears >= 1 ? 'chain' : '0');
+    const stunShare = stunArg !== '0' ? { clock: () => leader!.tick(), until: -1, stunnedUntil: -1, overlap: stunArg === 'strict' ? 0 : 1 } : undefined;
+    const burstOnStun = arg(args, 'BURST_STUN', spears >= 1 ? '1' : '0') === '1';
     if (stunShare) cfg.fight = { ...cfg.fight, stunShare };
+    if (burstOnStun) cfg.fight = { ...cfg.fight, burstOnStun };
+    const leaderKit = kitFrom(leader!.sdk.getEquipment(), leader!.sdk.getInventory(), cfg.ranged);
+    const leaderStun = defaultStunSpec(leaderKit);
+    if (leaderStun && !defaultSpec(leaderKit)?.stun) cfg.fight = { ...cfg.fight, stunSpec: leaderStun };
     const openTogether = arg(args, 'OPEN_TOGETHER', lock ? '1' : '0') === '1', openTicks = Number(arg(args, 'OPEN_TICKS', '20')), openRange = Number(arg(args, 'OPEN_RANGE', lock ? '1' : '3'));
     const opened = new Map<string, number>();
     let traced = -1, lastTick = -1;
@@ -233,7 +297,21 @@ if (import.meta.main) {
     // ARMY_OPTS: fight options (JSON) on top of that profile, such as {"freeze":false} for followers that only hit while
     // the leader freezes.
     const armyOpts = arg(args, 'ARMY_OPTS', '') || undefined;
-    const options = (s: Session): FightOptions => ({ ...sparOptions(armyProfile, armyOpts, kitFrom(s.sdk.getEquipment(), s.sdk.getInventory(), cfg.ranged), Math.round(cfg.maxMs / 600)), ...(freezeShare ? { freezeShare } : {}), ...(openTogether ? { holdFire: hold, holdRange: openRange } : {}), ...(volley ? { volley } : {}), ...(burstOnHold ? { burstOnHold } : {}), ...(openFreeze ? { openFreeze } : {}), ...(stunShare ? { stunShare } : {}) });
+    const options = (s: Session): FightOptions => {
+        const kit = kitFrom(s.sdk.getEquipment(), s.sdk.getInventory(), cfg.ranged);
+        const stunSpec = defaultStunSpec(kit);
+        return {
+            ...sparOptions(armyProfile, armyOpts, kit, Math.round(cfg.maxMs / 600)),
+            ...(freezeShare ? { freezeShare } : {}),
+            ...(openTogether ? { holdFire: hold, holdRange: openRange } : {}),
+            ...(volley ? { volley } : {}),
+            ...(burstOnHold ? { burstOnHold } : {}),
+            ...(openFreeze ? { openFreeze } : {}),
+            ...(stunShare ? { stunShare } : {}),
+            ...(burstOnStun ? { burstOnStun } : {}),
+            ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}),
+        };
+    };
     let result: Awaited<ReturnType<typeof huntOnce>> | undefined, failure: string | undefined;
     const runs = followers.map(f => follow(f, leader!, shared, army.filter(n => n !== f.name.toLowerCase()), options(f), followTiles, stop, emit));
     try { result = await huntOnce(leader!, cfg, stop, leaderEmit); }

@@ -12,7 +12,8 @@ import {openBot,finish,getWorld,accountOf,finishHooks,sessionDied} from '../pack
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {goTo,sessionWalker,walkPath,walkRoute,type PathDeps} from '../packages/core/src/walk';
-import {rsPathLength,type World,type Transport,type Account,type PathLength} from '../packages/core/src/world';
+import {rsPathLength,type World,type Transport,type Account,type PathLength,type Leg} from '../packages/core/src/world';
+import {planTripOffThread} from '../packages/core/src/route-plan';
 import {deadlyTo,loadHunters} from '../packages/core/src/danger';
 import {loadTravel,travelAllowed,type Travel} from '../packages/core/src/travel';
 import {sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
@@ -755,9 +756,11 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number,
  // walk). goTo plans again on foot when the cast fails.
  const acct=accountOf(s);
  if(at(s).level===0&&to.level===0&&cheb(at(s),to)>30&&(acct.counts?.lawrune??0)>0){
-  const plan=world.route(at(s),to,acct,{deadline:performance.now()+SWEEP_PLAN_BUDGET_MS});
-  const spell=plan.ok?plan.legs.find(l=>l.kind==='travel'&&l.travel.kind==='spell'):undefined;
-  console.log(`QUEST_SWEEP_SPELL ${JSON.stringify({from:at(s),to,planned:plan.ok,spell:spell?.kind==='travel'?(spell.travel as {name?:string}).name??true:false})}`);
+  const plan=world.offThread
+   ?await planTripOffThread(at(s),to,acct,undefined,SWEEP_PLAN_BUDGET_MS)
+   :(()=>{const d=world.route(at(s),to,acct,{deadline:performance.now()+SWEEP_PLAN_BUDGET_MS});return d.ok?{legs:d.legs}:null;})();
+  const spell=plan?.legs.find(l=>l.kind==='travel'&&l.travel.kind==='spell');
+  console.log(`QUEST_SWEEP_SPELL ${JSON.stringify({from:at(s),to,planned:!!plan,spell:spell?.kind==='travel'?(spell.travel as {name?:string}).name??true:false})}`);
   if(spell)return router(to);
  }
  const ground=async(t:Tile):Promise<Walked>=>{
@@ -773,7 +776,7 @@ async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number,
   console.log(`QUEST_SWEEP_DOWN ${JSON.stringify({from:at(s),to:down})}`);
   const r=await router(down);if(!r.ok)return r;
  }
- if(eastOfArdougne(at(s),to,accountOf(s))){const r=await crossEast(s,world,to,signal);if(!r.ok)return r;}
+ if(eastOfArdougne(at(s),to,acct)){const r=await crossEast(s,world,to,signal);if(!r.ok)return r;}
  // An upstairs target (Morgan's garlic cupboard in Draynor) is approached by the hubs toward the foot of its way up;
  // only the last leg, with its stairs, is the world router's.
  const beneath=wayUp(world.navigationGraph?.().transports??[],to);
@@ -1007,24 +1010,47 @@ export function pickInstead(buys:readonly Buy[],from:Tile,end:Tile,fields:(id:nu
 // the bank or the pack holds a law rune: the world router plans with the bank's runes added (Account.counts by debugname),
 // and a spell leg names its runes (packages/core/src/travel.ts Travel.runes). The far walk then casts it (walkFarLegs).
 // Bench extra:sweep-doric-draynor: 170 ticks walking, 72 with a Falador Teleport.
-export function teleportRunes(route:(acct:Account)=>ReturnType<World['route']>,acct:Account,bank:readonly Item[],
- nameOf:(id:number)=>string|undefined,idOf:(name:string)=>number|undefined):Item[]{
+export function runeInventoryAccount(acct:Account,bank:readonly Item[],nameOf:(id:number)=>string|undefined):Account|null{
  const counts:Record<string,number>={...(acct.counts??{})},items=new Set(acct.items);
  for(const b of bank){const n=nameOf(b.id);if(!n||!/rune$/.test(n)||b.count<=0)continue;counts[n]=(counts[n]??0)+b.count;items.add(n);}
- if(!((counts.lawrune??0)>0))return[];
- const plan=route({...acct,items:[...items],counts});
- if(!plan.ok)return[];
+ return (counts.lawrune??0)>0?{...acct,items:[...items],counts}:null;
+}
+export function extractSpellRunes(legs:readonly Leg[],idOf:(name:string)=>number|undefined):Item[]{
  const out:Item[]=[];
- for(const l of plan.legs)if(l.kind==='travel'&&l.travel.kind==='spell')for(const r of l.travel.runes){
+ for(const l of legs)if(l.kind==='travel'&&l.travel.kind==='spell')for(const r of l.travel.runes){
   const id=idOf(r.item);if(id===undefined)continue;
   const o=out.find(x=>x.id===id);if(o)o.count+=r.count;else out.push({id,count:r.count});
  }
  return out;
 }
-let itemIds:Map<string,number>|undefined;
-const itemIdOf=(debugname:string)=>(itemIds??=new Map((JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/items.json'),'utf8')) as {id:number;debugname:string}[]).map(i=>[i.debugname,i.id]))).get(debugname);
-let itemCatalog:Map<number,{debugname:string;name:string;cost:number}>|undefined;
-const catalogItem=(id:number)=>(itemCatalog??=new Map((JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/items.json'),'utf8')) as {id:number;debugname:string;name:string;cost:number}[]).map(i=>[i.id,i])) ).get(id);
+export function teleportRunes(route:(acct:Account)=>ReturnType<World['route']>,acct:Account,bank:readonly Item[],
+ nameOf:(id:number)=>string|undefined,idOf:(name:string)=>number|undefined):Item[]{
+ const withRunes=runeInventoryAccount(acct,bank,nameOf);
+ if(!withRunes)return[];
+ const plan=route(withRunes);
+ return plan.ok?extractSpellRunes(plan.legs,idOf):[];
+}
+export async function planTeleportRunes(world:World,from:Tile,to:Tile,acct:Account,bank:readonly Item[],
+ nameOf:(id:number)=>string|undefined,idOf:(name:string)=>number|undefined,budgetMs=SWEEP_PLAN_BUDGET_MS,
+ offThreadPlan=planTripOffThread):Promise<Item[]>{
+ const withRunes=runeInventoryAccount(acct,bank,nameOf);
+ if(!withRunes)return[];
+ const plan=world.offThread
+  ?await offThreadPlan(from,to,withRunes,undefined,budgetMs)
+  :(()=>{const d=world.route(from,to,withRunes,{deadline:performance.now()+budgetMs});return d.ok?{cost:d.cost,legs:d.legs}:null;})();
+ return plan?extractSpellRunes(plan.legs,idOf):[];
+}
+type CatalogItem={id:number;debugname:string;name:string;cost:number;tradeable?:boolean};
+let itemsCache:{byDebug:Map<string,number>;byId:Map<number,CatalogItem>}|undefined;
+function loadItems(){
+ if(itemsCache)return itemsCache;
+ const rows=JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/items.json'),'utf8')) as CatalogItem[];
+ const byDebug=new Map<string,number>(),byId=new Map<number,CatalogItem>();
+ for(const i of rows){byDebug.set(i.debugname,i.id);byId.set(i.id,i);}
+ return itemsCache={byDebug,byId};
+}
+const itemIdOf=(debugname:string)=>loadItems().byDebug.get(debugname);
+const catalogItem=(id:number)=>loadItems().byId.get(id);
 
 type GatherArgs=Parameters<typeof gatherPlan>;
 export function questGatherPlan(quest:string,missing:readonly Item[],at:Tile,seller:(id:number)=>number,...rest:[GatherArgs[4]?,GatherArgs[5]?,GatherArgs[6]?,GatherArgs[7]?,GatherArgs[8]?,GatherArgs[9]?]){
@@ -1517,17 +1543,17 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
   // Recipes paid in dialogue (Aggie's dyes, Wyson's woad leaves) take their coins out with the shop money, and so do the
   // two boat fares when a destination lies east of Ardougne: a plan of Wyson's woad and Aggie's blue dye alone budgets 25
   // coins, and crossEast refuses the crossing below 60.
-  shop.coins+=gather.coins+(heckelDust?HECKEL_DUST.coins:0)+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])],accountOf(s),quest==='scorpion'?shop.buys:[])
-   +(quest==='itgronigen'&&eastOfPass(here(),accountOf(s))?BOAT_FARES:0);
+  const sweepAcct=accountOf(s);
+  shop.coins+=gather.coins+(heckelDust?HECKEL_DUST.coins:0)+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])],sweepAcct,quest==='scorpion'?shop.buys:[])
+   +(quest==='itgronigen'&&eastOfPass(here(),sweepAcct)?BOAT_FARES:0);
   if(shop.coins){
    const take=shopCoinTake(shop.coins,count(pack(),COINS),p.withdraw.find(w=>w.id===COINS)?.count??0,need.get(COINS)??0);
    if(count(rows(),COINS)<take){await s.bot.closeBank();return fail(`missing ${COINS}:${take} to buy ${[...shop.buys.map(b=>b.id),...(heckelDust?[1975]:[])].join(',')}`+(shop.buys.some(b=>wornKit.wear.some(i=>i.required&&i.id===b.id))?' (required worn kit unavailable)':''));}
    if(take>0){const c=p.withdraw.find(w=>w.id===COINS);if(c)c.count+=take;else p.withdraw.push({id:COINS,count:take});}
    console.log(`QUEST_SWEEP_SHOP_PLAN ${JSON.stringify({buys:shop.buys,coins:shop.coins})}`);
   }
-  // Teleport runes for the walk to the quest start (teleportRunes), when the bank holds them.
-  const tele=teleportRunes(a=>world.route(here(),preset.position as Tile,a,{deadline:performance.now()+SWEEP_PLAN_BUDGET_MS}),
-   accountOf(s),rows(),id=>catalogItem(id)?.debugname,itemIdOf);
+  // Teleport runes for the walk to the quest start (planTeleportRunes), when the bank holds them.
+  const tele=await planTeleportRunes(world,here(),preset.position as Tile,sweepAcct,rows(),id=>catalogItem(id)?.debugname,itemIdOf);
   for(const r of tele){
    const have=count(pack(),r.id)+(p.withdraw.find(w=>w.id===r.id)?.count??0),want=r.count-have;
    if(want<=0||count(rows(),r.id)<want)continue;

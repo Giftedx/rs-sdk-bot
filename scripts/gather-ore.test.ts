@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { isNoProgressFailure } from '../packages/practice/src/supervise';
-import { mineRock, selectRock, oreStalled,oreDamageEvidence,watchOreDamage,retreatOre } from './gather-ore';
+import { mineRock, selectRock, oreStalled,oreDamageEvidence,watchOreDamage,retreatOre, selectActiveOrePickaxe, reconcileOrePickaxeAtBank } from './gather-ore';
 import type { Session } from '../packages/core/src/inprocess';
 import type { NearbyLoc } from '../vendor/rs-sdk/sdk/types';
 const rock = (id = 2090, distance = 1): NearbyLoc => ({ id, name: 'Rocks', x: 3285, z: 3367, level: 0, distance, options: ['Mine'], optionsWithIndex: [{ text: 'Mine', opIndex: 1 }] });
@@ -109,4 +109,193 @@ test('failed route or expired retreat cannot claim deposit or continue mining',a
     const f=recoveryFixture();try{await expect(retreatOre(f.s,{x:3185,z:3436},/^clay$/i,()=>false,async()=>false)).rejects.toThrow('bounded safety retreat');expect(f.calls.some(c=>c.startsWith('deposit'))).toBe(false);expect(f.inv.filter(i=>i.id===434).reduce((n,i)=>n+i.count,0)).toBe(20);}finally{f.close();}
     const g=recoveryFixture();try{await expect(retreatOre(g.s,{x:3185,z:3436},/^clay$/i,()=>false,async()=>{g.s.tick=()=>1000;return true;})).rejects.toThrow('bounded safety retreat');expect(g.calls.some(c=>c.startsWith('deposit'))).toBe(false);}finally{g.close();}
     const dead=recoveryFixture();(dead.s.sdk as any).getSkill=()=>({level:0,baseLevel:10});try{await expect(retreatOre(dead.s,{x:3185,z:3436},/^clay$/i,()=>false,dead.walk)).rejects.toThrow('died=true');expect(dead.calls).toEqual([]);}finally{dead.close();}
+});
+
+test('reconcileOrePickaxeAtBank selects, wields when Attack allows, and buys Nurmof upgrade when funded', async () => {
+    let bankOpen = true, shopOpen = false, gen = 1, tick = 0;
+    const bank: any[] = [{ id: 1265, name: 'Bronze pickaxe', count: 1, slot: 0 }, { id: 995, name: 'Coins', count: 5000, slot: 1 }];
+    const inv: any[] = [];
+    const eq: any[] = [];
+    const shopItems = [{ id: 1273, name: 'Mithril pickaxe', count: 2, buyPrice: 1300, slot: 0 }];
+    let attack = 1;
+    const walks: string[] = [];
+    const listeners = new Set<() => void>();
+    const timer = setInterval(() => { tick++; for (const cb of [...listeners]) cb(); }, 1);
+
+    const state: any = { bank: { isOpen: true, items: bank }, shop: { isOpen: false, shopItems } };
+    const s: any = {
+        tick: () => tick,
+        onTick: (cb: () => void) => { listeners.add(cb); return () => listeners.delete(cb); },
+        bankObservation: () => bankOpen ? { generation: gen, items: bank } : null,
+        sdk: {
+            getState: () => ({ ...state, inventory: inv, equipment: eq, bank: { isOpen: bankOpen, items: bank }, shop: { isOpen: shopOpen, shopItems } }),
+            getInventory: () => inv,
+            getEquipment: () => eq,
+            getSkill: (n: string) => ({ level: n === 'Mining' ? 21 : attack, baseLevel: n === 'Attack' ? attack : 21 }),
+        },
+        bot: {
+            openBank: async () => { bankOpen = true; gen++; return { success: true }; },
+            closeBank: async () => { bankOpen = false; return { success: true }; },
+            withdrawItem: async (item: any, n: number) => {
+                const row = bank.find(r => r.id === item.id);
+                row.count -= n;
+                if (row.count <= 0) bank.splice(bank.indexOf(row), 1);
+                const held = inv.find(r => r.id === item.id);
+                if (held && item.id === 995) held.count += n;
+                else inv.push({ id: item.id, name: item.name, count: n });
+                gen++;
+                return { success: true };
+            },
+            depositItem: async (item: any) => {
+                const idx = inv.findIndex(r => r.id === item.id);
+                const [removed] = inv.splice(idx, 1);
+                const row = bank.find(r => r.id === removed.id);
+                if (row) row.count += removed.count;
+                else bank.push({ ...removed });
+                gen++;
+                return { success: true };
+            },
+            equipItem: async (item: any) => {
+                const idx = inv.findIndex(r => r.id === item.id);
+                const [removed] = inv.splice(idx, 1);
+                eq.push({ ...removed, slot: 3 });
+                return { success: true };
+            },
+            openShop: async () => { shopOpen = true; return { success: true }; },
+            buyFromShop: async (row: any, n: number) => {
+                row.count -= n;
+                inv.find(i => i.id === 995).count -= row.buyPrice * n;
+                inv.push({ id: row.id, name: row.name, count: n });
+                return { success: true };
+            },
+            closeShop: async () => { shopOpen = false; return { success: true }; },
+        },
+    };
+
+    try {
+        // At Mining 21, Attack 1 with 5000gp: buys Mithril pickaxe (1273) from Nurmof, carries in pack (not wielded).
+        const rLow = await reconcileOrePickaxeAtBank(s, {
+            bankSpot: { x: 3253, z: 3420 },
+            stop: () => false,
+            walkTo: async spot => { walks.push(`${spot.x},${spot.z}`); return true; },
+        });
+        expect(rLow).toEqual({ activeId: 1273, worn: false, bought: 1273 });
+        expect(walks).toEqual(['2998,9844', '3253,3420']);
+        expect(eq).toHaveLength(0);
+        expect(inv.map(i => i.id)).toEqual([1273]);
+        expect(bank.find(i => i.id === 995)?.count).toBe(5000 - 1300);
+        expect(selectActiveOrePickaxe(s).current?.item.id).toBe(1273);
+
+        // After hitting Attack 20: same Mithril pickaxe is automatically wielded into slot 3.
+        attack = 20;
+        const rHigh = await reconcileOrePickaxeAtBank(s, {
+            bankSpot: { x: 3253, z: 3420 },
+            stop: () => false,
+            allowShop: false,
+        });
+        expect(rHigh.activeId).toBe(1273);
+        expect(rHigh.worn).toBe(true);
+        expect(eq[0]?.id).toBe(1273);
+        expect(inv).toHaveLength(0);
+    } finally {
+        clearInterval(timer);
+    }
+});
+
+test('reconcileOrePickaxeAtBank recovers coins when Nurmof shelf is empty, skips repeat trips for 700 ticks, and retries on restock or higher tier', async () => {
+    let bankOpen = true, shopOpen = false, gen = 1, tick = 100;
+    let mining = 31;
+    const bank: any[] = [{ id: 1265, name: 'Bronze pickaxe', count: 1, slot: 0 }, { id: 995, name: 'Coins', count: 40000, slot: 1 }];
+    const inv: any[] = [];
+    const eq: any[] = [];
+    const shopItems = [
+        { id: 1271, name: 'Adamant pickaxe', count: 0, buyPrice: 3200, slot: 0 },
+        { id: 1275, name: 'Rune pickaxe', count: 0, buyPrice: 32000, slot: 1 },
+    ];
+    const walks: string[] = [];
+    const listeners = new Set<() => void>();
+    const timer = setInterval(() => { tick++; for (const cb of [...listeners]) cb(); }, 2);
+
+    const state: any = { bank: { isOpen: true, items: bank }, shop: { isOpen: false, shopItems } };
+    const s: any = {
+        tick: () => tick,
+        onTick: (cb: () => void) => { listeners.add(cb); return () => listeners.delete(cb); },
+        bankObservation: () => bankOpen ? { generation: gen, items: bank } : null,
+        sdk: {
+            getState: () => ({ ...state, inventory: inv, equipment: eq, bank: { isOpen: bankOpen, items: bank }, shop: { isOpen: shopOpen, shopItems } }),
+            getInventory: () => inv,
+            getEquipment: () => eq,
+            getSkill: (n: string) => ({ level: n === 'Mining' ? mining : 1, baseLevel: n === 'Mining' ? mining : 1 }),
+        },
+        bot: {
+            openBank: async () => { bankOpen = true; gen++; return { success: true }; },
+            closeBank: async () => { bankOpen = false; return { success: true }; },
+            withdrawItem: async (item: any, n: number) => {
+                const row = bank.find(r => r.id === item.id);
+                row.count -= n;
+                if (row.count <= 0) bank.splice(bank.indexOf(row), 1);
+                inv.push({ id: item.id, name: item.name, count: n, slot: 0 });
+                gen++;
+                return { success: true };
+            },
+            depositItem: async (item: any, n: number) => {
+                const idx = inv.findIndex(r => r.id === item.id);
+                const cur = inv[idx];
+                const amt = n === -1 ? cur.count : n;
+                cur.count -= amt;
+                if (cur.count <= 0) inv.splice(idx, 1);
+                const row = bank.find(r => r.id === item.id);
+                if (row) row.count += amt;
+                else bank.push({ id: item.id, name: item.name, count: amt, slot: 0 });
+                gen++;
+                return { success: true };
+            },
+            openShop: async () => { shopOpen = true; return { success: true }; },
+            buyFromShop: async (row: any, n: number) => {
+                row.count -= n;
+                inv.find(i => i.id === 995).count -= row.buyPrice * n;
+                inv.push({ id: row.id, name: row.name, count: n, slot: 1 });
+                return { success: true };
+            },
+            closeShop: async () => { shopOpen = false; return { success: true }; },
+        },
+    };
+
+    const walkTo = async (spot: { x: number; z: number }) => { walks.push(`${spot.x},${spot.z}`); return true; };
+
+    try {
+        // Trip 1 (Mining 31): Nurmof out of Addy -> walks back, deposits 4000gp, keeps Bronze pickaxe.
+        const r1 = await reconcileOrePickaxeAtBank(s, { bankSpot: { x: 3253, z: 3420 }, stop: () => false, walkTo });
+        expect(r1).toEqual({ activeId: 1265, worn: false, bought: undefined });
+        expect(walks).toEqual(['2998,9844', '3253,3420']);
+        expect(bank.find(i => i.id === 995)?.count).toBe(40000);
+        expect(inv.filter(i => i.id === 995)).toHaveLength(0);
+
+        // Trip 2 within cooldown: skips Nurmof entirely.
+        tick += 50;
+        const r2 = await reconcileOrePickaxeAtBank(s, { bankSpot: { x: 3253, z: 3420 }, stop: () => false, walkTo });
+        expect(r2).toEqual({ activeId: 1265, worn: false, bought: undefined });
+        expect(walks).toHaveLength(2);
+
+        // Crossing Mining 41 resets gate immediately -> tries Rune pickaxe, also empty, deposits coins cleanly.
+        mining = 41;
+        const r3 = await reconcileOrePickaxeAtBank(s, { bankSpot: { x: 3253, z: 3420 }, stop: () => false, walkTo });
+        expect(r3).toEqual({ activeId: 1265, worn: false, bought: undefined });
+        expect(walks).toEqual(['2998,9844', '3253,3420', '2998,9844', '3253,3420']);
+        expect(bank.find(i => i.id === 995)?.count).toBe(40000);
+
+        // Still inside 700-tick cooldown at Mining 41 -> skipped even after Rune pickaxe restocks.
+        shopItems[1]!.count = 1;
+        tick += 100;
+        await reconcileOrePickaxeAtBank(s, { bankSpot: { x: 3253, z: 3420 }, stop: () => false, walkTo });
+        expect(walks).toHaveLength(4);
+
+        // After 700 ticks elapsed: retries Nurmof and buys Rune pickaxe.
+        tick += 650;
+        const r4 = await reconcileOrePickaxeAtBank(s, { bankSpot: { x: 3253, z: 3420 }, stop: () => false, walkTo });
+        expect(r4).toEqual({ activeId: 1275, worn: false, bought: 1275 });
+        expect(inv.map(i => i.id)).toEqual([1275]);
+    } finally {
+        clearInterval(timer);
+    }
 });

@@ -1,5 +1,8 @@
 import { test, expect } from 'bun:test';
-import { bestDamageSpell, bestFireSpell, canAttack, canCastCharge, castableFreeze, hasVarrockTeleport, multiPileThreat, outclasses, restockPlan, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, lootAt, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { rmSync } from 'node:fs';
+import { bestDamageSpell, bestFireSpell, canAttack, canCastCharge, castableFreeze, clearScoutIntel, hasVarrockTeleport, multiPileThreat, outclasses, pickScoutTargetForSquad, publishScoutIntel, readScoutIntel, restockPlan, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, lootAt, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
 
 test('roam pickup joins one native stack without eating combat food',async()=>{
  const inventory=Array.from({length:28},(_,slot)=>({id:slot===0?884:385,slot,count:1,optionsWithIndex:[{text:'Eat'}]}));const ground=[{id:884,name:'Iron arrow',count:5,x:1,z:1}];let eaten=0;
@@ -338,4 +341,23 @@ test('bestDamageSpell picks matching 2004 God Spell and canCastCharge gates on 8
     expect(canCastCharge(79, runes(3, 3, 3), 1192)).toBe(false);
     expect(canCastCharge(80, runes(2, 3, 3), 1192)).toBe(false);
     expect(canCastCharge(80, runes(3, 3, 3), 1189)).toBe(false);
+});
+
+test('shared scout intel publishes, filters by TTL/bracket/maxWild, prioritizes multi-way skulled prey, and clears', () => {
+    const file = join(tmpdir(), `pk-roam-intel-${Date.now()}-${Math.random()}.json`);
+    const now = 1_000_000;
+    try {
+        publishScoutIntel({ target: 'SingleGuy', x: 3090, z: 3600, combatLevel: 120, hpFrac: 0.9, skulled: false, multi: false, wild: 11, scout: 'ScoutA', at: now }, file);
+        publishScoutIntel({ target: 'MultiSkull', x: 3067, z: 3640, combatLevel: 120, hpFrac: 0.5, skulled: true, multi: true, wild: 16, scout: 'ScoutB', at: now }, file);
+        publishScoutIntel({ target: 'TooDeep', x: 3060, z: 3880, combatLevel: 120, hpFrac: 0.2, skulled: true, multi: true, wild: 46, scout: 'ScoutC', at: now }, file);
+        publishScoutIntel({ target: 'StaleGuy', x: 3067, z: 3640, combatLevel: 120, hpFrac: 0.1, skulled: true, multi: true, wild: 16, scout: 'ScoutD', at: now - 30_000 }, file);
+        const intel = readScoutIntel(file, now);
+        expect(intel.map(i => i.target)).toEqual(['SingleGuy', 'MultiSkull', 'TooDeep']);
+        const picked = pickScoutTargetForSquad({ me: { x: 3070, z: 3630, combat: 126 }, intel, maxWild: 20, now });
+        expect(picked?.target).toBe('MultiSkull');
+        clearScoutIntel('MultiSkull', file, now);
+        expect(readScoutIntel(file, now).map(i => i.target)).toEqual(['SingleGuy', 'TooDeep']);
+    } finally {
+        rmSync(file, { force: true });
+    }
 });

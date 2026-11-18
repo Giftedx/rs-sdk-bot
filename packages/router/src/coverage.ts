@@ -4,7 +4,7 @@
 // by the patched ScriptRunner.init). actionsNamed is a text match of content names against our source, not script coverage:
 // actions without a display name rarely match, shared code handles others without naming them, and a word in a comment
 // matches. Batch qualification is not tracked yet. Deterministic: no model calls. `bun packages/router/src/coverage.ts` writes .practice/coordinator/scoreboard.json.
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type { GameAction } from '../../knowledge/src/actions';
 import { parseConfigs } from '../../knowledge/src/config';
@@ -156,12 +156,13 @@ export function fleetSkills(local: Status[], others: SideAccount[], side: string
 
 // A pass finished the quest: "ok stopped at", "ok stage=" and qp=0 rows end only a part of it.
 const PARTIAL_RUN = /^ok (stopped at|stage=)|\bqp=0\b/;
+const NON_RESULT_DIRS = new Set(['session-lifecycle', 'coordinator', 'deliveries', 'fleet-data', 'status', 'bots', 'saves', 'runs', 'traces', 'trace', 'profiles', 'output', 'tmp', '.git']);
 // Quest folders with a passing run. .practice/results.jsonl names the script in goal; a task folder's results.jsonl names
 // it in quest, with or without the quest- prefix.
 export function practicePasses(practice: string, byScript: Map<string, string>): Set<string> {
     const passes = new Set<string>();
     if (!existsSync(practice)) return passes;
-    const files = [join(practice, 'results.jsonl'), ...readdirSync(practice, { withFileTypes: true }).filter(e => e.isDirectory()).map(e => join(practice, e.name, 'results.jsonl'))];
+    const files = [join(practice, 'results.jsonl'), ...readdirSync(practice, { withFileTypes: true }).filter(e => e.isDirectory() && !NON_RESULT_DIRS.has(e.name)).map(e => join(practice, e.name, 'results.jsonl'))];
     for (const file of files.filter(f => existsSync(f))) for (const line of readFileSync(file, 'utf8').split('\n')) {
         let r: any; try { r = JSON.parse(line); } catch { continue; }
         if (r?.ok !== true || PARTIAL_RUN.test(String(r.text ?? r.result ?? '').replace(/^RESULT /, ''))) continue;
@@ -249,6 +250,7 @@ export function buildScoreboard(root = resolve(import.meta.dir, '..', '..', '..'
         fleet: { side, sides: [...new Set([side, ...rows.map(a => a.side)])].sort(), sharedAccounts: otherStatuses.length, stale: shared.stale, questsUnknown: [...new Set(rows.filter(a => !Array.isArray(a.quests) && !Array.isArray(a.questJournal)).map(a => a.side))].sort() } };
     const goals = buildOwnerGoals({ root, now, statuses: canonical, questNames: quests.filter(q => q.questPoints > 0 && q.name).map(q => q.name!), fleetDir });
     const full = { ...board, goals, progress: progressOf({ ...board, goals }) };
+    mkdirSync(join(root, '.practice', 'coordinator'), { recursive: true });
     writeFileSync(join(root, '.practice', 'coordinator', 'scoreboard.json'), JSON.stringify(full, null, 1) + '\n');
     return full;
 }

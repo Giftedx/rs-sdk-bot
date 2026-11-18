@@ -10,6 +10,8 @@ import {planTripOffThread} from '../packages/core/src/route-plan';
 import {walkRoute} from '../packages/core/src/walk';
 import {routeFares} from '../packages/core/src/world';
 import {buyWithBudget} from './shop-buyer';
+import {GOD_LOADOUTS, godCapeStaffConflict, type GodName} from './pk-kits';
+import {hasVarrockTeleport} from './pk-roam';
 
 type Item={id:number;count:number};
 const count=(items:readonly Item[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
@@ -98,6 +100,89 @@ export async function runKitStage(s:Session,cap=1800,stop=()=>false){
  const q=p(),atBank=!!q&&q.level===0&&Math.max(Math.abs(q.worldX-3253),Math.abs(q.worldZ-3421))<=2;
  const ok=!failure&&accounting&&xpPreserved&&atBank&&bought===2&&hpMin===10&&!unsafe()&&eq().length===0&&inv().length===0;
  return{ok,ticks:s.tick()-start,spent,fares,foodSpent,bought,hpMin,xpPreserved,accounting,atBank,initial,final,position:q&&{x:q.worldX,z:q.worldZ,level:q.level},failure};
+}
+
+export type StagePreflightReport = {
+ ok: boolean;
+ missing: string[];
+ conflict: { capeGod: GodName; staffGod: GodName } | null;
+ escape: 'glory' | 'varrock_tele' | 'none';
+ canCharge: boolean;
+ maxGodCasts: number;
+};
+
+const CHARGED_GLORY_IDS = new Set([1706, 1708, 1710, 1712]);
+const PRAYER_POT_IDS = new Set([139, 141, 143, 2434, 3024, 3026, 3028, 3030]);
+const FOOD_RE = /^(shark|swordfish|lobster|tuna|salmon|trout|cheese|cooked karambwan|tbwt cooked karambwan)$/i;
+
+// Compute remaining deficits needed for a target item quantity list.
+export function stageSupplyDeficit(
+ available: readonly { id: number; count: number }[],
+ required: readonly { id: number; count: number }[],
+): { id: number; have: number; need: number; missing: number }[] {
+ const stock = totals(available);
+ return required.flatMap(({ id, count: need }) => {
+  const have = stock.get(id) ?? 0;
+  return have < need ? [{ id, have, need, missing: need - have }] : [];
+ });
+}
+
+// Verify staged rev-289 Wilderness kit supplies: god cape/staff parity, escape item, food floor, prayer pots, and Charge runes.
+export function verifyPvpStageSupplies(input: {
+ magicLevel: number;
+ inventory: readonly { id: number; name: string; count: number }[];
+ equipment: readonly { id: number; name: string; count?: number }[];
+ mode?: 'tribrid' | 'god-charge' | 'standby';
+ minFood?: number;
+ minPrayerPots?: number;
+}): StagePreflightReport {
+ const mode = input.mode ?? 'tribrid';
+ const minFood = input.minFood ?? (mode === 'standby' ? 1 : 8);
+ const minPrayerPots = input.minPrayerPots ?? (mode === 'standby' ? 0 : 1);
+ const combined = [...input.inventory, ...input.equipment.map(e => ({ ...e, count: e.count ?? 1 }))];
+ const conflict = godCapeStaffConflict(combined.map(i => i.id));
+ const missing: string[] = [];
+ if (conflict) missing.push(`conflicting ${conflict.capeGod} cape and ${conflict.staffGod} staff`);
+
+ const hasGlory = combined.some(i => CHARGED_GLORY_IDS.has(i.id) || /^amulet of glory\([1-4]\)$/i.test(i.name));
+ const hasTele = hasVarrockTeleport(input.magicLevel, input.inventory, input.equipment);
+ const escape: StagePreflightReport['escape'] = hasGlory ? 'glory' : hasTele ? 'varrock_tele' : 'none';
+ if (escape === 'none') missing.push('escape item (charged glory or Varrock Teleport runes)');
+
+ const foodCount = input.inventory
+  .filter(i => FOOD_RE.test(i.name.replace(/_/g, ' ')))
+  .reduce((n, i) => n + i.count, 0);
+ if (foodCount < minFood) missing.push(`food (${foodCount}/${minFood})`);
+
+ const prayPots = input.inventory.filter(i => PRAYER_POT_IDS.has(i.id) || /^(prayer potion|super restore)\([1-4]\)$/i.test(i.name)).length;
+ if (prayPots < minPrayerPots) missing.push(`prayer potions (${prayPots}/${minPrayerPots})`);
+
+ const runeCount = (re: RegExp, id: number) => input.inventory
+  .filter(i => i.id === id || re.test(i.name.replace(/_/g, ' ')))
+  .reduce((n, i) => n + i.count, 0);
+ const blood = runeCount(/^blood ?rune$/i, 565);
+ const fire = runeCount(/^fire ?rune$/i, 554);
+ const air = runeCount(/^air ?rune$/i, 556);
+
+ let maxGodCasts = 0;
+ const matchingGod = Object.values(GOD_LOADOUTS).find(g =>
+  combined.some(i => i.id === g.capeId || i.name.toLowerCase() === g.cape.replace(/_/g, ' '))
+  && combined.some(i => i.id === g.staffId || i.name.toLowerCase() === g.staff.replace(/_/g, ' ')),
+ );
+ if (matchingGod) {
+  maxGodCasts = Math.min(
+   Math.floor(blood / matchingGod.runes.blood),
+   Math.floor(fire / matchingGod.runes.fire),
+   Math.floor(air / matchingGod.runes.air),
+  );
+ }
+ const canCharge = input.magicLevel >= 80 && blood >= 3 && fire >= 3 && air >= 3 && !!matchingGod;
+ if (mode === 'god-charge') {
+  if (!matchingGod) missing.push('matching Mage Arena god cape and staff');
+  if (maxGodCasts < 5) missing.push(`god spell runes (casts=${maxGodCasts}, need >=5)`);
+  if (input.magicLevel >= 80 && !canCharge) missing.push('Charge runes (3 blood, 3 fire, 3 air + god gear)');
+ }
+ return { ok: missing.length === 0, missing, conflict, escape, canCharge, maxGodCasts };
 }
 if(import.meta.main){let stopped=false;const s=await openBot(process.argv[2]!,{onStop:async()=>{stopped=true;}}).catch(e=>finish([],false,String(e)));try{
  const r=await runKitStage(s,Number(process.argv[3]??1800),()=>stopped);console.log('KIT_STAGE_RESULT '+JSON.stringify(r));await finish([s],r.ok,JSON.stringify(r));

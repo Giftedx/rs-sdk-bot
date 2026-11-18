@@ -1,9 +1,10 @@
 import { expect, test } from 'bun:test';
 import {
-    attackable, bestDamageSpell, bestFood, castableFreeze, combatPrayers, dangerReason, defaultSpec,
+    attackable, battleaxeWarcryMath, bestDamageSpell, bestFood, canCastChargeNow, castableFreeze, chargeVarpTicks, combatPrayers, dangerReason, defaultSpec, defaultStunSpec,
     estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, ITEMS, killMessage, lowHealth,
-    kitRotation, negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, pickWeighted, PRAYER, protectedStyles, seededRandom, skulled, SPELLS,
-    weaponStyle, wildernessLevel,
+    kitRotation, meleeWeaponDelay, negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, pickFakieWeapon,
+    pickFrozenKiteTile, pickWeighted, planPrayerTick, PRAYER, protectedStyles, seededRandom, shouldComboEat, skulled,
+    SPELLS, STUNNED_SHOVE_SPOTANIM, weaponStyle, wildernessLevel,
 } from './pk';
 
 test('a weighted draw gives each index in the share of its weight', () => {
@@ -539,4 +540,418 @@ test('fightPlayer drinks Magic potion when magic kit is present and Magic is unb
         freeze: false, prayerFlick: false, cap: 5, log: () => {},
     });
     expect(used).toContain(3040);
+});
+
+test('planPrayerTick handles zeroDrainFlick (non-truncating step-down preserving Steel Skin + overhead) and offensiveFlick pre-enable', () => {
+    const active = new Array(15).fill(false);
+    // 5 active prayers at start (Protect Item, Steel Skin, Protect from Melee, Ultimate Strength, Incredible Reflexes)
+    for (const p of [PRAYER.item, PRAYER.steelSkin, PRAYER.melee, PRAYER.ultimateStrength, PRAYER.incredibleReflexes]) active[p] = true;
+    // Tick 13 (3 ticks after prayerDrainAt=10, >= 3 ticks before nextAttack=20): step down 5 -> 2 (keeping overhead + Steel Skin).
+    const step = planPrayerTick({
+        now: 13, nextAttack: 20, lastAttackAt: 9, walkingToMelee: false, prayerBase: 99, overhead: PRAYER.melee,
+        activePrayers: active, prayerDrainAt: 10, flickAt: 10, flickEvery: 4,
+        zeroDrainFlick: true, prayerFlick: true, offensiveFlick: false,
+        upcomingStyle: 'melee', specMeleeLikely: false, defencePrayer: true, protectItem: true, budget: 5,
+    });
+    expect(step.didFlick).toBe(false);
+    expect(step.nextDrainAt).toBe(10);
+    expect(step.toggles).not.toContain(PRAYER.melee);
+    expect(step.toggles).not.toContain(PRAYER.steelSkin);
+    for (const p of step.toggles) active[p] = !active[p];
+    expect(active.filter(Boolean).length).toBe(2);
+    expect(active[PRAYER.melee]).toBe(true);
+    expect(active[PRAYER.steelSkin]).toBe(true);
+
+    // Tick 14 (4 ticks after prayerDrainAt=10): full 2-prayer off+on cycle clears prayer_drain timer cleanly inside 4 packets and leaves both ON.
+    const flick = planPrayerTick({
+        now: 14, nextAttack: 20, lastAttackAt: 9, walkingToMelee: false, prayerBase: 99, overhead: PRAYER.melee,
+        activePrayers: active, prayerDrainAt: 10, flickAt: 10, flickEvery: 4,
+        zeroDrainFlick: true, prayerFlick: true, offensiveFlick: false,
+        upcomingStyle: 'melee', specMeleeLikely: false, defencePrayer: true, protectItem: true, budget: 5,
+    });
+    expect(flick.didFlick).toBe(true);
+    expect(flick.nextDrainAt).toBe(14);
+    expect(flick.toggles.length).toBe(4);
+    for (const p of flick.toggles) active[p] = !active[p];
+    expect(active[PRAYER.melee]).toBe(true);
+    expect(active[PRAYER.steelSkin]).toBe(true);
+
+    // zeroDrainFlick must never truncate a 3-prayer flick when active.length * 2 > budget (would leave Steel Skin off).
+    const threeActive = new Array(15).fill(false);
+    for (const p of [PRAYER.item, PRAYER.steelSkin, PRAYER.melee]) threeActive[p] = true;
+    const noTruncate = planPrayerTick({
+        now: 14, nextAttack: 16, lastAttackAt: 11, walkingToMelee: false, prayerBase: 99, overhead: PRAYER.melee,
+        activePrayers: threeActive, prayerDrainAt: 10, flickAt: 10, flickEvery: 4,
+        zeroDrainFlick: true, prayerFlick: true, offensiveFlick: false,
+        upcomingStyle: 'ranged', specMeleeLikely: false, defencePrayer: true, protectItem: true, budget: 5,
+    });
+    expect(noTruncate.didFlick).toBe(false);
+
+    // offensiveFlick drops Ultimate Strength + Incredible Reflexes on cooldown ticks after melee hit, then pre-enables on nextAttack - 1.
+    const offState = new Array(15).fill(false);
+    offState[PRAYER.melee] = true; offState[PRAYER.ultimateStrength] = true; offState[PRAYER.incredibleReflexes] = true;
+    const dropOff = planPrayerTick({
+        now: 10, nextAttack: 13, lastAttackAt: 9, walkingToMelee: false, prayerBase: 99, overhead: PRAYER.melee,
+        activePrayers: offState, prayerDrainAt: 8, flickAt: 8, flickEvery: 4,
+        zeroDrainFlick: false, prayerFlick: false, offensiveFlick: true,
+        upcomingStyle: 'melee', specMeleeLikely: false, defencePrayer: false, protectItem: false, budget: 5,
+    });
+    expect(dropOff.toggles).toContain(PRAYER.ultimateStrength);
+    expect(dropOff.toggles).toContain(PRAYER.incredibleReflexes);
+    const preOn = planPrayerTick({
+        now: 12, nextAttack: 13, lastAttackAt: 9, walkingToMelee: false, prayerBase: 99, overhead: PRAYER.melee,
+        activePrayers: new Array(15).fill(false), prayerDrainAt: -1, flickAt: 8, flickEvery: 4,
+        zeroDrainFlick: false, prayerFlick: false, offensiveFlick: true,
+        upcomingStyle: 'melee', specMeleeLikely: false, defencePrayer: false, protectItem: false, budget: 5,
+    });
+    expect(preOn.toggles).toContain(PRAYER.ultimateStrength);
+    expect(preOn.toggles).toContain(PRAYER.incredibleReflexes);
+});
+
+test('defaultSpec/defaultStunSpec/meleeWeaponDelay cover all 3 dragon spears and rev-289 weapon speeds', () => {
+    const names = new Map([
+        [1231, 'dragon_dagger_p'], [1201, 'rune_kiteshield'],
+        [1249, 'dragon_spear'], [1263, 'dragon_spear_p'], [3176, 'tbwt_dragon_spear_kp'],
+        [3204, 'dragon_halberd'], [1319, 'rune_2h_sword'], [1305, 'dragon_longsword'],
+    ]);
+    expect(defaultSpec({ melee: [1263] }, names)).toEqual({ kit: [1263], bar: 'combat_spear:specbar', cost: 250, below: 0.55, style: 'melee', stun: 4 });
+    expect(defaultSpec({ melee: [3176] }, names)).toEqual({ kit: [3176], bar: 'combat_spear:specbar', cost: 250, below: 0.55, style: 'melee', stun: 4 });
+    expect(defaultStunSpec({ melee: [1231, 1201, 1249] }, names)).toEqual({ kit: [1249], bar: 'combat_spear:specbar', cost: 250, below: 0.55, style: 'melee', stun: 4 });
+    expect(defaultStunSpec({ melee: [1231, 1201] }, names)).toBeUndefined();
+    expect(meleeWeaponDelay([1249], names)).toBe(6);
+    expect(meleeWeaponDelay([3176], names)).toBe(6);
+    expect(meleeWeaponDelay([3204], names)).toBe(7);
+    expect(meleeWeaponDelay([1319], names)).toBe(7);
+    expect(meleeWeaponDelay([1305], names)).toBe(5);
+    expect(meleeWeaponDelay([1231], names)).toBe(4);
+});
+
+test('shouldComboEat avoids non-KO karambwan suspension, and fightPlayer fixes karambwan delay timing', async () => {
+    // At 56 HP vs 126 cb (oppMax=32, eatAt=65), Shark alone is eaten (no karambwan p_delay(2)).
+    expect(shouldComboEat({ hp: 56, maxHp: 99, oppMax: 32, eatAt: 65, comboFood: true })).toBe(false);
+    // At 31 HP (<= oppMax), combo-eat triggers to survive burst KO.
+    expect(shouldComboEat({ hp: 31, maxHp: 99, oppMax: 32, eatAt: 65, comboFood: true })).toBe(true);
+    expect(shouldComboEat({ hp: 20, maxHp: 99, oppMax: 32, eatAt: 65, comboFood: false })).toBe(false);
+
+    let tick = 10;
+    const perTick: string[][] = [];
+    const client = { var: { 300: 0, 301: 0, 172: 1 }, players: [null, { headicons: 0, appearance: new Uint16Array(12), health: 99, totalHealth: 99 }] };
+    const state: any = {
+        player: { worldX: 3094, worldZ: 3555, combatLevel: 126, hp: 58, maxHp: 99, runEnergy: 100, lifeId: 1 },
+        skills: [{ name: 'Magic', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+        prayers: { prayerPoints: 99, activePrayers: new Array(20).fill(false) },
+        inventory: [
+            { slot: 0, id: ITEMS.shark, name: 'Shark', count: 1, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+            { slot: 1, id: ITEMS.karambwan, name: 'Cooked karambwan', count: 1, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+        ],
+        equipment: [{ slot: 3, id: 1231, name: 'Dragon dagger(p)', count: 1, optionsWithIndex: [] }],
+        nearbyPlayers: [{ index: 1, name: 'Dummy', combatLevel: 126, x: 3095, z: 3555, distance: 1 }],
+        combatEvents: [], gameMessages: [],
+    };
+    const session: any = {
+        client, tick: () => tick, ended: new Promise(() => {}),
+        onTick: (cb: () => void) => {
+            setTimeout(() => {
+                tick++;
+                perTick.push([]);
+                if (tick === 11) {
+                    // After eating Shark (+20 -> 78) cleanly without karambwan, bot should attack on tick 14 (11 + 3), not blocked 4 ticks by p_delay(2).
+                }
+                cb();
+            }, 0);
+            return () => {};
+        },
+        sdk: {
+            getState: () => state,
+            sendUseItem: (slot: number, op: number) => {
+                perTick[perTick.length - 1]!.push(`use:${slot}:${op}`);
+                if (slot === 0) state.player.hp += 20;
+                state.inventory = state.inventory.filter((x: any) => x.slot !== slot);
+            },
+            sendClickComponent: () => {},
+            sendInteractPlayer: (idx: number, op: number) => { perTick[perTick.length - 1]!.push(`attack:${idx}:${op}@${tick}`); },
+            sendTogglePrayer: () => {},
+        },
+    };
+    const res = await fightPlayer(session, 'Dummy', {
+        kit: { melee: [1231] }, rotation: ['melee'], eatAt: 65, comboFood: true,
+        freeze: false, prayerFlick: false, cap: 5, log: () => {},
+    });
+    expect(res.eaten).toBe(1); // Only Shark eaten at 58 HP; Cooked karambwan spared!
+    expect(perTick[0]).toEqual(['use:0:1']);
+    expect(perTick.flat()).toContain('attack:1:2@14'); // Attacks right on tick 11+3=14
+});
+
+test('pickFrozenKiteTile supports stepUnderFrozen, 4-corner diagonalFrozen, and clamps freeze kites to 10 tiles', () => {
+    // Same-tile step-under moves onto target tile and rests once there.
+    expect(pickFrozenKiteTile({ at: { x: 3092, z: 3555 }, target: { x: 3095, z: 3555 }, stepUnder: true, frozen: true })).toEqual({ x: 3095, z: 3555 });
+    expect(pickFrozenKiteTile({ at: { x: 3095, z: 3555 }, target: { x: 3095, z: 3555 }, stepUnder: true, frozen: true })).toBeNull();
+    // Diagonal picks an accessible alternate corner when primary preferred corner is blocked.
+    expect(pickFrozenKiteTile({
+        at: { x: 3097, z: 3555 }, target: { x: 3095, z: 3555 }, diagonal: true, frozen: true,
+        canWalkTo: (x, z) => !(x === 3096 && z === 3556),
+    })).toEqual({ x: 3096, z: 3554 });
+    // Clamp freeze kite distance <= 10 so pvp_frozen walktrigger never breaks.
+    const clamped = pickFrozenKiteTile({ at: { x: 3096, z: 3555 }, target: { x: 3095, z: 3555 }, kiteFrozen: 14, frozen: true });
+    expect(clamped).toEqual({ x: 3105, z: 3555 });
+});
+
+test('pickFakieWeapon and dragon spear spotanim 254 trigger stunShare overlap and burstOnStun', async () => {
+    const names = new Map([[1401, 'mystic_fire_staff'], [861, 'magic_shortbow'], [1231, 'dragon_dagger_p'], [1249, 'dragon_spear']]);
+    const decoy = pickFakieWeapon({
+        kit: { magic: [1401], ranged: [861], melee: [1231] },
+        realStyle: 'magic',
+        preferred: true,
+        inventory: [
+            { id: 1231, slot: 0, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+            { id: 861, slot: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+        ],
+        equipment: [{ id: 1401, slot: 3 }],
+        names,
+    });
+    expect(decoy?.style).toBe('melee');
+
+    let tick = 10;
+    const actions: string[] = [];
+    const enemyEntity = { headicons: 0, appearance: new Uint16Array(12), health: 90, totalHealth: 99, spotanimId: -1 };
+    const stunShare = { clock: () => tick, until: 15, stunnedUntil: 15, overlap: 1 };
+    const state: any = {
+        player: { worldX: 3094, worldZ: 3555, combatLevel: 126, hp: 99, maxHp: 99, runEnergy: 100, lifeId: 1 },
+        skills: [{ name: 'Magic', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+        prayers: { prayerPoints: 99, activePrayers: new Array(20).fill(false) },
+        inventory: [
+            { slot: 0, id: 1231, name: 'Dragon dagger(p)', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+            { slot: 1, id: 1249, name: 'Dragon spear', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+        ],
+        equipment: [{ slot: 3, id: 1231, name: 'Dragon dagger(p)', count: 1, optionsWithIndex: [] }],
+        nearbyPlayers: [{ index: 1, name: 'Dummy', combatLevel: 126, x: 3095, z: 3555, distance: 1 }],
+        combatEvents: [], gameMessages: [],
+    };
+    const session: any = {
+        name: 'BurstMate',
+        client: { var: { 300: 1000, 301: 0, 172: 1 }, players: [null, enemyEntity] },
+        tick: () => tick, ended: new Promise(() => {}),
+        onTick: (cb: () => void) => {
+            setTimeout(() => {
+                tick++;
+                if (tick === 11) enemyEntity.spotanimId = STUNNED_SHOVE_SPOTANIM;
+                cb();
+            }, 0);
+            return () => {};
+        },
+        sdk: {
+            getState: () => state,
+            sendUseItem: (slot: number, op: number) => { actions.push(`use:${slot}:${op}@${tick}`); },
+            sendClickComponent: (id: number) => { actions.push(`click:${id}@${tick}`); },
+            sendInteractPlayer: (idx: number, op: number) => { actions.push(`attack:${idx}:${op}@${tick}`); },
+            sendTogglePrayer: () => {},
+        },
+    };
+    // With target high HP (90/99) and stunned spotanim 254 active, burstOnStun fires DDS spec immediately instead of normal poke!
+    const res = await fightPlayer(session, 'Dummy', {
+        kit: { melee: [1231] }, rotation: ['melee'], freeze: false, prayerFlick: false,
+        spec: defaultSpec({ melee: [1231] }), stunShare, burstOnStun: true, specReserve: 500, cap: 2, log: () => {},
+    });
+    expect(res.specs).toBe(1);
+    expect(stunShare.stunnedUntil).toBeGreaterThanOrEqual(15);
+    expect(actions.some(a => a.startsWith('click:7562@'))).toBe(true);
+});
+
+test('stunSpec fires secondary dragon spear spec right on stunShare overlap tick (until - 1) while target is still stunned', async () => {
+    let tick = 10;
+    const actions: string[] = [];
+    const enemyEntity = { headicons: 0, appearance: new Uint16Array(12), health: 90, totalHealth: 99, spotanimId: -1 };
+    const stunShare = { clock: () => tick, until: 15, stunnedUntil: 15, overlap: 1 };
+    const state: any = {
+        player: { worldX: 3094, worldZ: 3555, combatLevel: 126, hp: 99, maxHp: 99, runEnergy: 100, lifeId: 1 },
+        skills: [{ name: 'Magic', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+        prayers: { prayerPoints: 99, activePrayers: new Array(20).fill(false) },
+        inventory: [
+            { slot: 0, id: 1231, name: 'Dragon dagger(p)', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+            { slot: 1, id: 1249, name: 'Dragon spear', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+        ],
+        equipment: [{ slot: 3, id: 1231, name: 'Dragon dagger(p)', count: 1, optionsWithIndex: [] }],
+        nearbyPlayers: [{ index: 1, name: 'Dummy', combatLevel: 126, x: 3095, z: 3555, distance: 1 }],
+        combatEvents: [], gameMessages: [],
+    };
+    const session: any = {
+        name: 'SpearChainer',
+        client: { var: { 300: 1000, 301: 0, 172: 1 }, players: [null, enemyEntity] },
+        tick: () => tick, ended: new Promise(() => {}),
+        onTick: (cb: () => void) => {
+            setTimeout(() => {
+                tick++;
+                if (tick === 11) enemyEntity.spotanimId = STUNNED_SHOVE_SPOTANIM;
+                cb();
+            }, 0);
+            return () => {};
+        },
+        sdk: {
+            getState: () => state,
+            sendUseItem: (slot: number, op: number) => {
+                actions.push(`use:${slot}:${op}@${tick}`);
+                if (slot === 1) state.equipment = [{ slot: 3, id: 1249, name: 'Dragon spear', count: 1, optionsWithIndex: [] }];
+            },
+            sendClickComponent: (id: number) => { actions.push(`click:${id}@${tick}`); },
+            sendInteractPlayer: (idx: number, op: number) => { actions.push(`attack:${idx}:${op}@${tick}`); },
+            sendTogglePrayer: () => {},
+        },
+    };
+    const kit = { melee: [1231, 1249] };
+    // Start at tick 11 (first attack), then melee delay 4 -> nextAttack at tick 15? Start with tick skipping to 14 on tick 14: wait melee rate 4 from 11 puts nextAttack at 15, right on until! Actually verify with stunShare.until = 15, attack at tick 14: set tick = 13 before first tick so tick 14 is first attack tick (`until - 1`, while `stunnedUntil` 15 is STILL active!).
+    tick = 13;
+    const res = await fightPlayer(session, 'Dummy', {
+        kit, rotation: ['melee'], freeze: false, prayerFlick: false,
+        spec: defaultSpec(kit), stunSpec: defaultStunSpec(kit), stunShare, burstOnStun: true, cap: 2, log: () => {},
+    });
+    expect(res.specs).toBe(1);
+    expect(actions).toContain('use:1:2@14'); // equipped dragon spear on exact overlap tick (until - 1 = 14)
+    expect(stunShare.until).toBe(20); // extended cleanly from 15 + 5 = 20 with zero gap
+});
+
+test('fightPlayer performs 1-tick fakie switch on cooldown, stepUnderFrozen onto frozen melee foe, and zeroDrainFlick', async () => {
+    let tick = 10;
+    const perTick: string[][] = [];
+    const appearance = new Uint16Array(12);
+    appearance[3] = 1231 + 512; // enemy holds melee dragon_dagger_p
+    const enemyEntity = { headicons: 0, appearance, health: 99, totalHealth: 99, spotanimId: -1 };
+    const state: any = {
+        player: { worldX: 3092, worldZ: 3555, combatLevel: 126, hp: 99, maxHp: 99, runEnergy: 100, lifeId: 1 },
+        skills: [{ name: 'Magic', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+        prayers: { prayerPoints: 99, activePrayers: new Array(20).fill(false) },
+        inventory: [
+            { slot: 0, id: 1231, name: 'Dragon dagger(p)', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+            { slot: 1, id: 861, name: 'Magic shortbow', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+        ],
+        equipment: [{ slot: 3, id: 1401, name: 'Mystic fire staff', count: 1, optionsWithIndex: [] }],
+        nearbyPlayers: [{ index: 1, name: 'Dummy', combatLevel: 126, x: 3095, z: 3555, distance: 3 }],
+        combatEvents: [], gameMessages: [],
+    };
+    const session: any = {
+        name: 'FakieBot',
+        client: { var: { 300: 0, 301: 0, 172: 1 }, players: [null, enemyEntity] },
+        tick: () => tick, ended: new Promise(() => {}),
+        onTick: (cb: () => void) => {
+            setTimeout(() => {
+                tick++;
+                perTick.push([]);
+                if (tick === 11) enemyEntity.spotanimId = 179; // entangle_impact freezes melee enemy
+                cb();
+            }, 0);
+            return () => {};
+        },
+        sdk: {
+            getState: () => state,
+            sendUseItem: (slot: number, op: number) => {
+                const list = perTick[perTick.length - 1]!;
+                list.push(`use:${slot}:${op}@${tick}`);
+                const invIdx = state.inventory.findIndex((i: any) => i.slot === slot);
+                if (invIdx >= 0) {
+                    const prev = state.equipment.find((e: any) => e.slot === 3);
+                    const next = state.inventory.splice(invIdx, 1)[0];
+                    if (prev) state.inventory.push({ ...prev, slot: next.slot, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] });
+                    state.equipment = [{ ...next, slot: 3 }];
+                }
+            },
+            sendSpellOnPlayer: (idx: number, spell: number) => { perTick[perTick.length - 1]!.push(`spell:${idx}:${spell}@${tick}`); },
+            sendInteractPlayer: (idx: number, op: number) => { perTick[perTick.length - 1]!.push(`attack:${idx}:${op}@${tick}`); },
+            sendWalk: (x: number, z: number) => { perTick[perTick.length - 1]!.push(`walk:${x},${z}@${tick}`); },
+            sendTogglePrayer: (p: number) => {
+                state.prayers.activePrayers[p] = !state.prayers.activePrayers[p];
+                perTick[perTick.length - 1]!.push(`pray:${p}@${tick}`);
+            },
+        },
+    };
+    const res = await fightPlayer(session, 'Dummy', {
+        kit: { magic: [1401], ranged: [861], melee: [1231] },
+        rotation: ['magic', 'ranged'],
+        freeze: false,
+        zeroDrainFlick: true,
+        fakieSwitch: 'melee',
+        stepUnderFrozen: true,
+        protectItem: false,
+        defencePrayer: false,
+        cap: 8,
+        log: () => {},
+    });
+    const flat = perTick.flat();
+    expect(flat.some(a => a.startsWith('walk:3095,3555@'))).toBe(true); // stepped onto frozen melee foe's tile
+    expect(flat.some(a => a.startsWith('use:0:2@1'))).toBe(true); // equipped melee dagger fakie during cooldown
+    expect(res.flicks).toBeGreaterThanOrEqual(1); // zeroDrainFlick reset active prayer cycle cleanly
+});
+
+test('battleaxeWarcryMath, Charge varp/rune gating, and Dragon Battleaxe warcry self-buff', async () => {
+    // Exact specwep.rs2:67-77 math at maxed combat stats: each 99 drains 9 -> sum 36 -> +19 Strength.
+    expect(battleaxeWarcryMath({ Attack: 99, Defence: 99, Ranged: 99, Magic: 99 })).toEqual({
+        drained: { attack: 9, defence: 9, ranged: 9, magic: 9 },
+        strengthBoost: 19,
+    });
+    const runes = (f: number, b: number, a: number) => [{ id: 554, count: f }, { id: 565, count: b }, { id: 556, count: a }];
+    expect(canCastChargeNow(80, runes(3, 3, 3), 0)).toBe(true);
+    expect(canCastChargeNow(80, runes(3, 3, 3), 120)).toBe(false); // varp 272 already active -> skip recast
+    expect(canCastChargeNow(79, runes(3, 3, 3), 0)).toBe(false);
+    expect(canCastChargeNow(80, runes(2, 3, 3), 0)).toBe(false);
+    expect(chargeVarpTicks({ var: { 272: 240 } })).toBe(240);
+
+    let tick = 10;
+    const clicks: number[] = [], uses: number[] = [];
+    const state: any = {
+        tick,
+        player: { worldX: 3060, worldZ: 3880, level: 0, hp: 99, maxHp: 99, combatLevel: 126 },
+        skills: [
+            { name: 'Attack', level: 99, baseLevel: 99 },
+            { name: 'Strength', level: 99, baseLevel: 99 },
+            { name: 'Defence', level: 99, baseLevel: 99 },
+            { name: 'Magic', level: 99, baseLevel: 99 },
+            { name: 'Hitpoints', level: 99, baseLevel: 99 },
+            { name: 'Prayer', level: 99, baseLevel: 99 },
+        ],
+        prayers: { activePrayers: new Array(15).fill(false), prayerPoints: 99 },
+        inventory: [
+            { id: ITEMS.dragonBattleaxe, slot: 0, count: 1, name: 'Dragon battleaxe', optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+            { id: 554, slot: 1, count: 3, name: 'Fire rune', optionsWithIndex: [] },
+            { id: 565, slot: 2, count: 3, name: 'Blood rune', optionsWithIndex: [] },
+            { id: 556, slot: 3, count: 3, name: 'Air rune', optionsWithIndex: [] },
+        ],
+        equipment: [{ id: 1231, slot: 3, count: 1, name: 'Dragon dagger(p)', optionsWithIndex: [] }],
+        nearbyPlayers: [{ index: 2, name: 'Foe', x: 3060, z: 3881, combatLevel: 126, distance: 1 }],
+        combatEvents: [], gameMessages: [], dialog: { isOpen: false },
+    };
+    const varArr = new Array(400).fill(0);
+    varArr[300] = 1000;
+    varArr[272] = 200; // Charge already active -> Charge click must be skipped
+    const session: any = {
+        name: 'AxeBot',
+        client: { var: varArr, players: [null, null, { appearance: [], headicons: 0, health: 99, totalHealth: 99 }] },
+        tick: () => tick,
+        ended: new Promise(() => {}),
+        onTick: (cb: () => void) => {
+            setTimeout(() => { tick++; state.tick = tick; cb(); }, 0);
+            return () => {};
+        },
+        sdk: {
+            getState: () => state,
+            sendUseItem: (slot: number) => {
+                const it = state.inventory.find((i: any) => i.slot === slot);
+                if (it) uses.push(it.id);
+            },
+            sendClickComponent: (id: number) => { clicks.push(id); },
+            sendInteractPlayer: () => {},
+            sendTogglePrayer: () => {},
+            sendWalk: () => {},
+        },
+    };
+    await fightPlayer(session, 'Foe', {
+        kit: { melee: [1231, ITEMS.dragonBattleaxe] },
+        rotation: ['melee'],
+        charge: true,
+        battleaxeBuff: true,
+        freeze: false,
+        prayerFlick: false,
+        cap: 4,
+        log: () => {},
+    });
+    expect(clicks).not.toContain(SPELLS.charge); // Charge already active via varp 272 -> zero wasted cast
+    expect(uses).toContain(ITEMS.dragonBattleaxe); // equipped 1377 and triggered warcry specbar
+    expect(clicks.length).toBeGreaterThanOrEqual(1);
 });

@@ -3,23 +3,50 @@
 import {existsSync} from 'node:fs';
 import {levelForXp,xpForLevel} from '../packages/planner/src/curve';
 import {openBot,finish,randomEventsOf} from '../packages/core/src/bot';
+import {questFlags} from '../packages/core/src/quest-status';
+import {selectProgressiveLoadout,readSkillLevels,scoreGearForStyle,type GearSkillLevels,type QuestInput} from '../packages/planner/src/gear-progression';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {walkPath,sessionWalker,expandPath,type PathDeps,type PathTile} from '../packages/core/src/walk';
 
-// Both weapon tables train Attack/Strength/Defence at indices0/1/3. A bronze pickaxe has the same
-// stab accuracy and strength bonus as the sword; qualify its slower attack rate in practice before live use.
-export function chickenTrainingKit(items:readonly {id:number}[]):number[] {
-    const has=(id:number)=>items.some(i=>i.id===id);
-    const weapon=has(1277)?1277:has(1265)?1265:undefined;
-    if(!weapon)throw Error('missing owned training weapon');
-    return [weapon,...(has(1171)?[1171]:[])];
+// Bronze sword score (1173) and wooden shield defence floor (4) protect 0-damage lower-health accounts.
+const LOWER_HEALTH_MIN_WEAPON_SCORE=1173;
+export function chickenTrainingKit(
+    items:readonly {id:number;count?:number}[],
+    options:{levels?:GearSkillLevels;quests?:QuestInput;entry?:ChickenEntry;trainSkill?:string}={},
+):number[] {
+    const stock=items.map(i=>({id:i.id,count:i.count??1}));
+    const entry=options.entry??'standard';
+    const loadout=selectProgressiveLoadout('melee',stock,options.levels,options.quests,{
+        trainSkill:options.trainSkill??'all-melee',
+        requireWeapon:true,
+        ...(entry==='lower-health'?{requireShield:true,minWeaponStrength:5,minShieldDefence:4}:{}),
+    });
+    const weapon=loadout.worn.weapon;
+    if(!weapon){
+        if(entry==='lower-health')throw Error('lower-health training requires owned melee weapon (>= bronze sword strength) and shield');
+        throw Error('missing owned training weapon');
+    }
+    if(entry==='lower-health'&&(!loadout.worn.shield||scoreGearForStyle(weapon,'melee')<LOWER_HEALTH_MIN_WEAPON_SCORE))
+        throw Error('lower-health training requires owned bronze sword/wooden shield equivalent or better');
+    return loadout.items.map(entryItem=>entryItem.item.id);
 }
 
-export function chickenTrainingStyle(levels:{Attack:number;Strength:number;Defence:number}):number {
+export function chickenDesiredSkill(levels:{Attack:number;Strength:number;Defence:number}):'Attack'|'Strength'|'Defence' {
     if(Object.values(levels).some(n=>!Number.isSafeInteger(n)||n<1))throw Error('training skills unavailable');
-    const choices=[['Strength',1],['Attack',0],['Defence',3]] as const;
-    return [...choices].sort((a,b)=>levels[a[0]]-levels[b[0]])[0]![1];
+    const choices=['Strength','Attack','Defence'] as const;
+    return [...choices].sort((a,b)=>levels[a]-levels[b])[0]!;
+}
+export function chickenTrainingStyle(levels:{Attack:number;Strength:number;Defence:number}):number {
+    const map={'Strength':1,'Attack':0,'Defence':3} as const;
+    return map[chickenDesiredSkill(levels)];
+}
+type ChickenStyleTab={known:boolean;weaponName?:string;currentStyle:number;styles?:readonly {index:number;name?:string;trainsSkills:readonly string[]}[]};
+export function chickenStyleForWeapon(tab:ChickenStyleTab|undefined,skill:'Attack'|'Strength'|'Defence'):number {
+    if(!tab?.known)throw Error('training weapon combat styles unknown');
+    const matched=tab.styles?.find(s=>s.trainsSkills.length===1&&s.trainsSkills[0]===skill);
+    if(!matched)throw Error(`${tab.weaponName||'training weapon'} has no style that trains only ${skill}`);
+    return matched.index;
 }
 // Both directions checked against hunt ranges with a nine-tile wander/footprint margin before the live pilot.
 const ROUTE=[{x:3253,z:3420,tol:2},{x:3207,z:3429,tol:0},{x:3171,z:3427,tol:0},
@@ -68,13 +95,16 @@ export function chickenCombatUnlockPlan(levels:{Attack:number;Defence:number;Hit
     if(!best)throw Error('melee cannot establish requested combat unlock');
     return best;
 }
-export function chickenCombatUnlockStyle(levels:{Strength:number;Defence:number},plan:{strength:number;defence:number}):number {
-    // With owned bronze sword bonus5, Strength6 keeps a max hit of2 in defensive style: ((6+8)*69+320)/640.
+export function chickenCombatUnlockSkill(levels:{Strength:number;Defence:number},plan:{strength:number;defence:number}):'Strength'|'Defence' {
+    // With owned melee weapon >= bronze sword bonus5, Strength6 keeps a max hit of2 in defensive style: ((6+8)*69+320)/640.
     // One short Strength phase improves the following Defence phase, with at most two further style switches.
-    if(levels.Strength<Math.min(6,plan.strength))return 1;
-    if(levels.Defence<plan.defence)return 3;
-    if(levels.Strength<plan.strength)return 1;
+    if(levels.Strength<Math.min(6,plan.strength))return 'Strength';
+    if(levels.Defence<plan.defence)return 'Defence';
+    if(levels.Strength<plan.strength)return 'Strength';
     throw Error('planned melee levels exhausted before observed combat unlock');
+}
+export function chickenCombatUnlockStyle(levels:{Strength:number;Defence:number},plan:{strength:number;defence:number}):number {
+    return chickenCombatUnlockSkill(levels,plan)==='Defence'?3:1;
 }
 export function chickenCombatUnlockMode(bank:string,skill:string|undefined,level:number|undefined,entry:ChickenEntry,target:number){
     if(skill!=='CombatUnlock')return false;
@@ -111,7 +141,7 @@ export function chickenTrainingTarget(target=13):number {
     return target;
 }
 
-export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,options:{rawChicken?:number;stop?:()=>boolean;trainSkill?:string;targetLevel?:number;entry?:ChickenEntry}={}) {
+export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,options:{rawChicken?:number;stop?:()=>boolean;trainSkill?:string;targetLevel?:number;entry?:ChickenEntry;walk?:(points:typeof ROUTE,homeward?:boolean)=>Promise<void>}={}) {
     chickenTrainingTarget(target);
     const entry=chickenTrainingEntry(options.entry);
     const profile=chickenTrainingProfile(bank),route=profile.route,home=route[0]!,balanced=chickenCombatUnlockMode(bank,options.trainSkill,options.targetLevel,entry,target),strengthTarget=balanced?undefined:chickenStrengthGoal(bank,options.trainSkill,options.targetLevel);
@@ -145,24 +175,32 @@ export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,
     // A run that reaches its tick cap with nothing else wrong (no damage, threat, stop request or lost session) and
     // with melee XP gained is a partial success: it walks back and banks like a finished one.
     const halted=()=>ended||hurt||!!options.stop?.()||!!threat()||existsSync(`.practice/stop-${s.name}`);
-    const walk=async(points:typeof ROUTE,homeward=false)=>{
+    const walk=options.walk??(async(points:typeof ROUTE,homeward=false)=>{
         const base=await sessionWalker(s),guarded=bank==='ardougne'?guardArdougneTrainingWalker(base):null;
         const r=await walkPath(guarded?.deps??base,points,homeward?{maxTicks:650,stop:halted}:{maxTicks:Math.max(1,Math.min(650,cap-(s.tick()-start))),stop:over});
         if(!r.ok)throw Error(`no training progress: route ${r.detail}; hurt=${hurt} threat=${threat()?.name??'-'}`);
-    };
+    });
     try {
         if(goal()&&rawTarget===0)return{ok:true,combat:combat(),ticks:0,kills:0,hpMin,preserved:true};
         if(!(await s.bot.openBank()).success)throw Error('training bank unavailable');
         await waitTicks(s,2);const before=assets();
-        const kit=chickenTrainingKit([...s.sdk.getInventory(),...s.sdk.getEquipment(),...(state()?.bank.items??[])]);
-        if(entry==='lower-health'&&(!kit.includes(1277)||!kit.includes(1171)))throw Error('lower-health training requires owned bronze sword and wooden shield');
+        const levels=readSkillLevels(n=>s.sdk.getSkill(n));
+        const quests=s.client?questFlags(s.client):null;
+        const kit=chickenTrainingKit([...s.sdk.getInventory(),...s.sdk.getEquipment(),...(state()?.bank.items??[])],{
+            levels,
+            quests,
+            entry,
+            trainSkill:unlockPlan?'all-melee':strengthTarget!==undefined?'Strength':'all-melee',
+        });
+        const pick=s.sdk.getInventory().find(i=>i.id===1265);
+        if(pick&&!kit.includes(1265)&&!(await s.bot.depositItem(pick,-1)).success)throw Error('cannot secure owned pickaxe');
         for(const id of kit){
             if([...s.sdk.getInventory(),...s.sdk.getEquipment()].some(i=>i.id===id))continue;
+            const required=id===kit[0]||(entry==='lower-health'&&id===kit[1]);
+            if(!required&&s.sdk.getInventory().length>=28)break;
             const item=state()?.bank.items.find(i=>i.id===id);
             if(!item||!(await s.bot.withdrawItem(item,1)).success)throw Error(`missing owned training kit ${id}`);
         }
-        const pick=s.sdk.getInventory().find(i=>i.id===1265);
-        if(pick&&!kit.includes(1265)&&!(await s.bot.depositItem(pick,-1)).success)throw Error('cannot secure owned pickaxe');
         await s.bot.closeBank();
         for(const id of kit)if(!s.sdk.getEquipment().some(i=>i.id===id)){
             const item=s.sdk.getInventory().find(i=>i.id===id);
@@ -176,12 +214,18 @@ export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,
             if(xp()>lastXp){lastXp=xp();progress=s.tick();}
             if(s.tick()-progress>120)throw Error('no training progress: no melee XP for120ticks');
             if(randomEventsOf(s)?.busy()){await waitTicks(s,1);continue;}
-            const style=unlockPlan?chickenCombatUnlockStyle({Strength:s.sdk.getSkill('Strength')?.baseLevel??0,Defence:s.sdk.getSkill('Defence')?.baseLevel??0},unlockPlan):strengthTarget===undefined?chickenTrainingStyle({Attack:s.sdk.getSkill('Attack')?.baseLevel??0,
-                Strength:s.sdk.getSkill('Strength')?.baseLevel??0,Defence:s.sdk.getSkill('Defence')?.baseLevel??0}):1;
+            if(!state()?.combatStyle?.known&&!await waitUntil(s,()=>state()?.combatStyle?.known===true||over(),{timeoutTicks:6}))
+                throw Error('training weapon combat styles unknown');
+            const desiredSkill=unlockPlan
+                ?chickenCombatUnlockSkill({Strength:s.sdk.getSkill('Strength')?.baseLevel??0,Defence:s.sdk.getSkill('Defence')?.baseLevel??0},unlockPlan)
+                :strengthTarget===undefined
+                    ?chickenDesiredSkill({Attack:s.sdk.getSkill('Attack')?.baseLevel??0,Strength:s.sdk.getSkill('Strength')?.baseLevel??0,Defence:s.sdk.getSkill('Defence')?.baseLevel??0})
+                    :'Strength';
+            const style=chickenStyleForWeapon(state()?.combatStyle,desiredSkill);
             if(state()?.combatStyle?.currentStyle!==style){
                 if(!(await s.sdk.sendSetCombatStyle(style)).success||!await waitUntil(s,()=>state()?.combatStyle?.known===true&&state()?.combatStyle?.currentStyle===style,{timeoutTicks:6}))
                     throw Error('training style not confirmed');
-                console.log('MILESTONE training-style '+JSON.stringify({style,strength:s.sdk.getSkill('Strength')?.baseLevel,defence:s.sdk.getSkill('Defence')?.baseLevel}));
+                console.log('MILESTONE training-style '+JSON.stringify({style,skill:desiredSkill,strength:s.sdk.getSkill('Strength')?.baseLevel,defence:s.sdk.getSkill('Defence')?.baseLevel}));
             }
             const chicken=state()?.nearbyNpcs.filter(n=>/^chicken$/i.test(n.name)&&!n.inCombat&&(n.hp??1)>0&&n.reachable!==false
                 &&n.x>=profile.pen.x0&&n.x<=profile.pen.x1&&n.z>=profile.pen.z0&&n.z<=profile.pen.z1).sort((a,b)=>a.distance-b.distance)[0];

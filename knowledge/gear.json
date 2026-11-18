@@ -21,6 +21,10 @@
    "prayer": 0
   },
   "attackRate": 5,
+  "special": {
+   "energy": 1000,
+   "pvp": false
+  },
   "requires": {
    "skills": {
     "attack": 20
@@ -11135,6 +11139,10 @@
    "prayer": 0
   },
   "attackRate": 6,
+  "special": {
+   "energy": 1000,
+   "pvp": false
+  },
   "requires": {
    "skills": {
     "attack": 60
@@ -18548,7 +18556,8 @@
   },
   "requires": {
    "skills": {
-    "defence": 50
+    "defence": 50,
+    "strength": 50
    },
    "src": "scripts/levelrequire/scripts/tier50.rs2:2"
   },
@@ -20286,7 +20295,9 @@
    "prayer": 0
   },
   "requires": {
-   "skills": {},
+   "skills": {
+    "defence": 45
+   },
    "src": "scripts/levelrequire/scripts/tier45.rs2:4",
    "quest": "The Fremennik Trials"
   },
@@ -20319,7 +20330,9 @@
    "prayer": 0
   },
   "requires": {
-   "skills": {},
+   "skills": {
+    "defence": 45
+   },
    "src": "scripts/levelrequire/scripts/tier45.rs2:1",
    "quest": "The Fremennik Trials"
   },
@@ -20352,7 +20365,9 @@
    "prayer": 0
   },
   "requires": {
-   "skills": {},
+   "skills": {
+    "defence": 45
+   },
    "src": "scripts/levelrequire/scripts/tier45.rs2:2",
    "quest": "The Fremennik Trials"
   },
@@ -20385,7 +20400,9 @@
    "prayer": 0
   },
   "requires": {
-   "skills": {},
+   "skills": {
+    "defence": 45
+   },
    "src": "scripts/levelrequire/scripts/tier45.rs2:3",
    "quest": "The Fremennik Trials"
   },

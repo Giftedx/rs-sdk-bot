@@ -5,10 +5,26 @@ import { openBot, finish, countItems } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker, expandPath } from '../packages/core/src/walk';
 import { bankCargo } from '../packages/core/src/cargo';
+import { depositObserved } from '../packages/core/src/deposit';
 import type {Session} from '../packages/core/src/inprocess';
 import {BotActions} from '../vendor/rs-sdk/sdk/actions';
 import type {NearbyLoc} from '../vendor/rs-sdk/sdk/types';
 import {productionStopRequested} from './microbot-c-lifetime';
+import {
+    WOODCUTTING_AXES_DESC,
+    type ShopRetryGate,
+    bestWoodcuttingAxe,
+    crossedTierBoundary,
+    executeShopToolPurchase,
+    planToolShopUpgrade,
+    readSkillLevels,
+    reconcileBankTool,
+    recordShopAttempt,
+    sessionShopGate,
+    sessionToolHooks,
+    shouldAttemptShopUpgrade,
+    tierBoundaryOf,
+} from '../packages/planner/src/gear-progression';
 
 // Native m42_54 willow and m42_53 magic placements, within the published loc radius.
 export function seersProcessingGrove(tree:string){
@@ -73,6 +89,86 @@ export function westOakPathAllowed(from:{x:number;z:number},corners:readonly {x:
     return corners.length>0&&[from,...expandPath(from,[...corners])].every(p=>
         (p.x<=3094||access&&p.x<=3103&&p.z>=3250&&p.z<=3271)&&!(p.x<3090&&p.z<3250));
 }
+const axeShopGates = new WeakMap<object, ShopRetryGate>();
+
+async function walkViaRoute(s: Session, spot: { x: number; z: number; level?: number }, stop: () => boolean): Promise<boolean> {
+    const { approach, walkTargetPersist } = await import('./walk-to');
+    return (await walkTargetPersist(s, { x: spot.x, z: spot.z, level: spot.level ?? 0 }, 4, t => approach(s, t, stop))).ok;
+}
+
+export async function reconcileWoodcuttingAxeAtBank(
+    s: Session,
+    options: {
+        bankSpot: { x: number; z: number; level?: number };
+        stop: () => boolean;
+        allowShop?: boolean;
+        refusedWields?: Set<number>;
+        walkTo?: (spot: { x: number; z: number; level?: number }) => Promise<boolean>;
+        shopGate?: ShopRetryGate;
+    },
+): Promise<{ activeId: number | null; worn: boolean; bought?: number }> {
+    const openBank = async () => {
+        if (!s.sdk.getState()?.bank?.isOpen) await s.bot.openBank();
+    };
+    const hooks = sessionToolHooks(s, {
+        openBank,
+        walkTo: options.walkTo ?? (spot => walkViaRoute(s, spot, options.stop)),
+        waitUntil: (pred, timeoutTicks) => waitUntil(s, pred, { timeoutTicks }),
+        stop: options.stop,
+    });
+    const wornItems = () => s.sdk.getEquipment?.() ?? s.sdk.getState()?.equipment ?? [];
+    await openBank();
+    if (!await waitUntil(s, () => options.stop() || !!s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 10 }) || options.stop()) {
+        const levels = readSkillLevels(s.sdk);
+        const cur = bestWoodcuttingAxe([...s.sdk.getInventory(), ...wornItems().filter(e => e.slot === 3)], levels).current;
+        return { activeId: cur?.item.id ?? null, worn: !!cur && wornItems().some(e => e.slot === 3 && e.id === cur.item.id) };
+    }
+
+    const bankItems = s.bankObservation?.()?.items ?? s.sdk.getState()?.bank?.items ?? [];
+    const levels = readSkillLevels(s.sdk);
+    let bought: number | undefined;
+    const axeTier = tierBoundaryOf(levels.woodcutting, [1, 6, 21, 31, 41]);
+    const shopGate = sessionShopGate(axeShopGates, s, options.shopGate);
+
+    if (options.allowShop && shouldAttemptShopUpgrade(shopGate, axeTier, s.tick?.() ?? 0)) {
+        const stock = [...s.sdk.getInventory(), ...wornItems().filter(e => e.slot === 3), ...bankItems];
+        const totalCoins = stock.filter(i => i.id === 995).reduce((n, i) => n + i.count, 0);
+        const shopPlan = planToolShopUpgrade('woodcutting-axe', stock, totalCoins, levels, {
+            allowedShops: ['axeshop'],
+            onlyWhenStarterOrMissing: false,
+        });
+        if (shopPlan && !options.stop()) {
+            const res = await executeShopToolPurchase(hooks, {
+                targetId: shopPlan.target.id,
+                shop: 'axeshop',
+                maxBudget: shopPlan.coinBudgetNeeded,
+                returnBankSpot: options.bankSpot,
+            });
+            recordShopAttempt(shopGate, axeTier, s.tick?.() ?? 0, res.bought);
+            if (res.bought) {
+                bought = res.id;
+                console.log(`WOOD_SHOP_AXE ${JSON.stringify(res)}`);
+                await openBank();
+                await waitUntil(s, () => options.stop() || !!s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 10 });
+                const spareCoins = s.sdk.getInventory().find(i => i.id === 995);
+                if (spareCoins && !options.stop()) await depositObserved(s, spareCoins);
+            }
+        }
+    }
+
+    const latestBank = s.bankObservation?.()?.items ?? s.sdk.getState()?.bank?.items ?? [];
+    const rec = bestWoodcuttingAxe([...s.sdk.getInventory(), ...wornItems().filter(e => e.slot === 3), ...latestBank], levels).current;
+    if (!rec) return { activeId: null, worn: false, bought };
+
+    const res = await reconcileBankTool(hooks, {
+        targetId: rec.item.id,
+        canWield: rec.canWield,
+        toolGroupIds: WOODCUTTING_AXES_DESC,
+        refusedWields: options.refusedWields,
+    });
+    return { activeId: res.activeId, worn: res.worn, bought };
+}
+
 export async function runDraynorOak(s:Session,o:{cap:number;maximum:number;prepare:boolean;grove?:string;noProgress?:number;walk?:(x:number,z:number,tol:number)=>Promise<boolean>}){
     const grove=oakGrove(o.grove);
     if(!Number.isSafeInteger(o.cap)||o.cap<1||!Number.isSafeInteger(o.maximum)||o.maximum<1||o.maximum>25)throw new Error('oak needs CAP>0 and MAX_MAKE1..25');
@@ -112,13 +208,18 @@ export async function runDraynorOak(s:Session,o:{cap:number;maximum:number;prepa
         await open();baselineOak=bankCount(1521);original=assets();
         if(held(1521))throw new Error('oak needs empty carried output for NEW-log accounting');
         if(o.prepare){
-            const missingAxe=held(1349)<1&&!count(st()?.equipment??[],1349);
+            const levels=readSkillLevels(s.sdk);
+            const eq=(st()?.equipment??[]).filter(e=>e.slot===3);
+            const chosen=bestWoodcuttingAxe([...inv(),...eq,...bankItems()],levels).current;
+            const axeId=chosen?.item.id;
+            const missingAxe=!axeId||(held(axeId)<1&&!count(eq,axeId));
             const foodNeed=Math.max(0,2-foods());
-            if(missingAxe&&bankCount(1349)<1||foodIds.reduce((n,id)=>n+bankCount(id),0)<foodNeed)throw new Error('oak owned axe/food unavailable');
-            if(missingAxe){const item=st()!.bank.items.find(i=>i.id===1349)!;if(!(await s.bot.withdrawItem(item,1,{asNote:false})).success||held(1349)!==1)throw new Error('oak owned iron axe withdrawal failed');}
+            if(!axeId||(missingAxe&&bankCount(axeId)<1)||foodIds.reduce((n,id)=>n+bankCount(id),0)<foodNeed)throw new Error('oak owned axe/food unavailable');
+            if(missingAxe){const item=st()!.bank.items.find(i=>i.id===axeId)!;if(!(await s.bot.withdrawItem(item,1,{asNote:false})).success||held(axeId)!==1)throw new Error('oak owned axe withdrawal failed');}
             for(const id of foodIds){const n=Math.min(Math.max(0,2-foods()),bankCount(id));if(n){const item=st()!.bank.items.find(i=>i.id===id)!;if(!(await s.bot.withdrawItem(item,n,{asNote:false})).success)throw new Error('oak owned food withdrawal failed');}}
         }
-        if(held(1349)+count(st()?.equipment??[],1349)<1||foods()<2)throw new Error('oak needs owned iron axe and2working foods');
+        const activeAxe=bestWoodcuttingAxe([...inv(),...(st()?.equipment??[]).filter(e=>e.slot===3)],readSkillLevels(s.sdk)).current;
+        if(!activeAxe||foods()<2)throw new Error('oak needs owned usable axe and2working foods');
         if(inv().length>3)throw new Error('oak bounded25 needs only axe and2foods held; no unrelated cargo');
         await s.bot.closeBank();
         for(const [x,z,tol] of [[3092,3250,1],[3089,3266,1],[grove.approach.x,grove.approach.z,grove.approach.tol]])if(!await walk(x!,z!,tol!))throw new Error('no wood progress: guarded northern entry failed');
@@ -212,9 +313,12 @@ try {
         return !!p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol;
     };
 
-    const bank = async () => {
+    const refusedWields = new Set<number>();
+    let toolLevels = readSkillLevels(s.sdk);
+    const activeAxe = () => bestWoodcuttingAxe([...s.sdk.getInventory(), ...(s.sdk.getEquipment?.() ?? s.sdk.getState()?.equipment ?? []).filter(e => e.slot === 3)], readSkillLevels(s.sdk)).current;
+    const bank = async (forceToolCheck = false) => {
         const n = yewLogs();
-        if (n === 0 && freeSpace() > 0) return;
+        if (n === 0 && freeSpace() > 0 && !forceToolCheck) return;
         if ((local || draynor) && (pos()?.worldX ?? 0) > 3150) for (const [x, z] of [[3226,3256],[3180,3258],[3140,3270],[3100,3270],[3089,3266],[3092,3250]]) await walk(x!, z!, 2);
         if (draynor) await walk(3092,3250,1);
         await walk(SEERS_BANK.x, SEERS_BANK.z, 2);
@@ -241,6 +345,30 @@ try {
         banked += n - after;
         bankTrips++;
         if(!over())await bankCargo(s, [logRe], 0, { stopped: over });
+        if (!over()) {
+            const axeWalk = async (spot: { x: number; z: number; level?: number }) => {
+                if ((local || draynor) && spot.x === 3231 && spot.z === 3203) {
+                    for (const [x, z] of [[3092,3250],[3089,3266],[3100,3270],[3140,3270],[3180,3258],[3220,3256]]) {
+                        if (!await walk(x!, z!, 2)) return false;
+                    }
+                    return walk(spot.x, spot.z, 2);
+                }
+                if ((local || draynor) && spot.x === SEERS_BANK.x && spot.z === SEERS_BANK.z) {
+                    for (const [x, z] of [[3220,3256],[3180,3258],[3140,3270],[3100,3270],[3089,3266],[3092,3250]]) {
+                        if (!await walk(x!, z!, 2)) return false;
+                    }
+                    return walk(SEERS_BANK.x, SEERS_BANK.z, 2);
+                }
+                return walkViaRoute(s, spot, over);
+            };
+            await reconcileWoodcuttingAxeAtBank(s, {
+                bankSpot: SEERS_BANK,
+                stop: over,
+                allowShop: local || draynor,
+                refusedWields,
+                walkTo: axeWalk,
+            });
+        }
         if (draynor) {
             const logs = s.sdk.getState()?.bank?.items.find(i => /^logs$/i.test(i.name))?.count ?? 0;
             TREE = treeAfterBank(process.env.TREE,logs);
@@ -259,10 +387,18 @@ try {
         await s.direct({ type: 'walkTo', x: 3220, z: 3256, running: true, reason: 'SDK' });
         await walk(3220, 3256, 2);
         for(const [x,z] of [[3180,3258],[3140,3270],[3100,3270],[3089,3266],[3092,3250]]) await walk(x!,z!,2);
-        await bank();
+        await bank(true);
+    } else if (!activeAxe() || (activeAxe()!.item.id === 1351 && (local || draynor)) || Math.max(Math.abs((pos()?.worldX ?? 0) - SEERS_BANK.x), Math.abs((pos()?.worldZ ?? 0) - SEERS_BANK.z)) <= 6) {
+        await bank(true);
     }
 
     while (!over() && bankTrips < Number(process.env.MAX_TRIPS ?? Infinity)) {
+        const curLevels = readSkillLevels(s.sdk);
+        if (crossedTierBoundary(toolLevels, curLevels, ['attack', 'woodcutting'])) {
+            toolLevels = curLevels;
+            await bank(true);
+            continue;
+        }
         const actual=banked+yewLogs();
         if(actual>chops) progressTick=s.tick();
         chops=actual;

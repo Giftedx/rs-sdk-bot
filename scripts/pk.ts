@@ -21,7 +21,8 @@ import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
 
 export const ITEMS = {
     shark: 385, karambwan: 3144, glory: [1712, 1710, 1708, 1706],
-    prayerPotion: [2434, 139, 141, 143], superRestore: [3024, 3026, 3028, 3030],
+    dragonMace: 1434, dragonBattleaxe: 1377,
+    prayerPotion: [2434, 139, 141, 143], superRestore: [3024, 3026, 3028, 3030], restorePotion: [2430, 127, 129, 131],
     superAttack: [2436, 145, 147, 149], attackPotion: [2428, 121, 123, 125],
     superStrength: [2440, 157, 159, 161], strengthPotion: [113, 115, 117, 119],
     superDefence: [2442, 163, 165, 167], defencePotion: [2432, 133, 135, 137],
@@ -127,21 +128,32 @@ export type FightOptions = {
     // active prayer off and on again in one tick, so the timer never fires and the prayers cost no points. One tick
     // holds 5 inputs: with three prayers on, the third comes back on the next tick. false turns the flick off.
     prayerFlick?: boolean;
+    // zeroDrainFlick: track prayer_drain timer start (prayer.rs2:30-43) and step down from 5 active prayers before
+    // cycling off+on so overhead protection stays up at the end of every tick with zero drain.
+    zeroDrainFlick?: boolean;
+    // offensiveFlick: keep melee Strength/Attack prayers off during cooldown and toggle them on for melee attack ticks only.
+    offensiveFlick?: boolean;
     // Ticks between two flicks (default 4). The drain timer fires 5 ticks after the prayers came on, and a bow on Rapid
     // gives one cooldown tick each 3 ticks: at 4 each second bow turn has no flick and the timer fires; at 3 it does not.
     flickEvery?: number;
+    // Hold a decoy weapon of a different style during cooldown ticks, then 1-tick switch to the real weapon on the attack tick.
+    fakieSwitch?: boolean | Style;
     // true: eat a carried karambwan on each tick where it costs no attack (see the loop). Default off.
     freeFood?: boolean;
-    // true: pair standard food with a cooked karambwan in the same tick at or below comboAt (default Math.max(eatAt - 10, oppMax)).
+    // true: pair standard food with a cooked karambwan in the same tick at or below KO burst threshold (comboAt / koComboAt).
     comboFood?: boolean;
     comboAt?: number;
+    koComboAt?: number;
     // Tiles to keep from the target between turns that are not melee: on a cooldown tick the loop steps away to this
     // distance, so an opponent with a melee weapon must walk for each hit.
     standOff?: number;
     // The same step back, but only while the target is frozen and holds a melee weapon: it cannot follow, so each of
-    // its turns is lost while ours land from range.
+    // its turns is lost while ours land from range (clamped to <= 10 tiles so pvp_frozen never breaks).
     kiteFrozen?: number;
-    // In place of the step back: stand on the corner tile of a frozen target that holds a melee weapon. Melee reaches
+    // In place of the step back: stand on the same tile as a frozen target that holds a melee weapon (rsmod reached is
+    // false for same-tile melee while line of sight stays true).
+    stepUnderFrozen?: boolean;
+    // In place of the step back: stand on a diagonal corner tile of a frozen target that holds a melee weapon. Melee reaches
     // the 4 side tiles only (RectangleBoundary.ts), so it cannot hit us there, and the bow shoots with no walk.
     diagonalFrozen?: boolean;
     // Against a target that holds a melee weapon: freezes and steps only, no hit and no special. A freeze goes out
@@ -183,9 +195,13 @@ export type FightOptions = {
     dropForStrip?: { free: number; minFood: number; hpAbove: number; always?: boolean };
     freezeWear?: string[];
     meleeStyle?: number;
-    // One stun for a group on one target: a special that stuns (SpecConfig.stun) goes only once the last one's hold
-    // ends (`until`, on the shared `clock`), so the group's spears hold the target in turn and hit between.
-    stunShare?: { clock: () => number; until: number };
+    // One stun for a group on one target: a special that stuns (SpecConfig.stun) waits until `until - overlap` (default 1,
+    // queuing push_* inside the final tick of p_delay(4) with zero eat/teleport gap). `stunnedUntil` marks when teammates burst.
+    stunShare?: { clock: () => number; until: number; stunnedUntil?: number; overlap?: number };
+    // Secondary stun-lock special (such as a carried Dragon spear alongside a primary DDS/bow DPS special).
+    stunSpec?: SpecConfig;
+    // While the target is stunned (observed shoved spotanim 254 or shared stunShare.stunnedUntil), bypass spec.below and specReserve.
+    burstOnStun?: boolean;
     // The first turn of the fight is a freeze, whatever the freeze rule: a group's opening holds the target before it
     // sees itself outnumbered and runs (pk-army OPEN_FREEZE).
     openFreeze?: boolean;
@@ -255,6 +271,10 @@ export type FightOptions = {
     // spell then hits up to 30, not 20 (pvp/spells/scripts/flames_of_zamorak.rs2:27; Charge needs Magic 80, 3 fire,
     // 3 blood and 3 air runes, and the Mage Arena done, skill_magic/scripts/spells/charge.rs2).
     charge?: boolean;
+    // Trigger Dragon Battleaxe (1377) combat_axe:specbar Strength warcry self-buff when carrying 1377 at 100% energy
+    // (specwep.rs2:61-78 drains Attack/Defence/Ranged/Magic by 10% and boosts Strength by 10 + sum/4).
+    // 'restore' also prioritizes super restore/attack potion after buffing to recover drained combat stats.
+    battleaxeBuff?: boolean | 'restore';
     maxWild?: number;
     maxDistance?: number;
     stop?: () => boolean;
@@ -287,6 +307,14 @@ export function weaponStyle(id: number | undefined, names = getObjNames()): Styl
 }
 const PROTECT_FROM: Record<Style, number> = { melee: 14, ranged: 13, magic: 12 };
 
+export const isDragonSpearName = (name: string) => /^dragon_spear(_p)?$|^tbwt_dragon_spear_kp$/.test(name);
+export const OFFENSIVE_MELEE_PRAYERS: readonly number[] = [
+    PRAYER.ultimateStrength, PRAYER.incredibleReflexes,
+    PRAYER.superhumanStrength, PRAYER.improvedReflexes,
+    PRAYER.burstOfStrength, PRAYER.clarityOfThought,
+];
+const isOverheadPrayer = (p: number) => p >= PRAYER.magic && p <= PRAYER.melee;
+
 // Prayers for the current combat state (player_combat_stat.rs2:33-35, 62-67): Protect Item, the best Defence prayer
 // (boosts melee, ranged and 30% of magic defence), the overhead for the opponent's weapon, and on melee/spec turns the
 // best Strength and Attack prayers (+15% max hit and accuracy at 31/34), turned off on non-melee turns to save drain.
@@ -306,8 +334,155 @@ export function combatPrayers(prayerBase: number, overhead: number | null, melee
     return { want, off };
 }
 
+export type PrayerPlanInput = {
+    now: number;
+    nextAttack: number;
+    lastAttackAt: number;
+    walkingToMelee: boolean;
+    prayerBase: number;
+    overhead: number | null;
+    activePrayers: readonly boolean[];
+    prayerDrainAt: number;
+    flickAt: number;
+    flickEvery: number;
+    zeroDrainFlick: boolean;
+    prayerFlick: boolean;
+    offensiveFlick: boolean;
+    upcomingStyle: Style | null;
+    specMeleeLikely: boolean;
+    defencePrayer: boolean;
+    protectItem: boolean;
+    budget: number;
+};
+export type PrayerPlanResult = { toggles: number[]; didFlick: boolean; nextDrainAt: number; nextFlickAt: number };
+
+const keepPrayerPriority = (p: number, overhead: number | null) =>
+    p === overhead || isOverheadPrayer(p) ? 3
+        : (p === PRAYER.steelSkin || p === PRAYER.rockSkin || p === PRAYER.thickSkin) ? 2
+        : p === PRAYER.item ? 1
+        : 0;
+
+// Plan prayer toggles during cooldown ticks under rev 289's 5-tick prayer_drain timer (prayer.rs2:30-43).
+export function planPrayerTick(input: PrayerPlanInput): PrayerPlanResult {
+    const {
+        now, nextAttack, lastAttackAt, walkingToMelee, prayerBase, overhead,
+        activePrayers, prayerDrainAt, flickAt, flickEvery, zeroDrainFlick,
+        prayerFlick, offensiveFlick, upcomingStyle, specMeleeLikely, defencePrayer, protectItem, budget,
+    } = input;
+    const sim = [...activePrayers];
+    let drainAt = sim.some(Boolean) ? (prayerDrainAt >= 0 ? prayerDrainAt : now) : -1;
+    const apply = (p: number) => {
+        const had = sim.some(Boolean);
+        sim[p] = !sim[p];
+        const has = sim.some(Boolean);
+        if (!has) drainAt = -1;
+        else if (!had && has) drainAt = now;
+    };
+    const active = sim.flatMap((on, p) => (on ? [p] : []));
+    const flickAllowed = (zeroDrainFlick || prayerFlick) && !walkingToMelee && active.length > 0;
+    const elapsed = zeroDrainFlick ? (drainAt >= 0 ? now - drainAt : 0) : now - flickAt;
+    const canFlickWindow = now < nextAttack - 1;
+    const maxFlick = Math.floor(budget / 2);
+
+    if (flickAllowed && canFlickWindow && budget >= 2) {
+        // Under zeroDrainFlick, never truncate an off+on cycle (active * 2 <= budget); step down lowest-priority
+        // prayers (offensive -> item) when >= 2 ticks remain before nextAttack so nextAttack - 1 stays free to buff.
+        if (zeroDrainFlick && active.length > maxFlick && elapsed >= Math.max(1, flickEvery - 1) && now <= nextAttack - 3) {
+            const toDrop = active
+                .filter(p => p !== overhead && !isOverheadPrayer(p) && p !== PRAYER.steelSkin && p !== PRAYER.rockSkin && p !== PRAYER.thickSkin)
+                .sort((a, b) => keepPrayerPriority(a, overhead) - keepPrayerPriority(b, overhead))
+                .slice(0, Math.min(budget, active.length - maxFlick));
+            if (toDrop.length > 0) {
+                for (const p of toDrop) apply(p);
+                return { toggles: toDrop, didFlick: false, nextDrainAt: drainAt, nextFlickAt: flickAt };
+            }
+        }
+        const due = zeroDrainFlick
+            ? (elapsed >= flickEvery || (now === nextAttack - 2 && elapsed >= Math.max(1, flickEvery - 1)))
+            : elapsed >= flickEvery;
+        const canCycle = zeroDrainFlick ? active.length <= maxFlick : active.length < budget;
+        if (due && canCycle) {
+            const order = [...active].sort((a, b) => keepPrayerPriority(b, overhead) - keepPrayerPriority(a, overhead));
+            const toggles = zeroDrainFlick
+                ? [...order, ...order]
+                : [...order, ...order.slice(0, budget - order.length)];
+            for (const p of toggles) apply(p);
+            return { toggles, didFlick: true, nextDrainAt: drainAt, nextFlickAt: now };
+        }
+    }
+
+    const toggles: number[] = [];
+    if (budget > 0) {
+        const nextIsMelee = now === nextAttack - 1 && (upcomingStyle === 'melee' || specMeleeLikely);
+        const { want, off } = combatPrayers(prayerBase, overhead, nextIsMelee, defencePrayer, protectItem);
+        const dropOffensive = offensiveFlick && now < nextAttack - 1 && (now === lastAttackAt + 1 || !nextIsMelee);
+        const dropSet = dropOffensive ? new Set([...off, ...OFFENSIVE_MELEE_PRAYERS]) : new Set(off);
+        // Priority order on activation: keep overhead active first, then non-overhead boosts.
+        const prioritizedWant = [...want].sort((a, b) => keepPrayerPriority(b, overhead) - keepPrayerPriority(a, overhead));
+        let rem = budget;
+        for (const p of prioritizedWant) {
+            if (!sim[p] && rem > 0) { toggles.push(p); apply(p); rem--; }
+        }
+        for (const p of dropSet) {
+            if (sim[p] && rem > 0) { toggles.push(p); apply(p); rem--; }
+        }
+    }
+    return { toggles, didFlick: false, nextDrainAt: drainAt, nextFlickAt: flickAt };
+}
+
+export function shouldComboEat(opts: {
+    hp: number; maxHp: number; oppMax: number; eatAt: number;
+    comboFood?: boolean; comboAt?: number; koComboAt?: number;
+    recentDamage?: number; oppSpecThreat?: boolean;
+}): boolean {
+    if (opts.comboFood === false || opts.hp >= opts.maxHp) return false;
+    // Limit tbwt_cooked_karambwan (p_delay(2) suspension) strictly to surviving lethal KO bursts unless explicitly configured.
+    const koBase = opts.koComboAt ?? (opts.oppSpecThreat ? Math.min(opts.eatAt, opts.oppMax + 8) : opts.oppMax);
+    const limit = opts.comboFood
+        ? (opts.comboAt !== undefined ? Math.max(opts.comboAt, koBase) : Math.min(opts.eatAt, Math.max(18, koBase)))
+        : koBase;
+    return opts.hp <= limit || (opts.comboFood === true && (opts.recentDamage ?? 0) >= opts.hp && opts.hp <= opts.eatAt);
+}
+
+export function pickFakieWeapon(opts: {
+    kit: Kit;
+    realStyle: Style;
+    preferred?: boolean | Style;
+    inventory: readonly { id: number; slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[];
+    equipment: readonly { id: number; slot: number }[];
+    names?: Map<number, string>;
+}): { id: number; slot: number; style: Style; opIndex: number } | null {
+    if (!opts.preferred) return null;
+    const names = opts.names ?? getObjNames();
+    const wornWeapon = opts.equipment.find(e => e.slot === 3);
+    const hasShield = opts.equipment.some(e => e.slot === 5);
+    const wornStyle = wornWeapon ? weaponStyle(wornWeapon.id, names) : null;
+    // Skip redundant equip if already holding the requested decoy (or any off-style weapon when fakieSwitch is boolean).
+    if (typeof opts.preferred === 'string' && opts.preferred !== opts.realStyle) {
+        if (wornStyle === opts.preferred) return null;
+    } else if (wornStyle && wornStyle !== opts.realStyle) return null;
+    const order: Style[] = typeof opts.preferred === 'string' && opts.preferred !== opts.realStyle
+        ? [opts.preferred, ...(['melee', 'ranged', 'magic'] as Style[]).filter(s => s !== opts.preferred && s !== opts.realStyle)]
+        : (['melee', 'magic', 'ranged'] as Style[]).filter(s => s !== opts.realStyle);
+    for (const st of order) {
+        const ids = opts.kit[st] ?? [];
+        if (!ids.length) continue;
+        // Skip equipping a 2H bow/spear decoy when a shield is worn and the pack has no free slot.
+        if (hasShield && opts.inventory.length >= 28 && (st === 'ranged' || ids.some(id => isDragonSpearName(names.get(id) ?? '')))) continue;
+        for (const id of ids) {
+            if (opts.equipment.some(e => e.id === id)) continue;
+            const n = names.get(id) ?? '';
+            if (/(kiteshield|sq_shield|shield|arrow|bolt)$/.test(n)) continue;
+            const item = opts.inventory.find(i => i.id === id);
+            const op = item?.optionsWithIndex.find(x => /^(Wield|Wear)$/i.test(x.text));
+            if (item && op) return { id, slot: item.slot, style: st, opIndex: op.opIndex };
+        }
+    }
+    return null;
+}
+
 // Default special-attack config from a staged kit (content specwep=true: dragon dagger 25%, longsword 25%, mace 25%,
-// rune claws 25%, magic shortbow 35% in bows.obj:343).
+// rune claws 25%, magic shortbow 35% in bows.obj:343, dragon spear/_p/kp 25%).
 export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undefined {
     for (const id of kit.melee ?? []) {
         const n = names.get(id) ?? '';
@@ -318,9 +493,16 @@ export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undef
         if (n === 'rune_claws') return { kit: kit.melee!, bar: 'combat_claw:specbar', cost: 250, below: 0.6, style: 'melee' };
         // The dragon spear's special does no damage: it holds the target 5 ticks with no input (pvp_dragon_spear.rs2
         // p_delay(4)), so it cannot eat or change its prayer: it goes out when the target is low enough to want food.
-        if (n === 'dragon_spear') return { kit: kit.melee!, bar: 'combat_spear:specbar', cost: 250, below: 0.55, style: 'melee', stun: 4 };
+        if (isDragonSpearName(n)) return { kit: [id], bar: 'combat_spear:specbar', cost: 250, below: 0.55, style: 'melee', stun: 4 };
     }
     return bowSpec(kit, names);
+}
+// Carried dragon spear secondary stun spec for kits whose primary spec weapon is a DPS weapon (e.g. DDS + dragon spear).
+export function defaultStunSpec(kit: Kit, names = getObjNames()): SpecConfig | undefined {
+    for (const id of kit.melee ?? []) {
+        if (isDragonSpearName(names.get(id) ?? '')) return { kit: [id], bar: 'combat_spear:specbar', cost: 250, below: 0.55, style: 'melee', stun: 4 };
+    }
+    return undefined;
 }
 // The magic shortbow special of a kit: the burst against a target out of melee reach.
 // A weapon's reach in tiles from knowledge/gear.json (param attackrange: magic shortbow 7, magic longbow 10).
@@ -372,6 +554,8 @@ export function gearBonus(id: number, bonus: string, names = getObjNames()): num
 // failedspell_impact (85) (pvp_magic.rs2, magic_combat_spells.dbrow, pack/spotanim.pack).
 export type Observed = { headicons: number; worn: number[]; health: number; totalHealth: number; spotanim: number };
 export const HOLD_IMPACT: readonly number[] = [179, 180, 181], SPLASH_IMPACT = 85;
+// spotanim.pack:255 stunned_shove, applied by pvp_dragon_spear.rs2 on stun impact.
+export const STUNNED_SHOVE_SPOTANIM = 254;
 // The hold spell of each impact graphic (magic_combat_spells.dbrow spotanim_target): its freeze_time sets the hold.
 export const IMPACT_SPELL: Readonly<Record<number, number>> = { 179: SPELLS.entangle, 180: SPELLS.snare, 181: SPELLS.bind };
 export function observePlayer(client: unknown, index: number): Observed | null {
@@ -413,8 +597,16 @@ const TURN: Record<Style, number> = { magic: 5, ranged: 4, melee: 4 };
 // A thrown weapon attacks each 3 ticks, each 2 on Rapid (knives.obj, darts.obj attackrate 3); a shortbow each 4, each 3 on Rapid.
 export const rangedWeaponDelay = (ids: readonly number[] | undefined, rapid: boolean, names = getObjNames()) =>
     ((ids ?? []).some(id => /_(knife|dart)(_p)?$/.test(names.get(id) ?? '')) ? 3 : TURN.ranged) - (rapid ? 1 : 0);
-const meleeWeaponDelay = (ids: readonly number[] | undefined, names = getObjNames()) =>
-    (ids ?? []).some(id => /(longsword|mace|battleaxe|warhammer|2h_sword|halberd)/.test(names.get(id) ?? '')) ? 5 : 4;
+export const meleeWeaponDelay = (ids: readonly number[] | undefined, names = getObjNames()) => {
+    let maxDelay = 4;
+    for (const id of ids ?? []) {
+        const n = names.get(id) ?? '';
+        if (/(2h_sword|halberd)/.test(n)) maxDelay = Math.max(maxDelay, 7);
+        else if (/(spear|battleaxe|warhammer)/.test(n)) maxDelay = Math.max(maxDelay, 6);
+        else if (/(longsword|mace)/.test(n)) maxDelay = Math.max(maxDelay, 5);
+    }
+    return maxDelay;
+};
 
 // Food best first by heal; any other item with an Eat option comes after these.
 export const FOOD_ORDER = [/^shark$/i, /^cooked karambwan$/i, /^swordfish$/i, /^lobster$/i, /^bass$/i, /^tuna$/i, /^salmon$/i, /^trout$/i, /^pike$/i];
@@ -521,6 +713,31 @@ export function bestDamageSpell(magic: number, carried: readonly { id: number; c
     if (has(ITEMS.mindRune)) return SPELLS.fireStrike;
     return SPELLS.fireWave;
 }
+
+// Rev 289 Charge varp (%magearena_charge = varp 272, set to 350 and decremented every 2 ticks by [timer,charge]).
+export const chargeVarpTicks = (client: unknown): number | undefined => {
+    const val = (client as { var?: number[] } | undefined)?.var?.[272];
+    return typeof val === 'number' ? val : undefined;
+};
+
+// Charge eligibility: Magic 80+, 3 fire/3 blood/3 air runes, and varp 272 <= 0 when observable.
+export function canCastChargeNow(magicLevel: number, inv: readonly { id: number; count: number }[], chargeVarp?: number): boolean {
+    if (magicLevel < 80 || (chargeVarp !== undefined && chargeVarp > 0)) return false;
+    const countOf = (id: number) => inv.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    return countOf(ITEMS.fireRune) >= 3 && countOf(ITEMS.bloodRune) >= 3 && countOf(ITEMS.airRune) >= 3;
+}
+
+// Exact rev-289 Dragon Battleaxe warcry stat drains & Strength boost (specwep.rs2:67-77).
+export function battleaxeWarcryMath(levels: { Attack: number; Defence: number; Ranged: number; Magic: number }) {
+    const drained = {
+        attack: Math.floor(levels.Attack / 10),
+        defence: Math.floor(levels.Defence / 10),
+        ranged: Math.floor(levels.Ranged / 10),
+        magic: Math.floor(levels.Magic / 10),
+    };
+    const sum = drained.attack + drained.defence + drained.ranged + drained.magic;
+    return { drained, strengthBoost: 10 + Math.floor(sum / 4) };
+}
 // A repeatable random number source (mulberry32): the same seed gives the same numbers.
 export function seededRandom(seed: number): () => number {
     let a = seed >>> 0;
@@ -546,6 +763,52 @@ const cheb = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.
 // kiteMelee: the 8 step directions, and the SDK's path search, loaded on the first kite step only (it holds the
 // collision map).
 const KITE_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
+export const DIAGONAL_CORNERS: readonly [number, number][] = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+// Compute the cooldown kite tile while the target is frozen and holds melee, enforcing pvp_frozen's 10-tile leash.
+export function pickFrozenKiteTile(opts: {
+    at: { x: number; z: number };
+    target: { x: number; z: number };
+    stepUnder?: boolean;
+    diagonal?: boolean;
+    standOff?: number;
+    kiteFrozen?: number;
+    frozen: boolean;
+    canWalkTo?: (x: number, z: number) => boolean;
+}): { x: number; z: number } | null {
+    const { at, target, stepUnder, diagonal, standOff, kiteFrozen, frozen, canWalkTo } = opts;
+    if (stepUnder) {
+        if (at.x === target.x && at.z === target.z) return null;
+        return !canWalkTo || canWalkTo(target.x, target.z) ? { x: target.x, z: target.z } : null;
+    }
+    if (diagonal) {
+        if (Math.abs(at.x - target.x) === 1 && Math.abs(at.z - target.z) === 1) return null;
+        const dxPref = Math.sign(at.x - target.x) || 1, dzPref = Math.sign(at.z - target.z) || 1;
+        const corners = [...DIAGONAL_CORNERS].sort((a, b) => {
+            const ad = Math.abs(at.x - (target.x + a[0])) + Math.abs(at.z - (target.z + a[1]));
+            const bd = Math.abs(at.x - (target.x + b[0])) + Math.abs(at.z - (target.z + b[1]));
+            const aPref = (a[0] === dxPref ? 0 : 1) + (a[1] === dzPref ? 0 : 1);
+            const bPref = (b[0] === dxPref ? 0 : 1) + (b[1] === dzPref ? 0 : 1);
+            return ad - bd || aPref - bPref;
+        });
+        for (const [cx, cz] of corners) {
+            const tile = { x: target.x + cx, z: Math.max(3522, target.z + cz) };
+            if (!canWalkTo || canWalkTo(tile.x, tile.z)) return tile;
+        }
+        return null;
+    }
+    const rawKeep = standOff ?? (frozen ? kiteFrozen ?? 0 : 0);
+    if (!rawKeep) return null;
+    const keep = frozen ? Math.min(rawKeep, 10) : rawKeep;
+    if (cheb(at, target) >= keep) return null;
+    const dx = Math.sign(at.x - target.x) || 1, dz = Math.sign(at.z - target.z);
+    const tile = { x: target.x + dx * keep, z: Math.max(3522, target.z + dz * keep) };
+    if (!canWalkTo || canWalkTo(tile.x, tile.z)) return tile;
+    for (const [ddx, ddz] of KITE_DIRS) {
+        const alt = { x: target.x + ddx * keep, z: Math.max(3522, target.z + ddz * keep) };
+        if (canWalkTo(alt.x, alt.z)) return alt;
+    }
+    return null;
+}
 let kitePaths: typeof import('../vendor/rs-sdk/sdk/pathfinding') | null = null;
 let kiteLos: typeof import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder') | null = null;
 // A spell goes out only with a line of sight to the target (GameMap.ts isApproached, rsmod hasLineOfSight with
@@ -608,7 +871,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // A bench name is aiob…x<4-character token><role>; the role (1, 1b, …) is the same on every run.
         ? Number(process.env.BENCH_SEED) * 100_003 + [...(s.name.toLowerCase().match(/^aiob[a-z0-9]*x[a-z0-9]{4}(.+)$/)?.[1] ?? s.name.toLowerCase())].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) : undefined;
     const rand = o.mixSeed !== undefined ? seededRandom(o.mixSeed) : benchSeed !== undefined ? seededRandom(benchSeed) : Math.random;
-    let charged = false, chargeAt = -10, stepAt = -10, flickAt = start, lastSpecStyle: Style | null = null;
+    let charged = (chargeVarpTicks(s.client) ?? 0) > 0, chargeAt = -10, battleaxeAt = -10, stepAt = -10, flickAt = start, prayerDrainAt = -1, targetStunnedUntil = -1, lastFakieAt = -10, lastSpecStyle: Style | null = null;
     let heldOverhead: number | null = null, overheadSince = -1000, chaseLow = false, kiteStopAt = -10, outnumbered = o.escapeLatch?.outnumbered ?? false;
     // prayerLag: the overhead that the loop wants, the tick from which it has it, and the overhead it has now.
     let lagWant: number | null | undefined, lagAt = start, lagHas: number | null | undefined;
@@ -722,6 +985,15 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 if (o.freezeShare) { o.freezeShare.until = o.freezeShare.clock(); o.freezeShare.heldUntil = Math.min(o.freezeShare.heldUntil ?? -1, o.freezeShare.clock()); }
                 frozenUntil = now; freezeReady = now; frozenTile = null;
                 log(`PK freeze missed (graphic) at distance ${cheb(at, target)}`);
+            } else if (spot !== lastSpot && spot === STUNNED_SHOVE_SPOTANIM) {
+                // Observed in the tick after server .p_delay(4) sets delayedUntil = fireTick + 5 -> 4 ticks left.
+                targetStunnedUntil = Math.max(targetStunnedUntil, now + 4);
+                if (o.stunShare) {
+                    const shareClock = o.stunShare.clock();
+                    if (o.stunShare.until <= shareClock) o.stunShare.until = shareClock + 4;
+                    o.stunShare.stunnedUntil = Math.max(o.stunShare.stunnedUntil ?? -1, shareClock + 4);
+                }
+                log(`PK target stunned (shove graphic) at distance ${cheb(at, target)}`);
             }
             if (spot !== lastSpot && process.env.PK_TRACE === '1') log(`PKS target graphic ${spot}`);
             lastSpot = spot;
@@ -795,21 +1067,31 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             if (food) {
                 use(food, /^Eat$/i);
                 foodReady = now + 3;
-                nextAttack = (hasAttacked ? nextAttack : now) + 3;
-                hasAttacked = true;
                 ateThisTick = true;
                 result.eaten++;
-                if (food.id === ITEMS.karambwan) { delayedUntil = Math.max(delayedUntil, now + 4); nextAttack = Math.max(nextAttack, delayedUntil); }
-                // Combo-eat a cooked karambwan in the same tick when dangerously low or comboFood is enabled.
-                const comboLimit = o.comboFood ? Math.max(o.comboAt ?? Math.max(18, eatAt - 10), oppMax) : oppMax;
-                if (me.hp <= comboLimit && now >= karambwanReady && food.id !== ITEMS.karambwan) {
-                    const kw = slotOf([ITEMS.karambwan]);
-                    if (kw) {
-                        use(kw, /^Eat$/i);
-                        karambwanReady = now + 3;
-                        delayedUntil = Math.max(delayedUntil, now + 4);
-                        nextAttack = Math.max(nextAttack + 2, delayedUntil);
-                        result.eaten++;
+                if (food.id === ITEMS.karambwan) {
+                    // tbwt_cooked_karambwan adds 0 ticks to %action_delay (consume.rs2:38) and suspends input via p_delay(2).
+                    karambwanReady = now + 3;
+                    delayedUntil = Math.max(delayedUntil, now + 4);
+                    nextAttack = Math.max(nextAttack, delayedUntil);
+                } else {
+                    nextAttack = (hasAttacked ? nextAttack : now) + 3;
+                    hasAttacked = true;
+                    const recentDamage = hits.filter(h => now - h.tick <= 2).reduce((n, h) => n + h.damage, 0);
+                    const comboWant = shouldComboEat({
+                        hp: me.hp, maxHp: me.maxHp, oppMax, eatAt,
+                        comboFood: o.comboFood, comboAt: o.comboAt, koComboAt: o.koComboAt,
+                        recentDamage, oppSpecThreat: !!o.spec || !!target,
+                    });
+                    if (comboWant && now >= karambwanReady) {
+                        const kw = slotOf([ITEMS.karambwan]);
+                        if (kw) {
+                            use(kw, /^Eat$/i);
+                            karambwanReady = now + 3;
+                            delayedUntil = Math.max(delayedUntil, now + 4);
+                            nextAttack = Math.max(nextAttack, delayedUntil);
+                            result.eaten++;
+                        }
                     }
                 }
             }
@@ -862,7 +1144,11 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             if (!potion && now + 3 <= nextAttack) {
                 const skill = (n: string) => state.skills.find(k => k.name === n);
                 const unboosted = (n: string) => { const k = skill(n); return !!k && k.level <= k.baseLevel; };
-                if (hasStyle(o.kit, 'melee') && unboosted('Strength')) potion = slotOf([...ITEMS.superStrength, ...ITEMS.strengthPotion]);
+                const drained = (n: string) => { const k = skill(n); return !!k && k.level < k.baseLevel; };
+                if (o.battleaxeBuff === 'restore' && (drained('Attack') || drained('Defence') || drained('Ranged') || drained('Magic'))) {
+                    potion = slotOf([...ITEMS.superRestore, ...ITEMS.restorePotion]);
+                }
+                if (!potion && hasStyle(o.kit, 'melee') && unboosted('Strength')) potion = slotOf([...ITEMS.superStrength, ...ITEMS.strengthPotion]);
                 if (!potion && hasStyle(o.kit, 'melee') && unboosted('Attack')) potion = slotOf([...ITEMS.superAttack, ...ITEMS.attackPotion]);
                 if (!potion && hasStyle(o.kit, 'ranged') && unboosted('Ranged')) potion = slotOf(ITEMS.rangingPotion);
                 if (!potion && hasStyle(o.kit, 'magic') && unboosted('Magic')) potion = slotOf(ITEMS.magicPotion);
@@ -949,7 +1235,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const chasing = (now < fleeingUntil || now < frozenUntil) && cheb(at, target) > 2 && ranged;
         // While we kite a frozen target, a melee turn would walk back into its reach.
         const heldMelee = now < frozenUntil && weaponStyle(seen?.worn[3]) === 'melee' && ranged;
-        const kiting = (!!kiteTiles || !!o.diagonalFrozen) && heldMelee;
+        const kiting = (!!kiteTiles || !!o.diagonalFrozen || !!o.stepUnderFrozen) && heldMelee;
         const canReachMelee = !chasing && !kiting && !(now < selfFrozenUntil && !adjacent(at, target)) && (cheb(at, target) <= 6 || (!hasStyle(o.kit, 'magic') && !hasStyle(o.kit, 'ranged')));
         const guarded = o.readOverheads === false ? new Set<Style>() : protectedStyles(seen?.headicons);
         const styleUsable = (st: Style) => hasStyle(o.kit, st) && (st !== 'melee' || canReachMelee);
@@ -1042,29 +1328,47 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         if (now < nextAttack || unattackableSince >= 0) {
             let budget = 5;
             const walkingToMelee = now <= lastAttackAt + lastWalkTicks;
-            // Not on the tick before our own attack: that tick sets the prayers of the turn.
             const flickEvery = o.flickEvery ?? (lastStyle === 'ranged' || upcomingTurn?.style === 'ranged' ? 3 : 4);
-            if (o.prayerFlick !== false && now - flickAt >= flickEvery && now < nextAttack - 1 && !walkingToMelee) {
-                const active = prayers.activePrayers.flatMap((on, p) => (on ? [p] : []));
-                if (active.length > 0 && active.length <= 4) {
-                    // The overhead first: it is the one that must be back on in this tick.
-                    const order = [...active].sort((a, b) => Number(b >= PRAYER.magic && b <= PRAYER.melee) - Number(a >= PRAYER.magic && a <= PRAYER.melee));
-                    for (const p of order) void sdk.sendTogglePrayer(p);
-                    for (const p of order.slice(0, 5 - order.length)) void sdk.sendTogglePrayer(p);
-                    flickAt = now;
+            let didFlick = false;
+            if (prayers.prayerPoints > 0) {
+                const plan = planPrayerTick({
+                    now, nextAttack, lastAttackAt, walkingToMelee, prayerBase, overhead,
+                    activePrayers: prayers.activePrayers, prayerDrainAt, flickAt, flickEvery,
+                    zeroDrainFlick: o.zeroDrainFlick === true,
+                    prayerFlick: o.prayerFlick !== false,
+                    offensiveFlick: o.offensiveFlick === true,
+                    upcomingStyle: upcomingTurn?.style ?? null,
+                    specMeleeLikely: !!o.spec && lowHealth(seen, o.spec.below),
+                    defencePrayer: o.defencePrayer !== false && !bursting,
+                    protectItem: o.protectItem !== false,
+                    budget,
+                });
+                for (const p of plan.toggles) { void sdk.sendTogglePrayer(p); budget--; }
+                prayerDrainAt = plan.nextDrainAt;
+                flickAt = plan.nextFlickAt;
+                didFlick = plan.didFlick;
+                if (didFlick) {
                     result.flicks = (result.flicks ?? 0) + 1;
-                    continue;
                 }
             }
-            const keep = o.standOff ?? (kiteTiles && now < frozenUntil && weaponStyle(seen?.worn[3]) === 'melee' ? kiteTiles : 0);
-            // diagonalFrozen: the tile at the corner of the frozen target on our side; melee reaches the 4 side tiles only.
-            const corner = { x: target.x + (Math.sign(at.x - target.x) || 1), z: target.z + (Math.sign(at.z - target.z) || 1) };
-            if (o.diagonalFrozen && heldMelee && !walkingToMelee && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2 && (at.x !== corner.x || at.z !== corner.z)) {
-                void sdk.sendWalk(corner.x, corner.z);
-                stepAt = now;
-            } else if (keep && !walkingToMelee && (upcomingTurn?.style !== 'melee' || !o.standOff) && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2 && cheb(at, target) < keep) {
-                const dx = Math.sign(at.x - target.x) || 1, dz = Math.sign(at.z - target.z);
-                void sdk.sendWalk(target.x + dx * keep, target.z + dz * keep);
+            const kiteStep = (heldMelee && (o.stepUnderFrozen || o.diagonalFrozen || kiteTiles)) || o.standOff
+                ? pickFrozenKiteTile({
+                    at, target,
+                    stepUnder: heldMelee && !!o.stepUnderFrozen,
+                    diagonal: heldMelee && !o.stepUnderFrozen && !!o.diagonalFrozen,
+                    standOff: o.standOff,
+                    kiteFrozen: heldMelee ? kiteTiles : undefined,
+                    frozen: now < frozenUntil,
+                    canWalkTo: kitePaths ? (wx, wz) => {
+                        const path = kitePaths!.findLongPath(me.level ?? 0, at.x, at.z, wx, wz, 16);
+                        const end = path[path.length - 1];
+                        return !!end && end.x === wx && end.z === wz;
+                    } : undefined,
+                })
+                : null;
+            const skipStandOffMelee = !!o.standOff && !heldMelee && upcomingTurn?.style === 'melee';
+            if (kiteStep && !walkingToMelee && !skipStandOffMelee && now > lastAttackAt && now >= selfFrozenUntil && now - stepAt >= 2) {
+                void sdk.sendWalk(kiteStep.x, kiteStep.z);
                 stepAt = now;
             }
             if (!walkingToMelee && !rapidSet && state.combatStyle && state.combatStyle.styles.length > 1 && state.combatStyle.currentStyle !== 1 && budget > 0) {
@@ -1072,31 +1376,54 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 rapidSet = true;
                 budget--;
             }
-            if (prayers.prayerPoints > 0 && budget > 0) {
-                // Pre-activate melee prayers on the tick before a melee turn so the attack tick needs 0 prayer packets.
-                const nextIsMelee = now === nextAttack - 1 && (upcomingTurn?.style === 'melee' || (!!o.spec && lowHealth(seen, o.spec.below)));
-                const { want: wantPray, off: offPray } = combatPrayers(prayerBase, overhead, nextIsMelee, o.defencePrayer !== false && !bursting, o.protectItem !== false);
-                // The tick before a bow special of the burst: armour off, as far as packets and free pack slots allow.
-                if (bursting && now === nextAttack - 1 && typeof sdk.sendUseEquipmentItem === 'function') {
-                    const free = 28 - inv.length - 1;
-                    for (const eq of negativeCastArmour(state.equipment, 'magic', new Set(), names).filter(e => !(torsoLocked && DRAGON_SLAYER_BODY.test(names.get(e.id) ?? ''))).slice(0, Math.max(0, Math.min(budget - 1, free)))) {
-                        tankIds.add(eq.id); void sdk.sendUseEquipmentItem(eq.slot, 1); budget--;
-                        log(`PK burst takes off ${names.get(eq.id)}`);
-                    }
+            // The tick before a bow special of the burst: armour off, as far as packets and free pack slots allow.
+            if (bursting && now === nextAttack - 1 && typeof sdk.sendUseEquipmentItem === 'function' && budget > 1) {
+                const free = 28 - inv.length - 1;
+                for (const eq of negativeCastArmour(state.equipment, 'magic', new Set(), names).filter(e => !(torsoLocked && DRAGON_SLAYER_BODY.test(names.get(e.id) ?? ''))).slice(0, Math.max(0, Math.min(budget - 1, free)))) {
+                    tankIds.add(eq.id); void sdk.sendUseEquipmentItem(eq.slot, 1); budget--;
+                    log(`PK burst takes off ${names.get(eq.id)}`);
                 }
-                for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
-                for (const p of offPray) if (prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
+            }
+            // 1-tick fakie switch: hold a decoy weapon style during cooldown, then swap back on the attack tick.
+            const castingFreeze = now <= freezeCastAt + 3 && !(now < frozenUntil && now >= freezeCastAt + 2);
+            if (o.fakieSwitch && upcomingTurn && hasAttacked && now > lastAttackAt && now < nextAttack - 1 && !walkingToMelee && !castingFreeze && lastFakieAt < lastAttackAt && budget >= 1) {
+                const decoy = pickFakieWeapon({
+                    kit: o.kit, realStyle: upcomingTurn.style, preferred: o.fakieSwitch,
+                    inventory: inv, equipment: state.equipment, names,
+                });
+                if (decoy) {
+                    void sdk.sendUseItem(decoy.slot, decoy.opIndex);
+                    lastFakieAt = now;
+                    budget--;
+                }
             }
             continue;
         }
         // kiteMelee: an attack tick with no freeze to cast is a step, not a hit.
         if (kiteTarget && !kiteCast) continue;
         // Charge goes out on an attack tick, in place of that attack: a button on a cooldown tick could clear an attack
-        // that the server still has in hand. One try each 6 ticks, until the game confirms it.
-        if (o.charge && !charged && now - chargeAt >= 6) {
+        // that the server still has in hand. One try each 6 ticks, until the game confirms it or varp 272 > 0.
+        const magicSkill = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
+        const chargeVarp = chargeVarpTicks(s.client);
+        if (chargeVarp !== undefined) charged = chargeVarp > 0;
+        if (o.charge && !charged && now - chargeAt >= 6 && canCastChargeNow(magicSkill, inv, chargeVarp)) {
             log('PK cast Charge');
             void sdk.sendClickComponent(SPELLS.charge);
             chargeAt = now; nextAttack = now + 2;
+            continue;
+        }
+        // Dragon Battleaxe warcry (specwep.rs2:61-78): 100% energy immediate Strength buff when carrying item 1377.
+        const hasBattleaxe = state.equipment.some(e => e.id === ITEMS.dragonBattleaxe) || inv.some(i => i.id === ITEMS.dragonBattleaxe);
+        const strSkill = state.skills.find(k => k.name === 'Strength');
+        if (o.battleaxeBuff && hasBattleaxe && !kiteTarget && now - battleaxeAt >= 12 && special(s.client).energy >= 1000
+            && (!strSkill || strSkill.level <= strSkill.baseLevel + 4)) {
+            const axeItem = state.equipment.some(e => e.id === ITEMS.dragonBattleaxe) ? undefined : slotOf([ITEMS.dragonBattleaxe]);
+            if (axeItem) use(axeItem, /^(Wield|Wear)$/i);
+            void sdk.sendClickComponent(componentId('combat_axe:specbar'));
+            log('PK Dragon Battleaxe warcry');
+            battleaxeAt = now;
+            result.specs++;
+            nextAttack = Math.max(nextAttack, now + 1);
             continue;
         }
         // When not cardinally adjacent, client interactPlayer/spellOnPlayer emits MOVE_OPCLICK + OPPLAYER* (2 USER_EVENT packets).
@@ -1117,18 +1444,23 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // A target that has fled is out of food: from then on every special goes out at once, whatever its health bar
         // shows, and past melee reach the bow special replaces a melee one.
         const energy = special(s.client);
+        const stunOverlap = o.stunShare?.overlap ?? 1;
+        const targetStunned = now < targetStunnedUntil || (!!o.stunShare && o.stunShare.clock() < (o.stunShare.stunnedUntil ?? -1));
+        const stunOpenForChain = o.stunShare ? o.stunShare.clock() >= o.stunShare.until - stunOverlap : !targetStunned;
+        const canSecondaryStun = !!o.stunSpec && canReachMelee && !bursting && energy.energy >= o.stunSpec.cost && stunOpenForChain
+            && (fled || lowHealth(seen, o.stunSpec.below) || !!o.stunShare);
         // In a burst the bow special goes first, then a melee special if one is ready, then the bow again: the target
         // prays against the weapon it saw last, so each lands off its prayer.
         const meleeSpecReady = !!o.spec && o.spec.style !== 'ranged' && energy.energy >= o.spec.cost && canReachMelee;
-        const spec: SpecConfig | undefined = bursting ? (lastSpecStyle === 'ranged' && meleeSpecReady ? o.spec : burstBow)
+        const spec: SpecConfig | undefined = canSecondaryStun ? o.stunSpec
+            : bursting ? (lastSpecStyle === 'ranged' && meleeSpecReady ? o.spec : burstBow)
             : o.spec && fled && o.spec.style !== 'ranged' && !canReachMelee ? bowSpec(o.kit, names) ?? o.spec : o.spec;
         const specStyle: Style = spec?.style ?? 'melee';
-        // A target that runs is held first: while a freeze is ready the special waits for it. A bow special on a target
-        // that runs beyond the bow's range (7 tiles for a shortbow, bows.obj attackrange) never leaves the bow: the
-        // special stays armed with its energy, and each such turn is lost.
+        // A target that runs is held first: while a freeze is ready the special waits for it (except adjacent stun-lock).
+        // A bow special on a target beyond the bow's range never leaves the bow and wastes the turn.
         const running = now < fleeingUntil;
         const specRange = specStyle === 'ranged' && spec ? weaponRange(spec.kit[0]!, names) ?? BOW_RANGE : BOW_RANGE;
-        const specWaits = running && (castFreeze || (specStyle === 'ranged' && cheb(at, target) > specRange));
+        const specWaits = running && ((castFreeze && !(spec?.stun && adjacent(at, target))) || (specStyle === 'ranged' && cheb(at, target) > specRange));
         const vs = o.volley && spec ? o.volley.state(targetName.toLowerCase()) : undefined, myKey = (s.name ?? '').toLowerCase();
         if (vs && !vs.fired) {
             const readyNow = energy.energy >= spec!.cost && now >= nextAttack && cheb(at, target) <= (specStyle === 'melee' ? 1 : specRange);
@@ -1137,14 +1469,19 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 vs.fired = true; log(`PK volley with ${vs.ready.size} of ${o.volley!.members} ready`);
             } else if (readyNow) continue;
         }
-        const stunWaits = !!spec?.stun && !!o.stunShare && o.stunShare.clock() < o.stunShare.until;
-        const volleying = (!!vs?.fired && !vs.done.has(myKey)) || (!!o.burstOnHold && !!o.freezeShare && o.freezeShare.clock() < (o.freezeShare.heldUntil ?? -1));
-        if (spec && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || lowHealth(seen, spec.below))
-            && (fled || bursting || volleying || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
+        const stunWaits = !!spec?.stun && !!o.stunShare && o.stunShare.clock() < o.stunShare.until - stunOverlap;
+        const chainStun = !!spec?.stun && !!o.stunShare && o.stunShare.until >= 0 && stunOpenForChain;
+        const volleying = (!!vs?.fired && !vs.done.has(myKey))
+            || (!!o.burstOnHold && !!o.freezeShare && o.freezeShare.clock() < (o.freezeShare.heldUntil ?? -1))
+            || (!!o.burstOnStun && !spec?.stun && targetStunned);
+        const specNeedsRoom = !!spec?.kit.some(id => isDragonSpearName(names.get(id) ?? '')) && state.equipment.some(e => e.slot === 3) && state.equipment.some(e => e.slot === 5) && inv.length >= 28;
+        if (spec && !specNeedsRoom && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || chainStun || lowHealth(seen, spec.below))
+            && (fled || bursting || volleying || chainStun || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
             && (spec.stun || !guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
-            for (const id of [...spec.kit, ...(specStyle === 'melee' ? tankIds : [])]) {
+            const specWieldIds = spec.kit.some(id => isDragonSpearName(names.get(id) ?? '')) ? spec.kit : [...spec.kit, ...(specStyle === 'melee' ? tankIds : [])];
+            for (const id of specWieldIds) {
                 if (state.equipment.some(e => e.id === id)) continue;
                 const item = slotOf([id]);
                 if (item && toWield.length < budget) toWield.push(item);
@@ -1153,7 +1490,11 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             if (o.meleeStyle !== undefined && specStyle === 'melee' && state.combatStyle && state.combatStyle.currentStyle !== o.meleeStyle && budget > 0) { void sdk.sendSetCombatStyle?.(o.meleeStyle); budget--; }
             if (prayers.prayerPoints > 0 && budget > 0) {
                 const { want: wantPray } = combatPrayers(prayerBase, overhead, specStyle === 'melee', o.defencePrayer !== false && !bursting, o.protectItem !== false);
-                for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
+                const orderedPray = [...wantPray].sort((a, b) => Number(b === overhead || isOverheadPrayer(b)) - Number(a === overhead || isOverheadPrayer(a)));
+                const hadPrayer = prayers.activePrayers.some(Boolean);
+                let turnedOn = 0;
+                for (const p of orderedPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; turnedOn++; }
+                if (!hadPrayer && turnedOn > 0 && prayerDrainAt < 0) prayerDrainAt = now;
             }
             for (const item of toWield) use(item, /^(Wield|Wear)$/i);
             log(`PK special ${specStyle} energy ${energy.energy} on ${energy.on} target ${seen?.health}/${seen?.totalHealth}`);
@@ -1161,10 +1502,17 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             void sdk.sendInteractPlayer(target.index, 2);
             result.specs++; result.attacks[specStyle]++; lastSpecStyle = specStyle;
             if (vs) vs.done.add(myKey);
-            if (spec.stun && o.stunShare) o.stunShare.until = o.stunShare.clock() + spec.stun + (specStyle === 'melee' ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : 0);
-            last = Math.max(0, rotation.indexOf(specStyle));
             const walkTicks = specStyle === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
-            // pvp_special_attack.rs2:35 always uses oc_param($weapon, attackrate) (4 for MSB/DDS/claws, 5 for longsword/mace), ignoring Rapid.
+            if (spec.stun) {
+                targetStunnedUntil = Math.max(targetStunnedUntil, now + walkTicks + spec.stun + 1);
+                if (o.stunShare) {
+                    const nextStunEnd = Math.max(o.stunShare.until, o.stunShare.clock() + walkTicks) + spec.stun + 1;
+                    o.stunShare.until = nextStunEnd;
+                    o.stunShare.stunnedUntil = Math.max(o.stunShare.stunnedUntil ?? -1, nextStunEnd);
+                }
+            }
+            last = Math.max(0, rotation.indexOf(specStyle));
+            // pvp_special_attack.rs2:35 always uses oc_param($weapon, attackrate) (4 for MSB/DDS/claws, 5 for longsword/mace, 6 for spear), ignoring Rapid.
             const delay = specStyle === 'melee' ? meleeWeaponDelay(spec.kit, names) : TURN[specStyle];
             if (specStyle === 'melee' && walkTicks === 0 && spec.kit.some(id => /^dragon_dagger/.test(names.get(id) ?? ''))) {
                 delayedUntil = Math.max(delayedUntil, now + 2); // pvp_dragon_dagger.rs2:11 p_delay(0)
@@ -1177,8 +1525,13 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // Hit off the opponent's overhead: a style they protect against loses 40% of its max hit.
         const turn = castFreeze ? { style: 'magic' as Style, index: last } : upcomingTurn;
         if (!turn) continue;
-        const kitIds = new Set(o.kit[turn.style] ?? []);
-        const switching2H = turn.style === 'ranged' && state.equipment.some(e => e.slot === 3) && state.equipment.some(e => e.slot === 5);
+        const rawMeleeIds = o.kit.melee ?? [];
+        const nonSpearMelee = rawMeleeIds.filter(id => !isDragonSpearName(names.get(id) ?? '') && id !== ITEMS.dragonBattleaxe);
+        const meleeIds = nonSpearMelee.some(id => !/(shield)$/.test(names.get(id) ?? '')) ? nonSpearMelee : rawMeleeIds;
+        const turnIds = turn.style === 'ranged' ? shootingKit(o.kit, names) : turn.style === 'melee' ? meleeIds : (o.kit[turn.style] ?? []);
+        const kitIds = new Set(turnIds);
+        const switching2H = (turn.style === 'ranged' || (turn.style === 'melee' && meleeIds.some(id => isDragonSpearName(names.get(id) ?? '') || /(2h_sword|halberd)/.test(names.get(id) ?? ''))))
+            && state.equipment.some(e => e.slot === 3) && state.equipment.some(e => e.slot === 5);
         // If switching to a 2H bow with a full 28-item pack and a shield worn, eat a food first so ~try_equip has room for the shield.
         if (switching2H && inv.length >= 28 && now >= foodReady) {
             const food = bestFood(inv);
@@ -1197,7 +1550,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // freezeWear: items (debugnames) worn for a freeze cast, such as a god cape (magic attack +10); the other turns'
         // switch lists put the usual ones back (pk-kits tribrid-dragon-capeswap).
         const freezeWear = castFreeze && o.freezeWear ? inv.filter(i => o.freezeWear!.includes(names.get(i.id) ?? '')).map(i => i.id) : [];
-        for (const id of [...freezeWear, ...(keepWeapon ? [] : [...(turn.style === 'ranged' ? shootingKit(o.kit, names) : o.kit[turn.style] ?? []), ...(turn.style === 'melee' ? tankIds : [])])]) {
+        for (const id of [...freezeWear, ...(keepWeapon ? [] : [...turnIds, ...(turn.style === 'melee' ? tankIds : [])])]) {
             if (state.equipment.some(e => e.id === id)) continue;
             const item = slotOf([id]);
             if (item && toWield.length < budget) toWield.push(item);
@@ -1231,8 +1584,13 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             : [];
         budget -= toRemove.length;
         if (prayers.prayerPoints > 0 && budget > 0) {
-            const { want: wantPray } = combatPrayers(prayerBase, overhead, turn.style === 'melee', o.defencePrayer !== false, o.protectItem !== false);
-            for (const p of wantPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
+            const { want: wantPray, off: offPray } = combatPrayers(prayerBase, overhead, turn.style === 'melee', o.defencePrayer !== false, o.protectItem !== false);
+            const orderedPray = [...wantPray].sort((a, b) => Number(b === overhead || isOverheadPrayer(b)) - Number(a === overhead || isOverheadPrayer(a)));
+            const hadPrayer = prayers.activePrayers.some(Boolean);
+            let turnedOn = 0;
+            for (const p of orderedPray) if (!prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; turnedOn++; }
+            if (o.offensiveFlick) for (const p of offPray) if (prayers.activePrayers[p] && budget > 0) { void sdk.sendTogglePrayer(p); budget--; }
+            if (!hadPrayer && turnedOn > 0 && prayerDrainAt < 0) prayerDrainAt = now;
         }
         for (const item of toWield) use(item, /^(Wield|Wear)$/i);
         for (const eq of toRemove) {
@@ -1260,7 +1618,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         lastArm = shownStyle !== undefined && turn.style === shownStyle ? 'into' : 'avoid';
         last = turn.index;
         const walkTicks = turn.style === 'melee' ? ((me.runEnergy ?? 100) >= 100 ? Math.ceil(Math.max(0, cheb(at, target) - 1) / 2) : Math.max(0, cheb(at, target) - 1)) : 0;
-        const delay = turn.style === 'ranged' ? rangedWeaponDelay(o.kit.ranged, rapidSet, names) : turn.style === 'melee' ? meleeWeaponDelay(o.kit.melee, names) : TURN[turn.style];
+        const delay = turn.style === 'ranged' ? rangedWeaponDelay(o.kit.ranged, rapidSet, names) : turn.style === 'melee' ? meleeWeaponDelay(meleeIds, names) : TURN[turn.style];
         lastAttackAt = now; lastWalkTicks = walkTicks;
         nextAttack = now + walkTicks + delay;
         hasAttacked = true;

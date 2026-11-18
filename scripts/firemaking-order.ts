@@ -242,9 +242,7 @@ export async function runFiremaking(s:Session,o:FiremakingOptions,selectedSite?:
   while(s.tick()-sent<LIGHT_TICKS){
    await waitTicks(s,1);live();
    if(xp()>x0){await waitUntil(s,()=>held(L.id)===n0-1,{timeoutTicks:3});if(guarded){
-    const receipt=()=>{live();const actual=inventoryTotals();if([...new Set([...Object.keys(expected!),...Object.keys(actual)])].some(id=>(actual[+id]??0)!==(expected![+id]??0))||JSON.stringify(project(st()?.equipment))!==gear||otherXP()!==xpOther)throw Error('native burn whole-pack/gear/other-XP receipt differs');};receipt();
-    // firemaking_success -> push_player p_delay(0): one suspension plus one publication tick.
-    for(let settle=0;settle<2;settle++){await waitTicks(s,1);receipt();}
+    live();const actual=inventoryTotals();if([...new Set([...Object.keys(expected!),...Object.keys(actual)])].some(id=>(actual[+id]??0)!==(expected![+id]??0))||JSON.stringify(project(st()?.equipment))!==gear||otherXP()!==xpOther)throw Error('native burn whole-pack/gear/other-XP receipt differs');
    }return xp()-x0;}
    if(fresh(/can't light a fire here/i))return 'blocked';
    if(fresh(/need a firemaking level|need a tinderbox/i))throw Error('light refused by server');

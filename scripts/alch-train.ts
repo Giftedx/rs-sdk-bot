@@ -82,7 +82,7 @@ export async function stageAlch(s:Session,o:{target:number;item:number;walk:(x:n
     await s.bot.closeBank();
     // The spell needs the side tabs back; a cast sent while the bank's inventory panel shows is dropped.
     if(!await waitUntil(s,()=>!state()?.bank?.isOpen,{timeoutTicks:10}))throw new Error('alch stage: bank did not close');
-    await waitTicks(s,2);
+    await waitTicks(s,1);
     const worn=()=>(state()?.equipment??[]).some(i=>FIRE_STAVES.includes(i.id));
     if(plan.staff!==undefined&&!worn()){
         const row=inv().find(i=>i.id===plan.staff);
@@ -154,9 +154,8 @@ export async function runAlch(s:Session,o:{target:number;cap:number;item:string;
             const r=await runItemMagic(s,itemMagicRecipe(mode,o.item),{count:n,cap:left,stop:o.stop});
             casts[mode]+=r.casts;
             if(!r.ok){stop=r.stop;break;}
-            // The last cast's level-up dialog stays open: a dismiss sent inside the spell's delay is dropped, and the next
-            // spell under the open dialog does nothing (practice: the switch to High Alchemy at 55).
-            await waitTicks(s,4);
+            // Poll briefly for any level-up dialog from the final cast, then dismiss once spell delay clears.
+            await waitUntil(s,()=>!!s.sdk.getState()?.dialog?.isOpen,{timeoutTicks:2});
             for(let n=0;n<5&&s.sdk.getState()?.dialog?.isOpen;n++){await s.bot.dismissBlockingUI();await waitTicks(s,2);}
             if(s.sdk.getState()?.dialog?.isOpen)throw new Error('alch: level-up dialog stayed open');
         }

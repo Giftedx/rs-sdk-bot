@@ -523,3 +523,179 @@ test('Kandarin recovery walks to Ardougne North bank instead of crossing White W
   expect(go).toHaveBeenCalledTimes(1);
  }finally{go.mockRestore();world.mockRestore();actor.mockRestore();}
 });
+
+import * as shopBuyer from './shop-buyer';
+import * as geBuy from './buy-owned-ge-item';
+import {isRangedAcquireMethod} from './ranged-train';
+
+test('runAdaptiveRanged acquires starter bow and arrows via shop progression instead of failing on acquire selected=null',async()=>{
+    expect(isRangedAcquireMethod('ranged/lowe-buy-shortbow')).toBe(true);
+    expect(isRangedAcquireMethod('ranged/ge-buy-willow')).toBe(true);
+    expect(isRangedAcquireMethod('ranged/chickens')).toBe(false);
+
+    const client={};setEquipmentObserved(client,true);
+    let generation=0,tick=0,bankOpen=false,shopOpen=false,rangedLvl=1,rangedXp=0;
+    const p={worldX:3253,worldZ:3421,level:0};
+    const listeners=new Set<()=>void>();
+    const ticker=setInterval(()=>{tick++;for(const cb of [...listeners])cb();},2);
+    const pack=[{id:995,name:'Coins',count:10_000,slot:0}];
+    const bank:{id:number;name:string;count:number}[]=[];
+    const equipment:{id:number;name:string;count:number}[]=[];
+    const skills=[{name:'Ranged',level:1,baseLevel:1,xp:0},{name:'Hitpoints',level:10,baseLevel:10,xp:xpForLevel(10)},{name:'Defence',level:1,baseLevel:1,xp:0}];
+    const sdk={
+        config:{browserLaunchUrl:'http://localhost:8880'},
+        getState:()=>({tick,player:p,inventory:[...pack],equipment:[...equipment],shop:{isOpen:shopOpen,shopItems:shopOpen?[{id:841,name:'Shortbow',count:4},{id:882,name:'Bronze arrow',count:2000}]:[]},bank:{isOpen:bankOpen,items:[...bank]},skills:skills.map(s=>s.name==='Ranged'?{...s,level:rangedLvl,baseLevel:rangedLvl,xp:rangedXp}:s),quests:[]}),
+        getInventory:()=>[...pack],
+        getEquipment:()=>[...equipment],
+        getSkills:()=>skills.map(s=>s.name==='Ranged'?{...s,level:rangedLvl,baseLevel:rangedLvl,xp:rangedXp}:s),
+        getSkill:(name:string)=>name==='Ranged'?{level:rangedLvl,baseLevel:rangedLvl,xp:rangedXp}:skills.find(s=>s.name===name),
+        getSkillXp:(name:string)=>name==='Ranged'?rangedXp:0,
+    };
+    const s={
+        name:'StarterBot',client,sdk,tick:()=>tick,ended:new Promise(()=>{}),onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},
+        lifecycle:{domain:'live'},
+        progression:{refresh:()=>({decision:{state:'acquire',selected:null,reason:['no proof'],path:[],alternatives:[],constraints:[],fingerprint:'fp'}}),executing:()=>{throw Error('must not call executing during acquire');}},
+        bankObservation:()=>({at:Date.now(),generation,items:bank.map(i=>({id:i.id,count:i.count}))}),
+        bot:{
+            openBank:async()=>{bankOpen=true;shopOpen=false;generation++;tick+=2;return{success:true};},
+            closeBank:async()=>{bankOpen=false;tick+=1;return{success:true};},
+            openShop:async()=>{shopOpen=true;bankOpen=false;tick+=2;return{success:true};},
+            openDoor:async()=>({success:true}),
+            closeShop:async()=>{shopOpen=false;return{success:true};},
+            withdrawItem:async(item:any,amount:number)=>{
+                const idx=bank.findIndex(i=>i.id===item.id);if(idx<0)return{success:false};
+                const take=Math.min(amount,bank[idx]!.count);bank[idx]!.count-=take;if(bank[idx]!.count<=0)bank.splice(idx,1);
+                const held=pack.find(i=>i.id===item.id);if(held)held.count+=take;else pack.push({id:item.id,name:item.name??'Item',count:take,slot:pack.length});
+                generation++;tick+=1;return{success:true};
+            },
+            depositItem:async(slot:any,amount:number)=>{
+                const idx=pack.findIndex(i=>i.id===slot.id);if(idx<0)return{success:false};
+                const take=Math.min(amount,pack[idx]!.count);pack[idx]!.count-=take;if(pack[idx]!.count<=0)pack.splice(idx,1);
+                const b=bank.find(i=>i.id===slot.id);if(b)b.count+=take;else bank.push({id:slot.id,name:slot.name,count:take});
+                generation++;tick+=1;return{success:true};
+            },
+        },
+    } as unknown as Session;
+
+    const world=spyOn(bot,'getWorld').mockResolvedValue({} as any);
+    const walk=spyOn(walking,'sessionWalker').mockResolvedValue({walk:async(x:number,z:number)=>{p.worldX=x;p.worldZ=z;tick+=4;return{ok:true};}} as any);
+    const go=spyOn(walking,'goTo').mockImplementation(async(_s,_w,to)=>{tick+=10;p.worldX=to.x;p.worldZ=to.z;return{ok:true} as any;});
+    const buy=spyOn(shopBuyer,'buyWithBudget').mockImplementation(async(_bot,_sdk,item,_want,_res,_allow)=>{
+        tick+=4;
+        const coins=pack.find(i=>i.id===995)!,label=String(item);
+        if(/bronze arrow/i.test(label)){coins.count-=200;pack.push({id:882,name:'Bronze arrow',count:100,slot:1});return{ok:true,bought:100,spent:200} as any;}
+        if(/shortbow/i.test(label)){coins.count-=60;pack.push({id:841,name:'Shortbow',count:1,slot:2});return{ok:true,bought:1,spent:60} as any;}
+        return{ok:false,bought:0,spent:0} as any;
+    });
+    const ge=spyOn(geBuy,'runOwnedItem');
+    const actor=spyOn(combat,'runGiants').mockImplementation(async()=>{
+        rangedLvl=5;rangedXp=xpForLevel(5);tick+=50;
+        return{ok:true,targetMet:true,preserved:true,foodAccounted:true,selectedXp:rangedXp,ammoId:882,ammoUsed:20,finalLevel:5} as any;
+    });
+    try{
+        // Step 1: live progression returned state=acquire selected=null with missing kit -> acquires bronze arrow + shortbow
+        // via Lowe's shop, then hits state=acquire with kit already held (requires proof) rather than failing on 0 kit.
+        const r=await runAdaptiveRanged(s,{...rangedTrainOptions({},['bun','s','StarterBot','5','3000']),coinReserve:1000,maxSpend:2000});
+        expect(buy).toHaveBeenCalledTimes(2);
+        expect(ge).not.toHaveBeenCalled();
+        expect(bank.find(i=>i.id===882)?.count).toBe(100);
+        expect(bank.find(i=>i.id===841)?.count).toBe(1);
+        expect(r.coinsSpent).toBe(260);
+        expect(r.segments.slice(0,2).map(seg=>seg.method)).toEqual(['ranged/lowe-buy-bronze','ranged/lowe-buy-shortbow']);
+        expect(r.segments.slice(0,2).every(seg=>seg.ok)).toBe(true);
+    }finally{
+        clearInterval(ticker);world.mockRestore();walk.mockRestore();go.mockRestore();buy.mockRestore();ge.mockRestore();actor.mockRestore();
+    }
+});
+
+import {mkdtempSync,rmSync,writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+
+test('Dargaud shop matches Bow and Arrow salesman, cross-region travelSpent reconciles, and settled GE journals increment goal key',async()=>{
+    const client={};setEquipmentObserved(client,true);
+    let generation=0,tick=0,bankOpen=false,shopOpen=false,rangedLvl=40;
+    const p={worldX:2654,worldZ:3283,level:0};
+    const listeners=new Set<()=>void>();
+    const ticker=setInterval(()=>{tick++;for(const cb of [...listeners])cb();},2);
+    const pack=[{id:995,name:'Coins',count:2000,slot:0}];
+    const bank:{id:number;name:string;count:number}[]=[{id:995,name:'Coins',count:50_000}];
+    const equipment:{id:number;name:string;count:number}[]=[];
+    const baseSkills=[{name:'Ranged',level:40,baseLevel:40,xp:xpForLevel(40)},{name:'Hitpoints',level:40,baseLevel:40,xp:xpForLevel(40)},{name:'Defence',level:10,baseLevel:10,xp:xpForLevel(10)}];
+    const skills=()=>baseSkills.map(k=>k.name==='Ranged'?{name:'Ranged',level:rangedLvl,baseLevel:rangedLvl,xp:xpForLevel(rangedLvl)}:k);
+    const sdk={
+        config:{browserLaunchUrl:'http://localhost:8880'},
+        getState:()=>({tick,player:p,inventory:[...pack],equipment:[...equipment],shop:{isOpen:shopOpen,shopItems:shopOpen?[{id:849,name:'Willow shortbow',count:1}]:[]},bank:{isOpen:bankOpen,items:[...bank]},skills:skills(),quests:[]}),
+        getInventory:()=>[...pack],
+        getEquipment:()=>[...equipment],
+        getSkills:()=>skills(),
+        getSkill:(name:string)=>skills().find(s=>s.name===name),
+        getSkillXp:(name:string)=>skills().find(s=>s.name===name)?.xp??0,
+    };
+    const openedNpcs:RegExp[]=[];
+    const s={
+        name:'GuildCross',client,sdk,tick:()=>tick,ended:new Promise(()=>{}),onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},
+        bankObservation:()=>({at:Date.now(),generation,items:bank.map(i=>({id:i.id,count:i.count}))}),
+        bot:{
+            openBank:async()=>{bankOpen=true;shopOpen=false;generation++;tick+=2;return{success:true};},
+            closeBank:async()=>{bankOpen=false;tick+=1;return{success:true};},
+            openShop:async(re:RegExp)=>{openedNpcs.push(re);shopOpen=true;bankOpen=false;tick+=2;return{success:re.test('Bow and Arrow salesman')};},
+            openDoor:async()=>({success:true}),
+            closeShop:async()=>{shopOpen=false;return{success:true};},
+            withdrawItem:async(item:any,amount:number)=>{
+                const idx=bank.findIndex(i=>i.id===item.id);if(idx<0)return{success:false};
+                const take=Math.min(amount,bank[idx]!.count);bank[idx]!.count-=take;if(bank[idx]!.count<=0)bank.splice(idx,1);
+                const held=pack.find(i=>i.id===item.id);if(held)held.count+=take;else pack.push({id:item.id,name:item.name??'Item',count:take,slot:pack.length});
+                generation++;tick+=1;return{success:true};
+            },
+            depositItem:async(slot:any,amount:number)=>{
+                const idx=pack.findIndex(i=>i.id===slot.id);if(idx<0)return{success:false};
+                const take=Math.min(amount,pack[idx]!.count);pack[idx]!.count-=take;if(pack[idx]!.count<=0)pack.splice(idx,1);
+                const b=bank.find(i=>i.id===slot.id);if(b)b.count+=take;else bank.push({id:slot.id,name:slot.name,count:take});
+                generation++;tick+=1;return{success:true};
+            },
+        },
+    } as unknown as Session;
+
+    const dir=mkdtempSync(join(tmpdir(),'ranged-acq-'));
+    const world=spyOn(bot,'getWorld').mockResolvedValue({} as any);
+    const go=spyOn(walking,'goTo').mockImplementation(async(_s,_w,to)=>{
+        tick+=10;
+        if(to.x===2673&&to.z===3434){const c=pack.find(i=>i.id===995);if(c)c.count-=60;}
+        p.worldX=to.x;p.worldZ=to.z;return{ok:true} as any;
+    });
+    const buy=spyOn(shopBuyer,'buyWithBudget').mockImplementation(async()=>{
+        tick+=4;pack.find(i=>i.id===995)!.count-=200;pack.push({id:849,name:'Willow shortbow',count:1,slot:1});
+        rangedLvl=45;
+        return{ok:true,bought:1,spent:200} as any;
+    });
+    const paths=spyOn(geBuy,'orderPaths').mockImplementation((_srv,_act,goal)=>({dir,journal:join(dir,`${goal}.json`),trace:join(dir,`${goal}.trace`)}) as any);
+    const seenReqs:geBuy.ItemRequest[]=[];
+    const ge=spyOn(geBuy,'runOwnedItem').mockImplementation(async(_s,req)=>{
+        seenReqs.push(req);
+        rangedLvl=45;
+        return{ok:true,acquired:req.quantity,spent:req.limit} as any;
+    });
+    try{
+        const shopDec={state:'execute' as const,selected:'ranged/guild-buy-willow',step:{script:'scripts/shop-buyer.ts',args:['dargaud'],env:{}},path:[],alternatives:[],reasons:[],reason:[],constraints:[],fingerprint:'f',expectedTicks:50,basis:'model' as const,followUps:[],gaps:[],search:{nodes:1,bound:8,depth:1,exhausted:false}};
+        const shopRes=await runAdaptiveRanged(s,{...rangedTrainOptions({},['bun','s','GuildCross','45','3000']),coinReserve:1000,maxSpend:5000},{decision:shopDec as any});
+        expect(openedNpcs.some(re=>re.test('Bow and Arrow salesman')&&!re.test('Dargaud'))).toBe(true);
+        expect(shopRes.segments[0]?.ok).toBe(true);
+        expect(shopRes.coinsSpent).toBe(260);
+
+        rangedLvl=40;
+        writeFileSync(join(dir,'ranged-acquire-888.json'),JSON.stringify({version:1,phase:'settled',previousIds:[],request:{actor:'GuildCross',server:'local',goal:'ranged-acquire-888',item:888,quantity:250,limit:120,reserve:1000,createdAt:1,reviewAt:2,deadline:3}}));
+        const geDec={state:'execute' as const,selected:'ranged/ge-buy-mithril',step:{script:'scripts/buy-owned-ge-item.ts',args:[],env:{ITEM_ID:'888',QUANTITY:'250',LIMIT_PRICE:'120'}},path:[],alternatives:[],reasons:[],reason:[],constraints:[],fingerprint:'g',expectedTicks:50,basis:'model' as const,followUps:[],gaps:[],search:{nodes:1,bound:8,depth:1,exhausted:false}};
+        await runAdaptiveRanged(s,{...rangedTrainOptions({},['bun','s','GuildCross','45','3000']),coinReserve:1000,maxSpend:35_000},{decision:geDec as any});
+        expect(seenReqs[0]?.goal).toBe('ranged-acquire-888-1');
+
+        rangedLvl=40;
+        writeFileSync(join(dir,'ranged-acquire-853.json'),JSON.stringify({version:1,phase:'open',previousIds:[99],request:{actor:'GuildCross',server:'local',goal:'ranged-acquire-853',item:853,quantity:1,limit:4000,reserve:1000,createdAt:10,reviewAt:20,deadline:30}}));
+        const openDec={state:'execute' as const,selected:'ranged/ge-buy-maple',step:{script:'scripts/buy-owned-ge-item.ts',args:[],env:{ITEM_ID:'853',QUANTITY:'1',LIMIT_PRICE:'4000'}},path:[],alternatives:[],reasons:[],reason:[],constraints:[],fingerprint:'h',expectedTicks:50,basis:'model' as const,followUps:[],gaps:[],search:{nodes:1,bound:8,depth:1,exhausted:false}};
+        await runAdaptiveRanged(s,{...rangedTrainOptions({},['bun','s','GuildCross','45','3000']),coinReserve:1000,maxSpend:35_000},{decision:openDec as any});
+        expect(seenReqs[1]).toMatchObject({goal:'ranged-acquire-853',createdAt:10,reviewAt:20,deadline:30});
+    }finally{
+        clearInterval(ticker);world.mockRestore();go.mockRestore();buy.mockRestore();paths.mockRestore();ge.mockRestore();
+        rmSync(dir,{recursive:true,force:true});
+    }
+});

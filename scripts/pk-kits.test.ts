@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, levelsBeforeRoute, overBuild, QUEST_CHAIN, kitSwitches, kitVarps, trained } from './pk-kits';
+import { buildGodSpellKit, combatLevel, compareDragonSpecs, GOD_LOADOUTS, godCapeStaffConflict, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, levelsBeforeRoute, overBuild, QUEST_CHAIN, kitSwitches, kitVarps, trained } from './pk-kits';
 import { KNOBS, readNets, stats, verdict } from './measure/pk-spar-climb';
 import { matrix, readList } from './measure/pk-spar-matrix';
 import { mayRun } from './measure/pk-spar-wait';
@@ -226,4 +226,31 @@ test('a kit gets the completion varp of each quest its items need (levelrequire.
     expect(combo.inventory).toHaveLength(27);
     expect(combo.inventory.filter(i => i.id === itemId('shark'))).toHaveLength(12);
     expect(combo.inventory.filter(i => i.id === itemId('tbwt_cooked_karambwan'))).toHaveLength(6);
+    const spearDds = kitItems('tribrid-spear-dds');
+    expect(spearDds.inventory).toHaveLength(27);
+    expect(kitSwitches('tribrid-spear-dds').melee).toContain(itemId('dragon_spear'));
+    expect(kitOptions('tribrid-combo-flick')).toMatchObject({
+        comboFood: true, zeroDrainFlick: true, offensiveFlick: true, fakieSwitch: true, stepUnderFrozen: true,
+    });
+});
+
+test('GOD_LOADOUTS, godCapeStaffConflict, buildGodSpellKit, and compareDragonSpecs verify rev-289 Mage Arena and Dragon spec rules', () => {
+    expect(GOD_LOADOUTS.saradomin).toMatchObject({ capeId: 2412, staffId: 2415, spell: 1190, drainEffect: 'prayer', castVarp: 268 });
+    expect(GOD_LOADOUTS.guthix).toMatchObject({ capeId: 2413, staffId: 2416, spell: 1191, drainEffect: 'defence', castVarp: 269 });
+    expect(GOD_LOADOUTS.zamorak).toMatchObject({ capeId: 2414, staffId: 2417, spell: 1192, drainEffect: 'magic', castVarp: 270 });
+    expect(godCapeStaffConflict([2412, 2415])).toBeNull();
+    expect(godCapeStaffConflict([2412, 2417])).toEqual({ capeGod: 'saradomin', staffGod: 'zamorak' });
+    const saraMace = buildGodSpellKit('saradomin', { dragonSpec: 'mace', charge: true });
+    expect(saraMace.worn.cape).toBe('saradomin_cape');
+    expect(saraMace.worn.weapon).toBe('saradomin_staff');
+    expect(saraMace.switches.melee).toContain('dragon_mace');
+    expect(saraMace.options).toMatchObject({ damageSpell: 1190, charge: true });
+    expect(saraMace.varps).toMatchObject({ 267: 8, 268: 99, 188: 15 });
+
+    const specs = compareDragonSpecs({ Attack: 99, Strength: 99, Defence: 99, Ranged: 99, Magic: 99 });
+    expect(specs.find(s => s.item === 'dragon_mace')).toMatchObject({ itemId: 1434, damageMultiplier: 1.5, accuracyMultiplier: 1.25, rollDefence: 'crush', speedTicks: 5 });
+    expect(specs.find(s => s.item === 'dragon_battleaxe')).toMatchObject({
+        itemId: 1377, kind: 'warcry_buff', energyCost: 1000, warcryStrengthBoost: 19,
+        warcryDrains: { attack: 9, defence: 9, ranged: 9, magic: 9 },
+    });
 });

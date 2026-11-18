@@ -30,6 +30,12 @@ export function wildLevel(x: number, z: number): number {
     return Math.floor((z - 3520) / 8) + 1;
 }
 
+// Wilderness level across both surface (2944..3391, 3520..3967) and dungeon (z 9920..10367); safe zones like Mage Bank cellar return 0.
+export function wildernessDepth(x: number, z: number): number {
+    if (x >= 2944 && x <= 3391 && z >= 9920 && z <= 10367) return Math.floor((z - 9920) / 8) + 1;
+    return wildLevel(x, z);
+}
+
 // pvp_combat.rs2: the combat gap must be no more than the lower of the two Wilderness levels.
 export function canAttack(me: { x: number; z: number; combat: number }, them: { x: number; z: number; combatLevel: number }): boolean {
     const a = wildLevel(me.x, me.z), b = wildLevel(them.x, them.z);
@@ -66,6 +72,65 @@ export function preyScore(t: Track, meetTicks: number, ganged = false): number {
 // fight a target, so a claimed target is left to its hunter; in multi-combat a claimed target is ganged.
 export type Claims = Map<string, { hunter: string; at: number }>;
 export const CLAIM_TTL_MS = 60_000;
+export const SCOUT_INTEL_TTL_MS = 25_000;
+
+export type ScoutIntel = {
+    target: string;
+    x: number;
+    z: number;
+    combatLevel: number;
+    hpFrac?: number;
+    skulled?: boolean;
+    multi: boolean;
+    wild: number;
+    scout: string;
+    at: number;
+};
+
+export function readScoutIntel(file = join(resolve(import.meta.dir, '..'), '.practice', 'pk-roam', 'intel.json'), now = Date.now()): ScoutIntel[] {
+    try {
+        const rows = JSON.parse(readFileSync(file, 'utf8')) as ScoutIntel[];
+        return Array.isArray(rows) ? rows.filter(r => now - r.at <= SCOUT_INTEL_TTL_MS) : [];
+    } catch { return []; }
+}
+
+export function publishScoutIntel(entry: ScoutIntel, file = join(resolve(import.meta.dir, '..'), '.practice', 'pk-roam', 'intel.json')): void {
+    try {
+        const fresh = readScoutIntel(file, entry.at).filter(r => r.target.toLowerCase() !== entry.target.toLowerCase());
+        fresh.push(entry);
+        mkdirSync(join(file, '..'), { recursive: true });
+        writeFileSync(file, JSON.stringify(fresh));
+    } catch { /* scout handoff is best-effort */ }
+}
+
+export function clearScoutIntel(target: string, file = join(resolve(import.meta.dir, '..'), '.practice', 'pk-roam', 'intel.json'), now = Date.now()): void {
+    try {
+        const left = readScoutIntel(file, now).filter(r => r.target.toLowerCase() !== target.toLowerCase());
+        mkdirSync(join(file, '..'), { recursive: true });
+        writeFileSync(file, JSON.stringify(left));
+    } catch { /* ignore */ }
+}
+
+// Select the highest-priority scouted target for a roaming squad/army within maxWild and attackable combat bracket.
+export function pickScoutTargetForSquad(opts: {
+    me: { x: number; z: number; combat: number };
+    intel: readonly ScoutIntel[];
+    maxWild: number;
+    friends?: ReadonlySet<string>;
+    now?: number;
+}): ScoutIntel | null {
+    const { me, intel, maxWild, friends = new Set(), now = Date.now() } = opts;
+    const candidates = intel.filter(i => now - i.at <= SCOUT_INTEL_TTL_MS
+        && !friends.has(i.target.toLowerCase())
+        && i.wild > 0 && i.wild <= maxWild
+        && Math.abs(i.combatLevel - me.combat) <= i.wild);
+    if (!candidates.length) return null;
+    candidates.sort((a, b) => Number(b.multi) - Number(a.multi)
+        || Number(Boolean(b.skulled)) - Number(Boolean(a.skulled))
+        || (a.hpFrac ?? 1) - (b.hpFrac ?? 1)
+        || cheb(me, a) - cheb(me, b));
+    return candidates[0] ?? null;
+}
 // A target this many combat levels above us outclasses us; this many strangers within 6 tiles of it is a pile.
 export const OUTCLASS_GAP = 3;
 export const PILE_SIZE = 2;
@@ -85,6 +150,120 @@ export function escapeStep(level: number, has: { glory: boolean; teleport: boole
     if (has.glory && level <= 30) return 'glory';
     if (has.teleport && level <= 20) return 'teleport';
     return 'run';
+}
+
+export type WildernessEscapeLoc = {
+    id: number;
+    kind: 'lever' | 'ladder' | 'gate' | 'web';
+    name: string;
+    option: string;
+    x: number;
+    z: number;
+    wildLevel: number;
+};
+
+// Verified rev 289 Wilderness escape landmarks (Deserted Keep lever, Mage Bank cellar ladder/webs, member gates).
+export const WILDERNESS_ESCAPES: readonly WildernessEscapeLoc[] = [
+    { id: 1815, kind: 'lever', name: 'Deserted Keep lever', option: 'Pull', x: 3153, z: 3923, wildLevel: 51 },
+    { id: 2871, kind: 'ladder', name: 'Mage Bank cellar ladder', option: 'Climb-down', x: 3091, z: 3957, wildLevel: 55 },
+    { id: 733, kind: 'web', name: 'Mage Bank east web', option: 'Slash', x: 3095, z: 3957, wildLevel: 55 },
+    { id: 733, kind: 'web', name: 'Mage Bank west web', option: 'Slash', x: 3093, z: 3957, wildLevel: 55 },
+    { id: 1765, kind: 'ladder', name: 'Wilderness mirror ladder west', option: 'Climb-down', x: 3017, z: 3849, wildLevel: 42 },
+    { id: 1767, kind: 'ladder', name: 'Wilderness mirror ladder east', option: 'Climb-down', x: 3069, z: 3856, wildLevel: 43 },
+    { id: 1596, kind: 'gate', name: 'Lava Maze gate', option: 'Open', x: 3071, z: 3857, wildLevel: 43 },
+    { id: 1596, kind: 'gate', name: 'KBD fence gate', option: 'Open', x: 3008, z: 3850, wildLevel: 42 },
+    { id: 1596, kind: 'gate', name: 'West Wilderness gate', option: 'Open', x: 2948, z: 3904, wildLevel: 49 },
+    { id: 1596, kind: 'gate', name: 'East Wilderness deep gate', option: 'Open', x: 3202, z: 3856, wildLevel: 43 },
+    { id: 1596, kind: 'gate', name: 'East Wilderness fence gate', option: 'Open', x: 3225, z: 3904, wildLevel: 49 },
+];
+
+export type WildernessEscapePlan = {
+    kind: 'out' | 'glory' | 'teleport' | 'lever' | 'ladder' | 'run';
+    distance: number;
+    loc?: WildernessEscapeLoc;
+    web?: WildernessEscapeLoc;
+    obstacle?: WildernessEscapeLoc;
+    detail: string;
+};
+
+// Choose the fastest rev-289 escape route from current coordinates: glory <=30, teleport <=20, nearby lever/safe ladder, else run south.
+export function planWildernessEscape(pos: { x: number; z: number }, has: { glory: boolean; teleport: boolean }): WildernessEscapePlan {
+    const level = wildLevel(pos.x, pos.z);
+    if (level === 0) return { kind: 'out', distance: 0, detail: 'outside Wilderness' };
+    if (has.glory && level <= 30) return { kind: 'glory', distance: 0, detail: `glory at level ${level}` };
+    if (has.teleport && level <= 20) return { kind: 'teleport', distance: 0, detail: `teleport at level ${level}` };
+
+    const targetZ = has.glory ? 3755 : has.teleport ? 3675 : 3518;
+    const southDist = Math.max(0, pos.z - targetZ);
+    const exits = WILDERNESS_ESCAPES
+        .filter(e => e.id === 1815 || e.id === 2871)
+        .map(e => ({ loc: e, dist: cheb(pos, e) }))
+        .sort((a, b) => a.dist - b.dist);
+    const bestExit = exits[0];
+    if (bestExit && bestExit.dist <= 35 && bestExit.dist < southDist) {
+        const web = bestExit.loc.id === 2871 && pos.x >= 3093
+            ? WILDERNESS_ESCAPES.find(w => w.id === 733 && w.x === 3095 && w.z === 3957)
+            : undefined;
+        return { kind: bestExit.loc.kind as 'lever' | 'ladder', loc: bestExit.loc, web, distance: bestExit.dist, detail: `${bestExit.loc.name} (${bestExit.dist} tiles)` };
+    }
+    const obstacle = WILDERNESS_ESCAPES.find(e => (e.kind === 'gate' || e.kind === 'web') && Math.abs(e.x - pos.x) <= 6 && e.z <= pos.z && pos.z - e.z <= 20);
+    return { kind: 'run', obstacle, distance: southDist, detail: `run south to level ${has.glory ? 30 : has.teleport ? 20 : 0}` };
+}
+
+// Slash a bigweb_slashable (id 733) repeatedly until it disappears (web.rs2:26 fails 50% of attempts with random(2)=1).
+export async function slashWebThrough(
+    s: Pick<Session, 'sdk' | 'bot'>,
+    web: { id: number; option: string; x: number; z: number },
+    stop: () => boolean = () => false,
+    maxTries = 6,
+): Promise<boolean> {
+    const findWeb = () => {
+        const locs = s.sdk.getState()?.nearbyLocs ?? [];
+        return locs.find(l => l.id === web.id && Math.max(Math.abs(l.x - web.x), Math.abs(l.z - web.z)) <= 2)
+            ?? locs.find(l => l.id === web.id);
+    };
+    for (let i = 0; i < maxTries && !stop(); i++) {
+        const live = findWeb();
+        if (!live) return true;
+        if (typeof s.bot?.interactLoc !== 'function') return false;
+        await s.bot.interactLoc(live, web.option).catch(() => {});
+        await s.sdk.waitForTicks(2);
+    }
+    return !findWeb();
+}
+
+export function wildernessCombatMargin(me: { z: number; combat: number }, opponentCombat: number) {
+    const level = Math.floor((Math.max(3520, me.z) - 3520) / 8) + 1;
+    const wild = me.z >= 3520 ? level : 0;
+    const gap = Math.abs(me.combat - opponentCombat);
+    return {
+        wildernessLevel: wild,
+        attackable: wild > 0 && gap <= wild,
+        minCombat: Math.max(3, me.combat - wild),
+        maxCombat: Math.min(126, me.combat + wild),
+        levelsToDrop: gap === 0 ? wild : Math.max(0, wild - gap + 1),
+    };
+}
+
+export function assessWildernessThreat(
+    me: { x: number; z: number; combat: number; weaponValue?: number; foodCount: number; glory: boolean; teleport: boolean },
+    nearby: readonly { name: string; x?: number; z?: number; combatLevel: number; distance: number; inCombat?: boolean; combatTargetType?: string; wornWeapon?: number }[],
+    friends: ReadonlySet<string>,
+    multiAt: (x: number, z: number) => boolean = isMulti,
+) {
+    const multi = wildLevel(me.x, me.z) > 0 && multiAt(me.x, me.z);
+    const hostiles = nearby.filter(p => !friends.has(p.name.toLowerCase()) && p.distance <= 12
+        && canAttack({ x: me.x, z: me.z, combat: me.combat }, { x: p.x ?? me.x, z: p.z ?? me.z, combatLevel: p.combatLevel }));
+    const outclassedBy = hostiles.find(p => outclasses({ combat: me.combat, weaponValue: me.weaponValue }, { combatLevel: p.combatLevel, weapon: p.wornWeapon }));
+    const multiPile = multiPileThreat(me, nearby, friends, multiAt);
+    const pjWaiters = hostiles.filter(p => p.distance <= 8 && !p.inCombat).length;
+    const escapePlan = planWildernessEscape(me, { glory: me.glory, teleport: me.teleport });
+    const pjUnsafe = !multi && hostiles.length >= 2 && pjWaiters >= 1 && me.foodCount <= 4;
+    const retreatReason = outclassedBy ? `threat: ${outclassedBy.name} (combat ${outclassedBy.combatLevel}) at ${outclassedBy.distance} tiles`
+        : multiPile ? multiPile
+        : pjUnsafe ? `pj risk: ${hostiles.length} attackable hostiles (${pjWaiters} idle) with ${me.foodCount} food`
+        : null;
+    return { multi, hostilesCount: hostiles.length, outclassedBy, multiPile, pjWaiters, escapePlan, retreatReason };
 }
 
 const AIR_STAFF = /staff of air|air battlestaff|mystic air staff/i;
@@ -344,8 +523,20 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     const myName = session.name.toLowerCase();
     // Our own weapon's value: the best of the staged melee and ranged weapons.
     const myWeaponValue = () => Math.max(0, ...[...(kit.melee ?? []), ...(kit.ranged ?? []), ...(kit.magic ?? [])].map(id => itemCost(id)));
+    const intelFile = join(resolve(import.meta.dir, '..'), '.practice', 'pk-roam', 'intel.json');
+    const shareIntel = (t: Pick<Track, 'name' | 'x' | 'z' | 'combatLevel' | 'hpFrac' | 'skulled'>) => {
+        const wild = wildLevel(t.x, t.z);
+        if (wild > 0) publishScoutIntel({
+            target: t.name, x: t.x, z: t.z, combatLevel: t.combatLevel,
+            hpFrac: t.hpFrac, skulled: t.skulled, multi: isMulti(t.x, t.z),
+            wild, scout: myName, at: Date.now(),
+        }, intelFile);
+    };
     const claim = (target: string) => writeClaims(c => c.set(target.toLowerCase(), { hunter: myName, at: Date.now() }));
-    const release = (target: string) => writeClaims(c => { if (c.get(target.toLowerCase())?.hunter === myName) c.delete(target.toLowerCase()); });
+    const release = (target: string) => {
+        writeClaims(c => { if (c.get(target.toLowerCase())?.hunter === myName) c.delete(target.toLowerCase()); });
+        clearScoutIntel(target, intelFile);
+    };
     const pickNow = (m: { x: number; z: number; combat: number }) =>
         pickTrack({ ...m, name: myName, weaponValue: myWeaponValue() }, tracks(), friends, cfg.maxWild, skip, MIN_ESCAPE_TILES, readClaims(), Date.now());
     let wentIn = false;
@@ -433,6 +624,26 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 await sdk.sendClickComponent(componentId('magic:varrock_teleport'));
                 await sdk.waitForTicks(6);
             } else {
+                const plan = planWildernessEscape(m, { glory: !!glory || (!!worn && removeTries < 3), teleport: canTeleport() });
+                const findLoc = (loc: { id: number; x: number; z: number }) => sdk.getState()?.nearbyLocs.find(l => l.id === loc.id && Math.max(Math.abs(l.x - loc.x), Math.abs(l.z - loc.z)) <= 2)
+                    ?? sdk.getState()?.nearbyLocs.find(l => l.id === loc.id);
+                if ((plan.kind === 'lever' || plan.kind === 'ladder') && plan.loc) {
+                    if (plan.web && cheb(m, plan.web) <= 3) await slashWebThrough(session, plan.web, () => false);
+                    await walkPath(walker, [{ x: plan.loc.x, z: plan.loc.z, tol: 2 }], { maxTicks: 16, idleMs: 9000 });
+                    const exitLoc = findLoc(plan.loc);
+                    if (exitLoc && typeof bot.interactLoc === 'function') {
+                        await bot.interactLoc(exitLoc, plan.loc.option).catch(() => {});
+                        await sdk.waitForTicks(4);
+                        continue;
+                    }
+                }
+                if (plan.obstacle && cheb(m, plan.obstacle) <= 3) {
+                    if (plan.obstacle.kind === 'web') await slashWebThrough(session, plan.obstacle, () => false);
+                    else {
+                        const obstacleLoc = findLoc(plan.obstacle);
+                        if (obstacleLoc && typeof bot.interactLoc === 'function') await bot.interactLoc(obstacleLoc, plan.obstacle.option).catch(() => {});
+                    }
+                }
                 // A walk that moved us nowhere goes 10 tiles to the side, east and west in turn, before south again.
                 const side = blocked ? (blocked % 2 ? 10 : -10) : 0;
                 await walkPath(walker, [{ x: m.x + side, z: Math.max(3510, m.z - (side ? 4 : 20)), tol: 2 }], { maxTicks: 12, idleMs: 9000 });
@@ -494,8 +705,12 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             const m = me()!;
             const near = sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === name.toLowerCase());
             const track = radar.tracks.get(name.toLowerCase());
-            if (session.tick() % 10 === 0) claim(name);
             const opp = near ? readOpponent(session.client, name) : null;
+            if (session.tick() % 10 === 0) {
+                claim(name);
+                if (near) shareIntel({ name, x: near.x, z: near.z, combatLevel: near.combatLevel, hpFrac: opp?.hp?.fresh ? opp.hp.current / Math.max(1, opp.hp.max) : undefined, skulled: opp?.skulled });
+                else if (track) shareIntel(track);
+            }
             if (opp?.hp?.fresh && opp.hp.current === 0) {
                 stats.kills++; emit({ e: 'kill', target: name, at: lastTile });
                 await sdk.waitForTicks(4);
@@ -646,6 +861,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             stats.targets.push(name);
             emit({ e: 'target', target: name, combat: pick.track.combatLevel, wild: wildLevel(pick.track.x, pick.track.z), meetIn: Math.round(pick.at.ticks), at: [pick.track.x, pick.track.z] });
             claim(name);
+            shareIntel(pick.track);
             const outcome = await chase(name).finally(() => release(chasing));
             emit({ e: 'chase-end', target: chasing, outcome });
             if (outcome === 'dead' || outcome === 'stop') break;
@@ -809,12 +1025,22 @@ export type RestockStep = { kind: 'ge'; item: number; quantity: number; limit: n
 // 278,874) for Defence 40+ without rune body armour. Rune scimitars, platebodies, platelegs and kiteshields had no
 // sellers. Each gear buy also keeps 20,000 coins for the next restock.
 export function restockPlan(held: { law: number; nature: number; water: number; coins: number; magic: number;
-    food?: number; sharks?: number; ranged?: number; defence?: number; magicShortbow?: boolean; runeBody?: boolean }): RestockStep[] {
+    food?: number; sharks?: number; ranged?: number; defence?: number; magicShortbow?: boolean; runeBody?: boolean;
+    glory?: boolean; prayerPots?: number; superPots?: boolean; antipoison?: boolean }): RestockStep[] {
     const steps: RestockStep[] = [];
     let coins = held.coins - 1000;
     if (held.law < 2) {
         const quantity = Math.min(10, Math.floor(coins / 1600));
         if (quantity >= 1) { steps.push({ kind: 'ge', item: 563, quantity, limit: 1600, owned: held.law }); coins -= quantity * 1600; }
+    }
+    // Charged glory (<30 wild emergency escape) prioritized when explicitly tracked as missing.
+    if (held.glory === false && coins >= 50_000 + 10_000) {
+        steps.push({ kind: 'ge', item: 1712, quantity: 1, limit: 50_000, owned: 0 }); coins -= 50_000;
+    }
+    // Prayer potions (4-dose) for sustained protection and overhead flick backups.
+    if (held.prayerPots !== undefined && held.prayerPots < 2) {
+        const quantity = Math.min(4 - held.prayerPots, Math.floor(coins / 3500));
+        if (quantity >= 1) { steps.push({ kind: 'ge', item: 2434, quantity, limit: 3500, owned: held.prayerPots }); coins -= quantity * 3500; }
     }
     // Freezes need both nature and water runes: keep the water budget back before buying nature runes.
     const waterShort = held.magic >= 50 && held.water < 10;
@@ -830,6 +1056,13 @@ export function restockPlan(held: { law: number; nature: number; water: number; 
         // owned is EXPECTED_OWNED for buy-owned-ge-item.ts: the sharks already held, which it tops up from.
         if (quantity >= 5) { steps.push({ kind: 'ge', item: 385, quantity, limit: 700, owned: held.sharks ?? 0 }); coins -= quantity * 700; }
     }
+    if (held.superPots === true && coins >= 5000) {
+        steps.push({ kind: 'ge', item: 2440, quantity: 1, limit: 2500, owned: 0 }); coins -= 2500;
+        steps.push({ kind: 'ge', item: 2436, quantity: 1, limit: 2500, owned: 0 }); coins -= 2500;
+    }
+    if (held.antipoison === true && coins >= 2500) {
+        steps.push({ kind: 'ge', item: 2448, quantity: 1, limit: 2500, owned: 0 }); coins -= 2500;
+    }
     if ((held.ranged ?? 1) >= 50 && held.magicShortbow === false && coins >= 110_000 + 20_000) {
         steps.push({ kind: 'ge', item: 861, quantity: 1, limit: 110_000, owned: 0 }); coins -= 110_000;
     }
@@ -837,4 +1070,17 @@ export function restockPlan(held: { law: number; nature: number; water: number; 
         steps.push({ kind: 'ge', item: 1113, quantity: 1, limit: 300_000, owned: 0 }); coins -= 300_000;
     }
     return steps;
+}
+
+// Compute restock GE/shop steps directly from combined bank + inventory + equipment stock counts.
+export function restockPlanFromStock(stock: readonly { id: number; count: number }[], skills: { magic: number; ranged?: number; defence?: number }, coins: number): RestockStep[] {
+    const count = (ids: readonly number[]) => stock.filter(i => ids.includes(i.id)).reduce((n, i) => n + i.count, 0);
+    const hasGlory = count([1712, 1710, 1708, 1706]) > 0;
+    const prayerPots = count([2434, 139, 141, 143]);
+    const sharks = count([385]);
+    return restockPlan({
+        law: count([563]), nature: count([561]), water: count([555]), coins,
+        magic: skills.magic, ranged: skills.ranged, defence: skills.defence,
+        food: sharks, sharks, glory: hasGlory, prayerPots,
+    });
 }

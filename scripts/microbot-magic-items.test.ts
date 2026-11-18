@@ -45,3 +45,49 @@ test('an elemental staff removes spell runes but never the alchemy target debit'
  expect(r.inputs[r.target]).toBe(1);
  expect(itemSpellCosts(r,[{id:1381,slot:3}])[r.target]).toBe(1);
 });
+
+test('runItemMagic equips a matching wearable elemental staff from inventory to save runes', async () => {
+ const r = itemMagicRecipe('superheat:gold');
+ let tick = 0, xp = 0, calls = 0, equips = 0;
+ let inventory: any[] = [{ id: 1387, name: 'Staff of fire', count: 1, slot: 0 }, { id: 444, count: 1, slot: 1 }, { id: 561, count: 1, slot: 2 }];
+ const equipment: any[] = [];
+ const listeners = new Set<() => void>();
+ const s: any = {
+  tick: () => tick,
+  ended: new Promise(() => {}),
+  onTick: (f: () => void) => { listeners.add(f); return () => listeners.delete(f); },
+  sdk: {
+   getState: () => ({ player: { worldX: 3200, worldZ: 3200, lifeId: 1, isDead: false }, equipment, inventory }),
+   getInventory: () => inventory,
+   getEquipment: () => equipment,
+   getSkillXp: () => xp,
+   getSkill: (n: string) => ({ level: n === 'Magic' || n === 'Smithing' ? 99 : 1, baseLevel: 1 }),
+  },
+  bot: {
+   dismissBlockingUI: async () => {},
+   equipItem: async (item: any) => {
+    equips++;
+    inventory = inventory.filter(i => i.id !== item.id);
+    equipment.push({ ...item, slot: 3 });
+    return { success: true };
+   },
+  },
+  direct: async () => {
+   calls++;
+   inventory = inventory.filter(i => i.id !== 444 && i.id !== 561);
+   inventory.push({ id: r.product, count: 1, slot: 0 });
+   xp = 53;
+   return { success: true };
+  },
+ };
+ const timer = setInterval(() => { tick++; for (const f of listeners) f(); }, 1);
+ try {
+  const out = await runItemMagic(s, r, { count: 1, cap: 20 });
+  expect(out.ok).toBe(true);
+  expect(equips).toBe(1);
+  expect(equipment[0]?.id).toBe(1387);
+  expect(calls).toBe(1);
+ } finally {
+  clearInterval(timer);
+ }
+});

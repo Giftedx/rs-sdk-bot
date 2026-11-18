@@ -1,7 +1,7 @@
 import {test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {parseTransportHandlers,buildTransports} from '../src/transports';
+import {parseTransportHandlers,buildTransports,NAMED_TRANSPORT_FILES} from '../src/transports';
 import {parseTriggers} from '../src/doors';
 const root=join(import.meta.dir,'../../../vendor/rs-sdk/server/content');
 const files=['scripts/ladders+stairs/scripts/ladders.rs2','scripts/ladders+stairs/scripts/stairs.rs2','scripts/quests/quest_mcannon/scripts/locs/mcannon_ladders.rs2'];
@@ -56,4 +56,22 @@ test('board room arrivals preserve all six possible tiles and loc-relative angle
  const edges=buildTransports(handlers,[{id:1,x:2460,z:3400,level:0,shape:10,angle:0,src:'map:1'}],new Map([[1,'spiralstairs_wooden']])).edges as any[];
  expect(edges.find(e=>e.locName==='spiralstairs_wooden')).toMatchObject({from:{x:2460,z:3400,level:0},to:{x:2462,z:3400,level:1},exact:true});
  expect(edges.find(e=>e.locName==='board_game_stairs_grey_all')?.landing).toEqual({minX:2205,maxX:2207,minZ:4933,maxZ:4934,level:1});
+});
+test('NAMED_TRANSPORT_FILES parses Mage Arena, Lava Maze, and Lighthouse stair handlers cleanly',()=>{
+ const extra=['scripts/areas/area_mage_arena/scripts/mage_arena.rs2','scripts/areas/area_wilderness/scripts/lava_maze.rs2','scripts/quests/quest_horror/scripts/quest_horror.rs2'];
+ for(const file of extra)expect(NAMED_TRANSPORT_FILES[file]?.length).toBeGreaterThan(0);
+ const handlers=extra.flatMap(file=>parseTransportHandlers(readFileSync(join(root,file),'utf8'),file,context).handlers.filter(h=>NAMED_TRANSPORT_FILES[file]!.includes(h.locName)));
+ expect(handlers.map(h=>h.locName)).toEqual(expect.arrayContaining(['magearena_ladder_to_cellar','magearena_ladder_from_cellar','loc_1766','wildymirrorladdertop2','horror_lighthouse_spiralstairs_base']));
+ const edges=buildTransports(handlers,[
+  {id:1,x:3091,z:3957,level:0,shape:10,angle:0,src:'mage-map:1'},
+  {id:2,x:2542,z:4713,level:0,shape:10,angle:0,src:'mage-map:2'},
+  {id:3,x:3069,z:3856,level:0,shape:10,angle:0,src:'lava-map:1'},
+  {id:4,x:3017,z:3849,level:0,shape:10,angle:0,src:'lava-map:2'},
+  {id:5,x:2506,z:3640,level:0,shape:10,angle:0,src:'horror-map:1'},
+ ],new Map([[1,'magearena_ladder_to_cellar'],[2,'magearena_ladder_from_cellar'],[3,'loc_1766'],[4,'wildymirrorladdertop2'],[5,'horror_lighthouse_spiralstairs_base']])).edges;
+ expect(edges.some(e=>e.locName==='magearena_ladder_to_cellar'&&e.to.level===0&&e.to.x===2542&&e.to.z===4713)).toBe(true);
+ expect(edges.some(e=>e.locName==='magearena_ladder_from_cellar'&&e.to.level===0&&e.to.x===3091&&e.to.z===3957)).toBe(true);
+ expect(edges.some(e=>e.locName==='loc_1766')).toBe(true);
+ expect(edges.some(e=>e.locName==='wildymirrorladdertop2')).toBe(true);
+ expect(edges.some(e=>e.locName==='horror_lighthouse_spiralstairs_base'&&e.to.level===1)).toBe(true);
 });

@@ -139,10 +139,16 @@
  },
  {
   "varp": "goblinquest",
-  "folder": null,
+  "folder": "quest_gobdip",
   "complete": 6,
   "questPoints": 5,
-  "xp": [],
+  "xp": [
+   {
+    "skill": "crafting",
+    "xp": 200,
+    "src": "scripts/quests/quest_gobdip/scripts/quest_gobdip.rs2:62"
+   }
+  ],
   "src": "scripts/general/scripts/quests.rs2:128"
  },
  {
@@ -164,7 +170,13 @@
   "folder": "quest_fluffs",
   "complete": 6,
   "questPoints": 1,
-  "xp": [],
+  "xp": [
+   {
+    "skill": "cooking",
+    "xp": 1525,
+    "src": "scripts/quests/quest_fluffs/scripts/quest_fluffs.rs2:316"
+   }
+  ],
   "src": "scripts/general/scripts/quests.rs2:134"
  },
  {
@@ -298,10 +310,16 @@
  },
  {
   "varp": "elenaquest",
-  "folder": null,
+  "folder": "quest_elena",
   "complete": 29,
   "questPoints": 1,
-  "xp": [],
+  "xp": [
+   {
+    "skill": "mining",
+    "xp": 2425,
+    "src": "scripts/quests/quest_elena/scripts/quest_elena.rs2:12"
+   }
+  ],
   "src": "scripts/general/scripts/quests.rs2:173"
  },
  {
@@ -355,10 +373,21 @@
  },
  {
   "varp": "waterfall_quest",
-  "folder": null,
+  "folder": "quest_waterfall",
   "complete": 10,
   "questPoints": 1,
-  "xp": [],
+  "xp": [
+   {
+    "skill": "attack",
+    "xp": 13750,
+    "src": "scripts/quests/quest_waterfall/scripts/quest_waterfall.rs2:491"
+   },
+   {
+    "skill": "strength",
+    "xp": 13750,
+    "src": "scripts/quests/quest_waterfall/scripts/quest_waterfall.rs2:492"
+   }
+  ],
   "src": "scripts/general/scripts/quests.rs2:188"
  },
  {
@@ -530,7 +559,18 @@
   "folder": "quest_arena",
   "complete": 14,
   "questPoints": 2,
-  "xp": [],
+  "xp": [
+   {
+    "skill": "attack",
+    "xp": 12175,
+    "src": "scripts/quests/quest_arena/scripts/quest_arena.rs2:270"
+   },
+   {
+    "skill": "thieving",
+    "xp": 2175,
+    "src": "scripts/quests/quest_arena/scripts/quest_arena.rs2:271"
+   }
+  ],
   "src": "scripts/general/scripts/quests.rs2:209"
  },
  {
@@ -601,6 +641,14 @@
    }
   ],
   "src": "scripts/general/scripts/quests.rs2:224"
+ },
+ {
+  "varp": "cogquest",
+  "folder": "quest_cog",
+  "complete": 8,
+  "questPoints": 1,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:227"
  },
  {
   "varp": "grandtree",
@@ -725,11 +773,36 @@
   "src": "scripts/general/scripts/quests.rs2:254"
  },
  {
+  "varp": "elemental_workshop_bits",
+  "folder": "quest_elemental_workshop",
+  "complete": 1048576,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "crafting",
+    "xp": 5000,
+    "src": "scripts/quests/quest_elemental_workshop/scripts/quest_elemental_workshop.rs2:274"
+   },
+   {
+    "skill": "smithing",
+    "xp": 5000,
+    "src": "scripts/quests/quest_elemental_workshop/scripts/quest_elemental_workshop.rs2:275"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:257"
+ },
+ {
   "varp": "priestperil",
   "folder": "quest_priestperil",
   "complete": 60,
   "questPoints": 1,
-  "xp": [],
+  "xp": [
+   {
+    "skill": "prayer",
+    "xp": 1406,
+    "src": "scripts/quests/quest_priestperil/scripts/priestperil.rs2:9"
+   }
+  ],
   "src": "scripts/general/scripts/quests.rs2:260"
  },
  {
@@ -777,6 +850,25 @@
   "questPoints": 1,
   "xp": [],
   "src": "scripts/general/scripts/quests.rs2:269"
+ },
+ {
+  "varp": "troll_love",
+  "folder": "quest_troll_love",
+  "complete": 45,
+  "questPoints": 2,
+  "xp": [
+   {
+    "skill": "strength",
+    "xp": 4000,
+    "src": "scripts/quests/quest_troll_love/scripts/quest_troll_love.rs2:304"
+   },
+   {
+    "skill": "agility",
+    "xp": 8000,
+    "src": "scripts/quests/quest_troll_love/scripts/quest_troll_love.rs2:305"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:272"
  },
  {
   "varp": "tbwt_main",
@@ -880,10 +972,26 @@
  },
  {
   "varp": "horrorquest",
-  "folder": null,
+  "folder": "quest_horror",
   "complete": 10,
   "questPoints": 2,
-  "xp": [],
+  "xp": [
+   {
+    "skill": "magic",
+    "xp": 4662,
+    "src": "scripts/quests/quest_horror/scripts/quest_horror.rs2:491"
+   },
+   {
+    "skill": "strength",
+    "xp": 4662,
+    "src": "scripts/quests/quest_horror/scripts/quest_horror.rs2:492"
+   },
+   {
+    "skill": "ranged",
+    "xp": 4662,
+    "src": "scripts/quests/quest_horror/scripts/quest_horror.rs2:493"
+   }
+  ],
   "src": "scripts/general/scripts/quests.rs2:287"
  },
  {
@@ -899,6 +1007,14 @@
    }
   ],
   "src": "scripts/general/scripts/quests.rs2:290"
+ },
+ {
+  "varp": "mm_main",
+  "folder": "quest_mm",
+  "complete": 9,
+  "questPoints": 3,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:293"
  },
  {
   "varp": "routequest",
