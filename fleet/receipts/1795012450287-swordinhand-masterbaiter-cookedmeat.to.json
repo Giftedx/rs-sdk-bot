@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795012450287-swordinhand-masterbaiter-cookedmeat",
+ "account": "Masterbaiter",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "4f4ff60d-c269-4946-affd-ced4569d79c4",
+ "count": 0,
+ "ok": false,
+ "at": 1795012555179,
+ "detail": "trade claimed"
+}
