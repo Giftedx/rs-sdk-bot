@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794989677058-bowbeforeme-undermykilt-1bf314a08af2c98b",
  "account": "BowBeforeMe",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Rune arrow",
  "requested": 234,
  "claim": "12dd0f41-7a54-4672-93bf-92b0982e0a37",
- "count": 0,
- "ok": false,
- "at": 1794989701129,
- "detail": "trade claimed"
+ "count": 234,
+ "ok": true,
+ "at": 1794990782578,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 234,
+  "after": 0
+ },
+ "bank": {
+  "count": 234,
+  "at": 1794989714593
+ },
+ "logout": {
+  "attemptId": "1794989701160-0000013976-0000000001",
+  "at": 1794990782040,
+  "sha256": "13b26fb2976c6e6e4fa1158b9a98e1b22f771017a61624d25ae6a80c08b6122e"
+ },
+ "screen": true
 }

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794989677058-bowbeforeme-undermykilt-1bf314a08af2c98b",
+ "account": "UnderMyKilt",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 234,
+ "claim": "62b503e7-b839-4bef-88f1-b840fc07b0bd",
+ "count": 234,
+ "ok": true,
+ "at": 1794990783665,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 234
+ },
+ "bank": {
+  "count": 234,
+  "at": 1794990782916
+ },
+ "logout": {
+  "attemptId": "1794990762135-0000020880-0000000001",
+  "at": 1794990783625,
+  "sha256": "bef63dd11854af39e8ec2193bd3d34357ed4862498e29760d5f69683811a68de"
+ },
+ "screen": true
+}
