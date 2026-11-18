@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { readFileSync as read } from 'node:fs';
 import { parsePack } from '../packages/knowledge/src/pack';
 import { contentRoot } from '../packages/knowledge/src/paths';
-import { attackStyleOfAnim, attackStyleOfSeq, holdProtect, protectOf, readSighting, retreatOf, ThreatWatch } from './pk-threat';
+import { attackStyleOfAnim, attackStyleOfSeq, holdProtect, KitSwapper, protectOf, readSighting, retreatOf, ThreatWatch } from './pk-threat';
 
 const idOf = (pack: string, name: string) => { for (const [id, n] of parsePack(read(join(contentRoot(), `pack/${pack}.pack`), 'utf8'))) if (n === name) return id; throw new Error(`${name} not in ${pack}`); };
 const STAFF = idOf('obj', 'staff_of_air'), BOW = idOf('obj', 'shortbow'), SCIM = idOf('obj', 'rune_scimitar');
@@ -144,4 +144,23 @@ test('a mage and a pack with dragonhide: the watch decides the armour swap for t
     expect(lines.some(l => l.startsWith('ADAPT kit Ours1 magic: Mage magic: wear 1135+1099'))).toBe(true);
     // A squad with no spare armour has no swap.
     expect(watch([MAGE], [9], { worn: [1127, 1079], pack: [] }).w.step(5).actions.some(a => a.kind === 'kit')).toBe(false);
+});
+
+test('KitSwapper wears the swap once, keeps it while a threat needs it, and wears the worn armour again after 60 ticks without one', async () => {
+    const used: number[] = [], lines: string[] = [];
+    const s: any = { name: 'Ours1', sdk: { getEquipment: () => [{ id: 1127 }, { id: 1079 }], getInventory: () => [{ id: 1135, slot: 5, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] }, { id: 1127, slot: 6, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] }], sendUseItem: async (slot: number) => { used.push(slot); } } };
+    const kit: any[] = [{ kind: 'kit', member: 'Ours1', style: 'magic', wear: [1135], gain: 26, reason: 'Mage magic' }];
+    const swapper = new KitSwapper(), tick = async () => true, log = (l: string) => lines.push(l);
+    expect(await swapper.step(s, kit, 10, tick, log)).toBe(true);
+    expect(used).toEqual([5]);
+    expect(swapper.active).toBe(true);
+    // Still needed: nothing to do, and the clock restarts.
+    expect(await swapper.step(s, kit, 40, tick, log)).toBe(false);
+    expect(await swapper.step(s, [], 99, tick, log)).toBe(false);
+    expect(await swapper.step(s, [], 100, tick, log)).toBe(true);
+    expect(used).toEqual([5, 6]);
+    expect(swapper.active).toBe(false);
+    expect(lines).toEqual(['[Ours1] threat kit swap: Mage magic', '[Ours1] threat kit restore: wear 1127']);
+    // A kit action for another member is not ours.
+    expect(await new KitSwapper().step(s, [{ ...kit[0], member: 'Ours2' }], 1, tick, log)).toBe(false);
 });
