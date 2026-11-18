@@ -3131,7 +3131,7 @@ describe('quest demand: the quests no owned account has done', () => {
         const unsellable = [...items].filter(item => item !== 'coin' && !(content.get(item)?.tradeable && content.get(item)!.cost > 0));
         // An item that the content does not mark tradeable gets no cap from the rule (wolfbane, druid pouch, serum 207), and a pack item that the rule caps stands at four times its base value.
         expect(unsellable.length).toBeGreaterThan(0);
-        for (const item of unsellable) expect([item, KIT_PRICE_CAPS[item]]).toEqual([item, undefined]);
+        for (const item of unsellable) expect([item, item in KIT_PRICE_CAPS]).toEqual([item, false]);
         const ruled = [...items].filter(item => !unsellable.includes(item) && item !== 'coin' && KIT_PRICE_CAPS[item] === Math.max(QUEST_CAP_MIN, QUEST_CAP_FACTOR * content.get(item)!.cost));
         expect(ruled.length).toBeGreaterThan(20);
         expect(KIT_PRICE_CAPS.knife).toBe(Math.max(QUEST_CAP_MIN, QUEST_CAP_FACTOR * content.get('knife')!.cost));
