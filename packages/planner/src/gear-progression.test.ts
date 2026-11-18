@@ -30,8 +30,8 @@ test('normalizes rev-289 quest aliases across questlist UI and gear.json names',
     const done = normalizeCompletedQuests(["Hero's Quest", 'Legends Quest', 'zanaris', 'dragon slayer', 'viking', 'regicide']);
     expect([...done].sort()).toEqual([
         'Dragon Slayer',
-        "Heroes' Quest",
-        "Legends' Quest",
+        "Hero's Quest",
+        "Legends Quest",
         'Lost City',
         'Regicide',
         'The Fremennik Trials',
@@ -646,7 +646,7 @@ test('a quest-point shop opens at its quest points, not never', () => {
 
 test('acquirableUpgrade names only an item with an open shop or a trade', () => {
     for (const [style, levels] of [['melee', { attack: 99, strength: 99, defence: 99 }], ['ranged', { ranged: 99, defence: 99 }], ['magic', { magic: 99, defence: 99 }]] as const) {
-        const loadout = selectProgressiveLoadout(style, [], levels, ['Dragon Slayer', "Legends' Quest", "Heroes' Quest", 'The Fremennik Trials', 'Regicide', 'Lost City']);
+        const loadout = selectProgressiveLoadout(style, [], levels, ['Dragon Slayer', "Legends Quest", "Hero's Quest", 'The Fremennik Trials', 'Regicide', 'Lost City']);
         for (const upgrade of Object.values(loadout.upgrades)) {
             const wanted = upgrade?.acquirableUpgrade;
             if (wanted) expect(wanted.tradeable || wanted.shops.length > 0).toBe(true);

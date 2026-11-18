@@ -541,7 +541,7 @@ try {
             await s.bot.depositItem(/longbow$/i, -1);
             await waitTicks(s, 1);
             await s.bot.withdrawItem(/bowstring/i, 14);
-            await s.bot.withdrawItem(/longbow \(u\)/i, 14);
+            await s.bot.withdrawItem(/^unstrung .*longbow$/i, 14);
         }
 
         bankTrips++;
