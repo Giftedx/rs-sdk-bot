@@ -16,7 +16,7 @@ import type { Session } from '../packages/core/src/inprocess';
 import { lootCapacity } from '../packages/core/src/loot-policy';
 import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
 import { fightPlayer, ITEMS, nextTick, observePlayer, wildernessLevel, type FightOptions, type FightResult, type Kit } from './pk';
-import { BOOST_POTIONS, EDGEVILLE_BANK, hitByPlayer, restock, TRIBRID_KIT, type TripItem } from './pk-hunt';
+import { BOOST_POTIONS, EDGEVILLE_BANK, FOOD_LIST, healOf, hitByPlayer, restock, TRIBRID_KIT, type TripItem } from './pk-hunt';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
@@ -81,23 +81,25 @@ export function bankTrip(at: { x: number; z: number }, back: { x: number; z: num
         if (!out.ok) return `no walk to the bank: ${out.detail ?? 'stopped'}`;
         const fault = fresh ? null : await restock(a, pack.food, pack.items, kit);
         if (fault) return fault;
-        // At the bank no attack is lost to an eat or a drink: eat to within one shark of full Hitpoints, drink one dose
-        // of each boost, then bank the boosts and fill the pack with sharks again.
+        // At the bank no attack is lost to an eat or a drink: eat to within one piece of food of full Hitpoints, drink one dose
+        // of each boost, then bank the boosts and fill the pack with food again (sharks first, then lobsters).
         // A stop ends the wait at once: the rest can be 1,000 ticks.
         const pause = async (ticks: number) => { for (let i = 0; i < ticks && !halt(); i++) if (!await nextTick(a)) return; };
         const edible = (i: { optionsWithIndex: { text: string }[] }) => i.optionsWithIndex.some(o => /^eat$/i.test(o.text));
         for (let i = 0; i < 6; i++) {
             const me = a.sdk.getState()?.player, food = a.sdk.getInventory().find(edible), op = food?.optionsWithIndex.find(o => /^eat$/i.test(o.text));
-            if (!me || !food || !op || me.hp > me.maxHp - 20) break;
+            if (!me || !food || !op || me.hp > me.maxHp - healOf(food.id)) break;
             await a.sdk.sendUseItem(food.slot, op.opIndex); bank.eaten++; await pause(3);
         }
         const boosts = () => a.sdk.getInventory().filter(i => PREPOT.some(doses => (doses as readonly number[]).includes(i.id)));
         for (const potion of boosts()) { const op = potion.optionsWithIndex.find(o => /^drink$/i.test(o.text)); if (op) { await a.sdk.sendUseItem(potion.slot, op.opIndex); await pause(3); } }
         if (!(await a.bot.openBank()).success) return 'bank did not open for the second visit';
         for (const potion of boosts()) await a.bot.depositItem(potion, -1);
-        const sharks = a.sdk.getBankItems().find(b => b.id === ITEMS.shark);
-        const room = more.fill === false ? pack.food - a.sdk.getInventory().filter(edible).length : 27 - a.sdk.getInventory().length;
-        if (sharks && room > 0) await a.bot.withdrawItem(sharks, Math.min(room, sharks.count), { asNote: false });
+        let room = more.fill === false ? pack.food - a.sdk.getInventory().filter(edible).length : 27 - a.sdk.getInventory().length;
+        for (const kind of FOOD_LIST) {
+            const row = a.sdk.getBankItems().find(b => b.id === kind.id);
+            if (row && room > 0) { const n = Math.min(room, row.count); await a.bot.withdrawItem(row, n, { asNote: false }); room -= n; }
+        }
         await a.bot.closeBank();
         await pause(more.rest ?? 0);
         if (halt()) return 'no walk back: stopped';

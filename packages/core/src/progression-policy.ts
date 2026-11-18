@@ -20,7 +20,7 @@ function bankJobIdentity(args:readonly string[]):string|null{
  }catch{return 'invalid';}
 }
 export function methodSupportsWork(step:Step,work:WorkDescriptor):boolean{
- if(entry(step.script)!==entry(work.script))return false;
+ if(entry(step.script)!==entry(work.script))return !!step.alsoRuns?.some(alt=>methodSupportsWork({script:alt.script,args:alt.args,env:alt.env},work));
  if(entry(step.script)==='scripts/cannon-fight.ts'){
   const expected=intentForEntry(step.script,step.args,step.env),actual=intentForEntry(work.script,work.args,work.env);
   if(expected?.kind==='train-all'||actual?.kind==='train-all'){

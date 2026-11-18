@@ -18,21 +18,24 @@ import {planTripOffThread} from '../packages/core/src/route-plan';
 import {routeFares,type Account} from '../packages/core/src/world';
 import {chooseProgression,type ObservedAccount,type ProgressionDecision} from '../packages/planner/src/progression';
 import {rangedProgressionMethods,rangedKit,rangedBandTarget} from '../packages/planner/src/progression-ranged';
+import {standardBowTiers,standardArrowTiers,gearById,shopCatalog} from '../packages/planner/src/gear-progression';
 import {questFlags} from '../packages/core/src/quest-status';
 import {isLocalServer} from '../packages/core/src/localserver';
 import {runGiants,TROOPER_SITE} from './gather-combat';
 import {ferryWalk} from './walk-to';
 type Item={id:number;count:number};
-// levelrequire from server/content/scripts/skill_combat/configs/ranged/{bows,arrows}.obj.
-// player_ranged.rs2 refuses arrows whose levelrequire exceeds the bow's levelrequire.
-export const BOWS=[{id:841,req:1,name:'Shortbow'},{id:839,req:1,name:'Longbow'},{id:843,req:5,name:'Oak shortbow'},{id:845,req:5,name:'Oak longbow'},
- {id:849,req:20,name:'Willow shortbow'},{id:847,req:20,name:'Willow longbow'},{id:853,req:30,name:'Maple shortbow'},{id:851,req:30,name:'Maple longbow'},
- {id:857,req:40,name:'Yew shortbow'},{id:855,req:40,name:'Yew longbow'},{id:861,req:50,name:'Magic shortbow'},{id:859,req:50,name:'Magic longbow'}] as const;
-export const ARROWS=[{id:882,req:1,name:'Bronze arrow'},{id:884,req:1,name:'Iron arrow'},{id:886,req:5,name:'Steel arrow'},{id:888,req:20,name:'Mithril arrow'},{id:890,req:30,name:'Adamant arrow'},{id:892,req:40,name:'Rune arrow'}] as const;
+// Bow and arrow tiers come from knowledge/gear.json through the planner engine (standardBowTiers, standardArrowTiers).
+// player_ranged.rs2 refuses arrows whose levelrequire exceeds the bow's levelrequire. In a level the shortbow is first,
+// so it wins a tie (it fires faster).
+// (packages/knowledge/src/ladders.ts names this declaration as the worker's bow evidence.)
+export const BOWS=[...standardBowTiers()].reverse()
+ .flatMap(t=>t.ids.map(id=>({id,req:t.level,name:gearById(id)?.name??String(id)})));
+export const ARROWS:readonly {id:number;req:number;name:string}[]=standardArrowTiers().sort((x,y)=>x.id-y.id)
+ .map(t=>({id:t.id,req:t.level,name:gearById(t.id)?.name??String(t.id)}));
 const ARROW_IDS:number[]=ARROWS.map(a=>a.id),BOW_IDS:number[]=BOWS.map(b=>b.id);
 const COINS=995,BONES=526,CHICKEN=2138,FEATHER=314,BANK={x:3253,z:3421},LOWE={x:3232,z:3423},WYDIN={x:3015,z:3206},PEN={x:3233,z:3297},LOOT_WINDOW=12;
-// Lowe's archeryshop lists these arrows (server/content/scripts/areas/area_varrock/configs/varrock.inv).
-const LOWE_ARROWS=[882,884,886];
+// The arrows Lowe's archeryshop lists (knowledge/shops.json).
+const LOWE_ARROWS:number[]=ARROWS.filter(a=>shopCatalog().get(a.id)?.some(s=>s.shop==='archeryshop')).map(a=>a.id);
 const OUT:PathPoint[]=[{x:3280,z:3429,tol:2},{x:3275,z:3380,tol:2},{x:3260,z:3335,tol:2},{x:3233,z:3297,tol:0}];
 const BACK:PathPoint[]=[{x:3260,z:3335,tol:2},{x:3275,z:3380,tol:2},{x:3280,z:3429,tol:2},{...BANK,tol:1}];
 // The starter's east-Varrock corridor and agility-order's public Draynor -> Wydin approach. A known mainland food

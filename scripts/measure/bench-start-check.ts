@@ -5,9 +5,15 @@
 //   3. the free memory is under the floor plus the engines that this run starts.
 // The floor is the floor of scripts/heavy-admission.ts: the fleet's floor beside a swarm, the tool floor with none.
 // `--wait <minutes>` on the bench waits for the three with a deadline, and `--force` skips the check.
+// Beside a live fleet (a swarm that writes its state) the memory rule is stricter and no flag turns it off:
+//   - each engine counts as a whole case (BENCH_CASE_GB: the engine, the worker and its tools);
+//   - the run also leaves the swarm's reserve for the bots that it starts now;
+//   - the run has LIVE_MAX_ENGINES engines at most;
+//   - during the run the bench reads the free memory again (fleetStop): under the floor plus the reserve it stops its
+//     engines and ends with FLEET_STOP_EXIT. A stalled tick disconnects real accounts; a stopped bench loses a run.
 // This file is tooling. No worker imports it, so a change here does not change a worker release.
 import { canBind } from '../../packages/practice/src/ports';
-import { floorGB, freeGB } from '../heavy-admission';
+import { fleet, floorGB, freeGB, type Fleet } from '../heavy-admission';
 
 // The jobs that must not run two at a time on one machine (AGENTS.md, "Keep the loop fast").
 export const HEAVY_SCRIPTS = ['aio-practice-bench.ts', 'ci-gate.ts', 'test-shards.ts'] as const;
@@ -19,6 +25,9 @@ export const BENCH_ENGINE_GB = 0.9;
 export const BENCH_CASE_GB = 1.5;
 // The exit code of a refused start. The bench exits with 0 when every case passes and with 1 when a case fails.
 export const START_REFUSED_EXIT = 2;
+// The engines of one bench beside a live fleet, and the exit code of a bench that stopped to give the fleet its memory.
+export const LIVE_MAX_ENGINES = 4;
+export const FLEET_STOP_EXIT = 4;
 export const WAIT_STEP_MS = 10_000;
 
 export type Proc = { pid: number; ppid: number; name: string; startedAt: number; commandLine: string };
@@ -32,6 +41,8 @@ export type StartFacts = {
     floorGB: number;
     // The engines that this run starts at one time.
     engines: number;
+    // The live fleet of this machine, when a swarm runs.
+    fleet?: Fleet | null;
 };
 
 // The heavy script that a bun process runs, or null: the first argument that is not an option, after `run`.
@@ -104,10 +115,26 @@ export function startProblems(f: StartFacts): string[] {
     const others = f.procs ? otherHeavyJobs(f.procs, f.selfPid) : [];
     if (others.length) out.push(`another heavy job runs (${others.map(o => `pid ${o.pid} ${o.script}`).join(', ')})`);
     if (f.busyPorts.length) out.push(`port ${f.busyPorts.join(', ')} has a listener`);
-    const need = f.floorGB + f.engines * BENCH_ENGINE_GB;
-    if (f.freeGB < need) out.push(`${f.freeGB.toFixed(1)} GiB is free and the run needs ${need.toFixed(1)} GiB (the floor of ${f.floorGB} GiB and ${f.engines} ${f.engines === 1 ? 'engine' : 'engines'} of ${BENCH_ENGINE_GB} GiB)`);
+    out.push(...memoryProblems(f));
     return out;
 }
+// The memory part of the check. Beside a live fleet it also holds with --force.
+export function memoryProblems(f: StartFacts): string[] {
+    const out: string[] = [], each = f.fleet ? BENCH_CASE_GB : BENCH_ENGINE_GB, reserve = f.fleet?.reserveGB ?? 0;
+    const need = f.floorGB + reserve + f.engines * each;
+    const beside = f.fleet ? `, beside ${f.fleet.bots} live ${f.fleet.bots === 1 ? 'bot' : 'bots'}${reserve ? ` with ${reserve.toFixed(1)} GiB held for bot starts` : ''}` : '';
+    if (f.freeGB < need) out.push(`${f.freeGB.toFixed(1)} GiB is free and the run needs ${need.toFixed(1)} GiB (the floor of ${f.floorGB} GiB and ${f.engines} ${f.engines === 1 ? 'engine' : 'engines'} of ${each} GiB${beside})`);
+    if (f.fleet && f.engines > LIVE_MAX_ENGINES) out.push(`${f.engines} engines beside the live fleet, ${LIVE_MAX_ENGINES} at most (--parallel ${LIVE_MAX_ENGINES})`);
+    return out;
+}
+// During a run beside a live fleet: the reason to stop now, or null. The engines of the run are in the free memory
+// already, so the rule is the floor and the swarm's reserve alone.
+export function fleetStop(f: Pick<StartFacts, 'freeGB' | 'floorGB' | 'fleet'>): string | null {
+    if (!f.fleet) return null;
+    const need = f.floorGB + f.fleet.reserveGB;
+    return f.freeGB < need ? `bench: stopped: ${f.freeGB.toFixed(1)} GiB is free beside ${f.fleet.bots} live ${f.fleet.bots === 1 ? 'bot' : 'bots'} and the fleet needs ${need.toFixed(1)} GiB (the floor of ${f.floorGB} GiB${f.fleet.reserveGB ? ` and ${f.fleet.reserveGB.toFixed(1)} GiB for bot starts` : ''}). Run the cases on a hosted runner: bun scripts/hosted-bench.ts '<pattern>'.` : null;
+}
+export const readFleetFacts = (root: string): Pick<StartFacts, 'freeGB' | 'floorGB' | 'fleet'> => ({ freeGB: freeGB(), floorGB: floorGB(root), fleet: fleet(root) });
 export const refusalLine = (problems: readonly string[]): string =>
     `bench: not started: ${problems.join('; ')}. Use --wait <minutes> to wait for a safe start, or --force to skip this check.`;
 
@@ -140,17 +167,18 @@ export async function readProcs(): Promise<Proc[] | null> {
 export type StartPlan = { root: string; ports: readonly number[]; engines: number };
 export async function readStartFacts(plan: StartPlan): Promise<StartFacts> {
     const procs = readProcs(); // starts first: the port and memory reads take its time
-    return { busyPorts: plan.ports.filter(p => !canBind(p)), freeGB: freeGB(), floorGB: floorGB(plan.root), engines: plan.engines, selfPid: process.pid, procs: await procs };
+    return { busyPorts: plan.ports.filter(p => !canBind(p)), freeGB: freeGB(), floorGB: floorGB(plan.root), engines: plan.engines, selfPid: process.pid, procs: await procs, fleet: fleet(plan.root) };
 }
 
 // null when the start is safe, or the refusal line. With `waitMs` above 0 it reads the facts again each WAIT_STEP_MS
 // until the start is safe or the time is over.
-export async function admitStart(plan: StartPlan, waitMs = 0, deps: { read?: (plan: StartPlan) => Promise<StartFacts>; sleep?: (ms: number) => Promise<unknown>; now?: () => number; log?: (line: string) => void } = {}): Promise<string | null> {
+export async function admitStart(plan: StartPlan, waitMs = 0, deps: { read?: (plan: StartPlan) => Promise<StartFacts>; sleep?: (ms: number) => Promise<unknown>; now?: () => number; log?: (line: string) => void; memoryOnly?: boolean } = {}): Promise<string | null> {
     const read = deps.read ?? readStartFacts, sleep = deps.sleep ?? Bun.sleep, now = deps.now ?? Date.now, log = deps.log ?? console.error;
     const deadline = now() + waitMs;
     let said = '';
     for (;;) {
-        const facts = await read(plan), problems = startProblems(facts);
+        // memoryOnly (--force): the check for another job and for the ports is off; the memory rule beside a live fleet stays.
+        const facts = await read(plan), problems = deps.memoryOnly ? (facts.fleet ? memoryProblems(facts) : []) : startProblems(facts);
         if (!facts.procs && !said && process.platform === 'win32') log('bench: the process list was not read, so the check for another heavy job did not run');
         if (!problems.length) return null;
         const left = deadline - now();

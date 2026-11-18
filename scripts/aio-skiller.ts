@@ -8,7 +8,7 @@ import {openBot,finish} from '../packages/core/src/bot';
 import {runDirectChild} from '../packages/core/src/run-child';
 import type {Step} from '../packages/core/src/chain-step';
 import {DEFAULT_METHOD,resolveRouteStep,resolveSkillerMethod} from './aio-route-step';
-import {xpForLevel} from '../packages/planner/src/curve';
+import {levelForXp,xpForLevel} from '../packages/planner/src/curve';
 import {planBankTripSchedule} from '../packages/core/src/bank-trip';
 import {runBankJob,runBankProfile,validateBankJob,type BankJob} from './microbot-bank-jobs';
 import {FISH_PROFILES,runStagedFishing,pickFishSpot,fishSpotIds,searchNativeCatherbyFishing,type FishMethod} from './microbot-b-fishing';
@@ -214,6 +214,8 @@ export interface ProgressiveBand {
  xpPerUnit: number;
  unitsNeeded: number;
  step: Step;
+ // Only on a band with unitsNeeded 0: no unlocked tier has its inputs, and this names what each tier lacks.
+ shortfall?: string;
 }
 
 export function progressiveSkillerAlternatives(skillInput:string,currentLevel:number,targetLevel:number,xpRate=25):ProgressiveBand[]{
@@ -332,8 +334,8 @@ export function readBankJobArgument(argument: string): BankJob {
  return job;
 }
 
-function progressiveTierBand(skill:string,active:ProgressiveTier,fromLevel:number,toLevel:number,xpRate:number):ProgressiveBand{
- const effectiveXp=active.xp*xpRate,unitsNeeded=Math.max(1,Math.ceil(Math.max(0,xpForLevel(toLevel)-xpForLevel(fromLevel))/effectiveXp));
+function progressiveTierBand(skill:string,active:ProgressiveTier,fromLevel:number,toLevel:number,xpRate:number,units?:number):ProgressiveBand{
+ const effectiveXp=active.xp*xpRate,unitsNeeded=units??Math.max(1,Math.ceil(Math.max(0,xpForLevel(toLevel)-xpForLevel(fromLevel))/effectiveXp));
  const extra=[...(active.args??[]),...(['agility','runecraft','cooking','magic'].includes(skill)&&(skill!=='magic'||active.method==='alch-train'||active.method==='splash')?[String(toLevel)]:[]),
   `TARGET_LEVEL=${toLevel}`,'CAP=20000',...(['woodcutting','fishing','thieving'].includes(skill)?[`TARGET=${toLevel}`]:[]),
   ...(skill==='fletching'?[`MAX_MAKE=${Math.min(25,unitsNeeded)}`,'LOG_RESERVE=0','BANK_KNIFE=1']:[]),
@@ -345,8 +347,22 @@ function progressiveTierBand(skill:string,active:ProgressiveTier,fromLevel:numbe
    ...skill==='cooking'?{targetLevel:toLevel}:{},...active.job.bank?{bank:active.job.bank}:{},...active.job.site?{site:active.job.site}:{}}):resolveSkillerStep(skill,active.method,extra)};
 }
 
+// What one unit of a tier uses, holds and makes. Only smithing names them (content recipes: smelt-batch.ts,
+// smith-batch.ts): an anvil order smiths bars that the account owns (smelt-bars.ts ORDER_ACTION=smith).
+type TierStock={inputs:Readonly<Record<number,number>>;tools:readonly number[];makes?:number};
+function tierStock(skill:string,tier:ProgressiveTier):TierStock|null{
+ if(skill!=='smithing')return null;
+ if(tier.method==='anvil'){const r=smithRecipe(Number(tier.env!.PRODUCT_ID));return{inputs:{[r.bar]:r.bars},tools:[HAMMER]};}
+ if(tier.method==='smelt'){const r=smeltRecipe(tier.args![1]!);return{inputs:Object.fromEntries(r.ingredients.map(i=>[i.id,i.units])),tools:[],makes:r.product};}
+ return null;
+}
+
 // Compute an automatic level-band progression from currentLevel -> targetLevel (accounting for server xpRate, default 25x).
-export function planProgressiveSkiller(skillInput: string, currentLevel: number, targetLevel: number, xpRate = 25): ProgressiveBand[] {
+// `owned` is the stock of the account (item id to count, pack and bank). A tier is planned only with inputs that the
+// stock holds or that an earlier band of the plan makes, and a band never plans more units than its inputs allow.
+// With no `owned` the plan knows no stock: it assumes each raw input (ore, coal, a tool) and counts only the bars
+// that its own bands make. If no unlocked tier has its inputs, the plan ends with a band of 0 units and a `shortfall`.
+export function planProgressiveSkiller(skillInput: string, currentLevel: number, targetLevel: number, xpRate = 25, owned?: Readonly<Record<number, number>>): ProgressiveBand[] {
  const skill = skillInput.toLowerCase();
  if (!Number.isSafeInteger(currentLevel) || currentLevel < 1 || !Number.isSafeInteger(targetLevel) || targetLevel <= currentLevel || targetLevel > 99 || !Number.isFinite(xpRate) || xpRate <= 0) {
   throw Error('aio-skiller: invalid progressive level bounds');
@@ -358,13 +374,53 @@ export function planProgressiveSkiller(skillInput: string, currentLevel: number,
  if (currentLevel < tiers[0]!.level) throw Error(`aio-skiller: ${skill} requires its level ${tiers[0]!.level} quest unlock`);
  // The owned prayer worker also verifies Protect from Melee; its first accepted milestone is 43.
  if(skill==='prayer')targetLevel=Math.max(43,targetLevel);
+ const stockOf=new Map(tiers.map(t=>[t,tierStock(skill,t)])),made=new Set([...stockOf.values()].flatMap(k=>k?.makes===undefined?[]:[k.makes]));
+ const stock=new Map<number,number>(Object.entries(owned??{}).map(([id,n])=>[Number(id),n]));
+ const have=(id:number)=>owned===undefined&&!made.has(id)?Infinity:stock.get(id)??0;
+ // Whole units of a tier that the stock pays for.
+ const affordable=(t:ProgressiveTier)=>{const k=stockOf.get(t);return !k?Infinity:k.tools.some(id=>have(id)<1)?0:Math.min(...Object.entries(k.inputs).map(([id,n])=>Math.floor(have(Number(id))/n)));};
+ // What a tier needs and the stock does not hold, as counts of item ids.
+ const lacks=(t:ProgressiveTier)=>{const k=stockOf.get(t)!;return `${t.method} ${t.env?.PRODUCT_ID??t.args?.[1]??''} needs ${[...Object.entries(k.inputs).filter(([id,n])=>have(Number(id))<n).map(([id,n])=>`${n}x${id}`),...k.tools.filter(id=>have(id)<1).map(id=>`1x${id}`)].join(' ')}`;};
  const bands: ProgressiveBand[] = [];
- let cursor = currentLevel;
- while (cursor < targetLevel) {
-  const active = [...tiers].filter(t => t.level <= cursor).at(-1) ?? tiers[0]!;
-  const nextUnlock = tiers.find(t => t.level > cursor && t.level < targetLevel)?.level ?? targetLevel;
-  bands.push(progressiveTierBand(skill,active,cursor,nextUnlock,xpRate));
-  cursor = nextUnlock;
+ const goal=xpForLevel(targetLevel);
+ let xp=xpForLevel(currentLevel);
+ while (xp < goal) {
+  const level=levelForXp(xp);
+  // The unlocked tiers, most XP for each unit first, the later tier on a tie. A later tier is not always the better
+  // one: a smelt and an anvil action both take 5 ticks (knowledge/ladders.json), and a platebody gives more XP than
+  // each bar that the levels above it smelt.
+  const unlocked=tiers.filter(t=>t.level<=level).reverse().sort((a,b)=>b.xp-a.xp);
+  // The first tier whose inputs the stock holds. For a tier with no bars, the smelt tier that makes its bar: the plan
+  // smelts the bars and then smiths them.
+  let active:ProgressiveTier|undefined,feeds:ProgressiveTier|undefined;
+  for(const t of unlocked){
+   if(affordable(t)>=1){active=t;break;}
+   const k=stockOf.get(t)!,bar=Object.keys(k.inputs).map(Number).find(id=>made.has(id));
+   const feeder=bar===undefined||k.tools.some(id=>have(id)<1)?undefined:unlocked.find(f=>stockOf.get(f)?.makes===bar&&affordable(f)>=1);
+   if(feeder){active=feeder;feeds=t;break;}
+  }
+  if(!active){
+   bands.push({...progressiveTierBand(skill,unlocked[0]!,level,targetLevel,xpRate,0),shortfall:unlocked.map(lacks).join('; ')});
+   break;
+  }
+  // A band ends at the next tier that gives more than the tier it smiths or smelts for.
+  const leader=feeds??active;
+  const end=tiers.find(t=>t.level>level&&t.level<targetLevel&&t.xp>=leader.xp)?.level??targetLevel;
+  const need=xpForLevel(end)-xp,each=active.xp*xpRate;
+  let units=Math.max(1,Math.ceil(need/each));
+  if(feeds){
+   // The fewest bars to smelt so that the bars and the platebodies from them reach the end of the band.
+   const bar=stockOf.get(active)!.makes!,held=have(bar),perUnit=stockOf.get(feeds)!.inputs[bar]!,smith=feeds.xp*xpRate;
+   for(units=1;units*each+Math.floor((held+units)/perUnit)*smith<need;)units++;
+  }
+  units=Math.min(units,affordable(active));
+  bands.push(progressiveTierBand(skill,active,level,end,xpRate,units));
+  const k=stockOf.get(active);
+  if(k){
+   for(const [id,n] of Object.entries(k.inputs))if(have(Number(id))!==Infinity)stock.set(Number(id),have(Number(id))-n*units);
+   if(k.makes!==undefined)stock.set(k.makes,(stock.get(k.makes)??0)+units);
+  }
+  xp=units*each>=need?xpForLevel(end):xp+units*each;
  }
  return bands;
 }

@@ -8,7 +8,7 @@ import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { BONE_XP } from './train-prayer';
 import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, startable, supervisorCommand } from './swarm';
 import { supervise } from '../packages/practice/src/supervise';
-import { aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import { FOLLOWED_RETRY_MS, GEAR_ASK_LIMIT, GEAR_ASK_MARGIN, UNSOLD_RETRY_MS, gearLimit } from './autopilot';
 import { KIT_PRICE_CAPS } from '../packages/planner/src/autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
@@ -501,11 +501,17 @@ test('the limit of a worn item follows the lowest ask up to five times its shop 
     expect(gearLimit(561, KIT_PRICE_CAPS['nature rune']!, { ask: 900, sell: 500 })).toBe(KIT_PRICE_CAPS['nature rune']!);
     const items = [{ id: 1079, name: 'Rune platelegs', debugname: 'rune_platelegs' }, { id: 1163, name: 'Rune full helm', debugname: 'rune_full_helm' }];
     const asks = { 1079: { ask: 105_375, sell: 4 }, 1163: { ask: 349_982, sell: 40 } }, hour = FOLLOWED_RETRY_MS, now = 10 * UNSOLD_RETRY_MS;
-    expect(kitMarket(items, {}, now, asks)).toEqual({ 'rune plateleg': { id: 1079, name: 'Rune platelegs', limit: 110_644 }, 'rune full helm': { id: 1163, name: 'Rune full helm', limit: helm } });
+    // The helm's lowest ask is over its limit, so no buy is planned for it.
+    expect(kitMarket(items, {}, now, asks)).toEqual({ 'rune plateleg': { id: 1079, name: 'Rune platelegs', limit: 110_644 } });
     // A buy that got none: the followed item is back after an hour, the capped one after a day.
     const failed = { '1079': now - hour + 1, '1163': now - hour - 1 };
     expect(Object.keys(kitMarket(items, failed, now, asks))).toEqual([]);
-    expect(Object.keys(kitMarket(items, { '1079': now - hour - 1, '1163': now - UNSOLD_RETRY_MS - 1 }, now, asks))).toEqual(['rune plateleg', 'rune full helm']);
+    expect(Object.keys(kitMarket(items, { '1079': now - hour - 1, '1163': now - UNSOLD_RETRY_MS - 1 }, now, asks))).toEqual(['rune plateleg']);
+    expect(Object.keys(kitMarket(items, { '1163': now - UNSOLD_RETRY_MS - 1 }, now))).toEqual(['rune plateleg', 'rune full helm']);
+    // A read with no seller, or with the lowest ask over the limit, plans no buy; an item with no read stays.
+    const blades = [{ id: 1333, name: 'Rune scimitar', debugname: 'rune_scimitar' }, { id: 1331, name: 'Adamant scimitar', debugname: 'adamant_scimitar' }, { id: 1215, name: 'Dragon dagger', debugname: 'dragon_dagger' }, { id: 1303, name: 'Rune longsword', debugname: 'rune_longsword' }];
+    expect(Object.keys(kitMarket(blades, {}, now, { 1333: { ask: null, sell: 0 }, 1331: { ask: 36_948, sell: 439 }, 1215: { ask: 266_203, sell: 2 } }))).toEqual(['adamant scimitar', 'rune longsword']);
+    expect(Object.keys(kitMarket(blades, {}, now))).toEqual(['rune scimitar', 'adamant scimitar', 'dragon dagger', 'rune longsword']);
     // With no quote the platelegs wait the day too.
     expect(Object.keys(kitMarket(items, { '1079': now - hour - 1 }, now))).toEqual(['rune full helm']);
 });
@@ -1103,12 +1109,12 @@ test('kitBuyRunning releases exit-4, orphaned and died kit buys while keeping ac
     const job = { account: 'SporranBulge', template: `${KIT_BUY}army-weapon`, enabled: true };
     const assigned = { template: `${KIT_BUY}army-weapon`, offset: 0, at: 1000 };
     expect(kitBuyRunning(job, assigned, () => [])).toBe(true);
-    expect(kitBuyRunning(job, assigned, () => [], false, { active: true, ended: { at: 900, reason: 'exit 4 after 1 runs' } })).toBe(true);
-    expect(kitBuyRunning(job, assigned, () => [], false, { active: false, ended: { at: 900, reason: 'exit 4 after 1 runs' } })).toBe(true);
-    expect(kitBuyRunning(job, assigned, () => [], false, { active: false, ended: { at: 1100, reason: 'exit 4 after 1 runs' } })).toBe(false);
+    expect(kitBuyRunning(job, assigned, () => [], false, { active: true, ended: { at: 900, reason: 'exit 4' } })).toBe(true);
+    expect(kitBuyRunning(job, assigned, () => [], false, { active: false, ended: { at: 900, reason: 'exit 4' } })).toBe(true);
+    expect(kitBuyRunning(job, assigned, () => [], false, { active: false, ended: { at: 1100, reason: 'exit 4' } })).toBe(false);
     expect(kitBuyRunning(job, assigned, () => [], false, { active: false, ended: { at: 1100, reason: 'exit orphaned: attempt x gone' } })).toBe(false);
     expect(kitBuyRunning(job, assigned, () => [], false, { active: false, ended: { at: 1100, reason: 'died after 1 runs' } })).toBe(false);
-    expect(isJobEnded(assigned, { active: false, ended: { at: 1200, reason: 'exit 4 after 1 runs' } })).toBe(true);
+    expect(isJobEnded(assigned, { active: false, ended: { at: 1200, reason: 'exit 4' } })).toBe(true);
 
     const stopMap = pauses(new Map([['Woodenstaff', 'owner pause']]));
     const pausedJob = { account: 'Woodenstaff', autopilot: 'local', script: 'scripts/goldfarm.ts', enabled: false };
@@ -1122,7 +1128,7 @@ test('kitBuyRunning releases exit-4, orphaned and died kit buys while keeping ac
     try {
         const runsFile = join(tmp, 'swarm-runs.json'), deathsFile = join(tmp, 'swarm-deaths.json');
         writeFileSync(runsFile, JSON.stringify([{ accounts: ['CoinCock'] }, { account: 'Ballspinner' }]));
-        writeFileSync(deathsFile, JSON.stringify({ SporranBulge: { at: 1200, reason: 'exit 4 after 1 runs' }, Magicwanda: { at: 1300, reason: 'died after 1 runs' } }));
+        writeFileSync(deathsFile, JSON.stringify({ SporranBulge: { at: 1200, reason: 'exit 4' }, Magicwanda: { at: 1300, reason: 'died after 1 runs' } }));
         expect([...readSwarmActiveAccounts(runsFile)]).toEqual(['coincock', 'ballspinner']);
         expect(readSwarmEnded(deathsFile).get('magicwanda')?.reason).toBe('died after 1 runs');
     } finally {
@@ -1143,4 +1149,53 @@ test('OFFLINE_GUARDED excludes main and specialists from stock transfers and pla
     const stock = sideStock('local', { accounts: ['Haggis', 'Shaftshooter', 'Polevaulter', 'Freebee'].map(row) },
         { at, jobs: [] }, new Set(), Date.now(), 60_000, id => (id === 995 ? 'Coins' : undefined), { owners, server: 'rs-sdk-demo.fly.dev' });
     expect(stock.map(s => s.name)).toEqual(['Freebee']);
+});
+
+test('a preparation/acquire retirement stays retired: its own embedded RESULT is not a drain of the job', () => {
+    const reason = '2 preparation/acquire RESULTs: RESULT fail no Ranged progress: {"ok":false,"stop":"preparation","failure":"progression requires acquire"}';
+    expect(liveRetirements({ 'wandwaver:army-trooper-ranged-99': { reason, script: 'same' } }, () => 'same')).toEqual({
+        retired: { 'wandwaver:army-trooper-ranged-99': { reason, script: 'same' } }, lapsed: [],
+    });
+});
+
+test('only a bare exit code of 4 ends a job as a script error: exit 4294967295 is no such end', () => {
+    const assigned = { at: 1000 };
+    expect(isJobEnded(assigned, { active: false, ended: { at: 1200, reason: 'exit 4' } })).toBe(true);
+    expect(isJobEnded(assigned, { active: false, ended: { at: 1200, reason: 'exit 4294967295' } })).toBe(false);
+    expect(isJobEnded(assigned, { active: false, ended: { at: 1200, reason: 'exit 40' } })).toBe(false);
+    expect(isJobEnded(assigned, { active: false, ended: { at: 1200, reason: 'exit unknown' } })).toBe(true);
+    expect(isJobEnded(assigned, { active: false, ended: { at: 1200, reason: 'exit unknown x' } })).toBe(false);
+});
+
+test('an orphaned kit buy raises its order sequence once for each end record', () => {
+    const state: Parameters<typeof raiseKitSeq>[0] = {};
+    expect(raiseKitSeq(state, 'Bulge', 5000)).toBe(true);
+    // A paused account keeps its job, so each pass reads the same end record again.
+    expect(raiseKitSeq(state, 'Bulge', 5000)).toBe(false);
+    expect(raiseKitSeq(state, 'bulge', 4000)).toBe(false);
+    expect(state.kitSeq).toEqual({ bulge: 1 });
+    expect(raiseKitSeq(state, 'Bulge', 9000)).toBe(true);
+    expect(state.kitSeq).toEqual({ bulge: 2 });
+});
+
+test('a goal job prints its band, not a coin rate of zero', async () => {
+    const { catalogue } = await import('../packages/planner/src/autopilot');
+    const all = catalogue(), band = all.find(t => t.id === 'army-trooper-prayer-99')!;
+    expect(jobRate({ template: band, value: 0 })).toBe(`band ${band.band}`);
+    expect(jobRate({ template: all.find(t => t.id === 'shop-runes')!, value: 0.14 })).toBe('0.14/tick');
+    expect(jobRate({ template: { ...band, tier: undefined, family: 'kit-buy' }, value: 0 })).toBe('kit buy');
+});
+
+test('every shop template of the catalogue selects at least one line of its profile with the real selectItems', () => {
+    // selectItems tests ITEMS against the SOURCE of each profile line (an anchored line has the source ^name$), so an
+    // anchored ITEMS value never matches it: the run throws "ITEMS matches no <profile> item" at once.
+    const empty: string[] = [];
+    for (const t of catalogue()) {
+        const steps: { profile: string; items?: string }[] = [];
+        if (t.script === 'scripts/shop-buyer.ts') steps.push({ profile: t.args?.[0] ?? '', items: t.env?.ITEMS });
+        if (t.script === 'scripts/chain.ts') for (const a of t.args ?? []) { const m = a.match(/shop-buyer\.ts\s+(\S+)/); if (m) steps.push({ profile: m[1]!, items: a.match(/ITEMS=(\S+)/)?.[1] }); }
+        for (const s of steps) if (PROFILES[s.profile] && s.items && selectItems(PROFILES[s.profile]!.items, s.items).length === 0) empty.push(`${t.id} ${s.profile} ITEMS=${s.items}`);
+    }
+    expect(empty).toEqual([]);
+    expect(selectItems(PROFILES.ardy!.items, 'iron axe').map(i => i.re.source)).toEqual(['^iron axe$']);
 });

@@ -2,11 +2,14 @@ import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import type {ObservedAccount,ProgressionMethod} from './progression';
 import type {Gear} from '../../knowledge/src/gear';
+import type {Step} from '../../core/src/chain-step';
+import {standardBowTiers,standardArrowTiers} from './gear-progression';
 
 export type RangedProgressionAccount=ObservedAccount;
-const bows=[{id:841,level:1},{id:839,level:1},{id:843,level:5},{id:845,level:5},{id:849,level:20},{id:847,level:20},
- {id:853,level:30},{id:851,level:30},{id:857,level:40},{id:855,level:40},{id:861,level:50},{id:859,level:50}];
-const arrows=[{id:882,level:1},{id:884,level:1},{id:886,level:5},{id:888,level:20},{id:890,level:30},{id:892,level:40}];
+// The standard bows and arrows by Ranged wear level, from knowledge/gear.json (gear-progression.ts). A level lists its
+// shortbow first, as the kit ranking breaks ties by that order.
+const bows=standardBowTiers().slice().reverse().flatMap(t=>t.ids.map(id=>({id,level:t.level})));
+const arrows=standardArrowTiers().sort((x,y)=>x.id-y.id).map(({id,level})=>({id,level}));
 const foods=[385,373,379,333,2142,2309,1901,1895,1893,1891];
 let gear:Map<number,Gear>|undefined;
 const items=()=>gear??=new Map((JSON.parse(readFileSync(resolve(import.meta.dir,'../../../knowledge/gear.json'),'utf8')) as Gear[]).map(g=>[g.id,g]));
@@ -28,7 +31,10 @@ export function rangedKit(a:ObservedAccount){
  })));
  return options.sort((x,y)=>rangedModelRate(level,y,22,12)-rangedModelRate(level,x,22,12)||y.strength-x.strength||x.bow-y.bow||x.arrow-y.arrow)[0]??null;
 }
-// Stop at the next owned or acquirable Ranged tier unlock before target.
+// Stop at the next owned or acquirable Ranged tier unlock before target. A tier is acquirable only when its bow and its
+// arrows each have a source: owned (three arrows, as rangedKit counts), or a method of rangedProgressionMethods that
+// acquires the item at that level. A stop with no source ends the band with nothing to gain there (no method buys a
+// yew shortbow or rune arrows).
 const tierUpgrades:Record<number,{bow:number;arrow:number;minCoins:number}>={
  5:{bow:843,arrow:886,minCoins:100},
  20:{bow:849,arrow:888,minCoins:2500},
@@ -39,13 +45,15 @@ export function rangedBandTarget(a:ObservedAccount,target:number){
  const current=rangedKit(a),level=ranged(a);
  const skill=Object.keys(a.skills).find(name=>name.toLowerCase()==='ranged')!;
  const heldCoins=Math.max(0,[a.inventory,a.bank,a.equipment].reduce((n,b)=>n+(b?.value[995]??0),0)-(a.reservations?.[995]??0));
+ const owned=stock(a),methods=rangedProgressionMethods(a,target);
+ const sourced=(id:number,need:number,boundary:number)=>(owned[id]??0)>=need||methods.some(m=>(m.effects.items?.[id]??0)>0&&(m.requirements?.levels?.Ranged??1)<=boundary);
  for(const boundary of [...new Set(bows.map(b=>b.level))].filter(n=>n>level&&n<target).sort((x,y)=>x-y)){
   if(current){
    const next=rangedKit({...a,skills:{...a.skills,[skill]:{...a.skills[skill]!,level:boundary}}});
    if(next&&(next.bow!==current.bow||next.arrow!==current.arrow))return boundary;
   }
   const upgrade=tierUpgrades[boundary];
-  if(upgrade&&heldCoins>=upgrade.minCoins&&(!current||current.bowLevel<boundary||(boundary===5&&current.arrow===882)))return boundary;
+  if(upgrade&&heldCoins>=upgrade.minCoins&&sourced(upgrade.bow,1,boundary)&&sourced(upgrade.arrow,3,boundary)&&(!current||current.bowLevel<boundary||(boundary===5&&current.arrow===882)))return boundary;
  }
  return target;
 }
@@ -84,13 +92,16 @@ export function rangedProgressionMethods(a:RangedProgressionAccount,targetLevel:
   model(activeKit?rangedModelRate(Math.max(1,level),activeKit,3,1,8+210/8):null,'Model: HP3 chickens, native rapid attack roll; eight kills per210-tick bank journey; pickup and targeting8ticks/kill. Validate on the current state.'),travel(3253,3421));
  if(!chickenFood)chicken.costs.acquisitionTicks=650;
  methods.push(chicken);
+ // The plain trooper trainer does the same work as the method's own worker: the army runs it for the Ranged band.
+ const plainTrooper=(target:number):Step=>({script:'scripts/gather-combat.ts',args:['1500','trooper'],env:{TARGET:'trooper',TRAIN_SKILL:'Ranged',TARGET_LEVEL:String(target)}});
+ const onTroopers=<M extends ProgressionMethod>(m:M):M=>{m.step={...m.step,alsoRuns:[plainTrooper(targetLevel)]};return m;};
  const trooper=base('ranged/troopers',{levels:{Hitpoints:40},items:{...required,...food?{[food]:3}:{2142:3}}},
   model(activeKit?rangedModelRate(Math.max(1,level),activeKit,22,12):null,'Model: HP22, Defence12 Khazard troopers, native rapid attack roll; targeting and ammo pickup8ticks/kill. Bank and approach included separately. Validate on the current state.'),travel(2619,3332));
- trooper.costs.setupTicks=220;methods.push(trooper);
+ trooper.costs.setupTicks=220;methods.push(onTroopers(trooper));
  const willow=kitStats(849,888);
  const guild=base('ranged/guild-willow-mithril',{levels:{Ranged:40,Hitpoints:40},items:{849:1,888:500,...food?{[food]:3}:{2142:3}}},
   model(rangedModelRate(Math.max(1,level),willow,22,12),'Model of the owned willow/mithril trooper route. Missing kit is supplied by the existing Dargaud shop jobs; observe shelf, price and complete bank credit before training.'),travel(2619,3332));
- guild.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(guild);
+ guild.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(onTroopers(guild));
  const shop=(id:string,item:number,count:number,pattern:string,budget:number):ProgressionMethod=>({
   id,source:'scripts/shop-buyer.ts dargaud; vendor/rs-sdk/server/content/scripts/minigames/game_ranging/configs/ranging.inv',
   step:{script:'scripts/shop-buyer.ts',args:['dargaud','1600'],env:{ITEMS:pattern,STOCK_TARGET:String((physical[item]??0)+Math.max(0,count-(owned[item]??0))),MAX_ITEMS:String(Math.max(0,count-(owned[item]??0))),STOP_AT_TARGET:'1',BANK_PACK:'1',BANK_AT:'0',NO_BUY_TICKS:'25',MAX_SPEND:String(budget),FLOAT:String(budget+1000),COIN_RESERVE:'500'}},
@@ -148,16 +159,16 @@ export function rangedProgressionMethods(a:RangedProgressionAccount,targetLevel:
    const mChick=base('ranged/chickens-oak',{levels:{Ranged:5},items:{843:1,886:50}},model(rangedModelRate(Math.max(5,level),oak,3,0),'Model: HP 3 chickens with Oak shortbow and Steel arrows.'),travel(3253,3421));
    mChick.costs={setupTicks:20,travelTicks:travel(3253,3421),acquisitionTicks:0,unlockTicks:0};methods.push(mChick);
    const mTroop=base('ranged/troopers-oak',{levels:{Ranged:5,Hitpoints:40},items:{843:1,886:250,...food?{[food]:3}:{2142:3}}},model(rangedModelRate(Math.max(5,level),oak,22,12),'Model: troopers with Oak shortbow and Steel arrows.'),travel(2619,3332));
-   mTroop.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(mTroop);
+   mTroop.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(onTroopers(mTroop));
   }
   if((!kit||kit.bowLevel<20)&&targetLevel>=20){
    const mWillow=base('ranged/troopers-willow',{levels:{Ranged:20,Hitpoints:40},items:{849:1,888:250,...food?{[food]:3}:{2142:3}}},model(rangedModelRate(Math.max(20,level),willow,22,12),'Model: troopers with Willow shortbow and Mithril arrows before Ranging Guild.'),travel(2619,3332));
-   mWillow.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(mWillow);
+   mWillow.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(onTroopers(mWillow));
   }
   const maple=kitStats(853,888);
   if((!kit||kit.bowLevel<30)&&targetLevel>=30){
    const mMaple=base('ranged/troopers-maple',{levels:{Ranged:30,Hitpoints:40},items:{853:1,888:250,...food?{[food]:3}:{2142:3}}},model(rangedModelRate(Math.max(30,level),maple,22,12),'Model: troopers with Maple shortbow and Mithril arrows.'),travel(2619,3332));
-   mMaple.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(mMaple);
+   mMaple.costs={setupTicks:220,travelTicks:travel(2619,3332),acquisitionTicks:0,unlockTicks:0};methods.push(onTroopers(mMaple));
   }
  }
  const bowTarget=goalItems?.[849]??1,arrowTarget=goalItems?.[888]??500;

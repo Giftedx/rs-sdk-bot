@@ -119,10 +119,13 @@ const FLOOR = 2097152; // CollisionFlag.FLOOR
 // Runs a synchronous path query with the danger tiles blocked, then opens exactly the tiles it blocked.
 // The start and end tiles stay open, so a walk that starts or ends inside an area can still leave or arrive.
 let active: { key: string; kept: ReadonlySet<string> } | null = null;
-// The danger scope a path query runs in: `key` names the closed set, `kept` the tiles left open (level,x,z).
+// The danger scope a path query runs in: `key` names the closed set, `kept` the tiles of that set left open
+// (level,x,z). A keep tile outside the closed set changes no tile of the grid, so it is not in `kept`: the two name
+// the closed ground exactly, and a walk length measured under them holds for every trip with the same closed ground
+// (leg-cache.ts). With every keep tile in `kept`, each new start or end tile of a trip measured every leg again.
 export const activeDanger = () => active;
 export function withDanger<T>(grid: FloorGrid, tiles: readonly Tile[] | Int32Array, keep: readonly Tile[], query: () => T, key = '?'): T {
-    const kept = new Set(keep.map(t => `${t.level},${t.x},${t.z}`)), open = new Set(keep.map(t => pack(t.level, t.x, t.z))), outer = active;
+    const kept = new Set<string>(), open = new Set(keep.map(t => pack(t.level, t.x, t.z))), outer = active;
     const packed = tiles instanceof Int32Array ? tiles : Int32Array.from(tiles, t => pack(t.level, t.x, t.z));
     const added = new Int32Array(packed.length);
     let n = 0;
@@ -130,7 +133,8 @@ export function withDanger<T>(grid: FloorGrid, tiles: readonly Tile[] | Int32Arr
     try {
         for (const k of packed) {
             const x = (k >>> 14) & 0x3fff, z = k & 0x3fff, level = k >>> 28;
-            if (!open.has(k) && !grid.isFlagged(x, z, level, FLOOR)) { grid.changeFloor(x, z, level, true); added[n++] = k; }
+            if (open.has(k)) kept.add(`${level},${x},${z}`);
+            else if (!grid.isFlagged(x, z, level, FLOOR)) { grid.changeFloor(x, z, level, true); added[n++] = k; }
         }
         const result = query();
         if (result && typeof (result as any).then === 'function') throw Error('Danger queries must be synchronous');
