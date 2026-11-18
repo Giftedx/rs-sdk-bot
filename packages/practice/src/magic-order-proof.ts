@@ -101,7 +101,9 @@ export function magicChildConfiguration(args:string[],env:Record<string,string>,
         env:{...inherited,...env,...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0'}};
 }
 // The shared registration CLI admits only default ports. Keep its session owner
-// and tick wait, with the exact generated profile bound to this proof's endpoints.
+// and tick wait, with the exact generated profile bound to this proof's endpoints. The session is the observe entry
+// scripts/session-check.ts (as in ammoRegistrationArgs): inline code has no script, and the progression session ends
+// a bot with no mapped entry as an unmapped worker.
 export function magicRegistrationArgs(name:string,p:ProofEndpoints){
     if(!/^[a-z0-9]{1,12}$/i.test(name))throw Error('invalid practice name');
     return['--eval',`import {readFileSync} from 'node:fs';
@@ -109,7 +111,7 @@ import {openBot,finish} from './packages/core/src/bot';
 import {waitTicks} from './packages/core/src/ticks';
 const lines=readFileSync(${JSON.stringify(join(rsSdkRoot(),'bots',name,'bot.env'))},'utf8').split(/\\r?\\n/);
 if(!lines.includes(${JSON.stringify('SERVER='+p.server)})||!lines.includes(${JSON.stringify('GATEWAY_URL='+p.gateway)}))throw Error('owned practice account required');
-const session=await openBot(${JSON.stringify(name)});await waitTicks(session,3);await finish([session],true,'practice ownership registered');`];
+const session=await openBot(${JSON.stringify(name)},{record:{script:'scripts/session-check.ts',argv:[${JSON.stringify(name)}]}});await waitTicks(session,3);await finish([session],true,'practice ownership registered');`];
 }
 
 // Inventory types in the saved player: 93 pack, 94 worn, 95 bank.
