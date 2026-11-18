@@ -34,3 +34,14 @@ test('a large retained backlog leaves bounded work for later passes',async()=>{
  const f=fixture();f.deps.discover=()=>Array.from({length:64},(_,i)=>({...discovered,directory:'/native/'+i,report:{...report,directory:'/native/'+i},reportSha256:String(i).padStart(64,'0')}));
  const out=await createProgressionProofReconciler('/root',f.deps)(initialState());expect(f.calls()).toBeLessThanOrEqual(4);expect(f.calls()).toBeGreaterThan(0);expect(out.filter(r=>r.status==='retry').length).toBeGreaterThanOrEqual(60);
 });
+test('reports that fail registration on each pass do not keep the import budget from a later valid report',async()=>{
+ const f=fixture(),rows=Array.from({length:5},(_,i)=>({...discovered,directory:'/native/'+i,report:{...report,directory:'/native/'+i},reportSha256:String(i).padStart(64,'0')}));
+ const attempts:string[]=[];f.deps.discover=()=>rows;
+ f.deps.register=async(_task,delivery)=>{attempts.push(delivery.directory!);if(delivery.directory!=='/native/4')throw Error('retained raw artifact missing');return{registered:1,index:'/index',proof};};
+ const reconcile=createProgressionProofReconciler('/root',f.deps);
+ const first=await reconcile(initialState());
+ expect(attempts).toEqual(['/native/0','/native/1','/native/2','/native/3']);expect(first.every(r=>r.status==='retry')).toBe(true);
+ const second=await reconcile(initialState());
+ expect(attempts[4]).toBe('/native/4');expect(second.find(r=>r.directory==='/native/4')).toMatchObject({status:'registered',proof});
+ expect(attempts).toHaveLength(8);
+});
