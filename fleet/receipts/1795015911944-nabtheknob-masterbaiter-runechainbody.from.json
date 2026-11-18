@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795015911944-nabtheknob-masterbaiter-runechainbody",
  "account": "NabTheKnob",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "6b6f1251-3da1-45c1-b4cb-30f1efd4ed6d",
- "count": 0,
- "ok": false,
- "at": 1795015968127,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795015994248,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795015975595
+ },
+ "logout": {
+  "attemptId": "1795015968136-0000020004-0000000001",
+  "at": 1795015994236,
+  "sha256": "8f6d4ea7b25ac95d6ef8a58d4117672dc26fdd42abae894ad24638e138cbbb72"
+ },
+ "screen": true
 }
