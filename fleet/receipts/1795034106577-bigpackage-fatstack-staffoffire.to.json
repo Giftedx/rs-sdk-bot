@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795034106577-bigpackage-fatstack-staffoffire",
  "account": "Fatstack",
  "partner": "Bigpackage",
@@ -12,6 +12,12 @@
  "claim": "01e6a23b-eadd-46dc-a89e-da4e4c8d7c0a",
  "count": 0,
  "ok": false,
- "at": 1795034428576,
- "detail": "trade claimed"
+ "at": 1795034575522,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795034428589-0000023488-0000000001",
+  "at": 1795034575510,
+  "sha256": "9abdde83ed7224f7871b0bccd3fbef21ebce2c3164944fa28b1b55d7c95cd01a"
+ },
+ "screen": false
 }
