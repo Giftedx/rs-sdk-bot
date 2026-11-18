@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794993383603,
+ "at": 1794993492537,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -271,30 +271,24 @@
   },
   {
    "account": "mmthv2350",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/train-prayer.ts",
    "args": [
-    "3000",
-    "cow"
+    "99"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "60",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "12"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 60 on the Ardougne cows",
+   "repeat": false,
+   "goal": "train Prayer to 99 burying the held bones",
    "role": "combat",
-   "template": "army-cow-strength-60",
+   "template": "army-bury-prayer-99",
    "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "resources": []
   },
   {
    "account": "Moneyshot",
@@ -309,8 +303,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Ranged\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
