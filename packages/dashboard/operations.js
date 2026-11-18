@@ -28,11 +28,12 @@
    (loops.length?loops.slice(0,6).map(l=>'<div class="op-dependency"><div><button data-op="account" data-value="'+E(l.name)+'">'+E(safeName(l.name))+'</button><div class="op-diag-meta">'+E(l.goal||'unknown')+' · '+E(l.error)+'</div></div><span class="op-late" style="white-space:nowrap">'+l.runs+'× · '+l.medianSec+'s</span></div>').join(''):'<p>No fast-fail loops in the last 2 h.</p>')+'</div>';
   const leaseCard='<div class="op-card"><div class="op-card-title"><strong>Controller leases</strong>'+badge(staleLeases.length?'pending':'succeeded',leases.length?(staleLeases.length?staleLeases.length+' stale':'All fresh'):'None')+'</div>'+
    (leases.length?leases.map(l=>'<div class="op-dependency"><div><strong>'+E(l.side)+'</strong><div class="op-diag-meta">'+E(l.host||'host unknown')+' · pid '+(l.pid??'?')+'</div></div>'+badge(l.stale===true?'blocked':l.stale===false?'succeeded':'pending',l.ageMs!=null?(l.stale?'STALE '+ago(l.ageMs):ago(l.ageMs)):'unknown')+'</div>').join(''):'<p>No controller lease files found.</p>')+'</div>';
-  return page(title('Operations / live observations','Command centre','Each number opens the plugin that answers it.')+
+  const rec=recoveryRows(),recoveryCardHtml=recoveryCard(rec);return page(title('Operations / live observations','Command centre','Each number opens the plugin that answers it.')+
    startBlock()+
    '<div class="op-kpis">'+
    kpi(playing,'accounts playing',all.filter(b=>b.inWorld).length+' in the world feed','fleet-open','working')+
    kpi(attention.length,'accounts need attention','stopped, failed or stale','fleet-open','attention',attention.length>0)+
+   kpi(rec.length,'jobs need recovery',rec.length?recoverySummary(rec):'no orphaned or blocked job','open','operations',rec.some(r=>r.kind!=='waiting'))+
    kpi(wild.length,'in Wilderness',wildRivals+' rival'+(wildRivals===1?'':'s')+' · '+wildOurs+' ours','open','world',wildRivals>0)+
    kpi(cap?.fresh===true?(cap?.active??'—')+' / '+(cap?.cap??'—'):'—','bot slots',(unused!=null?unused+' unused · ':'')+(cap?.queued??'—')+' queued','open','machine',unused===0)+
    kpi(cap?.headroomGB!=null?cap.headroomGB.toFixed(1):'—','GiB RAM headroom',(cap?.freeGB!=null?cap.freeGB.toFixed(1)+' GiB free · floor '+(cap?.floorGB!=null?cap.floorGB.toFixed(1):'?'):'RAM unknown'),'open','machine',cap?.headroomGB<0)+
@@ -43,10 +44,39 @@
    kpi(board?.goals?.version===1?(board.done?'done':board.remaining.length):'—','goal gaps',board?.available?'quests '+(board.quests.live??'—')+' / '+(board.quests.total??'—')+' live':'scoreboard not available','open','goals')+
    kpi(late.length,'fleet sides late',sides.length?sides.map(x=>x.side+' '+(x.at?age(x.at):'never')).join(' · '):'no fleet-data snapshot','fleet-open','all',late.length>0)+
    kpi(meta?.controllers?down.length:'—','controllers down',meta?.controllers?ctl.map(x=>x.label+' '+(x.state==='down'?'down'+(x.seenAt?', seen '+age(x.seenAt)+' ago':''):x.state==='stopped'?'stopped by owner':x.state==='never'?'not used here':'running')).join(' · '):'checking','open','machine',down.length>0)+
-   '</div>'+incidentCards()+loopCard+leaseCard+
+   '</div>'+incidentCards()+recoveryCardHtml+loopCard+leaseCard+
    '<div class="op-card"><div class="op-card-title"><strong>Coordinator</strong>'+badge(!meta?'pending':meta.paused?'pending':meta.coordinatorRunning===true?'running':meta.coordinatorRunning===false?'failed':'pending',!meta?'Checking':meta.paused?'Paused':meta.coordinatorRunning===true?'Running':meta.coordinatorRunning===false?'Stopped':'Unknown')+'</div><p>'+(c.planner?'Planner claim in queue: '+E(c.planner.agent)+' since '+age(c.planner.startedAt)+' ago':'No planner claim in queue')+'</p><div class="op-actions">'+button('Plan next work','plan','','primary')+button('New job','dispatch')+button(meta?.paused?'Resume coordinator':'Pause coordinator',meta?.paused?'resume':'pause','','danger')+button(meta?.fleetPaused?'Clear fleet stop':'Pause swarm',meta?.fleetPaused?'swarm-resume':'swarm-pause','','danger')+'</div></div>'+
    '<div class="op-eyebrow">Model workers</div>'+['codex','claude'].map(n=>{const a=c.agents?.find(a=>a.name===n),busy=a?.planning||a?.tasks?.length;return '<div class="op-card op-agent"><span class="monogram">'+n[0].toUpperCase()+'</span><div><strong>'+n[0].toUpperCase()+n.slice(1)+'</strong><small>'+(a?.planning?'Planning next work':(a?.tasks?.length||0)+' job claims')+'</small></div>'+badge(!c.fresh?'pending':busy?'running':'pending',!c.fresh?'Queue stale':busy?'Claimed':'No claims')+'</div>';}).join('')+
    (metaError?'<div class="op-notice error">'+E(metaError)+'</div>':'')+(message?'<div class="op-notice">'+E(message)+'</div>':''));
+ }
+ // Job end states (the swarm job `state`, the text scripts/now.ts counts): exit orphaned (the worker's owner process is
+ // gone), blocked after N runs and gave-up after N runs (the supervisor stopped the job), and waiting (the admission rule
+ // holds the start). Only enabled jobs count, as in now.ts, and the reserved main account is never listed.
+ function recoveryRows(){
+  const order={orphaned:0,blocked:1,'gave-up':2,waiting:3},rows=[];
+  for(const b of bots()){
+   if(b.reserved)continue;
+   const j=b.job||b.planJob,state=String(j?.state??'').trim();if(!j||j.enabled===false||!state)continue;
+   let kind=null,runs=null,m;
+   if(/exit orphaned/i.test(state))kind='orphaned';
+   else if((m=/blocked after (\d+) runs?/i.exec(state))){kind='blocked';runs=Number(m[1]);}
+   else if((m=/gave[- ]up after (\d+) runs?/i.exec(state))){kind='gave-up';runs=Number(m[1]);}
+   else if(/^waiting\b/i.test(state))kind='waiting';
+   if(kind)rows.push({name:b.name,kind,runs,state});
+  }
+  return rows.sort((a,b)=>order[a.kind]-order[b.kind]||String(a.name).localeCompare(String(b.name)));
+ }
+ const RECOVERY_LABEL={orphaned:'worker gone',blocked:'blocked','gave-up':'gave up',waiting:'waiting'};
+ function recoveryDetail(r){
+  if(r.kind==='orphaned'){const pid=/owner (\d+)/.exec(r.state)?.[1];return 'The worker process'+(pid?' '+pid:'')+' is gone.';}
+  if(r.kind==='blocked'||r.kind==='gave-up')return 'Ended '+(r.kind==='blocked'?'blocked':'as gave-up')+' after '+r.runs+' run'+(r.runs===1?'':'s')+'.';
+  return r.state.replace(/^waiting:\s*/i,'');
+ }
+ function recoverySummary(rows){const n={};for(const r of rows)n[r.kind]=(n[r.kind]||0)+1;return Object.keys(RECOVERY_LABEL).filter(k=>n[k]).map(k=>n[k]+' '+RECOVERY_LABEL[k]).join(' · ');}
+ function recoveryCard(rows){
+  const hard=rows.some(r=>r.kind!=='waiting');
+  return '<div class="op-card"><div class="op-card-title"><strong>Job recovery</strong>'+badge(hard?'failed':rows.length?'pending':'succeeded',rows.length?rows.length+' to review':'Clear')+'</div>'+
+   (rows.length?rows.slice(0,8).map(r=>'<div class="op-dependency"><div><button data-op="account" data-value="'+E(r.name)+'">'+E(safeName(r.name))+'</button><div class="op-diag-meta">'+E(recoveryDetail(r))+'</div></div><span class="'+(r.kind==='waiting'?'op-sub':'op-late')+'" style="white-space:nowrap">'+E(RECOVERY_LABEL[r.kind])+'</span></div>').join('')+(rows.length>8?'<p class="op-sub">+'+(rows.length-8)+' more in Fleet.</p>':''):'<p>No orphaned, blocked or waiting job.</p>')+'</div>';
  }
  // Why a new bot cannot start now, from the swarm's own admission rule (scripts/swarm.ts admissionDecision):
  // projected free RAM after the startup reserve must stay above the larger of FREE_FLOOR_GB (packages/core/src/memory.ts)
@@ -352,6 +382,7 @@ if(activityFilter==='shots')return page(title('Events / screenshots','Activity j
  // A spectator's toolbar also leaves out the plugins that client-shell.js folds into Fleet.
  const hiddenHere=id=>!isOwner()&&(OPERATOR_ONLY.includes(id)||(window.atlasPublicHidden||[]).includes(id));
  window.atlasCommandPlugins=()=>Object.entries(pluginNames).filter(([id])=>!hiddenHere(id));
+ window.atlasRecoveryRows=recoveryRows;
  const spectator=!(window.atlasOperator?.()??true);
  // Configuration is the wrench at the foot of the rail (client-shell.js), as in RuneLite.
  for(const id of ['operations','dispatch']){if(spectator&&OPERATOR_ONLY.includes(id))continue;const b=document.createElement('button');b.dataset.clientPlugin=id;b.setAttribute('aria-label',pluginNames[id]);b.title=pluginNames[id];b.innerHTML=window.atlasRailIcon?.(id)||'<svg viewBox="0 0 24 24"><path d="'+glyphs[id]+'"/></svg>';if(id==='operations')rail.prepend(b);else rail.insertBefore(b,rail.querySelector('.rail-gap'));}
