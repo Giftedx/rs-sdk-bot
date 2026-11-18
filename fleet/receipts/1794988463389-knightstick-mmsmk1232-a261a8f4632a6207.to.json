@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1794988463389-knightstick-mmsmk1232-a261a8f4632a6207",
+ "account": "mmsmk1232",
+ "partner": "Knightstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "7908dee5-223c-48f6-ad3b-2e67ec8600c1",
+ "count": 0,
+ "ok": false,
+ "at": 1794990596163,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794990587223-0000022348-0000000001",
+  "at": 1794990596078,
+  "sha256": "d0dd9b30725924e6dbd083fc429c5b267f761d9a75cb258da831650981f4d9b9"
+ },
+ "screen": false
+}
