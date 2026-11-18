@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795026714539-fatstack-mmtha0205-earthrune",
+ "account": "mmtha0205",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 3,
+ "claim": "57363bda-015f-4caf-a2d2-bc99b02d9b7c",
+ "count": 3,
+ "ok": true,
+ "at": 1795026821833,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795026818737
+ },
+ "logout": {
+  "attemptId": "1795026801530-0000018904-0000000001",
+  "at": 1795026821821,
+  "sha256": "caa8a49f2cb19f56a2d0677d97b266b4dcf0b05ed02e47dc8b7d61b09943e6aa"
+ },
+ "screen": true
+}
