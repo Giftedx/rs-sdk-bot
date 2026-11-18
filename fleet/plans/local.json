@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795004158161,
+ "at": 1795004201132,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -303,30 +303,26 @@
    "role": "helper"
   },
   {
-   "accounts": [
-    "Wandwaver",
-    "BowBeforeMe"
-   ],
-   "script": "scripts/handoff-inputs.ts",
+   "account": "BowBeforeMe",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "1000:Bronze arrow",
-    "500:Iron arrow",
-    "--bank-x=2615",
-    "--bank-z=3332",
-    "--approach-ms=900000",
-    "--request-ms=60000",
-    "--timeout-ms=240000"
+    "2000",
+    "trooper"
    ],
    "env": {
-    "HANDOFF_ORDER": "wandwaver-bow-ranged50-arrows-r3",
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "50",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-eb045b6d-1e16-40e4-9f34-b05e5150bc76"
+    "COORDINATOR_RUN_ID": "task-7d41d6d9-2eac-494e-ab0c-5dff57034051"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-handoff-wandwaver-bow-arrows-r3 [task-eb045b6d-1e16-40e4-9f34-b05e5150bc76]",
+   "goal": "run-bow-trooper-ranged50-owned-arrows [task-7d41d6d9-2eac-494e-ab0c-5dff57034051]",
    "role": "helper"
   }
  ],
