@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795012720352-masterbaiter-knightrider-cookedmeat",
  "account": "KnightRider",
  "partner": "Masterbaiter",
@@ -12,6 +12,12 @@
  "claim": "87e9f1d5-1d31-4624-91b9-cd543aec0d9c",
  "count": 0,
  "ok": false,
- "at": 1795012869681,
- "detail": "trade claimed"
+ "at": 1795012926770,
+ "detail": "fled at low hitpoints: flee_guard id=376 at=3026,3225 ticks=10",
+ "logout": {
+  "attemptId": "1795012869688-0000026304-0000000001",
+  "at": 1795012926763,
+  "sha256": "a6dfa908e8c2f939e387769d920f907c938b0a9c5a02669ead6bd37f727c736d"
+ },
+ "screen": false
 }
