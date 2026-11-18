@@ -162,8 +162,9 @@
    "home": "claude-cloud"
   },
   "Fatstack": {
-   "side": "claude-cloud",
-   "server": "rs-sdk-demo.fly.dev"
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev",
+   "home": "claude-cloud"
   },
   "Fingerblastr": {
    "side": "claude-cloud",
