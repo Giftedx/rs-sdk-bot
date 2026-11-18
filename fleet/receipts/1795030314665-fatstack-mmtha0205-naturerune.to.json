@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795030314665-fatstack-mmtha0205-naturerune",
+ "account": "mmtha0205",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "358374ee-6eea-4fe7-ba91-382c82a60051",
+ "count": 50,
+ "ok": true,
+ "at": 1795030492116,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 50
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795030491311
+ },
+ "logout": {
+  "attemptId": "1795030452746-0000017188-0000000001",
+  "at": 1795030492101,
+  "sha256": "957f462d0a2fb7d0ab0f76121d64f13aa2cd3774000b6d841c16e78d4a5bb4b4"
+ },
+ "screen": true
+}
