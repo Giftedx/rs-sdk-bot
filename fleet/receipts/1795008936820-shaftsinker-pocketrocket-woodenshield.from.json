@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795008936820-shaftsinker-pocketrocket-woodenshield",
+ "account": "Shaftsinker",
+ "partner": "Pocketrocket",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Wooden shield",
+ "requested": 1,
+ "claim": "e155213e-c1aa-4e16-9588-955929c1a7a0",
+ "count": 0,
+ "ok": false,
+ "at": 1795009007568,
+ "detail": "trade claimed"
+}
