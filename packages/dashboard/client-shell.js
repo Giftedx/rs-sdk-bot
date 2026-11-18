@@ -1267,7 +1267,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // server's (pvp_combat.rs2): both in the Wilderness, combat levels apart by at most the lower Wilderness level.
   // Roster rows are [name, x, z, level, combat]. Players up to 30 tiles away count.
   const canAttack=(a,b)=>{const w=Math.min(wildLevel(a.pos),wildLevel(b.pos));return w>=1&&Number.isFinite(a.combat)&&Number.isFinite(b.combat)&&Math.abs(a.combat-b.combat)<=w;};
-  const inMulti=p=>!p||typeof multiLines==='undefined'||!multiLines.length?false:multiLines.reduce((n,[x0,z0,x1,z1,l])=>(l===(p.level||0)&&x0===x1&&x0>p.x&&p.z>=z0&&p.z<z1?n+1:n),0)%2===1;
+  const inMulti=p=>!p||typeof multiLines==='undefined'||!multiLines?.length?false:multiLines.reduce((n,[x0,z0,x1,z1,l])=>(l===(p.level||0)&&x0===x1&&x0>p.x&&p.z>=z0&&p.z<z1?n+1:n),0)%2===1;
   function pvpState(b){
     if(!b?.inWorld||!b.pos)return null;
     const gearKnown=Array.isArray(b.equipment)&&b.equipmentObserved!==false,packKnown=Array.isArray(b.inventory),unobserved=[!gearKnown?'equipment':'',!packKnown?'inventory':''].filter(Boolean).join(' and ');
