@@ -17,6 +17,7 @@ import type { Session } from '../packages/core/src/inprocess';
 import { waitUntil } from '../packages/core/src/ticks';
 import { defaultSpec, fightPlayer, nextTick, PRAYER, weaponStyle, type FightOptions, type FightResult, type Kit } from './pk';
 import { TRIBRID_KIT } from './pk-hunt';
+import { cloneProfiles } from './pk-gang-clone';
 import { kitOptions, kitSwitches } from './pk-kits';
 
 // `specBelow` moves the health fraction at which the kit's special fires.
@@ -85,6 +86,10 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
     // 74 HP or less; a protect prayer that turns later than the bench's in some changes; with the food gone it fights
     // on to 30 HP, then runs south out of the Wilderness. SPAR_B_TRIPS gives the bank trip and the return.
     'ganker-live': { rotation: ['melee'], specBelow: 1, eatAt: 74, prayerFlick: false, readOverheads: false, prayerLag: [48, 35, 11, 5], escapeAt: 30, escapeWalk: 20 },
+    // One clone for each gang account, with its options read from its behaviour record (scripts/pk-gang-clone.ts,
+    // research/gang-clones.md): clone-goondelf, clone-ligma and clone-sugma, and each with -retreat and -stand for the
+    // two ends that the record shows with the food gone.
+    ...(cloneProfiles() as Record<string, Profile>),
 };
 const GOD_HUNTER: Profile = { kit: { ...TRIBRID_KIT, magic: [2417] }, damageSpell: 1192, charge: true };
 // Options a scenario gives a side under its profile. In `escape` side B is the runner: with its food gone at 60 HP or

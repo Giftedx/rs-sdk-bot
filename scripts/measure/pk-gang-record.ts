@@ -253,6 +253,8 @@ const PILOTS = 'research/pvp-fight-loop.md "The cost of a kill" (two squad pilot
 export function targetFile(name: string, g: Acc, group: GroupAcc, levels: Record<string, string> | undefined, levelSource: string) {
     const src = 'the traces of `sources`', fights = group.fights.filter(f => f.by === name), noEat = (f: Fight) => f.order.replace(/E/g, '');
     const specs = fights.map(f => (f.order.match(/S/g) ?? []).length), firstSpec = fights.map(f => noEat(f).indexOf('S')).filter(i => i >= 0);
+    const eatsBy: Hist = {}; for (const x of fights) { const e = (x.order.match(/E/g) ?? []).length; if (e) bump(eatsBy, x.target, e); }
+    const mostEats = Math.max(0, ...Object.values(eatsBy)), ranDry = g.lows.some(l => l.eatsAfter === 0);
     const hist = (a: number[]) => { const h: Hist = {}; for (const v of a) bump(h, v); return h; };
     const share = (h: Hist) => { const t = total(h); return Object.fromEntries(Object.entries(h).map(([key, v]) => [key, Math.round((1000 * v) / (t || 1)) / 10])); };
     const online = Object.fromEntries(Object.keys(group.hours).sort((a, b) => Number(a) - Number(b)).map(h => [h, Math.round((100 * (g.hours[h] ?? 0)) / group.hours[h]!)]));
@@ -263,7 +265,8 @@ export function targetFile(name: string, g: Acc, group: GroupAcc, levels: Record
             worn: M(g.worn, total(g.worn), `${src}: each appearance block, by its worn objects`),
             weaponPoison: M(Object.keys(g.poisonOnTarget).length ? { poisonSplatsOnPlayers: g.poisonOnTarget } : 'no poison splat on a player', total(g.poisonOnTarget), `${src}: type 2 splats on a player in a tick of an attack`, 'the worn name says which dagger; the splat sizes say how strong the poison is'),
             food: M({ eats: g.eats, healOfOneEat: g.heal }, g.eats, `${src}: animation 829 (human_eat), and the Hitpoints of the splats before and after it`, 'a heal of 20 is a shark (consume_normal.dbrow)'),
-            foodCount: U(`${TICKS} against the name, to its retreat: the eats of one fight are its pack`, { sharks: [6, 23] }, 'the most eats seen in one meeting: Goondelf 11, Ligma 6, Sugma 13 (research/pvp-fight-loop.md "The gang in a long fight")'),
+            foodCount: ranDry ? M({ sharks: mostEats, eatsByOpponent: eatsBy }, 1, `${src}: the eat animations in the fights against one opponent, in a meeting that the name ended at 40 Hitpoints or less with no eat after it`, 'the food ran out in that meeting, so its eats are the pack; a refill at the bank between two fights would add to the count')
+                : U(`${TICKS} against the name, to its retreat: the eats of one fight are its pack`, { sharks: [6, 23] }, `the most eats against one opponent: ${mostEats}; the food did not run out`),
             consumesNotForHitpoints: M(g.otherConsumes, g.otherConsumes.length, `${src}: animation 829 at 90 Hitpoints or more, or with no splat in the 20 ticks before`, 'a drink and an eat play the same animation (anti_poison.rs2:3); which item it was is not known'),
             potions: U('a splat over 22 with no Protect from Melee (a Strength boost), or a drink that restores no Hitpoints, in ' + FEED, { boosts: [false, true], prayerPotions: [0, 2] }, 'Herblore has no level on any of the three; a drink and an eat share animation 829'),
             runes: U(`a cast animation of the name in ${FEED}`, { casts: false }, 'no cast animation of a gang account is in any trace'),

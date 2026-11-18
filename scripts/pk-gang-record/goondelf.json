@@ -18,10 +18,10 @@
   },
   {
    "path": ".practice/gang-record/feed-1794981300762.jsonl",
-   "ticks": 3120,
+   "ticks": 4010,
    "from": "2026-11-18T05:55:02.069Z",
-   "to": "2026-11-18T06:15:50.069Z",
-   "frames": 313
+   "to": "2026-11-18T06:21:46.069Z",
+   "frames": 402
   }
  ],
  "levels": {
@@ -56,17 +56,17 @@
   "combat": {
    "value": 126,
    "status": "measured",
-   "n": 11761,
+   "n": 11850,
    "evidence": "the traces of `sources`: the roster rows"
   }
  },
  "kit": {
   "worn": {
    "value": {
-    "blackwizhat,dragon_dagger_p,monkrobetop,monkrobebottom": 1184
+    "blackwizhat,dragon_dagger_p,monkrobetop,monkrobebottom": 1206
    },
    "status": "measured",
-   "n": 1184,
+   "n": 1206,
    "evidence": "the traces of `sources`: each appearance block, by its worn objects"
   },
   "weaponPoison": {
@@ -94,15 +94,16 @@
    "note": "a heal of 20 is a shark (consume_normal.dbrow)"
   },
   "foodCount": {
-   "status": "unknown",
-   "closes": "the tick record of a bounded squad run (packages/core/src/tick-record.ts) against the name, to its retreat: the eats of one fight are its pack",
-   "cloneRange": {
-    "sharks": [
-     6,
-     23
-    ]
+   "value": {
+    "sharks": 11,
+    "eatsByOpponent": {
+     "mightyrod": 11
+    }
    },
-   "note": "the most eats seen in one meeting: Goondelf 11, Ligma 6, Sugma 13 (research/pvp-fight-loop.md \"The gang in a long fight\")"
+   "status": "measured",
+   "n": 1,
+   "evidence": "the traces of `sources`: the eat animations in the fights against one opponent, in a meeting that the name ended at 40 Hitpoints or less with no eat after it",
+   "note": "the food ran out in that meeting, so its eats are the pack; a refill at the bank between two fights would add to the count"
   },
   "consumesNotForHitpoints": {
    "value": [
@@ -171,18 +172,18 @@
  "attack": {
   "ticksBetweenAttacks": {
    "value": {
-    "4": 977,
-    "5": 33,
+    "4": 988,
+    "5": 35,
     "6": 10,
     "7": 22,
-    "8": 6,
+    "8": 7,
     "9": 3,
     "10": 4,
     "11": 5,
     "12": 5
    },
    "status": "measured",
-   "n": 1065,
+   "n": 1079,
    "evidence": "the traces of `sources`: animations 376, 377 and 1062"
   },
   "ticksBetweenAttacksWithAnEat": {
@@ -196,36 +197,36 @@
   "tilesToTarget": {
    "value": {
     "0": 16,
-    "1": 799,
+    "1": 801,
     "2": 99,
-    "3": 156,
+    "3": 166,
     "4": 12,
-    "5": 7,
+    "5": 10,
     "6": 1,
     "7": 1
    },
    "status": "measured",
-   "n": 1091,
+   "n": 1106,
    "evidence": "the traces of `sources`: the tiles of both at each attack"
   },
   "damage": {
    "value": {
     "attack on a player with Protect from Melee": {
-     "0": 70,
+     "0": 79,
      "1": 4,
      "2": 7,
      "3": 5,
      "4": 2,
      "5": 5,
      "6": 6,
-     "7": 5,
+     "7": 7,
      "8": 4,
-     "9": 5,
+     "9": 6,
      "10": 4,
      "11": 1
     },
     "special on a player with Protect from Melee": {
-     "0": 8,
+     "0": 9,
      "1": 1,
      "4": 1,
      "7": 1,
@@ -234,7 +235,7 @@
      "13": 3
     },
     "attack on a player without Protect from Melee": {
-     "0": 40,
+     "0": 41,
      "1": 1,
      "2": 2,
      "3": 3,
@@ -266,18 +267,18 @@
     }
    },
    "status": "measured",
-   "n": 222,
+   "n": 236,
    "evidence": "the traces of `sources`: the splats on the player in the tick of the attack, when no second gang account attacked it in that tick",
-   "note": "each splat alone; 46 ticks with a splat of a second attacker are left out"
+   "note": "each splat alone; 47 ticks with a splat of a second attacker are left out"
   },
   "specials": {
    "value": {
-    "attacks": 1091,
-    "specials": 128,
+    "attacks": 1106,
+    "specials": 130,
     "perFight": {
-     "0": 13,
+     "0": 14,
      "1": 12,
-     "2": 7,
+     "2": 8,
      "3": 2,
      "4": 11,
      "5": 3,
@@ -286,7 +287,7 @@
     },
     "attacksBeforeTheFirst": {
      "0": 10,
-     "1": 24,
+     "1": 25,
      "2": 3,
      "4": 1,
      "5": 1,
@@ -295,7 +296,7 @@
     }
    },
    "status": "measured",
-   "n": 54,
+   "n": 56,
    "evidence": "the traces of `sources`: the order of each fight (pk-rival-feed.ts digest)"
   },
   "specialAtTargetHp": {
@@ -304,7 +305,7 @@
     "80-89": 24,
     "50-59": 6,
     "60-69": 25,
-    "90-99": 29,
+    "90-99": 31,
     "40-49": 9,
     "0-9": 1,
     "30-39": 4,
@@ -312,19 +313,19 @@
     "not known": 1
    },
    "status": "measured",
-   "n": 128,
+   "n": 130,
    "evidence": "the traces of `sources`: the Hitpoints of the player before the splats of the tick of the special"
   },
   "specialAtOwnHp": {
    "value": {
-    "not known": 26,
+    "not known": 28,
     "90-99": 97,
     "70-79": 3,
     "60-69": 1,
     "20-29": 1
    },
    "status": "measured",
-   "n": 128,
+   "n": 130,
    "evidence": "the traces of `sources`: the last Hitpoints of the name that a splat showed"
   }
  },
@@ -448,10 +449,11 @@
    "value": [
     "2026-11-12T04:48:39.130Z",
     "2026-11-12T14:53:23.681Z",
-    "2026-11-12T16:41:23.681Z"
+    "2026-11-12T16:41:23.681Z",
+    "2026-11-18T06:17:38.069Z"
    ],
    "status": "measured",
-   "n": 3,
+   "n": 4,
    "evidence": "the traces of `sources`: roster frames within 12 tiles of (3052, 3490)"
   }
  },
@@ -506,12 +508,12 @@
    "value": {
     "monastery": 0.2,
     "outside": 1.2,
-    "wilderness": 29.5,
-    "post": 68.6,
-    "west tile": 0.6
+    "wilderness": 29.6,
+    "post": 68.5,
+    "west tile": 0.5
    },
    "status": "measured",
-   "n": 11761,
+   "n": 11850,
    "evidence": "the traces of `sources`: the tile of each roster frame (each 10 ticks)"
   },
   "standsOffThePost": {
@@ -524,82 +526,82 @@
     "2998,3931": 4,
     "3271,3871": 4,
     "3192,3963": 4,
+    "3243,3791": 3,
     "3092,3522": 2,
     "3092,3957": 2,
-    "3094,3491": 2,
-    "3072,3517": 2
+    "3094,3491": 2
    },
    "status": "measured",
-   "n": 116,
+   "n": 119,
    "evidence": "the traces of `sources`: roster frames on the tile of the frame before, off the post, no attack for 20 ticks"
   },
   "steps": {
    "value": {
-    "run": 29750,
-    "walk": 706
+    "run": 30061,
+    "walk": 716
    },
    "status": "measured",
-   "n": 30456,
+   "n": 30777,
    "evidence": "the traces of `sources`: the step records of each tick"
   },
   "farthestFromPost": {
    "value": 323,
    "status": "measured",
-   "n": 11761,
+   "n": 11850,
    "evidence": "the traces of `sources`: roster frames"
   },
   "trips": {
    "value": {
-    "withAnAttack": 35,
+    "withAnAttack": 36,
     "withNoAttack": 159,
     "farthestPlaceOfATripWithNoAttack": {
      "wilderness": 119,
      "west tile": 40
     },
     "accountsThatLeftInTheSameFrame": {
-     "1": 137,
+     "1": 138,
      "2": 46,
      "3": 12
     },
     "ticksFromLeaveToFirstAttack": {
-     "n": 35,
+     "n": 36,
      "min": 15,
-     "median": 136,
+     "median": 139,
      "max": 348
     },
     "tilesWalkedOverStraightLineToTheFirstAttack": {
-     "n": 32,
+     "n": 33,
      "min": 0.83,
-     "median": 2.2,
+     "median": 1.73,
      "max": 10.57
     },
     "ticksFromLastAttackToPost": {
-     "n": 35,
+     "n": 36,
      "min": 24,
      "median": 112,
      "max": 1724
     },
     "ticksAway": {
-     "n": 194,
+     "n": 195,
      "min": 10,
      "median": 150,
      "max": 2240
     },
     "tilesFromPostAtTheFarthest": {
-     "n": 194,
+     "n": 195,
      "min": 2,
      "median": 109,
      "max": 323
     },
     "tilesFromPostToTheTargetAtTheFirstAttack": {
-     "n": 35,
+     "n": 36,
      "min": 4,
-     "median": 107,
+     "median": 112,
      "max": 314
     }
    },
    "status": "measured",
-   "n": 194,
+   "n": 195,
    "evidence": "the traces of `sources`: from the roster frame off the post to the next one on it"
   }
  },
@@ -608,12 +610,12 @@
    "value": {
     "not in range at the leave": 15,
     "1 of 2": 2,
-    "1 of 1": 15,
+    "1 of 1": 16,
     "2 of 2": 2,
     "3 of 3": 1
    },
    "status": "measured",
-   "n": 35,
+   "n": 36,
    "evidence": "the traces of `sources`: the players the game lets the name attack at the frame of the leave, nearest to the post first"
   },
   "targetChange": {
@@ -624,20 +626,20 @@
   },
   "targetTilesMovedBetweenTwoAttacks": {
    "value": {
-    "0": 196,
+    "0": 197,
     "1": 40,
     "2": 70,
     "3": 49,
     "4": 116,
     "5": 49,
-    "6": 134,
+    "6": 135,
     "7": 51,
-    "8": 221,
-    "9": 16,
-    "10": 75
+    "8": 230,
+    "9": 17,
+    "10": 77
    },
    "status": "measured",
-   "n": 1017,
+   "n": 1031,
    "evidence": "the traces of `sources`: the tile of the player at two attacks at most 8 ticks apart",
    "note": "a player that moves is still attacked"
   },
@@ -758,7 +760,7 @@
    }
   },
   "status": "measured",
-  "n": 11761,
+  "n": 11850,
   "evidence": "the traces of `sources`: roster frames with the name, of all roster frames of that hour"
  }
 }

@@ -18,10 +18,10 @@
   },
   {
    "path": ".practice/gang-record/feed-1794981300762.jsonl",
-   "ticks": 3120,
+   "ticks": 4010,
    "from": "2026-11-18T05:55:02.069Z",
-   "to": "2026-11-18T06:15:50.069Z",
-   "frames": 313
+   "to": "2026-11-18T06:21:46.069Z",
+   "frames": 402
   }
  ],
  "levels": {
@@ -56,18 +56,18 @@
   "combat": {
    "value": 125,
    "status": "measured",
-   "n": 11761,
+   "n": 11850,
    "evidence": "the traces of `sources`: the roster rows"
   }
  },
  "kit": {
   "worn": {
    "value": {
-    "blackwizhat,dragon_dagger_p,monkrobetop,monkrobebottom": 1085,
+    "blackwizhat,dragon_dagger_p,monkrobetop,monkrobebottom": 1090,
     "blackwizhat,dragon_dagger_p": 1
    },
    "status": "measured",
-   "n": 1086,
+   "n": 1091,
    "evidence": "the traces of `sources`: each appearance block, by its worn objects"
   },
   "weaponPoison": {
@@ -95,15 +95,16 @@
    "note": "a heal of 20 is a shark (consume_normal.dbrow)"
   },
   "foodCount": {
-   "status": "unknown",
-   "closes": "the tick record of a bounded squad run (packages/core/src/tick-record.ts) against the name, to its retreat: the eats of one fight are its pack",
-   "cloneRange": {
-    "sharks": [
-     6,
-     23
-    ]
+   "value": {
+    "sharks": 13,
+    "eatsByOpponent": {
+     "mightyrod": 13
+    }
    },
-   "note": "the most eats seen in one meeting: Goondelf 11, Ligma 6, Sugma 13 (research/pvp-fight-loop.md \"The gang in a long fight\")"
+   "status": "measured",
+   "n": 1,
+   "evidence": "the traces of `sources`: the eat animations in the fights against one opponent, in a meeting that the name ended at 40 Hitpoints or less with no eat after it",
+   "note": "the food ran out in that meeting, so its eats are the pack; a refill at the bank between two fights would add to the count"
   },
   "consumesNotForHitpoints": {
    "value": [],
@@ -365,7 +366,7 @@
    "value": {
     "byHeadIcon": {
      "off": {
-      "splats": 419,
+      "splats": 421,
       "damage": 235,
       "highest": 17
      },
@@ -388,7 +389,7 @@
     "poison": 0
    },
    "status": "measured",
-   "n": 509,
+   "n": 511,
    "evidence": "the traces of `sources`: splats on the name, by its protect prayer in that tick"
   },
   "prayerPoints": {
@@ -475,15 +476,15 @@
  "movement": {
   "place": {
    "value": {
-    "wilderness": 33.3,
-    "post": 65.1,
+    "wilderness": 33.4,
+    "post": 65,
     "west tile": 0.6,
     "outside": 0.8,
     "monastery": 0.3,
     "chaos altar": 0
    },
    "status": "measured",
-   "n": 11761,
+   "n": 11850,
    "evidence": "the traces of `sources`: the tile of each roster frame (each 10 ticks)"
   },
   "standsOffThePost": {
@@ -494,35 +495,35 @@
     "3094,3489": 4,
     "3093,3525": 3,
     "3094,3956": 3,
+    "3244,3791": 3,
     "3093,3524": 2,
     "3087,3802": 2,
     "3311,3770": 2,
     "3097,3885": 1,
-    "3111,3666": 1,
-    "3094,3491": 1
+    "3111,3666": 1
    },
    "status": "measured",
-   "n": 95,
+   "n": 98,
    "evidence": "the traces of `sources`: roster frames on the tile of the frame before, off the post, no attack for 20 ticks"
   },
   "steps": {
    "value": {
-    "run": 33780,
-    "walk": 772
+    "run": 34076,
+    "walk": 775
    },
    "status": "measured",
-   "n": 34552,
+   "n": 34851,
    "evidence": "the traces of `sources`: the step records of each tick"
   },
   "farthestFromPost": {
    "value": 422,
    "status": "measured",
-   "n": 11761,
+   "n": 11850,
    "evidence": "the traces of `sources`: roster frames"
   },
   "trips": {
    "value": {
-    "withAnAttack": 47,
+    "withAnAttack": 48,
     "withNoAttack": 154,
     "farthestPlaceOfATripWithNoAttack": {
      "west tile": 37,
@@ -530,11 +531,11 @@
     },
     "accountsThatLeftInTheSameFrame": {
      "1": 147,
-     "2": 43,
+     "2": 44,
      "3": 12
     },
     "ticksFromLeaveToFirstAttack": {
-     "n": 47,
+     "n": 48,
      "min": 11,
      "median": 101,
      "max": 419
@@ -546,32 +547,32 @@
      "max": 10.72
     },
     "ticksFromLastAttackToPost": {
-     "n": 47,
+     "n": 48,
      "min": 43,
-     "median": 143,
+     "median": 157,
      "max": 442
     },
     "ticksAway": {
-     "n": 201,
+     "n": 202,
      "min": 10,
-     "median": 150,
+     "median": 160,
      "max": 2250
     },
     "tilesFromPostAtTheFarthest": {
-     "n": 201,
+     "n": 202,
      "min": 4,
      "median": 115,
      "max": 422
     },
     "tilesFromPostToTheTargetAtTheFirstAttack": {
-     "n": 47,
+     "n": 48,
      "min": 4,
      "median": 112,
      "max": 317
     }
    },
    "status": "measured",
-   "n": 201,
+   "n": 202,
    "evidence": "the traces of `sources`: from the roster frame off the post to the next one on it"
   }
  },
@@ -757,7 +758,7 @@
    }
   },
   "status": "measured",
-  "n": 11761,
+  "n": 11850,
   "evidence": "the traces of `sources`: roster frames with the name, of all roster frames of that hour"
  }
 }

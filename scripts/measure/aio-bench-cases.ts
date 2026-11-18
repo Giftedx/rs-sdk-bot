@@ -6,6 +6,7 @@ import {PRESETS, type SaveConfig} from '../../packages/practice/src/presets';
 import {firemakingFixture} from '../../packages/practice/src/firemaking-order-proof';
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
 import {KITS, kitItems, kitSkills, kitVarps, levelsBeforeRoute, overBuild} from '../pk-kits';
+import { CLONE_NAMES, cloneProfileName, cloneSpec, pooledProfile, type CloneMode, type CloneName } from '../pk-gang-clone';
 import {carrierAltar, type CarrierAltarName} from '../rune-carrier-altar';
 import {PROGRESSION_BENCH_CASES} from './progression-bench-cases';
 import {questSweepElenaPreset} from '../../packages/practice/src/quest-sweep-proof';
@@ -239,6 +240,21 @@ const squadCase = (key: string, kit: string, gangKit: string, n: number, args: s
   return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: ours(start.x + 1, start.z - 1), output: /kills=(\d+)/,
     scriptArgs: ['squad', ...letters.map(l => `{bot:${l}}`), 'SQUAD_GANG=3', 'MAX_MINUTES=6', 'STALL_TICKS=3000', ...args],
     companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < n - 1 ? ours(start.x + (i % 3), start.z) : kitFixture(gangKit, 3078, 3640)}))};
+};
+// The clones of the dagger gang (scripts/pk-gang-clone.ts, research/gang-clones.md): the start state of a gang account
+// is the skulled gang kit with the levels and the sharks of its behaviour record.
+const cloneFixture = (name: CloneName, mode: CloneMode, x: number, z: number): SaveConfig => { const spec = cloneSpec(name, mode), c = kitFixture('ganker-dds-skull', x, z);
+  return {...c, skills: {...c.skills, ...spec.skills}, inventory: [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: spec.sharks}, () => ({id: 385, count: 1}))], bank: GANG_BANK}; };
+// One of ours against the clones `names` on the gang's post (scripts/pk-gang.ts): each clone has its own profile.
+const cloneGang = (key: string, kit: string, names: readonly CloneName[], groups: number, args: string[], mode: CloneMode = 'seen', bank?: {id: number; count: number}[]): BenchCase => {
+  const size = names.length, c = gangCase(key, kit, 'ganker-dds-skull', groups, GANKER_POST, [`SPAR_B_PROFILES=${names.map(n => cloneProfileName(n, mode)).join('+')}`, ...args], size, undefined, bank);
+  return {...c, companions: c.companions!.map((comp, i) => ((i + 1) % (size + 1) === 0 ? comp : {...comp, presetConfig: cloneFixture(names[(i + 1) % (size + 1) - 1]!, mode, GANKER_POST.x, GANKER_POST.z)}))};
+};
+// The squad (scripts/pk-squad.ts) against the three clones. The squad script gives every gang account one set of
+// options, so the clones fight with the pooled options of the record; each has its own levels and sharks.
+const cloneSquad = (key: string, kit: string, n: number, args: string[], mode: CloneMode = 'seen', start = {x: 3093, z: 3501}, food?: number): BenchCase => {
+  const c = squadCase(key, kit, 'ganker-dds-skull', n, [`SPAR_B_OPTS=${JSON.stringify(pooledProfile(mode))}`, ...args], food, start);
+  return {...c, companions: c.companions!.map((comp, i) => (i < n - 1 ? comp : {...comp, presetConfig: cloneFixture(CLONE_NAMES[i - (n - 1)]!, mode, GANKER_POST.x, GANKER_POST.z)}))};
 };
 // `sizeB`: side B's accounts when it is not `size` (scripts/pk-team.ts SPAR_TEAM_B).
 const teamCase = (key: string, kitA: string, kitB: string, groups: number, at: {x: number; z: number}, size = 2, args: string[] = [], sizeB = size): BenchCase => {
@@ -990,6 +1006,19 @@ const ROUTE_CASES: BenchCase[] = [
   gangCase('extra:gang-live-check-x2', 'live-walker-iron', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK),
   // The same with one group: half the accounts, for a PC with little memory free.
   gangCase('extra:gang-live-check-x1', 'live-walker-iron', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK),
+  // The clones of the dagger gang (research/gang-clones.md). The fidelity case: the live meeting of the kit
+  // live-walker-iron with the three at the post, as extra:gang-live-check-x1 with each clone in place of ganker-live.
+  cloneGang('extra:clone-live-check-x1', 'live-walker-iron', CLONE_NAMES, 1, ['SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 'seen', EDGE_BANK),
+  // One of ours in the kit of the squad pilots (rune chainbody, no antipoison) against one clone: the fight that the
+  // live split on the walk in gave each of ours.
+  ...CLONE_NAMES.map(name => atBank(cloneGang(`extra:clone-solo-${name}-x2`, 'live-walker-iron-rune-chain-bare', [name], 2, ['SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 'seen', [...EDGE_BANK_SNARE, {id: 884, count: 2000}]), GANKER_POST)),
+  // Three and four of ours in that kit from the Edgeville bank to the multi-way post, the clones hunting them, each
+  // clone on its own one of ours: single-way tiles first, then multi-way.
+  cloneSquad('extra:clone-3v3-walkin-x1', 'live-walker-iron-rune-chain-bare', 3, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']),
+  cloneSquad('extra:clone-4v3-walkin-x1', 'live-walker-iron-rune-chain-bare', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']),
+  // The repeat cycle of one account for 30 game minutes: kill, pick up, bank trip, return, next kill. A clone that
+  // walks out comes back from the bank; a dead clone does not come back.
+  atBank(cloneGang('extra:clone-cycle-solo-x1', 'live-walker-iron-snare-rune-nopot', CLONE_NAMES, 1, ['SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=3000', 'SPAR_TRIPS=6', 'SPAR_PICKUP=1', 'SPAR_B_TRIPS=4', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000', 'SPAR_B_OPTS={"protectItem":false}'], 'seen', EDGE_BANK_SNARE), GANKER_POST),
   // The fast case of the hill climb: the same fight with short waits (the gang rests 150 ticks, our account waits 60,
   // a cap of 1,200 ticks). It holds the first walk out of a gang account and the drain of our prayer.
   atBank(gangCase('extra:gang-live-fast-x1', 'live-walker-iron', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK), GANKER_POST),
