@@ -44,7 +44,9 @@ A repair must bind its evidence to the failed source, entry state and first fail
 
 ## Deliver a capability
 
-Capability definitions live in `packages/router/tasks/<id>.json`: entry point, owned files, consumer and check commands. `bun run deliver <id>` runs the checks without a model call and writes logs to `.practice/deliveries/`. `stage: delivered` means those checks passed on those source bytes. It is not a live release.
+Capability definitions live in `packages/router/tasks/<id>.json`: entry point, owned files, consumer and check commands. `bun run deliver <id>` runs the checks without a model call and writes logs to `.practice/deliveries/`. `stage: delivered` means those checks passed on that source. It is not a live release.
+
+The checks of a definition run in their order. Neighbour checks of one phase that name one `group` run at one time, inside one practice turn; each reads the free memory after the check before it started, and the results keep the order of the definition. Give two checks one group only when they share no engine port, no lock file and no output file (the two practice checks of `ranged-train`). `gh workflow run "Progression practice" --ref <branch> -f capabilities=all` (or a list of ids) qualifies each capability on its own hosted runner at one time; the evidence of each delivery is the artifact `capability-<id>-<commit>`.
 
 **Acceptance bar.** A capability qualifies when:
 
