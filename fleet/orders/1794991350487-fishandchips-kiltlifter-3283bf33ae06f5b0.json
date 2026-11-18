@@ -1,0 +1,23 @@
+{
+ "id": "1794991350487-fishandchips-kiltlifter-3283bf33ae06f5b0",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "Kiltlifter",
+ "item": "Lobster",
+ "count": 750,
+ "start": 1794991350487,
+ "end": 1794994950487,
+ "meet": [
+  {
+   "x": 2809,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 2810,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

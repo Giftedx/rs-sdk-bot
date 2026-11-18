@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794990037648-mmsmk1232-pocketpool-e6c495cf1df2d7b6",
+ "account": "mmsmk1232",
+ "partner": "PocketPool",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron arrow",
+ "requested": 73,
+ "claim": "01fc840f-5d90-43c0-9d86-293bc4a3a8bc",
+ "count": 0,
+ "ok": false,
+ "at": 1794991352439,
+ "detail": "trade claimed"
+}
