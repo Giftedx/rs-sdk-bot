@@ -1,0 +1,22 @@
+{
+ "id": "1794968507769-dipstick-yewfirst-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Dipstick",
+ "to": "YewFirst",
+ "item": "Air rune",
+ "count": 35,
+ "start": 1794968507769,
+ "end": 1794970907769,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
