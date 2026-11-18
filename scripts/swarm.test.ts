@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { coordinatedAdmission,demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery } from './swarm';
+import { coordinatedAdmission,demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,persistentEnd } from './swarm';
 
 test('recovery uses the real admission policy, including inherited startup reserves, before checking release',()=>{
  const v={account:'Rod',active:[] as string[],running:0,external:0,pending:0,freeGB:10,minFreeGB:0,maxBots:17};let releases=0;
@@ -958,4 +958,30 @@ test('an adopted run whose pid a later process holds is ended', () => {
     expect(adoptedRunAlive(run, gone, new Map([[2856, run.started - 40]]))).toBe(false);
     // A record without a start time cannot prove a different process.
     expect(adoptedRunAlive({ pid: 2856 } as { pid: number; started: number }, answers, new Map([[2856, 5_000_000]]))).toBe(true);
+});
+
+// A squad job is one orchestrated run: one supervisor for all its accounts (supervisorCommand, orchestrate). Its death end
+// (RESULT fail died, scripts/pk-squad.ts squadEnd) reaches every account of the job and holds all of them, repeat or not.
+test('a squad job that ends in a death holds every member and a repeating job does not start it again', () => {
+    const accounts = ['Squad1', 'Squad2', 'Squad3', 'Squad4'];
+    const command = supervisorCommand({ key: 'Squad1', accounts, host: false, job: { script: 'scripts/aio-pvp.ts', args: ['squad'], orchestrate: true, repeat: true } } as any, accounts);
+    expect(command.slice(0, 3)).toEqual(['bun', 'packages/practice/src/supervise.ts', 'Squad1']);
+    expect(command).toEqual(expect.arrayContaining(['Squad2', 'Squad3', 'Squad4']));
+    // The supervisor prints one end line for the run, and the swarm gives that reason to each account of the run.
+    const end = supervisorEndLine('SUPERVISE end died after 1 runs');
+    expect(end).toBe('died after 1 runs');
+    expect(persistentEnd(end!)).toBe(true);
+    const ended = new Map(accounts.map(a => [a, { reason: end!, at: 1000, revision: 'r1' }]));
+    const repeating = startable(accounts, true, ended, () => Infinity);
+    expect(repeating.start).toEqual([]);
+    expect(repeating.blocked).toEqual(Object.fromEntries(accounts.map(a => [a, 'ended: died after 1 runs'])));
+    expect(startable(accounts, false, ended, () => Infinity).start).toEqual([]);
+    // A new revision of the job does not clear a death (only a done end is a new mission), and neither does a resume.
+    expect(startable(accounts, true, ended, () => Infinity, undefined, 'r2').start).toEqual([]);
+    const pending = new Set(accounts.map(a => a.toLowerCase())), cleared: string[] = [];
+    applyResume(accounts, false, ended as any, pending, a => cleared.push(a));
+    expect([...ended.keys()]).toEqual(accounts);
+    // A finished squad (done) with repeat starts again.
+    const done = new Map(accounts.map(a => [a, { reason: 'done after 1 runs', at: 1000 }]));
+    expect(startable(accounts, true, done, () => Infinity).start).toEqual(accounts);
 });

@@ -1185,3 +1185,17 @@ test('a goal job prints its band, not a coin rate of zero', async () => {
     expect(jobRate({ template: all.find(t => t.id === 'shop-runes')!, value: 0.14 })).toBe('0.14/tick');
     expect(jobRate({ template: { ...band, tier: undefined, family: 'kit-buy' }, value: 0 })).toBe('kit buy');
 });
+
+test('every shop template of the catalogue selects at least one line of its profile with the real selectItems', () => {
+    // selectItems tests ITEMS against the SOURCE of each profile line (an anchored line has the source ^name$), so an
+    // anchored ITEMS value never matches it: the run throws "ITEMS matches no <profile> item" at once.
+    const empty: string[] = [];
+    for (const t of catalogue()) {
+        const steps: { profile: string; items?: string }[] = [];
+        if (t.script === 'scripts/shop-buyer.ts') steps.push({ profile: t.args?.[0] ?? '', items: t.env?.ITEMS });
+        if (t.script === 'scripts/chain.ts') for (const a of t.args ?? []) { const m = a.match(/shop-buyer\.ts\s+(\S+)/); if (m) steps.push({ profile: m[1]!, items: a.match(/ITEMS=(\S+)/)?.[1] }); }
+        for (const s of steps) if (PROFILES[s.profile] && s.items && selectItems(PROFILES[s.profile]!.items, s.items).length === 0) empty.push(`${t.id} ${s.profile} ITEMS=${s.items}`);
+    }
+    expect(empty).toEqual([]);
+    expect(selectItems(PROFILES.ardy!.items, 'iron axe').map(i => i.re.source)).toEqual(['^iron axe$']);
+});
