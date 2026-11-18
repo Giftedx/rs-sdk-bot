@@ -14,6 +14,7 @@ import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { startStatus } from './status';
 import { loadDanger, watchRandomEvents, type RandomEventWatch } from './randomevents';
 import { GUARD_VALUE, recordRun, sellsItems, sharedLootTables } from './loot';
+import { runShutdownTasks } from './shutdown';
 import { FLEE_HP, damageLog, deathLine, recoverDeath, snapshot, type DeathSnapshot } from './death-recovery';
 import { protectByStyle, startPrayerGuard } from './prayer-guard';
 import { noGuardScript, startEatGuard } from './eat-guard';
@@ -326,6 +327,8 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
     // A script that ends during a death recovery does not log the account out under it.
     await Promise.all(sessions.map(s => deathRecoveries.get(s)));
     for (const s of sessions) settling.add(s);
+    // The tasks of shutdown.ts (an open kill-feed check and its socket) finish before the logout and the exit.
+    await runShutdownTasks();
     // A settling script waits for nothing more, and logout needs ticks: count as waiting so a lockstep tick is not held.
     tickWaits.active++;
     const log = opts.log ?? ((l: string) => console.log(l));
