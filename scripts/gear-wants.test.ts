@@ -1,8 +1,10 @@
 import { expect, test } from 'bun:test';
-import { GEAR_GAIN_FLOOR, GEAR_GE_ID, GEAR_SHOP_PILOT, bonusGain, gearJobFor, gearShopId, trainingStyle, type GearWantRow } from '../packages/planner/src/gear-want-jobs';
-import { KIT_BUY, KIT_BUY_SCRIPT, plan, type Acct } from '../packages/planner/src/autopilot';
+import { GEAR_GAIN_FLOOR, GEAR_GE_ID, GEAR_SHOP_PILOT, bonusGain, gearJobFor, gearShopId, type GearWantRow } from '../packages/planner/src/gear-want-jobs';
+import { KIT_BUY, KIT_BUY_SCRIPT, accountStyle, catalogue, plan, type Acct } from '../packages/planner/src/autopilot';
 import { shopProfileFor } from './gear-wants';
 import { gearWantsOf, kitBuyRunning } from './autopilot';
+import { PROFILES } from './shop-buyer';
+import { DATA_PROFILE, dataProfile, derivedProfile } from './shop-profiles';
 
 const side = 'claude-cloud';
 const IRON_SCIMITAR = 1323, RUNE_SCIMITAR = 1333, ADAMANT_SCIMITAR = 1331, LEATHER_GLOVES = 1059, LEATHER_COWL = 1167;
@@ -56,17 +58,41 @@ test('a held job, an ammunition want and a running session each give no cheap jo
     expect(gearJobFor([want], { coins: 300_000, room: 0, running: true })?.kind).toBe('ge');
 });
 
-test('the style of a job comes from its template, and the wants come from the status', () => {
-    expect(trainingStyle('army-cow-attack-30')).toBe('melee');
-    expect(trainingStyle('army-trooper-ranged-99')).toBe('ranged');
-    expect(trainingStyle('army-alch-magic-99')).toBeNull();
-    expect(trainingStyle('shop-runes')).toBeNull();
+test('the style comes from the running band, else from the next army band, else none', () => {
+    const templates = catalogue(), a: Acct = { name: 'Fighter', side, skills: { Hitpoints: 10, Attack: 1, Strength: 1, Defence: 1, Ranged: 1, Magic: 1 }, items: {} };
+    expect(accountStyle(a, templates, 'army-cow-strength-45', false)).toBe('melee');
+    expect(accountStyle(a, templates, 'army-trooper-ranged-99', false)).toBe('ranged');
+    expect(accountStyle(a, templates, 'army-alch-magic-99', false)).toBe('magic');
+    expect(accountStyle(a, templates, 'shop-runes', false)).toBeNull();
+    expect(accountStyle(a, templates, undefined, true)).not.toBeNull();
+    expect(accountStyle(a, templates, undefined, false)).toBeNull();
+    const done: Acct = { ...a, skills: Object.fromEntries(Object.keys(a.skills).map(k => [k, 99])) };
+    expect(accountStyle(done, templates, 'kit-buy:army-weapon', true)).toBeNull();
+});
+
+test('the wants come from the status, with the profile of each shop want', () => {
     const status = { skills: [{ name: 'Attack', level: 40 }, { name: 'Strength', level: 40 }, { name: 'Defence', level: 40 }], inventory: [{ id: 995, count: 300_000 }], equipment: [{ id: IRON_SCIMITAR, count: 1 }], bank: [], quests: [] };
     const asks = { [RUNE_SCIMITAR]: { ask: 15_000, sell: 5 } };
-    const wants = gearWantsOf(['Fighter'], () => status, () => 'army-cow-attack-30', {}, asks, Date.now());
+    const wants = gearWantsOf(['Fighter'], () => status, () => 'melee', () => undefined, {}, asks, Date.now());
     expect(wants.get('fighter')?.some(w => w.source.kind === 'ge' || w.source.kind === 'shop')).toBe(true);
-    expect(gearWantsOf(['Fighter'], () => status, () => 'shop-runes', {}, asks, Date.now()).size).toBe(0);
+    expect(gearWantsOf(['Fighter'], () => status, () => null, () => undefined, {}, asks, Date.now()).size).toBe(0);
     expect(shopProfileFor('scimitarshop', 'Mithril scimitar')).toBe('zeke');
+});
+
+test('a shop that has no hand profile gets one from the content', () => {
+    for (const shop of ['armourshop', 'helmetshop', 'legsshop', 'topshop', 'swordshop', 'chainmailshop', 'runeplateshop']) {
+        const p = derivedProfile(shop)!;
+        expect(p).toBeDefined();
+        expect(p.items.length).toBeGreaterThan(0);
+    }
+    const armour = derivedProfile('armourshop')!;
+    expect(armour.npc.test('Horvik')).toBe(true);
+    expect(armour.npcSpot).toEqual({ x: 3229, z: 3438 });
+    expect(armour.items.some(i => i.re.test('Steel platebody'))).toBe(true);
+    expect(shopProfileFor('armourshop', 'Steel platebody')).toBe(DATA_PROFILE + 'armourshop');
+    expect(dataProfile('data:armourshop')).toEqual(armour);
+    expect(derivedProfile('dragonswordshop')).toBeUndefined();
+    expect(PROFILES.jukat?.realm).toBeDefined();
 });
 
 test('no gear job starts until its pilot id is listed', () => {
@@ -91,6 +117,6 @@ test('a gear shop trip keeps its account while it runs, and frees it at its RESU
 
 test('the ranged account gets no weapon or ammunition want, and the skill comes from the band id', () => {
     const status = { skills: [{ name: 'Ranged', level: 50 }, { name: 'Defence', level: 40 }], inventory: [{ id: 995, count: 300_000 }], equipment: [], bank: [], quests: [] };
-    const wants = gearWantsOf(['Fighter'], () => status, () => 'army-trooper-ranged-99', {}, {}, Date.now()).get('fighter') ?? [];
+    const wants = gearWantsOf(['Fighter'], () => status, () => 'ranged', () => 'army-trooper-ranged-99', {}, {}, Date.now()).get('fighter') ?? [];
     expect(wants.every(w => w.slot !== 'weapon' && w.slot !== 'ammo')).toBe(true);
 });

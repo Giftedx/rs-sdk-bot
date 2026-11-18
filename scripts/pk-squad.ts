@@ -20,6 +20,8 @@
 // Bench only: SQUAD_GANG=<n> drives the last n accounts as the gang (profile ganker-live against our accounts).
 // Live: openBot refuses a non-local server without DEMO_OK=1 and an account of another fleet side. The main account
 // is refused. Stop: touch .practice/stop-<account> for one account, or .practice/stop-pk-squad for all.
+// First: it sets STALL_TICKS before packages/core/src/bot.ts loads (see the file).
+import './pk-squad-stall';
 import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { closeWithin } from '../packages/core/src/bot';
@@ -29,14 +31,19 @@ import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { attackable, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, recordKillLoot, STUNNED_SHOVE_SPOTANIM, wildernessLevel, type FightOptions } from './pk';
 import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { settleKillFeed } from './pk-kill-feed';
-import { EDGEVILLE_BANK, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
+import { EDGEVILLE_BANK, eatUp, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
 import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
 import { holdProtect, KitSwapper, protectOf, retreatOf, ThreatWatch } from './pk-threat';
 import { connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './pk-roam';
+import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
 
 export const GANG = ['goondelf', 'ligma', 'sugma'];
 export const SQUAD_POST = { x: 3067, z: 3640 };
+// A member starts the run with at least this share of the food of its pack (live: a member with 20 of 21 sharks is fit
+// to fight; one with a few is not). Under it the member stays at the bank and its part of the run ends.
+export const SQUAD_FOOD_FLOOR = 0.5;
+export const squadStartFood = (held: number, packFood: number): { ok: boolean; floor: number } => { const floor = Math.ceil(packFood * SQUAD_FOOD_FLOOR); return { ok: held >= floor, floor }; };
 const MAIN = new Set(['haggis']);
 // dropForStrip off: the profile's champion base drops a shark before a freeze to free slots for its armour strip.
 // specBelow 0.45: the special waits for a gang account at 45% or less (one-on-one in the pilot's kit with Bind: 13 kills
@@ -103,14 +110,34 @@ export function squadWorkSession(raw: Session): Session {
 }
 const cancelSquadWork = (raw: Session, reason: string) => { squadWorkSession(raw); workSessions.get(raw)!.cancel(reason); };
 
-export async function stopSquadSession(raw: Session, reason: string, halt: (reason: string) => void, closeMs = 1000): Promise<void> {
+export async function stopSquadSession(raw: Session, reason: string, halt: (reason: string) => void, closeMs = 1000, ended?: (raw: Session, reason: string) => unknown): Promise<void> {
     if (reason === 'died') return;
+    // A member with no progress for the stall limit (no xp, items, dialog or journey: one whose bank trip failed stands
+    // idle at the bank) ends its own session only. The others go on. The session is closed with a stop already asked
+    // for, so openBot reports no session end (packages/core/src/bot.ts watchUnexpectedEnd): `ended` records the member
+    // as dropped, and the rescue at the end takes it out of the Wilderness. Live: one idle member halted a squad of
+    // four that was killing.
+    if (/^no progress:/.test(reason)) {
+        cancelSquadWork(raw, reason);
+        await closeWithin([raw], closeMs);
+        await ended?.(raw, reason);
+        return;
+    }
     halt(reason);
     if (/^tick stream stalled:/.test(reason)) {
         cancelSquadWork(raw, reason);
         await closeWithin([raw], closeMs);
     }
 }
+// The stop handlers of a squad: a member whose session ends with no logout of ours (a dropped connection, or a stall
+// that ends its own session) goes into `dropped`, and the rescue at the end takes it out of the Wilderness.
+export function squadStopHandlers(halt: (detail: string) => void, dropped: Map<string, string>, log: (line: string) => void = line => console.log(line)) {
+    const onSessionEnd = async (s: Session, detail: string) => { if (!dropped.has(s.name)) { dropped.set(s.name, detail); log(`[${s.name}] SQUAD session ended: ${detail}`); } };
+    const onStop = (s: Session, reason: string) => stopSquadSession(s, reason, halt, 1000, onSessionEnd);
+    return { onStop, onSessionEnd };
+}
+// A kill line of the fight loop, not its proof lines (`PK kill receipt ...`, `PK kill feed ...`).
+export const isKillLine = (line: string) => /PK kill (?!receipt |feed )\S+ after \d+ ticks/.test(line);
 export const squadPaused = (name: string, exists: (path: string) => boolean = existsSync) => exists('.practice/stop-pk-squad') || exists(`.practice/stop-${name}`);
 
 // Connected members share one monotonic coordination clock after a member disconnects.
@@ -336,18 +363,29 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             if (wildernessLevel(p.worldZ) === 0) {
                 if (stats.trips >= o.trips) { o.log(`[${s.name}] SQUAD no trips left`); break; }
                 stats.trips++;
+                // The first visit, before any fight, is at the pack that the account logged in with: nothing is banked, so
+                // no shark of the pack has to come back from the bank (`fresh`). A restock there asked for the whole pack
+                // again after one meal of the eat-up. The member eats to full first (`eatUp`), and the fresh trip fills
+                // the slots of the meals from the bank.
+                const first = stats.fights === 0 && stats.trips === 1;
+                if (first) await eatUp(s, () => o.stopped());
                 // Eat up first: a teleport out (Camelot) leaves a long walk, and the gang's daggers poison.
-                for (let i = 0; i < 12 && !o.stopped(); i++) {
+                else for (let i = 0; i < 12 && !o.stopped(); i++) {
                     const q = me(), food = s.sdk.getInventory().find(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text)));
                     const op = food?.optionsWithIndex.find(x => /^eat$/i.test(x.text));
                     if (!q || !food || !op || q.hp >= q.maxHp - 20) break;
                     await s.sdk.sendUseItem(food.slot, op.opIndex);
                     for (let t = 0; t < 3; t++) if (!await nextTick(s)) break;
                 }
-                const fault = await trip(s);
+                const fault = await trip(s, first);
                 const after = me();
                 if (after && ((life0 !== undefined && after.lifeId !== life0) || Math.max(Math.abs(after.worldX - 3222), Math.abs(after.worldZ - 3218)) <= 40)) { o.log(`[${s.name}] SQUAD died on a bank trip`); if (await recover()) continue; stats.died = true; break; }
                 if (fault) { o.log(`[${s.name}] SQUAD bank trip: ${fault}`); break; }
+                if (first) {
+                    // A member one meal short starts with what it holds; one under the floor stays out of the Wilderness.
+                    const held = s.sdk.getInventory().filter(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text))).length, start = squadStartFood(held, pack.food);
+                    if (!start.ok) { o.log(`[${s.name}] SQUAD start: ${held} food held, under the floor of ${start.floor} of ${pack.food}`); break; }
+                }
                 continue;
             }
             const now = s.tick();
@@ -513,11 +551,10 @@ if (import.meta.main) {
     if (existsSync('.practice/stop-pk-squad') || paused.length) { console.log(`RESULT fail stop file present: ${existsSync('.practice/stop-pk-squad') ? 'stop-pk-squad' : paused.map(n => `stop-${n}`).join(' ')}`); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
     let halted: string | undefined;
-    const onStop = (s: Session, reason: string) => stopSquadSession(s, reason, detail => { halted ??= detail; });
     // A session that ends with no logout of ours (a dropped connection) stops that account only. openBot's default
     // finishes the process, and in the third live pilot one account's drop logged the other three out in the Wilderness.
     const dropped = new Map<string, string>();
-    const onSessionEnd = async (s: Session, detail: string) => { if (!dropped.has(s.name)) { dropped.set(s.name, detail); console.log(`[${s.name}] SQUAD session ended: ${detail}`); } };
+    const { onStop, onSessionEnd } = squadStopHandlers(detail => { halted ??= detail; }, dropped);
     const all = await openSquad(names, name => openBot(name, { onStop, onSessionEnd, continueAfterDeath: true }), (sessions, detail) => finish(sessions, false, detail));
     const squad = all.slice(0, ours.length).map(squadWorkSession), gang = all.slice(ours.length).map(squadWorkSession);
     // Bench: a gang account is out when it died (a new life, or at the Lumbridge spawn) or left the Wilderness.
@@ -534,10 +571,19 @@ if (import.meta.main) {
     // Bench: the gang accounts each fight the nearest of ours in view until they walk out (profile ganker-live).
     // SQUAD_GANG_SPLIT=1: gang account i takes our account i (i mod the squad), as the live gang split on the first
     // pilot's walk-in, in place of the nearest of ours.
-    const split = env.SQUAD_GANG_SPLIT === '1';
+    // SQUAD_GANG_PREY=<member index>,...: gang account i takes the member that the list names for it (list[i mod its length]),
+    // so a bench gang can pick the members that the live gang picked (in the first live squad run it attacked only the two
+    // members in dragonhide). It implies the split.
+    const preyList = (env.SQUAD_GANG_PREY ?? '').split(',').filter(x => /^\d+$/.test(x)).map(Number);
+    const split = env.SQUAD_GANG_SPLIT === '1' || preyList.length > 0;
     const gangRuns = gang.map(async (g, gi) => {
-        const mine = squad[gi % squad.length]!.name.toLowerCase();
-        const opts = sparOptions('ganker-live', env.SPAR_B_OPTS, kitFrom(g.sdk.getState()?.equipment ?? [], g.sdk.getState()?.inventory ?? []), 1200);
+        const preyAt = preyList.length ? preyList[gi % preyList.length]! % squad.length : gi % squad.length;
+        const mine = squad[preyAt]!.name.toLowerCase();
+        // SQUAD_GANG_KIT=<kit>+<kit>+...: the kit (scripts/pk-kits.ts) of gang account i is list[i mod its length], and
+        // SQUAD_GANG_PROFILE the fight profile of the gang (default ganker-live, the dagger gang). Both turn the gang accounts into
+        // the attacker of a bench threat: a mage, a ranger, a pure or a team (research/gang-clones.md, "The attackers").
+        const gangKit = (env.SQUAD_GANG_KIT ?? '').split('+').filter(Boolean), kitName = gangKit.length ? gangKit[gi % gangKit.length]! : undefined;
+        const opts = sparOptions(env.SQUAD_GANG_PROFILE ?? 'ganker-live', env.SPAR_B_OPTS, kitName ? kitSwitches(kitName) : kitFrom(g.sdk.getState()?.equipment ?? [], g.sdk.getState()?.inventory ?? []), 1200, kitName ? kitOptions(kitName) : {});
         while (!stopped() && g.tick() < deadline) {
             const me = g.sdk.getState()?.player;
             if (!me || wildernessLevel(me.worldZ) === 0) break;
@@ -547,7 +593,7 @@ if (import.meta.main) {
                 // SQUAD_GANG_HUNT=1: like the live gang, which the world feed takes to its target (it met the first live
                 // pilot 30 tiles from the post), it walks toward the nearest of ours in the Wilderness.
                 if (env.SQUAD_GANG_HUNT === '1' && g.tick() % 4 === 0) {
-                    const far = (split ? [squad[gi % squad.length]!] : squad).map(q => q.sdk.getState()?.player).filter((q): q is NonNullable<typeof q> => !!q && wildernessLevel(q.worldZ) > 0)
+                    const far = (split ? [squad[preyAt]!] : squad).map(q => q.sdk.getState()?.player).filter((q): q is NonNullable<typeof q> => !!q && wildernessLevel(q.worldZ) > 0)
                         .sort((a, b) => Math.max(Math.abs(a.worldX - me.worldX), Math.abs(a.worldZ - me.worldZ)) - Math.max(Math.abs(b.worldX - me.worldX), Math.abs(b.worldZ - me.worldZ)))[0];
                     if (far) void g.sdk.sendWalk(far.worldX, far.worldZ);
                 }
@@ -644,7 +690,7 @@ if (import.meta.main) {
             ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
             allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), run: runDeaths,
             onDeath: near => { recordPvpDeath({ account: s.name, server: squadServer, at: Date.now(), script: 'scripts/pk-squad.ts', near }); }, deadline,
-            stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (/PK kill /.test(l)) kills++; log(l); },
+            stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (isKillLine(l)) kills++; log(l); },
         });
     }));
     squadDone = true;

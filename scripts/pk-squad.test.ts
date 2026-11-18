@@ -2,7 +2,7 @@ import { describe, expect, spyOn, test } from 'bun:test';
 import * as walking from '../packages/core/src/walk';
 import * as pk from './pk';
 import { maxDeathsOf } from './pk-hunt';
-import { bankNear, leaveWilderness, openSquad, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
+import { bankNear, isKillLine, leaveWilderness, openSquad, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
 import { hold, squadEnd } from './pk-squad';
 import { newWatch, readLine } from './squad-watch';
@@ -81,6 +81,42 @@ test('a tick-stalled squad waiter ends even if close hangs while another member 
     expect(await Promise.all([waiting, completing, stopping])).toEqual([false, true, undefined]);
     expect(halted).toEqual(['tick stream stalled: 120 s without a game tick']);
     expect(stalled.listeners.size).toBe(0);
+});
+
+test('a member one meal short starts, and one under half of its pack food does not', () => {
+    expect(squadStartFood(20, 21)).toEqual({ ok: true, floor: 11 });
+    expect(squadStartFood(11, 21).ok).toBe(true);
+    expect(squadStartFood(10, 21)).toEqual({ ok: false, floor: 11 });
+    expect(squadStartFood(0, 0).ok).toBe(true);
+});
+
+test('an idle-stalled squad member ends its own session, halts no one, and is recorded as dropped for the rescue', async () => {
+    const idle = rescueSession('idle'), other = rescueSession('other'), halted: string[] = [], dropped = new Map<string, string>(), lines: string[] = [];
+    const { onStop } = squadStopHandlers(reason => halted.push(reason), dropped, line => lines.push(line));
+    const waiting = nextTick(squadWorkSession(idle.raw)), completing = nextTick(squadWorkSession(other.raw));
+    const stopping = onStop(idle.raw, 'no progress: 900 ticks without xp, items, dialog or a journey');
+    other.advance();
+    expect(await Promise.all([waiting, completing, stopping])).toEqual([false, true, undefined]);
+    expect(halted).toEqual([]);
+    expect(idle.listeners.size).toBe(0);
+    // The rescue at the end reads `dropped`: a member that stalled in the Wilderness is taken out, not left closed there.
+    expect([...dropped]).toEqual([['idle', 'no progress: 900 ticks without xp, items, dialog or a journey']]);
+    expect(lines).toEqual(['[idle] SQUAD session ended: no progress: 900 ticks without xp, items, dialog or a journey']);
+});
+
+test('a tick stall still halts the squad, and a death is left to the death handling', async () => {
+    const stalled = rescueSession('stalled'), halted: string[] = [], dropped = new Map<string, string>();
+    const { onStop } = squadStopHandlers(reason => halted.push(reason), dropped, () => {});
+    await onStop(rescueSession('dead').raw, 'died');
+    expect(halted).toEqual([]);
+    await onStop(stalled.raw, 'tick stream stalled: 120 s without a game tick');
+    expect(halted).toEqual(['tick stream stalled: 120 s without a game tick']);
+    expect(dropped.size).toBe(0);
+});
+
+test('the kill counter of the MAX_KILLS cutoff counts a kill line once, not its receipt and feed lines', () => {
+    const lines = ['[A] PK kill Sugma after 37 ticks', '[A] PK kill receipt live 1795039182214-0000026472-0000000005 wilderness 15 multi', '[A] PK kill feed matched at feed tick 209996', '[B] PK special melee energy 750 on false target 43/99', '[B] PK died to Ligma after 88 ticks'];
+    expect(lines.filter(isKillLine)).toEqual(['[A] PK kill Sugma after 37 ticks']);
 });
 
 test('account and squad pause files each prevent rescue login and remain in place', async () => {
