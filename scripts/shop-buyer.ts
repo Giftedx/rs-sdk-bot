@@ -22,6 +22,7 @@ import { bankCargo, courierWaiting, exactItem } from '../packages/core/src/cargo
 import { depositPack } from '../packages/core/src/deposit';
 import { knownBanks } from '../packages/core/src/trip';
 import { contentUnitBound, shopRules, type ShopRule } from './shop-price';
+import { dataProfile } from './shop-profiles';
 
 export const PROFILES: Record<string, {
     npc: RegExp;
@@ -513,13 +514,14 @@ for (const [key, value] of Object.entries({ COIN_RESERVE, MAX_SPEND, MAX_ITEMS, 
 }
 if (FLOAT <= COIN_RESERVE || MAX_SPEND === 0 || MAX_ITEMS === 0) throw new Error('shop budget needs FLOAT>COIN_RESERVE and positive MAX_SPEND/MAX_ITEMS');
 
-if (!botName || !PROFILES[profileKey]) {
-    console.error(`Usage: bun scripts/shop-buyer.ts <botName> <${Object.keys(PROFILES).join(' | ')}> [CAP] [BANK_AT]`);
+const PROFILE = PROFILES[profileKey] ?? dataProfile(profileKey);
+if (!botName || !PROFILE) {
+    console.error(`Usage: bun scripts/shop-buyer.ts <botName> <${Object.keys(PROFILES).join(' | ')} | data:<shop id of knowledge/shops.json>> [CAP] [BANK_AT]`);
     process.exit(1);
 }
 
 // ITEMS=<regex> keeps only the profile items a run needs (ITEMS='fire rune' buys no other rune).
-const conf = { ...PROFILES[profileKey]!, items: selectItems(PROFILES[profileKey]!.items, process.env.ITEMS) };
+const conf = { ...PROFILE, items: selectItems(PROFILE.items, process.env.ITEMS) };
 // The shop's price rule from the content, for the bound of each unit that a buy may cost.
 const priceRules = shopRules(conf.npc, conf.npcSpot);
 if (!conf.items.length) throw new Error(`ITEMS=${process.env.ITEMS} matches no ${profileKey} item`);

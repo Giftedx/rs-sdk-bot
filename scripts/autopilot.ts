@@ -33,16 +33,16 @@ import { matchingJobLines } from '../packages/core/src/job-log';
 import { squadBlock, type SquadInput } from '../packages/planner/src/squad';
 import { admittedByLevels, armyBatchOf, meleeTotal } from '../packages/core/src/army-roster';
 import { exempt } from '../packages/core/src/fleet-assign';
-import { OBSERVATION_FRESH_MS, reservedAccounts, ARMOUR_IDS, BOW_IDS, CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, assess, catalogue, finishedTrainers, jobResources, kitReserve, mergeJobs, norm, pairKey, plan, questsDoneIn, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock, type Template } from '../packages/planner/src/autopilot';
+import { OBSERVATION_FRESH_MS, reservedAccounts, ARMOUR_IDS, BOW_IDS, CAPACITY, CLAIM_MAX_AGE_MS, DRAIN_RESULT, SHARED, accountFrom, accountStyle, assess, catalogue, finishedTrainers, jobResources, kitReserve, mergeJobs, norm, pairKey, plan, questsDoneIn, plannableAccounts, reservedResources, BUILD_QUESTS, KIT_BUY, KIT_BUY_SCRIPT, KIT_PRICE_CAPS, priceTable, type Acct, type Assignment, type Funding, type ItemFunding, type Market, type Stock, type Template } from '../packages/planner/src/autopilot';
 import { deadlyTo, loadHunters, type Hunter } from '../packages/core/src/danger';
 import { jobAccounts, mergeJobs as withCoordinatorJobs, mergedPlan, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, type TradeReceipt } from './fleet-trade-settlement';
 import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { liveHelperStatuses, overallSupplyDemand, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
-import { gearById } from '../packages/planner/src/gear-progression';
+import { gearById, type CombatFocus } from '../packages/planner/src/gear-progression';
 import { GEAR_ASK_LIMIT, type MarketAsks } from '../packages/planner/src/gear-sources';
-import { GEAR_ASK_MARGIN, isGearShop, trainingStyle, type GearWantRow } from '../packages/planner/src/gear-want-jobs';
+import { GEAR_ASK_MARGIN, isGearShop, type GearWantRow } from '../packages/planner/src/gear-want-jobs';
 import { wantRowsFromStatus } from './gear-wants';
 import { MARKET_FILE, marketQuotes } from './market-cache';
 import { tickWaste, wasteShare } from './tick-waste';
@@ -259,12 +259,12 @@ export function kitMarket(items: readonly { id: number; name?: string; debugname
 }
 // The gear wants of each account for the style that its current job trains (scripts/gear-wants.ts, the workers' reconcile choice).
 // An item that a buy got none of within FOLLOWED_RETRY_MS is left out of the asks, as kitMarket does for a limit that follows a seller.
-export function gearWantsOf(names: readonly string[], status: (name: string) => any, templateOf: (name: string) => string | undefined,
-    unsold: Readonly<Record<string, number>>, asks: Asks, now: number): Map<string, readonly GearWantRow[]> {
+export function gearWantsOf(names: readonly string[], status: (name: string) => any, styleOf: (name: string) => CombatFocus | null,
+    templateOf: (name: string) => string | undefined, unsold: Readonly<Record<string, number>>, asks: Asks, now: number): Map<string, readonly GearWantRow[]> {
     const live = Object.fromEntries(Object.entries(asks).filter(([id]) => now - (unsold[id] ?? -Infinity) >= FOLLOWED_RETRY_MS)) as MarketAsks;
     const out = new Map<string, readonly GearWantRow[]>();
     for (const name of names) {
-        const style = trainingStyle(templateOf(name)), st = status(name);
+        const style = styleOf(name), st = status(name);
         if (!style || !st) continue;
         // The skill that the worker passes (gather-combat.ts trainSkill): the band id names it. A ranged worker pins its own bow and arrows
         // (gather-combat.ts pin), which the planner does not mirror, so a ranged account gets no weapon or ammunition want.
@@ -806,9 +806,10 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
         stocks:progressionStocks,sourcesFor:(account,_method,_item)=>[account,...stock.filter(s=>!newlyWorking.has(s.name.toLowerCase())&&owners.get(s.name.toLowerCase())?.server===owners.get(account.toLowerCase())?.server).map(s=>s.name)],
         canTransfer:(from,to)=>sourceAllowed.has(from.toLowerCase())&&!newlyWorking.has(from.toLowerCase())&&free(from)&&free(to)&&owners.get(from.toLowerCase())?.server===owners.get(to.toLowerCase())?.server});
     const externalLive = activeExternalLive(statusFiles.map(f => readJson(join(statusDir, f), null)).filter(Boolean), [...activeAccounts], now);
-    const gearWants = gearWantsOf(accounts.map(a => a.name), observed, name => state.assigned[name]?.template, state.unsold ?? {}, marketQuotes(readJson(join(root, MARKET_FILE), null), now), now);
+    const army = armyRoster(swarm, accounts, OFFLINE_GUARDED, reserved);
+    const gearWants = gearWantsOf(accounts.map(a => a.name), observed, name => { const a = accounts.find(x => x.name === name)!; return accountStyle(a, templates, state.assigned[name]?.template, army.has(name.toLowerCase())); }, name => state.assigned[name]?.template, state.unsold ?? {}, marketQuotes(readJson(join(root, MARKET_FILE), null), now), now);
     const questsDone = questsDoneIn([...statusFiles.map(f => readJson(join(statusDir, f), null)), ...published.flatMap(f => f.accounts ?? [])]);
-    const planned = plan({ side, accounts, questsDone, owners, gearWants, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set([...Object.keys(state.retired), ...unplacedHeld(state.unplaced, now)]), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm, accounts, OFFLINE_GUARDED, reserved), now, unobserved: unobservedAccounts(listed.filter(free), n => observed(n)?.at, now), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
+    const planned = plan({ side, accounts, questsDone, owners, gearWants, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set([...Object.keys(state.retired), ...unplacedHeld(state.unplaced, now)]), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army, now, unobserved: unobservedAccounts(listed.filter(free), n => observed(n)?.at, now), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
             externalLive.length,
             { running: swarm.jobs.filter((j: any) => mineMarked(j) && j.enabled !== false).flatMap(jobAccounts).filter((n: string) => activeAccounts.has(n.toLowerCase())).length,
                 headroom: headroomWithMargin(memoryHeadroom(freemem() / 2 ** 30, swarm.minFreeGB, pendingStartupCount(readJson(join(prac, 'swarm-runs.json'), []), now) + tradeStarts(open, externalLive, activeAccounts)), writtenNotRunning(swarm.jobs.filter(mineMarked), activeAccounts)) }), holding: activeAccounts, squad: squadInput(swarm, side, owners, n => observed(n)?.at > 0 ? accountFrom(n, side, observed(n), id => byId.get(id)).items : undefined, n => !stopClearable(observed(n), now) || existsSync(join(prac, 'stop-pk-squad'))), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
