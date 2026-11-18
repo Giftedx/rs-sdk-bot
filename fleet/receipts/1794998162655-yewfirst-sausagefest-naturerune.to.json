@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794998162655-yewfirst-sausagefest-naturerune",
+ "account": "Sausagefest",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "4fd340a8-1f26-4db6-b382-6f88d3b24d2c",
+ "count": 50,
+ "ok": true,
+ "at": 1794998219958,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 50
+ },
+ "bank": {
+  "count": 50,
+  "at": 1794998219081
+ },
+ "logout": {
+  "attemptId": "1794998200321-0000009652-0000000001",
+  "at": 1794998219943,
+  "sha256": "ffd819ec7b2c91c098f3e522a9a421369bc5ac16ec6a4e9198aabb61ffc01574"
+ },
+ "screen": true
+}
