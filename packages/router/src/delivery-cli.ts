@@ -5,6 +5,7 @@ import ts from 'typescript';
 import {existsSync} from 'node:fs';
 import {freemem} from 'node:os';
 import {capabilityRevision} from '../../core/src/worker-release';
+import {releaseFileDigest,runtimeImports} from '../../core/src/release-digest';
 import {killTree} from '../../practice/src/proc';
 import {PRACTICE_TURN_WAIT_EXPIRED,recoverProofLock,withPracticeTurn} from '../../practice/src/proof-lock';
 import {deliver,validateDelivery,type DeliveryTask,type DeliveryCheck} from './delivery';
@@ -66,7 +67,9 @@ const IMPORT_PARSE_LIMIT=2048;
 function relativeImports(path:string,bytes:Buffer):readonly string[]{
  const content=bytes.toString('utf8'),source=createHash('sha256').update(content).digest('hex');
  const prior=importParses.get(path);if(prior?.source===source)return prior.relative;
- const relative=ts.preProcessFile(content,true,true).importedFiles.map(s=>s.fileName).filter(s=>s.startsWith('.'));
+ // An import that the runtime erases (import type) loads no file, so it adds none to the closure (release-digest.ts).
+ const loaded=runtimeImports(path,content);
+ const relative=ts.preProcessFile(content,true,true).importedFiles.map(s=>s.fileName).filter(s=>s.startsWith('.')&&(!loaded||loaded.includes(s)));
  if(!prior&&importParses.size>=IMPORT_PARSE_LIMIT)importParses.clear();
  importParses.set(path,{source,relative});
  return relative;
@@ -96,10 +99,12 @@ function scanImportClosure(starts:readonly string[],base:string,contents?:Map<st
  return [...seen].sort();
 }
 // Import discovery and hashing share bytes only within this call. Every later scan reads fresh source.
+// Each file enters as the digest of its program (release-digest.ts): a comment, layout or line-ending edit keeps a
+// qualification, and a Windows and a Linux checkout of one commit give one source.
 export function hashImportClosure(starts:readonly string[],base=root,hash=createHash('sha256')):string{
  const contents=new Map<string,Buffer>();
  for(const file of scanImportClosure(starts,base,contents))
-  hash.update(file+'\0').update(contents.get(file)??readFileSync(join(base,file))).update('\0');
+  hash.update(file+'\0').update(releaseFileDigest(file,contents.get(file)??readFileSync(join(base,file)),ts)).update('\0');
  return hash.digest('hex');
 }
 // The capability release of the entry (packages/core/src/worker-release.ts); null when the entry cannot be released.
