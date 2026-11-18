@@ -5,6 +5,7 @@ import {join,resolve,relative,isAbsolute} from 'node:path';
 import {mySide,loadOwners} from '../../core/src/fleet';
 import {SPECIALIST_BOARDS} from '../../core/src/specialist-launch';
 import {readBound} from '../../core/src/launch-evidence';
+import {readKillReceipts} from '../../core/src/kill-receipt';
 import {boardsFromSnapshot,haggisActivities,haggisTravel,scheduleOverall,overallRequirementsFor,SKILLS,TRICKS} from '../../planner/src/haggis';
 import {loadTravel} from '../../planner/src/travel';
 import {supplyBill,type BillRow} from '../../planner/src/supply-bill';
@@ -16,6 +17,8 @@ export type GoalEvidence={source:string;at:number|null;ageMs:number|null;gap?:st
 export type GoalRank={account:string;board:string;rank:number;at:number;source:string};
 export type SpecialistGoal={account:string;board:string;planTicks:number|null;recordTicks:number|null;rehearsalTicks:number|null;marginTicks:number|null;rank:number|null;rankAt:number|null;rank1:boolean|null;evidence:GoalEvidence[]};
 export type CollectionNeed={item:string;id?:number;need:number;owned:number;consumer:string;verifyOwned?:number};
+// One credited kill: a live receipt of an own account for a player that is not an own account.
+export type ArmyKill={account:string;victim:string;at:number;wilderness:number;multi:boolean;feedMatched:boolean|null;receipt:string};
 export type ArmyAccount={account:string;levels:Record<CombatSkill,number|null>;missingLevels:number;maxed:boolean;at:number|null};
 export type OwnerGoals={
  version:1;at:number;
@@ -23,7 +26,7 @@ export type OwnerGoals={
  specialists:{targets:SpecialistGoal[];rank1s:(GoalRank&{rank:1})[];scopeKnown:boolean;evidence:GoalEvidence[]};
  quests:{complete:number;total:number;remaining:string[];observedAccounts:number;evidence:GoalEvidence[]};
  collection:{targets:number;held:number;missing:CollectionNeed[];scopeKnown:boolean;evidence:GoalEvidence[]};
- army:{roster:string[];accounts:ArmyAccount[];maxed:number;missingLevels:number;creditedKills:null;wildernessControl:null;evidence:GoalEvidence[]};
+ army:{roster:string[];accounts:ArmyAccount[];maxed:number;missingLevels:number;creditedKills:number|null;kills?:ArmyKill[];wildernessControl:null;evidence:GoalEvidence[]};
  metrics:Record<string,number>;remaining:string[];done:boolean;
 };
 export type OwnerGoalInputs={root:string;now:number;statuses:readonly any[];questNames:readonly string[];fleetDir?:string};
@@ -170,8 +173,14 @@ export function buildOwnerGoals({root,now,statuses,questNames,fleetDir=join(root
   const kit=kitItems(build),catalog=read(join(root,'knowledge/items.json'))??[];
   for(const i of [...kit.equipment,...kit.inventory])demands.push({item:catalog.find((c:any)=>c.id===i.id)?.name??`item ${i.id}`,itemId:i.id,count:i.count,consumer:`army:${account}:${build}`});
  }catch(error){armyEvidence.push(ev('scripts/pk-kits.ts',undefined,`${account}: ${String(error)}`));}
- armyEvidence.push(ev('.practice/status; fleet/snapshots',undefined,'Missing level observations are unverified target levels, not measured level deficits; no accepted credited player-kill or Wilderness-control receipt'));
- const army:OwnerGoals['army']={roster:[...roster].sort(),accounts,maxed:accounts.filter(a=>a.maxed).length,missingLevels:accounts.reduce((n,a)=>n+a.missingLevels,0),creditedKills:null,wildernessControl:null,evidence:armyEvidence};
+ armyEvidence.push(ev('.practice/status; fleet/snapshots',undefined,'Missing level observations are unverified target levels, not measured level deficits; no accepted Wilderness-control receipt'));
+ // Kill receipts of this machine (packages/core/src/kill-receipt.ts). Only the live tree of the live server is read, and a
+ // receipt gives credit only when its own fields also say live. With no credited receipt the count stays unknown.
+ const killSource='.practice/kill-receipts/live',verdicts=readKillReceipts({root:join(root,'.practice/kill-receipts'),server:SERVER,owned,now});
+ const kills:ArmyKill[]=verdicts.filter(v=>v.credited&&v.receipt).map(v=>({account:key(v.receipt!.account),victim:v.receipt!.victim,at:v.receipt!.at,wilderness:v.receipt!.wilderness,multi:v.receipt!.multi,feedMatched:v.receipt!.feed?v.receipt!.feed.matched:null,receipt:relative(root,v.file).replaceAll('\\','/')}));
+ const refused=verdicts.filter(v=>!v.credited),refusedWhy=[...new Set(refused.map(v=>v.reason))].sort().join(', ');
+ armyEvidence.push(ev(killSource,kills.length?Math.max(...kills.map(k=>k.at)):undefined,`${kills.length?`${kills.length} credited live kill receipts on this machine`:'No credited live player-kill receipt on this machine'}${refused.length?`; ${refused.length} refused (${refusedWhy})`:''}; receipts of other fleet sides are not read`));
+ const army:OwnerGoals['army']={roster:[...roster].sort(),accounts,maxed:accounts.filter(a=>a.maxed).length,missingLevels:accounts.reduce((n,a)=>n+a.missingLevels,0),creditedKills:kills.length||null,kills,wildernessControl:null,evidence:armyEvidence};
 
  const catalog=read(join(root,'knowledge/items.json'))??[];
  const knownContainer=(value:any)=>Array.isArray(value)&&value.every(i=>positive(i?.count)&&Number.isSafeInteger(i.baseId??i.id));
@@ -203,7 +212,9 @@ export function buildOwnerGoals({root,now,statuses,questNames,fleetDir=join(root
   for(const skill of COMBAT_SKILLS)if(account.levels[skill]!==null)metrics[`army.level:${account.account}:${skill}:target=99`]=account.levels[skill]!;
   if(COMBAT_SKILLS.every(skill=>account.levels[skill]!==null))metrics[`army.maxed:${account.account}`]=account.maxed?1:0;
  }
+ // The count of credited receipts is a fact of this machine, 0 included, so the first kill is an improvement.
+ metrics['army.creditedKills']=kills.length;
  if(gapTicks!==null)metrics[`main.gapTicks:record=${recordTicks}`]=gapTicks===0?0:-gapTicks;
- const remaining=[...(main.rank1===true?[]:[`Overall rank 1 ${main.rank===null?'unknown':`rank ${main.rank}`}${gapTicks===null?'; model gap unknown':`; ${gapTicks} ticks to launch margin`}`]),'Specialist target scope and priced winning margins need proof',...(quests.remaining.length?[`Quests ${quests.complete}/${quests.total}: ${quests.remaining.join(', ')}`]:quests.total?[]:['Implemented quest target list unavailable']),'Full useful-item and best-in-slot collection scope unknown',...(missing.length?[`Named supply lines ${collection.held}/${collection.targets} covered`]:[]),...(army.roster.length?[`Army ${army.maxed}/${army.roster.length} maxed; ${army.missingLevels} target levels unverified or missing`]:['Army roster unknown or empty']),'Credited player kills unknown','Wilderness control unknown'];
+ const remaining=[...(main.rank1===true?[]:[`Overall rank 1 ${main.rank===null?'unknown':`rank ${main.rank}`}${gapTicks===null?'; model gap unknown':`; ${gapTicks} ticks to launch margin`}`]),'Specialist target scope and priced winning margins need proof',...(quests.remaining.length?[`Quests ${quests.complete}/${quests.total}: ${quests.remaining.join(', ')}`]:quests.total?[]:['Implemented quest target list unavailable']),'Full useful-item and best-in-slot collection scope unknown',...(missing.length?[`Named supply lines ${collection.held}/${collection.targets} covered`]:[]),...(army.roster.length?[`Army ${army.maxed}/${army.roster.length} maxed; ${army.missingLevels} target levels unverified or missing`]:['Army roster unknown or empty']),...(army.creditedKills===null?['Credited player kills unknown']:[]),'Wilderness control unknown'];
  return{version:1,at:now,main,specialists:{targets,rank1s,scopeKnown:false,evidence:specialistEvidence},quests,collection,army,metrics,remaining,done:false};
 }

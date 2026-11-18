@@ -7,7 +7,7 @@
 // be kits joined by `+` (tribrid-snare-spear+tribrid-snare), taken in turn by its members.
 // Prints one `TEAM <json>` line for each group and one RESULT: wins (side A left standing), losses, draws.
 import type { Session } from '../packages/core/src/inprocess';
-import { fightPlayer, nextTick, observePlayer, wildernessLevel, type FightOptions } from './pk';
+import { fightPlayer, nextTick, observePlayer, recordKillLoot, wildernessLevel, type FightOptions } from './pk';
 import { TRIBRID_KIT } from './pk-hunt';
 import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
@@ -84,7 +84,11 @@ export async function team(a: readonly Session[], b: readonly Session[], options
             // `pickup`: after its kill the account takes the wanted stacks within `pickupRadius` tiles (SPAR_PICKUP_RADIUS,
             // default 3; scripts/pk-gang.ts pickUp). It runs on after the meeting ends: the last kill ends it.
             // A dead target counts as a kill too: the loop can stop on its death before the kill message comes.
-            if ((r.outcome === 'kill' || dead(pick.f, lives.get(pick.f))) && pickup && key === 'a') for (const [id, n] of Object.entries(await pickUp(s, pickup, { radius: pickupRadius, maxTicks: 30, wait: 6, stop: () => over || halt() }))) picked[id] = (picked[id] ?? 0) + n;
+            if ((r.outcome === 'kill' || dead(pick.f, lives.get(pick.f))) && pickup && key === 'a') {
+                const got = await pickUp(s, pickup, { radius: pickupRadius, maxTicks: 30, wait: 6, stop: () => over || halt() });
+                recordKillLoot(r, got);
+                for (const [id, n] of Object.entries(got)) picked[id] = (picked[id] ?? 0) + n;
+            }
             attacks[key] += r.attacks.magic + r.attacks.ranged + r.attacks.melee;
             if (r.outcome === 'died' || r.outcome === 'escaped' || r.outcome === 'session ended') return;
             if (!await nextTick(s)) return;

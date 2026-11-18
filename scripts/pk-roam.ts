@@ -21,7 +21,7 @@ import { tradePartners } from '../packages/core/src/tradeguard';
 import { readOpponent, readOpponents } from '../packages/core/src/opponent';
 import { componentId } from '../packages/core/src/logout';
 import { MARKET_FILE, marketQuotes } from './market-cache';
-import { bestFood, castableFreeze, dangerReason, defaultSpec, estMaxHit, fightPlayer, freezeSpell, getObjNames, isMulti, observePlayer, type FightOptions, type Kit } from './pk';
+import { bestFood, castableFreeze, dangerReason, defaultSpec, estMaxHit, fightPlayer, freezeSpell, getObjNames, isMulti, observePlayer, packGain, recordKillLoot, type FightOptions, type Kit } from './pk';
 export { castableFreeze, freezeSpell };
 import { armourDefence } from './pk-read';
 
@@ -794,7 +794,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                     stats.kills++;
                     const at = fight.targetAt ?? lastTile;
                     await sdk.waitForTicks(4);
-                    if (cfg.loot && at) await loot(at);
+                    if (cfg.loot && at) { const pack = sdk.getInventory().map(i => ({ id: i.id, count: i.count })); await loot(at); recordKillLoot(fight, packGain(pack, sdk.getInventory())); }
                     return "kill";
                 }
                 if (fight.outcome === "died") { stats.deaths++; return "dead"; }

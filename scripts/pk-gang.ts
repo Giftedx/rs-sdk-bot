@@ -15,7 +15,7 @@ import { join, resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { lootCapacity } from '../packages/core/src/loot-policy';
 import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
-import { fightPlayer, ITEMS, nextTick, observePlayer, wildernessLevel, type FightOptions, type FightResult, type Kit } from './pk';
+import { fightPlayer, ITEMS, nextTick, observePlayer, recordKillLoot, wildernessLevel, type FightOptions, type FightResult, type Kit } from './pk';
 import { BOOST_POTIONS, EDGEVILLE_BANK, FOOD_LIST, healOf, hitByPlayer, restock, TRIBRID_KIT, type TripItem } from './pk-hunt';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { kitOptions, kitSwitches } from './pk-kits';
@@ -248,7 +248,11 @@ export async function gang(a: Session, others: readonly Session[], optionsA: Fig
         // An attack click on an account that died can walk ours toward its respawn point: after a kill, back to the
         // meeting tile from more than 6 tiles.
         // `pickup`: the stacks that the kill left within 3 tiles, before the walk back.
-        if (r.outcome === 'kill' && more.pickup) for (const [id, n] of Object.entries(await pickUp(a, more.pickup, { radius: 3, maxTicks: 16, wait: 6, stop: halt }))) picked[id] = (picked[id] ?? 0) + n;
+        if (r.outcome === 'kill' && more.pickup) {
+            const got = await pickUp(a, more.pickup, { radius: 3, maxTicks: 16, wait: 6, stop: halt });
+            recordKillLoot(r, got);
+            for (const [id, n] of Object.entries(got)) picked[id] = (picked[id] ?? 0) + n;
+        }
         const here = self();
         if (here && spot && r.outcome === 'kill' && Math.max(Math.abs(here.worldX - spot.x), Math.abs(here.worldZ - spot.z)) > 6) void a.sdk.sendWalk(spot.x, spot.z);
         // The next choice leaves out each account that the game refused, until one attack goes through.

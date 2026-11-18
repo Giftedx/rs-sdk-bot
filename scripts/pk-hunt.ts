@@ -15,7 +15,7 @@ import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadOwners } from '../packages/core/src/fleet';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
+import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, packGain, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
 import { armourDefence } from './pk-read';
 import { assessWildernessThreat, hasVarrockTeleport, itemCost, planWildernessEscape, slashWebThrough, wildernessCombatMargin, wildernessDepth } from './pk-roam';
 import { nativeRequirementMetadata, resolveItemRequirements, type ItemCount, type ItemRequirement, type RequirementResolution } from '../packages/core/src/item-requirements';
@@ -402,7 +402,9 @@ export async function hunt(s: Session, o: HuntOptions) {
             });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
             if (r.outcome === 'kill') {
-                tally.kills++; const n = await loot(s, r.targetAt ?? target, over); tally.looted += n;
+                tally.kills++; const pack = s.sdk.getInventory().map(i => ({ id: i.id, count: i.count }));
+                const n = await loot(s, r.targetAt ?? target, over); tally.looted += n;
+                recordKillLoot(r, packGain(pack, s.sdk.getInventory()));
                 log(`HUNT looted ${n} piles at ${JSON.stringify(r.targetAt ?? target)}`);
             }
             // A danger exit (no food, two attackers) leaves the fight but not the place: the escape (glory, teleport or a

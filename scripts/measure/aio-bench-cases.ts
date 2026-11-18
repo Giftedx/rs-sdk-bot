@@ -236,11 +236,17 @@ const gangCase = (key: string, kit: string, gangKit: string, groups: number, at:
 // `food`: the sharks of each of ours at the start (the kit's own count by default), with EDGE_BANK_SNARE in its bank: a
 // low count sends it to the bank and back mid-meeting. `foodId`: the food item in place of each shark of the kit
 // (379 is the lobster, which heals 12 where the shark heals 20).
+// Each kill of a run has one kill receipt on the disk, and a practice engine gives practice receipts only
+// (packages/core/src/kill-receipt.ts killReceiptProof): `kills=N` and `killReceipts=N` of the RESULT line agree.
+export const killReceiptsMatch = (s: string) => {
+  const m = s.match(/^RESULT .*kills=(d+) killReceipts=(d+) receiptDomain=(w+)/m);
+  return !!m && m[1] === m[2] && m[3] === (m[1] === '0' ? 'none' : 'practice');
+};
 const squadCase = (key: string, kit: string, gangKit: string, n: number, args: string[] = [], food?: number, start = {x: 3066, z: 3641}, foodId = 385): BenchCase => {
   const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, n + 2).split('');
   const ours = (x: number, z: number): SaveConfig => { const c = kitFixture(kit, x, z), pack = (count: number) => [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: count}, () => ({id: foodId, count: 1}))];
     return food !== undefined ? {...c, bank: [...EDGE_BANK_SNARE, {id: 884, count: 2000}], inventory: pack(food)} : foodId === 385 ? c : {...c, inventory: pack(c.inventory!.filter(i => i.id === 385).length)}; };
-  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: ok, presetConfig: ours(start.x + 1, start.z - 1), output: /kills=(\d+)/,
+  return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: s => ok(s) && killReceiptsMatch(s), presetConfig: ours(start.x + 1, start.z - 1), output: /kills=(\d+)/,
     scriptArgs: ['squad', ...letters.map(l => `{bot:${l}}`), 'SQUAD_GANG=3', 'MAX_MINUTES=6', 'STALL_TICKS=3000', ...args],
     companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < n - 1 ? ours(start.x + (i % 3), start.z) : kitFixture(gangKit, 3078, 3640)}))};
 };
@@ -602,7 +608,12 @@ const ROUTE_CASES: BenchCase[] = [
   // of the run with no food that stands on its tile and hits back by auto-retaliate. Each passes on a kill.
   // fight: scripts/pk.ts with its own kit (staff, bow, dagger(p) and kiteshield: sparFixture) at Wilderness level 3.
   {key: 'pvp:fight', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}', 'fight', '{targets}', '600'],
-    pass: s => ok(s) && /"outcome":"kill"/.test(s), presetConfig: sparFixture(3094, 3540), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3096, 3540, {food: 0})}]},
+    pass: s => ok(s) && /"outcome":"kill"/.test(s) && /\bkill killReceipts=1 receiptDomain=practice\b/.test(s), presetConfig: sparFixture(3094, 3540), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3096, 3540, {food: 0})}]},
+  // The same fight with the world feed of the engine on (KILL_FEED=1, scripts/pk-kill-feed.ts): the receipt of the kill
+  // holds the feed's death of the target.
+  {key: 'extra:fight-kill-feed', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'fight', '{targets}', '600', 'KILL_FEED=1'],
+    pass: s => ok(s) && /\bkill killReceipts=1 receiptDomain=practice feedMatched=1\b/.test(s), presetConfig: sparFixture(3094, 3540), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3096, 3540, {food: 0})}]},
   // hunt: scripts/pk-hunt.ts from the Edgeville bank with an empty pack and the staff trip in the bank; the target
   // stands at the first hunt spot.
   {key: 'pvp:hunt', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge', scriptArgs: ['{bot:b}', 'hunt', '900'],
