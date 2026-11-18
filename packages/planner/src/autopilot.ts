@@ -584,7 +584,7 @@ function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
     }
     // The gang squad's stock targets, after every kit line: a row has no coin budget, so it never takes coins that a
     // member's own kit buy or a route purchase needs, and it never counts toward their funding.
-    for (const row of squadRows(inp.squad)) needs.push({ names: row.names, short: row.short, consumer: row.consumer, account: row.account });
+    for (const row of squadRows(inp.squad, item => inp.prices[item] ?? inp.market?.[item]?.limit, SQUAD_UNIT_COST)) needs.push({ names: row.names, short: row.short, consumer: row.consumer, account: row.account });
     return needs;
 }
 
@@ -659,7 +659,9 @@ export function plan(inp: Inputs): Assignment[] {
     if (squadNames.size) inp = { ...inp, stock: (inp.stock ?? []).filter(s => !squadNames.has(s.name.toLowerCase())), donors: (inp.donors ?? []).filter(d => !squadNames.has(d.name.toLowerCase())) };
     const byId = new Map(inp.templates.map(t => [t.id, t]));
     const mine = inp.accounts.filter(a => (inp.owners.get(a.name.toLowerCase())?.side ?? 'local') === inp.side && a.side === inp.side);
-    const demand = goalNeeds(inp, mine), fed = new Map<string, number>();
+    // An active squad's members take no band, kit buy or supply job: they are held for the squad's staging, and only its restock
+    // (below) gives them anything.
+    const demand = goalNeeds(inp, mine.filter(a => !squadNames.has(a.name.toLowerCase()))), fed = new Map<string, number>();
     const values = { ...inp, coinValue: 1, bill: demand.map(d => ({ item: d.names[0]!, aliases: d.names.slice(1), short: d.short, need: d.short, owned: 0, ids: [], holders: [] })) };
     const localByName = new Map(mine.map(a => [a.name.toLowerCase(), a]));
     const earnedCoins = new Map<string, number>();
@@ -816,6 +818,7 @@ export function plan(inp: Inputs): Assignment[] {
     const miss = (a: Acct, template: Template, gate: Miss['gate']) => { const list = misses.get(a.name); if (list) list.push({ template, gate }); else misses.set(a.name, [{ template, gate }]); };
     for (const a of mine) for (const listed of inp.templates) {
         if (listed.squadOnly && !inp.squad?.active) continue;
+        if (squadNames.has(a.name.toLowerCase())) continue;
         const band = buildBand(listed, a, inp.builds?.get(a.name.toLowerCase()), inp.buildQuests?.get(a.name.toLowerCase()), inp.buildBefore?.get(a.name.toLowerCase()));
         if (!band) continue;
         if (inp.retired?.has(pairKey(a.name, band.id))) { miss(a, band, 'retired'); continue; }
@@ -908,7 +911,7 @@ export function plan(inp: Inputs): Assignment[] {
     // Progressive weapon & armour kit buys precede combat bands. Owned stock can supply them without a market quote.
     for (const a of mine) {
         const lower = a.name.toLowerCase();
-        if (!inp.army?.has(lower)) continue;
+        if (!inp.army?.has(lower) || squadNames.has(lower)) continue;
         const wStage = weaponStageFor(a, inp);
         if (wStage) {
             const template: Template = { id: wStage.id, item: wStage.item, attack: 30, goal: wStage.goal, family: 'kit-buy', script: KIT_BUY_SCRIPT, role: 'supply', yields: () => [], kitFirst: true, needs: { items: { [wStage.item]: 1 } } } as Template & { item: string; attack: number };
@@ -1120,7 +1123,7 @@ export function plan(inp: Inputs): Assignment[] {
     // The gang squad's restock, after every kit order: a free donor of this side sends a member that is short a line it
     // holds above its own reserve, one order for a member in a pass. The member must be a plannable, offline account
     // that no kit order or job took; a member that runs a hand job is restocked when it is free.
-    if (inp.squad?.active) for (const row of squadRows(inp.squad)) {
+    if (inp.squad?.active) for (const row of squadRows(inp.squad, item => inp.prices[item] ?? inp.market?.[item]?.limit, SQUAD_UNIT_COST)) {
         const member = byName.get([...byName.keys()].find(n => n.toLowerCase() === row.account) ?? '');
         if (!member || done.has(member.name) || gave.has(member.name) || gaveItems.has(member.name) || vacated.has(member.name) || inp.unfundable?.has(row.account)) continue;
         const cost = (p: Acct | undefined) => cachedWayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true);
@@ -1811,11 +1814,12 @@ export function aioTemplates(): Template[] {
 // supplier's holding plus that demand, STOP_AT_TARGET ends the run there) and spends at most twice the shop cost of it
 // (MAX_SPEND, with FLOAT and COIN_RESERVE). A template is `squadOnly`: it is a candidate only while the plan's squad is
 // active, so a plan with no squad block never values it. Lines that already have a template: earth and air runes
-// (shop-runes), lobsters (lobster-chain). No template: sharks, since no script fishes them. Antipoison(3): the Jiminua
-// shelf gave 1 unit in about 650 ticks against rivals, so this run is a fallback with a small cap, and a maker
-// (Herblore) takes the line by yielding `antipoison(3)`.
+// (shop-runes), lobsters (lobster-chain). No template: sharks, since no script fishes them. Antipoison(3): a nearly empty
+// Jiminua shelf cannot feed the squad, so this run is a fallback with a small cap, and a maker (Herblore) takes the line
+// by yielding `antipoison(3)`.
 export const SQUAD_RUN_MAX: Readonly<Record<string, number>> = { 'iron arrow': 2000, 'water rune': 1500, 'nature rune': 1000, 'law rune': 200, 'antipoison(3)': 12 };
-// The shop cost of one unit (knowledge/items.json) that sizes the spend cap of a run.
+// The shop cost of one unit (knowledge/items.json), the fallback of a run's spend cap: the rows are priced from the plan's
+// price table (`prices`, from priceTable) when it holds the item.
 export const SQUAD_UNIT_COST: Readonly<Record<string, number>> = { 'iron arrow': 3, 'water rune': 4, 'nature rune': 20, 'law rune': 40, 'antipoison(3)': 288 };
 export function squadSupplies(): Template[] {
     const shop = (id: string, profile: string, item: string, items: string, perTick: number, goal: string, needs: Needs): Template => {

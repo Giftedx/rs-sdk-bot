@@ -8,7 +8,7 @@ import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { BONE_XP } from './train-prayer';
 import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, startable, supervisorCommand } from './swarm';
 import { supervise } from '../packages/practice/src/supervise';
-import { jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { squadInput, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import { FOLLOWED_RETRY_MS, GEAR_ASK_LIMIT, GEAR_ASK_MARGIN, UNSOLD_RETRY_MS, gearLimit } from './autopilot';
 import { KIT_PRICE_CAPS } from '../packages/planner/src/autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
@@ -1207,4 +1207,15 @@ test('the squad shop templates select their profile line with the real selectIte
     }
     const potion = catalogue().find(t => t.id === 'squad-antipoison-jiminua')!;
     expect(selectItems(PROFILES.jiminua!.items, potion.env!.ITEMS).map(i => i.re.source)).toEqual([/^antipoison\(3\)$/i.source]);
+});
+
+test('squadInput holds a member that runs outside the swarm or has no observation, and reads maxCoins', () => {
+    const owners = new Map([['a', { side: 'local', server: 's' }], ['b', { side: 'local', server: 's' }], ['c', { side: 'local', server: 's' }], ['d', { side: 'cloud', server: 's' }]]);
+    const plan = { squad: { active: true, members: ['A', 'B', 'C', 'D'], hours: 4, maxCoins: 5000 } };
+    const items = (n: string) => n === 'C' ? undefined : { shark: 1 };
+    const got = squadInput(plan, 'local', owners as any, items, n => n === 'B');
+    expect(got?.members.map(m => m.name)).toEqual(['A']);
+    expect(got?.maxCoins).toBe(5000);
+    expect(squadInput({ squad: { active: false, members: ['A'] } }, 'local', owners as any, items)).toBeUndefined();
+    expect(squadInput({}, 'local', owners as any, items)).toBeUndefined();
 });

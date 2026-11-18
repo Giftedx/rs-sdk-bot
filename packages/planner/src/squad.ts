@@ -17,16 +17,19 @@ export const SQUAD_FOOD_HEAL: Readonly<Record<string, number>> = { shark: 20, sw
 export const SQUAD_FOOD = Object.keys(SQUAD_FOOD_HEAL);
 
 export type SquadBlock = { active?: unknown; members?: unknown; hours?: unknown };
-export type SquadInput = { active: boolean; hours: number; members: readonly { name: string; items: Readonly<Record<string, number>> }[] };
+// `maxCoins`: the most the rows ask in coins at the shop price; the rows that would pass it are left out, the first lines first.
+export const SQUAD_MAX_COINS = 320_000;
+export type SquadInput = { active: boolean; hours: number; maxCoins?: number; members: readonly { name: string; items: Readonly<Record<string, number>> }[] };
 export type SquadRow = { account: string; names: string[]; short: number; target: number; consumer: string };
 
 // The squad block of a swarm plan, or an inactive squad: the members are names of the account list, the hours a whole
 // number from 1 to 24 (default SQUAD_HOURS).
-export function squadBlock(plan: unknown): { active: boolean; hours: number; members: string[] } {
+export function squadBlock(plan: unknown): { active: boolean; hours: number; members: string[]; maxCoins: number } {
     const b = (plan as { squad?: SquadBlock } | null | undefined)?.squad;
     const members = Array.isArray(b?.members) ? b.members.filter((n): n is string => typeof n === 'string' && /^[A-Za-z0-9]{1,12}$/.test(n)) : [];
     const hours = typeof b?.hours === 'number' && Number.isSafeInteger(b.hours) && b.hours >= 1 && b.hours <= 24 ? b.hours : SQUAD_HOURS;
-    return { active: b?.active === true && members.length > 0, hours, members };
+    const maxCoins = typeof (b as { maxCoins?: unknown } | undefined)?.maxCoins === 'number' && Number.isSafeInteger((b as { maxCoins: number }).maxCoins) && (b as { maxCoins: number }).maxCoins >= 0 ? (b as { maxCoins: number }).maxCoins : SQUAD_MAX_COINS;
+    return { active: b?.active === true && members.length > 0, hours, members, maxCoins };
 }
 
 // The stock target of a line for one member: the middle of the hourly range, a share of a squad hour of SQUAD_SIZE
@@ -50,18 +53,28 @@ export function squadKeeps(hours: number): Record<string, number> {
     return keeps;
 }
 
-// The demand rows of an active squad: each line a member holds fewer of than its target, and each escape item it lacks.
-export function squadRows(squad: SquadInput | undefined): SquadRow[] {
+// The demand rows of an active squad: each line a member holds fewer of than its target, and each escape item it lacks. Food
+// is sized in lobsters (the fleet's food: 20/12 of a shark unit each), so the lobster chain sees the whole food demand. The
+// rows are priced with `price` (the plan's price table; a missing price falls back to SQUAD_UNIT_COST of the supply table or
+// 150 for food) and kept in line order while they fit `maxCoins`.
+const FOOD_UNIT_COINS = 150;
+export function squadRows(squad: SquadInput | undefined, price: (item: string) => number | undefined = () => undefined, unitCost: Readonly<Record<string, number>> = {}): SquadRow[] {
     if (!squad?.active) return [];
     const rows: SquadRow[] = [];
+    let budget = squad.maxCoins ?? SQUAD_MAX_COINS;
     for (const m of squad.members) {
         const lines: [string, string[], number][] = [
             ...Object.keys(SQUAD_HOURLY).map(item => [item, item === 'food' ? SQUAD_FOOD : [item], squadTarget(item, squad.hours)] as [string, string[], number]),
             ...Object.entries(SQUAD_ESCAPE).map(([item, n]) => [item, [item], n] as [string, string[], number]),
         ];
         for (const [item, names, target] of lines) {
-            const short = Math.max(0, Math.ceil(target - squadHeld(item, m.items)));
-            if (short > 0) rows.push({ account: m.name.toLowerCase(), names, short, target, consumer: `gang squad ${m.name}: ${item}` });
+            const units = Math.max(0, Math.ceil(target - squadHeld(item, m.items)));
+            if (units <= 0) continue;
+            const short = item === 'food' ? Math.ceil(units * SQUAD_FOOD_HEAL.shark! / SQUAD_FOOD_HEAL.lobster!) : units;
+            const coins = short * (price(item === 'food' ? 'lobster' : item) ?? unitCost[item] ?? (item === 'food' ? FOOD_UNIT_COINS : 0));
+            if (coins > budget) continue;
+            budget -= coins;
+            rows.push({ account: m.name.toLowerCase(), names, short, target, consumer: `gang squad ${m.name}: ${item}` });
         }
     }
     return rows;
