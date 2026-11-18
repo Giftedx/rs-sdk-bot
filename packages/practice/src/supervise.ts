@@ -56,7 +56,7 @@ export function isPrerequisiteFailure(result: string): boolean {
     return result.startsWith('RESULT fail Fire-pilot ')
         || result.includes('Rune Mysteries quest required: Aubury refused teleport')
         || result.includes('Rune Mysteries prerequisite:')
-        || /\b(?:cow prerequisite:|cow kit equip failed (?:1277|1171):|oak PREPARE requires known Draynor bank start\b|cow needs positive CAP and MAX_KILLS1\.\.5\b|oak needs CAP>0 and MAX_MAKE1\.\.25\b|TRAIN_SKILL must be Attack, Strength or Defence\b|TARGET_LEVEL must be1\.\.99\b|missing shears\b|low HP during tool bootstrap\b|worker ended or cap\b)/.test(result);
+        || /\b(?:cow prerequisite:|cow kit(?: equip failed \d+:| withdraw failed \d+\b|: replaced gear deposit failed \(\d+\))|oak PREPARE requires known Draynor bank start\b|cow needs positive CAP and MAX_KILLS1\.\.5\b|oak needs CAP>0 and MAX_MAKE1\.\.25\b|TRAIN_SKILL must be Attack, Strength or Defence\b|TARGET_LEVEL must be1\.\.99\b|missing shears\b|low HP during tool bootstrap\b|worker ended or cap\b)/.test(result);
 }
 
 // A TickStallError (packages/core/src/tick-stream.ts) is the game connection going quiet, the same loss as a

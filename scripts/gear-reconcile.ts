@@ -133,8 +133,16 @@ function printWants(wants:readonly GearWant[]){
 /** True once for each observation in which a skill of the kind passed an unlock level (gearUnlockLevels). */
 export function gearLevelWatch(s:Pick<Session,'sdk'>,kind:GearUnlockKind,skills:readonly string[]=STYLE_SKILLS[kind]){
     const read=()=>readSkillLevels(n=>s.sdk.getSkill(n));
-    let previous=read();
-    return{crossed(){const now=read(),hit=crossedTierBoundary(previous,now,skills,kind);previous=now;return hit;}};
+    // readSkillLevels falls back to level 1 for a skill that is not synced yet. A baseline or a reading taken then
+    // would show the real level as a crossing, so the watch takes its baseline once every watched skill is read.
+    const synced=()=>skills.every(n=>!!s.sdk.getSkill(n.charAt(0).toUpperCase()+n.slice(1)));
+    let previous=synced()?read():undefined;
+    return{crossed(){
+        if(!synced())return false;
+        const now=read();
+        if(!previous){previous=now;return false;}
+        const hit=crossedTierBoundary(previous,now,skills,kind);previous=now;return hit;
+    }};
 }
 
 export async function reconcileLoadout(s:Session,o:ReconcileOptions):Promise<ReconcileResult>{
@@ -173,9 +181,11 @@ export async function reconcileLoadout(s:Session,o:ReconcileOptions):Promise<Rec
         if(!seen||wornCount(t)<=before)return fail(`${label} equip failed ${t.id}: ${result.message??'no SDK message'}; equipped item not observed`);
         worn.push(t.id);return true;
     };
-    const wear=async(targets:readonly GearTarget[])=>{
+    // `later`: more passes follow, so an item that is not in the pack yet waits for the next pass.
+    const wear=async(targets:readonly GearTarget[],later=false)=>{
         for(const t of targets){
             if(stop())return;
+            if(later&&wornCount(t)<1&&held(t.id)<1)continue;
             // A stack is topped up from the pack; any other item is done once it is worn.
             if(t.stack?held(t.id)<1:wornCount(t)>0)continue;
             await equip(t);
@@ -222,7 +232,7 @@ export async function reconcileLoadout(s:Session,o:ReconcileOptions):Promise<Rec
             if(!needWear&&!more)break;
             await closeBank();
             if(stop())break;
-            await wear(chosen.targets);
+            await wear(chosen.targets,more);
             const replaced=[...new Set(before)].filter(id=>!eq().some(i=>i.id===id)&&held(id)>0);
             if(!replaced.length&&!more)break;
             await openBank();
@@ -236,6 +246,8 @@ export async function reconcileLoadout(s:Session,o:ReconcileOptions):Promise<Rec
             }
             if(!more)break;
         }
+        // Items that no pass could bring into the pack are a failure now.
+        for(const t of chosen.targets)if(!t.stack&&!stop()&&!owns(t))fail(`${label} equip failed ${t.id}: no held item and not equipped`);
         if(state()?.bank?.isOpen&&!o.leaveBankOpen)await closeBank();
         else if(!state()?.bank?.isOpen&&o.leaveBankOpen&&!stop())await openBank();
     }else{
