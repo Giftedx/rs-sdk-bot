@@ -56,6 +56,19 @@ function parseClaim(raw: string, account: string, server?: string): FleetAccount
     return claim;
 }
 
+// Fetches the claim records that this checkout does not hold yet. A record is a commit, and a commit id names its
+// content, so a head that is here needs no fetch: a local check of every head costs one local command, a fetch of all
+// of them one network round trip each time. A failed check fetches every head, as before.
+function fetchMissingHeads(git: ReturnType<typeof gitForTrade>, heads: readonly string[]): void {
+    let missing: readonly string[] = heads;
+    try {
+        const present = new Set(git(['cat-file', '--batch-check=%(objectname) %(objecttype)'], heads.join('\n') + '\n').split(/\r?\n/)
+            .flatMap(line => { const [sha, type] = line.trim().split(' '); return sha && type === 'commit' ? [sha] : []; }));
+        missing = heads.filter(head => !present.has(head));
+    } catch { /* fetch every head */ }
+    if (missing.length) git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', ...missing]);
+}
+
 function loadClaim(git: ReturnType<typeof gitForTrade>, account: string, server: string) {
     // The owner registry names accounts globally. Keep one ref for that identity,
     // including when stale callers disagree on its server or side.
@@ -87,7 +100,7 @@ export function readHeldFleetTradeClaims(root: string, accounts?: readonly strin
         throw Error('fleet trade claim authority has an invalid account ref');
     }
     const heads = [...pending.keys()];
-    git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', ...heads]);
+    fetchMissingHeads(git, heads);
     const rows = git(['show', '-s', '--format=%H%x00%b%x00', ...heads]).split('\0');
     const held: FleetTradeClaim[] = [];
     while (rows.length > 1) {
@@ -107,10 +120,17 @@ export function readAllFleetAccountClaims(git: ReturnType<typeof fleetGitWindow>
     const refs = readFleetGitRefs(git, [CLAIM_PREFIX + '*']), out = new Map<string, FleetAccountClaim | null>();
     const heads = [...refs].filter(([ref]) => ACCOUNT.test(ref.slice(CLAIM_PREFIX.length)));
     if (!heads.length) return out;
-    git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', ...heads.map(([, sha]) => sha)]);
+    fetchMissingHeads(git, heads.map(([, sha]) => sha));
+    // One command reads every record (a command for each account took seconds under load). A record that the batch did
+    // not return, or that fails to parse, maps to null as before; a failed batch reads each record on its own.
+    const bodies = new Map<string, string>();
+    try {
+        const rows = git(['show', '-s', '--format=%H%x00%b%x00', ...heads.map(([, sha]) => sha)]).split('\0');
+        while (rows.length > 1) { const head = rows.shift()!.trim(), raw = rows.shift()!; bodies.set(head, raw); }
+    } catch { bodies.clear(); }
     for (const [ref, sha] of heads) {
         const account = ref.slice(CLAIM_PREFIX.length);
-        try { out.set(account, parseClaim(git(['show', '-s', '--format=%b', sha]), account)); } catch { out.set(account, null); }
+        try { out.set(account, parseClaim(bodies.get(sha) ?? git(['show', '-s', '--format=%b', sha]), account)); } catch { out.set(account, null); }
     }
     return out;
 }
