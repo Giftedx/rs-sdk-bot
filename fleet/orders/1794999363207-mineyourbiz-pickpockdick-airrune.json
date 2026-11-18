@@ -1,0 +1,22 @@
+{
+ "id": "1794999363207-mineyourbiz-pickpockdick-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "PickpockDick",
+ "item": "Air rune",
+ "count": 30,
+ "start": 1794999363207,
+ "end": 1795001763207,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
