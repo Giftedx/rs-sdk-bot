@@ -1891,6 +1891,20 @@ test('Combat preview: the max hit now, from the attack style and the Strength pr
  expect(t.equipStats(account({style:{currentStyle:1,styles},prayers:prayers([10])}))).toContain('Melee 23 · aggressive +3');
 });
 
+test('inMulti is false until the multi-way lines load, then counts the lines east of the point',()=>{
+ const line=shell.split('\n').find(l=>l.trimStart().startsWith('const inMulti='))!;
+ const make=(multiLines:unknown)=>new Function('multiLines',`${line};return inMulti;`)(multiLines) as (p:unknown)=>boolean;
+ const at={x:3100,z:3600,level:0};
+ // The page starts with `multiLines=null`; the HUD asks before the data file arrives.
+ expect(make(null)(at)).toBe(false);
+ expect(make([])(at)).toBe(false);
+ expect(make([[3200,3500,3200,3700,0]])(null)).toBe(false);
+ // One vertical line east of the point, on its level and across its z: an odd count is inside.
+ expect(make([[3200,3500,3200,3700,0]])(at)).toBe(true);
+ expect(make([[3200,3500,3200,3700,0]])({...at,x:3300})).toBe(false);
+ expect(make([[3200,3500,3200,3700,1]])(at)).toBe(false);
+});
+
 test('Equipment Stats: worn bonuses, the server max hit, and teleport casts from the pack',()=>{
  const code=shell.slice(shell.indexOf("  // Equipment Stats (the game's"),shell.indexOf("  // Items kept on death (RuneLite's"));
  const t=new Function('asset','fetch','E','window',`${code};return {wornBonuses,maxHit,equipStats,teleCasts,set:(i,s)=>{itemBonusData=i;spellbookData=s;}};`)((n:string)=>n,()=>new Promise(()=>{}),String,{});
