@@ -34,6 +34,8 @@ import { tradeSettlement, validOrder, windowClosures, type Order, type Receipt, 
 import { readHeldFleetTradeClaims } from '../packages/core/src/fleet-trade-claim';
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { liveHelperStatuses, overallSupplyDemand, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
+import { gearById } from '../packages/planner/src/gear-progression';
+import { MARKET_FILE, marketQuotes } from './market-cache';
 import { tickWaste, wasteShare } from './tick-waste';
 import { kitSkills, levelsBeforeRoute } from './pk-kits';
 import { createAutopilotProgression } from './autopilot-progression';
@@ -193,13 +195,31 @@ export function silentSides(orders: readonly Order[], receipts: readonly Receipt
 // cap, not that the buy job is broken: the pair is not retired, and the item leaves the market for a day, so the next
 // pass buys the other lines and asks a donor for this one.
 export const UNSOLD_RETRY_MS = 24 * 3600_000;
-export function kitMarket(items: readonly { id: number; name?: string; debugname?: string }[], unsold: Readonly<Record<string, number>> = {}, now = Date.now()): Market {
+// A weapon, an armour piece or a tool is bought once and worn on every later tick, and a hand cap under every seller
+// leaves it unbought (live: rune platelegs asked 105,375 against a cap of 75,000, the buy ended "unsold" and the
+// account kept its kit; the rune chainbody asked 210,367 against 60,000). The limit of such an item follows the lowest ask of the market cache
+// (scripts/market-cache.ts, sellers observed), GEAR_ASK_MARGIN over it, while the ask is at most GEAR_ASK_LIMIT times
+// the item's shop value in the content (knowledge/gear.json `cost`). Over that bound the hand cap stands, and a shop,
+// a quest or a smith is the source. Arrows, runes and food keep their hand caps: they are bought in stacks, and their
+// caps bound a whole batch.
+export const GEAR_ASK_MARGIN = 1.05, GEAR_ASK_LIMIT = 5, FOLLOWED_RETRY_MS = 3600_000;
+export type Asks = Readonly<Record<number, { ask: number | null; sell: number }>>;
+export function gearLimit(id: number, cap: number, quote: Asks[number] | undefined): number {
+    const gear = gearById(id), ask = quote && quote.sell > 0 ? quote.ask : null;
+    if (!gear || gear.slot === 'quiver' || !ask || ask <= cap || ask > GEAR_ASK_LIMIT * gear.cost) return cap;
+    return Math.ceil(ask * GEAR_ASK_MARGIN);
+}
+// An item whose limit follows a seller comes back FOLLOWED_RETRY_MS after a buy that got none: the failed offer was
+// at the hand cap, or the seller left, and the next read of the market shows which.
+export function kitMarket(items: readonly { id: number; name?: string; debugname?: string }[], unsold: Readonly<Record<string, number>> = {}, now = Date.now(), asks: Asks = {}): Market {
     const market: Record<string, { id: number; name: string; limit: number }> = {};
     for (const i of items) if (typeof i.name === 'string' && Number.isSafeInteger(i.id) && !/^cert_/.test(i.debugname ?? '') && norm(i.name) in KIT_PRICE_CAPS && !(norm(i.name) in market)
         && (!(norm(i.name) in BOW_IDS) || BOW_IDS[norm(i.name)] === i.id)
-        && (!(norm(i.name) in ARMOUR_IDS) || ARMOUR_IDS[norm(i.name)] === i.id)
-        && !(now - (unsold[i.id] ?? -Infinity) < UNSOLD_RETRY_MS))
-        market[norm(i.name)] = { id: i.id, name: i.name, limit: KIT_PRICE_CAPS[norm(i.name)]! };
+        && (!(norm(i.name) in ARMOUR_IDS) || ARMOUR_IDS[norm(i.name)] === i.id)) {
+        const cap = KIT_PRICE_CAPS[norm(i.name)]!, limit = gearLimit(i.id, cap, asks[i.id]);
+        if (now - (unsold[i.id] ?? -Infinity) < (limit > cap ? FOLLOWED_RETRY_MS : UNSOLD_RETRY_MS)) continue;
+        market[norm(i.name)] = { id: i.id, name: i.name, limit };
+    }
     return market;
 }
 export function unfilledItems(lines: readonly string[]): number[] {
@@ -583,7 +603,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         if (other !== side && !silent.has(other) && !leaseStale(other)) stock.push(...sideStock(other, readJson(join(snapshotDir, f), null), readJson(join(fleetDir, 'plans', f), null), open, now, SIDE_STOCK_MAX_AGE_MS, id => byId.get(id),
             { owners, server: 'rs-sdk-demo.fly.dev', card: readJson(join(fleetDir, 'sides', f), null) }));
     }
-    const market = kitMarket(items, state.unsold, now);
+    const market = kitMarket(items, state.unsold, now, marketQuotes(readJson(join(root, MARKET_FILE), null), now));
     // Finite funding uses each recipient's own coins and accessible donor surplus.
     // Protected, paused and busy accounts do not supply a shared cash budget.
     // Coins fund finite route and army acquisition demand.
