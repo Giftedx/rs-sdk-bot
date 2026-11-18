@@ -1,0 +1,22 @@
+{
+ "id": "1795005815613-fatstack-ballspinner",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "Ballspinner",
+ "item": "coins",
+ "count": 38358,
+ "start": 1795005815613,
+ "end": 1795008215613,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
