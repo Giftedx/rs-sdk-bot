@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794998432758-swordinhand-woodpecker-bronzesword",
+ "account": "Woodpecker",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze sword",
+ "requested": 1,
+ "claim": "7ccb059a-81fe-4a34-b1d1-b86c12f332fa",
+ "count": 0,
+ "ok": false,
+ "at": 1794998467067,
+ "detail": "trade claimed"
+}
