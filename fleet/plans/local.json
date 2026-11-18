@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795029839207,
+ "at": 1795030028566,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -336,22 +336,32 @@
   },
   {
    "account": "mmtha0205",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "99",
-    "5000"
+    "ardy",
+    "400"
    ],
    "env": {
-    "ALCH_ITEM": "airrune"
+    "ITEMS": "bronze arrow",
+    "STOCK_TARGET": "500",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-air-magic-99",
+   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-ardy",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "shop:ardy"
+   ]
   },
   {
    "account": "mmthv2350",
@@ -470,8 +480,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Attack\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -518,7 +527,8 @@
     "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"556\":600}}"
    },
    "enabled": true,
    "standing": true,
@@ -620,7 +630,7 @@
     "BONE_ID": "532",
     "BONE_RESERVE": "6",
     "CAP": "4000",
-    "AUTOPILOT_ORDER": "22",
+    "AUTOPILOT_ORDER": "23",
     "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
    },
    "enabled": true,
