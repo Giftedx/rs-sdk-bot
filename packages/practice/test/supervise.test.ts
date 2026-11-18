@@ -233,6 +233,17 @@ test('a walker result with no route ends the session as blocked at the first run
     expect(runs).toBe(1);
 });
 
+test('a failure that ended on another tile is not the same failure', async () => {
+    const at = (position: string) => `RESULT fail Error: market bank travel failed: position=${position} currentHP=9 ticks=101; Error: far walk to 3185,3436,0: stopped`;
+    expect(failureShape(at('3035,3247,0'))).not.toBe(failureShape(at('3096,3414,0')));
+    expect(failureShape(at('3096,3414,0'))).toBe(failureShape(at('3096,3414,0').replace('currentHP=9', 'currentHP=8').replace('ticks=101', 'ticks=55')));
+    const brief = (result: string) => out(['LEDGER ticks=3 xp=0 inventory=0 move=0 anim=0 dialog=0 stun=0 idle=3 idlePct=100.0 ', result], 1);
+    const moved = ['3035,3247,0', '3096,3414,0', '3184,3436,0'];
+    let n = 0;
+    const end = await supervise({ run: () => brief(at(moved[Math.min(n++, 2)]!))(), stopped: () => false, pause: async () => {}, maxRestarts: 20 });
+    expect(end).toEqual({ reason: 'blocked', runs: 4 });
+});
+
 test('two runs in a row with the same failure and no work end as blocked; work, logins and stalls keep retrying', async () => {
     expect(failureShape('RESULT fail feathers=2000 gained=0 kills=0 idle=0 ticks=2')).toBe(failureShape('RESULT fail feathers=2000 gained=0 kills=0 idle=0 ticks=3'));
     const brief = (result: string) => out(['LEDGER ticks=3 xp=0 inventory=0 move=0 anim=0 dialog=0 stun=0 idle=3 idlePct=100.0 ', result], 1);
