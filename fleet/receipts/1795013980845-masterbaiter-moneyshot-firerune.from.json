@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795013980845-masterbaiter-moneyshot-firerune",
+ "account": "Masterbaiter",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 1,
+ "claim": "13e32433-216c-4d94-8060-351489e94ddc",
+ "count": 1,
+ "ok": true,
+ "at": 1795014067148,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795014056780
+ },
+ "logout": {
+  "attemptId": "1795014046311-0000019912-0000000001",
+  "at": 1795014067133,
+  "sha256": "765589a76576c622c78b9626cd3cff6b76861a6edbd47cb690d141166fddc1a9"
+ },
+ "screen": true
+}
