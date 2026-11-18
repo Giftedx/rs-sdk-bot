@@ -1755,10 +1755,10 @@
        }
       ],
       "ticks": {
-       "floor": 2543,
-       "realistic": 2660,
+       "floor": 2180,
+       "realistic": 2232,
        "evidence": "ESTIMATE",
-       "source": "our measured pack cycle times the packs, plus the rival air leg: body altar 44 -> 99 needs 194 packs of 27 essence (977,286 XP at 5,062.5 XP a pack); bench case extra:rune-carriers-body-44-56 (7 carriers, 6 packs from Runecraft 44, seeds 7, 8, 9) takes 12.8, 13.4, 13.2 ticks a pack after the first, which takes 9 or 10 (research/runecraft-ladder.md); floor 194 x 12.8, realistic 194 x 13.4, each plus 60 for air 1-44 (rival, bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S06); the model adds the walks and bank trips (via). Not measured: a run with banking and 22 carriers"
+       "source": "our measured pack cycle times the packs, plus the rival air leg: body altar 44 -> 99 needs 194 packs of 27 essence (977,286 XP at 5,062.5 XP a pack) and 55 level-ups; hosted CI lockstep, seeds 7, 8, 9: bench case extra:rune-carriers-body-44-56 (6 packs, about 12 level-ups) takes 12.6, 12.4, 12.6 ticks a pack after the first, and extra:rune-carriers-body-80-82 (8 packs, 2 level-ups) 11.0, 11.1, 10.6; a pack without a level-up takes 10.33 (best seed) to 10.6 (mean of the seeds) ticks and a level-up adds 2.1 (research/runecraft-ladder.md); floor 194 x 10.33 + 55 x 2.1, realistic 194 x 10.6 + 55 x 2.1, each plus 60 for air 1-44 (rival, bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S06); the model adds the walks and bank trips (via). Not measured: a run with banking and 22 carriers"
       },
       "via": [
        "nature-ruins"
@@ -1985,9 +1985,9 @@
      "set": {
       "ticks": {
        "floor": 2282,
-       "realistic": 2309,
+       "realistic": 2292,
        "evidence": "MEASURED",
-       "source": "MEASURED lockstep practice (bench case extra:fishing-lumbridge-fly-74-99, scripts/measure/fishing-bench-cases.ts; research/gathering-tricks.md): Fishing 74 (176,037 XP; Sea Slug lands 179,375 XP) -> 99 by the knife reset with one fish dropped in each cycle, 2,282 / 2,309 / 2,286 ticks at seeds 7, 8, 9 (562-565 catches, 358-362 XP/tick, 8-14 stands beside a moved spot). Floor = best seed, realistic = worst seed. The 150 ms wall-clock engine of scripts/measure/floor-fish.ts gives 2,356 / 2,305 / 2,377 (research/skill-rows-measured.md). Fly beats delayed lobster and harpoon at every level 74-99 (stat_random code-read: 347-416 vs 211-296 XP/tick at 3 ticks per roll). The flinch model fails (research/gathering-tricks.md)"
+       "source": "MEASURED lockstep practice (bench case extra:fishing-lumbridge-fly-74-99, scripts/measure/fishing-bench-cases.ts; research/gathering-tricks.md): Fishing 74 (176,037 XP; Sea Slug lands 179,375 XP) -> 99 by the knife reset with one fish dropped in each cycle, 2,282 / 2,309 / 2,286 ticks at seeds 7, 8, 9 (562-565 catches, 358-362 XP/tick, 8-14 stands beside a moved spot). Floor = best seed, realistic = mean of the three seeds (2,292), as in the other measured rows of this patch family. The 150 ms wall-clock engine of scripts/measure/floor-fish.ts gives 2,356 / 2,305 / 2,377 (research/skill-rows-measured.md). Fly beats delayed lobster and harpoon at every level 74-99 (stat_random code-read: 347-416 vs 211-296 XP/tick at 3 ticks per roll). The flinch model fails (research/gathering-tricks.md)"
       },
       "label": "3-tick fly fishing 74 -> 99 after Sea Slug (drop one fish in the knife tick)",
       "via": []

@@ -482,6 +482,9 @@ const ROUTE_CASES: BenchCase[] = [
   // Body altar, the row `runecraft` of the planner (Runecraft 44 to 99 on the record route): 7 carriers with one pack each, so 7
   // trades in a row from Runecraft 44 (7.5 XP an essence: a pack is 5,062 XP at the rate of 25), no bank trip.
   carrierCase('body', 44, 56, 7),
+  // The same trade at a high level: Runecraft 80 to 82 in 8 packs, about 2 level-ups in all (0.25 a pack, as from 56 to 99
+  // on this server's curve), against about 2 level-ups a pack in the window above.
+  carrierCase('body', 80, 82, 8),
   // Fire with 2 carriers and 27 more essence in each bank: 3 packs, so one carrier banks at Al Kharid and returns.
   carrierCase('fire', 14, 40, 2, [{id: 1436, count: 27}]),
   skiller('thieving', 'knights', 'goldfarm_knights', ['TICKS=1500'], {output: /coinsGained=(\d+)/}),
