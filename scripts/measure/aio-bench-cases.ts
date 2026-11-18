@@ -87,6 +87,17 @@ export const lostCityKeepsBuild = (s: string) => {
   const line = s.match(/^RESULT ok\b.*$/m)?.[0];
   return !!line && / milestones=\S*,6\b/.test(line) && / died=false /.test(line) && !/\b(attack|defence|ranged|magic|prayer)=\d/.test(line.match(/ xp=(\S*)/)?.[1] ?? 'attack=1');
 };
+// The pass rule of the end step case (extra:trooper-end-under-attack). `endLeft=true` in the result line is also the
+// answer for an account that stands on a safe tile already, so the rule reads the step's own log line too: the step
+// found ground to leave (`squares` over 0) and chose a tile that is not the tile of the account. The result line must
+// show a fight before the step, the open logout window after it, a distance of 1 tile or more, and the logout that
+// the server confirmed.
+export const combatEndLeft = (s: string): boolean => {
+  const result = /^RESULT (?:ok|fail) mode=combat-end-case .*endUnderAttack=true endLeft=true endQuiet=true endTiles=(\d+) .*logout=confirmed/m.exec(s);
+  if (!result || Number(result[1]) < 1 || !/^LOGOUT logged-out$/m.test(s)) return false;
+  const leaves = [...s.matchAll(/^COMBAT_END leave (\{.*\})/gm)].map(m => { try { return JSON.parse(m[1]!) as {at?: {x: number; z: number}; squares?: number; to?: {x: number; z: number} | null}; } catch { return null; } });
+  return leaves.some(l => !!l && !!l.at && !!l.to && (l.squares ?? 0) > 0 && (l.to.x !== l.at.x || l.to.z !== l.at.z));
+};
 const questSlug = (script: string) => script.replace('scripts/generated/', '').replace(/^quest-/, '').replace(/\.ts$/, '');
 
 // Every route the AIO catalog can dispatch. Owned-account quest runners are quester modes, not quest keys.
@@ -600,6 +611,14 @@ const ROUTE_CASES: BenchCase[] = [
     pass: s => ok(s) && /stop=target-level/.test(s) && !/handoff/i.test(s),
     presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 69, Strength: 61, Defence: 62, Hitpoints: 62, Ranged: 1, Prayer: 43},
       bank: [{id: 841, count: 1}, {id: 884, count: 600}, {id: 385, count: 30}]}},
+  // The end step of a combat worker (packages/core/src/combat-end.ts): a trooper run that ends on the battlefield while
+  // a trooper fights the account, because its walk back to the bank is refused (scripts/measure/combat-end-case.ts).
+  // Attack 1 and Strength 1 keep each fight going past the tick cap. The case passes when the end step took the account
+  // from its tile off the troopers' ground, the logout window opened and the server confirmed the logout (combatEndLeft).
+  {key: 'extra:trooper-end-under-attack', script: 'scripts/measure/combat-end-case.ts', preset: 'fresh_lumbridge', scriptArgs: ['260'],
+    pass: combatEndLeft,
+    presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 1, Strength: 1, Defence: 60, Hitpoints: 60},
+      bank: [{id: 1277, count: 1}, {id: 1171, count: 1}, {id: 333, count: 30}]}},
   {key: 'fighter:chompy', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['chompy', '1', '1', '1500'], pass: ok, timeoutMs: 900_000,
     presetConfig: {position: {x: 2614, z: 3093, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Prayer: 99}, varps: {293: 65},
       equipment: [{id: 1718, count: 1, slot: 2}, {id: 544, count: 1, slot: 4}, {id: 542, count: 1, slot: 7}],

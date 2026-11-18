@@ -35,12 +35,25 @@ export function parseHunter(npc: { id?: number; name: string; combat: number; sp
 export const CAGED: readonly Tile[] = [{ x: 3110, z: 3157, level: 2 }];
 const caged = (s: Tile) => CAGED.some(c => c.x === s.x && c.z === s.z && c.level === s.level);
 
-let hunters: Hunter[] | undefined;
+// How far from its spawn a monster of this kind still keeps a target: `keep` tiles in each direction. The engine ends
+// the fight of a monster whose target is farther than maxrange + 1 from the monster's spawn, or maxrange + attackrange
+// for a monster that attacks from a distance (engine Npc.ts, the OpTrigger and ApTrigger maxrange checks). maxrange is
+// wanderrange + 2 when the config sets none, and never under wanderrange (NpcType.ts).
+export type Roamer = { id: number; name: string; keep: number; spawns: Tile[] };
+export function parseRoamer(npc: { id?: number; name: string; spawns?: Tile[] }, block: string): Roamer | null {
+    if (npc.id === undefined || !npc.spawns?.length) return null;
+    const field = (k: string) => { const v = block.match(new RegExp(`^${k}=(.+)$`, 'm'))?.[1]?.trim(); return v === undefined ? undefined : Number(v); };
+    const wander = field('wanderrange') ?? 5, set = field('maxrange'), max = Math.max(wander, set === undefined || set < 0 ? wander + 2 : set);
+    return { id: npc.id, name: npc.name, keep: max + Math.max(1, field('attackrange') ?? 0), spawns: npc.spawns };
+}
+
+let hunters: Hunter[] | undefined, roamers: Map<number, Roamer> | undefined;
+export function loadRoamers(): ReadonlyMap<number, Roamer> { loadHunters(); return roamers!; }
 export function loadHunters(): Hunter[] {
     if (hunters) return hunters;
     const npcs = JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'npcs.json'), 'utf8')) as { id?: number; name: string; combat: number; src: string; spawns?: Tile[] }[];
     const files = new Map<string, string[]>();
-    hunters = [];
+    hunters = []; roamers = new Map();
     for (const n of npcs) {
         const m = n.src?.match(/^(.*):(\d+)$/);
         if (!m || !n.spawns?.length) continue;
@@ -50,6 +63,8 @@ export function loadHunters(): Hunter[] {
         for (let i = start + 1; i < lines.length && !lines[i]!.startsWith('['); i++) block.push(lines[i]!);
         const h = parseHunter({ ...n, spawns: n.spawns.filter(s => !caged(s)) }, block.join('\n'));
         if (h) hunters.push(h);
+        const roam = parseRoamer(n, block.join('\n'));
+        if (roam) roamers.set(roam.id, roam);
     }
     return hunters;
 }

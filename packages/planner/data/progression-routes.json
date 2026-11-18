@@ -92118,6 +92118,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/combat-end-case.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/combat-melee.ts",
    "intents": [
     "observe"
