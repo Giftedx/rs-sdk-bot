@@ -9,6 +9,8 @@ import { BONE_XP } from './train-prayer';
 import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, startable, supervisorCommand } from './swarm';
 import { supervise } from '../packages/practice/src/supervise';
 import { aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { FOLLOWED_RETRY_MS, GEAR_ASK_LIMIT, GEAR_ASK_MARGIN, UNSOLD_RETRY_MS, gearLimit } from './autopilot';
+import { KIT_PRICE_CAPS } from '../packages/planner/src/autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
 import { existsSync } from 'node:fs';
 import { resolveAioStep } from './aio';
@@ -480,6 +482,32 @@ test('kit offers buy the usable bow ID and retain market absence and unsold hold
     expect(kitMarket(bows, { '861': 900 }, 1_000)['magic shortbow']).toBeUndefined();
     const nativeItems = JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/items.json'), 'utf8'));
     expect(kitMarket(nativeItems, {}, 1_000)['magic shortbow']?.id).toBe(861);
+});
+test('the limit of a worn item follows the lowest ask up to five times its shop value; stacked supplies keep their caps', () => {
+    const legs = KIT_PRICE_CAPS['rune plateleg']!, helm = KIT_PRICE_CAPS['rune full helm']!, arrow = KIT_PRICE_CAPS['rune arrow']!;
+    // Rune platelegs: shop value 64,000, asked 105,375 by four sellers.
+    expect(gearLimit(1079, legs, { ask: 105_375, sell: 4 })).toBe(Math.ceil(105_375 * GEAR_ASK_MARGIN));
+    // An ask at or under the cap, an ask with no seller behind it and no quote leave the cap.
+    expect(gearLimit(1079, legs, { ask: legs - 1, sell: 4 })).toBe(legs);
+    expect(gearLimit(1079, legs, { ask: 105_375, sell: 0 })).toBe(legs);
+    expect(gearLimit(1079, legs, undefined)).toBe(legs);
+    // Rune chainbody: shop value 50,000, asked 210,367.
+    expect(gearLimit(1113, KIT_PRICE_CAPS['rune chainbody']!, { ask: 210_367, sell: 896 })).toBe(220_886);
+    // Rune full helm: shop value 35,200, asked 349,982: over the bound.
+    expect(349_982).toBeGreaterThan(GEAR_ASK_LIMIT * 35_200);
+    expect(gearLimit(1163, helm, { ask: 349_982, sell: 40 })).toBe(helm);
+    // Rune arrows are bought in stacks, and a rune is not worn.
+    expect(gearLimit(892, arrow, { ask: arrow + 100, sell: 500 })).toBe(arrow);
+    expect(gearLimit(561, KIT_PRICE_CAPS['nature rune']!, { ask: 900, sell: 500 })).toBe(KIT_PRICE_CAPS['nature rune']!);
+    const items = [{ id: 1079, name: 'Rune platelegs', debugname: 'rune_platelegs' }, { id: 1163, name: 'Rune full helm', debugname: 'rune_full_helm' }];
+    const asks = { 1079: { ask: 105_375, sell: 4 }, 1163: { ask: 349_982, sell: 40 } }, hour = FOLLOWED_RETRY_MS, now = 10 * UNSOLD_RETRY_MS;
+    expect(kitMarket(items, {}, now, asks)).toEqual({ 'rune plateleg': { id: 1079, name: 'Rune platelegs', limit: 110_644 }, 'rune full helm': { id: 1163, name: 'Rune full helm', limit: helm } });
+    // A buy that got none: the followed item is back after an hour, the capped one after a day.
+    const failed = { '1079': now - hour + 1, '1163': now - hour - 1 };
+    expect(Object.keys(kitMarket(items, failed, now, asks))).toEqual([]);
+    expect(Object.keys(kitMarket(items, { '1079': now - hour - 1, '1163': now - UNSOLD_RETRY_MS - 1 }, now, asks))).toEqual(['rune plateleg', 'rune full helm']);
+    // With no quote the platelegs wait the day too.
+    expect(Object.keys(kitMarket(items, { '1079': now - hour - 1 }, now))).toEqual(['rune full helm']);
 });
 test('donor stock keeps unstrung bow names apart from usable and noted gear', () => {
     const stock = donorStock('Donor', 'local', { name: 'Donor', server: 'rs-sdk-demo.fly.dev', at: 1_000, bankAt: 1_000,

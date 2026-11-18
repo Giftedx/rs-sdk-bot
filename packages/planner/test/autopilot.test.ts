@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
-import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable, norm } from '../src/autopilot';
+import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable, norm, usableTool } from '../src/autopilot';
 
 const side = 'claude-cloud';
 // A fixture that can pick the knights (Thieving 55) has 20 Hitpoints, so the frail rule of the goldfarm job
@@ -1114,8 +1114,8 @@ test('the alchemy band gets its feathers at Port Sarim, its fire runes at Aubury
     expect(['army-feathers-sarim', 'army-fire-aubury', 'army-staff-guild', 'army-nature-guild', 'army-alch-air-magic-99']).not.toContain(pick({ Magic: 99 }, {}).template?.id);
 });
 
-test('an army account with no better blade buys one adamant scimitar before its Ranged and melee bands, two accounts at a time', () => {
-    const army = new Set(['blade', 'edge', 'point']);
+test('an army account with no better blade buys one adamant scimitar before its Ranged and melee bands, four accounts at a time', () => {
+    const army = new Set(['blade', 'edge', 'point', 'hilt', 'guard']);
     const sold: Market = { ...market, 'adamant scimitar': { id: 1331, name: 'Adamant scimitar', limit: KIT_PRICE_CAPS['adamant scimitar']! } };
     const skills = { Thieving: 99, Attack: 99, Strength: 99, Defence: 80, Hitpoints: 90, Ranged: 99, Magic: 99, Prayer: 99 };
     const kit = { coin: 900_000, shark: 40, 'bronze sword': 1 };
@@ -1138,11 +1138,36 @@ test('an army account with no better blade buys one adamant scimitar before its 
     expect(pick({ Ranged: 30 }, { ...kit, shortbow: 1, 'iron arrow': 500 }).template!.id).toBe(KIT_BUY + WEAPON.id);
     expect(pick({ Ranged: 30 }, { ...kit, shortbow: 1, 'iron arrow': 500, 'adamant scimitar': 1 }).template!.id).toBe('army-trooper-ranged-99');
     expect(pick({ Defence: 99, Prayer: 80 }, kit).template!.id).toBe(KIT_BUY + WEAPON.id);
-    // Two accounts are away for it at a time; the third keeps its band.
-    const three = ids(plan(inputs(['Blade', 'Edge', 'Point'].map(n => acct(n, skills, kit)), { army, market: sold, capacity: CAPACITY })));
-    expect(Object.values(three).sort()).toEqual(['army-trooper-defence-99', KIT_BUY + WEAPON.id, KIT_BUY + WEAPON.id]);
+    // Four accounts are away for it at a time; the fifth keeps its band.
+    const five = ids(plan(inputs(['Blade', 'Edge', 'Point', 'Hilt', 'Guard'].map(n => acct(n, skills, kit)), { army, market: sold, capacity: CAPACITY })));
+    expect(Object.values(five).sort()).toEqual(['army-trooper-defence-99', ...Array(4).fill(KIT_BUY + WEAPON.id)]);
+    // A blade is not used up by a band, so an account leaves its running band for the buy when its own coins pay it.
+    const onBand = { unfundable: new Set(['blade']), current: new Map([['blade', 'army-trooper-defence-99']]), running: new Set(['blade']) };
+    expect(pick({}, kit, onBand).template!.id).toBe(KIT_BUY + WEAPON.id);
+    // Short of coins it keeps the band: a busy account takes no funding and no item order.
+    const donors = [{ name: 'Big', coins: 5_000_000 }];
+    expect(pick({}, { ...kit, coin: 500 }, { ...onBand, donors }).template!.id).toBe('army-trooper-defence-99');
+    // With the blade held it keeps the band.
+    expect(pick({}, { ...kit, 'adamant scimitar': 1 }, onBand).template!.id).toBe('army-trooper-defence-99');
     // An account outside the army is not armed.
     expect(plan(inputs([acct('Blade', skills, kit)], { army: new Set(['other']), market: sold, capacity: CAPACITY })).some(x => x.template?.id === KIT_BUY + WEAPON.id)).toBe(false);
+});
+
+test('a kit buy takes only a pickaxe or an axe that the account can use', () => {
+    expect(usableTool({ skills: { Mining: 1 } }, 'adamant pickaxe')).toBe(false);
+    expect(usableTool({ skills: { Mining: 31 } }, 'adamant pickaxe')).toBe(true);
+    expect(usableTool({ skills: { Mining: 40 } }, 'rune pickaxe')).toBe(false);
+    expect(usableTool({ skills: { Woodcutting: 41 } }, 'rune axe')).toBe(true);
+    expect(usableTool({ skills: {} }, 'adamant scimitar')).toBe(true);
+    const dig: Template = { id: 'army-test-dig', family: 'mine', script: 'scripts/gather-ore.ts', role: 'mining', goal: 'mine', tier: 'goal', band: 1,
+        trains: { skill: 'Mining', to: 60, unlocks: [] }, yields: () => [], needs: { pieces: { of: ['adamant pickaxe', 'rune pickaxe'], count: 1 } } };
+    const picks: Market = { 'adamant pickaxe': { id: 1271, name: 'Adamant pickaxe', limit: 6_000 }, 'rune pickaxe': { id: 1275, name: 'Rune pickaxe', limit: 40_000 } };
+    const pick = (mining: number) => plan(inputs([acct('Digger', { Mining: mining }, { coin: 500_000 })], { templates: [dig], army: new Set(['digger']), market: picks, capacity: CAPACITY }))[0]!;
+    // Mining 1: adamant (Mining 31) and rune (Mining 41) are no use, so nothing is bought.
+    expect(pick(1).template).toBeUndefined();
+    expect(pick(31).template!.args![0]).toContain('ITEM_ID=1271');
+    // The cheaper usable one first.
+    expect(pick(41).template!.args![0]).toContain('ITEM_ID=1271');
 });
 
 test('with no fire on the market the alchemy kit buys its other lines, then the account buys a staff of fire at Zaff\'s', () => {

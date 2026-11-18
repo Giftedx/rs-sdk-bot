@@ -170,7 +170,9 @@ export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.t
 // Progressive weapon, armour, and skilling-tool tiers (rev-289 equipment requirements and shop/GE sources).
 export const WEAPON = { id: 'army-weapon', item: 'adamant scimitar', attack: 30, goal: 'fight with an adamant scimitar' } as const;
 export const WEAPON_HELD = ['adamant scimitar', 'adamant sword', 'adamant longsword', 'rune scimitar', 'rune sword', 'rune longsword', 'dragon longsword', 'dragon dagger'] as const;
-export const WEAPON_BAND = 3.5, WEAPON_BUYERS = 2, WEAPON_MARKET = 'ge:weapon';
+// WEAPON_BUYERS: a blade raises the damage of every later tick (max hit 12 with the bronze sword, 15 or 16 with the
+// adamant scimitar), and a buy may take an account from its running band, so four go at a time.
+export const WEAPON_BAND = 3.5, WEAPON_BUYERS = 4, WEAPON_MARKET = 'ge:weapon';
 export const ARMOUR_BAND = 3.55, RANGED_ARMOUR_BAND = 3.95, ARMOUR_MARKET = 'ge:armour', ARMOUR_BUYERS = 2;
 type WeaponStage = { id: string; item: string; fallbacks?: readonly string[]; attack: number; quest?: string; goal: string; held: readonly string[] };
 const RUNE_WEAPONS = ['rune scimitar', 'rune longsword', 'rune sword', 'dragon longsword', 'dragon dagger'] as const;
@@ -188,6 +190,12 @@ const PICKAXE_LADDER: readonly (readonly [level: number, item: string, coins: nu
 const AXE_LADDER: readonly (readonly [level: number, item: string, coins: number])[] = [
     [41, 'rune axe', 25_000], [31, 'adamant axe', 10_000], [21, 'mithril axe', 4_000], [6, 'steel axe', 1_500], [1, 'iron axe', 200],
 ];
+// A pickaxe or an axe over the account's level is no kit: the account cannot use it. The cheapest pickaxe with a
+// price cap is adamant (Mining 31), and a kit buy took it for an account with Mining 1.
+export const usableTool = (a: Pick<Acct, 'skills'>, item: string): boolean => {
+    const pick = PICKAXE_LADDER.find(([, name]) => name === item), axe = AXE_LADDER.find(([, name]) => name === item);
+    return (!pick || (a.skills.Mining ?? 1) >= pick[0]) && (!axe || (a.skills.Woodcutting ?? 1) >= axe[0]);
+};
 // The quest band of the army: after the blade, before Ranged, so an account does its quests once and goes back to
 // training. One account at a time does Lost City: its tree spirit serves one fighter (practice: of three accounts at
 // the dramen tree together one finished and two ended "Someone else is fighting that"). LOST_CITY_MEALS is the food
@@ -930,9 +938,14 @@ export function plan(inp: Inputs): Assignment[] {
         // air runes that a shop sells).
         if (far && (busy || ready.has(c.account))) return;
         // An account in a running band job keeps the rule it had before the kit tier: its live holdings dip while it
-        // works (food eaten, runes cast), and a kit buy must not replace a band that is still running.
+        // works (food eaten, runes cast), and a kit buy must not replace a band that is still running. A weapon or
+        // armour buy is the exception: the band does not use the item up, the account lacks it for as long as the
+        // band runs (live: Attack 99, Strength 99, Defence 94 and 1,090,000 coins with a bronze sword, held on the
+        // Defence band), and one buy run pays back on every later tick. The buy below starts only from the account's
+        // own coins: a busy account takes no funding and no item order.
         const now = inp.current?.get(c.account.toLowerCase());
-        if (busy && now && !now.startsWith(KIT_BUY) && banded(now)) return;
+        const wornKit = c.resources.includes(WEAPON_MARKET) || c.resources.includes(ARMOUR_MARKET);
+        if (busy && now && !now.startsWith(KIT_BUY) && banded(now) && !wornKit) return;
         // No kit for a band whose place is full: the account tries its next band.
         if (c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) return;
         const reachesMeet = (name: string) => { const p = byName.get(name), cost = cachedWayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true); return cost !== null && (cost === 0 || (p!.items.coin ?? 0) >= cost); };
@@ -962,7 +975,7 @@ export function plan(inp: Inputs): Assignment[] {
         }
         if (step === 'buy' && (c.template.shopKit || cachedWayCost(a.pos, PLACES['shop:zaff'], inp.mountain?.(a) ?? true) === null)) return;
         const own = (l: Lack) => l.of.some(i => !!c.template.ownSupply?.includes(i));
-        const picks = c.lacks!.filter(l => !shopLine(l) && !own(l)).map(l => { const item = l.of.filter(i => inp.market?.[i]).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
+        const picks = c.lacks!.filter(l => !shopLine(l) && !own(l)).map(l => { const item = l.of.filter(i => inp.market?.[i] && usableTool(a, i)).sort((x, y) => inp.market![x]!.limit - inp.market![y]!.limit)[0]; return item ? { item, count: l.count } : null; });
         if (step === 'buy' && picks.length && picks.every(p => p !== null) && !inp.retired?.has(pairKey(c.account, buyId))) {
             // The batch when the account can pay for it, else only what the band needs to start. A one-line band with
             // `partBatch` takes as much of its batch as the account can pay for.
