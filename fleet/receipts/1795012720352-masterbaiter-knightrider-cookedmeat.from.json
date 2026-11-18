@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795012720352-masterbaiter-knightrider-cookedmeat",
+ "account": "Masterbaiter",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "853d497f-03fa-4189-b17c-ae9a275b71c1",
+ "count": 0,
+ "ok": false,
+ "at": 1795012793651,
+ "detail": "trade claimed"
+}
