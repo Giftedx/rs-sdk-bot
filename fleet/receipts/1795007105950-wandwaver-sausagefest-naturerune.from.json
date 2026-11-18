@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795007105950-wandwaver-sausagefest-naturerune",
  "account": "Wandwaver",
  "partner": "Sausagefest",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 37,
  "claim": "d6f4abab-da0a-4c00-9b3b-c72913cd184a",
- "count": 0,
- "ok": false,
- "at": 1795007187987,
- "detail": "trade claimed"
+ "count": 37,
+ "ok": true,
+ "at": 1795007367007,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 37,
+  "after": 0
+ },
+ "bank": {
+  "count": 37,
+  "at": 1795007350628
+ },
+ "logout": {
+  "attemptId": "1795007187997-0000025824-0000000001",
+  "at": 1795007366995,
+  "sha256": "5cd498477cb7c5d2000a97a89fd7892f6b80d9dbbe61b66b659d28026827c137"
+ },
+ "screen": true
 }
