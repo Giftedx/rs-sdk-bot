@@ -1234,6 +1234,8 @@ test('a swarm.json reservation holds its account: no roster by rule, no job, no 
     // A job with no script that is no planner job is a reservation, enabled or not; a hand job with a script, off, is not.
     expect([...reservedAccounts(jobs, 'local')]).toEqual(['held']);
     expect([...armyRoster({}, accounts, OFFLINE_GUARDED, reservedAccounts(jobs, 'local'))]).toEqual(['free']);
+    // A reserved account that the hand list names stays on the roster (mmsmk1232: listed, held by a coordinator run): only the rule skips it.
+    expect([...armyRoster({ army: ['Held'] }, accounts, OFFLINE_GUARDED, reservedAccounts(jobs, 'local'))].sort()).toEqual(['free', 'held']);
     expect(admittedByLevels('AFKnight', { Attack: 99, Strength: 99, Defence: 99 })).toBe(false);
     // The scoreboard and planView count held accounts the same way: handNamed holds the reservation and an enabled hand job, not an off scripted one.
     expect([...handNamed(jobs, 'local')].sort()).toEqual(['held']);
