@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795042341457-bigchopper-sporrandip-staffoffire",
+ "account": "SporranDip",
+ "partner": "Bigchopper",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "581cf035-3531-4a4c-8e62-b6f9998cfc8f",
+ "count": 1,
+ "ok": true,
+ "at": 1795042480475,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795042479253
+ },
+ "logout": {
+  "attemptId": "1795042461449-0000025508-0000000001",
+  "at": 1795042480435,
+  "sha256": "3f02fad8b16c9cd58982f215700cb32da4cb0e91394a52b81a3ed54345433d5d"
+ },
+ "screen": true
+}
