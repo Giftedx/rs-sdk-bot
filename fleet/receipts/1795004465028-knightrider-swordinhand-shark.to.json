@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795004465028-knightrider-swordinhand-shark",
+ "account": "Swordinhand",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 6,
+ "claim": "a3f11d4f-5794-48b0-9d4a-c14fb50280c4",
+ "count": 0,
+ "ok": false,
+ "at": 1795004594156,
+ "detail": "trade claimed"
+}

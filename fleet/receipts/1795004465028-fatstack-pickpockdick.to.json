@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795004465028-fatstack-pickpockdick",
  "account": "PickpockDick",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 183326,
  "claim": "688c7e70-697f-4da6-a717-527100441268",
- "count": 0,
- "ok": false,
- "at": 1795004564995,
- "detail": "trade claimed"
+ "count": 183326,
+ "ok": true,
+ "at": 1795004590298,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 183326
+ },
+ "bank": {
+  "count": 183326,
+  "at": 1795004589651
+ },
+ "logout": {
+  "attemptId": "1795004565004-0000013260-0000000001",
+  "at": 1795004590284,
+  "sha256": "97c898a2d409701e1b0f4252cbfec4f0f0c0e0c24f37b750c00bc4c9e26fc6f1"
+ },
+ "screen": true
 }

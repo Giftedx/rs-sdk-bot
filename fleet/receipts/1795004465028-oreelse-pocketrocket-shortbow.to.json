@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795004465028-oreelse-pocketrocket-shortbow",
  "account": "Pocketrocket",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Shortbow",
  "requested": 1,
  "claim": "7f7aa21d-58c3-4e19-9358-01c3586cb7c2",
- "count": 0,
- "ok": false,
- "at": 1795004556942,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795004591117,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795004590391
+ },
+ "logout": {
+  "attemptId": "1795004556949-0000020100-0000000001",
+  "at": 1795004591105,
+  "sha256": "74eee34eb501ade9654ad23ec5a29015841999ddfc24a45449cbd59ad3a7f9f3"
+ },
+ "screen": true
 }

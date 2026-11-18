@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795004465028-wandwaver-yewfirst-airrune",
+ "account": "YewFirst",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 3,
+ "claim": "6d8281ae-9f40-4f0b-b494-5e1528b4f15f",
+ "count": 0,
+ "ok": false,
+ "at": 1795004598695,
+ "detail": "trade claimed"
+}
