@@ -101,9 +101,9 @@ test('act off: the watch logs and records and the squad is told nothing (the cal
 
 test('the targets of the squad are expected: protected against, never a retreat', () => {
     const gang = [{ ...MAGE, index: 9, name: 'A' }, { ...MAGE, index: 10, name: 'B', x: 3076 }, { ...MAGE, index: 11, name: 'C', x: 3076, z: 3643 }];
-    expect(retreatOf(watch(gang, [9, 10, 11], { multi: true }).w.step(5).actions)).toContain('team of 3');
-    // On a single-way tile the same team is held there, with no retreat.
-    expect(retreatOf(watch(gang, [9, 10, 11]).w.step(5).actions)).toBeNull();
+    // Three strangers against the two members of the fake squad outnumber it (members + 1), on multi-way or single-way ground.
+    expect(retreatOf(watch(gang, [9, 10, 11], { multi: true }).w.step(5).actions)).toContain('outnumbered: 3 attackers against 2 members');
+    expect(retreatOf(watch(gang, [9, 10, 11]).w.step(5).actions)).toContain('outnumbered: 3 attackers against 2 members');
     const expected = watch(gang, [9, 10, 11], { expected: ['a', 'b', 'c'], multi: true }).w.step(5);
     expect(retreatOf(expected.actions)).toBeNull();
     expect(protectOf(expected.actions, 'Ours1')).toBe('magic');
