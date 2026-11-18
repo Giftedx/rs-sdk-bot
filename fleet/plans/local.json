@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795004283283,
+ "at": 1795004334047,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -278,29 +278,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "account": "NabTheKnob",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-2e303faf-113e-49a0-96e5-778f11648dbd"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-nab-trooper-ranged99 [task-2e303faf-113e-49a0-96e5-778f11648dbd]",
-   "role": "helper"
   }
  ],
  "army": [
