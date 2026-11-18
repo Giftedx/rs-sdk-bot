@@ -13,6 +13,7 @@
 // the account owns little: it cooks banked raw beef and, still short, steals a pack at the Ardougne baker's stalls
 // (scripts/trooper-food.ts). A trooper run out of food at low HP ends stop=food, ok after kills.
 import { openBot, finish, countItems, getWorld, accountOf, sessionDied } from '../packages/core/src/bot';
+import { finishCombat } from '../packages/core/src/combat-end';
 import { questFlags } from '../packages/core/src/quest-status';
 import {startQuestSustain} from './quest-sustain';
 import {
@@ -922,9 +923,9 @@ if(giantTrained){
     // TROOPER_COOK=1: cook banked raw beef into trooper food first, when the account owns too little (scripts/trooper-food.ts).
     if(TARGET_KEY==='trooper'&&process.env.TROOPER_COOK==='1')try{const {stageTrooperFood}=await import('./trooper-food'),{walkTargetPersist}=await import('./walk-to');
         const r=await stageTrooperFood(ownedSession,{stop:cowStop.stop,walk:async(x,z)=>(await walkTargetPersist(ownedSession,{x,z,level:0})).ok});console.log(`TROOPER_FOOD ${JSON.stringify(r)}`);}
-    catch(e){await finish([ownedSession],false,String(e));}
-    try{const r=await runGiants(ownedSession,{cap:CAP,site:TARGET_KEY==='trooper'?TROOPER_SITE:undefined,trainSkill:giantSkill,targetLevel:giantLevel,maximum:giantMaximum,food:process.env.GIANT_FOOD===undefined?undefined:Number(process.env.GIANT_FOOD),ammo:process.env.GIANT_AMMO===undefined?undefined:Number(process.env.GIANT_AMMO),ammoPickup:process.env.GIANT_AMMO_PICKUP!=='0',bury:process.env.GIANT_BURY==='1',stop:cowStop.stop});console.log(`GIANT_RESULT ${JSON.stringify(r)}`);await finish([ownedSession],r.ok&&cowStop.reason()!=='died',`mode=giant ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
-    catch(e){await finish([ownedSession],false,String(e));}
+    catch(e){await finishCombat(ownedSession,false,String(e));}
+    try{const r=await runGiants(ownedSession,{cap:CAP,site:TARGET_KEY==='trooper'?TROOPER_SITE:undefined,trainSkill:giantSkill,targetLevel:giantLevel,maximum:giantMaximum,food:process.env.GIANT_FOOD===undefined?undefined:Number(process.env.GIANT_FOOD),ammo:process.env.GIANT_AMMO===undefined?undefined:Number(process.env.GIANT_AMMO),ammoPickup:process.env.GIANT_AMMO_PICKUP!=='0',bury:process.env.GIANT_BURY==='1',stop:cowStop.stop});console.log(`GIANT_RESULT ${JSON.stringify(r)}`);await finishCombat(ownedSession,r.ok&&cowStop.reason()!=='died',`mode=giant ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
+    catch(e){await finishCombat(ownedSession,false,String(e));}
 }
 const dungeonTravel=(TARGET_KEY==='druid'||dungeonGiant)&&!alch?.route?createEdgevilleTravel(ownedSession):undefined;
 const cleanupScope=(potionPolicy||maximum!==undefined)&&TARGET_KEY!=='cow'?combatPotionSession(ownedSession,cowStop.stop,CAP):undefined;
@@ -932,9 +933,9 @@ const s=cleanupScope??ownedSession;
 if(TARGET_KEY==='cow'){
     if(process.env.COW_STAGE==='1')try{const {stageCows}=await import('./cow-stage'),{walkTargetPersist}=await import('./walk-to');
         const r=await stageCows(s,{stop:cowStop.stop,walk:async(x,z)=>(await walkTargetPersist(s,{x,z,level:0})).ok});console.log(`COW_STAGE ${JSON.stringify(r)}`);}
-        catch(e){await finish([s],false,String(e));}
-    try{const r=await runCows(s,{cap:CAP,maximum:Number(process.env.MAX_KILLS??5),trainSkill:process.env.TRAIN_SKILL,targetLevel:process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL),bankProfile:process.env.COW_BANK_PROFILE,foodMode:process.env.COW_FOOD_MODE,potions:potionPolicy,diagnostics:process.env.COW_DIAGNOSTICS==='1',stop:cowStop.stop});console.log(`COW_RESULT ${JSON.stringify(r)}`);await finish([s],r.ok&&cowStop.reason()!=='died',`mode=cow ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
-    catch(e){await finish([s],false,String(e));}
+        catch(e){await finishCombat(s,false,String(e));}
+    try{const r=await runCows(s,{cap:CAP,maximum:Number(process.env.MAX_KILLS??5),trainSkill:process.env.TRAIN_SKILL,targetLevel:process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL),bankProfile:process.env.COW_BANK_PROFILE,foodMode:process.env.COW_FOOD_MODE,potions:potionPolicy,diagnostics:process.env.COW_DIAGNOSTICS==='1',stop:cowStop.stop});console.log(`COW_RESULT ${JSON.stringify(r)}`);await finishCombat(s,r.ok&&cowStop.reason()!=='died',`mode=cow ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
+    catch(e){await finishCombat(s,false,String(e));}
 }
 let combatRecovery:(()=>Promise<void>)|undefined;
 try {
@@ -1053,9 +1054,9 @@ try {
     const total = kills + itemsLooted;
     const perK = (total * 1000 / Math.max(1, used())).toFixed(2);
     const targetMet=maximum===undefined||kills===maximum&&!cowStop.stop();
-    await finish([ownedSession], total > 0&&targetMet, `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum??'-'}`);
+    await finishCombat(ownedSession, total > 0&&targetMet, `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum??'-'}`);
 } catch (e) {
     let detail=String(e);if(combatRecovery)try{await combatRecovery();}catch(recovery){detail+='; cleanup '+String(recovery);}
-    await finish([ownedSession], false, detail);
+    await finishCombat(ownedSession, false, detail);
 }
 }

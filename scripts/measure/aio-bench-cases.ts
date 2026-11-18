@@ -559,6 +559,14 @@ const ROUTE_CASES: BenchCase[] = [
     pass: s => ok(s) && /stop=target-level/.test(s) && !/handoff/i.test(s),
     presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 69, Strength: 61, Defence: 62, Hitpoints: 62, Ranged: 1, Prayer: 43},
       bank: [{id: 841, count: 1}, {id: 884, count: 600}, {id: 385, count: 30}]}},
+  // The end step of a combat worker (packages/core/src/combat-end.ts): a trooper run that ends on the battlefield while
+  // a trooper fights the account, because its walk back to the bank is refused (scripts/measure/combat-end-case.ts).
+  // Attack 1 and Strength 1 keep each fight going past the tick cap. The case passes when the end step took the account
+  // off the troopers' ground, the logout window opened and the server confirmed the logout.
+  {key: 'extra:trooper-end-under-attack', script: 'scripts/measure/combat-end-case.ts', preset: 'fresh_lumbridge', scriptArgs: ['260'],
+    pass: s => /^RESULT (?:ok|fail) mode=combat-end-case .*endUnderAttack=true endLeft=true endQuiet=true .*logout=confirmed/m.test(s) && /^LOGOUT logged-out$/m.test(s),
+    presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 1, Strength: 1, Defence: 60, Hitpoints: 60},
+      bank: [{id: 1277, count: 1}, {id: 1171, count: 1}, {id: 333, count: 30}]}},
   {key: 'fighter:chompy', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['chompy', '1', '1', '1500'], pass: ok, timeoutMs: 900_000,
     presetConfig: {position: {x: 2614, z: 3093, level: 0}, skills: {Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Prayer: 99}, varps: {293: 65},
       equipment: [{id: 1718, count: 1, slot: 2}, {id: 544, count: 1, slot: 4}, {id: 542, count: 1, slot: 7}],

@@ -14,6 +14,7 @@
 import {openBot,finish,randomEventsOf,getWorld,accountOf} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil,type TickSource} from '../packages/core/src/ticks';
+import {LOGOUT_QUIET_TICKS,logoutQuiet,awaitLogoutQuiet} from '../packages/core/src/combat-end';
 import {walkPath,sessionWalker,goTo,type PathPoint} from '../packages/core/src/walk';
 import {depositObserved} from '../packages/core/src/deposit';
 import {componentId} from '../packages/core/src/logout';
@@ -239,19 +240,8 @@ export async function eatBetweenCasts(s:TickSource&{direct(action:{type:string;[
  }
  throw Error(`food debit unobserved before the next cast: ${o.attempts} eats, item${last?.id??'?'} ${last?.before??'?'}->${last?count(last.id):'?'}`);
 }
-// logout.rs2:27 combat_preventlogout: each hit on the player (auto_retaliate.rs2:2) blocks logout for 16 ticks.
-export const LOGOUT_QUIET_TICKS=17;
-export function logoutQuiet(now:number,lastHit:number,inCombat:boolean){return !inCombat&&now-lastHit>=LOGOUT_QUIET_TICKS;}
-// Before logout: the retreat walk ends the player's own attack, then the wait runs until no hit lands for the
-// logout window. `between` eats while waiting. The result is observed, never assumed.
-export async function awaitLogoutQuiet(s:TickSource,o:{lastHit:()=>number;retreat:()=>Promise<void>;between:()=>Promise<unknown>;timeoutTicks:number}){
- let ended=false;void s.ended?.then(()=>{ended=true;});
- const start=s.tick(),quiet=()=>logoutQuiet(s.tick(),o.lastHit(),!!s.sdk.getState()?.player?.combat?.inCombat);
- if(quiet())return{quiet:true,retreated:false,ticks:0};
- await o.retreat();
- while(!ended&&!quiet()&&s.tick()-start<o.timeoutTicks){await o.between();await waitTicks(s,1);}
- return{quiet:quiet(),retreated:true,ticks:s.tick()-start};
-}
+// The logout window after combat and the wait for it are shared by each combat worker (packages/core/src/combat-end.ts).
+export {LOGOUT_QUIET_TICKS,logoutQuiet,awaitLogoutQuiet};
 const AIR_STAFF=/^(staff of air|air battlestaff|mystic air staff)$/i;
 
 export interface MagicResult{ok:boolean;stop:string;target:number;level:number;casts:number;runesUsed:{air:number;mind:number};
