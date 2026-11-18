@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794995143679,
+ "at": 1794995385800,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -247,26 +247,27 @@
    "account": "mmthv2350",
    "script": "scripts/gather-combat.ts",
    "args": [
-    "3000",
-    "cow"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "60",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":99}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 60 on the Ardougne cows",
+   "goal": "train Strength to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-cow-defence-60",
+   "template": "army-trooper-strength-99",
    "autopilot": "local",
    "resources": [
-    "cow:ardougne-north"
+    "trooper:battlefield"
    ]
   },
   {
@@ -303,8 +304,8 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
@@ -313,9 +314,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
@@ -374,11 +375,11 @@
    ]
   },
   {
-   "account": "YewFirst",
+   "account": "Wandwaver",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000",
-    "scripts/shop-buyer.ts dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000"
+    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
+    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
    ],
    "env": {
     "ROUNDS": "1"
@@ -386,12 +387,42 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy a willow shortbow and arrows up to mithril at the Ranging Guild for the Ranged band",
+   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
    "role": "supply",
-   "template": "army-arrows-guild",
+   "template": "army-hunt-supply",
    "autopilot": "local",
    "resources": [
-    "shop:dargaud"
+    "shop:lowe",
+    "shop:aubury"
+   ]
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "ardy",
+    "400"
+   ],
+   "env": {
+    "ITEMS": "bronze arrow",
+    "STOCK_TARGET": "500",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "4000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-ardy",
+   "autopilot": "local",
+   "resources": [
+    "shop:ardy"
    ]
   },
   {
@@ -424,55 +455,50 @@
    "account": "Ballspinner",
    "script": "scripts/shop-buyer.ts",
    "args": [
-    "ardy",
-    "400"
+    "catherby_arrows",
+    "600"
    ],
    "env": {
-    "ITEMS": "bronze arrow",
-    "STOCK_TARGET": "500",
+    "ITEMS": "iron arrow|bronze arrow",
+    "STOCK_TARGET": "1000",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "BANK_AT": "0",
     "NO_BUY_TICKS": "25",
-    "FLOAT": "5000",
+    "FLOAT": "21000",
     "COIN_RESERVE": "500",
-    "MAX_SPEND": "4000"
+    "MAX_SPEND": "20000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
+   "goal": "buy iron and bronze arrows at Hickton's in Catherby for the Ranged band",
    "role": "supply",
-   "template": "army-arrows-ardy",
+   "template": "army-arrows-catherby",
    "autopilot": "local",
    "resources": [
-    "shop:ardy"
+    "shop:catherby_arrows"
    ]
   },
   {
    "account": "Sausagefest",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=willow.shortbow STOCK_TARGET=1 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=4000 COIN_RESERVE=500 MAX_SPEND=3000",
+    "scripts/shop-buyer.ts dargaud 800 ITEMS=mithril.arrow|steel.arrow|iron.arrow|bronze.arrow STOCK_TARGET=500 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=51000 COIN_RESERVE=500 MAX_SPEND=50000"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "goal": "buy a willow shortbow and arrows up to mithril at the Ranging Guild for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-guild",
    "autopilot": "local",
    "resources": [
-    "trooper:battlefield"
+    "shop:dargaud"
    ]
   }
  ],
