@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795035246244-hocuspokeus-fatstack-staffoffire",
  "account": "Hocuspokeus",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "198ddcdd-0cb1-4327-b33e-6fb55d8116f8",
- "count": 0,
- "ok": false,
- "at": 1795035294928,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795035475095,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795035448734
+ },
+ "logout": {
+  "attemptId": "1795035294937-0000028500-0000000001",
+  "at": 1795035475081,
+  "sha256": "5a54ec47ea858a696f3efa4bfb5a0abe7deb4d04e57c85c32927326b97d97fa3"
+ },
+ "screen": true
 }
