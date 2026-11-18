@@ -3128,12 +3128,12 @@ describe('quest demand: the quests no owned account has done', () => {
         // Existing caps stand.
         expect([KIT_PRICE_CAPS['nature rune'], KIT_PRICE_CAPS.feather, KIT_PRICE_CAPS['fire rune']]).toEqual([800, 20, 160]);
         const items = new Set(QUEST_DEMAND_ROWS.flatMap(q => Object.keys(q.items).map(norm)));
-        for (const item of items) {
-            const found = content.get(item);
-            if (item === 'coin' || !found?.tradeable || found.cost <= 0) { expect([item, KIT_PRICE_CAPS[item]]).toEqual([item, KIT_PRICE_CAPS[item]]); continue; }
-            // Either a cap of the rule or one that was set by hand before.
-            expect([item, KIT_PRICE_CAPS[item]! >= Math.min(QUEST_CAP_MIN, KIT_PRICE_CAPS[item]!)]).toEqual([item, true]);
-        }
+        const unsellable = [...items].filter(item => item !== 'coin' && !(content.get(item)?.tradeable && content.get(item)!.cost > 0));
+        // An item that the content does not mark tradeable gets no cap from the rule (wolfbane, druid pouch, serum 207), and a pack item that the rule caps stands at four times its base value.
+        expect(unsellable.length).toBeGreaterThan(0);
+        for (const item of unsellable) expect([item, KIT_PRICE_CAPS[item]]).toEqual([item, undefined]);
+        const ruled = [...items].filter(item => !unsellable.includes(item) && item !== 'coin' && KIT_PRICE_CAPS[item] === Math.max(QUEST_CAP_MIN, QUEST_CAP_FACTOR * content.get(item)!.cost));
+        expect(ruled.length).toBeGreaterThan(20);
         expect(KIT_PRICE_CAPS.knife).toBe(Math.max(QUEST_CAP_MIN, QUEST_CAP_FACTOR * content.get('knife')!.cost));
         expect(KIT_PRICE_CAPS.rope).toBe(Math.max(QUEST_CAP_MIN, QUEST_CAP_FACTOR * content.get('rope')!.cost));
         // A second call adds nothing: every item already has its cap.
@@ -3164,7 +3164,9 @@ describe('quest demand: the quests no owned account has done', () => {
         expect(QUEST_DEMAND_ROWS.map(q => q.ticks)).toEqual([...QUEST_DEMAND_ROWS.map(q => q.ticks)].sort((a, b) => a - b));
         for (const t of ts) expect([t.id, t.pilot, t.once, t.tier, t.worker, t.aio, t.args!.slice(0, 2)]).toEqual([t.id, true, true, 'goal', 'scripts/quest-sweep.ts', `quester:quest:${t.id.slice(6)}`, ['quester', 'sweep']]);
         expect(ts.map(t => t.band)).toEqual([...ts.map(t => t.band)].sort((a, b) => a! - b!));
-        expect(CAPACITY[QUEST_DEMAND]).toBe(QUEST_DEMAND_PLACES);
+        // Two quest jobs at a time: one or two accounts.
+        expect(QUEST_DEMAND_PLACES).toBe(2);
+        expect(CAPACITY[QUEST_DEMAND]).toBe(2);
         for (const t of ts) expect([t.id, CAPACITY[t.resources![0]!]]).toEqual([t.id, 1]);
         // A donor keeps nothing for a quest pack.
         expect(kitReserve(ts)).toEqual({});
