@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794961731297,
+ "at": 1794961858785,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -252,8 +252,7 @@
     "5000"
    ],
    "env": {
-    "ALCH_ITEM": "airrune",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+    "ALCH_ITEM": "airrune"
    },
    "enabled": true,
    "standing": true,
@@ -349,9 +348,7 @@
     "99",
     "5000"
    ],
-   "env": {
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
