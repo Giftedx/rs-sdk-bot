@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795005109359-wandwaver-billionaire-firerune",
+ "account": "Billionaire",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 1,
+ "claim": "bb65c794-6215-44ba-9edd-0bfd4e06ef19",
+ "count": 0,
+ "ok": false,
+ "at": 1795005206569,
+ "detail": "trade claimed"
+}

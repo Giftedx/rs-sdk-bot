@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795005109359-masterbaiter-oreelse-dragonbones",
+ "account": "Masterbaiter",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 10,
+ "claim": "b556ce12-c6d2-4675-b36e-f23eb921c98d",
+ "count": 0,
+ "ok": false,
+ "at": 1795005188357,
+ "detail": "trade claimed"
+}

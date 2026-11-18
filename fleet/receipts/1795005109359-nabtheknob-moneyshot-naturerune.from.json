@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795005109359-nabtheknob-moneyshot-naturerune",
+ "account": "NabTheKnob",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "a28cbedb-8484-42ca-9e8b-f223c06b6e9a",
+ "count": 0,
+ "ok": false,
+ "at": 1795005196727,
+ "detail": "trade claimed"
+}
