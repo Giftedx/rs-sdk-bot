@@ -1,6 +1,11 @@
 import { expect, test } from 'bun:test';
-import { itemBonuses, league, series, simulate, SPECIAL } from './pk-sim';
+import { foodHeal, itemBonuses, league, series, simulate, SPECIAL } from './pk-sim';
 import { styleOfName } from './pk';
+
+test('a kit food heals what the content gives (consume_normal.dbrow lines 178, 194, 209, 222)', () => {
+    expect([foodHeal('shark'), foodHeal('tbwt_cooked_karambwan'), foodHeal('swordfish'), foodHeal('lobster')]).toEqual([20, 18, 14, 12]);
+    expect(() => foodHeal('dragon_dagger')).toThrow('not a food');
+});
 
 test('reads the combat bonuses of an item from the content configs', () => {
     const dagger = itemBonuses().get('dragon_dagger');

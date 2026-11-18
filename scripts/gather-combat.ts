@@ -15,6 +15,7 @@
 import { openBot, finish, countItems, getWorld, accountOf, sessionDied } from '../packages/core/src/bot';
 import { questFlags } from '../packages/core/src/quest-status';
 import {startQuestSustain} from './quest-sustain';
+import {cowFoodIds,foodStages,questFoodDefinitions} from '../packages/core/src/sustain';
 import {
     selectProgressiveLoadout,
     readSkillLevels,
@@ -151,11 +152,11 @@ export async function equipCowKit(
 }
 // Held cow food in bites: trout heals once; a cake is eaten in three bites (cake, 2/3 cake, slice), chocolate cake likewise.
 // The knight farm steals cake at the Ardougne bakery, so a farmer arrives with cake pieces rather than trout.
-export const COW_FOOD_BITES:Readonly<Record<number,number>>={333:1,1891:3,1893:2,1895:1,1897:3,1899:2,1901:1};
+// Bites and HP of each piece come from the content (consume_normal.dbrow heal, cooking_inv next_obj_stage; core/sustain.ts).
+export const COW_FOOD_BITES:Readonly<Record<number,number>>=Object.fromEntries(cowFoodIds().map(id=>[id,foodStages(id).length]));
 export const cowFoodBites=(items:readonly {id:number;count:number}[])=>items.reduce((n,i)=>n+(COW_FOOD_BITES[i.id]??0)*i.count,0);
-// HP one bite heals: trout 7, a cake bite 4, a chocolate cake bite 5. The trout rule held two trout, 14 HP of food;
-// held food must cover the same HP whatever it is made of.
-const COW_BITE_HEAL:Readonly<Record<number,number>>={333:7,1891:4,1893:4,1895:4,1897:5,1899:5,1901:5};
+// HP one bite heals. The trout rule held two trout, 14 HP of food; held food must cover the same HP whatever it is made of.
+const COW_BITE_HEAL:Readonly<Record<number,number>>=Object.fromEntries(cowFoodIds().map(id=>[id,questFoodDefinitions().get(id)!.heal]));
 export const COW_FOOD_HP=14;
 // When cow mode gives a cow up and picks another. In a shared field another account can take the cow over after our
 // first swing (live claude-cloud: 190 idle ticks until the no-progress throw): release after COW_RELEASE ticks with the
@@ -307,8 +308,8 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
             if(!(await s.bot.depositItem(item,-1)).success||held(id)>0||!await waitUntil(s,()=>bankCount(id)===before+amount,{timeoutTicks:20}))throw new Error('no cow progress: deposit failed');}}
         if(!profile.foodBanked)for(let tries=0;heal()<COW_FOOD_HP&&tries<6;tries++){
             // Trout first (one bite each); otherwise the smallest banked cake piece.
-            const items=state()?.bank.items??[],trout=items.find(i=>i.id===333),item=trout??cowFoodPick(items),want=heal()+(trout?7:0);
-            if(!item||!(await s.bot.withdrawItem(item,trout?Math.min(trout.count,Math.ceil((COW_FOOD_HP-heal())/7)):1,{asNote:false})).success)break;
+            const items=state()?.bank.items??[],trout=items.find(i=>i.id===333),item=trout??cowFoodPick(items),want=heal()+(trout?COW_BITE_HEAL[333]!:0);
+            if(!item||!(await s.bot.withdrawItem(item,trout?Math.min(trout.count,Math.ceil((COW_FOOD_HP-heal())/COW_BITE_HEAL[333]!)):1,{asNote:false})).success)break;
             await waitUntil(s,()=>heal()>=Math.min(COW_FOOD_HP,want),{timeoutTicks:5});
         }
         if(!profile.foodBanked&&heal()<COW_FOOD_HP)throw new Error('no cow progress: working food restock failed');

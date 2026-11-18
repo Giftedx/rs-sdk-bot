@@ -4,6 +4,7 @@ import {parseConfigs,type ConfigBlock} from '../../knowledge/src/config';
 import {parsePack} from '../../knowledge/src/pack';
 import {contentRoot,knowledgeDir} from '../../knowledge/src/paths';
 import {XP_RATE} from '../../knowledge/src/method-model';
+import {objIdByDebugName} from './sustain';
 
 // Game facts of the pinned revision-289 content, read once and cached: item and NPC ids, wear and use levels, spell
 // costs, prayer levels, bone XP and special attack numbers. A planner or a worker names a fact here by the name of the
@@ -20,11 +21,11 @@ const debugName=(name:string)=>name.replace(/ /g,'_');
 const objPack=lazy(()=>parsePack(text('pack/obj.pack')));
 const npcPack=lazy(()=>parsePack(text('pack/npc.pack')));
 const idsOf=(pack:Map<number,string>)=>new Map([...pack].map(([id,name])=>[name,id] as const));
-const objIds=lazy(()=>idsOf(objPack()));
 const npcIds=lazy(()=>idsOf(npcPack()));
 
+// One item-id source: sustain.ts reads the same pack for the food tables.
 export function objId(name:string):number{
- const id=objIds().get(debugName(name));
+ const id=objIdByDebugName(debugName(name));
  if(id===undefined)throw new Error(`content: no item "${name}"`);
  return id;
 }

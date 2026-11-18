@@ -1,5 +1,8 @@
 import { expect, test } from 'bun:test';
-import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { admittedByLevels, handNamed } from '../packages/core/src/army-roster';
+import { OBSERVATION_FRESH_MS, reservedAccounts } from '../packages/planner/src/autopilot';
+import { loadOwners } from '../packages/core/src/fleet';
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { jobLogStart } from '../packages/core/src/job-log';
@@ -8,7 +11,9 @@ import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { BONE_XP } from './train-prayer';
 import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, startable, supervisorCommand } from './swarm';
 import { supervise } from '../packages/practice/src/supervise';
-import { jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { planView } from './fleet-sync';
+import { SIDE_STOCK_MAX_AGE_MS, unobservedAccounts, headroomWithMargin, plannerOwns, writtenNotRunning, tradeStarts, memoryHeadroom, freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { mergedPlan } from '../packages/core/src/coordinator-jobs';
 import { FOLLOWED_RETRY_MS, GEAR_ASK_LIMIT, GEAR_ASK_MARGIN, UNSOLD_RETRY_MS, gearLimit } from './autopilot';
 import { KIT_PRICE_CAPS } from '../packages/planner/src/autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
@@ -417,6 +422,12 @@ test('the army roster is the plan\'s explicit list, lower-cased, never Haggis', 
     expect([...armyRoster({ army: ['Kiltlifter', 'PocketPool', 'Haggis', 7] })]).toEqual(['kiltlifter', 'pocketpool']);
     expect(armyRoster({ jobs: [] }).size).toBe(0);
     expect(armyRoster(null).size).toBe(0);
+});
+
+test('the planner food heals are the content heals over all bites', () => {
+    expect({ ...FOOD_HEAL }).toEqual({
+        trout: 7, cake: 12, '2/3 cake': 8, 'slice of cake': 4, 'chocolate cake': 15, '2/3 chocolate cake': 10, 'chocolate slice': 5,
+    });
 });
 
 test('the planner heals food by the same table as cow mode, and the cow bands need its HP', () => {
@@ -1071,10 +1082,12 @@ test('the fare of the reach rule is the fare the shared walker asks for', async 
     expect(fare('npc:borderguard2:lumbridge-side-west-of-the-toll-gate@3268,3226')).toBe(TOLL);
 });
 
-test('the place of each shop job is the bank of its shop profile, and the reach rule covers 65 of the 123 templates', () => {
+test('the place of each shop job is the bank of its shop profile, and the reach rule covers each template with a place resource', () => {
     for (const [resource, spot] of Object.entries(PLACES)) if (resource.startsWith('shop:')) expect([resource, spot]).toEqual([resource, PROFILES[resource.slice(5)]!.bankSpot]);
     // The templates the reach rule covers, of the whole catalogue.
-    expect([catalogue().filter(t => placeOf(t)).length, catalogue().length]).toEqual([65, 123]);
+    // A template has a place when one of its resources is a knight spot, a chicken pen or a place of PLACES: the count follows the data.
+    const hasPlace = (t: { resources?: string[] }) => (t.resources ?? []).some(r => r.startsWith('knight:') || /^pen:\d+,\d+$/.test(r) || r in PLACES);
+    expect(catalogue().filter(t => placeOf(t)).map(t => t.id)).toEqual(catalogue().filter(hasPlace).map(t => t.id));
     // The knight job's first walk from far away is to the bank that the planner names for each knight spot.
     const goldfarm = readFileSync(resolve(import.meta.dir, 'goldfarm.ts'), 'utf8');
     expect(goldfarm).toContain(`walkTargetPersist(s, { x: ${KNIGHT_BANK.x}, z: ${KNIGHT_BANK.z}, level: 0 })`);
@@ -1198,4 +1211,144 @@ test('every shop template of the catalogue selects at least one line of its prof
     }
     expect(empty).toEqual([]);
     expect(selectItems(PROFILES.ardy!.items, 'iron axe').map(i => i.re.source)).toEqual(['^iron axe$']);
+});
+
+test('the army roster adds each plannable account with Attack, Strength and Defence 90, never a guarded or specialist account', () => {
+    const melee = (name: string, level: number) => ({ name, skills: { Attack: level, Strength: level, Defence: level } });
+    const accounts = [melee('Maxed', 99), melee('NinetyOne', 91), melee('Edge', 90), melee('Low', 89), { name: 'Nine', skills: { Attack: 99, Strength: 99, Defence: 89 } },
+        melee('Shaftshooter', 99), melee('Polevaulter', 99), melee('Haggis', 99), melee('Fresh', 1)];
+    expect([...armyRoster({ army: ['Fresh'] }, accounts)].sort()).toEqual(['edge', 'fresh', 'maxed', 'ninetyone']);
+    // An account that a guard set names never joins by rule.
+    expect([...armyRoster({}, accounts, new Set(['maxed']))].sort()).toEqual(['edge', 'ninetyone']);
+    // The hand list keeps its own: a listed account stays on the roster at any level.
+    expect(armyRoster({ army: ['Low'] }, [melee('Low', 1)]).has('low')).toBe(true);
+});
+
+test('an active squad keeps its members off the roster by rule, and open trade parties reserve a start', () => {
+    const melee = (name: string) => ({ name, skills: { Attack: 99, Strength: 99, Defence: 99 } });
+    const accounts = [melee('Member'), melee('Other')];
+    expect([...armyRoster({ squad: { active: true, members: ['Member'] } }, accounts)]).toEqual(['other']);
+    expect([...armyRoster({ squad: { active: false, members: ['Member'] } }, accounts)].sort()).toEqual(['member', 'other']);
+    expect([...armyRoster({ army: ['Member'], squad: { active: true, members: ['Member'] } }, accounts)].sort()).toEqual(['member', 'other']);
+    // Two open order parties, one with a live session and one managed by the swarm: one start is still to come.
+    expect(tradeStarts(new Set(['a', 'b', 'c', 'd']), ['A'], new Set(['b']))).toBe(2);
+    expect(memoryHeadroom(8.6, 0, 2 + tradeStarts(new Set(['x', 'y']), [], new Set()))).toBe(0);
+});
+
+test('a swarm.json reservation holds its account: no roster by rule, no job, no donor; the protected AFKnight stays off the rule', () => {
+    const melee = (name: string) => ({ name, skills: { Attack: 99, Strength: 99, Defence: 99 } });
+    const accounts = [melee('Held'), melee('AFKnight'), melee('Free')];
+    const jobs = [{ account: 'Held', role: 'pvp', enabled: false, goal: 'reserved: gang squad' }, { account: 'Mine', autopilot: 'local', script: 'scripts/goldfarm.ts' }, { account: 'Hand', script: 'scripts/goldfarm.ts', enabled: false }];
+    // A job with no script that is no planner job is a reservation, enabled or not; a hand job with a script, off, is not.
+    expect([...reservedAccounts(jobs, 'local')]).toEqual(['held']);
+    expect([...armyRoster({}, accounts, OFFLINE_GUARDED, reservedAccounts(jobs, 'local'))]).toEqual(['free']);
+    // A reserved account that the hand list names stays on the roster (mmsmk1232: listed, held by a coordinator run): only the rule skips it.
+    expect([...armyRoster({ army: ['Held'] }, accounts, OFFLINE_GUARDED, reservedAccounts(jobs, 'local'))].sort()).toEqual(['free', 'held']);
+    expect(admittedByLevels('AFKnight', { Attack: 99, Strength: 99, Defence: 99 })).toBe(false);
+    // The scoreboard and planView count held accounts the same way: handNamed holds the reservation and an enabled hand job, not an off scripted one.
+    expect([...handNamed(jobs, 'local')].sort()).toEqual(['held']);
+    expect([...handNamed([...jobs, { account: 'Busy', script: 'scripts/goldfarm.ts', enabled: true }], 'local')].sort()).toEqual(['busy', 'held']);
+    const owners = new Map([['held', { side: 'local', server: 's' }], ['free', { side: 'local', server: 's' }]]);
+    const row = (name: string) => ({ name, skills: ['Attack', 'Strength', 'Defence'].map(n => ({ name: n, level: 99 })) });
+    const view = planView(jobs, 'local', owners as any, 7, { observed: [row('Held'), row('Free')] });
+    expect(view.army).toEqual(['free']);
+    // A party of an open fleet order keeps no band: fundOrders replaces its assignment while the order is open.
+    const band = { id: 'army-cow-strength-45', tier: 'goal' } as any;
+    const r = fundOrders([{ account: 'Giver', template: band, value: 0, resources: ['cow:ardougne-north'], reason: 'army band 0' }, { account: 'Other', template: band, value: 0, resources: [], reason: 'army band 0' }], new Set(['giver']), make);
+    expect(r.assignments.map(x => x.template?.id ?? x.reason)).toEqual(['vacant: in an open fleet order', 'army-cow-strength-45']);
+    expect(r.assignments[0]!.resources).toEqual([]);
+});
+
+test('the memory headroom carries the margin of one start while a planner job is written and not running', () => {
+    expect(headroomWithMargin(0, true)).toBe(1);
+    expect(headroomWithMargin(3, true)).toBe(4);
+    expect(headroomWithMargin(3, false)).toBe(3);
+    // A running planner job's slot is kept at headroom 0 plus the margin: the plan holds the running bots and one more start.
+    expect(freeSlots({ maxBots: 25 }, [], 'local', new Set(), 0, { running: 10, headroom: headroomWithMargin(0, true) })).toBe(11);
+});
+
+test('a planner job that is written and not running keeps one start of margin', () => {
+    const jobs = [{ account: 'Run', autopilot: 'local', enabled: true }, { account: 'Wait', autopilot: 'local', enabled: true }, { account: 'Off', autopilot: 'local', enabled: false }];
+    expect(writtenNotRunning(jobs, new Set(['run']))).toBe(true);
+    expect(writtenNotRunning(jobs.slice(0, 1), new Set(['run']))).toBe(false);
+    expect(writtenNotRunning([jobs[2]!], new Set())).toBe(false);
+    // Memory below the running count never retires a running job: the cap keeps every running bot.
+    expect(freeSlots({ maxBots: 25 }, [], 'local', new Set(), 0, { running: 10, headroom: 0 })).toBe(10);
+});
+
+test('armyBatch admits that many accounts under the rule, best melee first, and defaults to none', () => {
+    const melee = (name: string, level: number) => ({ name, skills: { Attack: level, Strength: level, Defence: level } });
+    const accounts = [melee('A', 80), melee('B', 70), melee('C', 60), melee('D', 50), melee('Maxed', 95), melee('Shaftshooter', 89)];
+    expect([...armyRoster({}, accounts)]).toEqual(['maxed']);
+    expect([...armyRoster({ armyBatch: 2 }, accounts)].sort()).toEqual(['a', 'b', 'maxed']);
+    expect([...armyRoster({ armyBatch: 0 }, accounts)]).toEqual(['maxed']);
+    expect([...armyRoster({ armyBatch: -1 }, accounts)]).toEqual(['maxed']);
+    expect([...armyRoster({ armyBatch: 1.5 }, accounts)]).toEqual(['maxed']);
+    expect([...armyRoster({ armyBatch: 99 }, accounts)].sort()).toEqual(['a', 'b', 'c', 'd', 'maxed']);
+});
+
+test('freeSlots is maxBots less the hand jobs, a host job counting each account', () => {
+    const jobs = [{ account: 'Hand', enabled: true }, { account: 'Off', enabled: false }, { accounts: ['H1', 'H2', 'H3'], host: true, enabled: true },
+        { account: 'Mine', autopilot: 'local', enabled: true }, { account: 'Paused', autopilot: 'local', enabled: true }];
+    expect(freeSlots({ maxBots: 25 }, jobs, 'local', new Set(['paused']))).toBe(25 - 1 - 3 - 1);
+    expect(freeSlots({ maxBots: 3 }, jobs, 'local', new Set())).toBe(0);
+    expect(freeSlots({}, jobs, 'local', new Set())).toBeUndefined();
+    // Memory caps the planner at its running bots plus the starts that headroom allows (floor 4 GiB, 1 GiB a start).
+    expect(memoryHeadroom(8.6, 0, 0)).toBe(4);
+    expect(memoryHeadroom(8.6, 0, 2)).toBe(2);
+    expect(memoryHeadroom(8.6, 6, 0)).toBe(2);
+    expect(memoryHeadroom(3.9, 0, 0)).toBe(0);
+    expect(memoryHeadroom(8.6, Number.NaN, 0)).toBe(4);
+    expect(freeSlots({ maxBots: 25 }, [], 'local', new Set(), 0, { running: 10, headroom: 4 })).toBe(14);
+    expect(freeSlots({ maxBots: 25 }, [], 'local', new Set(), 0, { running: 10, headroom: 40 })).toBe(25);
+    expect(freeSlots({ maxBots: 25 }, [], 'local', new Set(), 0, { running: 0, headroom: 0 })).toBe(0);
+    // Live bots that no swarm run owns count against the limit, as in admissionDecision.
+    expect(freeSlots({ maxBots: 25 }, jobs, 'local', new Set(['paused']), 4)).toBe(25 - 1 - 3 - 1 - 4);
+    // The coordinator's expansion replaces maxBots only when it was granted over the owner plan's value.
+    const owner = { maxBots: 25, jobs: [] };
+    expect(freeSlots(mergedPlan(owner, { jobs: [], coordination: {}, expansion: { over: 25, maxBots: 30 } } as any), jobs, 'local', new Set(['paused']))).toBe(30 - 5);
+    expect(freeSlots(mergedPlan(owner, { jobs: [], coordination: {}, expansion: { over: 20, maxBots: 30 } } as any), jobs, 'local', new Set(['paused']))).toBe(25 - 5);
+});
+
+test('plannerOwns refuses a reserved account as donor or job holder, and an unreserved one passes', () => {
+    const owners = new Map([['keeper', { side: 'local', server: 's' }], ['taker', { side: 'local', server: 's' }], ['other', { side: 'cloud', server: 's' }], ['haggis', { side: 'local', server: 's' }]]);
+    const reserved = new Set(['keeper']), died = new Set(['gone']);
+    expect(plannerOwns(owners as any, 'local', 'keeper', reserved, died)).toBe(false);
+    expect(plannerOwns(owners as any, 'local', 'taker', reserved, died)).toBe(true);
+    expect(plannerOwns(owners as any, 'local', 'other', reserved, died)).toBe(false);
+    expect(plannerOwns(owners as any, 'local', 'haggis', reserved, died)).toBe(false);
+    expect(plannerOwns(owners as any, 'local', 'gone', reserved, died)).toBe(false);
+});
+
+test('the dry pass names a swarm.json reservation by its goal and gives its account no job', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'autopilot-reserved-'));
+    const prevFleet = process.env.FLEET_DIR, prevSide = process.env.FLEET_SIDE;
+    try {
+        mkdirSync(join(dir, 'fleet'), { recursive: true });
+        writeFileSync(join(dir, 'fleet', 'owners.json'), JSON.stringify({ accounts: { Keeper: { side: 'local', server: 'rs-sdk-demo.fly.dev' }, Taker: { side: 'local', server: 'rs-sdk-demo.fly.dev' } } }));
+        process.env.FLEET_DIR = join(dir, 'fleet'); process.env.FLEET_SIDE = 'local';
+        const planFile = join(dir, 'swarm.json');
+        writeFileSync(planFile, JSON.stringify({ maxBots: 5, minFreeGB: 0, army: ['Taker'], jobs: [{ account: 'Keeper', role: 'pvp', enabled: false, goal: 'reserved: gang squad' }] }));
+        const lines = pass(planFile, true, () => false);
+        expect(lines).toContain('AUTOPILOT vacant Keeper: reserved: gang squad');
+        expect(lines.filter(l => /Keeper/.test(l) && /(assign|keep|fund|send) /.test(l))).toEqual([]);
+    } finally {
+        if (prevFleet === undefined) delete process.env.FLEET_DIR; else process.env.FLEET_DIR = prevFleet;
+        if (prevSide === undefined) delete process.env.FLEET_SIDE; else process.env.FLEET_SIDE = prevSide;
+        rmSync(dir, { recursive: true });
+    }
+});
+
+test('the stock freshness of the donor rule is the one OBSERVATION_FRESH_MS', () => {
+    expect(SIDE_STOCK_MAX_AGE_MS).toBe(OBSERVATION_FRESH_MS);
+});
+
+test('unobservedAccounts reads the observation time alone', () => {
+    const now = 10 * 3_600_000, at: Record<string, unknown> = { Fresh: now - 60_000, Old: now - 31 * 60_000, Edge: now - 30 * 60_000, Future: now + 1, Missing: undefined, Text: 'x', Zero: 0, Empty: now - 1000 };
+    expect(unobservedAccounts(Object.keys(at), n => at[n], now)).toEqual(['Old', 'Edge', 'Future', 'Missing', 'Text', 'Zero']);
+});
+
+test('the ring mould shop step selects the Dommik mould line with the real selectItems', () => {
+    const t = catalogue().find(x => x.id === 'shop-ring-mould')!;
+    expect(selectItems(PROFILES[t.args![0]!]!.items, t.env!.ITEMS).map(i => i.re.source)).toEqual(['^ring mould$']);
 });
