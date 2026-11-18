@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794991909168-pocketpool-woodpecker-naturerune",
+ "account": "Woodpecker",
+ "partner": "PocketPool",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "cebfaedb-cb7b-42ae-a2ac-e778014dea62",
+ "count": 0,
+ "ok": false,
+ "at": 1794991955514,
+ "detail": "trade claimed"
+}
