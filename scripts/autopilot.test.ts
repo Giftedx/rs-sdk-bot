@@ -527,6 +527,28 @@ test('the limit of a worn item follows the lowest ask up to five times its shop 
     // With no quote the platelegs wait the day too.
     expect(Object.keys(kitMarket(items, { '1079': now - hour - 1 }, now))).toEqual(['rune full helm']);
 });
+test('a confirmed-offline account keeps its observed stock for a day, unless a session or an order touched it later', () => {
+    const hour = 3_600_000, seen = 10 * hour, now = seen + 5 * hour;
+    const status = { name: 'Donor', server: 'rs-sdk-demo.fly.dev', at: seen, bankAt: seen, inventory: [], bank: [{ id: 556, name: 'Air rune', count: 400 }] };
+    const stockOf = (offline?: Parameters<typeof offlineStockFresh>[1], at = now) => donorStock('Donor', 'local', status, at, 30 * 60_000, () => undefined, 'rs-sdk-demo.fly.dev', offline)?.items['air rune'];
+    const proof = { confirmed: true, loggedOutAt: seen + 5_000 };
+    // Past the 30-minute window, no proof: no stock. With a confirmed logout after the observation: the stock stands.
+    expect(stockOf()).toBeUndefined();
+    expect(stockOf(proof)).toBe(400);
+    // Not confirmed, a logout before the observation, an order that ended after it, or an observation over a day old.
+    expect(stockOf({ confirmed: false })).toBeUndefined();
+    expect(stockOf({ confirmed: true, loggedOutAt: seen - 61_000 })).toBeUndefined();
+    expect(stockOf({ ...proof, ordersEnd: seen + 1 })).toBeUndefined();
+    expect(stockOf({ ...proof, ordersEnd: seen })).toBe(400);
+    expect(stockOf(proof, seen + OFFLINE_STOCK_MAX_AGE_MS)).toBeUndefined();
+    expect(stockOf(proof, seen + OFFLINE_STOCK_MAX_AGE_MS - 1)).toBe(400);
+    // A fresh observation needs no proof, and a future time is never fresh.
+    expect(offlineStockFresh(now, undefined, now)).toBe(false);
+    expect(offlineStockFresh(now + 1, proof, now)).toBe(false);
+    // The vacant note counts an account as unobserved only when neither window holds.
+    const at = (n: string) => ({ a: seen, b: seen, c: now - 60_000 })[n];
+    expect(unobservedAccounts(['a', 'b', 'c'], at, now, n => (n === 'a' ? proof : undefined))).toEqual(['b']);
+});
 test('donor stock keeps unstrung bow names apart from usable and noted gear', () => {
     const stock = donorStock('Donor', 'local', { name: 'Donor', server: 'rs-sdk-demo.fly.dev', at: 1_000, bankAt: 1_000,
         inventory: [{ id: 72, name: 'Magic shortbow', count: 3 }], bank: [{ id: 862, baseId: 861, name: 'Magic shortbow (noted)', count: 1 }] }, 1_001, 500, () => undefined);
@@ -534,7 +556,7 @@ test('donor stock keeps unstrung bow names apart from usable and noted gear', ()
     expect(stock?.items['unstrung magic shortbow']).toBe(3);
 });
 
-import { ARMY_MEET, itemOrder, sideStock } from './autopilot';
+import { ARMY_MEET, OFFLINE_STOCK_MAX_AGE_MS, itemOrder, offlineStockFresh, sideStock, unobservedAccounts } from './autopilot';
 import { meetingTiles } from './coin-courier';
 import { validOrder } from './fleet-trade-settlement';
 test('a kit item order fits the fleet order format and meets at the army bank', () => {
