@@ -1494,7 +1494,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       {id:1333,name:'Rune scimitar',slot:3,skills:{Attack:40},quest:null},
       {id:1231,name:'Dragon dagger(p)',slot:3,skills:{Attack:60},quest:'Lost City',also:[1215]},
       {id:1305,name:'Dragon longsword',slot:3,skills:{Attack:60},quest:'Lost City'},
-      {id:1434,name:'Dragon mace',slot:3,skills:{Attack:60},quest:"Heroes' Quest"},
+      {id:1434,name:'Dragon mace',slot:3,skills:{Attack:60},quest:"Hero's Quest"},
       {id:3204,name:'Dragon halberd',slot:3,skills:{Attack:60,Strength:30},quest:'Regicide'}
     ]},
     {id:'ranged-weapon',label:'Ranged bow',items:[
@@ -1575,7 +1575,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       {id:1197,name:'Mithril kiteshield',slot:5,skills:{Defence:20},quest:null},
       {id:1199,name:'Adamant kiteshield',slot:5,skills:{Defence:30},quest:null},
       {id:1201,name:'Rune kiteshield',slot:5,skills:{Defence:40},quest:null},
-      {id:1187,name:'Dragon sq shield',slot:5,skills:{Defence:60},quest:"Legends' Quest"}
+      {id:1187,name:'Dragon sq shield',slot:5,skills:{Defence:60},quest:"Legends Quest"}
     ]},
     {id:'neck',label:'Necklace / Amulet',items:[
       {id:1478,name:'Amulet of accuracy',slot:2,skills:{},quest:null},

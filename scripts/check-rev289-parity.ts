@@ -821,5 +821,10 @@ if (import.meta.main) {
     for (const issue of ownedIssues) console.error(`[FAIL:${issue.scope}] ${issue.file}: ${issue.detail}`);
     for (const issue of crossIssues) console.warn(`[CROSS-WORKER] ${issue.file}: ${issue.detail}`);
     console.log(`rev289-parity: ${ownedIssues.length} owned error(s), ${crossIssues.length} cross-worker warning(s)${strict ? ' [strict]' : ''}`);
-    if (!passed) process.exit(1);
+    // The name sweep (scripts/check-rev289-names.ts) holds every game-call name against the content's names.
+    const { scanNames } = await import('./check-rev289-names');
+    const names = scanNames({ baseline });
+    for (const f of names.faults) console.error(`[FAIL:names] ${f.file}: ${f.kind} "${f.text}" in ${f.use}: ${f.detail}`);
+    console.log(`rev289-names: ${names.namesChecked} names checked, ${names.idsChecked} ids checked, ${names.faults.length} fault(s)`);
+    if (!passed || names.faults.length) process.exit(1);
 }
