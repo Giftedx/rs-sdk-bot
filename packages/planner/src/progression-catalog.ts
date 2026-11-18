@@ -226,7 +226,7 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  const data=catalog??(existsSync(resolve(root,'packages/planner/data/progression-routes.json'))?loadProgressionCatalog():undefined);
  if(script==='scripts/microbot-jewellery-trip.ts'){
   try{
-   const raw=args[0];if(raw&&raw.endsWith('.json')&&!existsSync(raw))return{kind:'service',objective:'jewellery-trip:'+raw,units:1};
+   const raw=args[0];
    const order=raw?JSON.parse(readFileSync(raw,'utf8')):{recipe:env.RECIPE,target:Number(env.TARGET),stringAmulet:env.STRING_AMULET==='1'};
    if(typeof order.recipe!=='string'||!whole(order.target)||order.target<1||order.target>10000)return null;
    const native=data?.methods.find(m=>{const job=m.execution?.bankJob;return!!job&&job.family==='jewellery'&&job.recipe===order.recipe;});
@@ -284,10 +284,6 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
    if(whole(product)&&product>0&&whole(maximum)&&maximum>0)return{kind:'service',objective:`smith-anvil:${product}:${maximum}`,units:1};
    return null;
   }
-  const bar=setting(env,args,'BAR_TYPE')??args.find(a=>!/^\d+$/.test(a)&&!a.includes('='))??'bronze';
-  const capText=setting(env,args,'CAP')??args.find(a=>/^\d+$/.test(a));
-  const cap=capText===undefined?15000:Number(capText);
-  if(whole(cap)&&cap>0)return{kind:'service',objective:`smelt:${bar}`,units:1};
  }
  if(['scripts/microbot-production.ts','scripts/smelt-bars.ts'].includes(script)){
   const recipe=script==='scripts/microbot-production.ts'?args.find(a=>!a.includes('=')&&!/^\d+$/.test(a)):setting(env,args,'BAR_TYPE')??args[1];
@@ -296,14 +292,21 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   const items=method&&Object.fromEntries(Object.entries(method.effects.items??{}).map(([id,n])=>[id,n*maximum]));
   if(whole(maximum)&&maximum>0&&positiveItems(items))return{kind:'produce',items:items!,consumer};
  }
+ if(script==='scripts/smelt-bars.ts'){
+  // A smelt order with no product count: its tick cap is the bound.
+  const bar=setting(env,args,'BAR_TYPE')??args.find(a=>!/^\d+$/.test(a)&&!a.includes('='))??'bronze';
+  const capText=setting(env,args,'CAP')??args.find(a=>/^\d+$/.test(a));
+  const cap=capText===undefined?15000:Number(capText);
+  if(whole(cap)&&cap>0)return{kind:'service',objective:`smelt:${bar}`,units:1};
+ }
  if(script==='scripts/aio-skiller.ts'&&args[0]==='bank-job'){
   try{const raw=args[1]??'';
-   if(raw.endsWith('.json')&&!raw.startsWith('--job=')&&!existsSync(raw))return{kind:'service',objective:'bank-job:'+raw,units:1};
    const job=JSON.parse(raw.startsWith('--job=')?decodeURIComponent(raw.slice(6)):readFileSync(raw,'utf8'));
    const method=data?.methods.find(m=>{const profile=m.execution?.bankJob;return!!profile&&profile.family===job.family&&profile.recipe===job.recipe;}),skill=method&&Object.keys(method.effects.xp??{})[0];
    if(skill&&finiteLevel(job.targetLevel))return{kind:'train',skill,targetLevel:job.targetLevel};
    const product=method&&Object.keys(method.effects.items??{})[0];if(product&&whole(job.target)&&job.target>0)return{kind:'produce',items:{[Number(product)]:job.target},consumer};
-   if(typeof job.family==='string'&&typeof job.recipe==='string')return{kind:'service',objective:`bank-job:${job.family}:${job.recipe}`,units:1};
+   // A catalog recipe with no product row: the count of the job is the bound.
+   if(method&&whole(job.target)&&job.target>0)return{kind:'service',objective:`bank-job:${job.family}:${job.recipe}`,units:job.target};
   }catch{return null;}
  }
  if(script==='scripts/aio-skiller.ts'&&args[0]&&finiteLevel(target))return PROGRESSION_SKILLS.includes(key(args[0]) as typeof PROGRESSION_SKILLS[number])?{kind:'train',skill:key(args[0]),targetLevel:target}:null;
@@ -359,8 +362,12 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   'owned-logistics-entry','ranged-progression-case',
  ]);
  if(boundedServiceEntries.has(entryName)){
-  const capText=setting(env,args,'CAP')??setting(env,args,'TICKS');
-  if(capText!==undefined&&(!whole(Number(capText))||Number(capText)<=0))return null;
+  // The entry states its bound: a CAP or TICKS setting, or a count among its positional arguments. No number, a zero
+  // or a fraction is no finite goal.
+  const stated=[setting(env,args,'CAP'),setting(env,args,'TICKS'),...args.filter(a=>/^-?\d+(?:\.\d+)?$/.test(a))].filter(v=>v!==undefined);
+  // These nine workers run to their own default tick cap, so a bare entry is finite.
+  const defaultCap=['gather-flax','spin-bowstrings','fletch-arrows','gather-fish','cook-food','gather-yews','gather-ore','gather-essence','blood-chest'].includes(entryName);
+  if(!stated.length&&!defaultCap||stated.some(v=>!whole(Number(v))||Number(v)<=0))return null;
   const label=args.find(a=>!/^\d+$/.test(a)&&!a.includes('=')&&!a.startsWith('-'))??routes[0]?.id??script;
   return{kind:'service',objective:`${entryName}:${label}`,units:1};
  }
