@@ -1,0 +1,22 @@
+{
+ "id": "1795018062290-deeppockets-pickpockdick",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Deeppockets",
+ "to": "PickpockDick",
+ "item": "coins",
+ "count": 184566,
+ "start": 1795018062290,
+ "end": 1795020462290,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
