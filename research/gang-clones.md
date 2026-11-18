@@ -567,6 +567,40 @@ two dragonhide loadouts last.
   72, 51 and 74 without, with a spread of 2 to 3 times inside a row.
 ||||||| 4b839d5e98
 
+## The attackers
+
+Other teams run bots on this server. The attacker library puts attackers of a given kind on the post in place of the
+clones (`extra:attack-*`). `SQUAD_GANG_KIT=<kit>+<kit>` gives gang account i the kit `list[i]` of `scripts/pk-kits.ts`,
+and `SQUAD_GANG_PROFILE` its fight profile (here `champion`, the profile of the hill climb). The squad is the four members
+of live run 1 in their own loadouts, with full prayer points unless the case says no prayer. The attackers hunt the
+nearest member. A cell is what the squad run prints: kills of the attackers, deaths of ours, Hitpoints lost.
+
+First cells (hosted runs 44416402781, 44417085194, 44417511041; seeds 1, 2 and 3; raw Hitpoints lost by seed):
+
+| Attacker | Kit | Kills | Deaths of ours | Hitpoints lost by seed |
+|---|---|---|---|---|
+| mage | `mage` | 0 | 0 | 0, 6, 0 |
+| ranger | `ranger` | 0 | 0 | 89, 33, 77 |
+| tribrid | `tribrid-snare` | 0 | 0 | 13, 0, 27 |
+| Iban mage, god mage, pure with a bow, pure with a dagger | `pure-iban`, `pure-god`, `pure-ranger`, `pure-dds` | 0 | 0 | 0, 0, 0 in each |
+| team of 3 (mage, ranger, tribrid) | `mage+ranger+tribrid-snare` | 1 | 1 | 375, 357, 314 |
+| team of 3, squad with no prayer points | the same | 0 | 0 | 142, 121, 85 |
+| team of 5 (2 mages, a ranger, 2 tribrids) | `mage+ranger+tribrid-snare+tribrid-snare+mage` | 3 | 0 | 639, 569, 1261 |
+| team of 5, squad with no prayer points | the same | 0 | 2 | 571, 264, 223 |
+
+- **A lone attacker does not beat the squad here.** The mage, the ranger and the tribrid ended with 0 to 89 Hitpoints lost: the
+  squad stays together and the attacker with the champion's rules leaves when it is outnumbered (the log of the mage
+  case: `PK escaped ... after 104 ticks`).
+- **The four pure kits had no fight in 3 seeds.** Their combat levels are far under ours. The cause is not measured. A
+  combat range of the Wilderness is a candidate.
+- **A team of 5 is the one that kills our accounts when they have no prayer points:** 2 deaths in 3 seeds, and 223 to 571
+  Hitpoints lost with no kill. With prayer points the squad lost 569 to 1,261 Hitpoints and killed 3 attackers.
+- **The attackers do not yet play at their best.** They use the champion's options. The hill climb of an attacker's own rules
+  (target choice, when to pile on one member, when to leave) is not done. A third party that arrives in the middle of the
+  fight with the clones is not built.
+
+Not done: the matrix of our setups against each attacker, the policy table, and the third party during the gang fight.
+
 ## Keep it true
 
 `scripts/measure/pk-gang-drift.ts` compares new observations with the record:
