@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795034316289-masterbaiter-knightstick-feather",
  "account": "Masterbaiter",
  "partner": "Knightstick",
@@ -12,6 +12,16 @@
  "claim": "da5bf595-ad5d-4660-8bfd-7b8f329d7ed0",
  "count": 0,
  "ok": false,
- "at": 1795034436002,
- "detail": "trade claimed"
+ "at": 1795034606718,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "bank": {
+  "count": 50,
+  "at": 1795034605932
+ },
+ "logout": {
+  "attemptId": "1795034436013-0000017080-0000000001",
+  "at": 1795034606708,
+  "sha256": "0820b9ac7892a8c94efea147777562653311ce626211f34a7051d0f5a890da66"
+ },
+ "screen": false
 }
