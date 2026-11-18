@@ -1,5 +1,5 @@
 import { expect, spyOn, test } from 'bun:test';
-import { BOW_TRIP, FOOD_LIST, foodHeld, healOf, planFood, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget, pickTrip, resolveHuntSpots, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
+import { BOW_TRIP, EDGEVILLE_BANK, rekitAfterDeath, RESPAWN_TICKS, FOOD_LIST, foodHeld, healOf, planFood, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget, pickTrip, resolveHuntSpots, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
 import { assessWildernessThreat, planWildernessEscape, restockPlan, restockPlanFromStock, slashWebThrough, WILDERNESS_ESCAPES, wildernessCombatMargin, wildernessDepth } from './pk-roam';
 import { pvpCombatBracket } from './aio-pvp';
 import * as pk from './pk';
@@ -431,4 +431,119 @@ test('restock with too little food in the bank fails and names the sharks that a
     expect(err).toContain('lacks');
     expect(err).toContain('385');
     expect(f.withdrawals).toEqual([]);
+});
+
+// A world for the death path: the account dies, respawns at Lumbridge with 1 Hitpoints and nothing worn, and the bank holds the rest.
+function deathWorld(bankRows: { id: number; count: number }[], o: { respawnAfter?: number; worn?: number[] } = {}) {
+    const wornAtStart = o.worn ?? [1163, 1201, 1231];
+    const inventory: any[] = [], equipment: any[] = [], bank = bankRows.map(r => ({ ...r }));
+    let tick = 0, deadSince = 0, eaten = 0, slots = 0;
+    const player: any = { worldX: 3094, worldZ: 3540, combatLevel: 100, hp: 0, maxHp: 99, isDead: true, lifeId: 1 };
+    const state: any = { player, inventory, equipment, skills: [], combatEvents: [], nearbyPlayers: [] };
+    const respawn = () => { Object.assign(player, { worldX: 3222, worldZ: 3218, hp: 1, isDead: false, lifeId: 2 }); };
+    const s: any = {
+        tick: () => tick, ended: new Promise(() => {}), client: {},
+        sdk: {
+            getState: () => state, getInventory: () => inventory, getEquipment: () => equipment, getBankItems: () => bank,
+            sendUseItem: async (slot: number, op: number) => {
+                const idx = inventory.findIndex(i => i.slot === slot);
+                if (idx < 0) return;
+                const item = inventory[idx]!;
+                if (op === 1) { eaten++; player.hp = Math.min(player.maxHp, player.hp + 20); item.count--; if (item.count <= 0) inventory.splice(idx, 1); }
+                else { inventory.splice(idx, 1); equipment.push(item); }
+            },
+        },
+        bot: {
+            openBank: async () => ({ success: true }), closeBank: async () => {}, depositItem: async () => {},
+            withdrawItem: async (row: any, count: number) => {
+                row.count -= count;
+                const food = row.id === 385, held = inventory.find(i => i.id === row.id && food);
+                if (held) held.count += count;
+                else inventory.push({ id: row.id, count, slot: ++slots, name: food ? 'Shark' : 'Piece', optionsWithIndex: food ? [{ text: 'Eat', opIndex: 1 }] : [{ text: 'Wear', opIndex: 2 }] });
+            },
+        },
+    };
+    // The next tick: the account is dead for `respawnAfter` ticks (default 3) and then stands at the respawn point.
+    const next = async () => { tick++; if (player.isDead && ++deadSince > (o.respawnAfter ?? 3)) respawn(); return true; };
+    return { s, state, player, inventory, equipment, bank, wornAtStart: wornAtStart.map(id => ({ id, count: 1 })), next, eaten: () => eaten };
+}
+
+async function withDeathMocks<T>(w: ReturnType<typeof deathWorld>, run: () => Promise<T>): Promise<T> {
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_deps, path) => { w.player.worldX = path[0]!.x; w.player.worldZ = path[0]!.z; return { ok: true, ticks: 5, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 }; }),
+        spyOn(pk, 'nextTick').mockImplementation(w.next),
+    ];
+    try { return await run(); } finally { for (const mock of mocks) mock.mockRestore(); }
+}
+
+test('rekitAfterDeath waits for the new life, walks to the bank, wears the starting pieces and eats up from 1 Hitpoints', async () => {
+    const w = deathWorld([{ id: 385, count: 20 }, { id: 1163, count: 1 }, { id: 1201, count: 1 }, { id: 1231, count: 1 }]);
+    const lines: string[] = [];
+    const record = await withDeathMocks(w, () => rekitAfterDeath(w.s, { lifeBefore: 1, diedNear: { x: 3094, z: 3541 }, wornAtStart: w.wornAtStart, stop: () => false, log: l => lines.push(l) }));
+    expect(record).toMatchObject({ rekit: 'ok', missing: [], hpAtRespawn: 1, lifeBefore: 1, lifeAfter: 2, respawnAt: { x: 3222, z: 3218 }, diedNear: { x: 3094, z: 3541 }, packAtRespawn: [] });
+    expect(w.equipment.map(e => e.id).sort()).toEqual([1163, 1201, 1231]);
+    // 1 Hitpoints need 5 sharks to reach 99, and the eating stops within 10 of full: 5 sharks eaten, 1 left over.
+    expect(w.player.hp).toBeGreaterThanOrEqual(89);
+    expect(w.eaten()).toBe(5);
+    expect(w.inventory.find(i => i.id === 385)?.count).toBe(1);
+    expect(w.player.worldX).toBe(EDGEVILLE_BANK.x);
+    expect(lines.some(l => l.startsWith('HUNT death {') && l.includes('"rekit":"ok"'))).toBe(true);
+});
+
+test('rekitAfterDeath names the pieces that the bank lacks, and ends with no food in the bank or no respawn', async () => {
+    const lacks = deathWorld([{ id: 385, count: 20 }, { id: 1201, count: 1 }, { id: 1231, count: 1 }]);
+    const a = await withDeathMocks(lacks, () => rekitAfterDeath(lacks.s, { lifeBefore: 1, diedNear: null, wornAtStart: lacks.wornAtStart, stop: () => false, log: () => {} }));
+    expect(a).toMatchObject({ rekit: 'ok', missing: [1163] });
+    expect(lacks.equipment.map(e => e.id).sort()).toEqual([1201, 1231]);
+    const hungry = deathWorld([{ id: 1231, count: 1 }]);
+    const b = await withDeathMocks(hungry, () => rekitAfterDeath(hungry.s, { lifeBefore: 1, diedNear: null, wornAtStart: hungry.wornAtStart, stop: () => false, log: () => {} }));
+    expect(b.rekit).toBe('no food in the bank');
+    const never = deathWorld([{ id: 385, count: 20 }], { respawnAfter: 1000 });
+    const c = await withDeathMocks(never, () => rekitAfterDeath(never.s, { lifeBefore: 1, diedNear: null, wornAtStart: never.wornAtStart, stop: () => false, log: () => {} }));
+    expect(c).toMatchObject({ rekit: 'no respawn', respawnAt: null });
+    expect(c.ticks).toBeGreaterThanOrEqual(RESPAWN_TICKS);
+    // The death limit only records the death.
+    const limit = deathWorld([{ id: 385, count: 20 }]);
+    const d = await withDeathMocks(limit, () => rekitAfterDeath(limit.s, { lifeBefore: 1, diedNear: null, wornAtStart: limit.wornAtStart, stop: () => false, log: () => {}, recordOnly: true }));
+    expect(d).toMatchObject({ rekit: 'death limit', hpAtRespawn: 1 });
+    expect(limit.player.worldX).toBe(3222);
+});
+
+for (const maxDeaths of [2, 0]) test(`hunt after a death to a player ${maxDeaths ? 're-kits and goes on' : 'ends with the record at the death limit'}`, async () => {
+    const w = deathWorld([{ id: 385, count: 40 }, { id: 1163, count: 1 }, { id: 1201, count: 1 }, { id: 1231, count: 1 }]);
+    w.player.hp = 99; w.player.isDead = false;
+    w.equipment.push(...[1163, 1201, 1231].map(id => ({ id, count: 1, slot: 0, name: 'Piece', optionsWithIndex: [] })));
+    w.state.nearbyPlayers.push({ index: 3, name: 'Test stranger', combatLevel: 100, z: 3540, x: 3094, distance: 1 });
+    let fights = 0;
+    const lines: string[] = [];
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_deps, path) => { w.player.worldX = path[0]!.x; w.player.worldZ = path[0]!.z; return { ok: true, ticks: 5, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 }; }),
+        spyOn(pk, 'nextTick').mockImplementation(w.next),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+        // The first fight: the account dies. Its pack and worn items are gone (the killer has them), the new life starts at Lumbridge.
+        spyOn(pk, 'fightPlayer').mockImplementation(async () => {
+            fights++;
+            w.state.nearbyPlayers.length = 0;
+            if (fights === 1) { w.equipment.length = 0; w.inventory.length = 0; w.player.hp = 0; w.player.isDead = true; return { outcome: 'died', ticks: 30, targetAt: { x: 3095, z: 3541 } } as any; }
+            return { outcome: 'lost', ticks: 1 } as any;
+        }),
+    ];
+    try {
+        const result: any = await hunt(w.s, { cap: 400, food: 2, minFood: 1, escapeAt: 35, stop: () => false, log: l => lines.push(l), kit: {}, trip: [{ id: 385, count: 1 }], spots: [{ x: 3094, z: 3540, dwell: 3 }], maxDeaths });
+        expect(result.deaths).toBe(1);
+        if (maxDeaths) {
+            expect(result.rekits).toBe(1);
+            expect(result.end).toBe('cap');
+            expect(result.death).toBeUndefined();
+            expect(w.equipment.map(e => e.id).sort()).toEqual([1163, 1201, 1231]);
+            expect(w.player.hp).toBeGreaterThanOrEqual(89);
+            expect(lines.filter(l => l.startsWith('HUNT death {'))).toHaveLength(1);
+        } else {
+            expect(result.rekits).toBe(0);
+            expect(result.end).toBe('died');
+            expect(result.death).toMatchObject({ rekit: 'death limit', hpAtRespawn: 1, diedNear: { x: 3095, z: 3541 }, lifeBefore: 1, lifeAfter: 2 });
+        }
+    } finally { for (const mock of mocks) mock.mockRestore(); }
 });

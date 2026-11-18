@@ -604,6 +604,15 @@ const ROUTE_CASES: BenchCase[] = [
   // The same with the mage kit (splitbark, mystic fire staff, freeze runes): a magic attack bonus above 0, where rune
   // armour leaves the freeze's attack roll near 0 (player_combat_stat.rs2: (Magic + 9) x (bonus + 64)).
   gangCase('extra:kite-chase-mage-x4', 'mage', 'ganker-dds', 4, GANKER_POST, ['SPAR_B=ganker', 'SPAR_A=champion', 'SPAR_CAP=1500', 'SPAR_WAIT=60'], 1),
+  // A death and the re-kit (scripts/pk-hunt.ts rekitAfterDeath, research/pvp-fight-loop.md "Death, skull and re-kit"): a hunter
+  // that wears a rune full helm and a bronze dagger and holds the same pieces and sharks in its bank meets a target in full rune
+  // armour that fights back with the champion profile. The hunter fights on to its death (no danger exit, no escape), respawns at
+  // Lumbridge with 1 Hitpoints, walks to the Edgeville bank, eats up and wears its starting pieces again, and goes on until its cap.
+  {key: 'extra:hunt-death-rekit', engineEnv: SPAR_ENGINE, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b}', 'hunt', '900', 'PK_KIT={"melee":[1205]}', 'PK_TRIP=[{"id":385,"count":1}]', 'HUNT_FOOD=3', 'MIN_FOOD=1', 'ESCAPE_AT=0', 'HUNT_EXIT=0', 'HUNT_MAX_DEATHS=9', 'TARGET_PROFILE=champion'],
+    pass: s => ok(s) && /\bhunt cap kills \d+ deaths [1-9]\d* rekits [1-9]\d*/.test(s), output: /deaths (\d+)/,
+    presetConfig: {...sparFixture(3092, 3496), equipment: [{id: 1163, count: 1, slot: 0}, {id: 1205, count: 1, slot: 3}], inventory: [], bank: [{id: 385, count: 40}, {id: 1163, count: 1}, {id: 1205, count: 1}]},
+    companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3540)}]},
   // The routes that need a player to fight, through scripts/measure/pvp-with-targets.ts: the target is a second account
   // of the run with no food that stands on its tile and hits back by auto-retaliate. Each passes on a kill.
   // fight: scripts/pk.ts with its own kit (staff, bow, dagger(p) and kiteshield: sparFixture) at Wilderness level 3.
@@ -1040,6 +1049,13 @@ const ROUTE_CASES: BenchCase[] = [
   gangCase('extra:gang-live-check-x2', 'live-walker-iron', 'ganker-dds', 2, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK),
   // The same with one group: half the accounts, for a PC with little memory free.
   gangCase('extra:gang-live-check-x1', 'live-walker-iron', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK),
+  // The ring slot (research/pvp-fight-loop.md, "Rings"): the live-check meeting with a ring of recoil and with a ring of life, and
+  // the same meeting with no escape (escapeAt 0), where our account fights on to a death that a ring of life can prevent.
+  ...(['', '-recoil', '-life'] as const).flatMap(ring => [
+    ...(ring ? [gangCase(`extra:gang-live-check${ring}-x1`, `live-walker-iron${ring}`, 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK)] : []),
+    gangCase(`extra:gang-live-check-noescape${ring}-x1`, `live-walker-iron${ring}`, 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_A_OPTS={"escapeAt":0}', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK)]),
+  // The live-check meeting with the two prayer potions of the live pilot (kit live-walker-iron-pray).
+  gangCase('extra:gang-live-check-pray-x1', 'live-walker-iron-pray', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=2400', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=1000', 'SPAR_WAIT=400', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK),
   // The fast case of the hill climb: the same fight with short waits (the gang rests 150 ticks, our account waits 60,
   // a cap of 1,200 ticks). It holds the first walk out of a gang account and the drain of our prayer.
   atBank(gangCase('extra:gang-live-fast-x1', 'live-walker-iron', 'ganker-dds', 1, GANKER_POST, ['SPAR_B=ganker-live', 'SPAR_A=gang-hunter', 'SPAR_PRETRIP=1', 'SPAR_CAP=1200', 'SPAR_B_TRIPS=2', 'SPAR_B_FOLLOW=1', 'SPAR_B_REST=150', 'SPAR_WAIT=60', 'STALL_TICKS=3000'], 3, undefined, EDGE_BANK), GANKER_POST),

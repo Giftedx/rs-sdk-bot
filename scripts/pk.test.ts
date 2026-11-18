@@ -3,6 +3,7 @@ import {
     attackable, battleaxeWarcryMath, bestDamageSpell, bestFood, canCastChargeNow, castableFreeze, chargeVarpTicks, combatPrayers, dangerReason, defaultSpec, defaultStunSpec,
     estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, ITEMS, killMessage, lowHealth,
     kitRotation, meleeWeaponDelay, negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, pickFakieWeapon,
+    deathRisk, itemCostOf, ownSkull,
     pickFrozenKiteTile, pickWeighted, planPrayerTick, PRAYER, protectedStyles, seededRandom, shouldComboEat, skulled,
     SPELLS, STUNNED_SHOVE_SPOTANIM, weaponStyle, wildernessLevel,
 } from './pk';
@@ -966,4 +967,126 @@ test('each special bar that pk.ts names exists in the interface pack of the serv
     expect(used.size).toBeGreaterThan(5);
     // A name that the pack does not hold throws "no interface component" at the first special of that weapon.
     expect([...used].filter(bar => !known.has(bar))).toEqual([]);
+});
+
+// Our own skull and what a death costs (content death.rs2 pvp_death_lose_items).
+const COSTS: Record<number, number> = { 1215: 40_000, 1127: 65_000, 1201: 30_000, 385: 150, 995: 1, 1: 0 };
+const cost = (id: number) => COSTS[id] ?? 0;
+const KIT_UNITS = [{ id: 1215, count: 1 }, { id: 1127, count: 1 }, { id: 1201, count: 1 }, { id: 385, count: 10 }, { id: 995, count: 500 }, { id: 1, count: 3 }];
+
+test('deathRisk: no skull keeps the 3 dearest units, Protect Item one more, a skull only that one', () => {
+    expect(deathRisk(KIT_UNITS, cost, false, false)).toEqual({ keeps: 3, kept: [1127, 1215, 1201], keptValue: 135_000, lostValue: 10 * 150 + 500, lostUnits: 513 });
+    expect(deathRisk(KIT_UNITS, cost, false, true)).toMatchObject({ keeps: 4, kept: [1127, 1215, 1201, 385], keptValue: 135_150, lostUnits: 512 });
+    expect(deathRisk(KIT_UNITS, cost, true, false)).toEqual({ keeps: 0, kept: [], keptValue: 0, lostValue: 135_000 + 1500 + 500, lostUnits: 516 });
+    expect(deathRisk(KIT_UNITS, cost, true, true)).toEqual({ keeps: 1, kept: [1127], keptValue: 65_000, lostValue: 72_000, lostUnits: 515 });
+});
+
+test('deathRisk keeps one unit at a time, never an item with no cost, and tolerates a pack with fewer units than keeps', () => {
+    // A stack of 2 of the dearest item gives 2 of the 3 keeps.
+    expect(deathRisk([{ id: 1215, count: 2 }, { id: 1201, count: 1 }, { id: 385, count: 5 }], cost, false, false)).toMatchObject({ kept: [1215, 1215, 1201], lostUnits: 5 });
+    expect(deathRisk([{ id: 1, count: 4 }], cost, false, true)).toEqual({ keeps: 4, kept: [], keptValue: 0, lostValue: 0, lostUnits: 4 });
+    expect(deathRisk([], cost, true, true)).toEqual({ keeps: 1, kept: [], keptValue: 0, lostValue: 0, lostUnits: 0 });
+    // The real table: a dragon dagger has a cost, an unknown item has none.
+    expect(itemCostOf(1215)).toBeGreaterThan(0);
+    expect(itemCostOf(999_999)).toBe(0);
+});
+
+test('ownSkull reads the head icon of the local player', () => {
+    expect(ownSkull({ localPlayer: { headicons: 1 } })).toBe(true);
+    expect(ownSkull({ localPlayer: { headicons: 8 } })).toBe(false);
+    expect(ownSkull({ localPlayer: { headicons: 9 } })).toBe(true);
+    expect(ownSkull({ localPlayer: {} })).toBe(false);
+    expect(ownSkull({})).toBeNull();
+    expect(ownSkull(undefined)).toBeNull();
+});
+
+// One short fight with our own head icon `headicons`, to see whether Protect Item (prayer 8) goes on.
+async function protectItemRun(headicons: number | null, protectItem: boolean | 'skulled' | undefined) {
+    let tick = 10;
+    const actions: string[] = [], logs: string[] = [];
+    const appearance = new Uint16Array(12);
+    appearance[3] = 1231 + 512;
+    const client: any = { var: { 300: 1000, 301: 0, 172: 1 }, players: [null, { headicons: 0, appearance, health: 20, totalHealth: 99 }], ...(headicons === null ? {} : { localPlayer: { headicons } }) };
+    const state: any = {
+        player: { worldX: 3094, worldZ: 3555, combatLevel: 126, hp: 99, maxHp: 99, runEnergy: 100, lifeId: 1 },
+        skills: [{ name: 'Magic', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+        prayers: { prayerPoints: 99, activePrayers: new Array(20).fill(false) },
+        inventory: [{ slot: 0, id: 1231, name: 'Dragon dagger(p)', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] }, { slot: 1, id: 995, name: 'Coins', count: 500, optionsWithIndex: [] }],
+        equipment: [{ slot: 3, id: 1401, name: 'Mystic fire staff', count: 1, optionsWithIndex: [] }],
+        nearbyPlayers: [{ index: 1, name: 'Dummy', combatLevel: 126, x: 3095, z: 3555, distance: 1 }],
+        combatEvents: [], gameMessages: [],
+    };
+    const session: any = {
+        client, tick: () => tick, ended: new Promise(() => {}),
+        onTick: (cb: () => void) => { setTimeout(() => { tick++; if (tick === 16) state.gameMessages = [{ observationId: 9, tick: 16, type: 0, text: 'You have defeated Dummy.' }]; cb(); }, 0); return () => {}; },
+        sdk: {
+            getState: () => state, sendUseItem: () => {}, sendClickComponent: () => {}, sendInteractPlayer: () => {}, sendSpellOnPlayer: () => {},
+            sendTogglePrayer: (p: number) => { state.prayers.activePrayers[p] = !state.prayers.activePrayers[p]; actions.push(`pray:${p}`); },
+        },
+    };
+    const res = await fightPlayer(session, 'Dummy', { kit: { magic: [1401], melee: [1231] }, ...(protectItem === undefined ? {} : { protectItem }), log: l => logs.push(l) });
+    return { res, actions, logs, protectOn: actions.includes(`pray:${PRAYER.item}`) };
+}
+
+test('protectItem "skulled" turns Protect Item on only while our own skull shows; the default and true keep it on; false keeps it off', async () => {
+    expect((await protectItemRun(1, 'skulled')).protectOn).toBe(true);
+    expect((await protectItemRun(0, 'skulled')).protectOn).toBe(false);
+    expect((await protectItemRun(null, 'skulled')).protectOn).toBe(false);
+    expect((await protectItemRun(0, undefined)).protectOn).toBe(true);
+    expect((await protectItemRun(0, true)).protectOn).toBe(true);
+    expect((await protectItemRun(1, false)).protectOn).toBe(false);
+});
+
+test('the fight logs our skull and what a death would cost, once for each skull state', async () => {
+    const skull = await protectItemRun(1, undefined), plain = await protectItemRun(0, undefined);
+    expect(skull.res.outcome).toBe('kill');
+    const lines = (r: { logs: string[] }) => r.logs.filter(l => l.startsWith('PK skull '));
+    // Skulled with Protect Item (the default): 1 item kept. With no skull the 3 dearest are kept, and Protect Item keeps a fourth.
+    expect(lines(skull)).toHaveLength(1);
+    expect(lines(skull)[0]).toMatch(/^PK skull on: a death keeps 1 item and loses \d+ items worth \d+$/);
+    expect(lines(plain)).toHaveLength(1);
+    expect(lines(plain)[0]).toMatch(/^PK skull off: a death keeps 4 items and loses \d+ items worth \d+$/);
+    expect((await protectItemRun(null, undefined)).logs.some(l => l.startsWith('PK skull '))).toBe(false);
+});
+
+// The tick in which the fight drinks an antipoison after "You have been poisoned!" (the message comes in tick 11).
+async function antipoisonTick(cureNow: boolean | undefined): Promise<number | null> {
+    let tick = 10, drank: number | null = null;
+    const appearance = new Uint16Array(12);
+    appearance[3] = 1231 + 512;
+    const client: any = { var: { 300: 1000, 301: 0, 172: 1 }, players: [null, { headicons: 0, appearance, health: 20, totalHealth: 99 }] };
+    const state: any = {
+        player: { worldX: 3094, worldZ: 3555, combatLevel: 126, hp: 99, maxHp: 99, runEnergy: 100, lifeId: 1 },
+        skills: [{ name: 'Magic', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+        prayers: { prayerPoints: 99, activePrayers: new Array(20).fill(false) },
+        inventory: [{ slot: 0, id: 1231, name: 'Dragon dagger(p)', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+            { slot: 1, id: 2446, name: 'Antipoison(4)', count: 1, optionsWithIndex: [{ text: 'Drink', opIndex: 1 }] }],
+        equipment: [{ slot: 3, id: 1401, name: 'Mystic fire staff', count: 1, optionsWithIndex: [] }],
+        nearbyPlayers: [{ index: 1, name: 'Dummy', combatLevel: 126, x: 3095, z: 3555, distance: 1 }],
+        combatEvents: [], gameMessages: [],
+    };
+    const session: any = {
+        client, tick: () => tick, ended: new Promise(() => {}),
+        onTick: (cb: () => void) => {
+            setTimeout(() => {
+                tick++;
+                if (tick === 11) state.gameMessages = [{ observationId: 5, tick: 11, type: 0, text: 'You have been poisoned!' }];
+                if (tick === 20) state.gameMessages = [...state.gameMessages, { observationId: 9, tick: 20, type: 0, text: 'You have defeated Dummy.' }];
+                cb();
+            }, 0);
+            return () => {};
+        },
+        sdk: {
+            getState: () => state, sendClickComponent: () => {}, sendInteractPlayer: () => {}, sendSpellOnPlayer: () => {}, sendTogglePrayer: () => {},
+            sendUseItem: (slot: number) => { if (slot === 1 && drank === null) drank = tick; },
+        },
+    };
+    await fightPlayer(session, 'Dummy', { kit: { magic: [1401], melee: [1231] }, ...(cureNow === undefined ? {} : { cureNow }), log: () => {} });
+    return drank;
+}
+
+test('an antipoison goes down in the first tick after the poison by default, and a tick later with cureNow false', async () => {
+    expect(await antipoisonTick(undefined)).toBe(11);
+    expect(await antipoisonTick(true)).toBe(11);
+    expect(await antipoisonTick(false)).toBeGreaterThan(11);
 });

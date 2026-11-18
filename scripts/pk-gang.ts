@@ -130,7 +130,7 @@ export function packOf(inventory: readonly { id: number; count: number; optionsW
 export type GangTrips = { count: number; resupply: (g: Session, ran: boolean) => Promise<string | null>; follow?: boolean };
 // `trips`: with more than one, an account that walked out of the Wilderness goes to the bank and comes back.
 // `wait`: the ticks that our account waits on its tile with none of the gang in view (default 20); `idlePrayerOff`
-// (SPAR_IDLE_PRAYER_OFF=1): it turns its prayers off while it waits.
+// (default; SPAR_IDLE_PRAYER_OFF=0 keeps them on): it turns its prayers off while it waits.
 export async function gang(a: Session, others: readonly Session[], optionsA: FightOptions, optionsB: FightOptions | ((member: number) => FightOptions), log: (line: string) => void = l => console.log(l), halt: () => boolean = () => false,
     trips?: { count: number; resupply: (a: Session, fresh?: boolean) => Promise<string | null>; bank?: { eaten: number } }, more: { wait?: number; gangTrips?: GangTrips; idlePrayerOff?: boolean; pickup?: ReadonlySet<number> } = {}): Promise<GangResult> {
     // A new practice world refuses player attacks for its first 8 ticks (pvp_combat.rs2:110).
@@ -394,7 +394,7 @@ if (import.meta.main) {
     // and PICKUP_ITEMS. A drop lasts 200 ticks (lootdrop.constant), less than a meeting, so the end of one is too late.
     const pickupOf = groups.map(([a]) => { const ammo = (a!.sdk.getEquipment?.() ?? []).find(e => /arrow|bolt/i.test(e.name))?.id; return pickup ? new Set([...(ammo ? [ammo] : []), ...PICKUP_ITEMS]) : undefined; });
     const results = await Promise.all(groups.map(([a, ...others], i) => gang(a!, others, options(0, i), (member: number) => options(1, i, member), undefined, () => halted !== undefined, tripCount > 1 ? resupplies[i] : resupplies[i] && { ...resupplies[i]!, count: 1 },
-        { wait: env.SPAR_WAIT === undefined ? undefined : Number(env.SPAR_WAIT), gangTrips: gangTripsOf[i], idlePrayerOff: env.SPAR_IDLE_PRAYER_OFF === '1', pickup: pickupOf[i] })));
+        { wait: env.SPAR_WAIT === undefined ? undefined : Number(env.SPAR_WAIT), gangTrips: gangTripsOf[i], idlePrayerOff: env.SPAR_IDLE_PRAYER_OFF !== '0', pickup: pickupOf[i] })));
     for (const r of results) console.log(`GANG ${JSON.stringify({ profiles: { a: nameA, b: nameB }, kits: { a: kitA, b: kitList }, ...r })}`);
     const s = gangSummary(results), ok = results.every(gangValid) && halted === undefined;
     await finish(groups.flat(), ok, `gang groups=${s.groups} cleared=${s.cleared} died=${s.died} escaped=${s.escaped} away=${s.away} cap=${s.cap} kills=${s.kills} ticks=${s.ticks} a=${nameA} b=${nameB} `

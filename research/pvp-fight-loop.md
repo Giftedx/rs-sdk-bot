@@ -1222,6 +1222,91 @@ runs; only stacks worth 20,000 gp or more, 24 kills and about 2.23M; no loot (`L
 (`FREEZE=0`, seeds 1 to 4), 10 of 16 against the base's 11. The cheap stacks (sharks, runes) cost the ticks of a kill,
 so the roam's `LOOT_MIN` default is 20,000.
 
+### Death, skull and re-kit
+
+Source -> local consumer -> reuse/adapt -> check: the pinned server's `death.rs2` (`pvp_death_lose_items`,
+`move_priciest_item_on_hero_to_death`), `pvp_death_mark.rs2`, `pvp.constant`, `pk_skull.rs2` and `ring_of_life.rs2` -> `hunt`
+in `scripts/pk-hunt.ts` and `fightPlayer` in `scripts/pk.ts` -> adapt (the rules are read from the content, no upstream code)
+-> `scripts/pk-hunt.test.ts`, `scripts/pk.test.ts` and `extra:hunt-death-rekit`.
+
+What a death to a player does (`death.rs2`): the pack and the worn items drop where the account died. An account with no skull
+keeps its 3 dearest items (the highest content `cost`, one unit at a time, an item with cost 0 never), Protect Item keeps 1
+more, and a skulled account keeps only that one. The account respawns at Lumbridge with 1 Hitpoints and no skull, and a death
+mark of 1,000 ticks keeps any later death at 1 Hitpoint. The bank is not touched.
+
+- **Skull.** `ownSkull` reads the head icon of the client's local player. `fightPlayer` logs `PK skull on|off` with the
+  items a death keeps and loses at the start and at each change (`deathRisk`). `protectItem: 'skulled'` turns Protect Item on
+  only while the skull shows. The default stays on, as measured; no case measures `'skulled'` yet.
+- **A death in the hunt.** `hunt` detects the new life (`lifeId`), walks to the Edgeville bank at 1 Hitpoints, takes sharks and
+  the pieces that the account wore when the hunt began (what the bank holds), wears them and eats up
+  (`rekitAfterDeath`). The next pass restocks the trip. `HUNT_MAX_DEATHS` (default 2) bounds the re-kits: a later death ends
+  the run with its record (`death=`, the respawn tile, the Hitpoints, the pack that it kept, the step that stopped the
+  re-kit). A piece that the bank lacks is in `missing`, and the restock ends the run when the trip cannot be filled.
+- **The session.** A death ends a bot session by default: `openBot` (`packages/core/src/bot.ts`) prints the DEATH line and calls
+  `finish`. `pk-hunt.ts` passes an `onStop` that ignores the reason `died` and ends the session for every other reason. With the
+  default, `extra:hunt-death-rekit` ends in the walk to the bank with `session ended`.
+- **The case.** `extra:hunt-death-rekit`: the hunter wears a rune full helm and a bronze dagger and holds both and sharks in its
+  bank. A target in full rune armour (profile `champion`) kills it in about 150 ticks. With `HUNT_MAX_DEATHS=9` the case ends
+  at its cap of 900 ticks with `deaths 2 rekits 2`: each death sends the account to (3222, 3218) with 1 Hitpoints, and the re-kit
+  takes about 200 ticks (the respawn wait, the walk to Edgeville, the sharks and the pieces). Seed 7, one run.
+- **A threat retreat.** `hunt` uses the result of the retreat: a death is handled, and a retreat that did not leave the
+  Wilderness is counted in `retreatsFailed` and logged.
+
+Gap: the hunt re-kits a death to a player in the Wilderness. The roam, the squad and the gang end their run at a death.
+
+### Rings, prayer and poison in the gang meeting
+
+Source -> local consumer -> check: `ring_of_life.rs2`, `ring_of_recoil.rs2` and `pvp_combat.rs2` (both rings need a members
+world: `map_members`), `prayer.rs2` (the drain timer) and the live meeting above -> the `ring` slot of `scripts/pk-kits.ts`,
+`cureNow` and `idlePrayerOff` -> `extra:gang-live-check-x1` and its variants.
+
+Conditions: our kit `live-walker-iron` (variants `-recoil`, `-life`, `-pray`) with profile `gang-hunter` against the 3 accounts
+of `ganker-dds` with profile `ganker-live`, 2,400 ticks, lockstep engine, `--seeds 1,2,3 --seed-jobs 3`. Each cell is seed 1 /
+seed 2 / seed 3. `prayerOut` is the tick at which our prayer points reached 0.
+
+| Condition | kills | deaths | damage taken | prayerOut |
+|---|---|---|---|---|
+| base kit | 0 / 2 / 0 | 0 / 0 / 0 | 335 / 480 / 339 | 1223 / 976 / 739 |
+| base kit, prayers off while it waits | 2 / 1 / 1 | 0 / 0 / 0 | 444 / 302 / 226 | 554 / 1792 / 718 |
+| ring of recoil | 0 / 1 / 0 | 0 / 0 / 0 | 532 / 330 / 517 | 1054 / 816 / 540 |
+| ring of life | 0 / 3 / 1 | 0 / 0 / 0 | 448 / 424 / 520 | 1230 / 509 / 927 |
+| no escape (`escapeAt` 0) | 2 / 1 / 0 | 0 / 0 / 1 | 525 / 463 / 562 | 426 / 1200 / 740 |
+| no escape, ring of life | 1 / 1 / 1 | 1 / 0 / 0 | 571 / 463 / 181 | 399 / 1200 / 1159 |
+
+- **Recoil.** No gain: one kill against two, and 225 more damage taken in the 3 seeds. The ring breaks after 40 damage to the
+  attacker. Not kept.
+- **Life.** No gain that the numbers show. With no escape, one seed died without the ring and one seed died with it. The
+  seed with the ring that lived took 181 damage against 562. Seed 2 ends on the same ticks, damage and kills as its run with no
+  ring, so the ring changes nothing there. Seeds 1 and 3 differ from their runs with no ring (cause not found), so 3 seeds
+  cannot separate a ring from this spread. The log holds no game message, so it does not say whether the ring ever fired.
+  Not kept.
+- **Prayer.** `live-walker-iron` carries no prayer potion, so its prayer ends at 0 in every meeting. The pilot takes up to 3
+  prayer potions from its bank (`live-pilot.ts`), and the kit `live-walker-iron-pray` carries 3 in place of the defence
+  potion and 2 sharks. With it:
+
+| Condition (kit `-pray`) | prayer at the end | prayerOut |
+|---|---|---|
+| 2 potions | 0 / 0 / 0 | 1539 / 346 / 815 |
+| 2 potions, prayers off while it waits | 0 / 0 / 0 | 1814 / 1555 / 2008 |
+| 2 potions, `zeroDrainFlick` | 0 / 0 / 0 | 560 / 696 / 365 |
+| 2 potions, `defencePrayer` false | 0 / 0 / 0 | 745 / 1479 / 951 |
+| 2 potions, `zeroDrainFlick`, `defencePrayer` false, `offensiveFlick` | 0 / 30 / 0 | 821 / 969 / 785 |
+| 2 potions, prayers off while it waits, `defencePrayer` false | 0 / 0 / 0 | 1650 / 1682 / 2060 |
+| **3 potions, prayers off while it waits, `cureNow` (the defaults)** | **16 / 12 / 0** | never / 929 / 1655 |
+| the same with `defencePrayer` false | 0 / 0 / 0 | 2102 / 905 / 1844 |
+
+  Turning the prayers off while our account waits roughly doubles the ticks that the prayer lasts when potions are carried
+  (2,700 to 5,377 ticks summed over the 3 seeds). `zeroDrainFlick` and `defencePrayer` false do not help. The defaults end
+  the meeting with prayer left in 2 of 3 seeds (in seed 1 the prayer never ran out and 12 doses are left). Seed 3 ends at tick
+  2,400 with 0 and its prayer out at tick 1,655. Gap: 3 seeds,
+  and the third potion and the idle rule are not measured apart.
+- **The original case with the defaults.** `extra:gang-live-check-x1` (no prayer potion in the kit) with the prayers off while it
+  waits and `cureNow`: prayerOut 1184 / 1153 / 1330 against 1223 / 976 / 739, kills 0 / 1 / 0, damage taken 208 / 309 / 521,
+  prayer 0 at the end in each seed. The prayer lasts longer, and with no potion it still ends at 0.
+- **Poison.** `cureNow` is now the default: an antipoison goes down in the first tick after the poison message. It is not
+  measured apart from the other changes. Gap: `poisoned` is set from the message of the current fight only, so a poison
+  taken between two fights is not seen.
+
 ### The hunt's fight options against a defender
 
 `extra:hunt-defend` (the hunt route against a target in rune that defends on the champion with 18 sharks and a glory,

@@ -20,9 +20,12 @@ export function itemId(name: string): number {
 let costs: Map<number, number> | undefined;
 const costOf = (id: number) => (costs ??= new Map((JSON.parse(readFileSync(join(root, 'knowledge/items.json'), 'utf8')) as { id: number; cost?: number }[]).map(i => [i.id, i.cost ?? 0]))).get(id) ?? 0;
 
-// Worn slots (vendor wearpos): 0 hat, 1 cape, 2 amulet, 3 weapon, 4 torso, 5 shield, 7 legs, 9 hands, 10 feet, 13 ammo.
-type Worn = Partial<Record<'hat' | 'cape' | 'amulet' | 'weapon' | 'torso' | 'shield' | 'legs' | 'hands' | 'feet', string>> & { ammo?: [string, number]; weaponCount?: number };
-const SLOT = { hat: 0, cape: 1, amulet: 2, weapon: 3, torso: 4, shield: 5, legs: 7, hands: 9, feet: 10 } as const;
+// Worn slots (vendor wearpos): 0 hat, 1 cape, 2 amulet, 3 weapon, 4 torso, 5 shield, 7 legs, 9 hands, 10 feet, 12 ring, 13 ammo.
+// A ring of life (ring_of_life.rs2) teleports the account to Lumbridge at 10 percent of its Hitpoints or less, up to Wilderness
+// level 30, and is used up. A ring of recoil (pvp_combat.rs2) hits a player attacker back for 10 percent of each hit plus 1 and
+// breaks after 40 damage. Both work only on a members world (map_members).
+type Worn = Partial<Record<'hat' | 'cape' | 'amulet' | 'weapon' | 'torso' | 'shield' | 'legs' | 'hands' | 'feet' | 'ring', string>> & { ammo?: [string, number]; weaponCount?: number };
+const SLOT = { hat: 0, cape: 1, amulet: 2, weapon: 3, torso: 4, shield: 5, legs: 7, hands: 9, feet: 10, ring: 12 } as const;
 export type KitSpec = {
     worn: Worn;
     // Carried besides food: a name, or a name and a count.
@@ -227,6 +230,18 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
     // The live kit with what the shops and the GE had: no helm, iron arrows.
     'live-walker-iron': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
+        carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3dose2defense', '3doseantipoison', ['lawrune', 2], ['airrune', 10]], food: 20,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
+    // live-walker-iron with the three prayer potions that the live pilot takes from its bank (scripts/pk-live/live-pilot.ts, up to 3
+    // of POTIONS), in place of the defence potion and two sharks: the bench kit has no prayer potion.
+    'live-walker-iron-pray': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ammo: ['iron_arrow', 300] },
+        carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3doseantipoison', ...PRAYER_POTS, '4doseprayerrestore', ['lawrune', 2], ['airrune', 10]], food: 18,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
+    // live-walker-iron with a ring of life and with a ring of recoil in the ring slot (research/pvp-fight-loop.md, "Rings").
+    'live-walker-iron-life': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ring: 'ring_of_life', ammo: ['iron_arrow', 300] },
+        carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3dose2defense', '3doseantipoison', ['lawrune', 2], ['airrune', 10]], food: 20,
+        switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
+    'live-walker-iron-recoil': { worn: { torso: 'adamant_platebody', legs: 'adamant_platelegs', amulet: 'amulet_of_power', weapon: 'dragon_dagger', ring: 'ring_of_recoil', ammo: ['iron_arrow', 300] },
         carried: ['magic_shortbow', '4dose2attack', '4dose2strength', '3dose2defense', '3doseantipoison', ['lawrune', 2], ['airrune', 10]], food: 20,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger'] }, options: { rotation: ['ranged', 'melee'] } },
     // live-walker-iron with the runes of 10 Entangles (5 earth, 5 water, 4 nature a cast) for 3 sharks: the freeze holds

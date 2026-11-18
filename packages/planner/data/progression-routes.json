@@ -140,6 +140,15 @@
    "Prayer": 99,
    "Hitpoints": 99
   },
+  "live-walker-iron-life": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
   "live-walker-iron-p": {
    "Attack": 99,
    "Strength": 99,
@@ -149,7 +158,25 @@
    "Prayer": 99,
    "Hitpoints": 99
   },
+  "live-walker-iron-pray": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
   "live-walker-iron-psuper": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "live-walker-iron-recoil": {
    "Attack": 99,
    "Strength": 99,
    "Defence": 99,
