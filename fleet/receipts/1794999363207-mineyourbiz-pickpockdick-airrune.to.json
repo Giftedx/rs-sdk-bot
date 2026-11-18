@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794999363207-mineyourbiz-pickpockdick-airrune",
+ "account": "PickpockDick",
+ "partner": "MineYourBiz",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 30,
+ "claim": "a3bb7e90-d8fb-4177-b0c3-296352de9888",
+ "count": 0,
+ "ok": false,
+ "at": 1794999424474,
+ "detail": "trade claimed"
+}

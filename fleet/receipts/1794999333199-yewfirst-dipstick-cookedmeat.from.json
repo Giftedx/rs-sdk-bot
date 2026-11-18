@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794999333199-yewfirst-dipstick-cookedmeat",
+ "account": "YewFirst",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "5ad5337c-d120-4494-b102-176e1b9f6791",
+ "count": 0,
+ "ok": false,
+ "at": 1794999431935,
+ "detail": "trade claimed"
+}

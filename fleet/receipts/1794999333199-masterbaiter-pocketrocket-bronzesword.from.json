@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794999333199-masterbaiter-pocketrocket-bronzesword",
+ "account": "Masterbaiter",
+ "partner": "Pocketrocket",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze sword",
+ "requested": 1,
+ "claim": "50414064-e4cd-4ba6-9fb7-a000330665a3",
+ "count": 0,
+ "ok": false,
+ "at": 1794999438069,
+ "detail": "trade claimed"
+}
