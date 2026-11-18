@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795010518969,
+ "at": 1795010713579,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -205,26 +205,6 @@
    ]
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=112589 CASH_RESERVE=1000 ORDER_KEY=ballspinner-kit11-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Rune platelegs on the Grand Exchange to wear rune armour",
-   "role": "supply",
-   "template": "kit-buy:army-armour-rune",
-   "autopilot": "local",
-   "resources": [
-    "ge:armour"
-   ]
-  },
-  {
    "account": "PickpockDick",
    "script": "scripts/chain.ts",
    "args": [
@@ -238,6 +218,24 @@
    "standing": true,
    "repeat": false,
    "goal": "buy 14 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-big-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=25 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=billionaire-kit13-532-6to31 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 25 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
    "role": "supply",
    "template": "kit-buy:army-bury-big-99",
    "autopilot": "local",
@@ -381,20 +379,19 @@
     "cow"
    ],
    "env": {
-    "TRAIN_SKILL": "Defence",
-    "TARGET_LEVEL": "45",
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "60",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":45}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Defence to 45 on the Ardougne cows",
+   "goal": "train Strength to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-defence-45",
+   "template": "army-cow-strength-60",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
@@ -475,22 +472,25 @@
    ]
   },
   {
-   "account": "Billionaire",
+   "account": "Ballspinner",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=25 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=billionaire-kit13-532-6to31 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=112589 CASH_RESERVE=1000 ORDER_KEY=ballspinner-kit11-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1079\":1}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 25 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "goal": "buy 1 Rune platelegs on the Grand Exchange to wear rune armour",
    "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
+   "template": "kit-buy:army-armour-rune",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "ge:armour"
+   ]
   },
   {
    "account": "Sausagefest",
