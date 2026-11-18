@@ -1,0 +1,22 @@
+{
+ "id": "1794998432758-swordinhand-woodpecker-bronzesword",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordinhand",
+ "to": "Woodpecker",
+ "item": "Bronze sword",
+ "count": 1,
+ "start": 1794998432758,
+ "end": 1795000832758,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
