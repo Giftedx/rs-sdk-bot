@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795007955948,
+ "at": 1795008019323,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -499,6 +499,29 @@
    "resources": [
     "shop:magic_guild"
    ]
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1800",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Ranged",
+    "TARGET_LEVEL": "80",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-6e963588-9b3d-4591-8941-609edf0210ee"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-bow-trooper-ranged80-cap-retry [task-6e963588-9b3d-4591-8941-609edf0210ee]",
+   "role": "helper"
   }
  ],
  "army": [
