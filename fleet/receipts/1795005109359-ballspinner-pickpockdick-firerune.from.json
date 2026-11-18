@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795005109359-ballspinner-pickpockdick-firerune",
+ "account": "Ballspinner",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 1,
+ "claim": "1fb78645-cc31-43f1-9a3c-127da56f0d70",
+ "count": 0,
+ "ok": false,
+ "at": 1795005342316,
+ "detail": "trade claimed"
+}
