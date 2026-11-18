@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794986551831-mmthv2350-woodpecker-earthrune",
  "account": "Woodpecker",
  "partner": "mmthv2350",
@@ -10,8 +10,22 @@
  "item": "Earth rune",
  "requested": 252,
  "claim": "9484ffce-0fbd-477f-86be-b334de2e3d61",
- "count": 0,
- "ok": false,
- "at": 1794986917647,
- "detail": "trade claimed"
+ "count": 252,
+ "ok": true,
+ "at": 1794987063192,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 252
+ },
+ "bank": {
+  "count": 252,
+  "at": 1794987062242
+ },
+ "logout": {
+  "attemptId": "1794986917657-0000008536-0000000001",
+  "at": 1794987063041,
+  "sha256": "f1851cdd4ba9d9d9936a8453f8934f863f49bf13a6d1dabf4fd616a928f821be"
+ },
+ "screen": true
 }
