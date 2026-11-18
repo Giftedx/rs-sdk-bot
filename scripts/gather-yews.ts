@@ -394,7 +394,7 @@ try {
 
     while (!over() && bankTrips < Number(process.env.MAX_TRIPS ?? Infinity)) {
         const curLevels = readSkillLevels(s.sdk);
-        if (crossedTierBoundary(toolLevels, curLevels, ['attack', 'woodcutting'])) {
+        if (crossedTierBoundary(toolLevels, curLevels, ['attack', 'woodcutting'], 'woodcutting-axe')) {
             toolLevels = curLevels;
             await bank(true);
             continue;

@@ -1646,7 +1646,12 @@ export function sessionToolHooks(
     return {
         openBank: options.openBank ?? (() => s.bot.openBank()),
         closeBank: options.closeBank ?? (() => s.bot.closeBank()),
-        withdrawItem: (item, n) => s.bot.withdrawItem(item, n, { asNote: false }),
+        // The SDK takes a bank row with a slot. A row from the bank observation has none: use the open bank's row of
+        // the same id (without it the SDK looks the item up by name and throws on an object).
+        withdrawItem: (item, n) => {
+            const row = item.slot === undefined ? s.sdk.getState()?.bank?.items.find(i => i.id === item.id) ?? item : item;
+            return s.bot.withdrawItem(row, n, { asNote: false });
+        },
         depositItem: (item, n) => s.bot.depositItem(item, n),
         equipItem: s.bot.equipItem ? item => s.bot.equipItem!(item) : undefined,
         getInventory: () => s.sdk.getInventory(),
@@ -1811,6 +1816,37 @@ export function hasOwnedWearableWeapon(
 ): boolean {
     const loadout = selectProgressiveLoadout(style, stock, levels, quests, { trainSkill, requireWeapon: true });
     return loadout.worn.weapon !== null;
+}
+
+/**
+ * Every melee weapon as the weapon option of an owned-loadout slot, the best first (scoreGearForStyle). An option is
+ * equippable when the Attack level and the quests meet the weapon's wear rules, and unknown (null) when the Attack
+ * level is unknown. `oneHanded` leaves out two-handed weapons (a worker that wears a fixed shield).
+ */
+export function meleeWeaponSlot(
+    attack: number | null,
+    options: { oneHanded?: boolean; trainSkill?: string; quests?: QuestInput } = {},
+): GearSlot {
+    const known = attack !== null && Number.isSafeInteger(attack) && attack >= 1 && attack <= 99;
+    const list = gearCatalog()
+        .filter(g => g.slot === 'righthand' && scoreGearForStyle(g, 'melee') > -1e8
+            && weaponSupportsTrainSkill(g, options.trainSkill ?? 'all-melee')
+            && !(options.oneHanded && g.covers.includes('lefthand')))
+        .sort((a, b) => scoreGearForStyle(b, 'melee') - scoreGearForStyle(a, 'melee') || tieOrder(a, b, 'melee'));
+    return {
+        key: 'weapon',
+        options: list.map((g, preference) => ({
+            id: g.id, count: 1, preference,
+            equippable: known ? canWearGear(g, { attack: attack! }, options.quests) : null,
+        })),
+    };
+}
+
+/** The Fire giant pilot's kit: its best one-handed melee weapon (the engine's choice) with the fixed shield, amulet, rope and Salmon. */
+export function fireKit(attack: number | null): GearSlot[] {
+    const fixed = [{ key: 'shield', id: 1171, count: 1 }, { key: 'amulet', id: 295, count: 1 }, { key: 'rope', id: 954, count: 1 }, { key: 'salmon', id: 329, count: 16 }];
+    return [meleeWeaponSlot(attack, { oneHanded: true, trainSkill: 'Attack' }),
+        ...fixed.map(x => ({ key: x.key, options: [{ id: x.id, count: x.count, preference: 0, equippable: true }] }))];
 }
 
 export { ownedLoadout };

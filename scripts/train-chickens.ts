@@ -6,6 +6,7 @@ import {openBot,finish,randomEventsOf} from '../packages/core/src/bot';
 import {questFlags} from '../packages/core/src/quest-status';
 import {selectProgressiveLoadout,readSkillLevels,scoreGearForStyle,type GearSkillLevels,type QuestInput} from '../packages/planner/src/gear-progression';
 import type {Session} from '../packages/core/src/inprocess';
+import {reconcileLoadout,gearLevelWatch} from './gear-reconcile';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {walkPath,sessionWalker,expandPath,type PathDeps,type PathTile} from '../packages/core/src/walk';
 
@@ -208,6 +209,10 @@ export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,
                 throw Error('training kit not worn');
         }
         console.log(`MILESTONE training-outbound combat=${combat()} kit=${kit.join(',')}`);
+        // An unlock level passed: wear the better item from the pack at once (scripts/gear-reconcile.ts). The bank is next
+        // opened at the end of the run, so a better banked item waits until then.
+        const gearWatch=gearLevelWatch(s,'melee');
+        const gearTrain=unlockPlan?'all-melee':strengthTarget!==undefined?'Strength':'all-melee';
         await walk(route.slice(1));
         let progress=s.tick(),lastXp=xp();const startXp=lastXp;
         while((!goal()||raw()<rawTarget)&&!over()){
@@ -237,6 +242,8 @@ export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,
             await waitUntil(s,()=>over()||!state()?.nearbyNpcs.some(n=>n.index===chicken.index&&(n.hp??1)>0),{timeoutTicks:30});
             if(xp()>beforeXp&&!state()?.nearbyNpcs.some(n=>n.index===chicken.index&&(n.hp??1)>0)){
                 kills++;
+                if(gearWatch.crossed())await reconcileLoadout(s,{style:'melee',trainSkill:gearTrain,stop:over,label:'training kit',
+                    loadout:{requireWeapon:true,...entry==='lower-health'?{requireShield:true,minWeaponStrength:5,minShieldDefence:4}:{}}});
                 if(raw()<rawTarget&&s.sdk.getInventory().length<28){
                     const loot=()=>state()?.groundItems.find(i=>i.id===2138&&Math.max(Math.abs(i.x-chicken.x),Math.abs(i.z-chicken.z))<=1);
                     await waitUntil(s,()=>over()||!!loot(),{timeoutTicks:6});

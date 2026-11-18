@@ -75,15 +75,3 @@ export function ownedLoadout(slots:readonly GearSlot[],stock:readonly GearCount[
 export function ownedBestLoadout(slots:readonly OptionalGearSlot[],stock:readonly GearCount[],reserved:readonly GearCount[]=[],stockComplete=true):OwnedLoadout{
  return solveLoadout(slots,stock,reserved,stockComplete);
 }
-
-// Pinned rev289 content: levelrequire/scripts/tier1.rs2 and tier30.rs2.
-// IDs/order match the existing finite Fire worker. Rank is worker preference,
-// not a measured DPS ranking. Noted item IDs are deliberately absent.
-export function fireWeaponSlot(attack:number|null):GearSlot{
- const known=attack!==null&&Number.isSafeInteger(attack)&&attack>=1&&attack<=99;
- return{key:'weapon',options:[1331,1287,1301,1277].map((id,preference)=>({id,count:1,preference,equippable:known?attack!>=(id===1277?1:30):null}))};
-}
-
-export function fireKit(attack:number|null):GearSlot[]{
- return [fireWeaponSlot(attack),...[{key:'shield',id:1171,count:1},{key:'amulet',id:295,count:1},{key:'rope',id:954,count:1},{key:'salmon',id:329,count:16}].map(x=>({key:x.key,options:[{id:x.id,count:x.count,preference:0,equippable:true}]}))];
-}

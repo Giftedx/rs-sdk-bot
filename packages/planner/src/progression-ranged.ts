@@ -2,11 +2,13 @@ import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import type {ObservedAccount,ProgressionMethod} from './progression';
 import type {Gear} from '../../knowledge/src/gear';
+import {standardBowTiers,standardArrowTiers} from './gear-progression';
 
 export type RangedProgressionAccount=ObservedAccount;
-const bows=[{id:841,level:1},{id:839,level:1},{id:843,level:5},{id:845,level:5},{id:849,level:20},{id:847,level:20},
- {id:853,level:30},{id:851,level:30},{id:857,level:40},{id:855,level:40},{id:861,level:50},{id:859,level:50}];
-const arrows=[{id:882,level:1},{id:884,level:1},{id:886,level:5},{id:888,level:20},{id:890,level:30},{id:892,level:40}];
+// The standard bows and arrows by Ranged wear level, from knowledge/gear.json (gear-progression.ts). A level lists its
+// shortbow first, as the kit ranking breaks ties by that order.
+const bows=standardBowTiers().slice().reverse().flatMap(t=>t.ids.map(id=>({id,level:t.level})));
+const arrows=standardArrowTiers().sort((x,y)=>x.id-y.id).map(({id,level})=>({id,level}));
 const foods=[385,373,379,333,2142,2309,1901,1895,1893,1891];
 let gear:Map<number,Gear>|undefined;
 const items=()=>gear??=new Map((JSON.parse(readFileSync(resolve(import.meta.dir,'../../../knowledge/gear.json'),'utf8')) as Gear[]).map(g=>[g.id,g]));
