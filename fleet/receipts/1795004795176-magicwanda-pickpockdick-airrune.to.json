@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795004795176-magicwanda-pickpockdick-airrune",
  "account": "PickpockDick",
  "partner": "Magicwanda",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 3,
  "claim": "ffedc5a0-29bb-48e9-b30a-3937a002e96e",
- "count": 0,
- "ok": false,
- "at": 1795004914874,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795004955075,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795004954333
+ },
+ "logout": {
+  "attemptId": "1795004914883-0000000164-0000000001",
+  "at": 1795004955065,
+  "sha256": "da39834ba0dba87b7104f71aaed179e2d4c6a92b31bd9b335c32f3a1ae84c713"
+ },
+ "screen": true
 }

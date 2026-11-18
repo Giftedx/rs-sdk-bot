@@ -14,3 +14,18 @@
  "ok": true,
  "at": 1795004953655,
  "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795004937631
+ },
+ "logout": {
+  "attemptId": "1795004927323-0000016016-0000000001",
+  "at": 1795004953487,
+  "sha256": "aa07d458d78b77b9f8f10ada66d2757058378244ed4734d58ecdb953e94841b7"
+ },
+ "screen": true
+}
