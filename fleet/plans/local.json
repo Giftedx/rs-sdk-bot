@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795002012668,
+ "at": 1795002106415,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -283,8 +283,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Attack\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -299,55 +298,24 @@
   },
   {
    "account": "Moneyshot",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=554 QUANTITY=250 LIMIT_PRICE=160 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit6-554-0to250 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "536",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "9",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "train Prayer to 99 burying bought dragon bones",
-   "role": "combat",
-   "template": "army-bury-dragon-99",
+   "goal": "buy 250 Fire rune on the Grand Exchange to train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "supply",
+   "template": "kit-buy:army-alch-magic-99",
    "autopilot": "local",
    "resources": []
   },
   {
-   "account": "YewFirst",
+   "account": "PickpockDick",
    "script": "scripts/gather-combat.ts",
    "args": [
     "1500",
@@ -373,24 +341,48 @@
    ]
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/alch-train.ts",
+   "account": "YewFirst",
+   "script": "scripts/chain.ts",
    "args": [
-    "99",
-    "5000"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=220 LIMIT_PRICE=10000 CASH_RESERVE=101000 ORDER_KEY=yewfirst-kit10-536-0to220 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "ALCH_ITEM": "airrune",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 220 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-alch-air-magic-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Ballspinner",
@@ -470,6 +462,33 @@
    "repeat": false,
    "goal": "run-nab-trooper-ranged92-repair-blocked-end [task-f7f54687-c3c2-41b2-ba75-af0d0470a656]",
    "role": "helper"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "lowe",
+    "2500"
+   ],
+   "env": {
+    "ITEMS": "iron arrow",
+    "STOCK_TARGET": "1000",
+    "MAX_ITEMS": "1000",
+    "STOP_AT_TARGET": "1",
+    "MAX_SPEND": "20000",
+    "COIN_RESERVE": "450000",
+    "FLOAT": "470000",
+    "NO_BUY_TICKS": "350",
+    "BANK_PACK": "1",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-e03311fb-c5af-4559-94e0-5b16b3d8aa5f"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-shop-bow-lowe-iron-arrows [task-e03311fb-c5af-4559-94e0-5b16b3d8aa5f]",
+   "role": "supply"
   }
  ],
  "army": [

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795002004206-pocketrocket-woodpecker-airrune",
+ "account": "Pocketrocket",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 50,
+ "claim": "545ba58e-7451-4855-a371-e82115daf5de",
+ "count": 0,
+ "ok": false,
+ "at": 1795002077005,
+ "detail": "trade claimed"
+}
