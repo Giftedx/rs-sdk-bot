@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795002934486-hocuspokeus-billionaire-naturerune",
  "account": "Hocuspokeus",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 50,
  "claim": "9e818d67-0299-4227-9be2-96bce958b18c",
- "count": 0,
- "ok": false,
- "at": 1795002996164,
- "detail": "trade claimed"
+ "count": 50,
+ "ok": true,
+ "at": 1795003022749,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 50,
+  "after": 0
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795003005778
+ },
+ "logout": {
+  "attemptId": "1795002996176-0000025548-0000000001",
+  "at": 1795003022741,
+  "sha256": "e417179025954d0ba61bd48998b48bc669d647c4b94972205e0474c5208227b2"
+ },
+ "screen": true
 }

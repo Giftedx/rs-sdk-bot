@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795002904461-ballspinner-sausagefest-naturerune",
  "account": "Sausagefest",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 50,
  "claim": "27892358-cbf5-4e52-a33d-7a8da7214210",
- "count": 0,
- "ok": false,
- "at": 1795003008571,
- "detail": "trade claimed"
+ "count": 50,
+ "ok": true,
+ "at": 1795003028838,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 50
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795003028005
+ },
+ "logout": {
+  "attemptId": "1795003008578-0000017112-0000000001",
+  "at": 1795003028754,
+  "sha256": "497c633a4c603c7686863421ce45451171fae5641bb20d52b01ca3de4e39d228"
+ },
+ "screen": true
 }
