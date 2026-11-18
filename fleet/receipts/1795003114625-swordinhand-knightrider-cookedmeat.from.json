@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795003114625-swordinhand-knightrider-cookedmeat",
  "account": "Swordinhand",
  "partner": "KnightRider",
@@ -12,6 +12,12 @@
  "claim": "a14a7eb1-b893-4764-a8b3-569408cf7f4e",
  "count": 0,
  "ok": false,
- "at": 1795003291375,
- "detail": "trade claimed"
+ "at": 1795003299558,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795003291382-0000005072-0000000001",
+  "at": 1795003299548,
+  "sha256": "4793ab2000ca78ff5658ed4eafb7ae03aaa7f8189dfabe2fb173251ac1395b67"
+ },
+ "screen": false
 }
