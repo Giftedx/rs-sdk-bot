@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,existsSync,rmSync,utimesSync,readdirSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {classify,scan,counts,archiveThenDelete,GRACE_MS} from './practice-hygiene';
+import {classify,scan,counts,archiveThenDelete,GRACE_MS,scanFleetOrders,applyFleetMoves} from './practice-hygiene';
 
 const now=1_800_000_000_000,old=now-2*GRACE_MS,named=new Set(['flrcvxkeep','trousersnake']);
 
@@ -65,4 +65,21 @@ test("the recovery tests keep their scratch folders under one removed subfolder,
  }
  const helper=readFileSync(join(import.meta.dir,"../packages/core/test/recovery-scratch.ts"),"utf8");
  expect(helper).toContain(".practice/recovery-tmp");expect(helper).toContain("afterAll");
+});
+
+test('fleet orders past their window move by month with their receipts; open and recent ones stay',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'fleet-orders-')),now=Date.parse('2026-11-18T00:00:00Z'),day=86_400_000;
+ try{
+  for(const d of ['orders','receipts'])mkdirSync(join(dir,d),{recursive:true});
+  const order=(id:string,end:number)=>writeFileSync(join(dir,'orders',id+'.json'),JSON.stringify({id,from:'A',to:'B',start:end-1000,end}));
+  order('old',now-30*day);order('recent',now-2*day);order('open',now+day);
+  for(const f of ['old.from','old.to','recent.from','open.to','stray.from'])writeFileSync(join(dir,'receipts',f+'.json'),'{}');
+  writeFileSync(join(dir,'orders','broken.json'),'not json');
+  const r=scanFleetOrders(dir,now);
+  expect(r.moves.map(m=>m.id)).toEqual(['old']);expect(r.moves[0]!.month).toBe('2026-10');
+  expect(r.kept).toBe(3);expect(r.receiptsMoved).toBe(2);expect(r.orphanReceipts).toBe(3);
+  expect(applyFleetMoves(dir,r.moves)).toBe(3);
+  expect(readdirSync(join(dir,'orders')).sort()).toEqual(['broken.json','open.json','recent.json']);
+  expect(readdirSync(join(dir,'archive','2026-10','receipts')).sort()).toEqual(['old.from.json','old.to.json']);
+ }finally{rmSync(dir,{recursive:true,force:true});}
 });

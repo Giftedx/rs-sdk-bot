@@ -6,8 +6,13 @@
 // A stop file stays when: its name is not a generated fixture account (fl..x.., fb<n>.., rngex..: all lower case),
 // its text is JSON, a swarm.json or jobs.json job names the account, or fleet/owners.json names it. An entry written in
 // the last GRACE_MS stays, because a run may still own it.
+// --fleet-orders: the orders and receipts in .practice/fleet-data/fleet that every agent cycle reads whole. An order whose
+// window ended more than FLEET_KEEP_DAYS ago, with its receipts (<id>.from.json, <id>.to.json), moves to
+// fleet/archive/<YYYY-MM>/{orders,receipts}. An order that is open or ended more recently stays, and so does a receipt whose
+// order is not archived. fleet-sync commits the move on the fleet-data branch: run --apply with the fleet-sync owner.
 // Usage: bun scripts/practice-hygiene.ts [--root DIR] [--apply --archive-dir D:/rs-sdk-bot-archive]
-import {existsSync,lstatSync,mkdirSync,readdirSync,readFileSync,rmSync,statSync,writeFileSync} from 'node:fs';
+//        bun scripts/practice-hygiene.ts --fleet-orders [--keep-days 7] [--apply]
+import {existsSync,lstatSync,mkdirSync,readdirSync,readFileSync,renameSync,rmSync,statSync,writeFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 
@@ -83,9 +88,43 @@ export function archiveThenDelete(root:string,entries:Entry[],archiveDir:string,
  return {archive,deleted,bytes:statSync(archive).size};
 }
 
+export const FLEET_KEEP_DAYS=7;
+export type FleetMove={id:string;month:string;files:{dir:'orders'|'receipts';name:string}[]};
+export function scanFleetOrders(fleetDir:string,now=Date.now(),keepDays=FLEET_KEEP_DAYS):{moves:FleetMove[];kept:number;orphanReceipts:number;receiptsMoved:number}{
+ const list=(d:string)=>existsSync(join(fleetDir,d))?readdirSync(join(fleetDir,d)).filter(f=>f.endsWith('.json')):[];
+ const receipts=list('receipts'),moves:FleetMove[]=[];let kept=0;
+ const claimed=new Set<string>();
+ for(const name of list('orders')){
+  let order:any;try{order=JSON.parse(readFileSync(join(fleetDir,'orders',name),'utf8'));}catch{kept++;continue;}
+  const id=typeof order?.id==='string'?order.id:null,end=Number(order?.end);
+  if(!id||name!==id+'.json'||!Number.isFinite(end)||now-end<keepDays*86_400_000){kept++;continue;}
+  const month=new Date(end).toISOString().slice(0,7),files:FleetMove['files']=[{dir:'orders',name}];
+  for(const r of receipts)if(r===id+'.json'||r.startsWith(id+'.')){files.push({dir:'receipts',name:r});claimed.add(r);}
+  moves.push({id,month,files});
+ }
+ return {moves,kept,orphanReceipts:receipts.filter(r=>!claimed.has(r)).length,receiptsMoved:claimed.size};
+}
+export function applyFleetMoves(fleetDir:string,moves:FleetMove[]){
+ let moved=0;
+ for(const m of moves)for(const f of m.files){
+  const to=join(fleetDir,'archive',m.month,f.dir);mkdirSync(to,{recursive:true});
+  if(existsSync(join(to,f.name)))continue;
+  renameSync(join(fleetDir,f.dir,f.name),join(to,f.name));moved++;
+ }
+ return moved;
+}
+
 if(import.meta.main){
  const args=process.argv.slice(2),arg=(k:string)=>{const i=args.indexOf(k);return i>=0?args[i+1]:undefined;};
  const root=resolve(arg('--root')??join(import.meta.dir,'..')),apply=args.includes('--apply');
+ if(args.includes('--fleet-orders')){
+  const fleetDir=join(root,'.practice','fleet-data','fleet'),r=scanFleetOrders(fleetDir,Date.now(),Number(arg('--keep-days')??FLEET_KEEP_DAYS));
+  const months:Record<string,number>={};for(const m of r.moves)months[m.month]=(months[m.month]??0)+1;
+  console.log(JSON.stringify({fleetDir,ordersToArchive:r.moves.length,receiptsToArchive:r.receiptsMoved,ordersKept:r.kept,receiptsWithoutArchivedOrder:r.orphanReceipts,byMonth:months}));
+  if(!apply)console.log(`RESULT ok practice-hygiene fleet-orders would move ${r.moves.length} orders (dry run)`);
+  else console.log(`RESULT ok practice-hygiene fleet-orders moved ${applyFleetMoves(fleetDir,r.moves)} files`);
+  process.exit(0);
+ }
  const entries=scan(root);
  console.log(JSON.stringify({root,total:entries.length,byRule:counts(entries),graceMs:GRACE_MS}));
  if(!apply)console.log(`RESULT ok practice-hygiene would archive then delete ${entries.length} entries (dry run)`);
