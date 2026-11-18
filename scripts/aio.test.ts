@@ -265,6 +265,12 @@ describe('Step 2 & 3: 7 All-In-One Bot Engines & Unified Dispatcher', () => {
    },
    ownedItems: {},
   }, 'max-overall').step?.script).toBe('scripts/firemaking-order.ts');
+  // Smithing is the lowest skill: the step needs stock that the account owns.
+  const smith=(ownedItems:Record<number,number>)=>recommendNextAioJob({name:'Smith',skills:Object.fromEntries(['Attack','Strength','Defence','Hitpoints','Ranged','Prayer','Magic','Cooking','Woodcutting','Fletching','Fishing','Firemaking','Crafting','Mining','Herblore','Agility','Thieving','Runecraft'].map(k=>[k,60]).concat([['Smithing',40]])),ownedItems},'max-overall');
+  expect(smith({2351:40,2347:1}).step?.env.PRODUCT_ID).toBe('1115');
+  expect(smith({440:60,2347:1}).step?.args).toContain('iron');
+  const bare=smith({});
+  expect(bare.step).toBeNull();expect(bare.status).toBe('blocked');expect(bare.reason).toContain('5x2351');
   // Banked production scanner across all 230+ artisan recipes
   const banked = discoverBankedProduction(
    { Cooking: 80, Crafting: 50, Fletching: 60, Smithing: 40 },

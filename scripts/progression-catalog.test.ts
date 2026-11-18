@@ -78,11 +78,13 @@ test('shipped trainer and quest templates preserve their declared consumer throu
 
 test('progressive skiller covers smithing anvil, thieving sub-55, magic splash, runecraft early, agility barb XP, and prayer dragon bones',()=>{
  // Each smelt and each anvil action takes 5 ticks (knowledge/ladders.json), so a platebody gives more XP in a tick than
- // each bar that the level smelts. The anvil bands use the bars of the route's supply bill (research/supply-logistics.md,
- // Smithing row): iron 35, steel 95, mithril 280, adamantite 345.
- expect(planProgressiveSkiller('smithing',1,99).map(b=>`${b.fromLevel}-${b.toLevel} ${b.method} ${b.step.env.PRODUCT_ID??b.step.args[1]} x${b.unitsNeeded}`)).toEqual([
-  '1-15 smelt bronze x12','15-30 smelt iron x18','30-33 smelt steel x5','33-48 anvil 1115 x7','48-68 anvil 1119 x19','68-88 anvil 1121 x56','88-99 anvil 1123 x69']);
- expect(planProgressiveSkiller('smithing',50,60).map(b=>b.step.env.PRODUCT_ID)).toEqual(['1119']);
+ // each bar that the level smelts. With no stock known the plan smelts the bars and then smiths them.
+ const smith=(...a:Parameters<typeof planProgressiveSkiller>)=>planProgressiveSkiller(...a).map(b=>`${b.fromLevel}-${b.toLevel} ${b.method} ${b.step.env.PRODUCT_ID??b.step.args[1]} x${b.unitsNeeded}`);
+ expect(smith('smithing',1,99)).toEqual(['1-15 smelt bronze x12','15-30 smelt iron x18','30-33 smelt steel x5','33-48 anvil 1115 x3','42-48 smelt iron x11','44-48 anvil 1115 x2',
+  '48-68 anvil 1119 x1','50-68 smelt steel x61','58-68 anvil 1119 x12','68-88 smelt mithril x175','78-88 anvil 1121 x35','88-99 smelt adamantite x215','93-99 anvil 1123 x43']);
+ // An account that holds the bars of the route's supply bill (research/supply-logistics.md, Smithing row) and a hammer
+ // smiths them and smelts nothing.
+ expect(smith('smithing',33,99,25,{2351:35,2353:95,2359:280,2361:345,2347:1})).toEqual(['33-48 anvil 1115 x7','48-68 anvil 1119 x19','68-88 anvil 1121 x56','88-99 anvil 1123 x69']);
  expect(planProgressiveSkiller('thieving',1,55).map(b=>b.unlockLevel)).toEqual([1,5,40]);
  expect(planProgressiveSkiller('magic',1,21).map(b=>`${b.method}:${b.step.args[0]??'-'}`)).toEqual(['order:-','splash:11','splash:19','splash:21']);
  expect(planProgressiveSkiller('runecraft',1,44).map(b=>b.unlockLevel)).toEqual([1,2,5,9,14,20]);

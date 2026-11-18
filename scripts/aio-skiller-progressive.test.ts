@@ -88,3 +88,44 @@ test('stun superheat plan stages bronze then iron superheat casts for Smithing 1
  expect(planStunSuperheatSmithing(20, 43).map(b => b.metal)).toEqual(['iron']);
  expect(planStunSuperheatSmithing(41, 43)).toEqual([]);
 });
+
+// Item ids: iron ore 440, coal 453, gold ore 444, iron bar 2351, steel bar 2353, hammer 2347.
+const smithBand=(b:ReturnType<typeof planProgressiveSkiller>[number])=>`${b.fromLevel}-${b.toLevel} ${b.method} ${b.step.env.PRODUCT_ID??b.step.args[1]} x${b.unitsNeeded}`;
+test('a smithing tier is planned only with inputs that the account owns or that an earlier band of the plan makes',()=>{
+ // 40 iron bars and a hammer: the iron platebody is the step. 4 platebodies reach Smithing 48.
+ const bars=planProgressiveSkiller('smithing',40,55,25,{2351:40,2347:1});
+ expect(bars.map(smithBand)).toEqual(['40-48 anvil 1115 x4','48-55 anvil 1115 x4','53-55 anvil 1119 x0']);
+ expect(bars[0]!.step.env.MAX_MAKE).toBe('4');
+ expect(bars[2]!.shortfall).toContain('anvil 1119 needs 5x2353;');
+ // No bars but iron ore: the step smelts the bars that the platebodies need, then smiths them.
+ const ore=planProgressiveSkiller('smithing',40,48,25,{440:60,2347:1});
+ expect(ore.map(smithBand)).toEqual(['40-48 smelt iron x15','43-48 anvil 1115 x3']);
+ // Bars but no hammer, and gold ore: the step smelts gold.
+ expect(smithBand(planProgressiveSkiller('smithing',40,48,25,{2351:40,444:30})[0]!)).toBe('40-48 smelt gold x23');
+ // Nothing owned: no step, and the band names what each unlocked tier lacks.
+ const none=planProgressiveSkiller('smithing',40,55,25,{});
+ expect(none).toHaveLength(1);
+ expect(none[0]!.unitsNeeded).toBe(0);
+ expect(none[0]!.shortfall).toContain('anvil 1115 needs 5x2351 1x2347;');
+ expect(none[0]!.shortfall).toContain('smelt gold needs 1x444');
+ // The stock ends before the level: the plan stops at a band that names the shortfall.
+ const few=planProgressiveSkiller('smithing',40,48,25,{2351:10,2347:1});
+ expect(few.map(b=>[smithBand(b),!!b.shortfall])).toEqual([['40-48 anvil 1115 x2',false],['44-48 anvil 1115 x0',true]]);
+});
+test('with no stock known the smithing plan smelts each bar that its anvil bands use',()=>{
+ const plan=planProgressiveSkiller('smithing',1,99);
+ const stock=new Map<number,number>();
+ const bar:Record<string,number>={bronze:2349,iron:2351,steel:2353,gold:2357,mithril:2359,adamantite:2361,runite:2363},uses:Record<string,number>={1115:2351,1119:2353,1121:2359,1123:2361};
+ for(const b of plan){
+  expect(b.unitsNeeded).toBeGreaterThan(0);
+  if(b.method==='smelt')stock.set(bar[b.step.args[1]!]!,(stock.get(bar[b.step.args[1]!]!)??0)+b.unitsNeeded);
+  else{const id=uses[b.step.env.PRODUCT_ID!]!;stock.set(id,(stock.get(id)??0)-5*b.unitsNeeded);expect(stock.get(id)!,smithBand(b)).toBeGreaterThanOrEqual(0);}
+ }
+ expect(plan.at(-1)!.toLevel).toBe(99);
+ expect(plan.filter(b=>b.method==='anvil').map(b=>b.step.env.PRODUCT_ID)).toEqual(expect.arrayContaining(['1115','1119','1121','1123']));
+ expect(plan.some(b=>['gold','runite'].includes(b.step.args[1]!))).toBe(false);
+});
+test('other skills plan the same bands with and without a stock',()=>{
+ for(const skill of ['cooking','mining','magic','prayer','runecraft','thieving'])
+  expect(planProgressiveSkiller(skill,1,99,25,{}).map(b=>[b.fromLevel,b.toLevel,b.method,b.unitsNeeded])).toEqual(planProgressiveSkiller(skill,1,99).map(b=>[b.fromLevel,b.toLevel,b.method,b.unitsNeeded]));
+});
