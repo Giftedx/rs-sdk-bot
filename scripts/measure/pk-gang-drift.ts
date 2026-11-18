@@ -35,10 +35,13 @@ export function driftChecks(rec: any, now: any, minN = 20, points = 15): Check[]
     const sp = (f: any) => f.attack.specials.value;
     num('specials in 100 attacks', sp(rec).attacks ? (100 * sp(rec).specials) / sp(rec).attacks : 0, sp(now).attacks ? (100 * sp(now).specials) / sp(now).attacks : 0, sp(now).attacks, 8, 50);
     const open = (f: any, kind: string) => top(f.attack.damage.value?.[`${kind} on a player without Protect from Melee`] ?? {});
-    for (const kind of ['attack', 'special']) { const a = open(rec, kind), b = open(now, kind); out.push({ measure: `highest ${kind} splat with no Protect from Melee`, record: a, now: b, n: total(now.attack.damage.value?.[`${kind} on a player without Protect from Melee`] ?? {}), drift: b > a, ...(b > a ? { why: 'a higher hit: a potion or a new prayer' } : {}) }); }
-    // Eating: an eat above the eat level of the record.
+    // A hit drifts only above the ceiling of the dagger with Ultimate Strength: 21 (pvp_melee.rs2:31-33), and 24 for a special
+    // (15% more). A hit between the record's highest and that ceiling is a longer sample, not a new boost.
+    for (const [kind, ceiling] of [['attack', 21], ['special', 24]] as const) { const a = open(rec, kind), b = open(now, kind); out.push({ measure: `highest ${kind} splat with no Protect from Melee`, record: a, now: b, n: total(now.attack.damage.value?.[`${kind} on a player without Protect from Melee`] ?? {}), drift: b > ceiling, ...(b > ceiling ? { why: `above the ceiling ${ceiling} of Ultimate Strength: a potion or a new prayer` } : {}) }); }
+    // Eating: an eat above the eat level of the record. A lower highest eat is a short sample (the gang account died or
+    // left before it ate high), so it does not drift.
     const eat = (f: any) => top(f.eating.hpAtEat.value ?? {});
-    out.push({ measure: 'highest Hitpoints at an eat', record: eat(rec), now: eat(now), n: now.eating.hpAtEat.n ?? 0, drift: (now.eating.hpAtEat.n ?? 0) >= 5 && Math.abs(eat(now) - eat(rec)) > 5 });
+    out.push({ measure: 'highest Hitpoints at an eat', record: eat(rec), now: eat(now), n: now.eating.hpAtEat.n ?? 0, drift: (now.eating.hpAtEat.n ?? 0) >= 5 && eat(now) > eat(rec) + 5 });
     // Prayer: the share of weapon changes that got a prayer change, and the share of attacks that met the right prayer.
     const lag = (f: any) => { const v = f.prayer.ticksFromWeaponChangeToPrayer.value, hit = total(v.whenTheOpponentFacesIt), miss = v.noChangeIn8Ticks.whenTheOpponentFacesIt; return { n: hit + miss, share: hit + miss ? (100 * hit) / (hit + miss) : 0 }; };
     num('weapon changes with a prayer change in 100', lag(rec).share, lag(now).share, lag(now).n, 25);
