@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795000353676-masterbaiter-wandwaver-runechainbody",
+ "account": "Masterbaiter",
+ "partner": "Wandwaver",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "f2b6e285-2a6e-4c66-b7f1-a4b43c56ce3d",
+ "count": 1,
+ "ok": true,
+ "at": 1795000458068,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795000428511
+ },
+ "logout": {
+  "attemptId": "1795000420956-0000019624-0000000001",
+  "at": 1795000458056,
+  "sha256": "79ee50a338a993c6334ca6bb960680c63921a5f6154a0e445aabc905fdd799c9"
+ },
+ "screen": true
+}

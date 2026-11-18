@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795000309330-swordinhand-pickpockdick-staffoffire",
+ "account": "Swordinhand",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "fc400ec4-42ad-40b4-aa59-b188cdb36846",
+ "count": 1,
+ "ok": true,
+ "at": 1795000459693,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795000448933
+ },
+ "logout": {
+  "attemptId": "1795000437977-0000002508-0000000001",
+  "at": 1795000459678,
+  "sha256": "6fe586e7ed4e803dd84a84dde6c1ad0afd43efbfb9f9cc7b467e49c996cc4cbd"
+ },
+ "screen": true
+}
