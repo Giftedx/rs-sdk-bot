@@ -23,6 +23,7 @@ import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { fleetStatusRows, readSnapshotFiles, type SnapshotFile } from '../packages/core/src/fleet-snapshots';
 import { publishedSideHold } from '../packages/core/src/fleet-side-card';
 import { START_BUDGET_GB, activeExternalLive, clearSwarmStop, pendingStartupCount, swarmWroteStop } from './swarm';
+import { STABLE_CAUSES, unplacedCause, type RefusalCause } from '../packages/core/src/order-refusal';
 import { freemem } from 'node:os';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
@@ -250,12 +251,12 @@ export function kitMarket(items: readonly { id: number; name?: string; debugname
     }
     return market;
 }
-// A buy that ended before it placed an offer because a precondition failed: nothing escrowed or acquired, and the failure names coins
-// under the escrow and reserve, a full pack, a passed deadline or a count that differs from the planner's (scripts/buy-owned-ge-item.ts).
+// A buy that ended before it placed an offer on a cause that a second login meets again (coins under the escrow and reserve, a
+// full pack: STABLE_CAUSES of packages/core/src/order-refusal.ts). A passed deadline and a count that differs from the planner's
+// are settled by a fresh status, so they give no mark.
 export const UNPLACED_RETRY_MS = 30 * 60_000;
 export function unplacedPrecondition(lines: readonly string[]): boolean {
-    return lines.some(l => /RESULT fail \{/.test(l) && /"phase":"unplaced"/.test(l) && /"acquired":0\b/.test(l) && /"escrow":0\b/.test(l)
-        && /"failure":"Error: (?:order deadline passed|coins \d+ are under the escrow|pack holds \d+ items|owned item baseline \d+ differs from EXPECTED_OWNED|owned item already present|order expired)/.test(l));
+    return lines.some(l => /RESULT fail \{/.test(l) && STABLE_CAUSES.includes(unplacedCause(l) as RefusalCause));
 }
 // The pairs whose kit buy is held back now: a fresh unplaced mark.
 export function unplacedHeld(unplaced: Readonly<Record<string, number>> | undefined, now: number): string[] {
@@ -657,8 +658,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
         }
         if (String(j.template).startsWith(KIT_BUY) && unplacedPrecondition(jobLines)) {
             (state.unplaced ??= {})[pairKey(j.account, j.template)] = Date.now();
-            log.push(`AUTOPILOT unplaced ${j.account} ${j.template}: a precondition failed before an offer; no new buy for ${UNPLACED_RETRY_MS / 60_000} minutes`);
-            continue;
+            log.push(`AUTOPILOT unplaced ${j.account} ${j.template}: the coins or the pack stopped the buy before an offer; no new buy for ${UNPLACED_RETRY_MS / 60_000} minutes`);
         }
         if (r.retire) { const script = scriptOf(j.template); state.retired[pairKey(j.account, j.template)] = script === undefined ? r.reason : { reason: r.reason, script }; log.push(`AUTOPILOT retire ${j.account} ${j.template}: ${r.reason}`); continue; }
         const ctx = ctxFor(j.account);

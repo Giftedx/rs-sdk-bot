@@ -16,6 +16,7 @@ import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { validateBankRouteJob, type BankRouteJob } from '../../core/src/bank-trip';
 import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-route-step';
 import { cowFoodIds, foodTotalHeal } from '../../core/src/sustain';
+import { ORDER_COIN_MARGIN, REFUSAL_ANY_SOURCE } from '../../core/src/order-refusal';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -267,7 +268,7 @@ export const LOST_CITY_BUILD: Needs = {
 // guards a coin donor, so a buyer keeps only this.
 export const KIT_CASH_RESERVE = 1_000;
 // Coins the plan leaves above the reserve when it sizes a kit buy (see acquire): the observed coins are minutes old when the buy runs.
-export const KIT_COIN_MARGIN = 500;
+export const KIT_COIN_MARGIN = ORDER_COIN_MARGIN;
 // Unit price caps for kit buys, in coins. Estimates: the owner's hand jobs cap a law rune at 1,600 (shop value 40) and
 // a shark at 810 to 1,200 (shop value 300), so a rune caps at about 40 times and food at about 4 times its shop value.
 // An offer fills at or under its cap, and scripts/buy-owned-ge-item.ts refunds what does not fill. Gap: no measured
@@ -1338,7 +1339,9 @@ export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked
 // logged two such fails, and the account's Lost City band was retired).
 // An offline login server or an unavailable swarm claim authority refuses the session before the worker runs.
 // Supervisor retry bounds and claim recovery still apply; neither refusal establishes a broken worker.
-export const DRAIN_RESULT = /^RESULT fail (?:.*"phase":"unplaced",.*"escrow":0,.*"failure":"Error: (?:order deadline passed|coins \d+ are under the escrow|pack holds \d+ items|order expired)|session ended: disconnected\b|login: \[object WebSocket\]|login: LoginError: Login server offline\b|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|(?:login: )?(?:Error: )?fleet swarm claim authority (?:unavailable or changed|timed out)\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|.*\bstop"?[=:]"?preparation\b|.*\bprogression requires acquire\b|stop file\b|.*\bworker finished: stop file\b)/;
+const DRAIN_BASE = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|login: LoginError: Login server offline\b|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|(?:login: )?(?:Error: )?fleet swarm claim authority (?:unavailable or changed|timed out)\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|.*\bstop"?[=:]"?preparation\b|.*\bprogression requires acquire\b|stop file\b|.*\bworker finished: stop file\b)/;
+// A buy that ends before it places an offer, on any refusal of packages/core/src/order-refusal.ts, is no failure of its job.
+export const DRAIN_RESULT = new RegExp(DRAIN_BASE.source.replace('^RESULT fail (?:', `^RESULT fail (?:.*"phase":"unplaced",.*"escrow":0,.*"failure":"Error: (?:${REFUSAL_ANY_SOURCE})|`));
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
     const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;

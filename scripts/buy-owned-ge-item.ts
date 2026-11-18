@@ -2,7 +2,7 @@
 import {readFileSync,writeFileSync,existsSync,mkdirSync,renameSync,openSync,closeSync,unlinkSync} from 'node:fs';
 import {resolve} from 'node:path';import {createHash} from 'node:crypto';
 import {openBot,settle,serverFromEnv,getWorld,accountOf,randomEventsOf} from '../packages/core/src/bot';import type {Session} from '../packages/core/src/inprocess';
-import {waitUntil} from '../packages/core/src/ticks';import {depositObserved} from '../packages/core/src/deposit';import {sessionWalker,walkPath,expandPath,goTo} from '../packages/core/src/walk';
+import {orderRefusal} from '../packages/core/src/order-refusal';export {orderRefusal};import {waitUntil} from '../packages/core/src/ticks';import {depositObserved} from '../packages/core/src/deposit';import {sessionWalker,walkPath,expandPath,goTo} from '../packages/core/src/walk';
 import type {GEOffer,GEActionResult} from '../vendor/rs-sdk/sdk/ge-types';
 import {marketProgress,type MarketProgress} from '../packages/planner/src/market-progress';
 import {LUMBRIDGE_TO_DRAYNOR,DRAYNOR_BANK} from './courier-route';
@@ -241,16 +241,6 @@ export async function prepareMarketEntry(s:Session,stop:()=>boolean,travel:(sign
  }finally{off();ac.abort('market trip ended');}
 }
 // A new order starts only from the fresh holding its request names: none by default, or exactly expectedOwned.
-// Why a round may not start, or null: each cause names its numbers (the four were one message that named none). The escrow of a
-// round is its quantity at the limit price; the coins held (pack, bank and worn) must cover it and the reserve; two collection
-// slots need a pack of at most 26 items.
-export function orderRefusal(v:{now:number;deadline:number;over:boolean;coins:number;escrow:number;quantity:number;limit:number;reserve:number;pack:number}):string|null{
- if(v.now>=v.deadline)return`order deadline passed ${Math.round((v.now-v.deadline)/1000)} s ago (deadline ${new Date(v.deadline).toISOString()})`;
- if(v.over)return'order stopped: the session ended, died, was damaged, was told to stop or used its 500-tick budget';
- if(v.coins<v.escrow+v.reserve)return`coins ${v.coins} are under the escrow ${v.escrow} (${v.quantity} x ${v.limit}) plus the reserve ${v.reserve}: ${v.escrow+v.reserve-v.coins} short`;
- if(v.pack>26)return`pack holds ${v.pack} items, over 26: two collection slots unavailable`;
- return null;
-}
 export function ownedBaseline(r:ItemRequest,held:number){
  if(r.expectedOwned===undefined){if(held>0)throw Error('owned item already present;allocate it instead of buying duplicate stock');}
  else if(held!==r.expectedOwned)throw Error(`owned item baseline ${held} differs from EXPECTED_OWNED ${r.expectedOwned}`);

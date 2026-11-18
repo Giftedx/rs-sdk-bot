@@ -1,6 +1,8 @@
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import type {ObservedAccount,ProgressionMethod} from './progression';
+import {ORDER_COIN_MARGIN} from '../../core/src/order-refusal';
+const GE_CASH_RESERVE=500;
 import type {Gear} from '../../knowledge/src/gear';
 import type {Step} from '../../core/src/chain-step';
 import {standardBowTiers,standardArrowTiers} from './gear-progression';
@@ -127,8 +129,9 @@ export function rangedProgressionMethods(a:RangedProgressionAccount,targetLevel:
   const missing=Math.max(0,count-(owned[item]??0)),ownedQty=physical[item]??0;
   return{
    id,source:'scripts/buy-owned-ge-item.ts; knowledge/gear.json',
-   step:{script:'scripts/buy-owned-ge-item.ts',args:[],env:{ITEM_ID:String(item),QUANTITY:String(missing),...(ownedQty>0?{EXPECTED_OWNED:String(ownedQty)}:{}),LIMIT_PRICE:String(limitPrice),CASH_RESERVE:'500',ORDER_MS:'900000',FILL_WAIT_TICKS:'200'}},
-   effects:{items:{[item]:missing}},inputs:{995:limitPrice*missing},requirements:{levels:{Ranged:reqLevel}},
+   step:{script:'scripts/buy-owned-ge-item.ts',args:[],env:{ITEM_ID:String(item),QUANTITY:String(missing),...(ownedQty>0?{EXPECTED_OWNED:String(ownedQty)}:{}),LIMIT_PRICE:String(limitPrice),CASH_RESERVE:String(GE_CASH_RESERVE),ORDER_MS:'900000',FILL_WAIT_TICKS:'200'}},
+   // The buy script refuses a round whose escrow and reserve pass the coins it finds (order-refusal.ts), and the holdings are minutes old.
+   effects:{items:{[item]:missing}},inputs:{995:limitPrice*missing+GE_CASH_RESERVE+ORDER_COIN_MARGIN},requirements:{levels:{Ranged:reqLevel}},
    rate:model(Math.max(1,missing)/180,note),
    costs:{setupTicks:0,travelTicks:travel(3164,3487),acquisitionTicks:0,unlockTicks:0},maxUnits:1,repeatable:false,
   };

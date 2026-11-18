@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { orderRefusal } from '../../core/src/order-refusal';
 import { DRAIN_RESULT } from '../src/autopilot';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
 import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable, norm, usableTool } from '../src/autopilot';
@@ -2809,18 +2810,25 @@ test('a kit buy is planned only with the margin above the escrow and reserve: 16
     const market = { 'dragon bone': { id: 536, name: 'Dragon bones', limit: 10_000 } };
     const hunter = (coin: number) => acct('Hunter', { Prayer: 50, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Magic: 99, Ranged: 99 }, { coin, 'rune scimitar': 1 });
     const run = (coin: number) => plan(inputs([hunter(coin), acct('Mule', {}, { coin: 900_000 })], { templates: band, army: new Set(['hunter']), market, prices: { 'dragon bone': 10_000 }, donors: [{ name: 'Mule', coins: 900_000 }] })).find(x => x.account === 'Hunter')!;
-    // The live failures: 160,940 coins for 16 x 10,000 plus the 1,000 reserve was 60 short at the buy script. Now the plan funds the
-    // gap (escrow + reserve + margin - coins) first and buys only once the coins cover the margin.
+    // 160,940 coins for 16 x 10,000 plus the 1,000 reserve is 60 short at the buy script: the plan funds the gap (escrow + reserve + margin
+    // - coins) first and buys only once the coins cover the margin.
     const short = run(160_940);
     expect(short.fund).toMatchObject({ from: 'Mule', to: 'Hunter', coins: 16 * 10_000 + KIT_CASH_RESERVE + KIT_COIN_MARGIN - 160_940 });
     const buy = run(16 * 10_000 + KIT_CASH_RESERVE + KIT_COIN_MARGIN);
     expect(buy.fund).toBeUndefined();
     expect(buy.template!.args![0]).toContain('QUANTITY=16');
     expect(buy.template!.args![0]).toContain(`CASH_RESERVE=${KIT_CASH_RESERVE}`);
+    // The run meets coins 60 under what the status showed: the planned order still passes the buy script's refusal check, where an order planned
+    // at exactly escrow + reserve does not.
+    const step = buy.template!.args![0]!, read = (key: string) => Number(step.match(new RegExp(`${key}=([0-9]+)`))![1]);
+    const check = (coins: number) => orderRefusal({ now: 1, deadline: 2, over: false, coins, escrow: read('QUANTITY') * read('LIMIT_PRICE'), quantity: read('QUANTITY'), limit: read('LIMIT_PRICE'), reserve: read('CASH_RESERVE'), pack: 5 });
+    const planned = 16 * 10_000 + KIT_CASH_RESERVE + KIT_COIN_MARGIN;
+    expect(check(planned - 60)).toBeNull();
+    expect(check(16 * 10_000 + KIT_CASH_RESERVE - 60)).toMatch(/^coins \d+ are under the escrow 160000 \(16 x 10000\) plus the reserve 1000: 60 short$/);
 });
 
 test('the kit buy expects the unnoted count that the buy script reads, not the count with banknotes', () => {
-    // Masterbaiter: the planner read 4 (1 unnoted and 3 noted) and the script counted 1 (it matches the item id, never a note).
+    // The count by name is 4 (1 unnoted and 3 noted); the buy script counts 1 (it matches the item id, never a note).
     const a = accountFrom('Masterbaiter', side, { inventory: [{ id: 561, name: 'Nature rune', count: 1 }, { id: 5561, baseId: 561, name: 'Nature rune (noted)', count: 3 }], bank: [], coins: 0 }, () => undefined);
     expect(a.items['nature rune']).toBe(4);
     expect(a.exact?.['nature rune']).toBe(1);

@@ -1214,20 +1214,57 @@ test('every shop template of the catalogue selects at least one line of its prof
     expect(selectItems(PROFILES.ardy!.items, 'iron axe').map(i => i.re.source)).toEqual(['^iron axe$']);
 });
 
-test('an unplaced precondition failure marks its pair for a while, and is no job failure', () => {
-    const unplaced = (failure: string, extra = '') => `RESULT fail {"ok":false,"phase":"unplaced","pending":false,"quantity":16,"acquired":0${extra},"escrow":0,"refund":0,"spent":0,"ticks":3,"failure":"Error: ${failure}"}`;
-    const coins = unplaced('coins 160940 are under the escrow 160000 (16 x 10000) plus the reserve 1000: 60 short');
+const unplacedResult = (failure: string, extra = '') => `RESULT fail {"ok":false,"phase":"unplaced","pending":false,"quantity":16,"acquired":0${extra},"escrow":0,"refund":0,"spent":0,"ticks":3,"failure":"Error: ${failure}"}`;
+const COINS_REFUSAL = 'coins 160940 are under the escrow 160000 (16 x 10000) plus the reserve 1000: 60 short', PACK_REFUSAL = 'pack holds 27 items, over 26: two collection slots unavailable';
+
+test('a refusal on the coins or the pack marks its pair; a deadline or a baseline does not; none is a job failure', () => {
+    const coins = unplacedResult(COINS_REFUSAL);
     expect(unplacedPrecondition([coins])).toBe(true);
-    expect(unplacedPrecondition(['LEDGER ticks=3', unplaced('pack holds 27 items, over 26: two collection slots unavailable')])).toBe(true);
-    expect(unplacedPrecondition([unplaced('owned item baseline 68 differs from EXPECTED_OWNED 10')])).toBe(true);
-    expect(unplacedPrecondition([unplaced('GE interface unavailable')])).toBe(false);
+    expect(unplacedPrecondition(['LEDGER ticks=3', unplacedResult(PACK_REFUSAL)])).toBe(true);
+    for (const settled of ['owned item baseline 68 differs from EXPECTED_OWNED 10', 'order deadline passed 3 s ago (deadline 2000-01-01T00:00:00.000Z)', 'owned item already present;allocate it instead of buying duplicate stock'])
+        expect([settled, unplacedPrecondition([unplacedResult(settled)])]).toEqual([settled, false]);
+    expect(unplacedPrecondition([unplacedResult('GE interface unavailable')])).toBe(false);
     expect(unplacedPrecondition([coins.replace('"escrow":0', '"escrow":9')])).toBe(false);
-    // Two of them are drains, not two fails: the pair is not retired for them (the mark holds it back instead).
-    expect(assess([coins, coins])).toMatchObject({ retire: false, drains: 2, fail: 0 });
+    // Every refusal is a drain for assess, so two of them retire no pair.
+    for (const failure of [COINS_REFUSAL, PACK_REFUSAL, 'owned item baseline 68 differs from EXPECTED_OWNED 10', 'order deadline passed 3 s ago (deadline 2000-01-01T00:00:00.000Z)'])
+        expect(assess([unplacedResult(failure), unplacedResult(failure)])).toMatchObject({ retire: false, drains: 2, fail: 0 });
     // The mark holds for UNPLACED_RETRY_MS and no longer.
     const now = 10_000_000, marks = { 'a:kit-buy:x': now - 60_000, 'b:kit-buy:x': now - UNPLACED_RETRY_MS, 'c:kit-buy:x': now + 1 };
     expect(unplacedHeld(marks, now)).toEqual(['a:kit-buy:x']);
     expect(unplacedHeld(undefined, now)).toEqual([]);
+});
+
+test('a pass writes state.unplaced for a refusal on the coins, and a death in the same log still retires the pair', () => {
+    const rootDir = resolve(import.meta.dir, '..'), prac = join(rootDir, '.practice'), side = 'unpltest', account = 'Zunp', template = `${KIT_BUY}army-x`;
+    const dir = mkdtempSync(join(tmpdir(), 'autopilot-unplaced-')), prevFleet = process.env.FLEET_DIR, prevSide = process.env.FLEET_SIDE;
+    const files = [join(prac, 'autopilot', `${side}.json`), join(prac, 'progression-system', `fleet-${side}.json`), join(prac, 'swarm-logs', `${account}.log`)];
+    const job = { account, script: 'scripts/chain.ts', args: [], env: {}, role: 'supply', goal: 'test', enabled: true, standing: true, autopilot: side, template, resources: [] };
+    const run = (lines: string[]) => {
+        mkdirSync(join(prac, 'autopilot'), { recursive: true }); mkdirSync(join(prac, 'swarm-logs'), { recursive: true });
+        writeFileSync(files[0]!, JSON.stringify({ assigned: { [account.toLowerCase()]: { template, offset: 0, at: 1 }, [account]: { template, offset: 0, at: 1 } }, retired: {} }));
+        writeFileSync(files[2]!, jobLogStart(job) + lines.join('\n') + '\n');
+        writeFileSync(join(dir, 'swarm.json'), JSON.stringify({ maxBots: 5, minFreeGB: 0, jobs: [job] }));
+        pass(join(dir, 'swarm.json'), false, () => false);
+        return JSON.parse(readFileSync(files[0]!, 'utf8'));
+    };
+    try {
+        mkdirSync(join(dir, 'fleet'), { recursive: true });
+        writeFileSync(join(dir, 'fleet', 'owners.json'), JSON.stringify({ accounts: { [account]: { side, server: 'rs-sdk-demo.fly.dev' } } }));
+        process.env.FLEET_DIR = join(dir, 'fleet'); process.env.FLEET_SIDE = side;
+        const before = Date.now(), marked = run([unplacedResult(COINS_REFUSAL)]);
+        expect(marked.unplaced[`${account.toLowerCase()}:${template}`]).toBeGreaterThanOrEqual(before);
+        expect(Object.keys(marked.retired)).toEqual([]);
+        // A settled cause leaves no mark, and a death that the log also holds still retires the pair.
+        expect(run([unplacedResult('owned item baseline 68 differs from EXPECTED_OWNED 10')]).unplaced).toBeUndefined();
+        const died = run([unplacedResult(COINS_REFUSAL), 'RESULT fail died at 2652,3318']);
+        expect(died.unplaced[`${account.toLowerCase()}:${template}`]).toBeGreaterThanOrEqual(before);
+        expect(Object.keys(died.retired)).toEqual([`${account.toLowerCase()}:${template}`]);
+    } finally {
+        if (prevFleet === undefined) delete process.env.FLEET_DIR; else process.env.FLEET_DIR = prevFleet;
+        if (prevSide === undefined) delete process.env.FLEET_SIDE; else process.env.FLEET_SIDE = prevSide;
+        for (const f of files) rmSync(f, { force: true });
+        rmSync(dir, { recursive: true, force: true });
+    }
 });
 
 test('the army roster adds each plannable account with Attack, Strength and Defence 90, never a guarded or specialist account', () => {

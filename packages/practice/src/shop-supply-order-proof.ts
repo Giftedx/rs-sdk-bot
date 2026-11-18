@@ -1,6 +1,7 @@
 // Native acceptance for the existing shop-buyer CLI. Import and --verify never start a service.
 import{readFileSync,writeFileSync,existsSync,mkdirSync,copyFileSync,openSync,closeSync,unlinkSync}from'node:fs';
 import{join,resolve}from'node:path';
+import{REFUSAL_PATTERNS}from'../../core/src/order-refusal';
 import{createHash}from'node:crypto';
 import{freemem}from'node:os';
 import{createBot}from'./bots';
@@ -37,7 +38,7 @@ export function shopSupplyChecks(before:Save,after:Save,r:Run){const spent=amoun
 export function shopRepeatChecks(before:Save,after:Save,r:Run){return{...exits(r),assets:unchanged(before,after),bank:atBank(after),target:bank(after,557)===1139&&amount(r.log,'boughtTotal')===0&&amount(r.log,'spentTotal')===0&&amount(r.log,'targetMet')===1};}
 export function shopRefusalChecks(before:Save,after:Save,r:Run){
  const line=r.log.split(/\r?\n/).find(l=>l.startsWith('OWNED_GE_ITEM '));let ge:any;try{ge=line&&JSON.parse(line.slice(14));}catch{}
- const ordinary=ge?.ok===false&&ge.newItemsThisSession===0&&ge.cashDeltaThisSession===0&&ge.spent===0&&/owned reserve missing/.test(ge.failure??'');
+ const ordinary=ge?.ok===false&&ge.newItemsThisSession===0&&ge.cashDeltaThisSession===0&&ge.spent===0&&REFUSAL_PATTERNS.coins.test(String(ge.failure??'').replace(/^Error: /,''));
  return{...exits(r),exit:!r.timedOut&&(ordinary?r.code===1:r.code===0),assets:unchanged(before,after),health:Number.isFinite(r.hpMin)&&r.hpMin>0,
  refusal:ordinary||amount(r.log,'boughtTotal')===0&&amount(r.log,'spentTotal')===0&&amount(r.log,'targetMet')===0&&/stop=(?:stock-wait|coin-reserve|bounded-purchase-unaffordable)/.test(r.log)};
 }

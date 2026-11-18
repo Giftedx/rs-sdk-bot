@@ -567,7 +567,7 @@ test('a refused round names its cause and numbers: deadline, stop, coins under e
  expect(orderRefusal(ok)).toBeNull();
  expect(orderRefusal({...ok,now:8000})).toMatch(/^order deadline passed 3 s ago \(deadline 1970-01-01T00:00:05\.000Z\)$/);
  expect(orderRefusal({...ok,over:true})).toMatch(/^order stopped: /);
- // The lead's case: 160,940 coins for 16 x 10,000 plus a reserve of 1,000 is 60 short.
+ // 160,940 coins for 16 x 10,000 plus a reserve of 1,000 is 60 short.
  expect(orderRefusal({...ok,coins:160940})).toBe('coins 160940 are under the escrow 160000 (16 x 10000) plus the reserve 1000: 60 short');
  expect(orderRefusal({...ok,pack:27})).toBe('pack holds 27 items, over 26: two collection slots unavailable');
  expect(orderRefusal({...ok,pack:26})).toBeNull();
