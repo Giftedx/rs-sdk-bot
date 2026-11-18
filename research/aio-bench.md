@@ -131,7 +131,7 @@ keeps last-run estimates. It is not a receipt ledger for concurrent writes to di
 | `crest` | `crest` | 1,040 | 1,078 | 1,036 |
 | `waterfall` | `waterfall` | 1,112 | 1,101 | 1,103 |
 | `tree` | `tree` | 734 | 639 | 653 |
-| `grandtree` | `extra:grandtree-route-state` | 2,357 | 2,153 | 2,235 |
+| `grandtree` | `extra:grandtree-route-state` | 1,746 | 1,659 | 1,626 |
 | `plague-city` | `elena` | 430 | 423 | 453 |
 | `doric` | `doric` | 18 | 18 | 18 |
 | `druid` | `druid` | 208 | 208 | 208 |
@@ -150,7 +150,7 @@ keeps last-run estimates. It is not a receipt ledger for concurrent writes to di
 | `rival-seaslug` | `seaslug` | 348 | 344 | 346 |
 | `scorpion` | `scorpion` | 886 | 891 | 910 |
 
-**Grand Tree, Plague City, Doric:** the `grandtree` row starts from the planner state (Attack 91, Magic 45, Prayer 99, no prayer potion; `extra:grandtree-route-state`), and `quester:quest:grandtree` at Prayer 43 with 3 potions gave 2,246, 2,317 and 2,137 ticks at seeds 7, 8, 9 (the stored baseline of seed 7 is 1,726). In seed 7 the walk through the roots after the black demon takes 549 of the 2,357 ticks (milestone 140 at 1,645, milestone 150 at 2,236 in `.practice/aio-bench/output-seed-7/extra_grandtree-route-state.log`): bats hunt there (huntrange 2) and the walker plans round them (`extra:grandtree-roots`: 655 ticks for the 83-tick walk and the root search).
+**Grand Tree:** the `grandtree` row starts from the planner state (Attack 91, Magic 45, Prayer 99, no prayer potion; `extra:grandtree-route-state`). `quester:quest:grandtree` at Attack 60, Prayer 43 and 3 potions gives 1,770, 1,663 and 1,761 ticks at seeds 7, 8, 9. The walker planned round every hunter, and the bats in the roots after the black demon held the walk (`extra:grandtree-roots`: 655 ticks at seed 7 for an 83-tick walk; the route case took 2,357, 2,153 and 2,235 ticks). Now `liveHunters` (`packages/core/src/danger.ts`) gives a melee-only hunter no square while the live state shows Protect from Melee on with prayer points (`protectedFromMelee`, read at each call of the walker); the Grand Tree script keeps the prayer on and drinks a potion in the roots loop. `extra:grandtree-roots` takes 131, 169 and 130 ticks at seeds 7, 8, 9. With no points or the prayer off, the walker plans round the bats again. **Conditions:** lockstep, seeds 7, 8, 9, `bun run bench '^(quester:quest:grandtree|extra:grandtree-route-state|extra:grandtree-roots)$' --seeds 7,8,9 --seed-jobs 3`. **Gap:** the walk to Hazelmere is on foot (milestone 10 at 53, milestone 20 at 424 in seed 7).
 
 **Gap:** `extra:scorpion-with-barcrawl` (no Barcrawl: the guard talks at the outpost gate, and the Barcrawl runs first) passes at seeds 7 and 8 in 2,304 and 2,278 ticks. At seed 9 scorpion C stands at 3059,3486 upstairs in the Monastery for more than 200 ticks, the SDK marks it unreachable, and the cage gets "I can't reach that!" (`RESULT fail step catch c`). The `arrav` case runs one account, and the `quest-arrav` row is the pair run, so that row is not changed. `dig` spreads from 1,374 to 1,968 ticks and `zanaris` from 624 to 810. A wall-clock engine at 400 ms a tick read 1.7% above lockstep on two quests (Lockstep engine, above); the rows do not add that.
 

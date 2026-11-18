@@ -1230,6 +1230,10 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'extra:grandtree-route-state', script: 'scripts/aio-quester.ts', preset: 'quest_grandtree', scriptArgs: ['grandtree'], pass: ok, timeoutMs: 900_000,
     presetConfig: {...PRESETS.quest_grandtree!, skills: {...PRESETS.quest_grandtree!.skills, Attack: 91, Magic: 45, Prayer: 99},
       inventory: (PRESETS.quest_grandtree!.inventory ?? []).filter(i => i.id !== 2434)}},
+  // The end of The Grand Tree from the tile under Glough's trapdoor, after the black demon (varp 150 = 140): the walk
+  // to King Narnode through the roots, where bats hunt (bat huntrange 2), the root search and the completion.
+  {key: 'extra:grandtree-roots', script: 'scripts/aio-quester.ts', preset: 'quest_grandtree_s140', scriptArgs: ['grandtree', 'GT_FROM=140'], pass: ok,
+    presetConfig: {...PRESETS.quest_grandtree_s140!, position: {x: 2491, z: 9864, level: 0}, skills: {...PRESETS.quest_grandtree_s140!.skills, Attack: 91, Magic: 45, Prayer: 99}}},
   // Blocks 8 and 9 as the live run stages them: both quests' packs held from the start, plus death runes for Fire Blast
   // (Magic 59; max 16 against Fire Bolt's 12). `-blast` against the cases above measures the spell alone.
   {key: 'extra:sweep-tree-kit-blast', script: 'scripts/aio-quester.ts', preset: 'quest_tree', scriptArgs: ['sweep', 'tree'], pass: ok, timeoutMs: 600_000,
