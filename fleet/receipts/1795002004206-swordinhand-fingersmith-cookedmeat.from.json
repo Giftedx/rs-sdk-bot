@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795002004206-swordinhand-fingersmith-cookedmeat",
+ "account": "Swordinhand",
+ "partner": "Fingersmith",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "10915c93-b5dd-4ad3-b1c7-8c94019d1b93",
+ "count": 0,
+ "ok": false,
+ "at": 1795002224391,
+ "detail": "trade claimed"
+}
