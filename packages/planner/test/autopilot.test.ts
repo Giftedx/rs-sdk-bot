@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { DRAIN_RESULT } from '../src/autopilot';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
 import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable, norm, usableTool } from '../src/autopilot';
 
@@ -2872,4 +2873,26 @@ test('a food restock counts the donor item by heal: a lobster donor sends the lo
     const lobsters = Math.ceil(squadTarget('food', 4) * 20 / 12);
     expect(run('lobster')).toMatchObject({ item: 'lobster', count: lobsters });
     expect(run('shark')).toMatchObject({ item: 'shark', count: Math.ceil(lobsters * 12 / 20) });
+});
+
+test('a claim authority timeout is a drain, like an unavailable authority', () => {
+    for (const line of ['RESULT fail login: Error: fleet swarm claim authority timed out', 'RESULT fail fleet swarm claim authority timed out chain rounds=1 ok=0 failed=1',
+        'RESULT fail login: Error: fleet swarm claim authority unavailable or changed', 'RESULT fail fleet account claim held by swarm']) {
+        expect([line, DRAIN_RESULT.test(line)]).toEqual([line, true]);
+        expect(assess([line, line])).toMatchObject({ retire: false, drains: 2, fail: 0 });
+    }
+    expect(DRAIN_RESULT.test('RESULT fail fleet swarm claim authority exploded')).toBe(false);
+});
+
+test('a held squad member is no restock donor: only free members send each other stock', () => {
+    // A is on a live hunt (held: in `all`, not in `members`) with 4,000 arrows above its keep; B is free and short.
+    const squad: SquadInput = { active: true, hours: 4, all: ['A', 'B'], members: [{ name: 'B', items: {} }] };
+    const stock = [{ name: 'A', side, items: { 'iron arrow': 4000 } }];
+    const run = (sq: SquadInput) => plan(inputs([acct('A', {}, { 'iron arrow': 4000 }), acct('B', {}, { coin: 100 })], { templates: [], bill: [], stock, squad: sq }));
+    const held = run(squad);
+    expect(held.find(x => x.account === 'B')!.send).toBeUndefined();
+    expect(held.find(x => x.account === 'A')!.reason).not.toBe('vacant: gives a kit item this pass');
+    // Control: with A free (a member that is observed and not held) it may send B its surplus.
+    const free = run({ ...squad, members: [{ name: 'A', items: { 'iron arrow': 4000 } }, { name: 'B', items: {} }] });
+    expect(free.find(x => x.account === 'B')!.send).toMatchObject({ from: 'A', item: 'iron arrow' });
 });

@@ -25,10 +25,10 @@ jobs:
           path: |
             .practice/cache/rsmod-pathfinding.snap
             .practice/cache/route-areas.bin
-            .practice/cache/route-legs.sqlite*
-          key: route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
+            .practice/cache/route-legs-v2.sqlite*
+          key: route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
           restore-keys: |
-            route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
+            route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
       - name: Pack game assets
         working-directory: vendor/rs-sdk/server/engine
         timeout-minutes: 10
@@ -74,10 +74,10 @@ jobs:
           path: |
             .practice/cache/rsmod-pathfinding.snap
             .practice/cache/route-areas.bin
-            .practice/cache/route-legs.sqlite*
-          key: route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
+            .practice/cache/route-legs-v2.sqlite*
+          key: route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
           restore-keys: |
-            route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
+            route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
       - name: Pack game assets
         working-directory: vendor/rs-sdk/server/engine
         timeout-minutes: 10
