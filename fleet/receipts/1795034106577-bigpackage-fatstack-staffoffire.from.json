@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795034106577-bigpackage-fatstack-staffoffire",
  "account": "Bigpackage",
  "partner": "Fatstack",
@@ -12,6 +12,16 @@
  "claim": "4a59729e-af99-4faa-9a64-6a2407ad138b",
  "count": 0,
  "ok": false,
- "at": 1795034890202,
- "detail": "trade claimed"
+ "at": 1795034909112,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795034903184
+ },
+ "logout": {
+  "attemptId": "1795034890212-0000026200-0000000001",
+  "at": 1795034909096,
+  "sha256": "f8aed0776fcd32577ed2794cdba42b0300dc5305e2fa85596252a6b6323f672c"
+ },
+ "screen": false
 }
