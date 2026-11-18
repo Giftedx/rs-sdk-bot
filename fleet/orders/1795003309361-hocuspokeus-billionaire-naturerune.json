@@ -1,0 +1,22 @@
+{
+ "id": "1795003309361-hocuspokeus-billionaire-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Hocuspokeus",
+ "to": "Billionaire",
+ "item": "Nature rune",
+ "count": 47,
+ "start": 1795003309361,
+ "end": 1795005709361,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
