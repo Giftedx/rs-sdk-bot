@@ -1,0 +1,22 @@
+{
+ "id": "1794965200553-mmsmk1232-swordinhand-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmsmk1232",
+ "to": "Swordinhand",
+ "item": "Air rune",
+ "count": 36,
+ "start": 1794965200553,
+ "end": 1794967600553,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
