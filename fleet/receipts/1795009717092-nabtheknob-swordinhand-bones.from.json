@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "1795009717092-nabtheknob-swordinhand-bones",
+ "account": "NabTheKnob",
+ "partner": "Swordinhand",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 24,
+ "claim": "94ddf401-f2de-42c8-a3eb-d02820eebc6a",
+ "count": 0,
+ "ok": false,
+ "at": 1795009971324,
+ "detail": "Error: sender withdrawal debit or pack credit not confirmed: Bones",
+ "logout": {
+  "attemptId": "1795009938621-0000025852-0000000001",
+  "at": 1795009971271,
+  "sha256": "f357e3b49da47adaa7e5763fd6f1a86b226446243f255addde65163b7e0cc1f6"
+ },
+ "screen": false
+}
