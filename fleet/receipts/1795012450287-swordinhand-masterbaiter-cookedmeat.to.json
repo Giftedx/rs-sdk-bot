@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795012450287-swordinhand-masterbaiter-cookedmeat",
  "account": "Masterbaiter",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Cooked meat",
  "requested": 3,
  "claim": "4f4ff60d-c269-4946-affd-ced4569d79c4",
- "count": 0,
- "ok": false,
- "at": 1795012555179,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795012580020,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795012579319
+ },
+ "logout": {
+  "attemptId": "1795012555190-0000000988-0000000001",
+  "at": 1795012580003,
+  "sha256": "591137c36d90a98b95760199fe0640ef442b492b06e7e510de03d01ff7aaaa23"
+ },
+ "screen": true
 }
