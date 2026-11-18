@@ -29,6 +29,10 @@ Every record has `src`: a path and 1-based line, relative to the content root.
 - questPoints: 145
 - questLinesSkipped: 0
 - dropTables: 257
+- gearSourceNpc: 13
+- gearSourceQuest: 114
+- gearSourceClue: 107
+- gearShopNpcs: 127
 - pickablePlants: 2080
 - doors: 2718
 - doors_open: 984
@@ -52,6 +56,7 @@ Every record has `src`: a path and 1-based line, relative to the content root.
 - `skills.json`: one row per skill action from the skill dbtables; `xp` is whole XP (content stores tenths). Firemaking rows come from the log objects, herblore rows from `brew_potion.struct`, smelting rows from `smelting.struct`; an anvil row takes `bar_amount` x `xpperbar` of its bar struct. `xp` is `null` where the content holds none (a herblore unfinished potion).
 - `quests.json`: varp, complete value, quest points, and XP only from blocks that set the quest complete across all 68 quests.
 - `drops.json`: ai_queue3 tables and shared `label:` tables. Chances are per kill out of the roll die. Tables with two rolls are known to sum over 1.
+- `gear-sources.json`: where a wearable item comes from outside a shop stock line. `npc` rows are `inv_add` calls in a script file with an NPC trigger (a coin check above the call is the price; `gate` is the first `if` of the trigger, with its quest when the file is in a quest folder or the text holds a quest varp). A row whose gate names no quest, a free row with no gate, and a call after the loss of another item (an exchange) are left out. `quest` rows are the same calls in a quest folder without a price, or in a `*complete*` queue. `clue` rows are the clue reward procs. `shopNpcs` maps each `owned_shop` NPC to its spawn tiles.
 
 ## Skipped quest lines (condition form not understood)
 

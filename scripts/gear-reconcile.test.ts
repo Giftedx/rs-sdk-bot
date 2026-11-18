@@ -1,7 +1,7 @@
 import {expect,test} from 'bun:test';
 import type {Session} from '../packages/core/src/inprocess';
 import {gearById,selectProgressiveLoadout} from '../packages/planner/src/gear-progression';
-import {gearLevelWatch,gearWants,loadoutTargets,questPointsFloor,reconcileLoadout} from './gear-reconcile';
+import {gearLevelWatch,gearWants,loadoutTargets,printWants,questPointsFloor,questPointsOf,reconcileLoadout,type GearWant,type WantLog} from './gear-reconcile';
 
 type Row={id:number;name:string;count:number;slot:number};
 const WEARPOS:Record<string,number>={hat:0,back:1,front:2,righthand:3,torso:4,lefthand:5,legs:7,hands:9,feet:10,quiver:13};
@@ -151,7 +151,7 @@ test('the unlock watch takes its baseline when every skill is read and never fir
     expect(watch.crossed()).toBe(false);
 });
 
-test('GEAR_WANT rows name an unowned best item with a shop or a trade, and quest points are counted',()=>{
+test('GEAR_WANT rows name an unowned item with a real source, and quest points are counted',()=>{
     expect(questPointsFloor(null)).toBe(0);
     expect(questPointsFloor(new Set(['Cook','Doric']))).toBe(2);
     expect(questPointsFloor([{name:'a',state:'complete'},{name:'b',state:'started'}])).toBe(1);
@@ -159,8 +159,33 @@ test('GEAR_WANT rows name an unowned best item with a shop or a trade, and quest
     try{
         const want=gearWants('gear-fixture',selectProgressiveLoadout('melee',[{id:1329,count:1}],LEVELS,[],{questPoints:0}));
         expect(want.length).toBeGreaterThan(0);
-        for(const w of want)expect(w.source.kind==='trade'||w.source.shop.length>0).toBe(true);
+        for(const w of want)expect(['shop','npc','quest','craft','drop','clue','ge']).toContain(w.source.kind);
         expect(want.find(w=>w.slot==='weapon')?.current).toBe(1329);
         expect(loadoutTargets(selectProgressiveLoadout('melee',[{id:1329,count:1}],LEVELS,[]),{weapon:1333}).find(t=>t.slot==='weapon')?.id).toBe(1333);
     }finally{f.dispose();}
+});
+
+test('the quest point gate reads the QP varp, never less than the count of completed quests',()=>{
+    expect(questPointsOf({client:{varServ:{101:40}}} as any,5)).toBe(40);
+    expect(questPointsOf({client:{varServ:{101:3}}} as any,5)).toBe(5);
+    expect(questPointsOf({client:{}} as any,5)).toBe(5);
+    expect(questPointsOf({} as any,0)).toBe(0);
+    // The varp opens a quest-point shop that the count of quests does not.
+    const wants=(qp:number)=>selectProgressiveLoadout('melee',[],{attack:40,strength:40,defence:40,hitpoints:40},[],{questPoints:qp}).upgrades.body?.acquirableUpgrade?.shops.map(s=>s.shop)??[];
+    expect(wants(questPointsFloor(['a','b']))).not.toContain('championshop');
+    expect(wants(questPointsOf({client:{varServ:{101:32}}} as any,2))).toContain('championshop');
+});
+
+test('printWants prints a want once, and again only when its item or source changes',()=>{
+    const seen=new Map<string,string>(),log:WantLog={get:k=>seen.get(k),set:(k,v)=>void seen.set(k,v)};
+    const want=(id:number,cost:number):GearWant=>({account:'a',style:'melee',slot:'weapon',wearpos:3,id,name:'x',current:null,source:{kind:'shop',shop:'s',cost},goal:null});
+    const lines:string[]=[],write=console.log;
+    console.log=(...a:unknown[])=>void lines.push(a.join(' '));
+    try{
+        for(let i=0;i<50;i++)printWants([want(1,10)],log);
+        printWants([want(1,12)],log);printWants([want(2,12)],log);printWants([want(2,12)],log);
+        printWants([{...want(2,12),account:'b'}],log);
+    }finally{console.log=write;}
+    expect(lines.length).toBe(4);
+    expect(lines[0]).toStartWith('GEAR_WANT ');
 });
