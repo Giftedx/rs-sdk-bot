@@ -1,0 +1,22 @@
+{
+ "id": "1794998763031-swordinhand-mineyourbiz-bronzesword",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordinhand",
+ "to": "MineYourBiz",
+ "item": "Bronze sword",
+ "count": 1,
+ "start": 1794998763031,
+ "end": 1795001163031,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
