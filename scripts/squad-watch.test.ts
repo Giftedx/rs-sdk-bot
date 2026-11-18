@@ -18,6 +18,11 @@ describe('log lines', () => {
         expect(e).toBeNull();
         expect([w.kills, w.fallbacks, [...w.killsBy]]).toEqual([3, 1, [['Sugma', 2], ['Ligma', 1]]]);
     });
+    test('the proof lines of a kill are not kills', () => {
+        const { w, e } = feed(['[A] PK kill Sugma after 41 ticks', '[A] PK kill receipt live 1795039160584-0000026472-0000000001 wilderness 16 multi', '[A] PK kill feed matched at feed tick 209942']);
+        expect(e).toBeNull();
+        expect([w.kills, [...w.killsBy]]).toEqual([1, [['Sugma', 1]]]);
+    });
     test('a death line names the account', () => {
         expect(feed(['[A] PK kill Sugma after 41 ticks', '[B] SQUAD died']).e).toEqual({ kind: 'death', account: 'B', detail: 'SQUAD died' });
         expect(feed(['[B] PK died to Goondelf after 88 ticks']).e?.kind).toBe('death');
