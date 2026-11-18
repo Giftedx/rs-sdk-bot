@@ -139,9 +139,9 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
   // is sent again, at most 3 times in all, when the player is still inside after the wait; each miss is logged.
   await s.bot.dismissBlockingUI();check();
   for(let attempt=1;;attempt++){
-   const sent=(await s.sdk.sendInteractLoc(p.x,p.z,p.id,1)).success;
+   const reply=await s.sdk.sendInteractLoc(p.x,p.z,p.id,1),sent=reply.success;
    if(sent&&await waitUntil(s,()=>over()||!insideEarth(),{timeoutTicks:attempt<3?8:20})&&!insideEarth())break;
-   console.log('EARTH_EXIT_MISS '+JSON.stringify({attempt,sent,tick:s.tick(),at:pos()&&{x:pos()!.worldX,z:pos()!.worldZ},dialog:st()?.dialog?.isOpen===true}));
+   console.log('EARTH_EXIT_MISS '+JSON.stringify({attempt,sent,reason:reply.reason,message:reply.message,portal:{x:p.x,z:p.z},edge,tick:s.tick(),at:pos()&&{x:pos()!.worldX,z:pos()!.worldZ},dialog:st()?.dialog?.isOpen===true}));
    if(attempt>=3||over())throw Error('earth exit unobserved');
    await s.bot.dismissBlockingUI();check();
   }
