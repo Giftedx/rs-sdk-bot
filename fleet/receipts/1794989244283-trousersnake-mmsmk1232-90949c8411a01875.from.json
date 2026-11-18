@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794989244283-trousersnake-mmsmk1232-90949c8411a01875",
+ "account": "TrouserSnake",
+ "partner": "mmsmk1232",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 28,
+ "claim": "3de270fe-bc96-42d8-9721-e7cd4d2d2916",
+ "count": 0,
+ "ok": false,
+ "at": 1794989459682,
+ "detail": "trade claimed"
+}
