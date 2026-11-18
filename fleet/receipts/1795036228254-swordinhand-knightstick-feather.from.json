@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795036228254-swordinhand-knightstick-feather",
  "account": "Swordinhand",
  "partner": "Knightstick",
@@ -10,8 +10,22 @@
  "item": "Feather",
  "requested": 50,
  "claim": "f888f015-d597-4b07-908e-4e555241c138",
- "count": 0,
- "ok": false,
- "at": 1795036319565,
- "detail": "trade claimed"
+ "count": 50,
+ "ok": true,
+ "at": 1795036342433,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 50,
+  "after": 0
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795036329497
+ },
+ "logout": {
+  "attemptId": "1795036319575-0000012932-0000000001",
+  "at": 1795036342254,
+  "sha256": "9111a3d21338057dd56537e46efd1f341082807f0d33957cc1e1c007c9168c54"
+ },
+ "screen": true
 }
