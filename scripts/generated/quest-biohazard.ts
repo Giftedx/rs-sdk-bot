@@ -25,6 +25,8 @@ const HQ_STAIRS = { id: 1738, x: 2542, z: 3324 };
 const UP_DOOR = { id: 2034, x: 2547, z: 3325 };            // mournerstewdoorup, level 1, west edge
 const GATE = { id: 2060, x: 2551, z: 3325 };               // mournerquaters_gater, level 1, east edge
 const CRATE = { id: 2064, x: 2554, z: 3327 };              // mournercrateup, level 1
+const KILRON = { x: 2556, z: 3266 };                       // npc 349 (maps/m39_51.jm2); his ladder lands at 2559,3267
+const STAIRS_TOP = { id: 1740, x: 2543, z: 3325 };         // spiralstairstop, level 1
 const CHEMIST = { x: 2934, z: 3210 };
 const BOYS = { x: 2933, z: 3218 };                         // Hops 2931,3219; DeVinci 2933,3219; Chancy 2935,3219
 const INN = { x: 3271, z: 3390 };                          // Hops 3268,3389; Chancy 3270,3391; DeVinci 3274,3390
@@ -73,87 +75,125 @@ try {
         await q.step(label, () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(id)!, optionIndex: 2, reason: 'SDK' }), () => !q.has(id), 3, 3);
     };
 
-    // 1. Elena: "I'll try to retrieve it for you." sets 1 (elena.rs2:118-134).
-    await q.talk('elena 1', /^elena$/i, [/i'll try to retrieve it for you/i], () => q.sawText(/he lives next to the chapel/i), ELENA, 80);
-    q.milestone(1);
     // Elena's door (elenadoor2 2054 at 2592,3339, south edge) walks the bot through and shuts behind it
     // (areas/area_ardougne_east/scripts/doors.rs2:1-5); the walker stalled 150 ticks at it in two trials.
     const ELENA_DOOR = { id: 2054, x: 2592, z: 3339 };
     const outOfElena = async (label: string) => { await q.walk(`${label} to door`, [{ x: ELENA_DOOR.x, z: ELENA_DOOR.z - 1, tol: 0 }]); await cross(label, ELENA_DOOR, /^open$/i, () => z() >= ELENA_DOOR.z); };
     const intoElena = async (label: string) => { await q.walk(`${label} to door`, [{ x: ELENA_DOOR.x, z: ELENA_DOOR.z, tol: 0 }]); await cross(label, ELENA_DOOR, /^open$/i, () => z() < ELENA_DOOR.z); };
-    await outOfElena('elena door out');
-    // 2. Jerico: 2 (jerico.rs2:34-44). His cupboard gives the birdfeed; the pigeons behind his house.
-    // His house door (loc_1530 at 2610,3324, east edge, maps/m40_51.jm2): shut, the talk is rejected.
-    await q.walk('to jerico', [{ x: JERICO.x, z: JERICO.z, tol: 5 }]);
-    await q.openDoor('jerico door', 2610, 3324);
-    await q.talk('jerico', /^jerico$/i, [], () => q.sawText(/omart is waiting for you/i), JERICO, 60);
-    q.milestone(2);
-    await search('cupboard', JERICO_CUPBOARD, () => q.has(ITEM.feed));
-    await q.walk('to pigeons', [{ x: PIGEONS.x - 1, z: PIGEONS.z, tol: 1 }]);
-    await pickup('pigeons', ITEM.pigeons);
-    // 3-4. The birdfeed on the watch tower (3), the pigeons opened in its zone (4) (quest_biohazard.rs2:24-52).
-    await q.walk('to tower', [{ x: TOWER_SPOT.x, z: TOWER_SPOT.z, tol: 1 }]);
-    await q.step('birdfeed', () => q.useOnLoc(ITEM.feed, q.findLoc(l => l.id === TOWER.id && l.distance <= 8) ?? TOWER), () => !q.has(ITEM.feed), 10, 4);
-    await q.step('pigeons', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.pigeons)!, optionIndex: 1, reason: 'SDK' }), () => !q.has(ITEM.pigeons), 8, 4);
-    q.milestone(4);
-    // 5. Omart: "Ok, lets do it." over the wall (omart.rs2:10-37, quest_biohazard.rs2:54-68).
-    const ladders = () => q.msgCount(/climb up the rope ladder/i);
-    await q.talk('omart', /^omart$/i, [/ok, lets do it/i], () => ladders() >= 1, OMART, 60);
-    await q.waitUntil(() => x() <= 2556, 10);
-    if (x() > 2556) await q.fail('omart ladder');
-    q.milestone(5);
-    // 6. The rotten apple in the mourners' stew (6) (quest_biohazard.rs2:70-81).
-    await q.walk('to apple', [{ x: APPLE.x, z: APPLE.z, tol: 1 }]);
-    await pickup('apple', ITEM.apple);
-    // The cauldron stands in a railed yard; the fence (mournerstewfence 2068 at 2541,3331, east edge) is climbed over
-    // (general_use/scripts/fence.rs2:1-27). From outside the rail the apple gets "I can't reach that!".
-    const FENCE = { id: 2068, x: 2541, z: 3331 };
-    await q.walk('to fence', [{ x: FENCE.x, z: FENCE.z, tol: 0 }]);
-    await cross('fence in', FENCE, /climb-over/i, () => x() > FENCE.x);
-    await q.step('apple', () => q.useOnLoc(ITEM.apple, q.locAt(CAULDRON.x, CAULDRON.z) ?? CAULDRON), () => !q.has(ITEM.apple), 10, 4);
-    await q.waitUntil(() => sawMsg(/quickly dissolves/i), 10);
-    await cross('fence out', FENCE, /climb-over/i, () => x() <= FENCE.x);
-    q.milestone(6);
-    // 7. The nurse's cupboard gives the doctors' gown (quest_biohazard.rs2:83-90); worn, it opens the HQ doors
-    // (doors.rs2:1-13,56-66). Upstairs a sick mourner (mournerstew2) dies with the key (mourner.rs2:68-79); the key
-    // opens the gate; the crate gives the distillator (7) (quest_biohazard.rs2:92-128).
-    // The hut door (loc_1530 at 2519,3275, west edge, maps/m39_51.jm2); from a diagonal tile the cupboard gets
-    // "I can't reach that!".
-    await q.walk('to nurse hut', [{ x: 2520, z: 3275, tol: 1 }]);
-    await q.openDoor('nurse door', 2519, 3275);
-    for (let i = 0; i < 4 && !q.near(2518, 3275, 0); i++) {
-        await q.openDoor(`nurse door ${i}`, 2519, 3275);
-        await q.s.direct({ type: 'walkTo', x: 2518, z: 3275, running: true, reason: 'SDK' });
-        await q.waitUntil(() => q.near(2518, 3275, 0), 6);
+    // An account that holds the distillator is at step 7 already (a run that stopped inside West Ardougne): steps 1
+    // to 7 would talk to Elena in East Ardougne, which it cannot reach.
+    if (!q.has(ITEM.distillator)) {
+        // 1. Elena: "I'll try to retrieve it for you." sets 1 (elena.rs2:118-134).
+        await q.talk('elena 1', /^elena$/i, [/i'll try to retrieve it for you/i], () => q.sawText(/he lives next to the chapel/i), ELENA, 80);
+        q.milestone(1);
+        await outOfElena('elena door out');
+        // 2. Jerico: 2 (jerico.rs2:34-44). His cupboard gives the birdfeed; the pigeons behind his house.
+        // His house door (loc_1530 at 2610,3324, east edge, maps/m40_51.jm2): shut, the talk is rejected.
+        await q.walk('to jerico', [{ x: JERICO.x, z: JERICO.z, tol: 5 }]);
+        await q.openDoor('jerico door', 2610, 3324);
+        await q.talk('jerico', /^jerico$/i, [], () => q.sawText(/omart is waiting for you/i), JERICO, 60);
+        q.milestone(2);
+        await search('cupboard', JERICO_CUPBOARD, () => q.has(ITEM.feed));
+        await q.walk('to pigeons', [{ x: PIGEONS.x - 1, z: PIGEONS.z, tol: 1 }]);
+        await pickup('pigeons', ITEM.pigeons);
+        // 3-4. The birdfeed on the watch tower (3), the pigeons opened in its zone (4) (quest_biohazard.rs2:24-52).
+        await q.walk('to tower', [{ x: TOWER_SPOT.x, z: TOWER_SPOT.z, tol: 1 }]);
+        await q.step('birdfeed', () => q.useOnLoc(ITEM.feed, q.findLoc(l => l.id === TOWER.id && l.distance <= 8) ?? TOWER), () => !q.has(ITEM.feed), 10, 4);
+        await q.step('pigeons', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.pigeons)!, optionIndex: 1, reason: 'SDK' }), () => !q.has(ITEM.pigeons), 8, 4);
+        q.milestone(4);
+        // 5. Omart: "Ok, lets do it." over the wall (omart.rs2:10-37, quest_biohazard.rs2:54-68).
+        const ladders = () => q.msgCount(/climb up the rope ladder/i);
+        await q.talk('omart', /^omart$/i, [/ok, lets do it/i], () => ladders() >= 1, OMART, 60);
+        await q.waitUntil(() => x() <= 2556, 10);
+        if (x() > 2556) await q.fail('omart ladder');
+        q.milestone(5);
+        // 6. The rotten apple in the mourners' stew (6) (quest_biohazard.rs2:70-81).
+        await q.walk('to apple', [{ x: APPLE.x, z: APPLE.z, tol: 1 }]);
+        await pickup('apple', ITEM.apple);
+        // The cauldron stands in a railed yard; the fence (mournerstewfence 2068 at 2541,3331, east edge) is climbed over
+        // (general_use/scripts/fence.rs2:1-27). From outside the rail the apple gets "I can't reach that!".
+        const FENCE = { id: 2068, x: 2541, z: 3331 };
+        await q.walk('to fence', [{ x: FENCE.x, z: FENCE.z, tol: 0 }]);
+        await cross('fence in', FENCE, /climb-over/i, () => x() > FENCE.x);
+        await q.step('apple', () => q.useOnLoc(ITEM.apple, q.locAt(CAULDRON.x, CAULDRON.z) ?? CAULDRON), () => !q.has(ITEM.apple), 10, 4);
+        await q.waitUntil(() => sawMsg(/quickly dissolves/i), 10);
+        await cross('fence out', FENCE, /climb-over/i, () => x() <= FENCE.x);
+        q.milestone(6);
+        // 7. The nurse's cupboard gives the doctors' gown (quest_biohazard.rs2:83-90); worn, it opens the HQ doors
+        // (doors.rs2:1-13,56-66). Upstairs a sick mourner (mournerstew2) dies with the key (mourner.rs2:68-79); the key
+        // opens the gate; the crate gives the distillator (7) (quest_biohazard.rs2:92-128).
+        // The hut door (loc_1530 at 2519,3275, west edge, maps/m39_51.jm2); from a diagonal tile the cupboard gets
+        // "I can't reach that!".
+        await q.walk('to nurse hut', [{ x: 2520, z: 3275, tol: 1 }]);
+        await q.openDoor('nurse door', 2519, 3275);
+        for (let i = 0; i < 4 && !q.near(2518, 3275, 0); i++) {
+            await q.openDoor(`nurse door ${i}`, 2519, 3275);
+            await q.s.direct({ type: 'walkTo', x: 2518, z: 3275, running: true, reason: 'SDK' });
+            await q.waitUntil(() => q.near(2518, 3275, 0), 6);
+        }
+        await search('nurse cupboard', NURSE_CUPBOARD, () => q.has(ITEM.doctor));
+        await wear('doctor gown', ITEM.doctor);
+        await q.walk('to hq', [{ x: HQ_DOOR.x, z: HQ_DOOR.z, tol: 0 }]);
+        await cross('hq door', HQ_DOOR, /^open$/i, () => z() > HQ_DOOR.z);
+        // The stairs room door (loc_1530 at 2546,3325, east edge, maps/m39_51.jm2): shut, the stairs click gets
+        // "I can't reach that!".
+        await q.walk('to stairs door', [{ x: 2547, z: 3325, tol: 0 }]);
+        await q.openDoor('stairs door', 2546, 3325);
+        await q.climb('hq stairs', () => q.findLoc(l => l.id === HQ_STAIRS.id && l.distance <= 15) ?? HQ_STAIRS, /climb-up|^climb$/i, () => q.lvl() === 1);
+        await q.walk('to up door', [{ x: UP_DOOR.x - 1, z: UP_DOOR.z, tol: 0 }]);
+        await cross('up door', UP_DOOR, /^open$/i, () => x() >= UP_DOOR.x);
+        for (let i = 0; i < 6 && !q.has(ITEM.key); i++) {
+            await q.guard('sick mourner');
+            const m = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^mourner$/i.test(n.name) && n.combatLevel === 13).sort((a: any, b: any) => a.distance - b.distance)[0];
+            if (!m) { await q.waitTicks(2); continue; }
+            await q.attack(m);
+            await q.waitUntil(() => q.has(ITEM.key) || !(q.st()?.nearbyNpcs ?? []).some((n: any) => n.index === m.index), 60);
+            await q.waitUntil(() => q.has(ITEM.key), 4);
+        }
+        if (!q.has(ITEM.key)) await q.fail('no mourner key');
+        q.milestone('key');
+        await q.step('gate key', () => q.useOnLoc(ITEM.key, q.locAt(GATE.x, GATE.z) ?? GATE), () => x() > GATE.x, 12, 5);
+        await q.step('crate', () => q.opLoc(q.locAt(CRATE.x, CRATE.z) ?? CRATE, 1), () => q.has(ITEM.distillator), 12, 4);
     }
-    await search('nurse cupboard', NURSE_CUPBOARD, () => q.has(ITEM.doctor));
-    await wear('doctor gown', ITEM.doctor);
-    await q.walk('to hq', [{ x: HQ_DOOR.x, z: HQ_DOOR.z, tol: 0 }]);
-    await cross('hq door', HQ_DOOR, /^open$/i, () => z() > HQ_DOOR.z);
-    // The stairs room door (loc_1530 at 2546,3325, east edge, maps/m39_51.jm2): shut, the stairs click gets
-    // "I can't reach that!".
-    await q.walk('to stairs door', [{ x: 2547, z: 3325, tol: 0 }]);
-    await q.openDoor('stairs door', 2546, 3325);
-    await q.climb('hq stairs', () => q.findLoc(l => l.id === HQ_STAIRS.id && l.distance <= 15) ?? HQ_STAIRS, /climb-up|^climb$/i, () => q.lvl() === 1);
-    await q.walk('to up door', [{ x: UP_DOOR.x - 1, z: UP_DOOR.z, tol: 0 }]);
-    await cross('up door', UP_DOOR, /^open$/i, () => x() >= UP_DOOR.x);
-    for (let i = 0; i < 6 && !q.has(ITEM.key); i++) {
-        await q.guard('sick mourner');
-        const m = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^mourner$/i.test(n.name) && n.combatLevel === 13).sort((a: any, b: any) => a.distance - b.distance)[0];
-        if (!m) { await q.waitTicks(2); continue; }
-        await q.attack(m);
-        await q.waitUntil(() => q.has(ITEM.key) || !(q.st()?.nearbyNpcs ?? []).some((n: any) => n.index === m.index), 60);
-        await q.waitUntil(() => q.has(ITEM.key), 4);
-    }
-    if (!q.has(ITEM.key)) await q.fail('no mourner key');
-    q.milestone('key');
-    await q.step('gate key', () => q.useOnLoc(ITEM.key, q.locAt(GATE.x, GATE.z) ?? GATE), () => x() > GATE.x, 12, 5);
-    await q.step('crate', () => q.opLoc(q.locAt(CRATE.x, CRATE.z) ?? CRATE, 1), () => q.has(ITEM.distillator), 12, 4);
     q.milestone(7);
-    // Out: Ardougne teleport from the HQ upstairs (East Ardougne, 2661,3301; skillmagic dbrow tele_coord 0_41_51_37_37).
-    // In two trials the walk out stalled in the stairs room (92 and 272 ticks) with five mourners round the door, and
-    // the teleport also skips Kilron's ladder (kilron.rs2:1-12).
-    await q.teleport('ardougne teleport 1', 'magic:ardougne_teleport', 2661, 3301);
+    // Out of West Ardougne. With its runes: the Ardougne teleport from the HQ (East Ardougne, 2661,3301; skillmagic
+    // dbrow tele_coord 0_41_51_37_37). In two trials the walk out stalled in the stairs room (92 and 272 ticks) with
+    // five mourners round the door, so the teleport is the first choice.
+    // With no runes for it: the city doors stay shut until the quest is complete (doors.rs2:25-27) and no walk crosses
+    // the wall, so q.teleport's far walk has no route. The bot leaves the HQ on foot and Kilron's rope ladder puts it
+    // at 2559,3267 (kilron.rs2:1-12, "Yes I do.").
+    const outByKilron = async (): Promise<void> => {
+        if (q.lvl() === 1) {
+            // From the inside the key gate opens with no key (quest_biohazard.rs2:134-145); the worn doctors' gown
+            // passes the up door (doors.rs2:1-6).
+            if (x() > GATE.x) {
+                await q.walk('to gate out', [{ x: GATE.x + 1, z: GATE.z, tol: 0 }]);
+                await cross('gate out', GATE, /^open$/i, () => x() <= GATE.x);
+            }
+            await q.walk('to up door out', [{ x: UP_DOOR.x, z: UP_DOOR.z, tol: 0 }]);
+            await cross('up door out', UP_DOOR, /^open$/i, () => x() < UP_DOOR.x);
+            await q.climb('hq stairs down', () => q.findLoc(l => l.id === STAIRS_TOP.id && l.distance <= 15) ?? STAIRS_TOP, /climb-down|^climb$/i, () => q.lvl() === 0);
+        }
+        // The stairs room door (loc_1530 at 2546,3325, east edge), then the HQ door from the inside, which opens with
+        // no condition (doors.rs2:8-10).
+        if (x() <= 2546) {
+            await q.walk('to stairs door out', [{ x: 2546, z: 3325, tol: 0 }]);
+            await q.openDoor('stairs door out', 2546, 3325);
+        }
+        await q.walk('to hq door out', [{ x: HQ_DOOR.x, z: HQ_DOOR.z + 1, tol: 0 }]);
+        await cross('hq door out', HQ_DOOR, /^open$/i, () => z() <= HQ_DOOR.z);
+        await q.walk('to kilron', [{ x: KILRON.x, z: KILRON.z + 2, tol: 2 }]);
+        await q.talk('kilron', /^kilron$/i, [/yes i do/i], () => x() >= 2559, KILRON, 60);
+        await q.waitUntil(() => x() >= 2559, 10);
+        if (x() < 2559) await q.fail('kilron ladder');
+        await q.converse([], () => !q.dialogOpen(), 6);
+        console.log(`QUEST_EXIT ${JSON.stringify({ label: 'kilron ladder', at: { x: x(), z: z(), level: q.lvl() } })}`);
+    };
+    // West Ardougne is west of the wall at x 2558. An account east of it is out already.
+    if (x() <= 2557) {
+        if (q.canCast('magic:ardougne_teleport')) await q.teleport('ardougne teleport 1', 'magic:ardougne_teleport', 2661, 3301);
+        else await outByKilron();
+    }
     // 8. Elena: the distillator gives three vials and the sample (10) (elena.rs2:61-99).
     await intoElena('elena door in');
     // Her script closes the dialog twice with p_delay(2) before it gives the items (elena.rs2:70-99); a new click in
