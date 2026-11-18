@@ -38,6 +38,20 @@ describe('rev289 name sweep', () => {
         expect(faults.map(f => `${f.kind}:${f.text}`)).toEqual(['osrs-only:Abyssal whip', 'osrs-only:longbow \\(u\\)']);
     });
 
+    test('display names only: a debugname or an unstrung-bow pattern matches nothing', () => {
+        // The content names an unstrung bow like the strung one, and "Bow string" has a space.
+        expect(sets.all.has('unstrung oak longbow')).toBe(false);
+        expect(sets.all.has('bow string')).toBe(true);
+        expect(sets.all.has('guamvial')).toBe(false);
+        const faults = scanText(`bot.withdrawItem(/^unstrung .*longbow$/i, 14);\nbot.withdrawItem(/bowstring/i, 14);\nbot.withdrawItem(/bow string/i, 14);`);
+        expect(faults.map(f => f.text)).toEqual(['^unstrung .*longbow$', 'bowstring']);
+    });
+
+    test('the patterns of a local helper are checked', () => {
+        const faults = scanText(`const findItem = (re: RegExp) => inv().find(i => re.test(i.name));\nfindItem(/headless arrow/i);\nfindItem(/bronze arrowtips/i);\nfindItem(/longbow \\(u\\)/i);`);
+        expect(faults.map(f => f.text)).toEqual(['longbow \\(u\\)']);
+    });
+
     test('a name table with a spelling mismatch or an unknown name is a fault', () => {
         const faults = scanText(`const T = ['Bronze axe', 'Iron axe', 'Steel axe', 'Heroes Guild helm', 'Dragon medium helm'];`);
         expect(faults.map(f => f.text).sort()).toEqual(['Dragon medium helm', 'Heroes Guild helm']);

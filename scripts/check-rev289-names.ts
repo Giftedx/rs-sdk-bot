@@ -27,6 +27,8 @@ export interface NameSets {
     /** Every name above in one array, for substring and regular-expression matches. */
     list: string[];
     npcList: string[];
+    /** Debugnames of items, NPCs and objects: a table keyed by debugname is valid, a substring or pattern match is not. */
+    debugs: Set<string>;
     /** Per id: the debugname and the display name. */
     idNames: { obj: Map<number, string[]>; npc: Map<number, string[]>; loc: Map<number, string[]> };
 }
@@ -48,6 +50,9 @@ export const GAME_CALLEES = new Set([
     'interactNpc', 'interactLoc', 'attack', 'talkTo',
 ]);
 
+/** Built-in string and regular-expression methods: their patterns are not game names. */
+export const STRING_METHODS = new Set(['test', 'match', 'matchAll', 'search', 'replace', 'replaceAll', 'split', 'exec', 'startsWith', 'endsWith', 'includes', 'indexOf', 'some', 'every', 'filter', 'find']);
+
 /** Quest-script helpers whose second argument is a regular expression for the NPC's name. */
 export const TALK_CALLEES = new Set(['talk', 'talkOnce', 'talkChoose', 'talkChat', 'talkWait']);
 
@@ -56,7 +61,7 @@ export const NOT_GAME_CALLEES = new Set(['getSkill', 'getSkillXp', 'level', 'xp'
 
 /** Strings that call a game helper but name no game thing. Each entry carries its reason. */
 export const NAME_ALLOW: ReadonlyArray<{ file: string; text: string; reason: string }> = [
-    { file: 'scripts/generated/quest-scorpion.ts', text: 'equip failed', reason: 'a failure label in a table of log words' },
+    { file: 'scripts/generated/quest-scorpion.ts', text: 'equip failed', reason: 'the fallback text of `?? \'equip failed\'`, a message and not a name' },
     { file: 'scripts/pk-kits.ts', text: 'Mage Arena', reason: 'the content has the Mage Arena varp (267) and no journal entry, so the label has no content spelling' },
     { file: 'packages/dashboard/goal-details.ts', text: 'Legends Guild shop', reason: 'prose label of the shop inventory generallegends' },
     { file: 'packages/dashboard/server.ts', text: 'Quest Points', reason: 'a board name of the hiscores, not a game object' },
@@ -107,11 +112,11 @@ function packById(path: string): Map<number, string> {
 export const norm = (s: string) => s.trim().toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ');
 
 /** Names from the configs whose debugname the engine pack lists, and each id's display name and debugname. */
+const debugNames = new Set<string>();
 function configNames(content: string, ext: string, pack: Map<number, string>): { names: Set<string>; byId: Map<number, string[]> } {
     const names = new Set<string>();
     const display = new Map<string, string>();
     const debugs = new Set(pack.values());
-    for (const dbg of debugs) names.add(norm(dbg));
     for (const f of walkExt(join(content, 'scripts'), ext)) {
         let cur = '';
         for (const raw of readFileSync(f, 'utf8').split(/\r?\n/)) {
@@ -122,11 +127,23 @@ function configNames(content: string, ext: string, pack: Map<number, string>): {
         }
     }
     const byId = new Map<number, string[]>();
+    for (const dbg of debugs) debugNames.add(dbg.toLowerCase());
     for (const [id, dbg] of pack) byId.set(id, [norm(dbg), ...(display.has(dbg) ? [display.get(dbg)!] : [])]);
     return { names, byId };
 }
 
+const nameSetCache = new Map<string, NameSets>();
+
+/** Reads the content once for each root; later calls return the same sets. */
 export function loadNameSets(repoRoot = resolve(import.meta.dir, '..'), baseline?: Rev289Baseline): NameSets {
+    const cached = nameSetCache.get(repoRoot);
+    if (cached) return cached;
+    const sets = readNameSets(repoRoot, baseline);
+    nameSetCache.set(repoRoot, sets);
+    return sets;
+}
+
+function readNameSets(repoRoot: string, baseline?: Rev289Baseline): NameSets {
     const base = baseline ?? loadRev289Baseline(repoRoot);
     const content = join(repoRoot, 'vendor', 'rs-sdk', 'server', 'content');
     const obj = configNames(content, '.obj', packById(join(content, 'pack', 'obj.pack')));
@@ -140,7 +157,7 @@ export function loadNameSets(repoRoot = resolve(import.meta.dir, '..'), baseline
     for (const m of journal.matchAll(/^text=(.+)$/gm)) quests.add(norm(m[1]!));
     const all = new Set<string>([...obj.names, ...npc.names, ...loc.names, ...quests]);
     for (const s of [...base.skills, ...base.prayers, ...base.spells]) all.add(norm(s));
-    return { all, items: obj.names, npcs: npc.names, locs: loc.names, quests, list: [...all], npcList: [...npc.names], idNames: { obj: obj.byId, npc: npc.byId, loc: loc.byId } };
+    return { all, items: obj.names, npcs: npc.names, locs: loc.names, quests, list: [...all], npcList: [...npc.names], debugs: debugNames, idNames: { obj: obj.byId, npc: npc.byId, loc: loc.byId } };
 }
 
 /** A pattern matches when the SDK would find a name with it: substring for text, a test for a regular expression. */
@@ -271,26 +288,29 @@ export function scanNames(opts: ScanOptions = {}): NameScan {
 
     // A callee is a game call when it is listed, or when most of its string arguments are exact real names.
     // The test runs per file, because a local helper of one file can share its name with a game helper of another.
-    const callees = new Map<string, { total: number; real: number }>();
-    const fileCallees = new Map<string, Map<string, { total: number; real: number }>>();
+    type Stat = { total: number; real: number; rtotal: number; rreal: number };
+    const callees = new Map<string, Stat>();
+    const fileCallees = new Map<string, Map<string, Stat>>();
     for (const { rel, lits } of parsed) {
-        const local = new Map<string, { total: number; real: number }>();
+        const local = new Map<string, Stat>();
         fileCallees.set(rel, local);
         for (const l of lits) {
-            if (!l.callee || l.regex) continue;
-            const real = sets.all.has(norm(l.text)) ? 1 : 0;
+            if (!l.callee) continue;
+            const real = l.regex ? patternMatches(l.text, true, l.flags, sets) : sets.all.has(norm(l.text));
             for (const m of [callees, local]) {
-                const c = m.get(l.callee) ?? { total: 0, real: 0 };
-                c.total++;
-                c.real += real;
+                const c = m.get(l.callee) ?? { total: 0, real: 0, rtotal: 0, rreal: 0 };
+                if (l.regex) { c.rtotal++; if (real) c.rreal++; } else { c.total++; if (real) c.real++; }
                 m.set(l.callee, c);
             }
         }
     }
-    const isGameCallee = (rel: string, name: string) => {
+    // A helper that takes name patterns (findItem(/headless arrow/i)) joins when a third of its patterns match a name, and two do.
+    const isGameCallee = (rel: string, name: string, regex: boolean) => {
         if (GAME_CALLEES.has(name)) return true;
         const c = fileCallees.get(rel)?.get(name);
-        return !!c && c.total >= 5 && c.real / c.total >= 0.8 && !NOT_GAME_CALLEES.has(name);
+        if (!c || NOT_GAME_CALLEES.has(name) || STRING_METHODS.has(name)) return false;
+        if (regex && c.rreal >= 2 && c.rreal / c.rtotal >= 0.3) return true;
+        return !regex && c.total >= 5 && c.real / c.total >= 0.8;
     };
 
     const faults: NameFault[] = [];
@@ -312,7 +332,7 @@ export function scanNames(opts: ScanOptions = {}): NameScan {
             if (!l.container || l.regex) continue;
             const t = tally.get(l.container) ?? { total: 0, real: 0 };
             t.total++;
-            if (sets.all.has(norm(l.text))) t.real++;
+            if (sets.all.has(norm(l.text)) || sets.debugs.has(l.text.trim().toLowerCase().replace(/ /g, '_'))) t.real++;
             tally.set(l.container, t);
         }
         for (const l of lits) {
@@ -325,7 +345,7 @@ export function scanNames(opts: ScanOptions = {}): NameScan {
                 if (re && !sets.npcList.some(n => re!.test(n))) add(rel, line, `/${l.text}/${l.flags}`, `${l.callee}() npc`, 'osrs-only', 'matches no revision-289 NPC name');
                 continue;
             }
-            if (l.callee && isGameCallee(rel, l.callee) && !(l.callee === 'has' && l.regex) && (l.argIndex === 0 || /^useItemOn/.test(l.callee))) {
+            if (l.callee && isGameCallee(rel, l.callee, l.regex) && !(l.callee === 'has' && l.regex) && (l.argIndex === 0 || /^useItemOn/.test(l.callee))) {
                 if (l.text.length > 60) continue;
                 namesChecked++;
                 if (!patternMatches(l.text, l.regex, l.flags, sets)) {
@@ -340,7 +360,7 @@ export function scanNames(opts: ScanOptions = {}): NameScan {
                 const t = tally.get(l.container)!;
                 if (t.total >= 3 && t.real / t.total >= 0.6 && l.text.length <= 60) {
                     const n = norm(l.text);
-                    if (sets.all.has(n) || isPinnedForm(n, sets) || /^[a-z0-9]+(-[a-z0-9]+)+$/.test(l.text) || l.text.trim().split(/\s+/).length > 4) continue;
+                    if (sets.all.has(n) || sets.debugs.has(l.text.trim().toLowerCase().replace(/ /g, '_')) || isPinnedForm(n, sets) || /^[a-z0-9]+(-[a-z0-9]+)+$/.test(l.text) || l.text.trim().split(/\s+/).length > 4) continue;
                     namesChecked++;
                     const near = nearestName(l.text, sets);
                     if (near) add(rel, line, l.text, 'name table', 'mismatch', `near "${near}"`);

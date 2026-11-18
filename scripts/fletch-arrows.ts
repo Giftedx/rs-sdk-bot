@@ -13,6 +13,7 @@ import { openBot, finish, countItems } from "../packages/core/src/bot";
 import type { Session } from "../packages/core/src/inprocess";
 import { waitTicks, waitUntil } from "../packages/core/src/ticks";
 import { depositPack } from "../packages/core/src/deposit";
+import { longbowIds } from "../packages/core/src/content-facts";
 import { depositObserved } from "../packages/core/src/deposit";
 import {runShafts} from "./fletch-shafts";
 import { knownBanks } from "../packages/core/src/trip";
@@ -521,6 +522,9 @@ try {
 
     const findItem = (re: RegExp) => inv().find(i => re.test(i.name));
     const countRe = (re: RegExp) => countItems(s, re);
+    const BOWS = longbowIds();
+    const findId = (ids: readonly number[]) => inv().find(i => ids.includes(i.id));
+    const countIds = (ids: readonly number[]) => inv().filter(i => ids.includes(i.id)).reduce((n, i) => n + i.count, 0);
 
     const bank = async () => {
         const b = await s.bot.openBank();
@@ -538,10 +542,13 @@ try {
             await s.bot.withdrawItem(/headless arrow/i, 1000);
             await s.bot.withdrawItem(tipRe, 1000);
         } else if (MODE === 'bows') {
-            await s.bot.depositItem(/longbow$/i, -1);
+            // An unstrung bow has the display name of the strung bow, so the bows are found by id.
+            for (const item of inv().filter(i => BOWS.strung.includes(i.id))) await s.bot.depositItem(item, -1);
             await waitTicks(s, 1);
-            await s.bot.withdrawItem(/bowstring/i, 14);
-            await s.bot.withdrawItem(/^unstrung .*longbow$/i, 14);
+            for (const wanted of [[BOWS.string], BOWS.unstrung]) {
+                const item = s.sdk.getState()!.bank.items.find(i => wanted.includes(i.id));
+                if (item) await s.bot.withdrawItem(item, 14);
+            }
         }
 
         bankTrips++;
@@ -573,23 +580,23 @@ try {
             const gained = countRe(finishedRe) - before;
             if (gained > 0) fletched += gained;
         } else if (MODE === 'bows') {
-            const strings = findItem(/bowstring/i);
-            const unstrung = findItem(/longbow \(u\)/i);
+            const strings = findId([BOWS.string]);
+            const unstrung = findId(BOWS.unstrung);
             if (!strings || !unstrung) {
                 await bank();
-                if (!findItem(/bowstring/i) || !findItem(/longbow \(u\)/i)) {
+                if (!findId([BOWS.string]) || !findId(BOWS.unstrung)) {
                     await waitTicks(s, 5);
                     continue;
                 }
             }
 
-            const st = findItem(/bowstring/i)!;
-            const un = findItem(/longbow \(u\)/i)!;
-            const before = countRe(/longbow$/i);
+            const st = findId([BOWS.string])!;
+            const un = findId(BOWS.unstrung)!;
+            const before = countIds(BOWS.strung);
             await s.sdk.sendUseItemOnItem(st.slot, un.slot);
             await waitTicks(s, 2);
 
-            const gained = countRe(/longbow$/i) - before;
+            const gained = countIds(BOWS.strung) - before;
             if (gained > 0) fletched += gained;
         }
     }
