@@ -24,7 +24,8 @@ import { FOOD_ORDER, ITEMS, wildernessLevel } from './pk';
 import { squadEscapeSpell } from './pk-squad';
 
 export type WatchEvent = { kind: string; account: string; detail: string };
-export type Config = { noKillMs: number; quietMs: number; lowHp: number; repeat: boolean };
+// `accounts`: the watched accounts in lower case. A fight line counts only with the tag of one of them.
+export type Config = { noKillMs: number; quietMs: number; lowHp: number; repeat: boolean; accounts?: ReadonlySet<string> };
 export type StatusView = { name: string; at: number; hp: number; maxHp: number; x: number; z: number; magic: number;
     inventory: { id: number; name: string; count: number }[]; equipment: { id: number; name: string; count: number; slot: number }[] };
 export type Watch = { startedAt: number; kills: number; deaths: number; trips: number; fallbacks: number; hpLost: number; lastKillAt: number; lastLineAt: number;
@@ -37,10 +38,13 @@ const antipoisons = ITEMS.antipoison as readonly number[];
 const atSpawn = (s: { x: number; z: number }) => Math.max(Math.abs(s.x - 3222), Math.abs(s.z - 3218)) <= 40;
 
 // One log line. Returns the event that ends the watch, or null. Counts kills and fallbacks on the way.
-export function readLine(w: Watch, line: string, now: number, cfg: Pick<Config, 'repeat'>): WatchEvent | null {
+// A fight line (`PK ...`) counts only with the tag of a watched account: on the bench the gang's own fight loop
+// prints `PK died to ...` with no tag.
+export function readLine(w: Watch, line: string, now: number, cfg: Pick<Config, 'repeat' | 'accounts'>): WatchEvent | null {
     w.lastLineAt = now;
     const tag = line.match(/^\[([A-Za-z0-9_ -]{1,12})\] (.*)$/), account = tag?.[1] ?? '-', text = tag?.[2] ?? line;
     let m: RegExpMatchArray | null;
+    if (/^PK /.test(text) && (!tag || (cfg.accounts && !cfg.accounts.has(account.toLowerCase())))) return null;
     if ((m = text.match(/^PK kill (\S+)/))) { w.kills++; w.lastKillAt = now; w.killsBy.set(m[1]!, (w.killsBy.get(m[1]!) ?? 0) + 1); return null; }
     if (/^SQUAD coordinated fallback/.test(text)) { w.fallbacks++; return null; }
     if (/^SQUAD died\b/.test(text) || /^PK died to /.test(text)) { w.deaths++; return { kind: 'death', account, detail: text }; }
@@ -94,7 +98,7 @@ export function supplies(statuses: readonly StatusView[]): string {
 }
 export function summary(w: Watch, statuses: readonly StatusView[], now: number): string {
     const minutes = Math.max(1, Math.round((now - w.startedAt) / 60_000));
-    return `SQUAD_WATCH ok minutes=${minutes} kills=${w.kills} (${[...w.killsBy].map(([n, k]) => `${n} ${k}`).join(', ') || 'none'}) deaths=${w.deaths} hpLostSampled=${w.hpLost} hpPerKill=${w.kills ? Math.round(w.hpLost / w.kills) : '-'}`
+    return `SQUAD_WATCH ok minutes=${minutes} kills=${w.kills} (${[...w.killsBy].map(([n, k]) => `${n} ${k}`).join(', ') || 'none'}) deaths=${w.deaths} hpLostSampled=${w.hpLost} hpPerKill=${w.kills && w.seen.size ? Math.round(w.hpLost / w.kills) : '-'}`
         + ` trips=${w.trips} fallbacks=${w.fallbacks} hp=${statuses.map(s => `${s.name}:${s.hp}`).join(' ') || '-'} food/arrows/law/antipoison=${supplies(statuses) || '-'}`;
 }
 export const eventLine = (w: Watch, e: WatchEvent) => `SQUAD_WATCH event=${e.kind} account=${e.account} detail=${JSON.stringify(e.detail)} kills=${w.kills} deaths=${w.deaths} trips=${w.trips}`;
@@ -127,7 +131,7 @@ if (import.meta.main) {
     const [log, ...accounts] = args.filter(a => !/^[A-Z_]+=/.test(a));
     const get = (k: string, d: string) => kv[k] ?? process.env[k] ?? d;
     if (!log || !accounts.length) { console.log('SQUAD_WATCH event=usage account=- detail="bun scripts/squad-watch.ts <log file> <account> [<account> ...] [KEY=value ...]"'); process.exit(2); }
-    const cfg: Config = { noKillMs: Number(get('NO_KILL_MINUTES', '20')) * 60_000, quietMs: Number(get('QUIET_MINUTES', '4')) * 60_000, lowHp: Number(get('LOW_HP', '30')), repeat: get('REPEAT', '0') === '1' };
+    const cfg: Config = { noKillMs: Number(get('NO_KILL_MINUTES', '20')) * 60_000, quietMs: Number(get('QUIET_MINUTES', '4')) * 60_000, lowHp: Number(get('LOW_HP', '30')), repeat: get('REPEAT', '0') === '1', accounts: new Set(accounts.map(a => a.toLowerCase())) };
     const statusDir = get('STATUS', join('.practice', 'status')), pid = Number(get('PID', '0')), summaryMs = Number(get('SUMMARY_MINUTES', '5')) * 60_000, pollMs = Number(get('POLL_SECONDS', '5')) * 1000;
     const alive = (id: number) => { try { process.kill(id, 0); return true; } catch { return false; } };
     const statuses = () => accounts.flatMap(name => { try { const view = statusView(JSON.parse(readFileSync(join(statusDir, `${name}.json`), 'utf8'))); return view ? [view] : []; } catch { return []; } });

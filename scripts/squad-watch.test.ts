@@ -23,6 +23,14 @@ describe('log lines', () => {
         expect(feed(['[B] PK died to Goondelf after 88 ticks']).e?.kind).toBe('death');
         expect(feed(['[B] SQUAD died on a bank trip']).e?.kind).toBe('death');
     });
+    test('a fight line with no tag, or with the tag of an account that is not watched, counts for nothing', () => {
+        const w = newWatch(T0), watched = { repeat: false, accounts: new Set(['a', 'b']) };
+        for (const line of ['PK died to A after 45 ticks', 'PK kill A after 45 ticks', '[Gang1] PK kill A after 45 ticks', '[Gang1] PK died to B after 9 ticks']) expect(readLine(w, line, T0, watched)).toBeNull();
+        expect([w.kills, w.deaths]).toEqual([0, 0]);
+        expect(readLine(w, '[B] PK kill Gang1 after 30 ticks', T0, watched)).toBeNull();
+        expect(readLine(w, '[A] PK died to Gang1 after 45 ticks', T0, watched)).toMatchObject({ kind: 'death', account: 'A' });
+        expect([w.kills, w.deaths]).toEqual([1, 1]);
+    });
     test('a RESULT ok with a death is a death, and one with none ends the watch', () => {
         expect(feed(['RESULT ok squad accounts=4 kills=5 died=1 taken=800 trips=2 picked={}']).e).toMatchObject({ kind: 'death', account: '-' });
         expect(feed(['RESULT ok squad accounts=4 kills=5 died=0 taken=300 trips=2 picked={}']).e).toMatchObject({ kind: 'ended' });
