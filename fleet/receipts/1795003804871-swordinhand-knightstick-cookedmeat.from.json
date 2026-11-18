@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795003804871-swordinhand-knightstick-cookedmeat",
  "account": "Swordinhand",
  "partner": "Knightstick",
@@ -10,8 +10,18 @@
  "item": "Cooked meat",
  "requested": 3,
  "claim": "96c7c261-60a2-4808-b9fe-0ac0b127b7ed",
- "count": 0,
- "ok": false,
- "at": 1795004157099,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795004293959,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 14,
+  "after": 11
+ },
+ "logout": {
+  "attemptId": "1795004157178-0000003592-0000000001",
+  "at": 1795004293946,
+  "sha256": "9c1863d61d3f3e1076285c583d24eb51f96b4d7534b6c5f78d5c5b02b4410026"
+ },
+ "screen": true
 }
