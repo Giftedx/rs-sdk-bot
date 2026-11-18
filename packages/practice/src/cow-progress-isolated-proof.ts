@@ -46,11 +46,14 @@ export function claimCowStop(path:string,marker:string):CowStop{
 export function retainCowStop(stop:CowStop,_evidence?:string){
  return stop.path;
 }
-const refusal:Partial<Record<Kind,RegExp>>={nofood:/^RESULT fail .*cow prerequisite: stage2unnoted Trout/m,nokit:/^RESULT fail .*cow prerequisite: missing kit1277/m};
+const refusal:Partial<Record<Kind,RegExp>>={nofood:/^RESULT fail .*cow prerequisite: stage2unnoted Trout/m,nokit:/^RESULT fail .*cow prerequisite: missing owned wearable melee weapon/m};
+// The cow worker wields the best melee weapon that the pack, the worn gear and the bank hold (reconcileLoadout), so a
+// case with no kit holds none: no sword, no dagger, and no axe or pickaxe that can be wielded.
+const WIELDABLE=[1205,1265,1351];
 export function cowFixture(kind:Kind):SaveConfig{
  const inventory=SWORDINHAND.inventory.filter((i,n)=>kind==='nofood'?i.id!==TROUT||n===1:kind==='nokit'?i.id!==SWORD:true);
  return {position:SWORDINHAND.position,skills:{Attack:9,Defence:20,Strength:20,Hitpoints:20},inventory,
-  equipment:SWORDINHAND.equipment.filter(i=>kind!=='nokit'||i.id!==SWORD),bank:SWORDINHAND.bank};
+  equipment:SWORDINHAND.equipment.filter(i=>kind!=='nokit'||i.id!==SWORD),bank:SWORDINHAND.bank.filter(i=>kind!=='nokit'||!WIELDABLE.includes(i.id))};
 }
 const count=(s:Save,container:number,id:number)=>(s.inventories[container]??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const total=(s:Save,id:number)=>Object.values(s.inventories).flat().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
