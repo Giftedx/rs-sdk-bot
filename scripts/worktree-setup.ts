@@ -11,6 +11,7 @@
 import {copyFileSync,existsSync,mkdirSync,readFileSync,renameSync,rmSync,writeFileSync} from 'node:fs';
 import {Database} from 'bun:sqlite';
 import {dirname,join,resolve} from 'node:path';
+import {fleet} from './heavy-admission';
 
 export type PatchState='applied'|'clean'|'other';
 // The files that a patch creates. A restore of the tracked files leaves them in place, and the next apply stops on them.
@@ -50,9 +51,12 @@ export function hookSwitchText(mainLocal:string|null,worktreeLocal:string|null):
 // Copies the route caches that `to` does not hold from `from`. The walk lengths are an SQLite file that other
 // processes write: VACUUM INTO gives a whole copy of it. A failed copy leaves no file and is not a setup failure,
 // because every cache is optional. Returns one line for each cache.
-export const ROUTE_CACHES=['rsmod-pathfinding.snap','route-areas.bin','route-legs.sqlite'] as const;
-export function seedRouteCaches(from:string,to:string,dry=false):[string,string][]{
+export const ROUTE_CACHES=['rsmod-pathfinding.snap','route-areas.bin','route-legs-v2.sqlite'] as const;
+// `live`: a swarm runs from the main checkout. Its bots write the walk lengths, and a whole copy of that file reads
+// every page of it, so the copy waits for a run with no fleet. The two other files are written once and are copied.
+export function seedRouteCaches(from:string,to:string,dry=false,live=false):[string,string][]{
     return ROUTE_CACHES.map(name=>{
+        if(live&&name.endsWith('.sqlite')&&!existsSync(join(to,name)))return [name,'not copied: the live fleet writes it; run the setup again when no swarm runs'];
         const source=join(from,name),target=join(to,name);
         if(existsSync(target))return [name,'present'];
         if(!existsSync(source))return [name,'not in the main checkout'];
@@ -143,7 +147,7 @@ if(import.meta.main){
     // an older checkout is ignored, not trusted. A file that is here already is kept.
     if(flags.has('--bench')){
         if(resolve(main)===resolve(root))step('route caches','main checkout, nothing to copy');
-        else for(const [name,result] of seedRouteCaches(join(main,'.practice','cache'),join(root,'.practice','cache'),dry))step('route cache '+name,result);
+        else for(const [name,result] of seedRouteCaches(join(main,'.practice','cache'),join(root,'.practice','cache'),dry,fleet(root)!==null))step('route cache '+name,result);
     }
     console.log('worktree-setup: '+(failed?'NOT ready':dry?'check only, nothing changed':'ready'));
     process.exit(failed?1:0);

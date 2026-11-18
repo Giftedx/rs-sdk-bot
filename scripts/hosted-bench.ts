@@ -17,6 +17,8 @@ export type PlanRow = {id: string; pattern: string; seed: string};
 export function benchPlan(patterns: string, seeds: string): PlanRow[] {
     const list = patterns.split(/\s+/).filter(Boolean), seedList = (seeds.trim() || '7').split(',').map(s => s.trim());
     if (!list.length) throw new Error('no bench pattern');
+    // The runner hands the pattern to the bench as one argument; a leading dash would make it an option there.
+    for (const p of list) if (p.startsWith('-')) throw new Error(`a bench pattern cannot start with "-": ${p}`);
     for (const p of list) new RegExp(p);
     if (seedList.some(s => !/^\d{1,9}$/.test(s))) throw new Error(`seeds must be integers separated by commas, got ${seeds}`);
     const rows = list.flatMap((pattern, i) => seedList.map(seed => ({id: `p${i + 1}-s${seed}`, pattern, seed})));

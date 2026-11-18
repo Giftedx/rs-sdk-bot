@@ -4,7 +4,7 @@ import * as fs from 'node:fs';
 import {Database} from 'bun:sqlite';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {legCache,routeDangerHash} from '../src/leg-cache';
+import {legCache,removeSupersededLegFiles,routeDangerHash} from '../src/leg-cache';
 test('a legacy cache can supply a hit without being rewritten by incremental saves',()=>{
  const dir=mkdtempSync(join(tmpdir(),'route-leg-legacy-')),file=join(dir,'legs.sqlite'),legacy=join(dir,'legs.json');
  const bytes=JSON.stringify({source:'source',legs:{legacy:23}});writeFileSync(legacy,bytes);
@@ -68,4 +68,13 @@ test('ROUTE_LEG_CACHE=0 reads and writes no saved length; a length measured in t
   const again=legCache(file,'source');
   try{expect(again.get('a>b')).toBe(12);expect(again.get('c>d')).toBeUndefined();}finally{again.close();}
  }finally{if(prior===undefined)delete process.env.ROUTE_LEG_CACHE;else process.env.ROUTE_LEG_CACHE=prior;rmSync(dir,{recursive:true,force:true});}
+});
+test('the files of the first key format are removed; the v2 store and other files stay',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'route-leg-old-')),file=join(dir,'route-legs-v2.sqlite');
+ try{
+  for(const name of ['route-legs.sqlite','route-legs.sqlite-wal','route-legs.sqlite-shm','route-legs.json','route-legs.json.4752.1.zro24n.tmp','route-legs-v2.sqlite','route-areas.bin','route-legs.sqlite.bak'])writeFileSync(join(dir,name),'x');
+  expect(removeSupersededLegFiles(file).sort()).toEqual(['route-legs.json','route-legs.json.4752.1.zro24n.tmp','route-legs.sqlite','route-legs.sqlite-shm','route-legs.sqlite-wal']);
+  expect(fs.readdirSync(dir).sort()).toEqual(['route-areas.bin','route-legs-v2.sqlite','route-legs.sqlite.bak']);
+  expect(removeSupersededLegFiles(join(dir,'missing','route-legs-v2.sqlite'))).toEqual([]);
+ }finally{rmSync(dir,{recursive:true,force:true});}
 });

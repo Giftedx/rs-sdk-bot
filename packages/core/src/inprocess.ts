@@ -175,7 +175,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     // A route search off the game thread (route-plan.ts) holds the tick until it ends: no game tick passes in a search,
     // so a case gives the same ticks with empty and with full route caches. With the SIM_SCRIPT_MS bound the game went
     // on one tick for each 500 ms of a search, and one case at one seed gave 1,901, 2,072 and 2,238 ticks.
-    // SIM_ROUTE_MS bounds the hold for a search that never answers.
+    // SIM_ROUTE_MS bounds the hold for a search that never answers: a search older than the bound holds no tick.
     const routeMs = Math.max(busyMs, Number(process.env.SIM_ROUTE_MS || 180_000));
     const ackFile = process.env.SIM_ACK_FILE;
     // pumpMs: the packet reads of the client; stateMs: the state of a tick; scriptMs: the tick listeners (the script).
@@ -222,7 +222,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             // The count-dialog wait counts as a wait only until the dialog is open; then the tick holds for the submit,
             // so the submit lands in the same tick on every run, whatever the executor's 50 ms poll meets.
             const dialogOpen = !!(client as { isChatBackInputOpen?(): boolean }).isChatBackInputOpen?.();
-            const routes=pendingRouteWork();
+            const routes=pendingRouteWork(routeMs);
             // Persistent state listeners do not make an off-tick route a game-input wait.
             // Actual tick/actions/dialog waits still advance; SIM_ROUTE_MS bounds this hold.
             const routeBusy=routes>0&&waitLeft===0&&!serverWait&&!inDialogWait();

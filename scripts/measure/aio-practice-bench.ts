@@ -43,7 +43,7 @@ import {createHash} from 'node:crypto';
 import {dirname, join, resolve} from 'node:path';
 import {FREE_FLOOR_GB} from '../../packages/core/src/memory';
 import {fleet, freeGB, unitsThatFit} from '../heavy-admission';
-import {BENCH_CASE_GB, FLEET_STOP_EXIT, LIVE_MAX_ENGINES, START_REFUSED_EXIT, admitStart, fleetStop, readFleetFacts} from './bench-start-check';
+import {BENCH_CASE_GB, FLEET_STOP_EXIT, LIVE_MAX_ENGINES, START_REFUSED_EXIT, admitStart, fleetStop, liveBotProcs, readFleetFacts} from './bench-start-check';
 import {BUDGET_EXIT, BUDGET_MIN, budgetRefusal, estimateRun, parseAckStats, parseSimStat, readElapsed, readSince, recordElapsed} from './bench-budget';
 import {
   discoverBankedProduction,
@@ -350,7 +350,8 @@ function report(rows: Row[]) {
 }
 
 // The worker processes and engines of the cases in flight: a bench that stops for the live fleet ends them first.
-const activeProcs = new Set<{pid: number; kill(): void}>(), activeStacks = new Set<{stop(): Promise<void>}>();
+// An engine is in `startingStacks` from its spawn to its ready line, so a stop that comes in that time ends it too.
+const activeProcs = new Set<{pid: number; kill(): void}>(), activeStacks = new Set<{stop(): Promise<void>}>(), startingStacks = new Set<Promise<{stop(): Promise<void>}>>();
 // Where the wall time of the last case went, for AIO_BENCH_TIMING.
 const phase = { prepareMs: 0, scriptMs: 0, cleanupMs: 0 };
 const timed = async <T>(key: keyof typeof phase, work: () => Promise<T>): Promise<T> => { const t = Date.now(); try { return await work(); } finally { phase[key] += Date.now() - t; } };
@@ -478,9 +479,11 @@ async function main() {
   // a run of kept results only has no check. The shared stack of a --wall-clock run checks its own two ports at its start.
   const toRun = cases.filter(c => !(CACHE && existsSync(join(CACHE_DIR, `${caseHash(c)}.json`)))).length;
   const engines = FRESH ? Math.min(PARALLEL, toRun) : Math.min(1, toRun);
+  // The live bot supervisors of the start check: the watch below keeps the fleet's floor for them when the swarm state is stale.
+  let liveBots = 0;
   if (engines > 0) {
     // --force skips the check for another job and for the ports. The memory rule beside a live fleet stays.
-    const refusal = await admitStart({ root, engines, ports: FRESH ? Array.from({ length: engines }, (_, slot) => slotPort(SLOT_BASE + slot)) : [] }, Number(process.env.BENCH_WAIT_MIN ?? 0) * 60_000, { memoryOnly: process.env.BENCH_FORCE === '1' });
+    const refusal = await admitStart({ root, engines, ports: FRESH ? Array.from({ length: engines }, (_, slot) => slotPort(SLOT_BASE + slot)) : [] }, Number(process.env.BENCH_WAIT_MIN ?? 0) * 60_000, { memoryOnly: process.env.BENCH_FORCE === '1', seen: facts => { liveBots = liveBotProcs(facts.procs); } });
     if (refusal) { console.error(refusal); process.exit(START_REFUSED_EXIT); }
   }
   // The time budget: refuse a selection over it before the first engine, and start no case after the deadline.
@@ -502,12 +505,14 @@ async function main() {
   // workers and engines and exits: the memory goes back to the fleet within one read.
   let stopping = false;
   const watch = setInterval(() => {
-    const reason = stopping ? null : fleetStop(readFleetFacts(root));
+    const reason = stopping ? null : fleetStop(readFleetFacts(root, liveBots));
     if (!reason) return;
     stopping = true;
     console.error(reason);
     void (async () => {
       for (const proc of activeProcs) { if (process.platform === 'win32') Bun.spawnSync(['taskkill', '/PID', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true }); else proc.kill(); }
+      // An engine that is starting now has no handle yet: wait for its start, then stop it with the others.
+      for (const started of await Promise.allSettled([...startingStacks])) if (started.status === 'fulfilled') activeStacks.add(started.value);
       await Promise.allSettled([...activeStacks].map(s => s.stop()));
       try { writeFileSync(OUT, JSON.stringify({ coverage, concurrency: CONCURRENCY, runs: RUNS, rows, stopped: reason }, null, 2)); } catch { /* the log holds the rows of the cases that ended */ }
       process.exit(FLEET_STOP_EXIT);
@@ -520,7 +525,7 @@ async function main() {
       for (;;) {
         const i = next++;
         const c = cases[i];
-        if (!c) return;
+        if (!c || stopping) return; // no new case, and so no new engine, after the stop for the fleet
         let own: Awaited<ReturnType<typeof start>> | null = null;
         const kept = CACHE ? join(CACHE_DIR, `${caseHash(c)}.json`) : null;
         try {
@@ -536,7 +541,11 @@ async function main() {
             rows.push(row);
           } else {
             const engineAt = Date.now();
-            if (FRESH) { own = await start(c.key, slot, c.engineEnv); activeStacks.add(own); }
+            if (FRESH) {
+              const starting = start(c.key, slot, c.engineEnv);
+              startingStacks.add(starting);
+              try { own = await starting; activeStacks.add(own); } finally { startingStacks.delete(starting); }
+            }
             const engineStartMs = Date.now() - engineAt;
             // --profile: the bots of this case write their ACK_STAT lines here; the engine's wait lines are read from
             // the bytes its stat file gains during the case.

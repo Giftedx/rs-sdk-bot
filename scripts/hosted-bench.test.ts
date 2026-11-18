@@ -32,3 +32,9 @@ test('result lines: one for each case, the failure text, the profile, and a runn
         'FAIL  seed 7  bench-p2-s7: no result (bench: not started: port 21000 has a listener)']);
     expect({failed: r.failed, cases: r.cases}).toEqual({failed: 2, cases: 2});
 });
+
+test('a pattern that starts with a dash is refused: the runner would read it as an option', () => {
+    expect(() => benchPlan('--force', '7')).toThrow(/cannot start with "-"/);
+    expect(() => benchPlan('cook -x', '7')).toThrow(/cannot start with "-"/);
+    expect(benchPlan('a-b', '7')).toHaveLength(1);
+});

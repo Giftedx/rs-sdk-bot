@@ -41,3 +41,28 @@ describe('a bench beside a live fleet', () => {
         expect(FLEET_STOP_EXIT).toBe(4);
     });
 });
+
+import { fleetFacts, liveBotProcs } from './bench-start-check';
+describe('a fleet whose swarm wrote no fresh state', () => {
+    const WIN = 'C:/Users/dev/.bun/bin/bun.exe F:/repo/packages/practice/src/';
+    test('the supervisors of live bots in the process list are the second signal', () => {
+        const BS = String.fromCharCode(92), procs = [...SELF, proc(400, 1, 100, WIN + 'supervise.ts Moneyshot'), proc(401, 1, 100, ['bun.exe F:', 'repo', 'packages', 'practice', 'src', 'supervise-host.ts a b'].join(BS)), proc(402, 1, 100, WIN + 'supervised.ts'), proc(403, 1, 100, 'node F:/repo/packages/practice/src/supervise.ts', 'node.exe')];
+        expect(liveBotProcs(procs)).toBe(2);
+        expect(liveBotProcs(SELF)).toBe(0);
+        expect(liveBotProcs(null)).toBe(0);
+    });
+    test('live bots with a stale swarm state keep the fleet floor and stop a run under it', () => {
+        // '.' in this test has no fresh swarm state: the facts come from the bot count alone.
+        const none = fleetFacts('.practice/no-such-checkout', 0, 3.9), bots = fleetFacts('.practice/no-such-checkout', 2, 3.9);
+        expect(none.fleet).toBeNull();
+        expect(fleetStop(none)).toBeNull();
+        expect(bots).toEqual({ freeGB: 3.9, floorGB: 4, fleet: { bots: 2, reserveGB: 0 } });
+        expect(fleetStop(bots)).toMatch(/3\.9 GiB is free beside 2 live bots and the fleet needs 4\.0 GiB/);
+        expect(memoryProblems(facts({ engines: 1, ...fleetFacts('.practice/no-such-checkout', 2, 5.4) }))).toHaveLength(1);
+    });
+});
+test('the refusal line names the hosted command', () => {
+    expect(startProblems(facts({ engines: 2, freeGB: 1 })).length).toBe(1);
+    const busy = facts({ engines: 1, freeGB: 5, fleet: live });
+    return admitStart({ root: '.', ports: [], engines: 1 }, 0, { read: async () => busy, log: () => {} }).then(line => expect(line).toMatch(/Beside live bots run the cases on hosted runners: bun scripts\/hosted-bench\.ts '<pattern>'\.$/));
+});

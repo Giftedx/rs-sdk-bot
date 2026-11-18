@@ -4,13 +4,30 @@
 // spent measuring the same legs between fixed stairs, docks and transports again; with this file only new
 // legs cost a search.
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { Database } from 'bun:sqlite';
 import { pathfindingSourceKey } from './pathcache';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
-export const LEG_CACHE_FILE = join(repoRoot, '.practice', 'cache', 'route-legs.sqlite');
+// The file name holds the format of the keys: v2 keys name the closed danger ground alone (danger.ts withDanger).
+// Rows of the first format were kept under the start and end tile of each trip, are never read again, and had grown
+// to 1.5 GB in one checkout. A process that opens the v2 file removes the files of the first format when no other
+// process holds them, and the rows that another collision map or npc file measured.
+export const LEG_CACHE_FILE = join(repoRoot, '.practice', 'cache', 'route-legs-v2.sqlite');
+const SUPERSEDED = /^route-legs\.(?:sqlite(?:-wal|-shm)?|json(?:\..*\.tmp)?)$/;
+// Removes the cache files of the first key format beside `file`. Returns the names it removed. A file that another
+// process holds stays (Windows refuses the delete) and goes at a later open.
+export function removeSupersededLegFiles(file = LEG_CACHE_FILE): string[] {
+    const removed: string[] = [];
+    try {
+        for (const name of readdirSync(dirname(file))) {
+            if (!SUPERSEDED.test(name)) continue;
+            try { rmSync(join(dirname(file), name)); removed.push(name); } catch { /* held by a process of an older release */ }
+        }
+    } catch { /* no cache folder yet */ }
+    return removed;
+}
 const LEGACY_READ_LIMIT = 16 * 2 ** 20;
 type File = { source: string; legs: Record<string, number | null> };
 
@@ -59,6 +76,11 @@ export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
     // empty caches, for the check that a bench case gives the same ticks with empty and with full caches).
     const stored = process.env.ROUTE_LEG_CACHE !== '0';
     let db = stored && existsSync(file) ? open() : undefined;
+    // The shared store only: one checkout has one collision map, so rows of another source are of an older map.
+    if (stored && file === LEG_CACHE_FILE && source === undefined) {
+        removeSupersededLegFiles(file);
+        try { if (db?.query('SELECT 1 FROM legs WHERE source < ?1 OR source > ?1 LIMIT 1').get(namespace)) db.query('DELETE FROM legs WHERE source < ?1 OR source > ?1').run(namespace); } catch { /* another process prunes, or the store is busy */ }
+    }
     const get = (key: string) => {
         if (fresh.has(key)) return fresh.get(key);
         try {

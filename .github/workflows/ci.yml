@@ -73,10 +73,10 @@ jobs:
           path: |
             .practice/cache/rsmod-pathfinding.snap
             .practice/cache/route-areas.bin
-            .practice/cache/route-legs.sqlite*
-          key: route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
+            .practice/cache/route-legs-v2.sqlite*
+          key: route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
           restore-keys: |
-            route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
+            route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
       - name: Pack the public game assets
         timeout-minutes: 10
         working-directory: vendor/rs-sdk/server/engine
@@ -163,10 +163,10 @@ jobs:
           path: |
             .practice/cache/rsmod-pathfinding.snap
             .practice/cache/route-areas.bin
-            .practice/cache/route-legs.sqlite*
-          key: route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
+            .practice/cache/route-legs-v2.sqlite*
+          key: route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
           restore-keys: |
-            route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
+            route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
       - name: Pack the public game assets
         timeout-minutes: 10
         working-directory: vendor/rs-sdk/server/engine
@@ -197,6 +197,24 @@ jobs:
             .practice/bench-cases/**
             .practice/aio-bench/output/*.log
             .practice/aio-bench/profile/**
+  # The key of the saved walk lengths: a set of real trips planned alone and with shared lengths gives equal plans
+  # (scripts/measure/route-key-parity.ts).
+  route-key-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Prepare the pinned dependencies
+        run: bun scripts/worktree-setup.ts
+      - name: Plan each trip alone and with shared walk lengths
+        timeout-minutes: 15
+        run: |
+          bun scripts/measure/route-key-parity.ts
   progression-practice:
     if: inputs.preparation_practice
     uses: ./.github/workflows/progression-practice.yml
@@ -268,10 +286,10 @@ jobs:
           path: |
             .practice/cache/rsmod-pathfinding.snap
             .practice/cache/route-areas.bin
-            .practice/cache/route-legs.sqlite*
-          key: route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
+            .practice/cache/route-legs-v2.sqlite*
+          key: route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
           restore-keys: |
-            route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
+            route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
       - name: Pack the public game assets
         timeout-minutes: 10
         working-directory: vendor/rs-sdk/server/engine
@@ -339,10 +357,10 @@ jobs:
           path: |
             .practice/cache/rsmod-pathfinding.snap
             .practice/cache/route-areas.bin
-            .practice/cache/route-legs.sqlite*
-          key: route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
+            .practice/cache/route-legs-v2.sqlite*
+          key: route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
           restore-keys: |
-            route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
+            route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
       - name: Pack the public game assets
         id: pack
         timeout-minutes: 10

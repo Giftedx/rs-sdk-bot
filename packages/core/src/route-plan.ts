@@ -9,8 +9,17 @@ type BunWorker = Worker & { ref(): void; unref(): void };
 let worker: BunWorker | null = null, next = 0, idle: ReturnType<typeof setTimeout> | null = null;
 // An idle worker holds a second pathfinder (about 800 MB per bot process); it closes this long after its last plan.
 export const WORKER_IDLE_MS = 30_000;
-const pending = new Map<number, { resolve(p: TripPlan | null): void; reject(e: unknown): void }>();
-export const pendingRouteWork = (): number => pending.size;
+const pending = new Map<number, { started: number; resolve(p: TripPlan | null): void; reject(e: unknown): void }>();
+// The searches in flight that started under `youngerThanMs` ago. A lockstep bot holds its tick for these only: a
+// search past the bound is hung, and a hung search that held every later tick for the whole bound again stopped the
+// case until its timeout.
+export const pendingRouteWork = (youngerThanMs = Infinity): number => {
+    if (youngerThanMs === Infinity) return pending.size;
+    const now = performance.now();
+    let count = 0;
+    for (const p of pending.values()) if (now - p.started < youngerThanMs) count++;
+    return count;
+};
 
 function stopWorker(w: BunWorker) {
     if (worker !== w) return;
@@ -58,6 +67,7 @@ export function planTripOffThread(from: Tile, to: Tile, acct: Account, stock?: B
         };
         const abort = () => fail(signal?.reason);
         pending.set(id, {
+            started: performance.now(),
             resolve: plan => { cleanup(); resolve(plan); },
             reject: error => { cleanup(); reject(error); },
         });

@@ -14,6 +14,7 @@
 // This file is tooling. No worker imports it, so a change here does not change a worker release.
 import { canBind } from '../../packages/practice/src/ports';
 import { fleet, floorGB, freeGB, type Fleet } from '../heavy-admission';
+import { FREE_FLOOR_GB } from '../../packages/core/src/memory';
 
 // The jobs that must not run two at a time on one machine (AGENTS.md, "Keep the loop fast").
 export const HEAVY_SCRIPTS = ['aio-practice-bench.ts', 'ci-gate.ts', 'test-shards.ts'] as const;
@@ -134,9 +135,23 @@ export function fleetStop(f: Pick<StartFacts, 'freeGB' | 'floorGB' | 'fleet'>): 
     const need = f.floorGB + f.fleet.reserveGB;
     return f.freeGB < need ? `bench: stopped: ${f.freeGB.toFixed(1)} GiB is free beside ${f.fleet.bots} live ${f.fleet.bots === 1 ? 'bot' : 'bots'} and the fleet needs ${need.toFixed(1)} GiB (the floor of ${f.floorGB} GiB${f.fleet.reserveGB ? ` and ${f.fleet.reserveGB.toFixed(1)} GiB for bot starts` : ''}). Run the cases on a hosted runner: bun scripts/hosted-bench.ts '<pattern>'.` : null;
 }
-export const readFleetFacts = (root: string): Pick<StartFacts, 'freeGB' | 'floorGB' | 'fleet'> => ({ freeGB: freeGB(), floorGB: floorGB(root), fleet: fleet(root) });
+// The second signal for a live fleet: the supervisor of each live bot in the process list (packages/practice/src/
+// supervise.ts and supervise-host.ts start a swarm worker). A swarm that hangs or dies can stop writing its state for
+// longer than SWARM_FRESH_MS while its bots still run; the state file alone would then read as "no fleet" and the floor
+// would fall to the tool floor.
+export function liveBotProcs(procs: readonly Proc[] | null): number {
+    return (procs ?? []).filter(p => /bun/i.test(p.name) && /[\\/]practice[\\/]src[\\/]supervise(?:-host)?\.ts/.test(p.commandLine)).length;
+}
+// The fleet of the swarm state, or of the process list when the state is stale, with the fleet's floor.
+export function fleetFacts(root: string, bots: number, free = freeGB()): Pick<StartFacts, 'freeGB' | 'floorGB' | 'fleet'> {
+    const state = fleet(root);
+    if (state) return { freeGB: free, floorGB: FREE_FLOOR_GB, fleet: state };
+    return bots > 0 ? { freeGB: free, floorGB: FREE_FLOOR_GB, fleet: { bots, reserveGB: 0 } } : { freeGB: free, floorGB: floorGB(root), fleet: null };
+}
+// `bots`: the live bot supervisors seen at the start check of this run (the watch does not read the process list again).
+export const readFleetFacts = (root: string, bots = 0): Pick<StartFacts, 'freeGB' | 'floorGB' | 'fleet'> => fleetFacts(root, bots);
 export const refusalLine = (problems: readonly string[]): string =>
-    `bench: not started: ${problems.join('; ')}. Use --wait <minutes> to wait for a safe start, or --force to skip this check.`;
+    `bench: not started: ${problems.join('; ')}. Use --wait <minutes> to wait for a safe start, or --force to skip this check. Beside live bots run the cases on hosted runners: bun scripts/hosted-bench.ts '<pattern>'.`;
 
 // The lines `pid|parent pid|name|start in Unix ms|command line` and a last line `read`, which proves that the
 // query ran to its end. null when that line is missing.
@@ -167,18 +182,20 @@ export async function readProcs(): Promise<Proc[] | null> {
 export type StartPlan = { root: string; ports: readonly number[]; engines: number };
 export async function readStartFacts(plan: StartPlan): Promise<StartFacts> {
     const procs = readProcs(); // starts first: the port and memory reads take its time
-    return { busyPorts: plan.ports.filter(p => !canBind(p)), freeGB: freeGB(), floorGB: floorGB(plan.root), engines: plan.engines, selfPid: process.pid, procs: await procs, fleet: fleet(plan.root) };
+    const list = await procs;
+    return { busyPorts: plan.ports.filter(p => !canBind(p)), engines: plan.engines, selfPid: process.pid, procs: list, ...fleetFacts(plan.root, liveBotProcs(list)) };
 }
 
 // null when the start is safe, or the refusal line. With `waitMs` above 0 it reads the facts again each WAIT_STEP_MS
 // until the start is safe or the time is over.
-export async function admitStart(plan: StartPlan, waitMs = 0, deps: { read?: (plan: StartPlan) => Promise<StartFacts>; sleep?: (ms: number) => Promise<unknown>; now?: () => number; log?: (line: string) => void; memoryOnly?: boolean } = {}): Promise<string | null> {
+export async function admitStart(plan: StartPlan, waitMs = 0, deps: { read?: (plan: StartPlan) => Promise<StartFacts>; sleep?: (ms: number) => Promise<unknown>; now?: () => number; log?: (line: string) => void; memoryOnly?: boolean; seen?: (facts: StartFacts) => void } = {}): Promise<string | null> {
     const read = deps.read ?? readStartFacts, sleep = deps.sleep ?? Bun.sleep, now = deps.now ?? Date.now, log = deps.log ?? console.error;
     const deadline = now() + waitMs;
     let said = '';
     for (;;) {
         // memoryOnly (--force): the check for another job and for the ports is off; the memory rule beside a live fleet stays.
         const facts = await read(plan), problems = deps.memoryOnly ? (facts.fleet ? memoryProblems(facts) : []) : startProblems(facts);
+        deps.seen?.(facts);
         if (!facts.procs && !said && process.platform === 'win32') log('bench: the process list was not read, so the check for another heavy job did not run');
         if (!problems.length) return null;
         const left = deadline - now();
