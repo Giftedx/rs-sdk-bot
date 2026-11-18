@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795008306569-ballspinner-swordswallow-cookedmeat",
  "account": "Swordswallow",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "Cooked meat",
  "requested": 3,
  "claim": "29a517f5-dda7-4d1d-8f48-d96ecdb81103",
- "count": 0,
- "ok": false,
- "at": 1795008338621,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795008714186,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795008713375
+ },
+ "logout": {
+  "attemptId": "1795008338630-0000025768-0000000001",
+  "at": 1795008714174,
+  "sha256": "279a5bcb7e44333c468e9e39b3e7ef2f1c3159fd37930f068d251cf5a77445fa"
+ },
+ "screen": true
 }
