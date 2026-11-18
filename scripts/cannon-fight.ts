@@ -28,6 +28,8 @@ import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { componentId } from '../packages/core/src/logout';
 import { PRAYER_NAMES, type PrayerName } from '../vendor/rs-sdk/sdk/types';
 import { walkTarget } from './walk-to';
+import { reconcileLoadout } from './gear-reconcile';
+import { gearById } from '../packages/planner/src/gear-progression';
 
 export type Tile = { x: number; z: number; level: number };
 // `clear`: a tile out of the spot's NPC range for the walk before logout, where hunters attack any player in reach.
@@ -330,9 +332,10 @@ export async function runCannonFight(s: Session, o: CannonFightOptions) {
         const ph = o.phases[phase];
         if (!ph) return;
         if (ph.weapon !== undefined && weapon()?.id !== ph.weapon) {
-            const item = inv().find(i => i.id === ph.weapon);
-            if (!item) throw Error(`phase weapon ${ph.weapon} is not in the pack`);
-            await s.bot.equipItem(item);
+            if (!inv().some(i => i.id === ph.weapon)) throw Error(`phase weapon ${ph.weapon} is not in the pack`);
+            // The one kit path (scripts/gear-reconcile.ts): the phase fixes the weapon (pin), the rest of the best kit that the pack holds is worn.
+            const g = gearById(ph.weapon);
+            await reconcileLoadout(s, { style: g && (g.bonuses.rangeAttack > 0 || g.bonuses.rangeStrength > 0) ? 'ranged' : 'melee', trainSkill: 'all-melee', pin: { weapon: ph.weapon }, stop: () => died(), strict: true, label: 'cannon phase' });
             if (!await waitUntil(s, () => weapon()?.id === ph.weapon, { timeoutTicks: 6 })) throw Error(`phase weapon ${ph.weapon} not wielded`);
         }
         if (ph.style !== undefined && st().combatStyle?.currentStyle !== ph.style) {
