@@ -1,9 +1,9 @@
-import {existsSync,mkdirSync,readFileSync,writeFileSync,copyFileSync,cpSync,lstatSync,unlinkSync,symlinkSync} from 'node:fs';
+import {existsSync,mkdirSync,readFileSync,readdirSync,writeFileSync,copyFileSync,cpSync,lstatSync,unlinkSync,symlinkSync} from 'node:fs';
 import {join,dirname} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
 import {prepareCoinProofRoot,removeCoinProofRoot} from './coin-courier-proof';
-import {copySourceTree,linkSourceDirectory} from './replay-root';
+import {copySourceTree,linkSourceDirectory,SOURCE_COPY_SKIP} from './replay-root';
 import {capabilityRevision,runtimeTrees} from '../../core/src/worker-release';
 import {accountDir,readLogoutProof} from '../../core/src/session-lifecycle';
 import {assertNativeFixtureRoot} from '../../core/src/session-recovery-permit';
@@ -14,7 +14,22 @@ import {killTree} from './proc';
 import {SWARM_STOP,clearSwarmStop} from '../../../scripts/swarm';
 import {withPlanWrite} from '../../core/src/plan-lock';
 
-export function materializeSwarmRuntime(sourceRoot:string,root:string){
+// The part of vendor/rs-sdk/server/content that a runtime copy holds. The whole tree is over 10,000 files and is most
+// of the copy: the engine and the workers of a recovery proof read all of it.
+export type RuntimeContent=(file:string)=>boolean;
+export const wholeContent:RuntimeContent=()=>true;
+// The files that loadDanger reads (packages/core/src/randomevents.ts): the npc pack and the npc configs. A check of
+// the danger content alone copies these, about 150 files. The paths are relative to the content folder.
+export const dangerContent:RuntimeContent=file=>file==='pack/npc.pack'||file.startsWith('scripts/')&&file.endsWith('.npc');
+function copyContent(from:string,to:string,keep:RuntimeContent,prefix=''){
+ for(const entry of readdirSync(from,{withFileTypes:true})){
+  if(SOURCE_COPY_SKIP.has(entry.name))continue;
+  const path=prefix+entry.name;
+  if(entry.isDirectory())copyContent(join(from,entry.name),join(to,entry.name),keep,path+'/');
+  else if(entry.isFile()&&keep(path)){mkdirSync(to,{recursive:true});copyFileSync(join(from,entry.name),join(to,entry.name));}
+ }
+}
+export function materializeSwarmRuntime(sourceRoot:string,root:string,content:RuntimeContent=wholeContent){
  const links:string[]=[];
  for(const path of ['vendor/rs-sdk/sdk','vendor/rs-sdk/server']){const p=join(root,path);if(lstatSync(p).isSymbolicLink())unlinkSync(p);mkdirSync(p,{recursive:true});}
  for(const path of runtimeTrees)copySourceTree(join(sourceRoot,path),join(root,path));
@@ -25,7 +40,8 @@ export function materializeSwarmRuntime(sourceRoot:string,root:string){
   const link=join(root,dir,'node_modules');linkSourceDirectory(join(sourceRoot,dir,'node_modules'),link);if(existsSync(link))links.push(link);
  }
  copySourceTree(join(sourceRoot,'vendor/rs-sdk/server/engine/src'),join(root,'vendor/rs-sdk/server/engine/src'));
- copySourceTree(join(sourceRoot,'vendor/rs-sdk/server/content'),join(root,'vendor/rs-sdk/server/content'));
+ if(content===wholeContent)copySourceTree(join(sourceRoot,'vendor/rs-sdk/server/content'),join(root,'vendor/rs-sdk/server/content'));
+ else copyContent(join(sourceRoot,'vendor/rs-sdk/server/content'),join(root,'vendor/rs-sdk/server/content'),content);
  return links;
 }
 

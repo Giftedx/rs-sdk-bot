@@ -170,3 +170,24 @@ describe('kept bench results', () => {
     }
   });
 });
+
+describe('kill receipt pass rules', () => {
+  test('the fight case passes only with the practice receipt of its kill', () => {
+    const pass = byKey('pvp:fight').pass, tail = '{"outcome":"kill","ticks":40}';
+    expect(pass(`RESULT ok pvp fight exit=0 kill killReceipts=1 receiptDomain=practice ${tail}`)).toBe(true);
+    expect(pass(`RESULT ok pvp fight exit=0 kill killReceipts=0 receiptDomain=none ${tail}`)).toBe(false);
+    expect(pass(`RESULT ok pvp fight exit=0 kill killReceipts=1 receiptDomain=live ${tail}`)).toBe(false);
+    expect(pass(`RESULT ok pvp fight exit=0 kill ${tail}`)).toBe(false);
+  });
+
+  test('a squad case passes only when each kill has a practice receipt', () => {
+    const pass = byKey('pvp:squad').pass;
+    expect(pass('RESULT ok squad accounts=4 kills=3 killReceipts=3 receiptDomain=practice gangDied=3 died=0')).toBe(true);
+    expect(pass('RESULT ok squad accounts=4 kills=0 killReceipts=0 receiptDomain=none gangDied=0 died=0')).toBe(true);
+    expect(pass('RESULT ok squad accounts=4 kills=3 killReceipts=2 receiptDomain=practice gangDied=3 died=0')).toBe(false);
+    expect(pass('RESULT ok squad accounts=4 kills=3 killReceipts=3 receiptDomain=live gangDied=3 died=0')).toBe(false);
+    expect(pass('RESULT ok squad accounts=4 kills=3 killReceipts=3 receiptDomain=mixed gangDied=3 died=0')).toBe(false);
+    expect(pass('RESULT ok squad accounts=4 kills=3 gangDied=3 died=0')).toBe(false);
+    expect(pass('RESULT fail squad accounts=4 kills=3 killReceipts=3 receiptDomain=practice')).toBe(false);
+  });
+});

@@ -48,7 +48,7 @@ const lumbridgeFly7499: BenchCase = {
   preset: 'fresh_lumbridge',
   scriptArgs: ['fishing', 'staged', 'fly', '4000', '5000', 'FISH_KNIFE=1', 'FISH_DROP=1', 'FISH_UNTIL_LEVEL=99'],
   pass: ok,
-  output: /"caught":(d+)/,
+  output: /"caught":(\d+)/,
   timeoutMs: 900_000,
   presetConfig: {position: {x: 3240, z: 3247, level: 0}, skills: {Fishing: 74, Attack: 20, Strength: 20, Defence: 20, Hitpoints: 30},
     inventory: [{id: 309, count: 1}, {id: 314, count: 1000}, {id: 946, count: 1}, {id: 1511, count: 1}]},
