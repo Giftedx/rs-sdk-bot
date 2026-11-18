@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795026014865-fatstack-mmtha0205-bodyrune",
+ "account": "Fatstack",
+ "partner": "mmtha0205",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Body rune",
+ "requested": 9,
+ "claim": "a2e3290e-be74-48e6-a18e-9a2e16d4dbe2",
+ "count": 9,
+ "ok": true,
+ "at": 1795026152445,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 9,
+  "after": 0
+ },
+ "bank": {
+  "count": 9,
+  "at": 1795026138750
+ },
+ "logout": {
+  "attemptId": "1795026126269-0000010792-0000000001",
+  "at": 1795026152220,
+  "sha256": "32a11dddb7dfa6164fefcc3b0f3649213677aed2e78f214f683dff97031bf2e3"
+ },
+ "screen": true
+}
