@@ -132,3 +132,17 @@ test('native initialization errors remain visible, can retry, and cache writes a
   expect({code,stdout,stderr}).toEqual({code:0,stdout:'',stderr:''});
  }finally{clearTimeout(deadline);}
 });
+
+test('a call with the default files hashes them once, and a call that names its files hashes them every time',()=>{
+ const first=api.pathfindingSourceKey(),second=api.pathfindingSourceKey();
+ expect(second).toBe(first);
+ const root=mkdtempSync(join(tmpdir(),'pathcache-default-')),a=join(root,'a'),b=join(root,'b'),c=join(root,'c.json'),d=join(root,'d');
+ try{
+  writeFileSync(a,'1');writeFileSync(b,'2');writeFileSync(c,'[]');writeFileSync(d,'4');
+  const named=()=>api.pathfindingSourceKey(a,b,c,d);
+  const one=named();writeFileSync(b,'9');
+  expect(named()).not.toBe(one);
+  // The key of the default files is not the key of other files.
+  expect(first).not.toBe(one);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
