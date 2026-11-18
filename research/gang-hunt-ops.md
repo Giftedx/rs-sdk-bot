@@ -23,7 +23,7 @@ piece widened to its class. Each check is a fault of a live pilot.
 | Escape | Camelot Teleport or Varrock Teleport castable at the post with the runes held (`squadEscapeSpell`) | an account clicked Camelot Teleport with no law runes |
 | Freeze | Bind castable with the runes held (`castableFreeze`, Magic capped at 49 by `SQUAD_OPTS`) | a gang account at low HP walked away |
 | Antipoison | one antipoison of any dose count | poison did 139 of 455 damage |
-| Food | a shark for each free slot of the pack (20 with the bench pack) | - |
+| Food | a shark or a lobster for each free slot of the pack (20 with the bench pack) | - |
 | Bank read | the status file's bank read is 6 hours old or less (`--max-age`) | a plan from stock that is gone |
 | Place | not inside West Ardougne, not in the Wilderness | the walker has no route across the West Ardougne wall |
 
@@ -46,15 +46,13 @@ Facts that the check rests on:
 - **Two items have the name "Magic shortbow".** Item 861 is the bow. Item 72 (`unstrung_magic_shortbow`) fires
   nothing, and stringing it needs Fletching 80. A count of magic shortbows by name counts both. The tool reads the
   item id and names an unstrung bow in a note. Evidence: `knowledge/items.json`.
-- **The bank trip takes sharks only.** `restock` (`scripts/pk-hunt.ts`) asks for item 385 for each food slot, and
-  `bankTrip` fills the free slots with item 385. The fight loop eats any food (`FOOD_ORDER` in `scripts/pk.ts`). An
-  account with lobsters in its pack fights, and its next bank trip ends `bank lacks trip requirements`. Gap: a
-  food list in `restock` and `bankTrip`.
-- **A death does not end the job as a death.** The squad's RESULT is `ok` when it fought and no account is stranded,
-  with the deaths as `died=<count>`. The supervisor (`packages/practice/src/supervise.ts`) ends `died` only for
-  `died=true` or `RESULT fail died`, so a run with a death ends `done`, and `"repeat": true` starts the squad again
-  with an account that stands at Lumbridge with no kit. Until the RESULT names a death in a form that the
-  supervisor reads, the job runs with `"repeat": false` and the watcher ends on a death.
+- **The bank trip takes food by a list.** `restock` and `bankTrip` fill the food slots from `FOOD_LIST`
+  (`scripts/pk-hunt.ts`): sharks first, then lobsters. The fight loop eats any food (`FOOD_ORDER` in `scripts/pk.ts`).
+  The readiness tool counts the same list, and the loadout file holds a row for each kind.
+- **A death ends the job as a death.** A run in which an account died ends `RESULT fail died squad ...`
+  (`scripts/pk-squad.ts` `squadEnd`). The supervisor (`packages/practice/src/supervise.ts`) ends `died` for it, and
+  the swarm does not start those accounts again, with `"repeat": true` too, until a person clears the end. The dead
+  account stands at Lumbridge with no kit: stage its kit before the next run.
 
 ## Staging
 
@@ -119,8 +117,8 @@ The same run as a `swarm.json` job. A job with several accounts in one process i
 
 The repeating run changes `MAX_MINUTES` to 60 and `TRIPS` to 10. A job that ended `done` with `"repeat": false`
 starts again only as a new mission: change an argument, or an env value such as `"env": {"SQUAD_RUN": "2"}`
-(`missionSignature` holds the script, the accounts, the arguments and the env). It keeps `"repeat": false` until a death ends
-the job as a death. The lead starts each next run after it reads the watcher's line.
+(`missionSignature` holds the script, the accounts, the arguments and the env). The first
+runs keep `"repeat": false`, and the lead starts each next run after it reads the watcher's line.
 
 What the swarm does with this job, from `scripts/swarm.ts` and `packages/practice/src/supervise.ts`:
 
@@ -156,7 +154,7 @@ food, arrows, law runes and antipoisons. It exits with `SQUAD_WATCH event=<kind>
 
 | Event | Source | First action |
 |---|---|---|
-| `death` | a `SQUAD died` or `PK died` line, a RESULT with `died=1` or more, an account at the Lumbridge spawn after the Wilderness | stop the squad (`stop-pk-squad`); read the fight lines of the account; stage its kit again |
+| `death` | a `SQUAD died` or `PK died` line, `RESULT fail died ...` or a RESULT with `died=1` or more, an account at the Lumbridge spawn after the Wilderness | stop the squad (`stop-pk-squad`); read the fight lines of the account; stage its kit again |
 | `in-danger` | an account in the Wilderness at `LOW_HP` or less with no food, no castable teleport and no glory | read its lines; the fight loop runs south |
 | `fail-result` | `RESULT fail ...` | read the detail (`stranded=`, `halted=`, a login refusal) |
 | `logout-unconfirmed` | a `LOGOUT` word that is not `logged-out` | check the account's logout proof before the next start |
@@ -238,6 +236,6 @@ From "fixes merged, pause lifted" to "the squad repeats". Each step names its ch
    line, repair, prove the repair on the bench, then one more bounded run.
 8. **Repeat.** After two bounded runs with no fault, `MAX_MINUTES=60` and `TRIPS=10`, with the watcher on each run.
    Before each run: `bun scripts/squad-ready.ts` prints `READY` for all four, and each bank holds the pack again
-   for each trip (20 sharks an account a trip, the arrows of the quiver, the runes, one antipoison).
+   for each trip (20 sharks or lobsters an account a trip, the arrows of the quiver, the runes, one antipoison).
 9. **Supply.** The demand lines above go to the planner. A supply account works while the squad runs. A transfer to
    a squad account runs between two squad runs, since a fleet order needs both accounts with no enabled job.

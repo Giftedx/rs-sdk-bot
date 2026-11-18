@@ -85,10 +85,22 @@ describe('pickKit', () => {
     });
     test('no antipoison, few sharks, an old bank read and West Ardougne each block', () => {
         expect(pickKit(full('A', { pack: without(KIT_PACK, 175) }), gear, rule, NOW).reasons).toEqual(['no antipoison']);
-        expect(pickKit(full('A', { bank: [it(385, 12)] }), gear, rule, NOW).reasons).toEqual(['no Shark (8 short)']);
-        expect(pickKit(full('A', { bank: [it(379, 500)] }), gear, rule, NOW).reasons).toEqual(['no Shark (20 short)']);
+        expect(pickKit(full('A', { bank: [it(385, 12)] }), gear, rule, NOW).reasons).toEqual(['no food (shark or lobster) (8 short)']);
+        expect(pickKit(full('A', { bank: [it(385, 5), it(379, 6)] }), gear, rule, NOW).reasons).toEqual(['no food (shark or lobster) (9 short)']);
         expect(pickKit(full('A', { bankAt: NOW - 56 * HOUR }), gear, rule, NOW).reasons).toEqual(['bank read 56.0 h old (limit 6 h)']);
         expect(pickKit(full('A', { pos: { x: 2555, z: 3324, level: 0 } }), gear, rule, NOW).reasons).toEqual(['stands inside West Ardougne, which the walker cannot leave']);
+    });
+    test('lobsters fill the food slots that the sharks leave, as the bank trip takes them', () => {
+        const lobsters = pickKit(full('A', { bank: [it(379, 500)] }), gear, rule, NOW);
+        expect([lobsters.ready, lobsters.food, lobsters.foodHeld, lobsters.foodRows]).toEqual([true, 20, 500, [{ id: 379, name: 'Lobster', count: 20 }]]);
+        const mixed = pickKit(full('A', { bank: [it(379, 100), it(385, 12)] }), gear, rule, NOW);
+        expect([mixed.ready, mixed.foodRows, mixed.pack.food]).toEqual([true, [{ id: 385, name: 'Shark', count: 12 }, { id: 379, name: 'Lobster', count: 8 }], 20]);
+        expect(mixed.foodStock).toEqual([{ id: 385, name: 'Shark', count: 12 }, { id: 379, name: 'Lobster', count: 100 }]);
+        const kit = loadoutOf(mixed, { x: 3094, z: 3491 });
+        expect(() => validateOwnedKit(kit)).not.toThrow();
+        expect(kit.pack.slice(-2)).toEqual([{ id: 385, count: 12 }, { id: 379, count: 8 }]);
+        // Sharks alone, as before: one row.
+        expect(pickKit(full('A'), gear, rule, NOW).foodRows).toEqual([{ id: 385, name: 'Shark', count: 20 }]);
     });
     test('the loadout of a ready account is a valid owned kit', () => {
         const kit = loadoutOf(pickKit(full('A'), gear, rule, NOW), { x: 3094, z: 3491 });
@@ -118,7 +130,7 @@ describe('stagingPlan', () => {
         const wearer = account('Wearer', { worn: [worn(1079, 7)], pack: [it(385, 28)] }), other = full('B', { bank: [it(385, 200), it(1079, 1)] });
         const plan = stagingPlan([a, other], [a, wearer, other], gear, rule, NOW);
         expect(plan.moves.map(m => [m.from, m.item])).toEqual([['B', 'Rune platelegs']]);
-        expect(plan.gaps).toEqual([{ account: 'A', what: 'Shark', id: 385, count: 15, blocking: true }]);
+        expect(plan.gaps).toEqual([{ account: 'A', what: 'food (shark or lobster)', id: 385, count: 15, blocking: true }]);
     });
     test('a donor inside West Ardougne or with an old bank read gives nothing', () => {
         const a = full('A', { pack: without(KIT_PACK, 175) });
