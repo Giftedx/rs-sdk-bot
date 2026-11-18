@@ -47,6 +47,7 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/goal-readiness.ts': 'report: the quest unlocks that an account holds',
  'scripts/haggis-gate.ts': 'the launch gate of the main account',
  'scripts/heavy-admission.ts': 'developer tool: sizes a test or type check job by the free memory',
+ 'scripts/hosted-bench.ts': 'developer tool: runs bench cases on hosted runners and prints the result of each case',
  'scripts/learn.ts': 'report: reads the run records on disk',
  'scripts/loop-watch.ts': 'report: finds accounts that repeat work with no result',
  'scripts/market-cache.ts': 'fleet control: saves the live market prices for the loot job and the value guard; the fleet agent starts it',
