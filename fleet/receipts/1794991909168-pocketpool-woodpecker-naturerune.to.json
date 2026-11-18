@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794991909168-pocketpool-woodpecker-naturerune",
  "account": "Woodpecker",
  "partner": "PocketPool",
@@ -12,6 +12,12 @@
  "claim": "cebfaedb-cb7b-42ae-a2ac-e778014dea62",
  "count": 0,
  "ok": false,
- "at": 1794991955514,
- "detail": "trade claimed"
+ "at": 1794992126809,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1794991955789-0000020264-0000000001",
+  "at": 1794992126794,
+  "sha256": "89fe759e7a9c472f8cfe2cfa5a70b5394dff295d7c30dbc42595e791a205c4da"
+ },
+ "screen": false
 }
