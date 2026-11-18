@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795036973298-yewfirst-knightstick-airrune",
+ "account": "YewFirst",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 50,
+ "claim": "64413707-9082-4804-adc4-c47c2e05909d",
+ "count": 0,
+ "ok": false,
+ "at": 1795037139834,
+ "detail": "trade claimed"
+}
