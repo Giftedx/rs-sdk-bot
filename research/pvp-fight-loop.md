@@ -1243,12 +1243,17 @@ mark of 1,000 ticks keeps any later death at 1 Hitpoint. The bank is not touched
   the run with its record (`death=`, the respawn tile, the Hitpoints, the pack that it kept, the step that stopped the
   re-kit). A piece that the bank lacks is in `missing`, and the restock ends the run when the trip cannot be filled.
 - **The session.** A death ends a bot session by default: `openBot` (`packages/core/src/bot.ts`) prints the DEATH line and calls
-  `finish`. `pk-hunt.ts` passes an `onStop` that ignores the reason `died` and ends the session for every other reason. With the
-  default, `extra:hunt-death-rekit` ends in the walk to the bank with `session ended`.
+  `finish`. `pk-hunt.ts` opens its account with `continueAfterDeath`: `deathStep` prints one DEATH line and moves the life baseline
+  to the new life, and `stopReasonOf` keeps the stop file, the fleet lease and the stall checks live (a stop file ends the session
+  after a re-kit). With the default, `extra:hunt-death-rekit` ends in the walk to the bank with `session ended`.
+- **The end line.** A hunt that ends in a death ends as `RESULT fail died hunt died: ...` (`huntEnd`), which the supervisor reads as
+  a death (`supervise.ts`, `supervise-host.ts` `classify`: `RESULT fail died`). The roam and the army use the default
+  `openBot`, so a death ends them as `RESULT fail died`. The gang, team and spar meetings are practice only.
 - **The case.** `extra:hunt-death-rekit`: the hunter wears a rune full helm and a bronze dagger and holds both and sharks in its
   bank. A target in full rune armour (profile `champion`) kills it in about 150 ticks. With `HUNT_MAX_DEATHS=9` the case ends
   at its cap of 900 ticks with `deaths 2 rekits 2`: each death sends the account to (3222, 3218) with 1 Hitpoints, and the re-kit
-  takes about 200 ticks (the respawn wait, the walk to Edgeville, the sharks and the pieces). Seed 7, one run.
+  takes about 200 ticks (the respawn wait, the walk to Edgeville, the sharks and the pieces). Seed 7, one run. A piece of the
+  starting kit that the bank lacks ends the run (`died: kit lacks <ids>`). `HUNT_MAX_DEATHS` is a whole number of 0 or more, else 2.
 - **A threat retreat.** `hunt` uses the result of the retreat: a death is handled, and a retreat that did not leave the
   Wilderness is counted in `retreatsFailed` and logged.
 

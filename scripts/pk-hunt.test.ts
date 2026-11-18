@@ -1,4 +1,7 @@
 import { expect, spyOn, test } from 'bun:test';
+import { classify } from '../packages/practice/src/supervise-host';
+import { supervise } from '../packages/practice/src/supervise';
+import { DEFAULT_MAX_DEATHS, huntEnd, maxDeathsOf } from './pk-hunt';
 import { BOW_TRIP, EDGEVILLE_BANK, rekitAfterDeath, RESPAWN_TICKS, FOOD_LIST, foodHeld, healOf, planFood, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget, pickTrip, resolveHuntSpots, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
 import { assessWildernessThreat, planWildernessEscape, restockPlan, restockPlanFromStock, slashWebThrough, WILDERNESS_ESCAPES, wildernessCombatMargin, wildernessDepth } from './pk-roam';
 import { pvpCombatBracket } from './aio-pvp';
@@ -494,7 +497,7 @@ test('rekitAfterDeath waits for the new life, walks to the bank, wears the start
 test('rekitAfterDeath names the pieces that the bank lacks, and ends with no food in the bank or no respawn', async () => {
     const lacks = deathWorld([{ id: 385, count: 20 }, { id: 1201, count: 1 }, { id: 1231, count: 1 }]);
     const a = await withDeathMocks(lacks, () => rekitAfterDeath(lacks.s, { lifeBefore: 1, diedNear: null, wornAtStart: lacks.wornAtStart, stop: () => false, log: () => {} }));
-    expect(a).toMatchObject({ rekit: 'ok', missing: [1163] });
+    expect(a).toMatchObject({ rekit: 'kit lacks 1163', missing: [1163] });
     expect(lacks.equipment.map(e => e.id).sort()).toEqual([1201, 1231]);
     const hungry = deathWorld([{ id: 1231, count: 1 }]);
     const b = await withDeathMocks(hungry, () => rekitAfterDeath(hungry.s, { lifeBefore: 1, diedNear: null, wornAtStart: hungry.wornAtStart, stop: () => false, log: () => {} }));
@@ -545,5 +548,55 @@ for (const maxDeaths of [2, 0]) test(`hunt after a death to a player ${maxDeaths
             expect(result.end).toBe('died');
             expect(result.death).toMatchObject({ rekit: 'death limit', hpAtRespawn: 1, diedNear: { x: 3095, z: 3541 }, lifeBefore: 1, lifeAfter: 2 });
         }
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+});
+
+test('maxDeathsOf takes a whole number of 0 or more and falls back to the default for anything else', () => {
+    expect(maxDeathsOf('0')).toBe(0);
+    expect(maxDeathsOf('5')).toBe(5);
+    for (const bad of [undefined, '', ' ', 'abc', '-1', '1.5', 'NaN', 'Infinity']) expect(maxDeathsOf(bad)).toBe(DEFAULT_MAX_DEATHS);
+    expect(DEFAULT_MAX_DEATHS).toBe(2);
+});
+
+test('a hunt that ends in a death ends with RESULT fail died, which the supervisor reads as a death', async () => {
+    const record = { diedNear: null, respawnAt: { x: 3222, z: 3218 }, hpAtRespawn: 1, lifeBefore: 1, lifeAfter: 2, packAtRespawn: [], ticks: 20, rekit: 'kit lacks 1163', missing: [1163] };
+    const dead = huntEnd({ end: 'died: kit lacks 1163', kills: 1, deaths: 1, rekits: 0, death: record });
+    expect(dead.ok).toBe(false);
+    const line = `RESULT fail ${dead.detail}`;
+    expect(line.startsWith('RESULT fail died hunt died: kit lacks 1163 kills 1 deaths 1 rekits 0 death={')).toBe(true);
+    expect(classify(line, false)).toBe('died');
+    const out = await supervise({ run: async () => ({ stdout: `${line}\n`, exitCode: 1 }), stopped: () => false, pause: async () => {}, maxRestarts: 5 } as any);
+    expect(out).toEqual({ reason: 'died', runs: 1 });
+    // The limit end and the other ends.
+    expect(classify(`RESULT fail ${huntEnd({ end: 'died', kills: 0, deaths: 3, rekits: 2, death: { ...record, rekit: 'death limit' } }).detail}`, false)).toBe('died');
+    expect(huntEnd({ end: 'cap', kills: 2, deaths: 1, rekits: 1 })).toEqual({ ok: true, detail: 'hunt cap kills 2 deaths 1 rekits 1' });
+    expect(huntEnd({ end: 'bank lacks trip requirements []', kills: 0, deaths: 0, rekits: 0 }).ok).toBe(false);
+});
+
+test('rekitAfterDeath ends the run when a piece of the starting kit is not in the bank', async () => {
+    const lacks = deathWorld([{ id: 385, count: 20 }, { id: 1201, count: 1 }, { id: 1231, count: 1 }]);
+    const r = await withDeathMocks(lacks, () => rekitAfterDeath(lacks.s, { lifeBefore: 1, diedNear: null, wornAtStart: lacks.wornAtStart, stop: () => false, log: () => {} }));
+    expect(r).toMatchObject({ rekit: 'kit lacks 1163', missing: [1163] });
+});
+
+test('hunt goes on after a re-kit that worked in its first retreat, and does not end the run as died', async () => {
+    const w = deathWorld([{ id: 385, count: 40 }, { id: 1163, count: 1 }, { id: 1201, count: 1 }, { id: 1231, count: 1 }]);
+    // The account starts dead and far from Edgeville: the first retreat sees the death.
+    Object.assign(w.player, { worldX: 3222, worldZ: 3218, hp: 0, isDead: true, lifeId: 1 });
+    const lines: string[] = [];
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_deps, path) => { w.player.worldX = path[0]!.x; w.player.worldZ = path[0]!.z; return { ok: true, ticks: 5, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 }; }),
+        spyOn(pk, 'nextTick').mockImplementation(w.next),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+        spyOn(pk, 'fightPlayer').mockImplementation(async () => ({ outcome: 'lost', ticks: 1 }) as any),
+    ];
+    try {
+        const result: any = await hunt(w.s, { cap: 300, food: 2, minFood: 1, escapeAt: 35, stop: () => false, log: l => lines.push(l), kit: {}, trip: [{ id: 385, count: 1 }], spots: [{ x: 3094, z: 3540, dwell: 3 }] });
+        expect(result.deaths).toBe(1);
+        expect(result.rekits).toBe(1);
+        expect(result.end).toBe('cap');
+        expect(lines.filter(l => l.startsWith('HUNT death {') && l.includes('"rekit":"ok"'))).toHaveLength(1);
+        expect(w.player.hp).toBeGreaterThanOrEqual(89);
     } finally { for (const mock of mocks) mock.mockRestore(); }
 });

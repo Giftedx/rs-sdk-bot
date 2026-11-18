@@ -231,10 +231,14 @@ export async function restock(s: Session, food: number, trip: readonly TripItem[
 export type DeathRecord = {
     diedNear: { x: number; z: number } | null; respawnAt: { x: number; z: number } | null; hpAtRespawn: number | null;
     lifeBefore: number | undefined; lifeAfter: number | undefined; packAtRespawn: number[]; ticks: number;
-    // `ok`, or the step that stopped the re-kit: `no respawn`, `walk to the bank` and the walk's outcome, `bank did not open`, `no food in the bank`.
+    // `ok`, or the step that stopped the re-kit: `no respawn`, `walk to the bank` and the walk's outcome, `bank did not open`, `no food in the bank`,
+    // `kit lacks <ids>` (pieces of the starting kit that the bank does not hold).
     rekit: string; missing: number[];
 };
 export const RESPAWN_TICKS = 40;
+export const DEFAULT_MAX_DEATHS = 2;
+// The death limit of HUNT_MAX_DEATHS: a whole number of 0 or more, else the default.
+export const maxDeathsOf = (value: string | undefined): number => { const n = Number(value); return value !== undefined && value.trim() !== '' && Number.isSafeInteger(n) && n >= 0 ? n : DEFAULT_MAX_DEATHS; };
 const WEAR_OPTION = /^(Wield|Wear)$/i;
 const isFood = (i: { optionsWithIndex?: { text: string }[] }) => !!i.optionsWithIndex?.some(op => /^eat$/i.test(op.text));
 // Eats until the Hitpoints are within a tenth of the maximum (at most 10) of full, or no food is left. Returns the Hitpoints.
@@ -298,7 +302,17 @@ export async function rekitAfterDeath(s: Session, o: { lifeBefore: number | unde
     }
     if (!s.sdk.getInventory().some(isFood)) return end('no food in the bank');
     await eatUp(s, o.stop);
+    // The pieces of the starting kit that the bank lacks: the account does not go back to the Wilderness without them.
+    if (record.missing.length) return end(`kit lacks ${record.missing.join(',')}`);
     return end('ok');
+}
+
+// The end of a hunt run: its ok and the detail of its RESULT line. A run that ended in a death starts with `died `, so that the
+// supervisor reads `RESULT fail died` as a death (packages/practice/src/supervise.ts, supervise-host.ts classify) and does not log the
+// account in again. Its record (the respawn, the kept pack, the step that stopped the re-kit) is the receipt of the end.
+export function huntEnd(r: { end: string; kills: number; deaths: number; rekits: number; death?: DeathRecord }): { ok: boolean; detail: string } {
+    const died = /^died/.test(r.end), ok = !died && !/failed|lacks|short|invalid|did not open/.test(r.end);
+    return { ok, detail: `${died ? 'died ' : ''}hunt ${r.end} kills ${r.kills} deaths ${r.deaths} rekits ${r.rekits}${r.death ? ` death=${JSON.stringify(r.death)}` : ''}` };
 }
 
 export type HuntOptions = { cap: number; food: number; minFood: number; escapeAt: number; stop: () => boolean; log?: (l: string) => void;
@@ -331,7 +345,7 @@ export async function hunt(s: Session, o: HuntOptions) {
     const died = () => { const p = s.sdk.getState()?.player; return !!p && life !== undefined && p.lifeId !== undefined && p.lifeId !== life; };
     const afterDeath = async (near: { x: number; z: number } | null | undefined): Promise<{ end: string; death: DeathRecord } | null> => {
         tally.deaths++;
-        const record = await rekitAfterDeath(s, { lifeBefore: life, diedNear: near ?? lastTile, wornAtStart, stop: over, log, recordOnly: tally.deaths > (o.maxDeaths ?? 2) });
+        const record = await rekitAfterDeath(s, { lifeBefore: life, diedNear: near ?? lastTile, wornAtStart, stop: over, log, recordOnly: tally.deaths > (o.maxDeaths ?? DEFAULT_MAX_DEATHS) });
         life = record.lifeAfter ?? life;
         if (record.rekit !== 'ok') return { end: record.rekit === 'death limit' ? 'died' : 'died: ' + record.rekit, death: record };
         tally.rekits++; needsRestock = true;
@@ -396,8 +410,8 @@ export async function hunt(s: Session, o: HuntOptions) {
     };
     if (far()) {
         const res = await exitWilderness('retreat to Edgeville');
-        if (res === 'died') { const d = await afterDeath(null); return d ? { ...tally, ...d } : { ...tally, end: 'died' }; }
-        if (res === 'failed') {
+        if (res === 'died') { const d = await afterDeath(null); if (d) return { ...tally, ...d }; }
+        else if (res === 'failed') {
             const p = s.sdk.getState()?.player;
             const magicLv = s.sdk.getState()?.skills?.find(k => k.name === 'Magic')?.level ?? 1;
             const hasTele = o.teleSpell !== undefined || hasVarrockTeleport(magicLv, s.sdk.getInventory(), s.sdk.getEquipment());
@@ -574,18 +588,18 @@ if (import.meta.main) {
     const { openBot, finish } = await import('../packages/core/src/bot');
     const stop = () => existsSync(`.practice/stop-${bot}`) || existsSync('.practice/stop-pk-hunt');
     // A death ends a bot session by default (packages/core/src/bot.ts: the DEATH line, then finish). The hunt handles its own death
-    // (rekitAfterDeath), so it ignores the `died` reason and ends its session for every other one.
-    const s = await openBot(bot, { onStop: async (session, reason) => { if (reason !== 'died') await finish([session], false, reason); } });
+    // (rekitAfterDeath): continueAfterDeath prints the DEATH line and goes on, and the stop file, the lease and the stall checks stay live.
+    const s = await openBot(bot, { continueAfterDeath: true });
     const env = process.env;
     const r = await hunt(s, { cap: Number(capArg ?? 6000), food: Number(env.HUNT_FOOD ?? 18), minFood: Number(env.MIN_FOOD ?? 6), escapeAt: Number(env.ESCAPE_AT ?? 35), stop,
         kit: env.PK_KIT === 'snare' ? SNARE_KIT : env.PK_KIT ? JSON.parse(env.PK_KIT) as Kit : undefined, trip: env.PK_TRIP ? JSON.parse(env.PK_TRIP) : env.PK_KIT === 'snare' ? SNARE_TRIP : undefined, damageSpell: env.PK_SPELL ? Number(env.PK_SPELL) : undefined,
         rotation: env.PK_ROTATION ? env.PK_ROTATION.split(',') as Style[] : undefined, teleSpell: env.PK_TELE ? Number(env.PK_TELE) : undefined,
-        spots: resolveHuntSpots(env), observe: env.PK_OBSERVE === '1', maxDeaths: env.HUNT_MAX_DEATHS ? Number(env.HUNT_MAX_DEATHS) : undefined });
+        spots: resolveHuntSpots(env), observe: env.PK_OBSERVE === '1', maxDeaths: maxDeathsOf(env.HUNT_MAX_DEATHS) });
     console.log('HUNT ' + JSON.stringify(r));
     // A dropped session reports the swarm's drain wording (planner DRAIN_RESULT), not a hunt outcome.
     if (r.end === 'session ended') await finish([s], false, 'session ended: disconnected');
     // A run that ended in a death is not ok. Its record (the respawn, the pack that it kept, the re-kit step that stopped it)
     // is the receipt of the end. A death that the hunt re-kitted after is in `deaths` and `rekits`.
-    const death = 'death' in r ? ` death=${JSON.stringify(r.death)}` : '';
-    await finish([s], !/^died/.test(r.end) && !/failed|lacks|short|invalid|did not open/.test(r.end), `hunt ${r.end} kills ${r.kills} deaths ${r.deaths} rekits ${r.rekits}${death}`);
+    const end = huntEnd(r);
+    await finish([s], end.ok, end.detail);
 }
