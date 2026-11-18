@@ -123,7 +123,7 @@ keeps last-run estimates. It is not a receipt ledger for concurrent writes to di
 
 ## Planner quest rows
 
-**Claim:** 20 single-quest rows of the planner (`packages/planner/src/haggis-boards.json`) hold the lockstep ticks of their bench case: the floor is the best of seeds 7, 8 and 9, and the realistic value is the worst. With these rows the modelled Overall finish is 38,086 ticks at floor rates and 40,842 at realistic rates (`bun packages/planner/src/haggis-cli.ts`, scenario a). **Conditions:** lockstep, a new engine for each case, three engines at a time; each case starts from the preset that its row names. **Evidence:** `bun run bench '^quester:quest:(<the cases below>)$' --parallel 3 --seed <7, 8 or 9>`; rows in `.practice/aio-bench/planner-rows-s7.json`, `planner-rows-s8.json` and `planner-rows-s9.json`:
+**Claim:** 22 single-quest rows of the planner (`packages/planner/src/haggis-boards.json`) hold the lockstep ticks of their bench case: the floor is the best of seeds 7, 8 and 9, and the realistic value is the worst. With the rows of this table and the measured rows of the other research files the modelled Overall finish is 33,829 ticks at floor rates and 35,703 at realistic rates (`bun packages/planner/src/haggis-cli.ts`, scenario a). **Conditions:** lockstep, a new engine for each case, three engines at a time; each case starts from the preset that its row names. **Evidence:** `bun run bench '^quester:quest:(<the cases below>)$' --parallel 3 --seed <7, 8 or 9>`; rows in `.practice/aio-bench/planner-rows-s7.json`, `planner-rows-s8.json` and `planner-rows-s9.json`:
 
 | Row | Case | Seed 7 | Seed 8 | Seed 9 |
 |---|---|---|---|---|
@@ -131,7 +131,9 @@ keeps last-run estimates. It is not a receipt ledger for concurrent writes to di
 | `crest` | `crest` | 1,040 | 1,078 | 1,036 |
 | `waterfall` | `waterfall` | 1,112 | 1,101 | 1,103 |
 | `tree` | `tree` | 734 | 639 | 653 |
-| `grandtree` | `grandtree` | 1,739 | 1,720 | 1,715 |
+| `grandtree` | `extra:grandtree-route-state` | 1,746 | 1,659 | 1,626 |
+| `plague-city` | `elena` | 430 | 423 | 453 |
+| `doric` | `doric` | 18 | 18 | 18 |
 | `druid` | `druid` | 208 | 208 | 208 |
 | `gobdip` | `gobdip` | 124 | 126 | 126 |
 | `rj` | `rj` | 256 | 265 | 262 |
@@ -147,6 +149,8 @@ keeps last-run estimates. It is not a receipt ledger for concurrent writes to di
 | `rival-mm` | `mm` | 4,347 | 4,539 | 4,588 |
 | `rival-seaslug` | `seaslug` | 348 | 344 | 346 |
 | `scorpion` | `scorpion` | 886 | 891 | 910 |
+
+**Grand Tree:** the `grandtree` row starts from the planner state (Attack 91, Magic 45, Prayer 99, no prayer potion; `extra:grandtree-route-state`). `quester:quest:grandtree` at Attack 60, Prayer 43 and 3 potions gives 1,770, 1,663 and 1,761 ticks at seeds 7, 8, 9. The walker planned round every hunter, and the bats in the roots after the black demon held the walk (`extra:grandtree-roots`: 655 ticks at seed 7 for an 83-tick walk; the route case took 2,357, 2,153 and 2,235 ticks). Now `liveHunters` (`packages/core/src/danger.ts`) gives a melee-only hunter no square while the live state shows Protect from Melee on with prayer points (`protectedFromMelee`, read at each call of the walker); the Grand Tree script keeps the prayer on and drinks a potion in the roots loop. `extra:grandtree-roots` takes 131, 169 and 130 ticks at seeds 7, 8, 9. With no points or the prayer off, the walker plans round the bats again. **Conditions:** lockstep, seeds 7, 8, 9, `bun run bench '^(quester:quest:grandtree|extra:grandtree-route-state|extra:grandtree-roots)$' --seeds 7,8,9 --seed-jobs 3`. **Gap:** the walk to Hazelmere is on foot (milestone 10 at 53, milestone 20 at 424 in seed 7).
 
 **Gap:** `extra:scorpion-with-barcrawl` (no Barcrawl: the guard talks at the outpost gate, and the Barcrawl runs first) passes at seeds 7 and 8 in 2,304 and 2,278 ticks. At seed 9 scorpion C stands at 3059,3486 upstairs in the Monastery for more than 200 ticks, the SDK marks it unreachable, and the cage gets "I can't reach that!" (`RESULT fail step catch c`). The `arrav` case runs one account, and the `quest-arrav` row is the pair run, so that row is not changed. `dig` spreads from 1,374 to 1,968 ticks and `zanaris` from 624 to 810. A wall-clock engine at 400 ms a tick read 1.7% above lockstep on two quests (Lockstep engine, above); the rows do not add that.
 

@@ -5,6 +5,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { knowledgeDir } from './paths';
+import { CONFIG_SKILL_TABLES } from './skills';
 import { coordTile, loadContent, modelBands, modelRung, modelXpPerTickAt, statRandomChance, ticksPerSuccess, XP_RATE, XP_RATE_SRC, type Band, type Content, type Row, type Timing } from './method-model';
 
 export const SKILLS = ['attack', 'defence', 'strength', 'hitpoints', 'ranged', 'prayer', 'magic', 'cooking', 'woodcutting',
@@ -172,6 +173,9 @@ export function buildLadders(d: Data) {
     let zeroXp = 0, npcSpells = 0;
     for (const a of d.skills) {
         if (!(SKILLS as readonly string[]).includes(a.skill)) continue;
+        // The object and struct rows of skills.ts (burning logs, brewing, smelting) check the hand tables of the planner.
+        // The ladders take those methods from the skill guide rows below, so a second row here would double each one.
+        if (CONFIG_SKILL_TABLES.has(a.table)) continue;
         if (a.skill === 'magic' && a.level <= 0) { npcSpells++; continue; }
         if (a.xp === 0) { zeroXp++; continue; }
         const row = dbRow(a.table, a.row);

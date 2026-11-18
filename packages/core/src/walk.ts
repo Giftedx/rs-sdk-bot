@@ -5,7 +5,7 @@ import { watchTickStream } from './tick-stream';
 import type { TickSource } from './ticks';
 import { blockedDoorsNear,installDoorPolicy,transportAllowed,interactionApproach,canonicalTransportLeg, type Account, type Door, type Leg, type Tile, type World, ROUTE_BUDGET_MS,type DoorBlock } from './world';
 import {accountForSdk,withDoorPolicy} from './door-policy';
-import {guardWalk,liveHunters,withDanger} from './danger';
+import {guardWalk,liveHunters,protectedFromMelee,withDanger} from './danger';
 import {disembark,type BoatSession} from './boat';
 import {componentId} from './logout';
 import {clientReach} from './reach';
@@ -825,6 +825,7 @@ export async function sessionWalker(s: { sdk: any; client?:unknown; onTick(cb: (
             // Deadly hunters' ground stays closed too (danger.ts), and the live hunters' squares walkPath passes.
             return guardWalk(grid,accountForSdk(s.sdk),{...from,level},{...to,level},32,()=>avoid?.length?withDanger(grid,avoid.map(t=>({...t,level})),[{...from,level},{...to,level}],find,'live'):find());
         },
-        hunters: () => { const p = s.sdk.getState()?.player; return p ? liveHunters(s.sdk.getState()?.nearbyNpcs ?? [], hunterActor ??= accountForSdk(s.sdk)) : []; },
+        // Protect from Melee is read from the live state at each call: only then a melee-only hunter has no square.
+        hunters: () => { const st = s.sdk.getState(); return st?.player ? liveHunters(st.nearbyNpcs ?? [], hunterActor ??= accountForSdk(s.sdk), 2, undefined, undefined, protectedFromMelee(st)) : []; },
     };
 }

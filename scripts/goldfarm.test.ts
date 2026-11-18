@@ -1,8 +1,8 @@
 import {test,expect} from 'bun:test';
 import {courierFoodReady,incomingCookedFood,receiveFoodAtBank,FOOD_ORDER,FRAIL_FLOOR,FRAIL_HP,FRAIL_RESERVE,foodReserve,guardHit,noKnightReason,ownerSeesTile,refugeDue,REFUGE_NONE,REFUGE_WINDOW} from './goldfarm';
-import {selectFoodToEat,calcEatAt} from './goldfarm-stable';
+import {selectFoodToEat,calcEatAt,healOf,FOOD_NAMES} from './goldfarm-stable';
 import {GOLDFARM_FOOD,GOLDFARM_FRAIL} from '../packages/planner/src/autopilot';
-import {foodTripDue} from './goldfarm';
+import {foodTripDue,foodBiteHeal,pickFoodForLoss} from './goldfarm';
 test('an idle pass names the first thing that keeps every knight from a pick',()=>{
     const k=(inRange:boolean,reachable=true,banned=false,avoided=false)=>({inRange,reachable,banned,avoided});
     expect(noKnightReason([])).toBe('none');
@@ -96,43 +96,78 @@ test('food rendezvous yields to a pending cash request from its same partner',as
     expect(r.incoming).toBe(0);expect(r.reason).toBe('until');expect(refills).toBe(2);
 });
 
+// The food of the two goldfarm scripts, by item id (content pack/obj.pack).
+const FOOD_IDS: Readonly<Record<string, number>> = { 'Slice of cake': 1895, '2/3 cake': 1893, Cake: 1891, 'Chocolate slice': 1901, Bread: 2309, Trout: 333, Salmon: 329, Lobster: 379, Shark: 385, 'Cooked meat': 2142, 'Cooked chicken': 2140 };
+const makeFood = (name: string, count = 1) => ({ id: FOOD_IDS[name]!, name, count, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] });
+
 test('selectFoodToEat matches HP deficit to best food avoiding overheal waste', () => {
-    const makeFood = (name: string, count = 1) => ({ name, count, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] });
-    const items = [
-        makeFood('Lobster'), // heals 12
-        makeFood('Salmon'),  // heals 9
-        makeFood('Trout'),   // heals 7
-        makeFood('Bread'),   // heals 5
-        makeFood('Cake'),    // heals 4
-        makeFood('Chocolate slice'), // heals 2
-    ];
+    // Heals from consume_normal.dbrow: lobster 12, salmon 9, trout 7, chocolate slice 5, bread 4, cake 4.
+    const items = [makeFood('Lobster'), makeFood('Salmon'), makeFood('Trout'), makeFood('Bread'), makeFood('Cake'), makeFood('Chocolate slice')];
 
-    // Loss = 4: Cake heals 4, exactly matches deficit with 0 waste
+    // Loss = 4: bread and cake heal 4, no waste. The later of the two in the pack is eaten.
     expect(selectFoodToEat(items, 4)?.name).toBe('Cake');
+    expect(selectFoodToEat([makeFood('Chocolate slice'), makeFood('Bread')], 4)?.name).toBe('Bread');
 
-    // Loss = 5: Bread heals 5, exactly matches deficit with 0 waste
-    expect(selectFoodToEat(items, 5)?.name).toBe('Bread');
+    // Loss = 5 and 6: the chocolate slice heals 5.
+    expect(selectFoodToEat(items, 5)?.name).toBe('Chocolate slice');
+    expect(selectFoodToEat(items, 6)?.name).toBe('Chocolate slice');
 
-    // Loss = 6: Bread heals 5 <= 6, best food under deficit
-    expect(selectFoodToEat(items, 6)?.name).toBe('Bread');
-
-    // Loss = 7: Trout heals 7, matches deficit
     expect(selectFoodToEat(items, 7)?.name).toBe('Trout');
-
-    // Loss = 10: Salmon heals 9 <= 10, best under deficit
     expect(selectFoodToEat(items, 10)?.name).toBe('Salmon');
-
-    // Loss = 12: Lobster heals 12, matches deficit
     expect(selectFoodToEat(items, 12)?.name).toBe('Lobster');
 
-    // Loss = 1: All foods heal more than 1, picks smallest food (Chocolate slice 2)
-    expect(selectFoodToEat(items, 1)?.name).toBe('Chocolate slice');
+    // Loss = 1: every food heals more than 1, so the smallest food is eaten. That is a 4 HP food, not the chocolate slice.
+    expect(selectFoodToEat(items, 1)?.name).toBe('Bread');
+    expect(selectFoodToEat([makeFood('Chocolate slice'), makeFood('Bread')], 2)?.name).toBe('Bread');
 
     // Only big food available: loss = 6, only lobster -> picks lobster rather than starving
     expect(selectFoodToEat([makeFood('Lobster')], 6)?.name).toBe('Lobster');
 
     // Non-food items ignored
     expect(selectFoodToEat([{ name: 'Coins', count: 100 }], 6)).toBeUndefined();
+});
+
+test('the stall thief picks its food with the same content heals', () => {
+    const pack = [makeFood('Chocolate slice'), makeFood('Bread'), makeFood('Slice of cake'), makeFood('Trout')];
+    expect(pickFoodForLoss(pack, 4)?.name).toBe('Bread');
+    expect(pickFoodForLoss(pack, 5)?.name).toBe('Chocolate slice');
+    expect(pickFoodForLoss(pack, 2)?.name).toBe('Slice of cake');
+    expect(pickFoodForLoss(pack, 9)?.name).toBe('Trout');
+    expect(pickFoodForLoss([], 9)).toBeUndefined();
+});
+
+test('each goldfarm food heal is the value of the content consume table', async () => {
+    const content = new URL('../vendor/rs-sdk/server/content/', import.meta.url);
+    const rows = await Bun.file(new URL('scripts/player/configs/consumption/consume_normal.dbrow', content)).text();
+    // debugname -> heal, read here with no shared parser: one [row] block gives one heal to each of its consumables.
+    const heal = new Map<string, number>();
+    for (const block of rows.split(/^\[/m)) {
+        const hp = block.match(/^data=stat_heal,hitpoints,(\d+),0\s*$/m);
+        if (!hp) continue;
+        for (const m of block.matchAll(/^data=consumable,(\S+)\s*$/gm)) heal.set(m[1]!, Number(hp[1]));
+    }
+    const pack = await Bun.file(new URL('pack/obj.pack', content)).text();
+    const debugname = new Map([...pack.matchAll(/^(\d+)=(\S+)\s*$/gm)].map(m => [Number(m[1]), m[2]!]));
+    const display = new Map((await Bun.file(new URL('../knowledge/items.json', import.meta.url)).json() as { id: number; name: string }[]).map(i => [i.id, i.name]));
+
+    expect(heal.get('bread')).toBe(4); // consume_normal.dbrow:84 in [heal_4]
+    expect(heal.get('chocolate_slice')).toBe(5); // consume_normal.dbrow:98 in [heal_5]
+    for (const [name, id] of Object.entries(FOOD_IDS)) {
+        const want = heal.get(debugname.get(id)!);
+        expect(display.get(id)).toBe(name);
+        expect(want).toBeGreaterThan(0);
+        expect(healOf({ id, name })).toBe(want!);
+        expect(foodBiteHeal({ id })).toBe(want!);
+    }
+    // Each food name that a script accepts has a row above, so no accepted food is without a content heal.
+    const names = Object.keys(FOOD_IDS);
+    for (const re of [...FOOD_ORDER, ...FOOD_NAMES]) expect(names.some(n => re.test(n))).toBe(true);
+    // No hand heal table in the two scripts.
+    for (const file of ['goldfarm.ts', 'goldfarm-stable.ts']) {
+        const source = await Bun.file(new URL(file, import.meta.url)).text();
+        expect(source).not.toMatch(/\bHEAL\s*=\s*\[/);
+        expect(source).not.toMatch(/\bheal\s*:\s*\d/);
+    }
 });
 
 test('calcEatAt guarantees never dying from Knight fail damage (DMG=3) while maximizing food efficiency', () => {

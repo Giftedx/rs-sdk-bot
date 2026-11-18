@@ -232,6 +232,24 @@ export const PROFILES: Record<string, {
         via: [{ x: 3028, z: 3221 }, { x: 2683, z: 3271 }],
         fare: 60,
     },
+    // Jiminua's Jungle Store (junglestore, area_karamja/configs/karamja.inv:29; npc 560 at 2767,3122, maps/m43_48.jm2):
+    // the one shop with antipoison (3doseantipoison, shelf 10, one back each 150 ticks). The trip from the Ardougne
+    // south bank takes Captain Barnaby's ship to Brimhaven and back, 30 coins each way.
+    jiminua: {
+        npc: /^jiminua$/i,
+        npcSpot: { x: 2767, z: 3122 },
+        bankSpot: { x: 2654, z: 3283 },
+        // The antipoison first, then each tool and food of the shelf that the progression catalog gives this profile
+        // a method for (scripts/progression-catalog.ts, `shop:jiminua:<item>`): a run names its item with ITEMS.
+        items: [
+            { re: /^antipoison\(3\)$/i, buyPerTick: 1, shelf: 10 },
+            { re: /^tinderbox$/i, buyPerTick: 1 }, { re: /^cooked meat$/i, buyPerTick: 1 }, { re: /^bread$/i, buyPerTick: 1 },
+            { re: /^pestle and mortar$/i, buyPerTick: 1 }, { re: /^knife$/i, buyPerTick: 1 }, { re: /^hammer$/i, buyPerTick: 1 },
+            { re: /^chisel$/i, buyPerTick: 1 }, { re: /^bronze axe$/i, buyPerTick: 1 }, { re: /^bronze pickaxe$/i, buyPerTick: 1 },
+            { re: /^bronze bar$/i, buyPerTick: 1 },
+        ],
+        fare: 60,
+    },
     zaff: {
         // Zaff's staff shop (area_varrock/configs/varrock.inv staffshop and memberstaffshop): staff_of_fire stock 2,
         // 1 back per 1,000 ticks. A fire staff replaces the fire runes of every alchemy cast (scripts/alch-train.ts).

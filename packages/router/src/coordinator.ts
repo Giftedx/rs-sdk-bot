@@ -312,8 +312,10 @@ export function deadRoots(state:CoordinatorState,records:ReadonlyMap<string,Task
   memo.set(id,null);
   let found:{root:string;at:number}|null=null;
   for(const dep of [...record.spec.dependsOn,...provisionRefs(record.spec)]){
-   // A failed refresh can be replaced when a new source needs qualification.
-   if(record.spec.kind==='run'&&dep.startsWith('refresh-'+record.spec.capability+'-'))continue;
+   // A failed refresh can be replaced when a new source needs qualification, so a run waits behind it. A session
+   // recovery does not wait: the recoveries behind it start only when it ends (orderOnlyDependency). Its failed
+   // refresh is a dead root until a new source links a new refresh (refreshQualifications).
+   if(record.spec.kind==='run'&&dep.startsWith('refresh-'+record.spec.capability+'-')&&!(record.spec.sessionRecovery&&records.get(dep)?.status==='failed'))continue;
    const next=records.get(dep);
    let candidate:{root:string;at:number}|null=null;
    if(!next)candidate={root:dep,at:0};

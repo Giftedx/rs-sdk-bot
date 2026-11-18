@@ -427,11 +427,12 @@ try {
         if (demon()) await q.fail('demon alive');
         console.log(`NOTE demon down at ${q.T()} casts=${casts} prayer=${points()} potions=${potions}`);
         await shutDialog();
-        await setPfm(false);
         await ms(140);
     }
 
     // 150. Narnode in the roots; then the roots, searched in a tour from him, until the Daconia rock.
+    // Bats hunt in the roots (bat huntrange 2, melee): the prayer stays on, and the walker then plans no way round them.
+    await setPfm(true);
     if (FROM < 150) {
         await walk('to narnode under', [{ x: NARNODE_UNDER.x, z: NARNODE_UNDER.z - 2, tol: 2 }]);
         await talkOnce('narnode 5', /^king narnode/i, [], () => q.sawText(/little time/i) && !q.dialogOpen(), 120);
@@ -441,6 +442,8 @@ try {
     for (const [x, rz] of ROOTS) {
         if (q.has(ITEM.rock)) break;
         await q.guard('roots');
+        await keepPrayer();
+        await setPfm(true);
         searched++;
         await walk(`to root ${x},${rz}`, [{ x, z: rz, tol: 2 }]);
         const ROOT_MSG = /search the root|anything interesting|turns out to be nothing/i;
@@ -450,6 +453,7 @@ try {
         await shutDialog();
     }
     if (!q.has(ITEM.rock)) await q.fail('no daconia rock');
+    await setPfm(false);
     q.milestone('rock');
 
     // 160. Narnode takes the rock and queues the completion.

@@ -53609,6 +53609,566 @@
    "maxBatch": 1000
   },
   {
+   "id": "shop:jiminua:1265",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "jiminua",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Bronze pickaxe$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "2",
+     "FLOAT": "1002",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_karamja/configs/karamja.inv:59",
+   "effects": {
+    "items": {
+     "1265": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 2
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:jiminua:1265"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 2
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:jiminua:1351",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "jiminua",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Bronze axe$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "36",
+     "FLOAT": "1036",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_karamja/configs/karamja.inv:58",
+   "effects": {
+    "items": {
+     "1351": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 36
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:jiminua:1351"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 36
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:jiminua:1755",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "jiminua",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Chisel$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "2",
+     "FLOAT": "1002",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_karamja/configs/karamja.inv:56",
+   "effects": {
+    "items": {
+     "1755": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 2
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:jiminua:1755"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 2
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:jiminua:2142",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "jiminua",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Cooked meat$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "9",
+     "FLOAT": "1009",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_karamja/configs/karamja.inv:45",
+   "effects": {
+    "items": {
+     "2142": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 9
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:jiminua:2142"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 9
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:jiminua:2309",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "jiminua",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Bread$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "27",
+     "FLOAT": "1027",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_karamja/configs/karamja.inv:46",
+   "effects": {
+    "items": {
+     "2309": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 27
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:jiminua:2309"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 27
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:jiminua:233",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "jiminua",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Pestle and mortar$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "9",
+     "FLOAT": "1009",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_karamja/configs/karamja.inv:49",
+   "effects": {
+    "items": {
+     "233": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 9
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:jiminua:233"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 9
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:jiminua:2347",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "jiminua",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Hammer$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "2",
+     "FLOAT": "1002",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_karamja/configs/karamja.inv:54",
+   "effects": {
+    "items": {
+     "2347": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 2
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:jiminua:2347"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 2
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:jiminua:2349",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "jiminua",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Bronze bar$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "18",
+     "FLOAT": "1018",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_karamja/configs/karamja.inv:61",
+   "effects": {
+    "items": {
+     "2349": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 18
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:jiminua:2349"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 18
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:jiminua:590",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "jiminua",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Tinderbox$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "2",
+     "FLOAT": "1002",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_karamja/configs/karamja.inv:37",
+   "effects": {
+    "items": {
+     "590": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 2
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:jiminua:590"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 2
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:jiminua:946",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "jiminua",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Knife$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "14",
+     "FLOAT": "1014",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_karamja/configs/karamja.inv:53",
+   "effects": {
+    "items": {
+     "946": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 14
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:jiminua:946"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 14
+   },
+   "maxBatch": 1000
+  },
+  {
    "id": "shop:khazard_paste:1265",
    "routeId": "market:shop-buy",
    "ladderIds": [],

@@ -176,7 +176,7 @@ a time, each run on a fresh account that is deleted after the run.
 | Quest | Script | RESULT ticks (3 runs) | Status |
 |---|---|---|---|
 | Sheep Shearer | `scripts/generated/quest-sheep.ts` | 70, 70, 70 | MEASURED 3/3 |
-| Doric's Quest | `scripts/generated/quest-doric.ts` | 30, 30, 30 | MEASURED 3/3 |
+| Doric's Quest | `scripts/generated/quest-doric.ts` | 18, 18, 18 (seeds 7, 8, 9) | MEASURED 3/3 |
 | Imp Catcher | `scripts/generated/quest-imp.ts` | 38, 38, 38 | MEASURED 3/3 |
 | Witch's Potion | `scripts/generated/quest-hetty.ts` | 80, 78, 79 | MEASURED 3/3 |
 | Rune Mysteries | `scripts/generated/quest-runemysteries.ts` | 449, 432, 441 | MEASURED 3/3 |
@@ -407,7 +407,7 @@ at a time, each run on a fresh account that is deleted after the run.
 |---|---|---|---|
 | Pirate's Treasure | `scripts/generated/quest-hunt.ts` | 474, 471, 460 | MEASURED 3/3 |
 | The Knight's Sword | `scripts/generated/quest-squire.ts` | 893, 887, 922 | MEASURED 3/3 |
-| Plague City | `scripts/generated/quest-elena.ts` | 780, 784, 749 | MEASURED 3/3 |
+| Plague City | `scripts/generated/quest-elena.ts` | 430, 423, 453 (seeds 7, 8, 9) | MEASURED 3/3 |
 | Priest in Peril | `scripts/generated/quest-priestperil.ts` | 1010, 993, 1011 | MEASURED 3/3 |
 | Biohazard | `scripts/generated/quest-biohazard.ts` | 1662, 1655, 1672 | MEASURED 3/3 |
 | Nature Spirit | `scripts/generated/quest-druidspirit.ts` | 823, 830, 791 | MEASURED 3/3 |
@@ -472,7 +472,7 @@ Findings:
 
 ### Plague City
 
-`RESULT ok qp=1 xp=mining=60625 ... ticks=780 ... walkTicks=227 retries=3 died=false` (runs: 780, 784, 749 ticks; a
+`RESULT ok qp=1 xp=mining=60625 ... ticks=427 ... walkTicks=174 retries=4 died=false` (runs: 430, 423, 453 ticks at seeds 7, 8, 9; a
 passing trial before the proof: 640), each with `You climb up the mud pile.` and `Congratulations! Quest complete!`.
 Steps (trial MILESTONE ticks, `quests/quest_elena/scripts/`): Edmond "What's happened to her?", "Can I help find
 her?" (1, `edmond.rs2:2-8,52-66`); the picture (obj 1510 on the table at 2576,3334, `maps/m40_52.jm2`); Alrena makes

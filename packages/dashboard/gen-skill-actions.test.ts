@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { contentRows, fishingRows, inputCounts, objParamRows, procCatches, skillActions, withEssence } from './gen-skill-actions';
 
 test('skill actions give the XP of one action on this server: base XP times the XP rate', () => {
@@ -95,4 +96,17 @@ test('a runecraft row with no input takes rune essence, one an action; other row
     expect(withEssence({ skill: 'runecraft', row: 'runecraft_air', level: 1, xp: 5, outputs: ['airrune'] })).toEqual({ skill: 'runecraft', row: 'runecraft_air', level: 1, xp: 5, outputs: ['airrune'], inputs: ['blankrune'], counts: [1] });
     const crafting = { skill: 'crafting', row: 'gloves', level: 1, xp: 13.8, inputs: ['leather'] };
     expect(withEssence(crafting)).toBe(crafting);
+});
+
+test('the written asset names herblore and smelting rows by item, with one row for each potion, and keeps the bar counts of the anvil rows', () => {
+    const asset = JSON.parse(readFileSync(new URL('./client-assets/skill-actions.json', import.meta.url), 'utf8')) as Record<string, [string, number, number, string[], string[], number[]][]>;
+    // No debug name of the brew structs (3dose1attack, 3doseantipoison, 3dose2defense) and no underscore name.
+    for (const skill of ['herblore', 'smithing', 'firemaking']) {
+        for (const [name] of asset[skill]!) expect([skill, name, /^\d+dose|_|^smelting /i.test(name)]).toEqual([skill, name, false]);
+    }
+    // One Attack potion row (level 3), not one for each source of the same potion.
+    expect(asset.herblore!.filter(r => r[0] === 'Attack potion(3)').map(r => r[1])).toEqual([3]);
+    expect(new Set(asset.herblore!.map(r => r[0])).size).toBe(asset.herblore!.length);
+    // An anvil row lists every bar that it takes: the XP row of skills.json holds one bar.
+    expect(asset.smithing!.find(r => r[0] === 'Bronze platebody')![3]).toEqual(Array(5).fill('Bronze bar'));
 });
