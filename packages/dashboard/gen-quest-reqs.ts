@@ -1,20 +1,22 @@
 // Writes client-assets/quest-reqs.json for the Quest Journal: what each quest needs before an account can finish it,
 // by its journal name (questJournalNames in packages/router/src/coverage.ts), as {s: [[skill, level, src]],
-// qp: [points, src], q: [[quest, src]], i: [[item, count, src]]}. src is 1 when the server scripts check it and 0 when only the wiki says it.
+// qp: [points, src], q: [[quest, src]], i: [[item, count, src]]}.
 //
-// Two sources, joined:
-// - The server: the level checks in the quest's folder (stat(skill) < N, stat_base(skill) >= N; the highest N of each
-//   skill; Hitpoints checks are fight rules, not requirements), the quest point checks (%qp < N, in any script), and
-//   the progress checks of other quests in the folder (%varp compared, with the varp of a quest from knowledge/quests.json).
-// - The wiki pages in vendor/rs-sdk/wiki/quests (## Requirements): "N Skill", "N Quest Points" and the names of other
-//   quests. A line that says recommended, optional or for shortcuts is not a requirement.
-// The server wins on a level: Legends Quest checks 52 Mining where the wiki says 50.
+// A skill, quest point or quest row comes only from the content (vendor/rs-sdk/server/content/scripts):
+// - The level checks in the quest's folder (stat(skill) < N, stat_base(skill) >= N; the highest N of each skill;
+//   Hitpoints checks are fight rules, not requirements), the quest point checks (%qp < N, in any script), and the
+//   progress checks of other quests in the folder (%varp compared, with the varp of a quest from knowledge/quests.json).
+// - The checks outside the quest's folder (areas, minigames, skill tables), named line by line in CONTENT_REQS. The
+//   generator reads each named line and stops when the line does not hold the check.
+// The wiki pages in vendor/rs-sdk/wiki/quests (## Requirements) give no row. They set src: 1 when the page also lists a
+// row that the content checks, 2 when it does not. A row that only the wiki lists is left out (--report prints it).
+// The item rows (i) come from the wiki list: src 1 when the quest's scripts name the item, 0 when only the wiki lists it.
 // Run: bun packages/dashboard/gen-quest-reqs.ts
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { VARP_FOLDER, questJournalNames } from '../router/src/coverage';
 
-export type Reqs = { s: [string, number, 0 | 1 | 2][]; qp?: [number, 0 | 1 | 2]; q: [string, 0 | 1 | 2][]; i?: [string, number, 0 | 1][] };
+export type Reqs = { s: [string, number, 1 | 2][]; qp?: [number, 1 | 2]; q: [string, 1 | 2][]; i?: [string, number, 0 | 1][] };
 
 const SKILLS = ['Attack', 'Defence', 'Strength', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing',
     'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', 'Runecraft'];
@@ -96,20 +98,23 @@ export function wikiReqs(page: string, journal: string[]): { s: Map<string, numb
     return { s, qp, q };
 }
 
-// src: 1 the server checks it and the wiki lists it (the server level wins), 0 only the wiki lists it, 2 only the
-// server checks it (a check inside the quest that the wiki does not list).
+// Each row is a content check. src: 1 the wiki page lists the row too (the content level wins), 2 the wiki does not.
+// A row that only the wiki lists gives no output: wikiOnly names it.
 export function joinReqs(server: Map<string, number>, serverQp: Set<number>, serverQuests: Set<string>, wiki: ReturnType<typeof wikiReqs> | null, folderQp: Set<number> = new Set()): Reqs {
-    const s: [string, number, 0 | 1 | 2][] = [];
-    for (const skill of new Set([...server.keys(), ...(wiki?.s.keys() ?? [])])) {
-        const sv = server.get(skill), wv = wiki?.s.get(skill);
-        s.push(sv != null ? [skill, sv, wv != null ? 1 : 2] : [skill, wv!, 0]);
-    }
+    const s: [string, number, 1 | 2][] = [...server].map(([skill, level]) => [skill, level, wiki?.s.has(skill) ? 1 : 2]);
     s.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     const out: Reqs = { s, q: [] };
-    if (wiki?.qp != null) out.qp = [wiki.qp, serverQp.has(wiki.qp) ? 1 : 0];
+    if (wiki?.qp != null && serverQp.has(wiki.qp)) out.qp = [wiki.qp, 1];
     else if (folderQp.size) out.qp = [Math.max(...folderQp), 2];
-    for (const name of new Set([...(wiki?.q ?? []), ...serverQuests])) out.q.push([name, serverQuests.has(name) ? (wiki?.q.includes(name) ? 1 : 2) : 0]);
+    for (const name of [...(wiki?.q ?? []).filter(n => serverQuests.has(n)), ...[...serverQuests].filter(n => !wiki?.q.includes(n))]) out.q.push([name, wiki?.q.includes(name) ? 1 : 2]);
     return out;
+}
+
+// The rows of a wiki page that no content check confirms, as text. They are not in the output.
+export function wikiOnly(server: Map<string, number>, serverQp: Set<number>, serverQuests: Set<string>, wiki: ReturnType<typeof wikiReqs> | null): string[] {
+    if (!wiki) return [];
+    return [...[...wiki.s].filter(([skill]) => !server.has(skill)).map(([skill, level]) => `${level} ${skill}`),
+        ...(wiki.qp != null && !serverQp.has(wiki.qp) ? [`${wiki.qp} QP`] : []), ...wiki.q.filter(n => !serverQuests.has(n))];
 }
 
 // The items of a wiki page's "Items Needed" list that name a real item: [name, count, debugname]. The count is the
@@ -139,27 +144,79 @@ export function dropCycles(out: Record<string, Reqs>) {
     for (const [a, r] of Object.entries(out)) if (!r.s.length && !r.q.length && !r.qp && !r.i) delete out[a];
 }
 
-// Quest prerequisites and skill checks in vendor/rs-sdk/server/content outside the quest's own folder:
-// areas/area_camelot/scripts/king_arthur.rs2:43 + black_knight_titan.rs2:30 (tier20.rs2:16);
-// areas/area_ardougne_east/scripts/elena.rs2:118; areas/area_karamja/scripts/trufitus.rs2:280;
-// quests/quest_death/scripts/death_ig_commander.rs2:7; areas/area_taverly/scripts/sanfew.rs2:102-103;
-// areas/area_karamja/scripts/tbwt_timfraku.rs2:51; quests/quest_grandtree/scripts/king_narnode.rs2:8-9;
-// skill_herblore/configs/brewing/brew_potion.struct:289 (Serum 207) + Mort Myre holy barrier.
-export const CROSS_FOLDER_REQS: Record<string, { q?: string[]; s?: [string, number][] }> = {
-    quest_grail: { q: ['quest_arthur'], s: [['Attack', 20]] },
-    quest_biohazard: { q: ['quest_elena'] },
-    quest_junglepotion: { q: ['quest_druid'] },
-    quest_troll: { q: ['quest_death'] },
-    quest_eadgar: { q: ['quest_druid', 'quest_death', 'quest_troll'], s: [['Herblore', 31]] },
-    quest_tbwt: { q: ['quest_junglepotion'] },
-    quest_mm: { q: ['quest_grandtree', 'quest_tree'] },
-    quest_mortton: { q: ['quest_priestperil'], s: [['Herblore', 15]] },
+// A content line that holds a check: the file under vendor/rs-sdk/server/content/scripts, the 1-based line, and text
+// that the line must hold.
+export type Cite = readonly [file: string, line: number, text: string];
+
+// Quest prerequisites and skill checks of the content outside the quest's own folder. Each row names its line.
+// A skill row: the cited text holds the level. Where the check is on an item or a place and not on the quest's
+// progress, the comment gives the line that ties it to the quest.
+export const CONTENT_REQS: Record<string, { q?: [folder: string, cite: Cite][]; s?: [skill: string, level: number, cite: Cite][] }> = {
+    quest_grail: {
+        q: [['quest_arthur', ['areas/area_camelot/scripts/king_arthur.rs2', 43, 'case ^arthur_complete : @king_arthur_grailstart;']]],
+        // The Black Knight Titan dies only to Excalibur (quests/quest_grail/scripts/black_knight_titan.rs2:30).
+        s: [['Attack', 20, ['levelrequire/scripts/tier20.rs2', 16, '[opheld2,excalibur] @levelrequire_attack(20, last_slot);']]],
+    },
+    // Elena starts Biohazard in her house (areas/area_ardougne_east/scripts/elena.rs2:118). Its door opens after Plague City.
+    quest_biohazard: { q: [['quest_elena', ['areas/area_ardougne_east/scripts/doors.rs2', 3, 'case ^elena_complete, ^elena_complete_read_scroll : ~open_and_close_door2(']]] },
+    quest_junglepotion: { q: [['quest_druid', ['areas/area_karamja/scripts/trufitus.rs2', 280, 'if (%druidquest = ^druid_complete) {']]] },
+    quest_troll: { q: [['quest_death', ['quests/quest_death/scripts/death_ig_commander.rs2', 7, 'case ^death_complete :']]] },
+    quest_eadgar: {
+        // Sanfew gives more work (sanfew_postquest) from the last stage of Druidic Ritual.
+        q: [['quest_druid', ['areas/area_taverly/scripts/sanfew.rs2', 27,'} else if(%druidquest >= ^druid_given_ingredients) {']],
+            ['quest_death', ['areas/area_taverly/scripts/sanfew.rs2', 102, '%death_equiproom = ^death_complete']],
+            ['quest_troll', ['areas/area_taverly/scripts/sanfew.rs2', 102, '%troll_quest = ^troll_complete']]],
+        s: [['Herblore', 31, ['areas/area_taverly/scripts/sanfew.rs2', 103, 'if(stat_base(herblore) >= 31) {']]],
+    },
+    quest_tbwt: { q: [['quest_junglepotion', ['areas/area_karamja/scripts/tbwt_timfraku.rs2', 51, 'if (%junglepotion >= ^junglepotion_complete) {']]] },
+    quest_mm: {
+        q: [['quest_grandtree', ['quests/quest_grandtree/scripts/king_narnode.rs2', 7, 'case ^grandtree_complete :']],
+            ['quest_tree', ['quests/quest_grandtree/scripts/king_narnode.rs2', 8, 'if(%treequest = ^tree_complete) {']]],
+    },
+    quest_mortton: {
+        // Drezel opens the way to Morytania after Priest in Peril.
+        q: [['quest_priestperil', ['areas/area_mausoleum/scripts/drezel.rs2', 120, 'if (%priestperil < ^priestperil_complete) {']]],
+        s: [
+            // Serum 207 ([mort_serum3_tarrominvial]); the quest goes on when it is made (skill_herblore/scripts/herblore.rs2:17).
+            ['Herblore', 15, ['skill_herblore/configs/brewing/brew_potion.struct', 289, 'param=brew_potion_level,15']],
+            // The temple repair moves the quest on (flamtaer_temple.rs2:77). The brick check of the quest folder is 12.
+            ['Crafting', 20, ['minigames/game_mortton/scripts/flamtaer_temple.rs2', 11, 'if (stat(crafting) < 20) {']],
+            // The lowest pyre; the pyre moves the quest on (mortton_pyre.rs2:75,91).
+            ['Firemaking', 5, ['minigames/game_mortton/configs/flamtaer_pyre.struct', 2, 'param=pyre_level,5']],
+        ],
+    },
+    // Achietties takes a fire feather, a lava eel and a thieves' armband (areas/areas_heroes_guild/scripts/achietties.rs2:12).
+    // The lava eel, the blamish oil for its rod and the ice gloves for the feather cannot be traded (knowledge/items.json).
+    quest_hero: {
+        s: [
+            ['Fishing', 53, ['skill_fishing/scripts/fishing_spots/lavafish.rs2', 84, 'if (stat(fishing) < 53) {']],
+            ['Cooking', 53, ['skill_cooking/configs/cooking_source/cooking_generic.dbrow', 110, 'data=levelrequired,53']],
+            // The rockslide on the way to the Ice Queen, who drops the ice gloves.
+            ['Mining', 50, ['areas/area_white_wolf_mountain/scripts/white_wolf_mountain.rs2', 20, 'if(stat(mining) < 50) {']],
+            // Blamish oil ([blamish_oil]) for the oily fishing rod.
+            ['Herblore', 25, ['skill_herblore/configs/brewing/brew_potion.struct', 210, 'param=brew_potion_level,25']],
+        ],
+    },
+    // King Lathas starts Underground Pass.
+    quest_upass: { s: [['Ranged', 25, ['areas/area_ardougne_east/scripts/king_lathas.rs2', 95, 'if(stat_base(ranged) < 25) {']]] },
 };
 
-// Post-2004 OSRS wiki quest requirements absent from rev 289 (king_roald.rs2:47-55 never checks Rune Mysteries).
-export const NON_REV289_WIKI_QUEST_DROPS: Record<string, ReadonlySet<string>> = {
-    'Priest in Peril': new Set(['Rune Mysteries Quest']),
-};
+// The citations of CONTENT_REQS that the content does not hold: a missing file or line, a line without the text, or a
+// skill row whose text does not hold its level. `read` returns the text of a content file, or null.
+export function citeFaults(read: (file: string) => string | null, reqs = CONTENT_REQS): string[] {
+    const out: string[] = [];
+    const check = (owner: string, [file, line, text]: Cite, level?: number) => {
+        const got = read(file)?.split(/\r?\n/)[line - 1];
+        if (got == null) out.push(`${owner}: ${file}:${line} is not in the content`);
+        else if (!got.includes(text)) out.push(`${owner}: ${file}:${line} does not hold "${text}" (line: "${got.trim()}")`);
+        if (level != null && !new RegExp(`(^|\\D)${level}(\\D|$)`).test(text)) out.push(`${owner}: the text "${text}" does not hold the level ${level}`);
+    };
+    for (const [folder, r] of Object.entries(reqs)) {
+        for (const [q, cite] of r.q ?? []) check(`${folder} needs ${q}`, cite);
+        for (const [skill, level, cite] of r.s ?? []) check(`${folder} needs ${level} ${skill}`, cite, level);
+    }
+    return out;
+}
 
 if (import.meta.main) {
     const root = join(import.meta.dir, '..', '..');
@@ -177,7 +234,9 @@ if (import.meta.main) {
     const serverQp = serverQuestPoints(files(scriptsDir, '.rs2'), constants);
     const wikiDir = join(root, 'vendor', 'rs-sdk', 'wiki', 'quests');
     const wiki = new Map(readdirSync(wikiDir).sort().filter(f => f.endsWith('.md')).map(f => { const t = readFileSync(join(wikiDir, f), 'utf8'); return [norm(t.match(/^# (.+)$/m)?.[1] ?? f), t] as [string, string]; }));
-    const out: Record<string, Reqs> = {}, report: string[] = [], mark = (s: number) => s === 0 ? '?' : s === 2 ? '*' : '';
+    const faults = citeFaults(file => { try { return readFileSync(join(scriptsDir, file), 'utf8'); } catch { return null; } });
+    if (faults.length) throw new Error(`CONTENT_REQS does not match the content:\n${faults.join('\n')}`);
+    const out: Record<string, Reqs> = {}, report: string[] = [], dropped: string[] = [], mark = (s: number) => s === 0 ? '?' : s === 2 ? '*' : '';
     for (const [folder, name] of names) {
         let scriptEntries: { path: string; text: string }[] = [];
         let journals: string[] = [];
@@ -185,14 +244,14 @@ if (import.meta.main) {
         const scripts = scriptEntries.map(e => e.text);
         // Post-quest godbook preaching (horror_godbook.rs2:272, 50 Prayer) is not a Horror from the Deep gate.
         const reqScripts = scriptEntries.filter(e => !/_godbook\.rs2$/.test(e.path)).map(e => e.text);
-        const cross = CROSS_FOLDER_REQS[folder];
-        const quests = new Set([...serverPrereqs(reqScripts, varpFolder, folder, journals), ...(cross?.q ?? [])].filter(f => names.has(f)).map(f => names.get(f)!));
+        const cross = CONTENT_REQS[folder];
+        const quests = new Set([...serverPrereqs(reqScripts, varpFolder, folder, journals), ...(cross?.q ?? []).map(([f]) => f)].filter(f => names.has(f)).map(f => names.get(f)!));
         const page = wiki.get(norm(name)) ?? null, w = page ? wikiReqs(page, journal.filter(n => n !== name)) : null;
-        const dropWikiQ = NON_REV289_WIKI_QUEST_DROPS[name];
-        if (w && dropWikiQ) w.q = w.q.filter(q => !dropWikiQ.has(q));
         const levels = serverLevels(reqScripts, constants, journals);
         for (const [sk, lv] of cross?.s ?? []) levels.set(sk, Math.max(levels.get(sk) ?? 0, lv));
         const r = joinReqs(levels, serverQp, quests, w, serverQuestPoints(reqScripts, constants));
+        const left = wikiOnly(levels, serverQp, quests, w);
+        if (left.length) dropped.push(`${name}: ${left.join(', ')}`);
         // Items: src 1 when the quest's scripts name the item (its debugname as a word), 0 when only the wiki lists it.
         const text = scripts.join('\n'), its = page ? wikiItems(page, items) : [];
         if (its.length) r.i = its.map(([n, c, d]) => [n, c, new RegExp(`\\b${d}\\b`).test(text) ? 1 : 0]);
@@ -202,7 +261,8 @@ if (import.meta.main) {
     }
     dropCycles(out);
     writeFileSync(join(import.meta.dir, 'client-assets', 'quest-reqs.json'), JSON.stringify(out));
-    // --report: one line a quest; ? only the wiki lists it, * only the server checks it.
-    if (process.argv.includes('--report')) console.log(report.join('\n'));
+    // --report: one line a quest; * the wiki does not list the row, ? an item that only the wiki lists. Then the wiki
+    // rows that no content check confirms: they are not in the file.
+    if (process.argv.includes('--report')) console.log(`${report.join('\n')}\n\nWiki rows with no content check (left out):\n${dropped.join('\n') || 'none'}`);
     console.log(`quest-reqs.json: ${Object.keys(out).length} quests with requirements`);
 }

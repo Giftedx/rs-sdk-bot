@@ -2132,11 +2132,11 @@ test('wildernessWatchBox highlights rivals within attack range of our Wilderness
  const hsCode=shell.slice(shell.indexOf('  function wildernessHotspotsBox()'),shell.indexOf('  function wildernessWatchBox()'));
  const hsHtml=new Function('S','E','safeName','window',`${hsCode};return wildernessHotspotsBox();`)(
   {
-   wildernessOverlay:{bands:[{label:'Lvl 1–20 (Tele)',colour:'#86c862',note:'Tele'},{label:'Lvl 21–30 (Glory)',colour:'#e8a844',note:'Glory'},{label:'Lvl 31+ (Deep Wild)',colour:'#e05347',note:'Blocked'}],hotspots:[{label:'Edgeville Ditch',x:3094,z:3520,wild:1,note:'Ditch'},{label:"Rogue's Castle",x:3285,z:3930,wild:52,note:'Castle'}],resolveTarget:(b:any)=>b.target||null},
+   wildernessOverlay:{bands:[{label:'Lvl 1–20 (Tele)',colour:'#86c862',note:'Tele'},{label:'Lvl 21–30 (Glory)',colour:'#e8a844',note:'Glory'},{label:'Lvl 31+ (Deep Wild)',colour:'#e05347',note:'Blocked'}],hotspots:[{label:'Wilderness Edge',x:3094,z:3520,wild:1,note:'Ditch'},{label:"Rogue's Castle",x:3285,z:3930,wild:52,note:'Castle'}],resolveTarget:(b:any)=>b.target||null},
    bots:[{name:'⟦MAIN⟧',inWorld:true,pos:{x:3094,z:3520,level:0},target:{x:3098,z:3955,label:'Mage Bank'}}],
   },
   String,(n:string)=>String(n).replaceAll('⟦MAIN⟧','Main · reserved'),{});
- expect(hsHtml).toContain('Lvl 1–20 (Tele)');expect(hsHtml).toContain('Edgeville Ditch');expect(hsHtml).toContain("Rogue's Castle");
+ expect(hsHtml).toContain('Lvl 1–20 (Tele)');expect(hsHtml).toContain('Wilderness Edge');expect(hsHtml).toContain("Rogue's Castle");
  expect(hsHtml).toContain('Main · reserved');expect(hsHtml).toContain('Mage Bank (3098, 3955)');expect(hsHtml).not.toContain('Haggis');
 });
 
@@ -2347,7 +2347,7 @@ test('minimap wildOverlay renders danger boundaries, hotspots, targets and wall 
  const hits:any[]=[],strokes:string[]=[];
  const g:any=new Proxy({stroke(){strokes.push(String(g.strokeStyle));}},{get:(o:any,k)=>k in o?o[k]:()=>{}});
  const canvas={width:146,height:151,getContext:()=>g};
- const wildOverlay={hotspots:[{label:'Edgeville Ditch',x:3094,z:3520,wild:1,band:'tele'},{label:'Mage Bank / Arena',x:3098,z:3955,wild:55,band:'deep'}],resolveTarget:(b:any)=>b.target||null};
+ const wildOverlay={hotspots:[{label:'Wilderness Edge',x:3094,z:3520,wild:1,band:'tele'},{label:'Mage Bank / Arena',x:3098,z:3955,wild:55,band:'deep'}],resolveTarget:(b:any)=>b.target||null};
  const env:any={
   S:{bots:[account],roster:[],map:{x0:2900,z0:3500,w:500,h:500,scale:1}},
   hud:{querySelector:(q:string)=>q.endsWith('canvas')?canvas:null},account:()=>account,
@@ -2356,7 +2356,7 @@ test('minimap wildOverlay renders danger boundaries, hotspots, targets and wall 
  };
  const res=new Function(...Object.keys(env),`let miniView;${code};minimap();return minimap.hits;`)(...Object.values(env));
  for(const h of res)hits.push(h[2]);
- expect(hits).toContain('Edgeville Ditch (Wildy 1)');
+ expect(hits).toContain('Wilderness Edge (Wildy 1)');
  expect(hits).toContain('Target: Edgeville bank gate');
  expect(strokes).toContain('#86c862');
  expect(strokes).toContain('#e8a844');
