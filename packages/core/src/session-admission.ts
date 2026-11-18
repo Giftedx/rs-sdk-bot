@@ -35,19 +35,32 @@ function assertStatusCovered(status:any,account:string,attemptId:string,createdA
   ||(status.sessionAttemptId&&status.sessionAttemptId!==attemptId&&(!Number.isFinite(status.started)||status.started>=createdAt)))throw Error('latest status is not covered by the producer logout: '+account);
 }
 
-function isDeadPreConnectFailure(receipt:ReturnType<typeof listAttempts>[number]['receipt'],account:string,alive:(pid:number)=>boolean):boolean{
+// The server drops a disconnected session after 500 ticks.
+export const SERVER_SESSION_DROP_MS=200_000;
+// The connect-failed details (inprocess.ts connectFailedDetail) of an attempt that ended before its game socket opened:
+// ClientStream.openSocket rejects with the WebSocket, and cache.ts throws on an error status of a cache request. A
+// second try inside one attempt follows only the server's reply 6, which refuses the client. A login reply
+// ("Account already logged in" names an open session), a timeout and a missing packet observer come after the login
+// block was sent and prove nothing about the session, so those attempts stay held (session-lifecycle.ts attemptOutcome).
+const NO_GAME_SOCKET=/^(?:\[object WebSocket\]|Error: lite: GET \S+ failed with \d+)/;
+function isDeadPreConnectFailure(receipt:ReturnType<typeof listAttempts>[number]['receipt'],account:string,alive:(pid:number)=>boolean,now:number):boolean{
  if(!receipt||receipt.account.toLowerCase()!==account.toLowerCase()||receipt.server!==LIVE_SERVER)return false;
  if(!Number.isFinite(receipt.owner?.pid)||receipt.owner.pid<=0||alive(receipt.owner.pid))return false;
- return receipt.events.some(e=>e.kind==='connect-failed')&&!receipt.events.some(e=>e.kind==='connected'||e.kind==='ready'||e.kind==='ended'||e.kind==='logout');
+ if(!receipt.events.every(e=>e.kind==='connecting'||e.kind==='connect-failed'||e.kind==='closed'))return false;
+ const failed=receipt.events.filter(e=>e.kind==='connect-failed');
+ return failed.length===1&&NO_GAME_SOCKET.test(failed[0]!.detail??'')&&now-receipt.updatedAt>=SERVER_SESSION_DROP_MS;
 }
 
-function priorConfirmedAfterDeadPreConnects(account:string,root:string,status:any,alive:(pid:number)=>boolean):ProducerProofRef|null{
+// Start admission only. The newest attempts opened no game socket, their owners are dead and the newest is older than
+// the server's session drop, so the account is as offline as the confirmed logout before them left it. The controller
+// accepts only the latest attempt as a repair proof (swarm.ts currentLogout), so a repair never takes this path.
+function priorConfirmedAfterDeadPreConnects(account:string,root:string,status:any,alive:(pid:number)=>boolean,now:number):ProducerProofRef|null{
  const attempts=listAttempts(account,LIVE_SERVER,{root});
  let skipped=0;
  for(let i=attempts.length-1;i>=0;i--){
   const r=attempts[i]!.receipt;
   if(!r)return null;
-  if(isDeadPreConnectFailure(r,account,alive)){skipped++;continue;}
+  if(isDeadPreConnectFailure(r,account,alive,now)){skipped++;continue;}
   if(skipped===0||r.account.toLowerCase()!==account.toLowerCase()||r.server!==LIVE_SERVER)return null;
   const end=r.events.find(e=>e.kind==='ended');
   if(end?.detail!=='logged-out')return null;
@@ -71,7 +84,7 @@ export function liveLogoutRef(account:string,base:string,required=false,now=Date
   return{kind:'producer',attemptId:proof.attemptId};
  }
  if(proof.state==='held'){
-  const fallback=priorConfirmedAfterDeadPreConnects(account,root,status,alive);
+  const fallback=required?null:priorConfirmedAfterDeadPreConnects(account,root,status,alive,now);
   if(fallback)return fallback;
   if(takeover&&!required){
    const ref=takeoverRef(proof,root,alive);

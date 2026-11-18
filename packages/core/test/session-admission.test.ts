@@ -35,31 +35,50 @@ test('historical live status and newer crossed status refuse; a fresh identity c
  f.status('Rod',{at:Date.now()+10000,result:''});expect(()=>withSessionAdmission(['Rod'],f.base,()=>++launches)).toThrow('not covered');expect(launches).toBe(1);
 });
 
-test('dead pre-connect failures after confirmed logout admit on the prior logout proof',()=>{
- const f=fixture();
- const confirmed=f.attempt('DeadFail');
- confirmed.record('connected');
- confirmed.record('ready');
- confirmed.record('ended','logged-out');
- const fail1=f.attempt('DeadFail');
- fail1.record('connect-failed','TimeoutError');
- const fail2=f.attempt('DeadFail');
- fail2.record('connect-failed','ECONNREFUSED');
+// Receipt details as inprocess.ts connectFailedDetail writes them.
+const SOCKET_NEVER_OPENED='[object WebSocket] http=[{"url":"https://rs-sdk-demo.fly.dev/api/version","status":200,"ms":80}]';
+const CACHE_REQUEST_REFUSED='Error: lite: GET https://rs-sdk-demo.fly.dev/crc failed with 502 http=[{"url":"https://rs-sdk-demo.fly.dev/crc","status":502,"ms":40}]';
+const dead=()=>false,alive=()=>true,AGED=201_000;
+function afterLogout(account:string,...details:string[]){
+ const f=fixture(),confirmed=f.attempt(account);
+ confirmed.record('connected');confirmed.record('ready');confirmed.record('ended','logged-out');
+ for(const detail of details)f.attempt(account).record('connect-failed',detail);
+ return{f,confirmed};
+}
+test('dead attempts that ended before the game socket opened admit on the prior logout proof',()=>{
+ const {f,confirmed}=afterLogout('DeadFail',SOCKET_NEVER_OPENED,CACHE_REQUEST_REFUSED);
  // While the owner pid appears alive, launch stays blocked.
- expect(()=>liveLogoutRef('DeadFail',f.base,true,Date.now(),false,()=>true)).toThrow('not confirmed');
- // Once owner pids are dead and status has not advanced, both normal and required admission use the prior confirmed logout.
- expect(liveLogoutRef('DeadFail',f.base,true,Date.now(),false,()=>false)).toEqual({kind:'producer',attemptId:confirmed.attemptId});
+ expect(()=>liveLogoutRef('DeadFail',f.base,false,Date.now()+AGED,false,alive)).toThrow('not confirmed');
+ // A failure younger than the server's 200 s session drop stays blocked.
+ expect(()=>liveLogoutRef('DeadFail',f.base,false,Date.now()+60_000,false,dead)).toThrow('not confirmed');
+ expect(liveLogoutRef('DeadFail',f.base,false,Date.now()+AGED,false,dead)).toEqual({kind:'producer',attemptId:confirmed.attemptId});
  // A newer uncovered status after the confirmed logout still refuses.
  f.status('DeadFail',{at:Date.now()+10000,result:''});
- expect(()=>liveLogoutRef('DeadFail',f.base,true,Date.now(),false,()=>false)).toThrow('not covered');
+ expect(()=>liveLogoutRef('DeadFail',f.base,false,Date.now()+AGED,false,dead)).toThrow('not covered');
 });
 
-test('dead pre-connect failures after a disconnected session remain unconfirmed for required repairs',()=>{
+test('a dead attempt that failed after its login block was sent keeps the account held',()=>{
+ for(const detail of ['LoginError: Account already logged in http=[{"url":"https://rs-sdk-demo.fly.dev/crc","status":200,"ms":40}]',
+  'TimeoutError: The operation timed out','LoginError: Login rejected (-1)','LoginError: Login server offline http=[]','no packet observer','ECONNREFUSED']){
+  const {f}=afterLogout('SentLogin',detail);
+  expect(()=>liveLogoutRef('SentLogin',f.base,false,Date.now()+AGED,false,dead)).toThrow('not confirmed');
+ }
+ // One unproved attempt among proved ones holds the account.
+ const {f}=afterLogout('SentLogin',SOCKET_NEVER_OPENED,'LoginError: Account already logged in',SOCKET_NEVER_OPENED);
+ expect(()=>liveLogoutRef('SentLogin',f.base,false,Date.now()+AGED,false,dead)).toThrow('not confirmed');
+});
+
+test('a repair never takes the older logout: the controller refuses a proof that a newer attempt supersedes',()=>{
+ const {f}=afterLogout('Repair',SOCKET_NEVER_OPENED);
+ expect(()=>liveLogoutRef('Repair',f.base,true,Date.now()+AGED,false,dead)).toThrow('not confirmed');
+});
+
+test('dead pre-connect failures after a disconnected session remain unconfirmed',()=>{
  const f=fixture();
  const disc=f.attempt('DiscPrev');
  disc.record('connected');
  disc.record('ended','disconnected');
  const fail=f.attempt('DiscPrev');
- fail.record('connect-failed','TimeoutError');
- expect(()=>liveLogoutRef('DiscPrev',f.base,true,Date.now(),false,()=>false)).toThrow('not confirmed');
+ fail.record('connect-failed',SOCKET_NEVER_OPENED);
+ for(const required of [true,false])expect(()=>liveLogoutRef('DiscPrev',f.base,required,Date.now()+AGED,false,dead)).toThrow('not confirmed');
 });
