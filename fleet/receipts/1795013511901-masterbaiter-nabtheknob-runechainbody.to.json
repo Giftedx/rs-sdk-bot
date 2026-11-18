@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795013511901-masterbaiter-nabtheknob-runechainbody",
+ "account": "NabTheKnob",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "3bf96210-7206-495a-ae52-8442844f3bd8",
+ "count": 0,
+ "ok": false,
+ "at": 1795013577078,
+ "detail": "trade claimed"
+}

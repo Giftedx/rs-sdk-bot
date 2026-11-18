@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795013525560,
+ "at": 1795013593232,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -205,10 +205,10 @@
    ]
   },
   {
-   "account": "Billionaire",
+   "account": "Swordinhand",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=18 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=billionaire-kit17-532-6to24 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=32 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=swordinhand-kit20-532-6to38 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -216,7 +216,7 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 18 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "goal": "buy 32 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
    "role": "supply",
    "template": "kit-buy:army-bury-big-99",
    "autopilot": "local",
@@ -401,24 +401,6 @@
    ]
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=32 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=swordinhand-kit20-532-6to38 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 32 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Wandwaver",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -488,6 +470,29 @@
    "resources": [
     "trooper:battlefield"
    ]
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "532",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "17",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying bought big bones",
+   "role": "combat",
+   "template": "army-bury-big-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Ballspinner",
