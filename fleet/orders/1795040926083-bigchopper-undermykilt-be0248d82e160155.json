@@ -1,0 +1,29 @@
+{
+ "id": "1795040926083-bigchopper-undermykilt-be0248d82e160155",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "UnderMyKilt",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795040926083,
+ "end": 1795043326083,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Rune platelegs",
+   "count": 1
+  }
+ ],
+ "takerWaits": true
+}
