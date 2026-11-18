@@ -51,6 +51,7 @@ import { supervise } from '../packages/practice/src/supervise';
 import { enabledByAccount, foreignRun, endedForGood, isReservation, parseJob, startable, loadEnded, applyEndRepair, persistEnded, supervisorEndLine, activeExternalLive, pendingStartupCount, admissionDecision, startReserve, missionSignature, overlappingRun, observeEnabled, applyResume, ownedPayoutWaiting,foodSupplyDemand,type Job,type RepairProofs,
     applyScriptQualification, holdCandidates, loadHolds, persistHolds, currentLogout, defaultRepairProofs, type ScriptHold } from './swarm';
 import { beginSessionAttempt, readLogoutProof, verifyLegacyLogout } from '../packages/core/src/session-lifecycle';
+import { liveLogoutRef } from '../packages/core/src/session-admission';
 import { createHash } from 'node:crypto';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { installJob } from '../packages/router/src/coordinator-live';
@@ -512,6 +513,19 @@ test('scoped coordinator starts only its qualified assignments while ordinary sw
  expect(coordinatedAdmission(old,false)).toBe(true);expect(coordinatedAdmission(old,true)).toBe(false);
  expect(coordinatedAdmission({...old,coordinatorOwner:'coordinator'} as Job,true)).toBe(true);
  expect(coordinatedAdmission({...old,standing:true} as Job,true)).toBe(true);
+});
+
+test('the older logout that start admission takes past a dead socket failure is never a repair proof',()=>{
+    const base=mkdtempSync(join(tmpdir(),'swarm-fallback-')),root=join(base,'.practice/session-lifecycle');
+    try{
+        const old=loggedOut(root,'Rod'),dead=()=>false,later=Date.now()+201_000;
+        beginSessionAttempt({account:'Rod',server:LIVE},{root,owner}).record('connect-failed','[object WebSocket] http=[]');
+        const ref=liveLogoutRef('Rod',base,false,later,false,dead);
+        expect(ref).toEqual({kind:'producer',attemptId:old.attemptId});
+        expect(currentLogout({account:'Rod',server:LIVE,proof:ref},lifecycleProofs(root))).toEqual({ok:false,reason:'logout proof superseded by a newer attempt'});
+        // A repair reads with required=true: it refuses before the coordinator parks an assignment on a proof the controller rejects.
+        expect(()=>liveLogoutRef('Rod',base,true,later,false,dead)).toThrow('account logout is not confirmed');
+    }finally{rmSync(base,{recursive:true,force:true});}
 });
 
 test('repair re-reads exact producer proof: new intent, late old callback, unknown cleanup and missing proof refuse',()=>{
