@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795004134907-oreelse-billionaire-naturerune",
+ "account": "OreElse",
+ "partner": "Billionaire",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "3c019840-6022-4798-a9a6-6c2c1375b091",
+ "count": 0,
+ "ok": false,
+ "at": 1795004273499,
+ "detail": "trade claimed"
+}

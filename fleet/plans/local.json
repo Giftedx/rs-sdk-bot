@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795004226704,
+ "at": 1795004283283,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -297,32 +297,9 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-2e303faf-113e-49a0-96e5-778f11648dbd"
    },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-nab-trooper-ranged99 [task-2e303faf-113e-49a0-96e5-778f11648dbd]",
-   "role": "helper"
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "2000",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "50",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-7d41d6d9-2eac-494e-ab0c-5dff57034051"
-   },
    "enabled": false,
    "repeat": false,
-   "goal": "run-bow-trooper-ranged50-owned-arrows [task-7d41d6d9-2eac-494e-ab0c-5dff57034051]",
+   "goal": "run-nab-trooper-ranged99 [task-2e303faf-113e-49a0-96e5-778f11648dbd]",
    "role": "helper"
   }
  ],
