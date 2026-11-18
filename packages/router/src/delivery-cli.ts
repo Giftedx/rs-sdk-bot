@@ -103,10 +103,19 @@ function scanImportClosure(starts:readonly string[],base:string,contents?:Map<st
 // Import discovery and hashing share bytes only within this call. Every later scan reads fresh source.
 // Each file enters as the digest of its program (release-digest.ts): a comment, layout or line-ending edit keeps a
 // qualification, and a Windows and a Linux checkout of one commit give one source.
+// The digest of a file is kept in the process under the hash of its bytes: a delivery asks for the fingerprint after
+// each check, and a file that did not change is not parsed again.
+const programDigests=new Map<string,string>();
+function programDigest(file:string,bytes:Buffer):string{
+ const key=createHash('sha256').update(bytes).digest('hex')+file.slice(file.lastIndexOf('.'));
+ let digest=programDigests.get(key);
+ if(!digest){if(programDigests.size>=8192)programDigests.clear();programDigests.set(key,digest=releaseFileDigest(file,bytes,ts));}
+ return digest;
+}
 export function hashImportClosure(starts:readonly string[],base=root,hash=createHash('sha256')):string{
  const contents=new Map<string,Buffer>();
  for(const file of scanImportClosure(starts,base,contents))
-  hash.update(file+'\0').update(releaseFileDigest(file,contents.get(file)??readFileSync(join(base,file)),ts)).update('\0');
+  hash.update(file+'\0').update(programDigest(file,contents.get(file)??readFileSync(join(base,file)))).update('\0');
  return hash.digest('hex');
 }
 // The capability release of the entry (packages/core/src/worker-release.ts); null when the entry cannot be released.

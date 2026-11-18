@@ -32,7 +32,8 @@ test('a captured native band accepts the next finite target without changing fix
  expect(rangedCase.rangedPracticeTarget(85,input,{RANGED_PROGRESSION_ENTRY:'captured.json',RANGED_PROGRESSION_TARGET:'90'})).toBe(90);
  expect(rangedCase.rangedPracticeTarget(83,fresh(),{})).toBe(83);
  expect(()=>rangedCase.rangedPracticeTarget(85,input,{RANGED_PROGRESSION_TARGET:'90'})).toThrow();
- for(const target of ['85','91','99','NaN','90.5'])expect(()=>rangedCase.rangedPracticeTarget(85,input,{RANGED_PROGRESSION_ENTRY:'captured.json',RANGED_PROGRESSION_TARGET:target})).toThrow();
+ expect(rangedCase.rangedPracticeTarget(85,input,{RANGED_PROGRESSION_ENTRY:'captured.json',RANGED_PROGRESSION_TARGET:'99'})).toBe(99);
+ for(const target of ['85','84','100','NaN','90.5'])expect(()=>rangedCase.rangedPracticeTarget(85,input,{RANGED_PROGRESSION_ENTRY:'captured.json',RANGED_PROGRESSION_TARGET:target})).toThrow();
 });
 
 test('captured practice protects its actual coin stock with the same bounded spend',()=>{
@@ -67,6 +68,14 @@ test('the outer benchmark checks the captured start tile after reading an overri
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
 
+test('the proof takes a training method and no acquire method, as the worker splits them',async()=>{
+ const {isRangedAcquireMethod}=await import('../../../scripts/ranged-train');
+ const ids=new Set<string>();
+ for(const file of ['packages/planner/src/progression-ranged.ts','scripts/ranged-train.ts'])for(const m of readFileSync(join(import.meta.dir,'../../..',file),'utf8').matchAll(/'(ranged\/[a-z0-9-]+)'/g))ids.add(m[1]!);
+ expect(ids.size).toBeGreaterThan(10);
+ for(const id of ids)expect([id,rangedCase.rangedTrainingMethod(id)]).toEqual([id,!isRangedAcquireMethod(id)]);
+});
+
 test('saved entry verification refuses tampered frozen bytes or detached skill and stock bands',()=>{
  const changed=fresh();changed.bank.find(i=>i.id===882)!.count=147;changed.bank.find(i=>i.id===2142)!.count=40;
  const loaded=parseRangedEntry(bytes(changed)),result={method:'ranged/troopers',bow:841,arrow:882,xpGain:123160};
@@ -79,6 +88,8 @@ test('saved entry verification refuses tampered frozen bytes or detached skill a
  expect(Object.values(band.levels).every(range=>!('max' in range))).toBe(true);
  // The step bound is the Ranged XP of the proof run, not its levels.
  expect(band.gainXp).toEqual({Ranged:123160});
+ // The bow and the arrow of the run are named, so the method must use them for the account.
+ expect(band.kit).toEqual([841,882]);
  expect(rangedSupportedMethods(loaded.entry,{...result,xpGain:undefined},report.source,85)[0]!.bands[0]!.gainXp).toEqual({Ranged:0});
  // Every Ranged training method the worker reports gets a band; an acquire step and a foreign id get none.
  expect(rangedSupportedMethods(loaded.entry,{...result,method:'ranged/troopers-maple'},report.source,85)[0]!.id).toBe('ranged/troopers-maple');

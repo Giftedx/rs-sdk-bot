@@ -35,7 +35,10 @@ export interface ObservedAccount{
 }
 // gainXp: the XP of a skill that one step may add at most: the XP that the proof run made. The bound is XP, not
 // levels, because XP is the work: the same levels cost many times the kills at a higher level.
-export interface StateBand{levels?:Record<string,{min?:number;max?:number}>;gainXp?:Record<string,number>;items?:Record<number,number>;quests?:string[];server?:string;loadout?:number[];maxCrowding?:number}
+// kit: the items that the proof run fought with (a bow and its arrows). The method must use these same items for
+// the account now: its requirements name the kit it chose, so an account with a better bow in the bank, which the
+// worker would take, is not admitted by a proof of the lesser bow.
+export interface StateBand{levels?:Record<string,{min?:number;max?:number}>;gainXp?:Record<string,number>;kit?:number[];items?:Record<number,number>;quests?:string[];server?:string;loadout?:number[];maxCrowding?:number}
 export interface ConditionalMeasuredSample{xp?:Record<string,number>;units:number;ticks:number;elapsedMs?:number;evidence:string;source:string;conditions:StateBand;setupTicks?:number}
 export interface ProgressionMethod{
  id:string;step:Step;source:string;
@@ -153,6 +156,12 @@ function bandReasons(b:StateBand,s:SearchState,a:ObservedAccount,c:SelectionCont
   const xp=skillXp(s,name),level=xp===undefined?undefined:levelForXp(xp);
   if(level===undefined||range.min!==undefined&&level<range.min||range.max!==undefined&&level>range.max)reasons.push('level band '+name);
  }
+ // A step makes one whole level at least (the worker's target is a level). When the proved XP does not reach the
+ // next level from here, no step fits inside the proof.
+ for(const [name,proved]of Object.entries(b.gainXp??{})){
+  const xp=skillXp(s,name),level=xp===undefined?undefined:levelForXp(xp);
+  if(xp===undefined||level===undefined||level<99&&xpForLevel(level+1)-xp>proved)reasons.push('gain band '+name);
+ }
  for(const [id,n]of entries(b.items))if((s.items[Number(id)]??0)<n)reasons.push('item band '+id);
  for(const q of b.quests??[])if(s.quests[key(q)]!==true)reasons.push('quest band '+q);
  if(b.server&&b.server!==a.server)reasons.push('server band');
@@ -161,6 +170,10 @@ function bandReasons(b:StateBand,s:SearchState,a:ObservedAccount,c:SelectionCont
  return reasons;
 }
 function qualificationReasons(b:StateBand,m:ProgressionMethod,s:SearchState,a:ObservedAccount,c:SelectionContext,intent:WorkIntent):string[]{
+ const kit=(b.kit??[]).filter(id=>!(m.requirements?.items&&Object.hasOwn(m.requirements.items,id))).map(id=>'kit band '+id);
+ return[...kit,...stateReasons(b,m,s,a,c,intent)];
+}
+function stateReasons(b:StateBand,m:ProgressionMethod,s:SearchState,a:ObservedAccount,c:SelectionContext,intent:WorkIntent):string[]{
  const admitted=c.admitted;
  if(!admitted||admitted.method!==m.id||admitted.source!==m.source||stable(admitted.intent)!==stable(intent)||key(admitted.account.account)!==key(a.account)||admitted.account.server!==a.server)return bandReasons(b,s,a,c);
  // A successful entry bound the stock available at admission. A spent arrow is not a failed entry fact.
