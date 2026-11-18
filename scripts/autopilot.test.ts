@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { admittedByLevels, handNamed } from '../packages/core/src/army-roster';
-import { reservedAccounts } from '../packages/planner/src/autopilot';
+import { OBSERVATION_FRESH_MS, reservedAccounts } from '../packages/planner/src/autopilot';
 import { loadOwners } from '../packages/core/src/fleet';
 import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -12,7 +12,7 @@ import { BONE_XP } from './train-prayer';
 import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, startable, supervisorCommand } from './swarm';
 import { supervise } from '../packages/practice/src/supervise';
 import { planView } from './fleet-sync';
-import { headroomWithMargin, plannerOwns, writtenNotRunning, tradeStarts, memoryHeadroom, freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { SIDE_STOCK_MAX_AGE_MS, unobservedAccounts, headroomWithMargin, plannerOwns, writtenNotRunning, tradeStarts, memoryHeadroom, freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import { mergedPlan } from '../packages/core/src/coordinator-jobs';
 import { FOLLOWED_RETRY_MS, GEAR_ASK_LIMIT, GEAR_ASK_MARGIN, UNSOLD_RETRY_MS, gearLimit } from './autopilot';
 import { KIT_PRICE_CAPS } from '../packages/planner/src/autopilot';
@@ -1329,4 +1329,13 @@ test('the dry pass names a swarm.json reservation by its goal and gives its acco
         if (prevSide === undefined) delete process.env.FLEET_SIDE; else process.env.FLEET_SIDE = prevSide;
         rmSync(dir, { recursive: true });
     }
+});
+
+test('the stock freshness of the donor rule is the one OBSERVATION_FRESH_MS', () => {
+    expect(SIDE_STOCK_MAX_AGE_MS).toBe(OBSERVATION_FRESH_MS);
+});
+
+test('unobservedAccounts reads the observation time alone', () => {
+    const now = 10 * 3_600_000, at: Record<string, unknown> = { Fresh: now - 60_000, Old: now - 31 * 60_000, Edge: now - 30 * 60_000, Future: now + 1, Missing: undefined, Text: 'x', Zero: 0, Empty: now - 1000 };
+    expect(unobservedAccounts(Object.keys(at), n => at[n], now)).toEqual(['Old', 'Edge', 'Future', 'Missing', 'Text', 'Zero']);
 });

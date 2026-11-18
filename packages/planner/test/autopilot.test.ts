@@ -2745,3 +2745,26 @@ test('an order costs two slots: the plan never holds more bots than the slots, d
     expect(one.find(x => x.account === 'Zed')!.reason).not.toBe('vacant: gives coins this pass');
     for (const slots of [0, 1, 2, 3]) expect([slots, run(slots).filter(x => x.template).reduce((n, x) => n + (x.fund || x.send ? 2 : 1), 0) <= slots]).toEqual([slots, true]);
 });
+
+test('a vacant reason names an observation too old to offer stock, and accountFrom keeps the observation time', () => {
+    const band = catalogue().filter(t => t.id === 'army-cow-strength-45');
+    const now = 100 * 3_600_000, old = { ...acct('Rookie'), observedAt: now - 52 * 3_600_000 };
+    const reason = (a: Acct, extra: Partial<Inputs> = {}) => plan(inputs([a], { templates: band, army: new Set(['rookie']), ...extra }))[0]!.reason;
+    expect(reason(old)).toMatch(/and no source gives them$/);
+    expect(reason(old, { now, unobserved: ['Idle1', 'Idle2'] })).toMatch(/and no source gives them \(its own observation is 52 h old; 2 free accounts have no observation under 30 minutes old, so their stock is not offered\)$/);
+    // A fresh observation and no unobserved donor add nothing.
+    expect(reason({ ...old, observedAt: now - 60_000 }, { now, unobserved: [] })).toMatch(/and no source gives them$/);
+    expect(accountFrom('Seen', side, { at: 1234, skills: [] }, () => undefined).observedAt).toBe(1234);
+    expect(accountFrom('Unseen', side, null, () => undefined).observedAt).toBeUndefined();
+});
+
+test('the stale-observation note follows only a missing source, not a coin lack', () => {
+    const band = catalogue().filter(t => t.id === 'army-cow-strength-45');
+    const now = 100 * 3_600_000, old = { ...acct('Rookie'), observedAt: now - 52 * 3_600_000 };
+    const run = (templates: Template[], a: Acct = old) => plan(inputs([a], { templates, army: new Set(['rookie']), now, unobserved: ['Idle1'] }))[0]!.reason;
+    expect(run(band)).toMatch(/and no source gives them \(its own observation is 52 h old/);
+    const poor = catalogue().filter(t => t.id === 'goldfarm@2652,3318');
+    const coin = plan(inputs([acct('Thief', { Thieving: 70, Hitpoints: 54 }, { coin: 1 })], { templates: poor, now, unobserved: ['Idle1'], taken: {} }))[0]!;
+    expect(coin.reason).toMatch(/coins/);
+    expect(coin.reason).not.toMatch(/observation/);
+});

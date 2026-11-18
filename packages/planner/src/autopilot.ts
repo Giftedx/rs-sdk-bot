@@ -21,7 +21,8 @@ import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-rou
 // reports (absent: none known, which counts as 0). `pos`: the tile where the account stands while it is offline
 // (absent: not known, and the reach rule does not apply).
 // `currentHP`: the observed current Hitpoints; absent means unknown, never the base level.
-export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; currentHP?: number; combat?: number; quests?: ReadonlySet<string>; questPoints?: number; pos?: { x: number; z: number; level: number } };
+// `observedAt`: when the observation behind this account was taken (its status `at`); absent: no observation.
+export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; observedAt?: number; currentHP?: number; combat?: number; quests?: ReadonlySet<string>; questPoints?: number; pos?: { x: number; z: number; level: number } };
 export type Flow = { item: string; perTick: number };
 // `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
 // `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
@@ -127,6 +128,11 @@ export type Inputs = {
     // Lower-case names of the accounts on this side's army roster: only they take goal bands. A specialist's board
     // time counts every tick it plays, so combat training is opt-in per account, never global.
     army?: ReadonlySet<string>;
+    // The time of this pass (ms). With it a vacant reason names an observation older than OBSERVATION_FRESH_MS.
+    now?: number;
+    // The free accounts of this side that no donor stock was read for: their observation is older than
+    // OBSERVATION_FRESH_MS or missing, so their stock is not offered to a kit (scripts/autopilot.ts donorStock).
+    unobserved?: readonly string[];
     // The bot slots left for planner jobs (the swarm's limit less the hand jobs and the live bots that the swarm counts but
     // does not run). plan() gives a job to at most this many accounts, best first, and names the rest "waits for a bot
     // slot"; a running job always keeps its slot. Absent: no limit.
@@ -164,6 +170,9 @@ export type Inputs = {
     mountain?: (a: Acct) => boolean;
 };
 export const FUND_RESERVE = 50_000;
+// An account's stock is offered to another account's kit only from an observation younger than this
+// (scripts/autopilot.ts SIDE_STOCK_MAX_AGE_MS equals it; scripts/autopilot.test.ts checks).
+export const OBSERVATION_FRESH_MS = 30 * 60_000;
 // The template id of a kit buy for a goal band: `kit-buy:<band id>`. A retired pair (two fail RESULTs with no
 // progress: no stock under the cap) sends the account to the donors instead.
 export const KIT_BUY = 'kit-buy:', KIT_BUY_SCRIPT = 'scripts/buy-owned-ge-item.ts';
@@ -1217,7 +1226,15 @@ export function plan(inp: Inputs): Assignment[] {
             return undefined;
         };
         // With no finite demand no supply job has value, whatever it lacks; a goal band still stands apart from demand.
-        const roster = has('roster')[0], other = demand.some(d => d.short > 0) ? job() : 'no finite route or army supply demand';
+        // An observation that is too old to offer stock is a cause of "no source", so the reason says so.
+        const sourceless = (text: string | undefined) => {
+            if (!text || !/ and no source/.test(text)) return text;
+            const notes: string[] = [];
+            if (inp.now !== undefined && a.observedAt !== undefined && inp.now - a.observedAt > OBSERVATION_FRESH_MS) notes.push(`its own observation is ${Math.round((inp.now - a.observedAt) / 3_600_000 * 10) / 10} h old`);
+            if (inp.unobserved?.length) notes.push(`${inp.unobserved.length} free accounts have no observation under ${OBSERVATION_FRESH_MS / 60_000} minutes old, so their stock is not offered`);
+            return notes.length ? `${text} (${notes.join('; ')})` : text;
+        };
+        const roster = has('roster')[0], other = sourceless(demand.some(d => d.short > 0) ? job() : 'no finite route or army supply demand');
         if (roster) return `vacant: not on the army roster (${has('roster').length} bands, nearest ${roster.template.id})${other ? `; otherwise ${other}` : ''}`;
         return `vacant: ${other ?? 'no template meets its skills and holdings'}`;
     };
@@ -2504,7 +2521,7 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
     const quests = Array.isArray(status?.quests)
         ? new Set<string>(status.quests.flatMap((q: any) => typeof q === 'string' ? [norm(q)] : typeof q?.name === 'string' && q.state === 'complete' ? [norm(q.name)] : [])) : undefined;
     const questPoints = status?.guildFacts?.varps?.qp, p = status?.pos;
-    return { name, side, skills, items, ...(currentHP !== undefined ? { currentHP } : {}), ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}), ...(Number.isFinite(questPoints) ? { questPoints } : {}),
+    return { name, side, skills, items, ...(Number.isFinite(status?.at) && status.at > 0 ? { observedAt: status.at } : {}), ...(currentHP !== undefined ? { currentHP } : {}), ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}), ...(Number.isFinite(questPoints) ? { questPoints } : {}),
         ...(Number.isFinite(p?.x) && Number.isFinite(p?.z) ? { pos: { x: p.x, z: p.z, level: Number.isFinite(p.level) ? p.level : 0 } } : {}) };
 }
 
