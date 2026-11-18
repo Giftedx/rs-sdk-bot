@@ -2,6 +2,10 @@ name: Progression practice
 on:
   workflow_dispatch:
   workflow_call:
+  # Each merge makes the method proofs of its commit on a clean runner. The PC adopts them with
+  # `bun scripts/adopt-proofs.ts` and runs no practice engine for them.
+  push:
+    branches: [master]
 permissions:
   contents: read
 jobs:
@@ -39,6 +43,8 @@ jobs:
             .practice/progression-ranged/**
             .practice/logs/engine-*.log
   ranged:
+    # The three-seed route comparison is for a dispatch, not for each merge.
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     strategy:
@@ -83,6 +89,7 @@ jobs:
             .practice/progression-ranged/**
             .practice/logs/engine-aiobench-*.log
   compare:
+    if: github.event_name != 'push'
     needs: ranged
     runs-on: ubuntu-latest
     timeout-minutes: 5
