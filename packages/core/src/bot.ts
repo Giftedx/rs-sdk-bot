@@ -81,10 +81,27 @@ export async function awaitBotReady(s: Session, log: (line: string) => void): Pr
     }
 }
 
+export interface BotRecord {
+    script: string;
+    argv: string[];
+    workArgs?: string[];
+    env?: Record<string, string | undefined>;
+}
+
+// Recorded argv is the complete CLI. A composed entry can supply its progression arguments separately.
+export function botWork(name: string, record?: BotRecord, argv: readonly string[] = process.argv, env: Record<string, string | undefined> = process.env) {
+    const args = record?.argv ?? argv.slice(2);
+    return {
+        script: record?.script ?? argv[1] ?? '',
+        args: [...(record?.workArgs ?? (args[0]?.toLowerCase() === name.toLowerCase() ? args.slice(1) : args))],
+        env: record?.env ?? { ...env },
+    };
+}
+
 // `opts.log` receives the START and LOGOUT lines; the bot host (host.ts) passes a per-bot log. Default console.log.
 // `opts.record` names the worker script and its arguments for the run record (tick-record.ts); the bot host passes
 // the hosted script, a standalone worker uses its own process arguments.
-export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown>; onSessionEnd?: (s: Session, detail: string) => Promise<unknown>; record?: { script: string; argv: string[]; env?:Record<string,string|undefined> }; trade?: Parameters<typeof connectInProcess>[0]['trade'] } = {}): Promise<Session> {
+export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown>; onSessionEnd?: (s: Session, detail: string) => Promise<unknown>; record?: BotRecord; trade?: Parameters<typeof connectInProcess>[0]['trade'] } = {}): Promise<Session> {
     if (executionContext.getStore()?.signal.aborted) return new Promise(() => {});
     // An in-process runner in a bot host routes this account's logins through the host's own openBot, so the host
     // tracks the session and logs it out when the runner ends. The hook is lifted for the call it makes back here.
@@ -123,8 +140,7 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     const fleeOn = process.env.FLEE_GUARD !== '0' && !recordRun(name) && !/pk|pvp|spar|gang/i.test(scriptFile.split(/[\\/]/).at(-1) ?? '');
     const lootTables = lootOn ? sharedLootTables() : null;
     if (lootOn) loadDanger();
-    const workArgv=opts.record?.argv??process.argv.slice(2);
-    const s = await connectInProcess({ name, password, server,work:{script:opts.record?.script??process.argv[1]??'',args:workArgv[0]?.toLowerCase()===name.toLowerCase()?workArgv.slice(1):workArgv,env:opts.record?.env??{...process.env}}, ...(trade ? {
+    const s = await connectInProcess({ name, password, server, work: botWork(name, opts.record), ...(trade ? {
         trade: {...trade, check: server => { assertSideOwns(name); trade.check(server); }},
     } : {}) });
     await awaitBotReady(s, log);
