@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794963495304,
+ "at": 1794963510214,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -462,22 +462,6 @@
    "template": "army-alch-air-magic-99",
    "autopilot": "local",
    "resources": []
-  },
-  {
-   "account": "NabTheKnob",
-   "script": "scripts/fleet-inspect.ts",
-   "args": [],
-   "env": {
-    "REQUIRE_BANK": "1",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-bad6dd4c-3cae-453c-b608-684ede337e9d"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-observe-nab95-after-prayer99 [task-bad6dd4c-3cae-453c-b608-684ede337e9d]",
-   "role": "helper"
   }
  ],
  "army": [
