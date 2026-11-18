@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { readFileSync as read } from 'node:fs';
 import { parsePack } from '../packages/knowledge/src/pack';
 import { contentRoot } from '../packages/knowledge/src/paths';
-import { attackStyleOfAnim, attackStyleOfSeq, holdProtect, KitSwapper, protectOf, readSighting, retreatOf, ThreatWatch } from './pk-threat';
+import { attackStyleOfAnim, attackStyleOfSeq, holdProtect, KitSwapper, protectionPoints, protectOf, readSighting, retreatOf, ThreatWatch } from './pk-threat';
 
 const idOf = (pack: string, name: string) => { for (const [id, n] of parsePack(read(join(contentRoot(), `pack/${pack}.pack`), 'utf8'))) if (n === name) return id; throw new Error(`${name} not in ${pack}`); };
 const STAFF = idOf('obj', 'staff_of_air'), BOW = idOf('obj', 'shortbow'), SCIM = idOf('obj', 'rune_scimitar');
@@ -208,4 +208,13 @@ test('a record file moves aside at the size cap, and a full directory takes no n
     expect(readdirSync(join(view2.root, '.practice', 'threat-records', 'demo.example_43594'))).toHaveLength(1);
     expect(view2.lines.filter(l => l.startsWith('THREAT record directory is full'))).toHaveLength(1);
     expect(lines.some(l => l.startsWith('THREAT record write failed'))).toBe(false);
+});
+
+test('protectionPoints: 0 when the account cannot use a protect prayer (Prayer below 37), else the points now', () => {
+    const at = (level: number, points?: number) => ({ sdk: { getSkill: () => ({ level }), getState: () => ({ prayers: { prayerPoints: points } }) } }) as never;
+    expect(protectionPoints(at(1, 1))).toBe(0);
+    expect(protectionPoints(at(36, 36))).toBe(0);
+    expect(protectionPoints(at(37, 37))).toBe(37);
+    expect(protectionPoints(at(99, 0))).toBe(0);
+    expect(protectionPoints(at(99, undefined))).toBeUndefined();
 });

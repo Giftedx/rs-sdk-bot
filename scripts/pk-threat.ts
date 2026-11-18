@@ -84,7 +84,7 @@ export class ThreatWatch {
     // The members now in the Wilderness, from the sessions that are logged in.
     private members(): { sessions: Session[]; members: Member[] } {
         const sessions = this.o.sessions().filter(s => { const p = s.sdk.getState()?.player; return !!p && !p.isDead && wildLevel(p.worldX, p.worldZ) > 0; });
-        return { sessions, members: sessions.map(s => { const p = s.sdk.getState()!.player!; return { name: s.name, x: p.worldX, z: p.worldZ, combat: p.combatLevel, prayer: s.sdk.getState()!.prayers?.prayerPoints }; }) };
+        return { sessions, members: sessions.map(s => { const p = s.sdk.getState()!.player!; return { name: s.name, x: p.worldX, z: p.worldZ, combat: p.combatLevel, prayer: protectionPoints(s) }; }) };
     }
 
     // The threats, their classes and the decisions of this tick. One reading for the squad each tick, whichever member asks.
@@ -203,6 +203,8 @@ export const retreatOf = (actions: readonly Adapt[]): string | null => (actions.
 // The levels are the prayer requirements (pk.ts PRAYER_REQ: 37, 40, 43).
 const PROTECT_LEVEL = { magic: 37, ranged: 40, melee: 43 } as const;
 const PROTECT_PRAYER = { magic: PRAYER.magic, ranged: PRAYER.missiles, melee: PRAYER.melee } as const;
+// The prayer points that can pay for a protect prayer: 0 below the level of the lowest one (37), else the points now (undefined when not known).
+export const protectionPoints = (s: Session): number | undefined => (s.sdk.getSkill('Prayer')?.level ?? 99) >= PROTECT_LEVEL.magic ? s.sdk.getState()?.prayers?.prayerPoints : 0;
 export function holdProtect(s: Session, style: CombatStyle, tick: number): void {
     if (tick % 3 !== 0) return;
     const active = s.sdk.getState()?.prayers.activePrayers ?? [], want = PROTECT_PRAYER[style];

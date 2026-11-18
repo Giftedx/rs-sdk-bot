@@ -16,7 +16,7 @@ export interface Sighting {
     // The member of ours that this player is fighting now, from the client's combat target, or null.
     targeting?: string | null;
 }
-// `prayer`: the prayer points now (undefined when not known: counts as some left).
+// `prayer`: the prayer points that can pay for a protect prayer now: 0 for an account that cannot use one (Prayer below 37) or has none left (undefined when not known: counts as some left).
 export interface Member { name: string; x: number; z: number; combat: number; prayer?: number }
 
 export interface ThreatRecord {
