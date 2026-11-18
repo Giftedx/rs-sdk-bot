@@ -48,7 +48,7 @@ export function hostedRows(dir: string, name = basename(dir)): Row[] {
     if (!output) return [];
     const seed = Number(bench.match(/lockstep seed=(\d+)/)?.[1] ?? 0), ticks = new Map<string, number | null>();
     for (const l of bench.split(/\r?\n/)) { const m = l.match(/^(\S+:\S+)\s+(pass|FAIL)\s+(\d+|-)/); if (m) ticks.set(m[1]!.replace(/[^a-z0-9-]/gi, '_'), m[3] === '-' ? null : Number(m[3])); }
-    return readdirSync(output).filter(f => f.endsWith('.log')).sort().flatMap(f => { const run = parseRun(readFileSync(join(output, f), 'utf8'), seed, ticks.get(f.slice(0, -4)) ?? null); return run ? [row(name, f.slice(0, -4).replace(/^extra_/, 'extra:'), [run])] : []; });
+    return readdirSync(output).filter(f => f.endsWith('.log')).sort().flatMap(f => { const run = parseRun(readFileSync(join(output, f), 'utf8'), seed, ticks.get(f.slice(0, -4)) ?? null); return run ? [row(name, f.slice(0, -4).replace(/^extra_/, 'extra:'), [run], returnTicks())] : []; });
 }
 export function batchRows(dir: string): Row[] {
     const bench = existsSync(join(dir, 'bench.txt')) ? readFileSync(join(dir, 'bench.txt'), 'utf8') : '', ticks = parseTicks(bench), byCase = new Map<string, Run[]>();
