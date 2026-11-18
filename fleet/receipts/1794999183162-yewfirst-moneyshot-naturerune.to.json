@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1794999183162-yewfirst-moneyshot-naturerune",
+ "account": "Moneyshot",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 19,
+ "claim": "9eee2ab9-97f9-4a6b-ab36-54d439ec4be8",
+ "count": 19,
+ "ok": true,
+ "at": 1794999276538,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 31,
+  "after": 50
+ },
+ "bank": {
+  "count": 19,
+  "at": 1794999275799
+ },
+ "logout": {
+  "attemptId": "1794999248664-0000009376-0000000001",
+  "at": 1794999276524,
+  "sha256": "8170269d9da09ea52eb30a6bee83f6c7bd44d39cf188370c5bd963129610e96c"
+ },
+ "screen": true
+}
