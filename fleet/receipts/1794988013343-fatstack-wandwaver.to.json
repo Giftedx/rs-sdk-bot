@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794988013343-fatstack-wandwaver",
+ "account": "Wandwaver",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 92980,
+ "claim": "7e6346d2-0373-4fe7-b80b-f27c46e4d6aa",
+ "count": 0,
+ "ok": false,
+ "at": 1794988127904,
+ "detail": "trade claimed"
+}
