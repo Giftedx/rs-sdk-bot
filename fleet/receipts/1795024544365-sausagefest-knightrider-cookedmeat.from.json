@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795024544365-sausagefest-knightrider-cookedmeat",
+ "account": "Sausagefest",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "3314040d-d237-4792-8055-62ea740da06c",
+ "count": 0,
+ "ok": false,
+ "at": 1795024641528,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795024619362-0000020536-0000000001",
+  "at": 1795024641515,
+  "sha256": "45b22e589846570086bcdc60398d09f091aa8c71642f3af5ce31976304af4db7"
+ },
+ "screen": false
+}

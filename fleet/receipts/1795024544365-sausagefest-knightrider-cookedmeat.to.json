@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795024544365-sausagefest-knightrider-cookedmeat",
+ "account": "KnightRider",
+ "partner": "Sausagefest",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "c273fa30-c6a0-4589-b366-236b6ac76261",
+ "count": 0,
+ "ok": false,
+ "at": 1795024640787,
+ "detail": "fled at low hitpoints: flee_guard id=377 at=3026,3210 ticks=6",
+ "logout": {
+  "attemptId": "1795024629569-0000023852-0000000001",
+  "at": 1795024640727,
+  "sha256": "9fdf3b54e978be1d9624378140577a05ff732fc7bcaf105b41e6ca4b053fca06"
+ },
+ "screen": false
+}
