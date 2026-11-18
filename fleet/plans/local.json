@@ -1,7 +1,47 @@
 {
  "side": "local",
- "at": 1794991920224,
+ "at": 1794991948296,
  "jobs": [
+  {
+   "account": "TrouserSnake",
+   "script": "",
+   "enabled": false,
+   "repeat": false,
+   "goal": "reserved: gang squad (Goondelf, Ligma, Sugma), staged at Edgeville",
+   "role": "pvp"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "",
+   "enabled": false,
+   "repeat": false,
+   "goal": "reserved: gang squad (Goondelf, Ligma, Sugma), staged at Edgeville",
+   "role": "pvp"
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "",
+   "enabled": false,
+   "repeat": false,
+   "goal": "reserved: gang squad (Goondelf, Ligma, Sugma), staged at Edgeville",
+   "role": "pvp"
+  },
+  {
+   "account": "PocketPool",
+   "script": "",
+   "enabled": false,
+   "repeat": false,
+   "goal": "reserved: gang squad (Goondelf, Ligma, Sugma), staged at Edgeville",
+   "role": "pvp"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "",
+   "enabled": false,
+   "repeat": false,
+   "goal": "reserved: gang squad (Goondelf, Ligma, Sugma), staged at Edgeville",
+   "role": "pvp"
+  },
   {
    "account": "AFKnight",
    "script": "scripts/gather-combat.ts",
