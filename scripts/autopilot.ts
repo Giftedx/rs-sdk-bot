@@ -593,7 +593,7 @@ export function queueBoundAccounts(queue: any): string {
     return JSON.stringify([...new Set<string>(open.flatMap((r: any) => boundAccounts(r.spec, queue) ?? []).map((a: string) => a.toLowerCase()))].sort());
 }
 // With `defer`, a pass that has something to write does not write: it gives its write step to `defer` (lockedPass).
-export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, defer?: (step: PassWrite) => void): string[] {
+export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, defer?: (step: PassWrite) => void, readClaims: typeof readHeldFleetTradeClaims = readHeldFleetTradeClaims): string[] {
     if (!dry && isPaused()) return [PAUSED];
     // The text of each input file before the plan reads it.
     const inputFiles = passInputFiles(planFile);
@@ -715,7 +715,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     // The shared intent precedes the local journal. A crashed host may never publish that journal.
     // Keep the claimed account and both known participants held even after the order window.
     const claimedAccounts = [...new Set([...listed, ...orders.flatMap(o => [o.from, o.to])])];
-    const heldClaims = claimedAccounts.length ? readHeldFleetTradeClaims(root, claimedAccounts) : [];
+    const heldClaims = claimedAccounts.length ? readClaims(root, claimedAccounts) : [];
     const heldNonces = new Set(heldClaims.map(c => c.nonce));
     const open = inOpenOrder(orders, receipts, now, r =>
         owners.get(r.account.toLowerCase())?.side !== side || tradeStockReady(r, observed(r.account)), nonce => heldNonces.has(nonce));

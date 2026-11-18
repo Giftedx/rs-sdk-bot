@@ -1244,7 +1244,7 @@ test('a pass writes state.unplaced for a refusal on the coins, and a death in th
         writeFileSync(files[0]!, JSON.stringify({ assigned: { [account.toLowerCase()]: { template, offset: 0, at: 1 }, [account]: { template, offset: 0, at: 1 } }, retired: {} }));
         writeFileSync(files[2]!, jobLogStart(job) + lines.join('\n') + '\n');
         writeFileSync(join(dir, 'swarm.json'), JSON.stringify({ maxBots: 5, minFreeGB: 0, jobs: [job] }));
-        pass(join(dir, 'swarm.json'), false, () => false);
+        pass(join(dir, 'swarm.json'), false, () => false, undefined, () => []);
         return JSON.parse(readFileSync(files[0]!, 'utf8'));
     };
     try {

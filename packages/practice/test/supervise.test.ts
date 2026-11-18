@@ -267,5 +267,7 @@ test('a Grand Exchange buy that ended before it placed an offer is a blocked pre
   'order deadline passed 3 s ago (deadline 2000-01-01T00:00:00.000Z)', 'owned item baseline 68 differs from EXPECTED_OWNED 10']) expect([failure, isPrerequisiteFailure(unplaced(failure))]).toEqual([failure, true]);
  // An offer that was placed (escrow held) or an unknown failure is not.
  expect(isPrerequisiteFailure(unplaced('GE interface unavailable'))).toBe(false);
+ // A stop can differ at the next login.
+ expect(isPrerequisiteFailure(unplaced('order stopped: the session ended, died, was damaged, was told to stop or used its 500-tick budget'))).toBe(false);
  expect(isPrerequisiteFailure(unplaced('coins 1 are under the escrow 2 (1 x 2) plus the reserve 0: 1 short').replace('"escrow":0', '"escrow":2000'))).toBe(false);
 });
