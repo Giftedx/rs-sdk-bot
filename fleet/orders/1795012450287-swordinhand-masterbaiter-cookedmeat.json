@@ -1,0 +1,22 @@
+{
+ "id": "1795012450287-swordinhand-masterbaiter-cookedmeat",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordinhand",
+ "to": "Masterbaiter",
+ "item": "Cooked meat",
+ "count": 3,
+ "start": 1795012450287,
+ "end": 1795014850287,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
