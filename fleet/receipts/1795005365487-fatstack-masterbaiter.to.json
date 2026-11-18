@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795005365487-fatstack-masterbaiter",
+ "account": "Masterbaiter",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 16976,
+ "claim": "e2112c97-c341-40e8-a2fa-b6d42a274176",
+ "count": 0,
+ "ok": false,
+ "at": 1795005461441,
+ "detail": "trade claimed"
+}
