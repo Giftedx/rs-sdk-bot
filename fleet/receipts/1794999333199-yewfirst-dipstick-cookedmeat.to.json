@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794999333199-yewfirst-dipstick-cookedmeat",
  "account": "Dipstick",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Cooked meat",
  "requested": 3,
  "claim": "d7c2543d-7a02-4778-98ae-ee4df4ee3adc",
- "count": 0,
- "ok": false,
- "at": 1794999428222,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1794999498090,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1794999497475
+ },
+ "logout": {
+  "attemptId": "1794999428230-0000025360-0000000001",
+  "at": 1794999498082,
+  "sha256": "cbc4a79c25d11856b0e274b6c086b73e646e9bcc7899ee1d4b865f6acf81a05e"
+ },
+ "screen": true
 }
