@@ -599,6 +599,15 @@ test('trade admission rereads pauses, assignments and producer ownership after t
         writeFileSync(overlay, '{"jobs":[]}');
         writeFileSync(planFile, '{"jobs":[{"account":"Giver","script":"","goal":"Fresh-clock specialist","enabled":false}]}');
         expect(admit).toThrow('reserved account');
+        // The gang squad's reservation row passes; the same row with a script-less fresh-clock goal, or enabled, does not.
+        writeFileSync(planFile, '{"jobs":[{"account":"Giver","script":"","role":"pvp","goal":"reserved: gang squad (Goondelf, Ligma, Sugma), staged at Edgeville","enabled":false}]}');
+        expect(admit).not.toThrow();
+        writeFileSync(planFile, '{"jobs":[{"account":"Giver","script":"","role":"pvp","goal":"Fresh-clock specialist","enabled":false}]}');
+        expect(admit).toThrow('reserved account');
+        writeFileSync(planFile, '{"jobs":[{"account":"Giver","script":"","goal":"reserved: gang squad","enabled":false}]}');
+        expect(admit).toThrow('reserved account');
+        writeFileSync(planFile, '{"jobs":[{"account":"Giver","script":"","role":"pvp","goal":"reserved: gang squad","enabled":true}]}');
+        expect(admit).toThrow('reserved account');
         writeFileSync(planFile, '{"jobs":[]}');
         expect(() => admit(5000)).toThrow('order window');
         expect(() => admit(2000, 'localhost:8888')).toThrow('order server');
