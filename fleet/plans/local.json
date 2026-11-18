@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1794960181919,
+ "at": 1794960287121,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -217,29 +217,6 @@
    ]
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "betty"
-   ],
-   "env": {
-    "ITEMS": "fire rune|air rune|earth rune",
-    "STOCK_TARGET": "500",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy elemental runes at Betty",
-   "role": "bank",
-   "template": "shop-runes",
-   "autopilot": "local",
-   "resources": [
-    "shop:betty"
-   ]
-  },
-  {
    "account": "Moneyshot",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -323,29 +300,27 @@
    ]
   },
   {
-   "account": "Swordinhand",
-   "script": "scripts/gather-combat.ts",
+   "account": "Pocketrocket",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "1500",
-    "trooper"
+    "betty"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "ITEMS": "fire rune|air rune|earth rune",
+    "STOCK_TARGET": "500",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"554\":500}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "goal": "buy elemental runes at Betty",
+   "role": "bank",
+   "template": "shop-runes",
    "autopilot": "local",
    "resources": [
-    "trooper:battlefield"
+    "shop:betty"
    ]
   },
   {
@@ -369,32 +344,6 @@
    "resources": [
     "shop:lowe",
     "shop:aubury"
-   ]
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
    ]
   },
   {
@@ -462,7 +411,8 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":99}}"
    },
    "enabled": true,
    "standing": true,
