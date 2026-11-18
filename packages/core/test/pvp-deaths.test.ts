@@ -63,7 +63,7 @@ test('a ledger that cannot be read stops the run, and a limit of 0 refuses after
     const one = ledger();
     expect(pvpDeathRefusal({ accounts: SQUAD, server: LIVE, now: NOW, file: one, limits: { perRun: 0, perDay: 0, perAccountPerDay: 0 } })).toBeNull();
     died(one, 'Bravo', HOUR);
-    expect(pvpDeathRefusal({ accounts: SQUAD, server: LIVE, now: NOW, file: one, limits: { perRun: 0, perDay: 0, perAccountPerDay: 0 } })).toBe('death ledger: Bravo died 1 times in 24 h (limit 0)');
+    expect(pvpDeathRefusal({ accounts: SQUAD, server: LIVE, now: NOW, file: one, limits: { perRun: 0, perDay: 0, perAccountPerDay: 0 } })).toBe('death ledger: Bravo died 1 time in 24 h (limit 0)');
     expect(JSON.parse(readFileSync(one, 'utf8'))).toHaveLength(1);
 });
 

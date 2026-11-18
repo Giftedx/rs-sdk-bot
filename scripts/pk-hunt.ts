@@ -605,8 +605,11 @@ if (import.meta.main) {
     if (!bot) { console.log('usage: bun scripts/pk-hunt.ts <bot> [CAP ticks]'); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
     // The death ledger: an account that died too often in the last 24 h on a live server does not start (RESULT fail died).
-    const { accountServer } = await import('./pk-roam');
-    const server = accountServer(bot), ledgerRefusal = pvpDeathRefusal({ accounts: [bot], server });
+    // The server comes from bot.env, which openBot restores from the vault later: the ledger restores it first. An unreadable bot.env is a fail line.
+    const { accountServerBeforeLogin } = await import('./pk-roam');
+    let server = '';
+    try { server = accountServerBeforeLogin(bot); } catch (e) { console.log(`RESULT fail no server for ${bot}: ${String(e).replace(/\s+/g, ' ').slice(0, 160)}`); process.exit(2); }
+    const ledgerRefusal = pvpDeathRefusal({ accounts: [bot], server });
     if (ledgerRefusal) { console.log(`RESULT fail died ${ledgerRefusal}`); process.exit(1); }
     const stop = () => existsSync(`.practice/stop-${bot}`) || existsSync('.practice/stop-pk-hunt');
     // A death ends a bot session by default (packages/core/src/bot.ts: the DEATH line, then finish). The hunt handles its own death

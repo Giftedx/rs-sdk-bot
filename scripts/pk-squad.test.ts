@@ -349,7 +349,7 @@ test('a rescue account that dies during its rescue is stranded, so a run cannot 
     }, () => {}, async s => { if (s.name === 'dead') retreated = true; return s; });
     expect(stranded).toEqual(['dead']);
     expect(retreated).toBe(false);
-||||||| parent of 40267d6e4e (Death ledger: a squad or hunt account that died too often in 24 h on a live server does not start)
+});
 
 test('a squad member calls the death ledger hook for each death, also over the limit, and a failing hook does not stop the re-kit', async () => {
     const seen: ({ x: number; z: number } | null)[] = [];

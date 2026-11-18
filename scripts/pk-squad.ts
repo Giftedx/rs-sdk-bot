@@ -466,8 +466,10 @@ if (import.meta.main) {
     // only after its login, and a login puts an account parked in the Wilderness back in the world).
     // The death ledger: a squad whose account or members died too often in the last 24 h on a live server does not start. The
     // supervisor reads `RESULT fail died` as a death, so the swarm holds it until a person clears the ledger.
-    const { accountServer: serverOf } = await import('./pk-roam');
-    const squadServer = serverOf(ours[0]!);
+    // The server comes from bot.env, which openBot restores from the vault later: the ledger restores it first. An unreadable bot.env is a fail line.
+    const { accountServerBeforeLogin } = await import('./pk-roam');
+    let squadServer = '';
+    try { squadServer = accountServerBeforeLogin(ours[0]!); } catch (e) { console.log(`RESULT fail no server for ${ours[0]}: ${String(e).replace(/\s+/g, ' ').slice(0, 160)}`); process.exit(2); }
     const runDeaths = { deaths: 0, limit: pvpDeathLimits().perRun };
     const ledgerRefusal = pvpDeathRefusal({ accounts: ours, server: squadServer });
     if (ledgerRefusal) { console.log(`RESULT fail died ${ledgerRefusal}`); process.exit(1); }

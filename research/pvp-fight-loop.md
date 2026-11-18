@@ -1270,9 +1270,18 @@ mark of 1,000 ticks keeps any later death at 1 Hitpoint. The bank is not touched
   one constant, `PVP_DEATH_LIMITS`, with the reason beside it. They hold until a person or the lead reads the cause. The supervisor reads that line as a death, so
   the swarm holds the job and a person clears the ledger (edit the file). A ledger that cannot be read refuses the run.
 
+Ledger limits of the file:
+
+- A write reads the file, adds one entry and renames a temporary file over it. Two deaths in the same millisecond from two processes can lose one entry.
+- A write that fails (a full disk, a locked file) logs the error and the run goes on. The ledger then misses that death, so it fails open.
+- The limits apply at the start of a run. A run that starts under the limit can end over it.
+- A rescue account that dies in the squad rescue is stranded and is not recorded.
+- A run on a local server records nothing.
+
 Gap: the hunt and the squad re-kit a death to a player in the Wilderness. The roam and the gang end their run at a death. The
-refusal at the start of the squad and hunt mains is not run by a test (the mains read the account's bot.env); the ledger
-functions and the death hooks are.
+refusal at the start of the squad and hunt mains is not run by a test (the mains exit the process). The server read before it
+(`accountServerBeforeLogin`: side check, vault restore of a missing bot.env, then the read) and the ledger functions and the
+death hooks are.
 
 ### Rings, prayer and poison in the gang meeting
 

@@ -45,6 +45,8 @@ export function recordPvpDeath(entry: Omit<PvpDeath, 'schema'>, file = DEFAULT_P
     return true;
 }
 
+const times = (n: number) => n === 1 ? '1 time' : `${n} times`;
+
 // The reason that a run of `accounts` on `server` must not start, or null. A local server never refuses.
 export function pvpDeathRefusal(o: { accounts: readonly string[]; server: string; now?: number; limits?: PvpDeathLimits; windowMs?: number; file?: string }): string | null {
     if (isLocalServer(o.server)) return null;
@@ -56,8 +58,8 @@ export function pvpDeathRefusal(o: { accounts: readonly string[]; server: string
     const hours = Math.round(windowMs / 3_600_000);
     for (const name of o.accounts) {
         const n = recent.filter(e => key(e.account) === key(name)).length;
-        if (n >= Math.max(1, limits.perAccountPerDay)) return `death ledger: ${name} died ${n} times in ${hours} h (limit ${limits.perAccountPerDay})`;
+        if (n >= Math.max(1, limits.perAccountPerDay)) return `death ledger: ${name} died ${times(n)} in ${hours} h (limit ${limits.perAccountPerDay})`;
     }
-    if (recent.length >= Math.max(1, limits.perDay)) return `death ledger: the squad died ${recent.length} times in ${hours} h (limit ${limits.perDay})`;
+    if (recent.length >= Math.max(1, limits.perDay)) return `death ledger: the squad died ${times(recent.length)} in ${hours} h (limit ${limits.perDay})`;
     return null;
 }
