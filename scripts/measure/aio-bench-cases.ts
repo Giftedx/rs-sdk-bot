@@ -455,6 +455,9 @@ const ROUTE_CASES: BenchCase[] = [
   // each carrier stands at the staging tile with 27 essence and the talisman (scripts/rune-carrier-altar.ts).
   // Block 4 of the record route: air altar, 7 essence helpers, Runecraft 1 to 44 (record 207 ticks).
   carrierCase('air', 1, 44, 7),
+  // Body altar, the row `runecraft` of the planner (Runecraft 44 to 99 on the record route): 7 carriers with one pack each, so 7
+  // trades in a row from Runecraft 44 (7.5 XP an essence: a pack is 5,062 XP at the rate of 25), no bank trip.
+  carrierCase('body', 44, 56, 7),
   // Fire with 2 carriers and 27 more essence in each bank: 3 packs, so one carrier banks at Al Kharid and returns.
   carrierCase('fire', 14, 40, 2, [{id: 1436, count: 27}]),
   skiller('thieving', 'knights', 'goldfarm_knights', ['TICKS=1500'], {output: /coinsGained=(\d+)/}),
