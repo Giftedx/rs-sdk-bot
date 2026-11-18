@@ -52,7 +52,6 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/market-cache.ts': 'fleet control: saves the live market prices for the loot job and the value guard; the fleet agent starts it',
  'scripts/market-snapshot.ts': 'report: fetches the supply prices',
  'scripts/microbot-action-replay.ts': 'replays a recorded action list; it needs a recording file and a bindings file, and no route supplies them',
- 'scripts/microbot-catalog.ts': 'report: lists the Microbot plugins and the port decisions',
  'scripts/monitor.ts': 'fleet control: the watchdog of the machine and the swarm',
  'scripts/now.ts': 'developer tool: prints the state of this PC and the fleet on one screen; it changes nothing',
  'scripts/fail-loops.ts': 'developer tool: lists the fast-fail loops of the main checkout results for now.ts; it changes nothing',

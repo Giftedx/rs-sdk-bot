@@ -1,31 +1,16 @@
 # Microbot ports
 
-## Coverage
+## Source
 
-The [catalog](microbot-ports.json) covers both pinned public Microbot production namespaces, including plugins without a `Script` suffix.
-Tests, resources, unrelated RuneLite plugins, private repositories and other third-party repositories are outside this scope.
+Behaviour adapted from two public Microbot repositories, pinned at these commits:
 
-| Repository | Commit | Java files | Groups | Script files |
-|---|---|---:|---:|---:|
-| [Microbot](https://github.com/chsami/Microbot) | `13b518350c4c81d64e4cfbb45b3d5d2f38488825` | 1,444 | 44 | 11 |
-| [Microbot-Hub](https://github.com/chsami/Microbot-Hub) | `cd648f48d536c01c58aa82aa4d353fb31ce6e102` | 1,567 | 173 | 212 |
+| Repository | Commit |
+|---|---|
+| [Microbot](https://github.com/chsami/Microbot) | `13b518350c4c81d64e4cfbb45b3d5d2f38488825` |
+| [Microbot-Hub](https://github.com/chsami/Microbot-Hub) | `cd648f48d536c01c58aa82aa4d353fb31ce6e102` |
 
-Both recursive trees report `truncated=false`. All 217 groups and 223 Script-suffix files have source decisions.
-Root Java classes count as individual groups. These counts are not a count of runnable bots.
-The coverage gate rejects missing groups, nested scripts, source evidence, consumers and blockers.
-Source review is complete within this scope. Full donor parity, native qualification and live release are incomplete.
-`partial` does not mean the server lacks the whole activity. `source-reviewed` does not mean game-tested.
-
-The decisions live in `microbot-decisions-{core,a,b,c}.json`. The catalog is generated from them and the pinned trees.
-Do not hand-edit the catalog. Exact [negative searches](microbot-server-search-a.ndjson) identify native scopes and patterns.
-
-```powershell
-bun scripts/microbot-catalog.ts --summary
-bun scripts/microbot-catalog.ts --show crafting
-bun scripts/microbot-catalog.ts --show cluesolver
-bun scripts/microbot-catalog.ts --blocked
-bun scripts/microbot-catalog.ts --remaining
-```
+The workers below are TypeScript. No Java source, no JVM and no inventory of the Java plugins is kept in this repository: a plugin is read from the pinned commit when a worker adapts it. Workers cite the BSD notice in their headers.
+A native worker is not a port of a whole plugin: it covers the scope that its row names. Source and unit proof do not mean game-tested; the practice receipts below do.
 
 ## Native consumers
 
@@ -252,7 +237,7 @@ Finite potion care and Druid pouch filling pass all 23 actual Native CLI cases i
 
 Ordinary native furnace smelting passes four actual `smelt-bars.ts` CLI cases in `.practice/microbot-ports/smelt-bars-native-1793655284503/result.json`: silver28 with loads27+1, adamantite6 with loads3+3 and runite5 with loads3+2; missing coal refuses with zero furnace input. Independent raw bank receipts and CRC saves reconcile all ore/coal debits, bars banked, reserve1, exact Smithing XP, other XP0, HP99, gear, controls, bank return and confirmed logout. Runtime hashes are `a9fe72cdbb1bc0afccc161336a77fa549216c4efe789c30e51688fc3b4f42245` for the batch and `6616832c1d99db3d40688f5937d97e44df45cfce66439f0693cf9162e9f8c97f` for the CLI, with guarded canonical settlement through Core `6131ef60c83956881b57854ec035b5d52caa4f3f632daed164f4d53af1eb4683`. All 11,483 captured dependencies remain unchanged. The 57 compiled-cache checks retain identical content, including the ZIP entries; ZIP metadata-only byte changes are recorded separately. Conditions are owned staged stock, members practice, 100ms ticks, XP25, Smithing99 and the Al Kharid bank/furnace. This proves ordinary native furnace bank/refill composition; Blast Furnace mechanics and live repeats remain outside this proof.
 
-Optional smelting gear passes three bounded Native cases in `.practice/microbot-ports/smelt-bars-native-1793686058938/result.json`: two gold bars with owned goldsmith gauntlets, 141 iron bars with a natural forging-ring melt and bank replacement, and an expected partial stop at140 bars with `MAX_RINGS=1`. The first two CLIs exit0; the partial stop exits1 as required. CRC saves and raw actions reconcile whole assets, ore, reserves, restored gear, HP99, home bank and logout. Raw Smithing XP is28100/440625/437500 at XP25. Source11483 and compiled57/server42 contents remain unchanged. The worker does not read private ring charges. Original ring1635 restoration has Native proof; original forging-ring restoration has unit proof. Runtime hashes and exact conditions are in the catalog's `smelting.proof.bonus` record. Other locations, starting conditions and live repeats retain separate qualification gaps.
+Optional smelting gear passes three bounded Native cases in `.practice/microbot-ports/smelt-bars-native-1793686058938/result.json`: two gold bars with owned goldsmith gauntlets, 141 iron bars with a natural forging-ring melt and bank replacement, and an expected partial stop at140 bars with `MAX_RINGS=1`. The first two CLIs exit0; the partial stop exits1 as required. CRC saves and raw actions reconcile whole assets, ore, reserves, restored gear, HP99, home bank and logout. Raw Smithing XP is28100/440625/437500 at XP25. Source11483 and compiled57/server42 contents remain unchanged. The worker does not read private ring charges. Original ring1635 restoration has Native proof; original forging-ring restoration has unit proof. Runtime hashes and exact conditions are in that result file. Other locations, starting conditions and live repeats retain separate qualification gaps.
 
 Declared local smelting has a [Falador silver28 case](../.practice/microbot-ports/smelt-bars-native-1793688250528/result.json), with explicit native furnace and legal stand. [Shilo access](../.practice/microbot-ports/smelt-bars-native-1793690721399/result.json) banks28 silver across26+2 loads with two20coin entries, fresh paid dialogue/landings, free exits and37coins retained. [Nearest selection](../.practice/microbot-ports/smelt-bars-native-1793691426915/result.json) runs the actual CLI with no route JSON from2974,3369, choosing furnace2781 at2975,3368 and bank2947,3368;28 silver across27+1 loads, no fees. Both new cases use members Native practice,100ms ticks,XP25 and Smithing99. Each independently reconciles raw paired bank operations, two CRC saves,95900raw Smithing XP at XP25, otherXP0, whole assets, kit/gear, HP99, controls, home and logout. Shilo/nearest captures check11483/11484source files and57compiled/server42 cache files unchanged. Source hashes and prerequisite conditions are in `smelting.proof.shilo` and `.nearest`; other locations and live repeats remain unqualified.
 
@@ -268,7 +253,7 @@ The [owned Heroes worker](../scripts/generated/quest-hero-owned.ts) completes bo
 
 The [Trio worker](../scripts/generated/quest-tbwt-owned.ts) passes a Native route from quest0 through all brother rewards: two quest points,2,000 coins,seven paid Monkey casts,exact XP/assets/gear/controls and confirmed logout. Independent CRC and complete raw audits pass in `.practice/microbot-ports/tbwt-native-1793842402151/result.json`; the Tinsay doorway exit reaches Tiadeche for the final Fishing reward. Conditions are Combat99/Agility99,staged ordinary prequest supplies,150ms shared Native server and XP25. All11,534 source entries and42 compiled-cache disk entries remain unchanged. Shared-server evidence binds admission disk bytes,not a fresh engine-load hash. Live,repeat and lower-level conditions remain unqualified.
 
-The [owned Legends worker](../scripts/generated/quest-legends-owned.ts) has Native component proof for sustained wildlife retreat before summoning Gujuo, the return Strength corridor, the Earth Orb gate, and both directions of the lower-cave ledges. Each fixture seeds a nearby position and runs the corresponding production code. A captured stage-22 save also reaches the final reward and bank logout through the production suffix. The [catalog](microbot-ports.json) records the exact fixture scope and captured source. Full fresh quest completion and live qualification remain open.
+The [owned Legends worker](../scripts/generated/quest-legends-owned.ts) has Native component proof for sustained wildlife retreat before summoning Gujuo, the return Strength corridor, the Earth Orb gate, and both directions of the lower-cave ledges. Each fixture seeds a nearby position and runs the corresponding production code. A captured stage-22 save also reaches the final reward and bank logout through the production suffix. Full fresh quest completion and live qualification remain open.
 
 The existing [smithing worker](../scripts/smith-batch.ts) resolves all 129 native anvil products, including six claw products and dart tips.
 Its native quest checks require completed Death Plateau for claws and completed Tourist Trap for ordinary dart admission.
@@ -279,82 +264,7 @@ Exact assets, HP99, bank return and logout pass in `.practice/microbot-ports/smi
 Its `source-check.json` records 11,471 unchanged dependencies during the check. Other products retain source coverage rather than this four-case runtime proof.
 See the [project use map](project-use-map.md) for existing utility decisions.
 
-The catalog entry's `review.blockers`, `scriptDecisions`, variants and native evidence own each exact blocker.
-Use `--show <name>` for the full record. Do not reduce all partial entries to “unsupported”.
-
-| Boundary | Distinction |
-|---|---|
-| Missing modern content | Fossil Island ammonites, Wintertodt, Tempoross, Sailing and modern Hunter sites have exact donor requirements and native searches attached to their entries. |
-| Different native mechanics | Native Miscellania uses sickle/herb weeding, not the donor rake/fairy-ring route. Native Trawler lacks the enormous-tentacle contribution mechanic. |
-| Supported native integration | Bank/refill/escape qualification, guardian mitigation and clue access requirements remain explicit per-consumer gaps. Native full Trawler trip and catch banking have practice proof. Clue handlers and puzzle turn-in mappings have finite consumers. |
-| GE policy | Native buy lists, explicit price-plan relisting, Finish and owned escrow recovery have finite native proof. The donor obtains portfolio advice from an external Copilot service; its bundle contains no local price-selection algorithm. Owned matching does not prove outside demand or profitable flipping. |
-| Client presentation | Java applets/JARs, Swing, overlays, hotkeys, desktop recordings and OSRS widget constants are not gameplay ports. Underlying game actions have separate decisions. |
-| Shared resources | Another owner can hold the practice slot. A blocked qualification does not authorize a second controller, server replacement or account takeover. |
-| Evidence | Source inspection, simulated SDK loops, native saved-state proof and live pilots prove different things. Missing native/live proof remains a release gap. |
-
-New bank adapters reject non-bank modals and stale observations before withdrawal.
-Per-session native bridges keep the ownership guard and command recorder, then restore the original executor.
-Orb dispatch follows native `OPLOCT`; puzzle slides follow native `OPHELD5`.
-Message receipts must be fresh native messages. Player chat cannot supply them.
-Finite NPC spell batches reject repeating autocast before spending runes.
-
-## Checks and use
-
-```powershell
-bun run typecheck
-bun test ./scripts ./packages
-```
-
-Focused tests live in `scripts/microbot-*.test.ts`. Adapter regressions exercise SDK calls against simulated state, not only recipe arithmetic.
-The actual server is required for native effects, saved-state and logout proof. No job is enabled by this research or its tests.
-
-Example finite pie-shell order at a staged bank:
-
-```powershell
-$env:MAX_MAKE='5'
-$env:CAP='500'
-bun scripts/microbot-production.ts <owned-account> pie-shell
-```
-
-The [bank-job controller](../scripts/microbot-bank-jobs.ts) reuses the finite workers for eleven job families.
-It supports jewellery, cooking, tanning, glass, item magic, inventory production, wine, bones, mining, fishing and stalls.
-It withdraws owned inputs, travels to the site, banks the output and refills within one tick budget.
-`returnTicks` reserves time for the return. Damage stops production. The controller keeps stock for bank recovery.
-Mining and stall jobs require explicit `bank` and `site` tiles. Other families have default sites.
-A recipe needs its native skills, membership and quest access. A configured site does not prove access.
-
-For an owned practice actor, put this finite gold-ring order in `job.json`:
-
-```json
-{"family":"jewellery","recipe":"gold_ring","target":3,"batch":1,"cap":1200,"returnTicks":250,"members":true,"reserve":1}
-```
-
-Stage the actor at Al Kharid bank with four gold bars and one ring mould in its bank.
-Use the native Crafting requirement for this recipe. The order keeps one gold bar in reserve.
-
-```powershell
-bun scripts/microbot-bank-jobs.ts <owned-practice-account> job.json
-```
-
-The protected karambwan route uses the same CLI. This finite order passes Native practice with Fishing, combat, Prayer and Agility99, completed Grand Tree/Jungle Potion/Trio, and real Lubufu vessel access. Supply one vessel3157, seven separate bait3150, and five four-dose prayer potions2434. Keep the potion stock in the bank. The order keeps one bank reserve and permits at most eight doses.
-
-```json
-{"family":"fishing","recipe":"karambwan","xpRate":25,"fishingProtection":{"prayer":14,"potionsPerUnit":2,"maximumDoses":8},"target":2,"batch":1,"reserve":1,"cap":2200,"returnTicks":600,"members":true,"bank":{"x":2449,"z":3482,"level":1},"site":{"x":2899,"z":3118,"level":0}}
-```
-
-Evidence: `.practice/microbot-ports/karambwan-glider-bank-native-1793668236693/result.json`. Two trips bank two fish through four glider legs, using three bait and two prayer doses. Whole assets, raw Fishing XP52,500 at25x, HP99, equipment, original prayer OFF at bank and logout reconcile. The 54 Shaikahan targeting observations are frames, not attack counts. The check binds 11,584 unchanged dependencies and57 unchanged compiled-cache contents; ZIP metadata is excluded. Other stats, starting sites and live repeat need their own qualification.
-
-The protected Lava route uses the same worker with an owned oily rod1585, dusty key1590, bait313 and worn anti-dragon shield1540. The finite Native order stages five full prayer potions2434 and three full antifire potions2452 in the bank, plus one oily rod, one key and31 bait. One raw eel in the bank is the retained product reserve. The tested account has Fishing, combat, Prayer and Agility99. Real potion effects protect the route; no resistance state is seeded.
-
-```json
-{"family":"fishing","recipe":"lava","xpRate":25,"fishingProtection":{"prayer":14,"potionsPerUnit":2,"maximumDoses":16,"antifire":true},"target":2,"batch":1,"reserve":1,"cap":2200,"returnTicks":600,"members":true,"bank":{"x":2945,"z":3369,"level":0},"site":{"x":2889,"z":9765,"level":0}}
-```
-
-Evidence: `.practice/microbot-ports/fishing-bank-all-native-1793677817240/result.json`. Two trips bank two eels with two bait, raw Fishing XP30,000 at25x, HP99, unchanged gear and foreign XP, preserved whole stock and reserves, original prayer OFF and logout. Seven doses comprise five prayer and two antifire doses; all partial potions return to the bank. Dusty-key entry, legal adjacent shore, reverse gate/ladder and refill pass. The check binds11,585 unchanged files, including42 compiled-cache files. This qualifies that finite Falador route; other starting sites and live repeat retain separate gates.
-
-`MEMBERS=1` selects an explicit members-world scope. Native content still enforces membership and quest access.
-That setting is not proof of a successful action. Read each worker's prerequisites before composing a route.
-Live execution requires a qualified release. Main-account launch gates remain authoritative.
+Read each blocker in the worker or the doc that names it. Do not reduce all partial ports to “unsupported”.
 
 ## Source and reproduction
 
@@ -364,12 +274,6 @@ Native definitions use the SDK base commit `db0cc51e0a8f9f0d6a7d60c44e534412bb06
 The local vendor checkout has other owners' patches and generated-state changes. A base commit does not bind those bytes.
 Qualification must bind the actual source files and runtime release.
 
-Save each pinned tree as `{sha,truncated,paths}`, where `paths` contains every blob path.
-With all four decision files present, generate the catalog:
-
-```powershell
-bun scripts/microbot-catalog.ts <core-tree.json> <hub-tree.json> research/microbot-ports.json --require-reviewed
-```
 
 Raw archives, inspected source, reference checks and test logs stay in `.practice/microbot-ports/`.
 The original tree snapshots also exist in that task folder in the main checkout.
