@@ -18,8 +18,8 @@ import {missionSignature,liveLogoutRef} from '../src/session-admission';
 import {budgetRefusal,MAX_WAITS,spentAttempts,waitedAttempts,retainedRecoveryTasks} from '../../../scripts/cloud-recover';
 import * as recoveryProcesses from '../../practice/src/proc';
 const source='a'.repeat(64),runner='b'.repeat(64),now=1793258000000;
-const fixtureRoot=resolve(import.meta.dir,'../../../.practice');
-mkdirSync(fixtureRoot,{recursive:true});
+import {useScratch} from './recovery-scratch';
+const scratch=useScratch();
 if(process.env.HOST_RECOVERY_FIXTURE==='1')test('qualified cross-host fixture body',async()=>{
  const f=fixture(),git=(...args:string[])=>execFileSync('git',args,{cwd:f.base,encoding:'utf8',stdio:'pipe',windowsHide:true}).trim();
  const started=performance.now();let fixtureGitCalls=0,fixtureGitMs=0;
@@ -152,7 +152,7 @@ test('the controller launches the core recovery worker inside the gameplay owner
  expect(RECOVERY_SCRIPT).toBe('packages/core/src/session-recovery.ts');
 });
 test('private fixtures honour every repository and fixture stop flag',()=>{
- const base=mkdtempSync(join(fixtureRoot,'recovery-stop-')),repo=resolve(import.meta.dir,'../../..');
+ const base=scratch('recovery-stop-'),repo=resolve(import.meta.dir,'../../..');
  for(const root of [base,repo])for(const flag of ['stop-coordinator','stop-swarm','stop-Rod']){
   const stopped=join(root,'.practice',flag),observed:string[]=[];
   expect(()=>assertRecoveryNotStopped('Rod',base,path=>{observed.push(path);return path===stopped;})).toThrow('owner stopped');
@@ -161,7 +161,7 @@ test('private fixtures honour every repository and fixture stop flag',()=>{
  expect(()=>assertRecoveryNotStopped('Rod',base,()=>false)).not.toThrow();
 });
 function fixture(){
- const base=mkdtempSync(join(fixtureRoot,'recovery-permit-'));
+ const base=scratch('recovery-permit-');
  const put=(path:string,value:any)=>{mkdirSync(dirname(join(base,path)),{recursive:true});writeFileSync(join(base,path),JSON.stringify(value));};
  const ref=(path:string)=>({path,sha256:createHash('sha256').update(readFileSync(join(base,path))).digest('hex')});
  put(RECOVERY_SCRIPT,'fixture runner');
