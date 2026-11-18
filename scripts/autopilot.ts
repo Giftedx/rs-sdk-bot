@@ -57,7 +57,18 @@ type Retirement = string | { reason: string; script: string };
 // `kitSeq`: each account's supply episode, used by GE order keys and settled held-bone batch missions.
 type State = { assigned: Record<string, { template: string; offset: number; at: number }>; retired: Record<string, Retirement>; kitSeq?: Record<string, number>;
     // `unsold`: when a kit buy last got none of an item, by item id. The market leaves the item out for UNSOLD_RETRY_MS.
-    unsold?: Record<string, number> };
+    unsold?: Record<string, number>;
+    // `kitEnds`: the end record (its `at`) that last raised an account's kitSeq, so one end record raises it once, even
+    // while the account stays paused and its job is not planned again.
+    kitEnds?: Record<string, number> };
+// An orphaned kit buy starts a new order key (kitSeq) once for each end record.
+export function raiseKitSeq(state: Pick<State, 'kitSeq' | 'kitEnds'>, account: string, endedAt: number | undefined): boolean {
+    const key = account.toLowerCase(), at = endedAt ?? 0;
+    if (at > 0 && (state.kitEnds?.[key] ?? 0) >= at) return false;
+    (state.kitEnds ??= {})[key] = at;
+    (state.kitSeq ??= {})[key] = (state.kitSeq[key] ?? 0) + 1;
+    return true;
+}
 // A retirement holds while its template's script is unchanged, so a fix to the script gives the pair its retries back.
 // A death holds until a person clears it, and so does a pair whose template is gone. A bare reason takes the current
 // script, so nothing comes back on the pass that first reads it. One whose last RESULT is now a drain (DRAIN_RESULT)
@@ -67,7 +78,8 @@ export function liveRetirements(retired: Readonly<Record<string, Retirement>>, s
     for (const [key, r] of Object.entries(retired)) {
         const reason = typeof r === 'string' ? r : r.reason, script = scriptOf(key.slice(key.indexOf(':') + 1));
         const result = reason.indexOf('RESULT ');
-        if (!/^death\b/.test(reason) && result >= 0 && DRAIN_RESULT.test(reason.slice(result))) lapsed.push(key);
+        // A preparation/acquire retirement embeds the very RESULTs that DRAIN_RESULT admits one at a time: it stays.
+        if (!/^death\b/.test(reason) && !/^\d+ preparation\/acquire RESULTs\b/.test(reason) && result >= 0 && DRAIN_RESULT.test(reason.slice(result))) lapsed.push(key);
         else if (/^death\b/.test(reason) || script === undefined) out[key] = r;
         else if (typeof r === 'string') out[key] = { reason, script };
         else if (r.script === script) out[key] = r;
@@ -255,7 +267,9 @@ export function readSwarmEnded(file: string): Map<string, EndedRecord> {
 export function isJobEnded(assigned: { at?: number } | undefined, status?: JobRunStatus): boolean {
     if (!status || status.active || !status.ended) return false;
     const reason = status.ended.reason ?? '';
-    const terminal = /^(?:exit (?:4|unknown|orphaned\b)|died\b|blocked\b|gave-up\b|done\b|stopped\b)/.test(reason);
+    // The swarm writes `<word> after N runs` from the supervisor and a bare `exit <code>` for a process that ended with
+    // no end line (scripts/swarm.ts), so a code matches whole: exit 4294967295 is not exit 4.
+    const terminal = /^(?:exit (?:4|unknown)$|exit orphaned\b|died\b|blocked\b|gave-up\b|done\b|stopped\b)/.test(reason);
     const afterAssign = typeof assigned?.at === 'number' && typeof status.ended.at === 'number' ? status.ended.at >= assigned.at : true;
     return terminal && afterAssign;
 }
@@ -464,6 +478,13 @@ export function aioPilots(plan: any): Set<string> {
     return new Set(Array.isArray(plan?.aio) ? plan.aio.filter((id: unknown): id is string => typeof id === 'string') : []);
 }
 
+// What a log line says of a job's worth: coins per tick for a supply job; a goal band has no coin value (its worth is
+// the army level it trains), so it prints its band, and a kit buy prints its kind.
+export function jobRate(x: Pick<Assignment, 'template' | 'value'>): string {
+    const t = x.template;
+    return t?.tier === 'goal' ? `band ${t.band ?? 0}` : t?.family === 'kit-buy' ? 'kit buy' : `${x.value.toFixed(2)}/tick`;
+}
+
 export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): string[] {
     if (!dry && isPaused()) return [PAUSED];
     const side = mySide(), owners = loadOwners(), swarm = readJson(planFile, null);
@@ -526,13 +547,13 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
             if (/^died\b/.test(endedReason)) {
                 state.retired[pairKey(j.account, j.template)] = `death: ${endedReason}`;
                 log.push(`AUTOPILOT retire ${j.account} ${j.template}: death: ${endedReason}`);
-            } else if (/^exit 4\b/.test(endedReason)) {
+            } else if (/^exit 4$/.test(endedReason)) {
                 const script = scriptOf(j.template);
                 const reason = `script-error: ${endedReason}`;
                 state.retired[pairKey(j.account, j.template)] = script === undefined ? reason : { reason, script };
                 log.push(`AUTOPILOT retire ${j.account} ${j.template}: ${reason}`);
             } else if (String(j.template).startsWith(KIT_BUY) && /^exit orphaned\b/.test(endedReason)) {
-                (state.kitSeq ??= {})[j.account.toLowerCase()] = (state.kitSeq?.[j.account.toLowerCase()] ?? 0) + 1;
+                raiseKitSeq(state, j.account, ctx.ended?.at);
             }
         }
     }
@@ -650,7 +671,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
             const lf = join(prac, 'swarm-logs', `${x.account}.log`);
             state.assigned[x.account] = { template: x.template.id, offset: existsSync(lf) ? statSync(lf).size : 0, at: Date.now() };
         }
-        log.push(`AUTOPILOT ${fresh.includes(x.account) ? 'assign' : 'keep'} ${x.account} ${x.template.id} ${x.value.toFixed(2)}/tick ${x.reason}`);
+        log.push(`AUTOPILOT ${fresh.includes(x.account) ? 'assign' : 'keep'} ${x.account} ${x.template.id} ${jobRate(x)} ${x.reason}`);
     }
     if (dry) return [...log, 'AUTOPILOT dry run: nothing written'];
     if (isPaused()) return [PAUSED];
