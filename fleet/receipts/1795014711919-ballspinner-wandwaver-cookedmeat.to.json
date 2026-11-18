@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795014711919-ballspinner-wandwaver-cookedmeat",
+ "account": "Wandwaver",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cooked meat",
+ "requested": 3,
+ "claim": "22f68560-1c8c-4cac-951a-a8252c3673af",
+ "count": 0,
+ "ok": false,
+ "at": 1795014799111,
+ "detail": "trade claimed"
+}
