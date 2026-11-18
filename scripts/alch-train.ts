@@ -11,6 +11,7 @@ import {openBot,finish} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {xpForLevel} from '../packages/planner/src/curve';
+import {CAST_XP,FIRE_PER,HIGH_LEVEL,alchCasts} from '../packages/planner/src/alch-plan';
 import {itemMagicRecipe,runItemMagic} from './microbot-magic-items';
 import {COW_NORTH_BANK,atNorthBank} from './cow-stage';
 import {walkPath,sessionWalker} from '../packages/core/src/walk';
@@ -18,9 +19,8 @@ import {componentId} from '../packages/core/src/logout';
 import {reconcileLoadout} from './gear-reconcile';
 
 type Item={id:number;count:number};
-export const NATURE=561,FIRE=554,HIGH_LEVEL=55;
-export const CAST_XP={'low-alch':775,'high-alch':1625} as const;
-const FIRE_PER={'low-alch':3,'high-alch':5} as const;
+export const NATURE=561,FIRE=554;
+export {CAST_XP,HIGH_LEVEL,alchCasts};
 // Staff of fire, fire battlestaff, mystic fire staff (skill_magic/configs/magic_staff.dbrow).
 export const FIRE_STAVES=[1387,1393,1401];
 // Wind Strike start. Practice: from 2621,3327 a Magic 1, Hitpoints 10 account cast 30 times in 180 ticks to Magic 23 and
@@ -28,15 +28,6 @@ export const FIRE_STAVES=[1387,1393,1401];
 export const STRIKE={level:21,xp:137,mind:558,air:556,npc:99,spot:{x:2621,z:3327},spare:8,wait:200} as const;
 export const strikeCasts=(xp:number,target:number)=>xp>=xpForLevel(Math.min(STRIKE.level,target))?0:Math.ceil((xpForLevel(Math.min(STRIKE.level,target))-xp)/STRIKE.xp);
 const count=(items:readonly Item[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
-
-// Casts of each spell from this XP to the target level: Low Alchemy below 55, High Alchemy from 55.
-export function alchCasts(xp:number,target:number){
-    const goal=xpForLevel(target),gate=xpForLevel(HIGH_LEVEL);
-    if(target<=STRIKE.level)return{low:0,high:0};
-    const low=xp<gate?Math.ceil((Math.min(goal,gate)-xp)/CAST_XP['low-alch']):0;
-    const high=target>HIGH_LEVEL?Math.ceil((goal-Math.max(xp,Math.min(goal,gate)))/CAST_XP['high-alch']):0;
-    return{low:Math.max(0,low),high:Math.max(0,high)};
-}
 
 // The withdrawals for those casts, capped by the bank. With a fire staff worn or taken, no fire runes.
 export function alchStagePlan(casts:{low:number;high:number;strike?:number},carried:readonly Item[],bank:readonly Item[],item:number){
