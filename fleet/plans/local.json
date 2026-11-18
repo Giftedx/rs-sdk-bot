@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795004201132,
+ "at": 1795004226704,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -320,7 +320,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-7d41d6d9-2eac-494e-ab0c-5dff57034051"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-bow-trooper-ranged50-owned-arrows [task-7d41d6d9-2eac-494e-ab0c-5dff57034051]",
    "role": "helper"
