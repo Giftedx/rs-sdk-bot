@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795005365487-fatstack-masterbaiter",
  "account": "Masterbaiter",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 16976,
  "claim": "e2112c97-c341-40e8-a2fa-b6d42a274176",
- "count": 0,
- "ok": false,
- "at": 1795005461441,
- "detail": "trade claimed"
+ "count": 16976,
+ "ok": true,
+ "at": 1795005481963,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 28440,
+  "after": 45416
+ },
+ "bank": {
+  "count": 16976,
+  "at": 1795005481126
+ },
+ "logout": {
+  "attemptId": "1795005461450-0000000428-0000000001",
+  "at": 1795005481863,
+  "sha256": "4a09fff7c442a4e8f3b30aa24281c4a3ad913896db0231cae99950a7a0dd5f3e"
+ },
+ "screen": true
 }
