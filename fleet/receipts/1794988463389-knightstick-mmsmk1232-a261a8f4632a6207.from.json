@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794988463389-knightstick-mmsmk1232-a261a8f4632a6207",
  "account": "Knightstick",
  "partner": "mmsmk1232",
@@ -12,6 +12,16 @@
  "claim": "3f6aff5b-29cd-4182-8871-92b193628b12",
  "count": 0,
  "ok": false,
- "at": 1794988469406,
- "detail": "trade claimed"
+ "at": 1794988756283,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "bank": {
+  "count": 2,
+  "at": 1794988485881
+ },
+ "logout": {
+  "attemptId": "1794988469417-0000017416-0000000001",
+  "at": 1794988756213,
+  "sha256": "698f06153c5d9da5715ba4f8cf70c5f50b50661e18229461571ec5fed9232cbf"
+ },
+ "screen": false
 }

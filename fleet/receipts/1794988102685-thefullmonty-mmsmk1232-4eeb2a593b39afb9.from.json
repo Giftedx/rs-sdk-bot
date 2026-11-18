@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794988102685-thefullmonty-mmsmk1232-4eeb2a593b39afb9",
  "account": "TheFullMonty",
  "partner": "mmsmk1232",
@@ -12,6 +12,16 @@
  "claim": "ed8ac4bb-f47d-4dba-8cb5-74a4e0f2346b",
  "count": 0,
  "ok": false,
- "at": 1794988221471,
- "detail": "trade claimed"
+ "at": 1794988747359,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1794988232605
+ },
+ "logout": {
+  "attemptId": "1794988221479-0000020868-0000000001",
+  "at": 1794988747330,
+  "sha256": "eb90fdba32f993d559c5efd6f5bc43202eef71ee0d80f3702bb4d3506c1f4bbf"
+ },
+ "screen": false
 }
