@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1794985998196-mmtha0205-pocketpython-airrune",
  "account": "mmtha0205",
  "partner": "Pocketpython",
@@ -12,6 +12,12 @@
  "claim": "956c95b1-9ed5-456a-a496-5d028377d630",
  "count": 0,
  "ok": false,
- "at": 1794986082943,
- "detail": "trade claimed"
+ "at": 1794986161829,
+ "detail": "Error: route to 2618, 3333: precondition no route to 3092,3243,0",
+ "logout": {
+  "attemptId": "1794986082952-0000009460-0000000001",
+  "at": 1794986161817,
+  "sha256": "a6a23247486f6fac2e167bbddbc8adca8ed93d9a472f9264656d32af209efb0c"
+ },
+ "screen": false
 }
