@@ -17,15 +17,19 @@ test('the Barcrawl script starts under the name the sweep gives it',()=>{
 });
 
 test('a named dialogue choice is page-bound while a continue keeps the implicit index',async()=>{
- const calls:string[]=[];
+ const calls:(string|RegExp)[]=[];
  const sdk={
-  clickDialogByText:async(pattern:string|RegExp)=>{calls.push(`choice:${typeof pattern==='string'?pattern:pattern.source}`);return{success:true};},
+  clickDialogByText:async(pattern:string|RegExp)=>{calls.push(pattern);return{success:true};},
   sendClickDialog:async(index:number)=>{calls.push(`continue:${index}`);return{success:true};},
  };
  const option={index:2,text:'I need to locate some scorpions.'};
  expect(await clickDialoguePage(sdk,option)).toEqual({success:true});
  expect(await clickDialoguePage(sdk)).toEqual({success:true});
- expect(calls).toEqual(['choice:I need to locate some scorpions.','continue:0']);
+ expect(calls).toHaveLength(2);
+ expect(calls[0]).toBeInstanceOf(RegExp);
+ expect((calls[0] as RegExp).test(option.text)).toBe(true);
+ expect((calls[0] as RegExp).test('I need to locate some scorpions!')).toBe(false);
+ expect(calls[1]).toBe('continue:0');
 });
 
 test('a refused named dialogue choice stays refused for the quest owner to fail clearly',async()=>{
