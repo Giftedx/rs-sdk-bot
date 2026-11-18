@@ -27,7 +27,8 @@ type Item={id:number;count:number};
 // Bow and arrow tiers come from knowledge/gear.json through the planner engine (standardBowTiers, standardArrowTiers).
 // player_ranged.rs2 refuses arrows whose levelrequire exceeds the bow's levelrequire. In a level the shortbow is first,
 // so it wins a tie (it fires faster).
-export const BOWS:readonly {id:number;req:number;name:string}[]=standardBowTiers().slice().reverse()
+// (packages/knowledge/src/ladders.ts names this declaration as the worker's bow evidence.)
+export const BOWS=[...standardBowTiers()].reverse()
  .flatMap(t=>t.ids.map(id=>({id,req:t.level,name:gearById(id)?.name??String(id)})));
 export const ARROWS:readonly {id:number;req:number;name:string}[]=standardArrowTiers().sort((x,y)=>x.id-y.id)
  .map(t=>({id:t.id,req:t.level,name:gearById(t.id)?.name??String(t.id)}));

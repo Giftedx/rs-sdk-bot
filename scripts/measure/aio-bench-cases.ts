@@ -524,7 +524,7 @@ const ROUTE_CASES: BenchCase[] = [
       bank: [{id: 1277, count: 1}, {id: 1171, count: 1}, {id: 333, count: 30}]}},
   // Gear unlocks (scripts/gear-reconcile.ts). Melee: the start wears the banked rune helm, legs and shield, and
   // Attack 40 unlocks the rune scimitar in the pack. The case passes only with all four worn at the end.
-  {key: 'fighter:trooper-gear', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['trooper', 'TRAIN_SKILL=Attack', 'TARGET_LEVEL=43'],
+  {key: 'extra:trooper-gear', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['trooper', 'TRAIN_SKILL=Attack', 'TARGET_LEVEL=43'],
     pass: s => ok(s) && /stop=target-level/.test(s) && wears(s, [1333, 1163, 1079, 1201]),
     presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 39, Strength: 45, Defence: 40, Hitpoints: 50},
       equipment: [{id: 1329, count: 1, slot: 3}], inventory: [{id: 1333, count: 1}],
@@ -532,13 +532,13 @@ const ROUTE_CASES: BenchCase[] = [
   // Ranged: the start wears the banked willow shortbow, mithril arrows and studded armour. Ranged 30 unlocks the
   // banked maple shortbow and adamant arrows: the run fetches them. It passes only with the bow, the arrows and the
   // armour worn at the end.
-  {key: 'fighter:trooper-ranged-gear', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['trooper', 'TRAIN_SKILL=Ranged', 'TARGET_LEVEL=36'],
+  {key: 'extra:trooper-ranged-gear', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['trooper', 'TRAIN_SKILL=Ranged', 'TARGET_LEVEL=36'],
     pass: s => ok(s) && /stop=target-level/.test(s) && wears(s, [853, 890, 1133, 1097]),
     presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Ranged: 29, Defence: 20, Hitpoints: 50},
       bank: [{id: 849, count: 1}, {id: 853, count: 1}, {id: 888, count: 300}, {id: 890, count: 300}, {id: 1133, count: 1}, {id: 1097, count: 1}, {id: 333, count: 30}]}},
   // The army's Ranged method (research/combat-measure.md "Ranged on the troopers"): the plain trooper trainer with
   // a shortbow, iron arrows and sharks from the Ardougne north bank. Passes on the target level with no progression handoff.
-  {key: 'fighter:trooper-ranged', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['trooper', 'TRAIN_SKILL=Ranged', 'TARGET_LEVEL=30', 'GIANT_FOOD=10', 'LOOT_WATCH=0'],
+  {key: 'extra:trooper-ranged', script: 'scripts/aio-fighter.ts', preset: 'fresh_lumbridge', scriptArgs: ['trooper', 'TRAIN_SKILL=Ranged', 'TARGET_LEVEL=30', 'GIANT_FOOD=10', 'LOOT_WATCH=0'],
     pass: s => ok(s) && /stop=target-level/.test(s) && !/handoff/i.test(s),
     presetConfig: {position: {x: 2619, z: 3332, level: 0}, skills: {Attack: 69, Strength: 61, Defence: 62, Hitpoints: 62, Ranged: 1, Prayer: 43},
       bank: [{id: 841, count: 1}, {id: 884, count: 600}, {id: 385, count: 30}]}},
