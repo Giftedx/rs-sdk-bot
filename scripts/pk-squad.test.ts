@@ -507,7 +507,8 @@ test('a single-way action walks to the tile once, and the squad stays there: no 
 
 test('a retreat action ends a member part in the Wilderness with the rescue: a walk to the bank, then back to the post by the bank trip', async () => {
     const reason = 'outclassed by Boss(145,magic) at 3 tiles';
-    const { lines, walks, stats } = await holdRadar(tick => tick < 10 ? [{ kind: 'retreat', reason }] : [], 200);
+    let fired = false;
+    const { lines, walks, stats } = await holdRadar(() => fired ? [] : (fired = true, [{ kind: 'retreat', reason }]), 200);
     expect(lines.filter(l => l.includes(`SQUAD threat retreat: ${reason}`))).toHaveLength(1);
     expect(lines.some(l => l.includes('SQUAD rescue at 3066,3641'))).toBe(true);
     expect(lines.some(l => l.includes('SQUAD rescue ends at') && l.includes('wild 0'))).toBe(true);
