@@ -1,0 +1,22 @@
+{
+ "id": "1795002124249-mineyourbiz-billionaire-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "Billionaire",
+ "item": "Nature rune",
+ "count": 40,
+ "start": 1795002124249,
+ "end": 1795004524249,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
