@@ -166,24 +166,31 @@ test('KitSwapper wears the swap once, keeps it while a threat needs it, and wear
     expect(await new KitSwapper().step(s, [{ ...kit[0], member: 'Ours2' }], 1, tick, log)).toBe(false);
 });
 
-test('a retreat is not decided again for the same stranger during the cooldown, stays 30 ticks for the squad, and a new stranger causes one at once', () => {
+test('a retreat stays decided until a member acts on it; then it is not decided again for the same stranger during the cooldown, and a new stranger causes one at once', () => {
     const view = [9];
     const { w, lines } = watch([MAGE, { ...MAGE, index: 10, name: 'Mage2' }], view, { outclass: true });
+    // Nobody acts (a member in a fight does not read it): the decision stays, tick after tick, and no cooldown starts.
     expect(retreatOf(w.step(5).actions)).toContain('outclassed by Mage');
-    // The other member of the squad acts 20 ticks later on the same decision.
-    expect(retreatOf(w.step(25).actions)).toContain('outclassed by Mage');
-    // The squad comes back: the same stranger, inside the cooldown (600 ticks from tick 5): no retreat, and the protect prayer stays.
-    const back = w.step(100);
+    expect(retreatOf(w.step(100).actions)).toContain('outclassed by Mage');
+    expect(retreatOf(w.step(400).actions)).toContain('outclassed by Mage');
+    // A member acts at tick 400: the cooldown starts, and the decision stays 30 ticks for the other members.
+    w.acted(400);
+    expect(retreatOf(w.step(420).actions)).toContain('outclassed by Mage');
+    // The squad comes back: the same stranger, inside the cooldown (600 ticks from tick 400): no retreat, and the protect prayer stays.
+    const back = w.step(500);
     expect(retreatOf(back.actions)).toBeNull();
     expect(protectOf(back.actions, 'Ours1')).toBe('magic');
     expect(lines.filter(l => l === 'THREAT retreat held, cooldown: mage')).toHaveLength(1);
     // A second stranger that was not there: a retreat at once.
     view.push(10);
-    expect(retreatOf(w.step(130).actions)).toContain('outclassed by');
-    // After the cooldown the first one counts again: both are cooled until 730, so a retreat only when a cooldown has ended.
+    expect(retreatOf(w.step(530).actions)).toContain('outclassed by');
+    w.acted(530);
+    // Both are cooled until 1130; a retreat only after that.
     view.length = 0; view.push(9);
-    expect(retreatOf(w.step(700).actions)).toBeNull();
-    expect(retreatOf(w.step(800).actions)).toContain('outclassed by Mage');
+    expect(retreatOf(w.step(1000).actions)).toBeNull();
+    expect(retreatOf(w.step(1200).actions)).toContain('outclassed by Mage');
+    // acted with nothing decided changes nothing.
+    expect(() => new (w.constructor as new (...a: never[]) => typeof w)({ sessions: () => [], server: 'x', friends: new Set(), log: () => {} } as never).acted(1)).not.toThrow();
 });
 
 test('a record file moves aside at the size cap, and a full directory takes no new name', () => {

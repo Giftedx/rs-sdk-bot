@@ -73,6 +73,7 @@ export class ThreatWatch {
     private recorded = new Map<string, number>();
     private cooling = new Map<string, number>();
     private held: { until: number; moves: Adapt[] } | null = null;
+    private pending: { culprits: string[]; moves: Adapt[] } | null = null;
     private full = false;
     readonly act: boolean;
     constructor(private o: WatchOptions) {
@@ -124,23 +125,33 @@ export class ThreatWatch {
         return this.cache;
     }
 
-    // A retreat or a single-way move for the players that caused one in the last `cooldown` ticks is dropped (the protect prayer and the swap stay):
-    // a stranger at the post would cause retreat, return, retreat until the trips run out.
+    // A retreat or a single-way move stays decided, each tick, until a member acts on it and says so (`acted`). From then on the same players cannot cause
+    // another one for `cooldown` ticks (the protect prayer and the swap stay): a stranger at the post would cause retreat, return, retreat until the trips
+    // run out. A member inside a fight does not read the decision, so the cooldown must not start before one has acted.
     private cooldown(tick: number, classes: readonly ThreatClass[], actions: Adapt[]): Adapt[] {
         const move = (a: Adapt) => a.kind === 'retreat' || a.kind === 'single-way';
         const rest = actions.filter(a => !move(a)), moves = actions.filter(move);
         if (this.held && tick <= this.held.until) return [...this.held.moves, ...rest];
-        if (!moves.length) return actions;
+        if (!moves.length) { this.pending = null; return actions; }
         const expected = this.o.decide?.expected;
         const culprits = classes.filter(c => c.dangerous && !expected?.has(c.record.name.toLowerCase())).map(c => c.record.name.toLowerCase());
         if (culprits.length && culprits.every(n => (this.cooling.get(n) ?? -1) > tick)) {
             if (this.logged.get('cooldown') !== culprits.join('+')) { this.logged.set('cooldown', culprits.join('+')); this.o.log(`THREAT retreat held, cooldown: ${culprits.join(', ')}`); }
+            this.pending = null;
             return rest;
         }
-        for (const n of culprits) this.cooling.set(n, tick + (this.o.cooldown ?? 600));
+        this.pending = { culprits, moves };
         this.logged.delete('cooldown');
-        this.held = { until: tick + 30, moves };
         return actions;
+    }
+
+    // A member acts on the retreat or the single-way move that the last `step` decided: the cooldown of its players starts, and the decision stays
+    // 30 ticks for the other members of the squad.
+    acted(tick: number): void {
+        if (!this.pending) return;
+        for (const n of this.pending.culprits) this.cooling.set(n, tick + (this.o.cooldown ?? 600));
+        this.held = { until: tick + 30, moves: this.pending.moves };
+        this.pending = null;
     }
 
     actionsFor(member: string): Adapt[] { return (this.cache?.actions ?? []).filter(a => 'member' in a ? a.member === member : true); }

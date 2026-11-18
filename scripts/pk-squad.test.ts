@@ -436,7 +436,7 @@ async function holdWithThreats(act: boolean) {
     let t = 0;
     w.s.tick = () => t;
     w.s.sdk.sendTogglePrayer = async (i: number) => { toggles.push(i); };
-    const threats: any = { act, step: () => ({ classes: [], actions: [{ kind: 'protect', member: 'Soldier', style: 'magic', reason: 'Mage magic by weapon, 4 tiles' }] }) };
+    const threats: any = { act, acted: () => {}, step: () => ({ classes: [], actions: [{ kind: 'protect', member: 'Soldier', style: 'magic', reason: 'Mage magic by weapon, 4 tiles' }] }) };
     const mocks = [
         spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
         spyOn(walking, 'walkPath').mockResolvedValue({ ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any),
@@ -476,7 +476,7 @@ async function holdRadar(actions: (tick: number) => any[], until = 120) {
         if (old >= 0) { const [gone] = w.equipment.splice(old, 1); w.inventory.push({ ...gone, slot: ++slot, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] }); }
         w.equipment.push(item);
     };
-    const threats: any = { act: true, step: (tick: number) => ({ classes: [], actions: actions(tick) }) };
+    const threats: any = { act: true, acted: () => {}, step: (tick: number) => ({ classes: [], actions: actions(tick) }) };
     const mocks = [
         spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
         spyOn(walking, 'walkPath').mockImplementation(async (_d, path) => { walks.push({ x: path[0]!.x, z: path[0]!.z }); w.player.worldX = path[0]!.x; w.player.worldZ = path[0]!.z; return { ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any; }),

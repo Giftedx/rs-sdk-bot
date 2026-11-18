@@ -394,6 +394,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             const protect = threat && o.threats!.act ? protectOf(threat.actions, s.name) : null;
             const threatRetreat = threat && o.threats!.act ? retreatOf(threat.actions) : null;
             if (threatRetreat) {
+                o.threats!.acted(now);
                 o.log(`[${s.name}] SQUAD threat retreat: ${threatRetreat}`);
                 const retreated = await rescue(s, o.log, o.stopped);
                 if (!retreated) { stats.died = true; break; }
@@ -405,6 +406,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 if (single) {
                     singleUntil = now + 120;
                     if (Math.max(Math.abs(p.worldX - single.to.x), Math.abs(p.worldZ - single.to.z)) > 2) {
+                        o.threats!.acted(now);
                         o.log(`[${s.name}] SQUAD threat single-way: ${single.reason}, to ${single.to.x},${single.to.z}`);
                         const walked = await walkPath(walker, [{ ...single.to, tol: 2 }], { maxTicks: 40, idleMs: 9000, stop: () => !going() });
                         if (!walked.ok) { o.log(`[${s.name}] SQUAD threat single-way walk failed, retreat`); if (!await rescue(s, o.log, o.stopped)) { stats.died = true; break; } }

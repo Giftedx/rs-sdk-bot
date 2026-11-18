@@ -505,8 +505,10 @@ export async function hunt(s: Session, o: HuntOptions) {
             // The threat radar: the armour swap first (it uses the tick), then a retreat that it decides when the hunt's own check has none.
             const radar = o.threats?.act ? o.threats.step(s.tick()) : null;
             if (radar && await swapper.step(s, radar.actions, s.tick(), () => nextTick(s), log)) continue;
-            const retreatReason = threat?.retreatReason ?? (attackerIndex === null && radar ? retreatOf(radar.actions) : null);
+            const radarReason = attackerIndex === null && radar ? retreatOf(radar.actions) : null;
+            const retreatReason = threat?.retreatReason ?? radarReason;
             if (retreatReason) {
+                if (!threat?.retreatReason && radarReason) o.threats!.acted(s.tick());
                 const margin = wildernessCombatMargin({ z: me.worldZ, combat: me.combatLevel }, me.combatLevel);
                 const escapePlan = threat?.escapePlan ?? planWildernessEscape({ x: me.worldX, z: me.worldZ }, { glory: hasGlory, teleport: hasTele });
                 log(`HUNT threat retreat (${retreatReason}, bracket=${margin.minCombat}-${margin.maxCombat}): ${escapePlan.detail}`);

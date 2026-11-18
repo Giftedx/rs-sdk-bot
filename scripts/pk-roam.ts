@@ -701,7 +701,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             // The threat radar: an escape that it decides, else the armour swap (it uses the tick).
             if (threats?.act && radarKit && swapper) {
                 const radarNow = threats.step(session.tick()), why = radarKit.retreatOf(radarNow.actions);
-                if (why) { await escape(`radar: ${why}`); return 'flee'; }
+                if (why) { threats.acted(session.tick()); await escape(`radar: ${why}`); return 'flee'; }
                 if (await swapper.step(session, radarNow.actions, session.tick(), async () => { await sdk.waitForTicks(1); return true; }, line => emit({ e: 'threat', line }))) return 'ok';
             }
             if (wildLevel(m.x, m.z) > cfg.maxWild) { await escape(`deeper than the limit (${wildLevel(m.x, m.z)} > ${cfg.maxWild})`); return 'flee'; }
