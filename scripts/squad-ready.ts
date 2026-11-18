@@ -11,8 +11,10 @@
 //   first two accounts of the list (poison did 139 of 455 damage; Rule antipoisonHolders), food for a full pack (the food list of the bank trip, scripts/pk-hunt.ts FOOD_LIST:
 //   sharks first, then lobsters), a bank read of a stated age, and a place the walker leaves.
 // Usage: bun scripts/squad-ready.ts [<account> ...] [--root <checkout>] [--max-age <hours>] [--json]
-//          [--loadouts <dir>] [--orders <dir>] [--receipt <dir>]
+//          [--loadouts <dir>] [--orders <dir>] [--receipt <dir>] [--ignore-prayer]
 //   No account named: every account of this fleet side with 99 in the seven combat skills.
+//   --ignore-prayer  leaves the prayer points out of the check, to write the kit files (a blocked account gets none) before
+//               the altar step. It cannot be combined with --receipt: a receipt always checks the prayer points.
 //   --root      the checkout whose .practice/status, .practice/market-all.json and fleet owners the tool reads
 //               (default: the main checkout of this repository).
 //   --loadouts  writes <account>.json for each account that holds its kit: the input of the kit step,
@@ -32,13 +34,22 @@ import { packOf } from './pk-gang';
 import { FOOD_LIST } from './pk-hunt';
 import { kitItems } from './pk-kits';
 import { kitFrom } from './pk-roam';
-import { SQUAD_OPTS, SQUAD_POST, squadEscapeSpell } from './pk-squad';
+import { SQUAD_OPTS, SQUAD_POST, squadEscapeSpell, squadStartFood } from './pk-squad';
 import { PROFILES } from './shop-buyer';
 
 export type Item = { id: number; name: string; count: number };
 export type Worn = Item & { slot: number };
 export type Account = { name: string; at: number; bankAt: number | null; pos: { x: number; z: number; level: number }; levels: Readonly<Record<string, number>>; quests: ReadonlySet<string>;
-    worn: Worn[]; pack: Item[]; bank: Item[]; side?: string; reservation?: string };
+    worn: Worn[]; pack: Item[]; bank: Item[]; side?: string; reservation?: string;
+    // The current Prayer level (prayer points); absent when the status file does not name it.
+    prayerPoints?: number };
+// A member fights with at least this share of its base Prayer level as prayer points. Live: all four fighting members of
+// the first run stood at Prayer 99 with 0 points and took 56 HP a kill; the clone replay with full points took half.
+// The fix is the altar step: Varrock east church (scripts/pray-at-altar.ts PRAYER_ALTARS), never the nearest altar of an
+// account at Edgeville, which is the Wilderness chaos temple.
+export const PRAYER_FLOOR = 0.7;
+export const PRAYER_ALTAR = '3253,3486';
+export const prayerFloor = (base: number) => Math.ceil(base * PRAYER_FLOOR);
 export type Gear = { id: number; name: string; slot: string; tier?: number; special?: { pvp?: boolean }; requires?: { skills?: Record<string, number>; quest?: string };
     bonuses: Record<string, number>; tradeable?: boolean };
 // antipoisonHolders: the first accounts of the list that must hold an antipoison. The gang clone bench (five of ours,
@@ -170,7 +181,9 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     const foodHeld = foodStock.reduce((n, f) => n + f.count, 0), foodRows: Item[] = [];
     for (const f of foodStock) { const take = Math.min(f.count, foodSlots - foodRows.reduce((n, r) => n + r.count, 0)); if (take > 0) foodRows.push({ id: f.id, name: f.name, count: take }); }
     const food = foodRows.reduce((n, r) => n + r.count, 0);
-    if (foodHeld < foodSlots) needs.push({ what: 'food (shark or lobster)', id: FOOD_IDS[0]!, count: foodSlots - foodHeld, blocking: true, accept: i => isFood(i.id) });
+    // A member that holds at least the food floor of its pack starts with what it holds (scripts/pk-squad.ts
+    // squadStartFood), so the missing meals are a want; under the floor they block.
+    if (foodHeld < foodSlots) needs.push({ what: 'food (shark or lobster)', id: FOOD_IDS[0]!, count: foodSlots - foodHeld, blocking: !squadStartFood(foodHeld, foodSlots).ok, accept: i => isFood(i.id) });
     // The fight kit, the pack of a bank trip, the escape and the freeze, each from the code that the squad runs.
     // The special of the fight kit: the melee weapon's, else the bow's (scripts/pk.ts defaultSpec).
     const fight = kitFrom(worn, carried), special = defaultSpec(fight)?.style ?? null;
@@ -182,6 +195,8 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     if (freezeSpell === null && !reasons.some(r => /Earth rune|Water rune|Nature rune/.test(r))) reasons.push('no Bind cast with the runes held');
     const ageHours = a.bankAt === null ? Infinity : (now - a.bankAt) / 3_600_000;
     if (ageHours > rule.maxBankAgeHours) reasons.push(a.bankAt === null ? 'no bank read' : `bank read ${ageHours.toFixed(1)} h old (limit ${rule.maxBankAgeHours} h)`);
+    const prayerBase = a.levels.prayer ?? 1;
+    if (a.prayerPoints !== undefined && a.prayerPoints < prayerFloor(prayerBase)) reasons.push(`prayer points ${a.prayerPoints} of ${prayerBase}, under the floor of ${prayerFloor(prayerBase)}: bun scripts/pray-at-altar.ts ${a.name} ALTAR=${PRAYER_ALTAR}`);
     if (inWestArdougne(a.pos)) reasons.push('stands inside West Ardougne, which the walker cannot leave');
     if (wildernessLevel(a.pos.z) > 0) reasons.push(`stands in the Wilderness at level ${wildernessLevel(a.pos.z)}`);
     if (!maxed(a)) notes.push(`not 99 in ${COMBAT.filter(s => (a.levels[s.toLowerCase()] ?? 1) < 99).join(', ')}`);
@@ -289,7 +304,8 @@ export function accountOf(status: any, owner?: { side?: string; reservation?: st
     if (!status || typeof status.name !== 'string' || !status.pos || !Array.isArray(status.skills)) return null;
     const items = (rows: any): Item[] => (Array.isArray(rows) ? rows : []).filter((i: any) => Number.isSafeInteger(i?.id) && typeof i.name === 'string' && i.count > 0).map((i: any) => ({ id: i.baseId ?? i.id, name: i.name, count: i.count }));
     return { name: status.name, at: Number(status.at) || 0, bankAt: Number.isFinite(status.bankAt) ? status.bankAt : null, pos: { x: status.pos.x, z: status.pos.z, level: status.pos.level ?? 0 },
-        levels: Object.fromEntries(status.skills.map((s: any) => [String(s.name).toLowerCase(), s.level])), quests: new Set((status.quests ?? []).filter((q: any) => q?.state === 'complete').map((q: any) => String(q.name).toLowerCase())),
+        levels: Object.fromEntries(status.skills.map((s: any) => [String(s.name).toLowerCase(), s.level])),
+        ...(Number.isFinite(status.skills.find((s: any) => s?.name === 'Prayer')?.currentLevel) ? { prayerPoints: status.skills.find((s: any) => s?.name === 'Prayer').currentLevel as number } : {}), quests: new Set((status.quests ?? []).filter((q: any) => q?.state === 'complete').map((q: any) => String(q.name).toLowerCase())),
         worn: (Array.isArray(status.equipment) ? status.equipment : []).filter((i: any) => Number.isSafeInteger(i?.id)).map((i: any) => ({ id: i.baseId ?? i.id, name: i.name, count: i.count, slot: i.slot })),
         pack: items(status.inventory), bank: items(status.bank), ...(owner?.side ? { side: owner.side } : {}), ...(owner?.reservation ? { reservation: owner.reservation } : {}) };
 }
@@ -342,6 +358,10 @@ if (import.meta.main) {
     const blockers = (a: Account) => pickKit(a, gear, rule, now).reasons.length;
     const candidates = names.length ? names.map(n => fleet.find(a => a.name.toLowerCase() === n.toLowerCase()) ?? (() => { throw Error(`no status file of this side's account ${n} in ${statusDir}`); })())
         : fleet.filter(maxed).sort((x, y) => blockers(x) - blockers(y));
+    if (args.includes('--ignore-prayer')) {
+        if (flag('--receipt')) throw Error('--ignore-prayer cannot be combined with --receipt: a receipt always checks the prayer points');
+        for (const a of candidates) delete a.prayerPoints;
+    }
     const plan = stagingPlan(candidates, fleet, gear, rule, now, undefined, nameOf);
     let market: Record<string, { ask: number | null; sell: number }> = {};
     try { market = read(join(root, '.practice', 'market-all.json')).items; } catch { /* no market file: the plan names no price */ }
