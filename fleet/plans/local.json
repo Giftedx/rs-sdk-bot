@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795003830180,
+ "at": 1795003913536,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -344,6 +344,33 @@
    "enabled": true,
    "repeat": false,
    "goal": "run-nab-trooper-ranged99 [task-2e303faf-113e-49a0-96e5-778f11648dbd]",
+   "role": "helper"
+  },
+  {
+   "accounts": [
+    "Wandwaver",
+    "BowBeforeMe"
+   ],
+   "script": "scripts/handoff-inputs.ts",
+   "args": [
+    "1000:Bronze arrow",
+    "500:Iron arrow",
+    "--bank-x=2615",
+    "--bank-z=3332",
+    "--approach-ms=900000",
+    "--request-ms=60000",
+    "--timeout-ms=240000"
+   ],
+   "env": {
+    "HANDOFF_ORDER": "wandwaver-bow-ranged50-arrows-r3",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-eb045b6d-1e16-40e4-9f34-b05e5150bc76"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-handoff-wandwaver-bow-arrows-r3 [task-eb045b6d-1e16-40e4-9f34-b05e5150bc76]",
    "role": "helper"
   }
  ],

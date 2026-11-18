@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795003804871-knightrider-ballspinner-shark",
+ "account": "KnightRider",
+ "partner": "Ballspinner",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 6,
+ "claim": "e38b3a55-45dc-4979-a014-bbfc12cd915c",
+ "count": 0,
+ "ok": false,
+ "at": 1795003904571,
+ "detail": "trade claimed"
+}
