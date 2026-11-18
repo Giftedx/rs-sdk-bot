@@ -1,0 +1,22 @@
+{
+ "id": "1795002709359-mineyourbiz-swordinhand-firerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "Swordinhand",
+ "item": "Fire rune",
+ "count": 1,
+ "start": 1795002709359,
+ "end": 1795005109359,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
