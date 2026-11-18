@@ -1,0 +1,22 @@
+{
+ "id": "1795005109359-masterbaiter-oreelse-dragonbones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "OreElse",
+ "item": "Dragon bones",
+ "count": 10,
+ "start": 1795005109359,
+ "end": 1795007509359,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
