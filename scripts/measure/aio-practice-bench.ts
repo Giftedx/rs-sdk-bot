@@ -469,7 +469,8 @@ async function main() {
   const start = (label?: string, slot?: number, caseEnv: Record<string, string> = {}) => startStack({ tickMs: Number(process.env.BENCH_TICK_MS ?? 150), xpRate: 25, readyTimeoutMs: 120_000,
     ...(slot === undefined ? {} : { instance: instanceOf(slot), gateway: false as const, portWaitMs: 10_000, ports: { engine: slotPort(slot), gateway: slotPort(slot) + 1 },
       engineEnv: { WEB_MANAGEMENT_PORT: String(slotPort(slot) + 2), NODE_PORT: String(slotPort(slot) + 3), GE_DATABASE: `data/market-aiobench-${slot}.sqlite`, ...caseEnv } }),
-    ...(LOCKSTEP ? { lockstep: { seed: SEED, anchor: '^aiob', ...(TRACE_DIR && label ? { traceFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.trace`), actionFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.actions`) } : {}) } } : {}) });
+    // ackMs: the engine waits this long for a bot that holds its tick. A route search holds it up to SIM_ROUTE_MS (180 s).
+    ...(LOCKSTEP ? { lockstep: { seed: SEED, anchor: '^aiob', ackMs: 190_000, ...(TRACE_DIR && label ? { traceFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.trace`), actionFile: resolve(TRACE_DIR, `${label.replace(/[^a-z0-9-]/gi, '_')}.actions`) } : {}) } } : {}) });
   if (TRACE_DIR) mkdirSync(TRACE_DIR, { recursive: true });
   if (FRESH && CONCURRENCY !== 1) throw new Error('BENCH_FRESH=1 uses BENCH_PARALLEL, not BENCH_CONCURRENCY');
   if (!FRESH && PARALLEL !== 1) throw new Error('BENCH_PARALLEL needs BENCH_FRESH=1');
