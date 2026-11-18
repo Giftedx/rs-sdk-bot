@@ -26,6 +26,8 @@ import { assertActionScope } from './action-scope';
 import type { TickRecorder } from './tick-record';
 import {attachProgressionSession,preflightProgressionWork,processWork,type ProgressionSession} from './progression-session';
 import type {WorkDescriptor} from './progression-policy';
+// The longest single hold of a lockstep tick for a route search, under the 60 s idle limit of the client session.
+export const ROUTE_HOLD_MS = 45_000;
 // The wait checks of every lockstep session of this process (selfWaiting in createShim).
 const waitingSessions = new Set<() => boolean>();
 // The executors that wait for the server to open a count dialog (a withdraw or deposit of X): the dialog comes in
@@ -177,6 +179,10 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     // on one tick for each 500 ms of a search, and one case at one seed gave 1,901, 2,072 and 2,238 ticks.
     // SIM_ROUTE_MS bounds the hold for a search that never answers: a search older than the bound holds no tick.
     const routeMs = Math.max(busyMs, Number(process.env.SIM_ROUTE_MS || 180_000));
+    // One hold is ROUTE_HOLD_MS at most. The client ends a session after 60 s with no packet (IDLE_CYCLES of the lite
+    // session), and a held tick sends none: a search of over a minute with empty caches ended the session as "idle"
+    // (pvp:stage-kit on a hosted runner). A longer search lets one tick pass each 45 s and holds the next one.
+    const routeHoldMs = Math.min(routeMs, ROUTE_HOLD_MS);
     const ackFile = process.env.SIM_ACK_FILE;
     // pumpMs: the packet reads of the client; stateMs: the state of a tick; scriptMs: the tick listeners (the script).
     const ackStat = { ticks: 0, held: 0, heldMs: 0, capped: 0, pumpMs: 0, stateMs: 0, scriptMs: 0 };
@@ -228,7 +234,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             const routeBusy=routes>0&&waitLeft===0&&!serverWait&&!inDialogWait();
             const busy = routeBusy || (running && waitLeft === 0 && !serverWait && !(inDialogWait() && !dialogOpen)) || !waiting;
             // A script that ended after its last tick wait leaves no wait: SIM_SCRIPT_MS (500) bounds that hold.
-            if (busy && performance.now() - since < (routeBusy ? routeMs : scriptTick ? scriptMs : busyMs)) { if (turns++ < 20) setImmediate(check); else setTimeout(check, 1); return; }
+            if (busy && performance.now() - since < (routeBusy ? routeHoldMs : scriptTick ? scriptMs : busyMs)) { if (turns++ < 20) setImmediate(check); else setTimeout(check, 1); return; }
             const held = performance.now() - since;
             ackStat.ticks++; if (busy) ackStat.capped++; if (held > 2) { ackStat.held++; ackStat.heldMs += held; }
             if (ackFile && held > 2) appendFileSync(ackFile, `ACK tick=${tick} bot=${(client as { loginUser?: string }).loginUser ?? "?"} waits=${tickWaits.active} state=${stateWaiters}/${stateWaitersLow} running=${running} pending=${actionPending} serverWait=${serverWait} routes=${routes} sdk=${[...inFlight].map(([k, n]) => `${k}${n > 1 ? `x${n}` : ''}`).join(',') || '-'} held=${held.toFixed(0)}ms${busy ? ' CAPPED' : ''}\n`);
