@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795042266748-undermykilt-mmsmk1232-3026744267102c65",
+ "account": "mmsmk1232",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune full helm",
+ "requested": 1,
+ "claim": "5301545c-0399-4cd7-94a5-292b720c57af",
+ "count": 0,
+ "ok": false,
+ "at": 1795042291281,
+ "detail": "trade claimed"
+}
