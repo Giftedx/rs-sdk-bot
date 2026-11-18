@@ -174,3 +174,14 @@ test('saved shop proof rejects changed bytes, missing receipts, wrong source and
   unlinkSync(join(directory,'refill-ledger.json'));expect(()=>verifyShopSupply(directory)).toThrow();
  }finally{revision.mockRestore();rmSync(directory,{recursive:true,force:true});rmSync(copy,{recursive:true,force:true});}
 });
+test('a buy that the coins refuse before an offer is an ordinary refusal with exit 1, read from the shared coins pattern',()=>{
+ const poor=save(3,30000);
+ const failure='coins 30000 are under the escrow 45000 (1 x 45000) plus the reserve 5000: 20000 short';
+ const line='OWNED_GE_ITEM '+JSON.stringify({ok:false,newItemsThisSession:0,cashDeltaThisSession:0,spent:0,phase:'unplaced',acquired:0,escrow:0,failure:'Error: '+failure});
+ const refused=(code:number)=>({code,timedOut:false,hpMin:35,log:`${line}\nLOGOUT logged-out\nRESULT fail ${JSON.stringify({ok:false})}\n`});
+ expect(Object.values(shopRefusalChecks(poor,poor,refused(1))).every(Boolean)).toBe(true);
+ // Exit 0 for an ordinary refusal is a fault, and a failure of another kind is no ordinary refusal.
+ expect(shopRefusalChecks(poor,poor,refused(0)).exit).toBe(false);
+ const other=refused(1);other.log=other.log.replace(failure,'GE interface unavailable');
+ expect(shopRefusalChecks(poor,poor,other).exit).toBe(false);
+});

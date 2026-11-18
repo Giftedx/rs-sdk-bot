@@ -23,6 +23,7 @@ import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { fleetStatusRows, readSnapshotFiles, type SnapshotFile } from '../packages/core/src/fleet-snapshots';
 import { publishedSideHold } from '../packages/core/src/fleet-side-card';
 import { START_BUDGET_GB, activeExternalLive, clearSwarmStop, pendingStartupCount, swarmWroteStop } from './swarm';
+import { STABLE_CAUSES, unplacedCause, type RefusalCause } from '../packages/core/src/order-refusal';
 import { freemem } from 'node:os';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
@@ -63,6 +64,9 @@ type Retirement = string | { reason: string; script: string };
 type State = { assigned: Record<string, { template: string; offset: number; at: number }>; retired: Record<string, Retirement>; kitSeq?: Record<string, number>;
     // `unsold`: when a kit buy last got none of an item, by item id. The market leaves the item out for UNSOLD_RETRY_MS.
     unsold?: Record<string, number>;
+    // `unplaced`: when an account's kit buy last ended before it placed an offer (a precondition failed), by pair key. The pair gets
+    // no new buy for UNPLACED_RETRY_MS, as an unsold item leaves the market: the same order is not planned again at once.
+    unplaced?: Record<string, number>;
     // `kitEnds`: the end record (its `at`) that last raised an account's kitSeq, so one end record raises it once, even
     // while the account stays paused and its job is not planned again.
     kitEnds?: Record<string, number> };
@@ -246,6 +250,17 @@ export function kitMarket(items: readonly { id: number; name?: string; debugname
         market[norm(i.name)] = { id: i.id, name: i.name, limit };
     }
     return market;
+}
+// A buy that ended before it placed an offer on a cause that a second login meets again (coins under the escrow and reserve, a
+// full pack: STABLE_CAUSES of packages/core/src/order-refusal.ts). A passed deadline and a count that differs from the planner's
+// are settled by a fresh status, so they give no mark.
+export const UNPLACED_RETRY_MS = 30 * 60_000;
+export function unplacedPrecondition(lines: readonly string[]): boolean {
+    return lines.some(l => /RESULT fail \{/.test(l) && STABLE_CAUSES.includes(unplacedCause(l) as RefusalCause));
+}
+// The pairs whose kit buy is held back now: a fresh unplaced mark.
+export function unplacedHeld(unplaced: Readonly<Record<string, number>> | undefined, now: number): string[] {
+    return Object.entries(unplaced ?? {}).filter(([, at]) => now - at < UNPLACED_RETRY_MS && at <= now).map(([key]) => key);
 }
 export function unfilledItems(lines: readonly string[]): number[] {
     const out = new Set<number>();
@@ -641,6 +656,10 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
             log.push(`AUTOPILOT unsold ${j.account} ${j.template}: no seller under the cap for ${none.map(id => byId.get(id) ?? id).join(', ')}`);
             continue;
         }
+        if (String(j.template).startsWith(KIT_BUY) && unplacedPrecondition(jobLines)) {
+            (state.unplaced ??= {})[pairKey(j.account, j.template)] = Date.now();
+            log.push(`AUTOPILOT unplaced ${j.account} ${j.template}: the coins or the pack stopped the buy before an offer; no new buy for ${UNPLACED_RETRY_MS / 60_000} minutes`);
+        }
         if (r.retire) { const script = scriptOf(j.template); state.retired[pairKey(j.account, j.template)] = script === undefined ? r.reason : { reason: r.reason, script }; log.push(`AUTOPILOT retire ${j.account} ${j.template}: ${r.reason}`); continue; }
         const ctx = ctxFor(j.account);
         if (isJobEnded(a, ctx)) {
@@ -750,7 +769,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
         stocks:progressionStocks,sourcesFor:(account,_method,_item)=>[account,...stock.filter(s=>!newlyWorking.has(s.name.toLowerCase())&&owners.get(s.name.toLowerCase())?.server===owners.get(account.toLowerCase())?.server).map(s=>s.name)],
         canTransfer:(from,to)=>sourceAllowed.has(from.toLowerCase())&&!newlyWorking.has(from.toLowerCase())&&free(from)&&free(to)&&owners.get(from.toLowerCase())?.server===owners.get(to.toLowerCase())?.server});
     const externalLive = activeExternalLive(statusFiles.map(f => readJson(join(statusDir, f), null)).filter(Boolean), [...activeAccounts], now);
-    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm, accounts, OFFLINE_GUARDED, reserved), now, unobserved: unobservedAccounts(listed.filter(free), n => observed(n)?.at, now), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
+    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set([...Object.keys(state.retired), ...unplacedHeld(state.unplaced, now)]), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm, accounts, OFFLINE_GUARDED, reserved), now, unobserved: unobservedAccounts(listed.filter(free), n => observed(n)?.at, now), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
             externalLive.length,
             { running: swarm.jobs.filter((j: any) => mineMarked(j) && j.enabled !== false).flatMap(jobAccounts).filter((n: string) => activeAccounts.has(n.toLowerCase())).length,
                 headroom: headroomWithMargin(memoryHeadroom(freemem() / 2 ** 30, swarm.minFreeGB, pendingStartupCount(readJson(join(prac, 'swarm-runs.json'), []), now) + tradeStarts(open, externalLive, activeAccounts)), writtenNotRunning(swarm.jobs.filter(mineMarked), activeAccounts)) }), holding: activeAccounts, builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),

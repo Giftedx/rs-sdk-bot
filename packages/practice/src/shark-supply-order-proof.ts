@@ -26,7 +26,8 @@ export const sharkProofSources=()=>({runtime:workerSourceRevision(),files:Object
     'scripts/measure/fleet-player-save.ts'].map(p=>[p,hash(join(root,p))]))});
 const sources=sharkProofSources;
 
-// Proof-only v6 fixture / v9 persisted cross-check from pinned PlayerLoading.load / Player.save.
+// Proof-only v6 fixture / v9 and v10 persisted cross-check from pinned PlayerLoading.load / Player.save (the engine
+// writes v10: after the v9 tail it adds the total playtime and the playtime of each skill in milliseconds, 8 bytes each).
 // Sequential DataView reads and bitwise CRC are independent of readPracticeSave and Bun.hash.
 // Do not use this as a runtime save adapter or expand it to unrelated save versions.
 export function decodeSharkSave(bytes:Uint8Array):{save:Save;recovery:{id:number;count:number}[];lastLogin:string} {
@@ -39,7 +40,7 @@ export function decodeSharkSave(bytes:Uint8Array):{save:Save;recovery:{id:number
     for(const byte of bytes.subarray(0,end)){crc^=byte;for(let bit=0;bit<8;bit++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);}
     if(((crc^0xffffffff)>>>0)!==view.getUint32(end))throw Error('shark save CRC mismatch');
     if(u16()!==0x2004)throw Error('invalid shark save magic');
-    const version=u16();if(version!==6&&version!==9)throw Error('requires shark fixture v6 or pinned v9 save');
+    const version=u16();if(version!==6&&version!==9&&version!==10)throw Error('requires shark fixture v6 or pinned v9 or v10 save');
     const position={x:u16(),z:u16(),level:u8()};
     take(7+5+1+2+4); // body, colours, gender, run energy, playtime
     const skills=Array.from({length:21},(_,index)=>{const rawExperience=i32(),level=u8();return {index,rawExperience,xp:Math.trunc(rawExperience/10),level};});
@@ -59,8 +60,9 @@ export function decodeSharkSave(bytes:Uint8Array):{save:Save;recovery:{id:number
     }
     const afk=u8();take(afk*4+2+1); // AFK zones, last zone, chat modes
     const lastLogin=view.getBigInt64(take(8)).toString();
-    const recovery=version===9?Array.from({length:u16()},()=>({id:u16(),count:i32()})):[];
-    if(version===9)take(21*4); // per-skill playtime
+    const recovery=version>=9?Array.from({length:u16()},()=>({id:u16(),count:i32()})):[];
+    if(version>=9)take(21*4); // per-skill playtime
+    if(version===10)take(8+21*8); // total playtime and per-skill playtime in milliseconds
     if(offset!==end)throw Error('unexpected shark save tail');
     return {save:{version,position,skills,vars,inventories},recovery,lastLogin};
 }

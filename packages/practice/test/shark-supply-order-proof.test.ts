@@ -74,7 +74,7 @@ test('fishing diagnostic input must be the recorded ordinary entry state',()=>{
 
 const root=resolve(import.meta.dir,'../../..');
 const sha=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
-// Independent fixture writer: full pinned v9 layout, including empty slots and tail.
+// Independent fixture writer: full pinned v9 and v10 layout, including empty slots and tail.
 function encode(s:ReturnType<typeof save>,version=9){
     const b=Buffer.alloc(20000);let at=0;
     const u1=(n:number)=>{b.writeUInt8(n,at++);},u2=(n:number)=>{b.writeUInt16BE(n,at);at+=2;},i4=(n:number)=>{b.writeInt32BE(n,at);at+=4;};
@@ -86,7 +86,7 @@ function encode(s:ReturnType<typeof save>,version=9){
     const containers=Object.entries(s.inventories);u1(containers.length);
     for(const [type,items] of containers){u2(Number(type));const size=Math.max(0,...items.map(i=>i.slot+1));u2(size);
         for(let slot=0;slot<size;slot++){const item=items.find(i=>i.slot===slot);u2(item?item.id+1:0);if(item){u1(item.count>=255?255:item.count);if(item.count>=255)i4(item.count);}}}
-    u1(0);u2(0);u1(0);at+=8;if(version===9){u2(0);at+=84;}
+    u1(0);u2(0);u1(0);at+=8;if(version>=9){u2(0);at+=84;}if(version===10)at+=8+21*8;
     b.writeUInt32BE(Bun.hash.crc32(b.subarray(0,at))>>>0,at);return b.subarray(0,at+4);
 }
 let fixtureTemplate:string|undefined;
@@ -203,4 +203,12 @@ test('independent semantic decoder checks full pinned v9 slots, skills, varints 
     expect(decodeSharkSave(substituted).save).not.toEqual(readPracticeSave(path));
     const fixture6=join(dir,'fixture-v6.sav');writeFileSync(fixture6,encode(save(),6));
     expect(decodeSharkSave(readFileSync(fixture6)).save).toEqual(readPracticeSave(fixture6));
+    // The save that the engine writes now (SAV_VERSION 10) is read by both decoders alike; v11 is not known.
+    const fixture10=join(dir,'fixture-v10.sav');writeFileSync(fixture10,encode(save(),10));
+    expect(decodeSharkSave(readFileSync(fixture10)).save).toEqual(readPracticeSave(fixture10));
+    const fixture11=Buffer.from(encode(save(),10));fixture11.writeUInt16BE(11,2);fixture11.writeUInt32BE(Bun.hash.crc32(fixture11.subarray(0,-4))>>>0,fixture11.length-4);
+    expect(()=>decodeSharkSave(fixture11)).toThrow('requires shark fixture');
+    // A v10 save with the v9 tail only is truncated.
+    const short10=Buffer.from(encode(save(),9));short10.writeUInt16BE(10,2);short10.writeUInt32BE(Bun.hash.crc32(short10.subarray(0,-4))>>>0,short10.length-4);
+    expect(()=>decodeSharkSave(short10)).toThrow('truncated');
 });

@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { orderRefusal } from '../../core/src/order-refusal';
 import { DRAIN_RESULT } from '../src/autopilot';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
 import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable, norm, usableTool } from '../src/autopilot';
@@ -138,13 +139,13 @@ test('a thief with few Hitpoints gets a knight spot only when it holds food; a f
     expect(job(acct('New'))).toBe('thieving55');
 });
 test('a frail thief with coins and no food buys food with its own coins, then takes a knight spot', async () => {
-    const { FRAIL_FOOD_BUY, FRAIL_FOOD_BUY_ID, KIT_BUY, KIT_CASH_RESERVE, KIT_PRICE_CAPS } = await import('../src/autopilot');
+    const { FRAIL_FOOD_BUY, FRAIL_FOOD_BUY_ID, KIT_BUY, KIT_CASH_RESERVE, KIT_COIN_MARGIN, KIT_PRICE_CAPS } = await import('../src/autopilot');
     const food = { trout: { id: 333, name: 'Trout', limit: KIT_PRICE_CAPS.trout! }, lobster: { id: 379, name: 'Lobster', limit: KIT_PRICE_CAPS.lobster! } };
     const frail = (items: Record<string, number> = {}) => acct('Frail', { Thieving: 99, Hitpoints: 10 }, items);
     const pick = (a: Acct, extra: Partial<Inputs> = {}) => plan(inputs([a], { market: food, ...extra })).find(x => x.account === a.name);
     const cost = FRAIL_FOOD_BUY * KIT_PRICE_CAPS.trout!;
     // The cheapest food of the job that the market lists, in one order with the price cap.
-    const buy = pick(frail({ coin: cost + KIT_CASH_RESERVE }))!;
+    const buy = pick(frail({ coin: cost + KIT_CASH_RESERVE + KIT_COIN_MARGIN }))!;
     expect(buy.template!.id).toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
     expect(buy.template!.args).toHaveLength(1);
     expect(buy.template!.args![0]).toContain(`ITEM_ID=333 QUANTITY=${FRAIL_FOOD_BUY} LIMIT_PRICE=${KIT_PRICE_CAPS.trout}`);
@@ -158,7 +159,7 @@ test('a frail thief with coins and no food buys food with its own coins, then ta
     const oneFree = { ...full, [`knight:${KNIGHT_SPOTS[0]}`]: 0 };
     expect(pick(frail({ coin: 1_000_000 }), { taken: oneFree })!.resources).toEqual([`knight:${KNIGHT_SPOTS[0]}`]);
     // One coin short of the order and the reserve: no buy.
-    expect(pick(frail({ coin: cost + KIT_CASH_RESERVE - 1 }))?.template?.id).not.toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
+    expect(pick(frail({ coin: cost + KIT_CASH_RESERVE + KIT_COIN_MARGIN - 1 }))?.template?.id).not.toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
     // No market, a retired buy, or an account that is not frail: no buy.
     expect(plan(inputs([frail({ coin: 1_000_000 })])).find(x => x.account === 'Frail')?.template?.id).not.toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
     expect(pick(frail({ coin: 1_000_000 }), { retired: new Set([pairKey('Frail', KIT_BUY + FRAIL_FOOD_BUY_ID)]) })?.template?.id).not.toBe(KIT_BUY + FRAIL_FOOD_BUY_ID);
@@ -327,7 +328,7 @@ test('assess retires repeated fails, a death and near-total waste, and keeps pro
 
 test('a status file becomes base levels and held counts by name', () => {
     const a = accountFrom('Pal', side, { skills: [{ name: 'Thieving', level: 56 }], inventory: [{ id: 314, name: 'Feather', count: 40 }], bank: [{ id: 314, count: 60 }], equipment: null }, id => id === 314 ? 'Feather' : undefined);
-    expect(a).toEqual({ name: 'Pal', side, skills: { Hitpoints: 10, Thieving: 56 }, items: { feather: 100 } });
+    expect(a).toEqual({ name: 'Pal', side, skills: { Hitpoints: 10, Thieving: 56 }, items: { feather: 100 }, exact: { feather: 100 } });
     expect(accountFrom('New', side, null, () => undefined).skills).toEqual({ Hitpoints: 10 });
 });
 test('bow kit stock uses native base IDs instead of shared unstrung display names', () => {
@@ -710,7 +711,7 @@ test('army accounts train Ranged to 99 on the troopers with a bow they wield and
 });
 
 import { xpForLevel } from '../src/curve';
-import { KIT_BUY, KIT_CASH_RESERVE, KIT_PRICE_CAPS, kitLacks, kitReserve, type Market, type Stock } from '../src/autopilot';
+import { KIT_BUY, KIT_CASH_RESERVE, KIT_COIN_MARGIN, KIT_PRICE_CAPS, kitLacks, kitReserve, type Market, type Stock } from '../src/autopilot';
 const market: Market = { 'mind rune': { id: 558, name: 'Mind rune', limit: KIT_PRICE_CAPS['mind rune']! }, 'air rune': { id: 556, name: 'Air rune', limit: KIT_PRICE_CAPS['air rune']! },
     'nature rune': { id: 561, name: 'Nature rune', limit: KIT_PRICE_CAPS['nature rune']! }, trout: { id: 333, name: 'Trout', limit: KIT_PRICE_CAPS.trout! },
     'bronze arrow': { id: 882, name: 'Bronze arrow', limit: KIT_PRICE_CAPS['bronze arrow']! } };
@@ -762,7 +763,7 @@ test('a kit buy brings the batch, not one start: 1,000 nature runes for alchemy'
 });
 
 test('an account that cannot pay gets the coins first: from this side, else from a free account of another side', () => {
-    const army = new Set(['poor']), poor = mage('Poor', { coin: 100, 'mind rune': 15, 'air rune': 25 }), cost = 20 * 120 + 10 * 160, short = cost + KIT_CASH_RESERVE - 100;
+    const army = new Set(['poor']), poor = mage('Poor', { coin: 100, 'mind rune': 15, 'air rune': 25 }), cost = 20 * 120 + 10 * 160, short = cost + KIT_CASH_RESERVE + KIT_COIN_MARGIN - 100;
     const own = plan(inputs([poor], { templates: strike(), army, market, donors: [{ name: 'Bank', coins: 1_000_000 }] }))[0]!;
     expect(own.fund).toEqual({ from: 'Bank', to: 'Poor', coins: short, template: KIT_BUY + 'army-strike-magic-21' });
     // Another side's coins only for an account with no job it can start: with a coin job open it keeps that.
@@ -2376,8 +2377,8 @@ test('market preparation retains the consumer fare and cash buffer without addin
     expect(run(0).fund).toMatchObject({coins:10,template:t.id});
     for(const template of [t,{...t,keepCoins:()=>10}]){
         const preparation=run(10,template);
-        expect(preparation.fund).toMatchObject({coins:11000,template:KIT_BUY+t.id});
-        const buy=run(11010,template);
+        expect(preparation.fund).toMatchObject({coins:11000+KIT_COIN_MARGIN,template:KIT_BUY+t.id});
+        const buy=run(11010+KIT_COIN_MARGIN,template);
         expect(buy.fund).toBeUndefined();expect(buy.template!.id).toBe(KIT_BUY+t.id);
         expect(buy.template!.args).toHaveLength(1);
         expect(buy.template!.args![0]).toContain('QUANTITY=1');
@@ -2390,8 +2391,8 @@ test('market preparation retains the consumer fare and cash buffer without addin
         donors:[{name:'CashMule',coins:100000}],market:{'nature rune':{id:561,name:'Nature rune',limit:100}}}))[0]!;
     expect(staff(0).fund).toMatchObject({coins:15000,template:zaff.id});
     for(const template of [zaff,{...zaff,keepCoins:()=>15000}]){
-        expect(staff(15000,template).fund).toMatchObject({coins:6000,template:KIT_BUY+zaff.id});
-        const buy=staff(21000,template);expect(buy.fund).toBeUndefined();
+        expect(staff(15000,template).fund).toMatchObject({coins:6000+KIT_COIN_MARGIN,template:KIT_BUY+zaff.id});
+        const buy=staff(21000+KIT_COIN_MARGIN,template);expect(buy.fund).toBeUndefined();
         expect(buy.template!.args![0]).toContain('QUANTITY=50');
         expect(buy.template!.args![0]).toContain(`CASH_RESERVE=${KIT_CASH_RESERVE+15000}`);
     }
@@ -2857,4 +2858,42 @@ test('a claim authority timeout is a drain, like an unavailable authority', () =
         expect(assess([line, line])).toMatchObject({ retire: false, drains: 2, fail: 0 });
     }
     expect(DRAIN_RESULT.test('RESULT fail fleet swarm claim authority exploded')).toBe(false);
+});
+
+test('a kit buy is planned only with the margin above the escrow and reserve: 16 dragon bones at 10,000 need 161,500 coins, not 161,000', () => {
+    const band = catalogue().filter(t => t.id === 'army-bury-dragon-99');
+    const market = { 'dragon bone': { id: 536, name: 'Dragon bones', limit: 10_000 } };
+    const hunter = (coin: number) => acct('Hunter', { Prayer: 50, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Magic: 99, Ranged: 99 }, { coin, 'rune scimitar': 1 });
+    const run = (coin: number) => plan(inputs([hunter(coin), acct('Mule', {}, { coin: 900_000 })], { templates: band, army: new Set(['hunter']), market, prices: { 'dragon bone': 10_000 }, donors: [{ name: 'Mule', coins: 900_000 }] })).find(x => x.account === 'Hunter')!;
+    // 160,940 coins for 16 x 10,000 plus the 1,000 reserve is 60 short at the buy script: the plan funds the gap (escrow + reserve + margin
+    // - coins) first and buys only once the coins cover the margin.
+    const short = run(160_940);
+    expect(short.fund).toMatchObject({ from: 'Mule', to: 'Hunter', coins: 16 * 10_000 + KIT_CASH_RESERVE + KIT_COIN_MARGIN - 160_940 });
+    const buy = run(16 * 10_000 + KIT_CASH_RESERVE + KIT_COIN_MARGIN);
+    expect(buy.fund).toBeUndefined();
+    expect(buy.template!.args![0]).toContain('QUANTITY=16');
+    expect(buy.template!.args![0]).toContain(`CASH_RESERVE=${KIT_CASH_RESERVE}`);
+    // The run meets coins 60 under what the status showed: the planned order still passes the buy script's refusal check, where an order planned
+    // at exactly escrow + reserve does not.
+    const step = buy.template!.args![0]!, read = (key: string) => Number(step.match(new RegExp(`${key}=([0-9]+)`))![1]);
+    const check = (coins: number) => orderRefusal({ now: 1, deadline: 2, over: false, coins, escrow: read('QUANTITY') * read('LIMIT_PRICE'), quantity: read('QUANTITY'), limit: read('LIMIT_PRICE'), reserve: read('CASH_RESERVE'), pack: 5 });
+    const planned = 16 * 10_000 + KIT_CASH_RESERVE + KIT_COIN_MARGIN;
+    expect(check(planned - 60)).toBeNull();
+    expect(check(16 * 10_000 + KIT_CASH_RESERVE - 60)).toMatch(/^coins \d+ are under the escrow 160000 \(16 x 10000\) plus the reserve 1000: 60 short$/);
+});
+
+test('the kit buy expects the unnoted count that the buy script reads, not the count with banknotes', () => {
+    // The count by name is 4 (1 unnoted and 3 noted); the buy script counts 1 (it matches the item id, never a note).
+    const a = accountFrom('Masterbaiter', side, { inventory: [{ id: 561, name: 'Nature rune', count: 1 }, { id: 5561, baseId: 561, name: 'Nature rune (noted)', count: 3 }], bank: [], coins: 0 }, () => undefined);
+    expect(a.items['nature rune']).toBe(4);
+    expect(a.exact?.['nature rune']).toBe(1);
+    expect(accountFrom('Nobody', side, null, () => undefined).exact).toBeUndefined();
+    const market = { 'nature rune': { id: 561, name: 'Nature rune', limit: 800 } };
+    const band = catalogue().filter(t => t.id === 'army-alch-magic-99');
+    const buy = plan(inputs([{ ...a, skills: { ...a.skills, Magic: 70 }, items: { ...a.items, coin: 900_000, 'fire rune': 1 }, exact: { ...a.exact, coin: 900_000, 'fire rune': 1 } }],
+        { templates: band, army: new Set(['masterbaiter']), market, prices: { 'nature rune': 800 } }))[0]!;
+    const step = buy.template?.args?.find(x => /ITEM_ID=561/.test(x));
+    expect(step).toBeDefined();
+    expect(step!).toContain('EXPECTED_OWNED=1');
+    expect(step!).not.toContain('EXPECTED_OWNED=4');
 });
