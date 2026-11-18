@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1794989677058-bowbeforeme-undermykilt-1bf314a08af2c98b",
+ "account": "BowBeforeMe",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 234,
+ "claim": "12dd0f41-7a54-4672-93bf-92b0982e0a37",
+ "count": 0,
+ "ok": false,
+ "at": 1794989701129,
+ "detail": "trade claimed"
+}
