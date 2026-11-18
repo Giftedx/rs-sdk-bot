@@ -16,7 +16,7 @@ import type { Session } from '../packages/core/src/inprocess';
 import { lootCapacity } from '../packages/core/src/loot-policy';
 import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
 import { fightPlayer, ITEMS, nextTick, observePlayer, wildernessLevel, type FightOptions, type FightResult, type Kit } from './pk';
-import { BOOST_POTIONS, EDGEVILLE_BANK, hitByPlayer, restock, TRIBRID_KIT } from './pk-hunt';
+import { BOOST_POTIONS, EDGEVILLE_BANK, hitByPlayer, restock, TRIBRID_KIT, type TripItem } from './pk-hunt';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
@@ -110,14 +110,17 @@ export function bankTrip(at: { x: number; z: number }, back: { x: number; z: num
 const PREPOT = [...BOOST_POTIONS, ITEMS.superDefence] as const;
 // What a bank trip takes again, from the pack and the quiver of an account at its start: every item that is no food
 // and no boost, the arrows at their count, and one slot for each shark and each boost.
-export function packOf(inventory: readonly { id: number; count: number; optionsWithIndex: { text: string }[] }[], equipment: readonly { id: number; count: number; slot: number }[]): { food: number; items: { id: number; count: number }[] } {
+export function packOf(inventory: readonly { id: number; count: number; optionsWithIndex: { text: string }[] }[], equipment: readonly { id: number; count: number; slot: number }[]): { food: number; items: TripItem[] } {
     const boost = (id: number) => BOOST_POTIONS.some(doses => (doses as readonly number[]).includes(id)), edible = (i: { optionsWithIndex: { text: string }[] }) => i.optionsWithIndex.some(o => /^eat$/i.test(o.text));
     const items = new Map<number, number>();
     for (const i of inventory) if (!edible(i) && !boost(i.id)) items.set(i.id, (items.get(i.id) ?? 0) + i.count);
-    // A potion with doses gone is asked for as a full one.
-    for (const doses of [ITEMS.superDefence, ITEMS.antipoison.slice(0, 4), ITEMS.antipoison.slice(4)]) for (const id of doses.slice(1)) if (items.has(id)) { items.set(doses[0]!, (items.get(doses[0]!) ?? 0) + items.get(id)!); items.delete(id); }
+    // A potion is asked for by its doses: for each one carried, a slot with a dose or more, and the trip takes the
+    // fullest that the bank holds (scripts/pk-hunt.ts tripRequirements). A request by count needs 4 doses in a slot, and
+    // the one shop with antipoison sells it with 3 doses (junglestore).
+    const families = [ITEMS.superDefence, ITEMS.antipoison.slice(0, 4), ITEMS.antipoison.slice(4)], potions = new Set<number>(families.map(doses => doses[0]!));
+    for (const doses of families) for (const id of doses.slice(1)) if (items.has(id)) { items.set(doses[0]!, (items.get(doses[0]!) ?? 0) + items.get(id)!); items.delete(id); }
     for (const e of equipment) if (e.slot === 13) items.set(e.id, e.count);
-    return { food: inventory.filter(i => edible(i) || boost(i.id)).length, items: [...items].map(([id, count]) => ({ id, count })) };
+    return { food: inventory.filter(i => edible(i) || boost(i.id)).length, items: [...items].map(([id, count]) => (potions.has(id) ? { id, count, minDoses: count, maxSlots: count } : { id, count })) };
 }
 // The trips of the gang (research/pvp-fight-loop.md, "The gang in a long fight"): an account of the gang that walked
 // out of the Wilderness goes to the bank and comes back to its tile, `count` times at most. `follow`: the others stop

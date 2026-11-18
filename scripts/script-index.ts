@@ -67,6 +67,8 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/serve-rsworld.ts': 'developer tool: serves the rs-world viewer',
  'scripts/session-check.ts': 'fleet control: the login and logout check of a session recovery',
  'scripts/shot.ts': 'developer tool: takes a screenshot of a page',
+ 'scripts/squad-ready.ts': 'report: the kit of each gang squad account from its own stock, each missing piece with its nearest owned donor, and the staging plan',
+ 'scripts/squad-watch.ts': 'fleet control: watches the log and the status files of a gang squad run and exits with one line when a person must look',
  'scripts/swarm.ts': 'fleet control: the controller that starts each live job',
  'scripts/test-shards.ts': 'developer tool: runs the test files in several processes',
  'scripts/tick-waste.ts': 'report: idle and walking ticks for each script family',
