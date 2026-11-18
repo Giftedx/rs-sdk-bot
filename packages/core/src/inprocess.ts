@@ -661,7 +661,7 @@ export type StartSession = (o: any) => Promise<{ client: unknown; stop(): void; 
 // The network part of connectInProcess. The lifecycle intent is written first; if it cannot be written, no
 // connection starts. Every later event comes from this session's own callbacks. Tests pass a fake startSession.
 export async function startInProcessSession(opts: { name: string; password: string; server?: string; members?: boolean; work?:WorkDescriptor },
-    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void; planLock?: string; sharedAccount?:{root:string;side:string;recover?:boolean;admission?:RecoveryConnectionAdmission;trade?:TradeAdmission}; claimSwarm?: typeof acquireFleetSwarmClaim; soloProcess?: boolean }): Promise<Session> {
+    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void; planLock?: string; sharedAccount?:{root:string;side:string;recover?:boolean;admission?:RecoveryConnectionAdmission;trade?:TradeAdmission}; claimSwarm?: typeof acquireFleetSwarmClaim; soloProcess?: boolean; countBots?: () => number }): Promise<Session> {
     const { startSession, sdk, Actions, cacheDir } = deps;
     let endResolve!: (v: { reason: string }) => void;
     const ended = new Promise<{ reason: string }>(r => { endResolve = r; });
@@ -685,7 +685,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
             // A bot of a process with several bots and a login under the lock keep the short window: the wait would
             // stall the other bots or hold the lock.
             else sharedClaim = (deps.claimSwarm ?? acquireFleetSwarmClaim)(root, target, { recover,admission,
-                patient: !deps.planLock && (deps.soloProcess ?? soloProcess()) && botsInProcess === 1 });
+                patient: !deps.planLock && (deps.soloProcess ?? soloProcess()) && (deps.countBots ?? botsInThisProcess)() === 1 });
             deps.beforeConnect?.(); // A stop or expired permit can land during the Git call.
             if (trade && tradeClaim) trade.prepare(tradeClaim);
         }

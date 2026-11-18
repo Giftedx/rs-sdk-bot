@@ -212,6 +212,15 @@
    "Prayer": 99,
    "Hitpoints": 99
   },
+  "live-walker-iron-rune-chain-bind-axe": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
   "live-walker-iron-rune-chain-blast": {
    "Attack": 99,
    "Strength": 99,
@@ -92110,6 +92119,15 @@
   },
   {
    "script": "scripts/measure/catalog-integration-proof.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/combat-end-case.ts",
    "intents": [
     "observe"
    ],

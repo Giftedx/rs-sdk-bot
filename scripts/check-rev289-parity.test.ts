@@ -46,9 +46,6 @@ test('packages/dashboard/client-assets/ passes strict Rev 289 parity', () => {
 }, 20_000);
 
 test('owned scripts/, core, knowledge code, planner, router, and practice pass strict Rev 289 parity', () => {
-    expect(checkScriptsParity(repoRoot, baseline, { includeCrossWorker: false })).toEqual([]);
-    expect(checkCoreAndKnowledgeCodeParity(repoRoot, baseline)).toEqual([]);
-    expect(checkPlannerRouterPracticeParity(repoRoot, baseline)).toEqual([]);
     expect(checkAllRev289Parity(repoRoot, { includeCrossWorker: false })).toEqual([]);
 }, 20_000);
 

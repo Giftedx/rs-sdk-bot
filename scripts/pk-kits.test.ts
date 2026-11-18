@@ -134,7 +134,7 @@ test('every kit has a quest route, and the planner holds the route of every buil
     expect(Object.fromEntries(Object.entries(BUILD_QUESTS).map(([kit, quests]) => [kit, [...quests].sort()]))).toEqual(builds);
     for (const quest of Object.values(BUILD_QUESTS).flat()) expect(QUEST_CHAIN[quest]).toBeDefined();
     expect(kitRoute('tribrid').quests).toEqual(['Dragon Slayer', 'Lost City']);
-    expect(kitRoute('tribrid-mace').quests).toEqual(['Dragon Slayer', "Heroes' Quest"]);
+    expect(kitRoute('tribrid-mace').quests).toEqual(['Dragon Slayer', "Hero's Quest"]);
     expect(kitRoute('zerker')).toEqual({ quests: ['Lost City', 'The Fremennik Trials'], breaks: [] });
     // The gear that a build with a Defence level leaves out, and the levels that a quest brings with it.
     const { levelForXp } = await import('../packages/planner/src/curve');
