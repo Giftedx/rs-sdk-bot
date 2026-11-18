@@ -1,0 +1,23 @@
+{
+ "id": "1794989677058-bowbeforeme-undermykilt-1bf314a08af2c98b",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "BowBeforeMe",
+ "to": "UnderMyKilt",
+ "item": "Rune arrow",
+ "count": 234,
+ "start": 1794989677058,
+ "end": 1794992077058,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

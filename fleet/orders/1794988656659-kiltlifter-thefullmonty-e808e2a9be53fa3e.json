@@ -1,0 +1,23 @@
+{
+ "id": "1794988656659-kiltlifter-thefullmonty-e808e2a9be53fa3e",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Kiltlifter",
+ "to": "TheFullMonty",
+ "item": "Iron arrow",
+ "count": 41,
+ "start": 1794988656659,
+ "end": 1794991056659,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
