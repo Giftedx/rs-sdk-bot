@@ -1,0 +1,22 @@
+{
+ "id": "1794966551189-bigchopper-sausagefest-bodyrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "Sausagefest",
+ "item": "Body rune",
+ "count": 1,
+ "start": 1794966551189,
+ "end": 1794968951189,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
