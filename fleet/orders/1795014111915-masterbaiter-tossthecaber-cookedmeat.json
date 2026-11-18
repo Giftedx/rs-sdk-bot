@@ -1,0 +1,22 @@
+{
+ "id": "1795014111915-masterbaiter-tossthecaber-cookedmeat",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "TossTheCaber",
+ "item": "Cooked meat",
+ "count": 3,
+ "start": 1795014111915,
+ "end": 1795016511915,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
