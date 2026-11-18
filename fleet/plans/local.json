@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795008019323,
+ "at": 1795008125130,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -223,29 +223,52 @@
    "resources": []
   },
   {
-   "account": "Bigpackage",
-   "script": "scripts/gather-combat.ts",
+   "account": "MineYourBiz",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1113 QUANTITY=1 LIMIT_PRICE=220886 CASH_RESERVE=1000 ORDER_KEY=mineyourbiz-kit6-1113-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TRAIN_SKILL": "Ranged",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Rune chainbody on the Grand Exchange to wear rune armour",
+   "role": "supply",
+   "template": "kit-buy:army-armour-rune",
+   "autopilot": "local",
+   "resources": [
+    "ge:armour"
+   ]
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "ardy",
+    "400"
+   ],
+   "env": {
+    "ITEMS": "bronze arrow",
+    "STOCK_TARGET": "500",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "4000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Ranged to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-ranged-99",
+   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
+   "role": "supply",
+   "template": "army-arrows-ardy",
    "autopilot": "local",
    "resources": [
-    "trooper:battlefield"
+    "shop:ardy"
    ]
   },
   {
@@ -275,26 +298,6 @@
    ]
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1113 QUANTITY=1 LIMIT_PRICE=220886 CASH_RESERVE=1000 ORDER_KEY=mineyourbiz-kit6-1113-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Rune chainbody on the Grand Exchange to wear rune armour",
-   "role": "supply",
-   "template": "kit-buy:army-armour-rune",
-   "autopilot": "local",
-   "resources": [
-    "ge:armour"
-   ]
-  },
-  {
    "account": "mmthv2350",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -321,45 +324,30 @@
    ]
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/alch-train.ts",
+   "account": "OreElse",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "5000"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-alch-magic-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "14",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying the held bones",
-   "role": "combat",
-   "template": "army-bury-prayer-99",
-   "autopilot": "local",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Swordinhand",
@@ -458,24 +446,19 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "99"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=35 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=billionaire-kit10-532-6to41 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "532",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "8",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "train Prayer to 99 burying bought big bones",
-   "role": "combat",
-   "template": "army-bury-big-99",
+   "goal": "buy 35 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-big-99",
    "autopilot": "local",
    "resources": []
   },
