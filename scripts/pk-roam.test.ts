@@ -2,7 +2,7 @@ import { test, expect } from 'bun:test';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { bestDamageSpell, bestFireSpell, canAttack, canCastCharge, castableFreeze, clearScoutIntel, hasVarrockTeleport, multiPileThreat, outclasses, pickScoutTargetForSquad, publishScoutIntel, readScoutIntel, restockLimit, restockMarket, restockPlan, RESTOCK_MARGIN_PERCENT, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, lootAt, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
+import { accountServerBeforeLogin, bestDamageSpell, bestFireSpell, canAttack, canCastCharge, castableFreeze, clearScoutIntel, hasVarrockTeleport, multiPileThreat, outclasses, pickScoutTargetForSquad, publishScoutIntel, readScoutIntel, restockLimit, restockMarket, restockPlan, RESTOCK_MARGIN_PERCENT, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, lootAt, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
 import marketRows from './measure/pk-restock-market.json';
 import type { RestockMarket } from './pk-roam';
 // Rows of the market cache (.practice/market-all.json) for the items of the PK restock: the lowest ask and the units offered
@@ -418,4 +418,18 @@ test('restockMarket reads the fresh quotes of the market cache and nothing from 
         writeFileSync(join(root, '.practice/market-all.json'), '{');
         expect(restockMarket(root, now)).toEqual({ market: {}, at: null });
     } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('accountServerBeforeLogin checks the side, restores a missing bot.env, then reads the server; an unreadable bot.env throws', () => {
+    const calls: string[] = [];
+    const server = accountServerBeforeLogin('Acct', { assertOwn: n => { calls.push('own ' + n); }, restore: n => { calls.push('restore ' + n); }, read: n => { calls.push('read ' + n); return 'demo.example:43594'; } });
+    expect(server).toBe('demo.example:43594');
+    expect(calls).toEqual(['own Acct', 'restore Acct', 'read Acct']);
+    const noFile = () => accountServerBeforeLogin('Acct', { assertOwn: () => {}, restore: () => {}, read: () => { throw new Error('ENOENT: no such file, open bot.env'); } });
+    expect(noFile).toThrow('ENOENT');
+    // The other side's account is refused before any restore.
+    const restored: string[] = [];
+    const other = () => accountServerBeforeLogin('Acct', { assertOwn: () => { throw new Error('owned by cloud'); }, restore: n => { restored.push(n); }, read: () => 'x' });
+    expect(other).toThrow('owned by cloud');
+    expect(restored).toEqual([]);
 });

@@ -57,7 +57,7 @@ export function adoptedRunAlive(run: { pid: number; started: number }, alive: (p
 }
 
 const ACCOUNT = /^[A-Za-z0-9_ -]{1,12}$/;
-const START_BUDGET_GB = 1;
+export const START_BUDGET_GB = 1;
 const START_RESERVE_MS = 30_000;
 
 // Count evidence of active live sessions across the whole status directory, not
