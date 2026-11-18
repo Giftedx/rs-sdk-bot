@@ -9,14 +9,20 @@ import { isLocalServer } from './localserver';
 export const PVP_DEATH_SCHEMA = 'pvp-death/1';
 export const DEFAULT_PVP_DEATHS_FILE = join(resolve(import.meta.dir, '..', '..', '..'), '.practice', 'pvp-deaths.json');
 export const PVP_DEATH_WINDOW_MS = 24 * 3_600_000;
-export type PvpDeathLimits = { perAccount: number; squad: number };
-export const DEFAULT_PVP_DEATH_LIMITS: PvpDeathLimits = { perAccount: 2, squad: 3 };
+// The limits of the death ledger, in one place. The lead decided them: a squad stops after 2 deaths in one run (the second death ends the
+// run as RESULT fail died) or 3 deaths in a day (the next run refuses to start), and an account stops after 2 deaths in a day. They stop
+// until a person or the lead reads the cause and clears the ledger. The reason: a death drops the kit to the killer (content death.rs2),
+// and a squad that loses a second member in a run, or a third in a day, is losing its fights. Re-kitting each death spends the bank
+// with nobody reading why.
+export const PVP_DEATH_LIMITS = { perRun: 2, perDay: 3, perAccountPerDay: 2 } as const;
+export type PvpDeathLimits = { perRun: number; perDay: number; perAccountPerDay: number };
 export type PvpDeath = { schema: typeof PVP_DEATH_SCHEMA; account: string; server: string; at: number; script: string; near: { x: number; z: number } | null };
 
 const whole = (value: string | undefined, fallback: number) => { const n = Number(value); return value !== undefined && value.trim() !== '' && Number.isSafeInteger(n) && n >= 0 ? n : fallback; };
-// PVP_MAX_DEATHS_PER_ACCOUNT and PVP_MAX_DEATHS_SQUAD: whole numbers of 0 or more, else the defaults.
-export const pvpDeathLimits = (env: Record<string, string | undefined> = process.env): PvpDeathLimits =>
-    ({ perAccount: whole(env.PVP_MAX_DEATHS_PER_ACCOUNT, DEFAULT_PVP_DEATH_LIMITS.perAccount), squad: whole(env.PVP_MAX_DEATHS_SQUAD, DEFAULT_PVP_DEATH_LIMITS.squad) });
+// PVP_MAX_DEATHS_PER_RUN, PVP_MAX_DEATHS_PER_DAY and PVP_MAX_DEATHS_PER_ACCOUNT: whole numbers of 0 or more, else PVP_DEATH_LIMITS.
+export const pvpDeathLimits = (env: Record<string, string | undefined> = process.env): PvpDeathLimits => ({
+    perRun: whole(env.PVP_MAX_DEATHS_PER_RUN, PVP_DEATH_LIMITS.perRun), perDay: whole(env.PVP_MAX_DEATHS_PER_DAY, PVP_DEATH_LIMITS.perDay),
+    perAccountPerDay: whole(env.PVP_MAX_DEATHS_PER_ACCOUNT, PVP_DEATH_LIMITS.perAccountPerDay) });
 
 // A limit of N refuses a run once N deaths are in the window (a limit of 0 refuses after the first death).
 // A missing file is an empty ledger. A file that cannot be read stops the run (it throws): the ledger fails closed.
@@ -50,8 +56,8 @@ export function pvpDeathRefusal(o: { accounts: readonly string[]; server: string
     const hours = Math.round(windowMs / 3_600_000);
     for (const name of o.accounts) {
         const n = recent.filter(e => key(e.account) === key(name)).length;
-        if (n >= Math.max(1, limits.perAccount)) return `death ledger: ${name} died ${n} times in ${hours} h (limit ${limits.perAccount})`;
+        if (n >= Math.max(1, limits.perAccountPerDay)) return `death ledger: ${name} died ${n} times in ${hours} h (limit ${limits.perAccountPerDay})`;
     }
-    if (recent.length >= Math.max(1, limits.squad)) return `death ledger: the squad died ${recent.length} times in ${hours} h (limit ${limits.squad})`;
+    if (recent.length >= Math.max(1, limits.perDay)) return `death ledger: the squad died ${recent.length} times in ${hours} h (limit ${limits.perDay})`;
     return null;
 }

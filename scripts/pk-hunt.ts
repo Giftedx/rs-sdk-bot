@@ -9,13 +9,13 @@
 // id (scripts/pk.ts SPELLS) used where no glory is carried, both to reach Edgeville and to escape. An account that starts
 // more than 60 tiles from Edgeville rubs a carried glory there first, or casts PK_TELE and walks on. PK_SPOTS replaces
 // the hunt spots as JSON [{"x":n,"z":n,"dwell":ticks}], visited in order (dwell 0 makes a waypoint), so a route can
-// reach the deep Wilderness; HUNT_MAX_DEATHS the deaths that the hunt re-kits after (default 2; a PvP death sends the account to
+// reach the deep Wilderness; HUNT_MAX_DEATHS the deaths that the hunt re-kits after (default 1; a PvP death sends the account to
 // Lumbridge with 1 Hitpoints: it walks to the bank, eats up and wears its starting kit again); PK_OBSERVE=1 only watches and logs (it still fights back when attacked). Every player seen
 // is logged as `HUNT seen` when first seen and whenever its verdict changes. openBot refuses a non-local server without DEMO_OK=1.
 import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadOwners } from '../packages/core/src/fleet';
-import { pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
+import { PVP_DEATH_LIMITS, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, packGain, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
 import { armourDefence } from './pk-read';
@@ -237,7 +237,8 @@ export type DeathRecord = {
     rekit: string; missing: number[];
 };
 export const RESPAWN_TICKS = 40;
-export const DEFAULT_MAX_DEATHS = 2;
+// Deaths that the hunt re-kits after: the run stops at its PVP_DEATH_LIMITS.perRun-th death (packages/core/src/pvp-deaths.ts).
+export const DEFAULT_MAX_DEATHS = PVP_DEATH_LIMITS.perRun - 1;
 // The death limit of HUNT_MAX_DEATHS: a whole number of 0 or more, else the default.
 export const maxDeathsOf = (value: string | undefined, fallback = DEFAULT_MAX_DEATHS): number => { const n = Number(value); return value !== undefined && value.trim() !== '' && Number.isSafeInteger(n) && n >= 0 ? n : fallback; };
 const WEAR_OPTION = /^(Wield|Wear)$/i;
@@ -325,7 +326,7 @@ export function huntEnd(r: { end: string; kills: number; deaths: number; rekits:
 export type HuntOptions = { cap: number; food: number; minFood: number; escapeAt: number; stop: () => boolean; log?: (l: string) => void;
     kit?: Kit; trip?: readonly TripItem[]; damageSpell?: number; rotation?: Style[]; teleSpell?: number;
     spots?: readonly Spot[]; observe?: boolean;
-    // Deaths that the hunt re-kits after (default 2). The death after that ends the run with its record.
+    // Deaths that the hunt re-kits after (default 1, DEFAULT_MAX_DEATHS). The death after that ends the run with its record.
     // `onDeath` is called for each death, at its tile (the death ledger of packages/core/src/pvp-deaths.ts).
     maxDeaths?: number; onDeath?: (near: { x: number; z: number } | null) => void };
 export async function hunt(s: Session, o: HuntOptions) {

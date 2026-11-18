@@ -2,7 +2,7 @@ import { afterEach, expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { pvpDeathLimits, pvpDeathRefusal, PVP_DEATH_WINDOW_MS, readPvpDeaths, recordPvpDeath } from '../src/pvp-deaths';
+import { PVP_DEATH_LIMITS, pvpDeathLimits, pvpDeathRefusal, PVP_DEATH_WINDOW_MS, readPvpDeaths, recordPvpDeath } from '../src/pvp-deaths';
 
 const LIVE = 'rs-sdk-demo.fly.dev', NOW = 1_800_000_000_000, HOUR = 3_600_000;
 const dirs: string[] = [];
@@ -10,7 +10,7 @@ afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, f
 const ledger = () => { const d = mkdtempSync(join(tmpdir(), 'pvp-deaths-')); dirs.push(d); return join(d, 'sub', 'pvp-deaths.json'); };
 const died = (file: string, account: string, ago: number, server = LIVE) => recordPvpDeath({ account, server, at: NOW - ago, script: 'scripts/pk-squad.ts', near: { x: 3066, z: 3641 } }, file);
 const SQUAD = ['Alpha', 'Bravo', 'Charlie', 'Delta'];
-const refusal = (file: string, o: { accounts?: string[]; server?: string } = {}) => pvpDeathRefusal({ accounts: o.accounts ?? SQUAD, server: o.server ?? LIVE, now: NOW, file, limits: { perAccount: 2, squad: 3 } });
+const refusal = (file: string, o: { accounts?: string[]; server?: string } = {}) => pvpDeathRefusal({ accounts: o.accounts ?? SQUAD, server: o.server ?? LIVE, now: NOW, file, limits: { perRun: 2, perDay: 3, perAccountPerDay: 2 } });
 
 test('a missing ledger refuses nothing, and a death is recorded in the file', () => {
     const file = ledger();
@@ -61,15 +61,17 @@ test('a ledger that cannot be read stops the run, and a limit of 0 refuses after
     writeFileSync(file, JSON.stringify([{ nope: true }]));
     expect(refusal(file)).toMatch(/^death ledger unreadable: Error: invalid pvp death ledger/);
     const one = ledger();
-    expect(pvpDeathRefusal({ accounts: SQUAD, server: LIVE, now: NOW, file: one, limits: { perAccount: 0, squad: 0 } })).toBeNull();
+    expect(pvpDeathRefusal({ accounts: SQUAD, server: LIVE, now: NOW, file: one, limits: { perRun: 0, perDay: 0, perAccountPerDay: 0 } })).toBeNull();
     died(one, 'Bravo', HOUR);
-    expect(pvpDeathRefusal({ accounts: SQUAD, server: LIVE, now: NOW, file: one, limits: { perAccount: 0, squad: 0 } })).toBe('death ledger: Bravo died 1 times in 24 h (limit 0)');
+    expect(pvpDeathRefusal({ accounts: SQUAD, server: LIVE, now: NOW, file: one, limits: { perRun: 0, perDay: 0, perAccountPerDay: 0 } })).toBe('death ledger: Bravo died 1 times in 24 h (limit 0)');
     expect(JSON.parse(readFileSync(one, 'utf8'))).toHaveLength(1);
 });
 
 test('the limits come from the environment as whole numbers and fall back to 2 and 3', () => {
-    expect(pvpDeathLimits({})).toEqual({ perAccount: 2, squad: 3 });
-    expect(pvpDeathLimits({ PVP_MAX_DEATHS_PER_ACCOUNT: '1', PVP_MAX_DEATHS_SQUAD: '5' })).toEqual({ perAccount: 1, squad: 5 });
-    expect(pvpDeathLimits({ PVP_MAX_DEATHS_PER_ACCOUNT: 'x', PVP_MAX_DEATHS_SQUAD: '-1' })).toEqual({ perAccount: 2, squad: 3 });
-    expect(pvpDeathLimits({ PVP_MAX_DEATHS_PER_ACCOUNT: '', PVP_MAX_DEATHS_SQUAD: '2.5' })).toEqual({ perAccount: 2, squad: 3 });
+    // The lead's limits: 2 deaths in one run, 3 in a day for a squad, 2 in a day for an account.
+    expect(PVP_DEATH_LIMITS).toEqual({ perRun: 2, perDay: 3, perAccountPerDay: 2 });
+    expect(pvpDeathLimits({})).toEqual({ perRun: 2, perDay: 3, perAccountPerDay: 2 });
+    expect(pvpDeathLimits({ PVP_MAX_DEATHS_PER_RUN: '1', PVP_MAX_DEATHS_PER_DAY: '5', PVP_MAX_DEATHS_PER_ACCOUNT: '4' })).toEqual({ perRun: 1, perDay: 5, perAccountPerDay: 4 });
+    expect(pvpDeathLimits({ PVP_MAX_DEATHS_PER_RUN: 'x', PVP_MAX_DEATHS_PER_DAY: '-1', PVP_MAX_DEATHS_PER_ACCOUNT: '' })).toEqual({ perRun: 2, perDay: 3, perAccountPerDay: 2 });
+    expect(pvpDeathLimits({ PVP_MAX_DEATHS_PER_RUN: '2.5', PVP_MAX_DEATHS_PER_DAY: 'NaN' })).toEqual({ perRun: 2, perDay: 3, perAccountPerDay: 2 });
 });

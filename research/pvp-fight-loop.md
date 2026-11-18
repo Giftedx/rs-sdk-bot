@@ -1239,7 +1239,7 @@ mark of 1,000 ticks keeps any later death at 1 Hitpoint. The bank is not touched
   only while the skull shows. The default stays on, as measured; no case measures `'skulled'` yet.
 - **A death in the hunt.** `hunt` detects the new life (`lifeId`), walks to the Edgeville bank at 1 Hitpoints, takes sharks and
   the pieces that the account wore when the hunt began (what the bank holds), wears them and eats up
-  (`rekitAfterDeath`). The next pass restocks the trip. `HUNT_MAX_DEATHS` (default 2) bounds the re-kits: a later death ends
+  (`rekitAfterDeath`). The next pass restocks the trip. `HUNT_MAX_DEATHS` (default 1) bounds the re-kits: a later death ends
   the run with its record (`death=`, the respawn tile, the Hitpoints, the pack that it kept, the step that stopped the
   re-kit). A piece that the bank lacks is in `missing`, and the restock ends the run when the trip cannot be filled.
 - **The session.** A death ends a bot session by default: `openBot` (`packages/core/src/bot.ts`) prints the DEATH line and calls
@@ -1253,7 +1253,7 @@ mark of 1,000 ticks keeps any later death at 1 Hitpoint. The bank is not touched
   bank. A target in full rune armour (profile `champion`) kills it in about 150 ticks. With `HUNT_MAX_DEATHS=9` the case ends
   at its cap of 900 ticks with `deaths 2 rekits 2`: each death sends the account to (3222, 3218) with 1 Hitpoints, and the re-kit
   takes about 200 ticks (the respawn wait, the walk to Edgeville, the sharks and the pieces). Seed 7, one run. A piece of the
-  starting kit that the bank lacks ends the run (`died: kit lacks <ids>`). `HUNT_MAX_DEATHS` is a whole number of 0 or more, else 2.
+  starting kit that the bank lacks ends the run (`died: kit lacks <ids>`). `HUNT_MAX_DEATHS` is a whole number of 0 or more, else 1.
 - **A threat retreat.** `hunt` uses the result of the retreat: a death is handled, and a retreat that did not leave the
   Wilderness is counted in `retreatsFailed` and logged.
 
@@ -1265,7 +1265,9 @@ mark of 1,000 ticks keeps any later death at 1 Hitpoint. The bank is not touched
 - **The death ledger.** `packages/core/src/pvp-deaths.ts` keeps `.practice/pvp-deaths.json`: the hunt and the squad record each
   death on a live server (account, server, time, script, tile). A local server records nothing and is never refused. At its start a
   run refuses with `RESULT fail died death ledger: ...` when an account in it has `PVP_MAX_DEATHS_PER_ACCOUNT` (default 2) deaths, or
-  its accounts together have `PVP_MAX_DEATHS_SQUAD` (default 3), in the last 24 hours. The supervisor reads that line as a death, so
+  its accounts together have `PVP_MAX_DEATHS_PER_DAY` (default 3), in the last 24 hours. A run stops at its `PVP_MAX_DEATHS_PER_RUN`-th death
+  (default 2): the squad shares one counter across its members, and the hunt re-kits `PVP_DEATH_LIMITS.perRun - 1` deaths. The three limits are
+  one constant, `PVP_DEATH_LIMITS`, with the reason beside it. They hold until a person or the lead reads the cause. The supervisor reads that line as a death, so
   the swarm holds the job and a person clears the ledger (edit the file). A ledger that cannot be read refuses the run.
 
 Gap: the hunt and the squad re-kit a death to a player in the Wilderness. The roam and the gang end their run at a death. The

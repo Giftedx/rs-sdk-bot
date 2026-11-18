@@ -290,7 +290,7 @@ function squadWorld() {
     return { s, player, equipment, inventory, walks, next, eaten: () => eaten, tick: () => tick };
 }
 
-async function runSquadDeath(maxDeaths: number | undefined, onDeath?: (near: { x: number; z: number } | null) => void) {
+async function runSquadDeath(maxDeaths: number | undefined, onDeath?: (near: { x: number; z: number } | null) => void, run?: { deaths: number; limit: number }) {
     const w = squadWorld(), lines: string[] = [];
     const mocks = [
         spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
@@ -300,7 +300,7 @@ async function runSquadDeath(maxDeaths: number | undefined, onDeath?: (near: { x
     ];
     try {
         const stats = await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3066, z: 3641 }, options: { kit: {} }, allies: [], pickup: false, trips: 3, deadline: 400,
-            stopped: () => w.tick() >= 120, killsLeft: () => true, log: l => lines.push(l), ...(maxDeaths === undefined ? {} : { maxDeaths }), ...(onDeath ? { onDeath } : {}) });
+            stopped: () => w.tick() >= 120, killsLeft: () => true, log: l => lines.push(l), ...(maxDeaths === undefined ? {} : { maxDeaths }), ...(onDeath ? { onDeath } : {}), ...(run ? { run } : {}) });
         return { stats, w, lines };
     } finally { for (const mock of mocks) mock.mockRestore(); }
 }
@@ -362,4 +362,22 @@ test('a squad member calls the death ledger hook for each death, also over the l
     const failing = await runSquadDeath(1, () => { throw new Error('disk full'); });
     expect(failing.stats).toMatchObject({ rekits: 1, died: false });
     expect(failing.lines.some(l => l.includes('SQUAD death ledger write failed: Error: disk full'))).toBe(true);
+});
+
+test('the deaths of all the members of a run share one limit: the death that reaches it is not recovered', async () => {
+    // The first death of the run (limit 2) is recovered.
+    const first = { deaths: 0, limit: 2 };
+    const a = await runSquadDeath(5, undefined, first);
+    expect(a.stats).toMatchObject({ deaths: 1, rekits: 1, died: false });
+    expect(first.deaths).toBe(1);
+    // Another member has died already: this member's death is the second of the run and ends its part.
+    const second = { deaths: 1, limit: 2 };
+    const b = await runSquadDeath(5, undefined, second);
+    expect(b.stats).toMatchObject({ deaths: 1, rekits: 0, died: true });
+    expect(second.deaths).toBe(2);
+    expect(b.lines.some(l => l.includes('reaches the run limit of 2'))).toBe(true);
+    // The death is still handed to the ledger hook.
+    const seen: unknown[] = [];
+    await runSquadDeath(5, near => seen.push(near), { deaths: 1, limit: 2 });
+    expect(seen).toHaveLength(1);
 });

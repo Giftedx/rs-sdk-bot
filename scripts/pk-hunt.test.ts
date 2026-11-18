@@ -555,7 +555,7 @@ test('maxDeathsOf takes a whole number of 0 or more and falls back to the defaul
     expect(maxDeathsOf('0')).toBe(0);
     expect(maxDeathsOf('5')).toBe(5);
     for (const bad of [undefined, '', ' ', 'abc', '-1', '1.5', 'NaN', 'Infinity']) expect(maxDeathsOf(bad)).toBe(DEFAULT_MAX_DEATHS);
-    expect(DEFAULT_MAX_DEATHS).toBe(2);
+    expect(DEFAULT_MAX_DEATHS).toBe(1);
 });
 
 test('a hunt that ends in a death ends with RESULT fail died, which the supervisor reads as a death', async () => {
