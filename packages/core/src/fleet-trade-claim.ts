@@ -301,9 +301,10 @@ function pendingHostWitness(root:string,head:string,inherited:FleetSwarmClaim,wi
 }
 
 // The budgets of a swarm login claim. The claim is a child commit on the account's ref, so two fleet sides cannot both
-// hold one account. One 11 s window for three network calls did not last under load: six logins failed at the push with
-// `spawnSync git ETIMEDOUT` while the CPU was at 100%. A patient claim gives the reads and the push their own windows
-// and tries each again, SWARM_CLAIM_TRIES times at most, after a failure that says nothing about the ref.
+// hold one account. One window for the reads and the push ends before the push on a machine under load, and the login
+// then fails with `spawnSync git ETIMEDOUT`. A patient claim gives the reads, the commit and the push their own
+// windows and tries the reads and the push again, SWARM_CLAIM_TRIES times at most, after a failure that says nothing
+// about the ref. Its longest wait is about 130 s: 3 reads and 1 commit of 15 s, 3 pushes of 20 s and the pauses.
 export const SWARM_CLAIM_READ_MS = 15_000, SWARM_CLAIM_PUSH_MS = 20_000, SWARM_CLAIM_TRIES = 3, SWARM_CLAIM_PAUSE_MS = 1000;
 const claimPause = (ms: number) => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); };
 export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { recover = false, admission=undefined as RecoveryConnectionAdmission|undefined, now = Date.now, ownerAlive = savedProcessAlive as (pid: number, savedAt: number) => boolean,

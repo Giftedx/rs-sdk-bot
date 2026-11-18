@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { coordinatedAdmission,demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery } from './swarm';
+import { coordinatedAdmission,demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,botCountEnv } from './swarm';
 
 test('recovery uses the real admission policy, including inherited startup reserves, before checking release',()=>{
  const v={account:'Rod',active:[] as string[],running:0,external:0,pending:0,freeGB:10,minFreeGB:0,maxBots:17};let releases=0;
@@ -958,4 +958,9 @@ test('an adopted run whose pid a later process holds is ended', () => {
     expect(adoptedRunAlive(run, gone, new Map([[2856, run.started - 40]]))).toBe(false);
     // A record without a start time cannot prove a different process.
     expect(adoptedRunAlive({ pid: 2856 } as { pid: number; started: number }, answers, new Map([[2856, 5_000_000]]))).toBe(true);
+});
+
+test('the swarm declares to each job process how many bots it holds', () => {
+    expect(botCountEnv(['Rod'])).toEqual({ SWARM_BOTS: '1' });
+    expect(botCountEnv(['Donor', 'Receiver', 'Third'])).toEqual({ SWARM_BOTS: '3' });
 });

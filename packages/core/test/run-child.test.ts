@@ -115,3 +115,14 @@ test('the error line of a crashed child loses the credentials of each URL before
         expect(result).not.toContain('s3cr3t-token');
     } finally { out.mockRestore(); err.mockRestore(); }
 }, 30_000);
+
+test('a crash line loses tokens and secret values, not only URL credentials', async () => {
+    const out = spyOn(process.stdout, 'write').mockImplementation((() => true) as any);
+    const err = spyOn(process.stderr, 'write').mockImplementation((() => true) as any);
+    try {
+        const result = await runChild([child("throw Error('request failed: Authorization: Bearer abc.def-123 FLEET_VAULT_KEY=topsecret password=\"hunter2\" for https://u:p@host.example/x');")]);
+        for (const secret of ['abc.def-123', 'topsecret', 'hunter2', 'u:p@']) expect(result, secret).not.toContain(secret);
+        expect(result).toContain('RESULT fail request failed:');
+        expect(result).toContain('https://host.example/x');
+    } finally { out.mockRestore(); err.mockRestore(); }
+}, 30_000);

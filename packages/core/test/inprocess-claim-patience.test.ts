@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
-import { botsInThisProcess, startInProcessSession, type Session } from '../src/inprocess';
+import { botsInThisProcess, soloProcess, startInProcessSession, type Session } from '../src/inprocess';
 
 // A fake lite session and a fake login claim. The claim records the options of each call.
 const SECRET = 'fixture-pass-7Q';
@@ -20,7 +20,7 @@ function fakeStart(fail = false) {
     };
 }
 
-test('a login claim waits for a slow Git authority only when the process holds one bot and no plan lock', async () => {
+test('a login claim waits for a slow Git authority only in a process that is declared to hold one bot, with no plan lock', async () => {
     const base = mkdtempSync(join(tmpdir(), 'claim-patience-')), asked: { account: string; patient: boolean | undefined }[] = [];
     const claimSwarm = ((_root: string, input: { account: string }, options: { patient?: boolean } = {}) => {
         asked.push({ account: input.account, patient: options.patient });
@@ -30,29 +30,41 @@ test('a login claim waits for a slow Git authority only when the process holds o
         startSession: fakeStart(fail), sdk: new BotSDK({ botUsername: name, password: SECRET, autoLaunchBrowser: false, autoReconnect: false } as any), Actions: FakeActions as any,
         cacheDir: base, lifecycle: { root: join(base, 'lifecycle') }, recordOwned: () => {}, sharedAccount: { root: base, side: 'local' }, claimSwarm, ...extra });
     const end = async (s: Session) => { (s.client as any).end('logged-out'); await Bun.sleep(1); };
+    const last = () => asked.at(-1);
     try {
         const before = botsInThisProcess();
-        // The one bot of a process: its claim waits.
-        const first = await open('Ana');
-        expect(asked.at(-1)).toEqual({ account: 'Ana', patient: true });
+        // The declaration of the swarm: SWARM_BOTS is the count of bots of the job.
+        expect([soloProcess({ SWARM_BOTS: '1' }), soloProcess({ SWARM_BOTS: '3' }), soloProcess({ SWARM_BOTS: '' }), soloProcess({})]).toEqual([true, false, false, false]);
+        // A host job of three bots: its first bot logs in before the second has started. No bot of it waits.
+        const host = { soloProcess: false };
+        const first = await open('Ana', host);
+        expect(last()).toEqual({ account: 'Ana', patient: false });
         expect(botsInThisProcess()).toBe(before + 1);
-        // A second bot in the process (a host job, a squad): its claim keeps the short window, so the first bot does not stall.
-        const second = await open('Bob');
-        expect(asked.at(-1)).toEqual({ account: 'Bob', patient: false });
-        expect(botsInThisProcess()).toBe(before + 2);
-        // A bot that logs in again beside a running bot keeps the short window too.
-        await end(first);
-        expect(botsInThisProcess()).toBe(before + 1);
-        const again = await open('Ana');
-        expect(asked.at(-1)).toEqual({ account: 'Ana', patient: false });
-        // A login that fails leaves the count.
-        await expect(open('Cid', {}, true)).rejects.toThrow('login refused');
-        expect(botsInThisProcess()).toBe(before + 2);
-        await end(second); await end(again);
+        // Two bots that start at the same time, as a host with no stagger: no bot waits.
+        const [second, third] = await Promise.all([open('Bob', host), open('Cat', host)]);
+        expect(asked.slice(-2)).toEqual([{ account: 'Bob', patient: false }, { account: 'Cat', patient: false }]);
+        expect(botsInThisProcess()).toBe(before + 3);
+        await end(first); await end(second); await end(third);
         expect(botsInThisProcess()).toBe(before);
-        // One bot under the plan lock: the short window, so the lock is not held for a long wait.
-        const locked = await open('Dan', { planLock: join(base, 'plan') });
-        expect(asked.at(-1)).toEqual({ account: 'Dan', patient: false });
+        // A process with no declaration (a manual run, a fleet trade): no wait.
+        const manual = await open('Dan');
+        expect(last()).toEqual({ account: 'Dan', patient: false });
+        await end(manual);
+        // The one bot of a process that the swarm declared: its claim waits.
+        const solo = { soloProcess: true };
+        const one = await open('Eve', solo);
+        expect(last()).toEqual({ account: 'Eve', patient: true });
+        // A second bot beside it, against the declaration, keeps the short window.
+        const beside = await open('Fay', solo);
+        expect(last()).toEqual({ account: 'Fay', patient: false });
+        // A login that fails leaves the count.
+        await expect(open('Gus', solo, true)).rejects.toThrow('login refused');
+        expect(botsInThisProcess()).toBe(before + 2);
+        await end(one); await end(beside);
+        expect(botsInThisProcess()).toBe(before);
+        // One declared bot under the plan lock: the short window, so the lock is not held for a long wait.
+        const locked = await open('Hal', { ...solo, planLock: join(base, 'plan') });
+        expect(last()).toEqual({ account: 'Hal', patient: false });
         await end(locked);
         expect(botsInThisProcess()).toBe(before);
     } finally { rmSync(base, { recursive: true, force: true, maxRetries: 5 }); }

@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import { classify, lastResults, superviseHost } from '../src/supervise-host';
-import { HELD_CLAIM_TRIES } from '../src/supervise';
+import { CLAIM_AUTHORITY_PAUSE_MS, HELD_CLAIM_TRIES } from '../src/supervise';
 
 test('host release refusal pauses each account without retrying',async()=>{
  const r=await superviseHost(['a','b'],{run:async()=>({stdout:['a','b'].map(a=>`[${a}] RESULT fail Error: no worker progress: release source changed; live starts paused`).join('\n'),exitCode:1}),
@@ -185,4 +185,17 @@ test('hosted account names that match object properties run and retain their own
         expect(Object.hasOwn(r.ends, name)).toBe(true);
         expect(r.ends[name]).toBe('done');
     }
+});
+
+test('the host waits longer before its next run when the claim authority of an account did not answer', async () => {
+    const fault = 'RESULT fail login: Error: fleet swarm claim authority unavailable or changed: spawnSync git ETIMEDOUT';
+    const run = (lines: string[]) => { let n = 0; const pauses: number[] = []; return { pauses, deps: {
+        run: async () => ({ stdout: n++ === 0 ? lines.join('\n') : ['a', 'b'].map(a => `[${a}] RESULT ok done`).join('\n'), exitCode: 0 }),
+        stopped: () => false, pause: async (ms: number) => { pauses.push(ms); }, maxRestarts: 5 } }; };
+    const slow = run([`[a] ${fault}`, '[b] RESULT fail bank did not open']);
+    expect((await superviseHost(['a', 'b'], slow.deps)).ends).toEqual({ a: 'done', b: 'done' });
+    expect(slow.pauses).toEqual([CLAIM_AUTHORITY_PAUSE_MS]);
+    const other = run(['[a] RESULT fail bank did not open', '[b] RESULT fail shop closed']);
+    expect((await superviseHost(['a', 'b'], other.deps)).ends).toEqual({ a: 'done', b: 'done' });
+    expect(other.pauses).toEqual([10_000]);
 });

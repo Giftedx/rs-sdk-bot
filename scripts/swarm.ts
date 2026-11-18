@@ -244,6 +244,9 @@ export function parseJob(job: Job): ParsedJob | { error: string } {
     return { key: job.account, accounts: [job.account], host: false, job };
 }
 
+// How many bots the process of a job holds: a login claim waits for a slow Git authority only in a process with one
+// bot (packages/core/src/inprocess.ts soloProcess).
+export const botCountEnv=(accounts:readonly string[])=>({SWARM_BOTS:String(accounts.length)});
 export function supervisorCommand(parsed:ParsedJob,accounts:string[]):string[]{
     const job=parsed.job,maxRestarts=String(job.maxRestarts??(job.orchestrate?0:20));
     // A host job: one --arg per script argument (values may hold commas) and one --env per account variable.
@@ -776,7 +779,7 @@ if (import.meta.main) {
             writeSync(out, jobLogStart(job));
             child = spawnChild(cmd[0]!, cmd.slice(1), {
                 cwd: root, detached: true, windowsHide: true, stdio: ['ignore', out, out],
-                env: { ...process.env, ...job.env, SWARM_LEASE_HOLDER: lease.holder, SWARM_MISSION_HASH: createHash('sha256').update(revision).digest('hex'), WORKER_RELEASE: workRelease, WORKER_ENTRY: entries.join(','), DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
+                env: { ...process.env, ...job.env, ...botCountEnv(accounts), SWARM_LEASE_HOLDER: lease.holder, SWARM_MISSION_HASH: createHash('sha256').update(revision).digest('hex'), WORKER_RELEASE: workRelease, WORKER_ENTRY: entries.join(','), DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
             });
         } finally { closeSync(out); }
         if (!child.pid) throw Error('supervisor did not start');
