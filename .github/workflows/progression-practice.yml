@@ -2,6 +2,11 @@ name: Progression practice
 on:
   workflow_dispatch:
     inputs:
+      env:
+        description: Environment settings of the deliveries, KEY=value separated by spaces (KEY is capital letters, digits and underscores)
+        type: string
+        required: false
+        default: ''
       capabilities:
         description: Capability ids separated by spaces, or all. Each one is qualified on its own runner (empty runs the Ranged jobs)
         type: string
@@ -59,9 +64,17 @@ jobs:
         run: bun run build
       - name: Qualify the capability
         timeout-minutes: 35
-        run: bun packages/router/src/delivery-cli.ts "$CAPABILITY"
+        run: |
+          for kv in $EXTRA_ENV; do
+            case "$kv" in
+              [A-Z]*=[A-Za-z0-9_.,:/-]*) export "$kv" ;;
+              *) echo "bad env setting: $kv"; exit 1 ;;
+            esac
+          done
+          bun packages/router/src/delivery-cli.ts "$CAPABILITY"
         env:
           CAPABILITY: ${{ matrix.capability }}
+          EXTRA_ENV: ${{ inputs.env }}
       - name: Retain the delivery evidence
         if: always()
         uses: actions/upload-artifact@v4
