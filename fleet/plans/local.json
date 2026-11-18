@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795011204808,
+ "at": 1795011290192,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -263,27 +263,6 @@
    "resources": []
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=861 QUANTITY=1 LIMIT_PRICE=60000 CASH_RESERVE=1000 ORDER_KEY=wandwaver-kit18-861-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=wandwaver-kit18-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=1 EXPECTED_OWNED=5 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=wandwaver-kit18-385-5to6 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":6}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Magic shortbow, 1 Law rune, 1 Shark on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on bronze arrows",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons-bronze",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "YewFirst",
    "script": "scripts/chain.ts",
    "args": [
@@ -302,28 +281,6 @@
    "template": "kit-buy:army-hunt-black-dragons",
    "autopilot": "local",
    "resources": []
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts lowe 2500 ITEMS=iron.arrow|bronze.arrow STOCK_TARGET=1200 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=29000 COIN_RESERVE=500 MAX_SPEND=28000",
-    "scripts/shop-buyer.ts aubury 800 ITEMS=air.rune|fire.rune STOCK_TARGET=60 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=8 FLOAT=3000 COIN_RESERVE=500 MAX_SPEND=2000"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "buy iron and bronze arrows at Lowe's and teleport runes at Aubury's in Varrock for the black dragon hunt",
-   "role": "supply",
-   "template": "army-hunt-supply",
-   "autopilot": "local",
-   "resources": [
-    "shop:lowe",
-    "shop:aubury"
-   ]
   },
   {
    "account": "MineYourBiz",
@@ -442,7 +399,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
    },
    "enabled": true,
    "standing": true,
@@ -515,8 +473,7 @@
     "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
    ],
    "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"556\":600}}"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
