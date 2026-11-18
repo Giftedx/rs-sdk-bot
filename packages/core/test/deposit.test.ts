@@ -94,3 +94,28 @@ test('carried 1902 coins with bank 15606 records dispatch and containers without
         expect(callbacks.size).toBe(0);
     } finally { log.mockRestore(); }
 });
+
+// An accepted coin deposit prints its receipt only; DEPOSIT_TRACE=1 prints the observations at once.
+for (const trace of [false, true]) {
+    test(`an accepted coin deposit ${trace ? 'prints' : 'does not print'} observations${trace ? ' with DEPOSIT_TRACE=1' : ''}`, async () => {
+        let tick = 0, held = 1902, generation = 1, stored = 15606;
+        const callbacks = new Set<() => void>(), rows: string[] = [];
+        const s: any = {
+            name: 'fixture', tick: () => tick, client: { ifType: () => undefined },
+            sdk: { getState: () => ({ inventory: held ? [{ id: 995, name: 'Coins', slot: 0, count: held }] : [] }) },
+            bankObservation: () => ({ generation, at: 1000, items: [{ id: 995, name: 'Coins', count: stored }] }),
+            onTick: (cb: () => void) => { callbacks.add(cb); return () => callbacks.delete(cb); },
+            bot: { depositItem: async () => { stored += held; held = 0; generation++; return { success: true }; } },
+        };
+        const log = spyOn(console, 'log').mockImplementation(line => { rows.push(String(line)); });
+        const prior = process.env.DEPOSIT_TRACE;
+        if (trace) process.env.DEPOSIT_TRACE = '1'; else delete process.env.DEPOSIT_TRACE;
+        try {
+            const work = depositObserved(s, { id: 995, name: 'Coins' });
+            for (let i = 0; i < 5; i++) { await Promise.resolve(); tick++; for (const cb of [...callbacks]) cb(); }
+            expect(await work).toBe(1902);
+            expect(rows.filter(l => l.startsWith('DEPOSIT_RECEIPT ')).length).toBe(1);
+            expect(rows.some(l => l.startsWith('DEPOSIT_OBSERVATION '))).toBe(trace);
+        } finally { log.mockRestore(); if (prior === undefined) delete process.env.DEPOSIT_TRACE; else process.env.DEPOSIT_TRACE = prior; }
+    });
+}
