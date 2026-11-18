@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795006115709-ballspinner-billionaire-bronzearrow",
+ "account": "Billionaire",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze arrow",
+ "requested": 244,
+ "claim": "30edda73-26e5-42d7-80cb-388a424ec53c",
+ "count": 0,
+ "ok": false,
+ "at": 1795006209655,
+ "detail": "trade claimed"
+}
