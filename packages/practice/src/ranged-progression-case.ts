@@ -64,7 +64,10 @@ export function loadRangedComparisonEntry(path=process.env.RANGED_PROGRESSION_EN
 export function rangedPracticeTarget(fixed:number,entry:RangedComparisonEntry,env:Record<string,string|undefined>=process.env){
  const requested=env.RANGED_PROGRESSION_TARGET;if(requested===undefined)return fixed;
  const target=Number(requested),level=entry.skills[4]!.level;
- if(!env.RANGED_PROGRESSION_ENTRY||!Number.isSafeInteger(target)||target<=level||target>Math.min(level+5,99))throw Error('captured Ranged target must be within the next finite five-level band');
+ // Any finite level above the entry: the proof states the XP that the run made (gainXp), so a longer run proves more
+ // and admits no more than it ran. The coordinator keeps its own bound for an observed account
+ // (packages/router/src/progression-native-context.ts).
+ if(!env.RANGED_PROGRESSION_ENTRY||!Number.isSafeInteger(target)||target<=level||target>99)throw Error('the Ranged target of an entry file must be a level above the entry, 99 at most');
  return target;
 }
 export function rangedPracticeCoins(entry:RangedComparisonEntry){

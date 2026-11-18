@@ -32,7 +32,8 @@ test('a captured native band accepts the next finite target without changing fix
  expect(rangedCase.rangedPracticeTarget(85,input,{RANGED_PROGRESSION_ENTRY:'captured.json',RANGED_PROGRESSION_TARGET:'90'})).toBe(90);
  expect(rangedCase.rangedPracticeTarget(83,fresh(),{})).toBe(83);
  expect(()=>rangedCase.rangedPracticeTarget(85,input,{RANGED_PROGRESSION_TARGET:'90'})).toThrow();
- for(const target of ['85','91','99','NaN','90.5'])expect(()=>rangedCase.rangedPracticeTarget(85,input,{RANGED_PROGRESSION_ENTRY:'captured.json',RANGED_PROGRESSION_TARGET:target})).toThrow();
+ expect(rangedCase.rangedPracticeTarget(85,input,{RANGED_PROGRESSION_ENTRY:'captured.json',RANGED_PROGRESSION_TARGET:'99'})).toBe(99);
+ for(const target of ['85','84','100','NaN','90.5'])expect(()=>rangedCase.rangedPracticeTarget(85,input,{RANGED_PROGRESSION_ENTRY:'captured.json',RANGED_PROGRESSION_TARGET:target})).toThrow();
 });
 
 test('captured practice protects its actual coin stock with the same bounded spend',()=>{

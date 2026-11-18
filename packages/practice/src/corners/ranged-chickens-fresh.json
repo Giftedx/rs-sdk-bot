@@ -1,0 +1,160 @@
+{
+ "at": 3,
+ "bankAt": 1,
+ "sourceSha256": "54ebb5bc3df204e53e190dac6363fff0af2f6707fd84ad84012636760194af28",
+ "producer": {
+  "loggedOutAt": 2,
+  "receiptSha256": "54ebb5bc3df204e53e190dac6363fff0af2f6707fd84ad84012636760194af28"
+ },
+ "pos": {
+  "x": 3222,
+  "z": 3218,
+  "level": 0
+ },
+ "hp": {
+  "now": 10,
+  "max": 10
+ },
+ "skills": [
+  {
+   "name": "Attack",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Defence",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Strength",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Hitpoints",
+   "level": 10,
+   "currentLevel": 10,
+   "xp": 980
+  },
+  {
+   "name": "Ranged",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Prayer",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Magic",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Cooking",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Woodcutting",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Fletching",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Fishing",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Firemaking",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Crafting",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Smithing",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Mining",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Herblore",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Agility",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Thieving",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Stat18",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Stat19",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  },
+  {
+   "name": "Runecraft",
+   "level": 1,
+   "currentLevel": 1,
+   "xp": 0
+  }
+ ],
+ "inventory": [],
+ "equipment": [
+  {
+   "id": 841,
+   "count": 1,
+   "slot": 3
+  },
+  {
+   "id": 882,
+   "count": 100,
+   "slot": 13
+  }
+ ],
+ "bank": []
+}
