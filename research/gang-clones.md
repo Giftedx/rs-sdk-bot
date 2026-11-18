@@ -319,6 +319,37 @@ The winner is `scripts/pk-gang-record/squad-candidate.json`: five of ours in the
 with a strung bow where the fleet has one, the multi-way post, the default options of the squad script. Its kills of
 an hour are 16.5 on the bench and 15.9 with the bias. Its food is 0.8 sharks a kill (16 Hitpoints).
 
+### The antipoison
+
+Five of ours in `chainbind` with fewer potions (`extra:clone-squad-5-chainbind-anti*-x1`, hosted run 44262314889,
+seeds 1, 2 and 3). A gang account hunts member i, so the first members are the ones that the gang hits first.
+"Food" puts sharks in the free slots of a pack with no potion: 22 sharks against 20.
+
+| Antipoison on | Kills | Deaths | Hitpoints lost a kill | With the bias | Ticks a run | Raw: Hitpoints lost by seed |
+|---|---|---|---|---|---|---|
+| each of the 5 members | 9 of 9 | 0 | 14 | 16 | 476 | 11, 33, 80 |
+| the first 2 members | 9 of 9 | 0 | 31 | 35 | 481 | 91, 127, 61 |
+| the first 2 members, food | 9 of 9 | 0 | 25 | 28 | 541 | 67, 58, 103 |
+| the first member | 9 of 9 | 0 | 24 | 27 | 480 | 77, 61, 80 |
+| no member | 9 of 9 | 0 | 30 | 34 | 500 | 94, 82, 93 |
+| no member, food | 9 of 9 | 0 | 15 | 17 | 486 | 65, 17, 51 |
+
+- **A squad of five with two potions, one or none kills all three clones with no death: 45 of 45.**
+- **Fewer potions cost about 10 to 17 Hitpoints a kill more**, under one shark. The five rows with fewer potions lie
+  inside each other's spread, so the table does not separate two potions from none.
+- The squad RESULT line holds no count of food and no source of damage. The food of a kill is its Hitpoints lost
+  over 20. In the one-against-three meeting with no cure, poison is 23 of 100 Hitpoints lost on the bench and 29 live.
+
+The poison in the content:
+
+- A dragon dagger (p) has poison strength 20 (`daggers.obj:554`). A hit over 0 poisons in 1 of 4 (`pvp_melee.rs2:50`).
+- A poisoned player takes a splat each 30 ticks (`poison.rs2:74`). The splat is the strength plus 4, over 5, and
+  the strength then falls by 1 (`poison.rs2:29-30`). From 20 that is 20 splats in 600 ticks and 50 Hitpoints.
+- A new poisoning puts the strength back to 20 (`poison.rs2:17`).
+- Only a death (`death.rs2:72`) or an antipoison (`anti_poison.rs2:5`) ends it. The end of a fight, a bank trip
+  and a logout do not: the timer starts again at login (`poison.rs2:69-70`). A dose also gives 5 timer turns with
+  no poison, 150 ticks.
+
 Not measured:
 
 - Lobsters: the two cases end with no fight. The bank trip of the squad takes sharks only.
