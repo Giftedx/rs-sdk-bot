@@ -8,7 +8,8 @@ import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { BONE_XP } from './train-prayer';
 import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, startable, supervisorCommand } from './swarm';
 import { supervise } from '../packages/practice/src/supervise';
-import { jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { assess } from '../packages/planner/src/autopilot';
+import { unplacedPrecondition, unplacedHeld, UNPLACED_RETRY_MS, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import { FOLLOWED_RETRY_MS, GEAR_ASK_LIMIT, GEAR_ASK_MARGIN, UNSOLD_RETRY_MS, gearLimit } from './autopilot';
 import { KIT_PRICE_CAPS } from '../packages/planner/src/autopilot';
 import type { TradeReceipt } from './fleet-trade-settlement';
@@ -1198,4 +1199,20 @@ test('every shop template of the catalogue selects at least one line of its prof
     }
     expect(empty).toEqual([]);
     expect(selectItems(PROFILES.ardy!.items, 'iron axe').map(i => i.re.source)).toEqual(['^iron axe$']);
+});
+
+test('an unplaced precondition failure marks its pair for a while, and is no job failure', () => {
+    const unplaced = (failure: string, extra = '') => `RESULT fail {"ok":false,"phase":"unplaced","pending":false,"quantity":16,"acquired":0${extra},"escrow":0,"refund":0,"spent":0,"ticks":3,"failure":"Error: ${failure}"}`;
+    const coins = unplaced('coins 160940 are under the escrow 160000 (16 x 10000) plus the reserve 1000: 60 short');
+    expect(unplacedPrecondition([coins])).toBe(true);
+    expect(unplacedPrecondition(['LEDGER ticks=3', unplaced('pack holds 27 items, over 26: two collection slots unavailable')])).toBe(true);
+    expect(unplacedPrecondition([unplaced('owned item baseline 68 differs from EXPECTED_OWNED 10')])).toBe(true);
+    expect(unplacedPrecondition([unplaced('GE interface unavailable')])).toBe(false);
+    expect(unplacedPrecondition([coins.replace('"escrow":0', '"escrow":9')])).toBe(false);
+    // Two of them are drains, not two fails: the pair is not retired for them (the mark holds it back instead).
+    expect(assess([coins, coins])).toMatchObject({ retire: false, drains: 2, fail: 0 });
+    // The mark holds for UNPLACED_RETRY_MS and no longer.
+    const now = 10_000_000, marks = { 'a:kit-buy:x': now - 60_000, 'b:kit-buy:x': now - UNPLACED_RETRY_MS, 'c:kit-buy:x': now + 1 };
+    expect(unplacedHeld(marks, now)).toEqual(['a:kit-buy:x']);
+    expect(unplacedHeld(undefined, now)).toEqual([]);
 });

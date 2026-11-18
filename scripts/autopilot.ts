@@ -59,6 +59,9 @@ type Retirement = string | { reason: string; script: string };
 type State = { assigned: Record<string, { template: string; offset: number; at: number }>; retired: Record<string, Retirement>; kitSeq?: Record<string, number>;
     // `unsold`: when a kit buy last got none of an item, by item id. The market leaves the item out for UNSOLD_RETRY_MS.
     unsold?: Record<string, number>;
+    // `unplaced`: when an account's kit buy last ended before it placed an offer (a precondition failed), by pair key. The pair gets
+    // no new buy for UNPLACED_RETRY_MS, as an unsold item leaves the market: the same order is not planned again at once.
+    unplaced?: Record<string, number>;
     // `kitEnds`: the end record (its `at`) that last raised an account's kitSeq, so one end record raises it once, even
     // while the account stays paused and its job is not planned again.
     kitEnds?: Record<string, number> };
@@ -242,6 +245,17 @@ export function kitMarket(items: readonly { id: number; name?: string; debugname
         market[norm(i.name)] = { id: i.id, name: i.name, limit };
     }
     return market;
+}
+// A buy that ended before it placed an offer because a precondition failed: nothing escrowed or acquired, and the failure names coins
+// under the escrow and reserve, a full pack, a passed deadline or a count that differs from the planner's (scripts/buy-owned-ge-item.ts).
+export const UNPLACED_RETRY_MS = 30 * 60_000;
+export function unplacedPrecondition(lines: readonly string[]): boolean {
+    return lines.some(l => /RESULT fail \{/.test(l) && /"phase":"unplaced"/.test(l) && /"acquired":0\b/.test(l) && /"escrow":0\b/.test(l)
+        && /"failure":"Error: (?:order deadline passed|coins \d+ are under the escrow|pack holds \d+ items|owned item baseline \d+ differs from EXPECTED_OWNED|owned item already present|order expired)/.test(l));
+}
+// The pairs whose kit buy is held back now: a fresh unplaced mark.
+export function unplacedHeld(unplaced: Readonly<Record<string, number>> | undefined, now: number): string[] {
+    return Object.entries(unplaced ?? {}).filter(([, at]) => now - at < UNPLACED_RETRY_MS && at <= now).map(([key]) => key);
 }
 export function unfilledItems(lines: readonly string[]): number[] {
     const out = new Set<number>();
@@ -568,6 +582,11 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
             log.push(`AUTOPILOT unsold ${j.account} ${j.template}: no seller under the cap for ${none.map(id => byId.get(id) ?? id).join(', ')}`);
             continue;
         }
+        if (String(j.template).startsWith(KIT_BUY) && unplacedPrecondition(jobLines)) {
+            (state.unplaced ??= {})[pairKey(j.account, j.template)] = Date.now();
+            log.push(`AUTOPILOT unplaced ${j.account} ${j.template}: a precondition failed before an offer; no new buy for ${UNPLACED_RETRY_MS / 60_000} minutes`);
+            continue;
+        }
         if (r.retire) { const script = scriptOf(j.template); state.retired[pairKey(j.account, j.template)] = script === undefined ? r.reason : { reason: r.reason, script }; log.push(`AUTOPILOT retire ${j.account} ${j.template}: ${r.reason}`); continue; }
         const ctx = ctxFor(j.account);
         if (isJobEnded(a, ctx)) {
@@ -676,7 +695,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
         busy:new Set([...keep,...open,...stranded,...diedAccounts,...swarm.jobs.filter((j:any)=>!mineMarked(j)&&j?.enabled!==false).flatMap(jobAccounts).map((n:string)=>n.toLowerCase())]),paused,protected:new Set(OFFLINE_GUARDED),
         stocks:progressionStocks,sourcesFor:(account,_method,_item)=>[account,...stock.filter(s=>!newlyWorking.has(s.name.toLowerCase())&&owners.get(s.name.toLowerCase())?.server===owners.get(account.toLowerCase())?.server).map(s=>s.name)],
         canTransfer:(from,to)=>sourceAllowed.has(from.toLowerCase())&&!newlyWorking.has(from.toLowerCase())&&free(from)&&free(to)&&owners.get(from.toLowerCase())?.server===owners.get(to.toLowerCase())?.server});
-    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
+    const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set([...Object.keys(state.retired), ...unplacedHeld(state.unplaced, now)]), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     for(const assignment of planned)if(assignment.template||assignment.fund||assignment.send)newlyWorking.add(assignment.account.toLowerCase());
     const refined=progression.refine(planned);

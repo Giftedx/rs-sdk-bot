@@ -241,6 +241,16 @@ export async function prepareMarketEntry(s:Session,stop:()=>boolean,travel:(sign
  }finally{off();ac.abort('market trip ended');}
 }
 // A new order starts only from the fresh holding its request names: none by default, or exactly expectedOwned.
+// Why a round may not start, or null: each cause names its numbers (the four were one message that named none). The escrow of a
+// round is its quantity at the limit price; the coins held (pack, bank and worn) must cover it and the reserve; two collection
+// slots need a pack of at most 26 items.
+export function orderRefusal(v:{now:number;deadline:number;over:boolean;coins:number;escrow:number;quantity:number;limit:number;reserve:number;pack:number}):string|null{
+ if(v.now>=v.deadline)return`order deadline passed ${Math.round((v.now-v.deadline)/1000)} s ago (deadline ${new Date(v.deadline).toISOString()})`;
+ if(v.over)return'order stopped: the session ended, died, was damaged, was told to stop or used its 500-tick budget';
+ if(v.coins<v.escrow+v.reserve)return`coins ${v.coins} are under the escrow ${v.escrow} (${v.quantity} x ${v.limit}) plus the reserve ${v.reserve}: ${v.escrow+v.reserve-v.coins} short`;
+ if(v.pack>26)return`pack holds ${v.pack} items, over 26: two collection slots unavailable`;
+ return null;
+}
 export function ownedBaseline(r:ItemRequest,held:number){
  if(r.expectedOwned===undefined){if(held>0)throw Error('owned item already present;allocate it instead of buying duplicate stock');}
  else if(held!==r.expectedOwned)throw Error(`owned item baseline ${held} differs from EXPECTED_OWNED ${r.expectedOwned}`);
@@ -426,7 +436,7 @@ export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:str
    const needsFunding=!journal||journal.phase==='entry'||journal.phase==='settled'||journal.phase==='placing'&&journal.submission==='prepared';
    if(needsFunding){
     if(cancel)throw Error('no submitted order to cancel');if(!journal)ownedBaseline(request,itemTotal());
-    if(Date.now()>=request.deadline||over()||coinsTotal()<roundEscrow+request.reserve||s.sdk.getInventory().length>26)throw Error('order expired,owned reserve missing or two collection slots unavailable');
+    {const failure=orderRefusal({now:Date.now(),deadline:request.deadline,over:over(),coins:coinsTotal(),escrow:roundEscrow,quantity:remaining,limit:request.limit,reserve:request.reserve,pack:s.sdk.getInventory().length});if(failure)throw Error(failure);}
     if(journal&&journal.phase==='placing'&&(coinsTotal()!==roundBaseline(journal).coins||itemTotal()!==roundBaseline(journal).items))throw Error('prepared order asset baseline changed');
     const coins=s.sdk.findBankItem(/^coins$/i),beforeBank=count(bankItems,i=>i.id===995),gen=bankObservation()?.generation??0;
     if(!coins||!(await s.bot.withdrawItem(coins,roundEscrow,{asNote:false})).success||!await waitUntil(s,()=>{const bank=bankObservation();return held(995)===roundEscrow&&(bank?.generation??0)>gen&&count(bank?.items??[],i=>i.id===995)===beforeBank-roundEscrow;},{timeoutTicks:10}))throw Error('owned order funding unobserved');
