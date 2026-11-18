@@ -113,14 +113,23 @@ async function phase(directory:string,mode:string){
  writeFileSync(join(directory,mode==='--hold'?'hold.json':'handoff.json'),JSON.stringify(data,null,2));return data;
 }
 
+// The delivery runs this proof as a check inside its own practice turn (packages/router/src/delivery-cli.ts holds
+// .practice/delivery-native.lock for the child). Asking for the same turn again made the proof wait for its parent
+// until its own wait ran out. The turn is held by the delivery when the delivery directory is set, the lock file of the
+// proof is the file that the delivery holds, and that lock names the parent process of this one.
+export function turnHeldByDelivery(lockFile:string,deliveryLock:string,env:Record<string,string|undefined>,parent:number):boolean{
+ if(!env.DELIVERY_DIR||resolve(lockFile)!==resolve(deliveryLock))return false;
+ try{const owner=JSON.parse(readFileSync(lockFile,'utf8'));return Number.isSafeInteger(owner?.pid)&&owner.pid===parent;}catch{return false;}
+}
 export async function runWineStockNative(directory:string){
  mkdirSync(directory,{recursive:true});if(existsSync(join(directory,'makerBefore.sav')))throw Error('preserve existing wine-stock evidence; use a fresh delivery directory');
  const git=Bun.spawnSync(['git','rev-parse','--git-common-dir'],{cwd:root,stdout:'pipe',stderr:'pipe',windowsHide:true});
  if(git.exitCode!==0)throw Error('shared practice owner unavailable');
  const main=dirname(resolve(root,git.stdout.toString().trim())),shared=join(main,'.practice');
+ const practiceTurn:typeof withPracticeTurn=(file,run,options)=>turnHeldByDelivery(file,join(root,'.practice/delivery-native.lock'),process.env,process.ppid)?run():withPracticeTurn(file,run,options);
  let signalled=false;const stop=()=>{signalled=true;},stopped=()=>signalled||[root,main].some(base=>existsSync(join(base,'.practice/stop-coordinator'))||existsSync(join(base,'.practice/stop-swarm')));
  process.on('SIGINT',stop);process.on('SIGTERM',stop);
- try{return await withPracticeTurn(join(shared,'delivery-native.lock'),async()=>{
+ try{return await practiceTurn(join(shared,'delivery-native.lock'),async()=>{
   if(stopped()||freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('native wine startup headroom unavailable or owner stopped');
   const lock=join(shared,'delivery-practice.lock'),owner=JSON.stringify({pid:process.pid,task:'wine-stock-order',directory}),fd=openSync(lock,'wx');writeFileSync(fd,owner);
   const pin=source(),endpoint=selectCoinProofEndpoints(),names=[runBotName('flwine',1),runBotName('flcook',1)],saves:string[]=[],children:any[]=[];

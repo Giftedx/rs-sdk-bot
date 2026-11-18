@@ -8,6 +8,7 @@ import {runBotName} from './prove';
 import {startStack,PROOF_TICK_MS,type StackOptions} from './stack';
 import {canBind} from './ports';
 import {rsSdkRoot,practiceDir} from './paths';
+import {coordinatorStateFixture} from './coordinator-state-fixture';
 import {killTree} from './proc';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {workerSourceRevision} from '../../core/src/worker-release';
@@ -129,6 +130,8 @@ async function run(directory:string){
     const lock=join(practiceDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');
     writeFileSync(fd,JSON.stringify({pid:process.pid,task:'ammo-order',directory,at:Date.now()}));
     let stack:Awaited<ReturnType<typeof startStack>>|undefined;
+    // The handoff worker checks the coordinator state for owners of its accounts; a checkout with none (a hosted runner) gets an empty one.
+    const restoreState=coordinatorStateFixture(resolve(practiceDir(),'..'));
     const command=async(args:string[],env:Record<string,string>,label:string,timeoutMs=180000):Promise<Run>=>{
         const out=join(directory,label+'.log'),err=join(directory,label+'.err');
         const child=Bun.spawn({...ammoChildConfiguration(args,env,endpoints),windowsHide:true,stdout:Bun.file(out),stderr:Bun.file(err)});
@@ -196,7 +199,7 @@ async function run(directory:string){
         writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source,order,names,plannedNames,plannedCode:planned.code,plannedRepeatCode:plannedRepeat.code,server:endpoints.server,endpoints:{ports:endpoints.ports,instance:endpoints.instance},transferCode:transfer.code,craftCode:craft.code,repeatCode:repeat.code,headlessCode:headless.code,refusalCode:refusal.code},null,2));
         return verify(directory);
     }finally{
-        try{await stack?.stop();}finally{closeSync(fd);unlinkSync(lock);}
+        try{await stack?.stop();}finally{restoreState();closeSync(fd);unlinkSync(lock);}
     }
 }
 

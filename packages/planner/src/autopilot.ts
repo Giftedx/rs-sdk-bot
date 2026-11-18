@@ -16,6 +16,7 @@ import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { validateBankRouteJob, type BankRouteJob } from '../../core/src/bank-trip';
 import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-route-step';
 import { cowFoodIds, foodTotalHeal } from '../../core/src/sustain';
+import { ORDER_COIN_MARGIN, REFUSAL_ANY_SOURCE } from '../../core/src/order-refusal';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -24,8 +25,10 @@ import { resolve } from 'node:path';
 // reports (absent: none known, which counts as 0). `pos`: the tile where the account stands while it is offline
 // (absent: not known, and the reach rule does not apply).
 // `currentHP`: the observed current Hitpoints; absent means unknown, never the base level.
+// `exact`: the holdings of unnoted items by name, as the buy script counts them (its matcher takes the item id and skips banknotes); `items`
+// counts a banknote under its item's name. Absent: no observation.
 // `observedAt`: when the observation behind this account was taken (its status `at`); absent: no observation.
-export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; observedAt?: number; currentHP?: number; combat?: number; quests?: ReadonlySet<string>; questPoints?: number; pos?: { x: number; z: number; level: number } };
+export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number>; exact?: Record<string, number>; observedAt?: number; currentHP?: number; combat?: number; quests?: ReadonlySet<string>; questPoints?: number; pos?: { x: number; z: number; level: number } };
 export type Flow = { item: string; perTick: number };
 // `under`: skills that must stay below a level (a band hands an account on to the next band at that level).
 // `holdsUnder`: holdings that end the job at once. The account must hold fewer, or the run finds its target met and fails.
@@ -269,6 +272,8 @@ export const LOST_CITY_BUILD: Needs = {
 // The coins a kit buy leaves in the bank (the buy script's CASH_RESERVE). A kit costs far less than FUND_RESERVE, which
 // guards a coin donor, so a buyer keeps only this.
 export const KIT_CASH_RESERVE = 1_000;
+// Coins the plan leaves above the reserve when it sizes a kit buy (see acquire): the observed coins are minutes old when the buy runs.
+export const KIT_COIN_MARGIN = ORDER_COIN_MARGIN;
 // Unit price caps for kit buys, in coins. Estimates: the owner's hand jobs cap a law rune at 1,600 (shop value 40) and
 // a shark at 810 to 1,200 (shop value 300), so a rune caps at about 40 times and food at about 4 times its shop value.
 // An offer fills at or under its cap, and scripts/buy-owned-ge-item.ts refunds what does not fill. Gap: no measured
@@ -603,7 +608,7 @@ export function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
         });
         budget(`army kit ${a.name}`, () => {
             const cost = lines.reduce((n, l) => n + (l.need.short + (l.need.bought ?? 0)) * l.price, 0);
-            return cash + keep + cost + (cost > 0 ? KIT_CASH_RESERVE : 0);
+            return cash + keep + cost + (cost > 0 ? KIT_CASH_RESERVE + KIT_COIN_MARGIN : 0);
         }, lower);
     }
     for (const need of route) if (!need.names.includes('coin')) {
@@ -1074,15 +1079,19 @@ export function plan(input: Inputs): Assignment[] {
             // The batch when the account can pay for it, else only what the band needs to start. A one-line band with
             // `partBatch` takes as much of its batch as the account can pay for.
             const batchOf = c.template.batchFor?.(a) ?? c.template.batch;
-            const sized = (batch: boolean): KitLine[] => picks.map(p => { const held = a.items[p!.item] ?? 0, m = inp.market![p!.item]!; return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(p!.count, batch ? (batchOf?.[p!.item] ?? 0) - held : 0) }; });
+            // `held` is what the buy script will count (EXPECTED_OWNED, the order key): the unnoted units. The batch top-up counts every unit, notes included.
+            const sized = (batch: boolean): KitLine[] => picks.map(p => { const owned = a.items[p!.item] ?? 0, held = a.exact ? a.exact[p!.item] ?? 0 : owned, m = inp.market![p!.item]!; return { item: m.name, id: m.id, held, limit: m.limit, quantity: Math.max(p!.count, batch ? (batchOf?.[p!.item] ?? 0) - owned : 0) }; });
             const price = (ls: readonly KitLine[]) => ls.reduce((n, l) => n + l.quantity * l.limit, 0), coins = a.items.coin ?? 0;
             const keep = Math.max(c.template.keepCoins?.(a) ?? 0,...Object.entries(c.template.needs?.items??{}).filter(([item])=>norm(item)==='coin').map(([,count])=>count));
             const free = coins - keep;
-            const full = sized(true), start = sized(false), part = Math.floor((free - KIT_CASH_RESERVE) / (full[0]?.limit ?? 1));
+            // The buy script refuses a round whose escrow and reserve pass the coins it finds, and the status that sized the buy is older than
+            // the run: KIT_COIN_MARGIN keeps the planned buy under the coins by what a few minutes of fares, food and fees can take.
+            const room = KIT_CASH_RESERVE + KIT_COIN_MARGIN;
+            const full = sized(true), start = sized(false), part = Math.floor((free - room) / (full[0]?.limit ?? 1));
             const frailFood = c.template.id === FRAIL_FOOD_BUY_ID;
-            const lines = frailFood || price(full) + KIT_CASH_RESERVE <= free ? full
+            const lines = frailFood || price(full) + room <= free ? full
                 : c.template.partBatch && full.length === 1 && part > start[0]!.quantity ? [{ ...full[0]!, quantity: Math.min(full[0]!.quantity, part) }] : start;
-            const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0, KIT_CASH_RESERVE + keep), cost = price(lines), short = cost + KIT_CASH_RESERVE - free;
+            const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0, KIT_CASH_RESERVE + keep), cost = price(lines), short = cost + room - free;
             const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
             // A `once` quest buys its kit for one account at a time, and for QUEST_DEMAND_PLACES quests at a time: the buy holds
             // the places of the quest, and the run that follows holds them too.
@@ -1350,7 +1359,9 @@ export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked
 // logged two such fails, and the account's Lost City band was retired).
 // An offline login server or an unavailable swarm claim authority refuses the session before the worker runs.
 // Supervisor retry bounds and claim recovery still apply; neither refusal establishes a broken worker.
-export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|login: LoginError: Login server offline\b|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|(?:login: )?(?:Error: )?fleet swarm claim authority (?:unavailable or changed|timed out)\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|.*\bstop"?[=:]"?preparation\b|.*\bprogression requires acquire\b|stop file\b|.*\bworker finished: stop file\b)/;
+const DRAIN_BASE = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|login: LoginError: Login server offline\b|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|(?:login: )?(?:Error: )?fleet swarm claim authority (?:unavailable or changed|timed out)\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|.*\bstop"?[=:]"?preparation\b|.*\bprogression requires acquire\b|stop file\b|.*\bworker finished: stop file\b)/;
+// A buy that ends before it places an offer, on any refusal of packages/core/src/order-refusal.ts, is no failure of its job.
+export const DRAIN_RESULT = new RegExp(DRAIN_BASE.source.replace('^RESULT fail (?:', `^RESULT fail (?:.*"phase":"unplaced",.*"escrow":0,.*"failure":"Error: (?:${REFUSAL_ANY_SOURCE})|`));
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
     const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;
@@ -2617,7 +2628,7 @@ export function freshest(...observations: readonly any[]): any {
 // state, a snapshot row the complete ones by name), and the tile it stands on (a status only). No status: a fresh
 // account at level 1 (Hitpoints 10).
 export function accountFrom(name: string, side: string, status: any, itemName: (id: number) => string | undefined): Acct {
-    const skills: Record<string, number> = { Hitpoints: 10 }, items: Record<string, number> = {};
+    const skills: Record<string, number> = { Hitpoints: 10 }, items: Record<string, number> = {}, exact: Record<string, number> = {};
     for (const k of Array.isArray(status?.skills) ? status.skills : []) if (typeof k?.name === 'string' && Number.isFinite(k.level)) skills[k.name] = k.level;
     const validHP = (hp: unknown): hp is number => Number.isSafeInteger(hp) && (hp as number) >= 0;
     const sharedHP = (Array.isArray(status?.skills) ? status.skills : []).find((k: any) => k?.name === 'Hitpoints')?.currentLevel;
@@ -2626,6 +2637,7 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
         const n = typeof r?.name === 'string' ? r.name : itemName(r?.baseId ?? r?.id);
         const bow = bowStockNames.get(r?.baseId ?? r?.id), key = bow ?? (n && !(norm(n) in BOW_IDS) ? norm(n) : undefined);
         if (key && Number.isFinite(r.count)) items[key] = (items[key] ?? 0) + r.count;
+        if (key && Number.isFinite(r.count) && (r?.baseId === undefined || r.baseId === r.id)) exact[key] = (exact[key] ?? 0) + r.count;
         // The held-bones Prayer worker deposits and buries only id526. Keep notes in generic stock for trades and
         // other consumers, while this availability key admits only the exact normal bones that worker can use.
         if (r?.id === 526 && Number.isFinite(r.count)) items['bone (unnoted)'] = (items['bone (unnoted)'] ?? 0) + r.count;
@@ -2633,7 +2645,7 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
     const quests = Array.isArray(status?.quests)
         ? new Set<string>(status.quests.flatMap((q: any) => typeof q === 'string' ? [norm(q)] : typeof q?.name === 'string' && q.state === 'complete' ? [norm(q.name)] : [])) : undefined;
     const questPoints = status?.guildFacts?.varps?.qp, p = status?.pos;
-    return { name, side, skills, items, ...(Number.isFinite(status?.at) && status.at > 0 ? { observedAt: status.at } : {}), ...(currentHP !== undefined ? { currentHP } : {}), ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}), ...(Number.isFinite(questPoints) ? { questPoints } : {}),
+    return { name, side, skills, items, ...(status ? { exact } : {}), ...(Number.isFinite(status?.at) && status.at > 0 ? { observedAt: status.at } : {}), ...(currentHP !== undefined ? { currentHP } : {}), ...(Number.isFinite(status?.combat) ? { combat: status.combat } : {}), ...(quests ? { quests } : {}), ...(Number.isFinite(questPoints) ? { questPoints } : {}),
         ...(Number.isFinite(p?.x) && Number.isFinite(p?.z) ? { pos: { x: p.x, z: p.z, level: Number.isFinite(p.level) ? p.level : 0 } } : {}) };
 }
 

@@ -560,3 +560,17 @@ test('the health preparation eats the cheapest owned meal, sharks included', asy
   expect(HEAL_FOOD).toContain(385);
   expect(HEAL_FOOD.indexOf(329)).toBeLessThan(HEAL_FOOD.indexOf(385));
 });
+
+import {orderRefusal} from './buy-owned-ge-item';
+test('a refused round names its cause and numbers: deadline, stop, coins under escrow plus reserve, pack over 26',()=>{
+ const ok={now:1000,deadline:5000,over:false,coins:161000,escrow:160000,quantity:16,limit:10000,reserve:1000,pack:10};
+ expect(orderRefusal(ok)).toBeNull();
+ expect(orderRefusal({...ok,now:8000})).toMatch(/^order deadline passed 3 s ago \(deadline 1970-01-01T00:00:05\.000Z\)$/);
+ expect(orderRefusal({...ok,over:true})).toMatch(/^order stopped: /);
+ // 160,940 coins for 16 x 10,000 plus a reserve of 1,000 is 60 short.
+ expect(orderRefusal({...ok,coins:160940})).toBe('coins 160940 are under the escrow 160000 (16 x 10000) plus the reserve 1000: 60 short');
+ expect(orderRefusal({...ok,pack:27})).toBe('pack holds 27 items, over 26: two collection slots unavailable');
+ expect(orderRefusal({...ok,pack:26})).toBeNull();
+ // A passed deadline is named before the coins.
+ expect(orderRefusal({...ok,now:9000,coins:0})).toMatch(/^order deadline passed/);
+});
