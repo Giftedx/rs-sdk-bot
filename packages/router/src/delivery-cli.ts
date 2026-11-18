@@ -32,7 +32,7 @@ export function nativeNeedGB(check:Pick<DeliveryCheck,'command'>,facts:{floorGB:
 // The deferral of a check that ended because the host had no room: its exit code, or null. The report then carries
 // hostDeferred (nativeDeferralEvidence) and the coordinator resumes the prepared source in place of a new build.
 export function checkDeferral(check:Pick<DeliveryCheck,'id'|'command'>,exitCode:number):string|null{
- if(exitCode===HOST_DEFERRED_EXIT)return `check ${check.id} ended with the host deferral exit ${exitCode}; no case ran`;
+ if(exitCode===HOST_DEFERRED_EXIT)return `check ${check.id} ended with the host deferral exit ${exitCode}`;
  if(benchEngines(check)!==null&&(exitCode===BENCH_START_REFUSED_EXIT||exitCode===BENCH_FLEET_STOP_EXIT))return `check ${check.id}: the bench ended with exit ${exitCode} (refused to start or stopped for the fleet's memory)`;
  return null;
 }
@@ -63,9 +63,19 @@ export function isSavedProofVerifier(check:DeliveryCheck):boolean{
  return savedProofVerifierAllowed(check,readSavedProofPolicy(root));
 }
 // `requiredGB`: the free memory that this start needs, read again at each step (default NATIVE_STARTUP_GB).
+// The longest wait of a native admission, in ms. A task whose check runs another delivery sets a shorter budget in
+// this variable, so that the inner wait ends (as a host deferral) before the timeout of the outer check.
+export const ADMISSION_WAIT_ENV='DELIVERY_ADMISSION_WAIT_MS';
+export const ADMISSION_WAIT_MAX_MS=900000;
+export function admissionWaitMs(env:Record<string,string|undefined>=process.env):number{
+ const text=env[ADMISSION_WAIT_ENV];if(text===undefined||text==='')return ADMISSION_WAIT_MAX_MS;
+ const value=Number(text);
+ if(!Number.isSafeInteger(value)||value<1||value>ADMISSION_WAIT_MAX_MS)throw Error('invalid native admission wait budget: '+ADMISSION_WAIT_ENV);
+ return value;
+}
 type NativeAdmissionDeps={now:()=>number;freeGB:()=>number;stopped:()=>boolean;sleep:(ms:number)=>Promise<void>;requiredGB?:()=>number;progress:(value:{state:string;at:number;freeGB:number;requiredGB:number;deadline:number})=>void};
-export async function withNativeStartup<T>(start:()=>Promise<T>,deps:NativeAdmissionDeps,waitMs=900000):Promise<T>{
- if(!Number.isSafeInteger(waitMs)||waitMs<1||waitMs>900000)throw Error('invalid native admission wait budget');
+export async function withNativeStartup<T>(start:()=>Promise<T>,deps:NativeAdmissionDeps,waitMs=ADMISSION_WAIT_MAX_MS):Promise<T>{
+ if(!Number.isSafeInteger(waitMs)||waitMs<1||waitMs>ADMISSION_WAIT_MAX_MS)throw Error('invalid native admission wait budget');
  const deadline=deps.now()+waitMs;let lastState='';
  const required=()=>{const v=deps.requiredGB?.()??NATIVE_STARTUP_GB;if(!Number.isFinite(v)||v<NATIVE_STARTUP_GB)throw Error('invalid native memory requirement; no child started');return v;};
  const report=(state:string,at:number,freeGB:number)=>{if(state!==lastState){deps.progress({state,at,freeGB,requiredGB:required(),deadline});lastState=state;}};
@@ -185,7 +195,7 @@ async function runTask(task:DeliveryTask,diagnosticCheck?:string){
                     writeFileSync(join(directory,'admission.json'),JSON.stringify({...admission,check:check.id},null,2));
                     appendFileSync(join(directory,'admission.jsonl'),JSON.stringify({...admission,check:check.id})+'\n');
                     console.log('DELIVERY_ADMISSION '+JSON.stringify({...admission,check:check.id}));
-                }}),{stopped});
+                }},admissionWaitMs()),{stopped});
         },
     },diagnosticCheck);
     const report={...result,...nativeDeferralEvidence(result.reason),id:task.id,goal:task.goal,at:Date.now(),runtimeRevision:runtimeRevision(task),directory,files:task.files.map(path=>{

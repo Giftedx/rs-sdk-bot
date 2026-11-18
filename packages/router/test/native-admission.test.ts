@@ -1,8 +1,9 @@
 import{test,expect}from'bun:test';
-import{deliveryTask,isSavedProofVerifier,withNativeStartup,nativeDeferralEvidence,nativeNeedGB,checkDeferral,benchEngines,NATIVE_STARTUP_GB,SOURCE_STARTUP_GB}from'../src/delivery-cli';
+import{deliveryTask,isSavedProofVerifier,withNativeStartup,nativeDeferralEvidence,nativeNeedGB,checkDeferral,benchEngines,admissionWaitMs,ADMISSION_WAIT_ENV,ADMISSION_WAIT_MAX_MS,NATIVE_STARTUP_GB,SOURCE_STARTUP_GB}from'../src/delivery-cli';
 import{FREE_FLOOR_GB,PRACTICE_RESERVE_GB,HOST_DEFERRED_EXIT,benchStartGB}from'../../core/src/memory';
 import{memoryProblems}from'../../../scripts/measure/bench-start-check';
-import{qualificationExit}from'../src/bank-observer-qualification';
+import{qualificationExit,INNER_ADMISSION_WAIT_MS}from'../src/bank-observer-qualification';
+import{readFileSync}from'node:fs';
 import{mkdtempSync,writeFileSync,readdirSync}from'node:fs';
 import{tmpdir}from'node:os';
 import{join}from'node:path';
@@ -107,8 +108,9 @@ test('declared saved consumers bypass only the practice turn',()=>{
  expect(isSavedProofVerifier(unreviewed)).toBe(false);
 });
 
-// The coordinator built session-recovery-only nine times with no code defect: the check that runs the owned bank
-// observation passed its native admission at 6.6 GiB free, and the bench then refused to start because it needed 7.5.
+// The admission of a check that runs the bench and the start check of the bench use one memory rule. Beside 16 live
+// bots with 2 GiB held for bot starts, that rule is 7.5 GiB, and the admission never passes a start that the bench
+// then refuses.
 const BENCH_CHECK={id:'bank-observation-native',command:['bun','run','bench','^extra:owned-bank-observation$','--profile','--budget','10']};
 const BEHIND_FLEET={floorGB:FREE_FLOOR_GB,fleet:{bots:16,reserveGB:2}};
 test('a check that runs the bench is admitted at the memory that the bench needs, from one rule',()=>{
@@ -169,4 +171,24 @@ test('the bank observer check exits with the host deferral code for a deferred i
  expect(nativeDeferralEvidence(deferred!.message)).toEqual({hostDeferred:true});
  expect(qualificationExit({ok:false,reason:'check failed'})).toBeNull();
  expect(qualificationExit({ok:false,hostDeferred:false,reason:'check failed'})).toBeNull();
+});
+
+test('the admission wait of a delivery is the default, or the budget that a task sets, and nothing else',()=>{
+ expect(admissionWaitMs({})).toBe(ADMISSION_WAIT_MAX_MS);
+ expect(admissionWaitMs({[ADMISSION_WAIT_ENV]:''})).toBe(ADMISSION_WAIT_MAX_MS);
+ expect(admissionWaitMs({[ADMISSION_WAIT_ENV]:'300000'})).toBe(300000);
+ for(const bad of ['0','-5','1.5','abc',String(ADMISSION_WAIT_MAX_MS+1)])expect(()=>admissionWaitMs({[ADMISSION_WAIT_ENV]:bad}),bad).toThrow('invalid native admission wait budget');
+});
+
+test('the inner admission wait of the bank observer check ends well before the timeout of that check, as a host deferral',async()=>{
+ const outer=JSON.parse(readFileSync(new URL('../tasks/session-recovery-only.json',import.meta.url),'utf8')).checks.find((c:any)=>c.id==='bank-observer-qualification');
+ expect(outer.phase).toBe('regression');
+ // Under half of the outer timeout: the rest of the inner delivery (its tests and its bench case) has the other half.
+ expect(INNER_ADMISSION_WAIT_MS).toBeLessThanOrEqual(outer.timeoutMs/2);
+ expect(INNER_ADMISSION_WAIT_MS).toBeGreaterThanOrEqual(60000);
+ // At the budget the admission ends with the deferral text that the inner report and the exit 75 carry on.
+ const f=fixture();let reason='';
+ try{await withNativeStartup(f.start,f.deps,INNER_ADMISSION_WAIT_MS);}catch(error){reason=String(error);}
+ expect(nativeDeferralEvidence(reason)).toEqual({hostDeferred:true});expect(f.starts()).toBe(0);
+ expect(qualificationExit({ok:false,hostDeferred:true,reason})?.exit).toBe(HOST_DEFERRED_EXIT);
 });
