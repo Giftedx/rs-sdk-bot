@@ -16,6 +16,7 @@ import { ServerProt } from '../../../vendor/rs-sdk/server/webclient/src/io/Serve
 import { ClientProt } from '../../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import { tickWaits } from './tick-stream';
 import {pendingRouteWork} from './route-plan';
+import {fineTimers} from './timer-resolution';
 import { executionWait } from '../../../vendor/rs-sdk/sdk/execution-context';
 import { setEquipmentObserved } from './container-observation';
 import { beginSessionAttempt, lifecycleOwner, type SessionAttempt } from './session-lifecycle';
@@ -167,8 +168,15 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     // these, so it holds the tick until it waits. SIM_BUSY_MS (default 2000) bounds the hold, for a script that ends
     // without a wait. SIM_ACK_FILE receives one line per held tick and a total at the end.
     const lockstep = process.env.SIM_LOCKSTEP === '1';
+    // SIM_FINE_TIMERS=1: the acknowledgement below polls with 1 ms timers; on Windows they take 15 ms each without it.
+    if (lockstep) fineTimers();
     const busyMs = Number(process.env.SIM_BUSY_MS ?? 2000);
     const scriptMs = Math.min(busyMs, Number(process.env.SIM_SCRIPT_MS ?? 500));
+    // A route search off the game thread (route-plan.ts) holds the tick until it ends: no game tick passes in a search,
+    // so a case gives the same ticks with empty and with full route caches. With the SIM_SCRIPT_MS bound the game went
+    // on one tick for each 500 ms of a search, and one case at one seed gave 1,901, 2,072 and 2,238 ticks.
+    // SIM_ROUTE_MS bounds the hold for a search that never answers.
+    const routeMs = Math.max(busyMs, Number(process.env.SIM_ROUTE_MS || 180_000));
     const ackFile = process.env.SIM_ACK_FILE;
     // pumpMs: the packet reads of the client; stateMs: the state of a tick; scriptMs: the tick listeners (the script).
     const ackStat = { ticks: 0, held: 0, heldMs: 0, capped: 0, pumpMs: 0, stateMs: 0, scriptMs: 0 };
@@ -216,11 +224,11 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             const dialogOpen = !!(client as { isChatBackInputOpen?(): boolean }).isChatBackInputOpen?.();
             const routes=pendingRouteWork();
             // Persistent state listeners do not make an off-tick route a game-input wait.
-            // Actual tick/actions/dialog waits still advance; the existing busy cap bounds this hold.
+            // Actual tick/actions/dialog waits still advance; SIM_ROUTE_MS bounds this hold.
             const routeBusy=routes>0&&waitLeft===0&&!serverWait&&!inDialogWait();
             const busy = routeBusy || (running && waitLeft === 0 && !serverWait && !(inDialogWait() && !dialogOpen)) || !waiting;
             // A script that ended after its last tick wait leaves no wait: SIM_SCRIPT_MS (500) bounds that hold.
-            if (busy && performance.now() - since < (scriptTick ? scriptMs : busyMs)) { if (turns++ < 20) setImmediate(check); else setTimeout(check, 1); return; }
+            if (busy && performance.now() - since < (routeBusy ? routeMs : scriptTick ? scriptMs : busyMs)) { if (turns++ < 20) setImmediate(check); else setTimeout(check, 1); return; }
             const held = performance.now() - since;
             ackStat.ticks++; if (busy) ackStat.capped++; if (held > 2) { ackStat.held++; ackStat.heldMs += held; }
             if (ackFile && held > 2) appendFileSync(ackFile, `ACK tick=${tick} bot=${(client as { loginUser?: string }).loginUser ?? "?"} waits=${tickWaits.active} state=${stateWaiters}/${stateWaitersLow} running=${running} pending=${actionPending} serverWait=${serverWait} routes=${routes} sdk=${[...inFlight].map(([k, n]) => `${k}${n > 1 ? `x${n}` : ''}`).join(',') || '-'} held=${held.toFixed(0)}ms${busy ? ' CAPPED' : ''}\n`);

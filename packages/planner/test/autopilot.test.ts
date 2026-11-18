@@ -208,7 +208,7 @@ test('a donor that gives stays free that pass; an account that holds the coins n
     // Equal values go in name order. Poor comes first: Zed funds it and takes no job.
     expect(show(plan(inputs([acct('Poor'), acct('Zed', {}, { coin: 900_000 })], opts('Zed'))))).toEqual({ Poor: 'funded by Zed', Zed: 'vacant: gives coins this pass' });
     // Big comes first and takes the job itself: an assigned account never gives.
-    expect(show(plan(inputs([acct('Poor'), acct('Big', {}, { coin: 900_000 })], opts('Big'))))).toEqual({ Poor: expect.stringMatching(/^vacant: no template/), Big: 'shop-feathers' });
+    expect(show(plan(inputs([acct('Poor'), acct('Big', {}, { coin: 900_000 })], opts('Big'))))).toEqual({ Poor: 'vacant: shop-feathers needs 2000 coins and no free account can give them', Big: 'shop-feathers' });
     expect(plan(inputs([acct('Rich', {}, { coin: 5_000 })], { templates: shops, donors: [{ name: 'Big', coins: 900_000 }] }))[0]!.fund).toBeUndefined();
 });
 
@@ -614,7 +614,7 @@ test('injured trooper entries acquire food while healthy thieves and owned food 
     const template = catalogue().find(t => t.id === 'army-trooper-ranged-99')!;
     const templates = [template], market = { trout: { id: 333, name: 'Trout', limit: 100 } }, army = new Set(['archer']);
     const archer = (currentHP: number | undefined, food = 0): Acct => ({
-        ...acct('Archer', { Hitpoints: 99, Ranged: 70, Thieving: 99 }, { shortbow: 1, 'bronze arrow': 100, coin: 100_000, trout: food }), currentHP,
+        ...acct('Archer', { Hitpoints: 99, Defence: 99, Ranged: 70, Thieving: 99 }, { shortbow: 1, 'bronze arrow': 100, coin: 100_000, trout: food }), currentHP,
     });
     const pick = (a: Acct, extra: Partial<Inputs> = {}) => plan(inputs([a], { templates, army, market, ...extra }))[0]!;
     for (const hp of [29, 50, undefined]) {
@@ -722,13 +722,14 @@ test('kit lines: what an account lacks, the smallest of several kits, and null w
     const band = catalogue().find(t => t.id === 'army-strike-magic-21')!, ranged = catalogue().find(t => t.id === 'army-trooper-ranged-99')!;
     expect(kitLacks(acct('A', {}, { 'mind rune': 15, 'air rune': 25 }), band.needs)).toEqual([{ of: ['mind rune'], count: 20 }, { of: ['air rune'], count: 10 }]);
     expect(kitLacks(acct('A', {}, { 'mind rune': 35, 'air rune': 35 }), band.needs)).toEqual([]);
-    // Hitpoints 40 is a level, not a kit line.
-    expect(kitLacks(acct('A', { Hitpoints: 39 }, {}), ranged.needs)).toBeNull();
+    // Hitpoints 40 and Defence 60 are levels, not kit lines.
+    expect(kitLacks(acct('A', { Hitpoints: 39, Defence: 60 }, {}), ranged.needs)).toBeNull();
+    expect(kitLacks(acct('A', { Hitpoints: 40, Defence: 59 }, { shortbow: 1, 'bronze arrow': 500, shark: 20 }), ranged.needs)).toBeNull();
     // A shortbow with 25 bronze arrows is the nearest ranged kit: 75 arrows short, and 10 pieces of food for an account
     // that cannot steal them.
     const stock = ['shark', 'swordfish', 'lobster', 'trout', 'cooked meat', 'bread', 'chocolate slice', 'slice of cake', '2/3 cake', 'cake', 'raw beef'];
-    expect(kitLacks(acct('A', { Hitpoints: 40 }, { shortbow: 1, 'bronze arrow': 25 }), ranged.needs)).toEqual([{ of: ['bronze arrow'], count: 75 }, { of: stock, count: 10 }]);
-    expect(kitLacks(acct('A', { Hitpoints: 40, Thieving: 5 }, { shortbow: 1, 'bronze arrow': 25 }), ranged.needs)).toEqual([{ of: ['bronze arrow'], count: 75 }]);
+    expect(kitLacks(acct('A', { Hitpoints: 40, Defence: 60 }, { shortbow: 1, 'bronze arrow': 25 }), ranged.needs)).toEqual([{ of: ['bronze arrow'], count: 75 }, { of: stock, count: 10 }]);
+    expect(kitLacks(acct('A', { Hitpoints: 40, Defence: 60, Thieving: 5 }, { shortbow: 1, 'bronze arrow': 25 }), ranged.needs)).toEqual([{ of: ['bronze arrow'], count: 75 }]);
     expect(kitReserve(catalogue())).toMatchObject({ 'mind rune': 35, 'air rune': 50, 'nature rune': 50, feather: 50, bone: 100 });
 });
 
@@ -2200,7 +2201,7 @@ test('an account at Taverley with 1 coin gets the ferry fare for a knight spot f
     // reason to name it.
     expect(plan(inputs([thief], { templates: spot }))[0]).toEqual({ account: 'Thief', value: 0, resources: [],
         reason: 'vacant: lacks 59 coins for the way to goldfarm@2652,3318 (ferry fare 60), and no free account can give them' });
-    expect(plan(inputs([thief], { templates: spot, taken: { 'knight:2652,3318': 1 } }))[0]!.reason).toMatch(/^vacant: no template/);
+    expect(plan(inputs([thief], { templates: spot, taken: { 'knight:2652,3318': 1 } }))[0]!.reason).toBe('vacant: goldfarm@2652,3318 has no free place on knight:2652,3318');
     // A free donor sends the 59 coins it lacks. The order meets at Varrock West, which the account can walk to.
     const funded = plan(inputs([thief], { templates: spot, donors: big }))[0]!;
     expect(funded.template?.id).toBe('goldfarm@2652,3318');
@@ -2638,4 +2639,53 @@ test('autopilot runs the Ranged band on the trooper trainer, excludes rune plate
     for (const m of ['ranged/troopers-oak', 'ranged/troopers-willow', 'ranged/troopers-maple']) {
         expect(jobResources({ script: 'scripts/ranged-train.ts', env: { PROGRESSION_METHOD: m } })).toEqual(['trooper:battlefield']);
     }
+});
+
+test('assess does not retire a job for tick waste when its run ended on a stop file or another drain', () => {
+    // The log of MeatNTwoVeg's pickaxe buy: a 300-tick ferry walk, then the owner's stop file cut the run.
+    const ledger = 'LEDGER ticks=300 xp=0 inventory=2 move=160 anim=0 dialog=11 stun=0 idle=127 idlePct=42.3 xpGain=0 bot=MeatNTwoVeg';
+    const log = ['SWARM_JOB 81a7', 'START shop-buyer MeatNTwoVeg profile=nurmof coins=3050', ledger, 'PRAYER_GUARD {}', '[lite] MeatNTwoVeg: session ended (logged-out) ',
+        'LOGOUT logged-out', 'RESULT fail stop file', 'SUPERVISE run 1 exit 1: RESULT fail stop file', 'SUPERVISE end stopped after 1 runs'];
+    expect(assess(log)).toMatchObject({ retire: false, drains: 1 });
+    // Any other drain ending leaves the waste rule as it was.
+    for (const drain of ['RESULT fail session ended: disconnected', 'RESULT fail travel failed: precondition no route to 2654,3283,0', 'RESULT fail market bank travel failed: x'])
+        expect(assess([ledger, drain]).reason).toMatch(/^tick waste 96%/);
+    // A long wasteful run (5,000 ticks, 96% idle and walking) that ends on a stop file is still retired.
+    const long = 'LEDGER ticks=5000 xp=0 move=2400 anim=0 dialog=0 stun=0 idle=2400 bot=Long';
+    expect(assess([long, 'RESULT fail stop file']).reason).toMatch(/^tick waste 96%/);
+    expect(assess(['LEDGER ticks=999 xp=0 move=480 anim=0 dialog=0 stun=0 idle=480', 'RESULT fail stop file']).retire).toBe(false);
+    expect(assess(['LEDGER ticks=1000 xp=0 move=480 anim=0 dialog=0 stun=0 idle=480', 'RESULT fail stop file']).retire).toBe(true);
+    // A run that ended on its own failure at the same waste still retires, and so does a stop file after a real end.
+    expect(assess([ledger, 'RESULT fail no shop reached']).reason).toMatch(/^tick waste 96%/);
+    expect(assess([ledger, 'RESULT fail no shop reached', 'RESULT fail stop file']).reason).toMatch(/^tick waste 96%/);
+});
+
+test('a vacant slot names the nearest template and the first gate that stopped it', () => {
+    const supply = (id: string, extra: Partial<Template> = {}, item = 'feather'): Template =>
+        ({ id, family: id, script: `scripts/${id}.ts`, role: 'supply', goal: id, yields: () => [{ item, perTick: 5 }], ...extra });
+    const reason = (a: Acct, templates: Template[], extra: Partial<Inputs> = {}) => plan(inputs([a], { templates, ...extra }))[0]!.reason;
+    const band = catalogue().filter(t => t.id === 'army-cow-strength-45');
+    // Not on the army roster: the band's levels are met, so only the roster stops it.
+    expect(reason(acct('Rookie'), band)).toBe('vacant: not on the army roster (1 bands, nearest army-cow-strength-45)');
+    // On the roster with no sword in any source: the missing kit line.
+    expect(reason(acct('Rookie'), band, { army: new Set(['rookie']) })).toMatch(/^vacant: army-cow-strength-45 needs 1 bronze sword, 1 wooden shield.* and no source gives them$/);
+    // A level the template asks and the account lacks.
+    expect(reason(acct('Rookie'), [supply('deep-mine', { needs: { skills: { Mining: 41 } } })])).toBe('vacant: deep-mine needs Mining 41');
+    // A holding the template asks and no purchase fixes: the coin line is named as coins.
+    expect(reason(acct('Rookie'), [supply('rich-job', { needs: { items: { coin: 9000 } } })])).toBe('vacant: rich-job needs 9000 coins and no free account can give them');
+    // A job with no finite consumer has no value.
+    expect(reason(acct('Rookie'), [supply('idle-job', {}, 'zzz item')])).toBe('vacant: idle-job has no finite demand');
+    // A pilot that the plan's aio list does not name, then named.
+    const pilot = supply('pilot-job', { pilot: true });
+    expect(reason(acct('Rookie'), [pilot])).toBe('vacant: pilot-job is a pilot that the aio list does not name');
+    expect(plan(inputs([acct('Rookie')], { templates: [pilot], pilots: new Set(['pilot-job']) }))[0]!.template?.id).toBe('pilot-job');
+    // A retired pair.
+    expect(reason(acct('Rookie'), [supply('worn-job')], { retired: new Set(['rookie:worn-job']) })).toBe('vacant: worn-job is retired for this account');
+    // A place no way leads to: West Ardougne has no exit to the cow field.
+    const walled = { ...acct('Rookie'), pos: { x: 2520, z: 3300, level: 0 } };
+    expect(reason(walled, [supply('far-job', { resources: ['cow:ardougne-north'] })])).toBe('vacant: far-job has no way from where the account stands');
+    // A full place beats the other gates.
+    expect(reason(acct('Rookie'), [supply('crowded-job', { resources: ['pen:1,1'] })], { taken: { 'pen:1,1': 1 } })).toBe('vacant: crowded-job has no free place on pen:1,1');
+    // No demand at all, with no bill.
+    expect(reason(acct('Rookie'), [supply('any-job')], { bill: [] })).toBe('vacant: no finite route or army supply demand');
 });

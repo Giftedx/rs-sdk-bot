@@ -359,6 +359,31 @@ const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: strin
 const coinShort = (a: Acct, needs: Template['needs']) => Math.max(0, (Object.entries(needs?.items ?? {}).find(([i]) => norm(i) === 'coin')?.[1] ?? 0) - (a.items.coin ?? 0));
 const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...needs, items: Object.fromEntries(Object.entries(needs?.items ?? {}).filter(([i]) => norm(i) !== 'coin')) });
 
+// What an account still lacks of these needs, each as a short phrase: a level, a quest, a holding. The coin line and
+// holdings that a purchase fixes are listed too, so a vacant slot names the first thing that stops its template.
+export function unmet(a: Acct, needs: Template['needs']): string[] {
+    if (!needs) return [];
+    const out: string[] = [];
+    const combat = a.combat ?? combatLevel(a.skills);
+    if (combat < (needs.combat ?? 0)) out.push(`combat ${needs.combat}`);
+    for (const q of needs.quests ?? []) if (!questDone(a, q)) out.push(`quest ${q}`);
+    if ((a.questPoints ?? 0) < (needs.questPoints ?? 0)) out.push(`${needs.questPoints} quest points`);
+    for (const [s, l] of Object.entries(needs.skills ?? {})) if ((a.skills[s] ?? 1) < l) out.push(`${s} ${l}`);
+    for (const [s, l] of Object.entries(needs.under ?? {})) if ((a.skills[s] ?? 1) >= l) out.push(`${s} under ${l}`);
+    for (const [i, n] of Object.entries(needs.items ?? {})) if ((a.items[norm(i)] ?? 0) < n) out.push(`${n - (a.items[norm(i)] ?? 0)} ${norm(i)}`);
+    for (const [i, n] of Object.entries(needs.holdsUnder ?? {})) if ((a.items[norm(i)] ?? 0) >= n) out.push(`fewer than ${n} ${norm(i)}`);
+    for (const [i, n] of Object.entries(needs.holds ?? {})) if ((a.items[norm(i)] ?? 0) < n) out.push(`${n} ${norm(i)} from its own job`);
+    if (needs.shortOf && !isShort(a, { shortOf: needs.shortOf })) out.push(`to be short of ${Object.keys(needs.shortOf).join(' or ')}`);
+    if (needs.pieces) { const n = needs.pieces.count - needs.pieces.of.reduce((sum, i) => sum + (a.items[norm(i)] ?? 0), 0); if (n > 0) out.push(`${n} of ${needs.pieces.of.join('/')}`); }
+    if (foodHeal(a) < (needs.food ?? 0)) out.push(`${needs.food} HP of food`);
+    if (!healthMet(a, needs)) out.push('current Hitpoints above half');
+    if (frailShort(a, needs) > 0) out.push(`${frailShort(a, needs)} of ${needs.frail!.of.slice(0, 3).join('/')}`);
+    if (needs.anyOf && !needs.anyOf.some(alt => meets(a, alt))) {
+        const alts = needs.anyOf.map(alt => unmet(a, alt)).sort((x, y) => x.length - y.length);
+        out.push(...(alts[0] ?? []));
+    }
+    return out;
+}
 // The kit lines an account still lacks for these needs, or null when a level it does not have (or a holding it must
 // not have) stops the job: no item fixes that. The coin line is not a kit line (coinShort). Of several `anyOf`
 // kits the account takes one whose every line it `can` get (a buy: 250 fire runes, not a fire staff no market sells),
@@ -766,25 +791,34 @@ export function plan(inp: Inputs): Assignment[] {
     // The jobs an account could start but for coins of a ferry fare: the constraint of a slot that ends vacant.
     const fareShort = new Map<string, { id: string; coins: number; fare: number; resources: string[] }[]>();
     const lacksFare = (a: Acct, t: Template, fare: number) => { fareShort.set(a.name, [...(fareShort.get(a.name) ?? []), { id: t.id, coins: coinShort(a, t.needs), fare, resources: t.resources ?? [] }]); };
+    // Why a slot ends vacant (AGENTS.md: a vacant slot names its constraint). A template that stops at a gate before it
+    // is a candidate leaves the gate here. Only an account that ends with no job reads its list (vacancy, below).
+    type Miss = { template: Template; gate: 'retired' | 'pilot' | 'demand' | 'reach' | 'roster' | 'needs' | 'coins' };
+    const misses = new Map<string, Miss[]>();
+    const miss = (a: Acct, template: Template, gate: Miss['gate']) => { const list = misses.get(a.name); if (list) list.push({ template, gate }); else misses.set(a.name, [{ template, gate }]); };
     for (const a of mine) for (const listed of inp.templates) {
         const band = buildBand(listed, a, inp.builds?.get(a.name.toLowerCase()), inp.buildQuests?.get(a.name.toLowerCase()), inp.buildBefore?.get(a.name.toLowerCase()));
-        if (!band || inp.retired?.has(pairKey(a.name, band.id)) || !admitted(band)) continue;
+        if (!band) continue;
+        if (inp.retired?.has(pairKey(a.name, band.id))) { miss(a, band, 'retired'); continue; }
+        if (!admitted(band)) { miss(a, band, 'pilot'); continue; }
         // The reach rule (wayCost): no candidate for a place with no way from where the account stands. The ferry fare
         // of the way is a coin need of the job, so an account without the fare is funded as for any coin need.
-        const finite=finiteOrder(band,a);if(!finite)continue;
+        const finite=finiteOrder(band,a);if(!finite){miss(a,band,'demand');continue;}
         const selected=inp.templateFor?.(finite,a)??finite;
         const fare = cachedWayCost(a.pos, placeOf(selected), inp.mountain?.(a) ?? true);
-        if (fare === null) continue;
+        if (fare === null) { miss(a, selected, 'reach'); continue; }
         const t = fare ? withFare(selected, fare) : selected;
         if (t.quest && t.tier !== 'goal') {
             const lacks=kitLacks(a,t.needs,i=>!!inp.market?.[i]);
-            if (questDone(a, t.quest.name) || lacks===null || coinShort(a,t.needs)>0) continue;
-            const after: Acct = { ...a, quests: new Set([...(a.quests ?? []), norm(t.quest.name)]) };
+            if (questDone(a, t.quest.name)) continue;
+            if (lacks===null || coinShort(a,t.needs)>0) { miss(a, t, lacks === null ? 'needs' : 'coins'); continue; }
+            const after: Acct = { ...a, quests: new Set([...(a.quests ?? []), norm(t.quest.name)]) }, before = cands.length;
             for (const u of t.quest.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
                 if (!meets(after, u.needs)) continue;
                 const value = TRAIN_SHARE * valueOf(u, after);
                 if (value > 0 || makesCoins(u, after)) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `completes ${t.quest.name} for ${u.id}`, supply: { template: u, account: after, share: TRAIN_SHARE },...(lacks.length?{lacks}:{}) });
             }
+            if (cands.length === before) miss(a, t, 'demand');
             continue;
         }
         if (t.tier === 'goal') {
@@ -792,7 +826,8 @@ export function plan(inp: Inputs): Assignment[] {
             // target is a skill level, or a quest: that one stands until the account's status lists the quest complete,
             // and an account whose status names no quests gets none.
             const left = bandLeft(t, a);
-            if (!inp.army?.has(a.name.toLowerCase()) || left <= 0) continue;
+            if (left <= 0) continue;
+            if (!inp.army?.has(a.name.toLowerCase())) { miss(a, t, kitLacks(a, t.needs) === null ? 'needs' : 'roster'); continue; }
             const goal = { band: t.band ?? 0, left }, reason = t.trains ? `army band ${goal.band}: ${t.trains.skill} to ${t.trains.to}` : t.quest ? `army band ${goal.band}: ${t.quest.name}` : `army band ${goal.band}: ${t.stock!.to} ${t.stock!.item}`;
             // Keep only a confirmed live instance of this exact band. A parked enabled job still needs its full kit
             // before a new start. kitLacks preserves the band's level, quest and under-target admission rules.
@@ -812,25 +847,30 @@ export function plan(inp: Inputs): Assignment[] {
                 // Acquisition chooses the source, purchase batch and price after donor arbitration.
                 const lacks = kitLacks(a, t.needs, i => !!inp.market?.[i]);
                 if (lacks?.length) cands.push({ account: a.name, template: t, value: 0, resources: t.resources ?? [], reason, goal, lacks, coins:coinShort(a,t.needs) });
+                else miss(a, t, 'needs');
             }
             continue;
         }
         if (t.trains) {
-            if ((a.skills[t.trains.skill] ?? 1) >= t.trains.to || !meets(a, t.needs)) continue;
-            const trained: Acct = { ...a, skills: { ...a.skills, [t.trains.skill]: t.trains.to } };
+            if ((a.skills[t.trains.skill] ?? 1) >= t.trains.to) continue;
+            if (!meets(a, t.needs)) { miss(a, t, 'needs'); continue; }
+            const trained: Acct = { ...a, skills: { ...a.skills, [t.trains.skill]: t.trains.to } }, before = cands.length;
             for (const u of t.trains.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
                 // The frail rule counts what the account holds when the unlocked job starts, which is not known yet.
                 if (!meets(a, { ...u.needs, frail: undefined }, t.trains)) continue;
                 const value = TRAIN_SHARE * valueOf(u, trained);
                 if (value > 0 || makesCoins(u, trained)) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `trains ${t.trains.skill} ${t.trains.to} for ${u.id}`, supply: { template: u, account: trained, share: TRAIN_SHARE } });
             }
+            if (cands.length === before) miss(a, t, 'demand');
         } else if (meets(a, t.needs)) {
             const value = valueOf(t, a);
             if (value > 0 || makesCoins(t, a)) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), supply: { template: t, account: a, share: 1 } });
+            else miss(a, t, 'demand');
         } else if (coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs))) {
             const value = valueOf(t, a);
             if (value > 0 && fare) lacksFare(a, t, fare);
             if ((value > 0 || makesCoins(t, a)) && fundable(a)) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs), fare, supply: { template: t, account: a, share: 1 } });
+            else miss(a, t, value > 0 || makesCoins(t, a) ? 'coins' : 'demand');
         } else if (t.needs?.frail && frailShort(a, t.needs) > 0 && meets(a, { ...t.needs, frail: undefined })) {
             // Spare owned food precedes the existing full food purchase. Both
             // routes require finite coin demand and a free knight spot.
@@ -838,10 +878,12 @@ export function plan(inp: Inputs): Assignment[] {
             if (lacks?.length && (value > 0 || makesCoins(t, a))) cands.push({ account: a.name,
                 template: { ...t, id: FRAIL_FOOD_BUY_ID, batchFor: account => Object.fromEntries(t.needs!.frail!.of.map(item => [norm(item), (account.items[norm(item)] ?? 0) + FRAIL_FOOD_BUY])) },
                 value, resources: t.resources ?? [], reason: `prepares food for ${t.family}`, lacks, supply: { template: t, account: a, share: TRAIN_SHARE } });
+            else miss(a, t, 'demand');
         } else {
             const lacks=kitLacks(a,t.needs,i=>!!inp.market?.[i]),value=valueOf(t,a);
             if(lacks?.length&&value>0)cands.push({account:a.name,template:t,value,resources:t.resources??[],reason:`prepares ${t.goal}`,lacks,coins:coinShort(a,t.needs),
                 supply:{template:t,account:a,share:1}});
+            else miss(a, t, lacks === null ? 'needs' : 'demand');
         }
     }
     // Progressive weapon & armour kit buys precede combat bands. Owned stock can supply them without a market quote.
@@ -1109,9 +1151,44 @@ export function plan(inp: Inputs): Assignment[] {
     // A vacant slot names its constraint: the fare it lacks for a job whose place is still free, when that is all it lacks.
     const noFare = (a: Acct) => { const x = fareShort.get(a.name)?.find(x => x.resources.every(r => (used.get(r) ?? 0) < (inp.capacity?.[r] ?? 1)));
         return x ? `vacant: lacks ${x.coins} coins for the way to ${x.id} (ferry fare ${x.fare}), and no free account can give them` : undefined; };
+    // The first gate that stopped the account's nearest template (see `misses`), or what its candidates met.
+    const full = (c: Cand) => c.resources.find(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1));
+    const vacancy = (a: Acct): string => {
+        const list = misses.get(a.name) ?? [], has = (gate: Miss['gate']) => list.filter(m => m.gate === gate);
+        // The nearest job the account could do but for one gate: a candidate that no pass took, then a template that
+        // stopped before it was a candidate.
+        const job = (): string | undefined => {
+            const own = cands.filter(c => c.account === a.name).sort((x, y) => Number(!!y.goal) - Number(!!x.goal) || (x.goal?.band ?? 0) - (y.goal?.band ?? 0) || worth(y) - worth(x) || x.template.id.localeCompare(y.template.id));
+            for (const c of own) {
+                const id = c.template.id, place = full(c);
+                if (place) return `${id} has no free place on ${place}`;
+                if (c.lacks) return `${id} needs ${c.lacks.map(l => `${l.count} ${l.of[0]}`).join(', ')} and no source gives them`;
+                if (c.coins) return `${id} needs ${c.coins} coins and no free account can give them`;
+            }
+            const coins = has('coins').find(m => !(m.template.resources ?? []).some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1)));
+            const crowded = has('coins')[0]?.template.resources?.find(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1));
+            if (crowded && !coins) return `${has('coins')[0]!.template.id} has no free place on ${crowded}`;
+            if (coins) return `${coins.template.id} needs ${coinShort(a, coins.template.needs)} coins and no free account can give them`;
+            const none = has('demand')[0];
+            const needs = has('needs').map(m => ({ m, lacking: unmet(a, m.template.needs) })).filter(x => x.lacking.length)
+                .sort((x, y) => x.lacking.length - y.lacking.length || x.m.template.id.localeCompare(y.m.template.id))[0];
+            if (needs && (!none || needs.lacking.length <= 1)) return `${needs.m.template.id} needs ${needs.lacking.join(', ')}`;
+            if (none) return `${none.template.id} has no finite demand`;
+            const reach = has('reach')[0];
+            if (reach) return `${reach.template.id} has no way from where the account stands`;
+            const pilot = has('pilot').find(m => meets(a, m.template.needs));
+            if (pilot) return `${pilot.template.id} is a pilot that the aio list does not name`;
+            const retired = has('retired')[0];
+            if (retired) return `${retired.template.id} is retired for this account`;
+            return undefined;
+        };
+        // With no finite demand no supply job has value, whatever it lacks; a goal band still stands apart from demand.
+        const roster = has('roster')[0], other = demand.some(d => d.short > 0) ? job() : 'no finite route or army supply demand';
+        if (roster) return `vacant: not on the army roster (${has('roster').length} bands, nearest ${roster.template.id})${other ? `; otherwise ${other}` : ''}`;
+        return `vacant: ${other ?? 'no template meets its skills and holdings'}`;
+    };
     return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: gave.has(a.name) ? 'vacant: gives coins this pass'
-        : gaveItems.has(a.name) ? 'vacant: gives a kit item this pass' : vacated.get(a.name) ?? noFare(a) ?? (demand.some(d => d.short > 0)
-            ? 'vacant: no template meets finite demand, its skills and holdings with a free resource' : 'vacant: no finite route or army supply demand') });
+        : gaveItems.has(a.name) ? 'vacant: gives a kit item this pass' : vacated.get(a.name) ?? noFare(a) ?? vacancy(a) });
 }
 
 // The swarm job for an assignment. `autopilot` marks it as this side's planner job; the CLI replaces only marked jobs.
@@ -1167,6 +1244,9 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
 // M`): no order was placed, the run's bank visit gives the planner the count, and the next pass sizes the buy from it
 // (live: three accounts' rune buys retired on a count 36 to 124 over the bank's).
 export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
+// The ledger length under which a stop file's end exempts a run from the tick-waste retirement: the shortest job caps
+// (a shop trip, a kit buy) are 1,200 to 1,500 ticks, so a ledger under 1,000 ticks is the walk to the work.
+export const STOP_LEDGER_TICKS = 1000;
 // Cow mode reports its progress as selectedXp, damageXp and creditedKills.
 // A shop run reports what it bought as boughtTotal (scripts/shop-buyer.ts), and a Grand Exchange buy as "acquired" in
 // its JSON result (scripts/buy-owned-ge-item.ts). Without the second, a kit buy that ended ok after its long trip read
@@ -1180,7 +1260,7 @@ export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked
 // logged two such fails, and the account's Lost City band was retired).
 // An offline login server or an unavailable swarm claim authority refuses the session before the worker runs.
 // Supervisor retry bounds and claim recovery still apply; neither refusal establishes a broken worker.
-export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|login: LoginError: Login server offline\b|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|(?:login: )?(?:Error: )?fleet swarm claim authority unavailable or changed\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|.*\bstop[=:]"?preparation\b|.*\bprogression requires acquire\b|stop file\b|.*\bworker finished: stop file\b)/;
+export const DRAIN_RESULT = /^RESULT fail (?:session ended: disconnected\b|login: \[object WebSocket\]|login: LoginError: Login server offline\b|TickStallError\b|(?:login: )?(?:Error: )?fleet account claim held\b|(?:login: )?(?:Error: )?fleet swarm claim authority unavailable or changed\b|.*\bprecondition no route to\b|.*\bmarket bank travel failed\b|.*\bowned item baseline \d+ differs from EXPECTED_OWNED \d+|.*\bstop"?[=:]"?preparation\b|.*\bprogression requires acquire\b|stop file\b|.*\bworker finished: stop file\b)/;
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number; drains: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
     const drains = clean.filter(l => DRAIN_RESULT.test(l)).length;
@@ -1195,11 +1275,15 @@ export function assess(lines: readonly string[]): { retire: boolean; reason: str
     // A single preparation/acquire block is a drain, but RETIRE_FAILS consecutive blocks with no progress is a fast-fail loop.
     const allResults = clean.filter(l => /^RESULT (ok|fail)\b/.test(l));
     const prepTail = allResults.slice(-RETIRE_FAILS);
-    if (prepTail.length === RETIRE_FAILS && prepTail.every(l => l.startsWith('RESULT fail') && /\b(?:stop[=:]"?preparation\b|progression requires acquire\b)/.test(l) && !progressed(l)))
+    if (prepTail.length === RETIRE_FAILS && prepTail.every(l => l.startsWith('RESULT fail') && /\b(?:stop"?[=:]"?preparation\b|progression requires acquire\b)/.test(l) && !progressed(l)))
         return { retire: true, reason: `${RETIRE_FAILS} preparation/acquire RESULTs: ${prepTail.at(-1)!.slice(0, 120)}`, ok, fail, drains };
     const at = clean.reduce((last, l, i) => l.startsWith('LEDGER ') ? i : last, -1);
     const ledger = clean[at]?.match(/^LEDGER ticks=(\d+).* move=(\d+).* idle=(\d+)/), ended = clean.slice(at + 1).find(l => /^RESULT (ok|fail)\b/.test(l));
-    if (ledger && +ledger[1]! >= 300 && (+ledger[2]! + +ledger[3]!) / +ledger[1]! >= WASTE_LIMIT && !(ended?.startsWith('RESULT ok') && progressed(ended)))
+    // A run that an owner or controller stop file cut while its ledger was still short says nothing about the waste of
+    // its job: the ledger is the walk to the work. A long ledger (STOP_LEDGER_TICKS or more) has shown its waste, and any
+    // other drain ending leaves the rule as it was.
+    const stopCut = !!ended && /^RESULT fail (?:.*\bworker finished: )?stop file\b/.test(ended) && !!ledger && +ledger[1]! < STOP_LEDGER_TICKS;
+    if (ledger && +ledger[1]! >= 300 && (+ledger[2]! + +ledger[3]!) / +ledger[1]! >= WASTE_LIMIT && !(ended?.startsWith('RESULT ok') && progressed(ended)) && !stopCut)
         return { retire: true, reason: `tick waste ${(100 * (+ledger[2]! + +ledger[3]!) / +ledger[1]!).toFixed(0)}% idle+move`, ok, fail, drains };
     return { retire: false, reason: '', ok, fail, drains };
 }
@@ -1420,7 +1504,7 @@ export const PRAYER_FIELD_BAND = 9;
 // out of arrows it ends stop=ammo, ok after kills. It takes its fired arrows back after each kill. Practice 3/3
 // RESULT ok with bronze arrows: Ranged 1 to 59-62 in about 1,600 ticks, 41.1-46.7 XP a tick, 0.67-2.02 arrows lost
 // per 1,000 XP (research/combat-measure.md). It shares the battlefield with the melee trooper bands.
-export const RANGED_BAND = 4, GUILD_BAND = 3.9;
+export const RANGED_BAND = 4, GUILD_BAND = 3.9, RANGED_TROOPER_DEFENCE = 60;
 const BOWS: readonly (readonly [string, number])[] = [['shortbow', 1], ['longbow', 1], ['oak shortbow', 5], ['oak longbow', 5], ['willow shortbow', 20],
     ['willow longbow', 20], ['maple shortbow', 30], ['maple longbow', 30], ['yew shortbow', 40], ['yew longbow', 40], ['magic shortbow', 50], ['magic longbow', 50]];
 // Native bows and their unstrung inputs share display names. Only the strung base ID supplies a combat kit.
@@ -2057,7 +2141,10 @@ export function catalogue(): Template[] {
         id: 'army-trooper-ranged-99', family: 'combat-train', script: 'scripts/gather-combat.ts', args: ['1500', 'trooper'],
         env: { TRAIN_SKILL: 'Ranged', TARGET_LEVEL: '99', GIANT_FOOD: '20', GIANT_BURY: '1', TROOPER_COOK: '1', LOOT_WATCH: '0' }, role: 'combat', goal: 'train Ranged to 99 on the Khazard troopers',
         tier: 'goal', band: RANGED_BAND, repeats: true, trains: { skill: 'Ranged', to: 99, unlocks: [] }, resources: [TROOPER_FIELD], yields: () => [],
-        needs: { skills: { Hitpoints: 40 }, anyOf: RANGED_KIT.flatMap(kit => TROOPER_FED.map(fed => ({ ...kit, ...fed, skills: { ...kit.skills, ...fed.skills } }))) },
+        // RANGED_TROOPER_DEFENCE: the troopers reach an archer and hit it. Live, accounts with Defence 99 trained Ranged
+        // 1 to 45-55 in a run with 0 to 1 food eaten and lowest HP 49 to 92; accounts with Defence 9, 10 and 43 ate 26 to
+        // 36 food a run and fell to 16, 8 and 14 HP. An account under the floor takes its Defence bands first.
+        needs: { skills: { Hitpoints: 40, Defence: RANGED_TROOPER_DEFENCE }, anyOf: RANGED_KIT.flatMap(kit => TROOPER_FED.map(fed => ({ ...kit, ...fed, skills: { ...kit.skills, ...fed.skills } }))) },
         batch: { trout: 100, ...Object.fromEntries(ARROWS.map(([arrow]) => [arrow, 1000])) },
     };
     // The Ranged band's arrows, band 4. The market lists no arrow under the kit caps (live claude-cloud: every arrow
@@ -2140,7 +2227,7 @@ export function catalogue(): Template[] {
     });
     const ardyIronAxe: Template = {
         id: 'tool-axe-iron', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['ardy', '1200'],
-        env: { ITEMS: '^iron axe$', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '300', COIN_RESERVE: '100', MAX_SPEND: '200' },
+        env: { ITEMS: 'iron axe', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '300', COIN_RESERVE: '100', MAX_SPEND: '200' },
         role: 'woodcutting', goal: "buy iron axe from Aemad in East Ardougne (Bob's Axes has no profile)", repeats: false,
         resources: ['shop:ardy'], yields: () => [{ item: 'iron axe', perTick: 0.01 }],
         needs: { items: { coins: 300 }, holdsUnder: holdsUnderKeys(['iron axe', 'steel axe', 'black axe', 'mithril axe', 'adamant axe', 'rune axe']) },

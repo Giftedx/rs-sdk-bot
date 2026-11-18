@@ -20,6 +20,7 @@ import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { tradePartners } from '../packages/core/src/tradeguard';
 import { readOpponent, readOpponents } from '../packages/core/src/opponent';
 import { componentId } from '../packages/core/src/logout';
+import { MARKET_FILE, marketQuotes } from './market-cache';
 import { bestFood, castableFreeze, dangerReason, defaultSpec, estMaxHit, fightPlayer, freezeSpell, getObjNames, isMulti, observePlayer, type FightOptions, type Kit } from './pk';
 export { castableFreeze, freezeSpell };
 import { armourDefence } from './pk-read';
@@ -1015,65 +1016,72 @@ if (import.meta.main) {
     process.exitCode = ok && loggedOut ? 0 : 1;
 }
 
-// Restock before a trip: what to buy from the runes held (bank and pack) and the coins held.
-// Law runes: GE at most 1,600 gp each (live ask 1,345), up to 10, while under 2 are held: Varrock Teleport is the
-// escape. Nature runes for freezes: GE at most 300 gp (ask 250), up to 20. Water runes have no GE sellers; Betty's
-// rune shop (scripts/shop-buyer.ts betty) sells them, with a spend cap. 1,000 coins always stay.
+// Restock before a trip: what to buy from the runes held (bank and pack), the coins held and the observed market.
+// A price is never a fixed number. The limit of a buy is the lowest ask of the market cache plus RESTOCK_MARGIN_PERCENT
+// (scripts/market-cache.ts, at most 30 minutes old): a thin book can move a little between the snapshot and the order.
+// A limit above the ask costs nothing extra: an order fills at the asks that it meets, and the unused escrow returns.
+// An item with no ask, or with fewer units offered than a step needs, has no step. An offer with no seller waits and
+// holds its escrow, and the escrow of an order is its quantity times its limit, so the plan counts each step at its limit.
+// Water runes have no GE sellers: Betty's rune shop (scripts/shop-buyer.ts betty) sells them, with a spend cap.
+// 1,000 coins always stay.
 export type RestockStep = { kind: 'ge'; item: number; quantity: number; limit: number; owned: number } | { kind: 'shop'; profile: 'betty'; maxSpend: number };
-// Food and gear come after the escape runes (GE, live prices): sharks up to 20 at 700 gp (ask 563, 2 million for
-// sale); a magic shortbow at 110,000 (ask 96,000) for Ranged 50+ without one; a rune chainbody at 300,000 (ask
-// 278,874) for Defence 40+ without rune body armour. Rune scimitars, platebodies, platelegs and kiteshields had no
-// sellers. Each gear buy also keeps 20,000 coins for the next restock.
+// `ask`: the lowest price asked, or null; `sell`: the units offered at any price (scripts/market-cache.ts MarketQuote).
+export type RestockQuote = { ask: number | null; sell: number };
+export type RestockMarket = Readonly<Record<number, RestockQuote>>;
+export const RESTOCK_MARGIN_PERCENT = 10;
+// What a gear or glory buy leaves in the bank for the next restock.
+export const GLORY_RESERVE = 10_000;
+export const GEAR_RESERVE = 20_000;
+export const restockLimit = (market: RestockMarket, item: number): number | null => {
+    const quote = market[item];
+    return quote && quote.ask !== null && quote.ask > 0 && quote.sell >= 1 ? Math.ceil(quote.ask * (100 + RESTOCK_MARGIN_PERCENT) / 100) : null;
+};
+// The market for a plan: the fresh quotes of the market cache, or nothing when the file is missing or old. With nothing,
+// a plan has no GE step.
+export function restockMarket(root = resolve(import.meta.dir, '..'), now = Date.now()): { market: RestockMarket; at: number | null } {
+    let raw: any; try { raw = JSON.parse(readFileSync(join(root, MARKET_FILE), 'utf8')); } catch { return { market: {}, at: null }; }
+    const market = marketQuotes(raw, now);
+    return { market, at: Object.keys(market).length ? raw.at : null };
+}
 export function restockPlan(held: { law: number; nature: number; water: number; coins: number; magic: number;
     food?: number; sharks?: number; ranged?: number; defence?: number; magicShortbow?: boolean; runeBody?: boolean;
-    glory?: boolean; prayerPots?: number; superPots?: boolean; antipoison?: boolean }): RestockStep[] {
+    glory?: boolean; prayerPots?: number; superPots?: boolean; antipoison?: boolean }, market: RestockMarket): RestockStep[] {
     const steps: RestockStep[] = [];
     let coins = held.coins - 1000;
-    if (held.law < 2) {
-        const quantity = Math.min(10, Math.floor(coins / 1600));
-        if (quantity >= 1) { steps.push({ kind: 'ge', item: 563, quantity, limit: 1600, owned: held.law }); coins -= quantity * 1600; }
-    }
+    // Buys up to `want` of an item with the coins above `keep`, when at least `least` units fit. It returns the units bought.
+    const buy = (item: number, want: number, least: number, owned: number, keep = 0): number => {
+        const limit = restockLimit(market, item);
+        if (limit === null) return 0;
+        const quantity = Math.min(want, Math.floor((coins - keep) / limit), market[item]!.sell);
+        if (quantity < least) return 0;
+        steps.push({ kind: 'ge', item, quantity, limit, owned });
+        coins -= quantity * limit;
+        return quantity;
+    };
+    // Law runes: Varrock Teleport is the escape, so up to 10 while under 2 are held.
+    if (held.law < 2) buy(563, 10, 1, held.law);
     // Charged glory (<30 wild emergency escape) prioritized when explicitly tracked as missing.
-    if (held.glory === false && coins >= 50_000 + 10_000) {
-        steps.push({ kind: 'ge', item: 1712, quantity: 1, limit: 50_000, owned: 0 }); coins -= 50_000;
-    }
+    if (held.glory === false) buy(1712, 1, 1, 0, GLORY_RESERVE);
     // Prayer potions (4-dose) for sustained protection and overhead flick backups.
-    if (held.prayerPots !== undefined && held.prayerPots < 2) {
-        const quantity = Math.min(4 - held.prayerPots, Math.floor(coins / 3500));
-        if (quantity >= 1) { steps.push({ kind: 'ge', item: 2434, quantity, limit: 3500, owned: held.prayerPots }); coins -= quantity * 3500; }
-    }
+    if (held.prayerPots !== undefined && held.prayerPots < 2) buy(2434, 4 - held.prayerPots, 1, held.prayerPots);
     // Freezes need both nature and water runes: keep the water budget back before buying nature runes.
     const waterShort = held.magic >= 50 && held.water < 10;
     let nature = held.nature;
-    if (held.magic >= 50 && held.nature < 8) {
-        const quantity = Math.min(20, Math.floor((coins - (waterShort ? 500 : 0)) / 300));
-        if (quantity >= 4) { steps.push({ kind: 'ge', item: 561, quantity, limit: 300, owned: held.nature }); coins -= quantity * 300; nature += quantity; }
-    }
+    if (held.magic >= 50 && held.nature < 8) nature += buy(561, 20, 4, held.nature, waterShort ? 500 : 0);
     // Water alone cannot freeze: buy it only with 4 or more nature runes (Bind needs 2, Entangle 4) held after.
     if (waterShort && nature >= 4 && coins >= 500) { steps.push({ kind: 'shop', profile: 'betty', maxSpend: 500 }); coins -= 500; }
-    if (held.food !== undefined && held.food < 15) {
-        const quantity = Math.min(20 - held.food, Math.floor(coins / 700));
-        // owned is EXPECTED_OWNED for buy-owned-ge-item.ts: the sharks already held, which it tops up from.
-        if (quantity >= 5) { steps.push({ kind: 'ge', item: 385, quantity, limit: 700, owned: held.sharks ?? 0 }); coins -= quantity * 700; }
-    }
-    if (held.superPots === true && coins >= 5000) {
-        steps.push({ kind: 'ge', item: 2440, quantity: 1, limit: 2500, owned: 0 }); coins -= 2500;
-        steps.push({ kind: 'ge', item: 2436, quantity: 1, limit: 2500, owned: 0 }); coins -= 2500;
-    }
-    if (held.antipoison === true && coins >= 2500) {
-        steps.push({ kind: 'ge', item: 2448, quantity: 1, limit: 2500, owned: 0 }); coins -= 2500;
-    }
-    if ((held.ranged ?? 1) >= 50 && held.magicShortbow === false && coins >= 110_000 + 20_000) {
-        steps.push({ kind: 'ge', item: 861, quantity: 1, limit: 110_000, owned: 0 }); coins -= 110_000;
-    }
-    if ((held.defence ?? 1) >= 40 && held.runeBody === false && coins >= 300_000 + 20_000) {
-        steps.push({ kind: 'ge', item: 1113, quantity: 1, limit: 300_000, owned: 0 }); coins -= 300_000;
-    }
+    // Sharks up to 20. `owned` is EXPECTED_OWNED for buy-owned-ge-item.ts: the sharks already held, which it tops up from.
+    if (held.food !== undefined && held.food < 15) buy(385, 20 - held.food, 5, held.sharks ?? 0);
+    if (held.superPots === true) { buy(2440, 1, 1, 0); buy(2436, 1, 1, 0); }
+    // The super antipoison first, then the plain one: the first with a seller.
+    if (held.antipoison === true) for (const item of [2448, 2446]) if (buy(item, 1, 1, 0) > 0) break;
+    if ((held.ranged ?? 1) >= 50 && held.magicShortbow === false) buy(861, 1, 1, 0, GEAR_RESERVE);
+    if ((held.defence ?? 1) >= 40 && held.runeBody === false) buy(1113, 1, 1, 0, GEAR_RESERVE);
     return steps;
 }
 
 // Compute restock GE/shop steps directly from combined bank + inventory + equipment stock counts.
-export function restockPlanFromStock(stock: readonly { id: number; count: number }[], skills: { magic: number; ranged?: number; defence?: number }, coins: number): RestockStep[] {
+export function restockPlanFromStock(stock: readonly { id: number; count: number }[], skills: { magic: number; ranged?: number; defence?: number }, coins: number, market: RestockMarket): RestockStep[] {
     const count = (ids: readonly number[]) => stock.filter(i => ids.includes(i.id)).reduce((n, i) => n + i.count, 0);
     const hasGlory = count([1712, 1710, 1708, 1706]) > 0;
     const prayerPots = count([2434, 139, 141, 143]);
@@ -1082,5 +1090,5 @@ export function restockPlanFromStock(stock: readonly { id: number; count: number
         law: count([563]), nature: count([561]), water: count([555]), coins,
         magic: skills.magic, ranged: skills.ranged, defence: skills.defence,
         food: sharks, sharks, glory: hasGlory, prayerPots,
-    });
+    }, market);
 }

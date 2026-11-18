@@ -1,5 +1,7 @@
-import { expect, test } from 'bun:test';
-import { gangSummary, gangValid, packOf, pickAttacker, pickUp, plannedPickups, PICKUP_ITEMS, pickRunner, startsAttack, type GangResult } from './pk-gang';
+import { expect, spyOn, test } from 'bun:test';
+import * as walking from '../packages/core/src/walk';
+import * as pk from './pk';
+import { bankTrip, gangSummary, gangValid, packOf, pickAttacker, pickUp, plannedPickups, PICKUP_ITEMS, pickRunner, startsAttack, type GangResult } from './pk-gang';
 import { PROFILES, sparOptions } from './pk-spar';
 import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, kitSwitches, kitVarps } from './pk-kits';
 import { benchCases, GANKER_POST } from './measure/aio-bench-cases';
@@ -201,4 +203,57 @@ test('plannedPickups takes the wanted stacks within the radius, nearest first', 
     expect(plannedPickups([g(884, 5), g(526, 1), g(385, 1), g(1231, 2), g(884, 15)], ids, 12).map(p => [p.id, p.distance])).toEqual([[884, 5], [1231, 2], [385, 1]]);
     expect(plannedPickups([g(385, 1), g(1231, 2)], new Set(PICKUP_ITEMS), 12).map(p => p.id)).toEqual([1231, 385]);
     expect(PICKUP_ITEMS).toContain(itemId('dragon_dagger_p'));
+});
+
+// The second visit of a gang bank trip: eat up with the food in the pack, then refill the pack from the bank (sharks, then lobsters).
+async function runBankTrip(o: { pack: { id: number; count: number; name: string }[]; bank: { id: number; count: number }[]; hp: number }) {
+    // One slot for each piece of food, as in the game.
+    const inventory: any[] = o.pack.flatMap(p => Array.from({ length: p.count }, () => ({ id: p.id, name: p.name, count: 1, optionsWithIndex: /Shark|Lobster/.test(p.name) ? [{ text: 'Eat', opIndex: 1 }] : [] })))
+        .map((p, i) => ({ ...p, slot: i }));
+    const bank = o.bank.map(r => ({ ...r })), withdrawals: { id: number; count: number }[] = [], eaten: number[] = [];
+    const player: any = { worldX: 3094, worldZ: 3492, hp: o.hp, maxHp: 99 };
+    let tick = 0;
+    const s: any = {
+        tick: () => tick, client: {}, ended: new Promise(() => {}),
+        sdk: {
+            getState: () => ({ player, inventory }), getInventory: () => inventory, getBankItems: () => bank, getEquipment: () => [],
+            sendUseItem: async (slot: number) => {
+                const at = inventory.findIndex(i => i.slot === slot), item = inventory[at];
+                if (!item) return;
+                eaten.push(item.id); player.hp = Math.min(99, player.hp + (item.id === 385 ? 20 : 12));
+                item.count--; if (item.count <= 0) inventory.splice(at, 1);
+            },
+        },
+        bot: {
+            openBank: async () => ({ success: true }), closeBank: async () => {}, depositItem: async () => {},
+            withdrawItem: async (row: any, count: number) => { row.count -= count; withdrawals.push({ id: row.id, count }); inventory.push({ id: row.id, count, slot: 100 + withdrawals.length, name: row.id === 385 ? 'Shark' : 'Lobster', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] }); },
+        },
+    };
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async () => ({ ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 })),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { tick++; return true; }),
+    ];
+    try {
+        const fault = await bankTrip({ x: 3094, z: 3492 }, { x: 3070, z: 3640 }, { food: 18, items: [] }, {}, () => false)(s, true);
+        return { fault, withdrawals, eaten, hp: player.hp, inventory };
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+}
+
+test('the gang bank trip eats to within one piece of full with the food it holds, and refills with sharks first, then lobsters', async () => {
+    const lobsterPack = [{ id: 379, count: 5, name: 'Lobster' }];
+    const a = await runBankTrip({ pack: lobsterPack, bank: [{ id: 385, count: 4 }, { id: 379, count: 40 }], hp: 60 });
+    expect(a.fault).toBeNull();
+    // A lobster heals 12: from 60 to above 87 takes 3 lobsters. A shark would stop at 79 (within 20 of full).
+    expect(a.eaten).toEqual([379, 379, 379]);
+    expect(a.hp).toBe(96);
+    // The pack holds 2 lobsters; 25 slots are free: 4 sharks, then lobsters for the rest.
+    expect(a.withdrawals).toEqual([{ id: 385, count: 4 }, { id: 379, count: 21 }]);
+    const sharkPack = [{ id: 385, count: 5, name: 'Shark' }];
+    const b = await runBankTrip({ pack: sharkPack, bank: [{ id: 385, count: 30 }, { id: 379, count: 40 }], hp: 60 });
+    // A shark heals 20: 60 to 80 is within one shark of full, so one is eaten and 23 slots are free.
+    expect(b.eaten).toEqual([385]);
+    expect(b.withdrawals).toEqual([{ id: 385, count: 23 }]);
+    const c = await runBankTrip({ pack: [], bank: [{ id: 385, count: 2 }], hp: 99 });
+    expect(c.withdrawals).toEqual([{ id: 385, count: 2 }]);
 });

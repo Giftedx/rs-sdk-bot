@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { bankNear, leaveWilderness, openSquad, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
+import { squadEnd } from './pk-squad';
+import { newWatch, readLine } from './squad-watch';
+import { classify } from '../packages/practice/src/supervise-host';
+import { supervise } from '../packages/practice/src/supervise';
 import { assertActionScope } from '../packages/core/src/action-scope';
 
 const session = (z: number) => ({ sdk: { getState: () => ({ player: { worldX: 3092, worldZ: z, hp: 50, maxHp: 99 } }), getInventory: () => [] } }) as any;
@@ -204,4 +208,38 @@ test('pickSquadFocus prioritizes stunned targets, skips single-way PJ fights, an
     expect(squadFallbackPlan({ z: 3640, hp: 50, maxHp: 99, foodCount: 0, enemyCount: 1, allyCount: 0, inMulti: false, hasGlory: false, hasTeleport: true })).toBe('teleport');
     expect(squadFallbackPlan({ z: 3880, hp: 50, maxHp: 99, foodCount: 0, enemyCount: 3, allyCount: 0, inMulti: true, hasGlory: true, hasTeleport: true })).toBe('run');
     expect(squadFallbackPlan({ z: 3640, hp: 90, maxHp: 99, foodCount: 6, enemyCount: 2, allyCount: 1, inMulti: true, hasGlory: true, hasTeleport: true })).toBe('hold');
+});
+
+// The end of a squad run (scripts/pk-squad.ts squadEnd) and how the supervisor and the watch read it.
+describe('squad end with a death', () => {
+    const base = { accounts: 4, kills: 3, taken: 500, trips: 1, fights: 6, picked: { 884: 3 }, dropped: [], stranded: [] };
+    const line = (e: { ok: boolean; detail: string }) => `RESULT ${e.ok ? 'ok' : 'fail'} ${e.detail}`;
+
+    test('no death is ok, and a death is a fail that starts with died', () => {
+        const fine = squadEnd({ ...base, deaths: 0, gangDied: 3 });
+        expect(line(fine)).toBe('RESULT ok squad accounts=4 kills=3 gangDied=3 died=0 taken=500 trips=1 picked={"884":3}');
+        const dead = squadEnd({ ...base, deaths: 1, gangDied: 2 });
+        expect(dead.ok).toBe(false);
+        expect(line(dead)).toBe('RESULT fail died squad accounts=4 kills=3 gangDied=2 died=1 taken=500 trips=1 picked={"884":3}');
+        expect(squadEnd({ ...base, deaths: 0, halted: 'stop file' }).ok).toBe(false);
+        expect(squadEnd({ ...base, deaths: 0, fights: 0 }).ok).toBe(false);
+        expect(squadEnd({ ...base, deaths: 0, stranded: ['A'] }).detail).toContain('stranded=A');
+    });
+
+    test('the supervisor reads a squad with a death as a death, and a squad with none as done', async () => {
+        const dead = line(squadEnd({ ...base, deaths: 2 })), fine = line(squadEnd({ ...base, deaths: 0 }));
+        expect(classify(dead, false)).toBe('died');
+        expect(classify(fine, false)).toBe('done');
+        let runs = 0;
+        const out = await supervise({ run: async () => { runs++; return { stdout: `PK died to X after 9 ticks\n${dead}\n`, exitCode: 1 }; }, stopped: () => false, pause: async () => {}, maxRestarts: 5 } as any);
+        expect(out).toEqual({ reason: 'died', runs: 1 });
+        expect(runs).toBe(1);
+    });
+
+    test('the watch reads the line as a death with its count', () => {
+        const w = newWatch(0);
+        const e = readLine(w, line(squadEnd({ ...base, deaths: 2 })), 0, { repeat: false });
+        expect(e).toMatchObject({ kind: 'death', account: '-' });
+        expect(w.deaths).toBe(2);
+    });
 });

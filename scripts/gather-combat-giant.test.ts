@@ -175,11 +175,12 @@ test('Hitpoints accepts every observed weapon style and credits only its own XP 
         expect(r.ok).toBe(true);expect(r.selectedXp).toBe(7000);expect(r.finalLevel).toBe(76);expect(r.creditedKills).toBe(2);
     }finally{f.dispose();}
 });
+// The replaced weapon goes to the bank: a death on the field loses the pack.
 test('entry travels from an owned location and stages banked melee weapon and food without losing the old weapon',async()=>{
     const f=giantFixture({bankedKit:true});const legs:number[][]=[];try{
         const r=await runGiants(f.session,{cap:500,trainSkill:'Strength',targetLevel:90,walk:async(x,z,t)=>{legs.push([x,z]);return f.walk(x,z);}});
         expect(r.ok).toBe(true);expect(legs[0]).toEqual([2655,3283]);expect(legs).toContainEqual([2545,3144]);
-        expect(f.inv.some(i=>i.id===1381)).toBe(true);expect(r.preserved).toBe(true);expect(r.foodAccounted).toBe(true);
+        expect(f.bank.filter(i=>i.id===1381).reduce((n,i)=>n+i.count,0)).toBe(1);expect(f.inv.some(i=>i.id===1381)).toBe(false);expect(r.preserved).toBe(true);expect(r.foodAccounted).toBe(true);
         expect(selectGiantWeapon([{id:1331,count:1},{id:35,count:1},{id:2402,count:1}],99)).toBe(1331);
         expect(selectGiantWeapon([{id:1331,count:1},{id:2402,count:1}],1)).toBe(2402);
         expect(selectGiantWeapon([{id:1333,count:1},{id:1331,count:1}],99)).toBe(1333);

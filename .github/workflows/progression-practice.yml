@@ -17,6 +17,18 @@ jobs:
           bun-version: 1.3.14
       - name: Prepare pinned practice dependencies
         run: bun scripts/worktree-setup.ts --bench
+      # The pathfinder snapshot, the area labels and the measured walk lengths (.practice/cache). Each file is bound to
+      # the data named in the key and is checked on read. Without them each route search measures every leg again.
+      - name: Restore the route caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            .practice/cache/rsmod-pathfinding.snap
+            .practice/cache/route-areas.bin
+            .practice/cache/route-legs.sqlite*
+          key: route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
+          restore-keys: |
+            route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
       - name: Pack game assets
         working-directory: vendor/rs-sdk/server/engine
         timeout-minutes: 10
@@ -54,6 +66,18 @@ jobs:
           bun-version: 1.3.14
       - name: Prepare pinned worker and engine
         run: bun scripts/worktree-setup.ts --bench
+      # The pathfinder snapshot, the area labels and the measured walk lengths (.practice/cache). Each file is bound to
+      # the data named in the key and is checked on read. Without them each route search measures every leg again.
+      - name: Restore the route caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            .practice/cache/rsmod-pathfinding.snap
+            .practice/cache/route-areas.bin
+            .practice/cache/route-legs.sqlite*
+          key: route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
+          restore-keys: |
+            route-caches-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
       - name: Pack game assets
         working-directory: vendor/rs-sdk/server/engine
         timeout-minutes: 10

@@ -12,12 +12,15 @@ import {
     crossedTierBoundary,
     executeShopToolPurchase,
     gearById,
+    gearUnlockLevels,
     normalizeCompletedQuests,
+    ownsWearableMeleeWeapon,
     planBankToolSwap,
     planToolShopUpgrade,
     reconcileBankTool,
     recordShopAttempt,
     selectProgressiveLoadout,
+    sessionToolHooks,
     shopCatalog,
     shouldAttemptShopUpgrade,
     weaponSupportsTrainSkill,
@@ -585,4 +588,93 @@ test('shouldAttemptShopUpgrade gates repeat checks per tier and cools down faile
     recordShopAttempt(gate, 31, 820, true);
     expect(shouldAttemptShopUpgrade(gate, 31, 2000)).toBe(false);
     expect(shouldAttemptShopUpgrade(gate, 41, 2000)).toBe(true);
+});
+
+test('a thrown stack is counted and compared with the bow by damage per rapid tick', () => {
+    // Shortbow and iron arrows, with black knives (Ranged 10): five knives are not a run's worth of ammunition, 300 are.
+    const bow = [{ id: 841, count: 1 }, { id: 884, count: 300 }];
+    const few = selectProgressiveLoadout('ranged', [...bow, { id: 869, count: 5 }], { ranged: 10 });
+    expect(few.worn.weapon?.debugname).toBe('shortbow');
+    expect(few.ammo?.debugname).toBe('iron_arrow');
+    expect(few.thrown).toBe(false);
+    const many = selectProgressiveLoadout('ranged', [...bow, { id: 869, count: 300 }], { ranged: 10 });
+    expect(many.worn.weapon?.debugname).toBe('black_knife');
+    expect(many.thrown).toBe(true);
+    expect(many.ammo).toBeNull();
+    expect(many.ammoCount).toBe(300);
+    // A worker that counts its shots by arrows keeps thrown weapons out.
+    expect(selectProgressiveLoadout('ranged', [...bow, { id: 869, count: 300 }], { ranged: 10 }, null, { thrown: false }).worn.weapon?.debugname).toBe('shortbow');
+});
+
+test('arrows need a run of ammunition: three rune arrows never displace 300 mithril arrows', () => {
+    const stock = [{ id: 857, count: 1 }, { id: 892, count: 3 }, { id: 888, count: 300 }];
+    const loadout = selectProgressiveLoadout('ranged', stock, { ranged: 45 });
+    expect(loadout.ammo?.debugname).toBe('mithril_arrow');
+    expect(loadout.ammoCount).toBe(300);
+    // With no kind that reaches a run's worth, the largest stack is worn.
+    expect(selectProgressiveLoadout('ranged', [{ id: 857, count: 1 }, { id: 892, count: 3 }, { id: 888, count: 20 }], { ranged: 45 }).ammo?.debugname).toBe('mithril_arrow');
+    // A run's worth of the better kind wins.
+    expect(selectProgressiveLoadout('ranged', [{ id: 857, count: 1 }, { id: 892, count: 60 }, { id: 888, count: 300 }], { ranged: 45 }).ammo?.debugname).toBe('rune_arrow');
+});
+
+test('unlock levels come from the item data: Defence 45, Attack 50, Strength 15 and 50, Ranged 50 and 70', () => {
+    const none = { attack: 1, strength: 1, defence: 1, ranged: 1 };
+    expect(crossedTierBoundary({ defence: 44 }, { defence: 45 })).toBe(true);
+    expect(crossedTierBoundary({ attack: 49 }, { attack: 50 })).toBe(true);
+    expect(crossedTierBoundary({ strength: 14 }, { strength: 15 })).toBe(true);
+    expect(crossedTierBoundary({ strength: 49 }, { strength: 50 })).toBe(true);
+    expect(crossedTierBoundary({ ranged: 49 }, { ranged: 50 }, ['ranged'])).toBe(true);
+    expect(crossedTierBoundary({ ranged: 69 }, { ranged: 70 }, ['ranged'])).toBe(true);
+    expect(crossedTierBoundary({ ranged: 69 }, { ranged: 70 }, ['ranged'], 'melee')).toBe(true);
+    // A level that unlocks nothing is not a boundary.
+    expect(crossedTierBoundary({ defence: 46 }, { defence: 47 })).toBe(false);
+    expect(crossedTierBoundary({ ranged: 51 }, { ranged: 52 }, ['ranged'])).toBe(false);
+    expect(crossedTierBoundary(none, none)).toBe(false);
+    expect(gearUnlockLevels('ranged').ranged).toEqual(expect.arrayContaining([5, 20, 30, 40, 50, 70]));
+    expect(gearUnlockLevels('melee').defence).toEqual(expect.arrayContaining([5, 10, 20, 30, 40, 45, 50, 60]));
+    // Tools: the Attack level to wield and the use level of each pickaxe.
+    expect(gearUnlockLevels('mining-pickaxe')).toMatchObject({ attack: [5, 20, 30, 40], mining: [6, 21, 31, 41] });
+});
+
+test('a quest-point shop opens at its quest points, not never', () => {
+    const levels = { attack: 40, strength: 40, defence: 40, hitpoints: 40 };
+    const shops = (questPoints: number) => selectProgressiveLoadout('melee', [], levels, [], { questPoints }).upgrades.body?.acquirableUpgrade?.shops.map(s => s.shop) ?? [];
+    expect(shops(31)).not.toContain('runiteshop');
+    expect(shops(32)).toContain('runiteshop');
+    expect(shops(0)).not.toContain('runiteshop');
+});
+
+test('acquirableUpgrade names only an item with an open shop or a trade', () => {
+    for (const [style, levels] of [['melee', { attack: 99, strength: 99, defence: 99 }], ['ranged', { ranged: 99, defence: 99 }], ['magic', { magic: 99, defence: 99 }]] as const) {
+        const loadout = selectProgressiveLoadout(style, [], levels, ['Dragon Slayer', "Legends' Quest", "Heroes' Quest", 'The Fremennik Trials', 'Regicide', 'Lost City']);
+        for (const upgrade of Object.values(loadout.upgrades)) {
+            const wanted = upgrade?.acquirableUpgrade;
+            if (wanted) expect(wanted.tradeable || wanted.shops.length > 0).toBe(true);
+        }
+    }
+});
+
+test('ownsWearableMeleeWeapon answers by item name or id and honours the wield level', () => {
+    expect(ownsWearableMeleeWeapon({ 'bronze sword': 1 })).toBe(true);
+    expect(ownsWearableMeleeWeapon({ 1277: 1 })).toBe(true);
+    expect(ownsWearableMeleeWeapon({ 'Rune scimitar': 1 }, { attack: 30 })).toBe(false);
+    expect(ownsWearableMeleeWeapon({ 'Rune scimitar': 1 }, { attack: 40 })).toBe(true);
+    expect(ownsWearableMeleeWeapon({ 'wooden shield': 1, trout: 9 })).toBe(false);
+    expect(ownsWearableMeleeWeapon({ 'bronze sword': 0 })).toBe(false);
+    expect(ownsWearableMeleeWeapon([{ id: 1277, count: 1 }])).toBe(true);
+});
+
+test('sessionToolHooks withdraws a bank-observation row through the open bank row that has a slot', async () => {
+    const calls: unknown[] = [];
+    const bankRow = { id: 1275, name: 'Rune pickaxe', count: 1, slot: 7 };
+    const hooks = sessionToolHooks({
+        sdk: { getState: () => ({ bank: { isOpen: true, items: [bankRow] } }), getInventory: () => [] },
+        bot: {
+            openBank: async () => ({}), closeBank: async () => ({}), depositItem: async () => ({}),
+            withdrawItem: async (item: unknown) => { calls.push(item); return {}; },
+            openShop: async () => ({ success: true }), buyFromShop: async () => ({ success: true }), closeShop: async () => ({}),
+        },
+    }, { waitUntil: async () => true });
+    await hooks.withdrawItem({ id: 1275, name: 'Rune pickaxe', count: 1 }, 1);
+    expect(calls).toEqual([bankRow]);
 });
