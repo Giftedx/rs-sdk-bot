@@ -1,0 +1,22 @@
+{
+ "id": "1795005365487-fatstack-masterbaiter",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "Masterbaiter",
+ "item": "coins",
+ "count": 16976,
+ "start": 1795005365487,
+ "end": 1795007765487,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
