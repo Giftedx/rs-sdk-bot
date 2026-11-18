@@ -9,10 +9,7 @@
  },
  "arguments": [
   "TARGETS=goondelf,ligma,sugma",
-  "POST=3067,3640",
-  "TRIPS=1",
-  "RESCUE=1",
-  "PICKUP=1"
+  "POST=3067,3640"
  ],
  "options": "the default SQUAD_OPTS of scripts/pk-squad.ts: no change of one option beat it by more than the spread of the base (29 to 104 Hitpoints a run across six seeds)",
  "post": {
@@ -43,5 +40,6 @@
   "the repeat cycle of 30 minutes (a dead clone does not come back)",
   "the squad on a live run"
  ],
- "provisional": "a clone has no wait before an eat, our bench account attacks in the tick of its weapon change, and our bench account logs in first; each would move these numbers"
+ "provisional": "a clone has no wait before an eat, our bench account attacks in the tick of its weapon change, and our bench account logs in first; each would move these numbers",
+ "argumentsNote": "The bench cases pass no other argument of scripts/pk-squad.ts, so each ran at its default in scripts/pk-squad.ts: MARCH=1, PULL=1, PICKUP=1, RESCUE=1, FOLLOW=0, and TRIPS at its default. TARGETS and POST are the defaults of the script too; a bench case names its clone accounts as the targets."
 }
