@@ -8,7 +8,7 @@ import { COW_FOOD_BITES, COW_FOOD_HP, cowFoodHeal } from './gather-combat';
 import { BONE_XP } from './train-prayer';
 import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, startable, supervisorCommand } from './swarm';
 import { supervise } from '../packages/practice/src/supervise';
-import { memoryHeadroom, freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { tradeStarts, memoryHeadroom, freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import { mergedPlan } from '../packages/core/src/coordinator-jobs';
 import { FOLLOWED_RETRY_MS, GEAR_ASK_LIMIT, GEAR_ASK_MARGIN, UNSOLD_RETRY_MS, gearLimit } from './autopilot';
 import { KIT_PRICE_CAPS } from '../packages/planner/src/autopilot';
@@ -1210,6 +1210,17 @@ test('the army roster adds each plannable account with Attack, Strength and Defe
     expect([...armyRoster({}, accounts, new Set(['maxed']))].sort()).toEqual(['edge', 'ninetyone']);
     // The hand list keeps its own: a listed account stays on the roster at any level.
     expect(armyRoster({ army: ['Low'] }, [melee('Low', 1)]).has('low')).toBe(true);
+});
+
+test('an active squad keeps its members off the roster by rule, and open trade parties reserve a start', () => {
+    const melee = (name: string) => ({ name, skills: { Attack: 99, Strength: 99, Defence: 99 } });
+    const accounts = [melee('Member'), melee('Other')];
+    expect([...armyRoster({ squad: { active: true, members: ['Member'] } }, accounts)]).toEqual(['other']);
+    expect([...armyRoster({ squad: { active: false, members: ['Member'] } }, accounts)].sort()).toEqual(['member', 'other']);
+    expect([...armyRoster({ army: ['Member'], squad: { active: true, members: ['Member'] } }, accounts)].sort()).toEqual(['member', 'other']);
+    // Two open order parties, one with a live session and one managed by the swarm: one start is still to come.
+    expect(tradeStarts(new Set(['a', 'b', 'c', 'd']), ['A'], new Set(['b']))).toBe(2);
+    expect(memoryHeadroom(8.6, 0, 2 + tradeStarts(new Set(['x', 'y']), [], new Set()))).toBe(0);
 });
 
 test('armyBatch admits that many accounts under the rule, best melee first, and defaults to none', () => {

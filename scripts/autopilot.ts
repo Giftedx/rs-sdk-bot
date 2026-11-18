@@ -464,7 +464,9 @@ function originClaims(fleetDir: string): any[] {
 export function armyRoster(plan: any, accounts: readonly Pick<Acct, 'name' | 'skills'>[] = [], guarded: ReadonlySet<string> = OFFLINE_GUARDED): Set<string> {
     const names = Array.isArray(plan?.army) ? plan.army.filter((n: unknown): n is string => typeof n === 'string') : [];
     const roster = new Set<string>(names.map((n: string) => n.toLowerCase()).filter((n: string) => n !== 'haggis'));
-    const open = accounts.filter(a => !guarded.has(a.name.toLowerCase()) && !exempt(a.name) && !roster.has(a.name.toLowerCase()));
+    // The members of an active squad (the plan's `squad` block) stay with the squad: no rule or batch admission for them.
+    const squad = new Set<string>(plan?.squad?.active === true && Array.isArray(plan.squad.members) ? plan.squad.members.filter((n: unknown): n is string => typeof n === 'string').map((n: string) => n.toLowerCase()) : []);
+    const open = accounts.filter(a => !guarded.has(a.name.toLowerCase()) && !exempt(a.name) && !roster.has(a.name.toLowerCase()) && !squad.has(a.name.toLowerCase()));
     for (const a of open) if (admittedByLevels(a.name, a.skills)) roster.add(a.name.toLowerCase());
     const batch = open.filter(a => !roster.has(a.name.toLowerCase())).sort((x, y) => meleeTotal(y.skills) - meleeTotal(x.skills) || x.name.localeCompare(y.name));
     for (const a of batch.slice(0, armyBatchOf(plan))) roster.add(a.name.toLowerCase());
@@ -487,6 +489,13 @@ export function handBots(jobs: readonly any[], side: string, keep: ReadonlySet<s
 export function memoryHeadroom(freeGB: number, minFreeGB: number, pending: number): number {
     const floor = Math.max(FREE_FLOOR_GB, Number.isFinite(minFreeGB) ? minFreeGB : 0);
     return Math.max(0, Math.floor((freeGB - floor - START_BUDGET_GB * pending) / START_BUDGET_GB));
+}
+// The fleet trade sessions that will start: each party of an open fleet order (`open`) with no live session yet. The fleet agent logs
+// such an account in for the trade, so each reserves a start (START_BUDGET_GB) beside the swarm's own pending starts. A trade
+// that already runs shows as a live external status: it counts against maxBots (`external`) and its RAM is in the free memory.
+export function tradeStarts(open: ReadonlySet<string>, externalLive: readonly string[], managed: ReadonlySet<string>): number {
+    const live = new Set(externalLive.map(n => n.toLowerCase()));
+    return [...open].filter(n => !live.has(n.toLowerCase()) && !managed.has(n.toLowerCase())).length;
 }
 export function freeSlots(merged: any, jobs: readonly any[], side: string, keep: ReadonlySet<string>, external = 0, memory?: { running: number; headroom: number }): number | undefined {
     if (!(Number.isSafeInteger(merged?.maxBots) && merged.maxBots > 0)) return undefined;
@@ -692,10 +701,11 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused): st
         busy:new Set([...keep,...open,...stranded,...diedAccounts,...swarm.jobs.filter((j:any)=>!mineMarked(j)&&j?.enabled!==false).flatMap(jobAccounts).map((n:string)=>n.toLowerCase())]),paused,protected:new Set(OFFLINE_GUARDED),
         stocks:progressionStocks,sourcesFor:(account,_method,_item)=>[account,...stock.filter(s=>!newlyWorking.has(s.name.toLowerCase())&&owners.get(s.name.toLowerCase())?.server===owners.get(account.toLowerCase())?.server).map(s=>s.name)],
         canTransfer:(from,to)=>sourceAllowed.has(from.toLowerCase())&&!newlyWorking.has(from.toLowerCase())&&free(from)&&free(to)&&owners.get(from.toLowerCase())?.server===owners.get(to.toLowerCase())?.server});
+    const externalLive = activeExternalLive(statusFiles.map(f => readJson(join(statusDir, f), null)).filter(Boolean), [...activeAccounts], now);
     const planned = plan({ side, accounts, owners, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set(Object.keys(state.retired)), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army: armyRoster(swarm, accounts), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
-            activeExternalLive(statusFiles.map(f => readJson(join(statusDir, f), null)).filter(Boolean), [...activeAccounts], now).length,
+            externalLive.length,
             { running: swarm.jobs.filter((j: any) => mineMarked(j) && j.enabled !== false).flatMap(jobAccounts).filter((n: string) => activeAccounts.has(n.toLowerCase())).length,
-                headroom: memoryHeadroom(freemem() / 2 ** 30, swarm.minFreeGB, pendingStartupCount(readJson(join(prac, 'swarm-runs.json'), []), now)) }), holding: activeAccounts, builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
+                headroom: memoryHeadroom(freemem() / 2 ** 30, swarm.minFreeGB, pendingStartupCount(readJson(join(prac, 'swarm-runs.json'), []), now) + tradeStarts(open, externalLive, activeAccounts)) }), holding: activeAccounts, builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     for(const assignment of planned)if(assignment.template||assignment.fund||assignment.send)newlyWorking.add(assignment.account.toLowerCase());
     const refined=progression.refine(planned);
