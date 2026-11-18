@@ -9,7 +9,7 @@ test('the doorway gate of the goldfarm proof states a finite goal, the bank of i
  expect(accept).toEqual({bank:{995:DOOR_BANKED+DOOR_CARRIED}});
  expect(intentForEntry(work.script,work.args,work.env,accept,c)).toMatchObject({kind:'acquire',items:{995:DOOR_BANKED+DOOR_CARRIED}});
  // Without the stated consumer a zero bound is no finite goal (the rule that stopped the gate).
- const bare={...DOOR_ENV};delete bare.PROGRESSION_CONSUMER;
+ const bare:Record<string,string|undefined>={...DOOR_ENV};delete bare.PROGRESSION_CONSUMER;
  expect(intentForEntry(work.script,[],bare,undefined,c)).toBeNull();
  // The earning cases state their own bound.
  expect(intentForEntry(work.script,[],{...WORKER_ENV},undefined,c)).toMatchObject({kind:'service'});

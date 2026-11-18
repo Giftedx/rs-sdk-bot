@@ -28,7 +28,8 @@ export function driftChecks(rec: any, now: any, minN = 20, points = 15): Check[]
     out.push({ measure: 'worn sets not in the record', record: Object.keys(rec.kit.worn.value ?? {}).length, now: worn.join(' | ') || 'none', n: total(now.kit.worn.value ?? {}), drift: worn.length > 0 });
     // The levels: a hiscore row that changed.
     const lv = (f: any) => f.levels.skills.value ?? {}, moved = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Prayer', 'Magic', 'Ranged'].filter(s => lv(now)[s] !== undefined && lv(rec)[s] !== lv(now)[s]);
-    out.push({ measure: 'combat levels that changed', record: 'the hiscore row', now: moved.map(s => `${s} ${lv(rec)[s]} -> ${lv(now)[s]}`).join(', ') || 'none', n: 1, drift: moved.length > 0 });
+    const checked = Object.keys(lv(now)).length > 0;
+    out.push({ measure: 'combat levels that changed', record: 'the hiscore row', now: checked ? moved.map(s => `${s} ${lv(rec)[s]} -> ${lv(now)[s]}`).join(', ') || 'none' : 'no hiscore page', n: checked ? 1 : 0, drift: moved.length > 0, ...(checked ? {} : { why: 'no hiscore page: the levels are not checked (pk-gang-record.ts hiscores)' }) });
     // The attack: the share of 4-tick intervals, the share of specials, the highest splat.
     num('4-tick attack intervals in 100', share(rec.attack.ticksBetweenAttacks.value, '4'), share(now.attack.ticksBetweenAttacks.value, '4'), total(now.attack.ticksBetweenAttacks.value), points);
     const sp = (f: any) => f.attack.specials.value;
@@ -60,7 +61,8 @@ export function squadRuns(texts: readonly string[]): { kills: number; hpLost: nu
 // prediction by which a live run may differ. It needs 3 bench runs or more.
 export function squadDrift(live: { kills: number; hpLost: number }, bench: { kills: number; hpLost: number }[], tolerance = 0.5): Check[] {
     const kills = bench.reduce((a, b) => a + b.kills, 0), per = (a: number, k: number) => (k ? a / k : Infinity), l = per(live.hpLost, live.kills), b = per(bench.reduce((a, x) => a + x.hpLost, 0), kills);
-    return [{ measure: 'Hitpoints lost a kill (clone prediction against the live run)', record: Math.round(b), now: Math.round(l), n: bench.length, drift: bench.length >= 3 && Number.isFinite(l) && Number.isFinite(b) && Math.abs(l - b) > tolerance * b, ...(bench.length < 3 ? { why: 'under 3 bench runs' } : {}) }];
+    const noKill: Check[] = live.kills === 0 ? [{ measure: 'kills of the live run', record: `${kills} in ${bench.length} bench runs`, now: 0, n: bench.length, drift: bench.length >= 3 && kills > 0, ...(bench.length < 3 ? { why: 'under 3 bench runs' } : {}) }] : [];
+    return [...noKill, { measure: 'Hitpoints lost a kill (clone prediction against the live run)', record: Math.round(b), now: Math.round(l), n: bench.length, drift: bench.length >= 3 && Number.isFinite(l) && Number.isFinite(b) && Math.abs(l - b) > tolerance * b, ...(bench.length < 3 ? { why: 'under 3 bench runs' } : {}) }];
 }
 
 if (import.meta.main) {

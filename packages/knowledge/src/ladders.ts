@@ -126,7 +126,7 @@ const RULES: Rule[] = [
     { worker: 'scripts/brew-potions.ts', evidence: 'super_def:', methods: /^herblore\/potion-(prayer-restore-potion|super-attack-potion|super-strength-potion|super-defence-potion|energy-potion)$/ },
     { worker: 'scripts/train-prayer.ts', evidence: 'BONE=526', methods: /^prayer\/bury-bones$/ },
     { worker: 'scripts/train-chickens.ts', evidence: 'Train on Lumbridge chickens', methods: /^(attack|strength|defence|hitpoints)\/target-chicken$/ },
-    { worker: 'scripts/gather-combat.ts', evidence: "target==='giant'?117:target==='druid'?181", methods: /^(attack|strength|defence|hitpoints)\/target-(chaos_druid|giant)$/ },
+    { worker: 'scripts/gather-combat.ts', evidence: "target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid')", methods: /^(attack|strength|defence|hitpoints)\/target-(chaos_druid|giant)$/ },
     { worker: 'scripts/gather-ranged.ts', evidence: 'BOW=841', methods: /^(ranged\/bow-gear-standard-bows|ranged\/target-chicken)$/ },
 ];
 

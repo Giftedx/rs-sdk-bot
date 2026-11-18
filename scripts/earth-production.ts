@@ -135,7 +135,17 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
   const edge=[{x:p.x,z:p.z+1},{x:p.x+1,z:p.z},{x:p.x,z:p.z-1},{x:p.x-1,z:p.z}].find(t=>s.sdk.findPath(t.x,t.z).reachedDestination===true);
   if(!edge)throw Error('earth exit face unavailable');await s.bot.walkTo(edge.x,edge.z,0,{timeout:10000});check();
   if(pos()?.worldX!==edge.x||pos()?.worldZ!==edge.z)throw Error('earth exit face unobserved');
-  if(!(await s.sdk.sendInteractLoc(p.x,p.z,p.id,1)).success||!await waitUntil(s,()=>over()||!insideEarth(),{timeoutTicks:20})||insideEarth())throw Error('earth exit unobserved');check();
+  // A dialog that is open (the level-up message after a craft) can swallow the click, so it is closed first. The click
+  // is sent again, at most 3 times in all, when the player is still inside after the wait; each miss is logged.
+  await s.bot.dismissBlockingUI();check();
+  for(let attempt=1;;attempt++){
+   const sent=(await s.sdk.sendInteractLoc(p.x,p.z,p.id,1)).success;
+   if(sent&&await waitUntil(s,()=>over()||!insideEarth(),{timeoutTicks:attempt<3?8:20})&&!insideEarth())break;
+   console.log('EARTH_EXIT_MISS '+JSON.stringify({attempt,sent,tick:s.tick(),at:pos()&&{x:pos()!.worldX,z:pos()!.worldZ},dialog:st()?.dialog?.isOpen===true}));
+   if(attempt>=3||over())throw Error('earth exit unobserved');
+   await s.bot.dismissBlockingUI();check();
+  }
+  check();
  };
  const enterEarth=async()=>{
   await travel({x:3303,z:3477});await s.bot.dismissBlockingUI();

@@ -1,5 +1,6 @@
 import {test,expect} from 'bun:test';
-import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP,cowReleased,COW_RELEASE,selectGiantArmour} from './gather-combat';
+import {GIANT,GIANT_HERBS,TROOPER_FOODS,TROOPER_SITE,COW_BEAR_BOXES} from './gather-combat';
+import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP,cowReleased,COW_RELEASE,selectGiantArmour,COW_FOOD_BITES} from './gather-combat';
 import {gearById} from '../packages/planner/src/gear-progression';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
@@ -292,6 +293,13 @@ test('cow food counts cake pieces in bites and eats the smallest piece first', (
     expect(cowFoodPick([{id:995}])).toBeUndefined();
 });
 
+test('cow food bites and heals come from the content (cake 4 a bite in 3 bites, chocolate cake 5, trout 7)', () => {
+    expect(cowFoodHeal([{id:333,count:1}])).toBe(7);
+    expect(cowFoodHeal([{id:1891,count:1}])).toBe(12);
+    expect(cowFoodHeal([{id:1897,count:1}])).toBe(15);
+    expect(Object.keys(COW_FOOD_BITES).map(Number).sort((a,b)=>a-b)).toEqual([333,1891,1893,1895,1897,1899,1901]);
+});
+
 test('held cow food must cover the trout rule in HP, not in pieces', () => {
     expect(cowFoodHeal([{id:333,count:2}])).toBe(COW_FOOD_HP);
     expect(cowFoodHeal([{id:1895,count:3}])).toBe(12);
@@ -504,4 +512,19 @@ test('runCows re-checks inventory and bank gear upgrades when crossing level tie
     } finally {
         bankUpgrade.dispose();
     }
+});
+
+test('the giant and trooper ids and the bear boxes match the content',()=>{
+    expect(GIANT).toMatchObject({npc:117,food:385,bigBones:532,limpwurt:225});
+    expect(GIANT_HERBS).toEqual([199,201,203,205,207,209,211,213,215,217,219]);
+    expect(TROOPER_FOODS).toEqual([385,373,379,333,2142,2309,1901,1895,1893,1891]);
+    expect(TROOPER_SITE.npcs).toEqual([475,476]);
+    const bears=(JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/npcs.json'),'utf8')) as {id:number;spawns:{x:number;z:number;level:number}[]}[]).find(n=>n.id===105)!.spawns;
+    for(const [x1,z1,x2,z2] of COW_BEAR_BOXES){
+        const inside=bears.filter(s=>s.level===0&&s.x>=x1&&s.x<=x2&&s.z>=z1&&s.z<=z2);
+        expect(inside.length).toBeGreaterThan(0);
+        expect([Math.min(...inside.map(s=>s.x)),Math.min(...inside.map(s=>s.z)),Math.max(...inside.map(s=>s.x)),Math.max(...inside.map(s=>s.z))]).toEqual([x1,z1,x2,z2]);
+    }
+    const area=bears.filter(s=>s.level===0&&s.x>=2600&&s.x<=2740&&s.z>=3250&&s.z<=3360);
+    expect(area.every(s=>COW_BEAR_BOXES.some(([x1,z1,x2,z2])=>s.x>=x1&&s.x<=x2&&s.z>=z1&&s.z<=z2))).toBe(true);
 });
