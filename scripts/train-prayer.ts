@@ -7,10 +7,11 @@ import {waitUntil} from '../packages/core/src/ticks';
 import {xpForLevel} from '../packages/planner/src/curve';
 import {walkPath,sessionWalker,goTo,type PathPoint} from '../packages/core/src/walk';
 import {ferryWalk} from './walk-to';
+import {boneXp,objId} from '../packages/core/src/content-facts';
 
 const BONE=526,PRAYER=14;
 // Server XP per bury at 25x: bones 4.5, big bones 15, dragon bones 72 (bones.obj bone_exp, in tenths).
-export const BONE_XP:Record<number,number>={526:112.5,532:375,536:1800};
+export const BONE_XP:Record<number,number>=Object.fromEntries(['bones','big bones','dragon bones'].map(bone=>[objId(bone),boneXp(bone)]));
 // held (BURY_HELD=1): bury the bones the account holds above the reserve, up to the target; ok when they run out
 // after at least one bury. Each bury's XP is checked, so a batch too small for a level is still proved work: from 96
 // a level is about 60,000 XP, more than 100 bones give. The PK army's Prayer bands run this with a static target of 99.

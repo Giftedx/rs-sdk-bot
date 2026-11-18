@@ -126,6 +126,17 @@ describe('stagingPlan', () => {
         expect(plan.moves.map(m => m.to)).toEqual(['A']);
         expect(plan.gaps).toEqual([{ account: 'B', what: 'antipoison', id: 175, count: 1, blocking: true }]);
     });
+    test('the first two accounts of the list must hold an antipoison, and the others are ready without one', () => {
+        const none = (n: string) => full(n, { pack: without(KIT_PACK, 175) }), holder = (n: string) => full(n);
+        const blocked = stagingPlan([holder('A'), none('B'), none('C')], [], gear, rule, NOW);
+        expect(blocked.picks.map(p => [p.account, p.ready, p.reasons])).toEqual([['A', true, []], ['B', false, ['no antipoison']], ['C', true, []]]);
+        expect(blocked.picks[2]!.needs.map(n => [n.what, n.blocking])).toEqual([['antipoison', false]]);
+        expect(blocked.gaps.map(g => [g.account, g.blocking])).toEqual([['B', true], ['C', false]]);
+        // The order of the list decides: a holder at the end does not stand for the first two.
+        const reordered = stagingPlan([none('C'), none('B'), holder('A')], [], gear, rule, NOW);
+        expect(reordered.picks.map(p => [p.account, p.ready])).toEqual([['C', false], ['B', false], ['A', true]]);
+        expect(stagingPlan([holder('A'), holder('B'), none('C')], [], gear, rule, NOW).picks.every(p => p.ready)).toBe(true);
+    });
     test('a donor keeps what it wears and carries, and a candidate keeps its sharks and runes', () => {
         const a = full('A', { worn: KIT_WORN.filter(w => w.slot !== 7), bank: [it(385, 5)] });
         const wearer = account('Wearer', { worn: [worn(1079, 7)], pack: [it(385, 28)] }), other = full('B', { bank: [it(385, 200), it(1079, 1)] });

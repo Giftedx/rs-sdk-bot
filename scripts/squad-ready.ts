@@ -7,8 +7,8 @@
 // widened to its class, and the checks are the faults of the live pilots (research/pvp-fight-loop.md):
 //   body and leg armour (an account with no leg armour died), a melee weapon with a special attack or a rune blade,
 //   a bow with arrows that it can fire, the runes of an escape teleport that the account can cast (pk-squad.ts
-//   squadEscapeSpell: an account clicked Camelot Teleport with no law runes), the runes of Bind, an antipoison
-//   (poison did 139 of 455 damage), food for a full pack (the food list of the bank trip, scripts/pk-hunt.ts FOOD_LIST:
+//   squadEscapeSpell: an account clicked Camelot Teleport with no law runes), the runes of Bind, an antipoison on the
+//   first two accounts of the list (poison did 139 of 455 damage; Rule antipoisonHolders), food for a full pack (the food list of the bank trip, scripts/pk-hunt.ts FOOD_LIST:
 //   sharks first, then lobsters), a bank read of a stated age, and a place the walker leaves.
 // Usage: bun scripts/squad-ready.ts [<account> ...] [--root <checkout>] [--max-age <hours>] [--json]
 //          [--loadouts <dir>] [--orders <dir>] [--receipt <dir>]
@@ -41,9 +41,12 @@ export type Account = { name: string; at: number; bankAt: number | null; pos: { 
     worn: Worn[]; pack: Item[]; bank: Item[]; side?: string; reservation?: string };
 export type Gear = { id: number; name: string; slot: string; tier?: number; special?: { pvp?: boolean }; requires?: { skills?: Record<string, number>; quest?: string };
     bonuses: Record<string, number>; tradeable?: boolean };
-export type Rule = { name: string; benchKit: string; maxBankAgeHours: number; maxDonorBankAgeHours: number; minArrows: number };
+// antipoisonHolders: the first accounts of the list that must hold an antipoison. The gang clone bench (five of ours,
+// seeds 1 to 3, hosted run 44262314889) killed 9 of 9 with no death with a potion on all five, on the first two, on the
+// first one and on none; the others carry the extra food (2 lobsters or 1 shark a kill).
+export type Rule = { name: string; benchKit: string; maxBankAgeHours: number; maxDonorBankAgeHours: number; minArrows: number; antipoisonHolders: number };
 export const RULES: Readonly<Record<string, Rule>> = {
-    'gang-chain-bind': { name: 'gang-chain-bind', benchKit: 'live-walker-iron-rune-chain-bind', maxBankAgeHours: 6, maxDonorBankAgeHours: 168, minArrows: 100 },
+    'gang-chain-bind': { name: 'gang-chain-bind', benchKit: 'live-walker-iron-rune-chain-bind', maxBankAgeHours: 6, maxDonorBankAgeHours: 168, minArrows: 100, antipoisonHolders: 2 },
 };
 
 const SLOT: Readonly<Record<string, number>> = { hat: 0, back: 1, front: 2, righthand: 3, torso: 4, lefthand: 5, legs: 7, hands: 9, feet: 10, ring: 12, quiver: 13 };
@@ -80,7 +83,7 @@ export type Pick = { account: string; ready: boolean; reasons: string[]; notes: 
 const SPELL_NAME: Readonly<Record<number, string>> = { 1174: 'Camelot Teleport', 1164: 'Varrock Teleport' };
 
 // The kit of one account under the rule, from its own stock, with the pieces that it lacks.
-export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule, now: number, kit = kitItems(rule.benchKit), nameOf: (id: number) => string | undefined = () => undefined, post = SQUAD_POST): Pick {
+export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule, now: number, kit = kitItems(rule.benchKit), nameOf: (id: number) => string | undefined = () => undefined, post = SQUAD_POST, antipoisonRequired = true): Pick {
     const own = holdings(a), needs: Need[] = [], reasons: string[] = [], notes: string[] = [];
     const benchPiece = (test: (g: Gear) => boolean) => [...kit.equipment, ...kit.inventory].map(i => gear.get(i.id)).find(g => !!g && test(g))?.id;
     const owned = [...own.values()].filter(i => i.count > 0), g = (i: Item) => gear.get(i.id);
@@ -145,7 +148,7 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     const antipoisons = ITEMS.antipoison as readonly number[], isAntipoison = (i: Item) => antipoisons.includes(i.id);
     const antipoison = owned.filter(isAntipoison).sort((x, y) => antipoisons.indexOf(x.id) % 4 - antipoisons.indexOf(y.id) % 4)[0];
     if (antipoison) carried.push({ id: antipoison.id, name: antipoison.name, count: 1 });
-    else needs.push({ what: 'antipoison', count: 1, blocking: true, ...(kit.inventory.find(i => antipoisons.includes(i.id)) ? { id: kit.inventory.find(i => antipoisons.includes(i.id))!.id } : {}), accept: isAntipoison });
+    else needs.push({ what: 'antipoison', count: 1, blocking: antipoisonRequired, ...(kit.inventory.find(i => antipoisons.includes(i.id)) ? { id: kit.inventory.find(i => antipoisons.includes(i.id))!.id } : {}), accept: isAntipoison });
     const supplies = kit.inventory.filter(i => !isFood(i.id) && !antipoisons.includes(i.id) && !gear.has(i.id));
     const short = new Map<number, number>();
     for (const s of supplies) {
@@ -196,7 +199,7 @@ export type Plan = { picks: Pick[]; moves: Move[]; gaps: Gap[] };
 // goes to one account. A donor that covers the whole need comes first, then the nearest; a wanted supply that no one
 // donor covers stays a gap, so that the plan holds few trades.
 export function stagingPlan(candidates: readonly Account[], fleet: readonly Account[], gear: ReadonlyMap<number, Gear>, rule: Rule, now: number, kit = kitItems(rule.benchKit), nameOf: (id: number) => string | undefined = () => undefined): Plan {
-    const picks = candidates.map(a => pickKit(a, gear, rule, now, kit, nameOf)), byName = new Map(picks.map(p => [p.account.toLowerCase(), p]));
+    const picks = candidates.map((a, i) => pickKit(a, gear, rule, now, kit, nameOf, SQUAD_POST, i < rule.antipoisonHolders)), byName = new Map(picks.map(p => [p.account.toLowerCase(), p]));
     const spare = new Map<string, Map<number, Item>>();
     for (const a of fleet) {
         // No donor with an old bank read, and none that cannot walk to a meeting.
