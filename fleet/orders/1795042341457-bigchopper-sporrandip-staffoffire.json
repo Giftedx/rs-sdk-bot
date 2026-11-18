@@ -1,0 +1,22 @@
+{
+ "id": "1795042341457-bigchopper-sporrandip-staffoffire",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "SporranDip",
+ "item": "Staff of fire",
+ "count": 1,
+ "start": 1795042341457,
+ "end": 1795044741457,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
