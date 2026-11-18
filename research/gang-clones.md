@@ -437,6 +437,43 @@ Not measured:
   march and 1 kill of 9 on the single-way post. The pilots lost 249 and 260. The first live squad run is the check of
   the clones at squad size (`scripts/measure/pk-gang-drift.ts squad`).
 
+## The first live squad run
+
+Reported by the gang-hunt-ops session (its log `.practice/gang-hunt/squad-run-1.log` and the kill receipts under
+`.practice/kill-receipts/live/` are in the main checkout). The feed record is `.practice/gang-record/feed-1795038250687.jsonl`,
+which the collector wrote during the run.
+
+- **Run.** Five of ours in the kit rule `gang-chain-bind`, 21:56 to 22:03 UTC, the defaults of `scripts/pk-squad.ts`
+  (post 3067, 3640). Four fought. A fifth dropped out in its first minute with a fault of its start trip. The run
+  ended after about 8 of 30 minutes on `halted=no progress: 900 ticks`.
+- **Result.** `RESULT fail squad accounts=5 kills=5 killReceipts=5 receiptDomain=live feedMatched=5 died=0 taken=279
+  trips=5`. The kills: Goondelf 2, Ligma 2, Sugma 1. No death of ours. 56 Hitpoints lost a kill (279 over 5).
+- **By member.** 181 Hitpoints over 3 kills, 98 over 1 kill, 0 over 1 kill and 0 over 0 kills. Two members wear
+  dragonhide and two wear rune.
+
+The drift checks, against the clones:
+
+| Check | Clone | Live | Drift |
+|---|---|---|---|
+| Hitpoints lost a kill, four of ours (`pk-gang-drift.ts squad`, 6 clone runs of four of ours) | 18 | 56 | yes |
+
+So the live run cost 3.1 times the Hitpoints of a kill that the clones predict for four of ours. The factor of 1.35 in
+"The climb" came from one meeting of one account against the three: it is not the factor of a squad. One run with 5
+kills cannot give a new factor.
+
+The feed check of the collector file (`pk-gang-drift.ts feed`):
+
+| Check | Record | Live run | Reading |
+|---|---|---|---|
+| Worn sets not in the record: Goondelf with the dagger only, Ligma with hat, dagger and top, Sugma with hat, dagger and legs | the full robe set | 46, 29 and 84 appearance blocks | The gang died 5 times in the run. The record holds the same partial set after a death (`death.wornAfter`), so these are consistent with the kit of an account after a death. |
+| Weapon changes with a prayer change in 100, Ligma | 66.7 | 15 (n 20) | A new sample. The record holds 8 changes of Ligma. |
+
+No check of the attack, the special, the eat level, the post or the steps drifts.
+
+The fights of the run in the feed: 11 fights of 0 to 104 ticks, and the gang accounts died in 3 of them at Wilderness
+level 15 and 16 (the post and the tiles beside it). A clone run of four of ours takes 539 ticks
+for its three kills.
+
 ## Keep it true
 
 `scripts/measure/pk-gang-drift.ts` compares new observations with the record:

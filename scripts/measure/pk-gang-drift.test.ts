@@ -26,7 +26,15 @@ test('the same behaviour gives no drift', () => {
 test('a higher hit, a new worn item, a new level, a higher eat level and a prayer that changes less often each drift', () => {
     const now = file({ four: 180, other: 20, specials: 30, attacks: 200, maxHit: 25, eat: { 85: 4, 80: 3 }, hit: 5, miss: 35, post: 60, worn: { 'hat,dagger': 50, 'hat,dagger,rune_platebody': 9 }, prayer: '95' });
     const drift = driftChecks(RECORD, now).filter(c => c.drift).map(c => c.measure);
+    // 22 on an open attack is above the ceiling of 21; the special ceiling is 24.
     expect(drift).toEqual(['worn sets not in the record', 'combat levels that changed', 'highest attack splat with no Protect from Melee', 'highest Hitpoints at an eat', 'weapon changes with a prayer change in 100']);
+});
+
+test('a hit between the record and the ceiling of Ultimate Strength, and a lower highest eat, do not drift', () => {
+    const now = file({ four: 180, other: 20, specials: 30, attacks: 200, maxHit: 21, eat: { 40: 3, 44: 4 }, hit: 30, miss: 10, post: 60 });
+    const names = driftChecks(RECORD, now).filter(c => c.drift).map(c => c.measure);
+    expect(names).not.toContain('highest attack splat with no Protect from Melee');
+    expect(names).not.toContain('highest Hitpoints at an eat');
 });
 
 test('a share with few samples does not drift', () => {
