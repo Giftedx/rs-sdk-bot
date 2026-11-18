@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795011602551,
+ "at": 1795011648694,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -225,12 +225,10 @@
    ]
   },
   {
-   "account": "YewFirst",
+   "account": "Billionaire",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=861 QUANTITY=1 LIMIT_PRICE=60000 CASH_RESERVE=1000 ORDER_KEY=yewfirst-kit14-861-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=yewfirst-kit14-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=6 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=yewfirst-kit14-385-0to6 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=21 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=billionaire-kit15-532-6to27 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -238,9 +236,9 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 1 Magic shortbow, 1 Law rune, 6 Shark on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on iron arrows",
+   "goal": "buy 21 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
    "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons",
+   "template": "kit-buy:army-bury-big-99",
    "autopilot": "local",
    "resources": []
   },
@@ -380,8 +378,7 @@
     "BURY_HELD": "1",
     "BONE_RESERVE": "6",
     "CAP": "4000",
-    "AUTOPILOT_ORDER": "10",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+    "AUTOPILOT_ORDER": "10"
    },
    "enabled": true,
    "standing": true,
@@ -419,22 +416,30 @@
    ]
   },
   {
-   "account": "Billionaire",
-   "script": "scripts/chain.ts",
+   "account": "YewFirst",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=21 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=billionaire-kit15-532-6to27 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "ROUNDS": "1"
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy 21 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Ballspinner",
