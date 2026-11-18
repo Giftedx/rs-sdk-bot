@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync,readFileSync,statSync,utimesSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
-import {workerSourceRoots,workerSourceRevision,runtimeTrees,releaseFiles,releaseEntries,workerEntries,capabilityRevision,launchRevision,cachedLaunchRevision,cachedReleaseFor,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,standingPeer,crashResidue,LOST_SESSION_DROP_MS,forgetReleaseMemory} from '../src/worker-release';
+import {sourceScans,forgetSourceScans,workerSourceRoots,workerSourceRevision,runtimeTrees,releaseFiles,releaseEntries,workerEntries,capabilityRevision,launchRevision,cachedLaunchRevision,cachedReleaseFor,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,standingPeer,crashResidue,LOST_SESSION_DROP_MS,forgetReleaseMemory} from '../src/worker-release';
 test('the actual runtime source tree keeps controller tooling outside its import boundary',()=>{
  expect(()=>workerSourceRevision(resolve(import.meta.dir,'../../..'))).not.toThrow();
 });
@@ -351,5 +351,32 @@ test('the cached launch release rehashes only when a release file or folder chan
   const next=launchRevision(root);expect(next).not.toBe(pin);expect(cachedLaunchRevision(root)).toBe(next);
   writeFileSync(join(root,'vendor/rs-sdk/sdk/added.ts'),'export {};');
   expect(cachedLaunchRevision(root)).toBe(launchRevision(root));expect(launchRevision(root)).not.toBe(next);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('the whole-tree proof revision scans the imports of a file once for its bytes, in this process and the next',()=>{
+ const root=mkdtempSync(join(tmpdir(),'worker-release-scan-'));
+ try{
+  for(const dir of [...workerSourceRoots,'packages/dashboard'])mkdirSync(join(root,dir),{recursive:true});
+  for(const f of ['package.json','bun.lock','tsconfig.json'])writeFileSync(join(root,f),'original');
+  writeFileSync(join(root,'scripts/worker.ts'),"import './helper';export const worker=1;");
+  writeFileSync(join(root,'scripts/helper.ts'),'export const helper=1;');
+  const scans=()=>{const before=sourceScans.count,value=workerSourceRevision(root);return{value,scanned:sourceScans.count-before};};
+  const first=scans();expect(first.scanned).toBe(2);
+  // The same bytes: the same revision and no scan.
+  expect(scans()).toEqual({value:first.value,scanned:0});
+  // A new process reads the record on the disk.
+  forgetSourceScans();expect(scans()).toEqual({value:first.value,scanned:0});
+  // Changed bytes of one file: a new revision and one scan.
+  writeFileSync(join(root,'scripts/helper.ts'),'export const helper=2;');
+  const changed=scans();expect(changed.scanned).toBe(1);expect(changed.value).not.toBe(first.value);
+  // A file that fails the check is never recorded: each call scans it and refuses.
+  writeFileSync(join(root,'scripts/worker.ts'),"import '../packages/dashboard/server';");
+  for(let i=0;i<2;i++){forgetSourceScans();const before=sourceScans.count;expect(()=>workerSourceRevision(root)).toThrow('runtime imports non-runtime');expect(sourceScans.count-before).toBe(1);}
+  // The first bytes of the file passed before, so they need no scan. A damaged record is no record.
+  writeFileSync(join(root,'scripts/worker.ts'),"import './helper';export const worker=1;");
+  const repaired=scans();expect(repaired.scanned).toBe(0);
+  writeFileSync(join(root,'.practice/cache/release/source-scan.json'),'{');forgetSourceScans();
+  expect(scans()).toEqual({value:repaired.value,scanned:2});
  }finally{rmSync(root,{recursive:true,force:true});}
 });
