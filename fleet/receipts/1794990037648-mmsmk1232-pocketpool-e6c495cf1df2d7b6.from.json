@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1794990037648-mmsmk1232-pocketpool-e6c495cf1df2d7b6",
  "account": "mmsmk1232",
  "partner": "PocketPool",
@@ -10,8 +10,22 @@
  "item": "Iron arrow",
  "requested": 73,
  "claim": "01fc840f-5d90-43c0-9d86-293bc4a3a8bc",
- "count": 0,
- "ok": false,
- "at": 1794991352439,
- "detail": "trade claimed"
+ "count": 73,
+ "ok": true,
+ "at": 1794991637644,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 73,
+  "after": 0
+ },
+ "bank": {
+  "count": 73,
+  "at": 1794991362946
+ },
+ "logout": {
+  "attemptId": "1794991352461-0000009492-0000000001",
+  "at": 1794991637240,
+  "sha256": "5e5fefd942d5166ee56dfa1a0527dc055059ebfadfcac71b403e03cecd8d6892"
+ },
+ "screen": true
 }
