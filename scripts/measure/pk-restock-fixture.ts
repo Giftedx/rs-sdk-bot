@@ -1,7 +1,7 @@
 // Rows of the market cache (.practice/market-all.json) for the items of the PK restock, as the tests of restockPlan read them:
 // the lowest ask and the units offered. The prayer potion, the glory and the super potions are dear, the superantipoison
 // and the antipoison have no seller, and the nature rune asks more than twice the hand limit that the plan once used.
-import type { RestockMarket } from './pk-roam';
+import type { RestockMarket } from '../pk-roam';
 
 export const RESTOCK_MARKET: RestockMarket = {
     563: { ask: 700, sell: 105_042 },

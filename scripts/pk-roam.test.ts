@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { bestDamageSpell, bestFireSpell, canAttack, canCastCharge, castableFreeze, clearScoutIntel, hasVarrockTeleport, multiPileThreat, outclasses, pickScoutTargetForSquad, publishScoutIntel, readScoutIntel, restockLimit, restockMarket, restockPlan, RESTOCK_MARGIN_PERCENT, sectorStart, CLAIM_TTL_MS, escapeStep, escapeZ, isMulti, preyScore, freezeSpell, intercept, itemCost, kitFrom, lootAt, makeValuer, pickTrack, planLoot, Radar, spellId, sweep, wildLevel, type Track } from './pk-roam';
-import { RESTOCK_LIMITS, RESTOCK_MARKET } from './pk-restock-fixture';
+import { RESTOCK_LIMITS, RESTOCK_MARKET } from './measure/pk-restock-fixture';
 
 test('roam pickup joins one native stack without eating combat food',async()=>{
  const inventory=Array.from({length:28},(_,slot)=>({id:slot===0?884:385,slot,count:1,optionsWithIndex:[{text:'Eat'}]}));const ground=[{id:884,name:'Iron arrow',count:5,x:1,z:1}];let eaten=0;

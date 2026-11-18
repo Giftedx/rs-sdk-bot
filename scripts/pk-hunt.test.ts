@@ -3,7 +3,7 @@ import { BOW_TRIP, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget
 import { assessWildernessThreat, planWildernessEscape, restockPlan, restockPlanFromStock, slashWebThrough, WILDERNESS_ESCAPES, wildernessCombatMargin, wildernessDepth } from './pk-roam';
 import { pvpCombatBracket } from './aio-pvp';
 import * as pk from './pk';
-import { RESTOCK_LIMITS, RESTOCK_MARKET } from './pk-restock-fixture';
+import { RESTOCK_LIMITS, RESTOCK_MARKET } from './measure/pk-restock-fixture';
 import * as walking from '../packages/core/src/walk';
 
 const me = { z: 3556, combatLevel: 126 };

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { GOD_LOADOUTS } from '../pk-kits';
 import { restockPlan } from '../pk-roam';
-import { RESTOCK_MARKET } from '../pk-restock-fixture';
+import { RESTOCK_MARKET } from '../measure/pk-restock-fixture';
 import {
     ANTIPOISON,
     assessPilotEscapePreflight,
