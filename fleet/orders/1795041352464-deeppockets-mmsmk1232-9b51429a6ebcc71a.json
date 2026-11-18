@@ -1,0 +1,23 @@
+{
+ "id": "1795041352464-deeppockets-mmsmk1232-9b51429a6ebcc71a",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Deeppockets",
+ "to": "mmsmk1232",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795041352464,
+ "end": 1795043752464,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
