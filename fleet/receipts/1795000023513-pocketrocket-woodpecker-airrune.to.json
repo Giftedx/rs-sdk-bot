@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795000023513-pocketrocket-woodpecker-airrune",
  "account": "Woodpecker",
  "partner": "Pocketrocket",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 36,
  "claim": "bde6d349-a237-4834-bbe8-3aec15d48c9b",
- "count": 0,
- "ok": false,
- "at": 1795000117796,
- "detail": "trade claimed"
+ "count": 36,
+ "ok": true,
+ "at": 1795000136493,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 36
+ },
+ "bank": {
+  "count": 36,
+  "at": 1795000135756
+ },
+ "logout": {
+  "attemptId": "1795000117805-0000023644-0000000001",
+  "at": 1795000136478,
+  "sha256": "b48ae3b19820d7358b4d8e91b56d77d6a7242dac424c58c52c1c0842191b91ae"
+ },
+ "screen": true
 }
