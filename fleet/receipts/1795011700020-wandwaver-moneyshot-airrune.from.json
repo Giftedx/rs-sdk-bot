@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795011700020-wandwaver-moneyshot-airrune",
+ "account": "Wandwaver",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 3,
+ "claim": "40e93816-b013-4e0e-8d49-0bd19b05ce78",
+ "count": 0,
+ "ok": false,
+ "at": 1795011772667,
+ "detail": "trade claimed"
+}
