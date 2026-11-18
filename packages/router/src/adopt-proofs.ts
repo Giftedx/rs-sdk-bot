@@ -16,7 +16,7 @@
 // A proof of another commit, of edited source or with changed files is refused and the index keeps its bytes.
 // This file is controller tooling, as the registrar is: no worker imports it.
 // The command never starts a worker and never touches a stop file. `--check` prints the run it would take.
-import {existsSync, mkdirSync, readdirSync, rmSync} from 'node:fs';
+import {existsSync, mkdirSync, readdirSync, readFileSync, rmSync} from 'node:fs';
 import {join, resolve} from 'node:path';
 
 export const PROOF_WORKFLOW = 'Progression practice', PROOF_JOB = 'qualification', PROOF_EVENTS = ['push', 'workflow_dispatch'] as const;
@@ -52,6 +52,17 @@ export function originProblems(view: RunView, sha: string, branch: string): stri
 export function pickRun(runs: readonly RunRow[], sha: string, branch: string): RunRow | null {
     return [...runs].filter(r => r.headSha === sha && r.headBranch === branch && (PROOF_EVENTS as readonly string[]).includes(r.event ?? '') && r.status === 'completed' && r.conclusion === 'success')
         .sort((a, b) => b.databaseId - a.databaseId)[0] ?? null;
+}
+// Why the delivery report of an artifact cannot be registered: an empty list when it can. The registrar returns
+// "nothing registered" for a delivery that is not ok, with no error, so the report is checked here first.
+export function reportProblems(report: unknown): string[] {
+    const r = (report && typeof report === 'object' ? report : {}) as {ok?: unknown; stage?: unknown; id?: unknown; failedCheck?: unknown};
+    const out: string[] = [];
+    if (r.ok !== true) out.push('its delivery is not ok');
+    if (r.stage !== 'delivered') out.push(`its stage is ${JSON.stringify(r.stage ?? null)}, not "delivered"`);
+    if (r.failedCheck !== undefined) out.push(`its check ${JSON.stringify(r.failedCheck)} failed`);
+    if (r.id !== 'ranged-train') out.push(`it is a delivery of ${JSON.stringify(r.id ?? null)}, not of "ranged-train"`);
+    return out;
 }
 // The delivery folder inside a downloaded artifact root: the one folder under deliveries that holds a report.
 export function deliveryFolder(practiceRoot: string): string | null {
@@ -91,9 +102,15 @@ if (import.meta.main) {
     if (!got.ok) fail(`the artifact progression-qualification-${sha} of run ${run} was not read: ${got.err.split('\n').at(-1)}`);
     const directory = deliveryFolder(practiceRoot);
     if (!directory) fail(`run ${run} holds no one complete Ranged delivery`);
+    let report: unknown = null;
+    try { report = JSON.parse(readFileSync(join(directory!, 'report.json'), 'utf8')); } catch { /* reported below */ }
+    const unfit = reportProblems(report);
+    if (unfit.length) fail(`refused, the index is unchanged: ${unfit.join('; ')}`, 1);
     const {registerProgressionArtifact} = await import('./progression-qualification-cli');
     try {
         const result = await registerProgressionArtifact(directory!, practiceRoot);
+        // The registrar names the index file for every delivery it took. No index: it took nothing.
+        if (!result.index) fail('refused, the index is unchanged: the registrar took no delivery', 1);
         console.log(`adopt-proofs: ${result.registered ? 'registered' : 'already in the index'}: ${JSON.stringify({methods: (result as any).methods, source: (result as any).source, index: result.index})}`);
     } catch (error) {
         fail(`refused, the index is unchanged: ${String((error as Error)?.message ?? error)}`, 1);

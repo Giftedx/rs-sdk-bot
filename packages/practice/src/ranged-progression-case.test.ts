@@ -68,6 +68,14 @@ test('the outer benchmark checks the captured start tile after reading an overri
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
 
+test('the proof takes a training method and no acquire method, as the worker splits them',async()=>{
+ const {isRangedAcquireMethod}=await import('../../../scripts/ranged-train');
+ const ids=new Set<string>();
+ for(const file of ['packages/planner/src/progression-ranged.ts','scripts/ranged-train.ts'])for(const m of readFileSync(join(import.meta.dir,'../../..',file),'utf8').matchAll(/'(ranged\/[a-z0-9-]+)'/g))ids.add(m[1]!);
+ expect(ids.size).toBeGreaterThan(10);
+ for(const id of ids)expect([id,rangedCase.rangedTrainingMethod(id)]).toEqual([id,!isRangedAcquireMethod(id)]);
+});
+
 test('saved entry verification refuses tampered frozen bytes or detached skill and stock bands',()=>{
  const changed=fresh();changed.bank.find(i=>i.id===882)!.count=147;changed.bank.find(i=>i.id===2142)!.count=40;
  const loaded=parseRangedEntry(bytes(changed)),result={method:'ranged/troopers',bow:841,arrow:882,xpGain:123160};

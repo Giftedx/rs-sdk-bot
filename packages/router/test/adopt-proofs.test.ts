@@ -2,7 +2,7 @@ import {expect, test} from 'bun:test';
 import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
-import {adoptArgs, deliveryFolder, originProblems, pickRun, type RunView} from '../src/adopt-proofs';
+import {adoptArgs, deliveryFolder, originProblems, pickRun, reportProblems, type RunView} from '../src/adopt-proofs';
 
 const a = 'a'.repeat(40), b = 'b'.repeat(40);
 
@@ -45,6 +45,14 @@ test('origin: only a successful run of the proof workflow, for this commit, on t
     // A proof made on a feature branch is taken only by a checkout on that branch, never by master.
     expect(originProblems({...good, headBranch: 'claude/feature'}, a, 'claude/feature')).toEqual([]);
     expect(originProblems({}, a, 'master').length).toBeGreaterThanOrEqual(5);
+});
+
+test('a delivery report that is not a complete Ranged delivery is refused before the registrar', () => {
+    const good = {ok: true, stage: 'delivered', id: 'ranged-train', checks: []};
+    expect(reportProblems(good)).toEqual([]);
+    expect(reportProblems({...good, ok: false, stage: 'failed', failedCheck: 'adaptive-ranged-native'})).toEqual(['its delivery is not ok', 'its stage is "failed", not "delivered"', 'its check "adaptive-ranged-native" failed']);
+    expect(reportProblems({...good, id: 'magic-order'})).toEqual(['it is a delivery of "magic-order", not of "ranged-train"']);
+    for (const bad of [null, undefined, 'text', 7, {}, []]) expect(reportProblems(bad).length).toBeGreaterThanOrEqual(3);
 });
 
 test('pickRun takes the newest successful finished run of the commit on the branch only', () => {

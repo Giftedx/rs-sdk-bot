@@ -38,6 +38,7 @@
     {
       "id": "ranged-train-practice",
       "phase": "practice",
+      "group": "practice",
       "command": [
         "bun",
         "packages/practice/src/ranged-train-proof.ts"
@@ -47,6 +48,7 @@
     {
       "id": "adaptive-ranged-native",
       "phase": "practice",
+      "group": "practice",
       "command": ["bun", "run", "bench", "^extra:progression-ranged-adaptive85$", "--profile", "--budget", "10"],
       "timeoutMs": 660000
     },
