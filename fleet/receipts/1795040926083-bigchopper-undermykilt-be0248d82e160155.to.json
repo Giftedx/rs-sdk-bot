@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795040926083-bigchopper-undermykilt-be0248d82e160155",
+ "account": "UnderMyKilt",
+ "partner": "Bigchopper",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "721c814b-7399-4086-9bf0-e606fa98d72d",
+ "count": 0,
+ "ok": false,
+ "at": 1795041000668,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Rune platelegs",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}

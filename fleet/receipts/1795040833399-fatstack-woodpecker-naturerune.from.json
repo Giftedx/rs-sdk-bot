@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795040833399-fatstack-woodpecker-naturerune",
+ "account": "Fatstack",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 50,
+ "claim": "618d1c42-8069-4d70-86b1-a53f98b447b6",
+ "count": 0,
+ "ok": false,
+ "at": 1795040932920,
+ "detail": "trade claimed"
+}
