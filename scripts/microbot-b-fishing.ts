@@ -118,7 +118,7 @@ async function knifeFishing(d:FishDriver,o:FishBatchOptions,state:()=>BotWorldSt
  const freeRequired=o.method==='bigNet'?9:1,bait0=profile.bait?count(initial,profile.bait):0;
  let held=fishCount(initial,o.method),seenXp=xp(initial),caught=0,dropped=0,cycles=0,stands=0,progress=start,searches=0,missingSince=start;
  // Cycles and catches by the state at the start of the cycle: a modal open, the spot moved during it, or neither.
- const cycleStats:Record<string,{cycles:number;catches:number}>={};
+ const cycleStats:Record<string,{cycles:number;catches:number}>={};let lastLevel=initial.skills.find(k=>k.name==='Fishing')?.baseLevel??0;
  const observe=(drops:number)=>{
   const s=state(),now=fishCount(s,o.method),x=xp(s);
   if(now<held)dropped+=Math.min(drops,held-now);
@@ -145,7 +145,7 @@ async function knifeFishing(d:FishDriver,o:FishBatchOptions,state:()=>BotWorldSt
    // The drop goes first: it ends the pending action (OpHeldHandler.ts:54-55). The close after the click clears the
    // queued cut at the queue pass of this tick (Player.ts:998-1000) when the server refuses the click (a spot about to
    // move is delayed, OpNpcHandler.ts:27), and leaves the interaction alone.
-   const x0=xp(s),kind=s.modalOpen?'modal':'free';
+   const lv=s.skills.find(k=>k.name==='Fishing')?.baseLevel??0,x0=xp(s),kind=`${lv>lastLevel?'lvl-':''}${s.modalOpen?'modal-':''}${s.dialog?.isOpen?'dialog-':''}${drops.length?'drop':'nodrop'}`;lastLevel=lv;
    await send([...drops,...cut,click,{type:'closeModal'}]);await d.step();observe(n);await d.step();observe(0);await d.step();const e=observe(0);
    const moved=!e.nearbyNpcs.some(m=>m.index===spot.index&&m.x===spot.x&&m.z===spot.z),b=cycleStats[moved?'moved':kind]??={cycles:0,catches:0};b.cycles++;if(xp(e)>x0)b.catches++;
   }else{
