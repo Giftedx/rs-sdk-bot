@@ -1,0 +1,23 @@
+{
+ "id": "1795058059287-knightrider-trousersnake-bcd68fe215d35b75",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "TrouserSnake",
+ "item": "Water rune",
+ "count": 15,
+ "start": 1795058059287,
+ "end": 1795060459287,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
