@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795099458943-abracadickra-moneyshot",
+ "account": "Abracadickra",
+ "partner": "Moneyshot",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 65379,
+ "claim": "f642a61a-683e-4246-b9a1-629ed5e4e0cb",
+ "count": 0,
+ "ok": false,
+ "at": 1795099510226,
+ "detail": "trade claimed"
+}
