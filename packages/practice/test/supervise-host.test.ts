@@ -1,6 +1,16 @@
 import { test, expect } from 'bun:test';
-import { classify, lastResults, superviseHost } from '../src/supervise-host';
-import { CLAIM_AUTHORITY_PAUSE_MS, HELD_CLAIM_TRIES } from '../src/supervise';
+import { classify, keptHostLine, lastResults, superviseHost } from '../src/supervise-host';
+import { CLAIM_AUTHORITY_PAUSE_MS, HELD_CLAIM_TRIES, lineKeeper } from '../src/supervise';
+
+test('the host keeper holds the last RESULT and LEDGER line of each account and reads the same as the full output', () => {
+    const full = ['[A] noise', '[A] LEDGER ticks=10', '[B] RESULT fail x', '[A] RESULT ok one', '[B] LEDGER ticks=400 idle=2', '[A] LEDGER ticks=900', '[A] RESULT ok two', 'bare line'].join('\n');
+    const keep = lineKeeper(keptHostLine);
+    keep.push(full.slice(0, 40));
+    keep.push(full.slice(40));
+    const kept = keep.text();
+    expect(Object.fromEntries(lastResults(kept))).toEqual({ A: 'RESULT ok two', B: 'RESULT fail x' });
+    expect(kept.split('\n').filter(l => l.includes('LEDGER')).sort()).toEqual(['[A] LEDGER ticks=900', '[B] LEDGER ticks=400 idle=2']);
+});
 
 test('host release refusal pauses each account without retrying',async()=>{
  const r=await superviseHost(['a','b'],{run:async()=>({stdout:['a','b'].map(a=>`[${a}] RESULT fail Error: no worker progress: release source changed; live starts paused`).join('\n'),exitCode:1}),

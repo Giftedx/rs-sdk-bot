@@ -8,7 +8,7 @@
 // to host.ts as given, except that a restart passes only the env of the accounts it runs.
 // Prints `SUPERVISE-HOST account <name> <reason> after <n> runs` once per account, then `SUPERVISE-HOST end`.
 
-import { CLAIM_AUTHORITY_PAUSE_MS, isClaimAuthorityFault, failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal, isNoProgressFailure, isPrerequisiteFailure, isTransportStall, madeProgress, repeatableFailure } from './supervise';
+import { CLAIM_AUTHORITY_PAUSE_MS, isClaimAuthorityFault, failureShape, HELD_CLAIM_TRIES, isEntryRefusal, isHeldClaimRefusal, isNoProgressFailure, isPrerequisiteFailure, isTransportStall, keepOutput, madeProgress, repeatableFailure } from './supervise';
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
 import {fleetLeaseAllowsWorker} from '../../core/src/fleet-lease';
 
@@ -27,6 +27,13 @@ export function classify(result: string | undefined, stopFile: boolean): Account
     if (isEntryRefusal(r)) return 'refused';
     if (!isTransportStall(r) && (isNoProgressFailure(r) || isPrerequisiteFailure(r))) return 'blocked';
     return null;
+}
+
+// The lines of host output that the supervisor reads: the RESULT and the LEDGER line of each account (the key is the
+// kind and the account). Everything else is dropped as it arrives.
+export function keptHostLine(line: string): string | null {
+    const x = line.match(/^\[([^\]]+)\] (RESULT |LEDGER ticks=\d)/);
+    return x ? `${x[2]![0]}${x[1]}` : null;
 }
 
 // The last RESULT line of each account in host output (`[name] RESULT ...`).
@@ -130,10 +137,8 @@ if (import.meta.main) {
             // A standing owner job has no coordinator acceptance, so it runs the current source without the release pin.
             if(process.env.DEMO_OK==='1'&&process.env.STANDING!=='1')try{assertWorkerRelease();}catch(e){return {stdout:active.map(a=>`[${a}] RESULT fail ${String(e)}`).join('\n'),exitCode:1};}
             const p = Bun.spawn(['bun', 'packages/core/src/host.ts', script, ...active, '--stagger-ms', '2000', ...hostOptions(parsed, active)], { stdout: 'pipe', stderr: 'inherit', env: process.env ,windowsHide:true});
-            let text = '';
-            const reader = p.stdout.getReader();
-            for (;;) { const { done, value } = await reader.read(); if (done) break; const c = new TextDecoder().decode(value); text += c; process.stdout.write(c); }
-            return { stdout: text, exitCode: await p.exited };
+            const stdout = await keepOutput(p.stdout, keptHostLine);
+            return { stdout, exitCode: await p.exited };
         },
         stopped: a => !fleetLeaseAllowsWorker(process.cwd()) || existsSync(`.practice/stop-${a}`),
         pause: ms => Bun.sleep(ms),
