@@ -208,11 +208,11 @@ test('plannedPickups takes the wanted stacks within the radius, nearest first', 
 });
 
 // The second visit of a gang bank trip: eat up with the food in the pack, then refill the pack from the bank (sharks, then lobsters).
-async function runBankTrip(o: { pack: { id: number; count: number; name: string }[]; bank: { id: number; count: number }[]; hp: number; prayer?: { points: number; base: number }; altar?: boolean; prayerFails?: boolean }) {
+async function runBankTrip(o: { pack: { id: number; count: number; name: string }[]; bank: { id: number; count: number }[]; hp: number; prayer?: { points: number; base: number }; altar?: boolean; prayerFails?: boolean; route?: boolean }) {
     // One slot for each piece of food, as in the game.
     const inventory: any[] = o.pack.flatMap(p => Array.from({ length: p.count }, () => ({ id: p.id, name: p.name, count: 1, optionsWithIndex: /Shark|Lobster/.test(p.name) ? [{ text: 'Eat', opIndex: 1 }] : [] })))
         .map((p, i) => ({ ...p, slot: i }));
-    const prayedAt: string[] = [], bank = o.bank.map(r => ({ ...r })), withdrawals: { id: number; count: number }[] = [], eaten: number[] = [];
+    const prayedAt: string[] = [], logs: string[] = [], walked: { x: number; z: number }[][] = [], bank = o.bank.map(r => ({ ...r })), withdrawals: { id: number; count: number }[] = [], eaten: number[] = [];
     const player: any = { worldX: 3094, worldZ: 3492, hp: o.hp, maxHp: 99 };
     let tick = 0;
     const s: any = {
@@ -233,14 +233,14 @@ async function runBankTrip(o: { pack: { id: number; count: number; name: string 
     };
     const mocks = [
         spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
-        spyOn(walking, 'walkPath').mockImplementation(async () => ({ ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 })),
+        spyOn(walking, 'walkPath').mockImplementation(async (_d: any, points: any[]) => { walked.push(points.map(p => ({ x: p.x, z: p.z }))); return ({ ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 }); }),
         spyOn(pk, 'nextTick').mockImplementation(async () => { tick++; return true; }),
         spyOn(hunt, 'restock').mockResolvedValue(null),
         spyOn(altars, 'prayAtAltar').mockImplementation(async (_s: any, altar: any) => { prayedAt.push(altar.label); return { ok: !o.prayerFails, detail: 'mock failure' }; }),
     ];
     try {
-        const fault = await bankTrip({ x: 3094, z: 3492 }, { x: 3070, z: 3640 }, { food: 18, items: [] }, {}, () => false, undefined, { altar: o.altar })(s, !o.altar);
-        return { fault, withdrawals, eaten, hp: player.hp, inventory, prayedAt };
+        const fault = await bankTrip({ x: 3094, z: 3492 }, { x: 3070, z: 3640 }, { food: 18, items: [] }, {}, () => false, undefined, { altar: o.altar, log: (l: string) => logs.push(l), ...(o.route ? { route: (from: { x: number; z: number }) => [{ x: 3071, z: 3519 }, { x: 3071, z: 3600 }, { x: 3070, z: 3640 }] } : {}) })(s, !o.altar);
+        return { fault, withdrawals, eaten, hp: player.hp, inventory, prayedAt, logs, walked };
     } finally { for (const mock of mocks) mock.mockRestore(); }
 }
 
@@ -275,6 +275,18 @@ test('a later trip prays at the nearest safe altar when Prayer is under the floo
     expect((await runBankTrip({ ...base, prayer: { points: 40, base: 99 }, altar: true })).prayedAt).toEqual(['Varrock east church']);
     expect((await runBankTrip({ ...base, prayer: { points: 80, base: 99 }, altar: true })).prayedAt).toEqual([]);
     expect((await runBankTrip({ ...base, prayer: { points: 40, base: 99 } })).prayedAt).toEqual([]);
+    // A failed prayer does not end the trip: the account walks back and fights on, and the trip logs it.
     const failed = await runBankTrip({ ...base, prayer: { points: 0, base: 99 }, altar: true, prayerFails: true });
-    expect(failed.fault).toBe('no prayer restore: mock failure');
+    expect(failed.fault).toBeNull();
+    expect(failed.logs).toEqual(['no prayer restore, fights on: mock failure']);
+    expect(failed.walked.length).toBe(2);
+});
+
+test('the walk back goes through the route of the squad: the edge, the entry and the post', async () => {
+    const base = { pack: [], bank: [], hp: 99 };
+    const routed = await runBankTrip({ ...base, prayer: { points: 40, base: 99 }, altar: true, route: true });
+    // The walk to the bank, then the walk back by the three points.
+    expect(routed.walked).toEqual([[{ x: 3094, z: 3492 }], [{ x: 3071, z: 3519 }, { x: 3071, z: 3600 }, { x: 3070, z: 3640 }]]);
+    const plain = await runBankTrip({ ...base, prayer: { points: 99, base: 99 }, altar: true });
+    expect(plain.walked).toEqual([[{ x: 3094, z: 3492 }], [{ x: 3070, z: 3640 }]]);
 });

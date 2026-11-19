@@ -157,8 +157,9 @@ What the swarm does with this job, from `scripts/swarm.ts` and `packages/practic
   has been in the Wilderness (`outTripDue`), not on the first steps of the march, which are outside the Wilderness
   too: a trip there ran a restock before any fight. The bench shows it as `trips=4` for four members.
   A later trip also walks to the nearest safe altar (never one in the Wilderness) when Prayer is under 70 percent of
-  the base level, then to the post. `SQUAD_TRIP_ALTAR=0` turns it off. From Edgeville the altar is the Varrock east
-  church, about 159 tiles away.
+  the base level (`SQUAD_TRIP_PRAYER_FLOOR`). `SQUAD_TRIP_ALTAR=0` turns it off. From Edgeville the altar is the Varrock
+  east church, about 159 tiles away. A failed prayer does not end the trip: the member fights on without Prayer and the
+  log says so. Every walk back goes by the march's legs (`marchLegs`: the edge, the entry of the post's area, the post).
 - **Stall.** The stall guard (`packages/core/src/bot.ts`) ends a session with no xp, item, dialog or journey for
   `STALL_TICKS`. `scripts/pk-squad-stall.ts` sets it for the squad to the longest return of a gang account in the
   clone record (`group.returnToPost`) times 1.25 (`STALL_MARGIN`: the spread of the two recorded returns, 1431 over
