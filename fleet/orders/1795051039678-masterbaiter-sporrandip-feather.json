@@ -1,0 +1,22 @@
+{
+ "id": "1795051039678-masterbaiter-sporrandip-feather",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "SporranDip",
+ "item": "Feather",
+ "count": 149,
+ "start": 1795051039678,
+ "end": 1795053439678,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
