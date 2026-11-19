@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795094452727-yewfirst-thefullmonty-earthrune",
+ "account": "YewFirst",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 30,
+ "claim": "cbe69b9a-8677-49dd-b70e-6ae5484a4b30",
+ "count": 30,
+ "ok": true,
+ "at": 1795094575843,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 30,
+  "after": 0
+ },
+ "bank": {
+  "count": 30,
+  "at": 1795094563977
+ },
+ "logout": {
+  "attemptId": "1795094553372-0000020704-0000000001",
+  "at": 1795094575835,
+  "sha256": "e6a9fbaf99a7fe36b58a6d3b934a55ef1571faec87ac17c655dcc1549683d296"
+ },
+ "screen": true
+}
