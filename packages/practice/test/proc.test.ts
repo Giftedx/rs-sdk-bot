@@ -1,5 +1,5 @@
-import { test, expect } from 'bun:test';
-import { commandLine, killTree, processMatches, processMatchesRecent, processStartTimes, safeKill, sleeperCommand } from '../src/proc';
+import { test, expect, spyOn } from 'bun:test';
+import { commandLine, killTree, processMatches, processMatchesRecent, processStartTimes, safeKill, sleeperCommand, POWERSHELL_TIMEOUT_MS } from '../src/proc';
 
 function alive(pid: number): boolean {
     try { process.kill(pid, 0); return true; } catch { return false; }
@@ -91,3 +91,27 @@ test('processStartTimes reads the start of a live PID and lists no dead PID', ()
     } finally { child.kill(); }
     expect(processStartTimes([])).toEqual(new Map());
 }, 30_000);
+
+test('a PowerShell read that times out gives "not known" and carries the time limit', () => {
+    const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+    const calls: any[] = [];
+    // A timed-out spawn ends with a null exit code and whatever output it had.
+    const spawn = spyOn(Bun, 'spawnSync').mockImplementation(((command: string[], options: any) => {
+        calls.push({ command, options });
+        return { exitCode: null, stdout: Buffer.from(''), stderr: Buffer.from(''), success: false } as any;
+    }) as any);
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    try {
+        expect(processStartTimes([4242])).toBeNull();
+        expect(commandLine(4242)).toBeNull();
+        expect(calls).toHaveLength(2);
+        for (const call of calls) {
+            expect(call.command[0]).toBe('powershell');
+            expect(call.options.timeout).toBe(POWERSHELL_TIMEOUT_MS);
+        }
+    } finally {
+        Object.defineProperty(process, 'platform', platform);
+        spawn.mockRestore();
+    }
+});
+

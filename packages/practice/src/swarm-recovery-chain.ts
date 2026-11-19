@@ -45,6 +45,12 @@ export function materializeSwarmRuntime(sourceRoot:string,root:string,content:Ru
  return links;
 }
 
+// The private bare Git authority lives under the short private root, not under the delivery case folder: a push
+// writes objects/tmp_objdir-incoming-XXXXXX/NN/<38 hex> under the remote, which passes the Windows path limit of 260
+// characters below a deep case folder.
+const PRIVATE_AUTHORITY='.authority.git';
+export function privateAuthorityPath(root:string){return join(root,PRIVATE_AUTHORITY);}
+
 // An actual Swarm CLI with byte-identical source, loopback profiles and a private bare Git authority.
 // Recovery itself stays in the outer guarded dispatcher; no live controller root/server is redirected.
 export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;directory:string;account:string;server:string;profile:string;save:string;observerDelivery:string}){
@@ -71,7 +77,8 @@ export async function proveSwarmRecoveryContinuation(input:{sourceRoot:string;di
   if(existsSync(join(root,'.git')))unlinkSync(join(root,'.git'));
   git(['init','-q','-b','master']);git(['config','user.name','Native controller proof']);git(['config','user.email','native@example.invalid']);
   git(['commit','--allow-empty','-qm','Private native controller authority']);
-  const remote=join(directory,'private-authority.git');git(['init','--bare','-q',remote]);git(['remote','add','origin',remote]);
+  const remote=privateAuthorityPath(root);git(['init','--bare','-q',remote]);git(['-C',remote,'config','core.longpaths','true']);git(['remote','add','origin',remote]);
+  mkdirSync(join(root,'.git/info'),{recursive:true});writeFileSync(join(root,'.git/info/exclude'),'/'+PRIVATE_AUTHORITY+'/\n',{flag:'a'});writeFileSync(join(directory,'private-authority.txt'),remote+'\n');
   const reserved=Array.from({length:12},(_,i)=>'fxreserve'+i),owned=[account,...reserved];
   put('fleet/owners.json',{accounts:Object.fromEntries(owned.map(n=>[n,{side:'cloud',server}]))});
   const claim=acquireFleetTradeClaim(root,{account,server,side:'cloud',orderId:'native-observer-precondition',role:'from'});claim.release();

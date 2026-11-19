@@ -15,7 +15,7 @@ import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,ownerPlanPath,jo
 import {validateBoundedRecovery,assertBoundedRecoveryQueue} from '../../core/src/bounded-recovery';
 import {boundedOwnerBinding} from '../../core/src/bounded-owners';
 import {assignedWorker,type ModelWorker} from './model-worker';
-import {processMatches,safeKill} from '../../practice/src/proc';
+import {commandLine,processMatches,processStartTimes,safeKill} from '../../practice/src/proc';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
 import {SWARM_STOP,writeSwarmStop,swarmWroteStop} from '../../../scripts/swarm';
 import {prepareWorkspace,sharedWorkspacePlan} from './build-workspace';
@@ -125,7 +125,45 @@ async function expandUsefulFleet(state:CoordinatorState,config:any,runHeld:(task
  await withPlanWrite(()=>{const current=readPlan();if(current.maxBots!==plan.maxBots)return;const own=readCoordinatorJobs(projectRoot);own.expansion={maxBots:target,over:json(ownerPlanPath(projectRoot)).maxBots};own.coordination.lastExpansionAt=now;writeCoordinatorJobs(projectRoot,own);config.maxLive=target;config.lastExpansionAt=now;event('fleet-capacity-expanded',{from:plan.maxBots,to:target,freeGB:freemem()/2**30,cpu:usage,tickMs:Math.max(...latencies),usefulResults:useful});});
 }
 const existsPid=(pid:number)=>{try{process.kill(pid,0);return true;}catch{return false;}};
-export function reconcile(state:CoordinatorState,alive:(pid:number,marker:string)=>boolean=processMatches,directory=coordinationDir,pidExists=existsPid,startupGraceMs=15000){
+// Windows reuses a pid, so a running pid alone does not prove that the saved process is the one that runs. The planner
+// starts as `coordinator-cli.ts --planner <runId>`, so its command line holds the run id. A command line that cannot be read
+// proves nothing, and then a running pid counts.
+export const plannerHolds=(pid:number,runId:string,read:(pid:number)=>string|null=commandLine,exists:(pid:number)=>boolean=existsPid):boolean=>{
+ const line=read(pid);
+ return line===null?exists(pid):line.includes(runId);
+};
+// A coordinator that started without a token has a random nonce that its command line does not hold. Its saved start
+// time decides then: the coordinator process starts before it writes the claim, and a process that reused the pid
+// starts after it.
+export const OWNER_START_SLACK_MS=5000;
+export const ownerHolds=(owner:{pid:number;nonce:string;at?:number},read:(pid:number)=>string|null=commandLine,exists:(pid:number)=>boolean=existsPid,
+ starts:(pids:number[])=>Map<number,number>|null=processStartTimes):boolean=>{
+ const line=read(owner.pid);
+ if(line?.includes(owner.nonce))return true;
+ if(!exists(owner.pid))return false;
+ if(line===null||!Number.isFinite(owner.at))return true;
+ const table=starts([owner.pid]);
+ if(table===null)return true;
+ const started=table.get(owner.pid);
+ return started===undefined?false:started<=owner.at!+OWNER_START_SLACK_MS;
+};
+// A worker writes its owner file with its own pid and the time `at` right after it starts, so a process that started after
+// `at` is not that worker. The check reads the process table once for the pid, so a worker that passed it is not checked
+// again for WORKER_CHECK_MS. An unreadable table proves nothing, and then a running pid counts.
+export const WORKER_CHECK_MS=60000,WORKER_START_SLACK_MS=5000;
+const workerChecks=new Map<string,number>();
+export const workerHolds=(pid:number,runId:string,at:number,starts:(pids:number[])=>Map<number,number>|null=processStartTimes,
+ checks:Map<string,number>=workerChecks,now:number=Date.now()):boolean=>{
+ const key=runId+'|'+pid,seen=checks.get(key);
+ if(seen!==undefined&&now-seen<WORKER_CHECK_MS)return true;
+ const table=starts([pid]);
+ if(table===null)return true;
+ const started=table.get(pid);
+ if(started===undefined||started>at+WORKER_START_SLACK_MS){checks.delete(key);return false;}
+ checks.set(key,now);
+ return true;
+};
+export function reconcile(state:CoordinatorState,alive:(pid:number,marker:string)=>boolean=processMatches,directory=coordinationDir,pidExists=existsPid,startupGraceMs=15000,holds:(pid:number,runId:string,at:number)=>boolean=workerHolds){
  for(const record of state.tasks.filter(r=>r.status==='failed'&&r.receipt?.error?.startsWith('worker ended without a receipt'))){
   const file=join(runDirectory(record.runId!,directory),'receipt.json');
   if(existsSync(file)){
@@ -154,12 +192,13 @@ export function reconcile(state:CoordinatorState,alive:(pid:number,marker:string
    else finishTask(state,{taskId:record.spec.id,runId:record.runId!,ok:false,at:Date.now(),output:null,error:'mismatched receipt; original bytes retained'});
    continue;
   }
-  const pid=existsSync(owner)?json(owner).pid:record.pid;
+  const claim=existsSync(owner)?json(owner):null,pid=claim?claim.pid:record.pid;
   // CIM can briefly return no command line under load. That is not evidence
   // that a process ended. Keep its ownership until OS liveness also fails.
   // Check OS liveness first: command-line lookup starts PowerShell on Windows.
-  // The existing rule retains a live PID even when CIM cannot identify it.
-  if(pid&&(pidExists(pid)||alive(pid,record.runId!)))continue;
+  // The existing rule retains a live PID even when CIM cannot identify it. A PID that started after the worker wrote its
+  // owner file belongs to another program, which reused the PID.
+  if(pid&&(pidExists(pid)?!Number.isFinite(claim?.at)||holds(pid,record.runId!,claim.at)||alive(pid,record.runId!):alive(pid,record.runId!)))continue;
   if(Date.now()-(record.startedAt??0)>=startupGraceMs)finishTask(state,{taskId:record.spec.id,runId:record.runId!,ok:false,at:Date.now(),output:null,error:'worker ended without a receipt; inspect preserved run before repair'});
  }
 }
@@ -388,13 +427,13 @@ export function intakeRequests(state:CoordinatorState,base=projectRoot,{save=sav
   acknowledgeSubmission(state,base,publish,move);
  }
 }
-export function settlePlanner(state:CoordinatorState,base=projectRoot,{save=saveState,publish=publishCapabilityChanges}={}){
+export function settlePlanner(state:CoordinatorState,base=projectRoot,{save=saveState,publish=publishCapabilityChanges,holds=plannerHolds}={}){
  acknowledgeSubmission(state,base,publish);
  if(!state.planner)return;
  const directory=join(base,'.practice/coordinator');
  const {runId,pid}=state.planner,dir=runDirectory(runId,directory),proposal=join(dir,'proposal.json'),error=join(dir,'planner-error.json');
  const hasProposal=existsSync(proposal),hasError=existsSync(error);
- if(!hasProposal&&!hasError&&(existsPid(pid!)||processMatches(pid!,runId)))return;
+ if(!hasProposal&&!hasError&&pid&&holds(pid,runId))return;
  let bytes:Buffer,prepared:ReturnType<typeof prepareProposal>;
  try{
   if(!hasProposal)throw Error(hasError?json(error).error:'planner ended without proposal');
@@ -563,9 +602,9 @@ export function waitForWork(timeoutMs=1000,directory=coordinationDir){
   try{watcher=watch(directory,{recursive:true},(_,file)=>{if(/(?:receipt\.json|proposal\.json|planner-error\.json|\.request\.json|plan-request|restart)$/.test(String(file)))done();});}catch{/* bounded fallback also observes stop files */}
  });
 }
-type CoordinatorOwner={pid:number;nonce:string};
+type CoordinatorOwner={pid:number;nonce:string;at?:number};
 export async function claimCoordinatorState(nonce:string,directory=coordinationDir,
- held=(owner:CoordinatorOwner)=>owner.pid!==process.pid&&(processMatches(owner.pid,owner.nonce)||existsPid(owner.pid))){
+ held=(owner:CoordinatorOwner)=>owner.pid!==process.pid&&ownerHolds(owner)){
  const lease=join(directory,'owner.json');
  const activeOwner=():CoordinatorOwner|null=>{
   if(!existsSync(lease))return null;
