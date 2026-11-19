@@ -540,11 +540,24 @@ What the replay shows:
 
 ### The fidelity case
 
-`extra:clone-run1-fidelity-x1` passes only when the run has 1 kill or more, 1 to 4 members lose Hitpoints, and a run with 2
-kills or more loses 28 to 112 Hitpoints a kill (half to twice the live 56). The band stops a bench that goes soft by
-half again, or hard by twice. It is wide because one condition has a spread of 50 to 385 Hitpoints a kill from seed to
-seed. A band of 15% is not a test that one seed can pass: the live value is one run of 5 kills, and the replay of the
-same condition on two runs of the same seeds also differs.
+`extra:clone-run1-fidelity-x1` passes only when the run has 1 kill or more, 2 to 4 members lose Hitpoints, and a run with 2
+kills or more loses 33 to 56 Hitpoints a kill. The band is the lowest and the highest of the two live squad runs, run 1
+and run 3, with no margin added; its source numbers are in `run-1.json` ("fidelity", `bun scripts/measure/pk-gang-run1.ts live <log>`):
+
+| Live run | Kills | Hitpoints lost | Hitpoints a kill | Fights | Kills a fight | Ticks to a kill | Members hit |
+|---|---|---|---|---|---|---|---|
+| run 1 (`.practice/gang-hunt/squad-run-1.log`) | 5 | 279 | 56 | 20 | 0.25 | 34 | 2 |
+| run 3 (`.practice/gang-hunt/squad-run-3.log`) | 19 | 630 | 33 | 88 | 0.216 | 44 | 4 |
+| both | 24 | 909 | 38 | 108 | 0.222 | - | - |
+
+Hosted run 44450201424 on head 960dc4408f, seeds 1 to 30 of the case: 86 kills (2.9 a seed), 6043 Hitpoints lost, no death of
+ours. Pooled, the replay loses 70.3 Hitpoints a kill (live 33 and 56, both runs 38), takes 0.229 kills a fight (live 0.222) and
+64 ticks to a kill (live 34 and 44), and 2.4 members lose Hitpoints (live 2 and 4). **11 of the 30 seeds are inside the band**:
+18 are above 56 and 1 is below 33 (28). A seed is a run of 2 or 3 kills, and its Hitpoints a kill go from 28 to 184, so a band
+of the live range cannot be a test that a seed passes; the pooled numbers above (the table of
+`bun scripts/measure/pk-gang-run1.ts table <live log> <case logs>`) are the comparison. The case is in no smoke or CI selection
+(`SMOKE_KEYS`, `ci.yml`): it runs by name on a hosted run, so no gate is flaky. The clones are harder than the live gang
+per kill (+25% over the highest live run, +85% over both) and their kills take longer.
 
 ### The climb on the live state
 
@@ -763,7 +776,7 @@ hold ranged (a bench option; a gang account then prays melee against the tank an
 
 Cases: the squad of live run 1 (prey members 0 and 1) with the clones. The controls are `extra:clone-run1-x1` and
 `extra:clone-run1-prayer-x1`; `-faced-` adds `facedPrayer`; `-tank-` adds `facedPrayer` and `SQUAD_TANK=0,1`. Hosted runs
-44440391064 (prayer points) and 44440397115 (no prayer points), seeds 1 to 10. Sums over the 10 seeds; every case passed all 10
+44440391064 (prayer points) and 44440397115 (no prayer points), seeds 1 to 10, on head 2cb2678eec (base: master at 699b3f4a34; the later master commits are not in those runs). Sums over the 10 seeds; every case passed all 10
 seeds with no death of ours:
 
 | Case | Kills | Kill receipts | Clones dead | Hitpoints taken | Trips |
@@ -799,19 +812,6 @@ deviation (sd) of one seed; the paired difference tank minus faced by seed (mean
   launcher (kills at least equal and Hitpoints taken lower) is not met: the tank lock stays a bench option.
 - **With no prayer points the tank lock takes 36% more Hitpoints** (8977 against 6594; paired +79, standard error 24) for 3 more
   kills (+0.10, standard error 0.23). The Hitpoints gap is the one difference in this table that is above 3 standard errors.
-
-- **The fidelity band with `facedPrayer`.** The case `extra:clone-run1-fidelity-x1` (Hitpoints a kill 28 to 112, at least one kill) is
-  inside its band in 9 of 10 seeds with the old rule (one at 127), and with `facedPrayer` in 21 of 30 seeds (the `-faced-` cases, seeds 1 to
-  30: 5 seeds with no kill, 4 above 112) and 2 of 6 in the case itself (hosted run 44444707120, seeds 1 to 6: 2 with no kill, 2 at
-  141 and 124). The pass rate fell from 90% to 70% with the same band, over 10 seeds against 30, and a seed with no kill is the main
-  cause; the band is not changed.
-
-- **No case is separated from its control.** The kills differ by 1 or 2 over 10 seeds and the Hitpoints taken by seed range
-  from 114 to 855. The tank lock takes 21% fewer Hitpoints with prayer points (3612 against 4561) and 23% more with none (3067
-  against 2491), so the two results disagree and neither is a win.
-- **The tank lock is not a gain on these cells.** With prayer points it gives 7 kills against 6 and with none 14 against 12, both
-  inside the spread of 10 seeds.
-- Not measured: how far the members stand from each other. The squad's placement is the march of the cases.
 
 ## Keep it true
 
