@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { validateOwnedKit } from './microbot-owned-loadout';
-import { accountOf, loadoutOf, receiptOf, meetNear, orderCommands, pickKit, report, RULES, shopSource, stagingPlan, type Account, type Gear, type Item, type Shop, type Worn } from './squad-ready';
+import { accountOf, loadoutOf, receiptOf, meetNear, orderCommands, pickKit, prayerFloor, report, RULES, shopSource, stagingPlan, type Account, type Gear, type Item, type Shop, type Worn } from './squad-ready';
 
 const root = join(import.meta.dir, '..');
 const gear = new Map((JSON.parse(readFileSync(join(root, 'knowledge', 'gear.json'), 'utf8')) as Gear[]).map(g => [g.id, g]));
@@ -86,10 +86,46 @@ describe('pickKit', () => {
     });
     test('no antipoison, few sharks, an old bank read and West Ardougne each block', () => {
         expect(pickKit(full('A', { pack: without(KIT_PACK, 175) }), gear, rule, NOW).reasons).toEqual(['no antipoison']);
-        expect(pickKit(full('A', { bank: [it(385, 12)] }), gear, rule, NOW).reasons).toEqual(['no food (shark or lobster) (8 short)']);
-        expect(pickKit(full('A', { bank: [it(385, 5), it(379, 6)] }), gear, rule, NOW).reasons).toEqual(['no food (shark or lobster) (9 short)']);
+        // Under the food floor (half of the 20 slots) the missing food blocks; at it, the member starts with what it holds.
+        expect(pickKit(full('A', { bank: [it(385, 9)] }), gear, rule, NOW).reasons).toEqual(['no food (shark or lobster) (11 short)']);
+        expect(pickKit(full('A', { bank: [it(385, 5), it(379, 4)] }), gear, rule, NOW).reasons).toEqual(['no food (shark or lobster) (11 short)']);
+        const short = pickKit(full('A', { bank: [it(385, 12)] }), gear, rule, NOW);
+        expect([short.ready, short.reasons, short.needs.map(n => [n.what, n.count, n.blocking])]).toEqual([true, [], [['food (shark or lobster)', 8, false]]]);
         expect(pickKit(full('A', { bankAt: NOW - 56 * HOUR }), gear, rule, NOW).reasons).toEqual(['bank read 56.0 h old (limit 6 h)']);
         expect(pickKit(full('A', { pos: { x: 2555, z: 3324, level: 0 } }), gear, rule, NOW).reasons).toEqual(['stands inside West Ardougne, which the walker cannot leave']);
+    });
+    test('a member under the prayer floor is blocked and told the altar step; one at the floor, or with no reading, is not', () => {
+        const base = { ...MAXED, prayer: 99 }, floor = prayerFloor(99);
+        expect(floor).toBe(70);
+        const low = pickKit(full('A', { levels: base, prayerPoints: 0 }), gear, rule, NOW);
+        expect(low.ready).toBe(false);
+        expect(low.reasons).toEqual(['prayer points 0 of 99, under the floor of 70: bun scripts/pray-at-altar.ts A ALTAR=3253,3486']);
+        expect(pickKit(full('A', { levels: base, prayerPoints: 69 }), gear, rule, NOW).reasons).toHaveLength(1);
+        expect(pickKit(full('A', { levels: base, prayerPoints: 70 }), gear, rule, NOW).reasons).toEqual([]);
+        expect(pickKit(full('A', { levels: base }), gear, rule, NOW).reasons).toEqual([]);
+        // The status file names the current level of each skill; an account with no reading is not blocked.
+        const status = (currentLevel?: number) => ({ name: 'A', at: NOW, pos: { x: 3094, z: 3491, level: 0 }, skills: [{ name: 'Prayer', level: 99, ...(currentLevel === undefined ? {} : { currentLevel }) }] });
+        expect(accountOf(status(12))!.prayerPoints).toBe(12);
+        expect(accountOf(status())!.prayerPoints).toBeUndefined();
+    });
+    test('the carry check reads what the account wears and carries now, not the bank and the pack together', () => {
+        const check = (a: Account) => pickKit(a, gear, rule, NOW, undefined, name, undefined, true, true);
+        const packed = [...KIT_PACK, it(385, 20)];
+        // Worn kit, the pack with its supplies and 20 sharks: ready.
+        expect(check(full('A', { pack: packed })).reasons).toEqual([]);
+        // The same holdings with the pack in the bank (a failed trip deposited it): the bank-and-pack check says ready, the carry check names each fault.
+        const deposited = full('A', { pack: [], bank: [...KIT_PACK, it(385, 20)] });
+        expect(pickKit(deposited, gear, rule, NOW).ready).toBe(true);
+        const faults = check(deposited).reasons;
+        expect(faults).toContain('pack lacks 1 Magic shortbow: the kit step takes it');
+        expect(faults).toContain('pack lacks 2 Law rune (0 of 2): the kit step takes it');
+        expect(faults.some(f => /^pack holds 0 food, under the floor of 10 of 20/.test(f))).toBe(true);
+        // A piece in the bank that the kit wears: named as not worn.
+        expect(check(full('A', { pack: packed, worn: KIT_WORN.filter(w => w.slot !== 0), bank: [it(385, 60), it(1163)] })).reasons.some(r => /^not worn: .*helm/i.test(r))).toBe(true);
+        // A quiver under the least arrows while the bank holds more of them.
+        expect(check(full('A', { pack: packed, worn: [...KIT_WORN.filter(w => w.slot !== 13), worn(884, 13, 40)], bank: [it(385, 60), it(884, 300)] })).reasons.some(r => /^not worn: 40 Iron arrow in the quiver \(needs 100\)/.test(r))).toBe(true);
+        // Food at the floor is carried enough.
+        expect(check(full('A', { pack: [...KIT_PACK, it(385, 10)] })).reasons).toEqual([]);
     });
     test('lobsters fill the food slots that the sharks leave, as the bank trip takes them', () => {
         const lobsters = pickKit(full('A', { bank: [it(379, 500)] }), gear, rule, NOW);

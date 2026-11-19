@@ -23,7 +23,9 @@ piece widened to its class. Each check is a fault of a live pilot.
 | Escape | Camelot Teleport or Varrock Teleport castable at the post with the runes held (`squadEscapeSpell`) | an account clicked Camelot Teleport with no law runes |
 | Freeze | Bind castable with the runes held (`castableFreeze`, Magic capped at 49 by `SQUAD_OPTS`) | a gang account at low HP walked away |
 | Antipoison | one antipoison of any dose count on each of the first two accounts of the list; the others need none and carry the extra food (2 lobsters or 1 shark a kill) | poison did 139 of 455 damage; the gang clone bench killed 9 of 9 with a potion on 5, 2, 1 and 0 of five accounts, none died (hosted run 44262314889) |
-| Food | a shark or a lobster for each free slot of the pack (20 with the bench pack) | - |
+| Food | a shark or a lobster for each free slot of the pack (20 with the bench pack); at least half of them is enough (`SQUAD_FOOD_FLOOR`) | - |
+| Prayer | current Prayer points at 70% of the base level or more (`PRAYER_FLOOR`); the fix is `bun scripts/pray-at-altar.ts <account> ALTAR=3253,3486` (Varrock east church) | four members fought a whole run with 0 points and took twice the damage of the clone replay with points |
+| Worn and carried | each piece of the kit is worn, the bow and each supply are in the pack, and the pack holds the food floor (`--before-kit` leaves this out, to write the kit files) | an account whose failed trip had deposited its pack was called ready and fought with no bow, no runes and no escape |
 | Bank read | the status file's bank read is 6 hours old or less (`--max-age`) | a plan from stock that is gone |
 | Place | not inside West Ardougne, not in the Wilderness | the walker has no route across the West Ardougne wall |
 
@@ -264,7 +266,8 @@ From "fixes merged, pause lifted" to "the squad repeats". Each step names its ch
 3. **Stage.** Run the transfer commands that the tool prints, then the shop trips and the Grand Exchange buys for
    each `no owned spare` line. Antipoison first for the first two accounts of the list: the fleet holds 2, and one
    `jiminua` trip buys 10. Check: the tool prints `READY` for all accounts.
-4. **Kit.** Each account stands at its bank. `bun scripts/squad-ready.ts <a1> <a2> <a3> <a4> --loadouts <dir>`,
+4. **Kit.** Each account stands at its bank. `bun scripts/squad-ready.ts <a1> <a2> <a3> <a4> --before-kit --loadouts <dir>`
+   (`--ignore-prayer` too while the prayer points are still to restore),
    then `bun scripts/aio-logistics.ts <account> loadout <dir>/<account>.json` for each. Check:
    `OWNED_LOADOUT_RESULT` has `"ok":true` for each, and the tool still prints `READY`.
 5. **Practice.** `bun run bench "squad-4-gang-(hunted-)?chainbind" --wait 30` passes on the source that the live run
