@@ -1,0 +1,22 @@
+{
+ "id": "1795064280717-pickpockdick-dipstick-staffoffire",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PickpockDick",
+ "to": "Dipstick",
+ "item": "Staff of fire",
+ "count": 1,
+ "start": 1795064280717,
+ "end": 1795066680717,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

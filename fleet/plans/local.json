@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795064111800,
+ "at": 1795064292486,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -224,6 +224,36 @@
    ]
   },
   {
+   "account": "Swordswallow",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "water rune",
+    "STOCK_TARGET": "1424",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "11544",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "11344",
+    "AUTOPILOT_ORDER": "[6]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1424}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy water runes at Betty's in Port Sarim for the gang squad",
+   "role": "bank",
+   "template": "squad-water-betty",
+   "autopilot": "local",
+   "resources": [
+    "shop:betty"
+   ]
+  },
+  {
    "account": "Masterbaiter",
    "script": "scripts/chain.ts",
    "args": [
@@ -240,6 +270,36 @@
    "autopilot": "local",
    "resources": [
     "catherby:lobster"
+   ]
+  },
+  {
+   "account": "BraveHardon",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "jiminua",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "antipoison",
+    "STOCK_TARGET": "10",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5960",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "5760",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":10}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy antipoison(3) at Jiminua's in Karamja for the gang squad",
+   "role": "bank",
+   "template": "squad-antipoison-jiminua",
+   "autopilot": "local",
+   "resources": [
+    "shop:jiminua"
    ]
   },
   {
@@ -273,33 +333,60 @@
    ]
   },
   {
-   "account": "Swordswallow",
+   "account": "CoinCock",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "MeatNTwoVeg",
    "script": "scripts/shop-buyer.ts",
    "args": [
-    "betty",
+    "nurmof",
     "1200"
    ],
    "env": {
-    "ITEMS": "water rune",
-    "STOCK_TARGET": "1424",
+    "ITEMS": "^rune pickaxe$",
+    "STOCK_TARGET": "1",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
+    "BANK_AT": "0",
     "NO_BUY_TICKS": "25",
-    "FLOAT": "11544",
+    "FLOAT": "40000",
     "COIN_RESERVE": "200",
-    "MAX_SPEND": "11344",
-    "AUTOPILOT_ORDER": "[6]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1424}}"
+    "MAX_SPEND": "39800",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1275\":1}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy water runes at Betty's in Port Sarim for the gang squad",
-   "role": "bank",
-   "template": "squad-water-betty",
+   "goal": "buy rune pickaxe from Nurmof in the Dwarven Mine",
+   "role": "mining",
+   "template": "tool-pickaxe-rune",
    "autopilot": "local",
    "resources": [
-    "shop:betty"
+    "shop:nurmof"
    ]
   }
  ],
