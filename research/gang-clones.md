@@ -626,6 +626,41 @@ pure kits (`pure-iban`, `pure-god`, `pure-ranger`, `pure-dds`) had no fight in 3
 first cells of that run also gave the attackers the clones' melee rotation, and are not kept. The attackers do not
 yet choose a member by armour or by Hitpoints.
 
+## The threat climb
+
+The owner order: our accounts kill whoever attacks them while they kill the gang. A third party arrives in the middle of
+the gang fight (`extra:threat-*`). The squad is the four members of live run 1, against the three clones (each with its
+own profile from its record, `SQUAD_GANG_PROFILES`) and attackers that start 25 tiles north-east of the post and hunt the
+squad. The squad's targets are the clones only (`SQUAD_TARGET_COUNT=3`), so the squad does not attack an attacker unless a
+rule makes it. The attackers fight on (`attacker-fight`) and pile on member 1.
+
+"Radar off" is the squad of live run 1 with no threat radar. "Radar" is the threat radar of #1166 (`SQUAD_THREAT=1`: protect
+prayer, retreat). The objective is kills of the clones and of the attackers, with the deaths of ours as a hard limit, the
+radar-off row being the baseline. Hosted runs 44427016794 and 44428388815, seeds 1 to 10. Each cell is: kills (clones +
+attackers) over 10 seeds; deaths of ours over 10 seeds; Hitpoints lost over 10 seeds, in tens.
+
+| Third party | Prayer points: radar off | Prayer points: radar | No prayer points: radar off | No prayer points: radar |
+|---|---|---|---|---|
+| one mage | 25 (13 + 12); 0; 665 | 21 (12 + 9); 0; 586 | 25 (23 + 2); 1; 795 | 1 (1 + 0); 0; 107 |
+| one ranger | 17 (8 + 9); 4; 1478 | 17 (13 + 4); 5; 1332 | 25 (23 + 2); 9; 1356 | 3 (2 + 1); 0; 245 |
+| one tribrid with the dragon spear | 20 (13 + 7); 3; 1011 | 19 (10 + 9); 3; 956 | 20 (17 + 3); 5; 1044 | 2 (2 + 0); 0; 203 |
+| team of 3 (mage, ranger, tribrid) | 18 (10 + 8); 10; 1134 | 8 (5 + 3); 1; 338 | 10 (9 + 1); 4; 719 | 2 (2 + 0); 0; 203 |
+| team of 5 (2 mages, ranger, 2 tribrids) | 19 (11 + 8); 15; 1105 | 0 (0 + 0); 0; 67 | 1 (1 + 0); 11; 421 | 0 (0 + 0); 1; 115 |
+
+What the cells show:
+
+- **With no radar the squad dies to a team.** A team of 3 killed 10 of ours in 10 seeds, and a team of 5 killed 15 (11 with no
+  prayer points). One ranger killed 4 (9 with no prayer points).
+- **The radar of #1166 is safe and passive.** Against a team of 5 it ends with no death (1 with no prayer points) and no kill: the
+  squad leaves. Against a team of 3 it kills 8 and loses 1. A team does not get a fight from it.
+- **The radar is not safe against one ranger or one spear tribrid with prayer points.** One ranger: 5 deaths against 4 with the
+  radar off. The spear tribrid: 3 against 3. The deaths limit (never above the radar-off baseline) fails in the ranger cell.
+- **With no prayer points the radar leaves almost always** (0 deaths in four of five cells) and kills at most 3.
+
+The fight-or-flight rule (pvp-proof, #1183) turns on an attacker, focuses fire, freezes, prays by style, and retreats only when
+the fight is lost. Its numbers are the climb: the win-chance threshold, the target order, the freeze use and the pull to
+the single-way post. The cases above are its baselines. The climb waits for those numbers as options.
+
 ## Keep it true
 
 `scripts/measure/pk-gang-drift.ts` compares new observations with the record:
