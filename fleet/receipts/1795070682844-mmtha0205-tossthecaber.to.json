@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795070682844-mmtha0205-tossthecaber",
  "account": "TossTheCaber",
  "partner": "mmtha0205",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 4152,
  "claim": "3eb8cfbe-abaa-44b7-877b-6f7ff06214aa",
- "count": 0,
- "ok": false,
- "at": 1795070758885,
- "detail": "trade claimed"
+ "count": 4152,
+ "ok": true,
+ "at": 1795070962028,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1232,
+  "after": 5384
+ },
+ "bank": {
+  "count": 4152,
+  "at": 1795070961275
+ },
+ "logout": {
+  "attemptId": "1795070758892-0000022380-0000000001",
+  "at": 1795070962015,
+  "sha256": "fae5bd0b9a0f464269b302a7adc42fd1beafa1ac281e56cd02a57cd0b140104f"
+ },
+ "screen": true
 }
