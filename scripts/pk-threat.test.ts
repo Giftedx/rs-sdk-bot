@@ -169,7 +169,7 @@ test('KitSwapper wears the swap once, keeps it while a threat needs it, and wear
 
 test('a retreat stays decided until a member acts on it; then it is not decided again for the same stranger during the cooldown, and a new stranger causes one at once', () => {
     const view = [9];
-    const { w, lines } = watch([MAGE, { ...MAGE, index: 10, name: 'Mage2' }], view, { outclass: true });
+    const { w, lines } = watch([MAGE, { ...MAGE, index: 10, name: 'Mage2' }], view, { outclass: true, odds: false });
     // Nobody acts (a member in a fight does not read it): the decision stays, tick after tick, and no cooldown starts.
     expect(retreatOf(w.step(5).actions)).toContain('outclassed by Mage');
     expect(retreatOf(w.step(100).actions)).toContain('outclassed by Mage');

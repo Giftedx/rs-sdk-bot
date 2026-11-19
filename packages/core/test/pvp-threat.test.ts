@@ -239,10 +239,14 @@ test('odds mode: a squad with no food and low Hitpoints leaves a fight that a fe
     expect(decideAdapt(four, bare, o)[0]).toMatchObject({ kind: 'retreat' });
 });
 
-test('odds mode counts the squad targets too: a lost fight against the gang is left, and an outclassing stranger still comes first', () => {
+test('odds mode counts the squad targets too: a lost fight against the gang is left, and the outclass rule counts only for a solo account', () => {
     const o = { outclasses, odds: DEFAULT_ODDS, multiAt: () => false, expected: new Set(['att0', 'att1', 'att2', 'att3']) };
     const two = fed(2);
     expect(decideAdapt(classes4(attackers(4)), two, o)[0]).toMatchObject({ kind: 'retreat' });
-    const boss = decideAdapt(classes4([near('Boss', { combat: 145 }), ...attackers(2)]), fed(4), { ...o, expected: new Set(['att0', 'att1']) })[0]!;
-    expect((boss as { reason: string }).reason).toContain('outclassed by Boss');
+    const withBoss = classes4([near('Boss', { combat: 145 }), ...attackers(2)]);
+    const squadActions = decideAdapt(withBoss, fed(4), { ...o, expected: new Set(['att0', 'att1']) });
+    expect(squadActions.some(a => a.kind === 'retreat')).toBe(false);
+    const soloMember: Member[] = [{ ...squad[0]!, hp: 99, food: 10, prayer: 50, prayerLevel: 99 }];
+    const solo = decideAdapt(book().observe(1, soloMember, [near('Boss', { combat: 145, x: 3072, z: 3641 })]).map(r => classifyThreat(r, soloMember, { canAttack })), soloMember, { outclasses, odds: DEFAULT_ODDS, multiAt: () => false })[0]!;
+    expect((solo as { reason: string }).reason).toContain('outclassed by Boss');
 });
