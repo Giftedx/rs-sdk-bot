@@ -2384,6 +2384,9 @@ export function catalogue(): Template[] {
         { skills: { Magic: 66 }, items: { coins: 80000 }, holdsUnder: noFire });
     const natureGuild = supply('army-nature-guild', 'buy nature and air runes at the Magic Guild in Yanille for the alchemy band', 'magic_guild', guildRunes,
         { skills: { Magic: 66 }, items: { coins: 60000 }, holdsUnder: { 'nature rune': 50 }, anyOf: [{ items: { 'fire rune': 250 } }, ...FIRE_STAFFS.map(item => ({ items: { [item]: 1 } }))] });
+    const airGuild = supply('army-air-guild', 'buy air runes at the Magic Guild in Yanille for the alchemy band', 'magic_guild',
+        [shopRun('magic_guild', 600, 'air.rune', AIR_STOCK, 10000)],
+        { skills: { Magic: 66 }, items: { coins: 15000, 'nature rune': 50 }, holdsUnder: { 'air rune': 50, feather: 50 }, anyOf: [{ items: { 'fire rune': 250 } }, ...FIRE_STAFFS.map(item => ({ items: { [item]: 1 } }))] });
     // The alchemy band cast on air runes, for an account at Magic 66 or more that holds them (the guild trip's).
     const magicAir: Template = { ...magic, id: 'army-alch-air-magic-99', env: { ALCH_ITEM: 'airrune' }, goal: 'train Magic to 99 with alchemy on air runes at the Ardougne north bank',
         needs: { skills: { Magic: 66 }, items: { 'nature rune': 50, 'air rune': 50 }, anyOf: magic.needs!.anyOf }, batchFor: a => alchBatch(a, 'air rune'), shopKit: true };
@@ -2769,6 +2772,7 @@ export function catalogue(): Template[] {
         fireRunes,
         staffGuild,
         natureGuild,
+        airGuild,
         magicAir,
         prayer,
         dragonBones,

@@ -4,7 +4,7 @@ import {join,resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
-import {admissionDecision,startReserve,activeExternalLive,RECOVERY_SLOT_WAIT_MS,loadEnded,persistEnded,persistentEnd,loadHolds,openHold,LIVE_SERVER,failedScript,scriptKey,missionSignature,swarmWroteStop,clearSwarmStop} from '../../../scripts/swarm';
+import {admissionDecision,startReserve,activeExternalLive,RECOVERY_SLOT_WAIT_MS,loadEnded,persistEnded,persistentEnd,loadHolds,openHold,LIVE_SERVER,failedScript,scriptKey,missionSignature,swarmWroteStop,clearSwarmStop,standingRetryable,supplyExhaustedResult} from '../../../scripts/swarm';
 import {liveLogoutRef} from './coordinator-session';
 import {BOOTSTRAP_STATUS_AGE_MS} from '../../core/src/session-admission';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
@@ -218,8 +218,8 @@ function swarmRunAccounts(base:string):Set<string>|null{
   return Array.isArray(runs)?new Set(runs.flatMap((r:any)=>Array.isArray(r?.accounts)?r.accounts:[null]).map((n:unknown)=>String(n).toLowerCase())):null;}
  catch(e){return (e as NodeJS.ErrnoException).code==='ENOENT'?new Set():null;}
 }
-// An enabled autopilot row can yield between runs only after its exact mission succeeded and logged out.
-// A row prepared for a different, unstarted mission cannot inherit the previous mission's success.
+// An enabled autopilot row can yield between runs after its exact mission succeeded (or exhausted supplies) and logged out.
+// A row prepared for a different, unstarted mission cannot inherit the previous mission's outcome.
 function settledAutopilotJob(job:any,account:string,base:string):boolean{
  if(job?.standing!==true||job.enabled!==true||typeof job.autopilot!=='string'||!job.autopilot)return false;
  const root=join(base,'.practice/session-lifecycle'),proof=readLogoutProof(account,LIVE_SERVER,{root});
@@ -229,9 +229,13 @@ function settledAutopilotJob(job:any,account:string,base:string):boolean{
  try{assertNoRecoveryLease(account,base);}catch{return false;}
  const end=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===account.toLowerCase())?.[1];
  const status=liveRows(base).find(s=>s.name?.toLowerCase()===account.toLowerCase()),entries=workerEntries(job.script,job.args??[],base);
- return !!end&&/^done(?: after \d+ runs)?$/.test(end.reason)&&end.revision===missionSignature(job)&&end.at>=proof.loggedOutAt
+ const okEnd=!!end&&/^done(?: after \d+ runs)?$/.test(end.reason)&&/^ok(?:\s|$)/.test(status?.result??'');
+ const supplyEnd=!!end&&/^(?:blocked|stopped)(?: after \d+ runs)?$/.test(end.reason)
+  &&supplyExhaustedResult(status?.result,job.env)
+  &&!standingRetryable(end.reason,status?.result,job.standingRetry,job.env);
+ return (okEnd||supplyEnd)&&end.revision===missionSignature(job)&&end.at>=proof.loggedOutAt
   &&receipt.owner.coordinatorRunId===null&&entries.includes(receipt.owner.script)&&/^[0-9a-f]{64}$/.test(receipt.owner.workerRelease??'')
-  &&status?.server===LIVE_SERVER&&/^ok(?:\s|$)/.test(status.result??'')&&status.goal===job.goal
+  &&status?.server===LIVE_SERVER&&status.goal===job.goal
   &&status.sessionAttemptId===proof.attemptId&&status.workRevision===receipt.owner.workerRelease&&status.workEntry===entries.join(',')
   &&(status.coordinatorRunId??null)===null&&Number.isFinite(status.started)&&status.started>=receipt.createdAt&&status.started<=proof.loggedOutAt
   &&Number.isFinite(status.at)&&status.at>=status.started&&status.at<=end.at;
@@ -465,14 +469,16 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
   }
   if(openHold(holds,participant,script))throw Error('failed script still held for '+participant+': '+script);
  }
+ const isOrdinaryRun=task.kind==='run'&&!task.sessionRecovery&&(!task.launch||task.launch==='ordinary');
  for(const participant of accounts.filter(n=>n.toLowerCase()!==account.toLowerCase())){
   // This is a read-only ownership preflight, not an authorization to log peers in.
   if(retained)continue;
   const occupied=plan.jobs.find((j:any)=>(j.accounts??[j.account]).some((n:string)=>n?.toLowerCase()===participant.toLowerCase()));
   const ended=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===participant.toLowerCase())?.[1];
   if(Object.hasOwn(SPECIALIST_BOARDS,participant.toLowerCase())||occupied&&(!occupied.script||/fresh.clock|24 boards|main simultaneous/i.test(occupied.goal??'')))throw Error('participant has a protected reservation: '+participant);
-  if(occupied&&occupied.coordinatorOwner!=='coordinator'&&!settledOwnerJob(occupied,participant,ended)&&!rows.some(s=>s.name?.toLowerCase()===participant.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??'')))throw Error('participant assignment is not confirmed complete: '+participant);
-  if(ended&&persistentEnd(ended.reason)&&!pendingRepair(participant,ended))throw Error('participant needs verified recovery');
+  const participantAutopilotSettled=isOrdinaryRun&&settledAutopilotJob(occupied,participant,base);
+  if(occupied&&occupied.coordinatorOwner!=='coordinator'&&!settledOwnerJob(occupied,participant,ended)&&!participantAutopilotSettled&&!rows.some(s=>s.name?.toLowerCase()===participant.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??'')))throw Error('participant assignment is not confirmed complete: '+participant);
+  if(ended&&persistentEnd(ended.reason)&&!pendingRepair(participant,ended)&&!(participantAutopilotSettled&&/^blocked(?: after \d+ runs)?$/.test(ended.reason)))throw Error('participant needs verified recovery');
   if(rows.some(s=>s.name?.toLowerCase()===participant.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'&&!s.result))throw Error('participant session not settled');
  }
  const board=Object.hasOwn(SPECIALIST_BOARDS,account.toLowerCase())?SPECIALIST_BOARDS[account.toLowerCase()]:undefined;
@@ -486,7 +492,8 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  const unfinished=rows.find(s=>s.name?.toLowerCase()===account.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'&&!s.result);
  if(unfinished&&!options.recoveryPreflight&&!recoveredSessionForRun(account,LIVE_SERVER,runId,launch,base))throw Error('account session ownership is not settled');
  const end=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===account.toLowerCase())?.[1];
- if(end&&persistentEnd(end.reason)&&!pendingRepair(account,end))throw Error('account recovery needs a verified repair: '+end.reason);
+ const autopilotSettled=isOrdinaryRun&&settledAutopilotJob(existing,account,base);
+ if(end&&persistentEnd(end.reason)&&!pendingRepair(account,end)&&!(autopilotSettled&&/^blocked(?: after \d+ runs)?$/.test(end.reason)))throw Error('account recovery needs a verified repair: '+end.reason);
  // The recovery preflight of its own account parks the hand job next (prepareLiveRecovery turns it off), and the
  // account's last session ended without a result or with a failure: that is what the recovery repairs. The production
  // install after the recovery applies both checks against the parked job and the recovered status.
@@ -499,9 +506,8 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  // A disabled hand job whose account has no persistent end and a confirmed producer logout is settled: the owner
  // stopped the work and no session holds the account, so a new mission installs without an ok result or a recovery.
  const settled=handJob&&settledOwnerJob(existing,account,end);
- const autopilotSettled=task.kind==='run'&&!task.sessionRecovery&&(!task.launch||task.launch==='ordinary')&&settledAutopilotJob(existing,account,base);
  if(existing?.standing===true&&existing.enabled&&!parkedForRecovery&&!autopilotSettled)throw Error('account runs an owner standing job: '+existing.script);
- if(handJob&&!parkedForRecovery&&!releasedByRecovery&&!settled){
+ if(handJob&&!parkedForRecovery&&!releasedByRecovery&&!settled&&!autopilotSettled){
   const observed=rows.find(s=>s.name?.toLowerCase()===account.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??''));
   if(!observed)throw Error('existing assignment is not confirmed complete');
  }

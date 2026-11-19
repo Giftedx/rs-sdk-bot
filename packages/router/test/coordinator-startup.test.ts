@@ -1,6 +1,6 @@
 import {afterEach,expect,test} from 'bun:test';
 import {randomUUID} from 'node:crypto';
-import {existsSync,linkSync,mkdtempSync,readFileSync,readdirSync,rmSync,writeFileSync} from 'node:fs';
+import {existsSync,linkSync,mkdirSync,mkdtempSync,readFileSync,readdirSync,rmSync,unlinkSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {withPlanWrite} from '../../core/src/plan-lock';
@@ -117,5 +117,16 @@ processTest('a claim over an owner file whose pid another running program reused
   atomicJson(join(directory,'owner.json'),{pid:child.pid,nonce:'old-token-not-in-command-line',at:Date.now()+120_000});
   await expect(claimCoordinatorState('start-over-live-owner',directory)).rejects.toThrow('coordinator already owned');
  }finally{child.kill();}
+});
+
+test('plannerPaused reflects .practice/stop-planner presence',()=>{
+ const directory=fixture();
+ expect(coordinatorCli.plannerPaused(directory)).toBe(false);
+ mkdirSync(join(directory,'.practice'),{recursive:true});
+ const stopFile=join(directory,'.practice','stop-planner');
+ writeFileSync(stopFile,'quota hold');
+ expect(coordinatorCli.plannerPaused(directory)).toBe(true);
+ unlinkSync(stopFile);
+ expect(coordinatorCli.plannerPaused(directory)).toBe(false);
 });
 
