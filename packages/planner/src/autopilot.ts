@@ -1596,11 +1596,11 @@ export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore:
 // `quester:quest:<slug>`), which orders the bands, the cheapest first. `skills` and `quests` are the journal's asks
 // (packages/dashboard/client-assets/quest-reqs.json) and `items` is the pack of the practice run
 // (scripts/quest-sweep.ts presetFor), with `meals` of food; Hitpoints 90 stands where the practice run fell under 70
-// Hitpoints with 99 in every skill (the saved `hpMin`). No template gives a kit: an account that holds the pack gets the
-// job, and one that lacks it shows the missing item as the vacant reason. The table leaves out the quests that no one-account sweep can run: Shield of Arrav, Hero's Quest and
+// Hitpoints with 99 in every skill (the saved `hpMin`). A quest is a `kitFirst` band: an account that lacks its pack gets the items from a donor, or buys them
+// within the caps of questKitCaps below, and one that cannot shows the missing item as the vacant reason. The table leaves out the quests that no one-account sweep can run: Shield of Arrav, Hero's Quest and
 // Legends Quest open companion accounts (scripts/generated/quest-<slug>.ts take a helper name), the sweep refuses Hero's
 // Quest (scripts/quest-sweep.ts), and Throne of Miscellania needs Hero's Quest. They wait for an owned-pair path. QUEST_DEMAND_PLACES: quest jobs at once.
-export const QUEST_DEMAND_BAND = 5, QUEST_DEMAND = 'quest:demand', QUEST_DEMAND_PLACES = 3;
+export const QUEST_DEMAND_BAND = 5, QUEST_DEMAND = 'quest:demand', QUEST_DEMAND_PLACES = 2;
 export type QuestDemandRow = { slug: string; name: string; ticks: number; skills: Record<string, number>; quests: string[]; questPoints?: number; items: Record<string, number>; meals: number };
 export const QUEST_DEMAND_ROWS: readonly QuestDemandRow[] = [
     { slug: 'elemental', name: 'Elemental Workshop', ticks: 188, skills: { Crafting: 20, Mining: 20, Smithing: 20 }, quests: [], items: { knife: 1, needle: 1, leather: 1, thread: 1, hammer: 1, 'rune pickaxe': 1, coal: 4 }, meals: 6 },
@@ -1624,6 +1624,22 @@ export const QUEST_DEMAND_ROWS: readonly QuestDemandRow[] = [
 ];
 // The Fremennik Trials and the Underground Pass share the place of their build templates, so one account does each.
 export const questResource = (slug: string) => slug === 'viking' ? FREMENNIK : slug === 'upass' || slug === 'regicide' ? UPASS : `quest:${slug}`;
+// The price caps of the quest packs' items that the Grand Exchange can sell and KIT_PRICE_CAPS does not list: four times the item's base
+// value (knowledge/items.json `cost`), at least QUEST_CAP_MIN coins. The cap bounds each buy; the market read (packages/planner kitMarket,
+// scripts/autopilot.ts) drops an item whose lowest ask is over it. Added to KIT_PRICE_CAPS once, here, after the table that names the items.
+export const QUEST_CAP_FACTOR = 4, QUEST_CAP_MIN = 25;
+export function questKitCaps(rows: readonly { items: Readonly<Record<string, number>> }[] = QUEST_DEMAND_ROWS): Record<string, number> {
+    const content = new Map((JSON.parse(readFileSync(resolve(import.meta.dir, '../../../knowledge/items.json'), 'utf8')) as { name: string; debugname?: string; cost: number; tradeable?: boolean }[])
+        .filter(i => !/^cert_/.test(i.debugname ?? '')).map(i => [norm(i.name), i] as const).reverse());
+    const out: Record<string, number> = {};
+    for (const row of rows) for (const item of Object.keys(row.items)) {
+        const found = content.get(norm(item));
+        if (found?.tradeable && found.cost > 0 && !(norm(item) in KIT_PRICE_CAPS) && coinItem(norm(item)) === false) out[norm(item)] = Math.max(QUEST_CAP_MIN, QUEST_CAP_FACTOR * found.cost);
+    }
+    return out;
+}
+const coinItem = (item: string) => item === 'coin';
+for (const [item, cap] of Object.entries(questKitCaps())) (KIT_PRICE_CAPS as Record<string, number>)[item] ??= cap;
 // CAPACITY: accounts at one resource at a time. Every number is policy (a place, a market or a spot holds this many), not a game fact.
 export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [ARMOUR_MARKET]: ARMOUR_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, [QUEST_DEMAND]: QUEST_DEMAND_PLACES, ...Object.fromEntries(QUEST_DEMAND_ROWS.map(q => [questResource(q.slug), 1])), ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
@@ -1947,6 +1963,7 @@ export function questDemand(): Template[] {
         band: QUEST_DEMAND_BAND + i / 100, quest: { name: q.name, unlocks: [] }, resources: [questResource(q.slug), QUEST_DEMAND], yields: () => [],
         needs: { ...(Object.keys(q.skills).length ? { skills: q.skills } : {}), ...(q.quests.length ? { quests: q.quests } : {}), ...(q.questPoints ? { questPoints: q.questPoints } : {}),
             ...(Object.keys(q.items).length ? { items: q.items } : {}), ...(q.meals ? { pieces: { of: SWEEP_MEALS, count: q.meals } } : {}) },
+        kitFirst: true,
     }));
 }
 
