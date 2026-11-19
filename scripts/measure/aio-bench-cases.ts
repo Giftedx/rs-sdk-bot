@@ -582,7 +582,7 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'logistics:cure-poison', script: 'scripts/cure-poison.ts', preset: 'fresh_lumbridge', scriptArgs: [],
     presetConfig: {position: {x: 3185, z: 3438, level: 0}, inventory: [{id: 175, count: 1}]},
     pass: s => ok(s) && /cure-poison drank Antipoison\(3\) from the pack/.test(s) && s.includes('LOGOUT logged-out')},
-  {key: 'logistics:cure-poison-bank', script: 'scripts/cure-poison.ts', preset: 'fresh_lumbridge', scriptArgs: [],
+  {key: 'extra:cure-poison-bank', script: 'scripts/cure-poison.ts', preset: 'fresh_lumbridge', scriptArgs: [],
     presetConfig: {position: {x: 3185, z: 3438, level: 0}, inventory: [], bank: [{id: 175, count: 2}]},
     pass: s => ok(s) && /cure-poison drank Antipoison\(3\) from the bank/.test(s) && s.includes('LOGOUT logged-out')},
   // Hold an ordinary offensive prayer with the guard disabled, then restore the spent points through the AIO
