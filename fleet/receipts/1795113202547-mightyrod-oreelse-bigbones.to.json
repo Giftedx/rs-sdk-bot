@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795113202547-mightyrod-oreelse-bigbones",
+ "account": "OreElse",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Big bones",
+ "requested": 159,
+ "claim": "bdfbd573-9682-48e3-8baa-afdda0ef6b6b",
+ "count": 0,
+ "ok": false,
+ "at": 1795113278959,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1795113272971-0000029968-0000000001",
+  "at": 1795113278946,
+  "sha256": "40abeaf380a2d065ebd16d45e7c184ddb087ceb5b9889a345ac1797a124d3d5f"
+ },
+ "screen": false
+}

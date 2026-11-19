@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795113202547-mightyrod-oreelse-bigbones",
+ "account": "Mightyrod",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Big bones",
+ "requested": 159,
+ "claim": "8038cfdd-58ff-4d07-98a3-82623320ea8c",
+ "count": 0,
+ "ok": false,
+ "at": 1795113265631,
+ "detail": "trade claimed"
+}
