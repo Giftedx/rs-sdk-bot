@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795072539455,
+ "at": 1795072719085,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -254,60 +254,22 @@
    ]
   },
   {
-   "account": "TossTheCaber",
-   "script": "scripts/shop-buyer.ts",
+   "account": "Pocketrocket",
+   "script": "scripts/chain.ts",
    "args": [
-    "jiminua",
-    "1200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=17 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=pocketrocket-kit13-532-6to23 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "ITEMS": "antipoison",
-    "STOCK_TARGET": "18",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "1928",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "1728",
-    "AUTOPILOT_ORDER": "[15]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":18}}"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy antipoison(3) at Jiminua's in Karamja for the gang squad",
-   "role": "bank",
-   "template": "squad-antipoison-jiminua",
+   "goal": "buy 17 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-big-99",
    "autopilot": "local",
-   "resources": [
-    "shop:jiminua"
-   ]
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "resources": []
   },
   {
    "account": "CoinCock",
