@@ -4,7 +4,7 @@ import * as pk from './pk';
 import { maxDeathsOf } from './pk-hunt';
 import { bankNear, isKillLine, leaveWilderness, openSquad, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
-import { hold, squadEnd } from './pk-squad';
+import { hold, squadEnd, squadFightOverrides } from './pk-squad';
 import { newWatch, readLine } from './squad-watch';
 import { classify } from '../packages/practice/src/supervise-host';
 import { supervise } from '../packages/practice/src/supervise';
@@ -457,4 +457,45 @@ test('with a threat that can hit it and no target, a member holds the protect pr
 
 test('with act off the threat watch changes nothing in the hold loop', async () => {
     expect(await holdWithThreats(false)).toEqual([]);
+});
+
+test('the hold loop wears the starting armour again after a fight that stripped it', async () => {
+    const w = squadWorld();
+    w.s.tick = () => 0;
+    w.s.sdk.getState().nearbyPlayers = [{ index: 5, name: 'Goondelf', combatLevel: 126, x: 3067, z: 3641, distance: 1 }];
+    let t = 0, fights = 0;
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { t++; return true; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+        spyOn(pk, 'fightPlayer').mockImplementation(async () => {
+            fights++;
+            // A freeze stripped the helm in the first fight: it sits in the pack.
+            const at = fights === 1 ? w.equipment.findIndex(e => e.id === 1163) : -1;
+            if (at >= 0) { const [helm] = w.equipment.splice(at, 1); w.inventory.push({ ...helm, slot: 21, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] }); }
+            return { outcome: 'timeout' } as any;
+        }),
+    ];
+    const lines: string[] = [];
+    try {
+        await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3066, z: 3641 }, options: { kit: {} }, allies: [], pickup: false, trips: 3, deadline: 5000, stopped: () => t >= 30, killsLeft: () => true, log: l => lines.push(l) });
+        expect(fights).toBeGreaterThanOrEqual(1);
+        expect(lines.filter(l => l.includes('PK wore 1 piece of the starting armour again'))).toHaveLength(1);
+        expect(w.equipment.map(e => e.id)).toContain(1163);
+        expect(w.inventory.map(e => e.id)).not.toContain(1163);
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+});
+
+test('squadFightOverrides: the plain settings for freezeArmour and protectItem, and a fail for a value that is not listed', () => {
+    const env = (values: Record<string, string>) => (name: string, fallback: string) => values[name] ?? fallback;
+    expect(squadFightOverrides(env({}))).toEqual({});
+    expect(squadFightOverrides(env({ SQUAD_FREEZE_ARMOUR: 'torso' }))).toEqual({ freezeArmour: 'torso' });
+    expect(squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'skulled' }))).toEqual({ protectItem: 'skulled' });
+    expect(squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'on', SQUAD_FREEZE_ARMOUR: 'keep' }))).toEqual({ protectItem: true, freezeArmour: 'keep' });
+    expect(squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'off' }))).toEqual({ protectItem: false });
+    expect(squadFightOverrides(env({ SQUAD_FREEZE_LEASH: '9' }))).toEqual({ freezeLeash: 9 });
+    expect(() => squadFightOverrides(env({ SQUAD_FREEZE_LEASH: '12' }))).toThrow('from 2 to 10');
+    expect(() => squadFightOverrides(env({ SQUAD_FREEZE_LEASH: 'x' }))).toThrow('from 2 to 10');
+    expect(() => squadFightOverrides(env({ SQUAD_FREEZE_ARMOUR: 'bare' }))).toThrow('strip, torso or keep');
+    expect(() => squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'yes' }))).toThrow('on, off or skulled');
 });

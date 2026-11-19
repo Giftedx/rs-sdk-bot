@@ -17,7 +17,7 @@ import type { Session } from '../packages/core/src/inprocess';
 import { loadOwners } from '../packages/core/src/fleet';
 import { PVP_DEATH_LIMITS, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, packGain, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
+import { attackable, bestFood, rewearStart, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, packGain, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
 import { armourDefence } from './pk-read';
 import { assessWildernessThreat, hasVarrockTeleport, itemCost, planWildernessEscape, slashWebThrough, wildernessCombatMargin, wildernessDepth } from './pk-roam';
 import { nativeRequirementMetadata, resolveItemRequirements, type ItemCount, type ItemRequirement, type RequirementResolution } from '../packages/core/src/item-requirements';
@@ -538,6 +538,8 @@ export async function hunt(s: Session, o: HuntOptions) {
                 ...(process.env.HUNT_NOFOOD ? { noFoodAt: Number(process.env.HUNT_NOFOOD) } : {}),
             });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
+            // The armour that a freeze stripped goes back on (pk.ts rewearStart): not after a death or a dropped session.
+            if (r.outcome !== 'died' && r.outcome !== 'session ended') await rewearStart(s, wornAtStart.map(w => w.id), log);
             if (r.outcome === 'kill') {
                 tally.kills++; const pack = s.sdk.getInventory().map(i => ({ id: i.id, count: i.count }));
                 const n = await loot(s, r.targetAt ?? target, over); tally.looted += n;
