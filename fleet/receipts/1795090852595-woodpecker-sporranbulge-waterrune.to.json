@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795090852595-woodpecker-sporranbulge-waterrune",
+ "account": "SporranBulge",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 231,
+ "claim": "8e8901de-473a-4baa-84d1-a73cc45ed98a",
+ "count": 231,
+ "ok": true,
+ "at": 1795091082421,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 231
+ },
+ "bank": {
+  "count": 231,
+  "at": 1795091081628
+ },
+ "logout": {
+  "attemptId": "1795091046815-0000005180-0000000001",
+  "at": 1795091082410,
+  "sha256": "d07fbab411a2ba364b47e7c8d4c25b89e002051b74e1bebd4e7160604cca6cda"
+ },
+ "screen": true
+}
