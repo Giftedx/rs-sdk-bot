@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795104551098,
+ "at": 1795105082820,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -322,6 +322,31 @@
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "accounts": [
+    "SporranBulge",
+    "Moneyshot"
+   ],
+   "script": "scripts/coin-courier.ts",
+   "args": [
+    "2000000",
+    "--bank-x=2618",
+    "--bank-z=3332",
+    "--reserve=200000",
+    "--timeout-ms=600000"
+   ],
+   "env": {
+    "COIN_ORDER": "prayer99-moneyshot-bonefund2000k",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-c20be028-9a87-469a-95af-c1188632cab8"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-courier-sporranbulge-moneyshot-bone-fund-v2 [task-c20be028-9a87-469a-95af-c1188632cab8]",
+   "role": "supply"
   }
  ],
  "army": [
