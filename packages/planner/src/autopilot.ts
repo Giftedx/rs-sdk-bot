@@ -14,6 +14,7 @@ import { missionSignature } from '../../core/src/session-admission';
 import { xpForLevel } from './curve';
 import { ammoTier, boneXp, castRunes, objId, spellFact, toolLevel, wearLevel } from '../../core/src/content-facts';
 import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
+import { alchSupplies } from './alch-plan';
 import { validateBankRouteJob, type BankRouteJob } from '../../core/src/bank-trip';
 import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-route-step';
 import { SQUAD_FOOD_HEAL, squadKeeps, squadRows, type SquadInput } from './squad';
@@ -509,6 +510,16 @@ export function kitReserve(templates: readonly Template[], own?: Acct): Record<s
     }
     delete reserve.coin;
     return reserve;
+}
+// A batch of several lines that the account cannot pay in full: the same share of every line's batch that the coins reach, never under
+// the line's start. The cost counts each line at its price cap (`limit`). With less than the start it returns the start.
+export function proportionalLines(full: readonly KitLine[], start: readonly KitLine[], budget: number): KitLine[] {
+    const cost = (lines: readonly KitLine[]) => lines.reduce((n, l) => n + l.quantity * l.limit, 0), floor = cost(start);
+    if (budget <= floor) return [...start];
+    const extra = cost(full) - floor;
+    if (extra <= 0) return [...start];
+    const share = Math.min(1, (budget - floor) / extra);
+    return full.map((l, i) => ({ ...l, quantity: start[i]!.quantity + Math.floor((l.quantity - start[i]!.quantity) * share) }));
 }
 // One Grand Exchange order of a kit buy. `held` is what the account holds now: the buy script tops up exactly that many.
 export type KitLine = { item: string; id: number; quantity: number; held: number; limit: number };
@@ -1154,7 +1165,8 @@ export function plan(input: Inputs): Assignment[] {
             const full = sized(true), start = sized(false), part = Math.floor((free - room) / (full[0]?.limit ?? 1));
             const frailFood = c.template.id === FRAIL_FOOD_BUY_ID;
             const lines = frailFood || price(full) + room <= free ? full
-                : c.template.partBatch && full.length === 1 && part > start[0]!.quantity ? [{ ...full[0]!, quantity: Math.min(full[0]!.quantity, part) }] : start;
+                : c.template.partBatch && full.length === 1 && part > start[0]!.quantity ? [{ ...full[0]!, quantity: Math.min(full[0]!.quantity, part) }]
+                : c.template.partBatch && full.length > 1 ? proportionalLines(full, start, free - room) : start;
             const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0, KIT_CASH_RESERVE + keep), cost = price(lines), short = cost + room - free;
             const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
             // A `once` quest buys its kit for one account at a time, and for QUEST_DEMAND_PLACES quests at a time: the buy holds
@@ -2135,13 +2147,20 @@ export function catalogue(): Template[] {
         needs: { skills: { Attack: 60, Strength: 60, Defence: 60, Hitpoints: 40 }, anyOf: TROOPER_FED },
         batch: { trout: 100 },
     }));
+    // The alchemy band's consumables for the casts an account's Magic level still has to Magic 99 (the batch of a kit buy and what a donor keeps).
+    const alchBatch = (a: Acct, item: string): Record<string, number> => {
+        const need = alchSupplies(a.skills.Magic ?? 1);
+        return { 'nature rune': need.nature, [item]: need.item, 'fire rune': need.fire };
+    };
     const magic: Template = {
         id: 'army-alch-magic-99', family: 'combat-train', script: 'scripts/alch-train.ts', args: ['99', '5000'], role: 'combat', goal: 'train Magic to 99 with alchemy at the Ardougne north bank',
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [] }, resources: [], yields: () => [],
         needs: { skills: { Magic: 21 }, items: { 'nature rune': 50, feather: 50 }, anyOf: [{ items: { 'fire rune': 250 } }, ...FIRE_STAFFS.map(item => ({ items: { [item]: 1 } }))] },
-        // Magic 99 is 998,458 XP here. Low Alchemy gives 775 XP a cast to 55 and High Alchemy 1,625 from there (xpRate 25),
-        // so Magic 21 to 99 takes about 650 nature runes; a buy brings 1,000.
-        batch: { 'nature rune': 1000 },
+        // One buy brings every consumable of the casts left to Magic 99 (alchSupplies: one nature rune and one item a cast, and fire
+        // runes for the casts), as far as the account's coins reach (`partBatch`). Magic 21 to 99 is 642 casts: 642 nature runes, 642
+        // feathers and 3,098 fire runes. A start's 250 fire runes cover 50 casts, so a band bought by starts returns to the shop many times.
+        // With no coins for the whole batch the buy takes the share they pay for, down to the cash reserve and margin (`keepCoins` is not set).
+        batchFor: a => alchBatch(a, 'feather'), partBatch: true,
     };
     // Magic 1 to 21 for Low Alchemy: Wind Strike on the fenced Guard dog (scripts/alch-train.ts strikeStart). Practice,
     // fresh accounts started at the goldfarm knights: Magic 1 to 21-23 in 17-22 casts, no damage taken, about 180 ticks alone.
@@ -2204,7 +2223,7 @@ export function catalogue(): Template[] {
         { skills: { Magic: 66 }, items: { coins: 60000 }, holdsUnder: { 'nature rune': 50 }, anyOf: [{ items: { 'fire rune': 250 } }, ...FIRE_STAFFS.map(item => ({ items: { [item]: 1 } }))] });
     // The alchemy band cast on air runes, for an account at Magic 66 or more that holds them (the guild trip's).
     const magicAir: Template = { ...magic, id: 'army-alch-air-magic-99', env: { ALCH_ITEM: 'airrune' }, goal: 'train Magic to 99 with alchemy on air runes at the Ardougne north bank',
-        needs: { skills: { Magic: 66 }, items: { 'nature rune': 50, 'air rune': 50 }, anyOf: magic.needs!.anyOf }, batch: undefined, shopKit: true };
+        needs: { skills: { Magic: 66 }, items: { 'nature rune': 50, 'air rune': 50 }, anyOf: magic.needs!.anyOf }, batchFor: a => alchBatch(a, 'air rune'), shopKit: true };
     // Magic to SPLASH_TO with no fire rune, nature rune or feather, band 2: a curse cast over the fence of the Ardougne
     // cow field (scripts/splash-train.ts; Wind Strike, Confuse and Weaken under Magic 19). The kit is body, earth and
     // water runes, under 80,000 coins at the caps for the whole of it. A run starts with ten casts' runes
@@ -2867,9 +2886,14 @@ export function recoveringOwnerJobs(ownerJobs: readonly any[], coordinatorJobs: 
 
 // A marked job whose account is in `keep` (an owner pause: a stop file) stays as it is, with its enabled and repeat
 // settings, so lifting the pause later resumes that job instead of handing the account a fresh enabled one.
-export function mergeJobs(jobs: readonly any[], side: string, out: readonly Assignment[], keep: ReadonlySet<string> = new Set()): { jobs: any[]; fresh: string[] } {
+// `finished`: the accounts (lower case) whose planner job has a RESULT ok since its assignment (finishedTrainers). A planner job that a
+// coordinator hold or a running buy keeps cannot be replaced by this pass; if it repeats and has finished, it stops repeating, so the
+// swarm does not log the account in again every few seconds for a result that is already in (live: Pocketpython, 146 results of
+// ticks=10 from `stop=stock-target targetMet=1`). The job stays as a record, and the pass that frees the account replaces it.
+export function mergeJobs(jobs: readonly any[], side: string, out: readonly Assignment[], keep: ReadonlySet<string> = new Set(), finished: ReadonlySet<string> = new Set()): { jobs: any[]; fresh: string[] } {
     const mine = (j: any) => j?.autopilot === side, kept = (j: any) => [j?.account, ...(j?.accounts ?? [])].some((a: string) => a && keep.has(a.toLowerCase()));
-    const next = jobs.filter(j => !mine(j) || kept(j)), fresh: string[] = [];
+    const done = (j: any) => mine(j) && j.enabled !== false && j.repeat === true && typeof j.account === 'string' && finished.has(j.account.toLowerCase());
+    const next = jobs.filter(j => !mine(j) || kept(j)).map(j => done(j) ? { ...j, repeat: false } : j), fresh: string[] = [];
     for (const x of out) {
         if (!x.template) continue;
         // A job keeps its run only while it still runs its template (script, args and env, as the swarm signs a mission):

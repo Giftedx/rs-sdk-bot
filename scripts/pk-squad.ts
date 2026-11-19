@@ -31,7 +31,7 @@ import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { attackable, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, recordKillLoot, STUNNED_SHOVE_SPOTANIM, wildernessLevel, type FightOptions } from './pk';
 import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { settleKillFeed } from './pk-kill-feed';
-import { EDGEVILLE_BANK, eatUp, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
+import { EDGEVILLE_BANK, eatUp, FOOD_START_FLOOR, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
 import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
 import { holdProtect, protectOf, retreatOf, ThreatWatch } from './pk-threat';
 import { connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './pk-roam';
@@ -41,7 +41,12 @@ export const GANG = ['goondelf', 'ligma', 'sugma'];
 export const SQUAD_POST = { x: 3067, z: 3640 };
 // A member starts the run with at least this share of the food of its pack (live: a member with 20 of 21 sharks is fit
 // to fight; one with a few is not). Under it the member stays at the bank and its part of the run ends.
-export const SQUAD_FOOD_FLOOR = 0.5;
+export const SQUAD_FOOD_FLOOR = FOOD_START_FLOOR;
+// A member leaves the Wilderness for a bank trip when it stands outside it after it was in it, and once at the start of the
+// run (no trip done yet). A member that is still on the first steps of the march, outside the Wilderness, is on its way in:
+// a second trip there ran a restock before any fight (live run 2: `"trips":2,"fights":0` for each member; bench of the
+// first start fix: `trips=8` in 24 seeds, master `trips=4`).
+export const outTripDue = (z: number, enteredWilderness: boolean, tripsDone: number): boolean => wildernessLevel(z) === 0 && (enteredWilderness || tripsDone === 0);
 export const squadStartFood = (held: number, packFood: number): { ok: boolean; floor: number } => { const floor = Math.ceil(packFood * SQUAD_FOOD_FLOOR); return { ok: held >= floor, floor }; };
 const MAIN = new Set(['haggis']);
 // dropForStrip off: the profile's champion base drops a shark before a freeze to free slots for its armour strip.
@@ -340,6 +345,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     };
     let lastHp = me()?.hp ?? 0, seenMessage = 0, refusedAt = -100, pullSince = -1;
     const skip = new Map<string, number>();
+    let enteredWilderness = false;
     const unwatch = s.onTick(() => {
         const hp = me()?.hp; if (hp !== undefined) { if (hp < lastHp) stats.taken += lastHp - hp; lastHp = hp; }
         for (const m of s.sdk.getState()?.gameMessages ?? []) { const id = m.observationId ?? m.tick; if (id <= seenMessage) continue; seenMessage = id; if (/already under attack|already fighting your opponent/i.test(m.text)) refusedAt = s.tick(); }
@@ -355,7 +361,9 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             }
             lastTile = { x: p.worldX, z: p.worldZ };
             // Out of the Wilderness (a walk out, a teleport): to the bank and back to the post.
-            if (wildernessLevel(p.worldZ) === 0) {
+            if (wildernessLevel(p.worldZ) > 0) enteredWilderness = true;
+            if (outTripDue(p.worldZ, enteredWilderness, stats.trips)) {
+                enteredWilderness = false;
                 if (stats.trips >= o.trips) { o.log(`[${s.name}] SQUAD no trips left`); break; }
                 stats.trips++;
                 // The first visit, before any fight, is at the pack that the account logged in with: nothing is banked, so

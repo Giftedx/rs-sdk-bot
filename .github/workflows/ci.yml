@@ -45,6 +45,16 @@ on:
         type: string
         required: false
         default: ''
+      measure_script:
+        description: A script of scripts/measure/ to run alone on one clean runner, for numbers that the PC cannot give beside live bots (empty runs none)
+        type: string
+        required: false
+        default: ''
+      measure_args:
+        description: Arguments of the measure script
+        type: string
+        required: false
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -200,8 +210,8 @@ jobs:
   # The key of the saved walk lengths: a set of real trips planned alone and with shared lengths gives equal plans
   # (scripts/measure/route-key-parity.ts).
   route-key-parity:
-    # A dispatch for bench cases alone does not need it.
-    if: inputs.bench_pattern == ''
+    # A dispatch for bench cases or for one measure script alone does not need it.
+    if: inputs.bench_pattern == '' && inputs.measure_script == ''
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -217,6 +227,34 @@ jobs:
         timeout-minutes: 15
         run: |
           bun scripts/measure/route-key-parity.ts
+  # One script of scripts/measure/ on a clean runner (for example route-memory.ts: RSS, heap and time of the route steps).
+  # Dispatch: gh workflow run CI --ref <branch> -f measure_script=scripts/measure/route-memory.ts
+  measure:
+    if: inputs.measure_script != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MEASURE_SCRIPT: ${{ inputs.measure_script }}
+      MEASURE_ARGS: ${{ inputs.measure_args }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Prepare the pinned dependencies
+        run: bun scripts/worktree-setup.ts --bench
+      - name: Run the measure script
+        timeout-minutes: 15
+        run: |
+          case "$MEASURE_SCRIPT" in
+            scripts/measure/[A-Za-z0-9_-]*.ts) ;;
+            *) echo "measure_script must be a file of scripts/measure/: $MEASURE_SCRIPT"; exit 1 ;;
+          esac
+          case "$MEASURE_SCRIPT" in *..*) echo "no .. in the path"; exit 1 ;; esac
+          [ -f "$MEASURE_SCRIPT" ] || { echo "no such script: $MEASURE_SCRIPT"; exit 1; }
+          bun "$MEASURE_SCRIPT" $MEASURE_ARGS
   progression-practice:
     if: inputs.preparation_practice
     uses: ./.github/workflows/progression-practice.yml

@@ -4,7 +4,7 @@ import * as childProcess from 'node:child_process';
 import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { acquireFleetSwarmClaim, acquireFleetTradeClaim, readFleetAccountClaim, readFleetTradeClaim, readHeldFleetTradeClaims, releaseFleetTradeClaim } from '../src/fleet-trade-claim';
+import { acquireFleetSwarmClaim, acquireFleetTradeClaim, readAllFleetAccountClaims, readFleetAccountClaim, readFleetTradeClaim, readHeldFleetTradeClaims, releaseFleetTradeClaim } from '../src/fleet-trade-claim';
 import { beginSessionAttempt, lifecycleOwner } from '../src/session-lifecycle';
 import { acquireFleetLease, fleetGitWindow } from '../src/fleet-lease';
 import { ORPHAN_CLAIM_MS } from '../src/fleet-trade-claim';
@@ -432,5 +432,82 @@ test('a trade claim that reached the network is never taken back, and the claim 
         acquireFleetTradeClaim(a, input).release();
         expect(await dead(`acquireFleetTradeClaim(process.cwd(), ${JSON.stringify({ ...input, orderId: 'order-two' })})`)).toBe(0);
         expect(() => acquireFleetTradeClaim(a, input)).toThrow('already claimed');
+    });
+}, 60_000);
+
+// A git window that counts its commands by name.
+function counting(root: string) {
+    const base = fleetGitWindow(root), calls: Record<string, number> = {};
+    const window = ((args: string[], input?: string) => { const name = args.find(a => !a.startsWith('-')) ?? args[0]!; calls[name] = (calls[name] ?? 0) + 1; return base(args, input); }) as typeof base;
+    return { window, calls };
+}
+test('every claim is read with one batched read, and a head that this checkout holds is not fetched again', async () => {
+    await withRepos(async (a, b) => {
+        const names = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo'];
+        for (const [i, account] of names.entries()) acquireFleetTradeClaim(a, { ...input, account, orderId: 'order-' + i }, () => T0);
+        // A checkout that holds none of the records fetches them once, and reads each account with one command in all.
+        const first = counting(b), claims = readAllFleetAccountClaims(first.window);
+        expect([...claims.keys()].sort()).toEqual(names.map(n => n.toLowerCase()).sort());
+        for (const claim of claims.values()) expect(claim).toMatchObject({ phase: 'held' });
+        expect(first.calls['show']).toBe(1);
+        expect(first.calls['fetch']).toBe(1);
+        expect(first.calls['cat-file']).toBe(1);
+        // The same read again: the records are here, so nothing is fetched.
+        const second = counting(b);
+        expect(readAllFleetAccountClaims(second.window)).toEqual(claims);
+        expect(second.calls['show']).toBe(1);
+        expect(second.calls['fetch']).toBeUndefined();
+        // The batched reader for the held trade claims fetches nothing either.
+        expect(readHeldFleetTradeClaims(b).map(c => c.account).sort()).toEqual(names.map(n => n.toLowerCase()).sort());
+        // A record that this checkout lacks is fetched, and only that one: Bravo moves on, the others stay here.
+        const bravo = readFleetAccountClaim(a, { ...input, account: 'Bravo' })!;
+        releaseFleetTradeClaim(a, { ...input, account: 'Bravo', nonce: bravo.nonce });
+        const third = counting(b), after = readAllFleetAccountClaims(third.window);
+        expect(after.get('bravo')).toMatchObject({ phase: 'released' });
+        expect(third.calls['fetch']).toBe(1);
+        expect(third.calls['show']).toBe(1);
+    });
+}, 60_000);
+test('an unreadable claim record maps to null while the other accounts are still read in the one batch', async () => {
+    await withRepos(async (a, b) => {
+        acquireFleetTradeClaim(a, { ...input, account: 'Good', orderId: 'order-g' }, () => T0);
+        // A claim ref whose record is not a claim: a commit with a body that is not JSON.
+        const tree = execFileSync('git', ['hash-object', '-w', '-t', 'tree', '--stdin'], { cwd: a, input: '', encoding: 'utf8', windowsHide: true }).trim();
+        // The committer is given here: a runner has no global git identity.
+        const bad = git(a, '-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', 'commit-tree', tree, '-m', 'not a claim record\n\nplain text').toString().trim();
+        git(a, 'push', 'origin', bad + ':refs/heads/fleet-trade-claim/broken');
+        const read = counting(b), claims = readAllFleetAccountClaims(read.window);
+        expect(claims.get('broken')).toBeNull();
+        expect(claims.get('good')).toMatchObject({ phase: 'held' });
+        expect(read.calls['show']).toBe(1);
+    });
+}, 60_000);
+
+test('a failed batch read falls back to one read for each record, and a failed local check fetches every head', async () => {
+    await withRepos(async (a, b) => {
+        const names = ['Alpha', 'Bravo', 'Charlie'];
+        for (const [i, account] of names.entries()) acquireFleetTradeClaim(a, { ...input, account, orderId: 'order-' + i }, () => T0);
+        const expected = readAllFleetAccountClaims(fleetGitWindow(a));
+        expect([...expected.values()].every(c => c?.phase === 'held')).toBe(true);
+        // The batch `show` is refused: each record is read on its own, and the answer is the same.
+        const calls: Record<string, number> = {}, fetched: string[][] = [];
+        const refusing = ((args: string[], text?: string) => {
+            const name = args.find(arg => !arg.startsWith('-')) ?? args[0]!;
+            calls[name] = (calls[name] ?? 0) + 1;
+            if (name === 'show' && args.some(arg => arg.includes('%H'))) throw Error('batch refused');
+            return fleetGitWindow(b)(args, text);
+        }) as ReturnType<typeof fleetGitWindow>;
+        expect(readAllFleetAccountClaims(refusing)).toEqual(expected);
+        expect(calls['show']).toBe(1 + names.length);
+        // The local check fails: every head is fetched (as before this check existed), and the answer is the same.
+        const noCheck = ((args: string[], text?: string) => {
+            const name = args.find(arg => !arg.startsWith('-')) ?? args[0]!;
+            if (name === 'cat-file') throw Error('cat-file refused');
+            if (name === 'fetch') fetched.push(args.slice(args.indexOf('origin') + 1));
+            return fleetGitWindow(b)(args, text);
+        }) as ReturnType<typeof fleetGitWindow>;
+        expect(readAllFleetAccountClaims(noCheck)).toEqual(expected);
+        expect(fetched).toHaveLength(1);
+        expect(fetched[0]).toHaveLength(names.length);
     });
 }, 60_000);

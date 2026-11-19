@@ -113,6 +113,9 @@ export const hitByPlayer = (e: { type: string; sourceType: string; targetType: s
 const held = (s: Session, id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
 // The food of a trip, best first, with the Hitpoints that one piece heals (content consume_effects.dbrow: shark 20, lobster 12).
 // The restock and the bank trips take sharks first and fill what the bank lacks with lobsters.
+// A member starts a run, or leaves a bank, with at least this share of the food of its pack. Under it the missing food
+// blocks (scripts/pk-squad.ts squadStartFood, restock below).
+export const FOOD_START_FLOOR = 0.5;
 export const FOOD_LIST: readonly { id: number; heal: number }[] = [{ id: ITEMS.shark, heal: 20 }, { id: 379, heal: 12 }];
 export const healOf = (id: number): number => FOOD_LIST.find(f => f.id === id)?.heal ?? 12;
 // The pieces of food in a pack.
@@ -210,6 +213,10 @@ export async function restock(s: Session, food: number, trip: readonly TripItem[
     }
     food -= boosts.length;
     const total = (id: number) => stock().filter(r => r.id === id).reduce((n, r) => n + r.count, 0);
+    // A bank that holds at least the food floor of the pack's food fills the pack with what it holds: one meal eaten
+    // since the pack was taken must not end a trip (live: `required 21, available 20`, `required 16, available 15`).
+    const foodOwned = FOOD_LIST.reduce((n, f) => n + total(f.id), 0);
+    if (foodOwned < food && foodOwned >= Math.ceil(food * FOOD_START_FLOOR)) food = foodOwned;
     const target = resolveItemRequirements([...selected.items, ...boosts, ...planFood(total, food)], stock(), nativeRequirementMetadata);
     if (!target.ok) return fail(target);
     for (const item of [...s.sdk.getInventory()]) await s.bot.depositItem(item, -1);

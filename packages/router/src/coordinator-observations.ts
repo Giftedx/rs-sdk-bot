@@ -1,3 +1,4 @@
+import {RESERVED_ACCOUNTS} from '../../core/src/specialist-boards';
 import {createHash} from 'node:crypto';
 import {addTasks,boundAccounts,deadRoots,type CoordinatorState,type CoordTask} from './coordinator';
 import {currentQualification,reviewApproved,retarget} from './coordinator-rules';
@@ -11,6 +12,8 @@ const normalized=(s:string)=>s.toLowerCase();
 const canonical=(v:any):any=>Array.isArray(v)?v.map(canonical):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
 export interface ObservationBridgeDeps{
  now:number;side:string;goals:OwnerGoals;statuses:readonly any[];
+ /** A login attempt of the account began after the time, or that cannot be excluded (goal-work.ts bank validity). */
+ loginAfter?:(account:string,at:number)=>boolean;
  allowed:(account:string)=>boolean;paused:(account:string)=>boolean;
  definition:(id:string)=>{id:string;entry:string;source:string};
  capabilityFor:(entry:string)=>string|null;
@@ -44,7 +47,7 @@ export function applyObservationRequests(state:CoordinatorState,requests:readonl
  const entryOf=(cap:string)=>{try{return d.definition(cap).entry;}catch{return undefined;}};
  const statusOf=(name:string)=>d.statuses.filter(s=>s?.name?.toLowerCase()===normalized(name)&&!s.practice&&s.server==='rs-sdk-demo.fly.dev'&&Number.isFinite(s.at)&&s.at>0&&s.at<=d.now).sort((a,b)=>b.at-a.at)[0];
  const running=new Set(state.tasks.filter(r=>r.status==='running').flatMap(r=>boundAccounts(r.spec,state)??[]).map(normalized));
- const eligible=(name:string)=>/^[A-Za-z0-9]{1,12}$/.test(name)&&!['haggis','shaftshooter','polevaulter'].includes(normalized(name))&&d.allowed(name)&&!d.paused(name)&&!running.has(normalized(name));
+ const eligible=(name:string)=>/^[A-Za-z0-9]{1,12}$/.test(name)&&!RESERVED_ACCOUNTS.includes(normalized(name))&&d.allowed(name)&&!d.paused(name)&&!running.has(normalized(name));
  const fresh=(s:any,t:CoordTask)=>s&&d.now-s.at<300000&&Array.isArray(s.skills)&&Object.keys(t.accept?.skills??{}).every(skill=>s.skills.some((r:any)=>normalized(r.name??'')===normalized(skill)&&Number.isSafeInteger(r.level)&&r.level>=1&&r.level<=99&&Number.isFinite(r.xp)&&r.xp>=0));
  const freshBank=(s:any)=>s&&Number.isFinite(s.bankAt)&&s.bankAt>0&&s.bankAt<=s.at&&d.now-s.bankAt<300000&&Array.isArray(s.bank);
  const dependencies=(task:CoordTask)=>{
@@ -80,7 +83,7 @@ export function applyObservationRequests(state:CoordinatorState,requests:readonl
   if(!row)addTasks(candidate,[consumer],d.now);
   if(!candidate.tasks.some(r=>r.spec.id===id))addTasks(candidate,[observer],d.now);
   const target=candidate.tasks.find(r=>r.spec.id===consumer.id)!;target.spec.dependsOn=[...new Set([...target.spec.dependsOn,id])];
-  if(goalWork(candidate,d.goals,d.statuses,d.now,{entryOf}).get(id)?.value!==.01)return false;
+  if(goalWork(candidate,d.goals,d.statuses,d.now,{entryOf,loginAfter:d.loginAfter}).get(id)?.value!==.01)return false;
   const required=[...(bank?dependencies(consumer):consumer.dependsOn)].filter(id=>state.tasks.find(r=>r.spec.id===id)?.spec.kind==='qualify');
   const q=!existing||bank?qualification(cap,consumer.goal,consumer.priority+2):null;if((!existing||bank)&&!q)return false;
   if(!existing){observer.dependsOn=[...new Set([q!,...required])];addTasks(state,[observer],d.now);added.push(observer);}
@@ -124,7 +127,7 @@ export function applyObservationRequests(state:CoordinatorState,requests:readonl
   const consumer:CoordTask={id,goal:'skills',kind:'run',capability:cap,account:request.account,launch:'ordinary',dependsOn:[],priority:45,estimatedMs:240000,timeoutMs:1200000,args:[...work.args],env:{...work.env,LOOT_WATCH:'0',RANDOM_EVENTS:'0'},accept:structuredClone(accept),why:'Selected finite progression consumer from '+d.side+': '+JSON.stringify(accept)+'. The original selected work remains held until fresh observations and an exact qualified finite band fit its budget. No automatic retry follows a failed consumer.'};
   // Never copy a stale method/source assertion from a standing assignment.
   delete consumer.env!.PROGRESSION_METHOD;delete consumer.env!.PROGRESSION_SOURCE;consumer.env!.PROGRESSION_REQUEST=JSON.stringify(request.consumer);
-  if(fresh(status,consumer)){const candidate=structuredClone(state);addTasks(candidate,[consumer],d.now);const value=goalWork(candidate,d.goals,d.statuses,d.now,{entryOf}).get(id)?.value;if(!(typeof value==='number'&&value>0))continue;}
+  if(fresh(status,consumer)){const candidate=structuredClone(state);addTasks(candidate,[consumer],d.now);const value=goalWork(candidate,d.goals,d.statuses,d.now,{entryOf,loginAfter:d.loginAfter}).get(id)?.value;if(!(typeof value==='number'&&value>0))continue;}
   if(!observe(consumer,request.account,status,d.needsEntryObservation?.(consumer,request.account,status)??false))continue;
   const q=qualification(cap,consumer.goal,consumer.priority+1);if(!q)continue;consumer.dependsOn.push(q);
   if(fresh(status,consumer)){const ready=d.prepare(consumer,request.account,status);if(ready)Object.assign(consumer,ready);else requestQualification(consumer,request.account,status);}
