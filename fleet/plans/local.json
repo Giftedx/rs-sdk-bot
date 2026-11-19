@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795105866501,
+ "at": 1795106061998,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -343,6 +343,28 @@
    "resources": [
     "splash:ardougne-cow-fence"
    ]
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "536",
+    "QUANTITY": "8",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "7300",
+    "CASH_RESERVE": "5000",
+    "ORDER_MS": "1200000",
+    "ORDER_KEY": "prayer99-kiltlifter-dragonbones8",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-55317aee-a8ab-42b1-9a8a-14c75741455b"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-buy-kiltlifter-dragon-bones-8-norepair [task-55317aee-a8ab-42b1-9a8a-14c75741455b]",
+   "role": "supply"
   }
  ],
  "army": [
@@ -378,7 +400,6 @@
   "fatstack",
   "fingerblastr",
   "fingersmith",
-  "kiltlifter",
   "knightrider",
   "knightstick",
   "quickhandjob",
