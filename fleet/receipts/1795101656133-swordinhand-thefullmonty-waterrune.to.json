@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795101656133-swordinhand-thefullmonty-waterrune",
+ "account": "TheFullMonty",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 30,
+ "claim": "25d5a749-53fa-445e-a305-c7adddb63725",
+ "count": 30,
+ "ok": true,
+ "at": 1795101732168,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 27,
+  "after": 57
+ },
+ "bank": {
+  "count": 30,
+  "at": 1795101731532
+ },
+ "logout": {
+  "attemptId": "1795101697906-0000022620-0000000001",
+  "at": 1795101732158,
+  "sha256": "50bca7ace07863dc377b694cea830f37e3c2ad3e2cfca6d3bfd7e27a172818f6"
+ },
+ "screen": true
+}

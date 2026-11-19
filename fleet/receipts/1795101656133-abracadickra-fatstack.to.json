@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795101656133-abracadickra-fatstack",
+ "account": "Fatstack",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 27936,
+ "claim": "48842217-0fa1-435d-9cd2-dda66bb34576",
+ "count": 0,
+ "ok": false,
+ "at": 1795101706972,
+ "detail": "trade claimed"
+}
