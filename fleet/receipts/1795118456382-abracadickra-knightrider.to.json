@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795118456382-abracadickra-knightrider",
  "account": "KnightRider",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 182451,
  "claim": "2e917b3e-3535-49ec-9ec0-ff1cbdec4619",
- "count": 0,
- "ok": false,
- "at": 1795118538445,
- "detail": "trade claimed"
+ "count": 182451,
+ "ok": true,
+ "at": 1795118613279,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 60,
+  "after": 182511
+ },
+ "bank": {
+  "count": 182451,
+  "at": 1795118612372
+ },
+ "logout": {
+  "attemptId": "1795118538453-0000020288-0000000001",
+  "at": 1795118613096,
+  "sha256": "af4a72944d3e39fd3939e9d7a628c876504191bd6a8902b78928928deea97b9b"
+ },
+ "screen": true
 }
