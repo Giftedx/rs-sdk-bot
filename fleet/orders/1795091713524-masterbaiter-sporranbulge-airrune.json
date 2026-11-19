@@ -1,0 +1,22 @@
+{
+ "id": "1795091713524-masterbaiter-sporranbulge-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "SporranBulge",
+ "item": "Air rune",
+ "count": 2,
+ "start": 1795091713524,
+ "end": 1795094113524,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

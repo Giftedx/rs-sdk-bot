@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795091581784,
+ "at": 1795091729338,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -224,7 +224,7 @@
    ]
   },
   {
-   "account": "BraveHardon",
+   "account": "TossTheCaber",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "aubury",
