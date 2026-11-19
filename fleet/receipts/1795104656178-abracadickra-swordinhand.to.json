@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795104656178-abracadickra-swordinhand",
  "account": "Swordinhand",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 28111,
  "claim": "57f6a506-925a-41ef-a150-79f81ea94263",
- "count": 0,
- "ok": false,
- "at": 1795104725552,
- "detail": "trade claimed"
+ "count": 28111,
+ "ok": true,
+ "at": 1795104824439,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1889,
+  "after": 30000
+ },
+ "bank": {
+  "count": 28111,
+  "at": 1795104823716
+ },
+ "logout": {
+  "attemptId": "1795104725560-0000002368-0000000001",
+  "at": 1795104824431,
+  "sha256": "f940357429a2ef49dbbfed19eb613929cb58440ec4120c03b7adbfb81018bb9b"
+ },
+ "screen": true
 }
