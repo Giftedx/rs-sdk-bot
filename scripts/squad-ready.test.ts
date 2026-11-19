@@ -239,3 +239,26 @@ describe('receiptOf', () => {
         expect(receiptOf(pickKit(full('A'), gear, rule, NOW), full('A'), rule.name, NOW, new TextEncoder().encode('{"name":"A","x":1}')).statusSha256).not.toBe(ready.statusSha256);
     });
 });
+
+test('walkToKitTile names the walk when the account is more than 3 tiles from the bank tile of its loadout file', async () => {
+    const { walkToKitTile } = await import('./squad-ready');
+    expect(walkToKitTile('Alpha', { x: 3092, z: 3497 }, { x: 3094, z: 3491 })).toBe('bun scripts/walk-to.ts Alpha 3094 3491');
+    expect(walkToKitTile('Alpha', { x: 3093, z: 3492 }, { x: 3094, z: 3491 })).toBeNull();
+    expect(walkToKitTile('Alpha', { x: 3097, z: 3491 }, { x: 3094, z: 3491 })).toBeNull();
+    expect(walkToKitTile('Alpha', { x: 3098, z: 3491 }, { x: 3094, z: 3491 })).not.toBeNull();
+});
+
+test('stockFaults blocks under one pack of runes or arrows and notes under two', async () => {
+    const { stockFaults } = await import('./squad-ready');
+    const rule = { name: 'r', benchKit: 'b', maxBankAgeHours: 6, maxDonorBankAgeHours: 168, minArrows: 100, antipoisonHolders: 2 };
+    const acct = (pack: [number, number][], bank: [number, number][], quiver: number) => ({ name: 'A', pack: pack.map(([id, count]) => ({ id, name: `i${id}`, count })), bank: bank.map(([id, count]) => ({ id, name: `i${id}`, count })), worn: [{ id: 884, name: 'Iron arrow', count: quiver, slot: 13 }] }) as any;
+    const carried = [{ id: 563, name: 'Law rune', count: 2 }, { id: 557, name: 'Earth rune', count: 30 }, { id: 861, name: 'Magic shortbow', count: 1 }];
+    const worn = [{ id: 884, name: 'Iron arrow', count: 270, slot: 13 }];
+    const full = stockFaults(acct([[563, 2], [557, 30]], [[563, 2], [557, 30], [884, 200]], 270), worn, carried, rule);
+    expect(full).toEqual({ blocks: [], notes: [] });
+    const one = stockFaults(acct([[563, 2], [557, 30]], [[884, 30]], 90), worn, carried, rule);
+    expect(one.blocks).toEqual([]);
+    expect(one.notes).toEqual(['stock for one trip only: 2 Law rune of 4 for two trips', 'stock for one trip only: 30 Earth rune of 60 for two trips', 'stock for one trip only: 120 Iron arrow of 200 for two trips']);
+    const none = stockFaults(acct([[563, 1]], [], 60), worn, carried, rule);
+    expect(none.blocks).toEqual(['stock under one pack: 1 Law rune in the pack, bank and quiver (a pack needs 2)', 'stock under one pack: 0 Earth rune in the pack, bank and quiver (a pack needs 30)', 'stock under one pack: 60 Iron arrow in the pack, bank and quiver (a pack needs 100)']);
+});

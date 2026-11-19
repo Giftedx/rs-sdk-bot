@@ -723,3 +723,11 @@ test('a radar retreat in the hunt logs the hunt threat retreat with the radar re
         expect(lines.some(l => l.startsWith(`HUNT threat retreat (${reason}, bracket=`))).toBe(true);
     } finally { for (const mock of mocks) mock.mockRestore(); }
 });
+
+test('shortageText names each item with what the trip needs and what the bank holds', async () => {
+    const { shortageText } = await import('./pk-hunt');
+    const names = new Map([[884, 'iron_arrow'], [563, 'law_rune']]);
+    expect(shortageText([{ id: 884, unit: 'items', required: 75, available: 33 }, { id: 563, required: 1, available: 0 }, { id: 2446, unit: 'doses', required: 4, available: 3 }], id => names.get(id)))
+        .toBe('iron arrow: 75 items needed, 33 in the bank; law rune: 1 items needed, 0 in the bank; item 2446: 4 doses needed, 3 in the bank');
+    expect(shortageText([], () => undefined)).toBe('');
+});
