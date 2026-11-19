@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795127128842-abracadickra-pocketrocket",
  "account": "Abracadickra",
  "partner": "Pocketrocket",
@@ -10,8 +10,18 @@
  "item": "coins",
  "requested": 121740,
  "claim": "2b52cfd4-dec4-4a8d-8d68-f52e0a5a91e3",
- "count": 0,
- "ok": false,
- "at": 1795127755674,
- "detail": "trade claimed"
+ "count": 121740,
+ "ok": true,
+ "at": 1795127921612,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1666832,
+  "after": 1545092
+ },
+ "logout": {
+  "attemptId": "1795127755683-0000024440-0000000001",
+  "at": 1795127921589,
+  "sha256": "b22fbee7a2cde6b1cd0432aad25621e2b435556512d4218afd8c91ff6d672022"
+ },
+ "screen": true
 }
