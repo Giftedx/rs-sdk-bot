@@ -134,7 +134,7 @@ async function knifeFishing(d:FishDriver,o:FishBatchOptions,state:()=>BotWorldSt
   const spot=pickFishSpot(s,o.method,15);
   if(!spot){if(d.search){if(searches>=3||!await d.search(searches++,()=>{state();return false;}))throw Error('fishing no compatible native spot after bounded search');}else{if(d.tick()-missingSince>=Math.min(12,o.progressTicks))throw Error('fishing no compatible native spot');await d.step();}observe(0);continue;}
   searches=0;missingSince=d.tick();
-  if(Math.abs(s.player!.worldX-spot.x)+Math.abs(s.player!.worldZ-spot.z)!==1){if(++stands>o.maxAttempts)throw Error('fishing dispatch limit');if(!await stand(spot))await d.step();observe(0);continue;}
+  if(Math.abs(s.player!.worldX-spot.x)+Math.abs(s.player!.worldZ-spot.z)!==1){if(++stands>o.maxAttempts)throw Error('fishing dispatch limit');const t0=d.tick(),dist=Math.max(Math.abs(s.player!.worldX-spot.x),Math.abs(s.player!.worldZ-spot.z));if(!await stand(spot))await d.step();observe(0);console.log(`FISH_STAND tick=${t0-start} dist=${dist} ticks=${d.tick()-t0} sinceCatch=${t0-progress}`);continue;}
   const cut=knifeCut(s.inventory,k.make1);if(!cut)throw Error('knife fishing needs a knife and logs');
   const drops:FishAction[]=drop?[{type:'dropItem',slot:drop.slot}]:[],n=drop&&products.includes(drop.id)?1:0;
   const click:FishAction={type:'interactNpc',npcIndex:spot.index,optionIndex:profile.op};
