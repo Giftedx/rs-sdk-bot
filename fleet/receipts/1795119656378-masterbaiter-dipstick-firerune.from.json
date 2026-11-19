@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795119656378-masterbaiter-dipstick-firerune",
+ "account": "Masterbaiter",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 1,
+ "claim": "794db615-08ea-4e85-976f-172c1a2f3f31",
+ "count": 0,
+ "ok": false,
+ "at": 1795119766808,
+ "detail": "trade claimed"
+}
