@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795112692423-mightyrod-mmthv2350-bones",
+ "account": "Mightyrod",
+ "partner": "mmthv2350",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 31,
+ "claim": "01f69927-3a42-4ae5-8739-4052c93da87c",
+ "count": 31,
+ "ok": true,
+ "at": 1795112749345,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 31,
+  "after": 0
+ },
+ "bank": {
+  "count": 31,
+  "at": 1795112735811
+ },
+ "logout": {
+  "attemptId": "1795112729893-0000020904-0000000001",
+  "at": 1795112749336,
+  "sha256": "c187ba989871bde50b0c4b748ffd70d84c6243d6e7f4ec2f62d0508004ad3274"
+ },
+ "screen": true
+}
