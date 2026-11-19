@@ -381,7 +381,7 @@ export async function wearGlory(s: Session): Promise<void> {
 export type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: number; spell: string; ranged?: RegExp; loot: boolean; freeze: boolean; friends?: readonly string[];
     // Fight options added to each fight of the hunt (the army's allies and shared freeze, scripts/pk-army.ts).
     fight?: Partial<FightOptions>;
-    // The threat radar (scripts/pk-threat.ts, ROAM_THREAT=1): a protect prayer for the style of a threat, the armour swap of the pack, and an escape
+    // The threat radar (scripts/pk-threat.ts, the THREAT=1 argument): a protect prayer for the style of a threat, the armour swap of the pack, and an escape
     // when a player outclasses us or a team comes. threatAct false only logs and records.
     threat?: boolean; threatAct?: boolean;
     // While hold() is true the chase closes to 3 tiles of its target and casts and attacks nothing (the army's

@@ -255,3 +255,33 @@ test('threatOptions: SQUAD_THREAT_OPTS over the environment settings, defaults, 
     expect(() => threatOptions('{nope', env({}))).toThrow('not JSON');
     expect(() => threatOptions('[1]', env({}))).toThrow('not a JSON object');
 });
+
+test('KitSwapper: the swap stays while a threat of its style can still hit us (the protect action), though the kit action is gone, and is undone 60 ticks after both are gone', async () => {
+    const used: number[] = [], lines: string[] = [];
+    const s: any = { name: 'Ours1', sdk: { getEquipment: () => [{ id: 1127 }, { id: 1079 }], getInventory: () => [{ id: 1135, slot: 5, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] }, { id: 1127, slot: 6, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] }], sendUseItem: async (slot: number) => { used.push(slot); } } };
+    const kit: any[] = [{ kind: 'kit', member: 'Ours1', style: 'magic', wear: [1135], gain: 26, reason: 'Mage magic' }];
+    const protect: any[] = [{ kind: 'protect', member: 'Ours1', style: 'magic', reason: 'Mage' }];
+    const swapper = new KitSwapper(), tick = async () => true, log = (l: string) => lines.push(l);
+    expect(await swapper.step(s, [...protect, ...kit], 10, tick, log)).toBe(true);
+    // The armour is worn, so the kit action is gone; the mage is still there (a protect action of its style): no restore, however long.
+    for (const now of [40, 100, 400]) expect(await swapper.step(s, protect, now, tick, log)).toBe(false);
+    expect(swapper.active).toBe(true);
+    // A protect action for another style, or for another member, is not the threat of the swap.
+    expect(await swapper.step(s, [{ ...protect[0], style: 'melee' }], 459, tick, log)).toBe(false);
+    expect(await swapper.step(s, [{ ...protect[0], style: 'melee' }], 460, tick, log)).toBe(true);
+    expect(swapper.active).toBe(false);
+    expect(used).toEqual([5, 6]);
+});
+
+test('with the win-chance estimate a lost fight against the squad targets alone has a cooldown too, and the counting rules still leave the targets out of it', () => {
+    const gang = [{ ...MAGE, index: 9, name: 'A' }, { ...MAGE, index: 10, name: 'B', x: 3076 }, { ...MAGE, index: 11, name: 'C', x: 3076, z: 3643 }, { ...MAGE, index: 12, name: 'D', x: 3075, z: 3643 }];
+    const view = [9, 10, 11, 12];
+    const { w, lines } = watch(gang, view, { expected: ['a', 'b', 'c', 'd'] });
+    expect(retreatOf(w.step(5).actions)).toContain('lost fight');
+    w.acted(5);
+    // The squad comes back to the same gang inside the cooldown: no retreat, said once.
+    expect(retreatOf(w.step(200).actions)).toBeNull();
+    expect(lines.filter(l => l.startsWith('THREAT retreat held, cooldown:'))).toHaveLength(1);
+    // After the cooldown (600 ticks from the act) the fight is left again.
+    expect(retreatOf(w.step(700).actions)).toContain('lost fight');
+});

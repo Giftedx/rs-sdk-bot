@@ -164,7 +164,9 @@ export class ThreatWatch {
         const rest = actions.filter(a => !move(a)), moves = actions.filter(move);
         if (this.held && tick <= this.held.until) return [...this.held.moves, ...rest];
         if (!moves.length) { this.pending = null; return actions; }
-        const expected = this.o.decide?.expected;
+        // The players that caused the move: the strangers; with the win-chance estimate every dangerous player counts (it counts the squad's targets too, so a lost fight
+        // against the gang alone must have a cooldown as well).
+        const expected = this.o.odds === false ? this.o.decide?.expected : undefined;
         const culprits = classes.filter(c => c.dangerous && !expected?.has(c.record.name.toLowerCase())).map(c => c.record.name.toLowerCase());
         if (culprits.length && culprits.every(n => (this.cooling.get(n) ?? -1) > tick)) {
             if (this.logged.get('cooldown') !== culprits.join('+')) { this.logged.set('cooldown', culprits.join('+')); this.o.log(`THREAT retreat held, cooldown: ${culprits.join(', ')}`); }
@@ -253,19 +255,22 @@ export function holdProtect(s: Session, style: CombatStyle, tick: number): void 
 // pack once, and wears the worn armour again after the threat has been gone for `holdTicks` ticks. It returns true when it used the tick
 // (an input and a tick each), so that the caller goes on with a new pass.
 export class KitSwapper {
-    private swapped: { restore: number[]; lastNeeded: number } | null = null;
+    private swapped: { restore: number[]; lastNeeded: number; style: string } | null = null;
     constructor(private holdTicks = 60) {}
     get active() { return this.swapped !== null; }
     async step(s: Session, actions: readonly Adapt[], now: number, tick: () => Promise<boolean>, log: (line: string) => void): Promise<boolean> {
         const kit = actions.find(a => a.kind === 'kit' && a.member === s.name) as Extract<Adapt, { kind: 'kit' }> | undefined;
         if (kit && !this.swapped) {
-            this.swapped = { restore: restoreFor(s.sdk.getEquipment().map(e => e.id), kit.wear), lastNeeded: now };
+            this.swapped = { restore: restoreFor(s.sdk.getEquipment().map(e => e.id), kit.wear), lastNeeded: now, style: kit.style };
             log(`[${s.name}] threat kit swap: ${kit.reason}`);
             const failed = await wearIds(s, kit.wear, tick);
             if (failed.length) log(`[${s.name}] threat kit swap could not wear ${failed.join('+')}`);
             return true;
         }
-        if (kit && this.swapped) this.swapped.lastNeeded = now;
+        // The swap stays needed while a threat of its style can hit us: the kit action itself goes once the armour is worn (planCounterSwap finds nothing better), so
+        // the protect action of the same style is the sign that the threat is still there.
+        const stillThere = this.swapped !== null && actions.some(a => a.kind === 'protect' && a.member === s.name && a.style === this.swapped!.style);
+        if ((kit || stillThere) && this.swapped) this.swapped.lastNeeded = now;
         if (!kit && this.swapped && now - this.swapped.lastNeeded >= this.holdTicks) {
             const back = this.swapped.restore;
             this.swapped = null;

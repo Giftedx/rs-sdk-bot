@@ -1812,7 +1812,9 @@ the log and the record) -> `packages/core/test/pvp-threat.test.ts`, `scripts/pk-
   within the account's levels, when the gain over all slots is 6 or more. Rune platebody and platelegs against dragonhide body and chaps is
   +38 magic defence. The hold loop wears them before the next fight (the Wear option, one input and one tick each) and wears the worn ones
   again 60 ticks after no threat needs the swap. A swap needs spare armour in the pack, and no kit in `scripts/pk-kits.ts` carries any.
-- **Expected targets.** The squad's targets are expected: protected against, never a reason to retreat. `SQUAD_THREAT_EXPECTED=0` counts them as strangers, for a
+- **Expected targets.** With the counting rules (`SQUAD_THREAT_ODDS=0`) the squad's targets are expected: protected against, never a reason to retreat. With the win-chance
+  estimate (the default) the targets count in the odds like any dangerous player, so a lost fight against the gang alone is left (and has the cooldown too); the expected set
+  keeps its other meaning there: a target is not an interloper (not attacked first, not counted in `attackerKills`). `SQUAD_THREAT_EXPECTED=0` counts them as strangers, for a
   bench whose attackers are also the squad's targets (`extra:attack-*`), where the retreat rules have no other way to fire.
 - **Hunt and roam.** The hunt (`HUNT_THREAT=1`, `HUNT_THREAT_ACT=0`) and the roam (`THREAT=1`, `THREAT_ACT=0`) run the same `ThreatWatch` and
   `KitSwapper` for their one account: the protect prayer through `threatPrayer`, the armour swap, and the retreat (the hunt's threat retreat, the

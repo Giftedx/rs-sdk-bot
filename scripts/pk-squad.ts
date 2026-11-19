@@ -365,8 +365,8 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     // The threat radar's armour swap (the worn items that it took off, to wear again) and its single-way hold (no pull and no walk back to the
     // multi-way post until this tick).
     const swapper = new KitSwapper(), tickOf = () => nextTick(s);
-    // A fight stops when the radar decides a retreat or a single-way move: a member inside a fight does not read the decision, and the squad's
-    // fights are the whole run against a team (10-seed bench of team5-pile-noprayer: the retreat reached 2 of 10 runs before this).
+    // A fight stops when the radar decides a retreat or a single-way move: a member inside a fight does not read the decision, and against a team the squad's
+    // fights are the whole run, so without this stop a decision would not reach a member that is fighting.
     const radarMove = () => !!o.threats?.act && o.threats.step(s.tick()).actions.some(a => a.kind === 'retreat' || a.kind === 'single-way');
     let singleUntil = -1;
     const skip = new Map<string, number>();
@@ -586,6 +586,13 @@ if (import.meta.main) {
     if (ledgerRefusal) { console.log(`RESULT fail died ${ledgerRefusal}`); process.exit(1); }
     const paused = ours.filter(n => existsSync(`.practice/stop-${n}`));
     if (existsSync('.practice/stop-pk-squad') || paused.length) { console.log(`RESULT fail stop file present: ${existsSync('.practice/stop-pk-squad') ? 'stop-pk-squad' : paused.map(n => `stop-${n}`).join(' ')}`); process.exit(2); }
+    // The settings are checked before any account logs in: a bad one is a fail line with nobody in the Wilderness (squadFightOverrides: the plain settings for the
+    // options that a hosted bench A/B changes; threatOptions: SQUAD_THREAT_OPTS and the SQUAD_THREAT_* settings).
+    let fightOverrides: Partial<FightOptions>, threatConfig: ReturnType<typeof threatOptions> | undefined;
+    try {
+        fightOverrides = squadFightOverrides(get);
+        threatConfig = get('SQUAD_THREAT', '0') === '1' ? threatOptions(get('SQUAD_THREAT_OPTS', ''), get) : undefined;
+    } catch (e) { console.log(`RESULT fail ${e instanceof Error ? e.message : e}`); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
     let halted: string | undefined;
     // A session that ends with no logout of ours (a dropped connection) stops that account only. openBot's default
@@ -604,9 +611,6 @@ if (import.meta.main) {
     const maxKills = Number(get('MAX_KILLS', '0'));
     let kills = 0;
     const optsJson = get('SQUAD_OPTS', JSON.stringify(SQUAD_OPTS));
-    // Plain settings for the options that a hosted bench A/B changes (a hosted bench passes no JSON): scripts/pk-squad.ts squadFightOverrides.
-    let fightOverrides: Partial<FightOptions>;
-    try { fightOverrides = squadFightOverrides(get); } catch (e) { console.log(`RESULT fail ${e instanceof Error ? e.message : e}`); process.exit(2); }
     const log = (l: string) => console.log(l);
     // Bench: the gang accounts each fight the nearest of ours in view until they walk out (profile ganker-live).
     // SQUAD_GANG_SPLIT=1: gang account i takes our account i (i mod the squad), as the live gang split on the first
@@ -719,9 +723,7 @@ if (import.meta.main) {
     if (get('SQUAD_THREAT', '0') === '1') {
         const radar = new Radar();
         if (!gang.length) closeThreatRadar = connectRadar(squadServer, radar);
-        // SQUAD_THREAT_OPTS (JSON) and the SQUAD_THREAT_* settings: scripts/pk-threat.ts threatOptions. A bad setting is a fail line, not a default.
-        let to: ReturnType<typeof threatOptions>;
-        try { to = threatOptions(get('SQUAD_THREAT_OPTS', ''), get); } catch (e) { console.log(`RESULT fail ${e instanceof Error ? e.message : e}`); process.exit(2); }
+        const to = threatConfig!;
         threats = new ThreatWatch({ sessions: () => squad, server: squadServer, friends: new Set(ours.map(n => n.toLowerCase())), radar, log, act: to.act, cooldown: to.cooldown, odds: to.odds,
             decide: { expected: to.expectedTargets ? targets : new Set<string>() } });
     }
