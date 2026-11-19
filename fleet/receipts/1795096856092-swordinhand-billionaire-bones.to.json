@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795096856092-swordinhand-billionaire-bones",
+ "account": "Billionaire",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 29,
+ "claim": "002e91d3-9f1b-4cc2-b6d9-82f44e09b1d0",
+ "count": 0,
+ "ok": false,
+ "at": 1795096930930,
+ "detail": "trade claimed"
+}
