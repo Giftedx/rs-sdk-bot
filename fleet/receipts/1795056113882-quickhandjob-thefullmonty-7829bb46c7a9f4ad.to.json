@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795056113882-quickhandjob-thefullmonty-7829bb46c7a9f4ad",
+ "account": "TheFullMonty",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune kiteshield",
+ "requested": 1,
+ "claim": "12ef1a14-4cdc-4245-97c9-2befc105493e",
+ "count": 1,
+ "ok": true,
+ "at": 1795056197432,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795056196643
+ },
+ "logout": {
+  "attemptId": "1795056181312-0000019300-0000000001",
+  "at": 1795056197386,
+  "sha256": "5e6236c2bfcc8fc5ca915a13197d444f93f903d95d921b84a5319f7d827ba58a"
+ },
+ "screen": true
+}
