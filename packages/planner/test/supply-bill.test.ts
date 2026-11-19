@@ -1,5 +1,6 @@
 import { test, expect } from 'bun:test';
-import { idsFor, supplyBill, liveHelperStatuses } from '../src/supply-bill';
+import { join } from 'node:path';
+import { boardSupplyDemand, idsFor, supplyBill, liveHelperStatuses } from '../src/supply-bill';
 import {unitValue} from '../src/autopilot';
 
 const items = [{ id: 536, name: 'Dragon bones' }, { id: 99, name: 'Unfinished potion', debugname: 'ranarrvial' }, { id: 109, name: 'Unfinished potion', debugname: 'dwarfweedvial' }, { id: 2970, name: 'Mort myre fungi' }];
@@ -143,4 +144,20 @@ test('a local practice observation cannot hide a live fleet snapshot with the sa
         expect(statuses).toHaveLength(1);
         expect(supplyBill([{ item: 'dragon bones', count: 100 }], items, statuses)[0]).toMatchObject({ owned: 25, short: 75 });
     } finally { rmSync(base, { recursive: true, force: true }); }
+});
+
+const LIVE_SNAPSHOT = join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-live.json');
+test('a specialist board bill covers only the rows before that board reaches 99', () => {
+    const ranged = boardSupplyDemand(LIVE_SNAPSHOT, 'ranged')!;
+    const need = (item: string) => ranged.supplies.find(s => s.item === item)?.count ?? 0;
+    expect(need('cannonball')).toBe(1700);
+    expect(need('rune arrow')).toBe(850);
+    expect(need('adamantite bar')).toBe(0);
+    const attack = boardSupplyDemand(LIVE_SNAPSHOT, 'attack')!;
+    expect(attack.supplies.some(s => s.item === 'staff of air')).toBe(true);
+    expect(attack.supplies.some(s => s.item === 'cannonball')).toBe(false);
+});
+test('a board bill names a clock board only', () => {
+    expect(() => boardSupplyDemand(LIVE_SNAPSHOT, 'overall')).toThrow(/no clock board/);
+    expect(() => boardSupplyDemand(LIVE_SNAPSHOT, 'nothing')).toThrow(/no clock board/);
 });

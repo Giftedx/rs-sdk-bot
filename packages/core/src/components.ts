@@ -2,12 +2,15 @@
 // pathfinder masks them). A route search asks "same area?" before it runs findLongPath: a leg between two areas
 // cannot be walked, and searching it scans the whole 2048x2048 grid. Ardougne to Varrock took 180 s of search that
 // way. Labelling the map takes about 5 s for 7.7M tiles in 20,763 areas.
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { pathfindingSourceKey } from './pathcache';
 
-export type Labels = { area(level: number, x: number, z: number): number; areas: number; tiles: number; zones: Map<number, Int32Array> };
+// Labels hold one flat array of 64 labels for each zone (cells, in the order of zoneKeys; 0xffff in a Uint16Array, or -1 in an
+// Int32Array, for a tile that is not walkable) and an open-addressing table from a zone key to the place of its labels.
+// The array is a Uint16Array while the map has under 65,535 areas. zones offers size and keys() over zoneKeys.
+export type Labels = { area(level: number, x: number, z: number): number; areas: number; tiles: number; zones: { size: number; keys(): IterableIterator<number> }; cells: Uint16Array | Int32Array; zoneKeys: Int32Array };
 const zoneKey = (l: number, x: number, z: number) => (l << 28) | ((x >> 3) << 14) | (z >> 3);
 const cell = (x: number, z: number) => ((x & 7) << 3) | (z & 7);
 // area(): >= 0 an area id; -1 not walkable or not labelled; -2 outside the loaded map.
@@ -41,17 +44,41 @@ export function labelAreas(zones: Iterable<[number, number, number]>, walkable: 
 }
 
 function fromZones(label: Map<number, Int32Array>, areas: number, tiles: number): Labels {
-    const get = (l: number, x: number, z: number) => label.get(zoneKey(l, x, z))?.[cell(x, z)] ?? -2;
-    return { area: (l, x, z) => { const v = get(l, x, z); return v < 0 ? (v === -2 ? -2 : -1) : v; }, areas, tiles, zones: label };
+    const keys = Int32Array.from(label.keys()), small = areas < 0xffff;
+    const cells = small ? new Uint16Array(keys.length * 64) : new Int32Array(keys.length * 64);
+    keys.forEach((k, i) => { const z = label.get(k)!; for (let c = 0; c < 64; c++) cells[i * 64 + c] = z[c]! < 0 ? (small ? 0xffff : -1) : z[c]!; });
+    return flat(keys, cells, areas, tiles)!;
+}
+
+// The labels over one flat array. null when two zones have one key. The table holds at least twice as many slots as zones.
+function flat(keys: Int32Array, cells: Uint16Array | Int32Array, areas: number, tiles: number): Labels | null {
+    const bits = Math.max(4, 32 - Math.clz32(Math.max(1, keys.length) * 2 - 1)), shift = 32 - bits, mask = (1 << bits) - 1;
+    const slotKey = new Int32Array(1 << bits), slotAt = new Int32Array(1 << bits).fill(-1);
+    for (let i = 0; i < keys.length; i++) {
+        const k = keys[i]!;
+        let s = Math.imul(k, 0x9e3779b1) >>> shift;
+        while (slotAt[s]! >= 0) { if (slotKey[s] === k) return null; s = (s + 1) & mask; }
+        slotKey[s] = k; slotAt[s] = i;
+    }
+    const none = cells instanceof Uint16Array ? 0xffff : -1;
+    const area = (l: number, x: number, z: number): number => {
+        const k = zoneKey(l, x, z);
+        let s = Math.imul(k, 0x9e3779b1) >>> shift;
+        for (;;) {
+            const at = slotAt[s]!;
+            if (at < 0) return -2;
+            if (slotKey[s] === k) { const v = cells[at * 64 + cell(x, z)]!; return v === none ? -1 : v; }
+            s = (s + 1) & mask;
+        }
+    };
+    return { area, areas, tiles, zones: { size: keys.length, keys: () => keys.values() }, cells, zoneKeys: keys };
 }
 
 // File: u32 header length, JSON header {source, areas, tiles, n, sha256}, n Int32 zone keys, n*64 Uint16 labels
 // (0xffff = not walkable). Labels fit in 16 bits while the map has under 65,535 areas.
 export function writeLabels(file: string, source: string, l: Labels): void {
-    const keys = [...l.zones.keys()];
-    const ids = new Uint16Array(keys.length * 64);
-    keys.forEach((k, i) => { const z = l.zones.get(k)!; for (let c = 0; c < 64; c++) ids[i * 64 + c] = z[c]! < 0 ? 0xffff : z[c]!; });
-    const keyBytes = Buffer.from(new Int32Array(keys).buffer), idBytes = Buffer.from(ids.buffer);
+    const keys = l.zoneKeys, ids = l.cells instanceof Uint16Array ? l.cells : Uint16Array.from(l.cells, v => v < 0 ? 0xffff : v);
+    const keyBytes = Buffer.from(keys.buffer, keys.byteOffset, keys.byteLength), idBytes = Buffer.from(ids.buffer, ids.byteOffset, ids.byteLength);
     const sha256 = createHash('sha256').update(keyBytes).update(idBytes).digest('hex');
     const header = Buffer.from(JSON.stringify({ source, areas: l.areas, tiles: l.tiles, n: keys.length, sha256 }));
     const len = Buffer.alloc(4); len.writeUInt32LE(header.length);
@@ -61,38 +88,47 @@ export function writeLabels(file: string, source: string, l: Labels): void {
     renameSync(tmp, file);
 }
 export function readLabels(file: string, source: string): Labels | null {
+    let fd: number | undefined;
     try {
-        const b = readFileSync(file), hl = b.readUInt32LE(0);
-        if (hl > b.length - 4) return null;
-        const h = JSON.parse(b.subarray(4, 4 + hl).toString()) as { source: string; areas: number; tiles: number; n: number; sha256: string };
+        // The zone keys and the labels are read into their own arrays: no buffer of the whole file is held.
+        fd = openSync(file, 'r');
+        const size = fstatSync(fd).size, head = Buffer.alloc(4);
+        if (size < 4 || !readExact(fd, head, 0)) return null;
+        const hl = head.readUInt32LE(0);
+        if (hl > size - 4) return null;
+        const headerBytes = Buffer.alloc(hl);
+        if (!readExact(fd, headerBytes, 4)) return null;
+        const h = JSON.parse(headerBytes.toString()) as { source: string; areas: number; tiles: number; n: number; sha256: string };
         const at = 4 + hl;
         if (!h || h.source !== source || !Number.isSafeInteger(h.n) || h.n < 0
             || !Number.isSafeInteger(h.areas) || h.areas < 0 || h.areas >= 0xffff
             || !Number.isSafeInteger(h.tiles) || h.tiles < 0 || h.tiles > h.n * 64
-            || b.length - at !== h.n * 132) return null;
-        if (typeof h.sha256 !== 'string' || createHash('sha256').update(b.subarray(at)).digest('hex') !== h.sha256) return null;
-        const keys = new Int32Array(b.buffer.slice(b.byteOffset + at, b.byteOffset + at + h.n * 4));
-        const ids = new Uint16Array(b.buffer.slice(b.byteOffset + at + h.n * 4, b.byteOffset + at + h.n * 4 + h.n * 128));
-        const label = new Map<number, Int32Array>(), seen = new Uint8Array(h.areas);
+            || size - at !== h.n * 132) return null;
+        const keys = new Int32Array(h.n), ids = new Uint16Array(h.n * 64);
+        if (!readExact(fd, new Uint8Array(keys.buffer), at) || !readExact(fd, new Uint8Array(ids.buffer), at + h.n * 4)) return null;
+        if (typeof h.sha256 !== 'string' || createHash('sha256').update(new Uint8Array(keys.buffer)).update(new Uint8Array(ids.buffer)).digest('hex') !== h.sha256) return null;
+        const seen = new Uint8Array(h.areas);
         let tiles = 0, areas = 0;
-        for (let i = 0; i < keys.length; i++) {
-            const k = keys[i]!;
-            if (label.has(k)) return null;
-            const z = new Int32Array(64);
-            for (let c = 0; c < 64; c++) {
-                const v = ids[i * 64 + c]!;
-                if (v === 0xffff) z[c] = -1;
-                else {
-                    if (v >= h.areas) return null;
-                    z[c] = v; tiles++;
-                    if (!seen[v]) { seen[v] = 1; areas++; }
-                }
-            }
-            label.set(k, z);
+        for (let i = 0; i < ids.length; i++) {
+            const v = ids[i]!;
+            if (v === 0xffff) continue;
+            if (v >= h.areas) return null;
+            tiles++;
+            if (!seen[v]) { seen[v] = 1; areas++; }
         }
         if (tiles !== h.tiles || areas !== h.areas) return null;
-        return fromZones(label, h.areas, h.tiles);
-    } catch { return null; }
+        return flat(keys, ids, h.areas, h.tiles);
+    } catch { return null; } finally { if (fd !== undefined) closeSync(fd); }
+}
+// Fills `into` from `position`. false when the file ends before it is full.
+function readExact(fd: number, into: Uint8Array, position: number): boolean {
+    let done = 0;
+    while (done < into.length) {
+        const got = readSync(fd, into, done, into.length - done, position + done);
+        if (got <= 0) return false;
+        done += got;
+    }
+    return true;
 }
 
 // Areas a walk can start from or end at around a box of tiles; null when part of it lies outside the labelled map.

@@ -11,8 +11,12 @@
 //   first two accounts of the list (poison did 139 of 455 damage; Rule antipoisonHolders), food for a full pack (the food list of the bank trip, scripts/pk-hunt.ts FOOD_LIST:
 //   sharks first, then lobsters), a bank read of a stated age, and a place the walker leaves.
 // Usage: bun scripts/squad-ready.ts [<account> ...] [--root <checkout>] [--max-age <hours>] [--json]
-//          [--loadouts <dir>] [--orders <dir>] [--receipt <dir>]
+//          [--loadouts <dir>] [--orders <dir>] [--receipt <dir>] [--ignore-prayer] [--before-kit]
+//   --before-kit  leaves out the check of what each account wears and carries now (the check is on otherwise, and off for
+//               --receipt), to write the kit files before the kit step.
 //   No account named: every account of this fleet side with 99 in the seven combat skills.
+//   --ignore-prayer  leaves the prayer points out of the check, to write the kit files (a blocked account gets none) before
+//               the altar step. It cannot be combined with --receipt: a receipt always checks the prayer points.
 //   --root      the checkout whose .practice/status, .practice/market-all.json and fleet owners the tool reads
 //               (default: the main checkout of this repository).
 //   --loadouts  writes <account>.json for each account that holds its kit: the input of the kit step,
@@ -32,13 +36,22 @@ import { packOf } from './pk-gang';
 import { FOOD_LIST } from './pk-hunt';
 import { kitItems } from './pk-kits';
 import { kitFrom } from './pk-roam';
-import { SQUAD_OPTS, SQUAD_POST, squadEscapeSpell } from './pk-squad';
+import { SQUAD_OPTS, SQUAD_POST, squadEscapeSpell, squadStartFood } from './pk-squad';
 import { PROFILES } from './shop-buyer';
 
 export type Item = { id: number; name: string; count: number };
 export type Worn = Item & { slot: number };
 export type Account = { name: string; at: number; bankAt: number | null; pos: { x: number; z: number; level: number }; levels: Readonly<Record<string, number>>; quests: ReadonlySet<string>;
-    worn: Worn[]; pack: Item[]; bank: Item[]; side?: string; reservation?: string };
+    worn: Worn[]; pack: Item[]; bank: Item[]; side?: string; reservation?: string;
+    // The current Prayer level (prayer points); absent when the status file does not name it.
+    prayerPoints?: number };
+// A member fights with at least this share of its base Prayer level as prayer points. Live: all four fighting members of
+// the first run stood at Prayer 99 with 0 points and took 56 HP a kill; the clone replay with full points took half.
+// The fix is the altar step: Varrock east church (scripts/pray-at-altar.ts PRAYER_ALTARS), never the nearest altar of an
+// account at Edgeville, which is the Wilderness chaos temple.
+export const PRAYER_FLOOR = 0.7;
+export const PRAYER_ALTAR = '3253,3486';
+export const prayerFloor = (base: number) => Math.ceil(base * PRAYER_FLOOR);
 export type Gear = { id: number; name: string; slot: string; tier?: number; special?: { pvp?: boolean }; requires?: { skills?: Record<string, number>; quest?: string };
     bonuses: Record<string, number>; tradeable?: boolean };
 // antipoisonHolders: the first accounts of the list that must hold an antipoison. The gang clone bench (five of ours,
@@ -83,7 +96,21 @@ export type Pick = { account: string; ready: boolean; reasons: string[]; notes: 
 const SPELL_NAME: Readonly<Record<number, string>> = { 1174: 'Camelot Teleport', 1164: 'Varrock Teleport' };
 
 // The kit of one account under the rule, from its own stock, with the pieces that it lacks.
-export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule, now: number, kit = kitItems(rule.benchKit), nameOf: (id: number) => string | undefined = () => undefined, post = SQUAD_POST, antipoisonRequired = true): Pick {
+// The faults of what an account wears and carries now against the kit that pickKit chose: a piece of the kit that is not
+// worn, a worn quiver under the least arrows, a supply or the bow that is not in the pack, and a pack with food under
+// the food floor. The fix of each is the kit step (`bun scripts/aio-logistics.ts <account> loadout <file>`).
+export function carriedFaults(a: Account, worn: readonly Worn[], carried: readonly Item[], foodSlots: number, rule: Rule, nameOf: (id: number) => string | undefined = () => undefined): string[] {
+    const out: string[] = [], count = (rows: readonly Item[], id: number) => rows.filter(r => r.id === id).reduce((n, r) => n + r.count, 0);
+    for (const w of worn) {
+        if (w.slot === 13) { const held = a.worn.find(x => x.slot === 13 && x.id === w.id)?.count ?? 0; if (held < Math.min(w.count, rule.minArrows)) out.push(`not worn: ${held} ${w.name} in the quiver (needs ${Math.min(w.count, rule.minArrows)}): the kit step wears it`); continue; }
+        if (!a.worn.some(x => x.slot === w.slot && x.id === w.id)) out.push(`not worn: ${w.name}: the kit step wears it`);
+    }
+    for (const c of carried) { const held = count(a.pack, c.id); if (held < c.count) out.push(`pack lacks ${c.count - held} ${c.name}${c.count > 1 ? ` (${held} of ${c.count})` : ''}: the kit step takes it`); }
+    const food = a.pack.filter(i => FOOD_IDS.includes(i.id)).reduce((n, i) => n + i.count, 0);
+    if (!squadStartFood(food, foodSlots).ok) out.push(`pack holds ${food} food, under the floor of ${squadStartFood(food, foodSlots).floor} of ${foodSlots}: the kit step takes it`);
+    return out;
+}
+export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule, now: number, kit = kitItems(rule.benchKit), nameOf: (id: number) => string | undefined = () => undefined, post = SQUAD_POST, antipoisonRequired = true, carry = false): Pick {
     const own = holdings(a), needs: Need[] = [], reasons: string[] = [], notes: string[] = [];
     const benchPiece = (test: (g: Gear) => boolean) => [...kit.equipment, ...kit.inventory].map(i => gear.get(i.id)).find(g => !!g && test(g))?.id;
     const owned = [...own.values()].filter(i => i.count > 0), g = (i: Item) => gear.get(i.id);
@@ -170,7 +197,9 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     const foodHeld = foodStock.reduce((n, f) => n + f.count, 0), foodRows: Item[] = [];
     for (const f of foodStock) { const take = Math.min(f.count, foodSlots - foodRows.reduce((n, r) => n + r.count, 0)); if (take > 0) foodRows.push({ id: f.id, name: f.name, count: take }); }
     const food = foodRows.reduce((n, r) => n + r.count, 0);
-    if (foodHeld < foodSlots) needs.push({ what: 'food (shark or lobster)', id: FOOD_IDS[0]!, count: foodSlots - foodHeld, blocking: true, accept: i => isFood(i.id) });
+    // A member that holds at least the food floor of its pack starts with what it holds (scripts/pk-squad.ts
+    // squadStartFood), so the missing meals are a want; under the floor they block.
+    if (foodHeld < foodSlots) needs.push({ what: 'food (shark or lobster)', id: FOOD_IDS[0]!, count: foodSlots - foodHeld, blocking: !squadStartFood(foodHeld, foodSlots).ok, accept: i => isFood(i.id) });
     // The fight kit, the pack of a bank trip, the escape and the freeze, each from the code that the squad runs.
     // The special of the fight kit: the melee weapon's, else the bow's (scripts/pk.ts defaultSpec).
     const fight = kitFrom(worn, carried), special = defaultSpec(fight)?.style ?? null;
@@ -182,6 +211,12 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     if (freezeSpell === null && !reasons.some(r => /Earth rune|Water rune|Nature rune/.test(r))) reasons.push('no Bind cast with the runes held');
     const ageHours = a.bankAt === null ? Infinity : (now - a.bankAt) / 3_600_000;
     if (ageHours > rule.maxBankAgeHours) reasons.push(a.bankAt === null ? 'no bank read' : `bank read ${ageHours.toFixed(1)} h old (limit ${rule.maxBankAgeHours} h)`);
+    // `carry`: the squad takes its pack from what the account holds at login (scripts/pk-gang.ts packOf), so the check also
+    // reads what the account wears and carries now, not what the bank and the pack together could make. Live: an account
+    // whose pack a failed trip had deposited was called READY and fought with no bow, no runes and no escape.
+    if (carry) for (const fault of carriedFaults(a, worn, carried, foodSlots, rule, nameOf)) reasons.push(fault);
+    const prayerBase = a.levels.prayer ?? 1;
+    if (a.prayerPoints !== undefined && a.prayerPoints < prayerFloor(prayerBase)) reasons.push(`prayer points ${a.prayerPoints} of ${prayerBase}, under the floor of ${prayerFloor(prayerBase)}: bun scripts/pray-at-altar.ts ${a.name} ALTAR=${PRAYER_ALTAR}`);
     if (inWestArdougne(a.pos)) reasons.push('stands inside West Ardougne, which the walker cannot leave');
     if (wildernessLevel(a.pos.z) > 0) reasons.push(`stands in the Wilderness at level ${wildernessLevel(a.pos.z)}`);
     if (!maxed(a)) notes.push(`not 99 in ${COMBAT.filter(s => (a.levels[s.toLowerCase()] ?? 1) < 99).join(', ')}`);
@@ -198,8 +233,8 @@ export type Plan = { picks: Pick[]; moves: Move[]; gaps: Gap[] };
 // candidate holds over its own kit (a candidate keeps its food, runes and arrows for its own bank trips). One piece
 // goes to one account. A donor that covers the whole need comes first, then the nearest; a wanted supply that no one
 // donor covers stays a gap, so that the plan holds few trades.
-export function stagingPlan(candidates: readonly Account[], fleet: readonly Account[], gear: ReadonlyMap<number, Gear>, rule: Rule, now: number, kit = kitItems(rule.benchKit), nameOf: (id: number) => string | undefined = () => undefined): Plan {
-    const picks = candidates.map((a, i) => pickKit(a, gear, rule, now, kit, nameOf, SQUAD_POST, i < rule.antipoisonHolders)), byName = new Map(picks.map(p => [p.account.toLowerCase(), p]));
+export function stagingPlan(candidates: readonly Account[], fleet: readonly Account[], gear: ReadonlyMap<number, Gear>, rule: Rule, now: number, kit = kitItems(rule.benchKit), nameOf: (id: number) => string | undefined = () => undefined, carry = false): Plan {
+    const picks = candidates.map((a, i) => pickKit(a, gear, rule, now, kit, nameOf, SQUAD_POST, i < rule.antipoisonHolders, carry)), byName = new Map(picks.map(p => [p.account.toLowerCase(), p]));
     const spare = new Map<string, Map<number, Item>>();
     for (const a of fleet) {
         // No donor with an old bank read, and none that cannot walk to a meeting.
@@ -289,7 +324,8 @@ export function accountOf(status: any, owner?: { side?: string; reservation?: st
     if (!status || typeof status.name !== 'string' || !status.pos || !Array.isArray(status.skills)) return null;
     const items = (rows: any): Item[] => (Array.isArray(rows) ? rows : []).filter((i: any) => Number.isSafeInteger(i?.id) && typeof i.name === 'string' && i.count > 0).map((i: any) => ({ id: i.baseId ?? i.id, name: i.name, count: i.count }));
     return { name: status.name, at: Number(status.at) || 0, bankAt: Number.isFinite(status.bankAt) ? status.bankAt : null, pos: { x: status.pos.x, z: status.pos.z, level: status.pos.level ?? 0 },
-        levels: Object.fromEntries(status.skills.map((s: any) => [String(s.name).toLowerCase(), s.level])), quests: new Set((status.quests ?? []).filter((q: any) => q?.state === 'complete').map((q: any) => String(q.name).toLowerCase())),
+        levels: Object.fromEntries(status.skills.map((s: any) => [String(s.name).toLowerCase(), s.level])),
+        ...(Number.isFinite(status.skills.find((s: any) => s?.name === 'Prayer')?.currentLevel) ? { prayerPoints: status.skills.find((s: any) => s?.name === 'Prayer').currentLevel as number } : {}), quests: new Set((status.quests ?? []).filter((q: any) => q?.state === 'complete').map((q: any) => String(q.name).toLowerCase())),
         worn: (Array.isArray(status.equipment) ? status.equipment : []).filter((i: any) => Number.isSafeInteger(i?.id)).map((i: any) => ({ id: i.baseId ?? i.id, name: i.name, count: i.count, slot: i.slot })),
         pack: items(status.inventory), bank: items(status.bank), ...(owner?.side ? { side: owner.side } : {}), ...(owner?.reservation ? { reservation: owner.reservation } : {}) };
 }
@@ -342,7 +378,14 @@ if (import.meta.main) {
     const blockers = (a: Account) => pickKit(a, gear, rule, now).reasons.length;
     const candidates = names.length ? names.map(n => fleet.find(a => a.name.toLowerCase() === n.toLowerCase()) ?? (() => { throw Error(`no status file of this side's account ${n} in ${statusDir}`); })())
         : fleet.filter(maxed).sort((x, y) => blockers(x) - blockers(y));
-    const plan = stagingPlan(candidates, fleet, gear, rule, now, undefined, nameOf);
+    if (args.includes('--ignore-prayer')) {
+        if (flag('--receipt')) throw Error('--ignore-prayer cannot be combined with --receipt: a receipt always checks the prayer points');
+        for (const a of candidates) delete a.prayerPoints;
+    }
+    // The pack and worn check is on, except before the kit step (--before-kit, which writes the kit files) and for a receipt
+    // (the swarm's kit-restored repair reads the holdings, not the pack).
+    const carry = !args.includes('--before-kit') && !flag('--receipt');
+    const plan = stagingPlan(candidates, fleet, gear, rule, now, undefined, nameOf, carry);
     let market: Record<string, { ask: number | null; sell: number }> = {};
     try { market = read(join(root, '.practice', 'market-all.json')).items; } catch { /* no market file: the plan names no price */ }
     const source = (gap: Gap) => {
