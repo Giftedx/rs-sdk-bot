@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795051703627,
+ "at": 1795051787778,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -266,9 +266,7 @@
     "99",
     "5000"
    ],
-   "env": {
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
