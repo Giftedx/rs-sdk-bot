@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795098198627-billionaire-undermykilt-waterrune",
+ "account": "Billionaire",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 215,
+ "claim": "6347b6dc-3d5a-46d9-8797-4e3294352b01",
+ "count": 0,
+ "ok": false,
+ "at": 1795098267691,
+ "detail": "trade claimed"
+}
