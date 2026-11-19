@@ -1,0 +1,23 @@
+{
+ "id": "1795060696741-mmsmk1232-pocketpool-adda3f5d043baed5",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmsmk1232",
+ "to": "PocketPool",
+ "item": "Iron arrow",
+ "count": 97,
+ "start": 1795060696741,
+ "end": 1795071496741,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
