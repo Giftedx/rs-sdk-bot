@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795060458602-backdoorman-undermykilt-2ab3290654e5f403",
+ "account": "BackdoorMan",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 6,
+ "claim": "4011e201-b626-45e7-88b3-6b9c8808ac54",
+ "count": 0,
+ "ok": false,
+ "at": 1795060465101,
+ "detail": "trade claimed"
+}

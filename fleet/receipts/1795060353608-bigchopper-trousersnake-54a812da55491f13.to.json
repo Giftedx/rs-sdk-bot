@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795060353608-bigchopper-trousersnake-54a812da55491f13",
+ "account": "TrouserSnake",
+ "partner": "Bigchopper",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 1,
+ "claim": "1c641404-a00e-462f-849b-5c8eb7ee9f46",
+ "count": 0,
+ "ok": false,
+ "at": 1795060503157,
+ "detail": "trade claimed"
+}

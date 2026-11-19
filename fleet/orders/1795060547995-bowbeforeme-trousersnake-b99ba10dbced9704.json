@@ -1,0 +1,23 @@
+{
+ "id": "1795060547995-bowbeforeme-trousersnake-b99ba10dbced9704",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "BowBeforeMe",
+ "to": "TrouserSnake",
+ "item": "Rune arrow",
+ "count": 66,
+ "start": 1795060547995,
+ "end": 1795071347995,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
