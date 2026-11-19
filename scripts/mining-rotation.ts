@@ -103,8 +103,27 @@ export function standTiles(rock:Tile,rocks:readonly Tile[]):Tile[]{
  return [[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dz])=>({x:rock.x+dx!,z:rock.z+dz!,level:rock.level})).filter(t=>!rocks.some(r=>r.x===t.x&&r.z===t.z&&r.level===t.level));
 }
 const beside=(p:{x:number;z:number},rock:Tile)=>Math.abs(p.x-rock.x)+Math.abs(p.z-rock.z)===1;
+// Steps from p to the nearest stand tile of the rock, round the rocks of the site: a rock tile blocks, and a diagonal
+// step needs both side tiles free (the engine's diagonal rule). A block of rocks (the Wilderness hobgoblin mine) puts
+// some stand tiles 3 steps away that are 2 tiles away in a straight line. Other walls are not known here.
+export function pathSteps(p:{x:number;z:number},rock:Tile,rocks:readonly Tile[]):number{
+ const goals=new Set(standTiles(rock,rocks).map(t=>`${t.x},${t.z}`)),blocked=new Set(rocks.map(r=>`${r.x},${r.z}`));
+ const free=(x:number,z:number)=>!blocked.has(`${x},${z}`);
+ const seen=new Set([`${p.x},${p.z}`]);let front=[{x:p.x,z:p.z}];
+ for(let steps=0;front.length&&steps<=24;steps++){
+  if(front.some(t=>goals.has(`${t.x},${t.z}`)))return steps;
+  const next:{x:number;z:number}[]=[];
+  for(const t of front)for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
+   const x=t.x+dx,z=t.z+dz,k=`${x},${z}`;
+   if((!dx&&!dz)||seen.has(k)||!free(x,z)||(dx&&dz&&(!free(t.x+dx,t.z)||!free(t.x,t.z+dz))))continue;
+   seen.add(k);next.push({x,z});
+  }
+  front=next;
+ }
+ return Math.min(...standTiles(rock,rocks).map(t=>cheb(p,t)));
+}
 // Ticks of run (2 tiles a tick) to a stand tile of the rock; 0 when the account stands beside it.
-const runTicks=(p:{x:number;z:number},rock:Tile,rocks:readonly Tile[])=>beside(p,rock)?0:Math.ceil(Math.min(...standTiles(rock,rocks).map(t=>cheb(p,t)))/2);
+const runTicks=(p:{x:number;z:number},rock:Tile,rocks:readonly Tile[])=>beside(p,rock)?0:Math.ceil(pathSteps(p,rock,rocks)/2);
 
 export interface RotationOptions{
  maximum:number;cap:number;idleTicks:number;
@@ -210,7 +229,7 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
    const free=rocks.map(r=>({r,loc:locAt(s,r)})).filter(v=>v.loc&&v.loc.reachable!==false&&!s.nearbyPlayers.some(q=>cheb(q,v.r)<=1));
    const freeRoll=(r:Tile)=>{const op=n+1+ticksTo(r);return delay>=op?delay:canCut?Math.max(op,n+3):op+rate;};
    const waitRoll=(r:Tile,back:number)=>{const click=Math.max(back+1,n+1+ticksTo(r));return canCut?Math.max(click,n+3):click+rate;};
-   const byRoll=(o.pick??(canCut?'roll':'nearest'))==='roll',stepsTo=(r:Tile)=>Math.min(...standTiles(r,rocks).map(t=>cheb(pos,t)));
+   const byRoll=(o.pick??(canCut?'roll':'nearest'))==='roll',stepsTo=(r:Tile)=>pathSteps(pos,r,rocks);
    const best=free.map(v=>({...v,roll:freeRoll(v.r)})).sort((a,b)=>(byRoll?a.roll-b.roll:0)||stepsTo(a.r)-stepsTo(b.r))[0];
    const soon=rocks.filter(r=>depleted.has(key(r))).map(r=>({r,back:depleted.get(key(r))!+respawn})).map(v=>({...v,roll:waitRoll(v.r,v.back)})).sort((a,b)=>a.roll-b.roll||a.back-b.back)[0];
    if(best&&!(byRoll&&soon&&soon.roll<best.roll)){

@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import {miningProfiles,runAtSiteMining,type MiningDriver} from './microbot-b-mining';
-import {respawnTicks,knifeDelay,firstRoll,siteRocks,siteTiles,contentSites,standTiles,oreLag,MINING_SITES,KNIFE,NORMAL_LOGS,type MiningAction,type Tile} from './mining-rotation';
+import {respawnTicks,knifeDelay,firstRoll,siteRocks,siteTiles,contentSites,standTiles,pathSteps,oreLag,MINING_SITES,KNIFE,NORMAL_LOGS,type MiningAction,type Tile} from './mining-rotation';
 import type {BotWorldState} from '../vendor/rs-sdk/sdk/types';
 
 const iron=()=>miningProfiles().find(p=>p.name==='iron_rock_table')!;
@@ -20,6 +20,16 @@ test('the Ardougne zoo site has its six iron rocks from the map files, and every
  const sites=contentSites(iron());expect(sites.some(s=>s.rocks.length===6&&s.rocks.some(r=>r.x===2602&&r.z===3233))).toBe(true);
  expect(sites.reduce((n,s)=>n+s.rocks.length,0)).toBe(siteRocks(iron(),{x:0,z:0,level:0},99999).length);
  expect(standTiles({x:2602,z:3233,level:0},siteRocks(iron(),zoo.center,zoo.radius)).map(t=>`${t.x},${t.z}`)).toEqual(['2603,3233','2601,3233','2602,3232']);
+});
+
+test('the Wilderness hobgoblin mine: eight rocks, and the path to a stand tile goes round the block of rocks',()=>{
+ const rocks=siteTiles(iron(),MINING_SITES.find(s=>s.key==='wilderness-hobgoblin-iron')!);
+ expect(rocks.map(r=>`${r.x},${r.z}`)).toEqual(['3099,3765','3099,3766','3099,3767','3099,3768','3100,3765','3100,3766','3101,3765','3101,3768']);
+ // 3100,3768 to the west side of 3099,3766 (3098,3766): 2 tiles in a line, 6 steps round the rocks; the bench trace
+ // shows the run 3100,3768 > 3099,3769 > 3098,3768 > 3098,3766 in 3 ticks.
+ expect(pathSteps({x:3100,z:3768},rocks[1]!,rocks)).toBe(6);
+ expect(pathSteps({x:3100,z:3767},rocks[2]!,rocks)).toBe(0);
+ expect(pathSteps({x:3100,z:3767},rocks[7]!,rocks)).toBe(1);
 });
 
 // A small copy of skill_mining/scripts/mining.rs2 and cut_logs.rs2 on an open floor: actions run in order at the
