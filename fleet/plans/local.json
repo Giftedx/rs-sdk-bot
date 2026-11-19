@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795092487886,
+ "at": 1795092562036,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -300,22 +300,6 @@
    "resources": [
     "splash:ardougne-cow-fence"
    ]
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/fleet-inspect.ts",
-   "args": [],
-   "env": {
-    "REQUIRE_BANK": "1",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-e44abae5-5f16-494e-bb40-bd9a51685c9f"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-observe-mightyrod-after-death [task-e44abae5-5f16-494e-bb40-bd9a51685c9f]",
-   "role": "helper"
   }
  ],
  "army": [
