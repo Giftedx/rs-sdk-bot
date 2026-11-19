@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795074184687,
+ "at": 1795074257352,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -331,6 +331,23 @@
    "resources": [
     "shop:magic_guild"
    ]
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "biohazard"
+   ],
+   "env": {
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-3b6a376a-22bb-4f32-aec7-577feb2479b6"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-biohazard-mightyrod-proof-exit [task-3b6a376a-22bb-4f32-aec7-577feb2479b6]",
+   "role": "helper"
   }
  ],
  "army": [
