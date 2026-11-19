@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795060500150-bigchopper-pocketpool-b19696d949af5226",
+ "account": "PocketPool",
+ "partner": "Bigchopper",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 1,
+ "claim": "3cc48eda-899a-4723-9e79-711e9c81ce42",
+ "count": 0,
+ "ok": false,
+ "at": 1795060908358,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795060372005-mmsmk1232-thefullmonty-f647c915cc9eb40c",
  "account": "mmsmk1232",
  "partner": "TheFullMonty",
@@ -10,15 +10,37 @@
  "item": "Shark",
  "requested": 16,
  "claim": "553df4e5-95ea-4d2a-b419-8012c2d48d00",
- "count": 0,
- "ok": false,
- "at": 1795060378420,
- "detail": "trade claimed",
+ "count": 16,
+ "ok": true,
+ "at": 1795060903609,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Iron arrow",
    "requested": 114,
-   "count": 0
+   "count": 114,
+   "inventory": {
+    "before": 114,
+    "after": 0
+   },
+   "bank": {
+    "count": 114,
+    "at": 1795060385681
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 16,
+  "after": 0
+ },
+ "bank": {
+  "count": 16,
+  "at": 1795060384915
+ },
+ "logout": {
+  "attemptId": "1795060378429-0000022444-0000000001",
+  "at": 1795060903594,
+  "sha256": "f1b9b89b17833a08ac68adcb9e993f96d03a3412653a3f8dc61f93bfc622a124"
+ },
+ "screen": true
 }

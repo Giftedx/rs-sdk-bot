@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795060372005-mmsmk1232-thefullmonty-f647c915cc9eb40c",
+ "account": "TheFullMonty",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 16,
+ "claim": "463d6be5-9ce0-4200-bf90-491bba84f24e",
+ "count": 16,
+ "ok": true,
+ "at": 1795060906005,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Iron arrow",
+   "requested": 114,
+   "count": 114,
+   "inventory": {
+    "before": 34,
+    "after": 148
+   },
+   "bank": {
+    "count": 114,
+    "at": 1795060904455
+   }
+  }
+ ],
+ "inventory": {
+  "before": 5,
+  "after": 21
+ },
+ "bank": {
+  "count": 16,
+  "at": 1795060904881
+ },
+ "logout": {
+  "attemptId": "1795060885491-0000001520-0000000001",
+  "at": 1795060905994,
+  "sha256": "d6bc06b3dfb40d64790a7f38c02cadf0f782ad38b0790c61cf011eb39e33bfc4"
+ },
+ "screen": true
+}
