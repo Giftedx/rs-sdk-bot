@@ -1,5 +1,29 @@
 import { test, expect } from 'bun:test';
-import {supervisorParticipants,workerCommand,participantsStopped} from '../src/supervise';
+import {supervisorParticipants,workerCommand,participantsStopped,lineKeeper,keepOutput,madeProgress,MAX_KEPT_LINE} from '../src/supervise';
+
+test('lineKeeper keeps the last line of each key across chunk splits, CRLF and an unended last line', () => {
+    const keep = lineKeeper(l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : null);
+    for (const chunk of ['noise\nRESULT fail a\r\nLEDGER tic', 'ks=5 idle=1\nmore noise\nRES', 'ULT ok final']) keep.push(chunk);
+    const text = keep.text();
+    expect(text.split('\n').sort()).toEqual(['LEDGER ticks=5 idle=1', 'RESULT ok final']);
+    expect(madeProgress(text)).toBe(false);
+    expect(lineKeeper(() => null).text()).toBe('');
+});
+
+test('keepOutput holds a bounded amount of a long child output and a line over the cap keeps its head', async () => {
+    const script = `const f='x'.repeat(200);for(let i=0;i<200000;i++){console.log(f+i);if(i%50000===0)console.log('LEDGER ticks='+i)}console.log('y'.repeat(${MAX_KEPT_LINE * 2}));console.log('RESULT ok '+'z'.repeat(${MAX_KEPT_LINE * 2}))`;
+    const p = Bun.spawn(['bun', '-e', script], { stdout: 'pipe', stderr: 'inherit' });
+    const realWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = (() => true) as typeof process.stdout.write;
+    let text: string;
+    try { text = await keepOutput(p.stdout, l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : null); }
+    finally { process.stdout.write = realWrite; }
+    await p.exited;
+    const kept = text.split('\n');
+    expect(kept.length).toBe(2);
+    expect(kept.find(l => l.startsWith('LEDGER'))).toBe('LEDGER ticks=150000');
+    expect(kept.find(l => l.startsWith('RESULT'))!.length).toBe(MAX_KEPT_LINE);
+}, 60_000);
 
 test('supervisor forwards remaining CLI arguments and validates all orchestrator participants',async()=>{
  expect(workerCommand('Donor','scripts/handoff-inputs.ts',['Receiver','batch'])).toEqual(['bun','scripts/handoff-inputs.ts','Donor','Receiver','batch']);

@@ -5,11 +5,14 @@ import ts from 'typescript';
 import {existsSync} from 'node:fs';
 import {freemem} from 'node:os';
 import {capabilityRevision} from '../../core/src/worker-release';
+import {releaseFileDigest,runtimeImports} from '../../core/src/release-digest';
 import {killTree} from '../../practice/src/proc';
 import {PRACTICE_TURN_WAIT_EXPIRED,recoverProofLock,withPracticeTurn} from '../../practice/src/proof-lock';
 import {deliver,validateDelivery,type DeliveryTask,type DeliveryCheck} from './delivery';
 
 const root=resolve(import.meta.dir,'../../..');
+// The time between the start of one check of a group and the memory read of the next.
+export const GROUP_START_GAP_MS=5000;
 // Source preparation needs SOURCE_STARTUP_GB free: the free-memory floor and a reserve (packages/core/src/memory.ts).
 // Native launch requires PRACTICE_STARTUP_GB; this is checked at the actual child boundary.
 import {SOURCE_STARTUP_GB,PRACTICE_STARTUP_GB as NATIVE_STARTUP_GB,BENCH_FLEET_STOP_EXIT,BENCH_START_REFUSED_EXIT,HOST_DEFERRED_EXIT,benchStartGB} from '../../core/src/memory';
@@ -100,7 +103,9 @@ const IMPORT_PARSE_LIMIT=2048;
 function relativeImports(path:string,bytes:Buffer):readonly string[]{
  const content=bytes.toString('utf8'),source=createHash('sha256').update(content).digest('hex');
  const prior=importParses.get(path);if(prior?.source===source)return prior.relative;
- const relative=ts.preProcessFile(content,true,true).importedFiles.map(s=>s.fileName).filter(s=>s.startsWith('.'));
+ // An import that the runtime erases (import type) loads no file, so it adds none to the closure (release-digest.ts).
+ const loaded=runtimeImports(path,content);
+ const relative=ts.preProcessFile(content,true,true).importedFiles.map(s=>s.fileName).filter(s=>s.startsWith('.')&&(!loaded||loaded.includes(s)));
  if(!prior&&importParses.size>=IMPORT_PARSE_LIMIT)importParses.clear();
  importParses.set(path,{source,relative});
  return relative;
@@ -130,10 +135,21 @@ function scanImportClosure(starts:readonly string[],base:string,contents?:Map<st
  return [...seen].sort();
 }
 // Import discovery and hashing share bytes only within this call. Every later scan reads fresh source.
+// Each file enters as the digest of its program (release-digest.ts): a comment, layout or line-ending edit keeps a
+// qualification, and a Windows and a Linux checkout of one commit give one source.
+// The digest of a file is kept in the process under the hash of its bytes: a delivery asks for the fingerprint after
+// each check, and a file that did not change is not parsed again.
+const programDigests=new Map<string,string>();
+function programDigest(file:string,bytes:Buffer):string{
+ const key=createHash('sha256').update(bytes).digest('hex')+file.slice(file.lastIndexOf('.'));
+ let digest=programDigests.get(key);
+ if(!digest){if(programDigests.size>=8192)programDigests.clear();programDigests.set(key,digest=releaseFileDigest(file,bytes,ts));}
+ return digest;
+}
 export function hashImportClosure(starts:readonly string[],base=root,hash=createHash('sha256')):string{
  const contents=new Map<string,Buffer>();
  for(const file of scanImportClosure(starts,base,contents))
-  hash.update(file+'\0').update(contents.get(file)??readFileSync(join(base,file))).update('\0');
+  hash.update(file+'\0').update(programDigest(file,contents.get(file)??readFileSync(join(base,file)))).update('\0');
  return hash.digest('hex');
 }
 // The capability release of the entry (packages/core/src/worker-release.ts); null when the entry cannot be released.
@@ -162,6 +178,9 @@ async function runTask(task:DeliveryTask,diagnosticCheck?:string){
     const directory=mkdtempSync(join(parent,`${task.id}-${Date.now()}-`));
     writeFileSync(join(directory,'task.json'),JSON.stringify(task,null,2));
     let initialPolicy:SavedProofPolicy;
+    const stopped=()=>existsSync(join(root,'.practice/stop-coordinator'))||existsSync(join(root,'.practice/stop-swarm'));
+    // The native checks of the group that runs now, and the gate that orders their memory reads.
+    const grouped=new Set<DeliveryCheck>();let groupGate:Promise<void>=Promise.resolve();
     const result=await deliver(task,{
         fingerprint(task){
             const policy=readSavedProofPolicy(root);
@@ -184,18 +203,31 @@ async function runTask(task:DeliveryTask,diagnosticCheck?:string){
             return{exitCode,timedOut,detail:JSON.stringify({stdout:out,stderr:err})};
             };
             if(check.phase==='regression')return start();
-            const stopped=()=>existsSync(join(root,'.practice/stop-coordinator'))||existsSync(join(root,'.practice/stop-swarm'));
             if(savedProofVerifierAllowed(check,initialPolicy)){
                 if(stopped())throw Error('owner stopped before saved proof verification');
                 return start();
             }
-            return withPracticeTurn(join(root,'.practice/delivery-native.lock'),()=>withNativeStartup(start,{now:Date.now,freeGB:()=>freemem()/2**30,
+            const admit=(begin:()=>Promise<Awaited<ReturnType<typeof start>>>)=>withNativeStartup(begin,{now:Date.now,freeGB:()=>freemem()/2**30,
                 stopped,requiredGB:()=>nativeNeedGB(check,{floorGB:floorGB(root),fleet:fleet(root)}),
                 sleep:ms=>Bun.sleep(ms),progress:admission=>{
                     writeFileSync(join(directory,'admission.json'),JSON.stringify({...admission,check:check.id},null,2));
                     appendFileSync(join(directory,'admission.jsonl'),JSON.stringify({...admission,check:check.id})+'\n');
                     console.log('DELIVERY_ADMISSION '+JSON.stringify({...admission,check:check.id}));
-                }},admissionWaitMs()),{stopped});
+                }},admissionWaitMs());
+            if(!grouped.has(check))return withPracticeTurn(join(root,'.practice/delivery-native.lock'),()=>admit(start),{stopped});
+            // A check of a group: the group holds the practice turn (batch, below). The checks read the free memory one
+            // after the other, each GROUP_START_GAP_MS after the child before it started, so two checks do not both
+            // count the same free memory.
+            const prior=groupGate;let open!:()=>void;groupGate=new Promise<void>(r=>{open=r;});
+            await prior;
+            try{return await admit(()=>{const done=start();setTimeout(open,GROUP_START_GAP_MS);return done;});}finally{open();}
+        },
+        async batch(checks,work){
+            const native=checks.filter(c=>c.phase!=='regression'&&!savedProofVerifierAllowed(c,initialPolicy));
+            if(native.length<2)return work();
+            for(const c of native)grouped.add(c);
+            try{return await withPracticeTurn(join(root,'.practice/delivery-native.lock'),work,{stopped});}
+            finally{for(const c of native)grouped.delete(c);}
         },
     },diagnosticCheck);
     const report={...result,...nativeDeferralEvidence(result.reason),id:task.id,goal:task.goal,at:Date.now(),runtimeRevision:runtimeRevision(task),directory,files:task.files.map(path=>{
