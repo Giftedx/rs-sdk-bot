@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795091194060,
+ "at": 1795091276734,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -284,27 +284,27 @@
    "account": "Mightyrod",
    "script": "scripts/shop-buyer.ts",
    "args": [
-    "silver_merchant",
+    "dommik",
     "1500"
    ],
    "env": {
-    "ITEMS": "silver bar",
+    "ITEMS": "sickle mould",
     "STOCK_TARGET": "1",
     "STOP_AT_TARGET": "1",
     "MAX_ITEMS": "1",
-    "MAX_SPEND": "400",
-    "FLOAT": "1000",
+    "MAX_SPEND": "50",
+    "FLOAT": "200",
     "COIN_RESERVE": "0",
     "NO_BUY_TICKS": "25",
     "BANK_PACK": "1",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-a6ac2656-254e-4baa-ac2f-2e699d736441"
+    "COORDINATOR_RUN_ID": "task-d0881ef9-58a2-40b6-8be6-8d1e69d6a175"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-buy-mightyrod-silver-bar [task-a6ac2656-254e-4baa-ac2f-2e699d736441]",
+   "goal": "run-buy-mightyrod-sickle-mould [task-d0881ef9-58a2-40b6-8be6-8d1e69d6a175]",
    "role": "supply"
   }
  ],
