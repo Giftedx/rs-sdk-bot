@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795098354979-shaftsinker-oreelse",
  "account": "OreElse",
  "partner": "Shaftsinker",
@@ -12,6 +12,12 @@
  "claim": "ad8f9a87-1879-4270-9bd3-9a1dd7eb4bfb",
  "count": 0,
  "ok": false,
- "at": 1795098444256,
- "detail": "trade claimed"
+ "at": 1795098455908,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1795098444264-0000024612-0000000001",
+  "at": 1795098455894,
+  "sha256": "f45b648aacc93992fe4f5f0f23e02f375d5334e885793acd1b5e2568c158a0e3"
+ },
+ "screen": false
 }
