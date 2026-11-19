@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795095052656-yewfirst-thefullmonty-naturerune",
+ "account": "TheFullMonty",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 145,
+ "claim": "412786be-f914-43b1-b822-94a2557a56c6",
+ "count": 145,
+ "ok": true,
+ "at": 1795095119847,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 18,
+  "after": 163
+ },
+ "bank": {
+  "count": 145,
+  "at": 1795095119060
+ },
+ "logout": {
+  "attemptId": "1795095092102-0000000440-0000000001",
+  "at": 1795095119831,
+  "sha256": "c80b047eb881223034f1948eba8c1e2395fd8740667113f001446f18b949de0f"
+ },
+ "screen": true
+}
