@@ -4,7 +4,7 @@
 // does about it. Each decision is logged with the record that caused it. Each attacker is appended to
 // `.practice/threat-records/<server>/<name>.jsonl`, for the behaviour record of the rivals (research/pvp-fight-loop.md).
 //   Options: SQUAD_THREAT=1 (squad main) turns the watch on; SQUAD_THREAT_ACT=0 only logs and records; default 1 with the watch.
-import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { decodeHeadicons, decodeWorn, wornWeaponStyle, type CombatStyle } from '../packages/core/src/opponent';
@@ -25,9 +25,32 @@ export function attackStyleOfSeq(name: string | undefined): CombatStyle | null {
     if (/^human_(stab|slash|blunt|spear|sword|dagger|scim|whip|axe|mace|unarmed|hack|lunge|attack|claw|halberd|battleaxe|warhammer|pickaxe|2h)/.test(name)) return 'melee';
     return null;
 }
+// The attack animations that the content gives to weapons, by sequence name: the stab, slash and crush animations of every weapon object
+// (scripts/skill_combat/configs/**/*.obj: `stabattack_anim`, `slashattack_anim`, `crushattack_anim`, such as human_ddagger_lunge) are melee, and the special attack
+// animations of scripts/skill_combat/scripts/pvp/specs/scripts/pvp_<weapon>.rs2 (puncture, cleave, shove, snapshot, chainhit) take the style of their
+// weapon: a bow or a thrown weapon is ranged, any other is melee. The name rules of attackStyleOfSeq do not see these names.
+let contentStyles: Map<string, CombatStyle> | undefined;
+export function contentAttackStyles(root = contentRoot()): Map<string, CombatStyle> {
+    const map = new Map<string, CombatStyle>();
+    const configs = join(root, 'scripts/skill_combat/configs');
+    for (const file of readdirSync(configs, { recursive: true }) as string[]) {
+        if (!file.endsWith('.obj')) continue;
+        for (const m of readFileSync(join(configs, file), 'utf8').matchAll(/^param=(?:stab|slash|crush)attack_anim,(\w+)/gm)) map.set(m[1]!, 'melee');
+    }
+    const dir = join(root, 'scripts/skill_combat/scripts/pvp/specs/scripts');
+    for (const file of readdirSync(dir)) {
+        const weapon = file.match(/^pvp_(.+)\.rs2$/)?.[1];
+        if (!weapon) continue;
+        const style: CombatStyle = /bow|thrownaxe|knife|dart|javelin/.test(weapon) ? 'ranged' : 'melee';
+        for (const m of readFileSync(join(dir, file), 'utf8').matchAll(/^anim\((?!%)(\w+),/gm)) map.set(m[1]!, style);
+    }
+    return map;
+}
 export const attackStyleOfAnim = (anim: number): CombatStyle | null => {
     seqNames ??= parsePack(readFileSync(join(contentRoot(), 'pack/seq.pack'), 'utf8'));
-    return attackStyleOfSeq(seqNames.get(anim));
+    contentStyles ??= contentAttackStyles();
+    const name = seqNames.get(anim);
+    return (name !== undefined ? contentStyles.get(name) : undefined) ?? attackStyleOfSeq(name);
 };
 
 type ClientPlayer = { name?: string | null; combatLevel?: number; headicons?: number; appearance?: ArrayLike<number>; primaryAnim?: number; spotanimId?: number };

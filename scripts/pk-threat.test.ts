@@ -11,6 +11,23 @@ const idOf = (pack: string, name: string) => { for (const [id, n] of parsePack(r
 const STAFF = idOf('obj', 'staff_of_air'), BOW = idOf('obj', 'shortbow'), SCIM = idOf('obj', 'rune_scimitar');
 const CAST = idOf('seq', 'human_caststrike'), SHOOT = idOf('seq', 'human_bow');
 
+test('the animations of the dragon dagger swings and of every special attack have a style from the content', () => {
+    const style = (name: string) => attackStyleOfAnim(idOf('seq', name));
+    // The swings of the dragon dagger: 376 and 377.
+    expect(style('human_ddagger_lunge')).toBe('melee');
+    expect(style('human_ddagger_hack')).toBe('melee');
+    // The specials: dragon dagger 1062, magic shortbow 1074, dragon spear 1064, dragon longsword 1058, rune thrown axe 1068, dragon halberd 1203.
+    expect(style('puncture')).toBe('melee');
+    expect(style('snapshot')).toBe('ranged');
+    expect(style('shove')).toBe('melee');
+    expect(style('cleave')).toBe('melee');
+    expect(style('chainhit')).toBe('ranged');
+    expect(style('dragon_halberd_special_attack')).toBe('melee');
+    expect([376, 377, 1062, 1074, 1064, 1058, 1068, 1203].map(id => attackStyleOfAnim(id))).toEqual(['melee', 'melee', 'melee', 'ranged', 'melee', 'melee', 'ranged', 'melee']);
+    // Not attacks.
+    for (const name of ['human_blunt_block', 'human_unarmed_def', 'giant_casting']) expect(style(name)).toBeNull();
+});
+
 test('the style of an animation comes from the name of its sequence', () => {
     expect(attackStyleOfSeq('human_caststrike')).toBe('magic');
     expect(attackStyleOfSeq('human_castentangle')).toBe('magic');

@@ -28,7 +28,7 @@ import { closeWithin } from '../packages/core/src/bot';
 import { killReceiptProof } from '../packages/core/src/kill-receipt';
 import { bindActionScope } from '../packages/core/src/action-scope';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, recordKillLoot, STUNNED_SHOVE_SPOTANIM, wildernessLevel, type FightOptions } from './pk';
+import { attackable, rewearStart, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, recordKillLoot, STUNNED_SHOVE_SPOTANIM, wildernessLevel, type FightOptions } from './pk';
 import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { settleKillFeed } from './pk-kill-feed';
 import { EDGEVILLE_BANK, eatUp, FOOD_START_FLOOR, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
@@ -309,7 +309,9 @@ export function squadEnd(o: { accounts: number; kills: number; gangDied?: number
 }
 // One account of the squad: hold the post, fight the squad's target, pick up, bank and come back.
 export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: { x: number; z: number }; aim?: { x: number; z: number }; options: FightOptions; allies: readonly string[]; pickup: boolean; pull?: boolean;
-    stunShareFor?: (target: string) => FightOptions['stunShare']; burstOnStun?: boolean; stunSpec?: FightOptions['stunSpec'];
+    stunShareFor?: (target: string) => FightOptions['stunShare'];
+    // The freeze of each target is shared by the squad: the members stagger their casts (SQUAD_FREEZE_SHARE=1; pk.ts freezeShare).
+    freezeShareFor?: (target: string) => FightOptions['freezeShare']; burstOnStun?: boolean; stunSpec?: FightOptions['stunSpec'];
     trips: number; deadline: number; stopped: () => boolean; killsLeft: () => boolean; log: (l: string) => void;
     // Deaths that the account recovers from in the run (default 0: a death ends the account's part).
     // `onDeath` is called for each death of the account, at its tile (the death ledger of packages/core/src/pvp-deaths.ts).
@@ -462,15 +464,19 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             const began = s.tick();
             stats.fights++;
             const stunShare = o.stunShareFor?.(target.name.toLowerCase());
+            const freezeShare = o.freezeShareFor?.(target.name.toLowerCase());
             const r = await fightPlayer(s, target.name, {
                 ...o.options,
                 ...(o.threats?.act ? { threatPrayer: () => protectOf(o.threats!.step(s.tick()).actions, s.name) } : {}),
                 ...(stunShare ? { stunShare } : {}),
+                ...(freezeShare ? { freezeShare } : {}),
                 ...(o.burstOnStun !== undefined ? { burstOnStun: o.burstOnStun } : {}),
                 ...(o.stunSpec ? { stunSpec: o.stunSpec } : {}),
                 allies: o.allies, cap: Math.max(1, o.deadline - s.tick()), stop: () => !going() || refusedAt > began,
                 log: l => o.log(`[${s.name}] ${l}`),
             });
+            // The armour that a freeze stripped goes back on (pk.ts rewearStart).
+            if (going() && r.outcome !== 'session ended') await rewearStart(s, wornAtStart.map(w => w.id), l => o.log(`[${s.name}] ${l}`));
             if (refusedAt > began) skip.set(target.name.toLowerCase(), s.tick() + 8);
             const gone = !(s.sdk.getState()?.nearbyPlayers ?? []).some(q => q.name.toLowerCase() === target.name.toLowerCase());
             if (r.outcome === 'kill') stats.kills++;
@@ -645,6 +651,15 @@ if (import.meta.main) {
     { const c = centroid(); if (get('MARCH', '1') === '1' && Math.max(Math.abs(c.x - post.x), Math.abs(c.z - post.z)) > step) march({ ...post }); }
     const squadHasSpear = squad.some(s => [...(s.sdk.getState()?.equipment ?? []), ...(s.sdk.getState()?.inventory ?? [])].some(i => /^dragon spear/i.test(i.name)));
     const spearLock = get('SPEAR_LOCK', squadHasSpear ? '1' : '0') === '1';
+    const freezeShares = new Map<string, NonNullable<FightOptions['freezeShare']>>();
+    // SQUAD_FREEZE_SHARE=1: the squad shares one freeze clock for each target (the same stagger of 3 ticks that the bench of the freeze share used), so that 2 to 4
+    // members do not cast Bind on the same tick (run 3).
+    const freezeShareFor = (t: string) => {
+        const key = t.toLowerCase();
+        let share = freezeShares.get(key);
+        if (!share) { share = { clock: () => squad[0]!.tick(), until: -1, stagger: Number(get('FREEZE_STAGGER', '3')) }; freezeShares.set(key, share); }
+        return share;
+    };
     const stunShares = new Map<string, NonNullable<FightOptions['stunShare']>>();
     const stunShareFor = (t: string) => {
         const key = t.toLowerCase();
@@ -666,6 +681,7 @@ if (import.meta.main) {
         return hold(s, {
             targets, post, threats,
             options: sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200),
+            ...(get('FREEZE_SHARE', '0') === '1' ? { freezeShareFor } : {}),
             ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
             allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), run: runDeaths,
             onDeath: near => { recordPvpDeath({ account: s.name, server: squadServer, at: Date.now(), script: 'scripts/pk-squad.ts', near }); }, deadline,
