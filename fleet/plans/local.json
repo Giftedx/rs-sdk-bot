@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795118027676,
+ "at": 1795118505761,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -448,7 +448,7 @@
    ]
   },
   {
-   "account": "Ballbag",
+   "account": "Earlyshooter",
    "script": "scripts/generated/thieving60.ts",
    "args": [],
    "env": {
