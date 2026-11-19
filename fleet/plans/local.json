@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795097362665,
+ "at": 1795097437422,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -341,28 +341,25 @@
    "role": "helper"
   },
   {
-   "accounts": [
-    "Fingerblastr",
-    "Hocuspokeus"
-   ],
-   "script": "scripts/coin-courier.ts",
-   "args": [
-    "1700000",
-    "--bank-x=2618",
-    "--bank-z=3332",
-    "--reserve=200000",
-    "--timeout-ms=600000"
-   ],
+   "account": "Hocuspokeus",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
    "env": {
-    "COIN_ORDER": "prayer99-hocuspokeus-bonefund1700k",
+    "ITEM_ID": "536",
+    "QUANTITY": "253",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "7300",
+    "CASH_RESERVE": "10000",
+    "ORDER_MS": "1200000",
+    "ORDER_KEY": "prayer99-hocuspokeus-dragonbones253",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-8d3901d4-5a93-42b5-884b-a75888d822c0"
+    "COORDINATOR_RUN_ID": "task-0f3230dc-f71b-4a12-9ce7-cdc51607e8d4"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-courier-fingerblastr-hocuspokeus-bone-fund [task-8d3901d4-5a93-42b5-884b-a75888d822c0]",
+   "goal": "run-buy-hocuspokeus-dragon-bones-99 [task-0f3230dc-f71b-4a12-9ce7-cdc51607e8d4]",
    "role": "supply"
   }
  ],
