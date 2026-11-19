@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795129124461-dipstick-bigchopper-runechainbody",
  "account": "Bigchopper",
  "partner": "Dipstick",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "48d88417-5201-4d2c-bdb8-c0f80e37fd9b",
- "count": 0,
- "ok": false,
- "at": 1795129160418,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795129194723,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795129194005
+ },
+ "logout": {
+  "attemptId": "1795129160427-0000016352-0000000001",
+  "at": 1795129194715,
+  "sha256": "fa3ed82ddb06b63c10c64e686daf5da9e9d9444975410ebebf34ac768e2b297b"
+ },
+ "screen": true
 }
