@@ -1,0 +1,29 @@
+{
+ "id": "1795056470557-knightrider-undermykilt-e910ba681023a1bd",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "UnderMyKilt",
+ "item": "Water rune",
+ "count": 30,
+ "start": 1795056470557,
+ "end": 1795058870557,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Shark",
+   "count": 2
+  }
+ ],
+ "takerWaits": true
+}
