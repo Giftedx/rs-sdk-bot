@@ -26,7 +26,21 @@ export function freshRuneChildTimeout(label:string,deadline:number,now=Date.now(
  return timeoutMs;
 }
 type ProofBudget={deadline:number;check():void};
-export async function withFreshRuneStack<T>(directory:string,work:(budget:ProofBudget)=>Promise<T>,deps={
+// The stack of the proof before this one has stopped its engine, and its ports can stay bound a moment longer (two stacks
+// follow each other in one check: the 150 ms group and the 400 ms pacing fixture). The next stack waits for 8888 and 7780
+// for PORT_WAIT_MS, in steps of PORT_STEP_MS, and then refuses with the ports named. A recorded stack (pids.json) or a
+// foreign lock still refuses at once: another owner is not a race.
+export const PORT_WAIT_MS=30000,PORT_STEP_MS=250;
+export async function waitForProofPorts(portsFree:()=>boolean,sleep:(ms:number)=>Promise<void>=ms=>Bun.sleep(ms)):Promise<number>{
+ let waited=0;
+ while(!portsFree()){
+  if(waited>=PORT_WAIT_MS)throw Error('practice stack ownership or occupied ports: 8888 or 7780 still bound after '+PORT_WAIT_MS+' ms; refuse adoption');
+  await sleep(PORT_STEP_MS);waited+=PORT_STEP_MS;
+ }
+ return waited;
+}
+export interface FreshRuneStackDeps{practice:string;free:()=>number;portsFree:()=>boolean;start:typeof startStack;sleep?:(ms:number)=>Promise<void>}
+export async function withFreshRuneStack<T>(directory:string,work:(budget:ProofBudget)=>Promise<T>,deps:FreshRuneStackDeps={
  practice:join(root,'.practice'),free:freemem,portsFree:()=>canBind(8888)&&canBind(7780),start:startStack,
 },tickMs:150|400=150):Promise<T>{
  const deadline=Date.now()+workMs;
@@ -44,7 +58,8 @@ export async function withFreshRuneStack<T>(directory:string,work:(budget:ProofB
  try{
   writeFileSync(fd,owner);writeFileSync(join(directory,'practice-owner.json'),owner,{flag:'wx'});
   // Do not overwrite even stale owner evidence. Recovery belongs to the harness.
-  if(existsSync(pids)||!deps.portsFree())throw Error('practice stack ownership or occupied ports; refuse adoption');
+  if(existsSync(pids))throw Error('practice stack ownership or occupied ports; refuse adoption');
+  await waitForProofPorts(deps.portsFree,deps.sleep);
   if(deps.free()<PRACTICE_STARTUP_GB*2**30)throw Error(`insufficient fresh practice startup reserve: need${PRACTICE_STARTUP_GB}GiB`);
   stack=await deps.start({tickMs,xpRate:25,readyTimeoutMs:60000});
   ownedPids=readFileSync(pids,'utf8');

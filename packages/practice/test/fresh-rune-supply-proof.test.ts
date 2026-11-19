@@ -138,7 +138,7 @@ for(const boundary of ['registration','worker'])test(`${boundary} failure stops 
 test('foreign lock, occupied port and recorded stack refuse before startup',async()=>{
  for(const occupied of ['lock','port','pids'])await lifecycle(async(dir,deps,events)=>{
   const file=join(dir,occupied==='lock'?'delivery-practice.lock':'pids.json');
-  if(occupied==='port')deps.portsFree=()=>false;else writeFileSync(file,'foreign-owner');
+  if(occupied==='port'){deps.portsFree=()=>false;deps.sleep=async()=>{};}else writeFileSync(file,'foreign-owner');
   await expect(proof.withFreshRuneStack(dir,async()=>{events.push('registration');},deps)).rejects.toThrow();
   expect(events).toEqual([]);if(occupied!=='port')expect(readFileSync(file,'utf8')).toBe('foreign-owner');
  });
@@ -534,3 +534,21 @@ test('post-craft proof requires exact new output, immediate portal action, arriv
  const badBank=structuredClone(after);badBank.inventories[95]!.find(i=>i.id===556)!.count--;
  expect(proof.freshRunePostCraftChecks(before,badBank,run()).banked).toBe(false);
 });
+
+test('a stack that follows another waits for ports 8888 and 7780, in bounded steps, then refuses with the ports named',async()=>{
+ // Ports that free up after three steps: the stack starts, and the wait is 3 steps.
+ let bound=3;const slept:number[]=[];
+ expect(await proof.waitForProofPorts(()=>bound--<=0,async ms=>{slept.push(ms);})).toBe(3*proof.PORT_STEP_MS);
+ expect(slept).toEqual([proof.PORT_STEP_MS,proof.PORT_STEP_MS,proof.PORT_STEP_MS]);
+ // Ports that stay bound: the wait is PORT_WAIT_MS at most.
+ slept.length=0;
+ await expect(proof.waitForProofPorts(()=>false,async ms=>{slept.push(ms);})).rejects.toThrow('8888 or 7780 still bound after '+proof.PORT_WAIT_MS+' ms');
+ expect(slept.length).toBe(proof.PORT_WAIT_MS/proof.PORT_STEP_MS);
+ // Free ports: no wait at all.
+ expect(await proof.waitForProofPorts(()=>true,async()=>{throw Error('no wait expected');})).toBe(0);
+});
+test('withFreshRuneStack starts its stack when the ports free up during the wait',async()=>lifecycle(async(dir,deps,events)=>{
+ let bound=2;deps.portsFree=()=>bound--<=0;deps.sleep=async()=>{events.push('wait');};
+ await proof.withFreshRuneStack(dir,async()=>{events.push('work');},deps);
+ expect(events).toEqual(['wait','wait','ready','work','stop']);
+}));
