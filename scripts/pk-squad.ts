@@ -28,12 +28,12 @@ import { closeWithin } from '../packages/core/src/bot';
 import { killReceiptProof } from '../packages/core/src/kill-receipt';
 import { bindActionScope } from '../packages/core/src/action-scope';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, recordKillLoot, STUNNED_SHOVE_SPOTANIM, wildernessLevel, type FightOptions } from './pk';
+import { attackable, rewearStart, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, recordKillLoot, STUNNED_SHOVE_SPOTANIM, wildernessLevel, type FightOptions } from './pk';
 import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { settleKillFeed } from './pk-kill-feed';
 import { EDGEVILLE_BANK, eatUp, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
 import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
-import { holdProtect, protectOf, retreatOf, ThreatWatch } from './pk-threat';
+import { holdProtect, KitSwapper, protectOf, retreatOf, ThreatWatch, threatOptions } from './pk-threat';
 import { connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './pk-roam';
 import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
@@ -229,6 +229,8 @@ export async function openSquad(names: readonly string[], open: (name: string) =
 }
 
 export type SquadStats = { name: string; fights: number; pulls: number; kills: number; trips: number; died: boolean; picked: Record<string, number>; taken: number; receipts: string[];
+    // The kills of the account that were interlopers (players that the squad did not come for, the threat radar), counted when the watch is on.
+    interlopers?: number;
     // The deaths of the account in the run, and the ones that it recovered from (re-kit, restock and the walk back to the post).
     // `died` is true for a death that it did not recover from.
     deaths: number; rekits: number };
@@ -251,10 +253,12 @@ export function pickSquadFocus<P extends { name: string; index: number; distance
     me?: { x: number; z: number; combatLevel: number };
     inMulti?: boolean;
     stunned?: ReadonlySet<string>;
+    // Players that come first (the interlopers of the threat radar: they attack us or close in).
+    priority?: ReadonlySet<string>;
     activeFocus?: string;
     scoutTarget?: string;
 }): P | undefined {
-    const { view, targets, health, skip = new Set(), me, inMulti, stunned = new Set(), activeFocus, scoutTarget } = opts;
+    const { view, targets, health, skip = new Set(), me, inMulti, stunned = new Set(), priority = new Set<string>(), activeFocus, scoutTarget } = opts;
     const active = activeFocus?.toLowerCase();
     const scout = scoutTarget?.toLowerCase();
     const eligible = view.filter(p => {
@@ -268,7 +272,8 @@ export function pickSquadFocus<P extends { name: string; index: number; distance
     });
     return eligible.sort((a, b) => {
         const ak = a.name.toLowerCase(), bk = b.name.toLowerCase();
-        return Number(stunned.has(bk)) - Number(stunned.has(ak))
+        return Number(priority.has(bk)) - Number(priority.has(ak))
+            || Number(stunned.has(bk)) - Number(stunned.has(ak))
             || health(a) - health(b)
             || Number(bk === scout) - Number(ak === scout)
             || a.distance - b.distance;
@@ -295,17 +300,30 @@ export function squadFallbackPlan(opts: {
     return escapeStep(wild, { glory: opts.hasGlory, teleport: opts.hasTeleport });
 }
 
+// SQUAD_FREEZE_ARMOUR=strip|torso|keep: what a freeze takes off (pk.ts freezeArmour), and SQUAD_PROTECT_ITEM=on|off|skulled: Protect Item (pk.ts protectItem, 'skulled' is on
+// only while our own skull shows). They win over the profile and SQUAD_OPTS. A value that is not listed throws.
+export function squadFightOverrides(get: (name: string, fallback: string) => string): Partial<FightOptions> {
+    const out: Partial<FightOptions> = {};
+    const armour = get('SQUAD_FREEZE_ARMOUR', '');
+    if (armour) { if (!['strip', 'torso', 'keep'].includes(armour)) throw new Error(`SQUAD_FREEZE_ARMOUR is strip, torso or keep, got ${armour}`); out.freezeArmour = armour as 'strip' | 'torso' | 'keep'; }
+    const item = get('SQUAD_PROTECT_ITEM', '');
+    if (item) { if (!['on', 'off', 'skulled'].includes(item)) throw new Error(`SQUAD_PROTECT_ITEM is on, off or skulled, got ${item}`); out.protectItem = item === 'skulled' ? 'skulled' : item === 'on'; }
+    return out;
+}
+
 // The end of a squad run: its ok and the detail of its RESULT line. A squad with a death is not a finished squad: the supervisor reads
 // `RESULT fail died` as a death and does not start the squad again with an account that holds no kit (packages/practice/src/supervise.ts and
 // supervise-host.ts classify), and scripts/squad-watch.ts reads it as a death. `diedAccounts=A,B` names the accounts that died, early in the line
 // (the supervisor logs 200 characters of it): scripts/swarm.ts gives the died end to those accounts only.
-export function squadEnd(o: { accounts: number; kills: number; gangDied?: number; deaths: number; taken: number; trips: number; fights: number; picked: Record<string, number>; dropped: readonly string[]; stranded: readonly string[]; halted?: string; receiptProof?: string; rekits?: number; diedAccounts?: readonly string[] }): { ok: boolean; detail: string } {
+export function squadEnd(o: { accounts: number; kills: number; gangDied?: number; deaths: number; taken: number; trips: number; fights: number; picked: Record<string, number>; dropped: readonly string[]; stranded: readonly string[]; halted?: string; receiptProof?: string; rekits?: number; interlopers?: number; diedAccounts?: readonly string[] }): { ok: boolean; detail: string } {
     const ok = o.halted === undefined && o.stranded.length === 0 && o.fights > 0 && o.deaths === 0;
-    return { ok, detail: `${o.deaths > 0 ? 'died ' : ''}squad accounts=${o.accounts}${o.deaths > 0 && o.diedAccounts?.length ? ` diedAccounts=${o.diedAccounts.map(n => n.replace(/ /g, '_')).join(',')}` : ''} kills=${o.kills}${o.receiptProof ? ` ${o.receiptProof}` : ''}${o.gangDied !== undefined ? ` gangDied=${o.gangDied}` : ''} died=${o.deaths}${o.rekits ? ` rekits=${o.rekits}` : ''} taken=${o.taken} trips=${o.trips} picked=${JSON.stringify(o.picked)}${o.dropped.length ? ` dropped=${o.dropped.join(',')}` : ''}${o.stranded.length ? ` stranded=${o.stranded.join(',')}` : ''}${o.halted ? ` halted=${o.halted}` : ''}` };
+    return { ok, detail: `${o.deaths > 0 ? 'died ' : ''}squad accounts=${o.accounts}${o.deaths > 0 && o.diedAccounts?.length ? ` diedAccounts=${o.diedAccounts.map(n => n.replace(/ /g, '_')).join(',')}` : ''} kills=${o.kills}${o.receiptProof ? ` ${o.receiptProof}` : ''}${o.gangDied !== undefined ? ` gangDied=${o.gangDied}` : ''} died=${o.deaths}${o.rekits ? ` rekits=${o.rekits}` : ''}${o.interlopers !== undefined ? ` attackerKills=${o.interlopers}` : ''} taken=${o.taken} trips=${o.trips} picked=${JSON.stringify(o.picked)}${o.dropped.length ? ` dropped=${o.dropped.join(',')}` : ''}${o.stranded.length ? ` stranded=${o.stranded.join(',')}` : ''}${o.halted ? ` halted=${o.halted}` : ''}` };
 }
 // One account of the squad: hold the post, fight the squad's target, pick up, bank and come back.
 export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: { x: number; z: number }; aim?: { x: number; z: number }; options: FightOptions; allies: readonly string[]; pickup: boolean; pull?: boolean;
-    stunShareFor?: (target: string) => FightOptions['stunShare']; burstOnStun?: boolean; stunSpec?: FightOptions['stunSpec'];
+    stunShareFor?: (target: string) => FightOptions['stunShare'];
+    // The freeze of each target is shared by the squad: the members stagger their casts (SQUAD_FREEZE_SHARE=1; pk.ts freezeShare).
+    freezeShareFor?: (target: string) => FightOptions['freezeShare']; burstOnStun?: boolean; stunSpec?: FightOptions['stunSpec'];
     trips: number; deadline: number; stopped: () => boolean; killsLeft: () => boolean; log: (l: string) => void;
     // Deaths that the account recovers from in the run (default 0: a death ends the account's part).
     // `onDeath` is called for each death of the account, at its tile (the death ledger of packages/core/src/pvp-deaths.ts).
@@ -340,6 +358,13 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         return true;
     };
     let lastHp = me()?.hp ?? 0, seenMessage = 0, refusedAt = -100, pullSince = -1;
+    // The threat radar's armour swap (the worn items that it took off, to wear again) and its single-way hold (no pull and no walk back to the
+    // multi-way post until this tick).
+    const swapper = new KitSwapper(), tickOf = () => nextTick(s);
+    // A fight stops when the radar decides a retreat or a single-way move: a member inside a fight does not read the decision, and against a team the squad's
+    // fights are the whole run, so without this stop a decision would not reach a member that is fighting.
+    const radarMove = () => !!o.threats?.act && o.threats.step(s.tick()).actions.some(a => a.kind === 'retreat' || a.kind === 'single-way');
+    let singleUntil = -1;
     const skip = new Map<string, number>();
     const unwatch = s.onTick(() => {
         const hp = me()?.hp; if (hp !== undefined) { if (hp < lastHp) stats.taken += lastHp - hp; lastHp = hp; }
@@ -391,10 +416,27 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             const protect = threat && o.threats!.act ? protectOf(threat.actions, s.name) : null;
             const threatRetreat = threat && o.threats!.act ? retreatOf(threat.actions) : null;
             if (threatRetreat) {
+                o.threats!.acted(now);
                 o.log(`[${s.name}] SQUAD threat retreat: ${threatRetreat}`);
                 const retreated = await rescue(s, o.log, o.stopped);
                 if (!retreated) { stats.died = true; break; }
                 continue;
+            }
+            if (threat && o.threats!.act) {
+                // A team on a multi-way tile: to the nearest single-way tile (a walk that fails is the retreat), and stay there while it lasts.
+                const single = threat.actions.find(a => a.kind === 'single-way') as Extract<typeof threat.actions[number], { kind: 'single-way' }> | undefined;
+                if (single) {
+                    singleUntil = now + 120;
+                    if (Math.max(Math.abs(p.worldX - single.to.x), Math.abs(p.worldZ - single.to.z)) > 2) {
+                        o.threats!.acted(now);
+                        o.log(`[${s.name}] SQUAD threat single-way: ${single.reason}, to ${single.to.x},${single.to.z}`);
+                        const walked = await walkPath(walker, [{ ...single.to, tol: 2 }], { maxTicks: 40, idleMs: 9000, stop: () => !going() });
+                        if (!walked.ok) { o.log(`[${s.name}] SQUAD threat single-way walk failed, retreat`); if (!await rescue(s, o.log, o.stopped)) { stats.died = true; break; } }
+                        continue;
+                    }
+                }
+                // The armour that defends better against the threat's style, from the pack: worn before the next fight, and put back after the threat has been gone for 60 ticks.
+                if (await swapper.step(s, threat.actions, now, tickOf, o.log)) continue;
             }
             const view = s.sdk.getState()?.nearbyPlayers ?? [];
             const health = (q: { index: number }) => { const seen = observePlayer(s.client, q.index); return seen && seen.totalHealth > 0 ? seen.health / seen.totalHealth : 1; };
@@ -417,7 +459,10 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 if (!retreated) { stats.died = true; break; }
                 continue;
             }
-            const target = pickSquadFocus({ view, targets: o.targets, health, skip: new Set(skip.keys()), me: self, inMulti: isMulti(p.worldX, p.worldZ), stunned });
+            // Interlopers (dangerous players that are not the squad's targets) become targets, first: lowest health first among them. When they are dead or gone
+            // the squad goes back to its own targets.
+            const interlopers = new Set((threat && o.threats!.act ? threat.interlopers : []).map(n => n.toLowerCase()));
+            const target = pickSquadFocus({ view, targets: interlopers.size ? new Set([...o.targets, ...interlopers]) : o.targets, priority: interlopers, health, skip: new Set(skip.keys()), me: self, inMulti: isMulti(p.worldX, p.worldZ), stunned });
             if (!target) {
                 // No prayer while it waits: an active prayer drains with no fight loop to flick it (in one live meeting
                 // our prayer ran out at about tick 730), and the fight loop puts them on again. One input each 3 ticks.
@@ -426,7 +471,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 else if (s.tick() % 3 === 0) for (const [i, on] of (s.sdk.getState()?.prayers.activePrayers ?? []).entries()) if (on) void s.sdk.sendTogglePrayer(i);
                 // Back to the post between fights.
                 // At least a tick each pass: a walk to a step that cannot be reached fails at once.
-                if (Math.max(Math.abs(p.worldX - o.post.x), Math.abs(p.worldZ - o.post.z)) > 2) await walkPath(walker, [{ ...o.post, tol: 2 }], { maxTicks: 60, idleMs: 9000, stop: () => !going() || !!squadTarget(s.sdk.getState()?.nearbyPlayers ?? [], o.targets, health, new Set(), self) });
+                if (now >= singleUntil && Math.max(Math.abs(p.worldX - o.post.x), Math.abs(p.worldZ - o.post.z)) > 2) await walkPath(walker, [{ ...o.post, tol: 2 }], { maxTicks: 60, idleMs: 9000, stop: () => !going() || !!squadTarget(s.sdk.getState()?.nearbyPlayers ?? [], o.targets, health, new Set(), self) });
                 if (!await nextTick(s)) break;
                 continue;
             }
@@ -438,7 +483,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             // At most 20 ticks of pull at a stretch: an account that cannot get into multi-way (stood on, blocked) fights
             // where it is; one stuck pulling took hits without an answer for hundreds of ticks.
             if (isMulti(p.worldX, p.worldZ)) pullSince = -1;
-            if (o.pull && !isMulti(p.worldX, p.worldZ) && isMulti(aim.x, aim.z) && Math.max(Math.abs(p.worldX - aim.x), Math.abs(p.worldZ - aim.z)) <= 40
+            if (o.pull && now >= singleUntil && !isMulti(p.worldX, p.worldZ) && isMulti(aim.x, aim.z) && Math.max(Math.abs(p.worldX - aim.x), Math.abs(p.worldZ - aim.z)) <= 40
                 && (pullSince < 0 || s.tick() - pullSince < 20)) {
                 if (pullSince < 0) pullSince = s.tick();
                 const low = () => { const q = me(); return !!q && q.hp < q.maxHp * 0.6; };
@@ -455,18 +500,22 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             const began = s.tick();
             stats.fights++;
             const stunShare = o.stunShareFor?.(target.name.toLowerCase());
+            const freezeShare = o.freezeShareFor?.(target.name.toLowerCase());
             const r = await fightPlayer(s, target.name, {
                 ...o.options,
                 ...(o.threats?.act ? { threatPrayer: () => protectOf(o.threats!.step(s.tick()).actions, s.name) } : {}),
                 ...(stunShare ? { stunShare } : {}),
+                ...(freezeShare ? { freezeShare } : {}),
                 ...(o.burstOnStun !== undefined ? { burstOnStun: o.burstOnStun } : {}),
                 ...(o.stunSpec ? { stunSpec: o.stunSpec } : {}),
-                allies: o.allies, cap: Math.max(1, o.deadline - s.tick()), stop: () => !going() || refusedAt > began,
+                allies: o.allies, cap: Math.max(1, o.deadline - s.tick()), stop: () => !going() || refusedAt > began || radarMove(),
                 log: l => o.log(`[${s.name}] ${l}`),
             });
+            // The armour that a freeze stripped goes back on (pk.ts rewearStart).
+            if (going() && r.outcome !== 'session ended') await rewearStart(s, wornAtStart.map(w => w.id), l => o.log(`[${s.name}] ${l}`));
             if (refusedAt > began) skip.set(target.name.toLowerCase(), s.tick() + 8);
             const gone = !(s.sdk.getState()?.nearbyPlayers ?? []).some(q => q.name.toLowerCase() === target.name.toLowerCase());
-            if (r.outcome === 'kill') stats.kills++;
+            if (r.outcome === 'kill') { stats.kills++; if (interlopers.has(target.name.toLowerCase())) stats.interlopers = (stats.interlopers ?? 0) + 1; }
             if (r.receipt) stats.receipts.push(r.receipt);
             if (o.pickup && (r.outcome === 'kill' || gone)) {
                 const got = await pickUp(s, wanted, { radius: 3, maxTicks: 30, wait: 6, stop: o.stopped });
@@ -530,6 +579,13 @@ if (import.meta.main) {
     if (ledgerRefusal) { console.log(`RESULT fail died ${ledgerRefusal}`); process.exit(1); }
     const paused = ours.filter(n => existsSync(`.practice/stop-${n}`));
     if (existsSync('.practice/stop-pk-squad') || paused.length) { console.log(`RESULT fail stop file present: ${existsSync('.practice/stop-pk-squad') ? 'stop-pk-squad' : paused.map(n => `stop-${n}`).join(' ')}`); process.exit(2); }
+    // The settings are checked before any account logs in: a bad one is a fail line with nobody in the Wilderness (squadFightOverrides: the plain settings for the
+    // options that a hosted bench A/B changes; threatOptions: SQUAD_THREAT_OPTS and the SQUAD_THREAT_* settings).
+    let fightOverrides: Partial<FightOptions>, threatConfig: ReturnType<typeof threatOptions> | undefined;
+    try {
+        fightOverrides = squadFightOverrides(get);
+        threatConfig = get('SQUAD_THREAT', '0') === '1' ? threatOptions(get('SQUAD_THREAT_OPTS', ''), get) : undefined;
+    } catch (e) { console.log(`RESULT fail ${e instanceof Error ? e.message : e}`); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
     let halted: string | undefined;
     // A session that ends with no logout of ours (a dropped connection) stops that account only. openBot's default
@@ -647,6 +703,15 @@ if (import.meta.main) {
     { const c = centroid(); if (get('MARCH', '1') === '1' && Math.max(Math.abs(c.x - post.x), Math.abs(c.z - post.z)) > step) march({ ...post }); }
     const squadHasSpear = squad.some(s => [...(s.sdk.getState()?.equipment ?? []), ...(s.sdk.getState()?.inventory ?? [])].some(i => /^dragon spear/i.test(i.name)));
     const spearLock = get('SPEAR_LOCK', squadHasSpear ? '1' : '0') === '1';
+    const freezeShares = new Map<string, NonNullable<FightOptions['freezeShare']>>();
+    // SQUAD_FREEZE_SHARE=1: the squad shares one freeze clock for each target (the same stagger of 3 ticks that the bench of the freeze share used), so that 2 to 4
+    // members do not cast Bind on the same tick (run 3).
+    const freezeShareFor = (t: string) => {
+        const key = t.toLowerCase();
+        let share = freezeShares.get(key);
+        if (!share) { share = { clock: () => squad[0]!.tick(), until: -1, stagger: Number(get('SQUAD_FREEZE_STAGGER', '3')) }; freezeShares.set(key, share); }
+        return share;
+    };
     const stunShares = new Map<string, NonNullable<FightOptions['stunShare']>>();
     const stunShareFor = (t: string) => {
         const key = t.toLowerCase();
@@ -655,19 +720,22 @@ if (import.meta.main) {
         return share;
     };
     // SQUAD_THREAT=1: the threat radar (scripts/pk-threat.ts) reads every member's view and the world feed, logs each threat and decision,
-    // and records each attacker. SQUAD_THREAT_ACT=0 only logs and records. The targets of the squad are expected: they get a protect prayer but no retreat.
+    // and records each attacker. SQUAD_THREAT_ACT=0 only logs and records. The targets of the squad are expected: they get a protect prayer but no retreat (SQUAD_THREAT_EXPECTED=0: a target is a stranger too, for a bench whose attackers are also the targets).
     let closeThreatRadar: (() => void) | undefined, threats: ThreatWatch | undefined;
     if (get('SQUAD_THREAT', '0') === '1') {
         const radar = new Radar();
         if (!gang.length) closeThreatRadar = connectRadar(squadServer, radar);
-        threats = new ThreatWatch({ sessions: () => squad, server: squadServer, friends: new Set(ours.map(n => n.toLowerCase())), radar, log, act: get('SQUAD_THREAT_ACT', '1') !== '0', decide: { expected: targets } });
+        const to = threatConfig!;
+        threats = new ThreatWatch({ sessions: () => squad, server: squadServer, friends: new Set(ours.map(n => n.toLowerCase())), radar, log, act: to.act, cooldown: to.cooldown, odds: to.odds,
+            decide: { expected: to.expectedTargets ? targets : new Set<string>() } });
     }
     const results = await Promise.all(squad.map(s => {
         const kit = kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []);
         const stunSpec = defaultStunSpec(kit);
         return hold(s, {
             targets, post, threats,
-            options: sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200),
+            options: { ...sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200), ...fightOverrides },
+            ...(get('SQUAD_FREEZE_SHARE', '0') === '1' ? { freezeShareFor } : {}),
             ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
             allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), run: runDeaths,
             onDeath: near => { recordPvpDeath({ account: s.name, server: squadServer, at: Date.now(), script: 'scripts/pk-squad.ts', near }); }, deadline,
@@ -693,7 +761,7 @@ if (import.meta.main) {
     if (get('RESCUE', '1') === '1') stranded.push(...await rescueDropped(dropped.keys(), all, (name, onStop) => openBot(name, { onStop, onSessionEnd: (s, detail) => onStop(s, detail) }), log));
     else stranded.push(...dropped.keys());
     const end = squadEnd({ accounts: results.length, kills: sum(r => r.kills), gangDied: gang.length ? gang.filter(gangDead).length : undefined, deaths: results.filter(r => r.died).length,
-        taken: sum(r => r.taken), trips: sum(r => r.trips), fights: sum(r => r.fights), picked, dropped: [...dropped.keys()], stranded, halted, rekits: results.reduce((n, r) => n + r.rekits, 0), receiptProof: killReceiptProof(results.flatMap(r => r.receipts)), diedAccounts: results.filter(r => r.died).map(r => r.name) });
+        taken: sum(r => r.taken), trips: sum(r => r.trips), fights: sum(r => r.fights), picked, dropped: [...dropped.keys()], stranded, halted, rekits: results.reduce((n, r) => n + r.rekits, 0), ...(threats ? { interlopers: results.reduce((n, r) => n + (r.interlopers ?? 0), 0) } : {}), receiptProof: killReceiptProof(results.flatMap(r => r.receipts)), diedAccounts: results.filter(r => r.died).map(r => r.name) });
     await settleKillFeed();
     await finish(all, end.ok, end.detail);
 }

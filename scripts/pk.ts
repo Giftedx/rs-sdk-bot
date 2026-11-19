@@ -6,6 +6,7 @@
 // against Protect from Magic and leaves 5 ticks of immunity (pvp_magic.rs2:11-36, 85-104, 156); the attackable
 // range is the lower Wilderness level (wilderness_levels.rs2:4-16, pvp_combat.rs2:32-48).
 // Usage: bun scripts/pk.ts <bot> <target name> [CAP ticks]; practice only until a live pilot is qualified.
+import { loadGear } from './gear';
 import { readFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
@@ -541,6 +542,13 @@ export function pickFakieWeapon(opts: {
     return null;
 }
 
+// SAFETY: the chain of the rune throwing axe special picks its next target with huntall(origin, 3, line of sight) around the THROWER, excluding only the earlier targets
+// and the thrower (pvp_rune_thrownaxe.rs2 pvp_rune_thrownaxe_hunt), so any player within 3 tiles of the thrower that is attackable is a chain target: in a stacked squad
+// the special hits our own members. The special is refused when an ally stands within `AXE_ALLY_RANGE` tiles of us (one more than the server's 3, for a move in the tick).
+export const AXE_ALLY_RANGE = 4;
+export const thrownAxeHitsAlly = (spec: { kit: readonly number[] } | undefined, nearby: readonly { name: string; distance: number }[], allies: readonly string[] | undefined, names: ReadonlyMap<number, string>) =>
+    !!spec && !!allies?.length && spec.kit.some(id => names.get(id) === 'rune_thrownaxe') && nearby.some(p => p.distance <= AXE_ALLY_RANGE && allies.includes(p.name.toLowerCase()));
+
 // Default special-attack config from a staged kit (content specwep=true: dragon dagger 25%, longsword 25%, mace 25%,
 // rune claws 25%, magic shortbow 35% in bows.obj:343, dragon spear/_p/kp 25%).
 export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undefined {
@@ -636,6 +644,31 @@ const special = (client: unknown) => { const v = (client as { var?: number[] } |
 // A health bar at or under the fraction, from a hit that showed one.
 // A fraction of 1 or more holds at any health, also before the target's health bar shows (its first hit).
 export const lowHealth = (seen: Observed | null, fraction: number) => !!seen && (fraction >= 1 || (seen.totalHealth > 0 && seen.health / seen.totalHealth <= fraction));
+// After a fight: wear again the armour that the account wore at the start and that now sits in the pack with its slot empty. A freeze strips the platelegs, the full
+// helm and other pieces for the cast, and `tankIds` that wears them again lives in one fight: the next fight's set holds only the plate and chain bodies, so
+// the legs and the helm stayed in the pack for the rest of the run (run 3: members fought without them after a freeze). The weapon and the shield are not
+// touched: the fight loop picks the weapon, and wearing a shield would unwield a two-handed weapon. Returns the pieces that it wore.
+const ARMOUR_SLOT: Record<string, number> = { hat: 0, back: 1, torso: 4, legs: 7, hands: 9, feet: 10 };
+let gearSlots: Map<number, string> | undefined;
+export async function rewearStart(s: Session, start: readonly number[], log: (line: string) => void = () => {}, tick: () => Promise<boolean> = () => nextTick(s)): Promise<number> {
+    gearSlots ??= new Map(loadGear().map(g => [g.id, g.slot]));
+    let n = 0;
+    for (const id of start) {
+        const slot = ARMOUR_SLOT[gearSlots.get(id) ?? ''];
+        if (slot === undefined || (s.sdk.getState()?.equipment ?? []).some(e => e.slot === slot)) continue;
+        const item = s.sdk.getInventory().find(i => i.id === id), op = item?.optionsWithIndex?.find(x => /^(wear|wield)$/i.test(x.text));
+        if (!item || !op) continue;
+        await s.sdk.sendUseItem(item.slot, op.opIndex);
+        n++;
+        if (!await tick()) break;
+    }
+    if (n) log(`PK wore ${n} piece${n === 1 ? '' : 's'} of the starting armour again`);
+    return n;
+}
+
+// A health bar at 0 (a hit that showed one, and the target has no Hitpoints left): the target is dying. lowHealth is true there, so without this guard a special
+// attack, a freeze or a bind goes into a target that is already dead (run 3: about 40 specials and many binds).
+export const isDying = (seen: Observed | null) => !!seen && seen.totalHealth > 0 && seen.health <= 0;
 
 // The new hit splats on another player since the last call, read from the client's player entity (ClientEntity
 // damageCycles and damageValues, four slots). The SDK publishes a damage_dealt event only while our player faces the
@@ -1325,6 +1358,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             else if (now - unattackableSince >= 6) { result.outcome = 'lost'; return result; }
         } else unattackableSince = -1;
         const seen = observePlayer(s.client, target.index);
+        const dying = isDying(seen);
         // PK_TRACE=1: one line for each tick of what the loop reads, to find where two runs with one seed part.
         if (process.env.PK_TRACE === '1') log(`PKT ${result.ticks} hp=${me.hp} run=${me.runEnergy ?? '?'} at=${at.x},${at.z} t=${target.x},${target.z} th=${seen?.health}/${seen?.totalHealth} hi=${seen?.headicons} w=${seen?.worn.join('.')} pp=${state.prayers.prayerPoints} na=${nextAttack - start} hits=${hits.map(h => h.damage).join('.')} dealt=${result.dealt} ev=${state.combatEvents.length} inv=${inv.length}`);
         const prayerBase = state.skills.find(k => k.name === 'Prayer')?.baseLevel ?? 99;
@@ -1395,7 +1429,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const upcomingTurn = chosen ? { style: chosen, index: Math.max(0, turns.indexOf(chosen)) } : rotationTurn;
         const burstBow = o.bowBurst !== undefined ? bowSpec(o.kit, names) : undefined;
         const burstRange = burstBow ? weaponRange(burstBow.kit[0]!, names) ?? BOW_RANGE : BOW_RANGE;
-        const bursting = !!burstBow && special(s.client).energy >= burstBow.cost && (fled || lowHealth(seen, o.bowBurst!)) && cheb(at, target) <= burstRange;
+        const bursting = !dying && !!burstBow && special(s.client).energy >= burstBow.cost && (fled || lowHealth(seen, o.bowBurst!)) && cheb(at, target) <= burstRange;
         if (pjedByNpc) {
             pjedByNpc = false;
             if (!hitter && typeof sdk.sendInteractNpc === 'function') {
@@ -1576,7 +1610,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const freezeMagic = Math.min(magicLevel, o.freezeMagicCap ?? magicLevel);
         const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(freezeMagic, inv) : freezeSpell(freezeMagic)) : null;
         // A kit with the runes of a freeze and no staff still casts it: the cast keeps the weapon in hand.
-        const castFreeze = freeze !== null && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
+        const castFreeze = freeze !== null && !dying && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
             && (freezeRule === true || now < fleeingUntil || (o.openFreeze === true && !hasAttacked) || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)))
             && !(o.freezeShare && o.freezeShare.clock() < o.freezeShare.until)
             && (o.freezeStill !== true || (cheb(at, target) <= 10 && await lineOfSight(me.level ?? 0, at, target)));
@@ -1588,7 +1622,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const stunOverlap = o.stunShare?.overlap ?? 1;
         const targetStunned = now < targetStunnedUntil || (!!o.stunShare && o.stunShare.clock() < (o.stunShare.stunnedUntil ?? -1));
         const stunOpenForChain = o.stunShare ? o.stunShare.clock() >= o.stunShare.until - stunOverlap : !targetStunned;
-        const canSecondaryStun = !!o.stunSpec && canReachMelee && !bursting && energy.energy >= o.stunSpec.cost && stunOpenForChain
+        const canSecondaryStun = !dying && !!o.stunSpec && canReachMelee && !bursting && energy.energy >= o.stunSpec.cost && stunOpenForChain
             && (fled || lowHealth(seen, o.stunSpec.below) || !!o.stunShare);
         // In a burst the bow special goes first, then a melee special if one is ready, then the bow again: the target
         // prays against the weapon it saw last, so each lands off its prayer.
@@ -1616,7 +1650,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             || (!!o.burstOnHold && !!o.freezeShare && o.freezeShare.clock() < (o.freezeShare.heldUntil ?? -1))
             || (!!o.burstOnStun && !spec?.stun && targetStunned);
         const specNeedsRoom = !!spec?.kit.some(id => isDragonSpearName(names.get(id) ?? '')) && state.equipment.some(e => e.slot === 3) && state.equipment.some(e => e.slot === 5) && inv.length >= 28;
-        if (spec && !specNeedsRoom && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || chainStun || lowHealth(seen, spec.below))
+        // An axe special that would chain onto an ally within 3 tiles of us is not thrown (thrownAxeHitsAlly).
+        const axeHitsAlly = thrownAxeHitsAlly(spec, state.nearbyPlayers, o.allies, names);
+        if (spec && !dying && !axeHitsAlly && !specNeedsRoom && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || chainStun || lowHealth(seen, spec.below))
             && (fled || bursting || volleying || chainStun || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
             && (spec.stun || !guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - sentEvents - attackPackets - (energy.on ? 0 : 1);

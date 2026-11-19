@@ -58,7 +58,8 @@ test('the real saved-proof verifier rejects corrupt saves, changed raw output, d
    writeFileSync(join(f.folder,'worker.log'),f.log({...f.result,xpGain:f.result.xpGain+1}));
    const verified=verifyRegisteredRangedProof(f.folder,f.proof,f.base);expect(verified.checks.rawResult).toBe(false);expect(verified.checks.xp).toBe(false);
   }else{
-   f.proof.supportedMethods[0]!.bands[0]!.levels.Ranged={min:1,max:99};
+   // A band that admits a weaker account than the entry (a lower minimum) is not the band of this proof.
+   f.proof.supportedMethods[0]!.bands[0]!.levels.Ranged={min:1};
    expect(verifyRegisteredRangedProof(f.folder,f.proof,f.base).checks.supportedMethods).toBe(false);
   }
  }

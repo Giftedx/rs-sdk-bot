@@ -4,7 +4,7 @@ import * as pk from './pk';
 import { maxDeathsOf } from './pk-hunt';
 import { bankNear, isKillLine, leaveWilderness, openSquad, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
-import { hold, squadEnd } from './pk-squad';
+import { hold, squadEnd, squadFightOverrides } from './pk-squad';
 import { newWatch, readLine } from './squad-watch';
 import { classify } from '../packages/practice/src/supervise-host';
 import { supervise } from '../packages/practice/src/supervise';
@@ -436,7 +436,7 @@ async function holdWithThreats(act: boolean) {
     let t = 0;
     w.s.tick = () => t;
     w.s.sdk.sendTogglePrayer = async (i: number) => { toggles.push(i); };
-    const threats: any = { act, step: () => ({ classes: [], actions: [{ kind: 'protect', member: 'Soldier', style: 'magic', reason: 'Mage magic by weapon, 4 tiles' }] }) };
+    const threats: any = { act, acted: () => {}, step: () => ({ classes: [], interlopers: [], actions: [{ kind: 'protect', member: 'Soldier', style: 'magic', reason: 'Mage magic by weapon, 4 tiles' }] }) };
     const mocks = [
         spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
         spyOn(walking, 'walkPath').mockResolvedValue({ ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any),
@@ -457,4 +457,148 @@ test('with a threat that can hit it and no target, a member holds the protect pr
 
 test('with act off the threat watch changes nothing in the hold loop', async () => {
     expect(await holdWithThreats(false)).toEqual([]);
+});
+
+// The armour swap and the single-way hold of the threat radar in the hold loop.
+async function holdRadar(actions: (tick: number) => any[], until = 120) {
+    const w = squadWorld(), lines: string[] = [], walks: { x: number; z: number }[] = [], seen: number[][] = [];
+    let t = 0, slot = 20;
+    w.s.tick = () => t;
+    w.equipment.push({ id: 1127, count: 1, slot: 4, name: 'Rune platebody', optionsWithIndex: [] });
+    w.inventory.push({ id: 1135, count: 1, slot: ++slot, name: 'Dragonhide body', optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] });
+    // Wearing swaps the body: the worn one goes to the pack.
+    const body: Record<number, number> = { 1135: 1127, 1127: 1135 };
+    w.s.sdk.sendUseItem = async (s: number, op: number) => {
+        const at = w.inventory.findIndex(i => i.slot === s), item = w.inventory[at];
+        if (!item || op !== 2) return;
+        w.inventory.splice(at, 1);
+        const old = w.equipment.findIndex(e => e.id === body[item.id]);
+        if (old >= 0) { const [gone] = w.equipment.splice(old, 1); w.inventory.push({ ...gone, slot: ++slot, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] }); }
+        w.equipment.push(item);
+    };
+    const threats: any = { act: true, acted: () => {}, step: (tick: number) => ({ classes: [], interlopers: [], actions: actions(tick) }) };
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_d, path) => { walks.push({ x: path[0]!.x, z: path[0]!.z }); w.player.worldX = path[0]!.x; w.player.worldZ = path[0]!.z; return { ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any; }),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { t++; seen.push(w.equipment.map(e => e.id)); return true; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+    ];
+    try {
+        const stats = await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3066, z: 3641 }, options: { kit: {} }, allies: [], pickup: false, trips: 3, deadline: 400, stopped: () => t >= until, killsLeft: () => true, log: l => lines.push(l), threats });
+        return { w, lines, walks, seen, stats };
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+}
+
+test('a kit action wears the pack armour from the pack once, and wears the worn armour again 60 ticks after the threat is gone', async () => {
+    const { w, lines, seen } = await holdRadar(tick => tick < 30 ? [{ kind: 'kit', member: 'Soldier', style: 'magic', wear: [1135], gain: 26, reason: 'Mage magic: wear 1135 (+26)' }] : []);
+    expect(lines.filter(l => l.includes('threat kit swap'))).toHaveLength(1);
+    expect(seen.some(ids => ids.includes(1135) && !ids.includes(1127))).toBe(true);
+    expect(lines.some(l => l.includes('threat kit restore: wear 1127'))).toBe(true);
+    expect(w.equipment.map(e => e.id)).toContain(1127);
+    expect(w.equipment.map(e => e.id)).not.toContain(1135);
+});
+
+test('a single-way action walks to the tile once, and the squad stays there: no walk back to the multi-way post', async () => {
+    const to = { x: 3040, z: 3600 };
+    const { lines, walks } = await holdRadar(() => [{ kind: 'single-way', to, reason: 'team of 3: A(126,melee)' }], 40);
+    expect(walks).toEqual([to]);
+    expect(lines.filter(l => l.includes('SQUAD threat single-way: team of 3'))).toHaveLength(1);
+});
+
+test('a retreat action ends a member part in the Wilderness with the rescue: a walk to the bank, then back to the post by the bank trip', async () => {
+    const reason = 'outclassed by Boss(145,magic) at 3 tiles';
+    let fired = false;
+    const { lines, walks, stats } = await holdRadar(() => fired ? [] : (fired = true, [{ kind: 'retreat', reason }]), 200);
+    expect(lines.filter(l => l.includes(`SQUAD threat retreat: ${reason}`))).toHaveLength(1);
+    expect(lines.some(l => l.includes('SQUAD rescue at 3066,3641'))).toBe(true);
+    expect(lines.some(l => l.includes('SQUAD rescue ends at') && l.includes('wild 0'))).toBe(true);
+    expect(walks.some(t => t.z < 3520)).toBe(true);
+    expect(stats).toMatchObject({ died: false });
+    expect(stats.trips).toBeGreaterThanOrEqual(1);
+});
+
+test('a fight of the hold loop stops when the radar decides a retreat or a single-way move, and not for the protect prayer', async () => {
+    const w = squadWorld();
+    w.s.tick = () => 0;
+    w.s.sdk.getState().nearbyPlayers = [{ index: 5, name: 'Goondelf', combatLevel: 126, x: 3067, z: 3641, distance: 1 }];
+    const decided: { actions: any[] } = { actions: [{ kind: 'protect', member: 'Soldier', style: 'magic', reason: 't' }] };
+    const threats: any = { act: true, acted: () => {}, step: () => ({ classes: [], interlopers: [], actions: decided.actions }) };
+    const stops: boolean[] = [];
+    let t = 0;
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { t++; return true; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+        spyOn(pk, 'fightPlayer').mockImplementation(async (_s: any, _name: string, opts: any) => {
+            stops.push(opts.stop());
+            decided.actions = [{ kind: 'retreat', reason: 'outnumbered' }];
+            stops.push(opts.stop());
+            decided.actions = [{ kind: 'single-way', to: { x: 1, z: 1 }, reason: 'team' }];
+            stops.push(opts.stop());
+            t = 1000;
+            return { outcome: 'stopped' } as any;
+        }),
+    ];
+    try {
+        await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3066, z: 3641 }, options: { kit: {} }, allies: [], pickup: false, trips: 3, deadline: 400, stopped: () => t >= 500, killsLeft: () => true, log: () => {}, threats });
+        expect(stops.slice(0, 3)).toEqual([false, true, true]);
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+});
+
+test('pickSquadFocus: an interloper comes before the squad targets, the one with the lowest health first among interlopers, and the squad goes back to its targets when they are gone', () => {
+    const gang = { name: 'Goondelf', index: 1, distance: 5, hp: 0.2 }, mage = { name: 'Mage', index: 2, distance: 9, hp: 1 }, ranger = { name: 'Ranger', index: 3, distance: 6, hp: 0.5 };
+    const health = (p: { hp: number }) => p.hp;
+    const targets = new Set(['goondelf']);
+    expect(pickSquadFocus({ view: [gang, mage], targets, health })?.name).toBe('Goondelf');
+    const interlopers = new Set(['mage', 'ranger']);
+    const all = new Set([...targets, ...interlopers]);
+    expect(pickSquadFocus({ view: [gang, mage], targets: all, priority: interlopers, health })?.name).toBe('Mage');
+    expect(pickSquadFocus({ view: [gang, mage, ranger], targets: all, priority: interlopers, health })?.name).toBe('Ranger');
+    expect(pickSquadFocus({ view: [gang], targets, priority: new Set(), health })?.name).toBe('Goondelf');
+});
+
+test('the squad end line prints the kills of interlopers only when the threat watch counted them', () => {
+    const base = { accounts: 4, kills: 3, taken: 500, trips: 1, fights: 6, picked: {}, dropped: [], stranded: [], deaths: 0 };
+    expect(squadEnd(base).detail).toBe('squad accounts=4 kills=3 died=0 taken=500 trips=1 picked={}');
+    expect(squadEnd({ ...base, interlopers: 2 }).detail).toBe('squad accounts=4 kills=3 died=0 attackerKills=2 taken=500 trips=1 picked={}');
+    expect(squadEnd({ ...base, interlopers: 0 }).detail).toContain(' attackerKills=0 ');
+});
+
+
+test('the hold loop wears the starting armour again after a fight that stripped it', async () => {
+    const w = squadWorld();
+    w.s.tick = () => 0;
+    w.s.sdk.getState().nearbyPlayers = [{ index: 5, name: 'Goondelf', combatLevel: 126, x: 3067, z: 3641, distance: 1 }];
+    let t = 0, fights = 0;
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { t++; return true; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+        spyOn(pk, 'fightPlayer').mockImplementation(async () => {
+            fights++;
+            // A freeze stripped the helm in the first fight: it sits in the pack.
+            const at = fights === 1 ? w.equipment.findIndex(e => e.id === 1163) : -1;
+            if (at >= 0) { const [helm] = w.equipment.splice(at, 1); w.inventory.push({ ...helm, slot: 21, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] }); }
+            return { outcome: 'timeout' } as any;
+        }),
+    ];
+    const lines: string[] = [];
+    try {
+        await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3066, z: 3641 }, options: { kit: {} }, allies: [], pickup: false, trips: 3, deadline: 5000, stopped: () => t >= 30, killsLeft: () => true, log: l => lines.push(l) });
+        expect(fights).toBeGreaterThanOrEqual(1);
+        expect(lines.filter(l => l.includes('PK wore 1 piece of the starting armour again'))).toHaveLength(1);
+        expect(w.equipment.map(e => e.id)).toContain(1163);
+        expect(w.inventory.map(e => e.id)).not.toContain(1163);
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+});
+
+test('squadFightOverrides: the plain settings for freezeArmour and protectItem, and a fail for a value that is not listed', () => {
+    const env = (values: Record<string, string>) => (name: string, fallback: string) => values[name] ?? fallback;
+    expect(squadFightOverrides(env({}))).toEqual({});
+    expect(squadFightOverrides(env({ SQUAD_FREEZE_ARMOUR: 'torso' }))).toEqual({ freezeArmour: 'torso' });
+    expect(squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'skulled' }))).toEqual({ protectItem: 'skulled' });
+    expect(squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'on', SQUAD_FREEZE_ARMOUR: 'keep' }))).toEqual({ protectItem: true, freezeArmour: 'keep' });
+    expect(squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'off' }))).toEqual({ protectItem: false });
+    expect(() => squadFightOverrides(env({ SQUAD_FREEZE_ARMOUR: 'bare' }))).toThrow('strip, torso or keep');
+    expect(() => squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'yes' }))).toThrow('on, off or skulled');
 });
