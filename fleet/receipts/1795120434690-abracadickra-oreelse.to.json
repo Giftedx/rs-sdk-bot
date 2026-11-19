@@ -1,0 +1,16 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795120434690-abracadickra-oreelse",
+ "account": "OreElse",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 74267,
+ "claim": "852cccf3-a4a4-4fa3-94f9-08f481fd55bc",
+ "count": 0,
+ "ok": false,
+ "at": 1795120535061,
+ "detail": "Error: route to 318
