@@ -452,7 +452,7 @@ function solveLowerBounds(graph: LowerBoundGraph, goalBoundIdx: number, goalTile
 // Ordinary navigation may stop beside its goal; entry qualification requests the exact tile.
 type WorldOptions = { transports?: Transport[]; doors?: Door[]; travel?: Travel[]; pathLength: PathLength; goalTolerance?: 0 | 1 };
 
-// The route graph (waypoint tables, lower-bound graphs, approach tables: about 98 MB and 334,000 objects) builds on the
+// The route graph (waypoint tables, lower-bound graphs, approach tables: about 405 MB of RSS and 3.19 million objects, with the collision grid that its travel snap makes the SDK build) builds on the
 // first route(), navigationGraph() or routeGain() call. A process that plans its trips off the main thread
 // (bot.ts getWorld: offThread) and only asks for the doors that an account cannot pass never builds it.
 export function createWorld(opts: WorldOptions): World {
