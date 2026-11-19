@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795100689402-pickpockdick-trousersnake-waterrune",
  "account": "PickpockDick",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 4,
  "claim": "298a9b22-0905-445b-9559-108a11a606c7",
- "count": 0,
- "ok": false,
- "at": 1795100717030,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795100936621,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795100921483
+ },
+ "logout": {
+  "attemptId": "1795100717038-0000029752-0000000001",
+  "at": 1795100936609,
+  "sha256": "4dba57939c70a8a8363d0607543be63e2dc5af06e70b152481870525abf59272"
+ },
+ "screen": true
 }
