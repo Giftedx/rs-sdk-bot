@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795100899336-mightyrod-fatstack",
+ "account": "Mightyrod",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 28007,
+ "claim": "1543077f-fb98-4af8-bbc0-d46379d45b85",
+ "count": 0,
+ "ok": false,
+ "at": 1795100991439,
+ "detail": "trade claimed"
+}
