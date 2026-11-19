@@ -18,10 +18,6 @@
     "packages/practice/test/shop-supply-order-proof.test.ts",
     "scripts/measure/fleet-player-save.ts",
     "scripts/measure/fleet-player-save.test.ts",
-    "scripts/progression-catalog.ts",
-    "scripts/progression-catalog.test.ts",
-    "packages/planner/src/progression-catalog.ts",
-    "packages/planner/test/progression-catalog.test.ts",
     "packages/planner/data/progression-routes.json"
   ],
   "consumer": "Preserve existing ordinary GE entry, authorized rescue, law-rune and Earth top-up consumers. OreElse's finite Earth consumers acquire both talismans1438/1440, buy at most500 essence within36000 coins and craft to1139 banked Earth557 while retaining1482 Fire554 and30000 coins. The pending run-buy-bow-route-sapphire-two buys exactly two Gold bars2357 with LIMIT_PRICE5000, CASH_RESERVE1000000 and EXPECTED_OWNED0; run-cut-bow-route-sapphire-two cuts exactly two owned sapphires while retaining three raw gems; run-make-bow-route-sapphire-two banks two new rings to reach seven held rings for the Overall twelve-ring supply demand. Preserve journal compatibility and all finite consumer acceptance. Native checks invoke the actual buyer CLI and inspect useful output, reconciled assets, clear refusal and logout. Practice seller and snapshot fixtures remain local-only.",
@@ -39,8 +35,6 @@
         "scripts/earth-production.test.ts",
         "packages/practice/test/shop-supply-order-proof.test.ts",
         "scripts/measure/fleet-player-save.test.ts",
-        "scripts/progression-catalog.test.ts",
-        "packages/planner/test/progression-catalog.test.ts",
         "--timeout",
         "10000"
       ],
