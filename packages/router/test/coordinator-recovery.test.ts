@@ -412,12 +412,12 @@ test('a mismatched receipt cannot complete a different run',()=>{
  const dir=mkdtempSync(join(tmpdir(),'coord-recovery-')),s=seed();atomicJson(join(runDirectory('recovery-run',dir),'receipt.json'),{taskId:'producer',runId:'other-run',ok:true,at:Date.now(),output:{}});
  reconcile(s,()=>false,dir);expect(s.tasks[0]!.status).toBe('failed');expect(s.goals[1]!.completedTasks).toBe(0);
 });
-for(const reason of ['active-session','fleet-order'] as const)test('a proved pre-install '+reason+' deferral restores the exact run to pending without credit or lost receipt',()=>{
+for(const reason of ['active-session','fleet-order','reserved'] as const)test('a proved pre-install '+reason+' deferral restores the exact run to pending without credit or lost receipt',()=>{
  const dir=mkdtempSync(join(tmpdir(),'coord-live-defer-')),s=initialState();
  addTasks(s,[{id:'live',kind:'run',goal:'quests',capability:'quest-sweep',account:'Rod',dependsOn:[],priority:1,estimatedMs:1000,why:'finite quest',accept:{quests:['Scorpion Catcher']}}]);
  const record=startTask(s,'live',Date.now()-1000,'busy-run'),before=s.latestReceiptSequence;
  const receipt={taskId:'live',runId:'busy-run',ok:false,at:Date.now(),output:{ok:false,evidence:'live-deferred',installed:false,
-  liveDeferred:{account:'Rod',reason,attemptId:reason==='fleet-order'?null:'1794777984832-0000029060-0000000001',pid:reason==='fleet-order'?null:29060}}};
+  liveDeferred:{account:'Rod',reason,attemptId:reason==='active-session'?'1794777984832-0000029060-0000000001':null,pid:reason==='active-session'?29060:null}}};
  const file=join(runDirectory('busy-run',dir),'receipt.json');atomicJson(file,receipt);
  reconcile(s,()=>{throw Error('receipt must settle without a process probe');},dir);
  expect(record.status).toBe('pending');expect(record.attempts).toBe(1);expect(record.receipt).toBeUndefined();expect(record.runId).toBeUndefined();
@@ -427,11 +427,11 @@ for(const reason of ['active-session','fleet-order'] as const)test('a proved pre
  expect(chooseTask(s,Date.now(),{runHeld:()=>true})).toBeNull();expect(chooseTask(s,Date.now(),{runHeld:()=>false})?.id).toBe('live');
 });
 
-for(const invalid of ['task','run','account','old timestamp','installed','evidence','attempt','pid','missing attempt','missing pid'])test('a fleet-order deferral cannot hide forged '+invalid,()=>{
+for(const reason of ['fleet-order','reserved'] as const)for(const invalid of ['task','run','account','old timestamp','installed','evidence','attempt','pid','missing attempt','missing pid'])test('a '+reason+' deferral cannot hide forged '+invalid,()=>{
  const dir=mkdtempSync(join(tmpdir(),'coord-order-defer-')),s=initialState();
  addTasks(s,[{id:'live',kind:'run',goal:'quests',capability:'quest-sweep',account:'Rod',dependsOn:[],priority:1,estimatedMs:1000,why:'finite quest',accept:{quests:['Scorpion Catcher']}}]);
  const startedAt=Date.now()-1000;startTask(s,'live',startedAt,'order-run');
- const receipt:any={taskId:'live',runId:'order-run',ok:false,at:Date.now(),output:{ok:false,evidence:'live-deferred',installed:false,liveDeferred:{account:'Rod',reason:'fleet-order',attemptId:null,pid:null}}};
+ const receipt:any={taskId:'live',runId:'order-run',ok:false,at:Date.now(),output:{ok:false,evidence:'live-deferred',installed:false,liveDeferred:{account:'Rod',reason,attemptId:null,pid:null}}};
  if(invalid==='task')receipt.taskId='other-task';if(invalid==='run')receipt.runId='other-run';
  if(invalid==='account')receipt.output.liveDeferred.account='Other';if(invalid==='old timestamp')receipt.at=startedAt-1;
  if(invalid==='installed')receipt.output.installed=true;if(invalid==='evidence')receipt.output.evidence='live';
