@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795095383331,
+ "at": 1795095458988,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -282,44 +282,22 @@
   },
   {
    "account": "Fatstack",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "536",
-    "QUANTITY": "37",
-    "EXPECTED_OWNED": "6",
-    "LIMIT_PRICE": "7300",
-    "CASH_RESERVE": "10000",
-    "ORDER_MS": "1200000",
-    "ORDER_KEY": "prayer99-fatstack-dragonbones37",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-3e8659de-6553-4d2c-b6fb-d6918295994e"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-buy-fatstack-dragon-bones-99 [task-3e8659de-6553-4d2c-b6fb-d6918295994e]",
-   "role": "supply"
-  },
-  {
-   "account": "KnightRider",
    "script": "scripts/train-prayer.ts",
    "args": [
     "99"
    ],
    "env": {
     "BONE_ID": "536",
-    "MAX_BURY": "8",
+    "MAX_BURY": "37",
     "BONE_RESERVE": "6",
     "CAP": "1500",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
-    "COORDINATOR_RUN_ID": "task-635c6d94-9742-4d82-ba7b-6dadbb7d8d4d"
+    "COORDINATOR_RUN_ID": "task-d283a6d6-0262-4367-a333-dd453473ffce"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-prayer-knightrider-99 [task-635c6d94-9742-4d82-ba7b-6dadbb7d8d4d]",
+   "goal": "run-prayer-fatstack-99 [task-d283a6d6-0262-4367-a333-dd453473ffce]",
    "role": "helper"
   }
  ],
