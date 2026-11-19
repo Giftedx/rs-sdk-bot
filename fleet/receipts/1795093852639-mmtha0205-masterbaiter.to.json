@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795093852639-mmtha0205-masterbaiter",
  "account": "Masterbaiter",
  "partner": "mmtha0205",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 28175,
  "claim": "b6c042f8-ba6f-43a5-a216-2fd50f83b32e",
- "count": 0,
- "ok": false,
- "at": 1795093935535,
- "detail": "trade claimed"
+ "count": 28175,
+ "ok": true,
+ "at": 1795094160731,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1825,
+  "after": 30000
+ },
+ "bank": {
+  "count": 28175,
+  "at": 1795094159589
+ },
+ "logout": {
+  "attemptId": "1795093935543-0000017772-0000000001",
+  "at": 1795094160716,
+  "sha256": "cd3af4ad26401f1660f85e2ce1f9ede26e075a98a6c4a55196b34034faecb01c"
+ },
+ "screen": true
 }
