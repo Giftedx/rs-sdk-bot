@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795051039678-masterbaiter-sporrandip-feather",
+ "account": "SporranDip",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 149,
+ "claim": "6cd42418-1b40-4c0d-b225-fa5b714e0fd8",
+ "count": 0,
+ "ok": false,
+ "at": 1795051384711,
+ "detail": "trade claimed"
+}
