@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795119656378-pocketrocket-knightstick-firerune",
+ "account": "Knightstick",
+ "partner": "Pocketrocket",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 1,
+ "claim": "e51e98b8-a1fb-47a0-bdfd-b464b1ef5fb8",
+ "count": 0,
+ "ok": false,
+ "at": 1795119771142,
+ "detail": "trade claimed"
+}
