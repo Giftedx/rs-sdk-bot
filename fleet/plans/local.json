@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795096984788,
+ "at": 1795097212455,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -322,25 +322,23 @@
   },
   {
    "account": "PickpockDick",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
    "env": {
-    "ITEM_ID": "536",
-    "QUANTITY": "255",
-    "EXPECTED_OWNED": "6",
-    "LIMIT_PRICE": "7300",
-    "CASH_RESERVE": "10000",
-    "ORDER_MS": "1200000",
-    "ORDER_KEY": "prayer99-pickpockdick-dragonbones255",
+    "BONE_ID": "536",
+    "MAX_BURY": "255",
+    "BONE_RESERVE": "6",
+    "CAP": "3000",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-7572e564-8417-47de-a62d-e43142b36f31"
+    "COORDINATOR_RUN_ID": "task-8cb87198-ca89-4ef5-a9de-091ca6f64f56"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-buy-pickpockdick-dragon-bones-99 [task-7572e564-8417-47de-a62d-e43142b36f31]",
-   "role": "supply"
+   "goal": "run-prayer-pickpockdick-99 [task-8cb87198-ca89-4ef5-a9de-091ca6f64f56]",
+   "role": "helper"
   }
  ],
  "army": [
