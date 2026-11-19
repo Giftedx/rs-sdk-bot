@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795104056165-abracadickra-swordinhand",
  "account": "Swordinhand",
  "partner": "Abracadickra",
@@ -12,6 +12,12 @@
  "claim": "543bbf8f-ce83-4308-95c9-f427d62b3bb9",
  "count": 0,
  "ok": false,
- "at": 1795104097477,
- "detail": "trade claimed"
+ "at": 1795104218873,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795104097484-0000017488-0000000001",
+  "at": 1795104218863,
+  "sha256": "a2bc7cfdc3e2202d6b89d0737196edd273e205965473d195e4007dc4d724a74f"
+ },
+ "screen": false
 }

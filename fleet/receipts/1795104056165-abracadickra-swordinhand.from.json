@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795104056165-abracadickra-swordinhand",
  "account": "Abracadickra",
  "partner": "Swordinhand",
@@ -12,6 +12,12 @@
  "claim": "e77a029b-4bb0-4914-8445-9968b4be2851",
  "count": 0,
  "ok": false,
- "at": 1795104093090,
- "detail": "trade claimed"
+ "at": 1795104218471,
+ "detail": "Error: route to 2618, 3333: timeout Captain Tobias to Karamja (Musa Point): not at 2956,3146,0 (at {\"x\":3028,\"z\":3218,\"level\":0})",
+ "logout": {
+  "attemptId": "1795104093098-0000020792-0000000001",
+  "at": 1795104218462,
+  "sha256": "5d47029af6b723a8ce8b546187f7f2522bbfcf0ad21f5561c4f880af78558470"
+ },
+ "screen": false
 }
