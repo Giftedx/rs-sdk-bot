@@ -30,6 +30,7 @@ import { openBot, settle } from './bot';
 import { parseStep, runChainSteps, type Step } from './chain-step';
 import type { Session } from './inprocess';
 import { noteStatusLine } from './status';
+import { shareLocIndex } from './loc-index-share';
 import { workerExecution } from './worker-execution';
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
@@ -193,26 +194,6 @@ function install(out: (line: string) => void, guard: boolean): void {
     // One bot's stray error must not end the other bots' sessions.
     if (guard) process.on('unhandledRejection', e => { if (!(e instanceof HostExit)) out(`[host] unhandled rejection: ${fmt([e])}`); });
     if (guard) process.on('uncaughtException', e => { if (!(e instanceof HostExit)) out(`[host] uncaught exception: ${fmt([e])}`); });
-}
-
-// Every session shares one loc index (read only, about 14 MB each; LocIndex.ts:9-10 says it is meant to be shared),
-// instead of one copy per session (session.ts:119 loads it per session).
-async function shareLocIndex(): Promise<void> {
-    const mod: any = await import(join(repoRoot, 'vendor', 'rs-sdk', 'server', 'webclient', 'src', 'lite', 'world', 'LocIndex.ts'));
-    const L = mod.LocIndex;
-    if (L.__hostShared) return;
-    const orig = L.load.bind(L);
-    const memo = new Map<string, Promise<unknown>>();
-    L.load = (opts: { cacheDir: string; versionlistCrc: number }) => {
-        const k = `${opts.cacheDir}|${opts.versionlistCrc >>> 0}`;
-        const hit = memo.get(k);
-        if (hit) return hit;
-        const p: Promise<unknown> = orig(opts);
-        memo.set(k, p);
-        p.catch(() => memo.delete(k));
-        return p;
-    };
-    L.__hostShared = true;
 }
 
 export function memLine(tag = ''): string {

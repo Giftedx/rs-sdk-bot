@@ -5,6 +5,7 @@ import type { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import type { BotActions } from '../../../vendor/rs-sdk/sdk/actions';
 import type { SDKConfig } from '../../../vendor/rs-sdk/sdk/types';
 import { loadPathfinding } from './pathcache';
+import { shareLocIndex } from './loc-index-share';
 import { assertLoginAllowed } from './haggisgate';
 import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { acquireFleetSwarmClaim, acquireFleetTradeClaim, type FleetTradeClaim } from './fleet-trade-claim';
@@ -585,6 +586,7 @@ export async function connectInProcess(opts: { name: string; password: string; s
     // dom-shim must load before any webclient `#/` module (session.ts:15 does the same).
     await import(vendor('server/webclient/src/lite/dom-shim.ts'));
     const { startSession } = await import(vendor('server/webclient/src/lite/session.ts'));
+    await shareLocIndex();
     const { BotSDK } = await import(vendor('sdk/index.ts'));
     const { BotActions } = await import(vendor('sdk/actions.ts'));
     if (!pathfindingReady) {
