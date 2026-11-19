@@ -1,0 +1,22 @@
+{
+ "id": "1795115456323-ballspinner-thefullmonty-waterrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Ballspinner",
+ "to": "TheFullMonty",
+ "item": "Water rune",
+ "count": 5,
+ "start": 1795115456323,
+ "end": 1795117856323,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
