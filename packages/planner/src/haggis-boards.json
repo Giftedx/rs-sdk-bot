@@ -1755,10 +1755,10 @@
        }
       ],
       "ticks": {
-       "floor": 2125,
-       "realistic": 2178,
+       "floor": 1608,
+       "realistic": 1608,
        "evidence": "ESTIMATE",
-       "source": "our measured pack cycle times the packs, plus the rival air leg: body altar 44 -> 99 needs 194 packs of 27 essence (977,286 XP at 5,062.5 XP a pack) and 55 level-ups; hosted CI lockstep, seeds 7, 8, 9, run 44479866696: bench case extra:rune-carriers-body-44-56 (6 packs, about 12 level-ups) takes 12.0, 12.0, 12.0 ticks a pack after the first, and extra:rune-carriers-body-80-82 (8 packs, 2 level-ups) 11.14, 10.71, 11.0; crossed trade requests take 0.28 ticks a pack from the single request; a pack without a level-up takes 10.05 (best seed) to 10.32 (mean of the seeds) ticks and a level-up adds 2.1 (research/runecraft-ladder.md); floor 194 x 10.05 + 55 x 2.1, realistic 194 x 10.32 + 55 x 2.1, each plus 60 for air 1-44 (rival, bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S06); the model adds the walks and bank trips (via). Not measured: a run with banking and 22 carriers"
+       "source": "our measured pack cycle times the packs: body altar 44 -> 99 needs 194 packs of 27 essence (977,286 XP at 5,062.5 XP a pack), air 1 -> 44 7 packs; the tick-driven carrier trade (scripts/rune-carrier-trade.ts tickTransfer) takes 8 ticks from craft to craft, with or without level-ups; hosted CI lockstep, seeds 7, 8, 9, run 44485487430: every pack after the first takes 8 ticks in extra:rune-carriers-air-1-44 (7 packs), extra:rune-carriers-body-44-56 (6 packs, 12 level-ups) and extra:rune-carriers-body-80-82 (8 packs, 2 level-ups) (research/runecraft-ladder.md); 194 x 8 + 7 x 8; the model adds the walks and bank trips (via). Not measured: a run with banking and 22 carriers"
       },
       "via": [
        "nature-ruins"
