@@ -116,13 +116,14 @@ function knifeServer(method:FishMethod,spot:{x:number;z:number},player:{x:number
   stand:async()=>{w.stands++;w.tick+=2;w.player={x:spot.x+1,z:spot.z};return true;}};
  return{w,d};
 }
-test('fly knife reset: drop, knife, Make 1, Lure and a close in one tick, one roll each 3 ticks',async()=>{
+test('fly knife reset: drop, knife, Make 1, Lure and a close in one tick, a close in the next, one roll each 3 ticks',async()=>{
  const {w,d}=knifeServer('fly',{x:3238,z:3252},{x:3239,z:3252});
  const r=await runStagedFishing(d,{method:'fly',amount:4,cap:100,maxAttempts:5,progressTicks:40,knife:{make1:99,drop:true}});
  expect(r).toMatchObject({caught:4,baitUsed:4,attempts:4,knife:{reset:'same',dropped:3,stands:0}});
- expect(w.sent.map(s=>s.tick)).toEqual([0,3,6,9]);
+ expect(w.sent.map(s=>s.tick)).toEqual([0,1,3,4,6,7,9,10]);
  expect(w.sent[0]!.types).toEqual(['useItemOnItem','clickComponent','interactNpc','closeModal']);
- expect(w.sent[1]!.types).toEqual(['dropItem','useItemOnItem','clickComponent','interactNpc','closeModal']);
+ expect(w.sent[1]!.types).toEqual(['closeModal']);
+ expect(w.sent[2]!.types).toEqual(['dropItem','useItemOnItem','clickComponent','interactNpc','closeModal']);
  expect(w.inv.filter(i=>i.id===NORMAL_LOGS).length).toBe(1);
 });
 test('cage knife reset: knife in T, close in T+1, click in T+2; a corner start stands beside the spot first',async()=>{

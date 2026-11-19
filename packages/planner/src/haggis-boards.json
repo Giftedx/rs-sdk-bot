@@ -1984,10 +1984,10 @@
      "lever": "rival-sea-slug",
      "set": {
       "ticks": {
-       "floor": 2282,
-       "realistic": 2292,
+       "floor": 2213,
+       "realistic": 2218,
        "evidence": "MEASURED",
-       "source": "MEASURED lockstep practice (bench case extra:fishing-lumbridge-fly-74-99, scripts/measure/fishing-bench-cases.ts; research/gathering-tricks.md): Fishing 74 (176,037 XP; Sea Slug lands 179,375 XP) -> 99 by the knife reset with one fish dropped in each cycle, 2,282 / 2,309 / 2,286 ticks at seeds 7, 8, 9 (562-565 catches, 358-362 XP/tick, 8-14 stands beside a moved spot). Floor = best seed, realistic = mean of the three seeds (2,292), as in the other measured rows of this patch family. The 150 ms wall-clock engine of scripts/measure/floor-fish.ts gives 2,356 / 2,305 / 2,377 (research/skill-rows-measured.md). Fly beats delayed lobster and harpoon at every level 74-99 (stat_random code-read: 347-416 vs 211-296 XP/tick at 3 ticks per roll). The flinch model fails (research/gathering-tricks.md)"
+       "source": "MEASURED lockstep practice (bench case extra:fishing-lumbridge-fly-74-99, scripts/measure/fishing-bench-cases.ts; research/gathering-tricks.md): Fishing 74 (176,037 XP; Sea Slug lands 179,375 XP) -> 99 by the knife reset with one fish dropped in each cycle and a close-modal request in the second tick of each cycle, 2,213 / 2,228 / 2,214 ticks at seeds 7, 8, 9 on hosted runners (562-566 catches, 371-373 XP/tick, 8-14 stands beside a moved spot; without that close the cycle after each of the 24 level-ups gave no roll and the run took 2,282 / 2,309 / 2,286). Floor = best seed, realistic = mean of the three seeds (2,218), as in the other measured rows of this patch family. The 150 ms wall-clock engine of scripts/measure/floor-fish.ts gives 2,356 / 2,305 / 2,377 (research/skill-rows-measured.md). Fly beats delayed lobster and harpoon at every level 74-99 (stat_random code-read: 347-416 vs 211-296 XP/tick at 3 ticks per roll). The flinch model fails (research/gathering-tricks.md)"
       },
       "label": "3-tick fly fishing 74 -> 99 after Sea Slug (drop one fish in the knife tick)",
       "via": []

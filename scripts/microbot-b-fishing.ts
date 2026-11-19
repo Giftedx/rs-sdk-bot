@@ -117,6 +117,7 @@ async function knifeFishing(d:FishDriver,o:FishBatchOptions,state:()=>BotWorldSt
  if(!knifeCut(initial.inventory,k.make1))throw Error('knife fishing needs a knife and logs');
  const freeRequired=o.method==='bigNet'?9:1,bait0=profile.bait?count(initial,profile.bait):0;
  let held=fishCount(initial,o.method),seenXp=xp(initial),caught=0,dropped=0,cycles=0,stands=0,progress=start,searches=0,missingSince=start;
+ const cycleStats:Record<string,{cycles:number;catches:number}>={};let lastLevel=initial.skills.find(k=>k.name==='Fishing')?.baseLevel??0;
  const observe=(drops:number)=>{
   const s=state(),now=fishCount(s,o.method),x=xp(s);
   if(now<held)dropped+=Math.min(drops,held-now);
@@ -134,24 +135,36 @@ async function knifeFishing(d:FishDriver,o:FishBatchOptions,state:()=>BotWorldSt
   const spot=pickFishSpot(s,o.method,15);
   if(!spot){if(d.search){if(searches>=3||!await d.search(searches++,()=>{state();return false;}))throw Error('fishing no compatible native spot after bounded search');}else{if(d.tick()-missingSince>=Math.min(12,o.progressTicks))throw Error('fishing no compatible native spot');await d.step();}observe(0);continue;}
   searches=0;missingSince=d.tick();
-  if(Math.abs(s.player!.worldX-spot.x)+Math.abs(s.player!.worldZ-spot.z)!==1){if(++stands>o.maxAttempts)throw Error('fishing dispatch limit');if(!await stand(spot))await d.step();observe(0);continue;}
+  if(Math.abs(s.player!.worldX-spot.x)+Math.abs(s.player!.worldZ-spot.z)!==1){if(++stands>o.maxAttempts)throw Error('fishing dispatch limit');const t0=d.tick(),dist=Math.max(Math.abs(s.player!.worldX-spot.x),Math.abs(s.player!.worldZ-spot.z));if(!await stand(spot))await d.step();observe(0);console.log(`FISH_STAND tick=${t0-start} dist=${dist} ticks=${d.tick()-t0} sinceCatch=${t0-progress}`);continue;}
   const cut=knifeCut(s.inventory,k.make1);if(!cut)throw Error('knife fishing needs a knife and logs');
   const drops:FishAction[]=drop?[{type:'dropItem',slot:drop.slot}]:[],n=drop&&products.includes(drop.id)?1:0;
   const click:FishAction={type:'interactNpc',npcIndex:spot.index,optionIndex:profile.op};
   cycles++;
+  const lv=s.skills.find(k=>k.name==='Fishing')?.baseLevel??0,x0=xp(s),kind=lv>lastLevel?'levelUp':'steady';lastLevel=lv;
+  // Each cycle sends a close in tick T+1. A level-up in the roll of the last cycle opens the levelup chat box
+  // (levelup.rs2 if_openchat, p_pausebutton) in the queue pass of tick T, after the inputs of T, and the open box
+  // stops the spot interaction (engine trace: access=false at T, T+1 and T+2, no roll). A close request in T+1 closes
+  // it at the queue pass of T+1 (Player.ts processQueues), before the interaction, so the roll comes at T+2. A close
+  // in T cannot: it runs before the box opens. Without the close in T+1 the cycle after each of the 24 level-ups from
+  // Fishing 74 to 99 caught nothing (FISH_CYCLES, extra:fishing-lumbridge-fly-74-99 seeds 7, 8, 9).
+  const close:FishAction={type:'closeModal'};
   if(reset==='same'){
    // The drop goes first: it ends the pending action (OpHeldHandler.ts:54-55). The close after the click clears the
    // queued cut at the queue pass of this tick (Player.ts:998-1000) when the server refuses the click (a spot about to
-   // move is delayed, OpNpcHandler.ts:27), and leaves the interaction alone.
-   await send([...drops,...cut,click,{type:'closeModal'}]);await d.step();observe(n);await d.step();observe(0);await d.step();observe(0);
+   // move is delayed, OpNpcHandler.ts:27), and leaves the interaction alone. These are 5 inputs, the most that the
+   // engine reads from a player in one tick (ClientGameProtCategory USER_EVENT).
+   await send([...drops,...cut,click,close]);await d.step();observe(n);await send([close]);await d.step();observe(0);await d.step();
   }else{
    await send(cut);await d.step();observe(0);
-   await send(drops.length?drops:[{type:'closeModal'}]);await d.step();s=observe(n);
+   await send([...drops,close]);await d.step();s=observe(n);
    // A spot that moved gets no click (it would walk and roll late); the next cycle stands beside it first.
    if(s.nearbyNpcs.some(m=>m.index===spot.index&&m.x===spot.x&&m.z===spot.z))await send([click]);
-   await d.step();observe(0);
+   await d.step();
   }
+  // Cycles and catches after a level-up, after a spot move and in the steady loop (FISH_CYCLES).
+  const e=observe(0),moved=!e.nearbyNpcs.some(m=>m.index===spot.index&&m.x===spot.x&&m.z===spot.z),b=cycleStats[moved?'moved':kind]??={cycles:0,catches:0};b.cycles++;if(xp(e)>x0)b.catches++;
  }
+ console.log(`FISH_CYCLES ${JSON.stringify(cycleStats)}`);
  const final=state();if(xp(final)<=xp(initial))throw Error('fishing target unobserved');
  return{caught,baitUsed:profile.bait?bait0-count(final,profile.bait):0,attempts:cycles,ticks:d.tick()-start,knife:{reset,dropped,stands}};
 }
