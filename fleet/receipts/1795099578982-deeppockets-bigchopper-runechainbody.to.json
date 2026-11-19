@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795099578982-deeppockets-bigchopper-runechainbody",
  "account": "Bigchopper",
  "partner": "Deeppockets",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "29916394-d187-4ef8-8a8b-fe09c24369b1",
- "count": 0,
- "ok": false,
- "at": 1795099613760,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795099639877,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795099636497
+ },
+ "logout": {
+  "attemptId": "1795099613769-0000003548-0000000001",
+  "at": 1795099639866,
+  "sha256": "c70510608ef357765e531e3b6ab5f372a01158eb20ab526bab438695a53ab1b7"
+ },
+ "screen": true
 }

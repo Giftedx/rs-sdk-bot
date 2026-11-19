@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795099586463,
+ "at": 1795099656173,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -296,25 +296,6 @@
    "resources": []
   },
   {
-   "account": "Sausagefest",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=10 EXPECTED_OWNED=6 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit28-536-6to16 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"536\":16}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 10 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "mmtha0205",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -327,8 +308,7 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -418,6 +398,29 @@
    "resources": [
     "splash:ardougne-cow-fence"
    ]
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "28",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
   }
  ],
  "army": [
