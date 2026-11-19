@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795060353608-bigchopper-trousersnake-54a812da55491f13",
  "account": "TrouserSnake",
  "partner": "Bigchopper",
@@ -10,8 +10,22 @@
  "item": "Antipoison(3)",
  "requested": 1,
  "claim": "1c641404-a00e-462f-849b-5c8eb7ee9f46",
- "count": 0,
- "ok": false,
- "at": 1795060503157,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795060529645,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795060528879
+ },
+ "logout": {
+  "attemptId": "1795060503167-0000024680-0000000001",
+  "at": 1795060529632,
+  "sha256": "192e2828d7d3b30ee0fad9a23a6400749f13afc264ce98e0117a1150be3fc5e1"
+ },
+ "screen": true
 }
