@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795091983599-yewfirst-hocuspokeus-bones",
+ "account": "Hocuspokeus",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 30,
+ "claim": "aa645cf4-4991-49b6-b679-b50778385ba3",
+ "count": 0,
+ "ok": false,
+ "at": 1795092061000,
+ "detail": "trade claimed"
+}
