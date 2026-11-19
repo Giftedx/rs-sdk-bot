@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795102528272,
+ "at": 1795102548625,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -361,7 +361,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-63734199-ec44-4f7b-acc1-d967e916c38b"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-courier-deeppockets-sporrandip-bone-fund [task-63734199-ec44-4f7b-acc1-d967e916c38b]",
    "role": "supply"
@@ -395,6 +395,7 @@
   "Ballspinner",
   "SporranBulge",
   "Sausagefest",
+  "deeppockets",
   "dipstick",
   "fatstack",
   "fingerblastr",
@@ -402,7 +403,8 @@
   "kiltlifter",
   "knightrider",
   "knightstick",
-  "quickhandjob"
+  "quickhandjob",
+  "sporrandip"
  ],
  "builds": {
   "NabTheKnob": "tribrid",
