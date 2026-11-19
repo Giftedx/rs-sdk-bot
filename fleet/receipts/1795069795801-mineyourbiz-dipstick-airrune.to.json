@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795069795801-mineyourbiz-dipstick-airrune",
+ "account": "Dipstick",
+ "partner": "MineYourBiz",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 80,
+ "claim": "26fe51ee-61e8-4581-a305-b1b447e3cf3a",
+ "count": 80,
+ "ok": true,
+ "at": 1795069856098,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 80
+ },
+ "bank": {
+  "count": 80,
+  "at": 1795069855297
+ },
+ "logout": {
+  "attemptId": "1795069838243-0000018116-0000000001",
+  "at": 1795069856083,
+  "sha256": "38c596a20744318cf0d5cc65e29e4f0d12fd961d633d2c3f57bb88c7ae6c07f1"
+ },
+ "screen": true
+}
