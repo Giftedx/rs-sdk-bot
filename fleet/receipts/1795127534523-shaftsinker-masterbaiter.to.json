@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795127534523-shaftsinker-masterbaiter",
+ "account": "Masterbaiter",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 28948,
+ "claim": "a9a98f98-a65c-4a93-9e95-22b22986ab42",
+ "count": 0,
+ "ok": false,
+ "at": 1795127608291,
+ "detail": "trade claimed"
+}
