@@ -106,15 +106,12 @@ const beside=(p:{x:number;z:number},rock:Tile)=>Math.abs(p.x-rock.x)+Math.abs(p.
 // Steps from p to the nearest stand tile of the rock, round the rocks of the site: a rock tile blocks, and a diagonal
 // step needs both side tiles free (the engine's diagonal rule). A block of rocks (the Wilderness hobgoblin mine) puts
 // some stand tiles 3 steps away that are 2 tiles away in a straight line. Other walls are not known here.
-export function pathSteps(p:{x:number;z:number},rock:Tile,rocks:readonly Tile[]):number{return pathTo(p,rock,rocks).steps;}
-// The same, with the stand tile where the walk ends.
-export function pathTo(p:{x:number;z:number},rock:Tile,rocks:readonly Tile[]):{steps:number;tile:{x:number;z:number}}{
+export function pathSteps(p:{x:number;z:number},rock:Tile,rocks:readonly Tile[]):number{
  const goals=new Set(standTiles(rock,rocks).map(t=>`${t.x},${t.z}`)),blocked=new Set(rocks.map(r=>`${r.x},${r.z}`));
  const free=(x:number,z:number)=>!blocked.has(`${x},${z}`);
  const seen=new Set([`${p.x},${p.z}`]);let front=[{x:p.x,z:p.z}];
  for(let steps=0;front.length&&steps<=24;steps++){
-  const at=front.find(t=>goals.has(`${t.x},${t.z}`));
-  if(at)return{steps,tile:at};
+  if(front.some(t=>goals.has(`${t.x},${t.z}`)))return steps;
   const next:{x:number;z:number}[]=[];
   for(const t of front)for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
    const x=t.x+dx,z=t.z+dz,k=`${x},${z}`;
@@ -123,26 +120,10 @@ export function pathTo(p:{x:number;z:number},rock:Tile,rocks:readonly Tile[]):{s
   }
   front=next;
  }
- const tile=standTiles(rock,rocks).sort((a,b)=>cheb(p,a)-cheb(p,b))[0]??rock;
- return{steps:cheb(p,tile),tile};
+ return Math.min(...standTiles(rock,rocks).map(t=>cheb(p,t)));
 }
 // Ticks of run (2 tiles a tick) to a stand tile of the rock; 0 when the account stands beside it.
 const runTicks=(p:{x:number;z:number},rock:Tile,rocks:readonly Tile[])=>beside(p,rock)?0:Math.ceil(pathSteps(p,rock,rocks)/2);
-// Ticks from the click to the roll with the knife, for a run of `run` ticks: 3 up to 2 ticks of run (the cut in the
-// click tick sets the roll in the arrival tick or before it), else run + 1 (the cut sent 2 ticks before the arrival).
-export const knifeLeg=(run:number)=>run<=2?3:run+1;
-// The fewest knife ticks for `depth` more ores over the free rocks from p, each leg ending on its stand tile. The
-// pick takes the rock whose own leg plus this is least, so the tour does not end in a corner with a long walk out.
-export function tourTicks(p:{x:number;z:number},free:readonly Tile[],rocks:readonly Tile[],depth:number):number{
- if(depth<=0||!free.length)return 0;
- let best=Infinity;
- for(const r of free){
-  const to=beside(p,r)?{steps:0,tile:p}:pathTo(p,r,rocks);
-  const t=knifeLeg(Math.ceil(to.steps/2))+tourTicks(to.tile,free.filter(f=>f!==r),rocks,depth-1);
-  if(t<best)best=t;
- }
- return best;
-}
 
 export interface RotationOptions{
  maximum:number;cap:number;idleTicks:number;
@@ -158,7 +139,6 @@ export interface RotationResult{made:number;sideGems:number;attempts:number;outp
 
 const stockOf=(s:BotWorldState)=>{const r:Record<number,number>={};for(const i of s.inventory)r[i.id]=(r[i.id]??0)+i.count;return r;};
 const xpOf=(s:BotWorldState)=>s.skills.find(k=>k.name==='Mining')?.experience??0;
-const levelOf=(s:BotWorldState)=>s.skills.find(k=>k.name==='Mining')?.baseLevel??0;
 const hpOf=(s:BotWorldState)=>s.skills.find(k=>k.name==='Hitpoints')?.level??0;
 
 // One loop step per game tick. Actions sent after the observation of tick n run in tick n + 1.
@@ -185,7 +165,7 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
  const pend=new Map<number,{id:number;count:number;tick:number}>(); // dropped slot -> item, count, tick sent
  const pendingOf=(id:number)=>[...pend.values()].filter(v=>v.id===id).reduce((a,v)=>a+v.count,0);
  const settle=(id:number,lost:number)=>{for(const [slot,v] of pend){if(lost<=0)break;if(v.id!==id)continue;const t=Math.min(lost,v.count);v.count-=t;lost-=t;if(!v.count)pend.delete(slot);}};
- const first=state();let prevXp=xpOf(first),prevInv=stockOf(first),prevLevel=levelOf(first);
+ const first=state();let prevXp=xpOf(first),prevInv=stockOf(first);
  const locAt=(s:BotWorldState,t:Tile)=>s.nearbyLocs.find(l=>l.x===t.x&&l.z===t.z&&l.level===t.level&&p.rocks.includes(l.id)&&l.optionsWithIndex.some(v=>v.opIndex===1&&/^mine$/i.test(v.text)));
  for(;;){
   const s=state(),n=d.tick(),pos={x:s.player!.worldX,z:s.player!.worldZ};
@@ -205,8 +185,7 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
    else if(-g>pendingOf(id))throw Error('mining item lost without a drop');
    else if(g<0){dropped-=g;settle(id,-g);}
   }
-  const levelUp=levelOf(s)>prevLevel;
-  prevXp=xp;prevInv=inv;prevLevel=levelOf(s);
+  prevXp=xp;prevInv=inv;
   if(made>=o.maximum)break;
   if(n-progress>=o.idleTicks)throw Error('mining no useful ore progress');
   // 2. Rock states: learn the respawn from each rock seen to deplete and come back.
@@ -234,9 +213,10 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
   if(active){
    // After a step the swing starts in the next tick (the bench trace: a click with a 1-tile walk in tick 5 rolls in 8).
    if(active.arrival===undefined&&n>=active.sent&&beside(pos,active.rock)){active.arrival=n+1;const f=firstRoll(delay,n+1,rate);active.roll=f.roll;delay=f.delay;}
-   // On a walk of more than one tick the click-tick cut runs out on the way: cut again (and click again, as the cut
-   // clears the click, OpHeldUHandler.ts:57) when the swing is 2 ticks off, so it rolls in its first tick.
-   else if(active.arrival===undefined&&canCut&&n>=active.sent&&ticksTo(active.rock)===2&&delay<n+1){cut();actions.push({type:'interactLoc',x:active.loc.x,z:active.loc.z,locId:active.loc.id,optionIndex:1});}
+   // No cut while the account walks to the rock: the bench at the Wilderness hobgoblin mine shows the Make window
+   // still open in the next tick, so the delay stays old; the cut after the missed roll then finds %action_delay in the
+   // future, queues the fletch for one tick (cut_logs.rs2:83-86) and the fletch takes the only log (fletches 1 at
+   // seeds 7, 8 and 9). A walk of 3 ticks or more costs 2 more ticks an ore instead.
    if(active.roll!==undefined&&n>=active.roll){
     // No ore by the roll: a miss, or a gem roll (mining.rs2:194). Cut again so the next roll is 2 ticks away.
     if(canCut){cut();actions.push({type:'interactLoc',x:active.loc.x,z:active.loc.z,locId:active.loc.id,optionIndex:1});attempts++;active.roll=Math.max(delay,n+1);}
@@ -251,16 +231,12 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
    const freeRoll=(r:Tile)=>{const op=n+1+ticksTo(r);return delay>=op?delay:canCut?Math.max(op,n+3):op+rate;};
    const waitRoll=(r:Tile,back:number)=>{const click=Math.max(back+1,n+1+ticksTo(r));return canCut?Math.max(click,n+3):click+rate;};
    const byRoll=(o.pick??(canCut?'roll':'nearest'))==='roll',stepsTo=(r:Tile)=>pathSteps(pos,r,rocks);
-   const ahead=(r:Tile)=>byRoll&&canCut?tourTicks(beside(pos,r)?pos:pathTo(pos,r,rocks).tile,free.map(v=>v.r).filter(f=>f!==r),rocks,2):0;
-   const best=free.map(v=>({...v,roll:freeRoll(v.r),ahead:ahead(v.r)})).sort((a,b)=>(byRoll?a.roll+a.ahead-b.roll-b.ahead||a.roll-b.roll:0)||stepsTo(a.r)-stepsTo(b.r))[0];
+   const best=free.map(v=>({...v,roll:freeRoll(v.r)})).sort((a,b)=>(byRoll?a.roll-b.roll:0)||stepsTo(a.r)-stepsTo(b.r))[0];
    const soon=rocks.filter(r=>depleted.has(key(r))).map(r=>({r,back:depleted.get(key(r))!+respawn})).map(v=>({...v,roll:waitRoll(v.r,v.back)})).sort((a,b)=>a.roll-b.roll||a.back-b.back)[0];
    if(best&&!(byRoll&&soon&&soon.roll<best.roll)){
     const pick=best;
     if(s.inventory.length>=27)drops(1);
-    // A run of 3 ticks or more: no cut now, as its delay would end before the arrival; the cut on the way (above) sets
-    // the roll in the arrival tick. Not after an ore that gave a level: the level-up window opens in the tick of the
-    // cut on the way, and the bench lost the only log there (fletches 1 at seeds 7, 8 and 9).
-    if(canCut&&delay<n+1&&(ticksTo(pick.r)<=2||levelUp))cut();
+    if(canCut&&delay<n+1)cut();
     actions.push({type:'interactLoc',x:pick.loc!.x,z:pick.loc!.z,locId:pick.loc!.id,optionIndex:1});attempts++;
     active={rock:pick.r,loc:pick.loc!,sent:n+1};walkingTo=undefined;armedFor=undefined;
     if(beside(pos,pick.r)){active.arrival=n+1;const f=firstRoll(delay,n+1,rate);active.roll=f.roll;delay=f.delay;}
@@ -279,7 +255,7 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
     if(arm||modal)actions.push({type:'closeModal'});
    }
   }
-  if(process.env.MINING_DEBUG==="1")console.log(`MDBG n=${n} logs=${inv[NORMAL_LOGS]??0} iface=${s.interface?.isOpen?'1':'0'} pos=${pos.x},${pos.z} made=${made} delay=${delay} active=${active?`${active.rock.x},${active.rock.z} a=${active.arrival} r=${active.roll}`:"-"} up=${rocks.map(r=>locAt(s,r)?1:0).join("")} locs=${s.nearbyLocs.length} dlg=${!!s.dialog?.isOpen}/${!!s.interface?.isOpen}/${!!(s as any).modalOpen} acts=${actions.map(a=>a.type).join(",")}`);
+  if(process.env.MINING_DEBUG==="1")console.log(`MDBG n=${n} logs=${inv[NORMAL_LOGS]??0} pos=${pos.x},${pos.z} made=${made} delay=${delay} active=${active?`${active.rock.x},${active.rock.z} a=${active.arrival} r=${active.roll}`:"-"} up=${rocks.map(r=>locAt(s,r)?1:0).join("")} locs=${s.nearbyLocs.length} dlg=${!!s.dialog?.isOpen}/${!!s.interface?.isOpen}/${!!(s as any).modalOpen} acts=${actions.map(a=>a.type).join(",")}`);
   if(actions.length)await send(actions);
   await d.step();
  }
