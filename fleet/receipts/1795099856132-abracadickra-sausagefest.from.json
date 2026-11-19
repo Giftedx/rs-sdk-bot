@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795099856132-abracadickra-sausagefest",
+ "account": "Abracadickra",
+ "partner": "Sausagefest",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 71790,
+ "claim": "0edd5c8d-788e-49a8-aa21-767eb8732300",
+ "count": 71790,
+ "ok": true,
+ "at": 1795100072655,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2443210,
+  "after": 2371420
+ },
+ "logout": {
+  "attemptId": "1795100059986-0000021952-0000000001",
+  "at": 1795100072646,
+  "sha256": "08965e688a166126d216737a8fa2b2011cc5ed8d904d5ec882bd65637019a31e"
+ },
+ "screen": true
+}

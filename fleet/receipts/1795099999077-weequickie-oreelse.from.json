@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795099999077-weequickie-oreelse",
+ "account": "WeeQuickie",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 74267,
+ "claim": "be43c982-f7df-4fd0-b984-6601482af50f",
+ "count": 0,
+ "ok": false,
+ "at": 1795100070022,
+ "detail": "trade claimed"
+}
