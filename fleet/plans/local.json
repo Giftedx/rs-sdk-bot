@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795094923283,
+ "at": 1795095309536,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -279,6 +279,50 @@
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "536",
+    "QUANTITY": "8",
+    "EXPECTED_OWNED": "6",
+    "LIMIT_PRICE": "8000",
+    "CASH_RESERVE": "5000",
+    "ORDER_MS": "1200000",
+    "ORDER_KEY": "prayer99-knightrider-dragonbones8",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-3ba74499-9a58-47d2-8e3d-85d13dec13fb"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-buy-knightrider-dragon-bones-99 [task-3ba74499-9a58-47d2-8e3d-85d13dec13fb]",
+   "role": "supply"
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "536",
+    "QUANTITY": "37",
+    "EXPECTED_OWNED": "6",
+    "LIMIT_PRICE": "7300",
+    "CASH_RESERVE": "10000",
+    "ORDER_MS": "1200000",
+    "ORDER_KEY": "prayer99-fatstack-dragonbones37",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-3e8659de-6553-4d2c-b6fb-d6918295994e"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-buy-fatstack-dragon-bones-99 [task-3e8659de-6553-4d2c-b6fb-d6918295994e]",
+   "role": "supply"
   }
  ],
  "army": [
@@ -311,11 +355,9 @@
   "Sausagefest",
   "deeppockets",
   "dipstick",
-  "fatstack",
   "fingerblastr",
   "fingersmith",
   "kiltlifter",
-  "knightrider",
   "knightstick",
   "quickhandjob",
   "sporrandip"
