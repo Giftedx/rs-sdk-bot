@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795102399692,
+ "at": 1795102474650,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -293,15 +293,15 @@
    ],
    "env": {
     "ITEMS": "rune arrow",
-    "STOCK_TARGET": "458",
+    "STOCK_TARGET": "460",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
     "FLOAT": "320200",
     "COIN_RESERVE": "200",
     "MAX_SPEND": "320000",
-    "AUTOPILOT_ORDER": "[58]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":458}}"
+    "AUTOPILOT_ORDER": "[60]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":460}}"
    },
    "enabled": true,
    "standing": true,
