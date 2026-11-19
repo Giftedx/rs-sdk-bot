@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { readFileSync as read } from 'node:fs';
 import { parsePack } from '../packages/knowledge/src/pack';
 import { contentRoot } from '../packages/knowledge/src/paths';
-import { attackStyleOfAnim, attackStyleOfSeq, holdProtect, KitSwapper, protectLevels, protectOf, readSighting, retreatOf, ThreatWatch } from './pk-threat';
+import { attackStyleOfAnim, attackStyleOfSeq, holdProtect, KitSwapper, protectLevels, protectOf, readSighting, retreatOf, ThreatWatch, threatOptions } from './pk-threat';
 
 const idOf = (pack: string, name: string) => { for (const [id, n] of parsePack(read(join(contentRoot(), `pack/${pack}.pack`), 'utf8'))) if (n === name) return id; throw new Error(`${name} not in ${pack}`); };
 const STAFF = idOf('obj', 'staff_of_air'), BOW = idOf('obj', 'shortbow'), SCIM = idOf('obj', 'rune_scimitar');
@@ -221,4 +221,20 @@ test('the watch names the interlopers: dangerous players that are not the squad 
     expect(w.step(5).interlopers).toEqual(['Mage']);
     view.length = 0;
     expect(w.step(6).interlopers).toEqual([]);
+});
+
+test('threatOptions: SQUAD_THREAT_OPTS over the environment settings, defaults, and a fail for an unknown key or a bad number', () => {
+    const env = (values: Record<string, string>) => (name: string, fallback: string) => values[name] ?? fallback;
+    expect(threatOptions('', env({}))).toEqual({ act: true, cooldown: 600, expectedTargets: true, odds: { lose: 0.9, protect: 0.6, pile: 0.7, theirFood: 10, singleWayMin: 1.5 } });
+    // The environment settings.
+    expect(threatOptions('', env({ SQUAD_THREAT_LOSE: '1.2', SQUAD_THREAT_ACT: '0', SQUAD_THREAT_EXPECTED: '0', SQUAD_THREAT_COOLDOWN: '300' }))).toEqual({ act: false, cooldown: 300, expectedTargets: false, odds: { lose: 1.2, protect: 0.6, pile: 0.7, theirFood: 10, singleWayMin: 1.5 } });
+    // The JSON wins over the environment, key by key.
+    const o = threatOptions('{"lose":1.5,"singleWayMin":2,"pile":0.5,"cooldown":100,"expected":false}', env({ SQUAD_THREAT_LOSE: '1.2', SQUAD_THREAT_PROTECT: '0.4' }));
+    expect(o).toEqual({ act: true, cooldown: 100, expectedTargets: false, odds: { lose: 1.5, protect: 0.4, pile: 0.5, theirFood: 10, singleWayMin: 2 } });
+    expect(threatOptions('{"odds":false}', env({})).odds).toBe(false);
+    expect(threatOptions('', env({ SQUAD_THREAT_ODDS: '0' })).odds).toBe(false);
+    expect(() => threatOptions('{"loose":1}', env({}))).toThrow('unknown key: loose');
+    expect(() => threatOptions('{"lose":"x"}', env({}))).toThrow('lose is not a number');
+    expect(() => threatOptions('{nope', env({}))).toThrow('not JSON');
+    expect(() => threatOptions('[1]', env({}))).toThrow('not a JSON object');
 });

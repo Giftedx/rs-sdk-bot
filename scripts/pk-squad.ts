@@ -33,7 +33,7 @@ import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { settleKillFeed } from './pk-kill-feed';
 import { EDGEVILLE_BANK, eatUp, FOOD_START_FLOOR, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
 import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
-import { holdProtect, KitSwapper, protectOf, retreatOf, ThreatWatch } from './pk-threat';
+import { holdProtect, KitSwapper, protectOf, retreatOf, ThreatWatch, threatOptions } from './pk-threat';
 import { connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './pk-roam';
 import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
@@ -706,9 +706,11 @@ if (import.meta.main) {
     if (get('SQUAD_THREAT', '0') === '1') {
         const radar = new Radar();
         if (!gang.length) closeThreatRadar = connectRadar(squadServer, radar);
-        threats = new ThreatWatch({ sessions: () => squad, server: squadServer, friends: new Set(ours.map(n => n.toLowerCase())), radar, log, act: get('SQUAD_THREAT_ACT', '1') !== '0', cooldown: Number(get('SQUAD_THREAT_COOLDOWN', '600')),
-            // SQUAD_THREAT_ODDS=0: the counting rules in place of the win-chance estimate; the constants of the estimate are what the bench climbs.
-            odds: get('SQUAD_THREAT_ODDS', '1') === '0' ? false : { lose: Number(get('SQUAD_THREAT_LOSE', '0.9')), protect: Number(get('SQUAD_THREAT_PROTECT', '0.6')), pile: Number(get('SQUAD_THREAT_PILE', '0.7')), theirFood: Number(get('SQUAD_THREAT_THEIR_FOOD', '10')) }, decide: { expected: get('SQUAD_THREAT_EXPECTED', '1') === '1' ? targets : new Set<string>() } });
+        // SQUAD_THREAT_OPTS (JSON) and the SQUAD_THREAT_* settings: scripts/pk-threat.ts threatOptions. A bad setting is a fail line, not a default.
+        let to: ReturnType<typeof threatOptions>;
+        try { to = threatOptions(get('SQUAD_THREAT_OPTS', ''), get); } catch (e) { console.log(`RESULT fail ${e instanceof Error ? e.message : e}`); process.exit(2); }
+        threats = new ThreatWatch({ sessions: () => squad, server: squadServer, friends: new Set(ours.map(n => n.toLowerCase())), radar, log, act: to.act, cooldown: to.cooldown, odds: to.odds,
+            decide: { expected: to.expectedTargets ? targets : new Set<string>() } });
     }
     const results = await Promise.all(squad.map(s => {
         const kit = kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []);

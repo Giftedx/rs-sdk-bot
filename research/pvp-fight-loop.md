@@ -1825,11 +1825,14 @@ the log and the record) -> `packages/core/test/pvp-threat.test.ts`, `scripts/pk-
   product of total Hitpoints and total damage a tick of each side; the Hitpoints of a member are its Hitpoints and 20 a piece of food, an attacker's are those of its
   combat level and `theirFood` pieces; on multi-way ground every attacker hits and `pile` of our Hitpoints count, on single-way ground the strongest attackers as
   many as there are members hit; a protect prayer on an attacker's style leaves `protect` of its damage). The squad retreats when the odds are below `lose`,
-  and walks to a single-way tile instead when the odds there are 1 or more. An outclassing stranger is still a retreat. The constants (`lose` 0.9, `protect`
-  0.6, `pile` 0.7, `theirFood` 10; `SQUAD_THREAT_LOSE`, `_PROTECT`, `_PILE`, `_THEIR_FOOD`) are first guesses for the bench to climb; `SQUAD_THREAT_ODDS=0`
+  and walks to a single-way tile instead when the odds there are `singleWayMin` (1.5) or more. An outclassing stranger is still a retreat. The constants (`lose` 0.9, `protect`
+  0.6, `pile` 0.7, `theirFood` 10, `singleWayMin` 1.5; `SQUAD_THREAT_LOSE`, `_PROTECT`, `_PILE`, `_THEIR_FOOD`, `_SINGLE`) are first guesses for the bench to climb; `SQUAD_THREAT_ODDS=0`
   gives the counting rules (outnumbered, a team that no member can protect against). The squad end line prints `attackerKills=N` (the kills of interlopers) when
   the watch is on, so a bench cell reports deaths, attacker kills, gang kills (`kills` minus `attackerKills`) and Hitpoints lost. Not done: the freeze of the
   other attackers (Bind, Snare, Entangle on the ones that are not the focus) and the use of specials beyond what `fightPlayer` does.
+- **Options.** `SQUAD_THREAT_OPTS` is a JSON object that wins over the `SQUAD_THREAT_*` settings of the environment, key by key (`threatOptions` in
+  `scripts/pk-threat.ts`). Keys: `act`, `cooldown`, `expected`, `odds` (false: the counting rules), `lose`, `protect`, `pile`, `theirFood`, `singleWayMin`. An unknown key or a value
+  that is not a number ends the squad with `RESULT fail SQUAD_THREAT_OPTS ...`, so that a typo in a climb cannot leave a setting at its default.
 - **Cooldown.** A retreat or single-way decision stays decided, each tick, until a member acts on it and says so (`ThreatWatch.acted`). From then on the
   same players cannot cause another one for `cooldown` ticks (default 600, `SQUAD_THREAT_COOLDOWN` in the squad): a stranger at the post would otherwise
   cause retreat, return, retreat until the trips run out. The decision stays 30 ticks after the act, so that each member of the squad acts on it. A member

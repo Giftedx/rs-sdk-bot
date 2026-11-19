@@ -34,8 +34,10 @@ export interface OddsParams {
     pile: number;
     // Pieces of food that an attacker is assumed to hold.
     theirFood: number;
+    // The odds on single-way ground at which the squad walks there instead of leaving (the odds there are an estimate that the bench found too kind).
+    singleWayMin: number;
 }
-export const DEFAULT_ODDS: OddsParams = { lose: 0.9, protect: 0.6, pile: 0.7, theirFood: 10 };
+export const DEFAULT_ODDS: OddsParams = { lose: 0.9, protect: 0.6, pile: 0.7, theirFood: 10, singleWayMin: 1.5 };
 export interface Combatant { hp: number; dps: number }
 export const combatantHp = (combat: number) => Math.min(99, Math.round(combat * 0.78));
 export function fightOdds(o: { ours: readonly Combatant[]; theirs: readonly Combatant[]; protectedShare: number; singleWay: boolean }, p: OddsParams = DEFAULT_ODDS): number {
@@ -161,7 +163,7 @@ export interface DecideOptions {
     // The Prayer level of each protect prayer (default PROTECT_LEVELS).
     protectLevels?: ProtectLevels;
     // Fight or flight by the win-chance estimate (fightOdds) in place of the counting rules (outnumbered, a team that no member can protect against):
-    // the squad retreats when the odds are below `lose`, and walks to a single-way tile instead when that makes the odds 1 or more.
+    // the squad retreats when the odds are below `lose`, and walks to a single-way tile instead when the odds there are `singleWayMin` or more.
     odds?: OddsParams;
     outclasses: (me: Member, them: ThreatRecord) => boolean;
     // Whether a tile is multi-way. A team on a single-way tile is held there: one attacker at a time can hit each member (pvp_combat.rs2:103-133).
@@ -219,7 +221,7 @@ export function decideAdapt(classes: readonly ThreatClass[], members: readonly M
     // With the win-chance estimate a squad leaves by its odds: the outclass rule (a gap of combat levels, a dearer weapon) counts only for a solo account.
     if (outclassing && (!odds || members.length === 1)) actions.push({ kind: 'retreat', reason: `outclassed by ${names([outclassing])} at ${outclassing.record.nearest.dist} tiles` });
     else if (odds && odds.here < o.odds!.lose) {
-        const to = squadMulti && odds.there >= 1 ? o.singleWayFrom?.(centre) ?? null : null;
+        const to = squadMulti && odds.there >= o.odds!.singleWayMin ? o.singleWayFrom?.(centre) ?? null : null;
         const why = `odds ${odds.here.toFixed(2)} for ${members.length} members against ${danger.length}: ${names(danger)}`;
         actions.push(to ? { kind: 'single-way', to, reason: `${why}, ${odds.there.toFixed(2)} on single-way ground` } : { kind: 'retreat', reason: `lost fight: ${why}` });
     } else if (odds) { /* the odds hold: fight */ }
