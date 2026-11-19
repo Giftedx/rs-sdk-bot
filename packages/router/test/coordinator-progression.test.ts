@@ -2,7 +2,7 @@ import {expect,test} from 'bun:test';
 import {evaluateCoordinatorProgression,type CoordinatorProgressionOptions} from '../src/coordinator-progression';
 import type {CoordTask} from '../src/coordinator';
 import type {ProgressionMethod} from '../../planner/src/progression';
-import {xpForLevel} from '../../planner/src/curve';
+import {levelForXp,xpForLevel} from '../../planner/src/curve';
 const now=100000;
 const task:CoordTask={id:'next',goal:'skills',kind:'run',capability:'ranged-train',account:'A',dependsOn:['qualified'],priority:10,estimatedMs:1000,why:'Ranged50',args:['50'],accept:{skills:{Ranged:50}}};
 const method=(id:string,rate:number|null,script=`scripts/${id}.ts`):ProgressionMethod=>({id,source:'content-source',step:{script,args:['50'],env:{}},effects:{xp:{ranged:1}},rate:{unitsPerTick:rate,basis:rate===null?'unknown':'model',evidence:rate===null?'':'content'},costs:{setupTicks:0,travelTicks:0,acquisitionTicks:0,unlockTicks:0}});
@@ -52,4 +52,24 @@ test('a quest unlock route returns each finite step with the original final trai
  const r=evaluateCoordinatorProgression(o);
  expect(r.route?.map(s=>s.capability)).toEqual(['unlock-quest','faster-ranged']);
  expect(r.route?.[0]?.accept).toEqual({quests:['unlock']});expect(r.route?.[1]?.accept).toEqual({skills:{Ranged:50}});expect(r.consumer).toEqual({skills:{Ranged:50}});
+});
+
+test('a next-band first step stops at the level inside the proved XP, never at the consumer target',()=>{
+ // Ranged 85 to 90 needs more XP than the proof run made: the step is cut to the level that the proved XP reaches.
+ const proved=123160,start=xpForLevel(85),reached=levelForXp(start+proved);
+ expect(reached).toBeGreaterThanOrEqual(85);expect(reached).toBeLessThan(90);
+ const ranged:ProgressionMethod=({...method('fast',10,'scripts/ranged-train.ts'),step:{script:'scripts/ranged-train.ts',args:['90'],env:{TARGET_LEVEL:'90'}},
+  execution:{targetArg:0,targetEnv:['TARGET_LEVEL']}} as ProgressionMethod);
+ const band={levels:{Ranged:{min:80}},gainXp:{Ranged:proved}};
+ const o=options({task:{...task,args:['90'],accept:{skills:{Ranged:90}}},methods:()=>[ranged],
+  status:{...options().status,skills:[{name:'Ranged',level:85,xp:start}]},
+  bindingFor:m=>({capability:'ranged-train',methodId:m.id,source:'native-source:'+m.id,qualification:{source:'native-source:'+m.id,bands:[band]},reviewed:true})});
+ const r=evaluateCoordinatorProgression(o);
+ // The planner cap on units is the proved XP: the step that it plans holds one whole level, and its target is never 90.
+ expect(r.step).not.toBeNull();
+ const target=Number(r.step!.env.TARGET_LEVEL);
+ expect(target).toBe(reached);
+ expect(target).toBeLessThan(90);
+ expect(Number(r.step!.args[0])).toBe(target);
+ expect(r.stepAccept).toEqual({skills:{Ranged:reached}});
 });
