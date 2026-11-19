@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795060405919-bigchopper-undermykilt-507ecb3428c52eea",
  "account": "Bigchopper",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Rune arrow",
  "requested": 55,
  "claim": "d5421c55-9de4-48ba-a9a2-93599448cc05",
- "count": 0,
- "ok": false,
- "at": 1795060627970,
- "detail": "trade claimed"
+ "count": 55,
+ "ok": true,
+ "at": 1795060659575,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 55,
+  "after": 0
+ },
+ "bank": {
+  "count": 55,
+  "at": 1795060634895
+ },
+ "logout": {
+  "attemptId": "1795060627980-0000024868-0000000001",
+  "at": 1795060659250,
+  "sha256": "34836eafe7370b308a4189842274ea265303cfbec1d5945fd425c8ff035ef9c7"
+ },
+ "screen": true
 }
