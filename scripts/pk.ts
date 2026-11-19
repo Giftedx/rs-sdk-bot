@@ -303,6 +303,14 @@ export function protectedStyles(headicons: number | undefined): Set<Style> {
     return out;
 }
 export const skulled = (headicons: number | undefined) => ((headicons ?? 0) & 1) !== 0;
+// The death line's skull fields: the skull and what the death costs, read on the last tick that the account was alive (the
+// client clears the skull at the death itself), as ` skull=1 keeps=0 lost=420 lostValue=190000`. Empty when the client
+// showed no local player. The bait test reads it: an account hit first keeps no skull and keeps its 3 dearest items.
+export const deathSkullFields = (view: { skull: boolean | null; units: readonly { id: number; count: number }[]; protect: boolean } | null, cost: (id: number) => number): string => {
+    if (!view || view.skull === null) return '';
+    const risk = deathRisk(view.units, cost, view.skull, view.protect);
+    return ` skull=${view.skull ? 1 : 0} keeps=${risk.kept.length} lost=${risk.lostUnits} lostValue=${risk.lostValue}`;
+};
 // Our own skull: the head icon of the client's local player. Null when the client shows no local player (a test double).
 export const ownSkull = (client: unknown): boolean | null => {
     const local = (client as { localPlayer?: { headicons?: number } } | undefined)?.localPlayer;
@@ -974,6 +982,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     const protectItemNow = () => o.protectItem === false ? false : o.protectItem === 'skulled' ? ownSkull(s.client) === true : true;
     // Our skull and what a death would cost with it, logged at the start and at each change (the attacker takes a skull).
     let lastSkull: boolean | null | undefined;
+    // The skull, the items and Protect Item of the last tick that we were alive, for the death line (deathSkullFields).
+    let aliveView: { skull: boolean | null; units: { id: number; count: number }[]; protect: boolean } | null = null;
     // An account without Dragon Slayer cannot put its rune platebody back on after a cast ("You have not earned the
     // right to wear this yet."), so the loop leaves such a body on. The quest journal gives the state; where it does
     // not, the first refusal ends the removals.
@@ -992,6 +1002,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         if (!state || !me || !at) continue;
         feedWatch?.aim(at.x, at.z);
         const skullNow = ownSkull(s.client);
+        if (!(me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife))) aliveView = { skull: skullNow, units: [...state.inventory, ...state.equipment], protect: protectItemNow() };
         if (skullNow !== lastSkull) {
             lastSkull = skullNow;
             if (skullNow !== null) {
@@ -1079,7 +1090,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         }
         seenMessage = maxMessage;
         if ((rubbed >= 0 || ranAt >= 0) && wildernessLevel(at.z) === 0) { result.outcome = 'escaped'; log(`PK escaped ${targetName} after ${result.ticks} ticks at HP ${me.hp}`); return result; }
-        if (me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife)) { result.outcome = 'died'; log(`PK died to ${targetName} after ${result.ticks} ticks`); return result; }
+        if (me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife)) { result.outcome = 'died'; log(`PK died to ${targetName} after ${result.ticks} ticks${deathSkullFields(aliveView, itemCostOf)}`); return result; }
         if (o.stop?.()) { log(`PK stopped against ${targetName}`); return result; }
         target = state.nearbyPlayers.find(p => p.name.toLowerCase() === want);
         // Damage dealt: the splats on the target where the client shows them, else the SDK's events.

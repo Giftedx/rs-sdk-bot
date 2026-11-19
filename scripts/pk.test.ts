@@ -3,7 +3,7 @@ import {
     attackable, battleaxeWarcryMath, bestDamageSpell, bestFood, canCastChargeNow, castableFreeze, chargeVarpTicks, combatPrayers, dangerReason, defaultSpec, defaultStunSpec,
     estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, ITEMS, killMessage, lowHealth,
     kitRotation, meleeWeaponDelay, negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, pickFakieWeapon,
-    deathRisk, itemCostOf, ownSkull,
+    deathRisk, deathSkullFields, itemCostOf, ownSkull,
     pickFrozenKiteTile, pickWeighted, planPrayerTick, PRAYER, protectedStyles, seededRandom, shouldComboEat, skulled,
     SPELLS, STUNNED_SHOVE_SPOTANIM, weaponStyle, wildernessLevel,
 } from './pk';
@@ -979,6 +979,13 @@ test('deathRisk: no skull keeps the 3 dearest units, Protect Item one more, a sk
     expect(deathRisk(KIT_UNITS, cost, false, true)).toMatchObject({ keeps: 4, kept: [1127, 1215, 1201, 385], keptValue: 135_150, lostUnits: 512 });
     expect(deathRisk(KIT_UNITS, cost, true, false)).toEqual({ keeps: 0, kept: [], keptValue: 0, lostValue: 135_000 + 1500 + 500, lostUnits: 516 });
     expect(deathRisk(KIT_UNITS, cost, true, true)).toEqual({ keeps: 1, kept: [1127], keptValue: 65_000, lostValue: 72_000, lostUnits: 515 });
+});
+
+test('deathSkullFields: the skull bit, the keep count and the loss of the last tick alive, empty with no client', () => {
+    expect(deathSkullFields({ skull: false, units: KIT_UNITS, protect: false }, cost)).toBe(' skull=0 keeps=3 lost=513 lostValue=2000');
+    expect(deathSkullFields({ skull: true, units: KIT_UNITS, protect: true }, cost)).toBe(' skull=1 keeps=1 lost=515 lostValue=72000');
+    expect(deathSkullFields({ skull: null, units: KIT_UNITS, protect: true }, cost)).toBe('');
+    expect(deathSkullFields(null, cost)).toBe('');
 });
 
 test('deathRisk keeps one unit at a time, never an item with no cost, and tolerates a pack with fewer units than keeps', () => {

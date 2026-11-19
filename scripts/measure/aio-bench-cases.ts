@@ -267,7 +267,9 @@ const squadCase = (key: string, kit: string, gangKit: string, n: number, args: s
 };
 // The clones of the dagger gang (scripts/pk-gang-clone.ts, research/gang-clones.md): the start state of a gang account
 // is the skulled gang kit with the levels and the sharks of its behaviour record.
-const cloneFixture = (name: CloneName, mode: CloneMode, x: number, z: number): SaveConfig => { const spec = cloneSpec(name, mode), c = kitFixture('ganker-dds-skull', x, z);
+// `kit` 'ganker-dds' is the same gang account with no skull (varp 78 unset): the engine's own skull rule then skulls whoever hits first
+// (pk_skull.rs2), and a death keeps the 3 dearest items (death.rs2 pvp_death_lose_items).
+const cloneFixture = (name: CloneName, mode: CloneMode, x: number, z: number, kit: 'ganker-dds-skull' | 'ganker-dds' = 'ganker-dds-skull'): SaveConfig => { const spec = cloneSpec(name, mode), c = kitFixture(kit, x, z);
   return {...c, skills: {...c.skills, ...spec.skills}, inventory: [...c.inventory!.filter(i => i.id !== 385), ...Array.from({length: spec.sharks}, () => ({id: 385, count: 1}))], bank: GANG_BANK}; };
 // One of ours against the clones `names` on the gang's post (scripts/pk-gang.ts): each clone has its own profile.
 const cloneGang = (key: string, kit: string, names: readonly CloneName[], groups: number, args: string[], mode: CloneMode = 'seen', bank?: {id: number; count: number}[]): BenchCase => {
@@ -311,7 +313,7 @@ const threatCase = (key: string, kit: string, n: number, o: {radar: boolean; pra
     scriptArgs: ['squad', ...letters.map(l => `{bot:${l}}`), `SQUAD_GANG=${3 + n}`, 'SQUAD_TARGET_COUNT=3', `SQUAD_GANG_KIT=${all.join('+')}`,
       `SQUAD_GANG_PROFILES=${['clone-goondelf', 'clone-ligma', 'clone-sugma', ...Array.from({length: n}, () => 'attacker-fight')].join('+')}`, `SQUAD_GANG_PREY=${['0', '1', '0', ...Array.from({length: n}, () => '1')].join(',')}`, 'SPAR_B_OPTS={}', ...(o.radar ? ['SQUAD_THREAT=1'] : []), ...rest, ...(o.args ?? [])]};
 };
-const run1Squad = (key: string, o: {prayer: boolean; prey?: string; mode?: CloneMode; args?: string[]; gang?: Record<string, unknown>; order?: number[]}): BenchCase => {
+const run1Squad = (key: string, o: {prayer: boolean; prey?: string; mode?: CloneMode; args?: string[]; gang?: Record<string, unknown>; order?: number[]; unskulled?: boolean}): BenchCase => {
   const run1 = JSON.parse(readFileSync(join(import.meta.dir, '..', 'pk-gang-record', 'run-1.json'), 'utf8')) as Run1, start = {x: 3093, z: 3501}, base = 'live-walker-iron-rune-chain-bind';
   // A stack of food is one slot with one count in a preset: a shark each (the loop eats one and the stack would go).
   // `order` names the loadout of each member in turn (default the live order: 0 to 3).
@@ -320,7 +322,7 @@ const run1Squad = (key: string, o: {prayer: boolean; prey?: string; mode?: Clone
   const mode = o.mode ?? 'seen', n = (o.order ?? run1.members).length, letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, n + 2).split('');
   return {key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge', pass: s => ok(s) && killReceiptsMatch(s), presetConfig: member(0), output: /kills=(\d+)/,
     scriptArgs: ['squad', ...letters.map(l => `{bot:${l}}`), 'SQUAD_GANG=3', 'MAX_MINUTES=8', 'STALL_TICKS=3000', 'SQUAD_GANG_HUNT=1', `SPAR_B_OPTS=${JSON.stringify({...pooledProfile(mode), ...(o.gang ?? {})})}`, ...(o.prey ? [`SQUAD_GANG_PREY=${o.prey}`] : []), ...(o.args ?? [])],
-    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < n - 1 ? member(i + 1) : cloneFixture(CLONE_NAMES[i - (n - 1)]!, mode, GANKER_POST.x, GANKER_POST.z)}))};
+    companions: letters.map((suffix, i) => ({suffix, preset: 'fresh_lumbridge', presetConfig: i < n - 1 ? member(i + 1) : cloneFixture(CLONE_NAMES[i - (n - 1)]!, mode, GANKER_POST.x, GANKER_POST.z, o.unskulled ? 'ganker-dds' : 'ganker-dds-skull')}))};
 };
 // A change of the pack of the first `members` of ours in a clone squad case (all by default): lobsters for the sharks
 // (the fleet holds lobsters), or no bow and no arrows (an account with an unstrung bow).
@@ -1208,6 +1210,10 @@ const ROUTE_CASES: BenchCase[] = [
   {...run1Squad('extra:clone-run1-fidelity-x1', {prayer: false, prey: '0,1,0'}), pass: (s: string) => ok(s) && killReceiptsMatch(s) && run1Fidelity(s) === null},
   run1Squad('extra:clone-run1-prayer-x1', {prayer: true, prey: '0,1,0'}),
   run1Squad('extra:clone-run1-nearest-x1', {prayer: false}),
+  // The gang with no skull at the start (the skull test: who hits first is skulled, and an account hit first keeps 3 items at death). The
+  // pair of the two cases above with the skulled gang; the `PK died` line holds skull=, keeps= and lost= of the last tick alive.
+  run1Squad('extra:clone-run1-unskulled-x1', {prayer: false, prey: '0,1,0', unskulled: true}),
+  run1Squad('extra:clone-run1-unskulled-prayer-x1', {prayer: true, prey: '0,1,0', unskulled: true}),
   // Which behaviour of the clones sets the length of a fight: a gang that never eats (eatAt 0), and a gang whose protect prayer
   // never comes on (every weapon change waits the whole window).
   // Who stands where the gang goes first: the two rune members first, or all four in rune (the loadouts of TrouserSnake and TheFullMonty).
