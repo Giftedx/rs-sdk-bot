@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795118456382-abracadickra-knightrider",
+ "account": "KnightRider",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 182451,
+ "claim": "2e917b3e-3535-49ec-9ec0-ff1cbdec4619",
+ "count": 0,
+ "ok": false,
+ "at": 1795118538445,
+ "detail": "trade claimed"
+}
