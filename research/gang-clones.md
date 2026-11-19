@@ -739,6 +739,56 @@ Hosted run 44437396087, seeds 1 to 8. Kills; clones dead; Hitpoints taken; the s
 - Not measured: the bait test (the squad holds fire and lets the gang hit first). The option is the squad's, not the clones'.
   The cells are 8 seeds, so a difference of 2 kills between two cases is not separated.
 
+## The prayer of the gang
+
+**The rule.** A gang account picks its protect prayer from the weapon of the one player it faces (`fe`), not from the players
+around it; it never picks Protect from Magic. Evidence: the feed of live run 3 (`.practice/gang-record/feed-1795044543853.jsonl`),
+each change of a gang account's head icon to a protect prayer (not to off), read with `.practice/gang-prayer-faced.ts`:
+
+- 160 swaps: 83 to Protect from Melee, 77 to Protect from Missiles, 0 to Protect from Magic.
+- 107 swaps name a faced player; in 98 the new prayer is the weapon class of the faced player. By account: Goondelf 39 of 39, Ligma
+  20 of 21, Sugma 39 of 47.
+- 19 swaps are tests of the rule against a squad rule: the players within 12 tiles hold mostly another class than the faced one.
+  In 15 the prayer follows the faced player, in 4 the majority. Lines (all in the feed): k=229084 Ligma prays melee, faces
+  Pocketpool (melee), the other three in range hold ranged; k=229102 Ligma prays ranged, faces Pocketpool (ranged), two of the squad
+  and two other players near hold melee; k=229130 Sugma prays ranged, faces UnderMyKilt (ranged), the other three hold melee.
+- Not tested: 53 swaps have no faced player in the feed. A swap of the faced player's weapon in the last ticks also gives a
+  mismatch, so the 9 swaps that differ are not all a squad rule.
+
+**The clones.** A clone's overhead is the style of its target's weapon, but a hit from another player in the last 10 ticks takes
+the overhead to that hitter's weapon first (`hitter` in `fightPlayer`), which for a mage is Protect from Magic. The option
+`facedPrayer` removes that: the overhead follows the faced player only. The clone profile does not set it, so the existing cases
+keep their numbers. The tank lock is the squad option `SQUAD_TANK=<member>,...`: the listed members hold melee and all others
+hold ranged (a bench option; a gang account then prays melee against the tank and the bow shots of the others meet no overhead).
+
+Cases: the squad of live run 1 (prey members 0 and 1) with the clones. The controls are `extra:clone-run1-x1` and
+`extra:clone-run1-prayer-x1`; `-faced-` adds `facedPrayer`; `-tank-` adds `facedPrayer` and `SQUAD_TANK=0,1`. Hosted runs
+44440391064 (prayer points) and 44440397115 (no prayer points), seeds 1 to 10. Sums over the 10 seeds; every case passed all 10
+seeds with no death of ours:
+
+| Case | Kills | Kill receipts | Clones dead | Hitpoints taken | Trips |
+|---|---|---|---|---|---|
+| no prayer points: current rotation | 12 | 12 | 19 | 2491 | 40 |
+| no prayer points: `facedPrayer` | 14 | 14 | 21 | 2178 | 40 |
+| no prayer points: `facedPrayer` + tank lock | 14 | 14 | 19 | 3067 | 40 |
+| prayer points: current rotation | 6 | 6 | 14 | 4561 | 41 |
+| prayer points: `facedPrayer` | 5 | 5 | 11 | 4172 | 41 |
+| prayer points: `facedPrayer` + tank lock | 7 | 7 | 16 | 3612 | 40 |
+
+Kills and Hitpoints taken by seed (seeds 1 to 10), current rotation / `facedPrayer` / tank lock:
+
+- no prayer points kills: 1 1 1 1 1 1 2 1 1 2 / 1 1 3 1 1 1 0 3 1 2 / 1 0 1 0 2 3 3 3 0 1.
+- no prayer points taken: 520 131 175 197 203 207 224 296 285 253 / 278 225 121 143 219 159 273 233 173 354 / 396 297 219 237 335 244 260 585 380 114.
+- prayer points kills: 0 2 0 1 0 0 0 1 1 1 / 0 0 0 2 1 1 1 0 0 0 / 1 1 0 1 0 1 2 0 0 1.
+- prayer points taken: 624 167 547 152 547 503 525 481 160 855 / 271 642 247 298 571 208 469 515 592 359 / 401 343 232 351 414 357 314 343 464 393.
+
+- **No case is separated from its control.** The kills differ by 1 or 2 over 10 seeds and the Hitpoints taken by seed range
+  from 114 to 855. The tank lock takes 21% fewer Hitpoints with prayer points (3612 against 4561) and 23% more with none (3067
+  against 2491), so the two results disagree and neither is a win.
+- **The tank lock is not a gain on these cells.** With prayer points it gives 7 kills against 6 and with none 14 against 12, both
+  inside the spread of 10 seeds.
+- Not measured: how far the members stand from each other. The squad's placement is the march of the cases.
+
 ## Keep it true
 
 `scripts/measure/pk-gang-drift.ts` compares new observations with the record:
