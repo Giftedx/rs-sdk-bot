@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795056410282-mmsmk1232-pocketpool-f6299c9dd3c2981c",
+ "account": "mmsmk1232",
+ "partner": "PocketPool",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(1)",
+ "requested": 1,
+ "claim": "2bf3606c-96cd-4c00-842d-6f8d725b1764",
+ "count": 0,
+ "ok": false,
+ "at": 1795056420237,
+ "detail": "trade claimed"
+}
