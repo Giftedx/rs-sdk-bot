@@ -1,0 +1,22 @@
+{
+ "id": "1795098354979-billionaire-trousersnake-waterrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Billionaire",
+ "to": "TrouserSnake",
+ "item": "Water rune",
+ "count": 53,
+ "start": 1795098354979,
+ "end": 1795100754979,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

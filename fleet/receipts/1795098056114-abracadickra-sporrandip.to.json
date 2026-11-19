@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795098056114-abracadickra-sporrandip",
  "account": "SporranDip",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 32915,
  "claim": "f1915f49-06bc-4cbf-9fc0-862d5ed01d15",
- "count": 0,
- "ok": false,
- "at": 1795098108850,
- "detail": "trade claimed"
+ "count": 32915,
+ "ok": true,
+ "at": 1795098372720,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 32915
+ },
+ "bank": {
+  "count": 32915,
+  "at": 1795098371972
+ },
+ "logout": {
+  "attemptId": "1795098108858-0000019220-0000000001",
+  "at": 1795098372708,
+  "sha256": "c0221d6f2ba7fa211b42d9a7c75607f0e4e197f93374f9de8519b6df67d3cf9c"
+ },
+ "screen": true
 }
