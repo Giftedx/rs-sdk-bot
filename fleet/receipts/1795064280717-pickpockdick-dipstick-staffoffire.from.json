@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795064280717-pickpockdick-dipstick-staffoffire",
+ "account": "PickpockDick",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "461468be-63a9-4576-a643-ecf0ab5faad6",
+ "count": 0,
+ "ok": false,
+ "at": 1795064335634,
+ "detail": "trade claimed"
+}
