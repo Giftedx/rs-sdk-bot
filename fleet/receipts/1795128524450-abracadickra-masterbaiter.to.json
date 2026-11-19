@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795128524450-abracadickra-masterbaiter",
  "account": "Masterbaiter",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 129000,
  "claim": "cfdf1494-0458-4251-a0dc-217276608fb5",
- "count": 0,
- "ok": false,
- "at": 1795128630340,
- "detail": "trade claimed"
+ "count": 129000,
+ "ok": true,
+ "at": 1795128657978,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 129000
+ },
+ "bank": {
+  "count": 129000,
+  "at": 1795128657216
+ },
+ "logout": {
+  "attemptId": "1795128630371-0000024052-0000000001",
+  "at": 1795128657968,
+  "sha256": "69eab70a7c9648677724205b4a0210631f89ebc29230204b577b51c6c50f2a1a"
+ },
+ "screen": true
 }
