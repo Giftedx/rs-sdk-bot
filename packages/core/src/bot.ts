@@ -300,7 +300,9 @@ const ledgers = new Map<Session, ReturnType<typeof startLedger>>();
 const statuses = new Map<Session, ReturnType<typeof startStatus>>();
 const stallWatches = new Map<Session, { stop(): void }>();
 const randomEvents = new Map<Session, RandomEventWatch>();
-const deathRecoveries = new Map<Session, Promise<string>>();
+// A WeakMap: finish() and deathRecoveryOf() read it after the session ended, so nothing deletes an entry, and a long host
+// process must not keep each dead session's object graph through it.
+const deathRecoveries = new WeakMap<Session, Promise<string>>();
 const prayerGuards = new Map<Session, ReturnType<typeof startPrayerGuard>>();
 const eatGuards = new Map<Session, ReturnType<typeof startEatGuard>>();
 // For a script that owns the prayers and needs them all off at its start (scripts/microbot-prayer-flick.ts).
