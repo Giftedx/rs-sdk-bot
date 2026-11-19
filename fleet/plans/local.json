@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795113895589,
+ "at": 1795113918836,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -267,29 +267,6 @@
    "resources": []
   },
   {
-   "account": "Woodpecker",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "532",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "12",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying bought big bones",
-   "role": "combat",
-   "template": "army-bury-big-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -320,30 +297,33 @@
    ]
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/gather-combat.ts",
+   "account": "Deeppockets",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "3000",
-    "cow"
+    "dargaud",
+    "1200"
    ],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+    "ITEMS": "rune arrow",
+    "STOCK_TARGET": "400",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "320200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "320000",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":400}}"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
+   "repeat": false,
+   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
+   "role": "bank",
+   "template": "squad-arrows-dargaud",
    "autopilot": "local",
    "resources": [
-    "cow:ardougne-north"
+    "shop:dargaud"
    ]
   },
   {
@@ -371,6 +351,26 @@
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BONE_ID": "536",
+    "MAX_BURY": "290",
+    "BONE_RESERVE": "5",
+    "CAP": "3000",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "COORDINATOR_RUN_ID": "task-8bc9cf02-49b8-4443-8010-e695ee8b0b35"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-prayer-billionaire-99 [task-8bc9cf02-49b8-4443-8010-e695ee8b0b35]",
+   "role": "helper"
   }
  ],
  "army": [
