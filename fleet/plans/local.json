@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795096075683,
+ "at": 1795096150341,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -302,10 +302,7 @@
    ]
   },
   {
-   "accounts": [
-    "mmtha0205",
-    "Swordinhand"
-   ],
+   "account": "mmtha0205",
    "script": "scripts/coin-courier.ts",
    "args": [
     "800000",
@@ -321,9 +318,31 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-5f61e6ce-8bb7-4302-9f29-612c2fa78f88"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-courier-mmtha0205-swordinhand-bone-fund [task-5f61e6ce-8bb7-4302-9f29-612c2fa78f88]",
+   "role": "supply"
+  },
+  {
+   "account": "Swordinhand",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "536",
+    "QUANTITY": "107",
+    "EXPECTED_OWNED": "6",
+    "LIMIT_PRICE": "7300",
+    "CASH_RESERVE": "10000",
+    "ORDER_MS": "1200000",
+    "ORDER_KEY": "prayer99-swordinhand-dragonbones107",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-1b72d859-6617-4ec9-a411-d90d06e513ee"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-buy-swordinhand-dragon-bones-99 [task-1b72d859-6617-4ec9-a411-d90d06e513ee]",
    "role": "supply"
   }
  ],
