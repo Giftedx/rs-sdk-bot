@@ -92,6 +92,7 @@ export interface MiningSite{key:string;profile:string;center:Tile;radius:number;
 export const MINING_SITES:readonly MiningSite[]=[
  {key:'ardougne-zoo-iron',profile:'iron_rock_table',center:{x:2603,z:3235,level:0},radius:3,bank:{x:2655,z:3283,level:0}},
  {key:'ardougne-zoo-iron-9',profile:'iron_rock_table',center:{x:2603,z:3235,level:0},radius:3,bank:{x:2655,z:3283,level:0},more:[{center:{x:2591,z:3232,level:0},radius:2}]},
+ {key:'wilderness-hobgoblin-iron',profile:'iron_rock_table',center:{x:3100,z:3766,level:0},radius:2,bank:{x:3094,z:3493,level:0}},
  {key:'varrock-east-iron',profile:'iron_rock_table',center:{x:3286,z:3368,level:0},radius:3,bank:{x:3253,z:3420,level:0}},
 ];
 
