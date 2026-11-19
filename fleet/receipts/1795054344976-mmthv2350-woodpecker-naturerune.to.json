@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795054344976-mmthv2350-woodpecker-naturerune",
  "account": "Woodpecker",
  "partner": "mmthv2350",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 155,
  "claim": "e2527c51-cd35-4189-a03a-768551cfcfbb",
- "count": 0,
- "ok": false,
- "at": 1795054900957,
- "detail": "trade claimed"
+ "count": 155,
+ "ok": true,
+ "at": 1795054987320,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 155
+ },
+ "bank": {
+  "count": 155,
+  "at": 1795054986326
+ },
+ "logout": {
+  "attemptId": "1795054900967-0000017168-0000000001",
+  "at": 1795054987108,
+  "sha256": "7827a0f1338e2c7d1e8fde79e3058fcaf96c83e9a4d7d1554c6821ee14a8bfd1"
+ },
+ "screen": true
 }
