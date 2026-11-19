@@ -1,0 +1,22 @@
+{
+ "id": "1795095052656-yewfirst-thefullmonty-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "TheFullMonty",
+ "item": "Nature rune",
+ "count": 145,
+ "start": 1795095052656,
+ "end": 1795097452656,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
