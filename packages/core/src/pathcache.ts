@@ -47,7 +47,7 @@ export function pathfindingSourceKey(wasmFile?:string,collisionFile?:string,door
     return key;
 }
 function hashedSourceKey(wasmFile:string,collisionFile:string,doorsFile:string,initializerFile:string): string {
-    return JSON.stringify({v:4,wasm:sha256(readFileSync(wasmFile)),data:sha256(readFileSync(collisionFile)),initializer:sha256(readFileSync(initializerFile)),diagonal:sha256(Buffer.from(JSON.stringify(diagonalDoors(doorsFile))))});
+    return JSON.stringify({v:5,wasm:sha256(readFileSync(wasmFile)),data:sha256(readFileSync(collisionFile)),initializer:sha256(readFileSync(initializerFile)),diagonal:sha256(Buffer.from(JSON.stringify(diagonalDoors(doorsFile))))});
 }
 
 type SnapshotHeader={format:2;key:string;bytes:number;sha256:string};
@@ -145,6 +145,9 @@ export function loadPathfinding(opts: { cacheFile?: string } = {}): Promise<{ re
     return loaded;
 }
 
+// Level, start x and z, end x and z of the searches that run before a snapshot is written (a short and a long one).
+const WARM_ROUTES: [number, number, number, number, number][] = [[0, 3222, 3218, 3087, 3230], [0, 2655, 3283, 3185, 3436]];
+
 async function load(file: string): Promise<{ restored: boolean; ms: number }> {
     const t0 = Date.now();
     // Same specifier as sdk/pathfinding.ts imports, so this is the same module instance and the same wasm memory.
@@ -158,6 +161,13 @@ async function load(file: string): Promise<{ restored: boolean; ms: number }> {
     initPathfinding();
     openDiagonalDoors(rsmod);
     if (!restored) {
+        // The first route search grows the WASM memory for its scratch grid (a new backing buffer and a copy of the old
+        // one: about 190 MB of RSS, scripts/measure/wasm-grow-memory.ts). Two searches here grow it once, and the
+        // snapshot holds the grown memory, so a process that restores it never grows at its first route.
+        try {
+            const sdk = await import(vendor('sdk/pathfinding.ts'));
+            for (const [level, sx, sz, dx, dz] of WARM_ROUTES) sdk.findLongPath(level, sx, sz, dx, dz);
+        } catch { /* The snapshot is still valid without the growth. */ }
         try { writePathfindingSnapshot(file,k,new Uint8Array(memory.buffer)); }
         catch { /* A cache write failure does not invalidate the initialized grid. */ }
     }
