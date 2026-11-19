@@ -158,6 +158,7 @@ export interface RotationResult{made:number;sideGems:number;attempts:number;outp
 
 const stockOf=(s:BotWorldState)=>{const r:Record<number,number>={};for(const i of s.inventory)r[i.id]=(r[i.id]??0)+i.count;return r;};
 const xpOf=(s:BotWorldState)=>s.skills.find(k=>k.name==='Mining')?.experience??0;
+const levelOf=(s:BotWorldState)=>s.skills.find(k=>k.name==='Mining')?.baseLevel??0;
 const hpOf=(s:BotWorldState)=>s.skills.find(k=>k.name==='Hitpoints')?.level??0;
 
 // One loop step per game tick. Actions sent after the observation of tick n run in tick n + 1.
@@ -184,7 +185,7 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
  const pend=new Map<number,{id:number;count:number;tick:number}>(); // dropped slot -> item, count, tick sent
  const pendingOf=(id:number)=>[...pend.values()].filter(v=>v.id===id).reduce((a,v)=>a+v.count,0);
  const settle=(id:number,lost:number)=>{for(const [slot,v] of pend){if(lost<=0)break;if(v.id!==id)continue;const t=Math.min(lost,v.count);v.count-=t;lost-=t;if(!v.count)pend.delete(slot);}};
- const first=state();let prevXp=xpOf(first),prevInv=stockOf(first);
+ const first=state();let prevXp=xpOf(first),prevInv=stockOf(first),prevLevel=levelOf(first);
  const locAt=(s:BotWorldState,t:Tile)=>s.nearbyLocs.find(l=>l.x===t.x&&l.z===t.z&&l.level===t.level&&p.rocks.includes(l.id)&&l.optionsWithIndex.some(v=>v.opIndex===1&&/^mine$/i.test(v.text)));
  for(;;){
   const s=state(),n=d.tick(),pos={x:s.player!.worldX,z:s.player!.worldZ};
@@ -204,7 +205,8 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
    else if(-g>pendingOf(id))throw Error('mining item lost without a drop');
    else if(g<0){dropped-=g;settle(id,-g);}
   }
-  prevXp=xp;prevInv=inv;
+  const levelUp=levelOf(s)>prevLevel;
+  prevXp=xp;prevInv=inv;prevLevel=levelOf(s);
   if(made>=o.maximum)break;
   if(n-progress>=o.idleTicks)throw Error('mining no useful ore progress');
   // 2. Rock states: learn the respawn from each rock seen to deplete and come back.
@@ -256,8 +258,9 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
     const pick=best;
     if(s.inventory.length>=27)drops(1);
     // A run of 3 ticks or more: no cut now, as its delay would end before the arrival; the cut on the way (above) sets
-    // the roll in the arrival tick.
-    if(canCut&&delay<n+1&&ticksTo(pick.r)<=2)cut();
+    // the roll in the arrival tick. Not after an ore that gave a level: the level-up window opens in the tick of the
+    // cut on the way, and the bench lost the only log there (fletches 1 at seeds 7, 8 and 9).
+    if(canCut&&delay<n+1&&(ticksTo(pick.r)<=2||levelUp))cut();
     actions.push({type:'interactLoc',x:pick.loc!.x,z:pick.loc!.z,locId:pick.loc!.id,optionIndex:1});attempts++;
     active={rock:pick.r,loc:pick.loc!,sent:n+1};walkingTo=undefined;armedFor=undefined;
     if(beside(pos,pick.r)){active.arrival=n+1;const f=firstRoll(delay,n+1,rate);active.roll=f.roll;delay=f.delay;}
