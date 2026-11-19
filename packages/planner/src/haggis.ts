@@ -911,9 +911,9 @@ const HAGGIS_TRAVEL_MODELS = new WeakSet<TravelModel>();
 const inDeepWilderness = (p: Place | undefined) => !!p && p.x >= 2944 && p.x <= 3391 && p.z >= 3680 && p.z <= 3967;
 
 // Places of haggis-boards.json and the leg cache haggis-travel.json. The run starts where the tutorial skip lands.
-export function haggisTravel(path = BOARDS_FILE): TravelModel {
+export function haggisTravel(path = BOARDS_FILE, cachePath?: string): TravelModel {
     const data = JSON.parse(readFileSync(path, 'utf8')) as { places?: Record<string, Place> };
-    const model = { ...loadTravel(data.places ?? {}), start: 'lumbridge-spawn' };
+    const model = { ...loadTravel(data.places ?? {}, cachePath), start: 'lumbridge-spawn' };
     HAGGIS_TRAVEL_MODELS.add(model);
     return model;
 }

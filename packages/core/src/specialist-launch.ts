@@ -6,10 +6,8 @@ import {fresh, localFile, readBound, sha, validateRehearsals, validateSupplies, 
 import {missionSignature} from './session-admission';
 import {listAttempts, readLogoutProof, type AttemptReceipt} from './session-lifecycle';
 
-export const SPECIALIST_BOARDS: Readonly<Record<string, {name:string; category:number}>> = {
-    shaftshooter: {name:'Ranged', category:5},
-    polevaulter: {name:'Agility', category:17},
-};
+import {SPECIALIST_BOARDS} from './specialist-boards';
+export {SPECIALIST_BOARDS};
 const HOUR = 3_600_000;
 const LIVE_SERVER = 'rs-sdk-demo.fly.dev';
 const FIRST_LOGIN_MS = 600_000;

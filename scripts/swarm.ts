@@ -15,6 +15,7 @@
 // "envByAccount": {"<account>": {"KEY": "value"}} gives one hosted account its own variables on top of "env". A host
 // job whose script is scripts/chain.ts runs its "args" as chain steps inside the host, one chain per account.
 // Usage: DEMO_OK=1 bun scripts/swarm.ts [swarm.json]
+import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, renameSync, rmSync, statSync, writeFileSync, writeSync, createWriteStream } from 'node:fs';
 import { spawn as spawnChild } from 'node:child_process';
 import { join, resolve } from 'node:path';
@@ -438,7 +439,7 @@ export function applyEndRepair(request: any, ended: Map<string, EndRecord>, acti
     return { changed: true, reason: `repaired failure cleared (${logout.label})` };
 }
 // The main and fresh-clock accounts stay offline; the swarm never records an end for them.
-const PROTECTED_ACCOUNTS = ['haggis', 'shaftshooter', 'polevaulter', 'afknight'];
+const PROTECTED_ACCOUNTS = [...RESERVED_ACCOUNTS, 'afknight'];
 // Account names (as their latest attempt spells them) of every live lifecycle folder, so an account that has no
 // plan job is still found. An unreadable folder is skipped.
 export function lifecycleAccounts(dir: string): string[] {

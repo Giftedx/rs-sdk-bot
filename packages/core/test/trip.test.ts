@@ -85,6 +85,17 @@ test('a successful nearest bank keeps the search in its initial bank group',()=>
     expect(calls).toEqual([11,12,13]);
 });
 
+test('no direct route and no gain from the bank stock: no bank is searched',()=>{
+    const calls:number[]=[];
+    const w={route:(_a:typeof from,b:typeof to)=>{calls.push(b.x);return {ok:false};},routeGain:()=>false};
+    expect(planTrip(w as any,from,to,poor,{coins:0,items:{bronzeaxe:1}},[bank])).toBeNull();
+    expect(calls).toEqual([to.x]);
+    // With a gain the banks are still searched.
+    const g={...w,routeGain:()=>true};calls.length=0;
+    expect(planTrip(g as any,from,to,poor,{coins:0,items:{bronzeaxe:1}},[bank])).toBeNull();
+    expect(calls).toEqual([to.x,bank.x]);
+});
+
 test('bank fallback tries at most eight same-plane banks',()=>{
     const candidates=[...Array.from({length:10},(_,i)=>({x:11+i,z:0,level:0})),{x:10,z:0,level:1}],calls:number[]=[];
     const w={route:(_a:typeof from,b:typeof to)=>{if(b.x!==to.x)calls.push(b.x);return {ok:false};}};

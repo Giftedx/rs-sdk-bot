@@ -1,4 +1,4 @@
-import { appendFileSync, closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, renameSync, writeFileSync } from 'node:fs';
+import { appendFileSync, closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 
@@ -31,7 +31,22 @@ export function openDiagonalDoors(rsmod:{changeLoc(x:number,z:number,y:number,w:
     return doors.length;
 }
 
-export function pathfindingSourceKey(wasmFile=WASM,collisionFile=DATA,doorsFile=DOORS,initializerFile=INITIALIZER): string {
+// The key reads and hashes the 27.5 MB collision file, and one process asks for it from the snapshot, the leg cache, the
+// area labels and the route worker. A call with the default files keeps its key while the four files keep their size and
+// their modification time, so a process hashes them once. A call that names its files is always exact: it hashes the bytes.
+let defaultKey:{stamp:string;key:string}|null=null;
+const fileStamp=(file:string)=>{try{const s=statSync(file);return s.size+':'+s.mtimeMs;}catch{return 'missing';}};
+export function pathfindingSourceKey(wasmFile?:string,collisionFile?:string,doorsFile?:string,initializerFile?:string): string {
+    const named=wasmFile!==undefined||collisionFile!==undefined||doorsFile!==undefined||initializerFile!==undefined;
+    const files=[wasmFile??WASM,collisionFile??DATA,doorsFile??DOORS,initializerFile??INITIALIZER];
+    if(named)return hashedSourceKey(files[0]!,files[1]!,files[2]!,files[3]!);
+    const stamp=files.map(fileStamp).join(',');
+    if(defaultKey&&defaultKey.stamp===stamp)return defaultKey.key;
+    const key=hashedSourceKey(files[0]!,files[1]!,files[2]!,files[3]!);
+    defaultKey={stamp,key};
+    return key;
+}
+function hashedSourceKey(wasmFile:string,collisionFile:string,doorsFile:string,initializerFile:string): string {
     return JSON.stringify({v:4,wasm:sha256(readFileSync(wasmFile)),data:sha256(readFileSync(collisionFile)),initializer:sha256(readFileSync(initializerFile)),diagonal:sha256(Buffer.from(JSON.stringify(diagonalDoors(doorsFile))))});
 }
 
@@ -90,7 +105,8 @@ export function verifyPathfindingSnapshotFile(file:string,key:string):boolean {
 
 // Stage the checked payload before changing WASM memory. A failed read remains
 // an optional cache miss, even when it happens after some payload bytes arrive.
-// This uses one transient payload buffer, bounded by the checked file length.
+// This uses one transient payload buffer, bounded by the checked file length. It is not zero-filled: readFully fills all of it
+// and the hash covers all of it before any byte is used.
 // Copies the payload into WASM memory. A page that memory.grow() added is zero already, so a zero page of the payload
 // beyond `had` bytes is not written: writing it would make the operating system commit and map the page (about half of
 // the 1,593 pages of the snapshot are zero). A page below `had` is always written: it may hold other bytes.
@@ -110,7 +126,7 @@ export function restorePathfindingSnapshotFile(file:string,key:string,memory:Web
         const total=fstatSync(fd).size,head=Buffer.alloc(Math.min(total,4+MAX_HEADER));
         const parsed=readFully(fd,head,0)?snapshotHeader(head,total,key):null;
         if(!parsed)return false;
-        payload=Buffer.alloc(parsed.header.bytes);
+        payload=Buffer.allocUnsafe(parsed.header.bytes);
         if(!readFully(fd,payload,parsed.offset)||sha256(payload)!==parsed.header.sha256)return false;
     } catch { return false; }
     finally { if(fd!==undefined)try{closeSync(fd);}catch{/* The cache is optional. */} }
