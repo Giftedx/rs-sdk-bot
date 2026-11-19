@@ -157,7 +157,7 @@ What the swarm does with this job, from `scripts/swarm.ts` and `packages/practic
   has been in the Wilderness (`outTripDue`), not on the first steps of the march, which are outside the Wilderness
   too: a trip there ran a restock before any fight. The bench shows it as `trips=4` for four members.
   A later trip also walks to the nearest safe altar (never one in the Wilderness) when Prayer is under 70 percent of
-  the base level (`SQUAD_TRIP_PRAYER_FLOOR`). `SQUAD_TRIP_ALTAR=0` turns it off. From Edgeville the altar is the Varrock
+  the base level (`SQUAD_TRIP_PRAYER_FLOOR`). It is off by default (`SQUAD_TRIP_ALTAR=1` turns it on): in the bench (`extra:squad-2-gang-trips-altar-x1`, floor 1) both members leave for the church together and the post stands empty until they are back. From Edgeville the altar is the Varrock
   east church, about 159 tiles away. A failed prayer does not end the trip: the member fights on without Prayer and the
   log says so. Every walk back goes by the march's legs (`marchLegs`: the edge, the entry of the post's area, the post).
 - **Stall.** The stall guard (`packages/core/src/bot.ts`) ends a session with no xp, item, dialog or journey for
