@@ -92937,6 +92937,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/wasm-grow-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/wc-3tick.ts",
    "intents": [
     "observe"
