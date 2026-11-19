@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795112182291-pickpockdick-thefullmonty-earthrune",
+ "account": "PickpockDick",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 5,
+ "claim": "2781d641-53a1-4cd0-bc2f-a579cabfd406",
+ "count": 0,
+ "ok": false,
+ "at": 1795112253764,
+ "detail": "trade claimed"
+}
