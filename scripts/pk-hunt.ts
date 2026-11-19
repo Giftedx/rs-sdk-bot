@@ -197,7 +197,7 @@ export async function restock(s: Session, food: number, trip: readonly TripItem[
     const stock = () => [...s.sdk.getBankItems(), ...s.sdk.getInventory()];
     let selected: RequirementResolution | undefined;
     if (choose) { const pick = choose(stock(), equip()); trip = pick.trip; food += pick.moreFood; selected = pick.resolution; }
-    const fail = async (r: RequirementResolution) => { await s.bot.closeBank(); return 'bank lacks trip requirements ' + JSON.stringify(r.shortages); };
+    const fail = async (r: RequirementResolution) => { await s.bot.closeBank(); return 'bank lacks trip requirements ' + JSON.stringify(r.shortages) + ` (${shortageText(r.shortages, id => objNames().get(id))})`; };
     selected ??= resolveTrip(stock(), trip, equip());
     if (!selected.ok) return fail(selected);
     // Resolve the trip before optional boosts. A boost never consumes declared
@@ -269,6 +269,10 @@ export async function eatUp(s: Session, stop: () => boolean): Promise<number> {
 export function kitToWear(wornAtStart: readonly ItemCount[], inventory: readonly { id: number }[]): number[] {
     const inPack = new Set(inventory.map(i => i.id));
     return [...new Set(wornAtStart.map(p => p.id))].filter(id => inPack.has(id));
+}
+// The shortages of a trip in words, for the log: each item by name with what the trip needs and what the bank holds.
+export function shortageText(shortages: readonly { id: number; unit?: string; required: number; available: number }[], nameOf: (id: number) => string | undefined): string {
+    return shortages.map(x => `${nameOf(x.id)?.replace(/_/g, ' ') ?? 'item ' + x.id}: ${x.required} ${x.unit ?? 'items'} needed, ${x.available} in the bank`).join('; ');
 }
 // After a death: wait for the new life, walk to the bank, take sharks and the pieces that the account wore when the hunt began
 // (what the bank holds), wear them and eat up from 1 Hitpoints. The caller then restocks the trip. A piece that the bank lacks
