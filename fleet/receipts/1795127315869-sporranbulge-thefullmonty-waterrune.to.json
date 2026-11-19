@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795127315869-sporranbulge-thefullmonty-waterrune",
  "account": "TheFullMonty",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 130,
  "claim": "b2b29bd4-abd8-4278-87ad-d7520fee78f2",
- "count": 0,
- "ok": false,
- "at": 1795127343674,
- "detail": "trade claimed"
+ "count": 130,
+ "ok": true,
+ "at": 1795127458006,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 130
+ },
+ "bank": {
+  "count": 130,
+  "at": 1795127457241
+ },
+ "logout": {
+  "attemptId": "1795127343682-0000010548-0000000001",
+  "at": 1795127457992,
+  "sha256": "7b8803a61612dc295836cc7a627d3b494f738339e460189711c8c076ce763db2"
+ },
+ "screen": true
 }

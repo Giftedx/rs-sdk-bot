@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795127410875,
+ "at": 1795127459807,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -224,6 +224,49 @@
    ]
   },
   {
+   "account": "Hocuspokeus",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "18",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {
+    "ALCH_ITEM": "airrune",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-air-magic-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Deeppockets",
    "script": "scripts/chain.ts",
    "args": [
@@ -305,53 +348,6 @@
    "resources": [
     "shop:aubury"
    ]
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "536",
-    "QUANTITY": "6",
-    "EXPECTED_OWNED": "6",
-    "LIMIT_PRICE": "7300",
-    "CASH_RESERVE": "2000",
-    "ORDER_MS": "1200000",
-    "ORDER_KEY": "prayer99-hocuspokeus-dragonbones-six",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-334fb891-f112-4675-b73b-ced3729c10be"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-buy-hocuspokeus-dragon-bones-six-owned6 [task-334fb891-f112-4675-b73b-ced3729c10be]",
-   "role": "supply"
-  },
-  {
-   "accounts": [
-    "Fingerblastr",
-    "Fingersmith"
-   ],
-   "script": "scripts/coin-courier.ts",
-   "args": [
-    "1760000",
-    "--bank-x=2618",
-    "--bank-z=3332",
-    "--reserve=200000",
-    "--timeout-ms=600000"
-   ],
-   "env": {
-    "COIN_ORDER": "prayer99-fingersmith-bonefund1760k",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-0c83a9d0-a421-4fff-9e1a-7d8130b6d4fd"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-courier-fingerblastr-fingersmith-bone-fund [task-0c83a9d0-a421-4fff-9e1a-7d8130b6d4fd]",
-   "role": "supply"
   }
  ],
  "army": [
@@ -385,6 +381,8 @@
   "deeppockets",
   "dipstick",
   "fatstack",
+  "fingerblastr",
+  "fingersmith",
   "kiltlifter",
   "knightrider",
   "knightstick",
