@@ -239,3 +239,11 @@ describe('receiptOf', () => {
         expect(receiptOf(pickKit(full('A'), gear, rule, NOW), full('A'), rule.name, NOW, new TextEncoder().encode('{"name":"A","x":1}')).statusSha256).not.toBe(ready.statusSha256);
     });
 });
+
+test('walkToKitTile names the walk when the account is more than 3 tiles from the bank tile of its loadout file', async () => {
+    const { walkToKitTile } = await import('./squad-ready');
+    expect(walkToKitTile('Alpha', { x: 3092, z: 3497 }, { x: 3094, z: 3491 })).toBe('bun scripts/walk-to.ts Alpha 3094 3491');
+    expect(walkToKitTile('Alpha', { x: 3093, z: 3492 }, { x: 3094, z: 3491 })).toBeNull();
+    expect(walkToKitTile('Alpha', { x: 3097, z: 3491 }, { x: 3094, z: 3491 })).toBeNull();
+    expect(walkToKitTile('Alpha', { x: 3098, z: 3491 }, { x: 3094, z: 3491 })).not.toBeNull();
+});

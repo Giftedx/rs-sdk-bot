@@ -16,13 +16,16 @@
 //   eats up, restocks and walks back to the post; a death over the limit ends the account's part and the run ends as RESULT fail died)
 //   FOLLOW=1 (march to the targets the world feed shows: MAX_WILD=20, FOLLOW_WAIT=30)  MARCH=1 STEP=12 (move together)
 //   PULL=1 (attacked on a single-way tile with a multi-way post: walk on into multi-way)
-//   RESCUE=1 (a dropped account logs in again at the end and leaves the Wilderness)
+//   RESCUE=1 (a dropped account logs in again at once and leaves the Wilderness while the others fight on)
 // Bench only: SQUAD_GANG=<n> drives the last n accounts as the gang (profile ganker-live against our accounts).
 // Live: openBot refuses a non-local server without DEMO_OK=1 and an account of another fleet side. The main account
 // is refused. Stop: touch .practice/stop-<account> for one account, or .practice/stop-pk-squad for all.
 // First: it sets STALL_TICKS before packages/core/src/bot.ts loads (see the file).
 import './pk-squad-stall';
 import { existsSync } from 'node:fs';
+import * as os from 'node:os';
+import { FREE_FLOOR_GB, HOST_DEFERRED_EXIT } from '../packages/core/src/memory';
+import { isLocalServer } from '../packages/core/src/localserver';
 import type { Session } from '../packages/core/src/inprocess';
 import { closeWithin } from '../packages/core/src/bot';
 import { killReceiptProof } from '../packages/core/src/kill-receipt';
@@ -148,7 +151,7 @@ export async function stopSquadSession(raw: Session, reason: string, halt: (reas
     // A member with no progress for the stall limit (no xp, items, dialog or journey: one whose bank trip failed stands
     // idle at the bank) ends its own session only. The others go on. The session is closed with a stop already asked
     // for, so openBot reports no session end (packages/core/src/bot.ts watchUnexpectedEnd): `ended` records the member
-    // as dropped, and the rescue at the end takes it out of the Wilderness. Live: one idle member halted a squad of
+    // as dropped, and its rescue (at once, `startRescue`) takes it out of the Wilderness. Live: one idle member halted a squad of
     // four that was killing.
     if (/^no progress:/.test(reason)) {
         cancelSquadWork(raw, reason);
@@ -163,7 +166,7 @@ export async function stopSquadSession(raw: Session, reason: string, halt: (reas
     }
 }
 // The stop handlers of a squad: a member whose session ends with no logout of ours (a dropped connection, or a stall
-// that ends its own session) goes into `dropped`, and the rescue at the end takes it out of the Wilderness.
+// that ends its own session) goes into `dropped`, and its rescue (`onDrop`) takes it out of the Wilderness at once.
 export function squadStopHandlers(halt: (detail: string) => void, dropped: Map<string, string>, log: (line: string) => void = line => console.log(line), onDrop: (name: string) => void = () => {}) {
     const onSessionEnd = async (s: Session, detail: string) => { if (!dropped.has(s.name)) { dropped.set(s.name, detail); log(`[${s.name}] SQUAD session ended: ${detail}`); onDrop(s.name); } };
     const onStop = (s: Session, reason: string) => stopSquadSession(s, reason, halt, 1000, onSessionEnd);
@@ -192,10 +195,21 @@ export function squadEscapeSpell(z: number, carried: readonly { id: number; coun
     return null;
 }
 
-// Whether an idle member keeps its prayers on: a target of the squad within 12 tiles, or Hitpoints lost in the last 10 ticks.
-export const KEEP_PRAYER_RANGE = 12, KEEP_PRAYER_TICKS = 10;
-export function keepPrayer(o: { view: readonly { name: string; distance: number }[]; targets: ReadonlySet<string>; now: number; damagedAt: number }): boolean {
+// Whether an idle member keeps its prayers on: a target of the squad within 12 tiles, or Hitpoints lost in the last 10 ticks, and only while
+// its Prayer points are above the start floor of scripts/squad-ready.ts (70 percent of the base level): under it the prayers go off so that
+// a gang member that stands near and cannot be attacked does not drain them to nothing (a live run: the points ran out at about tick 730).
+export const KEEP_PRAYER_RANGE = 12, KEEP_PRAYER_TICKS = 10, KEEP_PRAYER_FLOOR = 0.7;
+export function keepPrayer(o: { view: readonly { name: string; distance: number }[]; targets: ReadonlySet<string>; now: number; damagedAt: number; points?: number; base?: number }): boolean {
+    if (o.points !== undefined && o.base !== undefined && o.points <= Math.ceil(o.base * KEEP_PRAYER_FLOOR)) return false;
     return o.now - o.damagedAt <= KEEP_PRAYER_TICKS || o.view.some(q => o.targets.has(q.name.toLowerCase()) && q.distance <= KEEP_PRAYER_RANGE);
+}
+
+// The memory gate of a live squad start: the fleet's floor and one GiB for each squad bot (the swarm admits a bot the same way,
+// scripts/swarm.ts START_BUDGET_GB).
+export const SQUAD_BOT_GB = 1;
+export function squadMemoryGate(freeGB: number, bots: number, floorGB: number = FREE_FLOOR_GB): { ok: boolean; needGB: number } {
+    const needGB = floorGB + SQUAD_BOT_GB * bots;
+    return { ok: freeGB >= needGB, needGB };
 }
 
 // The pull (hold): the distance to the march's goal within which an attacked account on single-way ground walks on into multi-way,
@@ -530,7 +544,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 // The protect prayer stays on while a target of the squad stands within reach (a skipped gang member next to us) or we took damage
                 // in the last 10 ticks (`keepPrayer`).
                 if (protect) holdProtect(s, protect, s.tick());
-                else if (!keepPrayer({ view, targets: o.targets, now: s.tick(), damagedAt }) && s.tick() % 3 === 0) for (const [i, on] of (s.sdk.getState()?.prayers.activePrayers ?? []).entries()) if (on) void s.sdk.sendTogglePrayer(i);
+                else if (!keepPrayer({ view, targets: o.targets, now: s.tick(), damagedAt, points: s.sdk.getSkill('Prayer')?.level, base: s.sdk.getSkill('Prayer')?.baseLevel }) && s.tick() % 3 === 0) for (const [i, on] of (s.sdk.getState()?.prayers.activePrayers ?? []).entries()) if (on) void s.sdk.sendTogglePrayer(i);
                 // Back to the post between fights.
                 // At least a tick each pass: a walk to a step that cannot be reached fails at once.
                 if (now >= singleUntil && Math.max(Math.abs(p.worldX - o.post.x), Math.abs(p.worldZ - o.post.z)) > 2) await walkPath(walker, [{ ...o.post, tol: 2 }], { maxTicks: 60, idleMs: 9000, stop: () => !going() || !!squadTarget(s.sdk.getState()?.nearbyPlayers ?? [], o.targets, health, new Set(), self) });
@@ -640,6 +654,11 @@ if (import.meta.main) {
     let squadServer = '';
     try { squadServer = accountServerBeforeLogin(ours[0]!); } catch (e) { console.log(`RESULT fail no server for ${ours[0]}: ${String(e).replace(/\s+/g, ' ').slice(0, 160)}`); process.exit(2); }
     const runDeaths = { deaths: 0, limit: pvpDeathLimits().perRun };
+    // A live start needs the floor plus one GiB for each bot of ours (the bench on a local server does not).
+    if (!isLocalServer(squadServer)) {
+        const gate = squadMemoryGate(os.freemem() / 2 ** 30, ours.length);
+        if (!gate.ok) { console.log(`RESULT fail host memory: ${(os.freemem() / 2 ** 30).toFixed(1)} GiB free, ${gate.needGB} needed (floor ${FREE_FLOOR_GB} + ${SQUAD_BOT_GB} for each of ${ours.length} accounts)`); process.exit(HOST_DEFERRED_EXIT); }
+    }
     const ledgerRefusal = pvpDeathRefusal({ accounts: ours, server: squadServer });
     if (ledgerRefusal) { console.log(`RESULT fail died ${ledgerRefusal}`); process.exit(1); }
     const paused = ours.filter(n => existsSync(`.practice/stop-${n}`));
@@ -821,7 +840,7 @@ if (import.meta.main) {
     // Live: no account logs out in the Wilderness. The deadline or a stop can end an account's hold mid-fight with
     // its food gone, and a later login on that tile met a PKer: live, KnightRider logged out at the post with 4 HP and
     // died 31 ticks into its next session, skulled, with its whole kit.
-    // A dropped account has no session to walk; the rescue below logs it in again.
+    // A dropped account has no session to walk; its rescue (started when it dropped) logs it in again.
     const stranded: string[] = [];
     if (!gang.length) await Promise.all(squad.map(async (s, i) => { if (dropped.has(s.name)) return; const out = await leaveWilderness(s, results[i]!.died); if (out.died) results[i]!.died = true; if (out.why) { log(`[${s.name}] SQUAD ${out.why}`); stranded.push(s.name); } }));
     for (const r of results) console.log(`SQUAD ${JSON.stringify(r)}`);

@@ -315,6 +315,12 @@ export function loadoutOf(pick: Pick, bank: { x: number; z: number }): { bank: {
         wear: pick.worn.map(w => ({ id: w.id, count: w.count, slot: w.slot })), cap: 600, maximumMoves: 128 };
 }
 
+// The kit step refuses an account that stands more than 3 tiles from the bank tile of its file (`owned loadout life/state/stop/budget`
+// at tick 0, with no move). The command that brings the account to the tile, or null when it stands within 3 tiles.
+export function walkToKitTile(account: string, at: { x: number; z: number }, bank: { x: number; z: number }): string | null {
+    return Math.max(Math.abs(bank.x - at.x), Math.abs(bank.z - at.z)) <= 3 ? null : `bun scripts/walk-to.ts ${account} ${bank.x} ${bank.z}`;
+}
+
 // A status file (packages/core/src/status.ts) as an account. A noted item counts as its plain item.
 // The receipt of one check (--receipt): it binds the verdict to the status file that the check read.
 export function receiptOf(p: Pick, a: { at: number; bankAt: number | null }, rule: string, now: number, statusBytes: Uint8Array): { schema: 'squad-ready/1'; account: string; ok: boolean; rule: string; at: number; statusAt: number; bankAt: number | null; statusSha256: string; reasons: string[] } {
@@ -408,6 +414,8 @@ if (import.meta.main) {
             const a = fleet.find(x => x.name === p.account)!, bank = meetNear(a.pos);
             writeFileSync(join(loadouts, `${p.account}.json`), JSON.stringify(loadoutOf(p, bank), null, 1) + '\n');
             console.log(`LOADOUT ${join(loadouts, `${p.account}.json`)} at the ${bank.bank} bank (${cheb(bank, a.pos)} tiles from the account)`);
+            const walk = walkToKitTile(p.account, a.pos, bank);
+            if (walk) console.log(`  first (the kit step needs the account within 3 tiles of the bank tile): ${walk}`);
         }
     }
     const receipts = flag('--receipt');
