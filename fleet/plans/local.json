@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795096377802,
+ "at": 1795096437834,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -225,32 +225,21 @@
   },
   {
    "account": "Masterbaiter",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "dargaud",
-    "1200"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ITEMS": "rune arrow",
-    "STOCK_TARGET": "584",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "320200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "320000",
-    "AUTOPILOT_ORDER": "[184]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":584}}"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
-   "role": "bank",
-   "template": "squad-arrows-dargaud",
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "shop:dargaud"
+    "knight:2582,3297"
    ]
   },
   {
@@ -346,16 +335,13 @@
     "RANDOM_EVENTS": "0",
     "COORDINATOR_RUN_ID": "task-9b7526df-6f37-4c48-9688-3ac787668a9c"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-prayer-swordinhand-99 [task-9b7526df-6f37-4c48-9688-3ac787668a9c]",
    "role": "helper"
   },
   {
-   "accounts": [
-    "mmtha0205",
-    "Knightstick"
-   ],
+   "account": "mmtha0205",
    "script": "scripts/coin-courier.ts",
    "args": [
     "1000000",
@@ -371,9 +357,31 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-13b20de6-4754-472b-b545-edda66b18e9f"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-courier-mmtha0205-knightstick-bone-fund [task-13b20de6-4754-472b-b545-edda66b18e9f]",
+   "role": "supply"
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "536",
+    "QUANTITY": "139",
+    "EXPECTED_OWNED": "6",
+    "LIMIT_PRICE": "7300",
+    "CASH_RESERVE": "10000",
+    "ORDER_MS": "1200000",
+    "ORDER_KEY": "prayer99-knightstick-dragonbones139",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-b61c3561-827e-44b2-8ca0-e0d1be444ac5"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-buy-knightstick-dragon-bones-99 [task-b61c3561-827e-44b2-8ca0-e0d1be444ac5]",
    "role": "supply"
   }
  ],
