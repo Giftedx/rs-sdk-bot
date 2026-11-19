@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795080652436-fatstack-undermykilt-earthrune",
+ "account": "Fatstack",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 294,
+ "claim": "b612f8f2-9aed-49d1-bc57-c91ba0dcd391",
+ "count": 294,
+ "ok": true,
+ "at": 1795080738112,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 294,
+  "after": 0
+ },
+ "bank": {
+  "count": 294,
+  "at": 1795080724079
+ },
+ "logout": {
+  "attemptId": "1795080713863-0000002836-0000000001",
+  "at": 1795080738103,
+  "sha256": "0006ae70bc9f93e987f99e4dc679296c9e0da733c210da5b3109d8ffaa8463d3"
+ },
+ "screen": true
+}
