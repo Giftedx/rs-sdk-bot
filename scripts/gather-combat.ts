@@ -1,5 +1,5 @@
 // Combat Monster Gatherer: fights Chaos Druids (herbs, runes) or Hill Giants (big bones, limpwurt) and banks drops.
-// Usage: bun scripts/gather-combat.ts <bot> [CAP ticks, default 15000] [TARGET: druid | giant | trooper | cow | unicorn]
+// Usage: bun scripts/gather-combat.ts <bot> [CAP ticks, default 15000] [TARGET: druid | giant | trooper | cow | unicorn | wizard]
 // TARGET=unicorn kills the two unicorns south of Edgeville and banks each horn (a unicorn always drops one, drop
 // tables/scripts/unicorn.rs2); with MAX_KILLS the run ends at that count and banks.
 // COW_STAGE=1 with cow first walks to the Ardougne north bank and takes the cow kit and food (scripts/cow-stage.ts).
@@ -100,8 +100,16 @@ export async function bankCombatLoot(s:Session,drops:RegExp,extraIds:readonly nu
     for(const id of ids){const row=s.sdk.getInventory().find(i=>i.id===id);if(row)await depositObserved(s,row);}
     if(s.sdk.getInventory().some(i=>matches.test(i.name)||extraIds.includes(i.id)))throw Error('combat outputs not banked');
 }
+// The exact, case-blind name of an UNTIL_ITEM drop.
+export function untilItemPattern(name:string):RegExp{
+    return new RegExp(`^${name.trim().replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}$`,'i');
+}
+// The drops that the generic loop of a target picks up (CONFIGS, defined below).
+export function conf0Drops(target:string):RegExp{
+    return CONFIGS[target]?.drops??/$^/;
+}
 export function genericCombatNpc<T extends {id:number;distance:number;reachable?:boolean;inCombat?:boolean;targetIndex?:number}>(target:string,npcs:readonly T[],selfSlot?:number):T|undefined{
-    const id=target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid'):target==='unicorn'?npcId('unicorn'):undefined;
+    const id=target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid'):target==='unicorn'?npcId('unicorn'):target==='wizard'?npcId('wizard'):undefined;
     const owned = (n:T) => selfSlot !== undefined && Number.isSafeInteger(selfSlot) && selfSlot >= 0 &&
         n.inCombat === true && n.targetIndex === 32768 + selfSlot;
     return npcs.filter(n => n.id === id && n.reachable === true &&
@@ -928,6 +936,14 @@ export const CONFIGS: Record<string, {
         bankSpot: { x: 3092, z: 3496 }, // Edgeville Bank
         drops: /^unicorn horn$/i,
     },
+    // Wizard (combat 9, 17 spawns at the Wizards' Tower, about 3110,3160): a water talisman in 3 of 128 kills
+    // (drop tables/scripts/wizard.rs2), for the water runes of the gang squad. The Draynor bank is the nearest.
+    wizard: {
+        npc: /^wizard$/i,
+        spot: { x: 3110, z: 3162 },
+        bankSpot: { x: 3092, z: 3243 }, // Draynor Bank
+        drops: /^water talisman$/i,
+    },
     giant: {
         npc: /^(?:hill )?giant$/i,
         spot: { x: 2545, z: 3144 }, // Surface Giant117 camp
@@ -945,6 +961,10 @@ if(TARGET_KEY!=='cow'&&!Object.prototype.hasOwnProperty.call(CONFIGS,TARGET_KEY)
 if(!Number.isSafeInteger(CAP)||CAP<1)await finish([],false,'no combat progress: finite positive CAP required');
 const maximum=TARGET_KEY!=='cow'&&process.env.MAX_KILLS!==undefined?Number(process.env.MAX_KILLS):undefined;
 if(maximum!==undefined&&(!Number.isSafeInteger(maximum)||maximum<1))await finish([],false,'no combat progress: finite positive MAX_KILLS required');
+// UNTIL_ITEM=<item name>: the run ends and banks when the pack holds that drop (a water talisman from the wizards).
+// MAX_KILLS still bounds the run; an item not held at that count ends it unmet.
+const untilItem=TARGET_KEY!=='cow'&&process.env.UNTIL_ITEM?untilItemPattern(process.env.UNTIL_ITEM):undefined;
+if(untilItem&&!conf0Drops(TARGET_KEY).test(process.env.UNTIL_ITEM!))await finish([],false,`no combat progress: UNTIL_ITEM ${process.env.UNTIL_ITEM} is no drop that target ${TARGET_KEY} picks up`);
 const potionPolicy=combatPotionPolicy();if((potionPolicy||maximum!==undefined)&&CAP<=200)throw Error('finite combat job reserves200ticks for owned bank return');
 const alch=combatAlchPolicy();if(alch&&TARGET_KEY==='cow')throw Error('owned alchemy hook requires generic combat loot path');
 const botName = process.argv[2];
@@ -956,7 +976,7 @@ const baseConf=dungeonGiant?{...targetConf,spot:{x:3117,z:9850},bankSpot:{x:3092
 const conf=alch?.route?{...baseConf,spot:alch.route.site,bankSpot:alch.route.bank}:baseConf;
 
 if (!botName) {
-    console.error('Usage: bun scripts/gather-combat.ts <botName> [CAP] [TARGET: druid | giant | trooper | cow | unicorn]');
+    console.error('Usage: bun scripts/gather-combat.ts <botName> [CAP] [TARGET: druid | giant | trooper | cow | unicorn | wizard]');
     process.exit(1);
 }
 
@@ -1072,6 +1092,7 @@ try {
                 itemsLooted++;
                 if(alch&&itemsLooted>=alch.maximum)break;
                 await waitTicks(s, 1);
+                if(untilItem&&s.sdk.getInventory().some(i=>untilItem.test(i.name)))break;
                 continue;
             }
         }
@@ -1104,10 +1125,15 @@ try {
     if(combatRecovery)await combatRecovery();
     if(potions){console.log('COMBAT_POTIONS_RESULT '+JSON.stringify({doses:potions.doses,delta:potions.delta,receipts:potions.receipts,blocked:potions.blocked,resumes:potions.resumes}));}
     if(alch){if(!cleanupScope)await bank();if(s.sdk.getInventory().some(i=>i.id===995||conf.drops.test(i.name)))throw Error('owned alchemy bank return unconfirmed');console.log('COMBAT_ALCH_RESULT '+JSON.stringify({casts:loot.alch!.casts,coins:loot.alch!.coins,consumed:loot.alch!.consumed,runes:loot.alch!.runes,receipts:loot.alch!.receipts,blocked:loot.alch!.blocked,itemsLooted,bankTrips,scope:'exact owned pickup and native alchemy; generic loot does not assert kill attribution'}));}
+    let untilHeld:boolean|undefined;
+    if(untilItem){
+        untilHeld=s.sdk.getInventory().some(i=>untilItem.test(i.name));
+        if(untilHeld&&!cleanupScope){await bank();if(s.sdk.getInventory().some(i=>untilItem.test(i.name)))throw Error('UNTIL_ITEM bank return unconfirmed');}
+    }
     const total = kills + itemsLooted;
     const perK = (total * 1000 / Math.max(1, used())).toFixed(2);
-    const targetMet=maximum===undefined||kills===maximum&&!cowStop.stop();
-    await finishCombat(ownedSession, total > 0&&targetMet, `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum??'-'}`);
+    const targetMet=untilItem?!!untilHeld:maximum===undefined||kills===maximum&&!cowStop.stop();
+    await finishCombat(ownedSession, total > 0&&targetMet, `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum??'-'}${untilItem?` until=${process.env.UNTIL_ITEM} held=${untilHeld}`:''}`);
 } catch (e) {
     let detail=String(e);if(combatRecovery)try{await combatRecovery();}catch(recovery){detail+='; cleanup '+String(recovery);}
     await finishCombat(ownedSession, false, detail);
