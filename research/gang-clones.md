@@ -661,6 +661,44 @@ The fight-or-flight rule (pvp-proof, #1183) turns on an attacker, focuses fire, 
 the fight is lost. Its numbers are the climb: the win-chance threshold, the target order, the freeze use and the pull to
 the single-way post. The cases above are its baselines. The climb waits for those numbers as options.
 
+## The fight-or-flight climb
+
+The radar of #1183 decides to fight or leave from a win-chance estimate with four constants: `SQUAD_THREAT_LOSE` (default
+0.9), `SQUAD_THREAT_PROTECT` (0.6), `SQUAD_THREAT_PILE` (0.7) and `SQUAD_THREAT_THEIR_FOOD` (10). The cases are the third-party
+cases with the radar on (`extra:threat-<team3|team5|ranger>-fof-<setting>-x1`): the squad of live run 1 with full prayer
+points against the three clones and the third party, which is not a target of the squad and is hunted by the interloper rule.
+Hosted runs 44430373121 and 44433043355, seeds 1 to 10 for each cell. Each cell is: kills (clones + attackers); deaths of
+ours; Hitpoints lost in tens. The radar-off baseline (the table of "The threat climb") has 18, 19 and 17 kills with 10, 15 and 4
+deaths for the team of 3, the team of 5 and one ranger. The deaths limit is met in every cell here.
+
+| Setting | Team of 3 | Team of 5 | One ranger |
+|---|---|---|---|
+| the old counting rules (`SQUAD_THREAT_ODDS=0`) | 16; 1; 1272 | 0; 0; 52 | 25; 0; 741 |
+| the defaults (LOSE 0.9, PROTECT 0.6, PILE 0.7, THEIR_FOOD 10) | 24; 0; 1255 | 17; 1; 1078 | 28; 0; 623 |
+| `SQUAD_THREAT_LOSE=0.7` | 27; 0; 1206 | 22; 0; 1133 | 26; 0; 553 |
+| `LOSE=1.1` | 20; 0; 988 | 11; 0; 867 | 25; 0; 559 |
+| `SQUAD_THREAT_PROTECT=0.4` | 30; 0; 1209 | 24; 0; 1289 | 23; 0; 642 |
+| `PROTECT=0.8` | 29; 2; 987 | 6; 0; 559 | 27; 0; 750 |
+| `PROTECT=0.3` | 24; 0; 1272 | 17; 0; 1304 | - |
+| `SQUAD_THREAT_PILE=0.5` | 15; 1; 1126 | 12; 0; 997 | 27; 0; 503 |
+| `PILE=0.9` | 28; 0; 1046 | 13; 0; 1029 | 31; 0; 582 |
+| `SQUAD_THREAT_THEIR_FOOD=5` | 26; 1; 1212 | 20; 1; 1241 | 26; 1; 715 |
+| `THEIR_FOOD=20` | 19; 0; 950 | 1; 0; 79 | 30; 0; 649 |
+| `PROTECT=0.4`, `LOSE=0.7` | 29; 1; 1167 | 19; 1; 1211 | - |
+| `PROTECT=0.4`, `LOSE=0.5` | 26; 0; 1142 | 18; 0; 1346 | - |
+| `PROTECT=0.4`, `LOSE=0.7`, `PILE=0.9` | 24; 0; 1086 | 20; 2; 1247 | - |
+
+- **The win-chance estimate beats the counting rules.** Against the team of 5 the counting rules kill nothing (0) and the defaults
+  kill 17. Against the team of 3 they kill 16 with a death, the defaults 24 with none.
+- **One change from the defaults.** `PROTECT=0.4` kills 30 and 24 against the defaults' 24 and 17 for the two teams, with no death
+  (the defaults lost one account to the team of 5). `LOSE=0.7` and `PILE=0.9` are next (27 and 22; 28 and 13).
+- **Combined settings do not add.** `PROTECT=0.4` with `LOSE=0.7` or with `PILE=0.9` kill 29, 24 and 19, 20 with up to 2
+  deaths. A cell is one run of 10 seeds, so a difference of about 5 kills is not separated.
+- **One ranger is held by every setting** (no death except `THEIR_FOOD=5`, 1) and the kills are 23 to 31.
+- **The champion rule is the defaults with `SQUAD_THREAT_PROTECT=0.4`:** 77 kills and no death over the three threats
+  (30 + 24 + 23), against the defaults' 69 kills and one death. The margin is small and one batch: the evidence for it is the
+  first-round cells of both teams.
+
 ## Keep it true
 
 `scripts/measure/pk-gang-drift.ts` compares new observations with the record:
