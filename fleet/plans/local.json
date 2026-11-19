@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795108866584,
+ "at": 1795108981105,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -267,24 +267,6 @@
    "resources": []
   },
   {
-   "account": "MineYourBiz",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=26 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=mineyourbiz-kit13-532-0to26 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 26 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "YewFirst",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -334,60 +316,13 @@
    ]
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
    "account": "BackdoorMan",
    "script": "scripts/generated/thieving60.ts",
    "args": [],
    "env": {
     "TARGET": "55",
     "CAP": "2500",
-    "CLEAN_FOOD": "1",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Thieving\":55}}"
+    "CLEAN_FOOD": "1"
    },
    "enabled": true,
    "standing": true,
@@ -397,7 +332,7 @@
    "template": "thieving55",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "knight:2652,3318"
    ]
   }
  ],
