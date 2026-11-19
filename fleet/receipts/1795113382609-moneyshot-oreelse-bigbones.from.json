@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795113382609-moneyshot-oreelse-bigbones",
  "account": "Moneyshot",
  "partner": "OreElse",
@@ -12,6 +12,16 @@
  "claim": "d7656a05-ea2d-4c50-b412-745ebc8aee7c",
  "count": 0,
  "ok": false,
- "at": 1795113424715,
- "detail": "trade claimed"
+ "at": 1795113483736,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 16,
+  "at": 1795113482955
+ },
+ "logout": {
+  "attemptId": "1795113424723-0000029064-0000000001",
+  "at": 1795113483724,
+  "sha256": "de47d60f72697095c3e7a2a03487e52f37f65148636e82907f9dafc4a5412e9a"
+ },
+ "screen": false
 }
