@@ -44,7 +44,7 @@ test('confirmation mode is explicit and rejects unknown controls',async()=>{
 });
 
 test('packet-gated transfer reads an incoming request between game ticks',async()=>{
- const code=`import{mock}from'bun:test';import{resolve}from'node:path';process.env.RUNE_TRADE_REFRESH='packets';
+ const code=`import{mock}from'bun:test';import{resolve}from'node:path';process.env.RUNE_TRADE_REFRESH='packets';process.env.RUNE_RECIPROCAL='0';
  let response=-1,scans=0,raw=[];const start=performance.now(),s={name:'Crafter',messages:[],client:{packetsReceived:1}},h={name:'Carrier',messages:[],client:{packetsReceived:1}};
  for(const[a,o]of[[s,h],[h,s]]){a.tick=()=>0;a.direct=async()=>{if(a===h)setTimeout(()=>{s.client.packetsReceived++;raw=[{type:4,sender:'Carrier',text:'wishes to trade with you.',observationId:1}]},35);else response=performance.now()-start;return{success:true}};
  a.sdk={getInventory:()=>a===h?Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})):[],getState:()=>({trade:{isOpen:false},gameMessages:a.messages,nearbyPlayers:[{name:o.name,index:1}]}),scanGroundItems:async()=>{scans++;if(a===s)a.messages=[...raw]}};}
@@ -77,7 +77,7 @@ test('causal confirmation reaches the server before confirmation publication and
 test('helper-ready acknowledgement answers once before delayed incoming publication',async()=>{
  for(const mode of ['fresh','stale','spoofed','busy-then-ready','stop','opened']){
   const code=`import{mock}from'bun:test';import{resolve}from'node:path';
-  process.env.RUNE_OPEN_AFTER='helper-ack';let tick=0,pending,requests=0,response=-1;
+  process.env.RUNE_OPEN_AFTER='helper-ack';process.env.RUNE_RECIPROCAL='0';let tick=0,pending,requests=0,response=-1;
   const s={name:'Crafter',messages:[]},h={name:'Carrier',messages:[{type:0,sender:'',text:'Sending trade offer...',observationId:1}]};
   for(const[a,o]of[[s,h],[h,s]]){a.tick=()=>tick;a.direct=async()=>{if(a===h)requests++;else response=tick;return{success:true}};
    a.sdk={getInventory:()=>a===h?Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})):[],
@@ -97,7 +97,7 @@ test('helper-ready acknowledgement answers once before delayed incoming publicat
 });
 test('polling preserves tick-stall failure with at most one wait per actor',async()=>{
  const code=`
- import{mock}from'bun:test';import{resolve}from'node:path';let active=0,peak=0,requests=0;
+ import{mock}from'bun:test';import{resolve}from'node:path';process.env.RUNE_RECIPROCAL='0';let active=0,peak=0,requests=0;
  const s={name:'Crafter'},h={name:'Carrier'};
  for(const[a,o]of [[s,h],[h,s]]){a.tick=()=>0;a.direct=async()=>{requests++;return{success:true}};a.sdk={getInventory:()=>a===h?Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})):[],getState:()=>({trade:{isOpen:false},gameMessages:[],nearbyPlayers:[{name:o.name,index:1}]}),scanGroundItems:async()=>{}};}
  mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{active++;peak=Math.max(peak,active);return new Promise((_,reject)=>setTimeout(()=>{active--;reject(Error('TickStallError: frozen tick stream'))},100));}}));
@@ -110,7 +110,7 @@ test('polling preserves tick-stall failure with at most one wait per actor',asyn
 test('a between-tick owned trade request is answered without waiting for another game tick',async()=>{
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';
- let tick=0,responseMs=-1,requests=0,raw=[];const started=performance.now();
+ process.env.RUNE_RECIPROCAL='0';let tick=0,responseMs=-1,requests=0,raw=[];const started=performance.now();
  const s={name:'Crafter',messages:[]},h={name:'Carrier',messages:[]};
  for(const[a,o]of [[s,h],[h,s]]){
   a.tick=()=>tick;a.direct=async()=>{if(a===h){requests++;setTimeout(()=>raw=[{type:4,sender:'Carrier',text:'wishes to trade with you.',observationId:1}],30);}else responseMs=performance.now()-started;return{success:true}};
@@ -234,8 +234,9 @@ test('sent confirmations still require both inventory publications',()=>{
 });
 
 test('delayed carrier transfer opening avoids cancellation and reconciles27 essence on both actors',async()=>{
+ for(const mode of ['1','0']){
  const code=`
- import{mock}from'bun:test';import{resolve}from'node:path';
+ import{mock}from'bun:test';import{resolve}from'node:path';process.env.RUNE_RECIPROCAL='${mode}';
  let phase=0,pending,duplicate=false,cancelled=false;
  const requests=[],closed=()=>({isOpen:false,screen:null,myOffer:[],theirOffer:[],myAccepted:false});
  const s={name:'Crafter',pack:[],trade:closed(),messages:[]},h={name:'Carrier',pack:Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})),trade:closed(),messages:[]};
@@ -264,13 +265,15 @@ test('delayed carrier transfer opening avoids cancellation and reconciles27 esse
  const child=await fixtureChild(code,10000);
  if(child.exitCode!==0)throw Error(child.stderr.toString());const result=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
  expect(result.error).toBe('');expect(result.duplicate).toBe(false);expect(result.cancelled).toBe(false);
- expect(result.requests).toEqual([{name:'Carrier',tick:0},{name:'Crafter',tick:1}]);
+ // Crossed requests: the crafter asks with the helper and sends no second request while the walk delays the trade.
+ expect(result.requests).toEqual([{name:'Carrier',tick:0},{name:'Crafter',tick:mode==='0'?1:0}]);
  expect(result.before).toEqual([0,27]);expect(result.after).toEqual([27,0]);expect(result.deltas).toEqual([27,-27]);
+ }
 });
 
-async function acknowledgedTransfer(busyUntil:number,mode:'fresh'|'missing'|'stop'|'levelup'|'level54'|'unrelated-dialog'|'levelup-stop'='fresh'){
+async function acknowledgedTransfer(busyUntil:number,mode:'fresh'|'missing'|'stop'|'levelup'|'level54'|'unrelated-dialog'|'levelup-stop'='fresh',reciprocal=true){
  const code=`
- import{mock}from'bun:test';import{resolve}from'node:path';
+ import{mock}from'bun:test';import{resolve}from'node:path';process.env.RUNE_RECIPROCAL='${reciprocal?'1':'0'}';
  let phase=0,pending,outstanding=false,received=false,duplicate=false,premature=false,opening=-1,escrow=[];
  let modal=${['levelup','level54','unrelated-dialog','levelup-stop'].includes(mode)},closes=0,unlock=false;
  const requests=[],events=[],closed=()=>({isOpen:false,screen:null,myOffer:[],theirOffer:[],myAccepted:false});
@@ -287,6 +290,12 @@ async function acknowledgedTransfer(busyUntil:number,mode:'fresh'|'missing'|'sto
    if(a===h){
     if(outstanding)duplicate=true;outstanding=true;const busy=phase<${busyUntil}||modal;
     events.push({at:phase+1,run:()=>{if(busy){outstanding=false;message(h,0,'','Crafter is busy at the moment.');}else if('${mode}'!=='missing'){received=true;message(s,4,'cArRiEr','wishes to trade with you.');}}});
+   }else if(${reciprocal}){
+    // Crossed requests: the server drops a busy crafter's request, and opens the trade when the crafter asks while
+    // the helper's accepted request stands. A crafter request after the opening is a duplicate.
+    if(phase<${busyUntil}||modal){}
+    else if(opening>=0)duplicate=true;
+    else if(outstanding&&'${mode}'!=='missing')opening=phase+1;
    }else if(!received||phase<${busyUntil})premature=true;
    else if(opening<0)opening=phase+1;
    return{success:true};
@@ -316,18 +325,21 @@ async function acknowledgedTransfer(busyUntil:number,mode:'fresh'|'missing'|'sto
  if(child.exitCode!==0)throw Error(child.stderr.toString());return JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
 }
 test('carrier retries only acknowledged busy requests and responds once to a fresh exact-player request',async()=>{
- for(const busy of [0,3,7]){
-  const r=await acknowledgedTransfer(busy);expect(r.error).toBe('');expect(r.duplicate).toBe(false);expect(r.premature).toBe(false);
+ for(const reciprocal of [true,false])for(const busy of [0,3,7]){
+  const r=await acknowledgedTransfer(busy,'fresh',reciprocal);expect(r.error).toBe('');expect(r.duplicate).toBe(false);expect(r.premature).toBe(false);
   expect(r.requests.filter((a:any)=>a.name==='Carrier')).toHaveLength(busy+1);
-  expect(r.requests.filter((a:any)=>a.name==='Crafter')).toEqual([{name:'Crafter',tick:busy+1}]);
-  expect(r.phase).toBeLessThanOrEqual(busy+5);expect(r.after).toEqual([27,0]);expect(r.talismans).toEqual([1,1]);
+  // Crossed requests: the crafter asks with each helper request, and the last pair opens the trade one tick sooner.
+  expect(r.requests.filter((a:any)=>a.name==='Crafter')).toEqual(reciprocal?Array.from({length:busy+1},(_,tick)=>({name:'Crafter',tick})):[{name:'Crafter',tick:busy+1}]);
+  expect(r.phase).toBeLessThanOrEqual(busy+(reciprocal?4:5));expect(r.after).toEqual([27,0]);expect(r.talismans).toEqual([1,1]);
  }
 });
 
 test('a Runecraft level-up dialog is dismissed before a fresh trade request can arrive',async()=>{
- const r=await acknowledgedTransfer(0,'levelup');expect(r.error).toBe('');expect(r.closes).toBe(1);
- expect(r.duplicate).toBe(false);expect(r.premature).toBe(false);expect(r.after).toEqual([27,0]);
- expect(r.talismans).toEqual([1,1]);expect(r.phase).toBeLessThanOrEqual(6);
+ for(const reciprocal of [true,false]){
+  const r=await acknowledgedTransfer(0,'levelup',reciprocal);expect(r.error).toBe('');expect(r.closes).toBe(1);
+  expect(r.duplicate).toBe(false);expect(r.premature).toBe(false);expect(r.after).toEqual([27,0]);
+  expect(r.talismans).toEqual([1,1]);expect(r.phase).toBeLessThanOrEqual(6);
+ }
 });
 
 test('the reachable level54 reward page cannot keep the next essence handoff busy',async()=>{
@@ -343,10 +355,14 @@ test('the handoff preserves unrelated dialogs and sends no dismissal after stop'
  expect(stopped.after).toEqual([0,27]);
 });
 test('stale, wrong-player and player-chat requests cannot open a handoff or send a response after stop',async()=>{
- const missing=await acknowledgedTransfer(0,'missing');expect(missing.error).toContain('essence transfer did not reconcile');
- expect(missing.requests).toEqual([{name:'Carrier',tick:0}]);expect(missing.after).toEqual([0,27]);expect(missing.phase).toBeLessThanOrEqual(35);
- const stopped=await acknowledgedTransfer(7,'stop');expect(stopped.error).toContain('essence transfer did not reconcile');
- expect(stopped.requests.every((a:any)=>a.name==='Carrier'&&a.tick<2)).toBe(true);expect(stopped.after).toEqual([0,27]);
+ for(const reciprocal of [true,false]){
+  const missing=await acknowledgedTransfer(0,'missing',reciprocal);expect(missing.error).toContain('essence transfer did not reconcile');
+  // The crafter's crossed request is its only request: a lost helper request gets no answer.
+  expect(missing.requests).toEqual(reciprocal?[{name:'Carrier',tick:0},{name:'Crafter',tick:0}]:[{name:'Carrier',tick:0}]);
+  expect(missing.after).toEqual([0,27]);expect(missing.phase).toBeLessThanOrEqual(35);
+  const stopped=await acknowledgedTransfer(7,'stop',reciprocal);expect(stopped.error).toContain('essence transfer did not reconcile');
+  expect(stopped.requests.every((a:any)=>(reciprocal||a.name==='Carrier')&&a.tick<2)).toBe(true);expect(stopped.after).toEqual([0,27]);
+ }
 });
 
 test('a delayed walking handshake is not cancelled by repeated trade requests',()=>{

@@ -48,7 +48,8 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
  const at=s.tick();
  if(!await waitUntil(s,()=>ess(h)===amount&&ess(s)===0,{timeoutTicks:10}))throw Error('handoff stock unobserved');
  let opened=false,offerSent=false,last='',requestPending=false,responseSent=false,levelupDismissed=false,incomingCursor=0,busyCursor=0;const confirmed=new Set<Session>(),offerAccepted=new Set<Session>();
- let craftAt:number|undefined;
+ let craftAt:number|undefined,readyAt:number|undefined;
+ const reciprocal=process.env.RUNE_RECIPROCAL!=='0';
  let receiverEarly=false,receiverRetry=false;const earlyConfirmed=new Set<Session>();
  const acceptedCursors=new Map([[s,cursor(s)],[h,cursor(h)]]);
  const credited=()=>ess(s)===amount&&ess(h)===0;
@@ -126,17 +127,28 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
     &&m.text==='Sending trade offer...'&&(m.observationId??0)>busyCursor);
    // Retry only a server-refused request. The incoming request acknowledges acceptance after the craft delay.
    if(requestPending&&!ready()&&messages(h).some(m=>m.type===0&&m.sender===''
-    &&m.text.toLowerCase()===s.name.toLowerCase()+' is busy at the moment.'&&(m.observationId??0)>busyCursor))requestPending=false;
+    &&m.text.toLowerCase()===s.name.toLowerCase()+' is busy at the moment.'&&(m.observationId??0)>busyCursor)){requestPending=false;readyAt=undefined;}
    if(!requestPending&&!stop()){
     const si=index(h,s.name),hi=index(s,h.name);
     if(si!==undefined&&hi!==undefined){
      incomingCursor=cursor(s);busyCursor=cursor(h);
-     mark('helper-request');await direct(h,{type:'interactPlayer',playerIndex:si,optionIndex:4,reason:'SDK'});mark('control');requestPending=true;
+     // The crafter asks the helper in the same tick: two requests that cross open the trade at once, as in the pipeline
+     // opening above, so the crafter does not wait a tick to see the helper's request before it answers. When the
+     // helper's request is refused as busy, both are sent again. RUNE_RECIPROCAL=0 sends the helper's request only.
+     mark('helper-request');
+     const ask=direct(h,{type:'interactPlayer',playerIndex:si,optionIndex:4,reason:'SDK'});
+     if(reciprocal)await Promise.all([ask,direct(s,{type:'interactPlayer',playerIndex:hi,optionIndex:4,reason:'SDK'})]);else await ask;
+     mark('control');requestPending=true;
     }
    }
    if(requestPending&&ready()&&!stop()){
-    const hi=index(s,h.name);
-    if(hi!==undefined){mark('crafter-response');await direct(s,{type:'interactPlayer',playerIndex:hi,optionIndex:4,reason:'SDK'});mark('control');responseSent=true;}
+    readyAt??=s.tick();
+    // A crafter that is busy when its crossed request arrives loses that request, so it answers the helper's
+    // request. Next to the helper it answers at once. Away from the helper a second request can cancel a trade that
+    // opens after the walk, so it answers only if no trade opens within 2 ticks.
+    const hi=index(s,h.name),main=state(s).player,helper=state(h).player;
+    const adjacent=!!main&&!!helper&&main.level===helper.level&&Math.max(Math.abs(main.worldX-helper.worldX),Math.abs(main.worldZ-helper.worldZ))<=1;
+    if(hi!==undefined&&(!reciprocal||adjacent||s.tick()-readyAt>2)){mark('crafter-response');await direct(s,{type:'interactPlayer',playerIndex:hi,optionIndex:4,reason:'SDK'});mark('control');responseSent=true;}
    }
    }
   }
