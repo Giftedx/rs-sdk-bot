@@ -522,7 +522,7 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 2603, z: 3234, level: 0}, skills: {Mining: 64, Hitpoints: 10, Prayer: 99, Magic: 59}, inventory: [{id: 1275, count: 1}, {id: 946, count: 1}, {id: 1511, count: 1}]}}), key: 'extra:mining-zoo-knife-99', timeoutMs: 600_000},
   // The eight iron rocks of the Wilderness hobgoblin mine (3099-3101,3765-3768, maps/m48_58.jm2), at the route's stats
   // for this step (Hitpoints 10, Prayer 99, Magic 59; with the stats of `zoo-knife` the hobgoblins attack and the run
-  // ends). Every rock has 1 to 3 stand tiles in a block, so each lap has one walk of 3 ticks: 3.45 ticks an ore against
+  // ends). Every rock has 1 to 3 stand tiles in a block, so each lap has one walk of 3 ticks: 3.46 ticks an ore against
   // the zoo's 3.19 (research/aio-bench.md, "The knife reset on the Ardougne zoo iron").
   {...skiller('mining', 'at-site', 'fresh_lumbridge', ['iron_rock_table', '75', '1500', 'MINING_ROTATE=1', 'MINING_DROP=1', 'MINING_SITE=wilderness-hobgoblin-iron', 'MINING_KNIFE=1'], {output: /"made":(\d+)/,
     presetConfig: {position: {x: 3100, z: 3767, level: 0}, skills: {Mining: 64, Hitpoints: 10, Prayer: 99, Magic: 59}, inventory: [{id: 1275, count: 1}, {id: 946, count: 1}, {id: 1511, count: 1}]}}), key: 'extra:mining-hobgoblin-knife'},
