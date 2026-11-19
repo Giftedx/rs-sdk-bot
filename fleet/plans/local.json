@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795064507709,
+ "at": 1795064567294,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -194,85 +194,6 @@
    ]
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "betty",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "water rune",
-    "STOCK_TARGET": "1418",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "11544",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "11344",
-    "AUTOPILOT_ORDER": "[0]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1418}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy water runes at Betty's in Port Sarim for the gang squad",
-   "role": "bank",
-   "template": "squad-water-betty",
-   "autopilot": "local",
-   "resources": [
-    "shop:betty"
-   ]
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 3000 lobster"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "Catherby lobsters, caught and cooked",
-   "role": "fishing",
-   "template": "lobster-chain",
-   "autopilot": "local",
-   "resources": [
-    "catherby:lobster"
-   ]
-  },
-  {
-   "account": "NabTheKnob",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "magic_guild",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "nature rune",
-    "STOCK_TARGET": "1158",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "38400",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "38200",
-    "AUTOPILOT_ORDER": "[203]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"561\":1158}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy nature runes at the Magic Guild for the gang squad",
-   "role": "bank",
-   "template": "squad-nature-guild",
-   "autopilot": "local",
-   "resources": [
-    "shop:magic_guild"
-   ]
-  },
-  {
    "account": "TossTheCaber",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -303,30 +224,52 @@
    ]
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/gather-combat.ts",
+   "account": "Masterbaiter",
+   "script": "scripts/chain.ts",
    "args": [
-    "3000",
-    "cow"
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 3000 lobster"
    ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
+   "goal": "Catherby lobsters, caught and cooked",
+   "role": "fishing",
+   "template": "lobster-chain",
    "autopilot": "local",
    "resources": [
-    "cow:ardougne-north"
+    "catherby:lobster"
+   ]
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "magic_guild",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "nature rune",
+    "STOCK_TARGET": "810",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "24480",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "24280",
+    "AUTOPILOT_ORDER": "[203]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"561\":810}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy nature runes at the Magic Guild for the gang squad",
+   "role": "bank",
+   "template": "squad-nature-guild",
+   "autopilot": "local",
+   "resources": [
+    "shop:magic_guild"
    ]
   }
  ],

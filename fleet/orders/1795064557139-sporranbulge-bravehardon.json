@@ -1,0 +1,22 @@
+{
+ "id": "1795064557139-sporranbulge-bravehardon",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "SporranBulge",
+ "to": "BraveHardon",
+ "item": "coins",
+ "count": 2649,
+ "start": 1795064557139,
+ "end": 1795066957139,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
