@@ -3305,3 +3305,18 @@ describe('the alchemy band buys the consumables of the casts left, as far as the
         expect(part[2]).toBeLessThan(need.fire);
     });
 });
+
+import { alchTicks, castTicks, CAST_BENCH } from '../src/alch-plan';
+test('the ticks of the alchemy band come from the measured cast times: 12 casts in 57 and 35 ticks', () => {
+    expect(castTicks('high-alch')).toBe(CAST_BENCH['high-alch'].ticks / CAST_BENCH['high-alch'].casts);
+    expect([castTicks('high-alch'), Math.round(castTicks('low-alch') * 100) / 100]).toEqual([4.75, 2.92]);
+    // XP a tick: High Alchemy 1,625 over 4.75 ticks.
+    expect(Math.round(CAST_XP['high-alch'] / castTicks('high-alch'))).toBe(342);
+    // Magic 50 to 99: 18 Low and 586 High Alchemy casts (the comment of the band says about 2,840 ticks).
+    const { low, high } = alchCasts(xpForLevel(50), 99);
+    expect(alchTicks(50)).toBe(Math.ceil(low * castTicks('low-alch') + high * castTicks('high-alch')));
+    expect(Math.round(alchTicks(50) / 10) * 10).toBe(2840);
+    // More levels left take more ticks, and Magic 99 takes none.
+    expect(alchTicks(21)).toBeGreaterThan(alchTicks(66));
+    expect(alchTicks(99)).toBe(0);
+});

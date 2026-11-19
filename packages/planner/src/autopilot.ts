@@ -1759,8 +1759,8 @@ export const TROOPER_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence';
 ];
 // Magic, band 2: alchemy at the Ardougne north bank (scripts/alch-train.ts) walks there from anywhere, banks the pack,
 // takes nature runes, fire (runes, or a fire staff it wields) and feathers, low-alchs to 55 and high-alchs to the
-// target. Practice at xpRate 25: 1,625 XP a High Alchemy cast at 6.5-7 ticks, 233-250 XP a tick, about 10 times
-// combat training, so Magic 50 to 99 is about 4,000 ticks. A run that runs out of supplies ends ok after a level;
+// target. At xpRate 25 a High Alchemy cast gives 1,625 XP and takes 4.75 ticks (castTicks in alch-plan.ts: 12 casts in 57 ticks on the bench), 342 XP
+// a tick, so Magic 50 to 99 is about 2,840 ticks (alchTicks). A run that runs out of supplies ends ok after a level;
 // the account takes the band again once restocked. Prayer, band 3: scripts/train-prayer.ts BURY_HELD=1 buries the held
 // bones above BONE_RESERVE up to 99 from the Ardougne north bank (entry within 60 tiles) and ends ok when they run
 // out after a level; practice from the knights buried 114 of 120 bones in 282 ticks to Prayer 75, about 2.2 ticks a
