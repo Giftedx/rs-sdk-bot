@@ -3808,10 +3808,10 @@
        "skill": "mining",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 274,
-        "realistic": 273.3,
+        "floor": 276,
+        "realistic": 275.5,
         "evidence": "MEASURED",
-        "source": "research/aio-bench.md \"Ardougne zoo iron\": extra:mining-zoo-knife seeds 7/8/9 = 3.22, 3.19, 3.19 ticks/ore = 272, 274, 274 XP/tick (mean 273.3, floor 274) with rune pickaxe and knife reset from Mining 65 (Doric + Plague City = 93,125 XP)"
+        "source": "research/aio-bench.md \"Ardougne zoo iron\": extra:mining-zoo-knife-99 (Mining 64-99, 1,041 ores, 910,836 XP) seeds 7/8/9 = 3,300, 3,300, 3,306 ticks = 276.0, 276.0, 275.5 XP/tick, 3.17 ticks/ore = the six-rock respawn limit 19/6, with rune pickaxe and knife reset"
        }
       }
      }
