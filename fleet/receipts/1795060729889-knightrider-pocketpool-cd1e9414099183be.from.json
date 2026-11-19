@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795060729889-knightrider-pocketpool-cd1e9414099183be",
+ "account": "KnightRider",
+ "partner": "PocketPool",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 6,
+ "claim": "a9574d4d-c12d-44a1-8e8f-48b1ea87d64e",
+ "count": 0,
+ "ok": false,
+ "at": 1795060762785,
+ "detail": "trade claimed"
+}

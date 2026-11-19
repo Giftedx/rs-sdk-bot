@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795060547995-bowbeforeme-trousersnake-b99ba10dbced9704",
+ "account": "TrouserSnake",
+ "partner": "BowBeforeMe",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 66,
+ "claim": "c8543c53-cefd-45c9-b1a2-6d346dbc4fff",
+ "count": 66,
+ "ok": true,
+ "at": 1795060773249,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 41,
+  "after": 107
+ },
+ "bank": {
+  "count": 66,
+  "at": 1795060772516
+ },
+ "logout": {
+  "attemptId": "1795060751803-0000027760-0000000001",
+  "at": 1795060773239,
+  "sha256": "269e23450e8056f6b916ea24939b35a2dc667beea72c8486b6cf5978abf20a6d"
+ },
+ "screen": true
+}

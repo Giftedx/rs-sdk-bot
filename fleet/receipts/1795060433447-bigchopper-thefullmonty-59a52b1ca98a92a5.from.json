@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795060433447-bigchopper-thefullmonty-59a52b1ca98a92a5",
+ "account": "Bigchopper",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 1,
+ "claim": "d5f1dc22-42e5-4c6b-aad4-71ed981a2d95",
+ "count": 0,
+ "ok": false,
+ "at": 1795060757636,
+ "detail": "trade claimed"
+}
