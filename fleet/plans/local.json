@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795067949543,
+ "at": 1795068138435,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -224,6 +224,36 @@
    ]
   },
   {
+   "account": "TossTheCaber",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "aubury",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "water rune",
+    "STOCK_TARGET": "1506",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "12200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "12000",
+    "AUTOPILOT_ORDER": "[6]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1506}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
+   "role": "bank",
+   "template": "squad-water-aubury",
+   "autopilot": "local",
+   "resources": [
+    "shop:aubury"
+   ]
+  },
+  {
    "account": "Masterbaiter",
    "script": "scripts/chain.ts",
    "args": [
@@ -273,36 +303,6 @@
    ]
   },
   {
-   "account": "TossTheCaber",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "aubury",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "water rune",
-    "STOCK_TARGET": "1506",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "12200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "12000",
-    "AUTOPILOT_ORDER": "[6]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1506}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
-   "role": "bank",
-   "template": "squad-water-aubury",
-   "autopilot": "local",
-   "resources": [
-    "shop:aubury"
-   ]
-  },
-  {
    "account": "Unsheathed",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -311,15 +311,15 @@
    ],
    "env": {
     "ITEMS": "iron arrow",
-    "STOCK_TARGET": "2684",
+    "STOCK_TARGET": "2763",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
     "FLOAT": "12200",
     "COIN_RESERVE": "200",
     "MAX_SPEND": "12000",
-    "AUTOPILOT_ORDER": "[684]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"884\":2684}}"
+    "AUTOPILOT_ORDER": "[763]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"884\":2763}}"
    },
    "enabled": true,
    "standing": true,
