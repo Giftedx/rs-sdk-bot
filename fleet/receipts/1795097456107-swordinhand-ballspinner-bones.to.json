@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795097456107-swordinhand-ballspinner-bones",
  "account": "Ballspinner",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Bones",
  "requested": 30,
  "claim": "619967c6-0c53-4e64-9485-2ad44e1264b7",
- "count": 0,
- "ok": false,
- "at": 1795097544100,
- "detail": "trade claimed"
+ "count": 30,
+ "ok": true,
+ "at": 1795097737574,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 30
+ },
+ "bank": {
+  "count": 30,
+  "at": 1795097736766
+ },
+ "logout": {
+  "attemptId": "1795097544108-0000022672-0000000001",
+  "at": 1795097737555,
+  "sha256": "9874ae5367a1734eb3d9472211aeb50276ad16bef9fecd638248b5e518ce4106"
+ },
+ "screen": true
 }
