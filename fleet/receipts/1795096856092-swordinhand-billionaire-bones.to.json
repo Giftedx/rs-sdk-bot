@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795096856092-swordinhand-billionaire-bones",
  "account": "Billionaire",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Bones",
  "requested": 29,
  "claim": "002e91d3-9f1b-4cc2-b6d9-82f44e09b1d0",
- "count": 0,
- "ok": false,
- "at": 1795096930930,
- "detail": "trade claimed"
+ "count": 29,
+ "ok": true,
+ "at": 1795097097977,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 29
+ },
+ "bank": {
+  "count": 29,
+  "at": 1795097097219
+ },
+ "logout": {
+  "attemptId": "1795096930938-0000028708-0000000001",
+  "at": 1795097097965,
+  "sha256": "0e4bebb55ef20f8edd458de6b89d278770a21a12b70bf3882ee7fb81e68c8a7d"
+ },
+ "screen": true
 }
