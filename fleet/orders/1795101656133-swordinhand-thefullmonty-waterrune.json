@@ -1,0 +1,22 @@
+{
+ "id": "1795101656133-swordinhand-thefullmonty-waterrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordinhand",
+ "to": "TheFullMonty",
+ "item": "Water rune",
+ "count": 30,
+ "start": 1795101656133,
+ "end": 1795104056133,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
