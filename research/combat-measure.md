@@ -680,7 +680,7 @@ TrouserSnake holds 13,450 feathers and 13 bones, UnderMyKilt holds 15,036 feathe
 
 - **Claim.** Alchemy on feathers is the fastest Magic the army can buy: 1,625 Magic XP per High Alchemy cast (65 base at
   xpRate 25) and 775 per Low Alchemy cast (31 base). From Magic 50 to 99 that is 18 Low and about 594 High Alchemy casts,
-  about 4,000 ticks at the measured 6.5-7 ticks per cast. A feather is worth 2, so High Alchemy pays 1 coin for it,
+  about 2,840 ticks at 4.75 ticks per High Alchemy cast and 2.9 per Low Alchemy cast (12 casts take 57 and 35 ticks: the bench cases `extra:magic-alch-high` and `extra:magic-alch-low`; the gap after a cast is the `p_delay` of the spell's script). A feather is worth 2, so High Alchemy pays 1 coin for it,
   and the cost is the nature runes (1 per cast) plus 5 fire runes per cast, or nothing for fire with a fire staff
   (Zaff, Varrock, stocks 2).
 - **Conditions.** Practice, xpRate 25. `scripts/alch-train.ts` started at the Ardougne market knights (the goldfarm spot)
