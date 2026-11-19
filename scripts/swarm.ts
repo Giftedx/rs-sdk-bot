@@ -27,7 +27,7 @@ import {cargoAccountServer} from '../packages/core/src/cargo';
 import {parseStep,tokenizeStep} from '../packages/core/src/chain-step';
 import { courierDeliveryWaiting } from './courier-cargo';
 import { deliveryResume, foodDeficit, selectFoodSource } from './courier-route';
-import {assertWorkerRelease,capabilityRevision,workerEntries} from '../packages/core/src/worker-release';
+import {assertWorkerRelease,cachedReleaseFor,workerEntries} from '../packages/core/src/worker-release';
 import {withSessionAdmission,missionSignature as sharedMissionSignature,successfulEnd,BOOTSTRAP_STATUS_AGE_MS} from '../packages/core/src/session-admission';
 import {rotateLog} from '../packages/core/src/log-rotate';
 import {assertNoRecoveryLease,heldRecoveryOwners,releaseExpiredRecoveryLeases} from '../packages/core/src/session-recovery-permit';
@@ -249,6 +249,12 @@ export function parseJob(job: Job): ParsedJob | { error: string } {
 // How many bots the process of a job holds: a login claim waits for a slow Git authority only in a process with one
 // bot (packages/core/src/inprocess.ts soloProcess).
 export const botCountEnv=(accounts:readonly string[])=>({SWARM_BOTS:String(accounts.length)});
+// A state file that other processes read (the dashboard, heavy-admission, live-update) is written whole or not at all:
+// a reader that met a half-written swarm-state.json read no swarm and sized its memory rule for an empty machine.
+export function writeStateFile(file:string,text:string,write:(path:string,data:string)=>void=writeFileSync,rename:(from:string,to:string)=>void=renameRetry):void{
+ const temporary=`${file}.tmp-${process.pid}`;
+ try{write(temporary,text);rename(temporary,file);}catch(error){rmSync(temporary,{force:true});throw error;}
+}
 export function supervisorCommand(parsed:ParsedJob,accounts:string[]):string[]{
     const job=parsed.job,maxRestarts=String(job.maxRestarts??(job.orchestrate?0:20));
     // A host job: one --arg per script argument (values may hold commas) and one --env per account variable.
@@ -838,7 +844,9 @@ if (import.meta.main) {
             // Each worker carries the release of the files its entries can run (docs/script-contract.md, Release
             // scope), so a runtime change needs no swarm restart and an edit outside those files leaves it unchanged.
             const entries = workerEntries(job.script, job.args ?? [], root);
-            const workRelease = capabilityRevision(entries, root);
+            // The cached release (a stamp check when no release file changed): the full hash of the release files costs
+            // seconds of this controller's tick for each worker that starts.
+            const workRelease = cachedReleaseFor(entries, root);
             assertLease();
             writeSync(out, jobLogStart(job));
             child = spawnChild(cmd[0]!, cmd.slice(1), {
@@ -1048,7 +1056,7 @@ if (import.meta.main) {
             }
         }
         const pendingStartup = pendingCount();
-        writeFileSync(join(prac, 'swarm-state.json'), JSON.stringify({ at: Date.now(), controllerPid:process.pid,coordinatorOwner,release:process.env.WORKER_RELEASE,freeGB: freemem() / 2 ** 30,
+        writeStateFile(join(prac, 'swarm-state.json'), JSON.stringify({ at: Date.now(), controllerPid:process.pid,coordinatorOwner,release:process.env.WORKER_RELEASE,freeGB: freemem() / 2 ** 30,
             running: botsRunning(), recovery:recoveryDispatch.active??null,recoverySlot:heldSlot.until>Date.now()?heldSlot:null,inheritedRecoveries, externalRunning: externalCount(), pendingStartup, pendingReserveGB: pendingStartup * START_BUDGET_GB,
             minFreeGB: Math.max(FREE_FLOOR_GB, plan.minFreeGB), maxBots: plan.maxBots, jobs: state }));
         if (stopAll && runs.size === 0&&!recoveryDispatch.active&&!inheritedRecoveries.length) { console.log('SWARM stopped (stop-swarm)'); process.exit(0); }
