@@ -1,0 +1,22 @@
+{
+ "id": "1795090852595-woodpecker-sporranbulge-waterrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodpecker",
+ "to": "SporranBulge",
+ "item": "Water rune",
+ "count": 231,
+ "start": 1795090852595,
+ "end": 1795093252595,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
