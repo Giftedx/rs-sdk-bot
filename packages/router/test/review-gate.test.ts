@@ -152,3 +152,26 @@ test('a replay root has its own .practice and its removal keeps every link targe
  expect(existsSync(root)).toBe(false);
  for(const kept of ['node_modules/keep','vendor/keep','.practice/cache/route-legs.json','.practice/status/bot.json'])expect(existsSync(join(source,kept))).toBe(true);
 });
+
+test('a replay that rejects does not end the wait while the other replay still runs, and it counts as an error of its record',async()=>{
+ const main=mkdtempSync(join(tmpdir(),'gate-settled-'));
+ mkdirSync(join(main,'scripts'),{recursive:true});mkdirSync(join(main,'packages'),{recursive:true});
+ writeFileSync(join(main,'scripts/x.ts'),'one');
+ const {root}=prepareWorkspace(main,'fixture',['scripts/x.ts']);
+ const ticks=join(root,'.practice','ticks','x');mkdirSync(ticks,{recursive:true});
+ for(const at of [10,20,30])writeFileSync(join(ticks,`bot-${at}.ticks.ndjson.gz`),'');
+ writeFileSync(join(root,'scripts/x.ts'),'changed');
+ const at=(f:string)=>f.match(/bot-(\d+)/)![1]!;
+ let slowDone=false;
+ const gate=await buildReviewGate({root,isolated:true,entry:'scripts/x.ts',owned:['scripts/x.ts'],startedAt:100,replay:async file=>{
+  if(at(file)==='30')return {status:'clean' as const,file};
+  // The second record rejects at once; the third keeps running for a while.
+  if(at(file)==='20')throw Error('replay child crashed');
+  await Bun.sleep(60);slowDone=true;return {status:'clean' as const,file};
+ }});
+ // The gate returned only after the slow replay finished, so nothing still runs when the scratch root is removed.
+ expect(slowDone).toBe(true);
+ expect(gate.blocking).toBe(true);
+ expect(gate.reason).toContain('replay failed on');
+ expect(gate.reason).toContain('replay child crashed');
+});
