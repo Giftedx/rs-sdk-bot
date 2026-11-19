@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795098928542,
+ "at": 1795099265385,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -296,6 +296,33 @@
    "resources": []
   },
   {
+   "account": "mmtha0205",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "60",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 60 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-60",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
    "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -304,15 +331,15 @@
    ],
    "env": {
     "ITEMS": "water rune",
-    "STOCK_TARGET": "799",
+    "STOCK_TARGET": "1037",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
-    "FLOAT": "6536",
+    "FLOAT": "8440",
     "COIN_RESERVE": "200",
-    "MAX_SPEND": "6336",
+    "MAX_SPEND": "8240",
     "AUTOPILOT_ORDER": "[7]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":799}}"
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1037}}"
    },
    "enabled": true,
    "standing": true,
@@ -350,6 +377,36 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "magic_guild",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "law rune",
+    "STOCK_TARGET": "20",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "1800",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "1600",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"563\":20}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy law runes at the Magic Guild for the gang squad",
+   "role": "bank",
+   "template": "squad-law-guild",
+   "autopilot": "local",
+   "resources": [
+    "shop:magic_guild"
    ]
   },
   {
