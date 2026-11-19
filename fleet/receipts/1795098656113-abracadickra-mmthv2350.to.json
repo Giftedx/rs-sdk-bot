@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795098656113-abracadickra-mmthv2350",
+ "account": "mmthv2350",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 54615,
+ "claim": "e06f0260-f23c-4f3e-92fa-f4c0d565d7d9",
+ "count": 0,
+ "ok": false,
+ "at": 1795098692021,
+ "detail": "trade claimed"
+}

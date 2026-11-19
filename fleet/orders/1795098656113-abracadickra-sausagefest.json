@@ -1,0 +1,22 @@
+{
+ "id": "1795098656113-abracadickra-sausagefest",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "Sausagefest",
+ "item": "coins",
+ "count": 73380,
+ "start": 1795098656113,
+ "end": 1795101056113,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

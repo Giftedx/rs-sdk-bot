@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795098656113-billionaire-thefullmonty-earthrune",
+ "account": "Billionaire",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 51,
+ "claim": "e1b2f4cc-89e9-47ea-8993-2c236853930a",
+ "count": 0,
+ "ok": false,
+ "at": 1795098702371,
+ "detail": "trade claimed"
+}

@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795098413336,
+ "at": 1795098703168,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -304,15 +304,15 @@
    ],
    "env": {
     "ITEMS": "water rune",
-    "STOCK_TARGET": "1090",
+    "STOCK_TARGET": "1037",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
-    "FLOAT": "8864",
+    "FLOAT": "8440",
     "COIN_RESERVE": "200",
-    "MAX_SPEND": "8664",
+    "MAX_SPEND": "8240",
     "AUTOPILOT_ORDER": "[7]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1090}}"
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1037}}"
    },
    "enabled": true,
    "standing": true,
