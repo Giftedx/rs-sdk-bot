@@ -1,0 +1,22 @@
+{
+ "id": "1795107656219-moneyshot-mineyourbiz-bones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Moneyshot",
+ "to": "MineYourBiz",
+ "item": "Bones",
+ "count": 31,
+ "start": 1795107656219,
+ "end": 1795110056219,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
