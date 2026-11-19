@@ -667,7 +667,7 @@ if (import.meta.main) {
     const freezeShareFor = (t: string) => {
         const key = t.toLowerCase();
         let share = freezeShares.get(key);
-        if (!share) { share = { clock: () => squad[0]!.tick(), until: -1, stagger: Number(get('FREEZE_STAGGER', '3')) }; freezeShares.set(key, share); }
+        if (!share) { share = { clock: () => squad[0]!.tick(), until: -1, stagger: Number(get('SQUAD_FREEZE_STAGGER', '3')) }; freezeShares.set(key, share); }
         return share;
     };
     const stunShares = new Map<string, NonNullable<FightOptions['stunShare']>>();
@@ -691,7 +691,7 @@ if (import.meta.main) {
         return hold(s, {
             targets, post, threats,
             options: sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200),
-            ...(get('FREEZE_SHARE', '0') === '1' ? { freezeShareFor } : {}),
+            ...(get('SQUAD_FREEZE_SHARE', '0') === '1' ? { freezeShareFor } : {}),
             ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
             allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), run: runDeaths,
             onDeath: near => { recordPvpDeath({ account: s.name, server: squadServer, at: Date.now(), script: 'scripts/pk-squad.ts', near }); }, deadline,
