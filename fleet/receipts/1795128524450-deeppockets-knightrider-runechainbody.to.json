@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795128524450-deeppockets-knightrider-runechainbody",
  "account": "KnightRider",
  "partner": "Deeppockets",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "b70f7e81-be6e-4dbb-bfc5-ab4e7ee8a9f3",
- "count": 0,
- "ok": false,
- "at": 1795128636480,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795128883214,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795128882450
+ },
+ "logout": {
+  "attemptId": "1795128636510-0000006776-0000000001",
+  "at": 1795128883203,
+  "sha256": "766d8ff759bac71c313946c19e3617dc8be4d6e81795e3c65b39fb623784fb93"
+ },
+ "screen": true
 }
