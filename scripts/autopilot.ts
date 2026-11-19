@@ -337,6 +337,12 @@ export function readSwarmEnded(file: string): Map<string, EndedRecord> {
     }
     return out;
 }
+// The accounts whose last swarm run ended `stopped` and that run nothing now. The swarm starts no job of such an account
+// again, a new mission included (scripts/swarm.ts startable): a person or a disable-enable of the job clears the end. A
+// planner job given to one only holds a bot slot and a place that no bot uses, so the planner leaves these accounts out.
+export function stoppedAccounts(ended: ReadonlyMap<string, { reason?: string }>, active: ReadonlySet<string>): Set<string> {
+    return new Set([...ended].filter(([a, r]) => !active.has(a) && /^stopped\b/.test(r.reason ?? '')).map(([a]) => a));
+}
 export function isJobEnded(assigned: { at?: number } | undefined, status?: JobRunStatus): boolean {
     if (!status || status.active || !status.ended) return false;
     const reason = status.ended.reason ?? '';
@@ -714,6 +720,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     for (const [acctLower, rec] of endedAccounts) {
         if (!activeAccounts.has(acctLower) && /^died\b/.test(rec.reason ?? '')) diedAccounts.add(acctLower);
     }
+    const stoppedEnds = stoppedAccounts(endedAccounts, activeAccounts);
     const { paused, swarmStopped } = pauses(new Map(listedNames.flatMap(n => { const t = stopText(n); return t === undefined ? [] : [[n, t] as const]; })));
     const queue=readJson(join(prac,'coordinator/state.json'),null);
     if(swarm.coordination?.enabled&&(!queue||queue.version!==1||!Array.isArray(queue.tasks)))return['AUTOPILOT hold: owning coordinator queue is unavailable'];
@@ -804,8 +811,9 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     };
     const plannable = plannableAccounts(swarm.jobs, side, listed.filter(n => {
         const lower = n.toLowerCase();
-        return plannerOwns(owners, side, lower, reserved, diedAccounts);
+        return plannerOwns(owners, side, lower, reserved, diedAccounts) && !stoppedEnds.has(lower);
     }), keep);
+    for (const n of listed.filter(n => stoppedEnds.has(n.toLowerCase())).sort()) log.push(`AUTOPILOT vacant ${n}: vacant: the swarm holds its stopped end (${endedAccounts.get(n.toLowerCase())?.reason}); a person clears it`);
     const accounts = [...plannable, ...squadRestockAccounts(swarm, listed, owners, side, paused, diedAccounts, plannable)]
         .map(n => offlinePlace(accountFrom(n, side, observed(n), id => byId.get(id)), observed(n), now));
     // Coin donors: this side's accounts with no enabled swarm or coordinator job, no stop file and no open order, as
