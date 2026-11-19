@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import {
     attackable, battleaxeWarcryMath, bestDamageSpell, bestFood, canCastChargeNow, castableFreeze, chargeVarpTicks, combatPrayers, dangerReason, defaultSpec, defaultStunSpec,
-    estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, ITEMS, killMessage, lowHealth,
+    estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, isDying, ITEMS, killMessage, lowHealth, rewearStart,
     kitRotation, meleeWeaponDelay, negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, pickFakieWeapon,
     deathRisk, deathSkullFields, itemCostOf, ownSkull,
     pickFrozenKiteTile, pickWeighted, planPrayerTick, PRAYER, protectedStyles, seededRandom, shouldComboEat, skulled,
@@ -1096,4 +1096,38 @@ test('an antipoison goes down in the first tick after the poison by default, and
     expect(await antipoisonTick(undefined)).toBe(11);
     expect(await antipoisonTick(true)).toBe(11);
     expect(await antipoisonTick(false)).toBeGreaterThan(11);
+});
+
+test('isDying: a health bar at 0 is a target that is dying, and lowHealth is true there', () => {
+    const seen = { headicons: 0, worn: [], health: 0, totalHealth: 99, spotanim: -1 };
+    expect(isDying(seen)).toBe(true);
+    expect(lowHealth(seen, 0.3)).toBe(true);
+    expect(isDying({ ...seen, health: 1 })).toBe(false);
+    // No health bar yet (the target has not been hit) is not dying, and neither is no observation.
+    expect(isDying({ ...seen, totalHealth: 0 })).toBe(false);
+    expect(isDying(null)).toBe(false);
+});
+
+test('rewearStart wears the starting armour that sits in the pack with its slot empty, and nothing else', async () => {
+    // Rune full helm 1163 (hat), rune platebody 1127 (torso, worn), rune platelegs 1079 (legs), dragon dagger 1215 (weapon), and an item the account did not wear at the start.
+    const used: [number, number][] = [], logs: string[] = [];
+    const wear = [{ text: 'Wear', opIndex: 2 }];
+    const s: any = { sdk: {
+        getState: () => ({ equipment: [{ id: 1127, slot: 4 }] }),
+        getInventory: () => [{ id: 1163, slot: 3, optionsWithIndex: wear }, { id: 1079, slot: 4, optionsWithIndex: wear }, { id: 1215, slot: 5, optionsWithIndex: wear }, { id: 1201, slot: 6, optionsWithIndex: wear }],
+        sendUseItem: async (slot: number, op: number) => { used.push([slot, op]); },
+    } };
+    let ticks = 0;
+    expect(await rewearStart(s, [1163, 1127, 1079, 1215], l => logs.push(l), async () => { ticks++; return true; })).toBe(2);
+    expect(used).toEqual([[3, 2], [4, 2]]);
+    expect(ticks).toBe(2);
+    expect(logs).toEqual(['PK wore 2 pieces of the starting armour again']);
+    // Nothing missing, nothing to wear.
+    used.length = 0;
+    expect(await rewearStart(s, [1127], undefined, async () => true)).toBe(0);
+    expect(used).toEqual([]);
+});
+
+test('isDying guards the freeze and the special: not read here, see the fight loop; the helper is the test of the rule', () => {
+    expect(isDying({ headicons: 0, worn: [], health: 0, totalHealth: 70, spotanim: -1 })).toBe(true);
 });
