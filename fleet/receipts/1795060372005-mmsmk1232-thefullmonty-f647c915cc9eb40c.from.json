@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795060372005-mmsmk1232-thefullmonty-f647c915cc9eb40c",
+ "account": "mmsmk1232",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 16,
+ "claim": "553df4e5-95ea-4d2a-b419-8012c2d48d00",
+ "count": 0,
+ "ok": false,
+ "at": 1795060378420,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Iron arrow",
+   "requested": 114,
+   "count": 0
+  }
+ ]
+}
