@@ -1214,6 +1214,13 @@ const ROUTE_CASES: BenchCase[] = [
   // pair of the two cases above with the skulled gang; the `PK died` line holds skull=, keeps= and lost= of the last tick alive.
   run1Squad('extra:clone-run1-unskulled-x1', {prayer: false, prey: '0,1,0', unskulled: true}),
   run1Squad('extra:clone-run1-unskulled-prayer-x1', {prayer: true, prey: '0,1,0', unskulled: true}),
+  // The prayer of the gang (research/gang-clones.md, "The prayer of the gang"): a gang account prays against the weapon of the member it
+  // faces and no other (facedPrayer), and the tank lock (SQUAD_TANK): the faced members 0 and 1 hold melee, members 2 and 3 hold ranged.
+  // The controls are extra:clone-run1-x1 and extra:clone-run1-prayer-x1.
+  run1Squad('extra:clone-run1-faced-x1', {prayer: false, prey: '0,1,0', gang: {facedPrayer: true}}),
+  run1Squad('extra:clone-run1-faced-prayer-x1', {prayer: true, prey: '0,1,0', gang: {facedPrayer: true}}),
+  run1Squad('extra:clone-run1-tank-x1', {prayer: false, prey: '0,1,0', gang: {facedPrayer: true}, args: ['SQUAD_TANK=0,1']}),
+  run1Squad('extra:clone-run1-tank-prayer-x1', {prayer: true, prey: '0,1,0', gang: {facedPrayer: true}, args: ['SQUAD_TANK=0,1']}),
   // Which behaviour of the clones sets the length of a fight: a gang that never eats (eatAt 0), and a gang whose protect prayer
   // never comes on (every weapon change waits the whole window).
   // Who stands where the gang goes first: the two rune members first, or all four in rune (the loadouts of TrouserSnake and TheFullMonty).

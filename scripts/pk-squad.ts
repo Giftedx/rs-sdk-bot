@@ -712,12 +712,16 @@ if (import.meta.main) {
         threats = new ThreatWatch({ sessions: () => squad, server: squadServer, friends: new Set(ours.map(n => n.toLowerCase())), radar, log, act: to.act, cooldown: to.cooldown, odds: to.odds,
             decide: { expected: to.expectedTargets ? targets : new Set<string>() } });
     }
+    const tankList = (env.SQUAD_TANK ?? '').split(',').filter(x => /^[0-9]+$/.test(x)).map(Number);
     const results = await Promise.all(squad.map(s => {
         const kit = kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []);
         const stunSpec = defaultStunSpec(kit);
         return hold(s, {
             targets, post, threats,
-            options: sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200),
+            // SQUAD_TANK=<member index>,...: the tank lock (bench only): the listed members hold melee and every other member holds
+            // ranged. A gang account prays against the weapon of the member it faces (live run 3), so the faced member's melee turns
+            // draw Protect from Melee and the bow shots of the others meet no overhead.
+            options: { ...sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200), ...(tankList.length ? { rotation: [tankList.includes(squad.indexOf(s)) ? 'melee' as const : 'ranged' as const] } : {}) },
             ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
             allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), run: runDeaths,
             onDeath: near => { recordPvpDeath({ account: s.name, server: squadServer, at: Date.now(), script: 'scripts/pk-squad.ts', near }); }, deadline,

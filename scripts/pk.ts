@@ -223,6 +223,10 @@ export type FightOptions = {
     // In multi-way combat, against two or more players that face us or an ally, the overhead prayer covers the style
     // most of them hold (a crowd's hits all carry the source we face, so the last hitter names no one).
     crowdPrayer?: boolean;
+    // The overhead covers the weapon of the player that we face and no other (research/gang-clones.md "The prayer of the gang": in live run 3 a
+    // gang account's protect prayer equals the weapon class of the account it faces in 98 of 107 swaps, and never goes to Protect from Magic).
+    // The hits of another player and the crowd rule do not change it.
+    facedPrayer?: boolean;
     // The ticks over which exitOnDanger's damage race is read (default 30).
     raceWindow?: number;
     // false: exitOnDanger leaves on no food, two attackers and no prayer, not on a lost damage race.
@@ -1340,7 +1344,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         if (process.env.PK_TRACE === '1') log(`PKT ${result.ticks} hp=${me.hp} run=${me.runEnergy ?? '?'} at=${at.x},${at.z} t=${target.x},${target.z} th=${seen?.health}/${seen?.totalHealth} hi=${seen?.headicons} w=${seen?.worn.join('.')} pp=${state.prayers.prayerPoints} na=${nextAttack - start} hits=${hits.map(h => h.damage).join('.')} dealt=${result.dealt} ev=${state.combatEvents.length} inv=${inv.length}`);
         const prayerBase = state.skills.find(k => k.name === 'Prayer')?.baseLevel ?? 99;
         const lastHit = [...hits].reverse().find(h => now - h.tick <= 10);
-        const hitter = lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
+        const hitter = !o.facedPrayer && lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
         if (seen) {
             const shown = weaponStyle(seen.worn[3]);
             predictor.observe(shown);
@@ -1355,7 +1359,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const countered = o.counterRead && shownGuard && predictor.seen().size === 2 && left.length === 1 ? left[0]! : null;
         const predicted = o.predictPrayer && !hitter && (!o.snapPrayer || now >= oppDue - (o.snapLead ?? 1)) ? countered ?? predictor.predict() : null;
         // crowdPrayer: two or more players face us: the overhead covers the style that most of them hold.
-        const crowdStyle = o.crowdPrayer && facers.length >= 2 && isMulti(at.x, at.z) ? (() => {
+        const crowdStyle = o.crowdPrayer && !o.facedPrayer && facers.length >= 2 && isMulti(at.x, at.z) ? (() => {
             const n = new Map<Style, number>();
             for (const p of facers) { const w = observePlayer(s.client, p.index); const st = weaponStyle(w?.worn[3]); n.set(st, (n.get(st) ?? 0) + 1); }
             return [...n].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
