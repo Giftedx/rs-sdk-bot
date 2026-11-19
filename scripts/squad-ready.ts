@@ -155,13 +155,13 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     const weapon = owned.filter(i => blade(i) && canWear(i)).sort((x, y) => rank(y) - rank(x))[0];
     wear(weapon, SLOT.righthand!);
     if (!weapon) needs.push({ what: 'melee weapon with a special attack or a rune blade', count: 1, blocking: true, ...(benchWorn.get(SLOT.righthand!) ? { id: benchWorn.get(SLOT.righthand!)!.id } : {}), accept: i => blade(i) && canWear(i) && g(i)!.tradeable !== false });
-    // Bow and arrows: the bow with the most ranged attack, and the cheapest arrows that it fires (tier at or under the
+    // Bow and arrows: the bow with the most ranged attack, and the strongest arrows that it fires (tier at or under the
     // bow's tier) with the bench kit's count, else the largest stack.
     const isBow = (i: Item) => { const row = g(i); return !!row && row.slot === 'righthand' && row.tier !== undefined && BOW.test(row.name) && !CROSSBOW.test(row.name); };
     const bow = owned.filter(i => isBow(i) && canWear(i)).sort((x, y) => (g(y)!.bonuses.rangeAttack ?? 0) - (g(x)!.bonuses.rangeAttack ?? 0))[0];
     const wantArrows = kit.equipment.find(e => e.slot === 13)?.count ?? 300, bowTier = bow ? g(bow)!.tier! : 1;
     const fires = (i: Item, tier: number) => { const row = g(i); return !!row && row.slot === 'quiver' && /arrow$/i.test(row.name) && (row.tier ?? 99) <= tier; };
-    const stacks = owned.filter(i => fires(i, bowTier)).sort((x, y) => (g(x)!.tier ?? 0) - (g(y)!.tier ?? 0));
+    const stacks = owned.filter(i => fires(i, bowTier)).sort((x, y) => (g(y)!.tier ?? 0) - (g(x)!.tier ?? 0));
     const benchBow = benchPiece(row => BOW.test(row.name)), benchArrow = kit.equipment.find(e => e.slot === 13)?.id;
     // Arrows as strong as the bench kit's first: the first live pilot shot bronze arrows on two accounts.
     const strength = (i: Item) => g(i)!.bonuses.rangeStrength ?? 0, benchStrength = benchArrow !== undefined ? gear.get(benchArrow)?.bonuses.rangeStrength ?? 0 : 0;

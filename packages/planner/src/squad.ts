@@ -5,16 +5,21 @@
 // The table holds the estimates of the gang-hunt session per squad hour of four members, [low, high]: food in shark
 // units at the cost of the two live pilots (300 to 410; the bench cost is 30 to 40), arrows and runes. A line's target
 // is the middle of its range, per member, for SQUAD_HOURS hours.
+// The supply is the best of each kind, not the cheapest: rune arrows (the magic shortbow fires them) and sharks.
 
 export const SQUAD_SIZE = 4, SQUAD_HOURS = 4;
 export const SQUAD_HOURLY: Readonly<Record<string, readonly [low: number, high: number]>> = {
-    food: [300, 410], 'iron arrow': [550, 760], 'earth rune': [270, 375], 'water rune': [270, 375], 'nature rune': [180, 250], 'antipoison(3)': [3, 5],
+    food: [300, 410], arrow: [550, 760], 'earth rune': [270, 375], 'water rune': [270, 375], 'nature rune': [180, 250], 'antipoison(3)': [3, 5],
 };
 // Each member also holds this many for the escape (Teleport to Varrock, Wind Strike away from a fight).
 export const SQUAD_ESCAPE: Readonly<Record<string, number>> = { 'law rune': 2, 'air rune': 10 };
-// One food line by the HP an item heals: the fleet holds lobsters, and a shark heals 20. Demand is in shark units.
+// The arrows that count toward the arrow line, best first. A row asks for these, and the supply jobs make rune arrows.
+export const SQUAD_ARROWS: readonly string[] = ['rune arrow', 'adamant arrow'];
+// What a member holds counts by the HP an item heals (a lobster held is still food); new food is sharks. Demand is in shark units.
 export const SQUAD_FOOD_HEAL: Readonly<Record<string, number>> = { shark: 20, swordfish: 14, lobster: 12 };
 export const SQUAD_FOOD = Object.keys(SQUAD_FOOD_HEAL);
+// The names that a row of a line asks for: sharks for food, the best arrows for the arrow line, else the item itself.
+export const squadLineNames = (item: string): string[] => item === 'food' ? ['shark'] : item === 'arrow' ? [...SQUAD_ARROWS] : [item];
 
 export type SquadBlock = { active?: unknown; members?: unknown; hours?: unknown };
 // `maxCoins`: the most the rows ask in coins at the shop price in ONE PASS (a budget of outstanding demand, not a total: as stock
@@ -44,6 +49,7 @@ export const squadTarget = (item: string, hours: number): number => {
 };
 // What a member holds of a line, in the line's units: food as shark units by heal.
 export function squadHeld(item: string, items: Readonly<Record<string, number>>): number {
+    if (item === 'arrow') return SQUAD_ARROWS.reduce((n, arrow) => n + (items[arrow] ?? 0), 0);
     return item === 'food' ? Object.entries(SQUAD_FOOD_HEAL).reduce((n, [food, heal]) => n + (items[food] ?? 0) * heal / SQUAD_FOOD_HEAL.shark!, 0) : items[item] ?? 0;
 }
 // The most of each item a squad member keeps for the squad, by item name: a donor that is a member gives only what it
@@ -51,6 +57,7 @@ export function squadHeld(item: string, items: Readonly<Record<string, number>>)
 export function squadKeeps(hours: number): Record<string, number> {
     const keeps: Record<string, number> = { ...SQUAD_ESCAPE };
     for (const item of Object.keys(SQUAD_HOURLY)) {
+        if (item === 'arrow') { for (const arrow of SQUAD_ARROWS) keeps[arrow] = squadTarget(item, hours); continue; }
         if (item !== 'food') { keeps[item] = squadTarget(item, hours); continue; }
         for (const food of SQUAD_FOOD) keeps[food] = Math.ceil(squadTarget('food', hours) * SQUAD_FOOD_HEAL.shark! / SQUAD_FOOD_HEAL[food]!);
     }
@@ -58,24 +65,24 @@ export function squadKeeps(hours: number): Record<string, number> {
 }
 
 // The demand rows of an active squad: each line a member holds fewer of than its target, and each escape item it lacks. Food
-// is sized in lobsters (the fleet's food: 20/12 of a shark unit each), so the lobster chain sees the whole food demand. The
-// rows are priced with `price` (the plan's price table; a missing price falls back to SQUAD_UNIT_COST of the supply table or
-// 150 for food) and kept in line order while they fit `maxCoins`.
-const FOOD_UNIT_COINS = 150;
+// is sized in sharks and the arrow line in rune arrows (squadLineNames). The rows are priced with `price` (the plan's price
+// table; a missing price falls back to SQUAD_UNIT_COST of the supply table or 300 for a shark) and kept in line order while
+// they fit `maxCoins`.
+const FOOD_UNIT_COINS = 300;
 export function squadRows(squad: SquadInput | undefined, price: (item: string) => number | undefined = () => undefined, unitCost: Readonly<Record<string, number>> = {}): SquadRow[] {
     if (!squad?.active) return [];
     const rows: SquadRow[] = [];
     let budget = squad.maxCoins ?? SQUAD_MAX_COINS;
     for (const m of squad.members) {
         const lines: [string, string[], number][] = [
-            ...Object.keys(SQUAD_HOURLY).map(item => [item, item === 'food' ? SQUAD_FOOD : [item], squadTarget(item, squad.hours)] as [string, string[], number]),
+            ...Object.keys(SQUAD_HOURLY).map(item => [item, squadLineNames(item), squadTarget(item, squad.hours)] as [string, string[], number]),
             ...Object.entries(SQUAD_ESCAPE).map(([item, n]) => [item, [item], n] as [string, string[], number]),
         ];
         for (const [item, names, target] of lines) {
             const units = Math.max(0, Math.ceil(target - squadHeld(item, m.items)));
             if (units <= 0) continue;
-            const short = item === 'food' ? Math.ceil(units * SQUAD_FOOD_HEAL.shark! / SQUAD_FOOD_HEAL.lobster!) : units;
-            const coins = short * (price(item === 'food' ? 'lobster' : item) ?? unitCost[item] ?? (item === 'food' ? FOOD_UNIT_COINS : 0));
+            const short = units, first = names[0]!;
+            const coins = short * (price(first) ?? unitCost[first] ?? (item === 'food' ? FOOD_UNIT_COINS : 0));
             if (coins > budget) continue;
             budget -= coins;
             rows.push({ account: m.name.toLowerCase(), names, short, target, consumer: `gang squad ${m.name}: ${item}` });
