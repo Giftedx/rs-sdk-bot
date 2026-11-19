@@ -117,7 +117,6 @@ async function knifeFishing(d:FishDriver,o:FishBatchOptions,state:()=>BotWorldSt
  if(!knifeCut(initial.inventory,k.make1))throw Error('knife fishing needs a knife and logs');
  const freeRequired=o.method==='bigNet'?9:1,bait0=profile.bait?count(initial,profile.bait):0;
  let held=fishCount(initial,o.method),seenXp=xp(initial),caught=0,dropped=0,cycles=0,stands=0,progress=start,searches=0,missingSince=start;
- // Cycles and catches by the state at the start of the cycle: a modal open, the spot moved during it, or neither.
  const cycleStats:Record<string,{cycles:number;catches:number}>={};let lastLevel=initial.skills.find(k=>k.name==='Fishing')?.baseLevel??0;
  const observe=(drops:number)=>{
   const s=state(),now=fishCount(s,o.method),x=xp(s);
@@ -141,20 +140,27 @@ async function knifeFishing(d:FishDriver,o:FishBatchOptions,state:()=>BotWorldSt
   const drops:FishAction[]=drop?[{type:'dropItem',slot:drop.slot}]:[],n=drop&&products.includes(drop.id)?1:0;
   const click:FishAction={type:'interactNpc',npcIndex:spot.index,optionIndex:profile.op};
   cycles++;
+  const lv=s.skills.find(k=>k.name==='Fishing')?.baseLevel??0,x0=xp(s),kind=lv>lastLevel?'levelUp':'steady';lastLevel=lv;
+  // The close goes first in tick T. A level-up in the roll of the last cycle leaves the levelup script paused on its
+  // chat box (levelup.rs2 p_pausebutton) with protected access, and the server refuses the drop and the knife of a
+  // protected script (Player.ts runScript); the close ends that script and the protected access (Player.ts
+  // closeModal). Without it the cycle after each level-up gives no roll: 24 of 24 such cycles caught nothing from
+  // Fishing 74 to 99 (FISH_CYCLES, extra:fishing-lumbridge-fly-74-99 seeds 7, 8, 9).
+  const close:FishAction={type:'closeModal'};
   if(reset==='same'){
-   // The drop goes first: it ends the pending action (OpHeldHandler.ts:54-55). The close after the click clears the
-   // queued cut at the queue pass of this tick (Player.ts:998-1000) when the server refuses the click (a spot about to
-   // move is delayed, OpNpcHandler.ts:27), and leaves the interaction alone.
-   const lv=s.skills.find(k=>k.name==='Fishing')?.baseLevel??0,x0=xp(s),kind=`${lv>lastLevel?'lvl-':''}${s.modalOpen?'modal-':''}${s.dialog?.isOpen?'dialog-':''}${drops.length?'drop':'nodrop'}`;lastLevel=lv;
-   await send([...drops,...cut,click,{type:'closeModal'}]);await d.step();observe(n);await d.step();observe(0);await d.step();const e=observe(0);
-   const moved=!e.nearbyNpcs.some(m=>m.index===spot.index&&m.x===spot.x&&m.z===spot.z),b=cycleStats[moved?'moved':kind]??={cycles:0,catches:0};b.cycles++;if(xp(e)>x0)b.catches++;
+   // The drop goes first after the close: it ends the pending action (OpHeldHandler.ts:54-55). The close after the
+   // click clears the queued cut at the queue pass of this tick (Player.ts:998-1000) when the server refuses the click
+   // (a spot about to move is delayed, OpNpcHandler.ts:27), and leaves the interaction alone.
+   await send([close,...drops,...cut,click,close]);await d.step();observe(n);await d.step();observe(0);await d.step();
   }else{
-   await send(cut);await d.step();observe(0);
-   await send(drops.length?drops:[{type:'closeModal'}]);await d.step();s=observe(n);
+   await send([close,...cut]);await d.step();observe(0);
+   await send(drops.length?drops:[close]);await d.step();s=observe(n);
    // A spot that moved gets no click (it would walk and roll late); the next cycle stands beside it first.
    if(s.nearbyNpcs.some(m=>m.index===spot.index&&m.x===spot.x&&m.z===spot.z))await send([click]);
-   await d.step();observe(0);
+   await d.step();
   }
+  // Cycles and catches after a level-up, after a spot move and in the steady loop (FISH_CYCLES).
+  const e=observe(0),moved=!e.nearbyNpcs.some(m=>m.index===spot.index&&m.x===spot.x&&m.z===spot.z),b=cycleStats[moved?'moved':kind]??={cycles:0,catches:0};b.cycles++;if(xp(e)>x0)b.catches++;
  }
  console.log(`FISH_CYCLES ${JSON.stringify(cycleStats)}`);
  const final=state();if(xp(final)<=xp(initial))throw Error('fishing target unobserved');
