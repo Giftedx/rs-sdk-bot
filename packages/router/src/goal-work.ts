@@ -2,7 +2,8 @@ import {boundAccounts,deadRoots,provisionRefs,type CoordinatorState,type CoordTa
 import type {OwnerGoals} from './goal-scoreboard';
 
 export interface GoalWorkValue {value:number|null;reason:string;consumers:string[]}
-export interface GoalWorkContext {entryOf?:(capability:string)=>string|undefined}
+// `loginAfter(account, at)`: a login attempt of the account began after `at`, or that cannot be excluded.
+export interface GoalWorkContext {entryOf?:(capability:string)=>string|undefined;loginAfter?:(account:string,at:number)=>boolean}
 const key=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'');
 const combat=new Set(['attack','strength','defence','ranged','magic','prayer','hitpoints']);
 const pkEntries=new Set(['scripts/pk-hunt.ts','scripts/pk-roam.ts','scripts/pk-army.ts']);
@@ -41,7 +42,15 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
   const name=key(row.name),old=observations.get(name);
   if(!old||row.at>old.at)observations.set(name,row);
  }
- const bankKnown=(account:string)=>{const own=observations.get(key(account));return own&&fresh(own.bankAt,now)&&own.bankAt<=own.at&&Array.isArray(own.bank);};
+ // The last bank read is known for 5 minutes. After the session ended (a result in its status row) it stays known until a
+ // newer login attempt of the account begins (context.loginAfter): a closed account's bank does not change, and an
+ // inspection login would only read what is here already.
+ const bankKnown=(account:string)=>{
+  const own=observations.get(key(account));
+  if(!own||!Array.isArray(own.bank)||!validTime(own.bankAt,now)||!(own.bankAt<=own.at))return false;
+  if(fresh(own.bankAt,now))return true;
+  return !!own.result&&context.loginAfter?.(account,own.bankAt)===false;
+ };
  const supplyLines=(id:number)=>goals.collection.missing.filter(line=>line.id===id&&line.consumer.trim()&&line.consumer!=='unresolved named supply'&&line.need>line.owned);
  const termsByTask=new Map<string,Map<string,number>>();
  const direct=(task:CoordTask):GoalWorkValue=>{

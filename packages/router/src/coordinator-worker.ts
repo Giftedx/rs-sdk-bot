@@ -80,7 +80,9 @@ export async function buildReviewGate(input:{root:string;isolated:boolean;entry:
    // The first replay runs alone: an error there (the worker did not open its recorded account) repeats for each
    // record, so it stops the others. After it the rest run together; the result list keeps the order of the records.
    const first=await replay(records[0]!);replays.push(first);
-   if(first.status!=='error')replays.push(...await Promise.all(records.slice(1).map(file=>replay(file))));
+   // allSettled, not all: a replay that rejects must not end the wait while the other still runs in the scratch root that
+   // the finally below deletes. A rejection is an error outcome of that record.
+   if(first.status!=='error')replays.push(...(await Promise.allSettled(records.slice(1).map(file=>replay(file)))).map((r,i):ReplayOutcome=>r.status==='fulfilled'?r.value:{status:'error',file:records[i+1],error:String((r.reason as Error)?.message??r.reason)}));
   }
  }finally{if(scratch)removeReplayRoot(scratch);}
  return reviewGate({scope,records:records.length,replays,allow:input.allow});

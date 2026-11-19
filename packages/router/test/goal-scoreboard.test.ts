@@ -93,7 +93,7 @@ test('fresh owned skill ranks count wins and stale or foreign rank claims cannot
   status('Wrong',{ranksAt:NOW-1000,ranks:[{board:'Magic',rank:1,level:99,server:'localhost:8888'}]}),
  ]});
  expect(g.specialists.rank1s.map(r=>[r.account,r.board])).toEqual([['winner','Ranged']]);
- expect(g.specialists.targets.map(t=>t.board).sort()).toEqual(['Agility','Ranged']);
+ expect(g.specialists.targets.map(t=>t.board).sort()).toEqual(['Agility','Attack','Ranged']);
  expect(g.metrics['specialists.rank1:winner:Ranged']).toBe(1);
 });
 

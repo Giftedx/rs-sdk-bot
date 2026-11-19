@@ -16,6 +16,7 @@
 // --daemon: a pass every 10 minutes, and one within TRAINER_POLL_MS of a planner trainer's ok RESULT (its target level
 // is met and its job does not repeat, so the account would otherwise sit ended until the timer).
 // Run beside DEMO_OK=1 bun scripts/swarm.ts and bun scripts/fleet-agent.ts --daemon, with FLEET_SIDE set.
+import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -55,7 +56,7 @@ import { COORDINATOR_JOBS_FILE } from '../packages/core/src/coordinator-jobs';
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
 const PASS_EVERY_MS = 10 * 60_000, TRAINER_POLL_MS = 30_000;
 const PAUSED = 'AUTOPILOT hold: swarm is paused';
-export const OFFLINE_GUARDED = new Set(['haggis', 'shaftshooter', 'polevaulter']);
+export const OFFLINE_GUARDED = new Set(RESERVED_ACCOUNTS);
 // A pass that changes the resources this plan's enabled jobs hold publishes the side's claim at once. Other sides plan
 // against origin's claims (newestClaims), and a claim that waits for the fleet agent's next sync (up to 10 minutes)
 // lets two sides give the same knight place in that window.
