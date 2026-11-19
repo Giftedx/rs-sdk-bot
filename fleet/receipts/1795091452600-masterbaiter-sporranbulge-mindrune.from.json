@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795091452600-masterbaiter-sporranbulge-mindrune",
  "account": "Masterbaiter",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Mind rune",
  "requested": 2,
  "claim": "30f89126-a2da-4bb0-a28b-54abfb94d5b8",
- "count": 0,
- "ok": false,
- "at": 1795091533054,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795091593199,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795091579280
+ },
+ "logout": {
+  "attemptId": "1795091533062-0000004196-0000000001",
+  "at": 1795091593190,
+  "sha256": "7431046b66c2d81dccbddb0d94ae2d68a0f4c3d8235333c75f291c75d2608d9a"
+ },
+ "screen": true
 }
