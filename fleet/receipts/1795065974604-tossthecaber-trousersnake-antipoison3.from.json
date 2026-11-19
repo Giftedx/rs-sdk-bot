@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795065974604-tossthecaber-trousersnake-antipoison3",
+ "account": "TossTheCaber",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 3,
+ "claim": "847e5e6d-e16f-4c8e-98fe-bc74348b43d1",
+ "count": 0,
+ "ok": false,
+ "at": 1795066015309,
+ "detail": "trade claimed"
+}

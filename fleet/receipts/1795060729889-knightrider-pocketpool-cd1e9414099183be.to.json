@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795060729889-knightrider-pocketpool-cd1e9414099183be",
  "account": "PocketPool",
  "partner": "KnightRider",
@@ -12,6 +12,12 @@
  "claim": "ac0c4552-22a3-4bb6-9635-7f0a14da3b91",
  "count": 0,
  "ok": false,
- "at": 1795061350381,
- "detail": "trade claimed"
+ "at": 1795066074211,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795061350390-0000020916-0000000001",
+  "at": 1795066074195,
+  "sha256": "f8dca293d387827310225a628c14b5373ea6b42c78de414057334ae7a9828f90"
+ },
+ "screen": false
 }
