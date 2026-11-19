@@ -1,0 +1,22 @@
+{
+ "id": "1795129724466-dipstick-bigchopper-runechainbody",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Dipstick",
+ "to": "Bigchopper",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795129724466,
+ "end": 1795132124466,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
