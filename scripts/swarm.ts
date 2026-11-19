@@ -331,10 +331,21 @@ export function runningJobState(parsed:ParsedJob,run:Pick<Run,'accounts'|'starte
 // stopped end with a result is the stop file's. A worker words its stop its own way (trooper and cow mode end
 // `fail mode=giant ... stop=stop-file`), so the rule does not look for one wording: live claude-cloud, five accounts
 // vacated for a fleet order stood 24 to 72 minutes with an enabled job. A death waits for a person; done is not a pause.
-export function standingRetryable(reason: string, result?: string, retry?:boolean): boolean {
-    if(retry===false)return false;
-    if (/^stopped after \d+ runs$/.test(reason)) return typeof result === 'string' && !/^(?:RESULT )?fail no food\b/.test(result);
-    return /^(?:blocked|gave-up)\b|^exit unknown$/.test(reason);
+export function supplyExhaustedResult(result?: string, env?: Record<string, string>): boolean {
+    if (typeof result !== 'string') return false;
+    if (/^(?:RESULT )?fail no food\b/.test(result) || /\bstop"?[=:]"?(?:supplies|input-insufficient)\b/.test(result)) return true;
+    const reserve = env?.BONE_RESERVE;
+    if (reserve !== undefined && /^\d+$/.test(reserve)) {
+        // Status lines truncate at 293 chars before train-prayer.ts prints stop=input-insufficient.
+        const match = result.match(/^(?:RESULT )?fail mode=prayer\b.*\bok=false\b.*\bburied=0\b.*\battempts=0\b.*\bboneBank=(\d+)\b.*\bheldBones=0\b/);
+        if (match && Number(match[1]) <= Number(reserve)) return true;
+    }
+    return false;
+}
+export function standingRetryable(reason: string, result?: string, retry?: boolean, env?: Record<string, string>): boolean {
+    if (retry === false) return false;
+    if (/^stopped after \d+ runs$/.test(reason)) return typeof result === 'string' && !supplyExhaustedResult(result, env);
+    return /^(?:blocked|gave-up)\b|^exit unknown$/.test(reason) && !supplyExhaustedResult(result, env);
 }
 // Whether the account of a retryable end is offline. `settled` is a confirmed logout on the live server. An account
 // with no status file has only that proof: without this rule its end stays for good.
@@ -602,9 +613,12 @@ export function observeEnabled(accounts: readonly string[], enabled: boolean, pr
     }
 }
 
-type CoordinatorResumeContext = {job:Job;paused:boolean;active:readonly string[];stopped:(account:string)=>boolean;settled:(account:string)=>boolean};
+type CoordinatorResumeContext = {
+    job:Job;paused:boolean;active:readonly string[];stopped:(account:string)=>boolean;settled:(account:string)=>boolean;
+    supplyExhausted?:(account:string,priorEnv?:Record<string,string>)=>boolean;
+};
 // A qualified coordinator install is an explicit new mission even when removing the old job hid its disable edge.
-// Its exact stopped end may resume after logout. Failures, unknown missions and the same mission keep their ends.
+// Its exact stopped end (or supply-exhausted blocked end) may resume after logout. Failures, unknown missions and the same mission keep their ends.
 function coordinatorResumeAccounts(accounts:readonly string[],ended:ReadonlyMap<string,EndRecord>,context:CoordinatorResumeContext):string[]{
     const job=context.job as Job & {coordinatorOwner?:string;coordinatorTask?:string;standing?:boolean};
     if(context.paused||!job.enabled||job.repeat!==false||job.standing||job.coordinatorOwner!=='coordinator'
@@ -612,11 +626,15 @@ function coordinatorResumeAccounts(accounts:readonly string[],ended:ReadonlyMap<
     const revision=missionSignature(job),active=new Set(context.active.map(a=>a.toLowerCase()));
     return accounts.filter(account=>{
         const key=account.toLowerCase(),end=[...ended].find(([name])=>name.toLowerCase()===key)?.[1];
-        if(!end||!/^stopped(?: after [1-9]\d* runs)?$/.test(end.reason)||!end.revision||end.revision===revision||active.has(key)||context.stopped(account))return false;
+        const stoppedReason=!!end&&/^stopped(?: after [1-9]\d* runs)?$/.test(end.reason);
+        const blockedReason=!!end&&/^blocked(?: after [1-9]\d* runs)?$/.test(end.reason);
+        if(!end||(!stoppedReason&&!blockedReason)||!end.revision||end.revision===revision||active.has(key)||context.stopped(account))return false;
         try{
             const prior=JSON.parse(end.revision);
             if(!Array.isArray(prior)||typeof prior[0]!=='string'||!prior[0].trim()||typeof prior[1]!=='boolean'
                 ||!Array.isArray(prior[2])||!prior[2].every((a:unknown)=>typeof a==='string')||!prior[2].some((a:string)=>a.toLowerCase()===key)||!Array.isArray(prior[3]))return false;
+            const priorEnv=Object.fromEntries(prior[3].filter((pair:unknown):pair is [string,string]=>Array.isArray(pair)&&typeof pair[0]==='string'&&typeof pair[1]==='string'));
+            if(blockedReason&&!context.supplyExhausted?.(account,priorEnv))return false;
             return context.settled(account);
         }catch{return false;}
     });
@@ -626,13 +644,19 @@ function coordinatorResumeAccounts(accounts:readonly string[],ended:ReadonlyMap<
 // A persistent failure needs a separate repair, and done is not a pause to clear.
 export function applyResume(accounts: readonly string[], active: boolean, ended: Map<string, EndRecord>, pending: Set<string>, clearStop: (a: string) => void,coordinator?:CoordinatorResumeContext): boolean {
     if (active) return false;
-    if(coordinator)for(const account of coordinatorResumeAccounts(accounts,ended,coordinator))pending.add(account.toLowerCase());
+    const supplyCleared=new Set<string>();
+    if(coordinator)for(const account of coordinatorResumeAccounts(accounts,ended,coordinator)){
+        const key=account.toLowerCase();
+        pending.add(key);
+        const entry=[...ended].find(([name])=>name.toLowerCase()===key);
+        if(entry&&/^blocked(?: after [1-9]\d* runs)?$/.test(entry[1].reason))supplyCleared.add(key);
+    }
     let changed=false;
     for (const a of accounts) {
         const key=a.toLowerCase();
         if (!pending.delete(key)) continue;
         const entry=[...ended].find(([name])=>name.toLowerCase()===key);
-        if (entry && (persistentEnd(entry[1].reason) || successfulEnd(entry[1].reason))) continue;
+        if (entry && ((persistentEnd(entry[1].reason) && !supplyCleared.has(key)) || successfulEnd(entry[1].reason))) continue;
         clearStop(a);
         if (entry) ended.delete(entry[0]);
         changed=true;
@@ -1003,6 +1027,10 @@ if (import.meta.main) {
             if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => clearSwarmStop(stopFile(a)),{
                 job,paused:existsSync(join(prac,'stop-coordinator')),active:resumeOwners,
                 stopped:a=>existsSync(stopFile(a))||existsSync(stopFile(a.toLowerCase())),settled:a=>defaultRepairProofs.readProof(a,LIVE_SERVER).state==='confirmed',
+                supplyExhausted:(a,priorEnv)=>{
+                    const s=(statuses as {name?:string;server?:string;result?:string}[]).find(row=>row?.name?.toLowerCase()===a.toLowerCase()&&row?.server===LIVE_SERVER);
+                    return supplyExhaustedResult(s?.result,priorEnv);
+                },
             }))
                 persistEnded(deathsFile, ended);
             const st: Record<string, string> = {};
@@ -1020,7 +1048,7 @@ if (import.meta.main) {
                     const key = [...ended.keys()].find(n => n.toLowerCase() === a.toLowerCase()), end = key ? ended.get(key) : undefined;
                     if (!end) continue;
                     let s: any; try { s = JSON.parse(readFileSync(join(prac, 'status', `${a}.json`), 'utf8')); } catch { /* no status file: the logout proof decides */ }
-                    if (!standingRetryable(end.reason, s?.result, job.standingRetry)) continue;
+                    if (!standingRetryable(end.reason, s?.result, job.standingRetry, job.env)) continue;
                     // A host-run account writes no status result; its confirmed producer logout (2 min old) shows it offline.
                     let settled = false;
                     try { const lp = readLogoutProof(a, LIVE_SERVER); settled = lp.state === 'confirmed' && Date.now() - lp.loggedOutAt >= 120_000; } catch { /* unreadable: use the status rule */ }

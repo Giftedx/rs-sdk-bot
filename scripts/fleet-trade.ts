@@ -9,6 +9,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { openBot, finish, countItems } from '../packages/core/src/bot';
+import { leaveElementalWorkshop } from './elemental-exit';
 import { walkTarget } from './walk-to';
 import type { Outcome } from '../packages/core/src/act';
 import { waitUntil } from '../packages/core/src/ticks';
@@ -401,6 +402,8 @@ if (import.meta.main) {
     try {
         await runOrderWork(order, async () => {
             const meet = order.meet ?? meetingTiles({ x: 3185, z: 3436 })!, tile = role === 'from' ? meet[0] : meet[1];
+            const exited = await leaveElementalWorkshop(s);
+            if (exited && !exited.ok) throw Error(`elemental workshop exit: ${exited.reason} ${exited.detail}`);
             // The planner has no land route between Ardougne and the east; walkTarget takes the ferries then (60 coins in the
             // pack). Live: a taker in Ardougne failed "no route to 3182,3440" for a Varrock West meet.
             const there = await walkTarget(s, tile, false) as Outcome;

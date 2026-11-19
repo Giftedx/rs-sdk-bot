@@ -219,6 +219,45 @@ for(const constraint of ['ordinary job','missing task','missing run','disabled j
  expect([...ended]).toEqual(before);expect(pending.size).toBe(0);expect(clears).toBe(0);
 });
 
+test('coordinator mission handoff clears supply-exhausted blocked ends with confirmed logout while keeping persistent failures held', () => {
+ const base=mkdtempSync(join(tmpdir(),'swarm-coordinator-supply-')),prac=join(base,'.practice'),account='Fingerblastr',runId='task-supply-handoff';
+ try{
+  mkdirSync(join(prac,'status'),{recursive:true});mkdirSync(join(prac,'coordinator/runs',runId),{recursive:true});
+  const source='a'.repeat(64);
+  const oldJob:Job & {standing?:boolean}={account,script:'scripts/alch-train.ts',args:['99','5000'],env:{ALCH_ITEM:'airrune'},goal:'train Magic to 99',standing:true,autopilot:'local',enabled:true,repeat:false};
+  writeFileSync(join(base,'swarm.json'),JSON.stringify({maxBots:25,minFreeGB:4,jobs:[oldJob]}));
+  const lifecycle=join(prac,'session-lifecycle');
+  let clock=Date.now()-1000;
+  const attempt=beginSessionAttempt({account,server:'rs-sdk-demo.fly.dev'},{root:lifecycle,now:()=>clock,
+   owner:{pid:999999,coordinatorRunId:null,workerRelease:source,script:oldJob.script,role:'combat',participants:null}});
+  const created=Number(attempt.attemptId.split('-')[0]);
+  clock=created+2;attempt.record('ready');clock=created+10;attempt.record('ended','logged-out');attempt.record('closed');
+  writeFileSync(join(prac,'status',account+'.json'),JSON.stringify({name:account,server:'rs-sdk-demo.fly.dev',goal:oldJob.goal,at:created+20,started:created+1,
+   sessionAttemptId:attempt.attemptId,workRevision:source,workEntry:oldJob.script,result:'fail alch level=98 stop=supplies failure=no alch progress'}));
+  writeFileSync(join(prac,'swarm-runs.json'),'[]');
+  const endFile=join(prac,'swarm-deaths.json');
+  persistEnded(endFile,new Map([[account,{at:created+30,reason:'blocked after 1 runs',revision:missionSignature(oldJob)}]]));
+  installJob({id:'courier-new',kind:'run',goal:'skills',account} as any,account,'scripts/coin-courier.ts',runId,'source',{},{base,freeGB:64});
+  const job=readCoordinatorJobs(base).jobs[0] as Job;
+  const handoff=(supply:boolean)=>({job,paused:false,active:[] as string[],stopped:()=>false,
+   settled:(name:string)=>readLogoutProof(name,'rs-sdk-demo.fly.dev',{root:lifecycle}).state==='confirmed',
+   supplyExhausted:()=>supply});
+  const blocked=loadEnded(endFile),pending=new Set<string>();
+  expect(applyResume([account],false,blocked,pending,()=>{},handoff(false))).toBe(false);
+  expect(blocked.has(account)).toBe(true);
+  expect(applyResume([account],false,blocked,pending,()=>{},handoff(true))).toBe(true);
+  expect(blocked.has(account)).toBe(false);
+  for(const reason of ['died','gave-up after 1 runs']){
+   const kept=new Map([[account,{at:100,reason,revision:missionSignature(oldJob)}]]);
+   expect(applyResume([account],false,kept,new Set(),()=>{},handoff(true))).toBe(false);
+   expect(kept.get(account)?.reason).toBe(reason);
+  }
+  const same=new Map([[account,{at:100,reason:'blocked after 1 runs',revision:missionSignature(job)}]]);
+  expect(applyResume([account],false,same,new Set(),()=>{},handoff(true))).toBe(false);
+  expect(same.has(account)).toBe(true);
+ }finally{rmSync(base,{recursive:true,force:true});}
+});
+
 test('mission identity includes actual work and canonical env but excludes display and enable fields', () => {
     const job = {account:'Ore',script:'scripts/gather-ore.ts',enabled:true,env:{B:'2',A:'1'}};
     const sig = missionSignature(job);
@@ -846,7 +885,7 @@ test('a run another job of the account started is foreign to a job that is off o
     expect(foreignRun(planned, planned[0]!, { revision: 'changed-mission' })).toBe(false);
 });
 
-import { SWARM_STOP, clearSwarmStop, swarmWroteStop, standingRetryable, standingRetryDue, writeSwarmStop, runningJobState } from './swarm';
+import { SWARM_STOP, clearSwarmStop, swarmWroteStop, standingRetryable, standingRetryDue, supplyExhaustedResult, writeSwarmStop, runningJobState } from './swarm';
 
 for(const [enabled,stopAll,label] of [[false,false,'disabled job'],[true,true,'global stop']] as const){
     test(`a running ${label} preserves the owner's pause through automatic resume`,()=>{
@@ -909,6 +948,21 @@ test('the controller knows its own stop files, and a standing job retries the en
     expect(standingRetryable('stopped after 1 runs', 'fail no food')).toBe(false);
     expect(standingRetryable('stopped after 1 runs', 'RESULT fail no food ticks=900')).toBe(false);
     expect(standingRetryable('stopped after 1 runs')).toBe(false);
+    const alchExhausted = 'fail alch level=98 gained=0 xp=0 strike=0 low=0 high=0 stop=supplies ticks=5 failure=no alch progress: the bank holds no supplies for one cast';
+    const prayerExhausted = 'fail mode=prayer ok=false gained=0 targetMet=false target=99 buried=0 attempts=0 initialBones=6 boneBank=6 heldBones=0 consumed=0 xpGain=0 initialXp=988950 finalXp=988950 finalLevel=98 stop=input-insufficient';
+    const prayerTruncated = 'fail mode=prayer ok=false gained=0 targetMet=false target=99 buried=0 attempts=0 initialBones=6 boneBank=6 heldBones=0 consumed=0 xpGain=0 initialXp=988950 finalXp=988950 finalLevel=98 firstBoneXp=0 rateVerified=false toggledOn=false toggledOff=true prayerPointsOn=0 prayerPointsFinal=9 bankOb';
+    const prayerNotExhausted = 'fail mode=prayer ok=false gained=0 targetMet=false target=99 buried=0 attempts=0 initialBones=12 boneBank=12 heldBones=0 consumed=0 xpGain=0 initialXp=988950 finalXp=988950 finalLevel=98 firstBoneXp=0';
+    expect(supplyExhaustedResult(alchExhausted)).toBe(true);
+    expect(supplyExhaustedResult(prayerExhausted)).toBe(true);
+    expect(supplyExhaustedResult(prayerTruncated, { BONE_RESERVE: '6' })).toBe(true);
+    expect(supplyExhaustedResult(prayerTruncated, { BONE_RESERVE: '5' })).toBe(false);
+    expect(supplyExhaustedResult(prayerNotExhausted, { BONE_RESERVE: '6' })).toBe(false);
+    expect(standingRetryable('blocked after 1 runs', alchExhausted)).toBe(false);
+    expect(standingRetryable('blocked after 1 runs', prayerExhausted)).toBe(false);
+    expect(standingRetryable('stopped after 1 runs', prayerExhausted)).toBe(false);
+    expect(standingRetryable('stopped after 1 runs', prayerTruncated, true, { BONE_RESERVE: '6' })).toBe(false);
+    expect(standingRetryable('blocked after 1 runs', 'fail no progress: target unreachable')).toBe(true);
+    expect(standingRetryable('blocked after 1 runs', prayerNotExhausted, true, { BONE_RESERVE: '6' })).toBe(true);
 });
 
 test('a finite standing job keeps admission but opts out of standing retries', () => {

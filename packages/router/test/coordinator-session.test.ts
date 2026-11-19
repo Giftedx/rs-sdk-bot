@@ -513,3 +513,45 @@ test('a parked coordinator job for the account does not hide the reservation row
  writeCoordinatorJobs(f.base,{...readCoordinatorJobs(f.base),jobs:[parked]});
  expect(liveAccountWait({kind:'run'} as any,['SquadOne'],f.base,()=>false)?.reason).toBe('reserved');
 });
+
+test('supply-exhausted autopilot jobs yield cleanly while non-supply blocked and persistent deaths stay held', () => {
+ const supplyState=(account:string,job:any,endReason:string,result:string)=>{
+  const f=fixture(),source='a'.repeat(64);
+  writeFileSync(join(f.base,'swarm.json'),JSON.stringify({maxBots:25,minFreeGB:4,jobs:[job]}));
+  const at=Date.now()-1000;let clock=at;
+  const attempt=beginSessionAttempt({account,server},{root:f.root,now:()=>clock,
+   owner:{pid:999999,coordinatorRunId:null,workerRelease:source,script:job.script,role:'combat',participants:null}});
+  const created=Number(attempt.attemptId.split('-')[0]);
+  clock=created+2;attempt.record('ready');clock=created+10;attempt.record('ended','logged-out');attempt.record('closed');
+  f.status(account,{goal:job.goal,result,at:created+20,started:created+1,sessionAttemptId:attempt.attemptId,workRevision:source,workEntry:job.script});
+  writeFileSync(join(f.base,'.practice/swarm-runs.json'),'[]');
+  writeFileSync(join(f.base,'.practice/swarm-deaths.json'),JSON.stringify({[account]:{at:created+30,reason:endReason,revision:missionSignature(job)}}));
+  return f;
+ };
+
+ const fingerJob={account:'Fingerblastr',script:'scripts/alch-train.ts',args:['99','5000'],env:{ALCH_ITEM:'airrune'},goal:'train Magic to 99 with alchemy',standing:true,enabled:true,repeat:false,autopilot:'local'};
+ const fAlch=supplyState('Fingerblastr',fingerJob,'blocked after 1 runs','fail alch level=98 stop=supplies failure=no alch progress');
+ const courierTask:any={id:'courier-test',kind:'run',goal:'skills',account:'Fingerblastr'};
+ expect(liveAccountWait(courierTask,['Fingerblastr'],fAlch.base,()=>false)).toBeNull();
+ expect(()=>installJob(courierTask,'Fingerblastr','scripts/coin-courier.ts','task-courier','source',{},{base:fAlch.base,preflight:true,freeGB:64})).not.toThrow();
+
+ const hocusJob={account:'Hocuspokeus',script:'scripts/train-prayer.ts',args:['99'],env:{BURY_HELD:'1',BONE_ID:'536',BONE_RESERVE:'6'},goal:'train Prayer to 99',standing:true,enabled:true,repeat:false,autopilot:'local'};
+ const truncatedPrayer='fail mode=prayer ok=false gained=0 targetMet=false target=99 buried=0 attempts=0 initialBones=6 boneBank=6 heldBones=0 consumed=0 xpGain=0 initialXp=988950 finalXp=988950 finalLevel=98 firstBoneXp=0 rateVerified=false toggledOn=false toggledOff=true prayerPointsOn=0 prayerPointsFinal=9 bankOb';
+ const fPray=supplyState('Hocuspokeus',hocusJob,'stopped after 1 runs',truncatedPrayer);
+ const buyTask:any={id:'buy-test',kind:'run',goal:'skills',account:'Hocuspokeus'};
+ expect(liveAccountWait(buyTask,['Hocuspokeus'],fPray.base,()=>false)).toBeNull();
+ expect(()=>installJob(buyTask,'Hocuspokeus','scripts/buy-owned-ge-item.ts','task-buy','source',{},{base:fPray.base,preflight:true,freeGB:64})).not.toThrow();
+
+ // A supply-exhausted second participant also yields for a composed ordinary run.
+ fAlch.attempt('Partner').record('ended','logged-out');
+ const composedTask:any={id:'composed-test',kind:'run',goal:'skills',participants:['Partner','Fingerblastr']};
+ expect(liveAccountWait(composedTask,['Partner','Fingerblastr'],fAlch.base,()=>false)).toBeNull();
+ expect(()=>installJob(composedTask,'Partner','scripts/coin-courier.ts','task-composed','source',{},{base:fAlch.base,preflight:true,freeGB:64})).not.toThrow();
+
+ // Non-supply blocked, died and gave-up ends still defer and refuse preflight install.
+ for(const [reason,result] of [['blocked after 1 runs','fail unknown stall'],['died after 1 runs','fail died stop=supplies'],['gave-up after 1 runs','fail stop=supplies']] as const){
+  const fBad=supplyState('Fingerblastr',fingerJob,reason,result);
+  expect(liveAccountWait(courierTask,['Fingerblastr'],fBad.base,()=>false)?.reason).toBe('autopilot-assignment');
+  expect(()=>installJob(courierTask,'Fingerblastr','scripts/coin-courier.ts','task-bad','source',{},{base:fBad.base,preflight:true,freeGB:64})).toThrow();
+ }
+});

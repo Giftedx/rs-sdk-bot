@@ -576,7 +576,7 @@ async function tick(state:CoordinatorState,config:any){
   }
   launchTask(state,task.id);
  }
- const planReason=diskLow||bounded?null:plannerDue(state,Date.now(),config.plannerIntervalMs??0,existsSync(planRequest));
+ const planReason=diskLow||bounded||plannerPaused()?null:plannerDue(state,Date.now(),config.plannerIntervalMs??0,existsSync(planRequest));
  const agent=plannerAgent(config.agents,state.tasks);
  if(planReason&&agent){
   if(existsSync(planRequest))unlinkSync(planRequest);
@@ -588,6 +588,7 @@ async function tick(state:CoordinatorState,config:any){
  const archived=archiveFinishedTasks(state);if(archived)event('tasks-archived',{count:archived,remaining:state.tasks.length});
  saveState(state);
 }
+export function plannerPaused(base=projectRoot):boolean{return existsSync(join(base,'.practice','stop-planner'));}
 export function plannerAgent(configured:readonly ModelWorker[]|undefined,records:readonly {status:string;agent?:ModelWorker;spec:{kind:string}}[]):ModelWorker|null{
  const allowed=(['codex','claude'] as const).filter(agent=>configured===undefined||configured.includes(agent));
  const preferred=assignedWorker('build',records.filter(r=>r.status==='running'&&r.spec.kind==='build'));

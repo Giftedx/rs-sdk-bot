@@ -1122,8 +1122,14 @@ test('the alchemy band gets its feathers at Port Sarim, its fire runes at Aubury
     const none = pick({}, { 'nature rune': 0 });
     expect(none.template!.id).toBe(KIT_BUY + 'army-alch-magic-99');
     expect(none.template!.args!.map(a => a.match(/ITEM_ID=(\d+)/)![1])).toEqual(['561']);
+    // An account with nature runes, fire staff, no air runes and no feathers restocks air runes at the Magic Guild.
+    const airRestock = pick({ Magic: 98 }, { 'nature rune': 373, 'staff of fire': 1 });
+    expect(airRestock.template!.id).toBe('army-air-guild');
+    expect(jobFor(airRestock, side)).toMatchObject({ args: [step('magic_guild', 600, 'air.rune', AIR_STOCK, 10000)], resources: ['shop:magic_guild'] });
+    // An account that still holds feathers keeps alching on feathers instead of making a Magic Guild trip.
+    expect(pick({ Magic: 80 }, { 'nature rune': 373, feather: 500, 'staff of fire': 1 }).template!.id).toBe('army-alch-magic-99');
     // Magic 99 needs none of it.
-    expect(['army-feathers-sarim', 'army-fire-aubury', 'army-staff-guild', 'army-nature-guild', 'army-alch-air-magic-99']).not.toContain(pick({ Magic: 99 }, {}).template?.id);
+    expect(['army-feathers-sarim', 'army-fire-aubury', 'army-staff-guild', 'army-nature-guild', 'army-air-guild', 'army-alch-air-magic-99']).not.toContain(pick({ Magic: 99 }, {}).template?.id);
 });
 
 test('an army account with no better blade buys one adamant scimitar before its Ranged and melee bands, four accounts at a time', () => {
