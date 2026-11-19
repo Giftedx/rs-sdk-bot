@@ -54,6 +54,7 @@ export const LOGISTICS_ROLES: readonly LogisticsRoleSpec[] = [
  {role:'walk-to',script:'scripts/walk-to.ts',description:'Walk account to any world coordinate (x, z, level) using doors/transports'},
  {role:'walk-edge',script:'scripts/pk-live/walk-edge.ts',description:'Walk to Edgeville bank through measured waypoints with a longer route planning budget'},
  {role:'restore-prayer',script:'scripts/pray-at-altar.ts',description:'Restore drained Prayer points at a nearby altar or an explicit ALTAR=x,z'},
+ {role:'cure-poison',script:'scripts/cure-poison.ts',description:'Drink one antipoison from the pack or the nearest bank'},
  {role:'relocate-bank',script:'scripts/relocate-bank.ts',description:'Relocate account to target bank safely'},
  {role:'relocate-knight',script:'scripts/relocate-knight.ts',description:'Relocate thieving account to Ardougne knight spot'},
  {role:'arrive-draynor',script:'scripts/arrive-draynor.ts',description:'Walk fresh account safely from Lumbridge to Draynor bank'},
