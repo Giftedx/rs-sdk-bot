@@ -711,6 +711,34 @@ deaths for the team of 3, the team of 5 and one ranger. The deaths limit is met 
 - **Not climbed:** target order, freeze use and `PILE` on top of `PROTECT=0.4`. The radar has no option for the first
   two (`threatOptions` reads `lose`, `protect`, `pile`, `theirFood`, `singleWayMin`, `cooldown`, `act`, `expected`, `odds`).
 
+## The skull of the gang
+
+The clones start skulled (kit `ganker-dds-skull`: varp 78 = 2000, as the live gang shows it), so a clone death keeps 1 item with
+Protect Item and 0 without. The live gang died unskulled in most deaths of run 3 (17 of 19), where a death keeps the 3 dearest
+items and no dagger drops (death.rs2 pvp_death_lose_items; pk_skull.rs2 skulls the attacker unless the target hit it first).
+The cases `extra:clone-run1-unskulled-x1` and `extra:clone-run1-unskulled-prayer-x1` are the cases `extra:clone-run1-x1` and
+`extra:clone-run1-prayer-x1` with the clones on the kit `ganker-dds` (no skull at the start); the engine's own skull rule then
+decides. Each `PK died to <name> after N ticks` line ends with ` skull=<0|1> keeps=<n> lost=<units> lostValue=<coins>`: the skull
+bit (head icon bit 1), the items that the death keeps and the units it loses, read on the last tick that the account was alive
+(the client clears the skull at the death itself). A gang account prints it with no tag; a squad member prints it with its tag.
+
+Hosted run 44437396087, seeds 1 to 8. Kills; clones dead; Hitpoints taken; the skull of the clone deaths (skull / keeps / lost):
+
+| Case | Kills | Clones dead | Hitpoints taken | Skull of the clone deaths |
+|---|---|---|---|---|
+| skulled gang, no prayer points | 11 | 15 | 2190 | 15 of 15 skulled (keeps 1) |
+| unskulled gang, no prayer points | 13 | 14 | 2156 | 14 of 14 skulled (keeps 1) |
+| skulled gang, prayer points | 4 | 9 | 3281 | 9 of 9 skulled (keeps 1) |
+| unskulled gang, prayer points | 1 | 9 | 4082 | 6 skulled (keeps 1), 3 unskulled (keeps 4, lost 0) |
+
+- **The skull rule runs in the bench.** A clone that has no skull takes one when it hits first: 20 of the 23 deaths of the unskulled
+  gang are skulled. With prayer points the squad hit first in 3 of 9 deaths, and those clones died unskulled with nothing lost.
+- **An unskulled death drops nothing.** `keeps=4 lost=0` is the 3 dearest items and Protect Item; the loot of that death is what
+  the clone's pack held beyond them. This matches run 3, where the receipts hold sharks and arrows and no dagger.
+- **Use the unskulled cases for the loot of a kill.** The skulled kit keeps 1 item at a death, the live gang kept 3 in 17 of 19 deaths.
+- Not measured: the bait test (the squad holds fire and lets the gang hit first). The option is the squad's, not the clones'.
+  The cells are 8 seeds, so a difference of 2 kills between two cases is not separated.
+
 ## Keep it true
 
 `scripts/measure/pk-gang-drift.ts` compares new observations with the record:
