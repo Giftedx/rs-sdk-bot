@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795065974604-tossthecaber-trousersnake-antipoison3",
  "account": "TossTheCaber",
  "partner": "TrouserSnake",
@@ -12,6 +12,16 @@
  "claim": "847e5e6d-e16f-4c8e-98fe-bc74348b43d1",
  "count": 0,
  "ok": false,
- "at": 1795066015309,
- "detail": "trade claimed"
+ "at": 1795066083921,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "bank": {
+  "count": 3,
+  "at": 1795066022712
+ },
+ "logout": {
+  "attemptId": "1795066015336-0000027780-0000000001",
+  "at": 1795066083822,
+  "sha256": "b8eb67d0543ab7b9235a2a014a73854c7625993048f2da9b78feeeb6eade16e8"
+ },
+ "screen": false
 }
