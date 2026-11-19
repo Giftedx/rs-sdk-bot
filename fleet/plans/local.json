@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795047716141,
+ "at": 1795047924492,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -192,25 +192,6 @@
    "resources": [
     "shop:zaff"
    ]
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=13 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=yewfirst-kit16-532-6to19 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"532\":19}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 13 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Pocketrocket",
