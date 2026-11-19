@@ -1,0 +1,22 @@
+{
+ "id": "1795078252420-hocuspokeus-sporranbulge-earthrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Hocuspokeus",
+ "to": "SporranBulge",
+ "item": "Earth rune",
+ "count": 80,
+ "start": 1795078252420,
+ "end": 1795080652420,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
