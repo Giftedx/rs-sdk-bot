@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795071532504-tossthecaber-pocketpool-antipoison3",
  "account": "PocketPool",
  "partner": "TossTheCaber",
@@ -10,8 +10,22 @@
  "item": "Antipoison(3)",
  "requested": 3,
  "claim": "fe40b00f-cb31-43e8-b942-23409122cb1d",
- "count": 0,
- "ok": false,
- "at": 1795071620387,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795071712785,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795071712030
+ },
+ "logout": {
+  "attemptId": "1795071620396-0000027944-0000000001",
+  "at": 1795071712775,
+  "sha256": "9aafe411cdf6884dfef9142010da316ec9236b6d6927ddd7907ba103b3451774"
+ },
+ "screen": true
 }
