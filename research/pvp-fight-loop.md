@@ -1807,6 +1807,24 @@ hunt and the roam keep their own threat checks. The kit decision (a counter kit 
 tile are rules in the model with their tests, but no kit swap, no counter kit and no single-way tile are wired, so a team ends in a retreat.
 The record file is not yet read by `scripts/measure/pk-gang-record.ts`.
 
+## Fight fixes from the review of run 3
+
+Source: the review of the kill receipts of the third live run, checked in the code. Each claim below was read in the code before the fix.
+
+- **A dying target.** `lowHealth` is true at a health bar of 0, so a special, a freeze or a bind went into a target that was already dead. `isDying` (`scripts/pk.ts`,
+  health bar 0 with a total above 0) now stops the freeze cast, the secondary stun, the special and the bow burst. Proof: `scripts/pk.test.ts` (the helper).
+  Gap: the fight loop's use of it is not run by a test of its own.
+- **The armour that a freeze strips.** The strip adds the platelegs and the full helm to `tankIds`, which lives in one fight; the next fight's set holds only the plate
+  and chain bodies, so they stayed in the pack. `rewearStart` (`scripts/pk.ts`) wears again, after each fight of the squad's hold loop and of the hunt, the armour that
+  the account wore at the start and that sits in the pack with its slot empty. It leaves the weapon and the shield alone (a shield would unwield a two-handed
+  weapon). Proof: `scripts/pk.test.ts` and the hold-loop test in `scripts/pk-squad.test.ts`.
+- **The attack styles of the radar.** `attackStyleOfAnim` (`scripts/pk-threat.ts`) reads the style of an animation from the content: the stab, slash and crush animations
+  of every weapon object under `scripts/skill_combat/configs` (such as `human_ddagger_lunge` 376 and `human_ddagger_hack` 377) are melee, and the special attack
+  animations of `scripts/skill_combat/scripts/pvp/specs/scripts/pvp_<weapon>.rs2` take the style of their weapon: `puncture` 1062, `cleave` 1058, `shove` 1064 and
+  `dragon_halberd_special_attack` 1203 are melee, `snapshot` 1074 and `chainhit` 1068 are ranged. Before, the name rules gave null for all of them.
+- **The freeze share.** `SQUAD_FREEZE_SHARE=1` gives each target one shared freeze clock with a stagger of `SQUAD_FREEZE_STAGGER` ticks (default 3), so that members do not cast Bind on
+  the same tick. Off by default until the bench says otherwise.
+
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).
