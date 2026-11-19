@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795065148274,
+ "at": 1795065218188,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -194,85 +194,6 @@
    ]
   },
   {
-   "account": "NabTheKnob",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "magic_guild",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "nature rune",
-    "STOCK_TARGET": "810",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "24480",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "24280",
-    "AUTOPILOT_ORDER": "[203]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"561\":810}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy nature runes at the Magic Guild for the gang squad",
-   "role": "bank",
-   "template": "squad-nature-guild",
-   "autopilot": "local",
-   "resources": [
-    "shop:magic_guild"
-   ]
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "lowe",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "iron arrow",
-    "STOCK_TARGET": "2000",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "12200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "12000",
-    "AUTOPILOT_ORDER": "[0]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"884\":2000}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy iron arrows at Lowe's in Varrock for the gang squad",
-   "role": "bank",
-   "template": "squad-arrows-lowe",
-   "autopilot": "local",
-   "resources": [
-    "shop:lowe"
-   ]
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 3000 lobster"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "Catherby lobsters, caught and cooked",
-   "role": "fishing",
-   "template": "lobster-chain",
-   "autopilot": "local",
-   "resources": [
-    "catherby:lobster"
-   ]
-  },
-  {
    "account": "Shaftsinker",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -300,6 +221,55 @@
    "autopilot": "local",
    "resources": [
     "shop:betty"
+   ]
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 3000 lobster"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "Catherby lobsters, caught and cooked",
+   "role": "fishing",
+   "template": "lobster-chain",
+   "autopilot": "local",
+   "resources": [
+    "catherby:lobster"
+   ]
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "lowe",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "iron arrow",
+    "STOCK_TARGET": "2000",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "12200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "12000",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"884\":2000}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy iron arrows at Lowe's in Varrock for the gang squad",
+   "role": "bank",
+   "template": "squad-arrows-lowe",
+   "autopilot": "local",
+   "resources": [
+    "shop:lowe"
    ]
   },
   {
