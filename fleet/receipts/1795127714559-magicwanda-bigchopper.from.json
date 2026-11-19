@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795127714559-magicwanda-bigchopper",
+ "account": "Magicwanda",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 9787,
+ "claim": "96bae992-7f9c-4a16-80dd-e24a6bbb5e59",
+ "count": 9787,
+ "ok": true,
+ "at": 1795127788051,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 9787,
+  "after": 0
+ },
+ "bank": {
+  "count": 9487,
+  "at": 1795127774822
+ },
+ "logout": {
+  "attemptId": "1795127765073-0000007036-0000000001",
+  "at": 1795127787971,
+  "sha256": "ca49c8cbadf87082c2ccef07aa228d077002c447d4f769d162a7a8d30ecb82ad"
+ },
+ "screen": true
+}
