@@ -92838,6 +92838,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/route-worker-churn.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/same-job-bench.ts",
    "intents": [
     "observe"
