@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795065104614-mmtha0205-bravehardon",
  "account": "mmtha0205",
  "partner": "BraveHardon",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 2060,
  "claim": "c2be83e5-3ce3-4e55-8e6a-56d485ac0e91",
- "count": 0,
- "ok": false,
- "at": 1795065144273,
- "detail": "trade claimed"
+ "count": 2060,
+ "ok": true,
+ "at": 1795065226662,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2060,
+  "after": 0
+ },
+ "bank": {
+  "count": 2060,
+  "at": 1795065154702
+ },
+ "logout": {
+  "attemptId": "1795065144620-0000022060-0000000001",
+  "at": 1795065226652,
+  "sha256": "fabe2de799cf69f8071ebe971fcf491cc368067d881db537fa4aef91932f8057"
+ },
+ "screen": true
 }
