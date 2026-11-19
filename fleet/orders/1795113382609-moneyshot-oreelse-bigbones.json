@@ -1,0 +1,22 @@
+{
+ "id": "1795113382609-moneyshot-oreelse-bigbones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Moneyshot",
+ "to": "OreElse",
+ "item": "Big bones",
+ "count": 16,
+ "start": 1795113382609,
+ "end": 1795115782609,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
