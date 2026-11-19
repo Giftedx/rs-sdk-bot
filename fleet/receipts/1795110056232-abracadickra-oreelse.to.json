@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795110056232-abracadickra-oreelse",
+ "account": "OreElse",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 74267,
+ "claim": "61e6c40b-1858-49c5-af6e-e200ef521cbe",
+ "count": 0,
+ "ok": false,
+ "at": 1795110132675,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1795110127388-0000003140-0000000001",
+  "at": 1795110132657,
+  "sha256": "70b0b9a3c0d01324d1736fc4f789b19d735b245c1dacddff35ba863e7355160f"
+ },
+ "screen": false
+}
