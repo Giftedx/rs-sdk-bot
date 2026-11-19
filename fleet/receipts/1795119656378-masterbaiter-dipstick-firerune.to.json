@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795119656378-masterbaiter-dipstick-firerune",
  "account": "Dipstick",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Fire rune",
  "requested": 1,
  "claim": "7e77d958-5a0b-4611-a55b-828e04528aae",
- "count": 0,
- "ok": false,
- "at": 1795119761748,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795119828644,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795119827904
+ },
+ "logout": {
+  "attemptId": "1795119761756-0000011312-0000000001",
+  "at": 1795119828636,
+  "sha256": "693188a16b01bb3636e49816f5620ecbb27409615b4f43e467c86bcdae3b4326"
+ },
+ "screen": true
 }
