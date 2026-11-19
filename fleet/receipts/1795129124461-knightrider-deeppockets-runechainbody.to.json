@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795129124461-knightrider-deeppockets-runechainbody",
+ "account": "Deeppockets",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "c71e4b15-1ed9-4cc0-9fc5-28180de0b487",
+ "count": 1,
+ "ok": true,
+ "at": 1795129184821,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795129183988
+ },
+ "logout": {
+  "attemptId": "1795129156351-0000012992-0000000001",
+  "at": 1795129184754,
+  "sha256": "3f3010e64b6362c38accf6cde9efba437853996116ddfc4e3fb222aa48b2350b"
+ },
+ "screen": true
+}
