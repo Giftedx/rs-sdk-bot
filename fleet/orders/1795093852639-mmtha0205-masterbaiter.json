@@ -1,0 +1,22 @@
+{
+ "id": "1795093852639-mmtha0205-masterbaiter",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmtha0205",
+ "to": "Masterbaiter",
+ "item": "coins",
+ "count": 28175,
+ "start": 1795093852639,
+ "end": 1795096252639,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

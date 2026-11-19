@@ -1,0 +1,22 @@
+{
+ "id": "1795093852639-yewfirst-undermykilt-waterrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "UnderMyKilt",
+ "item": "Water rune",
+ "count": 78,
+ "start": 1795093852639,
+ "end": 1795096252639,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
