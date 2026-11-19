@@ -1,0 +1,23 @@
+{
+ "id": "1795060500150-bigchopper-pocketpool-b19696d949af5226",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "PocketPool",
+ "item": "Antipoison(3)",
+ "count": 1,
+ "start": 1795060500150,
+ "end": 1795067700150,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
