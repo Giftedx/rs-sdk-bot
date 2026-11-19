@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795064100662-mmtha0205-bravehardon",
+ "account": "mmtha0205",
+ "partner": "BraveHardon",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 5645,
+ "claim": "e86e8d06-111c-4784-a8fb-000797bed8bb",
+ "count": 5645,
+ "ok": true,
+ "at": 1795064206708,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5645,
+  "after": 0
+ },
+ "bank": {
+  "count": 5645,
+  "at": 1795064194771
+ },
+ "logout": {
+  "attemptId": "1795064186206-0000028192-0000000001",
+  "at": 1795064206694,
+  "sha256": "023b66152a93481a9fc485f8b83c509df5f8d318e63dc4191ecc0d01c6ea1cda"
+ },
+ "screen": true
+}
