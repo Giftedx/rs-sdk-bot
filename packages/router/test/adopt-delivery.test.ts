@@ -1,8 +1,8 @@
 import {expect, test} from 'bun:test';
-import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
+import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {deliveryFolderOf, deliveryProblems, roundOriginProblems, safeFolder, type LocalFacts} from '../src/adopt-delivery';
+import {deliveryFolderOf, deliveryProblems, lfBytes, roundOriginProblems, safeFolder, sha256, type LocalFacts} from '../src/adopt-delivery';
 import type {DeliveryTask} from '../src/delivery';
 import type {RunView} from '../src/adopt-proofs';
 
@@ -86,4 +86,20 @@ test('deliveryFolderOf needs exactly one delivery whose report names the capabil
         expect(deliveryFolderOf(root, 'ammo-order')).toBeNull();
         writeFileSync(join(root, 'bad.txt'), 'x');
     } finally { rmSync(root, {recursive: true, force: true}); }
+});
+
+test('a declared text file is hashed in its LF form, a binary file as it is, and a missing file has no hash', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'adopt-sha-'));
+    try {
+        const lf = join(dir, 'a.ts'), crlf = join(dir, 'b.ts'), bin = join(dir, 'c.bin'), bin2 = join(dir, 'd.bin');
+        writeFileSync(lf, 'const a = 1;\nconst b = 2;\n'); writeFileSync(crlf, 'const a = 1;\r\nconst b = 2;\r\n');
+        expect(sha256(crlf)).toBe(sha256(lf));
+        // A lone CR stays: only a CR before a LF is a line ending.
+        writeFileSync(crlf, 'x\ry\r\n'); expect(lfBytes(readFileSync(crlf)).toString()).toBe('x\ry\n');
+        // A changed character is still a different file.
+        writeFileSync(crlf, 'const a = 1;\r\nconst b = 3;\r\n'); expect(sha256(crlf)).not.toBe(sha256(lf));
+        writeFileSync(bin, Buffer.from([1, 13, 10, 2])); writeFileSync(bin2, Buffer.from([1, 10, 2]));
+        expect(sha256(bin)).not.toBe(sha256(bin2));
+        expect(sha256(join(dir, 'missing.ts'))).toBeNull();
+    } finally { rmSync(dir, {recursive: true, force: true}); }
 });
