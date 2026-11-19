@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795097577820,
+ "at": 1795097619218,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -284,25 +284,29 @@
   },
   {
    "account": "Billionaire",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "20",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying the held bones",
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-bury-prayer-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "CoinCock",
@@ -351,26 +355,6 @@
    "resources": [
     "splash:ardougne-cow-fence"
    ]
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BONE_ID": "536",
-    "MAX_BURY": "253",
-    "BONE_RESERVE": "0",
-    "CAP": "3000",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "COORDINATOR_RUN_ID": "task-35302500-2786-495f-81c1-a7ef725cbc66"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-prayer-hocuspokeus-99 [task-35302500-2786-495f-81c1-a7ef725cbc66]",
-   "role": "helper"
   }
  ],
  "army": [
