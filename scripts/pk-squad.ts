@@ -300,6 +300,17 @@ export function squadFallbackPlan(opts: {
     return escapeStep(wild, { glory: opts.hasGlory, teleport: opts.hasTeleport });
 }
 
+// SQUAD_FREEZE_ARMOUR=strip|torso|keep: what a freeze takes off (pk.ts freezeArmour), and SQUAD_PROTECT_ITEM=on|off|skulled: Protect Item (pk.ts protectItem, 'skulled' is on
+// only while our own skull shows). They win over the profile and SQUAD_OPTS. A value that is not listed throws.
+export function squadFightOverrides(get: (name: string, fallback: string) => string): Partial<FightOptions> {
+    const out: Partial<FightOptions> = {};
+    const armour = get('SQUAD_FREEZE_ARMOUR', '');
+    if (armour) { if (!['strip', 'torso', 'keep'].includes(armour)) throw new Error(`SQUAD_FREEZE_ARMOUR is strip, torso or keep, got ${armour}`); out.freezeArmour = armour as 'strip' | 'torso' | 'keep'; }
+    const item = get('SQUAD_PROTECT_ITEM', '');
+    if (item) { if (!['on', 'off', 'skulled'].includes(item)) throw new Error(`SQUAD_PROTECT_ITEM is on, off or skulled, got ${item}`); out.protectItem = item === 'skulled' ? 'skulled' : item === 'on'; }
+    return out;
+}
+
 // The end of a squad run: its ok and the detail of its RESULT line. A squad with a death is not a finished squad: the supervisor reads
 // `RESULT fail died` as a death and does not start the squad again with an account that holds no kit (packages/practice/src/supervise.ts and
 // supervise-host.ts classify), and scripts/squad-watch.ts reads it as a death. `diedAccounts=A,B` names the accounts that died, early in the line
@@ -562,6 +573,9 @@ if (import.meta.main) {
     const maxKills = Number(get('MAX_KILLS', '0'));
     let kills = 0;
     const optsJson = get('SQUAD_OPTS', JSON.stringify(SQUAD_OPTS));
+    // Plain settings for the options that a hosted bench A/B changes (a hosted bench passes no JSON): scripts/pk-squad.ts squadFightOverrides.
+    let fightOverrides: Partial<FightOptions>;
+    try { fightOverrides = squadFightOverrides(get); } catch (e) { console.log(`RESULT fail ${e instanceof Error ? e.message : e}`); process.exit(2); }
     const log = (l: string) => console.log(l);
     // Bench: the gang accounts each fight the nearest of ours in view until they walk out (profile ganker-live).
     // SQUAD_GANG_SPLIT=1: gang account i takes our account i (i mod the squad), as the live gang split on the first
@@ -690,7 +704,7 @@ if (import.meta.main) {
         const stunSpec = defaultStunSpec(kit);
         return hold(s, {
             targets, post, threats,
-            options: sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200),
+            options: { ...sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200), ...fightOverrides },
             ...(get('SQUAD_FREEZE_SHARE', '0') === '1' ? { freezeShareFor } : {}),
             ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
             allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), run: runDeaths,
