@@ -516,3 +516,31 @@ test('a retreat action ends a member part in the Wilderness with the rescue: a w
     expect(stats).toMatchObject({ died: false });
     expect(stats.trips).toBeGreaterThanOrEqual(1);
 });
+
+test('a fight of the hold loop stops when the radar decides a retreat or a single-way move, and not for the protect prayer', async () => {
+    const w = squadWorld();
+    w.s.tick = () => 0;
+    w.s.sdk.getState().nearbyPlayers = [{ index: 5, name: 'Goondelf', combatLevel: 126, x: 3067, z: 3641, distance: 1 }];
+    const decided: { actions: any[] } = { actions: [{ kind: 'protect', member: 'Soldier', style: 'magic', reason: 't' }] };
+    const threats: any = { act: true, acted: () => {}, step: () => ({ classes: [], actions: decided.actions }) };
+    const stops: boolean[] = [];
+    let t = 0;
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { t++; return true; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+        spyOn(pk, 'fightPlayer').mockImplementation(async (_s: any, _name: string, opts: any) => {
+            stops.push(opts.stop());
+            decided.actions = [{ kind: 'retreat', reason: 'outnumbered' }];
+            stops.push(opts.stop());
+            decided.actions = [{ kind: 'single-way', to: { x: 1, z: 1 }, reason: 'team' }];
+            stops.push(opts.stop());
+            t = 1000;
+            return { outcome: 'stopped' } as any;
+        }),
+    ];
+    try {
+        await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3066, z: 3641 }, options: { kit: {} }, allies: [], pickup: false, trips: 3, deadline: 400, stopped: () => t >= 500, killsLeft: () => true, log: () => {}, threats });
+        expect(stops.slice(0, 3)).toEqual([false, true, true]);
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+});

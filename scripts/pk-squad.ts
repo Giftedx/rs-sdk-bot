@@ -342,6 +342,9 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     // The threat radar's armour swap (the worn items that it took off, to wear again) and its single-way hold (no pull and no walk back to the
     // multi-way post until this tick).
     const swapper = new KitSwapper(), tickOf = () => nextTick(s);
+    // A fight stops when the radar decides a retreat or a single-way move: a member inside a fight does not read the decision, and the squad's
+    // fights are the whole run against a team (10-seed bench of team5-pile-noprayer: the retreat reached 2 of 10 runs before this).
+    const radarMove = () => !!o.threats?.act && o.threats.step(s.tick()).actions.some(a => a.kind === 'retreat' || a.kind === 'single-way');
     let singleUntil = -1;
     const skip = new Map<string, number>();
     const unwatch = s.onTick(() => {
@@ -481,7 +484,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 ...(stunShare ? { stunShare } : {}),
                 ...(o.burstOnStun !== undefined ? { burstOnStun: o.burstOnStun } : {}),
                 ...(o.stunSpec ? { stunSpec: o.stunSpec } : {}),
-                allies: o.allies, cap: Math.max(1, o.deadline - s.tick()), stop: () => !going() || refusedAt > began,
+                allies: o.allies, cap: Math.max(1, o.deadline - s.tick()), stop: () => !going() || refusedAt > began || radarMove(),
                 log: l => o.log(`[${s.name}] ${l}`),
             });
             if (refusedAt > began) skip.set(target.name.toLowerCase(), s.tick() + 8);

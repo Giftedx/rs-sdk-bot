@@ -1824,6 +1824,9 @@ the log and the record) -> `packages/core/test/pvp-threat.test.ts`, `scripts/pk-
   inside a fight does not read the decision, so the cooldown does not start before one has acted. During the cooldown the protect prayer and the armour
   swap stay and the squad holds its ground; a player that was not there at the retreat causes a new one at once, and that one restarts the cooldown of all the
   players then in range.
+- **Fights stop.** A fight of the squad's hold loop stops when the radar decides a retreat or a single-way move (`stop` of `fightPlayer`), because a member
+  inside a fight does not read decisions and the squad's fights are the whole run against a team. The protect prayer does not stop a fight. The hunt and the
+  roam have no such stop: an account that is being attacked there keeps their own flee rules.
 - **Record limits.** A record file moves to `<name>.jsonl.1` at 5 MB (the older `.1` goes), so a name keeps at most 10 MB, and a server directory takes at most
   500 names (`MAX_RECORD_FILES`); the log says once that it is full.
 - **Attackers.** Each dangerous player or attacker is appended to `.practice/threat-records/<server>/<name>.jsonl` (schema
