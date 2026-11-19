@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795132323929,
+ "at": 1795132599832,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -271,25 +271,6 @@
    "resources": [
     "shop:dargaud"
    ]
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=16 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=pocketrocket-kit15-536-0to16 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"536\":16}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 16 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Swordswallow",
