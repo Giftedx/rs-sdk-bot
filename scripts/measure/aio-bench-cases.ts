@@ -591,6 +591,11 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'fighter:unicorn', script: 'scripts/aio-fighter.ts', preset: 'gather_combat_druid', scriptArgs: ['unicorn', '1200', 'unicorn', 'MAX_KILLS=4'], output: /kills=(\d+)/,
     pass: s => ok(s) && /kills=4 looted=4 /.test(s) && /targetMet=true/.test(s),
     presetConfig: {...PRESETS.gather_combat_druid!, position: {x: 3087, z: 3452, level: 0}}},
+  // The water talisman of the squad's water runes: wizards at the Wizards' Tower until one drops (3 in 128), then the
+  // Draynor bank.
+  {key: 'fighter:wizard', script: 'scripts/aio-fighter.ts', preset: 'gather_combat_druid', scriptArgs: ['wizard', '10000', 'wizard', 'MAX_KILLS=200', 'UNTIL_ITEM=water talisman'], output: /kills=(\d+)/,
+    pass: s => ok(s) && /held=true/.test(s) && /targetMet=true/.test(s),
+    presetConfig: {...PRESETS.gather_combat_druid!, position: {x: 3110, z: 3170, level: 0}}},
   // The antipoison from its inputs, one recipe of the bank-standing worker a case (scripts/microbot-production.ts):
   // unicorn horns ground to dust, marrentill and vials of water mixed, and the two brewed into antipoison(3).
   ...([['grind', 'grind:unicorn_horn', [{id: 233, count: 1}], [{id: 237, count: 3}]], ['unf', 'brew:unf_marrentill_potion', [], [{id: 251, count: 3}, {id: 227, count: 3}]],
@@ -1726,6 +1731,12 @@ const EXTRA_CASES: BenchCase[] = [
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 3}]}},
   {key: 'extra:smith-rune-full-helm', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=1163', 'MAX_MAKE=1', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":1,"banked":1/.test(s),
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 2}]}},
+  // The gang squad's iron arrows (packages/planner/src/autopilot.ts squad-iron-tips and squad-iron-arrows): two iron bars into
+  // 30 iron arrowtips at the Varrock West anvils, and 90 tips with 90 headless arrows into 90 iron arrows at a bank.
+  {key: 'extra:smith-iron-arrowtips', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=40', 'MAX_MAKE=2', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":2,"banked":30/.test(s),
+    presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 20}, inventory: [{id: 2347, count: 1}], bank: [{id: 2351, count: 2}]}},
+  {key: 'extra:fletch-iron-arrows', script: 'scripts/fletch-arrows.ts', preset: 'fresh_lumbridge', scriptArgs: ['600', 'iron'], pass: s => ok(s) && /mode=iron .*made=90 banked=90 /.test(s),
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Fletching: 15}, bank: [{id: 53, count: 290}, {id: 40, count: 90}]}},
   {key: 'extra:smith-rune-kiteshield', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=1201', 'MAX_MAKE=1', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":1,"banked":1/.test(s),
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 3}]}},
   // Steel bars from the Al Kharid bank at the level of the bar: 28 iron ore and 56 coal banked, 9 bars a pack load

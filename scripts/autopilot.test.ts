@@ -1286,6 +1286,16 @@ test('the squad shop templates select their profile line with the real selectIte
     expect(resolveAioStep('skiller', craft.args!.slice(1)).script).toBe('scripts/rune-bank-craft.ts');
     expect(craft.production!.resize(10).args).toContain('RUNE_ALTAR=water');
     expect(craft.production!.resize(10).args).toContain('ESSENCE_TARGET=10');
+    // The talisman hunt reaches the combat worker at the wizards, and the iron tips reach the anvil worker.
+    const hunt = catalogue().find(t => t.id === 'squad-water-talisman')!;
+    expect(resolveAioStep('fighter', hunt.args!.slice(1)).script).toBe('scripts/gather-combat.ts');
+    expect(hunt.args).toContain('UNTIL_ITEM=water talisman');
+    expect(hunt.provides).toEqual({ item: 'water talisman', unlocks: ['squad-water-craft'] });
+    // The iron arrows: the anvil step reaches the smithing worker, and the fletch step makes 15 arrows for each bar.
+    const arrows = catalogue().find(t => t.id === 'squad-iron-arrows')!, [anvil, fletch] = arrows.production!.resize(2).args!;
+    expect(resolveAioStep('skiller', anvil!.split(' ').slice(2, 6)).script).toBe('scripts/smelt-bars.ts');
+    expect(anvil).toContain('PRODUCT_ID=40 MAX_MAKE=2 ');
+    expect(fletch).toContain('fletch-arrows.ts 3000 iron MAX_MAKE=30 ');
     const potion = catalogue().find(t => t.id === 'squad-antipoison-jiminua')!;
     expect(selectItems(PROFILES.jiminua!.items, potion.env!.ITEMS).map(i => i.re.source)).toEqual([/^antipoison\(3\)$/i.source]);
 });
