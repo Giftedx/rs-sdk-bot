@@ -1,0 +1,22 @@
+{
+ "id": "1795066739993-mmtha0205-bravehardon",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmtha0205",
+ "to": "BraveHardon",
+ "item": "coins",
+ "count": 2263,
+ "start": 1795066739993,
+ "end": 1795069139993,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
