@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795060678052-bigchopper-thefullmonty-3a446372312d588d",
+ "account": "TheFullMonty",
+ "partner": "Bigchopper",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "bd10d2cf-5207-406e-abd1-2f6f6ae0e3cb",
+ "count": 1,
+ "ok": true,
+ "at": 1795061044423,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795061043650
+ },
+ "logout": {
+  "attemptId": "1795061028055-0000029548-0000000001",
+  "at": 1795061044410,
+  "sha256": "ae639b29af1c7e15fcb49c456e037a4b44e3edc8611befef3e7882b913e9bee5"
+ },
+ "screen": true
+}

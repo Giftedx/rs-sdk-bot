@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795060678052-bigchopper-thefullmonty-3a446372312d588d",
  "account": "Bigchopper",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Magic shortbow",
  "requested": 1,
  "claim": "e160387e-c195-41cf-82f5-3863ca1ccf5c",
- "count": 0,
- "ok": false,
- "at": 1795061012675,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795061043210,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795061021692
+ },
+ "logout": {
+  "attemptId": "1795061012742-0000008716-0000000001",
+  "at": 1795061043199,
+  "sha256": "13f8ff1e0a320a69e8ddd0f7ebaa98d418dcfabfc606031c58dba3c2785872c7"
+ },
+ "screen": true
 }

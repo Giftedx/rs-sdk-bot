@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795060423756-mmsmk1232-undermykilt-4c875c1d5a2d1846",
+ "account": "mmsmk1232",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 6,
+ "claim": "b526909d-f4b6-4d7a-9db0-8a9d1d546188",
+ "count": 0,
+ "ok": false,
+ "at": 1795061019452,
+ "detail": "trade claimed"
+}
