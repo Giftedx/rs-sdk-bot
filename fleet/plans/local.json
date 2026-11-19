@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795097212455,
+ "at": 1795097362665,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -339,6 +339,31 @@
    "repeat": false,
    "goal": "run-prayer-pickpockdick-99 [task-8cb87198-ca89-4ef5-a9de-091ca6f64f56]",
    "role": "helper"
+  },
+  {
+   "accounts": [
+    "Fingerblastr",
+    "Hocuspokeus"
+   ],
+   "script": "scripts/coin-courier.ts",
+   "args": [
+    "1700000",
+    "--bank-x=2618",
+    "--bank-z=3332",
+    "--reserve=200000",
+    "--timeout-ms=600000"
+   ],
+   "env": {
+    "COIN_ORDER": "prayer99-hocuspokeus-bonefund1700k",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-8d3901d4-5a93-42b5-884b-a75888d822c0"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-courier-fingerblastr-hocuspokeus-bone-fund [task-8d3901d4-5a93-42b5-884b-a75888d822c0]",
+   "role": "supply"
   }
  ],
  "army": [
