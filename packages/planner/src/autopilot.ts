@@ -2229,12 +2229,13 @@ export function squadSupplies(): Template[] {
         needs: { skills: { Fletching: 75 }, items: { coins: SQUAD_RUNE_SETS * 15 * SQUAD_UNIT_COST['rune arrowtips']! * 2 + 200, 'headless arrow': SQUAD_RUNE_SETS * 15 } },
         production: { output: 'rune arrow', outputPerUnit: 15, maximum: SQUAD_RUNE_SETS, inputs: { 'headless arrow': 15 }, resize: n => ({ args: runeSteps(n) }) },
         yields: () => [{ item: 'rune arrow', perTick: 1 }], spends: () => [{ item: 'coins', perTick: SQUAD_UNIT_COST['rune arrowtips']! }] };
-    // Sharks fished and cooked at Catherby (scripts/shark-supply.ts: Fishing 76, Cooking 80; it buys a harpoon when it has none).
+    // Sharks fished and cooked at Catherby (scripts/shark-supply.ts: Fishing 76, Cooking 80; it buys a harpoon when it has none,
+    // and it carries two banked trout, salmon or lobsters for the way back).
     // Bench case extra:shark-supply.
     const sharkSteps = (n: number) => ({ args: [String(n), '9000'], env: { SHARK_CONSUMER: 'gang squad' } });
     const sharks: Template = { id: 'squad-sharks', family: 'shark-supply', script: 'scripts/shark-supply.ts', ...sharkSteps(SQUAD_SHARK_RUN),
         role: 'fishing', goal: 'fish and cook sharks at Catherby for the gang squad', resources: ['squad:catherby-sharks'], squadOnly: true, repeats: false,
-        needs: { skills: { Fishing: 76, Cooking: 80 } },
+        needs: { skills: { Fishing: 76, Cooking: 80 }, items: { lobster: 2 } },
         production: { output: 'shark', outputPerUnit: 1, maximum: SQUAD_SHARK_RUN, inputs: {}, resize: n => sharkSteps(n) },
         yields: () => [{ item: 'shark', perTick: 0.05 }] };
     return [

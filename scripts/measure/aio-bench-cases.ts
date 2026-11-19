@@ -1739,10 +1739,10 @@ const EXTRA_CASES: BenchCase[] = [
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Fletching: 15}, bank: [{id: 53, count: 290}, {id: 40, count: 90}]}},
   // The gang squad's rune arrows and sharks (packages/planner/src/autopilot.ts squad-rune-arrows and squad-sharks): 30 rune
   // arrowtips with 30 headless arrows into 30 rune arrows at the Catherby bank, and three sharks fished and cooked at Catherby.
-  {key: 'extra:fletch-rune-arrows', script: 'scripts/fletch-arrows.ts', preset: 'fresh_lumbridge', scriptArgs: ['600', 'native-arrows', 'rune'], pass: ok,
+  {key: 'extra:fletch-rune-arrows', script: 'scripts/fletch-arrows.ts', preset: 'fresh_lumbridge', scriptArgs: ['600', 'native-arrows', 'rune'], pass: s => ok(s) && /"made":30,"banked":30,/.test(s),
     presetConfig: {position: {x: 2809, z: 3441, level: 0}, skills: {Fletching: 75}, bank: [{id: 53, count: 230}, {id: 44, count: 35}]}},
   {key: 'extra:shark-supply', script: 'scripts/shark-supply.ts', preset: 'fresh_lumbridge', scriptArgs: ['3', '3000'], pass: ok,
-    presetConfig: {position: {x: 2809, z: 3441, level: 0}, skills: {Fishing: 99, Cooking: 99, Hitpoints: 99}, inventory: [{id: 311, count: 1}], bank: [{id: 995, count: 1000}]}},
+    presetConfig: {position: {x: 2809, z: 3441, level: 0}, skills: {Fishing: 99, Cooking: 99, Hitpoints: 99}, inventory: [{id: 311, count: 1}], bank: [{id: 995, count: 1000}, {id: 379, count: 2}]}},
   {key: 'extra:smith-rune-kiteshield', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=1201', 'MAX_MAKE=1', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":1,"banked":1/.test(s),
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 3}]}},
   // Steel bars from the Al Kharid bank at the level of the bar: 28 iron ore and 56 coal banked, 9 bars a pack load
