@@ -14,6 +14,7 @@ import {workerSourceRevision} from '../../core/src/worker-release';
 import {runeSupplyPreserved} from '../../../scripts/rune-supply';
 import {applyPreset} from './presets';
 import {setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
+const T150:any=(process.env.PROOF_TICK_OVERRIDE && process.env.NODE_ENV !== 'test' ? Number(process.env.PROOF_TICK_OVERRIDE) : 150);
 import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 type Save=ReturnType<typeof readPracticeSave>;
 type Run={code:number;log:string};
@@ -28,7 +29,7 @@ export function freshRuneChildTimeout(label:string,deadline:number,now=Date.now(
 type ProofBudget={deadline:number;check():void};
 export async function withFreshRuneStack<T>(directory:string,work:(budget:ProofBudget)=>Promise<T>,deps={
  practice:join(root,'.practice'),free:freemem,portsFree:()=>canBind(8888)&&canBind(7780),start:startStack,
-},tickMs:150|400=150):Promise<T>{
+},tickMs:T150|400=T150):Promise<T>{
  const deadline=Date.now()+workMs;
  if(deps.free()<PRACTICE_STARTUP_GB*2**30)throw Error(`insufficient practice startup reserve: need${PRACTICE_STARTUP_GB}GiB`);
  const lock=join(deps.practice,'delivery-practice.lock'),pids=join(deps.practice,'pids.json');
@@ -219,7 +220,7 @@ export async function diagnoseFreshRuneEssence(directory:string,name:string,reta
   const checks={...freshRuneEssenceDiagnosticChecks(before,after,{code,log}),published:publication.matched,retained:hash(retained)===retainedHash,
    source:workerSourceRevision()===source&&JSON.stringify(files)===JSON.stringify(sources())};
   const report={ok:Object.values(checks).every(Boolean),checks,name,source,files,retained:resolve(retained),retainedHash,
-   beforeHash:hash(join(directory,'essence-before.sav')),afterHash:hash(join(directory,'essence-after.sav')),elapsedMs,tickMs:150,xpRate:25,
+   beforeHash:hash(join(directory,'essence-before.sav')),afterHash:hash(join(directory,'essence-after.sav')),elapsedMs,tickMs:T150,xpRate:25,
    scope:'Retained essence through installed CLI to first banked crafted output only. Not default-entry, Runecraft20, continuation, live or full delivery proof.'};
   writeFileSync(join(directory,'essence-diagnostic.json'),JSON.stringify(report,null,2),{flag:'wx'});
   return report;
@@ -287,7 +288,7 @@ export function freshRuneRecoveryContentsEqual(before:Save,after:Save,session?:R
  const position=session?.mode==='exit'?{x:2983,z:3288,level:0}:before.position;
  return same(position,after.position)&&same(before.skills,after.skills)&&same(before.inventories,after.inventories)&&same(vars(expected),vars(after.vars));
 }
-async function freshRuneRecoveryClock(tickMs=150){
+async function freshRuneRecoveryClock(tickMs=T150){
  const response=await fetch('http://localhost:8898/tickstats',{signal:AbortSignal.timeout(5000)});
  if(!response.ok)throw Error('air recovery server clock unavailable');
  const stats=await response.json() as {tick:number;tickRate:number};
@@ -364,7 +365,7 @@ export function verifyFreshRuneAirRecovery(parent:string,deps={binding:freshRune
  if(meta.at<=1793211592453||meta.fixtures?.length!==5||meta.source!==workerSourceRevision()||!same(meta.files,sources()))throw Error('missing fresh air recovery evidence');
  const checks:Record<string,boolean>={};
  for(const [i,fixture] of meta.fixtures.entries()){
-  const dir=join(directory,String(i)),binding=deps.binding(fixture.binding.name,i===4?400:150);
+  const dir=join(directory,String(i)),binding=deps.binding(fixture.binding.name,i===4?400:T150);
   checks['binding'+i]=same(binding,fixture.binding);
   const labels=i>=3?['postcraft']:i===0?['refused','recovery','higher']:['exit'];
   const required=['fixture.json','before.sav','after.sav',...(i===0?['refused.sav','higher.sav']:[]),...labels.flatMap(l=>[l+'.log',l+'.err',l+'-outcome.json']),
@@ -374,7 +375,7 @@ export function verifyFreshRuneAirRecovery(parent:string,deps={binding:freshRune
   checks['codes'+i]=same(Object.keys(fixture.codes).sort(),[...labels].sort());
   const before=readPracticeSave(join(dir,'before.sav')),after=readPracticeSave(join(dir,'after.sav'));
   checks['position'+i]=same(before.position,airRecoveryPositions[i>=3?0:i]!);
-  checks['pacing'+i]=fixture.tickMs===(i===4?400:150);
+  checks['pacing'+i]=fixture.tickMs===(i===4?400:T150);
   if(i===0){
    checks.noReseed=fixture.higherInputHash===hash(join(dir,'after.sav'));
    const run=readRun(dir,'recovery',fixture.codes.recovery),higher=readRun(dir,'higher',fixture.codes.higher);
@@ -385,7 +386,7 @@ export function verifyFreshRuneAirRecovery(parent:string,deps={binding:freshRune
    checks.refused=session.mode==='refused'&&refused.code===0&&logout(refused)&&freshRuneRecoveryContentsEqual(before,refusedSave,session)&&refused.log.includes('AIR_EXIT_REJECTION {"ok":true,')&&refused.log.includes('"reason":"no_matching_option"');
   }else if(i>=3){
    const clock=json(join(dir,'postcraft-clock.json'));
-   checks['clock'+i]=clock.tickMs===(i===4?400:150)&&clock.after>=clock.before&&clock.before>0;
+   checks['clock'+i]=clock.tickMs===(i===4?400:T150)&&clock.after>=clock.before&&clock.before>0;
    Object.assign(checks,Object.fromEntries(Object.entries(freshRunePostCraftChecks(before,after,readRun(dir,'postcraft',fixture.codes.postcraft))).map(([k,v])=>['postcraft'+i+'-'+k,v])));
   }else{
    const run=readRun(dir,'exit',fixture.codes.exit);
@@ -403,10 +404,10 @@ export async function proveFreshRuneAirRecovery(parent:string){
  writeFileSync(join(directory,'attempt.json'),JSON.stringify({at:Date.now(),source:workerSourceRevision(),files:sources()}),{flag:'wx'});
  const fixtures:any[]=[];
  try{
- for(const tickMs of [150,400] as const){
+ for(const tickMs of [T150,400] as const){
  const stackDir=join(directory,'stack-'+tickMs);mkdirSync(stackDir,{recursive:true});
  await withFreshRuneStack(stackDir,async budget=>{
-  for(const i of tickMs===150?[3,0,1,2]:[4]){
+  for(const i of tickMs===T150?[3,0,1,2]:[4]){
    const position=airRecoveryPositions[i>=3?0:i]!;
    budget.check();const dir=join(directory,String(i));mkdirSync(dir,{recursive:true});
    const name=runBotName('flair',i+1),save=engineSave(name);
@@ -486,7 +487,7 @@ const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
 const readRun=(directory:string,label:string,code:number):Run=>({code,log:readFileSync(join(directory,label+'.log'),'utf8')+readFileSync(join(directory,label+'.err'),'utf8')});
 // Hash the installed engine, packed collision/content and pinned script inputs.
 // Mutable saves, databases, logs and credentials are excluded from this stamp.
-function freshRuneServerHash(tickMs=150){
+function freshRuneServerHash(tickMs=T150){
  const digest=createHash('sha256');
  const walk=(path:string)=>{for(const entry of readdirSync(join(root,path),{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name))){
   if(['node_modules','.git'].includes(entry.name))continue;
@@ -504,7 +505,7 @@ function freshRuneServerHash(tickMs=150){
   digest.update(key+'\0').update(environment[key as keyof typeof environment]??'').update('\0');
  return digest.digest('hex');
 }
-function freshRuneBinding(name:string,tickMs=150):Binding{
+function freshRuneBinding(name:string,tickMs=T150):Binding{
  const env=join(root,'vendor/rs-sdk/bots',name,'bot.env');
  if(!/^[a-z0-9]{1,12}$/i.test(name)||!existsSync(env)||!/^SERVER=localhost:8888\r?$/m.test(readFileSync(env,'utf8')))
   throw Error('stage requires the same retained local account; no registration on restart');
@@ -550,7 +551,7 @@ export function freshRuneStageWorker(stage:Exclude<FreshRuneStage,'start'>,name:
  const label=stage==='target'?'resume':stage==='first-bank'?'first-bank':'higher';
  const timeoutMs=freshRuneChildTimeout(label,deadline,now);
  // Leave30s inside the child wall envelope for opening and the owner's logout.
- const cap=Math.floor((timeoutMs-30000)/150);
+ const cap=Math.floor((timeoutMs-30000)/T150);
  if(cap<1)throw Error('no finite tick budget with logout reserve');
  return {label,args:['scripts/rune-supply.ts',name,String(stage==='first-bank'?2:stage==='target'?20:21)],env:{CAP:String(cap)},timeoutMs};
 }
@@ -652,7 +653,7 @@ export async function proveFreshRuneStage(directory:string,stage:FreshRuneStage,
  writeFileSync(join(directory,stageFile(stage)),JSON.stringify(record,null,2),{flag:'wx'});
  if(stage==='higher'){
   const meta={at:Date.now(),source:record.binding.source,files:record.binding.files,name:record.binding.name,saveAbsent:true,credentialsAbsent:true,
-   registrationCode:record.codes.registration,codes:record.codes,tickMs:150,xpRate:25,staged:true,
+   registrationCode:record.codes.registration,codes:record.codes,tickMs:T150,xpRate:25,staged:true,
    hashes:Object.fromEntries(['before.sav',...checkpoints].map(p=>[p,hash(join(directory,p))]))};
   writeFileSync(join(directory,'native.json'),JSON.stringify(meta,null,2),{flag:'wx'});
   return deps.verify(directory);
@@ -680,7 +681,7 @@ export function verifyFreshRuneSupply(directory:string,deps={binding:freshRuneBi
   ...stageChecks,airRecovery:recovery.ok,...Object.fromEntries(Object.entries(recovery.checks).map(([k,v])=>['airRecovery-'+k,v])),
   source:meta.source===deps.source()&&JSON.stringify(meta.files)===JSON.stringify(deps.files()),
   registration:meta.saveAbsent===true&&meta.credentialsAbsent===true&&meta.registrationCode===0&&logout(run('registration')),
-  configuration:meta.tickMs===150&&meta.xpRate===25,
+  configuration:meta.tickMs===T150&&meta.xpRate===25,
   snapshots:['before.sav','interrupted.sav',...(meta.staged?['first-bank.sav']:[]),'after.sav','higher.sav'].every(p=>meta.hashes[p]===hash(join(directory,p))),
  };
  const later=readPracticeSave(join(directory,'higher.sav')),higher=run('higher'),b=summary(higher),prior=readPracticeSave(join(directory,'after.sav'));
@@ -724,7 +725,7 @@ export async function proveFreshRuneSupply(directory:string){
  if(higherCode!==0){copyFileSync(save,join(directory,'higher-failed.sav'));throw Error('fresh rune higher target failed; retain first boundary');}
  const higher=await waitPracticeSave(save,s=>(s.skills[20]?.level??0)>=21);copyFileSync(save,join(directory,'higher.sav'));
  if(!higher.matched)throw Error('higher target save not observed; retain higher.sav');
- writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source,files,name,saveAbsent,credentialsAbsent,registrationCode,codes,tickMs:150,xpRate:25,
+ writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source,files,name,saveAbsent,credentialsAbsent,registrationCode,codes,tickMs:T150,xpRate:25,
   hashes:Object.fromEntries(['before.sav','interrupted.sav','after.sav','higher.sav'].map(p=>[p,hash(join(directory,p))]))},null,2));
  const report=verifyFreshRuneSupply(directory);writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));return report;
  });

@@ -12,7 +12,7 @@ import {readPracticeSave,waitPracticeSave,setPracticeSkills} from '../../../scri
 import {killTree} from './proc';
 import {PRACTICE_STARTUP_GB,FREE_FLOOR_GB} from '../../core/src/memory';
 import {releaseRevision} from '../../core/src/worker-release';
-const root=resolve(import.meta.dir,'../../..'),CAP=2800,TICK_MS=400;
+const root=resolve(import.meta.dir,'../../..'),CAP=2800,TICK_MS=(process.env.PROOF_TICK_OVERRIDE && process.env.NODE_ENV !== 'test' ? Number(process.env.PROOF_TICK_OVERRIDE) : 400);
 export const runeContinuationHelpers=[
  [2523,4833,27,6495],[2523,4833,27,108],[3050,3442,27,108],[3061,3425,27,108],
  [3071,3421,27,108],[3086,3455,27,108],[3084,3466,27,108],[3094,3491,27,108],

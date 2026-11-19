@@ -75,6 +75,7 @@ jobs:
         run: bun packages/router/src/delivery-cli.ts "$CAPABILITY"
         env:
           CAPABILITY: ${{ matrix.capability }}
+          PROOF_TICK_OVERRIDE: '100'
       # The cache is saved when the job fails too: a capability whose routes are cold fails on its first runs (a search of
       # 45 s is 300 ticks of a native 150 ms engine), and a cache that only a green job saves is never made for it.
       - name: Save the route caches
