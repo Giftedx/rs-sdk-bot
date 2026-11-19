@@ -403,7 +403,10 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     const ammo = (st?.equipment ?? []).find(e => /arrow|bolt/i.test(e.name))?.id;
     const wanted = new Set([...PICKUP_ITEMS, ...(ammo ? [ammo] : [])]);
     const going = () => !o.stopped() && s.tick() < o.deadline && o.killsLeft();
-    const bankRun = bankTrip(bankNear(o.post.x), o.post, pack, kit, () => !going());
+    // A trip that left Prayer under the start floor restores it at the nearest safe altar (SQUAD_TRIP_ALTAR=1 turns it on; off by default: in the bench both members leave for the church together and the post stands empty). Each walk back
+    // from the bank or the altar goes by the march's legs (the edge, the entry of the post's area, the post), not straight over single-way ground.
+    const bankRun = bankTrip(bankNear(o.post.x), o.post, pack, kit, () => !going(), { eaten: 0 },
+        { altar: process.env.SQUAD_TRIP_ALTAR === '1', prayerFloor: Number(process.env.SQUAD_TRIP_PRAYER_FLOOR ?? '0.7'), log: l => o.log(`[${s.name}] SQUAD ${l}`), route: from => marchLegs(from, o.post) });
     // A member on a later trip does not hold the march (it is out of the Wilderness on purpose); one on the first trip does,
     // so the squad leaves the bank together.
     const trip = async (a: Session, fresh = false) => {

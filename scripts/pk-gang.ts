@@ -19,6 +19,7 @@ import { fightPlayer, ITEMS, nextTick, observePlayer, recordKillLoot, wilderness
 import { BOOST_POTIONS, EDGEVILLE_BANK, FOOD_LIST, healOf, hitByPlayer, restock, TRIBRID_KIT, type TripItem } from './pk-hunt';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { kitOptions, kitSwitches } from './pk-kits';
+import { nearestAltar, prayAtAltar } from './pray-at-altar';
 import { sparOptions } from './pk-spar';
 
 // The attack animations of a dragon dagger (content pack/seq.pack): the lunge, the hack and the special.
@@ -64,19 +65,25 @@ const attacksOf = (f: FightResult) => f.attacks.magic + f.attacks.ranged + f.att
 export const gangValid = (r: GangResult) => r.fights.some(f => attacksOf(f) > 0) && r.gang.some(f => attacksOf(f) > 0)
     && [...r.fights, ...r.gang].every(f => f.outcome !== 'session ended' && f.outcome !== 'danger');
 
+// Prayer below this share of the base level is restored on a trip (the start floor of scripts/squad-ready.ts PRAYER_FLOOR).
+export const TRIP_PRAYER_FLOOR = 0.7;
+export const tripPrayerDue = (points: number, base: number, floor = TRIP_PRAYER_FLOOR): boolean => base > 1 && points < Math.ceil(base * floor);
 // The trip to the bank between two meetings at the edge of the Wilderness: walk to the bank, bank the pack, take
 // `food` slots of sharks and boosts and the `items` again (scripts/pk-hunt.ts restock), wield the arrows, walk back.
 // `fill: false` takes sharks up to the food slots of the pack only, not a full pack, and `rest` is the ticks that the account waits at the bank.
 export function bankTrip(at: { x: number; z: number }, back: { x: number; z: number }, pack: { food: number; items: readonly { id: number; count: number }[] }, kit: Kit, halt: () => boolean = () => false,
-    bank: { eaten: number } = { eaten: 0 }, more: { fill?: boolean; rest?: number } = {}) {
+    bank: { eaten: number } = { eaten: 0 }, more: { fill?: boolean; rest?: number; altar?: boolean; prayerFloor?: number; log?: (line: string) => void; route?: (from: { x: number; z: number }) => { x: number; z: number }[] } = {}) {
     // `fresh`: the pack is the full pack of the kit already (the trip before the first meeting), so nothing is banked
     // but the boosts.
     return async (a: Session, fresh = false): Promise<string | null> => {
         const deps = await sessionWalker(a);
         // The walk budget grows with the distance: an account that left a fight by teleport (Camelot, about 430 tiles
         // from Varrock West) starts its trip far from both the bank and the post.
-        const go = (to: { x: number; z: number }) => { const p = a.sdk.getState()?.player, d = p ? Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) : 0;
-            return walkPath(deps, [{ ...to, tol: 2 }], { maxTicks: Math.max(400, 3 * d + 100), idleMs: 9000, stop: halt }); };
+        const go = (...to: { x: number; z: number }[]) => { const p = a.sdk.getState()?.player;
+            // The length of the walk through the points, from where the account stands.
+            let d = 0, at = p ? { x: p.worldX, z: p.worldZ } : null;
+            for (const t of to) { if (at) d += Math.max(Math.abs(at.x - t.x), Math.abs(at.z - t.z)); at = t; }
+            return walkPath(deps, to.map(t => ({ ...t, tol: 2 })), { maxTicks: Math.max(400, 3 * d + 100), idleMs: 9000, stop: halt }); };
         const out = await go(at);
         if (!out.ok) return `no walk to the bank: ${out.detail ?? 'stopped'}`;
         const fault = fresh ? null : await restock(a, pack.food, pack.items, kit);
@@ -104,7 +111,18 @@ export function bankTrip(at: { x: number; z: number }, back: { x: number; z: num
         await pause(more.rest ?? 0);
         if (halt()) return 'no walk back: stopped';
         for (const item of a.sdk.getInventory()) { const op = /arrow/i.test(item.name) ? item.optionsWithIndex.find(o => /^wield$/i.test(o.text)) : undefined; if (op) await a.sdk.sendUseItem(item.slot, op.opIndex); }
-        const home = await go(back);
+        // `altar`: a trip that left Prayer below the start floor goes to the nearest safe altar before the walk back (a fresh
+        // trip starts at the floor already: scripts/squad-ready.ts). A failed prayer does not end the trip: the account fights on
+        // without Prayer (it is logged).
+        if (more.altar && !fresh) {
+            const prayer = a.sdk.getSkill('Prayer'), me = a.sdk.getState()?.player;
+            if (prayer && me && tripPrayerDue(prayer.level, prayer.baseLevel, more.prayerFloor)) {
+                const done = await prayAtAltar(a, nearestAltar({ x: me.worldX, z: me.worldZ, level: me.level }));
+                more.log?.(done.ok ? `prayer restored: ${done.detail}` : `no prayer restore, fights on: ${done.detail}`);
+            }
+        }
+        const here = a.sdk.getState()?.player;
+        const home = await go(...(more.route && here ? more.route({ x: here.worldX, z: here.worldZ }) : [back]));
         return home.ok ? null : `no walk back: ${home.detail ?? 'stopped'}`;
     };
 }

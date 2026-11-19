@@ -156,6 +156,10 @@ What the swarm does with this job, from `scripts/swarm.ts` and `packages/practic
   that the bank and the pack together cannot fill deposits nothing. A trip is due at the start and after the member
   has been in the Wilderness (`outTripDue`), not on the first steps of the march, which are outside the Wilderness
   too: a trip there ran a restock before any fight. The bench shows it as `trips=4` for four members.
+  A later trip also walks to the nearest safe altar (never one in the Wilderness) when Prayer is under 70 percent of
+  the base level (`SQUAD_TRIP_PRAYER_FLOOR`). It is off by default (`SQUAD_TRIP_ALTAR=1` turns it on): in the bench (`extra:squad-2-gang-trips-altar-x1`, floor 1) both members leave for the church together and the post stands empty until they are back. From Edgeville the altar is the Varrock
+  east church, about 159 tiles away. A failed prayer does not end the trip: the member fights on without Prayer and the
+  log says so. Every walk back goes by the march's legs (`marchLegs`: the edge, the entry of the post's area, the post).
 - **Stock for a second trip.** `squad-ready.ts` counts the runes and arrows of a pack (and the quiver) against the pack, the
   bank and the quiver together: under one pack's worth is a block (`stock under one pack`), under two a note (`stock for one trip
   only`). A bank trip that cannot be filled says which item and how many (`bank lacks trip requirements ... (iron arrow: 75

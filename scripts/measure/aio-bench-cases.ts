@@ -1095,6 +1095,9 @@ const ROUTE_CASES: BenchCase[] = [
   squadCase('extra:squad-6-gang-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 6),
   // Three sharks each at the start: the squad's bank trip and walk back mid-meeting.
   squadCase('extra:squad-4-gang-trips-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=12'], 3),
+  // A later trip restores Prayer at the nearest safe altar (the Varrock east church) before the walk back by the march's legs. The floor of 1 sends
+  // any member that spent a point; the live floor is 0.7.
+  squadCase('extra:squad-2-gang-trips-altar-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, ['MAX_MINUTES=8', 'TRIPS=2', 'SQUAD_TRIP_ALTAR=1', 'SQUAD_TRIP_PRAYER_FLOOR=1'], 3),
   // The bank trip from the east post goes to Varrock West (bankNear) and keeps to multi-way tiles.
   squadCase('extra:squad-2-gang-trips-east-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, ['MAX_MINUTES=8', 'TRIPS=2', 'SQUAD_GANG_HUNT=1', 'POST=3200,3620'], 3, {x: 3197, z: 3621}),
   // Two of ours leave outnumbered: each walks out, banks at Edgeville and walks back to the post.
