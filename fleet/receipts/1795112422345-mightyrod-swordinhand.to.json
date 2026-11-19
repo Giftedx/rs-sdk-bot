@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795112422345-mightyrod-swordinhand",
  "account": "Swordinhand",
  "partner": "Mightyrod",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 28768,
  "claim": "3cc7e491-106f-4704-a133-42b22f4e0b50",
- "count": 0,
- "ok": false,
- "at": 1795112501192,
- "detail": "trade claimed"
+ "count": 28768,
+ "ok": true,
+ "at": 1795112556959,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1232,
+  "after": 30000
+ },
+ "bank": {
+  "count": 28768,
+  "at": 1795112556202
+ },
+ "logout": {
+  "attemptId": "1795112501201-0000017364-0000000001",
+  "at": 1795112556949,
+  "sha256": "c18600c80fd28ca58719af22cf403298d3c67ff9801197fadce689d20bf5313e"
+ },
+ "screen": true
 }
