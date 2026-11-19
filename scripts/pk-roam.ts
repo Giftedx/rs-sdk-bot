@@ -416,7 +416,7 @@ const MELEE_WEAPON = /dagger|scimitar|longsword|sword|mace|battleaxe|warhammer|s
 // Fight kit for scripts/pk.ts: melee wields the worn weapon and shield (or a carried melee weapon/shield if a bow or
 // staff is worn at start), ranged a carried bow (RANGED, default any bow), magic a carried staff. A style is
 // present only when the account carries its weapon: fightPlayer skips a style with an empty kit (pk.ts hasStyle).
-export function kitFrom(worn: readonly Item[], carried: readonly Item[], ranged = /bow$/i): Kit {
+export function kitFrom(worn: readonly Item[], carried: readonly Item[], ranged = /(bow|knife)$/i): Kit {
     const kit: Kit = {};
     const wornWep = worn.find(i => i.slot === 3 && !ranged.test(i.name) && !/staff/i.test(i.name));
     const wornShield = worn.find(i => i.slot === 5);

@@ -315,6 +315,9 @@ const SHARK = 385, LOBSTER = 379, MAGIC_SHORTBOW = 861, IRON_ARROW = 884;
 const withPack = (c: BenchCase, n: number, change: (cfg: SaveConfig) => SaveConfig, members = n): BenchCase => ({...c, presetConfig: change(c.presetConfig!),
   companions: c.companions!.map((comp, i) => (i < Math.min(n, members) - 1 ? {...comp, presetConfig: change(comp.presetConfig!)} : comp))});
 const lobsters = (cfg: SaveConfig): SaveConfig => ({...cfg, inventory: cfg.inventory!.map(i => (i.id === SHARK ? {...i, id: LOBSTER} : i))});
+// A stack of 500 rune knives for each bow of the pack (a magic or willow shortbow), and no arrows worn: the knife kit of the clone squad cases.
+const RUNE_KNIFE = 868, WILLOW_SHORTBOW = 849;
+const knives = (cfg: SaveConfig): SaveConfig => ({...cfg, inventory: cfg.inventory!.map(i => (i.id === MAGIC_SHORTBOW || i.id === WILLOW_SHORTBOW ? {id: RUNE_KNIFE, count: 500} : i)), equipment: cfg.equipment?.filter(e => e.slot !== 13)});
 const noBow = (cfg: SaveConfig): SaveConfig => ({...cfg, inventory: cfg.inventory!.map(i => (i.id === MAGIC_SHORTBOW ? {id: SHARK, count: 1} : i)), equipment: cfg.equipment?.filter(e => e.id !== IRON_ARROW)});
 // The same change for the members of ours from member `from` on (member 0 is the account of the run). In a clone squad
 // case gang account i hunts member i, so the first three members are the ones that the gang hits first.
@@ -1174,6 +1177,7 @@ const ROUTE_CASES: BenchCase[] = [
   // Three and four of ours in that kit from the Edgeville bank to the multi-way post, the clones hunting them, each
   // clone on its own one of ours: single-way tiles first, then multi-way.
   cloneSquad('extra:clone-3v3-walkin-x1', 'live-walker-iron-rune-chain-bare', 3, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']),
+  withPack(cloneSquad('extra:clone-3v3-walkin-knife-x1', 'live-walker-iron-rune-chain-bare', 3, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']), 3, knives),
   // The same meeting with the threat radar on (scripts/pk-threat.ts, research/pvp-fight-loop.md "Threat radar"): the clones are the squad's targets, so the
   // radar protects against them and never retreats. The squad kills must match the case above.
   cloneSquad('extra:clone-3v3-walkin-threat-x1', 'live-walker-iron-rune-chain-bare', 3, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'SQUAD_THREAT=1']),
@@ -1198,6 +1202,7 @@ const ROUTE_CASES: BenchCase[] = [
   // The fidelity case of the replay: it passes only inside the band of run-1.json, so the clones cannot go soft unseen.
   {...run1Squad('extra:clone-run1-fidelity-x1', {prayer: false, prey: '0,1,0'}), pass: (s: string) => ok(s) && killReceiptsMatch(s) && run1Fidelity(s) === null},
   run1Squad('extra:clone-run1-prayer-x1', {prayer: true, prey: '0,1,0'}),
+  withPack(run1Squad('extra:clone-run1-prayer-knife-x1', {prayer: true, prey: '0,1,0'}), 4, knives),
   run1Squad('extra:clone-run1-nearest-x1', {prayer: false}),
   // Which behaviour of the clones sets the length of a fight: a gang that never eats (eatAt 0), and a gang whose protect prayer
   // never comes on (every weapon change waits the whole window).
