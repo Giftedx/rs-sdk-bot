@@ -5,7 +5,7 @@ import { alchSupplies } from '../src/alch-plan';
 import { orderRefusal } from '../../core/src/order-refusal';
 import { DRAIN_RESULT } from '../src/autopilot';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
-import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable, norm, usableTool } from '../src/autopilot';
+import { PILOT_FALLBACK_SHARE, selfServePilot, GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable, norm, usableTool } from '../src/autopilot';
 
 const side = 'claude-cloud';
 // A fixture that can pick the knights (Thieving 55) has 20 Hitpoints, so the frail rule of the goldfarm job
@@ -3431,5 +3431,35 @@ describe('army kit stages follow the style that the account trains', () => {
         expect(melee({ 'rune scimitar': 1 }).template!.id).toBe(KIT_BUY + 'army-armour-rune');
         // No bow or arrow stage for it: it has no Ranged band to train.
         expect(melee({ 'rune scimitar': 1, 'rune chainbody': 1, 'rune plateleg': 1, 'rune full helm': 1, 'rune kiteshield': 1 }).template?.id ?? '').not.toMatch(/army-weapon-(bow|ammo)/);
+    });
+});
+
+// Inputs.pilotFallback: a free account outside the army roster takes a self-serve production pilot that the `aio` list does not name.
+describe('pilot fallback for a free account', () => {
+    const chopper = () => acct('Chopper', { Woodcutting: 60 }, { 'bronze axe': 1 });
+    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => plan(aioInputs(accounts, [], extra));
+    test('a non-army account gets the production pilot it qualifies for, and none without the switch', () => {
+        expect(ids(run([chopper()], { pilotFallback: true }))).toEqual({ Chopper: 'aio-yews' });
+        expect(ids(run([chopper()]))).toEqual({ Chopper: 'vacant' });
+        expect(ids(run([chopper()], { pilotFallback: false }))).toEqual({ Chopper: 'vacant' });
+        // A level under the template's need still gets no job.
+        expect(ids(run([acct('Low', { Woodcutting: 59 }, { 'bronze axe': 1 })], { pilotFallback: true })).Low).not.toBe('aio-yews');
+    });
+    test('met demand gives no job', () => {
+        expect(ids(run([chopper()], { pilotFallback: true, bill: [] }))).toEqual({ Chopper: 'vacant' });
+        expect(ids(run([chopper()], { pilotFallback: true, bill: [row('yew logs', 0)] }))).toEqual({ Chopper: 'vacant' });
+    });
+    test('an army account and a squad member get none, and quest, band and combat pilots stay on the list', () => {
+        expect(ids(run([chopper()], { pilotFallback: true, army: new Set(['chopper']) })).Chopper).not.toBe('aio-yews');
+        const squad = { active: true, hours: 4, all: ['Chopper'], members: [{ name: 'Chopper', items: {} }] };
+        expect(ids(run([chopper()], { pilotFallback: true, squad })).Chopper).not.toBe('aio-yews');
+        const open = catalogue().filter(selfServePilot).map(t => t.id);
+        expect(open).toContain('aio-yews');
+        for (const id of ['aio-quest-runemysteries', 'army-quest-lostcity', 'army-hunt-black-dragons', 'army-splash-magic-66', 'quest-ikov', 'army-fletch-25']) expect(open).not.toContain(id);
+    });
+    test('a listed pilot ranks above the fallback and the fallback is worth a fraction', () => {
+        const listed = plan(aioInputs([chopper()], ['aio-yews']))[0]!, fallback = run([chopper()], { pilotFallback: true })[0]!;
+        expect(fallback.template?.id).toBe('aio-yews');
+        expect(fallback.value).toBeCloseTo(listed.value * PILOT_FALLBACK_SHARE, 6);
     });
 });
