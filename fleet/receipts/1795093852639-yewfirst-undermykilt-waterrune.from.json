@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795093852639-yewfirst-undermykilt-waterrune",
+ "account": "YewFirst",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 78,
+ "claim": "33e0078d-d6e8-4865-8952-e3f4d3dc2d62",
+ "count": 78,
+ "ok": true,
+ "at": 1795093963073,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 78,
+  "after": 0
+ },
+ "bank": {
+  "count": 78,
+  "at": 1795093949528
+ },
+ "logout": {
+  "attemptId": "1795093940448-0000024872-0000000001",
+  "at": 1795093963063,
+  "sha256": "2530319af9cfb7a3b0ece21604314079bb98fe88006e408032816ecb03c7ed2e"
+ },
+ "screen": true
+}
