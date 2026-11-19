@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795111462127-abracadickra-oreelse",
+ "account": "Abracadickra",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 74267,
+ "claim": "f773e9ba-757a-4271-9b4c-842dfdf709a2",
+ "count": 0,
+ "ok": false,
+ "at": 1795111602600,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795111598934-0000021164-0000000001",
+  "at": 1795111602589,
+  "sha256": "d21b4fa96f62625d39ad4035cfb13ab2e20f67771dd3f8e4774f01d1ae6414c6"
+ },
+ "screen": false
+}
