@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795107056201-moneyshot-sausagefest-bones",
+ "account": "Moneyshot",
+ "partner": "Sausagefest",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 31,
+ "claim": "94ff52cd-6611-45db-9aeb-29a20ab617d0",
+ "count": 0,
+ "ok": false,
+ "at": 1795107138559,
+ "detail": "trade claimed"
+}
