@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795064804545-pickpockdick-dipstick-naturerune",
  "account": "PickpockDick",
  "partner": "Dipstick",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 348,
  "claim": "9ef29174-59ad-442d-b827-520aa14e55dc",
- "count": 0,
- "ok": false,
- "at": 1795064831685,
- "detail": "trade claimed"
+ "count": 348,
+ "ok": true,
+ "at": 1795064849057,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 348,
+  "after": 0
+ },
+ "bank": {
+  "count": 348,
+  "at": 1795064839568
+ },
+ "logout": {
+  "attemptId": "1795064831693-0000027180-0000000001",
+  "at": 1795064849048,
+  "sha256": "d24c174aefb2f7433ceb7433fe7884712586799ab8daa4dc61008c3f6d5d7dfb"
+ },
+ "screen": true
 }
