@@ -1,0 +1,23 @@
+{
+ "id": "1795056427457-ballspinner-undermykilt-9883fc826e31029b",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Ballspinner",
+ "to": "UnderMyKilt",
+ "item": "Earth rune",
+ "count": 30,
+ "start": 1795056427457,
+ "end": 1795058827457,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
