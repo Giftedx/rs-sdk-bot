@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795119656378-pocketrocket-knightstick-firerune",
  "account": "Knightstick",
  "partner": "Pocketrocket",
@@ -10,8 +10,22 @@
  "item": "Fire rune",
  "requested": 1,
  "claim": "e51e98b8-a1fb-47a0-bdfd-b464b1ef5fb8",
- "count": 0,
- "ok": false,
- "at": 1795119771142,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795119951464,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795119950686
+ },
+ "logout": {
+  "attemptId": "1795119771150-0000008932-0000000001",
+  "at": 1795119951454,
+  "sha256": "758ab707b37319dcd2142fd545a2b4401b11fc9034e10f37c0307cca2d6dac8f"
+ },
+ "screen": true
 }
