@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795110951337,
+ "at": 1795111006937,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -161,6 +161,36 @@
    "autopilot": "local",
    "resources": [
     "ge:armour"
+   ]
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "zaff",
+    "3000"
+   ],
+   "env": {
+    "ITEMS": "staff of fire",
+    "STOCK_TARGET": "1",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "1100",
+    "STALL_TICKS": "0",
+    "FLOAT": "13000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "12000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy a staff of fire at Zaff's shop in Varrock for the alchemy band",
+   "role": "supply",
+   "template": "army-staff-zaff",
+   "autopilot": "local",
+   "resources": [
+    "shop:zaff"
    ]
   },
   {
@@ -347,31 +377,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "accounts": [
-    "Pocketpython",
-    "Ballspinner"
-   ],
-   "script": "scripts/coin-courier.ts",
-   "args": [
-    "2000000",
-    "--bank-x=3185",
-    "--bank-z=3436",
-    "--reserve=200000",
-    "--timeout-ms=600000"
-   ],
-   "env": {
-    "COIN_ORDER": "prayer99-ballspinner-bonefund2m",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-3dfc6c30-32fd-45fc-852d-f230595c9ad1"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-courier-pocketpython-ballspinner-bone-fund [task-3dfc6c30-32fd-45fc-852d-f230595c9ad1]",
-   "role": "supply"
   }
  ],
  "army": [

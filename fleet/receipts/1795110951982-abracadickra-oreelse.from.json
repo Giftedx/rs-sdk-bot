@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795110951982-abracadickra-oreelse",
  "account": "Abracadickra",
  "partner": "OreElse",
@@ -12,6 +12,12 @@
  "claim": "8f54c86a-ed82-4c6e-9bd4-da47b6d2693f",
  "count": 0,
  "ok": false,
- "at": 1795110973393,
- "detail": "trade claimed"
+ "at": 1795110993469,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795110973562-0000003980-0000000001",
+  "at": 1795110993458,
+  "sha256": "8d0b1d35e24a7bb7426e30c9b9c2c8ec2b7e479bcc9c17a727f2e248e029140e"
+ },
+ "screen": false
 }
