@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795101109381-mightyrod-knightrider-dragondagger",
  "account": "KnightRider",
  "partner": "Mightyrod",
@@ -12,6 +12,12 @@
  "claim": "1f29481f-fbd8-43ed-9917-d990a8913e95",
  "count": 0,
  "ok": false,
- "at": 1795101183227,
- "detail": "trade claimed"
+ "at": 1795101276669,
+ "detail": "fled at low hitpoints: flee_guard id=918 at=3098,3245 ticks=9",
+ "logout": {
+  "attemptId": "1795101183236-0000028208-0000000001",
+  "at": 1795101276603,
+  "sha256": "029d318f6509c016a5babc17240e90c7079de2ce098f4350a109f7c357afd9c0"
+ },
+ "screen": false
 }
