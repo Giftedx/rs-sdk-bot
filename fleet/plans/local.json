@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795062535828,
+ "at": 1795063132754,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -213,6 +213,52 @@
    "resources": [
     "shop:lowe",
     "shop:aubury"
+   ]
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {
+    "ALCH_ITEM": "airrune",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-air-magic-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/aio.ts",
+   "args": [
+    "skiller",
+    "runecraft",
+    "bank-craft",
+    "99",
+    "RUNE_ALTAR=air",
+    "ESSENCE_TARGET=28",
+    "CAP=4000"
+   ],
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"runecraft\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "craft 28 banked rune essence into air runes",
+   "role": "magic",
+   "template": "aio-air-runes",
+   "autopilot": "local",
+   "resources": [
+    "aio:air-altar"
    ]
   },
   {
