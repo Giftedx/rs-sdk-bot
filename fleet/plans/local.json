@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795070633483,
+ "at": 1795070693906,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -253,36 +253,6 @@
    ]
   },
   {
-   "account": "BraveHardon",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "jiminua",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "antipoison",
-    "STOCK_TARGET": "25",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "3656",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "3456",
-    "AUTOPILOT_ORDER": "[19]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":25}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy antipoison(3) at Jiminua's in Karamja for the gang squad",
-   "role": "bank",
-   "template": "squad-antipoison-jiminua",
-   "autopilot": "local",
-   "resources": [
-    "shop:jiminua"
-   ]
-  },
-  {
    "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -371,8 +341,7 @@
     "5000"
    ],
    "env": {
-    "ALCH_ITEM": "airrune",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+    "ALCH_ITEM": "airrune"
    },
    "enabled": true,
    "standing": true,

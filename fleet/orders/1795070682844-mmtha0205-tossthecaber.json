@@ -1,0 +1,22 @@
+{
+ "id": "1795070682844-mmtha0205-tossthecaber",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmtha0205",
+ "to": "TossTheCaber",
+ "item": "coins",
+ "count": 4152,
+ "start": 1795070682844,
+ "end": 1795073082844,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
