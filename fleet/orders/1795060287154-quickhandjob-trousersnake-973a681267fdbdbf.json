@@ -1,0 +1,23 @@
+{
+ "id": "1795060287154-quickhandjob-trousersnake-973a681267fdbdbf",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Quickhandjob",
+ "to": "TrouserSnake",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795060287154,
+ "end": 1795071087154,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
