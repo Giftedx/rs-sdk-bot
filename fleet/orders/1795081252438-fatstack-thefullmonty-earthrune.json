@@ -1,0 +1,22 @@
+{
+ "id": "1795081252438-fatstack-thefullmonty-earthrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "TheFullMonty",
+ "item": "Earth rune",
+ "count": 15,
+ "start": 1795081252438,
+ "end": 1795083652438,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
