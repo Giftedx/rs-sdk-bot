@@ -1733,9 +1733,9 @@ const EXTRA_CASES: BenchCase[] = [
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 2}]}},
   // The gang squad's iron arrows (packages/planner/src/autopilot.ts squad-iron-tips and squad-iron-arrows): two iron bars into
   // 30 iron arrowtips at the Varrock West anvils, and 90 tips with 90 headless arrows into 90 iron arrows at a bank.
-  {key: 'extra:smith-iron-arrowtips', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=40', 'MAX_MAKE=2', 'BAR_RESERVE=0'], pass: ok,
+  {key: 'extra:smith-iron-arrowtips', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=40', 'MAX_MAKE=2', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":2,"banked":30/.test(s),
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 20}, inventory: [{id: 2347, count: 1}], bank: [{id: 2351, count: 2}]}},
-  {key: 'extra:fletch-iron-arrows', script: 'scripts/fletch-arrows.ts', preset: 'fresh_lumbridge', scriptArgs: ['600', 'iron'], pass: s => ok(s) && /mode=iron/.test(s),
+  {key: 'extra:fletch-iron-arrows', script: 'scripts/fletch-arrows.ts', preset: 'fresh_lumbridge', scriptArgs: ['600', 'iron'], pass: s => ok(s) && /mode=iron .*made=90 banked=90 /.test(s),
     presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Fletching: 15}, bank: [{id: 53, count: 290}, {id: 40, count: 90}]}},
   {key: 'extra:smith-rune-kiteshield', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', scriptArgs: ['smithing', 'anvil', '600', 'PRODUCT_ID=1201', 'MAX_MAKE=1', 'BAR_RESERVE=0'], pass: s => ok(s) && /"made":1,"banked":1/.test(s),
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Smithing: 99}, inventory: [{id: 2347, count: 1}], bank: [{id: 2363, count: 3}]}},

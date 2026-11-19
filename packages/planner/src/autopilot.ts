@@ -1789,8 +1789,8 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     [COW_FIELD]: ARMY_BANK, [STRIKE_TILE]: ARMY_BANK, [SPLASH_FENCE]: ARMY_BANK, [TROOPER_FIELD]: ARMY_BANK,
     'catherby:lobster': CATHERBY_BANK, [AIO_PLACES.flax]: { x: 2744, z: 3445 }, [AIO_PLACES.yews]: SEERS_BANK,
     'shop:ardy': { x: 2654, z: 3283 }, 'shop:catherby': CATHERBY_BANK, 'shop:catherby_arrows': CATHERBY_BANK, 'shop:dargaud': SEERS_BANK, 'shop:magic_guild': { x: 2612, z: 3093 },
-    'aio:water-altar': DRAYNOR_BANK, 'fighter:wizards-tower': DRAYNOR_BANK, 'squad:al-kharid-furnace': { x: 3269, z: 3167 }, 'squad:varrock-west-anvil': { x: 3185, z: 3436 },
-    'squad:fletch-ardougne': ARMY_BANK, 'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
+    'aio:water-altar': DRAYNOR_BANK, 'fighter:wizards-tower': DRAYNOR_BANK, 'squad:varrock-west-anvil': { x: 3185, z: 3436 },
+    'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
     'shop:zeke': { x: 3269, z: 3167 }, 'shop:dommik': { x: 3269, z: 3167 }, 'shop:jiminua': { x: 2654, z: 3283 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
 };
 // A template's place: its first resource with one. A chicken pen carries its tile, and a knight spot has the bank.
@@ -2184,8 +2184,8 @@ export const SQUAD_RUN_MAX: Readonly<Record<string, number>> = { 'iron arrow': 2
 export const SQUAD_UNIT_COST: Readonly<Record<string, number>> = { 'iron arrow': 3, 'water rune': 4, 'nature rune': 20, 'law rune': 40, 'antipoison(3)': 288 };
 // The essence of one water-rune craft run, as aio-air-runes (ESSENCE_TARGET=28).
 export const SQUAD_CRAFT_ESSENCE = 28;
-// The bars of one iron-arrowtip run (a hammer and 27 bars fill the pack) and the arrows of one fletch run (a multiple of 15).
-export const SQUAD_TIP_BARS = 27, SQUAD_FLETCH_ARROWS = 450;
+// The bars of one iron-arrow run: a hammer and 27 bars fill the pack.
+export const SQUAD_TIP_BARS = 27;
 export function squadSupplies(): Template[] {
     const shop = (id: string, profile: string, item: string, items: string, perTick: number, goal: string, needs: Needs): Template => {
         const cost = SQUAD_UNIT_COST[item]!, max = SQUAD_RUN_MAX[item]!;
@@ -2214,31 +2214,22 @@ export function squadSupplies(): Template[] {
         worker: 'scripts/gather-combat.ts', args: ['fighter', 'wizard', '10000', 'wizard', 'MAX_KILLS=200', 'UNTIL_ITEM=water talisman'],
         role: 'combat', goal: "kill wizards at the Wizards' Tower until a water talisman drops, for the gang squad's water runes", resources: ['fighter:wizards-tower'], squadOnly: true,
         needs: { combat: 40, holdsUnder: { 'water talisman': 1 } }, repeats: false, yields: () => [], provides: { item: 'water talisman', unlocks: ['squad-water-craft'] } };
-    // Iron arrows from the fleet's headless arrows: iron ore into bars (Al Kharid), a bar into 15 iron arrowtips at the Varrock
-    // West anvils (scripts/smith-batch.ts, smithing.dbrow: Smithing 20), and 15 tips with 15 headless arrows into 15 iron arrows
-    // (scripts/fletch-arrows.ts MODE=iron, arrows.dbrow: Fletching 15). Bench cases extra:smith-iron-arrowtips and
-    // extra:fletch-iron-arrows. The rates are estimates.
-    const ironBars: Template = { id: 'squad-iron-bars', family: 'aio:skiller:smithing:smelt', script: 'scripts/aio.ts', aio: 'skiller:smithing:smelt', worker: 'scripts/smelt-bars.ts',
-        args: ['skiller', 'smithing', 'smelt', '1500', 'iron', 'MAX_MAKE=28', 'ORE_RESERVE=0'], role: 'smithing', goal: 'smelt banked iron ore into iron bars at Al Kharid for the gang squad',
-        resources: ['squad:al-kharid-furnace'], squadOnly: true, needs: { skills: { Smithing: 15 }, items: { 'iron ore': 28 } }, repeats: false,
-        production: { output: 'iron bar', outputPerUnit: 1, maximum: 28, inputs: { 'iron ore': 1 }, resize: n => ({ args: ['skiller', 'smithing', 'smelt', '1500', 'iron', `MAX_MAKE=${n}`, 'ORE_RESERVE=0'] }) },
-        yields: () => [{ item: 'iron bar', perTick: 0.07 }] };
-    const ironTips: Template = { id: 'squad-iron-tips', family: 'aio:skiller:smithing:anvil', script: 'scripts/aio.ts', aio: 'skiller:smithing:anvil', worker: 'scripts/smelt-bars.ts',
-        args: ['skiller', 'smithing', 'anvil', '1500', 'PRODUCT_ID=40', `MAX_MAKE=${SQUAD_TIP_BARS}`, 'BAR_RESERVE=0'], role: 'smithing',
-        goal: 'smith banked iron bars into iron arrowtips at the Varrock West anvils for the gang squad', resources: ['squad:varrock-west-anvil'], squadOnly: true,
-        needs: { skills: { Smithing: 20 }, items: { hammer: 1, 'iron bar': SQUAD_TIP_BARS } }, repeats: false,
-        production: { output: 'iron arrowtips', outputPerUnit: 15, maximum: SQUAD_TIP_BARS, inputs: { 'iron bar': 1 },
-            resize: n => ({ args: ['skiller', 'smithing', 'anvil', '1500', 'PRODUCT_ID=40', `MAX_MAKE=${n}`, 'BAR_RESERVE=0'] }) },
-        yields: () => [{ item: 'iron arrowtips', perTick: 1 }] };
-    const fletchStep = (n: number) => `scripts/fletch-arrows.ts 3000 iron MAX_MAKE=${n} HEADLESS_RESERVE=0 TIP_RESERVE=0`;
-    const ironArrows: Template = { id: 'squad-iron-arrows', family: 'fletch', script: 'scripts/chain.ts', args: [`scripts/walk-to.ts ${ARMY_BANK.x} ${ARMY_BANK.z}`, fletchStep(SQUAD_FLETCH_ARROWS)],
-        env: { ROUNDS: '1' }, role: 'fletching', goal: 'fletch banked headless arrows and iron arrowtips into iron arrows for the gang squad', resources: ['squad:fletch-ardougne'], squadOnly: true,
-        needs: { skills: { Fletching: 15 }, items: { 'headless arrow': SQUAD_FLETCH_ARROWS, 'iron arrowtips': SQUAD_FLETCH_ARROWS } }, repeats: false,
-        production: { output: 'iron arrow', outputPerUnit: 15, maximum: SQUAD_FLETCH_ARROWS / 15, inputs: { 'headless arrow': 15, 'iron arrowtips': 15 },
-            resize: n => ({ args: [`scripts/walk-to.ts ${ARMY_BANK.x} ${ARMY_BANK.z}`, fletchStep(n * 15)] }) },
-        yields: () => [{ item: 'iron arrow', perTick: 2 }] };
+    // Iron arrows from the fleet's iron bars and headless arrows, one chain job: each bar into 15 iron arrowtips at the Varrock
+    // West anvils (scripts/smith-batch.ts, smithing.dbrow: Smithing 20), then 15 tips with 15 headless arrows into 15 iron arrows
+    // at the Varrock West bank (scripts/fletch-arrows.ts MODE=iron, arrows.dbrow: Fletching 15). One job, because the planner
+    // finds a missing input only in stock and on the market, not from another maker. Bench cases extra:smith-iron-arrowtips and
+    // extra:fletch-iron-arrows (hosted run 44467443936, seeds 1 to 3): 30 tips from 2 bars in 53 ticks, 90 arrows in 21 ticks.
+    // No job smelts the bars: they come from stock.
+    const ironSteps = (bars: number) => [`scripts/aio.ts skiller smithing anvil 1500 PRODUCT_ID=40 MAX_MAKE=${bars} BAR_RESERVE=0`,
+        `scripts/fletch-arrows.ts 3000 iron MAX_MAKE=${bars * 15} HEADLESS_RESERVE=0 TIP_RESERVE=0`];
+    const ironArrows: Template = { id: 'squad-iron-arrows', family: 'fletch', script: 'scripts/chain.ts', args: ironSteps(SQUAD_TIP_BARS), env: { ROUNDS: '1' },
+        role: 'fletching', goal: 'smith banked iron bars into arrowtips and fletch them with headless arrows into iron arrows for the gang squad',
+        resources: ['squad:varrock-west-anvil'], squadOnly: true, repeats: false,
+        needs: { skills: { Smithing: 20, Fletching: 15 }, items: { hammer: 1, 'iron bar': SQUAD_TIP_BARS, 'headless arrow': SQUAD_TIP_BARS * 15 } },
+        production: { output: 'iron arrow', outputPerUnit: 15, maximum: SQUAD_TIP_BARS, inputs: { 'iron bar': 1, 'headless arrow': 15 }, resize: n => ({ args: ironSteps(n) }) },
+        yields: () => [{ item: 'iron arrow', perTick: 4 }] };
     return [
-        waterCraft, waterTalisman, ironBars, ironTips, ironArrows,
+        waterCraft, waterTalisman, ironArrows,
         shop('squad-arrows-lowe', 'lowe', 'iron arrow', 'iron arrow', 0.5, "buy iron arrows at Lowe's in Varrock for the gang squad", { items: { coins: 6000 } }),
         shop('squad-arrows-catherby', 'catherby_arrows', 'iron arrow', 'iron arrow', 0.5, "buy iron arrows at Hickton's in Catherby for the gang squad", { items: { coins: 6000 } }),
         shop('squad-arrows-dargaud', 'dargaud', 'iron arrow', 'iron arrow', 0.4, 'buy iron arrows in the Ranging Guild for the gang squad', { skills: { Ranged: 40 }, items: { coins: 6000 } }),
