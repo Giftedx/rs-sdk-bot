@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795071532504-tossthecaber-pocketpool-antipoison3",
+ "account": "PocketPool",
+ "partner": "TossTheCaber",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 3,
+ "claim": "fe40b00f-cb31-43e8-b942-23409122cb1d",
+ "count": 0,
+ "ok": false,
+ "at": 1795071620387,
+ "detail": "trade claimed"
+}
