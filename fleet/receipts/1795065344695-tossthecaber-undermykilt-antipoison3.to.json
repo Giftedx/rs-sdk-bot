@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795065344695-tossthecaber-undermykilt-antipoison3",
  "account": "UnderMyKilt",
  "partner": "TossTheCaber",
@@ -10,8 +10,22 @@
  "item": "Antipoison(3)",
  "requested": 4,
  "claim": "72204b19-59fb-4f71-a13b-3c58bb5aff7b",
- "count": 0,
- "ok": false,
- "at": 1795065410534,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795065637068,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 4
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795065636284
+ },
+ "logout": {
+  "attemptId": "1795065410543-0000018260-0000000001",
+  "at": 1795065637018,
+  "sha256": "7e8df79e59e55ffed3c55e18d001c8015f09bbdaf738af9b2a2f6d9606f1f40d"
+ },
+ "screen": true
 }
