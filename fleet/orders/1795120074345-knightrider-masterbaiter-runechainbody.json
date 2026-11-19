@@ -1,0 +1,22 @@
+{
+ "id": "1795120074345-knightrider-masterbaiter-runechainbody",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "Masterbaiter",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795120074345,
+ "end": 1795122474345,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
