@@ -143,10 +143,12 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
    }
    if(requestPending&&ready()&&!stop()){
     readyAt??=s.tick();
-    // After crossed requests, a second crafter request can cancel a trade that opens after a walk. The crafter
-    // answers only if no trade opens within 2 ticks of the helper's accepted request.
-    const hi=index(s,h.name);
-    if(hi!==undefined&&(!reciprocal||s.tick()-readyAt>2)){mark('crafter-response');await direct(s,{type:'interactPlayer',playerIndex:hi,optionIndex:4,reason:'SDK'});mark('control');responseSent=true;}
+    // A crafter that is busy when its crossed request arrives loses that request, so it answers the helper's
+    // request. Next to the helper it answers at once. Away from the helper a second request can cancel a trade that
+    // opens after the walk, so it answers only if no trade opens within 2 ticks.
+    const hi=index(s,h.name),main=state(s).player,helper=state(h).player;
+    const adjacent=!!main&&!!helper&&main.level===helper.level&&Math.max(Math.abs(main.worldX-helper.worldX),Math.abs(main.worldZ-helper.worldZ))<=1;
+    if(hi!==undefined&&(!reciprocal||adjacent||s.tick()-readyAt>2)){mark('crafter-response');await direct(s,{type:'interactPlayer',playerIndex:hi,optionIndex:4,reason:'SDK'});mark('control');responseSent=true;}
    }
    }
   }
