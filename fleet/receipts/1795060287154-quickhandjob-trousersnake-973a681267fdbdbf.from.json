@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795060287154-quickhandjob-trousersnake-973a681267fdbdbf",
+ "account": "Quickhandjob",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "9eb54585-5e22-4085-aa06-ae4fdd8e44a6",
+ "count": 0,
+ "ok": false,
+ "at": 1795060295515,
+ "detail": "trade claimed"
+}

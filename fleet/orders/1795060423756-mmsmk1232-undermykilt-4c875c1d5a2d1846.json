@@ -1,0 +1,23 @@
+{
+ "id": "1795060423756-mmsmk1232-undermykilt-4c875c1d5a2d1846",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmsmk1232",
+ "to": "UnderMyKilt",
+ "item": "Earth rune",
+ "count": 6,
+ "start": 1795060423756,
+ "end": 1795071223756,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
