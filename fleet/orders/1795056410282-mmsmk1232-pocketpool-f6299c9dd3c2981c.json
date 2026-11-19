@@ -1,0 +1,23 @@
+{
+ "id": "1795056410282-mmsmk1232-pocketpool-f6299c9dd3c2981c",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmsmk1232",
+ "to": "PocketPool",
+ "item": "Antipoison(1)",
+ "count": 1,
+ "start": 1795056410282,
+ "end": 1795058810282,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
