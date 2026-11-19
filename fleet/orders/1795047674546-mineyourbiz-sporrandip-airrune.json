@@ -1,0 +1,22 @@
+{
+ "id": "1795047674546-mineyourbiz-sporrandip-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "SporranDip",
+ "item": "Air rune",
+ "count": 50,
+ "start": 1795047674546,
+ "end": 1795050074546,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
