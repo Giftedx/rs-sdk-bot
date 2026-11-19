@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795070133649-tossthecaber-thefullmonty-antipoison3",
+ "account": "TossTheCaber",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 3,
+ "claim": "3f62103c-8833-4b05-9e4b-e140bbb62c4d",
+ "count": 0,
+ "ok": false,
+ "at": 1795070211557,
+ "detail": "trade claimed"
+}
