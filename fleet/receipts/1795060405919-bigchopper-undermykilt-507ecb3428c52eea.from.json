@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795060405919-bigchopper-undermykilt-507ecb3428c52eea",
+ "account": "Bigchopper",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 55,
+ "claim": "d5421c55-9de4-48ba-a9a2-93599448cc05",
+ "count": 0,
+ "ok": false,
+ "at": 1795060627970,
+ "detail": "trade claimed"
+}

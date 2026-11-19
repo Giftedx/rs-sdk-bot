@@ -1,0 +1,23 @@
+{
+ "id": "1795060729889-knightrider-pocketpool-cd1e9414099183be",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "PocketPool",
+ "item": "Shark",
+ "count": 6,
+ "start": 1795060729889,
+ "end": 1795071529889,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

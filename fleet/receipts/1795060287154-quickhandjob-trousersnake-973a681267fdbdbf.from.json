@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795060287154-quickhandjob-trousersnake-973a681267fdbdbf",
  "account": "Quickhandjob",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 2,
  "claim": "9eb54585-5e22-4085-aa06-ae4fdd8e44a6",
- "count": 0,
- "ok": false,
- "at": 1795060295515,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795060639428,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795060304897
+ },
+ "logout": {
+  "attemptId": "1795060295524-0000028380-0000000001",
+  "at": 1795060639232,
+  "sha256": "bc302ec9d9f236894da71981ffa1a801c6b732df25784eaf07106b04ad06dcb7"
+ },
+ "screen": true
 }
