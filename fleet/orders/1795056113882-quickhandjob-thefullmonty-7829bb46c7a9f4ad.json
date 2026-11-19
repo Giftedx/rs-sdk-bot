@@ -1,0 +1,23 @@
+{
+ "id": "1795056113882-quickhandjob-thefullmonty-7829bb46c7a9f4ad",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Quickhandjob",
+ "to": "TheFullMonty",
+ "item": "Rune kiteshield",
+ "count": 1,
+ "start": 1795056113882,
+ "end": 1795058513882,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
