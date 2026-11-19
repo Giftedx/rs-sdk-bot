@@ -1,0 +1,29 @@
+{
+ "id": "1795060372005-mmsmk1232-thefullmonty-f647c915cc9eb40c",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmsmk1232",
+ "to": "TheFullMonty",
+ "item": "Shark",
+ "count": 16,
+ "start": 1795060372005,
+ "end": 1795071172005,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Iron arrow",
+   "count": 114
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795060207456-dipstick-undermykilt-cba322be54636134",
  "account": "Dipstick",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 2,
  "claim": "dc790ceb-8bcd-43b0-b99f-438042adbeb5",
- "count": 0,
- "ok": false,
- "at": 1795060218067,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795060252454,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795060226496
+ },
+ "logout": {
+  "attemptId": "1795060218076-0000030236-0000000001",
+  "at": 1795060252443,
+  "sha256": "05b739ae6862ece685eb28a098bb6407a6334aa9cb22f35903273d6cae7833f5"
+ },
+ "screen": true
 }
