@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795094765860,
+ "at": 1795094847548,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -300,7 +300,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-5c6eb6fe-fd8b-47f2-8dfc-3c78ed64262f"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-courier-mmtha0205-fatstack-bone-fund [task-5c6eb6fe-fd8b-47f2-8dfc-3c78ed64262f]",
    "role": "supply"
@@ -336,6 +336,7 @@
   "Sausagefest",
   "deeppockets",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "fingersmith",
   "kiltlifter",
