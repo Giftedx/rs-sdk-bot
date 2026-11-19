@@ -1067,7 +1067,7 @@ try {
     // The bank observation is taken when the bank opens, before a deposit, so it shows a drop only from an earlier run.
     // A drop that a bank trip of this run deposits is recorded here: bank() throws when a drop stays in the pack.
     const untilBanked=()=>untilId!==undefined&&(s.bankObservation?.()?.items??[]).some((i:{id:number;count:number})=>i.id===untilId&&i.count>0);
-    let untilDeposited=false;
+    let untilDeposited=false; // the drop was in the pack during this run (it is banked by the end)
     const bankUntil=async()=>{const had=untilInPack();await bank();if(had)untilDeposited=true;};
 
     while (!over()&&(!cleanupScope||!cowStop.stop())) {
@@ -1131,15 +1131,16 @@ try {
         }
     }
 
+    // A drop in the pack now is this run's: the end step below (combatRecovery) banks the pack before the UNTIL_ITEM check.
+    if(untilInPack())untilDeposited=true;
     if(combatRecovery)await combatRecovery();
     if(potions){console.log('COMBAT_POTIONS_RESULT '+JSON.stringify({doses:potions.doses,delta:potions.delta,receipts:potions.receipts,blocked:potions.blocked,resumes:potions.resumes}));}
     if(alch){if(!cleanupScope)await bank();if(s.sdk.getInventory().some(i=>i.id===995||conf.drops.test(i.name)))throw Error('owned alchemy bank return unconfirmed');console.log('COMBAT_ALCH_RESULT '+JSON.stringify({casts:loot.alch!.casts,coins:loot.alch!.coins,consumed:loot.alch!.consumed,runes:loot.alch!.runes,receipts:loot.alch!.receipts,blocked:loot.alch!.blocked,itemsLooted,bankTrips,scope:'exact owned pickup and native alchemy; generic loot does not assert kill attribution'}));}
     let untilHeld:boolean|undefined;
     if(untilItem){
-        console.log('UNTIL_DEBUG before '+JSON.stringify({untilId,inv:s.sdk.getInventory().map(i=>[i.id,i.name]),deposited:untilDeposited,cleanup:!!cleanupScope}));
-        if(untilInPack()&&!cleanupScope){await bankUntil();if(untilInPack())throw Error('UNTIL_ITEM bank return unconfirmed');}
-        untilHeld=untilDeposited||untilInPack()||untilBanked();
-        console.log('UNTIL_DEBUG after '+JSON.stringify({deposited:untilDeposited,held:untilHeld}));
+        if(untilInPack())await bankUntil();
+        if(untilInPack())throw Error('UNTIL_ITEM bank return unconfirmed');
+        untilHeld=untilDeposited||untilBanked();
     }
     const total = kills + itemsLooted;
     const perK = (total * 1000 / Math.max(1, used())).toFixed(2);
