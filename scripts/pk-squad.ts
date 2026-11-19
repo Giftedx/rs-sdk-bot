@@ -684,7 +684,7 @@ if (import.meta.main) {
         if (!gang.length) closeThreatRadar = connectRadar(squadServer, radar);
         threats = new ThreatWatch({ sessions: () => squad, server: squadServer, friends: new Set(ours.map(n => n.toLowerCase())), radar, log, act: get('SQUAD_THREAT_ACT', '1') !== '0', cooldown: Number(get('SQUAD_THREAT_COOLDOWN', '600')),
             // SQUAD_THREAT_ODDS=0: the counting rules in place of the win-chance estimate; the constants of the estimate are what the bench climbs.
-            odds: get('SQUAD_THREAT_ODDS', '1') === '0' ? false : { lose: Number(get('SQUAD_THREAT_LOSE', '0.9')), protect: Number(get('SQUAD_THREAT_PROTECT', '0.6')), pile: Number(get('SQUAD_THREAT_PILE', '0.7')), theirFood: Number(get('SQUAD_THREAT_THEIR_FOOD', '10')) }, decide: { expected: get('SQUAD_THREAT_EXPECTED', '1') === '1' ? targets : new Set<string>() } });
+            odds: get('SQUAD_THREAT_ODDS', '1') === '0' ? false : { lose: Number(get('SQUAD_THREAT_LOSE', '0.9')), protect: Number(get('SQUAD_THREAT_PROTECT', '0.6')), pile: Number(get('SQUAD_THREAT_PILE', '0.7')), theirFood: Number(get('SQUAD_THREAT_THEIR_FOOD', '10')), singleWayMin: Number(get('SQUAD_THREAT_SINGLE', '1.5')) }, decide: { expected: get('SQUAD_THREAT_EXPECTED', '1') === '1' ? targets : new Set<string>() } });
     }
     const results = await Promise.all(squad.map(s => {
         const kit = kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []);

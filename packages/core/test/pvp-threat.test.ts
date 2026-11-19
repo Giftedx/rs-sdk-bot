@@ -219,7 +219,9 @@ test('odds mode: fight a lone attacker and three attackers; against five leave, 
     expect(five).toMatchObject({ kind: 'retreat' });
     expect((five as { reason: string }).reason).toContain('lost fight: odds');
     const to = { x: 3040, z: 3600 };
-    const moved = decideAdapt(classes4(attackers(5)), members, { ...o, singleWayFrom: () => to })[0]!;
+    // Single-way ground gives about 1.3 against five: with the default `singleWayMin` (1.5) the squad leaves, with 1 it walks there.
+    expect(decideAdapt(classes4(attackers(5)), members, { ...o, singleWayFrom: () => to })[0]).toMatchObject({ kind: 'retreat' });
+    const moved = decideAdapt(classes4(attackers(5)), members, { ...o, odds: { ...DEFAULT_ODDS, singleWayMin: 1 }, singleWayFrom: () => to })[0]!;
     expect(moved).toMatchObject({ kind: 'single-way', to });
     expect((moved as { reason: string }).reason).toContain('on single-way ground');
     // On single-way ground the odds are those of single-way ground: the squad holds it and fights.
