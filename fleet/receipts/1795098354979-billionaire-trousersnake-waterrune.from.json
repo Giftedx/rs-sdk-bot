@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795098354979-billionaire-trousersnake-waterrune",
+ "account": "Billionaire",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 53,
+ "claim": "c78c90d5-c25f-4166-b3a3-6e1083ff21e4",
+ "count": 0,
+ "ok": false,
+ "at": 1795098449494,
+ "detail": "trade claimed"
+}
