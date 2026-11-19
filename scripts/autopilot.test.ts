@@ -1155,7 +1155,6 @@ test('an account whose logout is not confirmed is stranded and gives nothing', a
 
 import { OFFLINE_GUARDED, isJobEnded, readSwarmActiveAccounts, readSwarmEnded, stoppedAccounts } from './autopilot';
 import { ARMOUR_IDS, KIT_BUY } from '../packages/planner/src/autopilot';
-import { startable } from './swarm';
 
 test('the planner leaves out an account whose stopped end the swarm holds, as the swarm refuses its new mission', () => {
     const ended = new Map([['nab', { reason: 'stopped after 1 runs', revision: 'old' }], ['busy', { reason: 'stopped after 1 runs' }], ['fin', { reason: 'done after 1 runs', revision: 'old' }], ['ko', { reason: 'died: x' }]]);
