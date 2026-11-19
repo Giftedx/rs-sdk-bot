@@ -7,9 +7,9 @@ import { dirname, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { pathfindingSourceKey } from './pathcache';
 
-// zones: the zone keys in file order (size and keys() only). cells: 64 labels for each zone in that order, 0xffff or -1 for a
-// tile that is not walkable (Uint16Array while the map has under 65,535 areas). The labels are one flat array and a small
-// hash table from a zone key to its place in it: a Map of one Int32Array(64) for each of the 137,000 zones took 36 MB of heap.
+// Labels hold one flat array of 64 labels for each zone (cells, in the order of zoneKeys; 0xffff in a Uint16Array, or -1 in an
+// Int32Array, for a tile that is not walkable) and an open-addressing table from a zone key to the place of its labels.
+// The array is a Uint16Array while the map has under 65,535 areas. zones offers size and keys() over zoneKeys.
 export type Labels = { area(level: number, x: number, z: number): number; areas: number; tiles: number; zones: { size: number; keys(): IterableIterator<number> }; cells: Uint16Array | Int32Array; zoneKeys: Int32Array };
 const zoneKey = (l: number, x: number, z: number) => (l << 28) | ((x >> 3) << 14) | (z >> 3);
 const cell = (x: number, z: number) => ((x & 7) << 3) | (z & 7);

@@ -120,3 +120,34 @@ test('the flat labels answer like a map of zones, for zones, gaps and tiles that
     expect(back.zones.size).toBe(5);
     for (const [l, x, z] of [[0, 3, 3], [1, 9, 9], [1, 13, 13], [2, 3001, 3201], [0, -1, -1], [0, 16, 0], [3, 16380, 16380]] as const) expect(back.area(l, x, z)).toBe(g.area(l, x, z));
 });
+
+test('the flat labels give the answers of a Map of zone arrays for 20,000 sampled tiles, on a table with many shared slots', () => {
+    // 3,000 zones of three levels: the table holds 8,192 slots, so keys share slots and the probe loop runs often.
+    const origins: [number, number, number][] = [];
+    for (let l = 0; l < 3; l++) for (let i = 0; i < 1000; i++) origins.push([l, 8 * (i % 40), 8 * ((i / 40) | 0) + 1600 * l]);
+    const open = (x: number, z: number) => ((x * 31 + z * 17) & 7) !== 0;
+    const g = labelAreas(origins, (_l, x, z) => open(x, z), (_l, x, z, dx, dz) => open(x + dx, z + dz));
+    const file = join(directory, 'sampled.bin');
+    writeLabels(file, 'sampled', g);
+    const back = readLabels(file, 'sampled')!;
+    // The reference is the structure that the labels replace: a Map from the zone key to its own array of 64 labels.
+    const key = (l: number, x: number, z: number) => (l << 28) | ((x >> 3) << 14) | (z >> 3);
+    const reference = new Map<number, number[]>();
+    [...g.zones.keys()].forEach((k, i) => reference.set(k, Array.from(g.cells.subarray(i * 64, i * 64 + 64), v => (v === 0xffff || v < 0 ? -1 : v))));
+    const expected = (l: number, x: number, z: number) => { const zone = reference.get(key(l, x, z)); return zone ? zone[((x & 7) << 3) | (z & 7)]! : -2; };
+    let seed = 12345, inMap = 0, outside = 0;
+    const next = () => (seed = (Math.imul(seed, 1103515245) + 12345) >>> 0);
+    for (let n = 0; n < 20000; n++) {
+        // Half of the samples fall inside a zone of the map (a tile of it, or one tile beside it), half anywhere.
+        const [zl, zx, zz] = origins[next() % origins.length]!;
+        const near = n % 2 === 0, l = near ? zl : next() % 4, x = near ? zx + (next() % 10) - 1 : (next() % 400) - 20, z = near ? zz + (next() % 10) - 1 : (next() % 3600) - 20;
+        const want = expected(l, x, z);
+        expect(back.area(l, x, z)).toBe(want);
+        expect(g.area(l, x, z)).toBe(want);
+        if (want === -2) outside++; else inMap++;
+    }
+    expect(inMap).toBeGreaterThan(1000);
+    expect(outside).toBeGreaterThan(1000);
+    expect(g.zones.size).toBe(3000);
+    expect(back.zones.size).toBe(3000);
+});
