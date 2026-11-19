@@ -36,11 +36,16 @@ const VARROCK_TREE = { x: 3177, z: 3506 };            // young spirit tree (m49_
 const ANITA_STAIRS = { x: 2389, z: 3512 };            // spiralstairs to l1, Anita at 2390,3514
 const DEMON_ARRIVE = { x: 2491, z: 9864 };
 // Daconia roots, varp 151 = 1..15 (daconia_coords.enum; index 0 shares 2456,9886 with 1 and Map.set keeps 1).
-const ROOTS: [number, number][] = [[2467, 9896], [2473, 9897], [2481, 9904], [2490, 9889], [2485, 9885], [2468, 9890], [2465, 9891],
-    [2456, 9886], [2457, 9881], [2455, 9874], [2467, 9872], [2443, 9878], [2439, 9881], [2444, 9893], [2452, 9893]];
+// random_range(1, 15) is randominc, so each root is equally likely (random_range.rs2). The varp has no transmit, so the
+// client cannot see it. The order is the least mean search time from Narnode in the roots: findLongPath lengths between
+// the stand tiles, 2 tiles a tick, 3 ticks a search (scripts/measure/grandtree-roots-tour.ts): 61.7 ticks mean against 71.9 for the
+// east-first tour, the same 148-tick worst case.
+const ROOTS: [number, number][] = [[2467, 9896], [2465, 9891], [2468, 9890], [2456, 9886], [2452, 9893], [2444, 9893], [2439, 9881],
+    [2443, 9878], [2457, 9881], [2455, 9874], [2473, 9897], [2481, 9904], [2485, 9885], [2490, 9889], [2467, 9872]];
 const PFM = 14;
 
-const q = await openQuest({ cap: 6000, eatAt: 6, food: [ITEM.food] });
+// Dialogue bursts: 3/3 pass at seeds 7, 8, 9 and about 84 ticks less to the demon (research/quest-plan.md section 1g).
+const q = await openQuest({ cap: 6000, eatAt: 6, food: [ITEM.food], burst: true });
 try {
     const FROM = Number(process.env.GT_FROM ?? 0);
     let questDone = false;

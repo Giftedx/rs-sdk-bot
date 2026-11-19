@@ -270,9 +270,12 @@ const TALK_RECORD = process.env.TALK_RECORD;
 const recordedPlans: Record<string, PlanToken[]> = {};
 if (TALK_RECORD) process.on('exit', () => { try { mkdirSync(TALK_RECORD, { recursive: true }); writeFileSync(join(TALK_RECORD, `${questId()}.json`), JSON.stringify(recordedPlans)); } catch { /* a record is optional */ } });
 export let recorded = 0;
-// Q_BURST=1: blind dialogue bursts (research/quest-plan.md "Dialogue burst"); off by default.
+// Q_BURST=1: blind dialogue bursts (research/quest-plan.md "Dialogue burst"); off by default. A quest that passes with
+// bursts turns them on with openQuest({burst: true}); Q_BURST=0 turns them off for that quest too.
 const BURST = process.env.Q_BURST === '1';
-if (BURST) process.on('exit', () => console.log(`NOTE bursts=${bursts} recorded=${recorded} Q_BURST=1`));
+let burstNote = false;
+const noteBursts = (): void => { if (!burstNote) { burstNote = true; process.on('exit', () => console.log(`NOTE bursts=${bursts} recorded=${recorded} Q_BURST=1`)); } };
+if (BURST) noteBursts();
 
 export interface Loc { id: number; x: number; z: number }
 export const LUMBRIDGE = { x: 3222, z: 3218 };
@@ -370,8 +373,10 @@ export async function fightForDrop(io: DropFightIO, ticks: number): Promise<Drop
 // lumbridgeOk: the script teleports to Lumbridge, so a jump there is not a death (respawn and life id still count).
 // name: the account (default process.argv[2]). others: more sessions of a two-account quest (quest-arrav.ts); fail()
 // and end() log them out too.
-export async function openQuest(opts: { session?: Session; stop?:()=>boolean; cap?: number; eatAt?: number; food?: number[]; reservedFood?: Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>); trace?: boolean; lumbridgeOk?: boolean; name?: string; others?: () => Session[]; resend?: boolean } = {}) {
+export async function openQuest(opts: { session?: Session; stop?:()=>boolean; cap?: number; eatAt?: number; food?: number[]; reservedFood?: Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>); trace?: boolean; lumbridgeOk?: boolean; name?: string; others?: () => Session[]; resend?: boolean; burst?: boolean } = {}) {
     const CAP = opts.cap ?? 3000;
+    const BURST = process.env.Q_BURST !== '0' && (opts.burst ?? process.env.Q_BURST === '1');
+    if (BURST) noteBursts();
     const EAT_AT = opts.eatAt ?? defaultEatAt;
     // Without a list of its own a quest eats anything that heals: a live account carries swordfish, cake slices or
     // trout, not the lobsters a preset does. quest-sweep marks the preset's edible ingredients on the session
