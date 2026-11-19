@@ -1,0 +1,22 @@
+{
+ "id": "1795070133649-tossthecaber-thefullmonty-antipoison3",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TossTheCaber",
+ "to": "TheFullMonty",
+ "item": "Antipoison(3)",
+ "count": 3,
+ "start": 1795070133649,
+ "end": 1795072533649,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
