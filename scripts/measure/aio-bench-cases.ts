@@ -593,7 +593,7 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {...PRESETS.gather_combat_druid!, position: {x: 3087, z: 3452, level: 0}}},
   // The water talisman of the squad's water runes: wizards at the Wizards' Tower until one drops (3 in 128), then the
   // Draynor bank.
-  {key: 'fighter:wizard', script: 'scripts/aio-fighter.ts', preset: 'gather_combat_druid', scriptArgs: ['wizard', '3000', 'wizard', 'MAX_KILLS=200', 'UNTIL_ITEM=water talisman'], output: /kills=(\d+)/,
+  {key: 'fighter:wizard', script: 'scripts/aio-fighter.ts', preset: 'gather_combat_druid', scriptArgs: ['wizard', '10000', 'wizard', 'MAX_KILLS=200', 'UNTIL_ITEM=water talisman'], output: /kills=(\d+)/,
     pass: s => ok(s) && /held=true/.test(s) && /targetMet=true/.test(s),
     presetConfig: {...PRESETS.gather_combat_druid!, position: {x: 3110, z: 3170, level: 0}}},
   // The antipoison from its inputs, one recipe of the bank-standing worker a case (scripts/microbot-production.ts):

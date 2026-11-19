@@ -961,10 +961,12 @@ if(TARGET_KEY!=='cow'&&!Object.prototype.hasOwnProperty.call(CONFIGS,TARGET_KEY)
 if(!Number.isSafeInteger(CAP)||CAP<1)await finish([],false,'no combat progress: finite positive CAP required');
 const maximum=TARGET_KEY!=='cow'&&process.env.MAX_KILLS!==undefined?Number(process.env.MAX_KILLS):undefined;
 if(maximum!==undefined&&(!Number.isSafeInteger(maximum)||maximum<1))await finish([],false,'no combat progress: finite positive MAX_KILLS required');
-// UNTIL_ITEM=<item name>: the run ends and banks when the pack holds that drop (a water talisman from the wizards).
-// MAX_KILLS still bounds the run; an item not held at that count ends it unmet.
+// UNTIL_ITEM=<item name>: the run ends, with the drop banked, once the pack or the bank holds that drop (a water talisman
+// from the wizards). A full pack banks the drop inside the loop, so the bank counts too. MAX_KILLS still bounds the run;
+// an item not held at that count ends it unmet.
 const untilItem=TARGET_KEY!=='cow'&&process.env.UNTIL_ITEM?untilItemPattern(process.env.UNTIL_ITEM):undefined;
 if(untilItem&&!conf0Drops(TARGET_KEY).test(process.env.UNTIL_ITEM!))await finish([],false,`no combat progress: UNTIL_ITEM ${process.env.UNTIL_ITEM} is no drop that target ${TARGET_KEY} picks up`);
+const untilId=untilItem?objId(process.env.UNTIL_ITEM!.trim().toLowerCase()):undefined;
 const potionPolicy=combatPotionPolicy();if((potionPolicy||maximum!==undefined)&&CAP<=200)throw Error('finite combat job reserves200ticks for owned bank return');
 const alch=combatAlchPolicy();if(alch&&TARGET_KEY==='cow')throw Error('owned alchemy hook requires generic combat loot path');
 const botName = process.argv[2];
@@ -1061,8 +1063,11 @@ try {
     if(cleanupScope)combatRecovery=combatPotionRecovery(cleanupScope,()=>!!potions?.blocked||loot.blocked,bank,active=>{recoveringPotions=active;});
 
     console.log(`START combat gatherer ${botName} target=${TARGET_KEY} at=${pos()?.worldX},${pos()?.worldZ}`);
+    const untilInPack=()=>untilId!==undefined&&s.sdk.getInventory().some(i=>i.id===untilId);
+    const untilBanked=()=>untilId!==undefined&&(s.bankObservation?.()?.items??[]).some((i:{id:number;count:number})=>i.id===untilId&&i.count>0);
 
     while (!over()&&(!cleanupScope||!cowStop.stop())) {
+        if(untilInPack()||untilBanked())break;
         if(potions)await potions.poll();
         const invSpace = 28 - s.sdk.getInventory().length;
         if (invSpace <= 1) {
@@ -1092,7 +1097,7 @@ try {
                 itemsLooted++;
                 if(alch&&itemsLooted>=alch.maximum)break;
                 await waitTicks(s, 1);
-                if(untilItem&&s.sdk.getInventory().some(i=>untilItem.test(i.name)))break;
+                if(untilInPack())break;
                 continue;
             }
         }
@@ -1127,8 +1132,8 @@ try {
     if(alch){if(!cleanupScope)await bank();if(s.sdk.getInventory().some(i=>i.id===995||conf.drops.test(i.name)))throw Error('owned alchemy bank return unconfirmed');console.log('COMBAT_ALCH_RESULT '+JSON.stringify({casts:loot.alch!.casts,coins:loot.alch!.coins,consumed:loot.alch!.consumed,runes:loot.alch!.runes,receipts:loot.alch!.receipts,blocked:loot.alch!.blocked,itemsLooted,bankTrips,scope:'exact owned pickup and native alchemy; generic loot does not assert kill attribution'}));}
     let untilHeld:boolean|undefined;
     if(untilItem){
-        untilHeld=s.sdk.getInventory().some(i=>untilItem.test(i.name));
-        if(untilHeld&&!cleanupScope){await bank();if(s.sdk.getInventory().some(i=>untilItem.test(i.name)))throw Error('UNTIL_ITEM bank return unconfirmed');}
+        if(untilInPack()&&!cleanupScope){await bank();if(untilInPack())throw Error('UNTIL_ITEM bank return unconfirmed');}
+        untilHeld=untilInPack()||untilBanked();
     }
     const total = kills + itemsLooted;
     const perK = (total * 1000 / Math.max(1, used())).toFixed(2);
