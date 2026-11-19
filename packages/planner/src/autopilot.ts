@@ -1789,7 +1789,7 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     [COW_FIELD]: ARMY_BANK, [STRIKE_TILE]: ARMY_BANK, [SPLASH_FENCE]: ARMY_BANK, [TROOPER_FIELD]: ARMY_BANK,
     'catherby:lobster': CATHERBY_BANK, [AIO_PLACES.flax]: { x: 2744, z: 3445 }, [AIO_PLACES.yews]: SEERS_BANK,
     'shop:ardy': { x: 2654, z: 3283 }, 'shop:catherby': CATHERBY_BANK, 'shop:catherby_arrows': CATHERBY_BANK, 'shop:dargaud': SEERS_BANK, 'shop:magic_guild': { x: 2612, z: 3093 },
-    'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
+    'aio:water-altar': DRAYNOR_BANK, 'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
     'shop:zeke': { x: 3269, z: 3167 }, 'shop:dommik': { x: 3269, z: 3167 }, 'shop:jiminua': { x: 2654, z: 3283 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
 };
 // A template's place: its first resource with one. A chicken pen carries its tile, and a knight spot has the bank.
@@ -2181,6 +2181,8 @@ export const SQUAD_RUN_MAX: Readonly<Record<string, number>> = { 'iron arrow': 2
 // The shop cost of one unit (knowledge/items.json), the fallback of a run's spend cap: the rows are priced from the plan's
 // price table (`prices`, from priceTable) when it holds the item.
 export const SQUAD_UNIT_COST: Readonly<Record<string, number>> = { 'iron arrow': 3, 'water rune': 4, 'nature rune': 20, 'law rune': 40, 'antipoison(3)': 288 };
+// The essence of one water-rune craft run, as aio-air-runes (ESSENCE_TARGET=28).
+export const SQUAD_CRAFT_ESSENCE = 28;
 export function squadSupplies(): Template[] {
     const shop = (id: string, profile: string, item: string, items: string, perTick: number, goal: string, needs: Needs): Template => {
         const cost = SQUAD_UNIT_COST[item]!, max = SQUAD_RUN_MAX[item]!;
@@ -2192,9 +2194,24 @@ export function squadSupplies(): Template[] {
             yields: () => [{ item, perTick }], spends: () => [{ item: 'coins', perTick: perTick * cost }], repeats: false,
             production: { output: item, outputPerUnit: 1, maximum: max, inputs: {}, resize: sized } };
     };
+    // Water runes crafted from banked rune essence at the water altar (scripts/rune-bank-craft.ts RUNE_ALTAR=water, bench case
+    // extra:water-supply): one rune for each essence under Runecraft 19. The talisman is held for good; the essence comes from
+    // the fleet's stock through the planner's item orders. The bench case makes 10 runes in 399 to 403 ticks from the Draynor
+    // bank (hosted run 44464164017, seeds 1 to 3); the rate below is an estimate for a 28-essence run.
+    const waterCraft: Template = { id: 'squad-water-craft', family: 'aio:skiller:runecraft:bank-craft', script: 'scripts/aio.ts', aio: 'skiller:runecraft:bank-craft',
+        worker: 'scripts/rune-bank-craft.ts', args: ['skiller', 'runecraft', 'bank-craft', '99', 'RUNE_ALTAR=water', `ESSENCE_TARGET=${SQUAD_CRAFT_ESSENCE}`, 'CAP=4000'],
+        role: 'magic', goal: 'craft banked rune essence into water runes at the water altar for the gang squad', resources: ['aio:water-altar'], squadOnly: true,
+        needs: { skills: { Runecraft: 5 }, items: { 'water talisman': 1, 'rune essence': SQUAD_CRAFT_ESSENCE } }, repeats: false,
+        production: { output: 'water rune', outputPerUnit: 1, maximum: SQUAD_CRAFT_ESSENCE, inputs: { 'rune essence': 1 },
+            resize: n => ({ args: ['skiller', 'runecraft', 'bank-craft', '99', 'RUNE_ALTAR=water', `ESSENCE_TARGET=${n}`, 'CAP=4000'] }) },
+        yields: () => [{ item: 'water rune', perTick: 0.08 }] };
     return [
+        waterCraft,
         shop('squad-arrows-lowe', 'lowe', 'iron arrow', 'iron arrow', 0.5, "buy iron arrows at Lowe's in Varrock for the gang squad", { items: { coins: 6000 } }),
+        shop('squad-arrows-catherby', 'catherby_arrows', 'iron arrow', 'iron arrow', 0.5, "buy iron arrows at Hickton's in Catherby for the gang squad", { items: { coins: 6000 } }),
+        shop('squad-arrows-dargaud', 'dargaud', 'iron arrow', 'iron arrow', 0.4, 'buy iron arrows in the Ranging Guild for the gang squad', { skills: { Ranged: 40 }, items: { coins: 6000 } }),
         shop('squad-water-betty', 'betty', 'water rune', 'water rune', 0.7, "buy water runes at Betty's in Port Sarim for the gang squad", { items: { coins: 6000 } }),
+        shop('squad-water-aubury', 'aubury', 'water rune', 'water rune', 0.7, "buy water runes at Aubury's in Varrock for the gang squad", { items: { coins: 6000 } }),
         shop('squad-nature-guild', 'magic_guild', 'nature rune', 'nature rune', 0.4, 'buy nature runes at the Magic Guild for the gang squad', { skills: { Magic: 66 }, items: { coins: 40_000 } }),
         shop('squad-law-guild', 'magic_guild', 'law rune', 'law rune', 0.4, 'buy law runes at the Magic Guild for the gang squad', { skills: { Magic: 66 }, items: { coins: 17_000 } }),
         shop('squad-antipoison-jiminua', 'jiminua', 'antipoison(3)', 'antipoison', 0.02, "buy antipoison(3) at Jiminua's in Karamja for the gang squad", { items: { coins: 8000 } }),

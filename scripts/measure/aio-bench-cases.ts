@@ -465,6 +465,14 @@ const ROUTE_CASES: BenchCase[] = [
     pass: s => ok(s) && /"consumed":28/.test(s) && /"crafted":280/.test(s) && /"bankEssence":3/.test(s)
       && /"altar":"air"/.test(s) && !/RUNE_BANK_ALTAR .*"altar":"body"/.test(s) && /LOGOUT logged-out/.test(s),
   }),
+  // The gang squad's water runes (Bind): squad-water-craft in packages/planner/src/autopilot.ts, from the Draynor bank.
+  skiller('runecraft', 'bank-craft', 'fresh_lumbridge', ['99', 'RUNE_ALTAR=water', 'ESSENCE_TARGET=10', 'CAP=4000'], {
+    key: 'extra:water-supply',
+    presetConfig: {position: {x: 3092, z: 3243, level: 0}, varps: {63: 6, 101: 1, 281: 1000}, skills: {Runecraft: 5, Hitpoints: 99, Defence: 99},
+      bank: [{id: 1436, count: 11}, {id: 1444, count: 1}, {id: 995, count: 42}]},
+    pass: s => ok(s) && /"consumed":10/.test(s) && /"crafted":10/.test(s) && /"bankEssence":1/.test(s)
+      && /"altar":"water"/.test(s) && /LOGOUT logged-out/.test(s),
+  }),
   skiller('runecraft', 'bank-craft', 'fresh_lumbridge', ['99', 'RUNE_ALTAR=body', 'ESSENCE_TARGET=3', 'CAP=4000'], {
     key: 'extra:rune-supply-body-odd',
     presetConfig: {position: {x: 3013, z: 3355, level: 0}, varps: {63: 6, 101: 1, 281: 1000}, skills: {Runecraft: 99, Hitpoints: 99, Defence: 99},

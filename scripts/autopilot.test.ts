@@ -1277,10 +1277,15 @@ test('every shop template of the catalogue selects at least one line of its prof
 });
 
 test('the squad shop templates select their profile line with the real selectItems', () => {
-    for (const t of catalogue().filter(x => x.squadOnly)) {
+    for (const t of catalogue().filter(x => x.squadOnly && x.family === 'shop-buyer')) {
         const lines = selectItems(PROFILES[t.args![0]!]!.items, t.env!.ITEMS).map(i => i.re.source);
         expect([t.id, lines.length]).toEqual([t.id, 1]);
     }
+    // The water-rune craft reaches the runecraft worker at the water altar, and its resize keeps the altar.
+    const craft = catalogue().find(t => t.id === 'squad-water-craft')!;
+    expect(resolveAioStep('skiller', craft.args!.slice(1)).script).toBe('scripts/rune-bank-craft.ts');
+    expect(craft.production!.resize(10).args).toContain('RUNE_ALTAR=water');
+    expect(craft.production!.resize(10).args).toContain('ESSENCE_TARGET=10');
     const potion = catalogue().find(t => t.id === 'squad-antipoison-jiminua')!;
     expect(selectItems(PROFILES.jiminua!.items, potion.env!.ITEMS).map(i => i.re.source)).toEqual([/^antipoison\(3\)$/i.source]);
 });
