@@ -1,0 +1,22 @@
+{
+ "id": "1795104056165-abracadickra-swordinhand",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "Swordinhand",
+ "item": "coins",
+ "count": 28111,
+ "start": 1795104056165,
+ "end": 1795106456165,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
