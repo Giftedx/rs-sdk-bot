@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795098738761-fatstack-thefullmonty-earthrune",
+ "account": "TheFullMonty",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 30,
+ "claim": "2050b18c-faaa-4fbd-8eaf-b20ac100dcbe",
+ "count": 0,
+ "ok": false,
+ "at": 1795098788499,
+ "detail": "trade claimed"
+}
