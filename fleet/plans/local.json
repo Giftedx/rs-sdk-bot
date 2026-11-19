@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795068258894,
+ "at": 1795068317882,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -221,36 +221,6 @@
    "autopilot": "local",
    "resources": [
     "shop:betty"
-   ]
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "catherby_arrows",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "iron arrow",
-    "STOCK_TARGET": "2772",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "12200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "12000",
-    "AUTOPILOT_ORDER": "[772]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"884\":2772}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy iron arrows at Hickton's in Catherby for the gang squad",
-   "role": "bank",
-   "template": "squad-arrows-catherby",
-   "autopilot": "local",
-   "resources": [
-    "shop:catherby_arrows"
    ]
   },
   {
