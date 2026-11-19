@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795051741186-mineyourbiz-woodpecker-naturerune",
+ "account": "Woodpecker",
+ "partner": "MineYourBiz",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 26,
+ "claim": "44e95116-7da5-416b-a864-3ca43d839eb4",
+ "count": 0,
+ "ok": false,
+ "at": 1795051845380,
+ "detail": "trade claimed"
+}
