@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795067196837-yewfirst-dipstick-naturerune",
  "account": "Dipstick",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 80,
  "claim": "f9c6a9c1-962b-4bcb-b2b7-1a1af8e043cd",
- "count": 0,
- "ok": false,
- "at": 1795067258623,
- "detail": "trade claimed"
+ "count": 80,
+ "ok": true,
+ "at": 1795067456212,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 80
+ },
+ "bank": {
+  "count": 80,
+  "at": 1795067455415
+ },
+ "logout": {
+  "attemptId": "1795067258631-0000001348-0000000001",
+  "at": 1795067456199,
+  "sha256": "865135bf07e550e4cc8f3a1edcc0b4c01bf13a7da0d0b356847d4d572f2a88b1"
+ },
+ "screen": true
 }
