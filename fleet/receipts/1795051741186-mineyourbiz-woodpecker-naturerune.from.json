@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795051741186-mineyourbiz-woodpecker-naturerune",
  "account": "MineYourBiz",
  "partner": "Woodpecker",
@@ -12,6 +12,20 @@
  "claim": "c2e25a15-0db1-4b64-b248-cedd20ad0663",
  "count": 0,
  "ok": false,
- "at": 1795051832150,
- "detail": "trade claimed"
+ "at": 1795052017623,
+ "detail": "Error: transfer requires reconciliation: declined: Other player declined trade.",
+ "inventory": {
+  "before": 26,
+  "after": 26
+ },
+ "bank": {
+  "count": 26,
+  "at": 1795051993594
+ },
+ "logout": {
+  "attemptId": "1795051832160-0000007080-0000000001",
+  "at": 1795052017609,
+  "sha256": "dc14f36cdf63a44b6a100cceee53c26d5a4dab46da87cf6b1bb7cabf1bcb617a"
+ },
+ "screen": true
 }
