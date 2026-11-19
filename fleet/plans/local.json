@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795111733798,
+ "at": 1795111878493,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -365,7 +365,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
    },
    "enabled": true,
    "standing": true,
