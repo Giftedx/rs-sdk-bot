@@ -145,7 +145,7 @@ export function reconcile(state:CoordinatorState,alive:(pid:number,marker:string
     &&typeof wait?.account==='string'&&(boundAccounts(record.spec,state)??[]).some(n=>n.toLowerCase()===wait.account.toLowerCase())
     &&(wait.reason==='active-session'&&attempt(wait.attemptId)&&pid(wait.pid)
      ||wait.reason==='autopilot-assignment'&&(wait.attemptId===null||attempt(wait.attemptId))&&(wait.pid===null||pid(wait.pid))
-     ||wait.reason==='fleet-order'&&wait.attemptId===null&&wait.pid===null
+     ||(wait.reason==='fleet-order'||wait.reason==='reserved')&&wait.attemptId===null&&wait.pid===null
      ||validLiveMemoryWait(wait,boundAccounts(record.spec,state)??[]))){
     const runId=record.runId;record.status='pending';delete record.runId;delete record.startedAt;delete record.pid;delete record.receipt;
     state.sequence++;event('task-deferred',{id:record.spec.id,runId,wait,receipt},directory);continue;

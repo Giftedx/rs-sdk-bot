@@ -10,7 +10,7 @@ import {addTasks,chooseTask,initialState} from '../src/coordinator';
 import {sha} from '../../core/src/launch-evidence';
 import {missionSignature} from '../../core/src/session-admission';
 import {assertSpecialistLogin, specialistContext, specialistTokenPath} from '../../core/src/specialist-launch';
-import {readCoordinatorJobs} from '../../core/src/coordinator-jobs';
+import {readCoordinatorJobs,writeCoordinatorJobs} from '../../core/src/coordinator-jobs';
 import type {Order,TradeReceipt} from '../../../scripts/fleet-trade-settlement';
 const server='rs-sdk-demo.fly.dev';
 function fixture(){
@@ -483,4 +483,33 @@ test('specialist preflight binds the reserved board, winning clock, staged stock
  expect(()=>login(env,token.expiresAt)).toThrow('expired');
  snapshot(6000);
  expect(()=>login()).toThrow('Evidence changed');
+});
+
+test('an ordinary run waits for an account that the owner plan holds with a reservation row, and only for that', () => {
+ const f=fixture(),plan=(jobs:object[])=>writeFileSync(join(f.base,'swarm.json'),JSON.stringify({maxBots:25,minFreeGB:4,jobs}));
+ // The gang squad's row: disabled, no script, role pvp, trades allowed.
+ plan([{account:'SquadOne',role:'pvp',script:'',enabled:false,trades:true},{account:'Finished',script:'scripts/old.ts',enabled:false},{account:'NoScript',enabled:false,role:'helper'},{account:'Busy',script:'',enabled:true,role:'pvp'}]);
+ const run:any={kind:'run'};
+ expect(liveAccountWait(run,['SquadOne'],f.base,()=>false)).toEqual({account:'SquadOne',reason:'reserved',attemptId:null,pid:null});
+ expect(liveAccountWait(run,['squadone'],f.base,()=>false)?.reason).toBe('reserved');
+ // A row with no script field at all is a reservation too.
+ expect(liveAccountWait(run,['NoScript'],f.base,()=>false)?.reason).toBe('reserved');
+ // A finished hand job names its script, an enabled row is a job, and an account with no row is free.
+ expect(liveAccountWait(run,['Finished'],f.base,()=>false)).toBeNull();
+ expect(liveAccountWait(run,['Busy'],f.base,()=>false)).toBeNull();
+ expect(liveAccountWait(run,['Nobody'],f.base,()=>false)).toBeNull();
+ // A composed run waits when any participant is reserved.
+ expect(liveAccountWait(run,['Finished','SquadOne'],f.base,()=>false)?.account).toBe('SquadOne');
+ // The main account launch, a repair and a session recovery are not ordinary runs.
+ expect(liveAccountWait({kind:'run',launch:'main'} as any,['SquadOne'],f.base,()=>false)).toBeNull();
+ expect(liveAccountWait({kind:'run',repairs:[{account:'SquadOne',endedAt:1}]} as any,['SquadOne'],f.base,()=>false)).toBeNull();
+ expect(liveAccountWait({kind:'run',sessionRecovery:{account:'SquadOne'}} as any,['SquadOne'],f.base,()=>false)).toBeNull();
+});
+
+test('a parked coordinator job for the account does not hide the reservation row of the owner plan', () => {
+ const f=fixture();
+ writeFileSync(join(f.base,'swarm.json'),JSON.stringify({maxBots:25,minFreeGB:4,jobs:[{account:'SquadOne',role:'pvp',script:'',enabled:false,trades:true}]}));
+ const parked={account:'SquadOne',script:'scripts/old.ts',args:[],role:'pvp',goal:'t [x]',enabled:false,repeat:false,coordinatorOwner:'coordinator',coordinatorTask:'t',env:{COORDINATOR_RUN_ID:'task-t'}};
+ writeCoordinatorJobs(f.base,{...readCoordinatorJobs(f.base),jobs:[parked]});
+ expect(liveAccountWait({kind:'run'} as any,['SquadOne'],f.base,()=>false)?.reason).toBe('reserved');
 });
