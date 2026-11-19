@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795080661255,
+ "at": 1795081200506,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -222,23 +222,6 @@
    "resources": [
     "shop:betty"
    ]
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "biohazard"
-   ],
-   "env": {
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-d8497f89-4668-45e8-bb41-7e252b5e6023"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-biohazard-mightyrod-elena-door [task-d8497f89-4668-45e8-bb41-7e252b5e6023]",
-   "role": "helper"
   }
  ],
  "army": [
