@@ -253,3 +253,26 @@ export class KitSwapper {
         return false;
     }
 }
+
+// The settings of the squad's threat watch: SQUAD_THREAT_OPTS (a JSON object) over the SQUAD_THREAT_* settings of the environment. A key that is not
+// known, or a value that is not a number, throws, so that a typo in a climb cannot leave a setting at its default without a word.
+//   act (false: only log and record), cooldown (ticks), expected (false: the squad's targets count as strangers), odds (false: the counting rules),
+//   and the constants of the win-chance estimate: lose, protect, pile, theirFood, singleWayMin.
+export interface ThreatOptions { act: boolean; cooldown: number; expectedTargets: boolean; odds: Partial<OddsParams> | false }
+export const THREAT_OPTION_KEYS = ['act', 'cooldown', 'expected', 'odds', 'lose', 'protect', 'pile', 'theirFood', 'singleWayMin'] as const;
+export function threatOptions(json: string, get: (name: string, fallback: string) => string): ThreatOptions {
+    let o: unknown;
+    try { o = JSON.parse(json.trim() || '{}'); } catch { throw new Error('SQUAD_THREAT_OPTS is not JSON'); }
+    if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('SQUAD_THREAT_OPTS is not a JSON object');
+    const given = o as Record<string, unknown>;
+    for (const key of Object.keys(given)) if (!(THREAT_OPTION_KEYS as readonly string[]).includes(key)) throw new Error(`SQUAD_THREAT_OPTS has an unknown key: ${key} (known: ${THREAT_OPTION_KEYS.join(', ')})`);
+    const num = (key: string, env: string, fallback: string) => { const n = Number(given[key] ?? get(env, fallback)); if (!Number.isFinite(n)) throw new Error(`${key} is not a number`); return n; };
+    const off = given.odds !== undefined ? given.odds === false || given.odds === 0 : get('SQUAD_THREAT_ODDS', '1') === '0';
+    return {
+        act: given.act !== undefined ? given.act !== false && given.act !== 0 : get('SQUAD_THREAT_ACT', '1') !== '0',
+        cooldown: num('cooldown', 'SQUAD_THREAT_COOLDOWN', '600'),
+        expectedTargets: given.expected !== undefined ? given.expected !== false && given.expected !== 0 : get('SQUAD_THREAT_EXPECTED', '1') === '1',
+        odds: off ? false : { lose: num('lose', 'SQUAD_THREAT_LOSE', '0.9'), protect: num('protect', 'SQUAD_THREAT_PROTECT', '0.6'), pile: num('pile', 'SQUAD_THREAT_PILE', '0.7'),
+            theirFood: num('theirFood', 'SQUAD_THREAT_THEIR_FOOD', '10'), singleWayMin: num('singleWayMin', 'SQUAD_THREAT_SINGLE', '1.5') },
+    };
+}
