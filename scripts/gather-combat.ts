@@ -1136,8 +1136,10 @@ try {
     if(alch){if(!cleanupScope)await bank();if(s.sdk.getInventory().some(i=>i.id===995||conf.drops.test(i.name)))throw Error('owned alchemy bank return unconfirmed');console.log('COMBAT_ALCH_RESULT '+JSON.stringify({casts:loot.alch!.casts,coins:loot.alch!.coins,consumed:loot.alch!.consumed,runes:loot.alch!.runes,receipts:loot.alch!.receipts,blocked:loot.alch!.blocked,itemsLooted,bankTrips,scope:'exact owned pickup and native alchemy; generic loot does not assert kill attribution'}));}
     let untilHeld:boolean|undefined;
     if(untilItem){
+        console.log('UNTIL_DEBUG before '+JSON.stringify({untilId,inv:s.sdk.getInventory().map(i=>[i.id,i.name]),deposited:untilDeposited,cleanup:!!cleanupScope}));
         if(untilInPack()&&!cleanupScope){await bankUntil();if(untilInPack())throw Error('UNTIL_ITEM bank return unconfirmed');}
         untilHeld=untilDeposited||untilInPack()||untilBanked();
+        console.log('UNTIL_DEBUG after '+JSON.stringify({deposited:untilDeposited,held:untilHeld}));
     }
     const total = kills + itemsLooted;
     const perK = (total * 1000 / Math.max(1, used())).toFixed(2);
