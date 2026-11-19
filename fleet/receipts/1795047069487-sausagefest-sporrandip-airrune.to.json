@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795047069487-sausagefest-sporrandip-airrune",
+ "account": "SporranDip",
+ "partner": "Sausagefest",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 50,
+ "claim": "b623c070-d04a-439c-af63-45a2dc12cee5",
+ "count": 50,
+ "ok": true,
+ "at": 1795047174079,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 50
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795047172632
+ },
+ "logout": {
+  "attemptId": "1795047151161-0000019044-0000000001",
+  "at": 1795047174052,
+  "sha256": "78b61a1a0906ff868c1f86af3179ae807f125251a7195ba67278aaf4b3ad24ba"
+ },
+ "screen": true
+}
