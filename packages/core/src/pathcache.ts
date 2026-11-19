@@ -124,6 +124,27 @@ export function writePathfindingSnapshot(file:string,key:string,payload:Uint8Arr
 
 let loaded: Promise<{ restored: boolean; ms: number }> | null = null;
 
+// A process that never asked for the route finder still reaches it when a script calls an SDK function that
+// uses the collision grid (isTileWalkable, findDoorsAlongPath): sdk/pathfinding.ts then runs initPathfinding() itself,
+// and its first read of the collision data (the preload collision-lazy.ts) calls this hook before the zones are read.
+// The hook restores the snapshot, so the grid is the same as after loadPathfinding() and the 14 s of allocation do
+// not run. Without a valid snapshot it does nothing and the SDK builds the grid itself; the snapshot is then written
+// in the background by loadPathfinding().
+let syncTried = false;
+export function restorePathfindingOnFirstUse(file = DEFAULT_CACHE): boolean {
+    if (syncTried || (globalThis as { __rsPathRestored?: boolean }).__rsPathRestored) return false;
+    syncTried = true;
+    let restored = false;
+    try {
+        const rsmod = require(vendor('server/vendor/rsmod-pathfinder/rsmod-pathfinder.js'));
+        restored = restorePathfindingSnapshotFile(file, pathfindingSourceKey(), rsmod.__wasm.memory);
+    } catch { /* an optional cache */ }
+    if (restored) (globalThis as { __rsPathRestored?: boolean }).__rsPathRestored = true;
+    else queueMicrotask(() => { void loadPathfinding({ cacheFile: file }).catch(() => {}); });
+    return restored;
+}
+(globalThis as { __rsPathEnsure?: () => void }).__rsPathEnsure = () => { restorePathfindingOnFirstUse(); };
+
 export function loadPathfinding(opts: { cacheFile?: string } = {}): Promise<{ restored: boolean; ms: number }> {
     loaded ??= load(opts.cacheFile ?? DEFAULT_CACHE).catch(error=>{loaded=null;throw error;});
     return loaded;
@@ -135,7 +156,8 @@ async function load(file: string): Promise<{ restored: boolean; ms: number }> {
     const rsmod: any = await import(vendor('server/vendor/rsmod-pathfinder/rsmod-pathfinder.js'));
     const memory: WebAssembly.Memory = rsmod.__wasm.memory;
     const k = pathfindingSourceKey();
-    const restored=restorePathfindingSnapshotFile(file,k,memory);
+    // The first-use hook above may have restored the snapshot already.
+    const restored=(globalThis as { __rsPathRestored?: boolean }).__rsPathRestored===true||restorePathfindingSnapshotFile(file,k,memory);
     // collision-lazy.ts then skips parsing zones and tiles: the restored grid already holds them.
     if(restored)(globalThis as { __rsPathRestored?: boolean }).__rsPathRestored = true;
     const { initPathfinding } = await import(vendor('sdk/pathfinding.ts'));

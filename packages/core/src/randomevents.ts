@@ -226,9 +226,16 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
             };
         }).catch(() => {});
     }
-    if (opts.pf === undefined) {
-        void import('./pathcache').then(m => m.loadPathfinding()).then(() => import(vendor('sdk/pathfinding.ts'))).then((m: any) => { pf = m; }).catch(() => {});
-    }
+    // The route finder loads on the first handler that needs it (a flee tile or the maze), not at login: a bot that
+    // stands at one bank never pays for it. Until the load ends, `getPf()` is null and callers use the straight distance.
+    let pfStarted = opts.pf !== undefined;
+    const getPf = (): PathFinder | null => {
+        if (!pfStarted) {
+            pfStarted = true;
+            void import('./pathcache').then(m => m.loadPathfinding()).then(() => import(vendor('sdk/pathfinding.ts'))).then((m: any) => { pf = m; }).catch(() => { pfStarted = false; });
+        }
+        return pf;
+    };
 
     // ---- the gate: the script's actions wait while a job holds the player ----
     const rawDirect = s.direct.bind(s);
@@ -377,8 +384,9 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     const freeSlots = () => 28 - inv().length;
     const optIndex = (opts: any[] | undefined, re: RegExp, dflt: number) => opts?.find((o: any) => re.test(o.text))?.opIndex ?? dflt;
     const pathLen = (from: { x: number; z: number; level: number }, to: { x: number; z: number }): number | null => {
-        if (!pf) return cheb(from, to);
-        const pts = pf.findLongPath(from.level, from.x, from.z, to.x, to.z, 200, []);
+        const finder = getPf();
+        if (!finder) return cheb(from, to);
+        const pts = finder.findLongPath(from.level, from.x, from.z, to.x, to.z, 200, []);
         if (pts.length === 0) return cheb(from, to) === 0 ? 0 : null;
         const last = pts[pts.length - 1]!;
         if (last.x !== to.x || last.z !== to.z) return null;
@@ -706,7 +714,9 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         let at = -99, lastPos = '', moved = -99, doors = 0, shrineTries = 0;
         // Every maze wall is a "Wall" with op Open, so the door index takes them all for doors. The permanent ones
         // (macro_maze_wallhigh, loc 3626: "I can't open that.") go in as blocked doors, read from the map file.
-        const blocked: any[] = pf ? mazeWalls().map(([x, z]) => pf!.getDoorAt(0, x, z)).filter(Boolean) : [];
+        // The walls are read once the route finder has loaded; doors that answered "not the right way" join them.
+        const blocked: any[] = [], wrongWay: any[] = [];
+        let wallsRead = false;
         let lastDoor: any = null;
         return {
             name: 'maze', hold: true,
@@ -714,8 +724,10 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
                 const p = me();
                 if (!p || !inRegion(p, MAZE_REGION)) { say('maze', 'returned', `doors=${doors}`); return true; }
                 if (st?.dialog?.isOpen) { continueDialog(); return false; }
-                if (newMessages.any(/right way/i) && lastDoor) { blocked.push(lastDoor); say('maze', 'wrong-way', `door=${lastDoor.x},${lastDoor.z}`); lastDoor = null; at = -99; }
-                if (!canSend() || !pf) return false;
+                if (newMessages.any(/right way/i) && lastDoor) { (wallsRead ? blocked : wrongWay).push(lastDoor); say('maze', 'wrong-way', `door=${lastDoor.x},${lastDoor.z}`); lastDoor = null; at = -99; }
+                const finder = getPf();
+                if (!canSend() || !finder) return false;
+                if (!wallsRead) { wallsRead = true; blocked.push(...mazeWalls().map(([x, z]) => finder.getDoorAt(0, x, z)).filter(Boolean), ...wrongWay); }
                 const pos = `${p.x},${p.z}`;
                 if (pos !== lastPos) { lastPos = pos; moved = s.tick(); }
                 // Act when the player has stood still for 2 ticks after the last click, or 10 ticks passed.
