@@ -103,10 +103,6 @@ export function verifyPathfindingSnapshotFile(file:string,key:string):boolean {
     }finally{closeSync(fd);}
 }
 
-// Stage the checked payload before changing WASM memory. A failed read remains
-// an optional cache miss, even when it happens after some payload bytes arrive.
-// This uses one transient payload buffer, bounded by the checked file length. It is not zero-filled: readFully fills all of it
-// and the hash covers all of it before any byte is used.
 // Copies the payload into WASM memory. A page that memory.grow() added is zero already, so a zero page of the payload
 // beyond `had` bytes is not written: writing it would make the operating system commit and map the page (about half of
 // the 1,593 pages of the snapshot are zero). A page below `had` is always written: it may hold other bytes.
@@ -119,6 +115,10 @@ export function copyNonZeroPages(payload:Uint8Array,target:Uint8Array,had:number
     }
 }
 
+// Stage the checked payload before changing WASM memory. A failed read remains
+// an optional cache miss, even when it happens after some payload bytes arrive.
+// This uses one transient payload buffer, bounded by the checked file length. It is not zero-filled: readFully fills all of it
+// and the hash covers all of it before any byte is used.
 export function restorePathfindingSnapshotFile(file:string,key:string,memory:WebAssembly.Memory):boolean {
     let fd:number|undefined,payload:Buffer|undefined;
     try {
