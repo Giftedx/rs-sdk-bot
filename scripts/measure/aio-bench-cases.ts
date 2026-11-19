@@ -1042,6 +1042,7 @@ const ROUTE_CASES: BenchCase[] = [
   squadCase('extra:squad-6-gang-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 6),
   // Three sharks each at the start: the squad's bank trip and walk back mid-meeting.
   squadCase('extra:squad-4-gang-trips-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=12'], 3),
+  squadCase('extra:squad-4-gang-drop-x1', 'live-walker-iron-rune-chain-bind', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_DROP_AT=120']),
   // The bank trip from the east post goes to Varrock West (bankNear) and keeps to multi-way tiles.
   squadCase('extra:squad-2-gang-trips-east-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, ['MAX_MINUTES=8', 'TRIPS=2', 'SQUAD_GANG_HUNT=1', 'POST=3200,3620'], 3, {x: 3197, z: 3621}),
   // Two of ours leave outnumbered: each walks out, banks at Edgeville and walks back to the post.
