@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795060458602-backdoorman-undermykilt-2ab3290654e5f403",
  "account": "BackdoorMan",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 6,
  "claim": "4011e201-b626-45e7-88b3-6b9c8808ac54",
- "count": 0,
- "ok": false,
- "at": 1795060465101,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795061163205,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795060474560
+ },
+ "logout": {
+  "attemptId": "1795060465110-0000021896-0000000001",
+  "at": 1795061163191,
+  "sha256": "8a82ca95594f3dea341862178cc3736db35c9c07316a1e184052d6c08342bffe"
+ },
+ "screen": true
 }

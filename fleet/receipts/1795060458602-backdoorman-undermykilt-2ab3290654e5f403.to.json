@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795060458602-backdoorman-undermykilt-2ab3290654e5f403",
+ "account": "UnderMyKilt",
+ "partner": "BackdoorMan",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 6,
+ "claim": "21444ed3-6514-456b-acdc-58f098282031",
+ "count": 6,
+ "ok": true,
+ "at": 1795061164839,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 24,
+  "after": 30
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795061164075
+ },
+ "logout": {
+  "attemptId": "1795061145290-0000026488-0000000001",
+  "at": 1795061164804,
+  "sha256": "713f45e3fffa5fa47840116830687e7681467765e60e54f655b7dee98a4a5788"
+ },
+ "screen": true
+}
