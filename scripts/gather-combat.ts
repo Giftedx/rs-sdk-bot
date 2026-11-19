@@ -1064,14 +1064,18 @@ try {
 
     console.log(`START combat gatherer ${botName} target=${TARGET_KEY} at=${pos()?.worldX},${pos()?.worldZ}`);
     const untilInPack=()=>untilId!==undefined&&s.sdk.getInventory().some(i=>i.id===untilId);
+    // The bank observation is taken when the bank opens, before a deposit, so it shows a drop only from an earlier run.
+    // A drop that a bank trip of this run deposits is recorded here: bank() throws when a drop stays in the pack.
     const untilBanked=()=>untilId!==undefined&&(s.bankObservation?.()?.items??[]).some((i:{id:number;count:number})=>i.id===untilId&&i.count>0);
+    let untilDeposited=false;
+    const bankUntil=async()=>{const had=untilInPack();await bank();if(had)untilDeposited=true;};
 
     while (!over()&&(!cleanupScope||!cowStop.stop())) {
-        if(untilInPack()||untilBanked())break;
+        if(untilDeposited||untilInPack()||untilBanked())break;
         if(potions)await potions.poll();
         const invSpace = 28 - s.sdk.getInventory().length;
         if (invSpace <= 1) {
-            await bank();
+            await bankUntil();
             continue;
         }
 
@@ -1132,8 +1136,8 @@ try {
     if(alch){if(!cleanupScope)await bank();if(s.sdk.getInventory().some(i=>i.id===995||conf.drops.test(i.name)))throw Error('owned alchemy bank return unconfirmed');console.log('COMBAT_ALCH_RESULT '+JSON.stringify({casts:loot.alch!.casts,coins:loot.alch!.coins,consumed:loot.alch!.consumed,runes:loot.alch!.runes,receipts:loot.alch!.receipts,blocked:loot.alch!.blocked,itemsLooted,bankTrips,scope:'exact owned pickup and native alchemy; generic loot does not assert kill attribution'}));}
     let untilHeld:boolean|undefined;
     if(untilItem){
-        if(untilInPack()&&!cleanupScope){await bank();if(untilInPack())throw Error('UNTIL_ITEM bank return unconfirmed');}
-        untilHeld=untilInPack()||untilBanked();
+        if(untilInPack()&&!cleanupScope){await bankUntil();if(untilInPack())throw Error('UNTIL_ITEM bank return unconfirmed');}
+        untilHeld=untilDeposited||untilInPack()||untilBanked();
     }
     const total = kills + itemsLooted;
     const perK = (total * 1000 / Math.max(1, used())).toFixed(2);
