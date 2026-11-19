@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795098354979-shaftsinker-oreelse",
  "account": "Shaftsinker",
  "partner": "OreElse",
@@ -12,6 +12,16 @@
  "claim": "aa0962c1-02bb-4b49-a859-0f5548f50bc4",
  "count": 0,
  "ok": false,
- "at": 1795098436574,
- "detail": "trade claimed"
+ "at": 1795098562773,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 53537,
+  "at": 1795098561939
+ },
+ "logout": {
+  "attemptId": "1795098436582-0000029480-0000000001",
+  "at": 1795098562740,
+  "sha256": "5037455494d762446b86b0ad57eb0d9ef553a3317512be971281139eb29773aa"
+ },
+ "screen": false
 }
