@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795113202547-mightyrod-oreelse-bigbones",
  "account": "Mightyrod",
  "partner": "OreElse",
@@ -12,6 +12,16 @@
  "claim": "8038cfdd-58ff-4d07-98a3-82623320ea8c",
  "count": 0,
  "ok": false,
- "at": 1795113265631,
- "detail": "trade claimed"
+ "at": 1795113292258,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 159,
+  "at": 1795113276193
+ },
+ "logout": {
+  "attemptId": "1795113265639-0000030120-0000000001",
+  "at": 1795113292130,
+  "sha256": "cda85177bb0e92beec2dc0052824753950eb65d249dda51fe128071f38d1308d"
+ },
+ "screen": false
 }
