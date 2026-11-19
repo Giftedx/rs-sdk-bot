@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795070295260,
+ "at": 1795070384578,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -280,6 +280,36 @@
    "autopilot": "local",
    "resources": [
     "shop:jiminua"
+   ]
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "magic_guild",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "nature rune",
+    "STOCK_TARGET": "575",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "16680",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "16480",
+    "AUTOPILOT_ORDER": "[163]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"561\":575}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy nature runes at the Magic Guild for the gang squad",
+   "role": "bank",
+   "template": "squad-nature-guild",
+   "autopilot": "local",
+   "resources": [
+    "shop:magic_guild"
    ]
   },
   {
