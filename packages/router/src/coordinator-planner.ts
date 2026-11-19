@@ -8,6 +8,7 @@ import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
 import {goalWork} from './goal-work';
 import {projectRoot,coordinationDir,atomicJson,capabilitySource,publishCapabilityChanges} from './coordinator-store';
+import {loginAfter} from './login-attempts';
 import {deliveryConflictRoots} from './delivery-pr';
 import {diskFreeGB,heldRuns,type HeldRuns} from './coordinator-decisions';
 import {PROOF_TIMING} from './build-fault';
@@ -347,7 +348,7 @@ export function plannerStatusSummary(s:any){
 }
 export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof readWorld>,worldFile='',held:readonly HeldRuns[]=[],publicationConflicts:ReturnType<typeof deliveryConflictRoots>=[]){
  const values=world.scoreboard?.goals?.version===1?goalWork(state,world.scoreboard.goals,world.statuses,world.at??Date.now(),
-  {entryOf:capability=>world.capabilities.find(d=>d.id===capability)?.entry}):new Map();
+  {entryOf:capability=>world.capabilities.find(d=>d.id===capability)?.entry,loginAfter:loginAfter(projectRoot)}):new Map();
  const work=state.tasks.filter(r=>r.status==='pending').map(r=>{
   const value=values.get(r.spec.id);
   return{id:r.spec.id,...value,...(!(typeof value?.value==='number'&&Number.isFinite(value.value)&&value.value>0)?{dispatchable:false}:{})};

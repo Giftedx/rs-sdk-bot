@@ -35,9 +35,9 @@ export function controlView(state:any,controlMeta:any,main=MAIN_ACCOUNT){
 // which the spectator view shows. Banks, coins and income, the plan and its strategy, scripts, jobs, pull requests of
 // the private repository and this PC's resources stay with the owner (control.json).
 const PUBLIC_BOT=['name','server','side','remote','practice','reserved','at','started','fresh','inWorld','operation','pos','live','hp','hpAt','combat','questPoints',
- 'skills','quests','questsAt','equipment','equipmentObserved','inventory','ranks','ranksAt','role','goal','currentGoal','goalSkill','goalLevel',
+ 'skills','quests','questsDone','questsStarted','questsUnknown','questsAt','equipment','equipmentObserved','inventory','ranks','ranksAt','role','goal','currentGoal','goalSkill','goalLevel',
  'goalNow','goalXp','xpPerTick','xpPerHour','xpLeft','eta','rateSkill','spark','uptime','action','death','seenInFeed','lastSeen','outcome','training','snapshotAt','ground'] as const;
-const PUBLIC_KEYS=['now','world','worldPlayers','boards','roster','rivals','contention','lookups','farms','icons','map','pageVersion','snapshotAt','liveTopsAt','liveTops'] as const;
+const PUBLIC_KEYS=['now','questList','world','worldPlayers','boards','roster','rivals','contention','lookups','farms','icons','map','pageVersion','snapshotAt','liveTopsAt','liveTops'] as const;
 // Goal texts can carry a coordinator task id ("run-x [task-1a2b]") and, after a colon or in brackets, stock counts
 // ("Smithing from banked ore: 1630 bronze and 571 iron", "cooked lobsters (607 short)"): the public keeps the headline.
 // A coordinator job id ("run-ranged-<account>-band50") is a file name, not a goal: the public text names its kind.
@@ -145,4 +145,15 @@ export function publicView(state:any,main=MAIN_ACCOUNT,expectedDrops:readonly (P
  const text=JSON.stringify(out);
  if(new RegExp(main.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(text))throw Error('public view still names the main account; nothing published');
  return out;
+}
+
+// A published file changes every cycle through its clocks alone (`hosted.at`, `now`, each row's `at`). This is the
+// file with every epoch-millisecond number (2017 to 2065) set to 0: two files are the same news when this is equal.
+export const HEARTBEAT_MS=10*60_000;
+export function withoutClocks(json:string):string{
+ return JSON.stringify(JSON.parse(json),(_k,v)=>typeof v==='number'&&v>1.5e12&&v<3e12?0:v);
+}
+// Push when the content changed, or when the last push is older than the heartbeat (the page reads its age from `hosted.at`).
+export function pushDue(next:string,last:{stable:string;at:number}|null,now:number):boolean{
+ return !last||now-last.at>=HEARTBEAT_MS||withoutClocks(next)!==last.stable;
 }

@@ -184,11 +184,18 @@ export const sharedLootTables = (): LootTables => (shared ??= fileTables());
 // most each RELOAD_MS. A missing file gives no prices or no bill.
 // The market value of an item is the lower of its 7-day VWAP (when it traded at least 3 times) and its current bid:
 // the market is thin, and the bid is what a buyer pays now.
+// An item with no bid has no buyer, and a few trades between two accounts set its VWAP (Jug 29,076 coins, base 1). It is
+// then worth the lowest of the VWAP, the ask and UNBID_BASE_MULT times the shop price; the alchemy floor of unitValue
+// still applies.
 // The newest dated quote wins between the two files, even when its value falls. Undated files are fallback evidence.
 const RELOAD_MS = 600_000;
-export const marketValue = (m: { price?: number | null; bid?: number | null } | undefined): number => {
-    const price = typeof m?.price === 'number' && m.price > 0 ? m.price : null, bid = typeof m?.bid === 'number' && m.bid > 0 ? m.bid : null;
-    return price === null ? 0 : Math.floor(bid === null ? price : Math.min(price, bid));
+export const UNBID_BASE_MULT = 4;
+export const marketValue = (m: { price?: number | null; bid?: number | null; ask?: number | null; base?: number | null } | undefined): number => {
+    const pos = (v: unknown): number | null => typeof v === 'number' && v > 0 ? v : null;
+    const price = pos(m?.price), bid = pos(m?.bid), ask = pos(m?.ask), base = pos(m?.base);
+    if (price === null) return 0;
+    if (bid !== null) return Math.floor(Math.min(price, bid));
+    return Math.floor(Math.min(price, ask ?? Infinity, base === null ? Infinity : base * UNBID_BASE_MULT));
 };
 export function fileTables(root = resolve(import.meta.dir, '..', '..', '..')): LootTables {
     const items = new Map<number, ItemInfo>();

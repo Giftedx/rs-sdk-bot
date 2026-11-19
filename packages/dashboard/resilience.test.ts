@@ -114,13 +114,8 @@ test('distinct player lookups stay serial through cooldown while a fresh hit byp
  }
 });
 
-test('repeated background rounds share pending names and failed jobs are cleared before the next round',async()=>{
- const calls:string[]=[],h=playerLookupHarness(async url=>{calls.push(new URL(url).pathname.split('/').at(-1)!);return new Response('unavailable',{status:503});});
- const names=Array.from({length:12},(_,i)=>'Player'+i);h.wanted(names);expect(h.period).toBe(60_000);
- h.round();h.round();h.round();await h.lookup('Barrier');
- expect(calls).toEqual([...names.slice(0,10).map(name=>name.toLowerCase()),'barrier']);expect(h.cache.size).toBe(0);
- h.round();await h.lookup('Barrier');
- expect(calls).toEqual([...names.slice(0,10).map(name=>name.toLowerCase()),'barrier',...names.slice(0,10).map(name=>name.toLowerCase()),'barrier']);expect(h.cache.size).toBe(0);
+test('the state carries no lookups and the server has no background lookup round',()=>{
+ expect(server).not.toContain('lookupWanted');expect(server).not.toContain('lookups: looked');
 });
 
 test('an upstream 404 remains a cached unranked lookup with the same cooldown',async()=>{

@@ -106,7 +106,9 @@ export const isHeldClaimRefusal = (result: string) => /^RESULT fail (?:login: )?
 export const CLAIM_AUTHORITY_PAUSE_MS = 30_000;
 export const isClaimAuthorityFault = (result: string) => /^RESULT fail (?:login: )?(?:Error: )?fleet swarm claim authority (?:unavailable or changed|timed out)\b/.test(result);
 
-export const failureShape = (result: string) => result.replace(/\d+/g, 'N').replace(/\s+/g, ' ').trim();
+// A `position=x,z,level` keeps its numbers: a run that ended on another tile moved, so it is not the same failure
+// (market bank travel stopped at 3035,3247 and then at 3096,3414, and the job ended as blocked).
+export const failureShape = (result: string) => result.replace(/position=\d+,\d+,\d+|\d+/g, m => m.startsWith('position=') ? m : 'N').replace(/\s+/g, ' ').trim();
 export const repeatableFailure = (result: string) => /^RESULT fail\b/.test(result) && !isTransportStall(result) && !isHeldClaimRefusal(result) && !isClaimAuthorityFault(result)
     && !/^RESULT fail (?:login:|session ended|.*TickStallError)/.test(result);
 

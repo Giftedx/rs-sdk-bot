@@ -2869,9 +2869,14 @@ export function recoveringOwnerJobs(ownerJobs: readonly any[], coordinatorJobs: 
 
 // A marked job whose account is in `keep` (an owner pause: a stop file) stays as it is, with its enabled and repeat
 // settings, so lifting the pause later resumes that job instead of handing the account a fresh enabled one.
-export function mergeJobs(jobs: readonly any[], side: string, out: readonly Assignment[], keep: ReadonlySet<string> = new Set()): { jobs: any[]; fresh: string[] } {
+// `finished`: the accounts (lower case) whose planner job has a RESULT ok since its assignment (finishedTrainers). A planner job that a
+// coordinator hold or a running buy keeps cannot be replaced by this pass; if it repeats and has finished, it stops repeating, so the
+// swarm does not log the account in again every few seconds for a result that is already in (live: Pocketpython, 146 results of
+// ticks=10 from `stop=stock-target targetMet=1`). The job stays as a record, and the pass that frees the account replaces it.
+export function mergeJobs(jobs: readonly any[], side: string, out: readonly Assignment[], keep: ReadonlySet<string> = new Set(), finished: ReadonlySet<string> = new Set()): { jobs: any[]; fresh: string[] } {
     const mine = (j: any) => j?.autopilot === side, kept = (j: any) => [j?.account, ...(j?.accounts ?? [])].some((a: string) => a && keep.has(a.toLowerCase()));
-    const next = jobs.filter(j => !mine(j) || kept(j)), fresh: string[] = [];
+    const done = (j: any) => mine(j) && j.enabled !== false && j.repeat === true && typeof j.account === 'string' && finished.has(j.account.toLowerCase());
+    const next = jobs.filter(j => !mine(j) || kept(j)).map(j => done(j) ? { ...j, repeat: false } : j), fresh: string[] = [];
     for (const x of out) {
         if (!x.template) continue;
         // A job keeps its run only while it still runs its template (script, args and env, as the swarm signs a mission):

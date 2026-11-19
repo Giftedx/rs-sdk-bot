@@ -9,6 +9,7 @@
 // (README "Claude Code cloud fleet side"). The local side (packages/router/src/watchdog.ts) submits and returns: its
 // coordinator holds real work in jobs.json and releases its parked jobs itself (coordinator-live.ts
 // releaseFinishedOwnJobs), so this script never stops it.
+import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, openSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
@@ -420,7 +421,7 @@ export const cloudSide = (side: string) => side !== 'local';
 // The accounts that stay offline (scripts/swarm.ts PROTECTED_ACCOUNTS; the coordinator refuses a recovery of the
 // first three, packages/router/src/coordinator.ts). The swarm records no end for them, so eligibility refuses them
 // already; this list keeps them out of a proposal even with an end record written by hand.
-export const NEVER_RECOVERED = ['haggis', 'shaftshooter', 'polevaulter', 'afknight'];
+export const NEVER_RECOVERED = [...RESERVED_ACCOUNTS, 'afknight'];
 
 // A recovery run names the exact time of its end record, and its qualify takes about 9 minutes. The local swarm's
 // standing retry deletes a blocked, gave-up or stopped end once the account's status is BOOTSTRAP_STATUS_AGE_MS old

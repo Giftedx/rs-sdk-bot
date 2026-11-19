@@ -92,6 +92,17 @@ test('held Prayer batches stop repeating and rearm only after a matching settled
     expect(make(sequence,{...account,skills:{...account.skills,Prayer:99}})).toBeUndefined();
 });
 
+test('a finished repeating job that a hold keeps stops repeating; every other job stays as it is',()=>{
+    const side='local',job=(account:string,extra:Record<string,unknown>={})=>({account,script:'scripts/shop-buyer.ts',args:['zaff','3000'],env:{},role:'supply',enabled:true,repeat:true,standing:true,autopilot:side,template:'army-staff-zaff',...extra});
+    const keep=new Set(['held','open','paused']),finished=new Set(['held','free','paused']);
+    const out=mergeJobs([job('Held'),job('Open'),job('Free'),job('Paused',{enabled:false}),job('Other',{autopilot:'cloud'})],side,[],keep,finished).jobs;
+    // Held and finished: it stops repeating. Held and not finished: unchanged. Not held: this pass replaces it (here by nothing). Owner pause: unchanged.
+    expect(out.map(j=>[j.account,j.repeat])).toEqual([['Held',false],['Open',true],['Paused',true],['Other',true]]);
+    // Nothing finished or no keep set: the old result.
+    expect(mergeJobs([job('Held')],side,[],keep).jobs).toEqual([job('Held')]);
+    expect(mergeJobs([job('Held')],side,[],new Set(),finished).jobs).toEqual([]);
+});
+
 test('a kit buy that never started is not running: no process ran since its assignment, so no offer is open',()=>{
     const job={account:'Idle',enabled:true,template:'kit-buy:army-weapon'},assigned={template:'kit-buy:army-weapon',offset:500,at:1_000_000};
     const late=1_000_000+JOB_START_GRACE_MS+1;
@@ -1192,7 +1203,7 @@ test('kitBuyRunning releases exit-4, orphaned and died kit buys while keeping ac
 });
 
 test('OFFLINE_GUARDED excludes main and specialists from stock transfers and planner work', () => {
-    expect([...OFFLINE_GUARDED].sort()).toEqual(['haggis', 'polevaulter', 'shaftshooter']);
+    expect([...OFFLINE_GUARDED].sort()).toEqual(['haggis', 'hiltsdeep', 'polevaulter', 'shaftshooter']);
     const owners = new Map([
         ['haggis', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
         ['shaftshooter', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],

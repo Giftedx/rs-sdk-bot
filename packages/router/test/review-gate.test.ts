@@ -55,6 +55,42 @@ test('an out-of-scope build still waits for its review',async()=>{
  expect(reviewGate({scope:scope([]),records:3,replays:[clean,{status:'error',error:'boom'},clean]}).blocking).toBe(true);
 });
 
+test('after the first replay the other two run together, in the order of the records, and an error of the first stops them',async()=>{
+ const main=mkdtempSync(join(tmpdir(),'gate-par-'));
+ mkdirSync(join(main,'scripts'),{recursive:true});mkdirSync(join(main,'packages'),{recursive:true});
+ writeFileSync(join(main,'scripts/x.ts'),'one');
+ const {root}=prepareWorkspace(main,'fixture',['scripts/x.ts']);
+ const ticks=join(root,'.practice','ticks','x');mkdirSync(ticks,{recursive:true});
+ for(const at of [10,20,30])writeFileSync(join(ticks,`bot-${at}.ticks.ndjson.gz`),'');
+ writeFileSync(join(root,'scripts/x.ts'),'changed');
+ const at=(f:string)=>f.match(/bot-(\d+)/)![1]!;
+ // Each replay waits for a release. The second and third must both have started before either one is released.
+ const started:string[]=[],release=new Map<string,()=>void>();
+ const replay=(file:string)=>new Promise<any>(done=>{started.push(at(file));release.set(at(file),()=>done({status:'clean',file}));if(started.length===1)release.get(at(file))!();});
+ const gate=buildReviewGate({root,isolated:true,entry:'scripts/x.ts',owned:['scripts/x.ts'],startedAt:100,replay});
+ // The newest record first, alone.
+ await Bun.sleep(20);
+ expect(started[0]).toBe('30');
+ await Bun.sleep(20);
+ // Both others started while neither is released.
+ expect(started.slice(1).sort()).toEqual(['10','20']);
+ release.get('20')!();release.get('10')!();
+ const result=await gate;
+ expect(result.blocking).toBe(false);
+ expect(result.reason).toContain('replay clean on 3 recorded runs');
+ // An error of the first replay: no other replay starts.
+ const startedAgain:string[]=[];
+ const stopped=await buildReviewGate({root,isolated:true,entry:'scripts/x.ts',owned:['scripts/x.ts'],startedAt:100,replay:async file=>{startedAgain.push(at(file));return {status:'error',file,error:'worker did not open its recorded account'};}});
+ expect(startedAgain).toEqual(['30']);
+ expect(stopped.blocking).toBe(true);
+ // The order of the replays is the order of the records, whatever finishes first: a difference in the third is reported.
+ const order=await buildReviewGate({root,isolated:true,entry:'scripts/x.ts',owned:['scripts/x.ts'],startedAt:100,replay:async file=>{
+  if(at(file)==='10'){await Bun.sleep(5);return {status:'differ' as const,file,difference:{tick:7,index:1,expected:null,actual:null}};}
+  return {status:'clean' as const,file};
+ }});
+ expect(order.blocking).toBe(true);expect(order.reason).toContain('differs at tick 7');
+});
+
 test('the gate reads workspace changes and replays the three newest records from before the build',async()=>{
  const main=mkdtempSync(join(tmpdir(),'gate-main-'));
  mkdirSync(join(main,'scripts'),{recursive:true});mkdirSync(join(main,'packages'),{recursive:true});
@@ -115,4 +151,27 @@ test('a replay root has its own .practice and its removal keeps every link targe
  expect(removeReplayRoot(root)).toBe(true);
  expect(existsSync(root)).toBe(false);
  for(const kept of ['node_modules/keep','vendor/keep','.practice/cache/route-legs.json','.practice/status/bot.json'])expect(existsSync(join(source,kept))).toBe(true);
+});
+
+test('a replay that rejects does not end the wait while the other replay still runs, and it counts as an error of its record',async()=>{
+ const main=mkdtempSync(join(tmpdir(),'gate-settled-'));
+ mkdirSync(join(main,'scripts'),{recursive:true});mkdirSync(join(main,'packages'),{recursive:true});
+ writeFileSync(join(main,'scripts/x.ts'),'one');
+ const {root}=prepareWorkspace(main,'fixture',['scripts/x.ts']);
+ const ticks=join(root,'.practice','ticks','x');mkdirSync(ticks,{recursive:true});
+ for(const at of [10,20,30])writeFileSync(join(ticks,`bot-${at}.ticks.ndjson.gz`),'');
+ writeFileSync(join(root,'scripts/x.ts'),'changed');
+ const at=(f:string)=>f.match(/bot-(\d+)/)![1]!;
+ let slowDone=false;
+ const gate=await buildReviewGate({root,isolated:true,entry:'scripts/x.ts',owned:['scripts/x.ts'],startedAt:100,replay:async file=>{
+  if(at(file)==='30')return {status:'clean' as const,file};
+  // The second record rejects at once; the third keeps running for a while.
+  if(at(file)==='20')throw Error('replay child crashed');
+  await Bun.sleep(60);slowDone=true;return {status:'clean' as const,file};
+ }});
+ // The gate returned only after the slow replay finished, so nothing still runs when the scratch root is removed.
+ expect(slowDone).toBe(true);
+ expect(gate.blocking).toBe(true);
+ expect(gate.reason).toContain('replay failed on');
+ expect(gate.reason).toContain('replay child crashed');
 });

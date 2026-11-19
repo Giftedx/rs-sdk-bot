@@ -20,7 +20,7 @@ const PUBLISH_WAIT_MS=45*60*1000;
 import {buildWorkOrder,preparedNativeDelivery,preparedProvisionRuns,provisionRefs,type CoordinatorState,type CoordTask,type TaskRecord} from './coordinator';
 import {reviewHold} from './coordinator-decisions';
 import {loadState} from './coordinator-store';
-import {capabilityRevision} from '../../core/src/worker-release';
+import {cachedReleaseFor} from '../../core/src/worker-release';
 import {runModel,rejectedReview,type ModelWorker,reviewDependencies,reviewVerdict,reviewGate,REPLAY_RUNS,type ReplayOutcome} from './model-worker';
 import type {DeliveryResult} from './delivery';
 
@@ -76,9 +76,13 @@ export async function buildReviewGate(input:{root:string;isolated:boolean;entry:
  let scratch:string|undefined;
  const replay=input.replay??(file=>replayRun(scratch??=prepareReplayRoot(input.root),file,input.allow));
  try{
-  if(records.length===REPLAY_RUNS)for(const file of records){
-   const r=await replay(file);replays.push(r);
-   if(r.status==='error')break;
+  if(records.length===REPLAY_RUNS){
+   // The first replay runs alone: an error there (the worker did not open its recorded account) repeats for each
+   // record, so it stops the others. After it the rest run together; the result list keeps the order of the records.
+   const first=await replay(records[0]!);replays.push(first);
+   // allSettled, not all: a replay that rejects must not end the wait while the other still runs in the scratch root that
+   // the finally below deletes. A rejection is an error outcome of that record.
+   if(first.status!=='error')replays.push(...(await Promise.allSettled(records.slice(1).map(file=>replay(file)))).map((r,i):ReplayOutcome=>r.status==='fulfilled'?r.value:{status:'error',file:records[i+1],error:String((r.reason as Error)?.message??r.reason)}));
   }
  }finally{if(scratch)removeReplayRoot(scratch);}
  return reviewGate({scope,records:records.length,replays,allow:input.allow});
@@ -144,13 +148,13 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
     try{
      const definition=deliveryTask(capability);
      if(reviewHold(state,capability,()=>capabilitySource(definition.files)))return null;
-     return{fingerprint:deliveryFingerprint(definition),runtime:capabilityRevision([definition.entry]),entry:definition.entry};
+     return{fingerprint:deliveryFingerprint(definition),runtime:cachedReleaseFor([definition.entry]),entry:definition.entry};
     }catch{return null;}
    },{held:error=>{hold=error;},ready:value=>{crew=value;}}))throw Error(hold?'account creation waits for a prepared participant: '+String(hold):'account creation waits for fresh native proof of its prepared first job');
    return crew;
   };
   requirePreparedJob();
-  const world=readWorld(),deps=createAccountProvisionDeps({workerRelease:capabilityRevision([REGISTRATION_SCRIPT]),reservation:runId});
+  const world=readWorld(),deps=createAccountProvisionDeps({workerRelease:cachedReleaseFor([REGISTRATION_SCRIPT]),reservation:runId});
   const admission=admissionDecision({running:provisionLiveSessions().length,external:0,starting:1,startingReserve:1,pending:0,freeGB:freemem()/2**30,minFreeGB:world.capacity.minFreeGB,maxBots:world.capacity.maxBots});
   if(!admission.allowed)throw Error('account claim waits for measured capacity: '+admission.reason);
   const reserve=deps.reserveLiveAccount;

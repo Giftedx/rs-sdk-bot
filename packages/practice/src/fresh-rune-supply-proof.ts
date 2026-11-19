@@ -320,6 +320,9 @@ export function freshRuneAirRecoveryChecks(before:Save,after:Save,run:Run,target
   noPreparation:!r?.stages?.training&&!r?.stages?.food&&!r?.stages?.quest&&!r?.stages?.questExit};
 }
 // Ordinary seeded recovery evidence stays separate from genuine registration.
+// The post-craft fixture starts below the target: Runecraft 19 at 3000 XP (level 20 is 3105 XP). The essence in hand is
+// the work that reaches level 20, so the craft is not work after a finished goal (a finished goal refuses crafts).
+export const POSTCRAFT_XP=3000;
 export function freshRunePostCraftChecks(before:Save,after:Save,run:Run){
  const r=summary(run),events=run.log.split(/\r?\n/).flatMap(line=>{
   const prefix=line.startsWith('AIR_EXIT ')?'AIR_EXIT':line.startsWith('RUNE_SUPPLY_ACTION ')?'RUNE_SUPPLY_ACTION':null;
@@ -332,7 +335,7 @@ export function freshRunePostCraftChecks(before:Save,after:Save,run:Run){
  const food=(s:Save)=>[315,2309,2140].reduce((n,id)=>n+sum(s,id),0);
  return {child:run.code===0&&r?.ok===true&&r?.target===20,logout:logout(run),savedResult:freshRuneSavedResult(after,run),
   entry:same(before.position,airRecoveryPositions[0])&&before.vars[63]===6&&before.vars[101]===1&&before.vars[281]===1000
-   &&before.skills[20]!.level===20&&before.skills[20]!.rawExperience===32500&&sum(before,1436,93)===1&&sum(before,1436)===1
+   &&before.skills[20]!.level===19&&before.skills[20]!.rawExperience===POSTCRAFT_XP*10&&sum(before,1436,93)===1&&sum(before,1436)===1
    &&sum(before,556,93)===26&&sum(before,556,95)===25&&[1438,1265,1171].every(id=>sum(before,id)===1),
   quest:after.vars[63]===6&&after.vars[101]===1&&after.vars[281]===1000,
   production:r?.consumed===1&&r?.crafted===2&&r?.mined===0&&r?.stages?.resumedCraft?.ok===true
@@ -341,9 +344,11 @@ export function freshRunePostCraftChecks(before:Save,after:Save,run:Run){
    &&after.skills[20]!.rawExperience-before.skills[20]!.rawExperience===1250&&after.skills[20]!.level===20,
   banked:r?.inheritedBanked===26&&r?.newBanked===2&&r?.banked===28&&sum(after,556,93)===0&&sum(after,556,95)===53,
   craftThenExit:craft>=0&&selected>craft&&events[selected].tick-events[craft].tick>=0&&events[selected].tick-events[craft].tick<=1
-   &&events[craft].essence===0&&events[craft].air===28&&events[craft].runecraftXp===3375,
+   &&events[craft].essence===0&&events[craft].air===28&&events[craft].runecraftXp===POSTCRAFT_XP+125,
+  // The worker (scripts/generated/rcair.ts) records the walk reply on 'approach-dispatched' and records 'approached' with the position alone.
   approach:exit.some(e=>e.phase==='path'&&e.reply?.path?.success===true&&e.reply?.path?.reachedDestination===true)
-   &&exit.some(e=>e.phase==='approached'&&e.reply?.success===true&&e.position?.level===0
+   &&exit.some(e=>e.phase==='approach-dispatched'&&e.reply?.success===true)
+   &&exit.some(e=>e.phase==='approached'&&e.position?.level===0
     &&Math.abs(e.position.worldX-2841)+Math.abs(e.position.worldZ-4828)===1),
   dispatch:exit.some(e=>e.phase==='dispatch'&&e.portal?.id===2465&&e.portal?.x===2841&&e.portal?.z===4828)
    &&exit.some(e=>e.phase==='action'&&e.reply?.success===true),
@@ -410,10 +415,10 @@ export async function proveFreshRuneAirRecovery(parent:string){
    const binding=freshRuneBinding(name,tickMs);writeFileSync(join(dir,'fixture.json'),JSON.stringify({binding,position,scope:'ordinary recovery fixture; never default registration'}),{flag:'wx'});
    // Seed once, only for this separate ordinary fixture. Postcraft fixtures
    // carry one essence. The existing continuation fixture mines its own.
-   await applyPreset(name,{position,skills:{Runecraft:20,Mining:20,Hitpoints:16,Attack:12,Defence:11,Strength:11},varps:{63:6,101:1,281:1000},
+   await applyPreset(name,{position,skills:{Runecraft:i>=3?19:20,Mining:20,Hitpoints:16,Attack:12,Defence:11,Strength:11},varps:{63:6,101:1,281:1000},
     inventory:[{id:1438,count:1},{id:556,count:26},{id:315,count:1},...(i>=3?[{id:1436,count:1}]:[])],equipment:[{id:1265,count:1,slot:3},{id:1171,count:1,slot:5}],
     bank:[{id:556,count:25},{id:995,count:25},{id:1277,count:1},{id:2140,count:8},{id:2309,count:1},{id:1351,count:1},{id:590,count:1}]});
-   const seeded=readPracticeSave(save);setPracticeSkills(save,seeded.skills.map((s,index)=>({level:s.level,xp:index===20?3250:index===14?3375:s.xp})));
+   const seeded=readPracticeSave(save);setPracticeSkills(save,seeded.skills.map((s,index)=>({level:s.level,xp:index===20?(i>=3?POSTCRAFT_XP:3250):index===14?3375:s.xp})));
    copyFileSync(save,join(dir,'before.sav'));
    const codes:Record<string,number>={};let higherInputHash:string|undefined;
    const command=async(label:string,target:number,env:Record<string,string>={})=>{

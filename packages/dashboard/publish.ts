@@ -13,7 +13,8 @@
 import {existsSync,mkdirSync,readdirSync,readFileSync,writeFileSync,renameSync,rmSync,cpSync,openSync,closeSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
-import {controlView,publicView,stateWarm,withSides,MAIN_ACCOUNT} from './publish-relay';
+import {expandQuests} from './quest-pack';
+import {controlView,publicView,stateWarm,withSides,MAIN_ACCOUNT,pushDue,withoutClocks} from './publish-relay';
 import {expectedLootPrices} from './item-prices';
 import {FLEET_WORKTREE,loadOwners} from '../core/src/fleet';
 import {reloadDue,respawnDaemon} from '../core/src/live-reload';
@@ -48,18 +49,7 @@ export async function run(cmd:string[],cwd=root,limitMs=RUN_LIMIT_MS):Promise<{o
 }
 const gh=(...args:string[])=>run(['gh',...args]);
 const ghJson=async(...args:string[])=>{const r=await gh(...args);if(!r.ok)throw Error(r.out.slice(0,300));return JSON.parse(r.out);};
-// The repository's pull requests, for the page's Pull requests plugin (every agent lane and its PRs are public).
-const BOT_REPO='Giftedx/rs-sdk-bot';
-let prs={at:0,rows:[] as any[]};
-async function pullRequests(now:number){
- if(now-prs.at<300_000)return prs.rows;
- try{
-  const fields='number,title,headRefName,state,isDraft,updatedAt,author,url';
-  const open=await ghJson('pr','list','--repo',BOT_REPO,'--state','open','--limit','50','--json',fields),merged=await ghJson('pr','list','--repo',BOT_REPO,'--state','merged','--limit','15','--json',fields);
-  prs={at:now,rows:[...open,...merged].map((r:any)=>({number:r.number,title:String(r.title??''),branch:String(r.headRefName??''),state:String(r.state??''),draft:r.isDraft===true,updatedAt:String(r.updatedAt??''),author:String(r.author?.login??''),url:String(r.url??'')}))};
- }catch(e){console.log(`PUBLISH prs unavailable: ${String(e).slice(0,120)}`);prs.at=now;}
- return prs.rows;
-}
+// The pull request list comes from the local server's state (server.ts refreshPrs, one gh call pair every 5 minutes).
 const ownedNames=()=>{const d=join(root,'vendor','rs-sdk','bots');return existsSync(d)?readdirSync(d,{withFileTypes:true}).filter(n=>n.isDirectory()&&/^[A-Za-z0-9]{1,12}$/.test(n.name)).map(n=>n.name):[];};
 
 // ---------- the local dashboard: the collector ----------
@@ -78,7 +68,7 @@ async function collect(){
  await ensureDashboard();
  const ownersFile=[join(FLEET_WORKTREE,'fleet','owners.json'),join(root,'fleet','owners.json')].find(existsSync);
  const owners=(()=>{try{return ownersFile?loadOwners(ownersFile):new Map();}catch{return new Map();}})();
- const state={...withSides(await (await dash('/api/state')).json(),owners),prs:await pullRequests(Date.now())};
+ const state={...withSides(await (await dash('/api/state')).json(),owners)};
  const meta=await (async()=>{try{const r=await dash('/api/control',undefined,10_000);return r.ok?await r.json():null;}catch{return null;}})();
  let map:Uint8Array|null=null;
  if(!mapWritten&&state?.map?.ready){try{const r=await dash('/api/map');if(r.ok)map=new Uint8Array(await r.arrayBuffer());}catch{/* next cycle */}}
@@ -195,7 +185,7 @@ async function pollCommands(now:number,nonce:string|null):Promise<number>{
  return applied;
 }
 
-let lastSitePush=0,lastPublic='',lastControl='',coldSince=0;
+let lastSitePush=0,lastPublic:{stable:string;at:number}|null=null,lastControl:{stable:string;at:number}|null=null,coldSince=0;
 export type BundleAudit={ok:boolean;checkedFiles:number;checkedAssets:number;missing:string[];leaks:string[]};
 const STATIC_TEXT_EXT=/\.(html|css|js)$/i;
 const ASSET_PREFIX_PLACEHOLDERS=new Set(['rl-','skill-','spell-','prayer-']);
@@ -279,6 +269,11 @@ export function verifyStaticBundle(
  return {ok:missing.length===0&&leaks.length===0,checkedFiles,checkedAssets:assets.size,missing:[...new Set(missing)],leaks:[...new Set(leaks)]};
 }
 
+// True when the hosted page's index.html holds the expandQuests function of the packed quest state (quest-pack.ts).
+export function hostedPageExpandsQuests(main:string):boolean{
+ try{return readFileSync(join(main,'site','index.html'),'utf8').includes('function expandQuests(');}catch{return false;}
+}
+
 async function cycle(){
  const now=Date.now();
  let {state,meta,map}=await collect();
@@ -289,23 +284,26 @@ async function cycle(){
   const applied=await pollCommands(now,meta?.nonce??null);
   if(applied){({state,meta}=await collect());note+=` commands=${applied}`;}
  }
+ // The hosted page lives in the dashboard repository (main/site), deployed apart from this publisher. Packed quests go out
+ // only when that page can expand them; otherwise the data keeps the old quest shape, so an old page never shows empty quests.
+ if(!(REPO&&hostedPageExpandsQuests(join(DIR,'repo'))))state=expandQuests(state),delete state.questList;
  // The public view refuses a state that still names the main account. The owner's control view must still go out.
  const control=JSON.stringify(controlView(state,meta));let pub:string|null=null,pubError:unknown=null;
  try{pub=JSON.stringify(publicView(state,MAIN_ACCOUNT,expectedDrops));}catch(e){pubError=e;}
  writeAtomic(join(DIR,'out','control.json'),control);if(pub!==null)writeAtomic(join(DIR,'out','public.json'),pub);
  if(REPO){
   const main=join(DIR,'repo');
-  if(control!==lastControl){writeAtomic(join(DIR,'data','control.json'),control);note+=` data=${await pushSingleCommit(join(DIR,'data'),'data','fleet control state')}`;lastControl=control;}
+  if(pushDue(control,lastControl,now)){writeAtomic(join(DIR,'data','control.json'),control);note+=` data=${await pushSingleCommit(join(DIR,'data'),'data','fleet control state')}`;lastControl={stable:withoutClocks(control),at:now};}else note+=' data=unchanged';
   // A server that has just started has no market prices or board tops yet; that thin file would stay live for a
   // whole push period, so the push waits for a warm state, at most three periods from the first cold cycle.
   const warm=stateWarm(state);if(warm)coldSince=0;else if(!coldSince)coldSince=now;
-  if(pub!==null&&pub!==lastPublic&&now-lastSitePush>=PUBLIC_MS&&(warm||now-coldSince>=3*PUBLIC_MS)){
+  if(pub!==null&&pushDue(pub,lastPublic,now)&&now-lastSitePush>=PUBLIC_MS&&(warm||now-coldSince>=3*PUBLIC_MS)){
    const site=join(DIR,'site');
    for(const n of readdirSync(site))if(n!=='.git')rmSync(join(site,n),{recursive:true,force:true});
    if(existsSync(join(main,'site')))cpSync(join(main,'site'),site,{recursive:true});
    writeFileSync(join(site,'public.json'),pub);writeFileSync(join(site,'.nojekyll'),'');
    if(existsSync(join(DIR,'out','map.bin')))cpSync(join(DIR,'out','map.bin'),join(site,'map.bin'));
-   note+=` site=${await pushPublicCommit(site)}`;lastSitePush=now;lastPublic=pub;
+   note+=` site=${await pushPublicCommit(site)}`;lastSitePush=now;lastPublic={stable:withoutClocks(pub),at:now};
   }
  }
  if(pub===null)throw pubError;

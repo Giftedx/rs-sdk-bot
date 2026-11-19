@@ -504,23 +504,24 @@ test('wire XP match still requires exact pack and equipment quantities and IDs',
 
 test('post-craft proof requires exact new output, immediate portal action, arrival and saved logout',()=>{
  const before=save();before.position={x:2843,z:4832,level:0};before.vars={63:6,101:1,281:1000};
- Object.assign(before.skills[20]!,{level:20,xp:3250,rawExperience:32500});
+ Object.assign(before.skills[20]!,{level:19,xp:3000,rawExperience:30000});
  before.inventories={93:[{id:1436,count:1},{id:556,count:26},{id:1438,count:1},{id:315,count:1}],94:[{id:1265,count:1},{id:1171,count:1}],95:[{id:556,count:25},{id:995,count:25}]};
  const after=structuredClone(before);after.position={x:3253,z:3420,level:0};
- after.skills[20]!.rawExperience+=1250;after.skills[20]!.xp+=125;
+ after.skills[20]!.rawExperience+=1250;after.skills[20]!.xp+=125;after.skills[20]!.level=20;
  after.inventories[93]=[];after.inventories[95]=[...before.inventories[95]!.filter(i=>i.id!==556),...before.inventories[93]!.filter(i=>![1436,556].includes(i.id)),{id:556,count:53}];
- const action={action:'craft-air',phase:'end',tick:6,essence:0,air:28,runecraftXp:3375};
+ const action={action:'craft-air',phase:'end',tick:6,essence:0,air:28,runecraftXp:3125};
  const line=(prefix:string,o:any)=>prefix+' '+JSON.stringify(o);
  const events=[line('RUNE_SUPPLY_ACTION',action),line('AIR_EXIT',{phase:'selected',tick:6,position:{animId:791,spotanimId:186}}),
   line('AIR_EXIT',{phase:'path',reply:{path:{success:true,reachedDestination:true}}}),
-  line('AIR_EXIT',{phase:'approached',position:{worldX:2841,worldZ:4829,level:0},reply:{success:true}}),
+  line('AIR_EXIT',{phase:'approach-dispatched',reply:{success:true,message:'Walking'}}),
+  line('AIR_EXIT',{phase:'approached',position:{worldX:2841,worldZ:4829,level:0}}),
   line('AIR_EXIT',{phase:'dispatch',portal:{id:2465,x:2841,z:4828},tick:9}),line('AIR_EXIT',{phase:'action',reply:{success:true}}),
   line('AIR_EXIT',{phase:'outside',position:{worldX:2983,worldZ:3288,level:0},tick:10})];
  const result={ok:true,target:20,inheritedBanked:26,banked:28,newBanked:2,crafted:2,consumed:1,mined:0,travelFoodEaten:0,
   stages:{resumedCraft:{ok:true,consumed:1,runes:2,xp:125}},final:{skills:after.skills.map(sk=>({experience:sk.xp,level:sk.level})),inventory:after.inventories[93],equipment:after.inventories[94]}};
  const run=(e=events,r=result,s=after)=>({code:0,log:[...e,line('RUNE_SUPPLY_RESULT',{...r,final:{...r.final,skills:s.skills.map(sk=>({experience:sk.xp,level:sk.level}))}}),'LOGOUT logged-out'].join('\n')});
  expect(Object.values(proof.freshRunePostCraftChecks(before,after,run())).every(Boolean)).toBe(true);
- for(const phase of ['selected','approached','dispatch','action','outside']){
+ for(const phase of ['selected','approach-dispatched','approached','dispatch','action','outside']){
   const reduced=events.filter(l=>!l.includes('"phase":"'+phase+'"'));
   expect(Object.values(proof.freshRunePostCraftChecks(before,after,run(reduced))).every(Boolean)).toBe(false);
  }
