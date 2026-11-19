@@ -450,7 +450,24 @@ function solveLowerBounds(graph: LowerBoundGraph, goalBoundIdx: number, goalTile
 }
 
 // Ordinary navigation may stop beside its goal; entry qualification requests the exact tile.
-export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; travel?: Travel[]; pathLength: PathLength; goalTolerance?: 0 | 1 }): World {
+type WorldOptions = { transports?: Transport[]; doors?: Door[]; travel?: Travel[]; pathLength: PathLength; goalTolerance?: 0 | 1 };
+
+// The route graph (waypoint tables, lower-bound graphs, approach tables: about 98 MB and 334,000 objects) builds on the
+// first route(), navigationGraph() or routeGain() call. A process that plans its trips off the main thread
+// (bot.ts getWorld: offThread) and only asks for the doors that an account cannot pass never builds it.
+export function createWorld(opts: WorldOptions): World {
+    let doors: Door[] | undefined = opts.doors, full: World | undefined;
+    const doorList = () => doors ??= loadJson<Door[]>('doors.json');
+    const built = () => full ??= buildWorld({ ...opts, doors: doorList() });
+    return {
+        navigationGraph: () => built().navigationGraph!(),
+        blockedDoors: acct => doorList().filter(d => doorBlocks(d, acct)).map(doorBlock),
+        routeGain: (a, b) => built().routeGain!(a, b),
+        route: (from, to, acct, routeOpts) => built().route(from, to, acct, routeOpts),
+    };
+}
+
+function buildWorld(opts: WorldOptions): World {
     // A stair with direct op2/op3 links (Climb-up / Climb-down) uses op1 for a "which way?" menu
     // (e.g. spiralstairsmiddle op1=Climb). Clicking op1 opens a dialog and never changes floor, so drop it.
     const raw=opts.transports??loadJson<Transport[]>('transports.json');
