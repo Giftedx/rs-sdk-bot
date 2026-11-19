@@ -6,6 +6,8 @@ import { PROFILES, sparOptions } from './pk-spar';
 import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, kitSwitches, kitVarps } from './pk-kits';
 import { benchCases, GANKER_POST } from './measure/aio-bench-cases';
 import { wildernessLevel, type FightResult } from './pk';
+import * as hunt from './pk-hunt';
+import * as altars from './pray-at-altar';
 import { tripRequirements } from './pk-hunt';
 import { nativeRequirementMetadata, resolveItemRequirements } from '../packages/core/src/item-requirements';
 
@@ -206,17 +208,17 @@ test('plannedPickups takes the wanted stacks within the radius, nearest first', 
 });
 
 // The second visit of a gang bank trip: eat up with the food in the pack, then refill the pack from the bank (sharks, then lobsters).
-async function runBankTrip(o: { pack: { id: number; count: number; name: string }[]; bank: { id: number; count: number }[]; hp: number }) {
+async function runBankTrip(o: { pack: { id: number; count: number; name: string }[]; bank: { id: number; count: number }[]; hp: number; prayer?: { points: number; base: number }; altar?: boolean; prayerFails?: boolean }) {
     // One slot for each piece of food, as in the game.
     const inventory: any[] = o.pack.flatMap(p => Array.from({ length: p.count }, () => ({ id: p.id, name: p.name, count: 1, optionsWithIndex: /Shark|Lobster/.test(p.name) ? [{ text: 'Eat', opIndex: 1 }] : [] })))
         .map((p, i) => ({ ...p, slot: i }));
-    const bank = o.bank.map(r => ({ ...r })), withdrawals: { id: number; count: number }[] = [], eaten: number[] = [];
+    const prayedAt: string[] = [], bank = o.bank.map(r => ({ ...r })), withdrawals: { id: number; count: number }[] = [], eaten: number[] = [];
     const player: any = { worldX: 3094, worldZ: 3492, hp: o.hp, maxHp: 99 };
     let tick = 0;
     const s: any = {
         tick: () => tick, client: {}, ended: new Promise(() => {}),
         sdk: {
-            getState: () => ({ player, inventory }), getInventory: () => inventory, getBankItems: () => bank, getEquipment: () => [],
+            getState: () => ({ player, inventory }), getSkill: (n: string) => (n === 'Prayer' && o.prayer ? { level: o.prayer.points, baseLevel: o.prayer.base } : undefined), getInventory: () => inventory, getBankItems: () => bank, getEquipment: () => [],
             sendUseItem: async (slot: number) => {
                 const at = inventory.findIndex(i => i.slot === slot), item = inventory[at];
                 if (!item) return;
@@ -233,10 +235,12 @@ async function runBankTrip(o: { pack: { id: number; count: number; name: string 
         spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
         spyOn(walking, 'walkPath').mockImplementation(async () => ({ ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 })),
         spyOn(pk, 'nextTick').mockImplementation(async () => { tick++; return true; }),
+        spyOn(hunt, 'restock').mockResolvedValue(null),
+        spyOn(altars, 'prayAtAltar').mockImplementation(async (_s: any, altar: any) => { prayedAt.push(altar.label); return { ok: !o.prayerFails, detail: 'mock failure' }; }),
     ];
     try {
-        const fault = await bankTrip({ x: 3094, z: 3492 }, { x: 3070, z: 3640 }, { food: 18, items: [] }, {}, () => false)(s, true);
-        return { fault, withdrawals, eaten, hp: player.hp, inventory };
+        const fault = await bankTrip({ x: 3094, z: 3492 }, { x: 3070, z: 3640 }, { food: 18, items: [] }, {}, () => false, undefined, { altar: o.altar })(s, !o.altar);
+        return { fault, withdrawals, eaten, hp: player.hp, inventory, prayedAt };
     } finally { for (const mock of mocks) mock.mockRestore(); }
 }
 
@@ -264,4 +268,13 @@ test('a trip restores Prayer only under 70 percent of the base level', () => {
     expect(tripPrayerDue(0, 99)).toBe(true);
     expect(tripPrayerDue(99, 99)).toBe(false);
     expect(tripPrayerDue(0, 1)).toBe(false);
+});
+
+test('a later trip prays at the nearest safe altar when Prayer is under the floor, and a fresh trip or a full Prayer does not', async () => {
+    const base = { pack: [], bank: [], hp: 99 };
+    expect((await runBankTrip({ ...base, prayer: { points: 40, base: 99 }, altar: true })).prayedAt).toEqual(['Varrock east church']);
+    expect((await runBankTrip({ ...base, prayer: { points: 80, base: 99 }, altar: true })).prayedAt).toEqual([]);
+    expect((await runBankTrip({ ...base, prayer: { points: 40, base: 99 } })).prayedAt).toEqual([]);
+    const failed = await runBankTrip({ ...base, prayer: { points: 0, base: 99 }, altar: true, prayerFails: true });
+    expect(failed.fault).toBe('no prayer restore: mock failure');
 });
