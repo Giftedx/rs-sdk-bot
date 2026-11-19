@@ -2217,7 +2217,8 @@ export function squadSupplies(): Template[] {
     // Rune arrows from the fleet's headless arrows, one chain job: rune arrowtips bought at Hickton's in Catherby (200 coins,
     // half the price of a finished rune arrow), then 15 tips with 15 headless arrows into 15 rune arrows at the Catherby bank
     // (scripts/fletch-arrows.ts MODE=native-arrows TIP_TYPE=rune, arrows.dbrow: Fletching 75). One job, because the planner
-    // finds a missing input only in stock and on the market, not from another maker. Bench case extra:fletch-rune-arrows.
+    // finds a missing input only in stock and on the market, not from another maker. Bench case extra:fletch-rune-arrows: 30
+    // arrows in 14 ticks (hosted run 44470543603); the tip purchase is not in that time.
     const runeSteps = (sets: number) => {
         const tips = sets * 15, spend = tips * SQUAD_UNIT_COST['rune arrowtips']! * 2;
         return [`scripts/shop-buyer.ts catherby 1200 ITEMS=rune.arrowtips STOCK_TARGET=${tips} STOP_AT_TARGET=1 BANK_PACK=1 NO_BUY_TICKS=25 FLOAT=${spend + 200} COIN_RESERVE=200 MAX_SPEND=${spend}`,
@@ -2230,14 +2231,14 @@ export function squadSupplies(): Template[] {
         production: { output: 'rune arrow', outputPerUnit: 15, maximum: SQUAD_RUNE_SETS, inputs: { 'headless arrow': 15 }, resize: n => ({ args: runeSteps(n) }) },
         yields: () => [{ item: 'rune arrow', perTick: 1 }], spends: () => [{ item: 'coins', perTick: SQUAD_UNIT_COST['rune arrowtips']! }] };
     // Sharks fished and cooked at Catherby (scripts/shark-supply.ts: Fishing 76, Cooking 80; it buys a harpoon when it has none,
-    // and it carries two banked trout, salmon or lobsters for the way back).
-    // Bench case extra:shark-supply.
+    // and it carries two banked trout, salmon or lobsters for the way back). Bench case extra:shark-supply: 3 sharks in 182, 250 and
+    // 348 ticks (hosted run 44470543603, seeds 1 to 3); the rate is from those runs.
     const sharkSteps = (n: number) => ({ args: [String(n), '9000'], env: { SHARK_CONSUMER: 'gang squad' } });
     const sharks: Template = { id: 'squad-sharks', family: 'shark-supply', script: 'scripts/shark-supply.ts', ...sharkSteps(SQUAD_SHARK_RUN),
         role: 'fishing', goal: 'fish and cook sharks at Catherby for the gang squad', resources: ['squad:catherby-sharks'], squadOnly: true, repeats: false,
         needs: { skills: { Fishing: 76, Cooking: 80 }, items: { lobster: 2 } },
         production: { output: 'shark', outputPerUnit: 1, maximum: SQUAD_SHARK_RUN, inputs: {}, resize: n => sharkSteps(n) },
-        yields: () => [{ item: 'shark', perTick: 0.05 }] };
+        yields: () => [{ item: 'shark', perTick: 0.01 }] };
     return [
         waterCraft, waterTalisman, runeArrows, sharks,
         shop('squad-arrows-dargaud', 'dargaud', 'rune arrow', 'rune arrow', 0.4, 'buy rune arrows in the Ranging Guild for the gang squad', { skills: { Ranged: 40 }, items: { coins: 30_000 } }),

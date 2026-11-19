@@ -27,7 +27,7 @@ export type SquadBlock = { active?: unknown; members?: unknown; hours?: unknown 
 // An item with no price counts 0 and is never cut. Each supply run is capped on its own by MAX_SPEND.
 // `all`: every member of the block this side owns, whether it is restocked now or held; it drives the hold-out and the donor
 // reserve, while `members` (observed, not held) drives the restock rows.
-export const SQUAD_MAX_COINS = 320_000;
+export const SQUAD_MAX_COINS = 2_000_000;
 export type SquadInput = { active: boolean; hours: number; maxCoins?: number; all?: readonly string[]; members: readonly { name: string; items: Readonly<Record<string, number>> }[] };
 export type SquadRow = { account: string; names: string[]; short: number; target: number; consumer: string };
 
