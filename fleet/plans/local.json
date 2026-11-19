@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795102935010,
+ "at": 1795103009066,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -267,24 +267,6 @@
    "resources": []
   },
   {
-   "account": "Moneyshot",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=10 EXPECTED_OWNED=6 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=moneyshot-kit14-532-6to16 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 10 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "PickpockDick",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -369,6 +351,27 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/splash-train.ts",
+   "args": [
+    "66",
+    "6000"
+   ],
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":66}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "combat",
+   "template": "army-splash-magic-66",
+   "autopilot": "local",
+   "resources": [
+    "splash:ardougne-cow-fence"
    ]
   },
   {
