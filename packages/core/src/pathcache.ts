@@ -140,8 +140,21 @@ export function writePathfindingSnapshot(file:string,key:string,payload:Uint8Arr
 
 let loaded: Promise<{ restored: boolean; ms: number }> | null = null;
 
+// Whether the file is a snapshot of the current source key: its header is read, not its payload. A login that finds
+// none loads the route finder itself (inprocess.ts), so a cold build never happens inside a live session.
+export function pathfindingSnapshotUsable(file=DEFAULT_CACHE,key?:string):boolean {
+    let fd:number|undefined;
+    try{
+        fd=openSync(file,'r');
+        const total=fstatSync(fd).size,head=Buffer.alloc(Math.min(total,4+MAX_HEADER));
+        return readFully(fd,head,0)&&snapshotHeader(head,total,key??pathfindingSourceKey())!==null;
+    }catch{return false;}
+    finally{if(fd!==undefined)try{closeSync(fd);}catch{/* The cache is optional. */}}
+}
+
 // A process that never asked for the route finder still reaches it when a script calls an SDK function that
-// uses the collision grid (isTileWalkable, findDoorsAlongPath): sdk/pathfinding.ts then runs initPathfinding() itself,
+// initializes the collision grid (isTileWalkable, isFlagged, isZoneAllocated, findLongPath; not findDoorsAlongPath,
+// which only reads the door index): sdk/pathfinding.ts then runs initPathfinding() itself,
 // and its first read of the collision data (the preload collision-lazy.ts) calls this hook before the zones are read.
 // The hook restores the snapshot, so the grid is the same as after loadPathfinding() and the 14 s of allocation do
 // not run. Without a valid snapshot it does nothing and the SDK builds the grid itself; the snapshot is then written
@@ -159,9 +172,12 @@ export function restorePathfindingOnFirstUse(file = DEFAULT_CACHE): boolean {
     else queueMicrotask(() => { void loadPathfinding({ cacheFile: file }).catch(() => {}); });
     return restored;
 }
-(globalThis as { __rsPathEnsure?: () => void }).__rsPathEnsure = () => { restorePathfindingOnFirstUse(); };
+// The hook reads the file that loadPathfinding() was given, the default file otherwise.
+let hookFile = DEFAULT_CACHE;
+(globalThis as { __rsPathEnsure?: () => void }).__rsPathEnsure = () => { restorePathfindingOnFirstUse(hookFile); };
 
 export function loadPathfinding(opts: { cacheFile?: string } = {}): Promise<{ restored: boolean; ms: number }> {
+    if (opts.cacheFile) hookFile = opts.cacheFile;
     loaded ??= load(opts.cacheFile ?? DEFAULT_CACHE).catch(error=>{loaded=null;throw error;});
     return loaded;
 }

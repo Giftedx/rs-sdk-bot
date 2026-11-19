@@ -96,10 +96,13 @@ export interface PathFinder {
     findLongPath(level: number, sx: number, sz: number, dx: number, dz: number, max?: number, blocked?: Iterable<any>): { x: number; z: number; level: number }[];
     getDoorAt(level: number, x: number, z: number): any;
 }
+const PF_RETRY_MS = 60_000;
 export interface RandomEventOptions {
     // undefined: load the in-process client's IfType and the rsmod pathfinder lazily; null: run without them.
     ifReader?: IfReader | null;
     pf?: PathFinder | null;
+    // How the route finder loads when `pf` is undefined (a test gives its own); the default loads it through pathcache.ts.
+    loadPf?: () => Promise<PathFinder>;
     gate?: boolean;
     lampSkill?: string;
     // NPC type id -> danger radius in tiles; undefined: read the server's hunt configs once; null: none.
@@ -228,11 +231,14 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     }
     // The route finder loads on the first handler that needs it (a flee tile or the maze), not at login: a bot that
     // stands at one bank never pays for it. Until the load ends, `getPf()` is null and callers use the straight distance.
-    let pfStarted = opts.pf !== undefined;
+    // A flee job asks for it when it is created, so the load runs while the NPC walks up. A failed load is tried again
+    // after PF_RETRY_MS, not on each call.
+    let pfStarted = opts.pf !== undefined, pfRetryAt = 0;
+    const loadPf = opts.loadPf ?? (() => import('./pathcache').then(m => m.loadPathfinding()).then(() => import(vendor('sdk/pathfinding.ts'))));
     const getPf = (): PathFinder | null => {
-        if (!pfStarted) {
+        if (!pfStarted && Date.now() >= pfRetryAt) {
             pfStarted = true;
-            void import('./pathcache').then(m => m.loadPathfinding()).then(() => import(vendor('sdk/pathfinding.ts'))).then((m: any) => { pf = m; }).catch(() => { pfStarted = false; });
+            void loadPf().then((m: any) => { pf = m; }).catch(() => { pfStarted = false; pfRetryAt = Date.now() + PF_RETRY_MS; });
         }
         return pf;
     };
@@ -417,6 +423,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     // `onSafe` (the flee guard): no walk back after the escape. The job calls onSafe once and keeps the player held, so
     // the script cannot fight again before its session ends.
     const fleeJob = (idx: number, onSafe?: (detail: string) => void): Omit<Job, 'started'> => {
+        getPf();
         let dest: { x: number; z: number } | null = null;
         let sentAt = -99;
         let lastPos = '';

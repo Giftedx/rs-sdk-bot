@@ -1,11 +1,11 @@
-import { test, expect, mock } from 'bun:test';
-import { resolve } from 'node:path';
+import { test, expect } from 'bun:test';
+import { watchRandomEvents } from '../src/randomevents';
 
-// The route finder is loaded by the first handler that needs it, not when the watcher starts.
+// The route finder is loaded by the first handler that needs it, not when the watcher starts. The loader is given
+// to the watcher: no module mock, so no other test file sees a replaced pathcache.ts.
 test('a watcher that starts and ticks with no event does not load the route finder', async () => {
     let loads = 0;
-    mock.module(resolve(import.meta.dir, '../src/pathcache.ts'), () => ({ loadPathfinding: async () => { loads++; return {}; } }));
-    const { watchRandomEvents } = await import('../src/randomevents');
+    const loadPf = async () => { loads++; return {} as any; };
     let t = 0;
     const listeners = new Set<() => void>();
     const state: any = {
@@ -20,7 +20,7 @@ test('a watcher that starts and ticks with no event does not load the route find
         onTick(cb: () => void) { listeners.add(cb); return () => { listeners.delete(cb); }; },
         direct: async () => ({ success: true }), close: async () => {}, ended: new Promise(() => {}),
     };
-    const w = watchRandomEvents(s, { ifReader: null, danger: null, log: () => {} });
+    const w = watchRandomEvents(s, { ifReader: null, danger: null, loadPf, log: () => {} });
     for (let i = 0; i < 20; i++) { t++; for (const l of [...listeners]) l(); await Promise.resolve(); }
     await new Promise(r => setTimeout(r, 50));
     expect(loads).toBe(0);

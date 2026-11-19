@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import type { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import type { BotActions } from '../../../vendor/rs-sdk/sdk/actions';
 import type { SDKConfig } from '../../../vendor/rs-sdk/sdk/types';
-import { DEFAULT_CACHE, loadPathfinding } from './pathcache';
+import { loadPathfinding, pathfindingSnapshotUsable } from './pathcache';
 import { assertLoginAllowed } from './haggisgate';
 import { fleetLeaseAllowsWorker } from './fleet-lease';
 import { acquireFleetSwarmClaim, acquireFleetTradeClaim, type FleetTradeClaim } from './fleet-trade-claim';
@@ -588,10 +588,10 @@ export async function connectInProcess(opts: { name: string; password: string; s
     const { BotSDK } = await import(vendor('sdk/index.ts'));
     const { BotActions } = await import(vendor('sdk/actions.ts'));
     if (!pathfindingReady) {
-        // With a saved snapshot the route finder loads on its first use (pathcache.ts restorePathfindingOnFirstUse, or
+        // With a saved snapshot of the current source key (a stale one does not count) the route finder loads on its first use (pathcache.ts restorePathfindingOnFirstUse, or
         // loadPathfinding() from a route call), so a bot that stands at one bank never holds the grid. Without a
         // snapshot this login builds it and saves it (14 s, once for the machine). ROUTE_FINDER=eager always loads it here.
-        if (process.env.ROUTE_FINDER === 'eager' || !existsSync(DEFAULT_CACHE)) await loadPathfinding();
+        if (process.env.ROUTE_FINDER === 'eager' || !pathfindingSnapshotUsable()) await loadPathfinding();
         pathfindingReady = true;
     }
     const cacheDir = join(repoRoot, '.practice', 'cache');
