@@ -1,4 +1,4 @@
-import { appendFileSync, closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { appendFileSync, closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, renameSync, statSync, unlinkSync, writeFileSync, writeSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 
@@ -209,24 +209,69 @@ export function warmSnapshotGrid(sdk: { findLongPath(level: number, sx: number, 
 // Level, start x and z, end x and z of the searches that run before a snapshot is written (a short and a long one).
 const WARM_ROUTES: [number, number, number, number, number][] = [[0, 3222, 3218, 3087, 3230], [0, 2655, 3283, 3185, 3436]];
 
+// Single-flight build of the snapshot across processes. A lock file beside the snapshot (`<file>.lock`, created with
+// the exclusive flag, holding the owner's pid and time) names the one builder. The others poll until the snapshot is
+// usable for their source key (a header check, pathfindingSnapshotUsable) and restore it. A lock whose owner is dead,
+// or that is older than `staleMs`, is removed. After `waitMs` a waiter builds itself, without the lock, so a stuck
+// builder delays a process by at most `waitMs`. A lock that cannot be created (no write access) also means: build.
+export type SnapshotBuild={state:'build';release():void}|{state:'ready'}|{state:'timeout'};
+const pidAlive=(pid:number)=>{try{process.kill(pid,0);return true;}catch(e){return (e as NodeJS.ErrnoException)?.code==='EPERM';}};
+export async function acquireSnapshotBuild(file:string,key:string,opts:{waitMs?:number;pollMs?:number;staleMs?:number;alive?:(pid:number)=>boolean}={}):Promise<SnapshotBuild>{
+    const {waitMs=120_000,pollMs=250,staleMs=300_000,alive=pidAlive}=opts,lock=`${file}.lock`,deadline=Date.now()+waitMs;
+    for(;;){
+        if(pathfindingSnapshotUsable(file,key))return {state:'ready'};
+        // A cache folder that cannot exist (a file in the way, no access) means: build, without a lock.
+        try{mkdirSync(dirname(file),{recursive:true});}catch{return {state:'timeout'};}
+        try{
+            const fd=openSync(lock,'wx');
+            try{writeSync(fd,JSON.stringify({pid:process.pid,at:Date.now()}));}finally{closeSync(fd);}
+            const release=()=>{try{if(JSON.parse(readFileSync(lock,'utf8')).pid===process.pid)unlinkSync(lock);}catch{/* gone */}};
+            // A builder may have finished between the check above and this lock.
+            if(pathfindingSnapshotUsable(file,key)){release();return {state:'ready'};}
+            return {state:'build',release};
+        }catch(e){
+            if((e as NodeJS.ErrnoException)?.code!=='EEXIST')return {state:'timeout'};
+            let dead=false;
+            try{
+                const owner=JSON.parse(readFileSync(lock,'utf8')) as {pid:number;at:number};
+                dead=!alive(owner.pid)||Date.now()-owner.at>staleMs;
+            }catch{
+                // Not written yet, or damaged: only an old file is stale.
+                try{dead=Date.now()-statSync(lock).mtimeMs>staleMs;}catch{/* gone */}
+            }
+            if(dead)try{unlinkSync(lock);continue;}catch{/* another waiter removed it */}
+        }
+        if(Date.now()>=deadline)return {state:'timeout'};
+        await new Promise(r=>setTimeout(r,pollMs));
+    }
+}
+
 async function load(file: string): Promise<{ restored: boolean; ms: number }> {
     const t0 = Date.now();
     // Same specifier as sdk/pathfinding.ts imports, so this is the same module instance and the same wasm memory.
     const rsmod: any = await import(vendor('server/vendor/rsmod-pathfinder/rsmod-pathfinder.js'));
     const memory: WebAssembly.Memory = rsmod.__wasm.memory;
     const k = pathfindingSourceKey();
-    // The first-use hook above may have restored the snapshot already.
-    const restored=(globalThis as { __rsPathRestored?: boolean }).__rsPathRestored===true||restorePathfindingSnapshotFile(file,k,memory);
-    // collision-lazy.ts then skips parsing zones and tiles: the restored grid already holds them.
-    if(restored)(globalThis as { __rsPathRestored?: boolean }).__rsPathRestored = true;
-    const { initPathfinding } = await import(vendor('sdk/pathfinding.ts'));
-    initPathfinding();
-    openDiagonalDoors(rsmod);
-    if (!restored) {
-        try { warmSnapshotGrid(await import(vendor('sdk/pathfinding.ts'))); }
-        catch { /* The snapshot is still valid without the growth. */ }
-        try { writePathfindingSnapshot(file,k,new Uint8Array(memory.buffer)); }
-        catch { /* A cache write failure does not invalidate the initialized grid. */ }
+    // The first-use hook may have restored the snapshot already.
+    let restored=(globalThis as { __rsPathRestored?: boolean }).__rsPathRestored===true||restorePathfindingSnapshotFile(file,k,memory),build:SnapshotBuild|null=null;
+    // No usable snapshot: one process builds the grid and the others wait for its file (a build is about 14 s and
+    // 400 MB, so 20 workers starting together must not each pay it).
+    if(!restored){
+        build=await acquireSnapshotBuild(file,k);
+        if(build.state==='ready')restored=restorePathfindingSnapshotFile(file,k,memory);
     }
+    try{
+        // collision-lazy.ts then skips parsing zones and tiles: the restored grid already holds them.
+        if(restored)(globalThis as { __rsPathRestored?: boolean }).__rsPathRestored = true;
+        const { initPathfinding } = await import(vendor('sdk/pathfinding.ts'));
+        initPathfinding();
+        openDiagonalDoors(rsmod);
+        if (!restored) {
+            try { warmSnapshotGrid(await import(vendor('sdk/pathfinding.ts'))); }
+            catch { /* The snapshot is still valid without the growth. */ }
+            try { writePathfindingSnapshot(file,k,new Uint8Array(memory.buffer)); }
+            catch { /* A cache write failure does not invalidate the initialized grid. */ }
+        }
+    }finally{build?.release?.();}
     return { restored, ms: Date.now() - t0 };
 }
