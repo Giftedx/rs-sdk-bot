@@ -61,8 +61,29 @@ test('a pull may run 20 ticks and half a tick a tile of the distance', async () 
     const { pullTicks, pullDistance, PULL_RANGE } = await import('./pk-squad');
     expect(pullTicks(0)).toBe(20);
     expect(pullTicks(66)).toBe(53);
+    expect(pullTicks(PULL_RANGE)).toBe(60);
+    expect(pullTicks(500)).toBe(60);
     expect(pullDistance({ worldX: 3107, worldZ: 3574 }, { x: 3067, z: 3640 })).toBe(66);
     expect(PULL_RANGE).toBeGreaterThan(66);
+});
+
+test('the march waits for a member that holds, and not for a dropped, tripping or finished one', async () => {
+    const { marchClose } = await import('./pk-squad');
+    const post = { x: 3071, z: 3519 }, near = { x: 3072, z: 3520 }, bank = { x: 3094, z: 3492 };
+    const members = [{ name: 'a', at: near }, { name: 'b', at: bank }, { name: 'c', at: undefined }];
+    expect(marchClose(members, post, new Set())).toBe(false);
+    expect(marchClose(members, post, new Set(['b']))).toBe(true);
+    expect(marchClose(members, post, new Set(['a']))).toBe(false);
+    // The member that is outside the Wilderness is waited for like any other (the first walkers went in alone).
+    expect(marchClose([{ name: 'a', at: near }, { name: 'b', at: bank }], { x: 3071, z: 3560 }, new Set())).toBe(false);
+});
+
+test('marchLegs: the edge, the entry of the connected area and the post', async () => {
+    const { marchLegs } = await import('./pk-squad');
+    expect(marchLegs({ x: 3093, z: 3503 }, { x: 3067, z: 3640 })).toEqual([{ x: 3071, z: 3519 }, { x: 3071, z: 3600 }, { x: 3067, z: 3640 }]);
+    // From inside the Wilderness there is no edge leg; a post that is not multi-way has no entry.
+    expect(marchLegs({ x: 3090, z: 3560 }, { x: 3067, z: 3640 })).toEqual([{ x: 3071, z: 3600 }, { x: 3067, z: 3640 }]);
+    expect(marchLegs({ x: 3093, z: 3503 }, { x: 3090, z: 3560 })).toEqual([{ x: 3090, z: 3560 }]);
 });
 
 test('squadTarget leaves out a target the game will not let it attack', async () => {
