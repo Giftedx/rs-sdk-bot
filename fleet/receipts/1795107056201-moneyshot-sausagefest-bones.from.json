@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795107056201-moneyshot-sausagefest-bones",
  "account": "Moneyshot",
  "partner": "Sausagefest",
@@ -10,8 +10,22 @@
  "item": "Bones",
  "requested": 31,
  "claim": "94ff52cd-6611-45db-9aeb-29a20ab617d0",
- "count": 0,
- "ok": false,
- "at": 1795107138559,
- "detail": "trade claimed"
+ "count": 31,
+ "ok": true,
+ "at": 1795107299179,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 31,
+  "after": 0
+ },
+ "bank": {
+  "count": 31,
+  "at": 1795107292014
+ },
+ "logout": {
+  "attemptId": "1795107138567-0000006884-0000000001",
+  "at": 1795107299168,
+  "sha256": "13b30ad5edcb22e73dc030288436851c545043fa0b8b80edc1a1321cf878e53c"
+ },
+ "screen": true
 }
