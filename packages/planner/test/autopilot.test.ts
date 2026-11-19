@@ -2786,6 +2786,38 @@ test('an active squad member takes no band, kit buy or supply job, only the rest
     expect(held.send).toMatchObject({ from: 'Spare', to: 'Hunter', item: 'iron arrow' });
 });
 
+test('with few bot slots, the squad restock and then a squad supply job rank above a goal band', () => {
+    const templates = [...catalogue().filter(t => t.id === 'army-cow-strength-45'), ...squadSupplies().filter(t => t.id === 'squad-arrows-lowe')];
+    const trainer = () => acct('Trainer', { Strength: 10, Attack: 10, Defence: 10, Hitpoints: 30 }, { 'wooden shield': 1, trout: 20, coin: 50_000 });
+    const market = { 'bronze sword': { id: 1277, name: 'Bronze sword', limit: 100 } };
+    const squad = { active: true, hours: 4, members: [{ name: 'Hunter', items: {} }] };
+    const run = (accounts: Acct[], slots: number, stock: Stock[] = []) => plan(inputs([trainer(), acct('Hunter', {}, {}), ...accounts], { templates, army: new Set(['trainer']), market,
+        capacity: { ...CAPACITY, 'cow:ardougne-north': 6 }, squad, slots, stock, prices: { 'iron arrow': 3 } }));
+    // One slot: the arrow buyer takes it, the band waits.
+    const bought = run([acct('Buyer', {}, { coin: 50_000 })], 1);
+    expect(bought.find(x => x.account === 'Buyer')!.template?.id).toBe('squad-arrows-lowe');
+    expect(bought.find(x => x.account === 'Trainer')!.reason).toMatch(/^vacant: waits for a bot slot/);
+    // Two slots and a donor that holds arrows: the restock (two bots, the donor and the member) takes both.
+    const sent = run([acct('Spare', {}, { 'iron arrow': 5000 })], 2, [{ name: 'Spare', side, items: { 'iron arrow': 5000 } }]);
+    expect(sent.find(x => x.account === 'Hunter')!.send).toMatchObject({ from: 'Spare', to: 'Hunter', item: 'iron arrow' });
+    expect(sent.find(x => x.account === 'Trainer')!.reason).toMatch(/^vacant: waits for a bot slot/);
+});
+
+test('an active squad supply job takes its shop before a goal band that holds the same shop, unless a running job holds it', () => {
+    const band = { ...catalogue().find(t => t.id === 'army-cow-strength-45')!, resources: ['shop:lowe'] };
+    const templates = [band, ...squadSupplies().filter(t => t.id === 'squad-arrows-lowe')];
+    const trainer = acct('Trainer', { Strength: 10, Attack: 10, Defence: 10, Hitpoints: 30 }, { 'wooden shield': 1, 'bronze sword': 1, trout: 20, coin: 50_000 });
+    const run = (extra: Partial<Inputs> = {}) => plan(inputs([trainer, acct('Buyer', {}, { coin: 50_000 }), acct('Hunter', {}, {})], { templates, army: new Set(['trainer']),
+        capacity: { ...CAPACITY, 'shop:lowe': 1 }, prices: { 'iron arrow': 3 }, squad: { active: true, hours: 4, members: [{ name: 'Hunter', items: {} }] }, ...extra }));
+    const first = run();
+    expect(first.find(x => x.account === 'Buyer')!.template?.id).toBe('squad-arrows-lowe');
+    expect(first.find(x => x.account === 'Trainer')!.template?.id).toBeUndefined();
+    // The band runs on the shop now: it keeps the place, and the squad job waits.
+    const kept = run({ running: new Set(['trainer']), current: new Map([['trainer', band.id]]) });
+    expect(kept.find(x => x.account === 'Trainer')!.template?.id).toBe(band.id);
+    expect(kept.find(x => x.account === 'Buyer')!.template).toBeUndefined();
+});
+
 test('a squad supply template is a candidate only while the squad is active: the full catalogue with no squad plans as without them', () => {
     const all = catalogue(), without = all.filter(t => !t.squadOnly);
     expect(all.length - without.length).toBe(squadSupplies().length);
