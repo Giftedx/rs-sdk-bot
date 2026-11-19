@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795078252420-hocuspokeus-sporranbulge-earthrune",
+ "account": "SporranBulge",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 80,
+ "claim": "0589a979-aff2-4721-a853-7730695accf3",
+ "count": 0,
+ "ok": false,
+ "at": 1795078403158,
+ "detail": "trade claimed"
+}
