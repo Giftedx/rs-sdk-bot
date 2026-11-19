@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795112625942,
+ "at": 1795112638630,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -297,6 +297,29 @@
    ]
   },
   {
+   "account": "Woodpecker",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "11",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "CoinCock",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -322,27 +345,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying the held bones",
-   "role": "combat",
-   "template": "army-bury-prayer-99",
-   "autopilot": "local",
-   "resources": []
   }
  ],
  "army": [
