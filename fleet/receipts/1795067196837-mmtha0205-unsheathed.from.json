@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795067196837-mmtha0205-unsheathed",
  "account": "mmtha0205",
  "partner": "Unsheathed",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 7800,
  "claim": "8e2b7413-740b-4d97-a34d-ec9c42517486",
- "count": 0,
- "ok": false,
- "at": 1795067248440,
- "detail": "trade claimed"
+ "count": 7800,
+ "ok": true,
+ "at": 1795067317770,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 7800,
+  "after": 0
+ },
+ "bank": {
+  "count": 7800,
+  "at": 1795067255790
+ },
+ "logout": {
+  "attemptId": "1795067248450-0000026596-0000000001",
+  "at": 1795067317756,
+  "sha256": "026e67c0d87da71368e0b4e55b226f03ab5978c79a3dd448075b7fd2f7c72f25"
+ },
+ "screen": true
 }
