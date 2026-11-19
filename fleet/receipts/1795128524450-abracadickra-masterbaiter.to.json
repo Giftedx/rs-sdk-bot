@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795128524450-abracadickra-masterbaiter",
+ "account": "Masterbaiter",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 129000,
+ "claim": "cfdf1494-0458-4251-a0dc-217276608fb5",
+ "count": 0,
+ "ok": false,
+ "at": 1795128630340,
+ "detail": "trade claimed"
+}
