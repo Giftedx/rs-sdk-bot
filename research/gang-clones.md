@@ -800,6 +800,12 @@ deviation (sd) of one seed; the paired difference tank minus faced by seed (mean
 - **With no prayer points the tank lock takes 36% more Hitpoints** (8977 against 6594; paired +79, standard error 24) for 3 more
   kills (+0.10, standard error 0.23). The Hitpoints gap is the one difference in this table that is above 3 standard errors.
 
+- **The fidelity band with `facedPrayer`.** The case `extra:clone-run1-fidelity-x1` (Hitpoints a kill 28 to 112, at least one kill) is
+  inside its band in 9 of 10 seeds with the old rule (one at 127), and with `facedPrayer` in 21 of 30 seeds (the `-faced-` cases, seeds 1 to
+  30: 5 seeds with no kill, 4 above 112) and 2 of 6 in the case itself (hosted run 44444707120, seeds 1 to 6: 2 with no kill, 2 at
+  141 and 124). The pass rate fell from 90% to 70% with the same band, over 10 seeds against 30, and a seed with no kill is the main
+  cause; the band is not changed.
+
 - **No case is separated from its control.** The kills differ by 1 or 2 over 10 seeds and the Hitpoints taken by seed range
   from 114 to 855. The tank lock takes 21% fewer Hitpoints with prayer points (3612 against 4561) and 23% more with none (3067
   against 2491), so the two results disagree and neither is a win.
