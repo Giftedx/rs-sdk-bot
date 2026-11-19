@@ -1153,8 +1153,18 @@ test('an account whose logout is not confirmed is stranded and gives nothing', a
     expect([...out]).toEqual(['mmtha0205']);
 });
 
-import { OFFLINE_GUARDED, isJobEnded, readSwarmActiveAccounts, readSwarmEnded } from './autopilot';
+import { OFFLINE_GUARDED, isJobEnded, readSwarmActiveAccounts, readSwarmEnded, stoppedAccounts } from './autopilot';
 import { ARMOUR_IDS, KIT_BUY } from '../packages/planner/src/autopilot';
+
+test('the planner leaves out an account whose stopped end the swarm holds, as the swarm refuses its new mission', () => {
+    const ended = new Map([['nab', { reason: 'stopped after 1 runs', revision: 'old' }], ['busy', { reason: 'stopped after 1 runs' }], ['fin', { reason: 'done after 1 runs', revision: 'old' }], ['ko', { reason: 'died: x' }]]);
+    expect([...stoppedAccounts(ended, new Set(['busy']))]).toEqual(['nab']);
+    // The swarm's own rule: a new mission starts after a done end, not after a stopped end.
+    const swarmEnded = new Map([['nab', { reason: 'stopped after 1 runs', at: 1, revision: 'old' }], ['fin', { reason: 'done after 1 runs', at: 1, revision: 'old' }]]);
+    const r = startable(['nab', 'fin'], false, swarmEnded, () => Infinity, undefined, 'new');
+    expect(JSON.stringify(r)).toContain('ended: stopped after 1 runs');
+    expect(JSON.stringify(r)).toContain('fin');
+});
 
 test('kitMarket pins exact green dragonhide item ids ahead of blue, red and black variants', () => {
     const table = kitMarket([
