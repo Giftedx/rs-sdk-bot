@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795060433447-bigchopper-thefullmonty-59a52b1ca98a92a5",
  "account": "Bigchopper",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Antipoison(3)",
  "requested": 1,
  "claim": "d5f1dc22-42e5-4c6b-aad4-71ed981a2d95",
- "count": 0,
- "ok": false,
- "at": 1795060757636,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795060785657,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795060763658
+ },
+ "logout": {
+  "attemptId": "1795060757756-0000026440-0000000001",
+  "at": 1795060785629,
+  "sha256": "6520bc4409b8d6fec1794a6c7af265b1520390bc533b6ff668e04a5355bd3596"
+ },
+ "screen": true
 }
