@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795101656133-abracadickra-fatstack",
  "account": "Abracadickra",
  "partner": "Fatstack",
@@ -10,8 +10,18 @@
  "item": "coins",
  "requested": 27936,
  "claim": "dd7e32d6-b509-4877-859d-93542d2d803f",
- "count": 0,
- "ok": false,
- "at": 1795101702959,
- "detail": "trade claimed"
+ "count": 27936,
+ "ok": true,
+ "at": 1795101890960,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2255153,
+  "after": 2227217
+ },
+ "logout": {
+  "attemptId": "1795101702967-0000029952-0000000001",
+  "at": 1795101890948,
+  "sha256": "c449da9d57ab21b5a801330cf034b3c4394678ee63f312d90953a9237d05eb42"
+ },
+ "screen": true
 }
