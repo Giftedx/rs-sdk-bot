@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795104056165-abracadickra-swordinhand",
+ "account": "Abracadickra",
+ "partner": "Swordinhand",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 28111,
+ "claim": "e77a029b-4bb0-4914-8445-9968b4be2851",
+ "count": 0,
+ "ok": false,
+ "at": 1795104093090,
+ "detail": "trade claimed"
+}
