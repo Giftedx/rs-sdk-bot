@@ -1,0 +1,22 @@
+{
+ "id": "1795130843690-knightrider-sporrandip-runechainbody",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "SporranDip",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795130843690,
+ "end": 1795133243690,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
