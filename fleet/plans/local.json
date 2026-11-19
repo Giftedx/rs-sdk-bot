@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795063184248,
+ "at": 1795063773581,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -227,7 +227,9 @@
     "ESSENCE_TARGET=28",
     "CAP=4000"
    ],
-   "env": {},
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"runecraft\":99}}"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
