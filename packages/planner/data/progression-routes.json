@@ -1397,6 +1397,35 @@
    }
   },
   {
+   "id": "fighter:wizard",
+   "category": "fighter",
+   "name": "wizard",
+   "script": "scripts/gather-combat.ts",
+   "args": [],
+   "env": {
+    "TARGET": "wizard",
+    "CAP": "10000",
+    "MAX_KILLS": "200",
+    "UNTIL_ITEM": "water talisman"
+   },
+   "intents": [
+    "acquire"
+   ],
+   "skills": [
+    "attack",
+    "strength",
+    "defence",
+    "hitpoints",
+    "ranged"
+   ],
+   "description": "Kill the wizards at the Wizards' Tower until a water talisman drops, then bank it at Draynor",
+   "discriminator": {
+    "env": {
+     "TARGET": "wizard"
+    }
+   }
+  },
+  {
    "id": "logistics:arrive-draynor",
    "category": "logistics",
    "name": "arrive-draynor",
@@ -89963,6 +89992,7 @@
     "fighter:cow",
     "fighter:druid",
     "fighter:unicorn",
+    "fighter:wizard",
     "fighter:giant",
     "fighter:trooper",
     "fighter:fire-giant",
@@ -90386,6 +90416,7 @@
     "fighter:cow",
     "fighter:druid",
     "fighter:unicorn",
+    "fighter:wizard",
     "fighter:giant",
     "fighter:trooper",
     "fighter:fire-giant",
@@ -90949,6 +90980,7 @@
     "fighter:cow",
     "fighter:druid",
     "fighter:unicorn",
+    "fighter:wizard",
     "fighter:giant",
     "fighter:trooper"
    ]
