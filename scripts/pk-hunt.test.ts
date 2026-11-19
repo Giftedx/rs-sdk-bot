@@ -679,3 +679,22 @@ test('hunt goes on after a re-kit that worked in its first retreat, and does not
         expect(w.player.hp).toBeGreaterThanOrEqual(89);
     } finally { for (const mock of mocks) mock.mockRestore(); }
 });
+
+// The threat radar in the hunt: a retreat that the radar decides is logged as the hunt's own threat retreat, and ends the dwell for a restock.
+test('a radar retreat in the hunt logs the hunt threat retreat with the radar reason', async () => {
+    const w = deathWorld([{ id: 385, count: 40 }, { id: 1163, count: 1 }]);
+    Object.assign(w.player, { hp: 99, isDead: false, worldX: 3094, worldZ: 3540 });
+    for (let i = 0; i < 2; i++) w.inventory.push({ id: 385, count: 1, slot: i + 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] });
+    const reason = 'outclassed by Boss(145,magic) at 3 tiles';
+    const threats: any = { act: true, acted: () => {}, step: () => ({ classes: [], interlopers: [], actions: [{ kind: 'retreat', reason }] }) };
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_deps, path) => { w.player.worldX = path[0]!.x; w.player.worldZ = path[0]!.z; return { ok: true, ticks: 5, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any; }),
+        spyOn(pk, 'nextTick').mockImplementation(w.next), spyOn(pk, 'observePlayer').mockReturnValue(null),
+    ];
+    try {
+        const lines: string[] = [];
+        await hunt(w.s, { cap: 60, food: 2, minFood: 1, escapeAt: 35, stop: () => w.tick() >= 40, log: l => lines.push(l), kit: {}, trip: [{ id: 385, count: 1 }], spots: [{ x: 3094, z: 3540, dwell: 3 }], threats });
+        expect(lines.some(l => l.startsWith(`HUNT threat retreat (${reason}, bracket=`))).toBe(true);
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+});
