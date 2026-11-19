@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795116056332-abracadickra-oreelse",
  "account": "OreElse",
  "partner": "Abracadickra",
@@ -12,6 +12,12 @@
  "claim": "ec3fc568-ce6c-438e-9e31-e98383526ad6",
  "count": 0,
  "ok": false,
- "at": 1795116130140,
- "detail": "trade claimed"
+ "at": 1795116140421,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1795116130149-0000029284-0000000001",
+  "at": 1795116140403,
+  "sha256": "0a713a374436dd5a0002ace76de656e7749f0b3727295c4f2884e6f4e808fbea"
+ },
+ "screen": false
 }
