@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795068507984,
+ "at": 1795069616491,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -270,6 +270,96 @@
    "autopilot": "local",
    "resources": [
     "shop:lowe"
+   ]
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "jiminua",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "antipoison",
+    "STOCK_TARGET": "21",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5384",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "5184",
+    "AUTOPILOT_ORDER": "[12]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":21}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy antipoison(3) at Jiminua's in Karamja for the gang squad",
+   "role": "bank",
+   "template": "squad-antipoison-jiminua",
+   "autopilot": "local",
+   "resources": [
+    "shop:jiminua"
+   ]
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "aubury",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "water rune",
+    "STOCK_TARGET": "1507",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "12200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "12000",
+    "AUTOPILOT_ORDER": "[7]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1507}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
+   "role": "bank",
+   "template": "squad-water-aubury",
+   "autopilot": "local",
+   "resources": [
+    "shop:aubury"
+   ]
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby_arrows",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "iron arrow",
+    "STOCK_TARGET": "2812",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "12200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "12000",
+    "AUTOPILOT_ORDER": "[812]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"884\":2812}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy iron arrows at Hickton's in Catherby for the gang squad",
+   "role": "bank",
+   "template": "squad-arrows-catherby",
+   "autopilot": "local",
+   "resources": [
+    "shop:catherby_arrows"
    ]
   },
   {
