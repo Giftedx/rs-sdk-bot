@@ -26,9 +26,32 @@ export function attackStyleOfSeq(name: string | undefined): CombatStyle | null {
     if (/^human_(stab|slash|blunt|spear|sword|dagger|scim|whip|axe|mace|unarmed|hack|lunge|attack|claw|halberd|battleaxe|warhammer|pickaxe|2h)/.test(name)) return 'melee';
     return null;
 }
+// The attack animations that the content gives to weapons, by sequence name: the stab, slash and crush animations of every weapon object
+// (scripts/skill_combat/configs/**/*.obj: `stabattack_anim`, `slashattack_anim`, `crushattack_anim`, such as human_ddagger_lunge) are melee, and the special attack
+// animations of scripts/skill_combat/scripts/pvp/specs/scripts/pvp_<weapon>.rs2 (puncture, cleave, shove, snapshot, chainhit) take the style of their
+// weapon: a bow or a thrown weapon is ranged, any other is melee. The name rules of attackStyleOfSeq do not see these names.
+let contentStyles: Map<string, CombatStyle> | undefined;
+export function contentAttackStyles(root = contentRoot()): Map<string, CombatStyle> {
+    const map = new Map<string, CombatStyle>();
+    const configs = join(root, 'scripts/skill_combat/configs');
+    for (const file of readdirSync(configs, { recursive: true }) as string[]) {
+        if (!file.endsWith('.obj')) continue;
+        for (const m of readFileSync(join(configs, file), 'utf8').matchAll(/^param=(?:stab|slash|crush)attack_anim,(\w+)/gm)) map.set(m[1]!, 'melee');
+    }
+    const dir = join(root, 'scripts/skill_combat/scripts/pvp/specs/scripts');
+    for (const file of readdirSync(dir)) {
+        const weapon = file.match(/^pvp_(.+)\.rs2$/)?.[1];
+        if (!weapon) continue;
+        const style: CombatStyle = /bow|thrownaxe|knife|dart|javelin/.test(weapon) ? 'ranged' : 'melee';
+        for (const m of readFileSync(join(dir, file), 'utf8').matchAll(/^anim\((?!%)(\w+),/gm)) map.set(m[1]!, style);
+    }
+    return map;
+}
 export const attackStyleOfAnim = (anim: number): CombatStyle | null => {
     seqNames ??= parsePack(readFileSync(join(contentRoot(), 'pack/seq.pack'), 'utf8'));
-    return attackStyleOfSeq(seqNames.get(anim));
+    contentStyles ??= contentAttackStyles();
+    const name = seqNames.get(anim);
+    return (name !== undefined ? contentStyles.get(name) : undefined) ?? attackStyleOfSeq(name);
 };
 
 type ClientPlayer = { name?: string | null; combatLevel?: number; headicons?: number; appearance?: ArrayLike<number>; primaryAnim?: number; spotanimId?: number };
@@ -141,7 +164,9 @@ export class ThreatWatch {
         const rest = actions.filter(a => !move(a)), moves = actions.filter(move);
         if (this.held && tick <= this.held.until) return [...this.held.moves, ...rest];
         if (!moves.length) { this.pending = null; return actions; }
-        const expected = this.o.decide?.expected;
+        // The players that caused the move: the strangers; with the win-chance estimate every dangerous player counts (it counts the squad's targets too, so a lost fight
+        // against the gang alone must have a cooldown as well).
+        const expected = this.o.odds === false ? this.o.decide?.expected : undefined;
         const culprits = classes.filter(c => c.dangerous && !expected?.has(c.record.name.toLowerCase())).map(c => c.record.name.toLowerCase());
         if (culprits.length && culprits.every(n => (this.cooling.get(n) ?? -1) > tick)) {
             if (this.logged.get('cooldown') !== culprits.join('+')) { this.logged.set('cooldown', culprits.join('+')); this.o.log(`THREAT retreat held, cooldown: ${culprits.join(', ')}`); }
@@ -230,19 +255,22 @@ export function holdProtect(s: Session, style: CombatStyle, tick: number): void 
 // pack once, and wears the worn armour again after the threat has been gone for `holdTicks` ticks. It returns true when it used the tick
 // (an input and a tick each), so that the caller goes on with a new pass.
 export class KitSwapper {
-    private swapped: { restore: number[]; lastNeeded: number } | null = null;
+    private swapped: { restore: number[]; lastNeeded: number; style: string } | null = null;
     constructor(private holdTicks = 60) {}
     get active() { return this.swapped !== null; }
     async step(s: Session, actions: readonly Adapt[], now: number, tick: () => Promise<boolean>, log: (line: string) => void): Promise<boolean> {
         const kit = actions.find(a => a.kind === 'kit' && a.member === s.name) as Extract<Adapt, { kind: 'kit' }> | undefined;
         if (kit && !this.swapped) {
-            this.swapped = { restore: restoreFor(s.sdk.getEquipment().map(e => e.id), kit.wear), lastNeeded: now };
+            this.swapped = { restore: restoreFor(s.sdk.getEquipment().map(e => e.id), kit.wear), lastNeeded: now, style: kit.style };
             log(`[${s.name}] threat kit swap: ${kit.reason}`);
             const failed = await wearIds(s, kit.wear, tick);
             if (failed.length) log(`[${s.name}] threat kit swap could not wear ${failed.join('+')}`);
             return true;
         }
-        if (kit && this.swapped) this.swapped.lastNeeded = now;
+        // The swap stays needed while a threat of its style can hit us: the kit action itself goes once the armour is worn (planCounterSwap finds nothing better), so
+        // the protect action of the same style is the sign that the threat is still there.
+        const stillThere = this.swapped !== null && actions.some(a => a.kind === 'protect' && a.member === s.name && a.style === this.swapped!.style);
+        if ((kit || stillThere) && this.swapped) this.swapped.lastNeeded = now;
         if (!kit && this.swapped && now - this.swapped.lastNeeded >= this.holdTicks) {
             const back = this.swapped.restore;
             this.swapped = null;
