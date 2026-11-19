@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795091452600-masterbaiter-sporranbulge-mindrune",
+ "account": "Masterbaiter",
+ "partner": "SporranBulge",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 2,
+ "claim": "30f89126-a2da-4bb0-a28b-54abfb94d5b8",
+ "count": 0,
+ "ok": false,
+ "at": 1795091533054,
+ "detail": "trade claimed"
+}

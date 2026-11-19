@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795091500050,
+ "at": 1795091581784,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -279,6 +279,23 @@
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "druidspirit"
+   ],
+   "env": {
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-8a2fd281-5266-4b97-afe7-d79cdf7dcc96"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-nature-spirit-mightyrod [task-8a2fd281-5266-4b97-afe7-d79cdf7dcc96]",
+   "role": "helper"
   }
  ],
  "army": [
