@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795127534523-shaftsinker-masterbaiter",
  "account": "Shaftsinker",
  "partner": "Masterbaiter",
@@ -10,8 +10,18 @@
  "item": "coins",
  "requested": 28948,
  "claim": "a8abb146-7e71-4ecc-8052-f9328ef7c8a3",
- "count": 0,
- "ok": false,
- "at": 1795127603216,
- "detail": "trade claimed"
+ "count": 28948,
+ "ok": true,
+ "at": 1795127804822,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 74207,
+  "after": 45259
+ },
+ "logout": {
+  "attemptId": "1795127603225-0000000508-0000000001",
+  "at": 1795127804810,
+  "sha256": "2938f504c0e3cb3f5204d645fed4b76269726736b2422f07ce4872da8a1a43e1"
+ },
+ "screen": true
 }
