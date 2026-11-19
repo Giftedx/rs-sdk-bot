@@ -2,7 +2,7 @@ import { describe, expect, spyOn, test } from 'bun:test';
 import * as walking from '../packages/core/src/walk';
 import * as pk from './pk';
 import { maxDeathsOf } from './pk-hunt';
-import { bankNear, isKillLine, leaveWilderness, openSquad, outTripDue, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
+import { bankNear, isKillLine, leaveWilderness, openSquad, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
 import { hold, squadEnd } from './pk-squad';
 import { newWatch, readLine } from './squad-watch';
@@ -81,19 +81,6 @@ test('a tick-stalled squad waiter ends even if close hangs while another member 
     expect(await Promise.all([waiting, completing, stopping])).toEqual([false, true, undefined]);
     expect(halted).toEqual(['tick stream stalled: 120 s without a game tick']);
     expect(stalled.listeners.size).toBe(0);
-});
-
-test('a bank trip is due at the start and after the Wilderness, and not on the first steps of the march', () => {
-    const bank = 3491, step = 3503, inWilderness = 3560;
-    // The start: no trip done yet, outside the Wilderness.
-    expect(outTripDue(bank, false, 0)).toBe(true);
-    // After the first trip the member stands on a march step outside the Wilderness and has not been in it: no second trip.
-    expect(outTripDue(step, false, 1)).toBe(false);
-    expect(outTripDue(bank, false, 1)).toBe(false);
-    // In the Wilderness nothing is due; once it has been in it, a stand outside is a walk out or a teleport: a trip.
-    expect(outTripDue(inWilderness, true, 1)).toBe(false);
-    expect(outTripDue(step, true, 1)).toBe(true);
-    expect(outTripDue(bank, true, 3)).toBe(true);
 });
 
 test('a member one meal short starts, and one under half of its pack food does not', () => {

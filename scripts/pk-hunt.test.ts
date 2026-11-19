@@ -167,14 +167,9 @@ test('a restock that the bank and the pack together cannot fill deposits nothing
         };
         return { s, inventory, deposits };
     };
-    // At or over the food floor (half of the 21) the trip takes what the stock holds: one meal short is no fault.
-    const oneShort = session(20, 0);
-    expect(await restock(oneShort.s, 21, [])).toBeNull();
-    expect([oneShort.deposits.length, oneShort.inventory.length]).toEqual([20, 20]);
-    // Under the floor the trip is refused before the deposit, and the pack stays in the pack.
-    const short = session(5, 0);
+    const short = session(20, 0);
     expect(await restock(short.s, 21, [])).toContain('bank lacks trip requirements');
-    expect([short.deposits, short.inventory.length]).toEqual([[], 5]);
+    expect([short.deposits, short.inventory.length]).toEqual([[], 20]);
     const enough = session(20, 1);
     expect(await restock(enough.s, 21, [])).toBeNull();
     expect([enough.deposits.length, enough.inventory.length]).toEqual([20, 21]);
@@ -457,16 +452,11 @@ test('restock withdraws sharks first and lobsters for the rest, and counts both 
 });
 
 test('restock with too little food in the bank fails and names the sharks that are lacking', async () => {
-    // 4 meals for a pack of 10: under the food floor (5).
-    const f = supplyBank([{ id: 385, count: 2 }, { id: 379, count: 2 }]);
+    const f = supplyBank([{ id: 385, count: 2 }, { id: 379, count: 3 }]);
     const err = await restock(f.s, 10, []);
     expect(err).toContain('lacks');
     expect(err).toContain('385');
     expect(f.withdrawals).toEqual([]);
-    // 5 meals for a pack of 10: at the floor, the trip takes the 5.
-    const g = supplyBank([{ id: 385, count: 2 }, { id: 379, count: 3 }]);
-    expect(await restock(g.s, 10, [])).toBeNull();
-    expect(g.withdrawals.reduce((n, w) => n + w.count, 0)).toBe(5);
 });
 
 // A world for the death path: the account dies, respawns at Lumbridge with 1 Hitpoints and nothing worn, and the bank holds the rest.

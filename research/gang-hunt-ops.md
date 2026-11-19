@@ -152,10 +152,7 @@ What the swarm does with this job, from `scripts/swarm.ts` and `packages/practic
 - **Start.** Each member stands at the Edgeville bank, which `pk-squad.ts` reads as a trip. The first trip eats to
   within a tenth of full Hitpoints (`eatUp`) and keeps the pack that the member logged in with (`bankTrip` `fresh`):
   a member one meal short starts with what it holds, and one under half of its pack food (`SQUAD_FOOD_FLOOR`) stays
-  out. A later trip restocks the pack: it takes the food that the bank holds at or over the same floor, and a restock
-  that the bank and the pack together cannot fill deposits nothing. A trip is due at the start and after the member
-  has been in the Wilderness (`outTripDue`), not on the first steps of the march, which are outside the Wilderness
-  too: a trip there ran a restock before any fight. The bench shows it as `trips=4` for four members.
+  out. A later trip restocks the pack, and a restock that the bank and the pack together cannot fill deposits nothing.
 - **Stall.** The stall guard (`packages/core/src/bot.ts`) ends a session with no xp, item, dialog or journey for
   `STALL_TICKS`. `scripts/pk-squad-stall.ts` sets it for the squad to the longest return of a gang account in the
   clone record (`group.returnToPost`) times 1.25 (`STALL_MARGIN`: the spread of the two recorded returns, 1431 over
