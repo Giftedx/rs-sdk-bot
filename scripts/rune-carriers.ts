@@ -5,7 +5,7 @@ import type {Session} from '../packages/core/src/inprocess';
 import {assertSideOwns} from '../packages/core/src/fleet';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {xpForLevel} from '../packages/planner/src/curve';
-import {transfer,ownedSwap,ess,state,runeOpening,runeConfirmation} from './rune-carrier-trade';
+import {transfer,tickTransfer,runeTickTrade,ownedSwap,ess,state,runeOpening,runeConfirmation} from './rune-carrier-trade';
 import {restock,inside,stopCarriers,bankCarrier,withdrawCarrier,closeCarrierBank,stageCarrier} from './rune-carrier-bank';
 import {freshBodyStart} from './rune-carrier-start';
 import {runeCarrierRoster,assertFreshRuneSkills,assertRuneDonor} from './rune-carrier-roster';
@@ -40,17 +40,19 @@ async function carrierCraftLoop(a:RuneCarrierAltar,s:Session,crew:Carrier[],o:{t
  crafts:Set<Craft>;stop:()=>boolean;failure:()=>unknown;craftAfter:'inventory'|'trade-message';pipeline:boolean;delivered:(d:Carrier)=>void}){
  const {stop,failure,craftAfter,pipeline,crafts,rows}=o;
  const xp=()=>s.sdk.getSkillXp('Runecraft')??0,start=s.tick(),startedAt=performance.now();let batches=o.batches,waiting=0,previousCraft:Craft|undefined;
+ // The tick-driven trade crafts inside the handoff; the pipeline keeps the polled transfer.
+ const tickTrade=runeTickTrade()&&!pipeline;
  while(xp()<o.targetXp){
   if(stop())throw failure()??Error('carrier route stopped or over budget');
   let d=crew.filter(h=>h.ready).sort((a,b)=>a.deliveries-b.deliveries)[0];
   if(!d){const at=s.tick();if(!await waitUntil(s,()=>stop()||crew.some(h=>h.ready),{timeoutTicks:190}))throw Error('no carrier returned');waiting+=s.tick()-at;if(stop())throw failure()??Error('carrier route stopped');d=crew.filter(h=>h.ready).sort((a,b)=>a.deliveries-b.deliveries)[0];}
   if(!d)throw Error('no owned ready carrier');d.ready=false;const before=xp(),at=s.tick();
   const tal=s.sdk.getInventory().filter(i=>i.id===a.talisman).reduce((n,i)=>n+i.count,0),runes=s.sdk.getInventory().filter(i=>i.id===a.rune).reduce((n,i)=>n+i.count,0);
-  const craft=altarCraft(a,s,27,before,s.sdk.getSkill('Runecraft')?.baseLevel??0,runes,o.rate,stop,pipeline),coupled=craftAfter==='trade-message'&&tal!==1;crafts.add(craft);
+  const craft=altarCraft(a,s,27,before,s.sdk.getSkill('Runecraft')?.baseLevel??0,runes,o.rate,stop,pipeline),ticked=tickTrade&&tal!==1,coupled=ticked||craftAfter==='trade-message'&&tal!==1;crafts.add(craft);
   // The first pack has no earlier craft to overlap, so it trades without the pipeline.
   const boundary=pipeline&&coupled?previousCraft?.boundary:undefined;
-  const tradeTicks=tal===1?(await ownedSwap(s,d.s,{[a.talisman]:1},{1436:27},stop)).ticks:await transfer(s,d.s,stop,27,coupled?craft:undefined,boundary?{boundary}:undefined);
-  if(stop())throw failure()??Error('carrier route stopped');d.deliveries++;o.delivered(d);
+  const tradeTicks=tal===1?(await ownedSwap(s,d.s,{[a.talisman]:1},{1436:27},stop)).ticks:ticked?await tickTransfer(s,d.s,27,craft,stop,()=>{d.deliveries++;o.delivered(d);}):await transfer(s,d.s,stop,27,coupled?craft:undefined,boundary?{boundary}:undefined);
+  if(stop())throw failure()??Error('carrier route stopped');if(!ticked){d.deliveries++;o.delivered(d);}
   if(!coupled)await craft.send();
   if(!await waitUntil(s,()=>stop()||craft.complete(),{timeoutTicks:15})||stop())throw Error(a.name+' craft effect unobserved or stopped');
   batches++;const row={batch:batches,helper:d.s.name,tick:s.tick(),elapsedMs:performance.now()-startedAt,ticks:s.tick()-at,tradeTicks,xp:xp(),level:s.sdk.getSkill('Runecraft')?.baseLevel,waiting};rows.push(row);console.log('RUNE_CARRIER_BATCH '+JSON.stringify(row));

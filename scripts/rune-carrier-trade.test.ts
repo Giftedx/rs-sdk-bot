@@ -419,3 +419,56 @@ test('a stuck trade window refuses within the existing50tick budget despite sett
 test('stop after inventory settlement prevents a new bank action',()=>{
  const r=swapWindow('stop');expect(r.error).toContain('owned swap stopped');expect(r.received).toBe(406);expect(r.phase).toBe(2);expect(r.bankReady).toBe(false);
 });
+
+// A model of the engine tick (World.ts processClientsIn, then processPlayers) and of trade.rs2 for the tick-driven
+// trade. Clicks apply as they decode; requests and the altar run in each player's turn. The craft of tick 0 holds the
+// crafter until tick 4 (p_delay(3)); its request is dropped while the flag is set at decode, and the flag clears in the
+// crafter's own turn. An altar click that decodes under an open trade closes it (OpLocHandler clearPendingAction).
+async function tickTrade(order:'crafter'|'helper',levelup:boolean){
+ const code=`import{mock}from'bun:test';import{resolve}from'node:path';
+ const S=0,H=1,names=['Crafter','Carrier'],turns=${order==='crafter'?'[0,1]':'[1,0]'};let tick=0,delayed=true,delayUntil=4,modal=false,levelup=${levelup};
+ let open=false,screen=null,accepted=[false,false],offer=0,requested=[false,false],craftedAt=-1,cancelled=0,ignored=0,dropped=0;const ess=[0,27],queues=[[],[]],ops=[null,null],listeners=[[],[]];
+ const pack=n=>Array.from({length:n},(_,slot)=>({id:1436,count:1,slot}));
+ const busy=i=>(i===S&&(delayed||modal))||open;
+ const decode=(i,a)=>{
+  if(a.type==='interactPlayer'||a.type==='interactLoc'){
+   if(i===S&&delayed){dropped++;return;}
+   if(a.type==='interactLoc'&&open){open=false;screen=null;offer=0;cancelled++;}
+   if(i===S)modal=false;ops[i]=a;return;}
+  if(a.type==='closeModal'){if(i===S)modal=false;return;}
+  if(!open){ignored++;return;}
+  if(a.type==='clickComponentWithOption'&&a.componentId===3322&&screen==='offer'&&i===H){offer=ess[H];accepted=[false,false];return;}
+  if(a.componentId===3420&&screen==='offer'){accepted[i]=true;if(accepted[1-i]){screen='confirm';accepted=[false,false];}return;}
+  if(a.componentId===3546&&screen==='confirm'){accepted[i]=true;if(accepted[1-i]){ess[S]+=offer;ess[H]-=offer;offer=0;open=false;screen=null;accepted=[false,false];requested=[false,false];}return;}
+  ignored++;};
+ const turn=i=>{
+  if(i===S&&delayed&&tick>=delayUntil){delayed=false;if(levelup){modal=true;levelup=false;}}
+  const a=ops[i];ops[i]=null;if(!a)return;
+  if(a.type==='interactLoc'){if(ess[S]===27){craftedAt=tick;ess[S]=0;delayed=true;delayUntil=tick+4;}return;}
+  if(busy(1-i))return;
+  if(requested[1-i]){open=true;screen='offer';accepted=[false,false];requested=[false,false];}else requested[i]=true;};
+ const advance=()=>{tick++;for(const i of turns)for(const a of queues[i].splice(0))decode(i,a);for(const i of turns)turn(i);for(const i of [S,H])for(const l of [...listeners[i]])l();};
+ const actors=[0,1].map(i=>({name:names[i],tick:()=>tick,onTick:cb=>{listeners[i].push(cb);return()=>{listeners[i]=listeners[i].filter(x=>x!==cb);};},
+  direct:async a=>{queues[i].push(a);return{success:true};},
+  sdk:{getInventory:()=>pack(ess[i]),getState:()=>({trade:{isOpen:open,screen,partner:names[1-i],myAccepted:accepted[i],myOffer:i===H?pack(offer):[],theirOffer:i===S?pack(offer):[]},
+   dialog:i===S&&modal?{isOpen:true,allComponents:[{text:'Congratulations, you just advanced a runecraft level.'}]}:{isOpen:false},gameMessages:[],nearbyPlayers:[{name:names[1-i],index:1}]})}}));
+ mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p,o)=>{for(let k=0;k<(o?.timeoutTicks??10);k++){if(p())return true;advance();}return p();},waitTicks:async()=>{advance();}}));
+ const{tickTransfer}=await import('./scripts/rune-carrier-trade');let error='',credited=-1,result=-1;
+ const craft={send:async()=>{await actors[S].direct({type:'interactLoc'});},complete:()=>craftedAt>=0};
+ try{result=await tickTransfer(actors[S],actors[H],27,craft,()=>false,()=>{credited=tick;});}catch(e){error=String(e);}
+ console.log(JSON.stringify({error,result,credited,craftedAt,cancelled,ignored,dropped,crafter:ess[S],helper:ess[H]}));`;
+ const child=await fixtureChild(code,3000);
+ if(child.exitCode!==0)throw Error(child.stderr.toString());
+ return JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+}
+test('the tick-driven trade crafts the next pack 8 ticks after the last craft in both read orders',async()=>{
+ for(const order of ['crafter','helper'] as const)for(const levelup of [false,true]){
+  const r=await tickTrade(order,levelup);
+  expect(r.error).toBe('');expect(r.cancelled).toBe(0);
+  // The trade ends in tick 7, the crafter sees the essence in that publication and its altar click runs in tick 8.
+  expect(r.credited).toBe(7);expect(r.result).toBe(7);expect(r.craftedAt).toBe(8);
+  expect(r.crafter).toBe(0);expect(r.helper).toBe(0);expect(r.dropped).toBeGreaterThan(0);
+  // The crafter's first accept decodes before the offer and is reset; the helper's blind confirm then lands.
+  if(order==='crafter')expect(r.ignored).toBeGreaterThan(0);
+ }
+});
