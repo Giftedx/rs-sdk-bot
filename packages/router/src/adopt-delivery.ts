@@ -61,7 +61,18 @@ export function deliveryProblems(report: any, storedTask: unknown, task: Deliver
     if (files.length !== task.files.length || !files.every((f, i) => f?.path === task.files[i] && typeof f.sha256 === 'string' && /^[a-f0-9]{64}$/.test(f.sha256) && f.sha256 === local.fileSha(task.files[i]!))) out.push('a declared file differs from the file of this checkout');
     return out;
 }
-const sha256 = (file: string) => { try { return createHash('sha256').update(readFileSync(file)).digest('hex'); } catch { return null; } };
+// The hash of a declared file as the hosted Linux checkout holds it. A text file (the extensions of the repository's
+// sources) is hashed in its LF form: .gitattributes says eol=lf, so a copy with CRLF in a working tree is the same file for
+// git, and the runner's copy has LF. A CRLF copy of scripts/quest-cook-entry.test.ts refused two capabilities.
+const TEXT = /\.(?:ts|tsx|json|md|ya?ml)$/;
+export function lfBytes(bytes: Buffer): Buffer {
+    if (!bytes.includes(13)) return bytes;
+    const out = Buffer.allocUnsafe(bytes.length);
+    let n = 0;
+    for (let i = 0; i < bytes.length; i++) if (!(bytes[i] === 13 && bytes[i + 1] === 10)) out[n++] = bytes[i]!;
+    return out.subarray(0, n);
+}
+export const sha256 = (file: string) => { try { const bytes = readFileSync(file); return createHash('sha256').update(TEXT.test(file) ? lfBytes(bytes) : bytes).digest('hex'); } catch { return null; } };
 export function localFacts(task: DeliveryTask, folder: string, base = root): LocalFacts {
     let runtime: string | null = null;
     try { runtime = capabilityRevision([task.entry], base); } catch { /* an entry with no release is not adopted */ }
