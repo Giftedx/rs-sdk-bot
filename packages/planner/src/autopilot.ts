@@ -1669,7 +1669,7 @@ export const STRIKE_TILE = 'strike:ardougne-guard-dog';
 export const BLACK_CAVE = 'cave:taverley-black-dragons', BLACK_CAVE_PLACES = 2, HUNT_BAND = 10, HIDE_TARGET = 42;
 export const HUNT_ARROWS = 600, HUNT_KILLS = 9, HUNT_FOOD = 6;
 // The rune arrows of a hunt trip: a kill used 35, 47 and 14 rune arrows against 60, 81 and 52 mithril arrows, and took 236,
-// 271 and 184 ticks against 312, 388 and 298 (bench cases boss:black-dragon-rune and boss:black-dragon, hosted run
+// 271 and 184 ticks against 312, 388 and 298 (bench cases extra:black-dragon-rune and boss:black-dragon, hosted run
 // 44473165322, seeds 1 to 3). Nine kills at the most that one kill used, and the Ranging Guild shelf holds 400.
 export const HUNT_RUNE_ARROWS = 400;
 // Their price off a full shelf: 400 coins and 1% of it more for each arrow bought before (shop.rs2), 479,200 for 400.

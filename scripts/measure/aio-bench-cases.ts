@@ -708,7 +708,7 @@ const ROUTE_CASES: BenchCase[] = [
     presetConfig: {position: {x: 2835, z: 9820, level: 0}, skills: {Ranged: 99, Hitpoints: 99, Defence: 99, Prayer: 60},
       equipment: [{id: 861, count: 1, slot: 3}, {id: 888, count: 400, slot: 13}], inventory: [{id: 385, count: 1}, {id: 385, count: 1}, {id: 385, count: 1}]}},
   // The same kill on rune arrows, the best arrow that the magic shortbow fires (army-hunt-black-dragons-rune).
-  {key: 'boss:black-dragon-rune', script: 'scripts/aio-boss.ts', preset: 'fresh_lumbridge', scriptArgs: ['black-dragon', '1500', 'STAGED=1', 'KILLS=1'], pass: s => ok(s) && /kills=1 hides=1 bones=1/.test(s), timeoutMs: 900_000,
+  {key: 'extra:black-dragon-rune', script: 'scripts/aio-boss.ts', preset: 'fresh_lumbridge', scriptArgs: ['black-dragon', '1500', 'STAGED=1', 'KILLS=1'], pass: s => ok(s) && /kills=1 hides=1 bones=1/.test(s), timeoutMs: 900_000,
     presetConfig: {position: {x: 2835, z: 9820, level: 0}, skills: {Ranged: 99, Hitpoints: 99, Defence: 99, Prayer: 60},
       equipment: [{id: 861, count: 1, slot: 3}, {id: 892, count: 400, slot: 13}], inventory: [{id: 385, count: 1}, {id: 385, count: 1}, {id: 385, count: 1}]}},
   {key: 'boss:green-dragon', script: 'scripts/aio-boss.ts', preset: 'fresh_lumbridge', scriptArgs: ['green-dragon', '400', 'STAGED=1'], pass: ok, timeoutMs: 900_000,
