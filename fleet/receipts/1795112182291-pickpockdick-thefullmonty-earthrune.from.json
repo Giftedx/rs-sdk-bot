@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795112182291-pickpockdick-thefullmonty-earthrune",
  "account": "PickpockDick",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Earth rune",
  "requested": 5,
  "claim": "2781d641-53a1-4cd0-bc2f-a579cabfd406",
- "count": 0,
- "ok": false,
- "at": 1795112253764,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795112338167,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795112302627
+ },
+ "logout": {
+  "attemptId": "1795112253772-0000002668-0000000001",
+  "at": 1795112338156,
+  "sha256": "4e6001f250aaa8f9e4058bf1a56a463b17a259aba2ddad0c3be534b3c50c2fcb"
+ },
+ "screen": true
 }
