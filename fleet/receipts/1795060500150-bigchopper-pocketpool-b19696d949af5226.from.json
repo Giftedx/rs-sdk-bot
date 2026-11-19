@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795060500150-bigchopper-pocketpool-b19696d949af5226",
  "account": "Bigchopper",
  "partner": "PocketPool",
@@ -10,8 +10,22 @@
  "item": "Antipoison(3)",
  "requested": 1,
  "claim": "06e3db54-6861-4185-87c3-44c78589e5bc",
- "count": 0,
- "ok": false,
- "at": 1795060892531,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795060921386,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795060900461
+ },
+ "logout": {
+  "attemptId": "1795060892768-0000003228-0000000001",
+  "at": 1795060921208,
+  "sha256": "c5718db9089f4c1e84b322a98c1c79c7b12cbd364a943c60720120b375d3ecb8"
+ },
+ "screen": true
 }
