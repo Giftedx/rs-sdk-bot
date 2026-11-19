@@ -47,7 +47,9 @@ async function carrierCraftLoop(a:RuneCarrierAltar,s:Session,crew:Carrier[],o:{t
   if(!d)throw Error('no owned ready carrier');d.ready=false;const before=xp(),at=s.tick();
   const tal=s.sdk.getInventory().filter(i=>i.id===a.talisman).reduce((n,i)=>n+i.count,0),runes=s.sdk.getInventory().filter(i=>i.id===a.rune).reduce((n,i)=>n+i.count,0);
   const craft=altarCraft(a,s,27,before,s.sdk.getSkill('Runecraft')?.baseLevel??0,runes,o.rate,stop,pipeline),coupled=craftAfter==='trade-message'&&tal!==1;crafts.add(craft);
-  const tradeTicks=tal===1?(await ownedSwap(s,d.s,{[a.talisman]:1},{1436:27},stop)).ticks:await transfer(s,d.s,stop,27,coupled?craft:undefined,pipeline?{boundary:previousCraft?.boundary}:undefined);
+  // The first pack has no earlier craft to overlap, so it trades without the pipeline.
+  const boundary=pipeline&&coupled?previousCraft?.boundary:undefined;
+  const tradeTicks=tal===1?(await ownedSwap(s,d.s,{[a.talisman]:1},{1436:27},stop)).ticks:await transfer(s,d.s,stop,27,coupled?craft:undefined,boundary?{boundary}:undefined);
   if(stop())throw failure()??Error('carrier route stopped');d.deliveries++;o.delivered(d);
   if(!coupled)await craft.send();
   if(!await waitUntil(s,()=>stop()||craft.complete(),{timeoutTicks:15})||stop())throw Error(a.name+' craft effect unobserved or stopped');
