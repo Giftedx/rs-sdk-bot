@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795114256305-abracadickra-pickpockdick",
  "account": "Abracadickra",
  "partner": "PickpockDick",
@@ -10,8 +10,18 @@
  "item": "coins",
  "requested": 1025,
  "claim": "d5ee9c62-8930-413b-a6f7-87ecba0bd07f",
- "count": 0,
- "ok": false,
- "at": 1795114356050,
- "detail": "trade claimed"
+ "count": 1025,
+ "ok": true,
+ "at": 1795114522468,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2006722,
+  "after": 2005697
+ },
+ "logout": {
+  "attemptId": "1795114356058-0000010284-0000000001",
+  "at": 1795114522458,
+  "sha256": "c5143233095973a67bda5d38805e3450437d27218b176b84aa023f1fe9ca2449"
+ },
+ "screen": true
 }
