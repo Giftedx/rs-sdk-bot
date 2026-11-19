@@ -92143,7 +92143,25 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/bunzip-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/catalog-integration-proof.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/collision-doors-memory.ts",
    "intents": [
     "observe"
    ],
@@ -92620,6 +92638,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/ledger-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/levelup-pages.ts",
    "intents": [
     "observe"
@@ -92845,6 +92872,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/route-finder-lazy-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/route-key-parity.ts",
    "intents": [
     "observe"
@@ -92890,6 +92926,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/snapshot-restore-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/stun-guest.ts",
    "intents": [
     "observe"
@@ -92900,6 +92945,15 @@
   },
   {
    "script": "scripts/measure/stun-trade.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/supervise-output-memory.ts",
    "intents": [
     "observe"
    ],
@@ -92981,6 +93035,15 @@
   },
   {
    "script": "scripts/measure/wine.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/world-lazy-memory.ts",
    "intents": [
     "observe"
    ],

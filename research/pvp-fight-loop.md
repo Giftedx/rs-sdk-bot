@@ -1796,16 +1796,61 @@ the log and the record) -> `packages/core/test/pvp-threat.test.ts`, `scripts/pk-
   (the combat-level rule of its tile) and either fights one, or is within 10 tiles and closing, or within 4 tiles.
 - **Adapt** (`SQUAD_THREAT=1`, off by default; `SQUAD_THREAT_ACT=0` logs and records only). A member that a dangerous player can hit holds
   the protect prayer of its style: in a fight through the `threatPrayer` option of `fightPlayer` (after the opponent's own hits, before the
-  prediction), and while it waits through `holdProtect`. A dangerous player that outclasses the strongest member, or three or more
-  unexpected dangerous players (the squad's targets are expected), end the member's part in the Wilderness with the rescue, and the bank trip
-  brings it back. Each decision is logged as `ADAPT <kind> ...` with the record of the player (`THREAT ...`).
+  prediction), and while it waits through `holdProtect`. A dangerous player that outclasses the strongest member ends the member's part in
+  the Wilderness with the rescue, and the bank trip brings it back. Three or more unexpected dangerous players (the squad's targets are
+  expected) are a team (policy of the attacker benches, `research/gang-clones.md` "The attackers"): attackers at once that outnumber the squad
+  (members + 1, at least 3: five against four) are a retreat, also on single-way ground, because the gang's single-way post did not help against five;
+  a team of 3 or more that no member can protect against is a retreat at once: for each attacker the protect prayer of its style needs points and the Prayer level
+  of the content (`prayers.dbrow`: Magic 37, Missiles 40, Melee 43), so a melee team against members with Prayer 40 is unprotected; a lone mage, ranger or tribrid is met with the protect prayer and the
+  fight, no retreat. A team that is smaller than that: on a multi-way tile the squad walks to the nearest single-way tile, away from them (`nearestSingleWay`), and holds it
+  for 120 ticks after the last team decision (no pull, no walk back to the post); a walk that fails is the rescue. On a single-way tile the team
+  is held there, because one attacker at a time can hit each member (`pvp_combat.rs2:103-133`). Each decision is logged as
+  `ADAPT <kind> ...` with the record of the player (`THREAT ...`), once while only its distances change.
+- **Armour swap.** For each member that a dangerous player can hit, `planCounterSwap` (`scripts/pk-threat-kit.ts`) takes, in each of the
+  slots hat, torso, legs, back, feet and hands, the item of the pack with a better defence bonus than the worn one against the threat's style
+  (magic defence against a mage, ranged defence against an archer, the three melee defences against a melee player; `knowledge/gear.json`),
+  within the account's levels, when the gain over all slots is 6 or more. Rune platebody and platelegs against dragonhide body and chaps is
+  +38 magic defence. The hold loop wears them before the next fight (the Wear option, one input and one tick each) and wears the worn ones
+  again 60 ticks after no threat needs the swap. A swap needs spare armour in the pack, and no kit in `scripts/pk-kits.ts` carries any.
+- **Expected targets.** The squad's targets are expected: protected against, never a reason to retreat. `SQUAD_THREAT_EXPECTED=0` counts them as strangers, for a
+  bench whose attackers are also the squad's targets (`extra:attack-*`), where the retreat rules have no other way to fire.
+- **Hunt and roam.** The hunt (`HUNT_THREAT=1`, `HUNT_THREAT_ACT=0`) and the roam (`THREAT=1`, `THREAT_ACT=0`) run the same `ThreatWatch` and
+  `KitSwapper` for their one account: the protect prayer through `threatPrayer`, the armour swap, and the retreat (the hunt's threat retreat, the
+  roam's escape) when the radar decides one. Each keeps its own threat check. They have no single-way move, and the hunt turns the world feed
+  off on a local server.
+- **Fight or flight.** The owner's rule: the squad kills anyone that attacks it or closes in on it while it hunts the gang, and leaves only a fight that it
+  would lose. A dangerous player that is not a target of the squad is an **interloper** (`ThreatWatch.step().interlopers`): the squad takes it as a target,
+  ahead of its own targets (`pickSquadFocus` `priority`), one at a time, lowest health first, with the protect prayer of its style; when the interlopers are dead or
+  gone it goes back to the gang. The retreat is decided by the win-chance estimate `fightOdds` (`packages/core/src/pvp-threat.ts`, Lanchester square law: the
+  product of total Hitpoints and total damage a tick of each side; the Hitpoints of a member are its Hitpoints and 20 a piece of food, an attacker's are those of its
+  combat level and `theirFood` pieces; on multi-way ground every attacker hits and `pile` of our Hitpoints count, on single-way ground the strongest attackers as
+  many as there are members hit; a protect prayer on an attacker's style leaves `protect` of its damage). The squad retreats when the odds are below `lose`,
+  and walks to a single-way tile instead when the odds there are `singleWayMin` (1.5) or more. An outclassing stranger is still a retreat. The constants (`lose` 0.9, `protect`
+  0.6, `pile` 0.7, `theirFood` 10, `singleWayMin` 1.5; `SQUAD_THREAT_LOSE`, `_PROTECT`, `_PILE`, `_THEIR_FOOD`, `_SINGLE`) are first guesses for the bench to climb; `SQUAD_THREAT_ODDS=0`
+  gives the counting rules (outnumbered, a team that no member can protect against). The squad end line prints `attackerKills=N` (the kills of interlopers) when
+  the watch is on, so a bench cell reports deaths, attacker kills, gang kills (`kills` minus `attackerKills`) and Hitpoints lost. Not done: the freeze of the
+  other attackers (Bind, Snare, Entangle on the ones that are not the focus) and the use of specials beyond what `fightPlayer` does.
+- **Options.** `SQUAD_THREAT_OPTS` is a JSON object that wins over the `SQUAD_THREAT_*` settings of the environment, key by key (`threatOptions` in
+  `scripts/pk-threat.ts`). Keys: `act`, `cooldown`, `expected`, `odds` (false: the counting rules), `lose`, `protect`, `pile`, `theirFood`, `singleWayMin`. An unknown key or a value
+  that is not a number ends the squad with `RESULT fail SQUAD_THREAT_OPTS ...`, so that a typo in a climb cannot leave a setting at its default.
+- **Cooldown.** A retreat or single-way decision stays decided, each tick, until a member acts on it and says so (`ThreatWatch.acted`). From then on the
+  same players cannot cause another one for `cooldown` ticks (default 600, `SQUAD_THREAT_COOLDOWN` in the squad): a stranger at the post would otherwise
+  cause retreat, return, retreat until the trips run out. The decision stays 30 ticks after the act, so that each member of the squad acts on it. A member
+  inside a fight does not read the decision, so the cooldown does not start before one has acted. During the cooldown the protect prayer and the armour
+  swap stay and the squad holds its ground; a player that was not there at the retreat causes a new one at once, and that one restarts the cooldown of all the
+  players then in range.
+- **Fights stop.** A fight of the squad's hold loop stops when the radar decides a retreat or a single-way move (`stop` of `fightPlayer`), because a member
+  inside a fight does not read decisions and the squad's fights are the whole run against a team. The protect prayer does not stop a fight. The hunt and the
+  roam have no such stop: an account that is being attacked there keeps their own flee rules.
+- **Record limits.** A record file moves to `<name>.jsonl.1` at 5 MB (the older `.1` goes), so a name keeps at most 10 MB, and a server directory takes at most
+  500 names (`MAX_RECORD_FILES`); the log says once that it is full.
 - **Attackers.** Each dangerous player or attacker is appended to `.practice/threat-records/<server>/<name>.jsonl` (schema
   `threat-sighting/1`, at most one line each 25 ticks, and one at each attack seen), for the behaviour record of the rivals.
 
-Gap: practice and unit proof only, and the bench gang is the only attacker that the bench has. The squad is the only consumer: the
-hunt and the roam keep their own threat checks. The kit decision (a counter kit for a mage or a melee pure) and the move to a single-way
-tile are rules in the model with their tests, but no kit swap, no counter kit and no single-way tile are wired, so a team ends in a retreat.
-The record file is not yet read by `scripts/measure/pk-gang-record.ts`.
+Gap: practice and unit proof only, and the bench gang is the only attacker that the bench has. The roam has the bench case
+`extra:roam-pick-threat` and the hunt has a unit test; neither has an attacker that casts or shoots. No kit carries spare armour, so the swap does not fire in a run. A single-way tile is
+the nearest tile that is not multi-way, and the walker decides whether a path reaches it: a failed walk is a retreat. The swap does not
+change the weapon, and it waits for the end of a fight. `scripts/measure/pk-gang-record.ts` does not read the record file.
 
 ## Server rules the loop follows
 

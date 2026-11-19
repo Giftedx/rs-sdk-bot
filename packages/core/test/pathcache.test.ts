@@ -40,6 +40,28 @@ test('a restored pathfinding snapshot gives the same paths as a cold build, and 
     expect(warm.ms).toBeLessThan(3000);
 }, 120_000);
 
+// A process that does not call loadPathfinding (a bot at one bank) reaches the grid by its first SDK path call.
+test('the first SDK path call restores a valid snapshot, and with none it builds the grid and saves the snapshot', async () => {
+    const firstUse = join(import.meta.dir, 'fixtures', 'pathcache-first-use-probe.ts');
+    const probeFirstUse = async (file: string): Promise<{ restored: boolean; ms: number; paths: string[]; written: boolean }> => {
+        const p = Bun.spawn(['bun', firstUse, file], { stdout: 'pipe', stderr: 'pipe' });
+        const out = await new Response(p.stdout).text();
+        await p.exited;
+        const line = out.split(/\r?\n/).find(l => l.startsWith('PROBE '));
+        if (!line) throw new Error(`no PROBE line: ${out.slice(-400)}`);
+        return JSON.parse(line.slice(6));
+    };
+    const file = join(mkdtempSync(join(tmpdir(), 'pathcache-')), 'rsmod.snap');
+    const none = await probeFirstUse(file);
+    expect(none.restored).toBe(false);
+    expect(none.written).toBe(true);
+    expect(none.paths.every(p => p.length > 0)).toBe(true);
+    const warm = await probeFirstUse(file);
+    expect(warm.restored).toBe(true);
+    expect(warm.paths).toEqual(none.paths);
+    expect(warm.ms).toBeLessThan(5000);
+}, 180_000);
+
 test('an open diagonal door is cleared from the grid; a locked one stays', async () => {
     const { diagonalDoors, openDiagonalDoors } = await import('../src/pathcache');
     const { mkdtempSync, writeFileSync } = await import('node:fs');

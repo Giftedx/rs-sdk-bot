@@ -9,8 +9,6 @@
     "packages/practice/test/wine-stock-order-proof.test.ts",
     "scripts/aio-logistics.ts",
     "scripts/measure/aio-bench-cases.ts",
-    "packages/planner/src/progression-catalog.ts",
-    "scripts/progression-catalog.ts",
     "packages/planner/data/progression-routes.json"
   ],
   "consumer": "scripts/cook-wine.ts uses the actual produced wine after staging into an ordinary native fixture account; independent saved-state checks verify the requested Cooking level, conserved stock, preserved assets and logout.",
