@@ -1822,6 +1822,7 @@ Source: the review of the kill receipts of the third live run, checked in the co
   of every weapon object under `scripts/skill_combat/configs` (such as `human_ddagger_lunge` 376 and `human_ddagger_hack` 377) are melee, and the special attack
   animations of `scripts/skill_combat/scripts/pvp/specs/scripts/pvp_<weapon>.rs2` take the style of their weapon: `puncture` 1062, `cleave` 1058, `shove` 1064 and
   `dragon_halberd_special_attack` 1203 are melee, `snapshot` 1074 and `chainhit` 1068 are ranged. Before, the name rules gave null for all of them.
+- **The freeze leash.** A freeze holds only while its caster is within 10 tiles of the target and online (`pvp_magic.rs2` `walktrigger,pvp_frozen`, `%pk_binder`). `freezeLeash` (`scripts/pk.ts`; `SQUAD_FREEZE_LEASH=<tiles>` in the squad, 2 to 10) makes a fight walk one step toward a frozen target that is farther than that many tiles. Off by default; `leashStep` is unit tested and the fight loop is benched against the clones.
 - **The freeze share.** `SQUAD_FREEZE_SHARE=1` gives each target one shared freeze clock with a stagger of `SQUAD_FREEZE_STAGGER` ticks (default 3), so that members do not cast Bind on
   the same tick. Off by default until the bench says otherwise.
 
