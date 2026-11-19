@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795063834271,
+ "at": 1795063882104,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -194,25 +194,6 @@
    ]
   },
   {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 3000 lobster"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "Catherby lobsters, caught and cooked",
-   "role": "fishing",
-   "template": "lobster-chain",
-   "autopilot": "local",
-   "resources": [
-    "catherby:lobster"
-   ]
-  },
-  {
    "account": "NabTheKnob",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -240,6 +221,55 @@
    "autopilot": "local",
    "resources": [
     "shop:magic_guild"
+   ]
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 3000 lobster"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "Catherby lobsters, caught and cooked",
+   "role": "fishing",
+   "template": "lobster-chain",
+   "autopilot": "local",
+   "resources": [
+    "catherby:lobster"
+   ]
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "water rune",
+    "STOCK_TARGET": "1424",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "11544",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "11344",
+    "AUTOPILOT_ORDER": "[6]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1424}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy water runes at Betty's in Port Sarim for the gang squad",
+   "role": "bank",
+   "template": "squad-water-betty",
+   "autopilot": "local",
+   "resources": [
+    "shop:betty"
    ]
   }
  ],
