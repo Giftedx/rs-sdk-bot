@@ -224,6 +224,10 @@ export type FightOptions = {
     // In multi-way combat, against two or more players that face us or an ally, the overhead prayer covers the style
     // most of them hold (a crowd's hits all carry the source we face, so the last hitter names no one).
     crowdPrayer?: boolean;
+    // The overhead covers the weapon of the player that we face and no other (research/gang-clones.md "The prayer of the gang": in live run 3 a
+    // gang account's protect prayer equals the weapon class of the account it faces in 98 of 107 swaps, and never goes to Protect from Magic).
+    // The hits of another player and the crowd rule do not change it.
+    facedPrayer?: boolean;
     // The ticks over which exitOnDanger's damage race is read (default 30).
     raceWindow?: number;
     // false: exitOnDanger leaves on no food, two attackers and no prayer, not on a lost damage race.
@@ -304,6 +308,14 @@ export function protectedStyles(headicons: number | undefined): Set<Style> {
     return out;
 }
 export const skulled = (headicons: number | undefined) => ((headicons ?? 0) & 1) !== 0;
+// The death line's skull fields: the skull and what the death costs, read on the last tick that the account was alive (the
+// client clears the skull at the death itself), as ` skull=1 keeps=0 lost=420 lostValue=190000`. Empty when the client
+// showed no local player. The bait test reads it: an account hit first keeps no skull and keeps its 3 dearest items.
+export const deathSkullFields = (view: { skull: boolean | null; units: readonly { id: number; count: number }[]; protect: boolean } | null, cost: (id: number) => number): string => {
+    if (!view || view.skull === null) return '';
+    const risk = deathRisk(view.units, cost, view.skull, view.protect);
+    return ` skull=${view.skull ? 1 : 0} keeps=${risk.kept.length} lost=${risk.lostUnits} lostValue=${risk.lostValue}`;
+};
 // Our own skull: the head icon of the client's local player. Null when the client shows no local player (a test double).
 export const ownSkull = (client: unknown): boolean | null => {
     const local = (client as { localPlayer?: { headicons?: number } } | undefined)?.localPlayer;
@@ -1035,6 +1047,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     const protectItemNow = () => o.protectItem === false ? false : o.protectItem === 'skulled' ? ownSkull(s.client) === true : true;
     // Our skull and what a death would cost with it, logged at the start and at each change (the attacker takes a skull).
     let lastSkull: boolean | null | undefined;
+    // The skull, the items and Protect Item of the last tick that we were alive, for the death line (deathSkullFields).
+    let aliveView: { skull: boolean | null; units: { id: number; count: number }[]; protect: boolean } | null = null;
     // An account without Dragon Slayer cannot put its rune platebody back on after a cast ("You have not earned the
     // right to wear this yet."), so the loop leaves such a body on. The quest journal gives the state; where it does
     // not, the first refusal ends the removals.
@@ -1053,6 +1067,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         if (!state || !me || !at) continue;
         feedWatch?.aim(at.x, at.z);
         const skullNow = ownSkull(s.client);
+        if (!(me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife))) aliveView = { skull: skullNow, units: [...state.inventory, ...state.equipment], protect: protectItemNow() };
         if (skullNow !== lastSkull) {
             lastSkull = skullNow;
             if (skullNow !== null) {
@@ -1140,7 +1155,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         }
         seenMessage = maxMessage;
         if ((rubbed >= 0 || ranAt >= 0) && wildernessLevel(at.z) === 0) { result.outcome = 'escaped'; log(`PK escaped ${targetName} after ${result.ticks} ticks at HP ${me.hp}`); return result; }
-        if (me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife)) { result.outcome = 'died'; log(`PK died to ${targetName} after ${result.ticks} ticks`); return result; }
+        if (me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife)) { result.outcome = 'died'; log(`PK died to ${targetName} after ${result.ticks} ticks${deathSkullFields(aliveView, itemCostOf)}`); return result; }
         if (o.stop?.()) { log(`PK stopped against ${targetName}`); return result; }
         target = state.nearbyPlayers.find(p => p.name.toLowerCase() === want);
         // Damage dealt: the splats on the target where the client shows them, else the SDK's events.
@@ -1400,7 +1415,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         if (process.env.PK_TRACE === '1') log(`PKT ${result.ticks} hp=${me.hp} run=${me.runEnergy ?? '?'} at=${at.x},${at.z} t=${target.x},${target.z} th=${seen?.health}/${seen?.totalHealth} hi=${seen?.headicons} w=${seen?.worn.join('.')} pp=${state.prayers.prayerPoints} na=${nextAttack - start} hits=${hits.map(h => h.damage).join('.')} dealt=${result.dealt} ev=${state.combatEvents.length} inv=${inv.length}`);
         const prayerBase = state.skills.find(k => k.name === 'Prayer')?.baseLevel ?? 99;
         const lastHit = [...hits].reverse().find(h => now - h.tick <= 10);
-        const hitter = lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
+        const hitter = !o.facedPrayer && lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
         if (seen) {
             const shown = weaponStyle(seen.worn[3]);
             predictor.observe(shown);
@@ -1415,7 +1430,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const countered = o.counterRead && shownGuard && predictor.seen().size === 2 && left.length === 1 ? left[0]! : null;
         const predicted = o.predictPrayer && !hitter && (!o.snapPrayer || now >= oppDue - (o.snapLead ?? 1)) ? countered ?? predictor.predict() : null;
         // crowdPrayer: two or more players face us: the overhead covers the style that most of them hold.
-        const crowdStyle = o.crowdPrayer && facers.length >= 2 && isMulti(at.x, at.z) ? (() => {
+        const crowdStyle = o.crowdPrayer && !o.facedPrayer && facers.length >= 2 && isMulti(at.x, at.z) ? (() => {
             const n = new Map<Style, number>();
             for (const p of facers) { const w = observePlayer(s.client, p.index); const st = weaponStyle(w?.worn[3]); n.set(st, (n.get(st) ?? 0) + 1); }
             return [...n].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;

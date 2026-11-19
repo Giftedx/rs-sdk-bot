@@ -35,6 +35,7 @@ import { EDGEVILLE_BANK, eatUp, FOOD_START_FLOOR, maxDeathsOf, rekitAfterDeath }
 import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
 import { holdProtect, KitSwapper, protectOf, retreatOf, ThreatWatch, threatOptions } from './pk-threat';
 import { connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './pk-roam';
+import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
 
 export const GANG = ['goondelf', 'ligma', 'sugma'];
@@ -630,7 +631,10 @@ if (import.meta.main) {
     // ALLOW_SINGLE=1 holds a single-way post (the gang's own, when it does not follow into multi-way): one fight a
     // pair there, the refused accounts take the others (bench 3v3 at the post: 39 kills of 48, 80 HP a kill).
     if (wildernessLevel(post.z) === 0 || (!isMulti(post.x, post.z) && get('ALLOW_SINGLE', '0') !== '1')) { console.log(`RESULT fail post ${post.x},${post.z} is not a multi-way Wilderness tile (ALLOW_SINGLE=1 for a single-way one)`); process.exit(2); }
-    const targets = new Set((gangSize ? gangNames : get('TARGETS', GANG.join(',')).split(',')).map(t => t.trim().toLowerCase()).filter(Boolean));
+    // SQUAD_TARGET_COUNT=<n>: only the first n gang accounts are the squad's targets (the clones of the gang); the others are a third party
+    // that the squad does not expect (an attacker that arrives in the middle of the fight): the threat radar treats it as a threat.
+    const targetCount = Number(get('SQUAD_TARGET_COUNT', '-1'));
+    const targets = new Set((gangSize ? (targetCount >= 0 ? gangNames.slice(0, targetCount) : gangNames) : get('TARGETS', GANG.join(',')).split(',')).map(t => t.trim().toLowerCase()).filter(Boolean));
     // A pause holds before any login: a stop file present at the start logs no account in (openBot checks stop files
     // only after its login, and a login puts an account parked in the Wilderness back in the world).
     // The death ledger: a squad whose account or members died too often in the last 24 h on a live server does not start. The
@@ -686,10 +690,22 @@ if (import.meta.main) {
     // Bench: the gang accounts each fight the nearest of ours in view until they walk out (profile ganker-live).
     // SQUAD_GANG_SPLIT=1: gang account i takes our account i (i mod the squad), as the live gang split on the first
     // pilot's walk-in, in place of the nearest of ours.
-    const split = env.SQUAD_GANG_SPLIT === '1';
+    // SQUAD_GANG_PREY=<member index>,...: gang account i takes the member that the list names for it (list[i mod its length]),
+    // so a bench gang can pick the members that the live gang picked (in the first live squad run it attacked only the two
+    // members in dragonhide). It implies the split.
+    const preyList = (env.SQUAD_GANG_PREY ?? '').split(',').filter(x => /^\d+$/.test(x)).map(Number);
+    const split = env.SQUAD_GANG_SPLIT === '1' || preyList.length > 0;
     const gangRuns = gang.map(async (g, gi) => {
-        const mine = squad[gi % squad.length]!.name.toLowerCase();
-        const opts = sparOptions('ganker-live', env.SPAR_B_OPTS, kitFrom(g.sdk.getState()?.equipment ?? [], g.sdk.getState()?.inventory ?? []), 1200);
+        const preyAt = preyList.length ? preyList[gi % preyList.length]! % squad.length : gi % squad.length;
+        const mine = squad[preyAt]!.name.toLowerCase();
+        // SQUAD_GANG_KIT=<kit>+<kit>+...: the kit (scripts/pk-kits.ts) of gang account i is list[i mod its length], and
+        // SQUAD_GANG_PROFILE the fight profile of the gang (default ganker-live, the dagger gang). Both turn the gang accounts into
+        // the attacker of a bench threat: a mage, a ranger, a pure or a team (research/gang-clones.md, "The attackers").
+        const gangKit = (env.SQUAD_GANG_KIT ?? '').split('+').filter(Boolean), kitName = gangKit.length ? gangKit[gi % gangKit.length]! : undefined;
+        // SQUAD_GANG_PROFILES=<profile>+<profile>+...: the profile of gang account i, in place of SQUAD_GANG_PROFILE (the three clones
+        // take clone-goondelf, clone-ligma and clone-sugma, each from its own record, and an attacker takes attacker-fight).
+        const gangProfiles = (env.SQUAD_GANG_PROFILES ?? '').split('+').filter(Boolean);
+        const opts = sparOptions(gangProfiles.length ? gangProfiles[gi % gangProfiles.length]! : env.SQUAD_GANG_PROFILE ?? 'ganker-live', env.SPAR_B_OPTS, kitName ? kitSwitches(kitName) : kitFrom(g.sdk.getState()?.equipment ?? [], g.sdk.getState()?.inventory ?? []), 1200, kitName ? kitOptions(kitName) : {});
         while (!stopped() && g.tick() < deadline) {
             const me = g.sdk.getState()?.player;
             if (!me || wildernessLevel(me.worldZ) === 0) break;
@@ -699,7 +715,7 @@ if (import.meta.main) {
                 // SQUAD_GANG_HUNT=1: like the live gang, which the world feed takes to its target (it met the first live
                 // pilot 30 tiles from the post), it walks toward the nearest of ours in the Wilderness.
                 if (env.SQUAD_GANG_HUNT === '1' && g.tick() % 4 === 0) {
-                    const far = (split ? [squad[gi % squad.length]!] : squad).map(q => q.sdk.getState()?.player).filter((q): q is NonNullable<typeof q> => !!q && wildernessLevel(q.worldZ) > 0)
+                    const far = (split ? [squad[preyAt]!] : squad).map(q => q.sdk.getState()?.player).filter((q): q is NonNullable<typeof q> => !!q && wildernessLevel(q.worldZ) > 0)
                         .sort((a, b) => Math.max(Math.abs(a.worldX - me.worldX), Math.abs(a.worldZ - me.worldZ)) - Math.max(Math.abs(b.worldX - me.worldX), Math.abs(b.worldZ - me.worldZ)))[0];
                     if (far) void g.sdk.sendWalk(far.worldX, far.worldZ);
                 }
@@ -801,12 +817,16 @@ if (import.meta.main) {
         threats = new ThreatWatch({ sessions: () => squad, server: squadServer, friends: new Set(ours.map(n => n.toLowerCase())), radar, log, act: to.act, cooldown: to.cooldown, odds: to.odds,
             decide: { expected: to.expectedTargets ? targets : new Set<string>() } });
     }
+    const tankList = (env.SQUAD_TANK ?? '').split(',').filter(x => /^[0-9]+$/.test(x)).map(Number);
     const results = await Promise.all(squad.map(s => {
         const kit = kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []);
         const stunSpec = defaultStunSpec(kit);
         return hold(s, {
             targets, post, threats,
-            options: { ...sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200), ...fightOverrides },
+            // SQUAD_TANK=<member index>,...: the tank lock (bench only): the listed members hold melee and every other member holds
+            // ranged. A gang account prays against the weapon of the member it faces (live run 3), so the faced member's melee turns
+            // draw Protect from Melee and the bow shots of the others meet no overhead.
+            options: { ...sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200), ...fightOverrides, ...(tankList.length ? { rotation: [tankList.includes(squad.indexOf(s)) ? 'melee' as const : 'ranged' as const] } : {}) },
             ...(get('SQUAD_FREEZE_SHARE', '0') === '1' ? { freezeShareFor } : {}),
             ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
             allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', tripping, aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), run: runDeaths,

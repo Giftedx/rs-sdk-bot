@@ -1,0 +1,367 @@
+{
+ "what": "The first live squad run against the gang (2026-11-18 21:56 to 22:03 UTC, five accounts, four fought): the loadouts as it started and what it measured",
+ "sources": {
+  "loadouts": ".practice/gang-hunt/loadouts/<account>.json (main checkout): wear and pack",
+  "log": ".practice/gang-hunt/squad-run-1.log: the RESULT line, the SQUAD lines of each member, the PK kill lines",
+  "feed": ".practice/gang-record/feed-1795038250687.jsonl: the world feed of the run",
+  "status": ".practice/status/<account>.json: Prayer level 99 and current level 0 for each of the four"
+ },
+ "members": [
+  {
+   "name": "UnderMyKilt",
+   "wear": [
+    {
+     "id": 1139,
+     "count": 1,
+     "slot": 0
+    },
+    {
+     "id": 2503,
+     "count": 1,
+     "slot": 4
+    },
+    {
+     "id": 2497,
+     "count": 1,
+     "slot": 7
+    },
+    {
+     "id": 1201,
+     "count": 1,
+     "slot": 5
+    },
+    {
+     "id": 1478,
+     "count": 1,
+     "slot": 2
+    },
+    {
+     "id": 1333,
+     "count": 1,
+     "slot": 3
+    },
+    {
+     "id": 892,
+     "count": 300,
+     "slot": 13
+    }
+   ],
+   "pack": [
+    {
+     "id": 861,
+     "count": 1
+    },
+    {
+     "id": 175,
+     "count": 1
+    },
+    {
+     "id": 563,
+     "count": 2
+    },
+    {
+     "id": 556,
+     "count": 10
+    },
+    {
+     "id": 557,
+     "count": 30
+    },
+    {
+     "id": 555,
+     "count": 30
+    },
+    {
+     "id": 561,
+     "count": 20
+    },
+    {
+     "id": 385,
+     "count": 20
+    }
+   ]
+  },
+  {
+   "name": "mmsmk1232",
+   "wear": [
+    {
+     "id": 2503,
+     "count": 1,
+     "slot": 4
+    },
+    {
+     "id": 2497,
+     "count": 1,
+     "slot": 7
+    },
+    {
+     "id": 1171,
+     "count": 1,
+     "slot": 5
+    },
+    {
+     "id": 1333,
+     "count": 1,
+     "slot": 3
+    },
+    {
+     "id": 884,
+     "count": 300,
+     "slot": 13
+    }
+   ],
+   "pack": [
+    {
+     "id": 849,
+     "count": 1
+    },
+    {
+     "id": 177,
+     "count": 1
+    },
+    {
+     "id": 563,
+     "count": 2
+    },
+    {
+     "id": 556,
+     "count": 10
+    },
+    {
+     "id": 557,
+     "count": 30
+    },
+    {
+     "id": 555,
+     "count": 30
+    },
+    {
+     "id": 561,
+     "count": 20
+    },
+    {
+     "id": 385,
+     "count": 20
+    }
+   ]
+  },
+  {
+   "name": "TrouserSnake",
+   "wear": [
+    {
+     "id": 1163,
+     "count": 1,
+     "slot": 0
+    },
+    {
+     "id": 1113,
+     "count": 1,
+     "slot": 4
+    },
+    {
+     "id": 1079,
+     "count": 1,
+     "slot": 7
+    },
+    {
+     "id": 1201,
+     "count": 1,
+     "slot": 5
+    },
+    {
+     "id": 1731,
+     "count": 1,
+     "slot": 2
+    },
+    {
+     "id": 1215,
+     "count": 1,
+     "slot": 3
+    },
+    {
+     "id": 892,
+     "count": 300,
+     "slot": 13
+    }
+   ],
+   "pack": [
+    {
+     "id": 861,
+     "count": 1
+    },
+    {
+     "id": 563,
+     "count": 2
+    },
+    {
+     "id": 556,
+     "count": 10
+    },
+    {
+     "id": 557,
+     "count": 30
+    },
+    {
+     "id": 555,
+     "count": 30
+    },
+    {
+     "id": 561,
+     "count": 20
+    },
+    {
+     "id": 385,
+     "count": 21
+    }
+   ]
+  },
+  {
+   "name": "TheFullMonty",
+   "wear": [
+    {
+     "id": 1163,
+     "count": 1,
+     "slot": 0
+    },
+    {
+     "id": 1113,
+     "count": 1,
+     "slot": 4
+    },
+    {
+     "id": 1079,
+     "count": 1,
+     "slot": 7
+    },
+    {
+     "id": 1731,
+     "count": 1,
+     "slot": 2
+    },
+    {
+     "id": 1215,
+     "count": 1,
+     "slot": 3
+    },
+    {
+     "id": 884,
+     "count": 259,
+     "slot": 13
+    }
+   ],
+   "pack": [
+    {
+     "id": 849,
+     "count": 1
+    },
+    {
+     "id": 563,
+     "count": 2
+    },
+    {
+     "id": 556,
+     "count": 10
+    },
+    {
+     "id": 557,
+     "count": 30
+    },
+    {
+     "id": 555,
+     "count": 30
+    },
+    {
+     "id": 561,
+     "count": 20
+    },
+    {
+     "id": 385,
+     "count": 21
+    }
+   ]
+  }
+ ],
+ "prayerPointsAtStart": 0,
+ "gangTargets": "In 6 fights that the feed shows, the gang attacked UnderMyKilt 3 times and mmsmk1232 3 times, and TrouserSnake and TheFullMonty never, with all four within 1 to 3 tiles in 4 of the 6.",
+ "measured": {
+  "kills": 5,
+  "killsBy": {
+   "Goondelf": 2,
+   "Ligma": 2,
+   "Sugma": 1
+  },
+  "deathsOfOurs": 0,
+  "taken": 279,
+  "takenBy": {
+   "UnderMyKilt": 181,
+   "mmsmk1232": 98,
+   "TrouserSnake": 0,
+   "TheFullMonty": 0
+  },
+  "killTicks": [
+   54,
+   37,
+   27,
+   22,
+   28
+  ],
+  "gangAttacksOnMember": {
+   "UnderMyKilt": 23,
+   "mmsmk1232": 21,
+   "TrouserSnake": 0,
+   "TheFullMonty": 0
+  },
+  "splatDamageOnMember": {
+   "UnderMyKilt": 118,
+   "mmsmk1232": 93,
+   "TrouserSnake": 0,
+   "TheFullMonty": 0
+  }
+ },
+ "fidelity": {
+  "hpAKill": [
+   33,
+   56
+  ],
+  "kills": 2,
+  "membersHit": [
+   2,
+   4
+  ],
+  "live": {
+   "sources": [
+    ".practice/gang-hunt/squad-run-1.log (live run 1)",
+    ".practice/gang-hunt/squad-run-3.log (live run 3)",
+    "bun scripts/measure/pk-gang-run1.ts live <log>"
+   ],
+   "run1": {
+    "kills": 5,
+    "taken": 279,
+    "hpAKill": 56,
+    "fights": 20,
+    "killsPerFight": 0.25,
+    "meanKillTicks": 34,
+    "membersHit": 2,
+    "deaths": 0
+   },
+   "run3": {
+    "kills": 19,
+    "taken": 630,
+    "hpAKill": 33,
+    "fights": 88,
+    "killsPerFight": 0.216,
+    "meanKillTicks": 44,
+    "membersHit": 4,
+    "deaths": 0
+   },
+   "pooled": {
+    "kills": 24,
+    "taken": 909,
+    "hpAKill": 38,
+    "fights": 108,
+    "killsPerFight": 0.222
+   }
+  },
+  "note": "The band is the lowest and the highest of the two live runs: Hitpoints a kill 33 (run 3) to 56 (run 1), members hit 2 to 4. It applies to a replay run with 2 kills or more; a run with no kill fails. Kills a fight of the live runs: 0.25 and 0.216. The replay has no hand-made margin."
+ }
+}
