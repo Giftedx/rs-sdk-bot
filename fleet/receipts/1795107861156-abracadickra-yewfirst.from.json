@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795107861156-abracadickra-yewfirst",
+ "account": "Abracadickra",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 4,
+ "claim": "33500ae3-5383-498e-96ff-88fe9f8e86b2",
+ "count": 0,
+ "ok": false,
+ "at": 1795107898970,
+ "detail": "trade claimed"
+}
