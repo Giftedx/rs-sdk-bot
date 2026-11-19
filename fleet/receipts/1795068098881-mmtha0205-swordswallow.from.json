@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795068098881-mmtha0205-swordswallow",
+ "account": "mmtha0205",
+ "partner": "Swordswallow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 2060,
+ "claim": "81bcfa27-91b0-4f6b-9ffd-7a3a1fc2547e",
+ "count": 0,
+ "ok": false,
+ "at": 1795068163139,
+ "detail": "trade claimed"
+}
