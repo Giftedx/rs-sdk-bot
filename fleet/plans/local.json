@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795105082820,
+ "at": 1795105304671,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -324,28 +324,25 @@
    ]
   },
   {
-   "accounts": [
-    "SporranBulge",
-    "Moneyshot"
-   ],
-   "script": "scripts/coin-courier.ts",
-   "args": [
-    "2000000",
-    "--bank-x=2618",
-    "--bank-z=3332",
-    "--reserve=200000",
-    "--timeout-ms=600000"
-   ],
+   "account": "Moneyshot",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
    "env": {
-    "COIN_ORDER": "prayer99-moneyshot-bonefund2000k",
+    "ITEM_ID": "536",
+    "QUANTITY": "273",
+    "EXPECTED_OWNED": "6",
+    "LIMIT_PRICE": "7300",
+    "CASH_RESERVE": "5000",
+    "ORDER_MS": "1200000",
+    "ORDER_KEY": "prayer99-moneyshot-dragonbones273",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-c20be028-9a87-469a-95af-c1188632cab8"
+    "COORDINATOR_RUN_ID": "task-1a05556e-7c3f-4d16-ad28-dc61039d0990"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-courier-sporranbulge-moneyshot-bone-fund-v2 [task-c20be028-9a87-469a-95af-c1188632cab8]",
+   "goal": "run-buy-moneyshot-dragon-bones-273 [task-1a05556e-7c3f-4d16-ad28-dc61039d0990]",
    "role": "supply"
   }
  ],
