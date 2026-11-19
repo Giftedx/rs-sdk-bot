@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795127315869-sporranbulge-thefullmonty-waterrune",
+ "account": "TheFullMonty",
+ "partner": "SporranBulge",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 130,
+ "claim": "b2b29bd4-abd8-4278-87ad-d7520fee78f2",
+ "count": 0,
+ "ok": false,
+ "at": 1795127343674,
+ "detail": "trade claimed"
+}

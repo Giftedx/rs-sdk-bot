@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795127128842-abracadickra-pocketrocket",
+ "account": "Pocketrocket",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 121740,
+ "claim": "7c0e1e75-4a9e-42a2-ae20-92669f866a56",
+ "count": 0,
+ "ok": false,
+ "at": 1795127349255,
+ "detail": "trade claimed"
+}
