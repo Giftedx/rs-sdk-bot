@@ -640,7 +640,8 @@ if (import.meta.main) {
     const squad = all.slice(0, ours.length).map(squadWorkSession), gang = all.slice(ours.length).map(squadWorkSession);
     const rescuing = new Set<string>(), rescues: Promise<string[]>[] = [];
     startRescue = name => {
-        if (get('RESCUE', '1') !== '1' || rescuing.has(name)) return;
+        // Only a member of ours: a gang account of the bench that ends its session is no one to rescue.
+        if (get('RESCUE', '1') !== '1' || rescuing.has(name) || !ours.includes(name)) return;
         rescuing.add(name);
         rescues.push(rescueDropped([name], all, (n, onStopRescue) => openBot(n, { onStop: onStopRescue, onSessionEnd: (s, detail) => onStopRescue(s, detail) }), line => console.log(line)));
     };
