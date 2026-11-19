@@ -193,6 +193,10 @@ export type Inputs = {
     noSend?: ReadonlySet<string>;
     // The ids of the `pilot` templates this plan admits (its `aio` list). Absent: none.
     pilots?: ReadonlySet<string>;
+    // Admit the self-serve production pilots (selfServePilot) to a free account that is not on the army roster, whatever the
+    // `aio` list names, at PILOT_FALLBACK_SHARE of their worth so every listed job and every other supply job ranks first.
+    // Each place keeps its capacity, and finite demand sizes each run, so the fallback stays bounded. Absent: off.
+    pilotFallback?: boolean;
     // The quests (lower case journal names) that some observed account of any side completed. A `once` template needs it.
     questsDone?: ReadonlySet<string>;
     // Whether the walker lets the account walk over White Wolf Mountain (scripts/autopilot.ts mountainWalk). Absent:
@@ -338,6 +342,12 @@ export const BILL_PREMIUM = 2, TRAIN_SHARE = 0.25;
 // scripts/autopilot.ts plans every ten minutes: 1,000 game ticks at 600 ms per tick. This is an output estimate,
 // not a claim that a worker stops at this bound; the next pass reads its actual holdings.
 export const VALUE_TICKS = 1000;
+// A production pilot that the `aio` list does not name ranks at this share of its worth (Inputs.pilotFallback).
+export const PILOT_FALLBACK_SHARE = 0.05;
+// A pilot that makes or gathers a bill item for the route or the army kit and needs no quest, band or combat: the AIO skiller
+// routes (mining, woodcutting, smelting, smithing, fletching, crafting, runecraft, cooking, fishing) and the maker chains.
+export const selfServePilot = (t: Template): boolean => !!t.pilot && !t.tier && !t.quest && !t.once && !t.buildOnly && !t.trains && !t.provides
+    && (!!t.production || !!t.aio?.startsWith('skiller:'));
 // Inputs that feed a bill line: a feather is needed while headless arrows are short, even with the feather line met.
 // A steel bar is on no line of the bill: it is needed while cannonballs are short (one bar casts 4, cannonballs.rs2).
 export const FEEDS: Record<string, string[]> = { feather: ['headless arrow'], 'arrow shaft': ['headless arrow'], 'raw lobster': ['lobster'],
@@ -964,7 +974,7 @@ export function plan(input: Inputs): Assignment[] {
             else if (rest > 0) fed.set(item, (fed.get(item) ?? 0) + rest);
         }
     };
-    const valueOf = (t: Template, a: Acct) => jobValue(t, a, values, item => needed(item, a.name));
+    const valueOf = (t: Template, a: Acct) => jobValue(t, a, values, item => needed(item, a.name)) * (onList(t) ? 1 : PILOT_FALLBACK_SHARE);
     // `fare`: the ferry fare inside the coin need of the candidate's template.
     type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number; fare?: number; goal?: { band: number; left: number }; lacks?: Lack[];
         supply?: { template: Template; account: Acct; share: number }; kit?: readonly KitLine[] };
@@ -972,7 +982,8 @@ export function plan(input: Inputs): Assignment[] {
     // Keep qualified coin opportunities until the kit tier has used existing funds. A helper gets value only if
     // the finite transfer below chooses it; a coin opportunity alone never gives an account work.
     const makesCoins = (t: Template, a: Acct) => t.yields(a).some(f => norm(f.item) === 'coin' && f.perTick > 0);
-    const admitted = (t: Template) => !t.pilot || !!inp.pilots?.has(t.id);
+    const onList = (t: Template) => !t.pilot || !!inp.pilots?.has(t.id);
+    const admitted = (t: Template, a?: Acct) => onList(t) || (!!inp.pilotFallback && selfServePilot(t) && !(a && (inp.army?.has(a.name.toLowerCase()) || squadNames.has(a.name.toLowerCase()))));
     const shopLine = (l: Lack) => !l.of.some(i => inp.market?.[i]) && l.of.some(i => SHOP_SUPPLIED.has(i));
     // A donor can fund the account: it has no enabled job, and a meeting place that it can reach (meetFor).
     const meetOf = new Map(mine.map(a => [a.name, meetFor(a.pos)]));
@@ -992,7 +1003,7 @@ export function plan(input: Inputs): Assignment[] {
         const band = buildBand(listed, a, inp.builds?.get(a.name.toLowerCase()), inp.buildQuests?.get(a.name.toLowerCase()), inp.buildBefore?.get(a.name.toLowerCase()));
         if (!band) continue;
         if (inp.retired?.has(pairKey(a.name, band.id))) { miss(a, band, 'retired'); continue; }
-        if (!admitted(band)) { miss(a, band, 'pilot'); continue; }
+        if (!admitted(band, a)) { miss(a, band, 'pilot'); continue; }
         // The reach rule (wayCost): no candidate for a place with no way from where the account stands. The ferry fare
         // of the way is a coin need of the job, so an account without the fare is funded as for any coin need.
         const finite=finiteOrder(band,a);if(!finite){miss(a,band,'demand');continue;}
@@ -1005,7 +1016,7 @@ export function plan(input: Inputs): Assignment[] {
             if (questDone(a, t.quest.name)) continue;
             if (lacks===null || coinShort(a,t.needs)>0) { miss(a, t, lacks === null ? 'needs' : 'coins'); continue; }
             const after: Acct = { ...a, quests: new Set([...(a.quests ?? []), norm(t.quest.name)]) }, before = cands.length;
-            for (const u of t.quest.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
+            for (const u of t.quest.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u, a) && !inp.retired?.has(pairKey(a.name, u.id)))) {
                 if (!meets(after, u.needs)) continue;
                 const value = TRAIN_SHARE * valueOf(u, after);
                 if (value > 0 || makesCoins(u, after)) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `completes ${t.quest.name} for ${u.id}`, supply: { template: u, account: after, share: TRAIN_SHARE },...(lacks.length?{lacks}:{}) });
@@ -1048,7 +1059,7 @@ export function plan(input: Inputs): Assignment[] {
             const item = norm(t.provides.item), held: Acct = { ...a, items: { ...a.items, [item]: Math.max(1, a.items[item] ?? 0) } }, before = cands.length;
             if ((a.items[item] ?? 0) >= 1) continue;
             if (coinShort(a, t.needs) > 0 || !meets(a, withoutCoins(t.needs))) { miss(a, t, coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)) ? 'coins' : 'needs'); continue; }
-            for (const u of t.provides.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
+            for (const u of t.provides.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u, a) && !inp.retired?.has(pairKey(a.name, u.id)))) {
                 if (!meets(held, u.needs)) continue;
                 const value = TRAIN_SHARE * valueOf(u, held);
                 if (value > 0) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `buys a ${t.provides.item} for ${u.id}`, supply: { template: u, account: held, share: TRAIN_SHARE } });
@@ -1060,7 +1071,7 @@ export function plan(input: Inputs): Assignment[] {
             if ((a.skills[t.trains.skill] ?? 1) >= t.trains.to) continue;
             if (!meets(a, t.needs)) { miss(a, t, 'needs'); continue; }
             const trained: Acct = { ...a, skills: { ...a.skills, [t.trains.skill]: t.trains.to } }, before = cands.length;
-            for (const u of t.trains.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
+            for (const u of t.trains.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u, a) && !inp.retired?.has(pairKey(a.name, u.id)))) {
                 // The frail rule counts what the account holds when the unlocked job starts, which is not known yet.
                 if (!meets(a, { ...u.needs, frail: undefined }, t.trains)) continue;
                 const value = TRAIN_SHARE * valueOf(u, trained);
