@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795067196837-yewfirst-dipstick-naturerune",
+ "account": "YewFirst",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 80,
+ "claim": "f12e033e-5529-4e94-a8e2-d9a432286ac2",
+ "count": 0,
+ "ok": false,
+ "at": 1795067253949,
+ "detail": "trade claimed"
+}
