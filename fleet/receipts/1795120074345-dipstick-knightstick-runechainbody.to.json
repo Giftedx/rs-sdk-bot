@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795120074345-dipstick-knightstick-runechainbody",
+ "account": "Knightstick",
+ "partner": "Dipstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "25a7dc07-817b-4fb2-8c25-adbd74d75183",
+ "count": 0,
+ "ok": false,
+ "at": 1795120123321,
+ "detail": "trade claimed"
+}

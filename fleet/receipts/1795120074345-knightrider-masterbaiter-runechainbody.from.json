@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795120074345-knightrider-masterbaiter-runechainbody",
+ "account": "KnightRider",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "2e9d99b5-263e-45bc-8edb-eb1c14cf4ef4",
+ "count": 0,
+ "ok": false,
+ "at": 1795120119448,
+ "detail": "trade claimed"
+}
