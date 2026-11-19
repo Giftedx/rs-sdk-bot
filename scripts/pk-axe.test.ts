@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { defaultSpec, shootingKit } from './pk';
+import { AXE_ALLY_RANGE, defaultSpec, shootingKit, thrownAxeHitsAlly } from './pk';
 import { itemId, kitItems, kitSwitches } from './pk-kits';
 import { kitFrom } from './pk-roam';
 
@@ -37,4 +37,19 @@ test('kitFrom puts the axe in the ranged kit only with PK_AXE=1', () => {
         // Axes with no bow: the axe alone is the ranged kit.
         expect(kitFrom(worn, [item(805, 'Rune thrownaxe')]).ranged).toEqual([805]);
     } finally { if (before === undefined) delete process.env.PK_AXE; else process.env.PK_AXE = before; }
+});
+
+test('the axe special is refused when an ally is within reach of its chain: the server picks the chain from the tile of the thrower and does not exclude allies', () => {
+    const names = new Map([[805, 'rune_thrownaxe'], [1215, 'dragon_dagger']]);
+    const axe = { kit: [805] }, dagger = { kit: [1215] };
+    const nearby = (name: string, distance: number) => [{ name, distance }];
+    expect(thrownAxeHitsAlly(axe, nearby('Ours2', AXE_ALLY_RANGE), ['ours2'], names)).toBe(true);
+    expect(thrownAxeHitsAlly(axe, nearby('Ours2', 3), ['ours2'], names)).toBe(true);
+    // Out of range, not an ally, no allies named, another special, or no special.
+    expect(thrownAxeHitsAlly(axe, nearby('Ours2', AXE_ALLY_RANGE + 1), ['ours2'], names)).toBe(false);
+    expect(thrownAxeHitsAlly(axe, nearby('Stranger', 2), ['ours2'], names)).toBe(false);
+    expect(thrownAxeHitsAlly(axe, nearby('Ours2', 2), [], names)).toBe(false);
+    expect(thrownAxeHitsAlly(axe, nearby('Ours2', 2), undefined, names)).toBe(false);
+    expect(thrownAxeHitsAlly(dagger, nearby('Ours2', 2), ['ours2'], names)).toBe(false);
+    expect(thrownAxeHitsAlly(undefined, nearby('Ours2', 2), ['ours2'], names)).toBe(false);
 });
