@@ -8,8 +8,26 @@
 import { plugin } from 'bun';
 
 export function lazyCollisionSource(file: string): string {
-    return `import { readFileSync } from 'node:fs';
+    return `import { closeSync, fstatSync, openSync, readFileSync, readSync } from 'node:fs';
 let parsed, doors;
+// The doors array of the file, from its last bytes: 4 times more bytes at each try until "doors": is in them.
+const doorsFromTail = () => {
+    const fd = openSync(${JSON.stringify(file)}, 'r');
+    try {
+        const size = fstatSync(fd).size;
+        for (let want = 1 << 16; ; want *= 4) {
+            const length = Math.min(want, size), bytes = Buffer.alloc(length);
+            if (readSync(fd, bytes, 0, length, size - length) !== length) return undefined;
+            const text = bytes.toString('utf8'), at = text.lastIndexOf('"doors":');
+            if (at >= 0) {
+                const body = text.slice(at + 8).trimEnd();
+                // Doors that are not the last key leave more than the array here: the whole file answers then.
+                try { return body.endsWith('}') ? JSON.parse(body.slice(0, -1)) : undefined; } catch { return undefined; }
+            }
+            if (length === size) return undefined;
+        }
+    } finally { closeSync(fd); }
+};
 const full = () => {
     if (!parsed) { parsed = JSON.parse(readFileSync(${JSON.stringify(file)}, 'utf8')); setTimeout(() => { parsed = undefined; }, 0); }
     return parsed;
@@ -20,11 +38,9 @@ export default {
     // (pathcache.ts restorePathfindingOnFirstUse sets __rsPathEnsure; without it nothing happens).
     get zones() { globalThis.__rsPathEnsure?.(); return restored() ? [] : full().zones; },
     get tiles() { return restored() ? [] : full().tiles; },
-    // "doors" is the file's last key: parse only its array, not the 1.27 million tiles before it.
+    // "doors" is the file's last key: read and parse only its array, not the 27 MB of tiles before it.
     get doors() {
-        if (doors) return doors;
-        const text = readFileSync(${JSON.stringify(file)}, 'utf8'), at = text.lastIndexOf('"doors":');
-        return doors = at >= 0 && text.trimEnd().endsWith('}') ? JSON.parse(text.slice(at + 8, text.trimEnd().length - 1)) : full().doors;
+        return doors ??= doorsFromTail() ?? full().doors;
     },
 };`;
 }

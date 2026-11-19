@@ -2086,9 +2086,11 @@ Claim: the planner gives an army account one sweep job for each of 18 of the 22 
 (`QUEST_DEMAND_ROWS` in `packages/planner/src/autopilot.ts`). Conditions: the job is a `pilot` (it runs only while the plan's
 `aio` list names `quest-<slug>`), its band is 5 plus 0.01 for each quest in order of practice ticks (after the build bands,
 before the open-ended fields), and a quest stops being a candidate once any account of any side lists it complete
-(`Inputs.questsDone`, from `questsDoneIn`). A shared place `quest:demand` allows 3 quest jobs at once. No template gives
-a kit: an account that holds the practice pack (`presetFor` in `scripts/quest-sweep.ts`) gets the job, and an account that
-lacks an item shows it as its vacant reason. Hitpoints 90 stands on the 6 quests where the saved practice run fell under 70
+(`Inputs.questsDone`, from `questsDoneIn`). A shared place `quest:demand` allows 2 quest jobs at once. A quest is a
+`kitFirst` band: an account that lacks the practice pack (`presetFor` in `scripts/quest-sweep.ts`) gets the items from a donor, or
+buys them at the Grand Exchange within a cap of four times the item's base value (`questKitCaps`), and an account that cannot
+shows the missing item as its vacant reason. A buy holds the quest's places, so one account buys for one quest, and the shared
+place allows 2 quests at a time. Hitpoints 90 stands on the 6 quests where the saved practice run fell under 70
 Hitpoints with 99 in every skill. Left out: Shield of Arrav, Hero's Quest and Legends Quest open companion accounts (`scripts/generated/quest-<slug>.ts` read a helper name from `process.argv[3]`), the sweep refuses Hero's Quest (`scripts/quest-sweep.ts`), and Throne of Miscellania needs Hero's Quest. They wait for an owned-pair path. Evidence: the bench cases `quester:quest:<slug>` and their saved output in
 `.practice/aio-bench/output/quester_quest_<slug>.log`; `scripts/autopilot.test.ts` checks each row against the journal
 data (`packages/dashboard/client-assets/quest-reqs.json`) and the practice pack. Gap: the practice runs start at 99 in

@@ -272,6 +272,6 @@ async function load(file: string): Promise<{ restored: boolean; ms: number }> {
             try { writePathfindingSnapshot(file,k,new Uint8Array(memory.buffer)); }
             catch { /* A cache write failure does not invalidate the initialized grid. */ }
         }
-    }finally{build?.release?.();}
+    }finally{if(build?.state==='build')build.release();}
     return { restored, ms: Date.now() - t0 };
 }
