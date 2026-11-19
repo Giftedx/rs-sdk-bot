@@ -1043,7 +1043,10 @@ const ROUTE_CASES: BenchCase[] = [
   // Three sharks each at the start: the squad's bank trip and walk back mid-meeting.
   squadCase('extra:squad-4-gang-trips-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=12'], 3),
   // The first of four drops its connection 120 ticks in (SQUAD_DROP_AT): it logs in again at once and leaves the Wilderness while the other three fight on.
-  squadCase('extra:squad-4-gang-drop-x1', 'live-walker-iron-rune-chain-bind', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_DROP_AT=120']),
+  // The RESULT is `fail ... dropped=<name>` by design (a dropped member is a fault of the run): the case passes when the others killed, the rescue
+  // ended outside the Wilderness and no account is stranded.
+  {...squadCase('extra:squad-4-gang-drop-x1', 'live-walker-iron-rune-chain-bind', 'ganker-dds', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_DROP_AT=120']),
+    pass: s => /^RESULT fail squad .*dropped=\w+/m.test(s) && !/stranded=/.test(s) && /SQUAD rescue ends at \S+ wild 0/.test(s) && /kills=[1-9]/.test(s) && killReceiptsMatch(s)},
   // The bank trip from the east post goes to Varrock West (bankNear) and keeps to multi-way tiles.
   squadCase('extra:squad-2-gang-trips-east-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 2, ['MAX_MINUTES=8', 'TRIPS=2', 'SQUAD_GANG_HUNT=1', 'POST=3200,3620'], 3, {x: 3197, z: 3621}),
   // Two of ours leave outnumbered: each walks out, banks at Edgeville and walks back to the post.
