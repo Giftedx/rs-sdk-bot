@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795098656113-abracadickra-sausagefest",
  "account": "Sausagefest",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 73380,
  "claim": "4ab3d974-e28b-4997-a032-02007a3d82a9",
- "count": 0,
- "ok": false,
- "at": 1795098696483,
- "detail": "trade claimed"
+ "count": 73380,
+ "ok": true,
+ "at": 1795099383517,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 73380
+ },
+ "bank": {
+  "count": 73380,
+  "at": 1795099382729
+ },
+ "logout": {
+  "attemptId": "1795098696491-0000024896-0000000001",
+  "at": 1795099383469,
+  "sha256": "c353cff455ac4a619777479ffff2b6e76949ab296ca22cd0f51e2fa33663977c"
+ },
+ "screen": true
 }
