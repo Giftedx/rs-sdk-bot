@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795078252420-hocuspokeus-sporranbulge-earthrune",
  "account": "SporranBulge",
  "partner": "Hocuspokeus",
@@ -10,8 +10,22 @@
  "item": "Earth rune",
  "requested": 80,
  "claim": "0589a979-aff2-4721-a853-7730695accf3",
- "count": 0,
- "ok": false,
- "at": 1795078403158,
- "detail": "trade claimed"
+ "count": 80,
+ "ok": true,
+ "at": 1795078432502,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 80
+ },
+ "bank": {
+  "count": 80,
+  "at": 1795078428954
+ },
+ "logout": {
+  "attemptId": "1795078403166-0000019220-0000000001",
+  "at": 1795078432494,
+  "sha256": "5350a448ebe534a81bcad71963ad1b0dd14439895c049da39d9c2317ce060fa9"
+ },
+ "screen": true
 }
