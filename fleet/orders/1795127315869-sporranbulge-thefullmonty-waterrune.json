@@ -1,0 +1,22 @@
+{
+ "id": "1795127315869-sporranbulge-thefullmonty-waterrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "SporranBulge",
+ "to": "TheFullMonty",
+ "item": "Water rune",
+ "count": 130,
+ "start": 1795127315869,
+ "end": 1795129715869,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
