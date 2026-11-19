@@ -2,7 +2,7 @@ import { expect, spyOn, test } from 'bun:test';
 import { classify } from '../packages/practice/src/supervise-host';
 import { supervise } from '../packages/practice/src/supervise';
 import { DEFAULT_MAX_DEATHS, huntEnd, maxDeathsOf } from './pk-hunt';
-import { BOW_TRIP, EDGEVILLE_BANK, rekitAfterDeath, RESPAWN_TICKS, FOOD_LIST, foodHeld, healOf, planFood, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget, pickTrip, resolveHuntSpots, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
+import { kitToWear, BOW_TRIP, EDGEVILLE_BANK, rekitAfterDeath, RESPAWN_TICKS, FOOD_LIST, foodHeld, healOf, planFood, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget, pickTrip, resolveHuntSpots, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
 import { assessWildernessThreat, planWildernessEscape, restockPlan, restockPlanFromStock, slashWebThrough, WILDERNESS_ESCAPES, wildernessCombatMargin, wildernessDepth } from './pk-roam';
 import { pvpCombatBracket } from './aio-pvp';
 import * as pk from './pk';
@@ -470,13 +470,13 @@ test('restock with too little food in the bank fails and names the sharks that a
 });
 
 // A world for the death path: the account dies, respawns at Lumbridge with 1 Hitpoints and nothing worn, and the bank holds the rest.
-function deathWorld(bankRows: { id: number; count: number }[], o: { respawnAfter?: number; worn?: number[]; loseKit?: boolean } = {}) {
+function deathWorld(bankRows: { id: number; count: number }[], o: { respawnAfter?: number; worn?: number[]; loseKit?: boolean; kept?: number[] } = {}) {
     const wornAtStart = o.worn ?? [1163, 1201, 1231];
     const inventory: any[] = [], equipment: any[] = [], bank = bankRows.map(r => ({ ...r }));
     let tick = 0, deadSince = 0, eaten = 0, slots = 0;
     const player: any = { worldX: 3094, worldZ: 3540, combatLevel: 100, hp: 0, maxHp: 99, isDead: true, lifeId: 1 };
     const state: any = { player, inventory, equipment, skills: [], combatEvents: [], nearbyPlayers: [] };
-    const respawn = () => { Object.assign(player, { worldX: 3222, worldZ: 3218, hp: 1, isDead: false, lifeId: 2 }); if (o.loseKit) { equipment.length = 0; inventory.length = 0; } };
+    const respawn = () => { Object.assign(player, { worldX: 3222, worldZ: 3218, hp: 1, isDead: false, lifeId: 2 }); if (o.loseKit) { equipment.length = 0; inventory.length = 0; } for (const id of o.kept ?? []) inventory.push({ id, count: 1, slot: ++slots, name: 'Piece', optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] }); };
     const s: any = {
         tick: () => tick, ended: new Promise(() => {}), client: {},
         sdk: {
@@ -525,6 +525,21 @@ test('rekitAfterDeath waits for the new life, walks to the bank, wears the start
     expect(w.inventory.find(i => i.id === 385)?.count).toBe(1);
     expect(w.player.worldX).toBe(EDGEVILLE_BANK.x);
     expect(lines.some(l => l.startsWith('HUNT death {') && l.includes('"rekit":"ok"'))).toBe(true);
+});
+
+test('rekitAfterDeath wears the pieces that the death kept in the pack, and the ones from the bank', async () => {
+    // An unskulled account keeps its 3 priciest items: 1201 respawns in the pack and the bank holds the other two.
+    const w = deathWorld([{ id: 385, count: 20 }, { id: 1163, count: 1 }, { id: 1231, count: 1 }], { kept: [1201] });
+    const record = await withDeathMocks(w, () => rekitAfterDeath(w.s, { lifeBefore: 1, diedNear: null, wornAtStart: w.wornAtStart, stop: () => false, log: () => {} }));
+    expect(record).toMatchObject({ rekit: 'ok', missing: [] });
+    expect(w.equipment.map(e => e.id).sort()).toEqual([1163, 1201, 1231]);
+    expect(w.inventory.some(i => [1163, 1201, 1231].includes(i.id))).toBe(false);
+});
+
+test('kitToWear lists the pieces of the starting kit that the pack holds, once each', () => {
+    const kit = [{ id: 1163, count: 1 }, { id: 1201, count: 1 }, { id: 884, count: 100 }, { id: 1163, count: 1 }];
+    expect(kitToWear(kit, [{ id: 1201 }, { id: 385 }, { id: 884 }])).toEqual([1201, 884]);
+    expect(kitToWear(kit, [])).toEqual([]);
 });
 
 test('rekitAfterDeath names the pieces that the bank lacks, and ends with no food in the bank or no respawn', async () => {

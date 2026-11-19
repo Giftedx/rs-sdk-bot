@@ -577,7 +577,6 @@ test('the squad end line prints the kills of interlopers only when the threat wa
     expect(squadEnd({ ...base, interlopers: 0 }).detail).toContain(' attackerKills=0 ');
 });
 
-
 test('the hold loop wears the starting armour again after a fight that stripped it', async () => {
     const w = squadWorld();
     w.s.tick = () => 0;
@@ -614,4 +613,13 @@ test('squadFightOverrides: the plain settings for freezeArmour and protectItem, 
     expect(squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'off' }))).toEqual({ protectItem: false });
     expect(() => squadFightOverrides(env({ SQUAD_FREEZE_ARMOUR: 'bare' }))).toThrow('strip, torso or keep');
     expect(() => squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'yes' }))).toThrow('on, off or skulled');
+});
+
+test('a member that drops starts its rescue at once through onDrop, once', async () => {
+    const dropped = new Map<string, string>(), started: string[] = [];
+    const { onSessionEnd } = squadStopHandlers(() => {}, dropped, () => {}, name => started.push(name));
+    await onSessionEnd({ name: 'Alpha' } as any, 'connection lost');
+    await onSessionEnd({ name: 'Alpha' } as any, 'connection lost again');
+    await onSessionEnd({ name: 'Beta' } as any, 'stall');
+    expect(started).toEqual(['Alpha', 'Beta']);
 });
