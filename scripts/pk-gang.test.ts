@@ -1,7 +1,7 @@
 import { expect, spyOn, test } from 'bun:test';
 import * as walking from '../packages/core/src/walk';
 import * as pk from './pk';
-import { bankTrip, gangSummary, gangValid, packOf, pickAttacker, pickUp, plannedPickups, PICKUP_ITEMS, pickRunner, startsAttack, type GangResult } from './pk-gang';
+import { bankTrip, gangSummary, gangValid, packOf, pickAttacker, pickUp, plannedPickups, PICKUP_ITEMS, pickRunner, startsAttack, tripPrayerDue, type GangResult } from './pk-gang';
 import { PROFILES, sparOptions } from './pk-spar';
 import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, kitSwitches, kitVarps } from './pk-kits';
 import { benchCases, GANKER_POST } from './measure/aio-bench-cases';
@@ -256,4 +256,12 @@ test('the gang bank trip eats to within one piece of full with the food it holds
     expect(b.withdrawals).toEqual([{ id: 385, count: 23 }]);
     const c = await runBankTrip({ pack: [], bank: [{ id: 385, count: 2 }], hp: 99 });
     expect(c.withdrawals).toEqual([{ id: 385, count: 2 }]);
+});
+
+test('a trip restores Prayer only under 70 percent of the base level', () => {
+    expect(tripPrayerDue(69, 99)).toBe(true);
+    expect(tripPrayerDue(70, 99)).toBe(false);
+    expect(tripPrayerDue(0, 99)).toBe(true);
+    expect(tripPrayerDue(99, 99)).toBe(false);
+    expect(tripPrayerDue(0, 1)).toBe(false);
 });
