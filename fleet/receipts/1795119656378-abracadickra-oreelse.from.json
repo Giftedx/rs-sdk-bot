@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795119656378-abracadickra-oreelse",
+ "account": "Abracadickra",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 74267,
+ "claim": "ace450a5-9d81-4140-bb82-25eaa4f0c238",
+ "count": 0,
+ "ok": false,
+ "at": 1795119745992,
+ "detail": "trade claimed"
+}
