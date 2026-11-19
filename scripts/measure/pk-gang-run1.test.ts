@@ -22,10 +22,14 @@ test('the table gives the error of the bench mean against the live run', () => {
 });
 
 test('the fidelity band: a replay that goes soft by half again, hits no member or kills too little is refused', () => {
-    expect(run1Fidelity(log([74, 117, 0, 0], 3, [66, 33, 81]))).toBeNull();
-    // 15 Hitpoints a kill is soft: below the 28 of the band (half the live 56).
-    expect(run1Fidelity(log([20, 25, 0, 0], 3, [60, 60, 60]))).toContain('outside 28 to 112');
-    expect(run1Fidelity(log([300, 100, 0, 0], 3, [60, 60, 60]))).toContain('outside 28 to 112');
+    // The band is the two live runs: 33 Hitpoints a kill (run 3) to 56 (run 1), 2 to 4 members hit.
+    expect(run1Fidelity(log([60, 50, 0, 0], 3, [66, 33, 81]))).toBeNull();
+    // 15 Hitpoints a kill is soft: below the 33 of the band. 64 is hard.
+    expect(run1Fidelity(log([20, 25, 0, 0], 3, [60, 60, 60]))).toContain('outside 33 to 56');
+    expect(run1Fidelity(log([74, 117, 0, 0], 3, [66, 33, 81]))).toContain('outside 33 to 56');
+    expect(run1Fidelity(log([300, 100, 0, 0], 3, [60, 60, 60]))).toContain('outside 33 to 56');
+    // One member hit is below the 2 to 4 of the live runs.
+    expect(run1Fidelity(log([100, 0, 0, 0], 3, [60, 60, 60]))).toContain('members hit 1 outside 2 to 4');
     // One kill gives no verdict on the Hitpoints; no kill is a failure.
     expect(run1Fidelity(log([300, 85, 0, 0], 1, [60]))).toBeNull();
     expect(run1Fidelity(log([60, 60, 0, 0], 0, []))).toBe('no kill');

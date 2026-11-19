@@ -3,22 +3,23 @@
 //   bun scripts/measure/pk-gang-run1.ts live <squad log>               the measures of the live log
 //   bun scripts/measure/pk-gang-run1.ts table <live log> <case log> [...]   the table of a case at its seeds beside the live run
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-export type Run = { kills: number; taken: number; hpAKill: number | null; killTicks: number[]; meanKillTicks: number | null; takenBy: number[]; membersHit: number; deaths: number };
+export type Run = { kills: number; taken: number; hpAKill: number | null; killTicks: number[]; meanKillTicks: number | null; takenBy: number[]; membersHit: number; deaths: number; fights: number; killsPerFight: number | null };
 // The measures of one squad log. `takenBy` is the Hitpoints that each member lost, in the order of the SQUAD lines.
 export function parseSquadLog(text: string): Run {
-    const members = text.split(/\r?\n/).flatMap(l => { const i = l.indexOf('SQUAD {'); if (i < 0) return []; try { return [JSON.parse(l.slice(i + 6)) as { kills: number; taken: number; died?: boolean }]; } catch { return []; } });
+    const members = text.split(/\r?\n/).flatMap(l => { const i = l.indexOf('SQUAD {'); if (i < 0) return []; try { return [JSON.parse(l.slice(i + 6)) as { kills: number; taken: number; fights?: number; died?: boolean }]; } catch { return []; } });
     const killTicks = [...text.matchAll(/PK kill \S+ after (\d+) ticks/g)].map(m => Number(m[1]));
     const result = text.split(/\r?\n/).reverse().find(l => /RESULT (ok|fail)( died)? squad/.test(l)) ?? '';
     const num = (key: string) => Number(result.match(new RegExp(`${key}=(\\d+)`))?.[1] ?? 0);
     const kills = num('kills'), taken = num('taken'), takenBy = members.map(m => m.taken);
-    return { kills, taken, hpAKill: kills ? Math.round(taken / kills) : null, killTicks, meanKillTicks: killTicks.length ? Math.round(killTicks.reduce((a, b) => a + b, 0) / killTicks.length) : null, takenBy, membersHit: takenBy.filter(t => t > 0).length, deaths: num('died') };
+    return { kills, taken, hpAKill: kills ? Math.round(taken / kills) : null, killTicks, meanKillTicks: killTicks.length ? Math.round(killTicks.reduce((a, b) => a + b, 0) / killTicks.length) : null, takenBy, membersHit: takenBy.filter(t => t > 0).length, deaths: num('died'), fights: members.reduce((a, m) => a + (m.fights ?? 0), 0), killsPerFight: members.some(m => m.fights) ? Math.round((1000 * kills) / members.reduce((a, m) => a + (m.fights ?? 0), 0)) / 1000 : null };
 }
-// The fidelity band of the replay (scripts/pk-gang-record/run-1.json "fidelity"): a run of the replay lands in it, or the clones
-// have drifted from the live run. The band is wide on purpose: one live run is 5 kills, and the replay on one seed
-// has a spread of 50 to 385 Hitpoints a kill (a run with 1 kill and 385 Hitpoints is one of six). It stops a bench that goes
-// soft by half again, or hard by twice. A run needs 1 kill; the Hitpoints band applies to a run with 2 kills or more.
-export function run1Fidelity(text: string, band = { hpAKill: [28, 112], kills: 2, membersHit: [1, 4] } as { hpAKill: [number, number]; kills: number; membersHit: [number, number] }): string | null {
+// The fidelity band of the replay (scripts/pk-gang-record/run-1.json "fidelity"): the Hitpoints a kill and the members hit of the two
+// live squad runs, run 1 and run 3 (the lowest and the highest of the two, with their source numbers beside them). A run of the replay
+// lands in it, or the clones have drifted from the live runs. A run needs 1 kill; the Hitpoints band applies to a run with 2 kills or more.
+export const liveBand = () => (JSON.parse(readFileSync(join(import.meta.dir, '..', 'pk-gang-record', 'run-1.json'), 'utf8')).fidelity) as { hpAKill: [number, number]; kills: number; membersHit: [number, number] };
+export function run1Fidelity(text: string, band = liveBand()): string | null {
     const r = parseSquadLog(text);
     if (r.kills < 1) return 'no kill';
     if (r.kills >= band.kills && (r.hpAKill === null || r.hpAKill < band.hpAKill[0] || r.hpAKill > band.hpAKill[1])) return `Hitpoints a kill ${r.hpAKill} outside ${band.hpAKill.join(' to ')}`;

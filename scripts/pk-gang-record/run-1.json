@@ -320,14 +320,48 @@
  },
  "fidelity": {
   "hpAKill": [
-   28,
-   112
+   33,
+   56
   ],
   "kills": 2,
   "membersHit": [
-   1,
+   2,
    4
   ],
-  "note": "Live 56 Hitpoints a kill (5 kills), 2 members hit. The replay on 12 seeds: 3 kills at 64, 61 and 91 (run 44411582416); 273, 200 and 248 Hitpoints for 3 kills each (run 44414128854); and on six seeds 206, 385 (1 kill), 150, 257, 215 and 204 Hitpoints (run 44415206897). The band is 0.5 to 2 times the live Hitpoints a kill, for a run with 2 kills or more."
+  "live": {
+   "sources": [
+    ".practice/gang-hunt/squad-run-1.log (live run 1)",
+    ".practice/gang-hunt/squad-run-3.log (live run 3)",
+    "bun scripts/measure/pk-gang-run1.ts live <log>"
+   ],
+   "run1": {
+    "kills": 5,
+    "taken": 279,
+    "hpAKill": 56,
+    "fights": 20,
+    "killsPerFight": 0.25,
+    "meanKillTicks": 34,
+    "membersHit": 2,
+    "deaths": 0
+   },
+   "run3": {
+    "kills": 19,
+    "taken": 630,
+    "hpAKill": 33,
+    "fights": 88,
+    "killsPerFight": 0.216,
+    "meanKillTicks": 44,
+    "membersHit": 4,
+    "deaths": 0
+   },
+   "pooled": {
+    "kills": 24,
+    "taken": 909,
+    "hpAKill": 38,
+    "fights": 108,
+    "killsPerFight": 0.222
+   }
+  },
+  "note": "The band is the lowest and the highest of the two live runs: Hitpoints a kill 33 (run 3) to 56 (run 1), members hit 2 to 4. It applies to a replay run with 2 kills or more; a run with no kill fails. Kills a fight of the live runs: 0.25 and 0.216. The replay has no hand-made margin."
  }
 }
