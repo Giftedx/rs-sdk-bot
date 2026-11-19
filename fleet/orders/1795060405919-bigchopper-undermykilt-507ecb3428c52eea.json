@@ -1,0 +1,23 @@
+{
+ "id": "1795060405919-bigchopper-undermykilt-507ecb3428c52eea",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "UnderMyKilt",
+ "item": "Rune arrow",
+ "count": 55,
+ "start": 1795060405919,
+ "end": 1795071205919,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
