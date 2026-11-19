@@ -265,6 +265,11 @@ export async function eatUp(s: Session, stop: () => boolean): Promise<number> {
     }
     return s.sdk.getState()?.player?.hp ?? 0;
 }
+// The ids of the pieces of the starting kit that are in the pack, once each, in the order of the kit.
+export function kitToWear(wornAtStart: readonly ItemCount[], inventory: readonly { id: number }[]): number[] {
+    const inPack = new Set(inventory.map(i => i.id));
+    return [...new Set(wornAtStart.map(p => p.id))].filter(id => inPack.has(id));
+}
 // After a death: wait for the new life, walk to the bank, take sharks and the pieces that the account wore when the hunt began
 // (what the bank holds), wear them and eat up from 1 Hitpoints. The caller then restocks the trip. A piece that the bank lacks
 // is named in `missing`: the trip check of the restock ends the run when the trip cannot be filled.
@@ -316,7 +321,9 @@ export async function rekitAfterDeath(s: Session, o: { lifeBefore: number | unde
         if (await take(piece.id, Math.max(1, piece.count)) > 0) taken.push(piece.id); else record.missing.push(piece.id);
     }
     await s.bot.closeBank();
-    for (const id of taken) {
+    // Every piece of the starting kit that the pack holds goes on, the ones taken from the bank and the ones that the death kept
+    // (an unskulled account keeps its 3 priciest items, and they respawn in the pack): a trip restock banks the whole pack.
+    for (const id of kitToWear(o.wornAtStart, s.sdk.getInventory())) {
         const item = s.sdk.getInventory().find(i => i.id === id), op = item?.optionsWithIndex?.find(x => WEAR_OPTION.test(x.text));
         if (item && op) { await s.sdk.sendUseItem(item.slot, op.opIndex); await nextTick(s); }
     }
