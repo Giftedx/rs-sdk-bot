@@ -1231,6 +1231,12 @@ const ROUTE_CASES: BenchCase[] = [
   ...([['mage', 'mage', 1], ['ranger', 'ranger', 1], ['spear', 'tribrid-spear-dds', 1], ['team3', 'mage+ranger+tribrid-snare', 3], ['team5', 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5]] as const)
     .flatMap(([tag, kit, n]) => ([['off', false], ['radar', true]] as const).flatMap(([r, radar]) => ([['', true], ['noprayer-', false]] as const)
       .map(([p, prayer]) => threatCase(`extra:threat-${tag}-${r}-${p}x1`, kit, n, {radar, prayer})))),
+  // The climb of the radar's fight-or-flight constants (scripts/pk-squad.ts SQUAD_THREAT_LOSE, _PROTECT, _PILE, _THEIR_FOOD, and _ODDS=0 for the
+  // counting rules): the third-party cases with the radar on and one constant changed from its default, full prayer points.
+  ...([['team3', 'mage+ranger+tribrid-snare', 3], ['team5', 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5], ['ranger', 'ranger', 1]] as const)
+    .flatMap(([tag, kit, n]) => ([['base', []], ['odds0', ['SQUAD_THREAT_ODDS=0']], ['lose07', ['SQUAD_THREAT_LOSE=0.7']], ['lose11', ['SQUAD_THREAT_LOSE=1.1']], ['prot04', ['SQUAD_THREAT_PROTECT=0.4']],
+      ['prot08', ['SQUAD_THREAT_PROTECT=0.8']], ['pile05', ['SQUAD_THREAT_PILE=0.5']], ['pile09', ['SQUAD_THREAT_PILE=0.9']], ['food5', ['SQUAD_THREAT_THEIR_FOOD=5']], ['food20', ['SQUAD_THREAT_THEIR_FOOD=20']]] as const)
+      .map(([v, args]) => threatCase(`extra:threat-${tag}-fof-${v}-x1`, kit, n, {radar: true, prayer: true, args: [...args]}))),
   run1Squad('extra:clone-run1-noeat-x1', {prayer: false, prey: '0,1,0', gang: {eatAt: 0}}),
   run1Squad('extra:clone-run1-nopray-x1', {prayer: false, prey: '0,1,0', gang: {prayerLag: [0, 0, 0, 0, 0, 0, 0, 0, 1]}}),
   // The antipoison: five of ours in the kit, with a potion on the first two members, on the first one, on none
