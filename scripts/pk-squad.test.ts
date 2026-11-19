@@ -4,7 +4,7 @@ import * as pk from './pk';
 import { maxDeathsOf } from './pk-hunt';
 import { bankNear, isKillLine, leaveWilderness, openSquad, outTripDue, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
-import { hold, squadEnd } from './pk-squad';
+import { hold, squadEnd, squadFightOverrides } from './pk-squad';
 import { newWatch, readLine } from './squad-watch';
 import { classify } from '../packages/practice/src/supervise-host';
 import { supervise } from '../packages/practice/src/supervise';
@@ -497,4 +497,15 @@ test('the hold loop wears the starting armour again after a fight that stripped 
         expect(w.equipment.map(e => e.id)).toContain(1163);
         expect(w.inventory.map(e => e.id)).not.toContain(1163);
     } finally { for (const mock of mocks) mock.mockRestore(); }
+});
+
+test('squadFightOverrides: the plain settings for freezeArmour and protectItem, and a fail for a value that is not listed', () => {
+    const env = (values: Record<string, string>) => (name: string, fallback: string) => values[name] ?? fallback;
+    expect(squadFightOverrides(env({}))).toEqual({});
+    expect(squadFightOverrides(env({ SQUAD_FREEZE_ARMOUR: 'torso' }))).toEqual({ freezeArmour: 'torso' });
+    expect(squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'skulled' }))).toEqual({ protectItem: 'skulled' });
+    expect(squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'on', SQUAD_FREEZE_ARMOUR: 'keep' }))).toEqual({ protectItem: true, freezeArmour: 'keep' });
+    expect(squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'off' }))).toEqual({ protectItem: false });
+    expect(() => squadFightOverrides(env({ SQUAD_FREEZE_ARMOUR: 'bare' }))).toThrow('strip, torso or keep');
+    expect(() => squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'yes' }))).toThrow('on, off or skulled');
 });
