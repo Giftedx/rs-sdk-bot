@@ -596,9 +596,31 @@ Planner: row `grandtree` 2,001 / 2,083 MEASURED (also in the `rival-grandtree-ag
 |---|---|---|
 | Grand Tree MEASURED (2,001 / 2,083) | 39,981 | 44,841 |
 
-Still open: the root search is random (1-13 roots, 12-139 ticks); a better tour from the trapdoor (search before
-Narnode is not possible, the root is set at 150) is not tried. The walk to Narnode is not counted. The preset has
-10 HP; the planner does not model Hitpoints.
+### Dialogue bursts and the root tour (MEASURED practice)
+
+Claim: dialogue bursts and the least-mean root tour cut the route-state case from 1,746 / 1,659 / 1,626 to 1,583 /
+1,552 / 1,558 ticks. Conditions: hosted lockstep bench, `bun scripts/hosted-bench.ts 'extra:grandtree-route-state'
+--seeds 7,8,9`; runs 44486444182 (master `7857c9fc62`), 44487057733 (master with `--set Q_BURST=1`) and 44487747402
+(`openQuest({burst: true})` and the new tour). Evidence, ticks to the demon / to stage 150 / total:
+
+| Run | Seed 7 | Seed 8 | Seed 9 |
+|---|---|---|---|
+| Before | 1,334 / 1,564 / 1,746 | 1,336 / 1,576 / 1,659 | 1,338 / 1,578 / 1,626 |
+| Bursts, east-first tour | 1,252 / 1,527 / 1,623 | 1,248 / 1,476 / 1,655 | 1,255 / 1,492 / 1,673 |
+| Bursts, least-mean tour | 1,252 / 1,527 / 1,583 | 1,248 / 1,476 / 1,552 | 1,255 / 1,492 / 1,558 |
+
+- Bursts: dialog ticks 283-292 -> 124-128; 82-90 ticks less to the demon at every seed. The roll of the root and
+  the demon casts (30-40 Fire Bolts) follow from the timing, so the totals of the burst-only run moved both ways.
+- The root tour: the bursts runs share each seed's roll; stage 150 to the rock fell from 77 / 152 / 160 ticks to
+  36 / 50 / 45. `random_range(1, 15)` is `randominc`, every root equally likely; the varp has no `transmit`.
+  `scripts/measure/grandtree-roots-tour.ts`: mean 61.7 ticks against 71.9 for the east-first tour, worst case 148.
+- What does not go faster: the stronghold spirit tree needs the quest done (`spirit_tree.rs2` `oploc1,ent`); the
+  glider map opens only after the quest; no Agility boost exists for the Agility 25 climb (`stat(agility)`); Magic 45
+  gives no teleport near Hazelmere (Ardougne Teleport needs 51 and Plague City). The demon-to-Narnode walk in the
+  roots is 101 tiles of cave path (`findLongPath`), not a detour.
+
+Gap: three seeds are three rolls of the root and the demon. The walk to Narnode is not counted. The preset has 10 HP;
+the planner does not model Hitpoints.
 
 ## 1h. Monkey Madness (the `rival-mm` row): MEASURED end to end on practice
 

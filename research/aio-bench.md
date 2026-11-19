@@ -131,7 +131,7 @@ keeps last-run estimates. It is not a receipt ledger for concurrent writes to di
 | `crest` | `crest` | 1,040 | 1,078 | 1,036 |
 | `waterfall` | `waterfall` | 1,112 | 1,101 | 1,103 |
 | `tree` | `tree` | 734 | 639 | 653 |
-| `grandtree` | `extra:grandtree-route-state` | 1,746 | 1,659 | 1,626 |
+| `grandtree` | `extra:grandtree-route-state` | 1,583 | 1,552 | 1,558 |
 | `plague-city` | `elena` | 430 | 423 | 453 |
 | `doric` | `doric` | 18 | 18 | 18 |
 | `druid` | `druid` | 208 | 208 | 208 |
