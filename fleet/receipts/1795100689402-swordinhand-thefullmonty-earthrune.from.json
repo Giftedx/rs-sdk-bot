@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795100689402-swordinhand-thefullmonty-earthrune",
  "account": "Swordinhand",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Earth rune",
  "requested": 10,
  "claim": "563a955e-ee28-4909-86b9-68a38ce686aa",
- "count": 0,
- "ok": false,
- "at": 1795100721258,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795100785865,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 10,
+  "after": 0
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795100768335
+ },
+ "logout": {
+  "attemptId": "1795100721266-0000019504-0000000001",
+  "at": 1795100785853,
+  "sha256": "9a501f7832a556f876178955ad4665ba317a53646585a1c8dc1f7ffb1cfb5f58"
+ },
+ "screen": true
 }
