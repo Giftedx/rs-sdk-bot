@@ -1,0 +1,22 @@
+{
+ "id": "1795127714559-magicwanda-bigchopper",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Magicwanda",
+ "to": "Bigchopper",
+ "item": "coins",
+ "count": 9787,
+ "start": 1795127714559,
+ "end": 1795130114559,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
