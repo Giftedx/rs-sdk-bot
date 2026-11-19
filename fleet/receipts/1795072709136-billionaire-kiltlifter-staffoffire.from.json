@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795072709136-billionaire-kiltlifter-staffoffire",
+ "account": "Billionaire",
+ "partner": "Kiltlifter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "906de6cf-c2b2-45a4-9edc-4389688659cd",
+ "count": 1,
+ "ok": true,
+ "at": 1795072805139,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795072797977
+ },
+ "logout": {
+  "attemptId": "1795072792605-0000027332-0000000001",
+  "at": 1795072805128,
+  "sha256": "061c1528be3a18b909b06e7992fcfa5af3b3beb32949bdcce184e7c8183ffbee"
+ },
+ "screen": true
+}
