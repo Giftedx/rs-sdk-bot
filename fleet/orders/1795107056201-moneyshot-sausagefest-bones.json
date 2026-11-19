@@ -1,0 +1,22 @@
+{
+ "id": "1795107056201-moneyshot-sausagefest-bones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Moneyshot",
+ "to": "Sausagefest",
+ "item": "Bones",
+ "count": 31,
+ "start": 1795107056201,
+ "end": 1795109456201,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
