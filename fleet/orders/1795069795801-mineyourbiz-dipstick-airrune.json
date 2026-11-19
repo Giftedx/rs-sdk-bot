@@ -1,0 +1,22 @@
+{
+ "id": "1795069795801-mineyourbiz-dipstick-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "Dipstick",
+ "item": "Air rune",
+ "count": 80,
+ "start": 1795069795801,
+ "end": 1795072195801,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

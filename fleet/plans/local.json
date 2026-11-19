@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795069616491,
+ "at": 1795069806111,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -224,55 +224,6 @@
    ]
   },
   {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 3000 lobster"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "Catherby lobsters, caught and cooked",
-   "role": "fishing",
-   "template": "lobster-chain",
-   "autopilot": "local",
-   "resources": [
-    "catherby:lobster"
-   ]
-  },
-  {
-   "account": "BraveHardon",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "lowe",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "iron arrow",
-    "STOCK_TARGET": "2000",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "12200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "12000",
-    "AUTOPILOT_ORDER": "[0]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"884\":2000}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy iron arrows at Lowe's in Varrock for the gang squad",
-   "role": "bank",
-   "template": "squad-arrows-lowe",
-   "autopilot": "local",
-   "resources": [
-    "shop:lowe"
-   ]
-  },
-  {
    "account": "TossTheCaber",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -333,33 +284,32 @@
    ]
   },
   {
-   "account": "Unsheathed",
+   "account": "Masterbaiter",
    "script": "scripts/shop-buyer.ts",
    "args": [
-    "catherby_arrows",
+    "dargaud",
     "1200"
    ],
    "env": {
-    "ITEMS": "iron arrow",
-    "STOCK_TARGET": "2812",
+    "ITEMS": "rune arrow",
+    "STOCK_TARGET": "400",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
-    "FLOAT": "12200",
+    "FLOAT": "320200",
     "COIN_RESERVE": "200",
-    "MAX_SPEND": "12000",
-    "AUTOPILOT_ORDER": "[812]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"884\":2812}}"
+    "MAX_SPEND": "320000",
+    "AUTOPILOT_ORDER": "[0]"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy iron arrows at Hickton's in Catherby for the gang squad",
+   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
    "role": "bank",
-   "template": "squad-arrows-catherby",
+   "template": "squad-arrows-dargaud",
    "autopilot": "local",
    "resources": [
-    "shop:catherby_arrows"
+    "shop:dargaud"
    ]
   },
   {
@@ -384,6 +334,33 @@
    "resources": [
     "fighter:wizards-tower",
     "aio:water-altar"
+   ]
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
    ]
   }
  ],
