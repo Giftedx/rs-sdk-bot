@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795098198627-billionaire-undermykilt-waterrune",
  "account": "Billionaire",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 215,
  "claim": "6347b6dc-3d5a-46d9-8797-4e3294352b01",
- "count": 0,
- "ok": false,
- "at": 1795098267691,
- "detail": "trade claimed"
+ "count": 215,
+ "ok": true,
+ "at": 1795098279938,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 215,
+  "after": 0
+ },
+ "bank": {
+  "count": 215,
+  "at": 1795098273561
+ },
+ "logout": {
+  "attemptId": "1795098267699-0000020284-0000000001",
+  "at": 1795098279922,
+  "sha256": "dcaa97139730a9c56f02089f7b44113d61f84f52f33f89ce269e9402c1207666"
+ },
+ "screen": true
 }
