@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795131524479-sporrandip-knightrider-runechainbody",
  "account": "KnightRider",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "d48ba016-e486-4dfd-88c7-84887ee6579a",
- "count": 0,
- "ok": false,
- "at": 1795131589762,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795131609433,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795131608674
+ },
+ "logout": {
+  "attemptId": "1795131589772-0000007192-0000000001",
+  "at": 1795131609423,
+  "sha256": "767e17cbf793b449ae33ca488c0607c64dc822b44d8595500b4b3046b92e4aca"
+ },
+ "screen": true
 }
