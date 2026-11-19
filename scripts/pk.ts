@@ -668,20 +668,25 @@ export async function rewearStart(s: Session, start: readonly number[], log: (li
 
 // Poison. The server prints "You have been poisoned!" only when the poison was at 0 (poison.rs2 poison_player), so a poison that carries into the next fight, or one that is
 // renewed while it runs, gives no message. Its damage is a hitsplat of type hitmark_poison (2, hitmark.constant), which the client keeps for the own player
-// (ClientEntity damageTypes): ownPoisonHit reads it. A hit comes each 30 ticks (the poison timer), so the state holds POISON_HOLD ticks after its last sign and is
-// carried between fights of one account (poisonCarry).
+// (ClientEntity damageTypes): poisonSplat reads it. A hit comes each 30 ticks (the poison timer), so the state holds POISON_HOLD ticks after its last sign and is
+// carried between fights of one account (poisonCarry). The client shows a hitsplat for 70 cycles (ClientEntity.ts: damageCycles = loopCycle + 70), about 2.3 ticks, so one
+// splat is on screen for 3 ticks: a splat counts once, by its end cycle (poisonSplat returns it), or a cure on the first tick would be undone by the same splat on the next.
 export const POISON_HITMARK = 2, POISON_HOLD = 40;
-export function ownPoisonHit(client: unknown): boolean {
+export function poisonSplat(client: unknown): number {
     const c = client as { localPlayer?: { damageTypes?: ArrayLike<number>; damageCycles?: ArrayLike<number> }; getClientCycle?: () => number } | undefined;
     const p = c?.localPlayer;
-    if (!p?.damageTypes || !p.damageCycles || typeof c?.getClientCycle !== 'function') return false;
+    if (!p?.damageTypes || !p.damageCycles || typeof c?.getClientCycle !== 'function') return 0;
     const cycle = c.getClientCycle();
-    for (let i = 0; i < 4; i++) if (p.damageTypes[i] === POISON_HITMARK && (p.damageCycles[i] ?? 0) > cycle) return true;
-    return false;
+    let end = 0;
+    for (let i = 0; i < 4; i++) if (p.damageTypes[i] === POISON_HITMARK && (p.damageCycles[i] ?? 0) > cycle) end = Math.max(end, p.damageCycles[i]!);
+    return end;
 }
-const poisonCarry = new WeakMap<object, { poisoned: boolean; seenAt: number }>();
+export const ownPoisonHit = (client: unknown): boolean => poisonSplat(client) > 0;
+const poisonCarry = new WeakMap<object, { poisoned: boolean; seenAt: number; splat: number }>();
 export const carriedPoison = (client: unknown, now: number): boolean => { const c = typeof client === 'object' && client ? poisonCarry.get(client) : undefined; return !!c && c.poisoned && now - c.seenAt <= POISON_HOLD; };
-export function noteFightPoison(client: unknown, poisoned: boolean, seenAt: number): void { if (typeof client === 'object' && client) poisonCarry.set(client, { poisoned, seenAt }); }
+// The end cycle of the last splat that a fight used, so that the next fight does not count it again.
+export const carriedSplat = (client: unknown): number => (typeof client === 'object' && client ? poisonCarry.get(client)?.splat ?? 0 : 0);
+export function noteFightPoison(client: unknown, poisoned: boolean, seenAt: number, splat = 0): void { if (typeof client === 'object' && client) poisonCarry.set(client, { poisoned, seenAt, splat }); }
 
 // The reasons that let a special go, for its log line: the flee state, the bow burst, the volley, the stun chain, a health bar under the weapon's threshold.
 export const specReasons = (r: { fled: boolean; bursting: boolean; volleying: boolean; chainStun: boolean; low: boolean }) =>
@@ -1001,7 +1006,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     let last = -1, nextAttack = start, lastAttackAt = -10, lastWalkTicks = 0, hasAttacked = false, delayedUntil = start;
     let foodReady = Math.max(start, guardFoodReady), karambwanReady = start, potionReady = start;
     let freezeReady = start, frozenUntil = start, freezeCastAt = -10, freezeDur = 0, lastSpot = -1, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
-    let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = carriedPoison(s.client, start), poisonSeenAt = start, rapidSet = false, pjedByNpc = false;
+    let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = carriedPoison(s.client, start), poisonSeenAt = start, splatUsed = carriedSplat(s.client), rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, gloryOffAt = -10, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
     const predictor = new StylePredictor();
     let oppStyle: Style | null = null, oppChangedAt = start, earlyFreezes = 0;
@@ -1332,8 +1337,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // Drinking a potion triggers p_delay(1) in processClientsIn (consume_effects.rs2:167), blocking client input on
         // now+1 and now+2 (ready on now+3). Drink non-emergency potions only when now+3 <= nextAttack.
         // The poison hitsplat on us is the sign that the message does not give (a carried or renewed poison); the state ends POISON_HOLD ticks after its last sign.
-        if (ownPoisonHit(s.client)) { poisoned = true; poisonSeenAt = now; } else if (poisoned && now - poisonSeenAt > POISON_HOLD) poisoned = false;
-        noteFightPoison(s.client, poisoned, poisonSeenAt);
+        const splat = poisonSplat(s.client);
+        if (splat > splatUsed) { poisoned = true; poisonSeenAt = now; splatUsed = splat; } else if (poisoned && now - poisonSeenAt > POISON_HOLD) poisoned = false;
+        noteFightPoison(s.client, poisoned, poisonSeenAt, splatUsed);
         if (!castShield && now >= potionReady && (prayers.prayerPoints <= 5 || now + 3 <= nextAttack || (cureNow && poisoned && !!slotOf(ITEMS.antipoison)))) {
             let potion = prayers.prayerPoints <= restoreAt ? slotOf([...ITEMS.prayerPotion, ...ITEMS.superRestore]) : undefined;
             if (!potion && poisoned) {

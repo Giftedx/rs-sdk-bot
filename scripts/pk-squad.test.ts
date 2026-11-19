@@ -4,7 +4,8 @@ import * as pk from './pk';
 import { maxDeathsOf } from './pk-hunt';
 import { bankNear, isKillLine, leaveWilderness, openSquad, outTripDue, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
-import { hold, squadEnd, squadFightOverrides } from './pk-squad';
+import { hold, SQUAD_OPTS, squadEnd, squadFightOverrides } from './pk-squad';
+import { sparOptions } from './pk-spar';
 import { newWatch, readLine } from './squad-watch';
 import { classify } from '../packages/practice/src/supervise-host';
 import { supervise } from '../packages/practice/src/supervise';
@@ -622,4 +623,10 @@ test('a member that drops starts its rescue at once through onDrop, once', async
     await onSessionEnd({ name: 'Alpha' } as any, 'connection lost again');
     await onSessionEnd({ name: 'Beta' } as any, 'stall');
     expect(started).toEqual(['Alpha', 'Beta']);
+});
+
+test('the early check of the members options: the defaults pass with an empty kit, an unknown profile and bad JSON throw', () => {
+    expect(() => sparOptions('gang-hunter', JSON.stringify(SQUAD_OPTS), {}, 1200)).not.toThrow();
+    expect(() => sparOptions('no-such-profile', JSON.stringify(SQUAD_OPTS), {}, 1200)).toThrow('unknown profile');
+    expect(() => sparOptions('gang-hunter', '{bad', {}, 1200)).toThrow();
 });

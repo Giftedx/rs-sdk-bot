@@ -1858,17 +1858,17 @@ change the weapon, and it waits for the end of a fight. `scripts/measure/pk-gang
 
 Source: the review of the kill receipts of the third live run, checked in the code. Each claim below was read in the code before the fix.
 
-- **A dying target.** `lowHealth` is true at a health bar of 0, so a special, a freeze or a bind went into a target that was already dead. `isDying` (`scripts/pk.ts`,
-  health bar 0 with a total above 0) now stops the freeze cast, the secondary stun, the special and the bow burst. Proof: `scripts/pk.test.ts` (the helper).
+- **A dying target.** `lowHealth` is true at a health bar of 0, so without a guard a special, a freeze or a bind goes into a target that is already dead. `isDying` (`scripts/pk.ts`,
+  health bar 0 with a total above 0) stops the freeze cast, the secondary stun, the special and the bow burst. Proof: `scripts/pk.test.ts` (the helper).
   Gap: the fight loop's use of it is not run by a test of its own.
 - **The armour that a freeze strips.** The strip adds the platelegs and the full helm to `tankIds`, which lives in one fight; the next fight's set holds only the plate
-  and chain bodies, so they stayed in the pack. `rewearStart` (`scripts/pk.ts`) wears again, after each fight of the squad's hold loop and of the hunt, the armour that
+  and chain bodies, so the stripped pieces stay in the pack. `rewearStart` (`scripts/pk.ts`) wears again, after each fight of the squad's hold loop and of the hunt, the armour that
   the account wore at the start and that sits in the pack with its slot empty. It leaves the weapon and the shield alone (a shield would unwield a two-handed
   weapon). Proof: `scripts/pk.test.ts` and the hold-loop test in `scripts/pk-squad.test.ts`.
 - **The attack styles of the radar.** `attackStyleOfAnim` (`scripts/pk-threat.ts`) reads the style of an animation from the content: the stab, slash and crush animations
   of every weapon object under `scripts/skill_combat/configs` (such as `human_ddagger_lunge` 376 and `human_ddagger_hack` 377) are melee, and the special attack
   animations of `scripts/skill_combat/scripts/pvp/specs/scripts/pvp_<weapon>.rs2` take the style of their weapon: `puncture` 1062, `cleave` 1058, `shove` 1064 and
-  `dragon_halberd_special_attack` 1203 are melee, `snapshot` 1074 and `chainhit` 1068 are ranged. Before, the name rules gave null for all of them.
+  `dragon_halberd_special_attack` 1203 are melee, `snapshot` 1074 and `chainhit` 1068 are ranged. The name rules of an animation give null for all of them.
 - **The freeze share.** `SQUAD_FREEZE_SHARE=1` gives each target one shared freeze clock with a stagger of `SQUAD_FREEZE_STAGGER` ticks (default 3), so that members do not cast Bind on
   the same tick. Off by default until the bench says otherwise.
 
@@ -1876,13 +1876,16 @@ Source: the review of the kill receipts of the third live run, checked in the co
 
 Each claim was read in the code, the content and the log of the third live run (`.practice/gang-hunt/squad-run-3.log`) before the fix.
 
-- **The flee latch.** `fled` is set when the target moves and the gap grows past 2 tiles, and it bypassed the special's health threshold, the energy reserve, the bow burst and the stun spec for the
-  rest of the fight. `fledEnds` (`scripts/pk.ts`) ends it when the flee hold has run out (6 ticks with no step away), no freeze holds the target and it stands within 2 tiles. The log of run 3 does not show
+- **The flee latch.** `fled` is set when the target moves and the gap grows past 2 tiles, and it bypasses the special's health threshold, the energy reserve, the bow burst and the stun spec until it
+  ends. `fledEnds` (`scripts/pk.ts`) ends it when the flee hold has run out (6 ticks with no step away), no freeze holds the target and it stands within 2 tiles. A caster or an archer that stands
+  farther than 2 tiles keeps `fled` for the rest of the fight, so a special can still go by `fled` against it. The log of run 3 does not show
   which path fired the specials at full health (99/99, 91/99, 87/99, 75/99): its line prints the special bar's on state, and the first flee-only line comes later. Each special line now ends with its
   reasons (`by fled+low`, from `specReasons`: `fled`, `burst`, `volley`, `chain`, `low`; `none` when no rule allowed it), so the next log names the path.
-- **Poison across fights.** The server prints "You have been poisoned!" only when the poison was at 0 (`poison.rs2`), so a poison that carries into the next fight, or one that is renewed while it runs, gave no
-  message and was never cured. Its damage is a hitsplat of type `hitmark_poison` (2), which the client keeps for the own player. `ownPoisonHit` reads it; the state holds 40 ticks after its last sign (the
-  poison timer is 30 ticks) and is carried between the fights of one account (`carriedPoison`, `noteFightPoison`).
+- **Poison across fights.** The server prints "You have been poisoned!" only when the poison was at 0 (`poison.rs2`), so a poison that carries into the next fight, or one that is renewed while it runs, gives no
+  message, and a loop that waits for the message never cures it. Its damage is a hitsplat of type `hitmark_poison` (2), which the client keeps for the own player for 70 cycles (`ClientEntity.ts`:
+  `damageCycles = loopCycle + 70`, about 2.3 ticks, so 3 ticks on screen). `poisonSplat` returns the end cycle of the showing splat and the loop counts a splat once, by that cycle (`splatUsed`): the same splat on the
+  tick after a cure does not set the poison again. The state holds 40 ticks after its last new splat (the poison timer is 30 ticks) and is carried, with the last used splat, between the fights of one account
+  (`carriedPoison`, `carriedSplat`, `noteFightPoison`).
 - **The protect prayer switch.** Turning a protect prayer on turns the other two off on the server (`prayer.rs2` `prayer_activate` calls `prayer_deactivate_conflicting`; each protect prayer lists the other
   two in `prayers.dbrow`). `holdProtect` sends only the wanted one; switching the old one off first cost another 3 ticks.
 - **The rune knife** (measured, not changed). `knives.obj` `[rune_knife]`: `param=attackrate,3`, `attackrange,4`, ranged 40; the rapid style subtracts 1 (`pvp_ranged.rs2:20-22`), so it is a 2-tick weapon on rapid

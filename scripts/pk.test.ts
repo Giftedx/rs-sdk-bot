@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import {
     attackable, battleaxeWarcryMath, bestDamageSpell, bestFood, canCastChargeNow, castableFreeze, chargeVarpTicks, combatPrayers, dangerReason, defaultSpec, defaultStunSpec,
-    estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, isDying, ITEMS, killMessage, lowHealth, rewearStart, carriedPoison, fledEnds, noteFightPoison, ownPoisonHit, POISON_HOLD, specReasons,
+    estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, isDying, ITEMS, killMessage, lowHealth, rewearStart, carriedPoison, carriedSplat, fledEnds, noteFightPoison, ownPoisonHit, poisonSplat, POISON_HOLD, specReasons,
     kitRotation, meleeWeaponDelay, negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, pickFakieWeapon,
     deathRisk, itemCostOf, ownSkull,
     pickFrozenKiteTile, pickWeighted, planPrayerTick, PRAYER, protectedStyles, seededRandom, shouldComboEat, skulled,
@@ -1162,4 +1162,16 @@ test('ownPoisonHit reads a poison hitsplat (type 2) that is still showing on the
     expect(carriedPoison(key, 70)).toBe(false);
     expect(carriedPoison({}, 70)).toBe(false);
     expect(carriedPoison(undefined, 70)).toBe(false);
+    // The splat is returned by its end cycle, so that a loop counts it once: a splat that ends at 170 is the same one at cycle 100, 130 and 160 and a new one ends later.
+    expect(poisonSplat(client([2, 0, 0, 0], [170, 0, 0, 0], 100))).toBe(170);
+    expect(poisonSplat(client([2, 0, 0, 0], [170, 0, 0, 0], 160))).toBe(170);
+    expect(poisonSplat(client([2, 0, 0, 0], [170, 0, 0, 0], 170))).toBe(0);
+    expect(poisonSplat(client([2, 2, 0, 0], [170, 260, 0, 0], 100))).toBe(260);
+    expect(poisonSplat(client([1, 0, 0, 0], [170, 0, 0, 0]))).toBe(0);
+    // The splat that a fight used is carried to the next fight.
+    const k2 = {};
+    noteFightPoison(k2, false, 60, 170);
+    expect(carriedSplat(k2)).toBe(170);
+    expect(carriedSplat({})).toBe(0);
+    expect(carriedSplat(undefined)).toBe(0);
 });
