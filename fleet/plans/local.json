@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795113242627,
+ "at": 1795113706635,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -366,6 +366,28 @@
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "536",
+    "QUANTITY": "290",
+    "EXPECTED_OWNED": "5",
+    "LIMIT_PRICE": "7300",
+    "CASH_RESERVE": "5000",
+    "ORDER_MS": "1200000",
+    "ORDER_KEY": "prayer99-billionaire-dragonbones290",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-054fa1eb-e8a4-45c4-b696-8bc85be6b103"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-buy-billionaire-dragon-bones-290 [task-054fa1eb-e8a4-45c4-b696-8bc85be6b103]",
+   "role": "supply"
   }
  ],
  "army": [
