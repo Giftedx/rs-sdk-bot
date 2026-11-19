@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795102622834,
+ "at": 1795102698871,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -340,6 +340,28 @@
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "536",
+    "QUANTITY": "273",
+    "EXPECTED_OWNED": "6",
+    "LIMIT_PRICE": "7300",
+    "CASH_RESERVE": "5000",
+    "ORDER_MS": "1200000",
+    "ORDER_KEY": "prayer99-sporrandip-dragonbones273",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-93efeedc-f750-40d6-bfbb-01aed1d4b2d3"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-buy-sporrandip-dragon-bones-273-funded [task-93efeedc-f750-40d6-bfbb-01aed1d4b2d3]",
+   "role": "supply"
   }
  ],
  "army": [
@@ -378,8 +400,7 @@
   "kiltlifter",
   "knightrider",
   "knightstick",
-  "quickhandjob",
-  "sporrandip"
+  "quickhandjob"
  ],
  "builds": {
   "NabTheKnob": "tribrid",
