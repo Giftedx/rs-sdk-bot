@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795097465895,
+ "at": 1795097516535,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -351,26 +351,6 @@
    "resources": [
     "splash:ardougne-cow-fence"
    ]
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BONE_ID": "536",
-    "MAX_BURY": "255",
-    "BONE_RESERVE": "6",
-    "CAP": "3000",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "COORDINATOR_RUN_ID": "task-8cb87198-ca89-4ef5-a9de-091ca6f64f56"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-prayer-pickpockdick-99 [task-8cb87198-ca89-4ef5-a9de-091ca6f64f56]",
-   "role": "helper"
   },
   {
    "account": "Hocuspokeus",
