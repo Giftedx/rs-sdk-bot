@@ -1872,6 +1872,22 @@ Source: the review of the kill receipts of the third live run, checked in the co
 - **The freeze share.** `SQUAD_FREEZE_SHARE=1` gives each target one shared freeze clock with a stagger of `SQUAD_FREEZE_STAGGER` ticks (default 3), so that members do not cast Bind on
   the same tick. Off by default until the bench says otherwise.
 
+## Fight fixes from review waves 9 and 10
+
+Each claim was read in the code, the content and the log of the third live run (`.practice/gang-hunt/squad-run-3.log`) before the fix.
+
+- **The flee latch.** `fled` is set when the target moves and the gap grows past 2 tiles, and it bypassed the special's health threshold, the energy reserve, the bow burst and the stun spec for the
+  rest of the fight. `fledEnds` (`scripts/pk.ts`) ends it when the flee hold has run out (6 ticks with no step away), no freeze holds the target and it stands within 2 tiles. The log of run 3 does not show
+  which path fired the specials at full health (99/99, 91/99, 87/99, 75/99): its line prints the special bar's on state, and the first flee-only line comes later. Each special line now ends with its
+  reasons (`by fled+low`, from `specReasons`: `fled`, `burst`, `volley`, `chain`, `low`; `none` when no rule allowed it), so the next log names the path.
+- **Poison across fights.** The server prints "You have been poisoned!" only when the poison was at 0 (`poison.rs2`), so a poison that carries into the next fight, or one that is renewed while it runs, gave no
+  message and was never cured. Its damage is a hitsplat of type `hitmark_poison` (2), which the client keeps for the own player. `ownPoisonHit` reads it; the state holds 40 ticks after its last sign (the
+  poison timer is 30 ticks) and is carried between the fights of one account (`carriedPoison`, `noteFightPoison`).
+- **The protect prayer switch.** Turning a protect prayer on turns the other two off on the server (`prayer.rs2` `prayer_activate` calls `prayer_deactivate_conflicting`; each protect prayer lists the other
+  two in `prayers.dbrow`). `holdProtect` sends only the wanted one; switching the old one off first cost another 3 ticks.
+- **The rune knife** (measured, not changed). `knives.obj` `[rune_knife]`: `param=attackrate,3`, `attackrange,4`, ranged 40; the rapid style subtracts 1 (`pvp_ranged.rs2:20-22`), so it is a 2-tick weapon on rapid
+  and a 3-tick weapon on the other styles. `canFlickWindow` (`now < nextAttack - 1`) is false between two attacks 2 ticks apart.
+
 ## Specials and freezes: the server scripts
 
 Source: the review that read the PvP scripts, each claim read in `vendor/rs-sdk/server/content/scripts/skill_combat/scripts/pvp`.
