@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { Database } from 'bun:sqlite';
-import { pathfindingSourceKey } from './pathcache';
+import { pathfindingDataKey } from './pathcache';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 // The file name holds the format of the keys: v2 keys name the closed danger ground alone (danger.ts withDanger).
@@ -55,7 +55,7 @@ export function routeDangerHash(danger:{key:string;kept:ReadonlySet<string>},cac
 let shared: LegCache | undefined;
 export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
     if (shared && file === LEG_CACHE_FILE && source === undefined) return shared;
-    const src = source ?? pathfindingSourceKey() + ':' + createHash('sha256').update(readFileSync(join(repoRoot, 'knowledge', 'npcs.json'))).digest('hex');
+    const src = source ?? pathfindingDataKey() + ':' + createHash('sha256').update(readFileSync(join(repoRoot, 'knowledge', 'npcs.json'))).digest('hex');
     const namespace = createHash('sha256').update(src).digest('base64url');
     const legacyFile = file.replace(/\.sqlite$/, '.json');
     const legacy = (): Record<string, number | null> => {
