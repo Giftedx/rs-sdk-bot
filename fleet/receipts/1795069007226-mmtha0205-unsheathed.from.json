@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795069007226-mmtha0205-unsheathed",
+ "account": "mmtha0205",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 304,
+ "claim": "26a3f0cc-f9fe-461c-8f9e-611962260329",
+ "count": 0,
+ "ok": false,
+ "at": 1795069084844,
+ "detail": "trade claimed"
+}
