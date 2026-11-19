@@ -15,11 +15,13 @@
 import { existsSync } from 'node:fs';
 import type { Session } from '../packages/core/src/inprocess';
 import { loadOwners } from '../packages/core/src/fleet';
+import { isLocalServer } from '../packages/core/src/localserver';
 import { PVP_DEATH_LIMITS, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { attackable, bestFood, rewearStart, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, packGain, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
 import { armourDefence } from './pk-read';
-import { assessWildernessThreat, hasVarrockTeleport, itemCost, planWildernessEscape, slashWebThrough, wildernessCombatMargin, wildernessDepth } from './pk-roam';
+import { assessWildernessThreat, connectRadar, hasVarrockTeleport, itemCost, planWildernessEscape, Radar, slashWebThrough, wildernessCombatMargin, wildernessDepth } from './pk-roam';
+import { KitSwapper, protectOf, retreatOf, ThreatWatch } from './pk-threat';
 import { nativeRequirementMetadata, resolveItemRequirements, type ItemCount, type ItemRequirement, type RequirementResolution } from '../packages/core/src/item-requirements';
 import { lootCapacity } from '../packages/core/src/loot-policy';
 
@@ -338,9 +340,12 @@ export type HuntOptions = { cap: number; food: number; minFood: number; escapeAt
     spots?: readonly Spot[]; observe?: boolean;
     // Deaths that the hunt re-kits after (default 1, DEFAULT_MAX_DEATHS). The death after that ends the run with its record.
     // `onDeath` is called for each death, at its tile (the death ledger of packages/core/src/pvp-deaths.ts).
-    maxDeaths?: number; onDeath?: (near: { x: number; z: number } | null) => void };
+    maxDeaths?: number; onDeath?: (near: { x: number; z: number } | null) => void;
+    // The threat radar (scripts/pk-threat.ts, HUNT_THREAT=1): a protect prayer for the style of a threat, the armour swap of the pack, and a retreat
+    // when a player outclasses us or a team comes. The hunt's own threat check stays.
+    threats?: ThreatWatch };
 export async function hunt(s: Session, o: HuntOptions) {
-    const log = o.log ?? ((l: string) => console.log(l)), start = s.tick(), ours = fleetNames();
+    const log = o.log ?? ((l: string) => console.log(l)), start = s.tick(), ours = fleetNames(), swapper = new KitSwapper();
     const tally = { kills: 0, deaths: 0, rekits: 0, retreatsFailed: 0, escapes: 0, fights: 0, looted: 0, trips: 0 };
     if (o.trip !== undefined) { const invalid = invalidTrip(o.trip); if (invalid.length) return { ...tally, end: 'invalid trip requirements ' + JSON.stringify(invalid) }; }
     let ended = false;
@@ -504,16 +509,23 @@ export async function hunt(s: Session, o: HuntOptions) {
                 state.nearbyPlayers.map(p => ({ ...p, wornWeapon: observePlayer(s.client, p.index)?.worn[3] })),
                 ours,
             ) : null;
-            if (threat?.retreatReason) {
+            // The threat radar: the armour swap first (it uses the tick), then a retreat that it decides when the hunt's own check has none.
+            const radar = o.threats?.act ? o.threats.step(s.tick()) : null;
+            if (radar && await swapper.step(s, radar.actions, s.tick(), () => nextTick(s), log)) continue;
+            const radarReason = attackerIndex === null && radar ? retreatOf(radar.actions) : null;
+            const retreatReason = threat?.retreatReason ?? radarReason;
+            if (retreatReason) {
+                if (!threat?.retreatReason && radarReason) o.threats!.acted(s.tick());
                 const margin = wildernessCombatMargin({ z: me.worldZ, combat: me.combatLevel }, me.combatLevel);
-                log(`HUNT threat retreat (${threat.retreatReason}, bracket=${margin.minCombat}-${margin.maxCombat}): ${threat.escapePlan.detail}`);
+                const escapePlan = threat?.escapePlan ?? planWildernessEscape({ x: me.worldX, z: me.worldZ }, { glory: hasGlory, teleport: hasTele });
+                log(`HUNT threat retreat (${retreatReason}, bracket=${margin.minCombat}-${margin.maxCombat}): ${escapePlan.detail}`);
                 needsRestock = true;
-                if (wildernessLevel(me.worldZ) > 30 || threat.multiPile) {
+                if (wildernessLevel(me.worldZ) > 30 || threat?.multiPile) {
                     // The result of the retreat: a death is handled, and a retreat that did not leave the Wilderness is counted
                     // and logged. The restock walk that follows goes on south either way.
-                    const out = await exitWilderness(threat.retreatReason);
+                    const out = await exitWilderness(retreatReason);
                     if (out === 'died') { const d = await afterDeath(lastTile); if (d) return { ...tally, ...d }; }
-                    else if (out === 'failed' && !died()) { tally.retreatsFailed++; log(`HUNT threat retreat did not leave the Wilderness (${threat.retreatReason})`); }
+                    else if (out === 'failed' && !died()) { tally.retreatsFailed++; log(`HUNT threat retreat did not leave the Wilderness (${retreatReason})`); }
                 }
                 break;
             }
@@ -524,6 +536,7 @@ export async function hunt(s: Session, o: HuntOptions) {
             log(`HUNT engage ${target.name} (combat ${target.combatLevel}) at ${target.x},${target.z}`);
             tally.fights++;
             const r: FightResult = await fightPlayer(s, target.name, {
+                ...(o.threats?.act ? { threatPrayer: () => protectOf(o.threats!.step(s.tick()).actions, s.name) } : {}),
                 // The freeze goes out when the target runs: cast whenever the target was free, it lost a stand-up spar (2 wins,
                 // 4 losses), and a hunter with it killed no more runners (research/pvp-fight-loop.md).
                 // The overhead changes one tick before the target's next attack: 42 kills to 6 in mirror spars against 24 to 24.
@@ -628,11 +641,16 @@ if (import.meta.main) {
     // (rekitAfterDeath): continueAfterDeath prints the DEATH line and goes on, and the stop file, the lease and the stall checks stay live.
     const s = await openBot(bot, { continueAfterDeath: true });
     const env = process.env;
-    const r = await hunt(s, { cap: Number(capArg ?? 6000), food: Number(env.HUNT_FOOD ?? 18), minFood: Number(env.MIN_FOOD ?? 6), escapeAt: Number(env.ESCAPE_AT ?? 35), stop,
+    // HUNT_THREAT=1: the threat radar (HUNT_THREAT_ACT=0 only logs and records). The world feed is the radar's out-of-view source: none on a local server.
+    const threatRadar = env.HUNT_THREAT === '1' ? new Radar() : undefined;
+    const closeRadar = threatRadar && !isLocalServer(server) ? connectRadar(server, threatRadar) : undefined;
+    const threats = threatRadar ? new ThreatWatch({ sessions: () => [s], server, friends: fleetNames(), radar: threatRadar, log: l => console.log(l), act: env.HUNT_THREAT_ACT !== '0' }) : undefined;
+    const r = await hunt(s, { threats, cap: Number(capArg ?? 6000), food: Number(env.HUNT_FOOD ?? 18), minFood: Number(env.MIN_FOOD ?? 6), escapeAt: Number(env.ESCAPE_AT ?? 35), stop,
         kit: env.PK_KIT === 'snare' ? SNARE_KIT : env.PK_KIT ? JSON.parse(env.PK_KIT) as Kit : undefined, trip: env.PK_TRIP ? JSON.parse(env.PK_TRIP) : env.PK_KIT === 'snare' ? SNARE_TRIP : undefined, damageSpell: env.PK_SPELL ? Number(env.PK_SPELL) : undefined,
         rotation: env.PK_ROTATION ? env.PK_ROTATION.split(',') as Style[] : undefined, teleSpell: env.PK_TELE ? Number(env.PK_TELE) : undefined,
         spots: resolveHuntSpots(env), observe: env.PK_OBSERVE === '1', maxDeaths: maxDeathsOf(env.HUNT_MAX_DEATHS),
         onDeath: near => { recordPvpDeath({ account: bot, server, at: Date.now(), script: 'scripts/pk-hunt.ts', near }); } });
+    closeRadar?.();
     console.log('HUNT ' + JSON.stringify(r));
     // A dropped session reports the swarm's drain wording (planner DRAIN_RESULT), not a hunt outcome.
     if (r.end === 'session ended') await finish([s], false, 'session ended: disconnected');

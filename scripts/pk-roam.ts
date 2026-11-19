@@ -381,6 +381,9 @@ export async function wearGlory(s: Session): Promise<void> {
 export type Cfg = { maxMs: number; maxWild: number; eatAt: number; fleeAt: number; spell: string; ranged?: RegExp; loot: boolean; freeze: boolean; friends?: readonly string[];
     // Fight options added to each fight of the hunt (the army's allies and shared freeze, scripts/pk-army.ts).
     fight?: Partial<FightOptions>;
+    // The threat radar (scripts/pk-threat.ts, the THREAT=1 argument): a protect prayer for the style of a threat, the armour swap of the pack, and an escape
+    // when a player outclasses us or a team comes. threatAct false only logs and records.
+    threat?: boolean; threatAct?: boolean;
     // While hold() is true the chase closes to 3 tiles of its target and casts and attacks nothing (the army's
     // opening in one tick, scripts/pk-army.ts).
     hold?: () => boolean;
@@ -497,6 +500,10 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
     let leg = -1;
     const radar = new Radar();
     const closeRadar = connectRadar(server, radar);
+    // Loaded on demand: scripts/pk-threat.ts imports this module.
+    const radarKit = cfg.threat ? await import('./pk-threat') : null;
+    const threats = radarKit ? new radarKit.ThreatWatch({ sessions: () => [session], server, friends, radar, log: line => emit({ e: 'threat', line }), act: cfg.threatAct !== false }) : null;
+    const swapper = radarKit ? new radarKit.KitSwapper() : null;
     const end = Date.now() + cfg.maxMs;
     // cfg.maxTicks: the hunt also ends after that many game ticks, so a practice run gets the same game time whatever
     // the machine's speed (the wall clock gave 213 to 3,169 ticks to one minute, extra:roam-field).
@@ -691,6 +698,12 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
             if (threat) { await escape(`threat: ${threat.name} (combat ${threat.combatLevel}) at ${threat.distance} tiles`); return 'flee'; }
             const pile = multiPileThreat(m, sdk.getState()?.nearbyPlayers ?? [], friends);
             if (pile) { await escape(pile); return 'flee'; }
+            // The threat radar: an escape that it decides, else the armour swap (it uses the tick).
+            if (threats?.act && radarKit && swapper) {
+                const radarNow = threats.step(session.tick()), why = radarKit.retreatOf(radarNow.actions);
+                if (why) { threats.acted(session.tick()); await escape(`radar: ${why}`); return 'flee'; }
+                if (await swapper.step(session, radarNow.actions, session.tick(), async () => { await sdk.waitForTicks(1); return true; }, line => emit({ e: 'threat', line }))) return 'ok';
+            }
             if (wildLevel(m.x, m.z) > cfg.maxWild) { await escape(`deeper than the limit (${wildLevel(m.x, m.z)} > ${cfg.maxWild})`); return 'flee'; }
         }
         return 'ok';
@@ -792,6 +805,7 @@ export async function huntOnce(session: Session, cfg: Cfg, stopped: () => boolea
                 stats.attacks++; fought = true;
                 const damageSpell = cfg.spell.toUpperCase() === 'AUTO' ? bestDamageSpell(magic, sdk.getInventory(), sdk.getEquipment()) : spellId(cfg.spell);
                 const fight = await fightPlayer(session, name, {
+                    ...(threats?.act && radarKit ? { threatPrayer: () => radarKit.protectOf(threats.step(session.tick()).actions, session.name) } : {}),
                     // eatAt is a percentage here and an HP value in fightPlayer. Live, a 26 HP account given 50 ate a shark every
                     // 3 ticks at full HP.
                     kit, spec: specAll(defaultSpec(kit)), freeze: freezeNow() !== null ? 'flee' : false, predictPrayer: true, snapPrayer: true, eatAt: Math.ceil((me()?.maxHp ?? 99) * cfg.eatAt / 100), exitOnDanger: true,
@@ -1001,6 +1015,7 @@ if (import.meta.main) {
         eatAt: Number(arg(args, 'EAT_AT', '50')), fleeAt: Number(arg(args, 'FLEE_AT', '30')),
         spell: arg(args, 'SPELL', 'AUTO'), ranged: ranged ? new RegExp(ranged, 'i') : undefined,
         loot: arg(args, 'LOOT', '1') === '1', freeze: arg(args, 'FREEZE', '1') === '1',
+        ...(arg(args, 'THREAT', '0') === '1' ? { threat: true, threatAct: arg(args, 'THREAT_ACT', '1') !== '0' } : {}),
         lootMin: Number(arg(args, 'LOOT_MIN', '20000')), bankAt: Number(arg(args, 'BANK_AT', '30000')),
         ...(arg(args, 'MAX_TICKS', '') ? { maxTicks: Number(arg(args, 'MAX_TICKS', '')) } : {}),
         // A practice run registers its accounts as owned (tradeguard.ts), so its target is a friend unless FRIENDS names the list.
