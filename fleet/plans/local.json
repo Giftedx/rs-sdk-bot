@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795108274825,
+ "at": 1795108440429,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -268,32 +268,24 @@
   },
   {
    "account": "MineYourBiz",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "1500",
-    "trooper"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=26 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=mineyourbiz-kit13-532-0to26 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
+   "repeat": false,
+   "goal": "buy 26 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-big-99",
    "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
+   "resources": []
   },
   {
-   "account": "Swordinhand",
+   "account": "YewFirst",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "dargaud",
@@ -301,15 +293,15 @@
    ],
    "env": {
     "ITEMS": "rune arrow",
-    "STOCK_TARGET": "440",
+    "STOCK_TARGET": "463",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
     "FLOAT": "320200",
     "COIN_RESERVE": "200",
     "MAX_SPEND": "320000",
-    "AUTOPILOT_ORDER": "[40]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":440}}"
+    "AUTOPILOT_ORDER": "[63]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":463}}"
    },
    "enabled": true,
    "standing": true,
@@ -377,6 +369,25 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
    ]
   }
  ],
