@@ -1,0 +1,22 @@
+{
+ "id": "1795063821466-mmtha0205-swordswallow",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmtha0205",
+ "to": "Swordswallow",
+ "item": "coins",
+ "count": 5988,
+ "start": 1795063821466,
+ "end": 1795066221466,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
