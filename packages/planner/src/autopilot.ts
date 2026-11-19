@@ -1668,6 +1668,12 @@ export const STRIKE_TILE = 'strike:ardougne-guard-dog';
 // gathers before the band stands down: a set of body, chaps and vambraces takes six.
 export const BLACK_CAVE = 'cave:taverley-black-dragons', BLACK_CAVE_PLACES = 2, HUNT_BAND = 10, HIDE_TARGET = 42;
 export const HUNT_ARROWS = 600, HUNT_KILLS = 9, HUNT_FOOD = 6;
+// The rune arrows of a hunt trip: a kill used 35, 47 and 14 rune arrows against 60, 81 and 52 mithril arrows, and took 236,
+// 271 and 184 ticks against 312, 388 and 298 (bench cases extra:black-dragon-rune and boss:black-dragon, hosted run
+// 44473165322, seeds 1 to 3). Nine kills at the most that one kill used, and the Ranging Guild shelf holds 400.
+export const HUNT_RUNE_ARROWS = 400;
+// Their price off a full shelf: 400 coins and 1% of it more for each arrow bought before (shop.rs2), 479,200 for 400.
+export const HUNT_RUNE_SPEND = 500_000;
 // What a hunter's supply run brings it up to: the arrows of two trips, and the air and fire runes of twenty teleports.
 export const HUNT_ARROW_STOCK = 1200, HUNT_RUNE_STOCK = 60;
 // Dragon longswords from Jakut (scripts/shop-buyer.ts profile jukat): the swords one visit buys (his shelf holds two,
@@ -2460,14 +2466,17 @@ export function catalogue(): Template[] {
     // The same trip on bronze arrows, for an account whose shop run found more bronze than iron: Lowe's bronze shelf
     // holds 2,000 and gives one back every 10 ticks, the iron shelf 1,500 and one every 15. Practice, two hunters at
     // once with 600 arrows each: 7 kills on bronze, 6 on iron.
-    const huntOn = (id: string, arrow: string): Template => ({
+    const huntOn = (id: string, arrow: string, arrows = HUNT_ARROWS): Template => ({
         id, pilot: true, family: 'combat-train', script: 'scripts/black-dragon-camp.ts', args: ['9000'],
-        env: { KILLS: String(HUNT_KILLS), ARROW: arrow.replace(' ', '_'), ARROWS: String(HUNT_ARROWS) }, role: 'combat', goal: `kill Taverley's black dragons for their hides and bones, on ${arrow}s`,
+        env: { KILLS: String(HUNT_KILLS), ARROW: arrow.replace(' ', '_'), ARROWS: String(arrows) }, role: 'combat', goal: `kill Taverley's black dragons for their hides and bones, on ${arrow}s`,
         tier: 'goal', band: HUNT_BAND, filler: true, repeats: true, stock: { item: 'dragonhide', to: HIDE_TARGET }, resources: [BLACK_CAVE], yields: () => [],
-        ownSupply: ['iron arrow', 'bronze arrow', 'air rune', 'fire rune'],
+        ownSupply: ['rune arrow', 'iron arrow', 'bronze arrow', 'air rune', 'fire rune'],
         needs: { skills: { Defence: 90, Hitpoints: 90, Ranged: 90, Prayer: 60, Magic: 25 },
-            items: { 'dusty key': 1, 'magic shortbow': 1, [arrow]: HUNT_ARROWS, 'law rune': 1, 'air rune': 3, 'fire rune': 1, shark: HUNT_FOOD } },
+            items: { 'dusty key': 1, 'magic shortbow': 1, [arrow]: arrows, 'law rune': 1, 'air rune': 3, 'fire rune': 1, shark: HUNT_FOOD } },
     });
+    // The rune hunt is the first: the best arrow that the magic shortbow fires. The iron and bronze hunts serve an account
+    // that holds a trip of those and no trip of rune arrows.
+    const huntRune: Template = { ...huntOn('army-hunt-black-dragons-rune', 'rune arrow', HUNT_RUNE_ARROWS), band: HUNT_BAND - 0.01 };
     const hunt = huntOn('army-hunt-black-dragons', 'iron arrow'), huntBronze = huntOn('army-hunt-black-dragons-bronze', 'bronze arrow');
     // The hunt's shop lines. No market lists 600 iron arrows (live claude-cloud: 23 listed), and the arrow and rune
     // shop jobs of the training bands end at Ranged 99 and Magic 66. Lowe's Archery Emporium (archeryshop: 1,500 iron
@@ -2480,6 +2489,15 @@ export function catalogue(): Template[] {
     // stocks at the dearest price. Each step leaves an emptied shelf (practice: with a wait of 25 ticks a run stood
     // 2,500 ticks at Lowe's buying one arrow every 15), and the account hunts or shops again on the planner's next
     // pass.
+    // A hunter's rune arrows from the Ranging Guild shop (Ranged 40; HUNT_RUNE_SPEND covers a trip off a full shelf), then the
+    // teleport runes at Aubury's. It comes before the iron and bronze run.
+    const huntSupplyRune: Template = {
+        id: 'army-hunt-supply-rune', pilot: true, family: 'shop-buyer', script: 'scripts/chain.ts',
+        args: [shopRun('dargaud', 2500, 'rune.arrow', HUNT_RUNE_ARROWS, HUNT_RUNE_SPEND, 8), shopRun('aubury', 800, 'air.rune|fire.rune', HUNT_RUNE_STOCK, 2000, 8)],
+        env: { ROUNDS: '1' }, role: 'supply', goal: "buy rune arrows at the Ranging Guild and teleport runes at Aubury's for the black dragon hunt",
+        tier: 'goal', band: HUNT_BAND + 0.2, filler: true, repeats: true, stock: { item: 'dragonhide', to: HIDE_TARGET }, resources: ['shop:dargaud', 'shop:aubury'], yields: () => [],
+        needs: { skills: hunt.needs!.skills, items: { coins: HUNT_RUNE_SPEND + 4000 }, shortOf: { 'rune arrow': HUNT_RUNE_ARROWS, 'air rune': 3, 'fire rune': 1 } },
+    };
     const huntSupply: Template = {
         id: 'army-hunt-supply', pilot: true, family: 'shop-buyer', script: 'scripts/chain.ts',
         args: [shopRun('lowe', 2500, 'iron.arrow|bronze.arrow', HUNT_ARROW_STOCK, 28000, 8), shopRun('aubury', 800, 'air.rune|fire.rune', HUNT_RUNE_STOCK, 2000, 8)],
@@ -2770,8 +2788,10 @@ export function catalogue(): Template[] {
         regicide,
         holyGrail,
         dustyKey,
+        huntRune,
         hunt,
         huntBronze,
+        huntSupplyRune,
         huntSupply,
         jakut,
         zekeIron,
