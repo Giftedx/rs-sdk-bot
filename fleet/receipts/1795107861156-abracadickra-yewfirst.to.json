@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795107861156-abracadickra-yewfirst",
  "account": "YewFirst",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 4,
  "claim": "59732239-8cd8-4485-8a3d-cebef90888bc",
- "count": 0,
- "ok": false,
- "at": 1795107904897,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795108068723,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 29996,
+  "after": 30000
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795108068005
+ },
+ "logout": {
+  "attemptId": "1795107904906-0000026684-0000000001",
+  "at": 1795108068711,
+  "sha256": "9895ea972bfe547df88d8ede5aedb6803f8689711405e4f4eee2927c96b9fb55"
+ },
+ "screen": true
 }
