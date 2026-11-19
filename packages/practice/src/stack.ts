@@ -39,6 +39,8 @@ export interface StackOptions {
 
 // The engine command line keeps MARKERS.engine, so safeKill still identifies the server.
 export function engineCommand(opts: StackOptions, port: number, platform: string = process.platform, fine: string | undefined = process.env.SIM_FINE_TIMERS): { cmd: string[]; env: Record<string, string> } {
+    // EXPERIMENT: PROOF_LOCKSTEP=1 runs any proof stack on the lockstep engine (ticks wait for the bots, no wall clock).
+    const lockstep = opts.lockstep ?? (process.env.PROOF_LOCKSTEP === '1' ? { ackMs: 190_000 } : undefined);
     const env: Record<string, string> = {
         NODE_TICKRATE: String(opts.tickMs ?? PROOF_TICK_MS),
         NODE_XPRATE: String(opts.xpRate ?? 25),
@@ -46,12 +48,12 @@ export function engineCommand(opts: StackOptions, port: number, platform: string
         // The coverage scoreboard reads this trace (patches/rs-sdk.md item 8).
         ACTION_TRACE_FILE: join(practiceDir(), 'action-trace.log'),
     };
-    if (opts.lockstep) {
-        Object.assign(env, { SIM_LOCKSTEP: '1', SIM_DET: '1', SIM_ACK_MS: String(opts.lockstep.ackMs ?? 10_000), SIM_LOGIN_MS: '5000', SIM_STAT_FILE: simStatFile(opts.instance) });
-        if (opts.lockstep.seed !== undefined) env.SIM_SEED = String(opts.lockstep.seed);
-        if (opts.lockstep.anchor) env.SIM_SEED_ANCHOR = opts.lockstep.anchor;
-        if (opts.lockstep.traceFile) env.SIM_TRACE_FILE = opts.lockstep.traceFile;
-        if (opts.lockstep.actionFile) env.SIM_ACTION_FILE = opts.lockstep.actionFile;
+    if (lockstep) {
+        Object.assign(env, { SIM_LOCKSTEP: '1', SIM_DET: '1', SIM_ACK_MS: String(lockstep.ackMs ?? 10_000), SIM_LOGIN_MS: '5000', SIM_STAT_FILE: simStatFile(opts.instance) });
+        if (lockstep.seed !== undefined) env.SIM_SEED = String(lockstep.seed);
+        if (lockstep.anchor) env.SIM_SEED_ANCHOR = lockstep.anchor;
+        if (lockstep.traceFile) env.SIM_TRACE_FILE = lockstep.traceFile;
+        if (lockstep.actionFile) env.SIM_ACTION_FILE = lockstep.actionFile;
     }
     for (const [key, value] of Object.entries(opts.engineEnv ?? {})) {
         if (key in env) throw new Error(`engineEnv cannot replace ${key}`);
@@ -59,7 +61,7 @@ export function engineCommand(opts: StackOptions, port: number, platform: string
     }
     // SIM_FINE_TIMERS=1: a lockstep engine on Windows polls with 1 ms timers that take 15 ms each by default; the
     // preload sets 1 ms timers for the engine process (packages/core/src/timer-resolution.ts).
-    const timers = opts.lockstep && platform === 'win32' && fine === '1' ? ['--preload', FINE_TIMERS] : [];
+    const timers = lockstep && platform === 'win32' && fine === '1' ? ['--preload', FINE_TIMERS] : [];
     const pre = opts.enginePreload;
     if (!pre) return { cmd: ['bun', ...timers, MARKERS.engine], env };
     if (!isAbsolute(pre.module) || !existsSync(pre.module)) throw new Error(`engine preload not found: ${pre.module}`);
