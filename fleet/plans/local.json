@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795072261820,
+ "at": 1795072503237,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -224,36 +224,6 @@
    ]
   },
   {
-   "account": "BraveHardon",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "jiminua",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "antipoison",
-    "STOCK_TARGET": "28",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "1928",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "1728",
-    "AUTOPILOT_ORDER": "[25]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":28}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy antipoison(3) at Jiminua's in Karamja for the gang squad",
-   "role": "bank",
-   "template": "squad-antipoison-jiminua",
-   "autopilot": "local",
-   "resources": [
-    "shop:jiminua"
-   ]
-  },
-  {
    "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -281,6 +251,59 @@
    "autopilot": "local",
    "resources": [
     "shop:aubury"
+   ]
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "532",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "12",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying bought big bones",
+   "role": "combat",
+   "template": "army-bury-big-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "jiminua",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "antipoison",
+    "STOCK_TARGET": "18",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "1928",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "1728",
+    "AUTOPILOT_ORDER": "[15]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":18}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy antipoison(3) at Jiminua's in Karamja for the gang squad",
+   "role": "bank",
+   "template": "squad-antipoison-jiminua",
+   "autopilot": "local",
+   "resources": [
+    "shop:jiminua"
    ]
   },
   {
