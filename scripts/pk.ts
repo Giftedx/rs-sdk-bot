@@ -91,6 +91,10 @@ export type FightOptions = {
     castArmour?: 'torso' | 'keep' | 'strip';
     // The same rule for a freeze (default 'torso', whatever castArmour says): the freeze needs its magic roll.
     freezeArmour?: 'torso' | 'keep' | 'strip';
+    // The leash of a freeze: a freeze holds only while its caster is within 10 tiles of the target (pvp_magic.rs2 walktrigger pvp_frozen, %pk_binder), so a caster that
+    // shoots from range and drifts to 10 or more tiles frees it. With this many tiles (9 is the usual), a fight walks one step toward a frozen target that is farther than that.
+    // Off by default.
+    freezeLeash?: number;
     // false: no Defence prayer (Steel Skin and the lower ones). It saves prayer points and gives up their defence.
     defencePrayer?: boolean;
     // false: no Protect Item. An account with no skull keeps its three best items without it, and a melee turn then
@@ -659,6 +663,10 @@ export async function rewearStart(s: Session, start: readonly number[], log: (li
     return n;
 }
 
+// The tile to walk to for the leash of a freeze: the target's tile when it is frozen and farther than `leash` tiles, else null.
+export const leashStep = (at: { x: number; z: number }, target: { x: number; z: number } | null | undefined, frozen: boolean, leash: number | undefined): { x: number; z: number } | null =>
+    leash !== undefined && frozen && !!target && cheb(at, target) > leash ? { x: target.x, z: target.z } : null;
+
 // A health bar at 0 (a hit that showed one, and the target has no Hitpoints left): the target is dying. lowHealth is true there, so without this guard a special
 // attack, a freeze or a bind goes into a target that is already dead (run 3: about 40 specials and many binds).
 export const isDying = (seen: Observed | null) => !!seen && seen.totalHealth > 0 && seen.health <= 0;
@@ -970,6 +978,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     const feedWatch = killFeed(s.lifecycle?.server);
     let last = -1, nextAttack = start, lastAttackAt = -10, lastWalkTicks = 0, hasAttacked = false, delayedUntil = start;
     let foodReady = Math.max(start, guardFoodReady), karambwanReady = start, potionReady = start;
+    let leashAt = -10;
     let freezeReady = start, frozenUntil = start, freezeCastAt = -10, freezeDur = 0, lastSpot = -1, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
     let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, gloryOffAt = -10, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
@@ -1328,6 +1337,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // would cancel an approach that the server has in hand, so it is sent only while we stand still.
         const ranged = hasStyle(o.kit, 'magic') || hasStyle(o.kit, 'ranged');
         if (o.chaseBelow !== undefined && target) chaseLow = lowHealth(observePlayer(s.client, target.index), o.chaseBelow);
+        // The leash of a freeze: a caster that drifted too far from a frozen target walks back toward it (freezeLeash).
+        const leash = leashStep(at, target, now < frozenUntil, o.freezeLeash);
+        if (leash && now >= selfFrozenUntil && now - leashAt >= 2 && walk(leash.x, leash.z)) { leashAt = now; log(`PK freeze leash: ${cheb(at, target!)} tiles from the frozen target, walking back`); }
         if (o.kiteMelee === undefined && !freezeHolding && (o.chase !== false || chaseLow) && ranged && stoodStill && now >= selfFrozenUntil && now - chaseAt >= 2 && now < nextAttack && now < fleeingUntil + 12) {
             const ahead = o.cutOff !== undefined && now < fleeingUntil;
             const to = target && cheb(at, target) > (ahead ? 1 : 5) ? (ahead ? { x: target.x + heading.x * o.cutOff!, z: target.z + heading.z * o.cutOff! } : { x: target.x, z: target.z })

@@ -506,6 +506,9 @@ test('squadFightOverrides: the plain settings for freezeArmour and protectItem, 
     expect(squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'skulled' }))).toEqual({ protectItem: 'skulled' });
     expect(squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'on', SQUAD_FREEZE_ARMOUR: 'keep' }))).toEqual({ protectItem: true, freezeArmour: 'keep' });
     expect(squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'off' }))).toEqual({ protectItem: false });
+    expect(squadFightOverrides(env({ SQUAD_FREEZE_LEASH: '9' }))).toEqual({ freezeLeash: 9 });
+    expect(() => squadFightOverrides(env({ SQUAD_FREEZE_LEASH: '12' }))).toThrow('from 2 to 10');
+    expect(() => squadFightOverrides(env({ SQUAD_FREEZE_LEASH: 'x' }))).toThrow('from 2 to 10');
     expect(() => squadFightOverrides(env({ SQUAD_FREEZE_ARMOUR: 'bare' }))).toThrow('strip, torso or keep');
     expect(() => squadFightOverrides(env({ SQUAD_PROTECT_ITEM: 'yes' }))).toThrow('on, off or skulled');
 });

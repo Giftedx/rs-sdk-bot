@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import {
     attackable, battleaxeWarcryMath, bestDamageSpell, bestFood, canCastChargeNow, castableFreeze, chargeVarpTicks, combatPrayers, dangerReason, defaultSpec, defaultStunSpec,
-    estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, isDying, ITEMS, killMessage, lowHealth, rewearStart,
+    estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, isDying, ITEMS, killMessage, leashStep, lowHealth, rewearStart,
     kitRotation, meleeWeaponDelay, negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, pickFakieWeapon,
     deathRisk, itemCostOf, ownSkull,
     pickFrozenKiteTile, pickWeighted, planPrayerTick, PRAYER, protectedStyles, seededRandom, shouldComboEat, skulled,
@@ -1123,4 +1123,14 @@ test('rewearStart wears the starting armour that sits in the pack with its slot 
 
 test('isDying guards the freeze and the special: not read here, see the fight loop; the helper is the test of the rule', () => {
     expect(isDying({ headicons: 0, worn: [], health: 0, totalHealth: 70, spotanim: -1 })).toBe(true);
+});
+
+test('leashStep: toward a frozen target that is farther than the leash, nothing otherwise', () => {
+    const at = { x: 3000, z: 3600 };
+    expect(leashStep(at, { x: 3010, z: 3600 }, true, 9)).toEqual({ x: 3010, z: 3600 });
+    expect(leashStep(at, { x: 3009, z: 3600 }, true, 9)).toBeNull();
+    expect(leashStep(at, { x: 3010, z: 3600 }, false, 9)).toBeNull();
+    expect(leashStep(at, { x: 3010, z: 3600 }, true, undefined)).toBeNull();
+    expect(leashStep(at, null, true, 9)).toBeNull();
+    expect(leashStep(at, { x: 3012, z: 3611 }, true, 9)).toEqual({ x: 3012, z: 3611 });
 });

@@ -300,13 +300,16 @@ export function squadFallbackPlan(opts: {
 }
 
 // SQUAD_FREEZE_ARMOUR=strip|torso|keep: what a freeze takes off (pk.ts freezeArmour), and SQUAD_PROTECT_ITEM=on|off|skulled: Protect Item (pk.ts protectItem, 'skulled' is on
-// only while our own skull shows). They win over the profile and SQUAD_OPTS. A value that is not listed throws.
+// only while our own skull shows), SQUAD_FREEZE_LEASH=<tiles>: a caster walks back to a frozen target that is farther than that (pk.ts freezeLeash; off by default).
+// They win over the profile and SQUAD_OPTS. A value that is not listed throws.
 export function squadFightOverrides(get: (name: string, fallback: string) => string): Partial<FightOptions> {
     const out: Partial<FightOptions> = {};
     const armour = get('SQUAD_FREEZE_ARMOUR', '');
     if (armour) { if (!['strip', 'torso', 'keep'].includes(armour)) throw new Error(`SQUAD_FREEZE_ARMOUR is strip, torso or keep, got ${armour}`); out.freezeArmour = armour as 'strip' | 'torso' | 'keep'; }
     const item = get('SQUAD_PROTECT_ITEM', '');
     if (item) { if (!['on', 'off', 'skulled'].includes(item)) throw new Error(`SQUAD_PROTECT_ITEM is on, off or skulled, got ${item}`); out.protectItem = item === 'skulled' ? 'skulled' : item === 'on'; }
+    const leash = get('SQUAD_FREEZE_LEASH', '');
+    if (leash) { const n = Number(leash); if (!Number.isFinite(n) || n < 2 || n > 10) throw new Error(`SQUAD_FREEZE_LEASH is a number of tiles from 2 to 10, got ${leash}`); out.freezeLeash = n; }
     return out;
 }
 
