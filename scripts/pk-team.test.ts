@@ -86,6 +86,17 @@ test('marchLegs: the edge, the entry of the connected area and the post', async 
     expect(marchLegs({ x: 3093, z: 3503 }, { x: 3090, z: 3560 })).toEqual([{ x: 3090, z: 3560 }]);
 });
 
+test('an idle member keeps its prayer on near a target of the squad or after damage, and switches it off otherwise', async () => {
+    const { keepPrayer } = await import('./pk-squad');
+    const targets = new Set(['goondelf', 'ligma']);
+    const near = [{ name: 'Goondelf', distance: 5 }], far = [{ name: 'Goondelf', distance: 20 }], other = [{ name: 'Steve301', distance: 2 }];
+    expect(keepPrayer({ view: near, targets, now: 100, damagedAt: -100 })).toBe(true);
+    expect(keepPrayer({ view: far, targets, now: 100, damagedAt: -100 })).toBe(false);
+    expect(keepPrayer({ view: other, targets, now: 100, damagedAt: -100 })).toBe(false);
+    expect(keepPrayer({ view: [], targets, now: 100, damagedAt: 91 })).toBe(true);
+    expect(keepPrayer({ view: [], targets, now: 100, damagedAt: 89 })).toBe(false);
+});
+
 test('squadTarget leaves out a target the game will not let it attack', async () => {
     const { squadTarget } = await import('./pk-squad');
     const view = [{ name: 'Goondelf', index: 1, distance: 3, z: 3515, combatLevel: 126 }, { name: 'Ligma', index: 2, distance: 5, z: 3640, combatLevel: 125 }];

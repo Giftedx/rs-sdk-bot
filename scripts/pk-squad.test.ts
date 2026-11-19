@@ -576,3 +576,12 @@ test('the squad end line prints the kills of interlopers only when the threat wa
     expect(squadEnd({ ...base, interlopers: 2 }).detail).toBe('squad accounts=4 kills=3 died=0 attackerKills=2 taken=500 trips=1 picked={}');
     expect(squadEnd({ ...base, interlopers: 0 }).detail).toContain(' attackerKills=0 ');
 });
+
+test('a member that drops starts its rescue at once through onDrop, once', async () => {
+    const dropped = new Map<string, string>(), started: string[] = [];
+    const { onSessionEnd } = squadStopHandlers(() => {}, dropped, () => {}, name => started.push(name));
+    await onSessionEnd({ name: 'Alpha' } as any, 'connection lost');
+    await onSessionEnd({ name: 'Alpha' } as any, 'connection lost again');
+    await onSessionEnd({ name: 'Beta' } as any, 'stall');
+    expect(started).toEqual(['Alpha', 'Beta']);
+});
