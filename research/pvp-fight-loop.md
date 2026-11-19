@@ -1812,7 +1812,9 @@ the log and the record) -> `packages/core/test/pvp-threat.test.ts`, `scripts/pk-
   within the account's levels, when the gain over all slots is 6 or more. Rune platebody and platelegs against dragonhide body and chaps is
   +38 magic defence. The hold loop wears them before the next fight (the Wear option, one input and one tick each) and wears the worn ones
   again 60 ticks after no threat needs the swap. A swap needs spare armour in the pack, and no kit in `scripts/pk-kits.ts` carries any.
-- **Expected targets.** The squad's targets are expected: protected against, never a reason to retreat. `SQUAD_THREAT_EXPECTED=0` counts them as strangers, for a
+- **Expected targets.** With the counting rules (`SQUAD_THREAT_ODDS=0`) the squad's targets are expected: protected against, never a reason to retreat. With the win-chance
+  estimate (the default) the targets count in the odds like any dangerous player, so a lost fight against the gang alone is left (and has the cooldown too); the expected set
+  keeps its other meaning there: a target is not an interloper (not attacked first, not counted in `attackerKills`). `SQUAD_THREAT_EXPECTED=0` counts them as strangers, for a
   bench whose attackers are also the squad's targets (`extra:attack-*`), where the retreat rules have no other way to fire.
 - **Hunt and roam.** The hunt (`HUNT_THREAT=1`, `HUNT_THREAT_ACT=0`) and the roam (`THREAT=1`, `THREAT_ACT=0`) run the same `ThreatWatch` and
   `KitSwapper` for their one account: the protect prayer through `threatPrayer`, the armour swap, and the retreat (the hunt's threat retreat, the
@@ -1851,6 +1853,24 @@ Gap: practice and unit proof only, and the bench gang is the only attacker that 
 `extra:roam-pick-threat` and the hunt has a unit test; neither has an attacker that casts or shoots. No kit carries spare armour, so the swap does not fire in a run. A single-way tile is
 the nearest tile that is not multi-way, and the walker decides whether a path reaches it: a failed walk is a retreat. The swap does not
 change the weapon, and it waits for the end of a fight. `scripts/measure/pk-gang-record.ts` does not read the record file.
+
+## Fight fixes from the review of run 3
+
+Source: the review of the kill receipts of the third live run, checked in the code. Each claim below was read in the code before the fix.
+
+- **A dying target.** `lowHealth` is true at a health bar of 0, so a special, a freeze or a bind went into a target that was already dead. `isDying` (`scripts/pk.ts`,
+  health bar 0 with a total above 0) now stops the freeze cast, the secondary stun, the special and the bow burst. Proof: `scripts/pk.test.ts` (the helper).
+  Gap: the fight loop's use of it is not run by a test of its own.
+- **The armour that a freeze strips.** The strip adds the platelegs and the full helm to `tankIds`, which lives in one fight; the next fight's set holds only the plate
+  and chain bodies, so they stayed in the pack. `rewearStart` (`scripts/pk.ts`) wears again, after each fight of the squad's hold loop and of the hunt, the armour that
+  the account wore at the start and that sits in the pack with its slot empty. It leaves the weapon and the shield alone (a shield would unwield a two-handed
+  weapon). Proof: `scripts/pk.test.ts` and the hold-loop test in `scripts/pk-squad.test.ts`.
+- **The attack styles of the radar.** `attackStyleOfAnim` (`scripts/pk-threat.ts`) reads the style of an animation from the content: the stab, slash and crush animations
+  of every weapon object under `scripts/skill_combat/configs` (such as `human_ddagger_lunge` 376 and `human_ddagger_hack` 377) are melee, and the special attack
+  animations of `scripts/skill_combat/scripts/pvp/specs/scripts/pvp_<weapon>.rs2` take the style of their weapon: `puncture` 1062, `cleave` 1058, `shove` 1064 and
+  `dragon_halberd_special_attack` 1203 are melee, `snapshot` 1074 and `chainhit` 1068 are ranged. Before, the name rules gave null for all of them.
+- **The freeze share.** `SQUAD_FREEZE_SHARE=1` gives each target one shared freeze clock with a stagger of `SQUAD_FREEZE_STAGGER` ticks (default 3), so that members do not cast Bind on
+  the same tick. Off by default until the bench says otherwise.
 
 ## Server rules the loop follows
 
