@@ -92595,6 +92595,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/ledger-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/levelup-pages.ts",
    "intents": [
     "observe"
