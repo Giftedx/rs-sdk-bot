@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795093394009-mmtha0205-quickhandjob",
+ "account": "mmtha0205",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 246,
+ "claim": "46cf2b35-e818-4718-b375-157453d313de",
+ "count": 0,
+ "ok": false,
+ "at": 1795093482896,
+ "detail": "trade claimed"
+}
