@@ -578,6 +578,13 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'logistics:walk-edge', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-edge'],
     presetConfig: {position: {x: 3107, z: 3491, level: 0}, skills: {Hitpoints: 60, Defence: 60}},
     pass: s => ok(s) && /WALK_EDGE \{"ok":true,/.test(s) && /"loggedOut":true/.test(s) && s.includes('LOGOUT logged-out')},
+  // The poison cure drinks one antipoison: from the pack at once, or from the bank beside the account.
+  {key: 'logistics:cure-poison', script: 'scripts/cure-poison.ts', preset: 'fresh_lumbridge', scriptArgs: [],
+    presetConfig: {position: {x: 3185, z: 3438, level: 0}, inventory: [{id: 175, count: 1}]},
+    pass: s => ok(s) && /cure-poison drank Antipoison\(3\) from the pack/.test(s) && s.includes('LOGOUT logged-out')},
+  {key: 'extra:cure-poison-bank', script: 'scripts/cure-poison.ts', preset: 'fresh_lumbridge', scriptArgs: [],
+    presetConfig: {position: {x: 3185, z: 3438, level: 0}, inventory: [], bank: [{id: 175, count: 2}]},
+    pass: s => ok(s) && /cure-poison drank Antipoison\(3\) from the bank/.test(s) && s.includes('LOGOUT logged-out')},
   // Hold an ordinary offensive prayer with the guard disabled, then restore the spent points through the AIO
   // route. A full-prayer preset alone would exercise only the altar worker's idempotent early return.
   {key: 'logistics:restore-prayer', script: 'scripts/measure/restore-prayer-entry.ts', preset: 'fresh_lumbridge', scriptArgs: [],
