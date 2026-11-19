@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795109456229-mmthv2350-sporranbulge-bronzesword",
  "account": "mmthv2350",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Bronze sword",
  "requested": 1,
  "claim": "7c9ddd0a-4cd6-4bd4-906a-b2645d486699",
- "count": 0,
- "ok": false,
- "at": 1795109526051,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795109688261,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795109673921
+ },
+ "logout": {
+  "attemptId": "1795109526059-0000026728-0000000001",
+  "at": 1795109688250,
+  "sha256": "1bc5c084cea457acb98ab603b8c098a907b996d3caee9de74ad9b897b1d77e6a"
+ },
+ "screen": true
 }
