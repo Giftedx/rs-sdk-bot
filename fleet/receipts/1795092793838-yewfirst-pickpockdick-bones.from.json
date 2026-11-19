@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795092793838-yewfirst-pickpockdick-bones",
+ "account": "YewFirst",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 34,
+ "claim": "37331d04-73e1-4019-b5d5-77125bf2ca5f",
+ "count": 34,
+ "ok": true,
+ "at": 1795092905930,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 34,
+  "after": 0
+ },
+ "bank": {
+  "count": 34,
+  "at": 1795092894436
+ },
+ "logout": {
+  "attemptId": "1795092886656-0000027876-0000000001",
+  "at": 1795092905919,
+  "sha256": "4216a2dc0e224dcfedfdc239caf4cb737c2be9b76be6651bc8acc262fb36f338"
+ },
+ "screen": true
+}
