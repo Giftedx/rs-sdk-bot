@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795106137019,
+ "at": 1795106212927,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -365,25 +365,23 @@
   },
   {
    "account": "Kiltlifter",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
    "env": {
-    "ITEM_ID": "536",
-    "QUANTITY": "8",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "7300",
-    "CASH_RESERVE": "5000",
-    "ORDER_MS": "1200000",
-    "ORDER_KEY": "prayer99-kiltlifter-dragonbones8",
+    "BONE_ID": "536",
+    "MAX_BURY": "8",
+    "BONE_RESERVE": "0",
+    "CAP": "1500",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-55317aee-a8ab-42b1-9a8a-14c75741455b"
+    "COORDINATOR_RUN_ID": "task-ed42b401-2394-49ed-b56e-60003d5c3070"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-buy-kiltlifter-dragon-bones-8-norepair [task-55317aee-a8ab-42b1-9a8a-14c75741455b]",
-   "role": "supply"
+   "goal": "run-prayer-kiltlifter-99-bury8 [task-ed42b401-2394-49ed-b56e-60003d5c3070]",
+   "role": "helper"
   }
  ],
  "army": [
