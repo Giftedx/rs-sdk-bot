@@ -27,7 +27,7 @@ function archive(): Buffer {
 const mode = process.argv[2];
 if (mode === 'raw' || mode === 'cold' || mode === 'warm') {
     const bytes = new Uint8Array(archive());
-    const mod: any = await import('../../vendor/rs-sdk/server/webclient/src/io/BZip2.js');
+    const mod: any = await import(String('../../vendor/rs-sdk/server/webclient/src/io/BZip2.js'));
     const fn = mode === 'raw' ? (mod.bunzip2Raw ?? mod.bunzip2) : mod.bunzip2;
     Bun.gc(true);
     const before = process.memoryUsage().rss;

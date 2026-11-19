@@ -65,7 +65,7 @@ test('the preload serves the vendor module: bunzip2 gives the same bytes as bunz
     let seed = 7;
     writeFileSync(raw, Buffer.from('interface text '.repeat(500) + Array.from({ length: 60000 }, () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) % 9973).join(',')));
     const packed = Bun.spawnSync(['bzip2', '-9', '-c', raw], { stdout: 'pipe', windowsHide: true }).stdout;
-    const mod: any = await import('../../../vendor/rs-sdk/server/webclient/src/io/BZip2.js');
+    const mod: any = await import(String('../../../vendor/rs-sdk/server/webclient/src/io/BZip2.js'));
     expect(typeof mod.bunzip2Raw).toBe('function');
     const prior = process.env.BUNZIP_CACHE_DIR;
     process.env.BUNZIP_CACHE_DIR = join(dir, 'cache');
