@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795096437834,
+ "at": 1795096455999,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -319,48 +319,6 @@
    "resources": [
     "splash:ardougne-cow-fence"
    ]
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BONE_ID": "536",
-    "MAX_BURY": "107",
-    "BONE_RESERVE": "6",
-    "CAP": "2500",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "COORDINATOR_RUN_ID": "task-9b7526df-6f37-4c48-9688-3ac787668a9c"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-prayer-swordinhand-99 [task-9b7526df-6f37-4c48-9688-3ac787668a9c]",
-   "role": "helper"
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/coin-courier.ts",
-   "args": [
-    "1000000",
-    "--bank-x=2618",
-    "--bank-z=3332",
-    "--reserve=200000",
-    "--timeout-ms=600000"
-   ],
-   "env": {
-    "COIN_ORDER": "prayer99-knightstick-bonefund1m",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-13b20de6-4754-472b-b545-edda66b18e9f"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-courier-mmtha0205-knightstick-bone-fund [task-13b20de6-4754-472b-b545-edda66b18e9f]",
-   "role": "supply"
   },
   {
    "account": "Knightstick",
