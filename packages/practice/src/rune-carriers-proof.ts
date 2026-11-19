@@ -14,7 +14,8 @@ import {PRACTICE_STARTUP_GB,FREE_FLOOR_GB} from '../../core/src/memory';
 import {xpForLevel,levelForXp} from '../../planner/src/curve';
 import {runRunePipeline,verifyRunePipeline} from './rune-pipeline-proof';
 const root=resolve(import.meta.dir,'../../..'),helpers=16;
-const TICK_MS=400,WORKER_CAP=2800,WORKER_TIMEOUT_MS=WORKER_CAP*TICK_MS+60000;
+// 100 ms (400 ms before): hosted runs give the same results, items and XP and game ticks within the noise of two runs at the old tick (see the pull request).
+const TICK_MS=100,WORKER_CAP=2800,WORKER_TIMEOUT_MS=WORKER_CAP*TICK_MS+60000;
 const files=['scripts/rune-pipeline.ts','scripts/rune-bank-craft.ts','scripts/rune-carriers.ts','scripts/rune-carrier-start.ts','scripts/rune-carrier-trade.ts','scripts/rune-carrier-bank.ts','scripts/rune-carrier-roster.ts','scripts/rune-carrier-altar.ts','packages/practice/src/rune-carriers-proof.ts'];
 const hashes=()=>Object.fromEntries(files.map(f=>[f,createHash('sha256').update(readFileSync(join(root,f))).digest('hex')]));
 
