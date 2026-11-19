@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import {
     attackable, battleaxeWarcryMath, bestDamageSpell, bestFood, canCastChargeNow, castableFreeze, chargeVarpTicks, combatPrayers, dangerReason, defaultSpec, defaultStunSpec,
-    estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, isDying, ITEMS, killMessage, lowHealth, rewearStart,
+    estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, isDying, ITEMS, killMessage, lowHealth, rewearStart, carriedPoison, fledEnds, noteFightPoison, ownPoisonHit, POISON_HOLD, specReasons,
     kitRotation, meleeWeaponDelay, negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, pickFakieWeapon,
     deathRisk, itemCostOf, ownSkull,
     pickFrozenKiteTile, pickWeighted, planPrayerTick, PRAYER, protectedStyles, seededRandom, shouldComboEat, skulled,
@@ -1123,4 +1123,43 @@ test('rewearStart wears the starting armour that sits in the pack with its slot 
 
 test('isDying guards the freeze and the special: not read here, see the fight loop; the helper is the test of the rule', () => {
     expect(isDying({ headicons: 0, worn: [], health: 0, totalHealth: 70, spotanim: -1 })).toBe(true);
+});
+
+test('specReasons names the rules that let a special go, and none when no rule does', () => {
+    const off = { fled: false, bursting: false, volleying: false, chainStun: false, low: false };
+    expect(specReasons(off)).toBe('none');
+    expect(specReasons({ ...off, low: true })).toBe('low');
+    expect(specReasons({ ...off, fled: true, low: true })).toBe('fled+low');
+    expect(specReasons({ fled: true, bursting: true, volleying: true, chainStun: true, low: true })).toBe('fled+burst+volley+chain+low');
+});
+
+test('fledEnds: the flee state ends when the flee hold has run out, no freeze holds the target and it stands within 2 tiles', () => {
+    // fled, gap 1, now 20, flee hold until 14, frozen until 10: ends.
+    expect(fledEnds(true, 1, 20, 14, 10)).toBe(true);
+    expect(fledEnds(true, 2, 20, 14, 10)).toBe(true);
+    // Not while it is still fleeing (the hold has not run out), not while a freeze holds it, not farther than 2 tiles, not when it never fled.
+    expect(fledEnds(true, 1, 13, 14, 10)).toBe(false);
+    expect(fledEnds(true, 1, 20, 14, 25)).toBe(false);
+    expect(fledEnds(true, 3, 20, 14, 10)).toBe(false);
+    expect(fledEnds(false, 1, 20, 14, 10)).toBe(false);
+});
+
+test('ownPoisonHit reads a poison hitsplat (type 2) that is still showing on the own player; carriedPoison holds a poison between fights for 40 ticks', () => {
+    const client = (types: number[], cycles: number[], now = 100) => ({ localPlayer: { damageTypes: types, damageCycles: cycles }, getClientCycle: () => now });
+    expect(ownPoisonHit(client([2, 0, 0, 0], [170, 0, 0, 0]))).toBe(true);
+    // A damage hitsplat (type 1), an old poison hitsplat (its cycle is past), no splat data, no cycle function.
+    expect(ownPoisonHit(client([1, 0, 0, 0], [170, 0, 0, 0]))).toBe(false);
+    expect(ownPoisonHit(client([2, 0, 0, 0], [90, 0, 0, 0]))).toBe(false);
+    expect(ownPoisonHit({})).toBe(false);
+    expect(ownPoisonHit({ localPlayer: { damageTypes: [2], damageCycles: [500] } })).toBe(false);
+    // The carry: a poison noted at tick 50 is carried to a fight that starts at tick 80 (30 ticks later), not to one at tick 91, and not when it was cured.
+    const key = {};
+    noteFightPoison(key, true, 50);
+    expect(carriedPoison(key, 80)).toBe(true);
+    expect(carriedPoison(key, 50 + POISON_HOLD)).toBe(true);
+    expect(carriedPoison(key, 50 + POISON_HOLD + 1)).toBe(false);
+    noteFightPoison(key, false, 60);
+    expect(carriedPoison(key, 70)).toBe(false);
+    expect(carriedPoison({}, 70)).toBe(false);
+    expect(carriedPoison(undefined, 70)).toBe(false);
 });
