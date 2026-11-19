@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795092711981,
+ "at": 1795092858912,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -222,28 +222,6 @@
    "resources": [
     "shop:betty"
    ]
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "17",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying the held bones",
-   "role": "combat",
-   "template": "army-bury-prayer-99",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Swordswallow",
