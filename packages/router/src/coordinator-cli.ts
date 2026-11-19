@@ -147,7 +147,23 @@ export const ownerHolds=(owner:{pid:number;nonce:string;at?:number},read:(pid:nu
  const started=table.get(owner.pid);
  return started===undefined?false:started<=owner.at!+OWNER_START_SLACK_MS;
 };
-export function reconcile(state:CoordinatorState,alive:(pid:number,marker:string)=>boolean=processMatches,directory=coordinationDir,pidExists=existsPid,startupGraceMs=15000){
+// A worker writes its owner file with its own pid and the time `at` right after it starts, so a process that started after
+// `at` is not that worker. The check reads the process table once for the pid, so a worker that passed it is not checked
+// again for WORKER_CHECK_MS. An unreadable table proves nothing, and then a running pid counts.
+export const WORKER_CHECK_MS=60000,WORKER_START_SLACK_MS=5000;
+const workerChecks=new Map<string,number>();
+export const workerHolds=(pid:number,runId:string,at:number,starts:(pids:number[])=>Map<number,number>|null=processStartTimes,
+ checks:Map<string,number>=workerChecks,now:number=Date.now()):boolean=>{
+ const key=runId+'|'+pid,seen=checks.get(key);
+ if(seen!==undefined&&now-seen<WORKER_CHECK_MS)return true;
+ const table=starts([pid]);
+ if(table===null)return true;
+ const started=table.get(pid);
+ if(started===undefined||started>at+WORKER_START_SLACK_MS){checks.delete(key);return false;}
+ checks.set(key,now);
+ return true;
+};
+export function reconcile(state:CoordinatorState,alive:(pid:number,marker:string)=>boolean=processMatches,directory=coordinationDir,pidExists=existsPid,startupGraceMs=15000,holds:(pid:number,runId:string,at:number)=>boolean=workerHolds){
  for(const record of state.tasks.filter(r=>r.status==='failed'&&r.receipt?.error?.startsWith('worker ended without a receipt'))){
   const file=join(runDirectory(record.runId!,directory),'receipt.json');
   if(existsSync(file)){
@@ -176,12 +192,13 @@ export function reconcile(state:CoordinatorState,alive:(pid:number,marker:string
    else finishTask(state,{taskId:record.spec.id,runId:record.runId!,ok:false,at:Date.now(),output:null,error:'mismatched receipt; original bytes retained'});
    continue;
   }
-  const pid=existsSync(owner)?json(owner).pid:record.pid;
+  const claim=existsSync(owner)?json(owner):null,pid=claim?claim.pid:record.pid;
   // CIM can briefly return no command line under load. That is not evidence
   // that a process ended. Keep its ownership until OS liveness also fails.
   // Check OS liveness first: command-line lookup starts PowerShell on Windows.
-  // The existing rule retains a live PID even when CIM cannot identify it.
-  if(pid&&(pidExists(pid)||alive(pid,record.runId!)))continue;
+  // The existing rule retains a live PID even when CIM cannot identify it. A PID that started after the worker wrote its
+  // owner file belongs to another program, which reused the PID.
+  if(pid&&(pidExists(pid)?!Number.isFinite(claim?.at)||holds(pid,record.runId!,claim.at)||alive(pid,record.runId!):alive(pid,record.runId!)))continue;
   if(Date.now()-(record.startedAt??0)>=startupGraceMs)finishTask(state,{taskId:record.spec.id,runId:record.runId!,ok:false,at:Date.now(),output:null,error:'worker ended without a receipt; inspect preserved run before repair'});
  }
 }
