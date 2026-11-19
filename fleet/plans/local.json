@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795113930730,
+ "at": 1795114019768,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -351,26 +351,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "account": "Billionaire",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BONE_ID": "536",
-    "MAX_BURY": "290",
-    "BONE_RESERVE": "5",
-    "CAP": "3000",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "COORDINATOR_RUN_ID": "task-8bc9cf02-49b8-4443-8010-e695ee8b0b35"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-prayer-billionaire-99 [task-8bc9cf02-49b8-4443-8010-e695ee8b0b35]",
-   "role": "helper"
   }
  ],
  "army": [
