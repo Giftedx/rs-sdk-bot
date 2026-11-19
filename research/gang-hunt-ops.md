@@ -156,6 +156,10 @@ What the swarm does with this job, from `scripts/swarm.ts` and `packages/practic
   that the bank and the pack together cannot fill deposits nothing. A trip is due at the start and after the member
   has been in the Wilderness (`outTripDue`), not on the first steps of the march, which are outside the Wilderness
   too: a trip there ran a restock before any fight. The bench shows it as `trips=4` for four members.
+- **Stock for a second trip.** `squad-ready.ts` counts the runes and arrows of a pack (and the quiver) against the pack, the
+  bank and the quiver together: under one pack's worth is a block (`stock under one pack`), under two a note (`stock for one trip
+  only`). A bank trip that cannot be filled says which item and how many (`bank lacks trip requirements ... (iron arrow: 75
+  items needed, 33 in the bank)`; the log line names the member).
 - **Memory.** A live start of `pk-squad.ts` needs the fleet's floor plus 1 GiB for each of our accounts of free memory
   (8 GiB for four): `RESULT fail host memory` and exit 75 otherwise. The bench on a local server has no gate.
 - **Kit tile.** The kit step (`aio-logistics.ts <account> loadout <file>`) needs the account within 3 tiles of the bank

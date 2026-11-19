@@ -110,6 +110,19 @@ export function carriedFaults(a: Account, worn: readonly Worn[], carried: readon
     if (!squadStartFood(food, foodSlots).ok) out.push(`pack holds ${food} food, under the floor of ${squadStartFood(food, foodSlots).floor} of ${foodSlots}: the kit step takes it`);
     return out;
 }
+// Stock for a second trip: the runes and arrows that the pack and the quiver carry, against what the pack, the bank and the quiver hold
+// together. Under one pack's worth the member cannot even refill after a trip (a block); under two it can make one trip only (a note).
+// Live run 4: every bank trip after the retreat failed for want of arrows and law runes (75 needed, 33 in the bank).
+export function stockFaults(a: Account, worn: readonly Worn[], carried: readonly Item[], rule: Rule, nameOf: (id: number) => string | undefined = () => undefined): { blocks: string[]; notes: string[] } {
+    const blocks: string[] = [], notes: string[] = [], total = (id: number) => [...a.pack, ...a.bank, ...a.worn.filter(w => w.slot === 13)].filter(r => r.id === id).reduce((n, r) => n + r.count, 0);
+    const lines = [...carried.filter(c => c.count > 1).map(c => ({ id: c.id, name: c.name, need: c.count })), ...worn.filter(w => w.slot === 13).map(w => ({ id: w.id, name: w.name, need: Math.min(w.count, rule.minArrows) }))];
+    for (const l of lines) {
+        const have = total(l.id);
+        if (have < l.need) blocks.push(`stock under one pack: ${have} ${l.name} in the pack, bank and quiver (a pack needs ${l.need})`);
+        else if (have < 2 * l.need) notes.push(`stock for one trip only: ${have} ${l.name} of ${2 * l.need} for two trips`);
+    }
+    return { blocks, notes };
+}
 export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule, now: number, kit = kitItems(rule.benchKit), nameOf: (id: number) => string | undefined = () => undefined, post = SQUAD_POST, antipoisonRequired = true, carry = false): Pick {
     const own = holdings(a), needs: Need[] = [], reasons: string[] = [], notes: string[] = [];
     const benchPiece = (test: (g: Gear) => boolean) => [...kit.equipment, ...kit.inventory].map(i => gear.get(i.id)).find(g => !!g && test(g))?.id;
@@ -214,7 +227,12 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     // `carry`: the squad takes its pack from what the account holds at login (scripts/pk-gang.ts packOf), so the check also
     // reads what the account wears and carries now, not what the bank and the pack together could make. Live: an account
     // whose pack a failed trip had deposited was called READY and fought with no bow, no runes and no escape.
-    if (carry) for (const fault of carriedFaults(a, worn, carried, foodSlots, rule, nameOf)) reasons.push(fault);
+    if (carry) {
+        for (const fault of carriedFaults(a, worn, carried, foodSlots, rule, nameOf)) reasons.push(fault);
+        const stock = stockFaults(a, worn, carried, rule, nameOf);
+        reasons.push(...stock.blocks);
+        notes.push(...stock.notes);
+    }
     const prayerBase = a.levels.prayer ?? 1;
     if (a.prayerPoints !== undefined && a.prayerPoints < prayerFloor(prayerBase)) reasons.push(`prayer points ${a.prayerPoints} of ${prayerBase}, under the floor of ${prayerFloor(prayerBase)}: bun scripts/pray-at-altar.ts ${a.name} ALTAR=${PRAYER_ALTAR}`);
     if (inWestArdougne(a.pos)) reasons.push('stands inside West Ardougne, which the walker cannot leave');
