@@ -1,0 +1,22 @@
+{
+ "id": "1795047069487-sausagefest-sporrandip-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Sausagefest",
+ "to": "SporranDip",
+ "item": "Air rune",
+ "count": 50,
+ "start": 1795047069487,
+ "end": 1795049469487,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
