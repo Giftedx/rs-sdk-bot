@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795064280717-pickpockdick-dipstick-staffoffire",
  "account": "Dipstick",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "fd76c9f7-06e9-4e46-8fef-ed431eea9725",
- "count": 0,
- "ok": false,
- "at": 1795064339558,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795064540285,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795064539192
+ },
+ "logout": {
+  "attemptId": "1795064339566-0000025092-0000000001",
+  "at": 1795064540274,
+  "sha256": "35b6fd5b2c3f3dc3109b70da38135edb935f8ac3f9d972836370e6c8a55ae2f3"
+ },
+ "screen": true
 }
