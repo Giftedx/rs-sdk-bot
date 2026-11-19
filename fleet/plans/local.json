@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795096455999,
+ "at": 1795096530411,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -322,25 +322,23 @@
   },
   {
    "account": "Knightstick",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
    "env": {
-    "ITEM_ID": "536",
-    "QUANTITY": "139",
-    "EXPECTED_OWNED": "6",
-    "LIMIT_PRICE": "7300",
-    "CASH_RESERVE": "10000",
-    "ORDER_MS": "1200000",
-    "ORDER_KEY": "prayer99-knightstick-dragonbones139",
+    "BONE_ID": "536",
+    "MAX_BURY": "139",
+    "BONE_RESERVE": "6",
+    "CAP": "3000",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-b61c3561-827e-44b2-8ca0-e0d1be444ac5"
+    "COORDINATOR_RUN_ID": "task-24bf8b44-13c8-4cd8-8acc-94b05bb3911d"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-buy-knightstick-dragon-bones-99 [task-b61c3561-827e-44b2-8ca0-e0d1be444ac5]",
-   "role": "supply"
+   "goal": "run-prayer-knightstick-99 [task-24bf8b44-13c8-4cd8-8acc-94b05bb3911d]",
+   "role": "helper"
   }
  ],
  "army": [
