@@ -276,6 +276,11 @@ jobs:
           (cd vendor/rs-sdk && bun install --frozen-lockfile --production)
           (cd vendor/rs-sdk/server/webclient && bun install --frozen-lockfile)
       - run: bun run check-pin
+      # A Windows checkout (CRLF in the SDK submodule) and this runner give one release for one commit
+      # (packages/core/src/release-digest.ts). Compare the line with `bun packages/core/src/worker-release.ts scripts/ranged-train.ts` on the PC.
+      - name: Print the release of one worker
+        run: |
+          bun packages/core/src/worker-release.ts scripts/ranged-train.ts
       - name: Typecheck (tsc needs more than the default Node heap for this repo)
         run: bun run typecheck
         env:

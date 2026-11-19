@@ -47,6 +47,9 @@ function outputPath(root:string,path:string){
  }
 }
 
+// A method id belongs to the capability whose first word it starts with: ranged-train owns ranged/<method>.
+// The id itself comes from the worker's own result line and is checked against the frozen entry (verifyProof).
+export const methodOfTask=(task:string,method:string)=>/^[a-z]+\/[a-z0-9-]+$/.test(method)&&method.startsWith(task.split('-')[0]+'/');
 /** Register only the saved method proof accepted by this complete native delivery. Never enables a worker. */
 export async function registerProgressionQualification(directory:string,o:ProgressionRegistrationOptions){
  if(o.task.id!=='ranged-train')return{registered:0,index:''};
@@ -85,7 +88,7 @@ export async function registerProgressionQualification(directory:string,o:Progre
   requireProof(proof.ok===true&&proof.code===0&&proof.mode==='adaptive'&&Number.isSafeInteger(proof.target)&&proof.target>=1&&proof.target<=99&&allPassed(proof.checks)&&required.every(k=>proof.checks[k]===true)&&proof.result?.ok===true&&proof.result.targetMet===true&&Number.isSafeInteger(proof.result.finalLevel)&&proof.result.finalLevel>=proof.target&&proof.result.xpGain>0,'method proof is incomplete');
   requireProof(proof.source===report.runtimeRevision&&digest(proof.proofSource)&&digest(proof.entrySha256)&&Number.isSafeInteger(proof.at)&&proof.at>0&&proof.at<=Date.now()&&(!original||proof.at<=report.at&&report.at-proof.at<900000),'method proof source or completion time differs');
   requireProof(hash(artifacts['entry.json']!)===proof.entrySha256,'frozen entry hash differs');
-  requireProof(Array.isArray(proof.supportedMethods)&&proof.supportedMethods.length>0&&proof.supportedMethods.every((m:any)=>['ranged/chickens','ranged/troopers'].includes(m.id)&&m.source===proof.source&&Array.isArray(m.bands)&&m.bands.length>0),'method proof has no supported source/state band');
+  requireProof(Array.isArray(proof.supportedMethods)&&proof.supportedMethods.length>0&&proof.supportedMethods.every((m:any)=>typeof m.id==='string'&&methodOfTask(o.task.id,m.id)&&m.source===proof.source&&Array.isArray(m.bands)&&m.bands.length>0),'method proof has no supported source/state band');
   return{folder,proofBytes,proof,artifacts,selectedRoot};
  };
  const pointerBytes=artifactBytes(directory,'ranged-adaptive-proof.json',practice);

@@ -6,6 +6,7 @@ import {authorLoop,runClaude,fileExists,type AuthorResult} from './author';
 import {deliveryTask,deliveryFingerprint,runDeliveryTask,runDiagnosticTask} from './delivery-cli';
 import {completeProgressionQualification} from './progression-qualification-native';
 import {runQualifiedDelivery} from './progression-native-context';
+import {adoptedDelivery} from './adopt-delivery';
 import {createAccountProvisionDeps,provisionAccount,REGISTRATION_SCRIPT} from './account-provision';
 import {readWorld,parseModelObject,runSubscriptionModel,type SubscriptionModelDeps} from './coordinator-planner';
 import {assertProvisionCrew,type ProvisionCrew} from '../../../scripts/provision-readiness';
@@ -80,7 +81,9 @@ export async function buildReviewGate(input:{root:string;isolated:boolean;entry:
    // The first replay runs alone: an error there (the worker did not open its recorded account) repeats for each
    // record, so it stops the others. After it the rest run together; the result list keeps the order of the records.
    const first=await replay(records[0]!);replays.push(first);
-   if(first.status!=='error')replays.push(...await Promise.all(records.slice(1).map(file=>replay(file))));
+   // allSettled, not all: a replay that rejects must not end the wait while the other still runs in the scratch root that
+   // the finally below deletes. A rejection is an error outcome of that record.
+   if(first.status!=='error')replays.push(...(await Promise.allSettled(records.slice(1).map(file=>replay(file)))).map((r,i):ReplayOutcome=>r.status==='fulfilled'?r.value:{status:'error',file:records[i+1],error:String((r.reason as Error)?.message??r.reason)}));
   }
  }finally{if(scratch)removeReplayRoot(scratch);}
  return reviewGate({scope,records:records.length,replays,allow:input.allow});
@@ -177,6 +180,12 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
   return runLiveTask(task,dependencies,definition,runId,startedAt);
  }
  if(task.kind==='qualify'){
+  // A delivery of this same source that a hosted runner made and adopt-delivery.ts checked against this checkout
+  // stands in for the local delivery, so the PC starts no practice engine for it. A task bound to one observed
+  // account (PROGRESSION_ context) always runs its own delivery. The method proofs of the progression layer are
+  // registered by adopt-proofs.ts, not from an adopted delivery.
+  const adopted=Object.keys(task.env??{}).some(k=>k.startsWith('PROGRESSION_'))?null:adoptedDelivery(definition,projectRoot);
+  if(adopted){console.log('QUALIFY_ADOPTED '+JSON.stringify({capability:definition.id,source:adopted.source,...adopted.adoptedFrom}));return completeProgressionQualification(definition,adopted as any,projectRoot,async()=>({registered:0,index:''}));}
   const delivery=await runQualifiedDelivery(definition,task,()=>runDeliveryTask(definition),{base:projectRoot});
   return completeProgressionQualification(definition,delivery,projectRoot);
  }

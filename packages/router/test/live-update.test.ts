@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
-import { TRADE_HOLD_MS, releaseClosure, applyUpdate, coordinatorHolds, gitIn, liveRuns, mergedDeliveryCopies, mergeText, parseStatus, rebasableDeliveryEdits, patchChangedFiles, patchCollisions, planUpdate, qualificationSource, readCheckout, reloadsFor, resetVendor, vendorExact, vendorReleaseFiles, vendorState, type UpdateInput } from '../src/live-update';
+import { TRADE_HOLD_MS, preloadOnlyChange, addedPreloads, releaseClosure, applyUpdate, coordinatorHolds, gitIn, liveRuns, mergedDeliveryCopies, mergeText, parseStatus, rebasableDeliveryEdits, patchChangedFiles, patchCollisions, planUpdate, qualificationSource, readCheckout, reloadsFor, resetVendor, vendorExact, vendorReleaseFiles, vendorState, type UpdateInput } from '../src/live-update';
 import { liveUpdateFile, reloadDue } from '../../core/src/live-reload';
 import { releaseFiles, workerLaunchers } from '../../core/src/worker-release';
 import { importClosure } from '../src/delivery-cli';
@@ -542,3 +542,51 @@ test('a live run whose entry gives no file holds each update: the files it loads
         expect(liveRuns(dir, 'live', () => [], now)).toEqual([{ name: 'Lost', files: [] }]);
     });
 });
+
+const BUNFIG_BEFORE = 'preload = ["./packages/core/src/collision-lazy.ts"]\n\n[test]\npreload = ["./packages/core/src/collision-lazy.ts"]\n';
+const BUNFIG_AFTER = 'preload = ["./packages/core/src/collision-lazy.ts", "./packages/core/src/bunzip-cache.ts"]\n\n[test]\npreload = ["./packages/core/src/collision-lazy.ts", "./packages/core/src/bunzip-cache.ts"]\n';
+test('a bunfig change that only touches preload lines is no dependency change, and any other manifest change still waits', () => {
+    expect(preloadOnlyChange(BUNFIG_BEFORE, BUNFIG_AFTER)).toBe(true);
+    expect(addedPreloads(BUNFIG_BEFORE, BUNFIG_AFTER)).toEqual(['packages/core/src/bunzip-cache.ts']);
+    // The same text, a change outside the preload lines, or a CRLF checkout.
+    expect(preloadOnlyChange(BUNFIG_BEFORE, BUNFIG_BEFORE)).toBe(false);
+    expect(preloadOnlyChange(BUNFIG_BEFORE, BUNFIG_AFTER + '[install]\nregistry = "https://example.invalid"\n')).toBe(false);
+    expect(preloadOnlyChange(BUNFIG_BEFORE, BUNFIG_AFTER.replace('[test]', '[test.x]'))).toBe(false);
+    expect(preloadOnlyChange(BUNFIG_BEFORE.replaceAll('\n', '\r\n'), BUNFIG_AFTER)).toBe(true);
+    // Without the flag, and with the flag, for bunfig alone and next to another manifest.
+    const base2: UpdateInput = { ...base, incoming: ['bunfig.toml', 'packages/core/src/bunzip-cache.ts'] };
+    expect(planUpdate(base2)).toEqual({ action: 'wait', reason: 'dependency change needs bun install: bunfig.toml' });
+    expect(planUpdate({ ...base2, bunfigPreloadOnly: false }).action).toBe('wait');
+    expect(planUpdate({ ...base2, bunfigPreloadOnly: true })).toEqual({ action: 'update', adopt: [] });
+    expect(planUpdate({ ...base2, incoming: ['bunfig.toml', 'package.json'], bunfigPreloadOnly: true })).toEqual({ action: 'wait', reason: 'dependency change needs bun install: package.json' });
+    expect(planUpdate({ ...base2, incoming: ['bun.lock'], bunfigPreloadOnly: true }).action).toBe('wait');
+});
+test('readCheckout flags a bunfig that adds a preload file that the target holds, and not one that adds a missing file', () => {
+    scratch('rsbot-live-bunfig-', dir => {
+        const origin = join(dir, 'origin'), main = join(dir, 'main');
+        mkdirSync(origin);
+        const run = (cwd: string, ...args: string[]) => { const r = gitIn(cwd)('-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false', ...args); if (!r.ok) throw Error(args.join(' ') + ': ' + r.out); };
+        run(origin, 'init', '--quiet', '--initial-branch=master');
+        mkdirSync(join(origin, 'packages/core/src'), { recursive: true });
+        writeFileSync(join(origin, 'bunfig.toml'), BUNFIG_BEFORE); writeFileSync(join(origin, 'packages/core/src/collision-lazy.ts'), 'export {};\n');
+        run(origin, 'add', '.'); run(origin, 'commit', '--quiet', '-m', 'first');
+        run(dir, 'clone', '--quiet', origin, main); run(main, 'config', 'core.autocrlf', 'false');
+        // The target adds the preload file and names it.
+        writeFileSync(join(origin, 'bunfig.toml'), BUNFIG_AFTER); writeFileSync(join(origin, 'packages/core/src/bunzip-cache.ts'), 'export {};\n');
+        run(origin, 'add', '.'); run(origin, 'commit', '--quiet', '-m', 'second');
+        run(main, 'fetch', '--quiet', 'origin', 'master');
+        const held = readCheckout(gitIn(main), main, 'origin/master');
+        expect([...held.incoming].sort()).toEqual(['bunfig.toml', 'packages/core/src/bunzip-cache.ts']);
+        expect(held.bunfigPreloadOnly).toBe(true);
+        expect(planUpdate({ ...held, holds: [], heldFiles: [] }).action).toBe('update');
+        // A target that names a preload file that it does not hold is a dependency change as before.
+        run(origin, 'rm', '--quiet', 'packages/core/src/bunzip-cache.ts'); run(origin, 'commit', '--quiet', '-m', 'third');
+        run(main, 'fetch', '--quiet', 'origin', 'master');
+        const missing = readCheckout(gitIn(main), main, 'origin/master');
+        expect(missing.bunfigPreloadOnly).toBe(false);
+        expect(planUpdate({ ...missing, holds: [], heldFiles: [] })).toEqual({ action: 'wait', reason: 'dependency change needs bun install: bunfig.toml' });
+        // An update that does not touch bunfig.toml carries no flag.
+        const plain = readCheckout(gitIn(main), main, 'origin/master~1');
+        expect('bunfigPreloadOnly' in plain).toBe(plain.incoming.includes('bunfig.toml'));
+    });
+}, 60_000);

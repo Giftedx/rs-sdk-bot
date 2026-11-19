@@ -186,7 +186,7 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     if (record && s.record) { s.record(record); records.set(s, record); }
     // Every session keeps a tick ledger (packages/core/src/ledger.ts); finish() prints it.
     // The ledger names the last script action of each idle tick: the watcher's gate sees them (started below).
-    const led = startLedger(s as any, () => randomEvents.get(s)?.lastAction() ?? null);
+    const led = startLedger(s as any, () => randomEvents.get(s)?.lastAction() ?? null, Math.max(STALL_TICKS, 300));
     ledgers.set(s, led);
     // Random events (dryad, genie, lost axe...) and valuable ground items share one watcher (packages/core/src/randomevents.ts,
     // packages/core/src/loot.ts). RANDOM_EVENTS=0 turns the events off and LOOT_WATCH=0 the pickup; a record run never loots.
@@ -251,7 +251,7 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
         void (opts.onStop ? opts.onStop(s, reason) : finish([s], false, reason));
     }));
     // Live status for the dashboard (packages/dashboard).
-    statuses.set(s, startStatus(s as any, server, () => { const c: Record<string, number> = {}; for (const r of led.rows) c[r.kind] = (c[r.kind] ?? 0) + 1; return c; }, () => led.rows.slice(-300).map(r => r.kind === 'inventory' ? 'v' : r.kind[0]).join('')));
+    statuses.set(s, startStatus(s as any, server, led.counts, () => led.rows.slice(-300).map(r => r.kind === 'inventory' ? 'v' : r.kind[0]).join('')));
     // No more game ticks arrive after disconnect. End a script waiting on them
     // through its own session owner, while planned logout/stop keeps its result.
     watchUnexpectedEnd(s,()=>settling.has(s),()=>stopping,detail=>
@@ -300,7 +300,9 @@ const ledgers = new Map<Session, ReturnType<typeof startLedger>>();
 const statuses = new Map<Session, ReturnType<typeof startStatus>>();
 const stallWatches = new Map<Session, { stop(): void }>();
 const randomEvents = new Map<Session, RandomEventWatch>();
-const deathRecoveries = new Map<Session, Promise<string>>();
+// A WeakMap: finish() and deathRecoveryOf() read it after the session ended, so nothing deletes an entry, and a long host
+// process must not keep each dead session's object graph through it.
+const deathRecoveries = new WeakMap<Session, Promise<string>>();
 const prayerGuards = new Map<Session, ReturnType<typeof startPrayerGuard>>();
 const eatGuards = new Map<Session, ReturnType<typeof startEatGuard>>();
 // For a script that owns the prayers and needs them all off at its start (scripts/microbot-prayer-flick.ts).

@@ -1462,6 +1462,19 @@
    "description": "Distribute coin floats from a treasury account to multiple worker accounts"
   },
   {
+   "id": "logistics:cure-poison",
+   "category": "logistics",
+   "name": "cure-poison",
+   "script": "scripts/cure-poison.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [],
+   "description": "Drink one antipoison from the pack or the nearest bank"
+  },
+  {
    "id": "logistics:fleet-trade",
    "category": "logistics",
    "name": "fleet-trade",
@@ -89994,6 +90007,7 @@
     "logistics:walk-to",
     "logistics:walk-edge",
     "logistics:restore-prayer",
+    "logistics:cure-poison",
     "logistics:relocate-bank",
     "logistics:relocate-knight",
     "logistics:arrive-draynor"
@@ -90452,6 +90466,7 @@
     "logistics:walk-to",
     "logistics:walk-edge",
     "logistics:restore-prayer",
+    "logistics:cure-poison",
     "logistics:relocate-bank",
     "logistics:relocate-knight",
     "logistics:arrive-draynor",
@@ -90742,6 +90757,16 @@
    ],
    "routeIds": [
     "skiller:crafting:legacy-jewelry"
+   ]
+  },
+  {
+   "script": "scripts/cure-poison.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [],
+   "routeIds": [
+    "logistics:cure-poison"
    ]
   },
   {
@@ -92118,7 +92143,25 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/bunzip-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/catalog-integration-proof.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/collision-doors-memory.ts",
    "intents": [
     "observe"
    ],
@@ -92595,6 +92638,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/ledger-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/levelup-pages.ts",
    "intents": [
     "observe"
@@ -92829,6 +92881,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/route-finder-lazy-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/route-key-parity.ts",
    "intents": [
     "observe"
@@ -92874,6 +92935,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/snapshot-restore-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/stun-guest.ts",
    "intents": [
     "observe"
@@ -92884,6 +92954,15 @@
   },
   {
    "script": "scripts/measure/stun-trade.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/supervise-output-memory.ts",
    "intents": [
     "observe"
    ],
@@ -92965,6 +93044,15 @@
   },
   {
    "script": "scripts/measure/wine.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/world-lazy-memory.ts",
    "intents": [
     "observe"
    ],

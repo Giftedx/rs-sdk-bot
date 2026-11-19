@@ -19,7 +19,7 @@ async function trace(reject:boolean,lateStop=false,direct=false,accountStop=fals
   const lifecycle=await import(${JSON.stringify(resolve(root,'packages/core/src/session-lifecycle.ts'))});
   mock.module(${JSON.stringify(resolve(root,'packages/core/src/session-lifecycle.ts'))},()=>({...lifecycle,beginSessionAttempt:()=>{events.push('intent');throw Error('fixture intent');}}));
  }
- mock.module(${JSON.stringify(resolve(root,'packages/core/src/pathcache.ts'))},()=>({loadPathfinding:async()=>{events.push('local-setup');stopped=${lateStop};return{};}}));
+ mock.module(${JSON.stringify(resolve(root,'packages/core/src/pathcache.ts'))},()=>({pathfindingSnapshotUsable:()=>false,loadPathfinding:async()=>{events.push('local-setup');stopped=${lateStop};return{};}}));
  mock.module(${JSON.stringify(resolve(root,'packages/core/src/tradeguard.ts'))},()=>({recordOwnedAccount:()=>events.push('record'),ownedAccounts:()=>new Set(),tradePartners:()=>new Set(),tradeRefusal:()=>null}));
  mock.module(${JSON.stringify(resolve(root,'vendor/rs-sdk/server/webclient/src/lite/session.ts'))},()=>({startSession:async opts=>{
   events.push('authenticating');if(${reject})throw Error('simulated credential rejection');

@@ -162,3 +162,10 @@ test('a relocated artifact root stays valid while publication remains in the act
   expect(existsSync(join(downloaded,'progression-system'))).toBe(false);
  }finally{f.cleanup();}
 });
+
+import {methodOfTask} from '../src/progression-qualification';
+test('a method id belongs to the capability it is named after, and no list of ids is fixed',()=>{
+ for(const id of ['ranged/chickens','ranged/troopers','ranged/troopers-maple','ranged/cannon'])expect(methodOfTask('ranged-train',id)).toBe(true);
+ for(const id of ['magic/splash','ranged','ranged/','Ranged/chickens','ranged/a/b','ranged/..','x ranged/chickens'])expect(methodOfTask('ranged-train',id)).toBe(false);
+ expect(methodOfTask('magic-order','magic/splash')).toBe(true);
+});

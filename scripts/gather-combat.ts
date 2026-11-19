@@ -549,6 +549,23 @@ export function roamTarget<T extends {index:number;distance:number}>(account:str
     const offset=(index:number)=>{let h=2166136261;for(const c of `${account}:${index}`)h=Math.imul(h^c.charCodeAt(0),16777619);return (h>>>0)%8;};
     return [...free].sort((a,b)=>a.distance+offset(a.index)-(b.distance+offset(b.index)))[0];
 }
+// Game ticks for the whole bank retreat, from its start distance in tiles: three a tile, as walkFar's far leg
+// (packages/core/src/walk.ts), plus 120 for the stops. The giant camp is 139 tiles from its bank: 537 ticks; its
+// walked path is 324 tiles.
+export const retreatBudget=(distance:number)=>Number.isFinite(distance)?Math.max(0,distance)*3+120:600;
+// The giant retreat walks the observed outbound path back. Practice: the walk bank->camp arrived on one direct leg,
+// but the planned route camp->bank took the Tree Gnome Village maze leg 'far walk to 2504,3192,0' and stood 305 ticks
+// at the camp until the retreat deadline. The walk out keeps a tile every TRAIL_STEP tiles; the retreat goes through
+// those tiles in reverse from the one nearest the account, then to the bank.
+export const TRAIL_STEP=12;
+const cheb=(a:PathTile,b:PathTile)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.z-b.z));
+export function retreatWaypoints(trail:readonly PathTile[],at:PathTile,bank:PathTile):PathPoint[]{
+    const back=[...trail].reverse().filter(p=>cheb(p,bank)>3);
+    if(!back.length)return [];
+    let i=0;for(let k=1;k<back.length;k++)if(cheb(back[k]!,at)<cheb(back[i]!,at))i=k;
+    if(cheb(back[i]!,at)<=3)i++;
+    return back.slice(i).map(p=>({x:p.x,z:p.z,tol:2}));
+}
 // A target that fights another player: in combat and facing a player slot that is not this account's.
 export const anothersFight=(npc:{inCombat?:boolean;targetIndex?:number}|undefined,selfSlot:number|undefined)=>
     !!npc?.inCombat&&selfSlot!==undefined&&(npc.targetIndex??-1)>=32768&&npc.targetIndex!==32768+selfSlot;
@@ -616,24 +633,44 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         }
         throw new Error(`no ${label} progress: shark did not heal`);
     };
-    // A stop or the cap cancels only the walk out to the camp: the retreat to the bank always runs.
-    const walk=async(x:number,z:number,tol:number,outbound=false)=>{
+    // A stop or the cap cancels only the walk out to the camp: the retreat to the bank always runs, until its own
+    // deadline (game tick). A walk that does not arrive logs the walker's reason and the tile it stopped on.
+    // `via`: waypoints walked first, by walkPath directly and not by the route planner.
+    const walk=async(x:number,z:number,tol:number,outbound=false,deadline=Infinity,via?:readonly PathPoint[])=>{
         await eatGap();
         const sustain=startQuestSustain({...s,direct:async a=>await s.direct(a) as {success:boolean;message?:string}},
             {food:[...site.foods],eatAt,onConsumed:()=>{eaten++;lastEat=s.tick();}});
-        const cancel=new AbortController(),offTick=outbound?s.onTick(()=>{if(over())cancel.abort('stop requested');}):undefined;
-        const signal=outbound?AbortSignal.any([sustain.aborted,cancel.signal]):sustain.aborted;
+        const cancel=new AbortController(),offTick=s.onTick(()=>{if(outbound&&over())cancel.abort('stop requested');else if(s.tick()>=deadline)cancel.abort('retreat deadline');});
+        const signal=AbortSignal.any([sustain.aborted,cancel.signal]);
         try{
-            const ok=o.walk?await o.walk(x,z,tol,signal):
+            let why='-';
+            const ok=via?await (async()=>{
+                if(o.walk){
+                    for(const p of via){if(signal.aborted||!await o.walk(p.x,p.z,p.tol??2,signal)){why=`via ${p.x},${p.z} not reached`;return false;}}
+                    return await o.walk(x,z,tol,signal);
+                }
+                const left=deadline-s.tick();
+                const r=await walkPath(await sessionWalker(s),[...via,{x,z,tol}],{signal,...Number.isFinite(left)?{maxTicks:Math.max(1,left)}:{}});
+                if(!r.ok)why=`walkPath: ${r.detail??'not arrived'} next=${r.next} still=${r.still}`;return r.ok;
+            })():o.walk?await o.walk(x,z,tol,signal):await (async()=>{
                 // From the Varrock side the planner has no route to Ardougne: ferryWalk takes the ferries then.
-                (await ferryWalk(s,{x,z,level:0},async(tile,planBudgetMs)=>goTo(s,await getWorld(),tile,accountOf(s),{maxRetriesPerLeg:2,legTimeoutTicks:150,signal,planBudgetMs}))).ok;
+                const r=await ferryWalk(s,{x,z,level:0},async(tile,planBudgetMs)=>goTo(s,await getWorld(),tile,accountOf(s),{maxRetriesPerLeg:2,legTimeoutTicks:150,signal,planBudgetMs}));
+                if(!r.ok)why=`${r.reason}: ${r.detail}`;return r.ok;})();
             await sustain.settle();
             if(sustain.failure())throw new Error(sustain.failure()!);
-            return ok&&near(x,z,tol);
-        }finally{offTick?.();await sustain.settle();}
+            const arrived=ok&&near(x,z,tol);
+            if(!arrived){const p=state()?.player;console.log(`WALK_FAIL ${label} to=${x},${z} at=${p?`${p.worldX},${p.worldZ},${p.level}`:'-'} ok=${ok} aborted=${signal.aborted?String(signal.reason):'-'} ${why}`);}
+            return arrived;
+        }finally{offTick();await sustain.settle();}
     };
+    // The giant walk out keeps its observed tiles (retreatWaypoints). Only an arrived walk replaces the kept trail.
+    let trail:PathTile[]=[];
     const enter=async()=>{
-        const arrived=await walk(site.spot.x,site.spot.z,3,true);
+        const rec:PathTile[]=[],mark=()=>{const p=state()?.player;if(!p||p.level!==0)return;const at={x:p.worldX,z:p.worldZ},last=rec[rec.length-1];if(!last||cheb(last,at)>=TRAIL_STEP)rec.push(at);};
+        const giant=site===GIANT_SITE;if(giant)mark();
+        const offTrail=giant?s.onTick(mark):()=>{};
+        let arrived:boolean;try{arrived=await walk(site.spot.x,site.spot.z,3,true);}finally{offTrail();}
+        if(giant&&arrived&&near(site.spot.x,site.spot.z,3)){const p=state()!.player!,at={x:p.worldX,z:p.worldZ},last=rec[rec.length-1];if(!last||cheb(last,at)>0)rec.push(at);trail=rec;}
         if(over())return;
         if(!arrived||!near(site.spot.x,site.spot.z,3))throw new Error(`no ${label} progress: surface camp arrival unobserved`);
     };
@@ -645,18 +682,32 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         await s.direct({type:'clickComponent',componentId:on?RETALIATE_ON:RETALIATE_OFF,reason:`${label} retreat auto-retaliate ${on?'ON':'OFF'}`});
         return await waitUntil(s,()=>state()?.autoRetaliateEnabled===on,{timeoutTicks:5});
     };
+    // All tries share one deadline (retreatBudget), so a stalled walk fails here and the session owner logs out. The
+    // walk alone has no total bound: goTo bounds each leg, not the route (practice: try 1 stopped 118 tiles from the
+    // Ardougne south bank and try 2 ran past the proof's 270 s child timer).
+    const bankDistance=()=>{const p=state()?.player;return p?Math.max(Math.abs(p.worldX-site.bank.x),Math.abs(p.worldZ-site.bank.z)):Infinity;};
+    // From the giant camp or its kept trail the retreat walks the trail back (retreatWaypoints), and with no trail the
+    // direct walk to the bank, as the walk out. Elsewhere, and at every other site, it takes the route planner.
+    const giantRetreat=():PathPoint[]|undefined=>{
+        const p=state()?.player;if(site!==GIANT_SITE||!p||p.level!==0)return undefined;
+        const at={x:p.worldX,z:p.worldZ},r=site.room;
+        const close=trail.some(t=>cheb(t,at)<=20)||inBox([r[0]!-10,r[1]!-10,r[2]!+10,r[3]!+10],at.x,at.z);
+        return close?retreatWaypoints(trail,at,site.bank):undefined;
+    };
     const leave=async()=>{
-        const off=await retaliate(false);
-        console.log(`RETREAT ${label} autoRetaliateOff=${off}`);
+        const off=await retaliate(false),budget=retreatBudget(bankDistance()),begin=s.tick(),deadline=begin+budget;
+        console.log(`RETREAT ${label} autoRetaliateOff=${off} distance=${bankDistance()} budget=${budget}`);
         try{
             let best=Infinity;
-            for(let n=0;n<3;n++){
-                if(await walk(site.bank.x,site.bank.z,3)&&near(site.bank.x,site.bank.z,3))return;
-                const p=state()?.player,d=p?Math.max(Math.abs(p.worldX-site.bank.x),Math.abs(p.worldZ-site.bank.z)):Infinity;
-                console.log(`WALK_RETRY ${label} retreat try=${n+1} distance=${d}`);
+            for(let n=0;n<3&&s.tick()<deadline;n++){
+                const via=giantRetreat();
+                if(via)console.log(`RETREAT ${label} via=${JSON.stringify(via.map(p=>[p.x,p.z]))} trail=${trail.length}`);
+                if(await walk(site.bank.x,site.bank.z,3,false,deadline,via)&&near(site.bank.x,site.bank.z,3))return;
+                const d=bankDistance();
+                console.log(`WALK_RETRY ${label} retreat try=${n+1} distance=${d} ticks=${s.tick()-begin}`);
                 if(d>=best)break;best=d;
             }
-            throw new Error(`no ${label} progress: bank retreat failed`);
+            throw new Error(`no ${label} progress: bank retreat failed at distance=${bankDistance()} after ${s.tick()-begin} of ${budget} ticks`);
         }finally{if(off)console.log(`RETREAT ${label} autoRetaliateRestored=${await retaliate(true)}`);}
     };
     const open=async()=>{if(state()?.bank?.isOpen&&s.bankObservation?.())return;const gen=s.bankObservation?.()?.generation??0;

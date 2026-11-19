@@ -539,3 +539,31 @@ test('unknown work cannot block an independent useful task and admission still h
  expect(chooseTask(state,NOW,{goalValue})?.id).toBe('quest');
  expect(chooseTask(state,NOW,{goalValue,runHeld:()=>true})).toBeNull();
 });
+
+test('the last bank read of an account whose session ended stays known until a newer login attempt, and not before the session ends', () => {
+ const TEN_MINUTES = 600_000, OLD = NOW - TEN_MINUTES;
+ // The session read its bank 10 minutes ago (over the 5 minutes) and ended with a result: 100 nature runes are held, so the supply adds nothing.
+ const closed = status('Helper', { at: OLD + 60_000, bankAt: OLD, bank: [{ id: 561, count: 100 }], result: 'ok logout' });
+ const supply = () => run('supply', { accept: { bank: { 561: 100 } } });
+ const valueWith = (row: any, loginAfter?: (account: string, at: number) => boolean) => {
+  const state = initialState(); addTasks(state, [supply()], NOW);
+  return goalWork(state, goals(), [row], NOW, loginAfter ? { loginAfter } : {}).get('supply')!.value;
+ };
+ const asked: [string, number][] = [];
+ // No login attempt since the read: the bank is known, no inspection is needed.
+ expect(valueWith(closed, (account, at) => { asked.push([account, at]); return false; })).toBe(0);
+ expect(asked).toEqual([['Helper', OLD]]);
+ // A newer login attempt, or no way to exclude one: unknown again, as before.
+ expect(valueWith(closed, () => true)).toBeNull();
+ expect(valueWith(closed)).toBeNull();
+ // A session that has not ended (no result) is not closed: its bank can have changed after the read.
+ const live = { ...closed }; delete (live as any).result;
+ expect(valueWith(live, () => false)).toBeNull();
+ // A read in the last 5 minutes is known without the hook, and the hook is not asked.
+ let calls = 0;
+ expect(valueWith(status('Helper', { bank: [{ id: 561, count: 100 }] }), () => { calls++; return true; })).toBe(0);
+ expect(calls).toBe(0);
+ // A read that is newer than its own status row, or not a time, is never known.
+ expect(valueWith({ ...closed, bankAt: closed.at + 1 }, () => false)).toBeNull();
+ expect(valueWith({ ...closed, bankAt: 0 }, () => false)).toBeNull();
+});

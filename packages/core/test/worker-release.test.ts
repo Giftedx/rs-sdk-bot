@@ -31,7 +31,8 @@ test('the pathfinder package, JavaScript and wasm invalidate proof and cached ad
   for(const file of files){
    const original=readFileSync(join(root,file)),pin=capabilityRevision(entry,root),proof=workerSourceRevision(root);
    expect(cachedReleaseFor(entry,root)).toBe(pin);
-   writeFileSync(join(root,file),Buffer.concat([original,Buffer.from('\n')]));
+   // A blank line keeps the program of a code file (release-digest.ts), so the JavaScript file gets a statement.
+   writeFileSync(join(root,file),Buffer.concat([original,Buffer.from(file.endsWith('.js')?'\nexport const changed=1;':'\n')]));
    const changed=capabilityRevision(entry,root);
    expect(changed).not.toBe(pin);
    expect(workerSourceRevision(root)).not.toBe(proof);
@@ -41,7 +42,8 @@ test('the pathfinder package, JavaScript and wasm invalidate proof and cached ad
    expect(cachedReleaseFor(entry,root)).toBe(pin);
    // Keep the old disk record, then change the file after dropping the process's memory cache.
    forgetReleaseMemory();
-   writeFileSync(join(root,file),Buffer.concat([original,Buffer.from('\n')]));
+   // A blank line keeps the program of a code file (release-digest.ts), so the JavaScript file gets a statement.
+   writeFileSync(join(root,file),Buffer.concat([original,Buffer.from(file.endsWith('.js')?'\nexport const changed=1;':'\n')]));
    expect(cachedReleaseFor(entry,root)).toBe(changed);
    expect(()=>assertWorkerRelease({WORKER_ENTRY:entry[0],WORKER_RELEASE:pin},root)).toThrow('source changed');
    writeFileSync(join(root,file),original);
@@ -145,7 +147,9 @@ test('release pin covers its closure; notes, receipts and edits elsewhere do not
   // Edits inside: the entry, its helper, the data file it reads, a launcher and what it names, a runtime tree.
   for(const f of ['scripts/worker.ts','packages/core/src/shared.ts','knowledge/npcs.json','packages/practice/src/supervise.ts','packages/core/src/host.ts','vendor/rs-sdk/sdk/helper.ts']){
    const before=readFileSync(join(root,f),'utf8');
-   writeFileSync(join(root,f),before+'\n// changed');expect(()=>assertWorkerRelease(env,root)).toThrow('source changed');
+   writeFileSync(join(root,f),before+(f.endsWith('.json')?'\n ':'\nexport const changed=1;'));expect(()=>assertWorkerRelease(env,root)).toThrow('source changed');
+   // A comment, a blank line and CRLF line endings keep the program, so they keep the pin.
+   if(!f.endsWith('.json')){writeFileSync(join(root,f),('// note\n'+before+'\n\n/* note */\n').replaceAll('\n','\r\n'));expect(assertWorkerRelease(env,root)).toBe(pin);}
    writeFileSync(join(root,f),before);expect(assertWorkerRelease(env,root)).toBe(pin);
   }
   writeFileSync(join(root,'vendor/rs-sdk/sdk/added.ts'),'export {};');expect(()=>assertWorkerRelease(env,root)).toThrow('source changed');
@@ -290,7 +294,11 @@ test('an empty-result live row is closed only when its own producer lifecycle sh
  const root=mkdtempSync(join(tmpdir(),'release-rows-')),server='rs-sdk-demo.fly.dev',pin='a'.repeat(64);
  const owner=(pid:number)=>({pid,coordinatorRunId:null,workerRelease:null,script:'test',role:null,participants:null});
  try{
-  const start=(account:string,pid:number)=>{const a=beginSessionAttempt({account,server},{root,owner:owner(pid)});a.record('connected');a.record('ready');return a;};
+  // The creation time of an attempt is at least the floor that every test file of the process shares (session-lifecycle.ts
+  // createdAt = max(now(), floor)), and an earlier file can have set it ahead of the clock. Every fixture gets one time,
+  // taken from the real clock and that floor, so the ages below do not depend on how long the fixtures took to write.
+  const floor=Number(beginSessionAttempt({account:'Probe',server},{root,now:()=>0}).attemptId.slice(0,13)),base=Math.max(Date.now(),floor);
+  const start=(account:string,pid:number)=>{const a=beginSessionAttempt({account,server},{root,owner:owner(pid),now:()=>base});a.record('connected');a.record('ready');return a;};
   const done=start('Done',11);done.record('ended','logged-out');
   const later=start('Later',12);const newer=start('Later',13);newer.record('ended','logged-out');
   const dead=start('Dead',14),live=start('Live',15),fresh=start('Fresh',16),gone=start('Gone',17);start('Gone',18);
@@ -299,7 +307,7 @@ test('an empty-result live row is closed only when its own producer lifecycle sh
   const killed=start('Killed',19);start('Killed',20);
   const retried=start('Retried',21);start('Retried',15);
   // The fixtures' receipts are written now; the gate judges them LOST_SESSION_DROP_MS later, when their drop has passed.
-  const now=Date.now()+LOST_SESSION_DROP_MS,old=now-LOST_SESSION_DROP_MS,row=(a:{account:string;attemptId:string},at=old)=>({name:a.account,server,result:'',at,workRevision:pin,sessionAttemptId:a.attemptId});
+  const now=base+LOST_SESSION_DROP_MS,old=base,row=(a:{account:string;attemptId:string},at=old)=>({name:a.account,server,result:'',at,workRevision:pin,sessionAttemptId:a.attemptId});
   const alive=(pid:number)=>pid===15,closed=(r:any)=>closedSessionRow(r,server,{root},alive,now);
   expect(closed(row(done))).toBe(true);        // its own attempt confirmed logout
   expect(closed(row(later))).toBe(true);       // a newer attempt confirmed logout
@@ -351,6 +359,24 @@ test('the cached launch release rehashes only when a release file or folder chan
   const next=launchRevision(root);expect(next).not.toBe(pin);expect(cachedLaunchRevision(root)).toBe(next);
   writeFileSync(join(root,'vendor/rs-sdk/sdk/added.ts'),'export {};');
   expect(cachedLaunchRevision(root)).toBe(launchRevision(root));expect(launchRevision(root)).not.toBe(next);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('a file reached only through a type import is not in the release; a value import puts it in',()=>{
+ const root=fixture();
+ try{
+  writeFileSync(join(root,'packages/core/src/types.ts'),'export interface Shape{n:number}\nexport const shape=1;\n');
+  writeFileSync(join(root,'scripts/worker.ts'),"import {shared} from '../packages/core/src/shared';\nimport type {Shape} from '../packages/core/src/types';\nexport const s:Shape={n:shared};\n");
+  expect(releaseFiles(['scripts/worker.ts'],root)).not.toContain('packages/core/src/types.ts');
+  const pin=capabilityRevision(['scripts/worker.ts'],root);
+  // The runtime never loads the file, so an edit of it keeps the release.
+  writeFileSync(join(root,'packages/core/src/types.ts'),'export interface Shape{n:number;m?:number}\nexport const shape=2;\n');
+  expect(capabilityRevision(['scripts/worker.ts'],root)).toBe(pin);
+  writeFileSync(join(root,'scripts/worker.ts'),"import {shared} from '../packages/core/src/shared';\nimport {shape,type Shape} from '../packages/core/src/types';\nexport const s:Shape={n:shared+shape};\n");
+  expect(releaseFiles(['scripts/worker.ts'],root)).toContain('packages/core/src/types.ts');
+  const loaded=capabilityRevision(['scripts/worker.ts'],root);
+  writeFileSync(join(root,'packages/core/src/types.ts'),'export interface Shape{n:number;m?:number}\nexport const shape=3;\n');
+  expect(capabilityRevision(['scripts/worker.ts'],root)).not.toBe(loaded);
  }finally{rmSync(root,{recursive:true,force:true});}
 });
 

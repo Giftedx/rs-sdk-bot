@@ -303,3 +303,14 @@ test('a bank with too few coins is a missing fare; a bank that holds the fare ha
     expect(fareFault(60, 60, 60)).toBe('ferry fare: the withdrawal of 60 coins failed, the bank holds 60');
     expect(isPrerequisiteFailure(result(fareFault(60, 59, 11000)))).toBe(false);
 });
+
+test('the direct plan before the known two-ferry route gets the short plan budget; other walks keep the full one', async () => {
+    const budgets: (number | undefined)[] = [];
+    const walk = async (_to: { x: number; z: number }, budget?: number): Promise<Outcome> => { budgets.push(budget); return budgets.length === 1 ? { ok: false, reason: 'precondition', detail: 'no route to 2619,3332,0', ticks: 0 } : { ok: true, ticks: 1 }; };
+    const sail = async (): Promise<Outcome> => ({ ok: true, ticks: 1 });
+    await walkWithFerryFallback({ x: 3185, z: 3436, level: 0 }, { x: 2619, z: 3332, level: 0 }, walk, sail, () => 60);
+    expect(budgets[0]).toBe(15_000);
+    budgets.length = 0;
+    await walkWithFerryFallback({ x: 3185, z: 3436, level: 0 }, { x: 3222, z: 3218, level: 0 }, walk, sail, () => 60);
+    expect(budgets).toEqual([undefined]);
+});

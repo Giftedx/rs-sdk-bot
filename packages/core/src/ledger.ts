@@ -48,27 +48,60 @@ export function classifyTick(before: any, now: any, stunned = false): TickKind {
     return stunned ? 'stun' : 'idle';
 }
 
-export function summarize(rows: TickRow[], xpGain = 0) {
-    const counts: Record<TickKind, number> = { xp: 0, inventory: 0, move: 0, anim: 0, dialog: 0, stun: 0, idle: 0 };
-    for (const r of rows) counts[r.kind]++;
-    const streaks: { start: number; length: number; at: string }[] = [];
-    for (let i = 0; i < rows.length; i++) {
-        if (rows[i]!.kind !== 'idle') continue;
-        let j = i;
-        while (j + 1 < rows.length && rows[j + 1]!.kind === 'idle') j++;
-        streaks.push({ start: rows[i]!.tick, length: j - i + 1, at: rows[i]!.at });
-        i = j;
+const LONGEST_IDLE = 5;
+type Streak = { start: number; length: number; at: string };
+
+// Counters for the summary: a count of each kind, the idle reasons and the five longest idle streaks. A session holds
+// these, not every row, so its memory does not grow with the run.
+export class TickTally {
+    ticks = 0;
+    readonly counts: Record<TickKind, number> = { xp: 0, inventory: 0, move: 0, anim: 0, dialog: 0, stun: 0, idle: 0 };
+    private readonly why = new Map<string, number>();
+    private readonly longest: Streak[] = [];
+    private open: Streak | null = null;
+    add(r: TickRow): void {
+        this.ticks++;
+        this.counts[r.kind]++;
+        if (r.kind !== 'idle') { this.close(); return; }
+        const reason = r.why ?? 'none';
+        this.why.set(reason, (this.why.get(reason) ?? 0) + 1);
+        if (this.open) this.open.length++;
+        else this.open = { start: r.tick, length: 1, at: r.at };
     }
-    streaks.sort((x, y) => y.length - x.length || x.start - y.start);
-    const why = new Map<string, number>();
-    for (const r of rows) if (r.kind === 'idle') why.set(r.why ?? 'none', (why.get(r.why ?? 'none') ?? 0) + 1);
-    const idleBy = [...why].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, 6);
-    return { ticks: rows.length, counts, idlePct: rows.length ? (100 * counts.idle) / rows.length : 0, longestIdle: streaks.slice(0, 5), xpGain, idleBy };
+    private close(): void {
+        if (this.open) offerStreak(this.longest, this.open);
+        this.open = null;
+    }
+    summary(xpGain = 0) {
+        // The open streak is a streak too. Offer it to a copy, so the tally keeps counting.
+        const longest = this.longest.map(s => ({ ...s }));
+        if (this.open) offerStreak(longest, this.open);
+        const idleBy = [...this.why].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, 6);
+        return { ticks: this.ticks, counts: { ...this.counts }, idlePct: this.ticks ? (100 * this.counts.idle) / this.ticks : 0, longestIdle: longest, xpGain, idleBy };
+    }
 }
 
+// Streaks arrive in start order. The list stays sorted by length (longest first), then by start.
+function offerStreak(list: Streak[], s: Streak): void {
+    const at = list.findIndex(x => s.length > x.length || (s.length === x.length && s.start < x.start));
+    if (at >= 0) list.splice(at, 0, { ...s }); else list.push({ ...s });
+    if (list.length > LONGEST_IDLE) list.length = LONGEST_IDLE;
+}
+
+export function summarize(rows: readonly TickRow[], xpGain = 0) {
+    const tally = new TickTally();
+    for (const r of rows) tally.add(r);
+    return tally.summary(xpGain);
+}
+
+// Rows that a ledger keeps when the caller names no count: enough for the stall window (900 ticks) and the 300-tick timeline.
+export const LEDGER_KEEP = 1024;
+
 // `lastAction` returns the type of the last action the script sent, or null.
-export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; onTick(cb: () => void): () => void; tick(): number }, lastAction: () => string | null = () => null) {
-    const rows: TickRow[] = [];
+// `keep` is the number of newest rows that `rows` holds (at least the stall window of `stalled`); older rows only
+// count in the tally. `rows` holds between `keep` and 2 x `keep` rows.
+export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; onTick(cb: () => void): () => void; tick(): number }, lastAction: () => string | null = () => null, keep = LEDGER_KEEP) {
+    const rows: TickRow[] = [], tally = new TickTally(), floor = Number.isFinite(keep) ? Math.max(1, keep) : LEDGER_KEEP;
     // Copy the fields the classifier reads: the state object may be reused between ticks.
     const snap = () => {
         const st = s.sdk.getState(), p = st?.player, hit = p?.combat?.lastDamageTick ?? -1, now = st?.tick ?? 0;
@@ -93,10 +126,18 @@ export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; on
         for (const m of msgs) if ((m.tick ?? -1) > seenTick && /stunned/i.test(m.text ?? '')) stunUntil = s.tick() + 8;
         seenTick = Math.max(seenTick, ...msgs.map((m: any) => m.tick ?? -1));
         const kind = classifyTick(last, now, s.tick() <= stunUntil);
-        rows.push({ tick: s.tick(), kind, at: `${now.player?.worldX},${now.player?.worldZ}`, ...(kind === 'idle' ? { why: idleWhy(now, lastAction()) } : {}) });
+        const row: TickRow = { tick: s.tick(), kind, at: `${now.player?.worldX},${now.player?.worldZ}`, ...(kind === 'idle' ? { why: idleWhy(now, lastAction()) } : {}) };
+        tally.add(row);
+        rows.push(row);
+        if (rows.length >= 2 * floor) rows.splice(0, rows.length - floor);
         last = now;
     });
-    return { stop: () => { off(); return summarize(rows, Math.max(0, xpSum(last) - xpStart)); }, rows };
+    return {
+        stop: () => { off(); return tally.summary(Math.max(0, xpSum(last) - xpStart)); },
+        rows,
+        /** Ticks of each kind so far, for the kinds that occurred. */
+        counts: (): Record<string, number> => Object.fromEntries(Object.entries(tally.counts).filter(([, n]) => n > 0)),
+    };
 }
 
 export function formatLedger(sum: ReturnType<typeof summarize>): string {

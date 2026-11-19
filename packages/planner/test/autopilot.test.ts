@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { alchSupplies } from '../src/alch-plan';
 import { orderRefusal } from '../../core/src/order-refusal';
 import { DRAIN_RESULT } from '../src/autopilot';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
@@ -755,11 +758,13 @@ test('a rich army account buys its missing kit with its own coins in one login, 
     expect(ids(plan(inputs([rich], { templates: strike(), army: new Set(), market })))).toEqual({ Rich: expect.stringMatching(/^goldfarm@/) });
 });
 
-test('a kit buy brings the batch, not one start: 1,000 nature runes for alchemy', () => {
+// The alchemy band's consumables for the casts left to Magic 99 (src/alch-plan.ts): Magic 30 casts 637 times.
+const ALCH30 = alchSupplies(30);
+test('a kit buy brings the batch, not one start: the nature runes for the casts left to Magic 99', () => {
     const alch = catalogue().filter(t => t.id === 'army-alch-magic-99'), army = new Set(['rich']);
     const [x] = plan(inputs([mage('Rich', { coin: 5_000_000, 'nature rune': 10, feather: 500, 'staff of fire': 1 }, { Magic: 30 })], { templates: alch, army, market }));
-    expect(x!.template!.args).toEqual(['scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=990 EXPECTED_OWNED=10 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=rich-kit0-561-10to1000 ORDER_MS=900000 FILL_WAIT_TICKS=200']);
-    expect(x!.reason).toContain('at most 792000 coins');
+    expect(x!.template!.args).toEqual([`scripts/buy-owned-ge-item.ts ITEM_ID=561 QUANTITY=${ALCH30.nature - 10} EXPECTED_OWNED=10 LIMIT_PRICE=800 CASH_RESERVE=1000 ORDER_KEY=rich-kit0-561-10to${ALCH30.nature} ORDER_MS=900000 FILL_WAIT_TICKS=200`]);
+    expect(x!.reason).toContain(`at most ${(ALCH30.nature - 10) * 800} coins`);
 });
 
 test('an account that cannot pay gets the coins first: from this side, else from a free account of another side', () => {
@@ -828,8 +833,8 @@ test('a later top-up from the same holding gets a new order key', () => {
     const alch = catalogue().filter(t => t.id === 'army-alch-magic-99'), army = new Set(['rich']);
     const rich = mage('Rich', { coin: 5_000_000, feather: 500, 'staff of fire': 1 }, { Magic: 30 });
     const key = (kitSeq?: Map<string, number>) => plan(inputs([rich], { templates: alch, army, market, kitSeq }))[0]!.template!.args![0]!.match(/ORDER_KEY=(\S+)/)![1];
-    expect(key()).toBe('rich-kit0-561-0to1000');
-    expect(key(new Map([['rich', 3]]))).toBe('rich-kit3-561-0to1000');
+    expect(key()).toBe(`rich-kit0-561-0to${ALCH30.nature}`);
+    expect(key(new Map([['rich', 3]]))).toBe(`rich-kit3-561-0to${ALCH30.nature}`);
 });
 
 test('with no fire staff the alchemy kit buys fire runes, not a staff no market sells', () => {
@@ -837,7 +842,7 @@ test('with no fire staff the alchemy kit buys fire runes, not a staff no market 
     const full: Market = { ...market, 'fire rune': { id: 554, name: 'Fire rune', limit: KIT_PRICE_CAPS['fire rune']! }, feather: { id: 314, name: 'Feather', limit: KIT_PRICE_CAPS.feather! } };
     const [x] = plan(inputs([mage('Rich', { coin: 5_000_000 }, { Magic: 30 })], { templates: alch, army, market: full }));
     expect(x!.template!.id).toBe(KIT_BUY + 'army-alch-magic-99');
-    expect(x!.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).join('x'))).toEqual(['561x1000', '314x50', '554x250']);
+    expect(x!.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).join('x'))).toEqual([`561x${ALCH30.nature}`, `314x${ALCH30.item}`, `554x${ALCH30.fire}`]);
     // With no rule for what it can get, the nearest kit is the one-item staff.
     const band = alch[0]!;
     expect(kitLacks(mage('Rich', {}, { Magic: 30 }), band.needs)!.at(-1)).toEqual({ of: ['staff of fire'], count: 1 });
@@ -866,7 +871,8 @@ test('available owned kit stock supplies a free recipient before an affordable m
     expect(next!.send).toEqual({ from: 'StaffMule', to: 'Caster', item: 'staff of fire', count: 1, template: 'army-alch-magic-99' });
     const [reserved] = plan(inputs([caster], { templates, army: new Set(['caster']), market, stock: [{ name: 'StaffMule', side, items: { 'staff of fire': 1 } }] }));
     expect(reserved!.send).toBeUndefined();
-    expect(reserved!.template!.args![0]).toContain('ITEM_ID=554 QUANTITY=250');
+    // The coins reach more than the 250 fire runes a start needs: the buy takes the share of the batch they pay for.
+    expect(Number(reserved!.template!.args![0]!.match(/ITEM_ID=554 QUANTITY=(\d+)/)![1])).toBeGreaterThanOrEqual(250);
 });
 
 test('a frail thief receives spare owned food before buying, without a quote or cash', () => {
@@ -889,7 +895,7 @@ test('a ready alchemy shop run cannot preempt a spare owned ingredient for the s
     const templates = catalogue().filter(t => ['army-alch-magic-99', 'army-feathers-sarim'].includes(t.id));
     const stock = [{ name: 'FeatherMule', side, items: { feather: 500 } }];
     const opts = { templates, army: new Set(['caster']), stock };
-    expect(plan(inputs([caster], opts))[0]!.send).toMatchObject({ from: 'FeatherMule', item: 'feather', count: 50, template: 'army-alch-magic-99' });
+    expect(plan(inputs([caster], opts))[0]!.send).toMatchObject({ from: 'FeatherMule', item: 'feather', count: 450, template: 'army-alch-magic-99' });
     expect(plan(inputs([caster], { ...opts, stock: [] }))[0]!.template?.id).toBe('army-feathers-sarim');
     expect(plan(inputs([caster], { ...opts, stock: [{ ...stock[0]!, side: 'local' }] }))[0]!.template?.id).toBe('army-feathers-sarim');
     expect(plan(inputs([caster], { ...opts, unfundable: new Set(['caster']), running: new Set(['caster']), current: new Map([['caster', 'army-feathers-sarim']]) }))[0]!.send).toBeUndefined();
@@ -1184,7 +1190,7 @@ test('with no fire on the market the alchemy kit buys its other lines, then the 
     // The market sells nature runes and no fire: the buy takes the nature runes and leaves the fire line to the shop job.
     const buy = pick({ coin: 5_000_000, feather: 500 })!;
     expect(buy.template!.id).toBe(KIT_BUY + 'army-alch-magic-99');
-    expect(buy.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).join('x'))).toEqual(['561x1000']);
+    expect(buy.template!.args!.map(a => a.match(/ITEM_ID=(\d+) QUANTITY=(\d+)/)!.slice(1).join('x'))).toEqual([`561x${ALCH30.nature}`]);
     // With the nature runes and feathers held and no fire, the staff job; with a staff or 250 fire runes, the band.
     const held = { coin: 4_000_000, feather: 500, 'nature rune': 1000 };
     const shop = pick(held)!;
@@ -1228,12 +1234,12 @@ test('an account in a running band job gets no kit buy over it', () => {
     expect(on('goldfarm@2652,3318')).toBe(KIT_BUY + 'army-strike-magic-21');
 });
 
-test('an account that cannot pay for the batch buys only the start kit', () => {
+test('an account that cannot pay for the batch buys the share its coins reach, never under the start', () => {
     const alch = catalogue().filter(t => t.id === 'army-alch-magic-99'), army = new Set(['thin']);
     const thin = mage('Thin', { coin: 50_000, 'nature rune': 10, feather: 500, 'staff of fire': 1 }, { Magic: 30 });
     const [x] = plan(inputs([thin], { templates: alch, army, market, unfundable: new Set(['thin']) }));
-    expect(x!.template!.args![0]).toContain('QUANTITY=40 EXPECTED_OWNED=10 LIMIT_PRICE=800');
-    expect(x!.reason).toContain('at most 32000 coins');
+    expect(x!.template!.args![0]).toContain('QUANTITY=60 EXPECTED_OWNED=10 LIMIT_PRICE=800');
+    expect(x!.reason).toContain('at most 48000 coins');
 });
 
 // AIO routes (aioTemplates): practice-proved options the plan's `aio` list admits.
@@ -3044,7 +3050,7 @@ test('a claim authority timeout is a drain, like an unavailable authority', () =
     expect(DRAIN_RESULT.test('RESULT fail fleet swarm claim authority exploded')).toBe(false);
 });
 
-import { goalNeeds, QUEST_DEMAND, QUEST_DEMAND_BAND, QUEST_DEMAND_PLACES, QUEST_DEMAND_ROWS, questDemand, questResource, questsDoneIn } from '../src/autopilot';
+import { QUEST_CAP_FACTOR, QUEST_CAP_MIN, questKitCaps, goalNeeds, QUEST_DEMAND, QUEST_DEMAND_BAND, QUEST_DEMAND_PLACES, QUEST_DEMAND_ROWS, questDemand, questResource, questsDoneIn } from '../src/autopilot';
 describe('quest demand: the quests no owned account has done', () => {
     const MAXED = { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99, Thieving: 99, Agility: 99, Cooking: 99, Fletching: 99, Crafting: 99, Mining: 99, Smithing: 99 };
     const row = (slug: string) => QUEST_DEMAND_ROWS.find(q => q.slug === slug)!;
@@ -3120,6 +3126,41 @@ describe('quest demand: the quests no owned account has done', () => {
         expect(rows(5)[0]).toMatchObject({ names: ['law rune'], short: 1, account: 'soldier0' });
     });
 
+    test('the pack items that the exchange can sell have a price cap of four times their base value, and no cap changes', () => {
+        const content = new Map((JSON.parse(readFileSync(resolve(import.meta.dir, '../../../knowledge/items.json'), 'utf8')) as { name: string; debugname?: string; cost: number; tradeable?: boolean }[])
+            .filter(i => !/^cert_/.test(i.debugname ?? '')).map(i => [norm(i.name), i] as const).reverse());
+        // Existing caps stand.
+        expect([KIT_PRICE_CAPS['nature rune'], KIT_PRICE_CAPS.feather, KIT_PRICE_CAPS['fire rune']]).toEqual([800, 20, 160]);
+        const items = new Set(QUEST_DEMAND_ROWS.flatMap(q => Object.keys(q.items).map(norm)));
+        const unsellable = [...items].filter(item => item !== 'coin' && !(content.get(item)?.tradeable && content.get(item)!.cost > 0));
+        // An item that the content does not mark tradeable gets no cap from the rule (wolfbane, druid pouch, serum 207), and a pack item that the rule caps stands at four times its base value.
+        expect(unsellable.length).toBeGreaterThan(0);
+        for (const item of unsellable) expect([item, item in KIT_PRICE_CAPS]).toEqual([item, false]);
+        const ruled = [...items].filter(item => !unsellable.includes(item) && item !== 'coin' && KIT_PRICE_CAPS[item] === Math.max(QUEST_CAP_MIN, QUEST_CAP_FACTOR * content.get(item)!.cost));
+        expect(ruled.length).toBeGreaterThan(20);
+        expect(KIT_PRICE_CAPS.knife).toBe(Math.max(QUEST_CAP_MIN, QUEST_CAP_FACTOR * content.get('knife')!.cost));
+        expect(KIT_PRICE_CAPS.rope).toBe(Math.max(QUEST_CAP_MIN, QUEST_CAP_FACTOR * content.get('rope')!.cost));
+        // A second call adds nothing: every item already has its cap.
+        expect(questKitCaps()).toEqual({});
+    });
+
+    test('an account without a quest pack buys it within the caps, one account for a quest and at most QUEST_DEMAND_PLACES quests at a time', () => {
+        const market: Market = Object.fromEntries([...new Set(QUEST_DEMAND_ROWS.flatMap(q => Object.keys(q.items).map(norm)).concat(['shark', 'lobster']))]
+            .filter(item => item in KIT_PRICE_CAPS).map((item, i) => [item, { id: 1000 + i, name: item, limit: KIT_PRICE_CAPS[item]! }]));
+        const bare = (name: string): Acct => ({ ...acct(name, { ...MAXED }, { coin: 5_000_000 }), quests: new Set(['lost city']) });
+        const out = run(['A', 'B', 'C', 'D'].map(bare), { market });
+        const buys = out.map(x => x.template?.id).filter((t): t is string => !!t && t.startsWith(KIT_BUY + 'quest-'));
+        // Elemental Workshop first (the shortest practice run): its whole pack is on the market.
+        expect(buys[0]).toBe(KIT_BUY + 'quest-elemental');
+        expect(new Set(buys).size).toBe(buys.length);
+        expect(buys.length).toBeLessThanOrEqual(QUEST_DEMAND_PLACES);
+        const first = out.find(x => x.template?.id === KIT_BUY + 'quest-elemental')!;
+        const ids = first.template!.args!.map(a => Number(a.match(/ITEM_ID=(\d+)/)![1]));
+        // One line for each pack item, the food as one line; every line is under its cap.
+        expect(ids.length).toBeGreaterThanOrEqual(Object.keys(QUEST_DEMAND_ROWS.find(q => q.slug === 'elemental')!.items).length);
+        for (const a of first.template!.args!) expect(Number(a.match(/LIMIT_PRICE=(\d+)/)![1])).toBeLessThanOrEqual(Math.max(...Object.values(KIT_PRICE_CAPS)));
+    });
+
     test('the table gives each quest one template with the AIO route of its bench case, in order of practice ticks', () => {
         const ts = questDemand();
         expect(ts.map(t => t.id)).toEqual(QUEST_DEMAND_ROWS.map(q => `quest-${q.slug}`));
@@ -3127,7 +3168,9 @@ describe('quest demand: the quests no owned account has done', () => {
         expect(QUEST_DEMAND_ROWS.map(q => q.ticks)).toEqual([...QUEST_DEMAND_ROWS.map(q => q.ticks)].sort((a, b) => a - b));
         for (const t of ts) expect([t.id, t.pilot, t.once, t.tier, t.worker, t.aio, t.args!.slice(0, 2)]).toEqual([t.id, true, true, 'goal', 'scripts/quest-sweep.ts', `quester:quest:${t.id.slice(6)}`, ['quester', 'sweep']]);
         expect(ts.map(t => t.band)).toEqual([...ts.map(t => t.band)].sort((a, b) => a! - b!));
-        expect(CAPACITY[QUEST_DEMAND]).toBe(QUEST_DEMAND_PLACES);
+        // Two quest jobs at a time: one or two accounts.
+        expect(QUEST_DEMAND_PLACES).toBe(2);
+        expect(CAPACITY[QUEST_DEMAND]).toBe(2);
         for (const t of ts) expect([t.id, CAPACITY[t.resources![0]!]]).toEqual([t.id, 1]);
         // A donor keeps nothing for a quest pack.
         expect(kitReserve(ts)).toEqual({});
@@ -3209,4 +3252,71 @@ test('the kit buy expects the unnoted count that the buy script reads, not the c
     expect(step).toBeDefined();
     expect(step!).toContain('EXPECTED_OWNED=1');
     expect(step!).not.toContain('EXPECTED_OWNED=4');
+});
+
+import { proportionalLines, type KitLine } from '../src/autopilot';
+import { alchCasts, CAST_XP, FIRE_PER } from '../src/alch-plan';
+describe('the alchemy band buys the consumables of the casts left, as far as the coins reach', () => {
+    test('one rule gives the supplies from the XP left: a nature rune and an item a cast, fire runes by the spell', () => {
+        for (const level of [21, 30, 54, 55, 66, 90, 98]) {
+            const { low, high } = alchCasts(xpForLevel(level), 99), need = alchSupplies(level);
+            expect(need).toEqual({ nature: low + high, item: low + high, fire: low * FIRE_PER['low-alch'] + high * FIRE_PER['high-alch'] });
+            // The casts reach Magic 99, and one fewer cast of each spell would not.
+            const xp = low * CAST_XP['low-alch'] + high * CAST_XP['high-alch'];
+            expect(xpForLevel(level) + xp).toBeGreaterThanOrEqual(xpForLevel(99));
+        }
+        // Magic 99 needs nothing; fewer levels left need less.
+        expect(alchSupplies(99)).toEqual({ nature: 0, item: 0, fire: 0 });
+        expect(alchSupplies(80).fire).toBeLessThan(alchSupplies(60).fire);
+        // The table of the band: High Alchemy only from Magic 55, so the first 34 levels cost Low Alchemy casts.
+        expect(alchCasts(xpForLevel(55), 99).low).toBe(0);
+        expect(alchCasts(xpForLevel(21), 99).low).toBeGreaterThan(0);
+    });
+    test('a batch that the coins do not reach shrinks in every line by one share and never under the start', () => {
+        const line = (item: string, quantity: number, limit: number): KitLine => ({ item, id: 1, quantity, held: 0, limit });
+        const full = [line('Nature rune', 600, 800), line('Feather', 600, 20), line('Fire rune', 3000, 160)], start = [line('Nature rune', 50, 800), line('Feather', 50, 20), line('Fire rune', 250, 160)];
+        const cost = (ls: readonly KitLine[]) => ls.reduce((n, l) => n + l.quantity * l.limit, 0);
+        const startCost = cost(start), fullCost = cost(full);
+        // Budget for the whole batch: the batch. Under the start: the start. Between: one share of the extra on every line.
+        expect(proportionalLines(full, start, fullCost)).toEqual(full);
+        expect(proportionalLines(full, start, startCost - 1)).toEqual(start);
+        const half = proportionalLines(full, start, startCost + (fullCost - startCost) / 2);
+        expect(half.map(l => l.quantity)).toEqual([325, 325, 1625]);
+        expect(cost(half)).toBeLessThanOrEqual(startCost + (fullCost - startCost) / 2);
+        expect(half.every((l, i) => l.quantity >= start[i]!.quantity && l.quantity <= full[i]!.quantity)).toBe(true);
+        // A batch no larger than the start has nothing to share.
+        expect(proportionalLines(start, start, 1e9)).toEqual(start);
+    });
+    test('an account with coins for part of the batch buys part of every line', () => {
+        const alch = catalogue().filter(t => t.id === 'army-alch-magic-99');
+        const market: Market = { 'nature rune': { id: 561, name: 'Nature rune', limit: 800 }, feather: { id: 314, name: 'Feather', limit: 20 }, 'fire rune': { id: 554, name: 'Fire rune', limit: 160 } };
+        const need = alchSupplies(30), start = { nature: 50, feather: 50, fire: 250 };
+        const lines = (coin: number) => {
+            const [x] = plan(inputs([mage('Rich', { coin }, { Magic: 30 })], { templates: alch, army: new Set(['rich']), market, unfundable: new Set(['rich']) }));
+            return x!.template?.args?.map(a => Number(a.match(/QUANTITY=(\d+)/)![1])) ?? [];
+        };
+        const fullCost = need.nature * 800 + need.item * 20 + need.fire * 160;
+        expect(lines(fullCost + 10_000)).toEqual([need.nature, need.item, need.fire]);
+        const part = lines(Math.floor(fullCost / 2));
+        expect(part.length).toBe(3);
+        expect(part[0]).toBeGreaterThan(start.nature);
+        expect(part[0]).toBeLessThan(need.nature);
+        expect(part[2]).toBeGreaterThan(start.fire);
+        expect(part[2]).toBeLessThan(need.fire);
+    });
+});
+
+import { alchTicks, castTicks, CAST_BENCH } from '../src/alch-plan';
+test('the ticks of the alchemy band come from the measured cast times: 12 casts in 57 and 35 ticks', () => {
+    expect(castTicks('high-alch')).toBe(CAST_BENCH['high-alch'].ticks / CAST_BENCH['high-alch'].casts);
+    expect([castTicks('high-alch'), Math.round(castTicks('low-alch') * 100) / 100]).toEqual([4.75, 2.92]);
+    // XP a tick: High Alchemy 1,625 over 4.75 ticks.
+    expect(Math.round(CAST_XP['high-alch'] / castTicks('high-alch'))).toBe(342);
+    // Magic 50 to 99: 18 Low and 586 High Alchemy casts (the comment of the band says about 2,840 ticks).
+    const { low, high } = alchCasts(xpForLevel(50), 99);
+    expect(alchTicks(50)).toBe(Math.ceil(low * castTicks('low-alch') + high * castTicks('high-alch')));
+    expect(Math.round(alchTicks(50) / 10) * 10).toBe(2840);
+    // More levels left take more ticks, and Magic 99 takes none.
+    expect(alchTicks(21)).toBeGreaterThan(alchTicks(66));
+    expect(alchTicks(99)).toBe(0);
 });

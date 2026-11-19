@@ -13,8 +13,6 @@
     "packages/practice/test/goldfarm-order-proof.test.ts",
     "packages/core/src/walk.ts",
     "packages/core/test/walkpath.test.ts",
-    "packages/core/src/reaction-delay.ts",
-    "packages/core/test/reaction-delay.test.ts",
     "packages/core/test/bot.test.ts"
   ],
   "consumer": "Actual installed goldfarm-stable CLI on representative ordinary HP/Thieving and bank entry earns new coins, accounts for food use, banks the income and logs out. Native saved state verifies cash gain, food debit, retained kit/other assets, life, exhausted-supply exit and safe restart. Live consumers fund the endgame equipment, skill inputs and premium-food chain. Every session opened through openBot also reports a passive REACTION line (send-to-first-server-response delay in game ticks) at settle, with zero behaviour change; the goldfarm native delivery retains that line with at least 20 samples.",
@@ -29,7 +27,6 @@
         "scripts/goldfarm.test.ts",
         "packages/practice/test/goldfarm-order-proof.test.ts",
         "packages/core/test/walkpath.test.ts",
-        "packages/core/test/reaction-delay.test.ts",
         "packages/core/test/bot.test.ts",
         "--timeout",
         "10000"

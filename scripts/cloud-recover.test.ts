@@ -154,7 +154,7 @@ test('the local side takes an end only when the standing retry can no longer cha
 });
 
 test('the accounts that stay offline are never recovery targets', () => {
-    for (const name of ['haggis', 'shaftshooter', 'polevaulter', 'afknight']) expect(NEVER_RECOVERED).toContain(name);
+    for (const name of ['haggis', 'shaftshooter', 'polevaulter', 'hiltsdeep', 'afknight']) expect(NEVER_RECOVERED).toContain(name);
 });
 
 test('a submitted recovery that the coordinator has not taken yet holds the next call', () => {

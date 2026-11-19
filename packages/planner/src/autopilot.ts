@@ -14,6 +14,7 @@ import { missionSignature } from '../../core/src/session-admission';
 import { xpForLevel } from './curve';
 import { ammoTier, boneXp, castRunes, objId, spellFact, toolLevel, wearLevel } from '../../core/src/content-facts';
 import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
+import { alchSupplies } from './alch-plan';
 import { validateBankRouteJob, type BankRouteJob } from '../../core/src/bank-trip';
 import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-route-step';
 import { SQUAD_FOOD_HEAL, squadKeeps, squadRows, type SquadInput } from './squad';
@@ -509,6 +510,16 @@ export function kitReserve(templates: readonly Template[], own?: Acct): Record<s
     }
     delete reserve.coin;
     return reserve;
+}
+// A batch of several lines that the account cannot pay in full: the same share of every line's batch that the coins reach, never under
+// the line's start. The cost counts each line at its price cap (`limit`). With less than the start it returns the start.
+export function proportionalLines(full: readonly KitLine[], start: readonly KitLine[], budget: number): KitLine[] {
+    const cost = (lines: readonly KitLine[]) => lines.reduce((n, l) => n + l.quantity * l.limit, 0), floor = cost(start);
+    if (budget <= floor) return [...start];
+    const extra = cost(full) - floor;
+    if (extra <= 0) return [...start];
+    const share = Math.min(1, (budget - floor) / extra);
+    return full.map((l, i) => ({ ...l, quantity: start[i]!.quantity + Math.floor((l.quantity - start[i]!.quantity) * share) }));
 }
 // One Grand Exchange order of a kit buy. `held` is what the account holds now: the buy script tops up exactly that many.
 export type KitLine = { item: string; id: number; quantity: number; held: number; limit: number };
@@ -1154,7 +1165,8 @@ export function plan(input: Inputs): Assignment[] {
             const full = sized(true), start = sized(false), part = Math.floor((free - room) / (full[0]?.limit ?? 1));
             const frailFood = c.template.id === FRAIL_FOOD_BUY_ID;
             const lines = frailFood || price(full) + room <= free ? full
-                : c.template.partBatch && full.length === 1 && part > start[0]!.quantity ? [{ ...full[0]!, quantity: Math.min(full[0]!.quantity, part) }] : start;
+                : c.template.partBatch && full.length === 1 && part > start[0]!.quantity ? [{ ...full[0]!, quantity: Math.min(full[0]!.quantity, part) }]
+                : c.template.partBatch && full.length > 1 ? proportionalLines(full, start, free - room) : start;
             const template = kitBuyTemplate(c.template, c.account, lines, inp.kitSeq?.get(c.account.toLowerCase()) ?? 0, KIT_CASH_RESERVE + keep), cost = price(lines), short = cost + room - free;
             const what = lines.map(l => `${l.quantity} ${l.item}`).join(', ');
             // A `once` quest buys its kit for one account at a time, and for QUEST_DEMAND_PLACES quests at a time: the buy holds
@@ -1584,11 +1596,11 @@ export const AIO_PLACES = { flax: 'aio:seers-flax', yews: 'aio:seers-yews', ore:
 // `quester:quest:<slug>`), which orders the bands, the cheapest first. `skills` and `quests` are the journal's asks
 // (packages/dashboard/client-assets/quest-reqs.json) and `items` is the pack of the practice run
 // (scripts/quest-sweep.ts presetFor), with `meals` of food; Hitpoints 90 stands where the practice run fell under 70
-// Hitpoints with 99 in every skill (the saved `hpMin`). No template gives a kit: an account that holds the pack gets the
-// job, and one that lacks it shows the missing item as the vacant reason. The table leaves out the quests that no one-account sweep can run: Shield of Arrav, Hero's Quest and
+// Hitpoints with 99 in every skill (the saved `hpMin`). A quest is a `kitFirst` band: an account that lacks its pack gets the items from a donor, or buys them
+// within the caps of questKitCaps below, and one that cannot shows the missing item as the vacant reason. The table leaves out the quests that no one-account sweep can run: Shield of Arrav, Hero's Quest and
 // Legends Quest open companion accounts (scripts/generated/quest-<slug>.ts take a helper name), the sweep refuses Hero's
 // Quest (scripts/quest-sweep.ts), and Throne of Miscellania needs Hero's Quest. They wait for an owned-pair path. QUEST_DEMAND_PLACES: quest jobs at once.
-export const QUEST_DEMAND_BAND = 5, QUEST_DEMAND = 'quest:demand', QUEST_DEMAND_PLACES = 3;
+export const QUEST_DEMAND_BAND = 5, QUEST_DEMAND = 'quest:demand', QUEST_DEMAND_PLACES = 2;
 export type QuestDemandRow = { slug: string; name: string; ticks: number; skills: Record<string, number>; quests: string[]; questPoints?: number; items: Record<string, number>; meals: number };
 export const QUEST_DEMAND_ROWS: readonly QuestDemandRow[] = [
     { slug: 'elemental', name: 'Elemental Workshop', ticks: 188, skills: { Crafting: 20, Mining: 20, Smithing: 20 }, quests: [], items: { knife: 1, needle: 1, leather: 1, thread: 1, hammer: 1, 'rune pickaxe': 1, coal: 4 }, meals: 6 },
@@ -1612,6 +1624,22 @@ export const QUEST_DEMAND_ROWS: readonly QuestDemandRow[] = [
 ];
 // The Fremennik Trials and the Underground Pass share the place of their build templates, so one account does each.
 export const questResource = (slug: string) => slug === 'viking' ? FREMENNIK : slug === 'upass' || slug === 'regicide' ? UPASS : `quest:${slug}`;
+// The price caps of the quest packs' items that the Grand Exchange can sell and KIT_PRICE_CAPS does not list: four times the item's base
+// value (knowledge/items.json `cost`), at least QUEST_CAP_MIN coins. The cap bounds each buy; the market read (packages/planner kitMarket,
+// scripts/autopilot.ts) drops an item whose lowest ask is over it. Added to KIT_PRICE_CAPS once, here, after the table that names the items.
+export const QUEST_CAP_FACTOR = 4, QUEST_CAP_MIN = 25;
+export function questKitCaps(rows: readonly { items: Readonly<Record<string, number>> }[] = QUEST_DEMAND_ROWS): Record<string, number> {
+    const content = new Map((JSON.parse(readFileSync(resolve(import.meta.dir, '../../../knowledge/items.json'), 'utf8')) as { name: string; debugname?: string; cost: number; tradeable?: boolean }[])
+        .filter(i => !/^cert_/.test(i.debugname ?? '')).map(i => [norm(i.name), i] as const).reverse());
+    const out: Record<string, number> = {};
+    for (const row of rows) for (const item of Object.keys(row.items)) {
+        const found = content.get(norm(item));
+        if (found?.tradeable && found.cost > 0 && !(norm(item) in KIT_PRICE_CAPS) && coinItem(norm(item)) === false) out[norm(item)] = Math.max(QUEST_CAP_MIN, QUEST_CAP_FACTOR * found.cost);
+    }
+    return out;
+}
+const coinItem = (item: string) => item === 'coin';
+for (const [item, cap] of Object.entries(questKitCaps())) (KIT_PRICE_CAPS as Record<string, number>)[item] ??= cap;
 // CAPACITY: accounts at one resource at a time. Every number is policy (a place, a market or a spot holds this many), not a game fact.
 export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [ARMOUR_MARKET]: ARMOUR_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, [QUEST_DEMAND]: QUEST_DEMAND_PLACES, ...Object.fromEntries(QUEST_DEMAND_ROWS.map(q => [questResource(q.slug), 1])), ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
@@ -1731,8 +1759,8 @@ export const TROOPER_BANDS: readonly { skill: 'Strength' | 'Attack' | 'Defence';
 ];
 // Magic, band 2: alchemy at the Ardougne north bank (scripts/alch-train.ts) walks there from anywhere, banks the pack,
 // takes nature runes, fire (runes, or a fire staff it wields) and feathers, low-alchs to 55 and high-alchs to the
-// target. Practice at xpRate 25: 1,625 XP a High Alchemy cast at 6.5-7 ticks, 233-250 XP a tick, about 10 times
-// combat training, so Magic 50 to 99 is about 4,000 ticks. A run that runs out of supplies ends ok after a level;
+// target. At xpRate 25 a High Alchemy cast gives 1,625 XP and takes 4.75 ticks (castTicks in alch-plan.ts: 12 casts in 57 ticks on the bench), 342 XP
+// a tick, so Magic 50 to 99 is about 2,840 ticks (alchTicks). A run that runs out of supplies ends ok after a level;
 // the account takes the band again once restocked. Prayer, band 3: scripts/train-prayer.ts BURY_HELD=1 buries the held
 // bones above BONE_RESERVE up to 99 from the Ardougne north bank (entry within 60 tiles) and ends ok when they run
 // out after a level; practice from the knights buried 114 of 120 bones in 282 ticks to Prayer 75, about 2.2 ticks a
@@ -1935,6 +1963,7 @@ export function questDemand(): Template[] {
         band: QUEST_DEMAND_BAND + i / 100, quest: { name: q.name, unlocks: [] }, resources: [questResource(q.slug), QUEST_DEMAND], yields: () => [],
         needs: { ...(Object.keys(q.skills).length ? { skills: q.skills } : {}), ...(q.quests.length ? { quests: q.quests } : {}), ...(q.questPoints ? { questPoints: q.questPoints } : {}),
             ...(Object.keys(q.items).length ? { items: q.items } : {}), ...(q.meals ? { pieces: { of: SWEEP_MEALS, count: q.meals } } : {}) },
+        kitFirst: true,
     }));
 }
 
@@ -2118,13 +2147,20 @@ export function catalogue(): Template[] {
         needs: { skills: { Attack: 60, Strength: 60, Defence: 60, Hitpoints: 40 }, anyOf: TROOPER_FED },
         batch: { trout: 100 },
     }));
+    // The alchemy band's consumables for the casts an account's Magic level still has to Magic 99 (the batch of a kit buy and what a donor keeps).
+    const alchBatch = (a: Acct, item: string): Record<string, number> => {
+        const need = alchSupplies(a.skills.Magic ?? 1);
+        return { 'nature rune': need.nature, [item]: need.item, 'fire rune': need.fire };
+    };
     const magic: Template = {
         id: 'army-alch-magic-99', family: 'combat-train', script: 'scripts/alch-train.ts', args: ['99', '5000'], role: 'combat', goal: 'train Magic to 99 with alchemy at the Ardougne north bank',
         tier: 'goal', band: MAGIC_BAND, repeats: true, trains: { skill: 'Magic', to: 99, unlocks: [] }, resources: [], yields: () => [],
         needs: { skills: { Magic: 21 }, items: { 'nature rune': 50, feather: 50 }, anyOf: [{ items: { 'fire rune': 250 } }, ...FIRE_STAFFS.map(item => ({ items: { [item]: 1 } }))] },
-        // Magic 99 is 998,458 XP here. Low Alchemy gives 775 XP a cast to 55 and High Alchemy 1,625 from there (xpRate 25),
-        // so Magic 21 to 99 takes about 650 nature runes; a buy brings 1,000.
-        batch: { 'nature rune': 1000 },
+        // One buy brings every consumable of the casts left to Magic 99 (alchSupplies: one nature rune and one item a cast, and fire
+        // runes for the casts), as far as the account's coins reach (`partBatch`). Magic 21 to 99 is 642 casts: 642 nature runes, 642
+        // feathers and 3,098 fire runes. A start's 250 fire runes cover 50 casts, so a band bought by starts returns to the shop many times.
+        // With no coins for the whole batch the buy takes the share they pay for, down to the cash reserve and margin (`keepCoins` is not set).
+        batchFor: a => alchBatch(a, 'feather'), partBatch: true,
     };
     // Magic 1 to 21 for Low Alchemy: Wind Strike on the fenced Guard dog (scripts/alch-train.ts strikeStart). Practice,
     // fresh accounts started at the goldfarm knights: Magic 1 to 21-23 in 17-22 casts, no damage taken, about 180 ticks alone.
@@ -2187,7 +2223,7 @@ export function catalogue(): Template[] {
         { skills: { Magic: 66 }, items: { coins: 60000 }, holdsUnder: { 'nature rune': 50 }, anyOf: [{ items: { 'fire rune': 250 } }, ...FIRE_STAFFS.map(item => ({ items: { [item]: 1 } }))] });
     // The alchemy band cast on air runes, for an account at Magic 66 or more that holds them (the guild trip's).
     const magicAir: Template = { ...magic, id: 'army-alch-air-magic-99', env: { ALCH_ITEM: 'airrune' }, goal: 'train Magic to 99 with alchemy on air runes at the Ardougne north bank',
-        needs: { skills: { Magic: 66 }, items: { 'nature rune': 50, 'air rune': 50 }, anyOf: magic.needs!.anyOf }, batch: undefined, shopKit: true };
+        needs: { skills: { Magic: 66 }, items: { 'nature rune': 50, 'air rune': 50 }, anyOf: magic.needs!.anyOf }, batchFor: a => alchBatch(a, 'air rune'), shopKit: true };
     // Magic to SPLASH_TO with no fire rune, nature rune or feather, band 2: a curse cast over the fence of the Ardougne
     // cow field (scripts/splash-train.ts; Wind Strike, Confuse and Weaken under Magic 19). The kit is body, earth and
     // water runes, under 80,000 coins at the caps for the whole of it. A run starts with ten casts' runes

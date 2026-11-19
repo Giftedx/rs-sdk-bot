@@ -30,6 +30,7 @@ import {evaluateProgressionWork,progressionProofs} from '../../core/src/progress
 import {processDeliveryPrs} from './delivery-pr';
 import {freshScoreboard} from './coverage';
 import {goalWork,ruleGoalValue} from './goal-work';
+import {loginAfter} from './login-attempts';
 import {liveHelperStatuses} from '../../planner/src/supply-bill';
 import {recoverConcurrentPlanWrite} from '../../core/src/plan-lock';
 import {createProgressionProofReconciler} from './progression-proof-reconcile';
@@ -283,6 +284,7 @@ function runRules(state:CoordinatorState,liveLimit:number){
    allowed:account=>owners.get(account.toLowerCase())?.side===side&&owners.get(account.toLowerCase())?.server==='rs-sdk-demo.fly.dev'&&['confirmed','none'].includes(readLogoutProof(account,'rs-sdk-demo.fly.dev',{root:join(projectRoot,'.practice/session-lifecycle')}).state),
    paused:account=>coordinatorAccountPaused(account),
    definition:id=>{const def=deliveryTask(id);return{id:def.id,entry:def.entry,source:observedSource(id)};},
+   loginAfter:loginAfter(projectRoot),
    capabilityFor:entry=>entry==='scripts/ranged-train.ts'?definitions.filter(d=>d.entry===entry&&reviewApproved(state,d.id)).sort((a,b)=>Number(!!currentQualification(state,b.id,observedSource(b.id)))-Number(!!currentQualification(state,a.id,observedSource(a.id)))||a.id.localeCompare(b.id))[0]?.id??null:null,
    prepare:finiteBand,
    needsEntryObservation:(task,_account,status)=>{
@@ -519,7 +521,7 @@ async function tick(state:CoordinatorState,config:any){
  let goalValues:ReturnType<typeof goalWork>=new Map();
  try{
   const observedAt=Date.now(),board=freshScoreboard(projectRoot);
-  goalValues=goalWork(state,board.goals,liveHelperStatuses(projectRoot),observedAt,{entryOf:capability=>{try{return deliveryTask(capability).entry;}catch{return undefined;}}});
+  goalValues=goalWork(state,board.goals,liveHelperStatuses(projectRoot),observedAt,{entryOf:capability=>{try{return deliveryTask(capability).entry;}catch{return undefined;}},loginAfter:loginAfter(projectRoot)});
  }catch(error){event('goal-observation-wait',String(error));}
  for(let dispatch=0;!diskLow&&dispatch<developmentLimit+liveLimit;dispatch++){
   const freeGB=freemem()/2**30,request=join(coordinationDir,'publish-request.json');

@@ -533,6 +533,10 @@ const ROUTE_CASES: BenchCase[] = [
     jobFiles: {'.practice/aio-bench/jobs/{bot}-prog.json': {mode: 'fletch', targetLevel: 99, maximum: 1, batch: 1, reserve: 0, cap: 600, members: false, bank: {x: 3092, z: 3243, level: 0}}}}),
   skiller('runecraft', 'supply', 'fresh_lumbridge', ['20', 'CAP=1500'], {presetConfig: {position: {x: 2843, z: 4832, level: 0}, skills: {Runecraft: 20, Mining: 20, Hitpoints: 16, Attack: 12, Defence: 11, Strength: 11}, varps: {63: 6, 101: 1, 281: 1000}, inventory: [{id: 1438, count: 1}, {id: 556, count: 26}, {id: 315, count: 1}, {id: 1436, count: 1}], equipment: [{id: 1265, count: 1, slot: 3}, {id: 1171, count: 1, slot: 5}], bank: [{id: 556, count: 25}, {id: 995, count: 25}, {id: 1277, count: 1}, {id: 2140, count: 8}, {id: 2309, count: 1}, {id: 1351, count: 1}, {id: 590, count: 1}]}}),
   skiller('magic', 'items', 'fresh_lumbridge', ['enchant:sapphire_ring', '-', '3', '200'], {presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 7}, inventory: [{id: 564, count: 3}, {id: 555, count: 3}, {id: 1637, count: 1}, {id: 1637, count: 1}, {id: 1637, count: 1}]}}),
+  // Twelve casts of each item spell at the Draynor bank: the ticks between casts come from the spell's p_delay (scripts/microbot-magic-items.ts).
+  {key: 'extra:magic-alch-high', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', pass: ok, scriptArgs: ['magic', 'items', 'high-alch', 'bronze_dagger', '12', '300'], presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 55}, inventory: [...Array.from({length: 12}, () => ({id: 1205, count: 1})), {id: 561, count: 12}, {id: 554, count: 60}]}},
+  {key: 'extra:magic-alch-low', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', pass: ok, scriptArgs: ['magic', 'items', 'low-alch', 'bronze_dagger', '12', '300'], presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 21}, inventory: [...Array.from({length: 12}, () => ({id: 1205, count: 1})), {id: 561, count: 12}, {id: 554, count: 36}]}},
+  {key: 'extra:magic-superheat-iron', script: 'scripts/aio-skiller.ts', preset: 'fresh_lumbridge', pass: ok, scriptArgs: ['magic', 'items', 'superheat:iron', '-', '12', '300'], presetConfig: {position: {x: 3092, z: 3243, level: 0}, skills: {Magic: 43, Smithing: 15}, inventory: [...Array.from({length: 12}, () => ({id: 440, count: 1})), {id: 561, count: 12}, {id: 554, count: 48}]}},
   skiller('magic', 'npc', 'fresh_lumbridge', ['wind_strike', '41', '1', '200'], {presetConfig: {position: {x: 3229, z: 3298, level: 0}, skills: {Magic: 50, Defence: 99, Hitpoints: 20}, equipment: [{id: 1381, count: 1, slot: 3}], inventory: [{id: 558, count: 10}, {id: 556, count: 10}]}}),
   skiller('magic', 'teleport', 'floor_tele25', ['varrock', '2', '100']),
   skiller('magic', 'trip', 'fresh_lumbridge', ['.practice/aio-bench/jobs/{bot}-magic-trip.json'], {presetConfig: {position: {x: 3185, z: 3436, level: 0}, skills: {Magic: 25}, bank: [{id: 554, count: 5}, {id: 556, count: 15}, {id: 563, count: 5}]},
@@ -620,6 +624,13 @@ const ROUTE_CASES: BenchCase[] = [
   {key: 'logistics:walk-edge', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-edge'],
     presetConfig: {position: {x: 3107, z: 3491, level: 0}, skills: {Hitpoints: 60, Defence: 60}},
     pass: s => ok(s) && /WALK_EDGE \{"ok":true,/.test(s) && /"loggedOut":true/.test(s) && s.includes('LOGOUT logged-out')},
+  // The poison cure drinks one antipoison: from the pack at once, or from the bank beside the account.
+  {key: 'logistics:cure-poison', script: 'scripts/cure-poison.ts', preset: 'fresh_lumbridge', scriptArgs: [],
+    presetConfig: {position: {x: 3185, z: 3438, level: 0}, inventory: [{id: 175, count: 1}]},
+    pass: s => ok(s) && /cure-poison drank Antipoison\(3\) from the pack/.test(s) && s.includes('LOGOUT logged-out')},
+  {key: 'extra:cure-poison-bank', script: 'scripts/cure-poison.ts', preset: 'fresh_lumbridge', scriptArgs: [],
+    presetConfig: {position: {x: 3185, z: 3438, level: 0}, inventory: [], bank: [{id: 175, count: 2}]},
+    pass: s => ok(s) && /cure-poison drank Antipoison\(3\) from the bank/.test(s) && s.includes('LOGOUT logged-out')},
   // Hold an ordinary offensive prayer with the guard disabled, then restore the spent points through the AIO
   // route. A full-prayer preset alone would exercise only the altar worker's idempotent early return.
   {key: 'logistics:restore-prayer', script: 'scripts/measure/restore-prayer-entry.ts', preset: 'fresh_lumbridge', scriptArgs: [],
@@ -1839,6 +1850,10 @@ const EXTRA_CASES: BenchCase[] = [
       presetConfig: {...preset, skills: before, ...(KITS[kit]!.noRoute ? {inventory: sharks} : {})}};
   }),
   ...SAME_JOB_CASES,
+  // From the Varrock West bank to the Ardougne north bank with the 60-coin fare of the two ferries (scripts/walk-to.ts
+  // ferryWalk). The wall time of the case and the ms of each WALK_NO_ROUTE line give the plan time.
+  {key: 'extra:walk-varrock-ardougne', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '2619', '3332', '0'], pass: ok, timeoutMs: 600_000,
+    presetConfig: {position: {x: 3185, z: 3436, level: 0}, inventory: [{id: 995, count: 60}]}},
 ];
 
 const KNOWN_QUEST: Readonly<Record<string, string>> = {
