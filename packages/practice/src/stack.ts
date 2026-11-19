@@ -41,7 +41,7 @@ export interface StackOptions {
 export function engineCommand(opts: StackOptions, port: number, platform: string = process.platform, fine: string | undefined = process.env.SIM_FINE_TIMERS): { cmd: string[]; env: Record<string, string> } {
     const env: Record<string, string> = {
         // EXPERIMENT: PROOF_TICK_MS in the environment overrides the tick of every proof stack (not for merge).
-        NODE_TICKRATE: String(process.env.PROOF_TICK_MS ? Number(process.env.PROOF_TICK_MS) : (opts.tickMs ?? PROOF_TICK_MS)),
+        NODE_TICKRATE: String(process.env.PROOF_TICK_MS && process.env.NODE_ENV !== 'test' ? Number(process.env.PROOF_TICK_MS) : (opts.tickMs ?? PROOF_TICK_MS)),
         NODE_XPRATE: String(opts.xpRate ?? 25),
         WEB_PORT: String(port),
         // The coverage scoreboard reads this trace (patches/rs-sdk.md item 8).
