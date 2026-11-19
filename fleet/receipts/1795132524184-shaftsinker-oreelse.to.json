@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795132524184-shaftsinker-oreelse",
+ "account": "OreElse",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 71730,
+ "claim": "ec63bc6e-ef91-473e-940e-7e253dd9915f",
+ "count": 0,
+ "ok": false,
+ "at": 1795132715500,
+ "detail": "trade claimed"
+}
