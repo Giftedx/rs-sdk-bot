@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795060640285-mmsmk1232-trousersnake-8ec17527d96f7d3e",
  "account": "TrouserSnake",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 9,
  "claim": "539d04a7-675f-4b68-9f1a-5cd31ba68daa",
- "count": 0,
- "ok": false,
- "at": 1795061164715,
- "detail": "trade claimed"
+ "count": 9,
+ "ok": true,
+ "at": 1795061182412,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 21,
+  "after": 30
+ },
+ "bank": {
+  "count": 9,
+  "at": 1795061181718
+ },
+ "logout": {
+  "attemptId": "1795061165064-0000029660-0000000001",
+  "at": 1795061182401,
+  "sha256": "e2e78764859db0e22887356ff704e3e0b570cf0b756542eb222a5149e638bb4e"
+ },
+ "screen": true
 }
