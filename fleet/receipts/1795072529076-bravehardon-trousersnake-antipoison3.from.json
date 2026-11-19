@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795072529076-bravehardon-trousersnake-antipoison3",
+ "account": "BraveHardon",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 3,
+ "claim": "553740f4-8702-43de-af14-95dd650e02a7",
+ "count": 3,
+ "ok": true,
+ "at": 1795072649556,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795072606669-0000027584-0000000001",
+  "at": 1795072649548,
+  "sha256": "e670fa5db1bbf3dd5e8589b17650624801353b370965223081f99b8e095dd387"
+ },
+ "screen": true
+}
