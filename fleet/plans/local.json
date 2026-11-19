@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795095605535,
+ "at": 1795095667286,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -254,6 +254,25 @@
    ]
   },
   {
+   "account": "Quickhandjob",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=10 EXPECTED_OWNED=6 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=quickhandjob-kit2-536-6to16 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"536\":16}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 10 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "CoinCock",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -278,6 +297,27 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/splash-train.ts",
+   "args": [
+    "66",
+    "6000"
+   ],
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":66}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "combat",
+   "template": "army-splash-magic-66",
+   "autopilot": "local",
+   "resources": [
+    "splash:ardougne-cow-fence"
    ]
   }
  ],
