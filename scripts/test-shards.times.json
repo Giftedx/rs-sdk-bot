@@ -7,7 +7,7 @@
  "packages/core/test/session-recovery-permit.test.ts": 11,
  "packages/core/test/session-recovery.test.ts": 10,
  "packages/core/test/walk.test.ts": 25,
- "packages/core/test/world-golden.test.ts": 14,
+ "packages/core/test/world-golden.test.ts": 190,
  "packages/dashboard/publish.test.ts": 15,
  "packages/practice/test/agility-order-proof.test.ts": 63,
  "packages/practice/test/ge-bulk-order-proof.test.ts": 17,

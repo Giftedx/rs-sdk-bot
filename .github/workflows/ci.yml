@@ -280,6 +280,14 @@ jobs:
           bun install --frozen-lockfile
           (cd vendor/rs-sdk && bun install --frozen-lockfile --production)
           (cd vendor/rs-sdk/server/webclient && bun install --frozen-lockfile)
+      # The caches under .practice/cache (route legs, the path snapshot, built tables) key each entry by the data it was
+      # built from, so an older copy is safe. A cold route-leg cache made world-golden.test.ts take 188 s here.
+      - name: Restore the content-keyed caches
+        uses: actions/cache@v4
+        with:
+          path: .practice/cache
+          key: practice-cache-${{ runner.os }}-part${{ matrix.part }}-${{ hashFiles('knowledge/**/*.json', '.gitmodules', 'patches/*.patch') }}
+          restore-keys: practice-cache-${{ runner.os }}-part${{ matrix.part }}-
       - run: bun run check-pin
         if: matrix.part == 1
       # A Windows checkout (CRLF in the SDK submodule) and this runner give one release for one commit
@@ -323,6 +331,12 @@ jobs:
         working-directory: vendor/rs-sdk
       - run: bun install --frozen-lockfile
         working-directory: vendor/rs-sdk/server/webclient
+      - name: Restore the content-keyed caches
+        uses: actions/cache@v4
+        with:
+          path: .practice/cache
+          key: practice-cache-${{ runner.os }}-part${{ matrix.part }}-${{ hashFiles('knowledge/**/*.json', '.gitmodules', 'patches/*.patch') }}
+          restore-keys: practice-cache-${{ runner.os }}-part${{ matrix.part }}-
       - name: Full Windows gate, one part of the test files
         run: bun scripts/ci-gate.ts --full --part ${{ matrix.part }}/4
   preparation-practice:
