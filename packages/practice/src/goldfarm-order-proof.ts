@@ -13,6 +13,8 @@ import {practiceDir} from './paths';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {farmStartProblem} from '../../../scripts/goldfarm-stable';
+// The tick of this proof: 75 ms. At 75 ms the game outcome equals the one at 150 ms (hosted rounds 44446240837, 44447190266 and 44447293486: same results, items and XP; only wall seconds differ), at half the wall time.
+const TICK_MS=75;
 import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 
 type Save=ReturnType<typeof readPracticeSave>;
@@ -127,7 +129,7 @@ export function goldfarmDoorChecks(before:Save,after:Save,result:any,start:{x:nu
 }
 export function verifyGoldfarmDoor(delivery:string){
  const directory=join(delivery,DOOR_DIR),meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
- const checks:Record<string,boolean>={source:JSON.stringify(meta.source)===JSON.stringify(source()),configuration:meta.tickMs===150&&JSON.stringify(meta.env)===JSON.stringify(DOOR_ENV),
+ const checks:Record<string,boolean>={source:JSON.stringify(meta.source)===JSON.stringify(source()),configuration:meta.tickMs===TICK_MS&&JSON.stringify(meta.env)===JSON.stringify(DOOR_ENV),
   fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000,cases:JSON.stringify(meta.cases?.map((c:any)=>c.id))===JSON.stringify(doorCases.map(c=>c.id))};
  const results:Record<string,any>={};
  for(const k of doorCases){
@@ -139,7 +141,7 @@ export function verifyGoldfarmDoor(delivery:string){
   for(const [key,value] of Object.entries(local))checks[k.id+':'+key]=value;
  }
  const report={ok:Object.values(checks).every(Boolean),at:Date.now(),checks,results,
-  scope:'Diagnostic doorway gate only: native 150ms installed goldfarm-stable CLI, TICKS=0, carried cash banked from the knight house and outside. Not an earning, restart, exhausted or live proof.',
+  scope:'Diagnostic doorway gate only: native 75ms installed goldfarm-stable CLI, TICKS=0, carried cash banked from the knight house and outside. Not an earning, restart, exhausted or live proof.',
   next:'If ok, run the full goldfarm-order proof (no argument). If not ok, return this report for walker repair.'};
  writeFileSync(join(directory,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
@@ -153,7 +155,7 @@ export function goldfarmChildChecks(code:number,timedOut:boolean,log:string,kind
 
 export function verifyGoldfarm(directory:string){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
- const checks:Record<string,boolean>={source:JSON.stringify(meta.source)===JSON.stringify(source()),configuration:meta.tickMs===150&&JSON.stringify(meta.env)===JSON.stringify(WORKER_ENV),
+ const checks:Record<string,boolean>={source:JSON.stringify(meta.source)===JSON.stringify(source()),configuration:meta.tickMs===TICK_MS&&JSON.stringify(meta.env)===JSON.stringify(WORKER_ENV),
   fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000,cases:JSON.stringify(meta.cases?.map((c:any)=>c.id))===JSON.stringify(cases.map(c=>c.id))};
  const results:Record<string,any>={};
  for(const k of cases){
@@ -166,7 +168,7 @@ export function verifyGoldfarm(directory:string){
   for(const [key,value] of Object.entries(local))checks[k.id+':'+key]=value;
  }
  const report={ok:Object.values(checks).every(Boolean),at:Date.now(),checks,results,
-  scope:'Native 150ms installed goldfarm-stable CLI with RANDOM_EVENTS on and no courier; no live, unattended or speed claim.',
+  scope:'Native 75ms installed goldfarm-stable CLI with RANDOM_EVENTS on and no courier; no live, unattended or speed claim.',
   nextConsumer:'Finite live 600-tick batches on the seven trained Ardougne earners with dated owned food; coins fund endgame gear and premium-food procurement.'};
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
@@ -183,7 +185,7 @@ async function run(delivery:string,door=false){
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  try{
   const pin=source(),receipts:any[]=[],accounts:Record<string,{name:string;path:string}>={};
-  stack=await startStack({tickMs:150,readyTimeoutMs:60000});
+  stack=await startStack({tickMs:TICK_MS,readyTimeoutMs:60000});
   for(const [index,k] of list.entries()){
    const dir=join(directory,k.id);mkdirSync(dir);
    let account=k.from?accounts[k.from]:undefined;
@@ -211,7 +213,7 @@ async function run(delivery:string,door=false){
    const persisted=await waitPracticeSave(account.path,s=>(s.vars[134]??0)>(before.vars[134]??0),{timeoutMs:15000});
    copyFileSync(account.path,join(dir,'after.sav'));
    receipts.push({id:k.id,name:account.name,code,timedOut,persisted:persisted.matched,before:hash(join(dir,'before.sav')),after:hash(join(dir,'after.sav')),log:hash(join(dir,'worker.log'))});
-   writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source:pin,tickMs:150,env,cases:receipts},null,2));
+   writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source:pin,tickMs:TICK_MS,env,cases:receipts},null,2));
    // Keep the failed case. Do not continue with an account whose logout or save is unproved.
    if(!persisted.matched||timedOut)throw Error(`goldfarm ${k.id} logout/save deadline; evidence retained`);
   }
