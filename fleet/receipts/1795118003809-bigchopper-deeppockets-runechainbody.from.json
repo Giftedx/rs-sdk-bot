@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795118003809-bigchopper-deeppockets-runechainbody",
+ "account": "Bigchopper",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "58ab3121-f416-4665-bacf-81b65f5422e4",
+ "count": 0,
+ "ok": false,
+ "at": 1795118062774,
+ "detail": "trade claimed"
+}
