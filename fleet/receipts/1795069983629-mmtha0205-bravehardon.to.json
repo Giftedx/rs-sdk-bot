@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795069983629-mmtha0205-bravehardon",
+ "account": "BraveHardon",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 2060,
+ "claim": "8b913fe6-b37e-4f2e-b51f-a74138d5d56c",
+ "count": 0,
+ "ok": false,
+ "at": 1795070064763,
+ "detail": "trade claimed"
+}
