@@ -1,0 +1,22 @@
+{
+ "id": "1795065344695-tossthecaber-undermykilt-antipoison3",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TossTheCaber",
+ "to": "UnderMyKilt",
+ "item": "Antipoison(3)",
+ "count": 4,
+ "start": 1795065344695,
+ "end": 1795067744695,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
