@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795068098881-mmtha0205-swordswallow",
  "account": "Swordswallow",
  "partner": "mmtha0205",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 2060,
  "claim": "97dff4ff-0b17-4728-87b0-d97e27ae7ea4",
- "count": 0,
- "ok": false,
- "at": 1795068158879,
- "detail": "trade claimed"
+ "count": 2060,
+ "ok": true,
+ "at": 1795068358518,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6000,
+  "after": 8060
+ },
+ "bank": {
+  "count": 2060,
+  "at": 1795068357816
+ },
+ "logout": {
+  "attemptId": "1795068158886-0000029132-0000000001",
+  "at": 1795068358508,
+  "sha256": "69064c0f02f62dd8288e59e5f8a68c918b58911f15a2fb743bb1a7345cd53c97"
+ },
+ "screen": true
 }
