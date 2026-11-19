@@ -92652,6 +92652,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/grandtree-roots-tour.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/guard-stand.ts",
    "intents": [
     "observe"
