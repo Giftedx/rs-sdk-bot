@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795100359195-abracadickra-ballspinner",
  "account": "Ballspinner",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 116087,
  "claim": "16f4dc8b-9e6f-4ea1-9a0d-95cf8d3dae87",
- "count": 0,
- "ok": false,
- "at": 1795100395652,
- "detail": "trade claimed"
+ "count": 116087,
+ "ok": true,
+ "at": 1795100581095,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 116087
+ },
+ "bank": {
+  "count": 116087,
+  "at": 1795100580270
+ },
+ "logout": {
+  "attemptId": "1795100395661-0000012076-0000000001",
+  "at": 1795100581003,
+  "sha256": "75daaa1d340893e40e741345a9a7244012cc2d01346aa2db5cffcbdb9421829e"
+ },
+ "screen": true
 }
