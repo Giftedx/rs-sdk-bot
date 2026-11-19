@@ -33,7 +33,7 @@ test('the eat level is the median of the Hitpoints at an eat, not the highest', 
 test('a clone takes each option from its own record', () => {
     const g = cloneProfile('goondelf', 'seen', records, 16);
     // The walk out: the Hitpoints at its last attack, from the Wilderness level of the post.
-    expect(g).toEqual({ rotation: ['melee'], readOverheads: false, specBelow: 1, prayerFlick: false, eatAt: 66, prayerLag: [7, 9, 1, 0, 0, 0, 0, 0, 33], escapeAt: 28, escapeWalk: 16 });
+    expect(g).toEqual({ rotation: ['melee'], readOverheads: false, facedPrayer: true, specBelow: 1, prayerFlick: false, eatAt: 66, prayerLag: [7, 9, 1, 0, 0, 0, 0, 0, 33], escapeAt: 28, escapeWalk: 16 });
     // Sugma's own sample is a fight to its death: no walk out, in every mode.
     for (const mode of ['seen', 'retreat', 'stand'] as const) expect(cloneProfile('sugma', mode, records, 16).escapeAt).toBeUndefined();
     // Goondelf keeps its sample in every mode.

@@ -757,8 +757,8 @@ each change of a gang account's head icon to a protect prayer (not to off), read
 
 **The clones.** A clone's overhead is the style of its target's weapon, but a hit from another player in the last 10 ticks takes
 the overhead to that hitter's weapon first (`hitter` in `fightPlayer`), which for a mage is Protect from Magic. The option
-`facedPrayer` removes that: the overhead follows the faced player only. The clone profile does not set it, so the existing cases
-keep their numbers. The tank lock is the squad option `SQUAD_TANK=<member>,...`: the listed members hold melee and all others
+`facedPrayer` removes that: the overhead follows the faced player only. The clone profile sets it (`cloneProfile`), so every clone case
+has it; the cases `-faced-` equal the controls after that change, and the numbers of the cases before it are those of the old rule. The tank lock is the squad option `SQUAD_TANK=<member>,...`: the listed members hold melee and all others
 hold ranged (a bench option; a gang account then prays melee against the tank and the bow shots of the others meet no overhead).
 
 Cases: the squad of live run 1 (prey members 0 and 1) with the clones. The controls are `extra:clone-run1-x1` and
@@ -781,6 +781,24 @@ Kills and Hitpoints taken by seed (seeds 1 to 10), current rotation / `facedPray
 - no prayer points taken: 520 131 175 197 203 207 224 296 285 253 / 278 225 121 143 219 159 273 233 173 354 / 396 297 219 237 335 244 260 585 380 114.
 - prayer points kills: 0 2 0 1 0 0 0 1 1 1 / 0 0 0 2 1 1 1 0 0 0 / 1 1 0 1 0 1 2 0 0 1.
 - prayer points taken: 624 167 547 152 547 503 525 481 160 855 / 271 642 247 298 571 208 469 515 592 359 / 401 343 232 351 414 357 314 343 464 393.
+
+**The tank lock over 30 seeds.** Seeds 11 to 30 on hosted runs 44442654347 (prayer points) and 44442658706 (no prayer points), with
+seeds 1 to 10 above. `facedPrayer` on in all four cases; the tank lock off (`faced`) and on (`tank`, `SQUAD_TANK=0,1`). Every one of
+the 120 runs passed with no death of ours, and the kill receipts equal the kills. Sums over 30 seeds; the mean and the standard
+deviation (sd) of one seed; the paired difference tank minus faced by seed (mean, standard error):
+
+| Case | Kills | Clones dead | Hitpoints taken | Trips | Kills per seed | Hitpoints taken per seed |
+|---|---|---|---|---|---|---|
+| no prayer points, tank off | 34 | 51 | 6594 | 120 | 1.13 (sd 0.78) | 219.8 (sd 93.8) |
+| no prayer points, tank on | 37 | 50 | 8977 | 120 | 1.23 (sd 1.07) | 299.2 (sd 88.3) |
+| prayer points, tank off | 15 | 40 | 13214 | 122 | 0.50 (sd 0.68) | 440.5 (sd 156.0) |
+| prayer points, tank on | 13 | 35 | 11434 | 120 | 0.43 (sd 0.68) | 381.1 (sd 173.3) |
+
+- **With prayer points the tank lock kills 13 against 15 and takes 13% fewer Hitpoints** (11,434 against 13,214). Paired by seed:
+  kills -0.07 (standard error 0.17), Hitpoints taken -59 (standard error 36). Kills are not at least equal, so the rule for the live
+  launcher (kills at least equal and Hitpoints taken lower) is not met: the tank lock stays a bench option.
+- **With no prayer points the tank lock takes 36% more Hitpoints** (8977 against 6594; paired +79, standard error 24) for 3 more
+  kills (+0.10, standard error 0.23). The Hitpoints gap is the one difference in this table that is above 3 standard errors.
 
 - **No case is separated from its control.** The kills differ by 1 or 2 over 10 seeds and the Hitpoints taken by seed range
   from 114 to 855. The tank lock takes 21% fewer Hitpoints with prayer points (3612 against 4561) and 23% more with none (3067
