@@ -13,4 +13,11 @@
  "count": 0,
  "ok": false,
  "at": 1795120535061,
- "detail": "Error: route to 318
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1795120530776-0000009244-0000000001",
+  "at": 1795120535025,
+  "sha256": "101a5d76a4838c97e53dba7f4969b823a958c6ec12041e5d24262412d19740a5"
+ },
+ "screen": false
+}
