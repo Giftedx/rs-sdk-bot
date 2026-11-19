@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795108581338-abracadickra-woodpecker",
+ "account": "Woodpecker",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 65282,
+ "claim": "74254679-c994-4ac3-8518-95a52165c80f",
+ "count": 65282,
+ "ok": true,
+ "at": 1795108687889,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 346,
+  "after": 65628
+ },
+ "bank": {
+  "count": 65282,
+  "at": 1795108687234
+ },
+ "logout": {
+  "attemptId": "1795108667344-0000027032-0000000001",
+  "at": 1795108687874,
+  "sha256": "0fa586c7faef249a568ce9e79a96babcbd1533f483046361dcfcf5a6ce04ff85"
+ },
+ "screen": true
+}
