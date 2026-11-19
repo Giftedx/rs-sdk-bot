@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795109456229-mmthv2350-sporranbulge-bronzesword",
+ "account": "SporranBulge",
+ "partner": "mmthv2350",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze sword",
+ "requested": 1,
+ "claim": "685fbb9b-2ae3-44ae-9719-579e72d82e38",
+ "count": 0,
+ "ok": false,
+ "at": 1795109520416,
+ "detail": "trade claimed"
+}
