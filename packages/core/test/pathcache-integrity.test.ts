@@ -4,7 +4,7 @@ import * as fs from 'node:fs';
 import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
-import {pathfindingSourceKey,decodePathfindingSnapshot,verifyPathfindingSnapshotFile,writePathfindingSnapshot,restorePathfindingSnapshotFile} from '../src/pathcache';
+import {pathfindingSourceKey,decodePathfindingSnapshot,verifyPathfindingSnapshotFile,writePathfindingSnapshot,restorePathfindingSnapshotFile,copyNonZeroPages} from '../src/pathcache';
 
 const api={pathfindingSourceKey,decodePathfindingSnapshot,verifyPathfindingSnapshotFile,writePathfindingSnapshot};
 const digest=(b:Uint8Array)=>createHash('sha256').update(b).digest('hex');
@@ -131,4 +131,19 @@ test('native initialization errors remain visible, can retry, and cache writes a
   const [code,stdout,stderr]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);
   expect({code,stdout,stderr}).toEqual({code:0,stdout:'',stderr:''});
  }finally{clearTimeout(deadline);}
+});
+
+test('a restore writes the zero pages of the payload only below the old memory size',()=>{
+ const P=65536,payload=Buffer.alloc(4*P);
+ payload.fill(5,1*P,2*P);payload.fill(6,3*P,4*P); // pages 0 and 2 are zero, 1 and 3 are not
+ const memory=new WebAssembly.Memory({initial:1});
+ new Uint8Array(memory.buffer).fill(9);
+ const had=memory.buffer.byteLength;memory.grow(3);
+ const target=new Uint8Array(memory.buffer);target.fill(9,P); // a sentinel that real grown memory (zero) never holds
+ copyNonZeroPages(payload,new Uint8Array(memory.buffer,0,payload.length),had);
+ const page=(n:number)=>new Set(new Uint8Array(memory.buffer,n*P,P));
+ expect([...page(0)]).toEqual([0]);   // below `had`: the zero page overwrites the old byte 9
+ expect([...page(1)]).toEqual([5]);
+ expect([...page(2)]).toEqual([9]);   // beyond `had`: the zero page is skipped, the sentinel stays
+ expect([...page(3)]).toEqual([6]);
 });
