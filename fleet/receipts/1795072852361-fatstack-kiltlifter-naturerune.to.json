@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795072852361-fatstack-kiltlifter-naturerune",
+ "account": "Kiltlifter",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 79,
+ "claim": "c8e76eb0-a896-4c37-9d85-67faecfaf244",
+ "count": 79,
+ "ok": true,
+ "at": 1795072969849,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 79
+ },
+ "bank": {
+  "count": 79,
+  "at": 1795072968793
+ },
+ "logout": {
+  "attemptId": "1795072955199-0000030084-0000000001",
+  "at": 1795072969507,
+  "sha256": "12a5d6d9191428ada80cf505d3c9a4cc393b5a1449eabc6a0413d6abdf9f23f8"
+ },
+ "screen": true
+}
