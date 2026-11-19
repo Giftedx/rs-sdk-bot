@@ -106,12 +106,15 @@ const beside=(p:{x:number;z:number},rock:Tile)=>Math.abs(p.x-rock.x)+Math.abs(p.
 // Steps from p to the nearest stand tile of the rock, round the rocks of the site: a rock tile blocks, and a diagonal
 // step needs both side tiles free (the engine's diagonal rule). A block of rocks (the Wilderness hobgoblin mine) puts
 // some stand tiles 3 steps away that are 2 tiles away in a straight line. Other walls are not known here.
-export function pathSteps(p:{x:number;z:number},rock:Tile,rocks:readonly Tile[]):number{
+export function pathSteps(p:{x:number;z:number},rock:Tile,rocks:readonly Tile[]):number{return pathTo(p,rock,rocks).steps;}
+// The same, with the stand tile where the walk ends.
+export function pathTo(p:{x:number;z:number},rock:Tile,rocks:readonly Tile[]):{steps:number;tile:{x:number;z:number}}{
  const goals=new Set(standTiles(rock,rocks).map(t=>`${t.x},${t.z}`)),blocked=new Set(rocks.map(r=>`${r.x},${r.z}`));
  const free=(x:number,z:number)=>!blocked.has(`${x},${z}`);
  const seen=new Set([`${p.x},${p.z}`]);let front=[{x:p.x,z:p.z}];
  for(let steps=0;front.length&&steps<=24;steps++){
-  if(front.some(t=>goals.has(`${t.x},${t.z}`)))return steps;
+  const at=front.find(t=>goals.has(`${t.x},${t.z}`));
+  if(at)return{steps,tile:at};
   const next:{x:number;z:number}[]=[];
   for(const t of front)for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
    const x=t.x+dx,z=t.z+dz,k=`${x},${z}`;
@@ -120,10 +123,26 @@ export function pathSteps(p:{x:number;z:number},rock:Tile,rocks:readonly Tile[])
   }
   front=next;
  }
- return Math.min(...standTiles(rock,rocks).map(t=>cheb(p,t)));
+ const tile=standTiles(rock,rocks).sort((a,b)=>cheb(p,a)-cheb(p,b))[0]??rock;
+ return{steps:cheb(p,tile),tile};
 }
 // Ticks of run (2 tiles a tick) to a stand tile of the rock; 0 when the account stands beside it.
 const runTicks=(p:{x:number;z:number},rock:Tile,rocks:readonly Tile[])=>beside(p,rock)?0:Math.ceil(pathSteps(p,rock,rocks)/2);
+// Ticks from the click to the roll with the knife, for a run of `run` ticks: 3 up to 2 ticks of run (the cut in the
+// click tick sets the roll in the arrival tick or before it), else run + 1 (the cut sent 2 ticks before the arrival).
+export const knifeLeg=(run:number)=>run<=2?3:run+1;
+// The fewest knife ticks for `depth` more ores over the free rocks from p, each leg ending on its stand tile. The
+// pick takes the rock whose own leg plus this is least, so the tour does not end in a corner with a long walk out.
+export function tourTicks(p:{x:number;z:number},free:readonly Tile[],rocks:readonly Tile[],depth:number):number{
+ if(depth<=0||!free.length)return 0;
+ let best=Infinity;
+ for(const r of free){
+  const to=beside(p,r)?{steps:0,tile:p}:pathTo(p,r,rocks);
+  const t=knifeLeg(Math.ceil(to.steps/2))+tourTicks(to.tile,free.filter(f=>f!==r),rocks,depth-1);
+  if(t<best)best=t;
+ }
+ return best;
+}
 
 export interface RotationOptions{
  maximum:number;cap:number;idleTicks:number;
@@ -230,12 +249,15 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
    const freeRoll=(r:Tile)=>{const op=n+1+ticksTo(r);return delay>=op?delay:canCut?Math.max(op,n+3):op+rate;};
    const waitRoll=(r:Tile,back:number)=>{const click=Math.max(back+1,n+1+ticksTo(r));return canCut?Math.max(click,n+3):click+rate;};
    const byRoll=(o.pick??(canCut?'roll':'nearest'))==='roll',stepsTo=(r:Tile)=>pathSteps(pos,r,rocks);
-   const best=free.map(v=>({...v,roll:freeRoll(v.r)})).sort((a,b)=>(byRoll?a.roll-b.roll:0)||stepsTo(a.r)-stepsTo(b.r))[0];
+   const ahead=(r:Tile)=>byRoll&&canCut?tourTicks(beside(pos,r)?pos:pathTo(pos,r,rocks).tile,free.map(v=>v.r).filter(f=>f!==r),rocks,2):0;
+   const best=free.map(v=>({...v,roll:freeRoll(v.r),ahead:ahead(v.r)})).sort((a,b)=>(byRoll?a.roll+a.ahead-b.roll-b.ahead||a.roll-b.roll:0)||stepsTo(a.r)-stepsTo(b.r))[0];
    const soon=rocks.filter(r=>depleted.has(key(r))).map(r=>({r,back:depleted.get(key(r))!+respawn})).map(v=>({...v,roll:waitRoll(v.r,v.back)})).sort((a,b)=>a.roll-b.roll||a.back-b.back)[0];
    if(best&&!(byRoll&&soon&&soon.roll<best.roll)){
     const pick=best;
     if(s.inventory.length>=27)drops(1);
-    if(canCut&&delay<n+1)cut();
+    // A run of 3 ticks or more: no cut now, as its delay would end before the arrival; the cut on the way (above) sets
+    // the roll in the arrival tick.
+    if(canCut&&delay<n+1&&ticksTo(pick.r)<=2)cut();
     actions.push({type:'interactLoc',x:pick.loc!.x,z:pick.loc!.z,locId:pick.loc!.id,optionIndex:1});attempts++;
     active={rock:pick.r,loc:pick.loc!,sent:n+1};walkingTo=undefined;armedFor=undefined;
     if(beside(pos,pick.r)){active.arrival=n+1;const f=firstRoll(delay,n+1,rate);active.roll=f.roll;delay=f.delay;}
