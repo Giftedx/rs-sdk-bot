@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795127924440-moneyshot-woodpecker-bigbones",
  "account": "Woodpecker",
  "partner": "Moneyshot",
@@ -10,8 +10,22 @@
  "item": "Big bones",
  "requested": 16,
  "claim": "6cfc4d34-f48c-4f82-8d2a-db4cde988b7a",
- "count": 0,
- "ok": false,
- "at": 1795127971371,
- "detail": "trade claimed"
+ "count": 16,
+ "ok": true,
+ "at": 1795128132405,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 16
+ },
+ "bank": {
+  "count": 16,
+  "at": 1795128131640
+ },
+ "logout": {
+  "attemptId": "1795127971721-0000006776-0000000001",
+  "at": 1795128132388,
+  "sha256": "35ece2dff4729907bfddcc31281dc14d3ad03f937686fe1f81f9037237502e58"
+ },
+ "screen": true
 }
