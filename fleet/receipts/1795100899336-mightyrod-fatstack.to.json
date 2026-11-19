@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795100899336-mightyrod-fatstack",
  "account": "Fatstack",
  "partner": "Mightyrod",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 28007,
  "claim": "441443f4-b40c-4f89-8330-fdbac8ae001c",
- "count": 0,
- "ok": false,
- "at": 1795100986646,
- "detail": "trade claimed"
+ "count": 28007,
+ "ok": true,
+ "at": 1795101083127,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1993,
+  "after": 30000
+ },
+ "bank": {
+  "count": 28007,
+  "at": 1795101082243
+ },
+ "logout": {
+  "attemptId": "1795100986654-0000018848-0000000001",
+  "at": 1795101083056,
+  "sha256": "af4f7b3ddc760aa8a352b74f28d681ed872f7ee587e65682042db9022e6a97ed"
+ },
+ "screen": true
 }
