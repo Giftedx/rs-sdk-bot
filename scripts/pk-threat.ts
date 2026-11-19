@@ -246,8 +246,9 @@ export function protectLevels(): ProtectLevels {
 }
 export function holdProtect(s: Session, style: CombatStyle, tick: number): void {
     if (tick % 3 !== 0) return;
+    // Turning a protect prayer on turns the other two off on the server (prayer.rs2 prayer_activate calls prayer_deactivate_conflicting, and each protect prayer
+    // lists the other two in prayers.dbrow), so only the wanted one is sent: switching the old one off first cost another 3 ticks.
     const active = s.sdk.getState()?.prayers.activePrayers ?? [], want = PROTECT_PRAYER[style];
-    for (const i of Object.values(PROTECT_PRAYER)) if (i !== want && active[i]) { void s.sdk.sendTogglePrayer(i); return; }
     if (!active[want] && (s.sdk.getSkill('Prayer')?.level ?? 0) >= protectLevels()[style]) void s.sdk.sendTogglePrayer(want);
 }
 

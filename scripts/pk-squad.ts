@@ -650,6 +650,9 @@ if (import.meta.main) {
     try {
         fightOverrides = squadFightOverrides(get);
         threatConfig = get('SQUAD_THREAT', '0') === '1' ? threatOptions(get('SQUAD_THREAT_OPTS', ''), get) : undefined;
+        // The profile and the extra options of the members: sparOptions throws on an unknown profile and on bad JSON. The kit comes from each member's state after login, so this
+        // call uses an empty one; it only checks the settings.
+        sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), get('SQUAD_OPTS', JSON.stringify(SQUAD_OPTS)), {}, 1200);
     } catch (e) { console.log(`RESULT fail ${e instanceof Error ? e.message : e}`); process.exit(2); }
     const { openBot, finish } = await import('../packages/core/src/bot');
     let halted: string | undefined;

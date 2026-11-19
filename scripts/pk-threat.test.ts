@@ -127,12 +127,13 @@ test('the targets of the squad are expected: protected against, never a retreat'
     expect(protectOf(expected.actions, 'Ours1')).toBe('magic');
 });
 
-test('holdProtect: other protect prayers off first, then the wanted one, one input each 3 ticks, by the prayer level', () => {
+test('holdProtect: only the wanted protect prayer is sent (the server turns the others off), one input each 3 ticks, by the prayer level', () => {
     const none = session('Ours1', ME1, [], []);
     holdProtect(none.s, 'magic', 4); expect(none.toggles).toEqual([]);
     holdProtect(none.s, 'magic', 6); expect(none.toggles).toEqual([12]);
     const wrong = session('Ours1', ME1, [], [], { active: Object.assign(Array(15).fill(false), { 14: true }) });
-    holdProtect(wrong.s, 'ranged', 6); expect(wrong.toggles).toEqual([14]);
+    // Protect from Melee is on and Missiles is wanted: one input, Missiles (13); the server turns Melee off.
+    holdProtect(wrong.s, 'ranged', 6); expect(wrong.toggles).toEqual([13]);
     const on = session('Ours1', ME1, [], [], { active: Object.assign(Array(15).fill(false), { 13: true }) });
     holdProtect(on.s, 'ranged', 6); expect(on.toggles).toEqual([]);
     const low = session('Ours1', ME1, [], [], { prayer: 30 });
