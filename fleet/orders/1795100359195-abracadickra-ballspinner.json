@@ -1,0 +1,22 @@
+{
+ "id": "1795100359195-abracadickra-ballspinner",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "Ballspinner",
+ "item": "coins",
+ "count": 116087,
+ "start": 1795100359195,
+ "end": 1795102759195,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

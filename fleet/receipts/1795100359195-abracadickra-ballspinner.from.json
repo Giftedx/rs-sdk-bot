@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795100359195-abracadickra-ballspinner",
+ "account": "Abracadickra",
+ "partner": "Ballspinner",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 116087,
+ "claim": "4a3d001a-3fc9-4a45-8a11-c8cad36379c2",
+ "count": 0,
+ "ok": false,
+ "at": 1795100384498,
+ "detail": "trade claimed"
+}
