@@ -1,0 +1,22 @@
+{
+ "id": "1795100899336-mightyrod-fatstack",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "Fatstack",
+ "item": "coins",
+ "count": 28007,
+ "start": 1795100899336,
+ "end": 1795103299336,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

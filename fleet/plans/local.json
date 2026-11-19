@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795100854986,
+ "at": 1795100920489,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -263,25 +263,6 @@
    "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
    "role": "combat",
    "template": "army-alch-air-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "mmthv2350",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=10 EXPECTED_OWNED=6 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=mmthv2350-kit22-536-6to16 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"536\":16}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 10 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
    "autopilot": "local",
    "resources": []
   },
