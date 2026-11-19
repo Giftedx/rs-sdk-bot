@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795096298739,
+ "at": 1795096377802,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -333,24 +333,47 @@
   },
   {
    "account": "Swordinhand",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
    "env": {
-    "ITEM_ID": "536",
-    "QUANTITY": "107",
-    "EXPECTED_OWNED": "6",
-    "LIMIT_PRICE": "7300",
-    "CASH_RESERVE": "10000",
-    "ORDER_MS": "1200000",
-    "ORDER_KEY": "prayer99-swordinhand-dragonbones107",
+    "BONE_ID": "536",
+    "MAX_BURY": "107",
+    "BONE_RESERVE": "6",
+    "CAP": "2500",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "COORDINATOR_RUN_ID": "task-9b7526df-6f37-4c48-9688-3ac787668a9c"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-prayer-swordinhand-99 [task-9b7526df-6f37-4c48-9688-3ac787668a9c]",
+   "role": "helper"
+  },
+  {
+   "accounts": [
+    "mmtha0205",
+    "Knightstick"
+   ],
+   "script": "scripts/coin-courier.ts",
+   "args": [
+    "1000000",
+    "--bank-x=2618",
+    "--bank-z=3332",
+    "--reserve=200000",
+    "--timeout-ms=600000"
+   ],
+   "env": {
+    "COIN_ORDER": "prayer99-knightstick-bonefund1m",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-1b72d859-6617-4ec9-a411-d90d06e513ee"
+    "COORDINATOR_RUN_ID": "task-13b20de6-4754-472b-b545-edda66b18e9f"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-buy-swordinhand-dragon-bones-99 [task-1b72d859-6617-4ec9-a411-d90d06e513ee]",
+   "goal": "run-courier-mmtha0205-knightstick-bone-fund [task-13b20de6-4754-472b-b545-edda66b18e9f]",
    "role": "supply"
   }
  ],
@@ -389,7 +412,6 @@
   "fingersmith",
   "kiltlifter",
   "knightrider",
-  "knightstick",
   "quickhandjob",
   "sporrandip"
  ],
