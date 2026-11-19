@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795112701102,
+ "at": 1795112936390,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -348,6 +348,31 @@
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "accounts": [
+    "SporranBulge",
+    "Billionaire"
+   ],
+   "script": "scripts/coin-courier.ts",
+   "args": [
+    "1557000",
+    "--bank-x=2618",
+    "--bank-z=3332",
+    "--reserve=200000",
+    "--timeout-ms=600000"
+   ],
+   "env": {
+    "COIN_ORDER": "prayer99-billionaire-bonefund-sporranbulge",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-62f52961-1f32-455f-83ed-6499061859c7"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-courier-sporranbulge-billionaire-bone-fund [task-62f52961-1f32-455f-83ed-6499061859c7]",
+   "role": "supply"
   }
  ],
  "army": [
