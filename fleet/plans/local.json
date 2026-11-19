@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795067348713,
+ "at": 1795067387794,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -254,6 +254,25 @@
    ]
   },
   {
+   "account": "Masterbaiter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 3000 lobster"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "Catherby lobsters, caught and cooked",
+   "role": "fishing",
+   "template": "lobster-chain",
+   "autopilot": "local",
+   "resources": [
+    "catherby:lobster"
+   ]
+  },
+  {
    "account": "BraveHardon",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -281,25 +300,6 @@
    "autopilot": "local",
    "resources": [
     "shop:lowe"
-   ]
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 3000 lobster"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "Catherby lobsters, caught and cooked",
-   "role": "fishing",
-   "template": "lobster-chain",
-   "autopilot": "local",
-   "resources": [
-    "catherby:lobster"
    ]
   },
   {
