@@ -870,6 +870,11 @@ const ROUTE_CASES: BenchCase[] = [
     scriptArgs: ['{bot:b},{bot:c}', 'roam', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'TARGET_PROFILE=champion', ...(process.env.ROAM_PROFILE ? [`ROAM_PROFILE=${process.env.ROAM_PROFILE}`] : [])], pass: ok, output: /PK hunt: (\d+) kills/,
     presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {glory: true})},
       {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: kitFixture('ganker-dds', 3100, 3584)}]},
+  // The same with the threat radar on (THREAT=1, scripts/pk-threat.ts): the radar logs the targets as threats and must not change the kills.
+  {key: 'extra:roam-pick-threat', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
+    scriptArgs: ['{bot:b},{bot:c}', 'roam', 'MAX_MINUTES=1', 'MAX_WILD=10', 'FRIENDS=', 'THREAT=1', 'TARGET_PROFILE=champion', ...(process.env.ROAM_PROFILE ? [`ROAM_PROFILE=${process.env.ROAM_PROFILE}`] : [])], pass: ok, output: /PK hunt: (\d+) kills/,
+    presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {glory: true})},
+      {suffix: 'c', preset: 'fresh_lumbridge', presetConfig: kitFixture('ganker-dds', 3100, 3584)}]},
   {key: 'pvp:roam', engineEnv: {...SPAR_ENGINE, WORLD_FEED: 'true', WORLD_FEED_TOKEN: ''}, script: 'scripts/measure/pvp-with-targets.ts', preset: 'fresh_lumbridge',
     scriptArgs: ['{bot:b}', 'roam', 'MAX_MINUTES=0.3', 'MAX_WILD=10', 'FRIENDS='], pass: s => ok(s) && /PK hunt: [1-9]\d* kills/.test(s), output: /PK hunt: (\d+) kills/,
     presetConfig: sparFixture(3094, 3515), companions: [{suffix: 'b', preset: 'fresh_lumbridge', presetConfig: sparFixture(3094, 3580, {food: 0})}]},
