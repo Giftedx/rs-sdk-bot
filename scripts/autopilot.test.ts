@@ -1291,11 +1291,14 @@ test('the squad shop templates select their profile line with the real selectIte
     expect(resolveAioStep('fighter', hunt.args!.slice(1)).script).toBe('scripts/gather-combat.ts');
     expect(hunt.args).toContain('UNTIL_ITEM=water talisman');
     expect(hunt.provides).toEqual({ item: 'water talisman', unlocks: ['squad-water-craft'] });
-    // The iron arrows: the anvil step reaches the smithing worker, and the fletch step makes 15 arrows for each bar.
-    const arrows = catalogue().find(t => t.id === 'squad-iron-arrows')!, [anvil, fletch] = arrows.production!.resize(2).args!;
-    expect(resolveAioStep('skiller', anvil!.split(' ').slice(2, 6)).script).toBe('scripts/smelt-bars.ts');
-    expect(anvil).toContain('PRODUCT_ID=40 MAX_MAKE=2 ');
-    expect(fletch).toContain('fletch-arrows.ts 3000 iron MAX_MAKE=30 ');
+    // The rune arrows: the tip step buys 15 rune arrowtips a set at Catherby (a line of the real profile), and the fletch step
+    // makes 15 rune arrows a set. The sharks: a finite order of the shark worker.
+    const arrows = catalogue().find(t => t.id === 'squad-rune-arrows')!, [buy, fletch] = arrows.production!.resize(2).args!;
+    expect(buy).toContain('scripts/shop-buyer.ts catherby 1200 ITEMS=rune.arrowtips STOCK_TARGET=30 ');
+    expect(selectItems(PROFILES.catherby!.items, 'rune.arrowtips').map(i => i.re.source)).toEqual([/rune arrowtips/i.source]);
+    expect(fletch).toContain('fletch-arrows.ts 3000 native-arrows rune MAX_MAKE=30 ');
+    const sharks = catalogue().find(t => t.id === 'squad-sharks')!;
+    expect([sharks.script, sharks.production!.resize(7).args]).toEqual(['scripts/shark-supply.ts', ['7', '9000']]);
     const potion = catalogue().find(t => t.id === 'squad-antipoison-jiminua')!;
     expect(selectItems(PROFILES.jiminua!.items, potion.env!.ITEMS).map(i => i.re.source)).toEqual([/^antipoison\(3\)$/i.source]);
 });

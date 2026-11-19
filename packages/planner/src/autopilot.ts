@@ -1351,7 +1351,7 @@ export function plan(input: Inputs): Assignment[] {
                 && !inp.noSend?.has(`${s.name}>${member.name}`.toLowerCase()) && (cost(byName.get(s.name)) ?? -1) >= 0 && (cost(member) ?? -1) >= 0);
             if (!from) continue;
             // A food row is in lobsters (squad.ts): a donor's item is counted by the HP it heals against the lobster's.
-            const count = Math.min(spare(from, item), item in SQUAD_FOOD_HEAL ? Math.ceil(row.short * SQUAD_FOOD_HEAL.lobster! / SQUAD_FOOD_HEAL[item]!) : row.short);
+            const count = Math.min(spare(from, item), item in SQUAD_FOOD_HEAL ? Math.ceil(row.short * SQUAD_FOOD_HEAL.shark! / SQUAD_FOOD_HEAL[item]!) : row.short);
             gaveItems.add(from.name); pool.delete(from.name); pool.delete(member.name);
             done.set(member.name, { account: member.name, template: SQUAD_RESTOCK, value: 0, reason: `restocks ${count} ${item} for the gang squad, sent by ${from.name}`, resources: [],
                 send: { from: from.name, to: member.name, item, count, template: SQUAD_RESTOCK.id } });
@@ -1789,7 +1789,7 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     [COW_FIELD]: ARMY_BANK, [STRIKE_TILE]: ARMY_BANK, [SPLASH_FENCE]: ARMY_BANK, [TROOPER_FIELD]: ARMY_BANK,
     'catherby:lobster': CATHERBY_BANK, [AIO_PLACES.flax]: { x: 2744, z: 3445 }, [AIO_PLACES.yews]: SEERS_BANK,
     'shop:ardy': { x: 2654, z: 3283 }, 'shop:catherby': CATHERBY_BANK, 'shop:catherby_arrows': CATHERBY_BANK, 'shop:dargaud': SEERS_BANK, 'shop:magic_guild': { x: 2612, z: 3093 },
-    'aio:water-altar': DRAYNOR_BANK, 'fighter:wizards-tower': DRAYNOR_BANK, 'squad:varrock-west-anvil': { x: 3185, z: 3436 },
+    'aio:water-altar': DRAYNOR_BANK, 'fighter:wizards-tower': DRAYNOR_BANK, 'squad:catherby-sharks': CATHERBY_BANK,
     'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
     'shop:zeke': { x: 3269, z: 3167 }, 'shop:dommik': { x: 3269, z: 3167 }, 'shop:jiminua': { x: 2654, z: 3283 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
 };
@@ -2176,16 +2176,16 @@ export function aioTemplates(): Template[] {
 // supplier's holding plus that demand, STOP_AT_TARGET ends the run there) and spends at most twice the shop cost of it
 // (MAX_SPEND, with FLOAT and COIN_RESERVE). A template is `squadOnly`: it is a candidate only while the plan's squad is
 // active, so a plan with no squad block never values it. Lines that already have a template: earth and air runes
-// (shop-runes), lobsters (lobster-chain). No template: sharks, since no script fishes them. Antipoison(3): the shop run is a
+// (shop-runes). Food is sharks (squad-sharks) and arrows are rune arrows (squad-rune-arrows, squad-arrows-dargaud). Antipoison(3): the shop run is a
 // fallback with a small cap, and a maker (Herblore) takes the line by yielding `antipoison(3)`.
-export const SQUAD_RUN_MAX: Readonly<Record<string, number>> = { 'iron arrow': 2000, 'water rune': 1500, 'nature rune': 1000, 'law rune': 200, 'antipoison(3)': 12 };
+export const SQUAD_RUN_MAX: Readonly<Record<string, number>> = { 'rune arrow': 400, 'water rune': 1500, 'nature rune': 1000, 'law rune': 200, 'antipoison(3)': 12 };
 // The shop cost of one unit (knowledge/items.json), the fallback of a run's spend cap: the rows are priced from the plan's
 // price table (`prices`, from priceTable) when it holds the item.
-export const SQUAD_UNIT_COST: Readonly<Record<string, number>> = { 'iron arrow': 3, 'water rune': 4, 'nature rune': 20, 'law rune': 40, 'antipoison(3)': 288 };
+export const SQUAD_UNIT_COST: Readonly<Record<string, number>> = { 'rune arrow': 400, 'rune arrowtips': 200, shark: 300, 'water rune': 4, 'nature rune': 20, 'law rune': 40, 'antipoison(3)': 288 };
 // The essence of one water-rune craft run, as aio-air-runes (ESSENCE_TARGET=28).
 export const SQUAD_CRAFT_ESSENCE = 28;
-// The bars of one iron-arrow run: a hammer and 27 bars fill the pack.
-export const SQUAD_TIP_BARS = 27;
+// The 15-arrow sets of one rune-arrow run, and the sharks of one shark run (the default count of scripts/shark-supply.ts).
+export const SQUAD_RUNE_SETS = 20, SQUAD_SHARK_RUN = 25;
 export function squadSupplies(): Template[] {
     const shop = (id: string, profile: string, item: string, items: string, perTick: number, goal: string, needs: Needs): Template => {
         const cost = SQUAD_UNIT_COST[item]!, max = SQUAD_RUN_MAX[item]!;
@@ -2214,25 +2214,34 @@ export function squadSupplies(): Template[] {
         worker: 'scripts/gather-combat.ts', args: ['fighter', 'wizard', '10000', 'wizard', 'MAX_KILLS=200', 'UNTIL_ITEM=water talisman'],
         role: 'combat', goal: "kill wizards at the Wizards' Tower until a water talisman drops, for the gang squad's water runes", resources: ['fighter:wizards-tower'], squadOnly: true,
         needs: { combat: 40, holdsUnder: { 'water talisman': 1 } }, repeats: false, yields: () => [], provides: { item: 'water talisman', unlocks: ['squad-water-craft'] } };
-    // Iron arrows from the fleet's iron bars and headless arrows, one chain job: each bar into 15 iron arrowtips at the Varrock
-    // West anvils (scripts/smith-batch.ts, smithing.dbrow: Smithing 20), then 15 tips with 15 headless arrows into 15 iron arrows
-    // at the Varrock West bank (scripts/fletch-arrows.ts MODE=iron, arrows.dbrow: Fletching 15). One job, because the planner
-    // finds a missing input only in stock and on the market, not from another maker. Bench cases extra:smith-iron-arrowtips and
-    // extra:fletch-iron-arrows (hosted run 44467443936, seeds 1 to 3): 30 tips from 2 bars in 53 ticks, 90 arrows in 21 ticks.
-    // No job smelts the bars: they come from stock.
-    const ironSteps = (bars: number) => [`scripts/aio.ts skiller smithing anvil 1500 PRODUCT_ID=40 MAX_MAKE=${bars} BAR_RESERVE=0`,
-        `scripts/fletch-arrows.ts 3000 iron MAX_MAKE=${bars * 15} HEADLESS_RESERVE=0 TIP_RESERVE=0`];
-    const ironArrows: Template = { id: 'squad-iron-arrows', family: 'fletch', script: 'scripts/chain.ts', args: ironSteps(SQUAD_TIP_BARS), env: { ROUNDS: '1' },
-        role: 'fletching', goal: 'smith banked iron bars into arrowtips and fletch them with headless arrows into iron arrows for the gang squad',
-        resources: ['squad:varrock-west-anvil'], squadOnly: true, repeats: false,
-        needs: { skills: { Smithing: 20, Fletching: 15 }, items: { hammer: 1, 'iron bar': SQUAD_TIP_BARS, 'headless arrow': SQUAD_TIP_BARS * 15 } },
-        production: { output: 'iron arrow', outputPerUnit: 15, maximum: SQUAD_TIP_BARS, inputs: { 'iron bar': 1, 'headless arrow': 15 }, resize: n => ({ args: ironSteps(n) }) },
-        yields: () => [{ item: 'iron arrow', perTick: 4 }] };
+    // Rune arrows from the fleet's headless arrows, one chain job: rune arrowtips bought at Hickton's in Catherby (200 coins,
+    // half the price of a finished rune arrow), then 15 tips with 15 headless arrows into 15 rune arrows at the Catherby bank
+    // (scripts/fletch-arrows.ts MODE=native-arrows TIP_TYPE=rune, arrows.dbrow: Fletching 75). One job, because the planner
+    // finds a missing input only in stock and on the market, not from another maker. Bench case extra:fletch-rune-arrows: 30
+    // arrows in 14 ticks (hosted run 44470543603); the tip purchase is not in that time.
+    const runeSteps = (sets: number) => {
+        const tips = sets * 15, spend = tips * SQUAD_UNIT_COST['rune arrowtips']! * 2;
+        return [`scripts/shop-buyer.ts catherby 1200 ITEMS=rune.arrowtips STOCK_TARGET=${tips} STOP_AT_TARGET=1 BANK_PACK=1 NO_BUY_TICKS=25 FLOAT=${spend + 200} COIN_RESERVE=200 MAX_SPEND=${spend}`,
+            `scripts/fletch-arrows.ts 3000 native-arrows rune MAX_MAKE=${tips} HEADLESS_RESERVE=0 TIP_RESERVE=0`];
+    };
+    const runeArrows: Template = { id: 'squad-rune-arrows', family: 'fletch', script: 'scripts/chain.ts', args: runeSteps(SQUAD_RUNE_SETS), env: { ROUNDS: '1' },
+        role: 'fletching', goal: "buy rune arrowtips at Catherby and fletch them with banked headless arrows into rune arrows for the gang squad",
+        resources: ['shop:catherby'], squadOnly: true, repeats: false,
+        needs: { skills: { Fletching: 75 }, items: { coins: SQUAD_RUNE_SETS * 15 * SQUAD_UNIT_COST['rune arrowtips']! * 2 + 200, 'headless arrow': SQUAD_RUNE_SETS * 15 } },
+        production: { output: 'rune arrow', outputPerUnit: 15, maximum: SQUAD_RUNE_SETS, inputs: { 'headless arrow': 15 }, resize: n => ({ args: runeSteps(n) }) },
+        yields: () => [{ item: 'rune arrow', perTick: 1 }], spends: () => [{ item: 'coins', perTick: SQUAD_UNIT_COST['rune arrowtips']! }] };
+    // Sharks fished and cooked at Catherby (scripts/shark-supply.ts: Fishing 76, Cooking 80; it buys a harpoon when it has none,
+    // and it carries two banked trout, salmon or lobsters for the way back). Bench case extra:shark-supply: 3 sharks in 182, 250 and
+    // 348 ticks (hosted run 44470543603, seeds 1 to 3); the rate is from those runs.
+    const sharkSteps = (n: number) => ({ args: [String(n), '9000'], env: { SHARK_CONSUMER: 'gang squad' } });
+    const sharks: Template = { id: 'squad-sharks', family: 'shark-supply', script: 'scripts/shark-supply.ts', ...sharkSteps(SQUAD_SHARK_RUN),
+        role: 'fishing', goal: 'fish and cook sharks at Catherby for the gang squad', resources: ['squad:catherby-sharks'], squadOnly: true, repeats: false,
+        needs: { skills: { Fishing: 76, Cooking: 80 }, items: { lobster: 2 } },
+        production: { output: 'shark', outputPerUnit: 1, maximum: SQUAD_SHARK_RUN, inputs: {}, resize: n => sharkSteps(n) },
+        yields: () => [{ item: 'shark', perTick: 0.01 }] };
     return [
-        waterCraft, waterTalisman, ironArrows,
-        shop('squad-arrows-lowe', 'lowe', 'iron arrow', 'iron arrow', 0.5, "buy iron arrows at Lowe's in Varrock for the gang squad", { items: { coins: 6000 } }),
-        shop('squad-arrows-catherby', 'catherby_arrows', 'iron arrow', 'iron arrow', 0.5, "buy iron arrows at Hickton's in Catherby for the gang squad", { items: { coins: 6000 } }),
-        shop('squad-arrows-dargaud', 'dargaud', 'iron arrow', 'iron arrow', 0.4, 'buy iron arrows in the Ranging Guild for the gang squad', { skills: { Ranged: 40 }, items: { coins: 6000 } }),
+        waterCraft, waterTalisman, runeArrows, sharks,
+        shop('squad-arrows-dargaud', 'dargaud', 'rune arrow', 'rune arrow', 0.4, 'buy rune arrows in the Ranging Guild for the gang squad', { skills: { Ranged: 40 }, items: { coins: 30_000 } }),
         shop('squad-water-betty', 'betty', 'water rune', 'water rune', 0.7, "buy water runes at Betty's in Port Sarim for the gang squad", { items: { coins: 6000 } }),
         shop('squad-water-aubury', 'aubury', 'water rune', 'water rune', 0.7, "buy water runes at Aubury's in Varrock for the gang squad", { items: { coins: 6000 } }),
         shop('squad-nature-guild', 'magic_guild', 'nature rune', 'nature rune', 0.4, 'buy nature runes at the Magic Guild for the gang squad', { skills: { Magic: 66 }, items: { coins: 40_000 } }),

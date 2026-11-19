@@ -127,6 +127,10 @@ describe('pickKit', () => {
         // Food at the floor is carried enough.
         expect(check(full('A', { pack: [...KIT_PACK, it(385, 10)] })).reasons).toEqual([]);
     });
+    test('the quiver takes the strongest arrows that the bow fires, not the cheapest', () => {
+        const p = pickKit(full('A', { bank: [it(385, 60), it(892, 300)] }), gear, rule, NOW);
+        expect(p.worn.find(w => w.slot === 13)).toMatchObject({ id: 892, count: 300 });
+    });
     test('lobsters fill the food slots that the sharks leave, as the bank trip takes them', () => {
         const lobsters = pickKit(full('A', { bank: [it(379, 500)] }), gear, rule, NOW);
         expect([lobsters.ready, lobsters.food, lobsters.foodHeld, lobsters.foodRows]).toEqual([true, 20, 500, [{ id: 379, name: 'Lobster', count: 20 }]]);

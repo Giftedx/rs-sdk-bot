@@ -236,9 +236,8 @@ hour, the high number the pilot cost at 33 kills an hour (estimates).
 
 | Item | Units a squad hour | Consumer | Source |
 |---|---|---|---|
-| Shark | 30 to 40 at the bench cost; 300 to 410 at the pilots' cost (250 HP a kill, 20 HP a shark) | the bank trip of each squad account, 20 a trip | the Grand Exchange; `scripts/shark-supply.ts` (Fishing 76 and Cooking 80; no bench case, rate not measured) |
-| Lobster, once the bank trip takes it | 40 to 55 at the bench cost; 500 to 690 at the pilots' cost (12 HP a lobster) | the same | owned stock; `scripts/gather-fish.ts cage` and `scripts/cook-food.ts` |
-| Iron arrow | 550 to 760 | the quiver, 300 an account | `lowe`, `catherby_arrows` |
+| Shark | 30 to 40 at the bench cost; 300 to 410 at the pilots' cost (250 HP a kill, 20 HP a shark) | the bank trip of each squad account, 20 a trip | `squad-sharks`: `scripts/shark-supply.ts` at Catherby (Fishing 76 and Cooking 80; bench case `extra:shark-supply`: 3 sharks in 182, 250 and 348 ticks); lobsters already held count by heal, and no job makes new lobsters for the squad |
+| Rune arrow (adamant arrows count too) | 550 to 760 | the quiver, 300 an account; staging takes the strongest arrows that the bow fires | `squad-rune-arrows`: rune arrowtips from Hickton (200 coins) fletched with headless arrows (Fletching 75; bench case `extra:fletch-rune-arrows`: 30 arrows in 14 ticks); `squad-arrows-dargaud` (400 coins, Ranged 40) |
 | Earth rune | 270 to 375 | Bind, 30 an account a trip | owned stock; `aubury`, `betty` |
 | Water rune | 270 to 375 | Bind, 30 an account a trip | `aubury`, `betty` |
 | Nature rune | 180 to 250 | Bind, 20 an account a trip | owned stock; `magic_guild` |
