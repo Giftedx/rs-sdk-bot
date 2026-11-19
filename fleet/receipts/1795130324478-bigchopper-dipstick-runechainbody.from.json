@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795130324478-bigchopper-dipstick-runechainbody",
+ "account": "Bigchopper",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "1f48d819-ea33-4254-b784-6be5fc1cd401",
+ "count": 1,
+ "ok": true,
+ "at": 1795130393485,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795130379162
+ },
+ "logout": {
+  "attemptId": "1795130370081-0000024412-0000000001",
+  "at": 1795130393477,
+  "sha256": "6dea3691e7a940cbd5da2132aa9284c77c7fc688b696b04ab75a4cf16f46c8a9"
+ },
+ "screen": true
+}
