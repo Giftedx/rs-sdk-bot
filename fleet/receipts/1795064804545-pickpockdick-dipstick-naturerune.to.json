@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795064804545-pickpockdick-dipstick-naturerune",
+ "account": "Dipstick",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 348,
+ "claim": "2db085e3-b410-43ff-8526-e58d46bdd3bf",
+ "count": 0,
+ "ok": false,
+ "at": 1795064836298,
+ "detail": "trade claimed"
+}
