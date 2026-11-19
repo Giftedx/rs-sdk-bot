@@ -1,7 +1,7 @@
 import {test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {gateSteps,statusBody,checkoutProblem,localSteps} from './ci-gate';
+import {gateSteps,statusBody,checkoutProblem,localSteps,partSteps} from './ci-gate';
 
 test('a posted status needs the SDK patch and no changed or untracked files',()=>{
  expect(checkoutProblem('',true,true)).toBeNull();
@@ -31,4 +31,13 @@ test('the local gate runs the test steps in shards, only the reached files unles
  const steps=[{cmd:['bun','run','typecheck']},{cmd:['bun','test','./scripts','./packages']},{cmd:['bun','test','./packages/dashboard']}];
  expect(localSteps(steps,false).map(s=>s.cmd.join(' '))).toEqual(['bun run typecheck','bun scripts/test-shards.ts --changed origin/master ./scripts ./packages']);
  expect(localSteps(steps,true).map(s=>s.cmd.join(' '))).toEqual(['bun run typecheck','bun scripts/test-shards.ts ./scripts ./packages']);
+});
+
+test('a CI test-shards step is the bun test step that it splits, and --part splits the gate the same way',()=>{
+ const yml=['      - run: bun scripts/test-shards.ts --part $TEST_PART ./scripts ./packages','        env:','          TEST_PART: ${{ matrix.part }}/2','      - run: bun run typecheck'].join('\n');
+ expect(gateSteps(yml).map(s=>s.cmd.join(' '))).toEqual(['bun test ./scripts ./packages','bun run typecheck']);
+ const local=localSteps(gateSteps(yml),true);
+ expect(partSteps(local,'1/3').map(s=>s.cmd.join(' '))).toEqual(['bun scripts/test-shards.ts --part 1/3 ./scripts ./packages','bun run typecheck']);
+ expect(partSteps(local,'2/3').map(s=>s.cmd.join(' '))).toEqual(['bun scripts/test-shards.ts --part 2/3 ./scripts ./packages']);
+ expect(partSteps(local,undefined)).toEqual(local);
 });

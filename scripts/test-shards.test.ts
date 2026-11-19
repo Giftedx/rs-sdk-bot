@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
-import { affectedTests, failedFiles, runShard, shard, shardCount } from './test-shards';
+import { affectedTests, failedFiles, runShard, shard, shardCount, partFiles, parsePart } from './test-shards';
 
 test.skipIf(process.platform !== 'win32')('Windows shards run every file in a fresh process before any retry', async () => {
     const root = resolve(import.meta.dir, '..'), scratch = join(root, '.practice');
@@ -61,6 +61,16 @@ test('the slow files go to separate shards and every file runs once', () => {
     expect(shards.flat().sort()).toEqual(files);
     expect(shards.find(s => s.includes('a.test.ts'))).not.toContain('b.test.ts');
     expect(shard([], 4)).toEqual([[]]);
+});
+
+test('the parts of n runners hold every file once, and a bad part is refused', () => {
+    const files = Array.from({ length: 11 }, (_, i) => `f${i}.test.ts`), seconds = { 'f3.test.ts': 40, 'f7.test.ts': 30 };
+    const parts = [1, 2, 3].map(index => partFiles(files, { index, count: 3 }, seconds));
+    expect(parts.flat().sort()).toEqual([...files].sort());
+    expect(parts.find(p => p.includes('f3.test.ts'))).not.toContain('f7.test.ts');
+    expect(partFiles(files, { index: 2, count: 3 }, seconds)).toEqual(parts[1]!);
+    expect(parsePart('2/4')).toEqual({ index: 2, count: 4 });
+    for (const bad of ['0/4', '5/4', '1/0', 'x', undefined]) expect(() => parsePart(bad)).toThrow();
 });
 
 test('a failed test names its file and a passing file is not named', () => {
