@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795098056114-abracadickra-sporrandip",
+ "account": "SporranDip",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 32915,
+ "claim": "f1915f49-06bc-4cbf-9fc0-862d5ed01d15",
+ "count": 0,
+ "ok": false,
+ "at": 1795098108850,
+ "detail": "trade claimed"
+}
