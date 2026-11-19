@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795060696741-mmsmk1232-pocketpool-adda3f5d043baed5",
+ "account": "PocketPool",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Iron arrow",
+ "requested": 97,
+ "claim": "02a45f6b-035d-4651-8862-bf79d8d4d953",
+ "count": 97,
+ "ok": true,
+ "at": 1795061293622,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 33,
+  "after": 130
+ },
+ "bank": {
+  "count": 97,
+  "at": 1795061292862
+ },
+ "logout": {
+  "attemptId": "1795061276052-0000025676-0000000001",
+  "at": 1795061293587,
+  "sha256": "b6248e0ddf4c9a379ff4387c1f91a0f8f34172a8a6fab0babbadee6b37b02b4f"
+ },
+ "screen": true
+}
