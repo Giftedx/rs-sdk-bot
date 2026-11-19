@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795060678052-bigchopper-thefullmonty-3a446372312d588d",
+ "account": "Bigchopper",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "e160387e-c195-41cf-82f5-3863ca1ccf5c",
+ "count": 0,
+ "ok": false,
+ "at": 1795061012675,
+ "detail": "trade claimed"
+}

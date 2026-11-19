@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795060729889-knightrider-pocketpool-cd1e9414099183be",
  "account": "KnightRider",
  "partner": "PocketPool",
@@ -12,6 +12,16 @@
  "claim": "a9574d4d-c12d-44a1-8e8f-48b1ea87d64e",
  "count": 0,
  "ok": false,
- "at": 1795060762785,
- "detail": "trade claimed"
+ "at": 1795061012426,
+ "detail": "fled at low hitpoints: flee_guard id=3 at=3092,3491 ticks=10",
+ "bank": {
+  "count": 6,
+  "at": 1795060769238
+ },
+ "logout": {
+  "attemptId": "1795060762794-0000017088-0000000001",
+  "at": 1795061012415,
+  "sha256": "6cc0b19818762f35cc879c307d684aa0f25deff5063005cd47af23057158d02c"
+ },
+ "screen": false
 }
