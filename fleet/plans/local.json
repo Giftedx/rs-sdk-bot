@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795112055312,
+ "at": 1795112135157,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -381,25 +381,23 @@
   },
   {
    "account": "Ballspinner",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
    "env": {
-    "ITEM_ID": "536",
-    "QUANTITY": "281",
-    "EXPECTED_OWNED": "6",
-    "LIMIT_PRICE": "7300",
-    "CASH_RESERVE": "5000",
-    "ORDER_MS": "1200000",
-    "ORDER_KEY": "prayer99-ballspinner-dragonbones281",
+    "BONE_ID": "536",
+    "MAX_BURY": "281",
+    "BONE_RESERVE": "6",
+    "CAP": "3000",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-e28547f8-542f-4d24-8468-9f27e94b15e9"
+    "COORDINATOR_RUN_ID": "task-d4316b89-2774-4990-8a80-5c6d8e32fe7b"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-buy-ballspinner-dragon-bones-281 [task-e28547f8-542f-4d24-8468-9f27e94b15e9]",
-   "role": "supply"
+   "goal": "run-prayer-ballspinner-99 [task-d4316b89-2774-4990-8a80-5c6d8e32fe7b]",
+   "role": "helper"
   }
  ],
  "army": [
