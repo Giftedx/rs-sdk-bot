@@ -17,7 +17,36 @@ export interface Sighting {
     targeting?: string | null;
 }
 // `prayer`: the prayer points now, `prayerLevel`: the Prayer level (undefined when not known: counts as some points left and a level high enough).
-export interface Member { name: string; x: number; z: number; combat: number; prayer?: number; prayerLevel?: number }
+// `hp` and `food`: the Hitpoints now and the pieces of food held (the win-chance estimate counts 20 Hitpoints a piece).
+export interface Member { name: string; x: number; z: number; combat: number; prayer?: number; prayerLevel?: number; hp?: number; food?: number }
+
+// The win-chance estimate of a fight (Lanchester square law): the side that has the larger product of total Hitpoints and total damage a tick wins.
+// A side's damage a tick is its combat level (only the ratio of the two sides counts) and its Hitpoints are those of its combat level plus the food it
+// is assumed to hold. The squad focus-fires, so no damage is wasted. In multi-way ground every attacker hits, and they can pile one member, which
+// `pile` takes off our Hitpoints; on single-way ground only as many attackers as there are members hit, the strongest. A protect prayer on an attacker's
+// style takes `protect` of its damage. The constants are the ones that the bench climbs (SQUAD_THREAT_* in scripts/pk-squad.ts).
+export interface OddsParams {
+    // The squad leaves a fight whose odds are below this (1 is an even fight).
+    lose: number;
+    // The share of an attacker's damage that remains when the member protects against its style.
+    protect: number;
+    // The share of our Hitpoints that count on multi-way ground, where attackers pile one member.
+    pile: number;
+    // Pieces of food that an attacker is assumed to hold.
+    theirFood: number;
+}
+export const DEFAULT_ODDS: OddsParams = { lose: 0.9, protect: 0.6, pile: 0.7, theirFood: 10 };
+export interface Combatant { hp: number; dps: number }
+export const combatantHp = (combat: number) => Math.min(99, Math.round(combat * 0.78));
+export function fightOdds(o: { ours: readonly Combatant[]; theirs: readonly Combatant[]; protectedShare: number; singleWay: boolean }, p: OddsParams = DEFAULT_ODDS): number {
+    if (!o.theirs.length) return Infinity;
+    if (!o.ours.length) return 0;
+    const sum = (xs: readonly Combatant[], k: 'hp' | 'dps') => xs.reduce((n, x) => n + x[k], 0);
+    const hitting = o.singleWay ? [...o.theirs].sort((a, b) => b.dps - a.dps).slice(0, o.ours.length) : o.theirs;
+    const incoming = sum(hitting, 'dps') * (1 - o.protectedShare * (1 - p.protect));
+    const ourHp = sum(o.ours, 'hp') * (o.singleWay ? 1 : p.pile);
+    return (ourHp * sum(o.ours, 'dps')) / (sum(o.theirs, 'hp') * incoming);
+}
 
 // The Prayer level of each protect prayer (content scripts/skill_prayer/configs/prayers.dbrow), by the style that it covers.
 export type ProtectLevels = Record<CombatStyle, number>;
@@ -131,6 +160,9 @@ export interface DecideOptions {
     outnumberedBy?: number;
     // The Prayer level of each protect prayer (default PROTECT_LEVELS).
     protectLevels?: ProtectLevels;
+    // Fight or flight by the win-chance estimate (fightOdds) in place of the counting rules (outnumbered, a team that no member can protect against):
+    // the squad retreats when the odds are below `lose`, and walks to a single-way tile instead when that makes the odds 1 or more.
+    odds?: OddsParams;
     outclasses: (me: Member, them: ThreatRecord) => boolean;
     // Whether a tile is multi-way. A team on a single-way tile is held there: one attacker at a time can hit each member (pvp_combat.rs2:103-133).
     multiAt?: (x: number, z: number) => boolean;
@@ -173,7 +205,23 @@ export function decideAdapt(classes: readonly ThreatClass[], members: readonly M
     const centre = { x: Math.round(members.reduce((n, m) => n + m.x, 0) / members.length), z: Math.round(members.reduce((n, m) => n + m.z, 0) / members.length) };
     const squadMulti = o.multiAt ? members.some(m => o.multiAt!(m.x, m.z)) : true;
     const names = (cs: readonly ThreatClass[]) => cs.slice(0, 3).map(c => `${c.record.name}(${c.record.combat},${c.style})`).join(', ');
+    const odds = (() => {
+        if (!o.odds) return null;
+        const p = o.odds;
+        const ours = members.map(m => ({ hp: (m.hp ?? 99) + 20 * (m.food ?? 0), dps: m.combat }));
+        const theirs = danger.map(c => ({ hp: combatantHp(c.record.combat) + 20 * p.theirFood, dps: c.record.combat }));
+        const covered = danger.filter(c => c.cover !== null && members.some(m => canProtect(m, c.cover!, o.protectLevels))).length;
+        const protectedShare = covered / danger.length;
+        const here = fightOdds({ ours, theirs, protectedShare, singleWay: !squadMulti }, p);
+        const there = squadMulti ? fightOdds({ ours, theirs, protectedShare, singleWay: true }, p) : here;
+        return { here, there };
+    })();
     if (outclassing) actions.push({ kind: 'retreat', reason: `outclassed by ${names([outclassing])} at ${outclassing.record.nearest.dist} tiles` });
+    else if (odds && odds.here < o.odds!.lose) {
+        const to = squadMulti && odds.there >= 1 ? o.singleWayFrom?.(centre) ?? null : null;
+        const why = `odds ${odds.here.toFixed(2)} for ${members.length} members against ${danger.length}: ${names(danger)}`;
+        actions.push(to ? { kind: 'single-way', to, reason: `${why}, ${odds.there.toFixed(2)} on single-way ground` } : { kind: 'retreat', reason: `lost fight: ${why}` });
+    } else if (odds) { /* the odds hold: fight */ }
     else if (outnumbered) actions.push({ kind: 'retreat', reason: `outnumbered: ${unexpected.length} attackers against ${members.length} members: ${names(unexpected)}` });
     else if (unexpected.length >= team && noPrayer) actions.push({ kind: 'retreat', reason: `team of ${unexpected.length} that no member can protect against: ${names(unexpected)}` });
     else if (unexpected.length >= team && squadMulti) {

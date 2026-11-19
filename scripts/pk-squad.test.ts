@@ -436,7 +436,7 @@ async function holdWithThreats(act: boolean) {
     let t = 0;
     w.s.tick = () => t;
     w.s.sdk.sendTogglePrayer = async (i: number) => { toggles.push(i); };
-    const threats: any = { act, acted: () => {}, step: () => ({ classes: [], actions: [{ kind: 'protect', member: 'Soldier', style: 'magic', reason: 'Mage magic by weapon, 4 tiles' }] }) };
+    const threats: any = { act, acted: () => {}, step: () => ({ classes: [], interlopers: [], actions: [{ kind: 'protect', member: 'Soldier', style: 'magic', reason: 'Mage magic by weapon, 4 tiles' }] }) };
     const mocks = [
         spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
         spyOn(walking, 'walkPath').mockResolvedValue({ ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any),
@@ -476,7 +476,7 @@ async function holdRadar(actions: (tick: number) => any[], until = 120) {
         if (old >= 0) { const [gone] = w.equipment.splice(old, 1); w.inventory.push({ ...gone, slot: ++slot, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] }); }
         w.equipment.push(item);
     };
-    const threats: any = { act: true, acted: () => {}, step: (tick: number) => ({ classes: [], actions: actions(tick) }) };
+    const threats: any = { act: true, acted: () => {}, step: (tick: number) => ({ classes: [], interlopers: [], actions: actions(tick) }) };
     const mocks = [
         spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
         spyOn(walking, 'walkPath').mockImplementation(async (_d, path) => { walks.push({ x: path[0]!.x, z: path[0]!.z }); w.player.worldX = path[0]!.x; w.player.worldZ = path[0]!.z; return { ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any; }),
@@ -522,7 +522,7 @@ test('a fight of the hold loop stops when the radar decides a retreat or a singl
     w.s.tick = () => 0;
     w.s.sdk.getState().nearbyPlayers = [{ index: 5, name: 'Goondelf', combatLevel: 126, x: 3067, z: 3641, distance: 1 }];
     const decided: { actions: any[] } = { actions: [{ kind: 'protect', member: 'Soldier', style: 'magic', reason: 't' }] };
-    const threats: any = { act: true, acted: () => {}, step: () => ({ classes: [], actions: decided.actions }) };
+    const threats: any = { act: true, acted: () => {}, step: () => ({ classes: [], interlopers: [], actions: decided.actions }) };
     const stops: boolean[] = [];
     let t = 0;
     const mocks = [
@@ -543,4 +543,23 @@ test('a fight of the hold loop stops when the radar decides a retreat or a singl
         await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3066, z: 3641 }, options: { kit: {} }, allies: [], pickup: false, trips: 3, deadline: 400, stopped: () => t >= 500, killsLeft: () => true, log: () => {}, threats });
         expect(stops.slice(0, 3)).toEqual([false, true, true]);
     } finally { for (const mock of mocks) mock.mockRestore(); }
+});
+
+test('pickSquadFocus: an interloper comes before the squad targets, the one with the lowest health first among interlopers, and the squad goes back to its targets when they are gone', () => {
+    const gang = { name: 'Goondelf', index: 1, distance: 5, hp: 0.2 }, mage = { name: 'Mage', index: 2, distance: 9, hp: 1 }, ranger = { name: 'Ranger', index: 3, distance: 6, hp: 0.5 };
+    const health = (p: { hp: number }) => p.hp;
+    const targets = new Set(['goondelf']);
+    expect(pickSquadFocus({ view: [gang, mage], targets, health })?.name).toBe('Goondelf');
+    const interlopers = new Set(['mage', 'ranger']);
+    const all = new Set([...targets, ...interlopers]);
+    expect(pickSquadFocus({ view: [gang, mage], targets: all, priority: interlopers, health })?.name).toBe('Mage');
+    expect(pickSquadFocus({ view: [gang, mage, ranger], targets: all, priority: interlopers, health })?.name).toBe('Ranger');
+    expect(pickSquadFocus({ view: [gang], targets, priority: new Set(), health })?.name).toBe('Goondelf');
+});
+
+test('the squad end line prints the kills of interlopers only when the threat watch counted them', () => {
+    const base = { accounts: 4, kills: 3, taken: 500, trips: 1, fights: 6, picked: {}, dropped: [], stranded: [], deaths: 0 };
+    expect(squadEnd(base).detail).toBe('squad accounts=4 kills=3 died=0 taken=500 trips=1 picked={}');
+    expect(squadEnd({ ...base, interlopers: 2 }).detail).toBe('squad accounts=4 kills=3 died=0 attackerKills=2 taken=500 trips=1 picked={}');
+    expect(squadEnd({ ...base, interlopers: 0 }).detail).toContain(' attackerKills=0 ');
 });

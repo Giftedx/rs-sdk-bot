@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { canProtect, classifyThreat, decideAdapt, threatLine, ThreatBook, type Member, type Sighting } from '../src/pvp-threat';
+import { canProtect, classifyThreat, DEFAULT_ODDS, decideAdapt, fightOdds, threatLine, ThreatBook, type Member, type Sighting } from '../src/pvp-threat';
 import type { CombatStyle } from '../src/opponent';
 
 // Style by weapon id for the tests: 1 staff, 2 bow, 3 whip. Animation 10 casts, 11 shoots, 12 hits.
@@ -193,4 +193,56 @@ test('no danger, no action; the log line holds the record', () => {
     expect(decideAdapt(classes([rival({ x: 3100, z: 3700 })]), squad, { outclasses })).toEqual([]);
     const [c] = classes([near('Mage', { worn: { weapon: 1, torso: 577, legs: 1095, back: 1052 } })]);
     expect(threatLine(c!)).toBe('THREAT Mage combat=120 style=magic by=weapon wild=16 multi dist=3 to=Ours2 hits=Ours1+Ours2 weapon=1 torso=577 legs=1095 back=1052');
+});
+
+// Fight or flight by the win-chance estimate (fightOdds).
+const fed = (n: number) => squad4.slice(0, n).map(m => ({ ...m, hp: 99, food: 10, prayer: 50, prayerLevel: 99 }));
+const side = (n: number, combat = 126) => Array.from({ length: n }, () => ({ hp: 98 + 20 * DEFAULT_ODDS.theirFood, dps: combat }));
+const ours = (n: number) => Array.from({ length: n }, () => ({ hp: 99 + 200, dps: 126 }));
+
+test('fightOdds: four members beat three attackers and lose to five; single-way ground helps the squad; protection helps; no attackers is a win', () => {
+    expect(fightOdds({ ours: ours(4), theirs: side(3), protectedShare: 1, singleWay: false })).toBeGreaterThan(1.5);
+    const five = fightOdds({ ours: ours(4), theirs: side(5), protectedShare: 1, singleWay: false });
+    expect(five).toBeLessThan(DEFAULT_ODDS.lose);
+    expect(fightOdds({ ours: ours(4), theirs: side(5), protectedShare: 1, singleWay: true })).toBeGreaterThan(five);
+    expect(fightOdds({ ours: ours(4), theirs: side(5), protectedShare: 0, singleWay: false })).toBeLessThan(five);
+    expect(fightOdds({ ours: ours(4), theirs: [], protectedShare: 0, singleWay: false })).toBe(Infinity);
+    expect(fightOdds({ ours: [], theirs: side(1), protectedShare: 0, singleWay: false })).toBe(0);
+});
+
+test('odds mode: fight a lone attacker and three attackers; against five leave, or go to a single-way tile when that makes the fight even or better', () => {
+    const o = { outclasses, odds: DEFAULT_ODDS, multiAt: () => true };
+    const members = fed(4);
+    expect(decideAdapt(classes4([near('Mage')]), members, o).some(a => a.kind === 'retreat' || a.kind === 'single-way')).toBe(false);
+    expect(decideAdapt(classes4(attackers(3)), members, o).some(a => a.kind === 'retreat' || a.kind === 'single-way')).toBe(false);
+    const five = decideAdapt(classes4(attackers(5)), members, o)[0]!;
+    expect(five).toMatchObject({ kind: 'retreat' });
+    expect((five as { reason: string }).reason).toContain('lost fight: odds');
+    const to = { x: 3040, z: 3600 };
+    const moved = decideAdapt(classes4(attackers(5)), members, { ...o, singleWayFrom: () => to })[0]!;
+    expect(moved).toMatchObject({ kind: 'single-way', to });
+    expect((moved as { reason: string }).reason).toContain('on single-way ground');
+    // On single-way ground the odds are those of single-way ground: the squad holds it and fights.
+    expect(decideAdapt(classes4(attackers(5)), members, { ...o, multiAt: () => false }).some(a => a.kind === 'retreat' || a.kind === 'single-way')).toBe(false);
+});
+
+test('odds mode: a squad with no food and low Hitpoints leaves a fight that a fed squad takes; unprotected attackers are worse', () => {
+    const o = { outclasses, odds: DEFAULT_ODDS, multiAt: () => false };
+    const weak = squad4.map(m => ({ ...m, hp: 30, food: 0, prayer: 50, prayerLevel: 99 }));
+    expect(decideAdapt(classes4(attackers(3)), weak, o)[0]).toMatchObject({ kind: 'retreat' });
+    expect(decideAdapt(classes4(attackers(3)), fed(4), o).some(a => a.kind === 'retreat')).toBe(false);
+    // Four attackers: protected the fed squad takes it; with Prayer 1 (no protection) it leaves.
+    const bare = squad4.map(m => ({ ...m, hp: 99, food: 4, prayer: 1, prayerLevel: 1 }));
+    const protectedSquad = squad4.map(m => ({ ...m, hp: 99, food: 4, prayer: 50, prayerLevel: 99 }));
+    const four = classes4(attackers(4));
+    expect(decideAdapt(four, protectedSquad, o).some(a => a.kind === 'retreat')).toBe(false);
+    expect(decideAdapt(four, bare, o)[0]).toMatchObject({ kind: 'retreat' });
+});
+
+test('odds mode counts the squad targets too: a lost fight against the gang is left, and an outclassing stranger still comes first', () => {
+    const o = { outclasses, odds: DEFAULT_ODDS, multiAt: () => false, expected: new Set(['att0', 'att1', 'att2', 'att3']) };
+    const two = fed(2);
+    expect(decideAdapt(classes4(attackers(4)), two, o)[0]).toMatchObject({ kind: 'retreat' });
+    const boss = decideAdapt(classes4([near('Boss', { combat: 145 }), ...attackers(2)]), fed(4), { ...o, expected: new Set(['att0', 'att1']) })[0]!;
+    expect((boss as { reason: string }).reason).toContain('outclassed by Boss');
 });

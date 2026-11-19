@@ -228,6 +228,8 @@ export async function openSquad(names: readonly string[], open: (name: string) =
 }
 
 export type SquadStats = { name: string; fights: number; pulls: number; kills: number; trips: number; died: boolean; picked: Record<string, number>; taken: number; receipts: string[];
+    // The kills of the account that were interlopers (players that the squad did not come for, the threat radar), counted when the watch is on.
+    interlopers?: number;
     // The deaths of the account in the run, and the ones that it recovered from (re-kit, restock and the walk back to the post).
     // `died` is true for a death that it did not recover from.
     deaths: number; rekits: number };
@@ -250,10 +252,12 @@ export function pickSquadFocus<P extends { name: string; index: number; distance
     me?: { x: number; z: number; combatLevel: number };
     inMulti?: boolean;
     stunned?: ReadonlySet<string>;
+    // Players that come first (the interlopers of the threat radar: they attack us or close in).
+    priority?: ReadonlySet<string>;
     activeFocus?: string;
     scoutTarget?: string;
 }): P | undefined {
-    const { view, targets, health, skip = new Set(), me, inMulti, stunned = new Set(), activeFocus, scoutTarget } = opts;
+    const { view, targets, health, skip = new Set(), me, inMulti, stunned = new Set(), priority = new Set<string>(), activeFocus, scoutTarget } = opts;
     const active = activeFocus?.toLowerCase();
     const scout = scoutTarget?.toLowerCase();
     const eligible = view.filter(p => {
@@ -267,7 +271,8 @@ export function pickSquadFocus<P extends { name: string; index: number; distance
     });
     return eligible.sort((a, b) => {
         const ak = a.name.toLowerCase(), bk = b.name.toLowerCase();
-        return Number(stunned.has(bk)) - Number(stunned.has(ak))
+        return Number(priority.has(bk)) - Number(priority.has(ak))
+            || Number(stunned.has(bk)) - Number(stunned.has(ak))
             || health(a) - health(b)
             || Number(bk === scout) - Number(ak === scout)
             || a.distance - b.distance;
@@ -298,9 +303,9 @@ export function squadFallbackPlan(opts: {
 // `RESULT fail died` as a death and does not start the squad again with an account that holds no kit (packages/practice/src/supervise.ts and
 // supervise-host.ts classify), and scripts/squad-watch.ts reads it as a death. `diedAccounts=A,B` names the accounts that died, early in the line
 // (the supervisor logs 200 characters of it): scripts/swarm.ts gives the died end to those accounts only.
-export function squadEnd(o: { accounts: number; kills: number; gangDied?: number; deaths: number; taken: number; trips: number; fights: number; picked: Record<string, number>; dropped: readonly string[]; stranded: readonly string[]; halted?: string; receiptProof?: string; rekits?: number; diedAccounts?: readonly string[] }): { ok: boolean; detail: string } {
+export function squadEnd(o: { accounts: number; kills: number; gangDied?: number; deaths: number; taken: number; trips: number; fights: number; picked: Record<string, number>; dropped: readonly string[]; stranded: readonly string[]; halted?: string; receiptProof?: string; rekits?: number; interlopers?: number; diedAccounts?: readonly string[] }): { ok: boolean; detail: string } {
     const ok = o.halted === undefined && o.stranded.length === 0 && o.fights > 0 && o.deaths === 0;
-    return { ok, detail: `${o.deaths > 0 ? 'died ' : ''}squad accounts=${o.accounts}${o.deaths > 0 && o.diedAccounts?.length ? ` diedAccounts=${o.diedAccounts.map(n => n.replace(/ /g, '_')).join(',')}` : ''} kills=${o.kills}${o.receiptProof ? ` ${o.receiptProof}` : ''}${o.gangDied !== undefined ? ` gangDied=${o.gangDied}` : ''} died=${o.deaths}${o.rekits ? ` rekits=${o.rekits}` : ''} taken=${o.taken} trips=${o.trips} picked=${JSON.stringify(o.picked)}${o.dropped.length ? ` dropped=${o.dropped.join(',')}` : ''}${o.stranded.length ? ` stranded=${o.stranded.join(',')}` : ''}${o.halted ? ` halted=${o.halted}` : ''}` };
+    return { ok, detail: `${o.deaths > 0 ? 'died ' : ''}squad accounts=${o.accounts}${o.deaths > 0 && o.diedAccounts?.length ? ` diedAccounts=${o.diedAccounts.map(n => n.replace(/ /g, '_')).join(',')}` : ''} kills=${o.kills}${o.receiptProof ? ` ${o.receiptProof}` : ''}${o.gangDied !== undefined ? ` gangDied=${o.gangDied}` : ''} died=${o.deaths}${o.rekits ? ` rekits=${o.rekits}` : ''}${o.interlopers !== undefined ? ` attackerKills=${o.interlopers}` : ''} taken=${o.taken} trips=${o.trips} picked=${JSON.stringify(o.picked)}${o.dropped.length ? ` dropped=${o.dropped.join(',')}` : ''}${o.stranded.length ? ` stranded=${o.stranded.join(',')}` : ''}${o.halted ? ` halted=${o.halted}` : ''}` };
 }
 // One account of the squad: hold the post, fight the squad's target, pick up, bank and come back.
 export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: { x: number; z: number }; aim?: { x: number; z: number }; options: FightOptions; allies: readonly string[]; pickup: boolean; pull?: boolean;
@@ -440,7 +445,10 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 if (!retreated) { stats.died = true; break; }
                 continue;
             }
-            const target = pickSquadFocus({ view, targets: o.targets, health, skip: new Set(skip.keys()), me: self, inMulti: isMulti(p.worldX, p.worldZ), stunned });
+            // Interlopers (dangerous players that are not the squad's targets) become targets, first: lowest health first among them. When they are dead or gone
+            // the squad goes back to its own targets.
+            const interlopers = new Set((threat && o.threats!.act ? threat.interlopers : []).map(n => n.toLowerCase()));
+            const target = pickSquadFocus({ view, targets: interlopers.size ? new Set([...o.targets, ...interlopers]) : o.targets, priority: interlopers, health, skip: new Set(skip.keys()), me: self, inMulti: isMulti(p.worldX, p.worldZ), stunned });
             if (!target) {
                 // No prayer while it waits: an active prayer drains with no fight loop to flick it (in one live meeting
                 // our prayer ran out at about tick 730), and the fight loop puts them on again. One input each 3 ticks.
@@ -489,7 +497,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             });
             if (refusedAt > began) skip.set(target.name.toLowerCase(), s.tick() + 8);
             const gone = !(s.sdk.getState()?.nearbyPlayers ?? []).some(q => q.name.toLowerCase() === target.name.toLowerCase());
-            if (r.outcome === 'kill') stats.kills++;
+            if (r.outcome === 'kill') { stats.kills++; if (interlopers.has(target.name.toLowerCase())) stats.interlopers = (stats.interlopers ?? 0) + 1; }
             if (r.receipt) stats.receipts.push(r.receipt);
             if (o.pickup && (r.outcome === 'kill' || gone)) {
                 const got = await pickUp(s, wanted, { radius: 3, maxTicks: 30, wait: 6, stop: o.stopped });
@@ -674,7 +682,9 @@ if (import.meta.main) {
     if (get('SQUAD_THREAT', '0') === '1') {
         const radar = new Radar();
         if (!gang.length) closeThreatRadar = connectRadar(squadServer, radar);
-        threats = new ThreatWatch({ sessions: () => squad, server: squadServer, friends: new Set(ours.map(n => n.toLowerCase())), radar, log, act: get('SQUAD_THREAT_ACT', '1') !== '0', cooldown: Number(get('SQUAD_THREAT_COOLDOWN', '600')), decide: { expected: get('SQUAD_THREAT_EXPECTED', '1') === '1' ? targets : new Set<string>() } });
+        threats = new ThreatWatch({ sessions: () => squad, server: squadServer, friends: new Set(ours.map(n => n.toLowerCase())), radar, log, act: get('SQUAD_THREAT_ACT', '1') !== '0', cooldown: Number(get('SQUAD_THREAT_COOLDOWN', '600')),
+            // SQUAD_THREAT_ODDS=0: the counting rules in place of the win-chance estimate; the constants of the estimate are what the bench climbs.
+            odds: get('SQUAD_THREAT_ODDS', '1') === '0' ? false : { lose: Number(get('SQUAD_THREAT_LOSE', '0.9')), protect: Number(get('SQUAD_THREAT_PROTECT', '0.6')), pile: Number(get('SQUAD_THREAT_PILE', '0.7')), theirFood: Number(get('SQUAD_THREAT_THEIR_FOOD', '10')) }, decide: { expected: get('SQUAD_THREAT_EXPECTED', '1') === '1' ? targets : new Set<string>() } });
     }
     const results = await Promise.all(squad.map(s => {
         const kit = kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []);
@@ -707,7 +717,7 @@ if (import.meta.main) {
     if (get('RESCUE', '1') === '1') stranded.push(...await rescueDropped(dropped.keys(), all, (name, onStop) => openBot(name, { onStop, onSessionEnd: (s, detail) => onStop(s, detail) }), log));
     else stranded.push(...dropped.keys());
     const end = squadEnd({ accounts: results.length, kills: sum(r => r.kills), gangDied: gang.length ? gang.filter(gangDead).length : undefined, deaths: results.filter(r => r.died).length,
-        taken: sum(r => r.taken), trips: sum(r => r.trips), fights: sum(r => r.fights), picked, dropped: [...dropped.keys()], stranded, halted, rekits: results.reduce((n, r) => n + r.rekits, 0), receiptProof: killReceiptProof(results.flatMap(r => r.receipts)), diedAccounts: results.filter(r => r.died).map(r => r.name) });
+        taken: sum(r => r.taken), trips: sum(r => r.trips), fights: sum(r => r.fights), picked, dropped: [...dropped.keys()], stranded, halted, rekits: results.reduce((n, r) => n + r.rekits, 0), ...(threats ? { interlopers: results.reduce((n, r) => n + (r.interlopers ?? 0), 0) } : {}), receiptProof: killReceiptProof(results.flatMap(r => r.receipts)), diedAccounts: results.filter(r => r.died).map(r => r.name) });
     await settleKillFeed();
     await finish(all, end.ok, end.detail);
 }

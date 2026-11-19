@@ -52,11 +52,11 @@ afterEach(() => { for (const r of roots.splice(0)) rmSync(r, { recursive: true, 
 const ME1: Fake = { index: 1, name: 'Ours1', combat: 126, x: 3070, z: 3640 }, ME2: Fake = { index: 2, name: 'Ours2', combat: 126, x: 3072, z: 3640 };
 const MAGE: Fake = { index: 9, name: 'Mage', combat: 120, x: 3075, z: 3644, weapon: STAFF };
 
-function watch(players: Fake[], view: number[], o: { act?: boolean; expected?: string[]; worn?: number[]; pack?: number[]; multi?: boolean; outclass?: boolean; cooldown?: number; recordMaxBytes?: number; recordMaxFiles?: number } = {}) {
+function watch(players: Fake[], view: number[], o: { act?: boolean; expected?: string[]; worn?: number[]; pack?: number[]; multi?: boolean; outclass?: boolean; odds?: false; cooldown?: number; recordMaxBytes?: number; recordMaxFiles?: number } = {}) {
     const root = mkdtempSync(join(tmpdir(), 'threat-')); roots.push(root);
     const a = session('Ours1', ME1, [ME2, ...players], view, o), b = session('Ours2', ME2, [ME1, ...players], view);
     const lines: string[] = [];
-    const w = new ThreatWatch({ sessions: () => [a.s, b.s], server: 'demo.example:43594', friends: new Set(['ours1', 'ours2']), log: l => lines.push(l), recordRoot: root, act: o.act, cooldown: o.cooldown, recordMaxBytes: o.recordMaxBytes, recordMaxFiles: o.recordMaxFiles,
+    const w = new ThreatWatch({ sessions: () => [a.s, b.s], server: 'demo.example:43594', friends: new Set(['ours1', 'ours2']), log: l => lines.push(l), recordRoot: root, act: o.act, cooldown: o.cooldown, recordMaxBytes: o.recordMaxBytes, recordMaxFiles: o.recordMaxFiles, odds: o.odds,
         decide: { expected: new Set(o.expected ?? []), ...(o.multi ? { multiAt: () => true, singleWayFrom: () => null } : {}), ...(o.outclass ? { outclasses: () => true } : {}) }, now: () => 1000 });
     return { w, lines, root, a, b };
 }
@@ -102,9 +102,10 @@ test('act off: the watch logs and records and the squad is told nothing (the cal
 test('the targets of the squad are expected: protected against, never a retreat', () => {
     const gang = [{ ...MAGE, index: 9, name: 'A' }, { ...MAGE, index: 10, name: 'B', x: 3076 }, { ...MAGE, index: 11, name: 'C', x: 3076, z: 3643 }];
     // Three strangers against the two members of the fake squad outnumber it (members + 1), on multi-way or single-way ground.
-    expect(retreatOf(watch(gang, [9, 10, 11], { multi: true }).w.step(5).actions)).toContain('outnumbered: 3 attackers against 2 members');
-    expect(retreatOf(watch(gang, [9, 10, 11]).w.step(5).actions)).toContain('outnumbered: 3 attackers against 2 members');
-    const expected = watch(gang, [9, 10, 11], { expected: ['a', 'b', 'c'], multi: true }).w.step(5);
+    // (The counting rules: `odds: false`. The win-chance estimate counts the targets too: see the odds tests.)
+    expect(retreatOf(watch(gang, [9, 10, 11], { multi: true, odds: false }).w.step(5).actions)).toContain('outnumbered: 3 attackers against 2 members');
+    expect(retreatOf(watch(gang, [9, 10, 11], { odds: false }).w.step(5).actions)).toContain('outnumbered: 3 attackers against 2 members');
+    const expected = watch(gang, [9, 10, 11], { expected: ['a', 'b', 'c'], multi: true, odds: false }).w.step(5);
     expect(retreatOf(expected.actions)).toBeNull();
     expect(protectOf(expected.actions, 'Ours1')).toBe('magic');
 });
@@ -212,4 +213,12 @@ test('a record file moves aside at the size cap, and a full directory takes no n
 
 test('the protect prayer levels come from the content: Magic 37, Missiles 40, Melee 43', () => {
     expect(protectLevels()).toEqual({ magic: 37, ranged: 40, melee: 43 });
+});
+
+test('the watch names the interlopers: dangerous players that are not the squad targets, and nobody else', () => {
+    const view = [9, 10];
+    const { w } = watch([MAGE, { ...MAGE, index: 10, name: 'Gang1' }], view, { expected: ['gang1'] });
+    expect(w.step(5).interlopers).toEqual(['Mage']);
+    view.length = 0;
+    expect(w.step(6).interlopers).toEqual([]);
 });

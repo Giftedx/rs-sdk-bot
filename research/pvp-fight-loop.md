@@ -1818,6 +1818,18 @@ the log and the record) -> `packages/core/test/pvp-threat.test.ts`, `scripts/pk-
   `KitSwapper` for their one account: the protect prayer through `threatPrayer`, the armour swap, and the retreat (the hunt's threat retreat, the
   roam's escape) when the radar decides one. Each keeps its own threat check. They have no single-way move, and the hunt turns the world feed
   off on a local server.
+- **Fight or flight.** The owner's rule: the squad kills anyone that attacks it or closes in on it while it hunts the gang, and leaves only a fight that it
+  would lose. A dangerous player that is not a target of the squad is an **interloper** (`ThreatWatch.step().interlopers`): the squad takes it as a target,
+  ahead of its own targets (`pickSquadFocus` `priority`), one at a time, lowest health first, with the protect prayer of its style; when the interlopers are dead or
+  gone it goes back to the gang. The retreat is decided by the win-chance estimate `fightOdds` (`packages/core/src/pvp-threat.ts`, Lanchester square law: the
+  product of total Hitpoints and total damage a tick of each side; the Hitpoints of a member are its Hitpoints and 20 a piece of food, an attacker's are those of its
+  combat level and `theirFood` pieces; on multi-way ground every attacker hits and `pile` of our Hitpoints count, on single-way ground the strongest attackers as
+  many as there are members hit; a protect prayer on an attacker's style leaves `protect` of its damage). The squad retreats when the odds are below `lose`,
+  and walks to a single-way tile instead when the odds there are 1 or more. An outclassing stranger is still a retreat. The constants (`lose` 0.9, `protect`
+  0.6, `pile` 0.7, `theirFood` 10; `SQUAD_THREAT_LOSE`, `_PROTECT`, `_PILE`, `_THEIR_FOOD`) are first guesses for the bench to climb; `SQUAD_THREAT_ODDS=0`
+  gives the counting rules (outnumbered, a team that no member can protect against). The squad end line prints `attackerKills=N` (the kills of interlopers) when
+  the watch is on, so a bench cell reports deaths, attacker kills, gang kills (`kills` minus `attackerKills`) and Hitpoints lost. Not done: the freeze of the
+  other attackers (Bind, Snare, Entangle on the ones that are not the focus) and the use of specials beyond what `fightPlayer` does.
 - **Cooldown.** A retreat or single-way decision stays decided, each tick, until a member acts on it and says so (`ThreatWatch.acted`). From then on the
   same players cannot cause another one for `cooldown` ticks (default 600, `SQUAD_THREAT_COOLDOWN` in the squad): a stranger at the post would otherwise
   cause retreat, return, retreat until the trips run out. The decision stays 30 ticks after the act, so that each member of the squad acts on it. A member

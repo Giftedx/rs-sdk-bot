@@ -8,7 +8,7 @@ import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renam
 import { join } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { decodeHeadicons, decodeWorn, wornWeaponStyle, type CombatStyle } from '../packages/core/src/opponent';
-import { classifyThreat, decideAdapt, threatLine, ThreatBook, type Adapt, type DecideOptions, type Member, type ProtectLevels, type Sighting, type ThreatClass, type ThreatRecord } from '../packages/core/src/pvp-threat';
+import { classifyThreat, DEFAULT_ODDS, decideAdapt, threatLine, ThreatBook, type OddsParams, type Adapt, type DecideOptions, type Member, type ProtectLevels, type Sighting, type ThreatClass, type ThreatRecord } from '../packages/core/src/pvp-threat';
 import { parsePack } from '../packages/knowledge/src/pack';
 import { contentRoot } from '../packages/knowledge/src/paths';
 import { PRAYER } from './pk';
@@ -57,6 +57,8 @@ export interface WatchOptions {
     // Ticks after a retreat or a single-way move for which the same players cannot cause another one (default 600). A player that was not
     // there at the first one causes one at once. A decision stays for 30 ticks, so that each member of the squad acts on it.
     cooldown?: number;
+    // Fight or flight by the win-chance estimate (default on, with DEFAULT_ODDS; the parts that are given replace the default; false: the counting rules).
+    odds?: Partial<OddsParams> | false;
     decide?: Partial<DecideOptions>;
     // false: the watch logs and records, and the squad does not act on it (default true).
     act?: boolean;
@@ -68,7 +70,7 @@ export const MAX_RECORD_BYTES = 5_000_000, MAX_RECORD_FILES = 500;
 
 export class ThreatWatch {
     private book: ThreatBook;
-    private cache: { tick: number; classes: ThreatClass[]; actions: Adapt[] } | null = null;
+    private cache: { tick: number; classes: ThreatClass[]; actions: Adapt[]; interlopers: string[] } | null = null;
     private logged = new Map<string, string>();
     private recorded = new Map<string, number>();
     private cooling = new Map<string, number>();
@@ -84,11 +86,12 @@ export class ThreatWatch {
     // The members now in the Wilderness, from the sessions that are logged in.
     private members(): { sessions: Session[]; members: Member[] } {
         const sessions = this.o.sessions().filter(s => { const p = s.sdk.getState()?.player; return !!p && !p.isDead && wildLevel(p.worldX, p.worldZ) > 0; });
-        return { sessions, members: sessions.map(s => { const p = s.sdk.getState()!.player!; return { name: s.name, x: p.worldX, z: p.worldZ, combat: p.combatLevel, prayer: s.sdk.getState()!.prayers?.prayerPoints, prayerLevel: s.sdk.getSkill('Prayer')?.level }; }) };
+        return { sessions, members: sessions.map(s => { const p = s.sdk.getState()!.player!; return { name: s.name, x: p.worldX, z: p.worldZ, combat: p.combatLevel, prayer: s.sdk.getState()!.prayers?.prayerPoints, prayerLevel: s.sdk.getSkill('Prayer')?.level,
+            hp: p.hp, food: s.sdk.getInventory().filter(i => i.optionsWithIndex?.some(op => /^eat$/i.test(op.text))).length }; }) };
     }
 
     // The threats, their classes and the decisions of this tick. One reading for the squad each tick, whichever member asks.
-    step(tick: number): { classes: ThreatClass[]; actions: Adapt[] } {
+    step(tick: number): { classes: ThreatClass[]; actions: Adapt[]; interlopers: string[] } {
         if (this.cache?.tick === tick) return this.cache;
         const { sessions, members } = this.members();
         const sightings = new Map<string, Sighting>();
@@ -110,6 +113,7 @@ export class ThreatWatch {
             outclasses: (m, t) => outclasses({ combat: m.combat }, { combatLevel: t.combat }),
             multiAt: isMulti,
             protectLevels: protectLevels(),
+            ...(this.o.odds === false ? {} : { odds: { ...DEFAULT_ODDS, ...this.o.odds } }),
             // The nearest single-way tile, away from the dangerous players.
             singleWayFrom: at => nearestSingleWay(at, { multiAt: isMulti, wildAt: wildLevel, avoid: classes.filter(c => c.dangerous).map(c => ({ x: c.record.x, z: c.record.z })) }),
             // The armour of the pack that defends better against the threat's style (scripts/pk-threat-kit.ts).
@@ -121,7 +125,10 @@ export class ThreatWatch {
             ...this.o.decide,
         });
         const actions = this.cooldown(tick, classes, decided);
-        this.cache = { tick, classes, actions };
+        // The interlopers: dangerous players that the squad did not come for. They are targets (the squad switches to them, one at a time).
+        const expected = this.o.decide?.expected;
+        const interlopers = classes.filter(c => c.dangerous && !expected?.has(c.record.name.toLowerCase())).map(c => c.record.name);
+        this.cache = { tick, classes, actions, interlopers };
         this.report(tick, classes, actions);
         return this.cache;
     }

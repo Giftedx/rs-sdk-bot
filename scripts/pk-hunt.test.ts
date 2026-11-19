@@ -686,7 +686,7 @@ test('a radar retreat in the hunt logs the hunt threat retreat with the radar re
     Object.assign(w.player, { hp: 99, isDead: false, worldX: 3094, worldZ: 3540 });
     for (let i = 0; i < 2; i++) w.inventory.push({ id: 385, count: 1, slot: i + 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] });
     const reason = 'outclassed by Boss(145,magic) at 3 tiles';
-    const threats: any = { act: true, acted: () => {}, step: () => ({ classes: [], actions: [{ kind: 'retreat', reason }] }) };
+    const threats: any = { act: true, acted: () => {}, step: () => ({ classes: [], interlopers: [], actions: [{ kind: 'retreat', reason }] }) };
     const mocks = [
         spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
         spyOn(walking, 'walkPath').mockImplementation(async (_deps, path) => { w.player.worldX = path[0]!.x; w.player.worldZ = path[0]!.z; return { ok: true, ticks: 5, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any; }),
