@@ -1,0 +1,22 @@
+{
+ "id": "1795107861156-abracadickra-yewfirst",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "YewFirst",
+ "item": "coins",
+ "count": 4,
+ "start": 1795107861156,
+ "end": 1795110261156,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
