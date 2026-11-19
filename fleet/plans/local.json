@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795111972831,
+ "at": 1795112055312,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -161,6 +161,36 @@
    "autopilot": "local",
    "resources": [
     "ge:armour"
+   ]
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "zaff",
+    "3000"
+   ],
+   "env": {
+    "ITEMS": "staff of fire",
+    "STOCK_TARGET": "1",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "1100",
+    "STALL_TICKS": "0",
+    "FLOAT": "13000",
+    "COIN_RESERVE": "500",
+    "MAX_SPEND": "12000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy a staff of fire at Zaff's shop in Varrock for the alchemy band",
+   "role": "supply",
+   "template": "army-staff-zaff",
+   "autopilot": "local",
+   "resources": [
+    "shop:zaff"
    ]
   },
   {
@@ -350,28 +380,25 @@
    ]
   },
   {
-   "accounts": [
-    "Pocketpython",
-    "Ballspinner"
-   ],
-   "script": "scripts/coin-courier.ts",
-   "args": [
-    "2000000",
-    "--bank-x=3185",
-    "--bank-z=3436",
-    "--reserve=200000",
-    "--timeout-ms=600000"
-   ],
+   "account": "Ballspinner",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
    "env": {
-    "COIN_ORDER": "prayer99-ballspinner-bonefund2m-r3",
+    "ITEM_ID": "536",
+    "QUANTITY": "281",
+    "EXPECTED_OWNED": "6",
+    "LIMIT_PRICE": "7300",
+    "CASH_RESERVE": "5000",
+    "ORDER_MS": "1200000",
+    "ORDER_KEY": "prayer99-ballspinner-dragonbones281",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
     "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-1217c8cd-f78f-464f-a0d5-640126608479"
+    "COORDINATOR_RUN_ID": "task-e28547f8-542f-4d24-8468-9f27e94b15e9"
    },
    "enabled": true,
    "repeat": false,
-   "goal": "run-courier-pocketpython-ballspinner-bone-fund-r3 [task-1217c8cd-f78f-464f-a0d5-640126608479]",
+   "goal": "run-buy-ballspinner-dragon-bones-281 [task-e28547f8-542f-4d24-8468-9f27e94b15e9]",
    "role": "supply"
   }
  ],
