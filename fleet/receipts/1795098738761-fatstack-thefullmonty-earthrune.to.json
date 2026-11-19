@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795098738761-fatstack-thefullmonty-earthrune",
  "account": "TheFullMonty",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Earth rune",
  "requested": 30,
  "claim": "2050b18c-faaa-4fbd-8eaf-b20ac100dcbe",
- "count": 0,
- "ok": false,
- "at": 1795098788499,
- "detail": "trade claimed"
+ "count": 30,
+ "ok": true,
+ "at": 1795098962725,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 30
+ },
+ "bank": {
+  "count": 30,
+  "at": 1795098961986
+ },
+ "logout": {
+  "attemptId": "1795098788769-0000029456-0000000001",
+  "at": 1795098962712,
+  "sha256": "1ccd32b59fea8a02d41e1406ad68d1222c8ebae349073277b6fb5157bc8bf8a0"
+ },
+ "screen": true
 }
