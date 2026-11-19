@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795064846712,
+ "at": 1795064879662,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -194,36 +194,6 @@
    ]
   },
   {
-   "account": "TossTheCaber",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "jiminua",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "antipoison",
-    "STOCK_TARGET": "10",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "5960",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "5760",
-    "AUTOPILOT_ORDER": "[0]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":10}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy antipoison(3) at Jiminua's in Karamja for the gang squad",
-   "role": "bank",
-   "template": "squad-antipoison-jiminua",
-   "autopilot": "local",
-   "resources": [
-    "shop:jiminua"
-   ]
-  },
-  {
    "account": "NabTheKnob",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -284,25 +254,6 @@
    ]
   },
   {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 3000 lobster"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "Catherby lobsters, caught and cooked",
-   "role": "fishing",
-   "template": "lobster-chain",
-   "autopilot": "local",
-   "resources": [
-    "catherby:lobster"
-   ]
-  },
-  {
    "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -330,6 +281,55 @@
    "autopilot": "local",
    "resources": [
     "shop:lowe"
+   ]
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 3000 lobster"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "Catherby lobsters, caught and cooked",
+   "role": "fishing",
+   "template": "lobster-chain",
+   "autopilot": "local",
+   "resources": [
+    "catherby:lobster"
+   ]
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "jiminua",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "antipoison",
+    "STOCK_TARGET": "10",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "5960",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "5760",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":10}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy antipoison(3) at Jiminua's in Karamja for the gang squad",
+   "role": "bank",
+   "template": "squad-antipoison-jiminua",
+   "autopilot": "local",
+   "resources": [
+    "shop:jiminua"
    ]
   },
   {
@@ -370,8 +370,7 @@
     "BONE_ID": "536",
     "BONE_RESERVE": "6",
     "CAP": "4000",
-    "AUTOPILOT_ORDER": "3",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+    "AUTOPILOT_ORDER": "4"
    },
    "enabled": true,
    "standing": true,
