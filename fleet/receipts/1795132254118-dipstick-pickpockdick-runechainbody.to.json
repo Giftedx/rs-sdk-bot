@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795132254118-dipstick-pickpockdick-runechainbody",
+ "account": "PickpockDick",
+ "partner": "Dipstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "417dd0fc-3068-442e-9d1b-333ff515c145",
+ "count": 1,
+ "ok": true,
+ "at": 1795132409060,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795132406306
+ },
+ "logout": {
+  "attemptId": "1795132381480-0000012980-0000000001",
+  "at": 1795132409013,
+  "sha256": "024f97cc4142f1acb0a724460f22e2e036175e51f2262ddcd8a1f743dd34b73a"
+ },
+ "screen": true
+}
