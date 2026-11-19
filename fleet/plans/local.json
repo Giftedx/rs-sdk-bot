@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795084260323,
+ "at": 1795084272024,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -252,28 +252,6 @@
    "resources": [
     "shop:aubury"
    ]
-  },
-  {
-   "account": "OreElse",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "453",
-    "QUANTITY": "4",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "1000",
-    "CASH_RESERVE": "20000",
-    "ORDER_MS": "60000",
-    "ORDER_KEY": "elemental-oreelse-coal",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-77543f0f-365f-44aa-8d40-c44fe0dba49d"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-buy-oreelse-coal-elemental [task-77543f0f-365f-44aa-8d40-c44fe0dba49d]",
-   "role": "production"
   }
  ],
  "army": [
