@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795091713524-masterbaiter-sporranbulge-airrune",
+ "account": "Masterbaiter",
+ "partner": "SporranBulge",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 2,
+ "claim": "17addf6c-248f-4249-9fa9-bef6c4bb43f0",
+ "count": 2,
+ "ok": true,
+ "at": 1795091781174,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795091769209
+ },
+ "logout": {
+  "attemptId": "1795091759378-0000020704-0000000001",
+  "at": 1795091781164,
+  "sha256": "9890aed20f3795f6d6722d019675620d73345a6f1c451e99c3477c47515c940a"
+ },
+ "screen": true
+}
