@@ -1,0 +1,22 @@
+{
+ "id": "1795112182291-pickpockdick-thefullmonty-earthrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PickpockDick",
+ "to": "TheFullMonty",
+ "item": "Earth rune",
+ "count": 5,
+ "start": 1795112182291,
+ "end": 1795114582291,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
