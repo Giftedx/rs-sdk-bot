@@ -1317,6 +1317,16 @@ export function plan(input: Inputs): Assignment[] {
     const kits = [...cands.filter(c => c.goal && c.lacks).sort(goalOrder),...cands.filter(c=>!c.goal&&c.lacks).sort(order)];
     // The accounts with a job of any tier that they can start now with what they hold.
     const ready = new Set(cands.filter(c => !c.lacks && !c.coins && (c.goal || worth(c) > 0)).map(c => c.account));
+    // An active gang squad's supply jobs take their places first: a goal band that takes the same shop (army-hunt-supply holds
+    // shop:lowe) would leave the squad's line with no place. A place that a running job of its current template holds stays
+    // with that job, and an account that runs a job keeps it. An account with a goal band (ready, or short of its kit) keeps the
+    // band's way: the squad's supply goes first to the accounts with no band.
+    if (inp.squad?.active) {
+        const runningHolds = new Set(cands.filter(k => inp.running?.has(k.account.toLowerCase()) && inp.current?.get(k.account.toLowerCase()) === k.template.id).flatMap(k => k.resources));
+        const banded = new Set(cands.filter(k => k.goal).map(k => k.account));
+        for (const c of cands.filter(c => c.template.squadOnly && !banded.has(c.account) && !inp.running?.has(c.account.toLowerCase()) && !c.resources.some(r => runningHolds.has(r))).sort((p, q) => worth(q) - worth(p)))
+            take(c, worth(c));
+    }
     for(const c of cands.filter(c=>c.goal&&!c.lacks&&!!c.template.quest&&keeps(c)).sort(goalOrder))take(c,0);
     for(const c of cands.filter(c=>c.goal&&!c.template.filler).sort(goalOrder)){
         if(!c.lacks){
@@ -1444,8 +1454,12 @@ export function plan(input: Inputs): Assignment[] {
         const jobs = [...done.values()].filter(x => x.template);
         if (jobs.reduce((n, x) => n + cost(x), 0) > inp.slots) {
             const holds = (x: Assignment) => !!inp.running?.has(x.account.toLowerCase()) || !!inp.holding?.has(x.account.toLowerCase());
+            // The gang squad's stock comes first while the squad is active: its restock, then its supply jobs, then the goal bands.
+            // The squad is the live consumer of these lines: a bank trip that is short of one of them ends the squad's run.
             const rank = (x: Assignment): number[] => {
                 const id = x.template!.id, c = cands.find(k => k.account === x.account && (k.template.id === id || KIT_BUY + k.template.id === id));
+                if (id === SQUAD_RESTOCK.id) return [0, -2, 0];
+                if (c?.template.squadOnly) return [0, -1, -worth(c)];
                 return c?.goal ? [0, c.goal.band, c.goal.left] : c ? [1, -worth(c), 0] : gearValue.has(x.account) ? [0, 1e6, -gearValue.get(x.account)!] : [2, 0, 0];
             };
             const holders = jobs.filter(holds);

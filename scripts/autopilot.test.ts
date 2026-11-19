@@ -13,7 +13,7 @@ import { coordinatedAdmission, missionSignature, parseJob, standingRetryable, st
 import { supervise } from '../packages/practice/src/supervise';
 import { assess } from '../packages/planner/src/autopilot';
 import { planView } from './fleet-sync';
-import { squadInput, unplacedPrecondition, unplacedHeld, UNPLACED_RETRY_MS, SIDE_STOCK_MAX_AGE_MS, unobservedAccounts, headroomWithMargin, plannerOwns, writtenNotRunning, tradeStarts, memoryHeadroom, freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
+import { squadInput, unplacedPrecondition, unplacedHeld, UNPLACED_RETRY_MS, SIDE_STOCK_MAX_AGE_MS, unobservedAccounts, headroomWithMargin, plannerOwns, squadRestockAccounts, writtenNotRunning, tradeStarts, memoryHeadroom, freeSlots, jobRate, raiseKitSeq, aioPilots, armyRoster, completedHeldOrderSeq, donorStock, liveRetirements, coinOrder, fundOrders, heldResources, inOpenOrder, kitMarket, newestClaims, observedAccount, pass, planningOwnership, readJobResultLines, tradeStockReady } from './autopilot';
 import { mergedPlan } from '../packages/core/src/coordinator-jobs';
 import { FOLLOWED_RETRY_MS, GEAR_ASK_LIMIT, GEAR_ASK_MARGIN, UNSOLD_RETRY_MS, gearLimit } from './autopilot';
 import { KIT_PRICE_CAPS } from '../packages/planner/src/autopilot';
@@ -1446,6 +1446,16 @@ test('plannerOwns refuses a reserved account as donor or job holder, and an unre
     expect(plannerOwns(owners as any, 'local', 'other', reserved, died)).toBe(false);
     expect(plannerOwns(owners as any, 'local', 'haggis', reserved, died)).toBe(false);
     expect(plannerOwns(owners as any, 'local', 'gone', reserved, died)).toBe(false);
+});
+
+test('the members of an active squad enter the plan for the restock, past their reservation', () => {
+    const owners = new Map(['hunter', 'mate', 'paused', 'gone', 'remote', 'haggis', 'free'].map(n => [n, { side: n === 'remote' ? 'cloud' : 'local', server: 's' }]));
+    const squad = { active: true, members: ['Hunter', 'Mate', 'Paused', 'Gone', 'Remote', 'Haggis'] };
+    const listed = ['Hunter', 'Mate', 'Paused', 'Gone', 'Remote', 'Haggis', 'Free'];
+    // Mate is on the plannable list already; Paused has an owner stop file; Gone died; Remote is another side's; Haggis is guarded.
+    expect(squadRestockAccounts({ squad }, listed, owners as any, 'local', new Set(['paused']), new Set(['gone']), ['Mate'])).toEqual(['Hunter']);
+    expect(squadRestockAccounts({ squad: { ...squad, active: false } }, listed, owners as any, 'local', new Set(), new Set())).toEqual([]);
+    expect(squadRestockAccounts({}, listed, owners as any, 'local', new Set(), new Set())).toEqual([]);
 });
 
 test('the dry pass names a swarm.json reservation by its goal and gives its account no job', () => {

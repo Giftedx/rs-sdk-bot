@@ -658,6 +658,17 @@ export function plannerOwns(owners: ReturnType<typeof loadOwners>, side: string,
     return owners.get(lower)?.side === side && !OFFLINE_GUARDED.has(lower) && !reserved.has(lower) && !died.has(lower);
 }
 
+// The members of an active squad that enter plan() for the squad's restock alone. Their swarm.json reservation keeps them
+// off the plannable list, so without this entry plan() never sees a member and never sends it stock. plan() holds a member
+// out of every band, kit buy, supply job and donor list (Inputs.squad), and the restock becomes a fleet order, not a swarm job.
+// A member of another side, a guarded account, an account that died or one with an owner stop file stays out.
+export function squadRestockAccounts(plan: any, listed: readonly string[], owners: ReturnType<typeof loadOwners>, side: string,
+    paused: ReadonlySet<string>, died: ReadonlySet<string>, already: readonly string[] = []): string[] {
+    const squad = activeSquadMembers(plan), have = new Set(already.map(n => n.toLowerCase()));
+    return listed.filter(n => { const k = n.toLowerCase();
+        return squad.has(k) && !have.has(k) && owners.get(k)?.side === side && !OFFLINE_GUARDED.has(k) && !paused.has(k) && !died.has(k); });
+}
+
 // The write step of a pass: `unchanged` is true while the files that the plan came from hold the text that the plan
 // read, and the coordinator queue binds the same accounts.
 export interface PassWrite { unchanged(): boolean; write(): string[] }
@@ -791,10 +802,12 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
         }
         return observedCache.get(lower)!;
     };
-    const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => {
+    const plannable = plannableAccounts(swarm.jobs, side, listed.filter(n => {
         const lower = n.toLowerCase();
         return plannerOwns(owners, side, lower, reserved, diedAccounts);
-    }), keep).map(n => offlinePlace(accountFrom(n, side, observed(n), id => byId.get(id)), observed(n), now));
+    }), keep);
+    const accounts = [...plannable, ...squadRestockAccounts(swarm, listed, owners, side, paused, diedAccounts, plannable)]
+        .map(n => offlinePlace(accountFrom(n, side, observed(n), id => byId.get(id)), observed(n), now));
     // Coin donors: this side's accounts with no enabled swarm or coordinator job, no stop file and no open order, as
     // their last status reports them. The fleet agent runs a trade only for such accounts.
     const orders: Order[] = existsSync(join(fleetDir, 'orders')) ? readdirSync(join(fleetDir, 'orders')).filter(f => f.endsWith('.json')).map(f => readJson(join(fleetDir, 'orders', f), null)).filter(validOrder) : [];
