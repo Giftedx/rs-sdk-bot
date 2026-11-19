@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795056113882-quickhandjob-thefullmonty-7829bb46c7a9f4ad",
+ "account": "Quickhandjob",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune kiteshield",
+ "requested": 1,
+ "claim": "a10fc0f6-f209-4f6d-9ec4-c198b97a2639",
+ "count": 0,
+ "ok": false,
+ "at": 1795056128083,
+ "detail": "trade claimed"
+}
