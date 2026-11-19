@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795116844915,
+ "at": 1795116962595,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -267,32 +267,6 @@
    "resources": []
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "Moneyshot",
    "script": "scripts/chain.ts",
    "args": [
@@ -327,6 +301,50 @@
    "template": "kit-buy:aio-blood-chest",
    "autopilot": "local",
    "resources": []
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=5 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit6-385-0to5 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 5 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "supply",
+   "template": "kit-buy:aio-blood-chest",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "99",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 99 on the Khazard troopers",
+   "role": "combat",
+   "template": "army-trooper-strength-99",
+   "autopilot": "local",
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Swordinhand",
@@ -378,6 +396,33 @@
    ]
   },
   {
+   "account": "CoinCock",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
    "account": "Ballspinner",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -386,15 +431,15 @@
    ],
    "env": {
     "ITEMS": "rune arrow",
-    "STOCK_TARGET": "426",
+    "STOCK_TARGET": "428",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
     "FLOAT": "320200",
     "COIN_RESERVE": "200",
     "MAX_SPEND": "320000",
-    "AUTOPILOT_ORDER": "[26]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":426}}"
+    "AUTOPILOT_ORDER": "[28]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":428}}"
    },
    "enabled": true,
    "standing": true,
@@ -408,22 +453,25 @@
    ]
   },
   {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=5 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit6-385-0to5 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
+   "account": "Crownjewels",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Thieving\":55}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 5 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "supply",
-   "template": "kit-buy:aio-blood-chest",
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "knight:2652,3318"
+   ]
   },
   {
    "account": "SporranBulge",
