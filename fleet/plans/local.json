@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795098373801,
+ "at": 1795098413336,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -253,6 +253,29 @@
    ]
   },
   {
+   "account": "Hocuspokeus",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "18",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Fingerblastr",
    "script": "scripts/alch-train.ts",
    "args": [
@@ -349,28 +372,6 @@
    "resources": [
     "splash:ardougne-cow-fence"
    ]
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ITEM_ID": "536",
-    "QUANTITY": "6",
-    "EXPECTED_OWNED": "253",
-    "LIMIT_PRICE": "7300",
-    "CASH_RESERVE": "2000",
-    "ORDER_MS": "1200000",
-    "ORDER_KEY": "prayer99-hocuspokeus-dragonbones-top6",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-6fc6d375-820b-4f26-89a2-802eb71b22cf"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-buy-hocuspokeus-dragon-bones-top6 [task-6fc6d375-820b-4f26-89a2-802eb71b22cf]",
-   "role": "supply"
   }
  ],
  "army": [
