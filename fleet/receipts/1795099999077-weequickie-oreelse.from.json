@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795099999077-weequickie-oreelse",
  "account": "WeeQuickie",
  "partner": "OreElse",
@@ -12,6 +12,16 @@
  "claim": "be43c982-f7df-4fd0-b984-6601482af50f",
  "count": 0,
  "ok": false,
- "at": 1795100070022,
- "detail": "trade claimed"
+ "at": 1795100158627,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 74207,
+  "at": 1795100157885
+ },
+ "logout": {
+  "attemptId": "1795100070029-0000017412-0000000001",
+  "at": 1795100158620,
+  "sha256": "1c6ed2a79320321e03570d31b7cdb690cd8adda0744e5277c8ab46378cf5d1cb"
+ },
+ "screen": false
 }
