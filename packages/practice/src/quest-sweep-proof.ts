@@ -48,9 +48,11 @@ export function questSweepProofAccountEnv(text:string,p:ProofEndpoints){
  const local=text.replace(/^SERVER=.*$/gm,`SERVER=${p.server}`);
  return gateways.length?local.replace(/^GATEWAY_URL=.*$/gm,`GATEWAY_URL=${p.gateway}`):`${local.trimEnd()}\nGATEWAY_URL=${p.gateway}\n`;
 }
-export async function startQuestSweepProofStack(p:ProofEndpoints,start:(opts:StackOptions)=>ReturnType<typeof startStack>=startStack){
+// The tick of this proof: 75 ms. At 75 ms the game outcome equals the one at 150 ms (hosted rounds 44446240837, 44447190266 and 44447293486: same results, items and XP; only wall seconds differ), at half the wall time.
+export const QUEST_SWEEP_TICK_MS=75;
+export async function startQuestSweepProofStack(p:ProofEndpoints,start:(opts:StackOptions)=>ReturnType<typeof startStack>=startStack,tickMs=150){
  const previous=Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]));
- try{Object.assign(process.env,p.env);return await start({ports:p.ports,instance:p.instance,tickMs:150,readyTimeoutMs:60000});}
+ try{Object.assign(process.env,p.env);return await start({ports:p.ports,instance:p.instance,tickMs,readyTimeoutMs:60000});}
  finally{for(const [k,v] of Object.entries(previous)){if(v===undefined)delete process.env[k];else process.env[k]=v;}}
 }
 export function questSweepChildConfiguration(name:string,quest:string,p:ProofEndpoints,inherited:NodeJS.ProcessEnv=process.env){
@@ -596,7 +598,7 @@ function verify(dir:string,selected:readonly string[]=QUEST_SWEEP_PROOF_CASE_IDS
   return{...record,ok:Object.values(checks).every(Boolean),checks};
  });
  const source=meta.source===workerSourceRevision();
- const report={ok:source&&results.every(r=>r.ok),source,cases:[...selected],results,scope:'Native practice at150ms/25xXP. scorpion-barcrawl starts at Ardougne south bank2655,3283,0 and requires the real account-parameterized scorpion CLI with worn rune scimitar1333, teleport runes, no ranged or strike kit and an observed melee Jailer fight. scorpion-ranged-barcrawl retains the Varrock bank entry and bow-and-arrows variant. Each completion case starts with Barcrawl incomplete, stages eight Law runes, completes Barcrawl and the outpost gate, reaches quest flag76=6 and QP+1, reconciles assets and confirms logout. A completed-quest entry refuses before input and confirms logout. Existing quest-sweep cases retain their own exact saved-state checks. No live or unattended claim.'};
+ const report={ok:source&&results.every(r=>r.ok),source,cases:[...selected],results,scope:'Native practice at75ms/25xXP. scorpion-barcrawl starts at Ardougne south bank2655,3283,0 and requires the real account-parameterized scorpion CLI with worn rune scimitar1333, teleport runes, no ranged or strike kit and an observed melee Jailer fight. scorpion-ranged-barcrawl retains the Varrock bank entry and bow-and-arrows variant. Each completion case starts with Barcrawl incomplete, stages eight Law runes, completes Barcrawl and the outpost gate, reaches quest flag76=6 and QP+1, reconciles assets and confirms logout. A completed-quest entry refuses before input and confirms logout. Existing quest-sweep cases retain their own exact saved-state checks. No live or unattended claim.'};
  writeFileSync(join(dir,'results.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 
@@ -618,11 +620,11 @@ async function run(dir:string,selected:readonly string[]=QUEST_SWEEP_PROOF_CASE_
  mkdirSync(dir,{recursive:true});
  const cases:CaseRecord[]=[],source=workerSourceRevision();
  let endpoints:ProofEndpoints|undefined;
- const retain=()=>writeFileSync(join(dir,'native.json'),JSON.stringify({source,tickMs:150,xpRate:25,endpoints,cases},null,2));
+ const retain=()=>writeFileSync(join(dir,'native.json'),JSON.stringify({source,tickMs:QUEST_SWEEP_TICK_MS,xpRate:25,endpoints,cases},null,2));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  try{
   endpoints=selectQuestSweepProofEndpoints();
-  stack=await startQuestSweepProofStack(endpoints);
+  stack=await startQuestSweepProofStack(endpoints,undefined,QUEST_SWEEP_TICK_MS);
   for(const c of ([{id:'scorpion-barcrawl',quest:'scorpion',bank:SCORPION_BANK},{id:'scorpion-ranged-barcrawl',quest:'scorpion',bank:[...SCORPION_BANK,{id:882,count:40}]},{id:'scorpion-complete-refusal',quest:'scorpion',bank:[]},{id:'imp-surplus-beads',quest:'imp',bank:[...IMP_BEADS.map(id=>({id,count:3})),{id:995,count:723},{id:1478,count:1}]},{id:'ball-worn-kit',quest:'ball',bank:[{id:995,count:183752},{id:1059,count:1},{id:1331,count:1}]},{id:'ball-missing-gloves',quest:'ball',bank:[]},...['rj-pirate-letter','rj-pirate-started'].map(id=>({id,quest:'rj',bank:[{id:995,count:183752},{id:1891,count:7},{id:373,count:5}]})),{id:'hunt-crowded',quest:'hunt',bank:[{id:995,count:183752},{id:1891,count:7}]},{id:'totem-started-cakes',quest:'totem',bank:[{id:995,count:183752},{id:1891,count:15},{id:1893,count:1},{id:1895,count:2}]},{id:'clock-stage',quest:'cog',bank:[{id:995,count:183752},{id:1436,count:243}]},{id:'ernest-fortress',quest:'haunted',bank:[{id:273,count:1},{id:952,count:1},{id:379,count:4}]},{id:'vampire-started',quest:'vampire',bank:[{id:379,count:6}]},{id:'fishing-stage',quest:'fishingcompo',bank:[{id:952,count:1},{id:307,count:1},{id:313,count:2},{id:1550,count:1},{id:556,count:5}]},{id:'bank-stage',quest:'sheep',bank:[{id:1759,count:20}]},...['doric-self-supply','doric-no-cash'].map(id=>({id,quest:'doric',bank:[]})),...['retained-ghost','banked-ghost'].map(id=>({id,quest:'priest',bank:[{id:995,count:1127309},{id:1436,count:243},{id:1446,count:1},...(id==='banked-ghost'?[{id:553,count:1}]:[])]})),{id:'elena-heckel-dust',quest:'elena',bank:ELENA_DUST_BANK},{id:'blackknight-finish',quest:'blackknight',bank:[]},{id:'fluffs-yard-exit',quest:'fluffs',bank:[]}] as {id:string;quest:string;bank:{id:number;count:number}[]}[]).filter(c=>selected.includes(c.id))){
    const before=join(dir,c.id+'-before.sav');
    if(existsSync(before))throw Error(`preserve before snapshot: ${before}`);
@@ -638,7 +640,7 @@ async function run(dir:string,selected:readonly string[]=QUEST_SWEEP_PROOF_CASE_
    const stamp=statSync(save).mtimeMs;
    const record:CaseRecord={id:c.id,exit:-1,timedOut:false,saveMatched:false,seconds:0};cases.push(record);retain();
    await runQuestSweepProofCase({dir,record,save,retain,
-    // CAP 6000 ticks at 150 ms is 900 s: the Vampire child must reach its own tick-cap failure before this kill.
+    // CAP 6000 ticks at 75 ms is 450 s: the Vampire child must reach its own tick-cap failure before this kill.
     timeoutMs:elena?600000:scorpion&&!scorpionRefused||fluffs||ball||rj||hunt?5400000:vampire||totem||doric?1200000:long?900000:300000,
     spawn:()=>Bun.spawn({...questSweepChildConfiguration(name,c.quest,endpoints!,long||elena?{...process.env,CAP:'6000'}:process.env),windowsHide:true,stdout:'pipe',stderr:'pipe'}),
     matched:async()=>(await waitPracticeSave(save,s=>statSync(save).mtimeMs>stamp&&(scorpionRefused||doricRefused||ballMissing||(scorpion?s.vars[76]===SCORPION_COMPLETE&&s.vars[77]===2:fluffs?s.vars[180]===6:imp?s.vars[160]===2:doric?s.vars[31]===100:blackknight?s.vars[130]===4:elena?s.vars[165]===29:ball?s.vars[226]===7:rj?s.vars[144]===100:hunt?s.vars[71]===4:totem?s.vars[200]===5:clock?((s.vars[10]??0)&15)===8:ernest?s.vars[32]===3:vampire?s.vars[178]===3:ghost?s.vars[107]===5:fishing?s.vars[11]===5:s.vars[179]===22)),{timeoutMs:6000})).matched});

@@ -236,7 +236,8 @@ function settledAutopilotJob(job:any,account:string,base:string):boolean{
   &&(status.coordinatorRunId??null)===null&&Number.isFinite(status.started)&&status.started>=receipt.createdAt&&status.started<=proof.loggedOutAt
   &&Number.isFinite(status.at)&&status.at>=status.started&&status.at<=end.at;
 }
-export type LiveAccountWait={account:string;reason:'active-session'|'autopilot-assignment'|'fleet-order';attemptId:string|null;pid:number|null};
+// `reserved`: swarm.json holds the account with a reservation row (disabled, no script), as for the gang squad's accounts.
+export type LiveAccountWait={account:string;reason:'active-session'|'autopilot-assignment'|'fleet-order'|'reserved';attemptId:string|null;pid:number|null};
 type MemoryCapacity=Parameters<typeof admissionDecision>[0];
 type LiveMemoryWait={account:string;reason:'memory';capacity:MemoryCapacity};
 type LiveWait=LiveAccountWait|LiveMemoryWait;
@@ -310,6 +311,12 @@ function fleetOrderClaimsHeld(base:string,orders:readonly Order[],receipts:reado
  }
  return(nonce:string)=>{const v=bindings.get(nonce);return !v||!cache!.resolved.has(v.key);};
 }
+// An owner's reservation row is disabled and names no script. It holds the account for its role. It is read from the
+// owner's plan, because a coordinator job for the same account shadows the row in the merged plan. A finished hand job
+// names its script, so only a reservation matches. The task waits as it does for an owner's order, and no run installs over it.
+const reservedByOwner=(account:string,base:string):boolean=>{
+ try{return(JSON.parse(readFileSync(ownerPlanPath(base),'utf8')).jobs as any[]).some(j=>j?.coordinatorOwner===undefined&&j.enabled===false&&(typeof j.script!=='string'||!j.script.trim())&&jobAccounts(j).some(n=>n.toLowerCase()===account.toLowerCase()));}catch{return false;}
+};
 export function liveAccountWait(task:Pick<CoordTask,'kind'|'sessionRecovery'|'repairs'|'launch'>,accounts:readonly string[],base=projectRoot,alive=pidAlive,authority:OrderClaimAuthority={}):LiveAccountWait|null{
  if(!ordinaryDeferrable(task))return null;
  const root=join(base,'.practice/session-lifecycle');
@@ -335,6 +342,7 @@ export function liveAccountWait(task:Pick<CoordTask,'kind'|'sessionRecovery'|'re
   let job:any;try{job=readMergedPlan(base).jobs.find((j:any)=>jobAccounts(j).some(n=>n.toLowerCase()===account.toLowerCase()));}catch{continue;}
   if(job?.standing===true&&job.enabled===true&&typeof job.autopilot==='string'&&job.autopilot&&!settledAutopilotJob(job,account,base))
    return{account,reason:'autopilot-assignment',attemptId:receipt?.attemptId??null,pid:receipt?.owner.pid??null};
+  if(reservedByOwner(account,base))return{account,reason:'reserved',attemptId:null,pid:null};
  }
  return null;
 }

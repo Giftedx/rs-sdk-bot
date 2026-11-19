@@ -5,7 +5,7 @@ import { alchSupplies } from '../src/alch-plan';
 import { orderRefusal } from '../../core/src/order-refusal';
 import { DRAIN_RESULT } from '../src/autopilot';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
-import { GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable, norm, usableTool } from '../src/autopilot';
+import { PILOT_FALLBACK_SHARE, selfServePilot, GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable, norm, usableTool } from '../src/autopilot';
 
 const side = 'claude-cloud';
 // A fixture that can pick the knights (Thieving 55) has 20 Hitpoints, so the frail rule of the goldfarm job
@@ -1146,8 +1146,8 @@ test('an army account with no better blade buys one adamant scimitar before its 
     expect(pick({}, { ...kit, coin: KIT_PRICE_CAPS['adamant scimitar']! }).template!.id).toBe('army-trooper-defence-99');
     expect(pick({}, kit, { market }).template!.id).toBe('army-trooper-defence-99');
     expect(pick({}, kit, { retired: new Set([pairKey('Blade', KIT_BUY + WEAPON.id)]) }).template!.id).toBe('army-trooper-defence-99');
-    // Every account gets one now: the buy comes before the Ranged band too, and before the Prayer filler.
-    expect(pick({ Ranged: 30 }, { ...kit, shortbow: 1, 'iron arrow': 500 }).template!.id).toBe(KIT_BUY + WEAPON.id);
+    // A melee trainer buys it before the Prayer filler. A Ranged trainer buys no blade: it keeps its Ranged band.
+    expect(pick({ Ranged: 30 }, { ...kit, shortbow: 1, 'iron arrow': 500 }).template!.id).toBe('army-trooper-ranged-99');
     expect(pick({ Ranged: 30 }, { ...kit, shortbow: 1, 'iron arrow': 500, 'adamant scimitar': 1 }).template!.id).toBe('army-trooper-ranged-99');
     expect(pick({ Defence: 99, Prayer: 80 }, kit).template!.id).toBe(KIT_BUY + WEAPON.id);
     // Four accounts are away for it at a time; the fifth keeps its band.
@@ -3319,4 +3319,147 @@ test('the ticks of the alchemy band come from the measured cast times: 12 casts 
     // More levels left take more ticks, and Magic 99 takes none.
     expect(alchTicks(21)).toBeGreaterThan(alchTicks(66));
     expect(alchTicks(99)).toBe(0);
+});
+
+import { kitStyle, bowStageFor, ammoStageFor, AMMO_BATCH, AMMO_LOW, AMMO_MARKET } from '../src/autopilot';
+import { GEAR_GE_ID, GEAR_SHOP_PILOT, type GearWantRow } from '../src/gear-want-jobs';
+
+describe('army kit stages follow the style that the account trains', () => {
+    const army = new Set(['fighter']);
+    const listed = (name: string, id: number): Market => ({ [name]: { id, name, limit: KIT_PRICE_CAPS[name]! } });
+    const mkt: Market = {
+        ...listed('adamant scimitar', 1331), ...listed('rune scimitar', 1333), ...listed('rune chainbody', 1113), ...listed('rune plateleg', 1079), ...listed('rune full helm', 1163),
+        ...listed('rune kiteshield', 1201), ...listed('magic shortbow', 861), ...listed('rune arrow', 892), ...listed('bronze arrow', 882), ...listed('dragonhide chap', 1099),
+    };
+    const base = { Thieving: 99, Attack: 69, Strength: 45, Defence: 43, Hitpoints: 64, Ranged: 64, Magic: 74, Prayer: 21 };
+    const ranged = catalogue().filter(t => t.id === 'army-trooper-ranged-99');
+    const run = (skills: Record<string, number>, items: Record<string, number>, current?: string, extra: Partial<Inputs> = {}) =>
+        plan(inputs([acct('Fighter', { ...base, ...skills }, { shark: 40, coin: 998_000, ...items })], { army, market: mkt, capacity: CAPACITY, ...(current ? { current: new Map([['fighter', current]]) } : {}), ...extra }))[0]!;
+
+    test('a Ranged trainer with a plain shortbow buys the magic shortbow, then rune arrows, never the melee kit', () => {
+        const kit = { shortbow: 1, 'bronze arrow': 354 };
+        const bow = run({}, kit, 'army-trooper-ranged-99', { templates: ranged });
+        expect(bow.template!.id).toBe(KIT_BUY + 'army-weapon-bow');
+        expect(bow.template!.args![0]).toContain('ITEM_ID=861 QUANTITY=1');
+        expect(bow.resources).toEqual([WEAPON_MARKET]);
+        const ammo = run({}, { ...kit, 'magic shortbow': 1 }, 'army-trooper-ranged-99', { templates: ranged });
+        expect(ammo.template!.id).toBe(KIT_BUY + 'army-weapon-ammo');
+        expect(ammo.template!.args![0]).toContain(`ITEM_ID=892 QUANTITY=${AMMO_BATCH}`);
+        // A kit buy that runs keeps the style of its stage, so the buy does not change with the band.
+        const idle = run({}, { ...kit, 'rune scimitar': 1, 'rune chainbody': 1 }, KIT_BUY + 'army-armour-rune', { templates: ranged });
+        // A finished rune-armour buy does not lead on to the rest of the rune set for a Ranged trainer; a running one keeps its stage.
+        expect(idle.template!.id).toBe(KIT_BUY + 'army-weapon-bow');
+        expect(run({}, { ...kit, 'rune scimitar': 1, 'rune chainbody': 1 }, KIT_BUY + 'army-armour-rune', { templates: ranged, running: new Set(['fighter']) }).template!.id).toBe(KIT_BUY + 'army-armour-rune');
+        expect(run({}, kit, KIT_BUY + 'army-weapon-bow', { templates: ranged }).template!.id).toBe(KIT_BUY + 'army-weapon-bow');
+        for (const t of [bow, ammo, run({}, { ...kit, 'magic shortbow': 1, 'rune arrow': 300 }, 'army-trooper-ranged-99', { templates: ranged })])
+            expect(t.template?.id).not.toMatch(/army-armour-rune|army-weapon-rune|army-weapon$/);
+        // The planner row of the live account named: the chainbody is not planned for a Ranged trainer.
+        expect(JSON.stringify(bow.template!.args)).not.toContain('ITEM_ID=1113');
+    });
+
+    test('a Ranged trainer that owns the bow and holds the arrows keeps its band, and a bow it cannot wear is not bought', () => {
+        const full = { 'magic shortbow': 1, 'rune arrow': 300, 'dragonhide chap': 1, 'dragon vambrace': 1 };
+        // With no bow or arrow to buy, the ranged armour comes next: dragonhide, not rune.
+        expect(run({}, { 'magic shortbow': 1, 'rune arrow': 300 }, 'army-trooper-ranged-99', { templates: ranged }).template?.id).toBe(KIT_BUY + 'army-armour-dhide');
+        expect(run({}, full, 'army-trooper-ranged-99', { templates: ranged }).template?.id ?? '').not.toMatch(/^kit-buy:army-(weapon|armour)/);
+        const low = { ...base, Ranged: 45 } as unknown as Record<string, number>;
+        const a = acct('Fighter', low, { shortbow: 1, coin: 998_000 });
+        expect(bowStageFor(a, inputs([a], { market: mkt }))).toBeNull();
+    });
+
+    test('the arrows follow the bow, the Ranged level and the coins, and a stock of better arrows holds', () => {
+        const withBow = (items: Record<string, number>, skills: Record<string, number> = {}) => acct('Fighter', { ...base, ...skills }, { 'magic shortbow': 1, coin: 998_000, ...items });
+        const arrows = (a: Acct, bow: number, market: Market = mkt) => ammoStageFor(a, inputs([a], { market }), bow)?.items;
+        expect(arrows(withBow({}), 50)).toEqual([{ item: 'rune arrow', count: AMMO_BATCH }]);
+        // A bow of level 1 fires only arrows of level 1: nothing to order beyond the band's bronze arrows.
+        expect(arrows(withBow({}), 1)).toBeUndefined();
+        // Too few coins for a batch of the best tier, or no seller: nothing, never a tier the bow cannot fire.
+        expect(arrows(withBow({ coin: 1_000 }), 50)).toBeUndefined();
+        expect(arrows(withBow({}), 50, listed('bronze arrow', 882))).toBeUndefined();
+        // The batch at the price caps may cost at most half of the coins: 720,000 for 300 rune arrows.
+        expect(arrows(withBow({ coin: 700_000 }), 50)).toBeUndefined();
+        expect(arrows(withBow({ coin: 720_000 }), 50)).toEqual([{ item: 'rune arrow', count: AMMO_BATCH }]);
+        // The stage fires only when the arrows run low: 50 held of the tier are a stock, 49 are topped up to the batch.
+        expect(arrows(withBow({ 'rune arrow': AMMO_LOW }), 50)).toBeUndefined();
+        expect(arrows(withBow({ 'rune arrow': AMMO_LOW - 1 }), 50)).toEqual([{ item: 'rune arrow', count: AMMO_BATCH - AMMO_LOW + 1 }]);
+    });
+
+    test('the arrow buy is bounded: it never replaces a running band, and it comes again only when the arrows run low', () => {
+        const kit = { 'magic shortbow': 1, 'dragonhide chap': 1, 'dragon vambrace': 1 };
+        const idle = run({}, { ...kit, 'rune arrow': 10 }, undefined, { templates: ranged });
+        expect(idle.template!.id).toBe(KIT_BUY + 'army-weapon-ammo');
+        expect(idle.resources).toEqual([AMMO_MARKET]);
+        // A running Ranged band keeps its place: a buy of the weapon market may replace it, the arrow buy may not.
+        const busy = { templates: ranged, running: new Set(['fighter']), unfundable: new Set(['fighter']) };
+        expect(run({}, { ...kit, 'rune arrow': 10 }, 'army-trooper-ranged-99', busy).template?.id ?? '').not.toBe(KIT_BUY + 'army-weapon-ammo');
+        // After a buy the stock holds, and the buy does not repeat until the arrows fall under AMMO_LOW again.
+        expect(run({}, { ...kit, 'rune arrow': 10 + AMMO_BATCH }, undefined, { templates: ranged }).template?.id ?? '').not.toBe(KIT_BUY + 'army-weapon-ammo');
+        // A retired pair buys no more.
+        expect(run({}, { ...kit, 'rune arrow': 10 }, undefined, { templates: ranged, retired: new Set([pairKey('Fighter', KIT_BUY + 'army-weapon-ammo')]) }).template?.id ?? '').not.toBe(KIT_BUY + 'army-weapon-ammo');
+    });
+
+    test('with no running band the style is that of the first band it can start: Magic first, then Ranged, then melee', () => {
+        const bands = (...ids: string[]) => ids.map(id => ({ template: catalogue().find(t => t.id === id)! }));
+        const who = (skills: Record<string, number>) => acct('Fighter', { ...base, ...skills });
+        const none = { templates: catalogue(), current: new Map<string, string>() };
+        expect(kitStyle(who({}), none, bands('army-alch-magic-99', 'army-trooper-ranged-99', 'army-trooper-defence-99'))).toBe('magic');
+        // The Magic band is no candidate (the pass lists none): the next one gives the style. A candidate with no missing kit comes first.
+        expect(kitStyle(who({}), none, bands('army-trooper-ranged-99', 'army-trooper-defence-99'))).toBe('ranged');
+        expect(kitStyle(who({}), none, [{ template: catalogue().find(t => t.id === 'army-alch-magic-99')!, lacks: [{ of: ['nature rune'], count: 50 }] }, ...bands('army-trooper-defence-99')])).toBe('melee');
+        // No band left: no style, so the old kit stays (a blade and rune armour).
+        const maxed = acct('Fighter', { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99, Thieving: 99 });
+        expect(kitStyle(maxed, none, [])).toBeNull();
+        // A running band gives its own style, whatever the pass lists.
+        expect(kitStyle(who({}), { ...none, current: new Map([['fighter', 'army-trooper-defence-99']]) }, bands('army-alch-magic-99'))).toBe('melee');
+    });
+
+    test('a magic trainer buys no melee kit: the gear pass serves its staff and robes', () => {
+        const noBands = (t: Template) => t.id === 'army-alch-magic-99';
+        const mage = run({ Magic: 80 }, { 'bronze sword': 1, 'nature rune': 500, 'fire rune': 800 }, 'army-alch-magic-99', { templates: catalogue().filter(noBands) });
+        expect(kitStyle(acct('Fighter', { ...base, Magic: 80 }), { templates: catalogue().filter(noBands), current: new Map([['fighter', 'army-alch-magic-99']]) })).toBe('magic');
+        expect(mage.template?.id ?? '').not.toMatch(/^kit-buy:army-(weapon|armour)/);
+        // The gear pass takes the account when a want is listed: a staff from a shop.
+        const want: GearWantRow = { style: 'magic', slot: 'weapon', id: 1389, name: 'Magic staff', current: null, source: { kind: 'shop', shop: 'staffshop', cost: 200 }, profile: 'zaff' };
+        const gear = run({ Magic: 80 }, { 'bronze sword': 1, 'nature rune': 500, 'fire rune': 800 }, 'army-alch-magic-99', { templates: catalogue().filter(noBands), gearWants: new Map([['fighter', [want]]]), pilots: new Set([GEAR_GE_ID, GEAR_SHOP_PILOT]) });
+        expect(gear.reason).toContain('gear:');
+    });
+
+    test('a melee trainer keeps the blade and the rune armour', () => {
+        const cow = catalogue().filter(t => t.id === 'army-cow-strength-45');
+        const melee = (items: Record<string, number>, skills: Record<string, number> = {}) => run({ Strength: 30, Defence: 45, ...skills }, { 'bronze sword': 1, ...items }, 'army-cow-strength-45', { templates: cow });
+        expect(melee({}).template!.id).toBe(KIT_BUY + 'army-weapon-rune');
+        expect(melee({ 'rune scimitar': 1 }).template!.id).toBe(KIT_BUY + 'army-armour-rune');
+        // No bow or arrow stage for it: it has no Ranged band to train.
+        expect(melee({ 'rune scimitar': 1, 'rune chainbody': 1, 'rune plateleg': 1, 'rune full helm': 1, 'rune kiteshield': 1 }).template?.id ?? '').not.toMatch(/army-weapon-(bow|ammo)/);
+    });
+});
+
+// Inputs.pilotFallback: a free account outside the army roster takes a self-serve production pilot that the `aio` list does not name.
+describe('pilot fallback for a free account', () => {
+    const chopper = () => acct('Chopper', { Woodcutting: 60 }, { 'bronze axe': 1 });
+    const run = (accounts: Acct[], extra: Partial<Inputs> = {}) => plan(aioInputs(accounts, [], extra));
+    test('a non-army account gets the production pilot it qualifies for, and none without the switch', () => {
+        expect(ids(run([chopper()], { pilotFallback: true }))).toEqual({ Chopper: 'aio-yews' });
+        expect(ids(run([chopper()]))).toEqual({ Chopper: 'vacant' });
+        expect(ids(run([chopper()], { pilotFallback: false }))).toEqual({ Chopper: 'vacant' });
+        // A level under the template's need still gets no job.
+        expect(ids(run([acct('Low', { Woodcutting: 59 }, { 'bronze axe': 1 })], { pilotFallback: true })).Low).not.toBe('aio-yews');
+    });
+    test('met demand gives no job', () => {
+        expect(ids(run([chopper()], { pilotFallback: true, bill: [] }))).toEqual({ Chopper: 'vacant' });
+        expect(ids(run([chopper()], { pilotFallback: true, bill: [row('yew logs', 0)] }))).toEqual({ Chopper: 'vacant' });
+    });
+    test('an army account and a squad member get none, and quest, band and combat pilots stay on the list', () => {
+        expect(ids(run([chopper()], { pilotFallback: true, army: new Set(['chopper']) })).Chopper).not.toBe('aio-yews');
+        const squad = { active: true, hours: 4, all: ['Chopper'], members: [{ name: 'Chopper', items: {} }] };
+        expect(ids(run([chopper()], { pilotFallback: true, squad })).Chopper).not.toBe('aio-yews');
+        const open = catalogue().filter(selfServePilot).map(t => t.id);
+        expect(open).toContain('aio-yews');
+        for (const id of ['aio-quest-runemysteries', 'army-quest-lostcity', 'army-hunt-black-dragons', 'army-splash-magic-66', 'quest-ikov', 'army-fletch-25']) expect(open).not.toContain(id);
+    });
+    test('a listed pilot ranks above the fallback and the fallback is worth a fraction', () => {
+        const listed = plan(aioInputs([chopper()], ['aio-yews']))[0]!, fallback = run([chopper()], { pilotFallback: true })[0]!;
+        expect(fallback.template?.id).toBe('aio-yews');
+        expect(fallback.value).toBeCloseTo(listed.value * PILOT_FALLBACK_SHARE, 6);
+    });
 });

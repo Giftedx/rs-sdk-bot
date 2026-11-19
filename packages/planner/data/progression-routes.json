@@ -92746,6 +92746,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/pk-gang-run1.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/pk-hunt-trip.ts",
    "intents": [
     "observe"
@@ -93008,6 +93017,15 @@
   },
   {
    "script": "scripts/measure/walk-bench.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/wasm-grow-memory.ts",
    "intents": [
     "observe"
    ],

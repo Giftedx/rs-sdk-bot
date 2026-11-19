@@ -27,7 +27,7 @@ test('isolated endpoints reach stack, generated account and actual CLI child wit
  const previous=Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]));
  let calls=0;
  const start=async(opts:any)=>{
-  calls++;expect(opts).toEqual({ports:p.ports,instance:p.instance,tickMs:150,xpRate:25,readyTimeoutMs:60000});
+  calls++;expect(opts).toEqual({ports:p.ports,instance:p.instance,tickMs:75,xpRate:25,readyTimeoutMs:60000});
   for(const [k,v] of Object.entries(p.env))expect(process.env[k]).toBe(v);
   return{logs:{engine:'',gateway:''},stop:async()=>{}};
  };

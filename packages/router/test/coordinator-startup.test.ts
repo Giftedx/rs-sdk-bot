@@ -5,9 +5,9 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {withPlanWrite} from '../../core/src/plan-lock';
 import {addTasks,initialState} from '../src/coordinator';
-import {claimCoordinatorState} from '../src/coordinator-cli';
+import {claimCoordinatorState,ownerHolds,OWNER_START_SLACK_MS} from '../src/coordinator-cli';
 import * as coordinatorCli from '../src/coordinator-cli';
-import {saveState} from '../src/coordinator-store';
+import {atomicJson,saveState} from '../src/coordinator-store';
 
 const directories:string[]=[];
 afterEach(()=>{for(const directory of directories.splice(0))rmSync(directory,{recursive:true,force:true});});
@@ -84,3 +84,38 @@ test('startup waits for a live plan writer and reads the queue that writer finis
  expect(existsSync(lockFile(directory))).toBe(false);
  expect(existsSync(join(directory,'plan-lock-recovery'))).toBe(false);
 });
+
+test('ownerHolds: the nonce in the command line holds, a pid that started after the claim does not',()=>{
+ const owner={pid:7,nonce:'resume-abc',at:1_000_000},up=()=>true,down=()=>false,started=(t:number|undefined)=>()=>new Map(t===undefined?[]:[[7,t]]);
+ // The command line holds the nonce.
+ expect(ownerHolds(owner,()=>'bun coordinator-cli.ts --run resume-abc',down,started(undefined))).toBe(true);
+ // No process runs under the pid.
+ expect(ownerHolds(owner,()=>null,down,started(undefined))).toBe(false);
+ // A coordinator that started without a token: its command line lacks the nonce, and it started before its claim.
+ expect(ownerHolds(owner,()=>'bun coordinator-cli.ts --run',up,started(owner.at-30_000))).toBe(true);
+ expect(ownerHolds(owner,()=>'bun coordinator-cli.ts --run',up,started(owner.at+OWNER_START_SLACK_MS))).toBe(true);
+ // Another program reused the pid: it started after the claim.
+ expect(ownerHolds(owner,()=>'claude.exe --output-format stream-json',up,started(owner.at+OWNER_START_SLACK_MS+1))).toBe(false);
+ // The process table has no row for the pid.
+ expect(ownerHolds(owner,()=>'claude.exe',up,started(undefined))).toBe(false);
+ // Nothing proves a reuse: no command line, no process table, no claim time.
+ expect(ownerHolds(owner,()=>null,up,started(owner.at+1_000_000))).toBe(true);
+ expect(ownerHolds(owner,()=>'claude.exe',up,()=>null)).toBe(true);
+ expect(ownerHolds({pid:7,nonce:'resume-abc'},()=>'claude.exe',up,started(owner.at+1_000_000))).toBe(true);
+});
+
+// A running program that is not a coordinator, under the saved pid, with a claim older than its start.
+const processTest=process.platform==='win32'?test:test.skip;
+processTest('a claim over an owner file whose pid another running program reused succeeds, and a younger claim is refused',async()=>{
+ const directory=fixture(),child=Bun.spawn([process.execPath,'-e','setTimeout(()=>{},30000)'],{stdout:'ignore',stderr:'ignore'});
+ try{
+  saveState(queuedState(),directory);
+  await Bun.sleep(500);
+  atomicJson(join(directory,'owner.json'),{pid:child.pid,nonce:'old-token-not-in-command-line',at:Date.now()-120_000});
+  await claimCoordinatorState('start-over-reused-pid',directory);
+  expect(JSON.parse(readFileSync(join(directory,'owner.json'),'utf8')).nonce).toBe('start-over-reused-pid');
+  atomicJson(join(directory,'owner.json'),{pid:child.pid,nonce:'old-token-not-in-command-line',at:Date.now()+120_000});
+  await expect(claimCoordinatorState('start-over-live-owner',directory)).rejects.toThrow('coordinator already owned');
+ }finally{child.kill();}
+});
+

@@ -86,6 +86,17 @@ test('marchLegs: the edge, the entry of the connected area and the post', async 
     expect(marchLegs({ x: 3093, z: 3503 }, { x: 3090, z: 3560 })).toEqual([{ x: 3090, z: 3560 }]);
 });
 
+test('an idle member keeps its prayer on near a target of the squad or after damage, and switches it off otherwise', async () => {
+    const { keepPrayer } = await import('./pk-squad');
+    const targets = new Set(['goondelf', 'ligma']);
+    const near = [{ name: 'Goondelf', distance: 5 }], far = [{ name: 'Goondelf', distance: 20 }], other = [{ name: 'Steve301', distance: 2 }];
+    expect(keepPrayer({ view: near, targets, now: 100, damagedAt: -100 })).toBe(true);
+    expect(keepPrayer({ view: far, targets, now: 100, damagedAt: -100 })).toBe(false);
+    expect(keepPrayer({ view: other, targets, now: 100, damagedAt: -100 })).toBe(false);
+    expect(keepPrayer({ view: [], targets, now: 100, damagedAt: 91 })).toBe(true);
+    expect(keepPrayer({ view: [], targets, now: 100, damagedAt: 89 })).toBe(false);
+});
+
 test('squadTarget leaves out a target the game will not let it attack', async () => {
     const { squadTarget } = await import('./pk-squad');
     const view = [{ name: 'Goondelf', index: 1, distance: 3, z: 3515, combatLevel: 126 }, { name: 'Ligma', index: 2, distance: 5, z: 3640, combatLevel: 125 }];
@@ -97,4 +108,15 @@ test('shouldStopUnseen keeps waiting when enemies are in view under refusal cool
     expect(shouldStopUnseen(true, 101, 100)).toBe(false);
     expect(shouldStopUnseen(false, 100, 100)).toBe(false);
     expect(shouldStopUnseen(false, 101, 100)).toBe(true);
+});
+
+test('keepPrayer stays off under the start floor of Prayer, and the memory gate asks for the floor plus one GiB a bot', async () => {
+    const { keepPrayer, squadMemoryGate } = await import('./pk-squad');
+    const targets = new Set(['goondelf']), near = [{ name: 'Goondelf', distance: 3 }];
+    expect(keepPrayer({ view: near, targets, now: 100, damagedAt: -100, points: 80, base: 99 })).toBe(true);
+    expect(keepPrayer({ view: near, targets, now: 100, damagedAt: -100, points: 70, base: 99 })).toBe(false);
+    expect(keepPrayer({ view: near, targets, now: 100, damagedAt: 95, points: 30, base: 99 })).toBe(false);
+    expect(squadMemoryGate(8, 4)).toEqual({ ok: true, needGB: 8 });
+    expect(squadMemoryGate(7.9, 4)).toEqual({ ok: false, needGB: 8 });
+    expect(squadMemoryGate(4.1, 4).ok).toBe(false);
 });

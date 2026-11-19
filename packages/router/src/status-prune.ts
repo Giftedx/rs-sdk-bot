@@ -1,7 +1,7 @@
 // Moves old rows of practice accounts out of .practice/status. A practice or bench bot writes one row there and nothing
 // removes it. The swarm, the coordinator and each live worker start parse the whole folder, so its size is their cost.
 // A row moves to .practice/status-archive only when all of these are true:
-//   - its file was not written for STATUS_ROW_MAX_AGE_MS;
+//   - its file was not written for STATUS_ROW_MAX_AGE_MS (one hour);
 //   - it parses, and its server is this machine (isLocalServer);
 //   - its account is not a fleet account of any side (fleet owners.json) and has no verified live login
 //     (.practice/owned-accounts.json).
@@ -13,7 +13,8 @@ import { join, resolve } from 'node:path';
 import { isLocalServer } from '../../core/src/localserver';
 import { loadOwners } from '../../core/src/fleet';
 
-export const STATUS_ROW_MAX_AGE_MS = 24 * 3600_000;
+// A practice bot writes its row every few ticks, so a row an hour old belongs to an ended run.
+export const STATUS_ROW_MAX_AGE_MS = 3600_000;
 
 // True for a row of this machine's own server whose account is not in `keep`. The file name and the row name both count.
 export function prunable(row: unknown, file: string, keep: ReadonlySet<string>): boolean {

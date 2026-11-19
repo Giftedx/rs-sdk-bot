@@ -3,7 +3,9 @@ import {copyFileSync,readFileSync,writeFileSync,mkdirSync,existsSync,openSync,cl
 import {join,resolve} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {freemem} from 'node:os';
-import {startStack,PROOF_TICK_MS,type StackOptions} from './stack';
+import {startStack,type StackOptions} from './stack';
+// The tick of this proof: 75 ms. At 75 ms the game outcome equals the one at 150 ms (hosted rounds 44446240837, 44447190266 and 44447293486: same results, items and XP; only wall seconds differ), at half the wall time.
+const TICK_MS=75;
 import {canBind} from './ports';
 import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
@@ -68,7 +70,7 @@ export function prayerProofAccountEnv(text:string,p:ProofEndpoints){
 }
 export async function startPrayerProofStack(p:ProofEndpoints,start:(opts:StackOptions)=>ReturnType<typeof startStack>=startStack){
  const previous=Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]));
- try{Object.assign(process.env,p.env);return await start({ports:p.ports,instance:p.instance,tickMs:PROOF_TICK_MS,xpRate:25,readyTimeoutMs:60000});}
+ try{Object.assign(process.env,p.env);return await start({ports:p.ports,instance:p.instance,tickMs:TICK_MS,xpRate:25,readyTimeoutMs:60000});}
  finally{for(const [k,v] of Object.entries(previous)){if(v===undefined)delete process.env[k];else process.env[k]=v;}}
 }
 export function childConfiguration(name:string,inherited:NodeJS.ProcessEnv=process.env,endpoints?:ProofEndpoints){
@@ -122,7 +124,7 @@ function fixtureChecks(before:Save,kind:Kind){
 export function verifyPrayer(directory:string){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
  const endpoints=prayerProofEndpoints(meta.endpoints?.ports,meta.endpoints?.instance??'');
- const checks:Record<string,boolean>={source:JSON.stringify(meta.source)===JSON.stringify(sources()),configuration:meta.tickMs===PROOF_TICK_MS&&meta.xpRate===25,
+ const checks:Record<string,boolean>={source:JSON.stringify(meta.source)===JSON.stringify(sources()),configuration:meta.tickMs===TICK_MS&&meta.xpRate===25,
   endpoints:meta.server===endpoints.server,
   fresh:Number.isFinite(meta.at)&&meta.at>=meta.startedAt&&meta.at<=Date.now()&&Date.now()-meta.at<NATIVE_DEADLINE_MS,
   cases:JSON.stringify(meta.cases?.map((c:any)=>c.id))===JSON.stringify(cases)};
@@ -134,7 +136,7 @@ export function verifyPrayer(directory:string){
   }catch(e){checks[`${id}:readable`]=false;console.error(String(e));}
  }
  const report={ok:Object.values(checks).every(Boolean),at:Date.now(),checks,
-  scope:'Native actual worker CLI on ordinary generated Bigchopper entry, 150ms/25x only. Live recovery, live access, speed and unattended readiness remain unproved.',
+  scope:'Native actual worker CLI on ordinary generated Bigchopper entry, 75ms/25x only. Live recovery, live access, speed and unattended readiness remain unproved.',
   nextConsumer:'qualify-recovery-bigchopper-prayer-entry then run-prayer-bigchopper-owned60; stronger-target Ranged follows protection access. Controller owns live execution; independent review remains required.'};
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
@@ -170,7 +172,7 @@ async function run(directory:string){
    copyFileSync(path,join(dir,'after.sav'));
    const after=readPracticeSave(join(dir,'after.sav')),text=readFileSync(log,'utf8');
    receipts.push({id,name,code,timedOut,persisted:persisted.matched,before:hash(join(dir,'before.sav')),after:hash(join(dir,'after.sav')),log:hash(log)});
-   writeFileSync(join(directory,'native.json'),JSON.stringify({startedAt:started,at:Date.now(),source,tickMs:PROOF_TICK_MS,xpRate:25,
+   writeFileSync(join(directory,'native.json'),JSON.stringify({startedAt:started,at:Date.now(),source,tickMs:TICK_MS,xpRate:25,
     server:endpoints.server,endpoints:{ports:endpoints.ports,instance:endpoints.instance},cases:receipts},null,2));
    const checks={...saveChecks(before,after,id),...childChecks({code,timedOut},text,id),fixture:fixtureChecks(before,id),persisted:persisted.matched};
    if(Object.values(checks).some(v=>!v))throw Error(`${id}: failed ${Object.entries(checks).filter(([,v])=>!v).map(([k])=>k).join(',')}; raw evidence retained`);

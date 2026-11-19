@@ -160,6 +160,17 @@ What the swarm does with this job, from `scripts/swarm.ts` and `packages/practic
   the base level (`SQUAD_TRIP_PRAYER_FLOOR`). It is off by default (`SQUAD_TRIP_ALTAR=1` turns it on): in the bench (`extra:squad-2-gang-trips-altar-x1`, floor 1) both members leave for the church together and the post stands empty until they are back. From Edgeville the altar is the Varrock
   east church, about 159 tiles away. A failed prayer does not end the trip: the member fights on without Prayer and the
   log says so. Every walk back goes by the march's legs (`marchLegs`: the edge, the entry of the post's area, the post).
+- **Stock for a second trip.** `squad-ready.ts` counts the runes and arrows of a pack (and the quiver) against the pack, the
+  bank and the quiver together: under one pack's worth is a block (`stock under one pack`), under two a note (`stock for one trip
+  only`). A bank trip that cannot be filled says which item and how many (`bank lacks trip requirements ... (iron arrow: 75
+  items needed, 33 in the bank)`; the log line names the member).
+- **Memory.** A live start of `pk-squad.ts` needs the fleet's floor plus 1 GiB for each of our accounts of free memory
+  (8 GiB for four): `RESULT fail host memory` and exit 75 otherwise. The bench on a local server has no gate.
+- **Kit tile.** The kit step (`aio-logistics.ts <account> loadout <file>`) needs the account within 3 tiles of the bank
+  tile of its file and stock for every line of the file: from (3092,3497) it stops at tick 0 with `owned loadout
+  life/state/stop/budget`, and a file that asks for more than the account holds stops with `stock missing before
+  withdrawals`. `squad-ready.ts --loadouts` writes the file from what the account holds and prints the walk
+  (`bun scripts/walk-to.ts <account> <x> <z>`) when the account stands farther away.
 - **Stall.** The stall guard (`packages/core/src/bot.ts`) ends a session with no xp, item, dialog or journey for
   `STALL_TICKS`. `scripts/pk-squad-stall.ts` sets it for the squad to the longest return of a gang account in the
   clone record (`group.returnToPost`) times 1.25 (`STALL_MARGIN`: the spread of the two recorded returns, 1431 over

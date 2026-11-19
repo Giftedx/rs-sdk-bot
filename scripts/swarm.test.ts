@@ -1,5 +1,5 @@
 import { test, expect, describe, afterEach } from 'bun:test';
-import { coordinatedAdmission,demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,botCountEnv,persistentEnd } from './swarm';
+import { coordinatedAdmission,demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,botCountEnv,persistentEnd,writeStateFile } from './swarm';
 
 test('recovery uses the real admission policy, including inherited startup reserves, before checking release',()=>{
  const v={account:'Rod',active:[] as string[],running:0,external:0,pending:0,freeGB:10,minFreeGB:0,maxBots:17};let releases=0;
@@ -43,7 +43,7 @@ test('no demand cannot hide a retained failure, stop marker or release hold',()=
  // A release pause starts again; the swarm checks the release pin itself before a non-standing start.
  expect(startable(['Courier'],true,new Map([['Courier',{reason:'release-paused'}]]),()=>Infinity).start).toEqual(['Courier']);
 });
-import { existsSync, mkdtempSync, mkdirSync, rmSync, statSync, writeFileSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { hasPayout } from '../packages/core/src/bank-demand';
@@ -1117,4 +1117,25 @@ describe('kit-restored repair', () => {
         expect(applyKitRestored(missing.request, [hold()], [], missing.proofs).reason).toBe('kit receipt missing or malformed');
         expect(applyKitRestored({ ...missing.request, kit: undefined }, [hold()], [], missing.proofs).reason).toBe('invalid kit-restored request');
     });
+});
+
+test('the swarm state file is replaced whole: a failed write leaves the previous state and no temporary file', () => {
+ const dir = mkdtempSync(join(tmpdir(), 'swarm-state-')), file = join(dir, 'swarm-state.json');
+ try {
+  writeStateFile(file, '{"at":1}');
+  expect(readFileSync(file, 'utf8')).toBe('{"at":1}');
+  // A write that stops half way never reaches the state file.
+  expect(() => writeStateFile(file, '{"at":2}', (path, data) => { writeFileSync(path, data.slice(0, 3)); throw Error('disk full'); })).toThrow('disk full');
+  expect(readFileSync(file, 'utf8')).toBe('{"at":1}');
+  expect(readdirSync(dir)).toEqual(['swarm-state.json']);
+  // A rename that fails keeps the previous file and removes the temporary file.
+  expect(() => writeStateFile(file, '{"at":3}', writeFileSync, () => { throw Error('rename refused'); })).toThrow('rename refused');
+  expect(readFileSync(file, 'utf8')).toBe('{"at":1}');
+  expect(readdirSync(dir)).toEqual(['swarm-state.json']);
+  // The state at each instant of a good write is a whole file (the rename is the only step that changes it).
+  let seen = '';
+  writeStateFile(file, '{"at":4}', writeFileSync, (from, to) => { seen = readFileSync(file, 'utf8'); writeFileSync(to, readFileSync(from, 'utf8')); rmSync(from); });
+  expect(seen).toBe('{"at":1}');
+  expect(readFileSync(file, 'utf8')).toBe('{"at":4}');
+ } finally { rmSync(dir, { recursive: true, force: true }); }
 });

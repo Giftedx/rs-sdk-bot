@@ -6,6 +6,7 @@
 // against Protect from Magic and leaves 5 ticks of immunity (pvp_magic.rs2:11-36, 85-104, 156); the attackable
 // range is the lower Wilderness level (wilderness_levels.rs2:4-16, pvp_combat.rs2:32-48).
 // Usage: bun scripts/pk.ts <bot> <target name> [CAP ticks]; practice only until a live pilot is qualified.
+import { loadGear } from './gear';
 import { readFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
@@ -223,6 +224,10 @@ export type FightOptions = {
     // In multi-way combat, against two or more players that face us or an ally, the overhead prayer covers the style
     // most of them hold (a crowd's hits all carry the source we face, so the last hitter names no one).
     crowdPrayer?: boolean;
+    // The overhead covers the weapon of the player that we face and no other (research/gang-clones.md "The prayer of the gang": in live run 3 a
+    // gang account's protect prayer equals the weapon class of the account it faces in 98 of 107 swaps, and never goes to Protect from Magic).
+    // The hits of another player and the crowd rule do not change it.
+    facedPrayer?: boolean;
     // The ticks over which exitOnDanger's damage race is read (default 30).
     raceWindow?: number;
     // false: exitOnDanger leaves on no food, two attackers and no prayer, not on a lost damage race.
@@ -303,6 +308,14 @@ export function protectedStyles(headicons: number | undefined): Set<Style> {
     return out;
 }
 export const skulled = (headicons: number | undefined) => ((headicons ?? 0) & 1) !== 0;
+// The death line's skull fields: the skull and what the death costs, read on the last tick that the account was alive (the
+// client clears the skull at the death itself), as ` skull=1 keeps=0 lost=420 lostValue=190000`. Empty when the client
+// showed no local player. The bait test reads it: an account hit first keeps no skull and keeps its 3 dearest items.
+export const deathSkullFields = (view: { skull: boolean | null; units: readonly { id: number; count: number }[]; protect: boolean } | null, cost: (id: number) => number): string => {
+    if (!view || view.skull === null) return '';
+    const risk = deathRisk(view.units, cost, view.skull, view.protect);
+    return ` skull=${view.skull ? 1 : 0} keeps=${risk.kept.length} lost=${risk.lostUnits} lostValue=${risk.lostValue}`;
+};
 // Our own skull: the head icon of the client's local player. Null when the client shows no local player (a test double).
 export const ownSkull = (client: unknown): boolean | null => {
     const local = (client as { localPlayer?: { headicons?: number } } | undefined)?.localPlayer;
@@ -541,6 +554,13 @@ export function pickFakieWeapon(opts: {
     return null;
 }
 
+// SAFETY: the chain of the rune throwing axe special picks its next target with huntall(origin, 3, line of sight) around the THROWER, excluding only the earlier targets
+// and the thrower (pvp_rune_thrownaxe.rs2 pvp_rune_thrownaxe_hunt), so any player within 3 tiles of the thrower that is attackable is a chain target: in a stacked squad
+// the special hits our own members. The special is refused when an ally stands within `AXE_ALLY_RANGE` tiles of us (one more than the server's 3, for a move in the tick).
+export const AXE_ALLY_RANGE = 4;
+export const thrownAxeHitsAlly = (spec: { kit: readonly number[] } | undefined, nearby: readonly { name: string; distance: number }[], allies: readonly string[] | undefined, names: ReadonlyMap<number, string>) =>
+    !!spec && !!allies?.length && spec.kit.some(id => names.get(id) === 'rune_thrownaxe') && nearby.some(p => p.distance <= AXE_ALLY_RANGE && allies.includes(p.name.toLowerCase()));
+
 // Default special-attack config from a staged kit (content specwep=true: dragon dagger 25%, longsword 25%, mace 25%,
 // rune claws 25%, magic shortbow 35% in bows.obj:343, dragon spear/_p/kp 25%).
 export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undefined {
@@ -636,6 +656,59 @@ const special = (client: unknown) => { const v = (client as { var?: number[] } |
 // A health bar at or under the fraction, from a hit that showed one.
 // A fraction of 1 or more holds at any health, also before the target's health bar shows (its first hit).
 export const lowHealth = (seen: Observed | null, fraction: number) => !!seen && (fraction >= 1 || (seen.totalHealth > 0 && seen.health / seen.totalHealth <= fraction));
+// After a fight: wear again the armour that the account wore at the start and that now sits in the pack with its slot empty. A freeze strips the platelegs, the full
+// helm and other pieces for the cast, and `tankIds` that wears them again lives in one fight: the next fight's set holds only the plate and chain bodies, so
+// the legs and the helm stayed in the pack for the rest of the run (run 3: members fought without them after a freeze). The weapon and the shield are not
+// touched: the fight loop picks the weapon, and wearing a shield would unwield a two-handed weapon. Returns the pieces that it wore.
+const ARMOUR_SLOT: Record<string, number> = { hat: 0, back: 1, torso: 4, legs: 7, hands: 9, feet: 10 };
+let gearSlots: Map<number, string> | undefined;
+export async function rewearStart(s: Session, start: readonly number[], log: (line: string) => void = () => {}, tick: () => Promise<boolean> = () => nextTick(s)): Promise<number> {
+    gearSlots ??= new Map(loadGear().map(g => [g.id, g.slot]));
+    let n = 0;
+    for (const id of start) {
+        const slot = ARMOUR_SLOT[gearSlots.get(id) ?? ''];
+        if (slot === undefined || (s.sdk.getState()?.equipment ?? []).some(e => e.slot === slot)) continue;
+        const item = s.sdk.getInventory().find(i => i.id === id), op = item?.optionsWithIndex?.find(x => /^(wear|wield)$/i.test(x.text));
+        if (!item || !op) continue;
+        await s.sdk.sendUseItem(item.slot, op.opIndex);
+        n++;
+        if (!await tick()) break;
+    }
+    if (n) log(`PK wore ${n} piece${n === 1 ? '' : 's'} of the starting armour again`);
+    return n;
+}
+
+// Poison. The server prints "You have been poisoned!" only when the poison was at 0 (poison.rs2 poison_player), so a poison that carries into the next fight, or one that is
+// renewed while it runs, gives no message. Its damage is a hitsplat of type hitmark_poison (2, hitmark.constant), which the client keeps for the own player
+// (ClientEntity damageTypes): poisonSplat reads it. A hit comes each 30 ticks (the poison timer), so the state holds POISON_HOLD ticks after its last sign and is
+// carried between fights of one account (poisonCarry). The client shows a hitsplat for 70 cycles (ClientEntity.ts: damageCycles = loopCycle + 70), about 2.3 ticks, so one
+// splat is on screen for 3 ticks: a splat counts once, by its end cycle (poisonSplat returns it), or a cure on the first tick would be undone by the same splat on the next.
+export const POISON_HITMARK = 2, POISON_HOLD = 40;
+export function poisonSplat(client: unknown): number {
+    const c = client as { localPlayer?: { damageTypes?: ArrayLike<number>; damageCycles?: ArrayLike<number> }; getClientCycle?: () => number } | undefined;
+    const p = c?.localPlayer;
+    if (!p?.damageTypes || !p.damageCycles || typeof c?.getClientCycle !== 'function') return 0;
+    const cycle = c.getClientCycle();
+    let end = 0;
+    for (let i = 0; i < 4; i++) if (p.damageTypes[i] === POISON_HITMARK && (p.damageCycles[i] ?? 0) > cycle) end = Math.max(end, p.damageCycles[i]!);
+    return end;
+}
+export const ownPoisonHit = (client: unknown): boolean => poisonSplat(client) > 0;
+const poisonCarry = new WeakMap<object, { poisoned: boolean; seenAt: number; splat: number }>();
+export const carriedPoison = (client: unknown, now: number): boolean => { const c = typeof client === 'object' && client ? poisonCarry.get(client) : undefined; return !!c && c.poisoned && now - c.seenAt <= POISON_HOLD; };
+// The end cycle of the last splat that a fight used, so that the next fight does not count it again.
+export const carriedSplat = (client: unknown): number => (typeof client === 'object' && client ? poisonCarry.get(client)?.splat ?? 0 : 0);
+export function noteFightPoison(client: unknown, poisoned: boolean, seenAt: number, splat = 0): void { if (typeof client === 'object' && client) poisonCarry.set(client, { poisoned, seenAt, splat }); }
+
+// The reasons that let a special go, for its log line: the flee state, the bow burst, the volley, the stun chain, a health bar under the weapon's threshold.
+export const specReasons = (r: { fled: boolean; bursting: boolean; volleying: boolean; chainStun: boolean; low: boolean }) =>
+    ([['fled', r.fled], ['burst', r.bursting], ['volley', r.volleying], ['chain', r.chainStun], ['low', r.low]] as const).filter(([, on]) => on).map(([name]) => name).join('+') || 'none';
+// The flee state ends when the flee hold (6 ticks after the last step away) has run out, no freeze holds the target and it stands within 2 tiles of us.
+export const fledEnds = (fled: boolean, gap: number, now: number, fleeingUntil: number, frozenUntil: number) => fled && gap <= 2 && now >= fleeingUntil && now >= frozenUntil;
+
+// A health bar at 0 (a hit that showed one, and the target has no Hitpoints left): the target is dying. lowHealth is true there, so without this guard a special
+// attack, a freeze or a bind goes into a target that is already dead (run 3: about 40 specials and many binds).
+export const isDying = (seen: Observed | null) => !!seen && seen.totalHealth > 0 && seen.health <= 0;
 
 // The new hit splats on another player since the last call, read from the client's player entity (ClientEntity
 // damageCycles and damageValues, four slots). The SDK publishes a damage_dealt event only while our player faces the
@@ -945,7 +1018,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     let last = -1, nextAttack = start, lastAttackAt = -10, lastWalkTicks = 0, hasAttacked = false, delayedUntil = start;
     let foodReady = Math.max(start, guardFoodReady), karambwanReady = start, potionReady = start;
     let freezeReady = start, frozenUntil = start, freezeCastAt = -10, freezeDur = 0, lastSpot = -1, frozenTile: { x: number; z: number } | null = null, selfFrozenUntil = start;
-    let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = false, rapidSet = false, pjedByNpc = false;
+    let seenEvent = 0, seenMessage = 0, lastSeen = start, unattackableSince = -1, poisoned = carriedPoison(s.client, start), poisonSeenAt = start, splatUsed = carriedSplat(s.client), rapidSet = false, pjedByNpc = false;
     let target: NearbyPlayer | undefined, rubbed = -1, gloryOffAt = -10, ranAt = -10, prevSelf: { x: number; z: number } | null = null;
     const predictor = new StylePredictor();
     let oppStyle: Style | null = null, oppChangedAt = start, earlyFreezes = 0;
@@ -974,6 +1047,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
     const protectItemNow = () => o.protectItem === false ? false : o.protectItem === 'skulled' ? ownSkull(s.client) === true : true;
     // Our skull and what a death would cost with it, logged at the start and at each change (the attacker takes a skull).
     let lastSkull: boolean | null | undefined;
+    // The skull, the items and Protect Item of the last tick that we were alive, for the death line (deathSkullFields).
+    let aliveView: { skull: boolean | null; units: { id: number; count: number }[]; protect: boolean } | null = null;
     // An account without Dragon Slayer cannot put its rune platebody back on after a cast ("You have not earned the
     // right to wear this yet."), so the loop leaves such a body on. The quest journal gives the state; where it does
     // not, the first refusal ends the removals.
@@ -992,6 +1067,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         if (!state || !me || !at) continue;
         feedWatch?.aim(at.x, at.z);
         const skullNow = ownSkull(s.client);
+        if (!(me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife))) aliveView = { skull: skullNow, units: [...state.inventory, ...state.equipment], protect: protectItemNow() };
         if (skullNow !== lastSkull) {
             lastSkull = skullNow;
             if (skullNow !== null) {
@@ -1071,7 +1147,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 freezeReady = Math.max(freezeReady, now + 4);
                 frozenUntil = Math.max(frozenUntil, now + 4);
             }
-            if (/have been poisoned/i.test(m.text)) poisoned = true;
+            if (/have been poisoned/i.test(m.text)) { poisoned = true; poisonSeenAt = now; }
             if (/not earned the right to wear/i.test(m.text)) torsoLocked = true;
             if (/feel charged with magic power/i.test(m.text)) charged = true;
             if (/magical charge fades away/i.test(m.text)) charged = false;
@@ -1079,7 +1155,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         }
         seenMessage = maxMessage;
         if ((rubbed >= 0 || ranAt >= 0) && wildernessLevel(at.z) === 0) { result.outcome = 'escaped'; log(`PK escaped ${targetName} after ${result.ticks} ticks at HP ${me.hp}`); return result; }
-        if (me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife)) { result.outcome = 'died'; log(`PK died to ${targetName} after ${result.ticks} ticks`); return result; }
+        if (me.isDead || me.hp <= 0 || (startLife !== undefined && me.lifeId !== startLife)) { result.outcome = 'died'; log(`PK died to ${targetName} after ${result.ticks} ticks${deathSkullFields(aliveView, itemCostOf)}`); return result; }
         if (o.stop?.()) { log(`PK stopped against ${targetName}`); return result; }
         target = state.nearbyPlayers.find(p => p.name.toLowerCase() === want);
         // Damage dealt: the splats on the target where the client shows them, else the SDK's events.
@@ -1093,6 +1169,11 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 fleeingUntil = now + 6;
                 fled = true;
                 heading = { x: Math.sign(target.x - prevTarget.x), z: Math.sign(target.z - prevTarget.z) };
+            } else if (fledEnds(fled, gap, now, fleeingUntil, frozenUntil)) {
+                // The flee hold has run out (no step away for 6 ticks), the target is not held by a freeze and it stands within 2 tiles: it re-engaged. `fled` bypasses the
+                // special's health threshold and the energy reserve, so it must not outlive the flight (a latch that never reset sent the specials at full health).
+                fled = false;
+                log(`PK target back within ${gap} tiles: no longer fled`);
             }
             prevTarget = { x: target.x, z: target.z }; prevGap = gap;
             // The graphic on the target names a hold spell's result in the tick the server casts it, whoever cast it:
@@ -1270,6 +1351,10 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const prayers = state.prayers;
         // Drinking a potion triggers p_delay(1) in processClientsIn (consume_effects.rs2:167), blocking client input on
         // now+1 and now+2 (ready on now+3). Drink non-emergency potions only when now+3 <= nextAttack.
+        // The poison hitsplat on us is the sign that the message does not give (a carried or renewed poison); the state ends POISON_HOLD ticks after its last sign.
+        const splat = poisonSplat(s.client);
+        if (splat > splatUsed) { poisoned = true; poisonSeenAt = now; splatUsed = splat; } else if (poisoned && now - poisonSeenAt > POISON_HOLD) poisoned = false;
+        noteFightPoison(s.client, poisoned, poisonSeenAt, splatUsed);
         if (!castShield && now >= potionReady && (prayers.prayerPoints <= 5 || now + 3 <= nextAttack || (cureNow && poisoned && !!slotOf(ITEMS.antipoison)))) {
             let potion = prayers.prayerPoints <= restoreAt ? slotOf([...ITEMS.prayerPotion, ...ITEMS.superRestore]) : undefined;
             if (!potion && poisoned) {
@@ -1325,11 +1410,12 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             else if (now - unattackableSince >= 6) { result.outcome = 'lost'; return result; }
         } else unattackableSince = -1;
         const seen = observePlayer(s.client, target.index);
+        const dying = isDying(seen);
         // PK_TRACE=1: one line for each tick of what the loop reads, to find where two runs with one seed part.
         if (process.env.PK_TRACE === '1') log(`PKT ${result.ticks} hp=${me.hp} run=${me.runEnergy ?? '?'} at=${at.x},${at.z} t=${target.x},${target.z} th=${seen?.health}/${seen?.totalHealth} hi=${seen?.headicons} w=${seen?.worn.join('.')} pp=${state.prayers.prayerPoints} na=${nextAttack - start} hits=${hits.map(h => h.damage).join('.')} dealt=${result.dealt} ev=${state.combatEvents.length} inv=${inv.length}`);
         const prayerBase = state.skills.find(k => k.name === 'Prayer')?.baseLevel ?? 99;
         const lastHit = [...hits].reverse().find(h => now - h.tick <= 10);
-        const hitter = lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
+        const hitter = !o.facedPrayer && lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
         if (seen) {
             const shown = weaponStyle(seen.worn[3]);
             predictor.observe(shown);
@@ -1344,7 +1430,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const countered = o.counterRead && shownGuard && predictor.seen().size === 2 && left.length === 1 ? left[0]! : null;
         const predicted = o.predictPrayer && !hitter && (!o.snapPrayer || now >= oppDue - (o.snapLead ?? 1)) ? countered ?? predictor.predict() : null;
         // crowdPrayer: two or more players face us: the overhead covers the style that most of them hold.
-        const crowdStyle = o.crowdPrayer && facers.length >= 2 && isMulti(at.x, at.z) ? (() => {
+        const crowdStyle = o.crowdPrayer && !o.facedPrayer && facers.length >= 2 && isMulti(at.x, at.z) ? (() => {
             const n = new Map<Style, number>();
             for (const p of facers) { const w = observePlayer(s.client, p.index); const st = weaponStyle(w?.worn[3]); n.set(st, (n.get(st) ?? 0) + 1); }
             return [...n].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
@@ -1395,7 +1481,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const upcomingTurn = chosen ? { style: chosen, index: Math.max(0, turns.indexOf(chosen)) } : rotationTurn;
         const burstBow = o.bowBurst !== undefined ? bowSpec(o.kit, names) : undefined;
         const burstRange = burstBow ? weaponRange(burstBow.kit[0]!, names) ?? BOW_RANGE : BOW_RANGE;
-        const bursting = !!burstBow && special(s.client).energy >= burstBow.cost && (fled || lowHealth(seen, o.bowBurst!)) && cheb(at, target) <= burstRange;
+        const bursting = !dying && !!burstBow && special(s.client).energy >= burstBow.cost && (fled || lowHealth(seen, o.bowBurst!)) && cheb(at, target) <= burstRange;
         if (pjedByNpc) {
             pjedByNpc = false;
             if (!hitter && typeof sdk.sendInteractNpc === 'function') {
@@ -1576,7 +1662,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const freezeMagic = Math.min(magicLevel, o.freezeMagicCap ?? magicLevel);
         const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(freezeMagic, inv) : freezeSpell(freezeMagic)) : null;
         // A kit with the runes of a freeze and no staff still casts it: the cast keeps the weapon in hand.
-        const castFreeze = freeze !== null && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
+        const castFreeze = freeze !== null && !dying && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
             && (freezeRule === true || now < fleeingUntil || (o.openFreeze === true && !hasAttacked) || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)))
             && !(o.freezeShare && o.freezeShare.clock() < o.freezeShare.until)
             && (o.freezeStill !== true || (cheb(at, target) <= 10 && await lineOfSight(me.level ?? 0, at, target)));
@@ -1588,7 +1674,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const stunOverlap = o.stunShare?.overlap ?? 1;
         const targetStunned = now < targetStunnedUntil || (!!o.stunShare && o.stunShare.clock() < (o.stunShare.stunnedUntil ?? -1));
         const stunOpenForChain = o.stunShare ? o.stunShare.clock() >= o.stunShare.until - stunOverlap : !targetStunned;
-        const canSecondaryStun = !!o.stunSpec && canReachMelee && !bursting && energy.energy >= o.stunSpec.cost && stunOpenForChain
+        const canSecondaryStun = !dying && !!o.stunSpec && canReachMelee && !bursting && energy.energy >= o.stunSpec.cost && stunOpenForChain
             && (fled || lowHealth(seen, o.stunSpec.below) || !!o.stunShare);
         // In a burst the bow special goes first, then a melee special if one is ready, then the bow again: the target
         // prays against the weapon it saw last, so each lands off its prayer.
@@ -1616,7 +1702,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             || (!!o.burstOnHold && !!o.freezeShare && o.freezeShare.clock() < (o.freezeShare.heldUntil ?? -1))
             || (!!o.burstOnStun && !spec?.stun && targetStunned);
         const specNeedsRoom = !!spec?.kit.some(id => isDragonSpearName(names.get(id) ?? '')) && state.equipment.some(e => e.slot === 3) && state.equipment.some(e => e.slot === 5) && inv.length >= 28;
-        if (spec && !specNeedsRoom && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || chainStun || lowHealth(seen, spec.below))
+        // An axe special that would chain onto an ally within 3 tiles of us is not thrown (thrownAxeHitsAlly).
+        const axeHitsAlly = thrownAxeHitsAlly(spec, state.nearbyPlayers, o.allies, names);
+        if (spec && !dying && !axeHitsAlly && !specNeedsRoom && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || chainStun || lowHealth(seen, spec.below))
             && (fled || bursting || volleying || chainStun || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
             && (spec.stun || !guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - sentEvents - attackPackets - (energy.on ? 0 : 1);
@@ -1638,7 +1726,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 if (!hadPrayer && turnedOn > 0 && prayerDrainAt < 0) prayerDrainAt = now;
             }
             for (const item of toWield) use(item, /^(Wield|Wear)$/i);
-            log(`PK special ${specStyle} energy ${energy.energy} on ${energy.on} target ${seen?.health}/${seen?.totalHealth}`);
+            // The reasons that let this special go (specReasons): which path fired it, so that a special at full health names the rule that allowed it.
+            log(`PK special ${specStyle} energy ${energy.energy} on ${energy.on} target ${seen?.health}/${seen?.totalHealth} by ${specReasons({ fled: fled && o.fledSpec !== false, bursting, volleying, chainStun, low: lowHealth(seen, spec.below) })}`);
             if (!energy.on) void sdk.sendClickComponent(componentId(spec.bar));
             void sdk.sendInteractPlayer(target.index, 2);
             result.specs++; result.attacks[specStyle]++; lastSpecStyle = specStyle;

@@ -76,6 +76,8 @@ export function cloneProfile(name: CloneName, mode: CloneMode = 'seen', records:
     const flick = !!holds && holds.twoTicksOrLess * 2 >= holds.toOff.n + holds.toAnotherProtectPrayer.n && holds.twoTicksOrLess > 0;
     const out = walkOut(r, mode, level);
     return {
+        // A gang account prays against the weapon of the one account it faces (research/gang-clones.md, "The prayer of the gang": 98 of 107 swaps).
+        facedPrayer: true,
         ...(melee ? { rotation: ['melee'], readOverheads: false } : {}), ...(specTop ? { specBelow: Math.min(1, (specTop + 1) / 100) } : {}), prayerFlick: flick,
         // The eat level: the median Hitpoints at an eat for Hitpoints.
         eatAt: median(r.eating.hpAtEat!.value as Hist),

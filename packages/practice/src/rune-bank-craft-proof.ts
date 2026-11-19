@@ -16,6 +16,8 @@ import {releaseRevision} from '../../core/src/worker-release';
 import {runeProofReceiptChecks} from './rune-proof-receipt';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {wrapTransparent} from './shark-fishing-diagnostic';
+// The tick of this proof: 100 ms. Hosted runs against the proof at 150 ms: same results, items and XP; game ticks within the noise of two runs at the old tick (see the pull request).
+const TICK_MS=100;
 
 // Practice preload uses the existing transparent observer hooks. No pinned file is changed.
 export async function installRuneEntryObserver(root:string,out:string,name:string){
@@ -111,7 +113,7 @@ function verify(directory:string){
   life:!/"died"/.test(log),
   ...runeProofReceiptChecks(meta,runeProofSource(),directory)};
  const report={ok:Object.values(checks).every(Boolean),at:Date.now(),
-  scope:'One staged practice account, 27 air essence then 3 mind essence after level 2, tick150 xpRate1. Other altars, live, unattended and speed remain unproved.',
+  scope:'One staged practice account, 27 air essence then 3 mind essence after level 2, tick100 xpRate1. Other altars, live, unattended and speed remain unproved.',
   checks,used,runecraftXp:after.skills[RC]!.xp,workerElapsedMs:meta.workerElapsedMs};
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
@@ -126,7 +128,7 @@ async function run(directory:string){
   const botDir=resolve(import.meta.dir,'../../../vendor/rs-sdk/bots',name);if(existsSync(botDir))throw Error('fresh account required');
   const preload=join(directory,'rune-entry-preload.ts'),trace=join(directory,'rune-entry-engine.jsonl');
   writeFileSync(preload,`import {isMainThread} from 'node:worker_threads';\nif(isMainThread){const {installRuneEntryObserver}=await import(${JSON.stringify(pathToFileURL(import.meta.path).href)});\nawait installRuneEntryObserver(process.cwd(),${JSON.stringify(trace)},${JSON.stringify(name)});}\n`);
-  stack=await startStack({tickMs:150,xpRate:XP_RATE,readyTimeoutMs:60000,ports:ISOLATED,instance:'rune-bank-craft',enginePreload:{module:preload,env:ISOLATED_ENGINE_ENV}});
+  stack=await startStack({tickMs:TICK_MS,xpRate:XP_RATE,readyTimeoutMs:60000,ports:ISOLATED,instance:'rune-bank-craft',enginePreload:{module:preload,env:ISOLATED_ENGINE_ENV}});
   const bot=await createBot(name);pointBotAt(bot.envPath,ISOLATED.engine,ISOLATED.gateway);
   if(!new RegExp(`^SERVER=localhost:${ISOLATED.engine}\\r?$`,'m').test(readFileSync(join(botDir,'bot.env'),'utf8')))throw Error('local fixture required');
   const path=await applyPreset(name,runeBankCraftFixture);

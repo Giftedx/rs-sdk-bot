@@ -193,6 +193,10 @@ export type Inputs = {
     noSend?: ReadonlySet<string>;
     // The ids of the `pilot` templates this plan admits (its `aio` list). Absent: none.
     pilots?: ReadonlySet<string>;
+    // Admit the self-serve production pilots (selfServePilot) to a free account that is not on the army roster, whatever the
+    // `aio` list names, at PILOT_FALLBACK_SHARE of their worth so every listed job and every other supply job ranks first.
+    // Each place keeps its capacity, and finite demand sizes each run, so the fallback stays bounded. Absent: off.
+    pilotFallback?: boolean;
     // The quests (lower case journal names) that some observed account of any side completed. A `once` template needs it.
     questsDone?: ReadonlySet<string>;
     // Whether the walker lets the account walk over White Wolf Mountain (scripts/autopilot.ts mountainWalk). Absent:
@@ -231,6 +235,8 @@ const WEAPON_STAGES: readonly WeaponStage[] = [
 ];
 const RUNE_ARMOUR_BAND = 'army-armour-rune';
 const DHIDE_ARMOUR_BAND = 'army-armour-dhide';
+// The ids start with `army-weapon-`, so a buy holds the weapon market place (acquire) and may replace a running band.
+const BOW_STAGE = 'army-weapon-bow', AMMO_STAGE = 'army-weapon-ammo';
 // The levels come from the content (toolLevel); the coins are the price cap of a purchase, which is policy.
 const toolLadder = (rows: readonly (readonly [item: string, coins: number])[]): readonly (readonly [level: number, item: string, coins: number])[] =>
     rows.map(([item, coins]) => [toolLevel(item), item, coins] as const);
@@ -307,7 +313,7 @@ export const KIT_PRICE_CAPS: Readonly<Record<string, number>> = {
     // Live claude-cloud read: 42 listed at 72,000, bids at 33,068, volume-weighted price 38,089.
     'adamant scimitar': 80_000,
     'rune scimitar': 50_000, 'rune longsword': 45_000, 'dragon dagger': 50_000, 'dragon longsword': 120_000,
-    shortbow: 500, 'oak shortbow': 800, 'willow shortbow': 2_500, 'maple shortbow': 5_000,
+    shortbow: 500, 'oak shortbow': 800, 'willow shortbow': 2_500, 'maple shortbow': 5_000, 'yew shortbow': 15_000,
     coif: 1_000, 'studded body': 2_500, 'studded chap': 2_000,
     'dragonhide body': 15_000, 'dragonhide chap': 8_000, 'dragon vambrace': 6_000,
     'adamant full helm': 8_000, 'adamant plateleg': 15_000, 'adamant platebody': 25_000,
@@ -336,6 +342,12 @@ export const BILL_PREMIUM = 2, TRAIN_SHARE = 0.25;
 // scripts/autopilot.ts plans every ten minutes: 1,000 game ticks at 600 ms per tick. This is an output estimate,
 // not a claim that a worker stops at this bound; the next pass reads its actual holdings.
 export const VALUE_TICKS = 1000;
+// A production pilot that the `aio` list does not name ranks at this share of its worth (Inputs.pilotFallback).
+export const PILOT_FALLBACK_SHARE = 0.05;
+// A pilot that makes or gathers a bill item for the route or the army kit and needs no quest, band or combat: the AIO skiller
+// routes (mining, woodcutting, smelting, smithing, fletching, crafting, runecraft, cooking, fishing) and the maker chains.
+export const selfServePilot = (t: Template): boolean => !!t.pilot && !t.tier && !t.quest && !t.once && !t.buildOnly && !t.trains && !t.provides
+    && (!!t.production || !!t.aio?.startsWith('skiller:'));
 // Inputs that feed a bill line: a feather is needed while headless arrows are short, even with the feather line met.
 // A steel bar is on no line of the bill: it is needed while cannonballs are short (one bar casts 4, cannonballs.rs2).
 export const FEEDS: Record<string, string[]> = { feather: ['headless arrow'], 'arrow shaft': ['headless arrow'], 'raw lobster': ['lobster'],
@@ -562,9 +574,77 @@ function weaponStageFor(a: Acct, inp: Inputs): { id: string; item: string; goal:
     }
     return null;
 }
-function armourItemsFor(a: Acct, inp: Inputs): { id: string; band: number; items: string[]; goal: string }[] {
+// The kit stages follow the style that the account trains: a ranged trainer gets a bow, arrows and dragonhide, never
+// the melee blade and rune armour (rune armour costs Ranged accuracy); a magic trainer gets no kit stage, so the gear pass
+// (gear-want-jobs.ts) buys its staff and robes. An account with no band left keeps the melee kit and the dragonhide.
+type KitStyles = { melee: boolean; ranged: boolean };
+const KIT_STAGE_STYLE: Readonly<Record<string, CombatFocus>> = Object.fromEntries([...WEAPON_STAGES.map(s => [s.id, 'melee']),
+    [RUNE_ARMOUR_BAND, 'melee'], [DHIDE_ARMOUR_BAND, 'ranged'], [BOW_STAGE, 'ranged'], [AMMO_STAGE, 'ranged']] as [string, CombatFocus][]);
+export function kitStyle(a: Acct, inp: Pick<Inputs, 'templates' | 'current' | 'running'>, bands: readonly { template: Template; lacks?: unknown }[] = []): CombatFocus | null {
+    const lower = a.name.toLowerCase(), now = inp.current?.get(lower);
+    // A kit buy that runs keeps the style of its own stage, so the account does not change its buy when its band changes.
+    // A finished bow buy leads on to its arrows and dragonhide. A finished melee buy does not lead on to the rest of the rune
+    // set: an account that left its melee band takes the style of its next band.
+    const stage = now?.startsWith(KIT_BUY) ? KIT_STAGE_STYLE[now.slice(KIT_BUY.length)] : undefined;
+    if (stage && (stage === 'ranged' || inp.running?.has(lower))) return stage;
+    // The band that it runs now.
+    const own = accountStyle(a, inp.templates, now, false);
+    if (own) return own;
+    // Else the first combat band that it can start now (its needs are met, or a kit buy supplies them), the one with no missing
+    // kit first: a band whose level it lacks is no candidate, so a Magic 1 account is not a magic trainer for the Magic band
+    // alone. `bands` are the goal candidates of the pass in band order.
+    const combat = bands.filter(c => c.template.trains && SKILL_STYLE[c.template.trains.skill] && !c.template.filler);
+    const first = combat.find(c => !c.lacks) ?? combat[0];
+    if (first) return SKILL_STYLE[first.template.trains!.skill]!;
+    return accountStyle(a, inp.templates, now, true);
+}
+const kitStylesOf = (style: CombatFocus | null): KitStyles => ({ melee: style === null || style === 'melee', ranged: style === null || style === 'ranged' });
+export type KitStage = { id: string; goal: string; items: { item: string; count: number }[] };
+// The shortbows by Ranged level, the highest first (a shortbow fires faster than a longbow of its level).
+const bowLadder = () => BOWS.filter(([bow]) => bow.endsWith('shortbow')).sort((x, y) => y[1] - x[1]);
+// The Ranged level of the best bow that the account owns and can wear, or 0.
+const ownedBowLevel = (a: Acct) => Math.max(0, ...BOWS.filter(([bow, level]) => level <= (a.skills.Ranged ?? 1) && (a.items[bow] ?? 0) > 0).map(([, level]) => level));
+// A bow upgrade for a Ranged account: the best shortbow for its Ranged level that a market or owned stock supplies, unless it
+// owns a bow of that level or better.
+export function bowStageFor(a: Acct, inp: Inputs): (KitStage & { level: number }) | null {
+    const ranged = a.skills.Ranged ?? 1, owned = ownedBowLevel(a), buyRetired = !!inp.retired?.has(pairKey(a.name, KIT_BUY + BOW_STAGE));
+    for (const [bow, level] of bowLadder()) {
+        if (ranged < level) continue;
+        if (owned >= level) return null;
+        if (hasStock(inp, bow) || (!buyRetired && hasMarket(inp, bow))) return { id: BOW_STAGE, goal: `fire a ${bow}`, level, items: [{ item: bow, count: 1 }] };
+    }
+    return null;
+}
+// Arrows for the bow the account fires: the best tier that the bow and the Ranged level allow and that its coins pay for in
+// a batch (a consumable, so a margin stays), unless it holds a stock of that tier or better. `bowLevel` is the level of the bow
+// it will wield.
+// The arrows are a consumable and the stage buys again when they run low, so it is bounded: it fires only when the account holds
+// under AMMO_LOW arrows of the tier or better (a bought batch of AMMO_BATCH lasts hundreds of thousands of Ranged experience:
+// the band loses 0.67 to 2.02 arrows per 1,000 experience), it never replaces a running band (its place is AMMO_MARKET, not the
+// weapon market), and a batch at the price caps may cost at most half of the account's coins.
+export const AMMO_BATCH = 300, AMMO_LOW = 50, AMMO_MARKET = 'ge:ammo';
+export function ammoStageFor(a: Acct, inp: Inputs, bowLevel: number): KitStage | null {
+    const top = Math.min(a.skills.Ranged ?? 1, bowLevel), buyRetired = !!inp.retired?.has(pairKey(a.name, KIT_BUY + AMMO_STAGE));
+    // Bronze arrows are the Ranged band's own kit (its batch), so a stage never orders them.
+    for (const [arrow, tier] of [...ARROWS].reverse().sort((x, y) => y[1] - x[1])) {
+        if (tier > top || arrow === 'bronze arrow') continue;
+        const held = ARROWS.filter(([, t]) => t >= tier && t <= top).reduce((n, [name]) => n + (a.items[name] ?? 0), 0);
+        if (held >= AMMO_LOW) return null;
+        const count = AMMO_BATCH - held, quote = inp.market?.[arrow];
+        if (hasStock(inp, arrow) || (!buyRetired && quote && count * quote.limit + KIT_CASH_RESERVE + KIT_COIN_MARGIN <= (a.items.coin ?? 0) && count * quote.limit * 2 <= (a.items.coin ?? 0)))
+            return { id: AMMO_STAGE, goal: `fire ${arrow}s`, items: [{ item: arrow, count }] };
+    }
+    return null;
+}
+// Every bow and arrow stage of an account that trains Ranged, in the order that they buy: the bow first, then the arrows
+// that the new bow fires.
+function rangedStagesFor(a: Acct, inp: Inputs): KitStage[] {
+    const bow = bowStageFor(a, inp), ammo = ammoStageFor(a, inp, Math.max(ownedBowLevel(a), bow?.level ?? 0));
+    return [...(bow ? [bow] : []), ...(ammo ? [ammo] : [])];
+}
+function armourItemsFor(a: Acct, inp: Inputs, styles: KitStyles = { melee: true, ranged: true }): { id: string; band: number; items: string[]; goal: string }[] {
     const out: { id: string; band: number; items: string[]; goal: string }[] = [];
-    if ((a.skills.Defence ?? 1) >= 40) {
+    if (styles.melee && (a.skills.Defence ?? 1) >= 40) {
         const buyRetired = !!inp.retired?.has(pairKey(a.name, KIT_BUY + RUNE_ARMOUR_BAND));
         const torso = questDone(a, 'Dragon Slayer') ? 'rune platebody' : 'rune chainbody';
         const heldTorso = (a.items['rune platebody'] ?? 0) > 0 || (!questDone(a, 'Dragon Slayer') && (a.items['rune chainbody'] ?? 0) > 0);
@@ -576,7 +656,7 @@ function armourItemsFor(a: Acct, inp: Inputs): { id: string; band: number; items
         ].filter(item => hasStock(inp, item) || (!buyRetired && hasMarket(inp, item)));
         if (need.length) out.push({ id: RUNE_ARMOUR_BAND, band: ARMOUR_BAND, items: need, goal: 'wear rune armour' });
     }
-    if ((a.skills.Ranged ?? 1) >= 40) {
+    if (styles.ranged && (a.skills.Ranged ?? 1) >= 40) {
         const buyRetired = !!inp.retired?.has(pairKey(a.name, KIT_BUY + DHIDE_ARMOUR_BAND));
         const bodyReady = (a.skills.Defence ?? 1) >= 40 && questDone(a, 'Dragon Slayer');
         const need = [
@@ -638,11 +718,13 @@ export function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
         if (!inp.army?.has(lower)) continue;
         const kit = new Map<string, { count: number; bands: Set<string> }>();
         let cash = 0, keep = 0;
+        const bands: { template: Template; lacks?: Lack[] }[] = [];
         for (const listed of inp.templates) {
             const t = startable(a, listed);
             if (!t || (t.once && onceOwner.get(t.id) !== lower)) continue;
             const lacks = kitLacks(a, t.needs, item => !!inp.market?.[item]);
             if (lacks === null) continue;
+            bands.push({ template: t, lacks: lacks.length ? lacks : undefined });
             cash = Math.max(cash, ...Object.entries(t.needs?.items ?? {}).filter(([item]) => norm(item) === 'coin').map(([, count]) => count));
             keep = Math.max(keep, t.keepCoins?.(a) ?? 0);
             const batch = t.batchFor?.(a) ?? t.batch;
@@ -655,9 +737,12 @@ export function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
                 entry.count = Math.max(entry.count, count); entry.bands.add(t.id); kit.set(item, entry);
             }
         }
-        const wStage = weaponStageFor(a, inp);
+        bands.sort((x, y) => (x.template.band ?? 0) - (y.template.band ?? 0));
+        const style = kitStyle(a, inp, bands), styles = kitStylesOf(style);
+        const wStage = styles.melee ? weaponStageFor(a, inp) : null;
         if (wStage) kit.set(wStage.item, { count: 1, bands: new Set([wStage.id]) });
-        for (const arm of armourItemsFor(a, inp)) for (const item of arm.items) if (!kit.has(item)) kit.set(item, { count: 1, bands: new Set([arm.id]) });
+        for (const arm of armourItemsFor(a, inp, styles)) for (const item of arm.items) if (!kit.has(item)) kit.set(item, { count: 1, bands: new Set([arm.id]) });
+        if (style === 'ranged') for (const stage of rangedStagesFor(a, inp)) for (const { item, count } of stage.items) if (!kit.has(item)) kit.set(item, { count, bands: new Set([stage.id]) });
         const toolItem = toolUpgradeNeed(a, routeDemand);
         if (toolItem && !kit.has(toolItem)) kit.set(toolItem, { count: 1, bands: new Set(['tool-upgrade']) });
         const lines = [...kit].map(([item, entry]) => {
@@ -889,7 +974,7 @@ export function plan(input: Inputs): Assignment[] {
             else if (rest > 0) fed.set(item, (fed.get(item) ?? 0) + rest);
         }
     };
-    const valueOf = (t: Template, a: Acct) => jobValue(t, a, values, item => needed(item, a.name));
+    const valueOf = (t: Template, a: Acct) => jobValue(t, a, values, item => needed(item, a.name)) * (onList(t) ? 1 : PILOT_FALLBACK_SHARE);
     // `fare`: the ferry fare inside the coin need of the candidate's template.
     type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number; fare?: number; goal?: { band: number; left: number }; lacks?: Lack[];
         supply?: { template: Template; account: Acct; share: number }; kit?: readonly KitLine[] };
@@ -897,7 +982,8 @@ export function plan(input: Inputs): Assignment[] {
     // Keep qualified coin opportunities until the kit tier has used existing funds. A helper gets value only if
     // the finite transfer below chooses it; a coin opportunity alone never gives an account work.
     const makesCoins = (t: Template, a: Acct) => t.yields(a).some(f => norm(f.item) === 'coin' && f.perTick > 0);
-    const admitted = (t: Template) => !t.pilot || !!inp.pilots?.has(t.id);
+    const onList = (t: Template) => !t.pilot || !!inp.pilots?.has(t.id);
+    const admitted = (t: Template, a?: Acct) => onList(t) || (!!inp.pilotFallback && selfServePilot(t) && !(a && (inp.army?.has(a.name.toLowerCase()) || squadNames.has(a.name.toLowerCase()))));
     const shopLine = (l: Lack) => !l.of.some(i => inp.market?.[i]) && l.of.some(i => SHOP_SUPPLIED.has(i));
     // A donor can fund the account: it has no enabled job, and a meeting place that it can reach (meetFor).
     const meetOf = new Map(mine.map(a => [a.name, meetFor(a.pos)]));
@@ -917,7 +1003,7 @@ export function plan(input: Inputs): Assignment[] {
         const band = buildBand(listed, a, inp.builds?.get(a.name.toLowerCase()), inp.buildQuests?.get(a.name.toLowerCase()), inp.buildBefore?.get(a.name.toLowerCase()));
         if (!band) continue;
         if (inp.retired?.has(pairKey(a.name, band.id))) { miss(a, band, 'retired'); continue; }
-        if (!admitted(band)) { miss(a, band, 'pilot'); continue; }
+        if (!admitted(band, a)) { miss(a, band, 'pilot'); continue; }
         // The reach rule (wayCost): no candidate for a place with no way from where the account stands. The ferry fare
         // of the way is a coin need of the job, so an account without the fare is funded as for any coin need.
         const finite=finiteOrder(band,a);if(!finite){miss(a,band,'demand');continue;}
@@ -930,7 +1016,7 @@ export function plan(input: Inputs): Assignment[] {
             if (questDone(a, t.quest.name)) continue;
             if (lacks===null || coinShort(a,t.needs)>0) { miss(a, t, lacks === null ? 'needs' : 'coins'); continue; }
             const after: Acct = { ...a, quests: new Set([...(a.quests ?? []), norm(t.quest.name)]) }, before = cands.length;
-            for (const u of t.quest.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
+            for (const u of t.quest.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u, a) && !inp.retired?.has(pairKey(a.name, u.id)))) {
                 if (!meets(after, u.needs)) continue;
                 const value = TRAIN_SHARE * valueOf(u, after);
                 if (value > 0 || makesCoins(u, after)) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `completes ${t.quest.name} for ${u.id}`, supply: { template: u, account: after, share: TRAIN_SHARE },...(lacks.length?{lacks}:{}) });
@@ -973,7 +1059,7 @@ export function plan(input: Inputs): Assignment[] {
             const item = norm(t.provides.item), held: Acct = { ...a, items: { ...a.items, [item]: Math.max(1, a.items[item] ?? 0) } }, before = cands.length;
             if ((a.items[item] ?? 0) >= 1) continue;
             if (coinShort(a, t.needs) > 0 || !meets(a, withoutCoins(t.needs))) { miss(a, t, coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs)) ? 'coins' : 'needs'); continue; }
-            for (const u of t.provides.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
+            for (const u of t.provides.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u, a) && !inp.retired?.has(pairKey(a.name, u.id)))) {
                 if (!meets(held, u.needs)) continue;
                 const value = TRAIN_SHARE * valueOf(u, held);
                 if (value > 0) cands.push({ account: a.name, template: t, value, resources: [...(t.resources ?? []), ...(u.resources ?? [])], reason: `buys a ${t.provides.item} for ${u.id}`, supply: { template: u, account: held, share: TRAIN_SHARE } });
@@ -985,7 +1071,7 @@ export function plan(input: Inputs): Assignment[] {
             if ((a.skills[t.trains.skill] ?? 1) >= t.trains.to) continue;
             if (!meets(a, t.needs)) { miss(a, t, 'needs'); continue; }
             const trained: Acct = { ...a, skills: { ...a.skills, [t.trains.skill]: t.trains.to } }, before = cands.length;
-            for (const u of t.trains.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u) && !inp.retired?.has(pairKey(a.name, u.id)))) {
+            for (const u of t.trains.unlocks.map(id => byId.get(id)).filter((u): u is Template => !!u && admitted(u, a) && !inp.retired?.has(pairKey(a.name, u.id)))) {
                 // The frail rule counts what the account holds when the unlocked job starts, which is not known yet.
                 if (!meets(a, { ...u.needs, frail: undefined }, t.trains)) continue;
                 const value = TRAIN_SHARE * valueOf(u, trained);
@@ -1020,12 +1106,20 @@ export function plan(input: Inputs): Assignment[] {
     for (const a of mine) {
         const lower = a.name.toLowerCase();
         if (!inp.army?.has(lower) || squadNames.has(lower)) continue;
-        const wStage = weaponStageFor(a, inp);
+        const bands = cands.filter(c => c.account === a.name && c.goal).sort((x, y) => x.goal!.band - y.goal!.band || x.goal!.left - y.goal!.left);
+        const style = kitStyle(a, inp, bands), styles = kitStylesOf(style);
+        const wStage = styles.melee ? weaponStageFor(a, inp) : null;
         if (wStage) {
             const template: Template = { id: wStage.id, item: wStage.item, attack: 30, goal: wStage.goal, family: 'kit-buy', script: KIT_BUY_SCRIPT, role: 'supply', yields: () => [], kitFirst: true, needs: { items: { [wStage.item]: 1 } } } as Template & { item: string; attack: number };
             cands.push({ account: a.name, template, value: 0, resources: [WEAPON_MARKET], reason: `army band ${WEAPON_BAND}: stages 1 ${wStage.item}`, goal: { band: WEAPON_BAND, left: 0 }, lacks: [{ of: [wStage.item], count: 1 }] });
         }
-        for (const arm of armourItemsFor(a, inp)) {
+        if (style === 'ranged') for (const stage of rangedStagesFor(a, inp)) {
+            const template: Template = { id: stage.id, goal: stage.goal, family: 'kit-buy', script: KIT_BUY_SCRIPT, role: 'supply', yields: () => [], kitFirst: true,
+                needs: { items: Object.fromEntries(stage.items.map(i => [i.item, i.count])) } };
+            cands.push({ account: a.name, template, value: 0, resources: [stage.id === AMMO_STAGE ? AMMO_MARKET : WEAPON_MARKET], reason: `army band ${WEAPON_BAND}: stages ${stage.items.map(i => `${i.count} ${i.item}`).join(', ')}`,
+                goal: { band: WEAPON_BAND + (stage.id === AMMO_STAGE ? 0.01 : 0), left: 0 }, lacks: stage.items.map(i => ({ of: [i.item], count: i.count })) });
+        }
+        for (const arm of armourItemsFor(a, inp, styles)) {
             const needsItems = Object.fromEntries(arm.items.map(i => [i, 1]));
             const template: Template = { id: arm.id, goal: arm.goal, family: 'kit-buy', script: KIT_BUY_SCRIPT, role: 'supply', yields: () => [], kitFirst: true, needs: { items: needsItems } };
             cands.push({ account: a.name, template, value: 0, resources: [ARMOUR_MARKET], reason: `army band ${arm.band}: stages ${arm.items.join(', ')}`, goal: { band: arm.band, left: 0 }, lacks: arm.items.map(i => ({ of: [i], count: 1 })) });

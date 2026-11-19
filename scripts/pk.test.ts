@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test';
 import {
     attackable, battleaxeWarcryMath, bestDamageSpell, bestFood, canCastChargeNow, castableFreeze, chargeVarpTicks, combatPrayers, dangerReason, defaultSpec, defaultStunSpec,
-    estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, ITEMS, killMessage, lowHealth,
+    estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, isDying, ITEMS, killMessage, lowHealth, rewearStart, carriedPoison, carriedSplat, fledEnds, noteFightPoison, ownPoisonHit, poisonSplat, POISON_HOLD, specReasons,
     kitRotation, meleeWeaponDelay, negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, pickFakieWeapon,
-    deathRisk, itemCostOf, ownSkull,
+    deathRisk, deathSkullFields, itemCostOf, ownSkull,
     pickFrozenKiteTile, pickWeighted, planPrayerTick, PRAYER, protectedStyles, seededRandom, shouldComboEat, skulled,
     SPELLS, STUNNED_SHOVE_SPOTANIM, weaponStyle, wildernessLevel,
 } from './pk';
@@ -981,6 +981,13 @@ test('deathRisk: no skull keeps the 3 dearest units, Protect Item one more, a sk
     expect(deathRisk(KIT_UNITS, cost, true, true)).toEqual({ keeps: 1, kept: [1127], keptValue: 65_000, lostValue: 72_000, lostUnits: 515 });
 });
 
+test('deathSkullFields: the skull bit, the keep count and the loss of the last tick alive, empty with no client', () => {
+    expect(deathSkullFields({ skull: false, units: KIT_UNITS, protect: false }, cost)).toBe(' skull=0 keeps=3 lost=513 lostValue=2000');
+    expect(deathSkullFields({ skull: true, units: KIT_UNITS, protect: true }, cost)).toBe(' skull=1 keeps=1 lost=515 lostValue=72000');
+    expect(deathSkullFields({ skull: null, units: KIT_UNITS, protect: true }, cost)).toBe('');
+    expect(deathSkullFields(null, cost)).toBe('');
+});
+
 test('deathRisk keeps one unit at a time, never an item with no cost, and tolerates a pack with fewer units than keeps', () => {
     // A stack of 2 of the dearest item gives 2 of the 3 keeps.
     expect(deathRisk([{ id: 1215, count: 2 }, { id: 1201, count: 1 }, { id: 385, count: 5 }], cost, false, false)).toMatchObject({ kept: [1215, 1215, 1201], lostUnits: 5 });
@@ -1089,4 +1096,89 @@ test('an antipoison goes down in the first tick after the poison by default, and
     expect(await antipoisonTick(undefined)).toBe(11);
     expect(await antipoisonTick(true)).toBe(11);
     expect(await antipoisonTick(false)).toBeGreaterThan(11);
+});
+
+test('isDying: a health bar at 0 is a target that is dying, and lowHealth is true there', () => {
+    const seen = { headicons: 0, worn: [], health: 0, totalHealth: 99, spotanim: -1 };
+    expect(isDying(seen)).toBe(true);
+    expect(lowHealth(seen, 0.3)).toBe(true);
+    expect(isDying({ ...seen, health: 1 })).toBe(false);
+    // No health bar yet (the target has not been hit) is not dying, and neither is no observation.
+    expect(isDying({ ...seen, totalHealth: 0 })).toBe(false);
+    expect(isDying(null)).toBe(false);
+});
+
+test('rewearStart wears the starting armour that sits in the pack with its slot empty, and nothing else', async () => {
+    // Rune full helm 1163 (hat), rune platebody 1127 (torso, worn), rune platelegs 1079 (legs), dragon dagger 1215 (weapon), and an item the account did not wear at the start.
+    const used: [number, number][] = [], logs: string[] = [];
+    const wear = [{ text: 'Wear', opIndex: 2 }];
+    const s: any = { sdk: {
+        getState: () => ({ equipment: [{ id: 1127, slot: 4 }] }),
+        getInventory: () => [{ id: 1163, slot: 3, optionsWithIndex: wear }, { id: 1079, slot: 4, optionsWithIndex: wear }, { id: 1215, slot: 5, optionsWithIndex: wear }, { id: 1201, slot: 6, optionsWithIndex: wear }],
+        sendUseItem: async (slot: number, op: number) => { used.push([slot, op]); },
+    } };
+    let ticks = 0;
+    expect(await rewearStart(s, [1163, 1127, 1079, 1215], l => logs.push(l), async () => { ticks++; return true; })).toBe(2);
+    expect(used).toEqual([[3, 2], [4, 2]]);
+    expect(ticks).toBe(2);
+    expect(logs).toEqual(['PK wore 2 pieces of the starting armour again']);
+    // Nothing missing, nothing to wear.
+    used.length = 0;
+    expect(await rewearStart(s, [1127], undefined, async () => true)).toBe(0);
+    expect(used).toEqual([]);
+});
+
+test('isDying guards the freeze and the special: not read here, see the fight loop; the helper is the test of the rule', () => {
+    expect(isDying({ headicons: 0, worn: [], health: 0, totalHealth: 70, spotanim: -1 })).toBe(true);
+});
+
+test('specReasons names the rules that let a special go, and none when no rule does', () => {
+    const off = { fled: false, bursting: false, volleying: false, chainStun: false, low: false };
+    expect(specReasons(off)).toBe('none');
+    expect(specReasons({ ...off, low: true })).toBe('low');
+    expect(specReasons({ ...off, fled: true, low: true })).toBe('fled+low');
+    expect(specReasons({ fled: true, bursting: true, volleying: true, chainStun: true, low: true })).toBe('fled+burst+volley+chain+low');
+});
+
+test('fledEnds: the flee state ends when the flee hold has run out, no freeze holds the target and it stands within 2 tiles', () => {
+    // fled, gap 1, now 20, flee hold until 14, frozen until 10: ends.
+    expect(fledEnds(true, 1, 20, 14, 10)).toBe(true);
+    expect(fledEnds(true, 2, 20, 14, 10)).toBe(true);
+    // Not while it is still fleeing (the hold has not run out), not while a freeze holds it, not farther than 2 tiles, not when it never fled.
+    expect(fledEnds(true, 1, 13, 14, 10)).toBe(false);
+    expect(fledEnds(true, 1, 20, 14, 25)).toBe(false);
+    expect(fledEnds(true, 3, 20, 14, 10)).toBe(false);
+    expect(fledEnds(false, 1, 20, 14, 10)).toBe(false);
+});
+
+test('ownPoisonHit reads a poison hitsplat (type 2) that is still showing on the own player; carriedPoison holds a poison between fights for 40 ticks', () => {
+    const client = (types: number[], cycles: number[], now = 100) => ({ localPlayer: { damageTypes: types, damageCycles: cycles }, getClientCycle: () => now });
+    expect(ownPoisonHit(client([2, 0, 0, 0], [170, 0, 0, 0]))).toBe(true);
+    // A damage hitsplat (type 1), an old poison hitsplat (its cycle is past), no splat data, no cycle function.
+    expect(ownPoisonHit(client([1, 0, 0, 0], [170, 0, 0, 0]))).toBe(false);
+    expect(ownPoisonHit(client([2, 0, 0, 0], [90, 0, 0, 0]))).toBe(false);
+    expect(ownPoisonHit({})).toBe(false);
+    expect(ownPoisonHit({ localPlayer: { damageTypes: [2], damageCycles: [500] } })).toBe(false);
+    // The carry: a poison noted at tick 50 is carried to a fight that starts at tick 80 (30 ticks later), not to one at tick 91, and not when it was cured.
+    const key = {};
+    noteFightPoison(key, true, 50);
+    expect(carriedPoison(key, 80)).toBe(true);
+    expect(carriedPoison(key, 50 + POISON_HOLD)).toBe(true);
+    expect(carriedPoison(key, 50 + POISON_HOLD + 1)).toBe(false);
+    noteFightPoison(key, false, 60);
+    expect(carriedPoison(key, 70)).toBe(false);
+    expect(carriedPoison({}, 70)).toBe(false);
+    expect(carriedPoison(undefined, 70)).toBe(false);
+    // The splat is returned by its end cycle, so that a loop counts it once: a splat that ends at 170 is the same one at cycle 100, 130 and 160 and a new one ends later.
+    expect(poisonSplat(client([2, 0, 0, 0], [170, 0, 0, 0], 100))).toBe(170);
+    expect(poisonSplat(client([2, 0, 0, 0], [170, 0, 0, 0], 160))).toBe(170);
+    expect(poisonSplat(client([2, 0, 0, 0], [170, 0, 0, 0], 170))).toBe(0);
+    expect(poisonSplat(client([2, 2, 0, 0], [170, 260, 0, 0], 100))).toBe(260);
+    expect(poisonSplat(client([1, 0, 0, 0], [170, 0, 0, 0]))).toBe(0);
+    // The splat that a fight used is carried to the next fight.
+    const k2 = {};
+    noteFightPoison(k2, false, 60, 170);
+    expect(carriedSplat(k2)).toBe(170);
+    expect(carriedSplat({})).toBe(0);
+    expect(carriedSplat(undefined)).toBe(0);
 });

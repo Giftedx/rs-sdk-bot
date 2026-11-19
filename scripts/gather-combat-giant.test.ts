@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {GIANT,CONFIGS,TROOPER_FOODS,giantStyle,giantTraining,giantCredit,giantKillLimit,runGiants,selectGiantWeapon,selectGiantBow,selectGiantArrows,selectedGiantRangedKit,roamTarget,anothersFight,ammoPiles,AMMO_REACH,AMMO_WORTH} from './gather-combat';
+import {GIANT,CONFIGS,TROOPER_FOODS,giantStyle,giantTraining,giantCredit,giantKillLimit,runGiants,selectGiantWeapon,selectGiantBow,selectGiantArrows,selectedGiantRangedKit,roamTarget,anothersFight,ammoPiles,AMMO_REACH,AMMO_WORTH,retreatBudget,retreatWaypoints} from './gather-combat';
 import {questDefinitions} from '../packages/core/src/quest-status';
 import {gearById} from '../packages/planner/src/gear-progression';
 import type {Session} from '../packages/core/src/inprocess';
@@ -164,6 +164,47 @@ test('a stop during the walk out cancels that walk, and the retreat still runs',
             requested=true;await waitTicks(f.session,3);cancelled=signal?.aborted===true;return false;
         }});
         expect(cancelled).toBe(true);expect(r.stop).toBe('stop-file');expect(r.ok).toBe(false);expect(f.attacks()).toBe(0);expect(r.failure??'').not.toContain('arrival unobserved');
+    }finally{f.dispose();}
+});
+
+// Practice: try 1 of the retreat from the camp stopped 118 tiles from the bank, and try 2 ran past the proof's child
+// timer. The retreat's tries share one tick deadline, which aborts the stalled walk and fails the run clearly.
+test('a stalled bank retreat is aborted on its tick deadline and the run fails clearly',async()=>{
+    const f=giantFixture();let fought=false,reason='',began=0,stopped=0,retreats=0;try{
+        const r=await runGiants(f.session,{cap:500,trainSkill:'Strength',targetLevel:90,walk:async(x,z,tol,signal)=>{
+            if(x===GIANT.spot.x&&z===GIANT.spot.z){fought=true;return f.walk(x,z);}
+            if(!fought)return f.walk(x,z);
+            // The walk back stalls at the camp and returns only when it is aborted.
+            retreats++;began=f.session.tick();
+            await new Promise<void>(done=>{if(signal!.aborted)done();else signal!.addEventListener('abort',()=>done(),{once:true});});
+            reason=String(signal!.reason);stopped=f.session.tick();return false;
+        }});
+        expect(r.ok).toBe(false);expect(r.failure).toContain('bank retreat failed at distance=139');
+        expect(reason).toBe('retreat deadline');expect(retreats).toBe(1);
+        expect(retreatBudget(139)).toBe(537);expect(stopped-began).toBeLessThanOrEqual(retreatBudget(139)+3);
+    }finally{f.dispose();}
+},30000);
+
+// Practice: the planned retreat camp->bank took the maze leg 'far walk to 2504,3192,0' and stalled at the camp. The
+// retreat walks the observed outbound tiles back instead, and then the bank.
+test('the giant retreat walks the outbound path in reverse and never the maze waypoint 2504,3192',async()=>{
+    expect(retreatWaypoints([],{x:2545,z:3144},GIANT.bank)).toEqual([]);
+    const out=[[2650,3270],[2640,3255],[2620,3240],[2600,3220],[2580,3200],[2560,3175]] as const;
+    const f=giantFixture();const calls:number[][]=[];try{
+        const r=await runGiants(f.session,{cap:500,trainSkill:'Strength',targetLevel:90,walk:async(x,z)=>{
+            calls.push([x,z]);
+            if(x===GIANT.spot.x&&z===GIANT.spot.z)for(const [sx,sz] of out)await f.walk(sx,sz);
+            return f.walk(x,z);
+        }});
+        expect(r.ok).toBe(true);expect(r.banked.bigBones).toBe(2);expect(r.foodAccounted).toBe(true);expect(r.preserved).toBe(true);
+        expect(calls.some(([x,z])=>x===2504&&z===3192)).toBe(false);
+        const back=[...[...out].reverse().map(([x,z])=>[x,z]),[GIANT.bank.x,GIANT.bank.z]];
+        // Every retreat from the camp: the outbound tiles in reverse, then the bank.
+        const spots=calls.flatMap((c,i)=>c[0]===GIANT.spot.x&&c[1]===GIANT.spot.z?[i]:[]);
+        expect(spots.length).toBeGreaterThanOrEqual(1);
+        for(const i of spots)expect(calls.slice(i+1,i+1+back.length)).toEqual(back);
+        expect(retreatWaypoints([{x:2655,z:3283},...out.map(([x,z])=>({x,z})),GIANT.spot],{x:2600,z:3221},GIANT.bank).map(p=>[p.x,p.z]))
+            .toEqual([[2620,3240],[2640,3255],[2650,3270]]);
     }finally{f.dispose();}
 });
 

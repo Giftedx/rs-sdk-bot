@@ -11,6 +11,23 @@ const idOf = (pack: string, name: string) => { for (const [id, n] of parsePack(r
 const STAFF = idOf('obj', 'staff_of_air'), BOW = idOf('obj', 'shortbow'), SCIM = idOf('obj', 'rune_scimitar');
 const CAST = idOf('seq', 'human_caststrike'), SHOOT = idOf('seq', 'human_bow');
 
+test('the animations of the dragon dagger swings and of every special attack have a style from the content', () => {
+    const style = (name: string) => attackStyleOfAnim(idOf('seq', name));
+    // The swings of the dragon dagger: 376 and 377.
+    expect(style('human_ddagger_lunge')).toBe('melee');
+    expect(style('human_ddagger_hack')).toBe('melee');
+    // The specials: dragon dagger 1062, magic shortbow 1074, dragon spear 1064, dragon longsword 1058, rune thrown axe 1068, dragon halberd 1203.
+    expect(style('puncture')).toBe('melee');
+    expect(style('snapshot')).toBe('ranged');
+    expect(style('shove')).toBe('melee');
+    expect(style('cleave')).toBe('melee');
+    expect(style('chainhit')).toBe('ranged');
+    expect(style('dragon_halberd_special_attack')).toBe('melee');
+    expect([376, 377, 1062, 1074, 1064, 1058, 1068, 1203].map(id => attackStyleOfAnim(id))).toEqual(['melee', 'melee', 'melee', 'ranged', 'melee', 'melee', 'ranged', 'melee']);
+    // Not attacks.
+    for (const name of ['human_blunt_block', 'human_unarmed_def', 'giant_casting']) expect(style(name)).toBeNull();
+});
+
 test('the style of an animation comes from the name of its sequence', () => {
     expect(attackStyleOfSeq('human_caststrike')).toBe('magic');
     expect(attackStyleOfSeq('human_castentangle')).toBe('magic');
@@ -110,12 +127,13 @@ test('the targets of the squad are expected: protected against, never a retreat'
     expect(protectOf(expected.actions, 'Ours1')).toBe('magic');
 });
 
-test('holdProtect: other protect prayers off first, then the wanted one, one input each 3 ticks, by the prayer level', () => {
+test('holdProtect: only the wanted protect prayer is sent (the server turns the others off), one input each 3 ticks, by the prayer level', () => {
     const none = session('Ours1', ME1, [], []);
     holdProtect(none.s, 'magic', 4); expect(none.toggles).toEqual([]);
     holdProtect(none.s, 'magic', 6); expect(none.toggles).toEqual([12]);
     const wrong = session('Ours1', ME1, [], [], { active: Object.assign(Array(15).fill(false), { 14: true }) });
-    holdProtect(wrong.s, 'ranged', 6); expect(wrong.toggles).toEqual([14]);
+    // Protect from Melee is on and Missiles is wanted: one input, Missiles (13); the server turns Melee off.
+    holdProtect(wrong.s, 'ranged', 6); expect(wrong.toggles).toEqual([13]);
     const on = session('Ours1', ME1, [], [], { active: Object.assign(Array(15).fill(false), { 13: true }) });
     holdProtect(on.s, 'ranged', 6); expect(on.toggles).toEqual([]);
     const low = session('Ours1', ME1, [], [], { prayer: 30 });
@@ -237,4 +255,34 @@ test('threatOptions: SQUAD_THREAT_OPTS over the environment settings, defaults, 
     expect(() => threatOptions('{"lose":"x"}', env({}))).toThrow('lose is not a number');
     expect(() => threatOptions('{nope', env({}))).toThrow('not JSON');
     expect(() => threatOptions('[1]', env({}))).toThrow('not a JSON object');
+});
+
+test('KitSwapper: the swap stays while a threat of its style can still hit us (the protect action), though the kit action is gone, and is undone 60 ticks after both are gone', async () => {
+    const used: number[] = [], lines: string[] = [];
+    const s: any = { name: 'Ours1', sdk: { getEquipment: () => [{ id: 1127 }, { id: 1079 }], getInventory: () => [{ id: 1135, slot: 5, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] }, { id: 1127, slot: 6, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] }], sendUseItem: async (slot: number) => { used.push(slot); } } };
+    const kit: any[] = [{ kind: 'kit', member: 'Ours1', style: 'magic', wear: [1135], gain: 26, reason: 'Mage magic' }];
+    const protect: any[] = [{ kind: 'protect', member: 'Ours1', style: 'magic', reason: 'Mage' }];
+    const swapper = new KitSwapper(), tick = async () => true, log = (l: string) => lines.push(l);
+    expect(await swapper.step(s, [...protect, ...kit], 10, tick, log)).toBe(true);
+    // The armour is worn, so the kit action is gone; the mage is still there (a protect action of its style): no restore, however long.
+    for (const now of [40, 100, 400]) expect(await swapper.step(s, protect, now, tick, log)).toBe(false);
+    expect(swapper.active).toBe(true);
+    // A protect action for another style, or for another member, is not the threat of the swap.
+    expect(await swapper.step(s, [{ ...protect[0], style: 'melee' }], 459, tick, log)).toBe(false);
+    expect(await swapper.step(s, [{ ...protect[0], style: 'melee' }], 460, tick, log)).toBe(true);
+    expect(swapper.active).toBe(false);
+    expect(used).toEqual([5, 6]);
+});
+
+test('with the win-chance estimate a lost fight against the squad targets alone has a cooldown too, and the counting rules still leave the targets out of it', () => {
+    const gang = [{ ...MAGE, index: 9, name: 'A' }, { ...MAGE, index: 10, name: 'B', x: 3076 }, { ...MAGE, index: 11, name: 'C', x: 3076, z: 3643 }, { ...MAGE, index: 12, name: 'D', x: 3075, z: 3643 }];
+    const view = [9, 10, 11, 12];
+    const { w, lines } = watch(gang, view, { expected: ['a', 'b', 'c', 'd'] });
+    expect(retreatOf(w.step(5).actions)).toContain('lost fight');
+    w.acted(5);
+    // The squad comes back to the same gang inside the cooldown: no retreat, said once.
+    expect(retreatOf(w.step(200).actions)).toBeNull();
+    expect(lines.filter(l => l.startsWith('THREAT retreat held, cooldown:'))).toHaveLength(1);
+    // After the cooldown (600 ticks from the act) the fight is left again.
+    expect(retreatOf(w.step(700).actions)).toContain('lost fight');
 });

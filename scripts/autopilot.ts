@@ -309,14 +309,14 @@ export function unfilledItems(lines: readonly string[]): number[] {
 }
 export type EndedRecord = { at?: number; reason?: string };
 // `logSize` and `now`: the size of the job's log file and the clock. A job that is not active and whose log has not grown since
-// its assignment never started (the swarm writes a header into the log at each start), so no process can hold an offer for it.
+// its assignment never started (equal size: a log that rotated is smaller than the offset and did start; the swarm writes a header into the log at each start), so no process can hold an offer for it.
 export type JobRunStatus = { active?: boolean; ended?: EndedRecord; logSize?: number; now?: number };
 // How long a written job may wait for the swarm to start it before a pass counts it as never started: the swarm starts a job within
 // its next ticks, and a start that waits for memory or a stop file is no start.
 export const JOB_START_GRACE_MS = 10 * 60_000;
 export function neverStarted(assigned: { offset: number; at?: number } | undefined, status?: JobRunStatus): boolean {
     return !!assigned && !!status && !status.active && status.logSize !== undefined && status.now !== undefined && typeof assigned.at === 'number'
-        && status.logSize <= assigned.offset && status.now - assigned.at > JOB_START_GRACE_MS;
+        && status.logSize === assigned.offset && status.now - assigned.at > JOB_START_GRACE_MS;
 }
 export function readSwarmActiveAccounts(file: string): Set<string> {
     const runs = readJson(file, null);
@@ -877,7 +877,7 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     const planned = plan({ side, accounts, questsDone, owners, gearWants, running: runningAssignments(swarm.jobs.filter(mineMarked), observed, now), bill, templates,templateFor:progression.templateFor, prices: priceTable(items, bill), waste: wasteShare(tickWaste(join(prac, 'swarm-logs'), { latest: true })), taken, retired: new Set([...Object.keys(state.retired), ...unplacedHeld(state.unplaced, now)]), capacity: CAPACITY, shared: SHARED, unfundable: busy, donors, current: new Map(Object.entries(state.assigned).map(([a, s]) => [a.toLowerCase(), s.template])), army, now, unobserved: unobservedAccounts(listed.filter(free), n => observed(n)?.at, now, offlineOf), slots: freeSlots(mergedPlan(swarm, readCoordinatorJobs(root)), withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs), side, keep,
             externalLive.length,
             { running: swarm.jobs.filter((j: any) => mineMarked(j) && j.enabled !== false).flatMap(jobAccounts).filter((n: string) => activeAccounts.has(n.toLowerCase())).length,
-                headroom: headroomWithMargin(memoryHeadroom(freemem() / 2 ** 30, swarm.minFreeGB, pendingStartupCount(readJson(join(prac, 'swarm-runs.json'), []), now) + tradeStarts(open, externalLive, activeAccounts)), writtenNotRunning(swarm.jobs.filter(mineMarked), activeAccounts)) }), holding: activeAccounts, squad: squadInput(swarm, side, owners, n => observed(n)?.at > 0 ? accountFrom(n, side, observed(n), id => byId.get(id)).items : undefined, n => !stopClearable(observed(n), now) || existsSync(join(prac, 'stop-pk-squad'))), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), stock, market: market as Market, mountain: mountainWalk(),
+                headroom: headroomWithMargin(memoryHeadroom(freemem() / 2 ** 30, swarm.minFreeGB, pendingStartupCount(readJson(join(prac, 'swarm-runs.json'), []), now) + tradeStarts(open, externalLive, activeAccounts)), writtenNotRunning(swarm.jobs.filter(mineMarked), activeAccounts)) }), holding: activeAccounts, squad: squadInput(swarm, side, owners, n => observed(n)?.at > 0 ? accountFrom(n, side, observed(n), id => byId.get(id)).items : undefined, n => !stopClearable(observed(n), now) || existsSync(join(prac, 'stop-pk-squad'))), builds: buildCaps(swarm), buildQuests: buildQuests(swarm), buildBefore: buildBefore(swarm), pilots: aioPilots(swarm), pilotFallback: swarm.aioFallback !== false, stock, market: market as Market, mountain: mountainWalk(),
         kitSeq: new Map(Object.entries(state.kitSeq ?? {}).map(([a, n]) => [a.toLowerCase(), n])), noSend: failedSends(orders, receipts, now) });
     for(const assignment of planned)if(assignment.template||assignment.fund||assignment.send)newlyWorking.add(assignment.account.toLowerCase());
     const refined=progression.refine(planned);

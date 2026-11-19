@@ -18,7 +18,7 @@ import { loadOwners } from '../packages/core/src/fleet';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { PVP_DEATH_LIMITS, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, bestFood, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, packGain, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
+import { attackable, bestFood, rewearStart, castableFreeze, defaultSpec, fightPlayer, getObjNames as objNames, isMulti, ITEMS, nextTick, observePlayer, packGain, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit, type Style } from './pk';
 import { armourDefence } from './pk-read';
 import { assessWildernessThreat, connectRadar, hasVarrockTeleport, itemCost, planWildernessEscape, Radar, slashWebThrough, wildernessCombatMargin, wildernessDepth } from './pk-roam';
 import { KitSwapper, protectOf, retreatOf, ThreatWatch } from './pk-threat';
@@ -197,7 +197,7 @@ export async function restock(s: Session, food: number, trip: readonly TripItem[
     const stock = () => [...s.sdk.getBankItems(), ...s.sdk.getInventory()];
     let selected: RequirementResolution | undefined;
     if (choose) { const pick = choose(stock(), equip()); trip = pick.trip; food += pick.moreFood; selected = pick.resolution; }
-    const fail = async (r: RequirementResolution) => { await s.bot.closeBank(); return 'bank lacks trip requirements ' + JSON.stringify(r.shortages); };
+    const fail = async (r: RequirementResolution) => { await s.bot.closeBank(); return 'bank lacks trip requirements ' + JSON.stringify(r.shortages) + ` (${shortageText(r.shortages, id => objNames().get(id))})`; };
     selected ??= resolveTrip(stock(), trip, equip());
     if (!selected.ok) return fail(selected);
     // Resolve the trip before optional boosts. A boost never consumes declared
@@ -265,6 +265,15 @@ export async function eatUp(s: Session, stop: () => boolean): Promise<number> {
     }
     return s.sdk.getState()?.player?.hp ?? 0;
 }
+// The ids of the pieces of the starting kit that are in the pack, once each, in the order of the kit.
+export function kitToWear(wornAtStart: readonly ItemCount[], inventory: readonly { id: number }[]): number[] {
+    const inPack = new Set(inventory.map(i => i.id));
+    return [...new Set(wornAtStart.map(p => p.id))].filter(id => inPack.has(id));
+}
+// The shortages of a trip in words, for the log: each item by name with what the trip needs and what the bank holds.
+export function shortageText(shortages: readonly { id: number; unit?: string; required: number; available: number }[], nameOf: (id: number) => string | undefined): string {
+    return shortages.map(x => `${nameOf(x.id)?.replace(/_/g, ' ') ?? 'item ' + x.id}: ${x.required} ${x.unit ?? 'items'} needed, ${x.available} in the bank`).join('; ');
+}
 // After a death: wait for the new life, walk to the bank, take sharks and the pieces that the account wore when the hunt began
 // (what the bank holds), wear them and eat up from 1 Hitpoints. The caller then restocks the trip. A piece that the bank lacks
 // is named in `missing`: the trip check of the restock ends the run when the trip cannot be filled.
@@ -316,7 +325,9 @@ export async function rekitAfterDeath(s: Session, o: { lifeBefore: number | unde
         if (await take(piece.id, Math.max(1, piece.count)) > 0) taken.push(piece.id); else record.missing.push(piece.id);
     }
     await s.bot.closeBank();
-    for (const id of taken) {
+    // Every piece of the starting kit that the pack holds goes on, the ones taken from the bank and the ones that the death kept
+    // (an unskulled account keeps its 3 priciest items, and they respawn in the pack): a trip restock banks the whole pack.
+    for (const id of kitToWear(o.wornAtStart, s.sdk.getInventory())) {
         const item = s.sdk.getInventory().find(i => i.id === id), op = item?.optionsWithIndex?.find(x => WEAR_OPTION.test(x.text));
         if (item && op) { await s.sdk.sendUseItem(item.slot, op.opIndex); await nextTick(s); }
     }
@@ -558,6 +569,8 @@ export async function hunt(s: Session, o: HuntOptions) {
                 ...(process.env.HUNT_NOFOOD ? { noFoodAt: Number(process.env.HUNT_NOFOOD) } : {}),
             });
             log(`HUNT fight ${r.outcome} ${JSON.stringify(r)}`);
+            // The armour that a freeze stripped goes back on (pk.ts rewearStart): not after a death or a dropped session.
+            if (r.outcome !== 'died' && r.outcome !== 'session ended') await rewearStart(s, wornAtStart.map(w => w.id), log);
             if (r.outcome === 'kill') {
                 tally.kills++; const pack = s.sdk.getInventory().map(i => ({ id: i.id, count: i.count }));
                 const n = await loot(s, r.targetAt ?? target, over); tally.looted += n;
