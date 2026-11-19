@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795102873129,
+ "at": 1795102935010,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -373,25 +373,23 @@
   },
   {
    "account": "SporranDip",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
    "env": {
-    "ITEM_ID": "536",
-    "QUANTITY": "273",
-    "EXPECTED_OWNED": "6",
-    "LIMIT_PRICE": "7300",
-    "CASH_RESERVE": "5000",
-    "ORDER_MS": "1200000",
-    "ORDER_KEY": "prayer99-sporrandip-dragonbones273",
+    "BONE_ID": "536",
+    "MAX_BURY": "273",
+    "BONE_RESERVE": "6",
+    "CAP": "3000",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-93efeedc-f750-40d6-bfbb-01aed1d4b2d3"
+    "COORDINATOR_RUN_ID": "task-6beb8fc8-b0bf-45e0-9e7f-5a673f58671a"
    },
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
-   "goal": "run-buy-sporrandip-dragon-bones-273-funded [task-93efeedc-f750-40d6-bfbb-01aed1d4b2d3]",
-   "role": "supply"
+   "goal": "run-prayer-sporrandip-99 [task-6beb8fc8-b0bf-45e0-9e7f-5a673f58671a]",
+   "role": "helper"
   }
  ],
  "army": [
@@ -430,8 +428,7 @@
   "kiltlifter",
   "knightrider",
   "knightstick",
-  "quickhandjob",
-  "sporrandip"
+  "quickhandjob"
  ],
  "builds": {
   "NabTheKnob": "tribrid",
