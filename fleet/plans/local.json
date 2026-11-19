@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795097516535,
+ "at": 1795097577820,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -354,25 +354,23 @@
   },
   {
    "account": "Hocuspokeus",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
    "env": {
-    "ITEM_ID": "536",
-    "QUANTITY": "253",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "7300",
-    "CASH_RESERVE": "10000",
-    "ORDER_MS": "1200000",
-    "ORDER_KEY": "prayer99-hocuspokeus-dragonbones253",
+    "BONE_ID": "536",
+    "MAX_BURY": "253",
+    "BONE_RESERVE": "0",
+    "CAP": "3000",
     "LOOT_WATCH": "0",
     "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-0f3230dc-f71b-4a12-9ce7-cdc51607e8d4"
+    "COORDINATOR_RUN_ID": "task-35302500-2786-495f-81c1-a7ef725cbc66"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
-   "goal": "run-buy-hocuspokeus-dragon-bones-99 [task-0f3230dc-f71b-4a12-9ce7-cdc51607e8d4]",
-   "role": "supply"
+   "goal": "run-prayer-hocuspokeus-99 [task-35302500-2786-495f-81c1-a7ef725cbc66]",
+   "role": "helper"
   }
  ],
  "army": [

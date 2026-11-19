@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795097456107-swordinhand-ballspinner-bones",
+ "account": "Ballspinner",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 30,
+ "claim": "619967c6-0c53-4e64-9485-2ad44e1264b7",
+ "count": 0,
+ "ok": false,
+ "at": 1795097544100,
+ "detail": "trade claimed"
+}

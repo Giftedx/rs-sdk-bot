@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795097456107-moneyshot-fingerblastr-staffoffire",
+ "account": "Fingerblastr",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "f92cb52e-f2bc-42b0-80f2-a92a9422f22e",
+ "count": 1,
+ "ok": true,
+ "at": 1795097575587,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795097574775
+ },
+ "logout": {
+  "attemptId": "1795097539438-0000009756-0000000001",
+  "at": 1795097575577,
+  "sha256": "e397696b9b89a552b0670ca2b941a79aed525e548d1e7b34482853bb32358db5"
+ },
+ "screen": true
+}
