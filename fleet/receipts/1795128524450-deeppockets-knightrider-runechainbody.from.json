@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795128524450-deeppockets-knightrider-runechainbody",
+ "account": "Deeppockets",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "e03210b2-01b3-457a-b541-4309b7337896",
+ "count": 0,
+ "ok": false,
+ "at": 1795128714722,
+ "detail": "trade claimed"
+}
