@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795096265547,
+ "at": 1795096298739,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -348,7 +348,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-1b72d859-6617-4ec9-a411-d90d06e513ee"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-buy-swordinhand-dragon-bones-99 [task-1b72d859-6617-4ec9-a411-d90d06e513ee]",
    "role": "supply"
