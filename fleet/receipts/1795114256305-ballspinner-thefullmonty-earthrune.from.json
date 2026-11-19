@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795114256305-ballspinner-thefullmonty-earthrune",
  "account": "Ballspinner",
  "partner": "TheFullMonty",
@@ -10,8 +10,22 @@
  "item": "Earth rune",
  "requested": 53,
  "claim": "3dbef7c2-5e4c-4623-ac9a-193208638e8e",
- "count": 0,
- "ok": false,
- "at": 1795114361443,
- "detail": "trade claimed"
+ "count": 53,
+ "ok": true,
+ "at": 1795114531282,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 53,
+  "after": 0
+ },
+ "bank": {
+  "count": 53,
+  "at": 1795114515305
+ },
+ "logout": {
+  "attemptId": "1795114361453-0000018512-0000000001",
+  "at": 1795114531270,
+  "sha256": "44a231b7edca65f1c122fc0f6e157719267b3616191b9faf68e6b450e7ea4f6c"
+ },
+ "screen": true
 }
