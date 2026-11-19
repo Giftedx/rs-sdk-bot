@@ -159,14 +159,17 @@ alternative, if its inputs land on time (check: logs stay constant).
 - Per cycle with `s.direct` (`packages/core/src/inprocess.ts`): T `useItemOnItem(knife, log)` and
   `clickComponent(skill_multi3:make1_a)`; T+1 `dropItem(fish)` or `closeModal`; T+2 `interactNpc(spot, visible op)`.
 - Count logs as a health check. If logs drop, the inputs are splitting across ticks: cut load or stop.
-- Level-up dialogs need no handling: the knife and the spot click close them.
+- Send a close-modal request first in tick T of each cycle. A level-up leaves the levelup script paused on its chat
+  box (`levelup.rs2` `p_pausebutton`) with protected access, and the server refuses the drop and the knife
+  (`Player.ts` `runScript`) until a close ends that script (`Player.ts` `closeModal`). The knife and the spot click
+  do not close it: without the first close, the cycle after each level-up gives no roll.
 
 ## The knife reset in the staged fishing library
 
 `scripts/microbot-b-fishing.ts` `runStagedFishing` with `knife: {make1, drop}` (env `FISH_KNIFE=1`, `FISH_DROP=1`;
 the helper is `scripts/knife-reset.ts`). `FISH_KNIFE_RESET` gives each method its cycle from its attempt label:
-`same` (fly, river bait, lava: drop, knife, Make 1, click and a close in tick T, roll in T+2) or `delayed` (net, sea
-bait, cage, harpoon, karambwanji, big net: knife in T, drop or close in T+1, click in T+2). Karambwan has none (it
+`same` (fly, river bait, lava: close, drop, knife, Make 1, click and a close in tick T, roll in T+2) or `delayed` (net, sea
+bait, cage, harpoon, karambwanji, big net: close and knife in T, drop or close in T+1, click in T+2). Karambwan has none (it
 waits `p_delay(5)`, `fishing_spots/tbwt.rs2:123`). The worker never clicks the spot without a cut, walks to a tile
 beside the spot (not a corner), and looks for a spot within 15 tiles. The protected-kit check stops the batch if a log
 is cut. `microbot-b-fishing.test.ts` checks the family of each method against the server label.
@@ -191,7 +194,7 @@ cycle, and 156 of 157 clicks ran (one refused at t=446, a spot about to move). C
 against 0.27 at Fishing 70. The low cage seeds are luck of the lockstep random seed or a cause not found: every
 click in the trace ran.
 
-Fishing 74-99 at Lumbridge (822,421 XP, the whole fly step): `extra:fishing-lumbridge-fly-74-99` (`FISH_KNIFE=1 FISH_DROP=1 FISH_UNTIL_LEVEL=99`, 1,000 feathers) takes 2,282, 2,309 and 2,286 ticks at seeds 7, 8, 9 (lockstep, `bun run bench extra:fishing-lumbridge-fly-74-99 --seeds 7,8,9 --seed-jobs 3`): 562 to 565 catches in 4.05 to 4.07 ticks each, 357.9 to 362.1 XP a tick, 8 to 14 stands beside a spot that moved. The cycle number below (about 2,000 from 78) holds 3.06 ticks a cycle and no stands; the run adds the stands and the catches that the roll misses. The 150 ms wall-clock engine gives 2,356, 2,305, 2,377.
+Fishing 74-99 at Lumbridge (822,421 XP, the whole fly step): `extra:fishing-lumbridge-fly-74-99` (`FISH_KNIFE=1 FISH_DROP=1 FISH_UNTIL_LEVEL=99`, 1,000 feathers) takes 2,213, 2,228 and 2,214 ticks at seeds 7, 8, 9 (lockstep, `bun scripts/hosted-bench.ts extra:fishing-lumbridge-fly-74-99 --seeds 7,8,9`): 562 to 566 catches in 3.91 to 3.93 ticks each, 370.9 to 373.0 XP a tick, 8 to 14 stands beside a spot that moved (12 to 32 ticks in all, `FISH_STAND`). `FISH_CYCLES` splits the cycles: 698 to 703 steady, 24 after a level-up (16 to 22 catches), 6 to 9 in which the spot moved (no catch). Without the close first in each cycle the 24 cycles after a level-up gave no catch at all three seeds, and the run took 2,282, 2,309 and 2,286 ticks. The cycle number below (about 2,000 from 78) holds 3.06 ticks a cycle and no stands; the run adds the stands and the catches that the roll misses. The 150 ms wall-clock engine gives 2,356, 2,305, 2,377.
 
 Fishing 78-99 at Lumbridge (765,957 XP, `packages/planner/src/curve.ts`): with one roll each 3 ticks, `stat_random`
 gives 1,957 ticks (652 rolls); at the measured 3.06 ticks a cycle, about 2,000. The record route plans 2,054 and took
