@@ -1,0 +1,22 @@
+{
+ "id": "1795112422345-mightyrod-swordinhand",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "Swordinhand",
+ "item": "coins",
+ "count": 28768,
+ "start": 1795112422345,
+ "end": 1795114822345,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
