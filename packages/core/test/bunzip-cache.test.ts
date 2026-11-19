@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdtempSync, readdirSync, writeFileSync, readFileSync, utimesSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { BUNZIP_KEEP_FILES, BUNZIP_MIN_BYTES, cachedBunzipSource } from '../src/bunzip-cache';
+import { BUNZIP_KEEP_FILES, BUNZIP_MIN_BYTES, BUNZIP_TMP_MAX_AGE_MS, cachedBunzipSource } from '../src/bunzip-cache';
 
 // A stand-in for the vendor function: it counts its calls and returns the input reversed.
 const vendor = 'export function bunzip2(bytes, checkMagic = false, checkCRC = false) { globalThis.__bzCalls = (globalThis.__bzCalls ?? 0) + 1; return Uint8Array.from(bytes).reverse(); }\n';
@@ -42,6 +42,21 @@ test('an archive unpacks once: the next call reads the kept bytes, a damaged fil
         const files = readdirSync(dir).length;
         mod.bunzip2(new Uint8Array([1, 2, 3]));
         expect(readdirSync(dir)).toHaveLength(files);
+    } finally { if (prior === undefined) delete process.env.BUNZIP_CACHE_DIR; else process.env.BUNZIP_CACHE_DIR = prior; }
+});
+
+test('a vendor file without an exported bunzip2 is served as it is, and a temporary file over an hour old is removed on a write', async () => {
+    const renamed = 'export function bunzip3(bytes) { return bytes; }\n';
+    expect(cachedBunzipSource(renamed, '/cache')).toBe(renamed);
+    const dir = mkdtempSync(join(tmpdir(), 'bunzip-')), prior = process.env.BUNZIP_CACHE_DIR;
+    process.env.BUNZIP_CACHE_DIR = dir;
+    try {
+        const old = join(dir, 'abc.bin.123.tmp'), young = join(dir, 'def.bin.456.tmp');
+        writeFileSync(old, 'x'); writeFileSync(young, 'y');
+        const longAgo = new Date(Date.now() - BUNZIP_TMP_MAX_AGE_MS - 60_000);
+        utimesSync(old, longAgo, longAgo);
+        (await load(dir, 'c')).bunzip2(bytes(3));
+        expect(readdirSync(dir).filter(f => f.endsWith('.tmp'))).toEqual(['def.bin.456.tmp']);
     } finally { if (prior === undefined) delete process.env.BUNZIP_CACHE_DIR; else process.env.BUNZIP_CACHE_DIR = prior; }
 });
 

@@ -10,10 +10,11 @@ import { resolve } from 'node:path';
 
 export const BUNZIP_MIN_BYTES = 16 * 1024;
 export const BUNZIP_KEEP_FILES = 8;
+export const BUNZIP_TMP_MAX_AGE_MS = 60 * 60 * 1000;
 
 export function cachedBunzipSource(original: string, dir: string): string {
     const raw = original.replace('export function bunzip2(', 'export function bunzip2Raw(');
-    if (raw === original) throw Error('BZip2.js has no exported bunzip2');
+    if (raw === original) return original; // the SDK renamed bunzip2: serve the vendor module as it is
     return `${raw}
 import { createHash as __bzHash } from 'node:crypto';
 import { existsSync as __bzExists, mkdirSync as __bzMkdir, readdirSync as __bzList, readFileSync as __bzRead, renameSync as __bzRename, statSync as __bzStat, unlinkSync as __bzUnlink, writeFileSync as __bzWrite } from 'node:fs';
@@ -39,6 +40,7 @@ export function bunzip2(bytes, checkMagic = false, checkCRC = false) {
             __bzRename(temporary, file);
             const files = __bzList(dir).filter(f => f.endsWith('.bin')).map(f => ({ f, at: __bzStat(dir + '/' + f).mtimeMs })).sort((a, b) => b.at - a.at);
             for (const old of files.slice(${BUNZIP_KEEP_FILES})) __bzUnlink(dir + '/' + old.f);
+            for (const f of __bzList(dir)) if (f.endsWith('.tmp')) { try { if (Date.now() - __bzStat(dir + '/' + f).mtimeMs > ${BUNZIP_TMP_MAX_AGE_MS}) __bzUnlink(dir + '/' + f); } catch { /* gone */ } }
         }
     } catch { /* an optional cache */ }
     return out;
@@ -52,8 +54,11 @@ const CACHE_DIR = resolve(repoRoot, '.practice', 'cache', 'bunzip').replace(/\\/
 plugin({
     name: 'bunzip-cache',
     setup(build) {
-        build.onLoad({ filter: /[\\/]webclient[\\/]src[\\/]io[\\/]BZip2\.js$/ }, async args => ({
-            contents: cachedBunzipSource(await Bun.file(args.path).text(), CACHE_DIR), loader: 'js',
-        }));
+        // A throw in onLoad stops the web client from loading, so every bot would fail: on any fault serve the vendor
+        // file as it is, or (when it cannot be read here) let Bun load it by its own path.
+        build.onLoad({ filter: /[\\/]webclient[\\/]src[\\/]io[\\/]BZip2\.js$/ }, async args => {
+            try { return { contents: cachedBunzipSource(await Bun.file(args.path).text(), CACHE_DIR), loader: 'js' }; }
+            catch { return undefined; }
+        });
     },
 });
