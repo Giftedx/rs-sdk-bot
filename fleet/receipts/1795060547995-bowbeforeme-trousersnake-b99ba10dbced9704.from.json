@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795060547995-bowbeforeme-trousersnake-b99ba10dbced9704",
+ "account": "BowBeforeMe",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 66,
+ "claim": "28fe43d1-5443-4d92-8ed6-cc9e8f97f59f",
+ "count": 0,
+ "ok": false,
+ "at": 1795060554160,
+ "detail": "trade claimed"
+}
