@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795114256305-ballspinner-thefullmonty-earthrune",
+ "account": "Ballspinner",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 53,
+ "claim": "3dbef7c2-5e4c-4623-ac9a-193208638e8e",
+ "count": 0,
+ "ok": false,
+ "at": 1795114361443,
+ "detail": "trade claimed"
+}
