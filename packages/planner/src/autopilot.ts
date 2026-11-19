@@ -570,11 +570,13 @@ function weaponStageFor(a: Acct, inp: Inputs): { id: string; item: string; goal:
 type KitStyles = { melee: boolean; ranged: boolean };
 const KIT_STAGE_STYLE: Readonly<Record<string, CombatFocus>> = Object.fromEntries([...WEAPON_STAGES.map(s => [s.id, 'melee']),
     [RUNE_ARMOUR_BAND, 'melee'], [DHIDE_ARMOUR_BAND, 'ranged'], [BOW_STAGE, 'ranged'], [AMMO_STAGE, 'ranged']] as [string, CombatFocus][]);
-export function kitStyle(a: Acct, inp: Pick<Inputs, 'templates' | 'current'>): CombatFocus | null {
-    const now = inp.current?.get(a.name.toLowerCase());
+export function kitStyle(a: Acct, inp: Pick<Inputs, 'templates' | 'current' | 'running'>): CombatFocus | null {
+    const lower = a.name.toLowerCase(), now = inp.current?.get(lower);
     // A kit buy that runs keeps the style of its own stage, so the account does not change its buy when its band changes.
-    const staged = now?.startsWith(KIT_BUY) ? KIT_STAGE_STYLE[now.slice(KIT_BUY.length)] : undefined;
-    return staged ?? accountStyle(a, inp.templates, now, true);
+    // A finished bow buy leads on to its arrows and dragonhide. A finished melee buy does not lead on to the rest of the rune
+    // set: an account that left its melee band takes the style of its next band.
+    const stage = now?.startsWith(KIT_BUY) ? KIT_STAGE_STYLE[now.slice(KIT_BUY.length)] : undefined;
+    return (stage && (stage === 'ranged' || inp.running?.has(lower)) ? stage : undefined) ?? accountStyle(a, inp.templates, now, true);
 }
 const kitStylesOf = (style: CombatFocus | null): KitStyles => ({ melee: style === null || style === 'melee', ranged: style === null || style === 'ranged' });
 export type KitStage = { id: string; goal: string; items: { item: string; count: number }[] };

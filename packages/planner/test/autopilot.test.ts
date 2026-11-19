@@ -3346,6 +3346,10 @@ describe('army kit stages follow the style that the account trains', () => {
         expect(ammo.template!.id).toBe(KIT_BUY + 'army-weapon-ammo');
         expect(ammo.template!.args![0]).toContain(`ITEM_ID=892 QUANTITY=${AMMO_BATCH}`);
         // A kit buy that runs keeps the style of its stage, so the buy does not change with the band.
+        const idle = run({}, { ...kit, 'rune scimitar': 1, 'rune chainbody': 1 }, KIT_BUY + 'army-armour-rune', { templates: ranged });
+        // A finished rune-armour buy does not lead on to the rest of the rune set for a Ranged trainer; a running one keeps its stage.
+        expect(idle.template!.id).toBe(KIT_BUY + 'army-weapon-bow');
+        expect(run({}, { ...kit, 'rune scimitar': 1, 'rune chainbody': 1 }, KIT_BUY + 'army-armour-rune', { templates: ranged, running: new Set(['fighter']) }).template!.id).toBe(KIT_BUY + 'army-armour-rune');
         expect(run({}, kit, KIT_BUY + 'army-weapon-bow', { templates: ranged }).template!.id).toBe(KIT_BUY + 'army-weapon-bow');
         for (const t of [bow, ammo, run({}, { ...kit, 'magic shortbow': 1, 'rune arrow': 300 }, 'army-trooper-ranged-99', { templates: ranged })])
             expect(t.template?.id).not.toMatch(/army-armour-rune|army-weapon-rune|army-weapon$/);
