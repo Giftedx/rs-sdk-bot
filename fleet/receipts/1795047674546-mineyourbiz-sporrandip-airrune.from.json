@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795047674546-mineyourbiz-sporrandip-airrune",
+ "account": "MineYourBiz",
+ "partner": "SporranDip",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 50,
+ "claim": "09704ac2-9573-4c91-9b7a-8197a81b3e28",
+ "count": 0,
+ "ok": false,
+ "at": 1795047784881,
+ "detail": "trade claimed"
+}
