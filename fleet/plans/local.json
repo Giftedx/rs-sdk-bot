@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795070143988,
+ "at": 1795070295260,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -224,36 +224,6 @@
    ]
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "aubury",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "water rune",
-    "STOCK_TARGET": "1507",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "12200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "12000",
-    "AUTOPILOT_ORDER": "[7]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1507}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
-   "role": "bank",
-   "template": "squad-water-aubury",
-   "autopilot": "local",
-   "resources": [
-    "shop:aubury"
-   ]
-  },
-  {
    "account": "Masterbaiter",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -283,57 +253,90 @@
    ]
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/aio.ts",
-   "args": [
-    "fighter",
-    "wizard",
-    "10000",
-    "wizard",
-    "MAX_KILLS=200",
-    "UNTIL_ITEM=water talisman"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "kill wizards at the Wizards' Tower until a water talisman drops, for the gang squad's water runes",
-   "role": "combat",
-   "template": "squad-water-talisman",
-   "autopilot": "local",
-   "resources": [
-    "fighter:wizards-tower",
-    "aio:water-altar"
-   ]
-  },
-  {
-   "account": "Dipstick",
+   "account": "BraveHardon",
    "script": "scripts/shop-buyer.ts",
    "args": [
-    "magic_guild",
+    "jiminua",
     "1200"
    ],
    "env": {
-    "ITEMS": "nature rune",
-    "STOCK_TARGET": "590",
+    "ITEMS": "antipoison",
+    "STOCK_TARGET": "25",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
-    "FLOAT": "22480",
+    "FLOAT": "3656",
     "COIN_RESERVE": "200",
-    "MAX_SPEND": "22280",
-    "AUTOPILOT_ORDER": "[33]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"561\":590}}"
+    "MAX_SPEND": "3456",
+    "AUTOPILOT_ORDER": "[19]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":25}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy nature runes at the Magic Guild for the gang squad",
+   "goal": "buy antipoison(3) at Jiminua's in Karamja for the gang squad",
    "role": "bank",
-   "template": "squad-nature-guild",
+   "template": "squad-antipoison-jiminua",
    "autopilot": "local",
    "resources": [
-    "shop:magic_guild"
+    "shop:jiminua"
+   ]
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "aubury",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "water rune",
+    "STOCK_TARGET": "1445",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "11704",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "11504",
+    "AUTOPILOT_ORDER": "[7]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1445}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
+   "role": "bank",
+   "template": "squad-water-aubury",
+   "autopilot": "local",
+   "resources": [
+    "shop:aubury"
+   ]
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
    ]
   }
  ],
