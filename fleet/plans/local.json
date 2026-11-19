@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795097437422,
+ "at": 1795097465895,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -225,21 +225,31 @@
   },
   {
    "account": "Masterbaiter",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "dargaud",
+    "1200"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "ITEMS": "rune arrow",
+    "STOCK_TARGET": "637",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "320200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "320000",
+    "AUTOPILOT_ORDER": "[237]"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "repeat": false,
+   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
+   "role": "bank",
+   "template": "squad-arrows-dargaud",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "shop:dargaud"
    ]
   },
   {
@@ -271,6 +281,28 @@
    "resources": [
     "shop:aubury"
    ]
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "20",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying the held bones",
+   "role": "combat",
+   "template": "army-bury-prayer-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "CoinCock",
@@ -335,7 +367,7 @@
     "RANDOM_EVENTS": "0",
     "COORDINATOR_RUN_ID": "task-8cb87198-ca89-4ef5-a9de-091ca6f64f56"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-prayer-pickpockdick-99 [task-8cb87198-ca89-4ef5-a9de-091ca6f64f56]",
    "role": "helper"

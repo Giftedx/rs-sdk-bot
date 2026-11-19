@@ -1,0 +1,22 @@
+{
+ "id": "1795097456107-moneyshot-fingerblastr-staffoffire",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Moneyshot",
+ "to": "Fingerblastr",
+ "item": "Staff of fire",
+ "count": 1,
+ "start": 1795097456107,
+ "end": 1795099856107,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
