@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795112191769,
+ "at": 1795112402006,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -296,37 +296,37 @@
    ]
   },
   {
-   "account": "Moneyshot",
+   "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
-    "magic_guild",
+    "aubury",
     "1200"
    ],
    "env": {
-    "ITEMS": "nature rune",
-    "STOCK_TARGET": "657",
+    "ITEMS": "water rune",
+    "STOCK_TARGET": "767",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
-    "FLOAT": "25120",
+    "FLOAT": "6280",
     "COIN_RESERVE": "200",
-    "MAX_SPEND": "24920",
-    "AUTOPILOT_ORDER": "[34]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"561\":657}}"
+    "MAX_SPEND": "6080",
+    "AUTOPILOT_ORDER": "[7]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":767}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy nature runes at the Magic Guild for the gang squad",
+   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
    "role": "bank",
-   "template": "squad-nature-guild",
+   "template": "squad-water-aubury",
    "autopilot": "local",
    "resources": [
-    "shop:magic_guild"
+    "shop:aubury"
    ]
   },
   {
-   "account": "SporranBulge",
+   "account": "CoinCock",
    "script": "scripts/gather-combat.ts",
    "args": [
     "3000",
@@ -334,22 +334,44 @@
    ],
    "env": {
     "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "60",
+    "TARGET_LEVEL": "45",
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Strength to 60 on the Ardougne cows",
+   "goal": "train Strength to 45 on the Ardougne cows",
    "role": "combat",
-   "template": "army-cow-strength-60",
+   "template": "army-cow-strength-45",
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying the held bones",
+   "role": "combat",
+   "template": "army-bury-prayer-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "Ballspinner",
@@ -366,7 +388,7 @@
     "RANDOM_EVENTS": "0",
     "COORDINATOR_RUN_ID": "task-d4316b89-2774-4990-8a80-5c6d8e32fe7b"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-prayer-ballspinner-99 [task-d4316b89-2774-4990-8a80-5c6d8e32fe7b]",
    "role": "helper"
