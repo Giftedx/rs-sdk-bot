@@ -141,20 +141,22 @@ async function knifeFishing(d:FishDriver,o:FishBatchOptions,state:()=>BotWorldSt
   const click:FishAction={type:'interactNpc',npcIndex:spot.index,optionIndex:profile.op};
   cycles++;
   const lv=s.skills.find(k=>k.name==='Fishing')?.baseLevel??0,x0=xp(s),kind=lv>lastLevel?'levelUp':'steady';lastLevel=lv;
-  // The close goes first in tick T. A level-up in the roll of the last cycle leaves the levelup script paused on its
-  // chat box (levelup.rs2 p_pausebutton) with protected access, and the server refuses the drop and the knife of a
-  // protected script (Player.ts runScript); the close ends that script and the protected access (Player.ts
-  // closeModal). Without it the cycle after each level-up gives no roll: 24 of 24 such cycles caught nothing from
-  // Fishing 74 to 99 (FISH_CYCLES, extra:fishing-lumbridge-fly-74-99 seeds 7, 8, 9).
+  // Each cycle sends a close in tick T+1. A level-up in the roll of the last cycle opens the levelup chat box
+  // (levelup.rs2 if_openchat, p_pausebutton) in the queue pass of tick T, after the inputs of T, and the open box
+  // stops the spot interaction (engine trace: access=false at T, T+1 and T+2, no roll). A close request in T+1 closes
+  // it at the queue pass of T+1 (Player.ts processQueues), before the interaction, so the roll comes at T+2. A close
+  // in T cannot: it runs before the box opens. Without the close in T+1 the cycle after each of the 24 level-ups from
+  // Fishing 74 to 99 caught nothing (FISH_CYCLES, extra:fishing-lumbridge-fly-74-99 seeds 7, 8, 9).
   const close:FishAction={type:'closeModal'};
   if(reset==='same'){
-   // The drop goes first after the close: it ends the pending action (OpHeldHandler.ts:54-55). The close after the
-   // click clears the queued cut at the queue pass of this tick (Player.ts:998-1000) when the server refuses the click
-   // (a spot about to move is delayed, OpNpcHandler.ts:27), and leaves the interaction alone.
-   await send([close,...drops,...cut,click,close]);await d.step();observe(n);await d.step();observe(0);await d.step();
+   // The drop goes first: it ends the pending action (OpHeldHandler.ts:54-55). The close after the click clears the
+   // queued cut at the queue pass of this tick (Player.ts:998-1000) when the server refuses the click (a spot about to
+   // move is delayed, OpNpcHandler.ts:27), and leaves the interaction alone. These are 5 inputs, the most that the
+   // engine reads from a player in one tick (ClientGameProtCategory USER_EVENT).
+   await send([...drops,...cut,click,close]);await d.step();observe(n);await send([close]);await d.step();observe(0);await d.step();
   }else{
-   await send([close,...cut]);await d.step();observe(0);
-   await send(drops.length?drops:[close]);await d.step();s=observe(n);
+   await send(cut);await d.step();observe(0);
+   await send([...drops,close]);await d.step();s=observe(n);
    // A spot that moved gets no click (it would walk and roll late); the next cycle stands beside it first.
    if(s.nearbyNpcs.some(m=>m.index===spot.index&&m.x===spot.x&&m.z===spot.z))await send([click]);
    await d.step();
