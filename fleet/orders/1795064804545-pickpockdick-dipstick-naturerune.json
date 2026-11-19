@@ -1,0 +1,22 @@
+{
+ "id": "1795064804545-pickpockdick-dipstick-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PickpockDick",
+ "to": "Dipstick",
+ "item": "Nature rune",
+ "count": 348,
+ "start": 1795064804545,
+ "end": 1795067204545,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
