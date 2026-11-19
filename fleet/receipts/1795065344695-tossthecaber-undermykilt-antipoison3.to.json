@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795065344695-tossthecaber-undermykilt-antipoison3",
+ "account": "UnderMyKilt",
+ "partner": "TossTheCaber",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 4,
+ "claim": "72204b19-59fb-4f71-a13b-3c58bb5aff7b",
+ "count": 0,
+ "ok": false,
+ "at": 1795065410534,
+ "detail": "trade claimed"
+}
