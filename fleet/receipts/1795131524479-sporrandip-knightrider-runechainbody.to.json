@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795131524479-sporrandip-knightrider-runechainbody",
+ "account": "KnightRider",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "d48ba016-e486-4dfd-88c7-84887ee6579a",
+ "count": 0,
+ "ok": false,
+ "at": 1795131589762,
+ "detail": "trade claimed"
+}
