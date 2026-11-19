@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795054344976-mmthv2350-woodpecker-naturerune",
+ "account": "Woodpecker",
+ "partner": "mmthv2350",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 155,
+ "claim": "e2527c51-cd35-4189-a03a-768551cfcfbb",
+ "count": 0,
+ "ok": false,
+ "at": 1795054900957,
+ "detail": "trade claimed"
+}
