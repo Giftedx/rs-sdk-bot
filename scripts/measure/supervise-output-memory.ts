@@ -8,7 +8,7 @@ const megabytes = Number(process.argv[mode === 'whole' || mode === 'kept' ? 3 : 
 const childScript = `const f='x'.repeat(199)+'\\n';const block=f.repeat(5000);for(let i=0;i<${Math.ceil(megabytes)};i++)process.stdout.write(block);process.stdout.write('LEDGER ticks=900\\nRESULT ok done\\n')`;
 
 if (mode === 'whole' || mode === 'kept') {
-    const p = Bun.spawn(['bun', '-e', childScript], { stdout: 'pipe', stderr: 'inherit' });
+    const p = Bun.spawn(['bun', '-e', childScript], { stdout: 'pipe', stderr: 'inherit', windowsHide: true });
     const quiet = process.stdout.write.bind(process.stdout);
     process.stdout.write = (() => true) as typeof process.stdout.write;
     let peak = 0;
@@ -27,6 +27,6 @@ if (mode === 'whole' || mode === 'kept') {
     process.exit(0);
 }
 for (const m of ['whole', 'kept']) {
-    const p = Bun.spawnSync(['bun', import.meta.path, m, String(megabytes)], { stdout: 'pipe', stderr: 'inherit' });
+    const p = Bun.spawnSync(['bun', import.meta.path, m, String(megabytes)], { stdout: 'pipe', stderr: 'inherit', windowsHide: true });
     process.stdout.write(p.stdout.toString());
 }
