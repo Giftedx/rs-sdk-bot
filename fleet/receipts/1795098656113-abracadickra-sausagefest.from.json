@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795098656113-abracadickra-sausagefest",
+ "account": "Abracadickra",
+ "partner": "Sausagefest",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 73380,
+ "claim": "736c0f29-0b7e-406b-897a-e7ee99e71eee",
+ "count": 0,
+ "ok": false,
+ "at": 1795099186212,
+ "detail": "trade claimed"
+}
