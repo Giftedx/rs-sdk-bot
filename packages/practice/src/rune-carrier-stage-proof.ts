@@ -77,7 +77,8 @@ async function runCohort(dir:string,baseName:string){
   }
   paths.forEach((p,i)=>copyFileSync(p,join(dir,id+'-after-'+i+'.sav')));
   writeFileSync(join(dir,'cohort.json'),JSON.stringify(meta,null,2));
-  if(timedOut||lowMemory||code!==(id==='existing'?0:1))throw Error('cohort CLI failed: '+id);
+  if(lowMemory)throw Error('insufficient practice free memory floor: cohort '+id+' stopped');
+  if(timedOut||code!==(id==='existing'?0:1))throw Error('cohort CLI failed: '+id);
  }
 }
 function verify(dir:string){

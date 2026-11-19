@@ -92,6 +92,33 @@ test('held Prayer batches stop repeating and rearm only after a matching settled
     expect(make(sequence,{...account,skills:{...account.skills,Prayer:99}})).toBeUndefined();
 });
 
+test('a finished repeating job that a hold keeps stops repeating; every other job stays as it is',()=>{
+    const side='local',job=(account:string,extra:Record<string,unknown>={})=>({account,script:'scripts/shop-buyer.ts',args:['zaff','3000'],env:{},role:'supply',enabled:true,repeat:true,standing:true,autopilot:side,template:'army-staff-zaff',...extra});
+    const keep=new Set(['held','open','paused']),finished=new Set(['held','free','paused']);
+    const out=mergeJobs([job('Held'),job('Open'),job('Free'),job('Paused',{enabled:false}),job('Other',{autopilot:'cloud'})],side,[],keep,finished).jobs;
+    // Held and finished: it stops repeating. Held and not finished: unchanged. Not held: this pass replaces it (here by nothing). Owner pause: unchanged.
+    expect(out.map(j=>[j.account,j.repeat])).toEqual([['Held',false],['Open',true],['Paused',true],['Other',true]]);
+    // Nothing finished or no keep set: the old result.
+    expect(mergeJobs([job('Held')],side,[],keep).jobs).toEqual([job('Held')]);
+    expect(mergeJobs([job('Held')],side,[],new Set(),finished).jobs).toEqual([]);
+});
+
+test('a kit buy that never started is not running: no process ran since its assignment, so no offer is open',()=>{
+    const job={account:'Idle',enabled:true,template:'kit-buy:army-weapon'},assigned={template:'kit-buy:army-weapon',offset:500,at:1_000_000};
+    const late=1_000_000+JOB_START_GRACE_MS+1;
+    // The log has not grown since the assignment, no run is active, and the grace has passed: not running (a stop file kept the swarm from starting it).
+    expect(kitBuyRunning(job,assigned,()=>[],false,{active:false,logSize:500,now:late})).toBe(false);
+    expect(neverStarted(assigned,{active:false,logSize:500,now:late})).toBe(true);
+    // Inside the grace, a grown log, an active run or an unknown log size: still running.
+    expect(kitBuyRunning(job,assigned,()=>[],false,{active:false,logSize:500,now:1_000_000+JOB_START_GRACE_MS})).toBe(true);
+    expect(kitBuyRunning(job,assigned,()=>[],false,{active:false,logSize:640,now:late})).toBe(true);
+    expect(kitBuyRunning(job,assigned,()=>[],false,{active:true,logSize:500,now:late})).toBe(true);
+    expect(kitBuyRunning(job,assigned,()=>[],false,{active:false,now:late})).toBe(true);
+    expect(kitBuyRunning(job,{...assigned,at:undefined},()=>[],false,{active:false,logSize:500,now:late})).toBe(true);
+    // The old end record of an earlier job (before the assignment) does not make a started job look ended.
+    expect(kitBuyRunning(job,assigned,()=>[],false,{active:false,logSize:640,now:late,ended:{at:900_000,reason:'exit 4'}})).toBe(true);
+});
+
 test('a declared finite maker keeps its exact pending mission until its own terminal result',()=>{
     const t=aioTemplates().find(t=>t.id==='aio-sapphire-rings')!,side='local';
     const job=jobFor({account:'Crafter',template:t,value:1,reason:'useful ring',resources:[]},side),assigned={template:t.id,offset:12};
@@ -527,6 +554,31 @@ test('the limit of a worn item follows the lowest ask up to five times its shop 
     // With no quote the platelegs wait the day too.
     expect(Object.keys(kitMarket(items, { '1079': now - hour - 1 }, now))).toEqual(['rune full helm']);
 });
+test('a confirmed-offline account keeps its observed stock for a day, unless a session or an order touched it later', () => {
+    const hour = 3_600_000, seen = 10 * hour, now = seen + 5 * hour;
+    const status = { name: 'Donor', server: 'rs-sdk-demo.fly.dev', at: seen, bankAt: seen, inventory: [], bank: [{ id: 556, name: 'Air rune', count: 400 }] };
+    const stockOf = (offline?: Parameters<typeof offlineStockFresh>[1], at = now) => donorStock('Donor', 'local', status, at, 30 * 60_000, () => undefined, 'rs-sdk-demo.fly.dev', offline)?.items['air rune'];
+    const proof = { confirmed: true, loggedOutAt: seen + 5_000, startedAt: seen - hour };
+    // Past the 30-minute window, no proof: no stock. With a confirmed logout after the observation: the stock stands.
+    expect(stockOf()).toBeUndefined();
+    expect(stockOf(proof)).toBe(400);
+    // Not confirmed, a logout before the observation, an order that ended after it, or an observation over a day old.
+    expect(stockOf({ confirmed: false })).toBeUndefined();
+    expect(stockOf({ confirmed: true, loggedOutAt: seen - 61_000, startedAt: seen - 2 * hour })).toBeUndefined();
+    // A later session (it started after the observation, so it may have changed the bank before it wrote a status).
+    expect(stockOf({ ...proof, startedAt: seen + 1 })).toBeUndefined();
+    expect(stockOf({ ...proof, startedAt: undefined })).toBeUndefined();
+    expect(stockOf({ ...proof, ordersEnd: seen + 1 })).toBeUndefined();
+    expect(stockOf({ ...proof, ordersEnd: seen })).toBe(400);
+    expect(stockOf(proof, seen + OFFLINE_STOCK_MAX_AGE_MS)).toBeUndefined();
+    expect(stockOf(proof, seen + OFFLINE_STOCK_MAX_AGE_MS - 1)).toBe(400);
+    // A fresh observation needs no proof, and a future time is never fresh.
+    expect(offlineStockFresh(now, undefined, now)).toBe(false);
+    expect(offlineStockFresh(now + 1, proof, now)).toBe(false);
+    // The vacant note counts an account as unobserved only when neither window holds.
+    const at = (n: string) => ({ a: seen, b: seen, c: now - 60_000 })[n];
+    expect(unobservedAccounts(['a', 'b', 'c'], at, now, n => (n === 'a' ? proof : undefined))).toEqual(['b']);
+});
 test('donor stock keeps unstrung bow names apart from usable and noted gear', () => {
     const stock = donorStock('Donor', 'local', { name: 'Donor', server: 'rs-sdk-demo.fly.dev', at: 1_000, bankAt: 1_000,
         inventory: [{ id: 72, name: 'Magic shortbow', count: 3 }], bank: [{ id: 862, baseId: 861, name: 'Magic shortbow (noted)', count: 1 }] }, 1_001, 500, () => undefined);
@@ -534,7 +586,7 @@ test('donor stock keeps unstrung bow names apart from usable and noted gear', ()
     expect(stock?.items['unstrung magic shortbow']).toBe(3);
 });
 
-import { ARMY_MEET, itemOrder, sideStock } from './autopilot';
+import { ARMY_MEET, OFFLINE_STOCK_MAX_AGE_MS, itemOrder, offlineStockFresh, sideStock } from './autopilot';
 import { meetingTiles } from './coin-courier';
 import { validOrder } from './fleet-trade-settlement';
 test('a kit item order fits the fleet order format and meets at the army bank', () => {
@@ -635,7 +687,7 @@ test('a fresh side plan cannot refresh stale donor bank stock or count worn kit 
     expect(stock.find(s=>s.name==='Future')?.items).toEqual({'mind rune':10});
 });
 
-import { failedSends, kitBuyRunning, SEND_RETRY_MS } from './autopilot';
+import { failedSends, JOB_START_GRACE_MS, kitBuyRunning, neverStarted, SEND_RETRY_MS } from './autopilot';
 test('a failed item order stops new orders for that pair for a day; coin orders and old orders do not', () => {
     const order = (id: string, item: string, start: number) => ({ id, server: 'rs-sdk-demo.fly.dev', from: 'Near', to: 'Needy', item, count: 20, start, end: start + 40 * 60_000 });
     const now = 10 * 3600_000;
@@ -1461,4 +1513,14 @@ test('each quest demand row dispatches to the sweep, has a bench case that can p
         expect(`${row.slug} ${JSON.stringify(Object.entries(row.items).map(([i, n]) => [norm(i), n]).sort())}`).toBe(`${row.slug} ${JSON.stringify(Object.entries(pack).sort())}`);
         expect(`${row.slug} ${row.meals}`).toBe(`${row.slug} ${meals}`);
     }
+});
+
+import { parseCatFileBatch } from './autopilot';
+test('the batch output of git cat-file is read object by object, with a missing object as null', () => {
+    const out = Buffer.from(['abc123 blob 7', '{"a":1}', 'origin/fleet-data:fleet/claims/x.json missing', 'def456 blob 2', '{}', ''].join(String.fromCharCode(10)));
+    expect(parseCatFileBatch(out, 3)).toEqual(['{"a":1}', null, '{}']);
+    // A multibyte character counts its bytes (the size of the header), and a short output leaves the rest null.
+    const nl = String.fromCharCode(10), wide = Buffer.from('abc blob 3' + nl + 'é"' + nl + 'def blob 1' + nl + 'x' + nl);
+    expect(parseCatFileBatch(wide, 3)).toEqual(['é"', 'x', null]);
+    expect(parseCatFileBatch(Buffer.from(''), 2)).toEqual([null, null]);
 });

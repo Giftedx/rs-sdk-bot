@@ -1165,6 +1165,9 @@ const ROUTE_CASES: BenchCase[] = [
   // Three and four of ours in that kit from the Edgeville bank to the multi-way post, the clones hunting them, each
   // clone on its own one of ours: single-way tiles first, then multi-way.
   cloneSquad('extra:clone-3v3-walkin-x1', 'live-walker-iron-rune-chain-bare', 3, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']),
+  // The same meeting with the threat radar on (scripts/pk-threat.ts, research/pvp-fight-loop.md "Threat radar"): the clones are the squad's targets, so the
+  // radar protects against them and never retreats. The squad kills must match the case above.
+  cloneSquad('extra:clone-3v3-walkin-threat-x1', 'live-walker-iron-rune-chain-bare', 3, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1', 'SQUAD_THREAT=1']),
   cloneSquad('extra:clone-4v3-walkin-x1', 'live-walker-iron-rune-chain-bare', 4, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']),
   // The climb against the clones (research/gang-clones.md, "The climb"): `n` of ours from the Edgeville bank, the
   // clones hunting them, each clone on its own one of ours. The kits are the ones the accounts hold: rune helm,

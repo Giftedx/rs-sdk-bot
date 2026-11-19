@@ -134,6 +134,16 @@ test('market value: the lower of the VWAP and the bid; no price, no value', () =
     expect(marketValue(undefined)).toBe(0);
 });
 
+test('market value: an item with no bid is not worth its wash-traded VWAP', () => {
+    // Rows of .practice/market-all.json: a VWAP in the tens of thousands, no bid, a base price of a few coins.
+    expect(marketValue({ price: 29076.3, bid: null, ask: 213, base: 1 })).toBe(4);
+    expect(marketValue({ price: 67125.7, bid: null, ask: 894, base: 18 })).toBe(72);
+    expect(marketValue({ price: 59501.4, bid: null, ask: 46999, base: 6 })).toBe(24);
+    expect(marketValue({ price: 51031.4, bid: null, ask: 36560, base: 2 })).toBe(8);
+    // A bid keeps the lower of the VWAP and the bid, whatever the base price.
+    expect(marketValue({ price: 29076, bid: 20000, ask: 213, base: 1 })).toBe(20000);
+});
+
 test('the loot tables value an item at its market price over the alchemy floor', () => {
     const root = mkdtempSync(join(tmpdir(), 'market-'));
     mkdirSync(join(root, 'knowledge')); mkdirSync(join(root, '.practice'));

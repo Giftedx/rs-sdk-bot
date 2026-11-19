@@ -31,8 +31,9 @@ import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { attackable, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, recordKillLoot, STUNNED_SHOVE_SPOTANIM, wildernessLevel, type FightOptions } from './pk';
 import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { settleKillFeed } from './pk-kill-feed';
-import { EDGEVILLE_BANK, eatUp, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
+import { EDGEVILLE_BANK, eatUp, FOOD_START_FLOOR, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
 import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
+import { holdProtect, protectOf, retreatOf, ThreatWatch } from './pk-threat';
 import { connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './pk-roam';
 import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
@@ -41,7 +42,12 @@ export const GANG = ['goondelf', 'ligma', 'sugma'];
 export const SQUAD_POST = { x: 3067, z: 3640 };
 // A member starts the run with at least this share of the food of its pack (live: a member with 20 of 21 sharks is fit
 // to fight; one with a few is not). Under it the member stays at the bank and its part of the run ends.
-export const SQUAD_FOOD_FLOOR = 0.5;
+export const SQUAD_FOOD_FLOOR = FOOD_START_FLOOR;
+// A member leaves the Wilderness for a bank trip when it stands outside it after it was in it, and once at the start of the
+// run (no trip done yet). A member that is still on the first steps of the march, outside the Wilderness, is on its way in:
+// a second trip there ran a restock before any fight (live run 2: `"trips":2,"fights":0` for each member; bench of the
+// first start fix: `trips=8` in 24 seeds, master `trips=4`).
+export const outTripDue = (z: number, enteredWilderness: boolean, tripsDone: number): boolean => wildernessLevel(z) === 0 && (enteredWilderness || tripsDone === 0);
 export const squadStartFood = (held: number, packFood: number): { ok: boolean; floor: number } => { const floor = Math.ceil(packFood * SQUAD_FOOD_FLOOR); return { ok: held >= floor, floor }; };
 const MAIN = new Set(['haggis']);
 // dropForStrip off: the profile's champion base drops a shark before a freeze to free slots for its armour strip.
@@ -309,7 +315,9 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     // Deaths that the account recovers from in the run (default 0: a death ends the account's part).
     // `onDeath` is called for each death of the account, at its tile (the death ledger of packages/core/src/pvp-deaths.ts).
     // `run`: the deaths of all the members in the run. The death that brings `deaths` to `limit` is not recovered (PVP_DEATH_LIMITS.perRun).
-    maxDeaths?: number; onDeath?: (near: { x: number; z: number } | null) => void; run?: { deaths: number; limit: number } }): Promise<SquadStats> {
+    maxDeaths?: number; onDeath?: (near: { x: number; z: number } | null) => void; run?: { deaths: number; limit: number };
+    // The threat radar of the squad (scripts/pk-threat.ts): a protect prayer for the style of a threat, and a retreat when it outclasses the squad.
+    threats?: ThreatWatch }): Promise<SquadStats> {
     const stats: SquadStats = { name: s.name, fights: 0, pulls: 0, kills: 0, trips: 0, died: false, picked: {}, taken: 0, receipts: [], deaths: 0, rekits: 0 };
     const st = s.sdk.getState(), me = () => s.sdk.getState()?.player;
     let life0 = st?.player?.lifeId, lastTile: { x: number; z: number } | null = null;
@@ -338,6 +346,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     };
     let lastHp = me()?.hp ?? 0, seenMessage = 0, refusedAt = -100, pullSince = -1;
     const skip = new Map<string, number>();
+    let enteredWilderness = false;
     const unwatch = s.onTick(() => {
         const hp = me()?.hp; if (hp !== undefined) { if (hp < lastHp) stats.taken += lastHp - hp; lastHp = hp; }
         for (const m of s.sdk.getState()?.gameMessages ?? []) { const id = m.observationId ?? m.tick; if (id <= seenMessage) continue; seenMessage = id; if (/already under attack|already fighting your opponent/i.test(m.text)) refusedAt = s.tick(); }
@@ -353,7 +362,9 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             }
             lastTile = { x: p.worldX, z: p.worldZ };
             // Out of the Wilderness (a walk out, a teleport): to the bank and back to the post.
-            if (wildernessLevel(p.worldZ) === 0) {
+            if (wildernessLevel(p.worldZ) > 0) enteredWilderness = true;
+            if (outTripDue(p.worldZ, enteredWilderness, stats.trips)) {
+                enteredWilderness = false;
                 if (stats.trips >= o.trips) { o.log(`[${s.name}] SQUAD no trips left`); break; }
                 stats.trips++;
                 // The first visit, before any fight, is at the pack that the account logged in with: nothing is banked, so
@@ -383,6 +394,16 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             }
             const now = s.tick();
             for (const [k, until] of skip) if (until <= now) skip.delete(k);
+            // The threat radar: each decision is logged with the record of the player that caused it (ThreatWatch). With `act` off it only logs.
+            const threat = o.threats?.step(now);
+            const protect = threat && o.threats!.act ? protectOf(threat.actions, s.name) : null;
+            const threatRetreat = threat && o.threats!.act ? retreatOf(threat.actions) : null;
+            if (threatRetreat) {
+                o.log(`[${s.name}] SQUAD threat retreat: ${threatRetreat}`);
+                const retreated = await rescue(s, o.log, o.stopped);
+                if (!retreated) { stats.died = true; break; }
+                continue;
+            }
             const view = s.sdk.getState()?.nearbyPlayers ?? [];
             const health = (q: { index: number }) => { const seen = observePlayer(s.client, q.index); return seen && seen.totalHealth > 0 ? seen.health / seen.totalHealth : 1; };
             const stunned = new Set(view.filter(q => observePlayer(s.client, q.index)?.spotanim === STUNNED_SHOVE_SPOTANIM).map(q => q.name.toLowerCase()));
@@ -408,7 +429,9 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             if (!target) {
                 // No prayer while it waits: an active prayer drains with no fight loop to flick it (in one live meeting
                 // our prayer ran out at about tick 730), and the fight loop puts them on again. One input each 3 ticks.
-                if (s.tick() % 3 === 0) for (const [i, on] of (s.sdk.getState()?.prayers.activePrayers ?? []).entries()) if (on) void s.sdk.sendTogglePrayer(i);
+                // A threat that can hit us keeps the protect prayer of its style on (holdProtect), at the cost of the drain.
+                if (protect) holdProtect(s, protect, s.tick());
+                else if (s.tick() % 3 === 0) for (const [i, on] of (s.sdk.getState()?.prayers.activePrayers ?? []).entries()) if (on) void s.sdk.sendTogglePrayer(i);
                 // Back to the post between fights.
                 // At least a tick each pass: a walk to a step that cannot be reached fails at once.
                 if (Math.max(Math.abs(p.worldX - o.post.x), Math.abs(p.worldZ - o.post.z)) > 2) await walkPath(walker, [{ ...o.post, tol: 2 }], { maxTicks: 60, idleMs: 9000, stop: () => !going() || !!squadTarget(s.sdk.getState()?.nearbyPlayers ?? [], o.targets, health, new Set(), self) });
@@ -442,6 +465,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             const stunShare = o.stunShareFor?.(target.name.toLowerCase());
             const r = await fightPlayer(s, target.name, {
                 ...o.options,
+                ...(o.threats?.act ? { threatPrayer: () => protectOf(o.threats!.step(s.tick()).actions, s.name) } : {}),
                 ...(stunShare ? { stunShare } : {}),
                 ...(o.burstOnStun !== undefined ? { burstOnStun: o.burstOnStun } : {}),
                 ...(o.stunSpec ? { stunSpec: o.stunSpec } : {}),
@@ -638,11 +662,19 @@ if (import.meta.main) {
         if (!share) { share = { clock: () => squad[0]!.tick(), until: -1, stunnedUntil: -1, overlap: 1 }; stunShares.set(key, share); }
         return share;
     };
+    // SQUAD_THREAT=1: the threat radar (scripts/pk-threat.ts) reads every member's view and the world feed, logs each threat and decision,
+    // and records each attacker. SQUAD_THREAT_ACT=0 only logs and records. The targets of the squad are expected: they get a protect prayer but no retreat.
+    let closeThreatRadar: (() => void) | undefined, threats: ThreatWatch | undefined;
+    if (get('SQUAD_THREAT', '0') === '1') {
+        const radar = new Radar();
+        if (!gang.length) closeThreatRadar = connectRadar(squadServer, radar);
+        threats = new ThreatWatch({ sessions: () => squad, server: squadServer, friends: new Set(ours.map(n => n.toLowerCase())), radar, log, act: get('SQUAD_THREAT_ACT', '1') !== '0', decide: { expected: targets } });
+    }
     const results = await Promise.all(squad.map(s => {
         const kit = kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []);
         const stunSpec = defaultStunSpec(kit);
         return hold(s, {
-            targets, post,
+            targets, post, threats,
             options: sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200),
             ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
             allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), run: runDeaths,
@@ -653,7 +685,7 @@ if (import.meta.main) {
     squadDone = true;
     await Promise.all(gangRuns);
     unwatchMarch(); unwatchRadar?.(); unwatchFollow?.();
-    closeRadar?.();
+    closeRadar?.(); closeThreatRadar?.();
     // Live: no account logs out in the Wilderness. The deadline or a stop can end an account's hold mid-fight with
     // its food gone, and a later login on that tile met a PKer: live, KnightRider logged out at the post with 4 HP and
     // died 31 ticks into its next session, skulled, with its whole kit.

@@ -2,7 +2,7 @@ import { describe, expect, spyOn, test } from 'bun:test';
 import * as walking from '../packages/core/src/walk';
 import * as pk from './pk';
 import { maxDeathsOf } from './pk-hunt';
-import { bankNear, isKillLine, leaveWilderness, openSquad, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
+import { bankNear, isKillLine, leaveWilderness, openSquad, outTripDue, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
 import { hold, squadEnd } from './pk-squad';
 import { newWatch, readLine } from './squad-watch';
@@ -81,6 +81,19 @@ test('a tick-stalled squad waiter ends even if close hangs while another member 
     expect(await Promise.all([waiting, completing, stopping])).toEqual([false, true, undefined]);
     expect(halted).toEqual(['tick stream stalled: 120 s without a game tick']);
     expect(stalled.listeners.size).toBe(0);
+});
+
+test('a bank trip is due at the start and after the Wilderness, and not on the first steps of the march', () => {
+    const bank = 3491, step = 3503, inWilderness = 3560;
+    // The start: no trip done yet, outside the Wilderness.
+    expect(outTripDue(bank, false, 0)).toBe(true);
+    // After the first trip the member stands on a march step outside the Wilderness and has not been in it: no second trip.
+    expect(outTripDue(step, false, 1)).toBe(false);
+    expect(outTripDue(bank, false, 1)).toBe(false);
+    // In the Wilderness nothing is due; once it has been in it, a stand outside is a walk out or a teleport: a trip.
+    expect(outTripDue(inWilderness, true, 1)).toBe(false);
+    expect(outTripDue(step, true, 1)).toBe(true);
+    expect(outTripDue(bank, true, 3)).toBe(true);
 });
 
 test('a member one meal short starts, and one under half of its pack food does not', () => {
@@ -428,4 +441,33 @@ test('the squad end line names the accounts that died, right after the account c
     // The supervisor logs 200 characters of the RESULT line: the names are in them even for a long line.
     const long = squadEnd({ ...base, deaths: 1, diedAccounts: ['Squad3'], picked: { 884: 3, 1231: 2, 385: 40, 995: 99999 }, dropped: ['A', 'B'], stranded: ['C'] });
     expect(('SUPERVISE run 1 exit 1: RESULT fail ' + long.detail).slice(0, 200)).toContain('diedAccounts=Squad3');
+});
+
+// The threat radar in the hold loop: with no target, a member that a threat can hit holds the protect prayer of the threat's style.
+async function holdWithThreats(act: boolean) {
+    const w = squadWorld(), toggles: number[] = [];
+    let t = 0;
+    w.s.tick = () => t;
+    w.s.sdk.sendTogglePrayer = async (i: number) => { toggles.push(i); };
+    const threats: any = { act, step: () => ({ classes: [], actions: [{ kind: 'protect', member: 'Soldier', style: 'magic', reason: 'Mage magic by weapon, 4 tiles' }] }) };
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockResolvedValue({ ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { t++; return true; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+    ];
+    try {
+        await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3066, z: 3641 }, options: { kit: {} }, allies: [], pickup: false, trips: 3, deadline: 400, stopped: () => t >= 12, killsLeft: () => true, log: () => {}, threats });
+        return toggles;
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+}
+
+test('with a threat that can hit it and no target, a member holds the protect prayer of the threat style (Protect from Magic is prayer 12)', async () => {
+    const toggles = await holdWithThreats(true);
+    expect(toggles.length).toBeGreaterThan(0);
+    expect(new Set(toggles)).toEqual(new Set([12]));
+});
+
+test('with act off the threat watch changes nothing in the hold loop', async () => {
+    expect(await holdWithThreats(false)).toEqual([]);
 });

@@ -52,6 +52,8 @@ export interface ReconcileOptions{
     thrown?:boolean;
     /** A weapon or ammunition id the caller's plan has fixed. The other slots are still chosen. */
     pin?:{weapon?:number;ammo?:number};
+    /** Wear only these slots. A worker whose job a full kit would spoil (splash casting wants no magic bonus from armour) names the slots it wants worn; the loadout and the GEAR_WANT rows still cover every slot. */
+    only?:readonly RangedLoadoutSlotName[];
     /** Magic: the runes the spell uses. The staff that supplies the most of them is the weapon. */
     runeIds?:readonly number[];
     levels?:GearSkillLevels;
@@ -215,7 +217,7 @@ export async function reconcileLoadout(s:Session,o:ReconcileOptions):Promise<Rec
             const staff=bestElementalStaffForRunes(stock,levels(),done,{runeIds:o.runeIds}).current;
             if(staff)pin.weapon=staff.item.id;
         }
-        return{loadout,targets:loadoutTargets(loadout,pin)};
+        return{loadout,targets:loadoutTargets(loadout,pin).filter(t=>!o.only||o.only.includes(t.slot))};
     };
     // An item id has one wear position, so a worn row with the id is the item in its slot.
     const wornCount=(t:GearTarget)=>count(eq(),t.id);

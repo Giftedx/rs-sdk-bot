@@ -26,6 +26,9 @@ import {buildItemExamine,catalogueIconAliases,projectItemExamine} from './item-e
 import {createVaultItems,type VaultItem} from './vault-items';
 import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,valueBoardRows,wildernessOverlayData,wildernessView,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow,type ValueRow} from './world-view';
 import {loadContentTable,readWorn} from './appearance';
+import {packQuests} from './quest-pack';
+import {bindRetry} from './bind-retry';
+import {tailJsonlFile, cachedTail} from './jsonl-tail';
 import {createOperatorControl} from './operator-control';
 import {folderScan} from './folder-scan';
 import { xpForLevel } from '../planner/src/curve';
@@ -80,11 +83,7 @@ const SCRIPT_ROLE: Record<string, { role: string; skill?: string; goal: string }
 const ROLE_SKILL: Record<string, string> = { thieving: 'Thieving', fishing: 'Fishing', woodcutting: 'Woodcutting', mining: 'Mining', runecraft: 'Runecraft', cooking: 'Cooking', crafting: 'Crafting', combat: 'Attack' };
 const NL = String.fromCharCode(10);
 
-function tailJsonl<T>(file: string, n: number): T[] {
-    try {
-        return readFileSync(file, 'utf8').split(NL).filter(Boolean).slice(-n).flatMap(l => { try { return [JSON.parse(l) as T]; } catch { return []; } });
-    } catch { return []; }
-}
+function tailJsonl<T>(file: string, n: number): T[] { return tailJsonlFile<T>(file, n); }
 function append(file: string, doc: unknown) {
     if (process.env.DASH_READ_ONLY === '1') return;
     try { appendFileSync(file, JSON.stringify(doc) + NL); } catch { /* locked or full: memory still has it */ }
@@ -286,6 +285,9 @@ const died = (text: string) => /\bdied=true\b/.test(text) || /\bdied (?!=)/.test
 const lastResult = new Map<string, { text: string; started?: number }>(), newestRes = new Map<string, Res>(), newestDeath = new Map<string, Res>();
 const noteRes = (r: Res) => { lastResult.set(r.name, { text: r.text, started: r.started }); newestRes.set(r.name, r); if (died(r.text)) newestDeath.set(r.name, r); };
 for (const r of allResults) noteRes(r);
+// The long read above fed the per-account maps; the list that fleetDiagnostics scans every 2 s keeps the newest RESULT_KEEP.
+const RESULT_KEEP = 5000;
+if (allResults.length > RESULT_KEEP) allResults.splice(0, allResults.length - RESULT_KEEP);
 function trackResult(s: Status) {
     const text = String(s.result ?? '');
     // Two runs can end with the same text: the run start tells them apart.
@@ -294,17 +296,24 @@ function trackResult(s: Status) {
     const r: Res = { started, at: s.at, name: s.name, goal: String(s.goal ?? '').replace(/\.ts$/, ''), ok: /^ok\b/.test(text), text: text.slice(0, 240) };
     noteRes(r);
     allResults.push(r);
-    if (allResults.length > 5000) allResults.splice(0, allResults.length - 5000);
+    if (allResults.length > RESULT_KEEP) allResults.splice(0, allResults.length - RESULT_KEEP);
     results.unshift(r);
     results.length = Math.min(results.length, 300);
     append(FILES.results, r);
 }
 type ProofEntry = {proof: NativeProof; resultPrefix: string};
-let proofScanAt=0;
+let proofScanAt=0,proofStamp='';
 let proofCache=new Map<string,ProofEntry>();
 function nativeProofs(now: number): Map<string,ProofEntry> {
     if(now-proofScanAt<10_000)return proofCache;
     proofScanAt=now;
+    // The inputs are the three hashed sources, the proof files and the status files of their actors: unchanged stats, same answer.
+    const stamp=(()=>{try{const proofDir=join(practice,'fleet-proof'),parts:string[]=[];
+        for(const f of ['packages/core/src/host.ts','scripts/train-prayer.ts','scripts/measure/fleet-host-stop.ts']){const t=statSync(join(root,f));parts.push(f+t.size+':'+t.mtimeMs);}
+        for(const f of readdirSync(proofDir)){const t=statSync(join(proofDir,f));parts.push(f+t.size+':'+t.mtimeMs);const m=/^host-stop-(fl[a-z0-9]+)-snapshot\.json$/i.exec(f);if(m)try{const t2=statSync(join(statusDir,m[1]+'.json'));parts.push('s'+t2.size+':'+t2.mtimeMs);}catch{/* no status */}}
+        return parts.join('|');}catch{return '';}})();
+    if(stamp&&stamp===proofStamp)return proofCache;
+    proofStamp=stamp;
     const next=new Map<string,ProofEntry>(),dir=join(practice,'fleet-proof');
     const boundedText=(path:string,max:number)=>{if(statSync(path).size>max)throw new Error('proof input too large');return readFileSync(path,'utf8');};
     const digest=(path:string)=>createHash('sha256').update(boundedText(path,512_000)).digest('hex').toUpperCase();
@@ -472,17 +481,20 @@ type RankRec = { at: number; name: string; board: string; rank: number; level: n
 const rankHist = new Map<string, RankRec[]>(); // name|board -> history, oldest first
 for (const r of tailJsonl<RankRec>(FILES.ranks, 5000)) { const k = r.name + '|' + r.board; const l = rankHist.get(k) ?? []; l.push(r); rankHist.set(k, l); }
 let ranksRefreshing = false;
+// When an account's ranks last moved: a quiet account is read every 30 minutes, an active one every 5.
+const rankChangedAt = new Map<string, number>();
 async function refreshRanks() {
     if (ranksRefreshing) return;
     ranksRefreshing = true;
     try {
     for (const name of [...new Set([...liveAccounts(), ...remoteNames()])]) {
         const r = ranks.get(name);
-        if (r && Date.now() - r.at < 300_000) continue;
+        if (r && Date.now() - r.at < (Date.now() - (rankChangedAt.get(name) ?? 0) > 2 * 3600_000 ? 1_800_000 : 300_000)) continue;
         try {
             const response = await fetch(gameDialAddress(`${DEMO}/hiscores/player/${encodeURIComponent(name.toLowerCase())}?profile=main`), { signal: AbortSignal.timeout(15_000) });
             if (!response.ok) throw Error(`Player ranks HTTP ${response.status}`);
             const rows: Row[] = hiscoreRows(await response.text(), SKILL_BOARDS);
+            if (!r || JSON.stringify(r.rows) !== JSON.stringify(rows)) rankChangedAt.set(name, Date.now());
             ranks.set(name, { at: Date.now(), rows });
             for (const row of rows) {
                 const k = name + '|' + row.board, l = rankHist.get(k) ?? [], last = l[l.length - 1];
@@ -542,10 +554,9 @@ function topOf(board: string): { name: string; level: number; ticks: number; at:
     return s ? { name: s.name, level: s.level, ticks: s.ticks, at: Date.parse(snapshot.takenAt) || 0, live: false } : null;
 }
 const snapshot = (() => { try { return JSON.parse(readFileSync(join(root, 'research', 'hiscores-2026-10-22.json'), 'utf8')); } catch { return null; } })();
-// Player lookups (World plugin): any player's hiscore page, one request every 1.2 s, each kept 30 minutes. The page
-// asks through /api/player; in the background each board's 10 rivals and the strangers at our spots (about 200
-// names, 10 a minute against the 30-minute cache) are kept fresh, because the hosted page cannot reach the hiscores
-// itself (no CORS) and reads these from its published state.
+// Player lookups (World plugin): any player's hiscore page, one request every 1.2 s, each kept 30 minutes. They are served
+// only on demand, through /api/player; the state does not carry them. The hosted page cannot reach the hiscores
+// itself (no CORS), so it shows no lookup detail.
 type Lookup = { name: string; at: number; rows: HiscoreRow[]; worn: { slot: string; id:number; name: string }[] | null; wornAt: number | null };
 const lookups = new Map<string, Lookup>();
 // Worn items of an online player (appearance.ts readWorn); lookups run one at a time, so this holds one feed slot.
@@ -579,9 +590,6 @@ function lookupPlayer(name: string): Promise<Lookup | null> {
     lookupChain = job.catch(() => null);
     return job;
 }
-let lookupWanted: string[] = [];
-// Fresh entries are skipped first, so the next ten that need a lookup get one, however long the list is.
-setInterval(() => { for (const n of lookupWanted.filter(n => { const hit = lookups.get(n.toLowerCase()); return !hit || Date.now() - hit.at >= 1_800_000; }).slice(0, 10)) void lookupPlayer(n); }, 60_000);
 
 // Equipment, Bank and Runite boards: each page's top 50, read every 10 min, for the #1 holder, our accounts' ranks
 // (a value board has no per-player page) and the value at the page's last rank.
@@ -1156,7 +1164,7 @@ function buildState() {
     const cargo = every(10_000, cargoDir, () => existsSync(cargoDir) ? readdirSync(cargoDir).filter(f => f.endsWith('.json') && !f.startsWith('request-')).flatMap(f => {
         try { return [JSON.parse(readFileSync(join(cargoDir, f), 'utf8'))]; } catch { return []; }
     }) : []);
-    const collection = collectionState(bots, [...new Set([...liveAccounts(), ...remoteNames()])], cargo, tailJsonl<any>(FILES.vault, 100_000), now);
+    const collection = collectionState(bots, [...new Set([...liveAccounts(), ...remoteNames()])], cargo, cachedTail<any>(FILES.vault, 100_000), now);
     if (!vaultTrend.length || now - vaultTrend[vaultTrend.length - 1]!.at > 60_000) { vaultTrend.push({ at: now, value: Math.round(v.value), coins: v.coins }); if (vaultTrend.length > 240) vaultTrend.shift(); }
     const farmers = (bots as any[]).filter(b => b.role4?.kind === 'gold' && !b.practice);
     const visiblePrices: (PriceIdentity | string)[] = [...(bots as any[]).flatMap(b => [b.inventory,b.bank,b.equipment,b.flow?.loot,b.flow?.used].flatMap(l => l ?? []).filter(Boolean)),
@@ -1195,8 +1203,10 @@ function buildState() {
         questConstants:cached(join(root,'vendor/rs-sdk/server/content/scripts/general/configs/quest.constant'),text=>text,''),
         receipts:Object.fromEntries(Object.entries(GOAL_RECEIPTS).map(([key,path])=>[key,cached<any>(join(root,path),JSON.parse,null)]))};
     const progress=goalProgress({now,bots,boards,collection,objectives,race:currentRace,gates:currentGates,scoreboard:currentScoreboard},goalInputs);
+    // The quest journals travel as one list and each bot's finished and started ids (quest-pack.ts); the page expands them.
+    const packedQuests = packQuests(bots as any[]);
     return {
-        now, objectives:{...objectives,progress}, world: { ...world, tick: serverTick() }, worldPlayers: world.players, bots, boards,
+        now, objectives:{...objectives,progress}, world: { ...world, tick: serverTick() }, worldPlayers: world.players, bots: packedQuests.bots, questList: packedQuests.questList, boards,
         coordination:(()=>{const file=join(practice,'coordinator/state.json');try{return coordinationView(cached(file,JSON.parse,null),statSync(file).mtimeMs,now,existsSync(join(practice,'stop-coordinator'))||existsSync(join(practice,'stop-swarm')));}catch{return coordinationView(null,0,now);}})(),
         events: events.slice(0, 160).map(e => ({ ...e, text: shortPhase(e.text), full: e.text, practice: prac.has(e.name) })),
         results: results.slice(0, 120).map(r => ({ ...r, practice: prac.has(r.name),nativeProof:resultProof(r,proofs) })), scripts: scripts(proofs), alerts: alerts(bots, now), requests: requests(), mainPlan: haggisPlan(),
@@ -1207,14 +1217,12 @@ function buildState() {
         race: currentRace, gates: currentGates, chain: foodChain(st, now), gapHistory: gapHistory.slice(-120).map(g => ({ at: g.at, gap: g.gap, floorGap: g.floorGap ?? null })), economy,
         pageVersion: (() => { try { return Math.max(...[PAGE_FILE,...['map-shell.css','map-shell.js','client-shell.css','client-shell.js','client-viewer.css','operations.css','operations.js','xp-tracker.js'].map(f=>join(import.meta.dir,f))].map(f=>existsSync(f)?statSync(f).mtimeMs:0)); } catch { return 0; } })(),
         ...(() => {
-            // Other players: the roster, each board's rivals, who stands at our claimed spots, and the cached lookups.
+            // Other players: the roster, each board's rivals, who stands at our claimed spots.
             const fleet = new Set(bots.map(b => b.name.toLowerCase()));
             const best = new Map(SKILL_BOARDS.map(b => { let top: { rank: number; name: string } | null = null; for (const bot of bots as any[]) for (const r of bot.ranks ?? []) if (r.board === b && (!top || r.rank < top.rank)) top = { rank: r.rank, name: bot.name }; return [b, top] as const; }));
             const rivals = rivalsView(boardTops, roster, fleet, best, now);
             const contention = contentionView(fleetList(join(FILES.fleet, 'claims')), roster, fleet, now);
-            lookupWanted = [...new Set([...rivals.flatMap(r => r.rows.filter(x => !x.fleet).map(x => x.name)), ...contention.flatMap(s => s.others)])];
-            const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 250).map(l => [l.name.toLowerCase().replace(SECRET_RE, SECRET_MARK), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now, l.worn, l.wornAt, world.connected ? world.tickAt : null)]));
-            return { roster: rosterView(roster, now), rivals, contention, lookups: looked, farms: farmsView(roster, fleet, contention, now), wilderness: wildernessView(roster, fleet, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
+            return { roster: rosterView(roster, now), rivals, contention, farms: farmsView(roster, fleet, contention, now), wilderness: wildernessView(roster, fleet, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
         })(),
         prs: prRows,
         scoreboard:currentScoreboard, fleetSides:fleetSides(now),
@@ -1383,7 +1391,7 @@ function viewerAsset(pathname:string):Response|null {
         return new Response(Bun.file(file),{headers:{...VIEWER_ISO,'cache-control':route.root==='static'?'public,max-age=3600':'no-cache'}});
     }catch{return new Response('not found',{status:404});}
 }
-const dashboardServer = Bun.serve({
+const dashboardServer = await bindRetry(() => Bun.serve({
     hostname: HOST,
     port: PORT,
     idleTimeout: 0,
@@ -1469,7 +1477,7 @@ const dashboardServer = Bun.serve({
         if (url.pathname === '/' || url.pathname === '/index.html') return new Response(Bun.file(PAGE_FILE), { headers: { ...ISO, 'content-type': 'text/html;charset=utf-8' } });
         return new Response('not found', { status: 404 });
     },
-});
+}), { log: console.log });
 // Reload the collector's imported code as well as the files the browser reads from disk.
 const reloadTimer = setInterval(async () => {
     if (!reloadDue(sourceRoot, 'dashboard', startedAt)) return;
