@@ -1872,6 +1872,24 @@ Source: the review of the kill receipts of the third live run, checked in the co
 - **The freeze share.** `SQUAD_FREEZE_SHARE=1` gives each target one shared freeze clock with a stagger of `SQUAD_FREEZE_STAGGER` ticks (default 3), so that members do not cast Bind on
   the same tick. Off by default until the bench says otherwise.
 
+## Specials and freezes: the server scripts
+
+Source: the review that read the PvP scripts, each claim read in `vendor/rs-sdk/server/content/scripts/skill_combat/scripts/pvp`.
+
+- **The thrown axe chain hits allies** (confirmed). `pvp_rune_thrownaxe.rs2` `pvp_rune_thrownaxe_hunt` runs `huntall($origin, 3, ^vis_lineofsight)` around the thrower and excludes only the earlier
+  targets and the thrower, and the chain needs the thrower's tile and the candidate's tile to be multi-way. Any attackable player within 3 tiles of the thrower is a chain target, so in a
+  stacked squad the special hits our own members. `thrownAxeHitsAlly` (`scripts/pk.ts`) refuses the special when an ally stands within `AXE_ALLY_RANGE` (4) tiles of us.
+  Proof: `scripts/pk-axe.test.ts`.
+- **The magic shortbow special rolls against our own ranged defence** (confirmed). `pvp_magic_shortbow.rs2:39` calls `~player_defence_roll_specific(%damagetype)`, the attacker's own
+  `%com_rangedef`, where every other special uses the target's (`~.player_defence_roll_specific`). The bow burst already takes off the plate, legs, shield and helm on the tick before the
+  special (`negativeCastArmour`), which are the pieces that carry the ranged defence; gloves, boots and cape are not stripped. Not benched alone.
+- **The magic longbow special never misses** (confirmed). `pvp_magic_longbow.rs2` has no accuracy roll: the damage is `randominc(maxhit)` with +10 Ranged levels, at 10 tiles for 35%.
+  `bowSpec` already prefers the longbow for the burst.
+- **A freeze holds only within 10 tiles of its caster** (confirmed). `pvp_magic.rs2` `walktrigger,pvp_frozen`: the hold applies only while `%pk_binder` is online and the frozen player is
+  within 10 tiles of it, and `%pk_binder` is the last player that froze it. A caster that walks more than 10 tiles from the target frees it. Not built: no rule keeps the caster near.
+- **The dragon spear special holds the target for 5 ticks** (confirmed). `pvp_dragon_spear.rs2` ends with `.p_delay(4)` on the target, which cannot act in that time. `defaultSpec` already
+  models it as a stun of 4 ticks with the spear's `stun` field and the squad's `stunShare`.
+
 ## Server rules the loop follows
 
 - Protect prayers cut a player's max hit by 40%, not 100% (`pvp_melee.rs2:32`, `pvp_ranged.rs2:38`, `pvp_magic.rs2:182`).

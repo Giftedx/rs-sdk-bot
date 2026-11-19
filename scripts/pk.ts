@@ -542,6 +542,13 @@ export function pickFakieWeapon(opts: {
     return null;
 }
 
+// SAFETY: the chain of the rune throwing axe special picks its next target with huntall(origin, 3, line of sight) around the THROWER, excluding only the earlier targets
+// and the thrower (pvp_rune_thrownaxe.rs2 pvp_rune_thrownaxe_hunt), so any player within 3 tiles of the thrower that is attackable is a chain target: in a stacked squad
+// the special hits our own members. The special is refused when an ally stands within `AXE_ALLY_RANGE` tiles of us (one more than the server's 3, for a move in the tick).
+export const AXE_ALLY_RANGE = 4;
+export const thrownAxeHitsAlly = (spec: { kit: readonly number[] } | undefined, nearby: readonly { name: string; distance: number }[], allies: readonly string[] | undefined, names: ReadonlyMap<number, string>) =>
+    !!spec && !!allies?.length && spec.kit.some(id => names.get(id) === 'rune_thrownaxe') && nearby.some(p => p.distance <= AXE_ALLY_RANGE && allies.includes(p.name.toLowerCase()));
+
 // Default special-attack config from a staged kit (content specwep=true: dragon dagger 25%, longsword 25%, mace 25%,
 // rune claws 25%, magic shortbow 35% in bows.obj:343, dragon spear/_p/kp 25%).
 export function defaultSpec(kit: Kit, names = getObjNames()): SpecConfig | undefined {
@@ -1643,7 +1650,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             || (!!o.burstOnHold && !!o.freezeShare && o.freezeShare.clock() < (o.freezeShare.heldUntil ?? -1))
             || (!!o.burstOnStun && !spec?.stun && targetStunned);
         const specNeedsRoom = !!spec?.kit.some(id => isDragonSpearName(names.get(id) ?? '')) && state.equipment.some(e => e.slot === 3) && state.equipment.some(e => e.slot === 5) && inv.length >= 28;
-        if (spec && !dying && !specNeedsRoom && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || chainStun || lowHealth(seen, spec.below))
+        // An axe special that would chain onto an ally within 3 tiles of us is not thrown (thrownAxeHitsAlly).
+        const axeHitsAlly = thrownAxeHitsAlly(spec, state.nearbyPlayers, o.allies, names);
+        if (spec && !dying && !axeHitsAlly && !specNeedsRoom && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || chainStun || lowHealth(seen, spec.below))
             && (fled || bursting || volleying || chainStun || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
             && (spec.stun || !guarded.has(specStyle) || lowHealth(seen, 0.25))) {
             let budget = 5 - sentEvents - attackPackets - (energy.on ? 0 : 1);
