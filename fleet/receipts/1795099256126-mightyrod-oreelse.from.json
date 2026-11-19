@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795099256126-mightyrod-oreelse",
+ "account": "Mightyrod",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 74267,
+ "claim": "ab6e4d35-e8b1-4b44-9907-ea060090a815",
+ "count": 0,
+ "ok": false,
+ "at": 1795099347895,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795099256126-mightyrod-oreelse",
+ "account": "OreElse",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 74267,
+ "claim": "d1a49f35-f240-4e89-9cc7-1b0bff059f11",
+ "count": 0,
+ "ok": false,
+ "at": 1795099359597,
+ "detail": "Error: route to 3182, 3440: precondition no route to 3182,3440,0",
+ "logout": {
+  "attemptId": "1795099354418-0000026096-0000000001",
+  "at": 1795099359513,
+  "sha256": "f3fbe8484c7585bc5166aea9e1a457c9f1c7bdd0c4085c4aad9ea2c036907513"
+ },
+ "screen": false
+}
