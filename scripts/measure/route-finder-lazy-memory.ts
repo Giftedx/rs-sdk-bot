@@ -25,6 +25,6 @@ if (mode === 'eager' || mode === 'lazy') {
     console.log(`${mode.padEnd(5)} ${rows.join(' | ')}`);
     process.exit(0);
 }
-const run = (m: string) => Bun.spawnSync(['bun', import.meta.path, m], { stdout: 'pipe', stderr: 'inherit' }).stdout.toString();
+const run = (m: string) => Bun.spawnSync(['bun', import.meta.path, m], { stdout: 'pipe', stderr: 'inherit', windowsHide: true }).stdout.toString();
 run('eager'); // builds the snapshot when there is none
 for (let i = 0; i < Number(process.argv[2] ?? 3); i++) for (const m of ['eager', 'lazy']) process.stdout.write(run(m));
