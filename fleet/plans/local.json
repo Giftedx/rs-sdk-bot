@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795091890401,
+ "at": 1795091993264,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -224,7 +224,7 @@
    ]
   },
   {
-   "account": "TossTheCaber",
+   "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "aubury",
@@ -232,15 +232,15 @@
    ],
    "env": {
     "ITEMS": "water rune",
-    "STOCK_TARGET": "1382",
+    "STOCK_TARGET": "1383",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
     "FLOAT": "11208",
     "COIN_RESERVE": "200",
     "MAX_SPEND": "11008",
-    "AUTOPILOT_ORDER": "[6]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1382}}"
+    "AUTOPILOT_ORDER": "[7]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1383}}"
    },
    "enabled": true,
    "standing": true,
@@ -278,6 +278,27 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "SporranBulge",
+   "script": "scripts/splash-train.ts",
+   "args": [
+    "66",
+    "6000"
+   ],
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":66}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "combat",
+   "template": "army-splash-magic-66",
+   "autopilot": "local",
+   "resources": [
+    "splash:ardougne-cow-fence"
    ]
   }
  ],

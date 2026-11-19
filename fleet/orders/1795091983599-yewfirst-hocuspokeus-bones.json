@@ -1,0 +1,22 @@
+{
+ "id": "1795091983599-yewfirst-hocuspokeus-bones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "Hocuspokeus",
+ "item": "Bones",
+ "count": 30,
+ "start": 1795091983599,
+ "end": 1795094383599,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
