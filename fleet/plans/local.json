@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795127330031,
+ "at": 1795127366577,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -290,36 +290,6 @@
    ]
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "aubury",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "water rune",
-    "STOCK_TARGET": "762",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "6240",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "6040",
-    "AUTOPILOT_ORDER": "[7]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":762}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
-   "role": "bank",
-   "template": "squad-water-aubury",
-   "autopilot": "local",
-   "resources": [
-    "shop:aubury"
-   ]
-  },
-  {
    "account": "Ballspinner",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -347,6 +317,36 @@
    "autopilot": "local",
    "resources": [
     "shop:dargaud"
+   ]
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "aubury",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "water rune",
+    "STOCK_TARGET": "559",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "4616",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "4416",
+    "AUTOPILOT_ORDER": "[7]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":559}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
+   "role": "bank",
+   "template": "squad-water-aubury",
+   "autopilot": "local",
+   "resources": [
+    "shop:aubury"
    ]
   }
  ],
