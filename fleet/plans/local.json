@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795064879662,
+ "at": 1795064934656,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -254,55 +254,6 @@
    ]
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "lowe",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "iron arrow",
-    "STOCK_TARGET": "2000",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "12200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "12000",
-    "AUTOPILOT_ORDER": "[0]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"884\":2000}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy iron arrows at Lowe's in Varrock for the gang squad",
-   "role": "bank",
-   "template": "squad-arrows-lowe",
-   "autopilot": "local",
-   "resources": [
-    "shop:lowe"
-   ]
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 3000 lobster"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "Catherby lobsters, caught and cooked",
-   "role": "fishing",
-   "template": "lobster-chain",
-   "autopilot": "local",
-   "resources": [
-    "catherby:lobster"
-   ]
-  },
-  {
    "account": "Unsheathed",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -330,6 +281,55 @@
    "autopilot": "local",
    "resources": [
     "shop:jiminua"
+   ]
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 3000 lobster"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "Catherby lobsters, caught and cooked",
+   "role": "fishing",
+   "template": "lobster-chain",
+   "autopilot": "local",
+   "resources": [
+    "catherby:lobster"
+   ]
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "lowe",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "iron arrow",
+    "STOCK_TARGET": "2000",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "12200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "12000",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"884\":2000}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy iron arrows at Lowe's in Varrock for the gang squad",
+   "role": "bank",
+   "template": "squad-arrows-lowe",
+   "autopilot": "local",
+   "resources": [
+    "shop:lowe"
    ]
   },
   {
@@ -361,23 +361,47 @@
   },
   {
    "account": "SporranDip",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "536",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "4"
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying bought dragon bones",
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-bury-dragon-99",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "local",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Dipstick",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {
+    "ALCH_ITEM": "airrune",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-air-magic-99",
    "autopilot": "local",
    "resources": []
   }
