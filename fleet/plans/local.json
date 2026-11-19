@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795064396415,
+ "at": 1795064440078,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -194,36 +194,6 @@
    ]
   },
   {
-   "account": "NabTheKnob",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "magic_guild",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "nature rune",
-    "STOCK_TARGET": "1158",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "38400",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "38200",
-    "AUTOPILOT_ORDER": "[203]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"561\":1158}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy nature runes at the Magic Guild for the gang squad",
-   "role": "bank",
-   "template": "squad-nature-guild",
-   "autopilot": "local",
-   "resources": [
-    "shop:magic_guild"
-   ]
-  },
-  {
    "account": "BraveHardon",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -251,55 +221,6 @@
    "autopilot": "local",
    "resources": [
     "shop:jiminua"
-   ]
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 3000 lobster"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "Catherby lobsters, caught and cooked",
-   "role": "fishing",
-   "template": "lobster-chain",
-   "autopilot": "local",
-   "resources": [
-    "catherby:lobster"
-   ]
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "lowe",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "iron arrow",
-    "STOCK_TARGET": "2000",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "12200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "12000",
-    "AUTOPILOT_ORDER": "[0]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"884\":2000}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy iron arrows at Lowe's in Varrock for the gang squad",
-   "role": "bank",
-   "template": "squad-arrows-lowe",
-   "autopilot": "local",
-   "resources": [
-    "shop:lowe"
    ]
   },
   {
@@ -333,6 +254,85 @@
    ]
   },
   {
+   "account": "Masterbaiter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 3000 lobster"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "Catherby lobsters, caught and cooked",
+   "role": "fishing",
+   "template": "lobster-chain",
+   "autopilot": "local",
+   "resources": [
+    "catherby:lobster"
+   ]
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "magic_guild",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "nature rune",
+    "STOCK_TARGET": "1158",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "38400",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "38200",
+    "AUTOPILOT_ORDER": "[203]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"561\":1158}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy nature runes at the Magic Guild for the gang squad",
+   "role": "bank",
+   "template": "squad-nature-guild",
+   "autopilot": "local",
+   "resources": [
+    "shop:magic_guild"
+   ]
+  },
+  {
+   "account": "TossTheCaber",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "lowe",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "iron arrow",
+    "STOCK_TARGET": "2000",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "12200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "12000",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"884\":2000}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy iron arrows at Lowe's in Varrock for the gang squad",
+   "role": "bank",
+   "template": "squad-arrows-lowe",
+   "autopilot": "local",
+   "resources": [
+    "shop:lowe"
+   ]
+  },
+  {
    "account": "CoinCock",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -357,35 +357,6 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "nurmof",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "^rune pickaxe$",
-    "STOCK_TARGET": "1",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "BANK_AT": "0",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "40000",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "39800"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy rune pickaxe from Nurmof in the Dwarven Mine",
-   "role": "mining",
-   "template": "tool-pickaxe-rune",
-   "autopilot": "local",
-   "resources": [
-    "shop:nurmof"
    ]
   }
  ],
