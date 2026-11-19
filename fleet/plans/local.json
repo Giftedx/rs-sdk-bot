@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795116374567,
+ "at": 1795116482066,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -396,15 +396,15 @@
    ],
    "env": {
     "ITEMS": "rune arrow",
-    "STOCK_TARGET": "417",
+    "STOCK_TARGET": "419",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
     "FLOAT": "320200",
     "COIN_RESERVE": "200",
     "MAX_SPEND": "320000",
-    "AUTOPILOT_ORDER": "[17]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":417}}"
+    "AUTOPILOT_ORDER": "[19]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":419}}"
    },
    "enabled": true,
    "standing": true,
@@ -460,6 +460,27 @@
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Ballbag",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Thieving\":55}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
    ]
   }
  ],
