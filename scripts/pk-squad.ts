@@ -524,7 +524,10 @@ if (import.meta.main) {
     // ALLOW_SINGLE=1 holds a single-way post (the gang's own, when it does not follow into multi-way): one fight a
     // pair there, the refused accounts take the others (bench 3v3 at the post: 39 kills of 48, 80 HP a kill).
     if (wildernessLevel(post.z) === 0 || (!isMulti(post.x, post.z) && get('ALLOW_SINGLE', '0') !== '1')) { console.log(`RESULT fail post ${post.x},${post.z} is not a multi-way Wilderness tile (ALLOW_SINGLE=1 for a single-way one)`); process.exit(2); }
-    const targets = new Set((gangSize ? gangNames : get('TARGETS', GANG.join(',')).split(',')).map(t => t.trim().toLowerCase()).filter(Boolean));
+    // SQUAD_TARGET_COUNT=<n>: only the first n gang accounts are the squad's targets (the clones of the gang); the others are a third party
+    // that the squad does not expect (an attacker that arrives in the middle of the fight): the threat radar treats it as a threat.
+    const targetCount = Number(get('SQUAD_TARGET_COUNT', '-1'));
+    const targets = new Set((gangSize ? (targetCount >= 0 ? gangNames.slice(0, targetCount) : gangNames) : get('TARGETS', GANG.join(',')).split(',')).map(t => t.trim().toLowerCase()).filter(Boolean));
     // A pause holds before any login: a stop file present at the start logs no account in (openBot checks stop files
     // only after its login, and a login puts an account parked in the Wilderness back in the world).
     // The death ledger: a squad whose account or members died too often in the last 24 h on a live server does not start. The
@@ -572,7 +575,10 @@ if (import.meta.main) {
         // SQUAD_GANG_PROFILE the fight profile of the gang (default ganker-live, the dagger gang). Both turn the gang accounts into
         // the attacker of a bench threat: a mage, a ranger, a pure or a team (research/gang-clones.md, "The attackers").
         const gangKit = (env.SQUAD_GANG_KIT ?? '').split('+').filter(Boolean), kitName = gangKit.length ? gangKit[gi % gangKit.length]! : undefined;
-        const opts = sparOptions(env.SQUAD_GANG_PROFILE ?? 'ganker-live', env.SPAR_B_OPTS, kitName ? kitSwitches(kitName) : kitFrom(g.sdk.getState()?.equipment ?? [], g.sdk.getState()?.inventory ?? []), 1200, kitName ? kitOptions(kitName) : {});
+        // SQUAD_GANG_PROFILES=<profile>+<profile>+...: the profile of gang account i, in place of SQUAD_GANG_PROFILE (the three clones
+        // take clone-goondelf, clone-ligma and clone-sugma, each from its own record, and an attacker takes attacker-fight).
+        const gangProfiles = (env.SQUAD_GANG_PROFILES ?? '').split('+').filter(Boolean);
+        const opts = sparOptions(gangProfiles.length ? gangProfiles[gi % gangProfiles.length]! : env.SQUAD_GANG_PROFILE ?? 'ganker-live', env.SPAR_B_OPTS, kitName ? kitSwitches(kitName) : kitFrom(g.sdk.getState()?.equipment ?? [], g.sdk.getState()?.inventory ?? []), 1200, kitName ? kitOptions(kitName) : {});
         while (!stopped() && g.tick() < deadline) {
             const me = g.sdk.getState()?.player;
             if (!me || wildernessLevel(me.worldZ) === 0) break;

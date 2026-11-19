@@ -77,6 +77,8 @@ export const PROFILES: Readonly<Record<string, Profile>> = {
     // The gang prays against the weapon it sees, so bow and dagger in strict turns land each hit off its prayer; the
     // special goes out from the first health bar, and a shark at 40 HP: 807 ticks a clear against 883, 6 meetings each.
     'gang-hunter': { ...CHAMPION, adaptStyles: false, mixStyles: false, specBelow: 1, eatAt: 40, castArmour: 'keep', escapeAt: 60, escapeSpell: 1174, protectItem: false, flickEvery: 2, chase: false },
+    // An attacker of the bench threats (research/gang-clones.md, "The attackers"): the champion that fights on when it is outnumbered.
+    'attacker-fight': { ...CHAMPION, escapeOutnumbered: null },
     ganker: { rotation: ['melee'], specBelow: 1, eatAt: 79, prayerFlick: false, readOverheads: false },
     'ganker-bare': { rotation: ['melee'], specBelow: 1, eatAt: 79, prayerFlick: false, readOverheads: false, overheadPrayer: false },
     // The gang with a protect prayer that stays 20 ticks: in the feed a gang account kept one for 13 to 33 ticks, and no

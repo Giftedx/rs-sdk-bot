@@ -298,6 +298,19 @@ const attackerSquad = (key: string, kit: string, n: number, o: {prayer?: boolean
   const rest = [...c.scriptArgs!.filter(x => !/^{bot:/.test(x) && x !== 'squad' && !/^SQUAD_GANG=/.test(x) && !/^SPAR_B_OPTS=/.test(x)), `SPAR_B_OPTS=${JSON.stringify(o.opts ?? {})}`];
   return {...c, pass: (s: string) => /^RESULT (ok|fail)( died)? squad/m.test(s), scriptArgs: ['squad', ...letters.map(l => `{bot:${l}}`), `SQUAD_GANG=${n}`, ...rest], companions};
 };
+// A third party during the gang fight (research/gang-clones.md, "The threat climb"): the squad of run 1 against the three clones, each with
+// its own profile from the record, and `kit` attackers that start 25 tiles north-east of the post and hunt the squad, that the
+// squad does not expect (SQUAD_TARGET_COUNT=3: only the clones are its targets). `radar` turns the threat radar on (SQUAD_THREAT=1).
+// The clones hunt the nearest member, the attackers pile on member 1.
+const threatCase = (key: string, kit: string, n: number, o: {radar: boolean; prayer: boolean; args?: string[]}): BenchCase => {
+  const base = run1Squad(key, {prayer: o.prayer, prey: '0,1,0'}), members = base.companions!.length - 3, kits = kit.split('+'), all = ['ganker-dds-skull', 'ganker-dds-skull', 'ganker-dds-skull', ...Array.from({length: n}, (_, i) => kits[i % kits.length]!)];
+  const letters = 'bcdefghijklmnopqrstuvwxyz'.slice(0, members + 3 + n).split('');
+  const companions = letters.map((suffix, i) => (i < members ? {...base.companions![i]!, suffix} : i < members + 3 ? {...base.companions![i]!, suffix} : {suffix, preset: 'fresh_lumbridge', presetConfig: kitFixture(all[i - members]!, 3088, 3665)}));
+  const rest = base.scriptArgs!.filter(x => !/^\{bot:/.test(x) && x !== 'squad' && !/^(SQUAD_GANG|SPAR_B_OPTS|SQUAD_GANG_PREY)=/.test(x));
+  return {...base, pass: (s: string) => /^RESULT (ok|fail)( died)? squad/m.test(s), companions,
+    scriptArgs: ['squad', ...letters.map(l => `{bot:${l}}`), `SQUAD_GANG=${3 + n}`, 'SQUAD_TARGET_COUNT=3', `SQUAD_GANG_KIT=${all.join('+')}`,
+      `SQUAD_GANG_PROFILES=${['clone-goondelf', 'clone-ligma', 'clone-sugma', ...Array.from({length: n}, () => 'attacker-fight')].join('+')}`, `SQUAD_GANG_PREY=${['0', '1', '0', ...Array.from({length: n}, () => '1')].join(',')}`, 'SPAR_B_OPTS={}', ...(o.radar ? ['SQUAD_THREAT=1'] : []), ...rest, ...(o.args ?? [])]};
+};
 const run1Squad = (key: string, o: {prayer: boolean; prey?: string; mode?: CloneMode; args?: string[]; gang?: Record<string, unknown>; order?: number[]}): BenchCase => {
   const run1 = JSON.parse(readFileSync(join(import.meta.dir, '..', 'pk-gang-record', 'run-1.json'), 'utf8')) as Run1, start = {x: 3093, z: 3501}, base = 'live-walker-iron-rune-chain-bind';
   // A stack of food is one slot with one count in a preset: a shark each (the loop eats one and the stack would go).
@@ -1209,6 +1222,10 @@ const ROUTE_CASES: BenchCase[] = [
     attackerSquad(`extra:attack-${tag}-pile-single-x1`, kit, n, {opts: {escapeOutnumbered: null}, prey: '1', args: ['POST=3075,3640', 'ALLOW_SINGLE=1']}),
     attackerSquad(`extra:attack-${tag}-pile-six-x1`, kit, n, {opts: {escapeOutnumbered: null}, prey: '1', order: [0, 1, 2, 3, 2, 3]}),
   ]),
+  // The threat climb: a third party in the gang fight, with the radar off and on, and with and without prayer points.
+  ...([['mage', 'mage', 1], ['ranger', 'ranger', 1], ['spear', 'tribrid-spear-dds', 1], ['team3', 'mage+ranger+tribrid-snare', 3], ['team5', 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5]] as const)
+    .flatMap(([tag, kit, n]) => ([['off', false], ['radar', true]] as const).flatMap(([r, radar]) => ([['', true], ['noprayer-', false]] as const)
+      .map(([p, prayer]) => threatCase(`extra:threat-${tag}-${r}-${p}x1`, kit, n, {radar, prayer})))),
   run1Squad('extra:clone-run1-noeat-x1', {prayer: false, prey: '0,1,0', gang: {eatAt: 0}}),
   run1Squad('extra:clone-run1-nopray-x1', {prayer: false, prey: '0,1,0', gang: {prayerLag: [0, 0, 0, 0, 0, 0, 0, 0, 1]}}),
   // The antipoison: five of ours in the kit, with a potion on the first two members, on the first one, on none
