@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795105459919,
+ "at": 1795105762460,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -338,7 +338,7 @@
     "RANDOM_EVENTS": "0",
     "COORDINATOR_RUN_ID": "task-df52eb20-f2a2-48e8-80a0-10d834278452"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-prayer-moneyshot-99 [task-df52eb20-f2a2-48e8-80a0-10d834278452]",
    "role": "helper"
