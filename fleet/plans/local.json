@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795118942569,
+ "at": 1795119126161,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -289,24 +289,6 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=5 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=pickpockdick-kit25-385-0to5 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 5 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "supply",
-   "template": "kit-buy:aio-blood-chest",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=5 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=fatstack-kit6-385-0to5 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
