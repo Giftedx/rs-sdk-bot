@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795081861336,
+ "at": 1795084260323,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -254,31 +254,26 @@
    ]
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
+   "account": "OreElse",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
    "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
+    "ITEM_ID": "453",
+    "QUANTITY": "4",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "1000",
+    "CASH_RESERVE": "20000",
+    "ORDER_MS": "60000",
+    "ORDER_KEY": "elemental-oreelse-coal",
     "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-77543f0f-365f-44aa-8d40-c44fe0dba49d"
    },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-buy-oreelse-coal-elemental [task-77543f0f-365f-44aa-8d40-c44fe0dba49d]",
+   "role": "production"
   }
  ],
  "army": [
