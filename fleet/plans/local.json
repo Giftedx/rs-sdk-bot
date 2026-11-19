@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795127940806,
+ "at": 1795128536176,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -244,25 +244,6 @@
    "resources": []
   },
   {
-   "account": "Hocuspokeus",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
-   "autopilot": "local",
-   "resources": [
-    "knight:2669,3298"
-   ]
-  },
-  {
    "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -291,6 +272,48 @@
    "resources": [
     "shop:aubury"
    ]
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "Woodpecker",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "532",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "14",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying bought big bones",
+   "role": "combat",
+   "template": "army-bury-big-99",
+   "autopilot": "local",
+   "resources": []
   },
   {
    "account": "CoinCock",
@@ -324,18 +347,18 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
+    "KNIGHT_SPOT": "2671,3313",
     "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
+   "goal": "goldfarm knights at 2671,3313",
    "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "template": "goldfarm@2671,3313",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "knight:2671,3313"
    ]
   }
  ],

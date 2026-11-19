@@ -1,0 +1,22 @@
+{
+ "id": "1795128524450-abracadickra-masterbaiter",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "Masterbaiter",
+ "item": "coins",
+ "count": 129000,
+ "start": 1795128524450,
+ "end": 1795130924450,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
