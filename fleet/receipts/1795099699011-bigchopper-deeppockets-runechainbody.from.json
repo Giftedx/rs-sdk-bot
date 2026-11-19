@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795099699011-bigchopper-deeppockets-runechainbody",
+ "account": "Bigchopper",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "21554b1c-e32a-4653-8164-149bc1c19456",
+ "count": 1,
+ "ok": true,
+ "at": 1795099800708,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795099786297
+ },
+ "logout": {
+  "attemptId": "1795099778148-0000014040-0000000001",
+  "at": 1795099800696,
+  "sha256": "7377fe77da09edd88575e0117791b5c46ea0ec8b464857350708970f0c28955a"
+ },
+ "screen": true
+}
