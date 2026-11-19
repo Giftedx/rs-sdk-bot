@@ -43,6 +43,28 @@ test('multiEntry: the nearest multi-way tile toward the post', async () => {
     expect(multiEntry({ x: 3066, z: 3620 }, { x: 3067, z: 3640 }, 150, multi)).toBeNull();
 });
 
+test('multiEntry takes the multi-way area connected to the post, not a nearer one', async () => {
+    const { multiEntry, marchPlan } = await import('./pk-squad');
+    // Two areas: the post's (x 3040 to 3071, z 3600 and up) and a nearer one east (x 3130 to 3140, z 3530 to 3550).
+    const multi = (x: number, z: number) => (x <= 3071 && x >= 3040 && z >= 3600) || (x >= 3130 && x <= 3140 && z >= 3530 && z <= 3550);
+    expect(multiEntry({ x: 3094, z: 3500 }, { x: 3067, z: 3640 }, 150, multi)).toEqual({ x: 3071, z: 3600 });
+    // The real map: the post area starts at z 3600 and its tile nearest the Edgeville bank is the corner (the east zone is no entry).
+    expect(multiEntry({ x: 3094, z: 3497 }, { x: 3067, z: 3640 })).toEqual({ x: 3071, z: 3600 });
+    // From outside the Wilderness the march goes along the edge to the entry's x, then north to the area, then to the post.
+    const plan = marchPlan({ x: 3094, z: 3497 }, { x: 3067, z: 3640 }, 12);
+    expect(plan.every(s => s.x <= 3094 && s.x >= 3067)).toBe(true);
+    expect(plan.find(s => s.z >= 3519 && s.z <= 3525)?.x).toBe(3071);
+    expect(plan[plan.length - 1]).toEqual({ x: 3067, z: 3640 });
+});
+
+test('a pull may run 20 ticks and half a tick a tile of the distance', async () => {
+    const { pullTicks, pullDistance, PULL_RANGE } = await import('./pk-squad');
+    expect(pullTicks(0)).toBe(20);
+    expect(pullTicks(66)).toBe(53);
+    expect(pullDistance({ worldX: 3107, worldZ: 3574 }, { x: 3067, z: 3640 })).toBe(66);
+    expect(PULL_RANGE).toBeGreaterThan(66);
+});
+
 test('squadTarget leaves out a target the game will not let it attack', async () => {
     const { squadTarget } = await import('./pk-squad');
     const view = [{ name: 'Goondelf', index: 1, distance: 3, z: 3515, combatLevel: 126 }, { name: 'Ligma', index: 2, distance: 5, z: 3640, combatLevel: 125 }];
