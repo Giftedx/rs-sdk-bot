@@ -184,7 +184,7 @@ export const threatLine = (c: ThreatClass) => {
 
 // What the squad does about the threats now, in priority order: retreat, single-way, protect, kit. Each action names its
 // reason, which holds the record of the player that caused it.
-//  - A player that outclasses the strongest member: retreat.
+//  - A player that outclasses the strongest member: retreat (a squad with the win-chance estimate leaves by the odds, so only a solo account here).
 //  - Attackers at once that outnumber the squad (members + 1, at least a team): retreat, on single-way ground too.
 //  - A team that no member can protect against (no prayer points, or a Prayer level below the protect prayer of the style of each attacker): retreat at once,
 //    on single-way ground too.
@@ -216,7 +216,8 @@ export function decideAdapt(classes: readonly ThreatClass[], members: readonly M
         const there = squadMulti ? fightOdds({ ours, theirs, protectedShare, singleWay: true }, p) : here;
         return { here, there };
     })();
-    if (outclassing) actions.push({ kind: 'retreat', reason: `outclassed by ${names([outclassing])} at ${outclassing.record.nearest.dist} tiles` });
+    // With the win-chance estimate a squad leaves by its odds: the outclass rule (a gap of combat levels, a dearer weapon) counts only for a solo account.
+    if (outclassing && (!odds || members.length === 1)) actions.push({ kind: 'retreat', reason: `outclassed by ${names([outclassing])} at ${outclassing.record.nearest.dist} tiles` });
     else if (odds && odds.here < o.odds!.lose) {
         const to = squadMulti && odds.there >= 1 ? o.singleWayFrom?.(centre) ?? null : null;
         const why = `odds ${odds.here.toFixed(2)} for ${members.length} members against ${danger.length}: ${names(danger)}`;
