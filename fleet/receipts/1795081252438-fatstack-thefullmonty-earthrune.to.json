@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795081252438-fatstack-thefullmonty-earthrune",
+ "account": "TheFullMonty",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 15,
+ "claim": "9751c801-5820-4925-8a0c-1a9189e11899",
+ "count": 15,
+ "ok": true,
+ "at": 1795081320227,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 26,
+  "after": 41
+ },
+ "bank": {
+  "count": 15,
+  "at": 1795081319244
+ },
+ "logout": {
+  "attemptId": "1795081295234-0000025808-0000000001",
+  "at": 1795081320000,
+  "sha256": "039bc026302bc74988df321d66cfdee2956bad3d86bc6338b675d6423e53cbe3"
+ },
+ "screen": true
+}
