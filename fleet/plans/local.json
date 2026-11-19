@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795102698871,
+ "at": 1795102873129,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -285,6 +285,36 @@
    "resources": []
   },
   {
+   "account": "PickpockDick",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "dargaud",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "rune arrow",
+    "STOCK_TARGET": "400",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "320200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "320000",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":400}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
+   "role": "bank",
+   "template": "squad-arrows-dargaud",
+   "autopilot": "local",
+   "resources": [
+    "shop:dargaud"
+   ]
+  },
+  {
    "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -358,7 +388,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-93efeedc-f750-40d6-bfbb-01aed1d4b2d3"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-buy-sporrandip-dragon-bones-273-funded [task-93efeedc-f750-40d6-bfbb-01aed1d4b2d3]",
    "role": "supply"
@@ -400,7 +430,8 @@
   "kiltlifter",
   "knightrider",
   "knightstick",
-  "quickhandjob"
+  "quickhandjob",
+  "sporrandip"
  ],
  "builds": {
   "NabTheKnob": "tribrid",
