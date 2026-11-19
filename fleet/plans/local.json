@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795102548625,
+ "at": 1795102622834,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -340,31 +340,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "accounts": [
-    "Deeppockets",
-    "SporranDip"
-   ],
-   "script": "scripts/coin-courier.ts",
-   "args": [
-    "1900000",
-    "--bank-x=2618",
-    "--bank-z=3332",
-    "--reserve=200000",
-    "--timeout-ms=600000"
-   ],
-   "env": {
-    "COIN_ORDER": "prayer99-sporrandip-bonefund1900k",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-63734199-ec44-4f7b-acc1-d967e916c38b"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-courier-deeppockets-sporrandip-bone-fund [task-63734199-ec44-4f7b-acc1-d967e916c38b]",
-   "role": "supply"
   }
  ],
  "army": [
