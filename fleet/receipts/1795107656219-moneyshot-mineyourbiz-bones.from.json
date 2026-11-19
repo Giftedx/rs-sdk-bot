@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795107656219-moneyshot-mineyourbiz-bones",
+ "account": "Moneyshot",
+ "partner": "MineYourBiz",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bones",
+ "requested": 31,
+ "claim": "3eea84c2-ae1a-4186-b6e9-247f532cdb67",
+ "count": 31,
+ "ok": true,
+ "at": 1795107764013,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 31,
+  "after": 0
+ },
+ "bank": {
+  "count": 31,
+  "at": 1795107752000
+ },
+ "logout": {
+  "attemptId": "1795107744470-0000018120-0000000001",
+  "at": 1795107763929,
+  "sha256": "db284049d09fc3c364b999636c8aab344c0bca8213c70be1863139c542aeea24"
+ },
+ "screen": true
+}
