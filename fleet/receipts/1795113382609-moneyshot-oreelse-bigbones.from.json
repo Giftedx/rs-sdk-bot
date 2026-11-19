@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795113382609-moneyshot-oreelse-bigbones",
+ "account": "Moneyshot",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Big bones",
+ "requested": 16,
+ "claim": "d7656a05-ea2d-4c50-b412-745ebc8aee7c",
+ "count": 0,
+ "ok": false,
+ "at": 1795113424715,
+ "detail": "trade claimed"
+}

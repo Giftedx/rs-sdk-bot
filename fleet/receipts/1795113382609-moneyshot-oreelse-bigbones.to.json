@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795113382609-moneyshot-oreelse-bigbones",
+ "account": "OreElse",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Big bones",
+ "requested": 16,
+ "claim": "03c1a304-6f36-467e-ba05-d45700334845",
+ "count": 0,
+ "ok": false,
+ "at": 1795113428541,
+ "detail": "Error: route to 2617, 3333: precondition no route to 2617,3333,0",
+ "logout": {
+  "attemptId": "1795113420179-0000019752-0000000001",
+  "at": 1795113428526,
+  "sha256": "477a0e07e5f198c4fb103d635a1e6ffc4a2e59d19be9ef8f6f07b86370b6bae4"
+ },
+ "screen": false
+}
