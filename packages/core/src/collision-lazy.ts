@@ -34,7 +34,9 @@ const full = () => {
 };
 const restored = () => globalThis.__rsPathRestored === true;
 export default {
-    get zones() { return restored() ? [] : full().zones; },
+    // initPathfinding reads zones first: a process that did not call loadPathfinding restores the snapshot here
+    // (pathcache.ts restorePathfindingOnFirstUse sets __rsPathEnsure; without it nothing happens).
+    get zones() { globalThis.__rsPathEnsure?.(); return restored() ? [] : full().zones; },
     get tiles() { return restored() ? [] : full().tiles; },
     // "doors" is the file's last key: read and parse only its array, not the 27 MB of tiles before it.
     get doors() {

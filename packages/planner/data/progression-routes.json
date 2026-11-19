@@ -92847,6 +92847,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/route-finder-lazy-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/route-key-parity.ts",
    "intents": [
     "observe"
