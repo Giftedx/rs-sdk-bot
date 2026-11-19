@@ -1,3 +1,4 @@
+// Leaves the Elemental Workshop basement and odd-wall stairwell on foot for Seers' Village bank.
 import type { Outcome } from '../packages/core/src/act';
 import type { Session } from '../packages/core/src/inprocess';
 import { waitUntil } from '../packages/core/src/ticks';
