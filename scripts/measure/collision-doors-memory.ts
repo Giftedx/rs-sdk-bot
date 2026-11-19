@@ -28,4 +28,4 @@ if (mode === 'whole' || mode === 'tail') {
     console.log(`${mode.padEnd(5)} doors ${doors.length}, rss before ${Math.round(base / 2 ** 20)} MB, peak ${Math.round(peak / 2 ** 20)} MB, peak over before +${Math.round((peak - base) / 2 ** 20)} MB`);
     process.exit(0);
 }
-for (const m of ['whole', 'tail']) process.stdout.write(Bun.spawnSync(['bun', import.meta.path, m], { stdout: 'pipe', stderr: 'inherit' }).stdout.toString());
+for (const m of ['whole', 'tail']) process.stdout.write(Bun.spawnSync(['bun', import.meta.path, m], { stdout: 'pipe', stderr: 'inherit', windowsHide: true }).stdout.toString());
