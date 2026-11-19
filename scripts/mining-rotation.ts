@@ -276,7 +276,7 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
     if(arm||modal)actions.push({type:'closeModal'});
    }
   }
-  if(process.env.MINING_DEBUG==="1")console.log(`MDBG n=${n} pos=${pos.x},${pos.z} made=${made} delay=${delay} active=${active?`${active.rock.x},${active.rock.z} a=${active.arrival} r=${active.roll}`:"-"} up=${rocks.map(r=>locAt(s,r)?1:0).join("")} locs=${s.nearbyLocs.length} dlg=${!!s.dialog?.isOpen}/${!!s.interface?.isOpen}/${!!(s as any).modalOpen} acts=${actions.map(a=>a.type).join(",")}`);
+  if(process.env.MINING_DEBUG==="1")console.log(`MDBG n=${n} logs=${inv[NORMAL_LOGS]??0} iface=${s.interface?.isOpen?'1':'0'} pos=${pos.x},${pos.z} made=${made} delay=${delay} active=${active?`${active.rock.x},${active.rock.z} a=${active.arrival} r=${active.roll}`:"-"} up=${rocks.map(r=>locAt(s,r)?1:0).join("")} locs=${s.nearbyLocs.length} dlg=${!!s.dialog?.isOpen}/${!!s.interface?.isOpen}/${!!(s as any).modalOpen} acts=${actions.map(a=>a.type).join(",")}`);
   if(actions.length)await send(actions);
   await d.step();
  }
