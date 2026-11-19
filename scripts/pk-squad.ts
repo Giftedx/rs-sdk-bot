@@ -164,8 +164,8 @@ export async function stopSquadSession(raw: Session, reason: string, halt: (reas
 }
 // The stop handlers of a squad: a member whose session ends with no logout of ours (a dropped connection, or a stall
 // that ends its own session) goes into `dropped`, and the rescue at the end takes it out of the Wilderness.
-export function squadStopHandlers(halt: (detail: string) => void, dropped: Map<string, string>, log: (line: string) => void = line => console.log(line)) {
-    const onSessionEnd = async (s: Session, detail: string) => { if (!dropped.has(s.name)) { dropped.set(s.name, detail); log(`[${s.name}] SQUAD session ended: ${detail}`); } };
+export function squadStopHandlers(halt: (detail: string) => void, dropped: Map<string, string>, log: (line: string) => void = line => console.log(line), onDrop: (name: string) => void = () => {}) {
+    const onSessionEnd = async (s: Session, detail: string) => { if (!dropped.has(s.name)) { dropped.set(s.name, detail); log(`[${s.name}] SQUAD session ended: ${detail}`); onDrop(s.name); } };
     const onStop = (s: Session, reason: string) => stopSquadSession(s, reason, halt, 1000, onSessionEnd);
     return { onStop, onSessionEnd };
 }
@@ -190,6 +190,12 @@ export function squadEscapeSpell(z: number, carried: readonly { id: number; coun
     if (wildernessLevel(z) > 20) return null;
     for (const spell of [1174, 1164]) if (escapeCastable(spell, carried, wornIds, magic)) return spell;
     return null;
+}
+
+// Whether an idle member keeps its prayers on: a target of the squad within 12 tiles, or Hitpoints lost in the last 10 ticks.
+export const KEEP_PRAYER_RANGE = 12, KEEP_PRAYER_TICKS = 10;
+export function keepPrayer(o: { view: readonly { name: string; distance: number }[]; targets: ReadonlySet<string>; now: number; damagedAt: number }): boolean {
+    return o.now - o.damagedAt <= KEEP_PRAYER_TICKS || o.view.some(q => o.targets.has(q.name.toLowerCase()) && q.distance <= KEEP_PRAYER_RANGE);
 }
 
 // The pull (hold): the distance to the march's goal within which an attacked account on single-way ground walks on into multi-way,
@@ -372,7 +378,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     threats?: ThreatWatch }): Promise<SquadStats> {
     const stats: SquadStats = { name: s.name, fights: 0, pulls: 0, kills: 0, trips: 0, died: false, picked: {}, taken: 0, receipts: [], deaths: 0, rekits: 0 };
     const st = s.sdk.getState(), me = () => s.sdk.getState()?.player;
-    let life0 = st?.player?.lifeId, lastTile: { x: number; z: number } | null = null;
+    let life0 = st?.player?.lifeId, lastTile: { x: number; z: number } | null = null, prevHp = 0, damagedAt = -100;
     // A death: a new life, or the tile of the Lumbridge respawn.
     const diedNow = (q: { lifeId?: number; worldX: number; worldZ: number }) => (life0 !== undefined && q.lifeId !== life0) || Math.max(Math.abs(q.worldX - 3222), Math.abs(q.worldZ - 3218)) <= 40;
     // A retreat that ends with no session is a death only when the account died: a stop or a walk that did not get out leaves it alive.
@@ -430,6 +436,8 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 stats.died = true; break;
             }
             lastTile = { x: p.worldX, z: p.worldZ };
+            if (p.hp < prevHp) damagedAt = s.tick();
+            prevHp = p.hp;
             // Out of the Wilderness (a walk out, a teleport): to the bank and back to the post.
             if (wildernessLevel(p.worldZ) > 0) enteredWilderness = true;
             if (outTripDue(p.worldZ, enteredWilderness, stats.trips)) {
@@ -519,8 +527,10 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 // No prayer while it waits: an active prayer drains with no fight loop to flick it (in one live meeting
                 // our prayer ran out at about tick 730), and the fight loop puts them on again. One input each 3 ticks.
                 // A threat that can hit us keeps the protect prayer of its style on (holdProtect), at the cost of the drain.
+                // The protect prayer stays on while a target of the squad stands within reach (a skipped gang member next to us) or we took damage
+                // in the last 10 ticks (`keepPrayer`).
                 if (protect) holdProtect(s, protect, s.tick());
-                else if (s.tick() % 3 === 0) for (const [i, on] of (s.sdk.getState()?.prayers.activePrayers ?? []).entries()) if (on) void s.sdk.sendTogglePrayer(i);
+                else if (!keepPrayer({ view, targets: o.targets, now: s.tick(), damagedAt }) && s.tick() % 3 === 0) for (const [i, on] of (s.sdk.getState()?.prayers.activePrayers ?? []).entries()) if (on) void s.sdk.sendTogglePrayer(i);
                 // Back to the post between fights.
                 // At least a tick each pass: a walk to a step that cannot be reached fails at once.
                 if (now >= singleUntil && Math.max(Math.abs(p.worldX - o.post.x), Math.abs(p.worldZ - o.post.z)) > 2) await walkPath(walker, [{ ...o.post, tol: 2 }], { maxTicks: 60, idleMs: 9000, stop: () => !going() || !!squadTarget(s.sdk.getState()?.nearbyPlayers ?? [], o.targets, health, new Set(), self) });
@@ -646,9 +656,19 @@ if (import.meta.main) {
     // A session that ends with no logout of ours (a dropped connection) stops that account only. openBot's default
     // finishes the process, and in the third live pilot one account's drop logged the other three out in the Wilderness.
     const dropped = new Map<string, string>();
-    const { onStop, onSessionEnd } = squadStopHandlers(detail => { halted ??= detail; }, dropped);
+    // RESCUE=1 (default): a member that drops is logged in again at once (`startRescue`), not at the end of the run: the others
+    // fight on while it is in the Wilderness without a session.
+    let startRescue: (name: string) => void = () => {};
+    const { onStop, onSessionEnd } = squadStopHandlers(detail => { halted ??= detail; }, dropped, line => console.log(line), name => startRescue(name));
     const all = await openSquad(names, name => openBot(name, { onStop, onSessionEnd, continueAfterDeath: true }), (sessions, detail) => finish(sessions, false, detail));
     const squad = all.slice(0, ours.length).map(squadWorkSession), gang = all.slice(ours.length).map(squadWorkSession);
+    const rescuing = new Set<string>(), rescues: Promise<string[]>[] = [];
+    startRescue = name => {
+        // Only a member of ours: a gang account of the bench that ends its session is no one to rescue.
+        if (get('RESCUE', '1') !== '1' || rescuing.has(name) || !ours.includes(name)) return;
+        rescuing.add(name);
+        rescues.push(rescueDropped([name], all, (n, onStopRescue) => openBot(n, { onStop: onStopRescue, onSessionEnd: (s, detail) => onStopRescue(s, detail) }), line => console.log(line)));
+    };
     // Bench: a gang account is out when it died (a new life, or at the Lumbridge spawn) or left the Wilderness.
     const gangLife = new Map(gang.map(g => [g, g.sdk.getState()?.player?.lifeId] as const));
     const gangDead = (g: Session) => { const p = g.sdk.getState()?.player; return !!p && ((gangLife.get(g) !== undefined && p.lifeId !== gangLife.get(g)) || Math.max(Math.abs(p.worldX - 3222), Math.abs(p.worldZ - 3218)) <= 40); };
@@ -807,7 +827,7 @@ if (import.meta.main) {
     const sum = (f: (r: SquadStats) => number) => results.reduce((n, r) => n + f(r), 0);
     // RESCUE=1 (default): each dropped account logs in again, eats, and leaves the Wilderness by Camelot Teleport
     // (Wilderness 20 or less, runes held) or a walk to the Edgeville bank; one it cannot get out the RESULT names.
-    if (get('RESCUE', '1') === '1') stranded.push(...await rescueDropped(dropped.keys(), all, (name, onStop) => openBot(name, { onStop, onSessionEnd: (s, detail) => onStop(s, detail) }), log));
+    if (get('RESCUE', '1') === '1') { for (const name of dropped.keys()) startRescue(name); stranded.push(...(await Promise.all(rescues)).flat()); }
     else stranded.push(...dropped.keys());
     const end = squadEnd({ accounts: results.length, kills: sum(r => r.kills), gangDied: gang.length ? gang.filter(gangDead).length : undefined, deaths: results.filter(r => r.died).length,
         taken: sum(r => r.taken), trips: sum(r => r.trips), fights: sum(r => r.fights), picked, dropped: [...dropped.keys()], stranded, halted, rekits: results.reduce((n, r) => n + r.rekits, 0), ...(threats ? { interlopers: results.reduce((n, r) => n + (r.interlopers ?? 0), 0) } : {}), receiptProof: killReceiptProof(results.flatMap(r => r.receipts)), diedAccounts: results.filter(r => r.died).map(r => r.name) });
