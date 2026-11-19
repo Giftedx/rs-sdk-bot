@@ -4,14 +4,15 @@
 // does about it. Each decision is logged with the record that caused it. Each attacker is appended to
 // `.practice/threat-records/<server>/<name>.jsonl`, for the behaviour record of the rivals (research/pvp-fight-loop.md).
 //   Options: SQUAD_THREAT=1 (squad main) turns the watch on; SQUAD_THREAT_ACT=0 only logs and records; default 1 with the watch.
-import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { decodeHeadicons, decodeWorn, wornWeaponStyle, type CombatStyle } from '../packages/core/src/opponent';
-import { classifyThreat, decideAdapt, threatLine, ThreatBook, type Adapt, type DecideOptions, type Member, type Sighting, type ThreatClass, type ThreatRecord } from '../packages/core/src/pvp-threat';
+import { classifyThreat, DEFAULT_ODDS, decideAdapt, threatLine, ThreatBook, type OddsParams, type Adapt, type DecideOptions, type Member, type ProtectLevels, type Sighting, type ThreatClass, type ThreatRecord } from '../packages/core/src/pvp-threat';
 import { parsePack } from '../packages/knowledge/src/pack';
 import { contentRoot } from '../packages/knowledge/src/paths';
 import { PRAYER } from './pk';
+import { nearestSingleWay, planCounterSwap, restoreFor, wearIds } from './pk-threat-kit';
 import { canAttack, isMulti, outclasses, wildLevel, type Radar } from './pk-roam';
 
 // The style of an attack animation, from the name of the sequence (content pack/seq.pack): a cast is magic, a bow or a throw is ranged,
@@ -50,17 +51,32 @@ export interface WatchOptions {
     log: (line: string) => void;
     // The root of the record tree (default the working directory), and false for no record.
     recordRoot?: string | false;
+    // A record file at this size (default MAX_RECORD_BYTES) moves to `<name>.jsonl.1` (the older one of that name goes), so a name keeps at most
+    // twice that. A server directory with this many record files (default MAX_RECORD_FILES) takes no new name.
+    recordMaxBytes?: number; recordMaxFiles?: number;
+    // Ticks after a retreat or a single-way move for which the same players cannot cause another one (default 600). A player that was not
+    // there at the first one causes one at once. A decision stays for 30 ticks, so that each member of the squad acts on it.
+    cooldown?: number;
+    // Fight or flight by the win-chance estimate (default on, with DEFAULT_ODDS; the parts that are given replace the default; false: the counting rules).
+    odds?: Partial<OddsParams> | false;
     decide?: Partial<DecideOptions>;
     // false: the watch logs and records, and the squad does not act on it (default true).
     act?: boolean;
     now?: () => number;
 }
 
+// A record file moves aside at 5 MB, and a server directory takes at most 500 names.
+export const MAX_RECORD_BYTES = 5_000_000, MAX_RECORD_FILES = 500;
+
 export class ThreatWatch {
     private book: ThreatBook;
-    private cache: { tick: number; classes: ThreatClass[]; actions: Adapt[] } | null = null;
+    private cache: { tick: number; classes: ThreatClass[]; actions: Adapt[]; interlopers: string[] } | null = null;
     private logged = new Map<string, string>();
     private recorded = new Map<string, number>();
+    private cooling = new Map<string, number>();
+    private held: { until: number; moves: Adapt[] } | null = null;
+    private pending: { culprits: string[]; moves: Adapt[] } | null = null;
+    private full = false;
     readonly act: boolean;
     constructor(private o: WatchOptions) {
         this.act = o.act !== false;
@@ -70,11 +86,12 @@ export class ThreatWatch {
     // The members now in the Wilderness, from the sessions that are logged in.
     private members(): { sessions: Session[]; members: Member[] } {
         const sessions = this.o.sessions().filter(s => { const p = s.sdk.getState()?.player; return !!p && !p.isDead && wildLevel(p.worldX, p.worldZ) > 0; });
-        return { sessions, members: sessions.map(s => { const p = s.sdk.getState()!.player!; return { name: s.name, x: p.worldX, z: p.worldZ, combat: p.combatLevel }; }) };
+        return { sessions, members: sessions.map(s => { const p = s.sdk.getState()!.player!; return { name: s.name, x: p.worldX, z: p.worldZ, combat: p.combatLevel, prayer: s.sdk.getState()!.prayers?.prayerPoints, prayerLevel: s.sdk.getSkill('Prayer')?.level,
+            hp: p.hp, food: s.sdk.getInventory().filter(i => i.optionsWithIndex?.some(op => /^eat$/i.test(op.text))).length }; }) };
     }
 
     // The threats, their classes and the decisions of this tick. One reading for the squad each tick, whichever member asks.
-    step(tick: number): { classes: ThreatClass[]; actions: Adapt[] } {
+    step(tick: number): { classes: ThreatClass[]; actions: Adapt[]; interlopers: string[] } {
         if (this.cache?.tick === tick) return this.cache;
         const { sessions, members } = this.members();
         const sightings = new Map<string, Sighting>();
@@ -91,10 +108,58 @@ export class ThreatWatch {
         if (this.o.radar?.fresh()) for (const t of this.o.radar.tracks.values()) if (!sightings.has(t.name.toLowerCase())) sightings.set(t.name.toLowerCase(), { name: t.name, combat: t.combatLevel, x: t.x, z: t.z, inView: false });
         const records = this.book.observe(tick, members, [...sightings.values()].filter(x => members.some(m => Math.max(Math.abs(m.x - x.x), Math.abs(m.z - x.z)) <= 40)));
         const classes = records.map(r => classifyThreat(r, members, { canAttack: (m, t) => canAttack(m, t) }));
-        const actions = decideAdapt(classes, members, { outclasses: (m, t) => outclasses({ combat: m.combat }, { combatLevel: t.combat }), ...this.o.decide });
-        this.cache = { tick, classes, actions };
+        const levelOf = (s: Session, skill: string) => s.sdk.getSkill(skill)?.level ?? 1;
+        const decided = decideAdapt(classes, members, {
+            outclasses: (m, t) => outclasses({ combat: m.combat }, { combatLevel: t.combat }),
+            multiAt: isMulti,
+            protectLevels: protectLevels(),
+            ...(this.o.odds === false ? {} : { odds: { ...DEFAULT_ODDS, ...this.o.odds } }),
+            // The nearest single-way tile, away from the dangerous players.
+            singleWayFrom: at => nearestSingleWay(at, { multiAt: isMulti, wildAt: wildLevel, avoid: classes.filter(c => c.dangerous).map(c => ({ x: c.record.x, z: c.record.z })) }),
+            // The armour of the pack that defends better against the threat's style (scripts/pk-threat-kit.ts).
+            counterFor: (member, style) => {
+                const s = sessions.find(x => x.name === member);
+                return s ? planCounterSwap({ worn: s.sdk.getEquipment().map(e => e.id), pack: s.sdk.getInventory().map(i => i.id), style,
+                    levels: { attack: levelOf(s, 'Attack'), strength: levelOf(s, 'Strength'), defence: levelOf(s, 'Defence'), ranged: levelOf(s, 'Ranged'), magic: levelOf(s, 'Magic') } }) : null;
+            },
+            ...this.o.decide,
+        });
+        const actions = this.cooldown(tick, classes, decided);
+        // The interlopers: dangerous players that the squad did not come for. They are targets (the squad switches to them, one at a time).
+        const expected = this.o.decide?.expected;
+        const interlopers = classes.filter(c => c.dangerous && !expected?.has(c.record.name.toLowerCase())).map(c => c.record.name);
+        this.cache = { tick, classes, actions, interlopers };
         this.report(tick, classes, actions);
         return this.cache;
+    }
+
+    // A retreat or a single-way move stays decided, each tick, until a member acts on it and says so (`acted`). From then on the same players cannot cause
+    // another one for `cooldown` ticks (the protect prayer and the swap stay): a stranger at the post would cause retreat, return, retreat until the trips
+    // run out. A member inside a fight does not read the decision, so the cooldown must not start before one has acted.
+    private cooldown(tick: number, classes: readonly ThreatClass[], actions: Adapt[]): Adapt[] {
+        const move = (a: Adapt) => a.kind === 'retreat' || a.kind === 'single-way';
+        const rest = actions.filter(a => !move(a)), moves = actions.filter(move);
+        if (this.held && tick <= this.held.until) return [...this.held.moves, ...rest];
+        if (!moves.length) { this.pending = null; return actions; }
+        const expected = this.o.decide?.expected;
+        const culprits = classes.filter(c => c.dangerous && !expected?.has(c.record.name.toLowerCase())).map(c => c.record.name.toLowerCase());
+        if (culprits.length && culprits.every(n => (this.cooling.get(n) ?? -1) > tick)) {
+            if (this.logged.get('cooldown') !== culprits.join('+')) { this.logged.set('cooldown', culprits.join('+')); this.o.log(`THREAT retreat held, cooldown: ${culprits.join(', ')}`); }
+            this.pending = null;
+            return rest;
+        }
+        this.pending = { culprits, moves };
+        this.logged.delete('cooldown');
+        return actions;
+    }
+
+    // A member acts on the retreat or the single-way move that the last `step` decided: the cooldown of its players starts, and the decision stays
+    // 30 ticks for the other members of the squad.
+    acted(tick: number): void {
+        if (!this.pending) return;
+        for (const n of this.pending.culprits) this.cooling.set(n, tick + (this.o.cooldown ?? 600));
+        this.held = { until: tick + 30, moves: this.pending.moves };
+        this.pending = null;
     }
 
     actionsFor(member: string): Adapt[] { return (this.cache?.actions ?? []).filter(a => 'member' in a ? a.member === member : true); }
@@ -110,7 +175,7 @@ export class ThreatWatch {
         for (const a of actions) {
             // The reason holds distances that change each tick: a decision is logged again only when its kind, member, style, kit or tile changes.
             const key = `adapt:${a.kind}:${'member' in a ? a.member : ''}`, sig = JSON.stringify({ ...a, reason: undefined });
-            if (this.logged.get(key) !== sig) { this.logged.set(key, sig); this.o.log(`ADAPT ${a.kind}${'member' in a ? ` ${a.member}` : ''}${'style' in a ? ` ${a.style}` : ''}${'kit' in a ? ` ${a.kit}` : ''}: ${a.reason}`); }
+            if (this.logged.get(key) !== sig) { this.logged.set(key, sig); this.o.log(`ADAPT ${a.kind}${'member' in a ? ` ${a.member}` : ''}${'style' in a ? ` ${a.style}` : ''}: ${a.reason}`); }
         }
         // A decision that no longer holds is forgotten, so that its next time is logged again.
         for (const key of [...this.logged.keys()]) if (key.startsWith('adapt:') && !actions.some(a => `adapt:${a.kind}:${'member' in a ? a.member : ''}` === key)) this.logged.delete(key);
@@ -124,8 +189,17 @@ export class ThreatWatch {
         const dir = join(this.o.recordRoot ?? '.', '.practice', 'threat-records', this.o.server.replace(/[^A-Za-z0-9._-]/g, '_'));
         const line = { schema: 'threat-sighting/1', tick, at: (this.o.now ?? Date.now)(), server: this.o.server, name: r.name, combat: r.combat, worn: r.worn, wild: r.wild, multi: r.multi, x: r.x, z: r.z,
             nearest: r.nearest, closing: r.closing, speed: r.speed, style: c.style, by: c.by, cover: c.cover, lastAttack: r.lastAttack, targeting: r.targeting, protect: r.protect, skulled: r.skulled, canHit: c.canHit };
-        try { mkdirSync(dir, { recursive: true }); appendFileSync(join(dir, `${r.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}.jsonl`), JSON.stringify(line) + '\n'); }
-        catch (error) { this.o.log(`THREAT record write failed: ${String(error)}`); }
+        const file = join(dir, `${r.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}.jsonl`);
+        try {
+            mkdirSync(dir, { recursive: true });
+            if (existsSync(file)) {
+                if (statSync(file).size >= (this.o.recordMaxBytes ?? MAX_RECORD_BYTES)) { rmSync(`${file}.1`, { force: true }); renameSync(file, `${file}.1`); }
+            } else if (readdirSync(dir).filter(n => n.endsWith('.jsonl')).length >= (this.o.recordMaxFiles ?? MAX_RECORD_FILES)) {
+                if (!this.full) { this.full = true; this.o.log(`THREAT record directory is full (${this.o.recordMaxFiles ?? MAX_RECORD_FILES} files): no new name is recorded`); }
+                return;
+            }
+            appendFileSync(file, JSON.stringify(line) + '\n');
+        } catch (error) { this.o.log(`THREAT record write failed: ${String(error)}`); }
     }
 }
 
@@ -134,12 +208,71 @@ export const protectOf = (actions: readonly Adapt[], member: string): CombatStyl
 export const retreatOf = (actions: readonly Adapt[]): string | null => (actions.find(a => a.kind === 'retreat') as Extract<Adapt, { kind: 'retreat' }> | undefined)?.reason ?? null;
 
 // Protect from `style` for an account that waits (no fight loop to hold it): other protect prayers off, then the one on, one input each 3 ticks.
-// The levels are the prayer requirements (pk.ts PRAYER_REQ: 37, 40, 43).
-const PROTECT_LEVEL = { magic: 37, ranged: 40, melee: 43 } as const;
 const PROTECT_PRAYER = { magic: PRAYER.magic, ranged: PRAYER.missiles, melee: PRAYER.melee } as const;
+// The Prayer level of each protect prayer, read from the content (scripts/skill_prayer/configs/prayers.dbrow).
+let levelCache: ProtectLevels | undefined;
+export function protectLevels(): ProtectLevels {
+    if (levelCache) return levelCache;
+    const text = readFileSync(join(contentRoot(), 'scripts/skill_prayer/configs/prayers.dbrow'), 'utf8');
+    const of = (row: string) => Number(text.match(new RegExp(`\\[prayer_protect_from_${row}\\][^\\[]*?data=level,(\\d+)`))?.[1]);
+    const levels = { magic: of('magic'), ranged: of('missiles'), melee: of('melee') };
+    if (!Object.values(levels).every(Number.isFinite)) throw new Error('prayers.dbrow: the protect prayer levels are not there');
+    return (levelCache = levels);
+}
 export function holdProtect(s: Session, style: CombatStyle, tick: number): void {
     if (tick % 3 !== 0) return;
     const active = s.sdk.getState()?.prayers.activePrayers ?? [], want = PROTECT_PRAYER[style];
     for (const i of Object.values(PROTECT_PRAYER)) if (i !== want && active[i]) { void s.sdk.sendTogglePrayer(i); return; }
-    if (!active[want] && (s.sdk.getSkill('Prayer')?.level ?? 0) >= PROTECT_LEVEL[style]) void s.sdk.sendTogglePrayer(want);
+    if (!active[want] && (s.sdk.getSkill('Prayer')?.level ?? 0) >= protectLevels()[style]) void s.sdk.sendTogglePrayer(want);
+}
+
+// The armour swap of one account, for the squad's hold loop and the hunt: wears what the radar decides (the `kit` action of the account) from the
+// pack once, and wears the worn armour again after the threat has been gone for `holdTicks` ticks. It returns true when it used the tick
+// (an input and a tick each), so that the caller goes on with a new pass.
+export class KitSwapper {
+    private swapped: { restore: number[]; lastNeeded: number } | null = null;
+    constructor(private holdTicks = 60) {}
+    get active() { return this.swapped !== null; }
+    async step(s: Session, actions: readonly Adapt[], now: number, tick: () => Promise<boolean>, log: (line: string) => void): Promise<boolean> {
+        const kit = actions.find(a => a.kind === 'kit' && a.member === s.name) as Extract<Adapt, { kind: 'kit' }> | undefined;
+        if (kit && !this.swapped) {
+            this.swapped = { restore: restoreFor(s.sdk.getEquipment().map(e => e.id), kit.wear), lastNeeded: now };
+            log(`[${s.name}] threat kit swap: ${kit.reason}`);
+            const failed = await wearIds(s, kit.wear, tick);
+            if (failed.length) log(`[${s.name}] threat kit swap could not wear ${failed.join('+')}`);
+            return true;
+        }
+        if (kit && this.swapped) this.swapped.lastNeeded = now;
+        if (!kit && this.swapped && now - this.swapped.lastNeeded >= this.holdTicks) {
+            const back = this.swapped.restore;
+            this.swapped = null;
+            log(`[${s.name}] threat kit restore: wear ${back.join('+')}`);
+            await wearIds(s, back, tick);
+            return true;
+        }
+        return false;
+    }
+}
+
+// The settings of the squad's threat watch: SQUAD_THREAT_OPTS (a JSON object) over the SQUAD_THREAT_* settings of the environment. A key that is not
+// known, or a value that is not a number, throws, so that a typo in a climb cannot leave a setting at its default without a word.
+//   act (false: only log and record), cooldown (ticks), expected (false: the squad's targets count as strangers), odds (false: the counting rules),
+//   and the constants of the win-chance estimate: lose, protect, pile, theirFood, singleWayMin.
+export interface ThreatOptions { act: boolean; cooldown: number; expectedTargets: boolean; odds: Partial<OddsParams> | false }
+export const THREAT_OPTION_KEYS = ['act', 'cooldown', 'expected', 'odds', 'lose', 'protect', 'pile', 'theirFood', 'singleWayMin'] as const;
+export function threatOptions(json: string, get: (name: string, fallback: string) => string): ThreatOptions {
+    let o: unknown;
+    try { o = JSON.parse(json.trim() || '{}'); } catch { throw new Error('SQUAD_THREAT_OPTS is not JSON'); }
+    if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('SQUAD_THREAT_OPTS is not a JSON object');
+    const given = o as Record<string, unknown>;
+    for (const key of Object.keys(given)) if (!(THREAT_OPTION_KEYS as readonly string[]).includes(key)) throw new Error(`SQUAD_THREAT_OPTS has an unknown key: ${key} (known: ${THREAT_OPTION_KEYS.join(', ')})`);
+    const num = (key: string, env: string, fallback: string) => { const n = Number(given[key] ?? get(env, fallback)); if (!Number.isFinite(n)) throw new Error(`${key} is not a number`); return n; };
+    const off = given.odds !== undefined ? given.odds === false || given.odds === 0 : get('SQUAD_THREAT_ODDS', '1') === '0';
+    return {
+        act: given.act !== undefined ? given.act !== false && given.act !== 0 : get('SQUAD_THREAT_ACT', '1') !== '0',
+        cooldown: num('cooldown', 'SQUAD_THREAT_COOLDOWN', '600'),
+        expectedTargets: given.expected !== undefined ? given.expected !== false && given.expected !== 0 : get('SQUAD_THREAT_EXPECTED', '1') === '1',
+        odds: off ? false : { lose: num('lose', 'SQUAD_THREAT_LOSE', '0.9'), protect: num('protect', 'SQUAD_THREAT_PROTECT', '0.6'), pile: num('pile', 'SQUAD_THREAT_PILE', '0.7'),
+            theirFood: num('theirFood', 'SQUAD_THREAT_THEIR_FOOD', '10'), singleWayMin: num('singleWayMin', 'SQUAD_THREAT_SINGLE', '1.5') },
+    };
 }

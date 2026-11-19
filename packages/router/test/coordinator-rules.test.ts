@@ -165,3 +165,20 @@ test('a callback cannot bypass a rival review or source qualification',()=>{
  const s=chain();qualifyRival(s);
  expect(applyRules(s,deps({fingerprint:cap=>cap==='faster-ranged'?'changed':'src-a',progression:()=>progressionResult()}),NOW)).toEqual([]);
 });
+
+test('a next-band route whose last step is cut below the consumer level queues nothing',()=>{
+ // The planner cuts a step to the XP that its proof made (Ranged 85 to 89 inside 123,160 XP). The consumer asks for 40
+ // here; a step that ends at 39 does not reach it, so the rule adds no task and names the reason.
+ const s=chain();qualifyRival(s);
+ const cut=progressionResult({stepAccept:{skills:{Ranged:39}},step:{script:'scripts/faster.ts',args:['39'],env:{TARGET_LEVEL:'39'}},
+  route:[{capability:'faster-ranged',step:{script:'scripts/faster.ts',args:['39'],env:{TARGET_LEVEL:'39'}},accept:{skills:{Ranged:39}}}]});
+ const skipped:RuleSkip[]=[];
+ expect(applyRules(s,deps({progression:()=>cut,skipped:x=>{skipped.push(x);}}),NOW)).toEqual([]);
+ expect(skipped.some(x=>/no bound step that reaches the original finite consumer/.test(x.reason))).toBe(true);
+ // The same route cut exactly at the consumer level is queued with the cut step.
+ const full=progressionResult({route:[{capability:'faster-ranged',step:{script:'scripts/faster.ts',args:['40'],env:{TARGET_LEVEL:'40'}},accept:{skills:{Ranged:40}}}]});
+ const ready=chain();qualifyRival(ready);
+ const added=applyRules(ready,deps({progression:()=>full}),NOW);
+ expect(added.length).toBe(1);
+ expect(added[0]).toMatchObject({capability:'faster-ranged',accept:{skills:{Ranged:40}},env:{TARGET_LEVEL:'40'}});
+});
