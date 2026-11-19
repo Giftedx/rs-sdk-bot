@@ -103,6 +103,18 @@ export function verifyPathfindingSnapshotFile(file:string,key:string):boolean {
     }finally{closeSync(fd);}
 }
 
+// Copies the payload into WASM memory. A page that memory.grow() added is zero already, so a zero page of the payload
+// beyond `had` bytes is not written: writing it would make the operating system commit and map the page (about half of
+// the 1,593 pages of the snapshot are zero). A page below `had` is always written: it may hold other bytes.
+export function copyNonZeroPages(payload:Uint8Array,target:Uint8Array,had:number):void {
+    const zero=new Uint8Array(PAGE);
+    for(let at=0;at<payload.length;at+=PAGE){
+        const page=payload.subarray(at,Math.min(at+PAGE,payload.length));
+        if(at>=had&&Buffer.compare(page,zero.subarray(0,page.length))===0)continue;
+        target.set(page,at);
+    }
+}
+
 // Stage the checked payload before changing WASM memory. A failed read remains
 // an optional cache miss, even when it happens after some payload bytes arrive.
 // This uses one transient payload buffer, bounded by the checked file length. It is not zero-filled: readFully fills all of it
@@ -118,9 +130,9 @@ export function restorePathfindingSnapshotFile(file:string,key:string,memory:Web
         if(!readFully(fd,payload,parsed.offset)||sha256(payload)!==parsed.header.sha256)return false;
     } catch { return false; }
     finally { if(fd!==undefined)try{closeSync(fd);}catch{/* The cache is optional. */} }
-    const need=payload.length/PAGE-memory.buffer.byteLength/PAGE;
+    const had=memory.buffer.byteLength,need=payload.length/PAGE-had/PAGE;
     if(need>0)try{memory.grow(need);}catch{return false;}
-    new Uint8Array(memory.buffer,0,payload.length).set(payload);
+    copyNonZeroPages(payload,new Uint8Array(memory.buffer,0,payload.length),had);
     return true;
 }
 
