@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795101109381-mightyrod-knightrider-dragondagger",
+ "account": "KnightRider",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon dagger",
+ "requested": 1,
+ "claim": "1f29481f-fbd8-43ed-9917-d990a8913e95",
+ "count": 0,
+ "ok": false,
+ "at": 1795101183227,
+ "detail": "trade claimed"
+}

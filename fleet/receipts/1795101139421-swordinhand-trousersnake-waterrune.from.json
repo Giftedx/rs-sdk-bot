@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795101139421-swordinhand-trousersnake-waterrune",
+ "account": "Swordinhand",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 236,
+ "claim": "975f8b3c-f3b0-472f-979f-1be144aff21a",
+ "count": 0,
+ "ok": false,
+ "at": 1795101200796,
+ "detail": "trade claimed"
+}
