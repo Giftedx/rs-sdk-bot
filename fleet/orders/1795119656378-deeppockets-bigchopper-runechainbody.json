@@ -1,0 +1,22 @@
+{
+ "id": "1795119656378-deeppockets-bigchopper-runechainbody",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Deeppockets",
+ "to": "Bigchopper",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795119656378,
+ "end": 1795122056378,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
