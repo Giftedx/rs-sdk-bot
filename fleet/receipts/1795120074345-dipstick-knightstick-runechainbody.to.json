@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795120074345-dipstick-knightstick-runechainbody",
  "account": "Knightstick",
  "partner": "Dipstick",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "25a7dc07-817b-4fb2-8c25-adbd74d75183",
- "count": 0,
- "ok": false,
- "at": 1795120123321,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795120135840,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795120135141
+ },
+ "logout": {
+  "attemptId": "1795120123553-0000027840-0000000001",
+  "at": 1795120135831,
+  "sha256": "229a505e88f424e053571d12d604f032f742a215e216e32a4930b5b909d586c1"
+ },
+ "screen": true
 }
