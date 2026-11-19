@@ -92883,6 +92883,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/supervise-output-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/talk-plans.ts",
    "intents": [
     "observe"
