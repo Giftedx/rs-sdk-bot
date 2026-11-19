@@ -1,0 +1,23 @@
+{
+ "id": "1795057982273-dipstick-undermykilt-7630a633074829f9",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Dipstick",
+ "to": "UnderMyKilt",
+ "item": "Law rune",
+ "count": 1,
+ "start": 1795057982273,
+ "end": 1795060382273,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
