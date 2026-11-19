@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795096530411,
+ "at": 1795096679301,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -335,7 +335,7 @@
     "RANDOM_EVENTS": "0",
     "COORDINATOR_RUN_ID": "task-24bf8b44-13c8-4cd8-8acc-94b05bb3911d"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-prayer-knightstick-99 [task-24bf8b44-13c8-4cd8-8acc-94b05bb3911d]",
    "role": "helper"
@@ -376,6 +376,7 @@
   "fingersmith",
   "kiltlifter",
   "knightrider",
+  "knightstick",
   "quickhandjob",
   "sporrandip"
  ],
