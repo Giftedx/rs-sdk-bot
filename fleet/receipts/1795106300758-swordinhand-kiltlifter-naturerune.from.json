@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795106300758-swordinhand-kiltlifter-naturerune",
  "account": "Swordinhand",
  "partner": "Kiltlifter",
@@ -10,8 +10,22 @@
  "item": "Nature rune",
  "requested": 297,
  "claim": "e2dd259b-3849-4cb1-91cd-3b75e8d5e14d",
- "count": 0,
- "ok": false,
- "at": 1795106397633,
- "detail": "trade claimed"
+ "count": 297,
+ "ok": true,
+ "at": 1795106548393,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 297,
+  "after": 0
+ },
+ "bank": {
+  "count": 297,
+  "at": 1795106407266
+ },
+ "logout": {
+  "attemptId": "1795106397641-0000009460-0000000001",
+  "at": 1795106548384,
+  "sha256": "e6c35a04f3d509dd9991ad7ac035d1ee4ee8c864825b3a0642fb7131ac9e1903"
+ },
+ "screen": true
 }
