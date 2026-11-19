@@ -234,6 +234,103 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
 
 export {transfer,ess,state};
 
+// RUNE_TICK_TRADE=0 keeps the polled transfer above for the carrier loop.
+export const runeTickTrade=(value=process.env.RUNE_TICK_TRADE??'1')=>{
+ if(value!=='0'&&value!=='1')throw Error('RUNE_TICK_TRADE must be 0 or 1');
+ return value==='1';
+};
+const RUNE_LEVEL_DIALOG=/^(?:(?:@dbl@)?Congratulations, you just advanced a runecraft level\.|(?:Members can now|You can now) craft @dbl@\w+ Runes@bla@\.)$/i;
+// One pack from an adjacent helper, then the craft. Each actor acts in its own tick listener, so its clicks leave with
+// the acknowledgement of the tick that it sees, and the server reads them in the next tick. Every click is safe to
+// repeat, so the order in which the server reads the two players does not change the result:
+// - Both ask each tick until the trade opens. The server drops the crafter's request while the craft delay holds and
+//   answers the helper's with "busy"; the first pair after the delay opens the trade (craft + 5 ticks).
+// - The helper offers all and accepts once (craft + 6). From then on it also clicks the confirm button each tick; the
+//   server refuses that click until the confirm screen is open (trade.rs2 [if_button,tradeconfirm:accept]).
+// - The crafter accepts the offer screen and clicks confirm in the same tick (Player.openMainModal opens the confirm
+//   screen at once). The trade ends at craft + 7 in both read orders.
+// - The crafter crafts in the tick it sees the essence. An altar click under the confirm screen would close it
+//   (OpLocHandler: clearPendingAction closes the modal) and cancel the trade, so the craft waits for the credit.
+// `credited` runs in the tick the crafter sees the essence, before the craft's XP: a restock rule that reads the XP
+// still needed sees the same XP as after the polled transfer.
+export async function tickTransfer(s:Session,h:Session,amount:number,craft:{send:()=>Promise<void>;complete:()=>boolean},stop:()=>boolean=()=>false,credited:()=>void=()=>{}){
+ if(!Number.isSafeInteger(amount)||amount<1||amount>27)throw Error('carrier transfer amount must be1..27');
+ const at=s.tick();
+ if(!await waitUntil(s,()=>stop()||ess(h)===amount&&ess(s)===0,{timeoutTicks:10})||stop())throw Error('handoff stock unobserved');
+ let failure:unknown,offerSent=false,craftAt:number|undefined,finished=false;
+ const counts={crafterRequests:0,helperRequests:0,crafterAccepts:0,helperAccepts:0,confirms:0,closes:0};
+ const fail=(e:unknown)=>{failure??=e;};
+ // A refused blind click is expected (a dropped request, a confirm before its screen); a dispatch that throws is not.
+ const fire=(actor:Session,action:Parameters<Session['direct']>[0])=>{try{void Promise.resolve(actor.direct(action)).catch(fail);}catch(e){fail(e);}};
+ const partnerOk=(t:NonNullable<ReturnType<typeof trade>>,name:string)=>!t.partner||t.partner.toLowerCase()===name.toLowerCase();
+ const offered=(items:readonly {id:number;count:number}[]|undefined)=>{
+  if((items??[]).some(i=>i.id!==1436))throw Error('unexpected item in owned handoff');
+  return (items??[]).reduce((n,i)=>n+i.count,0);
+ };
+ const crafter=()=>{
+  if(finished||failure)return;
+  try{
+   if(craftAt!==undefined){if(craft.complete())finished=true;return;}
+   const st=state(s),t=st.trade;
+   if(t?.isOpen){
+    if(!partnerOk(t,h.name))throw Error('unexpected carrier trade partner');
+    if(offered(t.myOffer)!==0||offered(t.theirOffer)>amount)throw Error('unexpected carrier trade stock');
+    if(t.screen==='offer'){
+     if(!t.myAccepted){fire(s,{type:'clickComponent',componentId:3420,reason:'SDK'});counts.crafterAccepts++;}
+     fire(s,{type:'clickComponent',componentId:3546,reason:'SDK'});counts.confirms++;
+    }else if(t.screen==='confirm'&&!t.myAccepted){
+     if(offered(t.theirOffer)!==amount)throw Error('incomplete carrier confirmation');
+     fire(s,{type:'clickComponent',componentId:3546,reason:'SDK'});counts.confirms++;
+    }
+    return;
+   }
+   if(st.dialog?.isOpen){
+    if(!st.dialog.allComponents?.some(c=>RUNE_LEVEL_DIALOG.test(c.text)))throw Error('carrier trade preserves unrelated dialogs');
+    // The level-up window opens after the craft delay and makes the crafter busy. The close and the request go in
+    // one tick: the server reads the close first, so the request sees a free crafter.
+    fire(s,{type:'closeModal',reason:'SDK'});counts.closes++;
+   }
+   if(ess(s)===amount&&ess(h)===0){craftAt=s.tick();credited();void craft.send().catch(fail);return;}
+   if(ess(s)===0){const hi=index(s,h.name);if(hi!==undefined){fire(s,{type:'interactPlayer',playerIndex:hi,optionIndex:4,reason:'SDK'});counts.crafterRequests++;}}
+  }catch(e){fail(e);}
+ };
+ const helper=()=>{
+  if(finished||failure||craftAt!==undefined)return;
+  try{
+   const t=trade(h);
+   if(t?.isOpen){
+    if(!partnerOk(t,s.name))throw Error('unexpected carrier trade partner');
+    const mine=offered(t.myOffer);
+    if(offered(t.theirOffer)!==0||mine>amount)throw Error('unexpected carrier trade stock');
+    if(t.screen==='offer'){
+     if(mine===0){
+      if(offerSent)return;
+      const e=inv(h).find(i=>i.id===1436);if(!e)throw Error('helper essence slot missing');
+      fire(h,{type:'clickComponentWithOption',componentId:3322,optionIndex:4,slot:e.slot,reason:'SDK'});offerSent=true;
+      fire(h,{type:'clickComponent',componentId:3420,reason:'SDK'});counts.helperAccepts++;
+     }else{
+      if(!t.myAccepted){fire(h,{type:'clickComponent',componentId:3420,reason:'SDK'});counts.helperAccepts++;}
+      fire(h,{type:'clickComponent',componentId:3546,reason:'SDK'});counts.confirms++;
+     }
+    }else if(t.screen==='confirm'&&!t.myAccepted){fire(h,{type:'clickComponent',componentId:3546,reason:'SDK'});counts.confirms++;}
+    return;
+   }
+   if(ess(h)===amount){const si=index(h,s.name);if(si!==undefined){fire(h,{type:'interactPlayer',playerIndex:si,optionIndex:4,reason:'SDK'});counts.helperRequests++;}}
+  }catch(e){fail(e);}
+ };
+ const offs=[s.onTick(crafter),h.onTick(helper)];
+ try{
+  // The listeners act on each published tick; the first pair of requests goes now.
+  helper();crafter();
+  if(!await waitUntil(s,()=>finished||!!failure||stop(),{timeoutTicks:40}))throw Error('carrier trade and craft did not finish in 40 ticks');
+  if(failure)throw failure;
+  if(stop())throw Error('carrier trade stopped');
+  if(ess(h)!==0)throw Error('helper kept essence after the craft');
+  console.log('RC_TICK_TRADE '+JSON.stringify({crafter:s.name,helper:h.name,at,craftAt,ticks:craftAt!-at,...counts}));
+  return craftAt!-at;
+ }finally{for(const off of offs)off();}
+}
+
 type Items=Record<number,number>;
 const count=(items:readonly {id:number;count:number}[]):Items=>{const result:Items={};for(const i of items)result[i.id]=(result[i.id]??0)+i.count;return result;};
 const equal=(a:Items,b:Items)=>[...new Set([...Object.keys(a),...Object.keys(b)])].every(k=>(a[Number(k)]??0)===(b[Number(k)]??0));
