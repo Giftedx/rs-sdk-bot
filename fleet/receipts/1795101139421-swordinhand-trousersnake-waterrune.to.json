@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795101139421-swordinhand-trousersnake-waterrune",
  "account": "TrouserSnake",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 236,
  "claim": "41b38952-e8fd-49e5-be1d-49694a4daeb8",
- "count": 0,
- "ok": false,
- "at": 1795101167187,
- "detail": "trade claimed"
+ "count": 236,
+ "ok": true,
+ "at": 1795101217812,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 236
+ },
+ "bank": {
+  "count": 236,
+  "at": 1795101217050
+ },
+ "logout": {
+  "attemptId": "1795101167196-0000029240-0000000001",
+  "at": 1795101217798,
+  "sha256": "c54cda81f651fa3bfea213641e91996a2d931d64fc4411002685eb50cd88219a"
+ },
+ "screen": true
 }
