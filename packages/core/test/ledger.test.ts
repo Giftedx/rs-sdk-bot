@@ -1,5 +1,67 @@
 import { test, expect } from 'bun:test';
-import { classifyTick, idleWhy, summarize, startLedger, formatLedger } from '../src/ledger';
+import { classifyTick, idleWhy, summarize, startLedger, formatLedger, stalled, type TickRow, type TickKind } from '../src/ledger';
+
+// The summary as it was computed over every row: the reference for the counters.
+function summarizeAllRows(rows: TickRow[], xpGain = 0) {
+    const counts: Record<TickKind, number> = { xp: 0, inventory: 0, move: 0, anim: 0, dialog: 0, stun: 0, idle: 0 };
+    for (const r of rows) counts[r.kind]++;
+    const streaks: { start: number; length: number; at: string }[] = [];
+    for (let i = 0; i < rows.length; i++) {
+        if (rows[i]!.kind !== 'idle') continue;
+        let j = i;
+        while (j + 1 < rows.length && rows[j + 1]!.kind === 'idle') j++;
+        streaks.push({ start: rows[i]!.tick, length: j - i + 1, at: rows[i]!.at });
+        i = j;
+    }
+    streaks.sort((x, y) => y.length - x.length || x.start - y.start);
+    const why = new Map<string, number>();
+    for (const r of rows) if (r.kind === 'idle') why.set(r.why ?? 'none', (why.get(r.why ?? 'none') ?? 0) + 1);
+    const idleBy = [...why].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, 6);
+    return { ticks: rows.length, counts, idlePct: rows.length ? (100 * counts.idle) / rows.length : 0, longestIdle: streaks.slice(0, 5), xpGain, idleBy };
+}
+
+test('the counters give the same summary as a pass over every row, for random runs', () => {
+    let seed = 12345;
+    const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    const kinds: TickKind[] = ['xp', 'inventory', 'move', 'anim', 'dialog', 'stun', 'idle', 'idle', 'idle', 'idle'];
+    const reasons = ['combat', 'hurt', 'bank', 'shop', 'window', 'none', 'after:walkTo', 'after:interactLoc', 'after:a', 'after:b'];
+    for (let run = 0; run < 200; run++) {
+        const n = Math.floor(rnd() * 400), rows: TickRow[] = [];
+        for (let i = 0; i < n; i++) {
+            const kind = kinds[Math.floor(rnd() * kinds.length)]!;
+            rows.push({ tick: 1000 + i, kind, at: `${i},0`, ...(kind === 'idle' && rnd() < 0.9 ? { why: reasons[Math.floor(rnd() * reasons.length)]! } : {}) });
+        }
+        expect(summarize(rows, 7)).toEqual(summarizeAllRows(rows, 7));
+    }
+    // Ties on length keep the earliest start, and a run that ends in an open streak counts it.
+    const tie = ['idle', 'idle', 'move', 'idle', 'idle', 'move', 'idle', 'idle', 'move', 'idle', 'idle', 'idle'].map((kind, i) => ({ tick: i, kind: kind as TickKind, at: `${i},0` }));
+    expect(summarize(tie).longestIdle).toEqual(summarizeAllRows(tie).longestIdle);
+});
+
+test('a ledger holds a bounded number of rows, and its summary, counts and stall check match the full run', () => {
+    let t = 0, x = 0, mode = 0;
+    const cbs: (() => void)[] = [];
+    let state: any = { tick: 0, player: { worldX: 0, worldZ: 0, level: 0, animId: -1, combat: { inCombat: false, lastDamageTick: -1 } }, skills: [], dialog: { isOpen: false } };
+    const keep = 50;
+    const led = startLedger({ sdk: { getState: () => state }, onTick: cb => { cbs.push(cb); return () => {}; }, tick: () => t }, () => null, keep);
+    const all: TickRow[] = [];
+    let maxHeld = 0;
+    for (let i = 0; i < 1000; i++) {
+        t++; mode = Math.floor(i / 7) % 3;
+        if (mode === 0) x++; // a move tick
+        state = { ...state, tick: t, player: { ...state.player, worldX: x, animId: mode === 1 ? 881 : -1 } };
+        for (const cb of cbs) cb();
+        maxHeld = Math.max(maxHeld, led.rows.length);
+        all.push(led.rows.at(-1)!);
+        // The window of the stall check is inside the held rows at each tick.
+        const w = 30;
+        expect(stalled(led.rows, w)).toBe(stalled(all, w));
+    }
+    expect(maxHeld).toBeLessThan(2 * keep);
+    expect(led.rows.slice(-keep).map(r => r.tick)).toEqual(all.slice(-keep).map(r => r.tick));
+    expect(led.counts()).toEqual(Object.fromEntries(Object.entries(summarizeAllRows(all).counts).filter(([, n]) => n > 0)));
+    expect(led.stop()).toEqual(summarizeAllRows(all));
+});
 
 const st = (o: { x?: number; xp?: number; anim?: number; dialog?: boolean }) => ({
     player: { worldX: o.x ?? 0, worldZ: 0, level: 0, animId: o.anim ?? -1 },

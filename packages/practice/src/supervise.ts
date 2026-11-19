@@ -112,6 +112,39 @@ export const failureShape = (result: string) => result.replace(/position=\d+,\d+
 export const repeatableFailure = (result: string) => /^RESULT fail\b/.test(result) && !isTransportStall(result) && !isHeldClaimRefusal(result) && !isClaimAuthorityFault(result)
     && !/^RESULT fail (?:login:|session ended|.*TickStallError)/.test(result);
 
+// A run's output can be hours long. The supervisor reads only the last RESULT line and the last LEDGER line (one for
+// each key), so this keeps those lines and drops the rest. `match` returns the key of a line to keep, or null. A line
+// over MAX_KEPT_LINE characters keeps its first MAX_KEPT_LINE characters.
+export const MAX_KEPT_LINE = 65_536;
+export function lineKeeper(match: (line: string) => string | null) {
+    const kept = new Map<string, string>();
+    let partial = '';
+    const take = (raw: string) => { const line = raw.endsWith('\r') ? raw.slice(0, -1) : raw, key = match(line); if (key !== null) kept.set(key, line); };
+    return {
+        push(chunk: string): void {
+            const parts = (partial + chunk).split('\n');
+            partial = parts.pop()!.slice(0, MAX_KEPT_LINE);
+            for (const part of parts) take(part.slice(0, MAX_KEPT_LINE));
+        },
+        /** The kept lines joined by newlines. This ends the open line. */
+        text(): string { if (partial) { take(partial); partial = ''; } return [...kept.values()].join('\n'); },
+    };
+}
+
+// Copies a child's stdout to this process and returns only the lines that `match` keeps.
+export async function keepOutput(stdout: ReadableStream<Uint8Array>, match: (line: string) => string | null): Promise<string> {
+    const keep = lineKeeper(match), reader = stdout.getReader(), decoder = new TextDecoder();
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const c = decoder.decode(value, { stream: true });
+        keep.push(c);
+        process.stdout.write(c);
+    }
+    keep.push(decoder.decode());
+    return keep.text();
+}
+
 export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused' | 'refused'; runs: number }> {
     let fails = 0, held = 0, lastShape: string | null = null;
     for (let runs = 1; ; runs++) {
@@ -152,10 +185,8 @@ if (import.meta.main) {
             // A standing owner job has no coordinator acceptance, so it runs the current source without the release pin.
             if(process.env.DEMO_OK==='1'&&process.env.STANDING!=='1')try{assertWorkerRelease();}catch(e){return {stdout:`RESULT fail ${String(e)}`,exitCode:1};}
             const p = Bun.spawn(workerCommand(bot,script,scriptArgs), { stdout: 'pipe', stderr: 'inherit', env: process.env ,windowsHide:true});
-            let text = '';
-            const reader = p.stdout.getReader();
-            for (;;) { const { done, value } = await reader.read(); if (done) break; const c = new TextDecoder().decode(value); text += c; process.stdout.write(c); }
-            return { stdout: text, exitCode: await p.exited };
+            const stdout = await keepOutput(p.stdout, l => l.startsWith('RESULT') ? 'RESULT' : /^LEDGER ticks=\d+/.test(l) ? 'LEDGER' : null);
+            return { stdout, exitCode: await p.exited };
         },
         stopped: () => !fleetLeaseAllowsWorker(process.cwd()) || participantsStopped(participants,account=>existsSync(`.practice/stop-${account}`)),
         pause: ms => Bun.sleep(ms),
