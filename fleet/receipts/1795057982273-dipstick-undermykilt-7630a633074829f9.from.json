@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795057982273-dipstick-undermykilt-7630a633074829f9",
+ "account": "Dipstick",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 1,
+ "claim": "2e4c0a81-2f2b-4df8-a068-e4daceb1dec4",
+ "count": 0,
+ "ok": false,
+ "at": 1795057997431,
+ "detail": "trade claimed"
+}

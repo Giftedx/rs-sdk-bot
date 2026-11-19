@@ -1,0 +1,23 @@
+{
+ "id": "1795060353608-bigchopper-trousersnake-54a812da55491f13",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "TrouserSnake",
+ "item": "Antipoison(3)",
+ "count": 1,
+ "start": 1795060353608,
+ "end": 1795067553608,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
