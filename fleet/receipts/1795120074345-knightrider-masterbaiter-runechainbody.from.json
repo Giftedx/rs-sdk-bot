@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795120074345-knightrider-masterbaiter-runechainbody",
  "account": "KnightRider",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "2e9d99b5-263e-45bc-8edb-eb1c14cf4ef4",
- "count": 0,
- "ok": false,
- "at": 1795120119448,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795120336246,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795120314359
+ },
+ "logout": {
+  "attemptId": "1795120119456-0000002452-0000000001",
+  "at": 1795120336238,
+  "sha256": "19033ae3a578ba4329a5b474d767f5ed8bda5ea59b9ec4131388ccd58dfd3805"
+ },
+ "screen": true
 }
