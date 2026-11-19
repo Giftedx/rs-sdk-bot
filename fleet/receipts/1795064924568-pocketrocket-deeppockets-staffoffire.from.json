@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795064924568-pocketrocket-deeppockets-staffoffire",
  "account": "Pocketrocket",
  "partner": "Deeppockets",
@@ -10,8 +10,22 @@
  "item": "Staff of fire",
  "requested": 1,
  "claim": "058e4670-5a82-4114-ad02-cab06f8b1414",
- "count": 0,
- "ok": false,
- "at": 1795064985562,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795065193042,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795065177530
+ },
+ "logout": {
+  "attemptId": "1795064985570-0000028796-0000000001",
+  "at": 1795065193033,
+  "sha256": "a6ce3b7308d4fde1cac31f4590613c0ddc9b307e6e41700d76b4e3030dc3e872"
+ },
+ "screen": true
 }
