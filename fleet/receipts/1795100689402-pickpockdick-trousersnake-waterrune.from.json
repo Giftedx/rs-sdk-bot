@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795100689402-pickpockdick-trousersnake-waterrune",
+ "account": "PickpockDick",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 4,
+ "claim": "298a9b22-0905-445b-9559-108a11a606c7",
+ "count": 0,
+ "ok": false,
+ "at": 1795100717030,
+ "detail": "trade claimed"
+}

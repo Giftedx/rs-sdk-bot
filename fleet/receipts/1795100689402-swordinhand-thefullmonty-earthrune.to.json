@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795100689402-swordinhand-thefullmonty-earthrune",
+ "account": "TheFullMonty",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 10,
+ "claim": "9fc84506-d16e-436f-91ae-54c95038f6b6",
+ "count": 0,
+ "ok": false,
+ "at": 1795100712798,
+ "detail": "trade claimed"
+}
