@@ -258,9 +258,14 @@ jobs:
   progression-practice:
     if: inputs.preparation_practice
     uses: ./.github/workflows/progression-practice.yml
+  # The test files run in parts on several runners at once (scripts/test-shards.ts --part); part 1 also runs the other checks.
   linux:
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1, 2]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -276,22 +281,32 @@ jobs:
           (cd vendor/rs-sdk && bun install --frozen-lockfile --production)
           (cd vendor/rs-sdk/server/webclient && bun install --frozen-lockfile)
       - run: bun run check-pin
+        if: matrix.part == 1
       # A Windows checkout (CRLF in the SDK submodule) and this runner give one release for one commit
       # (packages/core/src/release-digest.ts). Compare the line with `bun packages/core/src/worker-release.ts scripts/ranged-train.ts` on the PC.
       - name: Print the release of one worker
+        if: matrix.part == 1
         run: |
           bun packages/core/src/worker-release.ts scripts/ranged-train.ts
       - name: Typecheck (tsc needs more than the default Node heap for this repo)
+        if: matrix.part == 1
         run: bun run typecheck
         env:
           NODE_OPTIONS: --max-old-space-size=6144
-      - run: bun test ./scripts ./packages
+      - run: bun scripts/test-shards.ts --part $TEST_PART ./scripts ./packages
+        env:
+          TEST_PART: ${{ matrix.part }}/2
       # The dashboard tests alone too: in the full run another test's globals (window) can hide a missing stub.
       - run: bun test ./packages/dashboard
+        if: matrix.part == 1
   # The gate reads the one-line bun run/test steps above. This entry calls the script directly to avoid recursion.
   windows:
     runs-on: windows-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1, 2, 3, 4]
     steps:
       - name: Keep SDK patch line endings
         run: git config --global core.autocrlf false
@@ -308,8 +323,8 @@ jobs:
         working-directory: vendor/rs-sdk
       - run: bun install --frozen-lockfile
         working-directory: vendor/rs-sdk/server/webclient
-      - name: Full Windows gate
-        run: bun scripts/ci-gate.ts --full
+      - name: Full Windows gate, one part of the test files
+        run: bun scripts/ci-gate.ts --full --part ${{ matrix.part }}/4
   preparation-practice:
     if: inputs.preparation_practice
     runs-on: ubuntu-latest

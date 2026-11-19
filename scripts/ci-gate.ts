@@ -2,6 +2,7 @@
 // status, so a PR can merge when hosted runners are out of minutes or slow to start.
 // Usage: bun scripts/ci-gate.ts [--post] [--force] [--full]   (vendor/rs-sdk must carry patches/rs-sdk-working.patch, as in CI)
 //   --full   run every test file, not only the files that the change since origin/master can reach
+//   --part i/n  run part i of n of each test step; part 1 also runs the other checks (CI runs the parts on n runners)
 //   --post   post `local-gate` success or failure on HEAD (needs gh, and no changed or untracked files)
 //   --force  run while the local swarm reports running bots (tsc and the suites slow every bot client)
 // The checks are the workflow's single-line `bun run` and `bun test` steps, read from ci.yml, so the two cannot drift.
@@ -24,7 +25,21 @@ export function gateSteps(yml:string):Step[]{
         if(k==='name')step.name=v!.trim();
         if(k==='run')step.run=v!.trim();
     }
-    return raw.filter(s=>/^bun (run|test) \S/.test(s.run??'')).map(s=>({name:s.name??s.run!,cmd:s.run!.split(/\s+/),env:s.env}));
+    return raw.filter(s=>/^bun (run|test|scripts\/test-shards\.ts) \S/.test(s.run??'')).map(s=>({name:s.name??s.run!,cmd:testCmd(s.run!.split(/\s+/)),env:s.env}));
+}
+// A CI step `bun scripts/test-shards.ts [--part <i/n>] [--shards n] <folder>...` is the `bun test <folder>...` that it splits: the
+// gate runs every file of it, and `--part` of the gate (partSteps) splits it again.
+export function testCmd(cmd:string[]):string[]{
+    if(cmd[1]!=='scripts/test-shards.ts')return cmd;
+    const folders:string[]=[];
+    for(let i=2;i<cmd.length;i++){if(/^--(part|shards|changed)$/.test(cmd[i]!)){i++;continue;}folders.push(cmd[i]!);}
+    return ['bun','test',...folders];
+}
+// `--part i/n` of the gate: runner i of n runs part i of every test step, and only runner 1 runs the other checks.
+export function partSteps<T extends {cmd:string[]}>(steps:T[],part:string|undefined):T[]{
+    if(!part)return steps;
+    const index=Number(/^(\d+)\/\d+$/.exec(part)?.[1]);
+    return steps.flatMap(s=>s.cmd[1]==='scripts/test-shards.ts'?[{...s,cmd:[...s.cmd.slice(0,2),'--part',part,...s.cmd.slice(2)]}]:index===1?[s]:[]);
 }
 
 // The local form of the workflow's test steps. One `bun test` process for every file takes about 520 s on the PC.
@@ -68,7 +83,9 @@ if(import.meta.main){
     if(problem){console.error('gate: '+problem);process.exit(2);}
     try{const s=await (await fetch('http://127.0.0.1:3100/api/state',{signal:AbortSignal.timeout(3000)})).json() as any;const active=s?.capacity?.active;
         if(active>0&&!force){console.error(`gate: ${active} bots run now; tsc and the suites slow their clients. Rerun with --force to run anyway.`);process.exit(2);}}catch{/* no local dashboard: no swarm load to read */}
-    const steps=localSteps(gateSteps(readFileSync(join(root,'.github','workflows','ci.yml'),'utf8')),process.argv.includes('--full')),results:{name:string;ok:boolean;s:number}[]=[];
+    const partAt=process.argv.indexOf('--part'),part=partAt>=0?process.argv[partAt+1]:undefined;
+    if(partAt>=0&&!/^\d+\/\d+$/.test(part??'')){console.error(`gate: --part needs i/n, not ${part}`);process.exit(2);}
+    const steps=partSteps(localSteps(gateSteps(readFileSync(join(root,'.github','workflows','ci.yml'),'utf8')),process.argv.includes('--full')),part),results:{name:string;ok:boolean;s:number}[]=[];
     for(const step of steps){
         const t=performance.now();console.log(`gate: ${step.name}`);
         const p=Bun.spawnSync(step.cmd,{cwd:root,stdout:'inherit',stderr:'inherit',env:{...process.env,...step.env},windowsHide:true});

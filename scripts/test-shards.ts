@@ -1,7 +1,8 @@
 // Runs the test files of the given folders in several `bun test` processes at once and prints each shard's output.
-// Usage: bun scripts/test-shards.ts [--shards n] [--changed <git ref>] <folder>...   (12 shards when not given)
+// Usage: bun scripts/test-shards.ts [--shards n] [--changed <git ref>] [--part i/n] <folder>...   (12 shards when not given)
 // The number of shards is n at most, capped by CPU capacity and memory above the floor (scripts/heavy-admission.ts).
 // --changed runs only the test files that a change since <git ref> can reach (affectedTests below).
+// --part i/n runs part i of n of the files (partFiles below): CI runs the parts on n runners at once.
 // TEST_SHARDS_JUNIT=<path prefix> also writes a JUnit file for each shard, to measure the time of each file.
 // Windows runs each file in a fresh process inside its shard. Bun 1.3.14's cached sync-spawn clock can otherwise
 // spend a child's timeout on idle time in another file. The shard count still bounds concurrent processes.
@@ -26,6 +27,18 @@ export function shard(items: readonly string[], count: number, seconds: Readonly
         least.total += cost(file);
     }
     return out.map(s => s.files);
+}
+
+// `--part i/n`: the files of part i of n, by the same time-balanced split as the shards, so n runners that each run one
+// part run every file once. The split reads only the file list and the times file, so each runner gets the same parts.
+export type Part = { index: number; count: number };
+export function parsePart(text: string | undefined): Part {
+    const m = /^(\d+)\/(\d+)$/.exec(text ?? ''), index = Number(m?.[1]), count = Number(m?.[2]);
+    if (!m || count < 1 || index < 1 || index > count) throw new Error(`--part needs i/n with 1 <= i <= n, not ${text}`);
+    return { index, count };
+}
+export function partFiles(files: readonly string[], part: Part, seconds: Readonly<Record<string, number>> = {}): string[] {
+    return shard(files, part.count, seconds)[part.index - 1] ?? [];
 }
 
 export function shardCount(wanted: number, free: number, floor: number, cpu: number): number {
@@ -109,7 +122,9 @@ if (import.meta.main) {
     const count = at >= 0 ? Number(argv.splice(at, 2)[1]) : 12;
     const refAt = argv.indexOf('--changed');
     const changedRef = refAt >= 0 ? argv.splice(refAt, 2)[1] : undefined;
-    if (!Number.isSafeInteger(count) || count < 1 || !argv.length) throw new Error('usage: bun scripts/test-shards.ts [--shards n] <folder>...');
+    const partAt = argv.indexOf('--part');
+    const part = partAt >= 0 ? parsePart(argv.splice(partAt, 2)[1]) : undefined;
+    if (!Number.isSafeInteger(count) || count < 1 || !argv.length) throw new Error('usage: bun scripts/test-shards.ts [--shards n] [--changed <ref>] [--part i/n] <folder>...');
     const files: string[] = [];
     for (const folder of argv) {
         for await (const f of new Glob('**/*.test.{ts,tsx}').scan({ cwd: resolve(root, folder) })) {
@@ -133,6 +148,11 @@ if (import.meta.main) {
     const start = Date.now();
     const timesFile = resolve(import.meta.dir, 'test-shards.times.json');
     const seconds: Record<string, number> = existsSync(timesFile) ? JSON.parse(readFileSync(timesFile, 'utf8')) : {};
+    if (part) {
+        const mine = partFiles(files, part, seconds);
+        console.log(`test-shards: part ${part.index} of ${part.count}: ${mine.length} of ${files.length} test files`);
+        files.splice(0, files.length, ...mine);
+    }
     // Both CPU and memory constrain the same requested upper bound; one process remains possible below the floor.
     const free = freeGB(), floor = floorGB(root), cpu = cpuCapacity(), memory = unitsThatFit(count, TEST_SHARD_GB, free, floor);
     const shards = shardCount(count, free, floor, cpu);
