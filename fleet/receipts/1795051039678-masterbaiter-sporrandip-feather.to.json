@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795051039678-masterbaiter-sporrandip-feather",
  "account": "SporranDip",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Feather",
  "requested": 149,
  "claim": "6cd42418-1b40-4c0d-b225-fa5b714e0fd8",
- "count": 0,
- "ok": false,
- "at": 1795051384711,
- "detail": "trade claimed"
+ "count": 149,
+ "ok": true,
+ "at": 1795051562838,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 149
+ },
+ "bank": {
+  "count": 149,
+  "at": 1795051561653
+ },
+ "logout": {
+  "attemptId": "1795051384718-0000010120-0000000001",
+  "at": 1795051562812,
+  "sha256": "a46f5f17aa83a31e8743b5572d01333a3121b1caab6f8977d0346f07a79a6281"
+ },
+ "screen": true
 }
