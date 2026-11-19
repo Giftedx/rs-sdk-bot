@@ -1,0 +1,22 @@
+{
+ "id": "1795095767998-mmtha0205-hocuspokeus",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmtha0205",
+ "to": "Hocuspokeus",
+ "item": "coins",
+ "count": 25260,
+ "start": 1795095767998,
+ "end": 1795098167998,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
