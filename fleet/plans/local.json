@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795094847548,
+ "at": 1795094923283,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -279,31 +279,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "accounts": [
-    "mmtha0205",
-    "Fatstack"
-   ],
-   "script": "scripts/coin-courier.ts",
-   "args": [
-    "60000",
-    "--bank-x=2618",
-    "--bank-z=3332",
-    "--reserve=200000",
-    "--timeout-ms=600000"
-   ],
-   "env": {
-    "COIN_ORDER": "prayer99-fatstack-bonefund60k",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-5c6eb6fe-fd8b-47f2-8dfc-3c78ed64262f"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-courier-mmtha0205-fatstack-bone-fund [task-5c6eb6fe-fd8b-47f2-8dfc-3c78ed64262f]",
-   "role": "supply"
   }
  ],
  "army": [
