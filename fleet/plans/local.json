@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795095531688,
+ "at": 1795095605535,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -279,51 +279,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BONE_ID": "536",
-    "MAX_BURY": "37",
-    "BONE_RESERVE": "6",
-    "CAP": "1500",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "COORDINATOR_RUN_ID": "task-d283a6d6-0262-4367-a333-dd453473ffce"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-prayer-fatstack-99 [task-d283a6d6-0262-4367-a333-dd453473ffce]",
-   "role": "helper"
-  },
-  {
-   "accounts": [
-    "mmtha0205",
-    "OreElse"
-   ],
-   "script": "scripts/coin-courier.ts",
-   "args": [
-    "300000",
-    "--bank-x=2618",
-    "--bank-z=3332",
-    "--reserve=200000",
-    "--timeout-ms=600000"
-   ],
-   "env": {
-    "COIN_ORDER": "prayer99-oreelse-bonefund300k",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-9f4d6c62-a736-4205-a78a-7333f794c345"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-courier-mmtha0205-oreelse-bone-fund [task-9f4d6c62-a736-4205-a78a-7333f794c345]",
-   "role": "supply"
   }
  ],
  "army": [
