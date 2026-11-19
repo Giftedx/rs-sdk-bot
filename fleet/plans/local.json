@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795066966571,
+ "at": 1795067206762,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -224,25 +224,6 @@
    ]
   },
   {
-   "account": "Masterbaiter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/gather-fish.ts cage 3000",
-    "scripts/cook-food.ts 3000 lobster"
-   ],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "Catherby lobsters, caught and cooked",
-   "role": "fishing",
-   "template": "lobster-chain",
-   "autopilot": "local",
-   "resources": [
-    "catherby:lobster"
-   ]
-  },
-  {
    "account": "BraveHardon",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -273,33 +254,52 @@
    ]
   },
   {
-   "account": "TossTheCaber",
+   "account": "Shaftsinker",
    "script": "scripts/shop-buyer.ts",
    "args": [
-    "jiminua",
+    "catherby_arrows",
     "1200"
    ],
    "env": {
-    "ITEMS": "antipoison",
-    "STOCK_TARGET": "12",
+    "ITEMS": "iron arrow",
+    "STOCK_TARGET": "2000",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
-    "FLOAT": "5384",
+    "FLOAT": "12200",
     "COIN_RESERVE": "200",
-    "MAX_SPEND": "5184",
-    "AUTOPILOT_ORDER": "[3]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":9}}"
+    "MAX_SPEND": "12000",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"884\":2000}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy antipoison(3) at Jiminua's in Karamja for the gang squad",
+   "goal": "buy iron arrows at Hickton's in Catherby for the gang squad",
    "role": "bank",
-   "template": "squad-antipoison-jiminua",
+   "template": "squad-arrows-catherby",
    "autopilot": "local",
    "resources": [
-    "shop:jiminua"
+    "shop:catherby_arrows"
+   ]
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 3000 lobster"
+   ],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "Catherby lobsters, caught and cooked",
+   "role": "fishing",
+   "template": "lobster-chain",
+   "autopilot": "local",
+   "resources": [
+    "catherby:lobster"
    ]
   },
   {
@@ -333,33 +333,30 @@
    ]
   },
   {
-   "account": "Shaftsinker",
-   "script": "scripts/shop-buyer.ts",
+   "account": "CoinCock",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "catherby_arrows",
-    "1200"
+    "3000",
+    "cow"
    ],
    "env": {
-    "ITEMS": "iron arrow",
-    "STOCK_TARGET": "2000",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "12200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "12000",
-    "AUTOPILOT_ORDER": "[0]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"884\":2000}}"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "buy iron arrows at Hickton's in Catherby for the gang squad",
-   "role": "bank",
-   "template": "squad-arrows-catherby",
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
    "autopilot": "local",
    "resources": [
-    "shop:catherby_arrows"
+    "cow:ardougne-north"
    ]
   }
  ],
