@@ -105,7 +105,8 @@ export function verifyPathfindingSnapshotFile(file:string,key:string):boolean {
 
 // Stage the checked payload before changing WASM memory. A failed read remains
 // an optional cache miss, even when it happens after some payload bytes arrive.
-// This uses one transient payload buffer, bounded by the checked file length.
+// This uses one transient payload buffer, bounded by the checked file length. It is not zero-filled: readFully fills all of it
+// and the hash covers all of it before any byte is used.
 export function restorePathfindingSnapshotFile(file:string,key:string,memory:WebAssembly.Memory):boolean {
     let fd:number|undefined,payload:Buffer|undefined;
     try {
@@ -113,7 +114,7 @@ export function restorePathfindingSnapshotFile(file:string,key:string,memory:Web
         const total=fstatSync(fd).size,head=Buffer.alloc(Math.min(total,4+MAX_HEADER));
         const parsed=readFully(fd,head,0)?snapshotHeader(head,total,key):null;
         if(!parsed)return false;
-        payload=Buffer.alloc(parsed.header.bytes);
+        payload=Buffer.allocUnsafe(parsed.header.bytes);
         if(!readFully(fd,payload,parsed.offset)||sha256(payload)!==parsed.header.sha256)return false;
     } catch { return false; }
     finally { if(fd!==undefined)try{closeSync(fd);}catch{/* The cache is optional. */} }
