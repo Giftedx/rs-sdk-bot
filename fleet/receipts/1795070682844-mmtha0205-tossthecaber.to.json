@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795070682844-mmtha0205-tossthecaber",
+ "account": "TossTheCaber",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 4152,
+ "claim": "3eb8cfbe-abaa-44b7-877b-6f7ff06214aa",
+ "count": 0,
+ "ok": false,
+ "at": 1795070758885,
+ "detail": "trade claimed"
+}
