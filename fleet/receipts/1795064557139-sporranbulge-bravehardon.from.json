@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795064557139-sporranbulge-bravehardon",
+ "account": "SporranBulge",
+ "partner": "BraveHardon",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 2649,
+ "claim": "956c3c20-894a-405a-beae-110762084c9c",
+ "count": 2649,
+ "ok": true,
+ "at": 1795064703480,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 12050,
+  "after": 9401
+ },
+ "logout": {
+  "attemptId": "1795064652696-0000004920-0000000001",
+  "at": 1795064703470,
+  "sha256": "e4e45c22459bbd90c99284ae13164d4468fdcc08dbbcec64cc14be0b0764c930"
+ },
+ "screen": true
+}
