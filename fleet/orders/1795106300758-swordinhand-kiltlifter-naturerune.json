@@ -1,0 +1,22 @@
+{
+ "id": "1795106300758-swordinhand-kiltlifter-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordinhand",
+ "to": "Kiltlifter",
+ "item": "Nature rune",
+ "count": 297,
+ "start": 1795106300758,
+ "end": 1795108700758,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
