@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795058059287-knightrider-trousersnake-bcd68fe215d35b75",
+ "account": "KnightRider",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 15,
+ "claim": "1448e854-79ab-49fe-af70-59e98423a711",
+ "count": 0,
+ "ok": false,
+ "at": 1795058068905,
+ "detail": "trade claimed"
+}

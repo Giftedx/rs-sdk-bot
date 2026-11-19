@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795057982273-dipstick-undermykilt-7630a633074829f9",
+ "account": "UnderMyKilt",
+ "partner": "Dipstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 1,
+ "claim": "0d67a185-1c2a-4f7f-bb86-e88c177ef43e",
+ "count": 1,
+ "ok": true,
+ "at": 1795058072928,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795058072192
+ },
+ "logout": {
+  "attemptId": "1795058047721-0000006200-0000000001",
+  "at": 1795058072914,
+  "sha256": "fc0b1533e443f00f7a954951e6ad897d5b5d1b139475190538dfb16cbce7777d"
+ },
+ "screen": true
+}
