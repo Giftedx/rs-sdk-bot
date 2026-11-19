@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795106300758-swordinhand-kiltlifter-naturerune",
+ "account": "Swordinhand",
+ "partner": "Kiltlifter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 297,
+ "claim": "e2dd259b-3849-4cb1-91cd-3b75e8d5e14d",
+ "count": 0,
+ "ok": false,
+ "at": 1795106397633,
+ "detail": "trade claimed"
+}
