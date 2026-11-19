@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { acquireSnapshotBuild, writePathfindingSnapshot } from '../src/pathcache';
@@ -38,17 +38,56 @@ test('a lock of a dead owner, or an old lock, is removed; a live young one makes
     expect(afterOld.state).toBe('build');
     if (afterOld.state === 'build') afterOld.release();
 
+    // A lock of a live process that is not building (a reused pid): the first wait ends, the lock is taken away once
+    // and this waiter builds under its own lock.
     writeFileSync(`${file}.lock`, JSON.stringify({ pid: process.pid, at: Date.now() }));
     const started = Date.now();
     const waited = await acquireSnapshotBuild(file, 'k', { pollMs: 20, waitMs: 300, alive: () => true });
-    expect(waited.state).toBe('timeout');
+    expect(waited.state).toBe('build');
     expect(Date.now() - started).toBeGreaterThanOrEqual(290);
+    expect(JSON.parse(readFileSync(`${file}.lock`, 'utf8')).pid).toBe(process.pid);
+    if (waited.state === 'build') waited.release();
+});
+
+test('a reused-pid lock with many waiters: one builds after the first wait, the others wait a second round and then fail, none builds with no lock', async () => {
+    const file = join(dir(), 'world.snap');
+    // The dead builder's pid belongs to a live process now: `alive` says yes, and the lock is young.
+    writeFileSync(`${file}.lock`, JSON.stringify({ pid: 4242, at: Date.now() }));
+    const started = Date.now();
+    const results = await Promise.all(Array.from({ length: 12 }, () => acquireSnapshotBuild(file, 'k', { pollMs: 20, waitMs: 300, alive: () => true })));
+    const states = results.map(r => r.state);
+    expect(states.filter(s => s === 'build')).toHaveLength(1);
+    expect(states.filter(s => s === 'timeout')).toHaveLength(11);
+    expect(states.filter(s => s === 'unlocked' || s === 'ready')).toHaveLength(0);
+    // The losers waited two rounds.
+    expect(Date.now() - started).toBeGreaterThanOrEqual(590);
+    const winner = results.find(r => r.state === 'build');
+    if (winner?.state === 'build') winner.release();
+    expect(existsSync(`${file}.lock`)).toBe(false);
+});
+
+test('a waiter does not remove the lock of a newer builder, and a stolen-in-between stale lock stays', async () => {
+    const file = join(dir(), 'world.snap');
+    const first = await acquireSnapshotBuild(file, 'k');
+    expect(first.state).toBe('build');
+    // A second waiter has waited on an old lock text, the lock has since been replaced by a new builder's.
+    const waiting = acquireSnapshotBuild(file, 'k', { pollMs: 20, waitMs: 150, alive: () => true });
+    await new Promise(r => setTimeout(r, 60));
+    writeFileSync(`${file}.lock`, JSON.stringify({ pid: process.pid, at: Date.now() + 1 }));
+    const outcome = await waiting;
+    // Its first wait ended with the lock it saw first removed only if unchanged: the changed lock stayed, so the
+    // second round could not create the lock and the waiter failed.
+    expect(outcome.state).toBe('timeout');
+    expect(existsSync(`${file}.lock`)).toBe(true);
 });
 
 test('a lock whose file is not written yet is not stale, and a release removes only its own lock', async () => {
     const file = join(dir(), 'world.snap');
     writeFileSync(`${file}.lock`, '');
-    expect((await acquireSnapshotBuild(file, 'k', { pollMs: 20, waitMs: 200 })).state).toBe('timeout');
+    // An unwritten lock is not stale before the wait ends; after it, the waiter takes it away and builds.
+    const afterWait = await acquireSnapshotBuild(file, 'k', { pollMs: 20, waitMs: 200 });
+    expect(afterWait.state).toBe('build');
+    if (afterWait.state === 'build') afterWait.release();
     // Another process took the lock after a stale removal: the first builder's release leaves it.
     const second = join(dir(), 'second.snap');
     const got = await acquireSnapshotBuild(second, 'k');

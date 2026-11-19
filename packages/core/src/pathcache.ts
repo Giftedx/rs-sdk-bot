@@ -46,8 +46,18 @@ export function pathfindingSourceKey(wasmFile?:string,collisionFile?:string,door
     defaultKey={stamp,key};
     return key;
 }
-function hashedSourceKey(wasmFile:string,collisionFile:string,doorsFile:string,initializerFile:string): string {
-    return JSON.stringify({v:shouldWarmSnapshot()?5:4,wasm:sha256(readFileSync(wasmFile)),data:sha256(readFileSync(collisionFile)),initializer:sha256(readFileSync(initializerFile)),diagonal:sha256(Buffer.from(JSON.stringify(diagonalDoors(doorsFile))))});
+// The key of the data alone (wasm, collision data, initializer, doors), the same on every platform. The leg cache and the
+// area labels hold values that do not depend on how the snapshot was saved, so they use this key, not the snapshot's.
+let dataKeyMemo:{stamp:string;key:string}|null=null;
+export function pathfindingDataKey(): string {
+    const files=[WASM,DATA,DOORS,INITIALIZER],stamp=files.map(fileStamp).join(',');
+    if(dataKeyMemo&&dataKeyMemo.stamp===stamp)return dataKeyMemo.key;
+    const key=hashedSourceKey(files[0]!,files[1]!,files[2]!,files[3]!,4);
+    dataKeyMemo={stamp,key};
+    return key;
+}
+function hashedSourceKey(wasmFile:string,collisionFile:string,doorsFile:string,initializerFile:string,version=shouldWarmSnapshot()?5:4): string {
+    return JSON.stringify({v:version,wasm:sha256(readFileSync(wasmFile)),data:sha256(readFileSync(collisionFile)),initializer:sha256(readFileSync(initializerFile)),diagonal:sha256(Buffer.from(JSON.stringify(diagonalDoors(doorsFile))))});
 }
 
 type SnapshotHeader={format:2;key:string;bytes:number;sha256:string};
@@ -211,17 +221,30 @@ const WARM_ROUTES: [number, number, number, number, number][] = [[0, 3222, 3218,
 
 // Single-flight build of the snapshot across processes. A lock file beside the snapshot (`<file>.lock`, created with
 // the exclusive flag, holding the owner's pid and time) names the one builder. The others poll until the snapshot is
-// usable for their source key (a header check, pathfindingSnapshotUsable) and restore it. A lock whose owner is dead,
-// or that is older than `staleMs`, is removed. After `waitMs` a waiter builds itself, without the lock, so a stuck
-// builder delays a process by at most `waitMs`. A lock that cannot be created (no write access) also means: build.
-export type SnapshotBuild={state:'build';release():void}|{state:'ready'}|{state:'timeout'};
+// usable for their source key (a header check, pathfindingSnapshotUsable) and restore it.
+// - A lock whose owner pid is dead, or that is older than `staleMs`, is removed (read again just before the removal, so a
+//   lock that another process has taken in between stays).
+// - A builder cannot refresh its lock: the grid build blocks its event loop for about 14 s. So a lock held by a LIVE pid
+//   (a reused pid looks alive) can stay for `staleMs`. A waiter that has waited `waitMs` removes that lock once and goes
+//   back to the exclusive create: one waiter wins and builds, the others wait one more round.
+// - A second `waitMs` without a snapshot gives {state:'timeout'}: the caller fails (a login throws and retries) and does
+//   not build, so a stuck lock never makes all waiters build at once.
+// - {state:'unlocked'}: the cache folder or the lock file cannot be made (no access), so this process builds with no lock.
+export type SnapshotBuild={state:'build';release():void}|{state:'ready'}|{state:'timeout'}|{state:'unlocked'};
 const pidAlive=(pid:number)=>{try{process.kill(pid,0);return true;}catch(e){return (e as NodeJS.ErrnoException)?.code==='EPERM';}};
+const readLock=(lock:string):string|null=>{try{return readFileSync(lock,'utf8');}catch{return null;}};
+// Removes the lock only if it still holds `seen`.
+const removeLockIf=(lock:string,seen:string|null):boolean=>{
+    if(readLock(lock)!==seen)return false;
+    try{unlinkSync(lock);return true;}catch{return false;}
+};
 export async function acquireSnapshotBuild(file:string,key:string,opts:{waitMs?:number;pollMs?:number;staleMs?:number;alive?:(pid:number)=>boolean}={}):Promise<SnapshotBuild>{
-    const {waitMs=120_000,pollMs=250,staleMs=300_000,alive=pidAlive}=opts,lock=`${file}.lock`,deadline=Date.now()+waitMs;
+    const {waitMs=120_000,pollMs=250,staleMs=300_000,alive=pidAlive}=opts,lock=`${file}.lock`;
+    let round=1,deadline=Date.now()+waitMs,waitedOn:string|null=null;
     for(;;){
         if(pathfindingSnapshotUsable(file,key))return {state:'ready'};
         // A cache folder that cannot exist (a file in the way, no access) means: build, without a lock.
-        try{mkdirSync(dirname(file),{recursive:true});}catch{return {state:'timeout'};}
+        try{mkdirSync(dirname(file),{recursive:true});}catch{return {state:'unlocked'};}
         try{
             const fd=openSync(lock,'wx');
             try{writeSync(fd,JSON.stringify({pid:process.pid,at:Date.now()}));}finally{closeSync(fd);}
@@ -230,18 +253,27 @@ export async function acquireSnapshotBuild(file:string,key:string,opts:{waitMs?:
             if(pathfindingSnapshotUsable(file,key)){release();return {state:'ready'};}
             return {state:'build',release};
         }catch(e){
-            if((e as NodeJS.ErrnoException)?.code!=='EEXIST')return {state:'timeout'};
+            if((e as NodeJS.ErrnoException)?.code!=='EEXIST')return {state:'unlocked'};
+            const seen=readLock(lock);
+            waitedOn??=seen;
             let dead=false;
             try{
-                const owner=JSON.parse(readFileSync(lock,'utf8')) as {pid:number;at:number};
+                const owner=JSON.parse(seen??'') as {pid:number;at:number};
                 dead=!alive(owner.pid)||Date.now()-owner.at>staleMs;
             }catch{
                 // Not written yet, or damaged: only an old file is stale.
                 try{dead=Date.now()-statSync(lock).mtimeMs>staleMs;}catch{/* gone */}
             }
-            if(dead)try{unlinkSync(lock);continue;}catch{/* another waiter removed it */}
+            if(dead&&removeLockIf(lock,seen))continue;
         }
-        if(Date.now()>=deadline)return {state:'timeout'};
+        if(Date.now()>=deadline){
+            if(round>=2)return {state:'timeout'};
+            // The first wait ended: the lock holder is not building (a killed builder whose pid a live process now
+            // has). Take the lock away once; one waiter wins the exclusive create below, the rest wait a second round.
+            round=2;deadline=Date.now()+waitMs;
+            removeLockIf(lock,waitedOn); // only the lock that this waiter waited on, never a newer builder's
+            continue;
+        }
         await new Promise(r=>setTimeout(r,pollMs));
     }
 }
@@ -258,6 +290,8 @@ async function load(file: string): Promise<{ restored: boolean; ms: number }> {
     // 400 MB, so 20 workers starting together must not each pay it).
     if(!restored){
         build=await acquireSnapshotBuild(file,k);
+        // Two waits without a snapshot: fail, so a login throws and retries, and no waiter builds without the lock.
+        if(build.state==='timeout')throw Error(`pathfinding snapshot build did not finish: ${file}.lock held for too long`);
         if(build.state==='ready')restored=restorePathfindingSnapshotFile(file,k,memory);
     }
     try{

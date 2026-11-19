@@ -5,7 +5,7 @@
 import { closeSync, fstatSync, mkdirSync, openSync, readFileSync, readSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createHash } from 'node:crypto';
-import { pathfindingSourceKey } from './pathcache';
+import { pathfindingDataKey } from './pathcache';
 
 // Labels hold one flat array of 64 labels for each zone (cells, in the order of zoneKeys; 0xffff in a Uint16Array, or -1 in an
 // Int32Array, for a tile that is not walkable) and an open-addressing table from a zone key to the place of its labels.
@@ -164,7 +164,7 @@ let built: Labels | undefined;
 export function mapAreas(pf: any, grid: any, repoRoot: string): Labels {
     if (built) return built;
     pf.initPathfinding();
-    const file = join(repoRoot, '.practice', 'cache', 'route-areas.bin'), source = pathfindingSourceKey();
+    const file = join(repoRoot, '.practice', 'cache', 'route-areas.bin'), source = pathfindingDataKey();
     if ((built = readLabels(file, source) ?? undefined)) return built;
     const data = JSON.parse(readFileSync(join(repoRoot, 'vendor/rs-sdk/sdk/collision-data.json'), 'utf8')) as { zones: [number, number, number][] };
     // Zones are given by their origin tile, as pathfinding.ts allocates them; the same mainland fill follows.

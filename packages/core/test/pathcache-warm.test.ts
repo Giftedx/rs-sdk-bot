@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { pathfindingSourceKey, shouldWarmSnapshot, warmSnapshotGrid } from '../src/pathcache';
+import { pathfindingDataKey, pathfindingSourceKey, shouldWarmSnapshot, warmSnapshotGrid } from '../src/pathcache';
 
 test('only win32 warms the snapshot: the warm searches run there and nowhere else', () => {
     const calls: number[][] = [];
@@ -24,4 +24,17 @@ test('the source key differs between a warmed and a plain snapshot, so a snapsho
     expect(JSON.parse(win).v).toBe(5);
     expect(JSON.parse(linux).v).toBe(4);
     expect(keyOn('darwin')).toBe(linux);
+});
+
+test('the key of the leg cache and the area labels is the data key: the same on every platform', () => {
+    const real = Object.getOwnPropertyDescriptor(process, 'platform')!;
+    const dataOn = (platform: string) => {
+        Object.defineProperty(process, 'platform', { ...real, value: platform });
+        try { return pathfindingDataKey(); } finally { Object.defineProperty(process, 'platform', real); }
+    };
+    expect(dataOn('win32')).toBe(dataOn('linux'));
+    expect(JSON.parse(dataOn('win32')).v).toBe(4);
+    // On a platform that does not warm, the data key is the snapshot key.
+    const sourceOnLinux = (() => { Object.defineProperty(process, 'platform', { ...real, value: 'linux' }); try { return pathfindingSourceKey(); } finally { Object.defineProperty(process, 'platform', real); } })();
+    expect(dataOn('linux')).toBe(sourceOnLinux);
 });
