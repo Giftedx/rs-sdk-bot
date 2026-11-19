@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795112422345-mightyrod-swordinhand",
+ "account": "Mightyrod",
+ "partner": "Swordinhand",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 28768,
+ "claim": "1efdb939-3d47-491c-9e5a-e7569874696c",
+ "count": 0,
+ "ok": false,
+ "at": 1795112489220,
+ "detail": "trade claimed"
+}
