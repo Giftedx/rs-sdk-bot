@@ -290,7 +290,11 @@ test('an empty-result live row is closed only when its own producer lifecycle sh
  const root=mkdtempSync(join(tmpdir(),'release-rows-')),server='rs-sdk-demo.fly.dev',pin='a'.repeat(64);
  const owner=(pid:number)=>({pid,coordinatorRunId:null,workerRelease:null,script:'test',role:null,participants:null});
  try{
-  const start=(account:string,pid:number)=>{const a=beginSessionAttempt({account,server},{root,owner:owner(pid)});a.record('connected');a.record('ready');return a;};
+  // The creation time of an attempt is at least the floor that every test file of the process shares (session-lifecycle.ts
+  // createdAt = max(now(), floor)), and an earlier file can have set it ahead of the clock. Every fixture gets one time,
+  // taken from the real clock and that floor, so the ages below do not depend on how long the fixtures took to write.
+  const floor=Number(beginSessionAttempt({account:'Probe',server},{root,now:()=>0}).attemptId.slice(0,13)),base=Math.max(Date.now(),floor);
+  const start=(account:string,pid:number)=>{const a=beginSessionAttempt({account,server},{root,owner:owner(pid),now:()=>base});a.record('connected');a.record('ready');return a;};
   const done=start('Done',11);done.record('ended','logged-out');
   const later=start('Later',12);const newer=start('Later',13);newer.record('ended','logged-out');
   const dead=start('Dead',14),live=start('Live',15),fresh=start('Fresh',16),gone=start('Gone',17);start('Gone',18);
@@ -299,7 +303,7 @@ test('an empty-result live row is closed only when its own producer lifecycle sh
   const killed=start('Killed',19);start('Killed',20);
   const retried=start('Retried',21);start('Retried',15);
   // The fixtures' receipts are written now; the gate judges them LOST_SESSION_DROP_MS later, when their drop has passed.
-  const now=Date.now()+LOST_SESSION_DROP_MS,old=now-LOST_SESSION_DROP_MS,row=(a:{account:string;attemptId:string},at=old)=>({name:a.account,server,result:'',at,workRevision:pin,sessionAttemptId:a.attemptId});
+  const now=base+LOST_SESSION_DROP_MS,old=base,row=(a:{account:string;attemptId:string},at=old)=>({name:a.account,server,result:'',at,workRevision:pin,sessionAttemptId:a.attemptId});
   const alive=(pid:number)=>pid===15,closed=(r:any)=>closedSessionRow(r,server,{root},alive,now);
   expect(closed(row(done))).toBe(true);        // its own attempt confirmed logout
   expect(closed(row(later))).toBe(true);       // a newer attempt confirmed logout

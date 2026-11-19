@@ -26,3 +26,15 @@ export function alchSupplies(level: number, target = 99): { nature: number; item
     const { low, high } = alchCasts(xpForLevel(level), target), casts = low + high;
     return { nature: casts, item: casts, fire: low * FIRE_PER['low-alch'] + high * FIRE_PER['high-alch'] };
 }
+
+// The ticks of a cast, from the bench of the spell timing: 12 casts of each spell at the Draynor bank take 35 ticks for Low Alchemy
+// and 57 for High Alchemy (bench cases extra:magic-alch-low and extra:magic-alch-high). The gap after a cast is the p_delay of the
+// spell's script in the content (High Alchemy 3, Low Alchemy 1; scripts/microbot-magic-items.ts spellDelay), plus the casting tick
+// and the wait for the effect. The rate is the measured ticks over the casts, not a number set by hand.
+export const CAST_BENCH = { 'low-alch': { casts: 12, ticks: 35 }, 'high-alch': { casts: 12, ticks: 57 } } as const;
+export const castTicks = (mode: keyof typeof CAST_BENCH): number => CAST_BENCH[mode].ticks / CAST_BENCH[mode].casts;
+// The ticks the casts from a Magic level to the target take.
+export function alchTicks(level: number, target = 99): number {
+    const { low, high } = alchCasts(xpForLevel(level), target);
+    return Math.ceil(low * castTicks('low-alch') + high * castTicks('high-alch'));
+}
