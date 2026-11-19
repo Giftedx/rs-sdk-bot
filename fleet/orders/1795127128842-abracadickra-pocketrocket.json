@@ -1,0 +1,22 @@
+{
+ "id": "1795127128842-abracadickra-pocketrocket",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "Pocketrocket",
+ "item": "coins",
+ "count": 121740,
+ "start": 1795127128842,
+ "end": 1795129528842,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
