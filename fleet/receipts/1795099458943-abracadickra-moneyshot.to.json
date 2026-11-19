@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795099458943-abracadickra-moneyshot",
  "account": "Moneyshot",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 65379,
  "claim": "59229e5a-2d25-47a4-a188-a6fee8ebb843",
- "count": 0,
- "ok": false,
- "at": 1795099520583,
- "detail": "trade claimed"
+ "count": 65379,
+ "ok": true,
+ "at": 1795099537078,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 65379
+ },
+ "bank": {
+  "count": 65379,
+  "at": 1795099536299
+ },
+ "logout": {
+  "attemptId": "1795099520592-0000021284-0000000001",
+  "at": 1795099537069,
+  "sha256": "97234508b6884d9ac709aababe454d7968ca885535cfb2a6457782ac67d20229"
+ },
+ "screen": true
 }
