@@ -1,0 +1,22 @@
+{
+ "id": "1795112692423-mightyrod-mmthv2350-bones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "mmthv2350",
+ "item": "Bones",
+ "count": 31,
+ "start": 1795112692423,
+ "end": 1795115092423,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
