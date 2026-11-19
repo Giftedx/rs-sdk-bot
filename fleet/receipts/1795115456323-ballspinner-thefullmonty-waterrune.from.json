@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795115456323-ballspinner-thefullmonty-waterrune",
+ "account": "Ballspinner",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 5,
+ "claim": "83f29dea-fc32-4e57-8dc6-756ad49b62d8",
+ "count": 5,
+ "ok": true,
+ "at": 1795115562016,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795115550451
+ },
+ "logout": {
+  "attemptId": "1795115542384-0000024092-0000000001",
+  "at": 1795115562005,
+  "sha256": "d06c55db7b1d7e020a72dcc393f8aa075e264857be86bfdc80c80b847b0f9ff5"
+ },
+ "screen": true
+}
