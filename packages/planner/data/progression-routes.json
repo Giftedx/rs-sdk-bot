@@ -92118,6 +92118,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/bunzip-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/catalog-integration-proof.ts",
    "intents": [
     "observe"
