@@ -24,6 +24,6 @@ if (mode === 'all' || mode === 'ring') {
     process.exit(0);
 }
 for (const m of ['all', 'ring']) {
-    const p = Bun.spawnSync(['bun', import.meta.path, m, String(ticks)], { stdout: 'pipe', stderr: 'inherit' });
+    const p = Bun.spawnSync(['bun', import.meta.path, m, String(ticks)], { stdout: 'pipe', stderr: 'inherit', windowsHide: true });
     process.stdout.write(p.stdout.toString());
 }
