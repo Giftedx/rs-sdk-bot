@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795091350972,
+ "at": 1795091425318,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -296,7 +296,7 @@
     "RANDOM_EVENTS": "0",
     "COORDINATOR_RUN_ID": "task-05d093db-6ca6-46e9-83cd-53f9f6b5de2c"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-make-mightyrod-silver-sickle [task-05d093db-6ca6-46e9-83cd-53f9f6b5de2c]",
    "role": "production"
