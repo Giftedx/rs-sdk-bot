@@ -93000,6 +93000,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/world-lazy-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/microbot-a-cannonballs.ts",
    "intents": [
     "train",
