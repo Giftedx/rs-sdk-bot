@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795060423756-mmsmk1232-undermykilt-4c875c1d5a2d1846",
  "account": "UnderMyKilt",
  "partner": "mmsmk1232",
@@ -10,8 +10,22 @@
  "item": "Earth rune",
  "requested": 6,
  "claim": "aab47928-403a-4426-bf53-5a9cd670efdc",
- "count": 0,
- "ok": false,
- "at": 1795061035336,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795061054423,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 24,
+  "after": 30
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795061053656
+ },
+ "logout": {
+  "attemptId": "1795061035688-0000027408-0000000001",
+  "at": 1795061054414,
+  "sha256": "91bffb633df76a7d6d60b480584d484dddcf908e85b17d6fed00b36da0db0036"
+ },
+ "screen": true
 }
