@@ -309,14 +309,14 @@ export function unfilledItems(lines: readonly string[]): number[] {
 }
 export type EndedRecord = { at?: number; reason?: string };
 // `logSize` and `now`: the size of the job's log file and the clock. A job that is not active and whose log has not grown since
-// its assignment never started (the swarm writes a header into the log at each start), so no process can hold an offer for it.
+// its assignment never started (equal size: a log that rotated is smaller than the offset and did start; the swarm writes a header into the log at each start), so no process can hold an offer for it.
 export type JobRunStatus = { active?: boolean; ended?: EndedRecord; logSize?: number; now?: number };
 // How long a written job may wait for the swarm to start it before a pass counts it as never started: the swarm starts a job within
 // its next ticks, and a start that waits for memory or a stop file is no start.
 export const JOB_START_GRACE_MS = 10 * 60_000;
 export function neverStarted(assigned: { offset: number; at?: number } | undefined, status?: JobRunStatus): boolean {
     return !!assigned && !!status && !status.active && status.logSize !== undefined && status.now !== undefined && typeof assigned.at === 'number'
-        && status.logSize <= assigned.offset && status.now - assigned.at > JOB_START_GRACE_MS;
+        && status.logSize === assigned.offset && status.now - assigned.at > JOB_START_GRACE_MS;
 }
 export function readSwarmActiveAccounts(file: string): Set<string> {
     const runs = readJson(file, null);

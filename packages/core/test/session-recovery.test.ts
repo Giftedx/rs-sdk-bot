@@ -5,8 +5,8 @@ import {cachedLaunchRevision} from '../src/worker-release';
 import {beginSessionAttempt,listAttempts} from '../src/session-lifecycle';
 import {RECOVERY_SCHEMA,RECOVERY_SCRIPT,recoverSession,validateRecoveryRequest,recoveryBoundary,recoveryHeldDiagnostic,recoveryDiagnosticFromLog,RECOVERY_SETUP_PHASES,startRecoverySessionTimer,type RecoveryRequest} from '../src/session-recovery';
 const source='a'.repeat(64),server='localhost:8888';
-const fixtureRoot=resolve(import.meta.dir,'../../../.practice');
-mkdirSync(fixtureRoot,{recursive:true});
+import {useScratch} from './recovery-scratch';
+const scratch=useScratch();
 test('the child session timer keeps its120second cap and cannot outlive the remaining permit authority',()=>{
  for(const [expiresAt,elapsed] of [[undefined,120000],[nowValue()+150000,120000],[nowValue()+95000,95000],[nowValue(),0]] as const){
   let clock=nowValue();const exits:number[]=[],diagnostics:string[]=[];
@@ -56,7 +56,7 @@ test('diagnostic publication cannot create a connection admission or a producer 
 });
 test('actual CLI reports safe setup refusals before credentials, producer intent or output publication',async()=>{
  const deadline=performance.now()+30000,cleanupMs=1000;
- const dir=mkdtempSync(join(fixtureRoot,'recovery-cli-refusal-')),repo=resolve(import.meta.dir,'../../..');
+ const dir=scratch('recovery-cli-refusal-'),repo=resolve(import.meta.dir,'../../..');
  // The controller publishes the stamp-checked release cache before it launches the child.
  const sourceStarted=performance.now(),source=cachedLaunchRevision(),sourceMs=performance.now()-sourceStarted;
  const body={schema:RECOVERY_SCHEMA,account:'Recoverme',server:'localhost:8888',runId:'offline-cli-test',nonce:'one',endedAt:1,source};
@@ -92,7 +92,7 @@ test('actual CLI reports safe setup refusals before credentials, producer intent
  }
 },30000);
 function fixture(){
- const root=mkdtempSync(join(fixtureRoot,'session-recovery-')),request:RecoveryRequest={schema:RECOVERY_SCHEMA,account:'Recoverme',server,runId:'native-recovery',nonce:'one-attempt',endedAt:1,source};
+ const root=scratch('session-recovery-'),request:RecoveryRequest={schema:RECOVERY_SCHEMA,account:'Recoverme',server,runId:'native-recovery',nonce:'one-attempt',endedAt:1,source};
  let state:any={inGame:true,player:{name:request.account,worldX:2618,worldZ:3332,level:0,hp:43},inventory:[{id:995,count:1200}],equipment:[{id:311,count:1}],skills:[{name:'Fishing',experience:1000,level:99}],bank:{isOpen:false,items:[]},modalOpen:false,modalInterface:-1};
  let connected=0,loggedOut=0,closed=0;const lines:string[]=[];
  let lifecycle:ReturnType<typeof beginSessionAttempt>;

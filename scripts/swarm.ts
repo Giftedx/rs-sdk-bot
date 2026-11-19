@@ -29,6 +29,7 @@ import { courierDeliveryWaiting } from './courier-cargo';
 import { deliveryResume, foodDeficit, selectFoodSource } from './courier-route';
 import {assertWorkerRelease,capabilityRevision,workerEntries} from '../packages/core/src/worker-release';
 import {withSessionAdmission,missionSignature as sharedMissionSignature,successfulEnd,BOOTSTRAP_STATUS_AGE_MS} from '../packages/core/src/session-admission';
+import {rotateLog} from '../packages/core/src/log-rotate';
 import {assertNoRecoveryLease,heldRecoveryOwners,releaseExpiredRecoveryLeases} from '../packages/core/src/session-recovery-permit';
 import {createRecoveryDispatch} from '../packages/core/src/session-recovery-dispatch';
 import { createHash } from 'node:crypto';
@@ -830,6 +831,7 @@ if (import.meta.main) {
         const logName = p.host ? `host-${accounts[0]}.log` : `${accounts[0]}.log`, logPath = join(logDir, logName);
         const cmd = supervisorCommand(p,accounts);
         // Detached, so a controller restart (a rollout) leaves the run going; its output appends to its log.
+        rotateLog(logPath);
         const offset = existsSync(logPath) ? statSync(logPath).size : 0, out = openSync(logPath, 'a');
         let child: ReturnType<typeof spawnChild>;
         try {
