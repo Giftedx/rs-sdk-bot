@@ -1,0 +1,22 @@
+{
+ "id": "1795072852361-fatstack-kiltlifter-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "Kiltlifter",
+ "item": "Nature rune",
+ "count": 79,
+ "start": 1795072852361,
+ "end": 1795075252361,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
