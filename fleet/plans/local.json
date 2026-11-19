@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795091425318,
+ "at": 1795091500050,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -224,7 +224,7 @@
    ]
   },
   {
-   "account": "Swordswallow",
+   "account": "BraveHardon",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "aubury",
@@ -232,15 +232,15 @@
    ],
    "env": {
     "ITEMS": "water rune",
-    "STOCK_TARGET": "1507",
+    "STOCK_TARGET": "1382",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
-    "FLOAT": "12200",
+    "FLOAT": "11208",
     "COIN_RESERVE": "200",
-    "MAX_SPEND": "12000",
-    "AUTOPILOT_ORDER": "[7]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1507}}"
+    "MAX_SPEND": "11008",
+    "AUTOPILOT_ORDER": "[6]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1382}}"
    },
    "enabled": true,
    "standing": true,
@@ -279,27 +279,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/microbot-jewellery-trip.ts",
-   "args": [],
-   "env": {
-    "RECIPE": "silver_sickle",
-    "TARGET": "1",
-    "BATCH": "1",
-    "CAP": "2500",
-    "RETURN_TICKS": "200",
-    "RESERVE": "0",
-    "MEMBERS": "1",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "COORDINATOR_RUN_ID": "task-05d093db-6ca6-46e9-83cd-53f9f6b5de2c"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-make-mightyrod-silver-sickle [task-05d093db-6ca6-46e9-83cd-53f9f6b5de2c]",
-   "role": "production"
   }
  ],
  "army": [

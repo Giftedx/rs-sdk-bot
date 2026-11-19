@@ -1,0 +1,22 @@
+{
+ "id": "1795091452600-masterbaiter-sporranbulge-mindrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "SporranBulge",
+ "item": "Mind rune",
+ "count": 2,
+ "start": 1795091452600,
+ "end": 1795093852600,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
