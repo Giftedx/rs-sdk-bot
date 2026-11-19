@@ -1203,7 +1203,7 @@ test('kitBuyRunning releases exit-4, orphaned and died kit buys while keeping ac
 });
 
 test('OFFLINE_GUARDED excludes main and specialists from stock transfers and planner work', () => {
-    expect([...OFFLINE_GUARDED].sort()).toEqual(['haggis', 'polevaulter', 'shaftshooter']);
+    expect([...OFFLINE_GUARDED].sort()).toEqual(['haggis', 'hiltsdeep', 'polevaulter', 'shaftshooter']);
     const owners = new Map([
         ['haggis', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
         ['shaftshooter', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],

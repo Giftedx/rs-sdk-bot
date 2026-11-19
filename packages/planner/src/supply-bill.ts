@@ -1,11 +1,12 @@
 // The Overall route's supply bill against owned stock: what Haggis's realistic route consumes (suppliesFor), what the
 // live helper accounts hold (their status inventory, worn and last seen bank), and the shortfall to make or buy.
 // Usage: bun packages/planner/src/supply-bill.ts [hiscores snapshot]   writes .practice/coordinator/supply-bill.json
+//        bun packages/planner/src/supply-bill.ts [hiscores snapshot] --board <skill>   prints the bill of one specialist board, writes nothing
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { FLEET_DIR, mySide } from '../../core/src/fleet';
 import { fleetStatusRows, ownerOfIn, readSnapshotFiles } from '../../core/src/fleet-snapshots';
 import { dirname, join, resolve } from 'node:path';
-import { boardsFromSnapshot, haggisActivities, haggisTravel, overallRequirementsFor, scheduleOverall, TRICKS } from './haggis';
+import { boardsFromSnapshot, haggisActivities, haggisTravel, overallRequirementsFor, schedule, scheduleOverall, SCENARIOS, TRICKS } from './haggis';
 
 const root = resolve(import.meta.dir, '../../..');
 export type BillRow = { item: string; itemId?: number; need: number; owned: number; short: number; ids: number[]; holders: { account: string; count: number }[]; aliases?: string[] };
@@ -110,8 +111,38 @@ export function overallSupplyDemand(snapshot = join(root, 'research/hiscores-liv
     return { overallFinish: plan.overallFinish, supplies, snapshotAt };
 }
 
+// The supplies that a fresh account consumes to win one skill board alone: the board goes first, every other board is
+// relaxed (scenario c, realistic), and the rows that start before its 99 count. Returns null when the board has no finish.
+export function boardSupplyDemand(snapshot = join(root, 'research/hiscores-live.json'), board: string) {
+    const target = JSON.parse(readFileSync(snapshot, 'utf8')) as Parameters<typeof boardsFromSnapshot>[0];
+    const activities = haggisActivities(), boards = boardsFromSnapshot(target);
+    if (!boards.some(b => b.id === board && b.rule.kind === 'clock' && b.id !== 'overall')) throw new Error(`no clock board named ${board}`);
+    const options = { mode: 'realistic' as const, tricks: new Set(SCENARIOS[2]!.tricks), travel: haggisTravel() };
+    const plan = schedule(boards, activities, { ...options, sacrificed: new Set(boards.filter(b => b.id !== board).map(b => b.id)) });
+    const finish = plan.boards.find(b => b.id === board)?.finish ?? null;
+    if (finish === null) return null;
+    const { supplies } = overallRequirementsFor(activities, options, { overallFinish: finish, order: plan.order, route: plan.route });
+    return { finish, supplies };
+}
+
 if (import.meta.main) {
-    const snapshot = process.argv[2] ?? join(root, 'research/hiscores-live.json');
+    const args = process.argv.slice(2), at = args.indexOf('--board');
+    const board = at >= 0 ? args[at + 1] : undefined;
+    if (at >= 0 && !board) throw new Error('--board needs a skill name');
+    const snapshot = args.find((a, i) => !a.startsWith('--') && i !== at + 1) ?? join(root, 'research/hiscores-live.json');
+    if (board) {
+        const demand = boardSupplyDemand(snapshot, board.toLowerCase());
+        if (!demand) throw new Error(`board ${board} has no modelled finish`);
+        const items = JSON.parse(readFileSync(join(root, 'knowledge/items.json'), 'utf8'));
+        const bill = supplyBill(demand.supplies, items, liveHelperStatuses());
+        console.log(`${board} alone: realistic finish ${demand.finish} ticks; ${bill.length} supplies, ${bill.filter(r => r.short > 0).length} short`);
+        console.log('');
+        console.log('| Supply | Need | Owned | Short | Top holders |');
+        console.log('|---|---|---|---|---|');
+        for (const r of [...bill].sort((a, b) => b.short - a.short))
+            console.log(`| ${r.item} | ${r.need} | ${r.owned} | ${r.short} | ${r.holders.slice(0, 3).map(h => `${h.account} ${h.count}`).join(', ') || (r.ids.length ? '-' : 'no item id')} |`);
+        process.exit(0);
+    }
     const { overallFinish, supplies, snapshotAt } = overallSupplyDemand(snapshot);
     const items = JSON.parse(readFileSync(join(root, 'knowledge/items.json'), 'utf8'));
     const bill = supplyBill(supplies, items, liveHelperStatuses());

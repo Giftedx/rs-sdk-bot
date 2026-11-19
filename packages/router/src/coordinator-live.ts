@@ -1,3 +1,4 @@
+import {RESERVED_ACCOUNTS} from '../../core/src/specialist-boards';
 import {readFileSync,existsSync,readdirSync,writeFileSync,renameSync,unlinkSync,mkdirSync,statSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -409,7 +410,7 @@ function retiredRecoveryCohort(task:CoordTask,account:string,base:string):Retire
  const ownerFile=join(base,'.practice/coordinator/runs',runId,'owner.json');
  if(existsSync(ownerFile)){const owner=JSON.parse(readFileSync(ownerFile,'utf8'));if(!Number.isSafeInteger(owner.pid)||owner.pid<1||processMatches(owner.pid,runId))refuse();}
  for(const name of accounts){
-  if(['haggis','shaftshooter','polevaulter'].includes(name.toLowerCase())||['stop-coordinator','stop-swarm','stop-'+name].some(f=>existsSync(join(base,'.practice',f))))refuse();
+  if(RESERVED_ACCOUNTS.includes(name.toLowerCase())||['stop-coordinator','stop-swarm','stop-'+name].some(f=>existsSync(join(base,'.practice',f))))refuse();
   assertNoRecoveryLease(name,base);
   if(liveRows(base).some(s=>s.name?.toLowerCase()===name.toLowerCase()&&s.server===LIVE_SERVER&&!s.result))refuse();
  }

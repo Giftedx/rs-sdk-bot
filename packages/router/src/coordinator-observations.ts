@@ -1,3 +1,4 @@
+import {RESERVED_ACCOUNTS} from '../../core/src/specialist-boards';
 import {createHash} from 'node:crypto';
 import {addTasks,boundAccounts,deadRoots,type CoordinatorState,type CoordTask} from './coordinator';
 import {currentQualification,reviewApproved,retarget} from './coordinator-rules';
@@ -46,7 +47,7 @@ export function applyObservationRequests(state:CoordinatorState,requests:readonl
  const entryOf=(cap:string)=>{try{return d.definition(cap).entry;}catch{return undefined;}};
  const statusOf=(name:string)=>d.statuses.filter(s=>s?.name?.toLowerCase()===normalized(name)&&!s.practice&&s.server==='rs-sdk-demo.fly.dev'&&Number.isFinite(s.at)&&s.at>0&&s.at<=d.now).sort((a,b)=>b.at-a.at)[0];
  const running=new Set(state.tasks.filter(r=>r.status==='running').flatMap(r=>boundAccounts(r.spec,state)??[]).map(normalized));
- const eligible=(name:string)=>/^[A-Za-z0-9]{1,12}$/.test(name)&&!['haggis','shaftshooter','polevaulter'].includes(normalized(name))&&d.allowed(name)&&!d.paused(name)&&!running.has(normalized(name));
+ const eligible=(name:string)=>/^[A-Za-z0-9]{1,12}$/.test(name)&&!RESERVED_ACCOUNTS.includes(normalized(name))&&d.allowed(name)&&!d.paused(name)&&!running.has(normalized(name));
  const fresh=(s:any,t:CoordTask)=>s&&d.now-s.at<300000&&Array.isArray(s.skills)&&Object.keys(t.accept?.skills??{}).every(skill=>s.skills.some((r:any)=>normalized(r.name??'')===normalized(skill)&&Number.isSafeInteger(r.level)&&r.level>=1&&r.level<=99&&Number.isFinite(r.xp)&&r.xp>=0));
  const freshBank=(s:any)=>s&&Number.isFinite(s.bankAt)&&s.bankAt>0&&s.bankAt<=s.at&&d.now-s.bankAt<300000&&Array.isArray(s.bank);
  const dependencies=(task:CoordTask)=>{
