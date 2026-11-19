@@ -92883,6 +92883,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/snapshot-restore-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/stun-guest.ts",
    "intents": [
     "observe"
