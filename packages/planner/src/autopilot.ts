@@ -570,13 +570,23 @@ function weaponStageFor(a: Acct, inp: Inputs): { id: string; item: string; goal:
 type KitStyles = { melee: boolean; ranged: boolean };
 const KIT_STAGE_STYLE: Readonly<Record<string, CombatFocus>> = Object.fromEntries([...WEAPON_STAGES.map(s => [s.id, 'melee']),
     [RUNE_ARMOUR_BAND, 'melee'], [DHIDE_ARMOUR_BAND, 'ranged'], [BOW_STAGE, 'ranged'], [AMMO_STAGE, 'ranged']] as [string, CombatFocus][]);
-export function kitStyle(a: Acct, inp: Pick<Inputs, 'templates' | 'current' | 'running'>): CombatFocus | null {
+export function kitStyle(a: Acct, inp: Pick<Inputs, 'templates' | 'current' | 'running'>, bands: readonly { template: Template; lacks?: unknown }[] = []): CombatFocus | null {
     const lower = a.name.toLowerCase(), now = inp.current?.get(lower);
     // A kit buy that runs keeps the style of its own stage, so the account does not change its buy when its band changes.
     // A finished bow buy leads on to its arrows and dragonhide. A finished melee buy does not lead on to the rest of the rune
     // set: an account that left its melee band takes the style of its next band.
     const stage = now?.startsWith(KIT_BUY) ? KIT_STAGE_STYLE[now.slice(KIT_BUY.length)] : undefined;
-    return (stage && (stage === 'ranged' || inp.running?.has(lower)) ? stage : undefined) ?? accountStyle(a, inp.templates, now, true);
+    if (stage && (stage === 'ranged' || inp.running?.has(lower))) return stage;
+    // The band that it runs now.
+    const own = accountStyle(a, inp.templates, now, false);
+    if (own) return own;
+    // Else the first combat band that it can start now (its needs are met, or a kit buy supplies them), the one with no missing
+    // kit first: a band whose level it lacks is no candidate, so a Magic 1 account is not a magic trainer for the Magic band
+    // alone. `bands` are the goal candidates of the pass in band order.
+    const combat = bands.filter(c => c.template.trains && SKILL_STYLE[c.template.trains.skill] && !c.template.filler);
+    const first = combat.find(c => !c.lacks) ?? combat[0];
+    if (first) return SKILL_STYLE[first.template.trains!.skill]!;
+    return accountStyle(a, inp.templates, now, true);
 }
 const kitStylesOf = (style: CombatFocus | null): KitStyles => ({ melee: style === null || style === 'melee', ranged: style === null || style === 'ranged' });
 export type KitStage = { id: string; goal: string; items: { item: string; count: number }[] };
@@ -598,16 +608,20 @@ export function bowStageFor(a: Acct, inp: Inputs): (KitStage & { level: number }
 // Arrows for the bow the account fires: the best tier that the bow and the Ranged level allow and that its coins pay for in
 // a batch (a consumable, so a margin stays), unless it holds a stock of that tier or better. `bowLevel` is the level of the bow
 // it will wield.
-export const AMMO_BATCH = 300, AMMO_KEEP = 200;
+// The arrows are a consumable and the stage buys again when they run low, so it is bounded: it fires only when the account holds
+// under AMMO_LOW arrows of the tier or better (a bought batch of AMMO_BATCH lasts hundreds of thousands of Ranged experience:
+// the band loses 0.67 to 2.02 arrows per 1,000 experience), it never replaces a running band (its place is AMMO_MARKET, not the
+// weapon market), and a batch at the price caps may cost at most half of the account's coins.
+export const AMMO_BATCH = 300, AMMO_LOW = 50, AMMO_MARKET = 'ge:ammo';
 export function ammoStageFor(a: Acct, inp: Inputs, bowLevel: number): KitStage | null {
     const top = Math.min(a.skills.Ranged ?? 1, bowLevel), buyRetired = !!inp.retired?.has(pairKey(a.name, KIT_BUY + AMMO_STAGE));
     // Bronze arrows are the Ranged band's own kit (its batch), so a stage never orders them.
     for (const [arrow, tier] of [...ARROWS].reverse().sort((x, y) => y[1] - x[1])) {
         if (tier > top || arrow === 'bronze arrow') continue;
         const held = ARROWS.filter(([, t]) => t >= tier && t <= top).reduce((n, [name]) => n + (a.items[name] ?? 0), 0);
-        if (held >= AMMO_KEEP) return null;
+        if (held >= AMMO_LOW) return null;
         const count = AMMO_BATCH - held, quote = inp.market?.[arrow];
-        if (hasStock(inp, arrow) || (!buyRetired && quote && count * quote.limit + KIT_CASH_RESERVE + KIT_COIN_MARGIN <= (a.items.coin ?? 0)))
+        if (hasStock(inp, arrow) || (!buyRetired && quote && count * quote.limit + KIT_CASH_RESERVE + KIT_COIN_MARGIN <= (a.items.coin ?? 0) && count * quote.limit * 2 <= (a.items.coin ?? 0)))
             return { id: AMMO_STAGE, goal: `fire ${arrow}s`, items: [{ item: arrow, count }] };
     }
     return null;
@@ -694,11 +708,13 @@ export function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
         if (!inp.army?.has(lower)) continue;
         const kit = new Map<string, { count: number; bands: Set<string> }>();
         let cash = 0, keep = 0;
+        const bands: { template: Template; lacks?: Lack[] }[] = [];
         for (const listed of inp.templates) {
             const t = startable(a, listed);
             if (!t || (t.once && onceOwner.get(t.id) !== lower)) continue;
             const lacks = kitLacks(a, t.needs, item => !!inp.market?.[item]);
             if (lacks === null) continue;
+            bands.push({ template: t, lacks: lacks.length ? lacks : undefined });
             cash = Math.max(cash, ...Object.entries(t.needs?.items ?? {}).filter(([item]) => norm(item) === 'coin').map(([, count]) => count));
             keep = Math.max(keep, t.keepCoins?.(a) ?? 0);
             const batch = t.batchFor?.(a) ?? t.batch;
@@ -711,7 +727,8 @@ export function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
                 entry.count = Math.max(entry.count, count); entry.bands.add(t.id); kit.set(item, entry);
             }
         }
-        const style = kitStyle(a, inp), styles = kitStylesOf(style);
+        bands.sort((x, y) => (x.template.band ?? 0) - (y.template.band ?? 0));
+        const style = kitStyle(a, inp, bands), styles = kitStylesOf(style);
         const wStage = styles.melee ? weaponStageFor(a, inp) : null;
         if (wStage) kit.set(wStage.item, { count: 1, bands: new Set([wStage.id]) });
         for (const arm of armourItemsFor(a, inp, styles)) for (const item of arm.items) if (!kit.has(item)) kit.set(item, { count: 1, bands: new Set([arm.id]) });
@@ -1078,7 +1095,8 @@ export function plan(input: Inputs): Assignment[] {
     for (const a of mine) {
         const lower = a.name.toLowerCase();
         if (!inp.army?.has(lower) || squadNames.has(lower)) continue;
-        const style = kitStyle(a, inp), styles = kitStylesOf(style);
+        const bands = cands.filter(c => c.account === a.name && c.goal).sort((x, y) => x.goal!.band - y.goal!.band || x.goal!.left - y.goal!.left);
+        const style = kitStyle(a, inp, bands), styles = kitStylesOf(style);
         const wStage = styles.melee ? weaponStageFor(a, inp) : null;
         if (wStage) {
             const template: Template = { id: wStage.id, item: wStage.item, attack: 30, goal: wStage.goal, family: 'kit-buy', script: KIT_BUY_SCRIPT, role: 'supply', yields: () => [], kitFirst: true, needs: { items: { [wStage.item]: 1 } } } as Template & { item: string; attack: number };
@@ -1087,7 +1105,7 @@ export function plan(input: Inputs): Assignment[] {
         if (style === 'ranged') for (const stage of rangedStagesFor(a, inp)) {
             const template: Template = { id: stage.id, goal: stage.goal, family: 'kit-buy', script: KIT_BUY_SCRIPT, role: 'supply', yields: () => [], kitFirst: true,
                 needs: { items: Object.fromEntries(stage.items.map(i => [i.item, i.count])) } };
-            cands.push({ account: a.name, template, value: 0, resources: [WEAPON_MARKET], reason: `army band ${WEAPON_BAND}: stages ${stage.items.map(i => `${i.count} ${i.item}`).join(', ')}`,
+            cands.push({ account: a.name, template, value: 0, resources: [stage.id === AMMO_STAGE ? AMMO_MARKET : WEAPON_MARKET], reason: `army band ${WEAPON_BAND}: stages ${stage.items.map(i => `${i.count} ${i.item}`).join(', ')}`,
                 goal: { band: WEAPON_BAND + (stage.id === AMMO_STAGE ? 0.01 : 0), left: 0 }, lacks: stage.items.map(i => ({ of: [i.item], count: i.count })) });
         }
         for (const arm of armourItemsFor(a, inp, styles)) {

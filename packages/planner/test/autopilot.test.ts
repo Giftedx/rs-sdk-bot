@@ -3321,7 +3321,7 @@ test('the ticks of the alchemy band come from the measured cast times: 12 casts 
     expect(alchTicks(99)).toBe(0);
 });
 
-import { kitStyle, bowStageFor, ammoStageFor, AMMO_BATCH } from '../src/autopilot';
+import { kitStyle, bowStageFor, ammoStageFor, AMMO_BATCH, AMMO_LOW, AMMO_MARKET } from '../src/autopilot';
 import { GEAR_GE_ID, GEAR_SHOP_PILOT, type GearWantRow } from '../src/gear-want-jobs';
 
 describe('army kit stages follow the style that the account trains', () => {
@@ -3376,9 +3376,41 @@ describe('army kit stages follow the style that the account trains', () => {
         // Too few coins for a batch of the best tier, or no seller: nothing, never a tier the bow cannot fire.
         expect(arrows(withBow({ coin: 1_000 }), 50)).toBeUndefined();
         expect(arrows(withBow({}), 50, listed('bronze arrow', 882))).toBeUndefined();
-        // 200 rune arrows held are a stock; 100 held are topped up to the batch.
-        expect(arrows(withBow({ 'rune arrow': 200 }), 50)).toBeUndefined();
-        expect(arrows(withBow({ 'rune arrow': 100 }), 50)).toEqual([{ item: 'rune arrow', count: AMMO_BATCH - 100 }]);
+        // The batch at the price caps may cost at most half of the coins: 720,000 for 300 rune arrows.
+        expect(arrows(withBow({ coin: 700_000 }), 50)).toBeUndefined();
+        expect(arrows(withBow({ coin: 720_000 }), 50)).toEqual([{ item: 'rune arrow', count: AMMO_BATCH }]);
+        // The stage fires only when the arrows run low: 50 held of the tier are a stock, 49 are topped up to the batch.
+        expect(arrows(withBow({ 'rune arrow': AMMO_LOW }), 50)).toBeUndefined();
+        expect(arrows(withBow({ 'rune arrow': AMMO_LOW - 1 }), 50)).toEqual([{ item: 'rune arrow', count: AMMO_BATCH - AMMO_LOW + 1 }]);
+    });
+
+    test('the arrow buy is bounded: it never replaces a running band, and it comes again only when the arrows run low', () => {
+        const kit = { 'magic shortbow': 1, 'dragonhide chap': 1, 'dragon vambrace': 1 };
+        const idle = run({}, { ...kit, 'rune arrow': 10 }, undefined, { templates: ranged });
+        expect(idle.template!.id).toBe(KIT_BUY + 'army-weapon-ammo');
+        expect(idle.resources).toEqual([AMMO_MARKET]);
+        // A running Ranged band keeps its place: a buy of the weapon market may replace it, the arrow buy may not.
+        const busy = { templates: ranged, running: new Set(['fighter']), unfundable: new Set(['fighter']) };
+        expect(run({}, { ...kit, 'rune arrow': 10 }, 'army-trooper-ranged-99', busy).template?.id ?? '').not.toBe(KIT_BUY + 'army-weapon-ammo');
+        // After a buy the stock holds, and the buy does not repeat until the arrows fall under AMMO_LOW again.
+        expect(run({}, { ...kit, 'rune arrow': 10 + AMMO_BATCH }, undefined, { templates: ranged }).template?.id ?? '').not.toBe(KIT_BUY + 'army-weapon-ammo');
+        // A retired pair buys no more.
+        expect(run({}, { ...kit, 'rune arrow': 10 }, undefined, { templates: ranged, retired: new Set([pairKey('Fighter', KIT_BUY + 'army-weapon-ammo')]) }).template?.id ?? '').not.toBe(KIT_BUY + 'army-weapon-ammo');
+    });
+
+    test('with no running band the style is that of the first band it can start: Magic first, then Ranged, then melee', () => {
+        const bands = (...ids: string[]) => ids.map(id => ({ template: catalogue().find(t => t.id === id)! }));
+        const who = (skills: Record<string, number>) => acct('Fighter', { ...base, ...skills });
+        const none = { templates: catalogue(), current: new Map<string, string>() };
+        expect(kitStyle(who({}), none, bands('army-alch-magic-99', 'army-trooper-ranged-99', 'army-trooper-defence-99'))).toBe('magic');
+        // The Magic band is no candidate (the pass lists none): the next one gives the style. A candidate with no missing kit comes first.
+        expect(kitStyle(who({}), none, bands('army-trooper-ranged-99', 'army-trooper-defence-99'))).toBe('ranged');
+        expect(kitStyle(who({}), none, [{ template: catalogue().find(t => t.id === 'army-alch-magic-99')!, lacks: [{ of: ['nature rune'], count: 50 }] }, ...bands('army-trooper-defence-99')])).toBe('melee');
+        // No band left: no style, so the old kit stays (a blade and rune armour).
+        const maxed = acct('Fighter', { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99, Thieving: 99 });
+        expect(kitStyle(maxed, none, [])).toBeNull();
+        // A running band gives its own style, whatever the pass lists.
+        expect(kitStyle(who({}), { ...none, current: new Map([['fighter', 'army-trooper-defence-99']]) }, bands('army-alch-magic-99'))).toBe('melee');
     });
 
     test('a magic trainer buys no melee kit: the gear pass serves its staff and robes', () => {
