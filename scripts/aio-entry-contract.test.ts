@@ -14,6 +14,7 @@ const root=resolve(import.meta.dir,'..');
 test('travel and prayer recovery workers dispatch through AIO with the worker argument contract',()=>{
  expect(resolveLogisticsStep('walk-edge')).toEqual({script:'scripts/pk-live/walk-edge.ts',args:[],env:{}});
  expect(resolveLogisticsStep('restore-prayer',['ALTAR=3243,3205'])).toEqual({script:'scripts/pray-at-altar.ts',args:[],env:{ALTAR:'3243,3205'}});
+ expect(resolveLogisticsStep('cure-poison')).toEqual({script:'scripts/cure-poison.ts',args:[],env:{}});
 });
 
 test('KBD positional limit reaches the fight worker environment and invalid limits fail before login',()=>{

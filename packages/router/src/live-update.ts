@@ -52,13 +52,28 @@ export type Dirty = { path: string; sameAsTarget: boolean; untracked: boolean; m
 // `vendorRelease`: the worker release files that the update changes through the SDK patch (vendorReleaseFiles).
 // `qualifications`: the running qualifications (`qualification <id> runs`); they hold only an update that changes a
 // file they can check (qualificationSource).
-export type UpdateInput = { branch: string; ahead: number; behind: number; incoming: readonly string[]; dirty: readonly Dirty[]; holds: readonly string[]; heldFiles: readonly string[]; qualifications?: readonly string[]; liveRuns?: readonly LiveRun[]; vendorRelease?: readonly string[] };
+// `bunfigPreloadOnly`: the incoming bunfig.toml changes only its `preload` lines, and each preload file that it adds is in the
+// target (see bunfigPreloadOnly below). That change installs nothing.
+export type UpdateInput = { branch: string; ahead: number; behind: number; incoming: readonly string[]; dirty: readonly Dirty[]; holds: readonly string[]; heldFiles: readonly string[]; qualifications?: readonly string[]; liveRuns?: readonly LiveRun[]; vendorRelease?: readonly string[]; bunfigPreloadOnly?: boolean };
 // `unknown`: the entry of the run gives no file here, so the files that the run loads are not known.
 export type LiveRun = { name: string; files: readonly string[]; unknown?: true };
 export type UpdatePlan = { action: 'none' | 'wait'; reason: string } | { action: 'update'; adopt: Dirty[] };
 
 const MANIFEST = /(?:^|\/)(?:package\.json|bun\.lock|bunfig\.toml|tsconfig\.json)$/;
 const few = (files: readonly string[]) => files.slice(0, 3).join(', ') + (files.length > 3 ? ` and ${files.length - 3} more` : '');
+
+// A bunfig.toml change that adds or removes only `preload` entries needs no `bun install`: a preload is a source file that a
+// process loads when it starts, and the target brings it. The text outside the `preload` lines must be the same.
+export function preloadOnlyChange(before: string, after: string): boolean {
+    const lf = (s: string) => s.replaceAll('\r\n', '\n'), rest = (s: string) => lf(s).split('\n').filter(l => !/^\s*preload\s*=/.test(l)).join('\n');
+    return lf(before) !== lf(after) && rest(before) === rest(after);
+}
+// The preload paths that `after` names and `before` does not, relative to the repository root.
+export function addedPreloads(before: string, after: string): string[] {
+    const paths = (s: string) => new Set(s.replaceAll('\r\n', '\n').split('\n').filter(l => /^\s*preload\s*=/.test(l)).flatMap(l => [...l.matchAll(/"([^"]+)"/g)].map(m => m[1]!.replace(/^\.\//, ''))));
+    const old = paths(before);
+    return [...paths(after)].filter(p => !old.has(p));
+}
 
 export function planUpdate(i: UpdateInput): UpdatePlan {
     if (i.branch !== 'master') return { action: 'none', reason: `checkout is on ${i.branch}` };
@@ -68,7 +83,7 @@ export function planUpdate(i: UpdateInput): UpdatePlan {
     const checked = i.qualifications?.length ? i.incoming.filter(qualificationSource) : [];
     if (checked.length) return { action: 'wait', reason: `${i.qualifications![0]} and checks ${few(checked)}` };
     const incoming = new Set(i.incoming);
-    const manifests = i.incoming.filter(f => MANIFEST.test(f));
+    const manifests = i.incoming.filter(f => MANIFEST.test(f) && !(f === 'bunfig.toml' && i.bunfigPreloadOnly));
     if (manifests.length) return { action: 'wait', reason: `dependency change needs bun install: ${few(manifests)}` };
     const owned = i.heldFiles.filter(f => incoming.has(f));
     if (owned.length) return { action: 'wait', reason: `a running build owns ${few(owned)}` };
@@ -288,7 +303,14 @@ export function readCheckout(git: Git, root: string, target: string): Omit<Updat
         const sameAsTarget = here ? want.ok && git('hash-object', '--', r.path).out === want.out : !want.ok;
         return { ...r, sameAsTarget };
     });
-    return { branch, ahead, behind, incoming, dirty };
+    // A bunfig.toml that only adds preload files is no dependency change when each added file is in the target.
+    let bunfigPreloadOnly: boolean | undefined;
+    if (incoming.includes('bunfig.toml')) {
+        const before = git('show', 'HEAD:bunfig.toml'), after = git('show', `${target}:bunfig.toml`);
+        bunfigPreloadOnly = before.ok && after.ok && preloadOnlyChange(before.out, after.out)
+            && addedPreloads(before.out, after.out).every(path => git('rev-parse', '--verify', '--quiet', `${target}:${path}`).ok);
+    }
+    return { branch, ahead, behind, incoming, dirty, ...(bunfigPreloadOnly === undefined ? {} : { bunfigPreloadOnly }) };
 }
 
 type WorkingCopy = { kind: 'missing' } | { kind: 'file'; bytes: Buffer; mode: number } | { kind: 'link'; target: string };
