@@ -1,0 +1,22 @@
+{
+ "id": "1795069007226-mmtha0205-unsheathed",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmtha0205",
+ "to": "Unsheathed",
+ "item": "coins",
+ "count": 304,
+ "start": 1795069007226,
+ "end": 1795071407226,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
