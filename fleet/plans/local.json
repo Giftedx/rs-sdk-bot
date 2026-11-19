@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795096150341,
+ "at": 1795096225227,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -300,28 +300,6 @@
    "resources": [
     "splash:ardougne-cow-fence"
    ]
-  },
-  {
-   "account": "mmtha0205",
-   "script": "scripts/coin-courier.ts",
-   "args": [
-    "800000",
-    "--bank-x=2618",
-    "--bank-z=3332",
-    "--reserve=200000",
-    "--timeout-ms=600000"
-   ],
-   "env": {
-    "COIN_ORDER": "prayer99-swordinhand-bonefund800k",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-5f61e6ce-8bb7-4302-9f29-612c2fa78f88"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-courier-mmtha0205-swordinhand-bone-fund [task-5f61e6ce-8bb7-4302-9f29-612c2fa78f88]",
-   "role": "supply"
   },
   {
    "account": "Swordinhand",
