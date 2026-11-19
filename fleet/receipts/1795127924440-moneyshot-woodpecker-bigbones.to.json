@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795127924440-moneyshot-woodpecker-bigbones",
+ "account": "Woodpecker",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Big bones",
+ "requested": 16,
+ "claim": "6cfc4d34-f48c-4f82-8d2a-db4cde988b7a",
+ "count": 0,
+ "ok": false,
+ "at": 1795127971371,
+ "detail": "trade claimed"
+}
