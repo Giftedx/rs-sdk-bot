@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795047674546-mineyourbiz-sporrandip-airrune",
  "account": "MineYourBiz",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 50,
  "claim": "09704ac2-9573-4c91-9b7a-8197a81b3e28",
- "count": 0,
- "ok": false,
- "at": 1795047784881,
- "detail": "trade claimed"
+ "count": 50,
+ "ok": true,
+ "at": 1795047958977,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 50,
+  "after": 0
+ },
+ "bank": {
+  "count": 50,
+  "at": 1795047942190
+ },
+ "logout": {
+  "attemptId": "1795047784891-0000018308-0000000001",
+  "at": 1795047958965,
+  "sha256": "c2b80af2f60df0600b512eebd9caad0fedca43ea806b8d531e17aca56233ddaa"
+ },
+ "screen": true
 }

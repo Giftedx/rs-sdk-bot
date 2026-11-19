@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795047924492,
+ "at": 1795047966786,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -192,25 +192,6 @@
    "resources": [
     "shop:zaff"
    ]
-  },
-  {
-   "account": "Pocketrocket",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=20 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=pocketrocket-kit11-532-0to20 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"532\":20}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 20 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "mmtha0205",
