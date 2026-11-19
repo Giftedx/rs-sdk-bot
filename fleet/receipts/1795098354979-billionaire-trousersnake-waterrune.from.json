@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795098354979-billionaire-trousersnake-waterrune",
  "account": "Billionaire",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 53,
  "claim": "c78c90d5-c25f-4166-b3a3-6e1083ff21e4",
- "count": 0,
- "ok": false,
- "at": 1795098449494,
- "detail": "trade claimed"
+ "count": 53,
+ "ok": true,
+ "at": 1795098529518,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 53,
+  "after": 0
+ },
+ "bank": {
+  "count": 53,
+  "at": 1795098457579
+ },
+ "logout": {
+  "attemptId": "1795098449503-0000022932-0000000001",
+  "at": 1795098529508,
+  "sha256": "7c4ae6200003bad7632bb7448ffa54071aa71321cb1d78302bf3376b916538a0"
+ },
+ "screen": true
 }
