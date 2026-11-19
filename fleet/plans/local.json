@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795107876956,
+ "at": 1795108274825,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -268,24 +268,59 @@
   },
   {
    "account": "MineYourBiz",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "13"
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "local",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
+   "account": "Swordinhand",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "dargaud",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "rune arrow",
+    "STOCK_TARGET": "440",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "320200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "320000",
+    "AUTOPILOT_ORDER": "[40]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":440}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "train Prayer to 99 burying the held bones",
-   "role": "combat",
-   "template": "army-bury-prayer-99",
+   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
+   "role": "bank",
+   "template": "squad-arrows-dargaud",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "shop:dargaud"
+   ]
   },
   {
    "account": "Swordswallow",
