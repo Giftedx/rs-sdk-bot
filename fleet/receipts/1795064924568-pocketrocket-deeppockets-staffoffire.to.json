@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795064924568-pocketrocket-deeppockets-staffoffire",
+ "account": "Deeppockets",
+ "partner": "Pocketrocket",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "2b28e74f-390d-428a-a4ea-1cef079ae2b5",
+ "count": 0,
+ "ok": false,
+ "at": 1795064989129,
+ "detail": "trade claimed"
+}
