@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795048861249,
+ "at": 1795048925275,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -216,26 +216,22 @@
   },
   {
    "account": "YewFirst",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "532",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "17",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying bought big bones",
-   "role": "combat",
-   "template": "army-bury-big-99",
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "knight:2582,3297"
+   ]
   },
   {
    "account": "CoinCock",
@@ -272,8 +268,7 @@
     "5000"
    ],
    "env": {
-    "ALCH_ITEM": "airrune",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+    "ALCH_ITEM": "airrune"
    },
    "enabled": true,
    "standing": true,
