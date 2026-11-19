@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795084862511,
+ "at": 1795085489543,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -279,6 +279,28 @@
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "453",
+    "QUANTITY": "4",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "1000",
+    "CASH_RESERVE": "20000",
+    "ORDER_MS": "1200000",
+    "ORDER_KEY": "elemental-oreelse-coal-v3",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-72a4060f-d419-488b-ac8b-90a6d0ef1d35"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-buy-oreelse-coal-elemental-v3 [task-72a4060f-d419-488b-ac8b-90a6d0ef1d35]",
+   "role": "production"
   }
  ],
  "army": [
