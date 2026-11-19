@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795116245209,
+ "at": 1795116374567,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -342,6 +342,25 @@
    ]
   },
   {
+   "account": "PickpockDick",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
+  },
+  {
    "account": "CoinCock",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -377,15 +396,15 @@
    ],
    "env": {
     "ITEMS": "rune arrow",
-    "STOCK_TARGET": "415",
+    "STOCK_TARGET": "417",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
     "FLOAT": "320200",
     "COIN_RESERVE": "200",
     "MAX_SPEND": "320000",
-    "AUTOPILOT_ORDER": "[15]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":415}}"
+    "AUTOPILOT_ORDER": "[17]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":417}}"
    },
    "enabled": true,
    "standing": true,
