@@ -1,0 +1,22 @@
+{
+ "id": "1795127534523-shaftsinker-masterbaiter",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftsinker",
+ "to": "Masterbaiter",
+ "item": "coins",
+ "count": 28948,
+ "start": 1795127534523,
+ "end": 1795129934523,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
