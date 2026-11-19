@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795095767998-mmtha0205-hocuspokeus",
+ "account": "Hocuspokeus",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 25260,
+ "claim": "34d11f2e-5adf-4ca8-b0e8-4c83bec687fd",
+ "count": 25260,
+ "ok": true,
+ "at": 1795095879326,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 25260
+ },
+ "bank": {
+  "count": 25260,
+  "at": 1795095878467
+ },
+ "logout": {
+  "attemptId": "1795095863407-0000027500-0000000001",
+  "at": 1795095879203,
+  "sha256": "22c23410c4eaafdd1fd244d4eeb023520e1270315cc1fd263298a5163710a616"
+ },
+ "screen": true
+}
