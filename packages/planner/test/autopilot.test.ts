@@ -1729,7 +1729,22 @@ test('the kit tier uses this side\'s own stock first: a maxed account gives all 
     expect(run([other], [monk], { market, templates: boneBands }).send).toEqual({ from: 'Far', to: 'Monk', item: 'dragon bone', count: BONE_START - 6, template: 'army-bury-dragon-99' });
 });
 
-import { BLACK_CAVE, BLACK_CAVE_PLACES, HIDE_TARGET, HUNT_ARROWS, HUNT_ARROW_STOCK, HUNT_BAND, HUNT_FOOD, HUNT_KILLS, HUNT_RUNE_STOCK, bandLeft } from '../src/autopilot';
+import { BLACK_CAVE, BLACK_CAVE_PLACES, HIDE_TARGET, HUNT_ARROWS, HUNT_ARROW_STOCK, HUNT_BAND, HUNT_FOOD, HUNT_KILLS, HUNT_RUNE_STOCK, HUNT_RUNE_ARROWS, HUNT_RUNE_SPEND, bandLeft } from '../src/autopilot';
+test('the black dragon hunt goes on rune arrows first, and a hunter short of them buys rune arrows before iron', () => {
+    const maxed = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99 };
+    const kit = { 'dusty key': 1, 'magic shortbow': 1, 'law rune': 1, 'air rune': 3, 'fire rune': 1, shark: HUNT_FOOD };
+    const pilots = new Set(['army-hunt-black-dragons-rune', 'army-hunt-black-dragons', 'army-hunt-supply-rune', 'army-hunt-supply', 'army-dusty-key']);
+    const run = (items: Record<string, number>) => plan(inputs([acct('Kilt', maxed, items)], { army: new Set(['kilt']), capacity: CAPACITY, pilots }))[0]!;
+    // A trip of rune arrows and a trip of iron arrows: the rune hunt, with the rune trip's arrow count.
+    const trip = run({ ...kit, 'rune arrow': HUNT_RUNE_ARROWS, 'iron arrow': HUNT_ARROWS });
+    expect(trip.template!.id).toBe('army-hunt-black-dragons-rune');
+    expect(jobFor(trip, side)).toMatchObject({ env: { ARROW: 'rune_arrow', ARROWS: String(HUNT_RUNE_ARROWS) } });
+    // Iron only: the iron hunt still runs, so the account is not idle.
+    expect(run({ ...kit, 'iron arrow': HUNT_ARROWS }).template!.id).toBe('army-hunt-black-dragons');
+    // No trip of either and the coins of a rune trip: the rune shop run.
+    expect(run({ ...kit, 'iron arrow': 60, coin: HUNT_RUNE_SPEND + 10_000 }).template!.id).toBe('army-hunt-supply-rune');
+});
+
 test('a maxed army account hunts black dragons for hides: the key first, the kit bought, two in the cave, and its kit is not spare stock', () => {
     const maxed = { Thieving: 99, Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Ranged: 99, Magic: 99, Prayer: 99 };
     const kit = { 'dusty key': 1, 'magic shortbow': 1, 'iron arrow': HUNT_ARROWS, 'law rune': 1, 'air rune': 3, 'fire rune': 1, shark: HUNT_FOOD, coin: 200_000 };
