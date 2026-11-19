@@ -687,6 +687,11 @@ deaths for the team of 3, the team of 5 and one ranger. The deaths limit is met 
 | `PROTECT=0.4`, `LOSE=0.7` | 29; 1; 1167 | 19; 1; 1211 | - |
 | `PROTECT=0.4`, `LOSE=0.5` | 26; 0; 1142 | 18; 0; 1346 | - |
 | `PROTECT=0.4`, `LOSE=0.7`, `PILE=0.9` | 24; 0; 1086 | 20; 2; 1247 | - |
+| `PROTECT=0.4` (control, run 44434441593) | 25; 0; 1224 | 26; 0; 1287 | 25; 0; 715 |
+| `PROTECT=0.4`, `LOSE=1.2` | 23; 0; 974 | 13; 1; 1123 | 22; 0; 861 |
+| `PROTECT=0.4`, `LOSE=1.5` | 29; 0; 1078 | 15; 0; 1000 | 24; 0; 660 |
+| `PROTECT=0.4`, `SQUAD_THREAT_SINGLE=2` | 24; 1; 1254 | 14; 0; 1286 | 23; 0; 690 |
+| `PROTECT=0.4`, `SINGLE=99` (never walk to single-way) | 20; 0; 1205 | 15; 0; 1150 | 23; 1; 480 |
 
 - **The win-chance estimate beats the counting rules.** Against the team of 5 the counting rules kill nothing (0) and the defaults
   kill 17. Against the team of 3 they kill 16 with a death, the defaults 24 with none.
@@ -698,6 +703,13 @@ deaths for the team of 3, the team of 5 and one ranger. The deaths limit is met 
 - **The champion rule is the defaults with `SQUAD_THREAT_PROTECT=0.4`:** 77 kills and no death over the three threats
   (30 + 24 + 23), against the defaults' 69 kills and one death. The margin is small and one batch: the evidence for it is the
   first-round cells of both teams.
+- **Nothing moves off `PROTECT=0.4`.** The control, run 44434441593 on seeds 1 to 10, kills 25, 26 and 25 (76, no death),
+  so the first batch (77) holds. A higher `LOSE` (1.2: 58 kills, 1 death; 1.5: 68, none) and a changed pull to single-way
+  (`SINGLE=2`: 61, 1 death; `SINGLE=99`: 58, 1 death) all kill less than the control. The team of 5 is the cell that
+  separates them: 26 kills for the control, 12 to 15 for every other setting. `LOSE=1.5` is the nearest rival, 8 kills
+  behind over the three threats, and it is not above the spread of one cell (about 5 kills).
+- **Not climbed:** target order, freeze use and `PILE` on top of `PROTECT=0.4`. The radar has no option for the first
+  two (`threatOptions` reads `lose`, `protect`, `pile`, `theirFood`, `singleWayMin`, `cooldown`, `act`, `expected`, `odds`).
 
 ## Keep it true
 
