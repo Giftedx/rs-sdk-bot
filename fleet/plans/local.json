@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795112548651,
+ "at": 1795112625942,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -343,31 +343,6 @@
    "template": "army-bury-prayer-99",
    "autopilot": "local",
    "resources": []
-  },
-  {
-   "accounts": [
-    "mmtha0205",
-    "Sausagefest"
-   ],
-   "script": "scripts/coin-courier.ts",
-   "args": [
-    "1560000",
-    "--bank-x=2618",
-    "--bank-z=3332",
-    "--reserve=200000",
-    "--timeout-ms=600000"
-   ],
-   "env": {
-    "COIN_ORDER": "prayer99-sausagefest-bonefund-mmtha0205",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-daadaa41-32ae-42a6-bed5-f3a5af1ae467"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-courier-mmtha0205-sausagefest-bone-fund [task-daadaa41-32ae-42a6-bed5-f3a5af1ae467]",
-   "role": "supply"
   }
  ],
  "army": [
