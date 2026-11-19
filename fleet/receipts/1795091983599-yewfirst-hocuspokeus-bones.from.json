@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795091983599-yewfirst-hocuspokeus-bones",
  "account": "YewFirst",
  "partner": "Hocuspokeus",
@@ -10,8 +10,22 @@
  "item": "Bones",
  "requested": 30,
  "claim": "1972a661-c4c0-4011-9a53-e25df5003bae",
- "count": 0,
- "ok": false,
- "at": 1795092066374,
- "detail": "trade claimed"
+ "count": 30,
+ "ok": true,
+ "at": 1795092138798,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 30,
+  "after": 0
+ },
+ "bank": {
+  "count": 30,
+  "at": 1795092125602
+ },
+ "logout": {
+  "attemptId": "1795092066383-0000002736-0000000001",
+  "at": 1795092138788,
+  "sha256": "c2dcd948b3bd4f71c3643b4d7fef0f134fd79d396c619a80b0c0f1fe82a7ddc3"
+ },
+ "screen": true
 }
