@@ -35,6 +35,7 @@ import { EDGEVILLE_BANK, eatUp, FOOD_START_FLOOR, maxDeathsOf, rekitAfterDeath }
 import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
 import { holdProtect, protectOf, retreatOf, ThreatWatch } from './pk-threat';
 import { connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './pk-roam';
+import { kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
 
 export const GANG = ['goondelf', 'ligma', 'sugma'];
@@ -559,10 +560,19 @@ if (import.meta.main) {
     // Bench: the gang accounts each fight the nearest of ours in view until they walk out (profile ganker-live).
     // SQUAD_GANG_SPLIT=1: gang account i takes our account i (i mod the squad), as the live gang split on the first
     // pilot's walk-in, in place of the nearest of ours.
-    const split = env.SQUAD_GANG_SPLIT === '1';
+    // SQUAD_GANG_PREY=<member index>,...: gang account i takes the member that the list names for it (list[i mod its length]),
+    // so a bench gang can pick the members that the live gang picked (in the first live squad run it attacked only the two
+    // members in dragonhide). It implies the split.
+    const preyList = (env.SQUAD_GANG_PREY ?? '').split(',').filter(x => /^\d+$/.test(x)).map(Number);
+    const split = env.SQUAD_GANG_SPLIT === '1' || preyList.length > 0;
     const gangRuns = gang.map(async (g, gi) => {
-        const mine = squad[gi % squad.length]!.name.toLowerCase();
-        const opts = sparOptions('ganker-live', env.SPAR_B_OPTS, kitFrom(g.sdk.getState()?.equipment ?? [], g.sdk.getState()?.inventory ?? []), 1200);
+        const preyAt = preyList.length ? preyList[gi % preyList.length]! % squad.length : gi % squad.length;
+        const mine = squad[preyAt]!.name.toLowerCase();
+        // SQUAD_GANG_KIT=<kit>+<kit>+...: the kit (scripts/pk-kits.ts) of gang account i is list[i mod its length], and
+        // SQUAD_GANG_PROFILE the fight profile of the gang (default ganker-live, the dagger gang). Both turn the gang accounts into
+        // the attacker of a bench threat: a mage, a ranger, a pure or a team (research/gang-clones.md, "The attackers").
+        const gangKit = (env.SQUAD_GANG_KIT ?? '').split('+').filter(Boolean), kitName = gangKit.length ? gangKit[gi % gangKit.length]! : undefined;
+        const opts = sparOptions(env.SQUAD_GANG_PROFILE ?? 'ganker-live', env.SPAR_B_OPTS, kitName ? kitSwitches(kitName) : kitFrom(g.sdk.getState()?.equipment ?? [], g.sdk.getState()?.inventory ?? []), 1200, kitName ? kitOptions(kitName) : {});
         while (!stopped() && g.tick() < deadline) {
             const me = g.sdk.getState()?.player;
             if (!me || wildernessLevel(me.worldZ) === 0) break;
@@ -572,7 +582,7 @@ if (import.meta.main) {
                 // SQUAD_GANG_HUNT=1: like the live gang, which the world feed takes to its target (it met the first live
                 // pilot 30 tiles from the post), it walks toward the nearest of ours in the Wilderness.
                 if (env.SQUAD_GANG_HUNT === '1' && g.tick() % 4 === 0) {
-                    const far = (split ? [squad[gi % squad.length]!] : squad).map(q => q.sdk.getState()?.player).filter((q): q is NonNullable<typeof q> => !!q && wildernessLevel(q.worldZ) > 0)
+                    const far = (split ? [squad[preyAt]!] : squad).map(q => q.sdk.getState()?.player).filter((q): q is NonNullable<typeof q> => !!q && wildernessLevel(q.worldZ) > 0)
                         .sort((a, b) => Math.max(Math.abs(a.worldX - me.worldX), Math.abs(a.worldZ - me.worldZ)) - Math.max(Math.abs(b.worldX - me.worldX), Math.abs(b.worldZ - me.worldZ)))[0];
                     if (far) void g.sdk.sendWalk(far.worldX, far.worldZ);
                 }
