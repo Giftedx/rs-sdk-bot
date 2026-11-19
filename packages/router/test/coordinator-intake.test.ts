@@ -3,7 +3,7 @@ import {existsSync,mkdirSync,mkdtempSync,readFileSync,writeFileSync} from 'node:
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
-import {intakeRequests,settlePlanner} from '../src/coordinator-cli';
+import {intakeRequests,plannerHolds,settlePlanner} from '../src/coordinator-cli';
 import {addTasks,finishTask,initialState,startTask} from '../src/coordinator';
 import {PLAN_GAP_MS,plannerDue} from '../src/coordinator-decisions';
 import {capabilityDefinitionTransition,loadState,publishCapabilityChanges,runDirectory,saveState} from '../src/coordinator-store';
@@ -220,3 +220,30 @@ test('model recovery refuses changed proposal bytes before publishing a committe
  intakeRequests(recovered,f.base);
  expect(existsSync(f.accepted)).toBe(true);
 });
+
+test('a planner pid that another program reused does not hold the planner slot',()=>{
+ const f=fixture();
+ f.state.planner={runId:'plan-reused',startedAt:100,pid:21008};
+ // A program with another command line runs under the saved pid: the planner is gone.
+ settlePlanner(f.state,f.base,{holds:(pid,runId)=>plannerHolds(pid,runId,()=>'claude.exe --output-format stream-json',()=>true)});
+ expect(f.state.planner).toBeUndefined();
+ expect(f.state.lastPlanReason).toContain('planner ended without proposal');
+ expect(loadState(f.directory).planner).toBeUndefined();
+});
+
+test('a live planner keeps its slot, and so does a pid whose command line cannot be read',()=>{
+ for(const read of [()=>'bun packages/router/src/coordinator-cli.ts --planner plan-live',()=>null]){
+  const f=fixture();
+  f.state.planner={runId:'plan-live',startedAt:100,pid:4242};
+  settlePlanner(f.state,f.base,{holds:(pid,runId)=>plannerHolds(pid,runId,read,()=>true)});
+  expect(f.state.planner?.runId).toBe('plan-live');
+ }
+});
+
+test('plannerHolds: a command line with the run id holds, another command line does not, no command line follows the pid',()=>{
+ expect(plannerHolds(1,'plan-a',()=>'bun coordinator-cli.ts --planner plan-a',()=>false)).toBe(true);
+ expect(plannerHolds(1,'plan-a',()=>'bun coordinator-cli.ts --planner plan-b',()=>true)).toBe(false);
+ expect(plannerHolds(1,'plan-a',()=>null,()=>true)).toBe(true);
+ expect(plannerHolds(1,'plan-a',()=>null,()=>false)).toBe(false);
+});
+

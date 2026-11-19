@@ -1,11 +1,15 @@
 import { readFileSync } from 'node:fs';
 
+// A PowerShell read that hangs ends after this time. The exit code is then null, and the readers below report "not known":
+// commandLine gives null and processStartTimes gives null. A coordinator loop must not wait on a hung read for good.
+export const POWERSHELL_TIMEOUT_MS = 20_000;
+
 // The command line of a live process, or null. Used to check that a saved PID is still our process:
 // Windows reuses PIDs, so a stale pids.json could otherwise point at an unrelated program.
 export function commandLine(pid: number): string | null {
     if (!Number.isInteger(pid) || pid <= 0) return null;
     if (process.platform === 'win32') {
-        const r = Bun.spawnSync(['powershell', '-NoProfile', '-Command', `(Get-CimInstance Win32_Process -Filter "ProcessId=${pid}").CommandLine`], { stdout: 'pipe', stderr: 'ignore' ,windowsHide:true});
+        const r = Bun.spawnSync(['powershell', '-NoProfile', '-Command', `(Get-CimInstance Win32_Process -Filter "ProcessId=${pid}").CommandLine`], { stdout: 'pipe', stderr: 'ignore' ,windowsHide:true, timeout: POWERSHELL_TIMEOUT_MS});
         const out = r.stdout.toString().trim();
         return out.length > 0 ? out : null;
     }
@@ -44,7 +48,7 @@ export function processStartTimes(pids: readonly number[]): Map<number, number> 
     if (process.platform !== 'win32') return null;
     // The last line proves that the query ran to its end: a failed query stops the script before it.
     const script = `$ErrorActionPreference='Stop'; Get-CimInstance Win32_Process -Filter "${ids.map(p => `ProcessId=${p}`).join(' OR ')}" | ForEach-Object { if ($_.CreationDate) { '{0}|{1}' -f $_.ProcessId, ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() } }; 'read'`;
-    const r = Bun.spawnSync(['powershell', '-NoProfile', '-Command', script], { stdout: 'pipe', stderr: 'ignore', windowsHide: true });
+    const r = Bun.spawnSync(['powershell', '-NoProfile', '-Command', script], { stdout: 'pipe', stderr: 'ignore', windowsHide: true, timeout: POWERSHELL_TIMEOUT_MS });
     const lines = r.stdout.toString().trim().split(/\r?\n/);
     if (r.exitCode !== 0 || lines.pop() !== 'read') return null;
     for (const line of lines) {

@@ -14,7 +14,7 @@ import {initialState,addTasks,startTask,chooseTask,validateTask} from '../src/co
 import {atomicJson,saveState,loadState,runDirectory} from '../src/coordinator-store';
 import {readMergedPlan,coordinatorJobsPath,writeCoordinatorJobs,emptyCoordinatorJobs} from '../../core/src/coordinator-jobs';
 const jobOf=(base:string,account:string)=>readMergedPlan(base).jobs.find((j:any)=>(j.accounts??[j.account]).includes(account));
-import {claimCoordinatorState,pauseCoordinator,reconcile} from '../src/coordinator-cli';
+import {claimCoordinatorState,pauseCoordinator,reconcile,workerHolds,WORKER_CHECK_MS,WORKER_START_SLACK_MS} from '../src/coordinator-cli';
 import {acceptProposal,parseModelObject} from '../src/coordinator-planner';
 import {replaceAssignments,prepareLiveRecovery,requestLiveRecovery,requestAuthenticatedRecovery,recoveryQualification,installJob,awaitControllerDrain,ensureSwarm,preserveCompletedLiveEnd} from '../src/coordinator-live';
 import * as liveAdmission from '../src/coordinator-live';
@@ -407,6 +407,34 @@ test('restart keeps an owned live worker and retains a lost worker as failure',(
  reconcile(s,(pid,marker)=>pid===123&&marker==='recovery-run',dir);expect(s.tasks[0]!.status).toBe('running');
  reconcile(s,()=>false,dir,()=>true);expect(s.tasks[0]!.status).toBe('running');
  reconcile(s,()=>false,dir,()=>false);expect(s.tasks[0]!.status).toBe('failed');expect(chooseTask(s,Date.now())).toBeNull();
+});
+test('a worker pid that another program reused is a lost worker, and a worker that passed the check stays',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-reused-')),s=seed(),at=Date.now()-600_000;
+ atomicJson(join(runDirectory('recovery-run',dir),'owner.json'),{pid:123,runId:'recovery-run',at});
+ // The worker started before its owner file: it runs.
+ reconcile(s,()=>false,dir,()=>true,0,()=>true);expect(s.tasks[0]!.status).toBe('running');
+ // The pid runs, but its program started after the owner file: another program reused the pid.
+ reconcile(s,()=>false,dir,()=>true,0,()=>false);expect(s.tasks[0]!.status).toBe('failed');
+ expect(s.tasks[0]!.receipt?.error).toContain('worker ended without a receipt');
+});
+test('a reused worker pid whose command line holds the run id still counts as the worker',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-reused-')),s=seed();
+ atomicJson(join(runDirectory('recovery-run',dir),'owner.json'),{pid:123,runId:'recovery-run',at:1});
+ reconcile(s,(pid,marker)=>pid===123&&marker==='recovery-run',dir,()=>true,0,()=>false);expect(s.tasks[0]!.status).toBe('running');
+});
+test('workerHolds: start before the owner file holds, start after it does not, and a passed check is kept for a minute',()=>{
+ const at=1_000_000,table=(t:number|undefined)=>()=>new Map<number,number>(t===undefined?[]:[[9,t]]),checks=new Map<string,number>();
+ expect(workerHolds(9,'run-a',at,table(at-30_000),checks,at)).toBe(true);
+ expect(workerHolds(9,'run-a',at,table(at+WORKER_START_SLACK_MS),checks,at)).toBe(true);
+ expect(workerHolds(9,'run-b',at,table(at+WORKER_START_SLACK_MS+1),new Map(),at)).toBe(false);
+ expect(workerHolds(9,'run-c',at,table(undefined),new Map(),at)).toBe(false);
+ // A table that cannot be read proves nothing.
+ expect(workerHolds(9,'run-d',at,()=>null,new Map(),at)).toBe(true);
+ // The check passed at `at`: the table is not read again inside the minute, and it is read again after it.
+ const seen=new Map([['run-e|9',at]]);let reads=0;const counted=()=>{reads++;return new Map<number,number>([[9,at+WORKER_START_SLACK_MS+1]]);};
+ expect(workerHolds(9,'run-e',at,counted,seen,at+WORKER_CHECK_MS-1)).toBe(true);expect(reads).toBe(0);
+ expect(workerHolds(9,'run-e',at,counted,seen,at+WORKER_CHECK_MS)).toBe(false);expect(reads).toBe(1);
+ expect(seen.has('run-e|9')).toBe(false);
 });
 test('a mismatched receipt cannot complete a different run',()=>{
  const dir=mkdtempSync(join(tmpdir(),'coord-recovery-')),s=seed();atomicJson(join(runDirectory('recovery-run',dir),'receipt.json'),{taskId:'producer',runId:'other-run',ok:true,at:Date.now(),output:{}});
