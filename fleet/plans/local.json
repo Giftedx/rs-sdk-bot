@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795096754860,
+ "at": 1795096904743,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -319,6 +319,31 @@
    "resources": [
     "splash:ardougne-cow-fence"
    ]
+  },
+  {
+   "accounts": [
+    "mmtha0205",
+    "PickpockDick"
+   ],
+   "script": "scripts/coin-courier.ts",
+   "args": [
+    "1820000",
+    "--bank-x=2618",
+    "--bank-z=3332",
+    "--reserve=200000",
+    "--timeout-ms=600000"
+   ],
+   "env": {
+    "COIN_ORDER": "prayer99-pickpockdick-bonefund1820k",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-d2fa6a17-0303-4a07-9a46-6f6b11e6a38f"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-courier-mmtha0205-pickpockdick-bone-fund [task-d2fa6a17-0303-4a07-9a46-6f6b11e6a38f]",
+   "role": "supply"
   }
  ],
  "army": [
