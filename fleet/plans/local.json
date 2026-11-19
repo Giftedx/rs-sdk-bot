@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795117867981,
+ "at": 1795118027676,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -448,13 +448,14 @@
    ]
   },
   {
-   "account": "DropMyLoad",
+   "account": "Ballbag",
    "script": "scripts/generated/thieving60.ts",
    "args": [],
    "env": {
     "TARGET": "55",
     "CAP": "2500",
-    "CLEAN_FOOD": "1"
+    "CLEAN_FOOD": "1",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Thieving\":55}}"
    },
    "enabled": true,
    "standing": true,
