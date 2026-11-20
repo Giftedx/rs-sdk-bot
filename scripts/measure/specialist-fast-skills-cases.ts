@@ -1,6 +1,6 @@
 // BenchCase definitions for the 6 fresh-clock fast-skill specialist Rank #1 winners.
 import type { SaveConfig } from '../../vendor/rs-sdk/sdk/test/utils/save-generator';
-import { CRAFTING_BATCHES } from '../crafting-specialist';
+import { CRAFTING_BATCHES, CRAFTING_VARIANTS } from '../crafting-specialist';
 import { ITEM_IDS } from '../fast-skills-lib';
 import {
  HERBLORE_BANK_HELPER_SPOT,
@@ -219,3 +219,18 @@ export const SPECIALIST_FAST_SKILLS_CASES: readonly BenchCase[] = [
   ),
  },
 ];
+
+export const CRAFTING_CANDIDATE_CASES: readonly BenchCase[] = (['155-dia', '155-live', '25-dia', '25-airb'] as const).map(variant => {
+ const batches = CRAFTING_VARIANTS[variant]!;
+ return {
+  key: `extra:crafting-${variant}`,
+  script: 'scripts/crafting-specialist.ts',
+  preset: 'fresh_lumbridge',
+  presetConfig: freshTutorialStart(),
+  scriptArgs: ['CAP=280', `VARIANT=${variant}`, helperArg(batches.length)],
+  pass: okSpecialist,
+  output: /ticks=(\d+)/,
+  timeoutMs: 600_000,
+  companions: batches.map((batch, i) => staticCompanion(i, { x: 3222, z: 3223, level: 0 }, batch.give)),
+ };
+});
