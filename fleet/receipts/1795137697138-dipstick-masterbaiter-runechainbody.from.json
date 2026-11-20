@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795137697138-dipstick-masterbaiter-runechainbody",
+ "account": "Dipstick",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "7bc6dab8-a41a-4775-9137-b48d1ae7693b",
+ "count": 0,
+ "ok": false,
+ "at": 1795137751713,
+ "detail": "trade claimed"
+}
