@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795141565047-billionaire-hocuspokeus-22bf362b66a987fc",
+ "account": "Billionaire",
+ "partner": "Hocuspokeus",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 500,
+ "claim": "37d1bc14-f813-4048-bec8-29bf91ab4fbb",
+ "count": 0,
+ "ok": false,
+ "at": 1795141644996,
+ "detail": "trade claimed"
+}

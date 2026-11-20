@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795141336349-bigpackage-bigchopper-dd2b9baf847f488a",
  "account": "Bigpackage",
  "partner": "Bigchopper",
@@ -10,8 +10,22 @@
  "item": "Rune arrowtips",
  "requested": 500,
  "claim": "6fa4c812-f8a2-4474-b214-50f3219bc697",
- "count": 0,
- "ok": false,
- "at": 1795141459492,
- "detail": "trade claimed"
+ "count": 500,
+ "ok": true,
+ "at": 1795141645804,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 500,
+  "after": 0
+ },
+ "bank": {
+  "count": 500,
+  "at": 1795141467453
+ },
+ "logout": {
+  "attemptId": "1795141459504-0000024152-0000000001",
+  "at": 1795141645789,
+  "sha256": "786d501894b48e3caa435487f875e254c79965211de60a034baa4bfa2bcf26e5"
+ },
+ "screen": true
 }
