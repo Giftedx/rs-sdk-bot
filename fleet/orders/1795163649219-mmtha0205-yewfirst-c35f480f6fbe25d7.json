@@ -1,0 +1,36 @@
+{
+ "id": "1795163649219-mmtha0205-yewfirst-c35f480f6fbe25d7",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmtha0205",
+ "to": "YewFirst",
+ "item": "Rune arrowtips",
+ "count": 500,
+ "start": 1795163649219,
+ "end": 1795164849219,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Adamant arrowtips",
+   "count": 500
+  },
+  {
+   "item": "Mithril arrowtips",
+   "count": 23
+  },
+  {
+   "item": "Steel arrowtips",
+   "count": 26
+  }
+ ]
+}
