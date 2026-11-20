@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795137924506-quickhandjob-bigchopper-eca2ed4efe193674",
+ "account": "Bigchopper",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 100,
+ "claim": "1874b2f1-8b13-4586-b33d-76bcfccee116",
+ "count": 0,
+ "ok": false,
+ "at": 1795138280858,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Law rune",
+   "requested": 5,
+   "count": 0
+  }
+ ]
+}
