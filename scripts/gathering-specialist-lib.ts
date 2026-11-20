@@ -29,6 +29,8 @@ export const OBJ_HALF_PINEAPPLE_PIZZA = 2303;
 export const OBJ_CAKE = 1891;
 export const OBJ_CAKE_2_3 = 1893;
 export const OBJ_CAKE_SLICE = 1895;
+export const OBJ_CHOCOLATE_CAKE = 1897;
+export const OBJ_CHOCOLATE_CAKE_2_3 = 1899;
 export const OBJ_CHOCOLATE_SLICE = 1901;
 export const OBJ_BREAD = 2309;
 const MULTI2_OPT1_ID = 2461;
@@ -118,10 +120,12 @@ export async function eatPineapplePizza(s: Session): Promise<boolean> {
 const HEALING_FOOD_IDS = [
     OBJ_HALF_PINEAPPLE_PIZZA,
     OBJ_PINEAPPLE_PIZZA,
+    OBJ_CHOCOLATE_SLICE,
+    OBJ_CHOCOLATE_CAKE_2_3,
+    OBJ_CHOCOLATE_CAKE,
     OBJ_CAKE_SLICE,
     OBJ_CAKE_2_3,
     OBJ_CAKE,
-    OBJ_CHOCOLATE_SLICE,
     OBJ_BREAD,
     OBJ_SHARK,
 ] as const;
@@ -129,10 +133,12 @@ const HEALING_FOOD_IDS = [
 const FOOD_BITES_BY_ID: Readonly<Record<number, number>> = {
     [OBJ_HALF_PINEAPPLE_PIZZA]: 1,
     [OBJ_PINEAPPLE_PIZZA]: 2,
+    [OBJ_CHOCOLATE_SLICE]: 1,
+    [OBJ_CHOCOLATE_CAKE_2_3]: 2,
+    [OBJ_CHOCOLATE_CAKE]: 3,
     [OBJ_CAKE_SLICE]: 1,
     [OBJ_CAKE_2_3]: 2,
     [OBJ_CAKE]: 3,
-    [OBJ_CHOCOLATE_SLICE]: 1,
     [OBJ_BREAD]: 1,
     [OBJ_SHARK]: 1,
 };

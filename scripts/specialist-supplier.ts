@@ -110,9 +110,9 @@ export const PRAYER_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(PRAYER_SU
 export const SMITHING_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(SMITHING_SUPPLY_BILL);
 export const RUNECRAFT_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(RUNECRAFT_SUPPLY_BILL);
 
-// 27 inventory slots: live-stockable Thieving kit using Ring of dueling(8) + 26 Cakes (100% in local stock).
+// 27 inventory slots: live Thieving kit using Ring of dueling(8) + 26 Chocolate cakes (390 HP, 1 slot free for Coins).
 export const THIEVING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = [
-    { id: 1891, name: 'Cake', count: 26, stackable: false },
+    { id: 1897, name: 'Chocolate cake', count: 26, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
 ] as const;
 

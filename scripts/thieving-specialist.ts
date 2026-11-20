@@ -15,13 +15,12 @@ import {
     walkWaypointsSafe,
     sailBrimhavenToArdougne,
     eatAnyFood,
-    foodBitesCount,
     isLiveSupplyVariant,
     itemQty,
     chebDist,
     CWARS_TO_ARDY_MARKET_WAYPOINTS,
     OBJ_COINS,
-    OBJ_CAKE,
+    OBJ_CHOCOLATE_CAKE,
     OBJ_GLORY_4,
     OBJ_DUELING_8,
     RING_OF_DUELING_IDS,
@@ -42,10 +41,10 @@ export const THIEVING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_PINEAPPLE_PIZZA]: THIEVING_PIZZAS,
 };
 
-// Live-stockable variant using local.json stock only (0 Glory, 0 Super energy, 0 Pineapple pizza).
+// Live-stockable variant: 0 Glory, 0 Super energy, 0 Pineapple pizza (local Ring of dueling(8) + 26 Chocolate cakes).
 export const THIEVING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_DUELING_8]: 1,
-    [OBJ_CAKE]: THIEVING_CAKES,
+    [OBJ_CHOCOLATE_CAKE]: THIEVING_CAKES,
 };
 
 export interface PickpocketTier {
@@ -152,11 +151,6 @@ if (import.meta.main) {
         let lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
         let lastPickTick = -99;
 
-        let restockingFood = false;
-        let prevHp = main.sdk.getState()?.player?.hp ?? 10;
-        let lastStallClick = -99;
-        let lastStallWalk = -99;
-
         while (!stopFlag && elapsedNow() < cap) {
             const st = main.sdk.getState();
             const lvl = main.sdk.getSkill('Thieving')?.baseLevel ?? 1;
@@ -170,18 +164,14 @@ if (import.meta.main) {
             }
 
             const tier = selectPickpocketTier(lvl);
-            const hpNow = st.player.hp;
 
-            // Detect new stun messages (or non-stun Guard damage while restocking) via monotonic message watermark.
+            // Detect new stun messages via monotonic message watermark (immune to ring-buffer length caps).
             const msgs = st.gameMessages ?? [];
             const newMsgs = msgs.filter(m => msgMark(m) > lastMsgMark);
             lastMsgMark = latestMark(msgs, lastMsgMark);
-            const stunned = newMsgs.some(m => /you've been stunned/i.test(m.text));
-            const guardHit = restockingFood && prevHp > 0 && hpNow < prevHp;
-            prevHp = hpNow;
-            if (stunned || guardHit) {
-                if (stunned) stuns++;
-                if (st.player.hp <= (restockingFood ? 6 : tier.stunDamage)) {
+            if (newMsgs.some(m => /you've been stunned/i.test(m.text))) {
+                stuns++;
+                if (st.player.hp <= tier.stunDamage) {
                     await eatAnyFood(main);
                 }
                 totalTicks += Math.max(1, main.tick() - sessStart) + 1;
@@ -197,48 +187,13 @@ if (import.meta.main) {
                 intentionalRelog = false;
                 sessStart = main.tick();
                 lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
-                prevHp = main.sdk.getState()?.player?.hp ?? 10;
                 lastPickTick = -99;
-                lastStallClick = -99;
-                lastStallWalk = -99;
                 continue;
             }
 
-            // Safety guard: eat before pickpocketing when HP <= stunDamage; restock early at a Guard-clear Baker's stall.
-            if (hpNow <= (restockingFood ? 6 : tier.stunDamage)) {
+            // Safety guard: never attempt a pickpocket while HP <= stunDamage. Wait a tick after eating so heal lands cleanly.
+            if (st.player.hp <= tier.stunDamage) {
                 if (await eatAnyFood(main)) {
-                    await waitTicks(main, 1);
-                    continue;
-                }
-            }
-            const bites = foodBitesCount(main);
-            if ((bites <= 1 && hpNow >= 6) || bites === 0) restockingFood = true;
-            if (restockingFood) {
-                if (bites >= 6 || st.inventory.length >= 28) {
-                    restockingFood = false;
-                } else {
-                    const guardAt = (tx: number, tz: number) =>
-                        st.nearbyNpcs.some(n => /^guard$/i.test(n.name) && chebDist({ x: n.x, z: n.z }, { x: tx, z: tz }) <= 4);
-                    const eastStand = { x: 2667, z: 3312 };
-                    const westStand = { x: 2655, z: 3313 };
-                    const stand = !guardAt(eastStand.x, eastStand.z)
-                        ? eastStand
-                        : (!guardAt(westStand.x, westStand.z) ? westStand : eastStand);
-                    if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, stand) > 1) {
-                        if (main.tick() - lastStallWalk >= 3) {
-                            lastStallWalk = main.tick();
-                            await main.sdk.sendWalk(stand.x, stand.z, true);
-                        }
-                    } else if (main.tick() - lastStallClick >= 2) {
-                        const stalls = (st.nearbyLocs ?? [])
-                            .filter(l => l.id === 2561 || /^baker's stall$/i.test(l.name ?? ''))
-                            .sort((a, b) => chebDist(a, stand) - chebDist(b, stand));
-                        const stall = stalls[0] ?? main.sdk.findNearbyLoc(/^baker's stall$/i);
-                        if (stall) {
-                            lastStallClick = main.tick();
-                            await main.sdk.sendInteractLoc(stall.x, stall.z, stall.id, 2);
-                        }
-                    }
                     await waitTicks(main, 1);
                     continue;
                 }
