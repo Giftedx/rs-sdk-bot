@@ -408,14 +408,14 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    const helpDlg = !!helper.sdk.getState()?.dialog?.isOpen;
    const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperName);
    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specName);
-   // OpPlayerHandler calls clearPendingAction() -> closeModal(); avoid sending closeModal alongside interactPlayer.
+   // Wait for spec's queued level-up dialogs before helper initiates trade so engineQueue cannot overwrite trademain.
    const openActs: Promise<unknown>[] = [];
-   const sendHelperReq = (!specDlg || opts.allowHelperOnSingleModal) && !!sTarget;
-   const sendSpecReq = !!hTarget;
-   if (helpDlg && !sendHelperReq) openActs.push(helper.direct({ type: 'closeModal', reason: 'SDK' }));
-   if (specDlg && !sendSpecReq) openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
-   if (sendHelperReq && sTarget) openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
-   if (sendSpecReq && hTarget) openActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
+   if (helpDlg) openActs.push(helper.direct({ type: 'closeModal', reason: 'SDK' }));
+   if ((!specDlg || opts.allowHelperOnSingleModal) && sTarget) {
+    openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
+   }
+   if (specDlg) openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+   if (hTarget) openActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
    if (openActs.length) await Promise.all(openActs);
    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
    continue;
