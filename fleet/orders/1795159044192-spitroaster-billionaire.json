@@ -1,0 +1,22 @@
+{
+ "id": "1795159044192-spitroaster-billionaire",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Spitroaster",
+ "to": "Billionaire",
+ "item": "coins",
+ "count": 29308,
+ "start": 1795159044192,
+ "end": 1795161444192,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795159044192-mightyrod-woodpecker-bigbones",
+ "account": "Woodpecker",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Big bones",
+ "requested": 159,
+ "claim": "58fc7101-a99c-4d9a-8b82-cbb59426589d",
+ "count": 0,
+ "ok": false,
+ "at": 1795159093047,
+ "detail": "trade claimed"
+}

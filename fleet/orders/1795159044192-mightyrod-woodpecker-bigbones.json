@@ -1,0 +1,22 @@
+{
+ "id": "1795159044192-mightyrod-woodpecker-bigbones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "Woodpecker",
+ "item": "Big bones",
+ "count": 159,
+ "start": 1795159044192,
+ "end": 1795161444192,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
