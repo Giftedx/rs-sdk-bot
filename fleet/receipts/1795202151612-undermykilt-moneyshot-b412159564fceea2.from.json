@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795202151612-undermykilt-moneyshot-b412159564fceea2",
  "account": "UnderMyKilt",
  "partner": "Moneyshot",
@@ -12,8 +12,8 @@
  "claim": "8b6b7172-c3e8-4c61-9562-2d89c4976500",
  "count": 0,
  "ok": false,
- "at": 1795202178405,
- "detail": "trade claimed",
+ "at": 1795202196635,
+ "detail": "Error: sender withdrawal debit or pack credit not confirmed: Dragonhide chaps",
  "lines": [
   {
    "item": "Dragonhide chaps",
@@ -25,5 +25,15 @@
    "requested": 2,
    "count": 0
   }
- ]
+ ],
+ "bank": {
+  "count": 130000,
+  "at": 1795202187509
+ },
+ "logout": {
+  "attemptId": "1795202178414-0000024044-0000000001",
+  "at": 1795202196628,
+  "sha256": "f6ad03e895b2ea220bf16976b363589b943537ead16b07861e509b45320eac74"
+ },
+ "screen": false
 }
