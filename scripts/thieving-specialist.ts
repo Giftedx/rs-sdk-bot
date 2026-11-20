@@ -155,6 +155,7 @@ if (import.meta.main) {
         let restockingFood = false;
         let prevHp = main.sdk.getState()?.player?.hp ?? 10;
         let lastStallClick = -99;
+        let lastStallWalk = -99;
 
         while (!stopFlag && elapsedNow() < cap) {
             const st = main.sdk.getState();
@@ -199,6 +200,7 @@ if (import.meta.main) {
                 prevHp = main.sdk.getState()?.player?.hp ?? 10;
                 lastPickTick = -99;
                 lastStallClick = -99;
+                lastStallWalk = -99;
                 continue;
             }
 
@@ -212,7 +214,7 @@ if (import.meta.main) {
             const bites = foodBitesCount(main);
             if ((bites <= 3 && hpNow >= 6) || bites === 0) restockingFood = true;
             if (restockingFood) {
-                if (bites >= 15 || st.inventory.length >= 28) {
+                if (bites >= 9 || st.inventory.length >= 28) {
                     restockingFood = false;
                 } else {
                     const guardAt = (tx: number, tz: number) =>
@@ -223,7 +225,10 @@ if (import.meta.main) {
                         ? eastStand
                         : (!guardAt(westStand.x, westStand.z) ? westStand : eastStand);
                     if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, stand) > 1) {
-                        await main.direct({ type: 'walk', x: stand.x, z: stand.z, running: true, reason: 'SDK' });
+                        if (main.tick() - lastStallWalk >= 3) {
+                            lastStallWalk = main.tick();
+                            await main.sdk.sendWalk(stand.x, stand.z, true);
+                        }
                     } else if (!guardAt(st.player.worldX, st.player.worldZ) && main.tick() - lastStallClick >= 2) {
                         const stalls = (st.nearbyLocs ?? [])
                             .filter(l => l.id === 2561 || /^baker's stall$/i.test(l.name ?? ''))
