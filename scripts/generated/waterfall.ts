@@ -645,7 +645,8 @@ try {
             await walkNoHunters('railing south approach', [[2561, 3242, 4], [2515, 3160, 0]]);
             await setPfm(false);
             await squeezeRailing(true);
-            await walkMazeLeg('railing to golrie', 2533, 3156, 2);
+            await walkMazeLeg('railing to hedge', 2529, 3165, 2);
+            await walkMazeLeg('railing to golrie', 2533, 3156, 0);
         } else {
             await walk('maze in entry', [[2502, 3191, 1]]);
             await walkMazeLeg('maze in', 2533, 3156, 2);
@@ -682,6 +683,7 @@ try {
         // 4. Glarial's tombstone: runes are refused in the tomb (quest_waterfall.rs2:70), so they wait on the ground
         // (300-tick drop timer). The pebble opens the tomb and sets 4.
         if (opts.looseRailing) {
+            await walkMazeLeg('golrie to turn', 2529, 3165, 2);
             await walkMazeLeg('golrie to railing', 2515, 3161, 0);
             await squeezeRailing(false);
             await setPfm(true);

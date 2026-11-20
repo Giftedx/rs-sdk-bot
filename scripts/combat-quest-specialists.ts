@@ -112,13 +112,13 @@ export const DEFENCE_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 946, name: 'Knife', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
-    { id: 556, name: 'Air rune', count: 1500, stackable: true },
+    { id: 556, name: 'Air rune', count: 1800, stackable: true },
     { id: 558, name: 'Mind rune', count: 20, stackable: true },
-    { id: 554, name: 'Fire rune', count: 3500, stackable: true },
-    { id: 555, name: 'Water rune', count: 1300, stackable: true },
-    { id: 557, name: 'Earth rune', count: 1400, stackable: true },
-    { id: 564, name: 'Cosmic rune', count: 200, stackable: true },
-    { id: 565, name: 'Blood rune', count: 1600, stackable: true },
+    { id: 554, name: 'Fire rune', count: 3800, stackable: true },
+    { id: 555, name: 'Water rune', count: 1500, stackable: true },
+    { id: 557, name: 'Earth rune', count: 2000, stackable: true },
+    { id: 564, name: 'Cosmic rune', count: 230, stackable: true },
+    { id: 565, name: 'Blood rune', count: 1800, stackable: true },
     { id: 563, name: 'Law rune', count: 10, stackable: true },
     { id: 1638, name: 'Sapphire ring', count: 14, stackable: true },
     { id: 1640, name: 'Emerald ring', count: 55, stackable: true },
@@ -1132,6 +1132,7 @@ async function enchantRingsTo80AtBank(s: Session, stop: StopFn): Promise<void> {
         await closeBankClean(s, stop);
 
         let lastCast = -10;
+        let dryCasts = 0;
         while (!stop() && skillInfo(s, 'Magic').baseLevel < spec.untilLevel) {
             if (activeContinueDialog(s)) await s.sdk.sendClickDialog(0);
             const ring = s.sdk.getInventory().find(i => i.id === spec.ringId);
@@ -1144,6 +1145,12 @@ async function enchantRingsTo80AtBank(s: Session, stop: StopFn): Promise<void> {
             lastCast = s.tick();
             await s.direct({ type: 'spellOnItem', slot: ring.slot, spellComponent: spec.spell, reason: 'SDK' });
             await waitUntil(s, () => skillInfo(s, 'Magic').experience > xp0 || stop(), { timeoutTicks: 4 });
+            if (skillInfo(s, 'Magic').experience <= xp0) {
+                dryCasts++;
+                if (dryCasts >= 4) throw Error(`enchant ${spec.label} gave no Magic XP at Magic ${skillInfo(s, 'Magic').baseLevel}`);
+            } else {
+                dryCasts = 0;
+            }
         }
         await waitTicks(s, 2);
         await dismissContinueDialogs(s, stop, 3);
