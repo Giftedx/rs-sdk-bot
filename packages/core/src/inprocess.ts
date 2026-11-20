@@ -765,6 +765,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
     }
     attempt.record('connected');
     (deps.recordOwned ?? recordOwnedAccount)(opts.name,host);
+    try { tradePartners(host); } catch { /* test doubles may omit filesystem bots dir */ }
     const bot: BotActions = new Actions(sdk);
     const result:Session={
         name: opts.name,

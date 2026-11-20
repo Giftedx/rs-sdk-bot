@@ -15,6 +15,8 @@ import {
     walkWaypointsSafe,
     sailBrimhavenToArdougne,
     eatAnyFood,
+    hasAnyFood,
+    foodBitesCount,
     isLiveSupplyVariant,
     itemQty,
     chebDist,
@@ -32,7 +34,7 @@ import type { Session } from '../packages/core/src/inprocess';
 export const THIEVING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
 
 export const THIEVING_PIZZAS = 25;
-export const THIEVING_CAKES = 26;
+export const THIEVING_CAKES = 27;
 
 export const THIEVING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_GLORY_4]: 1,
@@ -41,11 +43,56 @@ export const THIEVING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_PINEAPPLE_PIZZA]: THIEVING_PIZZAS,
 };
 
-// Live-stockable variant: 0 Glory, 0 Super energy, 0 Pineapple pizza (local Ring of dueling(8) + 26 Chocolate cakes).
+// Live-stockable variant: 0 Glory, 0 Super energy, 0 Pineapple pizza (local Ring of dueling(8) + 27 Chocolate cakes).
 export const THIEVING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_DUELING_8]: 1,
     [OBJ_CHOCOLATE_CAKE]: THIEVING_CAKES,
 };
+
+const BAKERS_STALL_SAFE_CENTER = { x: 2667, z: 3310 };
+const BAKERS_STALL_SIDE_OFFSETS: readonly [number, number][] = [
+    [2, 0], [2, 1], [-1, 0], [-1, 1], [0, -1], [1, -1], [0, 2], [1, 2],
+];
+
+/** Steal a small emergency food buffer from the Ardougne Baker's stall only when no Knight/Baker can spot the tile. */
+async function stealEmergencyStallFood(main: Session, stop: () => boolean, targetBites = 8): Promise<void> {
+    if (chebDist({ x: main.sdk.getState()?.player?.worldX ?? 0, z: main.sdk.getState()?.player?.worldZ ?? 0 }, BAKERS_STALL_SAFE_CENTER) > 6) {
+        await main.bot.walkTo(BAKERS_STALL_SAFE_CENTER.x + 2, BAKERS_STALL_SAFE_CENTER.z, 2);
+    }
+    for (let i = 0; i < 40 && !stop() && foodBitesCount(main) < targetBites && main.sdk.getInventory().length < 28; i++) {
+        const st = main.sdk.getState();
+        const me = st?.player;
+        if (!st || !me) {
+            await waitTicks(main, 1);
+            continue;
+        }
+        const stall = st.nearbyLocs.find(l => /^baker'?s stall$/i.test(l.name) && l.optionsWithIndex.some(o => /steal/i.test(o.text)));
+        if (!stall) {
+            await waitTicks(main, 1);
+            continue;
+        }
+        const watchers = st.nearbyNpcs.filter(n => /^(knight of ardougne|baker)$/i.test(n.name));
+        const safeTile = BAKERS_STALL_SIDE_OFFSETS
+            .map(([dx, dz]) => ({ x: stall.x + dx, z: stall.z + dz }))
+            .filter(t => watchers.every(w => chebDist({ x: w.x, z: w.z }, t) > 5))
+            .sort((a, b) => chebDist(a, { x: me.worldX, z: me.worldZ }) - chebDist(b, { x: me.worldX, z: me.worldZ }))[0];
+        if (!safeTile) {
+            await waitTicks(main, 1);
+            continue;
+        }
+        if (me.worldX !== safeTile.x || me.worldZ !== safeTile.z) {
+            await main.bot.walkTo(safeTile.x, safeTile.z, 0);
+            continue;
+        }
+        const op = stall.optionsWithIndex.find(o => /steal/i.test(o.text));
+        if (!op) break;
+        const before = foodBitesCount(main);
+        await main.direct({ type: 'interactLoc', x: stall.x, z: stall.z, locId: stall.id, optionIndex: op.opIndex, reason: 'SDK' });
+        for (let w = 0; w < 4 && !stop() && foodBitesCount(main) === before; w++) {
+            await waitTicks(main, 1);
+        }
+    }
+}
 
 export interface PickpocketTier {
     readonly name: string;
@@ -144,6 +191,11 @@ if (import.meta.main) {
                 p => p.level === 0 && p.worldX >= 2430 && p.worldX <= 2455 && p.worldZ >= 3075 && p.worldZ <= 3105,
                 isStopped,
             );
+            // Drop the spent Ring of dueling to free slot 28 for coins before pickpocketing.
+            const ringSlot = main.sdk.getInventory().find(i => (RING_OF_DUELING_IDS as readonly number[]).includes(i.id))?.slot;
+            if (ringSlot !== undefined) {
+                await main.direct({ type: 'dropItem', slot: ringSlot, reason: 'SDK' });
+            }
             await walkWaypointsSafe(main, CWARS_TO_ARDY_MARKET_WAYPOINTS, isStopped);
         }
 
@@ -191,9 +243,15 @@ if (import.meta.main) {
                 continue;
             }
 
-            // Safety guard: never attempt a pickpocket while HP <= stunDamage. Wait a tick after eating so heal lands cleanly.
+            // Safety guard: never attempt a pickpocket while HP <= stunDamage. Restock from Baker's stall only if all cakes run out.
             if (st.player.hp <= tier.stunDamage) {
                 if (await eatAnyFood(main)) {
+                    await waitTicks(main, 1);
+                    continue;
+                }
+                if (!hasAnyFood(main)) {
+                    await stealEmergencyStallFood(main, () => stopFlag || elapsedNow() >= cap);
+                    await eatAnyFood(main);
                     await waitTicks(main, 1);
                     continue;
                 }
