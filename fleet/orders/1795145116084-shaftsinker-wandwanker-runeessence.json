@@ -1,0 +1,22 @@
+{
+ "id": "1795145116084-shaftsinker-wandwanker-runeessence",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftsinker",
+ "to": "Wandwanker",
+ "item": "Rune essence",
+ "count": 28,
+ "start": 1795145116084,
+ "end": 1795147516084,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
