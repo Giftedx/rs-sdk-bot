@@ -1,0 +1,23 @@
+{
+ "id": "1795150342993-trousersnake-woodpecker-c619d4679e757ae3",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TrouserSnake",
+ "to": "Woodpecker",
+ "item": "Coins",
+ "count": 515000,
+ "start": 1795150342993,
+ "end": 1795151542993,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
