@@ -1,0 +1,58 @@
+{
+  "id": "fishing-specialist",
+  "goal": "specialists",
+  "entry": "scripts/fishing-specialist.ts",
+  "files": [
+    "scripts/fishing-specialist.ts",
+    "scripts/gathering-specialist-lib.ts",
+    "scripts/gathering-supplier.ts",
+    "scripts/specialist-supplier.ts",
+    "scripts/gathering-specialists.test.ts",
+    "packages/practice/src/rehearse.ts",
+    "packages/practice/test/specialist-rehearsal.test.ts"
+  ],
+  "consumer": "LochNessRod completes the continuous fresh-clock Fishing 99 specialist route from Tutorial Island within 3,261 ticks after receiving its staged supply kit.",
+  "checks": [
+    {
+      "id": "fishing-specialist-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/gathering-specialists.test.ts",
+        "packages/practice/test/specialist-rehearsal.test.ts",
+        "packages/core/test/specialist-launch.test.ts",
+        "packages/core/test/launch-evidence.test.ts",
+        "scripts/progression-catalog.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-fishing-specialist",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "run",
+        "bench",
+        "skiller:fishing:specialist",
+        "--budget",
+        "10"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "id": "fishing-specialist-consumer-gate",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "test",
+        "scripts/gathering-specialists.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    }
+  ]
+}
