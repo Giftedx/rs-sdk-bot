@@ -8,7 +8,7 @@ import { observedSupplies } from '../packages/practice/src/specialist-rehearsal'
 import { resolveSkillerStep } from './aio-skiller';
 import { CRAFTING_BATCHES, CRAFTING_SUPPLY_BILL } from './crafting-specialist';
 import { assertCatalogItems, loadItemCatalog, parseSpecialistArgs } from './fast-skills-lib';
-import { HERB_POTION_TIERS, HERBLORE_KAQEMEEX_BATCHES, HERBLORE_STARTER_BATCH, HERBLORE_SUPPLY_BILL } from './herblore-specialist';
+import { HERB_POTION_TIERS, HERBLORE_BATCHES, HERBLORE_SUPPLY_BILL } from './herblore-specialist';
 import { ENCHANT_TIERS, MAGIC_BATCHES, MAGIC_SUPPLY_BILL } from './magic-specialist';
 import { benchCases } from './measure/aio-bench-cases';
 import { SPECIALIST_FAST_SKILLS_CASES, expandInventory } from './measure/specialist-fast-skills-cases';
@@ -64,24 +64,25 @@ describe('fast-skills specialist supply bills and observedSupplies compatibility
 });
 
 describe('fast-skills specialist plans reach level 99 with valid inventory fits', () => {
- test('Crafting batches fit 28 slots and clear 99 Crafting XP even under pessimistic low-tier crushes', () => {
+ test('Crafting batches fit 28 slots and clear 99 Crafting XP cleanly', () => {
   for (const batch of CRAFTING_BATCHES) {
    expect(expandInventory(batch.give).length).toBeLessThanOrEqual(28);
   }
-  // Pessimistic simulation: 10 opals/5 jades/5 topaz succeed + remaining crush at 25% XP, then guaranteed saph..dragonstone.
   const xp99 = xpForLevel(99);
-  const xpFromGems = 19 * 93.75 + 10 * 125 + 10 * 156.25 + 3 * 1250 + 3 * 1687.5 + 5 * 2125 + 10 * 2687.5 + 291 * 3437.5;
-  expect(xpFromGems).toBeGreaterThan(xp99);
+  const worstOpals = 3 * 375 + 24 * 93.75;
+  expect(levelForXp(worstOpals)).toBeGreaterThanOrEqual(20);
+  const xpFromGems = worstOpals + 6 * 1250 + 5 * 1687.5 + 6 * 2125 + 10 * 2687.5;
+  expect(levelForXp(xpFromGems)).toBeGreaterThanOrEqual(55);
+  expect(xpFromGems + 290 * 3437.5).toBeGreaterThan(xp99);
  });
 
- test('Herblore starter + 17 Kaqemeex 14+14 loads unlock sequentially and exceed 99 Herblore', () => {
-  const batches = [HERBLORE_STARTER_BATCH, ...HERBLORE_KAQEMEEX_BATCHES];
-  for (const b of batches) expect(expandInventory(b.give).length).toBeLessThanOrEqual(28);
+ test('Herblore 18 Lumbridge Courtyard batches unlock sequentially from 1 to 99 with no Druidic Ritual', () => {
+  for (const b of HERBLORE_BATCHES) expect(expandInventory(b.give).length).toBeLessThanOrEqual(28);
 
-  let xp = 6250; // Druidic Ritual reward
-  const simulateBatch = (give: readonly { id: number; count: number }[]) => {
+  let xp = 0;
+  for (const b of HERBLORE_BATCHES) {
    const counts = new Map<number, number>();
-   for (const g of give) counts.set(g.id, (counts.get(g.id) ?? 0) + g.count);
+   for (const g of b.give) counts.set(g.id, (counts.get(g.id) ?? 0) + g.count);
    while (true) {
     const lvl = levelForXp(xp);
     const tier = [...HERB_POTION_TIERS].reverse().find(t => lvl >= t.level && (counts.get(t.unf) ?? 0) > 0 && (counts.get(t.sec) ?? 0) > 0);
@@ -90,8 +91,8 @@ describe('fast-skills specialist plans reach level 99 with valid inventory fits'
     counts.set(tier.sec, counts.get(tier.sec)! - 1);
     xp += tier.xp;
    }
-  };
-  for (const b of batches) simulateBatch(b.give);
+   for (const left of counts.values()) expect(left).toBe(0);
+  }
   expect(xp).toBeGreaterThanOrEqual(xpForLevel(99));
   expect(levelForXp(xp)).toBe(99);
  });
@@ -100,13 +101,13 @@ describe('fast-skills specialist plans reach level 99 with valid inventory fits'
   expect(PRAYER_BONES_NEEDED * 1800).toBeGreaterThanOrEqual(xpForLevel(99));
  });
 
- test('Smithing starter + 30 Varrock runner bar deliveries exceed 99 Smithing', () => {
-  const xpAfterStarter = 9 * 312.5 + 15 * 625;
+ test('Smithing starter + 31 Varrock runner bar deliveries exceed 99 Smithing', () => {
+  const xpAfterStarter = 9 * 312.5 + 17 * 625;
   expect(levelForXp(xpAfterStarter)).toBeGreaterThanOrEqual(33);
   const xpPerBar: Record<number, number> = { 2351: 625, 2353: 937.5, 2359: 1250, 2361: 1562.5 };
   let xp = xpAfterStarter;
   for (const delivery of SMITHING_RUNNER_QUEUE) {
-   expect(delivery.count).toBeLessThanOrEqual(26);
+   expect(delivery.count).toBeLessThanOrEqual(25);
    xp += delivery.count * xpPerBar[delivery.barId]!;
   }
   expect(xp).toBeGreaterThanOrEqual(xpForLevel(99));
@@ -118,7 +119,7 @@ describe('fast-skills specialist plans reach level 99 with valid inventory fits'
   expect(xpAfterAir + 205 * 26 * 187.5).toBeGreaterThanOrEqual(xpForLevel(99));
  });
 
- test('Magic batches fit 28 slots and enchant ladder reaches >= 78 before Mage Arena + Charge', () => {
+ test('Magic batches fit 28 slots and enchant ladder reaches >= 80 before Mage Arena + Charge', () => {
   for (const b of MAGIC_BATCHES) expect(expandInventory(b.give).length).toBeLessThanOrEqual(28);
   let xp = 600; // Wind Strike to level 7
   for (let i = 0; i < MAGIC_BATCHES.length - 1; i++) {
@@ -129,8 +130,8 @@ describe('fast-skills specialist plans reach level 99 with valid inventory fits'
     xp += g.count * tier.xp;
    }
   }
-  expect(levelForXp(xp)).toBeGreaterThanOrEqual(78);
-  expect(xp).toBeGreaterThan(232_501);
+  expect(levelForXp(xp)).toBeGreaterThanOrEqual(80);
+  expect(xp).toBeGreaterThanOrEqual(xpForLevel(80));
  });
 });
 

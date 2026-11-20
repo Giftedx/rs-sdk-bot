@@ -7,6 +7,7 @@ import {
  dropItemsFast,
  goalXp,
  ITEM_IDS,
+ logPhase,
  parseSpecialistArgs,
  skipTutorialFast,
  skillLevel,
@@ -44,28 +45,16 @@ export const CRAFTING_BATCHES: readonly CraftingBatchPlan[] = [
  {
   give: [
    { id: ITEM_IDS.chisel, count: 1 },
-   { id: ITEM_IDS.uncut_opal, count: 15 },
-   { id: ITEM_IDS.uncut_jade, count: 6 },
-   { id: ITEM_IDS.uncut_red_topaz, count: 6 },
+   { id: ITEM_IDS.uncut_opal, count: 27 },
   ],
   returnIds: [],
  },
  {
   give: [
-   { id: ITEM_IDS.uncut_opal, count: 4 },
-   { id: ITEM_IDS.uncut_jade, count: 4 },
-   { id: ITEM_IDS.uncut_red_topaz, count: 4 },
-   { id: ITEM_IDS.uncut_sapphire, count: 3 },
-   { id: ITEM_IDS.uncut_emerald, count: 3 },
-   { id: ITEM_IDS.uncut_ruby, count: 5 },
-   { id: ITEM_IDS.uncut_diamond, count: 4 },
-  ],
-  returnIds: [],
- },
- {
-  give: [
-   { id: ITEM_IDS.uncut_diamond, count: 6 },
-   { id: ITEM_IDS.uncut_dragonstone, count: 21 },
+   { id: ITEM_IDS.uncut_sapphire, count: 6 },
+   { id: ITEM_IDS.uncut_emerald, count: 5 },
+   { id: ITEM_IDS.uncut_ruby, count: 6 },
+   { id: ITEM_IDS.uncut_diamond, count: 10 },
   ],
   returnIds: [],
  },
@@ -73,25 +62,26 @@ export const CRAFTING_BATCHES: readonly CraftingBatchPlan[] = [
   give: [{ id: ITEM_IDS.uncut_dragonstone, count: 27 }],
   returnIds: [ITEM_IDS.dragonstone],
  })),
+ {
+  give: [{ id: ITEM_IDS.uncut_dragonstone, count: 20 }],
+  returnIds: [ITEM_IDS.dragonstone],
+ },
 ];
 
 export const CRAFTING_SUPPLY_BILL: readonly SupplyEntry[] = [
  { itemId: ITEM_IDS.chisel, item: 'Chisel', count: 1 },
- { itemId: ITEM_IDS.uncut_opal, item: 'Uncut opal', count: 19 },
- { itemId: ITEM_IDS.uncut_jade, item: 'Uncut jade', count: 10 },
- { itemId: ITEM_IDS.uncut_red_topaz, item: 'Uncut red topaz', count: 10 },
- { itemId: ITEM_IDS.uncut_sapphire, item: 'Uncut sapphire', count: 3 },
- { itemId: ITEM_IDS.uncut_emerald, item: 'Uncut emerald', count: 3 },
- { itemId: ITEM_IDS.uncut_ruby, item: 'Uncut ruby', count: 5 },
+ { itemId: ITEM_IDS.uncut_opal, item: 'Uncut opal', count: 27 },
+ { itemId: ITEM_IDS.uncut_sapphire, item: 'Uncut sapphire', count: 6 },
+ { itemId: ITEM_IDS.uncut_emerald, item: 'Uncut emerald', count: 5 },
+ { itemId: ITEM_IDS.uncut_ruby, item: 'Uncut ruby', count: 6 },
  { itemId: ITEM_IDS.uncut_diamond, item: 'Uncut diamond', count: 10 },
- { itemId: ITEM_IDS.uncut_dragonstone, item: 'Uncut dragonstone', count: 291 },
+ { itemId: ITEM_IDS.uncut_dragonstone, item: 'Uncut dragonstone', count: 290 },
 ];
 
-function keepSetFor(spec: Session, preserveCutDragonstones: boolean): Set<number> {
+function keepSetFor(preserveCutDragonstones: boolean): Set<number> {
  const keep = new Set<number>([ITEM_IDS.chisel]);
  for (const tier of CRAFTING_GEMS) keep.add(tier.id);
  if (preserveCutDragonstones) keep.add(ITEM_IDS.dragonstone);
- void spec;
  return keep;
 }
 
@@ -105,7 +95,13 @@ async function cutUnlockedGems(spec: Session, target: number, deadlineTick: numb
   const lvl = skillLevel(spec, 'Crafting');
   const unlocked = new Set(CRAFTING_GEMS.filter(t => lvl >= t.level).map(t => t.id));
   const gems = inv.filter(i => tierIds.has(i.id) && unlocked.has(i.id));
-  if (!gems.length) return;
+  if (!gems.length) {
+   if (spec.sdk.getState()?.dialog?.isOpen && !spec.sdk.getState()?.trade?.isOpen) {
+    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+    await waitTicks(spec, 1);
+   }
+   return;
+  }
   const st = spec.sdk.getState();
   const modalOpen = !!st?.dialog?.isOpen && !st?.trade?.isOpen;
   const batch = gems.slice(0, modalOpen ? 4 : 5);
@@ -144,15 +140,15 @@ export async function runCraftingSpecialist(
  try {
   await skipTutorialFast(spec, deadline);
   await dropItemsFast(spec, new Set(), deadline);
+  logPhase(spec, start, 'crafting_ready');
 
   for (let i = 0; i < CRAFTING_BATCHES.length && skillLevel(spec, 'Crafting') < target; i++) {
    const batch = CRAFTING_BATCHES[i]!;
    const helper = helpers[i]!;
    if (i > 0 && batch.returnIds.length === 0) {
-    await dropItemsFast(spec, keepSetFor(spec, false), deadline);
-   } else if (i === 3) {
-    // Clear diamond/early remnants once before pure dragonstone return-trade loop.
-    await dropItemsFast(spec, keepSetFor(spec, true), deadline);
+    await dropItemsFast(spec, keepSetFor(false), deadline);
+   } else if (i === 2) {
+    await dropItemsFast(spec, keepSetFor(true), deadline);
    }
    await burstTradeHost(spec, helper, {
     giveIds: batch.give.map(g => g.id),
@@ -160,6 +156,7 @@ export async function runCraftingSpecialist(
     deadlineTick: deadline,
    });
    await cutUnlockedGems(spec, target, deadline);
+   if (i === 1) logPhase(spec, start, `crafting_55_lvl=${skillLevel(spec, 'Crafting')}`);
   }
 
   const level = skillLevel(spec, 'Crafting');
@@ -181,7 +178,7 @@ export async function runCraftingSpecialist(
 
 if (import.meta.main) {
  const cfg = parseSpecialistArgs(process.argv.slice(2), process.env, {
-  cap: 250,
+  cap: 230,
   target: 99,
   defaultHelpers: CRAFTING_BATCHES.length,
  });

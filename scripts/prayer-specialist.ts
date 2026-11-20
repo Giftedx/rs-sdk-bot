@@ -7,11 +7,13 @@ import {
  dropItemsFast,
  goalXp,
  ITEM_IDS,
+ logPhase,
  LUMBRIDGE_COURTYARD,
  navigateWorld,
  nearTile,
  parseSpecialistArgs,
  playerPos,
+ restockAtBank,
  skipTutorialFast,
  skillLevel,
  skillXp,
@@ -20,9 +22,9 @@ import {
  type SupplyEntry,
 } from './fast-skills-lib';
 
-export const DRAYNOR_BANK = { x: 3092, z: 3245, level: 0 } as const;
+export const DRAYNOR_BANK = { x: 3092, z: 3243, level: 0 } as const;
 export const PRAYER_BONES_NEEDED = 555;
-export const PRAYER_RUNNER_COUNT = 5;
+export const PRAYER_RUNNER_COUNT = 8;
 
 export const PRAYER_SUPPLY_BILL: readonly SupplyEntry[] = [
  { itemId: ITEM_IDS.dragon_bones, item: 'Dragon bones', count: PRAYER_BONES_NEEDED },
@@ -36,6 +38,7 @@ type RunnerState = {
 
 async function restockBonesAtDraynor(runner: RunnerState, done: () => boolean, deadline: number): Promise<void> {
  const s = runner.session;
+ const keep = new Set<number>();
  while (!done() && s.tick() < deadline) {
   if (runner.claimed) {
    await waitTicks(s, 1);
@@ -49,22 +52,15 @@ async function restockBonesAtDraynor(runner: RunnerState, done: () => boolean, d
   }
   runner.ready = false;
   if (held < 28) {
-   await navigateWorld(s, DRAYNOR_BANK.x, DRAYNOR_BANK.z, 0, Math.max(10, deadline - s.tick()));
-   while (!done() && s.tick() < deadline && !s.sdk.getState()?.bank?.isOpen) {
-    await s.bot.openBank();
-    if (!s.sdk.getState()?.bank?.isOpen) await waitTicks(s, 1);
+   const got = await restockAtBank(s, DRAYNOR_BANK, ITEM_IDS.dragon_bones, 28, keep, done, deadline);
+   if (!got) {
+    await waitTicks(s, 1);
+    continue;
    }
-   if (done() || s.tick() >= deadline) break;
-   const bankItem = s.sdk.getState()?.bank?.items?.find((i: any) => i.id === ITEM_IDS.dragon_bones);
-   if (bankItem && bankItem.count > 0) {
-    const need = Math.min(28 - countItem(s.sdk.getInventory(), ITEM_IDS.dragon_bones), bankItem.count);
-    if (need > 0) await s.bot.withdrawItem(bankItem, need, { asNote: false });
-   }
-   if (s.sdk.getState()?.bank?.isOpen) await s.bot.closeBank();
   }
   if (countItem(s.sdk.getInventory(), ITEM_IDS.dragon_bones) > 0) {
    await navigateWorld(s, LUMBRIDGE_COURTYARD.x, LUMBRIDGE_COURTYARD.z, 0, Math.max(10, deadline - s.tick()));
-   runner.ready = true;
+   runner.ready = nearTile(s, LUMBRIDGE_COURTYARD.x, LUMBRIDGE_COURTYARD.z, 2);
   }
   await waitTicks(s, 1);
  }
@@ -109,6 +105,7 @@ export async function runPrayerSpecialist(
  try {
   await skipTutorialFast(spec, deadline);
   await dropItemsFast(spec, new Set(), deadline);
+  logPhase(spec, start, 'prayer_ready');
 
   while (skillLevel(spec, 'Prayer') < target && spec.tick() < deadline) {
    if (countItem(spec.sdk.getInventory(), ITEM_IDS.dragon_bones) === 0) {

@@ -2,7 +2,7 @@
 import type { SaveConfig } from '../../vendor/rs-sdk/sdk/test/utils/save-generator';
 import { ITEM_IDS } from '../fast-skills-lib';
 import { CRAFTING_BATCHES } from '../crafting-specialist';
-import { HERBLORE_KAQEMEEX_BATCHES, HERBLORE_STARTER_BATCH } from '../herblore-specialist';
+import { HERBLORE_BATCHES } from '../herblore-specialist';
 import { MAGIC_BATCHES } from '../magic-specialist';
 import { PRAYER_RUNNER_COUNT } from '../prayer-specialist';
 import { BODY_RUNNER_COUNT } from '../runecraft-specialist';
@@ -59,7 +59,7 @@ function staticCompanion(
    position: pos,
    inventory: expandInventory(items),
   },
- };
+ }
 }
 
 export const SPECIALIST_FAST_SKILLS_CASES: readonly BenchCase[] = [
@@ -79,14 +79,11 @@ export const SPECIALIST_FAST_SKILLS_CASES: readonly BenchCase[] = [
   script: 'scripts/herblore-specialist.ts',
   preset: 'fresh_lumbridge',
   presetConfig: freshTutorialStart(),
-  scriptArgs: ['CAP=460', helperArg(1 + HERBLORE_KAQEMEEX_BATCHES.length)],
+  scriptArgs: ['CAP=350', helperArg(HERBLORE_BATCHES.length)],
   pass: okSpecialist,
   output: /ticks=(\d+)/,
   timeoutMs: 600_000,
-  companions: [
-   staticCompanion(0, { x: 3222, z: 3223, level: 0 }, HERBLORE_STARTER_BATCH.give),
-   ...HERBLORE_KAQEMEEX_BATCHES.map((b, i) => staticCompanion(1 + i, { x: 2925, z: 3486, level: 0 }, b.give)),
-  ],
+  companions: HERBLORE_BATCHES.map((b, i) => staticCompanion(i, { x: 3222, z: 3223, level: 0 }, b.give)),
  },
  {
   key: 'extra:specialist-prayer',
@@ -121,15 +118,16 @@ export const SPECIALIST_FAST_SKILLS_CASES: readonly BenchCase[] = [
     { id: ITEM_IDS.hammer, count: 1 },
     { id: ITEM_IDS.amulet_of_glory_4, count: 1 },
     { id: ITEM_IDS.bronze_bar, count: 9 },
-    { id: ITEM_IDS.iron_bar, count: 15 },
+    { id: ITEM_IDS.iron_bar, count: 17 },
    ]),
    {
     suffix: 'c',
     preset: 'fresh_lumbridge',
     presetConfig: {
      position: { x: 3185, z: 3436, level: 0 },
-     inventory: expandInventory([{ id: ITEM_IDS.iron_bar, count: 26 }]),
+     inventory: expandInventory([{ id: ITEM_IDS.iron_bar, count: 25 }]),
      bank: [
+      { id: ITEM_IDS.iron_bar, count: 25 },
       { id: ITEM_IDS.steel_bar, count: 100 },
       { id: ITEM_IDS.mithril_bar, count: 275 },
       { id: ITEM_IDS.adamantite_bar, count: 400 },
@@ -143,6 +141,7 @@ export const SPECIALIST_FAST_SKILLS_CASES: readonly BenchCase[] = [
      position: { x: 3185, z: 3436, level: 0 },
      inventory: expandInventory([{ id: ITEM_IDS.steel_bar, count: 25 }]),
      bank: [
+      { id: ITEM_IDS.iron_bar, count: 25 },
       { id: ITEM_IDS.steel_bar, count: 100 },
       { id: ITEM_IDS.mithril_bar, count: 275 },
       { id: ITEM_IDS.adamantite_bar, count: 400 },

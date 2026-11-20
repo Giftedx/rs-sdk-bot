@@ -8,10 +8,12 @@ import {
  findLocBy,
  goalXp,
  ITEM_IDS,
+ logPhase,
  navigateWorld,
  nearTile,
  parseSpecialistArgs,
  playerPos,
+ restockAtBank,
  rubJewelryTeleport,
  skipTutorialFast,
  skillLevel,
@@ -22,8 +24,9 @@ import {
  type SupplyEntry,
 } from './fast-skills-lib';
 
-export const AIR_RUINS = { x: 2985, z: 3292, level: 0 } as const;
-export const BODY_RUINS = { x: 3053, z: 3445, level: 0 } as const;
+// Walkable exit_coord tiles adjacent to Air (2452) and Body (2457) Mysterious Ruins.
+export const AIR_RUINS = { x: 2983, z: 3288, level: 0 } as const;
+export const BODY_RUINS = { x: 3050, z: 3442, level: 0 } as const;
 export const EDGEVILLE_BANK = { x: 3094, z: 3491, level: 0 } as const;
 export const BODY_ALTAR_CRAFTER = { x: 2523, z: 4832, level: 0 } as const;
 export const BODY_ALTAR_STAND = { x: 2523, z: 4833, level: 0 } as const;
@@ -70,6 +73,7 @@ async function enterAltarWithTalisman(
 
 async function runBodyEssenceRunner(runner: RcRunnerState, done: () => boolean, deadline: number): Promise<void> {
  const s = runner.session;
+ const keep = new Set<number>([ITEM_IDS.body_talisman]);
  const insideBody = () => {
   const p = playerPos(s);
   return !!p && p.worldZ > 4500 && p.worldX < 2600;
@@ -103,19 +107,9 @@ async function runBodyEssenceRunner(runner: RcRunnerState, done: () => boolean, 
 
   runner.ready = false;
   if (heldEss < 26) {
-   await navigateWorld(s, EDGEVILLE_BANK.x, EDGEVILLE_BANK.z, 0, Math.max(10, deadline - s.tick()));
-   while (!done() && s.tick() < deadline && !s.sdk.getState()?.bank?.isOpen) {
-    await s.bot.openBank();
-    if (!s.sdk.getState()?.bank?.isOpen) await waitTicks(s, 1);
-   }
-   if (done() || s.tick() >= deadline) break;
-   const bankItem = s.sdk.getState()?.bank?.items?.find((i: any) => i.id === ITEM_IDS.blankrune);
-   if (bankItem && bankItem.count > 0) {
-    const need = Math.min(26 - countItem(s.sdk.getInventory(), ITEM_IDS.blankrune), bankItem.count);
-    if (need > 0) await s.bot.withdrawItem(bankItem, need, { asNote: false });
-   }
-   if (s.sdk.getState()?.bank?.isOpen) await s.bot.closeBank();
+   await restockAtBank(s, EDGEVILLE_BANK, ITEM_IDS.blankrune, 26, keep, done, deadline);
   }
+  if (done() || s.tick() >= deadline) break;
 
   if (countItem(s.sdk.getInventory(), ITEM_IDS.blankrune) >= 26) {
    await navigateWorld(s, BODY_RUINS.x, BODY_RUINS.z, 0, Math.max(10, deadline - s.tick()));
@@ -132,13 +126,23 @@ async function craftAtAltar(spec: Session, altarId: number, deadline: number): P
   const st = spec.sdk.getState();
   if (st?.dialog?.isOpen && !st?.trade?.isOpen) {
    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   await waitTicks(spec, 1);
+   continue;
   }
   const altar = findLocBy(spec, l => l.id === altarId || /altar/i.test(l.name));
   if (altar) {
+   const sentTick = spec.tick();
    await spec.direct({ type: 'interactLoc', x: altar.x, z: altar.z, locId: altar.id, optionIndex: 1, reason: 'SDK' });
-   await waitUntil(spec, () => countItem(spec.sdk.getInventory(), ITEM_IDS.blankrune) === 0 || !!spec.sdk.getState()?.dialog?.isOpen, {
-    timeoutTicks: 6,
-   });
+   const crafted = await waitUntil(
+    spec,
+    () => spec.tick() > sentTick && (countItem(spec.sdk.getInventory(), ITEM_IDS.blankrune) === 0 || !!spec.sdk.getState()?.dialog?.isOpen),
+    { timeoutTicks: 6 },
+   );
+   if (crafted && countItem(spec.sdk.getInventory(), ITEM_IDS.blankrune) === 0) {
+    // runecraft.rs2 finishes with p_delay(3) after inv_del; wait out delay cleanly before trading.
+    await waitTicks(spec, 3);
+    return;
+   }
   } else {
    await waitTicks(spec, 1);
   }
@@ -188,6 +192,7 @@ export async function runRunecraftSpecialist(
    },
    deadline,
   );
+  logPhase(spec, start, 'rc_glory_draynor');
 
   await navigateWorld(spec, AIR_RUINS.x, AIR_RUINS.z, 0, Math.max(10, deadline - spec.tick()));
   await enterAltarWithTalisman(
@@ -201,6 +206,7 @@ export async function runRunecraftSpecialist(
    deadline,
   );
   await craftAtAltar(spec, 2478, deadline);
+  logPhase(spec, start, `rc_air_crafted lvl=${skillLevel(spec, 'Runecraft')}`);
 
   await rubJewelryTeleport(
    spec,
@@ -227,6 +233,7 @@ export async function runRunecraftSpecialist(
 
   await dropItemsFast(spec, new Set([ITEM_IDS.body_talisman, ITEM_IDS.bodyrune]), deadline);
   await navigateWorld(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0, Math.max(10, deadline - spec.tick()));
+  logPhase(spec, start, 'rc_at_body_altar');
 
   while (skillLevel(spec, 'Runecraft') < target && spec.tick() < deadline) {
    let next = runners.find(

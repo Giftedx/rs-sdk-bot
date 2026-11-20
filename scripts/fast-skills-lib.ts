@@ -5,7 +5,6 @@ import type { Session } from '../packages/core/src/inprocess';
 import { accountOf, finish, getWorld, openBot } from '../packages/core/src/bot';
 import { levelForXp, xpForLevel } from '../packages/planner/src/curve';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
-import { logout } from '../packages/core/src/logout';
 import { goTo, sessionWalker, walkPath } from '../packages/core/src/walk';
 
 export const ITEM_IDS = {
@@ -191,6 +190,8 @@ export function nearTile(s: Session, x: number, z: number, tol = 2, level = 0): 
 
 // Opens companion helpers before the specialist so helper packets decode first in each game tick and
 // the specialist's fresh clock begins only when all companions are already logged into the world.
+// Companion guards (onStop/onSessionEnd) are suppressed so helper idle clocks never terminate long runs,
+// and finish() alone performs settlement + logout so watchUnexpectedEnd never aborts LEDGER reporting.
 export async function withSpecialistFleet<T>(
  specName: string,
  helperNames: readonly string[],
@@ -204,7 +205,13 @@ export async function withSpecialistFleet<T>(
  let detail = 'uninitialized';
  try {
   for (const name of helperNames) {
-   helpers.push(await openBot(name, { log }));
+   helpers.push(
+    await openBot(name, {
+     log,
+     onStop: async () => {},
+     onSessionEnd: async () => {},
+    }),
+   );
   }
   spec = await openBot(specName, { log });
   const res = await fn(spec, helpers);
@@ -213,21 +220,17 @@ export async function withSpecialistFleet<T>(
  } catch (error) {
   ok = false;
   detail = error instanceof Error ? error.message : String(error);
+  log(`SPECIALIST_ERROR ${detail}`);
  } finally {
-  if (spec && !spec.sdk.getState()?.inGame) {
-   // keep finish order [helpers..., spec] so specialist LEDGER stays last for bench reporting
-  }
-  if (spec) {
-   await logoutAll([...helpers, spec]).catch(() => {});
-  }
   const sessions = spec ? [...helpers, spec] : helpers;
   await finish(sessions, ok, detail);
  }
  throw Error('unreachable finish');
 }
 
-async function logoutAll(sessions: readonly Session[]): Promise<void> {
- await Promise.all(sessions.map(s => logout(s, 3000, { retryMs: 300 }).catch(() => 'timeout')));
+export function logPhase(s: Session, startTick: number, label: string, log: (line: string) => void = console.log): void {
+ const p = playerPos(s);
+ log(`PHASE ${label} tick=${s.tick() - startTick} pos=${p ? `${p.worldX},${p.worldZ},${p.level}` : '?'}`);
 }
 
 export async function skipTutorialFast(s: Session, deadlineTick: number): Promise<void> {
@@ -338,8 +341,15 @@ export async function burstTradeHost(spec: Session, helper: Session, opts: Burst
 
   if (!st.isOpen && !ht.isOpen) {
    if (sawConfirm) return;
-   if (spec.sdk.getState()?.dialog?.isOpen) await spec.direct({ type: 'closeModal', reason: 'SDK' });
-   if (helper.sdk.getState()?.dialog?.isOpen) await helper.direct({ type: 'closeModal', reason: 'SDK' });
+   const specDlg = !!spec.sdk.getState()?.dialog?.isOpen;
+   const helpDlg = !!helper.sdk.getState()?.dialog?.isOpen;
+   if (specDlg || helpDlg) {
+    if (specDlg) await spec.direct({ type: 'closeModal', reason: 'SDK' });
+    if (helpDlg) await helper.direct({ type: 'closeModal', reason: 'SDK' });
+    // CloseModal clears on processQueues (next tick), so avoid wasted busy trade packets on this tick.
+    await waitTicks(spec, 1);
+    continue;
+   }
 
    const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperName);
    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specName);
@@ -377,7 +387,7 @@ export async function burstTradeHost(spec: Session, helper: Session, opts: Burst
   }
   const helperOfferComplete = hDistinctSlots.length <= hOffers.length;
   const specAddingItems = sDistinctSlots.length > 0;
-  // Wait for confirm only if spec didn't reset accepts later in this same tick.
+  // When returning items, helper waits until spec's remaining return slots clear so partner accept isn't reset.
   if (helperOfferComplete && !specAddingItems && !ht.myAccepted) {
    await helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' });
   }
@@ -435,20 +445,18 @@ export async function runTo(s: Session, x: number, z: number, tol = 2, maxTicks 
 
 export async function navigateWorld(s: Session, x: number, z: number, level = 0, timeoutTicks = 250): Promise<void> {
  if (nearTile(s, x, z, 2, level)) return;
- const ac = new AbortController();
- const stopTimer = waitTicks(s, timeoutTicks).then(() => ac.abort('navigateWorld timeout'));
- try {
-  const res = await goTo(s, await getWorld(), { x, z, level }, accountOf(s), {
-   maxRetriesPerLeg: 1,
-   legTimeoutTicks: timeoutTicks,
-   signal: ac.signal,
-  });
-  if (!res.ok && !nearTile(s, x, z, 2, level)) {
-   throw Error(`goTo failed to ${x},${z},${level}: ${res.detail}`);
-  }
- } finally {
-  ac.abort('navigateWorld done');
-  await stopTimer.catch(() => {});
+ const p = playerPos(s);
+ if (p && p.level === level && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= 24) {
+  const walker = await sessionWalker(s);
+  const quick = await walkPath(walker, [{ x, z, tol: 2 }], { maxTicks: Math.max(10, Math.min(120, timeoutTicks)) });
+  if (quick.ok || nearTile(s, x, z, 2, level)) return;
+ }
+ const res = await goTo(s, await getWorld(), { x, z, level }, accountOf(s), {
+  maxRetriesPerLeg: 1,
+  legTimeoutTicks: Math.max(10, timeoutTicks),
+ });
+ if (!res.ok && !nearTile(s, x, z, 2, level)) {
+  throw Error(`goTo failed to ${x},${z},${level}: ${res.detail}`);
  }
 }
 
@@ -482,6 +490,57 @@ export async function rubJewelryTeleport(
   await waitTicks(s, 1);
  }
  throw Error(`jewelry teleport ${itemId} exceeded cap`);
+}
+
+export async function restockAtBank(
+ s: Session,
+ bankTile: { x: number; z: number; level?: number },
+ itemId: number,
+ targetCount: number,
+ keepIds: ReadonlySet<number>,
+ done: () => boolean,
+ deadline: number,
+): Promise<boolean> {
+ if (countItem(s.sdk.getInventory(), itemId) >= targetCount) return true;
+ await navigateWorld(s, bankTile.x, bankTile.z, bankTile.level ?? 0, Math.max(10, deadline - s.tick()));
+ while (!done() && s.tick() < deadline && !s.sdk.getState()?.bank?.isOpen) {
+  const gen = s.bankObservation?.()?.generation ?? -1;
+  const res = await s.bot.openBank();
+  if (s.sdk.getState()?.bank?.isOpen) break;
+  const sentTick = s.tick();
+  if (res.success) {
+   await waitUntil(s, () => s.tick() > sentTick && !!s.sdk.getState()?.bank?.isOpen && (s.bankObservation?.()?.generation ?? 0) > gen, {
+    timeoutTicks: 6,
+   });
+  } else {
+   await waitTicks(s, 1);
+  }
+ }
+ if (done() || s.tick() >= deadline || !s.sdk.getState()?.bank?.isOpen) return false;
+
+ const seenUnwanted = new Set<number>();
+ for (const item of s.sdk.getInventory()) {
+  if (item.id === itemId || keepIds.has(item.id) || seenUnwanted.has(item.id)) continue;
+  seenUnwanted.add(item.id);
+  const current = s.sdk.getInventory().find(i => i.id === item.id);
+  if (current) await s.bot.depositItem(current, -1);
+ }
+
+ const bankItem = s.sdk.getState()?.bank?.items?.find((i: any) => i.id === itemId);
+ if (bankItem && bankItem.count > 0) {
+  const need = Math.min(targetCount - countItem(s.sdk.getInventory(), itemId), bankItem.count);
+  if (need > 0) {
+   const sentTick = s.tick();
+   await s.bot.withdrawItem(bankItem, need, { asNote: false });
+   await waitUntil(s, () => s.tick() > sentTick && countItem(s.sdk.getInventory(), itemId) >= targetCount, { timeoutTicks: 5 });
+  }
+ }
+ if (s.sdk.getState()?.bank?.isOpen) {
+  await s.bot.closeBank();
+  const closeTick = s.tick();
+  await waitUntil(s, () => s.tick() > closeTick && !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 4 });
+ }
+ return countItem(s.sdk.getInventory(), itemId) > 0;
 }
 
 export function goalXp(): number {
