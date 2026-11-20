@@ -153,6 +153,8 @@ if (import.meta.main) {
         let lastPickTick = -99;
 
         let restockingFood = false;
+        let prevHp = main.sdk.getState()?.player?.hp ?? 10;
+        let lastStallClick = -99;
 
         while (!stopFlag && elapsedNow() < cap) {
             const st = main.sdk.getState();
@@ -167,15 +169,18 @@ if (import.meta.main) {
             }
 
             const tier = selectPickpocketTier(lvl);
+            const hpNow = st.player.hp;
 
-            // Detect new stun messages via monotonic message watermark (immune to ring-buffer length caps).
+            // Detect new stun messages (or non-stun Guard damage while restocking) via monotonic message watermark.
             const msgs = st.gameMessages ?? [];
             const newMsgs = msgs.filter(m => msgMark(m) > lastMsgMark);
             lastMsgMark = latestMark(msgs, lastMsgMark);
             const stunned = newMsgs.some(m => /you've been stunned/i.test(m.text));
-            if (stunned || (restockingFood && st.player.combat?.inCombat)) {
+            const guardHit = restockingFood && prevHp > 0 && hpNow < prevHp;
+            prevHp = hpNow;
+            if (stunned || guardHit) {
                 if (stunned) stuns++;
-                if (st.player.hp <= tier.stunDamage) {
+                if (st.player.hp <= (restockingFood ? 6 : tier.stunDamage)) {
                     await eatAnyFood(main);
                 }
                 totalTicks += Math.max(1, main.tick() - sessStart) + 1;
@@ -191,37 +196,45 @@ if (import.meta.main) {
                 intentionalRelog = false;
                 sessStart = main.tick();
                 lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
+                prevHp = main.sdk.getState()?.player?.hp ?? 10;
                 lastPickTick = -99;
+                lastStallClick = -99;
                 continue;
             }
 
-            // Safety guard: eat before pickpocketing when HP <= stunDamage; restock early at east Baker's stall if food drops low.
-            if (st.player.hp <= tier.stunDamage) {
+            // Safety guard: eat before pickpocketing when HP <= stunDamage; restock early at a Guard-clear Baker's stall.
+            if (hpNow <= (restockingFood ? 6 : tier.stunDamage)) {
                 if (await eatAnyFood(main)) {
                     await waitTicks(main, 1);
                     continue;
                 }
             }
             const bites = foodBitesCount(main);
-            if ((bites <= 3 && st.player.hp >= 6) || bites === 0) restockingFood = true;
+            if ((bites <= 3 && hpNow >= 6) || bites === 0) restockingFood = true;
             if (restockingFood) {
-                if (bites >= 12 || st.inventory.length >= 28) {
+                if (bites >= 15 || st.inventory.length >= 28) {
                     restockingFood = false;
                 } else {
+                    const guardAt = (tx: number, tz: number) =>
+                        st.nearbyNpcs.some(n => /^guard$/i.test(n.name) && chebDist({ x: n.x, z: n.z }, { x: tx, z: tz }) <= 6);
                     const eastStand = { x: 2667, z: 3312 };
-                    if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, eastStand) > 1) {
-                        await main.bot.walkTo(eastStand.x, eastStand.z, 1);
-                        await waitTicks(main, 1);
-                        continue;
+                    const westStand = { x: 2655, z: 3313 };
+                    const stand = !guardAt(eastStand.x, eastStand.z)
+                        ? eastStand
+                        : (!guardAt(westStand.x, westStand.z) ? westStand : eastStand);
+                    if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, stand) > 1) {
+                        await main.direct({ type: 'walk', x: stand.x, z: stand.z, running: true, reason: 'SDK' });
+                    } else if (!guardAt(st.player.worldX, st.player.worldZ) && main.tick() - lastStallClick >= 2) {
+                        const stalls = (st.nearbyLocs ?? [])
+                            .filter(l => l.id === 2561 || /^baker's stall$/i.test(l.name ?? ''))
+                            .sort((a, b) => chebDist(a, stand) - chebDist(b, stand));
+                        const stall = stalls[0] ?? main.sdk.findNearbyLoc(/^baker's stall$/i);
+                        if (stall) {
+                            lastStallClick = main.tick();
+                            await main.sdk.sendInteractLoc(stall.x, stall.z, stall.id, 2);
+                        }
                     }
-                    const stalls = (st.nearbyLocs ?? [])
-                        .filter(l => l.id === 2561 || /^baker's stall$/i.test(l.name ?? ''))
-                        .sort((a, b) => b.x - a.x);
-                    const stall = stalls[0] ?? main.sdk.findNearbyLoc(/^baker's stall$/i);
-                    if (stall) {
-                        await main.sdk.sendInteractLoc(stall.x, stall.z, stall.id, 2);
-                    }
-                    await waitTicks(main, 2);
+                    await waitTicks(main, 1);
                     continue;
                 }
             }
