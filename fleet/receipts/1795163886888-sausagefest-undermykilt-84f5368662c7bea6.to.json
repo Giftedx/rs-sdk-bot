@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795163886888-sausagefest-undermykilt-84f5368662c7bea6",
  "account": "UnderMyKilt",
  "partner": "Sausagefest",
@@ -10,20 +10,50 @@
  "item": "Coins",
  "requested": 11000,
  "claim": "43793b67-d8a9-4193-b5c4-c602e3d05a7e",
- "count": 0,
- "ok": false,
- "at": 1795163899016,
- "detail": "trade claimed",
+ "count": 11000,
+ "ok": true,
+ "at": 1795163926064,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Cannon furnace",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795163924904
+   }
   },
   {
    "item": "Iron arrow",
    "requested": 375,
-   "count": 0
+   "count": 375,
+   "inventory": {
+    "before": 0,
+    "after": 375
+   },
+   "bank": {
+    "count": 375,
+    "at": 1795163925316
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 11000
+ },
+ "bank": {
+  "count": 11000,
+  "at": 1795163924473
+ },
+ "logout": {
+  "attemptId": "1795163899024-0000020928-0000000001",
+  "at": 1795163926047,
+  "sha256": "5fecf1fa80151b1a0fb0377e4025f971b42388edb499716f22a4aaef4d162f0c"
+ },
+ "screen": true
 }
