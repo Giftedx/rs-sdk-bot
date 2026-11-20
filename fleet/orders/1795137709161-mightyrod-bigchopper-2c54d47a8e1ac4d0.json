@@ -1,0 +1,29 @@
+{
+ "id": "1795137709161-mightyrod-bigchopper-2c54d47a8e1ac4d0",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "Bigchopper",
+ "item": "Air rune",
+ "count": 50,
+ "start": 1795137709161,
+ "end": 1795138909161,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Law rune",
+   "count": 10
+  }
+ ],
+ "takerWaits": true
+}

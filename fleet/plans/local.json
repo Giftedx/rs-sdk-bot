@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795137517194,
+ "at": 1795137714067,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -244,6 +244,25 @@
    "resources": []
   },
   {
+   "account": "OreElse",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=10 EXPECTED_OWNED=6 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=oreelse-kit24-536-6to16 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"536\":16}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 10 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
+   "role": "supply",
+   "template": "kit-buy:army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -301,27 +320,6 @@
    ]
   },
   {
-   "account": "Spitroaster",
-   "script": "scripts/generated/thieving60.ts",
-   "args": [],
-   "env": {
-    "TARGET": "55",
-    "CAP": "2500",
-    "CLEAN_FOOD": "1",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Thieving\":55}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Thieving to 55 for a knight spot",
-   "role": "thieving",
-   "template": "thieving55",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
    "account": "Stirmypot",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -347,8 +345,7 @@
    "env": {
     "TARGET": "55",
     "CAP": "2500",
-    "CLEAN_FOOD": "1",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Thieving\":55}}"
+    "CLEAN_FOOD": "1"
    },
    "enabled": true,
    "standing": true,
@@ -358,7 +355,7 @@
    "template": "thieving55",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "knight:2652,3318"
    ]
   }
  ],

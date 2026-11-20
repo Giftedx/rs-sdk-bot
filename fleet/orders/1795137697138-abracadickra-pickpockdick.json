@@ -1,0 +1,22 @@
+{
+ "id": "1795137697138-abracadickra-pickpockdick",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "PickpockDick",
+ "item": "coins",
+ "count": 21060,
+ "start": 1795137697138,
+ "end": 1795140097138,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
