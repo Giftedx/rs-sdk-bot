@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795136638325-deeppockets-bigchopper-9c3af1a8ada06aff",
+ "account": "Bigchopper",
+ "partner": "Deeppockets",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 2,
+ "claim": "0eb4da91-53fe-4990-8bda-f8776eab66c3",
+ "count": 2,
+ "ok": true,
+ "at": 1795136721228,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795136720137
+ },
+ "logout": {
+  "attemptId": "1795136703174-0000001484-0000000001",
+  "at": 1795136721215,
+  "sha256": "7e3a9b39e45d2019497dcd62ed75f4808e1b040abc867589c6fa5c48026a93a2"
+ },
+ "screen": true
+}
