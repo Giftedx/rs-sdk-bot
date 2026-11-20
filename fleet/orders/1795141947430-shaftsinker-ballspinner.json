@@ -1,0 +1,22 @@
+{
+ "id": "1795141947430-shaftsinker-ballspinner",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftsinker",
+ "to": "Ballspinner",
+ "item": "coins",
+ "count": 50056,
+ "start": 1795141947430,
+ "end": 1795144347430,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
