@@ -1,0 +1,32 @@
+{
+ "id": "1795202508534-bigpackage-bigchopper-57c657d9c0b72a67",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigpackage",
+ "to": "Bigchopper",
+ "item": "Rune platelegs",
+ "count": 1,
+ "start": 1795202508534,
+ "end": 1795203708534,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Iron arrow",
+   "count": 300
+  },
+  {
+   "item": "Water rune",
+   "count": 30
+  }
+ ]
+}

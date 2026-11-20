@@ -1,0 +1,28 @@
+{
+ "id": "1795202508516-fingersmith-bigchopper-858bc35ffb65d498",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingersmith",
+ "to": "Bigchopper",
+ "item": "Rune scimitar",
+ "count": 1,
+ "start": 1795202508516,
+ "end": 1795203708516,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Cake",
+   "count": 13
+  }
+ ]
+}
