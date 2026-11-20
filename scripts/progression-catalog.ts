@@ -306,6 +306,7 @@ export function buildProgressionCatalog(base=root):ProgressionCatalog{
  for(const script of ['scripts/fleet-inspect.ts','scripts/session-check.ts','scripts/where.ts','scripts/goal-readiness.ts','scripts/preparation-report.ts'])entries.set(script,{script,intents:['observe'],skills:[],routeIds:[]});
  for(const script of ['scripts/claim-account.ts','packages/core/src/session-recovery.ts'])entries.set(script,{script,intents:['service'],skills:[],routeIds:[]});
  entries.set('scripts/courier-handoff.ts',{script:'scripts/courier-handoff.ts',intents:['service'],skills:[],routeIds:[]});
+ entries.set('scripts/ranged-live-prep.ts',{script:'scripts/ranged-live-prep.ts',intents:['service'],skills:['herblore'],routeIds:[]});
  entries.set('scripts/handoff-inputs.ts',{script:'scripts/handoff-inputs.ts',intents:['acquire','produce','service'],skills:['fletching'],routeIds:[]});
  entries.set('packages/practice/src/ge-bulk-order-proof.ts',{script:'packages/practice/src/ge-bulk-order-proof.ts',intents:['service','observe'],skills:[],routeIds:[],practiceOnly:true});
  // The practice proofs log a seeded account in once to register it (3 ticks, no game action): an observe entry.

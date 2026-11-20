@@ -205,6 +205,17 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  }
  if(script==='scripts/specialist-supplier.ts')return {kind:'service',objective:'stage or hand off specialist supply kit',units:1};
  if(script==='scripts/gathering-supplier.ts')return {kind:'service',objective:'hand off gathering specialist supply kit',units:1};
+ if(script==='scripts/ranged-live-prep.ts'){
+  const modeArg=args.find(a=>a.startsWith('--mode='));
+  const mode=(modeArg?modeArg.slice(7):'all').trim().toLowerCase();
+  if(!['all','leather','brew','decant'].includes(mode))return null;
+  const capArg=args.find(a=>a.startsWith('--cap='));
+  const positional=args.filter(a=>!a.startsWith('--'));
+  const posCap=positional.length>=2&&/^\d+$/.test(positional[1]!)?positional[1]:positional.length===1&&/^\d+$/.test(positional[0]!)?positional[0]:undefined;
+  const cap=Number(capArg?capArg.slice(6):setting(env,args,'CAP')??posCap??'2400');
+  if(!whole(cap)||cap<100||cap>20000)return null;
+  return{kind:'service',objective:`ranged-live-prep:${mode}`,units:1};
+ }
  if(acceptedSkills.length)return trainingIntent(accept!.skills!);
  // Native GE counterparties have finite fixture work, admitted only on local practice.
  if(script==='packages/practice/src/ge-bulk-order-proof.ts'){
