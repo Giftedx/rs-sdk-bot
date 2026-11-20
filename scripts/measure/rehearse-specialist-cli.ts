@@ -296,8 +296,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
                 inventory: expandKitToSave(batch.give),
             }),
         })),
-        planTicks: 1143,
-        planSource: 'hosted-bench skiller:magic:specialist 1137-1184t; 400ms rehearsal 1142t (<=1236t vs #1 1262t)',
+        planTicks: 1170,
+        planSource: 'hosted-bench skiller:magic:specialist 1137-1184t; 400ms rehearsals 1142-1193t (<=1236t vs #1 1262t)',
         targetCap: 1236,
     },
     {
