@@ -116,19 +116,48 @@ export function selectPickpocketTier(level: number): PickpocketTier {
     return ARDOUGNE_PICKPOCKET_TIERS[0]!;
 }
 
-if (import.meta.main) {
-    const account = process.argv[2];
-    const helperName = process.argv.slice(3).find(a => !a.includes('=') && !a.startsWith('-')) ?? process.env.HELPER ?? `${account}b`;
-    const cap = Number(process.env.CAP ?? 3200);
+export function isArdougneResumeState(
+    pos: { worldX: number; worldZ: number; level: number } | null | undefined,
+    hasFood: boolean,
+): boolean {
+    return !!pos
+        && pos.level === 0
+        && pos.worldX >= 2590 && pos.worldX <= 2700
+        && pos.worldZ >= 3260 && pos.worldZ <= 3340
+        && hasFood;
+}
+
+export function parseThievingCliArgs(argv: readonly string[], env: NodeJS.ProcessEnv = process.env): {
+    account: string;
+    helperName: string;
+    cap: number;
+    resume: boolean;
+} {
+    const pos: string[] = [];
+    const kv = new Map<string, string>();
+    for (const raw of argv) {
+        const eq = raw.indexOf('=');
+        if (eq > 0 && !raw.startsWith('-')) kv.set(raw.slice(0, eq).toUpperCase(), raw.slice(eq + 1));
+        else if (!raw.startsWith('-')) pos.push(raw);
+    }
+    const account = pos[0];
     if (!account) throw Error('usage: bun scripts/thieving-specialist.ts <account> [helperAccount]');
+    const helperName = pos[1] ?? kv.get('HELPER') ?? env.HELPER ?? `${account}b`;
+    const cap = Number(kv.get('CAP') ?? env.CAP ?? 3200);
+    const resume = (kv.get('RESUME') ?? env.RESUME) === '1';
+    return { account, helperName, cap, resume };
+}
+
+if (import.meta.main) {
+    const { account, helperName, cap, resume } = parseThievingCliArgs(process.argv.slice(2), process.env);
 
     let stopFlag = false;
     let intentionalRelog = false;
-    let helperSettled = false;
+    let helperSettled = resume;
     let totalTicks = 0;
     const isStopped = () => stopFlag || existsSync(`.practice/stop-${account}`) || existsSync('.practice/stop-all') || totalTicks >= cap;
 
-    const helper = externalSupplierName() ? undefined : await openBot(helperName, { onStop: async () => { stopFlag = true; } });
+    const helper = resume || externalSupplierName() ? undefined : await openBot(helperName, { onStop: async () => { stopFlag = true; } });
     const onUnexpectedEnd = async (sess: Session, detail: string) => {
         if (intentionalRelog) return;
         await finish(helperSettled || !helper ? [sess] : [helper, sess], false, `unexpected end: ${detail}`);
@@ -144,6 +173,9 @@ if (import.meta.main) {
     let relogs = 0;
     let stuns = 0;
     let attempts = 0;
+    let tutTicks = 0;
+    let tradeTicks = 0;
+    let travelTicks = 0;
     let ok = false;
     let detail = '';
 
@@ -157,49 +189,58 @@ if (import.meta.main) {
     let readyForTrade = false;
     const arm = startHelperTradeArm(helper, main.name, isStopped, () => readyForTrade);
     try {
-        const tutTicks = await skipTutorialFast(main, isStopped);
-        await dropTutorialJunk(main, isStopped, 18);
-        readyForTrade = true;
-        const tradeTicks = await receiveTradeFast(main, helper, supplies, isStopped, arm);
-        helperDone = settleHelper(helper)
-            .then(() => { helperSettled = true; })
-            .catch(err => {
-                console.log(`WARN helper settle: ${String(err)}`);
-            });
-
-        if (THIEVING_GLORY_IDS.some(id => itemQty(main, id) > 0)) {
-            // Travel via Karamja Glory -> Brimhaven -> Ardougne dock -> East Ardougne market.
-            await rubTeleport(
-                main,
-                THIEVING_GLORY_IDS,
-                2,
-                p => p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
-                isStopped,
-            );
-            await walkWaypointsSafe(
-                main,
-                [[2774, 3228, 3]],
-                isStopped,
-            );
-            await sailBrimhavenToArdougne(main, isStopped);
-            await walkWaypointsSafe(main, [[2621, 3293, 2]], isStopped);
-        } else {
-            await rubTeleport(
-                main,
-                RING_OF_DUELING_IDS,
-                /castle wars/i,
-                p => p.level === 0 && p.worldX >= 2430 && p.worldX <= 2455 && p.worldZ >= 3075 && p.worldZ <= 3105,
-                isStopped,
-            );
-            // Drop the spent Ring of dueling to free slot 28 for coins before pickpocketing.
-            const ringSlot = main.sdk.getInventory().find(i => (RING_OF_DUELING_IDS as readonly number[]).includes(i.id))?.slot;
-            if (ringSlot !== undefined) {
-                await main.direct({ type: 'dropItem', slot: ringSlot, reason: 'SDK' });
+        if (resume) {
+            for (let w = 0; w < 20 && !isStopped() && !main.sdk.getState()?.player; w++) {
+                await waitTicks(main, 1);
             }
-            await walkWaypointsSafe(main, CWARS_TO_ARDY_MARKET_WAYPOINTS, isStopped);
-        }
+            const p = main.sdk.getState()?.player;
+            if (!isArdougneResumeState(p, hasAnyFood(main))) {
+                throw Error(`resume blocked: pos=${p?.worldX},${p?.worldZ},${p?.level} hasFood=${hasAnyFood(main)}`);
+            }
+        } else {
+            tutTicks = await skipTutorialFast(main, isStopped);
+            await dropTutorialJunk(main, isStopped, 18);
+            readyForTrade = true;
+            tradeTicks = await receiveTradeFast(main, helper, supplies, isStopped, arm);
+            helperDone = settleHelper(helper)
+                .then(() => { helperSettled = true; })
+                .catch(err => {
+                    console.log(`WARN helper settle: ${String(err)}`);
+                });
 
-        const travelTicks = elapsedNow();
+            if (THIEVING_GLORY_IDS.some(id => itemQty(main, id) > 0)) {
+                // Travel via Karamja Glory -> Brimhaven -> Ardougne dock -> East Ardougne market.
+                await rubTeleport(
+                    main,
+                    THIEVING_GLORY_IDS,
+                    2,
+                    p => p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
+                    isStopped,
+                );
+                await walkWaypointsSafe(
+                    main,
+                    [[2774, 3228, 3]],
+                    isStopped,
+                );
+                await sailBrimhavenToArdougne(main, isStopped);
+                await walkWaypointsSafe(main, [[2621, 3293, 2]], isStopped);
+            } else {
+                await rubTeleport(
+                    main,
+                    RING_OF_DUELING_IDS,
+                    /castle wars/i,
+                    p => p.level === 0 && p.worldX >= 2430 && p.worldX <= 2455 && p.worldZ >= 3075 && p.worldZ <= 3105,
+                    isStopped,
+                );
+                // Drop the spent Ring of dueling to free slot 28 for coins before pickpocketing.
+                const ringSlot = main.sdk.getInventory().find(i => (RING_OF_DUELING_IDS as readonly number[]).includes(i.id))?.slot;
+                if (ringSlot !== undefined) {
+                    await main.direct({ type: 'dropItem', slot: ringSlot, reason: 'SDK' });
+                }
+                await walkWaypointsSafe(main, CWARS_TO_ARDY_MARKET_WAYPOINTS, isStopped);
+            }
+            travelTicks = elapsedNow();
+        }
         let lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
         let lastPickTick = -99;
 
