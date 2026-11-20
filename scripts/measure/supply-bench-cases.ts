@@ -1,3 +1,4 @@
+// Practice bench cases for continuous non-Wilderness PK squad raw-to-finished supply routes.
 import type { BenchCase } from './aio-bench-cases';
 
 const ok = (s: string) => /^RESULT ok\b/m.test(s);
@@ -28,7 +29,7 @@ export const SUPPLY_BENCH_CASES: readonly BenchCase[] = [
         script: 'scripts/aio-market.ts',
         preset: 'fresh_lumbridge',
         scriptArgs: ['shop-buy', 'tenzing', '2000', 'ITEMS=climbing boots', 'STOCK_TARGET=2', 'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', 'NO_BUY_TICKS=25', 'FLOAT=100', 'COIN_RESERVE=20', 'MAX_SPEND=80'],
-        presetConfig: { position: { x: 2946, z: 3368, level: 0 }, varps: { 314: 80 }, bank: [{ id: 995, count: 500 }] },
+        presetConfig: { position: { x: 2946, z: 3368, level: 0 }, varps: { 314: 80, 315: 8 }, bank: [{ id: 995, count: 500 }] },
         pass: s => ok(s) && /boughtTotal=2 bankedTotal=2 /.test(s),
     },
     {
@@ -108,7 +109,7 @@ export const SUPPLY_BENCH_CASES: readonly BenchCase[] = [
         scriptArgs: ['2500', 'taverley_scales', 'MAX_KILLS=2'],
         presetConfig: {
             position: { x: 2946, z: 3368, level: 0 },
-            skills: { Defence: 99, Hitpoints: 99 },
+            skills: { Attack: 99, Strength: 99, Defence: 99, Hitpoints: 99, Prayer: 99 },
             equipment: [{ id: 1540, count: 1, slot: 5 }],
             inventory: [{ id: 1590, count: 1 }, { id: 385, count: 5 }],
             bank: [{ id: 385, count: 10 }],

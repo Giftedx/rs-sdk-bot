@@ -969,7 +969,7 @@ export function createTaverleyTravel() {
                             if (!await ground(wp.x, wp.z, 4)) return false;
                         }
                     }
-                    if (!await ground(TAVERLEY_ROUTE.DUSTY_GATE.x + 1, TAVERLEY_ROUTE.DUSTY_GATE.z, 2)) return false;
+                    if (!await ground(TAVERLEY_ROUTE.DUSTY_GATE.x, TAVERLEY_ROUTE.DUSTY_GATE.z, 1)) return false;
                     const key = s.sdk.getInventory().find(i => i.id === TAVERLEY_ROUTE.DUSTY_KEY_ID);
                     if (!key) throw Error('Dusty key (1590) required to unlock Taverley dragon gate');
                     for (let i = 0; i < 3 && !stop() && !behindDustyGate(pos()?.worldX ?? 9999, pos()?.worldZ ?? 0); i++) {
@@ -1199,7 +1199,7 @@ try {
         for (let i = 0; i < 3 && !travelStop(); i++) {
             const p = pos();
             if (p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol) break;
-            const r = await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: travelStop });
+            const r = await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: travelStop, maxTicks: 500 });
             if (!r.ok) {
                 console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
                 await waitTicks(s, 1);

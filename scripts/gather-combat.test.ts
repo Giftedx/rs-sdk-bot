@@ -587,7 +587,7 @@ test('non-Wilderness mainland supply configs resolve valid targets, guard Wilder
     expect(await travel.walk(s, 'taverley_black_dragon', { x: 2832, z: 9825 }, ground, () => false, 2)).toBe(true);
     expect(actions).toEqual([
         'ground:2884,3397', 'loc:1759:climb-down',
-        'ground:2886,9817', 'ground:2889,9831', 'ground:2910,9830', 'ground:2925,9803',
+        'ground:2886,9817', 'ground:2889,9831', 'ground:2910,9830', 'ground:2924,9803',
         'key:1590->2623',
         'ground:2895,9792', 'ground:2893,9777', 'ground:2885,9769', 'ground:2877,9788', 'ground:2860,9799', 'ground:2839,9814',
         'ground:2832,9825',
