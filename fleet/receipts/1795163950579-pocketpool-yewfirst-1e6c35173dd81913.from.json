@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795163950579-pocketpool-yewfirst-1e6c35173dd81913",
+ "account": "PocketPool",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 66,
+ "claim": "3b71f4a9-1375-4ed7-ab5a-1814ee131249",
+ "count": 0,
+ "ok": false,
+ "at": 1795163967091,
+ "detail": "trade claimed"
+}

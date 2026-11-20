@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795163954661-masterbaiter-undermykilt-e83f071160569457",
+ "account": "UnderMyKilt",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 5,
+ "claim": "e3f0c8f1-ad1c-4603-a433-a65d6536c2b2",
+ "count": 0,
+ "ok": false,
+ "at": 1795163976652,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Rune arrow",
+   "requested": 494,
+   "count": 0
+  }
+ ]
+}

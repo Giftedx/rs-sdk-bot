@@ -1,0 +1,28 @@
+{
+ "id": "1795163954661-masterbaiter-undermykilt-e83f071160569457",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "UnderMyKilt",
+ "item": "Lobster",
+ "count": 5,
+ "start": 1795163954661,
+ "end": 1795165454661,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Rune arrow",
+   "count": 494
+  }
+ ]
+}
