@@ -1,0 +1,22 @@
+{
+ "id": "1795209978091-billionaire-shaftmaker-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Billionaire",
+ "to": "Shaftmaker",
+ "item": "Nature rune",
+ "count": 37,
+ "start": 1795209978091,
+ "end": 1795212378091,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
