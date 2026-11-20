@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795136905450-mightyrod-pocketrocket-bigbones",
+ "account": "Mightyrod",
+ "partner": "Pocketrocket",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Big bones",
+ "requested": 159,
+ "claim": "b5a38302-f070-4dd2-9be3-c58c0f7d91b7",
+ "count": 0,
+ "ok": false,
+ "at": 1795137020385,
+ "detail": "trade claimed"
+}

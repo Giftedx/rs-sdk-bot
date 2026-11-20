@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795136990121,
+ "at": 1795137053047,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -274,56 +274,6 @@
    ]
   },
   {
-   "account": "OreElse",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "536",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "22",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying bought dragon bones",
-   "role": "combat",
-   "template": "army-bury-dragon-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
    "account": "Spitroaster",
    "script": "scripts/generated/thieving60.ts",
    "args": [],
@@ -345,27 +295,6 @@
   },
   {
    "account": "Stirmypot",
-   "script": "scripts/generated/thieving60.ts",
-   "args": [],
-   "env": {
-    "TARGET": "55",
-    "CAP": "2500",
-    "CLEAN_FOOD": "1",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Thieving\":55}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Thieving to 55 for a knight spot",
-   "role": "thieving",
-   "template": "thieving55",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
-   ]
-  },
-  {
-   "account": "RearEntry",
    "script": "scripts/generated/thieving60.ts",
    "args": [],
    "env": {

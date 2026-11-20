@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795136798162-kiltlifter-bigchopper-88dc67d130b7b28a",
+ "account": "Bigchopper",
+ "partner": "Kiltlifter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 1,
+ "claim": "cbbe2655-28c9-4747-930e-ed3d27d6e0b8",
+ "count": 1,
+ "ok": true,
+ "at": 1795137051994,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795137051275
+ },
+ "logout": {
+  "attemptId": "1795137035741-0000002112-0000000001",
+  "at": 1795137051984,
+  "sha256": "5c40dd9b3933e06b58eca32b56c02028f2377106d2030299edbbcccb351f0fad"
+ },
+ "screen": true
+}
