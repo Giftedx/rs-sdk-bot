@@ -1,0 +1,22 @@
+{
+ "id": "1795132794241-deeppockets-pickpockdick-runechainbody",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Deeppockets",
+ "to": "PickpockDick",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795132794241,
+ "end": 1795135194241,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
