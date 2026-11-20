@@ -1,0 +1,22 @@
+{
+ "id": "1795157177360-dipstick-pickpockdick-runechainbody",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Dipstick",
+ "to": "PickpockDick",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795157177360,
+ "end": 1795159577360,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
