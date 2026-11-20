@@ -1,7 +1,8 @@
-// Fresh-clock Defence 99 specialist: Waterfall (83 Atk/Str) and Defensive Rune scimitar PvP at Deserted Keep.
+// Fresh-clock Defence 99 specialist: Waterfall (83 Atk/Str) plus 1-tick Rune 2h relog Keep PvP.
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { finish, openBot } from '../packages/core/src/bot';
+import type { Session } from '../packages/core/src/inprocess';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { configureSpecialistGuardEnv, readServerHost, runMeleePvpSpecialist, type StopFn } from './combat-quest-specialists';
 
@@ -20,34 +21,54 @@ async function main(): Promise<void> {
 
     const root = resolve(import.meta.dir, '..');
     configureSpecialistGuardEnv();
-    const s = await openBot(bot);
+    const retired = new WeakSet<Session>();
+    let ended = false;
+    let stopRequested = false;
+    const s = await openBot(bot, {
+        onStop: async (sess, detail) => {
+            if (retired.has(sess)) return;
+            stopRequested = true;
+            await finish([sess], false, detail);
+        },
+        onSessionEnd: async (sess, detail) => {
+            if (retired.has(sess)) return;
+            ended = true;
+            await finish([sess], false, detail);
+        },
+    });
     const serverHost = readServerHost(root, bot);
     if (!serverHost) {
         await finish([s], false, `missing SERVER in bot.env for ${bot}`);
         return;
     }
 
-    let ended = false;
-    void s.ended?.then(() => { ended = true; });
     const t0 = s.tick();
     const stop: StopFn = () =>
+        stopRequested ||
         ended ||
-        s.tick() - t0 >= CAP ||
+        (!retired.has(s) && s.tick() - t0 >= CAP) ||
         existsSync(join(root, '.practice', `stop-${bot}`)) ||
         (!isLocalServer(serverHost) && existsSync(join(root, '.practice', 'stop-swarm')));
 
     try {
-        const msg = await runMeleePvpSpecialist(s, {
+        const res = await runMeleePvpSpecialist(s, {
+            botName: bot,
             board: 'defence',
             supplierName,
             tankNames,
             cap: CAP,
             t0,
             stop,
+            onRetireSession: sess => retired.add(sess),
         });
-        await finish([s], true, msg);
+        await finish([res.session], true, res.message);
     } catch (e) {
-        await finish([s], false, String(e));
+        if (!retired.has(s)) {
+            await finish([s], false, String(e));
+        } else {
+            const errSess = await openBot(bot, { log: () => {} }).catch(() => null);
+            await finish(errSess ? [errSess] : [], false, String(e));
+        }
     }
 }
 

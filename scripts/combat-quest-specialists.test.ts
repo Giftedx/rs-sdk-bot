@@ -23,6 +23,7 @@ import {
     kitRequirements,
     kitSlotTotal,
     pickCourtyardMagicTarget,
+    rankKeepRelogTanks,
     runSpecialistWaterfall,
 } from './combat-quest-specialists';
 import { runQuestBall } from './generated/quest-ball';
@@ -33,11 +34,13 @@ import { runWaterfall } from './generated/waterfall';
 import { benchCases } from './measure/aio-bench-cases';
 import {
     SPECIALIST_COMBAT_QUESTS_CASES,
+    buildCombatSpecialistRehearsalSegment,
     kitToSaveInventory,
     supplierPresetConfig,
     tankPostPresetConfig,
     tankSupplierPresetConfig,
 } from './measure/specialist-combat-quests-cases';
+import { checkSpecialistSegment, resolveSegmentSuppliers } from '../packages/practice/src/rehearse';
 import {
     hasExactKit as supplierHasExactKit,
     resolveBaseId,
@@ -140,7 +143,7 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
         expect(STRENGTH_SPECIALIST_KIT).toBe(KIT_BY_BOARD.strength);
         expect(DEFENCE_SPECIALIST_KIT).toBe(KIT_BY_BOARD.defence);
         for (const kit of [STRENGTH_SPECIALIST_KIT, DEFENCE_SPECIALIST_KIT]) {
-            expect(kit.find(k => k.id === 1333)?.count).toBe(1);
+            expect(kit.find(k => k.id === 1319)?.count).toBe(1);
             expect(kit.find(k => k.id === 2434)?.count).toBeGreaterThanOrEqual(2);
             expect(kit.find(k => k.id === 3016)?.count).toBeGreaterThanOrEqual(7);
         }
@@ -178,6 +181,18 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
         expect(tankPost.equipment?.some(e => e.id === 2552 && e.slot === 12)).toBe(true);
         expect(tankPost.inventory?.length).toBe(28);
         expect(tankPost.inventory?.every(i => i.id === 391)).toBe(true);
+
+        const ranked = rankKeepRelogTanks(
+            [
+                { index: 1, name: 'tankA', x: 3154, z: 3924, hp: 99 },
+                { index: 2, name: 'tankB', x: 3155, z: 3923, hp: 99 },
+                { index: 3, name: 'tankFar', x: 3157, z: 3924, hp: 99 },
+                { index: 4, name: 'tankDead', x: 3154, z: 3923, hp: 0 },
+            ],
+            ['tankA', 'tankB', 'tankFar', 'tankDead'],
+            new Map([['tanka', 5], ['tankb', 2]]),
+        );
+        expect(ranked.map(r => r.name)).toEqual(['tankB', 'tankA']);
     });
 });
 
@@ -216,6 +231,16 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
         expect(intentForEntry('scripts/hp-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'hitpoints', targetLevel: 99 });
         expect(intentForEntry('scripts/strength-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'strength', targetLevel: 99 });
         expect(intentForEntry('scripts/defence-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'defence', targetLevel: 99 });
+
+        for (const [acc, board, minSup] of [
+            ['FullBlooded', 'Hitpoints', 1],
+            ['BigSwinger', 'Strength', 3],
+            ['RockSolid', 'Defence', 3],
+        ] as const) {
+            const seg = buildCombatSpecialistRehearsalSegment(acc);
+            expect(checkSpecialistSegment(seg, acc)).toBe(board);
+            expect(resolveSegmentSuppliers(seg).length).toBe(minSup);
+        }
     });
 
     test('observedSupplies, validateSupplies, and validateDelivery round-trip for combat specialist kits and tasks', () => {

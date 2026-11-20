@@ -1,10 +1,12 @@
 // Bench cases and multi-actor fresh-clock coordinator for Hitpoints, Strength, and Defence combat-quest specialists.
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
 import { finish, openBot } from '../../packages/core/src/bot';
 import type { SaveConfig } from '../../packages/practice/src/presets';
 import { killTree } from '../../packages/practice/src/proc';
+import type { RehearsalReport } from '../../packages/practice/src/rehearse';
 import { playerSavePath } from '../../packages/practice/src/save-library';
+import { scoredClock } from '../../packages/practice/src/specialist-rehearsal';
 import {
     DEFENCE_SPECIALIST_KIT,
     HP_SPECIALIST_KIT,
@@ -49,7 +51,7 @@ const TANK_SKILLS = {
 const TANK_BANK = [
     { id: 563, count: 100 },
     { id: 2552, count: 50 },
-    { id: 391, count: 1000 },
+    { id: 391, count: 1500 },
     { id: 2440, count: 100 },
     { id: 2436, count: 50 },
     { id: 2434, count: 50 },
@@ -76,9 +78,9 @@ export function tankSupplierPresetConfig(kit: readonly KitSpecItem[]): SaveConfi
     };
 }
 
-export function tankPostPresetConfig(): SaveConfig {
+export function tankPostPresetConfig(offsetX = 0): SaveConfig {
     return {
-        position: { x: 3154, z: 3924, level: 0 },
+        position: offsetX === 2 ? { x: 3154, z: 3923, level: 0 } : { x: 3154, z: 3924, level: 0 },
         skills: { ...TANK_SKILLS },
         inventory: Array.from({ length: 28 }, () => ({ id: 391, count: 1 })),
         equipment: [{ id: 1381, count: 1, slot: 3 }, { id: 2552, count: 1, slot: 12 }],
@@ -114,10 +116,11 @@ export const SPECIALIST_COMBAT_QUESTS_CASES: BenchCase[] = [
         script: 'scripts/measure/specialist-combat-quests-cases.ts',
         preset: 'fresh_lumbridge',
         presetConfig: {},
-        scriptArgs: ['strength', '{bot:s}', '{bot:t}'],
+        scriptArgs: ['strength', '{bot:s}', '{bot:t}', '{bot:u}'],
         companions: [
             { suffix: 's', preset: 'fresh_lumbridge', presetConfig: tankSupplierPresetConfig(STRENGTH_SPECIALIST_KIT) },
-            { suffix: 't', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig() },
+            { suffix: 't', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(0) },
+            { suffix: 'u', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(2) },
         ],
         timeoutMs: 900_000,
         pass: s => ok(s) && /strength=99\b/.test(s) && observedTicks(s) <= SPECIALIST_TARGETS.strength.targetTicks && loggedOutOnce(s),
@@ -127,10 +130,11 @@ export const SPECIALIST_COMBAT_QUESTS_CASES: BenchCase[] = [
         script: 'scripts/measure/specialist-combat-quests-cases.ts',
         preset: 'fresh_lumbridge',
         presetConfig: {},
-        scriptArgs: ['defence', '{bot:s}', '{bot:t}'],
+        scriptArgs: ['defence', '{bot:s}', '{bot:t}', '{bot:u}'],
         companions: [
             { suffix: 's', preset: 'fresh_lumbridge', presetConfig: tankSupplierPresetConfig(DEFENCE_SPECIALIST_KIT) },
-            { suffix: 't', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig() },
+            { suffix: 't', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(0) },
+            { suffix: 'u', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig(2) },
         ],
         timeoutMs: 900_000,
         pass: s => ok(s) && /defence=99\b/.test(s) && observedTicks(s) <= SPECIALIST_TARGETS.defence.targetTicks && loggedOutOnce(s),
@@ -187,9 +191,9 @@ async function runCompanionMain(args: string[]): Promise<void> {
 }
 
 async function runCoordinatorMain(args: string[]): Promise<void> {
-    const [bot, modeRaw, supplier, tank] = args;
+    const [bot, modeRaw, supplier, ...tanks] = args;
     if (!bot || !modeRaw || !supplier || !(modeRaw in SPECIALIST_SCRIPT)) {
-        throw Error('usage: specialist-combat-quests-cases.ts <bot> <hp|strength|defence> <supplier> [tank]');
+        throw Error('usage: specialist-combat-quests-cases.ts <bot> <hp|strength|defence> <supplier> [tank...]');
     }
     const mode = modeRaw as 'hp' | 'strength' | 'defence';
     const board = SPECIALIST_BOARD[mode];
@@ -226,7 +230,7 @@ async function runCoordinatorMain(args: string[]): Promise<void> {
             ? [{ account: supplier, role: 'supplier', offsetX: 0 }]
             : [
                 { account: supplier, role: 'supplier-tank', offsetX: 1 },
-                ...(tank ? [{ account: tank, role: 'tank' as const, offsetX: 0 }] : []),
+                ...tanks.map((t, i) => ({ account: t, role: 'tank' as const, offsetX: i === 0 ? 0 : i + 1 })),
             ];
 
     const procs: ReturnType<typeof Bun.spawn>[] = [];
@@ -282,7 +286,7 @@ async function runCoordinatorMain(args: string[]): Promise<void> {
         ]);
         clearTimeout(readyTimer);
 
-        const tankEnv = tank ? `${supplier},${tank}` : supplier;
+        const tankEnv = [supplier, ...tanks].join(',');
         specProc = Bun.spawn(['bun', resolve(ROOT, specialistScript), bot], {
             cwd: ROOT,
             env: {
@@ -319,9 +323,175 @@ async function runCoordinatorMain(args: string[]): Promise<void> {
     }
 }
 
+const REHEARSE_GUARD_ENV: Record<string, string> = {
+    FLEE_GUARD: '0',
+    DEATH_RECOVERY: '0',
+    VALUE_GUARD: '0',
+    LOOT_WATCH: '0',
+    PRAYER_GUARD: '0',
+    EAT_GUARD: '0',
+    RANDOM_EVENTS: '0',
+    STALL_TICKS: '0',
+};
+
+export function buildCombatSpecialistRehearsalSegment(
+    accountRaw: string,
+    opts?: { planTicks?: number },
+) {
+    const key = accountRaw.trim().toLowerCase();
+    const override = opts?.planTicks;
+    if (key === 'fullblooded') {
+        return {
+            specialist: 'FullBlooded',
+            id: 'fullblooded-hitpoints',
+            start: { fresh: true as const },
+            script: 'scripts/hp-specialist.ts',
+            env: { CAP: '12000' },
+            supplier: {
+                script: 'scripts/specialist-supplier.ts',
+                args: ['{ACTOR}', '--kit=hp', '12000'],
+                env: { ...REHEARSE_GUARD_ENV },
+                save: { position: { x: 3223, z: 3222, level: 0 }, inventory: kitToSaveInventory(HP_SPECIALIST_KIT) },
+            },
+            plan: { ticks: override ?? 8620, source: 'hosted-bench fighter:specialist-hp (<=11116t vs #1 11343t)' },
+            expect: { skills: { Hitpoints: 99 } },
+            timeoutMs: 900_000,
+        };
+    }
+    if (key === 'bigswinger' || key === 'rocksolid') {
+        const isStr = key === 'bigswinger';
+        const board = isStr ? 'strength' : 'defence';
+        const skill = isStr ? 'Strength' : 'Defence';
+        const cap = isStr ? '6000' : '7500';
+        const kit = isStr ? STRENGTH_SPECIALIST_KIT : DEFENCE_SPECIALIST_KIT;
+        const planTicks = override ?? (isStr ? 2150 : 2250);
+        return {
+            specialist: isStr ? 'BigSwinger' : 'RockSolid',
+            id: isStr ? 'bigswinger-strength' : 'rocksolid-defence',
+            start: { fresh: true as const },
+            script: isStr ? 'scripts/strength-specialist.ts' : 'scripts/defence-specialist.ts',
+            env: { CAP: cap },
+            suppliers: [
+                {
+                    script: 'scripts/measure/specialist-combat-quests-cases.ts',
+                    args: ['--companion', '{ACTOR}', 'supplier-tank', board, '1'],
+                    env: { ...REHEARSE_GUARD_ENV },
+                    save: tankSupplierPresetConfig(kit),
+                },
+                {
+                    script: 'scripts/measure/specialist-combat-quests-cases.ts',
+                    args: ['--companion', '{ACTOR}', 'tank', board, '0'],
+                    env: { ...REHEARSE_GUARD_ENV },
+                    save: tankPostPresetConfig(0),
+                },
+                {
+                    script: 'scripts/measure/specialist-combat-quests-cases.ts',
+                    args: ['--companion', '{ACTOR}', 'tank', board, '2'],
+                    env: { ...REHEARSE_GUARD_ENV },
+                    save: tankPostPresetConfig(2),
+                },
+            ],
+            plan: {
+                ticks: planTicks,
+                source: isStr
+                    ? 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=3222t vs #1 3288t)'
+                    : 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=4236t vs #1 4323t)',
+            },
+            expect: { skills: { [skill]: 99 } },
+            timeoutMs: 900_000,
+        };
+    }
+    throw Error(`unknown combat specialist account "${accountRaw}" (expected FullBlooded, BigSwinger, RockSolid)`);
+}
+
+async function runRehearseMain(args: string[]): Promise<void> {
+    const accounts: string[] = [];
+    let planTicks: number | undefined;
+    for (let i = 0; i < args.length; i++) {
+        const a = args[i]!;
+        if (a === '--all') {
+            accounts.push('FullBlooded', 'BigSwinger', 'RockSolid');
+        } else if (a.startsWith('--plan-ticks=')) {
+            planTicks = Number(a.slice('--plan-ticks='.length));
+        } else if (a === '--plan-ticks') {
+            planTicks = Number(args[++i]);
+        } else if (!a.startsWith('-')) {
+            accounts.push(a);
+        }
+    }
+    if (accounts.length === 0) throw Error('usage: specialist-combat-quests-cases.ts --rehearse <FullBlooded|BigSwinger|RockSolid|--all> [--plan-ticks=<n>]');
+
+    const engineDir = join(ROOT, 'vendor', 'rs-sdk', 'server', 'engine');
+    if (!existsSync(join(engineDir, 'data', 'pack', 'server', 'script.dat'))) {
+        const built = Bun.spawnSync(['bun', 'run', 'build'], { cwd: engineDir, stdout: 'inherit', stderr: 'inherit', windowsHide: true });
+        if (built.exitCode !== 0) throw Error(`engine asset build failed (${built.exitCode})`);
+    }
+
+    const baseOut = join(ROOT, '.practice', 'hosted-rehearse');
+    mkdirSync(baseOut, { recursive: true });
+    let allOk = true;
+    for (const acc of accounts) {
+        const seg = buildCombatSpecialistRehearsalSegment(acc, { planTicks });
+        const segFile = join(baseOut, `${seg.specialist.toLowerCase()}.segment.json`);
+        const outRel = `.practice/hosted-rehearse/${seg.specialist.toLowerCase()}`;
+        const outAbs = resolve(ROOT, outRel);
+        rmSync(outAbs, { recursive: true, force: true });
+        writeFileSync(segFile, JSON.stringify(seg, null, 2) + '\n');
+        const proc = Bun.spawn(['bun', 'packages/practice/src/rehearse.ts', '--specialist', segFile, '--start', '--out', outRel], {
+            cwd: ROOT,
+            stdout: 'inherit',
+            stderr: 'inherit',
+            windowsHide: true,
+        });
+        const code = await proc.exited;
+        const reportPath = join(outAbs, `${seg.id}.json`);
+        const receiptPath = join(outAbs, `${seg.id}.receipt.json`);
+        const report = existsSync(reportPath) ? (JSON.parse(readFileSync(reportPath, 'utf8')) as RehearsalReport) : null;
+        const receipt = existsSync(receiptPath) ? (JSON.parse(readFileSync(receiptPath, 'utf8')) as { endPlaytime?: number; boardTicks?: Record<string, number> }) : null;
+        let boardTicks = receipt?.boardTicks ?? null;
+        let endPlaytime = receipt?.endPlaytime ?? null;
+        const board = Object.keys(seg.expect.skills)[0]!;
+        if (!receipt && report?.account) {
+            try {
+                const c = scoredClock(readFileSync(playerSavePath(report.account)), board);
+                boardTicks = { [board]: c.boardTick };
+                endPlaytime = c.endPlaytime;
+            } catch { /* no save */ }
+        }
+        console.log('COMBAT_REHEARSAL_SUMMARY ' + JSON.stringify({
+            account: seg.specialist,
+            board,
+            code,
+            ok: report?.ok === true,
+            wholeClock: report?.checks?.wholeClock === true,
+            planTicks: seg.plan.ticks,
+            ticks: report?.ticks ?? null,
+            checks: report?.checks ?? null,
+            boardTicks,
+            endPlaytime,
+            scope: report?.scope ?? null,
+            outDir: relative(ROOT, outAbs).replaceAll('\\', '/'),
+        }));
+        if (code !== 0 || report?.ok !== true || report?.checks?.wholeClock !== true) {
+            allOk = false;
+            const logPath = join(outAbs, `${seg.id}.log`);
+            if (existsSync(logPath)) {
+                console.log(`--- ${seg.id}.log tail ---\n` + readFileSync(logPath, 'utf8').split(/\r?\n/).slice(-50).join('\n'));
+            }
+        }
+    }
+    if (!allOk) process.exitCode = 1;
+}
+
 if (import.meta.main) {
     const args = process.argv.slice(2);
-    const entry = args[0] === '--companion' ? runCompanionMain(args.slice(1)) : runCoordinatorMain(args);
+    const entry = args[0] === '--companion'
+        ? runCompanionMain(args.slice(1))
+        : args[1] === '--companion'
+            ? runCompanionMain([args[0]!, ...args.slice(2)])
+            : args[0] === '--rehearse'
+                ? runRehearseMain(args.slice(1))
+                : runCoordinatorMain(args);
     entry.catch(err => {
         console.log(`RESULT fail ${String(err instanceof Error ? err.message : err)}`);
         process.exit(1);

@@ -1,13 +1,14 @@
 // Shared specialist combat-quest kits, navigation, supplier/tank companion helpers, and PvP training loops.
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { accountOf, finish, getWorld } from '../packages/core/src/bot';
+import { accountOf, awaitBotReady, botWork, closeWithin, finish, getWorld, logoutSession, openBot } from '../packages/core/src/bot';
 import { protectedFromMelee } from '../packages/core/src/danger';
 import { withDoorPolicy } from '../packages/core/src/door-policy';
-import type { Session } from '../packages/core/src/inprocess';
+import { connectInProcess, type Session } from '../packages/core/src/inprocess';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { componentId } from '../packages/core/src/logout';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
+import { createTickRecorder } from '../packages/core/src/tick-record';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { applyKnownDoorBlocks, goTo, sessionWalker, walkPath } from '../packages/core/src/walk';
 import { giantStyle } from './gather-combat';
@@ -103,12 +104,12 @@ export function countAntipoisonDoses(items: readonly { id: number; baseId?: numb
     return doses;
 }
 
-// 28 slots exact: Waterfall (83 Atk/Str) + 8x Super energy for 100% run + Prayer/Shark; Keep PvP pots delivered at Keep.
+// 28 slots exact: Waterfall (83 Atk/Str) + 7x Super energy for 100% run + 1-tick Rune 2h relog Keep PvP.
 export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 556, name: 'Air rune', count: 6, stackable: true },
     { id: 557, name: 'Earth rune', count: 6, stackable: true },
     { id: 555, name: 'Water rune', count: 6, stackable: true },
-    { id: 1333, name: 'Rune scimitar', count: 1, stackable: false },
+    { id: 1319, name: 'Rune 2h sword', count: 1, stackable: false },
     { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 954, name: 'Rope', count: 1, stackable: false },
@@ -893,6 +894,160 @@ export async function runWildyPvpLoop(
     }
 }
 
+export function rankKeepRelogTanks<T extends { index: number; name?: string; x?: number; z?: number; worldX?: number; worldZ?: number; hp?: number | null }>(
+    players: readonly T[],
+    tankNames: readonly string[],
+    lastHitSeq?: ReadonlyMap<string, number>,
+): T[] {
+    const tankRes = tankNames.map(exactNameRe);
+    return players
+        .filter(p => {
+            if (!tankRes.some(re => re.test(p.name ?? ''))) return false;
+            const z = p.z ?? p.worldZ ?? 0;
+            if (z < 3900) return false;
+            if (p.hp !== undefined && p.hp !== null && p.hp <= 0) return false;
+            return d8({ x: p.x ?? p.worldX ?? 0, z }, KEEP_SPECIALIST_POST) <= 1;
+        })
+        .sort((a, b) => {
+            const sa = lastHitSeq?.get((a.name ?? '').toLowerCase()) ?? 0;
+            const sb = lastHitSeq?.get((b.name ?? '').toLowerCase()) ?? 0;
+            if (sa !== sb) return sa - sb;
+            const da = d8({ x: a.x ?? a.worldX ?? 0, z: a.z ?? a.worldZ ?? 0 }, KEEP_SPECIALIST_POST);
+            const db = d8({ x: b.x ?? b.worldX ?? 0, z: b.z ?? b.worldZ ?? 0 }, KEEP_SPECIALIST_POST);
+            return da - db;
+        });
+}
+
+function readRelogCredentials(root: string, bot: string): { password: string; server: string } {
+    const raw = readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', bot, 'bot.env'), 'utf8');
+    const password = raw.match(/^PASSWORD=(.*)$/m)?.[1]?.trim() ?? '';
+    const server = raw.match(/^SERVER=(.*)$/m)?.[1]?.trim() ?? '';
+    if (!password || !server) throw Error(`missing credentials in bots/${bot}/bot.env`);
+    return { password, server };
+}
+
+export async function runWildyPvpRelogLoop(
+    initSess: Session,
+    opts: {
+        botName: string;
+        board: 'strength' | 'defence';
+        skill: 'Strength' | 'Defence';
+        targetLevel: number;
+        tankNames: readonly string[];
+        setupTicks: number;
+        cap: number;
+        shouldStop: () => boolean;
+        onRetireSession?: (s: Session) => void;
+    },
+): Promise<{ session: Session; totalTicks: number; swings: number }> {
+    const root = resolve(import.meta.dir, '..');
+    const creds = readRelogCredentials(root, opts.botName);
+    const members = isLocalServer(creds.server) || process.env.NODE_MEMBERS === 'true' ? true : undefined;
+    const work = botWork(opts.botName);
+    const logoutCom = componentId('logout:try_logout');
+    const ultStrCom = componentId('prayer:prayer_ultimatestrength');
+    const incRefCom = componentId('prayer:prayer_incrediblereflexes');
+    const styleCom = componentId(opts.board === 'strength' ? 'combat_heavysword:heavy1' : 'combat_heavysword:heavy3');
+
+    let totalTicks = opts.setupTicks;
+    let swings = 0;
+    const lastHitSeq = new Map<string, number>();
+
+    opts.onRetireSession?.(initSess);
+    await logoutSession(initSess);
+    await closeWithin([initSess], 5000);
+    await Bun.sleep(40);
+    totalTicks += 1;
+
+    while (!opts.shouldStop() && totalTicks < opts.cap) {
+        let sess: Session | undefined;
+        let rec: ReturnType<typeof createTickRecorder> = null;
+        try {
+            sess = await connectInProcess({ name: opts.botName, password: creds.password, server: creds.server, ...(members ? { members } : {}), work });
+            await awaitBotReady(sess, () => {});
+            const p0 = posOf(sess);
+            sess.lifecycle?.record('ready', `${p0?.worldX ?? 0} ${p0?.worldZ ?? 0} ${p0?.level ?? 0}`);
+            rec = createTickRecorder({ account: opts.botName, server: creds.server, script: work.script, argv: work.args, startedAt: Date.now() });
+            if (rec && sess.record) sess.record(rec);
+
+            const tick0 = sess.tick();
+            const curStat = skillInfo(sess, opts.skill);
+            if (curStat.baseLevel >= opts.targetLevel) {
+                await logoutSession(sess);
+                await closeWithin([sess], 5000);
+                if (rec) await Promise.race([rec.flushed, Bun.sleep(3000)]);
+                totalTicks += Math.max(0, sess.tick() - tick0) + 1;
+
+                const finalSess = await openBot(opts.botName, { log: () => {} });
+                await dismissContinueDialogs(finalSess, () => true, 4);
+                return { session: finalSess, totalTicks, swings };
+            }
+
+            if (!p0 || p0.worldZ < 3900) {
+                if (!p0 || p0.worldZ < 3800) await pullArdougneLeverToWildy(sess, opts.shouldStop);
+                await walkWaypoints(sess, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 30, opts.shouldStop, 'walk keep relog');
+            } else if (d8({ x: p0.worldX, z: p0.worldZ }, KEEP_SPECIALIST_POST) > 0) {
+                await walkWaypoints(sess, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 15, opts.shouldStop, 'recenter keep relog');
+            }
+
+            if (!sess.sdk.getEquipment().some(e => e.id === 1319)) {
+                await equipItemById(sess, 1319, opts.shouldStop, 'Rune 2h sword');
+            }
+
+            let target = rankKeepRelogTanks(sess.sdk.getState()?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq)[0];
+            if (!target) {
+                await waitUntil(
+                    sess,
+                    st => rankKeepRelogTanks(st?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq).length > 0 || opts.shouldStop(),
+                    { timeoutTicks: 40 },
+                );
+                target = rankKeepRelogTanks(sess.sdk.getState()?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq)[0];
+            }
+            if (!target) {
+                const tOut = sess.tick();
+                await logoutSession(sess);
+                await closeWithin([sess], 5000);
+                if (rec) await Promise.race([rec.flushed, Bun.sleep(3000)]);
+                totalTicks += Math.max(0, tOut - tick0) + 1;
+                continue;
+            }
+
+            const prayPts = sess.sdk.getState()?.prayers?.prayerPoints ?? 0;
+            const prayBase = skillInfo(sess, 'Prayer').baseLevel;
+            lastHitSeq.set((target.name ?? '').toLowerCase(), swings + 1);
+            if (prayPts > 0 && prayBase >= 31) void sess.direct({ type: 'clickComponent', componentId: ultStrCom, reason: 'SDK' });
+            if (prayPts > 0 && prayBase >= 34) void sess.direct({ type: 'clickComponent', componentId: incRefCom, reason: 'SDK' });
+            void sess.direct({ type: 'clickComponent', componentId: styleCom, reason: 'SDK' });
+            void sess.direct({ type: 'interactPlayer', playerIndex: target.index, optionIndex: 2, reason: 'SDK' });
+            void sess.direct({ type: 'clickComponent', componentId: logoutCom, reason: 'SDK' });
+
+            const endReason = await Promise.race([
+                sess.ended.then(e => e.reason),
+                waitTicks(sess, 4).then(() => 'timeout'),
+            ]);
+            const endTick = sess.tick();
+            if (endReason === 'timeout') await logoutSession(sess);
+            await closeWithin([sess], 5000);
+            if (rec) await Promise.race([rec.flushed, Bun.sleep(3000)]);
+            swings++;
+            totalTicks += Math.max(0, endTick - tick0) + 1;
+
+            if (swings % 100 === 0) {
+                console.log(`PVP_RELOG_PROGRESS tick=${totalTicks} ${opts.skill}=${curStat.baseLevel} xp=${curStat.experience} swings=${swings}`);
+            }
+        } catch (err) {
+            if (sess) {
+                await logoutSession(sess).catch(() => {});
+                await closeWithin([sess], 3000).catch(() => {});
+            }
+            if (rec) await Promise.race([rec.flushed, Bun.sleep(1000)]).catch(() => {});
+            throw err;
+        }
+    }
+
+    throw Error(`${opts.skill} relog PvP stopped/capped at totalTicks=${totalTicks} swings=${swings}`);
+}
+
 async function bankAndReturnToKeep(s: Session, stop: StopFn, keepKit?: readonly KitSpecItem[]): Promise<void> {
     // Unequip worn Ring of dueling if needed, teleport to Castle Wars Chest, stock 1 Law + Keep pots + Manta rays, Camelot -> Lever.
     const hasInvRing = () => s.sdk.getInventory().some(i => (DUELING_RING_IDS as readonly number[]).includes(i.id));
@@ -982,11 +1137,7 @@ export async function runCompanionRole(
     await waitUntil(s, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 });
     await setAutoRetaliate(s, false);
 
-    const keepKit =
-        opts.keepKit ??
-        (opts.role === 'supplier-tank' && (opts.board === 'strength' || opts.board === 'defence')
-            ? KEEP_TOPUP_BY_BOARD[opts.board]
-            : undefined);
+    const keepKit = opts.keepKit;
 
     if (opts.role === 'supplier' || opts.role === 'supplier-tank') {
         const kit = opts.kit!;
@@ -1021,10 +1172,12 @@ export async function runCompanionRole(
         console.log('COMPANION_READY ' + JSON.stringify({ role: opts.role, name: s.name, at: { x: p.worldX, z: p.worldZ, level: p.level } }));
     }
 
-    // Specialist stands at (3155,3924); tanks occupy (3154,3924) and (3155,3923), both d8=1 from specialist and away from lever (3153,3923).
+    // Specialist stands at (3155,3924); tanks occupy (3154,3924), (3155,3923), and (3154,3923), all d8=1 from specialist.
     const postTile = opts.postTileOffsetX === 0
         ? { x: 3154, z: 3924, level: 0 }
-        : { x: 3155, z: 3923, level: 0 };
+        : opts.postTileOffsetX === 1
+            ? { x: 3155, z: 3923, level: 0 }
+            : { x: 3154, z: 3923, level: 0 };
     const specialistRe = exactNameRe(opts.specialistName);
     const keepGiveList = (keepKit ?? []).map(k => ({ item: exactNameRe(k.name), amount: k.count }));
     let keepDelivered = !keepKit?.length;
@@ -1068,11 +1221,11 @@ export async function runCompanionRole(
             }
             const mantaCount = countById(s.sdk.getInventory(), 391);
             const hp = skillInfo(s, 'Hitpoints').level;
-            const otherTankAtPost = (s.sdk.getState()?.nearbyPlayers ?? []).some((np: any) =>
+            const otherTanksAtPost = (s.sdk.getState()?.nearbyPlayers ?? []).filter((np: any) =>
                 !specialistRe.test(np.name ?? '') &&
                 d8({ x: np.x ?? np.worldX ?? 0, z: np.z ?? np.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 1 &&
                 (np.hp === undefined || np.hp === null || np.hp > 0),
-            );
+            ).length;
             if (hp > 0 && hp <= 77 && mantaCount > 0 && s.tick() - lastEatTick >= 3) {
                 const food = s.sdk.getInventory().find(i => i.id === 391);
                 if (food) {
@@ -1080,7 +1233,7 @@ export async function runCompanionRole(
                     await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
                 }
             }
-            if (keepDelivered && ((mantaCount <= 7 && otherTankAtPost) || mantaCount <= 1)) {
+            if (keepDelivered && ((mantaCount <= 10 && otherTanksAtPost >= 2) || (mantaCount <= 5 && otherTanksAtPost >= 1) || mantaCount <= 1)) {
                 if (await pullKeepLeverOutAndRebank(s, stop)) continue;
             }
             await waitTicks(s, 1);
@@ -1136,7 +1289,7 @@ export async function runSpecialistWaterfall(
         statue: { id: 2006, x: 2565, z: 9916 },
         chalice: { id: 2014, x: 2603, z: 9910 },
     } as const;
-    const ITEM = { book: 292, golrieKey: 293, pebble: 294, amulet: 295, urn: 296, baxKey: 298, rope: 954, scim: 1333, air: 556, earth: 557, water: 555 } as const;
+    const ITEM = { book: 292, golrieKey: 293, pebble: 294, amulet: 295, urn: 296, baxKey: 298, rope: 954, scim: 1319, air: 556, earth: 557, water: 555 } as const;
     const RUNES = [ITEM.air, ITEM.earth, ITEM.water] as const;
     const PILLARS: readonly [number, number][] = [[2569, 9910], [2569, 9912], [2569, 9914], [2562, 9910], [2562, 9912], [2562, 9914]];
 
@@ -1427,18 +1580,19 @@ export async function runSpecialistWaterfall(
 export async function runMeleePvpSpecialist(
     s: Session,
     opts: {
+        botName?: string;
         board: 'strength' | 'defence';
         supplierName: string;
         tankNames: readonly string[];
         cap: number;
         t0: number;
         stop: StopFn;
+        onRetireSession?: (sess: Session) => void;
         runWaterfallFn?: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; protectMelee?: boolean; tombHoldIds?: readonly number[]; looseRailing?: boolean; superEnergy?: boolean }) => Promise<unknown>;
     },
-): Promise<string> {
+): Promise<{ session: Session; message: string }> {
     const skill = opts.board === 'strength' ? 'Strength' : 'Defence';
     const kit = KIT_BY_BOARD[opts.board];
-    const keepKit = KEEP_TOPUP_BY_BOARD[opts.board];
     const target = SPECIALIST_TARGETS[opts.board];
     const elapsed = () => s.tick() - opts.t0;
     const milestone = (step: string, extra = '') => {
@@ -1506,7 +1660,7 @@ export async function runMeleePvpSpecialist(
             exitFalls: true,
             keepAlive: true,
             protectMelee: true,
-            tombHoldIds: [1333],
+            tombHoldIds: [1319],
             looseRailing: true,
             superEnergy: true,
         });
@@ -1523,20 +1677,11 @@ export async function runMeleePvpSpecialist(
         onTickExtra: () => {
             ensureRunAndEnergy();
             if (s.tick() - preEquippedWait >= 2) {
-                const gear = s.sdk.getInventory().find(i => i.id === 1333);
+                const gear = s.sdk.getInventory().find(i => i.id === 1319);
                 if (gear) {
                     const wieldOp = (gear.optionsWithIndex ?? []).find((o: any) => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
                     preEquippedWait = s.tick();
                     void s.direct({ type: 'useInventoryItem', slot: gear.slot, optionIndex: wieldOp, reason: 'SDK' });
-                } else {
-                    const cs = s.sdk.getState()?.combatStyle;
-                    if (cs?.known && cs.weaponName === 'Rune scimitar') {
-                        const style = giantStyle(cs, skill);
-                        if (cs.currentStyle !== style.index) {
-                            preEquippedWait = s.tick();
-                            void s.sdk.sendSetCombatStyle(style.index);
-                        }
-                    }
                 }
             }
             const junk = s.sdk.getInventory().find(i => postWaterfallJunk.has(i.id));
@@ -1547,33 +1692,30 @@ export async function runMeleePvpSpecialist(
     milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
     await walkWaypoints(s, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 30, opts.stop, 'step to keep post');
-    for (let i = 0; i < 4 && !opts.stop(); i++) {
-        const leftover = s.sdk.getInventory().filter(x => postWaterfallJunk.has(x.id) || (SUPER_ENERGY_IDS as readonly number[]).includes(x.id)).slice(0, 5);
-        if (leftover.length === 0) break;
-        await Promise.all(leftover.map(x => s.direct({ type: 'dropItem', slot: x.slot, reason: 'SDK' })));
-        await waitTicks(s, 1);
-    }
+    await setAutoRetaliate(s, false);
+    await equipItemById(s, 1319, opts.stop, 'Rune 2h sword');
+    await equipFirstAvailableId(s, [1725, 1731], opts.stop, 'Amulet of strength/power');
 
-    if (!hasAtLeastKit(s.sdk.getInventory(), keepKit)) {
-        const supRe = exactNameRe(opts.supplierName);
-        const keepPartner = (s.sdk.getState()?.nearbyPlayers ?? []).find(
-            (np: any) => supRe.test(np.name ?? '') && (np.z ?? np.worldZ ?? 0) >= 3900 && d8({ x: np.x ?? np.worldX ?? 0, z: np.z ?? np.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 4,
-        );
-        if (keepPartner?.name) {
-            await receiveSupplyKit(s, keepPartner.name, keepKit, opts.stop, { skipWalk: true, timeoutTicks: 40 });
-            milestone('keep_topup', `from=${keepPartner.name}`);
-        }
-    }
+    const { session: finalSess, totalTicks } = await runWildyPvpRelogLoop(s, {
+        botName: opts.botName ?? s.name,
+        board: opts.board,
+        skill,
+        targetLevel: 99,
+        tankNames: opts.tankNames,
+        setupTicks: elapsed(),
+        cap: opts.cap,
+        shouldStop: opts.stop,
+        onRetireSession: opts.onRetireSession,
+    });
 
-    await runWildyPvpLoop(s, { skill, targetLevel: 99, tankNames: opts.tankNames, stop: opts.stop });
-
-    await dismissContinueDialogs(s, opts.stop, 4);
-    await s.bot.dismissBlockingUI();
-
-    const sk = skillInfo(s, skill);
-    milestone('complete', `${opts.board}=${sk.baseLevel} xp=${sk.experience} targetTicks=${target.targetTicks}`);
+    await finalSess.bot.dismissBlockingUI();
+    const sk = skillInfo(finalSess, skill);
+    console.log(`MILESTONE complete tick=${totalTicks} ${opts.board}=${sk.baseLevel} xp=${sk.experience} targetTicks=${target.targetTicks}`);
     if (sk.baseLevel < 99) throw Error(`${skill} finished at ${sk.baseLevel} (< 99), xp=${sk.experience}`);
-    return `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${elapsed()} liveTarget=${target.targetTicks}`;
+    return {
+        session: finalSess,
+        message: `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${totalTicks} liveTarget=${target.targetTicks}`,
+    };
 }
 
 async function trainMagicToLevel(s: Session, targetLevel: number, stop: StopFn): Promise<void> {
