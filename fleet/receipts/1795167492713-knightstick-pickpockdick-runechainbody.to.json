@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795167492713-knightstick-pickpockdick-runechainbody",
  "account": "PickpockDick",
  "partner": "Knightstick",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "8e57e561-c595-4bba-8abd-c01f27e80ff8",
- "count": 0,
- "ok": false,
- "at": 1795167578342,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795167701108,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795167700339
+ },
+ "logout": {
+  "attemptId": "1795167578350-0000011088-0000000001",
+  "at": 1795167701094,
+  "sha256": "f392248245f4e9a485dc701cc82a4b673511070739a25d171c4085808613fb43"
+ },
+ "screen": true
 }
