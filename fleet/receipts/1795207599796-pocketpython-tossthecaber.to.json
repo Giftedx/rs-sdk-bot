@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795207599796-pocketpython-tossthecaber",
+ "account": "TossTheCaber",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 1021,
+ "claim": "ed4974ea-8cbf-431f-bec7-665b8c8ac5c1",
+ "count": 1021,
+ "ok": true,
+ "at": 1795207666395,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1483,
+  "after": 2504
+ },
+ "bank": {
+  "count": 1021,
+  "at": 1795207665619
+ },
+ "logout": {
+  "attemptId": "1795207637192-0000005124-0000000001",
+  "at": 1795207666382,
+  "sha256": "00b0c3c0adc13a5c7082bebb7f107413f58352b7b10e2a62aee1a4642c1a4a78"
+ },
+ "screen": true
+}
