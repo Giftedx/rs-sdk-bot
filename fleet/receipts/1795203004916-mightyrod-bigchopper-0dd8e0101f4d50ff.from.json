@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795203004916-mightyrod-bigchopper-0dd8e0101f4d50ff",
+ "account": "Mightyrod",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 25,
+ "claim": "53f8b6e8-73de-4434-98a5-d4ef4818df00",
+ "count": 0,
+ "ok": false,
+ "at": 1795203017494,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Law rune",
+   "requested": 10,
+   "count": 0
+  }
+ ]
+}
