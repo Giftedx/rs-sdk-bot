@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795135383412-abracadickra-oreelse",
  "account": "OreElse",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 71730,
  "claim": "6c8e5157-17b8-425a-847f-75bc9edb478e",
- "count": 0,
- "ok": false,
- "at": 1795135434157,
- "detail": "trade claimed"
+ "count": 71730,
+ "ok": true,
+ "at": 1795135452378,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 71730
+ },
+ "bank": {
+  "count": 71730,
+  "at": 1795135451320
+ },
+ "logout": {
+  "attemptId": "1795135434167-0000022716-0000000001",
+  "at": 1795135452065,
+  "sha256": "20bf230eb888970a21bea8330a04f2f64706bf34256105bfdce074dc82d6b781"
+ },
+ "screen": true
 }
