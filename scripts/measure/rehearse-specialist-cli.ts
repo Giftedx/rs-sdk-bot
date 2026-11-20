@@ -4,6 +4,8 @@ import { join, relative, resolve } from 'node:path';
 import { SPECIALIST_BOARDS } from '../../packages/core/src/specialist-boards';
 import { checkSpecialistSegment, type RehearsalReport, type Segment } from '../../packages/practice/src/rehearse';
 import type { SaveConfig } from '../../packages/practice/src/presets';
+import { playerSavePath } from '../../packages/practice/src/save-library';
+import { scoredClock } from '../../packages/practice/src/specialist-rehearsal';
 import { CRAFTING_BATCHES } from '../crafting-specialist';
 import { ITEM_IDS } from '../fast-skills-lib';
 import { HERBLORE_NOTED_SUPPLIES, HERBLORE_STARTER_BATCH } from '../herblore-specialist';
@@ -119,7 +121,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
             position: { x: 3223, z: 3222, level: 0 },
             inventory: expandKitToSave(THIEVING_SPECIALIST_LIVE_KIT),
         }),
-        planTicks: 2070,
+        planTicks: 2189,
         planSource: 'hosted-bench extra:specialist-thieving-live 1999-2143t (<=2221t vs #1 2267t)',
         targetCap: 2221,
     },
@@ -150,7 +152,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
             inventory: expandKitToSave(RANGED_SPECIALIST_LIVE_TRADE1),
             bank: aggregateKitBank(RANGED_SPECIALIST_LIVE_TRADE2),
         }),
-        planTicks: 4550,
+        planTicks: 4450,
         planSource: 'hosted-bench extra:ranged-specialist-live 4505-4774t (<=5483t vs #1 5595t)',
         targetCap: 5483,
     },
@@ -373,6 +375,17 @@ export function collectRehearsalSummary(outDir: string, seg: SpecialistSegmentSp
         boardTicks?: Record<string, number>;
         externalSupplies?: { item: string; count: number; itemId?: number }[];
     }>(join(outDir, `${seg.id}.receipt.json`));
+    let endPlaytime = receipt?.endPlaytime ?? null;
+    let boardTicks = receipt?.boardTicks ?? null;
+    if (!receipt && report?.account && board) {
+        try {
+            const clock = scoredClock(readFileSync(playerSavePath(report.account)), board);
+            endPlaytime = clock.endPlaytime;
+            boardTicks = { [board]: clock.boardTick };
+        } catch {
+            // Rehearsal may fail before writing a final player save on the runner.
+        }
+    }
     return {
         account: seg.specialist,
         board,
@@ -382,8 +395,8 @@ export function collectRehearsalSummary(outDir: string, seg: SpecialistSegmentSp
         planTicks: seg.plan!.ticks,
         ticks: report?.ticks ?? null,
         checks: report?.checks ?? null,
-        endPlaytime: receipt?.endPlaytime ?? null,
-        boardTicks: receipt?.boardTicks ?? null,
+        endPlaytime,
+        boardTicks,
         externalSupplies: receipt?.externalSupplies ?? null,
         context: receipt?.context ?? null,
         scope: report?.scope ?? null,
