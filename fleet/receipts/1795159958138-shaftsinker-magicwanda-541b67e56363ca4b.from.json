@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795159958138-shaftsinker-magicwanda-541b67e56363ca4b",
+ "account": "Shaftsinker",
+ "partner": "Magicwanda",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "bf0d39d4-1ab6-4743-857b-b845f055fdc3",
+ "count": 0,
+ "ok": false,
+ "at": 1795159967667,
+ "detail": "trade claimed"
+}

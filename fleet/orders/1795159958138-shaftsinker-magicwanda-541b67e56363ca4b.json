@@ -1,0 +1,23 @@
+{
+ "id": "1795159958138-shaftsinker-magicwanda-541b67e56363ca4b",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftsinker",
+ "to": "Magicwanda",
+ "item": "Ring of dueling(8)",
+ "count": 1,
+ "start": 1795159958138,
+ "end": 1795161158138,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
