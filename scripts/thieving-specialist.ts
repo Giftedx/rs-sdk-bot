@@ -116,6 +116,26 @@ export function selectPickpocketTier(level: number): PickpocketTier {
     return ARDOUGNE_PICKPOCKET_TIERS[0]!;
 }
 
+export function selectPickpocketTarget<T extends {
+    readonly name: string;
+    readonly distance: number;
+    readonly x: number;
+    readonly z: number;
+    readonly reachable?: boolean;
+    readonly optionsWithIndex: readonly { readonly text: string; readonly opIndex: number }[];
+}>(
+    npcs: readonly T[],
+    tier: PickpocketTier,
+): { target: T | undefined; blocked: T | undefined } {
+    const matching = npcs
+        .filter(n => tier.pattern.test(n.name) && n.optionsWithIndex.some(o => /^pickpocket$/i.test(o.text)))
+        .sort((a, b) => a.distance - b.distance);
+    return {
+        target: matching.find(n => n.reachable !== false),
+        blocked: matching.find(n => n.reachable === false),
+    };
+}
+
 export function isArdougneResumeState(
     pos: { worldX: number; worldZ: number; level: number } | null | undefined,
     hasFood: boolean,
@@ -298,13 +318,13 @@ if (import.meta.main) {
                 }
             }
 
-            const npc = st.nearbyNpcs
-                .filter(n => tier.pattern.test(n.name) && n.optionsWithIndex.some(o => /^pickpocket$/i.test(o.text)))
-                .sort((a, b) => a.distance - b.distance)[0];
+            const { target: npc, blocked } = selectPickpocketTarget(st.nearbyNpcs, tier);
 
             if (!npc) {
                 if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, tier.anchor) > 4) {
                     await main.bot.walkTo(tier.anchor.x, tier.anchor.z, 2);
+                } else if (blocked) {
+                    await main.bot.walkTo(blocked.x, blocked.z, 1);
                 } else {
                     await waitTicks(main, 1);
                 }

@@ -11,6 +11,7 @@ import { MINING_SPECIALIST_SUPPLIES, MINING_SPECIALIST_LIVE_SUPPLIES, remainingI
 import {
     isArdougneResumeState,
     parseThievingCliArgs,
+    selectPickpocketTarget,
     selectPickpocketTier,
     THIEVING_SPECIALIST_SUPPLIES,
     THIEVING_SPECIALIST_LIVE_SUPPLIES,
@@ -128,6 +129,12 @@ describe('gathering specialists supply & progression plans', () => {
             cap: 2200,
             resume: true,
         });
+
+        const warriorTier = selectPickpocketTier(25);
+        expect(selectPickpocketTarget([
+            { name: 'Warrior woman', distance: 2, x: 2624, z: 3297, reachable: false, optionsWithIndex: [{ text: 'Pickpocket', opIndex: 3 }] },
+            { name: 'Warrior woman', distance: 6, x: 2630, z: 3296, reachable: true, optionsWithIndex: [{ text: 'Pickpocket', opIndex: 3 }] },
+        ], warriorTier).target?.x).toBe(2630);
     });
 
     test('extra:thieving-specialist-resume recovers Ardougne food saves within 1,850 ticks', () => {
