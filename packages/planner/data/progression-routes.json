@@ -93309,6 +93309,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/rehearse-specialist-cli.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/relog-bench.ts",
    "intents": [
     "observe"
