@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795142301994-bigchopper-bowbeforeme-dbf8b0d1197d4fe1",
+ "account": "Bigchopper",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 1000,
+ "claim": "90cd7893-99af-44e4-96a7-7c004f27e226",
+ "count": 0,
+ "ok": false,
+ "at": 1795142340464,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Adamant arrowtips",
+   "requested": 500,
+   "count": 0
+  }
+ ]
+}

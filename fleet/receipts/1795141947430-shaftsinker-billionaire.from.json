@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795141947430-shaftsinker-billionaire",
+ "account": "Shaftsinker",
+ "partner": "Billionaire",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 22658,
+ "claim": "a2f5257d-f97f-4c45-96a3-341a2de3a884",
+ "count": 0,
+ "ok": false,
+ "at": 1795142335814,
+ "detail": "trade claimed"
+}
