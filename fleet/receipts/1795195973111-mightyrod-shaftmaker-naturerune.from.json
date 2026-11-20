@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795195973111-mightyrod-shaftmaker-naturerune",
  "account": "Mightyrod",
  "partner": "Shaftmaker",
@@ -12,6 +12,16 @@
  "claim": "f5da5073-fe88-4f66-b126-bac40e68c916",
  "count": 0,
  "ok": false,
- "at": 1795196063828,
- "detail": "trade claimed"
+ "at": 1795196116944,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 50,
+  "at": 1795196116185
+ },
+ "logout": {
+  "attemptId": "1795196063837-0000024096-0000000001",
+  "at": 1795196116932,
+  "sha256": "9186f32e87f0835deddad53c314ecd7be210fccddb609ba961d08d68a63bfc87"
+ },
+ "screen": false
 }
