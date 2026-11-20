@@ -47,7 +47,7 @@ import {
     DEFAULT_STAGE_BANK,
     EDGEVILLE_BANK,
     parseSupplierCliArgs,
-    resolveSupplierKit,
+    resolveSupplierKitPlan,
 } from './specialist-supplier';
 import { SPECIALIST_RANGED_CASES } from './measure/specialist-ranged-cases';
 
@@ -216,12 +216,12 @@ test('parseSpecialistArgs and bench cases validate cleanly', () => {
 });
 
 test('specialist-supplier resolves attack and 2-trade ranged kits and parses CLI options', () => {
-    const attack = resolveSupplierKit(undefined);
+    const attack = resolveSupplierKitPlan(undefined);
     expect(attack.name).toBe('attack');
     expect(attack.legs).toHaveLength(1);
     expect(attack.legs[0]).toEqual({ kit: ATTACK_SPECIALIST_KIT, handoff: LUMBRIDGE_HANDOFF, bank: DEFAULT_STAGE_BANK });
 
-    const ranged = resolveSupplierKit('ranged');
+    const ranged = resolveSupplierKitPlan('ranged');
     expect(ranged.name).toBe('ranged');
     expect(ranged.combined).toBe(RANGED_SPECIALIST_KIT);
     expect(ranged.legs).toEqual([
@@ -229,7 +229,7 @@ test('specialist-supplier resolves attack and 2-trade ranged kits and parses CLI
         { kit: RANGED_SPECIALIST_TRADE2, handoff: EDGEVILLE_SUPPLIER_STAND, bank: EDGEVILLE_BANK },
     ]);
 
-    const live = resolveSupplierKit('ranged-live');
+    const live = resolveSupplierKitPlan('ranged-live');
     expect(live.name).toBe('ranged-live');
     expect(live.combined).toBe(RANGED_SPECIALIST_LIVE_KIT);
     expect(live.legs).toEqual([
@@ -237,7 +237,7 @@ test('specialist-supplier resolves attack and 2-trade ranged kits and parses CLI
         { kit: RANGED_SPECIALIST_LIVE_TRADE2, handoff: EDGEVILLE_SUPPLIER_STAND, bank: EDGEVILLE_BANK },
     ]);
 
-    expect(() => resolveSupplierKit('unknown')).toThrow('unknown kit');
+    expect(() => resolveSupplierKitPlan('unknown')).toThrow('unknown kit');
     expect(parseSupplierCliArgs(['Holder', 'Shaftshooter', '--kit=ranged-live', '6000'])).toEqual({
         kitArg: 'ranged-live',
         cap: 6000,
@@ -349,7 +349,7 @@ test('observedSupplies and validateSupplies round-trip for RANGED_SPECIALIST_KIT
     const liveObserved = observedSupplies(liveLedger + '\n', 'shaftshooter', ITEMS);
     expect(liveObserved).toEqual(kitRequirements(RANGED_SPECIALIST_LIVE_KIT));
 
-    const livePlan = resolveSupplierKit('ranged-live');
+    const livePlan = resolveSupplierKitPlan('ranged-live');
     const liveRefs = new Map<string, any>([
         ['bank', { name: 'Moneyshot', server: 'rs-sdk-demo.fly.dev', bankAt: now - 1000, bank: RANGED_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })) }],
         ...livePlan.legs.map((leg, idx) => [
