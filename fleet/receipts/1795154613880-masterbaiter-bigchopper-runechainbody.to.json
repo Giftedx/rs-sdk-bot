@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795154613880-masterbaiter-bigchopper-runechainbody",
  "account": "Bigchopper",
  "partner": "Masterbaiter",
@@ -12,6 +12,12 @@
  "claim": "b797adb2-318a-4582-b1d1-0eb8916608cb",
  "count": 0,
  "ok": false,
- "at": 1795154653309,
- "detail": "trade claimed"
+ "at": 1795154680481,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795154653320-0000008460-0000000001",
+  "at": 1795154680464,
+  "sha256": "5c5df1856273ad60f9ca7cc2afe30416679a2a429f0845b16da380409720be04"
+ },
+ "screen": false
 }

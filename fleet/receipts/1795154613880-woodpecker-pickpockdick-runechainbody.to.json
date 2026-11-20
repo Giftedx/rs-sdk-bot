@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795154613880-woodpecker-pickpockdick-runechainbody",
  "account": "PickpockDick",
  "partner": "Woodpecker",
@@ -12,6 +12,12 @@
  "claim": "210e96f1-f047-4287-a3e9-32fba2f3d822",
  "count": 0,
  "ok": false,
- "at": 1795154649370,
- "detail": "trade claimed"
+ "at": 1795154674107,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795154649379-0000026740-0000000001",
+  "at": 1795154674095,
+  "sha256": "e540cfdb3b433dd1712a63c4c2059bd831eca363cfbf5a572c34cfa0352fd84a"
+ },
+ "screen": false
 }
