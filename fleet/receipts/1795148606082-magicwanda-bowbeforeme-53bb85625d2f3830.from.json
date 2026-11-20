@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795148606082-magicwanda-bowbeforeme-53bb85625d2f3830",
  "account": "Magicwanda",
  "partner": "BowBeforeMe",
@@ -10,15 +10,33 @@
  "item": "Amulet of glory(3)",
  "requested": 1,
  "claim": "2bb0a4df-83e8-4d2d-a888-0d8814c91c4a",
- "count": 0,
- "ok": false,
- "at": 1795148623217,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795148657127,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Fly fishing rod",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795148633151
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795148623227-0000025440-0000000001",
+  "at": 1795148657107,
+  "sha256": "44f8087f58a41119b3b72a6cfd4477ecb303678c2ab6857ef96075fea0f4d65d"
+ },
+ "screen": true
 }
