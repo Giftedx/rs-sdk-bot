@@ -18,6 +18,7 @@ import {missionSignature} from '../../core/src/session-admission';
 import {SPECIALIST_BOARDS, specialistContext} from '../../core/src/specialist-launch';
 import {recordRoot, scriptKey} from '../../core/src/tick-record';
 import {capabilityRevision, workerEntries} from '../../core/src/worker-release';
+import {levelForXp} from '../../planner/src/curve';
 import {createBot} from './bots';
 import {practiceDir, rsSdkRoot} from './paths';
 import {applyPreset, PRESETS, type SaveConfig} from './presets';
@@ -122,7 +123,8 @@ export function checkExpect(s: SaveSummary, expect: Segment['expect']): Record<s
     const out: Record<string, boolean> = {};
     for (const [skill, min] of Object.entries(expect.skills ?? {})) {
         if (!SKILLS.includes(skill as never)) throw new Error(`unknown skill ${skill}`);
-        out[`skill.${skill}>=${min}`] = (s.skills[skill]?.level ?? 1) >= min;
+        const info = s.skills[skill];
+        out[`skill.${skill}>=${min}`] = Math.max(info?.level ?? 1, levelForXp(info?.xp ?? 0)) >= min;
     }
     for (const [id, e] of Object.entries(expect.items ?? {})) {
         const n = itemCount(s, id, e.in);

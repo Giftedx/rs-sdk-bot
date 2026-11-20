@@ -125,6 +125,31 @@ test('all 10 ready specialists construct valid --specialist segments matching bo
 
     const prayer = resolveSpecialistSegment('BigBoner');
     expect(prayer.suppliers).toHaveLength(PRAYER_RUNNER_COUNT);
+
+    const crafting = resolveSpecialistSegment('CutMyJewels');
+    expect(crafting.suppliers).toHaveLength(12);
+    expect(crafting.suppliers![0]!.args).toContain('--batch=0');
+    expect(crafting.suppliers![11]!.args).toContain('--batch=11');
+
+    const herb = resolveSpecialistSegment('GrindMyHerb');
+    expect(herb.suppliers).toHaveLength(2);
+    expect(herb.suppliers![0]!.args).toContain('--batch=0');
+    expect(herb.suppliers![1]!.args).toContain('--batch=1');
+    expect(herb.suppliers![1]!.save.position).toEqual({ x: 3094, z: 3491, level: 0 });
+
+    const magic = resolveSpecialistSegment('CastMyLoad');
+    expect(magic.suppliers).toHaveLength(7);
+    expect(magic.suppliers![0]!.args).toContain('--batch=0');
+    expect(magic.suppliers![6]!.args).toContain('--batch=6');
+
+    const smith = resolveSpecialistSegment('SteelRod');
+    expect(smith.suppliers).toHaveLength(4);
+    expect(smith.suppliers![0]!.args).toContain('--role=starter');
+    for (let i = 1; i <= 3; i++) {
+        expect(smith.suppliers![i]!.args).toContain('--role=runner');
+        expect(smith.suppliers![i]!.args).toContain(`--runner=${i - 1}/3`);
+        expect(smith.suppliers![i]!.save.position).toEqual({ x: 3185, z: 3436, level: 0 });
+    }
 });
 
 test('account lookup is case-insensitive and rejects unknown accounts or invalid overrides', () => {

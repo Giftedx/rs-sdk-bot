@@ -34,6 +34,7 @@ import {
     LUMBRIDGE_HANDOFF,
     MAGIC_SPECIALIST_KIT,
     parseKitArg,
+    parseSupplierCliArgs,
     parseSupplierRole,
     PRAYER_SPECIALIST_KIT,
     resolveBaseId,
@@ -281,4 +282,18 @@ test('multi-supplier runecraft role parsing, cooldown partner selection, and ext
     expect(rcExt.companions).toHaveLength(23);
     expect(rcExt.scriptArgs[0]!.split(',')).toHaveLength(23);
     expect(rcExt.scriptArgs).toContain('SUPPLIER_KIT=runecraft');
+
+    expect(parseSupplierCliArgs(['Holder', 'CastMyLoad', '--kit=magic', '--batch=3', '3000'])).toMatchObject({
+        kitArg: 'magic',
+        batchIndex: 3,
+        cap: 3000,
+    });
+    expect(parseSupplierCliArgs(['Holder', 'SteelRod', '--kit=smithing', '--role=runner', '--runner=1/3', '2000'])).toMatchObject({
+        kitArg: 'smithing',
+        runnerIndex: 1,
+        runnerCount: 3,
+        cap: 2000,
+    });
+    expect(() => parseSupplierCliArgs(['Holder', 'SteelRod', '--runner=3/3'])).toThrow(/out of bounds/);
+    expect(() => parseSupplierCliArgs(['Holder', 'CastMyLoad', '--batch=abc'])).toThrow(/invalid --batch/);
 });

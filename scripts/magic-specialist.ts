@@ -4,10 +4,10 @@ import { componentId } from '../packages/core/src/logout';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import {
  assertCatalogItems,
- buildTradeGiveForIds,
  burstTradeHost,
  countItem,
  dropItemsFast,
+ fastTradeExternalReceive,
  findLocBy,
  findNpcBy,
  goalXp,
@@ -21,7 +21,6 @@ import {
  skipTutorialFast,
  skillLevel,
  skillXp,
- tradeExternalSupplier,
  waitTicks,
  waitUntil,
  withSingleSpecialist,
@@ -575,10 +574,10 @@ export async function runMagicExternal(
  const target = opts.target ?? 99;
  const start = spec.tick();
  const deadline = start + opts.cap;
- return executeMagicLoop(spec, target, start, deadline, async batch => {
-  const give = buildTradeGiveForIds(spec, batch.returnIds);
-  await tradeExternalSupplier(spec, supplierNames, {
-   ...(give.length ? { give } : {}),
+ return executeMagicLoop(spec, target, start, deadline, async (batch, index) => {
+  const targets = supplierNames.length >= MAGIC_BATCHES.length ? [supplierNames[index]!] : supplierNames;
+  await fastTradeExternalReceive(spec, targets, {
+   returnIds: batch.returnIds,
    acceptOffer: offer => batch.give.every(g => countItem(offer, g.id) >= g.count),
    deadlineTick: deadline,
   });

@@ -2,10 +2,10 @@
 import type { Session } from '../packages/core/src/inprocess';
 import {
  assertCatalogItems,
- buildTradeGiveForIds,
  burstTradeHost,
  countItem,
  dropItemsFast,
+ fastTradeExternalReceive,
  goalXp,
  ITEM_IDS,
  logPhase,
@@ -14,7 +14,6 @@ import {
  skipTutorialFast,
  skillLevel,
  skillXp,
- tradeExternalSupplier,
  waitTicks,
  withSingleSpecialist,
  withSpecialistFleet,
@@ -206,10 +205,11 @@ export async function runCraftingExternal(
  const target = opts.target ?? 99;
  const start = spec.tick();
  const deadline = start + opts.cap;
- return executeCraftingLoop(spec, target, start, deadline, async batch => {
-  const give = buildTradeGiveForIds(spec, batch.returnIds);
-  await tradeExternalSupplier(spec, supplierNames, {
-   ...(give.length ? { give } : {}),
+ return executeCraftingLoop(spec, target, start, deadline, async (batch, index) => {
+  const targets = supplierNames.length >= CRAFTING_BATCHES.length ? [supplierNames[index]!] : supplierNames;
+  await fastTradeExternalReceive(spec, targets, {
+   returnIds: batch.returnIds,
+   allowSingleModal: index >= 3,
    acceptOffer: offer => batch.give.every(g => countItem(offer, g.id) >= g.count),
    deadlineTick: deadline,
   });

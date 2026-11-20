@@ -5,7 +5,7 @@ import {join} from 'node:path';
 import {gzipSync} from 'node:zlib';
 import {missionSignature} from '../../core/src/session-admission';
 import {xpForLevel} from '../../planner/src/curve';
-import {checkSpecialistSegment, isolatedStackOptions, rehearsalChildEnv, rehearseLockstep, resolveSegmentSuppliers, stopHelperProcs, SUPPLIER_ONLINE_TIMEOUT_MS, TickWindow, waitForSuppliersOnline, type HelperProcHandle, type Segment} from '../src/rehearse';
+import {checkExpect, checkSpecialistSegment, isolatedStackOptions, rehearsalChildEnv, rehearseLockstep, resolveSegmentSuppliers, stopHelperProcs, SUPPLIER_ONLINE_TIMEOUT_MS, TickWindow, waitForSuppliersOnline, type HelperProcHandle, type Segment} from '../src/rehearse';
 import {confirmLivingSession, observedSupplies, scoredClock, SPECIALIST_TICK_MS, successfulWorkerLog} from '../src/specialist-rehearsal';
 
 function engineSave(playtime = 305, levelTick = 300, tickMs = 400, level = 99) {
@@ -251,4 +251,24 @@ test('waitForSuppliersOnline waits for all helpers, fails on early exit or timeo
         20,
     );
     expect(killed).toEqual([101]);
+});
+
+test('checkExpect counts attained XP level 99 when current Hitpoints or Prayer is drained below 99', () => {
+    const injured = {
+        position: {x: 3222, z: 3222, level: 0},
+        skills: {
+            Hitpoints: {level: 74, xp: xpForLevel(99)},
+            Prayer: {level: 0, xp: xpForLevel(99)},
+            Agility: {level: 98, xp: xpForLevel(98)},
+        },
+        inventory: {},
+        worn: {},
+        bank: {},
+        varps: 0,
+    };
+    expect(checkExpect(injured, {skills: {Hitpoints: 99, Prayer: 99, Agility: 99}})).toEqual({
+        'skill.Hitpoints>=99': true,
+        'skill.Prayer>=99': true,
+        'skill.Agility>=99': false,
+    });
 });

@@ -6,6 +6,7 @@ import {
  burstTradeHost,
  countItem,
  dropItemsFast,
+ fastTradeExternalReceive,
  goalXp,
  GLORY_IDS,
  ITEM_IDS,
@@ -20,7 +21,6 @@ import {
  skipTutorialFast,
  skillLevel,
  skillXp,
- tradeExternalSupplier,
  waitTicks,
  waitUntil,
  withSingleSpecialist,
@@ -372,7 +372,8 @@ export async function runSmithingExternal(
  await skipTutorialFast(spec, deadline);
  await dropItemsFast(spec, new Set(), deadline);
 
- await tradeExternalSupplier(spec, supplierNames, {
+ const starterTargets = supplierNames.length >= 2 ? [supplierNames[0]!] : supplierNames;
+ await fastTradeExternalReceive(spec, starterTargets, {
   acceptOffer: offer =>
    offer.some(o => o.id === ITEM_IDS.hammer) && offer.some(o => o.id === ITEM_IDS.amulet_of_glory_4),
   deadlineTick: deadline,
@@ -395,11 +396,21 @@ export async function runSmithingExternal(
  await smithHeldBars(spec, target, deadline);
  await dropItemsFast(spec, keepSet, deadline);
 
+ const runnerNames = supplierNames.length >= 2 ? supplierNames.slice(1) : supplierNames;
+ const cooldowns = new Map<string, number>();
+ const lastTradedTick = new Map<string, number>();
  while (skillLevel(spec, 'Smithing') < target && spec.tick() < deadline) {
   const wantBar = nextWantedBarId(skillLevel(spec, 'Smithing'));
-  await tradeExternalSupplier(spec, supplierNames, {
+  await fastTradeExternalReceive(spec, runnerNames, {
    acceptOffer: offer => offer.some(o => o.id === wantBar) && offer.every(o => o.id === wantBar),
    deadlineTick: deadline,
+   maxDistance: 4,
+   cooldownTicks: 15,
+   cooldowns,
+   lastTradedTick,
+   canStand: p =>
+    (p.worldZ ?? p.z) <= 3429 &&
+    anvilRoomOk({ worldX: p.worldX ?? p.x, worldZ: p.worldZ ?? p.z, level: 0 }),
   });
   await smithHeldBars(spec, target, deadline);
   if (skillLevel(spec, 'Smithing') < target) {
