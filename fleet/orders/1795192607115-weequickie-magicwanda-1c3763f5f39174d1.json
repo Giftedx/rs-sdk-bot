@@ -1,0 +1,23 @@
+{
+ "id": "1795192607115-weequickie-magicwanda-1c3763f5f39174d1",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "WeeQuickie",
+ "to": "Magicwanda",
+ "item": "Ring of dueling(8)",
+ "count": 1,
+ "start": 1795192607115,
+ "end": 1795193807115,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

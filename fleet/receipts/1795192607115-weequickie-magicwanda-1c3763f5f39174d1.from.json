@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795192607115-weequickie-magicwanda-1c3763f5f39174d1",
+ "account": "WeeQuickie",
+ "partner": "Magicwanda",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "433f717b-3fcf-49bb-a1a0-714b14950a0f",
+ "count": 0,
+ "ok": false,
+ "at": 1795192620826,
+ "detail": "trade claimed"
+}
