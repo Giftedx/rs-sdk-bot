@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795164541305-weequickie-mightyrod-f55f7ec10bf01e0b",
+ "account": "WeeQuickie",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 50000,
+ "claim": "59b3fe13-6be8-4abe-9af0-b073ad8c372c",
+ "count": 0,
+ "ok": false,
+ "at": 1795164578826,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 50000,
+  "at": 1795164562894
+ },
+ "logout": {
+  "attemptId": "1795164554910-0000006968-0000000001",
+  "at": 1795164578816,
+  "sha256": "437e860a574e4edd127954597dc3bf77071302bb00b2601fa54076c5e1e48c83"
+ },
+ "screen": false
+}
