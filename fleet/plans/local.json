@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795145126213,
+ "at": 1795145329026,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -290,7 +290,7 @@
    ]
   },
   {
-   "account": "Billionaire",
+   "account": "PickpockDick",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "dargaud",
