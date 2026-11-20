@@ -124,8 +124,12 @@ export class TickWindow {
     enter: number | null = null;
     leave: number | null = null;
     observe(tick: number, inWorld: boolean) {
-        if (inWorld && this.enter === null) this.enter = tick;
-        if (!inWorld && this.enter !== null && this.leave === null) this.leave = tick;
+        if (inWorld) {
+            if (this.enter === null) this.enter = tick;
+            this.leave = null;
+        } else if (this.enter !== null && this.leave === null) {
+            this.leave = tick;
+        }
     }
     get ticks(): number | null { return this.enter !== null && this.leave !== null ? this.leave - this.enter : null; }
 }
@@ -167,10 +171,15 @@ async function writeSpecialistReceipt(seg: Segment, scored: ScoredRun, actor: st
     const workerLog = readFileSync(log, 'utf8');
     if (!successfulWorkerLog(workerLog)) throw Error('need one successful raw worker run with confirmed logout');
     const recordDir = join(recordRoot(root), scriptKey(seg.script));
-    const records = readdirSync(recordDir).filter(file => file.startsWith(actor.toLowerCase() + '-') && file.endsWith('.ticks.ndjson.gz'));
-    if (records.length !== 1) throw Error('need one complete tick record of the fresh actor');
-    const tickRecord = join(recordDir, records[0]!);
-    await confirmLivingSession(tickRecord, actor, server);
+    const prefix = actor.toLowerCase() + '-', suffix = '.ticks.ndjson.gz';
+    const records = readdirSync(recordDir)
+        .filter(file => file.startsWith(prefix) && file.endsWith(suffix))
+        .map(file => ({file: join(recordDir, file), at: Number(file.slice(prefix.length, -suffix.length))}))
+        .filter(r => Number.isSafeInteger(r.at))
+        .sort((a, b) => a.at - b.at)
+        .map(r => r.file);
+    if (records.length === 0) throw Error('need one complete tick record of the fresh actor');
+    await confirmLivingSession(records, actor, server);
     if (/\[trade-ledger\].*failed/.test(readFileSync(scored.engineLog, 'utf8'))) throw Error('practice trade ledger write failed');
     const save = readFileSync(savePath), {endPlaytime, boardTick} = scoredClock(save, scored.board);
     const planTicks = seg.plan!.ticks;
@@ -184,7 +193,8 @@ async function writeSpecialistReceipt(seg: Segment, scored: ScoredRun, actor: st
     const finalSave = join(out, seg.id + '.final.sav');
     writeFileSync(finalSave, save, {flag: 'wx'});
     const retainedTicks = join(out, seg.id + '.ticks.ndjson.gz');
-    copyFileSync(tickRecord, retainedTicks, constants.COPYFILE_EXCL);
+    if (records.length === 1) copyFileSync(records[0]!, retainedTicks, constants.COPYFILE_EXCL);
+    else writeFileSync(retainedTicks, Buffer.concat(records.map(file => readFileSync(file))), {flag: 'wx'});
     const stamp = {version: 2, context, runId: actor, actor, server, at: Date.now(), startPlaytime: 0, endPlaytime, planTicks,
         ok: true, died: false, logout: 'logged-out', boardTicks: {[scored.board]: boardTick}, externalSupplies,
         artifacts: {finalSave: bind(finalSave), tradeLedger: bind(scored.ledger), tickRecord: bind(retainedTicks)}};

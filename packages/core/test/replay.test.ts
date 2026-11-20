@@ -5,8 +5,8 @@ import { createShim, type ClientLike, type Session } from '../src/inprocess';
 import { openBot } from '../src/bot';
 import { waitTicks } from '../src/ticks';
 import { replayRecord } from '../src/replay';
-import { tickRecorder, stateDelta, applyDelta, createTickRecorder, readRecord } from '../src/tick-record';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tickRecorder, stateDelta, applyDelta, createTickRecorder, pruneRecords, readRecord, recordRoot, scriptKey } from '../src/tick-record';
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { gzipSync } from 'node:zlib';
@@ -146,4 +146,27 @@ test('a record file is complete once its flush resolves', async () => {
     const lines = readRecord(r.file);
     expect(lines[0]).toMatchObject({ k: 'meta', account: 'Flusher' });
     expect(lines.at(-1)).toMatchObject({ k: 'end', reason: 'logged-out', ticks: 50 });
+});
+
+test('createTickRecorder retains all relog segments in one process including timestamp collisions and pruneRecords respects preserve', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'record-relog-keep-'));
+    try {
+        const files: string[] = [];
+        for (let i = 0; i < 30; i++) {
+            const rec = createTickRecorder({ account: 'Relogger', server: 'localhost:8910', script: 'scripts/thief.ts', argv: [], startedAt: 1000 }, { root, env: {} })!;
+            rec.publish(i + 1, { tick: i + 1 }, 's');
+            rec.end(i + 1, 'logged-out');
+            await rec.flushed;
+            files.push(rec.file);
+        }
+        expect(new Set(files).size).toBe(30);
+        const dir = join(recordRoot(root), scriptKey('scripts/thief.ts'));
+        expect(readdirSync(dir).length).toBe(30);
+        pruneRecords(dir, 2, new Set(files.slice(0, 5)));
+        expect(readdirSync(dir).length).toBe(7);
+        pruneRecords(dir, 2);
+        expect(readdirSync(dir).length).toBe(2);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
 });

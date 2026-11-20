@@ -55,36 +55,43 @@ export function observedSupplies(log: string, account: string, catalog: {id: num
 export function successfulWorkerLog(log: string): boolean {
     const lines = log.split(/\r?\n/), starts = lines.filter(l => l.startsWith('START '));
     const outs = lines.filter(l => l.startsWith('LOGOUT ')), results = lines.filter(l => l.startsWith('RESULT '));
-    return starts.length === 1 && /^START \d+ \d+ \d+$/.test(starts[0]!) && outs.length === 1 && outs[0] === 'LOGOUT logged-out'
+    return starts.length >= 1 && starts.every(s => /^START \d+ \d+ \d+$/.test(s))
+        && outs.length === 1 && outs[0] === 'LOGOUT logged-out'
         && results.length === 1 && /^RESULT ok\b/.test(results[0]!) && !lines.some(l => l.startsWith('REHEARSAL '))
-        && lines.indexOf(starts[0]!) < lines.indexOf(outs[0]!) && lines.indexOf(outs[0]!) < lines.indexOf(results[0]!);
+        && lines.lastIndexOf(starts.at(-1)!) < lines.indexOf(outs[0]!) && lines.indexOf(outs[0]!) < lines.indexOf(results[0]!);
 }
 
-/** Read the worker's full tick record without retaining its large state stream. */
-export async function confirmLivingSession(file: string, account: string, server: string) {
-    const stream = createReadStream(file), unzip = createGunzip();
-    stream.on('error', error => unzip.destroy(error));
-    stream.pipe(unzip);
-    const lines = createInterface({input: unzip, crlfDelay: Infinity});
-    let meta = false, ended = false, life: number | undefined;
-    try {
-        for await (const line of lines) {
-            const row = JSON.parse(line);
-            if (!meta) {
-                meta = row.k === 'meta' && row.account === account && row.server === server;
-                if (!meta) throw Error('tick record identity differs');
-                continue;
+/** Read one or more segment tick records without retaining their large state streams. */
+export async function confirmLivingSession(files: string | readonly string[], account: string, server: string) {
+    const list = typeof files === 'string' ? [files] : files;
+    let inSegment = false, segments = 0, life: number | undefined;
+    for (const file of list) {
+        const stream = createReadStream(file), unzip = createGunzip();
+        stream.on('error', error => unzip.destroy(error));
+        stream.pipe(unzip);
+        const lines = createInterface({input: unzip, crlfDelay: Infinity});
+        try {
+            for await (const line of lines) {
+                const row = JSON.parse(line);
+                if (!inSegment) {
+                    if (row.k !== 'meta') throw Error('incomplete specialist tick record');
+                    if (row.account !== account || row.server !== server) throw Error('tick record identity differs');
+                    inSegment = true;
+                    segments++;
+                    continue;
+                }
+                if (row.k === 'cut' || row.k === 'meta') throw Error('incomplete specialist tick record');
+                if (row.k === 'end') { inSegment = false; continue; }
+                const p = row.k === 's' || row.k === 'p' ? row.d?.player : null;
+                if (!p) continue;
+                if (!Number.isSafeInteger(p.lifeId) || p.isDead !== false || p.respawnCount !== 0 || (life !== undefined && p.lifeId !== life))
+                    throw Error('specialist rehearsal life changed or is unknown');
+                life = p.lifeId;
             }
-            if (ended || row.k === 'cut' || row.k === 'meta') throw Error('incomplete specialist tick record');
-            if (row.k === 'end') { ended = true; continue; }
-            const p = row.k === 's' || row.k === 'p' ? row.d?.player : null;
-            if (!p) continue;
-            if (!Number.isSafeInteger(p.lifeId) || p.isDead !== false || p.respawnCount !== 0 || (life !== undefined && p.lifeId !== life))
-                throw Error('specialist rehearsal life changed or is unknown');
-            life = p.lifeId;
+        } finally {
+            lines.close(); stream.destroy(); unzip.destroy();
         }
-    } finally {
-        lines.close(); stream.destroy(); unzip.destroy();
+        if (inSegment) throw Error('specialist tick record has no complete observed life');
     }
-    if (!ended || life === undefined) throw Error('specialist tick record has no complete observed life');
+    if (segments === 0 || life === undefined) throw Error('specialist tick record has no complete observed life');
 }
