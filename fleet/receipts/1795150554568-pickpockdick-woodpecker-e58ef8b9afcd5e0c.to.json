@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795150554568-pickpockdick-woodpecker-e58ef8b9afcd5e0c",
+ "account": "Woodpecker",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 215000,
+ "claim": "47e9ddd4-bee5-4f10-ac70-7f449761793c",
+ "count": 0,
+ "ok": false,
+ "at": 1795150579962,
+ "detail": "trade claimed"
+}

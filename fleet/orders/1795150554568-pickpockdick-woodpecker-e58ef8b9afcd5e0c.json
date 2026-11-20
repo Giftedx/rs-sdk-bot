@@ -1,0 +1,23 @@
+{
+ "id": "1795150554568-pickpockdick-woodpecker-e58ef8b9afcd5e0c",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PickpockDick",
+ "to": "Woodpecker",
+ "item": "Coins",
+ "count": 215000,
+ "start": 1795150554568,
+ "end": 1795151754568,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
