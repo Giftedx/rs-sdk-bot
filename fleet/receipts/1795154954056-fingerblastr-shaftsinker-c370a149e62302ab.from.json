@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795154954056-fingerblastr-shaftsinker-c370a149e62302ab",
+ "account": "Fingerblastr",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 4300000,
+ "claim": "3c6cce37-8965-4a42-93df-6f242110b9e5",
+ "count": 0,
+ "ok": false,
+ "at": 1795154966617,
+ "detail": "trade claimed"
+}

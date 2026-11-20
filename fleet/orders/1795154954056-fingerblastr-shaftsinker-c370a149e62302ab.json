@@ -1,0 +1,23 @@
+{
+ "id": "1795154954056-fingerblastr-shaftsinker-c370a149e62302ab",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingerblastr",
+ "to": "Shaftsinker",
+ "item": "Coins",
+ "count": 4300000,
+ "start": 1795154954056,
+ "end": 1795156154056,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

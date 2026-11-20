@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795154836644-woodpecker-bigchopper-runechainbody",
  "account": "Bigchopper",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "f2c10ecb-10ae-490b-9fda-705fb58232e9",
- "count": 0,
- "ok": false,
- "at": 1795154919349,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795154953250,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795154952475
+ },
+ "logout": {
+  "attemptId": "1795154919358-0000029480-0000000001",
+  "at": 1795154953232,
+  "sha256": "cb2919f461b7d1329719324933d03c455f3e40207f8c3b8f31f3ce1ab90b8478"
+ },
+ "screen": true
 }
