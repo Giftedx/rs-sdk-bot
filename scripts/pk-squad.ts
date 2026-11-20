@@ -274,9 +274,16 @@ export async function rescue(s: Session, log: (l: string) => void, stopped: () =
         const st = s.sdk.getState(), magic = st?.skills.find(k => k.name === 'Magic')?.level ?? 1;
         const wornIds = (s.sdk.getEquipment?.() ?? []).map(e => e.id);
         const escapeSpell = st ? squadEscapeSpell(start.worldZ, st.inventory ?? [], wornIds, magic) : null;
-        // Cast an available escape teleport immediately before spending ticks eating under multi-way focus fire.
+        // Eat and cast an available escape teleport on the same tick to buffer delayed hits during teleport windup.
         if (escapeSpell !== null) {
             for (let i = 0; i < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; i++) {
+                if (stopped()) return null;
+                const q = me();
+                if (q && q.hp <= q.maxHp - 20) {
+                    const food = s.sdk.getInventory().find(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text)));
+                    const op = food?.optionsWithIndex.find(x => /^eat$/i.test(x.text));
+                    if (food && op) await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: op.opIndex, reason: 'SDK' });
+                }
                 if (stopped()) return null;
                 await s.direct({ type: 'clickComponent', componentId: escapeSpell, reason: 'SDK' });
                 for (let t = 0; t < 6 && wildernessLevel(me()?.worldZ ?? 0) > 0; t++) if (!await tick()) return null;
@@ -490,9 +497,10 @@ export function squadFallbackPlan(opts: {
 }): 'hold' | 'out' | 'glory' | 'teleport' | 'run' {
     const wild = wildernessLevel(opts.z);
     if (wild === 0) return 'out';
-    const outnumbered = opts.inMulti && opts.enemyCount - opts.allyCount >= 2 && opts.hp <= opts.maxHp * 0.65;
+    const isolatedPile = opts.inMulti && opts.allyCount === 0 && opts.enemyCount >= 3;
+    const outnumbered = opts.inMulti && opts.enemyCount - opts.allyCount >= 2 && opts.hp <= opts.maxHp * 0.75;
     const dry = opts.foodCount <= 0 && opts.hp <= opts.maxHp * 0.6;
-    if (!outnumbered && !dry) return 'hold';
+    if (!isolatedPile && !outnumbered && !dry) return 'hold';
     return escapeStep(wild, { glory: opts.hasGlory, teleport: opts.hasTeleport });
 }
 
@@ -693,13 +701,27 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 const single = threat.actions.find(a => a.kind === 'single-way') as Extract<typeof threat.actions[number], { kind: 'single-way' }> | undefined;
                 if (single) {
                     singleUntil = now + 120;
-                    if (needsSingleWayMove(p, single.to)) {
+                    if (needsSingleWayMove(p, single.to) && !fallbackDue()) {
                         o.threats!.acted(now);
+                        if (protect) holdProtect(s, protect, now);
                         o.log(`[${s.name}] SQUAD threat single-way: ${single.reason}, to ${single.to.x},${single.to.z}`);
+                        let stuckTicks = 0, lastX = p.worldX, lastZ = p.worldZ, checkedTick = s.tick();
+                        const walkDist = Math.max(Math.abs(p.worldX - single.to.x), Math.abs(p.worldZ - single.to.z));
                         const walked = await walkPath(walker, [{ ...single.to, tol: 0 }], {
-                            maxTicks: 40,
+                            maxTicks: Math.min(20, Math.max(8, walkDist * 2 + 4)),
                             idleMs: 9000,
-                            stop: () => !going() || (() => { const q = me(); return !!q && !isMulti(q.worldX, q.worldZ); })(),
+                            stop: () => {
+                                if (!going()) return true;
+                                const q = me();
+                                if (!q || !isMulti(q.worldX, q.worldZ)) return true;
+                                if (fallbackDue() || !!retreatOf(o.threats!.step(s.tick()).actions)) return true;
+                                const tNow = s.tick();
+                                if (tNow > checkedTick) {
+                                    stuckTicks = q.worldX === lastX && q.worldZ === lastZ ? stuckTicks + (tNow - checkedTick) : 0;
+                                    lastX = q.worldX; lastZ = q.worldZ; checkedTick = tNow;
+                                }
+                                return stuckTicks >= 3;
+                            },
                         });
                         const afterWalk = me();
                         if (!walked.ok && (!afterWalk || needsSingleWayMove(afterWalk, single.to))) {
@@ -792,8 +814,15 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     elapsedTicks: s.tick() - began,
                 });
             };
+            const singleHold = now < singleUntil && !isMulti(p.worldX, p.worldZ) && target.x !== undefined && target.z !== undefined && isMulti(target.x, target.z);
+            const singleStyles = singleHold ? (['ranged', 'magic'] as const).filter(stName => (o.options.kit[stName]?.length ?? 0) > 0) : [];
             const r = await fightPlayer(s, target.name, {
                 ...o.options,
+                ...(singleStyles.length ? {
+                    rotation: [...singleStyles],
+                    chase: false,
+                    ...(o.options.spec && o.options.spec.style !== 'ranged' && o.options.spec.style !== 'magic' ? { spec: undefined } : {}),
+                } : {}),
                 ...(o.threats?.act ? { threatPrayer: () => protectOf(o.threats!.step(s.tick()).actions, s.name) } : {}),
                 ...(stunShare ? { stunShare } : {}),
                 ...(freezeShare ? { freezeShare } : {}),

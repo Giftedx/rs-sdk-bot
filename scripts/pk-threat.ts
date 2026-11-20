@@ -162,13 +162,17 @@ export class ThreatWatch {
     private cooldown(tick: number, classes: readonly ThreatClass[], actions: Adapt[]): Adapt[] {
         const move = (a: Adapt) => a.kind === 'retreat' || a.kind === 'single-way';
         const rest = actions.filter(a => !move(a)), moves = actions.filter(move);
-        if (this.held && tick <= this.held.until) return [...this.held.moves, ...rest];
+        const hasRetreat = moves.some(a => a.kind === 'retreat');
+        if (this.held && tick <= this.held.until && (!hasRetreat || this.held.moves.some(a => a.kind === 'retreat'))) {
+            return [...this.held.moves, ...rest];
+        }
         if (!moves.length) { this.pending = null; return actions; }
         // The players that caused the move: the strangers; with the win-chance estimate every dangerous player counts (it counts the squad's targets too, so a lost fight
         // against the gang alone must have a cooldown as well).
         const expected = this.o.odds === false ? this.o.decide?.expected : undefined;
         const culprits = classes.filter(c => c.dangerous && !expected?.has(c.record.name.toLowerCase())).map(c => c.record.name.toLowerCase());
-        if (culprits.length && culprits.every(n => (this.cooling.get(n) ?? -1) > tick)) {
+        const kinds = [...new Set(moves.map(a => a.kind))];
+        if (culprits.length && culprits.every(n => kinds.every(k => (this.cooling.get(`${k}:${n}`) ?? -1) > tick))) {
             if (this.logged.get('cooldown') !== culprits.join('+')) { this.logged.set('cooldown', culprits.join('+')); this.o.log(`THREAT retreat held, cooldown: ${culprits.join(', ')}`); }
             this.pending = null;
             return rest;
@@ -182,7 +186,12 @@ export class ThreatWatch {
     // 30 ticks for the other members of the squad.
     acted(tick: number): void {
         if (!this.pending) return;
-        for (const n of this.pending.culprits) this.cooling.set(n, tick + (this.o.cooldown ?? 600));
+        const until = tick + (this.o.cooldown ?? 600);
+        const hasRetreat = this.pending.moves.some(a => a.kind === 'retreat');
+        for (const n of this.pending.culprits) {
+            this.cooling.set(`single-way:${n}`, until);
+            if (hasRetreat) this.cooling.set(`retreat:${n}`, until);
+        }
         this.held = { until: tick + 30, moves: this.pending.moves };
         this.pending = null;
     }

@@ -258,6 +258,8 @@ test('pickSquadFocus prioritizes stunned targets, skips single-way PJ fights, an
     expect(pickSquadFocus({ view, targets, health: p => hp[p.index]!, inMulti: true, stunned: new Set(['sugma']) })?.name).toBe('Sugma');
 
     expect(squadFallbackPlan({ z: 3640, hp: 50, maxHp: 99, foodCount: 4, enemyCount: 4, allyCount: 1, inMulti: true, hasGlory: true, hasTeleport: true })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3640, hp: 73, maxHp: 99, foodCount: 4, enemyCount: 4, allyCount: 2, inMulti: true, hasGlory: false, hasTeleport: true })).toBe('teleport');
+    expect(squadFallbackPlan({ z: 3640, hp: 99, maxHp: 99, foodCount: 4, enemyCount: 3, allyCount: 0, inMulti: true, hasGlory: false, hasTeleport: true })).toBe('teleport');
     expect(squadFallbackPlan({ z: 3640, hp: 50, maxHp: 99, foodCount: 0, enemyCount: 1, allyCount: 0, inMulti: false, hasGlory: false, hasTeleport: true })).toBe('teleport');
     expect(squadFallbackPlan({ z: 3880, hp: 50, maxHp: 99, foodCount: 0, enemyCount: 3, allyCount: 0, inMulti: true, hasGlory: true, hasTeleport: true })).toBe('run');
     expect(squadFallbackPlan({ z: 3640, hp: 90, maxHp: 99, foodCount: 6, enemyCount: 2, allyCount: 1, inMulti: true, hasGlory: true, hasTeleport: true })).toBe('hold');
@@ -717,7 +719,7 @@ test('rescue casts an available escape teleport on tick 0 before eating so multi
     try {
         const res = await rescue(mockSess, () => {}, () => false, false);
         expect(res).toBe(mockSess);
-        expect(actions).toEqual(['clickComponent:1174']);
+        expect(actions).toEqual(['useInventoryItem:2', 'clickComponent:1174']);
     } finally {
         spyTick.mockRestore();
     }
@@ -730,7 +732,7 @@ test('needsSingleWayMove checks single-way status and exact destination tile', (
     expect(needsSingleWayMove({ worldX: 3040, worldZ: 3600 }, { x: 3040, z: 3600 })).toBe(false);
 });
 
-test('hold does not stop fightPlayer for single-way once standing on single-way tile and stops on multi-way fallback', async () => {
+test('hold does not stop fightPlayer for single-way once standing on single-way tile and holds ranged without chase against multi-way targets', async () => {
     const w = squadWorld();
     w.s.tick = () => 0;
     w.player.worldX = 3071;
@@ -739,6 +741,7 @@ test('hold does not stop fightPlayer for single-way once standing on single-way 
     const decided: { actions: any[] } = { actions: [{ kind: 'single-way', to: { x: 3070, z: 3599 }, reason: 'team' }] };
     const threats: any = { act: true, acted: () => {}, step: () => ({ classes: [], interlopers: [], actions: decided.actions }) };
     const stops: boolean[] = [];
+    let seenOpts: any = null;
     let t = 0;
     const mocks = [
         spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
@@ -750,13 +753,14 @@ test('hold does not stop fightPlayer for single-way once standing on single-way 
         spyOn(pk, 'nextTick').mockImplementation(async () => { t++; return true; }),
         spyOn(pk, 'observePlayer').mockReturnValue(null),
         spyOn(pk, 'fightPlayer').mockImplementation(async (_s: any, _name: string, opts: any) => {
+            seenOpts = opts;
             stops.push(opts.stop());
             w.player.worldX = 3071;
             w.player.worldZ = 3600;
             stops.push(opts.stop());
             decided.actions = [];
             w.s.sdk.getState().nearbyPlayers = [
-                { index: 5, name: 'Goondelf', combatLevel: 126, x: 3070, z: 3600, z2: 3600, distance: 1 },
+                { index: 5, name: 'Goondelf', combatLevel: 126, x: 3070, z: 3600, distance: 1 },
                 { index: 6, name: 'Enemy2', combatLevel: 126, x: 3070, z: 3600, distance: 1 },
                 { index: 7, name: 'Enemy3', combatLevel: 126, x: 3070, z: 3600, distance: 1 },
                 { index: 8, name: 'Enemy4', combatLevel: 126, x: 3070, z: 3600, distance: 1 },
@@ -765,12 +769,18 @@ test('hold does not stop fightPlayer for single-way once standing on single-way 
             w.player.hp = Math.floor(w.player.maxHp * 0.65);
             stops.push(opts.stop());
             t = 1000;
-            return { outcome: 'stopped' } as any;
+            return { outcome: 'timeout' } as any;
         }),
     ];
     try {
-        await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3071, z: 3600 }, options: { kit: {} }, allies: ['Ally1'], pickup: false, trips: 3, deadline: 400, stopped: () => t >= 500, killsLeft: () => true, log: () => {}, threats });
-        // Walk moves off (3071, 3600) onto single-way (3070, 3599) first: stop=false at (3070,3599), stop=true at multi (3071,3600), stop=true at <=65% hp vs 5 enemies.
+        await hold(w.s, {
+            targets: new Set(['goondelf']), post: { x: 3071, z: 3600 },
+            options: { kit: { ranged: [861], melee: [1215] }, rotation: ['ranged', 'melee'], chase: true, spec: { kit: [1215], bar: 'dds', cost: 250, below: 1 } },
+            allies: ['Ally1'], pickup: false, trips: 3, deadline: 400, stopped: () => t >= 500, killsLeft: () => true, log: () => {}, threats,
+        });
         expect(stops).toEqual([false, true, true]);
+        expect(seenOpts.rotation).toEqual(['ranged']);
+        expect(seenOpts.chase).toBe(false);
+        expect(seenOpts.spec).toBeUndefined();
     } finally { for (const mock of mocks) mock.mockRestore(); }
 });
