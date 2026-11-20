@@ -229,6 +229,9 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   const category=args[0],entry=category&&['skiller','fighter','boss','pvp','quester','market','logistics'].includes(category)?category:args[1];
   if(entry)return intentForEntry('scripts/aio-'+entry+'.ts',args.slice(entry===category?1:2),env,accept,catalog);
  }
+ if(script==='scripts/hp-specialist.ts')return{kind:'train',skill:'hitpoints',targetLevel:99};
+ if(script==='scripts/strength-specialist.ts')return{kind:'train',skill:'strength',targetLevel:99};
+ if(script==='scripts/defence-specialist.ts')return{kind:'train',skill:'defence',targetLevel:99};
  if(script==='scripts/ranged-starter.ts')return{kind:'train',skill:'ranged',targetLevel:5};
  if(script==='scripts/generated/rcair.ts')return{kind:'service',objective:'craft current carried rune essence into air runes once',units:1};
  if(script==='scripts/pvp-kit-stage.ts'){

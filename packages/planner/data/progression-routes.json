@@ -1374,6 +1374,51 @@
    "description": "Fight Loar/Phrin/Riyl shades in Mort'ton and bank shade remains"
   },
   {
+   "id": "fighter:specialist-defence",
+   "category": "fighter",
+   "name": "specialist-defence",
+   "script": "scripts/defence-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "train"
+   ],
+   "skills": [
+    "defence"
+   ],
+   "description": "Fresh-clock Defence 99 quest-XP and Wildy PvP specialist"
+  },
+  {
+   "id": "fighter:specialist-hp",
+   "category": "fighter",
+   "name": "specialist-hp",
+   "script": "scripts/hp-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "train"
+   ],
+   "skills": [
+    "hitpoints"
+   ],
+   "description": "Fresh-clock Hitpoints 99 quest-XP specialist"
+  },
+  {
+   "id": "fighter:specialist-strength",
+   "category": "fighter",
+   "name": "specialist-strength",
+   "script": "scripts/strength-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "train"
+   ],
+   "skills": [
+    "strength"
+   ],
+   "description": "Fresh-clock Strength 99 quest-XP and Wildy PvP specialist"
+  },
+  {
    "id": "fighter:trooper",
    "category": "fighter",
    "name": "trooper",
@@ -90178,7 +90223,10 @@
     "fighter:cannon",
     "fighter:ranged-specialist",
     "fighter:loot-trip",
-    "fighter:attack-specialist"
+    "fighter:attack-specialist",
+    "fighter:specialist-hp",
+    "fighter:specialist-strength",
+    "fighter:specialist-defence"
    ]
   },
   {
@@ -90622,6 +90670,9 @@
     "fighter:ranged-specialist",
     "fighter:loot-trip",
     "fighter:attack-specialist",
+    "fighter:specialist-hp",
+    "fighter:specialist-strength",
+    "fighter:specialist-defence",
     "boss:kbd",
     "boss:black-dragon",
     "boss:green-dragon",
@@ -91007,6 +91058,18 @@
    "skills": [],
    "routeIds": [
     "logistics:cure-poison"
+   ]
+  },
+  {
+   "script": "scripts/defence-specialist.ts",
+   "intents": [
+    "train"
+   ],
+   "skills": [
+    "defence"
+   ],
+   "routeIds": [
+    "fighter:specialist-defence"
    ]
   },
   {
@@ -92298,6 +92361,18 @@
    "routeIds": []
   },
   {
+   "script": "scripts/hp-specialist.ts",
+   "intents": [
+    "train"
+   ],
+   "skills": [
+    "hitpoints"
+   ],
+   "routeIds": [
+    "fighter:specialist-hp"
+   ]
+  },
+  {
    "script": "scripts/item-fanin.ts",
    "intents": [
     "acquire"
@@ -93256,6 +93331,15 @@
   },
   {
    "script": "scripts/measure/specialist-ranged-cases.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/specialist-combat-quests-cases.ts",
    "intents": [
     "observe"
    ],
@@ -94514,6 +94598,18 @@
    "routeIds": [
     "skiller:magic:splash",
     "skiller:magic:splash-coop"
+   ]
+  },
+  {
+   "script": "scripts/strength-specialist.ts",
+   "intents": [
+    "train"
+   ],
+   "skills": [
+    "strength"
+   ],
+   "routeIds": [
+    "fighter:specialist-strength"
    ]
   },
   {

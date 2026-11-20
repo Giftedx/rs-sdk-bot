@@ -7,7 +7,8 @@
 //   50 the reinitialisation puzzle (raw OPHELD5, mm-puzzle.ts)     60 Daero, Waydar's glider to Crash Island
 //   70 Lumdo, Waydar orders him: chapter 2 cutscene, Ape Atoll (2801,2707)
 // MM_STOP=<n> ends the run (as a pass) at that milestone.
-import { openQuest } from './quest-lib';
+import { openQuest, fireSpell } from './quest-lib';
+import type { Session } from '../../packages/core/src/inprocess';
 import { componentId } from '../../packages/core/src/logout';
 import { solve, solved, applyClick } from './mm-puzzle';
 import { selectQuestFood } from '../quest-sustain';
@@ -40,12 +41,37 @@ if (process.env.MM_LOG) {
     const log0 = console.log.bind(console);
     console.log = (...a: unknown[]) => { log0(...a); try { appendFileSync(process.env.MM_LOG!, a.map(String).join(' ') + '\n'); } catch { /* the log is a debug aid */ } };
 }
+export interface QuestMMOptions {
+    session?: Session;
+    stop?: () => boolean;
+    cap?: number;
+    eatAt?: number;
+    food?: number[];
+    burst?: boolean;
+    keepAlive?: boolean;
+    daeroOption?: 1 | 2;
+}
+
+export async function runQuestMM(opts: QuestMMOptions = {}): Promise<void> {
+const handoff = globalThis as { QUEST_SCRIPT_ID?: string };
+const prevQuestId = handoff.QUEST_SCRIPT_ID;
+handoff.QUEST_SCRIPT_ID = 'quest-mm';
 // The shared eater stops the run on a bite the server drops, and a knockout's p_delay drops one (mm_jail.rs2:3-15, a shark
 // at 20 HP on the jail lane), so eatAt 0 turns it off and the tick below eats at 22.
-const q = await openQuest({ cap: Number(process.env.MM_CAP ?? 9000), eatAt: 0, food: [ITEM.food] });
+const q = await openQuest({
+    session: opts.session,
+    stop: opts.stop,
+    cap: opts.cap ?? Number(process.env.MM_CAP ?? 9000),
+    eatAt: opts.eatAt ?? 0,
+    food: opts.food ?? [ITEM.food],
+    burst: opts.burst,
+    keepAlive: opts.keepAlive,
+});
+const tickOffs: (() => void)[] = [];
+const addTick = (cb: () => void): (() => void) => { const u = q.s.onTick(cb); tickOffs.push(u); return u; };
 try {
     let eatCool = 0, sharks = -1;
-    q.s.onTick(() => {
+    addTick(() => {
         if (sharks >= 0 && q.cnt(ITEM.food) < sharks) q.stats.eats++;
         sharks = -1;
         if (eatCool > 0) { eatCool--; return; }
@@ -55,7 +81,7 @@ try {
         void q.s.direct({ type: 'useInventoryItem', slot: c.item.slot, optionIndex: c.opIndex, reason: 'SDK' });
     });
     // STATUS every 100 ticks: HP, prayer points, the active prayer, potions and sharks left.
-    q.s.onTick(() => {
+    addTick(() => {
         if (q.T() % 100 !== 0) return;
         const act = (q.st()?.prayers?.activePrayers ?? []).map((a: boolean, i: number) => a ? i : -1).filter((i: number) => i >= 0).join('+');
         const pots = [2434, 139, 141, 143].reduce((n, id, k) => n + q.cnt(id) * (4 - k), 0);
@@ -63,7 +89,7 @@ try {
     });
     // HIT lines: each HP drop with the NPCs within 3 tiles, so the damage source on the atoll is in the log.
     let hp0 = q.hp();
-    q.s.onTick(() => {
+    addTick(() => {
         const h = q.hp();
         if (h > 0 && h < hp0) {
             const p = q.pos();
@@ -83,7 +109,7 @@ try {
 
     // A page that opens during a walk (a level-up, a stray NPC line) is clicked through, so the walk goes on.
     let walking = false;
-    const offWalk = q.s.onTick(() => {
+    const offWalk = addTick(() => {
         if (!walking) return;
         const d: any = q.s.sdk.getDialog();
         if (d?.isOpen && !d.isWaiting && !(d.options ?? []).some((o: any) => !/click here to continue/i.test(o.text))) void q.s.sdk.sendClickDialog(0);
@@ -173,7 +199,7 @@ try {
     const ANTIPOISON = [2448, 181, 183, 185, 2446, 175, 177, 179];   // super antipoison first
     let poisonSeen = Math.max(-1, ...(q.st()?.gameMessages ?? []).map((m: any) => m.observationId ?? -1));
     let antipoisons = 0;
-    const offPoison = q.s.onTick(() => {
+    const offPoison = addTick(() => {
         const m = (q.st()?.gameMessages ?? []).filter((x: any) => x.type === 0 && /you have been poisoned/i.test(x.text) && (x.observationId ?? -1) > poisonSeen);
         if (m.length === 0) return;
         poisonSeen = Math.max(...m.map((x: any) => x.observationId ?? -1));
@@ -182,7 +208,7 @@ try {
     });
     // Bananas (2 HP) go in on the walks at 31 HP or less, before the sharks (eaten at 22, quest-lib), not in a talk.
     let bananaCool = 0, eatBananas = false;   // eatBananas: after the child has the quest's five
-    q.s.onTick(() => {
+    addTick(() => {
         if (bananaCool > 0) { bananaCool--; return; }
         if (!eatBananas || !walking || q.hp() > 31 || q.hp() <= 0 || q.dialogOpen() || !q.has(ITEM.banana)) return;
         bananaCool = 2;
@@ -392,7 +418,7 @@ try {
     };
     const pts = (): number => q.st()?.prayers?.prayerPoints ?? 0;
     let potCool = 0, potionsAtoll = 0;
-    const offPot = q.s.onTick(() => {
+    const offPot = addTick(() => {
         if (potCool > 0) { potCool--; return; }
         if (pts() > 6 || (want === null && !q.st()?.prayers?.activePrayers?.some((a: boolean) => a))) return;
         const pot = ITEM.prayerPot.find(id => q.has(id));
@@ -407,7 +433,7 @@ try {
     let want: number | 'auto' | null = null;
     let quiet = 0;
     const MELEE = /scorpion|spider|snake|zombie|skeleton|^monkey guard$/i;
-    const offWant = q.s.onTick(() => {
+    const offWant = addTick(() => {
         if (want === null || pts() <= 0) return;
         let w: number | null = typeof want === 'number' ? want : null;
         if (want === 'auto' && !greegree()) {
@@ -446,14 +472,14 @@ try {
     // from 1 tile in line of sight (mm_jail.rs2:181-203), so the bot picks only when neither is within 2 tiles.
     const DOOR = { x: 2771, z: 2795 };
     // MM_TRACE=1: the patrol guards, the aunt and the bot each tick near the jail and the garden (a debug aid).
-    if (process.env.MM_TRACE) q.s.onTick(() => {
+    if (process.env.MM_TRACE) addTick(() => {
         const p = q.pos();
         if (!p || p.worldZ > 6400 || Math.max(Math.abs(p.worldX - 2760), Math.abs(p.worldZ - 2796)) > 18) return;
         const g = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^(aberab|trefaji|the monkey's aunt|monkey child)$/i.test(n.name)).map((n: any) => `${n.name.slice(0, 3)}@${n.x},${n.z}`).join(' ');
         console.log(`JT ${q.T()} me=${p.worldX},${p.worldZ} ${g}`);
     });
     let dlg0 = '';
-    if (process.env.MM_TRACE) q.s.onTick(() => {
+    if (process.env.MM_TRACE) addTick(() => {
         const d: any = q.s.sdk.getDialog();
         const sig = d?.isOpen ? `${d.isWaiting ? 'W ' : ''}${(d.options ?? []).map((o: any) => o.text).join('|')}#${String(d.text ?? '').slice(0, 40)}` : '-';
         if (sig !== dlg0) { dlg0 = sig; console.log(`DLG ${q.T()} ${sig}`); }
@@ -555,7 +581,6 @@ try {
     // A hit closes the open dialog even at 0 damage (npc_combat_melee.rs2:36, npc_combat_ranged.rs2:48), so the
     // aggressive pests within `r` tiles (warehouse spiders 2 HP, scorpions 15, spiders and snakes 35) die by Fire Wave
     // before a dialog step. Not as a monkey: the greegree hides the spellbook (quest_mm.rs2:1148-1155).
-    const FIRE_WAVE = componentId('magic:fire_wave');
     let pestCasts = 0;
     const clearPests = async (label: string, r = 2): Promise<void> => {
         let last = -99;
@@ -567,7 +592,12 @@ try {
                 .sort((a: any, b: any) => a.distance - b.distance)[0];
             if (!n) return;
             if (q.dialogOpen()) void q.s.sdk.sendClickDialog(0);
-            if (q.T() - last >= 5) { last = q.T(); pestCasts++; await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: FIRE_WAVE, reason: 'SDK' }); }
+            if (q.T() - last >= 5) {
+                last = q.T();
+                pestCasts++;
+                const comp = componentId(fireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id)));
+                await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: comp, reason: 'SDK' });
+            }
             await q.waitTicks(1);
         }
     };
@@ -751,7 +781,7 @@ try {
     // stop (2737,2794) for 13 ticks or more: she steps in at 2740 18 ticks after she arrives there, so the bot is out 5 ticks before (practice
     // trace: the old margin, x >= 2737, pulled the bot out 16 ticks early and cut the child's talk).
     let auntDoorAt = -1;
-    q.s.onTick(() => {
+    addTick(() => {
         const a = q.npc(/monkey's aunt/i);
         if (a && a.x === 2737 && a.z === 2794) { if (auntDoorAt < 0) auntDoorAt = q.T(); } else auntDoorAt = -1;
     });
@@ -764,7 +794,7 @@ try {
     const meInA = (): boolean => { const p = q.pos(); return !!p && inAuntA(p.worldX, p.worldZ); };
     const OUTSIDE = { x: 2746, z: 2800 };
     let auntWatch = false, auntExits = 0;
-    q.s.onTick(() => {
+    addTick(() => {
         if (!auntWatch || !meInA() || !auntNear()) return;
         auntExits++;
         void q.s.direct({ type: 'walkTo', x: OUTSIDE.x, z: OUTSIDE.z, running: true, reason: 'SDK' });
@@ -1179,7 +1209,7 @@ try {
         await talk1('garkor sigil', /^garkor$/i, [], () => q.has(ITEM.sigil) && !q.dialogOpen(), 60, { x: 2805, z: 2762 });
         // The fight gear back: the staff of fire (the greegree comes off with it) and the amulet of magic.
         await wear('staff', 1387);
-        await wear('amulet of magic', 1727);
+        if (q.has(1727)) await wear('amulet of magic', 1727);
         await ms(120);
     }
 
@@ -1218,7 +1248,6 @@ try {
         }, 80);
         if (!demon()) await q.fail('no jungle demon');
         await q.step('protect from magic', () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFMAGIC, reason: 'SDK' }), pmOn, 3, 3);
-        const WAVE = componentId('magic:fire_wave');
         const lastMsg = (re: RegExp): number => Math.max(-1, ...(q.st()?.gameMessages ?? []).filter((m: any) => m.type === 0 && re.test(m.text)).map((m: any) => m.observationId ?? m.tick));
         const runes0 = lastMsg(/do not have enough/i);
         const t0 = q.T();
@@ -1246,7 +1275,8 @@ try {
             }
             if (!q.dialogOpen() && q.T() - lastCast >= 5 && q.T() - lastStep >= 2) {
                 casts++; lastCast = q.T();
-                await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: WAVE, reason: 'SDK' });
+                const comp = componentId(fireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id)));
+                await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: comp, reason: 'SDK' });
             }
             if (lastMsg(/do not have enough/i) > runes0) await q.fail('out of runes');
             await q.waitTicks(1);
@@ -1286,7 +1316,7 @@ try {
     // "Focus on increasing strength and stamina" (mm_daero.rs2:240-302): 35,000 Strength and Hitpoints, 20,000 Attack and
     // Defence base XP (x25).
     let questDone = false;
-    const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+'?monkey madness/i) > 0) questDone = true; });
+    const offDone = addTick(() => { if (q.msgCount(/quest complete|completed the\s+'?monkey madness/i) > 0) questDone = true; });
     if (FROM < 160) {
         await treeTo(0);
         await talkChoose('narnode report', /^king narnode/i, () => -1, () => (questDone || q.sawText(/sign up for training|you had better sign up/i)) && !q.dialogOpen(), 120, NARNODE);
@@ -1294,11 +1324,15 @@ try {
     }
     const str0 = q.xp('Strength');
     await treeTo(1);
-    await talkChoose('daero training', /^daero$/i, pick(/strength and stamina/i), () => q.xp('Strength') > str0, 80, DAERO);
-    offDone();
+    const daeroRe = opts.daeroOption === 2 ? /attack and defence/i : /strength and stamina/i;
+    await talkChoose('daero training', /^daero$/i, pick(daeroRe), () => q.xp('Strength') > str0, 80, DAERO);
     q.milestone('training');
-    offWalk();
     await q.end(q.xp('Strength') > str0, `qp=3 questMsg=${questDone} fightTicks=${fightTicks} casts=${casts} potions=${potions} prayerLeft=${points()}`);
 } catch (e) {
     await q.fail(`error ${String(e).slice(0, 200)}`);
+} finally {
+    for (const u of tickOffs) u();
+    handoff.QUEST_SCRIPT_ID = prevQuestId;
 }
+}
+if (import.meta.main) await runQuestMM();

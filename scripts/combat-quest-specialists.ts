@@ -1,0 +1,950 @@
+// Shared specialist combat-quest kits, navigation, supplier/tank companion helpers, and PvP training loops.
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { accountOf, finish, getWorld } from '../packages/core/src/bot';
+import { protectedFromMelee } from '../packages/core/src/danger';
+import { withDoorPolicy } from '../packages/core/src/door-policy';
+import type { Session } from '../packages/core/src/inprocess';
+import { isLocalServer } from '../packages/core/src/localserver';
+import { componentId } from '../packages/core/src/logout';
+import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
+import { waitTicks, waitUntil } from '../packages/core/src/ticks';
+import { applyKnownDoorBlocks, goTo, sessionWalker, walkPath } from '../packages/core/src/walk';
+import { giantStyle } from './gather-combat';
+import { leaveRuneStarter, onStarterIsland } from './rune-starter';
+
+export interface SpecialistBoardTarget {
+    readonly board: 'hitpoints' | 'strength' | 'defence';
+    readonly liveChampion: string;
+    readonly liveTicks: number;
+    readonly targetTicks: number;
+}
+
+export const SPECIALIST_TARGETS: Readonly<Record<'hitpoints' | 'strength' | 'defence', SpecialistBoardTarget>> = {
+    hitpoints: { board: 'hitpoints', liveChampion: 'nickvitalsq', liveTicks: 11343, targetTicks: 11116 },
+    strength: { board: 'strength', liveChampion: 'nicksinew', liveTicks: 3288, targetTicks: 3222 },
+    defence: { board: 'defence', liveChampion: 'nickbicep', liveTicks: 4323, targetTicks: 4236 },
+};
+
+export interface KitSpecItem {
+    readonly id: number;
+    readonly name: string;
+    readonly count: number;
+    readonly stackable: boolean;
+}
+
+export const DUELING_RING_IDS = [2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566] as const;
+export const PRAYER_POT_IDS = [2434, 139, 141, 143] as const;
+export const SUPER_ATTACK_IDS = [2436, 145, 147, 149] as const;
+export const SUPER_STRENGTH_IDS = [2440, 157, 159, 161] as const;
+
+export const LUMBRIDGE_HANDOFF = { x: 3222, z: 3222, level: 0 } as const;
+export const LUMBRIDGE_STAIRS = { x: 3205, z: 3209, level: 0 } as const;
+export const LUMBRIDGE_BANK = { x: 3208, z: 3220, level: 2 } as const;
+export const CASTLE_WARS_LAND = { x: 2440, z: 3090, level: 0 } as const;
+export const CASTLE_WARS_BANK = { x: 2444, z: 3083, level: 0 } as const;
+export const GRAND_TREE_BANK = { x: 2449, z: 3482, level: 1 } as const;
+export const ARDY_NORTH_BANK = { x: 2619, z: 3332, level: 0 } as const;
+export const ARDY_LEVER = { x: 2561, z: 3311, level: 0 } as const;
+export const DESERTED_KEEP = { x: 3154, z: 3924, level: 0 } as const;
+
+export function configureSpecialistGuardEnv(): void {
+    process.env.FLEE_GUARD = '0';
+    process.env.EAT_GUARD = '0';
+    process.env.PRAYER_GUARD = '0';
+    process.env.DEATH_RECOVERY = '0';
+    process.env.VALUE_GUARD = '0';
+    process.env.LOOT_WATCH ??= '0';
+    process.env.RANDOM_EVENTS ??= '0';
+}
+
+export const PROTECT_MELEE_INDEX = 14;
+export const ULTIMATE_STRENGTH_INDEX = 10;
+export const AUTO_RETALIATE_COMPONENT = 151;
+
+export const BURY_KEEP_IDS_HP = new Set([556, 558]);
+export const BURY_KEEP_IDS_MELEE = new Set([556, 557, 555]);
+
+// 28 slots exact: 7 stackables + 4 unnoted immediate quest items + 11 Dragon bones + 6 noted bank supplies.
+export const HP_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 556, name: 'Air rune', count: 2500, stackable: true },
+    { id: 558, name: 'Mind rune', count: 140, stackable: true },
+    { id: 562, name: 'Chaos rune', count: 220, stackable: true },
+    { id: 560, name: 'Death rune', count: 220, stackable: true },
+    { id: 563, name: 'Law rune', count: 60, stackable: true },
+    { id: 555, name: 'Water rune', count: 35, stackable: true },
+    { id: 995, name: 'Coins', count: 5000, stackable: true },
+    { id: 1387, name: 'Staff of fire', count: 1, stackable: false },
+    { id: 1059, name: 'Leather gloves', count: 1, stackable: false },
+    { id: 1985, name: 'Cheese', count: 1, stackable: false },
+    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
+    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
+    { id: 1512, name: 'Logs', count: 6, stackable: true },
+    { id: 2435, name: 'Prayer potion(4)', count: 15, stackable: true },
+    { id: 386, name: 'Shark', count: 18, stackable: true },
+    { id: 2358, name: 'Gold bar', count: 1, stackable: true },
+    { id: 1760, name: 'Ball of wool', count: 1, stackable: true },
+    { id: 2449, name: 'Superantipoison(4)', count: 2, stackable: true },
+] as const;
+
+// 28 slots exact: 3 Waterfall rune stacks + gear + 11 Dragon bones + Waterfall ropes/sharks + PvP boosts.
+export const STRENGTH_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 556, name: 'Air rune', count: 6, stackable: true },
+    { id: 557, name: 'Earth rune', count: 6, stackable: true },
+    { id: 555, name: 'Water rune', count: 6, stackable: true },
+    { id: 1333, name: 'Rune scimitar', count: 1, stackable: false },
+    { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
+    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
+    { id: 954, name: 'Rope', count: 2, stackable: false },
+    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
+    { id: 385, name: 'Shark', count: 2, stackable: false },
+    { id: 2436, name: 'Super attack(4)', count: 2, stackable: false },
+    { id: 2440, name: 'Super strength(4)', count: 3, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
+] as const;
+
+// 28 slots exact: 5 Super strength(4) keep +17 Strength boost across 99 Defence PvP.
+export const DEFENCE_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 556, name: 'Air rune', count: 6, stackable: true },
+    { id: 557, name: 'Earth rune', count: 6, stackable: true },
+    { id: 555, name: 'Water rune', count: 6, stackable: true },
+    { id: 1333, name: 'Rune scimitar', count: 1, stackable: false },
+    { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
+    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
+    { id: 954, name: 'Rope', count: 2, stackable: false },
+    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
+    { id: 385, name: 'Shark', count: 2, stackable: false },
+    { id: 2436, name: 'Super attack(4)', count: 1, stackable: false },
+    { id: 2440, name: 'Super strength(4)', count: 5, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 1, stackable: false },
+] as const;
+
+export const KIT_BY_BOARD: Readonly<Record<'hitpoints' | 'strength' | 'defence', readonly KitSpecItem[]>> = {
+    hitpoints: HP_SPECIALIST_KIT,
+    strength: STRENGTH_SPECIALIST_KIT,
+    defence: DEFENCE_SPECIALIST_KIT,
+};
+
+export const SPELLS = {
+    windStrike: componentId('magic:wind_strike'),
+    fireStrike: componentId('magic:fire_strike'),
+    varrockTeleport: componentId('magic:varrock_teleport'),
+    faladorTeleport: componentId('magic:falador_teleport'),
+    camelotTeleport: componentId('magic:camelot_teleport'),
+} as const;
+
+export type StopFn = () => boolean;
+export type Point = { x: number; z: number; tol?: number };
+
+export const escapeRe = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export const exactNameRe = (name: string): RegExp => new RegExp('^' + escapeRe(name) + '$', 'i');
+
+export function kitSlotTotal(kit: readonly KitSpecItem[]): number {
+    return kit.reduce((sum, item) => sum + (item.stackable ? 1 : item.count), 0);
+}
+
+export function kitRequirements(kit: readonly KitSpecItem[]) {
+    return [...kit].sort((a, b) => a.id - b.id).map(item => ({ item: item.name, count: item.count, itemId: item.id }));
+}
+
+export function countById(items: readonly { id: number; baseId?: number; count?: number }[], id: number): number {
+    let total = 0;
+    for (const item of items) {
+        if ((item.baseId ?? item.id) === id || item.id === id) total += item.count ?? 0;
+    }
+    return total;
+}
+
+export function hasAtLeastKit(items: readonly { id: number; baseId?: number; count?: number }[], kit: readonly KitSpecItem[]): boolean {
+    return kit.every(spec => countById(items, spec.id) >= spec.count);
+}
+
+export function hasExactKit(items: readonly { id: number; baseId?: number; count?: number }[], kit: readonly KitSpecItem[]): boolean {
+    const allowed = new Set(kit.map(k => k.id));
+    if (items.some(i => !allowed.has(i.id) && !allowed.has(i.baseId ?? i.id))) return false;
+    return kit.every(spec => countById(items, spec.id) === spec.count);
+}
+
+export function assertNonReservedAccount(name: string, label = 'account'): string {
+    if (!name || !/^[A-Za-z0-9_ -]{1,12}$/.test(name)) throw Error(`combat-specialists: invalid ${label}: ${name}`);
+    if (RESERVED_ACCOUNTS.includes(name.toLowerCase())) throw Error(`combat-specialists: refuses reserved ${label}: ${name}`);
+    return name;
+}
+
+export function readServerHost(root: string, bot: string): string {
+    const raw = readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', bot, 'bot.env'), 'utf8');
+    return (raw.match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
+}
+
+export function posOf(s: Session) {
+    return s.sdk.getState()?.player as { worldX: number; worldZ: number; level: number; hp?: number; isDead?: boolean } | undefined;
+}
+
+export function d8(a: { x: number; z: number }, b: { x: number; z: number }): number {
+    return Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
+}
+
+export function skillInfo(s: Session, name: string): { level: number; baseLevel: number; experience: number } {
+    const sk = s.sdk.getSkill(name) as { level?: number; baseLevel?: number; experience?: number } | undefined;
+    return {
+        level: sk?.level ?? 1,
+        baseLevel: sk?.baseLevel ?? sk?.level ?? 1,
+        experience: sk?.experience ?? 0,
+    };
+}
+
+export function activeContinueDialog(s: Session): boolean {
+    const d: any = s.sdk.getDialog();
+    if (!d?.isOpen || d.isWaiting) return false;
+    const opts: any[] = d.options ?? [];
+    return opts.length === 0 || opts.every(o => /click here to continue/i.test(o.text ?? ''));
+}
+
+export async function dismissContinueDialogs(s: Session, stop: StopFn, maxTicks = 8): Promise<void> {
+    for (let i = 0; i < maxTicks && !stop(); i++) {
+        const d: any = s.sdk.getDialog();
+        if (!d?.isOpen) return;
+        if (!d.isWaiting && activeContinueDialog(s)) await s.sdk.sendClickDialog(0);
+        await waitTicks(s, 1);
+    }
+}
+
+export async function walkWaypoints(
+    s: Session,
+    pts: Point[],
+    maxTicks: number,
+    stop: StopFn,
+    label: string,
+    opts: { ignoreMeleeHunters?: boolean; onTickExtra?: () => void; look?: number } = {},
+): Promise<void> {
+    const walker = await sessionWalker(s);
+    if (opts.ignoreMeleeHunters) {
+        const pf: any = await import('../vendor/rs-sdk/sdk/pathfinding');
+        const grid = await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+        const { withDanger } = await import('../packages/core/src/danger');
+        const basePlan = walker.plan;
+        walker.plan = (level, from, to, avoid) => {
+            const pfm = protectedFromMelee(s.sdk.getState());
+            if (!pfm) return basePlan(level, from, to, avoid);
+            pf.initPathfinding();
+            const blocks = applyKnownDoorBlocks(s.sdk, level, from, to).map(b =>
+                b.whenAxis === undefined ? { ...b, ...pf.getDoorAt(b.level, b.x, b.z) } : b,
+            );
+            const find = () =>
+                withDoorPolicy(grid, blocks, () =>
+                    pf.findLongPath(level, from.x, from.z, to.x, to.z, 500, (s.sdk as any).temporaryDoorBlocks?.active?.() ?? []),
+                );
+            return avoid?.length ? withDanger(grid, avoid.map(t => ({ ...t, level })), [{ ...from, level }, { ...to, level }], find, 'live') : find();
+        };
+    }
+    const offDialog = s.onTick(() => {
+        if (activeContinueDialog(s)) void s.sdk.sendClickDialog(0);
+        opts.onTickExtra?.();
+    });
+    try {
+        const r = await walkPath(walker, pts, { maxTicks, stop, look: opts.look ?? 20 });
+        if (!r.ok) throw Error(`walk failed (${label}): ${r.detail ?? JSON.stringify(r)}`);
+    } finally {
+        offDialog();
+    }
+}
+
+export async function moveToTile(
+    s: Session,
+    to: { x: number; z: number; level: number },
+    tol: number,
+    stop: StopFn,
+    label = `${to.x},${to.z},${to.level}`,
+): Promise<void> {
+    const near = () => {
+        const p = posOf(s);
+        return !!p && p.level === to.level && Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) <= tol;
+    };
+    if (near()) return;
+    const p = posOf(s);
+    if (p && p.level === to.level && Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) <= 32) {
+        const w = await sessionWalker(s);
+        const r = await walkPath(w, [{ x: to.x, z: to.z, tol }], { maxTicks: 120, stop });
+        if (r.ok && near()) return;
+    }
+    const world = await getWorld();
+    const r = await goTo(s, world, to, accountOf(s), { legTimeoutTicks: 240 });
+    if (!r.ok || !near()) throw Error(`moveToTile(${label}) failed: ${r.ok ? 'not at destination' : r.detail}`);
+}
+
+export async function setAutoRetaliate(s: Session, want: boolean): Promise<void> {
+    if (s.sdk.getState()?.autoRetaliateEnabled === want) return;
+    await s.direct({ type: 'clickComponent', componentId: AUTO_RETALIATE_COMPONENT, reason: 'SDK' });
+    await waitUntil(s, () => s.sdk.getState()?.autoRetaliateEnabled === want, { timeoutTicks: 5 });
+}
+
+export async function setPrayerState(s: Session, prayerIndex: number, on: boolean, stop: StopFn): Promise<void> {
+    const isOn = () => !!s.sdk.getState()?.prayers?.activePrayers?.[prayerIndex];
+    if (isOn() === on) return;
+    if (on && (s.sdk.getState()?.prayers?.prayerPoints ?? 0) <= 0) return;
+    for (let i = 0; i < 4 && !stop() && isOn() !== on; i++) {
+        await s.direct({ type: 'togglePrayer', prayerIndex, reason: 'SDK' });
+        if (await waitUntil(s, () => isOn() === on || stop(), { timeoutTicks: 3 })) return;
+    }
+}
+
+export async function startAndExitTutorial(s: Session, keepIds: ReadonlySet<number>, stop: StopFn): Promise<void> {
+    await leaveRuneStarter(s, stop);
+    if (onStarterIsland(posOf(s)) || posOf(s)?.level !== 0) {
+        throw Error('still on Tutorial Island after leaveRuneStarter');
+    }
+    const deadline = s.tick() + 45;
+    while (!stop()) {
+        const junk = s.sdk.getInventory().filter(i => !keepIds.has(i.id));
+        if (junk.length === 0) return;
+        if (s.tick() >= deadline) throw Error(`failed to drop starter items: ${junk.map(i => i.id).join(',')}`);
+        await dismissContinueDialogs(s, stop, 2);
+        const batch = junk.slice(0, 4);
+        await Promise.all(batch.map(i => s.direct({ type: 'dropItem', slot: i.slot, reason: 'SDK' })));
+        await waitTicks(s, 1);
+    }
+}
+
+export async function receiveSupplyKit(
+    s: Session,
+    supplierName: string,
+    kit: readonly KitSpecItem[],
+    stop: StopFn,
+): Promise<void> {
+    const p0 = posOf(s);
+    if (!p0 || d8({ x: p0.worldX, z: p0.worldZ }, LUMBRIDGE_HANDOFF) > 2) {
+        await walkWaypoints(s, [{ ...LUMBRIDGE_HANDOFF, tol: 2 }], 80, stop, 'lumbridge handoff');
+    }
+    const peerRe = exactNameRe(supplierName);
+    const allowed = new Set(kit.map(k => k.id));
+    const deadline = s.tick() + 180;
+    while (!stop() && !hasAtLeastKit(s.sdk.getInventory(), kit)) {
+        if (s.tick() >= deadline) throw Error(`did not receive supply kit from ${supplierName}`);
+        await dismissContinueDialogs(s, stop, 2);
+        await s.bot.dismissBlockingUI();
+        const near = (s.sdk.getState()?.nearbyPlayers ?? []).find((n: any) => peerRe.test(n.name));
+        if (!near) {
+            await waitTicks(s, 1);
+            continue;
+        }
+        const tr = await s.bot.trade(peerRe, {
+            accept: offer =>
+                offer.every(o => allowed.has(o.id)) && kit.every(k => countById(offer, k.id) === k.count),
+            requestTimeout: 10_000,
+            timeout: 45_000,
+            retryOnBusy: true,
+        });
+        if (tr.success) {
+            await waitUntil(s, () => hasAtLeastKit(s.sdk.getInventory(), kit) || stop(), { timeoutTicks: 10 });
+            if (hasAtLeastKit(s.sdk.getInventory(), kit)) return;
+        }
+        await waitTicks(s, 1);
+    }
+    if (!hasAtLeastKit(s.sdk.getInventory(), kit)) {
+        throw Error('stopped waiting for specialist supply kit');
+    }
+}
+
+export async function equipItemById(s: Session, itemId: number, stop: StopFn, label?: string): Promise<void> {
+    if (s.sdk.getEquipment().some(e => e.id === itemId)) return;
+    const item = s.sdk.getInventory().find(i => i.id === itemId);
+    if (!item) throw Error(`missing ${label ?? `item ${itemId}`} to equip`);
+    const eq = await s.bot.equipItem(item);
+    if (!eq.success && !s.sdk.getEquipment().some(e => e.id === itemId)) {
+        throw Error(`failed to equip ${label ?? item.name}: ${eq.message}`);
+    }
+    if (!await waitUntil(s, () => s.sdk.getEquipment().some(e => e.id === itemId) || stop(), { timeoutTicks: 6 })) {
+        throw Error(`equip not observed for ${label ?? item.name}`);
+    }
+}
+
+export async function buryBonesTo43(s: Session, stop: StopFn): Promise<void> {
+    const deadline = s.tick() + 60;
+    while (!stop()) {
+        const before = countById(s.sdk.getInventory(), 536);
+        if (before === 0) break;
+        if (s.tick() >= deadline) throw Error(`stalled burying Dragon bones (${before} remaining)`);
+        const bone = s.sdk.getInventory().find(i => i.id === 536);
+        if (!bone) break;
+        await s.sdk.sendUseItem(bone.slot, 1);
+        await waitUntil(s, () => countById(s.sdk.getInventory(), 536) < before || stop(), { timeoutTicks: 5 });
+    }
+    const prayer = skillInfo(s, 'Prayer');
+    if (prayer.baseLevel < 43) {
+        throw Error(`Prayer ${prayer.baseLevel} < 43 after burying Dragon bones (xp=${prayer.experience})`);
+    }
+}
+
+export interface CourtyardNpc {
+    index: number;
+    name?: string;
+    x?: number;
+    z?: number;
+    tileX?: number;
+    tileZ?: number;
+    distance?: number;
+    hp?: number | null;
+    inCombat?: boolean;
+    targetIndex?: number;
+    reachable?: boolean;
+    optionsWithIndex?: readonly { text?: string }[];
+}
+
+export function pickCourtyardMagicTarget(
+    npcs: readonly CourtyardNpc[],
+    opts: {
+        selfSlot?: number;
+        engagedTargetIndex?: number | null;
+        activeTargetIndex?: number | null;
+        avoid: ReadonlySet<number>;
+        zoneOk: (x: number, z: number) => boolean;
+    },
+): CourtyardNpc | undefined {
+    const attackable = (n: CourtyardNpc) =>
+        (n.hp === undefined || n.hp === null || n.hp > 0) &&
+        n.reachable !== false &&
+        (n.optionsWithIndex ?? []).some(o => /^attack$/i.test(o.text ?? ''));
+    const selfTarget = Number.isSafeInteger(opts.selfSlot) ? 32768 + opts.selfSlot! : -1;
+
+    if (opts.engagedTargetIndex !== null && opts.engagedTargetIndex !== undefined && opts.engagedTargetIndex >= 0) {
+        const engaged = npcs.find(n => n.index === opts.engagedTargetIndex && attackable(n));
+        if (engaged) return engaged;
+    }
+    if (selfTarget >= 32768) {
+        const attacker = npcs
+            .filter(n => n.inCombat && n.targetIndex === selfTarget && attackable(n))
+            .sort((a, b) => (a.distance ?? 99) - (b.distance ?? 99))[0];
+        if (attacker) return attacker;
+    }
+    const inZoneMob = (n: CourtyardNpc) => {
+        const nx = n.tileX ?? n.x ?? 0;
+        const nz = n.tileZ ?? n.z ?? 0;
+        return /^(man|woman|rat|goblin)$/i.test(n.name ?? '') && attackable(n) && opts.zoneOk(nx, nz);
+    };
+    const free = npcs.filter(n => inZoneMob(n) && !n.inCombat && !opts.avoid.has(n.index));
+    const preferred = free.find(n => n.index === opts.activeTargetIndex);
+    if (preferred) return preferred;
+    return free.sort((a, b) => (/^(man|woman)$/i.test(a.name ?? '') ? 0 : 1) - (/^(man|woman)$/i.test(b.name ?? '') ? 0 : 1) || (a.distance ?? 99) - (b.distance ?? 99))[0];
+}
+
+export async function trainCourtyardMagicTo25(s: Session, stop: StopFn): Promise<void> {
+    await setAutoRetaliate(s, false);
+    const inCourtyard = (x: number, z: number) => x >= 3217 && x <= 3225 && z >= 3210 && z <= 3229;
+    const inPlaza = (x: number, z: number) => x >= 3228 && x <= 3246 && z >= 3212 && z <= 3232;
+    const deadline = s.tick() + 450;
+    const avoid = new Map<number, number>();
+    let movedEast = false;
+    let emptyTicks = 0;
+    let activeTarget: number | null = null;
+    let lastCastTick = -10;
+
+    while (!stop() && skillInfo(s, 'Magic').baseLevel < 25) {
+        if (s.tick() >= deadline) throw Error(`Magic 1->25 timed out at ${skillInfo(s, 'Magic').baseLevel}`);
+        for (const [idx, exp] of avoid) if (s.tick() >= exp) avoid.delete(idx);
+
+        const st = s.sdk.getState();
+        const zoneOk = movedEast ? inPlaza : inCourtyard;
+        const engaged = st?.player?.combat?.inCombat && st.player.combat.targetType === 'npc' ? st.player.combat.targetIndex : null;
+        const selfSlot = (s.client as any)?.selfSlot;
+        const target = pickCourtyardMagicTarget(st?.nearbyNpcs ?? [], {
+            selfSlot,
+            engagedTargetIndex: engaged,
+            activeTargetIndex: activeTarget,
+            avoid: new Set(avoid.keys()),
+            zoneOk,
+        });
+        if (!target) {
+            emptyTicks++;
+            if (!movedEast && emptyTicks >= 8) {
+                movedEast = true;
+                emptyTicks = 0;
+                activeTarget = null;
+                await walkWaypoints(s, [{ x: 3234, z: 3221, tol: 2 }], 40, stop, 'lumbridge east plaza');
+            } else {
+                await waitTicks(s, 1);
+            }
+            continue;
+        }
+        emptyTicks = 0;
+        if (s.tick() - lastCastTick < 5) {
+            await waitTicks(s, 1);
+            continue;
+        }
+        await dismissContinueDialogs(s, stop, 2);
+        if (stop() || skillInfo(s, 'Magic').baseLevel >= 25) break;
+
+        const spell = skillInfo(s, 'Magic').baseLevel < 13 ? SPELLS.windStrike : SPELLS.fireStrike;
+        const xp0 = skillInfo(s, 'Magic').experience;
+        const castAt = s.tick();
+        activeTarget = target.index;
+        lastCastTick = castAt;
+        await s.direct({ type: 'spellOnNpc', npcIndex: target.index, spellComponent: spell, reason: 'SDK' });
+        const gotXp = await waitUntil(
+            s,
+            () => stop() || skillInfo(s, 'Magic').baseLevel >= 25 || skillInfo(s, 'Magic').experience > xp0,
+            { timeoutTicks: 6 },
+        );
+        if (skillInfo(s, 'Magic').baseLevel >= 25) break;
+        if (!gotXp || skillInfo(s, 'Magic').experience <= xp0) {
+            avoid.set(target.index, s.tick() + 25);
+            activeTarget = null;
+            lastCastTick = -10;
+            continue;
+        }
+        while (!stop() && skillInfo(s, 'Magic').baseLevel < 25 && s.tick() - castAt < 5) {
+            if (activeContinueDialog(s)) await s.sdk.sendClickDialog(0);
+            await waitTicks(s, 1);
+        }
+    }
+}
+
+export async function teleportTo45Falador(s: Session, stop: StopFn): Promise<void> {
+    const deadline = s.tick() + 220;
+    while (!stop() && skillInfo(s, 'Magic').baseLevel < 37) {
+        if (s.tick() >= deadline) throw Error(`Varrock teleport Magic 25->37 timed out at ${skillInfo(s, 'Magic').baseLevel}`);
+        if (countById(s.sdk.getInventory(), 563) < 1) throw Error('out of Law runes during Varrock teleport');
+        const xp0 = skillInfo(s, 'Magic').experience;
+        await s.direct({ type: 'clickComponent', componentId: SPELLS.varrockTeleport, reason: 'SDK' });
+        if (await waitUntil(s, () => skillInfo(s, 'Magic').experience > xp0 || stop(), { timeoutTicks: 5 }) && !stop()) {
+            await waitTicks(s, 3);
+        }
+    }
+    while (!stop() && (skillInfo(s, 'Magic').baseLevel < 45 || (posOf(s)?.worldX ?? 9999) > 3010)) {
+        if (s.tick() >= deadline) throw Error(`Falador teleport Magic 37->45 timed out at ${skillInfo(s, 'Magic').baseLevel}`);
+        if (countById(s.sdk.getInventory(), 563) < 1 || countById(s.sdk.getInventory(), 555) < 1) {
+            throw Error('out of Law or Water runes during Falador teleport');
+        }
+        const xp0 = skillInfo(s, 'Magic').experience;
+        await s.direct({ type: 'clickComponent', componentId: SPELLS.faladorTeleport, reason: 'SDK' });
+        if (await waitUntil(s, () => skillInfo(s, 'Magic').experience > xp0 || stop(), { timeoutTicks: 5 }) && !stop()) {
+            await waitTicks(s, 3);
+        }
+    }
+}
+
+export async function rubRingOfDueling(
+    s: Session,
+    optionRe: RegExp,
+    destTile: { x: number; z: number },
+    stop: StopFn,
+    radius = 8,
+): Promise<void> {
+    const deadline = s.tick() + 40;
+    while (!stop() && s.tick() < deadline) {
+        const p = posOf(s);
+        if (p && p.level === 0 && d8({ x: p.worldX, z: p.worldZ }, destTile) <= radius) return;
+        const d: any = s.sdk.getDialog();
+        if (d?.isOpen && !d.isWaiting) {
+            const pick = (d.options ?? []).find((o: any) => optionRe.test(o.text ?? ''));
+            await s.sdk.sendClickDialog(pick ? pick.index : 0);
+            await waitUntil(s, () => {
+                const cur = posOf(s);
+                return (!!cur && d8({ x: cur.worldX, z: cur.worldZ }, destTile) <= radius) || stop();
+            }, { timeoutTicks: 8 });
+            continue;
+        }
+        const ring = s.sdk.getInventory().find(i => (DUELING_RING_IDS as readonly number[]).includes(i.id));
+        if (!ring) throw Error('missing Ring of dueling in inventory');
+        const rubOp = (ring.optionsWithIndex ?? []).find((o: any) => /rub/i.test(o.text ?? ''))?.opIndex ?? 4;
+        await s.direct({ type: 'useInventoryItem', slot: ring.slot, optionIndex: rubOp, reason: 'SDK' });
+        await waitUntil(s, () => !!s.sdk.getDialog()?.isOpen || stop(), { timeoutTicks: 5 });
+    }
+    const p = posOf(s);
+    if (!p || d8({ x: p.worldX, z: p.worldZ }, destTile) > radius) {
+        throw Error(`Ring of dueling teleport to ${destTile.x},${destTile.z} failed at ${p ? `${p.worldX},${p.worldZ}` : 'unknown'}`);
+    }
+}
+
+export async function openFreshBank(s: Session, stop: StopFn): Promise<void> {
+    if (!s.sdk.getState()?.bank?.isOpen) {
+        await s.bot.dismissBlockingUI();
+        const r = await s.bot.openBank();
+        if (!r.success && !s.sdk.getState()?.bank?.isOpen) {
+            throw Error(`openBank failed: ${r.message ?? r.reason}`);
+        }
+    }
+    if (!await waitUntil(s, () => !!s.sdk.getState()?.bank?.isOpen || stop(), { timeoutTicks: 15 })) {
+        throw Error('bank interface did not open');
+    }
+}
+
+export async function depositIds(s: Session, ids: readonly number[], stop: StopFn): Promise<void> {
+    const idSet = new Set(ids);
+    for (let guard = 0; guard < 30 && !stop(); guard++) {
+        const item = s.sdk.getInventory().find(i => idSet.has(i.id));
+        if (!item) return;
+        const before = s.sdk.getInventory().length;
+        const r = await s.bot.depositItem(item, -1);
+        if (!r.success) throw Error(`deposit ${item.name} failed: ${r.message ?? r.reason}`);
+        await waitUntil(s, () => s.sdk.getInventory().length < before || !s.sdk.getInventory().some(i => i.slot === item.slot && i.id === item.id) || stop(), { timeoutTicks: 8 });
+    }
+}
+
+export async function withdrawExactCount(s: Session, id: number, count: number, stop: StopFn, label?: string): Promise<void> {
+    const row = s.sdk.getState()?.bank?.items.find(i => i.id === id);
+    if (!row || row.count < count) {
+        throw Error(`missing bank stock for ${label ?? id}: need ${count}, have ${row?.count ?? 0}`);
+    }
+    const before = countById(s.sdk.getInventory(), id);
+    const w = await s.bot.withdrawItem(row, count, { asNote: false });
+    if (!w.success || !await waitUntil(s, () => countById(s.sdk.getInventory(), id) >= before + count || stop(), { timeoutTicks: 12 })) {
+        throw Error(`withdraw ${label ?? row.name} failed: ${w.message ?? w.reason ?? 'count mismatch'}`);
+    }
+}
+
+export async function closeBankClean(s: Session, stop: StopFn): Promise<void> {
+    if (!s.sdk.getState()?.bank?.isOpen) return;
+    await s.bot.closeBank();
+    await waitUntil(s, () => !s.sdk.getState()?.bank?.isOpen || stop(), { timeoutTicks: 8 });
+}
+
+export async function pullArdougneLeverToWildy(s: Session, stop: StopFn): Promise<void> {
+    await moveToTile(s, { x: ARDY_LEVER.x, z: ARDY_LEVER.z, level: 0 }, 1, stop, 'walk to ardougne lever');
+    const deadline = s.tick() + 50;
+    while (!stop() && s.tick() < deadline) {
+        const p = posOf(s);
+        if (p && p.worldZ >= 3900) return;
+        const d: any = s.sdk.getDialog();
+        if (d?.isOpen) {
+            if (!d.isWaiting) {
+                const opts: any[] = d.options ?? [];
+                const pick = opts.find(o => /yes please/i.test(o.text ?? '')) ?? opts.find(o => /brave/i.test(o.text ?? ''));
+                await s.sdk.sendClickDialog(pick ? pick.index : 0);
+            }
+            await waitTicks(s, 1);
+            continue;
+        }
+        const lever = (s.sdk.getState()?.nearbyLocs ?? [])
+            .filter((l: any) => l.id === 1814 || (/lever/i.test(l.name ?? '') && d8(l, ARDY_LEVER) <= 2))
+            .sort((a: any, b: any) => d8(a, ARDY_LEVER) - d8(b, ARDY_LEVER))[0];
+        if (!lever) {
+            await waitTicks(s, 1);
+            continue;
+        }
+        const op = (lever.optionsWithIndex ?? [])[0];
+        await s.sdk.sendInteractLoc(lever.x, lever.z, lever.id, op?.opIndex ?? 1);
+        await waitUntil(s, () => (posOf(s)?.worldZ ?? 0) >= 3900 || !!s.sdk.getDialog()?.isOpen || stop(), { timeoutTicks: 8 });
+    }
+    if ((posOf(s)?.worldZ ?? 0) < 3900) {
+        throw Error('failed to teleport via Ardougne wilderness lever');
+    }
+}
+
+export async function runWildyPvpLoop(
+    s: Session,
+    opts: {
+        skill: 'Strength' | 'Defence';
+        targetLevel: number;
+        tankNames: readonly string[];
+        stop: StopFn;
+    },
+): Promise<void> {
+    await setAutoRetaliate(s, false);
+    await equipItemById(s, 1333, opts.stop, 'Rune scimitar');
+    await equipItemById(s, 1725, opts.stop, 'Amulet of strength');
+
+    // Verify exact Strength-only (Aggressive) or Defence-only (Defensive) combat style.
+    await waitUntil(s, () => {
+        const c = s.sdk.getState()?.combatStyle;
+        return (!!c?.known && c.weaponName === 'Rune scimitar') || opts.stop();
+    }, { timeoutTicks: 10 });
+    const style = giantStyle(s.sdk.getState()?.combatStyle, opts.skill);
+    if (s.sdk.getState()?.combatStyle?.currentStyle !== style.index) {
+        await s.sdk.sendSetCombatStyle(style.index);
+        if (!await waitUntil(s, () => s.sdk.getState()?.combatStyle?.currentStyle === style.index || opts.stop(), { timeoutTicks: 10 })) {
+            throw Error(`failed to switch combat style to ${style.name} (${opts.skill})`);
+        }
+    }
+
+    const tankRes = opts.tankNames.map(exactNameRe);
+    let lastAttackTick = -10;
+    let lastTargetIndex = -1;
+    let lastDrinkTick = -10;
+    let lastFlickTick = -10;
+    let lastPrayPotionTick = -10;
+
+    const drinkFromList = async (ids: readonly number[]): Promise<boolean> => {
+        for (const id of ids) {
+            const item = s.sdk.getInventory().find(i => i.id === id);
+            if (!item) continue;
+            await s.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 1, reason: 'SDK' });
+            return true;
+        }
+        return false;
+    };
+
+    try {
+        while (!opts.stop() && skillInfo(s, opts.skill).baseLevel < opts.targetLevel) {
+            if (activeContinueDialog(s)) void s.sdk.sendClickDialog(0);
+
+            const st = s.sdk.getState();
+            const pts = st?.prayers?.prayerPoints ?? 0;
+            const ultOn = !!st?.prayers?.activePrayers?.[ULTIMATE_STRENGTH_INDEX];
+
+            // Reset Ultimate Strength every 3 ticks in a single tick pair so prayer_drain (5-tick timer) stays cleared.
+            if (pts > 0 && skillInfo(s, 'Prayer').baseLevel >= 31) {
+                if (!ultOn) {
+                    lastFlickTick = s.tick();
+                    void s.direct({ type: 'togglePrayer', prayerIndex: ULTIMATE_STRENGTH_INDEX, reason: 'SDK' });
+                } else if (s.tick() - lastFlickTick >= 3) {
+                    lastFlickTick = s.tick();
+                    void s.direct({ type: 'togglePrayer', prayerIndex: ULTIMATE_STRENGTH_INDEX, reason: 'SDK' });
+                    void s.direct({ type: 'togglePrayer', prayerIndex: ULTIMATE_STRENGTH_INDEX, reason: 'SDK' });
+                }
+            }
+            if (pts <= 10 && s.tick() - lastPrayPotionTick >= 4) {
+                if (await drinkFromList(PRAYER_POT_IDS)) lastPrayPotionTick = s.tick();
+            }
+
+            // Re-boost Strength before +17 decays below +16 (keeps 23 maxhit at 83 Strength) and keep Attack boosted.
+            if (s.tick() - lastDrinkTick >= 3) {
+                const str = skillInfo(s, 'Strength');
+                const atk = skillInfo(s, 'Attack');
+                const maxStrBoost = 5 + Math.floor(str.baseLevel * 0.15);
+                if (str.level < str.baseLevel + maxStrBoost) {
+                    if (await drinkFromList(SUPER_STRENGTH_IDS)) lastDrinkTick = s.tick();
+                } else if (atk.level < atk.baseLevel + 10) {
+                    if (await drinkFromList(SUPER_ATTACK_IDS)) lastDrinkTick = s.tick();
+                }
+            }
+
+            const players: any[] = st?.nearbyPlayers ?? [];
+            const tanks = players
+                .filter(p => tankRes.some(re => re.test(p.name ?? '')) && (p.z ?? p.worldZ ?? 0) >= 3900 && (p.hp === undefined || p.hp === null || p.hp > 0))
+                .sort((a, b) => d8({ x: a.x ?? a.worldX ?? 0, z: a.z ?? a.worldZ ?? 0 }, DESERTED_KEEP) - d8({ x: b.x ?? b.worldX ?? 0, z: b.z ?? b.worldZ ?? 0 }, DESERTED_KEEP));
+
+            const combat = st?.player?.combat;
+            const currentAlive = combat?.inCombat && combat.targetType === 'player' && tanks.some(t => t.index === combat.targetIndex);
+            if (!currentAlive && tanks.length > 0) {
+                const target = tanks[0]!;
+                if (target.index !== lastTargetIndex || s.tick() - lastAttackTick >= 2) {
+                    lastTargetIndex = target.index;
+                    lastAttackTick = s.tick();
+                    await s.sdk.sendInteractPlayer(target.index, 2);
+                }
+            } else if (!tanks.length && d8({ x: posOf(s)?.worldX ?? 0, z: posOf(s)?.worldZ ?? 0 }, DESERTED_KEEP) > 3) {
+                await walkWaypoints(s, [{ ...DESERTED_KEEP, tol: 1 }], 40, opts.stop, 'recenter deserted keep');
+            }
+
+            await waitTicks(s, 1);
+        }
+    } finally {
+        await setPrayerState(s, ULTIMATE_STRENGTH_INDEX, false, () => true);
+    }
+}
+
+async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
+    // Climb Lumbridge Castle stairs (0 -> 1 -> 2) to bank, withdraw Law runes and Manta rays, Camelot -> Lever.
+    while (!stop() && (posOf(s)?.level ?? 0) < 2) {
+        const lvl = posOf(s)?.level ?? 0;
+        if (lvl === 0 && d8({ x: posOf(s)?.worldX ?? 0, z: posOf(s)?.worldZ ?? 0 }, LUMBRIDGE_STAIRS) > 4) {
+            await walkWaypoints(s, [{ x: LUMBRIDGE_STAIRS.x + 1, z: LUMBRIDGE_STAIRS.z, tol: 2 }], 60, stop, 'lumbridge stairs');
+        }
+        const stair = (s.sdk.getState()?.nearbyLocs ?? [])
+            .filter((l: any) => /stair/i.test(l.name ?? '') && d8(l, LUMBRIDGE_STAIRS) <= 4 && (l.optionsWithIndex ?? []).some((o: any) => /climb-up/i.test(o.text ?? '')))
+            .sort((a: any, b: any) => d8(a, LUMBRIDGE_STAIRS) - d8(b, LUMBRIDGE_STAIRS))[0];
+        if (stair) {
+            const op = stair.optionsWithIndex.find((o: any) => /climb-up/i.test(o.text ?? ''));
+            await s.sdk.sendInteractLoc(stair.x, stair.z, stair.id, op?.opIndex ?? 2);
+            await waitUntil(s, () => (posOf(s)?.level ?? 0) > lvl || stop(), { timeoutTicks: 8 });
+        } else {
+            await waitTicks(s, 1);
+        }
+    }
+    await walkWaypoints(s, [{ x: LUMBRIDGE_BANK.x, z: LUMBRIDGE_BANK.z, tol: 1 }], 40, stop, 'lumbridge top bank');
+    await openFreshBank(s, stop);
+    await withdrawExactCount(s, 563, 1, stop, 'Law rune');
+    const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
+    if (freeSlots > 0) await withdrawExactCount(s, 391, freeSlots, stop, 'Manta ray');
+    await closeBankClean(s, stop);
+
+    for (let attempt = 0; attempt < 5 && !stop(); attempt++) {
+        const p = posOf(s);
+        if (p && p.level === 0 && p.worldX <= 2800 && p.worldZ >= 3440) break;
+        await s.direct({ type: 'clickComponent', componentId: SPELLS.camelotTeleport, reason: 'SDK' });
+        await waitUntil(s, () => {
+            const cur = posOf(s);
+            return (!!cur && cur.level === 0 && cur.worldX <= 2800 && cur.worldZ >= 3440) || stop();
+        }, { timeoutTicks: 8 });
+    }
+    await pullArdougneLeverToWildy(s, stop);
+}
+
+async function pullKeepLeverOutAndRebank(s: Session, stop: StopFn): Promise<boolean> {
+    const outLever = (s.sdk.getState()?.nearbyLocs ?? [])
+        .filter((l: any) => l.id === 1815 || (/lever/i.test(l.name ?? '') && d8(l, DESERTED_KEEP) <= 3))
+        .sort((a: any, b: any) => d8(a, DESERTED_KEEP) - d8(b, DESERTED_KEEP))[0];
+    if (!outLever) return false;
+    const op = (outLever.optionsWithIndex ?? [])[0];
+    await s.sdk.sendInteractLoc(outLever.x, outLever.z, outLever.id, op?.opIndex ?? 1);
+    const leftWildy = await waitUntil(s, () => {
+        const cur = posOf(s);
+        return (!!cur && cur.worldZ < 3800) || stop();
+    }, { timeoutTicks: 10 });
+    if (!leftWildy || stop() || (posOf(s)?.worldZ ?? 9999) >= 3800) return false;
+
+    await moveToTile(s, ARDY_NORTH_BANK, 1, stop, 'ardougne north bank');
+    await openFreshBank(s, stop);
+    const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
+    if (freeSlots > 0) await withdrawExactCount(s, 391, freeSlots, stop, 'Manta ray');
+    await closeBankClean(s, stop);
+    await pullArdougneLeverToWildy(s, stop);
+    return true;
+}
+
+export async function runCompanionRole(
+    s: Session,
+    opts: {
+        role: 'supplier' | 'supplier-tank' | 'tank';
+        specialistName: string;
+        kit?: readonly KitSpecItem[];
+        postTileOffsetX?: number;
+        stopFile?: string;
+        cap: number;
+    },
+): Promise<{ ok: boolean; detail: string }> {
+    const root = resolve(import.meta.dir, '..');
+    const serverHost = readServerHost(root, s.name);
+    const t0 = s.tick();
+    const stop: StopFn = () =>
+        s.tick() - t0 >= opts.cap ||
+        (!!opts.stopFile && existsSync(resolve(root, opts.stopFile))) ||
+        existsSync(join(root, '.practice', `stop-${s.name}`)) ||
+        (!isLocalServer(serverHost) && existsSync(join(root, '.practice', 'stop-swarm')));
+
+    await waitUntil(s, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 });
+    await setAutoRetaliate(s, false);
+
+    if (opts.role === 'supplier' || opts.role === 'supplier-tank') {
+        const kit = opts.kit!;
+        await moveToTile(s, LUMBRIDGE_HANDOFF, 2, stop, 'lumbridge handoff');
+        const p = posOf(s)!;
+        console.log('COMPANION_READY ' + JSON.stringify({ role: opts.role, name: s.name, at: { x: p.worldX, z: p.worldZ, level: p.level } }));
+
+        const giveList = kit.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
+        const peerRe = exactNameRe(opts.specialistName);
+        let handoffDone = false;
+        while (!stop() && !handoffDone) {
+            const served = await s.bot.serveTrades({
+                from: peerRe,
+                give: giveList,
+                accept: offer => offer.length === 0,
+                maxTrades: 1,
+                tradeTimeout: 60_000,
+                timeout: 30_000,
+                until: stop,
+            });
+            handoffDone = served.trades.some(t => t.success && kit.every(k => countById(t.gave, k.id) === k.count) && t.received.length === 0);
+            if (!handoffDone) await waitTicks(s, 1);
+        }
+        if (!handoffDone) return { ok: false, detail: `supplier failed handoff to ${opts.specialistName}` };
+        console.log('COMPANION_HANDOFF ' + JSON.stringify({ name: s.name, specialist: opts.specialistName, tick: s.tick() - t0 }));
+        if (opts.role === 'supplier') {
+            return { ok: true, detail: `supplied ${opts.specialistName} in ${s.tick() - t0} ticks` };
+        }
+        await bankAndReturnToKeep(s, stop);
+    } else {
+        const p = posOf(s)!;
+        console.log('COMPANION_READY ' + JSON.stringify({ role: opts.role, name: s.name, at: { x: p.worldX, z: p.worldZ, level: p.level } }));
+    }
+
+    const postTile = { x: DESERTED_KEEP.x + (opts.postTileOffsetX ?? 0), z: DESERTED_KEEP.z, level: 0 };
+    const specialistRe = exactNameRe(opts.specialistName);
+    let lastEatTick = -10;
+    while (!stop()) {
+        if (activeContinueDialog(s)) void s.sdk.sendClickDialog(0);
+        const p = posOf(s);
+        if (!p || p.isDead) {
+            await waitTicks(s, 2);
+            continue;
+        }
+        if (p.worldZ < 3800) {
+            await setAutoRetaliate(s, false);
+            await bankAndReturnToKeep(s, stop);
+            continue;
+        }
+        if (d8({ x: p.worldX, z: p.worldZ }, postTile) > 0) {
+            await walkWaypoints(s, [{ x: postTile.x, z: postTile.z, tol: 0 }], 20, stop, 'tank step to post');
+        }
+        const mantaCount = countById(s.sdk.getInventory(), 391);
+        const hp = skillInfo(s, 'Hitpoints').level;
+        const otherTankHere = (s.sdk.getState()?.nearbyPlayers ?? []).some((np: any) =>
+            !specialistRe.test(np.name ?? '') &&
+            (np.z ?? np.worldZ ?? 0) >= 3900 &&
+            (np.hp === undefined || np.hp === null || np.hp > 0),
+        );
+        if (mantaCount === 0 && hp > 0 && hp <= 65 && otherTankHere) {
+            if (await pullKeepLeverOutAndRebank(s, stop)) continue;
+        }
+        if (hp > 0 && hp <= 77 && s.tick() - lastEatTick >= 3) {
+            const food = s.sdk.getInventory().find(i => i.id === 391);
+            if (food) {
+                lastEatTick = s.tick();
+                await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
+            }
+        }
+        await waitTicks(s, 1);
+    }
+    return { ok: true, detail: `tank ${s.name} finished in ${s.tick() - t0} ticks` };
+}
+
+export async function runMeleePvpSpecialist(
+    s: Session,
+    opts: {
+        board: 'strength' | 'defence';
+        supplierName: string;
+        tankNames: readonly string[];
+        cap: number;
+        t0: number;
+        stop: StopFn;
+        runWaterfallFn: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; tombHoldIds?: readonly number[] }) => Promise<unknown>;
+    },
+): Promise<string> {
+    const skill = opts.board === 'strength' ? 'Strength' : 'Defence';
+    const kit = KIT_BY_BOARD[opts.board];
+    const target = SPECIALIST_TARGETS[opts.board];
+    const elapsed = () => s.tick() - opts.t0;
+    const milestone = (step: string, extra = '') => {
+        console.log(`MILESTONE ${step} tick=${elapsed()}${extra ? ' ' + extra : ''}`);
+    };
+
+    milestone('start');
+    await startAndExitTutorial(s, BURY_KEEP_IDS_MELEE, opts.stop);
+    milestone('tutorial');
+
+    await receiveSupplyKit(s, opts.supplierName, kit, opts.stop);
+    milestone('kit', `slots=${s.sdk.getInventory().length}`);
+
+    await equipItemById(s, 1725, opts.stop, 'Amulet of strength');
+    await buryBonesTo43(s, opts.stop);
+    milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
+
+    await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, opts.stop);
+    await moveToTile(s, { x: 2522, z: 3494, level: 0 }, 2, opts.stop, 'castle wars to almera');
+    milestone('almera');
+
+    await opts.runWaterfallFn({
+        session: s,
+        stop: opts.stop,
+        cap: Math.max(300, opts.cap - elapsed()),
+        food: { id: 385, heal: 20, count: 2, eatAt: 6, crossAt: 9 },
+        mighty: false,
+        exitFalls: true,
+        keepAlive: true,
+        tombHoldIds: [1333],
+    });
+    milestone('waterfall', `atk=${skillInfo(s, 'Attack').baseLevel} str=${skillInfo(s, 'Strength').baseLevel} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
+
+    await pullArdougneLeverToWildy(s, opts.stop);
+    milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
+
+    await runWildyPvpLoop(s, { skill, targetLevel: 99, tankNames: opts.tankNames, stop: opts.stop });
+
+    await dismissContinueDialogs(s, opts.stop, 4);
+    await s.bot.dismissBlockingUI();
+
+    const sk = skillInfo(s, skill);
+    milestone('complete', `${opts.board}=${sk.baseLevel} xp=${sk.experience} targetTicks=${target.targetTicks}`);
+    if (sk.baseLevel < 99) throw Error(`${skill} finished at ${sk.baseLevel} (< 99), xp=${sk.experience}`);
+    return `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${elapsed()} liveTarget=${target.targetTicks}`;
+}
