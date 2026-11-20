@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795166892707-sporranbulge-dipstick",
  "account": "SporranBulge",
  "partner": "Dipstick",
@@ -12,6 +12,16 @@
  "claim": "94555f88-63eb-443f-83d0-67f755a96794",
  "count": 0,
  "ok": false,
- "at": 1795166939961,
- "detail": "trade claimed"
+ "at": 1795166965935,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 27956,
+  "at": 1795166949976
+ },
+ "logout": {
+  "attemptId": "1795166939970-0000010740-0000000001",
+  "at": 1795166965925,
+  "sha256": "686fa9eaae6d09f49a37da415ce7a85a4a94e0d3b974d3183dc4dfceb7dbab1d"
+ },
+ "screen": false
 }

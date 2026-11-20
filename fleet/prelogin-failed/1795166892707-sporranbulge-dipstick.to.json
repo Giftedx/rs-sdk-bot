@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795166892707-sporranbulge-dipstick",
+ "role": "to",
+ "account": "Dipstick",
+ "partner": "SporranBulge",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795166959101,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] 367064181c3398c676cd9cf240b2069ee739180b -> fleet-trade-claim/dipstick (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}

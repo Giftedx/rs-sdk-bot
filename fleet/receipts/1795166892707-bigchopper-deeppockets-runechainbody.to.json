@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795166892707-bigchopper-deeppockets-runechainbody",
  "account": "Deeppockets",
  "partner": "Bigchopper",
@@ -12,6 +12,12 @@
  "claim": "d5c62bfb-c3fb-4464-a9a0-1b4d189da9b5",
  "count": 0,
  "ok": false,
- "at": 1795166935911,
- "detail": "trade claimed"
+ "at": 1795166959240,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795166935994-0000018696-0000000001",
+  "at": 1795166959174,
+  "sha256": "5a42f851b2d9bba1e780eb71746f5af7ed8acba078f37cdd15db974556fa4ece"
+ },
+ "screen": false
 }
