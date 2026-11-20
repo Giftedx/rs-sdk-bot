@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795139504742-moneyshot-pocketrocket-dragonbones",
+ "account": "Moneyshot",
+ "partner": "Pocketrocket",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 17,
+ "claim": "edb7da30-69a1-4c05-afc5-969432373c78",
+ "count": 0,
+ "ok": false,
+ "at": 1795139572413,
+ "detail": "trade claimed"
+}
