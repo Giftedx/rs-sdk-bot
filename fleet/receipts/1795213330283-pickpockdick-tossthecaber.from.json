@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795213330283-pickpockdick-tossthecaber",
  "account": "PickpockDick",
  "partner": "TossTheCaber",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 1821,
  "claim": "08412197-e46a-49f1-8b44-2cc26f67cae4",
- "count": 0,
- "ok": false,
- "at": 1795213401544,
- "detail": "trade claimed"
+ "count": 1821,
+ "ok": true,
+ "at": 1795213594513,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1821,
+  "after": 0
+ },
+ "bank": {
+  "count": 1821,
+  "at": 1795213585377
+ },
+ "logout": {
+  "attemptId": "1795213401554-0000031812-0000000001",
+  "at": 1795213594503,
+  "sha256": "5ad7786caad8a52e093fafe810ad4aec4ea182c1c7066b2b1ad447e9a2b30d7a"
+ },
+ "screen": true
 }
