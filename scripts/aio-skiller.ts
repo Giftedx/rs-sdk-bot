@@ -128,6 +128,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'smithing',method:'smelt',script:'scripts/smelt-bars.ts',description:'Smelt bronze/iron/steel/gold/mithril/adamant/runite bars at furnace'},
  {skill:'smithing',method:'anvil',script:'scripts/smelt-bars.ts',defaultEnv:{ORDER_ACTION:'smith'},description:'Smith bars on the anvil: PRODUCT_ID, MAX_MAKE and BAR_RESERVE name the order'},
  {skill:'smithing',method:'cannonballs',script:'scripts/microbot-a-cannonballs.ts',description:'Smelt steel bars into cannonballs'},
+ {skill:'smithing',method:'specialist',script:'scripts/smithing-specialist.ts',description:'Fresh-clock 1-to-99 Smithing via Glory Edgeville and Varrock West anvil runners'},
  // Crafting
  {skill:'crafting',method:'bowstrings',script:'scripts/spin-bowstrings.ts',description:'Spin flax into bowstrings at Seers/Lumbridge wheel'},
  {skill:'crafting',method:'jewellery',script:'scripts/microbot-b-jewellery.ts',description:'Craft rings, necklaces, and amulets at furnace'},
@@ -147,6 +148,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'runecraft',method:'nature',script:'scripts/microbot-rune-trip.ts',description:'Shilo Village Nature altar runecrafting trips'},
  {skill:'runecraft',method:'supply',script:'scripts/rune-supply.ts',description:'Full fresh-account Rune Mysteries + essence + air runecraft chain'},
  {skill:'runecraft',method:'air',script:'scripts/generated/rcair.ts',description:'Direct Air altar runecrafting'},
+ {skill:'runecraft',method:'specialist',script:'scripts/runecraft-specialist.ts',description:'Fresh-clock 1-to-99 Runecraft via Air altar unlock and Body altar essence runners'},
  // Magic
  {skill:'magic',method:'order',script:'scripts/magic-order.ts',description:'Combat/curse/bolt magic training order'},
  {skill:'magic',method:'items',script:'scripts/microbot-magic-items.ts',description:'High/Low Alchemy, Superheat Item, and Jewellery Enchanting'},
@@ -163,6 +165,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  // Prayer
  {skill:'prayer',method:'bury',script:'scripts/train-prayer.ts',description:'Bury bones / big bones / dragon bones to target Prayer level'},
  {skill:'prayer',method:'flick',script:'scripts/microbot-prayer-flick.ts',description:'1-tick prayer flicking upkeep'},
+ {skill:'prayer',method:'specialist',script:'scripts/prayer-specialist.ts',description:'Fresh-clock 1-to-99 Prayer via Draynor Bank dragon-bone runners and Lumbridge burying'},
  // Agility
  {skill:'agility',method:'order',script:'scripts/agility-order.ts',description:'Gnome Stronghold / Barbarian / Wilderness agility course order'},
  // Thieving
