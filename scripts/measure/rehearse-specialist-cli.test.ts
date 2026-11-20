@@ -3,12 +3,14 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { SPECIALIST_BOARDS } from '../../packages/core/src/specialist-boards';
-import { checkSpecialistSegment } from '../../packages/practice/src/rehearse';
+import { checkSpecialistSegment, resolveSegmentSuppliers } from '../../packages/practice/src/rehearse';
+import { HP_SPECIALIST_KIT } from '../combat-quest-specialists';
 import { CRAFTING_SUPPLY_BILL } from '../crafting-specialist';
 import { HERBLORE_SUPPLY_BILL } from '../herblore-specialist';
 import { MAGIC_SUPPLY_BILL } from '../magic-specialist';
-import { PRAYER_SUPPLY_BILL } from '../prayer-specialist';
+import { PRAYER_RUNNER_COUNT, PRAYER_SUPPLY_BILL } from '../prayer-specialist';
 import { RANGED_SPECIALIST_LIVE_KIT } from '../ranged-specialist';
+import { BODY_RUNNER_COUNT, RUNECRAFT_SUPPLY_BILL } from '../runecraft-specialist';
 import { SMITHING_SUPPLY_BILL } from '../smithing-specialist';
 import {
     FLETCHING_SPECIALIST_LIVE_KIT,
@@ -36,11 +38,13 @@ function countSupplyMap(items: readonly { id: number; count: number }[]): Record
     return out;
 }
 
-test('all 8 ready specialists construct valid --specialist segments matching board expectations and supply bills', () => {
+test('all 10 ready specialists construct valid --specialist segments matching board expectations and supply bills', () => {
     expect(READY_SPECIALIST_ACCOUNTS).toEqual([
         'HalfInch',
         'NockAndLoad',
         'Shaftshooter',
+        'FullBlooded',
+        'PouchStuffed',
         'CutMyJewels',
         'GrindMyHerb',
         'CastMyLoad',
@@ -52,6 +56,8 @@ test('all 8 ready specialists construct valid --specialist segments matching boa
         HalfInch: THIEVING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
         NockAndLoad: FLETCHING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
         Shaftshooter: RANGED_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
+        FullBlooded: HP_SPECIALIST_KIT.map(k => ({ id: k.id, count: k.count })),
+        PouchStuffed: RUNECRAFT_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         CutMyJewels: CRAFTING_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         GrindMyHerb: HERBLORE_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         CastMyLoad: MAGIC_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
@@ -63,6 +69,8 @@ test('all 8 ready specialists construct valid --specialist segments matching boa
         HalfInch: 2221,
         NockAndLoad: 54,
         Shaftshooter: 5483,
+        FullBlooded: 11116,
+        PouchStuffed: 2207,
         CutMyJewels: 182,
         GrindMyHerb: 415,
         CastMyLoad: 1236,
@@ -85,16 +93,38 @@ test('all 8 ready specialists construct valid --specialist segments matching boa
         expect(seg.timeoutMs).toBeGreaterThanOrEqual(seg.plan!.ticks * 400 + 120_000);
         expect(Number(seg.env?.CAP)).toBeGreaterThanOrEqual(seg.plan!.ticks);
 
-        const sup = seg.supplier!;
-        expect(['scripts/specialist-supplier.ts', 'scripts/gathering-supplier.ts']).toContain(sup.script);
-        expect(sup.args).toContain('{ACTOR}');
-        expect(() => parseKitArg(sup.args ?? [])).not.toThrow();
-        expect(sup.save.inventory!.length).toBeLessThanOrEqual(28);
-        expect(sup.save.position).toEqual({ x: 3223, z: 3222, level: 0 });
+        const sups = resolveSegmentSuppliers(seg);
+        expect(sups.length).toBeGreaterThanOrEqual(1);
+        for (const sup of sups) {
+            expect(['scripts/specialist-supplier.ts', 'scripts/gathering-supplier.ts']).toContain(sup.script);
+            expect(sup.args).toContain('{ACTOR}');
+            expect(() => parseKitArg(sup.args ?? [])).not.toThrow();
+            expect(sup.save.inventory!.length).toBeLessThanOrEqual(28);
+            expect(sup.save.position).toBeDefined();
+        }
 
-        const combined = [...(sup.save.inventory ?? []), ...(sup.save.bank ?? [])];
-        expect(countSupplyMap(combined)).toEqual(countSupplyMap(expectedBills[account]!));
+        const combined = sups.flatMap(sup => [...(sup.save.inventory ?? []), ...(sup.save.bank ?? [])]);
+        const totals = countSupplyMap(combined);
+        if (seg.suppliers) {
+            for (const [itemId, need] of Object.entries(countSupplyMap(expectedBills[account]!))) {
+                expect(totals[Number(itemId)] ?? 0).toBeGreaterThanOrEqual(need);
+            }
+        } else {
+            expect(totals).toEqual(countSupplyMap(expectedBills[account]!));
+        }
     }
+
+    const rc = resolveSpecialistSegment('PouchStuffed');
+    expect(rc.suppliers).toHaveLength(1 + BODY_RUNNER_COUNT);
+    expect(rc.suppliers![0]!.args).toContain('--role=starter');
+    expect(rc.suppliers![0]!.save.position).toEqual({ x: 3223, z: 3222, level: 0 });
+    for (let i = 1; i <= BODY_RUNNER_COUNT; i++) {
+        expect(rc.suppliers![i]!.args).toContain('--role=runner');
+        expect(rc.suppliers![i]!.save.position).toEqual({ x: 3050, z: 3442, level: 0 });
+    }
+
+    const prayer = resolveSpecialistSegment('BigBoner');
+    expect(prayer.suppliers).toHaveLength(PRAYER_RUNNER_COUNT);
 });
 
 test('account lookup is case-insensitive and rejects unknown accounts or invalid overrides', () => {

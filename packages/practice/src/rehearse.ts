@@ -53,6 +53,7 @@ export interface Segment {
     args?: string[];
     env?: Record<string, string>;
     supplier?: SupplierSpec;
+    suppliers?: SupplierSpec[];
     // Absent for a seed run that only captures a state.
     plan?: {ticks: number; source: string};
     expect: {
@@ -66,6 +67,26 @@ export interface Segment {
 }
 
 const FORBIDDEN_SPECIALIST_ENV = /PASSWORD|SECRET|TOKEN|HAGGIS_RUN|WORKER_|DEMO_OK|^BUN_|^COORDINATOR_|^TICK_RECORD|^REPLAY_ONLY|^PRACTICE_/i;
+const FORBIDDEN_SUPPLIER_ENV = /PASSWORD|SECRET|TOKEN|HAGGIS_RUN|WORKER_|DEMO_OK|^BUN_|^COORDINATOR_|^TICK_RECORD|^REPLAY_ONLY/i;
+export const SUPPLIER_ONLINE_TIMEOUT_MS = 45_000;
+
+function checkSupplierSpec(sup: SupplierSpec) {
+    if (!sup || typeof sup !== 'object' || !sup.save || typeof sup.save !== 'object' || Array.isArray(sup.save) || !/^scripts\/[\w/-]+\.ts$/.test(sup.script ?? ''))
+        throw Error('invalid specialist supplier configuration');
+    if (Object.keys(sup.env ?? {}).some(k => !/^[_a-z][_a-z0-9]*$/i.test(k) || FORBIDDEN_SUPPLIER_ENV.test(k)))
+        throw Error('invalid specialist supplier environment');
+}
+
+export function resolveSegmentSuppliers(seg: Pick<Segment, 'supplier' | 'suppliers'>): SupplierSpec[] {
+    if (seg.supplier !== undefined && seg.suppliers !== undefined)
+        throw Error('specialist rehearsal cannot set both supplier and suppliers');
+    if (seg.suppliers !== undefined) {
+        if (!Array.isArray(seg.suppliers) || seg.suppliers.length < 1 || seg.suppliers.length > 32)
+            throw Error('specialist rehearsal suppliers must contain 1 to 32 items');
+        return seg.suppliers;
+    }
+    return seg.supplier !== undefined ? [seg.supplier] : [];
+}
 
 export function checkSpecialistSegment(seg: Segment, account: string) {
     const name = typeof account === 'string' ? account.toLowerCase() : '';
@@ -80,13 +101,7 @@ export function checkSpecialistSegment(seg: Segment, account: string) {
         throw Error('invalid specialist segment or worker path');
     if (Object.keys(seg.env ?? {}).some(k => !/^[_a-z][_a-z0-9]*$/i.test(k) || FORBIDDEN_SPECIALIST_ENV.test(k)))
         throw Error('invalid specialist worker environment');
-    if (seg.supplier !== undefined) {
-        const sup = seg.supplier;
-        if (!sup || typeof sup !== 'object' || !sup.save || typeof sup.save !== 'object' || Array.isArray(sup.save) || !/^scripts\/[\w/-]+\.ts$/.test(sup.script ?? ''))
-            throw Error('invalid specialist supplier configuration');
-        if (Object.keys(sup.env ?? {}).some(k => !/^[_a-z][_a-z0-9]*$/i.test(k) || /PASSWORD|SECRET|TOKEN|HAGGIS_RUN|WORKER_|DEMO_OK|^BUN_|^COORDINATOR_|^TICK_RECORD|^REPLAY_ONLY/i.test(k)))
-            throw Error('invalid specialist supplier environment');
-    }
+    for (const sup of resolveSegmentSuppliers(seg)) checkSupplierSpec(sup);
     return board;
 }
 
@@ -246,6 +261,55 @@ export function isolatedStackOptions(
     };
 }
 
+export interface HelperProcHandle {
+    readonly pid: number;
+    readonly exitCode: number | null;
+    readonly exited: Promise<unknown>;
+}
+
+export async function waitForSuppliersOnline(
+    helpers: readonly string[],
+    helperProcs: readonly HelperProcHandle[],
+    isOnline: (helper: string) => Promise<boolean>,
+    timeoutMs = SUPPLIER_ONLINE_TIMEOUT_MS,
+    pollMs = 50,
+): Promise<void> {
+    const readyDeadline = Date.now() + timeoutMs;
+    const pendingOnline = new Set(helpers);
+    while (Date.now() < readyDeadline && pendingOnline.size > 0) {
+        for (let i = 0; i < helperProcs.length; i++) {
+            const hp = helperProcs[i]!;
+            if (hp.exitCode !== null) throw new Error(`practice supplier ${helpers[i]} exited early (${hp.exitCode})`);
+        }
+        const checked = await Promise.all([...pendingOnline].map(async h => ({h, ok: await isOnline(h).catch(() => false)})));
+        for (const {h, ok} of checked) {
+            if (ok) pendingOnline.delete(h);
+        }
+        if (pendingOnline.size === 0) break;
+        let readyTimer: ReturnType<typeof setTimeout> | undefined;
+        await Promise.race([
+            ...helperProcs.map(p => p.exited),
+            new Promise<void>(r => { readyTimer = setTimeout(r, pollMs); }),
+        ]).finally(() => clearTimeout(readyTimer));
+    }
+    if (pendingOnline.size > 0) {
+        throw new Error(`practice supplier(s) did not reach world within ${Math.round(timeoutMs / 1000)} s: ${[...pendingOnline].join(', ')}`);
+    }
+}
+
+export async function stopHelperProcs(
+    helperProcs: readonly HelperProcHandle[],
+    terminate: (pid: number) => Promise<void> = killTree,
+    graceMs = 5_000,
+): Promise<void> {
+    await Promise.all(helperProcs.map(async helperProc => {
+        if (helperProc.exitCode !== null) return;
+        let helperTimer: ReturnType<typeof setTimeout> | undefined;
+        await Promise.race([helperProc.exited, new Promise<void>(r => { helperTimer = setTimeout(r, graceMs); })]).finally(() => clearTimeout(helperTimer));
+        if (helperProc.exitCode === null) await terminate(helperProc.pid);
+    }));
+}
+
 export async function rehearse(seg: Segment, opts: {out: string; port?: number; engine?: number; gateway?: number; scored?: ScoredRun}): Promise<RehearsalReport> {
     const port = opts.port ?? ISOLATED.save, engine = opts.engine ?? ISOLATED.engine, gateway = opts.gateway ?? ISOLATED.gateway;
     if (seg.capture?.when && !Object.keys(seg.capture.when).length) throw new Error(`${seg.id}: capture.when has no condition`);
@@ -276,39 +340,40 @@ export async function rehearse(seg: Segment, opts: {out: string; port?: number; 
     const saved = () => (statSync(savePath, {throwIfNoEntry: false})?.mtimeMs ?? 0) > loadedAt;
 
     const log = join(opts.out, `${seg.id}.log`);
-    let helper: string | undefined;
-    let helperProc: ReturnType<typeof Bun.spawn> | undefined;
+    const supplierSpecs = resolveSegmentSuppliers(seg);
+    const helpers: string[] = [];
+    const seenHelpers = new Set<string>();
+    const helperProcs: ReturnType<typeof Bun.spawn>[] = [];
+    const helperBase = 'sp' + seg.id.replace(/[^a-z0-9]/gi, '').slice(0, 3);
     try {
-        if (seg.supplier) {
-            helper = runBotName('sp' + seg.id.replace(/[^a-z0-9]/gi, '').slice(0, 3), 1);
-            if (existsSync(join(rsSdkRoot(), 'bots', helper))) throw new Error('fresh supplier account required');
-            const helperSave = playerSavePath(helper);
-            if (existsSync(helperSave)) throw new Error('fresh supplier account already has an engine save');
-            const helperState = await onlineState(helper, port);
-            if (helperState.online || helperState.pendingLogout) throw new Error('fresh supplier account already has an engine session');
-            const {envPath: helperEnvPath} = await createBot(helper);
-            pointBotAt(helperEnvPath, engine, gateway, host);
-            await applyPreset(helper, seg.supplier.save);
-            const helperArgs = (seg.supplier.args ?? []).map(a => a === '{ACTOR}' ? account : a);
-            const helperEnv = rehearsalChildEnv(process.env, seg.supplier.env, {scored: !!opts.scored, role: 'supplier'});
-            helperProc = Bun.spawn(['bun', seg.supplier.script, helper, ...helperArgs], {
-                cwd: root, env: helperEnv,
-                stdout: Bun.file(join(opts.out, `${seg.id}.supplier.log`)),
-                stderr: Bun.file(join(opts.out, `${seg.id}.supplier.err`)),
-                windowsHide: true,
-            });
-            const readyDeadline = Date.now() + 30_000;
-            let helperOnline = false;
-            while (Date.now() < readyDeadline) {
-                if (helperProc.exitCode !== null) throw new Error(`practice supplier exited early (${helperProc.exitCode})`);
-                const s = await onlineState(helper, port).catch(() => null);
-                if (s?.online) { helperOnline = true; break; }
-                let readyTimer: ReturnType<typeof setTimeout> | undefined;
-                await Promise.race([helperProc.exited, new Promise<void>(r => { readyTimer = setTimeout(r, 50); })]).finally(() => clearTimeout(readyTimer));
+        if (supplierSpecs.length > 0) {
+            for (let i = 0; i < supplierSpecs.length; i++) {
+                const sup = supplierSpecs[i]!;
+                let helper = runBotName(helperBase, i + 1);
+                while (seenHelpers.has(helper.toLowerCase())) helper = runBotName(helperBase, i + 1);
+                seenHelpers.add(helper.toLowerCase());
+                if (existsSync(join(rsSdkRoot(), 'bots', helper))) throw new Error('fresh supplier account required');
+                const helperSave = playerSavePath(helper);
+                if (existsSync(helperSave)) throw new Error('fresh supplier account already has an engine save');
+                const helperState = await onlineState(helper, port);
+                if (helperState.online || helperState.pendingLogout) throw new Error('fresh supplier account already has an engine session');
+                const {envPath: helperEnvPath} = await createBot(helper);
+                pointBotAt(helperEnvPath, engine, gateway, host);
+                await applyPreset(helper, sup.save);
+                helpers.push(helper);
+                const helperArgs = (sup.args ?? []).map(a => a === '{ACTOR}' ? account : a);
+                const helperEnv = rehearsalChildEnv(process.env, sup.env, {scored: !!opts.scored, role: 'supplier'});
+                const logSuffix = supplierSpecs.length === 1 ? 'supplier' : `supplier-${i + 1}`;
+                helperProcs.push(Bun.spawn(['bun', sup.script, helper, ...helperArgs], {
+                    cwd: root, env: helperEnv,
+                    stdout: Bun.file(join(opts.out, `${seg.id}.${logSuffix}.log`)),
+                    stderr: Bun.file(join(opts.out, `${seg.id}.${logSuffix}.err`)),
+                    windowsHide: true,
+                }));
             }
-            if (!helperOnline) throw new Error('practice supplier did not reach world within 30 s');
+            await waitForSuppliersOnline(helpers, helperProcs, async h => (await onlineState(h, port)).online, SUPPLIER_ONLINE_TIMEOUT_MS);
         }
-        const env = rehearsalChildEnv(process.env, seg.env, {scored: !!opts.scored, role: 'worker', supplier: helper});
+        const env = rehearsalChildEnv(process.env, seg.env, {scored: !!opts.scored, role: 'worker', supplier: helpers.length ? helpers.join(',') : undefined});
         const proc = Bun.spawn(['bun', seg.script, account, ...(seg.args ?? [])], {cwd: root, env,
             stdout: Bun.file(log), stderr: Bun.file(join(opts.out, `${seg.id}.err`)), windowsHide: true});
         const window = new TickWindow(!!opts.scored);
@@ -386,11 +451,7 @@ export async function rehearse(seg: Segment, opts: {out: string; port?: number; 
     writeFileSync(join(opts.out, `${seg.id}.json`), JSON.stringify(report, null, 2));
         return report;
     } finally {
-        if (helperProc && helperProc.exitCode === null) {
-            let helperTimer: ReturnType<typeof setTimeout> | undefined;
-            await Promise.race([helperProc.exited, new Promise<void>(r => { helperTimer = setTimeout(r, 5_000); })]).finally(() => clearTimeout(helperTimer));
-            if (helperProc.exitCode === null) await killTree(helperProc.pid);
-        }
+        await stopHelperProcs(helperProcs);
     }
 }
 
