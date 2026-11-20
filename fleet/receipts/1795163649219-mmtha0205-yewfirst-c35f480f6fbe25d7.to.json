@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795163649219-mmtha0205-yewfirst-c35f480f6fbe25d7",
  "account": "YewFirst",
  "partner": "mmtha0205",
@@ -10,25 +10,63 @@
  "item": "Rune arrowtips",
  "requested": 500,
  "claim": "5963d148-0a6b-4bfd-a62e-58762b10d36c",
- "count": 0,
- "ok": false,
- "at": 1795163667737,
- "detail": "trade claimed",
+ "count": 500,
+ "ok": true,
+ "at": 1795163722073,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Adamant arrowtips",
    "requested": 500,
-   "count": 0
+   "count": 500,
+   "inventory": {
+    "before": 0,
+    "after": 500
+   },
+   "bank": {
+    "count": 500,
+    "at": 1795163720591
+   }
   },
   {
    "item": "Mithril arrowtips",
    "requested": 23,
-   "count": 0
+   "count": 23,
+   "inventory": {
+    "before": 0,
+    "after": 23
+   },
+   "bank": {
+    "count": 23,
+    "at": 1795163720967
+   }
   },
   {
    "item": "Steel arrowtips",
    "requested": 26,
-   "count": 0
+   "count": 26,
+   "inventory": {
+    "before": 0,
+    "after": 26
+   },
+   "bank": {
+    "count": 26,
+    "at": 1795163721301
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 500
+ },
+ "bank": {
+  "count": 500,
+  "at": 1795163720199
+ },
+ "logout": {
+  "attemptId": "1795163667743-0000025300-0000000001",
+  "at": 1795163722060,
+  "sha256": "75bdf2616c67a968e489ebeceaf35cf583e3d83372e8ba17531e8044f1e066c0"
+ },
+ "screen": true
 }
