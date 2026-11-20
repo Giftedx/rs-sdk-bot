@@ -226,6 +226,8 @@ export interface TradeHelperArm {
     readonly close: () => void;
 }
 
+export const TRADE_REQUEST_COOLDOWN_TICKS = 4;
+
 /**
  * Drive `helper` synchronously inside `helper.onTick` before lockstep `acknowledgeTick` schedules flush,
  * and hold one lockstep waiter so packets never miss a tick behind `main`.
@@ -239,8 +241,8 @@ export function startHelperTradeArm(
     // An external supplier process (scripts/gathering-supplier.ts) runs this arm on its own session.
     if (!helper) return { close: () => {} };
     let done = false;
+    let wasOpen = false;
     let lastReqTick = -10;
-    let lastOfferTick = -10;
     let lastAcceptTick = -10;
     let lastConfirmTick = -10;
     const offeredIds = new Set<number>();
@@ -253,8 +255,14 @@ export function startHelperTradeArm(
         const t = helper.tick();
 
         if (!tHelp.isOpen) {
+            if (wasOpen) {
+                wasOpen = false;
+                // Trade unexpectedly closed before completion; allow immediate re-request if supplies remain.
+                lastReqTick = -10;
+            }
             if (offeredIds.size > 0) offeredIds.clear();
-            if (canRequest() && t - lastReqTick >= 1) {
+            if (helper.sdk.getInventory().length === 0) return;
+            if (canRequest() && t - lastReqTick >= TRADE_REQUEST_COOLDOWN_TICKS) {
                 const pMain = helper.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === mainLower);
                 if (pMain) {
                     lastReqTick = t;
@@ -263,17 +271,17 @@ export function startHelperTradeArm(
             }
             return;
         }
+        wasOpen = true;
 
         if (tHelp.screen === 'offer') {
-            if (t === lastOfferTick) return;
             const remainingById = new Map<number, number>();
             for (const item of helper.sdk.getInventory()) {
                 if (!offeredIds.has(item.id) && !remainingById.has(item.id)) remainingById.set(item.id, item.slot);
             }
-            const batch = [...remainingById.entries()].slice(0, 5);
-            if (batch.length > 0) {
-                lastOfferTick = t;
-                for (const [id, slot] of batch) {
+            // Pipeline all offers plus main/confirm accepts together: the server decodes 5 USER_EVENT packets
+            // per tick sequentially across ticks without paying extra 400ms client round-trips between batches.
+            if (remainingById.size > 0) {
+                for (const [id, slot] of remainingById) {
                     offeredIds.add(id);
                     void helper.direct({
                         type: 'clickComponentWithOption',
@@ -283,16 +291,20 @@ export function startHelperTradeArm(
                         reason: 'SDK',
                     });
                 }
-            }
-            const leftAfter = remainingById.size - batch.length;
-            if (leftAfter === 0 && batch.length < 5 && !tHelp.myAccepted && t - lastAcceptTick >= 1) {
+                if (!tHelp.myAccepted) {
+                    lastAcceptTick = t;
+                    void helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT_ID, reason: 'SDK' });
+                    void helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' });
+                }
+            } else if (!tHelp.myAccepted && t - lastAcceptTick >= 2) {
                 lastAcceptTick = t;
                 void helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT_ID, reason: 'SDK' });
+                void helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' });
             }
             return;
         }
 
-        if (tHelp.screen === 'confirm' && !tHelp.myAccepted && t - lastConfirmTick >= 1) {
+        if (tHelp.screen === 'confirm' && !tHelp.myAccepted && t - lastConfirmTick >= 2) {
             lastConfirmTick = t;
             void helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' });
         }
@@ -328,12 +340,15 @@ export async function receiveTradeFast(
     const hasAllExpected = () =>
         expectedEntries.every(([id, minQty]) => itemQty(main, id) >= minQty);
     const uniqueSupplyCount = expectedEntries.length;
-    const minUniqueOfferedBeforeAccept = Math.floor(uniqueSupplyCount / 5) * 5;
+    const minUniqueOfferedBeforeAccept = uniqueSupplyCount <= 5
+        ? uniqueSupplyCount
+        : Math.floor((uniqueSupplyCount - 1) / 5) * 5;
     const supplierName = helper?.name ?? externalSupplierName();
     if (!supplierName) throw Error('receiveTradeFast needs a helper session or SUPPLIER/PRACTICE_SUPPLIER');
     const supplierLower = supplierName.toLowerCase();
 
     const arm = existingArm ?? startHelperTradeArm(helper, main.name, stop, () => true);
+    let wasOpen = false;
     let lastReqTick = -10;
     let lastOfferAcceptTick = -10;
     let lastConfirmTick = -10;
@@ -347,7 +362,11 @@ export async function receiveTradeFast(
             const t = main.tick();
 
             if (!tMain.isOpen) {
-                if (t - lastReqTick >= 1) {
+                if (wasOpen) {
+                    wasOpen = false;
+                    lastReqTick = -10;
+                }
+                if (t - lastReqTick >= TRADE_REQUEST_COOLDOWN_TICKS) {
                     const pHelpOnMain = main.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === supplierLower);
                     if (pHelpOnMain) {
                         lastReqTick = t;
@@ -361,15 +380,22 @@ export async function receiveTradeFast(
                     }
                 }
             } else if (tMain.screen === 'offer') {
+                wasOpen = true;
                 const seenUnique = new Set(tMain.theirOffer.map(x => x.id)).size;
-                if (!tMain.myAccepted && seenUnique >= minUniqueOfferedBeforeAccept && t - lastOfferAcceptTick >= 1) {
+                const canRetry = seenUnique >= uniqueSupplyCount ? t - lastOfferAcceptTick >= 1 : t - lastOfferAcceptTick >= 2;
+                if (!tMain.myAccepted && seenUnique >= minUniqueOfferedBeforeAccept && canRetry) {
                     lastOfferAcceptTick = t;
-                    await main.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT_ID, reason: 'SDK' });
+                    await Promise.all([
+                        main.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT_ID, reason: 'SDK' }),
+                        main.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' }),
+                    ]);
+                }
+            } else if (tMain.screen === 'confirm') {
+                wasOpen = true;
+                if (!tMain.myAccepted && t - lastConfirmTick >= 2) {
+                    lastConfirmTick = t;
                     await main.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' });
                 }
-            } else if (tMain.screen === 'confirm' && !tMain.myAccepted && t - lastConfirmTick >= 1) {
-                lastConfirmTick = t;
-                await main.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' });
             }
 
             await waitTicks(main, 1);
