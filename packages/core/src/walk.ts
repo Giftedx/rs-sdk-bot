@@ -27,7 +27,7 @@ export interface Walker extends TickSource {
 }
 
 // planBudgetMs bounds the route search (world.ts ROUTE_BUDGET_MS when absent); a search over budget is 'no route (budget)'.
-export interface WalkOptions { maxRetriesPerLeg?: number; legTimeoutTicks?: number; signal?: AbortSignal; planBudgetMs?: number }
+export interface WalkOptions { maxRetriesPerLeg?: number; legTimeoutTicks?: number; signal?: AbortSignal; planBudgetMs?: number; noJewelry?: boolean }
 
 const cheb = (a: Tile, b: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - b.worldX), Math.abs(a.z - b.worldZ));
 
@@ -370,7 +370,9 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     if(!observedInside&&legendsEntry==='unknown'&&(acct.questStages?.legendsquest??0)<1)return {ok:false,reason:'precondition',detail:'Legends Guild first entry was not observed',ticks:s.tick()-started};
     // A session with a bank snapshot may stop at a bank for fares first (trip.ts).
     const name=(s as {name?:string}).name,banker=s as unknown as Parameters<typeof takeItems>[0];
-    const stock=name&&typeof (banker.bot as {openBank?:unknown}).openBank==='function'?bankStock(name):undefined;
+    if (opts.noJewelry) acct = withoutJewelry(acct);
+    const rawStock=name&&typeof (banker.bot as {openBank?:unknown}).openBank==='function'?bankStock(name):undefined;
+    const stock=opts.noJewelry&&rawStock?{coins:rawStock.coins,items:Object.fromEntries(Object.entries(rawStock.items??{}).filter(([k])=>!TELEPORT_JEWELRY_RE.test(k)))}:rawStock;
     const budgetMs=opts.planBudgetMs??ROUTE_BUDGET_MS,planStart=performance.now(),deadline=planStart+budgetMs;
     let why='';
     const r = world.offThread?await planTripOffThread(from,to,acct,stock,budgetMs)
@@ -404,6 +406,14 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
 
 // The account with no law rune: no teleport spell is castable, so a route planned for it keeps to the ground.
 export const withoutSpells = (a: Account): Account => ({ ...a, items: a.items.filter(i => i !== 'lawrune'), counts: { ...a.counts, lawrune: 0 } });
+export const TELEPORT_JEWELRY_RE = /^(?:amulet_of_glory|ring_of_dueling|games_necklace)_[1-8]$/;
+export const withoutJewelry = (a: Account): Account => {
+    const items = a.items.filter(i => !TELEPORT_JEWELRY_RE.test(i));
+    const counts: Record<string, number> = { ...a.counts };
+    for (const k of Object.keys(counts)) if (TELEPORT_JEWELRY_RE.test(k)) counts[k] = 0;
+    return { ...a, items, counts };
+};
+export const withoutTeleports = (a: Account): Account => withoutJewelry(withoutSpells(a));
 
 // ---- walkPath: walk through points the way a player clicks ahead on the minimap ----
 // bot.walkTo clicks each path corner and waits until the bot is within 2 tiles of it. The bot then takes 1 step

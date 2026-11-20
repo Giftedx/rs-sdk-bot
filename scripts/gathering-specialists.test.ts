@@ -11,9 +11,11 @@ import { OBJ_GAMES_8, OBJ_PINEAPPLE_PIZZA, OBJ_SUPER_ENERGY_4 } from './gatherin
 import { expandSupplyInventory, SPECIALIST_GATHERING_CASES } from './measure/specialist-gathering-cases';
 import { benchCases, benchCoverage } from './measure/aio-bench-cases';
 import {
+    hasAtLeastKit,
     hasExactKit,
     kitSlotTotal,
     parseKitOption,
+    resolveConcreteKit,
     SPECIALIST_KITS,
     type KitSpecItem,
 } from './specialist-supplier';
@@ -145,6 +147,35 @@ describe('bench registration and catalog integration', () => {
         expect(parseKitOption(['holder', 'spec'])).toBeNull();
         expect(parseKitOption(['holder', 'spec'], 'attack').name).toBe('attack');
         expect(() => parseKitOption(['--kit=bogus'])).toThrow('unknown --kit=bogus');
+    });
+
+    test('fishing kit accepts charged glories with >=2 charges (4/3/2) and resolves concrete bank stock', () => {
+        const fishingKit = SPECIALIST_KITS.fishing;
+        const expanded = expandSupplyInventory(FISHING_SPECIALIST_SUPPLIES);
+        const withoutGlory = expanded.filter(item => item.id !== 1712);
+
+        for (const [gloryId, gloryName] of [
+            [1712, 'Amulet of glory(4)'],
+            [1710, 'Amulet of glory(3)'],
+            [1708, 'Amulet of glory(2)'],
+        ] as const) {
+            const pack = [...withoutGlory, { id: gloryId, count: 1 }];
+            expect(hasExactKit(pack, fishingKit)).toBe(true);
+            expect(hasAtLeastKit(pack, fishingKit)).toBe(true);
+            const resolved = resolveConcreteKit(fishingKit, pack);
+            const glorySpec = resolved.find(item => item.count === 1 && (item.id === 1712 || item.id === gloryId));
+            expect(glorySpec?.id).toBe(gloryId);
+            expect(glorySpec?.name).toBe(gloryName);
+        }
+
+        for (const badGloryId of [1706, 1704]) {
+            const pack = [...withoutGlory, { id: badGloryId, count: 1 }];
+            expect(hasExactKit(pack, fishingKit)).toBe(false);
+            expect(hasAtLeastKit(pack, fishingKit)).toBe(false);
+        }
+
+        const duplicateGlory = [...withoutGlory, { id: 1712, count: 1 }, { id: 1710, count: 1 }];
+        expect(hasExactKit(duplicateGlory, fishingKit)).toBe(false);
     });
 
     test('planner catalog treats specialist routes as bounded service intents even with skill accept targets', () => {

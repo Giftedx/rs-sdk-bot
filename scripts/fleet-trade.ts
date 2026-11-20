@@ -406,7 +406,7 @@ if (import.meta.main) {
             if (exited && !exited.ok) throw Error(`elemental workshop exit: ${exited.reason} ${exited.detail}`);
             // The planner has no land route between Ardougne and the east; walkTarget takes the ferries then (60 coins in the
             // pack). Live: a taker in Ardougne failed "no route to 3182,3440" for a Varrock West meet.
-            const there = await walkTarget(s, tile, false) as Outcome;
+            const there = await walkTarget(s, tile, false, undefined, { noJewelry: true }) as Outcome;
             if (!there.ok) throw Error(`route to ${tile.x}, ${tile.z}: ${there.reason} ${there.detail}`);
             await s.bot.walkTo(tile.x, tile.z, 0);
             // The giver takes out of its bank what each line needs beyond what it holds, one bank visit for all lines.

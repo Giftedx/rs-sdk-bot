@@ -7,7 +7,7 @@ import { isLocalServer } from '../packages/core/src/localserver';
 import { planTripOffThread } from '../packages/core/src/route-plan';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
-import { goTo, sessionWalker, walkPath, walkRoute, withoutSpells } from '../packages/core/src/walk';
+import { goTo, sessionWalker, walkPath, walkRoute, withoutSpells, withoutTeleports } from '../packages/core/src/walk';
 import { DEFENCE_SPECIALIST_KIT, HP_SPECIALIST_KIT, STRENGTH_SPECIALIST_KIT } from './combat-quest-specialists';
 import { findLocBy, ITEM_IDS, loadItemCatalog, playerPos } from './fast-skills-lib';
 import { PRAYER_BONES_NEEDED, PRAYER_SUPPLY_BILL } from './prayer-specialist';
@@ -28,6 +28,7 @@ export interface KitSpecItem {
     readonly name: string;
     readonly count: number;
     readonly stackable: boolean;
+    readonly altIds?: readonly number[];
 }
 
 // 28 inventory slots exact: 5 stackables + 1 staff + 11 bones + 6 logs + 3 prayer potions + 2 lobsters.
@@ -64,7 +65,7 @@ export const FISHING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 314, name: 'Feather', count: 1500, stackable: true },
     { id: 946, name: 'Knife', count: 1, stackable: false },
     { id: 1511, name: 'Logs', count: 5, stackable: false },
-    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
+    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false, altIds: [1710, 1708] },
 ] as const;
 
 // 21 inventory slots: Doric quest ores + Rune pickaxe + 3t knife/logs + coins + glory + 2x super energy + games neck.
@@ -328,17 +329,38 @@ export function countById(items: readonly { id: number; baseId?: number; count?:
     return total;
 }
 
+const specIds = (spec: KitSpecItem): readonly number[] => (spec.altIds?.length ? [spec.id, ...spec.altIds] : [spec.id]);
+const countForSpec = (items: readonly { id: number; baseId?: number; count?: number }[], spec: KitSpecItem): number =>
+    specIds(spec).reduce((sum, id) => sum + countById(items, id), 0);
+
+export function resolveConcreteKit(
+    kit: readonly KitSpecItem[],
+    items: readonly { id: number; baseId?: number; count?: number }[],
+): readonly KitSpecItem[] {
+    return kit.map(spec => {
+        if (!spec.altIds?.length) return spec;
+        const matchedId = specIds(spec).find(id => countById(items, id) >= spec.count);
+        if (matchedId === undefined || matchedId === spec.id) return spec;
+        return {
+            id: matchedId,
+            name: loadItemCatalog().get(matchedId)?.name ?? spec.name,
+            count: spec.count,
+            stackable: spec.stackable,
+        };
+    });
+}
+
 export function hasExactKit(items: readonly { id: number; baseId?: number; count?: number }[], kit: readonly KitSpecItem[] = ATTACK_SPECIALIST_KIT): boolean {
-    const allowed = new Set(kit.map(k => resolveBaseId(k.id)));
+    const allowed = new Set(kit.flatMap(k => specIds(k).map(resolveBaseId)));
     if (items.some(i => !allowed.has(i.baseId ?? resolveBaseId(i.id)))) return false;
     return kit.every(spec =>
-        countById(items, spec.id) === spec.count
+        countForSpec(items, spec) === spec.count
         && (!isNotedId(spec.id) || items.some(i => i.id === spec.id && (i.count ?? 0) >= spec.count)),
     );
 }
 
 export function hasAtLeastKit(items: readonly { id: number; baseId?: number; count?: number }[], kit: readonly KitSpecItem[] = ATTACK_SPECIALIST_KIT): boolean {
-    return kit.every(spec => countById(items, spec.id) >= spec.count);
+    return kit.every(spec => countForSpec(items, spec) >= spec.count);
 }
 
 export function assertSupplierAccount(name: string, label = 'account'): string {
@@ -370,7 +392,7 @@ export async function moveGroundTo(
     const cur = s.sdk.getState()?.player;
     if (!cur) throw Error('walk failed: no player state');
     const from = { x: cur.worldX, z: cur.worldZ, level: cur.level };
-    const plan = await planTripOffThread(from, to, withoutSpells(accountOf(s)), undefined);
+    const plan = await planTripOffThread(from, to, withoutTeleports(accountOf(s)), undefined);
     if (!plan) throw Error(`ground route to ${to.x},${to.z},${to.level} unavailable from ${from.x},${from.z},${from.level}`);
     const r = await walkRoute(s, plan.legs, { legTimeoutTicks });
     if (!r.ok || !posNear(s, to, tol)) throw Error(`walk to ${to.x},${to.z},${to.level} failed: ${r.ok ? 'not at target' : r.detail}`);
@@ -385,7 +407,7 @@ async function moveTo(s: Session, to: { x: number; z: number; level: number }, t
         if (r.ok && posNear(s, to, tol)) return;
     }
     const world = await getWorld();
-    const r = await goTo(s, world, to, accountOf(s), { legTimeoutTicks: 150 });
+    const r = await goTo(s, world, to, accountOf(s), { legTimeoutTicks: 150, noJewelry: true });
     if (!r.ok || !posNear(s, to, tol)) throw Error(`walk to ${to.x},${to.z},${to.level} failed: ${r.ok ? 'not at target' : r.detail}`);
 }
 
@@ -414,11 +436,12 @@ async function depositAllInventory(s: Session): Promise<void> {
     }
 }
 
-export async function withdrawExactKit(s: Session, kit: readonly KitSpecItem[], bankAt: { x: number; z: number; level: number }, stop: () => boolean, allowNoted = false): Promise<void> {
+export async function withdrawExactKit(s: Session, kit: readonly KitSpecItem[], bankAt: { x: number; z: number; level: number }, stop: () => boolean, allowNoted = false): Promise<readonly KitSpecItem[]> {
     await moveTo(s, bankAt, 2, stop);
     const obs = await openFreshBank(s);
     await depositAllInventory(s);
-    for (const spec of kit) {
+    const concreteKit = resolveConcreteKit(kit, s.sdk.getState()?.bank?.items ?? []);
+    for (const spec of concreteKit) {
         const baseId = resolveBaseId(spec.id);
         const bankRow = s.sdk.getState()?.bank?.items.find(i => i.id === spec.id || i.id === baseId);
         if (!bankRow || bankRow.count < spec.count) {
@@ -436,7 +459,8 @@ export async function withdrawExactKit(s: Session, kit: readonly KitSpecItem[], 
     await s.bot.closeBank();
     await waitUntil(s, () => !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 8 });
     void obs;
-    if (!hasExactKit(s.sdk.getInventory(), kit)) throw Error('withdrawn inventory does not match exact specialist kit');
+    if (!hasExactKit(s.sdk.getInventory(), concreteKit)) throw Error('withdrawn inventory does not match exact specialist kit');
+    return concreteKit;
 }
 
 function invSpec(id: number, count: number): KitSpecItem {
@@ -527,9 +551,9 @@ async function runServe(args: string[]): Promise<void> {
             for (let legIdx = 0; legIdx < plan.legs.length; legIdx++) {
                 const leg = plan.legs[legIdx]!;
                 const legBank = legIdx === 0 && (parsed.bankX !== undefined || parsed.bankZ !== undefined) ? bankTile : leg.bank;
-                if (!hasExactKit(s.sdk.getInventory(), leg.kit)) {
-                    await withdrawExactKit(s, leg.kit, legBank, stop);
-                }
+                const concreteKit = hasExactKit(s.sdk.getInventory(), leg.kit)
+                    ? resolveConcreteKit(leg.kit, s.sdk.getInventory())
+                    : await withdrawExactKit(s, leg.kit, legBank, stop);
                 await moveGroundTo(s, leg.handoff, 2, stop);
                 const p = s.sdk.getState()!.player!;
                 console.log('SUPPLIER_READY ' + JSON.stringify({
@@ -543,7 +567,7 @@ async function runServe(args: string[]): Promise<void> {
                     slots: s.sdk.getInventory().length,
                 }));
 
-                const giveList = leg.kit.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
+                const giveList = concreteKit.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
                 let handoffDone = false;
                 while (!stop() && s.tick() - t0 < CAP && !handoffDone) {
                     const served = await s.bot.serveTrades({
@@ -555,7 +579,7 @@ async function runServe(args: string[]): Promise<void> {
                         timeout: 30_000,
                         until: () => stop() || s.tick() - t0 >= CAP,
                     });
-                    const done = served.trades.find(t => t.success && leg.kit.every(k => countById(t.gave, k.id) === k.count) && t.received.length === 0);
+                    const done = served.trades.find(t => t.success && concreteKit.every(k => countById(t.gave, k.id) === k.count) && t.received.length === 0);
                     if (done) {
                         handoffDone = true;
                         console.log('SUPPLIER_HANDOFF ' + JSON.stringify({
@@ -565,7 +589,7 @@ async function runServe(args: string[]): Promise<void> {
                             trade: legIdx + 1,
                             totalTrades: plan.legs.length,
                             tick: s.tick() - t0,
-                            items: leg.kit.map(k => ({ id: k.id, count: k.count })),
+                            items: concreteKit.map(k => ({ id: k.id, count: k.count })),
                         }));
                         break;
                     }
@@ -722,15 +746,15 @@ export async function runStage(args: string[]): Promise<void> {
         for (let legIdx = 0; legIdx < plan.legs.length; legIdx++) {
             const leg = plan.legs[legIdx]!;
             const legBefore = holderSession.sdk.getInventory().map(i => ({ id: resolveBaseId(i.id), count: i.count }));
-            if (!hasExactKit(donorSession.sdk.getInventory(), leg.kit)) {
-                await withdrawExactKit(donorSession, leg.kit, bankTile, stop, allowNoted);
-            }
-            const giveList = leg.kit.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
-            const allowed = new Set(leg.kit.map(k => resolveBaseId(k.id)));
+            const concreteKit = hasExactKit(donorSession.sdk.getInventory(), leg.kit)
+                ? resolveConcreteKit(leg.kit, donorSession.sdk.getInventory())
+                : await withdrawExactKit(donorSession, leg.kit, bankTile, stop, allowNoted);
+            const giveList = concreteKit.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
+            const allowed = new Set(concreteKit.map(k => resolveBaseId(k.id)));
             const [served, given] = await Promise.all([
                 holderSession.bot.serveTrades({
                     from: exactNameRe(donor),
-                    accept: offer => offer.every(o => allowed.has(resolveBaseId(o.id))) && leg.kit.every(k => countById(offer, k.id) === k.count),
+                    accept: offer => offer.every(o => allowed.has(resolveBaseId(o.id))) && concreteKit.every(k => countById(offer, k.id) === k.count),
                     maxTrades: 1,
                     timeout: 60_000,
                 }),
@@ -742,13 +766,13 @@ export async function runStage(args: string[]): Promise<void> {
                 }),
             ]);
             const rx = served.trades.find(t => t.success);
-            if (!given.success || !rx || !leg.kit.every(k => countById(rx.received, k.id) === k.count)) {
+            if (!given.success || !rx || !concreteKit.every(k => countById(rx.received, k.id) === k.count)) {
                 throw Error(`stage transfer mismatch (${plan.name} leg ${legIdx + 1}): given=${given.success} rx=${!!rx}`);
             }
-            await waitUntil(holderSession, () => hasExactKit(holderSession.sdk.getInventory(), leg.kit), { timeoutTicks: 10 });
+            await waitUntil(holderSession, () => hasExactKit(holderSession.sdk.getInventory(), concreteKit), { timeoutTicks: 10 });
             const legAfter = holderSession.sdk.getInventory().map(i => ({ id: resolveBaseId(i.id), count: i.count }));
             lastTransferAt = Date.now();
-            for (const spec of leg.kit) {
+            for (const spec of concreteKit) {
                 if (countById(legAfter, spec.id) - countById(legBefore, spec.id) !== spec.count) {
                     throw Error(`recipient delta mismatch (${plan.name} leg ${legIdx + 1}) for ${spec.name}`);
                 }
@@ -763,7 +787,7 @@ export async function runStage(args: string[]): Promise<void> {
                 at: lastTransferAt,
                 before: legBefore,
                 after: legAfter,
-                kit: leg.kit,
+                kit: concreteKit,
             });
             legReceipts.push(receipt);
             if (plan.legs.length > 1) {
