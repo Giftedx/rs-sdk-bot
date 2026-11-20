@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795202151612-undermykilt-moneyshot-b412159564fceea2",
+ "account": "Moneyshot",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 130000,
+ "claim": "62cc9b60-3a25-4b93-bc18-ca8ace95fc73",
+ "count": 0,
+ "ok": false,
+ "at": 1795202183365,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Dragonhide chaps",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Dragonhide body",
+   "requested": 2,
+   "count": 0
+  }
+ ]
+}
