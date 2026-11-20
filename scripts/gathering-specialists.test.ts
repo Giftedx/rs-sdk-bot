@@ -22,11 +22,14 @@ import {
 import { expandSupplyInventory, SPECIALIST_GATHERING_CASES } from './measure/specialist-gathering-cases';
 import { benchCases, benchCoverage } from './measure/aio-bench-cases';
 import {
+    FLETCHING_SPECIALIST_LIVE_KIT,
     hasAtLeastKit,
     hasExactKit,
     kitSlotTotal,
+    parseKitArg,
     parseKitOption,
     resolveConcreteKit,
+    resolveSupplierKitPlan,
     SPECIALIST_KITS,
     type KitSpecItem,
 } from './specialist-supplier';
@@ -132,12 +135,15 @@ describe('bench registration and catalog integration', () => {
         const byId = new Map(ITEMS.map(item => [item.id, item]));
         const suppliesBySkill = {
             fletching: FLETCHING_SPECIALIST_SUPPLIES,
+            'fletching-live': FLETCHING_SPECIALIST_SUPPLIES,
             fishing: FISHING_SPECIALIST_SUPPLIES,
             mining: MINING_SPECIALIST_SUPPLIES,
             'mining-live': MINING_SPECIALIST_LIVE_SUPPLIES,
             thieving: THIEVING_SPECIALIST_SUPPLIES,
             'thieving-live': THIEVING_SPECIALIST_LIVE_SUPPLIES,
         } as const;
+        expect(parseKitArg(['--kit=fletching-live'])).toBe('fletching-live');
+        expect(resolveSupplierKitPlan('fletching-live').combined).toBe(FLETCHING_SPECIALIST_LIVE_KIT);
         for (const [skill, supplies] of Object.entries(suppliesBySkill) as [keyof typeof suppliesBySkill, Record<number, number>][]) {
             const parsed = parseKitOption(['holder', 'spec', `--kit=${skill}`]);
             expect(parsed).not.toBeNull();
