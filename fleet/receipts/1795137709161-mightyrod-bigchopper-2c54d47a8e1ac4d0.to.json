@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795137709161-mightyrod-bigchopper-2c54d47a8e1ac4d0",
+ "account": "Bigchopper",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 50,
+ "claim": "61dd9747-29e9-4eef-aa72-9ea2dc2a2972",
+ "count": 0,
+ "ok": false,
+ "at": 1795138616084,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Law rune",
+   "requested": 10,
+   "count": 0
+  }
+ ]
+}
