@@ -1,0 +1,22 @@
+{
+ "id": "1795164631710-weequickie-mightyrod-5d2cb19a2d370356",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "WeeQuickie",
+ "to": "Mightyrod",
+ "item": "Coins",
+ "count": 50000,
+ "start": 1795164631710,
+ "end": 1795166131710,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ]
+}
