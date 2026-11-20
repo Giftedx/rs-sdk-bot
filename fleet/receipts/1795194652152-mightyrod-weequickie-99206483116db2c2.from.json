@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795194652152-mightyrod-weequickie-99206483116db2c2",
  "account": "Mightyrod",
  "partner": "WeeQuickie",
@@ -10,15 +10,37 @@
  "item": "Cannonball",
  "requested": 900,
  "claim": "cb926c6f-cb14-4ca8-970f-2ee7017b9c80",
- "count": 0,
- "ok": false,
- "at": 1795194677659,
- "detail": "trade claimed",
+ "count": 900,
+ "ok": true,
+ "at": 1795194829015,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Rune arrow",
    "requested": 95,
-   "count": 0
+   "count": 95,
+   "inventory": {
+    "before": 95,
+    "after": 0
+   },
+   "bank": {
+    "count": 95,
+    "at": 1795194797117
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 900,
+  "after": 0
+ },
+ "bank": {
+  "count": 900,
+  "at": 1795194796332
+ },
+ "logout": {
+  "attemptId": "1795194677669-0000007976-0000000001",
+  "at": 1795194829003,
+  "sha256": "38833082b34a4893cfe3f922a76adaba0b10682fe24b5847e40719f5f66589ea"
+ },
+ "screen": true
 }
