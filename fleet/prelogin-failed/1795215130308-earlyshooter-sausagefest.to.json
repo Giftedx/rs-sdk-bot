@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795215130308-earlyshooter-sausagefest",
+ "role": "to",
+ "account": "Sausagefest",
+ "partner": "Earlyshooter",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795215193883,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] fa158ed8822b051b90823e8de433606eece15d52 -> fleet-trade-claim/sausagefest (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}
