@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795164723960-weequickie-undermykilt-c4a373190af5037d",
  "account": "WeeQuickie",
  "partner": "UnderMyKilt",
@@ -12,38 +12,72 @@
  "claim": "f930e91b-b220-4e10-817a-ceca9f317135",
  "count": 0,
  "ok": false,
- "at": 1795164734470,
- "detail": "trade claimed",
+ "at": 1795164743227,
+ "detail": "Error: partner failed: no trade",
  "lines": [
   {
    "item": "Cannon stand",
    "requested": 1,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 1,
+    "at": 1795164739302
+   }
   },
   {
    "item": "Cannon barrels",
    "requested": 1,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 1,
+    "at": 1795164739728
+   }
   },
   {
    "item": "Ring of dueling(8)",
    "requested": 1,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 1,
+    "at": 1795164740096
+   }
   },
   {
    "item": "Dragon bones",
    "requested": 5,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 5,
+    "at": 1795164740918
+   }
   },
   {
    "item": "Ranarr weed",
    "requested": 6,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 6,
+    "at": 1795164741741
+   }
   },
   {
    "item": "Snape grass",
    "requested": 1,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 1,
+    "at": 1795164742452
+   }
   }
- ]
+ ],
+ "bank": {
+  "count": 1,
+  "at": 1795164738859
+ },
+ "logout": {
+  "attemptId": "1795164734476-0000022836-0000000001",
+  "at": 1795164743210,
+  "sha256": "1871bd28dd7ea89d1a9a901e9c2d362a70658d9aa1967d780b0930289b984cb8"
+ },
+ "screen": false
 }

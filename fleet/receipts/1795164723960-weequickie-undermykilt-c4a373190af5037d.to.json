@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795164723960-weequickie-undermykilt-c4a373190af5037d",
  "account": "UnderMyKilt",
  "partner": "WeeQuickie",
@@ -12,8 +12,8 @@
  "claim": "aa1abf7d-f3bd-4f55-86d7-0b15dd02bf41",
  "count": 0,
  "ok": false,
- "at": 1795164738764,
- "detail": "trade claimed",
+ "at": 1795164748024,
+ "detail": "Error: partner failed: no trade",
  "lines": [
   {
    "item": "Cannon stand",
@@ -45,5 +45,11 @@
    "requested": 1,
    "count": 0
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1795164738771-0000024380-0000000001",
+  "at": 1795164748010,
+  "sha256": "a1a0831ea8152774dfa8c3e69a4f2c357e1238436898aae7bd5fd3fe19571a28"
+ },
+ "screen": false
 }
