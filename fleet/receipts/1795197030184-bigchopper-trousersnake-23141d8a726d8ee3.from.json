@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795197030184-bigchopper-trousersnake-23141d8a726d8ee3",
+ "account": "Bigchopper",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "c709d64e-1a35-4339-8eef-9741951912c5",
+ "count": 2,
+ "ok": true,
+ "at": 1795197123786,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795197106148
+ },
+ "logout": {
+  "attemptId": "1795197096105-0000030608-0000000001",
+  "at": 1795197123697,
+  "sha256": "12fbe8b7ead06f59ff70030a7ce7a7da8ae5ebb0f73cf57d350a22a65a1073f4"
+ },
+ "screen": true
+}
