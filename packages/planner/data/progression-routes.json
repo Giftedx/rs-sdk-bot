@@ -3476,6 +3476,21 @@
    "description": "Soften clay with water sources"
   },
   {
+   "id": "skiller:crafting:specialist",
+   "category": "skiller",
+   "name": "crafting:specialist",
+   "script": "scripts/crafting-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "crafting"
+   ],
+   "description": "Fresh-clock 1-to-99 Crafting via companion gem trades and 5-per-tick cutting"
+  },
+  {
    "id": "skiller:crafting:tanning",
    "category": "skiller",
    "name": "crafting:tanning",
@@ -3846,6 +3861,21 @@
    "description": "Clean herbs, make unfinished potions, and brew finished potions"
   },
   {
+   "id": "skiller:herblore:specialist",
+   "category": "skiller",
+   "name": "herblore:specialist",
+   "script": "scripts/herblore-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "herblore"
+   ],
+   "description": "Fresh-clock 1-to-99 Herblore via Games necklace Druidic Ritual and Kaqemeex 5-per-tick brewing"
+  },
+  {
    "id": "skiller:magic:alch-train",
    "category": "skiller",
    "name": "magic:alch-train",
@@ -3974,6 +4004,21 @@
     "magic"
    ],
    "description": "Combat/curse/bolt magic training order"
+  },
+  {
+   "id": "skiller:magic:specialist",
+   "category": "skiller",
+   "name": "magic:specialist",
+   "script": "scripts/magic-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "magic"
+   ],
+   "description": "Fresh-clock 1-to-99 Magic via Enchant ladder, Kolodion Mage Arena, and 5-per-tick Charge"
   },
   {
    "id": "skiller:magic:splash",
@@ -4186,6 +4231,21 @@
    "description": "1-tick prayer flicking upkeep"
   },
   {
+   "id": "skiller:prayer:specialist",
+   "category": "skiller",
+   "name": "prayer:specialist",
+   "script": "scripts/prayer-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "prayer"
+   ],
+   "description": "Fresh-clock 1-to-99 Prayer via Draynor Bank dragon-bone runners and Lumbridge burying"
+  },
+  {
    "id": "skiller:runecraft:air",
    "category": "skiller",
    "name": "runecraft:air",
@@ -4232,6 +4292,21 @@
     "runecraft"
    ],
    "description": "Shilo Village Nature altar runecrafting trips"
+  },
+  {
+   "id": "skiller:runecraft:specialist",
+   "category": "skiller",
+   "name": "runecraft:specialist",
+   "script": "scripts/runecraft-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "runecraft"
+   ],
+   "description": "Fresh-clock 1-to-99 Runecraft via Air altar unlock and Body altar essence runners"
   },
   {
    "id": "skiller:runecraft:supply",
@@ -4298,6 +4373,21 @@
     "smithing"
    ],
    "description": "Smelt bronze/iron/steel/gold/mithril/adamant/runite bars at furnace"
+  },
+  {
+   "id": "skiller:smithing:specialist",
+   "category": "skiller",
+   "name": "smithing:specialist",
+   "script": "scripts/smithing-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "smithing"
+   ],
+   "description": "Fresh-clock 1-to-99 Smithing via Glory Edgeville and Varrock West anvil runners"
   },
   {
    "id": "skiller:thieving:blood-chest",
@@ -90227,6 +90317,7 @@
    "intents": [
     "train",
     "produce",
+    "service",
     "acquire"
    ],
    "skills": [
@@ -90279,6 +90370,7 @@
     "skiller:smithing:smelt",
     "skiller:smithing:anvil",
     "skiller:smithing:cannonballs",
+    "skiller:smithing:specialist",
     "skiller:crafting:bowstrings",
     "skiller:crafting:jewellery",
     "skiller:crafting:jewellery-trip",
@@ -90289,12 +90381,15 @@
     "skiller:crafting:soften-clay",
     "skiller:crafting:inventory",
     "skiller:crafting:progressive",
+    "skiller:crafting:specialist",
     "skiller:herblore:potions",
     "skiller:herblore:meats",
+    "skiller:herblore:specialist",
     "skiller:runecraft:bank-craft",
     "skiller:runecraft:nature",
     "skiller:runecraft:supply",
     "skiller:runecraft:air",
+    "skiller:runecraft:specialist",
     "skiller:magic:order",
     "skiller:magic:items",
     "skiller:magic:npc",
@@ -90307,8 +90402,10 @@
     "skiller:magic:alch-train",
     "skiller:magic:splash",
     "skiller:magic:splash-coop",
+    "skiller:magic:specialist",
     "skiller:prayer:bury",
     "skiller:prayer:flick",
+    "skiller:prayer:specialist",
     "skiller:agility:order",
     "skiller:thieving:knights",
     "skiller:thieving:knights-stable",
@@ -90397,6 +90494,7 @@
     "skiller:smithing:smelt",
     "skiller:smithing:anvil",
     "skiller:smithing:cannonballs",
+    "skiller:smithing:specialist",
     "skiller:crafting:bowstrings",
     "skiller:crafting:jewellery",
     "skiller:crafting:jewellery-trip",
@@ -90407,12 +90505,15 @@
     "skiller:crafting:soften-clay",
     "skiller:crafting:inventory",
     "skiller:crafting:progressive",
+    "skiller:crafting:specialist",
     "skiller:herblore:potions",
     "skiller:herblore:meats",
+    "skiller:herblore:specialist",
     "skiller:runecraft:bank-craft",
     "skiller:runecraft:nature",
     "skiller:runecraft:supply",
     "skiller:runecraft:air",
+    "skiller:runecraft:specialist",
     "skiller:magic:order",
     "skiller:magic:items",
     "skiller:magic:npc",
@@ -90425,8 +90526,10 @@
     "skiller:magic:alch-train",
     "skiller:magic:splash",
     "skiller:magic:splash-coop",
+    "skiller:magic:specialist",
     "skiller:prayer:bury",
     "skiller:prayer:flick",
+    "skiller:prayer:specialist",
     "skiller:agility:order",
     "skiller:thieving:knights",
     "skiller:thieving:knights-stable",
@@ -90841,6 +90944,18 @@
    ],
    "routeIds": [
     "skiller:crafting:legacy-jewelry"
+   ]
+  },
+  {
+   "script": "scripts/crafting-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "crafting"
+   ],
+   "routeIds": [
+    "skiller:crafting:specialist"
    ]
   },
   {
@@ -92108,6 +92223,18 @@
    "routeIds": []
   },
   {
+   "script": "scripts/herblore-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "herblore"
+   ],
+   "routeIds": [
+    "skiller:herblore:specialist"
+   ]
+  },
+  {
    "script": "scripts/item-fanin.ts",
    "intents": [
     "acquire"
@@ -92143,6 +92270,18 @@
    ],
    "routeIds": [
     "skiller:magic:order"
+   ]
+  },
+  {
+   "script": "scripts/magic-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "magic"
+   ],
+   "routeIds": [
+    "skiller:magic:specialist"
    ]
   },
   {
@@ -93039,6 +93178,15 @@
   },
   {
    "script": "scripts/measure/specialist-bench.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/specialist-fast-skills-cases.ts",
    "intents": [
     "observe"
    ],
@@ -93953,6 +94101,18 @@
    ]
   },
   {
+   "script": "scripts/prayer-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "prayer"
+   ],
+   "routeIds": [
+    "skiller:prayer:specialist"
+   ]
+  },
+  {
    "script": "scripts/preparation-report.ts",
    "intents": [
     "observe"
@@ -94111,6 +94271,18 @@
    ]
   },
   {
+   "script": "scripts/runecraft-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "runecraft"
+   ],
+   "routeIds": [
+    "skiller:runecraft:specialist"
+   ]
+  },
+  {
    "script": "scripts/seaslug-leave.ts",
    "intents": [
     "service"
@@ -94183,6 +94355,18 @@
    "routeIds": [
     "skiller:smithing:smelt",
     "skiller:smithing:anvil"
+   ]
+  },
+  {
+   "script": "scripts/smithing-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "smithing"
+   ],
+   "routeIds": [
+    "skiller:smithing:specialist"
    ]
   },
   {

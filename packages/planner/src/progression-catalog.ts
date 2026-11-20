@@ -152,6 +152,21 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  }
  if(requestedItems)return{kind:'acquire',items:{...requestedItems},consumer};
  if(accept?.quests?.length===1&&accept.quests[0]?.trim())return{kind:'quest',quest:accept.quests[0]};
+ const fastSkillSpecialists:Readonly<Record<string,{skill:string;cap:number}>>={
+  'scripts/crafting-specialist.ts':{skill:'crafting',cap:250},
+  'scripts/herblore-specialist.ts':{skill:'herblore',cap:460},
+  'scripts/prayer-specialist.ts':{skill:'prayer',cap:1350},
+  'scripts/smithing-specialist.ts':{skill:'smithing',cap:1350},
+  'scripts/runecraft-specialist.ts':{skill:'runecraft',cap:2300},
+  'scripts/magic-specialist.ts':{skill:'magic',cap:1300},
+ };
+ if(script in fastSkillSpecialists){
+  const spec=fastSkillSpecialists[script]!;
+  const cap=Number(setting(env,args,'CAP')??(/^\d+$/.test(args[0]??'')?args[0]:String(spec.cap)));
+  const target=Number(setting(env,args,'TARGET')??setting(env,args,'TARGET_LEVEL')??'99');
+  if(!whole(cap)||cap<1||!finiteLevel(target))return null;
+  return{kind:'service',objective:`specialist:${spec.skill}:${target}`,units:1};
+ }
  const acceptedSkills=Object.entries(accept?.skills??{});
  if(script==='scripts/cannon-fight.ts'){
   const mode=setting(env,args,'MODE');

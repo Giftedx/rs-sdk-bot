@@ -1,0 +1,492 @@
+// Shared fresh-clock specialist utilities, unnoted supply manifests, tutorial skip, and burst-trade helpers.
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import type { Session } from '../packages/core/src/inprocess';
+import { accountOf, finish, getWorld, openBot } from '../packages/core/src/bot';
+import { levelForXp, xpForLevel } from '../packages/planner/src/curve';
+import { waitTicks, waitUntil } from '../packages/core/src/ticks';
+import { logout } from '../packages/core/src/logout';
+import { goTo, sessionWalker, walkPath } from '../packages/core/src/walk';
+
+export const ITEM_IDS = {
+ chisel: 1755,
+ uncut_opal: 1625,
+ uncut_jade: 1627,
+ uncut_red_topaz: 1629,
+ uncut_sapphire: 1623,
+ uncut_emerald: 1621,
+ uncut_ruby: 1619,
+ uncut_diamond: 1617,
+ uncut_dragonstone: 1631,
+ opal: 1609,
+ jade: 1611,
+ red_topaz: 1613,
+ sapphire: 1607,
+ emerald: 1605,
+ ruby: 1603,
+ diamond: 1601,
+ dragonstone: 1615,
+ necklace_of_minigames_8: 3853,
+ raw_beef: 2132,
+ raw_rat_meat: 2134,
+ raw_bear_meat: 2136,
+ raw_chicken: 2138,
+ guamvial: 91,
+ marrentillvial: 93,
+ tarrominvial: 95,
+ harralandervial: 97,
+ ranarrvial: 99,
+ iritvial: 101,
+ avantoevial: 103,
+ kwuarmvial: 105,
+ cadantinevial: 107,
+ dwarfweedvial: 109,
+ torstolvial: 111,
+ lantadymevial: 2483,
+ toadflaxvial: 3002,
+ snapdragonvial: 3004,
+ eye_of_newt: 221,
+ red_spiders_eggs: 223,
+ limpwurt_root: 225,
+ snape_grass: 231,
+ unicorn_horn_dust: 235,
+ white_berries: 239,
+ dragon_scale_dust: 241,
+ wine_of_zamorak: 245,
+ jangerberries: 247,
+ chocolate_dust: 1975,
+ toads_legs: 2152,
+ mortmyremushroom: 2970,
+ cactus_potato: 3138,
+ zamorak_brew_3: 189,
+ dragon_bones: 536,
+ hammer: 2347,
+ bronze_bar: 2349,
+ iron_bar: 2351,
+ steel_bar: 2353,
+ mithril_bar: 2359,
+ adamantite_bar: 2361,
+ blankrune: 1436,
+ air_talisman: 1438,
+ body_talisman: 1446,
+ bodyrune: 559,
+ airrune: 556,
+ waterrune: 555,
+ earthrune: 557,
+ firerune: 554,
+ mindrune: 558,
+ cosmicrune: 564,
+ lawrune: 563,
+ bloodrune: 565,
+ staff_of_fire: 1387,
+ knife: 946,
+ amulet_of_glory_4: 1712,
+ sapphire_ring: 1637,
+ emerald_ring: 1639,
+ ruby_ring: 1641,
+ diamond_ring: 1643,
+ dragonstone_ring: 1645,
+ ring_of_recoil: 2550,
+ ring_of_dueling_8: 2552,
+ ring_of_forging: 2568,
+ ring_of_life: 2570,
+ ring_of_wealth: 2572,
+ prayer_potion_4: 2434,
+ shark: 385,
+} as const;
+
+export const TRADE_OFFER_INV = 3322;
+export const TRADE_MAIN_ACCEPT = 3420;
+export const TRADE_CONFIRM_ACCEPT = 3546;
+export const LUMBRIDGE_COURTYARD = { x: 3222, z: 3222, level: 0 } as const;
+
+export interface SupplyEntry {
+ itemId: number;
+ item: string;
+ count: number;
+}
+
+export interface SpecialistArgs {
+ account: string;
+ cap: number;
+ target: number;
+ helpers: string[];
+ env: Record<string, string | undefined>;
+}
+
+type CatalogItemRow = { id: number; name: string; debugname?: string; tradeable?: boolean };
+let catalogCache: Map<number, CatalogItemRow> | null = null;
+
+export function loadItemCatalog(base = resolve(import.meta.dir, '..')): Map<number, CatalogItemRow> {
+ if (catalogCache) return catalogCache;
+ const rows = JSON.parse(readFileSync(resolve(base, 'knowledge/items.json'), 'utf8')) as CatalogItemRow[];
+ catalogCache = new Map(rows.map(r => [r.id, r]));
+ return catalogCache;
+}
+
+export function assertCatalogItems(entries: readonly SupplyEntry[], base?: string): void {
+ const catalog = loadItemCatalog(base);
+ for (const entry of entries) {
+  if (!Number.isSafeInteger(entry.itemId) || entry.itemId < 1 || !Number.isSafeInteger(entry.count) || entry.count < 1) {
+   throw Error(`invalid supply entry ${JSON.stringify(entry)}`);
+  }
+  const row = catalog.get(entry.itemId);
+  if (!row) throw Error(`supply itemId ${entry.itemId} (${entry.item}) absent from knowledge/items.json`);
+  if (!row.tradeable) throw Error(`supply itemId ${entry.itemId} (${entry.item}) is untradeable`);
+ }
+}
+
+export function parseSpecialistArgs(
+ argv: readonly string[] = process.argv.slice(2),
+ env: Record<string, string | undefined> = process.env,
+ defaults: { cap: number; target?: number; defaultHelpers?: number } = { cap: 2000 },
+): SpecialistArgs {
+ const settings = { ...env };
+ const positional: string[] = [];
+ for (const token of argv) {
+  const m = token.match(/^([A-Z][A-Z0-9_]*)=([\s\S]*)$/);
+  if (m) settings[m[1]!] = m[2]!;
+  else positional.push(token);
+ }
+ const account = positional[0] ?? '';
+ if (!account) throw Error('specialist account required');
+ const cap = Number(settings.CAP ?? positional[1] ?? defaults.cap);
+ const target = Number(settings.TARGET ?? settings.TARGET_LEVEL ?? defaults.target ?? 99);
+ if (!Number.isSafeInteger(cap) || cap < 1) throw Error(`invalid CAP: ${settings.CAP ?? positional[1]}`);
+ if (!Number.isSafeInteger(target) || target < 1 || target > 99) throw Error(`invalid TARGET: ${settings.TARGET}`);
+ const helperRaw = settings.HELPERS ?? settings.COMPANIONS ?? '';
+ const parsedHelpers = helperRaw
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+ const suffixes = 'bcdefghijklmnopqrstuvwxyz0123456789';
+ const helpers = parsedHelpers.length
+  ? parsedHelpers
+  : Array.from({ length: defaults.defaultHelpers ?? 0 }, (_, i) => `${account}${suffixes[i]!}`);
+ return { account, cap, target, helpers, env: settings };
+}
+
+export function countItem(inv: readonly { id: number; count: number }[], id: number): number {
+ let total = 0;
+ for (const item of inv) if (item.id === id) total += item.count;
+ return total;
+}
+
+export function skillLevel(s: Session, skill: string): number {
+ return s.sdk.getSkill(skill)?.baseLevel ?? levelForXp(s.sdk.getSkillXp(skill) ?? 0);
+}
+
+export function skillXp(s: Session, skill: string): number {
+ return s.sdk.getSkillXp(skill) ?? 0;
+}
+
+export function playerPos(s: Session) {
+ return s.sdk.getState()?.player ?? null;
+}
+
+export function nearTile(s: Session, x: number, z: number, tol = 2, level = 0): boolean {
+ const p = playerPos(s);
+ return !!p && p.level === level && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol;
+}
+
+// Opens companion helpers before the specialist so helper packets decode first in each game tick and
+// the specialist's fresh clock begins only when all companions are already logged into the world.
+export async function withSpecialistFleet<T>(
+ specName: string,
+ helperNames: readonly string[],
+ fn: (spec: Session, helpers: Session[]) => Promise<{ ok: boolean; detail: string; value?: T }>,
+ log: (line: string) => void = console.log,
+): Promise<never> {
+ await getWorld();
+ const helpers: Session[] = [];
+ let spec: Session | null = null;
+ let ok = false;
+ let detail = 'uninitialized';
+ try {
+  for (const name of helperNames) {
+   helpers.push(await openBot(name, { log }));
+  }
+  spec = await openBot(specName, { log });
+  const res = await fn(spec, helpers);
+  ok = res.ok;
+  detail = res.detail;
+ } catch (error) {
+  ok = false;
+  detail = error instanceof Error ? error.message : String(error);
+ } finally {
+  if (spec && !spec.sdk.getState()?.inGame) {
+   // keep finish order [helpers..., spec] so specialist LEDGER stays last for bench reporting
+  }
+  if (spec) {
+   await logoutAll([...helpers, spec]).catch(() => {});
+  }
+  const sessions = spec ? [...helpers, spec] : helpers;
+  await finish(sessions, ok, detail);
+ }
+ throw Error('unreachable finish');
+}
+
+async function logoutAll(sessions: readonly Session[]): Promise<void> {
+ await Promise.all(sessions.map(s => logout(s, 3000, { retryMs: 300 }).catch(() => 'timeout')));
+}
+
+export async function skipTutorialFast(s: Session, deadlineTick: number): Promise<void> {
+ const ready = await waitUntil(s, () => !!playerPos(s), { timeoutTicks: 20 });
+ if (!ready) throw Error('tutorial start player state unobserved');
+ while (s.tick() < deadlineTick) {
+  const st = s.sdk.getState();
+  const p = st?.player;
+  if (!p) break;
+  if (p.worldX >= 3160 && p.worldZ >= 3180) return;
+  if (st.modalOpen && st.modalInterface === 3559) {
+   await s.direct({ type: 'acceptCharacterDesign', reason: 'SDK' });
+   await waitTicks(s, 1);
+   continue;
+  }
+  const d = st.dialog;
+  if (d?.isOpen) {
+   if (d.isWaiting) {
+    await waitTicks(s, 1);
+    continue;
+   }
+   const yes = d.options.find((o: any) => /yes please/i.test(o.text));
+   if (yes) {
+    await s.direct({ type: 'clickDialogOption', optionIndex: yes.index, reason: 'SDK' });
+   } else {
+    const cont = d.options[0]?.index ?? 0;
+    await s.direct({ type: 'clickDialogOption', optionIndex: cont, reason: 'SDK' });
+   }
+   await waitTicks(s, 1);
+   continue;
+  }
+  const guide = s.sdk.findNearbyNpc(/^runescape guide$/i);
+  if (guide) {
+   await s.direct({ type: 'interactNpc', npcIndex: guide.index, optionIndex: 1, reason: 'SDK' });
+  }
+  await waitTicks(s, 1);
+ }
+ throw Error('tutorial skip exceeded cap');
+}
+
+export async function clearBlockingModal(s: Session): Promise<void> {
+ const st = s.sdk.getState();
+ if (st?.dialog?.isOpen && !st?.trade?.isOpen) {
+  await s.direct({ type: 'closeModal', reason: 'SDK' });
+ }
+}
+
+// Drops up to 5 unwanted items per tick (drop.rs2 has no p_delay and USER_EVENT.limit is 5).
+export async function dropItemsFast(s: Session, keepIds: ReadonlySet<number>, deadlineTick: number): Promise<void> {
+ while (s.tick() < deadlineTick) {
+  const st = s.sdk.getState();
+  const dropSlots = s.sdk.getInventory().filter(i => !keepIds.has(i.id)).map(i => i.slot);
+  if (!dropSlots.length) return;
+  const actions: Promise<unknown>[] = [];
+  let budget = 5;
+  if (st?.dialog?.isOpen && !st?.trade?.isOpen) {
+   actions.push(s.direct({ type: 'closeModal', reason: 'SDK' }));
+   budget = 4;
+  }
+  for (const slot of dropSlots.slice(0, budget)) {
+   actions.push(s.direct({ type: 'dropItem', slot, reason: 'SDK' }));
+  }
+  await Promise.all(actions);
+  await waitTicks(s, 1);
+ }
+ throw Error('dropItemsFast exceeded cap');
+}
+
+export function findLocBy(s: Session, pred: (loc: ReturnType<Session['sdk']['getNearbyLocs']>[number]) => boolean) {
+ return s.sdk.getNearbyLocs().filter(pred).sort((a, b) => a.distance - b.distance)[0] ?? null;
+}
+
+export function findNpcBy(s: Session, pred: (npc: ReturnType<Session['sdk']['getNearbyNpcs']>[number]) => boolean) {
+ return s.sdk.getNearbyNpcs().filter(pred).sort((a, b) => a.distance - b.distance)[0] ?? null;
+}
+
+export async function waitNearPlayer(mover: Session, target: Session, deadlineTick: number): Promise<void> {
+ while (mover.tick() < deadlineTick) {
+  const mp = playerPos(mover);
+  const tp = playerPos(target);
+  if (mp && tp && mp.level === tp.level && Math.max(Math.abs(mp.worldX - tp.worldX), Math.abs(mp.worldZ - tp.worldZ)) <= 1) {
+   return;
+  }
+  if (tp) {
+   await mover.direct({ type: 'walkTo', x: tp.worldX, z: tp.worldZ, running: true, reason: 'SDK' });
+  }
+  await waitTicks(mover, 1);
+ }
+ throw Error(`helper ${mover.name} failed to reach ${target.name}`);
+}
+
+export interface BurstTradeSpec {
+ giveIds?: readonly number[];
+ returnIds?: readonly number[];
+ deadlineTick: number;
+}
+
+// Executes a decode-ordered 3-to-4-tick trade: helper packets enqueue before specialist packets.
+export async function burstTradeHost(spec: Session, helper: Session, opts: BurstTradeSpec): Promise<void> {
+ await waitNearPlayer(helper, spec, opts.deadlineTick);
+ const helperName = helper.name.toLowerCase();
+ const specName = spec.name.toLowerCase();
+ let sawConfirm = false;
+
+ while (spec.tick() < opts.deadlineTick) {
+  const st = spec.sdk.getTradeState();
+  const ht = helper.sdk.getTradeState();
+
+  if (!st.isOpen && !ht.isOpen) {
+   if (sawConfirm) return;
+   if (spec.sdk.getState()?.dialog?.isOpen) await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   if (helper.sdk.getState()?.dialog?.isOpen) await helper.direct({ type: 'closeModal', reason: 'SDK' });
+
+   const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperName);
+   const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specName);
+   if (sTarget) await helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' });
+   if (hTarget) await spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' });
+   await waitTicks(spec, 1);
+   continue;
+  }
+
+  if (st.screen === 'confirm' || ht.screen === 'confirm') {
+   sawConfirm = true;
+   if (ht.isOpen && ht.screen === 'confirm' && !ht.myAccepted) {
+    await helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' });
+   }
+   if (st.isOpen && st.screen === 'confirm' && !st.myAccepted) {
+    await spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' });
+   }
+   await waitTicks(spec, 1);
+   continue;
+  }
+
+  // First offer screen. Helper offers first so decode-ordered accept works in the same tick when spec returns 0 items.
+  const hWantSet = opts.giveIds ? new Set(opts.giveIds) : null;
+  const hDistinctSlots = uniqueSlotsForIds(helper.sdk.getInventory(), hWantSet, ht.myOffer);
+  const sReturnSet = opts.returnIds?.length ? new Set(opts.returnIds) : null;
+  const sDistinctSlots = sReturnSet ? uniqueSlotsForIds(spec.sdk.getInventory(), sReturnSet, st.myOffer) : [];
+
+  const hOffers = hDistinctSlots.slice(0, 4);
+  const sOffers = sDistinctSlots.slice(0, 4);
+
+  if (hOffers.length) {
+   await Promise.all(
+    hOffers.map(slot => helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' })),
+   );
+  }
+  const helperOfferComplete = hDistinctSlots.length <= hOffers.length;
+  const specAddingItems = sDistinctSlots.length > 0;
+  // Wait for confirm only if spec didn't reset accepts later in this same tick.
+  if (helperOfferComplete && !specAddingItems && !ht.myAccepted) {
+   await helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' });
+  }
+
+  if (sOffers.length) {
+   await Promise.all(
+    sOffers.map(slot => spec.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' })),
+   );
+  }
+  const specOfferComplete = sDistinctSlots.length <= sOffers.length;
+  if (specOfferComplete && !st.myAccepted) {
+   await spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' });
+  }
+
+  await waitTicks(spec, 1);
+ }
+
+ throw Error(`burstTradeHost with ${helper.name} exceeded cap`);
+}
+
+function uniqueSlotsForIds(
+ inv: readonly { id: number; count: number; slot: number }[],
+ wantIds: ReadonlySet<number> | null,
+ alreadyOffered: readonly { id: number; count: number }[],
+): number[] {
+ const offeredCounts = new Map<number, number>();
+ for (const o of alreadyOffered) offeredCounts.set(o.id, (offeredCounts.get(o.id) ?? 0) + o.count);
+ const totalInv = new Map<number, number>();
+ const firstSlot = new Map<number, number>();
+ for (const item of inv) {
+  if (wantIds && !wantIds.has(item.id)) continue;
+  totalInv.set(item.id, (totalInv.get(item.id) ?? 0) + item.count);
+  if (!firstSlot.has(item.id)) firstSlot.set(item.id, item.slot);
+ }
+ const slots: number[] = [];
+ for (const [id, needed] of totalInv) {
+  if ((offeredCounts.get(id) ?? 0) < needed) slots.push(firstSlot.get(id)!);
+ }
+ return slots;
+}
+
+export async function runTo(s: Session, x: number, z: number, tol = 2, maxTicks = 200): Promise<void> {
+ const walker = await sessionWalker(s);
+ const res = await walkPath(walker, [{ x, z, tol }], { maxTicks });
+ if (!res.ok && !nearTile(s, x, z, tol)) {
+  const goRes = await goTo(s, await getWorld(), { x, z, level: 0 }, accountOf(s), {
+   maxRetriesPerLeg: 1,
+   legTimeoutTicks: maxTicks,
+  });
+  if (!goRes.ok && !nearTile(s, x, z, tol)) {
+   throw Error(`walk failed to ${x},${z}: ${goRes.detail ?? res.detail}`);
+  }
+ }
+}
+
+export async function navigateWorld(s: Session, x: number, z: number, level = 0, timeoutTicks = 250): Promise<void> {
+ if (nearTile(s, x, z, 2, level)) return;
+ const ac = new AbortController();
+ const stopTimer = waitTicks(s, timeoutTicks).then(() => ac.abort('navigateWorld timeout'));
+ try {
+  const res = await goTo(s, await getWorld(), { x, z, level }, accountOf(s), {
+   maxRetriesPerLeg: 1,
+   legTimeoutTicks: timeoutTicks,
+   signal: ac.signal,
+  });
+  if (!res.ok && !nearTile(s, x, z, 2, level)) {
+   throw Error(`goTo failed to ${x},${z},${level}: ${res.detail}`);
+  }
+ } finally {
+  ac.abort('navigateWorld done');
+  await stopTimer.catch(() => {});
+ }
+}
+
+export async function rubJewelryTeleport(
+ s: Session,
+ itemId: number,
+ choiceRegex: RegExp,
+ arrived: () => boolean,
+ deadlineTick: number,
+): Promise<void> {
+ while (s.tick() < deadlineTick) {
+  if (arrived()) return;
+  const d = s.sdk.getDialog();
+  if (d?.isOpen) {
+   if (d.isWaiting) {
+    await waitTicks(s, 1);
+    continue;
+   }
+   const opt = d.options.find((o: any) => choiceRegex.test(o.text));
+   if (opt) {
+    await s.direct({ type: 'clickDialogOption', optionIndex: opt.index, reason: 'SDK' });
+   } else {
+    await s.direct({ type: 'clickDialogOption', optionIndex: d.options[0]?.index ?? 0, reason: 'SDK' });
+   }
+   await waitTicks(s, 1);
+   continue;
+  }
+  const item = s.sdk.getInventory().find(i => i.id === itemId);
+  if (!item) throw Error(`jewelry item ${itemId} missing for teleport`);
+  await s.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 4, reason: 'SDK' });
+  await waitTicks(s, 1);
+ }
+ throw Error(`jewelry teleport ${itemId} exceeded cap`);
+}
+
+export function goalXp(): number {
+ return xpForLevel(99);
+}
+
+// Re-export curve helpers so specialist scripts import from one boundary.
+export { finish, openBot, getWorld, accountOf, waitTicks, waitUntil, xpForLevel, levelForXp };
