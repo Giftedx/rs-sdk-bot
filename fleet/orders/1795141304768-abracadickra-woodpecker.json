@@ -1,0 +1,22 @@
+{
+ "id": "1795141304768-abracadickra-woodpecker",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "Woodpecker",
+ "item": "coins",
+ "count": 182695,
+ "start": 1795141304768,
+ "end": 1795143704768,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
