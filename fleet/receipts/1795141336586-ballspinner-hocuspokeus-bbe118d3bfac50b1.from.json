@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795141336586-ballspinner-hocuspokeus-bbe118d3bfac50b1",
  "account": "Ballspinner",
  "partner": "Hocuspokeus",
@@ -10,8 +10,22 @@
  "item": "Rune arrowtips",
  "requested": 500,
  "claim": "cf2d0381-4472-424c-b968-60f18a1f5376",
- "count": 0,
- "ok": false,
- "at": 1795141454589,
- "detail": "trade claimed"
+ "count": 500,
+ "ok": true,
+ "at": 1795141486193,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 500,
+  "after": 0
+ },
+ "bank": {
+  "count": 500,
+  "at": 1795141462259
+ },
+ "logout": {
+  "attemptId": "1795141454598-0000009584-0000000001",
+  "at": 1795141486181,
+  "sha256": "fd649fae61384a627f2081a143b9d455826a11e46fc394dc10a6202feaed1bcd"
+ },
+ "screen": true
 }

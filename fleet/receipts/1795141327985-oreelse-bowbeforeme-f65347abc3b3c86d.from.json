@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795141327985-oreelse-bowbeforeme-f65347abc3b3c86d",
  "account": "OreElse",
  "partner": "BowBeforeMe",
@@ -10,15 +10,37 @@
  "item": "Bronze arrowtips",
  "requested": 75,
  "claim": "29b8d2a4-cda6-4427-a720-5d49c7ea32b2",
- "count": 0,
- "ok": false,
- "at": 1795141444192,
- "detail": "trade claimed",
+ "count": 75,
+ "ok": true,
+ "at": 1795141482196,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Iron arrowtips",
    "requested": 105,
-   "count": 0
+   "count": 105,
+   "inventory": {
+    "before": 105,
+    "after": 0
+   },
+   "bank": {
+    "count": 105,
+    "at": 1795141451468
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 75,
+  "after": 0
+ },
+ "bank": {
+  "count": 75,
+  "at": 1795141450650
+ },
+ "logout": {
+  "attemptId": "1795141444201-0000018816-0000000001",
+  "at": 1795141482183,
+  "sha256": "86449879e0853d8488f148adc80eca98b00392f2f036d14152ba780d7f925ff5"
+ },
+ "screen": true
 }
