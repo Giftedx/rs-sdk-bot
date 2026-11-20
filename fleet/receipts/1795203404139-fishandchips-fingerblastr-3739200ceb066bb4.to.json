@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795203404139-fishandchips-fingerblastr-3739200ceb066bb4",
  "account": "Fingerblastr",
  "partner": "FishAndChips",
@@ -12,13 +12,19 @@
  "claim": "662b464b-ddee-406c-b565-91b93d09ba7f",
  "count": 0,
  "ok": false,
- "at": 1795203422335,
- "detail": "trade claimed",
+ "at": 1795203432587,
+ "detail": "Error: partner failed: no trade",
  "lines": [
   {
    "item": "Shark",
    "requested": 55,
    "count": 0
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1795203422344-0000001748-0000000001",
+  "at": 1795203432577,
+  "sha256": "1985ab5f9cedf0be140bd98a036798e45273fcf9c99af0f8a45c229e0bb76b89"
+ },
+ "screen": false
 }

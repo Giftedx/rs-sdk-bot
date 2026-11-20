@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795203404139-fishandchips-fingerblastr-3739200ceb066bb4",
+ "role": "from",
+ "account": "FishAndChips",
+ "partner": "Fingerblastr",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795203432178,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] 2de3d07177cbd70bbce3f04e1df319c7b7dd1e00 -> fleet-trade-claim/fishandchips (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}
