@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795160244169-bigchopper-shaftmaker-naturerune",
+ "account": "Bigchopper",
+ "partner": "Shaftmaker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 344,
+ "claim": "91295e38-84c8-4deb-9f0e-4fef83d30efc",
+ "count": 0,
+ "ok": false,
+ "at": 1795160282638,
+ "detail": "trade claimed"
+}
