@@ -1,0 +1,11 @@
+{
+ "id": "1795158766018-knightrider-shaftsinker-31a090096caac942",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "Shaftsinker",
+ "item": "Cake",
+ "count": 27,
+ "start": 1795158766018,
+ "end": 1795159966018,
+ "takerWaits": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795158766018-knightrider-shaftsinker-31a090096caac942",
+ "account": "KnightRider",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cake",
+ "requested": 27,
+ "claim": "89feed9e-32d6-4fa5-9651-8f2250e08ad5",
+ "count": 0,
+ "ok": false,
+ "at": 1795158778204,
+ "detail": "trade claimed"
+}
