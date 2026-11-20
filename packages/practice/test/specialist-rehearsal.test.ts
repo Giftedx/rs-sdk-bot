@@ -5,7 +5,7 @@ import {join} from 'node:path';
 import {gzipSync} from 'node:zlib';
 import {missionSignature} from '../../core/src/session-admission';
 import {xpForLevel} from '../../planner/src/curve';
-import {checkSpecialistSegment, isolatedStackOptions, rehearsalChildEnv, rehearseLockstep, type Segment} from '../src/rehearse';
+import {checkSpecialistSegment, isolatedStackOptions, rehearsalChildEnv, rehearseLockstep, TickWindow, type Segment} from '../src/rehearse';
 import {confirmLivingSession, observedSupplies, scoredClock, SPECIALIST_TICK_MS, successfulWorkerLog} from '../src/specialist-rehearsal';
 
 function engineSave(playtime = 305, levelTick = 300, tickMs = 400, level = 99) {
@@ -140,4 +140,59 @@ test('isolated rehearsal defaults to no-gateway lockstep with 400ms scored playt
 
     const realtimeWorkerEnv = rehearsalChildEnv({REHEARSE_REALTIME: '1', SIM_LOCKSTEP: '1'}, segEnv, {scored: true, role: 'worker'});
     expect(realtimeWorkerEnv.SIM_LOCKSTEP).toBeUndefined();
+});
+
+test('TickWindow tracks final logout after relog interruptions and successfulWorkerLog accepts multi-session starts', () => {
+    const window = new TickWindow(true);
+    window.observe(2, true);
+    window.observe(248, false);
+    expect(window.ticks).toBe(246);
+    window.observe(249, true);
+    expect(window.leave).toBeNull();
+    expect(window.ticks).toBeNull();
+    window.observe(2120, false);
+    expect(window.enter).toBe(2);
+    expect(window.leave).toBe(2120);
+    expect(window.ticks).toBe(2118);
+
+    const relogLog = 'START 3094 3106 0\nSTART 2623 3293 0\nSTART 2674 3305 0\nLOGOUT logged-out\nRESULT ok level=99\n';
+    expect(successfulWorkerLog(relogLog)).toBe(true);
+    expect(successfulWorkerLog('START bad\nLOGOUT logged-out\nRESULT ok\n')).toBe(false);
+    expect(successfulWorkerLog('START 3094 3106 0\nLOGOUT logged-out\nSTART 2674 3305 0\nRESULT ok\n')).toBe(false);
+});
+
+test('confirmLivingSession verifies multi-segment relog files and concatenated multi-member gzip streams', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'rsbot-relog-ticks-'));
+    const seg1 = join(dir, 'actor-10.ticks.ndjson.gz');
+    const seg2 = join(dir, 'actor-20.ticks.ndjson.gz');
+    const combined = join(dir, 'actor.combined.ticks.ndjson.gz');
+    const meta = {k: 'meta', account: 'actor', server: 'localhost:8910'};
+    const alive1 = {k: 's', d: {player: {lifeId: 7, isDead: false, respawnCount: 0}}};
+    const alive2 = {k: 'p', d: {player: {lifeId: 7, isDead: false, respawnCount: 0}}};
+    const end = {k: 'end'};
+    const gz = (rows: unknown[]) => gzipSync(rows.map(r => JSON.stringify(r)).join('\n') + '\n');
+    try {
+        writeFileSync(seg1, gz([meta, alive1, end]));
+        writeFileSync(seg2, gz([meta, alive2, end]));
+        await expect(confirmLivingSession([seg1, seg2], 'actor', 'localhost:8910')).resolves.toBeUndefined();
+
+        writeFileSync(combined, Buffer.concat([gz([meta, alive1, end]), gz([meta, alive2, end])]));
+        await expect(confirmLivingSession(combined, 'actor', 'localhost:8910')).resolves.toBeUndefined();
+
+        writeFileSync(seg2, gz([meta, {k: 's', d: {player: {lifeId: 8, isDead: false, respawnCount: 0}}}, end]));
+        await expect(confirmLivingSession([seg1, seg2], 'actor', 'localhost:8910')).rejects.toThrow(/life changed/);
+
+        writeFileSync(seg2, gz([{...meta, account: 'other'}, alive2, end]));
+        await expect(confirmLivingSession([seg1, seg2], 'actor', 'localhost:8910')).rejects.toThrow(/identity/);
+
+        writeFileSync(seg2, gz([meta, alive2, end, alive2]));
+        await expect(confirmLivingSession([seg1, seg2], 'actor', 'localhost:8910')).rejects.toThrow(/incomplete/);
+
+        writeFileSync(seg1, gz([meta, alive1]));
+        writeFileSync(seg2, gz([meta, alive2, end]));
+        await expect(confirmLivingSession([seg1, seg2], 'actor', 'localhost:8910')).rejects.toThrow(/complete/);
+    } finally {
+        for (const f of [seg1, seg2, combined]) try { unlinkSync(f); } catch {}
+        rmdirSync(dir);
+    }
 });

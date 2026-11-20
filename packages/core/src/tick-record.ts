@@ -21,6 +21,8 @@ export const RECORD_VERSION = 1;
 export const RECORD_MAX_RAW_BYTES = 512 * 2 ** 20;
 // Records kept per script. Replay reads the newest few; older ones are deleted when a new record starts.
 export const RECORD_KEEP = 24;
+const SESSION_KEEP_MAX = 2_000;
+const sessionFiles = new Set<string>();
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 export const recordRoot = (root = repoRoot) => join(root, '.practice', 'ticks');
 
@@ -105,8 +107,18 @@ export function createTickRecorder(meta: RecordMeta, opts: { root?: string; env?
     try {
         const dir = join(recordRoot(opts.root), scriptKey(meta.script));
         mkdirSync(dir, { recursive: true });
-        pruneRecords(dir, RECORD_KEEP - 1);
-        const file = join(dir, `${meta.account.toLowerCase()}-${meta.startedAt}.ticks.ndjson.gz`);
+        pruneRecords(dir, RECORD_KEEP - 1, sessionFiles);
+        let stamp = meta.startedAt;
+        let file = join(dir, `${meta.account.toLowerCase()}-${stamp}.ticks.ndjson.gz`);
+        while (existsSync(file)) {
+            stamp++;
+            file = join(dir, `${meta.account.toLowerCase()}-${stamp}.ticks.ndjson.gz`);
+        }
+        if (sessionFiles.size >= SESSION_KEEP_MAX) {
+            const oldest = sessionFiles.values().next().value;
+            if (oldest !== undefined) sessionFiles.delete(oldest);
+        }
+        sessionFiles.add(file);
         const gzip = createGzip({ level: 6 });
         const out = createWriteStream(file);
         gzip.pipe(out);
@@ -120,9 +132,9 @@ export function createTickRecorder(meta: RecordMeta, opts: { root?: string; env?
     }
 }
 
-export function pruneRecords(dir: string, keep: number) {
+export function pruneRecords(dir: string, keep: number, preserve?: ReadonlySet<string>) {
     if (!existsSync(dir)) return;
-    const files = readdirSync(dir).filter(f => f.endsWith('.ticks.ndjson.gz'))
+    const files = readdirSync(dir).filter(f => f.endsWith('.ticks.ndjson.gz') && !preserve?.has(join(dir, f)))
         .map(f => ({ f, at: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.at - a.at);
     for (const { f } of files.slice(keep)) try { unlinkSync(join(dir, f)); } catch { /* in use or gone */ }
 }
