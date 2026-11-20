@@ -748,6 +748,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             // Interlopers (dangerous players that are not the squad's targets) become targets, first: lowest health first among them. When they are dead or gone
             // the squad goes back to its own targets.
             const interlopers = new Set((threat && o.threats!.act ? threat.interlopers : []).map(n => n.toLowerCase()));
+            if (singleUntil >= 0 && interlopers.size > 0) singleUntil = Math.max(singleUntil, now + 120);
             const focusArgs = { view, targets: interlopers.size ? new Set([...o.targets, ...interlopers]) : o.targets, priority: interlopers, health, skip: new Set(skip.keys()), me: self, inMulti: isMulti(p.worldX, p.worldZ), stunned };
             const target = o.focus ? o.focus.pick({ ...focusArgs, now }) : pickSquadFocus(focusArgs);
             if (!target) {
@@ -840,8 +841,9 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             if (r.outcome === 'kill' || gone) o.focus?.clear(target.name);
             if (r.outcome === 'kill') { stats.kills++; if (interlopers.has(target.name.toLowerCase())) stats.interlopers = (stats.interlopers ?? 0) + 1; }
             if (r.receipt) stats.receipts.push(r.receipt);
-            if (o.pickup && (r.outcome === 'kill' || gone)) {
-                const got = await pickUp(s, wanted, { radius: 3, maxTicks: 30, wait: 6, stop: o.stopped });
+            const activeInterlopers = o.threats?.act ? o.threats.step(s.tick()).interlopers.length : 0;
+            if (o.pickup && !urgentEscape && s.tick() >= singleUntil && activeInterlopers === 0 && (r.outcome === 'kill' || gone)) {
+                const got = await pickUp(s, wanted, { radius: 3, maxTicks: 30, wait: 6, stop: () => o.stopped() || fallbackDue() || radarMove() });
                 recordKillLoot(r, got);
                 for (const [id, n] of Object.entries(got)) stats.picked[id] = (stats.picked[id] ?? 0) + n;
             }

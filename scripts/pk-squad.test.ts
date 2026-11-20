@@ -1,6 +1,7 @@
 import { describe, expect, spyOn, test } from 'bun:test';
 import * as walking from '../packages/core/src/walk';
 import * as pk from './pk';
+import * as pkGang from './pk-gang';
 import { maxDeathsOf } from './pk-hunt';
 import { activeCentroid, bankNear, createSquadFocus, isKillLine, leaveWilderness, marchPlan, needsSingleWayMove, openSquad, outTripDue, pickSquadFocus, rescue, rescueDropped, shouldFollowReplan, shouldSwitchFocus, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
@@ -782,5 +783,53 @@ test('hold does not stop fightPlayer for single-way once standing on single-way 
         expect(seenOpts.rotation).toEqual(['ranged']);
         expect(seenOpts.chase).toBe(false);
         expect(seenOpts.spec).toBeUndefined();
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+});
+
+test('hold keeps singleUntil extended past 120 ticks while dangerous interlopers remain and skips risky pickup', async () => {
+    const w = squadWorld();
+    let t = 0;
+    w.s.tick = () => t;
+    w.player.worldX = 3071;
+    w.player.worldZ = 3600;
+    w.s.sdk.getState().nearbyPlayers = [{ index: 5, name: 'Mage1', combatLevel: 126, x: 3070, z: 3600, distance: 1 }];
+    const decided = { actions: [{ kind: 'single-way', to: { x: 3070, z: 3599 }, reason: 'team' }] as any[], interlopers: ['Mage1'] };
+    const threats: any = { act: true, acted: () => {}, step: () => ({ classes: [], interlopers: decided.interlopers, actions: decided.actions }) };
+    const fightOptsList: any[] = [];
+    let pickups = 0;
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_d, path) => {
+            w.player.worldX = path[0]!.x;
+            w.player.worldZ = path[0]!.z;
+            return { ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any;
+        }),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { t++; return true; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+        spyOn(pkGang, 'pickUp').mockImplementation(async () => { pickups++; return {}; }),
+        spyOn(pk, 'fightPlayer').mockImplementation(async (_s: any, _name: string, opts: any) => {
+            fightOptsList.push({ rotation: opts.rotation, chase: opts.chase });
+            if (fightOptsList.length === 1) {
+                t = 130;
+                decided.actions = [];
+                decided.interlopers = ['Mage2'];
+                w.s.sdk.getState().nearbyPlayers = [{ index: 6, name: 'Mage2', combatLevel: 126, x: 3070, z: 3600, distance: 1 }];
+                return { outcome: 'kill' } as any;
+            }
+            t = 1000;
+            return { outcome: 'timeout' } as any;
+        }),
+    ];
+    try {
+        await hold(w.s, {
+            targets: new Set(['goondelf']), post: { x: 3071, z: 3600 },
+            options: { kit: { ranged: [861], melee: [1215] }, rotation: ['ranged', 'melee'], chase: true },
+            allies: [], pickup: true, pull: true, trips: 3, deadline: 400, stopped: () => t >= 500, killsLeft: () => true, log: () => {}, threats,
+        });
+        expect(pickups).toBe(0);
+        expect(fightOptsList).toEqual([
+            { rotation: ['ranged'], chase: false },
+            { rotation: ['ranged'], chase: false },
+        ]);
     } finally { for (const mock of mocks) mock.mockRestore(); }
 });
