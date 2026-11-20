@@ -89,7 +89,7 @@ export const HP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 2449, name: 'Superantipoison(4)', count: 2, stackable: true },
 ] as const;
 
-// 28 slots exact: Waterfall (83 Atk/Str) + Super energy + Prayer/Shark + PvP pots; zero post-quest banking needed.
+// 28 slots exact: Waterfall (83 Atk/Str) + Prayer/Shark + PvP pots; zero post-quest banking needed.
 export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 556, name: 'Air rune', count: 6, stackable: true },
     { id: 557, name: 'Earth rune', count: 6, stackable: true },
@@ -98,11 +98,10 @@ export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 954, name: 'Rope', count: 1, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 3, stackable: false },
-    { id: 2434, name: 'Prayer potion(4)', count: 1, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
     { id: 385, name: 'Shark', count: 2, stackable: false },
-    { id: 2436, name: 'Super attack(4)', count: 1, stackable: false },
-    { id: 2440, name: 'Super strength(4)', count: 3, stackable: false },
+    { id: 2436, name: 'Super attack(4)', count: 2, stackable: false },
+    { id: 2440, name: 'Super strength(4)', count: 4, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
 
@@ -757,13 +756,13 @@ export async function runWildyPvpLoop(
                 if (await drinkFromList(PRAYER_POT_IDS)) lastPrayPotionTick = s.tick();
             }
 
-            // Re-boost Strength (12 doses) and Attack (4 doses) without losing combat uptime.
+            // Re-boost Strength (16 doses) and Attack (8 doses) without losing combat uptime.
             if (!flickedThisTick && s.tick() - lastDrinkTick >= 3) {
                 const str = skillInfo(s, 'Strength');
                 const atk = skillInfo(s, 'Attack');
                 const maxStrBoost = 5 + Math.floor(str.baseLevel * 0.15);
-                const minStrBoost = opts.skill === 'Strength' ? Math.max(13, maxStrBoost - 2) : 14;
-                const minAtkBoost = opts.skill === 'Strength' ? 12 : 10;
+                const minStrBoost = opts.skill === 'Strength' && str.baseLevel < 95 ? maxStrBoost - 1 : maxStrBoost - 2;
+                const minAtkBoost = opts.skill === 'Strength' ? 14 : 13;
                 if (str.level <= str.baseLevel + minStrBoost) {
                     if (await drinkFromList(SUPER_STRENGTH_IDS)) lastDrinkTick = s.tick();
                 } else if (atk.level < atk.baseLevel + minAtkBoost) {

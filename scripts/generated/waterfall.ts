@@ -320,6 +320,7 @@ try {
     // Every tick: death watch, jump log, and the eat reflex (a direct op, so it never waits behind a bot.* action).
     let lastPrayDrink = -10;
     let lastPfmToggle = -10;
+    let lastPfmFlick = -10;
     let lastEnergyDrink = -10;
     off = s.onTick(() => {
         tally.pull();
@@ -358,6 +359,11 @@ try {
             }
             if (pfmOn !== inDangerZone && (!inDangerZone || prayPts > 0) && s.tick() - lastPfmToggle >= 2) {
                 lastPfmToggle = s.tick();
+                lastPfmFlick = s.tick();
+                void s.direct({ type: 'togglePrayer', prayerIndex: 14, reason: 'SDK' });
+            } else if (pfmOn && inDangerZone && prayPts > 0 && s.tick() - lastPfmFlick >= 3) {
+                lastPfmFlick = s.tick();
+                void s.direct({ type: 'togglePrayer', prayerIndex: 14, reason: 'SDK' });
                 void s.direct({ type: 'togglePrayer', prayerIndex: 14, reason: 'SDK' });
             }
         }
