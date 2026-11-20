@@ -174,6 +174,12 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
    return {kind:'service',objective:'fresh-clock Attack 99 specialist route',units:1};
   }
  }
+ if(script==='scripts/ranged-specialist.ts'){
+  const skills=accept?.skills?Object.entries(accept.skills):[];
+  if((!skills.length||(skills.length===1&&key(skills[0]![0])==='ranged'&&skills[0]![1]===99))&&!Object.keys(accept?.bank??{}).length&&!(accept?.quests?.length)){
+   return{kind:'service',objective:'fresh-clock Ranged 99 specialist route',units:1};
+  }
+ }
  if(script==='scripts/specialist-supplier.ts')return {kind:'service',objective:'stage or hand off specialist supply kit',units:1};
  if(acceptedSkills.length)return trainingIntent(accept!.skills!);
  // Native GE counterparties have finite fixture work, admitted only on local practice.

@@ -12,6 +12,7 @@ import {KITS, kitItems, kitSkills, kitVarps, levelsBeforeRoute, overBuild} from 
 import { CLONE_NAMES, cloneProfileName, cloneSpec, pooledProfile, type CloneMode, type CloneName } from '../pk-gang-clone';
 import {carrierAltar, type CarrierAltarName} from '../rune-carrier-altar';
 import {PROGRESSION_BENCH_CASES} from './progression-bench-cases';
+import {SPECIALIST_RANGED_CASES} from './specialist-ranged-cases';
 import {questSweepElenaPreset} from '../../packages/practice/src/quest-sweep-proof';
 import {ATTACK_SPECIALIST_KIT} from '../specialist-supplier';
 
@@ -1965,7 +1966,7 @@ export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
 };
 
 export function benchCases(): BenchCase[] {
-  return [...ROUTE_CASES, ...questCases(), ...EXTRA_CASES,...PROGRESSION_BENCH_CASES];
+  return [...ROUTE_CASES, ...questCases(), ...EXTRA_CASES,...PROGRESSION_BENCH_CASES, ...SPECIALIST_RANGED_CASES];
 }
 
 export function benchCoverage() {
