@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795159044192-spitroaster-billionaire",
+ "account": "Billionaire",
+ "partner": "Spitroaster",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 29308,
+ "claim": "846d238d-e09c-4b66-87d2-e50458894aa3",
+ "count": 0,
+ "ok": false,
+ "at": 1795159161769,
+ "detail": "trade claimed"
+}
