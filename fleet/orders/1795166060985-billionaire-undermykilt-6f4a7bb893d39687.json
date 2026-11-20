@@ -1,0 +1,28 @@
+{
+ "id": "1795166060985-billionaire-undermykilt-6f4a7bb893d39687",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Billionaire",
+ "to": "UnderMyKilt",
+ "item": "Cannonball",
+ "count": 270,
+ "start": 1795166060985,
+ "end": 1795167560985,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Rune arrow",
+   "count": 212
+  }
+ ]
+}

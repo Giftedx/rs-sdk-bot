@@ -1,0 +1,38 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795166060985-billionaire-undermykilt-6f4a7bb893d39687",
+ "account": "Billionaire",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cannonball",
+ "requested": 270,
+ "claim": "06fad3e2-7375-42d3-8de8-cf6dc8676854",
+ "count": 270,
+ "ok": true,
+ "at": 1795166084749,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Rune arrow",
+   "requested": 212,
+   "count": 212,
+   "inventory": {
+    "before": 212,
+    "after": 0
+   }
+  }
+ ],
+ "inventory": {
+  "before": 270,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795166071394-0000028648-0000000001",
+  "at": 1795166084733,
+  "sha256": "7bd8ff4bb1dbd65e87cae993e292334a9eec5175712d406aecf2f448600f9027"
+ },
+ "screen": true
+}
