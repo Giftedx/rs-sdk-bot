@@ -1,9 +1,9 @@
 import {test,expect} from 'bun:test';
 import {createHash} from 'node:crypto';
 import {inventoryRecipes,productionInputReserves,productionEffect,runInventoryProduction,runInventoryBank,type ProductionIO} from './microbot-production';
-test('native chicken stew variants append without changing any of the qualified178 descriptors',()=>{
- const recipes=inventoryRecipes();expect(recipes).toHaveLength(180);expect(createHash('sha256').update(JSON.stringify(recipes.slice(0,178))).digest('hex')).toBe('725b9e6775940ce8edbd2e73b083fc6db37d6c7832be746d12895920a138a126');
- expect(recipes.slice(178).map(r=>r.name)).toEqual(['prepare:chicken-stew','prepare:uncooked-stew-chicken']);
+test('native chicken stew and weapon poison variants append without changing any of the qualified178 descriptors',()=>{
+ const recipes=inventoryRecipes();expect(recipes).toHaveLength(184);expect(createHash('sha256').update(JSON.stringify(recipes.slice(0,178))).digest('hex')).toBe('725b9e6775940ce8edbd2e73b083fc6db37d6c7832be746d12895920a138a126');
+ expect(recipes.slice(178).map(r=>r.name)).toEqual(['prepare:chicken-stew','prepare:uncooked-stew-chicken','poison:dragon-dagger','poison:dragon-spear','poison:rune-arrow','brew:weapon_poison']);
  for(const[name,raw,product]of[['prepare:chicken-stew',1921,1999],['prepare:uncooked-stew-chicken',1997,2001]]as const){const r=recipes.find(r=>r.name===name)!;expect(r.inputs).toEqual([{id:raw===1921?2140:1997,units:1},{id:raw===1921?1921:2140,units:1}]);expect(r.level).toBe(25);const b={items:{[raw]:1,2140:1,995:37},xp:100},a={items:{[product]:1,995:37},xp:100};expect(productionEffect(r,b,a)).toBe('made');expect(productionEffect(r,b,{...a,items:{...a.items,995:38}})).toBe('invalid');}
 });
 test('every inventory recipe resolves native IDs and preserves tools in its receipt',()=>{
@@ -111,7 +111,7 @@ for(const fault of ['none','withdraw','close'] as const)test('SDK adapter, best-
  if(fault==='none'){expect(result).toMatchObject({ok:true,made:2,banked:2,attempts:2,failure:'-'});for(const i of r.inputs)expect(stock.get(i.id)).toBe(0);}
  else{expect(result).toMatchObject({ok:false,made:1,banked:1});expect(result.failure).toContain('inputs unavailable');for(const i of r.inputs)expect((stock.get(i.id)??0)+(pack.find(p=>p.id===i.id)?.count??0)).toBe(i.units*3);}
 });
-for(const name of ['pie-shell','glass:stafforb','leather:leather_gloves','identify:guam_leaf','darts:bronze_dart','dough:bread:jug_water','prepare:cake','pie-shell-stale-modal','bow-string:shortbow','bow-string:shortbow-mutable-reserve'])test('SDK adapter: '+name,async()=>{
+for(const name of ['pie-shell','glass:stafforb','leather:leather_gloves','identify:guam_leaf','darts:bronze_dart','dough:bread:jug_water','prepare:cake','pie-shell-stale-modal','bow-string:shortbow','bow-string:shortbow-mutable-reserve','poison:dragon-dagger','poison:dragon-spear','poison:rune-arrow','brew:weapon_poison'])test('SDK adapter: '+name,async()=>{
  const r=inventoryRecipes().find(r=>r.name===name.replace('-stale-modal','').replace('-mutable-reserve',''))!,units=r.productUnits??1;
  let pack:{id:number;slot:number;name:string;count:number}[]=[],generation=1,tick=0,xp=100,modal=name.endsWith('-stale-modal'),bankOpen=false;
  const stringJob=name.startsWith('bow-string:shortbow');
@@ -204,3 +204,11 @@ test('actual inventory adapter rejects a mutable player life or respawn replacem
 });
 
 test('per-input reserve overrides are explicit canonical inputs; default reserve remains uniform',()=>{const r=inventoryRecipes().find(r=>r.name==='bow-string:shortbow')!;expect(productionInputReserves(r,1)).toEqual({50:1,1777:1});expect(productionInputReserves(r,1,{50:0})).toEqual({50:0,1777:1});for(const bad of[{841:0},{50:-1},{50:0.5}] as Record<number,number>[])expect(()=>productionInputReserves(r,1,bad)).toThrow();});
+
+test('weapon poison recipes target canonical unpoisoned items, weapon_poison, poisoned outputs, and empty vials',()=>{
+ const byName=new Map(inventoryRecipes().map(r=>[r.name,r]));
+ expect(byName.get('poison:dragon-dagger')).toMatchObject({inputs:[{id:1215,units:1},{id:187,units:1}],product:1231,byproducts:[{id:229,units:1}],level:1,xp:false,members:true});
+ expect(byName.get('poison:dragon-spear')).toMatchObject({inputs:[{id:1249,units:1},{id:187,units:1}],product:1263,byproducts:[{id:229,units:1}],level:1,xp:false,members:true});
+ expect(byName.get('poison:rune-arrow')).toMatchObject({inputs:[{id:892,units:5},{id:187,units:1}],product:893,productUnits:5,byproducts:[{id:229,units:1}],level:1,xp:false,members:true});
+ expect(byName.get('brew:weapon_poison')).toMatchObject({inputs:[{id:241,units:1},{id:105,units:1}],product:187,level:60,xp:true,members:true});
+});

@@ -109,7 +109,7 @@ export function conf0Drops(target:string):RegExp{
     return CONFIGS[target]?.drops??/$^/;
 }
 export function genericCombatNpc<T extends {id:number;distance:number;reachable?:boolean;inCombat?:boolean;targetIndex?:number}>(target:string,npcs:readonly T[],selfSlot?:number):T|undefined{
-    const id=target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid'):target==='unicorn'?npcId('unicorn'):target==='wizard'?npcId('wizard'):undefined;
+    const id=target==='giant'?GIANT.npc:target==='druid'||target==='taverley_druid'?npcId('chaos druid'):target==='unicorn'?npcId('unicorn'):target==='wizard'?npcId('wizard'):target==='taverley_black_dragon'?npcId('black dragon'):target==='taverley_blue_dragon'?npcId('blue dragon'):undefined;
     const owned = (n:T) => selfSlot !== undefined && Number.isSafeInteger(selfSlot) && selfSlot >= 0 &&
         n.inCombat === true && n.targetIndex === 32768 + selfSlot;
     return npcs.filter(n => n.id === id && n.reachable === true &&
@@ -909,11 +909,109 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         lifeId:state()?.player?.lifeId,respawns:state()?.player?.respawnCount,ticks:s.tick()-start,preserved,targetMet,partial,stop,failure:failure||(!targetMet&&!partial?`no ${label} progress: bounded target unmet`:'-')};
 }
 
+export const TAVERLEY_ROUTE = {
+    SURFACE_BANK: { x: 2946, z: 3368 },
+    LADDER_DOWN: { x: 2884, z: 3397, id: 1759 },
+    LADDER_UP: { x: 2884, z: 9797, id: 1755 },
+    DUSTY_GATE: { x: 2924, z: 9803, id: 2623 },
+    DUSTY_KEY_ID: 1590,
+    ANTI_DRAGON_SHIELD_ID: 1540,
+} as const;
+
+export function isNonWildernessGatherGoal(x: number, z: number): boolean {
+    if (x >= 2944 && x <= 3391 && z >= 3520 && z < 6400) return false;
+    if (x >= 2944 && x <= 3391 && z >= 9920) return false;
+    return true;
+}
+
+export function createTaverleyTravel() {
+    const inDungeon = (z: number) => z >= 6400;
+    const behindDustyGate = (x: number, z: number) =>
+        (x >= 2895 && x < TAVERLEY_ROUTE.DUSTY_GATE.x && z >= 9792 && z <= 9818) ||
+        (x < 2880 && z >= 9792 && z <= 9850);
+    const findNearLoc = (s: Session, id: number, pattern: RegExp, x: number, z: number) =>
+        (s.sdk.getState()?.nearbyLocs ?? [])
+            .filter(l => l.id === id || (pattern.test(l.name) && Math.max(Math.abs(l.x - x), Math.abs(l.z - z)) <= 6))
+            .sort((a, b) => (Math.abs(a.x - x) + Math.abs(a.z - z)) - (Math.abs(b.x - x) + Math.abs(b.z - z)))[0];
+    return {
+        async walk(
+            s: Session,
+            _targetKey: string,
+            goal: { x: number; z: number; level?: number },
+            ground: (x: number, z: number, tol?: number) => Promise<boolean>,
+            stop: () => boolean,
+            tol = 2,
+        ): Promise<boolean> {
+            if (!isNonWildernessGatherGoal(goal.x, goal.z)) {
+                throw Error(`Wilderness goal forbidden in Taverley travel: ${goal.x},${goal.z}`);
+            }
+            const pos = () => s.sdk.getState()?.player;
+            let cur = pos();
+            if (!cur) return false;
+            if (inDungeon(goal.z)) {
+                if (!inDungeon(cur.worldZ)) {
+                    if (!await ground(TAVERLEY_ROUTE.LADDER_DOWN.x, TAVERLEY_ROUTE.LADDER_DOWN.z, 2)) return false;
+                    for (let i = 0; i < 3 && !stop() && !inDungeon(pos()?.worldZ ?? 0); i++) {
+                        const ladder = findNearLoc(s, TAVERLEY_ROUTE.LADDER_DOWN.id, /ladder/i, TAVERLEY_ROUTE.LADDER_DOWN.x, TAVERLEY_ROUTE.LADDER_DOWN.z);
+                        if (!ladder) { await waitTicks(s, 1); continue; }
+                        await s.bot.interactLoc(ladder, /climb-down/i);
+                        await waitUntil(s, () => stop() || inDungeon(pos()?.worldZ ?? 0), { timeoutTicks: 10 });
+                    }
+                    cur = pos();
+                    if (!cur || !inDungeon(cur.worldZ)) return false;
+                }
+                if (behindDustyGate(goal.x, goal.z) && !behindDustyGate(cur.worldX, cur.worldZ)) {
+                    if (!await ground(TAVERLEY_ROUTE.DUSTY_GATE.x + 1, TAVERLEY_ROUTE.DUSTY_GATE.z, 2)) return false;
+                    const key = s.sdk.getInventory().find(i => i.id === TAVERLEY_ROUTE.DUSTY_KEY_ID);
+                    if (!key) throw Error('Dusty key (1590) required to unlock Taverley dragon gate');
+                    for (let i = 0; i < 3 && !stop() && !behindDustyGate(pos()?.worldX ?? 9999, pos()?.worldZ ?? 0); i++) {
+                        const gate = findNearLoc(s, TAVERLEY_ROUTE.DUSTY_GATE.id, /gate/i, TAVERLEY_ROUTE.DUSTY_GATE.x, TAVERLEY_ROUTE.DUSTY_GATE.z);
+                        if (!gate) { await waitTicks(s, 1); continue; }
+                        await s.bot.useItemOnLoc(key, gate);
+                        await waitUntil(s, () => stop() || behindDustyGate(pos()?.worldX ?? 9999, pos()?.worldZ ?? 0), { timeoutTicks: 12 });
+                    }
+                    cur = pos();
+                    if (!cur || !behindDustyGate(cur.worldX, cur.worldZ)) return false;
+                }
+                return ground(goal.x, goal.z, tol);
+            }
+            if (inDungeon(cur.worldZ)) {
+                if (behindDustyGate(cur.worldX, cur.worldZ)) {
+                    if (!await ground(TAVERLEY_ROUTE.DUSTY_GATE.x - 1, TAVERLEY_ROUTE.DUSTY_GATE.z, 2)) return false;
+                    for (let i = 0; i < 3 && !stop() && behindDustyGate(pos()?.worldX ?? 0, pos()?.worldZ ?? 0); i++) {
+                        const gate = findNearLoc(s, TAVERLEY_ROUTE.DUSTY_GATE.id, /gate/i, TAVERLEY_ROUTE.DUSTY_GATE.x, TAVERLEY_ROUTE.DUSTY_GATE.z);
+                        if (!gate) { await waitTicks(s, 1); continue; }
+                        await s.bot.interactLoc(gate, /open/i);
+                        await waitUntil(s, () => stop() || !behindDustyGate(pos()?.worldX ?? 0, pos()?.worldZ ?? 0), { timeoutTicks: 12 });
+                    }
+                    cur = pos();
+                    if (!cur || behindDustyGate(cur.worldX, cur.worldZ)) return false;
+                }
+                if (!await ground(TAVERLEY_ROUTE.LADDER_UP.x, TAVERLEY_ROUTE.LADDER_UP.z, 2)) return false;
+                for (let i = 0; i < 3 && !stop() && inDungeon(pos()?.worldZ ?? 9999); i++) {
+                    const ladder = findNearLoc(s, TAVERLEY_ROUTE.LADDER_UP.id, /ladder/i, TAVERLEY_ROUTE.LADDER_UP.x, TAVERLEY_ROUTE.LADDER_UP.z);
+                    if (!ladder) { await waitTicks(s, 1); continue; }
+                    await s.bot.interactLoc(ladder, /climb-up/i);
+                    await waitUntil(s, () => stop() || !inDungeon(pos()?.worldZ ?? 9999), { timeoutTicks: 10 });
+                }
+                cur = pos();
+                if (!cur || inDungeon(cur.worldZ)) return false;
+            }
+            return ground(goal.x, goal.z, tol);
+        },
+    };
+}
+
 export const CONFIGS: Record<string, {
     npc: RegExp;
     spot: { x: number; z: number };
     bankSpot: { x: number; z: number };
     drops: RegExp;
+    gatherOnly?: boolean;
+    requireTelegrab?: boolean;
+    taverley?: boolean;
+    dustyKey?: boolean;
+    dragonShield?: boolean;
 }> = {
     druid: {
         npc: /^chaos druid$/i,
@@ -948,7 +1046,50 @@ export const CONFIGS: Record<string, {
         npc: /^(?:hill )?giant$/i,
         spot: { x: 2545, z: 3144 }, // Surface Giant117 camp
         bankSpot: { x: 2655, z: 3283 }, // Ardougne south bank
-        drops: /(big bones|limpwurt root|iron arrow|nature rune|herb)/i,
+        drops: /(big bones|limpwurt root|iron arrow|nature rune|cosmic rune|law rune|herb)/i,
+    },
+    taverley_druid: {
+        npc: /^chaos druid$/i,
+        spot: { x: 2933, z: 9849 }, // Taverley Dungeon Chaos Druids (non-Wilderness)
+        bankSpot: { x: 2946, z: 3368 }, // Falador West Bank
+        drops: /(herb|snape grass|nature rune|law rune|air rune|vial of water|uncut )/i,
+        taverley: true,
+    },
+    taverley_scales: {
+        npc: /$^/,
+        spot: { x: 2906, z: 9802 }, // Taverley Blue Dragon lair ground scales (2902..2910,9796..9809)
+        bankSpot: { x: 2946, z: 3368 }, // Falador West Bank
+        drops: /^blue dragon scale$/i,
+        gatherOnly: true,
+        taverley: true,
+        dustyKey: true,
+        dragonShield: true,
+    },
+    taverley_blue_dragon: {
+        npc: /^blue dragon$/i,
+        spot: { x: 2908, z: 9803 },
+        bankSpot: { x: 2946, z: 3368 },
+        drops: /(blue dragon scale|blue dragonhide|dragonhide|dragon bones|nature rune|water rune|rune dagger|adamant full helm|herb)/i,
+        taverley: true,
+        dustyKey: true,
+        dragonShield: true,
+    },
+    taverley_black_dragon: {
+        npc: /^black dragon$/i,
+        spot: { x: 2832, z: 9825 }, // Taverley Black Dragons (non-Wilderness)
+        bankSpot: { x: 2946, z: 3368 },
+        drops: /(black dragonhide|dragonhide|dragon bones|rune knife|blood rune|law rune|adamant platebody|rune longsword|adamant javelin|fire rune)/i,
+        taverley: true,
+        dustyKey: true,
+        dragonShield: true,
+    },
+    chaos_wine: {
+        npc: /$^/,
+        spot: { x: 2932, z: 3515 }, // Chaos Temple altar telegrab spot (z < 3520, non-Wilderness)
+        bankSpot: { x: 2946, z: 3368 }, // Falador West Bank
+        drops: /^wine of zamorak$/i,
+        gatherOnly: true,
+        requireTelegrab: true,
     },
 };
 
@@ -959,6 +1100,7 @@ const CAP = Number(process.argv[3] ?? process.env.CAP ?? 15000);
 if(TARGET_KEY!=='cow'&&!Object.prototype.hasOwnProperty.call(CONFIGS,TARGET_KEY))
     await finish([],false,`no combat progress: unsupported target ${TARGET_KEY}`);
 if(!Number.isSafeInteger(CAP)||CAP<1)await finish([],false,'no combat progress: finite positive CAP required');
+for(const raw of process.argv.slice(5)){const eq=raw.indexOf('=');if(eq>0&&/^[A-Z0-9_]+$/.test(raw.slice(0,eq)))process.env[raw.slice(0,eq)]??=raw.slice(eq+1);}
 const maximum=TARGET_KEY!=='cow'&&process.env.MAX_KILLS!==undefined?Number(process.env.MAX_KILLS):undefined;
 if(maximum!==undefined&&(!Number.isSafeInteger(maximum)||maximum<1))await finish([],false,'no combat progress: finite positive MAX_KILLS required');
 // UNTIL_ITEM=<item name>: the run ends, with the drop banked, once the pack or the bank holds that drop (a water talisman
@@ -974,8 +1116,10 @@ const telegrab=telegrabPolicy();if(telegrab&&TARGET_KEY==='cow')throw Error('Tel
 // Generic Microbot combat options retain the Edgeville route used by their owned proofs.
 const dungeonGiant=TARGET_KEY==='giant'&&(maximum!==undefined||!!potionPolicy||!!alch||!!telegrab);
 const targetConf=CONFIGS[TARGET_KEY]??CONFIGS.druid!;
+const effectiveTelegrab=telegrab??(TARGET_KEY!=='cow'&&targetConf.requireTelegrab?{maximum:maximum??50,cap:CAP}:undefined);
 const baseConf=dungeonGiant?{...targetConf,spot:{x:3117,z:9850},bankSpot:{x:3092,z:3496},drops:/(big bones|limpwurt root|iron arrow|nature rune)/i}:targetConf;
 const conf=alch?.route?{...baseConf,spot:alch.route.site,bankSpot:alch.route.bank}:baseConf;
+if(TARGET_KEY!=='cow'&&TARGET_KEY!=='druid'&&!dungeonGiant&&!isNonWildernessGatherGoal(conf.spot.x,conf.spot.z))throw Error(`Wilderness destination forbidden for ${TARGET_KEY}`);
 
 if (!botName) {
     console.error('Usage: bun scripts/gather-combat.ts <botName> [CAP] [TARGET: druid | giant | trooper | cow | unicorn | wizard]');
@@ -1002,7 +1146,7 @@ if(giantTrained){
     try{const r=await runGiants(ownedSession,{cap:CAP,site:TARGET_KEY==='trooper'?TROOPER_SITE:undefined,trainSkill:giantSkill,targetLevel:giantLevel,maximum:giantMaximum,food:process.env.GIANT_FOOD===undefined?undefined:Number(process.env.GIANT_FOOD),ammo:process.env.GIANT_AMMO===undefined?undefined:Number(process.env.GIANT_AMMO),ammoPickup:process.env.GIANT_AMMO_PICKUP!=='0',bury:process.env.GIANT_BURY==='1',stop:cowStop.stop});console.log(`GIANT_RESULT ${JSON.stringify(r)}`);await finishCombat(ownedSession,r.ok&&cowStop.reason()!=='died',`mode=giant ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
     catch(e){await finishCombat(ownedSession,false,String(e));}
 }
-const dungeonTravel=(TARGET_KEY==='druid'||dungeonGiant)&&!alch?.route?createEdgevilleTravel(ownedSession):undefined;
+const dungeonTravel=(TARGET_KEY==='druid'||dungeonGiant)&&!alch?.route?createEdgevilleTravel(ownedSession):targetConf.taverley&&!alch?.route?createTaverleyTravel():undefined;
 const cleanupScope=(potionPolicy||maximum!==undefined)&&TARGET_KEY!=='cow'?combatPotionSession(ownedSession,cowStop.stop,CAP):undefined;
 const s=cleanupScope??ownedSession;
 if(TARGET_KEY==='cow'){
@@ -1020,7 +1164,7 @@ try {
     const used = () => s.tick() - t0;
     let recoveringPotions=false;const over = () => used() >= (cleanupScope&&!recoveringPotions?CAP-200:CAP);
     const potions=potionPolicy?createCombatPotions(s,potionPolicy,['Attack','Strength','Defence','Hitpoints'],()=>over()||cowStop.stop()):undefined;
-    const loot=createCombatLoot(s,telegrab?{...telegrab,stop:()=>over()||cowStop.stop()}:undefined,alch?{...alch,stop:()=>over()||cowStop.stop()}:undefined);
+    const loot=createCombatLoot(s,effectiveTelegrab?{...effectiveTelegrab,stop:()=>over()||cowStop.stop()}:undefined,alch?{...alch,stop:()=>over()||cowStop.stop()}:undefined);
 
     let kills = 0, itemsLooted = 0, bankTrips = 0, walkTicks = 0;
 
@@ -1045,13 +1189,55 @@ try {
 
     const walk=async(x:number,z:number,tol=2)=>dungeonTravel?dungeonTravel.walk(s,TARGET_KEY as 'druid'|'giant',{x,z,level:0},ground,travelStop,tol):ground(x,z,tol);
 
+    const needsBankPrep = () => {
+        const inv = s.sdk.getInventory();
+        const worn = s.sdk.getState()?.equipment ?? [];
+        if (targetConf.dragonShield && !worn.some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) return true;
+        if (targetConf.dustyKey && !inv.some(i => i.id === TAVERLEY_ROUTE.DUSTY_KEY_ID)) return true;
+        if (targetConf.requireTelegrab) {
+            const hasLaw = inv.some(i => i.id === 563);
+            const hasAir = inv.some(i => i.id === 556) || worn.some(i => i.id === 1381 || i.id === 1397 || i.id === 1405);
+            if (!hasLaw || !hasAir) return true;
+        }
+        return false;
+    };
+
     const bank = async () => {
         if(!await walk(conf.bankSpot.x,conf.bankSpot.z,2))throw Error('combat bank return unavailable');
         await bankCombatLoot(s,conf.drops,[...alch?[995]:[],...potions?.depositIds??[]]);
 
-        // Ensure we have food in inventory (e.g. 5 lobsters)
-        if (countItems(s, /lobster|swordfish|trout/i) < 3) {
-            await s.bot.withdrawItem(/lobster/i, 5);
+        if (targetConf.dragonShield && !(s.sdk.getState()?.equipment ?? []).some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) {
+            if (!s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) {
+                await s.bot.withdrawItem(TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID, 1);
+                await waitTicks(s, 1);
+            }
+            const shield = s.sdk.getInventory().find(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID);
+            if (!shield) throw Error('Anti-dragon shield (1540) required');
+            await s.bot.closeInterface();
+            await s.bot.equipItem(shield);
+            await waitTicks(s, 1);
+            await s.bot.openBank();
+            await waitTicks(s, 1);
+        }
+        if (targetConf.dustyKey && !s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.DUSTY_KEY_ID)) {
+            await s.bot.withdrawItem(TAVERLEY_ROUTE.DUSTY_KEY_ID, 1);
+            await waitTicks(s, 1);
+            if (!s.sdk.getInventory().some(i => i.id === TAVERLEY_ROUTE.DUSTY_KEY_ID)) throw Error('Dusty key (1590) required');
+        }
+        if (targetConf.requireTelegrab) {
+            if (countItems(s, /^law rune$/i) < 10) await s.bot.withdrawItem(563, 25);
+            const hasAirStaff = (s.sdk.getState()?.equipment ?? []).some(i => i.id === 1381 || i.id === 1397 || i.id === 1405);
+            if (!hasAirStaff && countItems(s, /^air rune$/i) < 10) await s.bot.withdrawItem(556, 25);
+            await waitTicks(s, 1);
+            const hasLaw = s.sdk.getInventory().some(i => i.id === 563);
+            const hasAir = hasAirStaff || s.sdk.getInventory().some(i => i.id === 556);
+            if (!hasLaw || !hasAir) throw Error('Law and Air runes required for Telekinetic Grab');
+        }
+
+        // Ensure we have food in inventory (sharks if available for heavy targets, otherwise lobsters)
+        if (!targetConf.requireTelegrab && countItems(s, /shark|lobster|swordfish|trout/i) < 3) {
+            const w = await s.bot.withdrawItem(/shark/i, 5);
+            if (!w.success) await s.bot.withdrawItem(/lobster/i, 5);
         }
 
         bankTrips++;
@@ -1063,6 +1249,7 @@ try {
     if(cleanupScope)combatRecovery=combatPotionRecovery(cleanupScope,()=>!!potions?.blocked||loot.blocked,bank,active=>{recoveringPotions=active;});
 
     console.log(`START combat gatherer ${botName} target=${TARGET_KEY} at=${pos()?.worldX},${pos()?.worldZ}`);
+    if (needsBankPrep()) await bank();
     const untilInPack=()=>untilId!==undefined&&s.sdk.getInventory().some(i=>i.id===untilId);
     // The bank observation is taken when the bank opens, before a deposit, so it shows a drop only from an earlier run.
     // A drop that a bank trip of this run deposits is recorded here: bank() throws when a drop stays in the pack.
@@ -1080,8 +1267,8 @@ try {
         }
 
         // Check HP, eat food if below 50%
-        if (hp() > 0 && hp() < 20 && countItems(s, /lobster|swordfish|trout/i) > 0) {
-            await s.bot.eatFood(/lobster|swordfish|trout/i);
+        if (hp() > 0 && hp() < 20 && countItems(s, /shark|lobster|swordfish|trout/i) > 0) {
+            await s.bot.eatFood(/shark|lobster|swordfish|trout/i);
             await waitTicks(s, 1);
         }
 
@@ -1095,17 +1282,26 @@ try {
 
         // Check for ground loot
         if (invSpace > 0) {
-            const candidate=telegrab||alch?s.sdk.getState()?.groundItems.filter(i=>conf.drops.test(i.name)).sort((a,b)=>a.distance-b.distance)[0]:undefined;
-            const r = telegrab||alch?(candidate?await loot.pickup(candidate):{success:false}):await s.bot.pickupItem(conf.drops);
+            const candidate=effectiveTelegrab||alch?s.sdk.getState()?.groundItems.filter(i=>conf.drops.test(i.name)).sort((a,b)=>a.distance-b.distance)[0]:undefined;
+            const r = effectiveTelegrab||alch?(candidate?await loot.pickup(candidate):{success:false}):await s.bot.pickupItem(conf.drops);
             if (r.success) {
                 itemsLooted++;
                 if(alch&&itemsLooted>=alch.maximum)break;
+                if(targetConf.gatherOnly&&maximum!==undefined&&itemsLooted>=maximum){await bankUntil();break;}
                 await waitTicks(s, 1);
                 if(untilInPack())break;
                 continue;
             }
         }
 
+        if (targetConf.gatherOnly) {
+            if (maximum !== undefined && itemsLooted >= maximum) {
+                if (s.sdk.getInventory().some(i => conf.drops.test(i.name))) await bankUntil();
+                break;
+            }
+            await waitTicks(s, 2);
+            continue;
+        }
         if(maximum!==undefined&&kills>=maximum)break;
 
         // Find target monster
@@ -1144,7 +1340,7 @@ try {
     }
     const total = kills + itemsLooted;
     const perK = (total * 1000 / Math.max(1, used())).toFixed(2);
-    const targetMet=untilItem?!!untilHeld:maximum===undefined||kills===maximum&&!cowStop.stop();
+    const targetMet=untilItem?!!untilHeld:maximum===undefined||(targetConf.gatherOnly?itemsLooted===maximum:kills===maximum)&&!cowStop.stop();
     await finishCombat(ownedSession, total > 0&&targetMet, `ticks=${used()} ${counters()} actionsPer1kTicks=${perK} targetMet=${targetMet} maximum=${maximum??'-'}${untilItem?` until=${process.env.UNTIL_ITEM} held=${untilHeld}`:''}`);
 } catch (e) {
     let detail=String(e);if(combatRecovery)try{await combatRecovery();}catch(recovery){detail+='; cleanup '+String(recovery);}

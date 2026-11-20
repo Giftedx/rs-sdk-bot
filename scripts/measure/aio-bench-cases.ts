@@ -16,6 +16,7 @@ import {SPECIALIST_RANGED_CASES} from './specialist-ranged-cases';
 import {SPECIALIST_GATHERING_CASES, SPECIALIST_GATHERING_EXTERNAL_CASES} from './specialist-gathering-cases';
 import {SPECIALIST_FAST_SKILLS_CASES, SPECIALIST_FAST_SKILLS_EXTERNAL_CASES} from './specialist-fast-skills-cases';
 import {SPECIALIST_COMBAT_QUESTS_CASES} from './specialist-combat-quests-cases';
+import {SUPPLY_BENCH_CASES} from './supply-bench-cases';
 import {questSweepElenaPreset} from '../../packages/practice/src/quest-sweep-proof';
 import {ATTACK_SPECIALIST_KIT} from '../specialist-supplier';
 
@@ -1981,7 +1982,7 @@ export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
 };
 
 export function benchCases(): BenchCase[] {
-  return [...ROUTE_CASES, ...questCases(), ...EXTRA_CASES, ...PROGRESSION_BENCH_CASES, ...SPECIALIST_RANGED_CASES, ...SPECIALIST_GATHERING_CASES, ...SPECIALIST_GATHERING_EXTERNAL_CASES, ...SPECIALIST_FAST_SKILLS_CASES, ...SPECIALIST_FAST_SKILLS_EXTERNAL_CASES, ...SPECIALIST_COMBAT_QUESTS_CASES];
+  return [...ROUTE_CASES, ...questCases(), ...EXTRA_CASES, ...PROGRESSION_BENCH_CASES, ...SPECIALIST_RANGED_CASES, ...SPECIALIST_GATHERING_CASES, ...SPECIALIST_GATHERING_EXTERNAL_CASES, ...SPECIALIST_FAST_SKILLS_CASES, ...SPECIALIST_FAST_SKILLS_EXTERNAL_CASES, ...SPECIALIST_COMBAT_QUESTS_CASES, ...SUPPLY_BENCH_CASES];
 }
 
 export function benchCoverage() {

@@ -49,6 +49,10 @@ export const PROFILES: Record<string, {
         ladder: { id: number; x: number; z: number; say: RegExp };
         outBank: { x: number; z: number };
     };
+    // Option regex when Trade/Talk opens dialogue before opening the shop interface (e.g. Oziach, Tiadeche).
+    dialogOpen?: RegExp;
+    // Dialogue-only purchase (no shop interface; e.g. Tenzing's Climbing boots at 12 coins each).
+    dialogBuy?: { choices: readonly RegExp[]; cost: number; item: RegExp };
 }> = {
     // khazardshop: NPC555 at2641,3171, swamp paste1941 stock500/restock20; actual observed price governs buys.
     khazard_paste: {
@@ -336,6 +340,99 @@ export const PROFILES: Record<string, {
             { re: /bronze pickaxe/i, buyPerTick: 1 },
         ],
     },
+    // Brimhaven Shrimp and Parrot (brimhaven.inv karamja_fishrestaurant, npc 793 at 2793,3188): 3 cooked karambwans.
+    alfonse: {
+        npc: /^alfonse the waiter$/i,
+        npcSpot: { x: 2793, z: 3188 },
+        bankSpot: { x: 2654, z: 3283 }, // Ardougne South Bank
+        items: [
+            { re: /^cooked karambwan$/i, buyPerTick: 1, shelf: 3 },
+            { re: /^swordfish$/i, buyPerTick: 1, shelf: 2 },
+            { re: /^lobster$/i, buyPerTick: 1, shelf: 3 },
+        ],
+        fare: 60,
+    },
+    // Tai Bwo Wannai Karambwan Stall (karamja.inv tbwt_tiadeche_final_inventory, npc 1164 at 2781,3057): 10 raw karambwans (restock 10).
+    tiadeche: {
+        npc: /^tiadeche$/i,
+        npcSpot: { x: 2781, z: 3057 },
+        bankSpot: { x: 2654, z: 3283 }, // Ardougne South Bank
+        items: [{ re: /^raw karambwan$/i, buyPerTick: 5, shelf: 10 }],
+        fare: 60,
+        dialogOpen: /^yes\.?$/i,
+    },
+    // Oziach (edgeville.inv runeplateshop, npc 747 at 3069,3517, outside Wilderness z<3520): Dragon Slayer complete required.
+    oziach: {
+        npc: /^oziach$/i,
+        npcSpot: { x: 3069, z: 3517 },
+        bankSpot: { x: 3094, z: 3491 }, // Edgeville Bank
+        items: [
+            { re: /^rune platebody$/i, buyPerTick: 1, shelf: 2 },
+            { re: /^dragonhide body$/i, buyPerTick: 1, shelf: 2 },
+        ],
+        dialogOpen: /^can i buy a rune plate mail body/i,
+    },
+    // Al Kharid Gem Trader (alkharid.inv gemshop2, npc 540 at 3288,3212): uncut and cut sapphires.
+    gem_trader: {
+        npc: /^gem trader$/i,
+        npcSpot: { x: 3288, z: 3212 },
+        bankSpot: { x: 3269, z: 3167 }, // Al Kharid Bank
+        items: [
+            { re: /^uncut sapphire$/i, buyPerTick: 1, shelf: 1 },
+            { re: /^sapphire$/i, buyPerTick: 1, shelf: 1 },
+        ],
+    },
+    // Herquin's Gems, Falador (falador.inv gemshop, npc 584 at 2944,3334): uncut and cut sapphires.
+    herquin: {
+        npc: /^herquin$/i,
+        npcSpot: { x: 2944, z: 3334 },
+        bankSpot: { x: 2946, z: 3368 }, // Falador West Bank
+        items: [
+            { re: /^uncut sapphire$/i, buyPerTick: 1, shelf: 1 },
+            { re: /^sapphire$/i, buyPerTick: 1, shelf: 1 },
+        ],
+    },
+    // Tenzing (death_sherpa, npc 1071 at 2820,3556, x<2944 mainland): Climbing boots at 12 coins via dialogue after Death Plateau.
+    tenzing: {
+        npc: /^tenzing$/i,
+        npcSpot: { x: 2820, z: 3556 },
+        bankSpot: { x: 2946, z: 3368 }, // Falador West Bank
+        items: [{ re: /^climbing boots$/i, buyPerTick: 1 }],
+        dialogBuy: {
+            choices: [/can i buy some climbing boots/i, /ok,\s*sounds good/i],
+            cost: 12,
+            item: /^climbing boots$/i,
+        },
+    },
+    // Jakut dragon dagger line in Zanaris (lostcity.inv dragonswordshop: dragon_dagger stock 2, restock 500, baseCost 30000).
+    jukat_dagger: {
+        npc: /^jakut$/i,
+        npcSpot: { x: 3252, z: 9572 },
+        bankSpot: { x: 3152, z: 9578 },
+        items: [{ re: /^dragon dagger$/i, buyPerTick: 2, shelf: 2 }],
+        realm: {
+            inside: p => p.worldZ > 9000,
+            wear: /^dramen staff$/i,
+            stand: { x: 3201, z: 3169 },
+            door: { id: 2406, x: 3202, z: 3169 },
+            toll: { id: 2411, x: 3238, z: 9558, stand: { x: 3237, z: 9558 }, item: /^diamond$/i, say: /^okay/i },
+            ladder: { id: 2410, x: 3253, z: 9591, say: /ready to leave/i },
+            outBank: { x: 3269, z: 3167 },
+        },
+    },
+    // Magic Guild Store water & earth rune shelves (magic_guild.inv: 3,000 water & earth runes, restock 18t, Magic 66).
+    magic_guild_elemental: {
+        npc: /^magic store owner$/i,
+        npcSpot: { x: 2595, z: 3087, level: 1 },
+        bankSpot: { x: 2612, z: 3093 },
+        items: [
+            { re: /^water rune$/i, buyPerTick: 100 },
+            { re: /^earth rune$/i, buyPerTick: 100 },
+        ],
+        need: { skill: 'Magic', level: 66 },
+        via: [{ x: 3028, z: 3221 }, { x: 2683, z: 3271 }],
+        fare: 60,
+    },
 };
 
 export interface ShopPurchaseTarget { re: RegExp; buyPerTick: number }
@@ -494,6 +591,78 @@ export async function buyWithBudget(bot: { buyFromShop(item: RegExp, amount: num
     const spent = Math.max(0, wallet - count(/^coins$/i));
     if (count(/^coins$/i) < reserve || spent > remainingSpend) throw new Error('shop budget violated: observed server cost exceeded reserved maximum');
     return { bought: Math.max(0, count(re) - before), spent };
+}
+
+// Opens a shop whose Trade/Talk option runs an opening dialogue (e.g. Oziach after Dragon Slayer, Tiadeche) before openshop.
+export async function handleDialogShopOpen(
+    sdk: {
+        getState(): { shop?: { isOpen: boolean }; dialog?: { isOpen: boolean; isWaiting: boolean; options: { index: number; text: string }[] } | null } | null;
+        getDialog(): { isOpen: boolean; isWaiting: boolean; options: { index: number; text: string }[] } | null;
+        sendClickDialog(index: number): Promise<unknown>;
+    },
+    choiceRe: RegExp,
+    wait: () => Promise<unknown>,
+    maxSteps = 12,
+): Promise<boolean> {
+    for (let i = 0; i < maxSteps; i++) {
+        if (sdk.getState()?.shop?.isOpen) return true;
+        const d = sdk.getDialog();
+        if (!d?.isOpen) return !!sdk.getState()?.shop?.isOpen;
+        if (!d.isWaiting) {
+            const click = dialogClick(d, choiceRe);
+            if (click !== null) await sdk.sendClickDialog(click);
+        }
+        await wait();
+    }
+    return !!sdk.getState()?.shop?.isOpen;
+}
+
+// One bounded dialogue-purchase cycle (e.g. Tenzing Climbing boots at 12 gp): answers prompts and checks coin/item deltas.
+export async function runDialogBuyStep(
+    sdk: {
+        getInventory(): { name: string; count: number }[];
+        getDialog(): { isOpen: boolean; isWaiting: boolean; options: { index: number; text: string }[] } | null;
+        sendClickDialog(index: number): Promise<unknown>;
+        sendCloseModal?(): Promise<unknown>;
+    },
+    bot: { talkTo(npc: RegExp): Promise<{ success: boolean }> },
+    npc: RegExp,
+    spec: { choices: readonly RegExp[]; cost: number; item: RegExp },
+    reserve: number,
+    remainingSpend: number,
+    remainingItems: number,
+    wait: () => Promise<unknown>,
+    maxSteps = 20,
+): Promise<{ bought: number; spent: number }> {
+    const count = (re: RegExp) => sdk.getInventory().filter(i => re.test(i.name)).reduce((n, i) => n + i.count, 0);
+    const coinsBefore = count(/^coins$/i), heldBefore = count(spec.item);
+    if (remainingItems < 1 || 28 - sdk.getInventory().length < 1 || coinsBefore - reserve < spec.cost || remainingSpend < spec.cost) {
+        return { bought: 0, spent: 0 };
+    }
+    if (!sdk.getDialog()?.isOpen) {
+        const talk = await bot.talkTo(npc);
+        if (!talk.success) return { bought: 0, spent: 0 };
+        await wait();
+    }
+    const choiceRe = new RegExp(spec.choices.map(r => r.source).join('|'), 'i');
+    for (let step = 0; step < maxSteps; step++) {
+        if (count(spec.item) > heldBefore) break;
+        const d = sdk.getDialog();
+        if (!d?.isOpen) break;
+        if (!d.isWaiting) {
+            // Avoid clicking exit/no options if none of the desired choices matched.
+            const matched = d.options.find(o => choiceRe.test(o.text));
+            const click = matched ? matched.index : d.options.length === 1 ? 0 : null;
+            if (click === null) break;
+            await sdk.sendClickDialog(click);
+        }
+        await wait();
+    }
+    const coinsNow = count(/^coins$/i), spent = Math.max(0, coinsBefore - coinsNow), bought = Math.max(0, count(spec.item) - heldBefore);
+    if (coinsNow < reserve || spent > remainingSpend) {
+        throw new Error('shop budget violated: dialogue buy exceeded reserved maximum');
+    }
+    return { bought, spent };
 }
 
 async function main() {
@@ -777,61 +946,80 @@ try {
         }
 
         if (over() || ended) break;
-        if (!s.sdk.getState()?.shop?.isOpen) {
-            const shopRes = await s.bot.openShop(conf.npc);
-            if (!shopRes.success) {
-                console.log(`WARN openShop failed: ${shopRes.message}`);
-                await waitTicks(s, 5);
-                continue;
-            }
-            shopTrips++;
-        }
-
-        // Buy each configured item that has stock
-        const shop = s.sdk.getState()?.shop;
         let boughtInRound = 0;
         let blindWaits = false, blindUnit = 0;
 
-        if (shop?.isOpen && shop.shopItems && blindTargets.length) {
-            boughtInRound += blindLook();
-            for (const target of blindTargets) {
-                const item = shop.shopItems.find(i => target.re.test(i.name));
-                if (!item) continue;
-                const unit = unitBound(item, shop.shopConfig, target.shelf, priceRules);
-                blindBase ??= { coins: coins(), held: blindHeld(), unit };
-                blindBase.unit = Math.max(blindBase.unit, unit);
-                const owned = s.sdk.getInventory().filter(i => target.re.test(i.name)).reduce((n, i) => n + i.count, 0) + (stock.get(item.name.toLowerCase()) ?? 0);
-                const wanted = stockTarget - owned;
-                if (wanted > 0 && boughtTotal < MAX_ITEMS) { blindWaits = true; blindUnit = Math.max(blindUnit, unit); }
-                if (!blindBuyNow({ unit, wallet: coins(), reserve: COIN_RESERVE, remainingSpend: MAX_SPEND - spentTotal, remainingItems: MAX_ITEMS - boughtTotal,
-                    wanted, freeSlots: 28 - s.sdk.getInventory().length, pending: blindPending() })) continue;
-                const sent = await s.direct({ type: 'shopBuy', slot: item.slot, amount: 1, reason: 'SDK' }) as { success?: boolean } | null;
-                if (sent?.success) { blindRequests++; blindSent.push(s.tick()); }
-            }
-        }
-
-        if (shop?.isOpen && shop.shopItems) {
-            const purchases = planShopPurchases(planTargets, shop.shopItems, s.sdk.getInventory(), stock, Math.max(0, Math.min(coins() - COIN_RESERVE, MAX_SPEND - spentTotal)), stockTarget, MAX_ITEMS - boughtTotal);
-            // Say why nothing is bought: the shelf as seen, the budget and the free slots.
-            if (!purchases.length && !loggedEmpty) { loggedEmpty = true; console.log('SHOP_NONE ' + JSON.stringify({ shelf: shop.shopItems.filter(i => conf.items.some(t => t.re.test(i.name))).map(i => ({ name: i.name, count: i.count, price: i.buyPrice })), coins: coins(), free: 28 - s.sdk.getInventory().length, stockTarget: stockTarget, bank: conf.items.map(t => [...stock].find(([n]) => t.re.test(n))) })); }
-            for (const purchase of purchases) {
-                const remaining = Math.min(purchase.amount, MAX_ITEMS - boughtTotal);
-                if (remaining <= 0) break;
-                let countBought = 0;
-                if (guarded) {
-                    const result = await buyWithBudget(s.bot, s.sdk, purchase.name, remaining, COIN_RESERVE, MAX_SPEND - spentTotal, shelfOf(purchase.name), priceRules);
-                    countBought = result.bought;
-                    spentTotal += result.spent;
-                } else {
-                    const before = coins();
-                    const b = await s.bot.buyFromShop(purchase.name, remaining);
-                    countBought = b.amountBought ?? 0;
-                    spentTotal += Math.max(0, before - coins());
+        if (conf.dialogBuy) {
+            const owned = countItems(s, conf.dialogBuy.item) + ([...stock.entries()].find(([k]) => conf.dialogBuy!.item.test(k))?.[1] ?? 0);
+            const wanted = Math.max(0, stockTarget - owned);
+            if (wanted > 0 && boughtTotal < MAX_ITEMS && spentTotal < MAX_SPEND) {
+                const res = await runDialogBuyStep(s.sdk, s.bot, conf.npc, conf.dialogBuy, COIN_RESERVE, MAX_SPEND - spentTotal, Math.min(wanted, MAX_ITEMS - boughtTotal), () => waitTicks(s, 1));
+                if (res.bought > 0) {
+                    boughtInRound += res.bought;
+                    boughtTotal += res.bought;
+                    spentTotal += res.spent;
+                    console.log(`BOUGHT ${res.bought}x ${conf.dialogBuy.item.source}`);
                 }
-                if (countBought > 0) {
-                    boughtInRound += countBought;
-                    boughtTotal += countBought;
-                    console.log(`BOUGHT ${countBought}x ${purchase.name}`);
+            }
+        } else {
+            if (!s.sdk.getState()?.shop?.isOpen) {
+                const shopRes = await s.bot.openShop(conf.npc);
+                if (!s.sdk.getState()?.shop?.isOpen && conf.dialogOpen) {
+                    if (!s.sdk.getDialog()?.isOpen) await s.bot.talkTo(conf.npc);
+                    await handleDialogShopOpen(s.sdk, conf.dialogOpen, () => waitTicks(s, 1));
+                }
+                if (!s.sdk.getState()?.shop?.isOpen && !shopRes.success) {
+                    console.log(`WARN openShop failed: ${shopRes.message}`);
+                    await waitTicks(s, 5);
+                    continue;
+                }
+                if (s.sdk.getState()?.shop?.isOpen) shopTrips++;
+            }
+
+            // Buy each configured item that has stock
+            const shop = s.sdk.getState()?.shop;
+
+            if (shop?.isOpen && shop.shopItems && blindTargets.length) {
+                boughtInRound += blindLook();
+                for (const target of blindTargets) {
+                    const item = shop.shopItems.find(i => target.re.test(i.name));
+                    if (!item) continue;
+                    const unit = unitBound(item, shop.shopConfig, target.shelf, priceRules);
+                    blindBase ??= { coins: coins(), held: blindHeld(), unit };
+                    blindBase.unit = Math.max(blindBase.unit, unit);
+                    const owned = s.sdk.getInventory().filter(i => target.re.test(i.name)).reduce((n, i) => n + i.count, 0) + (stock.get(item.name.toLowerCase()) ?? 0);
+                    const wanted = stockTarget - owned;
+                    if (wanted > 0 && boughtTotal < MAX_ITEMS) { blindWaits = true; blindUnit = Math.max(blindUnit, unit); }
+                    if (!blindBuyNow({ unit, wallet: coins(), reserve: COIN_RESERVE, remainingSpend: MAX_SPEND - spentTotal, remainingItems: MAX_ITEMS - boughtTotal,
+                        wanted, freeSlots: 28 - s.sdk.getInventory().length, pending: blindPending() })) continue;
+                    const sent = await s.direct({ type: 'shopBuy', slot: item.slot, amount: 1, reason: 'SDK' }) as { success?: boolean } | null;
+                    if (sent?.success) { blindRequests++; blindSent.push(s.tick()); }
+                }
+            }
+
+            if (shop?.isOpen && shop.shopItems) {
+                const purchases = planShopPurchases(planTargets, shop.shopItems, s.sdk.getInventory(), stock, Math.max(0, Math.min(coins() - COIN_RESERVE, MAX_SPEND - spentTotal)), stockTarget, MAX_ITEMS - boughtTotal);
+                // Say why nothing is bought: the shelf as seen, the budget and the free slots.
+                if (!purchases.length && !loggedEmpty) { loggedEmpty = true; console.log('SHOP_NONE ' + JSON.stringify({ shelf: shop.shopItems.filter(i => conf.items.some(t => t.re.test(i.name))).map(i => ({ name: i.name, count: i.count, price: i.buyPrice })), coins: coins(), free: 28 - s.sdk.getInventory().length, stockTarget: stockTarget, bank: conf.items.map(t => [...stock].find(([n]) => t.re.test(n))) })); }
+                for (const purchase of purchases) {
+                    const remaining = Math.min(purchase.amount, MAX_ITEMS - boughtTotal);
+                    if (remaining <= 0) break;
+                    let countBought = 0;
+                    if (guarded) {
+                        const result = await buyWithBudget(s.bot, s.sdk, purchase.name, remaining, COIN_RESERVE, MAX_SPEND - spentTotal, shelfOf(purchase.name), priceRules);
+                        countBought = result.bought;
+                        spentTotal += result.spent;
+                    } else {
+                        const before = coins();
+                        const b = await s.bot.buyFromShop(purchase.name, remaining);
+                        countBought = b.amountBought ?? 0;
+                        spentTotal += Math.max(0, before - coins());
+                    }
+                    if (countBought > 0) {
+                        boughtInRound += countBought;
+                        boughtTotal += countBought;
+                        console.log(`BOUGHT ${countBought}x ${purchase.name}`);
+                    }
                 }
             }
         }

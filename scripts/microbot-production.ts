@@ -112,6 +112,14 @@ export function inventoryRecipes():InventoryRecipe[]{
  const chicken=cooking+'meat/cooked_meat.rs2';
  add('prepare:chicken-stew',['cooked_chicken','bowl_water'],'stew2','Cooking',25,false,chicken);
  add('prepare:uncooked-stew-chicken',['stew1','cooked_chicken'],'uncooked_stew','Cooking',25,false,chicken);
+ const poison='scripts/skill_combat/scripts/weapon_poison.rs2';
+ add('poison:dragon-dagger',['dragon_dagger','weapon_poison'],'dragon_dagger_p','Herblore',1,false,poison,[],true);
+ recipes.at(-1)!.byproducts=[{id:id('vial_empty'),units:1}];
+ add('poison:dragon-spear',['dragon_spear','weapon_poison'],'dragon_spear_p','Herblore',1,false,poison,[],true);
+ recipes.at(-1)!.byproducts=[{id:id('vial_empty'),units:1}];
+ add('poison:rune-arrow',['rune_arrow','weapon_poison'],'rune_arrow_p','Herblore',1,false,poison,[],true);
+ recipes.at(-1)!.productUnits=5;recipes.at(-1)!.inputs[0]!.units=5;recipes.at(-1)!.byproducts=[{id:id('vial_empty'),units:1}];
+ add('brew:weapon_poison',['dragon_scale_dust','kwuarmvial'],'weapon_poison','Herblore',60,true,'scripts/skill_herblore/scripts/brewing/brew_potion.rs2',[],true);
  if(new Set(recipes.map(r=>r.name)).size!==recipes.length)throw Error('duplicate inventory production profile');
  cachedInventoryRecipes=recipes;
  return cachedInventoryRecipes;

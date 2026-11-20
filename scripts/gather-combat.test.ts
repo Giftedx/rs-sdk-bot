@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {GIANT,GIANT_HERBS,TROOPER_FOODS,TROOPER_SITE,COW_BEAR_BOXES} from './gather-combat';
+import {GIANT,GIANT_HERBS,TROOPER_FOODS,TROOPER_SITE,COW_BEAR_BOXES,CONFIGS,TAVERLEY_ROUTE,isNonWildernessGatherGoal,createTaverleyTravel} from './gather-combat';
 import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP,cowReleased,COW_RELEASE,selectGiantArmour,COW_FOOD_BITES} from './gather-combat';
 import {gearById} from '../packages/planner/src/gear-progression';
 import type {Session} from '../packages/core/src/inprocess';
@@ -527,4 +527,69 @@ test('the giant and trooper ids and the bear boxes match the content',()=>{
     }
     const area=bears.filter(s=>s.level===0&&s.x>=2600&&s.x<=2740&&s.z>=3250&&s.z<=3360);
     expect(area.every(s=>COW_BEAR_BOXES.some(([x1,z1,x2,z2])=>s.x>=x1&&s.x<=x2&&s.z>=z1&&s.z<=z2))).toBe(true);
+});
+
+test('non-Wilderness mainland supply configs resolve valid targets, guard Wilderness borders, and traverse Taverley Dungeon', async () => {
+    for (const key of ['unicorn', 'wizard', 'giant', 'taverley_druid', 'taverley_scales', 'taverley_blue_dragon', 'taverley_black_dragon', 'chaos_wine']) {
+        const conf = CONFIGS[key]!;
+        expect(conf).toBeDefined();
+        expect(isNonWildernessGatherGoal(conf.spot.x, conf.spot.z)).toBe(true);
+        expect(isNonWildernessGatherGoal(conf.bankSpot.x, conf.bankSpot.z)).toBe(true);
+    }
+    expect(isNonWildernessGatherGoal(3115, 9928)).toBe(false); // Edgeville dungeon Chaos druids (Wilderness)
+    expect(isNonWildernessGatherGoal(3087, 3452)).toBe(true); // Edgeville surface Unicorns (non-Wilderness)
+    expect(isNonWildernessGatherGoal(2932, 3515)).toBe(true); // Chaos Temple outside Wilderness
+    expect(isNonWildernessGatherGoal(3095, 3521)).toBe(false); // Wilderness surface north of z=3520
+
+    const npcsJson = JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/npcs.json'), 'utf8')) as { id: number; name: string }[];
+    const base = { distance: 2, reachable: true, inCombat: false, targetIndex: -1 };
+    expect(genericCombatNpc('taverley_druid', [{ ...base, id: 181 }])?.id).toBe(181);
+    const blueId = npcsJson.find(n => n.name === 'Blue dragon')!.id;
+    const blackId = npcsJson.find(n => n.name === 'Black dragon')!.id;
+    expect(genericCombatNpc('taverley_blue_dragon', [{ ...base, id: blueId }])?.id).toBe(blueId);
+    expect(genericCombatNpc('taverley_black_dragon', [{ ...base, id: blackId }])?.id).toBe(blackId);
+
+    const travel = createTaverleyTravel();
+    const player = { worldX: 2946, worldZ: 3368, level: 0 };
+    const inv = [{ id: TAVERLEY_ROUTE.DUSTY_KEY_ID, count: 1, slot: 0, name: 'Dusty key' }];
+    const actions: string[] = [];
+    const s: any = {
+        tick: () => 0,
+        onTick: () => () => {},
+        sdk: {
+            getInventory: () => inv,
+            getState: () => ({
+                player,
+                nearbyLocs: [
+                    { id: TAVERLEY_ROUTE.LADDER_DOWN.id, name: 'Ladder', x: TAVERLEY_ROUTE.LADDER_DOWN.x, z: TAVERLEY_ROUTE.LADDER_DOWN.z },
+                    { id: TAVERLEY_ROUTE.LADDER_UP.id, name: 'Ladder', x: TAVERLEY_ROUTE.LADDER_UP.x, z: TAVERLEY_ROUTE.LADDER_UP.z },
+                    { id: TAVERLEY_ROUTE.DUSTY_GATE.id, name: 'Gate', x: TAVERLEY_ROUTE.DUSTY_GATE.x, z: TAVERLEY_ROUTE.DUSTY_GATE.z },
+                ],
+            }),
+        },
+        bot: {
+            interactLoc: async (loc: any, op: RegExp) => {
+                actions.push(`loc:${loc.id}:${op.source}`);
+                if (loc.id === TAVERLEY_ROUTE.LADDER_DOWN.id) { player.worldX = 2884; player.worldZ = 9797; }
+                else if (loc.id === TAVERLEY_ROUTE.LADDER_UP.id) { player.worldX = 2884; player.worldZ = 3397; }
+                else if (loc.id === TAVERLEY_ROUTE.DUSTY_GATE.id) { player.worldX = 2925; player.worldZ = 9803; }
+                return { success: true };
+            },
+            useItemOnLoc: async (item: any, loc: any) => {
+                actions.push(`key:${item.id}->${loc.id}`);
+                player.worldX = 2923; player.worldZ = 9803;
+                return { success: true };
+            },
+        },
+    };
+    const ground = async (x: number, z: number) => { actions.push(`ground:${x},${z}`); player.worldX = x; player.worldZ = z; return true; };
+
+    expect(await travel.walk(s, 'taverley_black_dragon', { x: 2832, z: 9825 }, ground, () => false, 2)).toBe(true);
+    expect(actions).toEqual(['ground:2884,3397', 'loc:1759:climb-down', 'ground:2925,9803', 'key:1590->2623', 'ground:2832,9825']);
+
+    actions.length = 0;
+    expect(await travel.walk(s, 'taverley_black_dragon', { x: 2946, z: 3368 }, ground, () => false, 2)).toBe(true);
+    expect(actions).toEqual(['ground:2923,9803', 'loc:2623:open', 'ground:2884,9797', 'loc:1755:climb-up', 'ground:2946,3368']);
+
+    await expect(travel.walk(s, 'taverley_druid', { x: 3115, z: 9928 }, ground, () => false, 2)).rejects.toThrow('Wilderness goal forbidden');
 });

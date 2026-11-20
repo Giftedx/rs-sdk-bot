@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { validateOwnedKit } from './microbot-owned-loadout';
-import { accountOf, loadoutOf, receiptOf, meetNear, orderCommands, pickKit, prayerFloor, report, RULES, shopSource, stagingPlan, type Account, type Gear, type Item, type Shop, type Worn } from './squad-ready';
+import { accountOf, enduranceHours, loadoutOf, questBlockers, receiptOf, meetNear, orderCommands, pickKit, prayerFloor, report, RULES, shopSource, stagingPlan, TRIBRID_BIS_ITEMS, WILDERNESS_SHOPS, type Account, type Gear, type Item, type Shop, type Worn } from './squad-ready';
 
 const root = join(import.meta.dir, '..');
 const gear = new Map((JSON.parse(readFileSync(join(root, 'knowledge', 'gear.json'), 'utf8')) as Gear[]).map(g => [g.id, g]));
@@ -218,8 +218,12 @@ describe('sources', () => {
     test('the jungle store stocks the 3-dose antipoison and a shop-buyer profile buys it', () => {
         expect(shopSource('Antipoison(3)', '3doseantipoison', shops)).toBe('shop-buyer profile jiminua (junglestore, shelf 10)');
     });
-    test('a shop item with no profile line is named as that', () => {
-        expect(shopSource('Dragon dagger', 'dragon_dagger', shops)).toBe('dragonswordshop stocks 2: no shop-buyer profile line');
+    test('a shop item with a new PK supply profile matches cleanly while unprofiled or Wilderness shops stay excluded', () => {
+        expect(shopSource('Dragon dagger', 'dragon_dagger', shops)).toBe('shop-buyer profile jukat_dagger (dragonswordshop, shelf 2)');
+        expect(shopSource('Dragon battleaxe', 'dragon_battleaxe', shops)).toBe('dragonaxeshop stocks 2: no shop-buyer profile line');
+        const wildyOnly: Shop[] = [{ inv: 'magearena_runeshop', stock: [{ item: 'cosmicrune', count: 20 }] }];
+        expect(WILDERNESS_SHOPS.has('magearena_runeshop')).toBe(true);
+        expect(shopSource('Cosmic rune', 'cosmicrune', wildyOnly)).toBeNull();
         expect(shopSource('Shark', 'shark', shops)).toBeNull();
     });
     test('a status file becomes an account, with a noted item as its plain item', () => {
@@ -265,4 +269,89 @@ test('stockFaults blocks under one pack of runes or arrows and notes under two',
     expect(one.notes).toEqual(['stock for one trip only: 2 Law rune of 4 for two trips', 'stock for one trip only: 30 Earth rune of 60 for two trips', 'stock for one trip only: 120 Iron arrow of 200 for two trips']);
     const none = stockFaults(acct([[563, 1]], [], 60), worn, carried, rule);
     expect(none.blocks).toEqual(['stock under one pack: 1 Law rune in the pack, bank and quiver (a pack needs 2)', 'stock under one pack: 0 Earth rune in the pack, bank and quiver (a pack needs 30)', 'stock under one pack: 60 Iron arrow in the pack, bank and quiver (a pack needs 100)']);
+});
+
+test('gang-tribrid-bis checks quest blockers, BiS kit, 4h endurance, and malformed status safety', () => {
+    const rule = RULES['gang-tribrid-bis']!;
+    expect(rule).toMatchObject({ name: 'gang-tribrid-bis', minHours: 4, bisSupplies: true });
+    expect(accountOf(null)).toBeNull();
+    expect(accountOf({ name: 'Bad', pos: { x: NaN, z: 3200 }, skills: [] })).toBeNull();
+    const cleaned = accountOf({
+        name: 'Good',
+        pos: { x: 3185, z: 3436 },
+        bankAt: NOW - 1000,
+        skills: [{ name: 'Attack', level: 99 }, { bad: true }],
+        quests: [{ name: 'Lost City', state: 'complete' }, null],
+        equipment: [{ id: 1215, name: 'Dragon dagger', slot: 3 }, { id: 'bad' }],
+        inventory: [{ id: 385, name: 'Shark', count: 10 }, { id: 999, name: 'Bad', count: -1 }],
+        bank: [],
+    });
+    expect(cleaned?.name).toBe('Good');
+    expect(cleaned?.pack).toEqual([{ id: 385, name: 'Shark', count: 10 }]);
+    expect(questBlockers(cleaned!, rule.requireQuests)).toEqual(['Dragon Slayer', 'Death Plateau', 'Druidic Ritual']);
+
+    const fullAccount: Account = {
+        name: 'TribridMax',
+        at: NOW,
+        bankAt: NOW - 60_000,
+        pos: { x: 3185, z: 3436, level: 0 },
+        levels: Object.fromEntries(['attack', 'strength', 'defence', 'ranged', 'magic', 'prayer', 'hitpoints'].map(s => [s, 99])),
+        quests: new Set(['lost city', 'dragon slayer', 'death plateau', 'druidic ritual', 'tai bwo wannai trio']),
+        worn: [
+            { id: 1163, name: 'Rune full helm', count: 1, slot: 0 },
+            { id: 1127, name: 'Rune platebody', count: 1, slot: 4 },
+            { id: 1079, name: 'Rune platelegs', count: 1, slot: 7 },
+            { id: 1201, name: 'Rune kiteshield', count: 1, slot: 5 },
+            { id: 1333, name: 'Rune scimitar', count: 1, slot: 3 },
+            { id: 892, name: 'Rune arrow', count: 700, slot: 13 },
+        ],
+        pack: [],
+        bank: [
+            { id: TRIBRID_BIS_ITEMS.shark, name: 'Shark', count: 400 },
+            { id: TRIBRID_BIS_ITEMS.cookedKarambwan, name: 'Cooked karambwan', count: 120 },
+            { id: TRIBRID_BIS_ITEMS.earthRune, name: 'Earth rune', count: 400 },
+            { id: TRIBRID_BIS_ITEMS.waterRune, name: 'Water rune', count: 400 },
+            { id: TRIBRID_BIS_ITEMS.natureRune, name: 'Nature rune', count: 300 },
+            { id: TRIBRID_BIS_ITEMS.lawRune, name: 'Law rune', count: 30 },
+            { id: TRIBRID_BIS_ITEMS.airRune, name: 'Air rune', count: 400 },
+            { id: TRIBRID_BIS_ITEMS.fireRune, name: 'Fire rune', count: 400 },
+            { id: TRIBRID_BIS_ITEMS.bloodRune, name: 'Blood rune', count: 150 },
+            { id: TRIBRID_BIS_ITEMS.cosmicRune, name: 'Cosmic rune', count: 20 },
+            { id: TRIBRID_BIS_ITEMS.climbingBoots, name: 'Climbing boots', count: 2 },
+            { id: TRIBRID_BIS_ITEMS.dragonDaggerP, name: 'Dragon dagger(p)', count: 2 },
+            { id: TRIBRID_BIS_ITEMS.magicShortbow, name: 'Magic shortbow', count: 2 },
+            { id: TRIBRID_BIS_ITEMS.blackBody, name: "Black d'hide body", count: 2 },
+            { id: TRIBRID_BIS_ITEMS.blackChaps, name: "Black d'hide chaps", count: 2 },
+            { id: TRIBRID_BIS_ITEMS.blackVambs, name: "Black d'hide vambs", count: 2 },
+            { id: TRIBRID_BIS_ITEMS.ringOfRecoil, name: 'Ring of recoil', count: 4 },
+            { id: 2434, name: 'Prayer potion(4)', count: 10 },
+            { id: 2436, name: 'Super attack(4)', count: 6 },
+            { id: 2440, name: 'Super strength(4)', count: 6 },
+            { id: 2442, name: 'Super defence(4)', count: 6 },
+            { id: 2444, name: 'Ranging potion(4)', count: 6 },
+            { id: 2448, name: 'Superantipoison(4)', count: 4 },
+        ],
+    };
+    const end = enduranceHours(fullAccount);
+    expect(end.hours).toBeGreaterThanOrEqual(4);
+    const readyPick = pickKit(fullAccount, gear, rule, NOW);
+    expect(readyPick.ready).toBe(true);
+    expect(readyPick.reasons).toEqual([]);
+    expect(readyPick.questBlockers).toEqual([]);
+
+    const shortAccount: Account = {
+        ...fullAccount,
+        quests: new Set(['dragon slayer']),
+        bank: fullAccount.bank.filter(i => i.id !== TRIBRID_BIS_ITEMS.ringOfRecoil && i.id !== TRIBRID_BIS_ITEMS.cookedKarambwan),
+    };
+    const badPick = pickKit(shortAccount, gear, rule, NOW);
+    expect(badPick.ready).toBe(false);
+    expect(badPick.reasons).toEqual(expect.arrayContaining([
+        'quest blocker: Lost City incomplete',
+        'quest blocker: Death Plateau incomplete',
+        'quest blocker: Druidic Ritual incomplete',
+        'no Ring of recoil (2 short)',
+        'no Cooked karambwan (25 short)',
+        'trip endurance 0.0 h under 4.0 h floor (limiting: cooked karambwan)',
+    ]));
 });
