@@ -2,7 +2,7 @@
 import type { BenchCase } from './aio-bench-cases';
 import type { SaveConfig } from '../../packages/practice/src/presets';
 import { FLETCHING_SPECIALIST_SUPPLIES } from '../fletching-specialist';
-import { FISHING_SPECIALIST_SUPPLIES, FISHING_SPECIALIST_LIVE_SUPPLIES } from '../fishing-specialist';
+import { FISHING_SPECIALIST_SUPPLIES } from '../fishing-specialist';
 import { MINING_SPECIALIST_SUPPLIES, MINING_SPECIALIST_LIVE_SUPPLIES } from '../mining-specialist';
 import { THIEVING_SPECIALIST_SUPPLIES, THIEVING_SPECIALIST_LIVE_SUPPLIES } from '../thieving-specialist';
 
@@ -99,7 +99,6 @@ const externalCase = (skill: string, supplies: Readonly<Record<number, number>>,
 export const SPECIALIST_GATHERING_EXTERNAL_CASES: BenchCase[] = [
     externalCase('fletching', FLETCHING_SPECIALIST_SUPPLIES, /\bticks=(\d+)/),
     externalCase('fishing', FISHING_SPECIALIST_SUPPLIES, /\bticks=(\d+)/),
-    externalCase('fishing', FISHING_SPECIALIST_LIVE_SUPPLIES, /\bticks=(\d+)/, true),
     externalCase('mining', MINING_SPECIALIST_SUPPLIES, /\bticks=(\d+)/),
     externalCase('mining', MINING_SPECIALIST_LIVE_SUPPLIES, /\bticks=(\d+)/, true),
     externalCase('thieving', THIEVING_SPECIALIST_SUPPLIES, /\btotalTicks=(\d+)/),

@@ -462,21 +462,16 @@ export async function walkWaypointsSafe(
     }
 }
 
-async function sailShip(
-    s: Session,
-    npcPattern: RegExp,
-    deckTile: { readonly x: number; readonly z: number },
-    pats: readonly RegExp[],
-    label: string,
-    stop: () => boolean,
-): Promise<void> {
+export const sailBrimhavenToArdougne = async (s: Session, stop: () => boolean): Promise<void> => {
+    const ardyDeck = { x: 2683, z: 3268 };
     const landed = () => {
         const p = s.sdk.getState()?.player;
-        return !!p && p.level === 1 && chebDist(deckTile, { x: p.worldX, z: p.worldZ }) <= 8;
+        return !!p && p.level === 1 && chebDist(ardyDeck, { x: p.worldX, z: p.worldZ }) <= 8;
     };
+    const pats = [/journey on this ship/i, /search away/i, /^ok\.?$/i];
     for (let tries = 0; tries < 3 && !stop() && !landed(); tries++) {
         await eatSharkIfHurt(s, 4);
-        const talk = await s.bot.talkTo(npcPattern);
+        const talk = await s.bot.talkTo(/^customs officer$/i);
         if (!talk.success) {
             await waitTicks(s, 2);
             continue;
@@ -490,7 +485,7 @@ async function sailShip(
             await waitTicks(s, 1);
         }
     }
-    if (!landed()) throw Error(`${label} sailing failed`);
+    if (!landed()) throw Error('Brimhaven->Ardougne sailing failed');
 
     for (let i = 0; i < 6 && !stop(); i++) {
         if (s.sdk.getState()?.player?.level === 0) return;
@@ -508,37 +503,8 @@ async function sailShip(
         await s.bot.interactLoc(plank, 'Cross');
         await waitUntil(s, st => st?.player?.level === 0, { timeoutTicks: 10 });
     }
-    if (s.sdk.getState()?.player?.level !== 0) throw Error(`${label} gangplank failed`);
-}
-
-export const sailBrimhavenToArdougne = (s: Session, stop: () => boolean): Promise<void> =>
-    sailShip(s, /^customs officer$/i, { x: 2683, z: 3268 }, [/journey on this ship/i, /search away/i, /^ok\.?$/i], 'Brimhaven->Ardougne', stop);
-
-export const sailPortSarimToKaramja = (s: Session, stop: () => boolean): Promise<void> =>
-    sailShip(s, /^(seaman lorris|captain tobias|seaman thresnor)$/i, { x: 2956, z: 3143 }, [/yes please/i], 'PortSarim->Karamja', stop);
-
-export async function crossAlKharidTollGate(s: Session, direction: 'east' | 'west', stop: () => boolean): Promise<void> {
-    const crossed = () => {
-        const p = s.sdk.getState()?.player;
-        return !!p && p.level === 0 && (direction === 'east' ? p.worldX >= 3268 : p.worldX <= 3267);
-    };
-    for (let tries = 0; tries < 3 && !stop() && !crossed(); tries++) {
-        const talk = await s.bot.talkTo(/^border guard$/i);
-        if (!talk.success) {
-            await waitTicks(s, 2);
-            continue;
-        }
-        for (let i = 0; i < 30 && !stop() && !crossed(); i++) {
-            const d = s.sdk.getDialog();
-            if (d?.isOpen && !d.isWaiting) {
-                const opt = d.options.find(o => /yes,\s*ok/i.test(o.text));
-                await s.direct({ type: 'clickDialogOption', optionIndex: opt ? opt.index : 0, reason: 'SDK' });
-            }
-            await waitTicks(s, 1);
-        }
-    }
-    if (!crossed()) throw Error(`Al Kharid toll gate (${direction}) crossing failed`);
-}
+    if (s.sdk.getState()?.player?.level !== 0) throw Error('Brimhaven->Ardougne gangplank failed');
+};
 
 /** Name of the external supplier account (live or rehearsal), or undefined when the helper runs in this process. */
 export function externalSupplierName(env: Record<string, string | undefined> = process.env): string | undefined {

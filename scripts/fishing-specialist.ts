@@ -12,18 +12,11 @@ import {
     settleHelper,
     rubTeleport,
     walkWaypointsSafe,
-    sailPortSarimToKaramja,
-    crossAlKharidTollGate,
-    isLiveSupplyVariant,
-    itemQty,
     finish,
     SKILL_MULTI3_MAKE1_A,
-    OBJ_COINS,
     OBJ_KNIFE,
     OBJ_LOGS,
     OBJ_GLORY_4,
-    OBJ_DUELING_8,
-    RING_OF_DUELING_IDS,
 } from './gathering-specialist-lib';
 
 export const OBJ_SMALL_NET = 303;
@@ -43,19 +36,6 @@ export const FISHING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_GLORY_4]: 1,
 };
 
-// Live-stockable variant using local.json stock (0 Glory): Port Sarim boat + Ring of dueling(8) to Al Kharid -> Lumbridge River.
-export const FISHING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>> = {
-    [OBJ_SMALL_NET]: 1,
-    [OBJ_FISHING_ROD]: 1,
-    [OBJ_FISHING_BAIT]: 60,
-    [OBJ_FLY_ROD]: 1,
-    [OBJ_FEATHER]: 1500,
-    [OBJ_KNIFE]: 1,
-    [OBJ_LOGS]: 5,
-    [OBJ_COINS]: 50,
-    [OBJ_DUELING_8]: 1,
-};
-
 export const FISHING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
 
 if (import.meta.main) {
@@ -71,32 +51,25 @@ if (import.meta.main) {
     let ok = false;
     let detail = '';
 
-    const supplies = isLiveSupplyVariant() ? FISHING_SPECIALIST_LIVE_SUPPLIES : FISHING_SPECIALIST_SUPPLIES;
     let readyForTrade = false;
     const arm = startHelperTradeArm(helper, main.name, isStopped, () => readyForTrade);
     try {
         const tutTicks = await skipTutorialFast(main, isStopped);
-        await dropTutorialJunk(main, isStopped, 11);
+        await dropTutorialJunk(main, isStopped, 10);
         readyForTrade = true;
-        const tradeTicks = await receiveTradeFast(main, helper, supplies, isStopped, arm);
+        const tradeTicks = await receiveTradeFast(main, helper, FISHING_SPECIALIST_SUPPLIES, isStopped, arm);
         helperDone = settleHelper(helper).catch(err => {
             console.log(`WARN helper settle: ${String(err)}`);
         });
 
-        const hasGlory = FISHING_GLORY_IDS.some(id => itemQty(main, id) > 0);
-        if (hasGlory) {
-            // Karamja Glory option 2 lands beside Musa Point saltfish spots (danger-free).
-            await rubTeleport(
-                main,
-                FISHING_GLORY_IDS,
-                2,
-                p => p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
-                isStopped,
-            );
-        } else {
-            await walkWaypointsSafe(main, [[3215, 3258, 3], [3140, 3285, 4], [3068, 3275, 4], [3028, 3221, 2]], isStopped);
-            await sailPortSarimToKaramja(main, isStopped);
-        }
+        // Karamja Glory option 2 lands beside Musa Point saltfish spots (danger-free).
+        await rubTeleport(
+            main,
+            FISHING_GLORY_IDS,
+            2,
+            p => p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
+            isStopped,
+        );
         await walkWaypointsSafe(main, [[2923, 3179, 2]], isStopped);
 
         const stand = async (spot: NearbyNpc) => {
@@ -155,32 +128,19 @@ if (import.meta.main) {
             });
         }
 
-        if (hasGlory) {
-            // Edgeville Glory option 1 lands at (3087,3496) -> hunter-free Barbarian Village river west bank (3109,3434).
-            await rubTeleport(
-                main,
-                FISHING_GLORY_IDS,
-                1,
-                p => p.worldX >= 3070 && p.worldX <= 3110 && p.worldZ >= 3480 && p.worldZ <= 3515,
-                isStopped,
-            );
-            await walkWaypointsSafe(
-                main,
-                [[3087, 3465, 3], [3109, 3434, 1]],
-                isStopped,
-            );
-        } else {
-            await rubTeleport(
-                main,
-                RING_OF_DUELING_IDS,
-                /al kharid/i,
-                p => p.level === 0 && p.worldX >= 3295 && p.worldX <= 3330 && p.worldZ >= 3220 && p.worldZ <= 3255,
-                isStopped,
-            );
-            await walkWaypointsSafe(main, [[3269, 3227, 1]], isStopped);
-            await crossAlKharidTollGate(main, 'west', isStopped);
-            await walkWaypointsSafe(main, [[3239, 3252, 1]], isStopped);
-        }
+        // Edgeville Glory option 1 lands at (3087,3496) -> hunter-free Barbarian Village river west bank (3109,3434).
+        await rubTeleport(
+            main,
+            FISHING_GLORY_IDS,
+            1,
+            p => p.worldX >= 3070 && p.worldX <= 3110 && p.worldZ >= 3480 && p.worldZ <= 3515,
+            isStopped,
+        );
+        await walkWaypointsSafe(
+            main,
+            [[3087, 3465, 3], [3109, 3434, 1]],
+            isStopped,
+        );
 
         const flyStart = main.tick() - t0;
         if ((main.sdk.getSkill('Fishing')?.baseLevel ?? 1) < 99) {

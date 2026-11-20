@@ -56,19 +56,6 @@ export const FISHING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
 ] as const;
 
-// 13 inventory slots: live-stockable Fishing kit replacing Glory with Port Sarim boat + Ring of dueling(8).
-export const FISHING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = [
-    { id: 303, name: 'Small fishing net', count: 1, stackable: false },
-    { id: 307, name: 'Fishing rod', count: 1, stackable: false },
-    { id: 309, name: 'Fly fishing rod', count: 1, stackable: false },
-    { id: 313, name: 'Fishing bait', count: 60, stackable: true },
-    { id: 314, name: 'Feather', count: 1500, stackable: true },
-    { id: 946, name: 'Knife', count: 1, stackable: false },
-    { id: 995, name: 'Coins', count: 50, stackable: true },
-    { id: 1511, name: 'Logs', count: 5, stackable: false },
-    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
-] as const;
-
 // 21 inventory slots: Doric quest ores + Rune pickaxe + 3t knife/logs + coins + glory + 2x super energy + games neck.
 export const MINING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 434, name: 'Clay', count: 6, stackable: false },
@@ -133,7 +120,6 @@ export const SPECIALIST_KITS = {
     attack: ATTACK_SPECIALIST_KIT,
     fletching: FLETCHING_SPECIALIST_KIT,
     fishing: FISHING_SPECIALIST_KIT,
-    'fishing-live': FISHING_SPECIALIST_LIVE_KIT,
     mining: MINING_SPECIALIST_KIT,
     'mining-live': MINING_SPECIALIST_LIVE_KIT,
     thieving: THIEVING_SPECIALIST_KIT,

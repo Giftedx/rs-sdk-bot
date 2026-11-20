@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { xpForLevel } from '../packages/planner/src/curve';
 import { intentForEntry } from '../packages/planner/src/progression-catalog';
 import { planFletchingActionCounts, pickNextFletchTier, FLETCHING_SPECIALIST_SUPPLIES, OBJ_HEADLESS_ARROW } from './fletching-specialist';
-import { FISHING_SPECIALIST_SUPPLIES, FISHING_SPECIALIST_LIVE_SUPPLIES } from './fishing-specialist';
+import { FISHING_SPECIALIST_SUPPLIES } from './fishing-specialist';
 import { MINING_SPECIALIST_SUPPLIES, MINING_SPECIALIST_LIVE_SUPPLIES, remainingIronOresTo99, IRON_ORE_XP_25X } from './mining-specialist';
 import { THIEVING_SPECIALIST_SUPPLIES, THIEVING_SPECIALIST_LIVE_SUPPLIES, THIEVING_PIZZAS, selectPickpocketTier } from './thieving-specialist';
 import { OBJ_GAMES_8, OBJ_PINEAPPLE_PIZZA, OBJ_SUPER_ENERGY_4 } from './gathering-specialist-lib';
@@ -120,7 +120,6 @@ describe('bench registration and catalog integration', () => {
         const suppliesBySkill = {
             fletching: FLETCHING_SPECIALIST_SUPPLIES,
             fishing: FISHING_SPECIALIST_SUPPLIES,
-            'fishing-live': FISHING_SPECIALIST_LIVE_SUPPLIES,
             mining: MINING_SPECIALIST_SUPPLIES,
             'mining-live': MINING_SPECIALIST_LIVE_SUPPLIES,
             thieving: THIEVING_SPECIALIST_SUPPLIES,
