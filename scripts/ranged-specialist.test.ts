@@ -9,19 +9,25 @@ import { xpForLevel } from '../packages/planner/src/curve';
 import { observedSupplies } from '../packages/practice/src/specialist-rehearsal';
 import {
     assertSupplierAccount,
+    chooseDesiredAmmo,
     chooseDesiredArmor,
     chooseDesiredChaps,
     chooseDesiredWeapon,
     countAnyId,
     countById,
+    EDGEVILLE_SUPPLIER_STAND,
     hasAtLeastKit,
     hasExactKit,
     isAdjacentToCannon,
     ITEM_IDS,
     kitRequirements,
     kitSlotTotal,
+    LUMBRIDGE_HANDOFF,
     parseSpecialistArgs,
     RANGED_SPECIALIST_KIT,
+    RANGED_SPECIALIST_LIVE_KIT,
+    RANGED_SPECIALIST_LIVE_TRADE1,
+    RANGED_SPECIALIST_LIVE_TRADE2,
     RANGED_SPECIALIST_MSB_KIT,
     RANGED_SPECIALIST_MSB_TRADE1,
     RANGED_SPECIALIST_MSB_TRADE2,
@@ -35,6 +41,14 @@ import {
     variantTrades,
     weaponReach,
 } from './ranged-specialist';
+import {
+    ATTACK_SPECIALIST_KIT,
+    buildLegDeliveryReceipt,
+    DEFAULT_STAGE_BANK,
+    EDGEVILLE_BANK,
+    parseSupplierCliArgs,
+    resolveSupplierKitPlan,
+} from './specialist-supplier';
 import { SPECIALIST_RANGED_CASES } from './measure/specialist-ranged-cases';
 
 const ROOT = resolve(import.meta.dir, '..');
@@ -49,6 +63,8 @@ test('RANGED_SPECIALIST two-trade kits and combined supplies use cataloged trade
         [RANGED_SPECIALIST_TRADE2, 19],
         [RANGED_SPECIALIST_MSB_TRADE1, 28],
         [RANGED_SPECIALIST_MSB_TRADE2, 20],
+        [RANGED_SPECIALIST_LIVE_TRADE1, 24],
+        [RANGED_SPECIALIST_LIVE_TRADE2, 21],
     ] as const) {
         expect(kitSlotTotal(trade)).toBe(expected);
         expect(expected).toBeLessThanOrEqual(28);
@@ -71,10 +87,16 @@ test('RANGED_SPECIALIST two-trade kits and combined supplies use cataloged trade
     expect(countById(RANGED_SPECIALIST_KIT, 3024)).toBe(8);
     expect(countById(RANGED_SPECIALIST_KIT, 3016)).toBe(7);
     expect(countById(RANGED_SPECIALIST_KIT, 1897)).toBe(3);
+    expect(countById(RANGED_SPECIALIST_LIVE_KIT, ITEM_IDS.cannonball)).toBe(1500);
+    expect(countById(RANGED_SPECIALIST_LIVE_KIT, 2434)).toBe(8);
+    expect(countById(RANGED_SPECIALIST_LIVE_KIT, 175)).toBe(8);
+    expect(countById(RANGED_SPECIALIST_LIVE_KIT, 379)).toBe(5);
     expect(variantKit('knives')).toBe(RANGED_SPECIALIST_KIT);
     expect(variantKit('msb')).toBe(RANGED_SPECIALIST_MSB_KIT);
+    expect(variantKit('live')).toBe(RANGED_SPECIALIST_LIVE_KIT);
     expect(variantTrades('knives')).toEqual({ trade1: RANGED_SPECIALIST_TRADE1, trade2: RANGED_SPECIALIST_TRADE2 });
     expect(variantTrades('msb')).toEqual({ trade1: RANGED_SPECIALIST_MSB_TRADE1, trade2: RANGED_SPECIALIST_MSB_TRADE2 });
+    expect(variantTrades('live')).toEqual({ trade1: RANGED_SPECIALIST_LIVE_TRADE1, trade2: RANGED_SPECIALIST_LIVE_TRADE2 });
 });
 
 test('assertSupplierAccount rejects reserved specialists and invalid names', () => {
@@ -124,7 +146,21 @@ test('weapon, gear, potion, and sustain scheduling rules behave across Ranged 1.
     expect(chooseDesiredWeapon(49, invMsb, [{ id: ITEM_IDS.ironKnife, slot: 3 }], 'msb')).toBeUndefined();
     expect(chooseDesiredWeapon(50, invMsb, [{ id: ITEM_IDS.ironKnife, slot: 3 }], 'msb')?.id).toBe(ITEM_IDS.msb);
     expect(weaponReach([{ id: ITEM_IDS.runeKnife, slot: 3 }])).toBe(4);
+    expect(weaponReach([{ id: ITEM_IDS.shortbow, slot: 3 }])).toBe(7);
     expect(weaponReach([{ id: ITEM_IDS.msb, slot: 3 }])).toBe(7);
+
+    const invLive = [
+        { id: ITEM_IDS.shortbow, slot: 0, count: 1 },
+        { id: ITEM_IDS.ironArrow, slot: 1, count: 300 },
+        { id: ITEM_IDS.msb, slot: 2, count: 1 },
+        { id: ITEM_IDS.runeArrow, slot: 3, count: 1000 },
+    ];
+    expect(chooseDesiredWeapon(1, invLive, [], 'live')?.id).toBe(ITEM_IDS.shortbow);
+    expect(chooseDesiredAmmo(1, invLive, [], 'live')?.id).toBe(ITEM_IDS.ironArrow);
+    expect(chooseDesiredWeapon(49, invLive, [{ id: ITEM_IDS.shortbow, slot: 3 }], 'live')).toBeUndefined();
+    expect(chooseDesiredWeapon(50, invLive, [{ id: ITEM_IDS.shortbow, slot: 3 }], 'live')?.id).toBe(ITEM_IDS.msb);
+    expect(chooseDesiredAmmo(50, invLive, [{ id: ITEM_IDS.ironArrow, slot: 13 }], 'live')?.id).toBe(ITEM_IDS.runeArrow);
+    expect(chooseDesiredAmmo(50, invLive, [{ id: ITEM_IDS.runeArrow, slot: 13 }], 'live')).toBeUndefined();
 
     // 8-dose Ranging pot: scheduled across 1, 22, 40, 54, 68, 77, 86, 93 without burning late doses early.
     expect(shouldDrinkRanging(1, 1, 8)).toBe(true);
@@ -146,6 +182,8 @@ test('weapon, gear, potion, and sustain scheduling rules behave across Ranged 1.
     expect(shouldDrinkAntipoison(true, 10)).toBe(true);
     expect(shouldDrinkAntipoison(false, 539)).toBe(false);
     expect(shouldDrinkAntipoison(false, 540)).toBe(true);
+    expect(shouldDrinkAntipoison(false, 540, false)).toBe(false);
+    expect(shouldDrinkAntipoison(true, 0, false)).toBe(true);
 
     expect(totalDoses([{ id: 2444, count: 1 }, { id: 171, count: 1 }], ITEM_IDS.rangingPot)).toBe(6);
     expect(countAnyId([{ id: 3024, count: 1 }, { id: 3026, count: 1 }], ITEM_IDS.superRestore)).toBe(2);
@@ -161,10 +199,61 @@ test('parseSpecialistArgs and bench cases validate cleanly', () => {
         benchSupplier2: undefined,
         spotCentre: { x: 3287, z: 3810, level: 0 },
     });
+    expect(parseSpecialistArgs(['Shaftshooter', '5600', 'VARIANT=live', 'BENCH_SUPPLIER=Sup'])).toEqual({
+        bot: 'Shaftshooter',
+        cap: 5600,
+        variant: 'live',
+        supplier: undefined,
+        benchSupplier: 'Sup',
+        benchSupplier2: undefined,
+        spotCentre: { x: 3287, z: 3810, level: 0 },
+    });
     expect(SPECIALIST_RANGED_CASES.map(c => c.key)).toEqual([
         'fighter:ranged-specialist',
         'extra:ranged-specialist-msb',
+        'extra:ranged-specialist-live',
     ]);
+});
+
+test('specialist-supplier resolves attack and 2-trade ranged kits and parses CLI options', () => {
+    const attack = resolveSupplierKitPlan(undefined);
+    expect(attack.name).toBe('attack');
+    expect(attack.legs).toHaveLength(1);
+    expect(attack.legs[0]).toEqual({ kit: ATTACK_SPECIALIST_KIT, handoff: LUMBRIDGE_HANDOFF, bank: DEFAULT_STAGE_BANK });
+
+    const ranged = resolveSupplierKitPlan('ranged');
+    expect(ranged.name).toBe('ranged');
+    expect(ranged.combined).toBe(RANGED_SPECIALIST_KIT);
+    expect(ranged.legs).toEqual([
+        { kit: RANGED_SPECIALIST_TRADE1, handoff: LUMBRIDGE_HANDOFF, bank: DEFAULT_STAGE_BANK },
+        { kit: RANGED_SPECIALIST_TRADE2, handoff: EDGEVILLE_SUPPLIER_STAND, bank: EDGEVILLE_BANK },
+    ]);
+
+    const live = resolveSupplierKitPlan('ranged-live');
+    expect(live.name).toBe('ranged-live');
+    expect(live.combined).toBe(RANGED_SPECIALIST_LIVE_KIT);
+    expect(live.legs).toEqual([
+        { kit: RANGED_SPECIALIST_LIVE_TRADE1, handoff: LUMBRIDGE_HANDOFF, bank: DEFAULT_STAGE_BANK },
+        { kit: RANGED_SPECIALIST_LIVE_TRADE2, handoff: EDGEVILLE_SUPPLIER_STAND, bank: EDGEVILLE_BANK },
+    ]);
+
+    expect(() => resolveSupplierKitPlan('unknown')).toThrow('unknown kit');
+    expect(parseSupplierCliArgs(['Holder', 'Shaftshooter', '--kit=ranged-live', '6000'])).toEqual({
+        kitArg: 'ranged-live',
+        cap: 6000,
+        outArg: undefined,
+        bankX: undefined,
+        bankZ: undefined,
+        positional: ['Holder', 'Shaftshooter', '6000'],
+    });
+    expect(parseSupplierCliArgs(['Donor', 'Holder', '--kit=ranged', '--out=.practice/stage', '--bank-x=3094', '--bank-z=3491'])).toEqual({
+        kitArg: 'ranged',
+        cap: undefined,
+        outArg: '.practice/stage',
+        bankX: 3094,
+        bankZ: 3491,
+        positional: ['Donor', 'Holder'],
+    });
 });
 
 test('progression catalog and live work gate admit ranged-specialist across Ranged 1..98', () => {
@@ -249,4 +338,51 @@ test('observedSupplies and validateSupplies round-trip for RANGED_SPECIALIST_KIT
         })),
     };
     expect(() => validateSupplies(manifest, context, observed, ITEMS, ['Helper', 'Moneyshot'], now, ref => refs.get(ref.path), 'shaftshooter')).not.toThrow();
+
+    const liveLedger = JSON.stringify({
+        tick: 120,
+        from: 'Moneyshot',
+        to: 'shaftshooter',
+        fromItems: RANGED_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
+        toItems: [],
+    });
+    const liveObserved = observedSupplies(liveLedger + '\n', 'shaftshooter', ITEMS);
+    expect(liveObserved).toEqual(kitRequirements(RANGED_SPECIALIST_LIVE_KIT));
+
+    const livePlan = resolveSupplierKitPlan('ranged-live');
+    const liveRefs = new Map<string, any>([
+        ['bank', { name: 'Moneyshot', server: 'rs-sdk-demo.fly.dev', bankAt: now - 1000, bank: RANGED_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })) }],
+        ...livePlan.legs.map((leg, idx) => [
+            `delivery-leg${idx + 1}`,
+            buildLegDeliveryReceipt({
+                kitName: livePlan.name,
+                leg: idx + 1,
+                totalLegs: livePlan.legs.length,
+                server: 'rs-sdk-demo.fly.dev',
+                from: 'Helper',
+                to: 'Moneyshot',
+                at: now - 2000 + idx * 100,
+                before: [],
+                after: leg.kit.map(k => ({ id: k.id, count: k.count })),
+                kit: leg.kit,
+            }),
+        ] as const),
+    ]);
+    const liveManifest = {
+        version: 2,
+        context,
+        at: now - 1000,
+        allocations: livePlan.legs.flatMap((leg, idx) =>
+            leg.kit.map(item => ({
+                item: item.name,
+                itemId: item.id,
+                count: item.count,
+                holder: 'Moneyshot',
+                recipient: 'shaftshooter',
+                bank: { path: 'bank' },
+                delivery: { path: `delivery-leg${idx + 1}` },
+            })),
+        ),
+    };
+    expect(() => validateSupplies(liveManifest, context, liveObserved, ITEMS, ['Helper', 'Moneyshot'], now, ref => liveRefs.get(ref.path), 'shaftshooter')).not.toThrow();
 });

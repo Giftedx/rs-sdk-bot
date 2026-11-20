@@ -9,8 +9,17 @@ import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { goTo, sessionWalker, walkPath } from '../packages/core/src/walk';
 import { findLocBy, ITEM_IDS, loadItemCatalog, playerPos } from './fast-skills-lib';
 import { PRAYER_BONES_NEEDED, PRAYER_SUPPLY_BILL } from './prayer-specialist';
+import {
+    EDGEVILLE_SUPPLIER_STAND,
+    RANGED_SPECIALIST_KIT,
+    RANGED_SPECIALIST_LIVE_KIT,
+    RANGED_SPECIALIST_MSB_KIT,
+    variantTrades,
+} from './ranged-specialist';
 import { BODY_ALTAR_STAND, BODY_RUINS, EDGEVILLE_BANK, RUNECRAFT_SUPPLY_BILL } from './runecraft-specialist';
 import { SMITHING_RUNNER_QUEUE, SMITHING_SUPPLY_BILL, VARROCK_WEST_ANVIL, VARROCK_WEST_BANK } from './smithing-specialist';
+
+export { EDGEVILLE_BANK };
 
 export interface KitSpecItem {
     readonly id: number;
@@ -100,6 +109,9 @@ export const RUNECRAFT_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(RUNECR
 
 export const SPECIALIST_KITS = {
     attack: ATTACK_SPECIALIST_KIT,
+    ranged: RANGED_SPECIALIST_KIT,
+    'ranged-msb': RANGED_SPECIALIST_MSB_KIT,
+    'ranged-live': RANGED_SPECIALIST_LIVE_KIT,
     fletching: FLETCHING_SPECIALIST_KIT,
     fishing: FISHING_SPECIALIST_KIT,
     mining: MINING_SPECIALIST_KIT,
@@ -167,6 +179,102 @@ export function resolveBaseId(id: number): number {
 export const LUMBRIDGE_HANDOFF = { x: 3222, z: 3222, level: 0 } as const;
 export const DEFAULT_STAGE_BANK = { x: 3092, z: 3243, level: 0 } as const;
 const ACCOUNT_RE = /^[A-Za-z0-9_ -]{1,12}$/;
+
+export interface SupplierTradeLeg {
+    readonly kit: readonly KitSpecItem[];
+    readonly handoff: { readonly x: number; readonly z: number; readonly level: number };
+    readonly bank: { readonly x: number; readonly z: number; readonly level: number };
+}
+
+export interface SupplierKitPlan {
+    readonly name: SupplierKitName;
+    readonly legs: readonly SupplierTradeLeg[];
+    readonly combined: readonly KitSpecItem[];
+}
+
+export function resolveSupplierKitPlan(kitName: string | undefined = process.env.SUPPLIER_KIT): SupplierKitPlan {
+    const raw = (kitName ?? 'attack').trim().toLowerCase() || 'attack';
+    const rangedVariant = raw === 'ranged' || raw === 'ranged-knives' ? 'knives'
+        : raw === 'ranged-msb' ? 'msb'
+        : raw === 'ranged-live' ? 'live'
+        : null;
+    if (rangedVariant) {
+        const name: SupplierKitName = rangedVariant === 'knives' ? 'ranged' : rangedVariant === 'msb' ? 'ranged-msb' : 'ranged-live';
+        const { trade1, trade2 } = variantTrades(rangedVariant);
+        return {
+            name,
+            legs: [
+                { kit: trade1, handoff: LUMBRIDGE_HANDOFF, bank: DEFAULT_STAGE_BANK },
+                { kit: trade2, handoff: EDGEVILLE_SUPPLIER_STAND, bank: EDGEVILLE_BANK },
+            ],
+            combined: SPECIALIST_KITS[name],
+        };
+    }
+    if (raw in SPECIALIST_KITS) {
+        const name = raw as SupplierKitName;
+        const kit = SPECIALIST_KITS[name];
+        return {
+            name,
+            legs: [{ kit, handoff: LUMBRIDGE_HANDOFF, bank: DEFAULT_STAGE_BANK }],
+            combined: kit,
+        };
+    }
+    throw Error(`specialist-supplier: unknown kit "${kitName}" (expected ${Object.keys(SPECIALIST_KITS).join('|')})`);
+}
+
+export function buildLegDeliveryReceipt(o: {
+    kitName: SupplierKitName;
+    leg: number;
+    totalLegs: number;
+    server: string;
+    from: string;
+    to: string;
+    at: number;
+    before: readonly { id: number; count: number }[];
+    after: readonly { id: number; count: number }[];
+    kit: readonly KitSpecItem[];
+    legs?: readonly string[];
+}) {
+    return {
+        ok: true,
+        observed: true,
+        kit: o.kitName,
+        leg: o.leg,
+        totalLegs: o.totalLegs,
+        ...(o.legs ? { legs: o.legs } : {}),
+        server: o.server,
+        from: o.from,
+        to: o.to,
+        at: o.at,
+        before: o.before.map(i => ({ id: i.id, count: i.count })),
+        after: o.after.map(i => ({ id: i.id, count: i.count })),
+        items: o.kit.map(k => ({ id: k.id, count: k.count })),
+    };
+}
+
+export function parseSupplierCliArgs(args: readonly string[]): {
+    kitArg?: string;
+    cap?: number;
+    outArg?: string;
+    bankX?: number;
+    bankZ?: number;
+    positional: string[];
+} {
+    const kitArg = args.find(a => a.startsWith('--kit='))?.slice(6);
+    const outArg = args.find(a => a.startsWith('--out='))?.slice(6);
+    const bxRaw = args.find(a => a.startsWith('--bank-x='))?.slice(9);
+    const bzRaw = args.find(a => a.startsWith('--bank-z='))?.slice(9);
+    const positional = args.filter(a => !a.startsWith('--'));
+    const capCandidate = positional.length >= 3 && /^\d+$/.test(positional[2]!) ? Number(positional[2]) : undefined;
+    return {
+        kitArg,
+        cap: capCandidate,
+        outArg,
+        bankX: bxRaw !== undefined ? Number(bxRaw) : undefined,
+        bankZ: bzRaw !== undefined ? Number(bzRaw) : undefined,
+        positional,
+    };
+}
 
 export const escapeRe = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 export const exactNameRe = (name: string): RegExp => new RegExp('^' + escapeRe(name) + '$', 'i');
@@ -330,44 +438,89 @@ async function exitPortal(s: Session, stop: () => boolean, inside: () => boolean
 }
 
 async function runServe(args: string[]): Promise<void> {
-    const kitName = parseKitArg(args);
-    const bx = Number(args.find(a => a.startsWith('--bank-x='))?.slice(9) ?? DEFAULT_STAGE_BANK.x);
-    const bz = Number(args.find(a => a.startsWith('--bank-z='))?.slice(9) ?? DEFAULT_STAGE_BANK.z);
-    const positional = args.filter(a => !a.startsWith('--'));
-    const holder = assertSupplierAccount(positional[0] ?? '', 'holder');
-    const specialist = positional[1] ?? '';
-    if (!specialist || !ACCOUNT_RE.test(specialist)) throw Error(`usage: specialist-supplier.ts <holder> <specialist> [--kit=${Object.keys(SPECIALIST_KITS).join('|')}] [cap]`);
-    const capArg = positional.slice(2).find(a => /^\d+$/.test(a));
-    const CAP = Number(capArg ?? process.env.CAP ?? 4000);
+    const parsed = parseSupplierCliArgs(args);
+    const holder = assertSupplierAccount(parsed.positional[0] ?? '', 'holder');
+    const specialist = parsed.positional[1] ?? '';
+    if (!specialist || !ACCOUNT_RE.test(specialist)) {
+        throw Error(`usage: specialist-supplier.ts <holder> <specialist> [--kit=${Object.keys(SPECIALIST_KITS).join('|')}] [cap]`);
+    }
+    const plan = resolveSupplierKitPlan(parsed.kitArg ?? process.env.SUPPLIER_KIT);
+    const CAP = Number(parsed.cap ?? process.env.CAP ?? (plan.legs.length > 1 ? 6000 : 4000));
     if (!Number.isSafeInteger(CAP) || CAP < 50 || CAP > 50000) throw Error(`invalid CAP: ${CAP}`);
     const root = resolve(import.meta.dir, '..');
     const serverHost = (readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', holder, 'bot.env'), 'utf8').match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
     if (!serverHost) throw Error(`missing SERVER in bot.env for ${holder}`);
     const stopFile = () => existsSync(join(root, '.practice', `stop-${holder}`)) || (!isLocalServer(serverHost) && existsSync(join(root, '.practice', 'stop-swarm')));
-    const bankTile = { x: bx, z: bz, level: 0 };
+    const bankTile = {
+        x: parsed.bankX ?? DEFAULT_STAGE_BANK.x,
+        z: parsed.bankZ ?? DEFAULT_STAGE_BANK.z,
+        level: 0,
+    };
 
     const s = await openBot(holder);
     const stop = () => stopFile();
     try {
         await waitUntil(s, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 });
         const t0 = s.tick();
+        const kitName = plan.name;
         if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'runecraft') {
-            const kit = resolveSupplierKit(kitName);
-            if (!hasExactKit(s.sdk.getInventory(), kit)) {
-                await withdrawExactKit(s, kit, bankTile, stop);
+            const peerRe = exactNameRe(specialist);
+            for (let legIdx = 0; legIdx < plan.legs.length; legIdx++) {
+                const leg = plan.legs[legIdx]!;
+                const legBank = legIdx === 0 && (parsed.bankX !== undefined || parsed.bankZ !== undefined) ? bankTile : leg.bank;
+                if (!hasExactKit(s.sdk.getInventory(), leg.kit)) {
+                    await withdrawExactKit(s, leg.kit, legBank, stop);
+                }
+                await moveTo(s, leg.handoff, 2, stop);
+                const p = s.sdk.getState()!.player!;
+                console.log('SUPPLIER_READY ' + JSON.stringify({
+                    holder,
+                    specialist,
+                    kit: plan.name,
+                    trade: legIdx + 1,
+                    totalTrades: plan.legs.length,
+                    server: serverHost,
+                    at: { x: p.worldX, z: p.worldZ, level: p.level },
+                    slots: s.sdk.getInventory().length,
+                }));
+
+                const giveList = leg.kit.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
+                let handoffDone = false;
+                while (!stop() && s.tick() - t0 < CAP && !handoffDone) {
+                    const served = await s.bot.serveTrades({
+                        from: peerRe,
+                        give: giveList,
+                        accept: offer => offer.length === 0,
+                        maxTrades: 1,
+                        tradeTimeout: 60_000,
+                        timeout: 30_000,
+                        until: () => stop() || s.tick() - t0 >= CAP,
+                    });
+                    const done = served.trades.find(t => t.success && leg.kit.every(k => countById(t.gave, k.id) === k.count) && t.received.length === 0);
+                    if (done) {
+                        handoffDone = true;
+                        console.log('SUPPLIER_HANDOFF ' + JSON.stringify({
+                            holder,
+                            specialist,
+                            kit: plan.name,
+                            trade: legIdx + 1,
+                            totalTrades: plan.legs.length,
+                            tick: s.tick() - t0,
+                            items: leg.kit.map(k => ({ id: k.id, count: k.count })),
+                        }));
+                        break;
+                    }
+                    if (served.trades.length > 0) {
+                        console.log('WARN supplier trade retry: ' + JSON.stringify(served.trades.map(t => ({ success: t.success, reason: t.reason, message: t.message }))));
+                    }
+                    await waitTicks(s, 1);
+                }
+                if (!handoffDone) {
+                    await finish([s], false, `supplier did not complete ${plan.name} trade ${legIdx + 1}/${plan.legs.length} within ${CAP} ticks`);
+                    return;
+                }
             }
-            await moveTo(s, LUMBRIDGE_HANDOFF, 2, stop);
-            const p = s.sdk.getState()!.player!;
-            console.log('SUPPLIER_READY ' + JSON.stringify({
-                holder, specialist, server: serverHost, kit: kitName,
-                at: { x: p.worldX, z: p.worldZ, level: p.level },
-                slots: s.sdk.getInventory().length,
-            }));
-            const handoffDone = await serveOneBatch(s, specialist, kit, t0, CAP, stop);
-            if (handoffDone) {
-                console.log('SUPPLIER_HANDOFF ' + JSON.stringify({ holder, specialist, tick: s.tick() - t0, items: kit.map(k => ({ id: k.id, count: k.count })) }));
-            }
-            await finish([s], handoffDone, handoffDone ? `supplied ${specialist} in ${s.tick() - t0} ticks` : `supplier did not complete handoff within ${CAP} ticks`);
+            await finish([s], true, `supplied ${specialist} (${plan.name}, ${plan.legs.length} trade(s)) in ${s.tick() - t0} ticks`);
             return;
         }
 
@@ -469,25 +622,24 @@ async function runServe(args: string[]): Promise<void> {
 }
 
 export async function runStage(args: string[]): Promise<void> {
-    const kitName = parseKitArg(args);
-    const rest = args.filter(a => a !== '--stage');
-    const outArg = rest.find(a => a.startsWith('--out='))?.slice(6);
-    const bx = Number(rest.find(a => a.startsWith('--bank-x='))?.slice(9) ?? DEFAULT_STAGE_BANK.x);
-    const bz = Number(rest.find(a => a.startsWith('--bank-z='))?.slice(9) ?? DEFAULT_STAGE_BANK.z);
-    const positional = rest.filter(a => !a.startsWith('--'));
-    const donor = assertSupplierAccount(positional[0] ?? '', 'donor');
-    const holder = assertSupplierAccount(positional[1] ?? '', 'holder');
+    const parsed = parseSupplierCliArgs(args.filter(a => a !== '--stage'));
+    const bx = parsed.bankX ?? DEFAULT_STAGE_BANK.x;
+    const bz = parsed.bankZ ?? DEFAULT_STAGE_BANK.z;
+    const donor = assertSupplierAccount(parsed.positional[0] ?? '', 'donor');
+    const holder = assertSupplierAccount(parsed.positional[1] ?? '', 'holder');
     if (donor.toLowerCase() === holder.toLowerCase()) throw Error('donor and holder must be different accounts');
-    if (!outArg) throw Error(`usage: specialist-supplier.ts --stage <donor> <holder> [--kit=${Object.keys(SPECIALIST_KITS).join('|')}] --out=<.practice-dir>`);
+    if (!parsed.outArg) {
+        throw Error(`usage: specialist-supplier.ts --stage <donor> <holder> [--kit=${Object.keys(SPECIALIST_KITS).join('|')}] --out=<.practice-dir>`);
+    }
+    const plan = resolveSupplierKitPlan(parsed.kitArg ?? process.env.SUPPLIER_KIT);
+    const allowNoted = plan.legs.length === 1 && kitSlotTotal(plan.combined) > 28;
     const root = resolve(import.meta.dir, '..');
-    const outDir = resolve(root, outArg);
+    const outDir = resolve(root, parsed.outArg);
     const relOut = relative(root, outDir).replaceAll('\\', '/');
     if (!relOut.startsWith('.practice/') || relOut.includes('..')) throw Error('--out must be inside .practice/');
     mkdirSync(outDir, { recursive: true });
 
     const bankTile = { x: bx, z: bz, level: 0 };
-    const kit = resolveSupplierKit(kitName);
-    const allowNoted = kitSlotTotal(kit) > 28;
     const server = (readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', holder, 'bot.env'), 'utf8').match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
     const donorSession = await openBot(donor);
     const holderSession = await openBot(holder);
@@ -505,71 +657,84 @@ export async function runStage(args: string[]): Promise<void> {
         await depositAllInventory(holderSession);
         await holderSession.bot.closeBank();
         await waitUntil(holderSession, () => !holderSession.sdk.getState()?.bank?.isOpen, { timeoutTicks: 8 });
-        const beforeInv = holderSession.sdk.getInventory().map(i => ({ id: i.id, baseId: resolveBaseId(i.id), count: i.count }));
-
-        if (!hasExactKit(donorSession.sdk.getInventory(), kit)) {
-            await withdrawExactKit(donorSession, kit, bankTile, stop, allowNoted);
-        }
-
-        const giveList = kit.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
-        const allowed = new Set(kit.map(k => k.id));
-        const [served, given] = await Promise.all([
-            holderSession.bot.serveTrades({
-                from: exactNameRe(donor),
-                accept: offer => offer.every(o => allowed.has(resolveBaseId(o.id))) && kit.every(k => countById(offer, k.id) === k.count),
-                maxTrades: 1,
-                timeout: 60_000,
-            }),
-            donorSession.bot.trade(exactNameRe(holder), {
-                give: giveList,
-                accept: offer => offer.length === 0,
-                requestTimeout: 20_000,
-                timeout: 60_000,
-            }),
-        ]);
-        const rx = served.trades.find(t => t.success);
-        if (!given.success || !rx || !kit.every(k => countById(rx.received, k.id) === k.count)) {
-            throw Error(`stage transfer mismatch: given=${given.success} rx=${!!rx}`);
-        }
-        await waitUntil(holderSession, () => hasExactKit(holderSession.sdk.getInventory(), kit), { timeoutTicks: 10 });
-        const afterInv = holderSession.sdk.getInventory().map(i => ({ id: i.id, baseId: resolveBaseId(i.id), count: i.count }));
-        const transferAt = Date.now();
-        for (const spec of kit) {
-            if (countById(afterInv, spec.id) - countById(beforeInv, spec.id) !== spec.count) {
-                throw Error(`recipient delta mismatch for ${spec.name}`);
+        let lastTransferAt = Date.now();
+        const legFiles: string[] = [];
+        const legReceipts: ReturnType<typeof buildLegDeliveryReceipt>[] = [];
+        for (let legIdx = 0; legIdx < plan.legs.length; legIdx++) {
+            const leg = plan.legs[legIdx]!;
+            const legBefore = holderSession.sdk.getInventory().map(i => ({ id: resolveBaseId(i.id), count: i.count }));
+            if (!hasExactKit(donorSession.sdk.getInventory(), leg.kit)) {
+                await withdrawExactKit(donorSession, leg.kit, bankTile, stop, allowNoted);
             }
+            const giveList = leg.kit.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
+            const allowed = new Set(leg.kit.map(k => k.id));
+            const [served, given] = await Promise.all([
+                holderSession.bot.serveTrades({
+                    from: exactNameRe(donor),
+                    accept: offer => offer.every(o => allowed.has(resolveBaseId(o.id))) && leg.kit.every(k => countById(offer, k.id) === k.count),
+                    maxTrades: 1,
+                    timeout: 60_000,
+                }),
+                donorSession.bot.trade(exactNameRe(holder), {
+                    give: giveList,
+                    accept: offer => offer.length === 0,
+                    requestTimeout: 20_000,
+                    timeout: 60_000,
+                }),
+            ]);
+            const rx = served.trades.find(t => t.success);
+            if (!given.success || !rx || !leg.kit.every(k => countById(rx.received, k.id) === k.count)) {
+                throw Error(`stage transfer mismatch (${plan.name} leg ${legIdx + 1}): given=${given.success} rx=${!!rx}`);
+            }
+            await waitUntil(holderSession, () => hasExactKit(holderSession.sdk.getInventory(), leg.kit), { timeoutTicks: 10 });
+            const legAfter = holderSession.sdk.getInventory().map(i => ({ id: resolveBaseId(i.id), count: i.count }));
+            lastTransferAt = Date.now();
+            for (const spec of leg.kit) {
+                if (countById(legAfter, spec.id) - countById(legBefore, spec.id) !== spec.count) {
+                    throw Error(`recipient delta mismatch (${plan.name} leg ${legIdx + 1}) for ${spec.name}`);
+                }
+            }
+            const receipt = buildLegDeliveryReceipt({
+                kitName: plan.name,
+                leg: legIdx + 1,
+                totalLegs: plan.legs.length,
+                server,
+                from: donor,
+                to: holder,
+                at: lastTransferAt,
+                before: legBefore,
+                after: legAfter,
+                kit: leg.kit,
+            });
+            legReceipts.push(receipt);
+            if (plan.legs.length > 1) {
+                const legFile = `delivery-leg${legIdx + 1}.json`;
+                legFiles.push(legFile);
+                writeFileSync(join(outDir, legFile), JSON.stringify(receipt, null, 2) + '\n');
+            }
+            await openFreshBank(holderSession);
+            await depositAllInventory(holderSession);
+            await holderSession.bot.closeBank();
+            await waitUntil(holderSession, () => !holderSession.sdk.getState()?.bank?.isOpen, { timeoutTicks: 8 });
         }
 
-        await openFreshBank(holderSession);
-        await depositAllInventory(holderSession);
         const bankObs = await openFreshBank(holderSession);
         await holderSession.bot.closeBank();
         const bankAt = bankObs.at;
-        if (bankAt < transferAt) throw Error(`bank observation (${bankAt}) older than transfer (${transferAt})`);
-        if (!hasAtLeastKit(bankObs.items, kit)) throw Error('holder final bank observation lacks full kit');
+        if (bankAt < lastTransferAt) throw Error(`bank observation (${bankAt}) older than transfer (${lastTransferAt})`);
+        if (!hasAtLeastKit(bankObs.items, plan.combined)) throw Error(`holder final bank observation lacks full ${plan.name} kit`);
 
-        const items = kit.map(k => ({ id: k.id, count: k.count }));
-        const delivery = {
-            ok: true,
-            observed: true,
-            server,
-            from: donor,
-            to: holder,
-            at: transferAt,
-            before: beforeInv,
-            after: afterInv,
-            items,
-        };
+        const primaryDelivery = plan.legs.length > 1 ? { ...legReceipts[0]!, legs: legFiles } : legReceipts[0]!;
         const bank = {
             name: holder,
             server,
             bankAt,
             bank: bankObs.items.map(i => ({ id: i.id, count: i.count })),
         };
-        writeFileSync(join(outDir, 'delivery.json'), JSON.stringify(delivery, null, 2) + '\n');
+        writeFileSync(join(outDir, 'delivery.json'), JSON.stringify(primaryDelivery, null, 2) + '\n');
         writeFileSync(join(outDir, 'bank.json'), JSON.stringify(bank, null, 2) + '\n');
-        console.log('SPECIALIST_STAGED ' + JSON.stringify({ out: relOut, kit: kitName, donor, holder, transferAt, bankAt }));
-        await finish([donorSession, holderSession], true, `staged ${kitName} kit from ${donor} to ${holder} into ${relOut}`);
+        console.log('SPECIALIST_STAGED ' + JSON.stringify({ out: relOut, kit: plan.name, legs: legFiles, donor, holder, transferAt: lastTransferAt, bankAt }));
+        await finish([donorSession, holderSession], true, `staged ${plan.name} kit from ${donor} to ${holder} into ${relOut}`);
     } catch (e) {
         await finish([donorSession, holderSession], false, String(e));
     }
