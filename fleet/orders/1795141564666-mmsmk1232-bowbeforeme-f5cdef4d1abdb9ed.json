@@ -1,0 +1,17 @@
+{
+ "id": "1795141564666-mmsmk1232-bowbeforeme-f5cdef4d1abdb9ed",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmsmk1232",
+ "to": "BowBeforeMe",
+ "item": "Steel arrowtips",
+ "count": 150,
+ "start": 1795141564666,
+ "end": 1795143964666,
+ "extra": [
+  {
+   "item": "Mithril arrowtips",
+   "count": 240
+  }
+ ],
+ "takerWaits": true
+}

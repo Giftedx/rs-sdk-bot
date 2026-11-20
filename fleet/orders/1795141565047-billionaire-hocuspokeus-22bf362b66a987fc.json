@@ -1,0 +1,23 @@
+{
+ "id": "1795141565047-billionaire-hocuspokeus-22bf362b66a987fc",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Billionaire",
+ "to": "Hocuspokeus",
+ "item": "Rune arrowtips",
+ "count": 500,
+ "start": 1795141565047,
+ "end": 1795143965047,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
