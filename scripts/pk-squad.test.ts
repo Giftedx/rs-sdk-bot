@@ -1,8 +1,9 @@
 import { describe, expect, spyOn, test } from 'bun:test';
 import * as walking from '../packages/core/src/walk';
 import * as pk from './pk';
+import * as pkGang from './pk-gang';
 import { maxDeathsOf } from './pk-hunt';
-import { bankNear, isKillLine, leaveWilderness, openSquad, outTripDue, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
+import { activeCentroid, bankNear, createSquadFocus, isKillLine, leaveWilderness, marchPlan, needsSingleWayMove, openSquad, outTripDue, pickSquadFocus, rescue, rescueDropped, shouldFollowReplan, shouldSwitchFocus, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
 import { hold, SQUAD_OPTS, squadEnd, squadFightOverrides } from './pk-squad';
 import { sparOptions } from './pk-spar';
@@ -258,6 +259,8 @@ test('pickSquadFocus prioritizes stunned targets, skips single-way PJ fights, an
     expect(pickSquadFocus({ view, targets, health: p => hp[p.index]!, inMulti: true, stunned: new Set(['sugma']) })?.name).toBe('Sugma');
 
     expect(squadFallbackPlan({ z: 3640, hp: 50, maxHp: 99, foodCount: 4, enemyCount: 4, allyCount: 1, inMulti: true, hasGlory: true, hasTeleport: true })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3640, hp: 73, maxHp: 99, foodCount: 4, enemyCount: 4, allyCount: 2, inMulti: true, hasGlory: false, hasTeleport: true })).toBe('teleport');
+    expect(squadFallbackPlan({ z: 3640, hp: 99, maxHp: 99, foodCount: 4, enemyCount: 3, allyCount: 0, inMulti: true, hasGlory: false, hasTeleport: true })).toBe('teleport');
     expect(squadFallbackPlan({ z: 3640, hp: 50, maxHp: 99, foodCount: 0, enemyCount: 1, allyCount: 0, inMulti: false, hasGlory: false, hasTeleport: true })).toBe('teleport');
     expect(squadFallbackPlan({ z: 3880, hp: 50, maxHp: 99, foodCount: 0, enemyCount: 3, allyCount: 0, inMulti: true, hasGlory: true, hasTeleport: true })).toBe('run');
     expect(squadFallbackPlan({ z: 3640, hp: 90, maxHp: 99, foodCount: 6, enemyCount: 2, allyCount: 1, inMulti: true, hasGlory: true, hasTeleport: true })).toBe('hold');
@@ -629,4 +632,204 @@ test('the early check of the members options: the defaults pass with an empty ki
     expect(() => sparOptions('gang-hunter', JSON.stringify(SQUAD_OPTS), {}, 1200)).not.toThrow();
     expect(() => sparOptions('no-such-profile', JSON.stringify(SQUAD_OPTS), {}, 1200)).toThrow('unknown profile');
     expect(() => sparOptions('gang-hunter', '{bad', {}, 1200)).toThrow();
+});
+
+test('activeCentroid excludes dropped, tripping, and finished members and prefers Wilderness members when marching north', () => {
+    const members = [
+        { name: 'UnderMyKilt', at: { x: 2888, z: 3345 } },
+        { name: 'TrouserSnake', at: { x: 3070, z: 3560 } },
+        { name: 'TheFullMonty', at: { x: 3072, z: 3562 } },
+        { name: 'PocketPool', at: { x: 3185, z: 3436 } },
+    ];
+    expect(activeCentroid(members, new Set(['UnderMyKilt', 'PocketPool']))).toEqual({ x: 3071, z: 3561 });
+    expect(activeCentroid(members, new Set(['UnderMyKilt']), true)).toEqual({ x: 3071, z: 3561 });
+    expect(activeCentroid(members, new Set(members.map(m => m.name)))).toBeNull();
+});
+
+test('marchPlan never generates intermediate straight-line waypoints south of the Wilderness ditch', () => {
+    const plan = marchPlan({ x: 2888, z: 3345 }, { x: 3067, z: 3640 }, 12);
+    expect(plan[0]!.z).toBe(3519);
+    expect(plan.every(step => step.z >= 3519)).toBe(true);
+    expect(plan[plan.length - 1]).toEqual({ x: 3067, z: 3640 });
+    // Single-way Wilderness target from far mainland first pathfinds to the ditch north of target x.
+    const singlePlan = marchPlan({ x: 2617, z: 3308 }, { x: 3090, z: 3560 }, 12);
+    expect(singlePlan[0]).toEqual({ x: 3090, z: 3519 });
+    expect(singlePlan.every(step => step.z >= 3519)).toBe(true);
+});
+
+test('shouldFollowReplan suppresses pre-rally replans and minor mid-march target jitter', () => {
+    const base = { rallied: true, routePending: true, currentAim: { x: 3067, z: 3640 }, nextTile: { x: 3071, z: 3634 }, tick: 100, lastReplanTick: -1 };
+    expect(shouldFollowReplan({ ...base, rallied: false, nextTile: { x: 3190, z: 3680 } })).toBe(false);
+    expect(shouldFollowReplan(base)).toBe(false);
+    expect(shouldFollowReplan({ ...base, nextTile: { x: 3185, z: 3679 } })).toBe(true);
+    expect(shouldFollowReplan({ ...base, nextTile: { x: 3185, z: 3679 }, tick: 115, lastReplanTick: 100 })).toBe(false);
+    expect(shouldFollowReplan({ ...base, routePending: false, nextTile: { x: 3075, z: 3640 }, tick: 120, lastReplanTick: 100 })).toBe(true);
+});
+
+test('createSquadFocus and shouldSwitchFocus pile all multi-way members onto one target and switch onto stunned/dying focus', () => {
+    const focus = createSquadFocus();
+    const targets = new Set(['goondelf', 'ligma', 'sugma']);
+    const viewA = [
+        { name: 'Goondelf', index: 1, distance: 1, x: 3067, z: 3640, combatLevel: 126 },
+        { name: 'Ligma', index: 2, distance: 5, x: 3069, z: 3640, combatLevel: 125 },
+    ];
+    const viewB = [
+        { name: 'Goondelf', index: 1, distance: 6, x: 3067, z: 3640, combatLevel: 126 },
+        { name: 'Ligma', index: 2, distance: 1, x: 3069, z: 3640, combatLevel: 125 },
+    ];
+    const hp: Record<number, number> = { 1: 1.0, 2: 1.0 };
+    expect(focus.pick({ view: viewA, targets, health: p => hp[p.index]!, inMulti: true, now: 10 })?.name).toBe('Goondelf');
+    // Second bot nearer Ligma still piles onto Goondelf at equal HP.
+    expect(focus.pick({ view: viewB, targets, health: p => hp[p.index]!, inMulti: true, now: 10 })?.name).toBe('Goondelf');
+    // Once Ligma drops to stunned or significantly lower HP, focus shifts and multi-way teammates yield to finish it.
+    hp[2] = 0.35;
+    expect(focus.pick({ view: viewA, targets, health: p => hp[p.index]!, inMulti: true, stunned: new Set(['ligma']), now: 15 })?.name).toBe('Ligma');
+    expect(shouldSwitchFocus({ inMulti: true, currentName: 'Goondelf', currentHp: 0.9, focusName: 'ligma', focusHp: 0.35, focusStunned: true, elapsedTicks: 4 })).toBe(true);
+    expect(shouldSwitchFocus({ inMulti: true, currentName: 'Goondelf', currentHp: 0.2, focusName: 'ligma', focusHp: 0.35, focusStunned: true, elapsedTicks: 4 })).toBe(false);
+    focus.clear('Ligma');
+    expect(focus.active(15)).toBeUndefined();
+});
+
+test('rescue casts an available escape teleport on tick 0 before eating so multi-way retreats do not stall', async () => {
+    const actions: string[] = [];
+    let z = 3600, ticks = 0;
+    const inv = [
+        { id: 563, count: 2, slot: 0, optionsWithIndex: [] },
+        { id: 556, count: 10, slot: 1, optionsWithIndex: [] },
+        { id: 385, count: 1, slot: 2, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    const mockSess: any = {
+        name: 'Escaper',
+        tick: () => ticks,
+        ended: new Promise(() => {}),
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp: 45, maxHp: 99 },
+                inventory: inv,
+                skills: [{ name: 'Magic', level: 45 }],
+            }),
+            getInventory: () => inv,
+            getEquipment: () => [],
+        },
+        direct: async (action: any) => {
+            actions.push(`${action.type}:${action.componentId ?? action.slot}`);
+            if (action.type === 'clickComponent' && action.componentId === 1174) z = 3480;
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => { ticks++; return true; });
+    try {
+        const res = await rescue(mockSess, () => {}, () => false, false);
+        expect(res).toBe(mockSess);
+        expect(actions).toEqual(['useInventoryItem:2', 'clickComponent:1174']);
+    } finally {
+        spyTick.mockRestore();
+    }
+});
+
+test('needsSingleWayMove checks single-way status and exact destination tile', () => {
+    expect(needsSingleWayMove({ worldX: 3071, worldZ: 3600 }, { x: 3070, z: 3599 })).toBe(true);
+    expect(needsSingleWayMove({ worldX: 3070, worldZ: 3599 }, { x: 3070, z: 3599 })).toBe(false);
+    expect(needsSingleWayMove({ worldX: 3072, worldZ: 3603 }, { x: 3070, z: 3599 })).toBe(false);
+    expect(needsSingleWayMove({ worldX: 3040, worldZ: 3600 }, { x: 3040, z: 3600 })).toBe(false);
+});
+
+test('hold does not stop fightPlayer for single-way once standing on single-way tile and holds ranged without chase against multi-way targets', async () => {
+    const w = squadWorld();
+    w.s.tick = () => 0;
+    w.player.worldX = 3071;
+    w.player.worldZ = 3600;
+    w.s.sdk.getState().nearbyPlayers = [{ index: 5, name: 'Goondelf', combatLevel: 126, x: 3070, z: 3600, distance: 1 }];
+    const decided: { actions: any[] } = { actions: [{ kind: 'single-way', to: { x: 3070, z: 3599 }, reason: 'team' }] };
+    const threats: any = { act: true, acted: () => {}, step: () => ({ classes: [], interlopers: [], actions: decided.actions }) };
+    const stops: boolean[] = [];
+    let seenOpts: any = null;
+    let t = 0;
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_d, path) => {
+            w.player.worldX = path[0]!.x;
+            w.player.worldZ = path[0]!.z;
+            return { ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any;
+        }),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { t++; return true; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+        spyOn(pk, 'fightPlayer').mockImplementation(async (_s: any, _name: string, opts: any) => {
+            seenOpts = opts;
+            stops.push(opts.stop());
+            w.player.worldX = 3071;
+            w.player.worldZ = 3600;
+            stops.push(opts.stop());
+            decided.actions = [];
+            w.s.sdk.getState().nearbyPlayers = [
+                { index: 5, name: 'Goondelf', combatLevel: 126, x: 3070, z: 3600, distance: 1 },
+                { index: 6, name: 'Enemy2', combatLevel: 126, x: 3070, z: 3600, distance: 1 },
+                { index: 7, name: 'Enemy3', combatLevel: 126, x: 3070, z: 3600, distance: 1 },
+                { index: 8, name: 'Enemy4', combatLevel: 126, x: 3070, z: 3600, distance: 1 },
+                { index: 9, name: 'Enemy5', combatLevel: 126, x: 3070, z: 3600, distance: 1 },
+            ];
+            w.player.hp = Math.floor(w.player.maxHp * 0.65);
+            stops.push(opts.stop());
+            t = 1000;
+            return { outcome: 'timeout' } as any;
+        }),
+    ];
+    try {
+        await hold(w.s, {
+            targets: new Set(['goondelf']), post: { x: 3071, z: 3600 },
+            options: { kit: { ranged: [861], melee: [1215] }, rotation: ['ranged', 'melee'], chase: true, spec: { kit: [1215], bar: 'dds', cost: 250, below: 1 } },
+            allies: ['Ally1'], pickup: false, trips: 3, deadline: 400, stopped: () => t >= 500, killsLeft: () => true, log: () => {}, threats,
+        });
+        expect(stops).toEqual([false, true, true]);
+        expect(seenOpts.rotation).toEqual(['ranged']);
+        expect(seenOpts.chase).toBe(false);
+        expect(seenOpts.spec).toBeUndefined();
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+});
+
+test('hold keeps singleUntil extended past 120 ticks while dangerous interlopers remain and skips risky pickup', async () => {
+    const w = squadWorld();
+    let t = 0;
+    w.s.tick = () => t;
+    w.player.worldX = 3071;
+    w.player.worldZ = 3600;
+    w.s.sdk.getState().nearbyPlayers = [{ index: 5, name: 'Mage1', combatLevel: 126, x: 3070, z: 3600, distance: 1 }];
+    const decided = { actions: [{ kind: 'single-way', to: { x: 3070, z: 3599 }, reason: 'team' }] as any[], interlopers: ['Mage1'] };
+    const threats: any = { act: true, acted: () => {}, step: () => ({ classes: [], interlopers: decided.interlopers, actions: decided.actions }) };
+    const fightOptsList: any[] = [];
+    let pickups = 0;
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_d, path) => {
+            w.player.worldX = path[0]!.x;
+            w.player.worldZ = path[0]!.z;
+            return { ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any;
+        }),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { t++; return true; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+        spyOn(pkGang, 'pickUp').mockImplementation(async () => { pickups++; return {}; }),
+        spyOn(pk, 'fightPlayer').mockImplementation(async (_s: any, _name: string, opts: any) => {
+            fightOptsList.push({ rotation: opts.rotation, chase: opts.chase });
+            if (fightOptsList.length === 1) {
+                t = 130;
+                decided.actions = [];
+                decided.interlopers = ['Mage2'];
+                w.s.sdk.getState().nearbyPlayers = [{ index: 6, name: 'Mage2', combatLevel: 126, x: 3070, z: 3600, distance: 1 }];
+                return { outcome: 'kill' } as any;
+            }
+            t = 1000;
+            return { outcome: 'timeout' } as any;
+        }),
+    ];
+    try {
+        await hold(w.s, {
+            targets: new Set(['goondelf']), post: { x: 3071, z: 3600 },
+            options: { kit: { ranged: [861], melee: [1215] }, rotation: ['ranged', 'melee'], chase: true },
+            allies: [], pickup: true, pull: true, trips: 3, deadline: 400, stopped: () => t >= 500, killsLeft: () => true, log: () => {}, threats,
+        });
+        expect(pickups).toBe(0);
+        expect(fightOptsList).toEqual([
+            { rotation: ['ranged'], chase: false },
+            { rotation: ['ranged'], chase: false },
+        ]);
+    } finally { for (const mock of mocks) mock.mockRestore(); }
 });

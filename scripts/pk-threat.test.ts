@@ -286,3 +286,23 @@ test('with the win-chance estimate a lost fight against the squad targets alone 
     // After the cooldown (600 ticks from the act) the fight is left again.
     expect(retreatOf(w.step(700).actions)).toContain('lost fight');
 });
+
+test('acting on single-way cools single-way without blocking an escalation to retreat during cooldown', () => {
+    let multi = false;
+    const enemies = [MAGE, { ...MAGE, index: 10, name: 'Mage2' }, { ...MAGE, index: 11, name: 'Mage3' }];
+    const root = mkdtempSync(join(tmpdir(), 'threat-')); roots.push(root);
+    const a = session('Ours1', ME1, [ME2, ...enemies], [9, 10, 11]), b = session('Ours2', ME2, [ME1, ...enemies], [9, 10, 11]);
+    const w = new ThreatWatch({
+        sessions: () => [a.s, b.s], server: 'demo.example:43594', friends: new Set(['ours1', 'ours2']),
+        log: () => {}, recordRoot: root, odds: false,
+        decide: { expected: new Set(), outnumberedBy: 2, multiAt: () => true, singleWayFrom: () => multi ? null : { x: 3072, z: 3640 }, outclasses: () => false },
+    });
+    expect(w.step(10).actions.some(x => x.kind === 'single-way')).toBe(true);
+    w.acted(10);
+    // Escalate to retreat immediately when no single-way tile exists inside the 600-tick cooldown.
+    multi = true;
+    expect(retreatOf(w.step(20).actions)).toBeTruthy();
+    w.acted(20);
+    // Retreats cool down for 600 ticks once retreat is acted on.
+    expect(retreatOf(w.step(100).actions)).toBeNull();
+});
