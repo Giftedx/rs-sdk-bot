@@ -7,8 +7,9 @@
 // Random parts (handled): a railing fix rolls stat_random(crafting, 60, 150) and a fail cuts for stat_base(hp)/10, max 3
 // (railings.rs2:72-91); a cannon inspect or repair rolls stat_random(smithing, 80, 300) | stat_random(crafting, 80, 350)
 // (mcannon_broken_cannon.rs2:89-96). Each roll is retried until it lands.
-// Travel: Falador teleport to Nulodion (154 tiles) and Camelot teleport back (265 tiles), instead of 741 tiles each way.
+//   Falador teleport to Nulodion (154 tiles) and Camelot teleport back (265 tiles), or caller-provided travel hooks.
 import { openBot, finish } from '../../packages/core/src/bot';
+import type { Session } from '../../packages/core/src/inprocess';
 import { holdSessionEater } from '../../packages/core/src/sustain';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
@@ -33,20 +34,48 @@ const RAILINGS = [
     { id: 18, x: 2559, z: 3462 }, { id: 19, x: 2564, z: 3460 }, { id: 20, x: 2572, z: 3460 },
 ];
 const ITEM = { remains: 0, toolkit: 1, notes: 3, mould: 4, railing: 14, lobster: 379 };
-const MEALS = [385, 373, 379, 365, 361, 333, 329, 1891, 1893, 1895, 2309];
+const MEALS = [2301, 2303, 385, 373, 1897, 1899, 1901, 379, 365, 361, 333, 329, 1891, 1893, 1895, 2309];
 const PARTS = ['Pipe', 'Barrel', 'Axle', 'Shaft'];
 const LAWGOF = { x: 2571, z: 3463 };
 const NULODION = { x: 3011, z: 3453 };
 const LUMBRIDGE = { x: 3222, z: 3218 };
-const CAP = 3000;
-const EAT_AT = 40;
+const PROTECT_FROM_MELEE = 14;
 const TRACE = process.env.DC_TRACE === '1';
 
-const s = await openBot(process.argv[2]!);
-// A quest session has no eat guard (packages/core/src/eat-guard.ts). The hold has no release.
-holdSessionEater(s.sdk);
+export type DwarfCannonTravelCtx = {
+    s: Session;
+    walk: (label: string, pts: PathPoint[]) => Promise<void>;
+    step: (label: string, send: () => unknown, ok: () => boolean, ticks?: number, tries?: number) => Promise<void>;
+    teleport: (label: string, comp: string, x: number, z: number) => Promise<void>;
+    near: (x: number, z: number, r: number) => boolean;
+    loc: typeof LOC;
+    nulodion: typeof NULODION;
+    lawgof: typeof LAWGOF;
+};
+
+export interface DwarfCannonOptions {
+    bot?: string;
+    session?: Session;
+    cap?: number;
+    from?: number;
+    eatAt?: number;
+    stop?: () => boolean;
+    protectCaveMelee?: boolean;
+    travelToNulodion?: (ctx: DwarfCannonTravelCtx) => Promise<void>;
+    travelBackFromNulodion?: (ctx: DwarfCannonTravelCtx) => Promise<void>;
+}
+
+export async function runDwarfCannon(opts: DwarfCannonOptions = {}): Promise<{ ok: boolean; craftingXp: number; detail: string }> {
+const owned = !opts.session;
+const CAP = opts.cap ?? 3000;
+const EAT_AT = opts.eatAt ?? 40;
+const FROM = opts.from ?? Number(process.env.FROM ?? 0);
+const s = opts.session ?? await openBot(opts.bot ?? process.argv[2]!);
+// A quest session uses explicit healing thresholds. Release on exit when sharing a caller session.
+const eatHold = holdSessionEater(s.sdk);
+let off: (() => void) | undefined;
 try {
-    await waitTicks(s, 3);
+    if (owned) await waitTicks(s, 3);
     const st = (): any => s.sdk.getState();
     const pos = (): any => st()?.player;
     const inv = (): any[] => st()?.inventory ?? [];
@@ -92,7 +121,8 @@ try {
         console.log(`MILESTONE ${k} ${T()}`);
     };
 
-    const off = s.onTick(() => {
+    const halted = (): boolean => died || !!opts.stop?.();
+    off = s.onTick(() => {
         pullMessages();
         const p = pos();
         const h = hp();
@@ -126,11 +156,14 @@ try {
         return `at=${p?.worldX},${p?.worldZ},${p?.level} ticks=${T()} hpMin=${hpMin} eats=${eats} railTries=${railTries} railFails=${railFails} inspectFails=${inspectFails} repairFails=${repairFails} walkTicks=${walkTicks} died=${died} milestones=${[...done].join(',')} jumps=${jumps.join(';')} msgs=${msgs}`;
     };
     const fail = async (why: string): Promise<never> => {
-        off();
-        return finish([s], false, `${why} ${detail()}`);
+        off?.();
+        const msg = `${why} ${detail()}`;
+        if (!owned) throw Error(msg);
+        return finish([s], false, msg);
     };
     const guard = async (label: string): Promise<void> => {
         if (died) await fail(`died during ${label}`);
+        if (opts.stop?.()) await fail(`stopped during ${label}`);
         if (T() > CAP) await fail(`tick cap during ${label}`);
     };
 
@@ -203,7 +236,7 @@ try {
         const tol = goal.tol ?? 2;
         for (let i = 0; i < 3 && !near(goal.x, goal.z, tol); i++) {
             await guard(label);
-            const r = await walkPath(walker, i === 0 ? pts : [goal], { stop: () => died || T() > CAP });
+            const r = await walkPath(walker, i === 0 ? pts : [goal], { stop: () => halted() || T() > CAP });
             walkTicks += r.ticks;
             if (!r.ok && !near(goal.x, goal.z, tol)) await s.bot.walkTo(goal.x, goal.z, tol, { timeout: 400_000 });
         }
@@ -223,8 +256,7 @@ try {
 
     // FROM=8 resumes after the cannon repair: the SDK state has no varps, so the caller names the last milestone the
     // account passed (a MILESTONE line of the run that stopped). Only 0 and 8 are resume points.
-    const FROM = Number(process.env.FROM ?? 0);
-    if (FROM !== 0 && FROM !== 8) await fail(`FROM=${process.env.FROM}: only 0 and 8 are resume points`);
+    if (FROM !== 0 && FROM !== 8) await fail(`FROM=${FROM}: only 0 and 8 are resume points`);
     if (FROM < 8) {
     // 1. Commander: "Yeah, I'd love to help." sets 1 and gives six railings (lawgof2.rs2:30-41).
     await talk('commander 1', /^dwarf commander$/i, [/love to help/i], () => cnt(ITEM.railing) >= 6);
@@ -240,7 +272,7 @@ try {
     for (const r of RAILINGS) {
         const ok0 = msgCount(OK_RAIL);
         const fixed = () => msgCount(OK_RAIL) > ok0;
-        for (let i = 0; i < 25 && !fixed(); i++) {
+        for (let i = 0; i < 60 && !fixed(); i++) {
             await guard(`railing ${r.x},${r.z}`);
             const fails0 = msgCount(FAIL_RAIL);
             const search0 = msgCount(SEARCH);
@@ -291,7 +323,16 @@ try {
 
     // 6. Goblin cave by the Fishing Guild sets 4; the crate frees the child and his talk sets 5 (mcannon_crate.rs2:3-21).
     const inCave = () => (pos()?.worldZ ?? 0) > 9000;
+    const setCavePfm = async (on: boolean): Promise<void> => {
+        if (!opts.protectCaveMelee) return;
+        const p = () => !!st()?.prayers?.activePrayers?.[PROTECT_FROM_MELEE];
+        const pts = () => st()?.prayers?.prayerPoints ?? 0;
+        if (on && pts() <= 0) return;
+        if (p() === on) return;
+        await step(`cave pfm ${on ? 'on' : 'off'}`, () => s.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE, reason: 'SDK' }), () => p() === on || (on && pts() <= 0), 3, 2);
+    };
     await walk('to cave', [{ x: LOC.cave.x, z: LOC.cave.z + 1, tol: 2 }]);
+    await setCavePfm(true);
     await step('cave', () => opLoc(LOC.cave), inCave, 12, 4);
     milestone(4);
     await walk('to crate', [{ x: LOC.crate.x, z: LOC.crate.z + 1, tol: 2 }]);
@@ -299,13 +340,14 @@ try {
     const freed = () => msgCount(/runs off into the caverns/i) > 0;
     await step('crate', async () => {
         await opLoc(LOC.crate);
-        await waitUntil(s, () => dialogOpen() || died, { timeoutTicks: 15 });
+        await waitUntil(s, () => dialogOpen() || halted(), { timeoutTicks: 15 });
         await converse([], freed, 20);
     }, freed, 5, 4);
     milestone(5);
     // From 2615,9802 the client could not route a click to the mud pile ("I can't reach that!"): walk beside it first.
     await walk('to mud pile', [{ x: LOC.mud.x - 1, z: LOC.mud.z + 1, tol: 1 }]);
     await step('mud pile', () => opLoc(LOC.mud), () => !inCave(), 10, 4);
+    await setCavePfm(false);
 
     // 7. Commander: "Ok, I'll see what I can do." gives the tool kit and sets 6 (lawgof2.rs2:119-125).
     await walk('to commander', [{ x: LAWGOF.x, z: LAWGOF.z + 1, tol: 3 }]);
@@ -366,26 +408,50 @@ try {
     await talk('commander 5', /^dwarf commander$/i, [/just for you/i], () => sawText(/speak to nulodion|nulodion, the dwarf cannon/i), 80);
     milestone(9);
 
-    // 10. Falador teleport (2965,3378), walk to Nulodion; his talk gives the notes and the mould and sets 10.
-    await teleport('falador teleport', 'magic:falador_teleport', 2965, 3378);
+    const travelCtx: DwarfCannonTravelCtx = { s, walk, step, teleport, near, loc: LOC, nulodion: NULODION, lawgof: LAWGOF };
+    // 10. Travel to Nulodion (Falador teleport by default, or caller hook); his talk gives the notes and the mould and sets 10.
+    if (opts.travelToNulodion) {
+        await opts.travelToNulodion(travelCtx);
+    } else {
+        await teleport('falador teleport', 'magic:falador_teleport', 2965, 3378);
+    }
     // Nulodion's room opens only by the quest door, which no planned walk opens: the porch, then the door by hand.
     await walk('to nulodion porch', [{ x: LOC.nulodionDoor.x, z: LOC.nulodionDoor.z, tol: 0 }]);
     await step('nulodion door', () => opLoc(LOC.nulodionDoor, opIndex(findLoc(l => l.id === LOC.nulodionDoor.id), /open/i)), () => (pos()?.worldX ?? 3015) < 3015, 10, 4);
     await talk('nulodion', /^nulodion$/i, [], () => has(ITEM.notes) && has(ITEM.mould), 60, NULODION);
     milestone(10);
 
-    // 11. Camelot teleport (2757,3478), walk back; the commander takes both and queues the reward (lawgof2.rs2:177-201).
-    await teleport('camelot teleport', 'magic:camelot_teleport', 2757, 3478);
-    await walk('back to commander', [{ x: LAWGOF.x, z: LAWGOF.z + 1, tol: 3 }]);
+    // 11. Travel back to commander (Camelot teleport by default, or caller hook); the commander takes both and queues the reward (lawgof2.rs2:177-201).
+    if (opts.travelBackFromNulodion) {
+        await opts.travelBackFromNulodion(travelCtx);
+    } else {
+        await teleport('camelot teleport', 'magic:camelot_teleport', 2757, 3478);
+        await walk('back to commander', [{ x: LAWGOF.x, z: LAWGOF.z + 1, tol: 3 }]);
+    }
     const rewarded = () => xp('Crafting') - craft0 >= 18_750;
     await talk('commander 6', /^dwarf commander$/i, [], () => rewarded() || (!has(ITEM.notes) && !has(ITEM.mould)), 60);
-    await waitUntil(s, () => rewarded() || died, { timeoutTicks: 10 });
+    await waitUntil(s, () => rewarded() || halted(), { timeoutTicks: 10 });
     if (rewarded()) milestone(11);
 
-    off();
+    off?.();
     const gained = xp('Crafting') - craft0;
     console.log(`RATE crafting ${gained} ${T()}`);
     const gains = SK.map(k => [k, xp(k) - xp0[k]!] as const).filter(([, g]) => g > 0).map(([k, g]) => `${k.toLowerCase()}=${g}`).join(',');
     const ok = rewarded() && !died;
-    await finish([s], ok, `craftingXp=${gained} xp=${gains} ${detail()}`);
-} catch (e) { await finish([s], false, String(e)); }
+    const summary = `craftingXp=${gained} xp=${gains} ${detail()}`;
+    if (owned) await finish([s], ok, summary);
+    else if (!ok) throw Error(`dwarfcannon failed: ${summary}`);
+    return { ok, craftingXp: gained, detail: summary };
+} catch (e) {
+    if (owned) { await finish([s], false, String(e)); return { ok: false, craftingXp: 0, detail: String(e) }; }
+    throw e;
+} finally {
+    off?.();
+    eatHold.release();
+}
+}
+
+if (import.meta.main) {
+    const res = await runDwarfCannon({ bot: process.argv[2]! });
+    if (!res.ok) process.exit(1);
+}

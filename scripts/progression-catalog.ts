@@ -29,7 +29,7 @@ const countItems=(rows:readonly {id:number|null;count?:number|null}[])=>Object.f
 function intents(category:string,name:string):CatalogIntent[]{
  if(category==='quester')return name==='items'?['acquire']:name==='seaslug-leave'?['service']:['quest'];
  if(category==='skiller')return name.startsWith('foraging:')?['acquire']:['train','produce'];
- if(category==='fighter')return name==='attack-specialist'?['service']:/^(?:chicken|cow|giant|trooper|ranged(?:-starter|-gather|-camp)?|cannon)$/.test(name)?['train','acquire']:['acquire'];
+ if(category==='fighter')return name==='attack-specialist'||name==='ranged-specialist'?['service']:/^(?:chicken|cow|giant|trooper|ranged(?:-starter|-gather|-camp)?|cannon)$/.test(name)?['train','acquire']:['acquire'];
  if(category==='boss')return ['acquire'];
  if(category==='pvp')return name==='monitor'?['observe']:name==='stage-kit'?['acquire']:name==='standby'?['service']:['pvp'];
  if(category==='market')return name==='ge-plan'?['observe']:['acquire'];
