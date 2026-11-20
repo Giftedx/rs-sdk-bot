@@ -1,0 +1,22 @@
+{
+ "id": "1795167492713-knightstick-pickpockdick-runechainbody",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Knightstick",
+ "to": "PickpockDick",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795167492713,
+ "end": 1795169892713,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
