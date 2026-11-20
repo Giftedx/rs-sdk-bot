@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795209978091-dipstick-woodpecker-dragonbones",
  "account": "Woodpecker",
  "partner": "Dipstick",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 15,
  "claim": "fffbd4f6-015a-4dbd-912a-902f0a04f64f",
- "count": 0,
- "ok": false,
- "at": 1795210040960,
- "detail": "trade claimed"
+ "count": 15,
+ "ok": true,
+ "at": 1795210196263,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 15
+ },
+ "bank": {
+  "count": 15,
+  "at": 1795210195512
+ },
+ "logout": {
+  "attemptId": "1795210040968-0000004004-0000000001",
+  "at": 1795210196253,
+  "sha256": "236b25742d4499e9652eeceda1580d042176b1e3621548a4f4938835483c4c32"
+ },
+ "screen": true
 }
