@@ -76,46 +76,66 @@ async function main(): Promise<void> {
     // Delete any preset save written by bench prepare() so the specialist logs into Tutorial Island at playtime=0.
     rmSync(playerSavePath(plan.bot), { force: true });
 
-    const supplierProc = Bun.spawn(['bun', resolve(ROOT, plan.supplierScript), plan.supplier, plan.bot, '20000'], {
-        cwd: ROOT,
-        env: {
-            ...process.env,
-            DEMO_OK: '',
-            LOOT_WATCH: '0',
-            PRAYER_GUARD: '0',
-            EAT_GUARD: '0',
-            RANDOM_EVENTS: '0',
-            COORDINATOR_RUN_ID: '',
-        },
-        stdout: 'pipe',
-        stderr: 'pipe',
-        windowsHide: true,
-    });
+    const suppliers = plan.supplier.split(',').map(s => s.trim()).filter(Boolean);
+    if (!suppliers.length) throw Error('specialist-bench: missing supplier account');
 
-    let supplierReady = false;
-    let resolveReady!: () => void;
-    let rejectReady!: (err: Error) => void;
-    const readyPromise = new Promise<void>((res, rej) => {
-        resolveReady = res;
-        rejectReady = rej;
-    });
+    const supplierProcs: ReturnType<typeof Bun.spawn>[] = [];
+    const pumpPromises: Promise<void>[] = [];
+    const readyPromises: Promise<void>[] = [];
 
-    const supOutDone = pumpPrefixed(supplierProc.stdout, 'SUPPLIER ', process.stdout, line => {
-        if (!supplierReady && line.includes('SUPPLIER_READY ')) {
-            supplierReady = true;
-            resolveReady();
-        }
-    });
-    const supErrDone = pumpPrefixed(supplierProc.stderr, 'SUPPLIER_ERR ', process.stderr);
-    void supplierProc.exited.then(code => {
-        if (!supplierReady) rejectReady(Error(`supplier exited early (${code}) before SUPPLIER_READY`));
-    });
+    for (let i = 0; i < suppliers.length; i++) {
+        const supName = suppliers[i]!;
+        const prefix = suppliers.length === 1 ? 'SUPPLIER ' : `SUPPLIER[${supName}] `;
+        const errPrefix = suppliers.length === 1 ? 'SUPPLIER_ERR ' : `SUPPLIER_ERR[${supName}] `;
+        const roleEnv =
+            plan.childEnv.SUPPLIER_ROLE ??
+            (suppliers.length > 1 ? (i === 0 ? 'starter' : 'runner') : undefined);
+        const proc = Bun.spawn(['bun', resolve(ROOT, plan.supplierScript), supName, plan.bot, '20000'], {
+            cwd: ROOT,
+            env: {
+                ...process.env,
+                ...(plan.childEnv.SUPPLIER_KIT ? { SUPPLIER_KIT: plan.childEnv.SUPPLIER_KIT } : {}),
+                ...(roleEnv ? { SUPPLIER_ROLE: roleEnv } : {}),
+                DEMO_OK: '',
+                LOOT_WATCH: '0',
+                PRAYER_GUARD: '0',
+                EAT_GUARD: '0',
+                RANDOM_EVENTS: '0',
+                COORDINATOR_RUN_ID: '',
+            },
+            stdout: 'pipe',
+            stderr: 'pipe',
+            windowsHide: true,
+        });
+        supplierProcs.push(proc);
+
+        let isReady = false;
+        let resolveReady!: () => void;
+        let rejectReady!: (err: Error) => void;
+        readyPromises.push(new Promise<void>((res, rej) => {
+            resolveReady = res;
+            rejectReady = rej;
+        }));
+
+        pumpPromises.push(
+            pumpPrefixed(proc.stdout as ReadableStream<Uint8Array>, prefix, process.stdout, line => {
+                if (!isReady && line.includes('SUPPLIER_READY ')) {
+                    isReady = true;
+                    resolveReady();
+                }
+            }),
+            pumpPrefixed(proc.stderr as ReadableStream<Uint8Array>, errPrefix, process.stderr),
+        );
+        void proc.exited.then(code => {
+            if (!isReady) rejectReady(Error(`supplier ${supName} exited early (${code}) before SUPPLIER_READY`));
+        });
+    }
 
     let specProc: ReturnType<typeof Bun.spawn> | undefined;
     let readyTimer: ReturnType<typeof setTimeout> | undefined;
     try {
         await Promise.race([
-            readyPromise,
+            Promise.all(readyPromises),
             new Promise<never>((_, rej) => {
                 readyTimer = setTimeout(() => rej(Error('supplier did not log SUPPLIER_READY within 60 s')), 60_000);
             }),
@@ -127,7 +147,7 @@ async function main(): Promise<void> {
             env: {
                 ...process.env,
                 ...plan.childEnv,
-                PRACTICE_SUPPLIER: plan.supplier,
+                PRACTICE_SUPPLIER: suppliers.join(','),
                 DEMO_OK: '',
                 COORDINATOR_RUN_ID: '',
             },
@@ -143,15 +163,15 @@ async function main(): Promise<void> {
     } finally {
         clearTimeout(readyTimer);
         if (specProc && specProc.exitCode === null) await killTree(specProc.pid).catch(() => {});
-        if (supplierProc.exitCode === null) {
-            let stopTimer: ReturnType<typeof setTimeout> | undefined;
-            await Promise.race([
-                supplierProc.exited,
-                new Promise<void>(r => { stopTimer = setTimeout(r, 5_000); }),
-            ]).finally(() => clearTimeout(stopTimer));
-            if (supplierProc.exitCode === null) await killTree(supplierProc.pid).catch(() => {});
-        }
-        await Promise.allSettled([supOutDone, supErrDone]);
+        let stopTimer: ReturnType<typeof setTimeout> | undefined;
+        await Promise.race([
+            Promise.allSettled(supplierProcs.map(p => (p.exitCode === null ? p.exited : Promise.resolve()))),
+            new Promise<void>(r => { stopTimer = setTimeout(r, suppliers.length > 1 ? 2_000 : 5_000); }),
+        ]).finally(() => clearTimeout(stopTimer));
+        await Promise.allSettled(
+            supplierProcs.filter(p => p.exitCode === null).map(p => killTree(p.pid).catch(() => {})),
+        );
+        await Promise.allSettled(pumpPromises);
     }
 }
 

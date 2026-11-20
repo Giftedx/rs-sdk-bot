@@ -15,11 +15,12 @@ import {
     ITEM_IDS,
     parseExternalSuppliers,
     parseSpecialistArgs,
+    pickEligibleExternalSupplier,
     type SupplyEntry,
 } from './fast-skills-lib';
 import { HERBLORE_BANK_HELPER_SPOT, HERBLORE_SUPPLY_BILL } from './herblore-specialist';
 import { MAGIC_SUPPLY_BILL } from './magic-specialist';
-import { SPECIALIST_FAST_SKILLS_CASES } from './measure/specialist-fast-skills-cases';
+import { SPECIALIST_FAST_SKILLS_CASES, SPECIALIST_FAST_SKILLS_EXTERNAL_CASES } from './measure/specialist-fast-skills-cases';
 import { PRAYER_BONES_NEEDED, PRAYER_SUPPLY_BILL } from './prayer-specialist';
 import { RUNECRAFT_SUPPLY_BILL } from './runecraft-specialist';
 import { SMITHING_RUNNER_QUEUE, SMITHING_SUPPLY_BILL } from './smithing-specialist';
@@ -33,6 +34,7 @@ import {
     LUMBRIDGE_HANDOFF,
     MAGIC_SPECIALIST_KIT,
     parseKitArg,
+    parseSupplierRole,
     PRAYER_SPECIALIST_KIT,
     resolveBaseId,
     resolveSupplierKit,
@@ -223,4 +225,60 @@ test('bench cases, aio-skiller routes, and progression catalog admit all 6 fast-
         });
         expect(() => preflightProgressionWork({ script, args: [], env: { CAP: cap, SUPPLIER: 'Moneyshot' } }, 'rs-sdk-demo.fly.dev', catalog, 'SpecBot')).not.toThrow();
     }
+});
+
+test('multi-supplier runecraft role parsing, cooldown partner selection, and external bench case', () => {
+    expect(parseSupplierRole([])).toBe('auto');
+    expect(parseSupplierRole(['--role=starter'])).toBe('starter');
+    expect(parseSupplierRole(['--role=runner'])).toBe('runner');
+    expect(parseSupplierRole([], { SUPPLIER_ROLE: 'runner' })).toBe('runner');
+    expect(() => parseSupplierRole(['--role=invalid'])).toThrow('unknown --role=invalid');
+
+    const nearby = [
+        { name: 'Starter', distance: 1, x: 2523, z: 4833, worldX: 2523, worldZ: 4833, index: 1 },
+        { name: 'Runner1', distance: 1, x: 2523, z: 4833, worldX: 2523, worldZ: 4833, index: 2 },
+        { name: 'Runner2', distance: 2, x: 2523, z: 4834, worldX: 2523, worldZ: 4834, index: 3 },
+        { name: 'FarRunner', distance: 6, x: 2528, z: 4833, worldX: 2528, worldZ: 4833, index: 4 },
+    ];
+    const cooldowns = new Map<string, number>([['starter', 50]]);
+    const picked = pickEligibleExternalSupplier(
+        nearby,
+        ['Starter', 'Runner1', 'Runner2', 'FarRunner'],
+        cooldowns,
+        10,
+        {
+            maxDistance: 4,
+            canStand: p => Math.max(Math.abs((p.worldX ?? p.x) - 2523), Math.abs((p.worldZ ?? p.z) - 4833)) <= 3,
+        },
+    );
+    expect(picked?.name).toBe('Runner1');
+
+    cooldowns.set('runner1', 55);
+    const nextPicked = pickEligibleExternalSupplier(
+        nearby,
+        ['Starter', 'Runner1', 'Runner2', 'FarRunner'],
+        cooldowns,
+        10,
+        { maxDistance: 4 },
+    );
+    expect(nextPicked?.name).toBe('Runner2');
+
+    // LRU tie-break picks least-recently-traded runner even when distance and index favor an earlier runner.
+    const lruPicked = pickEligibleExternalSupplier(
+        nearby,
+        ['Starter', 'Runner1', 'Runner2', 'FarRunner'],
+        new Map(),
+        100,
+        {
+            maxDistance: 4,
+            lastTradedTick: new Map([['starter', 80], ['runner1', 90]]),
+        },
+    );
+    expect(lruPicked?.name).toBe('Runner2');
+
+    expect(SPECIALIST_FAST_SKILLS_EXTERNAL_CASES.map(c => c.key)).toEqual(['extra:specialist-runecraft']);
+    const rcExt = SPECIALIST_FAST_SKILLS_EXTERNAL_CASES[0]!;
+    expect(rcExt.companions).toHaveLength(23);
+    expect(rcExt.scriptArgs[0]!.split(',')).toHaveLength(23);
+    expect(rcExt.scriptArgs).toContain('SUPPLIER_KIT=runecraft');
 });
