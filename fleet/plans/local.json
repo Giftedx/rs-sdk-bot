@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795143765669,
+ "at": 1795144369754,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -268,15 +268,15 @@
    ],
    "env": {
     "ITEMS": "water rune",
-    "STOCK_TARGET": "634",
+    "STOCK_TARGET": "561",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
-    "FLOAT": "5200",
+    "FLOAT": "4616",
     "COIN_RESERVE": "200",
-    "MAX_SPEND": "5000",
+    "MAX_SPEND": "4416",
     "AUTOPILOT_ORDER": "[9]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":634}}"
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":561}}"
    },
    "enabled": true,
    "standing": true,
@@ -342,8 +342,7 @@
    "env": {
     "TARGET": "55",
     "CAP": "2500",
-    "CLEAN_FOOD": "1",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Thieving\":55}}"
+    "CLEAN_FOOD": "1"
    },
    "enabled": true,
    "standing": true,
@@ -353,7 +352,7 @@
    "template": "thieving55",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "knight:2652,3318"
    ]
   }
  ],
