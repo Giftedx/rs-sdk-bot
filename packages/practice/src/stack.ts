@@ -90,6 +90,33 @@ export async function waitReady(proc: Subprocess, service: Service, logFile: str
     throw new Error(`${service} not ready after ${timeoutMs} ms\n${tail(logFile)}`);
 }
 
+// Engine startup prints "World ready" before startWeb() binds the HTTP transport worker thread.
+// Wait for /crc to serve HTTP 200 on loopback so callers never hit ConnectionRefused on startup.
+export async function waitHttpReady(proc: Subprocess, url: string, logFile: string, timeoutMs: number): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    let lastError = '';
+    while (Date.now() < deadline) {
+        if (proc.exitCode !== null) {
+            throw new Error(`engine exited with code ${proc.exitCode}\n${tail(logFile)}`);
+        }
+        try {
+            const perTry = Math.max(100, Math.min(2000, deadline - Date.now()));
+            const res = await fetch(url, { signal: AbortSignal.timeout(perTry) });
+            await res.arrayBuffer();
+            if (res.ok) return;
+            lastError = `HTTP ${res.status}`;
+        } catch (err) {
+            lastError = String(err);
+        }
+        if (proc.exitCode !== null) {
+            throw new Error(`engine exited with code ${proc.exitCode}\n${tail(logFile)}`);
+        }
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        await Promise.race([proc.exited, new Promise<void>(r => { timer = setTimeout(r, 50); })]).finally(() => clearTimeout(timer));
+    }
+    throw new Error(`http not ready at ${url} after ${timeoutMs} ms${lastError ? `: ${lastError}` : ''}\n${tail(logFile)}`);
+}
+
 export { killTree } from './proc';
 
 // Saved with each PID so a stale pids.json never kills an unrelated process (Windows reuses PIDs).
@@ -136,7 +163,9 @@ export async function startStack(opts: StackOptions = {}): Promise<Stack> {
     const saved: Saved = { engine: { pid: engine.pid, marker: MARKERS.engine } };
     writeFileSync(pidsFile(opts.instance), JSON.stringify(saved));
     try {
+        const readyDeadline = Date.now() + timeout;
         await waitReady(engine, 'engine', logs.engine, timeout);
+        await waitHttpReady(engine, `http://127.0.0.1:${ports.engine}/crc`, logs.engine, Math.max(1000, readyDeadline - Date.now()));
     } catch (e) {
         await killTree(engine.pid);
         throw e;
