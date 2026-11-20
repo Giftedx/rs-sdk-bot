@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795192230623-spitroaster-masterbaiter",
  "account": "Spitroaster",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 28504,
  "claim": "702a4dc5-224c-4731-b5b1-7de8eea9ab51",
- "count": 0,
- "ok": false,
- "at": 1795192324453,
- "detail": "trade claimed"
+ "count": 28504,
+ "ok": true,
+ "at": 1795192352306,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 28504,
+  "after": 0
+ },
+ "bank": {
+  "count": 19804,
+  "at": 1795192344357
+ },
+ "logout": {
+  "attemptId": "1795192324462-0000027652-0000000001",
+  "at": 1795192352293,
+  "sha256": "289e3299ac1540955695dbd03f09608017b44df641e27f8e9101a14b4cb93b70"
+ },
+ "screen": true
 }
