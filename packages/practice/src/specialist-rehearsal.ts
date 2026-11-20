@@ -2,6 +2,7 @@ import {createReadStream} from 'node:fs';
 import {createInterface} from 'node:readline';
 import {createGunzip} from 'node:zlib';
 import {parsePracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {resolveBaseId} from '../../../scripts/specialist-supplier';
 import type {SupplyRequirement} from '../../core/src/launch-evidence';
 import {xpForLevel} from '../../planner/src/curve';
 import {SKILLS} from './save-library';
@@ -27,6 +28,7 @@ export function scoredClock(raw: Uint8Array, board: string) {
 /** The engine writes both sides of a completed exchange. Count gross inputs, never client offers. */
 export function observedSupplies(log: string, account: string, catalog: {id: number; name: string}[]): SupplyRequirement[] {
     const name = account.toLowerCase(), counts = new Map<number, number>();
+    const catalogById = new Map(catalog.map(i => [i.id, i.name]));
     for (const line of log.split(/\r?\n/).filter(Boolean)) {
         const row = JSON.parse(line);
         if (typeof row?.from !== 'string' || typeof row.to !== 'string' || !Number.isSafeInteger(row.tick)
@@ -37,13 +39,14 @@ export function observedSupplies(log: string, account: string, catalog: {id: num
         for (const item of to === name ? row.fromItems : row.toItems) {
             if (!Number.isSafeInteger(item?.id) || item.id < 0 || !Number.isSafeInteger(item.count) || item.count <= 0)
                 throw Error('invalid incoming trade item');
-            const count = (counts.get(item.id) ?? 0) + item.count;
+            const id = catalogById.has(item.id) ? item.id : resolveBaseId(item.id);
+            const count = (counts.get(id) ?? 0) + item.count;
             if (!Number.isSafeInteger(count)) throw Error('incoming trade item quantity overflow');
-            counts.set(item.id, count);
+            counts.set(id, count);
         }
     }
     return [...counts].sort(([a], [b]) => a - b).map(([itemId, count]) => {
-        const item = catalog.find(i => i.id === itemId)?.name;
+        const item = catalogById.get(itemId);
         if (!item) throw Error('incoming trade item lacks exact catalog ID ' + itemId);
         return {item, count, itemId};
     });
