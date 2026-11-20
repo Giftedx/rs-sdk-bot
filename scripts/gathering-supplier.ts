@@ -1,15 +1,15 @@
 // Stage or withdraw a gathering specialist supply kit and hand it over at Lumbridge spawn in one Offer-All trade.
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { accountOf, finish, getWorld, openBot } from '../packages/core/src/bot';
+import { finish, openBot } from '../packages/core/src/bot';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
-import { goTo } from '../packages/core/src/walk';
 import { HELPER_SPAWN, startHelperTradeArm, chebDist } from './gathering-specialist-lib';
 import {
     assertSupplierAccount,
     DEFAULT_STAGE_BANK,
     hasExactKit,
+    moveGroundTo,
     parseKitOption,
     runStage,
     withdrawExactKit,
@@ -43,9 +43,7 @@ async function runServe(args: string[]): Promise<void> {
         if (kit.length === 0) throw Error(`${holder} carries no kit to hand over`);
         const p = s.sdk.getState()?.player;
         if (!p || p.level !== 0 || chebDist({ x: p.worldX, z: p.worldZ }, HELPER_SPAWN) > 2) {
-            const world = await getWorld();
-            const r = await goTo(s, world, HELPER_SPAWN, accountOf(s), { legTimeoutTicks: 240 });
-            if (!r.ok) throw Error(`walk to the Lumbridge handoff failed: ${r.detail}`);
+            await moveGroundTo(s, HELPER_SPAWN, 2, stop, 240);
         }
         const at = s.sdk.getState()!.player!;
         console.log('SUPPLIER_READY ' + JSON.stringify({
