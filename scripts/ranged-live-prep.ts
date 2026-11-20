@@ -100,7 +100,7 @@ export function planPrayerDecantSteps(initial: Readonly<PrayerDoseCounts>): Pray
         const high = Math.min(4, sum) as 2 | 3 | 4;
         const low = (sum - high) as 0 | 1 | 2;
         counts[high]++;
-        if (low > 0) counts[low]++;
+        if (low === 1 || low === 2) counts[low]++;
         else emptyVialsProduced++;
         steps.push({ fromDose: a, toDose: b, outHighDose: high, outLowDose: low });
     };
