@@ -73,9 +73,9 @@ export const AGILITY_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
     { id: 995, name: 'Coins', count: 500, stackable: true },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
-    { id: 2434, name: 'Prayer potion(4)', count: 1, stackable: false },
-    { id: 3032, name: 'Agility potion(4)', count: 4, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 7, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
+    { id: 3032, name: 'Agility potion(4)', count: 5, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 5, stackable: false },
     { id: 1897, name: 'Chocolate cake', count: 3, stackable: false },
 ] as const;
 

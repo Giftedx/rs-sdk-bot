@@ -136,9 +136,9 @@ export const MONKEYBARS_TRADE_1: readonly SupplyEntry[] = [
     { id: ITEMS.glory4, name: 'Amulet of glory(4)', count: 1 },
     { id: ITEMS.coins, name: 'Coins', count: 500 },
     { id: ITEMS.dragonBones, name: 'Dragon bones', count: 11 },
-    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 1 },
-    { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 4 },
-    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 7 },
+    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 2 },
+    { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 5 },
+    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 5 },
     { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 3 },
 ];
 
@@ -332,17 +332,9 @@ async function drinkFirstMatching(s: Session, ids: readonly number[]): Promise<b
     return true;
 }
 
-async function ensureRunEnabled(s: Session): Promise<void> {
-    const var173 = ((s.client as { var?: number[] } | undefined)?.var?.[173] ?? 1);
-    if (var173 !== 1 && (posOf(s)?.runEnergy ?? 0) >= 5) {
-        await s.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
-    }
-}
-
 async function maintainEnergy(s: Session, threshold = 65): Promise<void> {
     const energy = posOf(s)?.runEnergy ?? 100;
     if (energy < threshold) await drinkFirstMatching(s, ITEMS.superEnergy);
-    await ensureRunEnabled(s);
 }
 
 // Keeps Protect from Melee points above `floor` (the prayer guard flicks it on for hunters) with the traded potions.
@@ -594,6 +586,7 @@ class SupplierAgent {
 
     stop(): void { this.stopFlag = true; }
     startEdgevilleMove(): void { this.edgevilleTrigger = true; }
+    markPhaseDone(phase: number): void { if (phase > this.completedPhase) this.completedPhase = phase; }
     lastError(): Error | null { return this.error; }
     isReadyFor(phase: number): boolean { return this.readyPhase >= phase && !this.error; }
     sessionHandle(): Session | null { return this.session; }
@@ -686,22 +679,23 @@ class SupplierAgent {
         await waitUntil(s, () => !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 10 });
     }
 
-    async runTouristFlow(runnerName: string): Promise<void> {
+    async runTouristFlow(_runnerName: string): Promise<void> {
         try {
             const s = this.session!;
-            await waitUntil(s, () => invOf(s).length > 0, { timeoutTicks: 20 });
+            await waitUntil(s, () => this.stopFlag || invOf(s).length > 0, { timeoutTicks: 20 });
+            if (this.stopFlag) return;
             // Trade 1 in Lumbridge.
             this.readyPhase = 1;
-            await this.giveBatch(runnerName, TOURIST_TRADE_1, 200);
-            this.completedPhase = 1;
+            await waitUntil(s, () => this.stopFlag || this.completedPhase >= 1, { timeoutTicks: 240 });
+            if (this.stopFlag) return;
 
             // Teleport Edgeville using supplier Glory -> walk to Varrock West Bank for combined Trade 2.
             await rubGlory(s, /edgeville/i, { x: 3087, z: 3496 }, 25);
             await this.restockAtBank({ x: 3185, z: 3436 }, TOURIST_TRADE_2);
             await walkNear(s, { x: 3186, z: 3436 }, 1, 20);
             this.readyPhase = 2;
-            await this.giveBatch(runnerName, TOURIST_TRADE_2, 1500);
-            this.completedPhase = 2;
+            await waitUntil(s, () => this.stopFlag || this.completedPhase >= 2, { timeoutTicks: 1500 });
+            if (this.stopFlag) return;
 
             // Wait partway into Tourist Trap so Supplier never crosses the 900-tick stall window idle at Edgeville.
             const tWait = s.tick();
@@ -711,8 +705,7 @@ class SupplierAgent {
             await this.restockAtBank({ x: 3094, z: 3491 }, TOURIST_TRADE_3);
             await walkNear(s, { x: 3093, z: 3491 }, 1, 20);
             this.readyPhase = 3;
-            await this.giveBatch(runnerName, TOURIST_TRADE_3, 1500);
-            this.completedPhase = 3;
+            await waitUntil(s, () => this.stopFlag || this.completedPhase >= 3, { timeoutTicks: 1500 });
         } catch (err) {
             this.error = err instanceof Error ? err : Error(String(err));
         }
@@ -1450,16 +1443,16 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
     try {
         const hpThreshold = () => {
             const maxHp = skillLvl(s, 'Hitpoints');
-            return maxHp <= 15 ? 4 : Math.max(5, Math.floor(maxHp * 0.55));
+            return maxHp <= 15 ? 7 : Math.max(5, Math.floor(maxHp * 0.55));
         };
         const maybeEat = async () => {
             if (skillCur(s, 'Hitpoints') <= hpThreshold()) {
                 await drinkFirstMatching(s, [...ITEMS.chocolateCakeParts, ITEMS.shark]);
             }
         };
-        const syncPrayer = async (_stepIdx: number) => {
+        const syncPrayer = async (stepIdx: number) => {
             if (!cfg.usePrayer) return;
-            const needPrayer = inPit;
+            const needPrayer = inPit || stepIdx === 3;
             if (needPrayer) {
                 await sipPrayer(s, 6);
                 await setProtectFromMelee(s, true);
@@ -1468,16 +1461,18 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
             }
         };
 
-        // Click Pipe first, then sip energy/potion during the sprint if needed.
-        await syncPrayer(0);
-        await clickStep(WILDERNESS_STEPS[0]!);
-        await maintainEnergy(s, 70);
+        // Top-of-course potion, energy, prayer & HP prep before clicking Pipe.
         await sipAgilityPot();
+        await maintainEnergy(s, 70);
+        await syncPrayer(0);
+        await maybeEat();
+        await clickStep(WILDERNESS_STEPS[0]!);
 
         while (skillLvl(s, 'Agility') < 99 && s.tick() - tStart < cfg.cap && !stop?.()) {
             await waitTicks(s, 1);
             const p = posOf(s);
             if (!p || p.isDead) continue;
+            if (skillCur(s, 'Hitpoints') <= 7) await maybeEat();
             const key = `${p.worldX},${p.worldZ},${p.level}`;
             const moved = key !== lastPos;
             still = moved ? 0 : still + 1;
@@ -1487,7 +1482,6 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
                 failSeen = 0;
                 fails++;
                 preBlock = s.tick();
-                await maybeEat();
             }
 
             const gained = skillXp(s, 'Agility') - stepXp;
@@ -1498,19 +1492,20 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
                 prog = nextWildernessProgress(prog, WILDERNESS_STEPS[i]!.name);
                 i = (i + 1) % WILDERNESS_STEPS.length;
                 if (i === 0) {
+                    await sipAgilityPot();
+                    await maintainEnergy(s, 70);
+                    await syncPrayer(0);
+                    await maybeEat();
                     if (cfg.alignPipe && (p.worldX !== 3004 || p.worldZ !== 3937)) {
                         await s.direct({ type: 'walkTo', x: 3004, z: 3937, running: true, reason: 'SDK' });
-                        await maintainEnergy(s, 70);
-                        await sipAgilityPot();
                         still = 0;
                         continue;
                     }
-                    await clickStep(WILDERNESS_STEPS[0]!);
-                    await maintainEnergy(s, 70);
-                    await sipAgilityPot();
                 } else {
-                    await clickStep(WILDERNESS_STEPS[i]!);
+                    await syncPrayer(i);
+                    await maybeEat();
                 }
+                await clickStep(WILDERNESS_STEPS[i]!);
                 still = 0;
                 continue;
             }
@@ -1522,16 +1517,16 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
                     prog = nextWildernessProgress(prog, 'rocks');
                     i = 0;
                     stepXp = skillXp(s, 'Agility');
+                    await sipAgilityPot();
+                    await maintainEnergy(s, 70);
+                    await syncPrayer(0);
+                    await maybeEat();
                     if (cfg.alignPipe && (p.worldX !== 3004 || p.worldZ !== 3937)) {
                         await s.direct({ type: 'walkTo', x: 3004, z: 3937, running: true, reason: 'SDK' });
-                        await maintainEnergy(s, 70);
-                        await sipAgilityPot();
                         still = 0;
                         continue;
                     }
                     await clickStep(WILDERNESS_STEPS[0]!);
-                    await maintainEnergy(s, 70);
-                    await sipAgilityPot();
                     still = 0;
                     continue;
                 }
@@ -1633,28 +1628,28 @@ export async function runAgilitySpecialist(bot: string, argv: readonly string[] 
 
         await dropAllMatching(spec, new Set(invOf(spec).map(i => i.id)), 6);
         await walkNear(spec, { x: 3222, z: 3218, level: 0 }, 2, 20);
-        if (cfg.route !== 'tourist') {
+        const supplierNames = supplierEnv
+            ? supplierEnv.split(',').map(v => v.trim()).filter(Boolean)
+            : [cfg.supplier];
+        const receiveTradePhase = async (want: readonly SupplyEntry[], phase: number, timeoutTicks: number, stopSupplierAfter = false) => {
             if (supplier) {
-                await waitUntil(spec, () => stop() || supplier!.isReadyFor(1) || !!supplier!.lastError(), { timeoutTicks: 200 });
+                await waitUntil(spec, () => stop() || supplier!.isReadyFor(phase) || !!supplier!.lastError(), { timeoutTicks });
                 if (supplier.lastError()) throw supplier.lastError()!;
                 await burstTradeHost(spec, supplier.sessionHandle()!, {
-                    giveIds: trade1.map(w => w.id),
-                    deadlineTick: spec.tick() + 200,
+                    giveIds: want.map(w => w.id),
+                    deadlineTick: spec.tick() + timeoutTicks,
                     allowHelperOnSingleModal: true,
                 });
-                supplier.stop();
+                supplier.markPhaseDone(phase);
+                if (stopSupplierAfter) supplier.stop();
             } else {
-                const supplierNames = supplierEnv
-                    ? supplierEnv.split(',').map(v => v.trim()).filter(Boolean)
-                    : [cfg.supplier];
                 await fastTradeExternalReceive(spec, supplierNames, {
-                    acceptOffer: offer => trade1.every(w => countById(offer, w.id) >= w.count),
-                    deadlineTick: spec.tick() + 200,
+                    acceptOffer: offer => want.every(w => countById(offer, w.id) >= w.count),
+                    deadlineTick: spec.tick() + timeoutTicks,
                 });
             }
-        } else {
-            await receiveTradeFrom(spec, cfg.supplier, trade1, 200, () => !supplier || supplier.isReadyFor(1));
-        }
+        };
+        await receiveTradePhase(trade1, 1, 200, cfg.route !== 'tourist');
         await spec.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
 
         let setupTicks = 0;
@@ -1668,7 +1663,7 @@ export async function runAgilitySpecialist(bot: string, argv: readonly string[] 
 
             await walkNear(spec, { x: 3185, z: 3436, level: 0 }, 2, 40);
             await dropExcept(spec, new Set([...GLORY_IDS, ITEMS.airRune, ITEMS.chaosRune]), 8);
-            await receiveTradeFrom(spec, cfg.supplier, TOURIST_TRADE_2, 450, () => !supplier || supplier.isReadyFor(2));
+            await receiveTradePhase(TOURIST_TRADE_2, 2, 450);
             await smithTo20AtVarrock(spec);
             await wearItem(spec, ITEMS.desertShirt);
             await wearItem(spec, ITEMS.desertRobe);
@@ -1679,7 +1674,7 @@ export async function runAgilitySpecialist(bot: string, argv: readonly string[] 
             await rubGlory(spec, /edgeville/i, { x: 3087, z: 3496 }, 20);
             await walkNear(spec, { x: 3094, z: 3491, level: 0 }, 2, 25);
             await dropAllMatching(spec, new Set(invOf(spec).map(i => i.id).filter(id => !GLORY_IDS.includes(id))), 8);
-            await receiveTradeFrom(spec, cfg.supplier, TOURIST_TRADE_3, 450, () => !supplier || supplier.isReadyFor(3));
+            await receiveTradePhase(TOURIST_TRADE_3, 3, 450, true);
             if (supplierTask) {
                 await supplierTask;
                 if (supplier?.lastError()) throw supplier.lastError()!;
