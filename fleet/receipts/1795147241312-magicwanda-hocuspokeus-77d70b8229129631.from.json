@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795147241312-magicwanda-hocuspokeus-77d70b8229129631",
  "account": "Magicwanda",
  "partner": "Hocuspokeus",
@@ -12,13 +12,19 @@
  "claim": "af3f9f3f-716c-47ee-bd91-a80c5df1d200",
  "count": 0,
  "ok": false,
- "at": 1795147256134,
- "detail": "trade claimed",
+ "at": 1795147389158,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
  "lines": [
   {
    "item": "Fly fishing rod",
    "requested": 1,
    "count": 0
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1795147256142-0000007440-0000000001",
+  "at": 1795147389148,
+  "sha256": "45e7fd92d44724977fff01ecbedcfa79b7d4e44ba54afcec13ed0909963e5707"
+ },
+ "screen": false
 }
