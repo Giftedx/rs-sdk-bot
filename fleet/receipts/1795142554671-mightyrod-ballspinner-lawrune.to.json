@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795142554671-mightyrod-ballspinner-lawrune",
+ "account": "Ballspinner",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 1,
+ "claim": "95f8d610-713a-4ebb-92b3-e446897c5b4d",
+ "count": 1,
+ "ok": true,
+ "at": 1795142626968,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795142626218
+ },
+ "logout": {
+  "attemptId": "1795142609339-0000000520-0000000001",
+  "at": 1795142626952,
+  "sha256": "01963d6ca9da70bed3eb73afe3a682b9f1f6bc1e42fe11461d34ae0778063147"
+ },
+ "screen": true
+}
