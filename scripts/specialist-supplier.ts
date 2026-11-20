@@ -163,7 +163,6 @@ export function resolveBaseId(id: number): number {
     }
     return certToBaseMap.get(id) ?? id;
 }
-}
 
 export const LUMBRIDGE_HANDOFF = { x: 3222, z: 3222, level: 0 } as const;
 export const DEFAULT_STAGE_BANK = { x: 3092, z: 3243, level: 0 } as const;
