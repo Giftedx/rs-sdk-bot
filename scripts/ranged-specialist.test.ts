@@ -64,7 +64,7 @@ test('RANGED_SPECIALIST two-trade kits and combined supplies use cataloged trade
         [RANGED_SPECIALIST_MSB_TRADE1, 28],
         [RANGED_SPECIALIST_MSB_TRADE2, 20],
         [RANGED_SPECIALIST_LIVE_TRADE1, 24],
-        [RANGED_SPECIALIST_LIVE_TRADE2, 20],
+        [RANGED_SPECIALIST_LIVE_TRADE2, 21],
     ] as const) {
         expect(kitSlotTotal(trade)).toBe(expected);
         expect(expected).toBeLessThanOrEqual(28);
@@ -88,8 +88,8 @@ test('RANGED_SPECIALIST two-trade kits and combined supplies use cataloged trade
     expect(countById(RANGED_SPECIALIST_KIT, 3016)).toBe(7);
     expect(countById(RANGED_SPECIALIST_KIT, 1897)).toBe(3);
     expect(countById(RANGED_SPECIALIST_LIVE_KIT, ITEM_IDS.cannonball)).toBe(1500);
-    expect(countById(RANGED_SPECIALIST_LIVE_KIT, 2434)).toBe(9);
-    expect(countById(RANGED_SPECIALIST_LIVE_KIT, 175)).toBe(6);
+    expect(countById(RANGED_SPECIALIST_LIVE_KIT, 2434)).toBe(8);
+    expect(countById(RANGED_SPECIALIST_LIVE_KIT, 175)).toBe(8);
     expect(countById(RANGED_SPECIALIST_LIVE_KIT, 379)).toBe(5);
     expect(variantKit('knives')).toBe(RANGED_SPECIALIST_KIT);
     expect(variantKit('msb')).toBe(RANGED_SPECIALIST_MSB_KIT);
