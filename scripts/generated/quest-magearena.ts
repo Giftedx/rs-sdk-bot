@@ -305,8 +305,9 @@ try {
     }
     const wantCharge = opts.charge ?? process.env.MA_CHARGE === '1';
     if (opts.earlyCharge && wantCharge && base('Magic') >= 80 && q.cnt(554) >= 3 && q.cnt(565) >= 3 && q.cnt(556) >= 3) {
-        await q.step('charge early', () => q.s.sdk.sendClickComponent(CHARGE_SPELL), () => q.sawText(/feel charged with magic power/i), 4, 2);
-        charged = q.sawText(/feel charged with magic power/i);
+        const charge0 = q.msgCount(/feel charged with magic power/i);
+        await q.step('charge early', () => q.s.sdk.sendClickComponent(CHARGE_SPELL), () => q.msgCount(/feel charged with magic power/i) > charge0, 5, 3);
+        charged = q.msgCount(/feel charged with magic power/i) > charge0;
     }
     await fight('casts', () => {
         const all = npcs(NPC.mages), n = all.find((m: any) => m.targetIndex >= 32768 && m.distance <= 10) ?? all.find((m: any) => m.index === mage) ?? all[0];
@@ -315,8 +316,9 @@ try {
     }, GOD_SPELL, () => unlocked() || foodLow(), 1200);
     if (unlocked()) q.milestone('casts');
     if (!charged && wantCharge && base('Magic') >= 80 && q.cnt(554) >= 3 && q.cnt(565) >= 3 && q.cnt(556) >= 3) {
-        await q.step('charge', () => q.s.sdk.sendClickComponent(CHARGE_SPELL), () => q.sawText(/feel charged with magic power/i), 4, 2);
-        charged = q.sawText(/feel charged with magic power/i);
+        const charge0 = q.msgCount(/feel charged with magic power/i);
+        await q.step('charge', () => q.s.sdk.sendClickComponent(CHARGE_SPELL), () => q.msgCount(/feel charged with magic power/i) > charge0, 5, 3);
+        charged = q.msgCount(/feel charged with magic power/i) > charge0;
     }
     await q.converse([], () => !q.dialogOpen(), 10);
     await q.dash('to portal inside', PORTAL.x, PORTAL.z, 0, 40);
