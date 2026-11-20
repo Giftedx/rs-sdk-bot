@@ -1,0 +1,23 @@
+{
+ "id": "1795136798162-kiltlifter-bigchopper-88dc67d130b7b28a",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Kiltlifter",
+ "to": "Bigchopper",
+ "item": "Prayer potion(4)",
+ "count": 1,
+ "start": 1795136798162,
+ "end": 1795138298162,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
