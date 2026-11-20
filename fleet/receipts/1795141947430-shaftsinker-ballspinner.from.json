@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795141947430-shaftsinker-ballspinner",
  "account": "Shaftsinker",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 50056,
  "claim": "4869367f-6426-4bb3-8af6-795b214254b0",
- "count": 0,
- "ok": false,
- "at": 1795142045731,
- "detail": "trade claimed"
+ "count": 50056,
+ "ok": true,
+ "at": 1795142274167,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 50056,
+  "after": 0
+ },
+ "bank": {
+  "count": 50056,
+  "at": 1795142258248
+ },
+ "logout": {
+  "attemptId": "1795142045742-0000025104-0000000001",
+  "at": 1795142274155,
+  "sha256": "6b84af3085bbd6f71b68dbb19f35d5b52d05728311bc71699a8e26292d7b2613"
+ },
+ "screen": true
 }
