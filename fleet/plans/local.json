@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795142608066,
+ "at": 1795142782781,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -263,22 +263,20 @@
    "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1113 QUANTITY=1 LIMIT_PRICE=220887 CASH_RESERVE=1000 ORDER_KEY=woodpecker-kit15-1113-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=5 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=woodpecker-kit15-385-0to5 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1113\":1}}"
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":5}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 1 Rune chainbody on the Grand Exchange to wear rune armour",
+   "goal": "buy 5 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "supply",
-   "template": "kit-buy:army-armour-rune",
+   "template": "kit-buy:aio-blood-chest",
    "autopilot": "local",
-   "resources": [
-    "ge:armour"
-   ]
+   "resources": []
   },
   {
    "account": "Swordswallow",
@@ -308,6 +306,33 @@
    "autopilot": "local",
    "resources": [
     "shop:aubury"
+   ]
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
    ]
   },
   {
