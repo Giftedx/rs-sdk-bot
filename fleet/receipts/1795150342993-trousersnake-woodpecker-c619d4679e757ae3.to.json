@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795150342993-trousersnake-woodpecker-c619d4679e757ae3",
  "account": "Woodpecker",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 515000,
  "claim": "9d31f1e3-7b27-406a-81fb-6373775a7213",
- "count": 0,
- "ok": false,
- "at": 1795150369103,
- "detail": "trade claimed"
+ "count": 515000,
+ "ok": true,
+ "at": 1795150387850,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 515000
+ },
+ "bank": {
+  "count": 515000,
+  "at": 1795150387080
+ },
+ "logout": {
+  "attemptId": "1795150369128-0000028904-0000000001",
+  "at": 1795150387833,
+  "sha256": "68c7046a0e657da86ad87d4ce03f63b9a58dd98841cb5676c08dab721541291f"
+ },
+ "screen": true
 }
