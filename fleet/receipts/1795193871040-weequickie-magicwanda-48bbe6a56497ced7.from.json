@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795193871040-weequickie-magicwanda-48bbe6a56497ced7",
  "account": "WeeQuickie",
  "partner": "Magicwanda",
@@ -12,6 +12,12 @@
  "claim": "5a58d53b-e99e-4c57-8345-e98a2e284af4",
  "count": 0,
  "ok": false,
- "at": 1795193897683,
- "detail": "trade claimed"
+ "at": 1795193959976,
+ "detail": "fled at low hitpoints: flee_guard id=17 at=3108,3420 ticks=5",
+ "logout": {
+  "attemptId": "1795193897692-0000004132-0000000001",
+  "at": 1795193959885,
+  "sha256": "bb372b37a4b385f7772007d1caa0c5499f4fbada59d1140c35dc7632e57069f5"
+ },
+ "screen": false
 }
