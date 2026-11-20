@@ -670,6 +670,212 @@ export async function withSingleSpecialist<T>(
  throw Error('unreachable finish');
 }
 
+export interface ExternalPlayerCandidate {
+ name: string;
+ distance: number;
+ index: number;
+ x: number;
+ z: number;
+ worldX?: number;
+ worldZ?: number;
+}
+
+export interface FastExternalReceiveOpts {
+ acceptOffer: (offer: readonly { id: number; count: number }[]) => boolean;
+ deadlineTick: number;
+ maxDistance?: number;
+ cooldownTicks?: number;
+ cooldowns?: Map<string, number>;
+ openTimeoutTicks?: number;
+ offerTimeoutTicks?: number;
+ canStand?: (p: ExternalPlayerCandidate) => boolean;
+}
+
+export function pickEligibleExternalSupplier<T extends ExternalPlayerCandidate>(
+ nearby: readonly T[],
+ supplierNames: readonly string[],
+ cooldowns: ReadonlyMap<string, number>,
+ tick: number,
+ opts?: {
+  maxDistance?: number;
+  canStand?: (p: T) => boolean;
+ },
+): T | undefined {
+ const order = new Map<string, number>();
+ for (let i = 0; i < supplierNames.length; i++) {
+  const lower = supplierNames[i]!.toLowerCase();
+  if (!order.has(lower)) order.set(lower, i);
+ }
+ let best: T | undefined;
+ for (const p of nearby) {
+  const lower = p.name.toLowerCase();
+  if (!order.has(lower)) continue;
+  if ((cooldowns.get(lower) ?? -Infinity) > tick) continue;
+  if (opts?.maxDistance !== undefined && p.distance > opts.maxDistance) continue;
+  if (opts?.canStand && !opts.canStand(p)) continue;
+  if (
+   !best ||
+   p.distance < best.distance ||
+   (p.distance === best.distance && (order.get(lower) ?? 0) < (order.get(best.name.toLowerCase()) ?? 0))
+  ) {
+   best = p;
+  }
+ }
+ return best;
+}
+
+export async function fastTradeExternalReceive(
+ spec: Session,
+ supplierNames: readonly string[],
+ opts: FastExternalReceiveOpts,
+): Promise<string> {
+ const nameSet = new Set(supplierNames.map(n => n.toLowerCase()));
+ const cooldowns = opts.cooldowns ?? new Map<string, number>();
+ const openTimeoutTicks = opts.openTimeoutTicks ?? 7;
+ const offerTimeoutTicks = opts.offerTimeoutTicks ?? 6;
+ const getMsgs = () => spec.sdk.getState()?.gameMessages ?? [];
+ let tradeObsBaseline = getMsgs().reduce((mx, m) => Math.max(mx, m.observationId ?? 0), 0);
+ let tradeStartTick = spec.tick();
+ const hasTradeMsg = (re: RegExp) =>
+  getMsgs().some(
+   m => re.test(m.text) && (m.observationId !== undefined ? m.observationId > tradeObsBaseline : m.tick > tradeStartTick),
+  );
+
+ let attemptPartner: string | undefined;
+ let attemptStartTick = -1;
+ let lastOpenReqTick = -10;
+ let openedTick: number | undefined;
+ let sawConfirm = false;
+ let closedAfterConfirmTicks = 0;
+ let openPartner: string | undefined;
+
+ while (spec.tick() < opts.deadlineTick) {
+  const st = spec.sdk.getTradeState();
+
+  if (!st.isOpen) {
+   if (sawConfirm) {
+    if (hasTradeMsg(/Accepted trade\./i)) {
+     const partner = openPartner ?? attemptPartner ?? '';
+     if (partner && (opts.cooldownTicks ?? 0) > 0) {
+      cooldowns.set(partner, spec.tick() + opts.cooldownTicks!);
+     }
+     return partner;
+    }
+    if (hasTradeMsg(/(?:declined trade|enough inventory space)/i)) {
+     const partner = openPartner ?? attemptPartner;
+     if (partner) cooldowns.set(partner, spec.tick() + 8);
+     sawConfirm = false;
+     closedAfterConfirmTicks = 0;
+     attemptPartner = undefined;
+     openPartner = undefined;
+     openedTick = undefined;
+     tradeObsBaseline = getMsgs().reduce((mx, m) => Math.max(mx, m.observationId ?? 0), 0);
+     tradeStartTick = spec.tick();
+    } else {
+     closedAfterConfirmTicks++;
+     // Allow 1-2 tick offer->confirm or message flush blip before resetting.
+     if (closedAfterConfirmTicks >= 3) {
+      if (openPartner ?? attemptPartner) cooldowns.set((openPartner ?? attemptPartner)!, spec.tick() + 8);
+      sawConfirm = false;
+      closedAfterConfirmTicks = 0;
+      attemptPartner = undefined;
+      openPartner = undefined;
+      openedTick = undefined;
+     }
+     await waitTicks(spec, 1);
+     continue;
+    }
+   }
+
+   openedTick = undefined;
+   openPartner = undefined;
+   const nearby = spec.sdk.getNearbyPlayers();
+   let target = attemptPartner
+    ? nearby.find(p => p.name.toLowerCase() === attemptPartner && (cooldowns.get(attemptPartner!) ?? -Infinity) <= spec.tick())
+    : undefined;
+   if (attemptPartner && (!target || spec.tick() - attemptStartTick >= openTimeoutTicks)) {
+    cooldowns.set(attemptPartner, spec.tick() + 8);
+    attemptPartner = undefined;
+    target = undefined;
+   }
+   if (!target) {
+    target = pickEligibleExternalSupplier(nearby, supplierNames, cooldowns, spec.tick(), {
+     maxDistance: opts.maxDistance,
+     canStand: opts.canStand,
+    });
+    if (target) {
+     attemptPartner = target.name.toLowerCase();
+     attemptStartTick = spec.tick();
+     lastOpenReqTick = -10;
+     tradeObsBaseline = getMsgs().reduce((mx, m) => Math.max(mx, m.observationId ?? 0), 0);
+     tradeStartTick = spec.tick();
+    }
+   }
+
+   if (target) {
+    if (spec.tick() - lastOpenReqTick >= 3) {
+     lastOpenReqTick = spec.tick();
+     await spec.direct({ type: 'interactPlayer', playerIndex: target.index, optionIndex: 4, reason: 'SDK' });
+    } else if (spec.sdk.getState()?.dialog?.isOpen) {
+     await spec.direct({ type: 'closeModal', reason: 'SDK' });
+    }
+   } else if (spec.sdk.getState()?.dialog?.isOpen) {
+    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   }
+
+   await waitTicks(spec, 1);
+   continue;
+  }
+
+  lastOpenReqTick = -10;
+  closedAfterConfirmTicks = 0;
+  if (openedTick === undefined) openedTick = spec.tick();
+  const partnerLower = st.partner?.toLowerCase() ?? attemptPartner;
+  if (partnerLower) openPartner = partnerLower;
+
+  if (partnerLower && !nameSet.has(partnerLower)) {
+   await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   attemptPartner = undefined;
+   openPartner = undefined;
+   openedTick = undefined;
+   sawConfirm = false;
+   await waitTicks(spec, 1);
+   continue;
+  }
+
+  if (st.screen === 'confirm') {
+   sawConfirm = true;
+   if (!st.myAccepted) {
+    await spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' });
+   }
+   await waitTicks(spec, 1);
+   continue;
+  }
+
+  if (opts.acceptOffer(st.theirOffer)) {
+   const acts: Promise<unknown>[] = [];
+   if (!st.myAccepted) {
+    acts.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+   }
+   if (st.partnerAccepted) {
+    sawConfirm = true;
+    acts.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+   }
+   if (acts.length) await Promise.all(acts);
+  } else if (spec.tick() - openedTick >= offerTimeoutTicks) {
+   if (partnerLower) cooldowns.set(partnerLower, spec.tick() + 8);
+   await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   attemptPartner = undefined;
+   openPartner = undefined;
+   openedTick = undefined;
+   sawConfirm = false;
+  }
+
+  await waitTicks(spec, 1);
+ }
+ throw Error(`fastTradeExternalReceive(${supplierNames.join(',')}) exceeded cap`);
+}
+
 export async function tradeExternalSupplier(
  spec: Session,
  supplierNames: readonly string[],

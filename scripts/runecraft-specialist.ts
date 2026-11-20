@@ -5,6 +5,7 @@ import {
  burstTradeHost,
  countItem,
  dropItemsFast,
+ fastTradeExternalReceive,
  findLocBy,
  goalXp,
  GLORY_IDS,
@@ -20,7 +21,6 @@ import {
  skipTutorialFast,
  skillLevel,
  skillXp,
- tradeExternalSupplier,
  waitTicks,
  waitUntil,
  withSingleSpecialist,
@@ -308,9 +308,10 @@ export async function runRunecraftExternal(
  await skipTutorialFast(spec, deadline);
  await dropItemsFast(spec, new Set(), deadline);
 
- await tradeExternalSupplier(spec, supplierNames, {
+ const glorySet = new Set<number>(GLORY_IDS);
+ await fastTradeExternalReceive(spec, supplierNames, {
   acceptOffer: offer =>
-   offer.some(o => o.id === ITEM_IDS.amulet_of_glory_4) && offer.some(o => o.id === ITEM_IDS.body_talisman),
+   offer.some(o => glorySet.has(o.id)) && offer.some(o => o.id === ITEM_IDS.body_talisman),
   deadlineTick: deadline,
  });
 
@@ -367,10 +368,15 @@ export async function runRunecraftExternal(
  await navigateWorld(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0, Math.max(10, deadline - spec.tick()));
  logPhase(spec, start, 'rc_at_body_altar');
 
+ const runnerCooldowns = new Map<string, number>();
  while (skillLevel(spec, 'Runecraft') < target && spec.tick() < deadline) {
-  await tradeExternalSupplier(spec, supplierNames, {
+  await fastTradeExternalReceive(spec, supplierNames, {
    acceptOffer: offer => offer.some(o => o.id === ITEM_IDS.blankrune) && offer.every(o => o.id === ITEM_IDS.blankrune),
    deadlineTick: deadline,
+   maxDistance: 4,
+   cooldownTicks: 45,
+   cooldowns: runnerCooldowns,
+   canStand: p => Math.max(Math.abs((p.worldX ?? p.x) - BODY_ALTAR_STAND.x), Math.abs((p.worldZ ?? p.z) - BODY_ALTAR_STAND.z)) <= 3,
   });
   await craftAtAltar(spec, 2483, deadline);
  }

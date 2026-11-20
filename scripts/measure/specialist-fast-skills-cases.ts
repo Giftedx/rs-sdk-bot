@@ -219,3 +219,45 @@ export const SPECIALIST_FAST_SKILLS_CASES: readonly BenchCase[] = [
   ),
  },
 ];
+
+export const SPECIALIST_FAST_SKILLS_EXTERNAL_CASES: readonly BenchCase[] = [
+ {
+  key: 'extra:specialist-runecraft',
+  script: 'scripts/measure/specialist-bench.ts',
+  preset: 'fresh_lumbridge',
+  presetConfig: freshTutorialStart(),
+  scriptArgs: [
+   Array.from({ length: 1 + BODY_RUNNER_COUNT }, (_, i) => `{bot:${SUFFIXES[i]!}}`).join(','),
+   'scripts/runecraft-specialist.ts',
+   'SUPPLIER_KIT=runecraft',
+   'CAP=2300',
+  ],
+  pass: stdout => {
+   const result = stdout.match(/^RESULT ok\b.*$/m)?.[0] ?? '';
+   const ticks = Number(/\bticks=(\d+)/.exec(result)?.[1] ?? NaN);
+   return !!result && /\blevel=99\b/.test(result) && !/\bRESULT fail\b/.test(stdout) && ticks <= 2207;
+  },
+  output: /ticks=(\d+)/,
+  timeoutMs: 600_000,
+  companions: [
+   staticCompanion(0, { x: 3222, z: 3223, level: 0 }, [
+    { id: ITEM_IDS.amulet_of_glory_4, count: 1 },
+    { id: ITEM_IDS.air_talisman, count: 1 },
+    { id: ITEM_IDS.body_talisman, count: 1 },
+    { id: ITEM_IDS.blankrune, count: 25 },
+   ]),
+   ...Array.from({ length: BODY_RUNNER_COUNT }, (_, i) => ({
+    suffix: SUFFIXES[1 + i]!,
+    preset: 'fresh_lumbridge',
+    presetConfig: {
+     position: { x: 3050, z: 3442, level: 0 },
+     inventory: expandInventory([
+      { id: ITEM_IDS.body_talisman, count: 1 },
+      { id: ITEM_IDS.blankrune, count: 26 },
+     ]),
+     bank: [{ id: ITEM_IDS.blankrune, count: 500 }],
+    },
+   })),
+  ],
+ },
+];

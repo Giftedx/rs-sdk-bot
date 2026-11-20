@@ -10,7 +10,17 @@ import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { goTo, sessionWalker, walkPath, walkRoute, withoutSpells, withoutTeleports } from '../packages/core/src/walk';
 import { DEFENCE_SPECIALIST_KIT, HP_SPECIALIST_KIT, STRENGTH_SPECIALIST_KIT } from './combat-quest-specialists';
 import { CRAFTING_BATCHES, CRAFTING_SUPPLY_BILL } from './crafting-specialist';
-import { findLocBy, ITEM_IDS, loadItemCatalog, playerPos } from './fast-skills-lib';
+import {
+    findLocBy,
+    GLORY_IDS,
+    ITEM_IDS,
+    loadItemCatalog,
+    playerPos,
+    restockAtBank,
+    TRADE_CONFIRM_ACCEPT,
+    TRADE_MAIN_ACCEPT,
+    TRADE_OFFER_INV,
+} from './fast-skills-lib';
 import { HERBLORE_BANK_HELPER_SPOT, HERBLORE_NOTED_BATCH, HERBLORE_STARTER_BATCH, HERBLORE_SUPPLY_BILL } from './herblore-specialist';
 import { LUMBRIDGE_SAFE_SPOT, MAGIC_BATCHES, MAGIC_SUPPLY_BILL } from './magic-specialist';
 import { PRAYER_BONES_NEEDED, PRAYER_SUPPLY_BILL } from './prayer-specialist';
@@ -302,6 +312,18 @@ export function buildLegDeliveryReceipt(o: {
     };
 }
 
+export type SupplierRole = 'auto' | 'starter' | 'runner';
+
+export function parseSupplierRole(
+    args: readonly string[],
+    env: Record<string, string | undefined> = process.env,
+): SupplierRole {
+    const raw = (args.find(a => a.startsWith('--role='))?.slice(7) ?? env.SUPPLIER_ROLE ?? 'auto').trim().toLowerCase();
+    if (!raw || raw === 'auto') return 'auto';
+    if (raw === 'starter' || raw === 'runner') return raw;
+    throw Error(`specialist-supplier: unknown --role=${raw}; expected starter|runner|auto`);
+}
+
 export function parseSupplierCliArgs(args: readonly string[]): {
     kitArg?: string;
     cap?: number;
@@ -484,13 +506,169 @@ export async function withdrawExactKit(s: Session, kit: readonly KitSpecItem[], 
     return concreteKit;
 }
 
-function invSpec(id: number, count: number): KitSpecItem {
+function invSpec(id: number, count: number, altIds?: readonly number[]): KitSpecItem {
     return {
         id,
         name: loadItemCatalog().get(id)?.name ?? `Item ${id}`,
         count,
         stackable: STACKABLE_IDS.has(id),
+        ...(altIds?.length ? { altIds } : {}),
     };
+}
+
+function uniqueSlotsForBatch(
+    inv: readonly { id: number; count: number; slot: number }[],
+    batch: readonly KitSpecItem[],
+    alreadyOffered: readonly { id: number; count: number }[],
+): number[] {
+    const offeredCounts = new Map<number, number>();
+    for (const o of alreadyOffered) offeredCounts.set(o.id, (offeredCounts.get(o.id) ?? 0) + o.count);
+    const needed = new Map<number, number>();
+    for (const k of batch) needed.set(k.id, (needed.get(k.id) ?? 0) + k.count);
+    const slots: number[] = [];
+    for (const [id, want] of needed) {
+        if ((offeredCounts.get(id) ?? 0) >= want) continue;
+        const hit = inv.find(i => i.id === id);
+        if (hit) slots.push(hit.slot);
+    }
+    return slots;
+}
+
+async function serveFastBatch(
+    s: Session,
+    specialist: string,
+    batch: readonly KitSpecItem[],
+    t0: number,
+    CAP: number,
+    stop: () => boolean,
+    opts?: {
+        allowedReturnIds?: readonly number[];
+        exitAfterAbsenceTicks?: number;
+        insideCheck?: () => boolean;
+    },
+): Promise<'ok' | 'finished' | 'aborted'> {
+    const specLower = specialist.toLowerCase();
+    const specReqRe = new RegExp('^' + specialist.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s+wishes to trade', 'i');
+    const allowedReturns = new Set(opts?.allowedReturnIds ?? []);
+    const acceptReturn = (offer: readonly { id: number; baseId?: number }[]) =>
+        allowedReturns.size === 0 ? offer.length === 0 : offer.every(o => allowedReturns.has(o.baseId ?? resolveBaseId(o.id)));
+
+    const getMsgs = () => s.sdk.getState()?.gameMessages ?? [];
+    const startObsId = getMsgs().reduce((mx, m) => Math.max(mx, m.observationId ?? 0), 0);
+    let tradeObsBaseline = startObsId;
+    let tradeStartTick = s.tick();
+    let lastReqObsId = startObsId;
+    let lastReplyTick = -10;
+    let sawConfirm = false;
+    let closedAfterConfirmTicks = 0;
+    let sawSpecialist = false;
+    let lastSeenSpecTick = s.tick();
+    const startCounts = new Map(batch.map(k => [k.id, countById(s.sdk.getInventory(), k.id)]));
+
+    const hasTradeMsg = (re: RegExp) =>
+        getMsgs().some(
+            m => re.test(m.text) && (m.observationId !== undefined ? m.observationId > tradeObsBaseline : m.tick > tradeStartTick),
+        );
+
+    while (!stop() && s.tick() - t0 < CAP) {
+        const specNearby = s.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specLower);
+        if (specNearby && (!opts?.insideCheck || opts.insideCheck())) {
+            sawSpecialist = true;
+            lastSeenSpecTick = s.tick();
+        }
+
+        const ht = s.sdk.getTradeState();
+        if (!ht.isOpen) {
+            if (sawConfirm) {
+                if (hasTradeMsg(/Accepted trade\./i)) return 'ok';
+                if (hasTradeMsg(/(?:declined trade|enough inventory space)/i)) {
+                    sawConfirm = false;
+                    closedAfterConfirmTicks = 0;
+                    tradeObsBaseline = getMsgs().reduce((mx, m) => Math.max(mx, m.observationId ?? 0), 0);
+                    tradeStartTick = s.tick();
+                } else {
+                    closedAfterConfirmTicks++;
+                    if (closedAfterConfirmTicks >= 3) {
+                        if (batch.every(k => countById(s.sdk.getInventory(), k.id) <= (startCounts.get(k.id) ?? 0) - k.count)) {
+                            return 'ok';
+                        }
+                        sawConfirm = false;
+                        closedAfterConfirmTicks = 0;
+                    }
+                    await waitTicks(s, 1);
+                    continue;
+                }
+            }
+
+            if (
+                opts?.exitAfterAbsenceTicks !== undefined &&
+                sawSpecialist &&
+                s.tick() - lastSeenSpecTick >= opts.exitAfterAbsenceTicks
+            ) {
+                return 'finished';
+            }
+
+            const reqMsg = [...getMsgs()]
+                .reverse()
+                .find(
+                    m =>
+                        (m.type === 4 || /wishes to trade/i.test(m.text)) &&
+                        (m.sender?.toLowerCase() === specLower || specReqRe.test(m.text)) &&
+                        ((m.observationId !== undefined && m.observationId > lastReqObsId) || s.tick() - m.tick <= 2),
+                );
+            if (reqMsg && specNearby && s.tick() - lastReplyTick >= 2) {
+                lastReqObsId = Math.max(lastReqObsId, reqMsg.observationId ?? 0);
+                lastReplyTick = s.tick();
+                tradeObsBaseline = getMsgs().reduce((mx, m) => Math.max(mx, m.observationId ?? 0), 0);
+                tradeStartTick = s.tick();
+                await s.direct({ type: 'interactPlayer', playerIndex: specNearby.index, optionIndex: 4, reason: 'SDK' });
+            } else if (s.sdk.getState()?.dialog?.isOpen) {
+                await s.direct({ type: 'closeModal', reason: 'SDK' });
+            }
+            await waitTicks(s, 1);
+            continue;
+        }
+
+        closedAfterConfirmTicks = 0;
+        if (ht.partner && ht.partner.toLowerCase() !== specLower) {
+            await s.direct({ type: 'closeModal', reason: 'SDK' });
+            sawConfirm = false;
+            await waitTicks(s, 1);
+            continue;
+        }
+
+        if (ht.screen === 'confirm') {
+            sawConfirm = true;
+            if (!acceptReturn(ht.theirOffer)) {
+                await s.direct({ type: 'closeModal', reason: 'SDK' });
+            } else if (!ht.myAccepted) {
+                await s.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' });
+            }
+            await waitTicks(s, 1);
+            continue;
+        }
+
+        const offerSlots = uniqueSlotsForBatch(s.sdk.getInventory(), batch, ht.myOffer);
+        const maxOffers = offerSlots.length > 4 ? 5 : 4;
+        const toOffer = offerSlots.slice(0, maxOffers);
+        const allOffered = offerSlots.length <= toOffer.length;
+        const acts: Promise<unknown>[] = [];
+        for (const slot of toOffer) {
+            acts.push(s.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
+        }
+        if (allOffered && toOffer.length <= 4 && acceptReturn(ht.theirOffer)) {
+            if (!ht.myAccepted) {
+                acts.push(s.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
+            }
+            if (ht.partnerAccepted) {
+                sawConfirm = true;
+                acts.push(s.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
+            }
+        }
+        if (acts.length) await Promise.all(acts);
+        await waitTicks(s, 1);
+    }
+    return 'aborted';
 }
 
 async function serveOneBatch(
@@ -685,38 +863,136 @@ async function runServe(args: string[]): Promise<void> {
             }
             allDone = ok && idx === SMITHING_RUNNER_QUEUE.length;
         } else if (kitName === 'runecraft') {
-            const starter = [
-                invSpec(ITEM_IDS.amulet_of_glory_4, 1),
-                invSpec(ITEM_IDS.air_talisman, 1),
-                invSpec(ITEM_IDS.body_talisman, 1),
-                invSpec(ITEM_IDS.blankrune, 25),
-            ];
-            if (!hasExactKit(s.sdk.getInventory(), starter)) {
-                await withdrawExactKit(s, starter, bankTile, stop);
-            }
-            await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
-            emitReady();
-            let ok = await serveOneBatch(s, specialist, starter, t0, CAP, stop);
+            const role = parseSupplierRole(args, process.env);
             const insideBody = () => {
                 const p = playerPos(s);
                 return !!p && p.worldZ > 4500 && p.worldX < 2600;
             };
-            let trips = 0;
-            while (ok && !stop() && s.tick() - t0 < CAP && trips < 205) {
-                const fullPack = [invSpec(ITEM_IDS.body_talisman, 1), invSpec(ITEM_IDS.blankrune, 26)];
-                if (!hasExactKit(s.sdk.getInventory(), fullPack)) {
-                    if (insideBody()) await exitPortal(s, stop, insideBody);
-                    await withdrawExactKit(s, fullPack, EDGEVILLE_BANK, stop);
-                }
-                if (!insideBody()) {
-                    await moveGroundTo(s, BODY_RUINS, 2, stop);
-                    await enterAltar(s, ITEM_IDS.body_talisman, 2457, stop, insideBody);
-                }
-                await moveGroundTo(s, BODY_ALTAR_STAND, 2, stop);
-                ok = await serveOneBatch(s, specialist, [invSpec(ITEM_IDS.blankrune, 26)], t0, CAP, stop);
-                if (ok) trips++;
+            let ok = true;
+            let readyEmitted = false;
+            const markReady = () => {
+                if (readyEmitted) return;
+                readyEmitted = true;
+                emitReady();
+            };
+
+            if (role !== 'runner') {
+                const starter = [
+                    invSpec(ITEM_IDS.amulet_of_glory_4, 1, GLORY_IDS.filter(id => id !== ITEM_IDS.amulet_of_glory_4)),
+                    invSpec(ITEM_IDS.air_talisman, 1),
+                    invSpec(ITEM_IDS.body_talisman, 1),
+                    invSpec(ITEM_IDS.blankrune, 25),
+                ];
+                const concreteStarter = hasExactKit(s.sdk.getInventory(), starter)
+                    ? resolveConcreteKit(starter, s.sdk.getInventory())
+                    : await withdrawExactKit(s, starter, bankTile, stop);
+                await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
+                markReady();
+                ok = (await serveFastBatch(s, specialist, concreteStarter, t0, CAP, stop)) === 'ok';
             }
-            allDone = ok && trips >= 205;
+
+            if (ok && role !== 'starter') {
+                const runnerBank =
+                    role === 'runner' && (parsed.bankX !== undefined || parsed.bankZ !== undefined)
+                        ? bankTile
+                        : EDGEVILLE_BANK;
+                const keep = new Set<number>([ITEM_IDS.body_talisman]);
+                let trips = 0;
+                let sawSpecialist = false;
+                let autoHasRunnerStock = role === 'runner';
+
+                // In auto mode (single-supplier without explicit --role), only continue into Body Altar runner loops
+                // when Edgeville/stage bank actually holds a spare Body talisman + essence.
+                if (role === 'auto') {
+                    await moveTo(s, runnerBank, 2, stop);
+                    const bankObs = await openFreshBank(s);
+                    const hasTali = (bankObs.items.find(i => i.id === ITEM_IDS.body_talisman)?.count ?? 0) >= 1;
+                    const hasEss = (bankObs.items.find(i => i.id === ITEM_IDS.blankrune)?.count ?? 0) >= 1;
+                    await s.bot.closeBank().catch(() => {});
+                    await waitUntil(s, () => !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 8 });
+                    autoHasRunnerStock = hasTali && hasEss;
+                }
+
+                while (autoHasRunnerStock && !stop() && s.tick() - t0 < CAP && trips < 205) {
+                    const inv = s.sdk.getInventory();
+                    const heldTalisman = countById(inv, ITEM_IDS.body_talisman);
+                    const heldEss = countById(inv, ITEM_IDS.blankrune);
+
+                    if (!insideBody() && (heldTalisman < 1 || heldEss < 26)) {
+                        if (heldTalisman < 1) {
+                            await moveTo(s, trips === 0 ? runnerBank : EDGEVILLE_BANK, 2, stop);
+                            const bankObs = await openFreshBank(s);
+                            const hasTali = (bankObs.items.find(i => i.id === ITEM_IDS.body_talisman)?.count ?? 0) >= 1;
+                            if (!hasTali) {
+                                await s.bot.closeBank().catch(() => {});
+                                break;
+                            }
+                            const taliItem = s.sdk.getState()?.bank?.items?.find((i: any) => i.id === ITEM_IDS.body_talisman);
+                            if (taliItem) {
+                                await s.bot.withdrawItem(taliItem, 1, { asNote: false });
+                                await waitUntil(s, () => countById(s.sdk.getInventory(), ITEM_IDS.body_talisman) >= 1, { timeoutTicks: 8 });
+                            }
+                            await s.bot.closeBank().catch(() => {});
+                        }
+                        if (countById(s.sdk.getInventory(), ITEM_IDS.body_talisman) < 1) break;
+                        const bankSpot = trips === 0 ? runnerBank : EDGEVILLE_BANK;
+                        await restockAtBank(
+                            s,
+                            bankSpot,
+                            ITEM_IDS.blankrune,
+                            26,
+                            keep,
+                            () => stop() || s.tick() - t0 >= CAP,
+                            t0 + CAP,
+                        );
+                    }
+
+                    const readyTali = countById(s.sdk.getInventory(), ITEM_IDS.body_talisman);
+                    const readyEss = countById(s.sdk.getInventory(), ITEM_IDS.blankrune);
+                    if (!insideBody() && (readyTali < 1 || readyEss === 0)) break;
+
+                    if (!insideBody()) {
+                        markReady();
+                        await moveGroundTo(s, BODY_RUINS, 2, stop);
+                        await enterAltar(s, ITEM_IDS.body_talisman, 2457, stop, insideBody);
+                    }
+
+                    if (countById(s.sdk.getInventory(), ITEM_IDS.blankrune) === 0) {
+                        await exitPortal(s, stop, insideBody);
+                        continue;
+                    }
+
+                    markReady();
+                    await moveGroundTo(s, BODY_ALTAR_STAND, 2, stop);
+                    const batchCount = Math.min(26, countById(s.sdk.getInventory(), ITEM_IDS.blankrune));
+                    const res = await serveFastBatch(
+                        s,
+                        specialist,
+                        [invSpec(ITEM_IDS.blankrune, batchCount)],
+                        t0,
+                        CAP,
+                        stop,
+                        {
+                            exitAfterAbsenceTicks: 120,
+                            insideCheck: insideBody,
+                        },
+                    );
+                    if (res === 'ok') {
+                        sawSpecialist = true;
+                        trips++;
+                        await exitPortal(s, stop, insideBody);
+                    } else if (res === 'finished') {
+                        sawSpecialist = true;
+                        break;
+                    } else {
+                        ok = false;
+                        break;
+                    }
+                }
+                allDone = ok && (role === 'auto' ? (!autoHasRunnerStock || trips > 0 || sawSpecialist) : (trips > 0 || sawSpecialist));
+            } else {
+                allDone = ok;
+            }
         } else if (kitName === 'crafting') {
             let ok = true;
             let idx = 0;
