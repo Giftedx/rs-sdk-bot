@@ -37,6 +37,7 @@ export const DUELING_RING_IDS = [2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566]
 export const PRAYER_POT_IDS = [2434, 139, 141, 143] as const;
 export const SUPER_ATTACK_IDS = [2436, 145, 147, 149] as const;
 export const SUPER_STRENGTH_IDS = [2440, 157, 159, 161] as const;
+export const SUPER_ENERGY_IDS = [3016, 3018, 3020, 3022] as const;
 
 export const LUMBRIDGE_HANDOFF = { x: 3222, z: 3222, level: 0 } as const;
 export const LUMBRIDGE_STAIRS = { x: 3205, z: 3209, level: 0 } as const;
@@ -88,45 +89,25 @@ export const HP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 2449, name: 'Superantipoison(4)', count: 2, stackable: true },
 ] as const;
 
-// 28 slots exact: 3 Waterfall rune stacks + gear + 11 Dragon bones + immediate Waterfall food/prayer + noted Ardy PvP stacks.
-export const STRENGTH_SPECIALIST_KIT: readonly KitSpecItem[] = [
+// 28 slots exact: Waterfall (83 Atk/Str) + Super energy + Prayer/Shark + PvP pots; zero post-quest banking needed.
+export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 556, name: 'Air rune', count: 6, stackable: true },
     { id: 557, name: 'Earth rune', count: 6, stackable: true },
     { id: 555, name: 'Water rune', count: 6, stackable: true },
-    { id: 386, name: 'Shark', count: 6, stackable: true },
-    { id: 2435, name: 'Prayer potion(4)', count: 3, stackable: true },
-    { id: 2437, name: 'Super attack(4)', count: 2, stackable: true },
-    { id: 2441, name: 'Super strength(4)', count: 3, stackable: true },
     { id: 1333, name: 'Rune scimitar', count: 1, stackable: false },
     { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
-    { id: 954, name: 'Rope', count: 2, stackable: false },
+    { id: 954, name: 'Rope', count: 1, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 3, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 1, stackable: false },
+    { id: 385, name: 'Shark', count: 2, stackable: false },
+    { id: 2436, name: 'Super attack(4)', count: 1, stackable: false },
+    { id: 2440, name: 'Super strength(4)', count: 3, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
-    { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
-    { id: 385, name: 'Shark', count: 3, stackable: false },
 ] as const;
 
-// 28 slots exact: Magic 1->80 (Enchant rings), Mage Arena (Zamorak Cape/Staff + Charge), and Flames of Zamorak Defensive PvP.
-export const DEFENCE_SPECIALIST_KIT: readonly KitSpecItem[] = [
-    { id: 1387, name: 'Staff of fire', count: 1, stackable: false },
-    { id: 946, name: 'Knife', count: 1, stackable: false },
-    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
-    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
-    { id: 556, name: 'Air rune', count: 1800, stackable: true },
-    { id: 558, name: 'Mind rune', count: 20, stackable: true },
-    { id: 554, name: 'Fire rune', count: 3800, stackable: true },
-    { id: 555, name: 'Water rune', count: 1500, stackable: true },
-    { id: 557, name: 'Earth rune', count: 2000, stackable: true },
-    { id: 564, name: 'Cosmic rune', count: 230, stackable: true },
-    { id: 565, name: 'Blood rune', count: 1800, stackable: true },
-    { id: 563, name: 'Law rune', count: 10, stackable: true },
-    { id: 1638, name: 'Sapphire ring', count: 14, stackable: true },
-    { id: 1640, name: 'Emerald ring', count: 55, stackable: true },
-    { id: 1644, name: 'Diamond ring', count: 40, stackable: true },
-    { id: 1646, name: 'Dragonstone ring', count: 85, stackable: true },
-    { id: 2435, name: 'Prayer potion(4)', count: 8, stackable: true },
-    { id: 386, name: 'Shark', count: 6, stackable: true },
-] as const;
+export const STRENGTH_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
+export const DEFENCE_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
 
 export const KIT_BY_BOARD: Readonly<Record<'hitpoints' | 'strength' | 'defence', readonly KitSpecItem[]>> = {
     hitpoints: HP_SPECIALIST_KIT,
@@ -749,11 +730,13 @@ export async function runWildyPvpLoop(
             const st = s.sdk.getState();
             const pts = st?.prayers?.prayerPoints ?? 0;
 
-            // Reset prayers every 3 ticks in a single tick pair so prayer_drain (5-tick timer) stays cleared.
+            // Deactivate all active prayers first so ~prayers_are_active becomes false and cleartimer(prayer_drain) runs.
+            let flickedThisTick = false;
             if (pts > 0 && skillInfo(s, 'Prayer').baseLevel >= 31) {
                 const needOn = flickPrayers.some(idx => !st?.prayers?.activePrayers?.[idx]);
                 if (needOn) {
                     lastFlickTick = s.tick();
+                    flickedThisTick = true;
                     for (const idx of flickPrayers) {
                         if (!st?.prayers?.activePrayers?.[idx]) {
                             void s.direct({ type: 'togglePrayer', prayerIndex: idx, reason: 'SDK' });
@@ -761,24 +744,29 @@ export async function runWildyPvpLoop(
                     }
                 } else if (s.tick() - lastFlickTick >= 3) {
                     lastFlickTick = s.tick();
+                    flickedThisTick = true;
                     for (const idx of flickPrayers) {
                         void s.direct({ type: 'togglePrayer', prayerIndex: idx, reason: 'SDK' });
+                    }
+                    for (const idx of flickPrayers) {
                         void s.direct({ type: 'togglePrayer', prayerIndex: idx, reason: 'SDK' });
                     }
                 }
             }
-            if (pts <= 10 && s.tick() - lastPrayPotionTick >= 4) {
+            if (!flickedThisTick && pts <= 10 && s.tick() - lastPrayPotionTick >= 4) {
                 if (await drinkFromList(PRAYER_POT_IDS)) lastPrayPotionTick = s.tick();
             }
 
-            // Re-boost Strength when boost drops by 3+ (keeps top maxhit without frequent drink delays) and keep Attack boosted.
-            if (s.tick() - lastDrinkTick >= 3) {
+            // Re-boost Strength (12 doses) and Attack (4 doses) without losing combat uptime.
+            if (!flickedThisTick && s.tick() - lastDrinkTick >= 3) {
                 const str = skillInfo(s, 'Strength');
                 const atk = skillInfo(s, 'Attack');
                 const maxStrBoost = 5 + Math.floor(str.baseLevel * 0.15);
-                if (str.level <= str.baseLevel + Math.max(13, maxStrBoost - 3)) {
+                const minStrBoost = opts.skill === 'Strength' ? Math.max(13, maxStrBoost - 2) : 14;
+                const minAtkBoost = opts.skill === 'Strength' ? 12 : 10;
+                if (str.level <= str.baseLevel + minStrBoost) {
                     if (await drinkFromList(SUPER_STRENGTH_IDS)) lastDrinkTick = s.tick();
-                } else if (atk.level < atk.baseLevel + 10) {
+                } else if (atk.level < atk.baseLevel + minAtkBoost) {
                     if (await drinkFromList(SUPER_ATTACK_IDS)) lastDrinkTick = s.tick();
                 }
             }
@@ -931,42 +919,48 @@ export async function runCompanionRole(
         console.log('COMPANION_READY ' + JSON.stringify({ role: opts.role, name: s.name, at: { x: p.worldX, z: p.worldZ, level: p.level } }));
     }
 
-    const postTile = { x: DESERTED_KEEP.x + (opts.postTileOffsetX ?? 0), z: DESERTED_KEEP.z, level: 0 };
+    const postTile = opts.postTileOffsetX === 0
+        ? { x: DESERTED_KEEP.x, z: DESERTED_KEEP.z - 1, level: 0 }
+        : { x: DESERTED_KEEP.x + (opts.postTileOffsetX ?? 0), z: DESERTED_KEEP.z, level: 0 };
     const specialistRe = exactNameRe(opts.specialistName);
     let lastEatTick = -10;
-    while (!stop()) {
-        if (activeContinueDialog(s)) void s.sdk.sendClickDialog(0);
-        const p = posOf(s);
-        if (!p || p.isDead) {
-            await waitTicks(s, 2);
-            continue;
-        }
-        if (p.worldZ < 3800) {
-            await setAutoRetaliate(s, false);
-            await bankAndReturnToKeep(s, stop);
-            continue;
-        }
-        if (d8({ x: p.worldX, z: p.worldZ }, postTile) > 0) {
-            await walkWaypoints(s, [{ x: postTile.x, z: postTile.z, tol: 0 }], 20, stop, 'tank step to post');
-        }
-        const mantaCount = countById(s.sdk.getInventory(), 391);
-        const hp = skillInfo(s, 'Hitpoints').level;
-        const otherTankHere = (s.sdk.getState()?.nearbyPlayers ?? []).some((np: any) =>
-            !specialistRe.test(np.name ?? '') &&
-            (np.z ?? np.worldZ ?? 0) >= 3900 &&
-            (np.hp === undefined || np.hp === null || np.hp > 0),
-        );
-        if (hp > 0 && hp <= 77 && mantaCount > 0 && s.tick() - lastEatTick >= 3) {
-            const food = s.sdk.getInventory().find(i => i.id === 391);
-            if (food) {
-                lastEatTick = s.tick();
-                await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
+    try {
+        while (!stop()) {
+            if (activeContinueDialog(s)) void s.sdk.sendClickDialog(0);
+            const p = posOf(s);
+            if (!p || p.isDead) {
+                await waitTicks(s, 2);
+                continue;
             }
+            if (p.worldZ < 3800) {
+                await setAutoRetaliate(s, false);
+                await bankAndReturnToKeep(s, stop);
+                continue;
+            }
+            if (d8({ x: p.worldX, z: p.worldZ }, postTile) > 0) {
+                await walkWaypoints(s, [{ x: postTile.x, z: postTile.z, tol: 0 }], 20, stop, 'tank step to post');
+            }
+            const mantaCount = countById(s.sdk.getInventory(), 391);
+            const hp = skillInfo(s, 'Hitpoints').level;
+            const otherTankHere = (s.sdk.getState()?.nearbyPlayers ?? []).some((np: any) =>
+                !specialistRe.test(np.name ?? '') &&
+                (np.z ?? np.worldZ ?? 0) >= 3900 &&
+                (np.hp === undefined || np.hp === null || np.hp > 0),
+            );
+            if (hp > 0 && hp <= 77 && mantaCount > 0 && s.tick() - lastEatTick >= 3) {
+                const food = s.sdk.getInventory().find(i => i.id === 391);
+                if (food) {
+                    lastEatTick = s.tick();
+                    await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
+                }
+            }
+            if ((mantaCount <= 10 && otherTankHere) || mantaCount <= 1) {
+                if (await pullKeepLeverOutAndRebank(s, stop)) continue;
+            }
+            await waitTicks(s, 1);
         }
-        if ((mantaCount <= 5 && otherTankHere) || mantaCount <= 1) {
-            if (await pullKeepLeverOutAndRebank(s, stop)) continue;
-        }
-        await waitTicks(s, 1);
+    } catch (e) {
+        if (!stop()) throw e;
     }
     return { ok: true, detail: `tank ${s.name} finished in ${s.tick() - t0} ticks` };
 }
@@ -980,7 +974,7 @@ export async function runMeleePvpSpecialist(
         cap: number;
         t0: number;
         stop: StopFn;
-        runWaterfallFn: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; protectMelee?: boolean; tombHoldIds?: readonly number[]; looseRailing?: boolean }) => Promise<unknown>;
+        runWaterfallFn: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; protectMelee?: boolean; tombHoldIds?: readonly number[]; looseRailing?: boolean; superEnergy?: boolean }) => Promise<unknown>;
     },
 ): Promise<string> {
     const skill = opts.board === 'strength' ? 'Strength' : 'Defence';
@@ -989,6 +983,19 @@ export async function runMeleePvpSpecialist(
     const elapsed = () => s.tick() - opts.t0;
     const milestone = (step: string, extra = '') => {
         console.log(`MILESTONE ${step} tick=${elapsed()}${extra ? ' ' + extra : ''}`);
+    };
+
+    let lastEnergyTick = -10;
+    const ensureRunAndEnergy = () => {
+        const p: any = posOf(s);
+        const energy = p?.runEnergy ?? 100;
+        if (energy <= 65 && s.tick() - lastEnergyTick >= 3) {
+            const ep = s.sdk.getInventory().find(i => (SUPER_ENERGY_IDS as readonly number[]).includes(i.id));
+            if (ep) {
+                lastEnergyTick = s.tick();
+                void s.direct({ type: 'useInventoryItem', slot: ep.slot, optionIndex: 1, reason: 'SDK' });
+            }
+        }
     };
 
     milestone('start');
@@ -1003,50 +1010,37 @@ export async function runMeleePvpSpecialist(
     milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
 
     await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, opts.stop);
-    await walkWaypoints(s, [{ x: 2451, z: 3151, tol: 3 }], 100, opts.stop, 'castle wars to west road (2451,3151)');
+    await walkWaypoints(s, [{ x: 2451, z: 3151, tol: 4 }], 100, opts.stop, 'castle wars to west road (2451,3151)', { onTickExtra: ensureRunAndEnergy });
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, opts.stop);
-    for (const wp of [
-        { x: 2490, z: 3220, tol: 3 },
-        { x: 2527, z: 3240, tol: 3 },
-    ]) {
-        await walkWaypoints(s, [wp], 120, opts.stop, `castle wars to almera (${wp.x},${wp.z})`, { ignoreMeleeHunters: true });
-    }
+    await walkWaypoints(s, [
+        { x: 2490, z: 3220, tol: 4 },
+        { x: 2527, z: 3240, tol: 4 },
+    ], 120, opts.stop, 'castle wars to khazard battlefield', { ignoreMeleeHunters: true, onTickExtra: ensureRunAndEnergy });
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
-    for (const wp of [
-        { x: 2576, z: 3320, tol: 3 },
-        { x: 2577, z: 3380, tol: 3 },
-        { x: 2554, z: 3470, tol: 3 },
+    await walkWaypoints(s, [
+        { x: 2576, z: 3320, tol: 4 },
+        { x: 2565, z: 3380, tol: 4 },
         { x: 2522, z: 3494, tol: 2 },
-    ]) {
-        await walkWaypoints(s, [wp], 120, opts.stop, `castle wars to almera (${wp.x},${wp.z})`);
-    }
+    ], 160, opts.stop, 'khazard to almera', { onTickExtra: ensureRunAndEnergy });
     milestone('almera');
 
     await opts.runWaterfallFn({
         session: s,
         stop: opts.stop,
         cap: Math.max(300, opts.cap - elapsed()),
-        food: { id: 385, heal: 20, count: 6, eatAt: 6, crossAt: 9 },
+        food: { id: 385, heal: 20, count: 6, eatAt: 8, crossAt: 9 },
         mighty: false,
         exitFalls: true,
         keepAlive: true,
         protectMelee: true,
         tombHoldIds: [1333],
         looseRailing: true,
+        superEnergy: true,
     });
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     milestone('waterfall', `atk=${skillInfo(s, 'Attack').baseLevel} str=${skillInfo(s, 'Strength').baseLevel} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
-    await walkWaypoints(s, [{ x: ARDY_NORTH_BANK.x, z: ARDY_NORTH_BANK.z, tol: 1 }], 120, opts.stop, 'waterfall to ardy bank');
-    await openFreshBank(s, opts.stop);
-    await depositIds(s, [292, 293, 294, 295, 296, 298, 954, 556, 557, 555, 139, 141, 143, 229, 385, 2434, 1601, 2357, 299, 386, 2435, 2437, 2441, 2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566], opts.stop);
-    await withdrawExactCount(s, 2436, opts.board === 'strength' ? 2 : 1, opts.stop, 'Super attack(4)');
-    await withdrawExactCount(s, 2440, opts.board === 'strength' ? 3 : 5, opts.stop, 'Super strength(4)');
-    await withdrawExactCount(s, 2434, 3, opts.stop, 'Prayer potion(4)');
-    await withdrawExactCount(s, 385, 6, opts.stop, 'Shark');
-    await closeBankClean(s, opts.stop);
-    milestone('ardy_pvp_bank');
-
+    await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall to ardougne lever', { onTickExtra: ensureRunAndEnergy });
     await pullArdougneLeverToWildy(s, opts.stop);
     milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 

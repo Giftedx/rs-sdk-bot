@@ -212,6 +212,7 @@ export interface WaterfallOptions {
     protectMelee?: boolean;
     tombHoldIds?: readonly number[];
     looseRailing?: boolean;
+    superEnergy?: boolean;
 }
 
 export async function runWaterfall(opts: WaterfallOptions = {}): Promise<{ attackXp: number; strengthXp: number; ticks: number }> {
@@ -319,6 +320,7 @@ try {
     // Every tick: death watch, jump log, and the eat reflex (a direct op, so it never waits behind a bot.* action).
     let lastPrayDrink = -10;
     let lastPfmToggle = -10;
+    let lastEnergyDrink = -10;
     off = s.onTick(() => {
         tally.pull();
         capturePage();
@@ -340,10 +342,16 @@ try {
             const hits = (st()?.combatEvents ?? []).filter((e: any) => e.tick >= s.tick() - 1 && e.type === 'damage_taken').map((e: any) => `${e.sourceIndex}:${e.damage}`).join(',');
             console.log(`TRACE ${T()} ${p.worldX},${p.worldZ} hp=${h} hits=${hits} ${ns}`);
         }
+        if (opts.superEnergy && p && (p.runEnergy ?? 100) <= 65 && s.tick() - lastEnergyDrink >= 3) {
+            const ep = inv().find(i => [3016, 3018, 3020, 3022].includes(i.id));
+            if (ep) { lastEnergyDrink = s.tick(); void s.direct({ type: 'useInventoryItem', slot: ep.slot, optionIndex: 1, reason: 'SDK' }); }
+        }
         if (opts.protectMelee && p) {
             const pfmOn = !!st()?.prayers?.activePrayers?.[14];
             const prayPts = st()?.prayers?.prayerPoints ?? 0;
-            const inDangerZone = p.worldZ > 6400 || (p.worldX >= 2500 && p.worldX <= 2555 && p.worldZ >= 3138 && p.worldZ <= 3195);
+            const inDangerZone = p.worldZ > 6400
+                || (p.worldX >= 2500 && p.worldX <= 2555 && p.worldZ >= 3138 && p.worldZ <= 3195)
+                || (p.worldX >= 2530 && p.worldX <= 2570 && p.worldZ >= 3380 && p.worldZ <= 3450);
             if (inDangerZone && prayPts <= 8 && s.tick() - lastPrayDrink >= 3) {
                 const pot = inv().find(i => [2434, 139, 141, 143].includes(i.id));
                 if (pot) { lastPrayDrink = s.tick(); void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' }); }

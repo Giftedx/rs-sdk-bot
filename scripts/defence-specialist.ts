@@ -1,10 +1,10 @@
-// Fresh-clock Defence 99 specialist: Magic 80 Enchant, Mage Arena Zamorak + Charge, and Flames of Zamorak Defensive PvP.
+// Fresh-clock Defence 99 specialist: Waterfall (83 Atk/Str) and Defensive Rune scimitar PvP at Deserted Keep.
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { finish, openBot } from '../packages/core/src/bot';
 import { isLocalServer } from '../packages/core/src/localserver';
-import { configureSpecialistGuardEnv, readServerHost, runMagicDefenceSpecialist, type StopFn } from './combat-quest-specialists';
-import { runQuestMageArena } from './generated/quest-magearena';
+import { configureSpecialistGuardEnv, readServerHost, runMeleePvpSpecialist, type StopFn } from './combat-quest-specialists';
+import { runWaterfall } from './generated/waterfall';
 
 async function main(): Promise<void> {
     const bot = process.argv[2] ?? '';
@@ -36,13 +36,14 @@ async function main(): Promise<void> {
         (!isLocalServer(serverHost) && existsSync(join(root, '.practice', 'stop-swarm')));
 
     try {
-        const msg = await runMagicDefenceSpecialist(s, {
+        const msg = await runMeleePvpSpecialist(s, {
+            board: 'defence',
             supplierName,
             tankNames,
             cap: CAP,
             t0,
             stop,
-            runMageArenaFn: runQuestMageArena,
+            runWaterfallFn: runWaterfall,
         });
         await finish([s], true, msg);
     } catch (e) {
