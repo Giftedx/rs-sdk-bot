@@ -1213,7 +1213,7 @@ export async function runSpecialistWaterfall(
 
     const onIsland = () => inBox(2510, 3476, 2514, 3481);
     const crossToLedge = async (withHudon: boolean) => {
-        await walkFast([{ x: 2511, z: 3494, tol: 1 }], 40, 'to raft');
+        await walkFast([{ x: 2511, z: 3494, tol: 1 }], withHudon ? 40 : 120, 'to raft');
         await stepAct('board raft', () => opLoc(LOC.raft), onIsland, 10, 8);
         if (withHudon) {
             const hudonProof = /fine alone|so you're still here|find that treasure soon/i;
@@ -1397,9 +1397,9 @@ export async function runSpecialistWaterfall(
     await walkFast([{ x: 2604, z: 9901, tol: 1 }], 25, 'raised room exit', () => syncWaterfallPfm(true));
     await stepAct('raised door', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.baxKey, { id: 2002, x: 2604, z: 9900 }); }, () => inBox(2562, 9894, 2572, 9901), 10, 4);
     await stepAct('south giant door', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.baxKey, LOC.giantDoor); }, () => !findLoc(l => l.id === 2002 && l.x === LOC.giantDoor.x && l.z === LOC.giantDoor.z), 10, 4);
-    await walkFast([{ x: 2568, z: 9891, tol: 1 }, { x: 2565, z: 9883, tol: 1 }], 30, 'return giant room', () => syncWaterfallPfm(true));
+    await walkFast([{ x: 2568, z: 9891, tol: 1 }, { x: 2565, z: 9883, tol: 1 }], 45, 'return giant room', () => syncWaterfallPfm(true));
     await stepAct('return double door', openDoubleDoor, () => !doorShut(), 6, 4);
-    await walkFast([{ x: 2564, z: 9880, tol: 1 }, { x: 2584, z: 9876, tol: 2 }, { x: 2575, z: 9863, tol: 1 }], 40, 'return ledge exit', () => syncWaterfallPfm(true));
+    await walkFast([{ x: 2564, z: 9880, tol: 1 }, { x: 2584, z: 9876, tol: 2 }, { x: 2575, z: 9863, tol: 1 }], 60, 'return ledge exit', () => syncWaterfallPfm(true));
     await stepAct('falls exit', () => opLoc({ id: 2000, x: 2575, z: 9861 }), () => near(2511, 3463, 3), 10, 4);
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
     await stepAct('return barrel', () => opLoc(LOC.barrel), () => near(2527, 3413, 4), 10, 4);
