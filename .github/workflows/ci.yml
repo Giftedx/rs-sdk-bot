@@ -163,6 +163,13 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
+      - name: Restore Bun install cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-cache-${{ runner.os }}-${{ hashFiles('bun.lock', 'vendor/rs-sdk/bun.lock', 'vendor/rs-sdk/server/engine/bun.lock', 'vendor/rs-sdk/server/webclient/bun.lock') }}
+          restore-keys: |
+            bun-cache-${{ runner.os }}-
       - name: Prepare the pinned practice dependencies
         run: bun scripts/worktree-setup.ts --bench
       # The pathfinder snapshot, the area labels and the measured walk lengths (.practice/cache). Each file is bound to
@@ -177,19 +184,68 @@ jobs:
           key: route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
           restore-keys: |
             route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
+      - name: Restore packed game assets
+        id: pack-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: vendor/rs-sdk/server/engine/data/pack
+          key: engine-pack-v1-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/content/**', 'vendor/rs-sdk/server/engine/tools/pack/**', 'vendor/rs-sdk/server/engine/src/cache/**', 'patches/rs-sdk-working.patch', '.gitmodules') }}
       - name: Pack the public game assets
+        id: pack
         timeout-minutes: 10
         working-directory: vendor/rs-sdk/server/engine
         run: |
-          bun run build
+          if [ "${{ steps.pack-cache.outputs.cache-hit }}" = "true" ] \
+             && [ -s data/pack/server/script.dat ] \
+             && [ -s data/pack/server/script.idx ] \
+             && [ -s data/pack/main_file_cache.dat ] \
+             && [ -s data/pack/main_file_cache.idx0 ] \
+             && [ -s data/pack/main_file_cache.idx4 ] \
+             && [ -s data/pack/ondemand.zip ] \
+             && [ -s data/pack/client/config ] \
+             && { [ -s data/pack/.cache/maps-server.zip ] || [ -d data/pack/server/maps ]; }; then
+            echo "Using cached packed assets"
+            echo "built=false" >> "$GITHUB_OUTPUT"
+          else
+            rm -rf data/pack
+            bun run build
+            echo "built=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Save packed game assets
+        if: steps.pack.outputs.built == 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: vendor/rs-sdk/server/engine/data/pack
+          key: engine-pack-v1-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/content/**', 'vendor/rs-sdk/server/engine/tools/pack/**', 'vendor/rs-sdk/server/engine/src/cache/**', 'patches/rs-sdk-working.patch', '.gitmodules') }}
       - name: Run the named bench cases
         timeout-minutes: 25
         run: |
           set -o pipefail
           mkdir -p .practice/bench-cases
-          # A profile runs one engine. The plan job checked each extra argument (scripts/hosted-bench.ts checkArgs).
-          case " $BENCH_ARGS " in *" --profile "*) engines="" ;; *) engines="--parallel 4" ;; esac
-          bun run bench "$BENCH_PATTERN" --seed "$BENCH_SEED" $engines --budget 10 $BENCH_ARGS | tee .practice/bench-cases/bench.log
+          # Decode --set-b64 KEY=<base64> into --set KEY=<value> without bash word-splitting on JSON values.
+          # The plan job checked each extra argument (scripts/hosted-bench.ts checkArgs).
+          bun -e '
+            const raw = (process.env.BENCH_ARGS ?? "").split(/\s+/).filter(Boolean);
+            const args = [process.env.BENCH_PATTERN!, "--seed", process.env.BENCH_SEED!];
+            if (!raw.includes("--profile")) args.push("--parallel", "4");
+            args.push("--budget", "10");
+            for (let i = 0; i < raw.length; i++) {
+              const a = raw[i]!;
+              if (a === "--set-b64") {
+                const spec = raw[++i] ?? "";
+                const eq = spec.indexOf("=");
+                if (eq < 1) throw new Error(`invalid --set-b64: ${spec}`);
+                const b64 = spec.slice(eq + 1).replace(/-/g, "+").replace(/_/g, "/");
+                const val = Buffer.from(b64, "base64").toString("utf8");
+                args.push("--set", `${spec.slice(0, eq)}=${val}`);
+              } else {
+                args.push(a);
+              }
+            }
+            const p = Bun.spawnSync(["bun", "run", "bench", ...args], { stdio: ["inherit", "inherit", "inherit"] });
+            process.exit(p.exitCode ?? 1);
+          ' | tee .practice/bench-cases/bench.log
         env:
           BENCH_PATTERN: ${{ matrix.pattern }}
           BENCH_SEED: ${{ matrix.seed }}

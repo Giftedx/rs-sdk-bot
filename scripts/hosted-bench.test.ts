@@ -1,5 +1,5 @@
 import {expect, test} from 'bun:test';
-import {benchPlan, checkArgs, resultLines, MAX_JOBS} from './hosted-bench';
+import {benchPlan, checkArgs, decodeSetB64, MAX_JOBS, POLL_MS, resultLines} from './hosted-bench';
 
 test('the plan gives one runner to each pattern and seed', () => {
     expect(benchPlan('^pvp:squad$  ^quester:quest:crest$', '7,8')).toEqual([
@@ -37,4 +37,19 @@ test('a pattern that starts with a dash is refused: the runner would read it as 
     expect(() => benchPlan('--force', '7')).toThrow(/cannot start with "-"/);
     expect(() => benchPlan('cook -x', '7')).toThrow(/cannot start with "-"/);
     expect(benchPlan('a-b', '7')).toHaveLength(1);
+});
+
+test('--set-b64 decodes standard and URL-safe base64 JSON payloads and rejects malformed input', () => {
+    const json = '{"eatAt":65,"comboFood":true}';
+    const b64 = Buffer.from(json, 'utf8').toString('base64');
+    const b64url = Buffer.from('a', 'utf8').toString('base64url');
+    expect(checkArgs(`--profile --set-b64 SQUAD_OPTS=${b64}`)).toEqual(['--profile', '--set-b64', `SQUAD_OPTS=${b64}`]);
+    expect(decodeSetB64(`SQUAD_OPTS=${b64}`)).toEqual({key: 'SQUAD_OPTS', value: json});
+    expect(decodeSetB64(`FLAG=${b64url}`)).toEqual({key: 'FLAG', value: 'a'});
+    for (const bad of ['SQUAD_OPTS=', 'lower=YQ==', 'K=A', 'K=YQ=', 'K=bad!chars', 'K=YWJj=']) {
+        expect(() => decodeSetB64(bad)).toThrow();
+        expect(() => checkArgs(`--set-b64 ${bad}`)).toThrow();
+    }
+    expect(() => checkArgs('--set-b64')).toThrow();
+    expect(POLL_MS).toBe(5_000);
 });

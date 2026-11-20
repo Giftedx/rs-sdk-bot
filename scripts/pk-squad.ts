@@ -351,7 +351,66 @@ export type SquadStats = { name: string; fights: number; pulls: number; kills: n
     interlopers?: number;
     // The deaths of the account in the run, and the ones that it recovered from (re-kit, restock and the walk back to the post).
     // `died` is true for a death that it did not recover from.
-    deaths: number; rekits: number };
+    deaths: number; rekits: number;
+    killTicks?: number; minHp?: number; sharksEaten?: number; karamEaten?: number; freezesCast?: number; freezesLanded?: number; escapes?: number };
+
+export type SquadMetrics = {
+    accounts: number; kills: number; deaths: number; taken: number; trips: number;
+    avgKillTicks: number | null; minHp: number | null; sharksEaten: number; karamEaten: number;
+    freezesCast: number; freezesLanded: number; escapes: number;
+};
+
+/** Aggregates per-member SquadStats into one structured run summary for SQUAD_METRICS logging. */
+export function squadMetrics(results: readonly SquadStats[]): SquadMetrics {
+    const sum = (f: (r: SquadStats) => number) => results.reduce((n, r) => n + f(r), 0);
+    const kills = sum(r => r.kills), killTicks = sum(r => r.killTicks ?? 0);
+    const hps = results.map(r => r.minHp).filter((v): v is number => v !== undefined);
+    return {
+        accounts: results.length,
+        kills,
+        deaths: results.filter(r => r.died).length,
+        taken: sum(r => r.taken),
+        trips: sum(r => r.trips),
+        avgKillTicks: kills > 0 ? Math.round((killTicks / kills) * 10) / 10 : null,
+        minHp: hps.length ? Math.min(...hps) : null,
+        sharksEaten: sum(r => r.sharksEaten ?? 0),
+        karamEaten: sum(r => r.karamEaten ?? 0),
+        freezesCast: sum(r => r.freezesCast ?? 0),
+        freezesLanded: sum(r => r.freezesLanded ?? 0),
+        escapes: sum(r => r.escapes ?? 0),
+    };
+}
+
+export type BenchLocController = {
+    withLocs: <T>(fn: () => Promise<T>) => Promise<T>;
+    withoutLocs: <T>(fn: () => Promise<T>) => Promise<T>;
+};
+
+const PASSTHROUGH_LOCS: BenchLocController = { withLocs: fn => fn(), withoutLocs: fn => fn() };
+
+/**
+ * Applies lockstep-bench client optimizations (never used on live): disables reachability flood-fill,
+ * stubs nearby-loc scans outside walk/bank windows, and stubs ground-item scans on gang or non-pickup sessions.
+ */
+export function configureBenchSession(s: Session, opts: { isGang: boolean; pickup: boolean }): BenchLocController {
+    (s.client as { setReachabilityEnabled?: (on: boolean) => void } | undefined)?.setReachabilityEnabled?.(false);
+    const collector = (s.client as { collector?: Record<string, unknown> } | undefined)?.collector;
+    if (!collector) return PASSTHROUGH_LOCS;
+    if ((opts.isGang || !opts.pickup) && typeof collector.collectGroundItems === 'function') {
+        collector.collectGroundItems = () => [];
+    }
+    if (typeof collector.collectNearbyLocs !== 'function') return PASSTHROUGH_LOCS;
+    const origLocs = collector.collectNearbyLocs as () => unknown;
+    const stubLocs = () => [];
+    collector.collectNearbyLocs = stubLocs;
+    if (opts.isGang) return PASSTHROUGH_LOCS;
+    let depth = 0, paused = 0;
+    const sync = () => { collector.collectNearbyLocs = depth > 0 && paused === 0 ? origLocs : stubLocs; };
+    return {
+        withLocs: async fn => { depth++; sync(); try { return await fn(); } finally { depth--; sync(); } },
+        withoutLocs: async fn => { paused++; sync(); try { return await fn(); } finally { paused--; sync(); } },
+    };
+}
 
 // The target of the squad: the target account in view with the lowest health bar, the nearest on a tie; one the game
 // refused ("I'm already under attack.", "Someone else is already fighting your opponent.") leaves the pick for 8 ticks.
@@ -543,10 +602,37 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     // `run`: the deaths of all the members in the run. The death that brings `deaths` to `limit` is not recovered (PVP_DEATH_LIMITS.perRun).
     maxDeaths?: number; onDeath?: (near: { x: number; z: number } | null) => void; run?: { deaths: number; limit: number };
     // The threat radar of the squad (scripts/pk-threat.ts): a protect prayer for the style of a threat, and a retreat when it outclasses the squad.
-    threats?: ThreatWatch }): Promise<SquadStats> {
+    threats?: ThreatWatch;
+    locs?: BenchLocController }): Promise<SquadStats> {
     const stats: SquadStats = { name: s.name, fights: 0, pulls: 0, kills: 0, trips: 0, died: false, picked: {}, taken: 0, receipts: [], deaths: 0, rekits: 0 };
     const st = s.sdk.getState(), me = () => s.sdk.getState()?.player;
+    const locs = o.locs ?? PASSTHROUGH_LOCS;
     let life0 = st?.player?.lifeId, lastTile: { x: number; z: number } | null = null, prevHp = 0, damagedAt = -100;
+    let killTicks = 0, minHp: number | undefined = st?.player?.hp, sharksEaten = 0, karamEaten = 0, freezesCast = 0, freezesLanded = 0, escapes = 0;
+    const countEat = (slot: number, opIndex: number) => {
+        const item = s.sdk.getInventory?.().find(i => i.slot === slot);
+        if (!item) return;
+        const op = item.optionsWithIndex?.find(x => x.opIndex === opIndex);
+        if (!op || !/^eat$/i.test(op.text)) return;
+        if (item.id === ITEMS.shark) sharksEaten++;
+        else if (item.id === ITEMS.karambwan) karamEaten++;
+    };
+    const origSendUseItem = typeof s.sdk?.sendUseItem === 'function' ? s.sdk.sendUseItem : null;
+    const origDirect = typeof s.direct === 'function' ? s.direct : null;
+    if (origSendUseItem) {
+        s.sdk.sendUseItem = (slot: number, opIndex: number, ...rest: unknown[]) => {
+            countEat(slot, opIndex);
+            return (origSendUseItem as (...a: unknown[]) => Promise<unknown>).call(s.sdk, slot, opIndex, ...rest) as ReturnType<Session['sdk']['sendUseItem']>;
+        };
+    }
+    if (origDirect) {
+        s.direct = action => {
+            if (action.type === 'useInventoryItem' && typeof action.slot === 'number' && typeof action.optionIndex === 'number') {
+                countEat(action.slot, action.optionIndex);
+            }
+            return origDirect.call(s, action);
+        };
+    }
     // A death: a new life, or the tile of the Lumbridge respawn.
     const diedNow = (q: { lifeId?: number; worldX: number; worldZ: number }) => (life0 !== undefined && q.lifeId !== life0) || Math.max(Math.abs(q.worldX - 3222), Math.abs(q.worldZ - 3218)) <= 40;
     // A retreat that ends with no session is a death only when the account died: a stop or a walk that did not get out leaves it alive.
@@ -561,21 +647,23 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     const trip = async (a: Session, fresh = false) => {
         if (!fresh) o.tripping?.add(s.name);
         try {
-            const targetAim = { ...(o.aim ?? o.post) };
-            const bankRun = bankTrip(bankNear(targetAim.x), targetAim, pack, kit, () => !going(), bankEaten, {
-                altar: process.env.SQUAD_TRIP_ALTAR === '1',
-                prayerFloor: Number(process.env.SQUAD_TRIP_PRAYER_FLOOR ?? '0.7'),
-                log: l => o.log(`[${s.name}] SQUAD ${l}`),
-                route: from => marchLegs(from, targetAim),
-                beforeReturn: async isFresh => {
-                    if (isFresh && o.useRally) {
-                        o.onRallyReady?.(a.name);
-                        await o.waitForRally?.(a, () => !going());
-                    }
-                },
-                skipReturn: isFresh => isFresh && !!o.useRally,
+            return await locs.withLocs(async () => {
+                const targetAim = { ...(o.aim ?? o.post) };
+                const bankRun = bankTrip(bankNear(targetAim.x), targetAim, pack, kit, () => !going(), bankEaten, {
+                    altar: process.env.SQUAD_TRIP_ALTAR === '1',
+                    prayerFloor: Number(process.env.SQUAD_TRIP_PRAYER_FLOOR ?? '0.7'),
+                    log: l => o.log(`[${s.name}] SQUAD ${l}`),
+                    route: from => marchLegs(from, targetAim),
+                    beforeReturn: async isFresh => {
+                        if (isFresh && o.useRally) {
+                            o.onRallyReady?.(a.name);
+                            await locs.withoutLocs(() => o.waitForRally?.(a, () => !going()) ?? Promise.resolve());
+                        }
+                    },
+                    skipReturn: isFresh => isFresh && !!o.useRally,
+                });
+                return await bankRun(a, fresh);
             });
-            return await bankRun(a, fresh);
         } finally {
             o.tripping?.delete(s.name);
         }
@@ -588,7 +676,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         try { o.onDeath?.(lastTile); } catch (error) { o.log(`[${s.name}] SQUAD death ledger write failed: ${String(error)}`); }
         if (o.run && ++o.run.deaths >= o.run.limit) { o.log(`[${s.name}] SQUAD death ${o.run.deaths} of the run reaches the run limit of ${o.run.limit}`); return false; }
         if (stats.deaths > (o.maxDeaths ?? 0)) { o.log(`[${s.name}] SQUAD death ${stats.deaths}: over the limit of ${o.maxDeaths ?? 0}`); return false; }
-        const rec = await rekitAfterDeath(s, { lifeBefore: life0, diedNear: lastTile, wornAtStart, stop: () => !going(), log: l => o.log(`[${s.name}] ${l}`), bank: bankNear(o.post.x) });
+        const rec = await locs.withLocs(() => rekitAfterDeath(s, { lifeBefore: life0, diedNear: lastTile, wornAtStart, stop: () => !going(), log: l => o.log(`[${s.name}] ${l}`), bank: bankNear(o.post.x) }));
         if (rec.rekit !== 'ok') { o.log(`[${s.name}] SQUAD no re-kit: ${rec.rekit}`); return false; }
         life0 = rec.lifeAfter ?? life0;
         const fault = await trip(s);
@@ -637,7 +725,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     const skip = new Map<string, number>();
     let enteredWilderness = false;
     const unwatch = s.onTick(() => {
-        const hp = me()?.hp; if (hp !== undefined) { if (hp < lastHp) stats.taken += lastHp - hp; lastHp = hp; }
+        const hp = me()?.hp; if (hp !== undefined) { if (hp < lastHp) stats.taken += lastHp - hp; lastHp = hp; minHp = minHp === undefined ? hp : Math.min(minHp, hp); }
         for (const m of s.sdk.getState()?.gameMessages ?? []) { const id = m.observationId ?? m.tick; if (id <= seenMessage) continue; seenMessage = id; if (/already under attack|already fighting your opponent/i.test(m.text)) refusedAt = s.tick(); }
     });
     try {
@@ -692,8 +780,9 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             if (threatRetreat) {
                 o.threats!.acted(now);
                 o.log(`[${s.name}] SQUAD threat retreat: ${threatRetreat}`);
-                const retreated = await rescue(s, o.log, o.stopped, false);
+                const retreated = await locs.withLocs(() => rescue(s, o.log, o.stopped, false));
                 if (!retreated) { retreatEnded(); break; }
+                escapes++;
                 continue;
             }
             if (threat && o.threats!.act) {
@@ -707,7 +796,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                         o.log(`[${s.name}] SQUAD threat single-way: ${single.reason}, to ${single.to.x},${single.to.z}`);
                         let stuckTicks = 0, lastX = p.worldX, lastZ = p.worldZ, checkedTick = s.tick();
                         const walkDist = Math.max(Math.abs(p.worldX - single.to.x), Math.abs(p.worldZ - single.to.z));
-                        const walked = await walkPath(walker, [{ ...single.to, tol: 0 }], {
+                        const walked = await locs.withLocs(() => walkPath(walker, [{ ...single.to, tol: 0 }], {
                             maxTicks: Math.min(20, Math.max(8, walkDist * 2 + 4)),
                             idleMs: 9000,
                             stop: () => {
@@ -722,11 +811,12 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                                 }
                                 return stuckTicks >= 3;
                             },
-                        });
+                        }));
                         const afterWalk = me();
                         if (!walked.ok && (!afterWalk || needsSingleWayMove(afterWalk, single.to))) {
                             o.log(`[${s.name}] SQUAD threat single-way walk failed, retreat`);
-                            if (!await rescue(s, o.log, o.stopped, false)) { retreatEnded(); break; }
+                            if (!await locs.withLocs(() => rescue(s, o.log, o.stopped, false))) { retreatEnded(); break; }
+                            escapes++;
                         }
                         continue;
                     }
@@ -741,8 +831,9 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             const { plan: fallback, enemyCount, allyCount } = fallbackAction();
             if (fallback !== 'hold' && fallback !== 'out') {
                 o.log(`[${s.name}] SQUAD coordinated fallback (${fallback}) hp=${p.hp} enemies=${enemyCount} allies=${allyCount}`);
-                const retreated = await rescue(s, o.log, o.stopped, false);
+                const retreated = await locs.withLocs(() => rescue(s, o.log, o.stopped, false));
                 if (!retreated) { retreatEnded(); break; }
+                escapes++;
                 continue;
             }
             // Interlopers (dangerous players that are not the squad's targets) become targets, first: lowest health first among them. When they are dead or gone
@@ -763,7 +854,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 // At least a tick each pass: a walk to a step that cannot be reached fails at once.
                 if (now >= singleUntil && Math.max(Math.abs(p.worldX - o.post.x), Math.abs(p.worldZ - o.post.z)) > 2) {
                     const stepTarget = { ...o.post };
-                    await walkPath(walker, [{ ...stepTarget, tol: 2 }], { maxTicks: 60, idleMs: 9000, stop: () => !going() || stepTarget.x !== o.post.x || stepTarget.z !== o.post.z || !!squadTarget(s.sdk.getState()?.nearbyPlayers ?? [], o.targets, health, new Set(), self) });
+                    await locs.withLocs(() => walkPath(walker, [{ ...stepTarget, tol: 2 }], { maxTicks: 60, idleMs: 9000, stop: () => !going() || stepTarget.x !== o.post.x || stepTarget.z !== o.post.z || !!squadTarget(s.sdk.getState()?.nearbyPlayers ?? [], o.targets, health, new Set(), self) }));
                 }
                 if (!await nextTick(s)) break;
                 continue;
@@ -785,7 +876,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     if (food && op) { await s.sdk.sendUseItem(food.slot, op.opIndex); if (!await nextTick(s)) break; }
                 }
                 stats.pulls++;
-                await walkPath(walker, [{ ...aim, tol: 2 }], { maxTicks: 30, idleMs: 9000, stop: () => !going() || low() || (() => { const q = me(); return !!q && isMulti(q.worldX, q.worldZ); })() });
+                await locs.withLocs(() => walkPath(walker, [{ ...aim, tol: 2 }], { maxTicks: 30, idleMs: 9000, stop: () => !going() || low() || (() => { const q = me(); return !!q && isMulti(q.worldX, q.worldZ); })() }));
                 // At least a tick each pass: a walk that stops at once (low HP with no food) must not spin the loop.
                 if (!await nextTick(s)) break;
                 continue;
@@ -817,6 +908,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             };
             const singleHold = now < singleUntil && !isMulti(p.worldX, p.worldZ) && target.x !== undefined && target.z !== undefined && isMulti(target.x, target.z);
             const singleStyles = singleHold ? (['ranged', 'magic'] as const).filter(stName => (o.options.kit[stName]?.length ?? 0) > 0) : [];
+            let lastFreezeCastTick = -100, freezePending = false;
             const r = await fightPlayer(s, target.name, {
                 ...o.options,
                 ...(singleStyles.length ? {
@@ -831,15 +923,22 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 ...(o.burstOnStun !== undefined ? { burstOnStun: o.burstOnStun } : {}),
                 ...(o.stunSpec ? { stunSpec: o.stunSpec } : {}),
                 allies: o.allies, cap: Math.max(1, o.deadline - s.tick()), stop: () => !going() || refusedAt > began || radarMove() || fallbackDue() || focusYield(),
-                log: l => o.log(`[${s.name}] ${l}`),
+                log: l => {
+                    if (/^PK freeze cast\b/.test(l)) { lastFreezeCastTick = s.tick(); freezePending = true; }
+                    else if (/^PK freeze held\b/.test(l)) { if (freezePending && s.tick() - lastFreezeCastTick <= 4) freezesLanded++; freezePending = false; }
+                    else if (/^PK freeze missed\b/.test(l)) { freezePending = false; }
+                    o.log(`[${s.name}] ${l}`);
+                },
             });
+            freezesCast += r.freezes ?? 0;
+            if (r.outcome === 'escaped') escapes++;
             const urgentEscape = radarMove() || fallbackDue();
             // The armour that a freeze stripped goes back on (pk.ts rewearStart).
             if (going() && r.outcome !== 'session ended' && !urgentEscape) await rewearStart(s, wornAtStart.map(w => w.id), l => o.log(`[${s.name}] ${l}`));
             if (refusedAt > began) skip.set(target.name.toLowerCase(), s.tick() + 8);
             const gone = !(s.sdk.getState()?.nearbyPlayers ?? []).some(q => q.name.toLowerCase() === target.name.toLowerCase());
             if (r.outcome === 'kill' || gone) o.focus?.clear(target.name);
-            if (r.outcome === 'kill') { stats.kills++; if (interlopers.has(target.name.toLowerCase())) stats.interlopers = (stats.interlopers ?? 0) + 1; }
+            if (r.outcome === 'kill') { stats.kills++; killTicks += r.ticks ?? 0; if (interlopers.has(target.name.toLowerCase())) stats.interlopers = (stats.interlopers ?? 0) + 1; }
             if (r.receipt) stats.receipts.push(r.receipt);
             const activeInterlopers = o.threats?.act ? o.threats.step(s.tick()).interlopers.length : 0;
             if (o.pickup && !urgentEscape && s.tick() >= singleUntil && activeInterlopers === 0 && (r.outcome === 'kill' || gone)) {
@@ -851,7 +950,18 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             if (urgentEscape && (s.tick() > began || r.outcome !== 'timeout')) continue;
             if (!await nextTick(s)) break;
         }
-    } finally { unwatch(); }
+    } finally {
+        unwatch();
+        if (origSendUseItem) s.sdk.sendUseItem = origSendUseItem;
+        if (origDirect) s.direct = origDirect;
+    }
+    stats.killTicks = killTicks;
+    if (minHp !== undefined) stats.minHp = minHp;
+    stats.sharksEaten = sharksEaten;
+    stats.karamEaten = karamEaten;
+    stats.freezesCast = freezesCast;
+    stats.freezesLanded = freezesLanded;
+    stats.escapes = escapes;
     return stats;
 }
 
@@ -935,8 +1045,25 @@ if (import.meta.main) {
     // fight on while it is in the Wilderness without a session.
     let startRescue: (name: string) => void = () => {};
     const { onStop, onSessionEnd } = squadStopHandlers(detail => { halted ??= detail; }, dropped, line => console.log(line), name => startRescue(name));
-    const all = await openSquad(names, name => openBot(name, { onStop, onSessionEnd, continueAfterDeath: true }), (sessions, detail) => finish(sessions, false, detail));
+    let all: Session[];
+    if (gangSize > 0) {
+        const { tickWaits } = await import('../packages/core/src/tick-stream');
+        tickWaits.active++;
+        try {
+            all = await openSquad(names, name => openBot(name, { onStop, onSessionEnd, continueAfterDeath: true }), (sessions, detail) => finish(sessions, false, detail));
+        } finally {
+            tickWaits.active--;
+        }
+    } else {
+        all = await openSquad(names, name => openBot(name, { onStop, onSessionEnd, continueAfterDeath: true }), (sessions, detail) => finish(sessions, false, detail));
+    }
     const squad = all.slice(0, ours.length).map(squadWorkSession), gang = all.slice(ours.length).map(squadWorkSession);
+    const pickup = get('PICKUP', '1') === '1';
+    const squadLocs = new Map<Session, BenchLocController>();
+    if (gang.length > 0) {
+        for (const s of squad) squadLocs.set(s, configureBenchSession(s, { isGang: false, pickup }));
+        for (const g of gang) configureBenchSession(g, { isGang: true, pickup: false });
+    }
     const rescuing = new Set<string>(), rescues: Promise<string[]>[] = [];
     startRescue = name => {
         // Only a member of ours: a gang account of the bench that ends its session is no one to rescue.
@@ -1143,7 +1270,8 @@ if (import.meta.main) {
             options: { ...sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200), ...fightOverrides, ...(tankList.length ? { rotation: [tankList.includes(squad.indexOf(s)) ? 'melee' as const : 'ranged' as const] } : {}) },
             ...(useFreezeShare ? { freezeShareFor, burstOnHold: useBurstHold } : {}),
             ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
-            allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup: get('PICKUP', '1') === '1', pull: get('PULL', '1') === '1', tripping, aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), run: runDeaths,
+            allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup, pull: get('PULL', '1') === '1', tripping, aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), run: runDeaths,
+            locs: squadLocs.get(s),
             onDeath: near => { recordPvpDeath({ account: s.name, server: squadServer, at: Date.now(), script: 'scripts/pk-squad.ts', near }); }, deadline,
             stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (isKillLine(l)) kills++; log(l); },
         }).finally(() => { finished.add(s.name); });
@@ -1159,6 +1287,7 @@ if (import.meta.main) {
     const stranded: string[] = [];
     if (!gang.length) await Promise.all(squad.map(async (s, i) => { if (dropped.has(s.name)) return; const out = await leaveWilderness(s, results[i]!.died); if (out.died) results[i]!.died = true; if (out.why) { log(`[${s.name}] SQUAD ${out.why}`); stranded.push(s.name); } }));
     for (const r of results) console.log(`SQUAD ${JSON.stringify(r)}`);
+    console.log(`SQUAD_METRICS ${JSON.stringify(squadMetrics(results))}`);
     const picked: Record<string, number> = {};
     for (const r of results) for (const [id, n] of Object.entries(r.picked)) picked[id] = (picked[id] ?? 0) + n;
     const sum = (f: (r: SquadStats) => number) => results.reduce((n, r) => n + f(r), 0);
