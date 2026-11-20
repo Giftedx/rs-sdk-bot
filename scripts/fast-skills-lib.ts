@@ -411,10 +411,11 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specName);
    // Wait for spec's queued level-up dialogs before helper initiates trade so engineQueue cannot overwrite trademain.
    const openActs: Promise<unknown>[] = [];
-   if (helpDlg) openActs.push(helper.direct({ type: 'closeModal', reason: 'SDK' }));
-   if (specDlg) openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
-   // Send both OPPLAYER4 requests together once per 3-tick window so delayed packets cannot re-fire and close a newly opened trademain.
    const canRequest = (!specDlg || opts.allowHelperOnSingleModal) && !helpDlg && spec.tick() - lastOpenReqTick >= 3;
+   if (helpDlg) openActs.push(helper.direct({ type: 'closeModal', reason: 'SDK' }));
+   // When sending OPPLAYER4 this tick, OpPlayerHandler already calls clearPendingAction() -> closeModal(); avoid CloseModal's requestModalClose race.
+   if (specDlg && !(canRequest && sTarget && hTarget)) openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+   // Send both OPPLAYER4 requests together once per 3-tick window so delayed packets cannot re-fire and close a newly opened trademain.
    if (canRequest && sTarget && hTarget) {
     lastOpenReqTick = spec.tick();
     openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
@@ -465,19 +466,18 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
   if (hCanAccept && !ht.myAccepted && hOffers.length <= 4) {
    hMainActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
   }
-  if (hCanAccept && (ht.myAccepted || hOffers.length <= 3) && hOffers.length === 0 && sOffers.length === 0) {
+  if (hCanAccept && (ht.myAccepted || (hOffers.length <= 3 && sOffers.length <= 3))) {
    hMainActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
 
   for (const slot of sOffers) {
    sMainActs.push(spec.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
   }
-  // Spec waits until helper has already placed every item before accepting trademain so helper's Offer-All never resets spec's accept.
-  const specCanAccept = specOfferComplete && hDistinctSlots.length === 0;
+  const specCanAccept = specOfferComplete && helperOfferComplete;
   if (specCanAccept && !st.myAccepted && sOffers.length <= 4) {
    sMainActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
   }
-  if (specCanAccept && ht.myAccepted && sOffers.length <= 3) {
+  if (specCanAccept && (st.myAccepted || (sOffers.length <= 3 && hOffers.length <= 3))) {
    sMainActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
   if (hMainActs.length) await Promise.all(hMainActs);
