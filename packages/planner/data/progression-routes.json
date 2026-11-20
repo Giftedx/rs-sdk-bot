@@ -3647,6 +3647,21 @@
    "description": "Catherby shark harpoon + cook + bank order"
   },
   {
+   "id": "skiller:fishing:specialist",
+   "category": "skiller",
+   "name": "fishing:specialist",
+   "script": "scripts/fishing-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "fishing"
+   ],
+   "description": "Fresh-clock specialist Fishing 1 to 99 with tutorial skip, helper trade, and 3-tick net/bait/fly fishing"
+  },
+  {
    "id": "skiller:fishing:staged",
    "category": "skiller",
    "name": "fishing:staged",
@@ -3711,6 +3726,21 @@
     "fletching"
    ],
    "description": "Fletch arrow shafts from banked logs"
+  },
+  {
+   "id": "skiller:fletching:specialist",
+   "category": "skiller",
+   "name": "fletching:specialist",
+   "script": "scripts/fletching-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "fletching"
+   ],
+   "description": "Fresh-clock specialist Fletching 1 to 99 with tutorial skip, helper trade, and 5-action/tick arrow fletching"
   },
   {
    "id": "skiller:fletching:worker",
@@ -4173,6 +4203,21 @@
    "description": "Progressive level-unlocked mining"
   },
   {
+   "id": "skiller:mining:specialist",
+   "category": "skiller",
+   "name": "mining:specialist",
+   "script": "scripts/mining-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "mining"
+   ],
+   "description": "Fresh-clock specialist Mining 1 to 99 via Doric Quest and 3-tick Ardougne Zoo iron rotation"
+  },
+  {
    "id": "skiller:prayer:bury",
    "category": "skiller",
    "name": "prayer:bury",
@@ -4429,6 +4474,21 @@
     "thieving"
    ],
    "description": "At-site NPC pickpocketing"
+  },
+  {
+   "id": "skiller:thieving:specialist",
+   "category": "skiller",
+   "name": "thieving:specialist",
+   "script": "scripts/thieving-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "thieving"
+   ],
+   "description": "Fresh-clock specialist Thieving 1 to 99 prototype using relog-on-stun at East Ardougne"
   },
   {
    "id": "skiller:thieving:stalls",
@@ -90247,6 +90307,7 @@
    "intents": [
     "train",
     "produce",
+    "service",
     "acquire"
    ],
    "skills": [
@@ -90273,6 +90334,7 @@
     "skiller:fishing:village",
     "skiller:fishing:staged",
     "skiller:fishing:fly30",
+    "skiller:fishing:specialist",
     "skiller:cooking:food",
     "skiller:cooking:stock",
     "skiller:cooking:wine",
@@ -90289,6 +90351,7 @@
     "skiller:fletching:arrows",
     "skiller:fletching:shafts",
     "skiller:fletching:worker",
+    "skiller:fletching:specialist",
     "skiller:mining:ore",
     "skiller:mining:essence",
     "skiller:mining:at-site",
@@ -90296,6 +90359,7 @@
     "skiller:mining:progressive",
     "skiller:mining:loot",
     "skiller:mining:lava-maze",
+    "skiller:mining:specialist",
     "skiller:smithing:smelt",
     "skiller:smithing:anvil",
     "skiller:smithing:cannonballs",
@@ -90341,6 +90405,7 @@
     "skiller:thieving:stalls",
     "skiller:thieving:blood-chest",
     "skiller:thieving:nature-chest",
+    "skiller:thieving:specialist",
     "skiller:foraging:flax",
     "skiller:foraging:wool",
     "skiller:foraging:feathers",
@@ -90391,6 +90456,7 @@
     "skiller:fishing:village",
     "skiller:fishing:staged",
     "skiller:fishing:fly30",
+    "skiller:fishing:specialist",
     "skiller:cooking:food",
     "skiller:cooking:stock",
     "skiller:cooking:wine",
@@ -90407,6 +90473,7 @@
     "skiller:fletching:arrows",
     "skiller:fletching:shafts",
     "skiller:fletching:worker",
+    "skiller:fletching:specialist",
     "skiller:mining:ore",
     "skiller:mining:essence",
     "skiller:mining:at-site",
@@ -90414,6 +90481,7 @@
     "skiller:mining:progressive",
     "skiller:mining:loot",
     "skiller:mining:lava-maze",
+    "skiller:mining:specialist",
     "skiller:smithing:smelt",
     "skiller:smithing:anvil",
     "skiller:smithing:cannonballs",
@@ -90459,6 +90527,7 @@
     "skiller:thieving:stalls",
     "skiller:thieving:blood-chest",
     "skiller:thieving:nature-chest",
+    "skiller:thieving:specialist",
     "skiller:foraging:flax",
     "skiller:foraging:wool",
     "skiller:foraging:feathers",
@@ -90973,6 +91042,18 @@
    ]
   },
   {
+   "script": "scripts/fishing-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "fishing"
+   ],
+   "routeIds": [
+    "skiller:fishing:specialist"
+   ]
+  },
+  {
    "script": "scripts/fleet-inspect.ts",
    "intents": [
     "observe"
@@ -91015,6 +91096,18 @@
    ],
    "routeIds": [
     "skiller:fletching:worker"
+   ]
+  },
+  {
+   "script": "scripts/fletching-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "fletching"
+   ],
+   "routeIds": [
+    "skiller:fletching:specialist"
    ]
   },
   {
@@ -93068,6 +93161,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/specialist-gathering-cases.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/specialist-ranged-cases.ts",
    "intents": [
     "observe"
@@ -93863,6 +93965,18 @@
    ]
   },
   {
+   "script": "scripts/mining-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "mining"
+   ],
+   "routeIds": [
+    "skiller:mining:specialist"
+   ]
+  },
+  {
    "script": "scripts/note-courier.ts",
    "intents": [
     "acquire"
@@ -94319,6 +94433,18 @@
    "skills": [],
    "routeIds": [
     "logistics:take-from-banker"
+   ]
+  },
+  {
+   "script": "scripts/thieving-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "thieving"
+   ],
+   "routeIds": [
+    "skiller:thieving:specialist"
    ]
   },
   {

@@ -28,7 +28,7 @@ const unknownCosts=()=>({setupTicks:null,travelTicks:null,acquisitionTicks:null,
 const countItems=(rows:readonly {id:number|null;count?:number|null}[])=>Object.fromEntries(rows.flatMap(r=>r.id!==null&&Number.isSafeInteger(r.id)&&r.id>0&&typeof r.count==='number'&&r.count>0?[[r.id,r.count]]:[]));
 function intents(category:string,name:string):CatalogIntent[]{
  if(category==='quester')return name==='items'?['acquire']:name==='seaslug-leave'?['service']:['quest'];
- if(category==='skiller')return name.startsWith('foraging:')?['acquire']:['train','produce'];
+ if(category==='skiller')return name.startsWith('foraging:')?['acquire']:name.endsWith(':specialist')?['service']:['train','produce'];
  if(category==='fighter')return name==='attack-specialist'||name==='ranged-specialist'?['service']:/^(?:chicken|cow|giant|trooper|ranged(?:-starter|-gather|-camp)?|cannon)$/.test(name)?['train','acquire']:['acquire'];
  if(category==='boss')return ['acquire'];
  if(category==='pvp')return name==='monitor'?['observe']:name==='stage-kit'?['acquire']:name==='standby'?['service']:['pvp'];
