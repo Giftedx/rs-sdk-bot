@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795146947057-sausagefest-magicwanda-bd0bcefbe4597667",
+ "account": "Magicwanda",
+ "partner": "Sausagefest",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 1650000,
+ "claim": "aa9868c1-578d-4288-b1d3-29ad0e2b0219",
+ "count": 0,
+ "ok": false,
+ "at": 1795146974777,
+ "detail": "trade claimed"
+}
