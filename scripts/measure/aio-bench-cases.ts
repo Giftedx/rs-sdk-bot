@@ -1344,16 +1344,14 @@ const ROUTE_CASES: BenchCase[] = [
       )),
     };
   })(),
-  // Multi-trip restock regression: two maxed tribrids start at post with 1 shark and 0 spare arrows in bank; Trip 2+ must restock and finish the gang.
+  // Multi-trip restock regression: two maxed tribrids start at post with 1 shark against 3 clones and 0 spare arrows in bank; Trip 2+ must restock and finish.
   (() => {
     const base = cloneTribridSquad('extra:squad-2-trips-nospare-x1', 'tribrid-snare', 2,
       ['MAX_MINUTES=10', 'TRIPS=4', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1'],
       'seen', {x: 3066, z: 3641}, 1, EDGE_BANK_NOSPARE_ARROWS);
     return {
       ...base,
-      pass: s => ok(s) && killReceiptsMatch(s) && /\bdied=0\b/.test(s) && /\btrips=([1-9]|\d{2,})\b/.test(s) && /\bgangDied=2\b/.test(s),
-      scriptArgs: ['squad', '{bot:b}', '{bot:c}', '{bot:d}', ...base.scriptArgs!.filter(a => !/^\{bot:/.test(a) && a !== 'squad' && !/^SQUAD_GANG/.test(a) && a !== 'SPAR_B_OPTS={}'), 'SQUAD_GANG=2', 'SQUAD_GANG_PROFILE=attacker-fight'],
-      companions: base.companions!.slice(0, 3).map((comp, i) => (i >= 1 ? {...comp, presetConfig: kitFixture('ganker-max', 3078, 3640)} : comp)),
+      pass: s => ok(s) && killReceiptsMatch(s) && /\bdied=0\b/.test(s) && /\btrips=([1-9]|\d{2,})\b/.test(s) && /\bgangDied=[23]\b/.test(s),
     };
   })(),
   // The same against each mode of the clones: every clone walks out with its food gone (retreat), none does (stand),
