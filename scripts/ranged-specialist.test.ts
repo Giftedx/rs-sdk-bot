@@ -182,7 +182,8 @@ test('weapon, gear, potion, and sustain scheduling rules behave across Ranged 1.
     expect(shouldDrinkAntipoison(true, 10)).toBe(true);
     expect(shouldDrinkAntipoison(false, 539)).toBe(false);
     expect(shouldDrinkAntipoison(false, 540)).toBe(true);
-    expect(shouldDrinkAntipoison(false, 540, false)).toBe(false);
+    expect(shouldDrinkAntipoison(false, 139, false)).toBe(false);
+    expect(shouldDrinkAntipoison(false, 140, false)).toBe(true);
     expect(shouldDrinkAntipoison(true, 0, false)).toBe(true);
 
     expect(totalDoses([{ id: 2444, count: 1 }, { id: 171, count: 1 }], ITEM_IDS.rangingPot)).toBe(6);
