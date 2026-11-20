@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795157613923-masterbaiter-dipstick-runechainbody",
  "account": "Masterbaiter",
  "partner": "Dipstick",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "fc600f65-b4fb-450c-ba68-c6cbe50e0a33",
- "count": 0,
- "ok": false,
- "at": 1795157705675,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795157720308,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795157710824
+ },
+ "logout": {
+  "attemptId": "1795157705684-0000003780-0000000001",
+  "at": 1795157720297,
+  "sha256": "4704c3a9f7bb51398849cc997756842e9990449a17cac31fcbc7cae52fd5a465"
+ },
+ "screen": true
 }
