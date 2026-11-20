@@ -253,3 +253,49 @@ test('burst transitions cleanly into choice dialog and falls back on unchanged r
  expect(clicks).toBe(2);
  expect(fallbackReasons).toEqual(['settlement']);
 });
+
+test('consecutive openQuest calls on one session route burst page text to the active quest and restore hooks on dispose', async () => {
+ const { openQuest } = await import('./quest-lib');
+ const root = [...CONTINUE_ROOTS][0]!;
+ const com = { id: root + 1, layerId: root, text: '' };
+ const origIfMutable = () => com;
+ const origSendClickDialog = async () => ({ success: true });
+ const origClickByText = async () => ({ success: true });
+ let tick = 10;
+ const callbacks = new Set<() => void>();
+ const session: any = {
+  name: 'SharedBot',
+  tick: () => tick,
+  ended: new Promise(() => {}),
+  onTick: (cb: () => void) => { callbacks.add(cb); return () => callbacks.delete(cb); },
+  client: { ifMutable: origIfMutable, chatModalId: -1, writeOpcode: () => {}, out: { p2: () => {} } },
+  sdk: {
+   getState: () => ({ player: { lifeId: 1, respawnCount: 0, worldX: 2478, worldZ: 3463, level: 1 }, inventory: [], recentDialogs: [], gameMessages: [] }),
+   getInventory: () => [],
+   getDialog: () => ({ isOpen: false }),
+   getSkill: () => ({ level: 99, baseLevel: 99 }),
+   getSkillXp: () => 0,
+   sendClickDialog: origSendClickDialog,
+   clickDialogByText: origClickByText,
+  },
+  direct: async () => ({ success: true }),
+ };
+ const timer = setInterval(() => { tick++; for (const cb of callbacks) cb(); }, 1);
+ try {
+  const q1 = await openQuest({ session, burst: true });
+  session.client.ifMutable(com.id).text = 'First quest line';
+  expect(q1.sawText(/first quest line/i)).toBe(true);
+  await q1.dispose();
+  expect(session.client.ifMutable).toBe(origIfMutable);
+  expect(session.sdk.sendClickDialog).toBe(origSendClickDialog);
+  expect(session.sdk.clickDialogByText).toBe(origClickByText);
+
+  const q2 = await openQuest({ session, burst: true });
+  session.client.ifMutable(com.id).text = 'I will take care of this! Go back to the King.';
+  expect(q2.sawText(/go back to the king/i)).toBe(true);
+  await q2.dispose();
+  expect(session.client.ifMutable).toBe(origIfMutable);
+ } finally {
+  clearInterval(timer);
+ }
+});

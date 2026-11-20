@@ -991,6 +991,25 @@
    "description": "At-dock Fishing Trawler minigame loop"
   },
   {
+   "id": "fighter:attack-specialist",
+   "category": "fighter",
+   "name": "attack-specialist",
+   "script": "scripts/attack-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "attack",
+    "strength",
+    "defence",
+    "hitpoints",
+    "ranged"
+   ],
+   "description": "Run the fresh-clock Attack 99 specialist route from Tutorial Island through Tree Gnome Village, Grand Tree, and Fight Arena"
+  },
+  {
    "id": "fighter:cannon",
    "category": "fighter",
    "name": "cannon",
@@ -1645,6 +1664,19 @@
    ],
    "skills": [],
    "description": "Restore drained Prayer points at a nearby altar or an explicit ALTAR=x,z"
+  },
+  {
+   "id": "logistics:specialist-supplier",
+   "category": "logistics",
+   "name": "specialist-supplier",
+   "script": "scripts/specialist-supplier.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [],
+   "description": "Stage and hand off a specialist supply kit with observed bank and trade receipts"
   },
   {
    "id": "logistics:supply-bootstrap",
@@ -89978,7 +90010,8 @@
    "script": "scripts/aio-fighter.ts",
    "intents": [
     "train",
-    "acquire"
+    "acquire",
+    "service"
    ],
    "skills": [
     "attack",
@@ -90006,7 +90039,8 @@
     "fighter:ranged-gather",
     "fighter:ranged-camp",
     "fighter:cannon",
-    "fighter:loot-trip"
+    "fighter:loot-trip",
+    "fighter:attack-specialist"
    ]
   },
   {
@@ -90028,6 +90062,7 @@
     "logistics:take-from-banker",
     "logistics:supply-chain",
     "logistics:supply-holder",
+    "logistics:specialist-supplier",
     "logistics:wine-stock",
     "logistics:supply-bootstrap",
     "logistics:fleet-trade",
@@ -90431,6 +90466,7 @@
     "fighter:ranged-camp",
     "fighter:cannon",
     "fighter:loot-trip",
+    "fighter:attack-specialist",
     "boss:kbd",
     "boss:black-dragon",
     "boss:green-dragon",
@@ -90488,6 +90524,7 @@
     "logistics:take-from-banker",
     "logistics:supply-chain",
     "logistics:supply-holder",
+    "logistics:specialist-supplier",
     "logistics:wine-stock",
     "logistics:supply-bootstrap",
     "logistics:fleet-trade",
@@ -90594,6 +90631,22 @@
    "skills": [],
    "routeIds": [
     "logistics:arrive-draynor"
+   ]
+  },
+  {
+   "script": "scripts/attack-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "attack",
+    "strength",
+    "defence",
+    "hitpoints",
+    "ranged"
+   ],
+   "routeIds": [
+    "fighter:attack-specialist"
    ]
   },
   {
@@ -92985,6 +93038,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/specialist-bench.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/stun-guest.ts",
    "intents": [
     "observe"
@@ -94134,6 +94196,16 @@
    ],
    "routeIds": [
     "skiller:crafting:soften-clay"
+   ]
+  },
+  {
+   "script": "scripts/specialist-supplier.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [],
+   "routeIds": [
+    "logistics:specialist-supplier"
    ]
   },
   {

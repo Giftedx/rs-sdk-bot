@@ -1,0 +1,307 @@
+// Stage and hand off a specialist supply kit with observed bank and trade receipts.
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
+import { accountOf, finish, getWorld, openBot } from '../packages/core/src/bot';
+import type { Session } from '../packages/core/src/inprocess';
+import { isLocalServer } from '../packages/core/src/localserver';
+import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
+import { waitTicks, waitUntil } from '../packages/core/src/ticks';
+import { goTo, sessionWalker, walkPath } from '../packages/core/src/walk';
+
+export interface KitSpecItem {
+    readonly id: number;
+    readonly name: string;
+    readonly count: number;
+    readonly stackable: boolean;
+}
+
+// 28 inventory slots exact: 5 stackables + 1 staff + 11 bones + 6 logs + 3 prayer potions + 2 lobsters.
+export const ATTACK_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 1387, name: 'Staff of fire', count: 1, stackable: false },
+    { id: 558, name: 'Mind rune', count: 50, stackable: true },
+    { id: 556, name: 'Air rune', count: 1300, stackable: true },
+    { id: 563, name: 'Law rune', count: 30, stackable: true },
+    { id: 562, name: 'Chaos rune', count: 240, stackable: true },
+    { id: 995, name: 'Coins', count: 200, stackable: true },
+    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
+    { id: 1511, name: 'Logs', count: 6, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 3, stackable: false },
+    { id: 379, name: 'Lobster', count: 2, stackable: false },
+] as const;
+
+export const LUMBRIDGE_HANDOFF = { x: 3222, z: 3222, level: 0 } as const;
+export const DEFAULT_STAGE_BANK = { x: 3092, z: 3243, level: 0 } as const;
+const ACCOUNT_RE = /^[A-Za-z0-9_ -]{1,12}$/;
+
+export const escapeRe = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export const exactNameRe = (name: string): RegExp => new RegExp('^' + escapeRe(name) + '$', 'i');
+
+export function kitRequirements(kit: readonly KitSpecItem[] = ATTACK_SPECIALIST_KIT) {
+    return [...kit]
+        .sort((a, b) => a.id - b.id)
+        .map(item => ({ item: item.name, count: item.count, itemId: item.id }));
+}
+
+export function kitSlotTotal(kit: readonly KitSpecItem[] = ATTACK_SPECIALIST_KIT): number {
+    return kit.reduce((sum, item) => sum + (item.stackable ? 1 : item.count), 0);
+}
+
+export function countById(items: readonly { id: number; baseId?: number; count?: number }[], id: number): number {
+    let total = 0;
+    for (const item of items) {
+        if ((item.baseId ?? item.id) === id) total += item.count ?? 0;
+    }
+    return total;
+}
+
+export function hasExactKit(items: readonly { id: number; baseId?: number; count?: number }[], kit: readonly KitSpecItem[] = ATTACK_SPECIALIST_KIT): boolean {
+    const allowed = new Set(kit.map(k => k.id));
+    if (items.some(i => !allowed.has(i.baseId ?? i.id))) return false;
+    return kit.every(spec => countById(items, spec.id) === spec.count);
+}
+
+export function hasAtLeastKit(items: readonly { id: number; baseId?: number; count?: number }[], kit: readonly KitSpecItem[] = ATTACK_SPECIALIST_KIT): boolean {
+    return kit.every(spec => countById(items, spec.id) >= spec.count);
+}
+
+export function assertSupplierAccount(name: string, label = 'account'): string {
+    if (!name || !ACCOUNT_RE.test(name)) throw Error(`specialist-supplier: invalid ${label}: ${name}`);
+    if (RESERVED_ACCOUNTS.includes(name.toLowerCase())) throw Error(`specialist-supplier: refuses reserved ${label}: ${name}`);
+    return name;
+}
+
+function posNear(s: Session, to: { x: number; z: number; level: number }, tol = 2): boolean {
+    const p = s.sdk.getState()?.player;
+    return !!p && p.level === to.level && Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) <= tol;
+}
+
+async function moveTo(s: Session, to: { x: number; z: number; level: number }, tol = 2, stop: () => boolean): Promise<void> {
+    if (posNear(s, to, tol)) return;
+    const p = s.sdk.getState()?.player;
+    if (p && p.level === to.level && Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) <= 24) {
+        const w = await sessionWalker(s);
+        const r = await walkPath(w, [{ x: to.x, z: to.z, tol }], { maxTicks: 120, stop });
+        if (r.ok && posNear(s, to, tol)) return;
+    }
+    const world = await getWorld();
+    const r = await goTo(s, world, to, accountOf(s), { legTimeoutTicks: 150 });
+    if (!r.ok || !posNear(s, to, tol)) throw Error(`walk to ${to.x},${to.z},${to.level} failed: ${r.ok ? 'not at target' : r.detail}`);
+}
+
+async function openFreshBank(s: Session) {
+    if (s.sdk.getState()?.bank?.isOpen) {
+        await s.bot.closeBank();
+        await waitUntil(s, () => !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 8 });
+    }
+    const gen = s.bankObservation?.()?.generation ?? 0;
+    await s.bot.dismissBlockingUI();
+    const res = await s.bot.openBank();
+    if (!res.success) throw Error(`openBank failed: ${res.message ?? res.reason}`);
+    const ok = await waitUntil(s, () => !!s.sdk.getState()?.bank?.isOpen && (s.bankObservation?.()?.generation ?? 0) > gen, { timeoutTicks: 20 });
+    const obs = s.bankObservation?.();
+    if (!ok || !obs) throw Error('fresh bank observation unavailable');
+    return obs;
+}
+
+async function depositAllInventory(s: Session): Promise<void> {
+    while (s.sdk.getInventory().length > 0) {
+        const first = s.sdk.getInventory()[0];
+        if (!first) break;
+        const r = await s.bot.depositItem(first, -1);
+        if (!r.success) throw Error(`deposit failed for ${first.name}: ${r.message ?? r.reason}`);
+        await waitUntil(s, () => !s.sdk.getInventory().some(i => i.id === first.id), { timeoutTicks: 10 });
+    }
+}
+
+async function withdrawExactKit(s: Session, kit: readonly KitSpecItem[], bankAt: { x: number; z: number; level: number }, stop: () => boolean): Promise<void> {
+    await moveTo(s, bankAt, 2, stop);
+    const obs = await openFreshBank(s);
+    await depositAllInventory(s);
+    for (const spec of kit) {
+        const bankRow = s.sdk.getState()?.bank?.items.find(i => i.id === spec.id);
+        if (!bankRow || bankRow.count < spec.count) {
+            await s.bot.closeBank().catch(() => {});
+            throw Error(`missing bank stock for ${spec.name} (${spec.id}): need ${spec.count}, have ${bankRow?.count ?? 0}`);
+        }
+        const before = countById(s.sdk.getInventory(), spec.id);
+        const w = await s.bot.withdrawItem(bankRow, spec.count, { asNote: false });
+        if (!w.success || !await waitUntil(s, () => countById(s.sdk.getInventory(), spec.id) === before + spec.count, { timeoutTicks: 12 })) {
+            await s.bot.closeBank().catch(() => {});
+            throw Error(`withdraw failed for ${spec.name}: ${w.message ?? w.reason ?? 'count mismatch'}`);
+        }
+    }
+    await s.bot.closeBank();
+    await waitUntil(s, () => !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 8 });
+    void obs;
+    if (!hasExactKit(s.sdk.getInventory(), kit)) throw Error('withdrawn inventory does not match exact specialist kit');
+}
+
+async function runServe(args: string[]): Promise<void> {
+    const holder = assertSupplierAccount(args[0] ?? '', 'holder');
+    const specialist = args[1] ?? '';
+    if (!specialist || !ACCOUNT_RE.test(specialist)) throw Error('usage: specialist-supplier.ts <holder> <specialist> [--kit=attack] [cap]');
+    const capArg = args.slice(2).find(a => /^\d+$/.test(a));
+    const CAP = Number(capArg ?? process.env.CAP ?? 4000);
+    if (!Number.isSafeInteger(CAP) || CAP < 50 || CAP > 50000) throw Error(`invalid CAP: ${CAP}`);
+    const root = resolve(import.meta.dir, '..');
+    const serverHost = (readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', holder, 'bot.env'), 'utf8').match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
+    if (!serverHost) throw Error(`missing SERVER in bot.env for ${holder}`);
+    const stopFile = () => existsSync(join(root, '.practice', `stop-${holder}`)) || (!isLocalServer(serverHost) && existsSync(join(root, '.practice', 'stop-swarm')));
+    const kit = ATTACK_SPECIALIST_KIT;
+
+    const s = await openBot(holder);
+    const stop = () => stopFile();
+    try {
+        await waitUntil(s, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 });
+        const t0 = s.tick();
+        if (!hasExactKit(s.sdk.getInventory(), kit)) {
+            await withdrawExactKit(s, kit, DEFAULT_STAGE_BANK, stop);
+        }
+        await moveTo(s, LUMBRIDGE_HANDOFF, 2, stop);
+        const p = s.sdk.getState()!.player!;
+        console.log('SUPPLIER_READY ' + JSON.stringify({
+            holder, specialist, server: serverHost,
+            at: { x: p.worldX, z: p.worldZ, level: p.level },
+            slots: s.sdk.getInventory().length,
+        }));
+
+        const giveList = kit.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
+        const peerRe = exactNameRe(specialist);
+        let handoffDone = false;
+        while (!stop() && s.tick() - t0 < CAP && !handoffDone) {
+            const served = await s.bot.serveTrades({
+                from: peerRe,
+                give: giveList,
+                accept: offer => offer.length === 0,
+                maxTrades: 1,
+                tradeTimeout: 60_000,
+                timeout: 30_000,
+                until: () => stop() || s.tick() - t0 >= CAP,
+            });
+            const done = served.trades.find(t => t.success && kit.every(k => countById(t.gave, k.id) === k.count) && t.received.length === 0);
+            if (done) {
+                handoffDone = true;
+                console.log('SUPPLIER_HANDOFF ' + JSON.stringify({ holder, specialist, tick: s.tick() - t0, items: kit.map(k => ({ id: k.id, count: k.count })) }));
+                break;
+            }
+            if (served.trades.length > 0) {
+                console.log('WARN supplier trade retry: ' + JSON.stringify(served.trades.map(t => ({ success: t.success, reason: t.reason, message: t.message }))));
+            }
+            await waitTicks(s, 1);
+        }
+        await finish([s], handoffDone, handoffDone ? `supplied ${specialist} in ${s.tick() - t0} ticks` : `supplier did not complete handoff within ${CAP} ticks`);
+    } catch (e) {
+        await finish([s], false, String(e));
+    }
+}
+
+async function runStage(args: string[]): Promise<void> {
+    const rest = args.filter(a => a !== '--stage');
+    const outArg = rest.find(a => a.startsWith('--out='))?.slice(6);
+    const bx = Number(rest.find(a => a.startsWith('--bank-x='))?.slice(9) ?? DEFAULT_STAGE_BANK.x);
+    const bz = Number(rest.find(a => a.startsWith('--bank-z='))?.slice(9) ?? DEFAULT_STAGE_BANK.z);
+    const positional = rest.filter(a => !a.startsWith('--'));
+    const donor = assertSupplierAccount(positional[0] ?? '', 'donor');
+    const holder = assertSupplierAccount(positional[1] ?? '', 'holder');
+    if (donor.toLowerCase() === holder.toLowerCase()) throw Error('donor and holder must be different accounts');
+    if (!outArg) throw Error('usage: specialist-supplier.ts --stage <donor> <holder> [--kit=attack] --out=<.practice-dir>');
+    const root = resolve(import.meta.dir, '..');
+    const outDir = resolve(root, outArg);
+    const relOut = relative(root, outDir).replaceAll('\\', '/');
+    if (!relOut.startsWith('.practice/') || relOut.includes('..')) throw Error('--out must be inside .practice/');
+    mkdirSync(outDir, { recursive: true });
+
+    const bankTile = { x: bx, z: bz, level: 0 };
+    const kit = ATTACK_SPECIALIST_KIT;
+    const server = (readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', holder, 'bot.env'), 'utf8').match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
+    const donorSession = await openBot(donor);
+    const holderSession = await openBot(holder);
+    const stop = () => existsSync(join(root, '.practice', `stop-${donor}`)) || existsSync(join(root, '.practice', `stop-${holder}`)) || (!isLocalServer(server) && existsSync(join(root, '.practice', 'stop-swarm')));
+    try {
+        await Promise.all([
+            waitUntil(donorSession, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 }),
+            waitUntil(holderSession, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 }),
+        ]);
+        await Promise.all([
+            moveTo(donorSession, bankTile, 2, stop),
+            moveTo(holderSession, bankTile, 2, stop),
+        ]);
+        await openFreshBank(holderSession);
+        await depositAllInventory(holderSession);
+        await holderSession.bot.closeBank();
+        await waitUntil(holderSession, () => !holderSession.sdk.getState()?.bank?.isOpen, { timeoutTicks: 8 });
+        const beforeInv = holderSession.sdk.getInventory().map(i => ({ id: i.id, count: i.count }));
+
+        if (!hasExactKit(donorSession.sdk.getInventory(), kit)) {
+            await withdrawExactKit(donorSession, kit, bankTile, stop);
+        }
+
+        const giveList = kit.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
+        const allowed = new Set(kit.map(k => k.id));
+        const [served, given] = await Promise.all([
+            holderSession.bot.serveTrades({
+                from: exactNameRe(donor),
+                accept: offer => offer.every(o => allowed.has(o.id)) && kit.every(k => countById(offer, k.id) === k.count),
+                maxTrades: 1,
+                timeout: 60_000,
+            }),
+            donorSession.bot.trade(exactNameRe(holder), {
+                give: giveList,
+                accept: offer => offer.length === 0,
+                requestTimeout: 20_000,
+                timeout: 60_000,
+            }),
+        ]);
+        const rx = served.trades.find(t => t.success);
+        if (!given.success || !rx || !kit.every(k => countById(rx.received, k.id) === k.count)) {
+            throw Error(`stage transfer mismatch: given=${given.success} rx=${!!rx}`);
+        }
+        await waitUntil(holderSession, () => hasExactKit(holderSession.sdk.getInventory(), kit), { timeoutTicks: 10 });
+        const afterInv = holderSession.sdk.getInventory().map(i => ({ id: i.id, count: i.count }));
+        const transferAt = Date.now();
+        for (const spec of kit) {
+            if (countById(afterInv, spec.id) - countById(beforeInv, spec.id) !== spec.count) {
+                throw Error(`recipient delta mismatch for ${spec.name}`);
+            }
+        }
+
+        await openFreshBank(holderSession);
+        await depositAllInventory(holderSession);
+        const bankObs = await openFreshBank(holderSession);
+        await holderSession.bot.closeBank();
+        const bankAt = bankObs.at;
+        if (bankAt < transferAt) throw Error(`bank observation (${bankAt}) older than transfer (${transferAt})`);
+        if (!hasAtLeastKit(bankObs.items, kit)) throw Error('holder final bank observation lacks full kit');
+
+        const items = kit.map(k => ({ id: k.id, count: k.count }));
+        const delivery = {
+            ok: true,
+            observed: true,
+            server,
+            from: donor,
+            to: holder,
+            at: transferAt,
+            before: beforeInv,
+            after: afterInv,
+            items,
+        };
+        const bank = {
+            name: holder,
+            server,
+            bankAt,
+            bank: bankObs.items.map(i => ({ id: i.id, count: i.count })),
+        };
+        writeFileSync(join(outDir, 'delivery.json'), JSON.stringify(delivery, null, 2) + '\n');
+        writeFileSync(join(outDir, 'bank.json'), JSON.stringify(bank, null, 2) + '\n');
+        console.log('SPECIALIST_STAGED ' + JSON.stringify({ out: relOut, donor, holder, transferAt, bankAt }));
+        await finish([donorSession, holderSession], true, `staged attack kit from ${donor} to ${holder} into ${relOut}`);
+    } catch (e) {
+        await finish([donorSession, holderSession], false, String(e));
+    }
+}
+
+if (import.meta.main) {
+    const args = process.argv.slice(2);
+    if (args.includes('--stage')) await runStage(args);
+    else await runServe(args);
+}

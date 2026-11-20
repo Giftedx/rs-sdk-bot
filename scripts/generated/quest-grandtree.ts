@@ -9,6 +9,7 @@
 // GT_FROM=<varp stage> starts later (debug presets quest_grandtree_s<stage>).
 import { openQuest, fireSpell } from './quest-lib';
 import { componentId } from '../../packages/core/src/logout';
+import type { Session } from '../../packages/core/src/inprocess';
 
 const ITEM = {
     bark: 783, book: 784, journal: 785, scroll: 786, order: 787, key: 788,
@@ -45,16 +46,22 @@ const ROOTS: [number, number][] = [[2467, 9896], [2465, 9891], [2468, 9890], [24
 const PFM = 14;
 
 // Dialogue bursts: 3/3 pass at seeds 7, 8, 9 and about 84 ticks less to the demon (research/quest-plan.md section 1g).
-const q = await openQuest({ cap: 6000, eatAt: 6, food: [ITEM.food], burst: true });
+export async function runQuestGrandTree(opts: { session?: Session; cap?: number; stop?: () => boolean; burst?: boolean } = {}): Promise<{ ok: boolean; detail: string }> {
+const g = globalThis as { QUEST_SCRIPT_ID?: string };
+const prevScriptId = g.QUEST_SCRIPT_ID;
+g.QUEST_SCRIPT_ID = 'quest-grandtree';
+const q = await openQuest({ session: opts.session, stop: opts.stop, cap: opts.cap ?? 6000, eatAt: 6, food: [ITEM.food], burst: opts.burst ?? true });
+let offDone: (() => void) | undefined, offWalk: (() => void) | undefined;
 try {
     const FROM = Number(process.env.GT_FROM ?? 0);
     let questDone = false;
-    const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+grand tree/i) > 0) questDone = true; });
+    offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+grand tree/i) > 0) questDone = true; });
     const prayers = (): any => q.st()?.prayers;
     const pfmOn = (): boolean => !!prayers()?.activePrayers?.[PFM];
     const points = (): number => prayers()?.prayerPoints ?? 0;
     let potions = 0;
     const setPfm = async (on: boolean): Promise<void> => {
+        if (on && points() <= 0) await keepPrayer();
         if (pfmOn() === on || (on && points() <= 0)) return;
         await q.step(`protect from melee ${on ? 'on' : 'off'}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn() === on, 3, 3);
     };
@@ -73,7 +80,7 @@ try {
     const shutDialog = () => q.converse([], () => !q.dialogOpen(), 10);
     // A page that opens during a walk (a guard, a level-up) is clicked through, so the walk goes on.
     let walking = false;
-    const offWalk = q.s.onTick(() => {
+    offWalk = q.s.onTick(() => {
         if (!walking) return;
         const d: any = q.s.sdk.getDialog();
         if (d?.isOpen && !d.isWaiting && !(d.options ?? []).some((o: any) => !/click here to continue/i.test(o.text))) void q.s.sdk.sendClickDialog(0);
@@ -466,8 +473,13 @@ try {
     await q.waitUntil(() => questDone, 20);
     await shutDialog();
     q.milestone('complete');
-    offDone();
-    offWalk();
-    await q.end(questDone, `qp=5 questMsg=${questDone} roots=${searched} potions=${potions} prayerLeft=${points()}`);
+    const detail = `qp=5 questMsg=${questDone} roots=${searched} potions=${potions} prayerLeft=${points()}`;
+    if (opts.session) { await q.dispose(); if (!questDone) throw Error(detail); return { ok: true, detail }; }
+    await q.end(questDone, detail);
+    return { ok: questDone, detail };
 
-} catch (e) { await q.fail(String(e)); }
+} catch (e) { if (opts.session) { await q.dispose(); throw e; } await q.fail(String(e)); return { ok: false, detail: String(e) }; }
+finally { offDone?.(); offWalk?.(); if (prevScriptId === undefined) delete g.QUEST_SCRIPT_ID; else g.QUEST_SCRIPT_ID = prevScriptId; }
+}
+
+if (import.meta.main || !!(globalThis as { QUEST_SESSION?: Session }).QUEST_SESSION) await runQuestGrandTree();

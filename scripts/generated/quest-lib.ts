@@ -421,22 +421,30 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     // other interfaces' text (side panels) once matched a step check that the dialogue had not reached. The server sets
     // a page's text before IF_OPENCHAT (chat.rs2 chatnpc_page), so chatModalId cannot tell them apart.
     const lite: any = (s as any).client;
+    let restoreBurstHooks: (() => void) | undefined;
     if (BURST && lite && typeof lite.ifMutable === 'function') {
         const before = lite.ifMutable;
         // Any dialogue answer, also a script's own sendClickDialog (quest-tree.ts ballista), answers the pages so far.
-        const click = s.sdk.sendClickDialog.bind(s.sdk);
-        (s.sdk as any).sendClickDialog = async (option?: number) => { const seq = textSeq; const r: any = await click(option); if (r?.success) answeredSeq = Math.max(answeredSeq, seq); return r; };
-        const clickByText = s.sdk.clickDialogByText.bind(s.sdk);
-        (s.sdk as any).clickDialogByText = async (pattern: string | RegExp) => { const seq = textSeq; const r: any = await clickByText(pattern); if (r?.success) answeredSeq = Math.max(answeredSeq, seq); return r; };
+        const click = s.sdk.sendClickDialog;
+        const clickByText = s.sdk.clickDialogByText;
+        (s.sdk as any).sendClickDialog = async (option?: number) => { const seq = textSeq; const r: any = await click.call(s.sdk, option); if (r?.success) answeredSeq = Math.max(answeredSeq, seq); return r; };
+        (s.sdk as any).clickDialogByText = async (pattern: string | RegExp) => { const seq = textSeq; const r: any = await clickByText.call(s.sdk, pattern); if (r?.success) answeredSeq = Math.max(answeredSeq, seq); return r; };
         const recordBurstLine = createBurstPageRecorder(CHAT_ROOTS, joined => { pages.push(joined); if (pages.length > 400) pages.shift(); recorded++; textSeq++; textAt = s.tick(); });
+        lite.__burstPageSink = recordBurstLine;
         lite.ifMutable = function (id: number) {
             const com: any = before.call(this, id);
             if (com && !com.__pageText) {
                 let v = com.text;
-                Object.defineProperty(com, 'text', { configurable: true, enumerable: true, get: () => v, set: (x: any) => { v = x; recordBurstLine(id, com.layerId, x); } });
+                Object.defineProperty(com, 'text', { configurable: true, enumerable: true, get: () => v, set: (x: any) => { v = x; lite.__burstPageSink?.(id, com.layerId, x); } });
                 com.__pageText = true;
             }
             return com;
+        };
+        restoreBurstHooks = () => {
+            if (lite.__burstPageSink === recordBurstLine) lite.__burstPageSink = undefined;
+            lite.ifMutable = before;
+            (s.sdk as any).sendClickDialog = click;
+            (s.sdk as any).clickDialogByText = clickByText;
         };
     }
     const pageText = (): string => {
@@ -519,7 +527,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     };
     const gains = (): string => SKILLS.map(k => [k, xp(k) - xp0[k]!] as const).filter(([, g]) => g > 0).map(([k, g]) => `${k.toLowerCase()}=${g}`).join(',');
     const all = (): Session[] => [s, ...(opts.others?.() ?? []).filter(o => o !== s)];
-    const dispose = async () => { await sustain.settle(); off(); };
+    const dispose = async () => { await sustain.settle(); off(); restoreBurstHooks?.(); };
     const fail = async (why: string): Promise<never> => { await dispose(); const message=`${why} ${sustain.failure()??''} xp=${gains()} ${detail()}`; if(opts.session)throw Error(message); return finish(all(), false, message); };
     // A fight the account cannot win ends the quest before it ends the account: at the hitpoint floor (a quarter of the
     // base level, at least 5) with no food left to eat, the bot walks RETREAT_TILES away from whatever hits it, waits for
@@ -560,7 +568,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         if (sustain.failure()) await fail(`${sustain.failure()} during ${label}`);
         if (T() > CAP) await fail(`tick cap during ${label}`);
     };
-    const end = async (ok: boolean, extra = ''): Promise<never> => { await sustain.settle(); off(); return finish(all(), ok && !stats.died && !sustain.failure(), `${extra} ${sustain.failure()??''} xp=${gains()} ${detail()}`); };
+    const end = async (ok: boolean, extra = ''): Promise<never> => { await dispose(); return finish(all(), ok && !stats.died && !sustain.failure(), `${extra} ${sustain.failure()??''} xp=${gains()} ${detail()}`); };
 
     const opLoc = (l: Loc, op = 1) => s.direct({ type: 'interactLoc', x: l.x, z: l.z, locId: l.id, optionIndex: op, reason: 'SDK' });
     const locs = (): any[] => st()?.nearbyLocs ?? [];

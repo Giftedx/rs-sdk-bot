@@ -41,6 +41,7 @@ export const LOGISTICS_ROLES: readonly LogisticsRoleSpec[] = [
  {role:'take-from-banker',script:'scripts/take-from-banker.ts',description:'Receive staged items from a standing banker account'},
  {role:'supply-chain',script:'scripts/supply-chain.ts',description:'Run multi-actor supply-chain transfer'},
  {role:'supply-holder',script:'scripts/supply-holder.ts',description:'Hold and serve staged route supplies'},
+ {role:'specialist-supplier',script:'scripts/specialist-supplier.ts',description:'Stage and hand off a specialist supply kit with observed bank and trade receipts'},
  {role:'wine-stock',script:'scripts/make-wine-order.ts',defaultArgs:['12','1000','0'],description:'Preserve an exact new wine-note order from staged grapes and jugs of water'},
  {role:'supply-bootstrap',script:'scripts/supply-bootstrap.ts',description:'Practice-only zero-resource qualification: discard tutorial gifts before earning initial route supplies'},
  // Runecraft Essence Runners ("RC Runners")

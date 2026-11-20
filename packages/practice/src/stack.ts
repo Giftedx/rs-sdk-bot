@@ -57,9 +57,9 @@ export function engineCommand(opts: StackOptions, port: number, platform: string
         if (key in env) throw new Error(`engineEnv cannot replace ${key}`);
         env[key] = value;
     }
-    // SIM_FINE_TIMERS=1: a lockstep engine on Windows polls with 1 ms timers that take 15 ms each by default; the
-    // preload sets 1 ms timers for the engine process (packages/core/src/timer-resolution.ts).
-    const timers = opts.lockstep && platform === 'win32' && fine === '1' ? ['--preload', FINE_TIMERS] : [];
+    // On Windows lockstep, fine timers preload by default so 1 ms polls do not quantize to 15.6 ms;
+    // set SIM_FINE_TIMERS=0 to opt out (packages/core/src/timer-resolution.ts).
+    const timers = opts.lockstep && platform === 'win32' && fine !== '0' ? ['--preload', FINE_TIMERS] : [];
     const pre = opts.enginePreload;
     if (!pre) return { cmd: ['bun', ...timers, MARKERS.engine], env };
     if (!isAbsolute(pre.module) || !existsSync(pre.module)) throw new Error(`engine preload not found: ${pre.module}`);
@@ -84,7 +84,8 @@ export async function waitReady(proc: Subprocess, service: Service, logFile: str
         if (proc.exitCode !== null) {
             throw new Error(`${service} exited with code ${proc.exitCode}\n${tail(logFile)}`);
         }
-        await Bun.sleep(250);
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        await Promise.race([proc.exited, new Promise<void>(r => { timer = setTimeout(r, 100); })]).finally(() => clearTimeout(timer));
     }
     throw new Error(`${service} not ready after ${timeoutMs} ms\n${tail(logFile)}`);
 }

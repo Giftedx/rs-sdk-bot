@@ -1,13 +1,14 @@
 import { expect, test } from 'bun:test';
 import { fineTimers } from '../src/timer-resolution';
 
-test('fine timers: off outside Windows and without SIM_FINE_TIMERS=1', () => {
+test('fine timers: off outside Windows or when SIM_FINE_TIMERS=0', () => {
+    expect(fineTimers({}, 'linux')).toBe(false);
     expect(fineTimers({ SIM_FINE_TIMERS: '1' }, 'linux')).toBe(false);
-    expect(fineTimers({}, 'win32')).toBe(false);
     expect(fineTimers({ SIM_FINE_TIMERS: '0' }, 'win32')).toBe(false);
 });
 
-test.skipIf(process.platform !== 'win32')('fine timers: a 1 ms timer on Windows takes under 8 ms', async () => {
+test.skipIf(process.platform !== 'win32')('fine timers: enabled by default on Windows and a 1 ms timer takes under 8 ms', async () => {
+    expect(fineTimers({}, 'win32')).toBe(true);
     expect(fineTimers({ SIM_FINE_TIMERS: '1' }, 'win32')).toBe(true);
     const waits: number[] = [];
     for (let i = 0; i < 20; i++) { const t = performance.now(); await new Promise(r => setTimeout(r, 1)); waits.push(performance.now() - t); }

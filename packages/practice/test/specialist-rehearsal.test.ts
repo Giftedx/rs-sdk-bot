@@ -3,9 +3,10 @@ import {mkdtempSync, rmdirSync, unlinkSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {gzipSync} from 'node:zlib';
+import {missionSignature} from '../../core/src/session-admission';
 import {xpForLevel} from '../../planner/src/curve';
-import {checkSpecialistSegment, type Segment} from '../src/rehearse';
-import {confirmLivingSession, observedSupplies, scoredClock, successfulWorkerLog} from '../src/specialist-rehearsal';
+import {checkSpecialistSegment, isolatedStackOptions, rehearsalChildEnv, rehearseLockstep, type Segment} from '../src/rehearse';
+import {confirmLivingSession, observedSupplies, scoredClock, SPECIALIST_TICK_MS, successfulWorkerLog} from '../src/specialist-rehearsal';
 
 function engineSave(playtime = 305, levelTick = 300, tickMs = 400, level = 99) {
     // Version 10 fixed footer after the empty varps, inventories and ancillary fields.
@@ -51,6 +52,12 @@ test('specialist start refuses fixtures and partial qualification targets', () =
     expect(() => checkSpecialistSegment({...spec, start: {preset: 'starter'}}, 'shaftshooter')).toThrow(/fresh/);
     expect(() => checkSpecialistSegment({...spec, expect: {skills: {Ranged: 5}}}, 'shaftshooter')).toThrow(/99/);
     expect(() => checkSpecialistSegment({...spec, env: {DEMO_OK: '1'}}, 'shaftshooter')).toThrow(/environment/);
+    expect(() => checkSpecialistSegment({...spec, env: {PRACTICE_SUPPLIER: 'spoof'}}, 'shaftshooter')).toThrow(/environment/);
+    const supplier = {save: {position: {x: 3222, z: 3222, level: 0}, inventory: [{id: 1387, count: 1}]}, script: 'scripts/specialist-supplier.ts', args: ['{ACTOR}']};
+    const atkSpec: Segment = {...spec, expect: {skills: {Attack: 99}}, supplier};
+    expect(checkSpecialistSegment(atkSpec, 'Hiltsdeep')).toBe('Attack');
+    expect(() => checkSpecialistSegment({...atkSpec, supplier: {...supplier, script: '../bad.ts'}}, 'Hiltsdeep')).toThrow(/supplier configuration/);
+    expect(() => checkSpecialistSegment({...atkSpec, supplier: {...supplier, env: {TOKEN: 'x'}}}, 'Hiltsdeep')).toThrow(/supplier environment/);
 });
 
 test('requires the one real successful worker settlement', () => {
@@ -84,4 +91,38 @@ test('refuses a missing, cut, mismatched or dead actor tick record', async () =>
         unlinkSync(file);
         rmdirSync(dir);
     }
+});
+
+test('isolated rehearsal defaults to no-gateway lockstep with 400ms scored playtime and preserves seg.env', () => {
+    expect(rehearseLockstep({})).toBe(true);
+    expect(rehearseLockstep({REHEARSE_REALTIME: '1'})).toBe(false);
+
+    const unscored = isolatedStackOptions(undefined, {});
+    expect(unscored.gateway).toBe(false);
+    expect(unscored.lockstep).toEqual({ackMs: 30_000});
+    expect(unscored.tickMs).toBe(150);
+
+    const scored = isolatedStackOptions({ledger: 'trades.jsonl', market: 'market.sqlite'}, {});
+    expect(scored.gateway).toBe(false);
+    expect(scored.lockstep).toEqual({ackMs: 30_000});
+    expect(scored.tickMs).toBe(SPECIALIST_TICK_MS);
+    expect(scored.enginePreload?.env.TRADE_LEDGER_FILE).toBe('trades.jsonl');
+
+    const realtime = isolatedStackOptions({ledger: 'trades.jsonl', market: 'market.sqlite'}, {REHEARSE_REALTIME: '1'});
+    expect(realtime.gateway).toBe(false);
+    expect(realtime.lockstep).toBeUndefined();
+    expect(realtime.tickMs).toBe(SPECIALIST_TICK_MS);
+
+    const segEnv = {CAP: '4500', SUPPLIER: 'Moneyshot'};
+    const missionBefore = missionSignature({account: 'hiltsdeep', script: 'scripts/attack-specialist.ts', env: {...segEnv, COORDINATOR_RUN_ID: ''}});
+    const workerEnv = rehearsalChildEnv({}, segEnv, {scored: true, role: 'worker', supplier: 'spatk1'});
+    const supplierEnv = rehearsalChildEnv({}, undefined, {scored: true, role: 'supplier'});
+    expect(workerEnv.SIM_LOCKSTEP).toBe('1');
+    expect(workerEnv.PRACTICE_SUPPLIER).toBe('spatk1');
+    expect(supplierEnv.SIM_LOCKSTEP).toBe('1');
+    expect(segEnv).toEqual({CAP: '4500', SUPPLIER: 'Moneyshot'});
+    expect(missionSignature({account: 'hiltsdeep', script: 'scripts/attack-specialist.ts', env: {...segEnv, COORDINATOR_RUN_ID: ''}})).toBe(missionBefore);
+
+    const realtimeWorkerEnv = rehearsalChildEnv({REHEARSE_REALTIME: '1', SIM_LOCKSTEP: '1'}, segEnv, {scored: true, role: 'worker'});
+    expect(realtimeWorkerEnv.SIM_LOCKSTEP).toBeUndefined();
 });
