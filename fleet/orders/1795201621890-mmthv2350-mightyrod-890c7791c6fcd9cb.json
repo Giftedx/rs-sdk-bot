@@ -1,0 +1,22 @@
+{
+ "id": "1795201621890-mmthv2350-mightyrod-890c7791c6fcd9cb",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmthv2350",
+ "to": "Mightyrod",
+ "item": "Water rune",
+ "count": 60,
+ "start": 1795201621890,
+ "end": 1795202821890,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
