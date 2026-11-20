@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795161605177-spitroaster-pickpockdick",
+ "account": "PickpockDick",
+ "partner": "Spitroaster",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 22613,
+ "claim": "ef2d18ae-eaa9-403f-9ad0-3fe0f5d270c7",
+ "count": 22613,
+ "ok": true,
+ "at": 1795161681379,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 22613
+ },
+ "bank": {
+  "count": 22613,
+  "at": 1795161680193
+ },
+ "logout": {
+  "attemptId": "1795161659503-0000015924-0000000001",
+  "at": 1795161681362,
+  "sha256": "570214494d1289fa1fe3d482ea47fed24a8d5a9aaa21f2b0dcdeafeb8f0d2b9d"
+ },
+ "screen": true
+}
