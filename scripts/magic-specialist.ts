@@ -402,7 +402,7 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
    acts.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
   }
   const boss = spec.sdk.getNearbyNpcs().find(n => [907, 908, 909, 910, 911].includes(n.id) || (/kolodion/i.test(n.name) && n.optionsWithIndex.some(o => /attack/i.test(o.text))));
-  if (boss && spec.tick() - lastCastXpTick >= 5) {
+  if (boss && spec.tick() - lastCastXpTick >= 4) {
    const spell = skillLevel(spec, 'Magic') >= 75 ? fireWave : fireBlast;
    acts.push(spec.direct({ type: 'spellOnNpc', npcIndex: boss.index, spellComponent: spell, reason: 'SDK' }));
   }
