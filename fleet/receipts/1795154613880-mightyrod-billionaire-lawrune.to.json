@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795154613880-mightyrod-billionaire-lawrune",
  "account": "Billionaire",
  "partner": "Mightyrod",
@@ -12,6 +12,12 @@
  "claim": "4e23ce53-f3aa-4677-b8c2-ba70bc268eba",
  "count": 0,
  "ok": false,
- "at": 1795154662251,
- "detail": "trade claimed"
+ "at": 1795154707252,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795154662261-0000029704-0000000001",
+  "at": 1795154707240,
+  "sha256": "dded46f29ac88d51825dd2567008e31206f1cb8fa27c9a0f44cd12fabe411e12"
+ },
+ "screen": false
 }
