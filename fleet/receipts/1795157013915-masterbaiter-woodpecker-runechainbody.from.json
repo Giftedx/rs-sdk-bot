@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795157013915-masterbaiter-woodpecker-runechainbody",
+ "account": "Masterbaiter",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "936585f4-3fa7-407f-a40a-9ede167cfb47",
+ "count": 0,
+ "ok": false,
+ "at": 1795157064509,
+ "detail": "trade claimed"
+}
