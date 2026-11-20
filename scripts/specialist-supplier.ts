@@ -9,7 +9,10 @@ import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { goTo, sessionWalker, walkPath, walkRoute, withoutSpells, withoutTeleports } from '../packages/core/src/walk';
 import { DEFENCE_SPECIALIST_KIT, HP_SPECIALIST_KIT, STRENGTH_SPECIALIST_KIT } from './combat-quest-specialists';
+import { CRAFTING_BATCHES, CRAFTING_SUPPLY_BILL } from './crafting-specialist';
 import { findLocBy, ITEM_IDS, loadItemCatalog, playerPos } from './fast-skills-lib';
+import { HERBLORE_BANK_HELPER_SPOT, HERBLORE_NOTED_BATCH, HERBLORE_STARTER_BATCH, HERBLORE_SUPPLY_BILL } from './herblore-specialist';
+import { LUMBRIDGE_SAFE_SPOT, MAGIC_BATCHES, MAGIC_SUPPLY_BILL } from './magic-specialist';
 import { PRAYER_BONES_NEEDED, PRAYER_SUPPLY_BILL } from './prayer-specialist';
 import {
     EDGEVILLE_SUPPLIER_STAND,
@@ -121,6 +124,9 @@ const billToKit = (bill: readonly { itemId: number; item: string; count: number 
 export const PRAYER_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(PRAYER_SUPPLY_BILL);
 export const SMITHING_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(SMITHING_SUPPLY_BILL);
 export const RUNECRAFT_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(RUNECRAFT_SUPPLY_BILL);
+export const CRAFTING_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(CRAFTING_SUPPLY_BILL);
+export const HERBLORE_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(HERBLORE_SUPPLY_BILL);
+export const MAGIC_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(MAGIC_SUPPLY_BILL);
 
 // 27 inventory slots: live Thieving kit using Ring of dueling(8) + 26 Chocolate cakes (390 HP, 1 slot free for Coins).
 export const THIEVING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = [
@@ -145,6 +151,9 @@ export const SPECIALIST_KITS = {
     prayer: PRAYER_SPECIALIST_KIT,
     smithing: SMITHING_SPECIALIST_KIT,
     runecraft: RUNECRAFT_SPECIALIST_KIT,
+    crafting: CRAFTING_SPECIALIST_KIT,
+    herblore: HERBLORE_SPECIALIST_KIT,
+    magic: MAGIC_SPECIALIST_KIT,
 } as const satisfies Record<string, readonly KitSpecItem[]>;
 
 export type SpecialistKitName = keyof typeof SPECIALIST_KITS;
@@ -212,6 +221,7 @@ export interface SupplierTradeLeg {
     readonly kit: readonly KitSpecItem[];
     readonly handoff: { readonly x: number; readonly z: number; readonly level: number };
     readonly bank: { readonly x: number; readonly z: number; readonly level: number };
+    readonly noted?: boolean;
 }
 
 export interface SupplierKitPlan {
@@ -237,6 +247,16 @@ export function resolveSupplierKitPlan(kitName: string | undefined = process.env
                 { kit: trade2, handoff: EDGEVILLE_SUPPLIER_STAND, bank: EDGEVILLE_BANK },
             ],
             combined: SPECIALIST_KITS[name],
+        };
+    }
+    if (raw === 'herblore') {
+        return {
+            name: 'herblore',
+            legs: [
+                { kit: HERBLORE_STARTER_BATCH.give.map(g => invSpec(g.id, g.count)), handoff: LUMBRIDGE_HANDOFF, bank: DEFAULT_STAGE_BANK },
+                { kit: HERBLORE_NOTED_BATCH.give.map(g => invSpec(resolveBaseId(g.id), g.count)), handoff: HERBLORE_BANK_HELPER_SPOT, bank: EDGEVILLE_BANK, noted: true },
+            ],
+            combined: SPECIALIST_KITS.herblore,
         };
     }
     if (raw in SPECIALIST_KITS) {
@@ -479,20 +499,24 @@ async function serveOneBatch(
     t0: number,
     CAP: number,
     stop: () => boolean,
+    allowedReturnIds: readonly number[] = [],
 ): Promise<boolean> {
     const giveList = batch.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
     const peerRe = exactNameRe(specialist);
+    const allowedReturns = new Set(allowedReturnIds);
+    const acceptOffer = (offer: readonly { id: number; baseId?: number }[]) =>
+        allowedReturns.size === 0 ? offer.length === 0 : offer.every(o => allowedReturns.has(o.baseId ?? resolveBaseId(o.id)));
     while (!stop() && s.tick() - t0 < CAP) {
         const served = await s.bot.serveTrades({
             from: peerRe,
             give: giveList,
-            accept: offer => offer.length === 0,
+            accept: acceptOffer,
             maxTrades: 1,
             tradeTimeout: 60_000,
             timeout: 30_000,
             until: () => stop() || s.tick() - t0 >= CAP,
         });
-        const done = served.trades.find(t => t.success && batch.every(k => countById(t.gave, k.id) === k.count) && t.received.length === 0);
+        const done = served.trades.find(t => t.success && batch.every(k => countById(t.gave, k.id) === k.count) && acceptOffer(t.received));
         if (done) return true;
         await waitTicks(s, 1);
     }
@@ -546,14 +570,14 @@ async function runServe(args: string[]): Promise<void> {
         await waitUntil(s, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 });
         const t0 = s.tick();
         const kitName = plan.name;
-        if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'runecraft') {
+        if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'runecraft' && kitName !== 'crafting' && kitName !== 'magic') {
             const peerRe = exactNameRe(specialist);
             for (let legIdx = 0; legIdx < plan.legs.length; legIdx++) {
                 const leg = plan.legs[legIdx]!;
                 const legBank = legIdx === 0 && (parsed.bankX !== undefined || parsed.bankZ !== undefined) ? bankTile : leg.bank;
                 const concreteKit = hasExactKit(s.sdk.getInventory(), leg.kit)
                     ? resolveConcreteKit(leg.kit, s.sdk.getInventory())
-                    : await withdrawExactKit(s, leg.kit, legBank, stop);
+                    : await withdrawExactKit(s, leg.kit, legBank, stop, !!leg.noted);
                 await moveGroundTo(s, leg.handoff, 2, stop);
                 const p = s.sdk.getState()!.player!;
                 console.log('SUPPLIER_READY ' + JSON.stringify({
@@ -659,7 +683,7 @@ async function runServe(args: string[]): Promise<void> {
                 ok = await serveOneBatch(s, specialist, batch, t0, CAP, stop);
             }
             allDone = ok && idx === SMITHING_RUNNER_QUEUE.length;
-        } else {
+        } else if (kitName === 'runecraft') {
             const starter = [
                 invSpec(ITEM_IDS.amulet_of_glory_4, 1),
                 invSpec(ITEM_IDS.air_talisman, 1),
@@ -692,6 +716,38 @@ async function runServe(args: string[]): Promise<void> {
                 if (ok) trips++;
             }
             allDone = ok && trips >= 205;
+        } else if (kitName === 'crafting') {
+            let ok = true;
+            let idx = 0;
+            while (ok && !stop() && s.tick() - t0 < CAP && idx < CRAFTING_BATCHES.length) {
+                const specBatch = CRAFTING_BATCHES[idx++]!;
+                const batch = specBatch.give.map(g => invSpec(g.id, g.count));
+                if (!hasExactKit(s.sdk.getInventory(), batch)) {
+                    await withdrawExactKit(s, batch, bankTile, stop);
+                }
+                await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
+                emitReady();
+                ok = await serveOneBatch(s, specialist, batch, t0, CAP, stop, specBatch.returnIds);
+            }
+            allDone = ok && idx === CRAFTING_BATCHES.length;
+        } else if (kitName === 'magic') {
+            let ok = true;
+            let idx = 0;
+            while (ok && !stop() && s.tick() - t0 < CAP && idx < MAGIC_BATCHES.length) {
+                const specBatch = MAGIC_BATCHES[idx]!;
+                const stand = idx === 0 ? LUMBRIDGE_HANDOFF : LUMBRIDGE_SAFE_SPOT;
+                idx++;
+                const batch = specBatch.give.map(g => invSpec(g.id, g.count));
+                if (!hasExactKit(s.sdk.getInventory(), batch)) {
+                    await withdrawExactKit(s, batch, bankTile, stop);
+                }
+                await moveGroundTo(s, stand, 2, stop);
+                emitReady();
+                ok = await serveOneBatch(s, specialist, batch, t0, CAP, stop, specBatch.returnIds);
+            }
+            allDone = ok && idx === MAGIC_BATCHES.length;
+        } else {
+            throw Error(`unhandled serve kit: ${kitName}`);
         }
 
         if (allDone) {
@@ -748,7 +804,7 @@ export async function runStage(args: string[]): Promise<void> {
             const legBefore = holderSession.sdk.getInventory().map(i => ({ id: resolveBaseId(i.id), count: i.count }));
             const concreteKit = hasExactKit(donorSession.sdk.getInventory(), leg.kit)
                 ? resolveConcreteKit(leg.kit, donorSession.sdk.getInventory())
-                : await withdrawExactKit(donorSession, leg.kit, bankTile, stop, allowNoted);
+                : await withdrawExactKit(donorSession, leg.kit, bankTile, stop, allowNoted || !!leg.noted);
             const giveList = concreteKit.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
             const allowed = new Set(concreteKit.map(k => resolveBaseId(k.id)));
             const [served, given] = await Promise.all([

@@ -1,0 +1,57 @@
+{
+  "id": "prayer-specialist",
+  "goal": "specialists",
+  "entry": "scripts/prayer-specialist.ts",
+  "files": [
+    "scripts/prayer-specialist.ts",
+    "scripts/fast-skills-lib.ts",
+    "scripts/specialist-supplier.ts",
+    "scripts/fast-skills-specialist.test.ts",
+    "packages/practice/src/rehearse.ts",
+    "packages/practice/test/specialist-rehearsal.test.ts"
+  ],
+  "consumer": "BigBoner completes the continuous fresh-clock Prayer 99 specialist route from Tutorial Island within 1,246 ticks using Draynor Bank dragon-bone runners and Lumbridge burying.",
+  "checks": [
+    {
+      "id": "prayer-specialist-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/fast-skills-specialist.test.ts",
+        "packages/practice/test/specialist-rehearsal.test.ts",
+        "packages/core/test/specialist-launch.test.ts",
+        "packages/core/test/launch-evidence.test.ts",
+        "scripts/progression-catalog.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-prayer-specialist",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "run",
+        "bench",
+        "skiller:prayer:specialist",
+        "--budget",
+        "10"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "id": "prayer-specialist-consumer-gate",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "test",
+        "scripts/fast-skills-specialist.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    }
+  ]
+}

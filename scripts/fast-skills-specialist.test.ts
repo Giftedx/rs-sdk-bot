@@ -1,4 +1,4 @@
-// Unit tests for Prayer, Smithing, and Runecraft specialist supply bills, routes, and supplier kits.
+// Unit tests for all 6 fast-skill specialist supply bills, routes, and supplier kits.
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -8,6 +8,7 @@ import { xpForLevel } from '../packages/planner/src/curve';
 import { intentForEntry, loadProgressionCatalog } from '../packages/planner/src/progression-catalog';
 import { observedSupplies } from '../packages/practice/src/specialist-rehearsal';
 import { resolveSkillerStep } from './aio-skiller';
+import { CRAFTING_SUPPLY_BILL } from './crafting-specialist';
 import {
     assertCatalogItems,
     goalXp,
@@ -16,19 +17,26 @@ import {
     parseSpecialistArgs,
     type SupplyEntry,
 } from './fast-skills-lib';
+import { HERBLORE_BANK_HELPER_SPOT, HERBLORE_SUPPLY_BILL } from './herblore-specialist';
+import { MAGIC_SUPPLY_BILL } from './magic-specialist';
 import { SPECIALIST_FAST_SKILLS_CASES } from './measure/specialist-fast-skills-cases';
 import { PRAYER_BONES_NEEDED, PRAYER_SUPPLY_BILL } from './prayer-specialist';
 import { RUNECRAFT_SUPPLY_BILL } from './runecraft-specialist';
 import { SMITHING_RUNNER_QUEUE, SMITHING_SUPPLY_BILL } from './smithing-specialist';
 import {
     countById,
+    CRAFTING_SPECIALIST_KIT,
     hasAtLeastKit,
     hasExactKit,
+    HERBLORE_SPECIALIST_KIT,
     kitSlotTotal,
+    LUMBRIDGE_HANDOFF,
+    MAGIC_SPECIALIST_KIT,
     parseKitArg,
     PRAYER_SPECIALIST_KIT,
     resolveBaseId,
     resolveSupplierKit,
+    resolveSupplierKitPlan,
     RUNECRAFT_SPECIALIST_KIT,
     SMITHING_SPECIALIST_KIT,
 } from './specialist-supplier';
@@ -58,11 +66,14 @@ function buildTradeLedgerJsonl(supplier: string, specialist: string, bill: reado
         .join('\n');
 }
 
-test('all PR #1 specialist supply bills use tradeable cataloged base IDs compatible with observedSupplies', () => {
+test('all 6 fast-skill specialist supply bills use tradeable cataloged base IDs compatible with observedSupplies', () => {
     const bills: readonly (readonly SupplyEntry[])[] = [
         PRAYER_SUPPLY_BILL,
         SMITHING_SUPPLY_BILL,
         RUNECRAFT_SUPPLY_BILL,
+        CRAFTING_SUPPLY_BILL,
+        HERBLORE_SUPPLY_BILL,
+        MAGIC_SUPPLY_BILL,
     ];
     const now = 1_000_000;
     const context = 'a'.repeat(64);
@@ -142,23 +153,36 @@ test('parseSpecialistArgs and parseExternalSuppliers handle positional settings 
     expect(parseExternalSuppliers({})).toEqual([]);
 });
 
-test('specialist-supplier kits, parseKitArg, and resolveBaseId cert mapping work for PR #1 skills', () => {
+test('specialist-supplier kits, parseKitArg, and resolveBaseId cert mapping work for all 6 fast-skill specialists', () => {
     expect(parseKitArg([])).toBe('attack');
     expect(parseKitArg(['--kit=prayer'])).toBe('prayer');
     expect(parseKitArg(['--kit=smithing'])).toBe('smithing');
     expect(parseKitArg(['--kit=runecraft'])).toBe('runecraft');
+    expect(parseKitArg(['--kit=crafting'])).toBe('crafting');
+    expect(parseKitArg(['--kit=herblore'])).toBe('herblore');
+    expect(parseKitArg(['--kit=magic'])).toBe('magic');
     expect(() => parseKitArg(['--kit=unknown'])).toThrow('unknown --kit');
 
     expect(resolveSupplierKit('prayer')).toBe(PRAYER_SPECIALIST_KIT);
     expect(resolveSupplierKit('smithing')).toBe(SMITHING_SPECIALIST_KIT);
     expect(resolveSupplierKit('runecraft')).toBe(RUNECRAFT_SPECIALIST_KIT);
+    expect(resolveSupplierKit('crafting')).toBe(CRAFTING_SPECIALIST_KIT);
+    expect(resolveSupplierKit('herblore')).toBe(HERBLORE_SPECIALIST_KIT);
+    expect(resolveSupplierKit('magic')).toBe(MAGIC_SPECIALIST_KIT);
     expect(kitSlotTotal(PRAYER_SPECIALIST_KIT)).toBe(PRAYER_BONES_NEEDED);
+
+    const herbPlan = resolveSupplierKitPlan('herblore');
+    expect(herbPlan.legs).toHaveLength(2);
+    expect(herbPlan.legs[0]!.handoff).toEqual(LUMBRIDGE_HANDOFF);
+    expect(herbPlan.legs[1]!.handoff).toEqual(HERBLORE_BANK_HELPER_SPOT);
+    expect(herbPlan.legs[1]!.noted).toBe(true);
 
     // Base IDs remain unchanged; cert_<name> IDs from obj.pack map back to base IDs.
     expect(resolveBaseId(ITEM_IDS.dragon_bones)).toBe(ITEM_IDS.dragon_bones);
     expect(resolveBaseId(ITEM_IDS.dragon_bones + 1)).toBe(ITEM_IDS.dragon_bones);
     expect(resolveBaseId(ITEM_IDS.iron_bar + 1)).toBe(ITEM_IDS.iron_bar);
     expect(resolveBaseId(ITEM_IDS.blankrune + 1)).toBe(ITEM_IDS.blankrune);
+    expect(resolveBaseId(ITEM_IDS.torstolvial + 1)).toBe(ITEM_IDS.torstolvial);
 
     const notedPrayerInv = [{ id: ITEM_IDS.dragon_bones + 1, count: PRAYER_BONES_NEEDED }];
     expect(countById(notedPrayerInv, ITEM_IDS.dragon_bones)).toBe(PRAYER_BONES_NEEDED);
@@ -166,22 +190,31 @@ test('specialist-supplier kits, parseKitArg, and resolveBaseId cert mapping work
     expect(hasAtLeastKit(notedPrayerInv, PRAYER_SPECIALIST_KIT)).toBe(true);
 });
 
-test('bench cases, aio-skiller routes, and progression catalog admit Prayer, Smithing, and Runecraft specialists', () => {
+test('bench cases, aio-skiller routes, and progression catalog admit all 6 fast-skill specialists', () => {
     expect(SPECIALIST_FAST_SKILLS_CASES.map(c => c.key)).toEqual([
         'skiller:prayer:specialist',
         'skiller:smithing:specialist',
         'skiller:runecraft:specialist',
+        'skiller:crafting:specialist',
+        'skiller:herblore:specialist',
+        'skiller:magic:specialist',
     ]);
 
     expect(resolveSkillerStep('prayer', 'specialist', ['CAP=1350']).script).toBe('scripts/prayer-specialist.ts');
     expect(resolveSkillerStep('smithing', 'specialist', ['CAP=1350']).script).toBe('scripts/smithing-specialist.ts');
     expect(resolveSkillerStep('runecraft', 'specialist', ['CAP=2300']).script).toBe('scripts/runecraft-specialist.ts');
+    expect(resolveSkillerStep('crafting', 'specialist', ['CAP=250']).script).toBe('scripts/crafting-specialist.ts');
+    expect(resolveSkillerStep('herblore', 'specialist', ['CAP=600']).script).toBe('scripts/herblore-specialist.ts');
+    expect(resolveSkillerStep('magic', 'specialist', ['CAP=1300']).script).toBe('scripts/magic-specialist.ts');
 
     const catalog = loadProgressionCatalog();
     for (const [script, skill, cap] of [
         ['scripts/prayer-specialist.ts', 'prayer', '1350'],
         ['scripts/smithing-specialist.ts', 'smithing', '1350'],
         ['scripts/runecraft-specialist.ts', 'runecraft', '2300'],
+        ['scripts/crafting-specialist.ts', 'crafting', '250'],
+        ['scripts/herblore-specialist.ts', 'herblore', '600'],
+        ['scripts/magic-specialist.ts', 'magic', '1300'],
     ] as const) {
         expect(intentForEntry(script, [], { CAP: cap })).toEqual({
             kind: 'service',

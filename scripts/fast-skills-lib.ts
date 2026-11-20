@@ -80,6 +80,8 @@ export const ITEM_IDS = {
  staff_of_fire: 1387,
  knife: 946,
  amulet_of_glory_4: 1712,
+ amulet_of_magic: 1727,
+ boots_wizard: 2579,
  sapphire_ring: 1637,
  emerald_ring: 1639,
  ruby_ring: 1641,
@@ -337,7 +339,9 @@ export async function waitNearPlayer(
    return;
   }
   if (tp) {
-   await mover.direct({ type: 'walkTo', x: tp.worldX, z: tp.worldZ, running: true, reason: 'SDK' });
+   const close = mp && mp.level === tp.level && Math.max(Math.abs(mp.worldX - tp.worldX), Math.abs(mp.worldZ - tp.worldZ)) <= 1;
+   const wx = close && canStand ? tp.worldX + 1 : tp.worldX;
+   await mover.direct({ type: 'walkTo', x: wx, z: tp.worldZ, running: true, reason: 'SDK' });
   }
   await waitTicks(mover, 1);
  }
@@ -349,21 +353,36 @@ export interface BurstTradeSpec {
  returnIds?: readonly number[];
  deadlineTick: number;
  canStand?: (pos: NonNullable<ReturnType<typeof playerPos>>) => boolean;
+ allowHelperOnSingleModal?: boolean;
 }
 
 // Executes a 3-to-4-tick trade: closes dialogs + sends requests together, then pipelines offer/accept/confirm within USER_EVENT.limit=5.
 export async function burstTradeHost(spec: Session, helper: Session, opts: BurstTradeSpec): Promise<void> {
+ const begin = spec.tick();
+ await burstTradeInner(spec, helper, opts);
+ console.log(`TRADE_TICKS helper=${helper.name} at=${begin} ticks=${spec.tick() - begin}`);
+}
+
+async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeSpec): Promise<void> {
  await waitNearPlayer(helper, spec, opts.deadlineTick, opts.canStand);
  const helperName = helper.name.toLowerCase();
  const specName = spec.name.toLowerCase();
  const getMsgs = () => spec.sdk.getState()?.gameMessages ?? [];
+ const getHMsgs = () => helper.sdk.getState()?.gameMessages ?? [];
  const startObsId = getMsgs().reduce((mx, m) => Math.max(mx, m.observationId ?? 0), 0);
+ const startHObsId = getHMsgs().reduce((mx, m) => Math.max(mx, m.observationId ?? 0), 0);
  const startTick = spec.tick();
+ const initialHelperGive = new Map((opts.giveIds ?? []).map(id => [id, countItem(helper.sdk.getInventory(), id)]));
  const tradeAccepted = () =>
   getMsgs().some(
    m =>
     /Accepted trade\./i.test(m.text) &&
     (m.observationId !== undefined ? m.observationId > startObsId : m.tick > startTick),
+  ) ||
+  getHMsgs().some(
+   m =>
+    /Accepted trade\./i.test(m.text) &&
+    (m.observationId !== undefined ? m.observationId > startHObsId : m.tick > startTick),
   );
  const tradeDeclined = () =>
   getMsgs().some(
@@ -371,6 +390,8 @@ export async function burstTradeHost(spec: Session, helper: Session, opts: Burst
     /(?:declined trade|enough inventory space)/i.test(m.text) &&
     (m.observationId !== undefined ? m.observationId > startObsId : m.tick > startTick),
   );
+ const transferredGive = () =>
+  !!opts.giveIds?.length && opts.giveIds.some(id => countItem(helper.sdk.getInventory(), id) < (initialHelperGive.get(id) ?? 0));
  let sawConfirm = false;
 
  while (spec.tick() < opts.deadlineTick) {
@@ -380,31 +401,43 @@ export async function burstTradeHost(spec: Session, helper: Session, opts: Burst
   if (!st.isOpen && !ht.isOpen) {
    if (tradeAccepted()) return;
    if (sawConfirm) {
-    if (!tradeDeclined()) return;
+    if (!tradeDeclined() && (!opts.giveIds?.length || transferredGive())) return;
     sawConfirm = false;
    }
    const specDlg = !!spec.sdk.getState()?.dialog?.isOpen;
    const helpDlg = !!helper.sdk.getState()?.dialog?.isOpen;
    const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperName);
    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specName);
-   // Server clears modal on CloseModal before processing InteractPlayer in the same tick.
-   if (helpDlg) await helper.direct({ type: 'closeModal', reason: 'SDK' });
-   if (sTarget) await helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' });
-   if (specDlg) await spec.direct({ type: 'closeModal', reason: 'SDK' });
-   if (hTarget) await spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' });
-   await waitTicks(spec, 1);
+   // Wait for spec's queued level-up dialogs before helper initiates trade so engineQueue cannot overwrite trademain.
+   const openActs: Promise<unknown>[] = [];
+   if (helpDlg) openActs.push(helper.direct({ type: 'closeModal', reason: 'SDK' }));
+   if ((!specDlg || opts.allowHelperOnSingleModal) && sTarget) {
+    openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
+   }
+   if (specDlg) openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+   if ((!specDlg || opts.allowHelperOnSingleModal) && hTarget) {
+    openActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
+   }
+   if (openActs.length) await Promise.all(openActs);
+   await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
    continue;
+  }
+
+  if (st.isOpen !== ht.isOpen && spec.sdk.getState()?.dialog?.isOpen) {
+   await spec.direct({ type: 'closeModal', reason: 'SDK' });
   }
 
   if (st.screen === 'confirm' || ht.screen === 'confirm') {
    sawConfirm = true;
+   const confirmActs: Promise<unknown>[] = [];
    if (ht.isOpen && ht.screen === 'confirm' && !ht.myAccepted) {
-    await helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' });
+    confirmActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
    }
    if (st.isOpen && st.screen === 'confirm' && !st.myAccepted) {
-    await spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' });
+    confirmActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
    }
-   await waitTicks(spec, 1);
+   if (confirmActs.length) await Promise.all(confirmActs);
+   await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
    continue;
   }
 
@@ -413,40 +446,40 @@ export async function burstTradeHost(spec: Session, helper: Session, opts: Burst
   const sReturnSet = opts.returnIds?.length ? new Set(opts.returnIds) : null;
   const sDistinctSlots = sReturnSet ? uniqueSlotsForIds(spec.sdk.getInventory(), sReturnSet, st.myOffer) : [];
 
+  const hMainActs: Promise<unknown>[] = [];
+  const sMainActs: Promise<unknown>[] = [];
   const specAddingItems = sDistinctSlots.length > 0;
   const hMaxOffers = hDistinctSlots.length > 4 || specAddingItems ? 5 : 4;
   const hOffers = hDistinctSlots.slice(0, hMaxOffers);
   const helperOfferComplete = hDistinctSlots.length <= hOffers.length;
-  if (hOffers.length) {
-   await Promise.all(
-    hOffers.map(slot => helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' })),
-   );
+  for (const slot of hOffers) {
+   hMainActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
   }
   const hCanAccept = helperOfferComplete && !specAddingItems;
   if (hCanAccept && !ht.myAccepted && hOffers.length <= 4) {
-   await helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' });
+   hMainActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
   }
   if (hCanAccept && (ht.myAccepted || hOffers.length <= 3)) {
-   await helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' });
+   hMainActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
 
   const sMaxOffers = sDistinctSlots.length > 4 ? 5 : 4;
   const sOffers = sDistinctSlots.slice(0, sMaxOffers);
   const specOfferComplete = sDistinctSlots.length <= sOffers.length;
-  if (sOffers.length) {
-   await Promise.all(
-    sOffers.map(slot => spec.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' })),
-   );
+  for (const slot of sOffers) {
+   sMainActs.push(spec.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
   }
   const specCanAccept = specOfferComplete && (helperOfferComplete || ht.myAccepted || (ht.myOffer?.length ?? 0) > 0);
   if (specCanAccept && !st.myAccepted && sOffers.length <= 4) {
-   await spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' });
+   sMainActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
   }
   if (specOfferComplete && (ht.myAccepted || (hCanAccept && hOffers.length <= 4)) && sOffers.length <= 3) {
-   await spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' });
+   sMainActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
+  if (hMainActs.length) await Promise.all(hMainActs);
+  if (sMainActs.length) await Promise.all(sMainActs);
 
-  await waitTicks(spec, 1);
+  await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
  }
 
  throw Error(`burstTradeHost with ${helper.name} exceeded cap`);
@@ -670,3 +703,21 @@ export async function tradeExternalSupplier(
 
 // Re-export curve helpers so specialist scripts import from one boundary.
 export { finish, openBot, getWorld, accountOf, waitTicks, waitUntil, xpForLevel, levelForXp };
+
+export function buildTradeGiveForIds(
+ spec: Session,
+ returnIds: readonly number[],
+): { item: RegExp; amount: number }[] {
+ if (!returnIds.length) return [];
+ const catalog = loadItemCatalog();
+ const wanted = new Set(returnIds);
+ const counts = new Map<number, number>();
+ for (const item of spec.sdk.getInventory()) {
+  if (!wanted.has(item.id)) continue;
+  counts.set(item.id, (counts.get(item.id) ?? 0) + item.count);
+ }
+ return [...counts.entries()].map(([id, amount]) => {
+  const name = catalog.get(id)?.name ?? `Item ${id}`;
+  return { item: new RegExp('^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i'), amount };
+ });
+}

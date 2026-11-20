@@ -1,6 +1,14 @@
-// BenchCase definitions for the 3 fresh-clock fast-skill specialist Rank #1 winners (Prayer, Smithing, Runecraft).
+// BenchCase definitions for the 6 fresh-clock fast-skill specialist Rank #1 winners.
 import type { SaveConfig } from '../../vendor/rs-sdk/sdk/test/utils/save-generator';
+import { CRAFTING_BATCHES } from '../crafting-specialist';
 import { ITEM_IDS } from '../fast-skills-lib';
+import {
+ HERBLORE_BANK_HELPER_SPOT,
+ HERBLORE_NOTED_BATCH,
+ HERBLORE_NOTED_SUPPLIES,
+ HERBLORE_STARTER_BATCH,
+} from '../herblore-specialist';
+import { LUMBRIDGE_SAFE_SPOT, MAGIC_BATCHES } from '../magic-specialist';
 import { PRAYER_RUNNER_COUNT } from '../prayer-specialist';
 import { BODY_RUNNER_COUNT } from '../runecraft-specialist';
 import type { BenchCase } from './aio-bench-cases';
@@ -18,6 +26,7 @@ const STACKABLE_IDS = new Set<number>([
  ITEM_IDS.bloodrune,
  ITEM_IDS.bodyrune,
  995,
+ ...HERBLORE_NOTED_SUPPLIES.map(s => s.certId),
 ]);
 
 export function expandInventory(items: readonly { id: number; count: number }[]): { id: number; count: number }[] {
@@ -168,5 +177,45 @@ export const SPECIALIST_FAST_SKILLS_CASES: readonly BenchCase[] = [
     },
    })),
   ],
+ },
+ {
+  key: 'skiller:crafting:specialist',
+  script: 'scripts/aio-skiller.ts',
+  preset: 'fresh_lumbridge',
+  presetConfig: freshTutorialStart(),
+  scriptArgs: ['crafting', 'specialist', 'CAP=250', helperArg(CRAFTING_BATCHES.length)],
+  pass: okSpecialist,
+  output: /ticks=(\d+)/,
+  timeoutMs: 600_000,
+  companions: CRAFTING_BATCHES.map((batch, i) =>
+   staticCompanion(i, { x: 3222, z: 3223, level: 0 }, batch.give),
+  ),
+ },
+ {
+  key: 'skiller:herblore:specialist',
+  script: 'scripts/aio-skiller.ts',
+  preset: 'fresh_lumbridge',
+  presetConfig: freshTutorialStart(),
+  scriptArgs: ['herblore', 'specialist', 'CAP=600', helperArg(2)],
+  pass: okSpecialist,
+  output: /ticks=(\d+)/,
+  timeoutMs: 600_000,
+  companions: [
+   staticCompanion(0, { x: 3222, z: 3223, level: 0 }, HERBLORE_STARTER_BATCH.give),
+   staticCompanion(1, HERBLORE_BANK_HELPER_SPOT, HERBLORE_NOTED_BATCH.give),
+  ],
+ },
+ {
+  key: 'skiller:magic:specialist',
+  script: 'scripts/aio-skiller.ts',
+  preset: 'fresh_lumbridge',
+  presetConfig: freshTutorialStart(),
+  scriptArgs: ['magic', 'specialist', 'CAP=1300', helperArg(MAGIC_BATCHES.length)],
+  pass: okSpecialist,
+  output: /ticks=(\d+)/,
+  timeoutMs: 600_000,
+  companions: MAGIC_BATCHES.map((batch, i) =>
+   staticCompanion(i, i === 0 ? { x: 3222, z: 3223, level: 0 } : LUMBRIDGE_SAFE_SPOT, batch.give),
+  ),
  },
 ];
