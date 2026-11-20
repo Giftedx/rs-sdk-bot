@@ -29,7 +29,7 @@ const countItems=(rows:readonly {id:number|null;count?:number|null}[])=>Object.f
 function intents(category:string,name:string):CatalogIntent[]{
  if(category==='quester')return name==='items'?['acquire']:name==='seaslug-leave'?['service']:['quest'];
  if(category==='skiller')return name.startsWith('foraging:')?['acquire']:name.endsWith(':specialist')?['service']:['train','produce'];
- if(category==='fighter')return name==='attack-specialist'||name==='ranged-specialist'?['service']:/^(?:chicken|cow|giant|trooper|ranged(?:-starter|-gather|-camp)?|cannon)$/.test(name)?['train','acquire']:['acquire'];
+ if(category==='fighter')return name==='attack-specialist'||name==='ranged-specialist'?['service']:/^(?:specialist-(?:hp|strength|defence))$/.test(name)?['train']:/^(?:chicken|cow|giant|trooper|ranged(?:-starter|-gather|-camp)?|cannon)$/.test(name)?['train','acquire']:['acquire'];
  if(category==='boss')return ['acquire'];
  if(category==='pvp')return name==='monitor'?['observe']:name==='stage-kit'?['acquire']:name==='standby'?['service']:['pvp'];
  if(category==='market')return name==='ge-plan'?['observe']:['acquire'];
@@ -95,7 +95,7 @@ function questRows(base:string,generated:string[]):CatalogQuest[]{
 export function buildProgressionCatalog(base=root):ProgressionCatalog{
  const ladders=json<{ladders:Record<string,Rung[]>}>(base,'knowledge/ladders.json'),rungs=Object.values(ladders.ladders).flat();
  const routes:CatalogRoute[]=aioRoutes().map(r=>{
-  const step=knownStep(r.category,r.name,r.script),skills=r.category==='skiller'&&PROGRESSION_SKILLS.includes(r.name.split(':')[0] as typeof PROGRESSION_SKILLS[number])?[r.name.split(':')[0]!]:r.category==='fighter'?['attack','strength','defence','hitpoints','ranged']:[];
+  const step=knownStep(r.category,r.name,r.script),skills=r.category==='skiller'&&PROGRESSION_SKILLS.includes(r.name.split(':')[0] as typeof PROGRESSION_SKILLS[number])?[r.name.split(':')[0]!]:r.name==='specialist-hp'?['hitpoints']:r.name==='specialist-strength'?['strength']:r.name==='specialist-defence'?['defence']:r.category==='fighter'?['attack','strength','defence','hitpoints','ranged']:[];
   const discriminator=r.script==='scripts/gather-combat.ts'?{env:{TARGET:r.name}}:undefined;
   return{id:r.category==='quester'?`quester:mode:${r.name}`:`${r.category}:${r.name}`,category:r.category,name:r.name,script:r.script,args:step.args,env:step.env,intents:intents(r.category,r.name),skills,description:r.description,...(discriminator?{discriminator}:{})};
  });

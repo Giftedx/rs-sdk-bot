@@ -115,6 +115,9 @@ export const FIGHTER_PROFILES: readonly FighterProfileSpec[] = [
  {target:'ranged-specialist',script:'scripts/ranged-specialist.ts',description:'Run the fresh-clock Ranged 99 specialist route from Tutorial Island through Dwarf Cannon and Poison Spiders'},
  {target:'loot-trip',script:'scripts/microbot-loot-trip.ts',description:'Dedicated ground-item loot and bank trip'},
  {target:'attack-specialist',script:'scripts/attack-specialist.ts',description:'Run the fresh-clock Attack 99 specialist route from Tutorial Island through Tree Gnome Village, Grand Tree, and Fight Arena'},
+ {target:'specialist-hp',script:'scripts/hp-specialist.ts',description:'Fresh-clock Hitpoints 99 quest-XP specialist'},
+ {target:'specialist-strength',script:'scripts/strength-specialist.ts',description:'Fresh-clock Strength 99 quest-XP and Wildy PvP specialist'},
+ {target:'specialist-defence',script:'scripts/defence-specialist.ts',description:'Fresh-clock Defence 99 quest-XP and Wildy PvP specialist'},
 ];
 
 export function resolveFighterStep(targetInput: string, rest: readonly string[] = []): Step {

@@ -10,7 +10,8 @@ import type { Session } from '../../packages/core/src/inprocess';
 import { openBot, finish, countItems } from '../../packages/core/src/bot';
 import { holdSessionEater } from '../../packages/core/src/sustain';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
-import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
+import { applyKnownDoorBlocks, sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
+import { withDoorPolicy } from '../../packages/core/src/door-policy';
 import { messageTally } from '../../packages/core/src/message-tally';
 
 const LOC = {
@@ -43,10 +44,8 @@ const MAZE: [number, number][] = [[2505, 3190], [2512, 3190], [2512, 3188], [253
     [2533, 3177], [2544, 3177], [2544, 3174], [2549, 3174], [2549, 3165], [2545, 3165], [2545, 3159], [2550, 3159], [2550, 3156], [2548, 3156],
     [2548, 3145], [2538, 3145], [2538, 3150], [2541, 3150], [2541, 3148], [2544, 3148], [2544, 3150], [2545, 3150], [2545, 3155], [2533, 3156]];
 const LUMBRIDGE = { x: 3222, z: 3218 };
-const CAP = 4000;
 // Max hits on the route before the fire giants are 3-5 (hobgoblins, zombies, skeletons, moss and giant skeletons,
 // shadow spiders). Each lobster can only fill 10 HP, so a low threshold makes the 10 lobsters last.
-const EAT_AT = 6;
 const TRACE = process.env.WF_TRACE === "1";
 
 export function waterfallFood(kind = 'lobster', eatAt?: number, count = 16) {
@@ -193,17 +192,47 @@ export async function waterfallDialogue(s: Session, opts: { proof: RegExp; choic
     } finally { off(); }
 }
 
-async function main() {
-const MIGHTY = process.env.WF_MIGHTY === '1';
-const RESUME_HUDON = process.env.WF_RESUME_HUDON === '1';
+export interface WaterfallFood {
+    id: number;
+    heal: number;
+    count: number;
+    eatAt: number;
+    crossAt: number;
+}
+
+export interface WaterfallOptions {
+    session?: Session;
+    stop?: () => boolean;
+    cap?: number;
+    food?: WaterfallFood;
+    mighty?: boolean;
+    resumeHudon?: boolean;
+    exitFalls?: boolean;
+    keepAlive?: boolean;
+    protectMelee?: boolean;
+    tombHoldIds?: readonly number[];
+    looseRailing?: boolean;
+    superEnergy?: boolean;
+}
+
+export async function runWaterfall(opts: WaterfallOptions = {}): Promise<{ attackXp: number; strengthXp: number; ticks: number }> {
+const MIGHTY = opts.mighty ?? process.env.WF_MIGHTY === '1';
+const RESUME_HUDON = opts.resumeHudon ?? process.env.WF_RESUME_HUDON === '1';
 if (RESUME_HUDON && !MIGHTY) throw new Error('WF_RESUME_HUDON requires WF_MIGHTY=1');
-const FOOD = waterfallFood(process.env.WF_FOOD ?? 'lobster', process.env.WF_EAT_AT ? Number(process.env.WF_EAT_AT) : undefined, Number(process.env.WF_FOOD_COUNT ?? 16));
-if (!process.argv[2] || /^(haggis|main)$/i.test(process.argv[2])) throw new Error('explicit non-reserved Waterfall account required');
-const s = await openBot(process.argv[2]!);
+const CAP = opts.cap ?? 4000;
+const FOOD = opts.food ?? waterfallFood(process.env.WF_FOOD ?? 'lobster', process.env.WF_EAT_AT ? Number(process.env.WF_EAT_AT) : undefined, Number(process.env.WF_FOOD_COUNT ?? 16));
+let s: Session;
+if (opts.session) {
+    s = opts.session;
+} else {
+    if (!process.argv[2] || /^(haggis|main)$/i.test(process.argv[2])) throw new Error('explicit non-reserved Waterfall account required');
+    s = await openBot(process.argv[2]!);
+}
 // A quest session has no eat guard (packages/core/src/eat-guard.ts). The hold has no release.
 holdSessionEater(s.sdk);
+let off: (() => void) | undefined;
 try {
-    await waitTicks(s, 5);
+    await waitTicks(s, opts.session ? 1 : 5);
     const st = (): any => s.sdk.getState();
     const pos = (): any => st()?.player;
     const inv = (): any[] => st()?.inventory ?? [];
@@ -289,7 +318,10 @@ try {
     };
 
     // Every tick: death watch, jump log, and the eat reflex (a direct op, so it never waits behind a bot.* action).
-    const off = s.onTick(() => {
+    let lastPrayDrink = -10;
+    let lastPfmToggle = -10;
+    let lastEnergyDrink = -10;
+    off = s.onTick(() => {
         tally.pull();
         capturePage();
         const p = pos();
@@ -310,6 +342,24 @@ try {
             const hits = (st()?.combatEvents ?? []).filter((e: any) => e.tick >= s.tick() - 1 && e.type === 'damage_taken').map((e: any) => `${e.sourceIndex}:${e.damage}`).join(',');
             console.log(`TRACE ${T()} ${p.worldX},${p.worldZ} hp=${h} hits=${hits} ${ns}`);
         }
+        if (opts.superEnergy && p && (p.runEnergy ?? 100) <= 65 && s.tick() - lastEnergyDrink >= 3) {
+            const ep = inv().find(i => [3016, 3018, 3020, 3022].includes(i.id));
+            if (ep) { lastEnergyDrink = s.tick(); void s.direct({ type: 'useInventoryItem', slot: ep.slot, optionIndex: 1, reason: 'SDK' }); }
+        }
+        if (opts.protectMelee && p) {
+            const pfmOn = !!st()?.prayers?.activePrayers?.[14];
+            const prayPts = st()?.prayers?.prayerPoints ?? 0;
+            const inDangerZone = (p.worldZ > 6400 && !inBox(2502, 9576, 2523, 9593))
+                || (p.worldX >= 2500 && p.worldX <= 2555 && p.worldZ >= 3138 && p.worldZ <= 3195);
+            if (inDangerZone && prayPts <= 8 && s.tick() - lastPrayDrink >= 3) {
+                const pot = inv().find(i => [2434, 139, 141, 143].includes(i.id));
+                if (pot) { lastPrayDrink = s.tick(); void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' }); }
+            }
+            if (pfmOn !== inDangerZone && (!inDangerZone || prayPts > 0) && s.tick() - lastPfmToggle >= 2) {
+                lastPfmToggle = s.tick();
+                void s.direct({ type: 'togglePrayer', prayerIndex: 14, reason: 'SDK' });
+            }
+        }
         eatCheck();
         if (h > 0 && h <= (crossing ? FOOD.crossAt : FOOD.eatAt)) eatNow();
     });
@@ -320,11 +370,14 @@ try {
         return `at=${p?.worldX},${p?.worldZ},${p?.level} ticks=${T()} hpMin=${hpMin} eats=${eats} foodId=${FOOD.id} foodLeft=${cnt(FOOD.id)} lobsters=${cnt(379)} died=${died} milestones=${[...done].join(',')} jumps=${jumps.join(';')} msgs=${msgs}`;
     };
     const fail = async (why: string): Promise<never> => {
-        off();
+        off?.();
         console.log(`RATE attack ${atkXp() - atk0} ${T()}`);
-        return finish([s], false, `${why} ${detail()}`);
+        const msg = `${why} ${detail()}`;
+        if (opts.keepAlive || opts.session) throw new Error(msg);
+        return finish([s], false, msg);
     };
     const guard = async (label: string): Promise<void> => {
+        if (opts.stop?.()) await fail(`stopped during ${label}`);
         if (died) await fail(`died during ${label}`);
         if (T() > CAP) await fail(`tick cap during ${label}`);
     };
@@ -393,9 +446,29 @@ try {
     // Click-ahead walker (packages/core/src/walk.ts, research/walking.md): one click per tick at most, 20 tiles ahead,
     // opens shut doors on the path. bot.walkTo stays as the fallback for a leg it cannot finish.
     const walker = await sessionWalker(s as any);
+    const pfMaze: any = await import('../../vendor/rs-sdk/sdk/pathfinding');
+    const gridMaze: any = await import('../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+    // Inside the walled Gnome Maze, static outer-wall NPC spawns (e.g. Hill Giants outside z=3144) must not trigger guardWalk detours.
+    const mazeWalker: typeof walker = {
+        ...walker,
+        hunters: () => [],
+        plan: (level, from, to) => {
+            pfMaze.initPathfinding();
+            const blocks = applyKnownDoorBlocks(s.sdk, level, from, to).map((b: any) =>
+                b.whenAxis === undefined ? { ...b, ...pfMaze.getDoorAt(b.level, b.x, b.z) } : b,
+            );
+            return withDoorPolicy(gridMaze, blocks, () =>
+                pfMaze.findLongPath(level, from.x, from.z, to.x, to.z, 500, (s.sdk as any).temporaryDoorBlocks?.active?.() ?? []),
+            );
+        },
+    };
     let walkTicks = 0;
-    const fast = async (pts: PathPoint[]): Promise<number> => {
-        const r = await walkPath(walker, pts, { stop: () => died || T() > CAP });
+    const fast = async (pts: PathPoint[], look?: number, reclickAt?: number): Promise<number> => {
+        const r = await walkPath(walker, pts, {
+            ...(look !== undefined ? { look } : {}),
+            ...(reclickAt !== undefined ? { reclickAt } : {}),
+            stop: () => died || T() > CAP || !!opts.stop?.(),
+        });
         walkTicks += r.ticks;
         return r.ok ? pts.length : r.next;
     };
@@ -435,28 +508,19 @@ try {
             if (!near(x, z, 1)) await fail(`dash ${label} ${x},${z}`);
         }
     };
-    // One long walkTo; if it stops short, follow the maze waypoints from the nearest one.
-    const walkMaze = async (label: string, x: number, z: number, path: [number, number][], via: [number, number, number][] = []): Promise<void> => {
-        // From outside, one plan to the goal goes round the hedge and stops at the nearest outside tile. So the walk
-        // enters at the exact mouth tile, then takes the path points in order, each on its exact tile: a tolerance
-        // of one tile can count a tile on the far side of a hedge as arrived.
-        if (via.length && !near(x, z, 2)) {
-            const pts = [...via.map(([vx, vz, tol]) => ({ x: vx, z: vz, tol })), ...path.map(([px, pz]) => ({ x: px, z: pz, tol: 0 }))];
-            const done = await fast(pts);
-            if (done < pts.length) await fail(`maze ${label} ${pts[done]!.x},${pts[done]!.z}`);
-            await walk(label, [[x, z, 2]]);
-            return;
+    // Walk maze corridors with look=4 using mazeWalker so outer-hedge danger boxes cannot bend the path outside the fence.
+    const walkMazeLeg = async (label: string, x: number, z: number, tol: number): Promise<void> => {
+        if (near(x, z, tol)) return;
+        const r = await walkPath(mazeWalker, [{ x, z, tol }], {
+            look: 4,
+            reclickAt: 2,
+            stop: () => died || T() > CAP || !!opts.stop?.(),
+        });
+        walkTicks += r.ticks;
+        if (!r.ok) {
+            const p = pos();
+            await fail(`walk ${label} ${x},${z}: ${r.detail ?? 'incomplete'} at=${p?.worldX},${p?.worldZ}`);
         }
-        if (!near(x, z, 2)) await fast([{ x, z, tol: 1 }]);
-        for (let i = 0; i < 2 && !near(x, z, 2); i++) {
-            await guard(label);
-            await s.bot.walkTo(x, z, 1, { timeout: 400_000 });
-        }
-        if (near(x, z, 2)) return;
-        let k = 0;
-        for (let i = 1; i < path.length; i++) if (cheb(path[i]![0], path[i]![1]) < cheb(path[k]![0], path[k]![1])) k = i;
-        for (let i = k; i < path.length; i++) if (!(await walkPt(path[i]![0], path[i]![1], 1))) await fail(`maze ${label} ${path[i]}`);
-        await walk(label, [[x, z, 2]]);
     };
 
     // Ladder or staircase with an option matching `re`, nearest to (x, z); waits for the plane or the z band to change.
@@ -486,6 +550,14 @@ try {
     }
     const resume = inFalls();
     if (resume) console.log(`MILESTONE resume-falls ${T()}`);
+    const PFM = 14;
+    const pfmOn = () => !!st()?.prayers?.activePrayers?.[PFM];
+    const canPfm = () => (s.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43 && (st()?.prayers?.prayerPoints ?? 0) >= 4;
+    const setPfm = async (on: boolean) => {
+        if (pfmOn() === on) return;
+        if (on && !canPfm()) return;
+        await step(`pfm ${on ? 'on' : 'off'}`, () => s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn() === on, 3, 3);
+    };
     if (!resume) {
         // 1. Almera: "How can I help?" sets %waterfall_quest = 1 (almera.rs2:14).
         const talk = await s.bot.talkTo(/^almera$/i);
@@ -557,7 +629,33 @@ try {
         await climb('Hadley down', 2518, 3429, /climb-down/i, () => pos()?.level === 0);
 
         // Golrie under the Tree Gnome Village: key from the east crate (needs 3), key on the gate, pebble from Golrie.
-        await walkMaze('maze in', 2533, 3156, MAZE, [[2502, 3191, 0]]);
+        const walkNoHunters = async (label: string, pts: [number, number, number][]) => {
+            for (const [x, z, tol] of pts) {
+                if (near(x, z, tol)) continue;
+                const r = await walkPath(mazeWalker, [{ x, z, tol }], { stop: () => died || T() > CAP || !!opts.stop?.() });
+                walkTicks += r.ticks;
+                if (!r.ok && !near(x, z, tol)) await fail(`walk ${label} ${x},${z}: ${r.detail ?? 'incomplete'}`);
+            }
+        };
+        const squeezeRailing = async (toNorth: boolean) => {
+            const targetZ = toNorth ? 3161 : 3160;
+            const ok = () => toNorth ? (pos()?.worldZ ?? 0) >= targetZ : (pos()?.worldZ ?? 9999) <= targetZ;
+            await step(`railing ${toNorth ? 'north' : 'south'}`, async () => {
+                const l = findLoc(k => (k.id === 2186 || /railing/i.test(k.name ?? '')) && (k.optionsWithIndex ?? []).some((o: any) => /squeeze/i.test(o.text ?? '')) && Math.max(Math.abs(k.x - 2515), Math.abs(k.z - 3161)) <= 4);
+                if (l) await opLoc(l, opIndex(l, /squeeze/i));
+                else await s.bot.walkTo(2515, toNorth ? 3160 : 3161, 0);
+            }, ok, 8, 6);
+        };
+
+        if (opts.looseRailing) {
+            await setPfm(true);
+            await walkNoHunters('maze in entry direct', [[2561, 3242, 4], [2502, 3191, 1]]);
+            await setPfm(false);
+            await walkMazeLeg('maze in', 2533, 3156, 2);
+        } else {
+            await walk('maze in entry', [[2502, 3191, 1]]);
+            await walkMazeLeg('maze in', 2533, 3156, 2);
+        }
         const inCellar = () => (pos()?.worldZ ?? 0) > 9500 && (pos()?.worldZ ?? 0) < 9600;
         await climb('gnome cellar down', 2533, 3155, /climb-down/i, inCellar);
         await step('golrie crate', () => opLoc(LOC.golrieCrate), () => has(ITEM.golrieKey), 40, 3);
@@ -589,14 +687,24 @@ try {
 
         // 4. Glarial's tombstone: runes are refused in the tomb (quest_waterfall.rs2:70), so they wait on the ground
         // (300-tick drop timer). The pebble opens the tomb and sets 4.
-        await walkMaze('maze out', 2557, 3444, [...MAZE].reverse());
-        // All three stacks in one tick (the server takes 5 inputs per tick); bot.dropItem cost about 15 idle ticks here.
-        const runeDrop = MIGHTY ? await dropWaterfallRunes(s, () => died || T() > CAP) : { x: pos()?.worldX, z: pos()?.worldZ };
-        if (!MIGHTY) for (let i = 0; i < 4 && RUNES.some(has); i++) {
-            for (const r of inv().filter(x => RUNES.includes(x.id))) void s.direct({ type: 'dropItem', slot: r.slot, reason: 'SDK' });
-            await waitUntil(s, () => !RUNES.some(has) || died, { timeoutTicks: 2 });
+        if (opts.looseRailing) {
+            await walkMazeLeg('maze out exit', 2502, 3191, 1);
+            await setPfm(true);
+            await walkNoHunters('maze out direct', [[2561, 3242, 4], [2557, 3444, 2]]);
+            await setPfm(false);
+        } else {
+            await walkMazeLeg('maze out exit', 2502, 3191, 1);
+            await walk('maze out', [[2557, 3444, 2]]);
         }
-        if (RUNES.some(has)) await fail('could not drop the runes');
+        // All three stacks in one tick (the server takes 5 inputs per tick); bot.dropItem cost about 15 idle ticks here.
+        const tombHoldIds = [...new Set([...RUNES, ...(opts.tombHoldIds ?? [])])];
+        const tombTargetCount = new Map(tombHoldIds.map(id => [id, RUNES.includes(id) ? 6 : Math.max(1, cnt(id))]));
+        const runeDrop = MIGHTY ? await dropWaterfallRunes(s, () => died || T() > CAP) : { x: pos()?.worldX, z: pos()?.worldZ };
+        if (!MIGHTY) for (let i = 0; i < 4 && tombHoldIds.some(has); i++) {
+            for (const r of inv().filter(x => tombHoldIds.includes(x.id))) void s.direct({ type: 'dropItem', slot: r.slot, reason: 'SDK' });
+            await waitUntil(s, () => !tombHoldIds.some(has) || died, { timeoutTicks: 2 });
+        }
+        if (tombHoldIds.some(has)) await fail('could not drop the tomb-banned items');
         const dropTick = T();
         const inTomb = () => inBox(2520, 9795, 2560, 9850);
         await step('pebble', () => useOnLoc(ITEM.pebble, LOC.tombstone), inTomb, 15, 3);
@@ -616,14 +724,15 @@ try {
         await step('coffin', () => opLoc(LOC.coffin), () => has(ITEM.urn), 30, 3);
         await climb('tomb ladder', 2556, 9844, /climb-up/i, () => (pos()?.worldZ ?? 0) < 4000);
         // One pickup per tick, the next one sent as soon as the last stack lands.
-        for (let i = 0; i < 20 && RUNES.some(id => cnt(id) < 6); i++) {
+        for (let i = 0; i < 25 && tombHoldIds.some(id => cnt(id) < (tombTargetCount.get(id) ?? 1)); i++) {
             await guard('pick runes');
-            const id = RUNES.find(r => cnt(r) < 6)!;
+            const id = tombHoldIds.find(r => cnt(r) < (tombTargetCount.get(r) ?? 1))!;
+            const need = tombTargetCount.get(id) ?? 1;
             const g = (st()?.groundItems ?? []).filter((x: any) => x.id === id && (!MIGHTY || x.x === runeDrop.x && x.z === runeDrop.z && x.count === 6)).sort((a: any, b: any) => a.distance - b.distance)[0];
             if (g) await s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: id, reason: 'SDK' });
-            await waitUntil(s, () => cnt(id) >= 6 || died, { timeoutTicks: 3 });
+            await waitUntil(s, () => cnt(id) >= need || died, { timeoutTicks: 3 });
         }
-        if (RUNES.some(id => cnt(id) < 6)) await fail(`runes not picked up: ${RUNES.map(cnt).join('/')}`);
+        if (tombHoldIds.some(id => cnt(id) < (tombTargetCount.get(id) ?? 1))) await fail(`runes not picked up: ${tombHoldIds.map(cnt).join('/')}`);
         console.log(`WARN runes back after ${T() - dropTick} ticks on the ground`);
 
         // 5. Raft again, rope across, the ledge door with the amulet sets 5 (quest_waterfall.rs2:270).
@@ -674,8 +783,12 @@ try {
     const giantIdx = () => new Set(giants().map(g => g.index));
     const shieldHit = (): boolean => (st()?.combatEvents ?? []).some((e: any) => e.type === 'damage_taken' && e.sourceType === 'npc'
         && !giantIdx().has(e.sourceIndex) && e.tick >= s.tick() - 1);
+    const usePfm = (s.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43 && (st()?.prayers?.prayerPoints ?? 0) >= 8;
+    if (usePfm) await setPfm(true);
     let shieldWait = 0;
-    for (; shieldWait < 12 && !shieldHit() && !died; shieldWait++) { await guard('shield'); await waitTicks(s, 1); }
+    if (!usePfm) {
+        for (; shieldWait < 12 && !shieldHit() && !died; shieldWait++) { await guard('shield'); await waitTicks(s, 1); }
+    }
     await topUp('top up', FOOD.crossAt);
     console.log(`MILESTONE crossing ${T()} hp=${hp()} shield=${shieldHit()} waited=${shieldWait} gap=${giantGap(2564, 9885)}`);
     let lastSend = -99;
@@ -710,6 +823,7 @@ try {
     if (!pastGiantDoor()) await fail('step giant door');
     const inPuzzle = () => inBox(2561, 9902, 2570, 9917);
     await step('puzzle door', () => useOnLoc(ITEM.baxKey, LOC.puzzleDoor), inPuzzle, 15, 4);
+    if (usePfm) await setPfm(false);
     milestone(6);
 
     // 7. One rune of each type on each pillar; every use deletes one rune, a repeat only prints "You remember".
@@ -744,13 +858,14 @@ try {
     await step('chalice', () => useOnLoc(ITEM.urn, LOC.chalice), () => atkXp() > atk0, 15, 3);
     milestone(10);
 
-    if (!MIGHTY) off();
+    const shouldExit = opts.exitFalls ?? MIGHTY;
+    if (!shouldExit) off();
     const gained = atkXp() - atk0;
     const strGained = strXp() - str0;
     console.log(`RATE attack ${gained} ${T()}`);
     console.log(`INFO walkPath ticks=${walkTicks}`);
     let preserved = true, rewardsBanked = false;
-    if (MIGHTY && !died) {
+    if (shouldExit && !died) {
         // quest_waterfall.rs2:392 returns the raised chamber to the original room;
         // door2000:287 exits to the ledge, barrel:291 washes safely to2527,3413.
         await walk('raised room exit', [[2604,9901,1]]);
@@ -761,18 +876,32 @@ try {
         await dash('return to ledge exit', [[2564,9880],[2584,9876],[2575,9863]]);
         await step('falls exit', () => opLoc({ id: 2000, x: 2575, z: 9861 }), () => near(2511,3463,3), 15, 4);
         await step('return barrel', () => opLoc(LOC.barrel), () => near(2527,3413,4), 15, 4);
-        await walk('Waterfall reward return to bank', [[WF_BANK.x,WF_BANK.z,2]]);
-        await bankWaterfallPack(s);
-        const final = waterfallAssets(s);
-        preserved = !!initialAssets && waterfallConserved(initialAssets, final, FOOD.id, eats);
-        rewardsBanked = [ [1601,2], [2357,2], [299,40] ].every(([id,n]) => (final.get(id) ?? 0) - (initialAssets?.get(id) ?? 0) === n);
-        console.log(`WATERFALL_BANK ${JSON.stringify({ attackXp: gained, strengthXp: strGained, preserved, rewardsBanked, foodId: FOOD.id, eaten: eats, foodLeft: final.get(FOOD.id) ?? 0, diamonds: final.get(1601) ?? 0, goldBars: final.get(2357) ?? 0, seeds: final.get(299) ?? 0, hpMin, died })}`);
-        await s.bot.closeBank();
+        if (MIGHTY) {
+            await walk('Waterfall reward return to bank', [[WF_BANK.x,WF_BANK.z,2]]);
+            await bankWaterfallPack(s);
+            const final = waterfallAssets(s);
+            preserved = !!initialAssets && waterfallConserved(initialAssets, final, FOOD.id, eats);
+            rewardsBanked = [ [1601,2], [2357,2], [299,40] ].every(([id,n]) => (final.get(id) ?? 0) - (initialAssets?.get(id) ?? 0) === n);
+            console.log(`WATERFALL_BANK ${JSON.stringify({ attackXp: gained, strengthXp: strGained, preserved, rewardsBanked, foodId: FOOD.id, eaten: eats, foodLeft: final.get(FOOD.id) ?? 0, diamonds: final.get(1601) ?? 0, goldBars: final.get(2357) ?? 0, seeds: final.get(299) ?? 0, hpMin, died })}`);
+            await s.bot.closeBank();
+        }
         off();
     }
     const ok = (MIGHTY ? gained === 343750 && strGained === 343750 && preserved && rewardsBanked : gained >= 300_000) && !died;
+    if (opts.keepAlive) {
+        if (!ok) throw new Error(`Waterfall incomplete: attackXp=${gained} strengthXp=${strGained} ${detail()}`);
+        return { attackXp: gained, strengthXp: strGained, ticks: T() };
+    }
     await finish([s], ok, `attackXp=${gained} strengthXp=${strGained} preserved=${preserved} rewardsBanked=${rewardsBanked} ${detail()}`);
-} catch (e) { await finish([s], false, String(e)); }
+    return { attackXp: gained, strengthXp: strGained, ticks: T() };
+} catch (e) {
+    off?.();
+    if (opts.keepAlive || opts.session) throw e;
+    await finish([s], false, String(e));
+    return { attackXp: 0, strengthXp: 0, ticks: 0 };
+} finally {
+    off?.();
+}
 
 }
-if (import.meta.main) await main();
+if (import.meta.main) await runWaterfall();

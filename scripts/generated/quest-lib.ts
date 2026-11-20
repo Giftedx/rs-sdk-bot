@@ -373,7 +373,7 @@ export async function fightForDrop(io: DropFightIO, ticks: number): Promise<Drop
 // lumbridgeOk: the script teleports to Lumbridge, so a jump there is not a death (respawn and life id still count).
 // name: the account (default process.argv[2]). others: more sessions of a two-account quest (quest-arrav.ts); fail()
 // and end() log them out too.
-export async function openQuest(opts: { session?: Session; stop?:()=>boolean; cap?: number; eatAt?: number; food?: number[]; reservedFood?: Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>); trace?: boolean; lumbridgeOk?: boolean; name?: string; others?: () => Session[]; resend?: boolean; burst?: boolean } = {}) {
+export async function openQuest(opts: { session?: Session; stop?:()=>boolean; cap?: number; eatAt?: number; food?: number[]; reservedFood?: Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>); trace?: boolean; lumbridgeOk?: boolean; name?: string; others?: () => Session[]; resend?: boolean; burst?: boolean; keepAlive?: boolean } = {}) {
     const CAP = opts.cap ?? 3000;
     const BURST = process.env.Q_BURST !== '0' && (opts.burst ?? process.env.Q_BURST === '1');
     if (BURST) noteBursts();
@@ -528,7 +528,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const gains = (): string => SKILLS.map(k => [k, xp(k) - xp0[k]!] as const).filter(([, g]) => g > 0).map(([k, g]) => `${k.toLowerCase()}=${g}`).join(',');
     const all = (): Session[] => [s, ...(opts.others?.() ?? []).filter(o => o !== s)];
     const dispose = async () => { await sustain.settle(); off(); restoreBurstHooks?.(); };
-    const fail = async (why: string): Promise<never> => { await dispose(); const message=`${why} ${sustain.failure()??''} xp=${gains()} ${detail()}`; if(opts.session)throw Error(message); return finish(all(), false, message); };
+    const fail = async (why: string): Promise<never> => { await dispose(); const message=`${why} ${sustain.failure()??''} xp=${gains()} ${detail()}`; if(opts.session||opts.keepAlive)throw Error(message); return finish(all(), false, message); };
     // A fight the account cannot win ends the quest before it ends the account: at the hitpoint floor (a quarter of the
     // base level, at least 5) with no food left to eat, the bot walks RETREAT_TILES away from whatever hits it, waits for
     // the server's 16 ticks after combat (logout.rs2 p_preventlogout), and the run fails with the retreat. Demon Slayer on
@@ -568,7 +568,16 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         if (sustain.failure()) await fail(`${sustain.failure()} during ${label}`);
         if (T() > CAP) await fail(`tick cap during ${label}`);
     };
-    const end = async (ok: boolean, extra = ''): Promise<never> => { await dispose(); return finish(all(), ok && !stats.died && !sustain.failure(), `${extra} ${sustain.failure()??''} xp=${gains()} ${detail()}`); };
+    const end = async (ok: boolean, extra = ''): Promise<void> => {
+        await dispose();
+        const message = `${extra} ${sustain.failure()??''} xp=${gains()} ${detail()}`;
+        const passed = ok && !stats.died && !sustain.failure();
+        if (opts.keepAlive) {
+            if (!passed) throw Error(message);
+            return;
+        }
+        return finish(all(), passed, message);
+    };
 
     const opLoc = (l: Loc, op = 1) => s.direct({ type: 'interactLoc', x: l.x, z: l.z, locId: l.id, optionIndex: op, reason: 'SDK' });
     const locs = (): any[] => st()?.nearbyLocs ?? [];

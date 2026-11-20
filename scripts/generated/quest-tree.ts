@@ -27,16 +27,17 @@ const CHEST = { x: 2506, z: 3259 };                        // chestclosed_khazar
 const ITEM = { logs: 1511, orb: 587, orbs: 588, amulet: 589, prayerPot: [2434, 139, 141, 143], food: 379 };
 const PFM = 14;                                            // protect_from_melee (sdk PRAYER_INDICES)
 
-export async function runQuestTree(opts: { session?: Session; cap?: number; stop?: () => boolean; burst?: boolean } = {}): Promise<{ ok: boolean; detail: string }> {
+export async function runQuestTree(opts: { session?: Session; cap?: number; stop?: () => boolean; burst?: boolean; food?: number[]; eatAt?: number; keepAlive?: boolean } = {}): Promise<{ ok: boolean; detail: string }> {
 const g = globalThis as { QUEST_SCRIPT_ID?: string };
 const prevScriptId = g.QUEST_SCRIPT_ID;
 g.QUEST_SCRIPT_ID = 'quest-tree';
-const q = await openQuest({ session: opts.session, stop: opts.stop, cap: opts.cap ?? 3000, eatAt: 6, food: [ITEM.food], ...(opts.burst === undefined ? {} : { burst: opts.burst }) });
+const q = await openQuest({ session: opts.session, stop: opts.stop, cap: opts.cap ?? 3000, eatAt: opts.eatAt ?? 6, food: opts.food ?? [ITEM.food], ...(opts.burst === undefined ? {} : { burst: opts.burst }), ...(opts.keepAlive === undefined ? {} : { keepAlive: opts.keepAlive }) });
 let offDone: (() => void) | undefined;
 try {
     const FROM = Number(process.env.TREE_FROM ?? 0);
     let questDone = false;
-    offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+tree gnome village/i) > 0) questDone = true; });
+    const questMsg0 = q.msgCount(/quest complete|completed the\s+tree gnome village/i);
+    offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+tree gnome village/i) > questMsg0) questDone = true; });
     const prayers = (): any => q.st()?.prayers;
     const pfmOn = (): boolean => !!prayers()?.activePrayers?.[PFM];
     const points = (): number => prayers()?.prayerPoints ?? 0;

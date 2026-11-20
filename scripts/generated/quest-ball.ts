@@ -6,7 +6,9 @@
 // The witch (Nora T. Hagg) patrols z 3463 from x 2930 to 2904 and catches a player within 3 tiles in line of sight
 // who is north or south of her and not behind a hedge (witch.rs2:1-34). A catch takes the shed key and the ball, sets
 // 3 back to 1 and puts the player outside at 2929,3456. A player on her own row (dz 0) is never caught.
-import { openQuest } from './quest-lib';
+import { openQuest, fireSpell as resolveFireSpell } from './quest-lib';
+import type { Session } from '../../packages/core/src/inprocess';
+import { componentId } from '../../packages/core/src/logout';
 
 const BOY = { x: 2928, z: 3456 };
 const POT = { id: 2867, x: 2900, z: 3474 };               // witchpot: the door key (quest_ball.rs2:1-8)
@@ -30,13 +32,38 @@ const PFM = 14;
 type Tile = [number, number];
 const ROW = 3463;                                          // the witch's patrol row (witches_house.npc patrol1-6)
 
-const q = await openQuest({ cap: 1500, eatAt: 6, food: [ITEM.food] });
+export interface QuestBallOptions {
+    session?: Session;
+    stop?: () => boolean;
+    cap?: number;
+    eatAt?: number;
+    food?: number[];
+    burst?: boolean;
+    keepAlive?: boolean;
+}
+
+export async function runQuestBall(opts: QuestBallOptions = {}): Promise<void> {
+const handoff = globalThis as { QUEST_SCRIPT_ID?: string };
+const prevQuestId = handoff.QUEST_SCRIPT_ID;
+handoff.QUEST_SCRIPT_ID = 'quest-ball';
+const q = await openQuest({
+    session: opts.session,
+    stop: opts.stop,
+    cap: opts.cap ?? 1500,
+    eatAt: opts.eatAt ?? 6,
+    food: opts.food ?? [ITEM.food],
+    burst: opts.burst,
+    keepAlive: opts.keepAlive,
+});
+let off: (() => void) | undefined;
+let offCatch: (() => void) | undefined;
+let offWitch: (() => void) | undefined;
 try {
     // The partner (Defence 1, 10 HP) fights under Protect from Melee; the main (Defence 99) does not need it.
     const PARTNER = (q.s.sdk.getSkill('Defence')?.level ?? 1) < 40;
     let questDone = false;
     let caught = 0;
-    const off = q.s.onTick(() => {
+    off = q.s.onTick(() => {
         if (q.msgCount(/quest complete/i) > 0) questDone = true;
     });
     const boy = /^boy$/i;
@@ -53,7 +80,7 @@ try {
     // A catch puts the player at 2929,3456 (witch.rs2:29); the boy's side of the hedge is never reached otherwise
     // after step 1.
     let inGarden = false;
-    const offCatch = q.s.onTick(() => {
+    offCatch = q.s.onTick(() => {
         if (inGarden && q.near(2929, 3456, 1) && q.lvl() === 0) { caught++; inGarden = false; console.log(`WARN caught at ${q.T()}`); }
     });
     // Exposure (witch.rs2:4-8): within 3 tiles of the witch, not on her row, and no cover: a hedge on the tile toward
@@ -70,7 +97,7 @@ try {
     // waits on a hidden tile. The client routes each hop along the 1-tile corridor.
     let waited = 0;
     let wLast: number | undefined, wSeen = 0;
-    const offWitch = q.s.onTick(() => { const w = witch(); if (w) { wLast = w.x; wSeen = q.T(); } });
+    offWitch = q.s.onTick(() => { const w = witch(); if (w) { wLast = w.x; wSeen = q.T(); } });
     const sneak = async (label: string, path: Tile[]): Promise<void> => {
         let at = 0;
         for (let k = 0; k < 400 && at < path.length - 1; k++) {
@@ -158,24 +185,59 @@ try {
 
     // 6. The 4 forms: each death spawns the next, which attacks (witches_experiement.rs2:37-81).
     const attack = (n: any) => q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
-    // Each form spawns on the death of the last and attacks at once (opplayer2). Auto retaliate is on for the fight:
-    // with it off (openQuest) the attack click on the new form got "I'm already under attack!" and each form stood
-    // 20-30 ticks in a trial. The target is the latest form in sight (the dying one stays in the list for its death
-    // animation).
+    const hasStaff = () => q.has(1387) || q.s.sdk.getEquipment().some((e: any) => e.id === 1387);
+    const useMagic = (q.s.sdk.getSkill('Magic')?.baseLevel ?? 1) >= 35 && hasStaff() && (q.has(562) || q.has(560) || q.has(565));
+    if (useMagic && q.has(1387)) {
+        const staff = q.inv().find((i: any) => i.id === 1387);
+        if (staff) await q.s.bot.equipItem(staff);
+    }
     const FORMS = [/^witches experiment$/i, /second form/i, /third form/i, /fourth form/i];
     const exp = (): any => { for (let i = FORMS.length - 1; i >= 0; i--) { const n = q.npc(FORMS[i]!); if (n) return n; } return undefined; };
     const retaliate = () => q.s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
-    await retaliate();
+    if (!useMagic) await retaliate();
     let killed = false;
     let lastTarget = -1;
-    for (let t = 0; t < 400 && !killed; t++) {
+    let lastCast = -99;
+    let lastPrayerPot = -10;
+    const PRAY_POTS = [2434, 139, 141, 143];
+    for (let t = 0; t < 600 && !killed; t++) {
         await q.guard('experiment');
         if (q.msgCount(/kill the shapeshifter once and for all/i) > 0) { killed = true; break; }
+        if (wantPfm) {
+            const pts = q.st()?.prayers?.prayerPoints ?? 0;
+            if (pts <= 6 && t - lastPrayerPot >= 4) {
+                const pot = PRAY_POTS.find(id => q.has(id));
+                if (pot) {
+                    lastPrayerPot = t;
+                    await q.s.direct({ type: 'useInventoryItem', slot: q.slot(pot)!, optionIndex: 1, reason: 'SDK' });
+                }
+            }
+            if ((q.st()?.prayers?.prayerPoints ?? 0) > 0 && !pfmOn()) {
+                await q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' });
+            }
+        }
+        if (q.dialogOpen()) {
+            const d: any = q.st()?.dialog;
+            if (d && !d.isWaiting && (d.options?.length ?? 0) <= 1) void q.s.sdk.sendClickDialog(0);
+        }
         const n = exp();
-        if (n && (n.index !== lastTarget || t % 6 === 0) && q.pos()?.targetIndex !== n.index) { await attack(n); lastTarget = n.index; }
+        if (useMagic) {
+            if (n && !q.dialogOpen() && q.T() - lastCast >= 5) {
+                lastCast = q.T();
+                await q.s.direct({
+                    type: 'spellOnNpc',
+                    npcIndex: n.index,
+                    spellComponent: componentId(resolveFireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id))),
+                    reason: 'SDK',
+                });
+            }
+        } else if (n && (n.index !== lastTarget || t % 6 === 0) && q.pos()?.targetIndex !== n.index) {
+            await attack(n);
+            lastTarget = n.index;
+        }
         await q.waitTicks(1);
     }
-    await retaliate();
+    if (!useMagic) await retaliate();
     if (!killed) await q.fail('experiment not killed');
     q.milestone(6);
     if (wantPfm) await setPfm(false);
@@ -193,6 +255,12 @@ try {
     await q.talk('boy 2', boy, [], () => questDone, BOY, 40, true);
     await shut();
     q.milestone(7);
-    off(); offCatch(); offWitch();
     await q.end(questDone, `qp=4 caught=${caught} witchWait=${waited} pfm=${wantPfm}`);
-} catch (e) { await q.fail(String(e)); }
+} catch (e) {
+    await q.fail(String(e));
+} finally {
+    off?.(); offCatch?.(); offWitch?.();
+    handoff.QUEST_SCRIPT_ID = prevQuestId;
+}
+}
+if (import.meta.main) await runQuestBall();
