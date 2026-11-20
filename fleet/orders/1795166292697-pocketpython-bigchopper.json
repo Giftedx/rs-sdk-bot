@@ -1,0 +1,22 @@
+{
+ "id": "1795166292697-pocketpython-bigchopper",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Pocketpython",
+ "to": "Bigchopper",
+ "item": "coins",
+ "count": 200,
+ "start": 1795166292697,
+ "end": 1795168692697,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
