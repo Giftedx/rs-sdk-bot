@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795136905450-mightyrod-pocketrocket-bigbones",
  "account": "Pocketrocket",
  "partner": "Mightyrod",
@@ -12,6 +12,7 @@
  "claim": "62fa3919-20de-4d9e-aa59-ecc65f7d86e6",
  "count": 0,
  "ok": false,
- "at": 1795137010942,
- "detail": "trade claimed"
+ "at": 1795137682451,
+ "detail": "session ended: disconnected",
+ "screen": false
 }
