@@ -1,0 +1,22 @@
+{
+ "id": "1795215130308-earlyshooter-sausagefest",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Earlyshooter",
+ "to": "Sausagefest",
+ "item": "coins",
+ "count": 101000,
+ "start": 1795215130308,
+ "end": 1795217530308,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
