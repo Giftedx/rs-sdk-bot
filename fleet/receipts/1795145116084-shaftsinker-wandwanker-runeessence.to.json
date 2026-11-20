@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795145116084-shaftsinker-wandwanker-runeessence",
+ "account": "Wandwanker",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune essence",
+ "requested": 28,
+ "claim": "0144de7b-c3e2-438d-aa26-6de7c38ed3c9",
+ "count": 0,
+ "ok": false,
+ "at": 1795145209063,
+ "detail": "trade claimed"
+}
