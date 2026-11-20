@@ -467,11 +467,11 @@ try {
             if (!near(x, z, 1)) await fail(`dash ${label} ${x},${z}`);
         }
     };
-    // Walk each maze transition one target at a time so lookahead skips neither the north gap nor corners.
-    const walkMaze = async (label: string, x: number, z: number, via: [number, number, number][] = []): Promise<void> => {
-        for (const pt of [...via, [x, z, 2] as [number, number, number]]) {
-            if (!near(pt[0], pt[1], pt[2])) await walk(label, [pt]);
-        }
+    // Walk outer waypoints at default lookahead and maze corridors at look=4 so client clicks stay inside one hedge leg.
+    const walkMazeLeg = async (label: string, x: number, z: number, tol: number): Promise<void> => {
+        if (near(x, z, tol)) return;
+        const done = await fast([{ x, z, tol }], 4, 2);
+        if (done < 1 && !(await walkPt(x, z, tol))) await fail(`walk ${label} ${x},${z}`);
     };
 
     // Ladder or staircase with an option matching `re`, nearest to (x, z); waits for the plane or the z band to change.
@@ -572,7 +572,8 @@ try {
         await climb('Hadley down', 2518, 3429, /climb-down/i, () => pos()?.level === 0);
 
         // Golrie under the Tree Gnome Village: key from the east crate (needs 3), key on the gate, pebble from Golrie.
-        await walkMaze('maze in', 2533, 3156, [[2502, 3191, 1]]);
+        await walk('maze in entry', [[2502, 3191, 1]]);
+        await walkMazeLeg('maze in', 2533, 3156, 2);
         const inCellar = () => (pos()?.worldZ ?? 0) > 9500 && (pos()?.worldZ ?? 0) < 9600;
         await climb('gnome cellar down', 2533, 3155, /climb-down/i, inCellar);
         await step('golrie crate', () => opLoc(LOC.golrieCrate), () => has(ITEM.golrieKey), 40, 3);
@@ -604,7 +605,8 @@ try {
 
         // 4. Glarial's tombstone: runes are refused in the tomb (quest_waterfall.rs2:70), so they wait on the ground
         // (300-tick drop timer). The pebble opens the tomb and sets 4.
-        await walkMaze('maze out', 2557, 3444, [[2502, 3191, 1]]);
+        await walkMazeLeg('maze out exit', 2502, 3191, 1);
+        await walk('maze out', [[2557, 3444, 2]]);
         // All three stacks in one tick (the server takes 5 inputs per tick); bot.dropItem cost about 15 idle ticks here.
         const tombHoldIds = [...new Set([...RUNES, ...(opts.tombHoldIds ?? [])])];
         const tombTargetCount = new Map(tombHoldIds.map(id => [id, RUNES.includes(id) ? 6 : Math.max(1, cnt(id))]));

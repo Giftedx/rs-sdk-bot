@@ -601,14 +601,8 @@ export async function closeBankClean(s: Session, stop: StopFn): Promise<void> {
 export async function pullArdougneLeverToWildy(s: Session, stop: StopFn): Promise<void> {
     const p0 = posOf(s);
     if (!p0 || d8({ x: p0.worldX, z: p0.worldZ }, ARDY_LEVER) > 140) {
-        await walkWaypoints(
-            s,
-            [{ x: 2660, z: 3405, tol: 3 }, { x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }],
-            260,
-            stop,
-            'walk camelot to ardougne lever',
-            { look: 1 },
-        );
+        await walkWaypoints(s, [{ x: 2660, z: 3405, tol: 3 }], 160, stop, 'walk camelot mid');
+        await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 160, stop, 'walk mid to ardougne lever');
     } else {
         await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 200, stop, 'walk to ardougne lever');
     }
@@ -751,7 +745,7 @@ async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
     if (!hasInvRing()) {
         const wornRing = s.sdk.getEquipment().find(e => (DUELING_RING_IDS as readonly number[]).includes(e.id));
         if (wornRing) {
-            await s.direct({ type: 'unequipItem', slot: wornRing.slot, reason: 'SDK' });
+            await s.bot.unequipItem(wornRing);
             await waitUntil(s, () => hasInvRing() || stop(), { timeoutTicks: 6 });
         }
     }
@@ -934,21 +928,17 @@ export async function runMeleePvpSpecialist(
     milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
 
     await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, opts.stop);
-    await walkWaypoints(
-        s,
-        [
-            { x: 2461, z: 3108, tol: 2 },
-            { x: 2499, z: 3150, tol: 2 },
-            { x: 2535, z: 3225, tol: 2 },
-            { x: 2559, z: 3311, tol: 2 },
-            { x: 2545, z: 3405, tol: 2 },
-            { x: 2522, z: 3494, tol: 2 },
-        ],
-        420,
-        opts.stop,
-        'castle wars to almera',
-        { look: 1 },
-    );
+    for (const wp of [
+        { x: 2451, z: 3151, tol: 3 },
+        { x: 2490, z: 3220, tol: 3 },
+        { x: 2527, z: 3240, tol: 3 },
+        { x: 2576, z: 3320, tol: 3 },
+        { x: 2577, z: 3380, tol: 3 },
+        { x: 2554, z: 3470, tol: 3 },
+        { x: 2522, z: 3494, tol: 2 },
+    ]) {
+        await walkWaypoints(s, [wp], 120, opts.stop, `castle wars to almera (${wp.x},${wp.z})`);
+    }
     milestone('almera');
 
     await opts.runWaterfallFn({

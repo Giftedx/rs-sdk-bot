@@ -216,6 +216,10 @@ try {
                 await q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' });
             }
         }
+        if (q.dialogOpen()) {
+            const d: any = q.st()?.dialog;
+            if (d && !d.isWaiting && (d.options?.length ?? 0) <= 1) void q.s.sdk.sendClickDialog(0);
+        }
         const n = exp();
         if (useMagic) {
             if (n && !q.dialogOpen() && q.T() - lastCast >= 5) {
