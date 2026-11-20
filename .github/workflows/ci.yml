@@ -184,12 +184,15 @@ jobs:
           key: route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index }}
           restore-keys: |
             route-caches-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm', 'vendor/rs-sdk/sdk/collision-data.json', 'vendor/rs-sdk/sdk/pathfinding.ts', 'knowledge/doors.json', 'knowledge/npcs.json') }}-
+      - name: Compute pack cache key
+        id: pack-key
+        run: echo "key=engine-pack-v2-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/content/**', 'vendor/rs-sdk/server/engine/tools/pack/**', 'vendor/rs-sdk/server/engine/src/cache/**', 'patches/rs-sdk-working.patch', '.gitmodules') }}" >> "$GITHUB_OUTPUT"
       - name: Restore packed game assets
         id: pack-cache
         uses: actions/cache/restore@v4
         with:
           path: vendor/rs-sdk/server/engine/data/pack
-          key: engine-pack-v1-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/content/**', 'vendor/rs-sdk/server/engine/tools/pack/**', 'vendor/rs-sdk/server/engine/src/cache/**', 'patches/rs-sdk-working.patch', '.gitmodules') }}
+          key: ${{ steps.pack-key.outputs.key }}
       - name: Pack the public game assets
         id: pack
         timeout-minutes: 10
@@ -217,7 +220,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: vendor/rs-sdk/server/engine/data/pack
-          key: engine-pack-v1-${{ runner.os }}-${{ hashFiles('vendor/rs-sdk/server/content/**', 'vendor/rs-sdk/server/engine/tools/pack/**', 'vendor/rs-sdk/server/engine/src/cache/**', 'patches/rs-sdk-working.patch', '.gitmodules') }}
+          key: ${{ steps.pack-key.outputs.key }}
       - name: Run the named bench cases
         timeout-minutes: 25
         run: |
