@@ -2,9 +2,9 @@
 import type { BenchCase } from './aio-bench-cases';
 import type { SaveConfig } from '../../packages/practice/src/presets';
 import { FLETCHING_SPECIALIST_SUPPLIES } from '../fletching-specialist';
-import { FISHING_SPECIALIST_SUPPLIES } from '../fishing-specialist';
-import { MINING_SPECIALIST_SUPPLIES } from '../mining-specialist';
-import { THIEVING_SPECIALIST_SUPPLIES } from '../thieving-specialist';
+import { FISHING_SPECIALIST_SUPPLIES, FISHING_SPECIALIST_LIVE_SUPPLIES } from '../fishing-specialist';
+import { MINING_SPECIALIST_SUPPLIES, MINING_SPECIALIST_LIVE_SUPPLIES } from '../mining-specialist';
+import { THIEVING_SPECIALIST_SUPPLIES, THIEVING_SPECIALIST_LIVE_SUPPLIES } from '../thieving-specialist';
 
 const STACKABLE_SUPPLY_IDS = new Set([53, 39, 40, 41, 42, 43, 44, 313, 314, 995]);
 
@@ -83,14 +83,14 @@ export const SPECIALIST_GATHERING_CASES: BenchCase[] = [
     },
 ];
 
-// The same four routes with the kit held by a separate supplier process (scripts/gathering-supplier.ts), as on the live server.
-const externalCase = (skill: string, supplies: Readonly<Record<number, number>>, output: RegExp): BenchCase => ({
-    key: `extra:specialist-${skill}`,
+// The same routes (plus live-stockable variants) with the kit held by a separate supplier process (scripts/gathering-supplier.ts).
+const externalCase = (skill: string, supplies: Readonly<Record<number, number>>, output: RegExp, live = false): BenchCase => ({
+    key: `extra:specialist-${skill}${live ? '-live' : ''}`,
     script: 'scripts/measure/specialist-bench.ts',
     preset: 'fresh_lumbridge',
     presetConfig: FRESH_TUTORIAL_START,
     companions: [{ suffix: 's', preset: 'fresh_lumbridge', presetConfig: helperBesideLumbridge(supplies) }],
-    scriptArgs: ['{bot:s}', `scripts/${skill}-specialist.ts`, '--supplier-script=scripts/gathering-supplier.ts'],
+    scriptArgs: ['{bot:s}', `scripts/${skill}-specialist.ts`, '--supplier-script=scripts/gathering-supplier.ts', ...(live ? ['LIVE=1'] : [])],
     pass: specialistPass,
     timeoutMs: 600_000,
     output,
@@ -99,6 +99,9 @@ const externalCase = (skill: string, supplies: Readonly<Record<number, number>>,
 export const SPECIALIST_GATHERING_EXTERNAL_CASES: BenchCase[] = [
     externalCase('fletching', FLETCHING_SPECIALIST_SUPPLIES, /\bticks=(\d+)/),
     externalCase('fishing', FISHING_SPECIALIST_SUPPLIES, /\bticks=(\d+)/),
+    externalCase('fishing', FISHING_SPECIALIST_LIVE_SUPPLIES, /\bticks=(\d+)/, true),
     externalCase('mining', MINING_SPECIALIST_SUPPLIES, /\bticks=(\d+)/),
+    externalCase('mining', MINING_SPECIALIST_LIVE_SUPPLIES, /\bticks=(\d+)/, true),
     externalCase('thieving', THIEVING_SPECIALIST_SUPPLIES, /\btotalTicks=(\d+)/),
+    externalCase('thieving', THIEVING_SPECIALIST_LIVE_SUPPLIES, /\btotalTicks=(\d+)/, true),
 ];

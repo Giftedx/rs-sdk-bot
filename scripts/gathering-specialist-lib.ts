@@ -19,12 +19,29 @@ export const OBJ_KNIFE = 946;
 export const OBJ_LOGS = 1511;
 export const OBJ_SHARK = 385;
 export const OBJ_GLORY_4 = 1712;
+export const OBJ_DUELING_8 = 2552;
+export const RING_OF_DUELING_IDS = [2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566] as const;
 export const OBJ_GAMES_8 = 3853;
 export const OBJ_SUPER_ENERGY_4 = 3016;
 export const ENERGY_POTION_IDS = [3016, 3018, 3020, 3022] as const;
 export const OBJ_PINEAPPLE_PIZZA = 2301;
 export const OBJ_HALF_PINEAPPLE_PIZZA = 2303;
 const MULTI2_OPT1_ID = 2461;
+
+export const CWARS_TO_ARDY_ZOO_WAYPOINTS: readonly [number, number, number][] = [
+    [2451, 3151, 3],
+    [2463, 3178, 3],
+    [2476, 3197, 3],
+    [2486, 3214, 3],
+    [2506, 3233, 4],
+    [2555, 3234, 3],
+    [2603, 3234, 1],
+];
+
+export const isLiveSupplyVariant = (
+    env: Record<string, string | undefined> = process.env,
+    argv: readonly string[] = process.argv,
+): boolean => env.LIVE === '1' || argv.includes('--live');
 
 export const chebDist = (a: { x: number; z: number }, b: { x: number; z: number }): number =>
     Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
@@ -78,6 +95,15 @@ export async function eatPineapplePizza(s: Session): Promise<boolean> {
     const slot = half ?? whole;
     if (slot === undefined) return false;
     await s.direct({ type: 'useInventoryItem', slot, optionIndex: 1, reason: 'SDK' });
+    return true;
+}
+
+/** Eat half/whole pineapple pizza or shark, returning true if an eat packet was sent. */
+export async function eatAnyFood(s: Session): Promise<boolean> {
+    if (await eatPineapplePizza(s)) return true;
+    const shark = slotOfId(s, OBJ_SHARK);
+    if (shark === undefined) return false;
+    await s.direct({ type: 'useInventoryItem', slot: shark, optionIndex: 1, reason: 'SDK' });
     return true;
 }
 
@@ -306,7 +332,7 @@ export async function receiveTradeFast(
 export async function rubTeleport(
     s: Session,
     itemIds: readonly number[],
-    choiceIndex: number,
+    choice: number | RegExp,
     inDest: (p: { worldX: number; worldZ: number; level: number }) => boolean,
     stop: () => boolean,
 ): Promise<void> {
@@ -318,11 +344,10 @@ export async function rubTeleport(
         if (st?.player && inDest(st.player)) return;
         const dlg = s.sdk.getDialog();
         if (dlg?.isOpen && !dlg.isWaiting) {
-            if (dlg.options.length >= choiceIndex && dlg.options[choiceIndex - 1]) {
-                await s.direct({ type: 'clickDialogOption', optionIndex: choiceIndex, reason: 'SDK' });
-            } else {
-                await s.direct({ type: 'clickDialogOption', optionIndex: 0, reason: 'SDK' });
-            }
+            const matched = choice instanceof RegExp
+                ? dlg.options.find(o => choice.test(o.text))?.index
+                : (dlg.options.length >= choice && dlg.options[choice - 1] ? choice : undefined);
+            await s.direct({ type: 'clickDialogOption', optionIndex: matched ?? 0, reason: 'SDK' });
         } else if (!rubbed || i % 6 === 0) {
             const slot = s.sdk.getInventory().find(it => itemIds.includes(it.id))?.slot;
             if (slot === undefined) throw Error(`teleport item missing (${itemIds.join(',')})`);
@@ -405,16 +430,21 @@ export async function walkWaypointsSafe(
     }
 }
 
-export async function sailBrimhavenToArdougne(s: Session, stop: () => boolean): Promise<void> {
-    const ardyDeck = { x: 2683, z: 3268 };
+async function sailShip(
+    s: Session,
+    npcPattern: RegExp,
+    deckTile: { readonly x: number; readonly z: number },
+    pats: readonly RegExp[],
+    label: string,
+    stop: () => boolean,
+): Promise<void> {
     const landed = () => {
         const p = s.sdk.getState()?.player;
-        return !!p && p.level === 1 && chebDist(ardyDeck, { x: p.worldX, z: p.worldZ }) <= 8;
+        return !!p && p.level === 1 && chebDist(deckTile, { x: p.worldX, z: p.worldZ }) <= 8;
     };
-    const pats = [/journey on this ship/i, /search away/i, /^ok\.?$/i];
     for (let tries = 0; tries < 3 && !stop() && !landed(); tries++) {
         await eatSharkIfHurt(s, 4);
-        const talk = await s.bot.talkTo(/^customs officer$/i);
+        const talk = await s.bot.talkTo(npcPattern);
         if (!talk.success) {
             await waitTicks(s, 2);
             continue;
@@ -428,7 +458,7 @@ export async function sailBrimhavenToArdougne(s: Session, stop: () => boolean): 
             await waitTicks(s, 1);
         }
     }
-    if (!landed()) throw Error('customs officer sailing failed');
+    if (!landed()) throw Error(`${label} sailing failed`);
 
     for (let i = 0; i < 6 && !stop(); i++) {
         if (s.sdk.getState()?.player?.level === 0) return;
@@ -446,7 +476,36 @@ export async function sailBrimhavenToArdougne(s: Session, stop: () => boolean): 
         await s.bot.interactLoc(plank, 'Cross');
         await waitUntil(s, st => st?.player?.level === 0, { timeoutTicks: 10 });
     }
-    if (s.sdk.getState()?.player?.level !== 0) throw Error('Ardougne gangplank failed');
+    if (s.sdk.getState()?.player?.level !== 0) throw Error(`${label} gangplank failed`);
+}
+
+export const sailBrimhavenToArdougne = (s: Session, stop: () => boolean): Promise<void> =>
+    sailShip(s, /^customs officer$/i, { x: 2683, z: 3268 }, [/journey on this ship/i, /search away/i, /^ok\.?$/i], 'Brimhaven->Ardougne', stop);
+
+export const sailPortSarimToKaramja = (s: Session, stop: () => boolean): Promise<void> =>
+    sailShip(s, /^(seaman lorris|captain tobias|seaman thresnor)$/i, { x: 2956, z: 3143 }, [/yes please/i], 'PortSarim->Karamja', stop);
+
+export async function crossAlKharidTollGate(s: Session, direction: 'east' | 'west', stop: () => boolean): Promise<void> {
+    const crossed = () => {
+        const p = s.sdk.getState()?.player;
+        return !!p && p.level === 0 && (direction === 'east' ? p.worldX >= 3268 : p.worldX <= 3267);
+    };
+    for (let tries = 0; tries < 3 && !stop() && !crossed(); tries++) {
+        const talk = await s.bot.talkTo(/^border guard$/i);
+        if (!talk.success) {
+            await waitTicks(s, 2);
+            continue;
+        }
+        for (let i = 0; i < 30 && !stop() && !crossed(); i++) {
+            const d = s.sdk.getDialog();
+            if (d?.isOpen && !d.isWaiting) {
+                const opt = d.options.find(o => /yes,\s*ok/i.test(o.text));
+                await s.direct({ type: 'clickDialogOption', optionIndex: opt ? opt.index : 0, reason: 'SDK' });
+            }
+            await waitTicks(s, 1);
+        }
+    }
+    if (!crossed()) throw Error(`Al Kharid toll gate (${direction}) crossing failed`);
 }
 
 /** Name of the external supplier account (live or rehearsal), or undefined when the helper runs in this process. */

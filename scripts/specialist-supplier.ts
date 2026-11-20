@@ -33,15 +33,15 @@ export const ATTACK_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 379, name: 'Lobster', count: 2, stackable: false },
 ] as const;
 
-// 7 stackable slots: arrowtips + headless arrows for 240 arrow-fletching actions (1-99).
+// 7 stackable slots: exact 240 arrow-fletching actions (1-99, 0 spare buffer; 100% in local stock).
 export const FLETCHING_SPECIALIST_KIT: readonly KitSpecItem[] = [
-    { id: 39, name: 'Bronze arrowtips', count: 75, stackable: true },
-    { id: 40, name: 'Iron arrowtips', count: 105, stackable: true },
-    { id: 41, name: 'Steel arrowtips', count: 150, stackable: true },
-    { id: 42, name: 'Mithril arrowtips', count: 240, stackable: true },
-    { id: 43, name: 'Adamant arrowtips', count: 510, stackable: true },
-    { id: 44, name: 'Rune arrowtips', count: 2640, stackable: true },
-    { id: 53, name: 'Headless arrow', count: 3720, stackable: true },
+    { id: 39, name: 'Bronze arrowtips', count: 60, stackable: true },
+    { id: 40, name: 'Iron arrowtips', count: 90, stackable: true },
+    { id: 41, name: 'Steel arrowtips', count: 135, stackable: true },
+    { id: 42, name: 'Mithril arrowtips', count: 225, stackable: true },
+    { id: 43, name: 'Adamant arrowtips', count: 495, stackable: true },
+    { id: 44, name: 'Rune arrowtips', count: 2595, stackable: true },
+    { id: 53, name: 'Headless arrow', count: 3600, stackable: true },
 ] as const;
 
 // 12 inventory slots: nets/rods/bait/feathers + knife + 5 logs + glory for 3t Sea Slug/Trio/Barbarian fishing.
@@ -56,6 +56,19 @@ export const FISHING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
 ] as const;
 
+// 13 inventory slots: live-stockable Fishing kit replacing Glory with Port Sarim boat + Ring of dueling(8).
+export const FISHING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = [
+    { id: 303, name: 'Small fishing net', count: 1, stackable: false },
+    { id: 307, name: 'Fishing rod', count: 1, stackable: false },
+    { id: 309, name: 'Fly fishing rod', count: 1, stackable: false },
+    { id: 313, name: 'Fishing bait', count: 60, stackable: true },
+    { id: 314, name: 'Feather', count: 1500, stackable: true },
+    { id: 946, name: 'Knife', count: 1, stackable: false },
+    { id: 995, name: 'Coins', count: 50, stackable: true },
+    { id: 1511, name: 'Logs', count: 5, stackable: false },
+    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
+] as const;
+
 // 21 inventory slots: Doric quest ores + Rune pickaxe + 3t knife/logs + coins + glory + 2x super energy + games neck.
 export const MINING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 434, name: 'Clay', count: 6, stackable: false },
@@ -68,6 +81,17 @@ export const MINING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
     { id: 3016, name: 'Super energy(4)', count: 2, stackable: false },
     { id: 3853, name: 'Games necklace(8)', count: 1, stackable: false },
+] as const;
+
+// 17 inventory slots: live-stockable Mining kit using Ring of dueling(8) (0 Games necklace, 0 Glory, 0 Super energy).
+export const MINING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = [
+    { id: 434, name: 'Clay', count: 6, stackable: false },
+    { id: 436, name: 'Copper ore', count: 4, stackable: false },
+    { id: 440, name: 'Iron ore', count: 2, stackable: false },
+    { id: 946, name: 'Knife', count: 1, stackable: false },
+    { id: 1275, name: 'Rune pickaxe', count: 1, stackable: false },
+    { id: 1511, name: 'Logs', count: 2, stackable: false },
+    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
 ] as const;
 
 // 28 inventory slots: coins + glory + super energy(4) + 25 pineapple pizzas for Ardougne pickpocketing.
@@ -98,12 +122,21 @@ export const PRAYER_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(PRAYER_SU
 export const SMITHING_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(SMITHING_SUPPLY_BILL);
 export const RUNECRAFT_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(RUNECRAFT_SUPPLY_BILL);
 
+// 26 inventory slots: live-stockable Thieving kit using Ring of dueling(8) + 25 Sharks.
+export const THIEVING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = [
+    { id: 385, name: 'Shark', count: 25, stackable: false },
+    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
+] as const;
+
 export const SPECIALIST_KITS = {
     attack: ATTACK_SPECIALIST_KIT,
     fletching: FLETCHING_SPECIALIST_KIT,
     fishing: FISHING_SPECIALIST_KIT,
+    'fishing-live': FISHING_SPECIALIST_LIVE_KIT,
     mining: MINING_SPECIALIST_KIT,
+    'mining-live': MINING_SPECIALIST_LIVE_KIT,
     thieving: THIEVING_SPECIALIST_KIT,
+    'thieving-live': THIEVING_SPECIALIST_LIVE_KIT,
     prayer: PRAYER_SPECIALIST_KIT,
     smithing: SMITHING_SPECIALIST_KIT,
     runecraft: RUNECRAFT_SPECIALIST_KIT,

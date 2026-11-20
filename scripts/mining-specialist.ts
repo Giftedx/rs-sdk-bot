@@ -13,13 +13,18 @@ import {
     rubTeleport,
     walkWaypointsSafe,
     sailBrimhavenToArdougne,
+    isLiveSupplyVariant,
+    itemQty,
     finish,
     chebDist,
+    CWARS_TO_ARDY_ZOO_WAYPOINTS,
     SKILL_MULTI3_MAKE1_A,
     OBJ_KNIFE,
     OBJ_LOGS,
     OBJ_COINS,
     OBJ_GLORY_4,
+    OBJ_DUELING_8,
+    RING_OF_DUELING_IDS,
     OBJ_GAMES_8,
     OBJ_SUPER_ENERGY_4,
     ENERGY_POTION_IDS,
@@ -44,6 +49,17 @@ export const MINING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_GLORY_4]: 1,
     [OBJ_GAMES_8]: 1,
     [OBJ_SUPER_ENERGY_4]: 2,
+};
+
+// Live-stockable variant using local.json stock only (0 Games necklace, 0 Glory, 0 Super energy).
+export const MINING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>> = {
+    [OBJ_RUNE_PICKAXE]: 1,
+    [OBJ_KNIFE]: 1,
+    [OBJ_LOGS]: 2,
+    [OBJ_CLAY]: 6,
+    [OBJ_COPPER_ORE]: 4,
+    [OBJ_IRON_ORE]: 2,
+    [OBJ_DUELING_8]: 1,
 };
 
 async function exitGamesRoomToBurthorpe(main: Awaited<ReturnType<typeof openHelperAndMain>>['main'], stop: () => boolean): Promise<void> {
@@ -137,50 +153,70 @@ if (import.meta.main) {
     let ok = false;
     let detail = '';
 
+    const supplies = isLiveSupplyVariant() ? MINING_SPECIALIST_LIVE_SUPPLIES : MINING_SPECIALIST_SUPPLIES;
     let readyForTrade = false;
     const arm = startHelperTradeArm(helper, main.name, isStopped, () => readyForTrade);
     try {
         const tutTicks = await skipTutorialFast(main, isStopped);
         await dropTutorialJunk(main, isStopped, 13);
         readyForTrade = true;
-        const tradeTicks = await receiveTradeFast(main, helper, MINING_SPECIALIST_SUPPLIES, isStopped, arm);
+        const tradeTicks = await receiveTradeFast(main, helper, supplies, isStopped, arm);
         helperDone = settleHelper(helper).catch(err => {
             console.log(`WARN helper settle: ${String(err)}`);
         });
 
-        // Games necklace option 1 -> Burthorpe Games Room -> climb 2 stairs to (2899,3564) -> walk to Doric (135 tiles).
-        await rubTeleport(
-            main,
-            [OBJ_GAMES_8],
-            1,
-            p => p.level === 0 && p.worldX >= 2195 && p.worldX <= 2220 && p.worldZ >= 4925 && p.worldZ <= 4950,
-            isStopped,
-        );
-        await exitGamesRoomToBurthorpe(main, isStopped);
-        await walkWaypointsSafe(
-            main,
-            [[2952, 3451, 2]],
-            isStopped,
-        );
+        if (itemQty(main, OBJ_GAMES_8) > 0) {
+            // Games necklace option 1 -> Burthorpe Games Room -> climb 2 stairs to (2899,3564) -> walk to Doric (135 tiles).
+            await rubTeleport(
+                main,
+                [OBJ_GAMES_8],
+                1,
+                p => p.level === 0 && p.worldX >= 2195 && p.worldX <= 2220 && p.worldZ >= 4925 && p.worldZ <= 4950,
+                isStopped,
+            );
+            await exitGamesRoomToBurthorpe(main, isStopped);
+            await walkWaypointsSafe(
+                main,
+                [[2952, 3451, 2]],
+                isStopped,
+            );
+        } else {
+            await walkWaypointsSafe(
+                main,
+                [[3140, 3260, 4], [3075, 3315, 4], [3072, 3375, 4], [3010, 3408, 4], [2952, 3451, 2]],
+                isStopped,
+            );
+        }
 
         await completeDoricQuest(main, isStopped);
         const doricTicks = main.tick() - t0;
 
-        // Glory option 2 -> Karamja -> Brimhaven boat -> Ardougne dock -> Ardougne Zoo 6-rock iron.
-        await rubTeleport(
-            main,
-            MINING_GLORY_IDS,
-            2,
-            p => p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
-            isStopped,
-        );
-        await walkWaypointsSafe(
-            main,
-            [[2774, 3228, 3]],
-            isStopped,
-        );
-        await sailBrimhavenToArdougne(main, isStopped);
-        await walkWaypointsSafe(main, [[2603, 3234, 1]], isStopped);
+        if (MINING_GLORY_IDS.some(id => itemQty(main, id) > 0)) {
+            // Glory option 2 -> Karamja -> Brimhaven boat -> Ardougne dock -> Ardougne Zoo 6-rock iron.
+            await rubTeleport(
+                main,
+                MINING_GLORY_IDS,
+                2,
+                p => p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
+                isStopped,
+            );
+            await walkWaypointsSafe(
+                main,
+                [[2774, 3228, 3]],
+                isStopped,
+            );
+            await sailBrimhavenToArdougne(main, isStopped);
+            await walkWaypointsSafe(main, [[2603, 3234, 1]], isStopped);
+        } else {
+            await rubTeleport(
+                main,
+                RING_OF_DUELING_IDS,
+                /castle wars/i,
+                p => p.level === 0 && p.worldX >= 2430 && p.worldX <= 2455 && p.worldZ >= 3075 && p.worldZ <= 3105,
+                isStopped,
+            );
+            await walkWaypointsSafe(main, CWARS_TO_ARDY_ZOO_WAYPOINTS, isStopped);
+        }
 
         const zooStart = main.tick() - t0;
         const ironProfile = miningProfiles().find(p => p.name === 'iron_rock_table');
@@ -213,7 +249,7 @@ if (import.meta.main) {
                 make1: SKILL_MULTI3_MAKE1_A,
                 rocks,
                 pick: 'roll',
-                keep: [OBJ_RUNE_PICKAXE, ...MINING_GLORY_IDS, OBJ_COINS, ...ENERGY_POTION_IDS],
+                keep: [OBJ_RUNE_PICKAXE, ...MINING_GLORY_IDS, ...RING_OF_DUELING_IDS, OBJ_COINS, ...ENERGY_POTION_IDS],
             },
             2,
             incidentalMiningGems,

@@ -20,7 +20,7 @@ async function runServe(args: string[]): Promise<void> {
     const positional = args.filter(a => !a.startsWith('--'));
     const holder = assertSupplierAccount(positional[0] ?? '', 'holder');
     const specialist = (positional[1] ?? '').trim();
-    if (!specialist) throw Error('usage: gathering-supplier.ts <holder> <specialist> [--kit=fletching|fishing|mining|thieving] [cap]');
+    if (!specialist) throw Error('usage: gathering-supplier.ts <holder> <specialist> [--kit=fletching|fishing|fishing-live|mining|mining-live|thieving|thieving-live] [cap]');
     const capArg = positional.slice(2).find(a => /^\d+$/.test(a));
     const CAP = Number(capArg ?? process.env.CAP ?? (kitSpec ? 1500 : 600));
     if (!Number.isSafeInteger(CAP) || CAP < 50 || CAP > 50000) throw Error(`invalid CAP: ${CAP}`);
