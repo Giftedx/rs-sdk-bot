@@ -202,67 +202,85 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
         expect(intentForEntry('scripts/defence-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'defence', targetLevel: 99 });
     });
 
-    test('observedSupplies, validateSupplies, and validateDelivery round-trip for HP_SPECIALIST_KIT and hp-specialist task', () => {
+    test('observedSupplies, validateSupplies, and validateDelivery round-trip for combat specialist kits and tasks', () => {
         const root = resolve(import.meta.dir, '..');
         const items: { id: number; name: string }[] = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8'));
-        const ledger = JSON.stringify({
-            tick: 100,
-            from: 'Moneyshot',
-            to: 'FullBlooded',
-            fromItems: HP_SPECIALIST_KIT.map(k => ({ id: k.id, count: k.count })),
-            toItems: [],
-        });
-        const observed = observedSupplies(ledger + '\n', 'fullblooded', items);
-        const expected = [...HP_SPECIALIST_KIT]
-            .map(k => ({ item: k.name, count: k.count, itemId: resolveBaseId(k.id) }))
-            .sort((a, b) => a.itemId - b.itemId);
-        expect(observed).toEqual(expected);
+        const cases = [
+            { recipient: 'fullblooded', kit: HP_SPECIALIST_KIT, taskFile: 'hp-specialist.json' },
+            { recipient: 'bigswinger', kit: STRENGTH_SPECIALIST_KIT, taskFile: 'strength-specialist.json' },
+            { recipient: 'rocksolid', kit: DEFENCE_SPECIALIST_KIT, taskFile: 'defence-specialist.json' },
+        ] as const;
 
-        const now = 1_000_000;
-        const context = 'a'.repeat(64);
-        const bankItems = HP_SPECIALIST_KIT.map(k => ({ id: resolveBaseId(k.id), count: k.count }));
-        const refs = new Map<string, any>([
-            ['bank', { name: 'Moneyshot', server: 'rs-sdk-demo.fly.dev', bankAt: now - 1000, bank: bankItems }],
-            [
-                'delivery',
-                {
-                    ok: true,
-                    observed: true,
-                    server: 'rs-sdk-demo.fly.dev',
-                    from: 'Helper',
-                    to: 'Moneyshot',
-                    at: now - 2000,
-                    before: [],
-                    after: bankItems,
-                    items: bankItems,
-                },
-            ],
-        ]);
-        const manifest = {
-            version: 2,
-            context,
-            at: now - 1000,
-            allocations: observed.map(req => ({
-                item: req.item,
-                itemId: req.itemId,
-                count: req.count,
-                holder: 'Moneyshot',
-                recipient: 'fullblooded',
-                bank: { path: 'bank' },
-                delivery: { path: 'delivery' },
-            })),
-        };
-        expect(() => validateSupplies(manifest, context, observed, items, ['Helper', 'Moneyshot'], now, ref => refs.get(ref.path), 'fullblooded')).not.toThrow();
-        const task = JSON.parse(readFileSync(join(root, 'packages', 'router', 'tasks', 'hp-specialist.json'), 'utf8'));
-        expect(() => validateDelivery(task)).not.toThrow();
+        for (const { recipient, kit, taskFile } of cases) {
+            const ledger = JSON.stringify({
+                tick: 100,
+                from: 'Moneyshot',
+                to: recipient,
+                fromItems: kit.map(k => ({ id: k.id, count: k.count })),
+                toItems: [],
+            });
+            const observed = observedSupplies(ledger + '\n', recipient, items);
+            const expected = [...kit]
+                .map(k => ({ item: k.name, count: k.count, itemId: resolveBaseId(k.id) }))
+                .sort((a, b) => a.itemId - b.itemId);
+            expect(observed).toEqual(expected);
+
+            const now = 1_000_000;
+            const context = 'a'.repeat(64);
+            const bankItems = kit.map(k => ({ id: resolveBaseId(k.id), count: k.count }));
+            const refs = new Map<string, any>([
+                ['bank', { name: 'Moneyshot', server: 'rs-sdk-demo.fly.dev', bankAt: now - 1000, bank: bankItems }],
+                [
+                    'delivery',
+                    {
+                        ok: true,
+                        observed: true,
+                        server: 'rs-sdk-demo.fly.dev',
+                        from: 'Helper',
+                        to: 'Moneyshot',
+                        at: now - 2000,
+                        before: [],
+                        after: bankItems,
+                        items: bankItems,
+                    },
+                ],
+            ]);
+            const manifest = {
+                version: 2,
+                context,
+                at: now - 1000,
+                allocations: observed.map(req => ({
+                    item: req.item,
+                    itemId: req.itemId,
+                    count: req.count,
+                    holder: 'Moneyshot',
+                    recipient,
+                    bank: { path: 'bank' },
+                    delivery: { path: 'delivery' },
+                })),
+            };
+            expect(() => validateSupplies(manifest, context, observed, items, ['Helper', 'Moneyshot'], now, ref => refs.get(ref.path), recipient)).not.toThrow();
+            const task = JSON.parse(readFileSync(join(root, 'packages', 'router', 'tasks', taskFile), 'utf8'));
+            expect(() => validateDelivery(task)).not.toThrow();
+        }
     });
 
-    test('resolveSupplierKitPlan and supplierHasExactKit handle hitpoints noted items', () => {
-        const plan = resolveSupplierKitPlan('hitpoints');
-        expect(plan.name).toBe('hitpoints');
-        expect(resolveSupplierKitPlan('hp')).toEqual(plan);
-        expect(plan.legs.length).toBe(1);
-        expect(plan.combined).toEqual(HP_SPECIALIST_KIT);
+    test('resolveSupplierKitPlan and supplierHasExactKit handle hitpoints, strength, and defence kits', () => {
+        const hpPlan = resolveSupplierKitPlan('hitpoints');
+        expect(hpPlan.name).toBe('hitpoints');
+        expect(resolveSupplierKitPlan('hp')).toEqual(hpPlan);
+        expect(hpPlan.legs.length).toBe(1);
+        expect(hpPlan.combined).toEqual(HP_SPECIALIST_KIT);
+
+        const strPlan = resolveSupplierKitPlan('strength');
+        expect(strPlan.name).toBe('strength');
+        expect(strPlan.legs.length).toBe(1);
+        expect(strPlan.combined).toEqual(STRENGTH_SPECIALIST_KIT);
+
+        const defPlan = resolveSupplierKitPlan('defence');
+        expect(defPlan.name).toBe('defence');
+        expect(defPlan.legs.length).toBe(1);
+        expect(defPlan.combined).toEqual(DEFENCE_SPECIALIST_KIT);
 
         const notedInv = HP_SPECIALIST_KIT.map(k => ({ id: k.id, baseId: resolveBaseId(k.id), count: k.count }));
         expect(supplierHasExactKit(notedInv, HP_SPECIALIST_KIT)).toBe(true);
