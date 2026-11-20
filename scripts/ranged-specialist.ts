@@ -811,6 +811,9 @@ async function ensureCannonSetup(
         const fireOp = (loc.optionsWithIndex ?? []).find((o: any) => /^fire$/i.test(o.text ?? ''))?.opIndex ?? 1;
         await s.direct({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: fireOp, reason: 'SDK' });
         await waitTicks(s, 2);
+        // Probe Fire once more; an already-spinning cannon replies "already firing" with zero delay.
+        await s.direct({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: fireOp, reason: 'SDK' });
+        await waitTicks(s, 1);
         return { x: loc.x, z: loc.z, id: loc.id, centre: { x: loc.x + 1, z: loc.z + 1 }, setupTicks: s.tick() - t0 };
     }
     throw Error('failed to setup cannon at spiders');
@@ -853,6 +856,7 @@ async function runSpiderGrind(
 
     const tally = messageTally(() => st()?.gameMessages);
     const loadSeen = (): number => tally.count(/you load the cannon with|already full of ammo/i);
+    const fullSeen = (): number => tally.count(/already full of ammo/i);
     const emptySeen = (): number => tally.count(/out of ammo/i);
     const goneSeen = (): number => tally.count(/your cannon has been destroyed/i);
     const poisonSeen = (): number => tally.count(/you have been poisoned/i);
@@ -914,6 +918,8 @@ async function runSpiderGrind(
     const combatT0 = s.tick();
     let placedAt = s.tick();
     let lastLoad = s.tick();
+    let lastBallDrop = s.tick();
+    let lastFireAttempt = -99;
     let refills = 0;
     let reloads = 0;
     let specials = 0;
@@ -934,6 +940,7 @@ async function runSpiderGrind(
 
     tally.pull();
     let empty0 = emptySeen();
+    let full0 = fullSeen();
     let gone0 = goneSeen();
     let poison0 = poisonSeen();
     let empty = false;
@@ -959,6 +966,7 @@ async function runSpiderGrind(
         const nowBalls = countInv([ITEM_IDS.cannonball]);
         if (nowBalls < seenBalls) {
             lastLoad = s.tick();
+            lastBallDrop = s.tick();
             empty = false;
             loadPending = -1;
         }
@@ -1091,6 +1099,12 @@ async function runSpiderGrind(
             }
 
             // 5. Cannon load and fire state machine.
+            if (fullSeen() > full0) {
+                full0 = fullSeen();
+                needFire = true;
+            } else if (now - lastBallDrop >= 35 && now - lastFireAttempt >= 15 && countInv([ITEM_IDS.cannonball]) > 0) {
+                needFire = true;
+            }
             if (loadPending >= 0) {
                 if (loadSeen() <= loadMark && now - loadPending < 5) {
                     await waitTicks(s, 1);
@@ -1100,6 +1114,7 @@ async function runSpiderGrind(
             }
             if (needFire) {
                 needFire = false;
+                lastFireAttempt = now;
                 const loc = cannonAt(cannon) ?? { x: cannon.x, z: cannon.z, id: cannon.id };
                 const fireOp = (loc.optionsWithIndex ?? []).find((o: any) => /^fire$/i.test(o.text ?? ''))?.opIndex ?? 1;
                 await sendDirect({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: fireOp, reason: 'SDK' });
