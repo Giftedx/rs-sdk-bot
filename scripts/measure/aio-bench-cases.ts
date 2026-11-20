@@ -1141,7 +1141,7 @@ const ROUTE_CASES: BenchCase[] = [
   (() => {
     const c = cloneSquad('extra:squad-4-scattered-follow-x1', 'live-walker-iron-rune-chain-bind', 4,
       ['MAX_MINUTES=10', 'TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1'], 'seen', {x: 3093, z: 3501}, 20);
-    const starts = [{x: 2888, z: 3345, level: 0}, {x: 3185, z: 3436, level: 0}, {x: 3082, z: 3420, level: 0}, {x: 3093, z: 3501, level: 0}];
+    const starts = [{x: 2888, z: 3345, level: 0}, {x: 3185, z: 3436, level: 0}, {x: 3013, z: 3356, level: 0}, {x: 3093, z: 3501, level: 0}];
     return {
       ...c,
       presetConfig: {...c.presetConfig!, position: starts[0]!},

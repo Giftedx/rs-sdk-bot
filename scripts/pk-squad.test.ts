@@ -2,7 +2,7 @@ import { describe, expect, spyOn, test } from 'bun:test';
 import * as walking from '../packages/core/src/walk';
 import * as pk from './pk';
 import { maxDeathsOf } from './pk-hunt';
-import { activeCentroid, bankNear, createSquadFocus, isKillLine, leaveWilderness, marchPlan, openSquad, outTripDue, pickSquadFocus, rescueDropped, shouldFollowReplan, shouldSwitchFocus, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
+import { activeCentroid, bankNear, createSquadFocus, isKillLine, leaveWilderness, marchPlan, needsSingleWayMove, openSquad, outTripDue, pickSquadFocus, rescue, rescueDropped, shouldFollowReplan, shouldSwitchFocus, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
 import { hold, SQUAD_OPTS, squadEnd, squadFightOverrides } from './pk-squad';
 import { sparOptions } from './pk-spar';
@@ -685,4 +685,92 @@ test('createSquadFocus and shouldSwitchFocus pile all multi-way members onto one
     expect(shouldSwitchFocus({ inMulti: true, currentName: 'Goondelf', currentHp: 0.2, focusName: 'ligma', focusHp: 0.35, focusStunned: true, elapsedTicks: 4 })).toBe(false);
     focus.clear('Ligma');
     expect(focus.active(15)).toBeUndefined();
+});
+
+test('rescue casts an available escape teleport on tick 0 before eating so multi-way retreats do not stall', async () => {
+    const actions: string[] = [];
+    let z = 3600, ticks = 0;
+    const inv = [
+        { id: 563, count: 2, slot: 0, optionsWithIndex: [] },
+        { id: 556, count: 10, slot: 1, optionsWithIndex: [] },
+        { id: 385, count: 1, slot: 2, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    const mockSess: any = {
+        name: 'Escaper',
+        tick: () => ticks,
+        ended: new Promise(() => {}),
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp: 45, maxHp: 99 },
+                inventory: inv,
+                skills: [{ name: 'Magic', level: 45 }],
+            }),
+            getInventory: () => inv,
+            getEquipment: () => [],
+        },
+        direct: async (action: any) => {
+            actions.push(`${action.type}:${action.componentId ?? action.slot}`);
+            if (action.type === 'clickComponent' && action.componentId === 1174) z = 3480;
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => { ticks++; return true; });
+    try {
+        const res = await rescue(mockSess, () => {}, () => false, false);
+        expect(res).toBe(mockSess);
+        expect(actions).toEqual(['clickComponent:1174']);
+    } finally {
+        spyTick.mockRestore();
+    }
+});
+
+test('needsSingleWayMove checks single-way status and exact destination tile', () => {
+    expect(needsSingleWayMove({ worldX: 3071, worldZ: 3600 }, { x: 3070, z: 3599 })).toBe(true);
+    expect(needsSingleWayMove({ worldX: 3070, worldZ: 3599 }, { x: 3070, z: 3599 })).toBe(false);
+    expect(needsSingleWayMove({ worldX: 3072, worldZ: 3603 }, { x: 3070, z: 3599 })).toBe(false);
+    expect(needsSingleWayMove({ worldX: 3040, worldZ: 3600 }, { x: 3040, z: 3600 })).toBe(false);
+});
+
+test('hold does not stop fightPlayer for single-way once standing on single-way tile and stops on multi-way fallback', async () => {
+    const w = squadWorld();
+    w.s.tick = () => 0;
+    w.player.worldX = 3071;
+    w.player.worldZ = 3600;
+    w.s.sdk.getState().nearbyPlayers = [{ index: 5, name: 'Goondelf', combatLevel: 126, x: 3070, z: 3600, distance: 1 }];
+    const decided: { actions: any[] } = { actions: [{ kind: 'single-way', to: { x: 3070, z: 3599 }, reason: 'team' }] };
+    const threats: any = { act: true, acted: () => {}, step: () => ({ classes: [], interlopers: [], actions: decided.actions }) };
+    const stops: boolean[] = [];
+    let t = 0;
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_d, path) => {
+            w.player.worldX = path[0]!.x;
+            w.player.worldZ = path[0]!.z;
+            return { ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any;
+        }),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { t++; return true; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+        spyOn(pk, 'fightPlayer').mockImplementation(async (_s: any, _name: string, opts: any) => {
+            stops.push(opts.stop());
+            w.player.worldX = 3071;
+            w.player.worldZ = 3600;
+            stops.push(opts.stop());
+            decided.actions = [];
+            w.s.sdk.getState().nearbyPlayers = [
+                { index: 5, name: 'Goondelf', combatLevel: 126, x: 3070, z: 3600, z2: 3600, distance: 1 },
+                { index: 6, name: 'Enemy2', combatLevel: 126, x: 3070, z: 3600, distance: 1 },
+                { index: 7, name: 'Enemy3', combatLevel: 126, x: 3070, z: 3600, distance: 1 },
+                { index: 8, name: 'Enemy4', combatLevel: 126, x: 3070, z: 3600, distance: 1 },
+                { index: 9, name: 'Enemy5', combatLevel: 126, x: 3070, z: 3600, distance: 1 },
+            ];
+            w.player.hp = Math.floor(w.player.maxHp * 0.65);
+            stops.push(opts.stop());
+            t = 1000;
+            return { outcome: 'stopped' } as any;
+        }),
+    ];
+    try {
+        await hold(w.s, { targets: new Set(['goondelf']), post: { x: 3071, z: 3600 }, options: { kit: {} }, allies: ['Ally1'], pickup: false, trips: 3, deadline: 400, stopped: () => t >= 500, killsLeft: () => true, log: () => {}, threats });
+        // Walk moves off (3071, 3600) onto single-way (3070, 3599) first: stop=false at (3070,3599), stop=true at multi (3071,3600), stop=true at <=65% hp vs 5 enemies.
+        expect(stops).toEqual([false, true, true]);
+    } finally { for (const mock of mocks) mock.mockRestore(); }
 });
