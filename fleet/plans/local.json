@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795200186056,
+ "at": 1795200465484,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -259,7 +259,7 @@
    ]
   },
   {
-   "account": "BraveHardon",
+   "account": "TossTheCaber",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "jiminua",
@@ -267,15 +267,15 @@
    ],
    "env": {
     "ITEMS": "antipoison",
-    "STOCK_TARGET": "33",
+    "STOCK_TARGET": "22",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
     "FLOAT": "2504",
     "COIN_RESERVE": "200",
     "MAX_SPEND": "2304",
-    "AUTOPILOT_ORDER": "[29]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":33}}"
+    "AUTOPILOT_ORDER": "[18]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":22}}"
    },
    "enabled": true,
    "standing": true,
