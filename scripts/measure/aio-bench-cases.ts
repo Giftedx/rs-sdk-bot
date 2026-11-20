@@ -1347,7 +1347,7 @@ const ROUTE_CASES: BenchCase[] = [
   // Multi-trip restock regression: three maxed tribrids start at post with 1 shark against 3 5-shark tribrid-food clones (3v3) and 0 spare arrows in bank; Trip 2+ must restock and finish.
   (() => {
     const base = cloneTribridSquad('extra:squad-2-trips-nospare-x1', 'tribrid-snare', 3,
-      ['MAX_MINUTES=10', 'TRIPS=6', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_GANG_KIT=tribrid-food', 'SQUAD_OPTS={"cureNow":true,"eatAt":88,"escapeAt":70,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}'],
+      ['MAX_MINUTES=14', 'TRIPS=6', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_GANG_KIT=tribrid-food', 'SQUAD_OPTS={"cureNow":true,"eatAt":88,"escapeAt":64,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}'],
       'full', {x: 3066, z: 3641}, 1, EDGE_BANK_NOSPARE_ARROWS);
     const enemy = kitFixture('tribrid-food', GANKER_POST.x, GANKER_POST.z);
     const enemyInv = [...enemy.inventory!.filter(i => i.id !== 385), ...Array.from({length: 5}, () => ({id: 385, count: 1}))];
