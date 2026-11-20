@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795141565047-billionaire-hocuspokeus-22bf362b66a987fc",
  "account": "Billionaire",
  "partner": "Hocuspokeus",
@@ -10,8 +10,22 @@
  "item": "Rune arrowtips",
  "requested": 500,
  "claim": "37d1bc14-f813-4048-bec8-29bf91ab4fbb",
- "count": 0,
- "ok": false,
- "at": 1795141644996,
- "detail": "trade claimed"
+ "count": 500,
+ "ok": true,
+ "at": 1795141680621,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 500,
+  "after": 0
+ },
+ "bank": {
+  "count": 500,
+  "at": 1795141653465
+ },
+ "logout": {
+  "attemptId": "1795141645010-0000001488-0000000001",
+  "at": 1795141680607,
+  "sha256": "49fb7bc22d2a7f379bd04351371e62cae098c1d1c625ce2050e10a44d3d5ef01"
+ },
+ "screen": true
 }
