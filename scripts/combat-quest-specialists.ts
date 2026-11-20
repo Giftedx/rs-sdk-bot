@@ -87,20 +87,21 @@ export const HP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 2449, name: 'Superantipoison(4)', count: 2, stackable: true },
 ] as const;
 
-// 28 slots exact: 3 Waterfall rune stacks + gear + 11 Dragon bones + Waterfall ropes/sharks + PvP boosts.
+// 28 slots exact: 3 Waterfall rune stacks + gear + 11 Dragon bones + 5 unnoted Sharks + noted PvP/Waterfall bank stacks.
 export const STRENGTH_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 556, name: 'Air rune', count: 6, stackable: true },
     { id: 557, name: 'Earth rune', count: 6, stackable: true },
     { id: 555, name: 'Water rune', count: 6, stackable: true },
+    { id: 386, name: 'Shark', count: 11, stackable: true },
+    { id: 2435, name: 'Prayer potion(4)', count: 6, stackable: true },
+    { id: 2437, name: 'Super attack(4)', count: 2, stackable: true },
+    { id: 2441, name: 'Super strength(4)', count: 3, stackable: true },
     { id: 1333, name: 'Rune scimitar', count: 1, stackable: false },
     { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 954, name: 'Rope', count: 2, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
-    { id: 385, name: 'Shark', count: 2, stackable: false },
-    { id: 2436, name: 'Super attack(4)', count: 2, stackable: false },
-    { id: 2440, name: 'Super strength(4)', count: 3, stackable: false },
-    { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
+    { id: 385, name: 'Shark', count: 5, stackable: false },
 ] as const;
 
 // 28 slots exact: 5 Super strength(4) keep +17 Strength boost across 99 Defence PvP.
@@ -108,15 +109,16 @@ export const DEFENCE_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 556, name: 'Air rune', count: 6, stackable: true },
     { id: 557, name: 'Earth rune', count: 6, stackable: true },
     { id: 555, name: 'Water rune', count: 6, stackable: true },
+    { id: 386, name: 'Shark', count: 10, stackable: true },
+    { id: 2435, name: 'Prayer potion(4)', count: 6, stackable: true },
+    { id: 2437, name: 'Super attack(4)', count: 1, stackable: true },
+    { id: 2441, name: 'Super strength(4)', count: 5, stackable: true },
     { id: 1333, name: 'Rune scimitar', count: 1, stackable: false },
     { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 954, name: 'Rope', count: 2, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
-    { id: 385, name: 'Shark', count: 2, stackable: false },
-    { id: 2436, name: 'Super attack(4)', count: 1, stackable: false },
-    { id: 2440, name: 'Super strength(4)', count: 5, stackable: false },
-    { id: 2434, name: 'Prayer potion(4)', count: 1, stackable: false },
+    { id: 385, name: 'Shark', count: 5, stackable: false },
 ] as const;
 
 export const KIT_BY_BOARD: Readonly<Record<'hitpoints' | 'strength' | 'defence', readonly KitSpecItem[]>> = {
@@ -245,6 +247,40 @@ export async function walkWaypoints(
     });
     try {
         const r = await walkPath(walker, pts, { maxTicks, stop, look: opts.look ?? 20 });
+        if (!r.ok) throw Error(`walk failed (${label}): ${r.detail ?? JSON.stringify(r)}`);
+    } finally {
+        offDialog();
+    }
+}
+
+export async function mazeWalkWaypoints(
+    s: Session,
+    pts: Point[],
+    maxTicks: number,
+    stop: StopFn,
+    label: string,
+): Promise<void> {
+    const walker = await sessionWalker(s);
+    const pf: any = await import('../vendor/rs-sdk/sdk/pathfinding');
+    const grid = await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+    const mazeWalker: typeof walker = {
+        ...walker,
+        hunters: () => [],
+        plan: (level, from, to) => {
+            pf.initPathfinding();
+            const blocks = applyKnownDoorBlocks(s.sdk, level, from, to).map((b: any) =>
+                b.whenAxis === undefined ? { ...b, ...pf.getDoorAt(b.level, b.x, b.z) } : b,
+            );
+            return withDoorPolicy(grid, blocks, () =>
+                pf.findLongPath(level, from.x, from.z, to.x, to.z, 500, (s.sdk as any).temporaryDoorBlocks?.active?.() ?? []),
+            );
+        },
+    };
+    const offDialog = s.onTick(() => {
+        if (activeContinueDialog(s)) void s.sdk.sendClickDialog(0);
+    });
+    try {
+        const r = await walkPath(mazeWalker, pts, { maxTicks, stop, look: 4, reclickAt: 2 });
         if (!r.ok) throw Error(`walk failed (${label}): ${r.detail ?? JSON.stringify(r)}`);
     } finally {
         offDialog();
@@ -907,7 +943,7 @@ export async function runMeleePvpSpecialist(
         cap: number;
         t0: number;
         stop: StopFn;
-        runWaterfallFn: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; tombHoldIds?: readonly number[] }) => Promise<unknown>;
+        runWaterfallFn: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; protectMelee?: boolean; tombHoldIds?: readonly number[] }) => Promise<unknown>;
     },
 ): Promise<string> {
     const skill = opts.board === 'strength' ? 'Strength' : 'Defence';
@@ -930,6 +966,14 @@ export async function runMeleePvpSpecialist(
     milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
 
     await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, opts.stop);
+    await walkWaypoints(s, [{ x: CASTLE_WARS_BANK.x, z: CASTLE_WARS_BANK.z, tol: 1 }], 40, opts.stop, 'cw to bank');
+    await openFreshBank(s, opts.stop);
+    await depositIds(s, [386, 2435, 2437, 2441, 385, 2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566], opts.stop);
+    await withdrawExactCount(s, 385, 8, opts.stop, 'Shark');
+    await withdrawExactCount(s, 2434, 3, opts.stop, 'Prayer potion(4)');
+    await closeBankClean(s, opts.stop);
+    milestone('castle_wars_bank');
+
     await walkWaypoints(s, [{ x: 2451, z: 3151, tol: 3 }], 100, opts.stop, 'castle wars to west road (2451,3151)');
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, opts.stop);
     for (const wp of [
@@ -953,13 +997,25 @@ export async function runMeleePvpSpecialist(
         session: s,
         stop: opts.stop,
         cap: Math.max(300, opts.cap - elapsed()),
-        food: { id: 385, heal: 20, count: 2, eatAt: 6, crossAt: 9 },
+        food: { id: 385, heal: 20, count: 8, eatAt: 6, crossAt: 9 },
         mighty: false,
         exitFalls: true,
         keepAlive: true,
+        protectMelee: true,
         tombHoldIds: [1333],
     });
+    await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     milestone('waterfall', `atk=${skillInfo(s, 'Attack').baseLevel} str=${skillInfo(s, 'Strength').baseLevel} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
+
+    await walkWaypoints(s, [{ x: ARDY_NORTH_BANK.x, z: ARDY_NORTH_BANK.z, tol: 1 }], 120, opts.stop, 'waterfall to ardy bank');
+    await openFreshBank(s, opts.stop);
+    await depositIds(s, [292, 293, 294, 295, 296, 298, 954, 556, 557, 555, 139, 141, 143, 229, 385, 2434, 1601, 2357, 299], opts.stop);
+    await withdrawExactCount(s, 2436, opts.board === 'strength' ? 2 : 1, opts.stop, 'Super attack(4)');
+    await withdrawExactCount(s, 2440, opts.board === 'strength' ? 3 : 5, opts.stop, 'Super strength(4)');
+    await withdrawExactCount(s, 2434, 3, opts.stop, 'Prayer potion(4)');
+    await withdrawExactCount(s, 385, 6, opts.stop, 'Shark');
+    await closeBankClean(s, opts.stop);
+    milestone('ardy_pvp_bank');
 
     await pullArdougneLeverToWildy(s, opts.stop);
     milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);

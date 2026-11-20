@@ -21,6 +21,7 @@ import {
     dismissContinueDialogs,
     equipItemById,
     GRAND_TREE_BANK,
+    mazeWalkWaypoints,
     openFreshBank,
     posOf,
     configureSpecialistGuardEnv,
@@ -163,9 +164,28 @@ async function travelAgilityCourseToGrandTree(s: Session, stop: StopFn): Promise
 async function walkToBolren(s: Session, stop: StopFn): Promise<void> {
     await walkWaypoints(s, [{ x: 2451, z: 3151, tol: 2 }], 100, stop, 'castle wars west road');
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
-    await walkWaypoints(s, [{ x: 2515, z: 3160, tol: 0 }], 240, stop, 'castle wars to loose railing', {
-        ignoreMeleeHunters: true,
-    });
+    await walkWaypoints(
+        s,
+        [
+            { x: 2490, z: 3220, tol: 2 },
+            { x: 2502, z: 3191, tol: 1 },
+        ],
+        180,
+        stop,
+        'cw road to maze entry',
+        { ignoreMeleeHunters: true },
+    );
+    await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+    await mazeWalkWaypoints(
+        s,
+        [
+            { x: 2533, z: 3156, tol: 2 },
+            { x: 2515, z: 3160, tol: 0 },
+        ],
+        240,
+        stop,
+        'maze entry to loose railing',
+    );
     for (let attempt = 0; attempt < 8 && !stop(); attempt++) {
         if ((posOf(s)?.worldZ ?? 0) >= 3161) break;
         await dismissContinueDialogs(s, stop, 1);
@@ -179,7 +199,6 @@ async function walkToBolren(s: Session, stop: StopFn): Promise<void> {
         await waitUntil(s, () => (posOf(s)?.worldZ ?? 0) >= 3161 || stop(), { timeoutTicks: 8 });
     }
     if ((posOf(s)?.worldZ ?? 0) < 3161) throw Error('failed to squeeze through loose railing');
-    await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
     await walkWaypoints(
         s,
         [

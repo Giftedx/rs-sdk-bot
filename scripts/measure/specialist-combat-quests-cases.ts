@@ -211,6 +211,7 @@ async function runCoordinatorMain(args: string[]): Promise<void> {
     const companionEnv = {
         ...process.env,
         ...guardDisabledEnv,
+        STALL_TICKS: '0',
         DEMO_OK: '',
         COORDINATOR_RUN_ID: '',
     };

@@ -209,6 +209,7 @@ export interface WaterfallOptions {
     resumeHudon?: boolean;
     exitFalls?: boolean;
     keepAlive?: boolean;
+    protectMelee?: boolean;
     tombHoldIds?: readonly number[];
 }
 
@@ -315,6 +316,8 @@ try {
     };
 
     // Every tick: death watch, jump log, and the eat reflex (a direct op, so it never waits behind a bot.* action).
+    let lastPrayDrink = -10;
+    let lastPfmToggle = -10;
     off = s.onTick(() => {
         tally.pull();
         capturePage();
@@ -335,6 +338,19 @@ try {
             const ns = (st()?.nearbyNpcs ?? []).filter((n: any) => n.distance <= 8).map((n: any) => `${n.name[0]}${n.index}@${n.tileX ?? n.x},${n.tileZ ?? n.z}${n.inCombat ? '*' : ''}t${n.targetIndex}`).join(' ');
             const hits = (st()?.combatEvents ?? []).filter((e: any) => e.tick >= s.tick() - 1 && e.type === 'damage_taken').map((e: any) => `${e.sourceIndex}:${e.damage}`).join(',');
             console.log(`TRACE ${T()} ${p.worldX},${p.worldZ} hp=${h} hits=${hits} ${ns}`);
+        }
+        if (opts.protectMelee && p) {
+            const pfmOn = !!st()?.prayers?.activePrayers?.[14];
+            const prayPts = st()?.prayers?.prayerPoints ?? 0;
+            const inDangerZone = p.worldZ > 6400 || (p.worldX >= 2500 && p.worldX <= 2555 && p.worldZ >= 3138 && p.worldZ <= 3195);
+            if (inDangerZone && prayPts <= 8 && s.tick() - lastPrayDrink >= 3) {
+                const pot = inv().find(i => [2434, 139, 141, 143].includes(i.id));
+                if (pot) { lastPrayDrink = s.tick(); void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' }); }
+            }
+            if (pfmOn !== inDangerZone && (!inDangerZone || prayPts > 0) && s.tick() - lastPfmToggle >= 2) {
+                lastPfmToggle = s.tick();
+                void s.direct({ type: 'togglePrayer', prayerIndex: 14, reason: 'SDK' });
+            }
         }
         eatCheck();
         if (h > 0 && h <= (crossing ? FOOD.crossAt : FOOD.eatAt)) eatNow();
