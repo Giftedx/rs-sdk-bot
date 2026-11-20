@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795145446152-shaftsinker-woodpecker",
+ "account": "Shaftsinker",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 214278,
+ "claim": "38872fb0-0b43-438c-b03e-4169d2e449bf",
+ "count": 0,
+ "ok": false,
+ "at": 1795145531102,
+ "detail": "trade claimed"
+}
