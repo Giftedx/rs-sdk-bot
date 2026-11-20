@@ -18,11 +18,15 @@ test('each specialist has its own skill board and a name from the name lists', (
 });
 
 test('the reserved list is the main account and every specialist', () => {
-    expect([...RESERVED_ACCOUNTS].sort()).toEqual(['haggis', 'hiltsdeep', 'polevaulter', 'shaftshooter']);
+    expect([...RESERVED_ACCOUNTS].sort()).toEqual([
+        'bigboner', 'bigswinger', 'castmyload', 'cutmyjewels', 'dipyourwick', 'fullblooded',
+        'grindmyherb', 'haggis', 'hiltsdeep', 'justthetip', 'lochnessrod', 'mineshafted',
+        'polevaulter', 'pouchstuffed', 'rocksolid', 'shaftshooter', 'steelrod',
+    ]);
 });
 
 test('an ordinary account never receives a specialist name', () => {
-    const used = NAMES.combat.filter(n => n.toLowerCase() !== 'hiltsdeep');
+    const used = NAMES.combat.filter(n => !Object.hasOwn(SPECIALIST_BOARDS, n.toLowerCase()));
     expect(() => pickName('combat', used)).toThrow(/no names left/);
     expect(pickName('ranged', [])).not.toBe('Shaftshooter');
 });
