@@ -1,7 +1,7 @@
 // Runs bench cases on hosted runners (the `bench-cases` job of .github/workflows/ci.yml) and prints only the result
 // of each case. A hosted runner is clean and costs the PC no memory, so a bench never runs beside the live fleet.
 // Usage:
-//   bun scripts/hosted-bench.ts '<pattern> [<pattern> ...]' [--seeds 7,8,9] [--args '--profile --set KEY=value']
+//   bun scripts/hosted-bench.ts '<pattern> [<pattern> ...]' [--seeds 7,8,9] [--args '--profile --set KEY=value --set-b64 KEY=base64']
 //                               [--ref <branch or commit>] [--workflow-ref <branch>] [--no-wait]
 //   bun scripts/hosted-bench.ts --run <run id>      the results of a run that was started before
 // Each pattern and each seed gets its own runner, all at one time. `--ref` is the code that the runners check out
@@ -12,6 +12,7 @@ import {existsSync, mkdirSync, readdirSync, readFileSync, rmSync} from 'node:fs'
 import {join, resolve} from 'node:path';
 
 export const MAX_JOBS = 40;
+export const POLL_MS = 5_000;
 export type PlanRow = {id: string; pattern: string; seed: string};
 // The matrix of the hosted job: one row for each pattern and seed. Patterns are separated by spaces (a case key has none).
 export function benchPlan(patterns: string, seeds: string): PlanRow[] {
@@ -25,12 +26,26 @@ export function benchPlan(patterns: string, seeds: string): PlanRow[] {
     if (rows.length > MAX_JOBS) throw new Error(`${rows.length} runners asked, ${MAX_JOBS} at most: use fewer patterns or seeds`);
     return rows;
 }
+/** Validates and decodes a `KEY=<base64>` argument (standard or URL-safe base64). */
+export function decodeSetB64(spec: string): {key: string; value: string} {
+    const m = /^([A-Z][A-Z0-9_]*)=([A-Za-z0-9+/_-]+={0,2})$/.exec(spec);
+    if (!m) throw new Error(`--set-b64 needs KEY=base64, got ${spec}`);
+    const norm = m[2]!.replace(/-/g, '+').replace(/_/g, '/');
+    const raw = norm.replace(/=+$/, '');
+    if (!raw.length || raw.length % 4 === 1) throw new Error(`--set-b64 invalid base64 for ${m[1]}`);
+    const padded = raw + '='.repeat((4 - (raw.length % 4)) % 4);
+    if ((norm.includes('=') && norm !== padded) || Buffer.from(padded, 'base64').toString('base64') !== padded) {
+        throw new Error(`--set-b64 invalid base64 for ${m[1]}`);
+    }
+    return {key: m[1]!, value: Buffer.from(padded, 'base64').toString('utf8')};
+}
 // The extra bench arguments a run may carry. The start check, the budget and the engine count belong to the workflow.
 export function checkArgs(args: string): string[] {
     const list = args.split(/\s+/).filter(Boolean);
     for (let i = 0; i < list.length; i++) {
         const a = list[i]!;
         if (a === '--set') { if (!/^[A-Z][A-Z0-9_]*=[\w.,:+@\/-]*$/.test(list[++i] ?? '')) throw new Error(`--set needs KEY=value, got ${list[i]}`); }
+        else if (a === '--set-b64') { decodeSetB64(list[++i] ?? ''); }
         else if (!['--profile', '--no-keep', '--all', '--smoke', '--wall-clock'].includes(a)) throw new Error(`argument not allowed in a hosted bench: ${a}`);
     }
     return list;
@@ -86,7 +101,7 @@ if (import.meta.main) {
         const bench = (view.jobs ?? []).filter(j => j.name.startsWith('bench-cases'));
         if (view.status === 'completed' || (bench.length > 0 && bench.every(j => j.status === 'completed') && (view.jobs ?? []).some(j => j.name === 'bench-plan' && j.status === 'completed'))) break;
         if (Date.now() > deadline) { console.error(`hosted-bench: run ${run} did not end in 40 minutes`); process.exit(2); }
-        await Bun.sleep(15_000);
+        await Bun.sleep(POLL_MS);
     }
     const dir = join(root, '.practice', 'hosted-bench', run);
     rmSync(dir, {recursive: true, force: true}); mkdirSync(dir, {recursive: true});

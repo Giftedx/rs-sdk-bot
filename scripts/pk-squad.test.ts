@@ -3,7 +3,7 @@ import * as walking from '../packages/core/src/walk';
 import * as pk from './pk';
 import * as pkGang from './pk-gang';
 import { maxDeathsOf } from './pk-hunt';
-import { activeCentroid, bankNear, createSquadFocus, isKillLine, leaveWilderness, marchPlan, needsSingleWayMove, openSquad, outTripDue, pickSquadFocus, rescue, rescueDropped, shouldFollowReplan, shouldSwitchFocus, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
+import { activeCentroid, bankNear, configureBenchSession, createSquadFocus, isKillLine, leaveWilderness, marchPlan, needsSingleWayMove, openSquad, outTripDue, pickSquadFocus, rescue, rescueDropped, shouldFollowReplan, shouldSwitchFocus, squadEscapeSpell, squadFallbackPlan, squadMetrics, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
 import { hold, SQUAD_OPTS, squadEnd, squadFightOverrides } from './pk-squad';
 import { sparOptions } from './pk-spar';
@@ -831,5 +831,109 @@ test('hold keeps singleUntil extended past 120 ticks while dangerous interlopers
             { rotation: ['ranged'], chase: false },
             { rotation: ['ranged'], chase: false },
         ]);
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+});
+
+test('configureBenchSession disables reachability, preserves PICKUP=1 ground items on squad clients, and restores locs only during withLocs', async () => {
+    const mk = () => {
+        const reachCalls: boolean[] = [];
+        const collector: any = {
+            collectNearbyLocs: () => ['loc'],
+            collectGroundItems: () => ['loot'],
+        };
+        return { reachCalls, collector, s: { client: { setReachabilityEnabled: (on: boolean) => reachCalls.push(on), collector } } as any };
+    };
+    const gang = mk();
+    configureBenchSession(gang.s, { isGang: true, pickup: true });
+    expect(gang.reachCalls).toEqual([false]);
+    expect(gang.collector.collectNearbyLocs()).toEqual([]);
+    expect(gang.collector.collectGroundItems()).toEqual([]);
+
+    const sqNoPickup = mk();
+    const ctrl0 = configureBenchSession(sqNoPickup.s, { isGang: false, pickup: false });
+    expect(sqNoPickup.reachCalls).toEqual([false]);
+    expect(sqNoPickup.collector.collectNearbyLocs()).toEqual([]);
+    expect(sqNoPickup.collector.collectGroundItems()).toEqual([]);
+    await ctrl0.withLocs(async () => {
+        expect(sqNoPickup.collector.collectNearbyLocs()).toEqual(['loc']);
+        await ctrl0.withoutLocs(async () => {
+            expect(sqNoPickup.collector.collectNearbyLocs()).toEqual([]);
+        });
+        expect(sqNoPickup.collector.collectNearbyLocs()).toEqual(['loc']);
+    });
+    expect(sqNoPickup.collector.collectNearbyLocs()).toEqual([]);
+
+    const sqPickup = mk();
+    configureBenchSession(sqPickup.s, { isGang: false, pickup: true });
+    expect(sqPickup.collector.collectGroundItems()).toEqual(['loot']);
+    expect(sqPickup.collector.collectNearbyLocs()).toEqual([]);
+});
+
+test('hold tracks sharks/karambwans eaten, minHp, freeze hit rate, escapes, and kill ticks into squadMetrics', async () => {
+    const w = squadWorld();
+    let t = 0;
+    const listeners = new Set<() => void>();
+    w.s.tick = () => t;
+    w.s.onTick = (cb: () => void) => { listeners.add(cb); return () => { listeners.delete(cb); }; };
+    w.player.hp = 90;
+    w.inventory.push(
+        { id: 385, count: 1, slot: 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+        { id: 3144, count: 1, slot: 2, name: 'Cooked karambwan', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    );
+    w.s.sdk.getState().nearbyPlayers = [{ index: 5, name: 'Goondelf', combatLevel: 126, x: 3067, z: 3641, distance: 1 }];
+    let fightCalls = 0;
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockResolvedValue({ ok: true, ticks: 1, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { t++; for (const fn of listeners) fn(); return true; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+        spyOn(pk, 'fightPlayer').mockImplementation(async (sess: any, _name: string, opts: any) => {
+            fightCalls++;
+            if (fightCalls === 1) {
+                w.player.hp = 44;
+                for (const fn of listeners) fn();
+                await sess.sdk.sendUseItem(1, 1);
+                await sess.sdk.sendUseItem(2, 1);
+                // Own freeze cast + held within 4 ticks counts 1 landed; stray ally freeze held without prior cast does not double-count.
+                opts.log('PK freeze cast at distance 4');
+                t += 2;
+                opts.log('PK freeze held (graphic) at distance 4');
+                opts.log('PK freeze held (graphic) at distance 4');
+                t = 40;
+                return { outcome: 'kill', ticks: 40, freezes: 2 } as any;
+            }
+            t = 1000;
+            return { outcome: 'escaped', ticks: 15, freezes: 1 } as any;
+        }),
+    ];
+    try {
+        const stats = await hold(w.s, {
+            targets: new Set(['goondelf']), post: { x: 3066, z: 3641 }, options: { kit: {} }, allies: [], pickup: false,
+            trips: 3, deadline: 400, stopped: () => t >= 500, killsLeft: () => true, log: () => {},
+        });
+        expect(stats).toMatchObject({
+            kills: 1,
+            killTicks: 40,
+            minHp: 44,
+            sharksEaten: 1,
+            karamEaten: 1,
+            freezesCast: 3,
+            freezesLanded: 1,
+            escapes: 1,
+        });
+        expect(squadMetrics([stats, { name: 'B', fights: 1, pulls: 0, kills: 1, trips: 1, died: false, picked: {}, taken: 10, receipts: [], deaths: 0, rekits: 0, killTicks: 20, minHp: 58, sharksEaten: 1, karamEaten: 0, freezesCast: 1, freezesLanded: 1, escapes: 0 }])).toEqual({
+            accounts: 2,
+            kills: 2,
+            deaths: 0,
+            taken: stats.taken + 10,
+            trips: stats.trips + 1,
+            avgKillTicks: 30,
+            minHp: 44,
+            sharksEaten: 2,
+            karamEaten: 1,
+            freezesCast: 4,
+            freezesLanded: 2,
+            escapes: 1,
+        });
     } finally { for (const mock of mocks) mock.mockRestore(); }
 });

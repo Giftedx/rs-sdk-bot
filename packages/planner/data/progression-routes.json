@@ -93282,6 +93282,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/pk-squad-sweep.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/progression-bench-cases.ts",
    "intents": [
     "observe"
