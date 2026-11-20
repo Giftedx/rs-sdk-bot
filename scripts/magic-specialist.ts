@@ -49,7 +49,6 @@ export const ENCHANT_TIERS: readonly EnchantTier[] = [
  { spell: 'magic:enchant_lvl2', component: componentId('magic:enchant_lvl2'), level: 27, ringId: ITEM_IDS.emerald_ring, xp: 925 },
  { spell: 'magic:enchant_lvl3', component: componentId('magic:enchant_lvl3'), level: 49, ringId: ITEM_IDS.ruby_ring, xp: 1475 },
  { spell: 'magic:enchant_lvl4', component: componentId('magic:enchant_lvl4'), level: 57, ringId: ITEM_IDS.diamond_ring, xp: 1675 },
- { spell: 'magic:enchant_lvl5', component: componentId('magic:enchant_lvl5'), level: 68, ringId: ITEM_IDS.dragonstone_ring, xp: 1950 },
 ];
 
 export interface MagicBatchPlan {
@@ -63,65 +62,60 @@ export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
   give: [
    { id: ITEM_IDS.staff_of_fire, count: 1 },
    { id: ITEM_IDS.mindrune, count: 25 },
-   { id: ITEM_IDS.cosmicrune, count: 180 },
-   { id: ITEM_IDS.waterrune, count: 1800 },
-   { id: ITEM_IDS.airrune, count: 2000 },
-   { id: ITEM_IDS.earthrune, count: 1800 },
+   { id: ITEM_IDS.cosmicrune, count: 165 },
+   { id: ITEM_IDS.waterrune, count: 20 },
+   { id: ITEM_IDS.airrune, count: 1500 },
+   { id: ITEM_IDS.earthrune, count: 400 },
    { id: ITEM_IDS.sapphire_ring, count: 12 },
    { id: ITEM_IDS.emerald_ring, count: 9 },
    { id: ITEM_IDS.shark, count: 1 },
   ],
   returnIds: [],
  },
- // Batch 1 (18 emerald -> 27 emerald total, Lv 49 + 4 ruby)
+ // Batch 1 (25 free slots after dropping mind/water/shark/finished rings: 18 emerald -> 27 total Lv 49 + 7 ruby)
  {
   give: [
    { id: ITEM_IDS.emerald_ring, count: 18 },
-   { id: ITEM_IDS.ruby_ring, count: 4 },
+   { id: ITEM_IDS.ruby_ring, count: 7 },
   ],
-  returnIds: [ITEM_IDS.ring_of_recoil, ITEM_IDS.ring_of_dueling_8],
+  returnIds: [],
  },
- // Batch 2 (14 ruby -> 57,425 XP Lv 57 + 8 diamond)
+ // Batch 2 (25 free slots: 11 ruby -> 18 total Lv 57 + 14 diamond)
  {
   give: [
-   { id: ITEM_IDS.ruby_ring, count: 14 },
-   { id: ITEM_IDS.diamond_ring, count: 8 },
+   { id: ITEM_IDS.ruby_ring, count: 11 },
+   { id: ITEM_IDS.diamond_ring, count: 14 },
   ],
-  returnIds: [ITEM_IDS.ring_of_dueling_8, ITEM_IDS.ring_of_forging],
+  returnIds: [],
  },
- // Batch 3 (22 diamond)
- {
-  give: [{ id: ITEM_IDS.diamond_ring, count: 22 }],
-  returnIds: [ITEM_IDS.ring_of_forging, ITEM_IDS.ring_of_life],
- },
- // Batch 4 (6 diamond -> 117,725 XP Lv 68 + 16 dragonstone)
+ // Batch 3 (25 free slots: 22 diamond -> 36 total Lv 68 + 3 ruby)
  {
   give: [
-   { id: ITEM_IDS.diamond_ring, count: 6 },
-   { id: ITEM_IDS.dragonstone_ring, count: 16 },
+   { id: ITEM_IDS.diamond_ring, count: 22 },
+   { id: ITEM_IDS.ruby_ring, count: 3 },
   ],
-  returnIds: [ITEM_IDS.ring_of_life],
+  returnIds: [],
  },
- // Batch 5 (22 dragonstone)
+ // Batch 4 (26 free slots after dropping earth runes: 26 ruby)
  {
-  give: [{ id: ITEM_IDS.dragonstone_ring, count: 22 }],
-  returnIds: [ITEM_IDS.ring_of_life, ITEM_IDS.ring_of_wealth],
+  give: [{ id: ITEM_IDS.ruby_ring, count: 26 }],
+  returnIds: [],
  },
- // Batch 6 (14 dragonstone = 52 total -> ~221k XP Lv 77; Kolodion +65k XP unlocks Lv 80 Charge)
+ // Batch 5 (26 free slots: 26 ruby)
  {
-  give: [{ id: ITEM_IDS.dragonstone_ring, count: 14 }],
-  returnIds: [ITEM_IDS.ring_of_wealth],
+  give: [{ id: ITEM_IDS.ruby_ring, count: 26 }],
+  returnIds: [],
  },
- // Batch 7 (Mage Arena combat, runes, magic accuracy gear, & 38 Prayer kit)
+ // Batch 6 (8 ruby -> 81 total ~210.6k XP Lv 76 + Mage Arena combat & 38 Prayer kit = 26 slots)
  {
   give: [
-   { id: ITEM_IDS.lawrune, count: 10 },
+   { id: ITEM_IDS.ruby_ring, count: 8 },
+   { id: ITEM_IDS.lawrune, count: 12 },
    { id: ITEM_IDS.bloodrune, count: 850 },
    { id: ITEM_IDS.knife, count: 1 },
    { id: ITEM_IDS.dragon_bones, count: 8 },
    { id: ITEM_IDS.prayer_potion_4, count: 2 },
    { id: ITEM_IDS.amulet_of_magic, count: 1 },
-   { id: ITEM_IDS.boots_wizard, count: 1 },
    { id: ITEM_IDS.shark, count: 4 },
   ],
   returnIds: [],
@@ -149,12 +143,10 @@ function aggregateMagicSupply(): SupplyEntry[] {
   [ITEM_IDS.emerald_ring, 'Emerald ring'],
   [ITEM_IDS.ruby_ring, 'Ruby ring'],
   [ITEM_IDS.diamond_ring, 'Diamond ring'],
-  [ITEM_IDS.dragonstone_ring, 'Dragonstone ring'],
   [ITEM_IDS.knife, 'Knife'],
   [ITEM_IDS.dragon_bones, 'Dragon bones'],
   [ITEM_IDS.prayer_potion_4, 'Prayer potion(4)'],
   [ITEM_IDS.amulet_of_magic, 'Amulet of magic'],
-  [ITEM_IDS.boots_wizard, "Wizard's boots"],
   [ITEM_IDS.shark, 'Shark'],
  ]);
  return [...counts.entries()].map(([itemId, count]) => ({
@@ -162,29 +154,6 @@ function aggregateMagicSupply(): SupplyEntry[] {
   item: names.get(itemId) ?? `Item ${itemId}`,
   count,
  }));
-}
-
-function magicKeepSet(): Set<number> {
- return new Set<number>([
-  ITEM_IDS.staff_of_fire,
-  ITEM_IDS.mindrune,
-  ITEM_IDS.cosmicrune,
-  ITEM_IDS.waterrune,
-  ITEM_IDS.airrune,
-  ITEM_IDS.earthrune,
-  ITEM_IDS.firerune,
-  ITEM_IDS.lawrune,
-  ITEM_IDS.bloodrune,
-  ITEM_IDS.sapphire_ring,
-  ITEM_IDS.emerald_ring,
-  ITEM_IDS.ruby_ring,
-  ITEM_IDS.diamond_ring,
-  ITEM_IDS.dragonstone_ring,
-  ITEM_IDS.knife,
-  ITEM_IDS.dragon_bones,
-  ITEM_IDS.prayer_potion_4,
-  ITEM_IDS.shark,
- ]);
 }
 
 async function eatSharkIfLow(spec: Session): Promise<boolean> {
@@ -452,8 +421,6 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
   }
   await waitTicks(spec, 1);
  }
- const cape = spec.sdk.getInventory().find(i => i.id === 2414);
- if (cape) await spec.bot.equipItem(cape);
 
  // Path back to Chamber Guardian (904 at 2508,4696) -> receive staff (2417, sets %magearena = 8)
  await walkPath(chamberWalker, [{ x: 2508, z: 4695, tol: 2 }], { maxTicks: Math.max(10, Math.min(30, deadline - spec.tick())) });
@@ -497,34 +464,16 @@ async function executeMagicLoop(
  await skipTutorialFast(spec, deadline);
  await dropItemsFast(spec, new Set(), deadline);
 
- const keep = magicKeepSet();
  let windTicks = 0;
  let tradeTicks = 0;
  let enchantTicks = 0;
  for (let i = 0; i < MAGIC_BATCHES.length; i++) {
   const batch = MAGIC_BATCHES[i]!;
-  if (i === MAGIC_BATCHES.length - 1) {
-   // Shed mind/cosmic/water/earth/fire/finished rings before Mage Arena combat kit; preserve any spare sharks.
-   await dropItemsFast(spec, new Set([ITEM_IDS.airrune, ITEM_IDS.lawrune, ITEM_IDS.bloodrune, ITEM_IDS.shark]), deadline);
-  } else if (i === 1) {
-   // Shed leftover mind runes and Batch 0 shark so 7 rune stacks + 21 emerald rings fit cleanly inside 28 slots.
-   await dropItemsFast(
-    spec,
-    new Set([
-     ITEM_IDS.cosmicrune,
-     ITEM_IDS.waterrune,
-     ITEM_IDS.airrune,
-     ITEM_IDS.earthrune,
-     ITEM_IDS.firerune,
-     ITEM_IDS.lawrune,
-     ITEM_IDS.bloodrune,
-     ITEM_IDS.ring_of_recoil,
-     ITEM_IDS.ring_of_dueling_8,
-    ]),
-    deadline,
-   );
-  } else if (i > 0 && batch.returnIds.length === 0) {
-   await dropItemsFast(spec, keep, deadline);
+  if (i >= 4) {
+   // Earth runes are no longer needed once all 36 Diamond rings finish in Batch 3.
+   await dropItemsFast(spec, new Set([ITEM_IDS.cosmicrune, ITEM_IDS.airrune]), deadline);
+  } else if (i > 0) {
+   await dropItemsFast(spec, new Set([ITEM_IDS.cosmicrune, ITEM_IDS.airrune, ITEM_IDS.earthrune]), deadline);
   }
   const tr0 = spec.tick();
   await receiveBatch(batch, i);
@@ -535,7 +484,7 @@ async function executeMagicLoop(
    const w0 = spec.tick();
    await castWindStrikeToLevel7(spec, deadline);
    windTicks = spec.tick() - w0;
-   // Climb Lumbridge Castle stairs (1738 at 3204,3207) to 1st floor safe spot (level=1) so zero NPCs interrupt batch 1..8 trades.
+   // Climb Lumbridge Castle stairs (1738 at 3204,3207) to 1st floor safe spot (level=1) so zero NPCs interrupt batch 1..6 trades.
    if ((playerPos(spec)?.level ?? 0) !== LUMBRIDGE_SAFE_SPOT.level) {
     const castleWalker = await sessionWalker(spec);
     await walkPath(castleWalker, [{ x: 3206, z: 3209, tol: 3 }], {
@@ -551,17 +500,13 @@ async function executeMagicLoop(
     }
    }
   }
-  if (i < MAGIC_BATCHES.length - 1) {
-   const e0 = spec.tick();
-   await enchantHeldRings(spec, target, deadline, `batch${i}`);
-   enchantTicks += spec.tick() - e0;
-  }
+  const e0 = spec.tick();
+  await enchantHeldRings(spec, target, deadline, `batch${i}`);
+  enchantTicks += spec.tick() - e0;
  }
 
- for (const eqId of [ITEM_IDS.amulet_of_magic, ITEM_IDS.boots_wizard]) {
-  const gear = spec.sdk.getInventory().find(x => x.id === eqId);
-  if (gear) await spec.bot.equipItem(gear);
- }
+ const amulet = spec.sdk.getInventory().find(x => x.id === ITEM_IDS.amulet_of_magic);
+ if (amulet) await spec.bot.equipItem(amulet);
  await buryBones(spec, deadline);
  const preArenaTicks = spec.tick() - start;
  logPhase(spec, start, `magic_pre_arena lvl=${skillLevel(spec, 'Magic')} pray=${skillLevel(spec, 'Prayer')}`);
@@ -569,6 +514,12 @@ async function executeMagicLoop(
  if (skillLevel(spec, 'Magic') < 75) throw Error(`magic < 75 (${skillLevel(spec, 'Magic')}) before Mage Arena`);
  await completeMageArena(spec, start, deadline);
  const arenaDoneTicks = spec.tick() - start;
+ // If fast Kolodion damage rolls leave Magic slightly under 80, Camelot Teleports bridge the final XP cleanly.
+ const camelotFallback = componentId('magic:camelot_teleport');
+ while (spec.tick() < deadline && skillLevel(spec, 'Magic') < 80) {
+  await spec.direct({ type: 'clickComponent', componentId: camelotFallback, reason: 'SDK' });
+  await waitTicks(spec, 4);
+ }
  if (skillLevel(spec, 'Magic') < 80) throw Error(`magic < 80 (${skillLevel(spec, 'Magic')}) before Charge`);
  await spamChargeTo99(spec, target, deadline);
 
