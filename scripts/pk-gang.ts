@@ -15,7 +15,7 @@ import { join, resolve } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { lootCapacity } from '../packages/core/src/loot-policy';
 import type { NearbyPlayer } from '../vendor/rs-sdk/sdk/types';
-import { fightPlayer, ITEMS, nextTick, observePlayer, recordKillLoot, wildernessLevel, type FightOptions, type FightResult, type Kit } from './pk';
+import { escapeCastable, fightPlayer, ITEMS, nextTick, observePlayer, recordKillLoot, SPELLS, wildernessLevel, type FightOptions, type FightResult, type Kit } from './pk';
 import { BOOST_POTIONS, EDGEVILLE_BANK, FOOD_LIST, healOf, hitByPlayer, restock, TRIBRID_KIT, type TripItem } from './pk-hunt';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { kitOptions, kitSwitches } from './pk-kits';
@@ -71,8 +71,8 @@ export const tripPrayerDue = (points: number, base: number, floor = TRIP_PRAYER_
 // The trip to the bank between two meetings at the edge of the Wilderness: walk to the bank, bank the pack, take
 // `food` slots of sharks and boosts and the `items` again (scripts/pk-hunt.ts restock), wield the arrows, walk back.
 // `fill: false` takes sharks up to the food slots of the pack only, not a full pack, and `rest` is the ticks that the account waits at the bank.
-export function bankTrip(at: { x: number; z: number }, back: { x: number; z: number }, pack: { food: number; items: readonly { id: number; count: number }[] }, kit: Kit, halt: () => boolean = () => false,
-    bank: { eaten: number } = { eaten: 0 }, more: { fill?: boolean; rest?: number; altar?: boolean; prayerFloor?: number; log?: (line: string) => void; route?: (from: { x: number; z: number }) => { x: number; z: number }[]; beforeReturn?: (fresh: boolean) => Promise<void>; skipReturn?: (fresh: boolean) => boolean } = {}) {
+export function bankTrip(at: { x: number; z: number }, back: { x: number; z: number }, pack: { food: number; items: readonly TripItem[] }, kit: Kit, halt: () => boolean = () => false,
+    bank: { eaten: number } = { eaten: 0 }, more: { fill?: boolean; rest?: number; altar?: boolean; prayerFloor?: number; minFood?: number; requireEscape?: boolean; log?: (line: string) => void; route?: (from: { x: number; z: number }) => { x: number; z: number }[]; beforeReturn?: (fresh: boolean) => Promise<void>; skipReturn?: (fresh: boolean) => boolean } = {}) {
     // `fresh`: the pack is the full pack of the kit already (the trip before the first meeting), so nothing is banked
     // but the boosts.
     return async (a: Session, fresh = false): Promise<string | null> => {
@@ -108,9 +108,22 @@ export function bankTrip(at: { x: number; z: number }, back: { x: number; z: num
             if (row && room > 0) { const n = Math.min(room, row.count); await a.bot.withdrawItem(row, n, { asNote: false }); room -= n; }
         }
         await a.bot.closeBank();
+        for (const item of a.sdk.getInventory()) { const op = /arrow/i.test(item.name) ? item.optionsWithIndex.find(o => /^wield$/i.test(o.text)) : undefined; if (op) await a.sdk.sendUseItem(item.slot, op.opIndex); }
+        if (!fresh && more.minFood !== undefined) {
+            const foodAfter = a.sdk.getInventory().filter(edible).length;
+            if (foodAfter < more.minFood) return `bank lacks trip food (${foodAfter} < ${more.minFood})`;
+        }
+        if (!fresh && more.requireEscape) {
+            const invNow = a.sdk.getInventory();
+            const eqNow = typeof a.sdk.getEquipment === 'function' ? a.sdk.getEquipment() : a.sdk.getState()?.equipment ?? [];
+            const hasGlory = [...invNow, ...eqNow].some(i => (ITEMS.glory as readonly number[]).includes(i.id));
+            const magicNow = a.sdk.getSkill?.('Magic')?.level ?? a.sdk.getState()?.skills?.find(k => k.name === 'Magic')?.level ?? 1;
+            const eqIds = eqNow.map(e => e.id);
+            const hasTele = [SPELLS.camelotTeleport, SPELLS.varrockTeleport].some(sp => escapeCastable(sp, invNow, eqIds, magicNow));
+            if (!hasGlory && !hasTele) return 'bank lacks castable escape';
+        }
         await pause(more.rest ?? 0);
         if (halt()) return 'no walk back: stopped';
-        for (const item of a.sdk.getInventory()) { const op = /arrow/i.test(item.name) ? item.optionsWithIndex.find(o => /^wield$/i.test(o.text)) : undefined; if (op) await a.sdk.sendUseItem(item.slot, op.opIndex); }
         // `altar`: a trip that left Prayer below the start floor goes to the nearest safe altar before the walk back (a fresh
         // trip starts at the floor already: scripts/squad-ready.ts). A failed prayer does not end the trip: the account fights on
         // without Prayer (it is logged).
@@ -131,19 +144,52 @@ export function bankTrip(at: { x: number; z: number }, back: { x: number; z: num
 }
 // The boosts that an account drinks at the bank: the three of scripts/pk-hunt.ts and the super defence.
 const PREPOT = [...BOOST_POTIONS, ITEMS.superDefence] as const;
+// Minimum quiver arrows required across trips so spare bank arrow depletion does not block Trip 2+ restock.
+export const MIN_TRIP_ARROWS = 100;
+const MIN_RUNE_FLOORS: Readonly<Record<number, number>> = {
+    [ITEMS.lawRune]: 1,
+    [ITEMS.airRune]: 5,
+    [ITEMS.fireRune]: 5,
+    [ITEMS.earthRune]: 5,
+    [ITEMS.waterRune]: 5,
+    [ITEMS.natureRune]: 4,
+    [ITEMS.bloodRune]: 4,
+    [ITEMS.deathRune]: 2,
+    [ITEMS.chaosRune]: 2,
+};
 // What a bank trip takes again, from the pack and the quiver of an account at its start: every item that is no food
 // and no boost, the arrows at their count, and one slot for each shark and each boost.
-export function packOf(inventory: readonly { id: number; count: number; optionsWithIndex: { text: string }[] }[], equipment: readonly { id: number; count: number; slot: number }[]): { food: number; items: TripItem[] } {
+export function packOf(
+    inventory: readonly { id: number; count: number; optionsWithIndex: { text: string }[] }[],
+    equipment: readonly { id: number; count: number; slot: number }[],
+    opts?: { minArrows?: number; minRunes?: boolean },
+): { food: number; items: TripItem[] } {
     const boost = (id: number) => BOOST_POTIONS.some(doses => (doses as readonly number[]).includes(id)), edible = (i: { optionsWithIndex: { text: string }[] }) => i.optionsWithIndex.some(o => /^eat$/i.test(o.text));
-    const items = new Map<number, number>();
+    const items = new Map<number, number>(), quiverIds = new Set<number>();
     for (const i of inventory) if (!edible(i) && !boost(i.id)) items.set(i.id, (items.get(i.id) ?? 0) + i.count);
     // A potion is asked for by its doses: for each one carried, a slot with a dose or more, and the trip takes the
     // fullest that the bank holds (scripts/pk-hunt.ts tripRequirements). A request by count needs 4 doses in a slot, and
     // the one shop with antipoison sells it with 3 doses (junglestore).
-    const families = [ITEMS.superDefence, ITEMS.antipoison.slice(0, 4), ITEMS.antipoison.slice(4)], potions = new Set<number>(families.map(doses => doses[0]!));
+    const families: (readonly number[])[] = [ITEMS.superDefence, ITEMS.antipoison.slice(0, 4), ITEMS.antipoison.slice(4), ...(opts?.minRunes ? [ITEMS.prayerPotion, ITEMS.superRestore] : [])];
+    const potions = new Set<number>(families.map(doses => doses[0]!));
     for (const doses of families) for (const id of doses.slice(1)) if (items.has(id)) { items.set(doses[0]!, (items.get(doses[0]!) ?? 0) + items.get(id)!); items.delete(id); }
-    for (const e of equipment) if (e.slot === 13) items.set(e.id, e.count);
-    return { food: inventory.filter(i => edible(i) || boost(i.id)).length, items: [...items].map(([id, count]) => (potions.has(id) ? { id, count, minDoses: count, maxSlots: count } : { id, count })) };
+    const charges = new Set<number>();
+    if (opts?.minRunes) {
+        charges.add(ITEMS.glory[0]);
+        for (const id of ITEMS.glory.slice(1)) if (items.has(id)) { items.set(ITEMS.glory[0], (items.get(ITEMS.glory[0]) ?? 0) + items.get(id)!); items.delete(id); }
+    }
+    for (const e of equipment) if (e.slot === 13) { items.set(e.id, (items.get(e.id) ?? 0) + e.count); quiverIds.add(e.id); }
+    return {
+        food: inventory.filter(i => edible(i) || boost(i.id)).length,
+        items: [...items].map(([id, count]): TripItem => {
+            if (potions.has(id)) return { id, count, minDoses: Math.max(1, (count - 1) * 4 + 1), maxSlots: count };
+            if (charges.has(id)) return { id, count, minCharges: Math.max(1, (count - 1) * 4 + 1), maxSlots: count };
+            if (opts?.minArrows !== undefined && quiverIds.has(id)) return { id, count, minCount: Math.min(count, opts.minArrows) };
+            const runeFloor = opts?.minRunes ? MIN_RUNE_FLOORS[id] : undefined;
+            if (runeFloor !== undefined) return { id, count, minCount: Math.min(count, runeFloor) };
+            return { id, count };
+        }),
+    };
 }
 // The trips of the gang (research/pvp-fight-loop.md, "The gang in a long fight"): an account of the gang that walked
 // out of the Wilderness goes to the bank and comes back to its tile, `count` times at most. `follow`: the others stop
@@ -386,7 +432,7 @@ if (import.meta.main) {
         const bank = { eaten: 0 };
         // SPAR_POST=<x>,<z>: the tile that the trip walks back to (default the start tile), for an account that starts at the bank.
         const [px, pz] = (env.SPAR_POST ?? '').split(',').map(Number), back = Number.isFinite(px) && Number.isFinite(pz) && env.SPAR_POST ? { x: px!, z: pz! } : p ? { x: p.worldX, z: p.worldZ } : null;
-        return (tripCount > 1 || env.SPAR_PRETRIP === '1') && st && p && back ? { count: tripCount, bank, resupply: bankTrip(EDGEVILLE_BANK, back,{ ...packOf(st.inventory, st.equipment), ...(env.SPAR_TRIP_FOOD ? { food: Number(env.SPAR_TRIP_FOOD) } : {}) },
+        return (tripCount > 1 || env.SPAR_PRETRIP === '1') && st && p && back ? { count: tripCount, bank, resupply: bankTrip(EDGEVILLE_BANK, back,{ ...packOf(st.inventory, st.equipment, { minArrows: MIN_TRIP_ARROWS, minRunes: true }), ...(env.SPAR_TRIP_FOOD ? { food: Number(env.SPAR_TRIP_FOOD) } : {}) },
             kitA ? kitSwitches(kitA) : TRIBRID_KIT, () => halted !== undefined, bank) } : undefined; });
     // The fight loop reads no loc and no ground item, and their scan is part of the state of every tick. An account
     // that goes to the bank needs both.
@@ -401,7 +447,7 @@ if (import.meta.main) {
     const gangTripCount = Number(env.SPAR_B_TRIPS ?? 0);
     const gangTrips = (group: Session[]): GangTrips | undefined => gangTripCount > 0 ? { count: gangTripCount, follow: env.SPAR_B_FOLLOW === '1', resupply: (() => {
         const trip = (rest: number) => new Map(group.slice(1).map(g => { const st = g.sdk.getState(), p = st?.player;
-            return [g, st && p ? bankTrip(EDGEVILLE_BANK, { x: p.worldX, z: p.worldZ }, packOf(st.inventory, st.equipment), kitB ? kitSwitches(kitB) : TRIBRID_KIT, () => halted !== undefined, { eaten: 0 }, { fill: false, rest }) : null] as const; }));
+            return [g, st && p ? bankTrip(EDGEVILLE_BANK, { x: p.worldX, z: p.worldZ }, packOf(st.inventory, st.equipment, { minArrows: MIN_TRIP_ARROWS, minRunes: true }), kitB ? kitSwitches(kitB) : TRIBRID_KIT, () => halted !== undefined, { eaten: 0 }, { fill: false, rest }) : null] as const; }));
         const ran = trip(Number(env.SPAR_B_REST ?? 0)), went = trip(0);
         return async (g: Session, out: boolean) => { const go = (out ? ran : went).get(g); return go ? go(g) : 'no start state'; };
     })() } : undefined;

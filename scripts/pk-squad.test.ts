@@ -3,8 +3,9 @@ import * as walking from '../packages/core/src/walk';
 import * as pk from './pk';
 import * as pkGang from './pk-gang';
 import { maxDeathsOf } from './pk-hunt';
-import { activeCentroid, bankNear, configureBenchSession, createSquadFocus, isKillLine, leaveWilderness, marchPlan, needsSingleWayMove, openSquad, outTripDue, pickSquadFocus, rescue, rescueDropped, shouldFollowReplan, shouldSwitchFocus, squadEscapeSpell, squadFallbackPlan, squadMetrics, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
-import { escapeCastable, nextTick } from './pk';
+import { activeCentroid, bankNear, configureBenchSession, createSquadCohesion, createSquadFocus, isKillLine, leaveWilderness, marchPlan, needsSingleWayMove, openSquad, outTripDue, pickSquadFocus, rescue, rescueDropped, shouldBreakSingleWayChase, shouldFollowReplan, shouldSwitchFocus, SINGLE_WAY_CHASE_LEASH, squadEscapeSpell, squadFallbackPlan, squadMetrics, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
+import { escapeCastable, isMulti, nextTick } from './pk';
+import { benchCases } from './measure/aio-bench-cases';
 import { hold, SQUAD_OPTS, squadEnd, squadFightOverrides } from './pk-squad';
 import { sparOptions } from './pk-spar';
 import { newWatch, readLine } from './squad-watch';
@@ -936,4 +937,148 @@ test('hold tracks sharks/karambwans eaten, minHp, freeze hit rate, escapes, and 
             escapes: 1,
         });
     } finally { for (const mock of mocks) mock.mockRestore(); }
+});
+
+test('pickSquadFocus and shouldSwitchFocus prioritize multi-way targets over lower-HP single-way decoys and enforce single-way anti-PJ', () => {
+    expect([isMulti(3068, 3640), isMulti(3073, 3640), isMulti(3071, 3525)]).toEqual([true, false, false]);
+    const view = [
+        { name: 'Decoy', index: 1, distance: 2, x: 3073, z: 3640, combatLevel: 120, inCombat: true },
+        { name: 'Goondelf', index: 2, distance: 3, x: 3074, z: 3640, combatLevel: 120, inCombat: false },
+        { name: 'Ligma', index: 3, distance: 5, x: 3068, z: 3640, combatLevel: 120, inCombat: true },
+    ];
+    const hp: Record<number, number> = { 1: 0.2, 2: 0.5, 3: 0.9 };
+    const targets = new Set(['decoy', 'goondelf', 'ligma']);
+    // Even with attacker in multi-way, Ligma in multi-way outranks lower-HP Decoy/Goondelf in single-way.
+    expect(pickSquadFocus({ view, targets, health: p => hp[p.index]!, inMulti: true, preferMulti: true })?.name).toBe('Ligma');
+    // Without multi-way targets, inCombat target on single-way tile is still skipped for anti-PJ.
+    expect(pickSquadFocus({ view: view.slice(0, 2), targets, health: p => hp[p.index]!, inMulti: true, preferMulti: true })?.name).toBe('Goondelf');
+    // A chaser pulled onto a single-way tile still switches off a single-way target onto a multi-way shared focus.
+    expect(shouldSwitchFocus({
+        inMulti: false,
+        currentName: 'Goondelf',
+        currentHp: 0.6,
+        currentInMulti: false,
+        focusName: 'ligma',
+        focusHp: 0.9,
+        focusInMulti: true,
+        focusStunned: false,
+        elapsedTicks: 1,
+    })).toBe(true);
+});
+
+test('shouldBreakSingleWayChase and hold cohesion prevent 2v2 single-way splitting and return to multi-way post', async () => {
+    const coh = createSquadCohesion();
+    coh.update('Ally1', { x: 3067, z: 3640, inMulti: true, hasMultiTarget: true, tick: 10 });
+    const snap = coh.snapshot(10, 'soldier');
+    expect(snap).toEqual({ allyCount: 1, multiAllyCount: 1, anyMultiTarget: true, multiAnchor: { x: 3067, z: 3640 } });
+
+    expect(shouldBreakSingleWayChase({
+        now: 10, singleUntil: -1, aimInMulti: true,
+        self: { x: 3070, z: 3598, inMulti: false }, target: { x: 3071, z: 3525 },
+        hasMultiTargetInView: false, multiAllyCount: 1, anyAllyHasMultiTarget: true, anchor: { x: 3067, z: 3640 },
+    })).toBe(true);
+    // Out of multi-way past leash even with no allies visible splits -> break off.
+    expect(shouldBreakSingleWayChase({
+        now: 10, singleUntil: -1, aimInMulti: true,
+        self: { x: 3071, z: 3530, inMulti: false }, target: { x: 3071, z: 3525 },
+        hasMultiTargetInView: false, multiAllyCount: 0, anyAllyHasMultiTarget: false, anchor: { x: 3067, z: 3640 },
+    })).toBe(true);
+    // ALLOW_SINGLE (aimInMulti=false) or ThreatWatch single-way (now < singleUntil) are never broken.
+    expect(shouldBreakSingleWayChase({
+        now: 10, singleUntil: -1, aimInMulti: false,
+        self: { x: 3071, z: 3530, inMulti: false }, target: { x: 3071, z: 3525 },
+        hasMultiTargetInView: false, multiAllyCount: 0, anyAllyHasMultiTarget: false, anchor: { x: 3075, z: 3640 },
+    })).toBe(false);
+    expect(shouldBreakSingleWayChase({
+        now: 10, singleUntil: 120, aimInMulti: true,
+        self: { x: 3070, z: 3599, inMulti: false }, target: { x: 3071, z: 3598 },
+        hasMultiTargetInView: true, multiAllyCount: 1, anyAllyHasMultiTarget: true, anchor: { x: 3067, z: 3640 },
+    })).toBe(false);
+
+    // Hold loop: Soldier in Wild 1 single-way skips decoy and walks back to multi-way post without stopping for single-way decoy.
+    const w = squadWorld();
+    let t = 5;
+    w.s.tick = () => t;
+    w.player.worldX = 3071; w.player.worldZ = 3530;
+    w.s.sdk.getState().nearbyPlayers = [
+        { index: 1, name: 'Decoy', combatLevel: 126, x: 3071, z: 3525, distance: 5 },
+    ];
+    const focus = createSquadFocus();
+    const sharedCoh = createSquadCohesion();
+    sharedCoh.update('Ally1', { x: 3067, z: 3640, inMulti: true, hasMultiTarget: true, tick: 5 });
+    const fought: string[] = [];
+    const mocks = [
+        spyOn(walking, 'sessionWalker').mockResolvedValue({} as any),
+        spyOn(walking, 'walkPath').mockImplementation(async (_d, path, opts: any) => {
+            // Confirm walkPath stop callback does not abort for the Wild 1 single-way decoy.
+            expect(opts?.stop?.()).toBe(false);
+            w.walks.push({ x: path[0]!.x, z: path[0]!.z });
+            w.player.worldX = path[0]!.x; w.player.worldZ = path[0]!.z;
+            w.s.sdk.getState().nearbyPlayers = [
+                { index: 2, name: 'Ligma', combatLevel: 126, x: 3068, z: 3640, distance: 1 },
+            ];
+            return { ok: true, ticks: 2, still: 0, clicks: 0, repaths: 0, doors: 0, next: 1 } as any;
+        }),
+        spyOn(pk, 'nextTick').mockImplementation(async () => { t++; sharedCoh.update('Ally1', { x: 3067, z: 3640, inMulti: true, hasMultiTarget: true, tick: t }); return true; }),
+        spyOn(pk, 'observePlayer').mockReturnValue(null),
+        spyOn(pk, 'fightPlayer').mockImplementation(async (_s: any, targetName: string) => {
+            fought.push(targetName);
+            t = 500;
+            return { outcome: 'kill' } as any;
+        }),
+    ];
+    try {
+        await hold(w.s, {
+            targets: new Set(['decoy', 'ligma']), post: { x: 3067, z: 3640 },
+            options: { kit: { ranged: [861], melee: [1231] }, rotation: ['ranged', 'melee'] },
+            allies: ['Ally1'], pickup: false, pull: true, trips: 3, deadline: 400, focus, cohesion: sharedCoh,
+            stopped: () => t >= 400, killsLeft: () => true, log: () => {},
+        });
+        expect(SINGLE_WAY_CHASE_LEASH).toBe(16);
+        expect(w.walks).toEqual([{ x: 3067, z: 3640 }]);
+        expect(fought).toEqual(['Ligma']);
+    } finally { for (const mock of mocks) mock.mockRestore(); }
+});
+
+test('Wave A scaled clone-tribrid, threat, scattered-follow, single-way split, and nospare multi-trip bench cases exist', () => {
+    const all = benchCases();
+    const find = (key: string) => {
+        const found = all.find(c => c.key === key);
+        expect(found).toBeDefined();
+        return found!;
+    };
+    for (const n of [4, 6, 8, 10, 12, 16]) {
+        const c = find(`extra:clone-tribrid-${n}-x1`);
+        expect(c.companions).toHaveLength(n - 1 + 3);
+        expect(c.scriptArgs).toEqual(expect.arrayContaining([
+            'SQUAD_GANG=3',
+            'SQUAD_GANG_PROFILES=clone-goondelf+clone-ligma+clone-sugma',
+            'SPAR_B_OPTS={}',
+            'SQUAD_GANG_HUNT=1',
+            'SQUAD_GANG_SPLIT=1',
+        ]));
+        expect(c.pass('RESULT ok squad accounts=4 kills=3 killReceipts=3 receiptDomain=practice gangDied=3 died=0')).toBe(true);
+        expect(c.pass('RESULT fail died squad accounts=4 kills=2 killReceipts=2 receiptDomain=practice gangDied=2 died=1')).toBe(false);
+    }
+    for (const key of [
+        'extra:clone-tribrid-threat-ranger-x1',
+        'extra:clone-tribrid-threat-spear-radar-x1',
+        'extra:clone-tribrid-threat-team3-x1',
+        'extra:clone-tribrid-threat-team5-x1',
+        'extra:clone-tribrid-scattered-follow-x1',
+    ]) {
+        const c = find(key);
+        expect(c.scriptArgs).toEqual(expect.arrayContaining([
+            'SQUAD_GANG_PROFILES=clone-goondelf+clone-ligma+clone-sugma' + (key.includes('team5') ? '+attacker-fight+attacker-fight+attacker-fight+attacker-fight+attacker-fight' : key.includes('team3') ? '+attacker-fight+attacker-fight+attacker-fight' : key.includes('threat-') ? '+attacker-fight' : ''),
+            'SQUAD_THREAT=1',
+        ]));
+    }
+    const split = find('extra:squad-4-singleway-split-x1');
+    expect(split.companions![3]!.presetConfig!.position).toEqual({ x: 3071, z: 3525, level: 0 });
+    expect(split.pass('RESULT ok squad accounts=4 kills=2 killReceipts=2 receiptDomain=practice gangDied=2 died=0')).toBe(true);
+
+    const nospare = find('extra:squad-2-trips-nospare-x1');
+    expect(nospare.presetConfig!.bank!.some(r => r.id === 892 || r.id === 886)).toBe(false);
+    expect(nospare.pass('RESULT ok squad accounts=2 kills=2 killReceipts=2 receiptDomain=practice gangDied=2 died=0 trips=2')).toBe(true);
+    expect(nospare.pass('RESULT ok squad accounts=2 kills=2 killReceipts=2 receiptDomain=practice gangDied=2 died=0 trips=0')).toBe(false);
 });

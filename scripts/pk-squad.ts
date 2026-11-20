@@ -32,7 +32,7 @@ import { killReceiptProof } from '../packages/core/src/kill-receipt';
 import { bindActionScope } from '../packages/core/src/action-scope';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { attackable, rewearStart, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, recordKillLoot, STUNNED_SHOVE_SPOTANIM, wildernessLevel, type FightOptions } from './pk';
-import { bankTrip, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
+import { bankTrip, MIN_TRIP_ARROWS, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { settleKillFeed } from './pk-kill-feed';
 import { EDGEVILLE_BANK, eatUp, FOOD_START_FLOOR, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
 import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
@@ -421,7 +421,7 @@ export function squadTarget<P extends { name: string; index: number; distance: n
         .sort((a, b) => health(a) - health(b) || a.distance - b.distance)[0];
 }
 
-// Multi-way pile & anti-PJ target focus: prioritizes stunned targets, then lowest HP%, scouted priority target, and filters out busy single-way fights.
+// Multi-way pile & anti-PJ target focus: prioritizes multi-way targets when preferMulti is set, then priority interlopers, stunned targets, lowest HP%, scouted target, and skips busy single-way fights.
 export function pickSquadFocus<P extends { name: string; index: number; distance: number; x?: number; z?: number; combatLevel?: number; inCombat?: boolean }>(opts: {
     view: readonly P[];
     targets: ReadonlySet<string>;
@@ -429,25 +429,32 @@ export function pickSquadFocus<P extends { name: string; index: number; distance
     skip?: ReadonlySet<string>;
     me?: { x: number; z: number; combatLevel: number };
     inMulti?: boolean;
+    preferMulti?: boolean;
     stunned?: ReadonlySet<string>;
     // Players that come first (the interlopers of the threat radar: they attack us or close in).
     priority?: ReadonlySet<string>;
     activeFocus?: string;
     scoutTarget?: string;
 }): P | undefined {
-    const { view, targets, health, skip = new Set(), me, inMulti, stunned = new Set(), priority = new Set<string>(), activeFocus, scoutTarget } = opts;
+    const { view, targets, health, skip = new Set(), me, inMulti, preferMulti, stunned = new Set(), priority = new Set<string>(), activeFocus, scoutTarget } = opts;
     const active = activeFocus?.toLowerCase();
     const scout = scoutTarget?.toLowerCase();
+    const selfMulti = inMulti ?? true;
+    const isTargetMulti = (p: { x?: number; z?: number }) => (p.x !== undefined && p.z !== undefined ? isMulti(p.x, p.z) : selfMulti);
     const eligible = view.filter(p => {
         const key = p.name.toLowerCase();
         if (!targets.has(key) || skip.has(key)) return false;
         if (me && p.z !== undefined && !attackable(me, { z: p.z, combatLevel: p.combatLevel ?? me.combatLevel })) return false;
         // Anti-PJ in single-way: avoid hopping onto someone already actively engaged by another attacker unless it's our own active focus.
-        const multiTile = inMulti !== undefined ? inMulti : (p.x !== undefined && p.z !== undefined ? isMulti(p.x, p.z) : true);
-        if (!multiTile && p.inCombat && key !== active) return false;
+        const targetMulti = isTargetMulti(p);
+        if ((!selfMulti || !targetMulti) && p.inCombat && key !== active) return false;
         return true;
     });
     return eligible.sort((a, b) => {
+        if (preferMulti) {
+            const ma = Number(isTargetMulti(a)), mb = Number(isTargetMulti(b));
+            if (ma !== mb) return mb - ma;
+        }
         const ak = a.name.toLowerCase(), bk = b.name.toLowerCase();
         const pa = Number(priority.has(ak)), pb = Number(priority.has(bk));
         if (pa !== pb) return pb - pa;
@@ -464,6 +471,7 @@ export function pickSquadFocus<P extends { name: string; index: number; distance
 export interface SquadFocusEntry {
     readonly target: string;
     readonly hp: number;
+    readonly inMulti: boolean;
     readonly priority: boolean;
     readonly stunned: boolean;
     readonly updatedAt: number;
@@ -474,16 +482,21 @@ export function shouldSwitchFocus(o: {
     inMulti: boolean;
     currentName: string;
     currentHp: number;
+    currentInMulti?: boolean;
     focusName: string | null | undefined;
     focusHp: number;
+    focusInMulti?: boolean;
     focusStunned: boolean;
     elapsedTicks: number;
     minFightTicks?: number;
 }): boolean {
-    if (!o.inMulti || !o.focusName) return false;
-    if (o.elapsedTicks < (o.minFightTicks ?? 4)) return false;
+    if (!o.focusName) return false;
     const cur = o.currentName.toLowerCase(), next = o.focusName.toLowerCase();
-    if (cur === next || o.currentHp <= 0.30) return false;
+    if (cur === next) return false;
+    if (o.currentInMulti === false && o.focusInMulti === true) return o.elapsedTicks >= (o.minFightTicks ?? 1);
+    if (!o.inMulti) return false;
+    if (o.elapsedTicks < (o.minFightTicks ?? 4)) return false;
+    if (o.currentHp <= 0.30) return false;
     if (o.focusStunned) return true;
     return o.focusHp <= 0.50 && o.currentHp - o.focusHp >= 0.25;
 }
@@ -493,9 +506,11 @@ export function createSquadFocus(ttlTicks = 12) {
     let current: SquadFocusEntry | null = null;
     const stale = (now: number) => !current || now - current.updatedAt > ttlTicks;
     const ranksHigher = (cand: SquadFocusEntry, cur: SquadFocusEntry) =>
-        (cand.priority && !cur.priority)
-        || (cand.priority === cur.priority && cand.stunned && !cur.stunned)
-        || (cand.priority === cur.priority && cand.stunned === cur.stunned && cand.hp <= cur.hp - 0.08);
+        (cand.inMulti !== cur.inMulti ? cand.inMulti : (
+            (cand.priority && !cur.priority)
+            || (cand.priority === cur.priority && cand.stunned && !cur.stunned)
+            || (cand.priority === cur.priority && cand.stunned === cur.stunned && cand.hp <= cur.hp - 0.08)
+        ));
     return {
         active(now: number): string | undefined {
             return stale(now) ? undefined : current!.target;
@@ -510,6 +525,7 @@ export function createSquadFocus(ttlTicks = 12) {
             skip?: ReadonlySet<string>;
             me?: { x: number; z: number; combatLevel: number };
             inMulti?: boolean;
+            preferMulti?: boolean;
             stunned?: ReadonlySet<string>;
             priority?: ReadonlySet<string>;
             scoutTarget?: string;
@@ -518,11 +534,13 @@ export function createSquadFocus(ttlTicks = 12) {
             const activeFocus = stale(opts.now) ? undefined : current!.target;
             const picked = pickSquadFocus({ ...opts, activeFocus });
             if (!picked) return undefined;
-            if (opts.inMulti !== false) {
+            const targetMulti = picked.x !== undefined && picked.z !== undefined ? isMulti(picked.x, picked.z) : opts.inMulti !== false;
+            if (opts.inMulti !== false || targetMulti) {
                 const key = picked.name.toLowerCase();
                 const cand: SquadFocusEntry = {
                     target: key,
                     hp: opts.health(picked),
+                    inMulti: targetMulti,
                     priority: !!opts.priority?.has(key),
                     stunned: !!opts.stunned?.has(key),
                     updatedAt: opts.now,
@@ -540,6 +558,75 @@ export function createSquadFocus(ttlTicks = 12) {
             if (!target || current?.target === target.toLowerCase()) current = null;
         },
     };
+}
+
+export const SINGLE_WAY_CHASE_LEASH = 16;
+
+export interface SquadMemberState {
+    readonly x: number;
+    readonly z: number;
+    readonly inMulti: boolean;
+    readonly hasMultiTarget: boolean;
+    readonly tick: number;
+}
+
+/** Tracks live multi-way positions and multi-target presence across active squad members. */
+export function createSquadCohesion(staleTicks = 8) {
+    const members = new Map<string, SquadMemberState>();
+    return {
+        update(name: string, state: SquadMemberState): void {
+            members.set(name.toLowerCase(), state);
+        },
+        remove(name: string): void {
+            members.delete(name.toLowerCase());
+        },
+        snapshot(now: number, exclude?: string) {
+            const others: SquadMemberState[] = [];
+            for (const [name, st] of members) {
+                if (name === exclude || now - st.tick > staleTicks) continue;
+                others.push(st);
+            }
+            const multiAllies = others.filter(m => m.inMulti);
+            const multiAnchor = multiAllies.length
+                ? {
+                    x: Math.round(multiAllies.reduce((s, m) => s + m.x, 0) / multiAllies.length),
+                    z: Math.round(multiAllies.reduce((s, m) => s + m.z, 0) / multiAllies.length),
+                }
+                : null;
+            return {
+                allyCount: others.length,
+                multiAllyCount: multiAllies.length,
+                anyMultiTarget: others.some(m => m.hasMultiTarget),
+                multiAnchor,
+            };
+        },
+    };
+}
+
+/** Breaks off or refuses a single-way chase when the squad belongs in multi-way combat. */
+export function shouldBreakSingleWayChase(o: {
+    now: number;
+    singleUntil: number;
+    aimInMulti: boolean;
+    self: { x: number; z: number; inMulti: boolean };
+    target: { x?: number; z?: number };
+    hasMultiTargetInView: boolean;
+    focusInMulti?: boolean;
+    multiAllyCount: number;
+    anyAllyHasMultiTarget: boolean;
+    anchor?: { x: number; z: number } | null;
+    leash?: number;
+}): boolean {
+    if (!o.aimInMulti || o.now < o.singleUntil) return false;
+    const targetMulti = o.target.x !== undefined && o.target.z !== undefined ? isMulti(o.target.x, o.target.z) : o.self.inMulti;
+    if (targetMulti) return false;
+    if (o.hasMultiTargetInView || o.focusInMulti || o.anyAllyHasMultiTarget) return true;
+    if (o.multiAllyCount > 0 && !o.self.inMulti) return true;
+    if (!o.anchor || o.target.x === undefined || o.target.z === undefined) return false;
+    const leash = o.leash ?? SINGLE_WAY_CHASE_LEASH;
+    const targetDist = Math.max(Math.abs(o.target.x - o.anchor.x), Math.abs(o.target.z - o.anchor.z));
+    const selfDist = Math.max(Math.abs(o.self.x - o.anchor.x), Math.abs(o.self.z - o.anchor.z));
+    return targetDist > leash || (!o.self.inMulti && selfDist > leash);
 }
 
 // Coordinated squad escape fallback when outnumbered in multi-combat or out of food below threshold.
@@ -595,6 +682,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     // The freeze of each target is shared by the squad: the members stagger their casts (SQUAD_FREEZE_SHARE=1; pk.ts freezeShare).
     freezeShareFor?: (target: string) => FightOptions['freezeShare']; burstOnHold?: boolean; burstOnStun?: boolean; stunSpec?: FightOptions['stunSpec'];
     focus?: ReturnType<typeof createSquadFocus>;
+    cohesion?: ReturnType<typeof createSquadCohesion>;
     useRally?: boolean; onRallyReady?: (name: string) => void; waitForRally?: (s: Session, stopped: () => boolean) => Promise<void>;
     trips: number; deadline: number; stopped: () => boolean; killsLeft: () => boolean; log: (l: string) => void;
     // Deaths that the account recovers from in the run (default 0: a death ends the account's part).
@@ -638,7 +726,12 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     // A retreat that ends with no session is a death only when the account died: a stop or a walk that did not get out leaves it alive.
     const retreatEnded = () => { const q = me(); if (q && diedNow(q)) stats.died = true; else o.log(`[${s.name}] SQUAD retreat ended with the account alive${q ? ` at ${q.worldX},${q.worldZ}` : ''}`); };
     const wornAtStart = (st?.equipment ?? []).map(e => ({ id: e.id, count: e.count ?? 1 }));
-    const pack = packOf(st?.inventory ?? [], st?.equipment ?? []), kit = kitFrom(st?.equipment ?? [], st?.inventory ?? []);
+    const pack = packOf(st?.inventory ?? [], st?.equipment ?? [], { minArrows: MIN_TRIP_ARROWS, minRunes: true }), kit = kitFrom(st?.equipment ?? [], st?.inventory ?? []);
+    const startInv = st?.inventory ?? [], startEq = st?.equipment ?? [];
+    const startWornGlory = startEq.some(e => (ITEMS.glory as readonly number[]).includes(e.id));
+    const startMagic = s.sdk.getSkill?.('Magic')?.level ?? st?.skills?.find(k => k.name === 'Magic')?.level ?? 1;
+    const startHasEscape = [...startInv, ...startEq].some(i => (ITEMS.glory as readonly number[]).includes(i.id))
+        || [1174, 1164].some(sp => escapeCastable(sp, startInv, startEq.map(e => e.id), startMagic));
     const ammo = (st?.equipment ?? []).find(e => /arrow|bolt/i.test(e.name))?.id;
     const wanted = new Set([...PICKUP_ITEMS, ...(ammo ? [ammo] : [])]);
     const going = () => !o.stopped() && s.tick() < o.deadline && o.killsLeft();
@@ -649,12 +742,27 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         try {
             return await locs.withLocs(async () => {
                 const targetAim = { ...(o.aim ?? o.post) };
-                const bankRun = bankTrip(bankNear(targetAim.x), targetAim, pack, kit, () => !going(), bankEaten, {
+                const eqNow = typeof a.sdk.getEquipment === 'function' ? a.sdk.getEquipment() : a.sdk.getState()?.equipment ?? [];
+                const invNow = a.sdk.getInventory();
+                const needsReplacementGlory = !fresh && startWornGlory
+                    && !pack.items.some(r => (ITEMS.glory as readonly number[]).includes(r.id))
+                    && ![...eqNow, ...invNow].some(i => (ITEMS.glory as readonly number[]).includes(i.id));
+                const tripPack = needsReplacementGlory
+                    ? { ...pack, items: [...pack.items, { id: ITEMS.glory[0], count: 1, minCharges: 1, maxSlots: 1 }] }
+                    : pack;
+                const bankRun = bankTrip(bankNear(targetAim.x), targetAim, tripPack, kit, () => !going(), bankEaten, {
                     altar: process.env.SQUAD_TRIP_ALTAR === '1',
                     prayerFloor: Number(process.env.SQUAD_TRIP_PRAYER_FLOOR ?? '0.7'),
+                    minFood: squadStartFood(0, pack.food).floor,
+                    requireEscape: startHasEscape,
                     log: l => o.log(`[${s.name}] SQUAD ${l}`),
                     route: from => marchLegs(from, targetAim),
                     beforeReturn: async isFresh => {
+                        if (!isFresh && startWornGlory && !(typeof a.sdk.getEquipment === 'function' ? a.sdk.getEquipment() : a.sdk.getState()?.equipment ?? []).some(e => (ITEMS.glory as readonly number[]).includes(e.id))) {
+                            const invGlory = a.sdk.getInventory().find(i => (ITEMS.glory as readonly number[]).includes(i.id));
+                            const wearOp = invGlory?.optionsWithIndex?.find(x => /^(Wield|Wear)$/i.test(x.text));
+                            if (invGlory && wearOp) { await a.sdk.sendUseItem(invGlory.slot, wearOp.opIndex); await nextTick(a); }
+                        }
                         if (isFresh && o.useRally) {
                             o.onRallyReady?.(a.name);
                             await locs.withoutLocs(() => o.waitForRally?.(a, () => !going()) ?? Promise.resolve());
@@ -724,8 +832,50 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     let singleUntil = -1;
     const skip = new Map<string, number>();
     let enteredWilderness = false;
+    let curInterlopers = new Set<string>();
+    const splitFor = (
+        pos: { worldX: number; worldZ: number; combatLevel: number },
+        curView: readonly { name: string; x?: number; z?: number; combatLevel?: number }[],
+        cand: { x?: number; z?: number },
+        activeTargetsSet: ReadonlySet<string>,
+    ): boolean => {
+        const aimTile = o.aim ?? o.post;
+        const curSelf = { x: pos.worldX, z: pos.worldZ, combatLevel: pos.combatLevel };
+        const hasMultiTargetInView = curView.some(q =>
+            activeTargetsSet.has(q.name.toLowerCase())
+            && q.x !== undefined && q.z !== undefined && isMulti(q.x, q.z)
+            && attackable(curSelf, { z: q.z, combatLevel: q.combatLevel ?? pos.combatLevel }),
+        );
+        const nowTick = s.tick();
+        const coh = o.cohesion?.snapshot(nowTick, s.name.toLowerCase());
+        const focusSnap = o.focus?.snapshot(nowTick);
+        return shouldBreakSingleWayChase({
+            now: nowTick,
+            singleUntil,
+            aimInMulti: isMulti(aimTile.x, aimTile.z),
+            self: { x: pos.worldX, z: pos.worldZ, inMulti: isMulti(pos.worldX, pos.worldZ) },
+            target: cand,
+            hasMultiTargetInView,
+            focusInMulti: focusSnap?.inMulti,
+            multiAllyCount: coh?.multiAllyCount ?? 0,
+            anyAllyHasMultiTarget: coh?.anyMultiTarget ?? false,
+            anchor: coh?.multiAnchor ?? aimTile,
+        });
+    };
     const unwatch = s.onTick(() => {
-        const hp = me()?.hp; if (hp !== undefined) { if (hp < lastHp) stats.taken += lastHp - hp; lastHp = hp; minHp = minHp === undefined ? hp : Math.min(minHp, hp); }
+        const pos = me();
+        const hp = pos?.hp; if (hp !== undefined) { if (hp < lastHp) stats.taken += lastHp - hp; lastHp = hp; minHp = minHp === undefined ? hp : Math.min(minHp, hp); }
+        if (pos && o.cohesion) {
+            const stNow = s.sdk.getState();
+            const curSelf = { x: pos.worldX, z: pos.worldZ, combatLevel: pos.combatLevel };
+            const activeTargetsSet = curInterlopers.size ? new Set([...o.targets, ...curInterlopers]) : o.targets;
+            const hasMultiTarget = (stNow?.nearbyPlayers ?? []).some(q =>
+                activeTargetsSet.has(q.name.toLowerCase())
+                && q.x !== undefined && q.z !== undefined && isMulti(q.x, q.z)
+                && attackable(curSelf, { z: q.z, combatLevel: q.combatLevel }),
+            );
+            o.cohesion.update(s.name, { x: pos.worldX, z: pos.worldZ, inMulti: isMulti(pos.worldX, pos.worldZ), hasMultiTarget, tick: s.tick() });
+        }
         for (const m of s.sdk.getState()?.gameMessages ?? []) { const id = m.observationId ?? m.tick; if (id <= seenMessage) continue; seenMessage = id; if (/already under attack|already fighting your opponent/i.test(m.text)) refusedAt = s.tick(); }
     });
     try {
@@ -840,7 +990,14 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             // the squad goes back to its own targets.
             const interlopers = new Set((threat && o.threats!.act ? threat.interlopers : []).map(n => n.toLowerCase()));
             if (singleUntil >= 0 && interlopers.size > 0) singleUntil = Math.max(singleUntil, now + 120);
-            const focusArgs = { view, targets: interlopers.size ? new Set([...o.targets, ...interlopers]) : o.targets, priority: interlopers, health, skip: new Set(skip.keys()), me: self, inMulti: isMulti(p.worldX, p.worldZ), stunned };
+            curInterlopers = interlopers;
+            const allTargets = interlopers.size ? new Set([...o.targets, ...interlopers]) : o.targets;
+            const aim = o.aim ?? o.post;
+            const aimInMulti = isMulti(aim.x, aim.z);
+            const filteredView = o.pull !== false && aimInMulti && now >= singleUntil
+                ? view.filter(q => !allTargets.has(q.name.toLowerCase()) || !splitFor(p, view, q, allTargets))
+                : view;
+            const focusArgs = { view: filteredView, targets: allTargets, priority: interlopers, health, skip: new Set(skip.keys()), me: self, inMulti: isMulti(p.worldX, p.worldZ), preferMulti: aimInMulti && now >= singleUntil, stunned };
             const target = o.focus ? o.focus.pick({ ...focusArgs, now }) : pickSquadFocus(focusArgs);
             if (!target) {
                 // No prayer while it waits: an active prayer drains with no fight loop to flick it (in one live meeting
@@ -854,7 +1011,18 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 // At least a tick each pass: a walk to a step that cannot be reached fails at once.
                 if (now >= singleUntil && Math.max(Math.abs(p.worldX - o.post.x), Math.abs(p.worldZ - o.post.z)) > 2) {
                     const stepTarget = { ...o.post };
-                    await locs.withLocs(() => walkPath(walker, [{ ...stepTarget, tol: 2 }], { maxTicks: 60, idleMs: 9000, stop: () => !going() || stepTarget.x !== o.post.x || stepTarget.z !== o.post.z || !!squadTarget(s.sdk.getState()?.nearbyPlayers ?? [], o.targets, health, new Set(), self) }));
+                    await locs.withLocs(() => walkPath(walker, [{ ...stepTarget, tol: 2 }], { maxTicks: 60, idleMs: 9000, stop: () => {
+                        if (!going() || stepTarget.x !== o.post.x || stepTarget.z !== o.post.z) return true;
+                        const q = me(), curView = s.sdk.getState()?.nearbyPlayers ?? [];
+                        if (!q) return false;
+                        const curSelf = { x: q.worldX, z: q.worldZ, combatLevel: q.combatLevel };
+                        const tNow = s.tick();
+                        const cand = pickSquadFocus({ view: curView, targets: allTargets, priority: interlopers, health, skip: new Set(skip.keys()), me: curSelf, inMulti: isMulti(q.worldX, q.worldZ), preferMulti: aimInMulti && tNow >= singleUntil, stunned });
+                        if (!cand) return false;
+                        if (o.pull !== false && splitFor(q, curView, cand, allTargets)) return false;
+                        if (o.pull !== false && aimInMulti && tNow >= singleUntil && !isMulti(q.worldX, q.worldZ)) return false;
+                        return true;
+                    } }));
                 }
                 if (!await nextTick(s)) break;
                 continue;
@@ -863,7 +1031,6 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             // way instead of fighting there; on a single-way tile the game lets one attacker at a time on each account,
             // so the squad cannot concentrate.
             // The pull aims at the march's goal (`aim`), not its current step, which can be a single-way tile.
-            const aim = o.aim ?? o.post;
             // A stretch of pull is 20 ticks and half a tick a tile of the distance at most, and 60 ticks at the most: an account that cannot get into multi-way
             // (stood on, blocked) fights where it is; one stuck pulling took hits without an answer for hundreds of ticks.
             if (isMulti(p.worldX, p.worldZ)) pullSince = -1;
@@ -886,13 +1053,15 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             const stunShare = o.stunShareFor?.(target.name.toLowerCase());
             const freezeShare = o.freezeShareFor?.(target.name.toLowerCase());
             const focusYield = () => {
-                if (!o.focus) return false;
                 const stNow = s.sdk.getState(), pos = stNow?.player;
                 if (!pos) return false;
                 const curView = stNow?.nearbyPlayers ?? [];
                 const curTarget = curView.find(q => q.name.toLowerCase() === target.name.toLowerCase());
+                if (!curTarget) return false;
+                if (o.pull !== false && s.tick() > began && splitFor(pos, curView, curTarget, allTargets)) return true;
+                if (!o.focus) return false;
                 const snap = o.focus.snapshot(s.tick());
-                if (!curTarget || !snap || snap.target === target.name.toLowerCase()) return false;
+                if (!snap || snap.target === target.name.toLowerCase()) return false;
                 const snapTarget = curView.find(q => q.name.toLowerCase() === snap.target);
                 if (!snapTarget || !attackable({ z: pos.worldZ, combatLevel: pos.combatLevel }, { z: snapTarget.z, combatLevel: snapTarget.combatLevel })) return false;
                 const stunNow = new Set(curView.filter(q => observePlayer(s.client, q.index)?.spotanim === STUNNED_SHOVE_SPOTANIM).map(q => q.name.toLowerCase()));
@@ -900,13 +1069,17 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     inMulti: isMulti(pos.worldX, pos.worldZ),
                     currentName: target.name,
                     currentHp: health(curTarget),
+                    currentInMulti: curTarget.x !== undefined && curTarget.z !== undefined ? isMulti(curTarget.x, curTarget.z) : isMulti(pos.worldX, pos.worldZ),
                     focusName: snap.target,
                     focusHp: health(snapTarget),
+                    focusInMulti: snap.inMulti,
                     focusStunned: stunNow.has(snap.target) || snap.stunned,
                     elapsedTicks: s.tick() - began,
                 });
             };
-            const singleHold = now < singleUntil && !isMulti(p.worldX, p.worldZ) && target.x !== undefined && target.z !== undefined && isMulti(target.x, target.z);
+            const targetInSingle = target.x !== undefined && target.z !== undefined && !isMulti(target.x, target.z);
+            const singleHold = (now < singleUntil && !isMulti(p.worldX, p.worldZ) && target.x !== undefined && target.z !== undefined && isMulti(target.x, target.z))
+                || (o.pull !== false && aimInMulti && now >= singleUntil && isMulti(p.worldX, p.worldZ) && targetInSingle);
             const singleStyles = singleHold ? (['ranged', 'magic'] as const).filter(stName => (o.options.kit[stName]?.length ?? 0) > 0) : [];
             let lastFreezeCastTick = -100, freezePending = false;
             const r = await fightPlayer(s, target.name, {
@@ -952,6 +1125,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         }
     } finally {
         unwatch();
+        o.cohesion?.remove(s.name);
         if (origSendUseItem) s.sdk.sendUseItem = origSendUseItem;
         if (origDirect) s.direct = origDirect;
     }
@@ -1251,6 +1425,7 @@ if (import.meta.main) {
     }
     const tankList = (env.SQUAD_TANK ?? '').split(',').filter(x => /^[0-9]+$/.test(x)).map(Number);
     const sharedFocus = createSquadFocus();
+    const sharedCohesion = createSquadCohesion();
     const useFreezeShare = get('SQUAD_FREEZE_SHARE', ours.length >= 2 ? '1' : '0') === '1';
     const useBurstHold = get('SQUAD_BURST_HOLD', '0') === '1';
     const waitForRally = async (member: Session, holdStopped: () => boolean) => {
@@ -1263,7 +1438,7 @@ if (import.meta.main) {
         const kit = kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []);
         const stunSpec = defaultStunSpec(kit);
         return hold(s, {
-            targets, post, threats, focus: sharedFocus, useRally, onRallyReady: name => { ralliedSet.add(name); }, waitForRally,
+            targets, post, threats, focus: sharedFocus, cohesion: sharedCohesion, useRally, onRallyReady: name => { ralliedSet.add(name); }, waitForRally,
             // SQUAD_TANK=<member index>,...: the tank lock (bench only): the listed members hold melee and every other member holds
             // ranged. A gang account prays against the weapon of the member it faces (live run 3), so the faced member's melee turns
             // draw Protect from Melee and the bow shots of the others meet no overhead.
