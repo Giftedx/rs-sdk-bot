@@ -265,7 +265,7 @@ export function startedWildernessObstacle(name: string, p: { worldX: number; wor
         case 'ropeswing': return p.worldX === 3005 && p.worldZ >= 3953 && p.worldZ <= 3958;
         case 'stones': return p.worldZ === 3960 && p.worldX >= 2996 && p.worldX <= 3001;
         case 'log': return p.worldZ === 3945 && p.worldX >= 2994 && p.worldX <= 3002;
-        case 'rocks': return p.worldX >= 2993 && p.worldX <= 2995 && p.worldZ >= 3934 && p.worldZ <= 3935;
+        case 'rocks': return p.worldX >= 2993 && p.worldX <= 2995 && p.worldZ >= 3933 && p.worldZ <= 3936;
         default: return false;
     }
 }
@@ -1227,9 +1227,8 @@ async function train1To49Monkeybars(s: Session, usePotion: boolean, usePrayer = 
     await crossEdgevilleToMonkeybars(s, true, stop);
     await walkNear(s, { x: 3120, z: 9964, level: 0 }, 2, 120, { ignoreHunters: true, stop });
     const targetLvl = usePotion ? 49 : 52;
-    let mLastXp = skillXp(s, 'Agility'), mStill = 0, mLastKey = '';
+    let mLastXp = skillXp(s, 'Agility');
     for (let t = 0; skillLvl(s, 'Agility') < targetLvl && t < 1200 && !stop?.(); t++) {
-        await clearDialogTick(s);
         await maintainEnergy(s, 45);
         const p = posOf(s);
         if (!p || p.isDead || p.worldZ < 9000) throw Error(`monkeybars left dungeon at ${p?.worldX},${p?.worldZ}`);
@@ -1239,15 +1238,18 @@ async function train1To49Monkeybars(s: Session, usePotion: boolean, usePrayer = 
             await setProtectFromMelee(s, true);
         }
         if (usePotion && skillCur(s, 'Agility') < 15) await drinkFirstMatching(s, ITEMS.agilityPot);
-        const key = `${p.worldX},${p.worldZ},${p.level}`;
-        mStill = key === mLastKey ? mStill + 1 : 0;
-        mLastKey = key;
         const gained = skillXp(s, 'Agility') - mLastXp;
         if (gained > 0) mLastXp = skillXp(s, 'Agility');
-        if (t === 0 || gained > 0 || mStill >= 1) {
+        if (skillLvl(s, 'Agility') >= targetLvl) break;
+        // shortcuts.rs2:196 appends p_delay(0) after stat_advance; clicking at either endpoint every tick starts immediately when delay clears.
+        if (t === 0 || p.worldZ <= 9964 || p.worldZ >= 9969) {
             const target = p.worldZ < 9966 ? { x: 3120, z: 9964 } : { x: 3120, z: 9969 };
-            await s.direct({ type: 'interactLoc', x: target.x, z: target.z, locId: 2320, optionIndex: 1, reason: 'SDK' });
-            mStill = 0;
+            const acts: Promise<unknown>[] = [];
+            if (s.sdk.getState()?.dialog?.isOpen) acts.push(s.direct({ type: 'closeModal', reason: 'SDK' }));
+            acts.push(s.direct({ type: 'interactLoc', x: target.x, z: target.z, locId: 2320, optionIndex: 1, reason: 'SDK' }));
+            await Promise.all(acts);
+        } else if (s.sdk.getState()?.dialog?.isOpen) {
+            await clearDialogTick(s);
         }
         await waitTicks(s, 1);
     }
@@ -1350,7 +1352,6 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
         if (cfg.usePotion && skillCur(s, 'Agility') < 52) {
             if (await drinkFirstMatching(s, ITEMS.agilityPot)) {
                 doses++;
-                await waitTicks(s, 1);
             }
         }
         if (skillCur(s, 'Hitpoints') <= 7) {
@@ -1388,7 +1389,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
     const PIT = { id: 1755, x: 3005, z: 10363 };
     const LOG_IDX = 3;
     let i = 0, prog = 0, laps = 0, fails = 0, preClicks = 0, closes = 0;
-    let stepXp = skillXp(s, 'Agility'), lastPos = '', still = 0, inPit = false, preBlock = -1, sentTick = -1, preClickedIdx = -1;
+    let stepXp = skillXp(s, 'Agility'), lastPos = '', still = 0, inPit = false, preBlock = -1, sentTick = -1;
     let lastPotTick = -10;
 
     const sipAgilityPot = async () => {
@@ -1403,7 +1404,6 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
 
     const clickStep = async (step: WildyStep) => {
         const st = s.sdk.getState();
-        if (st?.dialog?.isOpen) { await s.direct({ type: 'closeModal', reason: 'SDK' }); closes++; }
         const p = posOf(s)!;
         const cands = [{ id: step.id, x: step.x, z: step.z }, ...(step.alt ?? [])]
             .sort((a, b) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ)) - Math.max(Math.abs(b.x - p.worldX), Math.abs(b.z - p.worldZ)));
@@ -1411,7 +1411,13 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
         const seenLoc = (st?.nearbyLocs ?? []).find((l: any) => l.id === c.id && l.x === c.x && l.z === c.z) as any;
         const op = seenLoc?.optionsWithIndex?.[0]?.opIndex ?? 1;
         sentTick = s.tick();
-        await s.direct({ type: 'interactLoc', x: c.x, z: c.z, locId: c.id, optionIndex: op, reason: 'SDK' });
+        const acts: Promise<unknown>[] = [];
+        if (st?.dialog?.isOpen) {
+            acts.push(s.direct({ type: 'closeModal', reason: 'SDK' }));
+            closes++;
+        }
+        acts.push(s.direct({ type: 'interactLoc', x: c.x, z: c.z, locId: c.id, optionIndex: op, reason: 'SDK' }));
+        await Promise.all(acts);
     };
 
     try {
@@ -1452,11 +1458,6 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
             still = moved ? 0 : still + 1;
             lastPos = key;
 
-            if (s.sdk.getState()?.dialog?.isOpen && sentTick !== s.tick()) {
-                await s.direct({ type: 'closeModal', reason: 'SDK' });
-                closes++;
-            }
-
             if (failSeen > 0) {
                 failSeen = 0;
                 fails++;
@@ -1470,7 +1471,6 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
                 if (gained >= 4989 * 2.2) laps++;
                 prog = nextWildernessProgress(prog, WILDERNESS_STEPS[i]!.name);
                 i = (i + 1) % WILDERNESS_STEPS.length;
-                preClickedIdx = -1;
                 if (i === 0) {
                     await sipAgilityPot();
                     await maintainEnergy(s, 45);
@@ -1492,11 +1492,10 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
 
             const step = WILDERNESS_STEPS[i]!;
             if (step.name === 'rocks') {
-                const atEnd = p.worldZ <= 3934 && p.worldZ < 9000 && (still >= 1 || p.worldX >= 2996);
+                const atEnd = p.worldZ <= 3933 && p.worldZ < 9000 && (still >= 1 || p.worldX >= 2996);
                 if (atEnd && (prog !== 4 || still >= 3)) {
                     prog = nextWildernessProgress(prog, 'rocks');
                     i = 0;
-                    preClickedIdx = -1;
                     stepXp = skillXp(s, 'Agility');
                     await sipAgilityPot();
                     await maintainEnergy(s, 45);
@@ -1525,9 +1524,11 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
             }
             if (preBlock >= 0 && moved && s.tick() > preBlock + 1) preBlock = -1;
             if ((still >= 1 || (inPit && moved)) && (inPit || (i === 1 && p.worldZ >= 3955))) {
+                const wasInPit = inPit;
                 inPit = false;
-                i = resumeStep('wilderness', p as any);
-                preClickedIdx = -1;
+                let nextI = resumeStep('wilderness', p as any);
+                if (wasInPit && WILDERNESS_STEPS[nextI]?.name === 'stones') nextI = LOG_IDX;
+                i = nextI;
                 stepXp = skillXp(s, 'Agility');
                 await syncPrayer(i);
                 await maybeEat();
@@ -1536,20 +1537,14 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
                 continue;
             }
 
-
-
-            // Pre-click: when near the end of current obstacle, queue the next obstacle once
-            if (preBlock < 0 && canPreClickNextObstacle(step.name, p)) {
+            // V2 wilderness pre-click: send next obstacle's click every tick once current obstacle has started.
+            // Server drops clicks while delayed (OpLocHandler.ts:14-18) so the first valid tick starts immediately.
+            if (preBlock < 0 && startedWildernessObstacle(step.name, p)) {
                 const nextIdx = (i + 1) % WILDERNESS_STEPS.length;
-                if (preClickedIdx !== nextIdx && sentTick !== s.tick()) {
-                    preClickedIdx = nextIdx;
+                if (sentTick !== s.tick()) {
                     preClicks++;
-                    if (nextIdx === 0) {
-                        if (cfg.alignPipe) {
-                            await s.direct({ type: 'walkTo', x: 3004, z: 3937, running: true, reason: 'SDK' });
-                        } else {
-                            await clickStep(WILDERNESS_STEPS[0]!);
-                        }
+                    if (nextIdx === 0 && cfg.alignPipe) {
+                        await s.direct({ type: 'walkTo', x: 3004, z: 3937, running: true, reason: 'SDK' });
                     } else {
                         await syncPrayer(nextIdx);
                         await maybeEat();

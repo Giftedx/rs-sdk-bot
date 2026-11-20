@@ -106,6 +106,7 @@ describe('Wilderness pre-clicks, progress transitions, and Agility potion logic'
         expect(startedWildernessObstacle('stones', { worldX: 3000, worldZ: 3960 })).toBe(true);
         expect(startedWildernessObstacle('log', { worldX: 2998, worldZ: 3945 })).toBe(true);
         expect(startedWildernessObstacle('rocks', { worldX: 2994, worldZ: 3935 })).toBe(true);
+        expect(startedWildernessObstacle('rocks', { worldX: 2994, worldZ: 3933 })).toBe(true);
         expect(startedWildernessObstacle('pipe', { worldX: 3004, worldZ: 3937 })).toBe(false);
     });
 

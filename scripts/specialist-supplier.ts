@@ -60,7 +60,7 @@ export const ATTACK_SPECIALIST_KIT: readonly KitSpecItem[] = [
 ] as const;
 
 // 21 inventory slots exact: 1 stackable (500 coins) + 1 glory + 11 dragon bones + 3 prayer pots + 5 chocolate cake (100% in stock).
-export const AGILITY_SPECIALIST_KIT: readonly KitSpecItem[] = [
+export const AGILITY_SPECIALIST_NOPOT_KIT: readonly KitSpecItem[] = [
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
     { id: 995, name: 'Coins', count: 500, stackable: true },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
@@ -68,7 +68,8 @@ export const AGILITY_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 1897, name: 'Chocolate cake', count: 5, stackable: false },
 ] as const;
 
-export const AGILITY_SPECIALIST_POTION_KIT: readonly KitSpecItem[] = [
+// 28 inventory slots exact: 1 stackable (500 coins) + 1 glory + 11 dragon bones + 3 prayer pots + 6 agility pots + 1 super energy + 5 cakes.
+export const AGILITY_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
     { id: 995, name: 'Coins', count: 500, stackable: true },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
@@ -77,6 +78,8 @@ export const AGILITY_SPECIALIST_POTION_KIT: readonly KitSpecItem[] = [
     { id: 3016, name: 'Super energy(4)', count: 1, stackable: false },
     { id: 1897, name: 'Chocolate cake', count: 5, stackable: false },
 ] as const;
+
+export const AGILITY_SPECIALIST_POTION_KIT: readonly KitSpecItem[] = AGILITY_SPECIALIST_KIT;
 
 // 7 stackable slots: exact 240 arrow-fletching actions (1-99, 0 spare buffer; 100% in local stock).
 export const FLETCHING_SPECIALIST_KIT: readonly KitSpecItem[] = [
