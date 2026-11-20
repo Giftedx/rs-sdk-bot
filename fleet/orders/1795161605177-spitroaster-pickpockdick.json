@@ -1,0 +1,22 @@
+{
+ "id": "1795161605177-spitroaster-pickpockdick",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Spitroaster",
+ "to": "PickpockDick",
+ "item": "coins",
+ "count": 22613,
+ "start": 1795161605177,
+ "end": 1795164005177,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
