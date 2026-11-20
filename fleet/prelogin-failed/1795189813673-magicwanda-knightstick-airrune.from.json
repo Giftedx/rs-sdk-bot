@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795189813673-magicwanda-knightstick-airrune",
+ "role": "from",
+ "account": "Magicwanda",
+ "partner": "Knightstick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795190518257,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] d437e46ee79ca468d679e4a8330145245f5e0a6d -> fleet-trade-claim/magicwanda (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}

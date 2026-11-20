@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795189813673-magicwanda-knightstick-airrune",
+ "role": "to",
+ "account": "Knightstick",
+ "partner": "Magicwanda",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795190520022,
+ "detail": "Error: account plan writer waits for its existing owner"
+}

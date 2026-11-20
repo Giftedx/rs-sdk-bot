@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795189813673-sporrandip-deeppockets-runechainbody",
+ "account": "SporranDip",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "8ccd6a54-fd92-4c35-8649-d8c719d9fe1d",
+ "count": 0,
+ "ok": false,
+ "at": 1795190509681,
+ "detail": "trade claimed"
+}
