@@ -544,6 +544,25 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  for(const {file} of stops)clearSwarmStop(file);
  return{goal,source,account,installedAt:now};
 }
+/** Unregistered specialists stay offline until launch, so a pre-login 404 snapshot is their repair proof. */
+export function repairLogoutProof(account:string,endedAt:number,base=projectRoot,now=Date.now()){
+ const key=account.toLowerCase();
+ if(Object.hasOwn(SPECIALIST_BOARDS,key)&&readLogoutProof(account,LIVE_SERVER,{root:join(base,'.practice/session-lifecycle')}).state==='none'
+  &&!existsSync(join(base,'.practice/status',account+'.json'))&&!existsSync(join(base,'.practice/status',key+'.json'))){
+  const snapshotPath=join(base,'.practice/specialist-launch/hiscores.json');
+  if(!existsSync(snapshotPath))throw Error('unregistered specialist repair needs a fresh 404 hiscores snapshot: '+account);
+  const bytes=readFileSync(snapshotPath),snap=JSON.parse(bytes.toString('utf8'));
+  const takenAt=Date.parse(snap?.takenAt);
+  if(snap?.base!=='https://rs-sdk-demo.fly.dev'||snap?.tickMs!==400||!Number.isFinite(takenAt)||takenAt>now||now-takenAt>=3_600_000)
+   throw Error('unregistered specialist repair snapshot is stale or invalid: '+account);
+  const profiles=Array.isArray(snap.profiles)?snap.profiles.filter((p:any)=>p?.name===key):[];
+  const profile=profiles[0];
+  if(profiles.length!==1||profile?.status!==404||!Number.isFinite(profile.at)||profile.at<endedAt||profile.at>now||now-profile.at>=3_600_000)
+   throw Error('unregistered specialist repair needs a post-failure 404 profile: '+account);
+  return {kind:'unregistered-specialist' as const,account:key,snapshotPath,snapshotSha256:createHash('sha256').update(bytes).digest('hex'),profileAt:profile.at};
+ }
+ return liveLogoutRef(account,base,true)!;
+}
 /** Check admission while the failure still holds, then park its old assignment before the controller can clear it. */
 export function prepareLiveRecovery(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,base=projectRoot,launch=source,admission:{freeGB?:number}={}){
  const retained=retiredRecoveryCohort(task,account,base);
@@ -551,7 +570,7 @@ export function prepareLiveRecovery(task:CoordTask,account:string,script:string,
  for(const repair of task.repairs??[]){
   if(!participants.some(n=>n?.toLowerCase()===repair.account.toLowerCase()))throw Error('repair must name a participant');
   assertNoRecoveryLease(repair.account,base);
-  if(!(task.sessionRecovery?.account===repair.account&&task.sessionRecovery.endedAt===repair.endedAt))liveLogoutRef(repair.account,base,true);
+  if(!(task.sessionRecovery?.account===repair.account&&task.sessionRecovery.endedAt===repair.endedAt))repairLogoutProof(repair.account,repair.endedAt,base);
   if(!Object.values(dependencies).some((d:any)=>d?.delivery?.ok&&d.delivery.stage==='delivered'&&d.delivery.id===task.capability&&d.delivery.at>repair.endedAt&&d.delivery.runtimeRevision===source))throw Error('recovery requires a fresh post-failure same-capability native delivery');
   const end=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===repair.account.toLowerCase())?.[1];
   if(!end||end.at!==repair.endedAt)throw Error('exact failure unavailable before recovery');
@@ -662,13 +681,13 @@ export async function requestAuthenticatedRecovery(task:CoordTask,dependencies:R
  }finally{if(existsSync(lease)&&JSON.parse(readFileSync(lease,'utf8')).nonce===request.nonce)unlinkSync(lease);}
 }
 export async function requestLiveRecovery(repair:{account:string;endedAt:number},runId:string,base=projectRoot,timeoutMs=15000){
- const proof=liveLogoutRef(repair.account,base,true)!;
+ const proof=repairLogoutProof(repair.account,repair.endedAt,base);
  const file=join(base,'.practice/swarm-repair.json'),request={...repair,server:LIVE_SERVER,proof,runId,nonce:randomUUID()};
  const lease=file+'.lease';
  const limit=Date.now()+timeoutMs;
  await acquireRecoverySlot(lease,{pid:process.pid,runId,nonce:request.nonce},repair.account,base,limit);
  try{
-  request.proof=liveLogoutRef(repair.account,base,true)!;
+  request.proof=repairLogoutProof(repair.account,repair.endedAt,base);
   if(existsSync(file+'.processing'))throw Error('another exact recovery owns the repair slot');
   writeFileSync(file,JSON.stringify(request),{flag:'wx'});
   while(Date.now()<limit){

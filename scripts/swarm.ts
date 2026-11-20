@@ -15,7 +15,7 @@
 // "envByAccount": {"<account>": {"KEY": "value"}} gives one hosted account its own variables on top of "env". A host
 // job whose script is scripts/chain.ts runs its "args" as chain steps inside the host, one chain per account.
 // Usage: DEMO_OK=1 bun scripts/swarm.ts [swarm.json]
-import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
+import { RESERVED_ACCOUNTS, SPECIALIST_BOARDS } from '../packages/core/src/specialist-boards';
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, renameSync, rmSync, statSync, writeFileSync, writeSync, createWriteStream } from 'node:fs';
 import { spawn as spawnChild } from 'node:child_process';
 import { join, resolve } from 'node:path';
@@ -431,6 +431,31 @@ export function currentLogout(request: any, proofs: RepairProofs): { ok: true; l
         if (!st || st.server !== request.server || typeof st.result !== 'string' || !st.result) return { ok: false, reason: 'status shows no finished session' };
         if (!Number.isFinite(st.at) || now - st.at < BOOTSTRAP_STATUS_AGE_MS) return { ok: false, reason: 'status changed in the last 15 minutes' };
         return { ok: true, label: `settled status at ${st.at}` };
+    }
+    if (p?.kind === 'unregistered-specialist') {
+        const key = request.account.toLowerCase();
+        if (!Object.hasOwn(SPECIALIST_BOARDS, key)) return { ok: false, reason: 'unregistered-specialist proof is reserved for specialist accounts' };
+        if (p.account !== key || typeof p.snapshotPath !== 'string' || !/^[a-f0-9]{64}$/.test(p.snapshotSha256 ?? '')
+            || !Number.isFinite(p.profileAt) || p.profileAt < request.endedAt)
+            return { ok: false, reason: 'invalid unregistered-specialist proof' };
+        let current: LogoutProof;
+        try { current = proofs.readProof(request.account, request.server); } catch { return { ok: false, reason: 'logout proof unavailable or recovery lease held' }; }
+        if (current.state !== 'none') return { ok: false, reason: `producer logout state is ${current.state}` };
+        let st: ReturnType<NonNullable<RepairProofs['status']>>;
+        try { st = proofs.status?.(request.account) ?? (key !== request.account ? proofs.status?.(key) : undefined); }
+        catch { return { ok: false, reason: 'status unreadable' }; }
+        if (st !== undefined) return { ok: false, reason: 'status file exists for specialist account' };
+        let raw: Buffer, snap: any;
+        try { raw = readFileSync(p.snapshotPath); snap = JSON.parse(raw.toString('utf8')); }
+        catch { return { ok: false, reason: 'specialist snapshot missing or malformed' }; }
+        if (createHash('sha256').update(raw).digest('hex') !== p.snapshotSha256)
+            return { ok: false, reason: 'specialist snapshot hash changed' };
+        const profiles = Array.isArray(snap?.profiles) ? snap.profiles.filter((x: any) => x?.name === key) : [];
+        const profile = profiles[0], now = proofs.now?.() ?? Date.now();
+        if (snap?.base !== 'https://rs-sdk-demo.fly.dev' || snap?.tickMs !== 400 || profiles.length !== 1 || profile?.status !== 404
+            || profile.at !== p.profileAt || profile.at > now || now - profile.at >= 3_600_000)
+            return { ok: false, reason: 'specialist snapshot lacks fresh 404 profile' };
+        return { ok: true, label: `unregistered specialist 404 at ${profile.at}` };
     }
     return { ok: false, reason: 'missing logout proof' };
 }
