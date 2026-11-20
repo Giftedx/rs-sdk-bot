@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795152813845-weequickie-mightyrod",
+ "account": "Mightyrod",
+ "partner": "WeeQuickie",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 3761,
+ "claim": "0d0890c4-df99-45bb-a533-c8a1723d33c9",
+ "count": 0,
+ "ok": false,
+ "at": 1795152879735,
+ "detail": "trade claimed"
+}

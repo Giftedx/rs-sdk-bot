@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795152813845-bigchopper-masterbaiter-runechainbody",
+ "account": "Bigchopper",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "154497b8-2fb5-48c1-94ad-75270716f721",
+ "count": 0,
+ "ok": false,
+ "at": 1795152883617,
+ "detail": "trade claimed"
+}
