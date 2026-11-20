@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795145456275,
+ "at": 1795146057187,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -317,22 +317,24 @@
    ]
   },
   {
-   "account": "Ballspinner",
-   "script": "scripts/goldfarm.ts",
+   "account": "YewGotWood",
+   "script": "scripts/generated/thieving60.ts",
    "args": [],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Thieving\":55}}"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
    "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "template": "thieving55",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "knight:2653,3300"
    ]
   },
   {

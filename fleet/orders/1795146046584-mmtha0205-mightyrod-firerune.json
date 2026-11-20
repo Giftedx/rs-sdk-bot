@@ -1,0 +1,22 @@
+{
+ "id": "1795146046584-mmtha0205-mightyrod-firerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmtha0205",
+ "to": "Mightyrod",
+ "item": "Fire rune",
+ "count": 1,
+ "start": 1795146046584,
+ "end": 1795148446584,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
