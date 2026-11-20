@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795195535703-fishandchips-pocketpool-eeb6aae8e4f982b2",
  "account": "FishAndChips",
  "partner": "PocketPool",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 6,
  "claim": "26d3ee53-a259-47ff-936f-4dec6d857972",
- "count": 0,
- "ok": false,
- "at": 1795195583897,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795195632167,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795195613371
+ },
+ "logout": {
+  "attemptId": "1795195583908-0000029816-0000000001",
+  "at": 1795195632157,
+  "sha256": "a10e7506dabf9be209bc33360ec121010cdfdb762dd60a78e972c749b6fbe3fd"
+ },
+ "screen": true
 }

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795195535417-mightyrod-trousersnake-516234593fcd1d64",
  "account": "Mightyrod",
  "partner": "TrouserSnake",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 2,
  "claim": "dacbca15-212b-4c40-aa20-84e7c235d85d",
- "count": 0,
- "ok": false,
- "at": 1795195574066,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795195644957,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795195626247
+ },
+ "logout": {
+  "attemptId": "1795195574156-0000008976-0000000001",
+  "at": 1795195644947,
+  "sha256": "0c320411f7dc824959b675e5ac30f88b9cf600714eddadc424c5caf522ddbed1"
+ },
+ "screen": true
 }
