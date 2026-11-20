@@ -1,0 +1,33 @@
+{
+ "id": "1795136180154-thefullmonty-bigchopper-ba96692ecad306d4",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TheFullMonty",
+ "to": "Bigchopper",
+ "item": "Mind rune",
+ "count": 41,
+ "start": 1795136180154,
+ "end": 1795137380154,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Chaos rune",
+   "count": 200
+  },
+  {
+   "item": "Air rune",
+   "count": 500
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,59 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795136180154-thefullmonty-bigchopper-ba96692ecad306d4",
+ "account": "Bigchopper",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 41,
+ "claim": "09249e4b-1b1a-4399-b654-840a41a80e1c",
+ "count": 41,
+ "ok": true,
+ "at": 1795136477278,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Chaos rune",
+   "requested": 200,
+   "count": 200,
+   "inventory": {
+    "before": 0,
+    "after": 200
+   },
+   "bank": {
+    "count": 200,
+    "at": 1795136476076
+   }
+  },
+  {
+   "item": "Air rune",
+   "requested": 500,
+   "count": 500,
+   "inventory": {
+    "before": 0,
+    "after": 500
+   },
+   "bank": {
+    "count": 500,
+    "at": 1795136476459
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 41
+ },
+ "bank": {
+  "count": 41,
+  "at": 1795136475725
+ },
+ "logout": {
+  "attemptId": "1795136460037-0000008988-0000000001",
+  "at": 1795136477199,
+  "sha256": "df586dfaa80b7bf44dbb6b514f11b03dfd384113b170a1733f4580348c324c16"
+ },
+ "screen": true
+}
