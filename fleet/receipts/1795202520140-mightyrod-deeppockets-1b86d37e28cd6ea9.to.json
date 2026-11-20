@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795202520140-mightyrod-deeppockets-1b86d37e28cd6ea9",
  "account": "Deeppockets",
  "partner": "Mightyrod",
@@ -10,15 +10,37 @@
  "item": "Lobster",
  "requested": 25,
  "claim": "a52aa3f6-6d6f-472d-aed5-0909ebaba816",
- "count": 0,
- "ok": false,
- "at": 1795202650552,
- "detail": "trade claimed",
+ "count": 25,
+ "ok": true,
+ "at": 1795202663842,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Law rune",
    "requested": 10,
-   "count": 0
+   "count": 10,
+   "inventory": {
+    "before": 0,
+    "after": 10
+   },
+   "bank": {
+    "count": 10,
+    "at": 1795202663090
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 25
+ },
+ "bank": {
+  "count": 25,
+  "at": 1795202662674
+ },
+ "logout": {
+  "attemptId": "1795202650635-0000016868-0000000001",
+  "at": 1795202663830,
+  "sha256": "b6c1196f017d14f0c195090765b5bfc93f994c4b8d5d40b77a0c4e2027b5c440"
+ },
+ "screen": true
 }
