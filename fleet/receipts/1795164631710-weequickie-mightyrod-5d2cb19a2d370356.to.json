@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795164631710-weequickie-mightyrod-5d2cb19a2d370356",
  "account": "Mightyrod",
  "partner": "WeeQuickie",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 50000,
  "claim": "42cf2277-48d0-4dee-98a9-3eff7fe447a3",
- "count": 0,
- "ok": false,
- "at": 1795164647640,
- "detail": "trade claimed"
+ "count": 50000,
+ "ok": true,
+ "at": 1795164660108,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 50000
+ },
+ "bank": {
+  "count": 50000,
+  "at": 1795164659285
+ },
+ "logout": {
+  "attemptId": "1795164647650-0000029656-0000000001",
+  "at": 1795164660022,
+  "sha256": "c3aee1fc41c0450bd8d15f8660c886629ad90f0d80f94b47fd7b9652150b266b"
+ },
+ "screen": true
 }
