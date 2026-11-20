@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795141304768-abracadickra-woodpecker",
  "account": "Woodpecker",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 182695,
  "claim": "d445d2fe-9b4c-4478-ae0e-c050bb4b5afb",
- "count": 0,
- "ok": false,
- "at": 1795141368040,
- "detail": "trade claimed"
+ "count": 182695,
+ "ok": true,
+ "at": 1795141497815,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 182695
+ },
+ "bank": {
+  "count": 182695,
+  "at": 1795141497062
+ },
+ "logout": {
+  "attemptId": "1795141368050-0000016944-0000000001",
+  "at": 1795141497795,
+  "sha256": "1a1a27b7f861ffb0be9538cfdb8970c7cc5788cfd61ef53998496a1006d87f97"
+ },
+ "screen": true
 }
