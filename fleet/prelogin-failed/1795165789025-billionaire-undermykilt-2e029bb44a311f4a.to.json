@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795165789025-billionaire-undermykilt-2e029bb44a311f4a",
+ "role": "to",
+ "account": "UnderMyKilt",
+ "partner": "Billionaire",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795166000679,
+ "detail": "Error: fleet trade: order receipt already exists"
+}
