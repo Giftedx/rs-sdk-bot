@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795165092686-mmthv2350-pocketpool-waterrune",
+ "role": "to",
+ "account": "PocketPool",
+ "partner": "mmthv2350",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795165216183,
+ "detail": "Error: fleet trade claim authority unavailable or changed: spawnSync git ETIMEDOUT"
+}

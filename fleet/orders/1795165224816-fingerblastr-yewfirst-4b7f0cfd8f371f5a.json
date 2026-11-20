@@ -1,0 +1,22 @@
+{
+ "id": "1795165224816-fingerblastr-yewfirst-4b7f0cfd8f371f5a",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingerblastr",
+ "to": "YewFirst",
+ "item": "Rune arrowtips",
+ "count": 275,
+ "start": 1795165224816,
+ "end": 1795166424816,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ]
+}
