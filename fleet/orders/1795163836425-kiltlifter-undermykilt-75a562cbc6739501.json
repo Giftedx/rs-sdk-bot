@@ -1,0 +1,32 @@
+{
+ "id": "1795163836425-kiltlifter-undermykilt-75a562cbc6739501",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Kiltlifter",
+ "to": "UnderMyKilt",
+ "item": "Coins",
+ "count": 10000,
+ "start": 1795163836425,
+ "end": 1795165336425,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Prayer potion(4)",
+   "count": 1
+  },
+  {
+   "item": "Dragon bones",
+   "count": 8
+  }
+ ]
+}
