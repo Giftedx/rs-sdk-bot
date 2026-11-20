@@ -1316,7 +1316,8 @@ try {
     // "Focus on increasing strength and stamina" (mm_daero.rs2:240-302): 35,000 Strength and Hitpoints, 20,000 Attack and
     // Defence base XP (x25).
     let questDone = false;
-    const offDone = addTick(() => { if (q.msgCount(/quest complete|completed the\s+'?monkey madness/i) > 0) questDone = true; });
+    const questMsg0 = q.msgCount(/quest complete|completed the\s+'?monkey madness/i);
+    const offDone = addTick(() => { if (q.msgCount(/quest complete|completed the\s+'?monkey madness/i) > questMsg0) questDone = true; });
     if (FROM < 160) {
         await treeTo(0);
         await talkChoose('narnode report', /^king narnode/i, () => -1, () => (questDone || q.sawText(/sign up for training|you had better sign up/i)) && !q.dialogOpen(), 120, NARNODE);

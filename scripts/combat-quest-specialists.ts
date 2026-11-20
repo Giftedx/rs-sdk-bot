@@ -955,7 +955,7 @@ export async function runMeleePvpSpecialist(
     };
 
     milestone('start');
-    await startAndExitTutorial(s, BURY_KEEP_IDS_MELEE, opts.stop);
+    await startAndExitTutorial(s, new Set(), opts.stop);
     milestone('tutorial');
 
     await receiveSupplyKit(s, opts.supplierName, kit, opts.stop);

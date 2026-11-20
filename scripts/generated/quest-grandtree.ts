@@ -55,7 +55,8 @@ let offDone: (() => void) | undefined, offWalk: (() => void) | undefined;
 try {
     const FROM = Number(process.env.GT_FROM ?? 0);
     let questDone = false;
-    offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+grand tree/i) > 0) questDone = true; });
+    const questMsg0 = q.msgCount(/quest complete|completed the\s+grand tree/i);
+    offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+grand tree/i) > questMsg0) questDone = true; });
     const prayers = (): any => q.st()?.prayers;
     const pfmOn = (): boolean => !!prayers()?.activePrayers?.[PFM];
     const points = (): number => prayers()?.prayerPoints ?? 0;
