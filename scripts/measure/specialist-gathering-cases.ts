@@ -1,3 +1,4 @@
+// Bench cases for the fresh-clock gathering specialists, with the helper in process and with an external supplier.
 import type { BenchCase } from './aio-bench-cases';
 import type { SaveConfig } from '../../packages/practice/src/presets';
 import { FLETCHING_SPECIALIST_SUPPLIES } from '../fletching-specialist';
@@ -80,4 +81,24 @@ export const SPECIALIST_GATHERING_CASES: BenchCase[] = [
         timeoutMs: 600_000,
         output: /\btotalTicks=(\d+)/,
     },
+];
+
+// The same four routes with the kit held by a separate supplier process (scripts/gathering-supplier.ts), as on the live server.
+const externalCase = (skill: string, supplies: Readonly<Record<number, number>>, output: RegExp): BenchCase => ({
+    key: `extra:specialist-${skill}`,
+    script: 'scripts/measure/specialist-bench.ts',
+    preset: 'fresh_lumbridge',
+    presetConfig: FRESH_TUTORIAL_START,
+    companions: [{ suffix: 's', preset: 'fresh_lumbridge', presetConfig: helperBesideLumbridge(supplies) }],
+    scriptArgs: ['{bot:s}', `scripts/${skill}-specialist.ts`, '--supplier-script=scripts/gathering-supplier.ts'],
+    pass: specialistPass,
+    timeoutMs: 600_000,
+    output,
+});
+
+export const SPECIALIST_GATHERING_EXTERNAL_CASES: BenchCase[] = [
+    externalCase('fletching', FLETCHING_SPECIALIST_SUPPLIES, /\bticks=(\d+)/),
+    externalCase('fishing', FISHING_SPECIALIST_SUPPLIES, /\bticks=(\d+)/),
+    externalCase('mining', MINING_SPECIALIST_SUPPLIES, /\bticks=(\d+)/),
+    externalCase('thieving', THIEVING_SPECIALIST_SUPPLIES, /\btotalTicks=(\d+)/),
 ];

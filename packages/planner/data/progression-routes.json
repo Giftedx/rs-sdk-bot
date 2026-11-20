@@ -1581,6 +1581,19 @@
    "description": "Deliver cooked food to thieving/combat workers"
   },
   {
+   "id": "logistics:gathering-supplier",
+   "category": "logistics",
+   "name": "gathering-supplier",
+   "script": "scripts/gathering-supplier.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [],
+   "description": "Hand a carried gathering kit to a fresh specialist in one Offer-All trade at the Lumbridge spawn"
+  },
+  {
    "id": "logistics:give-to-banker",
    "category": "logistics",
    "name": "give-to-banker",
@@ -90143,6 +90156,7 @@
     "logistics:supply-chain",
     "logistics:supply-holder",
     "logistics:specialist-supplier",
+    "logistics:gathering-supplier",
     "logistics:wine-stock",
     "logistics:supply-bootstrap",
     "logistics:fleet-trade",
@@ -90615,6 +90629,7 @@
     "logistics:supply-chain",
     "logistics:supply-holder",
     "logistics:specialist-supplier",
+    "logistics:gathering-supplier",
     "logistics:wine-stock",
     "logistics:supply-bootstrap",
     "logistics:fleet-trade",
@@ -91298,6 +91313,16 @@
    ],
    "routeIds": [
     "skiller:woodcutting:yews"
+   ]
+  },
+  {
+   "script": "scripts/gathering-supplier.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [],
+   "routeIds": [
+    "logistics:gathering-supplier"
    ]
   },
   {

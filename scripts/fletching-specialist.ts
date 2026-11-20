@@ -129,5 +129,5 @@ if (import.meta.main) {
         arm.close();
     }
 
-    await finish([helper, main], ok, detail);
+    await finish([helper, main].filter((s): s is NonNullable<typeof s> => !!s), ok, detail);
 }

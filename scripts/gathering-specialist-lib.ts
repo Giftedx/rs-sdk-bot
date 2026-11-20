@@ -1,3 +1,4 @@
+// Shared fast-trade, tutorial-skip, run-guarded walking and teleport helpers for the fresh-clock gathering specialists.
 import { openBot, settle, finish, logoutSession, closeWithin, countItems, randomEventsOf } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
@@ -150,11 +151,13 @@ export interface TradeHelperArm {
  * and hold one lockstep waiter so packets never miss a tick behind `main`.
  */
 export function startHelperTradeArm(
-    helper: Session,
+    helper: Session | undefined,
     mainName: string,
     stop: () => boolean,
     canRequest: () => boolean = () => true,
 ): TradeHelperArm {
+    // An external supplier process (scripts/gathering-supplier.ts) runs this arm on its own session.
+    if (!helper) return { close: () => {} };
     let done = false;
     let lastReqTick = -10;
     let lastOfferTick = -10;
@@ -235,7 +238,7 @@ export function startHelperTradeArm(
  */
 export async function receiveTradeFast(
     main: Session,
-    helper: Session,
+    helper: Session | undefined,
     expectedCounts: Readonly<Record<number, number>>,
     stop: () => boolean,
     existingArm?: TradeHelperArm,
@@ -246,6 +249,9 @@ export async function receiveTradeFast(
         expectedEntries.every(([id, minQty]) => itemQty(main, id) >= minQty);
     const uniqueSupplyCount = expectedEntries.length;
     const minUniqueOfferedBeforeAccept = Math.floor(uniqueSupplyCount / 5) * 5;
+    const supplierName = helper?.name ?? externalSupplierName();
+    if (!supplierName) throw Error('receiveTradeFast needs a helper session or SUPPLIER/PRACTICE_SUPPLIER');
+    const supplierLower = supplierName.toLowerCase();
 
     const arm = existingArm ?? startHelperTradeArm(helper, main.name, stop, () => true);
     let lastReqTick = -10;
@@ -262,11 +268,11 @@ export async function receiveTradeFast(
 
             if (!tMain.isOpen) {
                 if (t - lastReqTick >= 1) {
-                    const pHelpOnMain = main.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === helper.name.toLowerCase());
+                    const pHelpOnMain = main.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === supplierLower);
                     if (pHelpOnMain) {
                         lastReqTick = t;
                         await main.direct({ type: 'interactPlayer', playerIndex: pHelpOnMain.index, optionIndex: 4, reason: 'SDK' });
-                    } else {
+                    } else if (helper) {
                         const pPos = main.sdk.getState()?.player;
                         const hPos = helper.sdk.getState()?.player;
                         if (pPos && hPos && Math.max(Math.abs(pPos.worldX - hPos.worldX), Math.abs(pPos.worldZ - hPos.worldZ)) > 3) {
@@ -443,12 +449,23 @@ export async function sailBrimhavenToArdougne(s: Session, stop: () => boolean): 
     if (s.sdk.getState()?.player?.level !== 0) throw Error('Ardougne gangplank failed');
 }
 
+/** Name of the external supplier account (live or rehearsal), or undefined when the helper runs in this process. */
+export function externalSupplierName(env: Record<string, string | undefined> = process.env): string | undefined {
+    const name = (env.PRACTICE_SUPPLIER ?? env.SUPPLIER ?? '').trim();
+    return name || undefined;
+}
+
 export async function openHelperAndMain(
     mainName: string,
     helperName: string,
-): Promise<{ main: Session; helper: Session; stopped: () => boolean }> {
+): Promise<{ main: Session; helper: Session | undefined; stopped: () => boolean }> {
     let stopFlag = false;
     const stopCheck = () => stopFlag;
+    // An external SUPPLIER serves the trade from its own process, so this process runs the specialist alone.
+    if (externalSupplierName()) {
+        const main = await openBot(mainName, { onStop: async () => { stopFlag = true; } });
+        return { main, helper: undefined, stopped: stopCheck };
+    }
     // Open helper first so World slot order processes helper trade offers/accepts before main.
     const helper = await openBot(helperName, { onStop: async () => { stopFlag = true; } });
     const main = await openBot(mainName, { onStop: async () => { stopFlag = true; } });
@@ -471,7 +488,8 @@ export async function fleeRandomEventIfPresent(s: Session, returnTo: { x: number
     return !stop();
 }
 
-export async function settleHelper(helper: Session): Promise<void> {
+export async function settleHelper(helper: Session | undefined): Promise<void> {
+    if (!helper) return;
     await settle([helper], true, 'helper supplied specialist');
 }
 

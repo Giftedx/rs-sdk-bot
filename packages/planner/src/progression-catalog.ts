@@ -189,6 +189,7 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   }
  }
  if(script==='scripts/specialist-supplier.ts')return {kind:'service',objective:'stage or hand off specialist supply kit',units:1};
+ if(script==='scripts/gathering-supplier.ts')return {kind:'service',objective:'hand off gathering specialist supply kit',units:1};
  if(acceptedSkills.length)return trainingIntent(accept!.skills!);
  // Native GE counterparties have finite fixture work, admitted only on local practice.
  if(script==='packages/practice/src/ge-bulk-order-proof.ts'){

@@ -8,6 +8,7 @@ import {
     skipTutorialFast,
     dropTutorialJunk,
     startHelperTradeArm,
+    externalSupplierName,
     receiveTradeFast,
     settleHelper,
     rubTeleport,
@@ -67,10 +68,10 @@ if (import.meta.main) {
     let totalTicks = 0;
     const isStopped = () => stopFlag || existsSync(`.practice/stop-${account}`) || existsSync('.practice/stop-all') || totalTicks >= cap;
 
-    const helper = await openBot(helperName, { onStop: async () => { stopFlag = true; } });
+    const helper = externalSupplierName() ? undefined : await openBot(helperName, { onStop: async () => { stopFlag = true; } });
     const onUnexpectedEnd = async (sess: Session, detail: string) => {
         if (intentionalRelog) return;
-        await finish(helperSettled ? [sess] : [helper, sess], false, `unexpected end: ${detail}`);
+        await finish(helperSettled || !helper ? [sess] : [helper, sess], false, `unexpected end: ${detail}`);
     };
 
     let main = await openBot(account, {
@@ -210,5 +211,5 @@ if (import.meta.main) {
     }
 
     await helperDone;
-    await finish(helperSettled ? [main] : [helper, main], ok, detail);
+    await finish(helperSettled || !helper ? [main] : [helper, main], ok, detail);
 }

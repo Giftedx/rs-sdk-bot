@@ -13,7 +13,7 @@ import { CLONE_NAMES, cloneProfileName, cloneSpec, pooledProfile, type CloneMode
 import {carrierAltar, type CarrierAltarName} from '../rune-carrier-altar';
 import {PROGRESSION_BENCH_CASES} from './progression-bench-cases';
 import {SPECIALIST_RANGED_CASES} from './specialist-ranged-cases';
-import {SPECIALIST_GATHERING_CASES} from './specialist-gathering-cases';
+import {SPECIALIST_GATHERING_CASES, SPECIALIST_GATHERING_EXTERNAL_CASES} from './specialist-gathering-cases';
 import {questSweepElenaPreset} from '../../packages/practice/src/quest-sweep-proof';
 import {ATTACK_SPECIALIST_KIT} from '../specialist-supplier';
 
@@ -1947,6 +1947,7 @@ export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
   'logistics:give-to-banker': 'needs scripts/banker.ts running for the banker account',
   'logistics:take-from-banker': 'needs scripts/banker.ts running for the banker account',
   'logistics:supply-holder': 'serves trades from a specialist and a courier that other processes drive',
+  'logistics:gathering-supplier': 'serves trades from a specialist runner that another process drives; covered as companion in extra:specialist-<skill> gathering cases',
   'logistics:specialist-supplier': 'serves trades from a specialist runner that another process drives; covered as companion in extra:specialist-attack',
   'fighter:attack-specialist': 'needs scripts/specialist-supplier.ts running as a companion process; covered end-to-end in extra:specialist-attack',
   'quester:mode:hero-owned': 'needs an order file that names two owned accounts',
@@ -1967,7 +1968,7 @@ export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
 };
 
 export function benchCases(): BenchCase[] {
-  return [...ROUTE_CASES, ...questCases(), ...EXTRA_CASES, ...PROGRESSION_BENCH_CASES, ...SPECIALIST_RANGED_CASES, ...SPECIALIST_GATHERING_CASES];
+  return [...ROUTE_CASES, ...questCases(), ...EXTRA_CASES, ...PROGRESSION_BENCH_CASES, ...SPECIALIST_RANGED_CASES, ...SPECIALIST_GATHERING_CASES, ...SPECIALIST_GATHERING_EXTERNAL_CASES];
 }
 
 export function benchCoverage() {
