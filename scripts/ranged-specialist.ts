@@ -406,11 +406,22 @@ async function walkWaypoints(s: Session, pts: Point[], maxTicks: number, stop: S
         if (activeContinueDialog(s)) void s.sdk.sendClickDialog(0);
     });
     try {
-        const r = await walkPath(walker, pts, { maxTicks, stop, look: 20 });
+        const r = await walkPath(walker, pts, { maxTicks, stop, look: 12 });
         if (r.ok) return;
         const target = pts[pts.length - 1]!;
+        const tol = target.tol ?? 2;
         const p = posOf(s);
-        if (p && d8({ x: p.worldX, z: p.worldZ }, target) <= (target.tol ?? 2) + 1) return;
+        if (p && d8({ x: p.worldX, z: p.worldZ }, target) <= tol + 1) return;
+        // Retry locally before invoking global pathfinding so ground-walk slips avoid costly full-world searches.
+        if (p && p.level === 0 && d8({ x: p.worldX, z: p.worldZ }, target) <= 80) {
+            const retry = await walkPath(walker, [target], { maxTicks: Math.max(60, Math.floor(maxTicks / 2)), stop, look: 6 });
+            if (retry.ok) return;
+            const p2 = posOf(s);
+            if (p2 && d8({ x: p2.worldX, z: p2.worldZ }, target) <= tol + 1) return;
+            await s.bot.walkTo(target.x, target.z, Math.max(1, tol));
+            const p3 = posOf(s);
+            if (p3 && d8({ x: p3.worldX, z: p3.worldZ }, target) <= tol + 2) return;
+        }
         const world = await getWorld();
         const g = await goTo(s, world, { x: target.x, z: target.z, level: 0 }, accountOf(s), { legTimeoutTicks: Math.max(120, maxTicks) });
         if (!g.ok) throw Error(`walk failed (${label}): ${r.detail ?? g.detail ?? JSON.stringify(r)}`);
@@ -623,7 +634,10 @@ async function walkCwarsToLawgof(s: Session, stop: StopFn, label: string): Promi
         [
             { x: 2451, z: 3151, tol: 3 },
             { x: 2463, z: 3178, tol: 3 },
-            { x: 2476, z: 3197, tol: 3 },
+            { x: 2478, z: 3190, tol: 2 },
+        ],
+        [
+            { x: 2476, z: 3197, tol: 2 },
             { x: 2486, z: 3214, tol: 3 },
             { x: 2506, z: 3233, tol: 4 },
         ],
@@ -642,7 +656,7 @@ async function walkEdgevilleToSpiders(s: Session, spot: { x: number; z: number; 
     const legs: Point[] = [
         { x: 3100, z: 3559, tol: 4 },
         { x: 3161, z: 3631, tol: 4 },
-        { x: 3190, z: 3686, tol: 4 },
+        { x: 3188, z: 3686, tol: 4 },
         { x: 3217, z: 3740, tol: 4 },
         { x: spot.x, z: spot.z, tol: 0 },
     ];
