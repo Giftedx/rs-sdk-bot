@@ -1,0 +1,22 @@
+{
+ "id": "1795151013807-masterbaiter-bigchopper-runechainbody",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "Bigchopper",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795151013807,
+ "end": 1795153413807,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
