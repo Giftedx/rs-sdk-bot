@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795153413860-woodpecker-pickpockdick-runechainbody",
+ "account": "PickpockDick",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "705b04b7-36a7-4c6b-801b-d7443f6ad01a",
+ "count": 0,
+ "ok": false,
+ "at": 1795153484809,
+ "detail": "trade claimed"
+}

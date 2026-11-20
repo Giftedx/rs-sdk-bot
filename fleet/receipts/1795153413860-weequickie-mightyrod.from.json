@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795153413860-weequickie-mightyrod",
+ "account": "WeeQuickie",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 3761,
+ "claim": "f749bdfe-4bd9-4946-bea9-a252a9c05254",
+ "count": 3761,
+ "ok": true,
+ "at": 1795153513699,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 74267,
+  "after": 70506
+ },
+ "logout": {
+  "attemptId": "1795153496854-0000028264-0000000001",
+  "at": 1795153513688,
+  "sha256": "2ba2ed5299dc8809182369fddd667a8a8c5818b3835f82c37bb0f09502fa369a"
+ },
+ "screen": true
+}
