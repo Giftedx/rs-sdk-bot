@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795210343488,
+ "at": 1795210399895,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -315,8 +315,7 @@
     "BONE_ID": "536",
     "BONE_RESERVE": "6",
     "CAP": "4000",
-    "AUTOPILOT_ORDER": "19",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+    "AUTOPILOT_ORDER": "19"
    },
    "enabled": true,
    "standing": true,
