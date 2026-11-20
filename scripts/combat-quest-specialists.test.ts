@@ -1,8 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { validateSupplies } from '../packages/core/src/launch-evidence';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { intentForEntry } from '../packages/planner/src/progression-catalog';
+import { observedSupplies } from '../packages/practice/src/specialist-rehearsal';
+import { validateDelivery } from '../packages/router/src/delivery';
 import { FIGHTER_PROFILES } from './aio-fighter';
 import {
     DEFENCE_SPECIALIST_KIT,
@@ -31,6 +34,11 @@ import {
     tankPostPresetConfig,
     tankSupplierPresetConfig,
 } from './measure/specialist-combat-quests-cases';
+import {
+    hasExactKit as supplierHasExactKit,
+    resolveBaseId,
+    resolveSupplierKitPlan,
+} from './specialist-supplier';
 
 const ROOT = resolve(import.meta.dir, '..');
 
@@ -192,5 +200,74 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
         expect(intentForEntry('scripts/hp-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'hitpoints', targetLevel: 99 });
         expect(intentForEntry('scripts/strength-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'strength', targetLevel: 99 });
         expect(intentForEntry('scripts/defence-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'defence', targetLevel: 99 });
+    });
+
+    test('observedSupplies, validateSupplies, and validateDelivery round-trip for HP_SPECIALIST_KIT and hp-specialist task', () => {
+        const root = resolve(import.meta.dir, '..');
+        const items: { id: number; name: string }[] = JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8'));
+        const ledger = JSON.stringify({
+            tick: 100,
+            from: 'Moneyshot',
+            to: 'FullBlooded',
+            fromItems: HP_SPECIALIST_KIT.map(k => ({ id: k.id, count: k.count })),
+            toItems: [],
+        });
+        const observed = observedSupplies(ledger + '\n', 'fullblooded', items);
+        const expected = [...HP_SPECIALIST_KIT]
+            .map(k => ({ item: k.name, count: k.count, itemId: resolveBaseId(k.id) }))
+            .sort((a, b) => a.itemId - b.itemId);
+        expect(observed).toEqual(expected);
+
+        const now = 1_000_000;
+        const context = 'a'.repeat(64);
+        const bankItems = HP_SPECIALIST_KIT.map(k => ({ id: resolveBaseId(k.id), count: k.count }));
+        const refs = new Map<string, any>([
+            ['bank', { name: 'Moneyshot', server: 'rs-sdk-demo.fly.dev', bankAt: now - 1000, bank: bankItems }],
+            [
+                'delivery',
+                {
+                    ok: true,
+                    observed: true,
+                    server: 'rs-sdk-demo.fly.dev',
+                    from: 'Helper',
+                    to: 'Moneyshot',
+                    at: now - 2000,
+                    before: [],
+                    after: bankItems,
+                    items: bankItems,
+                },
+            ],
+        ]);
+        const manifest = {
+            version: 2,
+            context,
+            at: now - 1000,
+            allocations: observed.map(req => ({
+                item: req.item,
+                itemId: req.itemId,
+                count: req.count,
+                holder: 'Moneyshot',
+                recipient: 'fullblooded',
+                bank: { path: 'bank' },
+                delivery: { path: 'delivery' },
+            })),
+        };
+        expect(() => validateSupplies(manifest, context, observed, items, ['Helper', 'Moneyshot'], now, ref => refs.get(ref.path), 'fullblooded')).not.toThrow();
+        const task = JSON.parse(readFileSync(join(root, 'packages', 'router', 'tasks', 'hp-specialist.json'), 'utf8'));
+        expect(() => validateDelivery(task)).not.toThrow();
+    });
+
+    test('resolveSupplierKitPlan and supplierHasExactKit handle hitpoints noted items', () => {
+        const plan = resolveSupplierKitPlan('hitpoints');
+        expect(plan.name).toBe('hitpoints');
+        expect(resolveSupplierKitPlan('hp')).toEqual(plan);
+        expect(plan.legs.length).toBe(1);
+        expect(plan.combined).toEqual(HP_SPECIALIST_KIT);
+
+        const notedInv = HP_SPECIALIST_KIT.map(k => ({ id: k.id, baseId: resolveBaseId(k.id), count: k.count }));
+        expect(supplierHasExactKit(notedInv, HP_SPECIALIST_KIT)).toBe(true);
+
+        const unnotedInv = HP_SPECIALIST_KIT.map(k => ({ id: resolveBaseId(k.id), baseId: resolveBaseId(k.id), count: k.count }));
+        expect(supplierHasExactKit(unnotedInv, HP_SPECIALIST_KIT)).toBe(false);
     });
 });

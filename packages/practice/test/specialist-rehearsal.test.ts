@@ -45,6 +45,21 @@ test('reads gross incoming trade stock by exact item ID from both orientations',
     expect(() => observedSupplies(log + '\n{', 'fresh', catalog)).toThrow();
 });
 
+test('observedSupplies normalizes noted trade item IDs to base catalog IDs', () => {
+    const log = [
+        {tick: 40, from: 'helper', to: 'FullBlooded', fromItems: [{id: 2435, count: 6}, {id: 386, count: 16}], toItems: []},
+        {tick: 41, from: 'FullBlooded', to: 'helper', fromItems: [], toItems: [{id: 2434, count: 1}]},
+    ].map(row => JSON.stringify(row)).join('\n');
+    const catalog = [
+        {id: 385, name: 'Shark'},
+        {id: 2434, name: 'Prayer potion(4)'},
+    ];
+    expect(observedSupplies(log, 'fullblooded', catalog)).toEqual([
+        {item: 'Shark', count: 16, itemId: 385},
+        {item: 'Prayer potion(4)', count: 7, itemId: 2434},
+    ]);
+});
+
 test('specialist start refuses fixtures and partial qualification targets', () => {
     const spec: Segment = {id: 'ranged-full', start: {fresh: true}, script: 'scripts/ranged-starter.ts',
         plan: {ticks: 300, source: 'route model'}, expect: {skills: {Ranged: 99}}};

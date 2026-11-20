@@ -276,7 +276,7 @@ export function buildLegDeliveryReceipt(o: {
         at: o.at,
         before: o.before.map(i => ({ id: i.id, count: i.count })),
         after: o.after.map(i => ({ id: i.id, count: i.count })),
-        items: o.kit.map(k => ({ id: k.id, count: k.count })),
+        items: o.kit.map(k => ({ id: resolveBaseId(k.id), count: k.count })),
     };
 }
 
@@ -317,18 +317,24 @@ export function kitSlotTotal(kit: readonly KitSpecItem[] = ATTACK_SPECIALIST_KIT
     return kit.reduce((sum, item) => sum + (item.stackable ? 1 : item.count), 0);
 }
 
+const isNotedId = (id: number): boolean => resolveBaseId(id) !== id;
+
 export function countById(items: readonly { id: number; baseId?: number; count?: number }[], id: number): number {
+    const want = resolveBaseId(id);
     let total = 0;
     for (const item of items) {
-        if ((item.baseId ?? resolveBaseId(item.id)) === id) total += item.count ?? 0;
+        if ((item.baseId ?? resolveBaseId(item.id)) === want) total += item.count ?? 0;
     }
     return total;
 }
 
 export function hasExactKit(items: readonly { id: number; baseId?: number; count?: number }[], kit: readonly KitSpecItem[] = ATTACK_SPECIALIST_KIT): boolean {
-    const allowed = new Set(kit.map(k => k.id));
+    const allowed = new Set(kit.map(k => resolveBaseId(k.id)));
     if (items.some(i => !allowed.has(i.baseId ?? resolveBaseId(i.id)))) return false;
-    return kit.every(spec => countById(items, spec.id) === spec.count);
+    return kit.every(spec =>
+        countById(items, spec.id) === spec.count
+        && (!isNotedId(spec.id) || items.some(i => i.id === spec.id && (i.count ?? 0) >= spec.count)),
+    );
 }
 
 export function hasAtLeastKit(items: readonly { id: number; baseId?: number; count?: number }[], kit: readonly KitSpecItem[] = ATTACK_SPECIALIST_KIT): boolean {
@@ -413,13 +419,14 @@ export async function withdrawExactKit(s: Session, kit: readonly KitSpecItem[], 
     const obs = await openFreshBank(s);
     await depositAllInventory(s);
     for (const spec of kit) {
-        const bankRow = s.sdk.getState()?.bank?.items.find(i => i.id === spec.id);
+        const baseId = resolveBaseId(spec.id);
+        const bankRow = s.sdk.getState()?.bank?.items.find(i => i.id === spec.id || i.id === baseId);
         if (!bankRow || bankRow.count < spec.count) {
             await s.bot.closeBank().catch(() => {});
             throw Error(`missing bank stock for ${spec.name} (${spec.id}): need ${spec.count}, have ${bankRow?.count ?? 0}`);
         }
         const before = countById(s.sdk.getInventory(), spec.id);
-        const asNote = allowNoted && !spec.stackable && spec.count > 1;
+        const asNote = isNotedId(spec.id) || (allowNoted && !spec.stackable && spec.count > 1);
         const w = await s.bot.withdrawItem(bankRow, spec.count, { asNote });
         if (!w.success || !await waitUntil(s, () => countById(s.sdk.getInventory(), spec.id) === before + spec.count, { timeoutTicks: 12 })) {
             await s.bot.closeBank().catch(() => {});
@@ -719,7 +726,7 @@ export async function runStage(args: string[]): Promise<void> {
                 await withdrawExactKit(donorSession, leg.kit, bankTile, stop, allowNoted);
             }
             const giveList = leg.kit.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
-            const allowed = new Set(leg.kit.map(k => k.id));
+            const allowed = new Set(leg.kit.map(k => resolveBaseId(k.id)));
             const [served, given] = await Promise.all([
                 holderSession.bot.serveTrades({
                     from: exactNameRe(donor),
