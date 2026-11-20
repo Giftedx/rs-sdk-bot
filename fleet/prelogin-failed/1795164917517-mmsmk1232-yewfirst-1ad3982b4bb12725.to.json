@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795164917517-mmsmk1232-yewfirst-1ad3982b4bb12725",
+ "role": "to",
+ "account": "YewFirst",
+ "partner": "mmsmk1232",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795164939233,
+ "detail": "Error: fleet trade claim authority unavailable or changed: spawnSync git ETIMEDOUT"
+}
