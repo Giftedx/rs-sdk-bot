@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795201568269-pocketpython-tossthecaber",
+ "role": "from",
+ "account": "Pocketpython",
+ "partner": "TossTheCaber",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795201658818,
+ "detail": "Error: account plan writer waits for its existing owner"
+}

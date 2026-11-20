@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795201621890-mmthv2350-mightyrod-890c7791c6fcd9cb",
+ "account": "mmthv2350",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 60,
+ "claim": "171b6715-4789-4769-834f-369854668f93",
+ "count": 0,
+ "ok": false,
+ "at": 1795201659050,
+ "detail": "trade claimed"
+}
