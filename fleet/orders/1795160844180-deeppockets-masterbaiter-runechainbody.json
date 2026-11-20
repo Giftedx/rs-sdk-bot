@@ -1,0 +1,22 @@
+{
+ "id": "1795160844180-deeppockets-masterbaiter-runechainbody",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Deeppockets",
+ "to": "Masterbaiter",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795160844180,
+ "end": 1795163244180,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
