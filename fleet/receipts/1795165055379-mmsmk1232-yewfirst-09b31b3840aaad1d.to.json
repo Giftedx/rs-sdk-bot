@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795165055379-mmsmk1232-yewfirst-09b31b3840aaad1d",
  "account": "YewFirst",
  "partner": "mmsmk1232",
@@ -10,15 +10,37 @@
  "item": "Steel arrowtips",
  "requested": 135,
  "claim": "634b8e1c-6067-48c1-8729-24875ac762a3",
- "count": 0,
- "ok": false,
- "at": 1795165074150,
- "detail": "trade claimed",
+ "count": 135,
+ "ok": true,
+ "at": 1795165087192,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Mithril arrowtips",
    "requested": 189,
-   "count": 0
+   "count": 189,
+   "inventory": {
+    "before": 0,
+    "after": 189
+   },
+   "bank": {
+    "count": 189,
+    "at": 1795165086465
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 135
+ },
+ "bank": {
+  "count": 135,
+  "at": 1795165086055
+ },
+ "logout": {
+  "attemptId": "1795165074160-0000027796-0000000001",
+  "at": 1795165087179,
+  "sha256": "ace233b9099ff270311b0492a82a56efd0649f2e33233a9dddd451669958e4fd"
+ },
+ "screen": true
 }
