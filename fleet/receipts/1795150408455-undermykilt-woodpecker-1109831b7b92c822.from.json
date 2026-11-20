@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795150408455-undermykilt-woodpecker-1109831b7b92c822",
+ "account": "UnderMyKilt",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 300000,
+ "claim": "4a1b7b8d-e040-4916-8466-82b25e594c46",
+ "count": 0,
+ "ok": false,
+ "at": 1795150416569,
+ "detail": "trade claimed"
+}

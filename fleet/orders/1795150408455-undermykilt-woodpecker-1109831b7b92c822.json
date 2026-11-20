@@ -1,0 +1,23 @@
+{
+ "id": "1795150408455-undermykilt-woodpecker-1109831b7b92c822",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "UnderMyKilt",
+ "to": "Woodpecker",
+ "item": "Coins",
+ "count": 300000,
+ "start": 1795150408455,
+ "end": 1795151608455,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
