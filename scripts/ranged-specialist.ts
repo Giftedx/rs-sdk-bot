@@ -34,7 +34,7 @@ export interface KitSpecItem {
 
 export type RangedKitVariant = 'knives' | 'msb';
 
-// Exact 28 inventory slots for fresh-clock Ranged 1->99 with 2-tick knives, Black d'hide chaps, Dwarf Cannon, and jewellery teleports.
+// Exact 28 inventory slots for fresh-clock Ranged 1->99 with 2-tick knives, Dwarf Cannon, and jewellery teleports.
 export const RANGED_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
     { id: 6, name: 'Cannon base', count: 1, stackable: false },
@@ -46,11 +46,10 @@ export const RANGED_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
     { id: 863, name: 'Iron knife', count: 250, stackable: true },
     { id: 868, name: 'Rune knife', count: 2000, stackable: true },
-    { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
     { id: 2448, name: 'Superantipoison(4)', count: 1, stackable: false },
     { id: 2444, name: 'Ranging potion(4)', count: 1, stackable: false },
     { id: 3024, name: 'Super restore(4)', count: 4, stackable: false },
-    { id: 1897, name: 'Chocolate cake', count: 1, stackable: false },
+    { id: 1897, name: 'Chocolate cake', count: 2, stackable: false },
 ] as const;
 
 // Alternate 28 inventory slots swapping Rune knife + Black d'hide chaps for Magic shortbow + Rune arrows from level 50.
@@ -372,12 +371,11 @@ async function receiveSupplyKit(
 }
 
 async function serveBenchCompanion(
-    supplierName: string,
+    sup: Session,
     specialistName: string,
     kit: readonly KitSpecItem[],
     stop: StopFn,
 ): Promise<void> {
-    const sup = await openBot(supplierName, { onSessionEnd: async () => {}, onStop: async () => {} });
     try {
         await waitUntil(sup, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 });
         const giveList = kit.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
@@ -397,12 +395,22 @@ async function serveBenchCompanion(
             done = served.trades.some(t => t.success && kit.every(k => countById(t.gave, k.id) === k.count));
             if (!done) await waitTicks(sup, 1);
         }
-        if (!done) throw Error(`bench supplier ${supplierName} did not finish trade`);
+        if (!done) throw Error(`bench supplier did not finish trade for ${specialistName}`);
     } finally {
         await logoutSession(sup).catch(() => {});
         await closeWithin([sup], 3000).catch(() => {});
     }
 }
+
+const CWARS_TO_LAWGOF_PATH: Point[] = [
+    { x: 2451, z: 3151, tol: 3 },
+    { x: 2463, z: 3178, tol: 3 },
+    { x: 2476, z: 3197, tol: 3 },
+    { x: 2486, z: 3214, tol: 3 },
+    { x: 2506, z: 3233, tol: 3 },
+    { x: 2576, z: 3328, tol: 4 },
+    { x: LAWGOF.x, z: LAWGOF.z + 1, tol: 3 },
+];
 
 async function equipEarlyGearAndBuryBones(s: Session, variant: RangedKitVariant, stop: StopFn): Promise<void> {
     const inv = s.sdk.getInventory() as InvItem[];
@@ -440,10 +448,17 @@ async function walkEdgevilleToSpiders(s: Session, spot: { x: number; z: number; 
     ];
     for (let i = 0; i < legs.length && !stop(); i++) {
         const leg = legs[i]!;
-        // Activate Protect from Melee once approaching skeletons and poison spiders (z >= 3720).
+        const prayPts = s.sdk.getState()?.prayers?.prayerPoints ?? 0;
+        const basePray = skillInfo(s, 'Prayer').baseLevel;
+        if (shouldDrinkSuperRestore(prayPts, basePray)) {
+            const pot = (s.sdk.getInventory() as InvItem[]).find(it => ITEM_IDS.superRestore.includes(it.id));
+            if (pot && pot.slot !== undefined) {
+                await s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' });
+                await waitTicks(s, 2);
+            }
+        }
         if (leg.z >= 3750) await setProtectMelee(s, true, stop);
         await walkPath(walker, [leg], { maxTicks: 220, stop, look: 20 });
-        // Turn on protection immediately if attacked mid-walk.
         if (posOf(s)?.combat?.inCombat && !s.sdk.getState()?.prayers?.activePrayers?.[PROTECT_MELEE]) {
             await setProtectMelee(s, true, stop);
         }
@@ -468,32 +483,57 @@ async function runSpiderGrind(
     const cannonAt = (c: { x: number; z: number }) => findLoc(l => l.x === c.x && l.z === c.z && /cannon/i.test(l.name ?? ''));
     const countInv = (ids: readonly number[]) => countAnyId(inv(), ids);
 
-    // Ensure protection & poison immunity before setting up cannon.
+    // Ensure protection, prayer headroom, and poison immunity before setting up cannon.
+    const pray0 = st()?.prayers?.prayerPoints ?? 0;
+    const basePray0 = skillInfo(s, 'Prayer').baseLevel;
+    let restores = 0;
+    if (shouldDrinkSuperRestore(pray0, basePray0)) {
+        const rest0 = inv().find(i => ITEM_IDS.superRestore.includes(i.id));
+        if (rest0 && rest0.slot !== undefined) {
+            await s.direct({ type: 'useInventoryItem', slot: rest0.slot, optionIndex: 1, reason: 'SDK' });
+            restores++;
+            await waitTicks(s, 2);
+        }
+    }
     await setProtectMelee(s, true, stop);
     const glory = inv().find(i => ITEM_IDS.gloriesAll.includes(i.id));
     if (glory && !worn().some(w => w.slot === NECK_SLOT)) await equipItemFast(s, glory);
 
     const anti0 = inv().find(i => ITEM_IDS.antipoison.includes(i.id));
     let lastAnti = -999;
+    let antis = 0;
     if (anti0 && anti0.slot !== undefined) {
         await s.direct({ type: 'useInventoryItem', slot: anti0.slot, optionIndex: 1, reason: 'SDK' });
         lastAnti = s.tick();
-        await waitTicks(s, 1);
-    }
-
-    const rPot0 = inv().find(i => ITEM_IDS.rangingPot.includes(i.id));
-    let lastRPot = -999;
-    if (rPot0 && rPot0.slot !== undefined && shouldDrinkRanging(skillInfo(s, 'Ranged').baseLevel, skillInfo(s, 'Ranged').level, totalDoses(inv(), ITEM_IDS.rangingPot))) {
-        await s.direct({ type: 'useInventoryItem', slot: rPot0.slot, optionIndex: 1, reason: 'SDK' });
-        lastRPot = s.tick();
-        await waitTicks(s, 1);
+        antis++;
+        await waitTicks(s, 2);
     }
 
     // Turn auto-retaliate ON (Dwarf Cannon turned it off) and Rapid style ON (index 1).
     await s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
     await s.direct({ type: 'setCombatStyle', style: 1, reason: 'SDK' });
 
-    const cannon = await setupCannon(s, { centre: { x: spotCentre.x, z: spotCentre.z } });
+    let cannon: PlacedCannon | undefined;
+    for (let attempt = 0; attempt < 3 && !cannon && !stop(); attempt++) {
+        try {
+            cannon = await setupCannon(s, { centre: { x: spotCentre.x, z: spotCentre.z }, avoidOld: true });
+        } catch (err) {
+            if (attempt === 2) throw err;
+            await waitTicks(s, 2);
+        }
+    }
+    if (!cannon) throw Error('failed to setup cannon at spiders');
+
+    // Sip first Ranging potion dose after cannon setup clears any p_delay(1).
+    const rPot0 = inv().find(i => ITEM_IDS.rangingPot.includes(i.id));
+    let lastRPot = -999;
+    let rangePots = 0;
+    if (rPot0 && rPot0.slot !== undefined && shouldDrinkRanging(skillInfo(s, 'Ranged').baseLevel, skillInfo(s, 'Ranged').level, totalDoses(inv(), ITEM_IDS.rangingPot))) {
+        await s.direct({ type: 'useInventoryItem', slot: rPot0.slot, optionIndex: 1, reason: 'SDK' });
+        lastRPot = s.tick();
+        rangePots++;
+    }
+
     // Stand adjacent SW of cannon so reload takes zero walk ticks.
     const stand = { x: cannon.x, z: cannon.z - 1 };
     const combatT0 = s.tick();
@@ -502,9 +542,6 @@ async function runSpiderGrind(
     let refills = 0;
     let reloads = 0;
     let specials = 0;
-    let rangePots = rPot0 ? 1 : 0;
-    let restores = 0;
-    let antis = anti0 ? 1 : 0;
     let lastAttack = -99;
     let lastSpec = -99;
     let currentWeapon = worn().find(w => w.slot === WEAPON_SLOT)?.id;
@@ -724,8 +761,13 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
     const spotCentre = opts.spotCentre ?? SPIDERS_CENTRE;
     const root = resolve(import.meta.dir, '..');
     const serverHost = readServerHost(root, opts.bot);
-    const s = await openBot(opts.bot);
+    const benchSupName = (opts.benchSupplier || process.env.BENCH_SUPPLIER || '').trim();
+    const [s, benchSup] = await Promise.all([
+        openBot(opts.bot),
+        benchSupName ? openBot(benchSupName, { onSessionEnd: async () => {}, onStop: async () => {} }) : Promise.resolve(undefined),
+    ]);
     if (!serverHost) {
+        if (benchSup) { await logoutSession(benchSup).catch(() => {}); await closeWithin([benchSup], 3000).catch(() => {}); }
         await finish([s], false, `missing SERVER in bot.env for ${opts.bot}`);
         return;
     }
@@ -744,13 +786,10 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
     };
 
     try {
-        const supplierName = (opts.benchSupplier || opts.supplier || process.env.BENCH_SUPPLIER || process.env.PRACTICE_SUPPLIER || process.env.SUPPLIER || '').trim();
+        const supplierName = (benchSupName || opts.supplier || process.env.PRACTICE_SUPPLIER || process.env.SUPPLIER || '').trim();
         if (!supplierName) throw Error('missing SUPPLIER / PRACTICE_SUPPLIER / BENCH_SUPPLIER');
 
-        let companionTask: Promise<void> | undefined;
-        if (opts.benchSupplier || process.env.BENCH_SUPPLIER) {
-            companionTask = serveBenchCompanion(supplierName, opts.bot, kit, stop);
-        }
+        const companionTask = benchSup ? serveBenchCompanion(benchSup, opts.bot, kit, stop) : undefined;
 
         milestone('start', `variant=${variant}`);
         await leaveRuneStarter(s, stop);
@@ -770,12 +809,7 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
 
         await rubJewellery(s, ITEM_IDS.duelRings, /castle wars/i, CASTLE_WARS, 10, stop, 'castle wars 1');
         milestone('cwars1');
-        await walkWaypoints(s, [
-            { x: 2448, z: 3118, tol: 4 },
-            { x: 2494, z: 3225, tol: 4 },
-            { x: 2576, z: 3328, tol: 4 },
-            { x: LAWGOF.x, z: LAWGOF.z + 1, tol: 3 },
-        ], 320, stop, 'cwars to lawgof');
+        await walkWaypoints(s, CWARS_TO_LAWGOF_PATH, 320, stop, 'cwars to lawgof');
         milestone('lawgof_arrive');
 
         const dc = await runDwarfCannon({
@@ -789,12 +823,7 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
             },
             travelBackFromNulodion: async ({ s: qs, walk }) => {
                 await rubJewellery(qs, ITEM_IDS.duelRings, /castle wars/i, CASTLE_WARS, 10, stop, 'castle wars 2');
-                await walk('cwars back to commander', [
-                    { x: 2448, z: 3118, tol: 4 },
-                    { x: 2494, z: 3225, tol: 4 },
-                    { x: 2576, z: 3328, tol: 4 },
-                    { x: LAWGOF.x, z: LAWGOF.z + 1, tol: 3 },
-                ]);
+                await walk('cwars back to commander', CWARS_TO_LAWGOF_PATH);
             },
         });
         if (!dc.ok) throw Error(`Dwarf Cannon incomplete: ${dc.detail}`);
@@ -804,6 +833,8 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
         await dropItemsMatching(s, i => i.id === ITEM_IDS.toolkit || ITEM_IDS.duelRings.includes(i.id), stop, 'quest leftovers');
 
         await rubJewellery(s, ITEM_IDS.glories, /edgeville/i, EDGEVILLE, 10, stop, 'edgeville spiders');
+        const gloryEarly = (s.sdk.getInventory() as InvItem[]).find(i => ITEM_IDS.gloriesAll.includes(i.id));
+        if (gloryEarly) await equipItemFast(s, gloryEarly);
         milestone('edgeville');
 
         await walkEdgevilleToSpiders(s, spotCentre, stop);
