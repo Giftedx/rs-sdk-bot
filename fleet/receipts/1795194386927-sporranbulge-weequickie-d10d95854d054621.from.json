@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795194386927-sporranbulge-weequickie-d10d95854d054621",
+ "account": "SporranBulge",
+ "partner": "WeeQuickie",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 100000,
+ "claim": "80c174b4-cfb0-489e-8aee-6528b668bf20",
+ "count": 0,
+ "ok": false,
+ "at": 1795194423402,
+ "detail": "trade claimed"
+}
