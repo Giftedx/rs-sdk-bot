@@ -1,0 +1,22 @@
+{
+ "id": "1795164987820-bravehardon-undermykilt-82fac624682765f1",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "BraveHardon",
+ "to": "UnderMyKilt",
+ "item": "Antipoison(3)",
+ "count": 4,
+ "start": 1795164987820,
+ "end": 1795166487820,
+ "meet": [
+  {
+   "x": 3254,
+   "z": 3421,
+   "level": 0
+  },
+  {
+   "x": 3253,
+   "z": 3421,
+   "level": 0
+  }
+ ]
+}

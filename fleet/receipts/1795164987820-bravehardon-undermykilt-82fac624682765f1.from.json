@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795164987820-bravehardon-undermykilt-82fac624682765f1",
+ "account": "BraveHardon",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Antipoison(3)",
+ "requested": 4,
+ "claim": "426e4b36-bd66-4b0c-b78a-016a644c2f92",
+ "count": 4,
+ "ok": true,
+ "at": 1795165027213,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795165003254
+ },
+ "logout": {
+  "attemptId": "1795164997725-0000016584-0000000001",
+  "at": 1795165027200,
+  "sha256": "c1505ae1b455788bc87121a637bc152cfe9df74b38cc46f42737b9faf7e561c5"
+ },
+ "screen": true
+}

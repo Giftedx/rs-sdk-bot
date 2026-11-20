@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795164917517-mmsmk1232-yewfirst-1ad3982b4bb12725",
  "account": "mmsmk1232",
  "partner": "YewFirst",
@@ -12,13 +12,27 @@
  "claim": "d2b6cae4-5a44-4019-bafb-a066e66d9a78",
  "count": 0,
  "ok": false,
- "at": 1795164928048,
- "detail": "trade claimed",
+ "at": 1795164979259,
+ "detail": "Error: partner failed: no trade",
  "lines": [
   {
    "item": "Mithril arrowtips",
    "requested": 189,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 189,
+    "at": 1795164978456
+   }
   }
- ]
+ ],
+ "bank": {
+  "count": 135,
+  "at": 1795164977679
+ },
+ "logout": {
+  "attemptId": "1795164928058-0000012888-0000000001",
+  "at": 1795164979234,
+  "sha256": "93fb3a0067bd28dd47419399b12418abf0827e5930348f0a1c40eac879d2a038"
+ },
+ "screen": false
 }
