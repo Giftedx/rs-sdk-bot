@@ -1,0 +1,17 @@
+{
+ "id": "1795155449461-mmsmk1232-shaftsinker-f4297c7f530d1e14",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmsmk1232",
+ "to": "Shaftsinker",
+ "item": "Knife",
+ "count": 1,
+ "start": 1795155449461,
+ "end": 1795156649461,
+ "extra": [
+  {
+   "item": "Logs",
+   "count": 2
+  }
+ ],
+ "takerWaits": true
+}

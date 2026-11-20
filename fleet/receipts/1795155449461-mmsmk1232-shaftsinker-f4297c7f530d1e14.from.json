@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795155449461-mmsmk1232-shaftsinker-f4297c7f530d1e14",
+ "account": "mmsmk1232",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Knife",
+ "requested": 1,
+ "claim": "019a63fa-23b6-4885-ba00-c2511d3b28ae",
+ "count": 1,
+ "ok": true,
+ "at": 1795155485997,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Logs",
+   "requested": 2,
+   "count": 2,
+   "inventory": {
+    "before": 2,
+    "after": 0
+   },
+   "bank": {
+    "count": 2,
+    "at": 1795155469657
+   }
+  }
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795155468471
+ },
+ "logout": {
+  "attemptId": "1795155459868-0000011480-0000000001",
+  "at": 1795155485984,
+  "sha256": "79ba9c498b9e6bcd6ad3da1a9ed1dde36aba47d2a17d90c696fb4c90b5c3f851"
+ },
+ "screen": true
+}
