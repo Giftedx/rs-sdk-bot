@@ -7,6 +7,7 @@ import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { intentForEntry, loadProgressionCatalog } from '../packages/planner/src/progression-catalog';
 import { xpForLevel } from '../packages/planner/src/curve';
 import { observedSupplies } from '../packages/practice/src/specialist-rehearsal';
+import { selectItems } from './shop-buyer';
 import {
     assertSupplierAccount,
     chooseDesiredAmmo,
@@ -429,10 +430,11 @@ test('ranged-live-prep plans local Prayer potion brewing, decanting, and Thessal
     expect(mixed.totalDoses).toBe(18);
     expect(mixed.finalCounts).toEqual({ 1: 0, 2: 1, 3: 0, 4: 4 });
 
-    expect(buildLeatherBodyShopInvocation('Moneyshot')).toEqual({
+    const leatherInvocation = buildLeatherBodyShopInvocation('Moneyshot');
+    expect(leatherInvocation).toEqual({
         args: ['scripts/shop-buyer.ts', 'Moneyshot', 'data:clotheshop', '600'],
         env: {
-            ITEMS: '^leather body$',
+            ITEMS: 'leather body',
             STOCK_TARGET: '1',
             STOP_AT_TARGET: '1',
             MAX_ITEMS: '1',
@@ -444,6 +446,7 @@ test('ranged-live-prep plans local Prayer potion brewing, decanting, and Thessal
             BANK_AT: '1',
         },
     });
+    expect(selectItems([{ re: /^Leather body$/i }], leatherInvocation.env.ITEMS).map(i => i.re.source)).toEqual(['^Leather body$']);
 
     expect(parseRangedLivePrepArgs(['Moneyshot', '--mode=leather', '--bank=varrock_east', '--cap=800'])).toEqual({
         account: 'Moneyshot',

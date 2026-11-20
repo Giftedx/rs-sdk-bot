@@ -157,7 +157,7 @@ export function buildLeatherBodyShopInvocation(account: string, cap = 600): {
     return {
         args: ['scripts/shop-buyer.ts', account, 'data:clotheshop', String(cap)],
         env: {
-            ITEMS: '^leather body$',
+            ITEMS: 'leather body',
             STOCK_TARGET: '1',
             STOP_AT_TARGET: '1',
             MAX_ITEMS: '1',

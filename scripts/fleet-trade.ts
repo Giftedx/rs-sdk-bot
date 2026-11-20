@@ -7,7 +7,7 @@
 // Run it with STALL_TICKS=0, as scripts/fleet-agent.ts does: the wait for the partner is bounded by the order window,
 // and the session's idle guard would end it after 900 ticks.
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { openBot, finish, countItems } from '../packages/core/src/bot';
 import { leaveElementalWorkshop } from './elemental-exit';
 import { walkTarget } from './walk-to';
@@ -28,8 +28,8 @@ import { meetingTiles } from './coin-courier';
 import type { Session } from '../packages/core/src/inprocess';
 import type { TradeItem, TradeResult } from '../vendor/rs-sdk/sdk/types';
 import { withExecutionDeadline } from '../vendor/rs-sdk/sdk/execution-context';
-import { orderLines, validOrder, writeTradeReceipt, type Order, type Receipt, type TradeLine, type TradeReceipt, type TradeRole } from './fleet-trade-settlement';
-export { orderLines, validOrder, type Order, type Receipt } from './fleet-trade-settlement';
+import { clearPreloginFailure, orderLines, readPreloginFailure, validOrder, writePreloginFailure, writeTradeReceipt, type Order, type PreloginFailure, type Receipt, type TradeLine, type TradeReceipt, type TradeRole } from './fleet-trade-settlement';
+export { clearPreloginFailure, orderLines, readPreloginFailure, validOrder, writePreloginFailure, type Order, type PreloginFailure, type Receipt } from './fleet-trade-settlement';
 
 // Cancel post-login travel, banking and trade together. Receipt reconciliation and
 // logout belong to the caller, outside this scope; cancellation cannot undo a trade.
@@ -42,13 +42,15 @@ export async function runOrderWork<T>(order: Pick<Order, 'end'>, work: () => Pro
     return withExecutionDeadline(remaining, work, () => { throw Error('order window ended during work'); });
 }
 
-// The open order this account takes part in: in its window (or starting within `lead` ms) and with no receipt from it.
+// The open order this account takes part in: in its window (or starting within `lead` ms), with no receipt from
+// this role, and without a partner receipt that already closed the order as failed.
 export function pickOrder(orders: readonly Order[], receipts: readonly Receipt[], account: string, now: number, lead = 10 * 60_000): { order: Order; role: 'from' | 'to' } | null {
     const me = account.toLowerCase();
     for (const order of [...orders].sort((a, b) => a.start - b.start)) {
         const role = order.from.toLowerCase() === me ? 'from' : order.to.toLowerCase() === me ? 'to' : null;
         if (!role || now >= order.end || order.start - now > lead) continue;
-        if (receipts.some(r => r.id === order.id && r.role === role)) continue;
+        const other: TradeRole = role === 'from' ? 'to' : 'from';
+        if (receipts.some(r => r.id === order.id && (r.role === role || (r.role === other && r.version === 2 && r.state === 'failed')))) continue;
         return { order, role };
     }
     return null;
@@ -128,15 +130,14 @@ const requestRefusal = (result: TradeResult) => !result.success && !result.partn
     && ['player_not_found', 'no_response', 'busy'].includes(result.reason ?? '')
     && !result.gave.length && !result.received.length && !result.possiblyDropped?.length;
 
-// The partner's own receipt says its side failed: it will not come to the meet. Live: a taker that could not pay its
-// ferry fare failed at once, and its giver stood at the meet to the end of a 50-minute window; two such sessions,
-// started on the release before a rollout, also held back every new trade login until they ended. A receipt of this
-// machine's side is on disk at once, another side's after its next sync.
-export function partnerFailed(dir: string, order: Order, role: TradeRole): boolean {
+// The partner's own receipt or pre-login refusal says its side failed: it will not come to the meet.
+export function partnerFailed(dir: string, order: Order, role: TradeRole, preloginDir = join(dirname(dir), 'prelogin-failed')): boolean {
+    const other: TradeRole = role === 'from' ? 'to' : 'from';
     try {
-        const receipt = JSON.parse(readFileSync(join(dir, `${order.id}.${role === 'from' ? 'to' : 'from'}.json`), 'utf8'));
-        return receipt?.version === 2 && receipt.id === order.id && receipt.state === 'failed';
-    } catch { return false; }
+        const receipt = JSON.parse(readFileSync(join(dir, `${order.id}.${other}.json`), 'utf8'));
+        if (receipt?.version === 2 && receipt.id === order.id && receipt.state === 'failed') return true;
+    } catch { /* absent or unreadable */ }
+    return readPreloginFailure(preloginDir, order, other) !== null;
 }
 
 // An order with `takerWaits` keeps the receiver offline until the giver stands at the meet with every line out of its
@@ -354,7 +355,7 @@ export function fleetTradeRecord(dir: string, order: Order, account: string, arg
 if (import.meta.main) {
     const [account, onlyId] = process.argv.slice(2);
     if (!account) { console.log('RESULT fail usage: fleet-trade.ts <account> [order id]'); process.exit(2); }
-    const dir = FLEET_DIR(), receipts = join(dir, 'receipts');
+    const dir = FLEET_DIR(), receipts = join(dir, 'receipts'), preloginDir = join(dir, 'prelogin-failed');
     const orders = readJson(join(dir, 'orders')).filter(validOrder).filter(o => !onlyId || o.id === onlyId);
     const picked = pickOrder(orders, readJson(receipts), account, Date.now());
     if (!picked) { console.log(`RESULT ok fleet-trade no open order for ${account}`); process.exit(0); }
@@ -379,8 +380,11 @@ if (import.meta.main) {
     });
     while (Date.now() < order.start) await Bun.sleep(Math.min(5000, order.start - Date.now()));
     if (role === 'to' && order.takerWaits) {
-        const waited = await waitForGiver(order, { ready: () => existsSync(giverReadyFile(root, order.id)), failed: () => partnerFailed(receipts, order, role) });
+        const waited = await waitForGiver(order, { ready: () => existsSync(giverReadyFile(root, order.id)), failed: () => partnerFailed(receipts, order, role, preloginDir) });
         console.log(`FLEET_TAKER_WAIT ${order.id} ${waited}`);
+    }
+    if (partnerFailed(receipts, order, role, preloginDir)) {
+        await finish([], false, `fleet-trade ${order.id}: partner failed before login`);
     }
     const s = await openBot(account, {
         record: fleetTradeRecord(dir, order, account),
@@ -388,6 +392,7 @@ if (import.meta.main) {
             orderId: order.id, role,
             check: server => assertTradeAdmission(order, account, server, { receipts }),
             prepare: claim => {
+                clearPreloginFailure(preloginDir, order.id, role);
                 prepared = { version: 2, state: 'prepared', id: order.id, account, partner, role, side: claim.side, server: order.server,
                     item: order.item, requested: order.count, claim: claim.nonce, count: 0, ok: false, at: Date.now(), detail: 'trade claimed',
                     ...(order.extra ? { lines: order.extra.map(l => ({ item: l.item, requested: l.count, count: 0 })) } : {}) };
@@ -396,7 +401,15 @@ if (import.meta.main) {
         },
         onStop: (session, detail) => complete(session, false, detail),
         onSessionEnd: (session, detail) => complete(session, false, detail),
-    }).catch(e => finish([], false, `login: ${String(e)}`));
+    }).catch(e => {
+        if (!prepared) {
+            writePreloginFailure(preloginDir, {
+                version: 1, id: order.id, role, account, partner, server: order.server,
+                at: Date.now(), detail: String(e),
+            });
+        }
+        return finish([], false, `login: ${String(e)}`);
+    });
     let ok = false, detail: string;
     watchTradeScreen(s, progress);
     try {
@@ -452,7 +465,7 @@ if (import.meta.main) {
                 progress.uncertain = false;
             }
             if (role === 'from' && order.takerWaits) markGiverReady(root, order.id);
-            await performFleetTransfer(s, order, role, progress, { gone: () => partnerFailed(receipts, order, role) || releaseMoved() });
+            await performFleetTransfer(s, order, role, progress, { gone: () => partnerFailed(receipts, order, role, preloginDir) || releaseMoved() });
         });
         ok = true;
         detail = 'transfer observed';

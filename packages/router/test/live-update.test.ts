@@ -590,3 +590,64 @@ test('readCheckout flags a bunfig that adds a preload file that the target holds
         expect('bunfigPreloadOnly' in plain).toBe(plain.incoming.includes('bunfig.toml'));
     });
 }, 60_000);
+
+test('a fleet trade session does not hold an update when its partner failed pre-login admission without a receipt', () => {
+    scratch('rsbot-live-trade-deadlock-', dir => {
+        const now = 10_000_000, status = join(dir, '.practice', 'status');
+        const fleetDir = join(dir, '.practice', 'fleet-data', 'fleet');
+        const orders = join(fleetDir, 'orders'), receipts = join(fleetDir, 'receipts'), prelogin = join(fleetDir, 'prelogin-failed');
+        mkdirSync(status, { recursive: true });
+        mkdirSync(orders, { recursive: true });
+        mkdirSync(receipts, { recursive: true });
+        writeFileSync(join(dir, 'swarm.json'), JSON.stringify({ jobs: [] }));
+        writeFileSync(join(fleetDir, 'owners.json'), JSON.stringify({
+            accounts: {
+                Giver: { side: 'local', server: 'live' },
+                Taker: { side: 'local', server: 'live' },
+                CloudTaker: { side: 'cloud', server: 'live' },
+            },
+        }));
+        const trade = { id: 'o-hold', server: 'live', from: 'Giver', to: 'Taker', item: 'Nature rune', count: 344, start: now - 120_000, end: now + 1_800_000 };
+        writeFileSync(join(orders, 'o-hold.json'), JSON.stringify(trade));
+        writeFileSync(join(receipts, 'o-hold.from.json'), JSON.stringify({
+            version: 2, state: 'prepared', id: 'o-hold', account: 'Giver', partner: 'Taker', role: 'from',
+            side: 'local', server: 'live', item: 'Nature rune', requested: 344, claim: '12345678-1234-1234-1234-123456789012',
+            count: 0, ok: false, at: now - 60_000, detail: 'trade claimed',
+        }));
+        writeFileSync(join(status, 'Giver.json'), JSON.stringify({
+            name: 'Giver', server: 'live', at: now - 1000, started: now - 60_000,
+            workRevision: 'a'.repeat(64), workEntry: join(dir, 'scripts', 'fleet-trade.ts'),
+        }));
+        const closure = (entries: string[]) => entries.includes('scripts/fleet-trade.ts') ? ['scripts/fleet-trade.ts', 'packages/core/src/inprocess.ts'] : [];
+        // Healthy local partner (logout check passes): Giver holds the update.
+        expect(liveRuns(dir, 'live', closure, now, { fleetDir, side: 'local', checkLogout: () => {} })).toHaveLength(1);
+        // Partner fails liveLogoutRef pre-login without writing a failed receipt: Giver no longer holds the update.
+        expect(liveRuns(dir, 'live', closure, now, {
+            fleetDir, side: 'local', checkLogout: () => { throw Error('account logout is not confirmed: Taker ended stopped'); },
+        })).toEqual([]);
+        // Owner stop file on partner also releases the hold.
+        writeFileSync(join(dir, '.practice', 'stop-taker'), 'owner pause');
+        expect(liveRuns(dir, 'live', closure, now, { fleetDir, side: 'local', checkLogout: () => {} })).toEqual([]);
+        unlinkSync(join(dir, '.practice', 'stop-taker'));
+        // Active partner session (currently trading) keeps the hold even if checkLogout would throw.
+        writeFileSync(join(status, 'Taker.json'), JSON.stringify({
+            name: 'Taker', server: 'live', at: now - 1000, started: now - 30_000,
+            workRevision: 'a'.repeat(64), workEntry: join(dir, 'scripts', 'fleet-trade.ts'),
+        }));
+        expect(liveRuns(dir, 'live', closure, now, {
+            fleetDir, side: 'local', checkLogout: () => { throw Error('held while active'); },
+        }).map(r => r.name).sort()).toEqual(['Giver', 'Taker']);
+        unlinkSync(join(status, 'Taker.json'));
+        // Cross-side partner holds until prelogin-failed arrives via sync, then releases immediately.
+        writeFileSync(join(orders, 'o-hold.json'), JSON.stringify({ ...trade, to: 'CloudTaker' }));
+        expect(liveRuns(dir, 'live', closure, now, {
+            fleetDir, side: 'local', checkLogout: () => { throw Error('not on this side'); },
+        })).toHaveLength(1);
+        mkdirSync(prelogin, { recursive: true });
+        writeFileSync(join(prelogin, 'o-hold.to.json'), JSON.stringify({
+            version: 1, id: 'o-hold', role: 'to', account: 'CloudTaker', partner: 'Giver',
+            server: 'live', at: now - 5_000, detail: 'account logout is not confirmed',
+        }));
+        expect(liveRuns(dir, 'live', closure, now, { fleetDir, side: 'local', checkLogout: () => {} })).toEqual([]);
+    });
+});
