@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795158437955-woodpecker-sporrandip-airrune",
+ "account": "SporranDip",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 3,
+ "claim": "dd8088b1-6ac9-40f1-b82d-5e887a123318",
+ "count": 0,
+ "ok": false,
+ "at": 1795158559322,
+ "detail": "trade claimed"
+}

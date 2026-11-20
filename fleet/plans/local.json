@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795158502680,
+ "at": 1795158561336,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -274,25 +274,6 @@
    "goal": "buy 2 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
    "role": "supply",
    "template": "kit-buy:aio-blood-chest",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=6 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=mightyrod-kit3-385-0to6 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":6}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 6 Shark on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on rune arrows",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons-rune",
    "autopilot": "local",
    "resources": []
   },

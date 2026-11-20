@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795158437955-masterbaiter-dipstick-runechainbody",
+ "account": "Dipstick",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "c7403c2c-3543-4b55-810e-99194ee381bd",
+ "count": 1,
+ "ok": true,
+ "at": 1795158560313,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795158556019
+ },
+ "logout": {
+  "attemptId": "1795158534132-0000016972-0000000001",
+  "at": 1795158560298,
+  "sha256": "9dcd78b9e95ea228980bdc6eb4ba6cd3aae92abdd073fc57a1bac108460a2c25"
+ },
+ "screen": true
+}
