@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795189813673-pocketpython-hocuspokeus",
+ "account": "Pocketpython",
+ "partner": "Hocuspokeus",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 50513,
+ "claim": "01bd29a3-852a-4348-8a9a-9302a2a70d10",
+ "count": 0,
+ "ok": false,
+ "at": 1795192030116,
+ "detail": "trade claimed"
+}
