@@ -1,0 +1,22 @@
+{
+ "id": "1795160244169-bigchopper-shaftmaker-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "Shaftmaker",
+ "item": "Nature rune",
+ "count": 344,
+ "start": 1795160244169,
+ "end": 1795162644169,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
