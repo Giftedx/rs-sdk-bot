@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795140704762-sporrandip-pickpockdick-runechainbody",
+ "account": "PickpockDick",
+ "partner": "SporranDip",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "6f24f931-4564-4aff-9fb5-276f73dd22da",
+ "count": 0,
+ "ok": false,
+ "at": 1795140794823,
+ "detail": "trade claimed"
+}
