@@ -1,0 +1,23 @@
+{
+ "id": "1795136638325-deeppockets-bigchopper-9c3af1a8ada06aff",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Deeppockets",
+ "to": "Bigchopper",
+ "item": "Prayer potion(4)",
+ "count": 2,
+ "start": 1795136638325,
+ "end": 1795137838325,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

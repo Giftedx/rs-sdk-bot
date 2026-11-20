@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795136638325-deeppockets-bigchopper-9c3af1a8ada06aff",
+ "account": "Deeppockets",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 2,
+ "claim": "278dcb1d-208b-418f-a0e8-838171147daf",
+ "count": 0,
+ "ok": false,
+ "at": 1795136646692,
+ "detail": "trade claimed"
+}
