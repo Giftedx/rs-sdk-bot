@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795142554671-mightyrod-ballspinner-lawrune",
+ "account": "Mightyrod",
+ "partner": "Ballspinner",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 1,
+ "claim": "92326460-192a-453e-b7d7-6722dbc257d9",
+ "count": 0,
+ "ok": false,
+ "at": 1795142590721,
+ "detail": "trade claimed"
+}
