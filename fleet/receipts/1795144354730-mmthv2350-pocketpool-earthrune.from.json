@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795144354730-mmthv2350-pocketpool-earthrune",
+ "account": "mmthv2350",
+ "partner": "PocketPool",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 161,
+ "claim": "45a22317-9158-4da8-bd1c-9cd6226b7c76",
+ "count": 161,
+ "ok": true,
+ "at": 1795144480107,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 161,
+  "after": 0
+ },
+ "bank": {
+  "count": 161,
+  "at": 1795144460147
+ },
+ "logout": {
+  "attemptId": "1795144454576-0000006136-0000000001",
+  "at": 1795144480093,
+  "sha256": "0a647633e288d783edae6a006f6ff3fed6c157c5f91fe21a128a4e2a4df18086"
+ },
+ "screen": true
+}
