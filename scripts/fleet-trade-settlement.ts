@@ -1,4 +1,4 @@
-import { linkSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { renameRetry } from '../packages/core/src/status';
 
@@ -30,6 +30,42 @@ export type TradeReceipt = Omit<LegacyReceipt, 'version'> & {
     lines?: TradeLine[];
 };
 export type Receipt = LegacyReceipt | TradeReceipt;
+export type PreloginFailure = {
+    version: 1;
+    id: string;
+    role: TradeRole;
+    account: string;
+    partner: string;
+    server: string;
+    at: number;
+    detail: string;
+};
+
+export const preloginFailedFile = (dir: string, id: string, role: TradeRole): string => join(dir, `${id}.${role}.json`);
+
+export function writePreloginFailure(dir: string, failure: PreloginFailure): void {
+    mkdirSync(dir, { recursive: true });
+    const file = preloginFailedFile(dir, failure.id, failure.role), tmp = file + '.tmp-' + process.pid;
+    writeFileSync(tmp, JSON.stringify(failure, null, 1) + '\n', { flag: 'wx', flush: true });
+    try { renameRetry(tmp, file); } finally {
+        try { unlinkSync(tmp); }
+        catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    }
+}
+
+export function readPreloginFailure(dir: string, order: Order, role: TradeRole): PreloginFailure | null {
+    try {
+        const failure = JSON.parse(readFileSync(preloginFailedFile(dir, order.id, role), 'utf8'));
+        return failure?.version === 1 && failure.id === order.id && failure.role === role
+            && same(failure.account, order[role]) && same(failure.partner, order[role === 'from' ? 'to' : 'from'])
+            && same(failure.server, order.server) ? failure : null;
+    } catch { return null; }
+}
+
+export function clearPreloginFailure(dir: string, id: string, role: TradeRole): void {
+    try { unlinkSync(preloginFailedFile(dir, id, role)); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+}
 
 export function validOrder(o: any): o is Order {
     return !!o && typeof o.id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(o.id) && typeof o.server === 'string'

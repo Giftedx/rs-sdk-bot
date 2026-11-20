@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { assertTradeAdmission, fleetTradeOutcome, partnerFailed, performFleetTransfer, pickOrder, validOrder, watchTradeScreen, type Order, type Receipt } from './fleet-trade';
+import { assertTradeAdmission, clearPreloginFailure, fleetTradeOutcome, partnerFailed, performFleetTransfer, pickOrder, readPreloginFailure, validOrder, watchTradeScreen, writePreloginFailure, type Order, type Receipt } from './fleet-trade';
 import { beginSessionAttempt, readLogoutProof } from '../packages/core/src/session-lifecycle';
 import type { Session } from '../packages/core/src/inprocess';
 import { terminalTradeReceipt, windowClosures, writeTradeReceipt, type TradeReceipt } from './fleet-trade-settlement';
@@ -900,4 +900,31 @@ test('the live trade record maps each participant to the finite order, and the b
         expect(() => fleetTradeRecord(dir, o, 'Stranger', ['Stranger', o.id], {})).toThrow('is not in order');
         expect(() => fleetTradeRecord(dir, order({ id: 'no-such-order' }), 'Giver', ['Giver', 'no-such-order'], {})).toThrow('no order file');
     } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('a pre-login admission failure signals the partner without writing a failed receipt, and a failed partner closes pickOrder', () => {
+    const base = mkdtempSync(join(tmpdir(), 'fleet-trade-prelogin-'));
+    try {
+        const receipts = join(base, 'receipts'), prelogin = join(base, 'prelogin-failed');
+        mkdirSync(receipts, { recursive: true });
+        const trade = order({ id: 'o-prelogin' });
+        expect(partnerFailed(receipts, trade, 'from', prelogin)).toBe(false);
+        writePreloginFailure(prelogin, {
+            version: 1, id: trade.id, role: 'to', account: 'Taker', partner: 'Giver',
+            server: trade.server, at: 2000, detail: 'account logout is not confirmed: Taker ended stopped',
+        });
+        expect(readPreloginFailure(prelogin, trade, 'to')?.account).toBe('Taker');
+        expect(readPreloginFailure(prelogin, trade, 'from')).toBeNull();
+        expect(partnerFailed(receipts, trade, 'from', prelogin)).toBe(true);
+        expect(partnerFailed(receipts, trade, 'to', prelogin)).toBe(false);
+        // Sibling prelogin-failed lookup works with default arguments too.
+        expect(partnerFailed(receipts, trade, 'from')).toBe(true);
+        // Clearing on a successful retry removes the block.
+        clearPreloginFailure(prelogin, trade.id, 'to');
+        expect(partnerFailed(receipts, trade, 'from', prelogin)).toBe(false);
+        // Once the partner closes its side with a terminal failed receipt, pickOrder skips the dead order for the other party too.
+        const giverFailed = { ...claimedReceipt('from'), id: trade.id, state: 'failed' as const, detail: 'partner failed' };
+        expect(pickOrder([trade], [giverFailed], 'Taker', 2000)).toBeNull();
+        expect(pickOrder([trade], [claimedReceipt('from')], 'Taker', 2000)?.order.id).toBe(trade.id);
+    } finally { rmSync(base, { recursive: true, force: true }); }
 });

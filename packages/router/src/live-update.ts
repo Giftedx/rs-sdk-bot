@@ -41,7 +41,11 @@ import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { writeLiveUpdate, type LiveUpdateMark } from '../../core/src/live-reload';
+import { loadOwners, mySide, sideOf } from '../../core/src/fleet';
+import { liveLogoutRef } from '../../core/src/session-admission';
+import { readLogoutProof } from '../../core/src/session-lifecycle';
 import { releaseEntries, releaseFiles, runtimeTrees, standingAccounts, standingPeer, workerLaunchers, workerSourceRoots } from '../../core/src/worker-release';
+import { readPreloginFailure, validOrder, type Order, type TradeRole } from '../../../scripts/fleet-trade-settlement';
 import { patchNewFiles, patchState, type PatchState } from '../../../scripts/worktree-setup';
 
 // `mergedDelivery`: the local bytes are the snapshot of a coordinator delivery whose pull request merged (or had nothing
@@ -465,22 +469,86 @@ export function coordinatorHolds(root: string, workspace: (capability: string) =
     return { holds, heldFiles, qualifications };
 }
 
+export type LiveRunsOptions = {
+    fleetDir?: string;
+    side?: string;
+    checkLogout?: (account: string) => void;
+};
+
+function defaultTradeFleetDir(root: string): string | null {
+    for (const candidate of [join(root, '.practice', 'fleet-data', 'fleet'), join(root, 'fleet')]) {
+        if (existsSync(join(candidate, 'orders'))) return candidate;
+    }
+    return null;
+}
+
+function readJsonFile(file: string): any {
+    try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return null; }
+}
+
+// True when a trade session's partner already recorded a pre-login refusal or failed pre-login admission on this side
+// without writing a receipt: waiting for that partner deadlocks both the session and any pending live update.
+function tradePartnerBlocked(root: string, server: string, account: string, activeAccounts: ReadonlySet<string>, now: number, options?: LiveRunsOptions): boolean {
+    const fleetDir = options?.fleetDir ?? defaultTradeFleetDir(root);
+    const ordersDir = fleetDir ? join(fleetDir, 'orders') : null;
+    if (!fleetDir || !ordersDir || !existsSync(ordersDir)) return false;
+    const me = account.toLowerCase(), receiptsDir = join(fleetDir, 'receipts'), preloginDir = join(fleetDir, 'prelogin-failed');
+    const candidates: { order: Order; role: TradeRole; prepared: boolean }[] = [];
+    for (const file of readdirSync(ordersDir)) {
+        if (!file.endsWith('.json')) continue;
+        const order = readJsonFile(join(ordersDir, file));
+        if (!validOrder(order) || order.server.toLowerCase() !== server.toLowerCase() || now < order.start || now >= order.end) continue;
+        const role: TradeRole | null = order.from.toLowerCase() === me ? 'from' : order.to.toLowerCase() === me ? 'to' : null;
+        if (!role) continue;
+        const own = readJsonFile(join(receiptsDir, `${order.id}.${role}.json`));
+        if (own?.version === 2 && own.id === order.id && (own.state === 'settled' || own.state === 'failed')) continue;
+        candidates.push({ order, role, prepared: own?.version === 2 && own.id === order.id && own.state === 'prepared' });
+    }
+    candidates.sort((a, b) => Number(b.prepared) - Number(a.prepared) || a.order.start - b.order.start);
+    const active = candidates[0];
+    if (!active) return false;
+    const otherRole: TradeRole = active.role === 'from' ? 'to' : 'from', partner = active.order[otherRole];
+    const partnerReceipt = readJsonFile(join(receiptsDir, `${active.order.id}.${otherRole}.json`));
+    if (partnerReceipt?.version === 2 && partnerReceipt.id === active.order.id && partnerReceipt.state === 'failed') return true;
+    if (readPreloginFailure(preloginDir, active.order, otherRole) !== null) return true;
+    if (partnerReceipt || activeAccounts.has(partner.toLowerCase())) return false;
+    const owners = loadOwners(join(fleetDir, 'owners.json')), side = options?.side ?? mySide();
+    if (sideOf(partner, owners) !== side) return false;
+    const practice = join(root, '.practice');
+    if (['stop-swarm', `stop-${partner}`, `stop-${partner.toLowerCase()}`].some(name => existsSync(join(practice, name)))) return true;
+    const checkLogout = options?.checkLogout ?? ((name: string) => {
+        if (server === LIVE_SERVER) { liveLogoutRef(name, root, false, now); return; }
+        const proof = readLogoutProof(name, server, { root: join(practice, 'session-lifecycle') });
+        if (proof.state !== 'none' && proof.state !== 'confirmed') throw Error('account logout is not confirmed');
+    });
+    try { checkLogout(partner); return false; } catch { return true; }
+}
+
 // The unfinished live sessions that are not standing jobs, each with the files its entry loads. A standing job is
 // exempt from release equality, so an update never holds for it.
-export function liveRuns(root: string, server: string, closure: (entries: string[]) => string[], now = Date.now()): LiveRun[] {
+export function liveRuns(root: string, server: string, closure: (entries: string[]) => string[], now = Date.now(), options?: LiveRunsOptions): LiveRun[] {
     const dir = join(root, '.practice', 'status'), owners = standingAccounts(root), runs: LiveRun[] = [];
     if (!existsSync(dir)) return runs;
+    const rows: any[] = [];
     for (const file of readdirSync(dir)) {
         if (!file.endsWith('.json')) continue;
         let row: any; try { row = JSON.parse(readFileSync(join(dir, file), 'utf8')); } catch { continue; }
-        if (row?.server !== server || row.result || !Number.isFinite(row.at) || now - row.at >= LIVE_ROW_MS || standingPeer(row, owners)) continue;
+        if (row?.server !== server || row.result || !Number.isFinite(row.at) || now - row.at >= LIVE_ROW_MS) continue;
+        rows.push(row);
+    }
+    const activeAccounts = new Set(rows.map(row => String(row.name).toLowerCase()));
+    for (const row of rows) {
+        if (standingPeer(row, owners)) continue;
         // An entry as a path from the checkout root with forward slashes, the form of the changed files. The fleet agent
         // gives its trade workers the absolute path of scripts/fleet-trade.ts, and the closure of an absolute path is
         // empty: with that path a trade session at its meet holds no update, and the update ends its trade.
         const entries = releaseEntries(row.workEntry).map(entry => relative(resolve(root), resolve(root, entry)).replaceAll('\\', '/'));
         // A trade session ends with its order window (40 minutes, scripts/autopilot.ts). One that still writes its
-        // status TRADE_HOLD_MS after its start is stuck, and it does not hold the update.
-        if (entries.includes(TRADE_ENTRY) && Number.isFinite(row.started) && now - row.started >= TRADE_HOLD_MS) continue;
+        // status TRADE_HOLD_MS after its start, or whose partner failed pre-login without a receipt, does not hold the update.
+        if (entries.includes(TRADE_ENTRY) && (
+            Number.isFinite(row.started) && now - row.started >= TRADE_HOLD_MS
+            || tradePartnerBlocked(root, server, String(row.name), activeAccounts, now, options)
+        )) continue;
         const files = closure(entries);
         runs.push({ name: String(row.name), files, ...(entries.length && !files.length ? { unknown: true as const } : {}) });
     }
@@ -552,7 +620,8 @@ if (import.meta.main) {
         const inTheWay = shown ? patchCollisions(root, oldPatch, nextPatch) : [];
         const resets = shown !== null && !inTheWay.length;
         const vendorRelease = resets ? vendorReleaseFiles(oldPatch, nextPatch) : [];
-        const runs = () => liveRuns(root, LIVE_SERVER, releaseClosure(root));
+        const liveOpts: LiveRunsOptions | undefined = process.env.FLEET_DIR ? { fleetDir: resolve(process.env.FLEET_DIR) } : undefined;
+        const runs = () => liveRuns(root, LIVE_SERVER, releaseClosure(root), Date.now(), liveOpts);
         const plan = planUpdate({ ...checkout, vendorRelease, ...(checkout.behind ? { ...holds(), liveRuns: runs() } : { holds: [], heldFiles: [] }) });
         if (plan.action === 'none' && plan.reason === 'current') {
             // A current checkout. An SDK folder with no patch gets it: an apply discards nothing. It waits for the
