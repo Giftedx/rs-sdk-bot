@@ -5,7 +5,7 @@ import { planFletchingActionCounts, pickNextFletchTier, FLETCHING_SPECIALIST_SUP
 import { FISHING_SPECIALIST_SUPPLIES } from './fishing-specialist';
 import { MINING_SPECIALIST_SUPPLIES, remainingIronOresTo99, IRON_ORE_XP_25X } from './mining-specialist';
 import { THIEVING_SPECIALIST_SUPPLIES, THIEVING_PIZZAS, selectPickpocketTier } from './thieving-specialist';
-import { OBJ_GAMES_8, OBJ_PINEAPPLE_PIZZA, OBJ_SUPER_ENERGY_4 } from './gathering-specialist-lib';
+import { OBJ_PINEAPPLE_PIZZA, OBJ_SUPER_ENERGY_4 } from './gathering-specialist-lib';
 import { expandSupplyInventory, SPECIALIST_GATHERING_CASES } from './measure/specialist-gathering-cases';
 import { benchCases, benchCoverage } from './measure/aio-bench-cases';
 
@@ -42,16 +42,15 @@ describe('gathering specialists supply & progression plans', () => {
 
         expect(fletchSlots).toBe(7);
         expect(fishSlots).toBeLessThanOrEqual(14);
-        expect(mineSlots).toBe(21);
+        expect(mineSlots).toBe(20);
         expect(thieveSlots).toBe(28);
-        expect(MINING_SPECIALIST_SUPPLIES[OBJ_GAMES_8]).toBe(1);
         expect(MINING_SPECIALIST_SUPPLIES[OBJ_SUPER_ENERGY_4]).toBe(2);
         expect(THIEVING_PIZZAS).toBe(25);
         expect(THIEVING_SPECIALIST_SUPPLIES[OBJ_PINEAPPLE_PIZZA]).toBe(25);
-        // 18 tutorial slots -> main drops 0 (fletch), 10 (fish), 13 (mine), 18 (thieve).
+        // 18 tutorial slots -> main drops 0 (fletch), 10 (fish), 12 (mine), 18 (thieve).
         expect(28 - 18).toBeGreaterThanOrEqual(fletchSlots);
         expect(28 - (18 - 10) - fishSlots).toBeGreaterThanOrEqual(1);
-        expect(28 - (18 - 13) - mineSlots).toBeGreaterThanOrEqual(1);
+        expect(28 - (18 - 12) - mineSlots).toBeGreaterThanOrEqual(1);
         expect(28 - (18 - 18) - thieveSlots).toBeGreaterThanOrEqual(0);
     });
 

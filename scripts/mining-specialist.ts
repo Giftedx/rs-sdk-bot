@@ -20,7 +20,6 @@ import {
     OBJ_LOGS,
     OBJ_COINS,
     OBJ_GLORY_4,
-    OBJ_GAMES_8,
     OBJ_SUPER_ENERGY_4,
     ENERGY_POTION_IDS,
 } from './gathering-specialist-lib';
@@ -42,28 +41,8 @@ export const MINING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_IRON_ORE]: 2,
     [OBJ_COINS]: 150,
     [OBJ_GLORY_4]: 1,
-    [OBJ_GAMES_8]: 1,
     [OBJ_SUPER_ENERGY_4]: 2,
 };
-
-async function exitGamesRoomToBurthorpe(main: Awaited<ReturnType<typeof openHelperAndMain>>['main'], stop: () => boolean): Promise<void> {
-    let lastClickLvl = -1;
-    let lastClickAt = -10;
-    for (let i = 0; i < 30 && !stop(); i++) {
-        const p = main.sdk.getState()?.player;
-        if (!p) { await waitTicks(main, 1); continue; }
-        if (p.level === 0 && p.worldX >= 2890 && p.worldX <= 2910 && p.worldZ >= 3555 && p.worldZ <= 3575) return;
-        const targetLocId = p.level === 0 ? 4622 : 4627;
-        const loc = (main.sdk.getState()?.nearbyLocs ?? []).find(l => l.id === targetLocId);
-        if (loc && (lastClickLvl !== p.level || i - lastClickAt >= 5)) {
-            lastClickLvl = p.level;
-            lastClickAt = i;
-            await main.sdk.sendInteractLoc(loc.x, loc.z, loc.id, 1);
-        }
-        await waitTicks(main, 1);
-    }
-    throw Error('failed climbing Games Room stairs to Burthorpe');
-}
 
 export function remainingIronOresTo99(currentXp: number): number {
     return Math.max(0, Math.ceil((xpForLevel(99) - currentXp) / IRON_ORE_XP_25X));
@@ -137,22 +116,21 @@ if (import.meta.main) {
     const arm = startHelperTradeArm(helper, main.name, isStopped, () => readyForTrade);
     try {
         const tutTicks = await skipTutorialFast(main, isStopped);
-        await dropTutorialJunk(main, isStopped, 13);
+        await dropTutorialJunk(main, isStopped, 12);
         readyForTrade = true;
         const tradeTicks = await receiveTradeFast(main, helper, MINING_SPECIALIST_SUPPLIES, isStopped, arm);
         helperDone = settleHelper(helper).catch(err => {
             console.log(`WARN helper settle: ${String(err)}`);
         });
 
-        // Games necklace option 1 -> Burthorpe Games Room -> climb 2 stairs to (2899,3564) -> walk to Doric (135 tiles).
+        // Glory option 1 -> Edgeville (3087,3496), direct southern path around Ice Mountain to Doric (2952,3451).
         await rubTeleport(
             main,
-            [OBJ_GAMES_8],
+            MINING_GLORY_IDS,
             1,
-            p => p.level === 0 && p.worldX >= 2195 && p.worldX <= 2220 && p.worldZ >= 4925 && p.worldZ <= 4950,
+            p => p.worldX >= 3070 && p.worldX <= 3110 && p.worldZ >= 3480 && p.worldZ <= 3515,
             isStopped,
         );
-        await exitGamesRoomToBurthorpe(main, isStopped);
         await walkWaypointsSafe(
             main,
             [[2952, 3451, 2]],
