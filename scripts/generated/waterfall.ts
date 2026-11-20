@@ -647,11 +647,27 @@ try {
             }, ok, 8, 6);
         };
 
+        const walkKhazardDirect = async (label: string, pts: PathPoint[]) => {
+            const offPfm = s.onTick(() => {
+                const z = pos()?.worldZ ?? 0;
+                const wantPfm = z >= 3190 && z <= 3270;
+                if (wantPfm !== pfmOn() && (!wantPfm || (st()?.prayers?.prayerPoints ?? 0) > 0)) {
+                    void s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' });
+                }
+            });
+            try {
+                const r = await walkPath(mazeWalker, pts, { stop: () => died || T() > CAP || !!opts.stop?.() });
+                walkTicks += r.ticks;
+                const end = pts[pts.length - 1]!;
+                if (!r.ok && !near(end.x, end.z, end.tol ?? 2)) await fail(`walk ${label}: ${r.detail ?? 'incomplete'}`);
+            } finally {
+                offPfm();
+                await setPfm(false);
+            }
+        };
+
         if (opts.looseRailing) {
-            await setPfm(true);
-            await walkNoHunters('maze in entry direct', [[2561, 3242, 4], [2502, 3191, 1]]);
-            await setPfm(false);
-            await walkMazeLeg('maze in', 2533, 3156, 2);
+            await walkKhazardDirect('maze in direct', [{ x: 2561, z: 3242, tol: 4 }, { x: 2533, z: 3156, tol: 2 }]);
         } else {
             await walk('maze in entry', [[2502, 3191, 1]]);
             await walkMazeLeg('maze in', 2533, 3156, 2);
@@ -688,10 +704,7 @@ try {
         // 4. Glarial's tombstone: runes are refused in the tomb (quest_waterfall.rs2:70), so they wait on the ground
         // (300-tick drop timer). The pebble opens the tomb and sets 4.
         if (opts.looseRailing) {
-            await walkMazeLeg('maze out exit', 2502, 3191, 1);
-            await setPfm(true);
-            await walkNoHunters('maze out direct', [[2561, 3242, 4], [2557, 3444, 2]]);
-            await setPfm(false);
+            await walkKhazardDirect('maze out direct', [{ x: 2561, z: 3242, tol: 4 }, { x: 2557, z: 3444, tol: 2 }]);
         } else {
             await walkMazeLeg('maze out exit', 2502, 3191, 1);
             await walk('maze out', [[2557, 3444, 2]]);

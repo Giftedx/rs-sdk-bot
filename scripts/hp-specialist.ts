@@ -8,6 +8,7 @@ import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { agilityOptions, runAgility } from './agility-order';
 import {
     BURY_KEEP_IDS_HP,
+    HP_ANTIPOISON_ACCEPT_IDS,
     HP_SPECIALIST_KIT,
     PROTECT_MELEE_INDEX,
     SPECIALIST_TARGETS,
@@ -15,6 +16,7 @@ import {
     buryBonesTo43,
     CASTLE_WARS_BANK,
     closeBankClean,
+    countAntipoisonDoses,
     countById,
     d8,
     depositIds,
@@ -47,6 +49,27 @@ const GRAND_TREE_JUNK_IDS = [
     587, 588, 589, 783, 784, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794,
     562, 558, 555, 139, 141, 143, 175, 177, 179, 181, 183, 185, 229, 1985, 2434, 2446, 2448, 385,
 ];
+
+const ANTIPOISON_BANK_IDS = [2448, 2446, 175] as const;
+
+async function withdrawAntipoisonDoses(s: Session, minDoses: number, maxPots: number, stop: StopFn): Promise<void> {
+    let withdrawn = 0;
+    while (!stop() && withdrawn < maxPots && countAntipoisonDoses(s.sdk.getInventory()) < minDoses) {
+        const bankItems = s.sdk.getState()?.bank?.items ?? [];
+        const pick = ANTIPOISON_BANK_IDS
+            .map(id => bankItems.find(i => i.id === id && i.count > 0))
+            .find(Boolean);
+        if (!pick) break;
+        const dosePer = pick.id === 175 ? 3 : 4;
+        const needed = Math.ceil((minDoses - countAntipoisonDoses(s.sdk.getInventory())) / dosePer);
+        const take = Math.min(pick.count, maxPots - withdrawn, Math.max(1, needed));
+        await withdrawExactCount(s, pick.id, take, stop, pick.name ?? `Antipoison ${pick.id}`);
+        withdrawn += take;
+    }
+    if (countAntipoisonDoses(s.sdk.getInventory()) < minDoses) {
+        throw Error(`missing bank antipoison stock: need ${minDoses} doses, have ${countAntipoisonDoses(s.sdk.getInventory())}`);
+    }
+}
 
 async function rideSpiritTree(s: Session, treeTile: Point, choices: RegExp[], dest: Point, stop: StopFn): Promise<void> {
     if (d8({ x: posOf(s)?.worldX ?? 0, z: posOf(s)?.worldZ ?? 0 }, treeTile) > 4) {
@@ -247,7 +270,12 @@ async function main(): Promise<void> {
         await startAndExitTutorial(s, BURY_KEEP_IDS_HP, stop);
         milestone('tutorial');
 
-        await receiveSupplyKit(s, supplierName, HP_SPECIALIST_KIT, stop);
+        await receiveSupplyKit(s, supplierName, HP_SPECIALIST_KIT, stop, {
+            altSlots: new Map([[176, {
+                allowedIds: HP_ANTIPOISON_ACCEPT_IDS,
+                satisfied: items => countAntipoisonDoses(items) >= 8,
+            }]]),
+        });
         milestone('kit', `slots=${s.sdk.getInventory().length}`);
 
         await equipItemById(s, 1387, stop, 'Staff of fire');
@@ -261,7 +289,7 @@ async function main(): Promise<void> {
         await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, stop);
         await walkWaypoints(s, [{ x: CASTLE_WARS_BANK.x, z: CASTLE_WARS_BANK.z, tol: 1 }], 40, stop, 'castle wars bank 1');
         await openFreshBank(s, stop);
-        await depositIds(s, [1512, 2435, 386, 2358, 1760, 2449], stop);
+        await depositIds(s, [1512, 2435, 386, 2358, 1760, ...HP_ANTIPOISON_ACCEPT_IDS], stop);
         await withdrawExactCount(s, 385, 3, stop, 'Shark');
         await withdrawExactCount(s, 2434, 1, stop, 'Prayer potion(4)');
         await closeBankClean(s, stop);
@@ -284,7 +312,7 @@ async function main(): Promise<void> {
         await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, stop);
         await walkWaypoints(s, [{ x: CASTLE_WARS_BANK.x, z: CASTLE_WARS_BANK.z, tol: 1 }], 40, stop, 'castle wars bank');
         await openFreshBank(s, stop);
-        await depositIds(s, [1512, 2435, 386, 2358, 1760, 2449, 2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566, 2409, 2410, 2411, 2407, 1985, 139, 141, 143, 229, 385, 2434], stop);
+        await depositIds(s, [1512, 2435, 386, 2358, 1760, ...HP_ANTIPOISON_ACCEPT_IDS, 2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566, 2409, 2410, 2411, 2407, 1985, 139, 141, 143, 229, 385, 2434], stop);
         await withdrawExactCount(s, 1511, 6, stop, 'Logs');
         await withdrawExactCount(s, 2434, 2, stop, 'Prayer potion(4)');
         await withdrawExactCount(s, 385, 2, stop, 'Shark');
@@ -308,7 +336,6 @@ async function main(): Promise<void> {
         await openFreshBank(s, stop);
         await depositIds(s, [139, 141, 143, 229, 587, 588, 589, 1511, 385, 2434], stop);
         await withdrawExactCount(s, 2434, 3, stop, 'Prayer potion(4)');
-        await withdrawExactCount(s, 2448, 1, stop, 'Superantipoison(4)');
         await withdrawExactCount(s, 385, 3, stop, 'Shark');
         await closeBankClean(s, stop);
         await walkWaypoints(s, [{ x: 2466, z: 3495, tol: 1 }], 40, stop, 'grand tree bank to ladder 1');
@@ -324,9 +351,9 @@ async function main(): Promise<void> {
         await depositIds(s, GRAND_TREE_JUNK_IDS, stop);
         await withdrawExactCount(s, 2357, 1, stop, 'Gold bar');
         await withdrawExactCount(s, 1759, 1, stop, 'Ball of wool');
-        await withdrawExactCount(s, 2448, 1, stop, 'Superantipoison(4)');
+        await withdrawAntipoisonDoses(s, 8, 3, stop);
         await withdrawExactCount(s, 2434, 9, stop, 'Prayer potion(4)');
-        await withdrawExactCount(s, 385, 7, stop, 'Shark');
+        await withdrawExactCount(s, 385, 7, stop);
         await closeBankClean(s, stop);
         await walkWaypoints(s, [{ x: 2466, z: 3495, tol: 1 }], 40, stop, 'grand tree bank to ladder 2');
         await climbTreeLadder(s, 'down', 0, stop);
