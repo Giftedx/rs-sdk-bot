@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795135694334-sporrandip-masterbaiter-runechainbody",
  "account": "Masterbaiter",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "702cb459-0228-4a92-962e-84e8fb098445",
- "count": 0,
- "ok": false,
- "at": 1795135779956,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795135805702,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795135804906
+ },
+ "logout": {
+  "attemptId": "1795135779966-0000015268-0000000001",
+  "at": 1795135805669,
+  "sha256": "1c6682d28b8bfb38187c64ad4421627cd803bd4d88c77cf0918b2524d1c273d2"
+ },
+ "screen": true
 }
