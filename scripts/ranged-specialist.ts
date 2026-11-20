@@ -32,7 +32,7 @@ export interface KitSpecItem {
     readonly stackable: boolean;
 }
 
-export type RangedKitVariant = 'knives' | 'msb';
+export type RangedKitVariant = 'knives' | 'msb' | 'live';
 
 // Trade 1 at Lumbridge (28 slots): bones buried immediately (16 free slots left for Dwarf Cannon).
 export const RANGED_SPECIALIST_TRADE1: readonly KitSpecItem[] = [
@@ -82,6 +82,33 @@ export const RANGED_SPECIALIST_MSB_TRADE2: readonly KitSpecItem[] = [
     { id: 1897, name: 'Chocolate cake', count: 1, stackable: false },
 ] as const;
 
+// Live-stockable Trade 1 at Lumbridge (24 slots): uses locally stocked cannon/bones/pots/food + Lowe's shortbow/arrows.
+export const RANGED_SPECIALIST_LIVE_TRADE1: readonly KitSpecItem[] = [
+    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
+    { id: 6, name: 'Cannon base', count: 1, stackable: false },
+    { id: 8, name: 'Cannon stand', count: 1, stackable: false },
+    { id: 10, name: 'Cannon barrels', count: 1, stackable: false },
+    { id: 12, name: 'Cannon furnace', count: 1, stackable: false },
+    { id: 2, name: 'Cannonball', count: 1500, stackable: true },
+    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
+    { id: 841, name: 'Shortbow', count: 1, stackable: false },
+    { id: 884, name: 'Iron arrow', count: 300, stackable: true },
+    { id: 1129, name: 'Leather body', count: 1, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 1, stackable: false },
+    { id: 379, name: 'Lobster', count: 3, stackable: false },
+] as const;
+
+// Live-stockable Trade 2 at Edgeville (19 slots): MSB + Rune arrows, black d'hide chaps/vambs, Karamja Antipoison(3), Prayer pots.
+export const RANGED_SPECIALIST_LIVE_TRADE2: readonly KitSpecItem[] = [
+    { id: 861, name: 'Magic shortbow', count: 1, stackable: false },
+    { id: 892, name: 'Rune arrow', count: 1000, stackable: true },
+    { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
+    { id: 2491, name: 'Dragon vambraces', count: 1, stackable: false },
+    { id: 175, name: 'Antipoison(3)', count: 5, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 8, stackable: false },
+    { id: 379, name: 'Lobster', count: 2, stackable: false },
+] as const;
+
 function mergeKitSpecs(a: readonly KitSpecItem[], b: readonly KitSpecItem[]): readonly KitSpecItem[] {
     const order: KitSpecItem[] = [];
     const byId = new Map<number, KitSpecItem>();
@@ -104,14 +131,18 @@ export const RANGED_SPECIALIST_KIT: readonly KitSpecItem[] = mergeKitSpecs(RANGE
 
 export const RANGED_SPECIALIST_MSB_KIT: readonly KitSpecItem[] = mergeKitSpecs(RANGED_SPECIALIST_MSB_TRADE1, RANGED_SPECIALIST_MSB_TRADE2);
 
+export const RANGED_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = mergeKitSpecs(RANGED_SPECIALIST_LIVE_TRADE1, RANGED_SPECIALIST_LIVE_TRADE2);
+
 export function variantTrades(variant: RangedKitVariant = 'knives'): { trade1: readonly KitSpecItem[]; trade2: readonly KitSpecItem[] } {
-    return variant === 'msb'
-        ? { trade1: RANGED_SPECIALIST_MSB_TRADE1, trade2: RANGED_SPECIALIST_MSB_TRADE2 }
-        : { trade1: RANGED_SPECIALIST_TRADE1, trade2: RANGED_SPECIALIST_TRADE2 };
+    if (variant === 'msb') return { trade1: RANGED_SPECIALIST_MSB_TRADE1, trade2: RANGED_SPECIALIST_MSB_TRADE2 };
+    if (variant === 'live') return { trade1: RANGED_SPECIALIST_LIVE_TRADE1, trade2: RANGED_SPECIALIST_LIVE_TRADE2 };
+    return { trade1: RANGED_SPECIALIST_TRADE1, trade2: RANGED_SPECIALIST_TRADE2 };
 }
 
 export function variantKit(variant: RangedKitVariant = 'knives'): readonly KitSpecItem[] {
-    return variant === 'msb' ? RANGED_SPECIALIST_MSB_KIT : RANGED_SPECIALIST_KIT;
+    if (variant === 'msb') return RANGED_SPECIALIST_MSB_KIT;
+    if (variant === 'live') return RANGED_SPECIALIST_LIVE_KIT;
+    return RANGED_SPECIALIST_KIT;
 }
 
 export const LUMBRIDGE_HANDOFF = { x: 3222, z: 3222, level: 0 } as const;
@@ -119,6 +150,7 @@ export const SUPPLIER_STAND = { x: 3223, z: 3222, level: 0 } as const;
 export const EDGEVILLE_HANDOFF = { x: 3088, z: 3496, level: 0 } as const;
 export const EDGEVILLE_SUPPLIER_STAND = { x: 3089, z: 3496, level: 0 } as const;
 export const CASTLE_WARS = { x: 2440, z: 3089, level: 0 } as const;
+export const AL_KHARID = { x: 3315, z: 3235, level: 0 } as const;
 export const EDGEVILLE = { x: 3087, z: 3496, level: 0 } as const;
 export const LAWGOF = { x: 2571, z: 3463, level: 0 } as const;
 export const NULODION_DOOR = { x: 3015, z: 3453, level: 0 } as const;
@@ -132,6 +164,8 @@ export const ITEM_IDS = {
     cannonLocIds: [7, 8, 9, 6] as readonly number[],
     bones: 536,
     toolkit: 1,
+    shortbow: 841,
+    ironArrow: 884,
     ironKnife: 863,
     runeKnife: 868,
     msb: MSB,
@@ -144,11 +178,12 @@ export const ITEM_IDS = {
     duelRings: [2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566] as readonly number[],
     glories: [1712, 1710, 1708, 1706] as readonly number[],
     gloriesAll: [1712, 1710, 1708, 1706, 1704] as readonly number[],
-    antipoison: [2448, 181, 183, 185] as readonly number[],
+    superAntipoison: [2448, 181, 183, 185] as readonly number[],
+    antipoison: [2448, 181, 183, 185, 2446, 175, 177, 179] as readonly number[],
     rangingPot: [2444, 169, 171, 173] as readonly number[],
-    superRestore: [3024, 3026, 3028, 3030] as readonly number[],
+    superRestore: [3024, 3026, 3028, 3030, 2434, 139, 141, 143] as readonly number[],
     superEnergy: [3016, 3018, 3020, 3022] as readonly number[],
-    cake: [1897, 1899, 1901] as readonly number[],
+    cake: [1897, 1899, 1901, 379, 373, 385, 361, 329] as readonly number[],
     vial: 229,
 } as const;
 
@@ -223,7 +258,7 @@ export function chooseDesiredWeapon(
     variant: RangedKitVariant = 'knives',
 ): InvItem | undefined {
     const wornWeaponId = worn.find(w => w.slot === WEAPON_SLOT)?.id;
-    if (variant === 'msb' && rangedLevel >= 50) {
+    if ((variant === 'msb' || variant === 'live') && rangedLevel >= 50) {
         if (wornWeaponId === ITEM_IDS.msb) return undefined;
         return inv.find(i => i.id === ITEM_IDS.msb);
     }
@@ -231,8 +266,31 @@ export function chooseDesiredWeapon(
         if (wornWeaponId === ITEM_IDS.runeKnife) return undefined;
         return inv.find(i => i.id === ITEM_IDS.runeKnife);
     }
+    if (variant === 'live') {
+        if (wornWeaponId === ITEM_IDS.shortbow || wornWeaponId === ITEM_IDS.msb) return undefined;
+        return inv.find(i => i.id === ITEM_IDS.shortbow);
+    }
     if (wornWeaponId === ITEM_IDS.ironKnife || wornWeaponId === ITEM_IDS.runeKnife || wornWeaponId === ITEM_IDS.msb) return undefined;
     return inv.find(i => i.id === ITEM_IDS.ironKnife);
+}
+
+export function chooseDesiredAmmo(
+    rangedLevel: number,
+    inv: readonly InvItem[],
+    worn: readonly WornItem[],
+    variant: RangedKitVariant = 'knives',
+): InvItem | undefined {
+    if (variant === 'knives') return undefined;
+    const ammoId = worn.find(w => w.slot === AMMO_SLOT)?.id;
+    if (rangedLevel >= 50) {
+        if (ammoId === ITEM_IDS.runeArrow) return undefined;
+        return inv.find(i => i.id === ITEM_IDS.runeArrow);
+    }
+    if (variant === 'live') {
+        if (ammoId === ITEM_IDS.ironArrow) return undefined;
+        return inv.find(i => i.id === ITEM_IDS.ironArrow);
+    }
+    return undefined;
 }
 
 export function chooseDesiredChaps(rangedLevel: number, inv: readonly InvItem[], worn: readonly WornItem[]): InvItem | undefined {
@@ -267,7 +325,7 @@ export function isAdjacentToCannon(me: { x: number; z: number }, cannon: { x: nu
 
 export function weaponReach(worn: readonly WornItem[]): number {
     const w = worn.find(e => e.slot === WEAPON_SLOT)?.id;
-    return w === ITEM_IDS.msb ? 7 : 4;
+    return w === ITEM_IDS.msb || w === ITEM_IDS.shortbow ? 7 : 4;
 }
 
 // Schedule up to 8 Ranging potion doses across 1->99 so ranged level stays boosted continuously.
@@ -288,8 +346,8 @@ export function shouldDrinkSuperRestore(prayerPoints: number, basePrayer: number
     return prayerPoints <= Math.max(12, basePrayer - gain - 6);
 }
 
-export function shouldDrinkAntipoison(poisoned: boolean, ticksSinceDrink: number): boolean {
-    return poisoned || ticksSinceDrink >= 540;
+export function shouldDrinkAntipoison(poisoned: boolean, ticksSinceDrink: number, superImmune = true): boolean {
+    return poisoned || (superImmune && ticksSinceDrink >= 540);
 }
 
 function readServerHost(root: string, bot: string): string {
@@ -502,29 +560,46 @@ async function serveBenchCompanion(
     }
 }
 
-const CWARS_TO_LAWGOF_PATH: Point[] = [
-    { x: 2451, z: 3151, tol: 3 },
-    { x: 2463, z: 3178, tol: 3 },
-    { x: 2476, z: 3197, tol: 3 },
-    { x: 2486, z: 3214, tol: 3 },
-    { x: 2506, z: 3233, tol: 3 },
-    { x: 2576, z: 3328, tol: 4 },
-    { x: LAWGOF.x, z: LAWGOF.z + 1, tol: 3 },
+const AL_KHARID_TO_EDGEVILLE_PATH: Point[] = [
+    { x: 3293, z: 3296, tol: 5 },
+    { x: 3240, z: 3355, tol: 5 },
+    { x: 3212, z: 3424, tol: 6 },
+    { x: 3150, z: 3455, tol: 5 },
+    { x: EDGEVILLE_HANDOFF.x, z: EDGEVILLE_HANDOFF.z, tol: 2 },
+];
+
+const AL_KHARID_TO_NULODION_PATH: Point[] = [
+    { x: 3293, z: 3296, tol: 5 },
+    { x: 3240, z: 3355, tol: 5 },
+    { x: 3212, z: 3424, tol: 6 },
+    { x: 3150, z: 3450, tol: 5 },
+    { x: 3085, z: 3453, tol: 5 },
+    { x: NULODION_DOOR.x, z: NULODION_DOOR.z, tol: 1 },
 ];
 
 async function equipEarlyGearAndBuryBones(s: Session, variant: RangedKitVariant, stop: StopFn): Promise<void> {
     const inv = s.sdk.getInventory() as InvItem[];
-    const knife = inv.find(i => i.id === ITEM_IDS.ironKnife);
-    if (knife) {
-        await equipItemFast(s, knife);
-        await s.direct({ type: 'setCombatStyle', style: 1, reason: 'SDK' });
+    if (variant === 'live') {
+        const bow = inv.find(i => i.id === ITEM_IDS.shortbow);
+        if (bow) {
+            await equipItemFast(s, bow);
+            await s.direct({ type: 'setCombatStyle', style: 1, reason: 'SDK' });
+        }
+        const arrows = inv.find(i => i.id === ITEM_IDS.ironArrow);
+        if (arrows) await equipItemFast(s, arrows);
+    } else {
+        const knife = inv.find(i => i.id === ITEM_IDS.ironKnife);
+        if (knife) {
+            await equipItemFast(s, knife);
+            await s.direct({ type: 'setCombatStyle', style: 1, reason: 'SDK' });
+        }
+        if (variant === 'msb') {
+            const arrows = inv.find(i => i.id === ITEM_IDS.runeArrow);
+            if (arrows) await equipItemFast(s, arrows);
+        }
     }
     const body = inv.find(i => i.id === ITEM_IDS.leatherBody);
     if (body) await equipItemFast(s, body);
-    if (variant === 'msb') {
-        const arrows = inv.find(i => i.id === ITEM_IDS.runeArrow);
-        if (arrows) await equipItemFast(s, arrows);
-    }
     await waitTicks(s, 1);
 
     const deadline = s.tick() + 60;
@@ -916,12 +991,11 @@ async function runSpiderGrind(
             }
 
             const poisonedNow = poisonSeen() > poison0;
-            if (shouldDrinkAntipoison(poisonedNow, now - lastAnti)) {
-                const pot = inv().find(i => ITEM_IDS.antipoison.includes(i.id));
-                if (pot && pot.slot !== undefined) {
-                    const res = await sendDirect({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' });
-                    if (res.success) { poison0 = poisonSeen(); lastAnti = now; antis++; targetIdx = undefined; await waitTicks(s, 1); continue; }
-                }
+            const antiPot = inv().find(i => ITEM_IDS.antipoison.includes(i.id));
+            const hasSuperAnti = !!antiPot && ITEM_IDS.superAntipoison.includes(antiPot.id);
+            if (antiPot && antiPot.slot !== undefined && shouldDrinkAntipoison(poisonedNow, now - lastAnti, hasSuperAnti)) {
+                const res = await sendDirect({ type: 'useInventoryItem', slot: antiPot.slot, optionIndex: 1, reason: 'SDK' });
+                if (res.success) { poison0 = poisonSeen(); lastAnti = now; antis++; targetIdx = undefined; await waitTicks(s, 1); continue; }
             }
 
             if (now - lastRPot >= 12 && shouldDrinkRanging(r.baseLevel, r.level, totalDoses(inv(), ITEM_IDS.rangingPot))) {
@@ -932,13 +1006,22 @@ async function runSpiderGrind(
                 }
             }
 
-            // 3. Tier weapon and armor upgrades.
+            // 3. Tier weapon, ammo, and armor upgrades.
             const curWorn = worn();
             const wantWeapon = chooseDesiredWeapon(r.baseLevel, inv(), curWorn, variant);
             if (wantWeapon) {
                 await equipItemFast(s, wantWeapon);
                 await sendDirect({ type: 'setCombatStyle', style: 1, reason: 'SDK' });
                 currentWeapon = wantWeapon.id;
+                const upgradeAmmo = chooseDesiredAmmo(r.baseLevel, inv(), worn(), variant);
+                if (upgradeAmmo) await equipItemFast(s, upgradeAmmo);
+                targetIdx = undefined;
+                await waitTicks(s, 1);
+                continue;
+            }
+            const wantAmmo = chooseDesiredAmmo(r.baseLevel, inv(), curWorn, variant);
+            if (wantAmmo) {
+                await equipItemFast(s, wantAmmo);
                 targetIdx = undefined;
                 await waitTicks(s, 1);
                 continue;
@@ -1029,7 +1112,7 @@ async function runSpiderGrind(
                 fighting
                 && now - lastSpec >= 3
                 && specialDue({
-                    special: variant === 'msb',
+                    special: variant === 'msb' || variant === 'live',
                     weapon: currentWeapon,
                     energy: cvar(300),
                     enabled: cvar(301),
@@ -1167,7 +1250,12 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
             stop,
             travelToNulodion: async ({ s: qs }) => {
                 await topUpEnergy(qs, 85, stop);
-                await rubJewellery(qs, ITEM_IDS.glories, /edgeville/i, EDGEVILLE, 10, stop, 'edgeville nulodion');
+                if (variant === 'live') {
+                    await rubJewellery(qs, ITEM_IDS.duelRings, /al kharid/i, AL_KHARID, 20, stop, 'al kharid nulodion');
+                    await walkWaypoints(qs, AL_KHARID_TO_NULODION_PATH, 360, stop, 'ak to nulodion');
+                } else {
+                    await rubJewellery(qs, ITEM_IDS.glories, /edgeville/i, EDGEVILLE, 10, stop, 'edgeville nulodion');
+                }
             },
             travelBackFromNulodion: async ({ s: qs }) => {
                 await rubJewellery(qs, ITEM_IDS.duelRings, /castle wars/i, CASTLE_WARS, 10, stop, 'castle wars 2');
@@ -1177,9 +1265,14 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
         if (!dc.ok) throw Error(`Dwarf Cannon incomplete: ${dc.detail}`);
         milestone('dwarfcannon', `crafting=${dc.craftingXp}`);
 
-        await rubJewellery(s, ITEM_IDS.glories, /edgeville/i, EDGEVILLE, 10, stop, 'edgeville spiders');
-        const gloryEarly = (s.sdk.getInventory() as InvItem[]).find(i => ITEM_IDS.gloriesAll.includes(i.id));
-        if (gloryEarly) await equipItemFast(s, gloryEarly);
+        if (variant === 'live') {
+            await rubJewellery(s, ITEM_IDS.duelRings, /al kharid/i, AL_KHARID, 20, stop, 'al kharid edgeville');
+            await walkWaypoints(s, AL_KHARID_TO_EDGEVILLE_PATH, 320, stop, 'ak to edgeville');
+        } else {
+            await rubJewellery(s, ITEM_IDS.glories, /edgeville/i, EDGEVILLE, 10, stop, 'edgeville spiders');
+            const gloryEarly = (s.sdk.getInventory() as InvItem[]).find(i => ITEM_IDS.gloriesAll.includes(i.id));
+            if (gloryEarly) await equipItemFast(s, gloryEarly);
+        }
 
         await topUpEnergy(s, 95, stop);
 
@@ -1232,7 +1325,7 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
 
 export function parseSpecialistArgs(argv: readonly string[]): RangedSpecialistOptions {
     const bot = argv[0] ?? '';
-    if (!bot) throw Error('usage: ranged-specialist.ts <bot> [cap] [VARIANT=knives|msb] [BENCH_SUPPLIER=name] [SPOT_X=3287] [SPOT_Z=3810]');
+    if (!bot) throw Error('usage: ranged-specialist.ts <bot> [cap] [VARIANT=knives|msb|live] [BENCH_SUPPLIER=name] [SPOT_X=3287] [SPOT_Z=3810]');
     const kv = new Map<string, string>();
     let cap: number | undefined;
     for (const a of argv.slice(1)) {
@@ -1243,7 +1336,7 @@ export function parseSpecialistArgs(argv: readonly string[]): RangedSpecialistOp
         }
     }
     const variantRaw = kv.get('VARIANT') ?? process.env.VARIANT;
-    const variant: RangedKitVariant = variantRaw === 'msb' ? 'msb' : 'knives';
+    const variant: RangedKitVariant = variantRaw === 'msb' ? 'msb' : variantRaw === 'live' ? 'live' : 'knives';
     const sx = Number(kv.get('SPOT_X') ?? process.env.SPOT_X ?? SPIDERS_CENTRE.x);
     const sz = Number(kv.get('SPOT_Z') ?? process.env.SPOT_Z ?? SPIDERS_CENTRE.z);
     return {
