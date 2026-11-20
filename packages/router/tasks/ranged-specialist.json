@@ -5,11 +5,12 @@
   "files": [
     "scripts/ranged-specialist.ts",
     "scripts/ranged-specialist.test.ts",
+    "scripts/measure/specialist-ranged-cases.ts",
     "scripts/specialist-supplier.ts",
     "packages/practice/src/rehearse.ts",
     "packages/practice/test/specialist-rehearsal.test.ts"
   ],
-  "consumer": "Shaftshooter completes the continuous fresh-clock Ranged 99 specialist route from Tutorial Island within 5,483 ticks after receiving its staged supply kit.",
+  "consumer": "Shaftshooter completes the continuous fresh-clock Ranged 99 specialist route from Tutorial Island within 5,483 ticks after receiving its two-trade staged supply kit (including RANGED_SPECIALIST_LIVE_KIT / VARIANT=live).",
   "checks": [
     {
       "id": "ranged-specialist-regressions",
@@ -35,6 +36,19 @@
         "run",
         "bench",
         "fighter:ranged-specialist",
+        "--budget",
+        "10"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "id": "native-ranged-specialist-live",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "run",
+        "bench",
+        "^extra:ranged-specialist-live$",
         "--budget",
         "10"
       ],
