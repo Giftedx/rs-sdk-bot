@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795160244169-knightrider-deeppockets-shark",
+ "account": "KnightRider",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 6,
+ "claim": "454b1954-9f92-4ecb-9ad9-5c0a9f85a868",
+ "count": 0,
+ "ok": false,
+ "at": 1795160301233,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795160244169-masterbaiter-sporrandip-runechainbody",
+ "account": "SporranDip",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "6901159a-2954-4a0c-8db2-94e843632c73",
+ "count": 1,
+ "ok": true,
+ "at": 1795160309418,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795160308668
+ },
+ "logout": {
+  "attemptId": "1795160296806-0000005776-0000000001",
+  "at": 1795160309406,
+  "sha256": "c2b8d943918017945a052a6ef32f466b090b7f44830ca9403335b17293a94436"
+ },
+ "screen": true
+}
