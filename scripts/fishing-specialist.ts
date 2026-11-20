@@ -94,7 +94,7 @@ if (import.meta.main) {
                 isStopped,
             );
         } else {
-            await walkWaypointsSafe(main, [[3140, 3235, 4], [3028, 3221, 2]], isStopped);
+            await walkWaypointsSafe(main, [[3195, 3235, 4], [3095, 3248, 4], [3028, 3221, 2]], isStopped);
             await sailPortSarimToKaramja(main, isStopped);
         }
         await walkWaypointsSafe(main, [[2923, 3179, 2]], isStopped);

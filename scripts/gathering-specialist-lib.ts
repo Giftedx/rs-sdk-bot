@@ -26,6 +26,11 @@ export const OBJ_SUPER_ENERGY_4 = 3016;
 export const ENERGY_POTION_IDS = [3016, 3018, 3020, 3022] as const;
 export const OBJ_PINEAPPLE_PIZZA = 2301;
 export const OBJ_HALF_PINEAPPLE_PIZZA = 2303;
+export const OBJ_CAKE = 1891;
+export const OBJ_CAKE_2_3 = 1893;
+export const OBJ_CAKE_SLICE = 1895;
+export const OBJ_CHOCOLATE_SLICE = 1901;
+export const OBJ_BREAD = 2309;
 const MULTI2_OPT1_ID = 2461;
 
 export const CWARS_TO_ARDY_ZOO_WAYPOINTS: readonly [number, number, number][] = [
@@ -36,6 +41,16 @@ export const CWARS_TO_ARDY_ZOO_WAYPOINTS: readonly [number, number, number][] = 
     [2506, 3233, 4],
     [2555, 3234, 3],
     [2603, 3234, 1],
+];
+
+export const CWARS_TO_ARDY_MARKET_WAYPOINTS: readonly [number, number, number][] = [
+    [2451, 3151, 3],
+    [2463, 3178, 3],
+    [2476, 3197, 3],
+    [2486, 3214, 3],
+    [2506, 3233, 4],
+    [2598, 3235, 3],
+    [2621, 3293, 2],
 ];
 
 export const isLiveSupplyVariant = (
@@ -98,13 +113,17 @@ export async function eatPineapplePizza(s: Session): Promise<boolean> {
     return true;
 }
 
-/** Eat half/whole pineapple pizza or shark, returning true if an eat packet was sent. */
+/** Eat partial/whole healing food (pizza, cake slices, bread, or shark), returning true if an eat packet was sent. */
 export async function eatAnyFood(s: Session): Promise<boolean> {
     if (await eatPineapplePizza(s)) return true;
-    const shark = slotOfId(s, OBJ_SHARK);
-    if (shark === undefined) return false;
-    await s.direct({ type: 'useInventoryItem', slot: shark, optionIndex: 1, reason: 'SDK' });
-    return true;
+    for (const id of [OBJ_CAKE_SLICE, OBJ_CAKE_2_3, OBJ_CAKE, OBJ_CHOCOLATE_SLICE, OBJ_BREAD, OBJ_SHARK]) {
+        const slot = slotOfId(s, id);
+        if (slot !== undefined) {
+            await s.direct({ type: 'useInventoryItem', slot, optionIndex: 1, reason: 'SDK' });
+            return true;
+        }
+    }
+    return false;
 }
 
 /** Skip Tutorial Island in 2 ticks by chaining dialog continue + multi2:com_1 ("Yes please.") on tick 2. */

@@ -18,9 +18,9 @@ import {
     isLiveSupplyVariant,
     itemQty,
     chebDist,
-    CWARS_TO_ARDY_ZOO_WAYPOINTS,
+    CWARS_TO_ARDY_MARKET_WAYPOINTS,
     OBJ_COINS,
-    OBJ_SHARK,
+    OBJ_CAKE,
     OBJ_GLORY_4,
     OBJ_DUELING_8,
     RING_OF_DUELING_IDS,
@@ -32,6 +32,7 @@ import type { Session } from '../packages/core/src/inprocess';
 export const THIEVING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
 
 export const THIEVING_PIZZAS = 25;
+export const THIEVING_CAKES = 26;
 
 export const THIEVING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_GLORY_4]: 1,
@@ -43,7 +44,7 @@ export const THIEVING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
 // Live-stockable variant using local.json stock only (0 Glory, 0 Super energy, 0 Pineapple pizza).
 export const THIEVING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_DUELING_8]: 1,
-    [OBJ_SHARK]: THIEVING_PIZZAS,
+    [OBJ_CAKE]: THIEVING_CAKES,
 };
 
 export interface PickpocketTier {
@@ -143,7 +144,7 @@ if (import.meta.main) {
                 p => p.level === 0 && p.worldX >= 2430 && p.worldX <= 2455 && p.worldZ >= 3075 && p.worldZ <= 3105,
                 isStopped,
             );
-            await walkWaypointsSafe(main, [...CWARS_TO_ARDY_ZOO_WAYPOINTS, [2621, 3293, 2]], isStopped);
+            await walkWaypointsSafe(main, CWARS_TO_ARDY_MARKET_WAYPOINTS, isStopped);
         }
 
         const travelTicks = elapsedNow();
@@ -190,10 +191,21 @@ if (import.meta.main) {
                 continue;
             }
 
-            // Safety guard: never attempt a pickpocket while HP <= stunDamage. Wait a tick after eating so heal lands cleanly.
+            // Safety guard: never attempt a pickpocket while HP <= stunDamage. Steal emergency cakes in Ardougne Market if dry.
             if (st.player.hp <= tier.stunDamage) {
                 if (await eatAnyFood(main)) {
                     await waitTicks(main, 1);
+                    continue;
+                }
+                const freeSlots = 28 - st.inventory.length;
+                if (freeSlots > 0) {
+                    const stall = main.sdk.findNearbyLoc(/^baker's stall$/i);
+                    if (!stall || Math.max(Math.abs(stall.x - st.player.worldX), Math.abs(stall.z - st.player.worldZ)) > 2) {
+                        await main.bot.walkTo(2653, 3311, 2);
+                    } else {
+                        await main.bot.interactLoc(stall, 'Steal-from');
+                    }
+                    await waitTicks(main, 2);
                     continue;
                 }
             }

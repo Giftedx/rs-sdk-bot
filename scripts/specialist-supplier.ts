@@ -83,7 +83,7 @@ export const MINING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 3853, name: 'Games necklace(8)', count: 1, stackable: false },
 ] as const;
 
-// 17 inventory slots: live-stockable Mining kit using Ring of dueling(8) (0 Games necklace, 0 Glory, 0 Super energy).
+// 18 inventory slots: live Mining kit (0 Games necklace, 0 Super energy, 0 Coins) using 1 Glory(4) + Ring of dueling(8).
 export const MINING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = [
     { id: 434, name: 'Clay', count: 6, stackable: false },
     { id: 436, name: 'Copper ore', count: 4, stackable: false },
@@ -91,6 +91,7 @@ export const MINING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = [
     { id: 946, name: 'Knife', count: 1, stackable: false },
     { id: 1275, name: 'Rune pickaxe', count: 1, stackable: false },
     { id: 1511, name: 'Logs', count: 2, stackable: false },
+    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
 ] as const;
 
@@ -122,9 +123,9 @@ export const PRAYER_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(PRAYER_SU
 export const SMITHING_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(SMITHING_SUPPLY_BILL);
 export const RUNECRAFT_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(RUNECRAFT_SUPPLY_BILL);
 
-// 26 inventory slots: live-stockable Thieving kit using Ring of dueling(8) + 25 Sharks.
+// 27 inventory slots: live-stockable Thieving kit using Ring of dueling(8) + 26 Cakes (100% in local stock).
 export const THIEVING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = [
-    { id: 385, name: 'Shark', count: 25, stackable: false },
+    { id: 1891, name: 'Cake', count: 26, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
 ] as const;
 

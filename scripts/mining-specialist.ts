@@ -51,7 +51,7 @@ export const MINING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_SUPER_ENERGY_4]: 2,
 };
 
-// Live-stockable variant using local.json stock only (0 Games necklace, 0 Glory, 0 Super energy).
+// Live-stockable variant: 0 Games necklace, 0 Super energy, 0 Coins (uses 1 GE-available Glory(4) + local Ring of dueling(8)).
 export const MINING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_RUNE_PICKAXE]: 1,
     [OBJ_KNIFE]: 1,
@@ -59,6 +59,7 @@ export const MINING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>> =
     [OBJ_CLAY]: 6,
     [OBJ_COPPER_ORE]: 4,
     [OBJ_IRON_ORE]: 2,
+    [OBJ_GLORY_4]: 1,
     [OBJ_DUELING_8]: 1,
 };
 
@@ -180,6 +181,19 @@ if (import.meta.main) {
                 [[2952, 3451, 2]],
                 isStopped,
             );
+        } else if (MINING_GLORY_IDS.some(id => itemQty(main, id) > 0)) {
+            await rubTeleport(
+                main,
+                MINING_GLORY_IDS,
+                1,
+                p => p.worldX >= 3070 && p.worldX <= 3110 && p.worldZ >= 3480 && p.worldZ <= 3515,
+                isStopped,
+            );
+            await walkWaypointsSafe(
+                main,
+                [[3020, 3425, 4], [2952, 3451, 2]],
+                isStopped,
+            );
         } else {
             await walkWaypointsSafe(
                 main,
@@ -191,7 +205,16 @@ if (import.meta.main) {
         await completeDoricQuest(main, isStopped);
         const doricTicks = main.tick() - t0;
 
-        if (MINING_GLORY_IDS.some(id => itemQty(main, id) > 0)) {
+        if (RING_OF_DUELING_IDS.some(id => itemQty(main, id) > 0)) {
+            await rubTeleport(
+                main,
+                RING_OF_DUELING_IDS,
+                /castle wars/i,
+                p => p.level === 0 && p.worldX >= 2430 && p.worldX <= 2455 && p.worldZ >= 3075 && p.worldZ <= 3105,
+                isStopped,
+            );
+            await walkWaypointsSafe(main, CWARS_TO_ARDY_ZOO_WAYPOINTS, isStopped);
+        } else {
             // Glory option 2 -> Karamja -> Brimhaven boat -> Ardougne dock -> Ardougne Zoo 6-rock iron.
             await rubTeleport(
                 main,
@@ -207,15 +230,6 @@ if (import.meta.main) {
             );
             await sailBrimhavenToArdougne(main, isStopped);
             await walkWaypointsSafe(main, [[2603, 3234, 1]], isStopped);
-        } else {
-            await rubTeleport(
-                main,
-                RING_OF_DUELING_IDS,
-                /castle wars/i,
-                p => p.level === 0 && p.worldX >= 2430 && p.worldX <= 2455 && p.worldZ >= 3075 && p.worldZ <= 3105,
-                isStopped,
-            );
-            await walkWaypointsSafe(main, CWARS_TO_ARDY_ZOO_WAYPOINTS, isStopped);
         }
 
         const zooStart = main.tick() - t0;
