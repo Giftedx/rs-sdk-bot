@@ -48,6 +48,8 @@ export const GRAND_TREE_BANK = { x: 2449, z: 3482, level: 1 } as const;
 export const ARDY_NORTH_BANK = { x: 2619, z: 3332, level: 0 } as const;
 export const ARDY_LEVER = { x: 2561, z: 3311, level: 0 } as const;
 export const DESERTED_KEEP = { x: 3154, z: 3924, level: 0 } as const;
+export const KEEP_SPECIALIST_POST = { x: 3155, z: 3924, level: 0 } as const;
+export const KEEP_LEVER_TILE = { x: 3153, z: 3923, level: 0 } as const;
 
 export function configureSpecialistGuardEnv(): void {
     process.env.FLEE_GUARD = '0';
@@ -101,7 +103,7 @@ export function countAntipoisonDoses(items: readonly { id: number; baseId?: numb
     return doses;
 }
 
-// 28 slots exact: Waterfall (83 Atk/Str) + Super energy + Prayer/Shark + PvP pots; zero post-quest banking needed.
+// 28 slots exact: Waterfall (83 Atk/Str) + 8x Super energy for 100% run + Prayer/Shark; Keep PvP pots delivered at Keep.
 export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 556, name: 'Air rune', count: 6, stackable: true },
     { id: 557, name: 'Earth rune', count: 6, stackable: true },
@@ -110,16 +112,31 @@ export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 954, name: 'Rope', count: 1, stackable: false },
-    { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 1, stackable: false },
     { id: 385, name: 'Shark', count: 1, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 1, stackable: false },
-    { id: 2436, name: 'Super attack(4)', count: 1, stackable: false },
-    { id: 2440, name: 'Super strength(4)', count: 5, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 8, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
 
 export const STRENGTH_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
 export const DEFENCE_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
+
+export const STRENGTH_KEEP_KIT: readonly KitSpecItem[] = [
+    { id: 2440, name: 'Super strength(4)', count: 5, stackable: false },
+    { id: 2436, name: 'Super attack(4)', count: 1, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 1, stackable: false },
+] as const;
+
+export const DEFENCE_KEEP_KIT: readonly KitSpecItem[] = [
+    { id: 2440, name: 'Super strength(4)', count: 9, stackable: false },
+    { id: 2436, name: 'Super attack(4)', count: 1, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 1, stackable: false },
+] as const;
+
+export const KEEP_TOPUP_BY_BOARD: Readonly<Record<'strength' | 'defence', readonly KitSpecItem[]>> = {
+    strength: STRENGTH_KEEP_KIT,
+    defence: DEFENCE_KEEP_KIT,
+};
 
 export const KIT_BY_BOARD: Readonly<Record<'hitpoints' | 'strength' | 'defence', readonly KitSpecItem[]>> = {
     hitpoints: HP_SPECIALIST_KIT,
@@ -343,7 +360,7 @@ export async function startAndExitTutorial(s: Session, keepIds: ReadonlySet<numb
         if (junk.length === 0) return;
         if (s.tick() >= deadline) throw Error(`failed to drop starter items: ${junk.map(i => i.id).join(',')}`);
         await dismissContinueDialogs(s, stop, 2);
-        const batch = junk.slice(0, 4);
+        const batch = junk.slice(0, 5);
         await Promise.all(batch.map(i => s.direct({ type: 'dropItem', slot: i.slot, reason: 'SDK' })));
         await waitTicks(s, 1);
     }
@@ -351,6 +368,8 @@ export async function startAndExitTutorial(s: Session, keepIds: ReadonlySet<numb
 
 export interface ReceiveSupplyKitOpts {
     altSlots?: ReadonlyMap<number, { allowedIds: readonly number[]; satisfied: (items: readonly { id: number; baseId?: number; count?: number }[]) => boolean }>;
+    skipWalk?: boolean;
+    timeoutTicks?: number;
 }
 
 export async function receiveSupplyKit(
@@ -360,9 +379,11 @@ export async function receiveSupplyKit(
     stop: StopFn,
     opts: ReceiveSupplyKitOpts = {},
 ): Promise<void> {
-    const p0 = posOf(s);
-    if (!p0 || d8({ x: p0.worldX, z: p0.worldZ }, LUMBRIDGE_HANDOFF) > 2) {
-        await walkWaypoints(s, [{ ...LUMBRIDGE_HANDOFF, tol: 2 }], 80, stop, 'lumbridge handoff');
+    if (!opts.skipWalk) {
+        const p0 = posOf(s);
+        if (!p0 || d8({ x: p0.worldX, z: p0.worldZ }, LUMBRIDGE_HANDOFF) > 2) {
+            await walkWaypoints(s, [{ ...LUMBRIDGE_HANDOFF, tol: 2 }], 80, stop, 'lumbridge handoff');
+        }
     }
     const peerRe = exactNameRe(supplierName);
     const allowed = new Set(kit.map(k => k.id));
@@ -380,7 +401,7 @@ export async function receiveSupplyKit(
             const alt = opts.altSlots?.get(k.id);
             return alt ? alt.satisfied(offer) : countById(offer, k.id) === k.count;
         });
-    const deadline = s.tick() + 180;
+    const deadline = s.tick() + (opts.timeoutTicks ?? 180);
     while (!stop() && !satisfied(s.sdk.getInventory())) {
         if (s.tick() >= deadline) throw Error(`did not receive supply kit from ${supplierName}`);
         await dismissContinueDialogs(s, stop, 2);
@@ -755,7 +776,9 @@ export async function runWildyPvpLoop(
         return false;
     };
 
-    const flickPrayers = [ULTIMATE_STRENGTH_INDEX];
+    await walkWaypoints(s, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 30, opts.stop, 'step to specialist keep post');
+
+    const flickPrayers = [ULTIMATE_STRENGTH_INDEX, INCREDIBLE_REFLEXES_INDEX];
 
     try {
         while (!opts.stop() && skillInfo(s, opts.skill).baseLevel < opts.targetLevel) {
@@ -768,14 +791,14 @@ export async function runWildyPvpLoop(
             if (curXp > prevSkillXp || (animId > 0 && animId !== 424 && s.tick() - lastSwingTick >= 4)) {
                 lastSwingTick = s.tick();
                 prevSkillXp = curXp;
-            } else if (curXp > prevSkillXp) {
-                prevSkillXp = curXp;
             }
 
-            // Flick 1 tick after a swing (4-tick cadence < 5-tick prayer_drain timer) so p_clearpendingaction never delays a swing.
-            const sinceSwing = s.tick() - lastSwingTick;
+            const combat = st?.player?.combat;
+            const sinceSwing = lastSwingTick < 0 ? 99 : s.tick() - lastSwingTick;
             let flickedThisTick = false;
-            if (pts > 0 && skillInfo(s, 'Prayer').baseLevel >= 31) {
+
+            // Flick 1 tick after a swing (4 toggles + 1 re-engage = 5 actions, exact server USER_EVENT.limit).
+            if (pts > 0 && skillInfo(s, 'Prayer').baseLevel >= 34) {
                 const needOn = flickPrayers.some(idx => !st?.prayers?.activePrayers?.[idx]);
                 if (needOn) {
                     flickedThisTick = true;
@@ -795,51 +818,57 @@ export async function runWildyPvpLoop(
                 }
             }
             if (flickedThisTick) needReengage = true;
-            if (!flickedThisTick && pts <= 10 && s.tick() - lastPrayPotionTick >= 4) {
-                if (drinkFromList(PRAYER_POT_IDS)) { lastPrayPotionTick = s.tick(); needReengage = true; }
-            }
 
-            // Re-boost Strength (16 doses) and Attack (4 doses) without blocking a loop tick.
-            if (!flickedThisTick && s.tick() - lastDrinkTick >= 3) {
-                const str = skillInfo(s, 'Strength');
-                const atk = skillInfo(s, 'Attack');
-                const maxStrBoost = 5 + Math.floor(str.baseLevel * 0.15);
-                const minStrBoost = maxStrBoost - 1;
-                const minAtkBoost = opts.skill === 'Strength' ? 12 : 10;
-                if (str.level <= str.baseLevel + minStrBoost) {
-                    if (drinkFromList(SUPER_STRENGTH_IDS)) { lastDrinkTick = s.tick(); needReengage = true; }
-                } else if (atk.level < atk.baseLevel + minAtkBoost) {
-                    if (drinkFromList(SUPER_ATTACK_IDS)) { lastDrinkTick = s.tick(); needReengage = true; }
+            // Drink pots only on sinceSwing === 2 (or out of combat before swing 1) so <= 5 actions/tick & zero swing loss.
+            const potionWindow = (!flickedThisTick && sinceSwing === 2) || (!flickedThisTick && !combat?.inCombat && sinceSwing >= 4);
+            if (potionWindow) {
+                if (pts <= 10 && s.tick() - lastPrayPotionTick >= 4) {
+                    if (drinkFromList(PRAYER_POT_IDS)) { lastPrayPotionTick = s.tick(); needReengage = true; }
+                } else if (s.tick() - lastDrinkTick >= 3) {
+                    const str = skillInfo(s, 'Strength');
+                    const atk = skillInfo(s, 'Attack');
+                    const maxStrBoost = 5 + Math.floor(str.baseLevel * 0.15);
+                    // Keep boosted Strength at exact max (e.g. 100 on 83 base = maxhit 23 instead of 99 = maxhit 22).
+                    const minAtkBoost = 12;
+                    if (str.level < str.baseLevel + maxStrBoost) {
+                        if (drinkFromList(SUPER_STRENGTH_IDS)) { lastDrinkTick = s.tick(); needReengage = true; }
+                    } else if (atk.level < atk.baseLevel + minAtkBoost) {
+                        if (drinkFromList(SUPER_ATTACK_IDS)) { lastDrinkTick = s.tick(); needReengage = true; }
+                    }
                 }
+                const vial = s.sdk.getInventory().find(i => i.id === 229);
+                if (vial && !needReengage) void s.direct({ type: 'dropItem', slot: vial.slot, reason: 'SDK' });
             }
 
             const players: any[] = st?.nearbyPlayers ?? [];
             const tanks = players
                 .filter(p => tankRes.some(re => re.test(p.name ?? '')) && (p.z ?? p.worldZ ?? 0) >= 3900 && (p.hp === undefined || p.hp === null || p.hp > 0))
-                .sort((a, b) => d8({ x: a.x ?? a.worldX ?? 0, z: a.z ?? a.worldZ ?? 0 }, DESERTED_KEEP) - d8({ x: b.x ?? b.worldX ?? 0, z: b.z ?? b.worldZ ?? 0 }, DESERTED_KEEP));
+                .sort((a, b) => d8({ x: a.x ?? a.worldX ?? 0, z: a.z ?? a.worldZ ?? 0 }, KEEP_SPECIALIST_POST) - d8({ x: b.x ?? b.worldX ?? 0, z: b.z ?? b.worldZ ?? 0 }, KEEP_SPECIALIST_POST));
 
-            const combat = st?.player?.combat;
             if (s.tick() - lastStatusTick >= 100) {
                 lastStatusTick = s.tick();
                 const sk = skillInfo(s, opts.skill);
                 console.log(`PVP_STATUS tick=${s.tick()} ${opts.skill}=${sk.baseLevel} xp=${sk.experience} hp=${st?.player?.hp} pray=${pts} tanks=${tanks.length} inCombat=${!!combat?.inCombat} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
             }
+
+            const postTanks = tanks.filter(t => d8({ x: t.x ?? t.worldX ?? 0, z: t.z ?? t.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 1);
+            const activePool = postTanks.length > 0 ? postTanks : tanks;
             const currentTank = combat?.inCombat && combat.targetType === 'player'
                 ? tanks.find(t => t.index === combat.targetIndex)
                 : undefined;
-            const keepTank = tanks.find(t => d8({ x: t.x ?? t.worldX ?? 0, z: t.z ?? t.worldZ ?? 0 }, DESERTED_KEEP) <= 1);
-            const currentAlive = !!currentTank && (!keepTank || d8({ x: currentTank.x ?? currentTank.worldX ?? 0, z: currentTank.z ?? currentTank.worldZ ?? 0 }, DESERTED_KEEP) <= 1);
-            // togglePrayer/consumption run p_clearpendingaction; re-send interactPlayer on the same tick after them so the next 4-tick swing is never delayed.
-            if ((needReengage || !currentAlive) && tanks.length > 0) {
-                const target = tanks[0]!;
+            // Never follow a banking tank toward the lever: switch immediately to any tank still beside KEEP_SPECIALIST_POST.
+            const currentAlive = !!currentTank && d8({ x: currentTank.x ?? currentTank.worldX ?? 0, z: currentTank.z ?? currentTank.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 1;
+
+            if ((needReengage || !currentAlive) && activePool.length > 0) {
+                const target = activePool[0]!;
                 if (needReengage || target.index !== lastTargetIndex || s.tick() - lastAttackTick >= 2) {
                     needReengage = false;
                     lastTargetIndex = target.index;
                     lastAttackTick = s.tick();
                     void s.direct({ type: 'interactPlayer', playerIndex: target.index, optionIndex: 2, reason: 'SDK' });
                 }
-            } else if (!tanks.length && d8({ x: posOf(s)?.worldX ?? 0, z: posOf(s)?.worldZ ?? 0 }, DESERTED_KEEP) > 3) {
-                await walkWaypoints(s, [{ ...DESERTED_KEEP, tol: 1 }], 40, opts.stop, 'recenter deserted keep');
+            } else if (!tanks.length && d8({ x: posOf(s)?.worldX ?? 0, z: posOf(s)?.worldZ ?? 0 }, KEEP_SPECIALIST_POST) > 1) {
+                await walkWaypoints(s, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 40, opts.stop, 'recenter deserted keep');
             }
 
             await waitTicks(s, 1);
@@ -850,8 +879,8 @@ export async function runWildyPvpLoop(
     }
 }
 
-async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
-    // Unequip worn Ring of dueling if needed, teleport to Castle Wars Chest, stock 1 Law + Manta rays, Camelot -> Lever.
+async function bankAndReturnToKeep(s: Session, stop: StopFn, keepKit?: readonly KitSpecItem[]): Promise<void> {
+    // Unequip worn Ring of dueling if needed, teleport to Castle Wars Chest, stock 1 Law + Keep pots + Manta rays, Camelot -> Lever.
     const hasInvRing = () => s.sdk.getInventory().some(i => (DUELING_RING_IDS as readonly number[]).includes(i.id));
     if (!hasInvRing()) {
         const wornRing = s.sdk.getEquipment().find(e => (DUELING_RING_IDS as readonly number[]).includes(e.id));
@@ -869,6 +898,9 @@ async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
     }
     if (countById(s.sdk.getInventory(), 563) < 1) {
         await withdrawExactCount(s, 563, 1, stop, 'Law rune');
+    }
+    for (const spec of keepKit ?? []) {
+        await withdrawExactCount(s, spec.id, spec.count, stop, spec.name);
     }
     const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
     if (freeSlots > 0) await withdrawExactCount(s, 391, freeSlots, stop, 'Manta ray');
@@ -916,7 +948,9 @@ export async function runCompanionRole(
     opts: {
         role: 'supplier' | 'supplier-tank' | 'tank';
         specialistName: string;
+        board?: 'hitpoints' | 'strength' | 'defence';
         kit?: readonly KitSpecItem[];
+        keepKit?: readonly KitSpecItem[];
         postTileOffsetX?: number;
         stopFile?: string;
         cap: number;
@@ -933,6 +967,12 @@ export async function runCompanionRole(
 
     await waitUntil(s, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 });
     await setAutoRetaliate(s, false);
+
+    const keepKit =
+        opts.keepKit ??
+        (opts.role === 'supplier-tank' && (opts.board === 'strength' || opts.board === 'defence')
+            ? KEEP_TOPUP_BY_BOARD[opts.board]
+            : undefined);
 
     if (opts.role === 'supplier' || opts.role === 'supplier-tank') {
         const kit = opts.kit!;
@@ -961,16 +1001,19 @@ export async function runCompanionRole(
         if (opts.role === 'supplier') {
             return { ok: true, detail: `supplied ${opts.specialistName} in ${s.tick() - t0} ticks` };
         }
-        await bankAndReturnToKeep(s, stop);
+        await bankAndReturnToKeep(s, stop, keepKit);
     } else {
         const p = posOf(s)!;
         console.log('COMPANION_READY ' + JSON.stringify({ role: opts.role, name: s.name, at: { x: p.worldX, z: p.worldZ, level: p.level } }));
     }
 
+    // Specialist stands at (3155,3924); tanks occupy (3154,3924) and (3155,3923), both d8=1 from specialist and away from lever (3153,3923).
     const postTile = opts.postTileOffsetX === 0
-        ? { x: DESERTED_KEEP.x, z: DESERTED_KEEP.z - 1, level: 0 }
-        : { x: DESERTED_KEEP.x + (opts.postTileOffsetX ?? 0), z: DESERTED_KEEP.z, level: 0 };
+        ? { x: 3154, z: 3924, level: 0 }
+        : { x: 3155, z: 3923, level: 0 };
     const specialistRe = exactNameRe(opts.specialistName);
+    const keepGiveList = (keepKit ?? []).map(k => ({ item: exactNameRe(k.name), amount: k.count }));
+    let keepDelivered = !keepKit?.length;
     let lastEatTick = -10;
     try {
         while (!stop()) {
@@ -982,17 +1025,38 @@ export async function runCompanionRole(
             }
             if (p.worldZ < 3800) {
                 await setAutoRetaliate(s, false);
-                await bankAndReturnToKeep(s, stop);
+                await bankAndReturnToKeep(s, stop, keepDelivered ? undefined : keepKit);
                 continue;
             }
             if (d8({ x: p.worldX, z: p.worldZ }, postTile) > 0) {
                 await walkWaypoints(s, [{ x: postTile.x, z: postTile.z, tol: 0 }], 20, stop, 'tank step to post');
             }
+            if (!keepDelivered && keepKit?.length) {
+                const specNear = (s.sdk.getState()?.nearbyPlayers ?? []).find(
+                    (np: any) => specialistRe.test(np.name ?? '') && (np.z ?? np.worldZ ?? 0) >= 3900 && d8({ x: np.x ?? np.worldX ?? 0, z: np.z ?? np.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 2,
+                );
+                if (specNear) {
+                    const served = await s.bot.serveTrades({
+                        from: specialistRe,
+                        give: keepGiveList,
+                        accept: offer => offer.length === 0,
+                        maxTrades: 1,
+                        tradeTimeout: 12_000,
+                        timeout: 15_000,
+                        until: stop,
+                    });
+                    if (served.trades.some(t => t.success && keepKit.every(k => countById(t.gave, k.id) === k.count) && t.received.length === 0)) {
+                        keepDelivered = true;
+                        console.log('COMPANION_KEEP_HANDOFF ' + JSON.stringify({ name: s.name, specialist: opts.specialistName, tick: s.tick() - t0 }));
+                    }
+                    continue;
+                }
+            }
             const mantaCount = countById(s.sdk.getInventory(), 391);
             const hp = skillInfo(s, 'Hitpoints').level;
-            const otherTankHere = (s.sdk.getState()?.nearbyPlayers ?? []).some((np: any) =>
+            const otherTankAtPost = (s.sdk.getState()?.nearbyPlayers ?? []).some((np: any) =>
                 !specialistRe.test(np.name ?? '') &&
-                (np.z ?? np.worldZ ?? 0) >= 3900 &&
+                d8({ x: np.x ?? np.worldX ?? 0, z: np.z ?? np.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 1 &&
                 (np.hp === undefined || np.hp === null || np.hp > 0),
             );
             if (hp > 0 && hp <= 77 && mantaCount > 0 && s.tick() - lastEatTick >= 3) {
@@ -1002,7 +1066,7 @@ export async function runCompanionRole(
                     await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
                 }
             }
-            if ((mantaCount <= 5 && otherTankHere) || mantaCount <= 1) {
+            if (keepDelivered && ((mantaCount <= 7 && otherTankAtPost) || mantaCount <= 1)) {
                 if (await pullKeepLeverOutAndRebank(s, stop)) continue;
             }
             await waitTicks(s, 1);
@@ -1011,6 +1075,310 @@ export async function runCompanionRole(
         if (!stop()) throw e;
     }
     return { ok: true, detail: `tank ${s.name} finished in ${s.tick() - t0} ticks` };
+}
+
+export async function runSpecialistWaterfall(
+    s: Session,
+    stop: StopFn,
+    opts: { onEnergy?: () => void } = {},
+): Promise<{ attackXp: number; strengthXp: number }> {
+    const LOC = {
+        raft: { id: 1987, x: 2509, z: 3493 },
+        bookcase: { id: 1989, x: 2520, z: 3426 },
+        golrieCrate: { id: 1990, x: 2548, z: 9565 },
+        golrieGate: { id: 1991, x: 2515, z: 9575 },
+        tombstone: { id: 1992, x: 2558, z: 3444 },
+        coffin: { id: 1993, x: 2542, z: 9811 },
+        chestClosed: 1994,
+        chestOpen: 1995,
+        chest: { x: 2530, z: 9844 },
+        rock: { id: 1996, x: 2512, z: 3468 },
+        ledgeDoor: { id: 2010, x: 2511, z: 3464 },
+        tree: { id: 2020, x: 2512, z: 3465 },
+        barrel: { id: 2022, x: 2512, z: 3463 },
+        baxCrate: { id: 1999, x: 2589, z: 9888 },
+        giantDoor: { id: 2002, x: 2568, z: 9893 },
+        puzzleDoor: { id: 2002, x: 2566, z: 9901 },
+        pillar: 2004,
+        statue: { id: 2006, x: 2565, z: 9916 },
+        chalice: { id: 2014, x: 2603, z: 9910 },
+    } as const;
+    const ITEM = { book: 292, golrieKey: 293, pebble: 294, amulet: 295, urn: 296, baxKey: 298, rope: 954, scim: 1333, air: 556, earth: 557, water: 555 } as const;
+    const RUNES = [ITEM.air, ITEM.earth, ITEM.water] as const;
+    const PILLARS: readonly [number, number][] = [[2569, 9910], [2569, 9912], [2569, 9914], [2562, 9910], [2562, 9912], [2562, 9914]];
+
+    await setAutoRetaliate(s, false);
+    const inv = () => s.sdk.getInventory();
+    const has = (id: number) => countById(inv(), id) > 0;
+    const cnt = (id: number) => countById(inv(), id);
+    const inBox = (x0: number, z0: number, x1: number, z1: number) => {
+        const p = posOf(s);
+        return !!p && p.worldX >= x0 && p.worldX <= x1 && p.worldZ >= z0 && p.worldZ <= z1;
+    };
+    const near = (x: number, z: number, tol: number) => {
+        const p = posOf(s);
+        return !!p && d8({ x: p.worldX, z: p.worldZ }, { x, z }) <= tol;
+    };
+    const findLoc = (pred: (l: any) => boolean) =>
+        (s.sdk.getState()?.nearbyLocs ?? []).filter(pred).sort((a: any, b: any) => (a.distance ?? 99) - (b.distance ?? 99))[0];
+    const opIndex = (loc: any, re: RegExp) => loc?.optionsWithIndex?.find((o: any) => re.test(o.text ?? ''))?.opIndex ?? 1;
+    const sawMsg = (re: RegExp) => (s.sdk.getState()?.gameMessages ?? []).some((m: any) => re.test(m.text ?? ''));
+    const dialogPages: string[] = [];
+    const sawDialog = (re: RegExp) => {
+        const d: any = s.sdk.getDialog();
+        if (d?.isOpen && d.text && dialogPages[dialogPages.length - 1] !== d.text) {
+            dialogPages.push(d.text);
+            if (dialogPages.length > 200) dialogPages.shift();
+        }
+        if (dialogPages.some(t => re.test(t))) return true;
+        return (s.sdk.getState()?.recentDialogs ?? []).some((e: any) => re.test((e.text ?? []).join(' ')));
+    };
+    const converse = async (choices: RegExp[], donePred: () => boolean, maxTicks = 45): Promise<boolean> => {
+        let lastClick = -10;
+        const end = s.tick() + maxTicks;
+        while (!stop() && s.tick() < end) {
+            opts.onEnergy?.();
+            if (donePred()) return true;
+            const d: any = s.sdk.getDialog();
+            if (d?.isOpen && !d.isWaiting && s.tick() - lastClick >= 1) {
+                const optsList: any[] = d.options ?? [];
+                const pick = optsList.find(o => choices.some(re => re.test(o.text ?? '')));
+                lastClick = s.tick();
+                await s.sdk.sendClickDialog(pick ? pick.index : 0);
+            }
+            await waitTicks(s, 1);
+        }
+        return donePred();
+    };
+    const stepAct = async (label: string, act: () => Promise<unknown>, donePred: () => boolean, maxTries = 12, period = 4) => {
+        for (let i = 0; i < maxTries && !stop(); i++) {
+            if (donePred()) return;
+            await act();
+            if (await waitUntil(s, () => { opts.onEnergy?.(); return donePred() || stop(); }, { timeoutTicks: period })) return;
+        }
+        if (!donePred()) throw Error(`fast waterfall stalled at ${label}`);
+    };
+    const opLoc = async (loc: { id: number; x: number; z: number }, re?: RegExp) => {
+        const live = findLoc(l => l.id === loc.id && l.x === loc.x && l.z === loc.z) ?? findLoc(l => l.id === loc.id);
+        const target = live ?? loc;
+        return s.sdk.sendInteractLoc(target.x, target.z, target.id, re ? opIndex(target, re) : 1);
+    };
+    const useOnLoc = async (itemId: number, loc: { id: number; x: number; z: number }) => {
+        const item = inv().find(i => i.id === itemId);
+        if (!item) return;
+        const live = findLoc(l => l.id === loc.id && l.x === loc.x && l.z === loc.z) ?? loc;
+        return s.sdk.sendUseItemOnLoc(item.slot, live.x, live.z, live.id);
+    };
+    const walkFast = (pts: Point[], maxTicks: number, label: string, extra?: () => void) =>
+        walkWaypoints(s, pts, maxTicks, stop, label, {
+            ignoreMeleeHunters: true,
+            onTickExtra: () => {
+                opts.onEnergy?.();
+                extra?.();
+            },
+        });
+    const climb = (label: string, x: number, z: number, dir: RegExp, donePred: () => boolean) =>
+        stepAct(label, async () => {
+            const l = findLoc(k => Math.max(Math.abs(k.x - x), Math.abs(k.z - z)) <= 3 && (k.optionsWithIndex ?? []).some((o: any) => dir.test(o.text ?? '')));
+            if (l) await s.sdk.sendInteractLoc(l.x, l.z, l.id, opIndex(l, dir));
+        }, donePred, 10, 4);
+
+    const atk0 = skillInfo(s, 'Attack').experience;
+    const str0 = skillInfo(s, 'Strength').experience;
+
+    // 1. Almera -> Raft -> Hudon -> Rock -> Tree -> Barrel -> Hadley bookcase.
+    const talkAlmera = await s.bot.talkTo(/^almera$/i);
+    if (!talkAlmera.success) throw Error(`talk Almera failed: ${talkAlmera.message}`);
+    const almeraDone = await converse([/how can i help/i], () => sawDialog(/small raft out back|you are kind/i) && !s.sdk.getDialog()?.isOpen, 40);
+    if (!almeraDone) throw Error('Almera dialogue incomplete');
+
+    const onIsland = () => inBox(2510, 3476, 2514, 3481);
+    const crossToLedge = async (withHudon: boolean) => {
+        await walkFast([{ x: 2511, z: 3494, tol: 1 }], 40, 'to raft');
+        await stepAct('board raft', () => opLoc(LOC.raft), onIsland, 10, 8);
+        if (withHudon) {
+            const hudonProof = /fine alone|so you're still here|find that treasure soon/i;
+            let ok = await converse([], () => sawDialog(hudonProof) && !s.sdk.getDialog()?.isOpen, 24);
+            for (let i = 0; i < 2 && !ok && !stop(); i++) {
+                await walkFast([{ x: 2512, z: 3481, tol: 0 }], 15, 'to hudon');
+                const h = s.sdk.findNearbyNpc(/^hudon$/i);
+                if (h) await s.direct({ type: 'interactNpc', npcIndex: h.index, optionIndex: 1, reason: 'SDK' });
+                await waitUntil(s, () => !!s.sdk.getDialog()?.isOpen || stop(), { timeoutTicks: 6 });
+                ok = await converse([], () => sawDialog(hudonProof) && !s.sdk.getDialog()?.isOpen, 24);
+            }
+            if (!ok) throw Error('Hudon dialogue incomplete');
+        }
+        await walkFast([{ x: 2512, z: 3477, tol: 0 }], 20, 'to rock bank');
+        await stepAct('rope rock', async () => {
+            const roped = findLoc(l => l.id === 1997 && l.x === LOC.rock.x && l.z === LOC.rock.z);
+            if (!roped) await useOnLoc(ITEM.rope, LOC.rock);
+        }, () => near(LOC.rock.x + 1, LOC.rock.z, 0), 12, 4);
+        await waitTicks(s, 1);
+        await stepAct('rope tree', () => useOnLoc(ITEM.rope, LOC.tree), () => inBox(2510, 3462, 2513, 3464), 10, 4);
+    };
+
+    await crossToLedge(true);
+    await stepAct('barrel', () => opLoc(LOC.barrel), () => near(2527, 3413, 4), 10, 4);
+
+    await walkFast([{ x: 2517, z: 3427, tol: 2 }], 40, 'to hadley');
+    await climb('hadley up', 2517, 3428, /climb-up/i, () => posOf(s)?.level === 1);
+    await stepAct('bookcase', () => opLoc(LOC.bookcase), () => has(ITEM.book), 10, 4);
+    const readDone = await stepAct('read book', async () => {
+        const b = inv().find(x => x.id === ITEM.book);
+        if (b) await s.direct({ type: 'useInventoryItem', slot: b.slot, optionIndex: 1, reason: 'SDK' });
+    }, () => sawMsg(/book is old/i), 4, 3).then(() => true).catch(() => false);
+    if (!readDone) throw Error('failed reading Book on Baxtorian');
+    await s.direct({ type: 'closeModal', reason: 'SDK' });
+    await climb('hadley down', 2518, 3429, /climb-down/i, () => posOf(s)?.level === 0);
+
+    // 2. Hadley -> Golrie cellar -> Pebble -> Ring of dueling directly to CW -> Tomb.
+    const khazardPfm = () => {
+        const p = posOf(s);
+        const want = !!p && p.worldZ >= 3190 && p.worldZ <= 3270;
+        const on = !!s.sdk.getState()?.prayers?.activePrayers?.[PROTECT_MELEE_INDEX];
+        if (want !== on && (!want || (s.sdk.getState()?.prayers?.prayerPoints ?? 0) > 0)) {
+            void s.direct({ type: 'togglePrayer', prayerIndex: PROTECT_MELEE_INDEX, reason: 'SDK' });
+        }
+    };
+    await walkFast([{ x: 2561, z: 3242, tol: 4 }, { x: 2533, z: 3156, tol: 2 }], 300, 'hadley to golrie cellar', khazardPfm);
+    await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+
+    const inCellar = () => (posOf(s)?.worldZ ?? 0) > 9500 && (posOf(s)?.worldZ ?? 0) < 9600;
+    await climb('cellar down', 2533, 3155, /climb-down/i, inCellar);
+    await stepAct('golrie crate', () => opLoc(LOC.golrieCrate), () => has(ITEM.golrieKey), 25, 4);
+    await walkFast([{ x: 2515, z: 9574, tol: 0 }], 40, 'to golrie gate');
+    await stepAct('golrie gate', () => useOnLoc(ITEM.golrieKey, LOC.golrieGate), () => inBox(2502, 9576, 2523, 9593), 10, 6);
+
+    let golrieShut = 0;
+    const gotPebble = () => {
+        golrieShut = s.sdk.getDialog()?.isOpen ? 0 : golrieShut + 1;
+        return has(ITEM.pebble) && !has(ITEM.golrieKey) && ((sawDialog(/take care golrie/i) && !s.sdk.getDialog()?.isOpen) || golrieShut >= 5);
+    };
+    await stepAct('talk golrie', async () => {
+        const g = s.sdk.findNearbyNpc(/^golrie$/i);
+        if (g) await s.direct({ type: 'interactNpc', npcIndex: g.index, optionIndex: 1, reason: 'SDK' });
+        await converse([], gotPebble, 30);
+    }, gotPebble, 3, 2);
+
+    // Teleport out of Golrie's room straight to Castle Wars instead of unlocking gate & walking back out of maze.
+    await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, stop);
+    await walkFast([{ x: 2557, z: 3444, tol: 2 }], 260, 'cw to tomb', khazardPfm);
+    await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+
+    // 3. Tomb: drop only banned weapons/runes (keep Ring, Amulet, and all potions).
+    const wornWeapon = s.sdk.getEquipment().find(e => e.id === ITEM.scim);
+    if (wornWeapon) {
+        await s.bot.unequipItem(wornWeapon);
+        await waitUntil(s, () => has(ITEM.scim) || stop(), { timeoutTicks: 5 });
+    }
+    const tombDropIds = [...RUNES, ITEM.scim] as const;
+    const targetDropCount = new Map(tombDropIds.map(id => [id, id === ITEM.scim ? 1 : 6]));
+    for (let i = 0; i < 4 && tombDropIds.some(has) && !stop(); i++) {
+        await Promise.all(inv().filter(x => (tombDropIds as readonly number[]).includes(x.id)).map(r => s.direct({ type: 'dropItem', slot: r.slot, reason: 'SDK' })));
+        await waitUntil(s, () => !tombDropIds.some(has) || stop(), { timeoutTicks: 2 });
+    }
+    if (tombDropIds.some(has)) throw Error('failed dropping banned Tomb items');
+
+    const inTomb = () => inBox(2520, 9795, 2560, 9850);
+    await stepAct('enter tomb', () => useOnLoc(ITEM.pebble, LOC.tombstone), inTomb, 10, 4);
+    await stepAct('tomb chest', async () => {
+        const shut = findLoc(l => l.id === LOC.chestClosed && l.x === LOC.chest.x && l.z === LOC.chest.z);
+        if (shut) {
+            await opLoc({ id: shut.id, x: shut.x, z: shut.z }, /open/i);
+            await waitUntil(s, () => !!findLoc(l => l.id === LOC.chestOpen && l.x === LOC.chest.x && l.z === LOC.chest.z) || stop(), { timeoutTicks: 20 });
+        }
+        const open = findLoc(l => l.id === LOC.chestOpen && l.x === LOC.chest.x && l.z === LOC.chest.z);
+        if (open) await opLoc({ id: open.id, x: open.x, z: open.z }, /search/i);
+    }, () => has(ITEM.amulet), 8, 5);
+    await stepAct('tomb coffin', () => opLoc(LOC.coffin), () => has(ITEM.urn), 12, 4);
+    await climb('tomb up', 2556, 9844, /climb-up/i, () => (posOf(s)?.worldZ ?? 0) < 4000);
+
+    for (let i = 0; i < 20 && tombDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1)) && !stop(); i++) {
+        opts.onEnergy?.();
+        const id = tombDropIds.find(r => cnt(r) < (targetDropCount.get(r) ?? 1))!;
+        const g = (s.sdk.getState()?.groundItems ?? []).filter((x: any) => x.id === id).sort((a: any, b: any) => (a.distance ?? 99) - (b.distance ?? 99))[0];
+        if (g) await s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: id, reason: 'SDK' });
+        await waitUntil(s, () => cnt(id) >= (targetDropCount.get(id) ?? 1) || stop(), { timeoutTicks: 3 });
+    }
+    if (tombDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1))) {
+        throw Error(`failed recovering Tomb drops: ${tombDropIds.map(cnt).join('/')}`);
+    }
+
+    // 4. Waterfall Dungeon -> Baxtorian key -> Puzzle room -> Pillars -> Statue -> Chalice -> Exit.
+    await crossToLedge(false);
+    const inFalls = () => inBox(2555, 9860, 2615, 9925);
+    await stepAct('ledge door', () => opLoc(LOC.ledgeDoor), inFalls, 10, 4);
+
+    await walkFast([{ x: 2574, z: 9873, tol: 2 }, { x: 2584, z: 9876, tol: 2 }, { x: 2589, z: 9887, tol: 1 }], 60, 'falls crate');
+    await stepAct('falls crate', () => opLoc(LOC.baxCrate), () => has(ITEM.baxKey), 10, 4);
+    await walkFast([{ x: 2584, z: 9876, tol: 2 }, { x: 2569, z: 9876, tol: 2 }, { x: 2564, z: 9880, tol: 0 }], 50, 'double door');
+
+    const doorShut = () => !!findLoc(l => (l.id === 1516 || l.id === 1519) && l.z === 9881 && Math.abs(l.x - 2564.5) <= 1);
+    const openDoubleDoor = async () => {
+        const d = findLoc(l => (l.id === 1516 || l.id === 1519) && l.z === 9881 && Math.abs(l.x - 2564.5) <= 1);
+        if (d) await opLoc({ id: d.id, x: d.x, z: d.z }, /^open$/i);
+    };
+    await stepAct('open double door', openDoubleDoor, () => !doorShut(), 6, 4);
+
+    await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
+    const pastGiantDoor = () => inBox(2562, 9894, 2572, 9901);
+    let lastWalk = -99, keySent = -99;
+    for (let i = 0; i < 45 && !pastGiantDoor() && !stop(); i++) {
+        opts.onEnergy?.();
+        if (near(2568, 9893, 0)) {
+            if (s.tick() - keySent >= 3) { keySent = s.tick(); await useOnLoc(ITEM.baxKey, LOC.giantDoor); }
+        } else if (lastWalk < 0 || s.tick() - lastWalk >= 3) {
+            lastWalk = s.tick();
+            const w: any = await s.direct({ type: 'walkTo', x: 2568, z: 9893, running: true, reason: 'SDK' });
+            if (w && w.success === false) await openDoubleDoor();
+        }
+        await waitTicks(s, 1);
+    }
+    if (!pastGiantDoor()) throw Error('failed crossing giant room');
+
+    await stepAct('puzzle door', () => useOnLoc(ITEM.baxKey, LOC.puzzleDoor), () => inBox(2561, 9902, 2570, 9917), 10, 4);
+    await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+
+    // Apply all 18 runes on the exact 2-tick p_delay(0) rhythm without extra waitTicks waste.
+    for (const [px, pz] of PILLARS) {
+        for (const id of RUNES) {
+            const before = cnt(id);
+            const sentAt = s.tick();
+            await stepAct(`pillar ${px},${pz} ${id}`, () => useOnLoc(id, { id: LOC.pillar, x: px, z: pz }),
+                () => cnt(id) < before || sawMsg(/remember putting that type/i), 5, 3);
+            while (s.tick() < sentAt + 2 && !stop()) await waitTicks(s, 1);
+        }
+    }
+    if (RUNES.some(has)) throw Error(`runes remained after pillars: ${RUNES.map(cnt).join('/')}`);
+
+    await stepAct('statue', () => useOnLoc(ITEM.amulet, LOC.statue), () => inBox(2598, 9895, 2610, 9920), 10, 4);
+
+    // Ensure 5 free slots before claiming reward from chalice.
+    const freeDropIds = [229, ITEM.book, ITEM.pebble];
+    for (let i = 0; i < 4 && inv().length > 23 && !stop(); i++) {
+        const dropBatch = inv().filter(x => freeDropIds.includes(x.id)).slice(0, 5);
+        if (dropBatch.length === 0) break;
+        await Promise.all(dropBatch.map(x => s.direct({ type: 'dropItem', slot: x.slot, reason: 'SDK' })));
+        await waitTicks(s, 1);
+    }
+    if (inv().length > 23) throw Error(`needs 5 free slots for Chalice reward, has ${28 - inv().length}`);
+
+    await stepAct('chalice', () => useOnLoc(ITEM.urn, LOC.chalice), () => skillInfo(s, 'Attack').experience - atk0 >= 300_000, 10, 4);
+
+    // Exit raised room & falls to 2527,3413.
+    await walkFast([{ x: 2604, z: 9901, tol: 1 }], 25, 'raised room exit');
+    await stepAct('raised door', () => useOnLoc(ITEM.baxKey, { id: 2002, x: 2604, z: 9900 }), () => inBox(2562, 9894, 2572, 9901), 10, 4);
+    await stepAct('south giant door', () => useOnLoc(ITEM.baxKey, LOC.giantDoor), () => !findLoc(l => l.id === 2002 && l.x === LOC.giantDoor.x && l.z === LOC.giantDoor.z), 10, 4);
+    await walkFast([{ x: 2568, z: 9891, tol: 1 }, { x: 2565, z: 9883, tol: 1 }], 30, 'return giant room');
+    await stepAct('return double door', openDoubleDoor, () => !doorShut(), 6, 4);
+    await walkFast([{ x: 2564, z: 9880, tol: 1 }, { x: 2584, z: 9876, tol: 2 }, { x: 2575, z: 9863, tol: 1 }], 40, 'return ledge exit');
+    await stepAct('falls exit', () => opLoc({ id: 2000, x: 2575, z: 9861 }), () => near(2511, 3463, 3), 10, 4);
+    await stepAct('return barrel', () => opLoc(LOC.barrel), () => near(2527, 3413, 4), 10, 4);
+
+    return {
+        attackXp: skillInfo(s, 'Attack').experience - atk0,
+        strengthXp: skillInfo(s, 'Strength').experience - str0,
+    };
 }
 
 export async function runMeleePvpSpecialist(
@@ -1022,11 +1390,12 @@ export async function runMeleePvpSpecialist(
         cap: number;
         t0: number;
         stop: StopFn;
-        runWaterfallFn: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; protectMelee?: boolean; tombHoldIds?: readonly number[]; looseRailing?: boolean; superEnergy?: boolean }) => Promise<unknown>;
+        runWaterfallFn?: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; protectMelee?: boolean; tombHoldIds?: readonly number[]; looseRailing?: boolean; superEnergy?: boolean }) => Promise<unknown>;
     },
 ): Promise<string> {
     const skill = opts.board === 'strength' ? 'Strength' : 'Defence';
     const kit = KIT_BY_BOARD[opts.board];
+    const keepKit = KEEP_TOPUP_BY_BOARD[opts.board];
     const target = SPECIALIST_TARGETS[opts.board];
     const elapsed = () => s.tick() - opts.t0;
     const milestone = (step: string, extra = '') => {
@@ -1037,13 +1406,16 @@ export async function runMeleePvpSpecialist(
     const ensureRunAndEnergy = () => {
         const p: any = posOf(s);
         const energy = p?.runEnergy ?? 100;
-        if (energy <= 65 && s.tick() - lastEnergyTick >= 3) {
+        if (energy <= 75 && s.tick() - lastEnergyTick >= 3) {
             const ep = s.sdk.getInventory().find(i => (SUPER_ENERGY_IDS as readonly number[]).includes(i.id));
             if (ep) {
                 lastEnergyTick = s.tick();
                 void s.direct({ type: 'useInventoryItem', slot: ep.slot, optionIndex: 1, reason: 'SDK' });
+                return;
             }
         }
+        const vial = s.sdk.getInventory().find(i => i.id === 229);
+        if (vial) void s.direct({ type: 'dropItem', slot: vial.slot, reason: 'SDK' });
     };
 
     milestone('start');
@@ -1061,13 +1433,10 @@ export async function runMeleePvpSpecialist(
     await walkWaypoints(
         s,
         [
-            { x: 2451, z: 3151, tol: 4 },
             { x: 2490, z: 3220, tol: 4 },
-            { x: 2565, z: 3320, tol: 4 },
-            { x: 2565, z: 3380, tol: 4 },
             { x: 2522, z: 3494, tol: 2 },
         ],
-        320,
+        300,
         opts.stop,
         'castle wars to almera',
         {
@@ -1086,25 +1455,56 @@ export async function runMeleePvpSpecialist(
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     milestone('almera');
 
-    await opts.runWaterfallFn({
-        session: s,
-        stop: opts.stop,
-        cap: Math.max(300, opts.cap - elapsed()),
-        food: { id: 385, heal: 20, count: 6, eatAt: 8, crossAt: 9 },
-        mighty: false,
-        exitFalls: true,
-        keepAlive: true,
-        protectMelee: true,
-        tombHoldIds: [1333],
-        looseRailing: true,
-        superEnergy: true,
-    });
+    if (opts.runWaterfallFn) {
+        await opts.runWaterfallFn({
+            session: s,
+            stop: opts.stop,
+            cap: Math.max(300, opts.cap - elapsed()),
+            food: { id: 385, heal: 20, count: 6, eatAt: 8, crossAt: 9 },
+            mighty: false,
+            exitFalls: true,
+            keepAlive: true,
+            protectMelee: true,
+            tombHoldIds: [1333],
+            looseRailing: true,
+            superEnergy: true,
+        });
+    } else {
+        await runSpecialistWaterfall(s, opts.stop, { onEnergy: ensureRunAndEnergy });
+    }
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     milestone('waterfall', `atk=${skillInfo(s, 'Attack').baseLevel} str=${skillInfo(s, 'Strength').baseLevel} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
-    await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall exit to ardougne lever', { onTickExtra: ensureRunAndEnergy });
+    // Drop Waterfall rewards and leftover energy pots on the move to Ardougne lever.
+    const postWaterfallJunk = new Set<number>([1601, 2357, 299, 297, 298, 292, 294, 229, 954]);
+    await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall exit to ardougne lever', {
+        onTickExtra: () => {
+            ensureRunAndEnergy();
+            const junk = s.sdk.getInventory().find(i => postWaterfallJunk.has(i.id));
+            if (junk) void s.direct({ type: 'dropItem', slot: junk.slot, reason: 'SDK' });
+        },
+    });
     await pullArdougneLeverToWildy(s, opts.stop);
     milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
+
+    await walkWaypoints(s, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 30, opts.stop, 'step to keep post');
+    for (let i = 0; i < 4 && !opts.stop(); i++) {
+        const leftover = s.sdk.getInventory().filter(x => postWaterfallJunk.has(x.id) || (SUPER_ENERGY_IDS as readonly number[]).includes(x.id)).slice(0, 5);
+        if (leftover.length === 0) break;
+        await Promise.all(leftover.map(x => s.direct({ type: 'dropItem', slot: x.slot, reason: 'SDK' })));
+        await waitTicks(s, 1);
+    }
+
+    if (!hasAtLeastKit(s.sdk.getInventory(), keepKit)) {
+        const tankRes = opts.tankNames.map(exactNameRe);
+        const keepPartner = (s.sdk.getState()?.nearbyPlayers ?? []).find(
+            (np: any) => tankRes.some(re => re.test(np.name ?? '')) && (np.z ?? np.worldZ ?? 0) >= 3900 && d8({ x: np.x ?? np.worldX ?? 0, z: np.z ?? np.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 4,
+        );
+        if (keepPartner?.name) {
+            await receiveSupplyKit(s, keepPartner.name, keepKit, opts.stop, { skipWalk: true, timeoutTicks: 40 });
+            milestone('keep_topup', `from=${keepPartner.name}`);
+        }
+    }
 
     await runWildyPvpLoop(s, { skill, targetLevel: 99, tankNames: opts.tankNames, stop: opts.stop });
 

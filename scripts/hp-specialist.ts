@@ -47,7 +47,7 @@ import { runQuestTree } from './generated/quest-tree';
 
 const GRAND_TREE_JUNK_IDS = [
     587, 588, 589, 783, 784, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794,
-    562, 558, 555, 139, 141, 143, 175, 177, 179, 181, 183, 185, 229, 1985, 2434, 2446, 2448, 385,
+    562, 558, 555, 995, 139, 141, 143, 175, 177, 179, 181, 183, 185, 229, 1985, 2434, 2446, 2448, 385,
 ];
 
 const ANTIPOISON_BANK_IDS = [2448, 2446, 175] as const;
@@ -240,7 +240,8 @@ async function main(): Promise<void> {
     const CAP = Number(capArg ?? process.env.CAP ?? 12000);
     if (!bot) throw Error('usage: hp-specialist.ts <bot> [cap]');
     if (!Number.isSafeInteger(CAP) || CAP < 500 || CAP > 25000) throw Error(`invalid CAP: ${CAP}`);
-    const supplierName = (process.env.PRACTICE_SUPPLIER ?? process.env.SUPPLIER ?? '').trim();
+    const supplierRaw = (process.env.PRACTICE_SUPPLIER ?? process.env.SUPPLIER ?? '').trim();
+    const supplierName = supplierRaw.split(',').map(x => x.trim()).filter(Boolean)[0] ?? '';
     if (!supplierName) throw Error('missing SUPPLIER (or PRACTICE_SUPPLIER) environment variable');
 
     const root = resolve(import.meta.dir, '..');
@@ -352,8 +353,8 @@ async function main(): Promise<void> {
         await withdrawExactCount(s, 2357, 1, stop, 'Gold bar');
         await withdrawExactCount(s, 1759, 1, stop, 'Ball of wool');
         await withdrawAntipoisonDoses(s, 8, 3, stop);
-        await withdrawExactCount(s, 2434, 9, stop, 'Prayer potion(4)');
-        await withdrawExactCount(s, 385, 7, stop);
+        await withdrawExactCount(s, 2434, 8, stop, 'Prayer potion(4)');
+        await withdrawExactCount(s, 385, 9, stop, 'Shark');
         await closeBankClean(s, stop);
         await walkWaypoints(s, [{ x: 2466, z: 3495, tol: 1 }], 40, stop, 'grand tree bank to ladder 2');
         await climbTreeLadder(s, 'down', 0, stop);

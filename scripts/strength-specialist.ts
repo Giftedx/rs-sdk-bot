@@ -4,7 +4,6 @@ import { join, resolve } from 'node:path';
 import { finish, openBot } from '../packages/core/src/bot';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { configureSpecialistGuardEnv, readServerHost, runMeleePvpSpecialist, type StopFn } from './combat-quest-specialists';
-import { runWaterfall } from './generated/waterfall';
 
 async function main(): Promise<void> {
     const bot = process.argv[2] ?? '';
@@ -12,10 +11,12 @@ async function main(): Promise<void> {
     const CAP = Number(capArg ?? process.env.CAP ?? 6000);
     if (!bot) throw Error('usage: strength-specialist.ts <bot> [cap]');
     if (!Number.isSafeInteger(CAP) || CAP < 500 || CAP > 20000) throw Error(`invalid CAP: ${CAP}`);
-    const supplierName = (process.env.PRACTICE_SUPPLIER ?? process.env.SUPPLIER ?? '').trim();
+    const suppliersRaw = (process.env.PRACTICE_SUPPLIER ?? process.env.SUPPLIER ?? '').trim();
+    const suppliers = suppliersRaw.split(',').map(x => x.trim()).filter(Boolean);
+    const supplierName = suppliers[0] ?? '';
     if (!supplierName) throw Error('missing SUPPLIER (or PRACTICE_SUPPLIER) environment variable');
-    const tanksRaw = (process.env.PRACTICE_TANKS ?? process.env.TANKS ?? supplierName).trim();
-    const tankNames = tanksRaw.split(',').map(x => x.trim()).filter(Boolean);
+    const tanksRaw = (process.env.PRACTICE_TANKS ?? process.env.TANKS ?? suppliersRaw).trim();
+    const tankNames = [...new Set(tanksRaw.split(',').map(x => x.trim()).filter(Boolean))];
 
     const root = resolve(import.meta.dir, '..');
     configureSpecialistGuardEnv();
@@ -43,7 +44,6 @@ async function main(): Promise<void> {
             cap: CAP,
             t0,
             stop,
-            runWaterfallFn: runWaterfall,
         });
         await finish([s], true, msg);
     } catch (e) {

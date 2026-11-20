@@ -50,6 +50,10 @@ const TANK_BANK = [
     { id: 563, count: 100 },
     { id: 2552, count: 50 },
     { id: 391, count: 1000 },
+    { id: 2440, count: 100 },
+    { id: 2436, count: 50 },
+    { id: 2434, count: 50 },
+    { id: 3016, count: 50 },
 ];
 
 export function supplierPresetConfig(kit: readonly KitSpecItem[]): SaveConfig {
@@ -116,7 +120,7 @@ export const SPECIALIST_COMBAT_QUESTS_CASES: BenchCase[] = [
             { suffix: 't', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig() },
         ],
         timeoutMs: 900_000,
-        pass: s => ok(s) && /strength=99\b/.test(s) && loggedOutOnce(s),
+        pass: s => ok(s) && /strength=99\b/.test(s) && observedTicks(s) <= SPECIALIST_TARGETS.strength.targetTicks && loggedOutOnce(s),
     },
     {
         key: 'fighter:specialist-defence',
@@ -129,7 +133,7 @@ export const SPECIALIST_COMBAT_QUESTS_CASES: BenchCase[] = [
             { suffix: 't', preset: 'fresh_lumbridge', presetConfig: tankPostPresetConfig() },
         ],
         timeoutMs: 900_000,
-        pass: s => ok(s) && /defence=99\b/.test(s) && loggedOutOnce(s),
+        pass: s => ok(s) && /defence=99\b/.test(s) && observedTicks(s) <= SPECIALIST_TARGETS.defence.targetTicks && loggedOutOnce(s),
     },
 ];
 
@@ -170,6 +174,7 @@ async function runCompanionMain(args: string[]): Promise<void> {
         const res = await runCompanionRole(s, {
             role,
             specialistName: specialist,
+            board,
             kit: role === 'tank' ? undefined : KIT_BY_BOARD[board],
             postTileOffsetX: Number(offsetRaw ?? 0),
             stopFile,

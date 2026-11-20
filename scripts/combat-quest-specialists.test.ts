@@ -11,6 +11,7 @@ import {
     DEFENCE_SPECIALIST_KIT,
     HP_ANTIPOISON_ACCEPT_IDS,
     HP_SPECIALIST_KIT,
+    KEEP_TOPUP_BY_BOARD,
     KIT_BY_BOARD,
     SPECIALIST_TARGETS,
     STRENGTH_SPECIALIST_KIT,
@@ -22,6 +23,7 @@ import {
     kitRequirements,
     kitSlotTotal,
     pickCourtyardMagicTarget,
+    runSpecialistWaterfall,
 } from './combat-quest-specialists';
 import { runQuestBall } from './generated/quest-ball';
 import { runQuestGrandTree } from './generated/quest-grandtree';
@@ -128,7 +130,7 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
             expect(dragonBones * 72 * 25).toBeGreaterThanOrEqual(rev289XpForLevel(43));
         }
 
-        expect(HP_SPECIALIST_KIT.find(k => k.id === 386)?.count).toBeGreaterThanOrEqual(3 + 2 + 3 + 6);
+        expect(HP_SPECIALIST_KIT.find(k => k.id === 386)?.count).toBeGreaterThanOrEqual(3 + 2 + 3 + 9);
         expect(HP_SPECIALIST_KIT.find(k => k.id === 2435)?.count).toBeGreaterThanOrEqual(1 + 2 + 3 + 8);
         expect(HP_SPECIALIST_KIT.find(k => k.id === 176)?.count).toBeGreaterThanOrEqual(3);
         expect(countAntipoisonDoses(HP_SPECIALIST_KIT)).toBeGreaterThanOrEqual(9);
@@ -139,10 +141,17 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
         expect(DEFENCE_SPECIALIST_KIT).toBe(KIT_BY_BOARD.defence);
         for (const kit of [STRENGTH_SPECIALIST_KIT, DEFENCE_SPECIALIST_KIT]) {
             expect(kit.find(k => k.id === 1333)?.count).toBe(1);
-            expect(kit.find(k => k.id === 2434)?.count).toBeGreaterThanOrEqual(2);
-            expect(kit.find(k => k.id === 2440)?.count).toBeGreaterThanOrEqual(5);
-            expect(kit.find(k => k.id === 3016)?.count).toBeGreaterThanOrEqual(1);
+            expect(kit.find(k => k.id === 2434)?.count).toBe(1);
+            expect(kit.find(k => k.id === 3016)?.count).toBeGreaterThanOrEqual(8);
         }
+        expect(kitSlotTotal(KEEP_TOPUP_BY_BOARD.strength)).toBe(7);
+        expect(KEEP_TOPUP_BY_BOARD.strength.find(k => k.id === 2440)?.count).toBeGreaterThanOrEqual(5);
+        expect(kitSlotTotal(KEEP_TOPUP_BY_BOARD.defence)).toBe(11);
+        expect(KEEP_TOPUP_BY_BOARD.defence.find(k => k.id === 2440)?.count).toBeGreaterThanOrEqual(9);
+        for (const topup of [KEEP_TOPUP_BY_BOARD.strength, KEEP_TOPUP_BY_BOARD.defence]) {
+            for (const spec of topup) expect(itemsById.get(spec.id)?.tradeable).toBe(true);
+        }
+        expect(typeof runSpecialistWaterfall).toBe('function');
         expect(kitRequirements(STRENGTH_SPECIALIST_KIT).length).toBe(STRENGTH_SPECIALIST_KIT.length);
     });
 
