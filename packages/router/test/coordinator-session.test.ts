@@ -9,7 +9,7 @@ import {installJob,liveAccountWait} from '../src/coordinator-live';
 import {addTasks,chooseTask,initialState} from '../src/coordinator';
 import {sha} from '../../core/src/launch-evidence';
 import {missionSignature} from '../../core/src/session-admission';
-import {assertSpecialistLogin, specialistContext, specialistTokenPath} from '../../core/src/specialist-launch';
+import {assertSpecialistLogin, evaluateSpecialist, specialistContext, specialistTokenPath} from '../../core/src/specialist-launch';
 import {readCoordinatorJobs,writeCoordinatorJobs} from '../../core/src/coordinator-jobs';
 import type {Order,TradeReceipt} from '../../../scripts/fleet-trade-settlement';
 const server='rs-sdk-demo.fly.dev';
@@ -554,4 +554,45 @@ test('supply-exhausted autopilot jobs yield cleanly while non-supply blocked and
   expect(liveAccountWait(courierTask,['Fingerblastr'],fBad.base,()=>false)?.reason).toBe('autopilot-assignment');
   expect(()=>installJob(courierTask,'Fingerblastr','scripts/coin-courier.ts','task-bad','source',{},{base:fBad.base,preflight:true,freeGB:64})).toThrow();
  }
+});
+
+test('specialist preflight admits fast 1-99 routes whose boardTick beats #1 while draining engineQueue',()=>{
+ const f=fixture(),account='JustTheTip',name=account.toLowerCase(),board='Fletching';
+ const source='a'.repeat(64),runId='test-fast',now=Date.now(),dir='.practice/specialist-launch';
+ const script='fletching.ts',mission=missionSignature({script,account,env:{CAP:'200',COORDINATOR_RUN_ID:''}});
+ const requirements=[{item:'Headless arrow',count:100,itemId:53}];
+ const context=specialistContext(account,source,mission,requirements);
+ mkdirSync(join(f.base,dir),{recursive:true});mkdirSync(join(f.base,'fleet'));mkdirSync(join(f.base,'knowledge'));
+ const file=(path:string,value:unknown)=>{
+  const bytes=typeof value==='string'?value:JSON.stringify(value);
+  writeFileSync(join(f.base,path),bytes);
+  return{path,sha256:sha(bytes)};
+ };
+ file('swarm.json',{maxBots:17,minFreeGB:4,jobs:[{account,role:'fletching',goal:'Fresh-clock Fletching specialist',script:'',enabled:false}]});
+ file('fleet/owners.json',{accounts:{Holder:{side:'local',server},Courier:{side:'local',server}}});
+ file('knowledge/items.json',[{id:53,name:'Headless arrow'}]);
+ file(dir+'/hiscores.json',{base:'https://'+server,tickMs:400,takenAt:new Date(now).toISOString(),profiles:[{name,status:404,at:now}],
+  boards:[{board,category:10,rows:[{rank:1,name:'Leader',level:99,ticks:56}]}]});
+ const artifacts={
+  finalSave:file(dir+'/fast.final.sav','engine save fixture'),
+  tradeLedger:file(dir+'/fast.trades.jsonl','engine trade ledger fixture'),
+  tickRecord:file(dir+'/fast.ticks.ndjson.gz','engine tick record fixture'),
+ };
+ const items=[{id:53,count:100}];
+ const delivery=file(dir+'/delivery.json',{ok:true,observed:true,server,to:'Holder',from:'Courier',at:now-50,before:[],after:items,items});
+ const bank=file(dir+'/bank.json',{name:'Holder',server,bankAt:now-20,bank:[{id:53,count:100}]});
+ const staging=file(dir+'/staging.json',{version:2,context,at:now-10,allocations:[{item:'Headless arrow',itemId:53,count:100,holder:'Holder',recipient:name,bank,delivery}]});
+ const writePlan=(boardTick:number,endPlaytime:number)=>{
+  const raw={context,runId:'fast-1',actor:'PracticeFast',server:'localhost:8888',at:now-10,
+   startPlaytime:0,endPlaytime,planTicks:54,ok:true,died:false,logout:'logged-out',boardTicks:{[board]:boardTick},externalSupplies:requirements,artifacts};
+  const log=file(dir+'/fast.log','REHEARSAL '+JSON.stringify(raw)+'\nRESULT ok fletch 99\n');
+  const rehearsal=file(dir+'/fast.json',{version:2,...raw,log});
+  file(dir+'/'+name+'.json',{version:1,account:name,board,context,planTicks:54,requirements,rehearsal,staging});
+ };
+ writePlan(54,77);
+ expect(()=>evaluateSpecialist(f.base,account,runId,source,mission,['Holder','Courier'],now)).not.toThrow();
+ writePlan(55,77);
+ expect(()=>evaluateSpecialist(f.base,account,runId,source,mission,['Holder','Courier'],now)).toThrow();
+ writePlan(54,200);
+ expect(()=>evaluateSpecialist(f.base,account,runId,source,mission,['Holder','Courier'],now)).toThrow('Rehearsal clock mismatch');
 });

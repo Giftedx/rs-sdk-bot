@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {validateSupplies,validateRehearsals,gateProblem,GATE_NAMES} from '../src/launch-evidence';
+import {validateSupplies,validateRehearsals,gateProblem,GATE_NAMES,MAX_LOGOUT_DRAIN_TICKS} from '../src/launch-evidence';
 const now=10000000, context='a'.repeat(64);
 const refs=new Map<string,any>();
 const read=(r:any)=>{if(!refs.has(r.path))throw Error('missing evidence');return refs.get(r.path)};
@@ -55,6 +55,17 @@ test('rehearsals require three distinct full-clock runs and matching raw logs',(
  expect(()=>validateRehearsals([runs[0],runs[0],runs[0]],context,{overall:100},now,read)).toThrow();
  expect(()=>validateRehearsals(runs.map(r=>({...r,startPlaytime:25})),context,{overall:100},now,read)).toThrow();
  expect(()=>validateRehearsals(runs,context,{overall:90},now,read)).toThrow();
+ expect(()=>validateRehearsals(runs.map(r=>({...r,endPlaytime:105})),context,{overall:100},now,read)).toThrow();
+});
+test('fast specialist rehearsals allow bounded engineQueue logout drain while keeping strict boardTick matching',()=>{
+ const mk=(boardTick:number,endPlaytime:number,actor='practice-fast')=>{
+  const r={version:2,context,runId:actor,actor,server:'localhost:8888',at:now-1000,startPlaytime:0,endPlaytime,planTicks:54,ok:true,died:false,logout:'logged-out',boardTicks:{Fletching:boardTick},log:{path:'log-fast'}};
+  refs.set('log-fast','REHEARSAL '+JSON.stringify(r)+'\nRESULT ok');
+  return r;
+ };
+ expect(()=>validateRehearsals([mk(54,77)],context,{Fletching:54},now,read,{count:1,excludedActor:'justthetip',maxLogoutTailTicks:MAX_LOGOUT_DRAIN_TICKS})).not.toThrow();
+ expect(()=>validateRehearsals([mk(54,200)],context,{Fletching:54},now,read,{count:1,excludedActor:'justthetip',maxLogoutTailTicks:MAX_LOGOUT_DRAIN_TICKS})).toThrow('Rehearsal clock mismatch');
+ expect(()=>validateRehearsals([mk(56,77)],context,{Fletching:54},now,read,{count:1,excludedActor:'justthetip',maxLogoutTailTicks:MAX_LOGOUT_DRAIN_TICKS})).toThrow('Rehearsal board mismatch: Fletching');
 });
 test('login receipt rejects legacy, missing gates, future and expired authorizations',()=>{
  const g={version:2,go:true,at:now,expiresAt:now+60000,context,gates:GATE_NAMES.map(name=>({name,pass:true})),bindings:[{path:'source',sha256:context}]};
