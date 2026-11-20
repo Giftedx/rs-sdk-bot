@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795144425913-shaftsinker-oreelse",
  "account": "OreElse",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 230,
  "claim": "d01ace1a-3038-4ecd-ab4f-c603fe5106c7",
- "count": 0,
- "ok": false,
- "at": 1795144538892,
- "detail": "trade claimed"
+ "count": 230,
+ "ok": true,
+ "at": 1795144738093,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 230
+ },
+ "bank": {
+  "count": 230,
+  "at": 1795144737306
+ },
+ "logout": {
+  "attemptId": "1795144538903-0000024780-0000000001",
+  "at": 1795144738066,
+  "sha256": "0e605fb3f6d27583ac7248e8b21f4be0c85ecc0dec4cd5f923a2b73fa686eba3"
+ },
+ "screen": true
 }
