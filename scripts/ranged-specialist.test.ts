@@ -43,6 +43,7 @@ import {
 } from './ranged-specialist';
 import {
     ATTACK_SPECIALIST_KIT,
+    buildLegDeliveryReceipt,
     DEFAULT_STAGE_BANK,
     EDGEVILLE_BANK,
     parseSupplierCliArgs,
@@ -347,4 +348,41 @@ test('observedSupplies and validateSupplies round-trip for RANGED_SPECIALIST_KIT
     });
     const liveObserved = observedSupplies(liveLedger + '\n', 'shaftshooter', ITEMS);
     expect(liveObserved).toEqual(kitRequirements(RANGED_SPECIALIST_LIVE_KIT));
+
+    const livePlan = resolveSupplierKit('ranged-live');
+    const liveRefs = new Map<string, any>([
+        ['bank', { name: 'Moneyshot', server: 'rs-sdk-demo.fly.dev', bankAt: now - 1000, bank: RANGED_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })) }],
+        ...livePlan.legs.map((leg, idx) => [
+            `delivery-leg${idx + 1}`,
+            buildLegDeliveryReceipt({
+                kitName: livePlan.name,
+                leg: idx + 1,
+                totalLegs: livePlan.legs.length,
+                server: 'rs-sdk-demo.fly.dev',
+                from: 'Helper',
+                to: 'Moneyshot',
+                at: now - 2000 + idx * 100,
+                before: [],
+                after: leg.kit.map(k => ({ id: k.id, count: k.count })),
+                kit: leg.kit,
+            }),
+        ] as const),
+    ]);
+    const liveManifest = {
+        version: 2,
+        context,
+        at: now - 1000,
+        allocations: livePlan.legs.flatMap((leg, idx) =>
+            leg.kit.map(item => ({
+                item: item.name,
+                itemId: item.id,
+                count: item.count,
+                holder: 'Moneyshot',
+                recipient: 'shaftshooter',
+                bank: { path: 'bank' },
+                delivery: { path: `delivery-leg${idx + 1}` },
+            })),
+        ),
+    };
+    expect(() => validateSupplies(liveManifest, context, liveObserved, ITEMS, ['Helper', 'Moneyshot'], now, ref => liveRefs.get(ref.path), 'shaftshooter')).not.toThrow();
 });

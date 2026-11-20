@@ -222,6 +222,36 @@ export function resolveSupplierKitPlan(kitName: string | undefined = process.env
     throw Error(`specialist-supplier: unknown kit "${kitName}" (expected ${Object.keys(SPECIALIST_KITS).join('|')})`);
 }
 
+export function buildLegDeliveryReceipt(o: {
+    kitName: SupplierKitName;
+    leg: number;
+    totalLegs: number;
+    server: string;
+    from: string;
+    to: string;
+    at: number;
+    before: readonly { id: number; count: number }[];
+    after: readonly { id: number; count: number }[];
+    kit: readonly KitSpecItem[];
+    legs?: readonly string[];
+}) {
+    return {
+        ok: true,
+        observed: true,
+        kit: o.kitName,
+        leg: o.leg,
+        totalLegs: o.totalLegs,
+        ...(o.legs ? { legs: o.legs } : {}),
+        server: o.server,
+        from: o.from,
+        to: o.to,
+        at: o.at,
+        before: o.before.map(i => ({ id: i.id, count: i.count })),
+        after: o.after.map(i => ({ id: i.id, count: i.count })),
+        items: o.kit.map(k => ({ id: k.id, count: k.count })),
+    };
+}
+
 export function parseSupplierCliArgs(args: readonly string[]): {
     kitArg?: string;
     cap?: number;
@@ -627,11 +657,12 @@ export async function runStage(args: string[]): Promise<void> {
         await depositAllInventory(holderSession);
         await holderSession.bot.closeBank();
         await waitUntil(holderSession, () => !holderSession.sdk.getState()?.bank?.isOpen, { timeoutTicks: 8 });
-        const beforeInv = holderSession.sdk.getInventory().map(i => ({ id: i.id, baseId: resolveBaseId(i.id), count: i.count }));
-
-        let afterInv = beforeInv;
-        let transferAt = Date.now();
-        for (const leg of plan.legs) {
+        let lastTransferAt = Date.now();
+        const legFiles: string[] = [];
+        const legReceipts: ReturnType<typeof buildLegDeliveryReceipt>[] = [];
+        for (let legIdx = 0; legIdx < plan.legs.length; legIdx++) {
+            const leg = plan.legs[legIdx]!;
+            const legBefore = holderSession.sdk.getInventory().map(i => ({ id: resolveBaseId(i.id), count: i.count }));
             if (!hasExactKit(donorSession.sdk.getInventory(), leg.kit)) {
                 await withdrawExactKit(donorSession, leg.kit, bankTile, stop, allowNoted);
             }
@@ -653,11 +684,34 @@ export async function runStage(args: string[]): Promise<void> {
             ]);
             const rx = served.trades.find(t => t.success);
             if (!given.success || !rx || !leg.kit.every(k => countById(rx.received, k.id) === k.count)) {
-                throw Error(`stage transfer mismatch (${plan.name}): given=${given.success} rx=${!!rx}`);
+                throw Error(`stage transfer mismatch (${plan.name} leg ${legIdx + 1}): given=${given.success} rx=${!!rx}`);
             }
             await waitUntil(holderSession, () => hasExactKit(holderSession.sdk.getInventory(), leg.kit), { timeoutTicks: 10 });
-            afterInv = holderSession.sdk.getInventory().map(i => ({ id: i.id, baseId: resolveBaseId(i.id), count: i.count }));
-            transferAt = Date.now();
+            const legAfter = holderSession.sdk.getInventory().map(i => ({ id: resolveBaseId(i.id), count: i.count }));
+            lastTransferAt = Date.now();
+            for (const spec of leg.kit) {
+                if (countById(legAfter, spec.id) - countById(legBefore, spec.id) !== spec.count) {
+                    throw Error(`recipient delta mismatch (${plan.name} leg ${legIdx + 1}) for ${spec.name}`);
+                }
+            }
+            const receipt = buildLegDeliveryReceipt({
+                kitName: plan.name,
+                leg: legIdx + 1,
+                totalLegs: plan.legs.length,
+                server,
+                from: donor,
+                to: holder,
+                at: lastTransferAt,
+                before: legBefore,
+                after: legAfter,
+                kit: leg.kit,
+            });
+            legReceipts.push(receipt);
+            if (plan.legs.length > 1) {
+                const legFile = `delivery-leg${legIdx + 1}.json`;
+                legFiles.push(legFile);
+                writeFileSync(join(outDir, legFile), JSON.stringify(receipt, null, 2) + '\n');
+            }
             await openFreshBank(holderSession);
             await depositAllInventory(holderSession);
             await holderSession.bot.closeBank();
@@ -667,31 +721,19 @@ export async function runStage(args: string[]): Promise<void> {
         const bankObs = await openFreshBank(holderSession);
         await holderSession.bot.closeBank();
         const bankAt = bankObs.at;
-        if (bankAt < transferAt) throw Error(`bank observation (${bankAt}) older than transfer (${transferAt})`);
+        if (bankAt < lastTransferAt) throw Error(`bank observation (${bankAt}) older than transfer (${lastTransferAt})`);
         if (!hasAtLeastKit(bankObs.items, plan.combined)) throw Error(`holder final bank observation lacks full ${plan.name} kit`);
 
-        const items = plan.combined.map(k => ({ id: k.id, count: k.count }));
-        const delivery = {
-            ok: true,
-            observed: true,
-            kit: plan.name,
-            server,
-            from: donor,
-            to: holder,
-            at: transferAt,
-            before: beforeInv,
-            after: afterInv,
-            items,
-        };
+        const primaryDelivery = plan.legs.length > 1 ? { ...legReceipts[0]!, legs: legFiles } : legReceipts[0]!;
         const bank = {
             name: holder,
             server,
             bankAt,
             bank: bankObs.items.map(i => ({ id: i.id, count: i.count })),
         };
-        writeFileSync(join(outDir, 'delivery.json'), JSON.stringify(delivery, null, 2) + '\n');
+        writeFileSync(join(outDir, 'delivery.json'), JSON.stringify(primaryDelivery, null, 2) + '\n');
         writeFileSync(join(outDir, 'bank.json'), JSON.stringify(bank, null, 2) + '\n');
-        console.log('SPECIALIST_STAGED ' + JSON.stringify({ out: relOut, kit: plan.name, donor, holder, transferAt, bankAt }));
+        console.log('SPECIALIST_STAGED ' + JSON.stringify({ out: relOut, kit: plan.name, legs: legFiles, donor, holder, transferAt: lastTransferAt, bankAt }));
         await finish([donorSession, holderSession], true, `staged ${plan.name} kit from ${donor} to ${holder} into ${relOut}`);
     } catch (e) {
         await finish([donorSession, holderSession], false, String(e));
