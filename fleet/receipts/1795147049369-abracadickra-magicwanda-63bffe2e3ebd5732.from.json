@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795147049369-abracadickra-magicwanda-63bffe2e3ebd5732",
+ "account": "Abracadickra",
+ "partner": "Magicwanda",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 1350000,
+ "claim": "7c697e83-ff1e-4864-accc-e28d14a7001c",
+ "count": 1350000,
+ "ok": true,
+ "at": 1795147105161,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1350000,
+  "after": 0
+ },
+ "bank": {
+  "count": 300523,
+  "at": 1795147098404
+ },
+ "logout": {
+  "attemptId": "1795147088890-0000001668-0000000001",
+  "at": 1795147105150,
+  "sha256": "98185814c9d8f1b76d014714981b2b85730b7697406a0041f55206835f380f23"
+ },
+ "screen": true
+}

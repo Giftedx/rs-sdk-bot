@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795147049369-abracadickra-magicwanda-63bffe2e3ebd5732",
  "account": "Magicwanda",
  "partner": "Abracadickra",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 1350000,
  "claim": "12935bd0-a9d6-44f1-ab23-ebeb50a0bfe5",
- "count": 0,
- "ok": false,
- "at": 1795147068590,
- "detail": "trade claimed"
+ "count": 1350000,
+ "ok": true,
+ "at": 1795147106769,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1350000
+ },
+ "bank": {
+  "count": 1350000,
+  "at": 1795147105996
+ },
+ "logout": {
+  "attemptId": "1795147068600-0000024608-0000000001",
+  "at": 1795147106756,
+  "sha256": "a491d383b6cd48d0be38587c1b4ac129daca77ec65fa57006b4d3c6f9a45dd9d"
+ },
+ "screen": true
 }
