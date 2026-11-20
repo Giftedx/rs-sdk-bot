@@ -98,7 +98,7 @@ function keepSetFor(preserveCutDragonstones: boolean): Set<number> {
  return keep;
 }
 
-async function cutUnlockedGems(spec: Session, target: number, deadlineTick: number, clearAllModals = false): Promise<void> {
+async function cutUnlockedGems(spec: Session, target: number, deadlineTick: number): Promise<void> {
  const tierIds = new Set(CRAFTING_GEMS.map(t => t.id));
  while (spec.tick() < deadlineTick) {
   if (skillLevel(spec, 'Crafting') >= target) return;
@@ -111,8 +111,8 @@ async function cutUnlockedGems(spec: Session, target: number, deadlineTick: numb
   if (!gems.length) return;
   const st = spec.sdk.getState();
   const modalOpen = !!st?.dialog?.isOpen && !st?.trade?.isOpen;
-  const spare = Math.ceil(gems.length / 5) * 5 - gems.length;
-  const closeNow = modalOpen && (clearAllModals || spare > 0 || gems.length <= 4);
+  // OpHeldUHandler calls player.clearPendingAction() on packet 1, so cut 5/tick and only close explicitly on <=4 gems.
+  const closeNow = modalOpen && gems.length <= 4;
   const batch = gems.slice(0, closeNow ? 4 : 5);
   const actions: Promise<unknown>[] = [];
   if (closeNow) actions.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
@@ -142,8 +142,7 @@ async function executeCraftingLoop(
    await dropItemsFast(spec, keepSetFor(false), deadline);
   }
   await receiveBatch(batch, i);
-  // Batches 0..2 cross 10-20+ levels each; later batches drain up to 3 free modals inside the same 6-tick cut window.
-  await cutUnlockedGems(spec, target, deadline, i <= 2);
+  await cutUnlockedGems(spec, target, deadline);
   if (i === 1) logPhase(spec, start, `crafting_55_lvl=${skillLevel(spec, 'Crafting')}`);
  }
 
