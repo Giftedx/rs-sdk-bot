@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795165111312-quickhandjob-yewfirst-1da458937f0bf71a",
+ "account": "YewFirst",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 500,
+ "claim": "42976aa2-3e00-407f-a4ce-dbdd4abf4fcb",
+ "count": 0,
+ "ok": false,
+ "at": 1795165144259,
+ "detail": "trade claimed"
+}
