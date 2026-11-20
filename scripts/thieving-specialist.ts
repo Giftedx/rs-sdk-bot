@@ -15,7 +15,7 @@ import {
     walkWaypointsSafe,
     sailBrimhavenToArdougne,
     eatAnyFood,
-    hasAnyFood,
+    foodBitesCount,
     isLiveSupplyVariant,
     itemQty,
     chebDist,
@@ -152,6 +152,8 @@ if (import.meta.main) {
         let lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
         let lastPickTick = -99;
 
+        let restockingFood = false;
+
         while (!stopFlag && elapsedNow() < cap) {
             const st = main.sdk.getState();
             const lvl = main.sdk.getSkill('Thieving')?.baseLevel ?? 1;
@@ -170,8 +172,8 @@ if (import.meta.main) {
             const msgs = st.gameMessages ?? [];
             const newMsgs = msgs.filter(m => msgMark(m) > lastMsgMark);
             lastMsgMark = latestMark(msgs, lastMsgMark);
-            if (newMsgs.some(m => /you've been stunned/i.test(m.text))) {
-                stuns++;
+            if (newMsgs.some(m => /you've been stunned/i.test(m.text)) || st.player.combat?.inCombat) {
+                if (newMsgs.some(m => /you've been stunned/i.test(m.text))) stuns++;
                 if (st.player.hp <= tier.stunDamage) {
                     await eatAnyFood(main);
                 }
@@ -192,28 +194,33 @@ if (import.meta.main) {
                 continue;
             }
 
-            // Safety guard: never attempt a pickpocket while HP <= stunDamage. Steal emergency food at north side of Baker's stall if empty.
-            if (st.player.hp <= tier.stunDamage || !hasAnyFood(main)) {
-                if (st.player.hp <= tier.stunDamage && await eatAnyFood(main)) {
+            // Safety guard: eat before pickpocketing when HP <= stunDamage; restock early at east Baker's stall if food drops low.
+            if (st.player.hp <= tier.stunDamage) {
+                if (await eatAnyFood(main)) {
                     await waitTicks(main, 1);
                     continue;
                 }
-                if (!hasAnyFood(main) && st.inventory.length < 28) {
-                    const northTile = { x: 2655, z: 3313 };
-                    if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, northTile) > 1) {
-                        await main.bot.walkTo(northTile.x, northTile.z, 1);
+            }
+            const bites = foodBitesCount(main);
+            if ((bites <= 3 && st.player.hp >= 6) || bites === 0) restockingFood = true;
+            if (restockingFood) {
+                if (bites >= 12 || st.inventory.length >= 28) {
+                    restockingFood = false;
+                } else {
+                    const eastStand = { x: 2667, z: 3312 };
+                    if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, eastStand) > 1) {
+                        await main.bot.walkTo(eastStand.x, eastStand.z, 1);
                         await waitTicks(main, 1);
                         continue;
                     }
-                    const stall = st.nearbyLocs?.find(l => l.id === 2561 || /^baker's stall$/i.test(l.name ?? ''))
-                        ?? main.sdk.findNearbyLoc(/^baker's stall$/i);
+                    const stalls = (st.nearbyLocs ?? [])
+                        .filter(l => l.id === 2561 || /^baker's stall$/i.test(l.name ?? ''))
+                        .sort((a, b) => b.x - a.x);
+                    const stall = stalls[0] ?? main.sdk.findNearbyLoc(/^baker's stall$/i);
                     if (stall) {
                         await main.sdk.sendInteractLoc(stall.x, stall.z, stall.id, 2);
                     }
                     await waitTicks(main, 2);
-                    if (main.sdk.getState()!.player!.hp <= tier.stunDamage) {
-                        await eatAnyFood(main);
-                    }
                     continue;
                 }
             }

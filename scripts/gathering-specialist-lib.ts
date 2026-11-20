@@ -36,6 +36,7 @@ const MULTI2_OPT1_ID = 2461;
 export const CWARS_TO_ARDY_ZOO_WAYPOINTS: readonly [number, number, number][] = [
     [2451, 3151, 3],
     [2463, 3178, 3],
+    [2478, 3190, 2],
     [2476, 3197, 3],
     [2486, 3214, 3],
     [2506, 3233, 4],
@@ -46,6 +47,7 @@ export const CWARS_TO_ARDY_ZOO_WAYPOINTS: readonly [number, number, number][] = 
 export const CWARS_TO_ARDY_MARKET_WAYPOINTS: readonly [number, number, number][] = [
     [2451, 3151, 3],
     [2463, 3178, 3],
+    [2478, 3190, 2],
     [2476, 3197, 3],
     [2486, 3214, 3],
     [2506, 3233, 4],
@@ -123,6 +125,20 @@ const HEALING_FOOD_IDS = [
     OBJ_BREAD,
     OBJ_SHARK,
 ] as const;
+
+const FOOD_BITES_BY_ID: Readonly<Record<number, number>> = {
+    [OBJ_HALF_PINEAPPLE_PIZZA]: 1,
+    [OBJ_PINEAPPLE_PIZZA]: 2,
+    [OBJ_CAKE_SLICE]: 1,
+    [OBJ_CAKE_2_3]: 2,
+    [OBJ_CAKE]: 3,
+    [OBJ_CHOCOLATE_SLICE]: 1,
+    [OBJ_BREAD]: 1,
+    [OBJ_SHARK]: 1,
+};
+
+export const foodBitesCount = (s: Session): number =>
+    s.sdk.getInventory().reduce((sum, item) => sum + (FOOD_BITES_BY_ID[item.id] ?? 0) * item.count, 0);
 
 export const hasAnyFood = (s: Session): boolean =>
     HEALING_FOOD_IDS.some(id => slotOfId(s, id) !== undefined);
