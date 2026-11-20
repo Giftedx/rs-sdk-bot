@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795147690581-magicwanda-bowbeforeme-0292d31d4245f2e5",
+ "account": "BowBeforeMe",
+ "partner": "Magicwanda",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Amulet of glory(4)",
+ "requested": 1,
+ "claim": "1bc07df6-f841-45c5-91e5-a2f900c7f8c8",
+ "count": 0,
+ "ok": false,
+ "at": 1795147744350,
+ "detail": "Error: partner failed: no trade",
+ "lines": [
+  {
+   "item": "Fly fishing rod",
+   "requested": 1,
+   "count": 0
+  }
+ ],
+ "logout": {
+  "attemptId": "1795147740128-0000024836-0000000001",
+  "at": 1795147744337,
+  "sha256": "bfb8bf9af521039187fb28a6ad5d4c73ffb06d8f2b705b7c2ff6fe129a1b7a7f"
+ },
+ "screen": false
+}
