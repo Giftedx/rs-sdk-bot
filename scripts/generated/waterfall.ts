@@ -349,8 +349,7 @@ try {
         if (opts.protectMelee && p) {
             const pfmOn = !!st()?.prayers?.activePrayers?.[14];
             const prayPts = st()?.prayers?.prayerPoints ?? 0;
-            const inDangerZone = crossing
-                || inBox(2550, 9860, 2590, 9902)
+            const inDangerZone = (p.worldZ > 6400 && !inBox(2502, 9576, 2523, 9593))
                 || (p.worldX >= 2500 && p.worldX <= 2555 && p.worldZ >= 3138 && p.worldZ <= 3195);
             if (inDangerZone && prayPts <= 8 && s.tick() - lastPrayDrink >= 3) {
                 const pot = inv().find(i => [2434, 139, 141, 143].includes(i.id));
