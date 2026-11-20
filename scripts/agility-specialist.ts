@@ -1560,7 +1560,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
             }
 
             if (i === 0 && cfg.alignPipe) {
-                if (p.worldX === 3004 && p.worldZ <= 3937 && p.worldZ >= 3935) {
+                if (p.worldX === 3004 && p.worldZ === 3937) {
                     await syncPrayer(0);
                     await maybeEat();
                     await clickStep(step);
