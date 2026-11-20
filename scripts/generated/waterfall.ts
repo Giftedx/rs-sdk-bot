@@ -320,7 +320,6 @@ try {
     // Every tick: death watch, jump log, and the eat reflex (a direct op, so it never waits behind a bot.* action).
     let lastPrayDrink = -10;
     let lastPfmToggle = -10;
-    let lastPfmFlick = -10;
     let lastEnergyDrink = -10;
     off = s.onTick(() => {
         tally.pull();
@@ -350,20 +349,15 @@ try {
         if (opts.protectMelee && p) {
             const pfmOn = !!st()?.prayers?.activePrayers?.[14];
             const prayPts = st()?.prayers?.prayerPoints ?? 0;
-            const inDangerZone = p.worldZ > 6400
-                || (p.worldX >= 2500 && p.worldX <= 2555 && p.worldZ >= 3138 && p.worldZ <= 3195)
-                || (p.worldX >= 2530 && p.worldX <= 2570 && p.worldZ >= 3380 && p.worldZ <= 3450);
+            const inDangerZone = crossing
+                || inBox(2550, 9860, 2590, 9902)
+                || (p.worldX >= 2500 && p.worldX <= 2555 && p.worldZ >= 3138 && p.worldZ <= 3195);
             if (inDangerZone && prayPts <= 8 && s.tick() - lastPrayDrink >= 3) {
                 const pot = inv().find(i => [2434, 139, 141, 143].includes(i.id));
                 if (pot) { lastPrayDrink = s.tick(); void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' }); }
             }
             if (pfmOn !== inDangerZone && (!inDangerZone || prayPts > 0) && s.tick() - lastPfmToggle >= 2) {
                 lastPfmToggle = s.tick();
-                lastPfmFlick = s.tick();
-                void s.direct({ type: 'togglePrayer', prayerIndex: 14, reason: 'SDK' });
-            } else if (pfmOn && inDangerZone && prayPts > 0 && s.tick() - lastPfmFlick >= 3) {
-                lastPfmFlick = s.tick();
-                void s.direct({ type: 'togglePrayer', prayerIndex: 14, reason: 'SDK' });
                 void s.direct({ type: 'togglePrayer', prayerIndex: 14, reason: 'SDK' });
             }
         }

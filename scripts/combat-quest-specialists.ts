@@ -707,6 +707,7 @@ export async function runWildyPvpLoop(
     let lastFlickTick = -10;
     let lastPrayPotionTick = -10;
     let lastStatusTick = -100;
+    let needReengage = false;
 
     const drinkFromList = async (ids: readonly number[]): Promise<boolean> => {
         for (const id of ids) {
@@ -752,6 +753,7 @@ export async function runWildyPvpLoop(
                     }
                 }
             }
+            if (flickedThisTick) needReengage = true;
             if (!flickedThisTick && pts <= 10 && s.tick() - lastPrayPotionTick >= 4) {
                 if (await drinkFromList(PRAYER_POT_IDS)) lastPrayPotionTick = s.tick();
             }
@@ -782,9 +784,11 @@ export async function runWildyPvpLoop(
                 console.log(`PVP_STATUS tick=${s.tick()} ${opts.skill}=${sk.baseLevel} xp=${sk.experience} hp=${st?.player?.hp} pray=${pts} tanks=${tanks.length} inCombat=${!!combat?.inCombat} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
             }
             const currentAlive = combat?.inCombat && combat.targetType === 'player' && tanks.some(t => t.index === combat.targetIndex);
-            if (!currentAlive && tanks.length > 0) {
+            // togglePrayer runs p_clearpendingaction on the server, so re-send opplayer2 right after a flick tick.
+            if (!flickedThisTick && (needReengage || !currentAlive) && tanks.length > 0) {
                 const target = tanks[0]!;
-                if (target.index !== lastTargetIndex || s.tick() - lastAttackTick >= 2) {
+                if (needReengage || target.index !== lastTargetIndex || s.tick() - lastAttackTick >= 2) {
+                    needReengage = false;
                     lastTargetIndex = target.index;
                     lastAttackTick = s.tick();
                     await s.sdk.sendInteractPlayer(target.index, 2);
