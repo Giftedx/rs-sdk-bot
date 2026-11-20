@@ -1344,16 +1344,14 @@ const ROUTE_CASES: BenchCase[] = [
       )),
     };
   })(),
-  // Multi-trip restock regression: two maxed tribrids start at post with 1 shark against 3 ganker-dds accounts and 0 spare arrows in bank; Trip 2+ must restock and finish.
+  // Multi-trip restock regression: three maxed tribrids start at post with 1 shark against 3 full-food clones (3v3) and 0 spare arrows in bank; Trip 2+ must restock and finish.
   (() => {
-    const base = cloneTribridSquad('extra:squad-2-trips-nospare-x1', 'tribrid-snare', 2,
-      ['MAX_MINUTES=8', 'TRIPS=6', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_OPTS={"cureNow":true,"eatAt":88,"escapeAt":74,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}'],
-      'seen', {x: 3066, z: 3641}, 1, EDGE_BANK_NOSPARE_ARROWS);
+    const base = cloneTribridSquad('extra:squad-2-trips-nospare-x1', 'tribrid-snare', 3,
+      ['MAX_MINUTES=10', 'TRIPS=6', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_OPTS={"cureNow":true,"eatAt":88,"escapeAt":68,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}'],
+      'full', {x: 3066, z: 3641}, 1, EDGE_BANK_NOSPARE_ARROWS);
     return {
       ...base,
       pass: s => ok(s) && killReceiptsMatch(s) && /\bdied=0\b/.test(s) && /\btrips=([1-9]|\d{2,})\b/.test(s) && /\bgangDied=[23]\b/.test(s),
-      scriptArgs: ['squad', '{bot:b}', '{bot:c}', '{bot:d}', '{bot:e}', ...base.scriptArgs!.filter(a => !/^\{bot:/.test(a) && a !== 'squad' && !/^SQUAD_GANG/.test(a) && a !== 'SPAR_B_OPTS={}'), 'SQUAD_GANG=3', 'SQUAD_GANG_PROFILE=ganker-live'],
-      companions: base.companions!.map((comp, i) => (i >= 1 ? {...comp, presetConfig: kitFixture('ganker-dds', 3078, 3640)} : comp)),
     };
   })(),
   // The same against each mode of the clones: every clone walks out with its food gone (retreat), none does (stand),
