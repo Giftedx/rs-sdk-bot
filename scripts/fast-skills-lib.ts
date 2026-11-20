@@ -393,6 +393,7 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
  const transferredGive = () =>
   !!opts.giveIds?.length && opts.giveIds.some(id => countItem(helper.sdk.getInventory(), id) < (initialHelperGive.get(id) ?? 0));
  let sawConfirm = false;
+ let lastOpenReqTick = -10;
 
  while (spec.tick() < opts.deadlineTick) {
   const st = spec.sdk.getTradeState();
@@ -411,17 +412,20 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    // Wait for spec's queued level-up dialogs before helper initiates trade so engineQueue cannot overwrite trademain.
    const openActs: Promise<unknown>[] = [];
    if (helpDlg) openActs.push(helper.direct({ type: 'closeModal', reason: 'SDK' }));
-   if ((!specDlg || opts.allowHelperOnSingleModal) && sTarget) {
-    openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
-   }
    if (specDlg) openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
-   if ((!specDlg || opts.allowHelperOnSingleModal) && hTarget) {
+   // Send both OPPLAYER4 requests together once per 3-tick window so delayed packets cannot re-fire and close a newly opened trademain.
+   const canRequest = (!specDlg || opts.allowHelperOnSingleModal) && !helpDlg && spec.tick() - lastOpenReqTick >= 3;
+   if (canRequest && sTarget && hTarget) {
+    lastOpenReqTick = spec.tick();
+    openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
     openActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
    }
    if (openActs.length) await Promise.all(openActs);
    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
    continue;
   }
+
+  lastOpenReqTick = -10;
 
   if (st.isOpen !== ht.isOpen && spec.sdk.getState()?.dialog?.isOpen) {
    await spec.direct({ type: 'closeModal', reason: 'SDK' });
@@ -448,32 +452,32 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
 
   const hMainActs: Promise<unknown>[] = [];
   const sMainActs: Promise<unknown>[] = [];
-  const specAddingItems = sDistinctSlots.length > 0;
-  const hMaxOffers = hDistinctSlots.length > 4 || specAddingItems ? 5 : 4;
+  const sMaxOffers = sDistinctSlots.length > 4 ? 5 : 4;
+  const sOffers = sDistinctSlots.slice(0, sMaxOffers);
+  const specOfferComplete = sDistinctSlots.length <= sOffers.length;
+  const hMaxOffers = hDistinctSlots.length > 4 ? 5 : 4;
   const hOffers = hDistinctSlots.slice(0, hMaxOffers);
   const helperOfferComplete = hDistinctSlots.length <= hOffers.length;
   for (const slot of hOffers) {
    hMainActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
   }
-  const hCanAccept = helperOfferComplete && !specAddingItems;
+  const hCanAccept = helperOfferComplete && specOfferComplete;
   if (hCanAccept && !ht.myAccepted && hOffers.length <= 4) {
    hMainActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
   }
-  if (hCanAccept && (ht.myAccepted || hOffers.length <= 3)) {
+  if (hCanAccept && (ht.myAccepted || hOffers.length <= 3) && hOffers.length === 0 && sOffers.length === 0) {
    hMainActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
 
-  const sMaxOffers = sDistinctSlots.length > 4 ? 5 : 4;
-  const sOffers = sDistinctSlots.slice(0, sMaxOffers);
-  const specOfferComplete = sDistinctSlots.length <= sOffers.length;
   for (const slot of sOffers) {
    sMainActs.push(spec.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
   }
-  const specCanAccept = specOfferComplete && (helperOfferComplete || ht.myAccepted || (ht.myOffer?.length ?? 0) > 0);
+  // Spec waits until helper has already placed every item before accepting trademain so helper's Offer-All never resets spec's accept.
+  const specCanAccept = specOfferComplete && hDistinctSlots.length === 0;
   if (specCanAccept && !st.myAccepted && sOffers.length <= 4) {
    sMainActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
   }
-  if (specOfferComplete && (ht.myAccepted || (hCanAccept && hOffers.length <= 4)) && sOffers.length <= 3) {
+  if (specCanAccept && ht.myAccepted && sOffers.length <= 3) {
    sMainActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
   if (hMainActs.length) await Promise.all(hMainActs);
