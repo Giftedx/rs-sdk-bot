@@ -1,0 +1,22 @@
+{
+ "id": "1795145446152-mmtha0205-knightstick-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmtha0205",
+ "to": "Knightstick",
+ "item": "Air rune",
+ "count": 3,
+ "start": 1795145446152,
+ "end": 1795147846152,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
