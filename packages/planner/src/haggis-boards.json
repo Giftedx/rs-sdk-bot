@@ -374,6 +374,43 @@
    "x": 2971,
    "z": 2969,
    "note": "Karamja gnome glider landing (glider.constant ^gandius)"
+  },
+  "glory-edgeville": {
+   "x": 3087,
+   "z": 3496,
+   "note": "Amulet of glory Edgeville teleport (amulet_of_glory.rs2:30 0_48_54_15_40)"
+  },
+  "glory-karamja": {
+   "x": 2918,
+   "z": 3176,
+   "island": {
+    "id": "karamja",
+    "port": "port-sarim-dock",
+    "landing": "musa-point",
+    "boatTicks": 18,
+    "source": "research/walking.md boat talk: 18, 20, 17 ticks from the Port Sarim seaman to the Musa Point deck (MEASURED practice)"
+   },
+   "note": "Amulet of glory Karamja teleport (amulet_of_glory.rs2:31 0_45_49_38_40)"
+  },
+  "glory-draynor": {
+   "x": 3105,
+   "z": 3251,
+   "note": "Amulet of glory Draynor Village teleport (amulet_of_glory.rs2:32 0_48_50_33_51)"
+  },
+  "glory-al-kharid": {
+   "x": 3293,
+   "z": 3163,
+   "note": "Amulet of glory Al Kharid teleport (amulet_of_glory.rs2:33 0_51_49_29_27)"
+  },
+  "dueling-arena": {
+   "x": 3315,
+   "z": 3235,
+   "note": "Ring of dueling Al Kharid Duel Arena teleport (ring_of_dueling.rs2:21 0_51_50_51_35)"
+  },
+  "dueling-castle-wars": {
+   "x": 2440,
+   "z": 3090,
+   "note": "Ring of dueling Castle Wars Arena teleport (ring_of_dueling.rs2:23 0_38_48_8_18)"
   }
  },
  "activities": [
@@ -451,6 +488,18 @@
      "itemId": 995,
      "count": 10,
      "note": "Al Kharid toll"
+    },
+    {
+     "item": "amulet of glory(4)",
+     "itemId": 1712,
+     "count": 1,
+     "note": "Edgeville, Karamja, Draynor Village and Al Kharid teleports (amulet_of_glory.rs2:30-33)"
+    },
+    {
+     "item": "ring of dueling(8)",
+     "itemId": 2552,
+     "count": 1,
+     "note": "Duel Arena and Castle Wars teleports (ring_of_dueling.rs2:21-23)"
     }
    ],
    "suppliesLadder": {
@@ -3988,10 +4037,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 15000,
-    "realistic": 24000,
-    "evidence": "ESTIMATE",
-    "source": "6 quests not on another row and not measured (research/quest-points-board.md), 22 QP: the 46 rest quests (83 QP) plus 7 QP of 4 quests whose rows carry qp 0 (crest 1, rival-fight-arena 2, rival-mm 3, rival-seaslug 1), less the 10 short quests (12 QP) MEASURED in row quests-short and Shield of Arrav (1 QP, medium) MEASURED in row quest-arrav; less 19 medium quests (33 QP) MEASURED in row quests-medium; less Lost City (3 QP, medium) MEASURED in row quest-zanaris; less 9 long quests (19 QP) MEASURED in row quests-long; with that row the run ends at 145 = MAX_QP (quest.constant:72-139, quests.rs2:96-327). Ticks by size class anchored on MEASURED practice runs (research/quest-plan.md): 0 short x 250/400, 0 medium x 900/1,300 (Merlin 868-897, Dwarf Cannon 888-925, Waterfall 1,030-1,037), 0 long x 1,800/2,600 (Dragon Slayer 1,488-1,577, Grand Tree 2,001-2,083), 6 very long x 2,500/4,000 (no measured anchor); realistic adds walks and unscripted retries; not measured"
+    "floor": 14554,
+    "realistic": 16157,
+    "evidence": "MEASURED",
+    "source": "6 remaining quests measured at seeds 7, 8 and 9 on GitHub Actions lockstep bench (hosted-bench run 44700044593, 18/18 PASS, 0 capped): quester:quest:hero 1735/1766/1689, quester:quest:itwatchtower 2933/2751/3307, quester:quest:legends 4779/4242/4240, quester:quest:misc 1370/1356/1354, quester:quest:tbwt 1470/1496/1492, quester:quest:viking 3052/3439/3050; floor = sum of best seeds, realistic = sum of worst seeds"
    },
    "lump": true,
    "qp": 22,
@@ -4005,32 +4054,8 @@
     "waterfall",
     "quest-arrav"
    ],
-   "evidence": "ESTIMATE",
-   "source": "145 QP over 68 quests (quest.constant:72-139); quest list, requirements and size classes in research/quest-points-board.md; not measured",
-   "patches": [
-    {
-     "lever": "rival-dialogue-burst",
-     "set": {
-      "ticks": {
-       "floor": 13872,
-       "realistic": 22195,
-       "evidence": "ESTIMATE",
-       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109)"
-      }
-     }
-    },
-    {
-     "lever": "q-burst",
-     "set": {
-      "ticks": {
-       "floor": 13775,
-       "realistic": 22040,
-       "evidence": "ESTIMATE",
-       "source": "research/aio-bench.md Routes: Q_BURST=1 saves 0.7% across passing quests (30,203 vs 30,426) stacked on non-talk-plans quests"
-      }
-     }
-    }
-   ],
+   "evidence": "MEASURED",
+   "source": "145 QP over 68 quests (quest.constant:72-139); 6 remaining very long quests measured at seeds 7, 8 and 9 (hosted-bench run 44700044593, 18/18 PASS, 0 capped)",
    "at": "anywhere"
   },
   {
