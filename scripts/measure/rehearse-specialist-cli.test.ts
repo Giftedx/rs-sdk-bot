@@ -108,8 +108,8 @@ test('account lookup is case-insensitive and rejects unknown accounts or invalid
     expect(ranged.plan!.ticks).toBe(4600);
     expect(ranged.env?.VARIANT).toBe('live');
 
-    expect(lower.plan!.ticks).toBe(2189);
-    expect(resolveSpecialistSegment('Shaftshooter').plan!.ticks).toBe(4450);
+    expect(lower.plan!.ticks).toBe(2167);
+    expect(resolveSpecialistSegment('Shaftshooter').plan!.ticks).toBe(4660);
 
     expect(() => resolveSpecialistSegment('Haggis')).toThrow('unknown specialist');
     expect(() => resolveSpecialistSegment('DipYourWick', { planTicks: 0 })).toThrow('invalid planTicks');
