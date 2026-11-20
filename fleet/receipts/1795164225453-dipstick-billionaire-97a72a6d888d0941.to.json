@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795164225453-dipstick-billionaire-97a72a6d888d0941",
+ "account": "Billionaire",
+ "partner": "Dipstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrow",
+ "requested": 135,
+ "claim": "1c8e9d73-c1db-4297-b62c-1702a0a1f04b",
+ "count": 135,
+ "ok": true,
+ "at": 1795164297654,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 135
+ },
+ "bank": {
+  "count": 135,
+  "at": 1795164296890
+ },
+ "logout": {
+  "attemptId": "1795164246682-0000006124-0000000001",
+  "at": 1795164297626,
+  "sha256": "23b6797540cee5b77fdfe9cab7900652f48bfa9a4e191ae47ebc2481b29cc792"
+ },
+ "screen": true
+}
