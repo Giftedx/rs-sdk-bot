@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795146046584-mmtha0205-mightyrod-firerune",
+ "account": "mmtha0205",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 1,
+ "claim": "7161b865-d696-45f1-bd6b-04f03b6e40aa",
+ "count": 0,
+ "ok": false,
+ "at": 1795146142385,
+ "detail": "trade claimed"
+}
