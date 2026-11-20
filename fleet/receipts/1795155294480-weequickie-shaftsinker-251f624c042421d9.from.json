@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795155294480-weequickie-shaftsinker-251f624c042421d9",
  "account": "WeeQuickie",
  "partner": "Shaftsinker",
@@ -10,15 +10,37 @@
  "item": "Ring of dueling(8)",
  "requested": 1,
  "claim": "d209040b-a782-434d-8889-0301ead54520",
- "count": 0,
- "ok": false,
- "at": 1795155307381,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795155402035,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Iron ore",
    "requested": 2,
-   "count": 0
+   "count": 2,
+   "inventory": {
+    "before": 2,
+    "after": 0
+   },
+   "bank": {
+    "count": 2,
+    "at": 1795155385664
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795155384483
+ },
+ "logout": {
+  "attemptId": "1795155307390-0000028012-0000000001",
+  "at": 1795155402024,
+  "sha256": "0d23d17801201581c1ec41a35f1bc483c9ea08fe72345987fee36f79cc50241a"
+ },
+ "screen": true
 }
