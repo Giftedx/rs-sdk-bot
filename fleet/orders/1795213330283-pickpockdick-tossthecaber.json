@@ -1,0 +1,22 @@
+{
+ "id": "1795213330283-pickpockdick-tossthecaber",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PickpockDick",
+ "to": "TossTheCaber",
+ "item": "coins",
+ "count": 1821,
+ "start": 1795213330283,
+ "end": 1795215730283,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
