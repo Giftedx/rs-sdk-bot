@@ -160,6 +160,18 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  ]);
  const specialistSkill=specialistGathering.get(script);
  if(specialistSkill)return{kind:'service',objective:`fresh-clock ${specialistSkill} 99 specialist`,units:1};
+ const fastSkillSpecialists:Readonly<Record<string,{skill:string;cap:number}>>={
+  'scripts/prayer-specialist.ts':{skill:'prayer',cap:1350},
+  'scripts/smithing-specialist.ts':{skill:'smithing',cap:1350},
+  'scripts/runecraft-specialist.ts':{skill:'runecraft',cap:2300},
+ };
+ if(script in fastSkillSpecialists){
+  const spec=fastSkillSpecialists[script]!;
+  const cap=Number(setting(env,args,'CAP')??(/^\d+$/.test(args[0]??'')?args[0]:String(spec.cap)));
+  const target=Number(setting(env,args,'TARGET')??setting(env,args,'TARGET_LEVEL')??'99');
+  if(!whole(cap)||cap<1||!finiteLevel(target))return null;
+  return{kind:'service',objective:`specialist:${spec.skill}:${target}`,units:1};
+ }
  const acceptedSkills=Object.entries(accept?.skills??{});
  if(script==='scripts/cannon-fight.ts'){
   const mode=setting(env,args,'MODE');

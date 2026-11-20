@@ -4263,6 +4263,21 @@
    "description": "1-tick prayer flicking upkeep"
   },
   {
+   "id": "skiller:prayer:specialist",
+   "category": "skiller",
+   "name": "prayer:specialist",
+   "script": "scripts/prayer-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "prayer"
+   ],
+   "description": "Fresh-clock 1-to-99 Prayer via Draynor Bank dragon-bone runners and Lumbridge burying"
+  },
+  {
    "id": "skiller:runecraft:air",
    "category": "skiller",
    "name": "runecraft:air",
@@ -4309,6 +4324,21 @@
     "runecraft"
    ],
    "description": "Shilo Village Nature altar runecrafting trips"
+  },
+  {
+   "id": "skiller:runecraft:specialist",
+   "category": "skiller",
+   "name": "runecraft:specialist",
+   "script": "scripts/runecraft-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "runecraft"
+   ],
+   "description": "Fresh-clock 1-to-99 Runecraft via Air altar unlock and Body altar essence runners"
   },
   {
    "id": "skiller:runecraft:supply",
@@ -4375,6 +4405,21 @@
     "smithing"
    ],
    "description": "Smelt bronze/iron/steel/gold/mithril/adamant/runite bars at furnace"
+  },
+  {
+   "id": "skiller:smithing:specialist",
+   "category": "skiller",
+   "name": "smithing:specialist",
+   "script": "scripts/smithing-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "smithing"
+   ],
+   "description": "Fresh-clock 1-to-99 Smithing via Glory Edgeville and Varrock West anvil runners"
   },
   {
    "id": "skiller:thieving:blood-chest",
@@ -90377,6 +90422,7 @@
     "skiller:smithing:smelt",
     "skiller:smithing:anvil",
     "skiller:smithing:cannonballs",
+    "skiller:smithing:specialist",
     "skiller:crafting:bowstrings",
     "skiller:crafting:jewellery",
     "skiller:crafting:jewellery-trip",
@@ -90393,6 +90439,7 @@
     "skiller:runecraft:nature",
     "skiller:runecraft:supply",
     "skiller:runecraft:air",
+    "skiller:runecraft:specialist",
     "skiller:magic:order",
     "skiller:magic:items",
     "skiller:magic:npc",
@@ -90407,6 +90454,7 @@
     "skiller:magic:splash-coop",
     "skiller:prayer:bury",
     "skiller:prayer:flick",
+    "skiller:prayer:specialist",
     "skiller:agility:order",
     "skiller:thieving:knights",
     "skiller:thieving:knights-stable",
@@ -90499,6 +90547,7 @@
     "skiller:smithing:smelt",
     "skiller:smithing:anvil",
     "skiller:smithing:cannonballs",
+    "skiller:smithing:specialist",
     "skiller:crafting:bowstrings",
     "skiller:crafting:jewellery",
     "skiller:crafting:jewellery-trip",
@@ -90515,6 +90564,7 @@
     "skiller:runecraft:nature",
     "skiller:runecraft:supply",
     "skiller:runecraft:air",
+    "skiller:runecraft:specialist",
     "skiller:magic:order",
     "skiller:magic:items",
     "skiller:magic:npc",
@@ -90529,6 +90579,7 @@
     "skiller:magic:splash-coop",
     "skiller:prayer:bury",
     "skiller:prayer:flick",
+    "skiller:prayer:specialist",
     "skiller:agility:order",
     "skiller:thieving:knights",
     "skiller:thieving:knights-stable",
@@ -93186,6 +93237,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/specialist-fast-skills-cases.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/specialist-gathering-cases.ts",
    "intents": [
     "observe"
@@ -94122,6 +94182,18 @@
    ]
   },
   {
+   "script": "scripts/prayer-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "prayer"
+   ],
+   "routeIds": [
+    "skiller:prayer:specialist"
+   ]
+  },
+  {
    "script": "scripts/preparation-report.ts",
    "intents": [
     "observe"
@@ -94296,6 +94368,18 @@
    ]
   },
   {
+   "script": "scripts/runecraft-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "runecraft"
+   ],
+   "routeIds": [
+    "skiller:runecraft:specialist"
+   ]
+  },
+  {
    "script": "scripts/seaslug-leave.ts",
    "intents": [
     "service"
@@ -94368,6 +94452,18 @@
    "routeIds": [
     "skiller:smithing:smelt",
     "skiller:smithing:anvil"
+   ]
+  },
+  {
+   "script": "scripts/smithing-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "smithing"
+   ],
+   "routeIds": [
+    "skiller:smithing:specialist"
    ]
   },
   {
