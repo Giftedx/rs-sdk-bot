@@ -2,7 +2,7 @@ import { describe, expect, spyOn, test } from 'bun:test';
 import * as walking from '../packages/core/src/walk';
 import * as pk from './pk';
 import { maxDeathsOf } from './pk-hunt';
-import { bankNear, isKillLine, leaveWilderness, openSquad, outTripDue, pickSquadFocus, rescueDropped, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
+import { activeCentroid, bankNear, createSquadFocus, isKillLine, leaveWilderness, marchPlan, openSquad, outTripDue, pickSquadFocus, rescueDropped, shouldFollowReplan, shouldSwitchFocus, squadEscapeSpell, squadFallbackPlan, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, nextTick } from './pk';
 import { hold, SQUAD_OPTS, squadEnd, squadFightOverrides } from './pk-squad';
 import { sparOptions } from './pk-spar';
@@ -629,4 +629,60 @@ test('the early check of the members options: the defaults pass with an empty ki
     expect(() => sparOptions('gang-hunter', JSON.stringify(SQUAD_OPTS), {}, 1200)).not.toThrow();
     expect(() => sparOptions('no-such-profile', JSON.stringify(SQUAD_OPTS), {}, 1200)).toThrow('unknown profile');
     expect(() => sparOptions('gang-hunter', '{bad', {}, 1200)).toThrow();
+});
+
+test('activeCentroid excludes dropped, tripping, and finished members and prefers Wilderness members when marching north', () => {
+    const members = [
+        { name: 'UnderMyKilt', at: { x: 2888, z: 3345 } },
+        { name: 'TrouserSnake', at: { x: 3070, z: 3560 } },
+        { name: 'TheFullMonty', at: { x: 3072, z: 3562 } },
+        { name: 'PocketPool', at: { x: 3185, z: 3436 } },
+    ];
+    expect(activeCentroid(members, new Set(['UnderMyKilt', 'PocketPool']))).toEqual({ x: 3071, z: 3561 });
+    expect(activeCentroid(members, new Set(['UnderMyKilt']), true)).toEqual({ x: 3071, z: 3561 });
+    expect(activeCentroid(members, new Set(members.map(m => m.name)))).toBeNull();
+});
+
+test('marchPlan never generates intermediate straight-line waypoints south of the Wilderness ditch', () => {
+    const plan = marchPlan({ x: 2888, z: 3345 }, { x: 3067, z: 3640 }, 12);
+    expect(plan[0]!.z).toBe(3519);
+    expect(plan.every(step => step.z >= 3519)).toBe(true);
+    expect(plan[plan.length - 1]).toEqual({ x: 3067, z: 3640 });
+    // Single-way Wilderness target from far mainland first pathfinds to the ditch north of target x.
+    const singlePlan = marchPlan({ x: 2617, z: 3308 }, { x: 3090, z: 3560 }, 12);
+    expect(singlePlan[0]).toEqual({ x: 3090, z: 3519 });
+    expect(singlePlan.every(step => step.z >= 3519)).toBe(true);
+});
+
+test('shouldFollowReplan suppresses pre-rally replans and minor mid-march target jitter', () => {
+    const base = { rallied: true, routePending: true, currentAim: { x: 3067, z: 3640 }, nextTile: { x: 3071, z: 3634 }, tick: 100, lastReplanTick: -1 };
+    expect(shouldFollowReplan({ ...base, rallied: false, nextTile: { x: 3190, z: 3680 } })).toBe(false);
+    expect(shouldFollowReplan(base)).toBe(false);
+    expect(shouldFollowReplan({ ...base, nextTile: { x: 3185, z: 3679 } })).toBe(true);
+    expect(shouldFollowReplan({ ...base, nextTile: { x: 3185, z: 3679 }, tick: 115, lastReplanTick: 100 })).toBe(false);
+    expect(shouldFollowReplan({ ...base, routePending: false, nextTile: { x: 3075, z: 3640 }, tick: 120, lastReplanTick: 100 })).toBe(true);
+});
+
+test('createSquadFocus and shouldSwitchFocus pile all multi-way members onto one target and switch onto stunned/dying focus', () => {
+    const focus = createSquadFocus();
+    const targets = new Set(['goondelf', 'ligma', 'sugma']);
+    const viewA = [
+        { name: 'Goondelf', index: 1, distance: 1, x: 3067, z: 3640, combatLevel: 126 },
+        { name: 'Ligma', index: 2, distance: 5, x: 3069, z: 3640, combatLevel: 125 },
+    ];
+    const viewB = [
+        { name: 'Goondelf', index: 1, distance: 6, x: 3067, z: 3640, combatLevel: 126 },
+        { name: 'Ligma', index: 2, distance: 1, x: 3069, z: 3640, combatLevel: 125 },
+    ];
+    const hp: Record<number, number> = { 1: 1.0, 2: 1.0 };
+    expect(focus.pick({ view: viewA, targets, health: p => hp[p.index]!, inMulti: true, now: 10 })?.name).toBe('Goondelf');
+    // Second bot nearer Ligma still piles onto Goondelf at equal HP.
+    expect(focus.pick({ view: viewB, targets, health: p => hp[p.index]!, inMulti: true, now: 10 })?.name).toBe('Goondelf');
+    // Once Ligma drops to stunned or significantly lower HP, focus shifts and multi-way teammates yield to finish it.
+    hp[2] = 0.35;
+    expect(focus.pick({ view: viewA, targets, health: p => hp[p.index]!, inMulti: true, stunned: new Set(['ligma']), now: 15 })?.name).toBe('Ligma');
+    expect(shouldSwitchFocus({ inMulti: true, currentName: 'Goondelf', currentHp: 0.9, focusName: 'ligma', focusHp: 0.35, focusStunned: true, elapsedTicks: 4 })).toBe(true);
+    expect(shouldSwitchFocus({ inMulti: true, currentName: 'Goondelf', currentHp: 0.2, focusName: 'ligma', focusHp: 0.35, focusStunned: true, elapsedTicks: 4 })).toBe(false);
+    focus.clear('Ligma');
+    expect(focus.active(15)).toBeUndefined();
 });

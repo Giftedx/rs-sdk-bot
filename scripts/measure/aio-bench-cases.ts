@@ -1137,6 +1137,17 @@ const ROUTE_CASES: BenchCase[] = [
   squadCase('extra:squad-4-gang-single-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['POST=3075,3640', 'ALLOW_SINGLE=1']),
   // The squad starts out of sight of the gang, on the multi-way tiles at (3150, 3560), and follows the world feed to it.
   squadCase('extra:squad-4-gang-follow-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['POST=3150,3560', 'FOLLOW=1', 'MAX_MINUTES=8'], undefined, {x: 3149, z: 3561}),
+  // Scattered mainland starts (Taverley, Varrock West, Barbarian Village, Edgeville) with FOLLOW=1, threat radar, and shared freeze/focus.
+  (() => {
+    const c = cloneSquad('extra:squad-4-scattered-follow-x1', 'live-walker-iron-rune-chain-bind', 4,
+      ['MAX_MINUTES=10', 'TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1'], 'seen', {x: 3093, z: 3501}, 20);
+    const starts = [{x: 2888, z: 3345, level: 0}, {x: 3185, z: 3436, level: 0}, {x: 3082, z: 3420, level: 0}, {x: 3093, z: 3501, level: 0}];
+    return {
+      ...c,
+      presetConfig: {...c.presetConfig!, position: starts[0]!},
+      companions: c.companions!.map((comp, i) => (i < 3 ? {...comp, presetConfig: {...comp.presetConfig!, position: starts[i + 1]!}} : comp)),
+    };
+  })(),
   // The squad walks in from the Edgeville bank (3094, 3500) to the multi-way post: as a march (the default) or not.
   squadCase('extra:squad-4-gang-walkin-x1', 'live-walker-iron-snare-rune-nopot', 'ganker-dds', 4, ['MAX_MINUTES=8'], undefined, {x: 3093, z: 3501}),
   // The gang hunts (SQUAD_GANG_HUNT=1: it walks to the nearest of ours in the Wilderness, as the live gang did): the

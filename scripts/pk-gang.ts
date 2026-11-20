@@ -72,7 +72,7 @@ export const tripPrayerDue = (points: number, base: number, floor = TRIP_PRAYER_
 // `food` slots of sharks and boosts and the `items` again (scripts/pk-hunt.ts restock), wield the arrows, walk back.
 // `fill: false` takes sharks up to the food slots of the pack only, not a full pack, and `rest` is the ticks that the account waits at the bank.
 export function bankTrip(at: { x: number; z: number }, back: { x: number; z: number }, pack: { food: number; items: readonly { id: number; count: number }[] }, kit: Kit, halt: () => boolean = () => false,
-    bank: { eaten: number } = { eaten: 0 }, more: { fill?: boolean; rest?: number; altar?: boolean; prayerFloor?: number; log?: (line: string) => void; route?: (from: { x: number; z: number }) => { x: number; z: number }[] } = {}) {
+    bank: { eaten: number } = { eaten: 0 }, more: { fill?: boolean; rest?: number; altar?: boolean; prayerFloor?: number; log?: (line: string) => void; route?: (from: { x: number; z: number }) => { x: number; z: number }[]; beforeReturn?: (fresh: boolean) => Promise<void>; skipReturn?: (fresh: boolean) => boolean } = {}) {
     // `fresh`: the pack is the full pack of the kit already (the trip before the first meeting), so nothing is banked
     // but the boosts.
     return async (a: Session, fresh = false): Promise<string | null> => {
@@ -121,6 +121,9 @@ export function bankTrip(at: { x: number; z: number }, back: { x: number; z: num
                 more.log?.(done.ok ? `prayer restored: ${done.detail}` : `no prayer restore, fights on: ${done.detail}`);
             }
         }
+        if (more.beforeReturn) await more.beforeReturn(fresh);
+        if (halt()) return 'no walk back: stopped';
+        if (more.skipReturn?.(fresh)) return null;
         const here = a.sdk.getState()?.player;
         const home = await go(...(more.route && here ? more.route({ x: here.worldX, z: here.worldZ }) : [back]));
         return home.ok ? null : `no walk back: ${home.detail ?? 'stopped'}`;
