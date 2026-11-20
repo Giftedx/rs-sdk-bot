@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795191654185-undermykilt-weequickie-ca85b58f666fb452",
  "account": "WeeQuickie",
  "partner": "UnderMyKilt",
@@ -10,80 +10,206 @@
  "item": "Cannon base",
  "requested": 1,
  "claim": "2acea160-8bd7-407e-8808-b33a88ad4c12",
- "count": 0,
- "ok": false,
- "at": 1795191698808,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795191727955,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Cannon stand",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795191721992
+   }
   },
   {
    "item": "Cannon barrels",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795191722377
+   }
   },
   {
    "item": "Cannon furnace",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795191722799
+   }
   },
   {
    "item": "Cannonball",
    "requested": 604,
-   "count": 0
+   "count": 604,
+   "inventory": {
+    "before": 0,
+    "after": 604
+   },
+   "bank": {
+    "count": 604,
+    "at": 1795191723245
+   }
   },
   {
    "item": "Dragon bones",
    "requested": 11,
-   "count": 0
+   "count": 11,
+   "inventory": {
+    "before": 0,
+    "after": 11
+   },
+   "bank": {
+    "count": 11,
+    "at": 1795191723592
+   }
   },
   {
    "item": "Leather body",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795191724011
+   }
   },
   {
    "item": "Iron arrow",
    "requested": 300,
-   "count": 0
+   "count": 300,
+   "inventory": {
+    "before": 0,
+    "after": 300
+   },
+   "bank": {
+    "count": 300,
+    "at": 1795191724404
+   }
   },
   {
    "item": "Prayer potion(3)",
    "requested": 8,
-   "count": 0
+   "count": 8,
+   "inventory": {
+    "before": 0,
+    "after": 8
+   },
+   "bank": {
+    "count": 8,
+    "at": 1795191724801
+   }
   },
   {
    "item": "Prayer potion(4)",
    "requested": 4,
-   "count": 0
+   "count": 4,
+   "inventory": {
+    "before": 0,
+    "after": 4
+   },
+   "bank": {
+    "count": 4,
+    "at": 1795191725187
+   }
   },
   {
    "item": "Dragonhide chaps",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795191725629
+   }
   },
   {
    "item": "Dragon vambraces",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795191725998
+   }
   },
   {
    "item": "Antipoison(3)",
    "requested": 8,
-   "count": 0
+   "count": 8,
+   "inventory": {
+    "before": 0,
+    "after": 8
+   },
+   "bank": {
+    "count": 8,
+    "at": 1795191726456
+   }
   },
   {
    "item": "Rune arrow",
    "requested": 909,
-   "count": 0
+   "count": 909,
+   "inventory": {
+    "before": 0,
+    "after": 909
+   },
+   "bank": {
+    "count": 909,
+    "at": 1795191726841
+   }
   },
   {
    "item": "Lobster",
    "requested": 5,
-   "count": 0
+   "count": 5,
+   "inventory": {
+    "before": 0,
+    "after": 5
+   },
+   "bank": {
+    "count": 5,
+    "at": 1795191727194
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795191721598
+ },
+ "logout": {
+  "attemptId": "1795191698815-0000030656-0000000001",
+  "at": 1795191727945,
+  "sha256": "d4ab46b39b23a3d20c7a13ce27cc55356b1fb9a563acc4278fa8fc9b5843a363"
+ },
+ "screen": true
 }
