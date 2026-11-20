@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795152822095,
+ "at": 1795153462745,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -260,6 +260,24 @@
    "resources": []
   },
   {
+   "account": "Spitroaster",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=2 EXPECTED_OWNED=1 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=spitroaster-kit1-385-1to3 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 2 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "supply",
+   "template": "kit-buy:aio-blood-chest",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "OreElse",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -334,24 +352,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "account": "Spitroaster",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=2 EXPECTED_OWNED=1 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=spitroaster-kit1-385-1to3 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 2 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "supply",
-   "template": "kit-buy:aio-blood-chest",
-   "autopilot": "local",
-   "resources": []
   }
  ],
  "army": [
