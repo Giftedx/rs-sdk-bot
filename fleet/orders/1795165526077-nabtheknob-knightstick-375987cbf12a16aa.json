@@ -1,0 +1,22 @@
+{
+ "id": "1795165526077-nabtheknob-knightstick-375987cbf12a16aa",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "NabTheKnob",
+ "to": "Knightstick",
+ "item": "Rune arrowtips",
+ "count": 223,
+ "start": 1795165526077,
+ "end": 1795166726077,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ]
+}
