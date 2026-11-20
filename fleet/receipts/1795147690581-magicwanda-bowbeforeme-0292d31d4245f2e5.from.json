@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795147690581-magicwanda-bowbeforeme-0292d31d4245f2e5",
+ "account": "Magicwanda",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Amulet of glory(4)",
+ "requested": 1,
+ "claim": "cd7bf6b5-c03d-4628-99f7-ec79bc5aef2b",
+ "count": 0,
+ "ok": false,
+ "at": 1795147733541,
+ "detail": "Error: stock short: Amulet of glory(4) 0 banked + 0 held < 1",
+ "lines": [
+  {
+   "item": "Fly fishing rod",
+   "requested": 1,
+   "count": 0
+  }
+ ],
+ "logout": {
+  "attemptId": "1795147706133-0000013912-0000000001",
+  "at": 1795147733529,
+  "sha256": "718d5441ae94ff9c7354518015f910728e5997c2f6392472d2125cca29315c10"
+ },
+ "screen": false
+}
