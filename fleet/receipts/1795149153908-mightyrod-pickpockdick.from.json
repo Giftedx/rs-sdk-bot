@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795149153908-mightyrod-pickpockdick",
+ "account": "Mightyrod",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 221859,
+ "claim": "7ed64820-4aaf-446f-830d-7ad82475df9e",
+ "count": 221859,
+ "ok": true,
+ "at": 1795149285860,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 221859,
+  "after": 0
+ },
+ "bank": {
+  "count": 221859,
+  "at": 1795149278708
+ },
+ "logout": {
+  "attemptId": "1795149269770-0000011488-0000000001",
+  "at": 1795149285849,
+  "sha256": "38e1859ba2b99cc9ab1232ed44b5188449736ec75122511dba767d754cc8d504"
+ },
+ "screen": true
+}
