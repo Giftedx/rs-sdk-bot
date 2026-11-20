@@ -1,0 +1,28 @@
+{
+ "id": "1795203404139-fishandchips-fingerblastr-3739200ceb066bb4",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "Fingerblastr",
+ "item": "Lobster",
+ "count": 300,
+ "start": 1795203404139,
+ "end": 1795204604139,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Shark",
+   "count": 55
+  }
+ ]
+}
