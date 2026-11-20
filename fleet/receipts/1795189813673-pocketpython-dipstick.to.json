@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795189813673-pocketpython-dipstick",
  "account": "Dipstick",
  "partner": "Pocketpython",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 109456,
  "claim": "d47c5c12-90af-47cb-8e5f-82a9a20947cc",
- "count": 0,
- "ok": false,
- "at": 1795190474365,
- "detail": "trade claimed"
+ "count": 109456,
+ "ok": true,
+ "at": 1795191909870,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2044,
+  "after": 111500
+ },
+ "bank": {
+  "count": 109456,
+  "at": 1795191908801
+ },
+ "logout": {
+  "attemptId": "1795190474385-0000016164-0000000001",
+  "at": 1795191909565,
+  "sha256": "9f027d6fd6bc098a3f18985a4d3aa57206c1b768218cc9dc4f8934f71ba791e2"
+ },
+ "screen": true
 }
