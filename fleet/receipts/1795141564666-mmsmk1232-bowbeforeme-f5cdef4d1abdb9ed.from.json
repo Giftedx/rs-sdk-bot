@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795141564666-mmsmk1232-bowbeforeme-f5cdef4d1abdb9ed",
+ "account": "mmsmk1232",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel arrowtips",
+ "requested": 150,
+ "claim": "c4666e2a-b421-4bb5-a694-eeca6cacd1c9",
+ "count": 0,
+ "ok": false,
+ "at": 1795141872231,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Mithril arrowtips",
+   "requested": 240,
+   "count": 0
+  }
+ ]
+}

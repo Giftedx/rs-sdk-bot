@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795139504742-moneyshot-pocketrocket-dragonbones",
  "account": "Moneyshot",
  "partner": "Pocketrocket",
@@ -12,6 +12,16 @@
  "claim": "edb7da30-69a1-4c05-afc5-969432373c78",
  "count": 0,
  "ok": false,
- "at": 1795139572413,
- "detail": "trade claimed"
+ "at": 1795141905035,
+ "detail": "Error: order window ended during work",
+ "bank": {
+  "count": 17,
+  "at": 1795139638831
+ },
+ "logout": {
+  "attemptId": "1795139572423-0000016048-0000000001",
+  "at": 1795141905020,
+  "sha256": "433b576e76b9437b6376b18cec76103bce8f2489e2ba5aea1a92a16e9d86b390"
+ },
+ "screen": false
 }
