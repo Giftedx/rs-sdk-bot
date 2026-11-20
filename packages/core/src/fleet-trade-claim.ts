@@ -384,37 +384,57 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
         }
         return { ref, head, current, pending, orphan, inheritedHold, inheritedHead };
     };
-    const { ref, head, current, pending, orphan, inheritedHold, inheritedHead } = again(() => { try { return read(git); } catch (error) { git = gitWindow(root, authority, SWARM_CLAIM_READ_MS); throw error; } });
-    const record: FleetSwarmClaim = { kind: 'swarm', account, server, side, ...claimOwner(root), nonce: randomUUID(), phase: 'held', at: now() };
-    writePending(root, record, inheritedHold,inheritedHead);
-    const subject = orphan ? `Fleet swarm attempt, replacing the orphaned ${orphan.side} claim ${orphan.nonce}` : 'Fleet swarm attempt';
-    let owned: string;
-    if (!patient) owned = appendClaim(git, ref, head, subject, record);
-    else {
-        // One record, made one time. A push that timed out can have reached the remote, and the same commit pushed again
-        // is then no change. A push that the fast-forward rule rejected means that another writer has the ref: it is
-        // never pushed again. A remote that was busy is not that rejection (fleetPushRetryable).
-        owned = commitClaim(gitWindow(root, authority, SWARM_CLAIM_READ_MS), head, subject, record);
-        again(() => pushFleetGitRecord(gitWindow(root, authority, SWARM_CLAIM_PUSH_MS), ref, owned), fleetPushRetryable);
+    for (let casAttempt = 1; casAttempt <= tries; casAttempt++) {
+        if (casAttempt > 1) git = gitWindow(root, authority, SWARM_CLAIM_READ_MS);
+        const { ref, head, current, pending, orphan, inheritedHold, inheritedHead } = again(() => { try { return read(git); } catch (error) { git = gitWindow(root, authority, SWARM_CLAIM_READ_MS); throw error; } });
+        const record: FleetSwarmClaim = { kind: 'swarm', account, server, side, ...claimOwner(root), nonce: randomUUID(), phase: 'held', at: now() };
+        writePending(root, record, inheritedHold,inheritedHead);
+        const subject = orphan ? `Fleet swarm attempt, replacing the orphaned ${orphan.side} claim ${orphan.nonce}` : 'Fleet swarm attempt';
+        let owned: string;
+        if (!patient) owned = appendClaim(git, ref, head, subject, record);
+        else {
+            // One record, made one time. A push that timed out can have reached the remote, and the same commit pushed again
+            // is then no change. A push that the fast-forward rule rejected means that another writer has the ref: it is
+            // never pushed again, unless a lagged ref check caught our own checkout releasing the held claim we read.
+            owned = commitClaim(gitWindow(root, authority, SWARM_CLAIM_READ_MS), head, subject, record);
+            try {
+                again(() => pushFleetGitRecord(gitWindow(root, authority, SWARM_CLAIM_PUSH_MS), ref, owned), fleetPushRetryable);
+            } catch (error) {
+                if (casAttempt >= tries || fleetPushRetryable(error)) throw error;
+                cleanPending(root, record.nonce);
+                wait(SWARM_CLAIM_PAUSE_MS);
+                const after = again(() => loadClaim(gitWindow(root, authority, SWARM_CLAIM_READ_MS), account, server));
+                if (after.head !== head && after.claim && isSwarmClaim(after.claim) && after.claim.phase === 'released'
+                    && owningCheckout(root, after.claim, side) && current && isSwarmClaim(current) && after.claim.nonce === current.nonce) {
+                    continue;
+                }
+                throw error;
+            }
+        }
+        if (pending && current) cleanPending(root, current.nonce);
+        let released = false;
+        const release = (restore?: FleetSwarmClaim) => {
+            if (released) return;
+            const releaseSubject = restore ? 'Fleet swarm inherited hold restored' : 'Fleet swarm released';
+            const releaseBody = restore ?? { ...record, phase: 'released', at: now() };
+            if (!patient) appendClaim(gitWindow(root, authority, 4000), ref, owned, releaseSubject, releaseBody);
+            else {
+                const rel = commitClaim(gitWindow(root, authority, SWARM_CLAIM_READ_MS), owned, releaseSubject, releaseBody);
+                again(() => pushFleetGitRecord(gitWindow(root, authority, SWARM_CLAIM_PUSH_MS), ref, rel), fleetPushRetryable);
+            }
+            released = true;
+            cleanPending(root, record.nonce);
+        };
+        return {
+            nonce: record.nonce,
+            armNetwork: () => forgetPending(root, record.nonce),
+            abortBeforeNetwork: () => release(inheritedHold),
+            releaseAfterLogout(attemptId: string) {
+                const latest = matchedWorkerProof(root, record, input);
+                if (latest?.state !== 'confirmed' || latest.attemptId !== attemptId) throw Error('fleet swarm claim lacks exact logout proof');
+                release();
+            },
+        };
     }
-    if (pending && current) cleanPending(root, current.nonce);
-    let released = false;
-    const release = (restore?: FleetSwarmClaim) => {
-        if (released) return;
-        appendClaim(fleetGitWindow(root, 'fleet swarm claim authority', 4000), ref, owned,
-            restore ? 'Fleet swarm inherited hold restored' : 'Fleet swarm released',
-            restore ?? { ...record, phase: 'released', at: now() });
-        released = true;
-        cleanPending(root, record.nonce);
-    };
-    return {
-        nonce: record.nonce,
-        armNetwork: () => forgetPending(root, record.nonce),
-        abortBeforeNetwork: () => release(inheritedHold),
-        releaseAfterLogout(attemptId: string) {
-            const latest = matchedWorkerProof(root, record, input);
-            if (latest?.state !== 'confirmed' || latest.attemptId !== attemptId) throw Error('fleet swarm claim lacks exact logout proof');
-            release();
-        },
-    };
+    throw Error('fleet swarm claim attempts exhausted');
 }

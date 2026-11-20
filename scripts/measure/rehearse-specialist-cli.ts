@@ -24,7 +24,7 @@ const DEFAULT_OUT_BASE = '.practice/hosted-rehearse';
 export type SpecialistSegmentSpec = Segment & { specialist: string };
 
 export const READY_SPECIALIST_ACCOUNTS = [
-    'DipYourWick',
+    'HalfInch',
     'NockAndLoad',
     'Shaftshooter',
     'CutMyJewels',
@@ -111,8 +111,8 @@ interface SpecialistSpecDefinition {
 
 const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
     {
-        account: 'DipYourWick',
-        id: 'dipyourwick-thieving',
+        account: 'HalfInch',
+        id: 'halfinch-thieving',
         script: 'scripts/thieving-specialist.ts',
         env: { CAP: '3200', LIVE: '1' },
         supplierScript: 'scripts/gathering-supplier.ts',
