@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { xpForLevel } from '../packages/planner/src/curve';
 import { intentForEntry } from '../packages/planner/src/progression-catalog';
 import { planFletchingActionCounts, pickNextFletchTier, FLETCHING_SPECIALIST_SUPPLIES, OBJ_HEADLESS_ARROW } from './fletching-specialist';
@@ -8,6 +10,18 @@ import { THIEVING_SPECIALIST_SUPPLIES, THIEVING_PIZZAS, selectPickpocketTier } f
 import { OBJ_GAMES_8, OBJ_PINEAPPLE_PIZZA, OBJ_SUPER_ENERGY_4 } from './gathering-specialist-lib';
 import { expandSupplyInventory, SPECIALIST_GATHERING_CASES } from './measure/specialist-gathering-cases';
 import { benchCases, benchCoverage } from './measure/aio-bench-cases';
+import {
+    hasExactKit,
+    kitSlotTotal,
+    parseKitOption,
+    SPECIALIST_KITS,
+    type KitSpecItem,
+} from './specialist-supplier';
+
+const ROOT = resolve(import.meta.dir, '..');
+const ITEMS: { id: number; name: string; tradeable?: boolean }[] = JSON.parse(
+    readFileSync(join(ROOT, 'knowledge', 'items.json'), 'utf8'),
+);
 
 describe('gathering specialists supply & progression plans', () => {
     test('fletching ladder hits 99 in 240 actions using 7 stackable slots', () => {
@@ -91,6 +105,36 @@ describe('bench registration and catalog integration', () => {
         }
         expect(SPECIALIST_GATHERING_CASES.length).toBe(4);
         expect(benchCoverage().gaps).toEqual([]);
+    });
+
+    test('gathering kits match supply bills, cataloged tradeable names, and --kit option parsing', () => {
+        const byId = new Map(ITEMS.map(item => [item.id, item]));
+        const suppliesBySkill = {
+            fletching: FLETCHING_SPECIALIST_SUPPLIES,
+            fishing: FISHING_SPECIALIST_SUPPLIES,
+            mining: MINING_SPECIALIST_SUPPLIES,
+            thieving: THIEVING_SPECIALIST_SUPPLIES,
+        } as const;
+        for (const [skill, supplies] of Object.entries(suppliesBySkill) as [keyof typeof suppliesBySkill, Record<number, number>][]) {
+            const parsed = parseKitOption(['holder', 'spec', `--kit=${skill}`]);
+            expect(parsed).not.toBeNull();
+            expect(parsed!.name).toBe(skill);
+            const kit: readonly KitSpecItem[] = SPECIALIST_KITS[skill];
+            expect(parsed!.kit).toBe(kit);
+            const expanded = expandSupplyInventory(supplies);
+            expect(kitSlotTotal(kit)).toBe(expanded.length);
+            expect(hasExactKit(expanded, kit)).toBe(true);
+            for (const spec of kit) {
+                const entry = byId.get(spec.id);
+                expect(entry, `${skill}:${spec.id}`).toBeDefined();
+                expect(entry!.tradeable).toBe(true);
+                expect(entry!.name).toBe(spec.name);
+                expect(supplies[spec.id]).toBe(spec.count);
+            }
+        }
+        expect(parseKitOption(['holder', 'spec'])).toBeNull();
+        expect(parseKitOption(['holder', 'spec'], 'attack').name).toBe('attack');
+        expect(() => parseKitOption(['--kit=bogus'])).toThrow('unknown --kit=bogus');
     });
 
     test('planner catalog treats specialist routes as bounded service intents even with skill accept targets', () => {

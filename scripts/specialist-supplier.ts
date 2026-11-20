@@ -29,6 +29,76 @@ export const ATTACK_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 379, name: 'Lobster', count: 2, stackable: false },
 ] as const;
 
+// 7 stackable slots: arrowtips + headless arrows for 240 arrow-fletching actions (1-99).
+export const FLETCHING_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 39, name: 'Bronze arrowtips', count: 75, stackable: true },
+    { id: 40, name: 'Iron arrowtips', count: 105, stackable: true },
+    { id: 41, name: 'Steel arrowtips', count: 150, stackable: true },
+    { id: 42, name: 'Mithril arrowtips', count: 240, stackable: true },
+    { id: 43, name: 'Adamant arrowtips', count: 510, stackable: true },
+    { id: 44, name: 'Rune arrowtips', count: 2640, stackable: true },
+    { id: 53, name: 'Headless arrow', count: 3720, stackable: true },
+] as const;
+
+// 12 inventory slots: nets/rods/bait/feathers + knife + 5 logs + glory for 3t Sea Slug/Trio/Barbarian fishing.
+export const FISHING_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 303, name: 'Small fishing net', count: 1, stackable: false },
+    { id: 307, name: 'Fishing rod', count: 1, stackable: false },
+    { id: 309, name: 'Fly fishing rod', count: 1, stackable: false },
+    { id: 313, name: 'Fishing bait', count: 60, stackable: true },
+    { id: 314, name: 'Feather', count: 1500, stackable: true },
+    { id: 946, name: 'Knife', count: 1, stackable: false },
+    { id: 1511, name: 'Logs', count: 5, stackable: false },
+    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
+] as const;
+
+// 21 inventory slots: Doric quest ores + Rune pickaxe + 3t knife/logs + coins + glory + 2x super energy + games neck.
+export const MINING_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 434, name: 'Clay', count: 6, stackable: false },
+    { id: 436, name: 'Copper ore', count: 4, stackable: false },
+    { id: 440, name: 'Iron ore', count: 2, stackable: false },
+    { id: 946, name: 'Knife', count: 1, stackable: false },
+    { id: 995, name: 'Coins', count: 150, stackable: true },
+    { id: 1275, name: 'Rune pickaxe', count: 1, stackable: false },
+    { id: 1511, name: 'Logs', count: 2, stackable: false },
+    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 2, stackable: false },
+    { id: 3853, name: 'Games necklace(8)', count: 1, stackable: false },
+] as const;
+
+// 28 inventory slots: coins + glory + super energy(4) + 25 pineapple pizzas for Ardougne pickpocketing.
+export const THIEVING_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 995, name: 'Coins', count: 200, stackable: true },
+    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
+    { id: 2301, name: 'Pineapple pizza', count: 25, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 1, stackable: false },
+] as const;
+
+export const SPECIALIST_KITS = {
+    attack: ATTACK_SPECIALIST_KIT,
+    fletching: FLETCHING_SPECIALIST_KIT,
+    fishing: FISHING_SPECIALIST_KIT,
+    mining: MINING_SPECIALIST_KIT,
+    thieving: THIEVING_SPECIALIST_KIT,
+} as const satisfies Record<string, readonly KitSpecItem[]>;
+
+export type SpecialistKitName = keyof typeof SPECIALIST_KITS;
+
+export function parseKitOption(args: readonly string[]): { name: SpecialistKitName; kit: readonly KitSpecItem[] } | null;
+export function parseKitOption(args: readonly string[], defaultName: SpecialistKitName): { name: SpecialistKitName; kit: readonly KitSpecItem[] };
+export function parseKitOption(
+    args: readonly string[],
+    defaultName?: SpecialistKitName,
+): { name: SpecialistKitName; kit: readonly KitSpecItem[] } | null {
+    const raw = args.find(a => a.startsWith('--kit='))?.slice(6).trim().toLowerCase();
+    if (!raw) return defaultName ? { name: defaultName, kit: SPECIALIST_KITS[defaultName] } : null;
+    if (!(raw in SPECIALIST_KITS)) {
+        throw Error(`specialist-supplier: unknown --kit=${raw}; expected ${Object.keys(SPECIALIST_KITS).join('|')}`);
+    }
+    const name = raw as SpecialistKitName;
+    return { name, kit: SPECIALIST_KITS[name] };
+}
+
 export const LUMBRIDGE_HANDOFF = { x: 3222, z: 3222, level: 0 } as const;
 export const DEFAULT_STAGE_BANK = { x: 3092, z: 3243, level: 0 } as const;
 const ACCOUNT_RE = /^[A-Za-z0-9_ -]{1,12}$/;
@@ -113,7 +183,7 @@ async function depositAllInventory(s: Session): Promise<void> {
     }
 }
 
-async function withdrawExactKit(s: Session, kit: readonly KitSpecItem[], bankAt: { x: number; z: number; level: number }, stop: () => boolean): Promise<void> {
+export async function withdrawExactKit(s: Session, kit: readonly KitSpecItem[], bankAt: { x: number; z: number; level: number }, stop: () => boolean): Promise<void> {
     await moveTo(s, bankAt, 2, stop);
     const obs = await openFreshBank(s);
     await depositAllInventory(s);
@@ -137,17 +207,18 @@ async function withdrawExactKit(s: Session, kit: readonly KitSpecItem[], bankAt:
 }
 
 async function runServe(args: string[]): Promise<void> {
-    const holder = assertSupplierAccount(args[0] ?? '', 'holder');
-    const specialist = args[1] ?? '';
+    const positional = args.filter(a => !a.startsWith('--'));
+    const holder = assertSupplierAccount(positional[0] ?? '', 'holder');
+    const specialist = positional[1] ?? '';
     if (!specialist || !ACCOUNT_RE.test(specialist)) throw Error('usage: specialist-supplier.ts <holder> <specialist> [--kit=attack] [cap]');
-    const capArg = args.slice(2).find(a => /^\d+$/.test(a));
+    const capArg = positional.slice(2).find(a => /^\d+$/.test(a));
     const CAP = Number(capArg ?? process.env.CAP ?? 4000);
     if (!Number.isSafeInteger(CAP) || CAP < 50 || CAP > 50000) throw Error(`invalid CAP: ${CAP}`);
     const root = resolve(import.meta.dir, '..');
     const serverHost = (readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', holder, 'bot.env'), 'utf8').match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
     if (!serverHost) throw Error(`missing SERVER in bot.env for ${holder}`);
     const stopFile = () => existsSync(join(root, '.practice', `stop-${holder}`)) || (!isLocalServer(serverHost) && existsSync(join(root, '.practice', 'stop-swarm')));
-    const kit = ATTACK_SPECIALIST_KIT;
+    const { kit } = parseKitOption(args, 'attack');
 
     const s = await openBot(holder);
     const stop = () => stopFile();
@@ -195,7 +266,7 @@ async function runServe(args: string[]): Promise<void> {
     }
 }
 
-async function runStage(args: string[]): Promise<void> {
+export async function runStage(args: string[]): Promise<void> {
     const rest = args.filter(a => a !== '--stage');
     const outArg = rest.find(a => a.startsWith('--out='))?.slice(6);
     const bx = Number(rest.find(a => a.startsWith('--bank-x='))?.slice(9) ?? DEFAULT_STAGE_BANK.x);
@@ -212,7 +283,7 @@ async function runStage(args: string[]): Promise<void> {
     mkdirSync(outDir, { recursive: true });
 
     const bankTile = { x: bx, z: bz, level: 0 };
-    const kit = ATTACK_SPECIALIST_KIT;
+    const { name: kitName, kit } = parseKitOption(args, 'attack');
     const server = (readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', holder, 'bot.env'), 'utf8').match(/^SERVER=(.*)$/m)?.[1] ?? '').trim();
     const donorSession = await openBot(donor);
     const holderSession = await openBot(holder);
@@ -293,8 +364,8 @@ async function runStage(args: string[]): Promise<void> {
         };
         writeFileSync(join(outDir, 'delivery.json'), JSON.stringify(delivery, null, 2) + '\n');
         writeFileSync(join(outDir, 'bank.json'), JSON.stringify(bank, null, 2) + '\n');
-        console.log('SPECIALIST_STAGED ' + JSON.stringify({ out: relOut, donor, holder, transferAt, bankAt }));
-        await finish([donorSession, holderSession], true, `staged attack kit from ${donor} to ${holder} into ${relOut}`);
+        console.log('SPECIALIST_STAGED ' + JSON.stringify({ out: relOut, kit: kitName, donor, holder, transferAt, bankAt }));
+        await finish([donorSession, holderSession], true, `staged ${kitName} kit from ${donor} to ${holder} into ${relOut}`);
     } catch (e) {
         await finish([donorSession, holderSession], false, String(e));
     }
