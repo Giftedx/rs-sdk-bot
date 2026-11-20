@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795141327985-oreelse-bowbeforeme-f65347abc3b3c86d",
+ "account": "OreElse",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze arrowtips",
+ "requested": 75,
+ "claim": "29b8d2a4-cda6-4427-a720-5d49c7ea32b2",
+ "count": 0,
+ "ok": false,
+ "at": 1795141444192,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Iron arrowtips",
+   "requested": 105,
+   "count": 0
+  }
+ ]
+}
