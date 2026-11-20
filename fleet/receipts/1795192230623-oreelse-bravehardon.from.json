@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795192230623-oreelse-bravehardon",
+ "account": "OreElse",
+ "partner": "BraveHardon",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 1492,
+ "claim": "d47cef50-312f-4779-b98c-c8c6f6ddb657",
+ "count": 0,
+ "ok": false,
+ "at": 1795192320483,
+ "detail": "trade claimed"
+}

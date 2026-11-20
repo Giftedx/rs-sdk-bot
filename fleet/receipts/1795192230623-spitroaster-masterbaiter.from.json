@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795192230623-spitroaster-masterbaiter",
+ "account": "Spitroaster",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 28504,
+ "claim": "702a4dc5-224c-4731-b5b1-7de8eea9ab51",
+ "count": 0,
+ "ok": false,
+ "at": 1795192324453,
+ "detail": "trade claimed"
+}
