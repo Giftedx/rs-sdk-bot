@@ -1,0 +1,23 @@
+{
+ "id": "1795196356341-trousersnake-thefullmonty-0a3ac384893fcdb6",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TrouserSnake",
+ "to": "TheFullMonty",
+ "item": "Shark",
+ "count": 5,
+ "start": 1795196356341,
+ "end": 1795198756341,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

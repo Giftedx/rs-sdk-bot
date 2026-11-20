@@ -1,0 +1,23 @@
+{
+ "id": "1795196356092-mightyrod-pocketpool-704384e84f5fd3b1",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "PocketPool",
+ "item": "Law rune",
+ "count": 1,
+ "start": 1795196356092,
+ "end": 1795198756092,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
