@@ -739,7 +739,6 @@ export async function runWildyPvpLoop(
     let lastAttackTick = -10;
     let lastTargetIndex = -1;
     let lastDrinkTick = -10;
-    let lastFlickTick = -10;
     let lastPrayPotionTick = -10;
     let lastStatusTick = -100;
     let lastSwingTick = -10;
@@ -756,9 +755,7 @@ export async function runWildyPvpLoop(
         return false;
     };
 
-    const flickPrayers = skillInfo(s, 'Prayer').baseLevel >= 34
-        ? [ULTIMATE_STRENGTH_INDEX, INCREDIBLE_REFLEXES_INDEX]
-        : [ULTIMATE_STRENGTH_INDEX];
+    const flickPrayers = [ULTIMATE_STRENGTH_INDEX];
 
     try {
         while (!opts.stop() && skillInfo(s, opts.skill).baseLevel < opts.targetLevel) {
@@ -777,20 +774,17 @@ export async function runWildyPvpLoop(
 
             // Flick 1 tick after a swing (4-tick cadence < 5-tick prayer_drain timer) so p_clearpendingaction never delays a swing.
             const sinceSwing = s.tick() - lastSwingTick;
-            const sinceFlick = s.tick() - lastFlickTick;
             let flickedThisTick = false;
             if (pts > 0 && skillInfo(s, 'Prayer').baseLevel >= 31) {
                 const needOn = flickPrayers.some(idx => !st?.prayers?.activePrayers?.[idx]);
                 if (needOn) {
-                    lastFlickTick = s.tick();
                     flickedThisTick = true;
                     for (const idx of flickPrayers) {
                         if (!st?.prayers?.activePrayers?.[idx]) {
                             void s.direct({ type: 'togglePrayer', prayerIndex: idx, reason: 'SDK' });
                         }
                     }
-                } else if (sinceSwing === 1 || (sinceFlick >= 4 && sinceSwing !== 4)) {
-                    lastFlickTick = s.tick();
+                } else if (sinceSwing === 1) {
                     flickedThisTick = true;
                     for (const idx of flickPrayers) {
                         void s.direct({ type: 'togglePrayer', prayerIndex: idx, reason: 'SDK' });
@@ -1066,7 +1060,13 @@ export async function runMeleePvpSpecialist(
     await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, opts.stop);
     await walkWaypoints(
         s,
-        [{ x: 2451, z: 3151, tol: 4 }, { x: 2522, z: 3494, tol: 2 }],
+        [
+            { x: 2451, z: 3151, tol: 4 },
+            { x: 2490, z: 3220, tol: 4 },
+            { x: 2565, z: 3320, tol: 4 },
+            { x: 2565, z: 3380, tol: 4 },
+            { x: 2522, z: 3494, tol: 2 },
+        ],
         320,
         opts.stop,
         'castle wars to almera',
@@ -1075,7 +1075,7 @@ export async function runMeleePvpSpecialist(
             onTickExtra: () => {
                 ensureRunAndEnergy();
                 const p = posOf(s);
-                const wantPfm = !!p && p.worldZ >= 3175 && p.worldZ <= 3275;
+                const wantPfm = !!p && p.worldZ >= 3175 && p.worldZ <= 3265;
                 const pfmOn = !!s.sdk.getState()?.prayers?.activePrayers?.[PROTECT_MELEE_INDEX];
                 if (wantPfm !== pfmOn && (!wantPfm || (s.sdk.getState()?.prayers?.prayerPoints ?? 0) > 0)) {
                     void s.direct({ type: 'togglePrayer', prayerIndex: PROTECT_MELEE_INDEX, reason: 'SDK' });
