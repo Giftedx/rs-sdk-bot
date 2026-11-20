@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795146057187,
+ "at": 1795146092515,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -290,41 +290,13 @@
    ]
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
-   ]
-  },
-  {
    "account": "YewGotWood",
    "script": "scripts/generated/thieving60.ts",
    "args": [],
    "env": {
     "TARGET": "55",
     "CAP": "2500",
-    "CLEAN_FOOD": "1",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Thieving\":55}}"
+    "CLEAN_FOOD": "1"
    },
    "enabled": true,
    "standing": true,
@@ -334,7 +306,7 @@
    "template": "thieving55",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "knight:2652,3318"
    ]
   },
   {
