@@ -130,8 +130,8 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
             expect(dragonBones * 72 * 25).toBeGreaterThanOrEqual(rev289XpForLevel(43));
         }
 
-        expect(HP_SPECIALIST_KIT.find(k => k.id === 386)?.count).toBeGreaterThanOrEqual(3 + 2 + 3 + 9);
-        expect(HP_SPECIALIST_KIT.find(k => k.id === 2435)?.count).toBeGreaterThanOrEqual(1 + 2 + 3 + 8);
+        expect(HP_SPECIALIST_KIT.find(k => k.id === 386)?.count).toBeGreaterThanOrEqual(3 + 2 + 3 + 8);
+        expect(HP_SPECIALIST_KIT.find(k => k.id === 2435)?.count).toBeGreaterThanOrEqual(1 + 2 + 3 + 9);
         expect(HP_SPECIALIST_KIT.find(k => k.id === 176)?.count).toBeGreaterThanOrEqual(3);
         expect(countAntipoisonDoses(HP_SPECIALIST_KIT)).toBeGreaterThanOrEqual(9);
         expect(countAntipoisonDoses([{ id: 2449, count: 2 }])).toBe(8);
@@ -141,8 +141,8 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
         expect(DEFENCE_SPECIALIST_KIT).toBe(KIT_BY_BOARD.defence);
         for (const kit of [STRENGTH_SPECIALIST_KIT, DEFENCE_SPECIALIST_KIT]) {
             expect(kit.find(k => k.id === 1333)?.count).toBe(1);
-            expect(kit.find(k => k.id === 2434)?.count).toBe(1);
-            expect(kit.find(k => k.id === 3016)?.count).toBeGreaterThanOrEqual(8);
+            expect(kit.find(k => k.id === 2434)?.count).toBeGreaterThanOrEqual(2);
+            expect(kit.find(k => k.id === 3016)?.count).toBeGreaterThanOrEqual(7);
         }
         expect(kitSlotTotal(KEEP_TOPUP_BY_BOARD.strength)).toBe(7);
         expect(KEEP_TOPUP_BY_BOARD.strength.find(k => k.id === 2440)?.count).toBeGreaterThanOrEqual(5);

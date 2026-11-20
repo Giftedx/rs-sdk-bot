@@ -112,9 +112,9 @@ export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 954, name: 'Rope', count: 1, stackable: false },
-    { id: 2434, name: 'Prayer potion(4)', count: 1, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
     { id: 385, name: 'Shark', count: 1, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 8, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 7, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
 
@@ -1077,6 +1077,25 @@ export async function runCompanionRole(
     return { ok: true, detail: `tank ${s.name} finished in ${s.tick() - t0} ticks` };
 }
 
+function createPfmSustainer(s: Session): (want: boolean) => void {
+    let lastPrayDrink = -10;
+    return (want: boolean) => {
+        const st = s.sdk.getState();
+        const pts = st?.prayers?.prayerPoints ?? 0;
+        if (want && pts <= 15 && s.tick() - lastPrayDrink >= 3) {
+            const pp = s.sdk.getInventory().find(i => (PRAYER_POT_IDS as readonly number[]).includes(i.id));
+            if (pp) {
+                lastPrayDrink = s.tick();
+                void s.direct({ type: 'useInventoryItem', slot: pp.slot, optionIndex: 1, reason: 'SDK' });
+            }
+        }
+        const on = !!st?.prayers?.activePrayers?.[PROTECT_MELEE_INDEX];
+        if (want !== on && (!want || pts > 0)) {
+            void s.direct({ type: 'togglePrayer', prayerIndex: PROTECT_MELEE_INDEX, reason: 'SDK' });
+        }
+    };
+}
+
 export async function runSpecialistWaterfall(
     s: Session,
     stop: StopFn,
@@ -1232,15 +1251,12 @@ export async function runSpecialistWaterfall(
     await climb('hadley down', 2518, 3429, /climb-down/i, () => posOf(s)?.level === 0);
 
     // 2. Hadley -> Golrie cellar -> Pebble -> Ring of dueling directly to CW -> Tomb.
-    const khazardPfm = () => {
+    const syncWaterfallPfm = createPfmSustainer(s);
+    const khazardPfm = (maxZ: number) => () => {
         const p = posOf(s);
-        const want = !!p && p.worldZ >= 3190 && p.worldZ <= 3270;
-        const on = !!s.sdk.getState()?.prayers?.activePrayers?.[PROTECT_MELEE_INDEX];
-        if (want !== on && (!want || (s.sdk.getState()?.prayers?.prayerPoints ?? 0) > 0)) {
-            void s.direct({ type: 'togglePrayer', prayerIndex: PROTECT_MELEE_INDEX, reason: 'SDK' });
-        }
+        syncWaterfallPfm(!!p && p.worldZ <= maxZ);
     };
-    await walkFast([{ x: 2561, z: 3242, tol: 4 }, { x: 2533, z: 3156, tol: 2 }], 300, 'hadley to golrie cellar', khazardPfm);
+    await walkFast([{ x: 2561, z: 3242, tol: 4 }, { x: 2533, z: 3156, tol: 2 }], 300, 'hadley to golrie cellar', khazardPfm(3275));
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
 
     const inCellar = () => (posOf(s)?.worldZ ?? 0) > 9500 && (posOf(s)?.worldZ ?? 0) < 9600;
@@ -1260,9 +1276,10 @@ export async function runSpecialistWaterfall(
         await converse([], gotPebble, 30);
     }, gotPebble, 3, 2);
 
-    // Teleport out of Golrie's room straight to Castle Wars instead of unlocking gate & walking back out of maze.
+    // Teleport out of Golrie's room straight to Castle Wars, pre-arming PFM so guardWalk skips the Observatory detour.
     await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, stop);
-    await walkFast([{ x: 2557, z: 3444, tol: 2 }], 260, 'cw to tomb', khazardPfm);
+    await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
+    await walkFast([{ x: 2470, z: 3170, tol: 4 }, { x: 2557, z: 3444, tol: 2 }], 300, 'cw to tomb', khazardPfm(3270));
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
 
     // 3. Tomb: drop only banned weapons/runes (keep Ring, Amulet, and all potions).
@@ -1280,18 +1297,21 @@ export async function runSpecialistWaterfall(
     if (tombDropIds.some(has)) throw Error('failed dropping banned Tomb items');
 
     const inTomb = () => inBox(2520, 9795, 2560, 9850);
-    await stepAct('enter tomb', () => useOnLoc(ITEM.pebble, LOC.tombstone), inTomb, 10, 4);
+    await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
+    await stepAct('enter tomb', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.pebble, LOC.tombstone); }, inTomb, 10, 4);
     await stepAct('tomb chest', async () => {
+        syncWaterfallPfm(true);
         const shut = findLoc(l => l.id === LOC.chestClosed && l.x === LOC.chest.x && l.z === LOC.chest.z);
         if (shut) {
             await opLoc({ id: shut.id, x: shut.x, z: shut.z }, /open/i);
-            await waitUntil(s, () => !!findLoc(l => l.id === LOC.chestOpen && l.x === LOC.chest.x && l.z === LOC.chest.z) || stop(), { timeoutTicks: 20 });
+            await waitUntil(s, () => { syncWaterfallPfm(true); return !!findLoc(l => l.id === LOC.chestOpen && l.x === LOC.chest.x && l.z === LOC.chest.z) || stop(); }, { timeoutTicks: 20 });
         }
         const open = findLoc(l => l.id === LOC.chestOpen && l.x === LOC.chest.x && l.z === LOC.chest.z);
         if (open) await opLoc({ id: open.id, x: open.x, z: open.z }, /search/i);
     }, () => has(ITEM.amulet), 8, 5);
-    await stepAct('tomb coffin', () => opLoc(LOC.coffin), () => has(ITEM.urn), 12, 4);
+    await stepAct('tomb coffin', () => { syncWaterfallPfm(true); return opLoc(LOC.coffin); }, () => has(ITEM.urn), 12, 4);
     await climb('tomb up', 2556, 9844, /climb-up/i, () => (posOf(s)?.worldZ ?? 0) < 4000);
+    await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
 
     for (let i = 0; i < 20 && tombDropIds.some(id => cnt(id) < (targetDropCount.get(id) ?? 1)) && !stop(); i++) {
         opts.onEnergy?.();
@@ -1307,11 +1327,12 @@ export async function runSpecialistWaterfall(
     // 4. Waterfall Dungeon -> Baxtorian key -> Puzzle room -> Pillars -> Statue -> Chalice -> Exit.
     await crossToLedge(false);
     const inFalls = () => inBox(2555, 9860, 2615, 9925);
+    await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
     await stepAct('ledge door', () => opLoc(LOC.ledgeDoor), inFalls, 10, 4);
 
-    await walkFast([{ x: 2574, z: 9873, tol: 2 }, { x: 2584, z: 9876, tol: 2 }, { x: 2589, z: 9887, tol: 1 }], 60, 'falls crate');
-    await stepAct('falls crate', () => opLoc(LOC.baxCrate), () => has(ITEM.baxKey), 10, 4);
-    await walkFast([{ x: 2584, z: 9876, tol: 2 }, { x: 2569, z: 9876, tol: 2 }, { x: 2564, z: 9880, tol: 0 }], 50, 'double door');
+    await walkFast([{ x: 2574, z: 9873, tol: 2 }, { x: 2584, z: 9876, tol: 2 }, { x: 2589, z: 9887, tol: 1 }], 60, 'falls crate', () => syncWaterfallPfm(true));
+    await stepAct('falls crate', () => { syncWaterfallPfm(true); return opLoc(LOC.baxCrate); }, () => has(ITEM.baxKey), 10, 4);
+    await walkFast([{ x: 2584, z: 9876, tol: 2 }, { x: 2569, z: 9876, tol: 2 }, { x: 2564, z: 9880, tol: 0 }], 50, 'double door', () => syncWaterfallPfm(true));
 
     const doorShut = () => !!findLoc(l => (l.id === 1516 || l.id === 1519) && l.z === 9881 && Math.abs(l.x - 2564.5) <= 1);
     const openDoubleDoor = async () => {
@@ -1325,6 +1346,7 @@ export async function runSpecialistWaterfall(
     let lastWalk = -99, keySent = -99;
     for (let i = 0; i < 45 && !pastGiantDoor() && !stop(); i++) {
         opts.onEnergy?.();
+        syncWaterfallPfm(true);
         if (near(2568, 9893, 0)) {
             if (s.tick() - keySent >= 3) { keySent = s.tick(); await useOnLoc(ITEM.baxKey, LOC.giantDoor); }
         } else if (lastWalk < 0 || s.tick() - lastWalk >= 3) {
@@ -1365,14 +1387,16 @@ export async function runSpecialistWaterfall(
 
     await stepAct('chalice', () => useOnLoc(ITEM.urn, LOC.chalice), () => skillInfo(s, 'Attack').experience - atk0 >= 300_000, 10, 4);
 
-    // Exit raised room & falls to 2527,3413.
-    await walkFast([{ x: 2604, z: 9901, tol: 1 }], 25, 'raised room exit');
-    await stepAct('raised door', () => useOnLoc(ITEM.baxKey, { id: 2002, x: 2604, z: 9900 }), () => inBox(2562, 9894, 2572, 9901), 10, 4);
-    await stepAct('south giant door', () => useOnLoc(ITEM.baxKey, LOC.giantDoor), () => !findLoc(l => l.id === 2002 && l.x === LOC.giantDoor.x && l.z === LOC.giantDoor.z), 10, 4);
-    await walkFast([{ x: 2568, z: 9891, tol: 1 }, { x: 2565, z: 9883, tol: 1 }], 30, 'return giant room');
+    // Exit raised room & falls to 2527,3413 with PFM back on across the giant rooms.
+    await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
+    await walkFast([{ x: 2604, z: 9901, tol: 1 }], 25, 'raised room exit', () => syncWaterfallPfm(true));
+    await stepAct('raised door', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.baxKey, { id: 2002, x: 2604, z: 9900 }); }, () => inBox(2562, 9894, 2572, 9901), 10, 4);
+    await stepAct('south giant door', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.baxKey, LOC.giantDoor); }, () => !findLoc(l => l.id === 2002 && l.x === LOC.giantDoor.x && l.z === LOC.giantDoor.z), 10, 4);
+    await walkFast([{ x: 2568, z: 9891, tol: 1 }, { x: 2565, z: 9883, tol: 1 }], 30, 'return giant room', () => syncWaterfallPfm(true));
     await stepAct('return double door', openDoubleDoor, () => !doorShut(), 6, 4);
-    await walkFast([{ x: 2564, z: 9880, tol: 1 }, { x: 2584, z: 9876, tol: 2 }, { x: 2575, z: 9863, tol: 1 }], 40, 'return ledge exit');
+    await walkFast([{ x: 2564, z: 9880, tol: 1 }, { x: 2584, z: 9876, tol: 2 }, { x: 2575, z: 9863, tol: 1 }], 40, 'return ledge exit', () => syncWaterfallPfm(true));
     await stepAct('falls exit', () => opLoc({ id: 2000, x: 2575, z: 9861 }), () => near(2511, 3463, 3), 10, 4);
+    await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
     await stepAct('return barrel', () => opLoc(LOC.barrel), () => near(2527, 3413, 4), 10, 4);
 
     return {
@@ -1403,10 +1427,11 @@ export async function runMeleePvpSpecialist(
     };
 
     let lastEnergyTick = -10;
+    const syncCwPfm = createPfmSustainer(s);
     const ensureRunAndEnergy = () => {
         const p: any = posOf(s);
         const energy = p?.runEnergy ?? 100;
-        if (energy <= 75 && s.tick() - lastEnergyTick >= 3) {
+        if (energy <= 78 && s.tick() - lastEnergyTick >= 3) {
             const ep = s.sdk.getInventory().find(i => (SUPER_ENERGY_IDS as readonly number[]).includes(i.id));
             if (ep) {
                 lastEnergyTick = s.tick();
@@ -1430,13 +1455,14 @@ export async function runMeleePvpSpecialist(
     milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
 
     await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, opts.stop);
+    await setPrayerState(s, PROTECT_MELEE_INDEX, true, opts.stop);
     await walkWaypoints(
         s,
         [
-            { x: 2490, z: 3220, tol: 4 },
+            { x: 2470, z: 3170, tol: 4 },
             { x: 2522, z: 3494, tol: 2 },
         ],
-        300,
+        340,
         opts.stop,
         'castle wars to almera',
         {
@@ -1444,11 +1470,7 @@ export async function runMeleePvpSpecialist(
             onTickExtra: () => {
                 ensureRunAndEnergy();
                 const p = posOf(s);
-                const wantPfm = !!p && p.worldZ >= 3175 && p.worldZ <= 3265;
-                const pfmOn = !!s.sdk.getState()?.prayers?.activePrayers?.[PROTECT_MELEE_INDEX];
-                if (wantPfm !== pfmOn && (!wantPfm || (s.sdk.getState()?.prayers?.prayerPoints ?? 0) > 0)) {
-                    void s.direct({ type: 'togglePrayer', prayerIndex: PROTECT_MELEE_INDEX, reason: 'SDK' });
-                }
+                syncCwPfm(!!p && p.worldZ <= 3265);
             },
         },
     );
