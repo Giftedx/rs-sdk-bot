@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795152213831-masterbaiter-bigchopper-runechainbody",
+ "account": "Masterbaiter",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "91e1be70-9580-4332-bd90-641c82cdc719",
+ "count": 1,
+ "ok": true,
+ "at": 1795152377366,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795152364648
+ },
+ "logout": {
+  "attemptId": "1795152358188-0000027380-0000000001",
+  "at": 1795152377354,
+  "sha256": "d7f40c58507f8382496a6b52579dbf2372c5c0f56d019f9dbaca2c4c77abe8ad"
+ },
+ "screen": true
+}
