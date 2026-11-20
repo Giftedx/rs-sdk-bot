@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795132794241-deeppockets-pickpockdick-runechainbody",
+ "account": "PickpockDick",
+ "partner": "Deeppockets",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "147d1e6e-b1a7-494b-a6b2-4f4f875536c9",
+ "count": 1,
+ "ok": true,
+ "at": 1795132911785,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795132911047
+ },
+ "logout": {
+  "attemptId": "1795132879107-0000016116-0000000001",
+  "at": 1795132911770,
+  "sha256": "b4a78bf019e28929f32eef398e278bedba52dd3470a3e1ac79641340b95e6e7b"
+ },
+ "screen": true
+}
