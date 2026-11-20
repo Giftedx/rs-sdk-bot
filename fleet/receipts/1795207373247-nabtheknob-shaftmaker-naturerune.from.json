@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795207373247-nabtheknob-shaftmaker-naturerune",
+ "account": "NabTheKnob",
+ "partner": "Shaftmaker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 153,
+ "claim": "2b2ce4cd-cf51-4c18-b848-5eae25e25730",
+ "count": 0,
+ "ok": false,
+ "at": 1795207409679,
+ "detail": "trade claimed"
+}
