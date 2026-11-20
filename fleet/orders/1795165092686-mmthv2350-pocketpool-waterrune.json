@@ -1,0 +1,22 @@
+{
+ "id": "1795165092686-mmthv2350-pocketpool-waterrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmthv2350",
+ "to": "PocketPool",
+ "item": "Water rune",
+ "count": 197,
+ "start": 1795165092686,
+ "end": 1795167492686,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
