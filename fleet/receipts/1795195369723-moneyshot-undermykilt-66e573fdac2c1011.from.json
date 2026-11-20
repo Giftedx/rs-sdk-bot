@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795195369723-moneyshot-undermykilt-66e573fdac2c1011",
  "account": "Moneyshot",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 2,
  "claim": "8d1706b4-ca41-4957-9697-d4dea185ada5",
- "count": 0,
- "ok": false,
- "at": 1795195394925,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795195472983,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795195454627
+ },
+ "logout": {
+  "attemptId": "1795195394935-0000015968-0000000001",
+  "at": 1795195472968,
+  "sha256": "c99ede2672b1de758698d061836726c6ef2159caabe25ce265583768a86873f6"
+ },
+ "screen": true
 }

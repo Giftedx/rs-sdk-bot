@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795195369723-moneyshot-undermykilt-66e573fdac2c1011",
+ "account": "UnderMyKilt",
+ "partner": "Moneyshot",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "e84f8d98-d16e-435e-8d39-052aa58ede6d",
+ "count": 2,
+ "ok": true,
+ "at": 1795195474613,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795195473812
+ },
+ "logout": {
+  "attemptId": "1795195463017-0000022672-0000000001",
+  "at": 1795195474565,
+  "sha256": "817d58ef277445de828d60484776402d155b44ae3040c1df59ae61a02fda1644"
+ },
+ "screen": true
+}
