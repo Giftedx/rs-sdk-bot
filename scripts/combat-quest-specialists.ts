@@ -86,10 +86,22 @@ export const HP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 386, name: 'Shark', count: 20, stackable: true },
     { id: 2358, name: 'Gold bar', count: 1, stackable: true },
     { id: 1760, name: 'Ball of wool', count: 1, stackable: true },
-    { id: 2449, name: 'Superantipoison(4)', count: 2, stackable: true },
+    { id: 176, name: 'Antipoison(3)', count: 3, stackable: true },
 ] as const;
 
-// 28 slots exact: Waterfall (83 Atk/Str) + Prayer/Shark + PvP pots; zero post-quest banking needed.
+export const HP_ANTIPOISON_ACCEPT_IDS = [176, 175, 2447, 2446, 2449, 2448] as const;
+
+export function countAntipoisonDoses(items: readonly { id: number; baseId?: number; count?: number }[]): number {
+    const doseByBase: Readonly<Record<number, number>> = { 2448: 4, 2446: 4, 175: 3, 181: 3, 177: 2, 183: 2, 179: 1, 185: 1 };
+    let doses = 0;
+    for (const item of items) {
+        const base = item.baseId ?? (item.id === 176 ? 175 : item.id === 2447 ? 2446 : item.id === 2449 ? 2448 : item.id);
+        doses += (doseByBase[base] ?? 0) * (item.count ?? 0);
+    }
+    return doses;
+}
+
+// 28 slots exact: Waterfall (83 Atk/Str) + Super energy + Prayer/Shark + PvP pots; zero post-quest banking needed.
 export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 556, name: 'Air rune', count: 6, stackable: true },
     { id: 557, name: 'Earth rune', count: 6, stackable: true },
@@ -99,7 +111,8 @@ export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 954, name: 'Rope', count: 1, stackable: false },
     { id: 2434, name: 'Prayer potion(4)', count: 3, stackable: false },
-    { id: 385, name: 'Shark', count: 2, stackable: false },
+    { id: 385, name: 'Shark', count: 1, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 1, stackable: false },
     { id: 2436, name: 'Super attack(4)', count: 1, stackable: false },
     { id: 2440, name: 'Super strength(4)', count: 4, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
@@ -336,11 +349,16 @@ export async function startAndExitTutorial(s: Session, keepIds: ReadonlySet<numb
     }
 }
 
+export interface ReceiveSupplyKitOpts {
+    altSlots?: ReadonlyMap<number, { allowedIds: readonly number[]; satisfied: (items: readonly { id: number; baseId?: number; count?: number }[]) => boolean }>;
+}
+
 export async function receiveSupplyKit(
     s: Session,
     supplierName: string,
     kit: readonly KitSpecItem[],
     stop: StopFn,
+    opts: ReceiveSupplyKitOpts = {},
 ): Promise<void> {
     const p0 = posOf(s);
     if (!p0 || d8({ x: p0.worldX, z: p0.worldZ }, LUMBRIDGE_HANDOFF) > 2) {
@@ -348,8 +366,22 @@ export async function receiveSupplyKit(
     }
     const peerRe = exactNameRe(supplierName);
     const allowed = new Set(kit.map(k => k.id));
+    for (const alt of opts.altSlots?.values() ?? []) {
+        for (const id of alt.allowedIds) allowed.add(id);
+    }
+    const satisfied = (items: readonly { id: number; baseId?: number; count?: number }[]) =>
+        kit.every(k => {
+            const alt = opts.altSlots?.get(k.id);
+            return alt ? alt.satisfied(items) : countById(items, k.id) >= k.count;
+        });
+    const offerSatisfied = (offer: readonly { id: number; baseId?: number; count?: number }[]) =>
+        offer.every(o => allowed.has(o.id)) &&
+        kit.every(k => {
+            const alt = opts.altSlots?.get(k.id);
+            return alt ? alt.satisfied(offer) : countById(offer, k.id) === k.count;
+        });
     const deadline = s.tick() + 180;
-    while (!stop() && !hasAtLeastKit(s.sdk.getInventory(), kit)) {
+    while (!stop() && !satisfied(s.sdk.getInventory())) {
         if (s.tick() >= deadline) throw Error(`did not receive supply kit from ${supplierName}`);
         await dismissContinueDialogs(s, stop, 2);
         await s.bot.dismissBlockingUI();
@@ -359,34 +391,37 @@ export async function receiveSupplyKit(
             continue;
         }
         const tr = await s.bot.trade(peerRe, {
-            accept: offer =>
-                offer.every(o => allowed.has(o.id)) && kit.every(k => countById(offer, k.id) === k.count),
+            accept: offerSatisfied,
             requestTimeout: 10_000,
             timeout: 45_000,
             retryOnBusy: true,
         });
         if (tr.success) {
-            await waitUntil(s, () => hasAtLeastKit(s.sdk.getInventory(), kit) || stop(), { timeoutTicks: 10 });
-            if (hasAtLeastKit(s.sdk.getInventory(), kit)) return;
+            await waitUntil(s, () => satisfied(s.sdk.getInventory()) || stop(), { timeoutTicks: 10 });
+            if (satisfied(s.sdk.getInventory())) return;
         }
         await waitTicks(s, 1);
     }
-    if (!hasAtLeastKit(s.sdk.getInventory(), kit)) {
+    if (!satisfied(s.sdk.getInventory())) {
         throw Error('stopped waiting for specialist supply kit');
     }
 }
 
-export async function equipItemById(s: Session, itemId: number, stop: StopFn, label?: string): Promise<void> {
-    if (s.sdk.getEquipment().some(e => e.id === itemId)) return;
-    const item = s.sdk.getInventory().find(i => i.id === itemId);
-    if (!item) throw Error(`missing ${label ?? `item ${itemId}`} to equip`);
+export async function equipFirstAvailableId(s: Session, itemIds: readonly number[], stop: StopFn, label?: string): Promise<void> {
+    if (s.sdk.getEquipment().some(e => itemIds.includes(e.id))) return;
+    const item = itemIds.map(id => s.sdk.getInventory().find(i => i.id === id)).find(Boolean);
+    if (!item) throw Error(`missing ${label ?? `item ${itemIds.join('/')}`} to equip`);
     const eq = await s.bot.equipItem(item);
-    if (!eq.success && !s.sdk.getEquipment().some(e => e.id === itemId)) {
+    if (!eq.success && !s.sdk.getEquipment().some(e => e.id === item.id)) {
         throw Error(`failed to equip ${label ?? item.name}: ${eq.message}`);
     }
-    if (!await waitUntil(s, () => s.sdk.getEquipment().some(e => e.id === itemId) || stop(), { timeoutTicks: 6 })) {
+    if (!await waitUntil(s, () => s.sdk.getEquipment().some(e => e.id === item.id) || stop(), { timeoutTicks: 6 })) {
         throw Error(`equip not observed for ${label ?? item.name}`);
     }
+}
+
+export async function equipItemById(s: Session, itemId: number, stop: StopFn, label?: string): Promise<void> {
+    return equipFirstAvailableId(s, [itemId], stop, label);
 }
 
 export async function buryBonesTo43(s: Session, stop: StopFn): Promise<void> {
@@ -685,7 +720,7 @@ export async function runWildyPvpLoop(
 ): Promise<void> {
     await setAutoRetaliate(s, false);
     await equipItemById(s, 1333, opts.stop, 'Rune scimitar');
-    await equipItemById(s, 1725, opts.stop, 'Amulet of strength');
+    await equipFirstAvailableId(s, [1725, 1731], opts.stop, 'Amulet of strength/power');
 
     // Verify exact Strength-only (Aggressive) or Defence-only (Defensive) combat style.
     await waitUntil(s, () => {
@@ -767,7 +802,7 @@ export async function runWildyPvpLoop(
             }
             if (flickedThisTick) needReengage = true;
             if (!flickedThisTick && pts <= 10 && s.tick() - lastPrayPotionTick >= 4) {
-                if (drinkFromList(PRAYER_POT_IDS)) lastPrayPotionTick = s.tick();
+                if (drinkFromList(PRAYER_POT_IDS)) { lastPrayPotionTick = s.tick(); needReengage = true; }
             }
 
             // Re-boost Strength (16 doses) and Attack (4 doses) without blocking a loop tick.
@@ -778,9 +813,9 @@ export async function runWildyPvpLoop(
                 const minStrBoost = opts.skill === 'Strength' && str.baseLevel < 95 ? maxStrBoost - 1 : maxStrBoost - 2;
                 const minAtkBoost = opts.skill === 'Strength' ? 12 : 10;
                 if (str.level <= str.baseLevel + minStrBoost) {
-                    if (drinkFromList(SUPER_STRENGTH_IDS)) lastDrinkTick = s.tick();
+                    if (drinkFromList(SUPER_STRENGTH_IDS)) { lastDrinkTick = s.tick(); needReengage = true; }
                 } else if (atk.level < atk.baseLevel + minAtkBoost) {
-                    if (drinkFromList(SUPER_ATTACK_IDS)) lastDrinkTick = s.tick();
+                    if (drinkFromList(SUPER_ATTACK_IDS)) { lastDrinkTick = s.tick(); needReengage = true; }
                 }
             }
 
@@ -796,8 +831,8 @@ export async function runWildyPvpLoop(
                 console.log(`PVP_STATUS tick=${s.tick()} ${opts.skill}=${sk.baseLevel} xp=${sk.experience} hp=${st?.player?.hp} pray=${pts} tanks=${tanks.length} inCombat=${!!combat?.inCombat} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
             }
             const currentAlive = combat?.inCombat && combat.targetType === 'player' && tanks.some(t => t.index === combat.targetIndex);
-            // togglePrayer runs p_clearpendingaction on the server, so re-send interactPlayer non-blockingly on the next tick.
-            if (!flickedThisTick && (needReengage || !currentAlive) && tanks.length > 0) {
+            // togglePrayer/consumption run p_clearpendingaction; re-send interactPlayer on the same tick after them so the next 4-tick swing is never delayed.
+            if ((needReengage || !currentAlive) && tanks.length > 0) {
                 const target = tanks[0]!;
                 if (needReengage || target.index !== lastTargetIndex || s.tick() - lastAttackTick >= 2) {
                     needReengage = false;
@@ -969,7 +1004,7 @@ export async function runCompanionRole(
                     await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
                 }
             }
-            if ((mantaCount <= 10 && otherTankHere) || mantaCount <= 1) {
+            if ((mantaCount <= 5 && otherTankHere) || mantaCount <= 1) {
                 if (await pullKeepLeverOutAndRebank(s, stop)) continue;
             }
             await waitTicks(s, 1);
@@ -1020,7 +1055,7 @@ export async function runMeleePvpSpecialist(
     await receiveSupplyKit(s, opts.supplierName, kit, opts.stop);
     milestone('kit', `slots=${s.sdk.getInventory().length}`);
 
-    await equipItemById(s, 1725, opts.stop, 'Amulet of strength');
+    await equipFirstAvailableId(s, [1725, 1731], opts.stop, 'Amulet of strength/power');
     await buryBonesTo43(s, opts.stop);
     milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
 
@@ -1045,7 +1080,7 @@ export async function runMeleePvpSpecialist(
         cap: Math.max(300, opts.cap - elapsed()),
         food: { id: 385, heal: 20, count: 6, eatAt: 8, crossAt: 9 },
         mighty: false,
-        exitFalls: true,
+        exitFalls: false,
         keepAlive: true,
         protectMelee: true,
         tombHoldIds: [1333],
@@ -1055,7 +1090,15 @@ export async function runMeleePvpSpecialist(
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     milestone('waterfall', `atk=${skillInfo(s, 'Attack').baseLevel} str=${skillInfo(s, 'Strength').baseLevel} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
-    await walkWaypoints(s, [{ x: 2557, z: 3370, tol: 4 }, { x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall to ardougne lever', { onTickExtra: ensureRunAndEnergy });
+    await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, opts.stop);
+    await walkWaypoints(s, [{ x: 2451, z: 3151, tol: 4 }], 100, opts.stop, 'cwars2 to west road', { onTickExtra: ensureRunAndEnergy });
+    await setPrayerState(s, PROTECT_MELEE_INDEX, true, opts.stop);
+    await walkWaypoints(s, [
+        { x: 2490, z: 3220, tol: 4 },
+        { x: 2527, z: 3240, tol: 4 },
+    ], 120, opts.stop, 'cwars2 to khazard battlefield', { ignoreMeleeHunters: true, onTickExtra: ensureRunAndEnergy });
+    await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
+    await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'khazard to ardougne lever', { onTickExtra: ensureRunAndEnergy });
     await pullArdougneLeverToWildy(s, opts.stop);
     milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 

@@ -9,11 +9,13 @@ import { validateDelivery } from '../packages/router/src/delivery';
 import { FIGHTER_PROFILES } from './aio-fighter';
 import {
     DEFENCE_SPECIALIST_KIT,
+    HP_ANTIPOISON_ACCEPT_IDS,
     HP_SPECIALIST_KIT,
     KIT_BY_BOARD,
     SPECIALIST_TARGETS,
     STRENGTH_SPECIALIST_KIT,
     assertNonReservedAccount,
+    countAntipoisonDoses,
     countById,
     hasAtLeastKit,
     hasExactKit,
@@ -126,8 +128,12 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
             expect(dragonBones * 72 * 25).toBeGreaterThanOrEqual(rev289XpForLevel(43));
         }
 
-        expect(HP_SPECIALIST_KIT.find(k => k.id === 386)?.count).toBeGreaterThanOrEqual(3 + 2 + 3 + 7);
-        expect(HP_SPECIALIST_KIT.find(k => k.id === 2435)?.count).toBeGreaterThanOrEqual(1 + 2 + 3 + 9);
+        expect(HP_SPECIALIST_KIT.find(k => k.id === 386)?.count).toBeGreaterThanOrEqual(3 + 2 + 3 + 6);
+        expect(HP_SPECIALIST_KIT.find(k => k.id === 2435)?.count).toBeGreaterThanOrEqual(1 + 2 + 3 + 8);
+        expect(HP_SPECIALIST_KIT.find(k => k.id === 176)?.count).toBeGreaterThanOrEqual(3);
+        expect(countAntipoisonDoses(HP_SPECIALIST_KIT)).toBeGreaterThanOrEqual(9);
+        expect(countAntipoisonDoses([{ id: 2449, count: 2 }])).toBe(8);
+        expect(HP_ANTIPOISON_ACCEPT_IDS).toContain(175);
         expect(HP_SPECIALIST_KIT.find(k => k.id === 563)?.count).toBeGreaterThanOrEqual(18);
         expect(STRENGTH_SPECIALIST_KIT).toBe(KIT_BY_BOARD.strength);
         expect(DEFENCE_SPECIALIST_KIT).toBe(KIT_BY_BOARD.defence);
@@ -135,6 +141,7 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
             expect(kit.find(k => k.id === 1333)?.count).toBe(1);
             expect(kit.find(k => k.id === 2434)?.count).toBeGreaterThanOrEqual(3);
             expect(kit.find(k => k.id === 2440)?.count).toBeGreaterThanOrEqual(4);
+            expect(kit.find(k => k.id === 3016)?.count).toBeGreaterThanOrEqual(1);
         }
         expect(kitRequirements(STRENGTH_SPECIALIST_KIT).length).toBe(STRENGTH_SPECIALIST_KIT.length);
     });
