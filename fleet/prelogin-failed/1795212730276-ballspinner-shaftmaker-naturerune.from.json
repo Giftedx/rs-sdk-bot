@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795212730276-ballspinner-shaftmaker-naturerune",
+ "role": "from",
+ "account": "Ballspinner",
+ "partner": "Shaftmaker",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795213092118,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] 1d3e31899663de10525e7e1e14ac4d28b9cf96f4 -> fleet-trade-claim/ballspinner (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}
