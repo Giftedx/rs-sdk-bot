@@ -34,6 +34,7 @@
 // leash for a test. The script finds its stage from what Kolodion says and what the account holds.
 import { openQuest } from './quest-lib';
 import { componentId } from '../../packages/core/src/logout';
+import type { Session } from '../../packages/core/src/inprocess';
 import { GOD_LOADOUTS, type GodName } from '../pk-kits';
 
 const POOL_CELLAR = { id: 2878, x: 2541, z: 4719 }, POOL_CHAMBER = { id: 2879, x: 2508, z: 4686 };
@@ -41,7 +42,21 @@ const GUARDIAN = { x: 2508, z: 4696 };
 const LADDER_UP = { id: 2872, x: 2542, z: 4713 }, LADDER_DOWN = { id: 2871, x: 3091, z: 3957 };
 const WEBS = [{ x: 3093, z: 3957 }, { x: 3095, z: 3957 }];
 const PORTAL = { id: 2880, x: 3105, z: 3953 };
-const rawGod = (process.env.MA_GOD ?? 'zamorak').toLowerCase();
+export interface MageArenaOptions {
+    session?: Session;
+    cap?: number;
+    stop?: () => boolean;
+    god?: GodName;
+    mode?: 'pray' | 'leash';
+    charge?: boolean;
+    earlyCharge?: boolean;
+    defensive?: boolean;
+    stopOutside?: boolean;
+    keepAlive?: boolean;
+}
+
+export async function runQuestMageArena(opts: MageArenaOptions = {}): Promise<void> {
+const rawGod = (opts.god ?? process.env.MA_GOD ?? 'zamorak').toLowerCase();
 const GOD: GodName = rawGod === 'saradomin' || rawGod === 'guthix' || rawGod === 'zamorak' ? rawGod : 'zamorak';
 const GOD_SPEC = GOD_LOADOUTS[GOD];
 const STATUE = GOD_SPEC.statue;
@@ -59,13 +74,23 @@ const ZONE: Array<[number, number, number, number]> = [[3084, 3919, 3126, 3944],
 const LEASH = 17;
 
 // Two spells of 20 can land between two meals: the bot eats under 45.
-const q = await openQuest({ cap: 3000, eatAt: 45, food: [ITEM.food] });
+const g = globalThis as { QUEST_SCRIPT_ID?: string };
+const prevScriptId = g.QUEST_SCRIPT_ID;
+g.QUEST_SCRIPT_ID = 'quest-magearena';
+const q = await openQuest({
+    session: opts.session,
+    stop: opts.stop,
+    cap: opts.cap ?? 3000,
+    eatAt: 45,
+    food: [ITEM.food],
+    ...(opts.keepAlive === undefined ? {} : { keepAlive: opts.keepAlive }),
+});
 try {
     const prayers = (): any => q.st()?.prayers;
     const prayOn = (): boolean => !!prayers()?.activePrayers?.[PFMAGIC];
     const points = (): number => prayers()?.prayerPoints ?? 0;
     const base = (skill: string): number => q.st()?.skills?.find((k: any) => k.name === skill)?.baseLevel ?? 1;
-    const MODE = process.env.MA_MODE ?? 'pray';
+    const MODE = opts.mode ?? (process.env.MA_MODE ?? 'pray');
     if (MODE === 'pray' && base('Prayer') < 37) await q.fail(`Prayer ${base('Prayer')} under the 37 of Protect from Magic (MA_MODE=leash runs the method with no prayer)`);
     const SPELL = base('Magic') >= 75 ? 'magic:fire_wave' : 'magic:fire_blast';
     const GOD_SPELL = GOD_SPEC.spell;
@@ -271,13 +296,25 @@ try {
     // FOOD_FLOOR pieces or fewer left it goes out, and a later run goes on from the count that the god cast varp holds.
     let mage = -1;
     const foodLow = (): boolean => MODE !== 'pray' && q.cnt(ITEM.food) <= FOOD_FLOOR;
+    if (opts.defensive) {
+        await q.waitUntil(() => !!q.st()?.combatStyle?.known, 8);
+        if (q.st()?.combatStyle?.currentStyle !== 2) {
+            await q.s.sdk.sendSetCombatStyle(2);
+            await q.waitUntil(() => q.st()?.combatStyle?.currentStyle === 2, 8);
+        }
+    }
+    const wantCharge = opts.charge ?? process.env.MA_CHARGE === '1';
+    if (opts.earlyCharge && wantCharge && base('Magic') >= 80 && q.cnt(554) >= 3 && q.cnt(565) >= 3 && q.cnt(556) >= 3) {
+        await q.step('charge early', () => q.s.sdk.sendClickComponent(CHARGE_SPELL), () => q.sawText(/feel charged with magic power/i), 4, 2);
+        charged = q.sawText(/feel charged with magic power/i);
+    }
     await fight('casts', () => {
         const all = npcs(NPC.mages), n = all.find((m: any) => m.targetIndex >= 32768 && m.distance <= 10) ?? all.find((m: any) => m.index === mage) ?? all[0];
         mage = n?.index ?? -1;
         return n;
     }, GOD_SPELL, () => unlocked() || foodLow(), 1200);
     if (unlocked()) q.milestone('casts');
-    if (process.env.MA_CHARGE === '1' && base('Magic') >= 80 && q.cnt(554) >= 3 && q.cnt(565) >= 3 && q.cnt(556) >= 3) {
+    if (!charged && wantCharge && base('Magic') >= 80 && q.cnt(554) >= 3 && q.cnt(565) >= 3 && q.cnt(556) >= 3) {
         await q.step('charge', () => q.s.sdk.sendClickComponent(CHARGE_SPELL), () => q.sawText(/feel charged with magic power/i), 4, 2);
         charged = q.sawText(/feel charged with magic power/i);
     }
@@ -285,11 +322,16 @@ try {
     await q.dash('to portal inside', PORTAL.x, PORTAL.z, 0, 40);
     await q.step('portal out', () => q.opLoc(PORTAL, 1), () => !inArena(), 8, 4);
     await setPray(false);
-    await q.dash('to webs', WEBS[1]!.x + 1, WEBS[1]!.z, 0, 40);
-    await cutWebs([...WEBS].reverse());
-    await q.climb('ladder down', () => q.locAt(LADDER_DOWN.x, LADDER_DOWN.z), /climb-down/i, inCellar);
+    if (!opts.stopOutside) {
+        await q.dash('to webs', WEBS[1]!.x + 1, WEBS[1]!.z, 0, 40);
+        await cutWebs([...WEBS].reverse());
+        await q.climb('ladder down', () => q.locAt(LADDER_DOWN.x, LADDER_DOWN.z), /climb-down/i, inCellar);
+    }
     q.milestone('complete');
     const ok = held(ITEM.cape) && held(ITEM.staff) && unlocked();
     if (!ok && foodLow()) console.log(`WARN food low after ${casts} casts: the count stays, a second run ends the casts`);
     await q.end(ok, `god=${GOD} mode=${MODE} spell=${SPELL} fought=${fought} fightXp=${fightXp || '-'} casts=${casts} charged=${charged} lures=${lures} potions=${potions} prayerLeft=${points()} cape=${held(ITEM.cape)} staff=${held(ITEM.staff)} unlocked=${unlocked()}`);
-} catch (e) { await q.fail(String(e)); }
+} catch (e) { await q.fail(String(e)); } finally { g.QUEST_SCRIPT_ID = prevScriptId; }
+}
+
+if (import.meta.main) void runQuestMageArena();

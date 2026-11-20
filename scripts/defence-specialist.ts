@@ -1,10 +1,10 @@
-// Fresh-clock Defence 99 specialist: Waterfall Quest (83 Attack and Strength) plus 2-Tank Wilderness PvP.
+// Fresh-clock Defence 99 specialist: Magic 80 Enchant, Mage Arena Zamorak + Charge, and Flames of Zamorak Defensive PvP.
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { finish, openBot } from '../packages/core/src/bot';
 import { isLocalServer } from '../packages/core/src/localserver';
-import { configureSpecialistGuardEnv, readServerHost, runMeleePvpSpecialist, type StopFn } from './combat-quest-specialists';
-import { runWaterfall } from './generated/waterfall';
+import { configureSpecialistGuardEnv, readServerHost, runMagicDefenceSpecialist, type StopFn } from './combat-quest-specialists';
+import { runQuestMageArena } from './generated/quest-magearena';
 
 async function main(): Promise<void> {
     const bot = process.argv[2] ?? '';
@@ -36,14 +36,13 @@ async function main(): Promise<void> {
         (!isLocalServer(serverHost) && existsSync(join(root, '.practice', 'stop-swarm')));
 
     try {
-        const msg = await runMeleePvpSpecialist(s, {
-            board: 'defence',
+        const msg = await runMagicDefenceSpecialist(s, {
             supplierName,
             tankNames,
             cap: CAP,
             t0,
             stop,
-            runWaterfallFn: runWaterfall,
+            runMageArenaFn: runQuestMageArena,
         });
         await finish([s], true, msg);
     } catch (e) {

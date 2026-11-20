@@ -42,8 +42,8 @@ const TANK_SKILLS = {
     Defence: 1,
     Hitpoints: 99,
     Prayer: 99,
-    Magic: 99,
-    Ranged: 1,
+    Magic: 1,
+    Ranged: 99,
 } as const;
 
 const TANK_BANK = [

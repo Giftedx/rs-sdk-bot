@@ -45,7 +45,7 @@ import { runQuestTree } from './generated/quest-tree';
 
 const GRAND_TREE_JUNK_IDS = [
     587, 588, 589, 783, 784, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794,
-    562, 558, 555, 139, 141, 143, 175, 177, 179, 181, 183, 185, 229, 2434, 2446, 2448, 385,
+    562, 558, 555, 139, 141, 143, 175, 177, 179, 181, 183, 185, 229, 1985, 2434, 2446, 2448, 385,
 ];
 
 async function rideSpiritTree(s: Session, treeTile: Point, choices: RegExp[], dest: Point, stop: StopFn): Promise<void> {
@@ -325,8 +325,8 @@ async function main(): Promise<void> {
         await withdrawExactCount(s, 2357, 1, stop, 'Gold bar');
         await withdrawExactCount(s, 1759, 1, stop, 'Ball of wool');
         await withdrawExactCount(s, 2448, 1, stop, 'Superantipoison(4)');
-        await withdrawExactCount(s, 2434, 7, stop, 'Prayer potion(4)');
-        await withdrawExactCount(s, 385, 8, stop, 'Shark');
+        await withdrawExactCount(s, 2434, 9, stop, 'Prayer potion(4)');
+        await withdrawExactCount(s, 385, 7, stop, 'Shark');
         await closeBankClean(s, stop);
         await walkWaypoints(s, [{ x: 2466, z: 3495, tol: 1 }], 40, stop, 'grand tree bank to ladder 2');
         await climbTreeLadder(s, 'down', 0, stop);

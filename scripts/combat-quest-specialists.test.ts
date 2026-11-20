@@ -118,11 +118,13 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
             expect(dragonBones * 72 * 25).toBeGreaterThanOrEqual(rev289XpForLevel(43));
         }
 
-        expect(HP_SPECIALIST_KIT.find(k => k.id === 386)?.count).toBeGreaterThanOrEqual(3 + 2 + 3 + 8);
-        expect(HP_SPECIALIST_KIT.find(k => k.id === 2435)?.count).toBeGreaterThanOrEqual(1 + 2 + 3 + 7);
+        expect(HP_SPECIALIST_KIT.find(k => k.id === 386)?.count).toBeGreaterThanOrEqual(3 + 2 + 3 + 7);
+        expect(HP_SPECIALIST_KIT.find(k => k.id === 2435)?.count).toBeGreaterThanOrEqual(1 + 2 + 3 + 9);
         expect(HP_SPECIALIST_KIT.find(k => k.id === 563)?.count).toBeGreaterThanOrEqual(18);
         expect(STRENGTH_SPECIALIST_KIT).toBe(KIT_BY_BOARD.strength);
         expect(DEFENCE_SPECIALIST_KIT).toBe(KIT_BY_BOARD.defence);
+        expect(STRENGTH_SPECIALIST_KIT.find(k => k.id === 3105)?.count).toBe(1);
+        expect(DEFENCE_SPECIALIST_KIT.find(k => k.id === 565)?.count).toBeGreaterThanOrEqual(1600);
         expect(kitRequirements(STRENGTH_SPECIALIST_KIT).length).toBe(STRENGTH_SPECIALIST_KIT.length);
     });
 
@@ -130,8 +132,8 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
         const hpInv = kitToSaveInventory(HP_SPECIALIST_KIT).map((x, slot) => ({ ...x, slot }));
         expect(hasAtLeastKit(hpInv, HP_SPECIALIST_KIT)).toBe(true);
         expect(hasExactKit(hpInv, HP_SPECIALIST_KIT)).toBe(true);
-        expect(countById(hpInv, 386)).toBe(18);
-        expect(countById([{ id: 386, baseId: 385, count: 18 }], 385)).toBe(18);
+        expect(countById(hpInv, 386)).toBe(20);
+        expect(countById([{ id: 386, baseId: 385, count: 20 }], 385)).toBe(20);
 
         const mutated = [...hpInv, { id: 9999, count: 1, slot: 27 }];
         expect(hasExactKit(mutated, HP_SPECIALIST_KIT)).toBe(false);
@@ -140,7 +142,8 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
         expect(sup.inventory?.length).toBe(28);
         const tankSup = tankSupplierPresetConfig(STRENGTH_SPECIALIST_KIT);
         expect(tankSup.skills?.Defence).toBe(1);
-        expect(tankSup.skills?.Magic).toBe(99);
+        expect(tankSup.skills?.Magic).toBe(1);
+        expect(tankSup.skills?.Ranged).toBe(99);
         expect(tankSup.bank?.some(b => b.id === 563 && b.count >= 50)).toBe(true);
         expect(tankSup.bank?.some(b => b.id === 391 && b.count >= 500)).toBe(true);
         const tankPost = tankPostPresetConfig();

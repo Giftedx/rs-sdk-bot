@@ -211,6 +211,7 @@ export interface WaterfallOptions {
     keepAlive?: boolean;
     protectMelee?: boolean;
     tombHoldIds?: readonly number[];
+    looseRailing?: boolean;
 }
 
 export async function runWaterfall(opts: WaterfallOptions = {}): Promise<{ attackXp: number; strengthXp: number; ticks: number }> {
@@ -542,6 +543,14 @@ try {
     }
     const resume = inFalls();
     if (resume) console.log(`MILESTONE resume-falls ${T()}`);
+    const PFM = 14;
+    const pfmOn = () => !!st()?.prayers?.activePrayers?.[PFM];
+    const canPfm = () => (s.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43 && (st()?.prayers?.prayerPoints ?? 0) >= 4;
+    const setPfm = async (on: boolean) => {
+        if (pfmOn() === on) return;
+        if (on && !canPfm()) return;
+        await step(`pfm ${on ? 'on' : 'off'}`, () => s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn() === on, 3, 3);
+    };
     if (!resume) {
         // 1. Almera: "How can I help?" sets %waterfall_quest = 1 (almera.rs2:14).
         const talk = await s.bot.talkTo(/^almera$/i);
@@ -613,8 +622,34 @@ try {
         await climb('Hadley down', 2518, 3429, /climb-down/i, () => pos()?.level === 0);
 
         // Golrie under the Tree Gnome Village: key from the east crate (needs 3), key on the gate, pebble from Golrie.
-        await walk('maze in entry', [[2502, 3191, 1]]);
-        await walkMazeLeg('maze in', 2533, 3156, 2);
+        const walkNoHunters = async (label: string, pts: [number, number, number][]) => {
+            for (const [x, z, tol] of pts) {
+                if (near(x, z, tol)) continue;
+                const r = await walkPath(mazeWalker, [{ x, z, tol }], { stop: () => died || T() > CAP || !!opts.stop?.() });
+                walkTicks += r.ticks;
+                if (!r.ok && !near(x, z, tol)) await fail(`walk ${label} ${x},${z}: ${r.detail ?? 'incomplete'}`);
+            }
+        };
+        const squeezeRailing = async (toNorth: boolean) => {
+            const targetZ = toNorth ? 3161 : 3160;
+            const ok = () => toNorth ? (pos()?.worldZ ?? 0) >= targetZ : (pos()?.worldZ ?? 9999) <= targetZ;
+            await step(`railing ${toNorth ? 'north' : 'south'}`, async () => {
+                const l = findLoc(k => (k.id === 2186 || /railing/i.test(k.name ?? '')) && (k.optionsWithIndex ?? []).some((o: any) => /squeeze/i.test(o.text ?? '')) && Math.max(Math.abs(k.x - 2515), Math.abs(k.z - 3161)) <= 4);
+                if (l) await opLoc(l, opIndex(l, /squeeze/i));
+                else await s.bot.walkTo(2515, toNorth ? 3160 : 3161, 0);
+            }, ok, 8, 6);
+        };
+
+        if (opts.looseRailing) {
+            await setPfm(true);
+            await walkNoHunters('railing south approach', [[2561, 3242, 4], [2515, 3160, 0]]);
+            await setPfm(false);
+            await squeezeRailing(true);
+            await walkMazeLeg('railing to golrie', 2533, 3156, 2);
+        } else {
+            await walk('maze in entry', [[2502, 3191, 1]]);
+            await walkMazeLeg('maze in', 2533, 3156, 2);
+        }
         const inCellar = () => (pos()?.worldZ ?? 0) > 9500 && (pos()?.worldZ ?? 0) < 9600;
         await climb('gnome cellar down', 2533, 3155, /climb-down/i, inCellar);
         await step('golrie crate', () => opLoc(LOC.golrieCrate), () => has(ITEM.golrieKey), 40, 3);
@@ -646,8 +681,16 @@ try {
 
         // 4. Glarial's tombstone: runes are refused in the tomb (quest_waterfall.rs2:70), so they wait on the ground
         // (300-tick drop timer). The pebble opens the tomb and sets 4.
-        await walkMazeLeg('maze out exit', 2502, 3191, 1);
-        await walk('maze out', [[2557, 3444, 2]]);
+        if (opts.looseRailing) {
+            await walkMazeLeg('golrie to railing', 2515, 3161, 0);
+            await squeezeRailing(false);
+            await setPfm(true);
+            await walkNoHunters('railing to tomb', [[2561, 3242, 4], [2557, 3444, 2]]);
+            await setPfm(false);
+        } else {
+            await walkMazeLeg('maze out exit', 2502, 3191, 1);
+            await walk('maze out', [[2557, 3444, 2]]);
+        }
         // All three stacks in one tick (the server takes 5 inputs per tick); bot.dropItem cost about 15 idle ticks here.
         const tombHoldIds = [...new Set([...RUNES, ...(opts.tombHoldIds ?? [])])];
         const tombTargetCount = new Map(tombHoldIds.map(id => [id, RUNES.includes(id) ? 6 : Math.max(1, cnt(id))]));
@@ -735,13 +778,7 @@ try {
     const giantIdx = () => new Set(giants().map(g => g.index));
     const shieldHit = (): boolean => (st()?.combatEvents ?? []).some((e: any) => e.type === 'damage_taken' && e.sourceType === 'npc'
         && !giantIdx().has(e.sourceIndex) && e.tick >= s.tick() - 1);
-    const PFM = 14;
     const usePfm = (s.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43 && (st()?.prayers?.prayerPoints ?? 0) >= 8;
-    const pfmOn = () => !!st()?.prayers?.activePrayers?.[PFM];
-    const setPfm = async (on: boolean) => {
-        if (pfmOn() === on) return;
-        await step(`pfm ${on ? 'on' : 'off'}`, () => s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn() === on, 3, 3);
-    };
     if (usePfm) await setPfm(true);
     let shieldWait = 0;
     if (!usePfm) {

@@ -59,6 +59,7 @@ export function configureSpecialistGuardEnv(): void {
 }
 
 export const PROTECT_MELEE_INDEX = 14;
+export const INCREDIBLE_REFLEXES_INDEX = 11;
 export const ULTIMATE_STRENGTH_INDEX = 10;
 export const AUTO_RETALIATE_COMPONENT = 151;
 
@@ -80,45 +81,52 @@ export const HP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
     { id: 1512, name: 'Logs', count: 6, stackable: true },
-    { id: 2435, name: 'Prayer potion(4)', count: 15, stackable: true },
-    { id: 386, name: 'Shark', count: 18, stackable: true },
+    { id: 2435, name: 'Prayer potion(4)', count: 18, stackable: true },
+    { id: 386, name: 'Shark', count: 20, stackable: true },
     { id: 2358, name: 'Gold bar', count: 1, stackable: true },
     { id: 1760, name: 'Ball of wool', count: 1, stackable: true },
     { id: 2449, name: 'Superantipoison(4)', count: 2, stackable: true },
 ] as const;
 
-// 28 slots exact: 3 Waterfall rune stacks + gear + 11 Dragon bones + 5 unnoted Sharks + noted PvP/Waterfall bank stacks.
+// 28 slots exact: 3 Waterfall rune stacks + gear + 11 Dragon bones + immediate Waterfall food/prayer + noted Ardy PvP stacks.
 export const STRENGTH_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 556, name: 'Air rune', count: 6, stackable: true },
     { id: 557, name: 'Earth rune', count: 6, stackable: true },
     { id: 555, name: 'Water rune', count: 6, stackable: true },
-    { id: 386, name: 'Shark', count: 11, stackable: true },
-    { id: 2435, name: 'Prayer potion(4)', count: 6, stackable: true },
+    { id: 386, name: 'Shark', count: 6, stackable: true },
+    { id: 2435, name: 'Prayer potion(4)', count: 3, stackable: true },
     { id: 2437, name: 'Super attack(4)', count: 2, stackable: true },
     { id: 2441, name: 'Super strength(4)', count: 3, stackable: true },
+    { id: 3105, name: 'Climbing boots', count: 1, stackable: false },
     { id: 1333, name: 'Rune scimitar', count: 1, stackable: false },
     { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 954, name: 'Rope', count: 2, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
-    { id: 385, name: 'Shark', count: 5, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
+    { id: 385, name: 'Shark', count: 2, stackable: false },
 ] as const;
 
-// 28 slots exact: 5 Super strength(4) keep +17 Strength boost across 99 Defence PvP.
+// 28 slots exact: Magic 1->80 (Enchant rings), Mage Arena (Zamorak Cape/Staff + Charge), and Flames of Zamorak Defensive PvP.
 export const DEFENCE_SPECIALIST_KIT: readonly KitSpecItem[] = [
-    { id: 556, name: 'Air rune', count: 6, stackable: true },
-    { id: 557, name: 'Earth rune', count: 6, stackable: true },
-    { id: 555, name: 'Water rune', count: 6, stackable: true },
-    { id: 386, name: 'Shark', count: 10, stackable: true },
-    { id: 2435, name: 'Prayer potion(4)', count: 6, stackable: true },
-    { id: 2437, name: 'Super attack(4)', count: 1, stackable: true },
-    { id: 2441, name: 'Super strength(4)', count: 5, stackable: true },
-    { id: 1333, name: 'Rune scimitar', count: 1, stackable: false },
-    { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
+    { id: 1387, name: 'Staff of fire', count: 1, stackable: false },
+    { id: 946, name: 'Knife', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
-    { id: 954, name: 'Rope', count: 2, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
-    { id: 385, name: 'Shark', count: 5, stackable: false },
+    { id: 556, name: 'Air rune', count: 1500, stackable: true },
+    { id: 558, name: 'Mind rune', count: 20, stackable: true },
+    { id: 554, name: 'Fire rune', count: 3500, stackable: true },
+    { id: 555, name: 'Water rune', count: 1300, stackable: true },
+    { id: 557, name: 'Earth rune', count: 1400, stackable: true },
+    { id: 564, name: 'Cosmic rune', count: 200, stackable: true },
+    { id: 565, name: 'Blood rune', count: 1600, stackable: true },
+    { id: 563, name: 'Law rune', count: 10, stackable: true },
+    { id: 1638, name: 'Sapphire ring', count: 14, stackable: true },
+    { id: 1640, name: 'Emerald ring', count: 55, stackable: true },
+    { id: 1644, name: 'Diamond ring', count: 40, stackable: true },
+    { id: 1646, name: 'Dragonstone ring', count: 85, stackable: true },
+    { id: 2435, name: 'Prayer potion(4)', count: 8, stackable: true },
+    { id: 386, name: 'Shark', count: 6, stackable: true },
 ] as const;
 
 export const KIT_BY_BOARD: Readonly<Record<'hitpoints' | 'strength' | 'defence', readonly KitSpecItem[]>> = {
@@ -130,9 +138,15 @@ export const KIT_BY_BOARD: Readonly<Record<'hitpoints' | 'strength' | 'defence',
 export const SPELLS = {
     windStrike: componentId('magic:wind_strike'),
     fireStrike: componentId('magic:fire_strike'),
+    enchantLvl1: componentId('magic:enchant_lvl1'),
+    enchantLvl2: componentId('magic:enchant_lvl2'),
+    enchantLvl4: componentId('magic:enchant_lvl4'),
+    enchantLvl5: componentId('magic:enchant_lvl5'),
     varrockTeleport: componentId('magic:varrock_teleport'),
     faladorTeleport: componentId('magic:falador_teleport'),
     camelotTeleport: componentId('magic:camelot_teleport'),
+    charge: componentId('magic:charge'),
+    flamesOfZamorak: componentId('magic:flames_of_zamorak'),
 } as const;
 
 export type StopFn = () => boolean;
@@ -686,6 +700,9 @@ export async function runWildyPvpLoop(
     await setAutoRetaliate(s, false);
     await equipItemById(s, 1333, opts.stop, 'Rune scimitar');
     await equipItemById(s, 1725, opts.stop, 'Amulet of strength');
+    if (s.sdk.getInventory().some(i => i.id === 3105)) {
+        await equipItemById(s, 3105, opts.stop, 'Climbing boots');
+    }
 
     // Verify exact Strength-only (Aggressive) or Defence-only (Defensive) combat style.
     await waitUntil(s, () => {
@@ -718,35 +735,45 @@ export async function runWildyPvpLoop(
         return false;
     };
 
+    const flickPrayers = skillInfo(s, 'Prayer').baseLevel >= 34
+        ? [ULTIMATE_STRENGTH_INDEX, INCREDIBLE_REFLEXES_INDEX]
+        : [ULTIMATE_STRENGTH_INDEX];
+
     try {
         while (!opts.stop() && skillInfo(s, opts.skill).baseLevel < opts.targetLevel) {
             if (activeContinueDialog(s)) void s.sdk.sendClickDialog(0);
 
             const st = s.sdk.getState();
             const pts = st?.prayers?.prayerPoints ?? 0;
-            const ultOn = !!st?.prayers?.activePrayers?.[ULTIMATE_STRENGTH_INDEX];
 
-            // Reset Ultimate Strength every 3 ticks in a single tick pair so prayer_drain (5-tick timer) stays cleared.
+            // Reset prayers every 3 ticks in a single tick pair so prayer_drain (5-tick timer) stays cleared.
             if (pts > 0 && skillInfo(s, 'Prayer').baseLevel >= 31) {
-                if (!ultOn) {
+                const needOn = flickPrayers.some(idx => !st?.prayers?.activePrayers?.[idx]);
+                if (needOn) {
                     lastFlickTick = s.tick();
-                    void s.direct({ type: 'togglePrayer', prayerIndex: ULTIMATE_STRENGTH_INDEX, reason: 'SDK' });
+                    for (const idx of flickPrayers) {
+                        if (!st?.prayers?.activePrayers?.[idx]) {
+                            void s.direct({ type: 'togglePrayer', prayerIndex: idx, reason: 'SDK' });
+                        }
+                    }
                 } else if (s.tick() - lastFlickTick >= 3) {
                     lastFlickTick = s.tick();
-                    void s.direct({ type: 'togglePrayer', prayerIndex: ULTIMATE_STRENGTH_INDEX, reason: 'SDK' });
-                    void s.direct({ type: 'togglePrayer', prayerIndex: ULTIMATE_STRENGTH_INDEX, reason: 'SDK' });
+                    for (const idx of flickPrayers) {
+                        void s.direct({ type: 'togglePrayer', prayerIndex: idx, reason: 'SDK' });
+                        void s.direct({ type: 'togglePrayer', prayerIndex: idx, reason: 'SDK' });
+                    }
                 }
             }
             if (pts <= 10 && s.tick() - lastPrayPotionTick >= 4) {
                 if (await drinkFromList(PRAYER_POT_IDS)) lastPrayPotionTick = s.tick();
             }
 
-            // Re-boost Strength before +17 decays below +16 (keeps 23 maxhit at 83 Strength) and keep Attack boosted.
+            // Re-boost Strength when boost drops by 3+ (keeps top maxhit without frequent drink delays) and keep Attack boosted.
             if (s.tick() - lastDrinkTick >= 3) {
                 const str = skillInfo(s, 'Strength');
                 const atk = skillInfo(s, 'Attack');
                 const maxStrBoost = 5 + Math.floor(str.baseLevel * 0.15);
-                if (str.level < str.baseLevel + maxStrBoost) {
+                if (str.level <= str.baseLevel + Math.max(13, maxStrBoost - 3)) {
                     if (await drinkFromList(SUPER_STRENGTH_IDS)) lastDrinkTick = s.tick();
                 } else if (atk.level < atk.baseLevel + 10) {
                     if (await drinkFromList(SUPER_ATTACK_IDS)) lastDrinkTick = s.tick();
@@ -780,6 +807,7 @@ export async function runWildyPvpLoop(
         }
     } finally {
         await setPrayerState(s, ULTIMATE_STRENGTH_INDEX, false, () => true);
+        await setPrayerState(s, INCREDIBLE_REFLEXES_INDEX, false, () => true);
     }
 }
 
@@ -925,15 +953,15 @@ export async function runCompanionRole(
             (np.z ?? np.worldZ ?? 0) >= 3900 &&
             (np.hp === undefined || np.hp === null || np.hp > 0),
         );
-        if (mantaCount === 0 && hp > 0 && hp <= 65 && otherTankHere) {
-            if (await pullKeepLeverOutAndRebank(s, stop)) continue;
-        }
-        if (hp > 0 && hp <= 77 && s.tick() - lastEatTick >= 3) {
+        if (hp > 0 && hp <= 77 && mantaCount > 0 && s.tick() - lastEatTick >= 3) {
             const food = s.sdk.getInventory().find(i => i.id === 391);
             if (food) {
                 lastEatTick = s.tick();
                 await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
             }
+        }
+        if ((mantaCount <= 5 && otherTankHere) || mantaCount <= 1) {
+            if (await pullKeepLeverOutAndRebank(s, stop)) continue;
         }
         await waitTicks(s, 1);
     }
@@ -949,7 +977,7 @@ export async function runMeleePvpSpecialist(
         cap: number;
         t0: number;
         stop: StopFn;
-        runWaterfallFn: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; protectMelee?: boolean; tombHoldIds?: readonly number[] }) => Promise<unknown>;
+        runWaterfallFn: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; protectMelee?: boolean; tombHoldIds?: readonly number[]; looseRailing?: boolean }) => Promise<unknown>;
     },
 ): Promise<string> {
     const skill = opts.board === 'strength' ? 'Strength' : 'Defence';
@@ -968,18 +996,13 @@ export async function runMeleePvpSpecialist(
     milestone('kit', `slots=${s.sdk.getInventory().length}`);
 
     await equipItemById(s, 1725, opts.stop, 'Amulet of strength');
+    if (s.sdk.getInventory().some(i => i.id === 3105)) {
+        await equipItemById(s, 3105, opts.stop, 'Climbing boots');
+    }
     await buryBonesTo43(s, opts.stop);
     milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
 
     await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, opts.stop);
-    await walkWaypoints(s, [{ x: CASTLE_WARS_BANK.x, z: CASTLE_WARS_BANK.z, tol: 1 }], 40, opts.stop, 'cw to bank');
-    await openFreshBank(s, opts.stop);
-    await depositIds(s, [386, 2435, 2437, 2441, 385, 2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566], opts.stop);
-    await withdrawExactCount(s, 385, 8, opts.stop, 'Shark');
-    await withdrawExactCount(s, 2434, 3, opts.stop, 'Prayer potion(4)');
-    await closeBankClean(s, opts.stop);
-    milestone('castle_wars_bank');
-
     await walkWaypoints(s, [{ x: 2451, z: 3151, tol: 3 }], 100, opts.stop, 'castle wars to west road (2451,3151)');
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, opts.stop);
     for (const wp of [
@@ -1003,19 +1026,20 @@ export async function runMeleePvpSpecialist(
         session: s,
         stop: opts.stop,
         cap: Math.max(300, opts.cap - elapsed()),
-        food: { id: 385, heal: 20, count: 8, eatAt: 6, crossAt: 9 },
+        food: { id: 385, heal: 20, count: 6, eatAt: 6, crossAt: 9 },
         mighty: false,
         exitFalls: true,
         keepAlive: true,
         protectMelee: true,
         tombHoldIds: [1333],
+        looseRailing: true,
     });
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     milestone('waterfall', `atk=${skillInfo(s, 'Attack').baseLevel} str=${skillInfo(s, 'Strength').baseLevel} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
     await walkWaypoints(s, [{ x: ARDY_NORTH_BANK.x, z: ARDY_NORTH_BANK.z, tol: 1 }], 120, opts.stop, 'waterfall to ardy bank');
     await openFreshBank(s, opts.stop);
-    await depositIds(s, [292, 293, 294, 295, 296, 298, 954, 556, 557, 555, 139, 141, 143, 229, 385, 2434, 1601, 2357, 299], opts.stop);
+    await depositIds(s, [292, 293, 294, 295, 296, 298, 954, 556, 557, 555, 139, 141, 143, 229, 385, 2434, 1601, 2357, 299, 386, 2435, 2437, 2441, 2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566], opts.stop);
     await withdrawExactCount(s, 2436, opts.board === 'strength' ? 2 : 1, opts.stop, 'Super attack(4)');
     await withdrawExactCount(s, 2440, opts.board === 'strength' ? 3 : 5, opts.stop, 'Super strength(4)');
     await withdrawExactCount(s, 2434, 3, opts.stop, 'Prayer potion(4)');
@@ -1035,4 +1059,270 @@ export async function runMeleePvpSpecialist(
     milestone('complete', `${opts.board}=${sk.baseLevel} xp=${sk.experience} targetTicks=${target.targetTicks}`);
     if (sk.baseLevel < 99) throw Error(`${skill} finished at ${sk.baseLevel} (< 99), xp=${sk.experience}`);
     return `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${elapsed()} liveTarget=${target.targetTicks}`;
+}
+
+async function trainMagicToLevel(s: Session, targetLevel: number, stop: StopFn): Promise<void> {
+    await setAutoRetaliate(s, false);
+    const inCourtyard = (x: number, z: number) => x >= 3217 && x <= 3225 && z >= 3210 && z <= 3229;
+    const deadline = s.tick() + 180;
+    const avoid = new Map<number, number>();
+    let activeTarget: number | null = null;
+    let lastCastTick = -10;
+    while (!stop() && skillInfo(s, 'Magic').baseLevel < targetLevel) {
+        if (s.tick() >= deadline) throw Error(`Magic 1->${targetLevel} timed out at ${skillInfo(s, 'Magic').baseLevel}`);
+        for (const [idx, exp] of avoid) if (s.tick() >= exp) avoid.delete(idx);
+        const st = s.sdk.getState();
+        const engaged = st?.player?.combat?.inCombat && st.player.combat.targetType === 'npc' ? st.player.combat.targetIndex : null;
+        const selfSlot = (s.client as any)?.selfSlot;
+        const target = pickCourtyardMagicTarget(st?.nearbyNpcs ?? [], {
+            selfSlot,
+            engagedTargetIndex: engaged,
+            activeTargetIndex: activeTarget,
+            avoid: new Set(avoid.keys()),
+            zoneOk: inCourtyard,
+        });
+        if (!target || s.tick() - lastCastTick < 5) {
+            await waitTicks(s, 1);
+            continue;
+        }
+        await dismissContinueDialogs(s, stop, 2);
+        if (stop() || skillInfo(s, 'Magic').baseLevel >= targetLevel) break;
+        const xp0 = skillInfo(s, 'Magic').experience;
+        const castAt = s.tick();
+        activeTarget = target.index;
+        lastCastTick = castAt;
+        await s.direct({ type: 'spellOnNpc', npcIndex: target.index, spellComponent: SPELLS.windStrike, reason: 'SDK' });
+        const gotXp = await waitUntil(s, () => stop() || skillInfo(s, 'Magic').baseLevel >= targetLevel || skillInfo(s, 'Magic').experience > xp0, { timeoutTicks: 6 });
+        if (skillInfo(s, 'Magic').baseLevel >= targetLevel) break;
+        if (!gotXp || skillInfo(s, 'Magic').experience <= xp0) {
+            avoid.set(target.index, s.tick() + 25);
+            activeTarget = null;
+            lastCastTick = -10;
+            continue;
+        }
+        while (!stop() && skillInfo(s, 'Magic').baseLevel < targetLevel && s.tick() - castAt < 5) {
+            if (activeContinueDialog(s)) await s.sdk.sendClickDialog(0);
+            await waitTicks(s, 1);
+        }
+    }
+}
+
+async function enchantRingsTo80AtBank(s: Session, stop: StopFn): Promise<void> {
+    const ALL_RING_IDS = [1637, 1638, 1639, 1640, 1643, 1644, 1645, 1646, 2550, 2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566, 2570, 2572];
+    const pickRingSpec = (lvl: number) => {
+        if (lvl < 27) return { ringId: 1637, spell: SPELLS.enchantLvl1, label: 'Sapphire ring', untilLevel: 27 };
+        if (lvl < 57) return { ringId: 1639, spell: SPELLS.enchantLvl2, label: 'Emerald ring', untilLevel: 57 };
+        if (lvl < 68) return { ringId: 1643, spell: SPELLS.enchantLvl4, label: 'Diamond ring', untilLevel: 68 };
+        return { ringId: 1645, spell: SPELLS.enchantLvl5, label: 'Dragonstone ring', untilLevel: 80 };
+    };
+
+    const deadline = s.tick() + 900;
+    while (!stop() && skillInfo(s, 'Magic').baseLevel < 80) {
+        if (s.tick() >= deadline) throw Error(`Enchant Magic -> 80 timed out at ${skillInfo(s, 'Magic').baseLevel}`);
+        await openFreshBank(s, stop);
+        await depositIds(s, [...ALL_RING_IDS, 558, 2435, 386], stop);
+        const lvl = skillInfo(s, 'Magic').baseLevel;
+        if (lvl >= 80) break;
+        const spec = pickRingSpec(lvl);
+        const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
+        const row = s.sdk.getState()?.bank?.items.find(i => i.id === spec.ringId);
+        const take = Math.min(freeSlots, row?.count ?? 0);
+        if (!row || take <= 0) throw Error(`out of ${spec.label} in bank at Magic ${lvl}`);
+        await withdrawExactCount(s, spec.ringId, take, stop, spec.label);
+        await closeBankClean(s, stop);
+
+        let lastCast = -10;
+        while (!stop() && skillInfo(s, 'Magic').baseLevel < spec.untilLevel) {
+            if (activeContinueDialog(s)) await s.sdk.sendClickDialog(0);
+            const ring = s.sdk.getInventory().find(i => i.id === spec.ringId);
+            if (!ring) break;
+            if (s.tick() - lastCast < 3) {
+                await waitTicks(s, 1);
+                continue;
+            }
+            const xp0 = skillInfo(s, 'Magic').experience;
+            lastCast = s.tick();
+            await s.direct({ type: 'spellOnItem', slot: ring.slot, spellComponent: spec.spell, reason: 'SDK' });
+            await waitUntil(s, () => skillInfo(s, 'Magic').experience > xp0 || stop(), { timeoutTicks: 4 });
+        }
+    }
+
+    await openFreshBank(s, stop);
+    await depositIds(s, [...ALL_RING_IDS, 558, 555, 557, 564, 2435, 386], stop);
+    await withdrawExactCount(s, 2434, 5, stop, 'Prayer potion(4)');
+    await withdrawExactCount(s, 385, 3, stop, 'Shark');
+    await closeBankClean(s, stop);
+}
+
+async function walkKeepToMageArenaHut(s: Session, stop: StopFn): Promise<void> {
+    await walkWaypoints(s, [{ x: 3096, z: 3957, tol: 1 }], 120, stop, 'keep to mage arena webs');
+    for (const wx of [3095, 3093]) {
+        const deadline = s.tick() + 40;
+        while (!stop() && s.tick() < deadline) {
+            const web = (s.sdk.getState()?.nearbyLocs ?? []).find(
+                (l: any) => l.x === wx && l.z === 3957 && (l.optionsWithIndex ?? []).some((o: any) => /slash/i.test(o.text ?? '')),
+            );
+            if (!web) break;
+            const knife = s.sdk.getInventory().find(i => i.id === 946);
+            if (!knife) throw Error('missing Knife to slash Mage Arena web');
+            await s.direct({ type: 'useItemOnLoc', itemSlot: knife.slot, x: wx, z: 3957, locId: web.id, reason: 'SDK' });
+            await waitTicks(s, 3);
+        }
+    }
+    await walkWaypoints(s, [{ x: 3091, z: 3957, tol: 1 }], 30, stop, 'webs to mage arena ladder');
+}
+
+async function runWildyMagicDefenceLoop(
+    s: Session,
+    opts: {
+        targetLevel: number;
+        tankNames: readonly string[];
+        stop: StopFn;
+    },
+): Promise<void> {
+    await setAutoRetaliate(s, false);
+    await equipItemById(s, 2414, opts.stop, 'Zamorak cape');
+    await equipItemById(s, 2417, opts.stop, 'Zamorak staff');
+
+    await waitUntil(s, () => {
+        const c = s.sdk.getState()?.combatStyle;
+        return (!!c?.known && /zamorak/i.test(c.weaponName ?? '')) || opts.stop();
+    }, { timeoutTicks: 10 });
+    if (s.sdk.getState()?.combatStyle?.currentStyle !== 2) {
+        await s.sdk.sendSetCombatStyle(2);
+        if (!await waitUntil(s, () => s.sdk.getState()?.combatStyle?.currentStyle === 2 || opts.stop(), { timeoutTicks: 10 })) {
+            throw Error('failed to set Zamorak staff to Defensive style (2)');
+        }
+    }
+
+    const tankRes = opts.tankNames.map(exactNameRe);
+    let lastCastTick = -10;
+    let lastStatusTick = -100;
+    let chargeExpiresTick = s.tick() + 650;
+    let lastChargeCheckTick = s.tick();
+
+    const sawFade = (sinceTick: number) =>
+        (s.sdk.getState()?.gameMessages ?? []).some(
+            (m: any) => m.type === 0 && (m.tick ?? 0) >= sinceTick && /magical charge fades away/i.test(m.text ?? ''),
+        );
+    const ensureCharge = async () => {
+        if (s.tick() < chargeExpiresTick && !sawFade(lastChargeCheckTick)) return;
+        lastChargeCheckTick = s.tick();
+        const prevCount = (s.sdk.getState()?.gameMessages ?? []).filter((m: any) => m.type === 0 && /feel charged with magic power/i.test(m.text ?? '')).length;
+        await s.direct({ type: 'clickComponent', componentId: SPELLS.charge, reason: 'SDK' });
+        await waitUntil(
+            s,
+            () => (s.sdk.getState()?.gameMessages ?? []).filter((m: any) => m.type === 0 && /feel charged with magic power/i.test(m.text ?? '')).length > prevCount || opts.stop(),
+            { timeoutTicks: 4 },
+        );
+        chargeExpiresTick = s.tick() + 680;
+    };
+
+    while (!opts.stop() && skillInfo(s, 'Defence').baseLevel < opts.targetLevel) {
+        if (activeContinueDialog(s)) void s.sdk.sendClickDialog(0);
+        if (countById(s.sdk.getInventory(), 565) < 2 || countById(s.sdk.getInventory(), 554) < 4 || countById(s.sdk.getInventory(), 556) < 1) {
+            throw Error('out of runes for Flames of Zamorak');
+        }
+        await ensureCharge();
+
+        const st = s.sdk.getState();
+        const players: any[] = st?.nearbyPlayers ?? [];
+        const tanks = players
+            .filter(p => tankRes.some(re => re.test(p.name ?? '')) && (p.z ?? p.worldZ ?? 0) >= 3900 && (p.hp === undefined || p.hp === null || p.hp > 0))
+            .sort((a, b) => d8({ x: a.x ?? a.worldX ?? 0, z: a.z ?? a.worldZ ?? 0 }, DESERTED_KEEP) - d8({ x: b.x ?? b.worldX ?? 0, z: b.z ?? b.worldZ ?? 0 }, DESERTED_KEEP));
+
+        if (s.tick() - lastStatusTick >= 100) {
+            lastStatusTick = s.tick();
+            const def = skillInfo(s, 'Defence');
+            const mag = skillInfo(s, 'Magic');
+            console.log(`PVP_STATUS tick=${s.tick()} Defence=${def.baseLevel} xp=${def.experience} Magic=${mag.baseLevel} tanks=${tanks.length} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
+        }
+
+        if (tanks.length > 0 && s.tick() - lastCastTick >= 5) {
+            const target = tanks[0]!;
+            lastCastTick = s.tick();
+            await s.direct({ type: 'spellOnPlayer', playerIndex: target.index, spellComponent: SPELLS.flamesOfZamorak, reason: 'SDK' });
+        } else if (tanks.length === 0 && d8({ x: posOf(s)?.worldX ?? 0, z: posOf(s)?.worldZ ?? 0 }, DESERTED_KEEP) > 3) {
+            await walkWaypoints(s, [{ ...DESERTED_KEEP, tol: 1 }], 40, opts.stop, 'recenter deserted keep');
+        }
+
+        await waitTicks(s, 1);
+    }
+}
+
+export async function runMagicDefenceSpecialist(
+    s: Session,
+    opts: {
+        supplierName: string;
+        tankNames: readonly string[];
+        cap: number;
+        t0: number;
+        stop: StopFn;
+        runMageArenaFn: (o: { session?: Session; cap?: number; stop?: () => boolean; god?: 'zamorak'; mode?: 'pray'; charge?: boolean; earlyCharge?: boolean; defensive?: boolean; stopOutside?: boolean; keepAlive?: boolean }) => Promise<void>;
+    },
+): Promise<string> {
+    const target = SPECIALIST_TARGETS.defence;
+    const elapsed = () => s.tick() - opts.t0;
+    const milestone = (step: string, extra = '') => {
+        console.log(`MILESTONE ${step} tick=${elapsed()}${extra ? ' ' + extra : ''}`);
+    };
+
+    milestone('start');
+    await startAndExitTutorial(s, BURY_KEEP_IDS_HP, opts.stop);
+    milestone('tutorial');
+
+    await receiveSupplyKit(s, opts.supplierName, DEFENCE_SPECIALIST_KIT, opts.stop);
+    milestone('kit', `slots=${s.sdk.getInventory().length}`);
+
+    await equipItemById(s, 1387, opts.stop, 'Staff of fire');
+    await buryBonesTo43(s, opts.stop);
+    milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
+
+    await trainMagicToLevel(s, 7, opts.stop);
+    milestone('magic7', `magic=${skillInfo(s, 'Magic').baseLevel}`);
+
+    await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, opts.stop);
+    await walkWaypoints(s, [{ x: CASTLE_WARS_BANK.x, z: CASTLE_WARS_BANK.z, tol: 1 }], 40, opts.stop, 'cw to bank');
+    await enchantRingsTo80AtBank(s, opts.stop);
+    milestone('magic80', `magic=${skillInfo(s, 'Magic').baseLevel} xp=${skillInfo(s, 'Magic').experience}`);
+
+    for (let attempt = 0; attempt < 5 && !opts.stop(); attempt++) {
+        const p = posOf(s);
+        if (p && p.level === 0 && p.worldX <= 2800 && p.worldZ >= 3440) break;
+        await s.direct({ type: 'clickComponent', componentId: SPELLS.camelotTeleport, reason: 'SDK' });
+        await waitUntil(s, () => {
+            const cur = posOf(s);
+            return (!!cur && cur.level === 0 && cur.worldX <= 2800 && cur.worldZ >= 3440) || opts.stop();
+        }, { timeoutTicks: 8 });
+    }
+    await pullArdougneLeverToWildy(s, opts.stop);
+    await walkKeepToMageArenaHut(s, opts.stop);
+    milestone('mage_arena_hut');
+
+    await opts.runMageArenaFn({
+        session: s,
+        cap: Math.max(300, opts.cap - elapsed()),
+        stop: opts.stop,
+        god: 'zamorak',
+        mode: 'pray',
+        charge: true,
+        earlyCharge: true,
+        defensive: true,
+        stopOutside: true,
+        keepAlive: true,
+    });
+    milestone('mage_arena', `def=${skillInfo(s, 'Defence').baseLevel} defXp=${skillInfo(s, 'Defence').experience}`);
+
+    await walkWaypoints(s, [{ ...DESERTED_KEEP, tol: 1 }], 80, opts.stop, 'mage arena to keep');
+    milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
+
+    await runWildyMagicDefenceLoop(s, { targetLevel: 99, tankNames: opts.tankNames, stop: opts.stop });
+
+    await dismissContinueDialogs(s, opts.stop, 4);
+    await s.bot.dismissBlockingUI();
+
+    const def = skillInfo(s, 'Defence');
+    milestone('complete', `defence=${def.baseLevel} xp=${def.experience} targetTicks=${target.targetTicks}`);
+    if (def.baseLevel < 99) throw Error(`Defence finished at ${def.baseLevel} (< 99), xp=${def.experience}`);
+    return `defence=${def.baseLevel} xp=${def.experience} ticks=${elapsed()} liveTarget=${target.targetTicks}`;
 }
