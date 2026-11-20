@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795202908075-fingersmith-bigchopper-02dcdfce112a15a8",
+ "account": "Fingersmith",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "9ce9283a-b155-414b-9a53-d4e2ad8d2ff3",
+ "count": 0,
+ "ok": false,
+ "at": 1795202919951,
+ "detail": "trade claimed"
+}
