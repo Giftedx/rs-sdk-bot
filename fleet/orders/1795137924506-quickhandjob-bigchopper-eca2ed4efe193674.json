@@ -1,0 +1,29 @@
+{
+ "id": "1795137924506-quickhandjob-bigchopper-eca2ed4efe193674",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Quickhandjob",
+ "to": "Bigchopper",
+ "item": "Air rune",
+ "count": 100,
+ "start": 1795137924506,
+ "end": 1795139124506,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Law rune",
+   "count": 5
+  }
+ ],
+ "takerWaits": true
+}
