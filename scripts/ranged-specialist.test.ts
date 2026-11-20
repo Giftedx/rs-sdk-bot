@@ -45,10 +45,10 @@ const ITEMS: { id: number; name: string; tradeable?: boolean }[] = JSON.parse(
 test('RANGED_SPECIALIST two-trade kits and combined supplies use cataloged tradeable items within <=28 slots per trade', () => {
     const byId = new Map(ITEMS.map(item => [item.id, item]));
     for (const [trade, expected] of [
-        [RANGED_SPECIALIST_TRADE1, 23],
-        [RANGED_SPECIALIST_TRADE2, 17],
-        [RANGED_SPECIALIST_MSB_TRADE1, 23],
-        [RANGED_SPECIALIST_MSB_TRADE2, 18],
+        [RANGED_SPECIALIST_TRADE1, 27],
+        [RANGED_SPECIALIST_TRADE2, 18],
+        [RANGED_SPECIALIST_MSB_TRADE1, 27],
+        [RANGED_SPECIALIST_MSB_TRADE2, 19],
     ] as const) {
         expect(kitSlotTotal(trade)).toBe(expected);
         expect(expected).toBeLessThanOrEqual(28);
@@ -68,7 +68,8 @@ test('RANGED_SPECIALIST two-trade kits and combined supplies use cataloged trade
         expect(hasAtLeastKit([...inv, { id: 882, count: 10 }], trade)).toBe(true);
     }
     expect(countById(RANGED_SPECIALIST_KIT, ITEM_IDS.cannonball)).toBe(2000);
-    expect(countById(RANGED_SPECIALIST_KIT, 3024)).toBe(9);
+    expect(countById(RANGED_SPECIALIST_KIT, 3024)).toBe(8);
+    expect(countById(RANGED_SPECIALIST_KIT, 3016)).toBe(5);
     expect(countById(RANGED_SPECIALIST_KIT, 1897)).toBe(3);
     expect(variantKit('knives')).toBe(RANGED_SPECIALIST_KIT);
     expect(variantKit('msb')).toBe(RANGED_SPECIALIST_MSB_KIT);
@@ -158,7 +159,7 @@ test('parseSpecialistArgs and bench cases validate cleanly', () => {
         supplier: undefined,
         benchSupplier: 'Sup',
         benchSupplier2: undefined,
-        spotCentre: { x: 3292, z: 3816, level: 0 },
+        spotCentre: { x: 3287, z: 3810, level: 0 },
     });
     expect(SPECIALIST_RANGED_CASES.map(c => c.key)).toEqual([
         'fighter:ranged-specialist',

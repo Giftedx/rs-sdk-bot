@@ -34,7 +34,7 @@ export interface KitSpecItem {
 
 export type RangedKitVariant = 'knives' | 'msb';
 
-// Trade 1 at Lumbridge (23 slots): bones buried immediately (19 free slots left for Dwarf Cannon).
+// Trade 1 at Lumbridge (27 slots): bones buried immediately (15 free slots left for Dwarf Cannon).
 export const RANGED_SPECIALIST_TRADE1: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
     { id: 6, name: 'Cannon base', count: 1, stackable: false },
@@ -47,25 +47,27 @@ export const RANGED_SPECIALIST_TRADE1: readonly KitSpecItem[] = [
     { id: 863, name: 'Iron knife', count: 250, stackable: true },
     { id: 1129, name: 'Leather body', count: 1, stackable: false },
     { id: 3024, name: 'Super restore(4)', count: 1, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 4, stackable: false },
     { id: 1897, name: 'Chocolate cake', count: 2, stackable: false },
 ] as const;
 
-// Trade 2 at Edgeville after Dwarf Cannon (17 slots): knives, full 1-def BIS Ranged armor, pots, and 32 Super restore doses.
+// Trade 2 at Edgeville after Dwarf Cannon (18 slots): knives, full 1-def BIS Ranged armor, pots, and 28 Super restore doses.
 export const RANGED_SPECIALIST_TRADE2: readonly KitSpecItem[] = [
     { id: 868, name: 'Rune knife', count: 2000, stackable: true },
     { id: 2581, name: 'Robin hood hat', count: 1, stackable: false },
     { id: 2577, name: 'Ranger boots', count: 1, stackable: false },
     { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
     { id: 2491, name: 'Dragon vambraces', count: 1, stackable: false },
-    { id: 2448, name: 'Superantipoison(4)', count: 1, stackable: false },
+    { id: 2448, name: 'Superantipoison(4)', count: 2, stackable: false },
     { id: 2444, name: 'Ranging potion(4)', count: 2, stackable: false },
-    { id: 3024, name: 'Super restore(4)', count: 8, stackable: false },
+    { id: 3024, name: 'Super restore(4)', count: 7, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 1, stackable: false },
     { id: 1897, name: 'Chocolate cake', count: 1, stackable: false },
 ] as const;
 
 export const RANGED_SPECIALIST_MSB_TRADE1: readonly KitSpecItem[] = RANGED_SPECIALIST_TRADE1;
 
-// MSB Trade 2 at Edgeville after Dwarf Cannon (18 slots): Magic shortbow + Rune arrows, full BIS armor, pots, and restores.
+// MSB Trade 2 at Edgeville after Dwarf Cannon (19 slots): Magic shortbow + Rune arrows, full BIS armor, pots, and restores.
 export const RANGED_SPECIALIST_MSB_TRADE2: readonly KitSpecItem[] = [
     { id: 861, name: 'Magic shortbow', count: 1, stackable: false },
     { id: 892, name: 'Rune arrow', count: 1000, stackable: true },
@@ -73,9 +75,10 @@ export const RANGED_SPECIALIST_MSB_TRADE2: readonly KitSpecItem[] = [
     { id: 2577, name: 'Ranger boots', count: 1, stackable: false },
     { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
     { id: 2491, name: 'Dragon vambraces', count: 1, stackable: false },
-    { id: 2448, name: 'Superantipoison(4)', count: 1, stackable: false },
+    { id: 2448, name: 'Superantipoison(4)', count: 2, stackable: false },
     { id: 2444, name: 'Ranging potion(4)', count: 2, stackable: false },
-    { id: 3024, name: 'Super restore(4)', count: 8, stackable: false },
+    { id: 3024, name: 'Super restore(4)', count: 7, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 1, stackable: false },
     { id: 1897, name: 'Chocolate cake', count: 1, stackable: false },
 ] as const;
 
@@ -119,9 +122,9 @@ export const CASTLE_WARS = { x: 2440, z: 3089, level: 0 } as const;
 export const EDGEVILLE = { x: 3087, z: 3496, level: 0 } as const;
 export const LAWGOF = { x: 2571, z: 3463, level: 0 } as const;
 export const NULODION_DOOR = { x: 3015, z: 3453, level: 0 } as const;
-// North cluster center covers 35 of 62 Poison Spiders across all 8 cannon rays (knowledge/npcs.json, m51_59).
-export const SPIDERS_CENTRE = { x: 3292, z: 3816, level: 0 } as const;
-export const SPIDERS_CLEAR = { x: 3290, z: 3760, level: 0 } as const;
+// Optimal cannon centre matching CANNON_SPOTS.spiders (7.8/8 rays covered, clear 3x3 at 3287,3810).
+export const SPIDERS_CENTRE = { x: 3287, z: 3810, level: 0 } as const;
+export const SPIDERS_CLEAR = { x: 3287, z: 3755, level: 0 } as const;
 
 export const ITEM_IDS = {
     cannonball: 2,
@@ -144,6 +147,7 @@ export const ITEM_IDS = {
     antipoison: [2448, 181, 183, 185] as readonly number[],
     rangingPot: [2444, 169, 171, 173] as readonly number[],
     superRestore: [3024, 3026, 3028, 3030] as readonly number[],
+    superEnergy: [3016, 3018, 3020, 3022] as readonly number[],
     cake: [1897, 1899, 1901] as readonly number[],
     vial: 229,
 } as const;
@@ -151,6 +155,7 @@ export const ITEM_IDS = {
 const PROTECT_MELEE = 14;
 const RETALIATE_ON = 150;
 const RETALIATE_OFF = 151;
+const RUN_ON = 153;
 const HEAD_SLOT = 0;
 const NECK_SLOT = 2;
 const WEAPON_SLOT = 3;
@@ -294,7 +299,7 @@ function readServerHost(root: string, bot: string): string {
 }
 
 function posOf(s: Session) {
-    return s.sdk.getState()?.player as { worldX: number; worldZ: number; level: number; hp?: number; combat?: { inCombat?: boolean } } | undefined;
+    return s.sdk.getState()?.player as { worldX: number; worldZ: number; level: number; hp?: number; runEnergy?: number; combat?: { inCombat?: boolean; targetIndex?: number } } | undefined;
 }
 
 function d8(a: { x: number; z: number }, b: { x: number; z: number }): number {
@@ -322,8 +327,54 @@ async function dismissContinueDialogs(s: Session, stop: StopFn, maxTicks = 6): P
     }
 }
 
+function attachEnergySipper(
+    s: Session,
+    stop: StopFn,
+    opts: { threshold?: number; requireMoving?: boolean } = {},
+): () => void {
+    const threshold = opts.threshold ?? 65;
+    let lastSip = -10;
+    let prevPos = '';
+    return s.onTick(() => {
+        if (stop()) return;
+        const st = s.sdk.getState();
+        const p = posOf(s);
+        if (!p) return;
+        const curPos = `${p.worldX},${p.worldZ},${p.level}`;
+        const moved = !!prevPos && curPos !== prevPos;
+        prevPos = curPos;
+        if (opts.requireMoving && (!moved || p.worldX === 2576)) return;
+        if (st?.dialog?.isOpen || st?.modalOpen) return;
+        const energy = p.runEnergy ?? 100;
+        const now = s.tick();
+        if (energy <= threshold && now - lastSip >= 3) {
+            const pot = (st?.inventory as InvItem[] | undefined)?.find(it => ITEM_IDS.superEnergy.includes(it.id));
+            if (pot && pot.slot !== undefined) {
+                lastSip = now;
+                void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' });
+                if (energy < 5) void s.direct({ type: 'clickComponent', componentId: RUN_ON, reason: 'SDK' });
+            }
+        }
+    });
+}
+
+async function topUpEnergy(s: Session, targetEnergy: number, stop: StopFn): Promise<void> {
+    for (let i = 0; i < 6 && !stop(); i++) {
+        const energy = posOf(s)?.runEnergy ?? 100;
+        if (energy >= targetEnergy) break;
+        const pot = (s.sdk.getInventory() as InvItem[]).find(it => ITEM_IDS.superEnergy.includes(it.id));
+        if (!pot || pot.slot === undefined) break;
+        await s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' });
+        await waitTicks(s, 1);
+    }
+    if ((posOf(s)?.runEnergy ?? 100) >= 5) {
+        await s.direct({ type: 'clickComponent', componentId: RUN_ON, reason: 'SDK' });
+    }
+}
+
 async function walkWaypoints(s: Session, pts: Point[], maxTicks: number, stop: StopFn, label: string): Promise<void> {
     const walker = await sessionWalker(s);
+    const offEnergy = attachEnergySipper(s, stop, { threshold: 65 });
     const offDialog = s.onTick(() => {
         if (activeContinueDialog(s)) void s.sdk.sendClickDialog(0);
     });
@@ -337,6 +388,7 @@ async function walkWaypoints(s: Session, pts: Point[], maxTicks: number, stop: S
         const g = await goTo(s, world, { x: target.x, z: target.z, level: 0 }, accountOf(s), { legTimeoutTicks: Math.max(120, maxTicks) });
         if (!g.ok) throw Error(`walk failed (${label}): ${r.detail ?? g.detail ?? JSON.stringify(r)}`);
     } finally {
+        offEnergy();
         offDialog();
     }
 }
@@ -549,12 +601,20 @@ async function walkEdgevilleToSpiders(s: Session, spot: { x: number; z: number; 
                 void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' });
             }
         }
+        if ((p?.runEnergy ?? 100) <= 65 && now - lastSip >= 3) {
+            const epot = (s.sdk.getInventory() as InvItem[]).find(it => ITEM_IDS.superEnergy.includes(it.id));
+            if (epot && epot.slot !== undefined) {
+                lastSip = now;
+                void s.direct({ type: 'useInventoryItem', slot: epot.slot, optionIndex: 1, reason: 'SDK' });
+            }
+        }
         if (wantPray && pts > 0 && !st?.prayers?.activePrayers?.[PROTECT_MELEE] && now - lastPrayToggle >= 2) {
             lastPrayToggle = now;
             void s.direct({ type: 'togglePrayer', prayerIndex: PROTECT_MELEE, reason: 'SDK' });
         }
     });
     try {
+        await s.direct({ type: 'clickComponent', componentId: RUN_ON, reason: 'SDK' });
         for (let i = 0; i < legs.length && !stop(); i++) {
             const leg = legs[i]!;
             if (leg.z >= 3765) wantPray = true;
@@ -597,13 +657,43 @@ async function ensureCannonSetup(
         .join('|');
 
     const tally = messageTally(() => st()?.gameMessages);
+    tally.pull();
     for (let attempt = 0; attempt < 3 && !stop(); attempt++) {
         if (!findCannonLoc() && hasPart(ITEM_IDS.cannonParts[0]!)) {
-            try {
-                return await setupCannon(s, { centre: { x: spotCentre.x, z: spotCentre.z }, avoidOld: false });
-            } catch (err) {
-                const p = posOf(s);
-                console.log(`WARN cannon_setup attempt=${attempt} err=${String(err)} at=${p?.worldX},${p?.worldZ} inv=${inv().map(i => `${i.id}x${i.count}`).join(',')} nearby=${summarizeLocs()}`);
+            if (attempt === 0) {
+                const p0 = posOf(s);
+                if (!p0 || d8({ x: p0.worldX, z: p0.worldZ }, spotCentre) > 0) {
+                    await s.bot.walkTo(spotCentre.x, spotCentre.z, 0);
+                    await waitTicks(s, 1);
+                }
+                const base = inv().find(i => i.id === ITEM_IDS.cannonParts[0]);
+                if (base && base.slot !== undefined) {
+                    tally.pull();
+                    const placed0 = tally.count(/place the cannon base/i);
+                    const space0 = tally.count(/isn't enough space/i);
+                    const op = base.optionsWithIndex?.find(o => /set-?up/i.test(o.text ?? ''))?.opIndex ?? 1;
+                    await s.direct({ type: 'useInventoryItem', slot: base.slot, optionIndex: op, reason: 'SDK' });
+                    await waitUntil(
+                        s,
+                        () => {
+                            tally.pull();
+                            return stop()
+                                || !!findCannonLoc()
+                                || !hasPart(ITEM_IDS.cannonParts[0]!)
+                                || tally.count(/place the cannon base/i) > placed0
+                                || tally.count(/isn't enough space/i) > space0;
+                        },
+                        { timeoutTicks: 8 },
+                    );
+                }
+            } else {
+                try {
+                    await waitTicks(s, 1);
+                    return await setupCannon(s, { centre: { x: spotCentre.x, z: spotCentre.z }, avoidOld: false });
+                } catch (err) {
+                    const p = posOf(s);
+                    console.log(`WARN cannon_setup attempt=${attempt} err=${String(err)} at=${p?.worldX},${p?.worldZ} inv=${inv().map(i => `${i.id}x${i.count}`).join(',')} nearby=${summarizeLocs()}`);
+                }
             }
         }
 
@@ -748,6 +838,8 @@ async function runSpiderGrind(
     let reloads = 0;
     let specials = 0;
     let lastAttack = -99;
+    let lastGain = -99;
+    let lastHpXp = skillInfo(s, 'Hitpoints').experience;
     let lastSpec = -99;
     let loadPending = -1;
     let loadMark = 0;
@@ -928,7 +1020,7 @@ async function runSpiderGrind(
             }
             firePending = -1;
 
-            if (reloadDue({ now, lastLoad, interval: 24, empty }) && countInv([ITEM_IDS.cannonball]) > 0) {
+            if (reloadDue({ now, lastLoad, interval: 25, empty }) && countInv([ITEM_IDS.cannonball]) > 0) {
                 if (empty) { needFire = true; empty = false; }
                 loadMark = loadSeen();
                 if (await reloadOnce()) {
@@ -944,15 +1036,23 @@ async function runSpiderGrind(
             // 6. Special attack (Magic shortbow) and target engagement.
             const p = posOf(s);
             const me = { x: p?.worldX ?? cannon.centre.x, z: p?.worldZ ?? cannon.centre.z };
-            const combat = (p as any)?.combat;
+            const hx = skillInfo(s, 'Hitpoints').experience;
+            if (hx > lastHpXp) { lastHpXp = hx; lastGain = now; }
+
+            const reach = weaponReach(curWorn);
+            const npcs: TargetNpc[] = (st()?.nearbyNpcs ?? []) as TargetNpc[];
+            const alive = targetIdx !== undefined ? npcs.find(n => n.index === targetIdx && (n.hp ?? 1) > 0 && d8(me, n) <= reach) : undefined;
+            const fighting = !!alive && (now - lastGain < 10 || now - lastAttack < 10);
+
             if (
-                now - lastSpec >= 3
+                fighting
+                && now - lastSpec >= 3
                 && specialDue({
                     special: variant === 'msb',
                     weapon: currentWeapon,
                     energy: cvar(300),
                     enabled: cvar(301),
-                    fighting: !!combat?.inCombat && targetIdx !== undefined,
+                    fighting,
                 })
             ) {
                 await s.sdk.sendClickComponent(componentId('combat_bow:specbar'));
@@ -960,10 +1060,8 @@ async function runSpiderGrind(
                 lastSpec = now;
             }
 
-            const reach = weaponReach(curWorn);
-            const npcs: TargetNpc[] = (st()?.nearbyNpcs ?? []) as TargetNpc[];
-            const alive = targetIdx !== undefined ? npcs.find(n => n.index === targetIdx && (n.hp ?? 1) > 0 && d8(me, n) <= reach) : undefined;
-            if (!alive && (!combat?.inCombat || combat?.targetIndex === -1)) {
+            if (!fighting) {
+                if (targetIdx !== undefined && now - lastAttack >= 10) bad.set(targetIdx, now + 20);
                 if (!isAdjacentToCannon(me, cannon)) {
                     const w = await sessionWalker(s);
                     await walkPath(w, [{ x: stand.x, z: stand.z, tol: 0 }], { maxTicks: 8, stop });
@@ -1074,25 +1172,34 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
         await equipEarlyGearAndBuryBones(s, variant, stop);
         milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
 
+        await topUpEnergy(s, 80, stop);
         await rubJewellery(s, ITEM_IDS.duelRings, /castle wars/i, CASTLE_WARS, 10, stop, 'castle wars 1');
         milestone('cwars1');
         await walkWaypoints(s, CWARS_TO_LAWGOF_PATH, 320, stop, 'cwars to lawgof');
         milestone('lawgof_arrive');
 
-        const dc = await runDwarfCannon({
-            session: s,
-            cap: Math.max(300, CAP - elapsed()),
-            eatAt: 5,
-            protectCaveMelee: true,
-            stop,
-            travelToNulodion: async ({ s: qs }) => {
-                await rubJewellery(qs, ITEM_IDS.glories, /edgeville/i, EDGEVILLE, 10, stop, 'edgeville nulodion');
-            },
-            travelBackFromNulodion: async ({ s: qs, walk }) => {
-                await rubJewellery(qs, ITEM_IDS.duelRings, /castle wars/i, CASTLE_WARS, 10, stop, 'castle wars 2');
-                await walk('cwars back to commander', CWARS_TO_LAWGOF_PATH);
-            },
-        });
+        const offDcEnergy = attachEnergySipper(s, stop, { threshold: 55, requireMoving: true });
+        let dc: { ok: boolean; craftingXp: number; detail: string };
+        try {
+            dc = await runDwarfCannon({
+                session: s,
+                cap: Math.max(300, CAP - elapsed()),
+                eatAt: 5,
+                protectCaveMelee: true,
+                stop,
+                travelToNulodion: async ({ s: qs }) => {
+                    await topUpEnergy(qs, 70, stop);
+                    await rubJewellery(qs, ITEM_IDS.glories, /edgeville/i, EDGEVILLE, 10, stop, 'edgeville nulodion');
+                },
+                travelBackFromNulodion: async ({ s: qs }) => {
+                    await topUpEnergy(qs, 80, stop);
+                    await rubJewellery(qs, ITEM_IDS.duelRings, /castle wars/i, CASTLE_WARS, 10, stop, 'castle wars 2');
+                    await walkWaypoints(qs, CWARS_TO_LAWGOF_PATH, 280, stop, 'cwars back to commander');
+                },
+            });
+        } finally {
+            offDcEnergy();
+        }
         if (!dc.ok) throw Error(`Dwarf Cannon incomplete: ${dc.detail}`);
         milestone('dwarfcannon', `crafting=${dc.craftingXp}`);
 
@@ -1100,12 +1207,15 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
         const gloryEarly = (s.sdk.getInventory() as InvItem[]).find(i => ITEM_IDS.gloriesAll.includes(i.id));
         if (gloryEarly) await equipItemFast(s, gloryEarly);
 
-        // Drop toolkit, duel ring, empty vials, and partial cakes before Edgeville Trade 2.
+        await topUpEnergy(s, 85, stop);
+
+        // Drop toolkit, duel ring, empty vials, Super energy leftovers, and partial cakes before Edgeville Trade 2.
         await dropItemsMatching(
             s,
             i => i.id === ITEM_IDS.toolkit
                 || i.id === ITEM_IDS.vial
                 || ITEM_IDS.duelRings.includes(i.id)
+                || ITEM_IDS.superEnergy.includes(i.id)
                 || ITEM_IDS.cake.includes(i.id),
             stop,
             'quest leftovers',
@@ -1148,7 +1258,7 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
 
 export function parseSpecialistArgs(argv: readonly string[]): RangedSpecialistOptions {
     const bot = argv[0] ?? '';
-    if (!bot) throw Error('usage: ranged-specialist.ts <bot> [cap] [VARIANT=knives|msb] [BENCH_SUPPLIER=name] [SPOT_X=3292] [SPOT_Z=3816]');
+    if (!bot) throw Error('usage: ranged-specialist.ts <bot> [cap] [VARIANT=knives|msb] [BENCH_SUPPLIER=name] [SPOT_X=3287] [SPOT_Z=3810]');
     const kv = new Map<string, string>();
     let cap: number | undefined;
     for (const a of argv.slice(1)) {
