@@ -1,0 +1,22 @@
+{
+ "id": "1795139504742-moneyshot-pocketrocket-dragonbones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Moneyshot",
+ "to": "Pocketrocket",
+ "item": "Dragon bones",
+ "count": 17,
+ "start": 1795139504742,
+ "end": 1795141904742,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
