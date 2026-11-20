@@ -123,10 +123,11 @@ export function checkExpect(s: SaveSummary, expect: Segment['expect']): Record<s
 export class TickWindow {
     enter: number | null = null;
     leave: number | null = null;
+    constructor(private readonly relog = false) {}
     observe(tick: number, inWorld: boolean) {
         if (inWorld) {
             if (this.enter === null) this.enter = tick;
-            this.leave = null;
+            if (this.relog) this.leave = null;
         } else if (this.enter !== null && this.leave === null) {
             this.leave = tick;
         }
@@ -310,7 +311,7 @@ export async function rehearse(seg: Segment, opts: {out: string; port?: number; 
         const env = rehearsalChildEnv(process.env, seg.env, {scored: !!opts.scored, role: 'worker', supplier: helper});
         const proc = Bun.spawn(['bun', seg.script, account, ...(seg.args ?? [])], {cwd: root, env,
             stdout: Bun.file(log), stderr: Bun.file(join(opts.out, `${seg.id}.err`)), windowsHide: true});
-        const window = new TickWindow();
+        const window = new TickWindow(!!opts.scored);
         let timedOut = false, captured: RehearsalReport['captured'], captureError = '';
         const timer = setTimeout(() => { timedOut = true; void killTree(proc.pid); }, seg.timeoutMs ?? 600_000);
         const poll = async () => {

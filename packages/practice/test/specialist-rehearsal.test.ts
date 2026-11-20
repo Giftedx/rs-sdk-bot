@@ -143,7 +143,7 @@ test('isolated rehearsal defaults to no-gateway lockstep with 400ms scored playt
 });
 
 test('TickWindow tracks final logout after relog interruptions and successfulWorkerLog accepts multi-session starts', () => {
-    const window = new TickWindow();
+    const window = new TickWindow(true);
     window.observe(2, true);
     window.observe(248, false);
     expect(window.ticks).toBe(246);
