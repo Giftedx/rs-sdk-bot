@@ -110,12 +110,11 @@ export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 555, name: 'Water rune', count: 6, stackable: true },
     { id: 1333, name: 'Rune scimitar', count: 1, stackable: false },
     { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
-    { id: 3105, name: 'Climbing boots', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 954, name: 'Rope', count: 1, stackable: false },
     { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
     { id: 385, name: 'Shark', count: 1, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 6, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 7, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
 
@@ -743,9 +742,6 @@ export async function runWildyPvpLoop(
     await setAutoRetaliate(s, false);
     await equipItemById(s, 1333, opts.stop, 'Rune scimitar');
     await equipFirstAvailableId(s, [1725, 1731], opts.stop, 'Amulet of strength/power');
-    if (s.sdk.getInventory().some(i => i.id === 3105)) {
-        await equipItemById(s, 3105, opts.stop, 'Climbing boots');
-    }
 
     // Verify exact Strength-only (Aggressive) or Defence-only (Defensive) combat style.
     await waitUntil(s, () => {
@@ -1527,7 +1523,7 @@ export async function runMeleePvpSpecialist(
         onTickExtra: () => {
             ensureRunAndEnergy();
             if (s.tick() - preEquippedWait >= 2) {
-                const gear = s.sdk.getInventory().find(i => i.id === 1333 || i.id === 3105);
+                const gear = s.sdk.getInventory().find(i => i.id === 1333);
                 if (gear) {
                     const wieldOp = (gear.optionsWithIndex ?? []).find((o: any) => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
                     preEquippedWait = s.tick();

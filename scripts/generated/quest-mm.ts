@@ -1181,14 +1181,18 @@ try {
         // Round the locked door of the Khazard building (2567-2569,3237-3239) that the SDK plans through.
         await walk('to zoo', [{ x: 2561, z: 3241, tol: 2 }, { x: 2566, z: 3232, tol: 2 }, { x: 2576, z: 3230, tol: 2 }, { x: 2581, z: 3248, tol: 2 }, { x: 2598, z: 3268, tol: 2 }, { x: 2603, z: 3272, tol: 2 }]);
         await wearGreegree('zoo greegree');
-        const minder = (): any => q.npc(/^monkey minder$/i);
+        const minder = (): any => (q.st()?.nearbyNpcs ?? [])
+            .filter((n: any) => /^monkey minder$/i.test(n.name))
+            .sort((a: any, b: any) => (a.distance ?? 99) - (b.distance ?? 99))[0];
         await talk1('minder cage', minder, [], () => inCage() && !q.dialogOpen(), 40, { x: 2602, z: 3274 });
         const zooMonkey = (): any => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^monkey$/i.test(n.name) && (n.optionsWithIndex ?? []).some((o: any) => /talk/i.test(o.text)))
             .sort((a: any, b: any) => a.distance - b.distance)[0];
         await talk1('zoo monkey', zooMonkey, [], () => q.has(ITEM.backpackMonkey) && !q.dialogOpen(), 60);
         await unwearGreegree();
-        // From inside the cage the bot cannot walk to the minder: the talk starts only when his walk brings him beside
-        // the bars. At seed 9 he stayed away for 100 ticks, so the bot keeps trying for up to 20 talks.
+        // Stand beside the south gate (near minder spawn 2602,3274) and target the nearest minder within apnpc1 range 5.
+        if (inCage() && !q.near(2602, 3276, 1)) {
+            await walk('to minder gate', [{ x: 2602, z: 3276, tol: 1 }]);
+        }
         await talk1('minder out', minder, [], () => !inCage() && !q.dialogOpen(), 40, undefined, 20);
         q.milestone('zoo');
         // The stronghold's south gate (gnome_areagate 190 at 2459,3383, gnome_gate.rs2) is not a door in the SDK
