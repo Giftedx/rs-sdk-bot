@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795137923887-sporrandip-bigchopper-f3c2d398efb442cb",
+ "account": "SporranDip",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 8,
+ "claim": "365c3c1b-608a-44b0-a36e-7d457db70176",
+ "count": 0,
+ "ok": false,
+ "at": 1795137952365,
+ "detail": "trade claimed"
+}
