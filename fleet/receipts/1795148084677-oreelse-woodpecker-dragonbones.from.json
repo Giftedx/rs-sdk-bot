@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795148084677-oreelse-woodpecker-dragonbones",
+ "account": "OreElse",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 14,
+ "claim": "5b2f93b5-7115-46d7-82c3-6d8be45efae2",
+ "count": 0,
+ "ok": false,
+ "at": 1795148136564,
+ "detail": "trade claimed"
+}
