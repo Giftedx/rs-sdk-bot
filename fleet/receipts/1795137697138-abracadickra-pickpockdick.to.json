@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795137697138-abracadickra-pickpockdick",
+ "account": "PickpockDick",
+ "partner": "Abracadickra",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 21060,
+ "claim": "16b9a8f1-8d76-4cbb-8f2c-ca41423bf7d8",
+ "count": 0,
+ "ok": false,
+ "at": 1795137742263,
+ "detail": "trade claimed"
+}
