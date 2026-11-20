@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795141336349-bigpackage-bigchopper-dd2b9baf847f488a",
+ "account": "Bigchopper",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 500,
+ "claim": "46126389-ac5a-4fe5-9491-1a184d99c0fa",
+ "count": 0,
+ "ok": false,
+ "at": 1795141629651,
+ "detail": "trade claimed"
+}

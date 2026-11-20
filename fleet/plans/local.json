@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795141597044,
+ "at": 1795141639157,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -334,22 +334,6 @@
    "resources": [
     "knight:2582,3297"
    ]
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/fleet-inspect.ts",
-   "args": [],
-   "env": {
-    "REQUIRE_BANK": "1",
-    "LOOT_WATCH": "0",
-    "RANDOM_EVENTS": "0",
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-05a61650-1e4f-482d-802e-f71731dcd3c7"
-   },
-   "enabled": true,
-   "repeat": false,
-   "goal": "run-observe-bowbeforeme-rings [task-05a61650-1e4f-482d-802e-f71731dcd3c7]",
-   "role": "helper"
   }
  ],
  "army": [
