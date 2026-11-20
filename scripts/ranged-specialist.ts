@@ -1097,15 +1097,16 @@ async function runSpiderGrind(
                     continue;
                 }
                 loadPending = -1;
-                if (needFire) {
-                    needFire = false;
-                    const loc = cannonAt(cannon) ?? { x: cannon.x, z: cannon.z, id: cannon.id };
-                    await sendDirect({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: 1, reason: 'SDK' });
-                    firePending = now;
-                    targetIdx = undefined;
-                    await waitTicks(s, 1);
-                    continue;
-                }
+            }
+            if (needFire) {
+                needFire = false;
+                const loc = cannonAt(cannon) ?? { x: cannon.x, z: cannon.z, id: cannon.id };
+                const fireOp = (loc.optionsWithIndex ?? []).find((o: any) => /^fire$/i.test(o.text ?? ''))?.opIndex ?? 1;
+                await sendDirect({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: fireOp, reason: 'SDK' });
+                firePending = now;
+                targetIdx = undefined;
+                await waitTicks(s, 1);
+                continue;
             }
             if (firePending >= 0 && now - firePending < 2) {
                 await waitTicks(s, 1);
