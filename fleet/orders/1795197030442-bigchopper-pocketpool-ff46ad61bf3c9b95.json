@@ -1,0 +1,23 @@
+{
+ "id": "1795197030442-bigchopper-pocketpool-ff46ad61bf3c9b95",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "PocketPool",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795197030442,
+ "end": 1795199430442,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
