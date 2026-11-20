@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795165789025-billionaire-undermykilt-2e029bb44a311f4a",
+ "account": "Billionaire",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cannonball",
+ "requested": 270,
+ "claim": "1955b278-ffa8-4b09-9fa1-c4fe7a8a8e9d",
+ "count": 0,
+ "ok": false,
+ "at": 1795165799492,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Rune arrow",
+   "requested": 212,
+   "count": 0
+  }
+ ]
+}
