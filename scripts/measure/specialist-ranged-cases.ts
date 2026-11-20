@@ -53,15 +53,15 @@ export const SPECIALIST_RANGED_CASES: readonly BenchCase[] = [
                 preset: 'fresh_lumbridge',
                 presetConfig: {
                     position: { x: 3223, z: 3222, level: 0 },
-                    inventory: kitToSaveInventory(RANGED_SPECIALIST_TRADE1, 28),
+                    inventory: kitToSaveInventory(RANGED_SPECIALIST_TRADE1, 23),
                 },
             },
             {
                 suffix: 'c',
                 preset: 'fresh_lumbridge',
                 presetConfig: {
-                    position: { x: 3222, z: 3223, level: 0 },
-                    inventory: kitToSaveInventory(RANGED_SPECIALIST_TRADE2, 10),
+                    position: { x: 3089, z: 3496, level: 0 },
+                    inventory: kitToSaveInventory(RANGED_SPECIALIST_TRADE2, 17),
                 },
             },
         ],
@@ -81,15 +81,15 @@ export const SPECIALIST_RANGED_CASES: readonly BenchCase[] = [
                 preset: 'fresh_lumbridge',
                 presetConfig: {
                     position: { x: 3223, z: 3222, level: 0 },
-                    inventory: kitToSaveInventory(RANGED_SPECIALIST_MSB_TRADE1, 28),
+                    inventory: kitToSaveInventory(RANGED_SPECIALIST_MSB_TRADE1, 23),
                 },
             },
             {
                 suffix: 'c',
                 preset: 'fresh_lumbridge',
                 presetConfig: {
-                    position: { x: 3222, z: 3223, level: 0 },
-                    inventory: kitToSaveInventory(RANGED_SPECIALIST_MSB_TRADE2, 11),
+                    position: { x: 3089, z: 3496, level: 0 },
+                    inventory: kitToSaveInventory(RANGED_SPECIALIST_MSB_TRADE2, 18),
                 },
             },
         ],

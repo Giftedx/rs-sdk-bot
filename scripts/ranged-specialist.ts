@@ -34,7 +34,7 @@ export interface KitSpecItem {
 
 export type RangedKitVariant = 'knives' | 'msb';
 
-// Trade 1 (28 slots): Dragon bones buried immediately at Lumbridge plus starter weapon, armor, cannon, and pots.
+// Trade 1 at Lumbridge (23 slots): bones buried immediately (19 free slots left for Dwarf Cannon).
 export const RANGED_SPECIALIST_TRADE1: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
     { id: 6, name: 'Cannon base', count: 1, stackable: false },
@@ -45,33 +45,28 @@ export const RANGED_SPECIALIST_TRADE1: readonly KitSpecItem[] = [
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
     { id: 863, name: 'Iron knife', count: 250, stackable: true },
-    { id: 868, name: 'Rune knife', count: 2000, stackable: true },
     { id: 1129, name: 'Leather body', count: 1, stackable: false },
+    { id: 3024, name: 'Super restore(4)', count: 1, stackable: false },
+    { id: 1897, name: 'Chocolate cake', count: 2, stackable: false },
+] as const;
+
+// Trade 2 at Edgeville after Dwarf Cannon (17 slots): knives, full 1-def BIS Ranged armor, pots, and 32 Super restore doses.
+export const RANGED_SPECIALIST_TRADE2: readonly KitSpecItem[] = [
+    { id: 868, name: 'Rune knife', count: 2000, stackable: true },
     { id: 2581, name: 'Robin hood hat', count: 1, stackable: false },
     { id: 2577, name: 'Ranger boots', count: 1, stackable: false },
     { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
     { id: 2491, name: 'Dragon vambraces', count: 1, stackable: false },
     { id: 2448, name: 'Superantipoison(4)', count: 1, stackable: false },
     { id: 2444, name: 'Ranging potion(4)', count: 2, stackable: false },
-] as const;
-
-// Trade 2 (10 slots) after bones are buried and starter gear worn: 32 Super restore doses and 2 Chocolate cakes.
-export const RANGED_SPECIALIST_TRADE2: readonly KitSpecItem[] = [
     { id: 3024, name: 'Super restore(4)', count: 8, stackable: false },
-    { id: 1897, name: 'Chocolate cake', count: 2, stackable: false },
+    { id: 1897, name: 'Chocolate cake', count: 1, stackable: false },
 ] as const;
 
-// MSB Trade 1 (28 slots): replaces Rune knife and Leather body with Magic shortbow and Rune arrows.
-export const RANGED_SPECIALIST_MSB_TRADE1: readonly KitSpecItem[] = [
-    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
-    { id: 6, name: 'Cannon base', count: 1, stackable: false },
-    { id: 8, name: 'Cannon stand', count: 1, stackable: false },
-    { id: 10, name: 'Cannon barrels', count: 1, stackable: false },
-    { id: 12, name: 'Cannon furnace', count: 1, stackable: false },
-    { id: 2, name: 'Cannonball', count: 2000, stackable: true },
-    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
-    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
-    { id: 863, name: 'Iron knife', count: 250, stackable: true },
+export const RANGED_SPECIALIST_MSB_TRADE1: readonly KitSpecItem[] = RANGED_SPECIALIST_TRADE1;
+
+// MSB Trade 2 at Edgeville after Dwarf Cannon (18 slots): Magic shortbow + Rune arrows, full BIS armor, pots, and restores.
+export const RANGED_SPECIALIST_MSB_TRADE2: readonly KitSpecItem[] = [
     { id: 861, name: 'Magic shortbow', count: 1, stackable: false },
     { id: 892, name: 'Rune arrow', count: 1000, stackable: true },
     { id: 2581, name: 'Robin hood hat', count: 1, stackable: false },
@@ -80,24 +75,31 @@ export const RANGED_SPECIALIST_MSB_TRADE1: readonly KitSpecItem[] = [
     { id: 2491, name: 'Dragon vambraces', count: 1, stackable: false },
     { id: 2448, name: 'Superantipoison(4)', count: 1, stackable: false },
     { id: 2444, name: 'Ranging potion(4)', count: 2, stackable: false },
-] as const;
-
-// MSB Trade 2 (11 slots) after bones are buried: 32 Super restore doses, 2 Chocolate cakes, and Leather body.
-export const RANGED_SPECIALIST_MSB_TRADE2: readonly KitSpecItem[] = [
     { id: 3024, name: 'Super restore(4)', count: 8, stackable: false },
-    { id: 1897, name: 'Chocolate cake', count: 2, stackable: false },
-    { id: 1129, name: 'Leather body', count: 1, stackable: false },
+    { id: 1897, name: 'Chocolate cake', count: 1, stackable: false },
 ] as const;
 
-export const RANGED_SPECIALIST_KIT: readonly KitSpecItem[] = [
-    ...RANGED_SPECIALIST_TRADE1,
-    ...RANGED_SPECIALIST_TRADE2,
-] as const;
+function mergeKitSpecs(a: readonly KitSpecItem[], b: readonly KitSpecItem[]): readonly KitSpecItem[] {
+    const order: KitSpecItem[] = [];
+    const byId = new Map<number, KitSpecItem>();
+    for (const item of [...a, ...b]) {
+        const cur = byId.get(item.id);
+        if (cur) {
+            const merged = { ...cur, count: cur.count + item.count };
+            byId.set(item.id, merged);
+            order[order.findIndex(x => x.id === item.id)] = merged;
+        } else {
+            const copy = { ...item };
+            byId.set(item.id, copy);
+            order.push(copy);
+        }
+    }
+    return order;
+}
 
-export const RANGED_SPECIALIST_MSB_KIT: readonly KitSpecItem[] = [
-    ...RANGED_SPECIALIST_MSB_TRADE1,
-    ...RANGED_SPECIALIST_MSB_TRADE2,
-] as const;
+export const RANGED_SPECIALIST_KIT: readonly KitSpecItem[] = mergeKitSpecs(RANGED_SPECIALIST_TRADE1, RANGED_SPECIALIST_TRADE2);
+
+export const RANGED_SPECIALIST_MSB_KIT: readonly KitSpecItem[] = mergeKitSpecs(RANGED_SPECIALIST_MSB_TRADE1, RANGED_SPECIALIST_MSB_TRADE2);
 
 export function variantTrades(variant: RangedKitVariant = 'knives'): { trade1: readonly KitSpecItem[]; trade2: readonly KitSpecItem[] } {
     return variant === 'msb'
@@ -111,6 +113,8 @@ export function variantKit(variant: RangedKitVariant = 'knives'): readonly KitSp
 
 export const LUMBRIDGE_HANDOFF = { x: 3222, z: 3222, level: 0 } as const;
 export const SUPPLIER_STAND = { x: 3223, z: 3222, level: 0 } as const;
+export const EDGEVILLE_HANDOFF = { x: 3088, z: 3496, level: 0 } as const;
+export const EDGEVILLE_SUPPLIER_STAND = { x: 3089, z: 3496, level: 0 } as const;
 export const CASTLE_WARS = { x: 2440, z: 3089, level: 0 } as const;
 export const EDGEVILLE = { x: 3087, z: 3496, level: 0 } as const;
 export const LAWGOF = { x: 2571, z: 3463, level: 0 } as const;
@@ -408,15 +412,18 @@ async function receiveSupplyKit(
     supplierName: string,
     kit: readonly KitSpecItem[],
     stop: StopFn,
+    handoff: { x: number; z: number; level: number } = LUMBRIDGE_HANDOFF,
 ): Promise<void> {
     const p0 = posOf(s);
-    if (!p0 || d8({ x: p0.worldX, z: p0.worldZ }, LUMBRIDGE_HANDOFF) > 2) {
-        await walkWaypoints(s, [{ ...LUMBRIDGE_HANDOFF, tol: 1 }], 80, stop, 'lumbridge handoff');
+    if (!p0 || d8({ x: p0.worldX, z: p0.worldZ }, handoff) > 2) {
+        await walkWaypoints(s, [{ ...handoff, tol: 1 }], 80, stop, 'supply handoff');
     }
+    const before = new Map(kit.map(k => [k.id, countById(s.sdk.getInventory(), k.id)]));
+    const receivedAll = () => kit.every(spec => countById(s.sdk.getInventory(), spec.id) >= (before.get(spec.id) ?? 0) + spec.count);
     const allowed = new Set(kit.map(k => k.id));
     const peerRe = exactNameRe(supplierName);
-    const deadline = s.tick() + 200;
-    while (!stop() && !hasAtLeastKit(s.sdk.getInventory(), kit)) {
+    const deadline = s.tick() + 250;
+    while (!stop() && !receivedAll()) {
         if (s.tick() >= deadline) throw Error(`did not receive ranged kit from ${supplierName}`);
         await dismissContinueDialogs(s, stop, 2);
         await s.bot.dismissBlockingUI();
@@ -432,12 +439,12 @@ async function receiveSupplyKit(
             retryOnBusy: true,
         });
         if (tr.success) {
-            await waitUntil(s, () => hasAtLeastKit(s.sdk.getInventory(), kit) || stop(), { timeoutTicks: 10 });
-            if (hasAtLeastKit(s.sdk.getInventory(), kit)) return;
+            await waitUntil(s, () => receivedAll() || stop(), { timeoutTicks: 10 });
+            if (receivedAll()) return;
         }
         await waitTicks(s, 1);
     }
-    if (!hasAtLeastKit(s.sdk.getInventory(), kit)) {
+    if (!receivedAll()) {
         throw Error('stopped waiting for ranged supply kit');
     }
 }
@@ -447,12 +454,13 @@ async function serveBenchCompanion(
     specialistName: string,
     kit: readonly KitSpecItem[],
     stop: StopFn,
+    waitTicksCap = 300,
 ): Promise<void> {
     try {
         await waitUntil(sup, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 });
         const giveList = kit.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
         const peerRe = exactNameRe(specialistName);
-        const deadline = sup.tick() + 200;
+        const deadline = sup.tick() + waitTicksCap;
         let done = false;
         while (!stop() && !done && sup.tick() < deadline) {
             const served = await sup.bot.serveTrades({
@@ -1029,11 +1037,13 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
     }
 
     let ended = false;
+    let finished = false;
     void s.ended?.then(() => { ended = true; });
     const t0 = s.tick();
     const elapsed = () => s.tick() - t0;
     const stop: StopFn = () =>
         ended
+        || finished
         || elapsed() >= CAP
         || existsSync(join(root, '.practice', `stop-${opts.bot}`))
         || (!isLocalServer(serverHost) && existsSync(join(root, '.practice', 'stop-swarm')));
@@ -1041,13 +1051,12 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
         console.log(`MILESTONE ${step} tick=${elapsed()}${extra ? ' ' + extra : ''}`);
     };
 
+    const companionTask1 = benchSup ? serveBenchCompanion(benchSup, opts.bot, trade1, stop, 300) : undefined;
+    const companionTask2 = benchSup2 ? serveBenchCompanion(benchSup2, opts.bot, trade2, stop, Math.max(2500, CAP)) : undefined;
     try {
         const supplierName = (benchSupName || opts.supplier || process.env.PRACTICE_SUPPLIER || process.env.SUPPLIER || '').trim();
         const supplierName2 = (benchSup2Name || supplierName).trim();
         if (!supplierName) throw Error('missing SUPPLIER / PRACTICE_SUPPLIER / BENCH_SUPPLIER');
-
-        const companionTask1 = benchSup ? serveBenchCompanion(benchSup, opts.bot, trade1, stop) : undefined;
-        const companionTask2 = benchSup2 ? serveBenchCompanion(benchSup2, opts.bot, trade2, stop) : undefined;
 
         milestone('start', `variant=${variant}`);
         await leaveRuneStarter(s, stop);
@@ -1058,18 +1067,12 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
         await dropItemsMatching(s, i => !allowed.has(i.id), stop, 'tutorial junk');
         milestone('tutorial');
 
-        await receiveSupplyKit(s, supplierName, trade1, stop);
+        await receiveSupplyKit(s, supplierName, trade1, stop, LUMBRIDGE_HANDOFF);
         if (companionTask1) await companionTask1;
-        milestone('trade1', `slots=${s.sdk.getInventory().length}`);
+        milestone('kit', `slots=${s.sdk.getInventory().length}`);
 
         await equipEarlyGearAndBuryBones(s, variant, stop);
         milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
-
-        await receiveSupplyKit(s, supplierName2, trade2, stop);
-        if (companionTask2) await companionTask2;
-        const bodyPost = (s.sdk.getInventory() as InvItem[]).find(i => i.id === ITEM_IDS.leatherBody);
-        if (bodyPost) await equipItemFast(s, bodyPost);
-        milestone('kit', `slots=${s.sdk.getInventory().length}`);
 
         await rubJewellery(s, ITEM_IDS.duelRings, /castle wars/i, CASTLE_WARS, 10, stop, 'castle wars 1');
         milestone('cwars1');
@@ -1093,13 +1096,28 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
         if (!dc.ok) throw Error(`Dwarf Cannon incomplete: ${dc.detail}`);
         milestone('dwarfcannon', `crafting=${dc.craftingXp}`);
 
-        // Drop toolkit and ring of dueling before entering the Wilderness.
-        await dropItemsMatching(s, i => i.id === ITEM_IDS.toolkit || ITEM_IDS.duelRings.includes(i.id), stop, 'quest leftovers');
-
         await rubJewellery(s, ITEM_IDS.glories, /edgeville/i, EDGEVILLE, 10, stop, 'edgeville spiders');
         const gloryEarly = (s.sdk.getInventory() as InvItem[]).find(i => ITEM_IDS.gloriesAll.includes(i.id));
         if (gloryEarly) await equipItemFast(s, gloryEarly);
-        milestone('edgeville');
+
+        // Drop toolkit, duel ring, empty vials, and partial cakes before Edgeville Trade 2.
+        await dropItemsMatching(
+            s,
+            i => i.id === ITEM_IDS.toolkit
+                || i.id === ITEM_IDS.vial
+                || ITEM_IDS.duelRings.includes(i.id)
+                || ITEM_IDS.cake.includes(i.id),
+            stop,
+            'quest leftovers',
+        );
+
+        await receiveSupplyKit(s, supplierName2, trade2, stop, EDGEVILLE_HANDOFF);
+        if (companionTask2) await companionTask2;
+        if (variant === 'msb') {
+            const arrows = (s.sdk.getInventory() as InvItem[]).find(i => i.id === ITEM_IDS.runeArrow);
+            if (arrows) await equipItemFast(s, arrows);
+        }
+        milestone('edgeville', `slots=${s.sdk.getInventory().length}`);
 
         await walkEdgevilleToSpiders(s, spotCentre, stop);
         milestone('spiders_arrive', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
@@ -1122,6 +1140,9 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
         await finish([s], ok, detail);
     } catch (e) {
         await finish([s], false, String(e));
+    } finally {
+        finished = true;
+        await Promise.allSettled([companionTask1, companionTask2].filter(Boolean));
     }
 }
 
