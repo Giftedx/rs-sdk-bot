@@ -141,8 +141,8 @@ async function executeCraftingLoop(
    await dropItemsFast(spec, keepSetFor(false), deadline);
   }
   await receiveBatch(batch, i);
-  // Batches 0..2 cross 10-20+ levels each; overlap closeModal on every cut tick to drain level-up modals without stalling the next trade.
-  await cutUnlockedGems(spec, target, deadline, i <= 2);
+  // Overlap closeModal on every cut tick so queued level-up modals never trigger extra trade-open retries.
+  await cutUnlockedGems(spec, target, deadline, true);
   if (i === 1) logPhase(spec, start, `crafting_55_lvl=${skillLevel(spec, 'Crafting')}`);
  }
 
