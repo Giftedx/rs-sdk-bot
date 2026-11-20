@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795213370961,
+ "at": 1795213940611,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -190,26 +190,6 @@
    ]
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/alch-train.ts",
-   "args": [
-    "99",
-    "5000"
-   ],
-   "env": {
-    "ALCH_ITEM": "airrune",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-air-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "accounts": [
     "UnderMyKilt",
     "TrouserSnake",
@@ -270,6 +250,36 @@
    ]
   },
   {
+   "account": "TossTheCaber",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "jiminua",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "antipoison",
+    "STOCK_TARGET": "30",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "3656",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "3456",
+    "AUTOPILOT_ORDER": "[24]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":30}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy antipoison(3) at Jiminua's in Karamja for the gang squad",
+   "role": "bank",
+   "template": "squad-antipoison-jiminua",
+   "autopilot": "local",
+   "resources": [
+    "shop:jiminua"
+   ]
+  },
+  {
    "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -278,15 +288,15 @@
    ],
    "env": {
     "ITEMS": "water rune",
-    "STOCK_TARGET": "561",
+    "STOCK_TARGET": "576",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
-    "FLOAT": "4616",
+    "FLOAT": "4736",
     "COIN_RESERVE": "200",
-    "MAX_SPEND": "4416",
+    "MAX_SPEND": "4536",
     "AUTOPILOT_ORDER": "[9]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":561}}"
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":576}}"
    },
    "enabled": true,
    "standing": true,
@@ -344,6 +354,25 @@
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/alch-train.ts",
+   "args": [
+    "99",
+    "5000"
+   ],
+   "env": {
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "role": "combat",
+   "template": "army-alch-magic-99",
+   "autopilot": "local",
+   "resources": []
   }
  ],
  "army": [
