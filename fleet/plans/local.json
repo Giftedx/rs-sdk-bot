@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795215144504,
+ "at": 1795215746548,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -247,63 +247,6 @@
    "autopilot": "local",
    "resources": [
     "shop:dargaud"
-   ]
-  },
-  {
-   "account": "Swordswallow",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "aubury",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "water rune",
-    "STOCK_TARGET": "303",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "2552",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "2352",
-    "AUTOPILOT_ORDER": "[9]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":303}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
-   "role": "bank",
-   "template": "squad-water-aubury",
-   "autopilot": "local",
-   "resources": [
-    "shop:aubury"
-   ]
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
    ]
   }
  ],
