@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795142301994-bigchopper-bowbeforeme-dbf8b0d1197d4fe1",
  "account": "Bigchopper",
  "partner": "BowBeforeMe",
@@ -10,15 +10,37 @@
  "item": "Rune arrowtips",
  "requested": 1000,
  "claim": "90cd7893-99af-44e4-96a7-7c004f27e226",
- "count": 0,
- "ok": false,
- "at": 1795142340464,
- "detail": "trade claimed",
+ "count": 1000,
+ "ok": true,
+ "at": 1795142440568,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Adamant arrowtips",
    "requested": 500,
-   "count": 0
+   "count": 500,
+   "inventory": {
+    "before": 500,
+    "after": 0
+   },
+   "bank": {
+    "count": 500,
+    "at": 1795142364229
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1000,
+  "after": 0
+ },
+ "bank": {
+  "count": 1000,
+  "at": 1795142363495
+ },
+ "logout": {
+  "attemptId": "1795142340474-0000025292-0000000001",
+  "at": 1795142440557,
+  "sha256": "24109ae85f5fcb6d44b993c0e112c8c713523e49be9bac65d80e1518171bf89d"
+ },
+ "screen": true
 }

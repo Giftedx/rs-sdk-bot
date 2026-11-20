@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795142301994-bigchopper-bowbeforeme-dbf8b0d1197d4fe1",
+ "account": "BowBeforeMe",
+ "partner": "Bigchopper",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 1000,
+ "claim": "63b80731-fee8-415a-80fa-d2c95cd2f1f9",
+ "count": 1000,
+ "ok": true,
+ "at": 1795142440617,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Adamant arrowtips",
+   "requested": 500,
+   "count": 500,
+   "inventory": {
+    "before": 0,
+    "after": 500
+   },
+   "bank": {
+    "count": 500,
+    "at": 1795142438717
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1000
+ },
+ "bank": {
+  "count": 1000,
+  "at": 1795142437970
+ },
+ "logout": {
+  "attemptId": "1795142423061-0000024844-0000000001",
+  "at": 1795142440604,
+  "sha256": "a368e71b517e2063bd3dddefd626d7920f8ce7d37740a1e103001039c5676694"
+ },
+ "screen": true
+}
