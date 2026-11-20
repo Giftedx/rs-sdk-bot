@@ -1,0 +1,22 @@
+{
+ "id": "1795136905450-mightyrod-pocketrocket-bigbones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "Pocketrocket",
+ "item": "Big bones",
+ "count": 159,
+ "start": 1795136905450,
+ "end": 1795139305450,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
