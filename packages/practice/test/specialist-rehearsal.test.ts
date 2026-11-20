@@ -5,7 +5,7 @@ import {join} from 'node:path';
 import {gzipSync} from 'node:zlib';
 import {missionSignature} from '../../core/src/session-admission';
 import {xpForLevel} from '../../planner/src/curve';
-import {checkSpecialistSegment, isolatedStackOptions, rehearsalChildEnv, rehearseLockstep, TickWindow, type Segment} from '../src/rehearse';
+import {checkExpect, checkSpecialistSegment, ISOLATED_ENGINE_ENV, isolatedStackOptions, rehearsalChildEnv, rehearseLockstep, resolveSegmentSuppliers, stopHelperProcs, SUPPLIER_ONLINE_TIMEOUT_MS, TickWindow, waitForSuppliersOnline, type HelperProcHandle, type Segment} from '../src/rehearse';
 import {confirmLivingSession, observedSupplies, scoredClock, SPECIALIST_TICK_MS, successfulWorkerLog} from '../src/specialist-rehearsal';
 
 function engineSave(playtime = 305, levelTick = 300, tickMs = 400, level = 99) {
@@ -194,5 +194,91 @@ test('confirmLivingSession verifies multi-segment relog files and concatenated m
     } finally {
         for (const f of [seg1, seg2, combined]) try { unlinkSync(f); } catch {}
         rmdirSync(dir);
+    }
+});
+
+test('multi-supplier segments validate 1..32 helpers, reject mixing supplier/suppliers, and expose PRACTICE_SUPPLIER', () => {
+    const sup = {save: {position: {x: 3222, z: 3222, level: 0}, inventory: [{id: 1446, count: 1}]}, script: 'scripts/specialist-supplier.ts', args: ['{ACTOR}']};
+    const base: Segment = {
+        id: 'pouch-rc',
+        start: {fresh: true},
+        script: 'scripts/runecraft-specialist.ts',
+        plan: {ticks: 2155, source: 'hosted-bench'},
+        expect: {skills: {Runecraft: 99}},
+    };
+
+    expect(checkSpecialistSegment({...base, suppliers: [sup, sup]}, 'PouchStuffed')).toBe('Runecraft');
+    expect(resolveSegmentSuppliers({...base, suppliers: [sup, sup]})).toHaveLength(2);
+    expect(() => checkSpecialistSegment({...base, supplier: sup, suppliers: [sup]}, 'PouchStuffed')).toThrow(/both supplier and suppliers/);
+    expect(() => checkSpecialistSegment({...base, suppliers: []}, 'PouchStuffed')).toThrow(/1 to 32/);
+    expect(() => checkSpecialistSegment({...base, suppliers: Array.from({length: 33}, () => sup)}, 'PouchStuffed')).toThrow(/1 to 32/);
+    expect(() => checkSpecialistSegment({...base, suppliers: [sup, {...sup, script: '../bad.ts'}]}, 'PouchStuffed')).toThrow(/supplier configuration/);
+    expect(() => checkSpecialistSegment({...base, suppliers: [sup, {...sup, env: {SECRET: 'x'}}]}, 'PouchStuffed')).toThrow(/supplier environment/);
+
+    const workerEnv = rehearsalChildEnv({}, {CAP: '2300'}, {scored: true, role: 'worker', supplier: 'sp1,sp2,sp3'});
+    expect(workerEnv.PRACTICE_SUPPLIER).toBe('sp1,sp2,sp3');
+    expect(SUPPLIER_ONLINE_TIMEOUT_MS).toBe(45_000);
+});
+
+test('waitForSuppliersOnline waits for all helpers, fails on early exit or timeout, and stopHelperProcs terminates live helpers', async () => {
+    const alive = (pid: number): HelperProcHandle => ({pid, exitCode: null, exited: new Promise(() => {})});
+    const seen = new Set<string>();
+    await waitForSuppliersOnline(['sp1', 'sp2'], [alive(10), alive(11)], async h => {
+        if (h === 'sp1' || seen.has('sp1')) {
+            seen.add(h);
+            return seen.size === 2 || h === 'sp1';
+        }
+        return false;
+    }, 1000, 1);
+
+    await expect(waitForSuppliersOnline(['sp1', 'sp2'], [alive(10), {pid: 11, exitCode: 1, exited: Promise.resolve(1)}], async () => false, 1000, 1))
+        .rejects.toThrow(/sp2 exited early \(1\)/);
+
+    await expect(waitForSuppliersOnline(['sp1', 'sp2'], [alive(10), alive(11)], async h => h === 'sp1', 25, 2))
+        .rejects.toThrow(/did not reach world.*: sp2/);
+
+    const killed: number[] = [];
+    let markExited!: () => void;
+    const graceProc: HelperProcHandle & {exitCode: number | null} = {
+        pid: 102,
+        exitCode: null,
+        exited: new Promise<void>(r => { markExited = () => { graceProc.exitCode = 0; r(); }; }),
+    };
+    setTimeout(markExited, 1);
+    await stopHelperProcs(
+        [alive(101), graceProc, {pid: 103, exitCode: 0, exited: Promise.resolve(0)}],
+        async pid => { killed.push(pid); },
+        20,
+    );
+    expect(killed).toEqual([101]);
+});
+
+test('checkExpect counts attained XP level 99 when current Hitpoints or Prayer is drained below 99', () => {
+    const injured = {
+        position: {x: 3222, z: 3222, level: 0},
+        skills: {
+            Hitpoints: {level: 74, xp: xpForLevel(99)},
+            Prayer: {level: 0, xp: xpForLevel(99)},
+            Agility: {level: 98, xp: xpForLevel(98)},
+        },
+        inventory: {},
+        worn: {},
+        bank: {},
+        varps: 0,
+    };
+    expect(checkExpect(injured, {skills: {Hitpoints: 99, Prayer: 99, Agility: 99}})).toEqual({
+        'skill.Hitpoints>=99': true,
+        'skill.Prayer>=99': true,
+        'skill.Agility>=99': false,
+    });
+});
+
+test('ISOLATED_ENGINE_ENV keeps all worker ports below Linux ip_local_port_range (32768+)', () => {
+    for (const [key, value] of Object.entries(ISOLATED_ENGINE_ENV)) {
+        if (!key.endsWith('_PORT')) continue;
+        const port = Number(value);
+        expect(Number.isInteger(port)).toBe(true);
+        expect(port).toBeGreaterThan(1024);
+        expect(port).toBeLessThan(32_768);
     }
 });

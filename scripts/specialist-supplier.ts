@@ -333,12 +333,33 @@ export function parseSupplierCliArgs(args: readonly string[]): {
     outArg?: string;
     bankX?: number;
     bankZ?: number;
+    batchIndex?: number;
+    runnerIndex?: number;
+    runnerCount?: number;
     positional: string[];
 } {
     const kitArg = args.find(a => a.startsWith('--kit='))?.slice(6);
     const outArg = args.find(a => a.startsWith('--out='))?.slice(6);
     const bxRaw = args.find(a => a.startsWith('--bank-x='))?.slice(9);
     const bzRaw = args.find(a => a.startsWith('--bank-z='))?.slice(9);
+    const batchRaw = args.find(a => a.startsWith('--batch='))?.slice(8);
+    const runnerRaw = args.find(a => a.startsWith('--runner='))?.slice(9);
+    let batchIndex: number | undefined;
+    if (batchRaw !== undefined) {
+        if (!/^\d+$/.test(batchRaw)) throw Error(`specialist-supplier: invalid --batch=${batchRaw}`);
+        batchIndex = Number(batchRaw);
+    }
+    let runnerIndex: number | undefined;
+    let runnerCount: number | undefined;
+    if (runnerRaw !== undefined) {
+        const m = runnerRaw.match(/^(\d+)\/(\d+)$/);
+        if (!m) throw Error(`specialist-supplier: invalid --runner=${runnerRaw} (expected <index>/<count>)`);
+        runnerIndex = Number(m[1]);
+        runnerCount = Number(m[2]);
+        if (runnerCount < 1 || runnerIndex < 0 || runnerIndex >= runnerCount) {
+            throw Error(`specialist-supplier: invalid --runner=${runnerRaw} (index out of bounds)`);
+        }
+    }
     const positional = args.filter(a => !a.startsWith('--'));
     const capCandidate = positional.length >= 3 && /^\d+$/.test(positional[2]!) ? Number(positional[2]) : undefined;
     return {
@@ -347,6 +368,9 @@ export function parseSupplierCliArgs(args: readonly string[]): {
         outArg,
         bankX: bxRaw !== undefined ? Number(bxRaw) : undefined,
         bankZ: bzRaw !== undefined ? Number(bzRaw) : undefined,
+        batchIndex,
+        runnerIndex,
+        runnerCount,
         positional,
     };
 }
@@ -514,7 +538,7 @@ function invSpec(id: number, count: number, altIds?: readonly number[]): KitSpec
         id,
         name: loadItemCatalog().get(id)?.name ?? `Item ${id}`,
         count,
-        stackable: STACKABLE_IDS.has(id),
+        stackable: STACKABLE_IDS.has(id) || isNotedId(id),
         ...(altIds?.length ? { altIds } : {}),
     };
 }
@@ -691,37 +715,6 @@ async function serveFastBatch(
     return 'aborted';
 }
 
-async function serveOneBatch(
-    s: Session,
-    specialist: string,
-    batch: readonly KitSpecItem[],
-    t0: number,
-    CAP: number,
-    stop: () => boolean,
-    allowedReturnIds: readonly number[] = [],
-): Promise<boolean> {
-    const giveList = batch.map(k => ({ item: exactNameRe(k.name), amount: k.count }));
-    const peerRe = exactNameRe(specialist);
-    const allowedReturns = new Set(allowedReturnIds);
-    const acceptOffer = (offer: readonly { id: number; baseId?: number }[]) =>
-        allowedReturns.size === 0 ? offer.length === 0 : offer.every(o => allowedReturns.has(o.baseId ?? resolveBaseId(o.id)));
-    while (!stop() && s.tick() - t0 < CAP) {
-        const served = await s.bot.serveTrades({
-            from: peerRe,
-            give: giveList,
-            accept: acceptOffer,
-            maxTrades: 1,
-            tradeTimeout: 60_000,
-            timeout: 30_000,
-            until: () => stop() || s.tick() - t0 >= CAP,
-        });
-        const done = served.trades.find(t => t.success && batch.every(k => countById(t.gave, k.id) === k.count) && acceptOffer(t.received));
-        if (done) return true;
-        await waitTicks(s, 1);
-    }
-    return false;
-}
-
 async function enterAltar(s: Session, talismanId: number, ruinsId: number, stop: () => boolean, inside: () => boolean): Promise<void> {
     while (!stop() && !inside()) {
         const ruins = findLocBy(s, l => l.id === ruinsId || /mysterious ruins/i.test(l.name));
@@ -769,7 +762,7 @@ async function runServe(args: string[]): Promise<void> {
         await waitUntil(s, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 });
         const t0 = s.tick();
         const kitName = plan.name;
-        if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'runecraft' && kitName !== 'crafting' && kitName !== 'magic') {
+        if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'runecraft' && kitName !== 'crafting' && kitName !== 'herblore' && kitName !== 'magic') {
             const peerRe = exactNameRe(specialist);
             for (let legIdx = 0; legIdx < plan.legs.length; legIdx++) {
                 const leg = plan.legs[legIdx]!;
@@ -853,35 +846,70 @@ async function runServe(args: string[]): Promise<void> {
                 }
                 await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
                 emitReady();
-                const ok = await serveOneBatch(s, specialist, batch, t0, CAP, stop);
-                if (!ok) break;
-                delivered += need;
+                const res = await serveFastBatch(s, specialist, batch, t0, CAP, stop, {
+                    exitAfterAbsenceTicks: 120,
+                });
+                if (res === 'ok') {
+                    delivered += need;
+                } else if (res === 'finished') {
+                    delivered = PRAYER_BONES_NEEDED;
+                    break;
+                } else {
+                    break;
+                }
             }
             allDone = delivered >= PRAYER_BONES_NEEDED;
         } else if (kitName === 'smithing') {
-            const starter = [
-                invSpec(ITEM_IDS.hammer, 1),
-                invSpec(ITEM_IDS.amulet_of_glory_4, 1),
-                invSpec(ITEM_IDS.bronze_bar, 9),
-                invSpec(ITEM_IDS.iron_bar, 17),
-            ];
-            if (!hasExactKit(s.sdk.getInventory(), starter)) {
-                await withdrawExactKit(s, starter, bankTile, stop);
-            }
-            await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
-            emitReady();
-            let ok = await serveOneBatch(s, specialist, starter, t0, CAP, stop);
-            let idx = 0;
-            while (ok && !stop() && s.tick() - t0 < CAP && idx < SMITHING_RUNNER_QUEUE.length) {
-                const delivery = SMITHING_RUNNER_QUEUE[idx++]!;
-                const batch = [invSpec(delivery.barId, delivery.count)];
-                if (!hasExactKit(s.sdk.getInventory(), batch)) {
-                    await withdrawExactKit(s, batch, VARROCK_WEST_BANK, stop);
+            const role = parseSupplierRole(args, process.env);
+            let ok = true;
+            if (role !== 'runner') {
+                const starter = [
+                    invSpec(ITEM_IDS.hammer, 1),
+                    invSpec(ITEM_IDS.amulet_of_glory_4, 1),
+                    invSpec(ITEM_IDS.bronze_bar, 9),
+                    invSpec(ITEM_IDS.iron_bar, 17),
+                ];
+                if (!hasExactKit(s.sdk.getInventory(), starter)) {
+                    await withdrawExactKit(s, starter, bankTile, stop);
                 }
-                await moveGroundTo(s, VARROCK_WEST_ANVIL, 2, stop);
-                ok = await serveOneBatch(s, specialist, batch, t0, CAP, stop);
+                await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
+                emitReady();
+                ok = (await serveFastBatch(s, specialist, starter, t0, CAP, stop)) === 'ok';
             }
-            allDone = ok && idx === SMITHING_RUNNER_QUEUE.length;
+            if (ok && role !== 'starter') {
+                const runnerIdx = role === 'runner' ? (parsed.runnerIndex ?? 0) : 0;
+                const runnerCount = role === 'runner' ? (parsed.runnerCount ?? 1) : 1;
+                const runnerBank =
+                    role === 'runner' && (parsed.bankX !== undefined || parsed.bankZ !== undefined)
+                        ? bankTile
+                        : VARROCK_WEST_BANK;
+                let idx = runnerIdx;
+                let finishedEarly = false;
+                while (ok && !stop() && s.tick() - t0 < CAP && idx < SMITHING_RUNNER_QUEUE.length) {
+                    const delivery = SMITHING_RUNNER_QUEUE[idx]!;
+                    const batch = [invSpec(delivery.barId, delivery.count)];
+                    if (!hasExactKit(s.sdk.getInventory(), batch)) {
+                        await withdrawExactKit(s, batch, idx === runnerIdx ? runnerBank : VARROCK_WEST_BANK, stop);
+                    }
+                    await moveGroundTo(s, VARROCK_WEST_ANVIL, 1, stop);
+                    emitReady();
+                    const res = await serveFastBatch(s, specialist, batch, t0, CAP, stop, {
+                        exitAfterAbsenceTicks: 180,
+                    });
+                    if (res === 'ok') {
+                        idx += runnerCount;
+                    } else if (res === 'finished') {
+                        finishedEarly = true;
+                        break;
+                    } else {
+                        ok = false;
+                        break;
+                    }
+                }
+                allDone = ok && (finishedEarly || idx >= SMITHING_RUNNER_QUEUE.length);
+            } else {
+                allDone = ok;
+            }
         } else if (kitName === 'runecraft') {
             const role = parseSupplierRole(args, process.env);
             const insideBody = () => {
@@ -1014,36 +1042,67 @@ async function runServe(args: string[]): Promise<void> {
             } else {
                 allDone = ok;
             }
-        } else if (kitName === 'crafting') {
+        } else if (kitName === 'herblore') {
+            const starterBatch = HERBLORE_STARTER_BATCH.give.map(g => invSpec(g.id, g.count));
+            const notedBatch = HERBLORE_NOTED_BATCH.give.map(g => invSpec(g.id, g.count));
+            if (parsed.batchIndex !== undefined && parsed.batchIndex > 1) {
+                throw Error(`herblore --batch=${parsed.batchIndex} out of range (0..1)`);
+            }
             let ok = true;
-            let idx = 0;
-            while (ok && !stop() && s.tick() - t0 < CAP && idx < CRAFTING_BATCHES.length) {
-                const specBatch = CRAFTING_BATCHES[idx++]!;
+            if (parsed.batchIndex === undefined || parsed.batchIndex === 0) {
+                if (!hasExactKit(s.sdk.getInventory(), starterBatch)) {
+                    await withdrawExactKit(s, starterBatch, bankTile, stop);
+                }
+                await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
+                emitReady();
+                ok = (await serveFastBatch(s, specialist, starterBatch, t0, CAP, stop)) === 'ok';
+            }
+            if (ok && (parsed.batchIndex === undefined || parsed.batchIndex === 1)) {
+                if (!hasExactKit(s.sdk.getInventory(), notedBatch)) {
+                    await withdrawExactKit(s, notedBatch, EDGEVILLE_BANK, stop, true);
+                }
+                await moveGroundTo(s, HERBLORE_BANK_HELPER_SPOT, 2, stop);
+                emitReady();
+                ok = (await serveFastBatch(s, specialist, notedBatch, t0, CAP, stop)) === 'ok';
+            }
+            allDone = ok;
+        } else if (kitName === 'crafting') {
+            const batchIndices = parsed.batchIndex !== undefined
+                ? [parsed.batchIndex]
+                : CRAFTING_BATCHES.map((_, i) => i);
+            let ok = true;
+            for (const idx of batchIndices) {
+                const specBatch = CRAFTING_BATCHES[idx];
+                if (!specBatch) throw Error(`crafting --batch=${idx} out of range (0..${CRAFTING_BATCHES.length - 1})`);
                 const batch = specBatch.give.map(g => invSpec(g.id, g.count));
                 if (!hasExactKit(s.sdk.getInventory(), batch)) {
                     await withdrawExactKit(s, batch, bankTile, stop);
                 }
                 await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
                 emitReady();
-                ok = await serveOneBatch(s, specialist, batch, t0, CAP, stop, specBatch.returnIds);
+                ok = (await serveFastBatch(s, specialist, batch, t0, CAP, stop, { allowedReturnIds: specBatch.returnIds })) === 'ok';
+                if (!ok || stop() || s.tick() - t0 >= CAP) break;
             }
-            allDone = ok && idx === CRAFTING_BATCHES.length;
+            allDone = ok;
         } else if (kitName === 'magic') {
+            const batchIndices = parsed.batchIndex !== undefined
+                ? [parsed.batchIndex]
+                : MAGIC_BATCHES.map((_, i) => i);
             let ok = true;
-            let idx = 0;
-            while (ok && !stop() && s.tick() - t0 < CAP && idx < MAGIC_BATCHES.length) {
-                const specBatch = MAGIC_BATCHES[idx]!;
+            for (const idx of batchIndices) {
+                const specBatch = MAGIC_BATCHES[idx];
+                if (!specBatch) throw Error(`magic --batch=${idx} out of range (0..${MAGIC_BATCHES.length - 1})`);
                 const stand = idx === 0 ? LUMBRIDGE_HANDOFF : LUMBRIDGE_SAFE_SPOT;
-                idx++;
                 const batch = specBatch.give.map(g => invSpec(g.id, g.count));
                 if (!hasExactKit(s.sdk.getInventory(), batch)) {
                     await withdrawExactKit(s, batch, bankTile, stop);
                 }
                 await moveGroundTo(s, stand, 2, stop);
                 emitReady();
-                ok = await serveOneBatch(s, specialist, batch, t0, CAP, stop, specBatch.returnIds);
+                ok = (await serveFastBatch(s, specialist, batch, t0, CAP, stop, { allowedReturnIds: specBatch.returnIds })) === 'ok';
+                if (!ok || stop() || s.tick() - t0 >= CAP) break;
             }
-            allDone = ok && idx === MAGIC_BATCHES.length;
+            allDone = ok;
         } else {
             throw Error(`unhandled serve kit: ${kitName}`);
         }

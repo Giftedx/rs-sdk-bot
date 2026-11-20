@@ -6,6 +6,7 @@ import {
  burstTradeHost,
  countItem,
  dropItemsFast,
+ fastTradeExternalReceive,
  findLocBy,
  findNpcBy,
  GAMES_NECKLACE_IDS,
@@ -23,7 +24,6 @@ import {
  skipTutorialFast,
  skillLevel,
  skillXp,
- tradeExternalSupplier,
  waitTicks,
  withSingleSpecialist,
  withSpecialistFleet,
@@ -678,21 +678,23 @@ export async function runHerbloreExternal(
  const target = opts.target ?? 99;
  const start = spec.tick();
  const deadline = start + opts.cap;
+ const starterSuppliers = supplierNames.length >= 2 ? [supplierNames[0]!] : supplierNames;
+ const notedSuppliers = supplierNames.length >= 2 ? [supplierNames[1]!] : supplierNames;
  return executeHerbloreLoop(
   spec,
   target,
   start,
   deadline,
   () =>
-   tradeExternalSupplier(spec, supplierNames, {
+   fastTradeExternalReceive(spec, starterSuppliers, {
     acceptOffer: offer => HERBLORE_STARTER_BATCH.give.every(g => countItem(offer, g.id) >= g.count),
     deadlineTick: deadline,
-   }),
+   }).then(() => {}),
   () =>
-   tradeExternalSupplier(spec, supplierNames, {
+   fastTradeExternalReceive(spec, notedSuppliers, {
     acceptOffer: offer => HERBLORE_NOTED_BATCH.give.every(g => countItem(offer, g.id) >= g.count),
     deadlineTick: deadline,
-   }),
+   }).then(() => {}),
  );
 }
 

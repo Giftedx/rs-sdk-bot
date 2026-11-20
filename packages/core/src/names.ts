@@ -9,7 +9,7 @@
 import { SPECIALIST_BOARDS } from './specialist-boards';
 
 export const NAMES = {
-    thieving: ['Pocketrocket', 'Pocketpython', 'Quickhandjob', 'TrouserSnake', 'TheFullMonty', 'UnderMyKilt', 'Fingerblastr', 'Kiltlifter', 'Knightstick', 'PocketPool', 'SporranDip', 'FullSporran', 'Fingersmith', 'Dipstick', 'KnightRider', 'DipYourWick', 'HalfInch'],
+    thieving: ['Pocketrocket', 'Pocketpython', 'Quickhandjob', 'TrouserSnake', 'TheFullMonty', 'UnderMyKilt', 'Fingerblastr', 'Kiltlifter', 'Knightstick', 'PocketPool', 'SporranDip', 'FullSporran', 'Fingersmith', 'Dipstick', 'KnightRider', 'DipYourWick', 'HalfInch', 'StickyFinger'],
     runecraft: ['Wandwaver', 'Woodenstaff', 'Magicwanda', 'Rubmyrunes', 'ChaosInPants', 'Staffstiffy', 'PouchStuffed'],
     mining: ['Shaftsinker', 'HardRockCafe', 'Stonedboner', 'Mineshafted'],
     woodcutting: ['Woodpecker', 'Bigchopper', 'Morningwood', 'YewGotWood', 'WoodInMyKilt'],
@@ -22,7 +22,7 @@ export const NAMES = {
     prayer: ['Bigboner', 'BoneToPick', 'Bonezone'],
     agility: ['Polevaulter', 'PoleDancer', 'Tightsqueeze'],
     firemaking: ['Firecrotch', 'Lightmylog', 'Tinderballs'],
-    fletching: ['Shaftmaker', 'Nockitoff', 'JustTheTip', 'NockAndLoad'],
+    fletching: ['Shaftmaker', 'Nockitoff', 'JustTheTip', 'NockAndLoad', 'TipMyShaft'],
     smithing: ['Hammeredhard', 'Ironrod', 'Steelrod'],
     herblore: ['Stirmypot', 'Grindmyherb', 'Vialvirile'],
     bank: ['Moneyshot', 'SporranBulge', 'Fatstack', 'Deeppockets', 'Coinpurse'],

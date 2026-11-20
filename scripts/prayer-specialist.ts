@@ -5,6 +5,7 @@ import {
  burstTradeHost,
  countItem,
  dropItemsFast,
+ fastTradeExternalReceive,
  goalXp,
  ITEM_IDS,
  logPhase,
@@ -18,7 +19,6 @@ import {
  skipTutorialFast,
  skillLevel,
  skillXp,
- tradeExternalSupplier,
  waitTicks,
  withSingleSpecialist,
  withSpecialistFleet,
@@ -171,15 +171,26 @@ export async function runPrayerExternal(
  const deadline = start + opts.cap;
  await skipTutorialFast(spec, deadline);
  await dropItemsFast(spec, new Set(), deadline);
+ if (!nearTile(spec, LUMBRIDGE_COURTYARD.x, LUMBRIDGE_COURTYARD.z, 2)) {
+  await navigateWorld(spec, LUMBRIDGE_COURTYARD.x, LUMBRIDGE_COURTYARD.z, 0, Math.max(10, deadline - spec.tick()));
+ }
  logPhase(spec, start, 'prayer_ready');
 
+ const cooldowns = new Map<string, number>();
+ const lastTradedTick = new Map<string, number>();
  while (skillLevel(spec, 'Prayer') < target && spec.tick() < deadline) {
   if (countItem(spec.sdk.getInventory(), ITEM_IDS.dragon_bones) === 0) {
-   await tradeExternalSupplier(spec, supplierNames, {
+   await fastTradeExternalReceive(spec, supplierNames, {
     acceptOffer: offer =>
      offer.some(o => o.id === ITEM_IDS.dragon_bones) &&
      offer.every(o => o.id === ITEM_IDS.dragon_bones),
     deadlineTick: deadline,
+    maxDistance: 4,
+    cooldownTicks: 40,
+    cooldowns,
+    lastTradedTick,
+    canStand: p =>
+     Math.max(Math.abs((p.worldX ?? p.x) - LUMBRIDGE_COURTYARD.x), Math.abs((p.worldZ ?? p.z) - LUMBRIDGE_COURTYARD.z)) <= 3,
    });
   }
   await buryAllBones(spec, target, deadline);

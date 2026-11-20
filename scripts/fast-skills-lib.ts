@@ -93,6 +93,7 @@ export const ITEM_IDS = {
  ring_of_life: 2570,
  ring_of_wealth: 2572,
  prayer_potion_4: 2434,
+ super_energy_4: 3016,
  shark: 385,
 } as const;
 
@@ -683,6 +684,8 @@ export interface ExternalPlayerCandidate {
 export interface FastExternalReceiveOpts {
  acceptOffer: (offer: readonly { id: number; count: number }[]) => boolean;
  deadlineTick: number;
+ returnIds?: readonly number[];
+ allowSingleModal?: boolean;
  maxDistance?: number;
  cooldownTicks?: number;
  cooldowns?: Map<string, number>;
@@ -736,6 +739,7 @@ export async function fastTradeExternalReceive(
  opts: FastExternalReceiveOpts,
 ): Promise<string> {
  const nameSet = new Set(supplierNames.map(n => n.toLowerCase()));
+ const returnSet = opts.returnIds?.length ? new Set(opts.returnIds) : null;
  const cooldowns = opts.cooldowns ?? new Map<string, number>();
  const openTimeoutTicks = opts.openTimeoutTicks ?? 7;
  const offerTimeoutTicks = opts.offerTimeoutTicks ?? 6;
@@ -824,14 +828,14 @@ export async function fastTradeExternalReceive(
     }
    }
 
-   if (target) {
-    if (spec.tick() - lastOpenReqTick >= 3) {
-     lastOpenReqTick = spec.tick();
-     await spec.direct({ type: 'interactPlayer', playerIndex: target.index, optionIndex: 4, reason: 'SDK' });
-    } else if (spec.sdk.getState()?.dialog?.isOpen) {
-     await spec.direct({ type: 'closeModal', reason: 'SDK' });
-    }
-   } else if (spec.sdk.getState()?.dialog?.isOpen) {
+   const specDlg = !!spec.sdk.getState()?.dialog?.isOpen;
+   if (target && spec.tick() - lastOpenReqTick >= 3) {
+    lastOpenReqTick = spec.tick();
+    const reqActs: Promise<unknown>[] = [];
+    if (specDlg && !opts.allowSingleModal) reqActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+    reqActs.push(spec.direct({ type: 'interactPlayer', playerIndex: target.index, optionIndex: 4, reason: 'SDK' }));
+    await Promise.all(reqActs);
+   } else if (specDlg) {
     await spec.direct({ type: 'closeModal', reason: 'SDK' });
    }
 
@@ -864,26 +868,37 @@ export async function fastTradeExternalReceive(
    continue;
   }
 
-  if (opts.acceptOffer(st.theirOffer)) {
-   const acts: Promise<unknown>[] = [];
+  const sDistinctSlots = returnSet ? uniqueSlotsForIds(spec.sdk.getInventory(), returnSet, st.myOffer) : [];
+  const sMaxOffers = sDistinctSlots.length > 4 ? 5 : 4;
+  const sOffers = sDistinctSlots.slice(0, sMaxOffers);
+  const myOfferComplete = sDistinctSlots.length <= sOffers.length;
+  const acts: Promise<unknown>[] = [];
+  for (const slot of sOffers) {
+   acts.push(spec.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
+  }
+  const canAccept = myOfferComplete && opts.acceptOffer(st.theirOffer);
+  if (canAccept && sOffers.length <= 4) {
    if (!st.myAccepted) {
     acts.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
    }
-   if (st.partnerAccepted) {
+   if (st.partnerAccepted && sOffers.length <= 3) {
     sawConfirm = true;
     acts.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
    }
    if (acts.length) await Promise.all(acts);
-  } else if (spec.tick() - openedTick >= offerTimeoutTicks) {
-   if (partnerLower) {
-    cooldowns.set(partnerLower, spec.tick() + 8);
-    opts.lastTradedTick?.set(partnerLower, spec.tick());
+  } else {
+   if (acts.length) await Promise.all(acts);
+   if (myOfferComplete && spec.tick() - openedTick >= offerTimeoutTicks) {
+    if (partnerLower) {
+     cooldowns.set(partnerLower, spec.tick() + 8);
+     opts.lastTradedTick?.set(partnerLower, spec.tick());
+    }
+    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+    attemptPartner = undefined;
+    openPartner = undefined;
+    openedTick = undefined;
+    sawConfirm = false;
    }
-   await spec.direct({ type: 'closeModal', reason: 'SDK' });
-   attemptPartner = undefined;
-   openPartner = undefined;
-   openedTick = undefined;
-   sawConfirm = false;
   }
 
   await waitTicks(spec, 1);

@@ -3,12 +3,13 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { SPECIALIST_BOARDS } from '../../packages/core/src/specialist-boards';
-import { checkSpecialistSegment } from '../../packages/practice/src/rehearse';
+import { checkSpecialistSegment, resolveSegmentSuppliers } from '../../packages/practice/src/rehearse';
 import { CRAFTING_SUPPLY_BILL } from '../crafting-specialist';
 import { HERBLORE_SUPPLY_BILL } from '../herblore-specialist';
 import { MAGIC_SUPPLY_BILL } from '../magic-specialist';
-import { PRAYER_SUPPLY_BILL } from '../prayer-specialist';
+import { PRAYER_RUNNER_COUNT, PRAYER_SUPPLY_BILL } from '../prayer-specialist';
 import { RANGED_SPECIALIST_LIVE_KIT } from '../ranged-specialist';
+import { BODY_RUNNER_COUNT, RUNECRAFT_SUPPLY_BILL } from '../runecraft-specialist';
 import { SMITHING_SUPPLY_BILL } from '../smithing-specialist';
 import {
     FLETCHING_SPECIALIST_LIVE_KIT,
@@ -36,11 +37,12 @@ function countSupplyMap(items: readonly { id: number; count: number }[]): Record
     return out;
 }
 
-test('all 8 ready specialists construct valid --specialist segments matching board expectations and supply bills', () => {
+test('all 9 ready specialists construct valid --specialist segments matching board expectations and supply bills', () => {
     expect(READY_SPECIALIST_ACCOUNTS).toEqual([
-        'HalfInch',
-        'NockAndLoad',
+        'StickyFinger',
+        'TipMyShaft',
         'Shaftshooter',
+        'PouchStuffed',
         'CutMyJewels',
         'GrindMyHerb',
         'CastMyLoad',
@@ -49,9 +51,10 @@ test('all 8 ready specialists construct valid --specialist segments matching boa
     ]);
 
     const expectedBills: Record<string, readonly { id: number; count: number }[]> = {
-        HalfInch: THIEVING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
-        NockAndLoad: FLETCHING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
+        StickyFinger: THIEVING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
+        TipMyShaft: FLETCHING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
         Shaftshooter: RANGED_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
+        PouchStuffed: RUNECRAFT_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         CutMyJewels: CRAFTING_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         GrindMyHerb: HERBLORE_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         CastMyLoad: MAGIC_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
@@ -60,9 +63,10 @@ test('all 8 ready specialists construct valid --specialist segments matching boa
     };
 
     const expectedTargets: Record<string, number> = {
-        HalfInch: 2221,
-        NockAndLoad: 54,
+        StickyFinger: 2221,
+        TipMyShaft: 54,
         Shaftshooter: 5483,
+        PouchStuffed: 2207,
         CutMyJewels: 182,
         GrindMyHerb: 415,
         CastMyLoad: 1236,
@@ -85,23 +89,71 @@ test('all 8 ready specialists construct valid --specialist segments matching boa
         expect(seg.timeoutMs).toBeGreaterThanOrEqual(seg.plan!.ticks * 400 + 120_000);
         expect(Number(seg.env?.CAP)).toBeGreaterThanOrEqual(seg.plan!.ticks);
 
-        const sup = seg.supplier!;
-        expect(['scripts/specialist-supplier.ts', 'scripts/gathering-supplier.ts']).toContain(sup.script);
-        expect(sup.args).toContain('{ACTOR}');
-        expect(() => parseKitArg(sup.args ?? [])).not.toThrow();
-        expect(sup.save.inventory!.length).toBeLessThanOrEqual(28);
-        expect(sup.save.position).toEqual({ x: 3223, z: 3222, level: 0 });
+        const sups = resolveSegmentSuppliers(seg);
+        expect(sups.length).toBeGreaterThanOrEqual(1);
+        for (const sup of sups) {
+            expect(['scripts/specialist-supplier.ts', 'scripts/gathering-supplier.ts']).toContain(sup.script);
+            expect(sup.args).toContain('{ACTOR}');
+            expect(() => parseKitArg(sup.args ?? [])).not.toThrow();
+            expect(sup.save.inventory!.length).toBeLessThanOrEqual(28);
+            expect(sup.save.position).toBeDefined();
+        }
 
-        const combined = [...(sup.save.inventory ?? []), ...(sup.save.bank ?? [])];
-        expect(countSupplyMap(combined)).toEqual(countSupplyMap(expectedBills[account]!));
+        const combined = sups.flatMap(sup => [...(sup.save.inventory ?? []), ...(sup.save.bank ?? [])]);
+        const totals = countSupplyMap(combined);
+        if (seg.suppliers) {
+            for (const [itemId, need] of Object.entries(countSupplyMap(expectedBills[account]!))) {
+                expect(totals[Number(itemId)] ?? 0).toBeGreaterThanOrEqual(need);
+            }
+        } else {
+            expect(totals).toEqual(countSupplyMap(expectedBills[account]!));
+        }
+    }
+
+    const rc = resolveSpecialistSegment('PouchStuffed');
+    expect(rc.suppliers).toHaveLength(1 + BODY_RUNNER_COUNT);
+    expect(1 + rc.suppliers!.length).toBeLessThanOrEqual(25);
+    expect(rc.suppliers![0]!.args).toContain('--role=starter');
+    expect(rc.suppliers![0]!.save.position).toEqual({ x: 3223, z: 3222, level: 0 });
+    for (let i = 1; i <= BODY_RUNNER_COUNT; i++) {
+        expect(rc.suppliers![i]!.args).toContain('--role=runner');
+        expect(rc.suppliers![i]!.save.position).toEqual({ x: 3050, z: 3442, level: 0 });
+    }
+
+    const prayer = resolveSpecialistSegment('BigBoner');
+    expect(prayer.suppliers).toHaveLength(PRAYER_RUNNER_COUNT);
+
+    const crafting = resolveSpecialistSegment('CutMyJewels');
+    expect(crafting.suppliers).toHaveLength(12);
+    expect(crafting.suppliers![0]!.args).toContain('--batch=0');
+    expect(crafting.suppliers![11]!.args).toContain('--batch=11');
+
+    const herb = resolveSpecialistSegment('GrindMyHerb');
+    expect(herb.suppliers).toHaveLength(2);
+    expect(herb.suppliers![0]!.args).toContain('--batch=0');
+    expect(herb.suppliers![1]!.args).toContain('--batch=1');
+    expect(herb.suppliers![1]!.save.position).toEqual({ x: 3094, z: 3491, level: 0 });
+
+    const magic = resolveSpecialistSegment('CastMyLoad');
+    expect(magic.suppliers).toHaveLength(7);
+    expect(magic.suppliers![0]!.args).toContain('--batch=0');
+    expect(magic.suppliers![6]!.args).toContain('--batch=6');
+
+    const smith = resolveSpecialistSegment('SteelRod');
+    expect(smith.suppliers).toHaveLength(4);
+    expect(smith.suppliers![0]!.args).toContain('--role=starter');
+    for (let i = 1; i <= 3; i++) {
+        expect(smith.suppliers![i]!.args).toContain('--role=runner');
+        expect(smith.suppliers![i]!.args).toContain(`--runner=${i - 1}/3`);
+        expect(smith.suppliers![i]!.save.position).toEqual({ x: 3185, z: 3436, level: 0 });
     }
 });
 
 test('account lookup is case-insensitive and rejects unknown accounts or invalid overrides', () => {
-    const lower = resolveSpecialistSegment('halfinch');
-    const upper = resolveSpecialistSegment('HALFINCH');
+    const lower = resolveSpecialistSegment('stickyfinger');
+    const upper = resolveSpecialistSegment('STICKYFINGER');
     expect(lower).toEqual(upper);
-    expect(lower.specialist).toBe('HalfInch');
+    expect(lower.specialist).toBe('StickyFinger');
     expect(lower.env?.LIVE).toBe('1');
 
     const ranged = resolveSpecialistSegment('shaftshooter', { planTicks: 4600 });
@@ -112,8 +164,8 @@ test('account lookup is case-insensitive and rejects unknown accounts or invalid
     expect(resolveSpecialistSegment('Shaftshooter').plan!.ticks).toBe(4660);
 
     expect(() => resolveSpecialistSegment('Haggis')).toThrow('unknown specialist');
-    expect(() => resolveSpecialistSegment('HalfInch', { planTicks: 0 })).toThrow('invalid planTicks');
-    expect(() => resolveSpecialistSegment('HalfInch', { planTicks: -5 })).toThrow('invalid planTicks');
+    expect(() => resolveSpecialistSegment('StickyFinger', { planTicks: 0 })).toThrow('invalid planTicks');
+    expect(() => resolveSpecialistSegment('StickyFinger', { planTicks: -5 })).toThrow('invalid planTicks');
 });
 
 test('expandKitToSave and aggregateKitBank validate 28-slot limits and aggregate totals', () => {
@@ -123,8 +175,8 @@ test('expandKitToSave and aggregateKitBank validate 28-slot limits and aggregate
 });
 
 test('parseCliArgs handles flags and positional account cleanly', () => {
-    expect(parseCliArgs(['NockAndLoad'])).toEqual({
-        account: 'NockAndLoad',
+    expect(parseCliArgs(['TipMyShaft'])).toEqual({
+        account: 'TipMyShaft',
         dryRun: false,
         out: undefined,
         planTicks: undefined,
@@ -142,26 +194,26 @@ test('parseCliArgs handles flags and positional account cleanly', () => {
         planTicks: 1212,
     });
     expect(() => parseCliArgs([])).toThrow('usage:');
-    expect(() => parseCliArgs(['HalfInch', '--bogus'])).toThrow('unknown flag');
-    expect(() => parseCliArgs(['HalfInch', 'extra'])).toThrow('unexpected positional');
-    expect(() => parseCliArgs(['HalfInch', '--plan-ticks', 'abc'])).toThrow('positive integer');
+    expect(() => parseCliArgs(['StickyFinger', '--bogus'])).toThrow('unknown flag');
+    expect(() => parseCliArgs(['StickyFinger', 'extra'])).toThrow('unexpected positional');
+    expect(() => parseCliArgs(['StickyFinger', '--plan-ticks', 'abc'])).toThrow('positive integer');
 });
 
 test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir, and reports receipt fields', async () => {
     const dryLogs: string[] = [];
-    const dry = await runHostedRehearsal(['NockAndLoad', '--dry-run'], { log: line => dryLogs.push(line) });
+    const dry = await runHostedRehearsal(['TipMyShaft', '--dry-run'], { log: line => dryLogs.push(line) });
     expect(dry.exitCode).toBe(0);
-    expect(JSON.parse(dryLogs.join('\n')).specialist).toBe('NockAndLoad');
+    expect(JSON.parse(dryLogs.join('\n')).specialist).toBe('TipMyShaft');
 
     const root = mkdtempSync(join(tmpdir(), 'hosted-rehearse-cli-'));
     try {
-        await expect(runHostedRehearsal(['NockAndLoad', '--out', 'outside/dir'], { root })).rejects.toThrow('inside .practice/');
+        await expect(runHostedRehearsal(['TipMyShaft', '--out', 'outside/dir'], { root })).rejects.toThrow('inside .practice/');
 
         const logs: string[] = [];
         let seenCmd: string[] = [];
-        const outDir = resolve(root, '.practice/hosted-rehearse/nockandload');
+        const outDir = resolve(root, '.practice/hosted-rehearse/tipmyshaft');
 
-        const result = await runHostedRehearsal(['NockAndLoad'], {
+        const result = await runHostedRehearsal(['TipMyShaft'], {
             root,
             log: line => logs.push(line),
             spawn: async cmd => {
@@ -173,12 +225,12 @@ test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir,
                 const segPath = cmd[segIdx + 1]!;
                 expect(existsSync(segPath)).toBe(true);
                 const writtenSeg = JSON.parse(readFileSync(segPath, 'utf8'));
-                expect(writtenSeg.specialist).toBe('NockAndLoad');
+                expect(writtenSeg.specialist).toBe('TipMyShaft');
 
                 mkdirSync(outDir, { recursive: true });
-                writeFileSync(join(outDir, 'nockandload-fletching.json'), JSON.stringify({
+                writeFileSync(join(outDir, 'tipmyshaft-fletching.json'), JSON.stringify({
                     ok: true,
-                    segment: 'nockandload-fletching',
+                    segment: 'tipmyshaft-fletching',
                     account: 'rhnoc1',
                     start: { fresh: true },
                     plan: writtenSeg.plan,
@@ -188,7 +240,7 @@ test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir,
                     end: null,
                     scope: 'One practice rehearsal',
                 }));
-                writeFileSync(join(outDir, 'nockandload-fletching.receipt.json'), JSON.stringify({
+                writeFileSync(join(outDir, 'tipmyshaft-fletching.receipt.json'), JSON.stringify({
                     version: 2,
                     context: 'a'.repeat(64),
                     endPlaytime: 54,
@@ -203,7 +255,7 @@ test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir,
         expect(seenCmd[1]).toBe('packages/practice/src/rehearse.ts');
         expect(seenCmd).toContain('--start');
         expect(seenCmd).toContain('--out');
-        expect(seenCmd[seenCmd.indexOf('--out') + 1]).toBe('.practice/hosted-rehearse/nockandload');
+        expect(seenCmd[seenCmd.indexOf('--out') + 1]).toBe('.practice/hosted-rehearse/tipmyshaft');
         expect(result.exitCode).toBe(0);
         expect(result.summary?.wholeClock).toBe(true);
         expect(result.summary?.boardTicks).toEqual({ Fletching: 54 });
@@ -211,7 +263,7 @@ test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir,
         expect(logs.some(l => l.startsWith('HOSTED_REHEARSAL_SUMMARY '))).toBe(true);
 
         // Existing outDir is rejected cleanly.
-        await expect(runHostedRehearsal(['NockAndLoad'], { root })).rejects.toThrow('already exists');
+        await expect(runHostedRehearsal(['TipMyShaft'], { root })).rejects.toThrow('already exists');
 
         // Failed rehearsal summary prints log tails and non-zero exit code.
         const failOut = resolve(root, '.practice/hosted-rehearse/steelrod-fail');

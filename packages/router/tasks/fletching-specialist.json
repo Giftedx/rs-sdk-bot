@@ -10,7 +10,7 @@
     "packages/practice/src/rehearse.ts",
     "packages/practice/test/specialist-rehearsal.test.ts"
   ],
-  "consumer": "NockAndLoad completes the continuous fresh-clock Fletching 99 specialist route from Tutorial Island within 54 ticks after receiving FLETCHING_SPECIALIST_KIT from its external supplier.",
+  "consumer": "TipMyShaft completes the continuous fresh-clock Fletching 99 specialist route from Tutorial Island within 54 ticks after receiving FLETCHING_SPECIALIST_KIT from its external supplier.",
   "checks": [
     {
       "id": "fletching-specialist-regressions",
