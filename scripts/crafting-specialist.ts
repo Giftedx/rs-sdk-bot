@@ -98,7 +98,7 @@ function keepSetFor(preserveCutDragonstones: boolean): Set<number> {
  return keep;
 }
 
-async function cutUnlockedGems(spec: Session, target: number, deadlineTick: number): Promise<void> {
+async function cutUnlockedGems(spec: Session, target: number, deadlineTick: number, clearAllModals = false): Promise<void> {
  const tierIds = new Set(CRAFTING_GEMS.map(t => t.id));
  while (spec.tick() < deadlineTick) {
   if (skillLevel(spec, 'Crafting') >= target) return;
@@ -111,9 +111,10 @@ async function cutUnlockedGems(spec: Session, target: number, deadlineTick: numb
   if (!gems.length) return;
   const st = spec.sdk.getState();
   const modalOpen = !!st?.dialog?.isOpen && !st?.trade?.isOpen;
-  const batch = gems.slice(0, 5);
+  const closeNow = modalOpen && (clearAllModals || gems.length <= 4);
+  const batch = gems.slice(0, closeNow ? 4 : 5);
   const actions: Promise<unknown>[] = [];
-  if (modalOpen && gems.length <= 4) actions.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+  if (closeNow) actions.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
   for (const gem of batch) {
    actions.push(spec.direct({ type: 'useItemOnItem', sourceSlot: chisel.slot, targetSlot: gem.slot, reason: 'SDK' }));
   }
@@ -140,7 +141,8 @@ async function executeCraftingLoop(
    await dropItemsFast(spec, keepSetFor(false), deadline);
   }
   await receiveBatch(batch, i);
-  await cutUnlockedGems(spec, target, deadline);
+  // Batches 0..3 cross 5+ levels each; overlap closeModal on every cut tick to drain level-up modals without stalling the next trade.
+  await cutUnlockedGems(spec, target, deadline, i <= 3);
   if (i === 1) logPhase(spec, start, `crafting_55_lvl=${skillLevel(spec, 'Crafting')}`);
  }
 
