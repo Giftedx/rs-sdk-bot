@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795150554568-pickpockdick-woodpecker-e58ef8b9afcd5e0c",
  "account": "Woodpecker",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 215000,
  "claim": "47e9ddd4-bee5-4f10-ac70-7f449761793c",
- "count": 0,
- "ok": false,
- "at": 1795150579962,
- "detail": "trade claimed"
+ "count": 215000,
+ "ok": true,
+ "at": 1795150600302,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 215000
+ },
+ "bank": {
+  "count": 215000,
+  "at": 1795150598312
+ },
+ "logout": {
+  "attemptId": "1795150579971-0000016612-0000000001",
+  "at": 1795150600287,
+  "sha256": "fb14a183f81e06e0968b5ff362d561b9d1fbd0fe7a8b0417d34b162225d479ef"
+ },
+ "screen": true
 }
