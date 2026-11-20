@@ -1,0 +1,28 @@
+{
+ "id": "1795164130426-bigpackage-undermykilt-76097ebbc35bd1fa",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigpackage",
+ "to": "UnderMyKilt",
+ "item": "Coins",
+ "count": 37000,
+ "start": 1795164130426,
+ "end": 1795165630426,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Cannonball",
+   "count": 50
+  }
+ ]
+}

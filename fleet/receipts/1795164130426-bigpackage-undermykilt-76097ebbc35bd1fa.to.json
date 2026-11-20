@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795164130426-bigpackage-undermykilt-76097ebbc35bd1fa",
+ "account": "UnderMyKilt",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 37000,
+ "claim": "5f8d931d-995f-416c-8d19-bd3af15bdd10",
+ "count": 0,
+ "ok": false,
+ "at": 1795164146113,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Cannonball",
+   "requested": 50,
+   "count": 0
+  }
+ ]
+}
