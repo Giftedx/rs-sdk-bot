@@ -891,14 +891,21 @@ interface TeleportSite {
     castTicks: number;
     requiresDone?: string;
 }
-// Standard Magic teleports (magic_spells.dbrow:62-105; teleport.rs2:17-35) and the East Ardougne / Deserted Keep
-// Wilderness lever (wilderness_lever.constant:1-2, wilderness_lever.rs2:24-44).
+// Standard Magic teleports (magic_spells.dbrow:62-105; teleport.rs2:17-35), jewellery teleports
+// (amulet_of_glory.rs2:30-33, ring_of_dueling.rs2:21-23), and the East Ardougne / Deserted Keep Wilderness lever
+// (wilderness_lever.constant:1-2, wilderness_lever.rs2:24-44).
 const STANDARD_TELEPORTS: readonly TeleportSite[] = [
     { id: 'varrock', place: 'varrock-teleport', magicLevel: 25, castTicks: 4 },
     { id: 'lumbridge', place: 'lumbridge-spawn', magicLevel: 31, castTicks: 4 },
     { id: 'falador', place: 'falador-teleport', magicLevel: 37, castTicks: 4 },
     { id: 'camelot', place: 'camelot-teleport', magicLevel: 45, castTicks: 4 },
     { id: 'ardougne', place: 'ardougne-market', magicLevel: 51, castTicks: 4, requiresDone: 'plague-city' },
+    { id: 'glory-edgeville', place: 'glory-edgeville', magicLevel: 1, castTicks: 5, requiresDone: 'trade-start' },
+    { id: 'glory-karamja', place: 'glory-karamja', magicLevel: 1, castTicks: 5, requiresDone: 'trade-start' },
+    { id: 'glory-draynor', place: 'glory-draynor', magicLevel: 1, castTicks: 5, requiresDone: 'trade-start' },
+    { id: 'glory-al-kharid', place: 'glory-al-kharid', magicLevel: 1, castTicks: 5, requiresDone: 'trade-start' },
+    { id: 'dueling-arena', place: 'dueling-arena', magicLevel: 1, castTicks: 6, requiresDone: 'trade-start' },
+    { id: 'dueling-castle-wars', place: 'dueling-castle-wars', magicLevel: 1, castTicks: 6, requiresDone: 'trade-start' },
 ];
 const WILDY_LEVER_IN = 'ardougne-lever';
 const WILDY_LEVER_OUT = 'deserted-keep-lever';
@@ -921,7 +928,7 @@ export function haggisTravel(path = BOARDS_FILE, cachePath?: string): TravelMode
 export const TRICKS: Trick[] = ['loginWine', 'stunRelog', 'sacredOil'];
 // Gap-closer choices. All techniques are authorized; retired slower variants remain available for comparison.
 export const LEVERS: { id: string; owner: boolean; label: string; retired?: boolean }[] = [
-    { id: 'magic-teleports', owner: false, label: 'Standard Magic teleports (Varrock 25, Lumbridge 31, Falador 37, Camelot 45, Ardougne 51) and Deserted Keep lever' },
+    { id: 'magic-teleports', owner: false, label: 'Standard Magic teleports (Varrock 25, Lumbridge 31, Falador 37, Camelot 45, Ardougne 51), Amulet of glory, Ring of dueling, and Deserted Keep lever' },
     { id: 'spiders-combat', owner: false, label: 'Wilderness Poison Spiders progressive Ranged 1->55->99, pre-Overall Dragon Slayer, Doric/Plague City + Zoo mining, Air->Body altar RC' },
     { id: 'woodcut-givers', owner: false, label: 'Woodcutting 1->99 + Prayer 1->99 with bone givers at the trees (extra:woodcut-givers-block5)' },
     { id: 'superheat-stun', owner: false, label: 'Superheat inside pickpocket stuns (Magic 76->80 and Smithing XP in unused stun deadTicks)' },

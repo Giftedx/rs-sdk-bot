@@ -567,3 +567,22 @@ test('a Haggis travel model built with a leg cache path prices the same route as
     expect((model as { start?: string }).start).toBe('lumbridge-spawn');
     expect(finish(model)).toBe(finish(haggisTravel()));
 });
+
+test('jewellery teleports (Amulet of glory, Ring of dueling) unlock after trade-start and quests-rest uses 3-seed measurements', () => {
+    const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-live.json'));
+    const acts = haggisActivities();
+    const travel = haggisTravel();
+    const real = scheduleOverall(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel });
+    const floor = scheduleOverall(boards, acts, { mode: 'floor', tricks: new Set(TRICKS), travel });
+    const tradeStartAt = real.order.find(p => p.id === 'trade-start')!.landsAt;
+    const jewelleryLegs = real.order.filter(p => p.method?.startsWith('teleport:glory-') || p.method?.startsWith('teleport:dueling-'));
+    expect(jewelleryLegs.length).toBeGreaterThan(0);
+    for (const p of jewelleryLegs) expect(p.start).toBeGreaterThanOrEqual(tradeStartAt);
+    expect(real.travel).toBeLessThan(2622);
+    expect(floor.overallFinish!).toBeLessThan(33524);
+    expect(real.overallFinish!).toBeLessThan(35053);
+    const questsRest = acts.find(a => a.id === 'quests-rest')!;
+    expect(questsRest.evidence).toBe('MEASURED');
+    expect(questsRest.ticks).toMatchObject({ floor: 14554, realistic: 16157, evidence: 'MEASURED' });
+    expect(finish(real, 'questpoints').finish!).toBeLessThan(103358);
+});

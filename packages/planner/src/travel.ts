@@ -29,6 +29,7 @@ export interface Place {
     x: number; z: number; level?: number;
     site?: string; // world.json site id
     island?: Island;
+    teleportOnly?: boolean;
     note?: string;
 }
 export interface Leg { ticks: number; method: 'same' | 'world.json' | 'path' | 'estimate' | 'boat' | 'bank-trip'; detail?: string;gates?:RouteGate[] }
