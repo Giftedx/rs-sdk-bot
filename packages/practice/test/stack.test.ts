@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { practiceDir } from '../src/paths';
-import { engineCommand, MARKERS, startStack, waitReady } from '../src/stack';
+import { engineCommand, MARKERS, startStack, waitHttpReady, waitReady } from '../src/stack';
 
 test('quest proof carries private endpoints through stack, fresh account and real CLI without changing the parent', async () => {
     const { selectQuestSweepProofEndpoints, questSweepProofAccountEnv, startQuestSweepProofStack, questSweepChildConfiguration } = await import('../src/quest-sweep-proof');
@@ -79,4 +79,43 @@ test('a lockstep engine on Windows preloads fine timers by default unless SIM_FI
     expect(engineCommand({}, 8888, 'win32', '1').cmd).toEqual(['bun', MARKERS.engine]);
     const module = join(import.meta.dir, '../src/shark-fishing-diagnostic.ts');
     expect(engineCommand({ lockstep: {}, enginePreload: { module, env: {} } }, 8888, 'win32', undefined).cmd).toEqual(['bun', '--preload', timers, '--preload', module, MARKERS.engine]);
+});
+
+test('waitHttpReady retries ConnectionRefused until delayed HTTP server serves 200', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'stack-http-'));
+    const log = join(dir, 'engine.log');
+    writeFileSync(log, 'World ready\n');
+    const probe = Bun.listen({ hostname: '127.0.0.1', port: 0, socket: { data() {} } });
+    const port = probe.port;
+    probe.stop(true);
+    const proc = Bun.spawn(['bun', '-e', 'setTimeout(() => {}, 10000)'], { stdout: Bun.file(log), stderr: Bun.file(log) });
+    let server: ReturnType<typeof Bun.serve> | undefined;
+    const starter = setTimeout(() => {
+        server = Bun.serve({
+            hostname: '127.0.0.1',
+            port,
+            fetch(req) {
+                return new URL(req.url).pathname === '/crc' ? new Response('/crc') : new Response('not found', { status: 404 });
+            },
+        });
+    }, 200);
+    try {
+        await expect(waitHttpReady(proc, `http://127.0.0.1:${port}/crc`, log, 5000)).resolves.toBeUndefined();
+    } finally {
+        clearTimeout(starter);
+        server?.stop(true);
+        proc.kill();
+        await proc.exited;
+    }
+});
+
+test('waitHttpReady fails fast with exit code and log tail if process exits early', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'stack-http-fail-'));
+    const log = join(dir, 'engine.log');
+    writeFileSync(log, '');
+    const probe = Bun.listen({ hostname: '127.0.0.1', port: 0, socket: { data() {} } });
+    const port = probe.port;
+    probe.stop(true);
+    const proc = Bun.spawn(['bun', '-e', 'console.log("web transport aborted"); process.exit(4)'], { stdout: Bun.file(log), stderr: Bun.file(log) });
+    await expect(waitHttpReady(proc, `http://127.0.0.1:${port}/crc`, log, 5000)).rejects.toThrow(/engine exited with code 4[\s\S]*web transport aborted/);
 });
