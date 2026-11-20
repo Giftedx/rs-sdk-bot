@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795133924535-pickpockdick-bigchopper-runechainbody",
+ "account": "Bigchopper",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "8fcdb191-4919-4401-9a05-253bd42ac246",
+ "count": 1,
+ "ok": true,
+ "at": 1795134040913,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795134040212
+ },
+ "logout": {
+  "attemptId": "1795134021178-0000005264-0000000001",
+  "at": 1795134040897,
+  "sha256": "b2edd86edb9f494e54a0a250f7e0f24ff35c58ba19d2b44571aac4623633cea1"
+ },
+ "screen": true
+}
