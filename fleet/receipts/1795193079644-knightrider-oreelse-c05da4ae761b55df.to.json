@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795193079644-knightrider-oreelse-c05da4ae761b55df",
  "account": "OreElse",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 10,
  "claim": "e9ee5382-7c13-4ae2-845d-265ef3c3d85e",
- "count": 0,
- "ok": false,
- "at": 1795193325934,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795193369901,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 12
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795193369132
+ },
+ "logout": {
+  "attemptId": "1795193325944-0000018556-0000000001",
+  "at": 1795193369883,
+  "sha256": "d865b0d8a2931dd786b3509fb0cd588e7a4522525408976e85a6ea97999417c9"
+ },
+ "screen": true
 }
