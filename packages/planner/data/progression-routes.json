@@ -94452,6 +94452,16 @@
    ]
   },
   {
+   "script": "scripts/ranged-live-prep.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "herblore"
+   ],
+   "routeIds": []
+  },
+  {
    "script": "scripts/ranged-specialist.ts",
    "intents": [
     "service"

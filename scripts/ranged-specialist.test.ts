@@ -302,6 +302,37 @@ test('progression catalog and live work gate admit ranged-specialist across Rang
     }
 });
 
+test('progression catalog and live work gate admit ranged-live-prep valid modes and reject invalid mode or cap', () => {
+    const catalog = loadProgressionCatalog();
+    const okWork = {
+        script: 'scripts/ranged-live-prep.ts',
+        args: ['UnderMyKilt', '--mode=decant'],
+        env: {},
+    };
+    expect(intentForEntry(okWork.script, okWork.args, okWork.env)).toEqual({
+        kind: 'service',
+        objective: 'ranged-live-prep:decant',
+        units: 1,
+    });
+    expect(() => preflightProgressionWork(okWork, 'rs-sdk-demo.fly.dev', catalog, 'UnderMyKilt')).not.toThrow();
+
+    const bogusWork = {
+        script: 'scripts/ranged-live-prep.ts',
+        args: ['UnderMyKilt', '--mode=bogus'],
+        env: {},
+    };
+    expect(intentForEntry(bogusWork.script, bogusWork.args, bogusWork.env)).toBeNull();
+    expect(() => preflightProgressionWork(bogusWork, 'rs-sdk-demo.fly.dev', catalog, 'UnderMyKilt')).toThrow('requires a finite goal');
+
+    expect(intentForEntry('scripts/ranged-live-prep.ts', ['--mode=brew'], { CAP: '99' })).toBeNull();
+    expect(intentForEntry('scripts/ranged-live-prep.ts', ['--mode=all'], { CAP: '20001' })).toBeNull();
+    expect(intentForEntry('scripts/ranged-live-prep.ts', ['--mode=leather'], { CAP: '1500' })).toEqual({
+        kind: 'service',
+        objective: 'ranged-live-prep:leather',
+        units: 1,
+    });
+});
+
 test('observedSupplies and validateSupplies round-trip for RANGED_SPECIALIST_KIT', () => {
     const ledger = JSON.stringify({
         tick: 100,
