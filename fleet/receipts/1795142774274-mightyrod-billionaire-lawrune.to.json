@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795142774274-mightyrod-billionaire-lawrune",
  "account": "Billionaire",
  "partner": "Mightyrod",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 1,
  "claim": "ded82e14-d29c-4427-b572-990b2450d7d5",
- "count": 0,
- "ok": false,
- "at": 1795142831034,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795142849799,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795142849007
+ },
+ "logout": {
+  "attemptId": "1795142831046-0000023824-0000000001",
+  "at": 1795142849783,
+  "sha256": "3e2feee690e572a9dfdbb19c0d24b836cb0a4e8f4036664bbc67b2fdbc363e0b"
+ },
+ "screen": true
 }
