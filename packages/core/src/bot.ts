@@ -245,11 +245,11 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
         }
     });
     // A tick stream that stops arriving without a disconnect (tick-stall.ts) ends the session on the clock.
-    stallWatches.set(s, startTickStallWatch(s, reason => {
+    attachTickStallWatch(s, reason => {
         if (stopping || settling.has(s)) return;
         stopping = true;
         void (opts.onStop ? opts.onStop(s, reason) : finish([s], false, reason));
-    }));
+    });
     // Live status for the dashboard (packages/dashboard).
     statuses.set(s, startStatus(s as any, server, led.counts, () => led.rows.slice(-300).map(r => r.kind === 'inventory' ? 'v' : r.kind[0]).join('')));
     // No more game ticks arrive after disconnect. End a script waiting on them
@@ -282,6 +282,50 @@ export const logoutAdapter = (s: Pick<Session, 'direct' | 'ended'>) =>
 // The death recovery of a session that runs now, or undefined. An end step that walks waits for it first.
 export const deathRecoveryOf = (s: Session): Promise<unknown> | undefined => deathRecoveries.get(s);
 
+/** Stops all per-session monitors and timers when an intermediate session closes outside `settleOnce`. */
+function cleanupClosedSession(s: Session): void {
+    stallWatches.get(s)?.stop();
+    stallWatches.delete(s);
+    if (settling.has(s)) return;
+    statuses.get(s)?.stop();
+    statuses.delete(s);
+    ledgers.get(s)?.stop();
+    ledgers.delete(s);
+    randomEvents.get(s)?.stop();
+    randomEvents.delete(s);
+    eatGuards.get(s)?.stop();
+    eatGuards.delete(s);
+    const guard = prayerGuards.get(s);
+    if (guard) {
+        prayerGuards.delete(s);
+        void guard.release().catch(() => {});
+    }
+    const rec = records.get(s);
+    if (rec) {
+        records.delete(s);
+        rec.end(typeof s.tick === 'function' ? s.tick() : 0, 'closed');
+    }
+}
+
+/** Attaches a tick-stall watch that disarms automatically when `s.ended` settles or `closeWithin` closes `s`. */
+export function attachTickStallWatch(
+    s: Pick<Session, 'onTick' | 'ended'>,
+    onStall: (detail: string) => void,
+    opts?: Parameters<typeof startTickStallWatch>[2],
+): { stop(): void } {
+    const watch = startTickStallWatch(s, reason => {
+        stallWatches.delete(s as Session);
+        onStall(reason);
+    }, opts);
+    stallWatches.set(s as Session, watch);
+    const disarm = () => {
+        stallWatches.get(s as Session)?.stop();
+        stallWatches.delete(s as Session);
+    };
+    void s.ended.then(disarm, disarm);
+    return watch;
+}
+
 // A session close can hang (seen: one proving run printed RESULT ok, then sat until the 300 s
 // kill). Each close gets `ms`; the caller exits either way, and the engine saves on socket close.
 export async function closeWithin(sessions: Pick<Session, 'close'>[], ms: number): Promise<{ closed: number; timedOut: number }> {
@@ -289,6 +333,7 @@ export async function closeWithin(sessions: Pick<Session, 'close'>[], ms: number
     let timedOut = 0;
     await Promise.all(sessions.map(async s => {
         const done = await Promise.race([s.close().then(() => true, () => true), Bun.sleep(ms).then(() => false)]);
+        cleanupClosedSession(s as Session);
         if (done) closed++; else timedOut++;
     }));
     return { closed, timedOut };

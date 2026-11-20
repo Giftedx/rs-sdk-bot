@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { botWork, closeWithin, releaseLine, settle, sessionDied, watchUnexpectedEnd } from '../src/bot';
+import { attachTickStallWatch, botWork, closeWithin, releaseLine, settle, sessionDied, watchUnexpectedEnd } from '../src/bot';
 
 test('explicit composed work arguments do not change complete recorded CLI arguments',()=>{
     const argv=['Donor','Receiver','90:Iron arrowtips','--notes'],env={HANDOFF_ORDER:'record-cli-order',PROGRESSION_CONSUMER:'{"bank":{"40":90}}'};
@@ -98,4 +98,19 @@ test('a death is judged on life fields copied while connected, not on the state 
     const born = { isDead: false, respawnCount: 0, lifeId: 7 };
     expect(sessionDied(born, { ...born })).toBe(false);
     expect(sessionDied(born, { ...born, lifeId: 8 })).toBe(true);
+});
+
+test('tick-stall watch disarms on closeWithin and ended so closed relog sessions never stop active work', async () => {
+    let endA!: (v: { reason: string }) => void;
+    let endB!: (v: { reason: string }) => void;
+    const stalledCalls: string[] = [];
+    const sessA: any = { onTick: () => () => {}, ended: new Promise(r => { endA = r; }), close: async () => {} };
+    const sessB: any = { onTick: () => () => {}, ended: new Promise(r => { endB = r; }), close: async () => {} };
+    attachTickStallWatch(sessA, r => stalledCalls.push(`A:${r}`), { ms: 40, every: 10 });
+    attachTickStallWatch(sessB, r => stalledCalls.push(`B:${r}`), { ms: 40, every: 10 });
+    await closeWithin([sessA], 200);
+    endB({ reason: 'logged-out' });
+    await Bun.sleep(90);
+    endA({ reason: 'logged-out' });
+    expect(stalledCalls).toEqual([]);
 });

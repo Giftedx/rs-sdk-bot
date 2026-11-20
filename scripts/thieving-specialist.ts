@@ -172,19 +172,22 @@ if (import.meta.main) {
     const { account, helperName, cap, resume } = parseThievingCliArgs(process.argv.slice(2), process.env);
 
     let stopFlag = false;
+    let stopReason = '';
+    let activeMainToken = 1;
     let intentionalRelog = false;
     let helperSettled = resume;
     let totalTicks = 0;
     const isStopped = () => stopFlag || existsSync(`.practice/stop-${account}`) || existsSync('.practice/stop-all') || totalTicks >= cap;
 
-    const helper = resume || externalSupplierName() ? undefined : await openBot(helperName, { onStop: async () => { stopFlag = true; } });
+    const helper = resume || externalSupplierName() ? undefined : await openBot(helperName, { onStop: async (_s, why) => { stopReason ||= `helper: ${why}`; stopFlag = true; } });
     const onUnexpectedEnd = async (sess: Session, detail: string) => {
         if (intentionalRelog) return;
         await finish(helperSettled || !helper ? [sess] : [helper, sess], false, `unexpected end: ${detail}`);
     };
 
+    const initialToken = activeMainToken;
     let main = await openBot(account, {
-        onStop: async () => { stopFlag = true; },
+        onStop: async (_s, why) => { if (initialToken === activeMainToken) { stopReason ||= why; stopFlag = true; } },
         onSessionEnd: onUnexpectedEnd,
     });
 
@@ -293,8 +296,9 @@ if (import.meta.main) {
                 const out = await logoutSession(main);
                 if (out !== 'logged-out' && out !== 'disconnected') throw Error(`relog logout failed: ${out}`);
                 await closeWithin([main], 5000);
+                const nextToken = ++activeMainToken;
                 main = await openBot(account, {
-                    onStop: async () => { stopFlag = true; },
+                    onStop: async (_s, why) => { if (nextToken === activeMainToken) { stopReason ||= why; stopFlag = true; } },
                     onSessionEnd: onUnexpectedEnd,
                 });
                 intentionalRelog = false;
@@ -346,7 +350,7 @@ if (import.meta.main) {
         const finalLvl = main.sdk.getSkill('Thieving')?.baseLevel ?? 0;
         const finalXp = main.sdk.getSkillXp('Thieving') ?? 0;
         ok = ok && finalLvl >= 99;
-        detail = `level=${finalLvl} xp=${finalXp} totalTicks=${totalTicks} relogs=${relogs} stuns=${stuns} attempts=${attempts} tut=${tutTicks} trade=${tradeTicks} travel=${travelTicks}`;
+        detail = `level=${finalLvl} xp=${finalXp} totalTicks=${totalTicks} relogs=${relogs} stuns=${stuns} attempts=${attempts} tut=${tutTicks} trade=${tradeTicks} travel=${travelTicks}${stopReason ? ` stop=${stopReason}` : ''}`;
     } catch (error) {
         totalTicks = elapsedNow();
         detail = `${String(error)} totalTicks=${totalTicks} relogs=${relogs}`;
