@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795141994677,
+ "at": 1795142461673,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -307,6 +307,26 @@
    "resources": [
     "knight:2652,3318"
    ]
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/microbot-jewellery-trip.ts",
+   "args": [],
+   "env": {
+    "RECIPE": "sapphire_ring",
+    "TARGET": "2",
+    "BATCH": "2",
+    "CAP": "2500",
+    "RETURN_TICKS": "200",
+    "RESERVE": "0",
+    "LOOT_WATCH": "0",
+    "RANDOM_EVENTS": "0",
+    "COORDINATOR_RUN_ID": "task-58211f92-1d72-46cd-b738-821ca2d3869b"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-make-bow-route-sapphire-two-observed-v2 [task-58211f92-1d72-46cd-b738-821ca2d3869b]",
+   "role": "production"
   }
  ],
  "army": [
