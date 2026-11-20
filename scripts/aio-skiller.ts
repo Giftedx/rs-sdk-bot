@@ -171,6 +171,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'prayer',method:'specialist',script:'scripts/prayer-specialist.ts',description:'Fresh-clock 1-to-99 Prayer via Draynor Bank dragon-bone runners and Lumbridge burying'},
  // Agility
  {skill:'agility',method:'order',script:'scripts/agility-order.ts',description:'Gnome Stronghold / Barbarian / Wilderness agility course order'},
+ {skill:'agility',method:'specialist',script:'scripts/agility-specialist.ts',description:'Fresh-clock 1 to 99 Agility specialist route (Tourist Trap + boosted Wilderness course)'},
  // Thieving
  {skill:'thieving',method:'knights',script:'scripts/goldfarm.ts',description:'Pickpocket Knights of Ardougne with bank food refill and Baker stall fallback'},
  {skill:'thieving',method:'knights-stable',script:'scripts/goldfarm-stable.ts',description:'Bounded Ardougne knight pickpocketing batch'},

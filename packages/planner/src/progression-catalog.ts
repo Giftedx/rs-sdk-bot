@@ -216,6 +216,7 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   if(!whole(cap)||cap<100||cap>20000)return null;
   return{kind:'service',objective:`ranged-live-prep:${mode}`,units:1};
  }
+ if(script==='scripts/agility-specialist.ts')return{kind:'service',objective:'skiller:agility:specialist',units:1};
  if(acceptedSkills.length)return trainingIntent(accept!.skills!);
  // Native GE counterparties have finite fixture work, admitted only on local practice.
  if(script==='packages/practice/src/ge-bulk-order-proof.ts'){
