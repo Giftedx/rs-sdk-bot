@@ -557,7 +557,7 @@ test('supply-exhausted autopilot jobs yield cleanly while non-supply blocked and
 });
 
 test('specialist preflight admits fast 1-99 routes whose boardTick beats #1 while draining engineQueue',()=>{
- const f=fixture(),account='JustTheTip',name=account.toLowerCase(),board='Fletching';
+ const f=fixture(),account='NockAndLoad',name=account.toLowerCase(),board='Fletching';
  const source='a'.repeat(64),runId='test-fast',now=Date.now(),dir='.practice/specialist-launch';
  const script='fletching.ts',mission=missionSignature({script,account,env:{CAP:'200',COORDINATOR_RUN_ID:''}});
  const requirements=[{item:'Headless arrow',count:100,itemId:53}];
