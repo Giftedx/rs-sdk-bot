@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795154887680,
+ "at": 1795155826316,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -333,6 +333,25 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "YewGotWood",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
    ]
   }
  ],
