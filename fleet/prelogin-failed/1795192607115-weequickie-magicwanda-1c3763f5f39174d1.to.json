@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795192607115-weequickie-magicwanda-1c3763f5f39174d1",
+ "role": "to",
+ "account": "Magicwanda",
+ "partner": "WeeQuickie",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795192709101,
+ "detail": "Error: fleet trade: order receipt already exists"
+}

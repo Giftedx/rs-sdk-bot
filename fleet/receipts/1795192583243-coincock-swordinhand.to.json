@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795192583243-coincock-swordinhand",
+ "account": "Swordinhand",
+ "partner": "CoinCock",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 29776,
+ "claim": "36a638a8-4944-4635-a5d8-24a8e7febdc9",
+ "count": 0,
+ "ok": false,
+ "at": 1795192668184,
+ "detail": "trade claimed"
+}
