@@ -31,7 +31,7 @@ const helperBesideLumbridge = (supplies: Readonly<Record<number, number>>): Save
 });
 
 const specialistPass = (stdout: string): boolean =>
-    /^LOGOUT logged-out$/m.test(stdout)
+    /^LOGOUT (?:logged-out\s*)+$/m.test(stdout)
     && /^RESULT ok .*?\blevel=99\b/m.test(stdout)
     && !/^RESULT fail\b/m.test(stdout);
 

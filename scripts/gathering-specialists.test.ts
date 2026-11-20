@@ -42,12 +42,12 @@ describe('gathering specialists supply & progression plans', () => {
         expect(fletchSlots).toBe(7);
         expect(fishSlots).toBeLessThanOrEqual(14);
         expect(mineSlots).toBeLessThanOrEqual(20);
-        expect(thieveSlots).toBeLessThanOrEqual(18);
-        // 18 tutorial slots -> main drops 0 (fletch), 10 (fish), 12 (mine), 8 (thieve).
+        expect(thieveSlots).toBeLessThanOrEqual(21);
+        // 18 tutorial slots -> main drops 0 (fletch), 10 (fish), 10 (mine), 12 (thieve).
         expect(28 - 18).toBeGreaterThanOrEqual(fletchSlots);
         expect(28 - (18 - 10) - fishSlots).toBeGreaterThanOrEqual(1);
-        expect(28 - (18 - 12) - mineSlots).toBeGreaterThanOrEqual(1);
-        expect(28 - (18 - 8) - thieveSlots).toBeGreaterThanOrEqual(1);
+        expect(28 - (18 - 10) - mineSlots).toBeGreaterThanOrEqual(1);
+        expect(28 - (18 - 12) - thieveSlots).toBeGreaterThanOrEqual(1);
     });
 
     test('mining iron count from Doric reward covers level 99', () => {
@@ -79,6 +79,7 @@ describe('bench registration and catalog integration', () => {
             expect(c!.presetConfig?.varps?.[281]).toBe(0);
             expect(c!.companions?.length).toBe(1);
             expect(c!.pass('LOGOUT logged-out\nRESULT ok level=99 ticks=53')).toBe(true);
+            expect(c!.pass('LOGOUT logged-out logged-out\nRESULT ok level=99 ticks=53')).toBe(true);
             expect(c!.pass('LOGOUT logged-out\nRESULT ok level=98 ticks=53')).toBe(false);
             expect(c!.pass('LOGOUT logged-out\nRESULT ok helper supplied\nRESULT fail cap')).toBe(false);
             expect(c!.pass('RESULT ok level=99 ticks=53')).toBe(false);

@@ -14,8 +14,7 @@ import {
     rubTeleport,
     walkWaypointsSafe,
     sailBrimhavenToArdougne,
-    eatSharkIfHurt,
-    dismissModalsAndDialogs,
+    drinkEnergyIfLow,
     finish,
     chebDist,
     SKILL_MULTI3_MAKE1_A,
@@ -23,7 +22,8 @@ import {
     OBJ_LOGS,
     OBJ_COINS,
     OBJ_GLORY_4,
-    OBJ_SHARK,
+    OBJ_SUPER_ENERGY_4,
+    ENERGY_POTION_IDS,
 } from './gathering-specialist-lib';
 
 export const OBJ_RUNE_PICKAXE = 1275;
@@ -43,7 +43,7 @@ export const MINING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_IRON_ORE]: 2,
     [OBJ_COINS]: 150,
     [OBJ_GLORY_4]: 1,
-    [OBJ_SHARK]: 1,
+    [OBJ_SUPER_ENERGY_4]: 1,
 };
 
 export function remainingIronOresTo99(currentXp: number): number {
@@ -76,14 +76,18 @@ async function completeDoricQuest(main: Awaited<ReturnType<typeof openHelperAndM
         throw Error('could not talk to Doric');
     };
 
-    // Part 1: accept quest.
+    // Part 1: accept quest and exit immediately when dialog closes.
     await talkDoric();
+    let part1Open = false;
     await converse(
         [/wanted to use your anvils/i, /yes, i will get you materials/i],
-        () => main.sdk.getDialog()?.text?.toLowerCase().includes('certainly, i will get them') ?? false,
+        () => {
+            const open = !!main.sdk.getDialog()?.isOpen;
+            if (open) part1Open = true;
+            return part1Open && !open;
+        },
         25,
     );
-    await converse([], () => !main.sdk.getDialog()?.isOpen, 10);
 
     // Part 2: hand in 6 clay, 4 copper ore, 2 iron ore -> 32,500 Mining XP (lvl 49).
     await talkDoric();
@@ -92,7 +96,6 @@ async function completeDoricQuest(main: Awaited<ReturnType<typeof openHelperAndM
         () => (main.sdk.getSkill('Mining')?.baseLevel ?? 1) >= 49,
         35,
     );
-    await dismissModalsAndDialogs(main, stop, 6);
     if ((main.sdk.getSkill('Mining')?.baseLevel ?? 1) < 49) {
         throw Error(`Doric's Quest did not grant Mining 49 (level=${main.sdk.getSkill('Mining')?.baseLevel})`);
     }
@@ -113,7 +116,7 @@ if (import.meta.main) {
 
     try {
         const tutTicks = await skipTutorialFast(main, isStopped);
-        await dropTutorialJunk(main, isStopped, 12);
+        await dropTutorialJunk(main, isStopped, 10);
         const tradeTicks = await receiveTradeFast(main, helper, MINING_SPECIALIST_SUPPLIES, isStopped);
         helperDone = settleHelper(helper).catch(err => {
             console.log(`WARN helper settle: ${String(err)}`);
@@ -134,9 +137,9 @@ if (import.meta.main) {
             { x: 2980, z: 3448, level: 0 },
             { x: 2952, z: 3451, level: 0 },
         ]) {
+            await drinkEnergyIfLow(main, 78);
             const leg = await goTo(main, w, wp, acct, { legTimeoutTicks: 150 });
             if (!leg.ok) throw Error(`walk Doric waypoint failed at ${wp.x},${wp.z}: ${JSON.stringify(leg)}`);
-            await eatSharkIfHurt(main, 3);
         }
 
         await completeDoricQuest(main, isStopped);
@@ -157,8 +160,6 @@ if (import.meta.main) {
         );
         await sailBrimhavenToArdougne(main, isStopped);
         await walkWaypointsSafe(main, [[2660, 3255, 4], [2603, 3234, 0]], isStopped);
-        if (await eatSharkIfHurt(main, 1)) await waitTicks(main, 1);
-        await dismissModalsAndDialogs(main, isStopped, 4);
 
         const zooStart = main.tick() - t0;
         const ironProfile = miningProfiles().find(p => p.name === 'iron_rock_table');
@@ -176,7 +177,7 @@ if (import.meta.main) {
                 mine: l => main.sdk.sendInteractLoc(l.x, l.z, l.id, 1).then(r => r.success),
                 wait: (test, ticks) => waitUntil(main, test, { timeoutTicks: ticks }),
                 step: () => waitTicks(main, 1),
-                clearModal: () => dismissModalsAndDialogs(main, isStopped, 3),
+                clearModal: () => main.direct({ type: 'closeModal', reason: 'SDK' }).then(() => {}),
                 send: async acts => {
                     for (const a of acts) await main.direct({ ...a, reason: 'SDK' });
                 },
@@ -191,7 +192,7 @@ if (import.meta.main) {
                 make1: SKILL_MULTI3_MAKE1_A,
                 rocks,
                 pick: 'roll',
-                keep: [OBJ_RUNE_PICKAXE, ...MINING_GLORY_IDS, OBJ_COINS, OBJ_SHARK],
+                keep: [OBJ_RUNE_PICKAXE, ...MINING_GLORY_IDS, OBJ_COINS, ...ENERGY_POTION_IDS],
             },
             2,
             incidentalMiningGems,

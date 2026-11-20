@@ -11,13 +11,11 @@ import {
     settleHelper,
     rubTeleport,
     walkWaypointsSafe,
-    eatSharkIfHurt,
     finish,
     SKILL_MULTI3_MAKE1_A,
     OBJ_KNIFE,
     OBJ_LOGS,
     OBJ_GLORY_4,
-    OBJ_SHARK,
 } from './gathering-specialist-lib';
 
 export const OBJ_SMALL_NET = 303;
@@ -35,7 +33,6 @@ export const FISHING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_KNIFE]: 1,
     [OBJ_LOGS]: 5,
     [OBJ_GLORY_4]: 1,
-    [OBJ_SHARK]: 1,
 };
 
 export const FISHING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
@@ -127,20 +124,19 @@ if (import.meta.main) {
             });
         }
 
-        // Draynor Glory option 3 -> north-around jail-guard safe lane to Lumbridge river fly spot.
+        // Edgeville Glory option 1 lands at (3087,3496) -> hunter-free Barbarian Village river west bank (3109,3434).
         await rubTeleport(
             main,
             FISHING_GLORY_IDS,
-            3,
-            p => p.worldX >= 3090 && p.worldX <= 3120 && p.worldZ >= 3235 && p.worldZ <= 3265,
+            1,
+            p => p.worldX >= 3070 && p.worldX <= 3110 && p.worldZ >= 3480 && p.worldZ <= 3515,
             isStopped,
         );
         await walkWaypointsSafe(
             main,
-            [[3100, 3285, 3], [3180, 3258, 3], [3225, 3240, 3], [3239, 3251, 1]],
+            [[3087, 3465, 3], [3109, 3434, 1]],
             isStopped,
         );
-        await eatSharkIfHurt(main, 1);
 
         const flyStart = main.tick() - t0;
         if ((main.sdk.getSkill('Fishing')?.baseLevel ?? 1) < 99) {

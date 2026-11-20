@@ -11,36 +11,39 @@ import {
     rubTeleport,
     walkWaypointsSafe,
     sailBrimhavenToArdougne,
-    eatSharkIfHurt,
+    eatPineapplePizza,
     chebDist,
     OBJ_COINS,
     OBJ_GLORY_4,
-    OBJ_SHARK,
+    OBJ_SUPER_ENERGY_4,
+    OBJ_PINEAPPLE_PIZZA,
 } from './gathering-specialist-lib';
 import type { Session } from '../packages/core/src/inprocess';
 
 export const THIEVING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
 
-export const THIEVING_SHARKS = 15;
+export const THIEVING_PIZZAS = 18;
 
 export const THIEVING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_GLORY_4]: 1,
     [OBJ_COINS]: 200,
-    [OBJ_SHARK]: THIEVING_SHARKS,
+    [OBJ_SUPER_ENERGY_4]: 1,
+    [OBJ_PINEAPPLE_PIZZA]: THIEVING_PIZZAS,
 };
 
 export interface PickpocketTier {
     readonly name: string;
     readonly minLevel: number;
+    readonly stunDamage: number;
     readonly pattern: RegExp;
     readonly anchor: { readonly x: number; readonly z: number };
 }
 
 export const ARDOUGNE_PICKPOCKET_TIERS: readonly PickpocketTier[] = [
-    { name: 'man', minLevel: 1, pattern: /^(man|woman)$/i, anchor: { x: 2621, z: 3293 } },
-    { name: 'warrior', minLevel: 25, pattern: /^warrior woman$/i, anchor: { x: 2630, z: 3296 } },
-    { name: 'guard', minLevel: 40, pattern: /^guard$/i, anchor: { x: 2662, z: 3305 } },
-    { name: 'knight', minLevel: 55, pattern: /^knight of ardougne$/i, anchor: { x: 2654, z: 3301 } },
+    { name: 'man', minLevel: 1, stunDamage: 1, pattern: /^(man|woman)$/i, anchor: { x: 2621, z: 3293 } },
+    { name: 'warrior', minLevel: 25, stunDamage: 2, pattern: /^warrior woman$/i, anchor: { x: 2630, z: 3296 } },
+    { name: 'guard', minLevel: 40, stunDamage: 2, pattern: /^guard$/i, anchor: { x: 2662, z: 3305 } },
+    { name: 'knight', minLevel: 55, stunDamage: 3, pattern: /^knight of ardougne$/i, anchor: { x: 2654, z: 3301 } },
 ];
 
 export function selectPickpocketTier(level: number): PickpocketTier {
@@ -83,7 +86,7 @@ if (import.meta.main) {
 
     try {
         const tutTicks = await skipTutorialFast(main, isStopped);
-        await dropTutorialJunk(main, isStopped, 8);
+        await dropTutorialJunk(main, isStopped, 12);
         const tradeTicks = await receiveTradeFast(main, helper, THIEVING_SPECIALIST_SUPPLIES, isStopped);
 
         // Travel via Karamja Glory -> Brimhaven -> Ardougne dock -> East Ardougne market.
@@ -118,17 +121,22 @@ if (import.meta.main) {
                 continue;
             }
 
-            // Detect new stun messages since login.
+            const tier = selectPickpocketTier(lvl);
+
+            // Detect new stun messages since login. Heal on the stun tick before relogging so %action_delay resets on login.
             const msgs = st.gameMessages ?? [];
             const newMsgs = msgs.slice(lastMsgCount);
             lastMsgCount = msgs.length;
             if (newMsgs.some(m => /you've been stunned/i.test(m.text))) {
                 stuns++;
+                if (st.player.hp <= tier.stunDamage) {
+                    await eatPineapplePizza(main);
+                }
                 totalTicks += Math.max(1, main.tick() - sessStart) + 1;
                 relogs++;
                 intentionalRelog = true;
                 const out = await logoutSession(main);
-                if (out !== 'logged-out') throw Error(`relog logout failed: ${out}`);
+                if (out !== 'logged-out' && out !== 'disconnected') throw Error(`relog logout failed: ${out}`);
                 await closeWithin([main], 5000);
                 main = await openBot(account, {
                     onStop: async () => { stopFlag = true; },
@@ -141,12 +149,14 @@ if (import.meta.main) {
                 continue;
             }
 
-            // Eat before clicking if HP <= 5 so stun hits never drop HP to 0.
-            if (st.player.hp <= 5) {
-                await eatSharkIfHurt(main, 1);
+            // Safety guard: never attempt a pickpocket while HP <= stunDamage. Wait a tick after eating so heal lands cleanly.
+            if (st.player.hp <= tier.stunDamage) {
+                if (await eatPineapplePizza(main)) {
+                    await waitTicks(main, 1);
+                    continue;
+                }
             }
 
-            const tier = selectPickpocketTier(lvl);
             const npc = st.nearbyNpcs
                 .filter(n => tier.pattern.test(n.name) && n.optionsWithIndex.some(o => /^pickpocket$/i.test(o.text)))
                 .sort((a, b) => a.distance - b.distance)[0];

@@ -18,6 +18,11 @@ export const OBJ_LOGS = 1511;
 export const OBJ_SHARK = 385;
 export const OBJ_GLORY_4 = 1712;
 export const OBJ_GAMES_8 = 3853;
+export const OBJ_SUPER_ENERGY_4 = 3016;
+export const ENERGY_POTION_IDS = [3016, 3018, 3020, 3022] as const;
+export const OBJ_PINEAPPLE_PIZZA = 2301;
+export const OBJ_HALF_PINEAPPLE_PIZZA = 2303;
+const MULTI2_OPT1_ID = 2461;
 
 export const chebDist = (a: { x: number; z: number }, b: { x: number; z: number }): number =>
     Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
@@ -54,7 +59,27 @@ export async function eatSharkIfHurt(s: Session, minMissing = 3): Promise<boolea
     return true;
 }
 
-/** Skip Tutorial Island from login using same-tick character-design acceptance + guide interaction. */
+/** Drink one dose of Super energy potion (no action/eat delay) whenever energy drops at or below threshold. */
+export async function drinkEnergyIfLow(s: Session, maxEnergy = 78): Promise<boolean> {
+    const p = s.sdk.getState()?.player;
+    if (!p || p.runEnergy > maxEnergy) return false;
+    const item = s.sdk.getInventory().find(it => (ENERGY_POTION_IDS as readonly number[]).includes(it.id));
+    if (!item) return false;
+    await s.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 1, reason: 'SDK' });
+    return true;
+}
+
+/** Eat half or whole pineapple pizza (10 HP bite on 10 HP specialist, 20 HP/slot). */
+export async function eatPineapplePizza(s: Session): Promise<boolean> {
+    const half = slotOfId(s, OBJ_HALF_PINEAPPLE_PIZZA);
+    const whole = slotOfId(s, OBJ_PINEAPPLE_PIZZA);
+    const slot = half ?? whole;
+    if (slot === undefined) return false;
+    await s.direct({ type: 'useInventoryItem', slot, optionIndex: 1, reason: 'SDK' });
+    return true;
+}
+
+/** Skip Tutorial Island in 2 ticks by chaining dialog continue + multi2:com_1 ("Yes please.") on tick 2. */
 export async function skipTutorialFast(s: Session, stop: () => boolean): Promise<number> {
     const t0 = s.tick();
     let designSent = false;
@@ -82,6 +107,7 @@ export async function skipTutorialFast(s: Session, stop: () => boolean): Promise
                     await s.direct({ type: 'clickDialogOption', optionIndex: yes.index, reason: 'SDK' });
                 } else if (dlg.options.length === 0 || (dlg.options.length === 1 && dlg.options[0]!.buttonType === 6)) {
                     await s.direct({ type: 'clickDialogOption', optionIndex: 0, reason: 'SDK' });
+                    await s.direct({ type: 'clickComponent', componentId: MULTI2_OPT1_ID, reason: 'SDK' });
                 } else {
                     throw Error(`unsupported tutorial dialog: ${JSON.stringify(dlg)}`);
                 }
@@ -125,26 +151,32 @@ export async function receiveTradeFast(
     stop: () => boolean,
 ): Promise<number> {
     const t0 = main.tick();
-    const pendingSlots = helper.sdk.getInventory().map(i => ({ slot: i.slot, id: i.id, count: i.count }));
     const hasAllExpected = () =>
         Object.entries(expectedCounts).every(([id, minQty]) => itemQty(main, Number(id)) >= minQty);
 
-    let lastReqTick = -99;
-    let confirmClickedTick = -99;
+    let tradeOpened = false;
+    let closedRun = 0;
 
     for (let i = 0; i < 60 && !stop(); i++) {
-        if (hasAllExpected() && !main.sdk.getTradeState().isOpen) {
-            return main.tick() - t0;
-        }
         const tMain = main.sdk.getTradeState();
         const tHelp = helper.sdk.getTradeState();
+        if (hasAllExpected() && !tMain.isOpen) {
+            return main.tick() - t0;
+        }
+
+        if (tMain.isOpen || tHelp.isOpen) {
+            tradeOpened = true;
+            closedRun = 0;
+        } else {
+            closedRun++;
+        }
 
         if (!tMain.isOpen && !tHelp.isOpen) {
-            if (main.tick() - lastReqTick >= 2) {
+            if (!tradeOpened || closedRun >= 6) {
+                tradeOpened = false;
                 const pHelpOnMain = main.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === helper.name.toLowerCase());
                 const pMainOnHelp = helper.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === main.name.toLowerCase());
                 if (pHelpOnMain && pMainOnHelp) {
-                    lastReqTick = main.tick();
                     await helper.direct({ type: 'interactPlayer', playerIndex: pMainOnHelp.index, optionIndex: 4, reason: 'SDK' });
                     await main.direct({ type: 'interactPlayer', playerIndex: pHelpOnMain.index, optionIndex: 4, reason: 'SDK' });
                 } else {
@@ -156,35 +188,37 @@ export async function receiveTradeFast(
                 }
             }
         } else if (tHelp.isOpen && tHelp.screen === 'offer' && tMain.isOpen && tMain.screen === 'offer') {
-            let sent = 0;
-            while (pendingSlots.length > 0 && sent < 5) {
-                const next = pendingSlots.shift()!;
+            // Trade Offer-All (option 4) transfers every matching item ID across slots in one packet.
+            const remainingById = new Map<number, number>();
+            for (const item of helper.sdk.getInventory()) {
+                if (!remainingById.has(item.id)) remainingById.set(item.id, item.slot);
+            }
+            const batch = [...remainingById.entries()].slice(0, 5);
+            for (const [, slot] of batch) {
                 await helper.direct({
                     type: 'clickComponentWithOption',
                     componentId: TRADE_SIDE_INV_ID,
                     optionIndex: 4,
-                    slot: next.slot,
+                    slot,
                     reason: 'SDK',
                 });
-                sent++;
             }
-            if (pendingSlots.length === 0) {
-                if (!tHelp.myAccepted && sent < 5) {
+            const leftAfter = remainingById.size - batch.length;
+            if (leftAfter === 0 && batch.length < 5) {
+                if (!tHelp.myAccepted) {
                     await helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT_ID, reason: 'SDK' });
                 }
                 if (!tMain.myAccepted) {
                     await main.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT_ID, reason: 'SDK' });
+                    await main.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' });
                 }
             }
         } else if (tHelp.screen === 'confirm' || tMain.screen === 'confirm') {
-            if (main.tick() !== confirmClickedTick) {
-                confirmClickedTick = main.tick();
-                if (tHelp.isOpen && tHelp.screen === 'confirm' && !tHelp.myAccepted) {
-                    await helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' });
-                }
-                if (tMain.isOpen && tMain.screen === 'confirm' && !tMain.myAccepted) {
-                    await main.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' });
-                }
+            if (tHelp.isOpen && tHelp.screen === 'confirm' && !tHelp.myAccepted) {
+                await helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' });
+            }
+            if (tMain.isOpen && tMain.screen === 'confirm' && !tMain.myAccepted) {
+                await main.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' });
             }
         }
 
@@ -220,6 +254,9 @@ export async function rubTeleport(
             const slot = s.sdk.getInventory().find(it => itemIds.includes(it.id))?.slot;
             if (slot === undefined) throw Error(`teleport item missing (${itemIds.join(',')})`);
             rubbed = true;
+            if (st?.dialog?.isOpen || st?.modalOpen) {
+                await s.direct({ type: 'closeModal', reason: 'SDK' });
+            }
             await s.direct({ type: 'useInventoryItem', slot, optionIndex: 4, reason: 'SDK' });
         }
         await waitTicks(s, 1);
@@ -236,6 +273,7 @@ export async function walkWaypointsSafe(
         for (let tries = 0; tries < 4 && !stop(); tries++) {
             const p = s.sdk.getState()?.player;
             if (p && p.level === 0 && chebDist({ x, z }, { x: p.worldX, z: p.worldZ }) <= tol + 1) break;
+            await drinkEnergyIfLow(s, 78);
             await eatSharkIfHurt(s, 4);
             await s.bot.walkTo(x, z, tol);
         }
