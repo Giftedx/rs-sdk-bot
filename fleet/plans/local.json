@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795200465484,
+ "at": 1795200735962,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -256,36 +256,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2652,3318"
-   ]
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "jiminua",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "antipoison",
-    "STOCK_TARGET": "22",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "2504",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "2304",
-    "AUTOPILOT_ORDER": "[18]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":22}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy antipoison(3) at Jiminua's in Karamja for the gang squad",
-   "role": "bank",
-   "template": "squad-antipoison-jiminua",
-   "autopilot": "local",
-   "resources": [
-    "shop:jiminua"
    ]
   },
   {
