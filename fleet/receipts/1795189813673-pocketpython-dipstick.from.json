@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795189813673-pocketpython-dipstick",
+ "account": "Pocketpython",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 109456,
+ "claim": "735bff1d-8429-4211-afef-e9445feb6d06",
+ "count": 0,
+ "ok": false,
+ "at": 1795191708115,
+ "detail": "trade claimed"
+}
