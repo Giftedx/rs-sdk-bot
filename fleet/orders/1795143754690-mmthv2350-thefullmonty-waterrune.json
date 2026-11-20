@@ -1,0 +1,22 @@
+{
+ "id": "1795143754690-mmthv2350-thefullmonty-waterrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmthv2350",
+ "to": "TheFullMonty",
+ "item": "Water rune",
+ "count": 73,
+ "start": 1795143754690,
+ "end": 1795146154690,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

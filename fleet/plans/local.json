@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795143293908,
+ "at": 1795143765669,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -333,6 +333,27 @@
    "autopilot": "local",
    "resources": [
     "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "WellHung",
+   "script": "scripts/generated/thieving60.ts",
+   "args": [],
+   "env": {
+    "TARGET": "55",
+    "CAP": "2500",
+    "CLEAN_FOOD": "1",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Thieving\":55}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Thieving to 55 for a knight spot",
+   "role": "thieving",
+   "template": "thieving55",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
    ]
   }
  ],
