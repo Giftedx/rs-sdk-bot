@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795196356092-mightyrod-pocketpool-704384e84f5fd3b1",
  "account": "PocketPool",
  "partner": "Mightyrod",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 1,
  "claim": "21d454e1-eaf5-409a-b51f-b2745b5ca898",
- "count": 0,
- "ok": false,
- "at": 1795196469143,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795196482189,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795196479856
+ },
+ "logout": {
+  "attemptId": "1795196469164-0000027864-0000000001",
+  "at": 1795196482146,
+  "sha256": "fccd92b3a3b51790c294d1a43712bea8258de98ef434994001140902334afa52"
+ },
+ "screen": true
 }
