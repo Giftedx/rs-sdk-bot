@@ -1,0 +1,29 @@
+{
+ "id": "1795194652152-mightyrod-weequickie-99206483116db2c2",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "WeeQuickie",
+ "item": "Cannonball",
+ "count": 900,
+ "start": 1795194652152,
+ "end": 1795195852152,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Rune arrow",
+   "count": 95
+  }
+ ],
+ "takerWaits": true
+}
