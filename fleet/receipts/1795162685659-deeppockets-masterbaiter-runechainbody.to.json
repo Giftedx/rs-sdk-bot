@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795162685659-deeppockets-masterbaiter-runechainbody",
+ "account": "Masterbaiter",
+ "partner": "Deeppockets",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "2edff69b-dd4f-492b-ab8b-b44cb3a9d655",
+ "count": 0,
+ "ok": false,
+ "at": 1795162785349,
+ "detail": "trade claimed"
+}
