@@ -413,8 +413,8 @@ export async function receiveSupplyKit(
         }
         const tr = await s.bot.trade(peerRe, {
             accept: offerSatisfied,
-            requestTimeout: 10_000,
-            timeout: 45_000,
+            requestTimeout: opts.timeoutTicks ? 4_000 : 10_000,
+            timeout: opts.timeoutTicks ? 6_000 : 45_000,
             retryOnBusy: true,
         });
         if (tr.success) {
@@ -1523,9 +1523,9 @@ export async function runMeleePvpSpecialist(
     }
 
     if (!hasAtLeastKit(s.sdk.getInventory(), keepKit)) {
-        const tankRes = opts.tankNames.map(exactNameRe);
+        const supRe = exactNameRe(opts.supplierName);
         const keepPartner = (s.sdk.getState()?.nearbyPlayers ?? []).find(
-            (np: any) => tankRes.some(re => re.test(np.name ?? '')) && (np.z ?? np.worldZ ?? 0) >= 3900 && d8({ x: np.x ?? np.worldX ?? 0, z: np.z ?? np.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 4,
+            (np: any) => supRe.test(np.name ?? '') && (np.z ?? np.worldZ ?? 0) >= 3900 && d8({ x: np.x ?? np.worldX ?? 0, z: np.z ?? np.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 4,
         );
         if (keepPartner?.name) {
             await receiveSupplyKit(s, keepPartner.name, keepKit, opts.stop, { skipWalk: true, timeoutTicks: 40 });
