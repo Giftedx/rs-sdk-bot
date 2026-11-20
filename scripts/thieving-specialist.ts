@@ -14,10 +14,16 @@ import {
     rubTeleport,
     walkWaypointsSafe,
     sailBrimhavenToArdougne,
-    eatPineapplePizza,
+    eatAnyFood,
+    isLiveSupplyVariant,
+    itemQty,
     chebDist,
+    CWARS_TO_ARDY_MARKET_WAYPOINTS,
     OBJ_COINS,
+    OBJ_CHOCOLATE_CAKE,
     OBJ_GLORY_4,
+    OBJ_DUELING_8,
+    RING_OF_DUELING_IDS,
     OBJ_SUPER_ENERGY_4,
     OBJ_PINEAPPLE_PIZZA,
 } from './gathering-specialist-lib';
@@ -26,12 +32,19 @@ import type { Session } from '../packages/core/src/inprocess';
 export const THIEVING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
 
 export const THIEVING_PIZZAS = 25;
+export const THIEVING_CAKES = 26;
 
 export const THIEVING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_GLORY_4]: 1,
     [OBJ_COINS]: 200,
     [OBJ_SUPER_ENERGY_4]: 1,
     [OBJ_PINEAPPLE_PIZZA]: THIEVING_PIZZAS,
+};
+
+// Live-stockable variant: 0 Glory, 0 Super energy, 0 Pineapple pizza (local Ring of dueling(8) + 26 Chocolate cakes).
+export const THIEVING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>> = {
+    [OBJ_DUELING_8]: 1,
+    [OBJ_CHOCOLATE_CAKE]: THIEVING_CAKES,
 };
 
 export interface PickpocketTier {
@@ -93,34 +106,46 @@ if (import.meta.main) {
     const latestMark = (msgs: readonly { observationId?: number; tick: number }[], fallback: number) =>
         msgs.reduce((max, m) => Math.max(max, msgMark(m)), fallback);
 
+    const supplies = isLiveSupplyVariant() ? THIEVING_SPECIALIST_LIVE_SUPPLIES : THIEVING_SPECIALIST_SUPPLIES;
     let readyForTrade = false;
     const arm = startHelperTradeArm(helper, main.name, isStopped, () => readyForTrade);
     try {
         const tutTicks = await skipTutorialFast(main, isStopped);
         await dropTutorialJunk(main, isStopped, 18);
         readyForTrade = true;
-        const tradeTicks = await receiveTradeFast(main, helper, THIEVING_SPECIALIST_SUPPLIES, isStopped, arm);
+        const tradeTicks = await receiveTradeFast(main, helper, supplies, isStopped, arm);
         helperDone = settleHelper(helper)
             .then(() => { helperSettled = true; })
             .catch(err => {
                 console.log(`WARN helper settle: ${String(err)}`);
             });
 
-        // Travel via Karamja Glory -> Brimhaven -> Ardougne dock -> East Ardougne market.
-        await rubTeleport(
-            main,
-            THIEVING_GLORY_IDS,
-            2,
-            p => p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
-            isStopped,
-        );
-        await walkWaypointsSafe(
-            main,
-            [[2774, 3228, 3]],
-            isStopped,
-        );
-        await sailBrimhavenToArdougne(main, isStopped);
-        await walkWaypointsSafe(main, [[2621, 3293, 2]], isStopped);
+        if (THIEVING_GLORY_IDS.some(id => itemQty(main, id) > 0)) {
+            // Travel via Karamja Glory -> Brimhaven -> Ardougne dock -> East Ardougne market.
+            await rubTeleport(
+                main,
+                THIEVING_GLORY_IDS,
+                2,
+                p => p.worldX >= 2900 && p.worldX <= 2960 && p.worldZ >= 3140 && p.worldZ <= 3200,
+                isStopped,
+            );
+            await walkWaypointsSafe(
+                main,
+                [[2774, 3228, 3]],
+                isStopped,
+            );
+            await sailBrimhavenToArdougne(main, isStopped);
+            await walkWaypointsSafe(main, [[2621, 3293, 2]], isStopped);
+        } else {
+            await rubTeleport(
+                main,
+                RING_OF_DUELING_IDS,
+                /castle wars/i,
+                p => p.level === 0 && p.worldX >= 2430 && p.worldX <= 2455 && p.worldZ >= 3075 && p.worldZ <= 3105,
+                isStopped,
+            );
+            await walkWaypointsSafe(main, CWARS_TO_ARDY_MARKET_WAYPOINTS, isStopped);
+        }
 
         const travelTicks = elapsedNow();
         let lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
@@ -147,7 +172,7 @@ if (import.meta.main) {
             if (newMsgs.some(m => /you've been stunned/i.test(m.text))) {
                 stuns++;
                 if (st.player.hp <= tier.stunDamage) {
-                    await eatPineapplePizza(main);
+                    await eatAnyFood(main);
                 }
                 totalTicks += Math.max(1, main.tick() - sessStart) + 1;
                 relogs++;
@@ -168,7 +193,7 @@ if (import.meta.main) {
 
             // Safety guard: never attempt a pickpocket while HP <= stunDamage. Wait a tick after eating so heal lands cleanly.
             if (st.player.hp <= tier.stunDamage) {
-                if (await eatPineapplePizza(main)) {
+                if (await eatAnyFood(main)) {
                     await waitTicks(main, 1);
                     continue;
                 }

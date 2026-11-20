@@ -20,18 +20,18 @@ export interface FletchArrowTier {
     readonly supplyTips: number;
 }
 
-// 240 total actions across 7 stackable slots (arrows-only ladder, 25x curve).
+// Exact 240 actions across 7 stackable slots (arrows-only ladder, 25x curve, 0 spare buffer).
 export const FLETCHING_TIERS: readonly FletchArrowTier[] = [
-    { name: 'bronze', tipId: 39, reqLevel: 1, xpPerAction: 487.5, supplyTips: 75 },
-    { name: 'iron', tipId: 40, reqLevel: 15, xpPerAction: 937.5, supplyTips: 105 },
-    { name: 'steel', tipId: 41, reqLevel: 30, xpPerAction: 1875, supplyTips: 150 },
-    { name: 'mithril', tipId: 42, reqLevel: 45, xpPerAction: 2812.5, supplyTips: 240 },
-    { name: 'adamant', tipId: 43, reqLevel: 60, xpPerAction: 3750, supplyTips: 510 },
-    { name: 'rune', tipId: 44, reqLevel: 75, xpPerAction: 4687.5, supplyTips: 2640 },
+    { name: 'bronze', tipId: 39, reqLevel: 1, xpPerAction: 487.5, supplyTips: 60 },
+    { name: 'iron', tipId: 40, reqLevel: 15, xpPerAction: 937.5, supplyTips: 90 },
+    { name: 'steel', tipId: 41, reqLevel: 30, xpPerAction: 1875, supplyTips: 135 },
+    { name: 'mithril', tipId: 42, reqLevel: 45, xpPerAction: 2812.5, supplyTips: 225 },
+    { name: 'adamant', tipId: 43, reqLevel: 60, xpPerAction: 3750, supplyTips: 495 },
+    { name: 'rune', tipId: 44, reqLevel: 75, xpPerAction: 4687.5, supplyTips: 2595 },
 ];
 
 export const FLETCHING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
-    [OBJ_HEADLESS_ARROW]: 3720,
+    [OBJ_HEADLESS_ARROW]: 3600,
     ...Object.fromEntries(FLETCHING_TIERS.map(t => [t.tipId, t.supplyTips])),
 };
 

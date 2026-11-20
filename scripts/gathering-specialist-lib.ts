@@ -19,12 +19,48 @@ export const OBJ_KNIFE = 946;
 export const OBJ_LOGS = 1511;
 export const OBJ_SHARK = 385;
 export const OBJ_GLORY_4 = 1712;
+export const OBJ_DUELING_8 = 2552;
+export const RING_OF_DUELING_IDS = [2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566] as const;
 export const OBJ_GAMES_8 = 3853;
 export const OBJ_SUPER_ENERGY_4 = 3016;
 export const ENERGY_POTION_IDS = [3016, 3018, 3020, 3022] as const;
 export const OBJ_PINEAPPLE_PIZZA = 2301;
 export const OBJ_HALF_PINEAPPLE_PIZZA = 2303;
+export const OBJ_CAKE = 1891;
+export const OBJ_CAKE_2_3 = 1893;
+export const OBJ_CAKE_SLICE = 1895;
+export const OBJ_CHOCOLATE_CAKE = 1897;
+export const OBJ_CHOCOLATE_CAKE_2_3 = 1899;
+export const OBJ_CHOCOLATE_SLICE = 1901;
+export const OBJ_BREAD = 2309;
 const MULTI2_OPT1_ID = 2461;
+
+export const CWARS_TO_ARDY_ZOO_WAYPOINTS: readonly [number, number, number][] = [
+    [2451, 3151, 3],
+    [2463, 3178, 3],
+    [2478, 3190, 2],
+    [2476, 3197, 3],
+    [2486, 3214, 3],
+    [2506, 3233, 4],
+    [2555, 3234, 3],
+    [2603, 3234, 1],
+];
+
+export const CWARS_TO_ARDY_MARKET_WAYPOINTS: readonly [number, number, number][] = [
+    [2451, 3151, 3],
+    [2463, 3178, 3],
+    [2478, 3190, 2],
+    [2476, 3197, 3],
+    [2486, 3214, 3],
+    [2506, 3233, 4],
+    [2598, 3235, 3],
+    [2621, 3293, 2],
+];
+
+export const isLiveSupplyVariant = (
+    env: Record<string, string | undefined> = process.env,
+    argv: readonly string[] = process.argv,
+): boolean => env.LIVE === '1' || argv.includes('--live');
 
 export const chebDist = (a: { x: number; z: number }, b: { x: number; z: number }): number =>
     Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
@@ -79,6 +115,50 @@ export async function eatPineapplePizza(s: Session): Promise<boolean> {
     if (slot === undefined) return false;
     await s.direct({ type: 'useInventoryItem', slot, optionIndex: 1, reason: 'SDK' });
     return true;
+}
+
+const HEALING_FOOD_IDS = [
+    OBJ_HALF_PINEAPPLE_PIZZA,
+    OBJ_PINEAPPLE_PIZZA,
+    OBJ_CHOCOLATE_SLICE,
+    OBJ_CHOCOLATE_CAKE_2_3,
+    OBJ_CHOCOLATE_CAKE,
+    OBJ_CAKE_SLICE,
+    OBJ_CAKE_2_3,
+    OBJ_CAKE,
+    OBJ_BREAD,
+    OBJ_SHARK,
+] as const;
+
+const FOOD_BITES_BY_ID: Readonly<Record<number, number>> = {
+    [OBJ_HALF_PINEAPPLE_PIZZA]: 1,
+    [OBJ_PINEAPPLE_PIZZA]: 2,
+    [OBJ_CHOCOLATE_SLICE]: 1,
+    [OBJ_CHOCOLATE_CAKE_2_3]: 2,
+    [OBJ_CHOCOLATE_CAKE]: 3,
+    [OBJ_CAKE_SLICE]: 1,
+    [OBJ_CAKE_2_3]: 2,
+    [OBJ_CAKE]: 3,
+    [OBJ_BREAD]: 1,
+    [OBJ_SHARK]: 1,
+};
+
+export const foodBitesCount = (s: Session): number =>
+    s.sdk.getInventory().reduce((sum, item) => sum + (FOOD_BITES_BY_ID[item.id] ?? 0) * item.count, 0);
+
+export const hasAnyFood = (s: Session): boolean =>
+    HEALING_FOOD_IDS.some(id => slotOfId(s, id) !== undefined);
+
+/** Eat partial/whole healing food (pizza, cake slices, bread, or shark), returning true if an eat packet was sent. */
+export async function eatAnyFood(s: Session): Promise<boolean> {
+    for (const id of HEALING_FOOD_IDS) {
+        const slot = slotOfId(s, id);
+        if (slot !== undefined) {
+            await s.direct({ type: 'useInventoryItem', slot, optionIndex: 1, reason: 'SDK' });
+            return true;
+        }
+    }
+    return false;
 }
 
 /** Skip Tutorial Island in 2 ticks by chaining dialog continue + multi2:com_1 ("Yes please.") on tick 2. */
@@ -306,7 +386,7 @@ export async function receiveTradeFast(
 export async function rubTeleport(
     s: Session,
     itemIds: readonly number[],
-    choiceIndex: number,
+    choice: number | RegExp,
     inDest: (p: { worldX: number; worldZ: number; level: number }) => boolean,
     stop: () => boolean,
 ): Promise<void> {
@@ -318,11 +398,10 @@ export async function rubTeleport(
         if (st?.player && inDest(st.player)) return;
         const dlg = s.sdk.getDialog();
         if (dlg?.isOpen && !dlg.isWaiting) {
-            if (dlg.options.length >= choiceIndex && dlg.options[choiceIndex - 1]) {
-                await s.direct({ type: 'clickDialogOption', optionIndex: choiceIndex, reason: 'SDK' });
-            } else {
-                await s.direct({ type: 'clickDialogOption', optionIndex: 0, reason: 'SDK' });
-            }
+            const matched = choice instanceof RegExp
+                ? dlg.options.find(o => choice.test(o.text))?.index
+                : (dlg.options.length >= choice && dlg.options[choice - 1] ? choice : undefined);
+            await s.direct({ type: 'clickDialogOption', optionIndex: matched ?? 0, reason: 'SDK' });
         } else if (!rubbed || i % 6 === 0) {
             const slot = s.sdk.getInventory().find(it => itemIds.includes(it.id))?.slot;
             if (slot === undefined) throw Error(`teleport item missing (${itemIds.join(',')})`);
@@ -405,7 +484,7 @@ export async function walkWaypointsSafe(
     }
 }
 
-export async function sailBrimhavenToArdougne(s: Session, stop: () => boolean): Promise<void> {
+export const sailBrimhavenToArdougne = async (s: Session, stop: () => boolean): Promise<void> => {
     const ardyDeck = { x: 2683, z: 3268 };
     const landed = () => {
         const p = s.sdk.getState()?.player;
@@ -428,7 +507,7 @@ export async function sailBrimhavenToArdougne(s: Session, stop: () => boolean): 
             await waitTicks(s, 1);
         }
     }
-    if (!landed()) throw Error('customs officer sailing failed');
+    if (!landed()) throw Error('Brimhaven->Ardougne sailing failed');
 
     for (let i = 0; i < 6 && !stop(); i++) {
         if (s.sdk.getState()?.player?.level === 0) return;
@@ -446,8 +525,8 @@ export async function sailBrimhavenToArdougne(s: Session, stop: () => boolean): 
         await s.bot.interactLoc(plank, 'Cross');
         await waitUntil(s, st => st?.player?.level === 0, { timeoutTicks: 10 });
     }
-    if (s.sdk.getState()?.player?.level !== 0) throw Error('Ardougne gangplank failed');
-}
+    if (s.sdk.getState()?.player?.level !== 0) throw Error('Brimhaven->Ardougne gangplank failed');
+};
 
 /** Name of the external supplier account (live or rehearsal), or undefined when the helper runs in this process. */
 export function externalSupplierName(env: Record<string, string | undefined> = process.env): string | undefined {

@@ -5,8 +5,8 @@ import { xpForLevel } from '../packages/planner/src/curve';
 import { intentForEntry } from '../packages/planner/src/progression-catalog';
 import { planFletchingActionCounts, pickNextFletchTier, FLETCHING_SPECIALIST_SUPPLIES, OBJ_HEADLESS_ARROW } from './fletching-specialist';
 import { FISHING_SPECIALIST_SUPPLIES } from './fishing-specialist';
-import { MINING_SPECIALIST_SUPPLIES, remainingIronOresTo99, IRON_ORE_XP_25X } from './mining-specialist';
-import { THIEVING_SPECIALIST_SUPPLIES, THIEVING_PIZZAS, selectPickpocketTier } from './thieving-specialist';
+import { MINING_SPECIALIST_SUPPLIES, MINING_SPECIALIST_LIVE_SUPPLIES, remainingIronOresTo99, IRON_ORE_XP_25X } from './mining-specialist';
+import { THIEVING_SPECIALIST_SUPPLIES, THIEVING_SPECIALIST_LIVE_SUPPLIES, THIEVING_PIZZAS, selectPickpocketTier } from './thieving-specialist';
 import { OBJ_GAMES_8, OBJ_PINEAPPLE_PIZZA, OBJ_SUPER_ENERGY_4 } from './gathering-specialist-lib';
 import { expandSupplyInventory, SPECIALIST_GATHERING_CASES } from './measure/specialist-gathering-cases';
 import { benchCases, benchCoverage } from './measure/aio-bench-cases';
@@ -37,7 +37,15 @@ describe('gathering specialists supply & progression plans', () => {
             rune: 173,
         });
         expect(expandSupplyInventory(FLETCHING_SPECIALIST_SUPPLIES).length).toBe(7);
-        expect(FLETCHING_SPECIALIST_SUPPLIES[OBJ_HEADLESS_ARROW]).toBeGreaterThanOrEqual(240 * 15);
+        expect(FLETCHING_SPECIALIST_SUPPLIES).toEqual({
+            [OBJ_HEADLESS_ARROW]: 3600,
+            39: 60,
+            40: 90,
+            41: 135,
+            42: 225,
+            43: 495,
+            44: 2595,
+        });
     });
 
     test('fletching tier picker obeys level unlocks and tip stock', () => {
@@ -113,7 +121,9 @@ describe('bench registration and catalog integration', () => {
             fletching: FLETCHING_SPECIALIST_SUPPLIES,
             fishing: FISHING_SPECIALIST_SUPPLIES,
             mining: MINING_SPECIALIST_SUPPLIES,
+            'mining-live': MINING_SPECIALIST_LIVE_SUPPLIES,
             thieving: THIEVING_SPECIALIST_SUPPLIES,
+            'thieving-live': THIEVING_SPECIALIST_LIVE_SUPPLIES,
         } as const;
         for (const [skill, supplies] of Object.entries(suppliesBySkill) as [keyof typeof suppliesBySkill, Record<number, number>][]) {
             const parsed = parseKitOption(['holder', 'spec', `--kit=${skill}`]);
