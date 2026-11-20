@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795152380783,
+ "at": 1795152822095,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -337,32 +337,21 @@
   },
   {
    "account": "Spitroaster",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "nurmof",
-    "1200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=2 EXPECTED_OWNED=1 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=spitroaster-kit1-385-1to3 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "ITEMS": "^rune pickaxe$",
-    "STOCK_TARGET": "1",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "BANK_AT": "0",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "40000",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "39800"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy rune pickaxe from Nurmof in the Dwarven Mine",
-   "role": "mining",
-   "template": "tool-pickaxe-rune",
+   "goal": "buy 2 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "supply",
+   "template": "kit-buy:aio-blood-chest",
    "autopilot": "local",
-   "resources": [
-    "shop:nurmof"
-   ]
+   "resources": []
   }
  ],
  "army": [
