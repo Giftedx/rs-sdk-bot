@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795159184159-knightrider-shaftsinker-87c4a6d0ad9d4dbd",
  "account": "Shaftsinker",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Cake",
  "requested": 27,
  "claim": "79a2e6cb-b02c-4a12-b4e9-404c43301b94",
- "count": 0,
- "ok": false,
- "at": 1795159244704,
- "detail": "trade claimed"
+ "count": 27,
+ "ok": true,
+ "at": 1795159314655,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 27
+ },
+ "bank": {
+  "count": 27,
+  "at": 1795159313909
+ },
+ "logout": {
+  "attemptId": "1795159244713-0000027612-0000000001",
+  "at": 1795159314642,
+  "sha256": "6435544a893d7b180b539b8908fc5f66617f17e55f876d81852cf47f2777bba8"
+ },
+ "screen": true
 }
