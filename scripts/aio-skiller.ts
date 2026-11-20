@@ -93,6 +93,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'fishing',method:'village',script:'scripts/microbot-village-fishing.ts',description:'Barbarian Village fly/bait fishing with drop/cook/bank modes'},
  {skill:'fishing',method:'staged',script:'scripts/microbot-b-fishing.ts',description:'Staged native fishing across all 10 FISH_PROFILES methods'},
  {skill:'fishing',method:'fly30',script:'scripts/generated/fishing30.ts',description:'Fresh-account fly fishing to level 30'},
+ {skill:'fishing',method:'specialist',script:'scripts/fishing-specialist.ts',description:'Fresh-clock specialist Fishing 1 to 99 with tutorial skip, helper trade, and 3-tick net/bait/fly fishing'},
  // Cooking
  {skill:'cooking',method:'food',script:'scripts/cook-food.ts',description:'Cook banked raw fish (lobster/shark/trout/salmon) at Catherby range'},
  {skill:'cooking',method:'stock',script:'scripts/cook-stock.ts',description:'Batch cook banked raw stock with burn/XP reconciliation'},
@@ -113,6 +114,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'fletching',method:'arrows',script:'scripts/fletch-arrows.ts',description:'Fletch shafts, headless arrows, and tipped arrows (bronze..rune)'},
  {skill:'fletching',method:'shafts',script:'scripts/fletch-arrows.ts',defaultEnv:{MODE:'shafts'},description:'Fletch arrow shafts from banked logs'},
  {skill:'fletching',method:'worker',script:'scripts/fletch-worker.ts',description:'Fletch unstrung/strung shortbows and longbows from banked logs'},
+ {skill:'fletching',method:'specialist',script:'scripts/fletching-specialist.ts',description:'Fresh-clock specialist Fletching 1 to 99 with tutorial skip, helper trade, and 5-action/tick arrow fletching'},
  // Mining
  {skill:'mining',method:'ore',script:'scripts/gather-ore.ts',description:'Mine and bank copper/tin/iron/coal/gold/mithril/adamant'},
  {skill:'mining',method:'essence',script:'scripts/gather-essence.ts',description:'Mine and bank Rune essence at Varrock/Aubury'},
@@ -121,6 +123,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'mining',method:'progressive',script:'scripts/microbot-mining-progressive.ts',description:'Progressive level-unlocked mining'},
  {skill:'mining',method:'loot',script:'scripts/microbot-b-mining-loot.ts',description:'Mine and bank with gem/loot retention'},
  {skill:'mining',method:'lava-maze',script:'scripts/lava-maze-escorted-ore.ts',description:'Wilderness Lava Maze runite ore mining'},
+ {skill:'mining',method:'specialist',script:'scripts/mining-specialist.ts',description:'Fresh-clock specialist Mining 1 to 99 via Doric Quest and 3-tick Ardougne Zoo iron rotation'},
  // Smithing
  {skill:'smithing',method:'smelt',script:'scripts/smelt-bars.ts',description:'Smelt bronze/iron/steel/gold/mithril/adamant/runite bars at furnace'},
  {skill:'smithing',method:'anvil',script:'scripts/smelt-bars.ts',defaultEnv:{ORDER_ACTION:'smith'},description:'Smith bars on the anvil: PRODUCT_ID, MAX_MAKE and BAR_RESERVE name the order'},
@@ -176,6 +179,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'thieving',method:'stalls',script:'scripts/microbot-c-stalls.ts',description:'Steal from Baker/Silk/Fur/Silver/Spice/Gem stalls'},
  {skill:'thieving',method:'blood-chest',script:'scripts/blood-chest.ts',description:'Chaos Druid Tower blood rune chest thieving'},
  {skill:'thieving',method:'nature-chest',script:'scripts/microbot-b-nature-chest.ts',description:'East Ardougne nature rune chest thieving'},
+ {skill:'thieving',method:'specialist',script:'scripts/thieving-specialist.ts',description:'Fresh-clock specialist Thieving 1 to 99 prototype using relog-on-stun at East Ardougne'},
  // Foraging / Gathering / Care
  {skill:'foraging',method:'flax',script:'scripts/gather-flax.ts',description:'Pick and bank flax at Seers Village'},
  {skill:'foraging',method:'wool',script:'scripts/collect-wool.ts',description:'Shear sheep and spin wool at Lumbridge'},
