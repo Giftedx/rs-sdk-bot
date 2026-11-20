@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795136114014-bigpackage-bigchopper-45d7c011056aaf89",
+ "account": "Bigchopper",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Staff of fire",
+ "requested": 1,
+ "claim": "53bfed94-085e-4bdd-8c0a-cc7f05586305",
+ "count": 1,
+ "ok": true,
+ "at": 1795136154837,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Logs",
+   "requested": 6,
+   "count": 6,
+   "inventory": {
+    "before": 0,
+    "after": 6
+   },
+   "bank": {
+    "count": 6,
+    "at": 1795136154118
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795136153734
+ },
+ "logout": {
+  "attemptId": "1795136137256-0000017232-0000000001",
+  "at": 1795136154826,
+  "sha256": "2fdb039f4931a61977ac2c84913e2e7f10eae379d1911235342c3a9a89a92f73"
+ },
+ "screen": true
+}
