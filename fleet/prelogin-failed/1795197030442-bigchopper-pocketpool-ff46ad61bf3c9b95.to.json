@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795197030442-bigchopper-pocketpool-ff46ad61bf3c9b95",
+ "role": "to",
+ "account": "PocketPool",
+ "partner": "Bigchopper",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795197194309,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] 441e0d5e70a69b322d3e71f2e023a87b7b5ecaa2 -> fleet-trade-claim/pocketpool (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}

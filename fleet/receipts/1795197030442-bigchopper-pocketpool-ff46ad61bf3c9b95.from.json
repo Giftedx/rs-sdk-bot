@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795197030442-bigchopper-pocketpool-ff46ad61bf3c9b95",
+ "account": "Bigchopper",
+ "partner": "PocketPool",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "9deac350-8341-417b-bec5-a82adb6f415f",
+ "count": 0,
+ "ok": false,
+ "at": 1795197196299,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 2,
+  "at": 1795197179346
+ },
+ "logout": {
+  "attemptId": "1795197171294-0000013248-0000000001",
+  "at": 1795197196107,
+  "sha256": "fe26e8b1778d296187358b78c266bc269cb6ed3ccf7e03f4f962d595bc97b9b2"
+ },
+ "screen": false
+}
