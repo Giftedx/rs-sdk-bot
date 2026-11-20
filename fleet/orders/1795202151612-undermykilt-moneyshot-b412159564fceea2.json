@@ -1,0 +1,32 @@
+{
+ "id": "1795202151612-undermykilt-moneyshot-b412159564fceea2",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "UnderMyKilt",
+ "to": "Moneyshot",
+ "item": "Coins",
+ "count": 130000,
+ "start": 1795202151612,
+ "end": 1795203351612,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Dragonhide chaps",
+   "count": 1
+  },
+  {
+   "item": "Dragonhide body",
+   "count": 2
+  }
+ ]
+}
