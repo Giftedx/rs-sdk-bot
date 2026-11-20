@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795202520140-mightyrod-deeppockets-1b86d37e28cd6ea9",
+ "account": "Mightyrod",
+ "partner": "Deeppockets",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 25,
+ "claim": "c52e967e-578c-4fa0-a769-35b6723bbe5d",
+ "count": 0,
+ "ok": false,
+ "at": 1795202598901,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Law rune",
+   "requested": 10,
+   "count": 0
+  }
+ ]
+}

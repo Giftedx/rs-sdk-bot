@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795202520135-mineyourbiz-deeppockets-4c49d95f45a4e3fb",
+ "account": "Deeppockets",
+ "partner": "MineYourBiz",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune platelegs",
+ "requested": 1,
+ "claim": "04ab7fdf-6aa7-4a3d-98c3-3ef0f449da95",
+ "count": 0,
+ "ok": false,
+ "at": 1795202602762,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Earth rune",
+   "requested": 30,
+   "count": 0
+  },
+  {
+   "item": "Water rune",
+   "requested": 60,
+   "count": 0
+  }
+ ]
+}

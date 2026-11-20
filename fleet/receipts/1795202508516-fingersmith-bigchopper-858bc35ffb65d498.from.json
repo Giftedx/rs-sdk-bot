@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795202508516-fingersmith-bigchopper-858bc35ffb65d498",
  "account": "Fingersmith",
  "partner": "Bigchopper",
@@ -12,13 +12,27 @@
  "claim": "b1e0be72-b162-4901-969d-89215105d3e3",
  "count": 0,
  "ok": false,
- "at": 1795202590382,
- "detail": "trade claimed",
+ "at": 1795202601060,
+ "detail": "Error: partner failed: no trade",
  "lines": [
   {
    "item": "Cake",
    "requested": 13,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 13,
+    "at": 1795202599853
+   }
   }
- ]
+ ],
+ "bank": {
+  "count": 1,
+  "at": 1795202598760
+ },
+ "logout": {
+  "attemptId": "1795202590617-0000005088-0000000001",
+  "at": 1795202601052,
+  "sha256": "49721902081086d5d439c957059c751d8dd8459530fc0502c919e370bd7e5e36"
+ },
+ "screen": false
 }
