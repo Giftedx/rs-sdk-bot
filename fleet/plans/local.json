@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795208581394,
+ "at": 1795208781862,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -210,6 +210,36 @@
    "resources": []
   },
   {
+   "account": "BraveHardon",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "jiminua",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "antipoison",
+    "STOCK_TARGET": "45",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "2504",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "2304",
+    "AUTOPILOT_ORDER": "[41]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":45}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy antipoison(3) at Jiminua's in Karamja for the gang squad",
+   "role": "bank",
+   "template": "squad-antipoison-jiminua",
+   "autopilot": "local",
+   "resources": [
+    "shop:jiminua"
+   ]
+  },
+  {
    "account": "Bigchopper",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -241,52 +271,23 @@
   },
   {
    "account": "PickpockDick",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
-   "account": "BraveHardon",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "jiminua",
-    "1200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=861 QUANTITY=1 LIMIT_PRICE=60000 CASH_RESERVE=1000 ORDER_KEY=pickpockdick-kit27-861-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=pickpockdick-kit27-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=6 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=pickpockdick-kit27-385-0to6 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "ITEMS": "antipoison",
-    "STOCK_TARGET": "45",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "2504",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "2304",
-    "AUTOPILOT_ORDER": "[41]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":45}}"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy antipoison(3) at Jiminua's in Karamja for the gang squad",
-   "role": "bank",
-   "template": "squad-antipoison-jiminua",
+   "goal": "buy 1 Magic shortbow, 1 Law rune, 6 Shark on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on rune arrows",
+   "role": "supply",
+   "template": "kit-buy:army-hunt-black-dragons-rune",
    "autopilot": "local",
-   "resources": [
-    "shop:jiminua"
-   ]
+   "resources": []
   },
   {
    "account": "Swordswallow",
@@ -347,21 +348,44 @@
   },
   {
    "account": "Deeppockets",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1163 QUANTITY=1 LIMIT_PRICE=45000 CASH_RESERVE=1000 ORDER_KEY=deeppockets-kit3-1163-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1201 QUANTITY=1 LIMIT_PRICE=65000 CASH_RESERVE=1000 ORDER_KEY=deeppockets-kit3-1201-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "repeat": false,
+   "goal": "buy 1 Rune full helm, 1 Rune kiteshield on the Grand Exchange to wear rune armour",
+   "role": "supply",
+   "template": "kit-buy:army-armour-rune",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "ge:armour"
+   ]
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1215 QUANTITY=1 LIMIT_PRICE=50000 CASH_RESERVE=1000 ORDER_KEY=knightrider-kit3-1215-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1215\":1}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Dragon dagger on the Grand Exchange to fight with a dragon dagger",
+   "role": "supply",
+   "template": "kit-buy:army-weapon-dragon",
+   "autopilot": "local",
+   "resources": [
+    "ge:weapon"
    ]
   }
  ],
