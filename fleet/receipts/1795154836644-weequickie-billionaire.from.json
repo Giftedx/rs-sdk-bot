@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795154836644-weequickie-billionaire",
+ "account": "WeeQuickie",
+ "partner": "Billionaire",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 28060,
+ "claim": "d7143514-4dfb-4f41-899a-50e8aa68f292",
+ "count": 0,
+ "ok": false,
+ "at": 1795154922998,
+ "detail": "trade claimed"
+}

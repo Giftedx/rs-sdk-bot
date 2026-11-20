@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795154836644-woodpecker-bigchopper-runechainbody",
+ "account": "Bigchopper",
+ "partner": "Woodpecker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "f2c10ecb-10ae-490b-9fda-705fb58232e9",
+ "count": 0,
+ "ok": false,
+ "at": 1795154919349,
+ "detail": "trade claimed"
+}
