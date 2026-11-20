@@ -8,6 +8,7 @@ import { planTripOffThread } from '../packages/core/src/route-plan';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { goTo, sessionWalker, walkPath, walkRoute, withoutSpells } from '../packages/core/src/walk';
+import { DEFENCE_SPECIALIST_KIT, HP_SPECIALIST_KIT, STRENGTH_SPECIALIST_KIT } from './combat-quest-specialists';
 import { findLocBy, ITEM_IDS, loadItemCatalog, playerPos } from './fast-skills-lib';
 import { PRAYER_BONES_NEEDED, PRAYER_SUPPLY_BILL } from './prayer-specialist';
 import {
@@ -110,6 +111,9 @@ export const RUNECRAFT_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(RUNECR
 
 export const SPECIALIST_KITS = {
     attack: ATTACK_SPECIALIST_KIT,
+    hitpoints: HP_SPECIALIST_KIT,
+    strength: STRENGTH_SPECIALIST_KIT,
+    defence: DEFENCE_SPECIALIST_KIT,
     ranged: RANGED_SPECIALIST_KIT,
     'ranged-msb': RANGED_SPECIALIST_MSB_KIT,
     'ranged-live': RANGED_SPECIALIST_LIVE_KIT,
@@ -131,19 +135,21 @@ export function parseKitOption(
     args: readonly string[],
     defaultName?: SpecialistKitName,
 ): { name: SpecialistKitName; kit: readonly KitSpecItem[] } | null {
-    const raw = args.find(a => a.startsWith('--kit='))?.slice(6).trim().toLowerCase();
+    const rawInput = args.find(a => a.startsWith('--kit='))?.slice(6).trim().toLowerCase();
+    const raw = rawInput === 'hp' ? 'hitpoints' : rawInput;
     if (!raw) return defaultName ? { name: defaultName, kit: SPECIALIST_KITS[defaultName] } : null;
     if (!(raw in SPECIALIST_KITS)) {
-        throw Error(`specialist-supplier: unknown --kit=${raw}; expected ${Object.keys(SPECIALIST_KITS).join('|')}`);
+        throw Error(`specialist-supplier: unknown --kit=${rawInput}; expected ${Object.keys(SPECIALIST_KITS).join('|')}`);
     }
     const name = raw as SpecialistKitName;
     return { name, kit: SPECIALIST_KITS[name] };
 }
 
 export function parseKitArg(args: readonly string[], env: Record<string, string | undefined> = process.env): SpecialistKitName {
-    const raw = (args.find(a => a.startsWith('--kit='))?.slice(6) ?? env.SUPPLIER_KIT ?? 'attack').trim().toLowerCase();
+    const rawInput = (args.find(a => a.startsWith('--kit='))?.slice(6) ?? env.SUPPLIER_KIT ?? 'attack').trim().toLowerCase();
+    const raw = rawInput === 'hp' ? 'hitpoints' : rawInput;
     if (raw in SPECIALIST_KITS) return raw as SpecialistKitName;
-    throw Error(`unknown --kit: ${raw} (expected ${Object.keys(SPECIALIST_KITS).join('|')})`);
+    throw Error(`unknown --kit: ${rawInput} (expected ${Object.keys(SPECIALIST_KITS).join('|')})`);
 }
 
 export function resolveSupplierKit(kitName: SpecialistKitName): readonly KitSpecItem[] {
@@ -194,7 +200,8 @@ export interface SupplierKitPlan {
 }
 
 export function resolveSupplierKitPlan(kitName: string | undefined = process.env.SUPPLIER_KIT): SupplierKitPlan {
-    const raw = (kitName ?? 'attack').trim().toLowerCase() || 'attack';
+    const rawInput = (kitName ?? 'attack').trim().toLowerCase() || 'attack';
+    const raw = rawInput === 'hp' ? 'hitpoints' : rawInput;
     const rangedVariant = raw === 'ranged' || raw === 'ranged-knives' ? 'knives'
         : raw === 'ranged-msb' ? 'msb'
         : raw === 'ranged-live' ? 'live'
