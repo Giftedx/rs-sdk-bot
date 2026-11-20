@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795146046584-mmtha0205-mightyrod-firerune",
+ "account": "Mightyrod",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 1,
+ "claim": "da559cc5-719b-47db-9e20-c26471a54e41",
+ "count": 1,
+ "ok": true,
+ "at": 1795146322034,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795146321244
+ },
+ "logout": {
+  "attemptId": "1795146307231-0000011076-0000000001",
+  "at": 1795146322020,
+  "sha256": "78fca1f3401a94a67f10b626c0ae5dd4fe951751f82aa440279a2d0cf5ebcecb"
+ },
+ "screen": true
+}
