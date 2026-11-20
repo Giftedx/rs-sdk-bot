@@ -1,0 +1,49 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795164723960-weequickie-undermykilt-c4a373190af5037d",
+ "account": "WeeQuickie",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cannon base",
+ "requested": 1,
+ "claim": "f930e91b-b220-4e10-817a-ceca9f317135",
+ "count": 0,
+ "ok": false,
+ "at": 1795164734470,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Cannon stand",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Cannon barrels",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Ring of dueling(8)",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Dragon bones",
+   "requested": 5,
+   "count": 0
+  },
+  {
+   "item": "Ranarr weed",
+   "requested": 6,
+   "count": 0
+  },
+  {
+   "item": "Snape grass",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}
