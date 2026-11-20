@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795137924506-quickhandjob-bigchopper-eca2ed4efe193674",
  "account": "Quickhandjob",
  "partner": "Bigchopper",
@@ -10,15 +10,37 @@
  "item": "Air rune",
  "requested": 100,
  "claim": "b84a49e4-addf-42d0-8431-3d25bbd337b4",
- "count": 0,
- "ok": false,
- "at": 1795137945549,
- "detail": "trade claimed",
+ "count": 100,
+ "ok": true,
+ "at": 1795138339562,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Law rune",
    "requested": 5,
-   "count": 0
+   "count": 5,
+   "inventory": {
+    "before": 5,
+    "after": 0
+   },
+   "bank": {
+    "count": 5,
+    "at": 1795137992793
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 100,
+  "after": 0
+ },
+ "bank": {
+  "count": 100,
+  "at": 1795137992409
+ },
+ "logout": {
+  "attemptId": "1795137945558-0000017100-0000000001",
+  "at": 1795138339548,
+  "sha256": "a4ed892238fe53eb131fb262190ae448e7e759866c077257d80835617be7815b"
+ },
+ "screen": true
 }
