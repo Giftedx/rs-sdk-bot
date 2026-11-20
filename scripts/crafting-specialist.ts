@@ -411,21 +411,21 @@ export async function runCraftingExternal(
 }
 
 if (import.meta.main) {
- const cfg = parseSpecialistArgs(process.argv.slice(2), process.env, {
+ const rawArgs = process.argv.slice(2);
+ const variant = (rawArgs.find(a => a.startsWith('VARIANT='))?.slice(8) ?? process.env.VARIANT ?? 'default').trim() || 'default';
+ const batches = CRAFTING_VARIANTS[variant] ?? CRAFTING_BATCHES;
+ const cfg = parseSpecialistArgs(rawArgs, process.env, {
   cap: 230,
   target: 99,
-  defaultHelpers: CRAFTING_BATCHES.length,
+  defaultHelpers: batches.length,
  });
- const variant = (cfg.kv.get('VARIANT') ?? cfg.env.VARIANT ?? 'default').trim();
  const externalSuppliers = parseExternalSuppliers(cfg.env);
  if (externalSuppliers.length > 0) {
   await withSingleSpecialist(cfg.account, spec =>
    runCraftingExternal(spec, externalSuppliers, { cap: cfg.cap, target: cfg.target, variant }),
   );
  } else {
-  const batches = CRAFTING_VARIANTS[variant] ?? CRAFTING_BATCHES;
-  const helpers = cfg.kv.has('HELPERS') ? cfg.helpers : Array.from({ length: batches.length }, (_, i) => `h${i + 1}`);
-  await withSpecialistFleet(cfg.account, helpers, (spec, h) =>
+  await withSpecialistFleet(cfg.account, cfg.helpers, (spec, h) =>
    runCraftingSpecialist(spec, h, { cap: cfg.cap, target: cfg.target, variant }),
   );
  }
