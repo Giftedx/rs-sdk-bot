@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795162685659-deeppockets-masterbaiter-runechainbody",
  "account": "Deeppockets",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "2cdcc607-d67d-4f90-8439-5d0b3eae5b43",
- "count": 0,
- "ok": false,
- "at": 1795162768466,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795162800521,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795162777769
+ },
+ "logout": {
+  "attemptId": "1795162768488-0000028108-0000000001",
+  "at": 1795162800506,
+  "sha256": "d56b2834a94b9c79cdc805579d8453cee7302f9cfc4033735686f005d0334090"
+ },
+ "screen": true
 }
