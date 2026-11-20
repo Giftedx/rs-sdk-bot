@@ -151,7 +151,7 @@ export async function runRotationMining(d:MiningDriver,p:MiningProfile,o:Rotatio
  if(!rocks.length)throw Error('no '+p.name+' rocks at this site in the map files');
  const key=(t:Tile)=>`${t.x},${t.z}`;
  const equipment=JSON.stringify(initial.equipment.map(i=>({id:i.id,slot:i.slot})).sort((a,b)=>a.slot-b.slot));
- const state=()=>{const s=d.state();if(!s?.player)throw Error('mining session ended');if(d.stop())throw Error('mining stopped');if(d.tick()-start>=o.cap)throw Error('mining tick cap');if(s.player.isDead||s.player.lifeId!==me.lifeId||s.player.level!==me.level||hpOf(s)!==hpOf(initial))throw Error('mining health or life changed');if(JSON.stringify(s.equipment.map(i=>({id:i.id,slot:i.slot})).sort((a,b)=>a.slot-b.slot))!==equipment)throw Error('mining equipment changed');return s;};
+ const state=()=>{const s=d.state();if(!s?.player)throw Error('mining session ended');if(d.stop())throw Error('mining stopped');if(d.tick()-start>=o.cap)throw Error('mining tick cap');if(s.player.isDead||s.player.lifeId!==me.lifeId||s.player.level!==me.level||hpOf(s)<hpOf(initial))throw Error('mining health or life changed');if(JSON.stringify(s.equipment.map(i=>({id:i.id,slot:i.slot})).sort((a,b)=>a.slot-b.slot))!==equipment)throw Error('mining equipment changed');return s;};
  let respawn=respawnTicks(p.respawn,o.players??1);
  const depleted=new Map<string,number>(),seen=new Map<string,boolean>();
  let delay=-Infinity,made=0,sideGems=0,attempts=0,dropped=0,knifeCuts=0,preArms=0,fletches=0,progress=start,waitTicks=0;
