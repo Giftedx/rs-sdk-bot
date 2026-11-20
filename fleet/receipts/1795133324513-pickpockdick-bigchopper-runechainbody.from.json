@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795133324513-pickpockdick-bigchopper-runechainbody",
+ "account": "PickpockDick",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "14cb1e3f-4968-4681-b954-3635a6171078",
+ "count": 0,
+ "ok": false,
+ "at": 1795133400828,
+ "detail": "trade claimed"
+}
