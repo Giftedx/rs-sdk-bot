@@ -8,7 +8,15 @@ import type { Session } from '../packages/core/src/inprocess';
 import { planFletchingActionCounts, pickNextFletchTier, FLETCHING_SPECIALIST_SUPPLIES, OBJ_HEADLESS_ARROW } from './fletching-specialist';
 import { FISHING_SPECIALIST_SUPPLIES } from './fishing-specialist';
 import { MINING_SPECIALIST_SUPPLIES, MINING_SPECIALIST_LIVE_SUPPLIES, remainingIronOresTo99, IRON_ORE_XP_25X } from './mining-specialist';
-import { THIEVING_SPECIALIST_SUPPLIES, THIEVING_SPECIALIST_LIVE_SUPPLIES, THIEVING_PIZZAS, selectPickpocketTier } from './thieving-specialist';
+import {
+    isArdougneResumeState,
+    parseThievingCliArgs,
+    selectPickpocketTarget,
+    selectPickpocketTier,
+    THIEVING_SPECIALIST_SUPPLIES,
+    THIEVING_SPECIALIST_LIVE_SUPPLIES,
+    THIEVING_PIZZAS,
+} from './thieving-specialist';
 import {
     OBJ_GAMES_8,
     OBJ_PINEAPPLE_PIZZA,
@@ -110,6 +118,32 @@ describe('gathering specialists supply & progression plans', () => {
         expect(selectPickpocketTier(54).name).toBe('guard');
         expect(selectPickpocketTier(55).name).toBe('knight');
         expect(selectPickpocketTier(99).name).toBe('knight');
+
+        expect(isArdougneResumeState({ worldX: 2621, worldZ: 3293, level: 0 }, true)).toBe(true);
+        expect(isArdougneResumeState({ worldX: 3222, worldZ: 3218, level: 0 }, true)).toBe(false);
+        expect(isArdougneResumeState({ worldX: 2621, worldZ: 3293, level: 1 }, true)).toBe(false);
+        expect(isArdougneResumeState({ worldX: 2621, worldZ: 3293, level: 0 }, false)).toBe(false);
+        expect(parseThievingCliArgs(['HalfInch', 'RESUME=1', 'CAP=2200'], { LIVE: '1' })).toEqual({
+            account: 'HalfInch',
+            helperName: 'HalfInchb',
+            cap: 2200,
+            resume: true,
+        });
+
+        const warriorTier = selectPickpocketTier(25);
+        expect(selectPickpocketTarget([
+            { name: 'Warrior woman', distance: 2, x: 2624, z: 3297, reachable: false, optionsWithIndex: [{ text: 'Pickpocket', opIndex: 3 }] },
+            { name: 'Warrior woman', distance: 6, x: 2630, z: 3296, reachable: true, optionsWithIndex: [{ text: 'Pickpocket', opIndex: 3 }] },
+        ], warriorTier).target?.x).toBe(2630);
+    });
+
+    test('extra:thieving-specialist-resume recovers Ardougne food saves within 1,850 ticks', () => {
+        const resume = benchCases().find(x => x.key === 'extra:thieving-specialist-resume');
+        expect(resume).toBeDefined();
+        expect(resume!.presetConfig?.position).toEqual({ x: 2621, z: 3293, level: 0 });
+        expect(resume!.presetConfig?.inventory?.length).toBe(27);
+        expect(resume!.pass('LOGOUT logged-out\nRESULT ok level=99 totalTicks=1750')).toBe(true);
+        expect(resume!.pass('LOGOUT logged-out\nRESULT ok level=99 totalTicks=1860')).toBe(false);
     });
 });
 

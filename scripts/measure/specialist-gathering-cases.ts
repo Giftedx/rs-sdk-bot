@@ -103,4 +103,22 @@ export const SPECIALIST_GATHERING_EXTERNAL_CASES: BenchCase[] = [
     externalCase('mining', MINING_SPECIALIST_LIVE_SUPPLIES, /\bticks=(\d+)/, true),
     externalCase('thieving', THIEVING_SPECIALIST_SUPPLIES, /\btotalTicks=(\d+)/),
     externalCase('thieving', THIEVING_SPECIALIST_LIVE_SUPPLIES, /\btotalTicks=(\d+)/, true),
+    {
+        key: 'extra:thieving-specialist-resume',
+        script: 'scripts/thieving-specialist.ts',
+        preset: 'fresh_lumbridge',
+        presetConfig: {
+            position: { x: 2621, z: 3293, level: 0 },
+            skills: { Thieving: 12 },
+            inventory: Array.from({ length: 27 }, () => ({ id: 1897, count: 1 })),
+        },
+        scriptArgs: ['RESUME=1', 'LIVE=1', 'CAP=1850'],
+        pass: stdout => {
+            if (!specialistPass(stdout)) return false;
+            const m = /\btotalTicks=(\d+)/.exec(stdout);
+            return !!m && Number(m[1]) <= 1850;
+        },
+        timeoutMs: 600_000,
+        output: /\btotalTicks=(\d+)/,
+    },
 ];
