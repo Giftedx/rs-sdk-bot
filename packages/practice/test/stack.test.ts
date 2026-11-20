@@ -3,6 +3,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { practiceDir } from '../src/paths';
+import { ISOLATED_ENGINE_ENV } from '../src/rehearse';
 import { engineCommand, MARKERS, startStack, waitHttpReady, waitReady } from '../src/stack';
 
 test('quest proof carries private endpoints through stack, fresh account and real CLI without changing the parent', async () => {
@@ -118,4 +119,9 @@ test('waitHttpReady fails fast with exit code and log tail if process exits earl
     probe.stop(true);
     const proc = Bun.spawn(['bun', '-e', 'console.log("web transport aborted"); process.exit(4)'], { stdout: Bun.file(log), stderr: Bun.file(log) });
     await expect(waitHttpReady(proc, `http://127.0.0.1:${port}/crc`, log, 5000)).rejects.toThrow(/engine exited with code 4[\s\S]*web transport aborted/);
+});
+
+test('ISOLATED_ENGINE_ENV disables live reload and startup builds so practice trades are never interrupted', () => {
+    expect(ISOLATED_ENGINE_ENV.BUILD_LIVE_RELOAD).toBe('false');
+    expect(ISOLATED_ENGINE_ENV.BUILD_STARTUP).toBe('false');
 });

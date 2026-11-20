@@ -5,6 +5,7 @@ import {join,dirname} from 'node:path';
 import {buildOwnerGoals,COMBAT_SKILLS} from '../src/goal-scoreboard';
 import {improved,type Progress} from '../src/coverage';
 import {writeKillReceipt,type KillInput} from '../../core/src/kill-receipt';
+import {SPECIALIST_BOARDS} from '../../core/src/specialist-boards';
 
 const NOW=1_800_000_000_000,SERVER='rs-sdk-demo.fly.dev';
 const roots:string[]=[];
@@ -93,7 +94,7 @@ test('fresh owned skill ranks count wins and stale or foreign rank claims cannot
   status('Wrong',{ranksAt:NOW-1000,ranks:[{board:'Magic',rank:1,level:99,server:'localhost:8888'}]}),
  ]});
  expect(g.specialists.rank1s.map(r=>[r.account,r.board])).toEqual([['winner','Ranged']]);
- expect(g.specialists.targets.map(t=>t.board).sort()).toEqual(['Agility','Attack','Ranged']);
+ expect(g.specialists.targets.map(t=>t.board).sort()).toEqual(Object.values(SPECIALIST_BOARDS).map(b=>b.name).sort());
  expect(g.metrics['specialists.rank1:winner:Ranged']).toBe(1);
 });
 
