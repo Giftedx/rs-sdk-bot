@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795148084677-oreelse-woodpecker-dragonbones",
  "account": "OreElse",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 14,
  "claim": "5b2f93b5-7115-46d7-82c3-6d8be45efae2",
- "count": 0,
- "ok": false,
- "at": 1795148136564,
- "detail": "trade claimed"
+ "count": 14,
+ "ok": true,
+ "at": 1795148196806,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 14,
+  "after": 0
+ },
+ "bank": {
+  "count": 14,
+  "at": 1795148183940
+ },
+ "logout": {
+  "attemptId": "1795148136574-0000024432-0000000001",
+  "at": 1795148196723,
+  "sha256": "0edc47bc5ea7ed82ece2063aab80e50dbb95162374a6c364be940cbb0da9aace"
+ },
+ "screen": true
 }
