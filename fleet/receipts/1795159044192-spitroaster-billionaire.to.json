@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795159044192-spitroaster-billionaire",
  "account": "Billionaire",
  "partner": "Spitroaster",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 29308,
  "claim": "846d238d-e09c-4b66-87d2-e50458894aa3",
- "count": 0,
- "ok": false,
- "at": 1795159161769,
- "detail": "trade claimed"
+ "count": 29308,
+ "ok": true,
+ "at": 1795159209846,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 692,
+  "after": 30000
+ },
+ "bank": {
+  "count": 29308,
+  "at": 1795159209165
+ },
+ "logout": {
+  "attemptId": "1795159161779-0000030192-0000000001",
+  "at": 1795159209832,
+  "sha256": "327f71b0ebdb923d3e5095e6f9126abf90df461ec0a03a0fe6b76bf7ef48938b"
+ },
+ "screen": true
 }
