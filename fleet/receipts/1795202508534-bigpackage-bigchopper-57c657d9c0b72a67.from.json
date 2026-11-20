@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795202508534-bigpackage-bigchopper-57c657d9c0b72a67",
+ "account": "Bigpackage",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune platelegs",
+ "requested": 1,
+ "claim": "9dab3f29-f707-4780-965e-5ea8d9c5f235",
+ "count": 0,
+ "ok": false,
+ "at": 1795202716062,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Iron arrow",
+   "requested": 300,
+   "count": 0
+  },
+  {
+   "item": "Water rune",
+   "requested": 30,
+   "count": 0
+  }
+ ]
+}
