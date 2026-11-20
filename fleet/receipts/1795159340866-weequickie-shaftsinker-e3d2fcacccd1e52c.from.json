@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795159340866-weequickie-shaftsinker-e3d2fcacccd1e52c",
+ "account": "WeeQuickie",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "151920fc-c0cf-4c2f-a3f2-992604483250",
+ "count": 0,
+ "ok": false,
+ "at": 1795159349774,
+ "detail": "trade claimed"
+}

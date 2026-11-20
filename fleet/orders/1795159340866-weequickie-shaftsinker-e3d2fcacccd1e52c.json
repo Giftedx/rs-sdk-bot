@@ -1,0 +1,23 @@
+{
+ "id": "1795159340866-weequickie-shaftsinker-e3d2fcacccd1e52c",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "WeeQuickie",
+ "to": "Shaftsinker",
+ "item": "Ring of dueling(8)",
+ "count": 1,
+ "start": 1795159340866,
+ "end": 1795160540866,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
