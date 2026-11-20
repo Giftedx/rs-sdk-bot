@@ -707,13 +707,15 @@ export async function runWildyPvpLoop(
     let lastFlickTick = -10;
     let lastPrayPotionTick = -10;
     let lastStatusTick = -100;
+    let lastSwingTick = -10;
+    let prevSkillXp = skillInfo(s, opts.skill).experience;
     let needReengage = false;
 
-    const drinkFromList = async (ids: readonly number[]): Promise<boolean> => {
+    const drinkFromList = (ids: readonly number[]): boolean => {
         for (const id of ids) {
             const item = s.sdk.getInventory().find(i => i.id === id);
             if (!item) continue;
-            await s.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 1, reason: 'SDK' });
+            void s.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 1, reason: 'SDK' });
             return true;
         }
         return false;
@@ -729,8 +731,18 @@ export async function runWildyPvpLoop(
 
             const st = s.sdk.getState();
             const pts = st?.prayers?.prayerPoints ?? 0;
+            const curXp = skillInfo(s, opts.skill).experience;
+            const animId = (st?.player as any)?.animId ?? -1;
+            if (curXp > prevSkillXp || (animId > 0 && animId !== 424 && s.tick() - lastSwingTick >= 4)) {
+                lastSwingTick = s.tick();
+                prevSkillXp = curXp;
+            } else if (curXp > prevSkillXp) {
+                prevSkillXp = curXp;
+            }
 
-            // Deactivate all active prayers first so ~prayers_are_active becomes false and cleartimer(prayer_drain) runs.
+            // Flick 1 tick after a swing (4-tick cadence < 5-tick prayer_drain timer) so p_clearpendingaction never delays a swing.
+            const sinceSwing = s.tick() - lastSwingTick;
+            const sinceFlick = s.tick() - lastFlickTick;
             let flickedThisTick = false;
             if (pts > 0 && skillInfo(s, 'Prayer').baseLevel >= 31) {
                 const needOn = flickPrayers.some(idx => !st?.prayers?.activePrayers?.[idx]);
@@ -742,7 +754,7 @@ export async function runWildyPvpLoop(
                             void s.direct({ type: 'togglePrayer', prayerIndex: idx, reason: 'SDK' });
                         }
                     }
-                } else if (s.tick() - lastFlickTick >= 3) {
+                } else if (sinceSwing === 1 || (sinceFlick >= 4 && sinceSwing !== 4 && sinceSwing !== 3)) {
                     lastFlickTick = s.tick();
                     flickedThisTick = true;
                     for (const idx of flickPrayers) {
@@ -755,10 +767,10 @@ export async function runWildyPvpLoop(
             }
             if (flickedThisTick) needReengage = true;
             if (!flickedThisTick && pts <= 10 && s.tick() - lastPrayPotionTick >= 4) {
-                if (await drinkFromList(PRAYER_POT_IDS)) lastPrayPotionTick = s.tick();
+                if (drinkFromList(PRAYER_POT_IDS)) lastPrayPotionTick = s.tick();
             }
 
-            // Re-boost Strength (16 doses) and Attack (8 doses) without losing combat uptime.
+            // Re-boost Strength (16 doses) and Attack (8 doses) without blocking a loop tick.
             if (!flickedThisTick && s.tick() - lastDrinkTick >= 3) {
                 const str = skillInfo(s, 'Strength');
                 const atk = skillInfo(s, 'Attack');
@@ -766,9 +778,9 @@ export async function runWildyPvpLoop(
                 const minStrBoost = opts.skill === 'Strength' && str.baseLevel < 95 ? maxStrBoost - 1 : maxStrBoost - 2;
                 const minAtkBoost = opts.skill === 'Strength' ? 14 : 13;
                 if (str.level <= str.baseLevel + minStrBoost) {
-                    if (await drinkFromList(SUPER_STRENGTH_IDS)) lastDrinkTick = s.tick();
+                    if (drinkFromList(SUPER_STRENGTH_IDS)) lastDrinkTick = s.tick();
                 } else if (atk.level < atk.baseLevel + minAtkBoost) {
-                    if (await drinkFromList(SUPER_ATTACK_IDS)) lastDrinkTick = s.tick();
+                    if (drinkFromList(SUPER_ATTACK_IDS)) lastDrinkTick = s.tick();
                 }
             }
 
@@ -784,14 +796,14 @@ export async function runWildyPvpLoop(
                 console.log(`PVP_STATUS tick=${s.tick()} ${opts.skill}=${sk.baseLevel} xp=${sk.experience} hp=${st?.player?.hp} pray=${pts} tanks=${tanks.length} inCombat=${!!combat?.inCombat} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
             }
             const currentAlive = combat?.inCombat && combat.targetType === 'player' && tanks.some(t => t.index === combat.targetIndex);
-            // togglePrayer runs p_clearpendingaction on the server, so re-send opplayer2 right after a flick tick.
+            // togglePrayer runs p_clearpendingaction on the server, so re-send interactPlayer non-blockingly on the next tick.
             if (!flickedThisTick && (needReengage || !currentAlive) && tanks.length > 0) {
                 const target = tanks[0]!;
                 if (needReengage || target.index !== lastTargetIndex || s.tick() - lastAttackTick >= 2) {
                     needReengage = false;
                     lastTargetIndex = target.index;
                     lastAttackTick = s.tick();
-                    await s.sdk.sendInteractPlayer(target.index, 2);
+                    void s.direct({ type: 'interactPlayer', playerIndex: target.index, optionIndex: 2, reason: 'SDK' });
                 }
             } else if (!tanks.length && d8({ x: posOf(s)?.worldX ?? 0, z: posOf(s)?.worldZ ?? 0 }, DESERTED_KEEP) > 3) {
                 await walkWaypoints(s, [{ ...DESERTED_KEEP, tol: 1 }], 40, opts.stop, 'recenter deserted keep');
@@ -1021,7 +1033,7 @@ export async function runMeleePvpSpecialist(
     ], 120, opts.stop, 'castle wars to khazard battlefield', { ignoreMeleeHunters: true, onTickExtra: ensureRunAndEnergy });
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     await walkWaypoints(s, [
-        { x: 2576, z: 3320, tol: 4 },
+        { x: 2565, z: 3320, tol: 4 },
         { x: 2565, z: 3380, tol: 4 },
         { x: 2522, z: 3494, tol: 2 },
     ], 160, opts.stop, 'khazard to almera', { onTickExtra: ensureRunAndEnergy });
@@ -1043,7 +1055,7 @@ export async function runMeleePvpSpecialist(
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     milestone('waterfall', `atk=${skillInfo(s, 'Attack').baseLevel} str=${skillInfo(s, 'Strength').baseLevel} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
-    await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall to ardougne lever', { onTickExtra: ensureRunAndEnergy });
+    await walkWaypoints(s, [{ x: 2557, z: 3370, tol: 4 }, { x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall to ardougne lever', { onTickExtra: ensureRunAndEnergy });
     await pullArdougneLeverToWildy(s, opts.stop);
     milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
