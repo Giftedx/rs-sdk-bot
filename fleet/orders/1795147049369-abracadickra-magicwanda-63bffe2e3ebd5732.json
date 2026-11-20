@@ -1,0 +1,22 @@
+{
+ "id": "1795147049369-abracadickra-magicwanda-63bffe2e3ebd5732",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Abracadickra",
+ "to": "Magicwanda",
+ "item": "Coins",
+ "count": 1350000,
+ "start": 1795147049369,
+ "end": 1795148249369,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
