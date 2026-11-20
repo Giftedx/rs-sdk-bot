@@ -446,26 +446,43 @@ async function walkEdgevilleToSpiders(s: Session, spot: { x: number; z: number; 
         { x: 3217, z: 3740, tol: 4 },
         { x: spot.x, z: spot.z, tol: 0 },
     ];
-    for (let i = 0; i < legs.length && !stop(); i++) {
-        const leg = legs[i]!;
-        const prayPts = s.sdk.getState()?.prayers?.prayerPoints ?? 0;
+    let lastSip = -10;
+    let lastPrayToggle = -10;
+    let wantPray = false;
+    const offWalk = s.onTick(() => {
+        if (stop()) return;
+        const p = posOf(s);
+        const now = s.tick();
+        const st = s.sdk.getState();
+        const pts = st?.prayers?.prayerPoints ?? 0;
         const basePray = skillInfo(s, 'Prayer').baseLevel;
-        if (shouldDrinkSuperRestore(prayPts, basePray)) {
+        if ((p?.worldZ ?? 0) >= 3720 || p?.combat?.inCombat || (p?.hp ?? 10) < 10) wantPray = true;
+        if (shouldDrinkSuperRestore(pts, basePray) && now - lastSip >= 3) {
             const pot = (s.sdk.getInventory() as InvItem[]).find(it => ITEM_IDS.superRestore.includes(it.id));
             if (pot && pot.slot !== undefined) {
-                await s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' });
-                await waitTicks(s, 2);
+                lastSip = now;
+                void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' });
             }
         }
-        if (leg.z >= 3750) await setProtectMelee(s, true, stop);
-        await walkPath(walker, [leg], { maxTicks: 220, stop, look: 20 });
-        if (posOf(s)?.combat?.inCombat && !s.sdk.getState()?.prayers?.activePrayers?.[PROTECT_MELEE]) {
-            await setProtectMelee(s, true, stop);
+        if (wantPray && pts > 0 && !st?.prayers?.activePrayers?.[PROTECT_MELEE] && now - lastPrayToggle >= 2) {
+            lastPrayToggle = now;
+            void s.direct({ type: 'togglePrayer', prayerIndex: PROTECT_MELEE, reason: 'SDK' });
         }
-    }
-    const p = posOf(s);
-    if (!p || d8({ x: p.worldX, z: p.worldZ }, spot) > 1) {
-        await walkWaypoints(s, [{ x: spot.x, z: spot.z, tol: 0 }], 80, stop, 'to spiders center');
+    });
+    try {
+        for (let i = 0; i < legs.length && !stop(); i++) {
+            const leg = legs[i]!;
+            if (leg.z >= 3740) wantPray = true;
+            if (wantPray) await setProtectMelee(s, true, stop);
+            await walkPath(walker, [leg], { maxTicks: 220, stop, look: 20 });
+        }
+        const p = posOf(s);
+        if (!p || d8({ x: p.worldX, z: p.worldZ }, spot) > 1) {
+            await walkWaypoints(s, [{ x: spot.x, z: spot.z, tol: 0 }], 80, stop, 'to spiders center');
+        }
+        await setProtectMelee(s, true, stop);
+    } finally {
+        offWalk();
     }
 }
 
@@ -532,6 +549,7 @@ async function runSpiderGrind(
         await s.direct({ type: 'useInventoryItem', slot: rPot0.slot, optionIndex: 1, reason: 'SDK' });
         lastRPot = s.tick();
         rangePots++;
+        await waitTicks(s, 2);
     }
 
     // Stand adjacent SW of cannon so reload takes zero walk ticks.

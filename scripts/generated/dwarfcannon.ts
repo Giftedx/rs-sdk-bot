@@ -272,7 +272,7 @@ try {
     for (const r of RAILINGS) {
         const ok0 = msgCount(OK_RAIL);
         const fixed = () => msgCount(OK_RAIL) > ok0;
-        for (let i = 0; i < 25 && !fixed(); i++) {
+        for (let i = 0; i < 60 && !fixed(); i++) {
             await guard(`railing ${r.x},${r.z}`);
             const fails0 = msgCount(FAIL_RAIL);
             const search0 = msgCount(SEARCH);

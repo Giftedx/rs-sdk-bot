@@ -1,6 +1,13 @@
 // Bench cases for the fresh-clock Ranged 99 specialist route and weapon A/B comparisons.
 import type { BenchCase } from './aio-bench-cases';
+import { PRESETS } from '../../packages/practice/src/presets';
+import { COOK_JOB_NATIVE_NULL_VARPS } from '../../packages/practice/src/quest-items-order-proof';
 import { kitSlotTotal, RANGED_SPECIALIST_KIT, RANGED_SPECIALIST_MSB_KIT, type KitSpecItem } from '../ranged-specialist';
+
+const FRESH_NATIVE_LUMBRIDGE = {
+    ...PRESETS.fresh_lumbridge!,
+    varps: { ...COOK_JOB_NATIVE_NULL_VARPS },
+};
 
 const kitToSaveInventory = (kit: readonly KitSpecItem[]) => {
     const items = kit.flatMap(item =>
@@ -28,6 +35,7 @@ export const SPECIALIST_RANGED_CASES: readonly BenchCase[] = [
         key: 'fighter:ranged-specialist',
         script: 'scripts/aio-fighter.ts',
         preset: 'fresh_lumbridge',
+        presetConfig: FRESH_NATIVE_LUMBRIDGE,
         scriptArgs: ['ranged-specialist', 'CAP=5200', 'VARIANT=knives', 'BENCH_SUPPLIER={bot:b}'],
         pass: rangedSpecialistPass,
         timeoutMs: 900_000,
@@ -45,6 +53,7 @@ export const SPECIALIST_RANGED_CASES: readonly BenchCase[] = [
         key: 'extra:ranged-specialist-msb',
         script: 'scripts/ranged-specialist.ts',
         preset: 'fresh_lumbridge',
+        presetConfig: FRESH_NATIVE_LUMBRIDGE,
         scriptArgs: ['CAP=5200', 'VARIANT=msb', 'BENCH_SUPPLIER={bot:b}'],
         pass: rangedSpecialistPass,
         timeoutMs: 900_000,
