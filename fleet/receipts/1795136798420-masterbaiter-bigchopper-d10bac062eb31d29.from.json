@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795136798420-masterbaiter-bigchopper-d10bac062eb31d29",
  "account": "Masterbaiter",
  "partner": "Bigchopper",
@@ -10,8 +10,22 @@
  "item": "Lobster",
  "requested": 2,
  "claim": "68c19de5-dfc1-494f-8fa9-45b0ae61d40f",
- "count": 0,
- "ok": false,
- "at": 1795136840742,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795137189608,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795136850868
+ },
+ "logout": {
+  "attemptId": "1795136840751-0000023896-0000000001",
+  "at": 1795137189596,
+  "sha256": "dd1f38fcc1af40e21e9f67609254e9b78105aece3f7abb4c3a11d28f7babcad2"
+ },
+ "screen": true
 }

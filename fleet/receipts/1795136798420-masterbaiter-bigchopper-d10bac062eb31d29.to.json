@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795136798420-masterbaiter-bigchopper-d10bac062eb31d29",
+ "account": "Bigchopper",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 2,
+ "claim": "50b0a25f-4d7a-480f-84fa-68bfbe4bec90",
+ "count": 2,
+ "ok": true,
+ "at": 1795137191270,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795137190440
+ },
+ "logout": {
+  "attemptId": "1795137174705-0000018360-0000000001",
+  "at": 1795137191176,
+  "sha256": "987deb1a7a7a8d53ed5333e148942cc002f948ad0c951695c0b0d762160d9272"
+ },
+ "screen": true
+}
