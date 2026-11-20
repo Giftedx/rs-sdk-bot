@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795158766018-knightrider-shaftsinker-31a090096caac942",
  "account": "KnightRider",
  "partner": "Shaftsinker",
@@ -12,6 +12,12 @@
  "claim": "89feed9e-32d6-4fa5-9651-8f2250e08ad5",
  "count": 0,
  "ok": false,
- "at": 1795158778204,
- "detail": "trade claimed"
+ "at": 1795158907057,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
+ "logout": {
+  "attemptId": "1795158778214-0000028548-0000000001",
+  "at": 1795158907045,
+  "sha256": "9fc8b4affff486574d5568d44b2efb44060d7f97106f76fe0f6a72584d41640e"
+ },
+ "screen": false
 }
