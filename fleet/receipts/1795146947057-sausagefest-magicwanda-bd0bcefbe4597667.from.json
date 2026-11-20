@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795146947057-sausagefest-magicwanda-bd0bcefbe4597667",
+ "account": "Sausagefest",
+ "partner": "Magicwanda",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 1650000,
+ "claim": "07509945-d231-484b-b6e9-3d13675a27c6",
+ "count": 1650000,
+ "ok": true,
+ "at": 1795147036362,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1650000,
+  "after": 0
+ },
+ "bank": {
+  "count": 1650000,
+  "at": 1795147023661
+ },
+ "logout": {
+  "attemptId": "1795147017320-0000010628-0000000001",
+  "at": 1795147036352,
+  "sha256": "78f8043caa14ec37940db040746816d75127c0deee6a50962ad5a99e8d35c4e7"
+ },
+ "screen": true
+}

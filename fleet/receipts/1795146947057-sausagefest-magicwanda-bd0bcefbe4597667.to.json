@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795146947057-sausagefest-magicwanda-bd0bcefbe4597667",
  "account": "Magicwanda",
  "partner": "Sausagefest",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 1650000,
  "claim": "aa9868c1-578d-4288-b1d3-29ad0e2b0219",
- "count": 0,
- "ok": false,
- "at": 1795146974777,
- "detail": "trade claimed"
+ "count": 1650000,
+ "ok": true,
+ "at": 1795147037987,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1650000
+ },
+ "bank": {
+  "count": 1650000,
+  "at": 1795147037302
+ },
+ "logout": {
+  "attemptId": "1795146974786-0000011336-0000000001",
+  "at": 1795147037972,
+  "sha256": "3a3337d18cbaa35dc96251ca5d713e91e0ae3365a95485141334b49179e6b0eb"
+ },
+ "screen": true
 }
