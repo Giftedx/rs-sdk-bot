@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795189813673-sporrandip-deeppockets-runechainbody",
  "account": "SporranDip",
  "partner": "Deeppockets",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "8ccd6a54-fd92-4c35-8649-d8c719d9fe1d",
- "count": 0,
- "ok": false,
- "at": 1795190509681,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795190537330,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795190529672
+ },
+ "logout": {
+  "attemptId": "1795190509689-0000026656-0000000001",
+  "at": 1795190537320,
+  "sha256": "22e5cfa638cae14b410a4650619bb4ed60013c9c62c9f6709a66b223081bd34b"
+ },
+ "screen": true
 }

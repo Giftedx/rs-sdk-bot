@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795189813673-pocketpython-woodpecker",
+ "account": "Woodpecker",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 58155,
+ "claim": "c235d552-6934-41a5-aeee-11d82de917cb",
+ "count": 0,
+ "ok": false,
+ "at": 1795190529168,
+ "detail": "trade claimed"
+}
