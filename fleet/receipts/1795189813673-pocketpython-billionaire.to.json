@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795189813673-pocketpython-billionaire",
+ "account": "Billionaire",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 21560,
+ "claim": "d081c6e0-4381-4002-8e90-69cb32542bdf",
+ "count": 0,
+ "ok": false,
+ "at": 1795190671722,
+ "detail": "trade claimed"
+}
