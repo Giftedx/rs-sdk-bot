@@ -5,6 +5,6 @@
  "account": "Shaftmaker",
  "partner": "OreElse",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795192021631,
+ "at": 1795192116574,
  "detail": "Error: account logout is not confirmed: Shaftmaker ended stopped"
 }
