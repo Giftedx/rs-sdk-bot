@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795195535417-mightyrod-trousersnake-516234593fcd1d64",
+ "account": "Mightyrod",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 2,
+ "claim": "dacbca15-212b-4c40-aa20-84e7c235d85d",
+ "count": 0,
+ "ok": false,
+ "at": 1795195574066,
+ "detail": "trade claimed"
+}

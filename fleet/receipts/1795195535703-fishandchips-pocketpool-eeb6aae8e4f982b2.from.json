@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795195535703-fishandchips-pocketpool-eeb6aae8e4f982b2",
+ "account": "FishAndChips",
+ "partner": "PocketPool",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 6,
+ "claim": "26d3ee53-a259-47ff-936f-4dec6d857972",
+ "count": 0,
+ "ok": false,
+ "at": 1795195583897,
+ "detail": "trade claimed"
+}

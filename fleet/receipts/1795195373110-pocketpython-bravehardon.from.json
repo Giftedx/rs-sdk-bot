@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795195373110-pocketpython-bravehardon",
  "account": "Pocketpython",
  "partner": "BraveHardon",
@@ -12,6 +12,12 @@
  "claim": "bf71d9c3-7422-45e9-9bc4-22c7a99e9345",
  "count": 0,
  "ok": false,
- "at": 1795195475113,
- "detail": "trade claimed"
+ "at": 1795195606970,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
+ "logout": {
+  "attemptId": "1795195475121-0000026552-0000000001",
+  "at": 1795195606957,
+  "sha256": "80432689fe7bb190eaacfaa405d50ad65e3b470b96dc503e27fa94da8b28220a"
+ },
+ "screen": false
 }
