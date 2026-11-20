@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795150408455-undermykilt-woodpecker-1109831b7b92c822",
+ "account": "Woodpecker",
+ "partner": "UnderMyKilt",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 300000,
+ "claim": "cad525dd-22e2-408b-94a0-b3d955814fb8",
+ "count": 300000,
+ "ok": true,
+ "at": 1795150463111,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 300000
+ },
+ "bank": {
+  "count": 300000,
+  "at": 1795150462282
+ },
+ "logout": {
+  "attemptId": "1795150441815-0000016300-0000000001",
+  "at": 1795150463019,
+  "sha256": "4022cf1363612c323c5e5a58912edfa062fd5c1cf2207a03313df32a580f082d"
+ },
+ "screen": true
+}
