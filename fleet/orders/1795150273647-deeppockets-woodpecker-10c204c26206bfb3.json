@@ -1,0 +1,23 @@
+{
+ "id": "1795150273647-deeppockets-woodpecker-10c204c26206bfb3",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Deeppockets",
+ "to": "Woodpecker",
+ "item": "Coins",
+ "count": 760000,
+ "start": 1795150273647,
+ "end": 1795151473647,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

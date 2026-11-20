@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795150273647-deeppockets-woodpecker-10c204c26206bfb3",
+ "account": "Deeppockets",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 760000,
+ "claim": "1619fb1b-b5fd-4ec8-b334-965b07c4f033",
+ "count": 760000,
+ "ok": true,
+ "at": 1795150320673,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 760000,
+  "after": 0
+ },
+ "bank": {
+  "count": 760000,
+  "at": 1795150291083
+ },
+ "logout": {
+  "attemptId": "1795150281365-0000025756-0000000001",
+  "at": 1795150320660,
+  "sha256": "c14365e199277c34e25c281e68f33564c99abfd1eead7ebb20eed66ec4834469"
+ },
+ "screen": true
+}
