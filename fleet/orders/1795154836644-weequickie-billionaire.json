@@ -1,0 +1,22 @@
+{
+ "id": "1795154836644-weequickie-billionaire",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "WeeQuickie",
+ "to": "Billionaire",
+ "item": "coins",
+ "count": 28060,
+ "start": 1795154836644,
+ "end": 1795157236644,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
