@@ -1,0 +1,22 @@
+{
+ "id": "1795164225453-dipstick-billionaire-97a72a6d888d0941",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Dipstick",
+ "to": "Billionaire",
+ "item": "Rune arrow",
+ "count": 135,
+ "start": 1795164225453,
+ "end": 1795165725453,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ]
+}
