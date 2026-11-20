@@ -272,7 +272,7 @@ async function main(): Promise<void> {
         milestone('tutorial');
 
         await receiveSupplyKit(s, supplierName, HP_SPECIALIST_KIT, stop, {
-            altSlots: new Map([[176, {
+            altSlots: new Map([[2449, {
                 allowedIds: HP_ANTIPOISON_ACCEPT_IDS,
                 satisfied: items => countAntipoisonDoses(items) >= 8,
             }]]),
@@ -352,9 +352,9 @@ async function main(): Promise<void> {
         await depositIds(s, GRAND_TREE_JUNK_IDS, stop);
         await withdrawExactCount(s, 2357, 1, stop, 'Gold bar');
         await withdrawExactCount(s, 1759, 1, stop, 'Ball of wool');
-        await withdrawAntipoisonDoses(s, 8, 3, stop);
+        await withdrawAntipoisonDoses(s, 8, 2, stop);
         await withdrawExactCount(s, 2434, 9, stop, 'Prayer potion(4)');
-        await withdrawExactCount(s, 385, 8, stop, 'Shark');
+        await withdrawExactCount(s, 385, 9, stop, 'Shark');
         await closeBankClean(s, stop);
         await walkWaypoints(s, [{ x: 2466, z: 3495, tol: 1 }], 40, stop, 'grand tree bank to ladder 2');
         await climbTreeLadder(s, 'down', 0, stop);

@@ -88,7 +88,7 @@ export const HP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 386, name: 'Shark', count: 20, stackable: true },
     { id: 2358, name: 'Gold bar', count: 1, stackable: true },
     { id: 1760, name: 'Ball of wool', count: 1, stackable: true },
-    { id: 176, name: 'Antipoison(3)', count: 3, stackable: true },
+    { id: 2449, name: 'Superantipoison(4)', count: 2, stackable: true },
 ] as const;
 
 export const HP_ANTIPOISON_ACCEPT_IDS = [176, 175, 2447, 2446, 2449, 2448] as const;
@@ -1256,14 +1256,16 @@ export async function runSpecialistWaterfall(
         const p = posOf(s);
         syncWaterfallPfm(!!p && p.worldZ <= maxZ);
     };
-    await walkFast([{ x: 2561, z: 3242, tol: 4 }, { x: 2533, z: 3156, tol: 2 }], 300, 'hadley to golrie cellar', khazardPfm(3275));
-    await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+    await walkFast([{ x: 2561, z: 3280, tol: 4 }], 140, 'hadley to khazard border');
+    await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
+    await walkFast([{ x: 2533, z: 3156, tol: 2 }], 220, 'khazard to golrie cellar', () => syncWaterfallPfm(true));
 
     const inCellar = () => (posOf(s)?.worldZ ?? 0) > 9500 && (posOf(s)?.worldZ ?? 0) < 9600;
     await climb('cellar down', 2533, 3155, /climb-down/i, inCellar);
-    await stepAct('golrie crate', () => opLoc(LOC.golrieCrate), () => has(ITEM.golrieKey), 25, 4);
-    await walkFast([{ x: 2515, z: 9574, tol: 0 }], 40, 'to golrie gate');
-    await stepAct('golrie gate', () => useOnLoc(ITEM.golrieKey, LOC.golrieGate), () => inBox(2502, 9576, 2523, 9593), 10, 6);
+    await stepAct('golrie crate', () => { syncWaterfallPfm(true); return opLoc(LOC.golrieCrate); }, () => has(ITEM.golrieKey), 25, 4);
+    await walkFast([{ x: 2515, z: 9574, tol: 0 }], 90, 'to golrie gate', () => syncWaterfallPfm(true));
+    await stepAct('golrie gate', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.golrieKey, LOC.golrieGate); }, () => inBox(2502, 9576, 2523, 9593), 10, 6);
+    await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
 
     let golrieShut = 0;
     const gotPebble = () => {

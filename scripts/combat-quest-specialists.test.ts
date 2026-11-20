@@ -132,10 +132,10 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
 
         expect(HP_SPECIALIST_KIT.find(k => k.id === 386)?.count).toBeGreaterThanOrEqual(3 + 2 + 3 + 8);
         expect(HP_SPECIALIST_KIT.find(k => k.id === 2435)?.count).toBeGreaterThanOrEqual(1 + 2 + 3 + 9);
-        expect(HP_SPECIALIST_KIT.find(k => k.id === 176)?.count).toBeGreaterThanOrEqual(3);
-        expect(countAntipoisonDoses(HP_SPECIALIST_KIT)).toBeGreaterThanOrEqual(9);
+        expect(countAntipoisonDoses(HP_SPECIALIST_KIT)).toBeGreaterThanOrEqual(8);
         expect(countAntipoisonDoses([{ id: 2449, count: 2 }])).toBe(8);
         expect(HP_ANTIPOISON_ACCEPT_IDS).toContain(175);
+        expect(HP_ANTIPOISON_ACCEPT_IDS).toContain(2449);
         expect(HP_SPECIALIST_KIT.find(k => k.id === 563)?.count).toBeGreaterThanOrEqual(18);
         expect(STRENGTH_SPECIALIST_KIT).toBe(KIT_BY_BOARD.strength);
         expect(DEFENCE_SPECIALIST_KIT).toBe(KIT_BY_BOARD.defence);
