@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795160244169-bigchopper-shaftmaker-naturerune",
  "account": "Bigchopper",
  "partner": "Shaftmaker",
@@ -12,6 +12,20 @@
  "claim": "91295e38-84c8-4deb-9f0e-4fef83d30efc",
  "count": 0,
  "ok": false,
- "at": 1795160282638,
- "detail": "trade claimed"
+ "at": 1795162644526,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 344,
+  "after": 344
+ },
+ "bank": {
+  "count": 344,
+  "at": 1795160289846
+ },
+ "logout": {
+  "attemptId": "1795160282991-0000010460-0000000001",
+  "at": 1795162644510,
+  "sha256": "243de2b852bf886ac1068edca1fec60a91f7f42a440ed4cd2b6e15929c38a628"
+ },
+ "screen": false
 }
