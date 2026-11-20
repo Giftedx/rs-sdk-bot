@@ -1,0 +1,28 @@
+{
+ "id": "1795164901896-hocuspokeus-undermykilt-6872238d74b93f95",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Hocuspokeus",
+ "to": "UnderMyKilt",
+ "item": "Cannonball",
+ "count": 149,
+ "start": 1795164901896,
+ "end": 1795166401896,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Rune arrow",
+   "count": 102
+  }
+ ]
+}

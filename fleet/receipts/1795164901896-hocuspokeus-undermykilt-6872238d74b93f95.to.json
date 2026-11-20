@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795164901896-hocuspokeus-undermykilt-6872238d74b93f95",
+ "account": "UnderMyKilt",
+ "partner": "Hocuspokeus",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cannonball",
+ "requested": 149,
+ "claim": "0857487a-e3b9-4bf5-b252-42caad1c5f61",
+ "count": 149,
+ "ok": true,
+ "at": 1795164931653,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Rune arrow",
+   "requested": 102,
+   "count": 102,
+   "inventory": {
+    "before": 0,
+    "after": 102
+   },
+   "bank": {
+    "count": 102,
+    "at": 1795164930859
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 149
+ },
+ "bank": {
+  "count": 149,
+  "at": 1795164930138
+ },
+ "logout": {
+  "attemptId": "1795164916744-0000001452-0000000001",
+  "at": 1795164931640,
+  "sha256": "8ffcbb2f8321e2632659824a60fbbaed925d354f6d2518f98ca2bb0a3282d3aa"
+ },
+ "screen": true
+}
