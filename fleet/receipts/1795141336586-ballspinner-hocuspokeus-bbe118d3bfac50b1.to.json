@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795141336586-ballspinner-hocuspokeus-bbe118d3bfac50b1",
+ "account": "Hocuspokeus",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 500,
+ "claim": "92c97f6a-7f15-433e-8aad-f8be7cc6be0a",
+ "count": 0,
+ "ok": false,
+ "at": 1795141468975,
+ "detail": "trade claimed"
+}
