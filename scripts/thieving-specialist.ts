@@ -8,6 +8,7 @@ import {
     skipTutorialFast,
     dropTutorialJunk,
     receiveTradeFast,
+    settleHelper,
     rubTeleport,
     walkWaypointsSafe,
     sailBrimhavenToArdougne,
@@ -22,7 +23,7 @@ import type { Session } from '../packages/core/src/inprocess';
 
 export const THIEVING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
 
-export const THIEVING_PIZZAS = 18;
+export const THIEVING_PIZZAS = 25;
 
 export const THIEVING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_GLORY_4]: 1,
@@ -61,13 +62,14 @@ if (import.meta.main) {
 
     let stopFlag = false;
     let intentionalRelog = false;
+    let helperSettled = false;
     let totalTicks = 0;
     const isStopped = () => stopFlag || existsSync(`.practice/stop-${account}`) || existsSync('.practice/stop-all') || totalTicks >= cap;
 
     const helper = await openBot(helperName, { onStop: async () => { stopFlag = true; } });
     const onUnexpectedEnd = async (sess: Session, detail: string) => {
         if (intentionalRelog) return;
-        await finish([helper, sess], false, `unexpected end: ${detail}`);
+        await finish(helperSettled ? [sess] : [helper, sess], false, `unexpected end: ${detail}`);
     };
 
     let main = await openBot(account, {
@@ -75,6 +77,7 @@ if (import.meta.main) {
         onSessionEnd: onUnexpectedEnd,
     });
 
+    let helperDone: Promise<void> | undefined;
     let sessStart = main.tick();
     let relogs = 0;
     let stuns = 0;
@@ -85,9 +88,14 @@ if (import.meta.main) {
     const elapsedNow = () => totalTicks + Math.max(0, main.tick() - sessStart);
 
     try {
-        const tutTicks = await skipTutorialFast(main, isStopped);
-        await dropTutorialJunk(main, isStopped, 12);
+        const tutTicks = await skipTutorialFast(main, isStopped, helper);
+        await dropTutorialJunk(main, isStopped, 18, helper);
         const tradeTicks = await receiveTradeFast(main, helper, THIEVING_SPECIALIST_SUPPLIES, isStopped);
+        helperDone = settleHelper(helper)
+            .then(() => { helperSettled = true; })
+            .catch(err => {
+                console.log(`WARN helper settle: ${String(err)}`);
+            });
 
         // Travel via Karamja Glory -> Brimhaven -> Ardougne dock -> East Ardougne market.
         await rubTeleport(
@@ -191,5 +199,6 @@ if (import.meta.main) {
         detail = `${String(error)} totalTicks=${totalTicks} relogs=${relogs}`;
     }
 
-    await finish([helper, main], ok, detail);
+    await helperDone;
+    await finish(helperSettled ? [main] : [helper, main], ok, detail);
 }

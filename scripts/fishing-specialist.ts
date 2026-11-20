@@ -51,8 +51,8 @@ if (import.meta.main) {
     let detail = '';
 
     try {
-        const tutTicks = await skipTutorialFast(main, isStopped);
-        await dropTutorialJunk(main, isStopped, 10);
+        const tutTicks = await skipTutorialFast(main, isStopped, helper);
+        await dropTutorialJunk(main, isStopped, 10, helper);
         const tradeTicks = await receiveTradeFast(main, helper, FISHING_SPECIALIST_SUPPLIES, isStopped);
         helperDone = settleHelper(helper).catch(err => {
             console.log(`WARN helper settle: ${String(err)}`);

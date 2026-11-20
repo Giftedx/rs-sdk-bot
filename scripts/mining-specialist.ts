@@ -1,6 +1,4 @@
 import { existsSync } from 'node:fs';
-import { accountOf, getWorld } from '../packages/core/src/bot';
-import { goTo } from '../packages/core/src/walk';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { xpForLevel } from '../packages/planner/src/curve';
 import { miningProfiles, incidentalMiningGems } from './microbot-b-mining';
@@ -14,7 +12,6 @@ import {
     rubTeleport,
     walkWaypointsSafe,
     sailBrimhavenToArdougne,
-    drinkEnergyIfLow,
     finish,
     chebDist,
     SKILL_MULTI3_MAKE1_A,
@@ -43,7 +40,7 @@ export const MINING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_IRON_ORE]: 2,
     [OBJ_COINS]: 150,
     [OBJ_GLORY_4]: 1,
-    [OBJ_SUPER_ENERGY_4]: 1,
+    [OBJ_SUPER_ENERGY_4]: 2,
 };
 
 export function remainingIronOresTo99(currentXp: number): number {
@@ -115,8 +112,8 @@ if (import.meta.main) {
     let detail = '';
 
     try {
-        const tutTicks = await skipTutorialFast(main, isStopped);
-        await dropTutorialJunk(main, isStopped, 10);
+        const tutTicks = await skipTutorialFast(main, isStopped, helper);
+        await dropTutorialJunk(main, isStopped, 12, helper);
         const tradeTicks = await receiveTradeFast(main, helper, MINING_SPECIALIST_SUPPLIES, isStopped);
         helperDone = settleHelper(helper).catch(err => {
             console.log(`WARN helper settle: ${String(err)}`);
@@ -130,17 +127,11 @@ if (import.meta.main) {
             p => p.worldX >= 3070 && p.worldX <= 3110 && p.worldZ >= 3480 && p.worldZ <= 3515,
             isStopped,
         );
-        const w = await getWorld();
-        const acct = accountOf(main);
-        for (const wp of [
-            { x: 3045, z: 3455, level: 0 },
-            { x: 2980, z: 3448, level: 0 },
-            { x: 2952, z: 3451, level: 0 },
-        ]) {
-            await drinkEnergyIfLow(main, 78);
-            const leg = await goTo(main, w, wp, acct, { legTimeoutTicks: 150 });
-            if (!leg.ok) throw Error(`walk Doric waypoint failed at ${wp.x},${wp.z}: ${JSON.stringify(leg)}`);
-        }
+        await walkWaypointsSafe(
+            main,
+            [[3045, 3455, 4], [2980, 3448, 4], [2952, 3451, 2]],
+            isStopped,
+        );
 
         await completeDoricQuest(main, isStopped);
         const doricTicks = main.tick() - t0;

@@ -1,6 +1,7 @@
 import { openBot, settle, finish, logoutSession, closeWithin, countItems, randomEventsOf } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
+import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import { componentId } from '../packages/core/src/logout';
 import { onStarterIsland } from './rune-starter';
 
@@ -79,8 +80,11 @@ export async function eatPineapplePizza(s: Session): Promise<boolean> {
     return true;
 }
 
+const stepSession = (main: Session, helper?: Session): Promise<void> =>
+    helper ? Promise.all([waitTicks(main, 1), waitTicks(helper, 1)]).then(() => {}) : waitTicks(main, 1);
+
 /** Skip Tutorial Island in 2 ticks by chaining dialog continue + multi2:com_1 ("Yes please.") on tick 2. */
-export async function skipTutorialFast(s: Session, stop: () => boolean): Promise<number> {
+export async function skipTutorialFast(s: Session, stop: () => boolean, helper?: Session): Promise<number> {
     const t0 = s.tick();
     let designSent = false;
     let guideClicked = false;
@@ -120,13 +124,13 @@ export async function skipTutorialFast(s: Session, stop: () => boolean): Promise
                 }
             }
         }
-        await waitTicks(s, 1);
+        await stepSession(s, helper);
     }
     throw Error('tutorial skip exceeded tick budget');
 }
 
 /** Drop up to `maxCount` matching slots in 5-per-tick bursts to clear tutorial items quickly. */
-export async function dropTutorialJunk(s: Session, stop: () => boolean, dropSlotsNeeded: number): Promise<void> {
+export async function dropTutorialJunk(s: Session, stop: () => boolean, dropSlotsNeeded: number, helper?: Session): Promise<void> {
     let left = dropSlotsNeeded;
     for (let tick = 0; tick < 10 && left > 0 && !stop(); tick++) {
         const inv = s.sdk.getInventory();
@@ -136,7 +140,7 @@ export async function dropTutorialJunk(s: Session, stop: () => boolean, dropSlot
             await s.direct({ type: 'dropItem', slot: item.slot, reason: 'SDK' });
             left--;
         }
-        if (left > 0) await waitTicks(s, 1);
+        if (left > 0) await stepSession(s, helper);
     }
 }
 
@@ -156,6 +160,7 @@ export async function receiveTradeFast(
 
     let tradeOpened = false;
     let closedRun = 0;
+    const offeredIds = new Set<number>();
 
     for (let i = 0; i < 60 && !stop(); i++) {
         const tMain = main.sdk.getTradeState();
@@ -174,6 +179,7 @@ export async function receiveTradeFast(
         if (!tMain.isOpen && !tHelp.isOpen) {
             if (!tradeOpened || closedRun >= 6) {
                 tradeOpened = false;
+                offeredIds.clear();
                 const pHelpOnMain = main.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === helper.name.toLowerCase());
                 const pMainOnHelp = helper.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === main.name.toLowerCase());
                 if (pHelpOnMain && pMainOnHelp) {
@@ -191,10 +197,11 @@ export async function receiveTradeFast(
             // Trade Offer-All (option 4) transfers every matching item ID across slots in one packet.
             const remainingById = new Map<number, number>();
             for (const item of helper.sdk.getInventory()) {
-                if (!remainingById.has(item.id)) remainingById.set(item.id, item.slot);
+                if (!offeredIds.has(item.id) && !remainingById.has(item.id)) remainingById.set(item.id, item.slot);
             }
             const batch = [...remainingById.entries()].slice(0, 5);
-            for (const [, slot] of batch) {
+            for (const [id, slot] of batch) {
+                offeredIds.add(id);
                 await helper.direct({
                     type: 'clickComponentWithOption',
                     componentId: TRADE_SIDE_INV_ID,
@@ -222,7 +229,7 @@ export async function receiveTradeFast(
             }
         }
 
-        await waitTicks(main, 1);
+        await stepSession(main, helper);
         if (hasAllExpected() && !main.sdk.getTradeState().isOpen) {
             return main.tick() - t0;
         }
@@ -269,18 +276,66 @@ export async function walkWaypointsSafe(
     points: readonly [number, number, number][],
     stop: () => boolean,
 ): Promise<void> {
-    for (const [x, z, tol] of points) {
-        for (let tries = 0; tries < 4 && !stop(); tries++) {
-            const p = s.sdk.getState()?.player;
-            if (p && p.level === 0 && chebDist({ x, z }, { x: p.worldX, z: p.worldZ }) <= tol + 1) break;
-            await drinkEnergyIfLow(s, 78);
-            await eatSharkIfHurt(s, 4);
-            await s.bot.walkTo(x, z, tol);
-        }
+    if (points.length === 0) return;
+    const goal = points[points.length - 1]!;
+    const arrived = () => {
         const p = s.sdk.getState()?.player;
-        if (stop() || !p || chebDist({ x, z }, { x: p.worldX, z: p.worldZ }) > tol + 2) {
-            throw Error(`walkWaypointsSafe failed reaching (${x},${z}) from (${p?.worldX},${p?.worldZ},${p?.level})`);
+        return !!p && p.level === 0 && chebDist({ x: goal[0], z: goal[1] }, { x: p.worldX, z: p.worldZ }) <= goal[2] + 1;
+    };
+    if (arrived()) return;
+
+    const runEnabled = () => ((s.client as { var?: number[] } | undefined)?.var?.[173] ?? 0) === 1;
+    let lastDrinkTick = -10;
+    let lastRunClickTick = -10;
+    const ensureRunOn = async () => {
+        const t = s.tick();
+        if (!runEnabled() && t - lastRunClickTick >= 2) {
+            lastRunClickTick = t;
+            await s.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
         }
+    };
+    const baseDeps = await sessionWalker(s);
+    const deps = {
+        ...baseDeps,
+        // Guard component 153 toggle so consecutive walks keep varp 173 (option_run) active instead of toggling off.
+        runOn: ensureRunOn,
+    };
+
+    const offWatch = s.onTick(() => {
+        const p = s.sdk.getState()?.player;
+        if (!p) return;
+        const t = s.tick();
+        if (p.runEnergy <= 75 && t - lastDrinkTick >= 3) {
+            lastDrinkTick = t;
+            void drinkEnergyIfLow(s, 75);
+        }
+        if (p.runEnergy >= 10) void ensureRunOn();
+    });
+
+    try {
+        await drinkEnergyIfLow(s, 75);
+        const pathPts = points.map(([x, z, tol]) => ({ x, z, tol }));
+        const budget = Math.max(240, points.length * 120);
+        const res = await walkPath(deps, pathPts, { maxTicks: budget, stop });
+        if (!res.ok || !arrived()) {
+            const rem = points.slice(Math.min(res.next, points.length - 1));
+            for (const [x, z, tol] of rem) {
+                for (let tries = 0; tries < 4 && !stop(); tries++) {
+                    const p = s.sdk.getState()?.player;
+                    if (p && p.level === 0 && chebDist({ x, z }, { x: p.worldX, z: p.worldZ }) <= tol + 1) break;
+                    await drinkEnergyIfLow(s, 75);
+                    await eatSharkIfHurt(s, 4);
+                    await s.bot.walkTo(x, z, tol);
+                }
+            }
+        }
+    } finally {
+        offWatch();
+    }
+
+    const p = s.sdk.getState()?.player;
+    if (stop() || !p || !arrived()) {
+        throw Error(`walkWaypointsSafe failed reaching (${goal[0]},${goal[1]}) from (${p?.worldX},${p?.worldZ},${p?.level})`);
     }
 }
 

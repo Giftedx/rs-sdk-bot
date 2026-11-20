@@ -72,7 +72,7 @@ if (import.meta.main) {
     let detail = '';
 
     try {
-        const tutTicks = await skipTutorialFast(main, isStopped);
+        const tutTicks = await skipTutorialFast(main, isStopped, helper);
         const tradeTicks = await receiveTradeFast(main, helper, FLETCHING_SPECIALIST_SUPPLIES, isStopped);
         const fletchStart = main.tick() - t0;
 
