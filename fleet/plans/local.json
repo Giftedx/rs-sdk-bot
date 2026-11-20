@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795200735962,
+ "at": 1795200780818,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -286,33 +286,6 @@
    "autopilot": "local",
    "resources": [
     "shop:aubury"
-   ]
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "3000",
-    "cow"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "45",
-    "COW_BANK_PROFILE": "north",
-    "MAX_KILLS": "8",
-    "COW_STAGE": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 45 on the Ardougne cows",
-   "role": "combat",
-   "template": "army-cow-strength-45",
-   "autopilot": "local",
-   "resources": [
-    "cow:ardougne-north"
    ]
   }
  ],

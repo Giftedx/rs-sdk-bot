@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795200728066-pocketpython-bravehardon",
+ "account": "Pocketpython",
+ "partner": "BraveHardon",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 1821,
+ "claim": "b7036811-8f04-4d4a-b342-dedfa432d28b",
+ "count": 0,
+ "ok": false,
+ "at": 1795200767988,
+ "detail": "trade claimed"
+}
