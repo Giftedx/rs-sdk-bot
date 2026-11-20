@@ -4,9 +4,10 @@ import { join, relative, resolve } from 'node:path';
 import { accountOf, finish, getWorld, openBot } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { isLocalServer } from '../packages/core/src/localserver';
+import { planTripOffThread } from '../packages/core/src/route-plan';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
-import { goTo, sessionWalker, walkPath } from '../packages/core/src/walk';
+import { goTo, sessionWalker, walkPath, walkRoute, withoutSpells } from '../packages/core/src/walk';
 import { findLocBy, ITEM_IDS, loadItemCatalog, playerPos } from './fast-skills-lib';
 import { PRAYER_BONES_NEEDED, PRAYER_SUPPLY_BILL } from './prayer-specialist';
 import {
@@ -318,6 +319,30 @@ function posNear(s: Session, to: { x: number; z: number; level: number }, tol = 
     return !!p && p.level === to.level && Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) <= tol;
 }
 
+/** Walk a ground-only route without bank stops or teleport spells so full-inventory kit suppliers never trigger rune withdrawals. */
+export async function moveGroundTo(
+    s: Session,
+    to: { x: number; z: number; level: number },
+    tol = 2,
+    stop: () => boolean = () => false,
+    legTimeoutTicks = 150,
+): Promise<void> {
+    if (posNear(s, to, tol)) return;
+    const p = s.sdk.getState()?.player;
+    if (p && p.level === to.level && Math.max(Math.abs(p.worldX - to.x), Math.abs(p.worldZ - to.z)) <= 24) {
+        const w = await sessionWalker(s);
+        const r = await walkPath(w, [{ x: to.x, z: to.z, tol }], { maxTicks: 120, stop });
+        if (r.ok && posNear(s, to, tol)) return;
+    }
+    const cur = s.sdk.getState()?.player;
+    if (!cur) throw Error('walk failed: no player state');
+    const from = { x: cur.worldX, z: cur.worldZ, level: cur.level };
+    const plan = await planTripOffThread(from, to, withoutSpells(accountOf(s)), undefined);
+    if (!plan) throw Error(`ground route to ${to.x},${to.z},${to.level} unavailable from ${from.x},${from.z},${from.level}`);
+    const r = await walkRoute(s, plan.legs, { legTimeoutTicks });
+    if (!r.ok || !posNear(s, to, tol)) throw Error(`walk to ${to.x},${to.z},${to.level} failed: ${r.ok ? 'not at target' : r.detail}`);
+}
+
 async function moveTo(s: Session, to: { x: number; z: number; level: number }, tol = 2, stop: () => boolean): Promise<void> {
     if (posNear(s, to, tol)) return;
     const p = s.sdk.getState()?.player;
@@ -471,7 +496,7 @@ async function runServe(args: string[]): Promise<void> {
                 if (!hasExactKit(s.sdk.getInventory(), leg.kit)) {
                     await withdrawExactKit(s, leg.kit, legBank, stop);
                 }
-                await moveTo(s, leg.handoff, 2, stop);
+                await moveGroundTo(s, leg.handoff, 2, stop);
                 const p = s.sdk.getState()!.player!;
                 console.log('SUPPLIER_READY ' + JSON.stringify({
                     holder,
@@ -545,7 +570,7 @@ async function runServe(args: string[]): Promise<void> {
                 if (!hasExactKit(s.sdk.getInventory(), batch)) {
                     await withdrawExactKit(s, batch, bankTile, stop);
                 }
-                await moveTo(s, LUMBRIDGE_HANDOFF, 2, stop);
+                await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
                 emitReady();
                 const ok = await serveOneBatch(s, specialist, batch, t0, CAP, stop);
                 if (!ok) break;
@@ -562,7 +587,7 @@ async function runServe(args: string[]): Promise<void> {
             if (!hasExactKit(s.sdk.getInventory(), starter)) {
                 await withdrawExactKit(s, starter, bankTile, stop);
             }
-            await moveTo(s, LUMBRIDGE_HANDOFF, 2, stop);
+            await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
             emitReady();
             let ok = await serveOneBatch(s, specialist, starter, t0, CAP, stop);
             let idx = 0;
@@ -572,7 +597,7 @@ async function runServe(args: string[]): Promise<void> {
                 if (!hasExactKit(s.sdk.getInventory(), batch)) {
                     await withdrawExactKit(s, batch, VARROCK_WEST_BANK, stop);
                 }
-                await moveTo(s, VARROCK_WEST_ANVIL, 2, stop);
+                await moveGroundTo(s, VARROCK_WEST_ANVIL, 2, stop);
                 ok = await serveOneBatch(s, specialist, batch, t0, CAP, stop);
             }
             allDone = ok && idx === SMITHING_RUNNER_QUEUE.length;
@@ -586,7 +611,7 @@ async function runServe(args: string[]): Promise<void> {
             if (!hasExactKit(s.sdk.getInventory(), starter)) {
                 await withdrawExactKit(s, starter, bankTile, stop);
             }
-            await moveTo(s, LUMBRIDGE_HANDOFF, 2, stop);
+            await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
             emitReady();
             let ok = await serveOneBatch(s, specialist, starter, t0, CAP, stop);
             const insideBody = () => {
@@ -601,10 +626,10 @@ async function runServe(args: string[]): Promise<void> {
                     await withdrawExactKit(s, fullPack, EDGEVILLE_BANK, stop);
                 }
                 if (!insideBody()) {
-                    await moveTo(s, BODY_RUINS, 2, stop);
+                    await moveGroundTo(s, BODY_RUINS, 2, stop);
                     await enterAltar(s, ITEM_IDS.body_talisman, 2457, stop, insideBody);
                 }
-                await moveTo(s, BODY_ALTAR_STAND, 2, stop);
+                await moveGroundTo(s, BODY_ALTAR_STAND, 2, stop);
                 ok = await serveOneBatch(s, specialist, [invSpec(ITEM_IDS.blankrune, 26)], t0, CAP, stop);
                 if (ok) trips++;
             }

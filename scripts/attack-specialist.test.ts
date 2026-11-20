@@ -5,6 +5,7 @@ import { validateSupplies } from '../packages/core/src/launch-evidence';
 import { componentId } from '../packages/core/src/logout';
 import { evaluateProgressionWork, preflightProgressionWork } from '../packages/core/src/progression-session';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
+import { withoutSpells } from '../packages/core/src/walk';
 import { intentForEntry, loadProgressionCatalog } from '../packages/planner/src/progression-catalog';
 import { xpForLevel } from '../packages/planner/src/curve';
 import { observedSupplies } from '../packages/practice/src/specialist-rehearsal';
@@ -19,6 +20,7 @@ import {
     hasExactKit,
     kitRequirements,
     kitSlotTotal,
+    moveGroundTo,
 } from './specialist-supplier';
 
 const ROOT = resolve(import.meta.dir, '..');
@@ -212,4 +214,17 @@ test('parseSpecialistBenchArgs splits child env overrides from positional specia
         childEnv: { LOOT_WATCH: '0', PRAYER_GUARD: '0', EAT_GUARD: '0' },
     });
     expect(() => parseSpecialistBenchArgs(['a', 'b', 'scripts/does-not-exist.ts'], ROOT)).toThrow(/missing script/);
+});
+
+test('moveGroundTo exists and withoutSpells strips lawrune so full-kit suppliers never stop at banks for teleport runes', () => {
+    expect(typeof moveGroundTo).toBe('function');
+    const stripped = withoutSpells({
+        skills: {},
+        quests: [],
+        items: ['lawrune', 'airrune', 'staffoffire'],
+        counts: { lawrune: 30, airrune: 1300 },
+        coins: 200,
+    } as any);
+    expect(stripped.items).toEqual(['airrune', 'staffoffire']);
+    expect(stripped.counts?.lawrune).toBe(0);
 });
