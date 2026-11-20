@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795165224816-fingerblastr-yewfirst-4b7f0cfd8f371f5a",
+ "role": "from",
+ "account": "Fingerblastr",
+ "partner": "YewFirst",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795165242513,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] 476c861c6b0d47e58c1ff40eef9d00de2d610358 -> fleet-trade-claim/fingerblastr (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}

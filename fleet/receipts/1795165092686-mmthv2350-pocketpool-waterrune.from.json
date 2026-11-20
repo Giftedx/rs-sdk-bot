@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795165092686-mmthv2350-pocketpool-waterrune",
  "account": "mmthv2350",
  "partner": "PocketPool",
@@ -12,6 +12,16 @@
  "claim": "4358b10a-2365-4995-8d0b-0897ca9027b1",
  "count": 0,
  "ok": false,
- "at": 1795165205008,
- "detail": "trade claimed"
+ "at": 1795165230847,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 197,
+  "at": 1795165214901
+ },
+ "logout": {
+  "attemptId": "1795165205017-0000028912-0000000001",
+  "at": 1795165230811,
+  "sha256": "911e775a78eda8d2a3cc66271a0cb38871b4b208707d165f3a332daf8ca66aa2"
+ },
+ "screen": false
 }
