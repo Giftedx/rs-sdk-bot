@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795154836644-weequickie-billionaire",
  "account": "WeeQuickie",
  "partner": "Billionaire",
@@ -10,8 +10,18 @@
  "item": "coins",
  "requested": 28060,
  "claim": "d7143514-4dfb-4f41-899a-50e8aa68f292",
- "count": 0,
- "ok": false,
- "at": 1795154922998,
- "detail": "trade claimed"
+ "count": 28060,
+ "ok": true,
+ "at": 1795154936586,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 70506,
+  "after": 42446
+ },
+ "logout": {
+  "attemptId": "1795154923007-0000026784-0000000001",
+  "at": 1795154936492,
+  "sha256": "1136c8782cf378285fa45aff57824966ec7d95fd442e957cd15c1c752e39d80d"
+ },
+ "screen": true
 }

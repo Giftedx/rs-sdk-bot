@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795154836644-woodpecker-bigchopper-runechainbody",
+ "account": "Woodpecker",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "46db74fe-ecf6-40e0-9cc1-8ec30b43e72c",
+ "count": 1,
+ "ok": true,
+ "at": 1795154950832,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795154933695-0000028444-0000000001",
+  "at": 1795154950819,
+  "sha256": "7608531fec8c4bd227573e78f9c7a85c322913024759751e120986cf8e2adfc8"
+ },
+ "screen": true
+}
