@@ -54,7 +54,11 @@ async function exitGamesRoomToBurthorpe(main: Awaited<ReturnType<typeof openHelp
         if (!p) { await waitTicks(main, 1); continue; }
         if (p.level === 0 && p.worldX >= 2890 && p.worldX <= 2910 && p.worldZ >= 3555 && p.worldZ <= 3575) return;
         const targetLocId = p.level === 0 ? 4622 : 4627;
-        const loc = (main.sdk.getState()?.nearbyLocs ?? []).find(l => l.id === targetLocId);
+        // Level 0: the base stairs at (2207,4935) lead to the upper floor beside the Burthorpe exit stairs (1_34_77_29_7).
+        const locs = (main.sdk.getState()?.nearbyLocs ?? [])
+            .filter(l => l.id === targetLocId && (p.level !== 0 || l.x === 2207))
+            .sort((a, b) => chebDist({ x: a.x, z: a.z }, { x: p.worldX, z: p.worldZ }) - chebDist({ x: b.x, z: b.z }, { x: p.worldX, z: p.worldZ }));
+        const loc = locs[0];
         if (loc && (lastClickLvl !== p.level || i - lastClickAt >= 5)) {
             lastClickLvl = p.level;
             lastClickAt = i;
