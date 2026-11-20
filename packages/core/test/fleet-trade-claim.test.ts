@@ -1,7 +1,7 @@
 import { expect, test, spyOn } from 'bun:test';
 import { execFileSync } from 'node:child_process';
 import * as childProcess from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { acquireFleetSwarmClaim, acquireFleetTradeClaim, readAllFleetAccountClaims, readFleetAccountClaim, readFleetTradeClaim, readHeldFleetTradeClaims, releaseFleetTradeClaim } from '../src/fleet-trade-claim';
@@ -509,5 +509,140 @@ test('a failed batch read falls back to one read for each record, and a failed l
         expect(readAllFleetAccountClaims(noCheck)).toEqual(expected);
         expect(fetched).toHaveLength(1);
         expect(fetched[0]).toHaveLength(names.length);
+    });
+}, 60_000);
+
+test('a patient releaseAfterLogout retries a timed-out push via injected gitWindow without duplicate commits', async () => {
+    await withRepos(async (a, b) => {
+        const seenBudgets: Array<number | undefined> = [];
+        let pushes = 0;
+        const slowRelease = ((root: string, authority?: string, budgetMs?: number) => {
+            seenBudgets.push(budgetMs);
+            return fleetGitWindow(root, authority, budgetMs, (args, { input: stdin, timeout }) => {
+                const real = () => execFileSync('git', args, { cwd: root, input: stdin, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout, windowsHide: true });
+                if (!args.includes('push')) return real();
+                if (++pushes === 1) return real();
+                if (pushes <= 3) {
+                    if (pushes === 2) real();
+                    throw Object.assign(Error('spawnSync git ETIMEDOUT'), { code: 'ETIMEDOUT', stdout: '', stderr: '' });
+                }
+                return real();
+            });
+        }) as typeof fleetGitWindow;
+        const waits: number[] = [];
+        const claim = acquireFleetSwarmClaim(a, swarmInput, { patient: true, gitWindow: slowRelease, wait: ms => waits.push(ms) });
+        const attempt = beginSessionAttempt(swarmInput, { root: join(a, '.practice/session-lifecycle'),
+            owner: { ...lifecycleOwner(), sharedClaimNonce: claim.nonce } });
+        claim.armNetwork();
+        expect(attempt.record('ended', 'logged-out')).toBe(true);
+        claim.releaseAfterLogout(attempt.attemptId);
+        expect(pushes).toBe(4);
+        expect(waits.length).toBeGreaterThan(0);
+        expect(seenBudgets).toContain(claimApi.SWARM_CLAIM_PUSH_MS);
+        expect(readFleetAccountClaim(b, swarmInput)).toMatchObject({ phase: 'released', nonce: claim.nonce });
+        git(a, 'fetch', '--quiet', 'origin', 'refs/heads/fleet-trade-claim/trader');
+        expect(claimLog(a)).toEqual(['Fleet swarm released', 'Fleet swarm attempt']);
+
+        const nonPatientBudgets: Array<number | undefined> = [];
+        const np = acquireFleetSwarmClaim(a, { ...swarmInput, account: 'Trader2' }, {
+            gitWindow: ((root: string, authority?: string, budgetMs?: number) => {
+                nonPatientBudgets.push(budgetMs);
+                return fleetGitWindow(root, authority, budgetMs);
+            }) as typeof fleetGitWindow,
+        });
+        np.abortBeforeNetwork();
+        expect(nonPatientBudgets).toEqual([undefined, 4000]);
+    });
+}, 60_000);
+
+test('a patient acquireFleetSwarmClaim recovers when own held H0 raced with own released H1 of the same nonce', async () => {
+    await withRepos(async (a, b) => {
+        const prev = acquireFleetSwarmClaim(a, swarmInput, { patient: true });
+        const attempt = beginSessionAttempt(swarmInput, { root: join(a, '.practice/session-lifecycle'),
+            owner: { ...lifecycleOwner(), sharedClaimNonce: prev.nonce } });
+        prev.armNetwork();
+        expect(attempt.record('ended', 'logged-out')).toBe(true);
+
+        let pushes = 0, raced = false;
+        const waits: number[] = [];
+        const racingRelease = ((root: string, authority?: string, budgetMs?: number) => fleetGitWindow(root, authority, budgetMs, (args, { input: stdin, timeout }) => {
+            if (args.includes('push')) {
+                pushes++;
+                if (!raced) { raced = true; prev.releaseAfterLogout(attempt.attemptId); }
+            }
+            return execFileSync('git', args, { cwd: root, input: stdin, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout, windowsHide: true });
+        })) as typeof fleetGitWindow;
+
+        const next = acquireFleetSwarmClaim(a, swarmInput, { patient: true, gitWindow: racingRelease, wait: ms => waits.push(ms) });
+        expect(raced).toBe(true);
+        expect(pushes).toBe(2);
+        expect(waits).toEqual([claimApi.SWARM_CLAIM_PAUSE_MS]);
+        expect(next.nonce).not.toBe(prev.nonce);
+        expect(readFleetAccountClaim(b, swarmInput)).toMatchObject({ phase: 'held', nonce: next.nonce });
+        // Failed casAttempt 1 pending marker was cleaned before retrying casAttempt 2.
+        const pendingFiles = readdirSync(join(a, '.practice', 'fleet-account-pending'));
+        expect(pendingFiles).toEqual([next.nonce + '.json']);
+        git(a, 'fetch', '--quiet', 'origin', 'refs/heads/fleet-trade-claim/trader');
+        expect(claimLog(a)).toEqual(['Fleet swarm attempt', 'Fleet swarm released', 'Fleet swarm attempt']);
+    });
+}, 60_000);
+
+test('a patient acquireFleetSwarmClaim still refuses immediately when H1 has a different nonce or phase held', async () => {
+    await withRepos(async (a) => {
+        // Case 1: H1 is released, but under a different claim nonce on the same checkout.
+        const prev = acquireFleetSwarmClaim(a, swarmInput, { patient: true });
+        const attempt1 = beginSessionAttempt(swarmInput, { root: join(a, '.practice/session-lifecycle'),
+            owner: { ...lifecycleOwner(), sharedClaimNonce: prev.nonce } });
+        prev.armNetwork();
+        expect(attempt1.record('ended', 'logged-out')).toBe(true);
+
+        let pushes1 = 0, raced1 = false;
+        const otherNonceRelease = ((root: string, authority?: string, budgetMs?: number) => fleetGitWindow(root, authority, budgetMs, (args, { input: stdin, timeout }) => {
+            if (args.includes('push')) {
+                pushes1++;
+                if (!raced1) {
+                    raced1 = true;
+                    prev.releaseAfterLogout(attempt1.attemptId);
+                    const intermediate = acquireFleetSwarmClaim(a, swarmInput, { patient: true });
+                    const attempt2 = beginSessionAttempt(swarmInput, { root: join(a, '.practice/session-lifecycle'),
+                        owner: { ...lifecycleOwner(), sharedClaimNonce: intermediate.nonce } });
+                    intermediate.armNetwork();
+                    expect(attempt2.record('ended', 'logged-out')).toBe(true);
+                    intermediate.releaseAfterLogout(attempt2.attemptId);
+                }
+            }
+            return execFileSync('git', args, { cwd: root, input: stdin, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout, windowsHide: true });
+        })) as typeof fleetGitWindow;
+
+        expect(() => acquireFleetSwarmClaim(a, swarmInput, { patient: true, gitWindow: otherNonceRelease, wait: () => {} })).toThrow('unavailable or changed');
+        expect(raced1).toBe(true);
+        expect(pushes1).toBe(1);
+    });
+
+    await withRepos(async (a) => {
+        // Case 2: H1 is held (another login acquired after release before our push landed).
+        const prev = acquireFleetSwarmClaim(a, swarmInput, { patient: true });
+        const attempt1 = beginSessionAttempt(swarmInput, { root: join(a, '.practice/session-lifecycle'),
+            owner: { ...lifecycleOwner(), sharedClaimNonce: prev.nonce } });
+        prev.armNetwork();
+        expect(attempt1.record('ended', 'logged-out')).toBe(true);
+
+        let pushes2 = 0, raced2 = false, winnerNonce = '';
+        const racedHeld = ((root: string, authority?: string, budgetMs?: number) => fleetGitWindow(root, authority, budgetMs, (args, { input: stdin, timeout }) => {
+            if (args.includes('push')) {
+                pushes2++;
+                if (!raced2) {
+                    raced2 = true;
+                    prev.releaseAfterLogout(attempt1.attemptId);
+                    winnerNonce = acquireFleetSwarmClaim(a, swarmInput, { patient: true }).nonce;
+                }
+            }
+            return execFileSync('git', args, { cwd: root, input: stdin, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout, windowsHide: true });
+        })) as typeof fleetGitWindow;
+
+        expect(() => acquireFleetSwarmClaim(a, swarmInput, { patient: true, gitWindow: racedHeld, wait: () => {} })).toThrow('unavailable or changed');
+        expect(raced2).toBe(true);
+        expect(pushes2).toBe(1);
+        expect(readFleetAccountClaim(a, swarmInput)).toMatchObject({ phase: 'held', nonce: winnerNonce });
     });
 }, 60_000);

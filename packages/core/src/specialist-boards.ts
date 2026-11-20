@@ -16,9 +16,9 @@ export const SPECIALIST_BOARDS: Readonly<Record<string, {name:string; category:n
     mineshafted: {name:'Mining', category:15},
     grindmyherb: {name:'Herblore', category:16},
     polevaulter: {name:'Agility', category:17},
-    dipyourwick: {name:'Thieving', category:18},
+    halfinch: {name:'Thieving', category:18},
     pouchstuffed: {name:'Runecraft', category:21},
 };
 
 // The main account and the specialists (including retired specialist clocks kept offline): no planner, recovery or transfer plan may put them online.
-export const RESERVED_ACCOUNTS: readonly string[] = ['haggis', 'justthetip', ...Object.keys(SPECIALIST_BOARDS)];
+export const RESERVED_ACCOUNTS: readonly string[] = ['haggis', 'justthetip', 'dipyourwick', ...Object.keys(SPECIALIST_BOARDS)];

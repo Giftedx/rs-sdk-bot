@@ -20,7 +20,7 @@ test('each specialist has its own skill board and a name from the name lists', (
 test('the reserved list is the main account and every specialist', () => {
     expect([...RESERVED_ACCOUNTS].sort()).toEqual([
         'bigboner', 'bigswinger', 'castmyload', 'cutmyjewels', 'dipyourwick', 'fullblooded',
-        'grindmyherb', 'haggis', 'hiltsdeep', 'justthetip', 'lochnessrod', 'mineshafted',
+        'grindmyherb', 'haggis', 'halfinch', 'hiltsdeep', 'justthetip', 'lochnessrod', 'mineshafted',
         'nockandload', 'polevaulter', 'pouchstuffed', 'rocksolid', 'shaftshooter', 'steelrod',
     ]);
     expect(SPECIALIST_BOARDS.nockandload).toEqual({ name: 'Fletching', category: 10 });

@@ -38,7 +38,7 @@ function countSupplyMap(items: readonly { id: number; count: number }[]): Record
 
 test('all 8 ready specialists construct valid --specialist segments matching board expectations and supply bills', () => {
     expect(READY_SPECIALIST_ACCOUNTS).toEqual([
-        'DipYourWick',
+        'HalfInch',
         'NockAndLoad',
         'Shaftshooter',
         'CutMyJewels',
@@ -49,7 +49,7 @@ test('all 8 ready specialists construct valid --specialist segments matching boa
     ]);
 
     const expectedBills: Record<string, readonly { id: number; count: number }[]> = {
-        DipYourWick: THIEVING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
+        HalfInch: THIEVING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
         NockAndLoad: FLETCHING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
         Shaftshooter: RANGED_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
         CutMyJewels: CRAFTING_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
@@ -60,7 +60,7 @@ test('all 8 ready specialists construct valid --specialist segments matching boa
     };
 
     const expectedTargets: Record<string, number> = {
-        DipYourWick: 2221,
+        HalfInch: 2221,
         NockAndLoad: 54,
         Shaftshooter: 5483,
         CutMyJewels: 182,
@@ -98,10 +98,10 @@ test('all 8 ready specialists construct valid --specialist segments matching boa
 });
 
 test('account lookup is case-insensitive and rejects unknown accounts or invalid overrides', () => {
-    const lower = resolveSpecialistSegment('dipyourwick');
-    const upper = resolveSpecialistSegment('DIPYOURWICK');
+    const lower = resolveSpecialistSegment('halfinch');
+    const upper = resolveSpecialistSegment('HALFINCH');
     expect(lower).toEqual(upper);
-    expect(lower.specialist).toBe('DipYourWick');
+    expect(lower.specialist).toBe('HalfInch');
     expect(lower.env?.LIVE).toBe('1');
 
     const ranged = resolveSpecialistSegment('shaftshooter', { planTicks: 4600 });
@@ -112,8 +112,8 @@ test('account lookup is case-insensitive and rejects unknown accounts or invalid
     expect(resolveSpecialistSegment('Shaftshooter').plan!.ticks).toBe(4660);
 
     expect(() => resolveSpecialistSegment('Haggis')).toThrow('unknown specialist');
-    expect(() => resolveSpecialistSegment('DipYourWick', { planTicks: 0 })).toThrow('invalid planTicks');
-    expect(() => resolveSpecialistSegment('DipYourWick', { planTicks: -5 })).toThrow('invalid planTicks');
+    expect(() => resolveSpecialistSegment('HalfInch', { planTicks: 0 })).toThrow('invalid planTicks');
+    expect(() => resolveSpecialistSegment('HalfInch', { planTicks: -5 })).toThrow('invalid planTicks');
 });
 
 test('expandKitToSave and aggregateKitBank validate 28-slot limits and aggregate totals', () => {
@@ -142,9 +142,9 @@ test('parseCliArgs handles flags and positional account cleanly', () => {
         planTicks: 1212,
     });
     expect(() => parseCliArgs([])).toThrow('usage:');
-    expect(() => parseCliArgs(['DipYourWick', '--bogus'])).toThrow('unknown flag');
-    expect(() => parseCliArgs(['DipYourWick', 'extra'])).toThrow('unexpected positional');
-    expect(() => parseCliArgs(['DipYourWick', '--plan-ticks', 'abc'])).toThrow('positive integer');
+    expect(() => parseCliArgs(['HalfInch', '--bogus'])).toThrow('unknown flag');
+    expect(() => parseCliArgs(['HalfInch', 'extra'])).toThrow('unexpected positional');
+    expect(() => parseCliArgs(['HalfInch', '--plan-ticks', 'abc'])).toThrow('positive integer');
 });
 
 test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir, and reports receipt fields', async () => {
