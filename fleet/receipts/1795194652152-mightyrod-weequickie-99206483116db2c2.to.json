@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795194652152-mightyrod-weequickie-99206483116db2c2",
+ "account": "WeeQuickie",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cannonball",
+ "requested": 900,
+ "claim": "c6c21852-64a4-4d37-bed6-907572d5a233",
+ "count": 0,
+ "ok": false,
+ "at": 1795194816780,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Rune arrow",
+   "requested": 95,
+   "count": 0
+  }
+ ]
+}
