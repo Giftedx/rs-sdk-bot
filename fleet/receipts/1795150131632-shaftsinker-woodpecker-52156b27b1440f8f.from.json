@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795150131632-shaftsinker-woodpecker-52156b27b1440f8f",
+ "account": "Shaftsinker",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 1180000,
+ "claim": "2f184cd9-ba8f-4cb8-a7d9-e82a52de3063",
+ "count": 1180000,
+ "ok": true,
+ "at": 1795150179823,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1180000,
+  "after": 0
+ },
+ "bank": {
+  "count": 1180000,
+  "at": 1795150152277
+ },
+ "logout": {
+  "attemptId": "1795150143338-0000015392-0000000001",
+  "at": 1795150179807,
+  "sha256": "c7086e8a38ee76c13301903a0ca175c81b8cde2ce432653140431c8f19d4cec4"
+ },
+ "screen": true
+}

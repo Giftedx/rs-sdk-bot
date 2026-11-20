@@ -1,0 +1,23 @@
+{
+ "id": "1795150131632-shaftsinker-woodpecker-52156b27b1440f8f",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftsinker",
+ "to": "Woodpecker",
+ "item": "Coins",
+ "count": 1180000,
+ "start": 1795150131632,
+ "end": 1795151331632,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
