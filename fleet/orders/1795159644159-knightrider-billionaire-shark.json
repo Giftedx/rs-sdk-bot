@@ -1,0 +1,22 @@
+{
+ "id": "1795159644159-knightrider-billionaire-shark",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "Billionaire",
+ "item": "Shark",
+ "count": 6,
+ "start": 1795159644159,
+ "end": 1795162044159,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
