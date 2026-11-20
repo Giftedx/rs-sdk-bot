@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795164438168-swordinhand-mightyrod-f8092af552b8040b",
  "account": "Mightyrod",
  "partner": "Swordinhand",
@@ -10,15 +10,37 @@
  "item": "Coins",
  "requested": 120000,
  "claim": "ffe8b75f-e5fc-4c92-ae26-ccb72bb2ca81",
- "count": 0,
- "ok": false,
- "at": 1795164452577,
- "detail": "trade claimed",
+ "count": 120000,
+ "ok": true,
+ "at": 1795164503251,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Rune arrow",
    "requested": 71,
-   "count": 0
+   "count": 71,
+   "inventory": {
+    "before": 0,
+    "after": 71
+   },
+   "bank": {
+    "count": 71,
+    "at": 1795164502552
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 99,
+  "after": 120099
+ },
+ "bank": {
+  "count": 120000,
+  "at": 1795164502112
+ },
+ "logout": {
+  "attemptId": "1795164452928-0000026516-0000000001",
+  "at": 1795164503238,
+  "sha256": "776832dc18482d172530aafa544ab3faf8fa55a911e5be38c0c715540a2b7fdb"
+ },
+ "screen": true
 }
