@@ -49,17 +49,17 @@ export const CRAFTING_BATCHES: readonly CraftingBatchPlan[] = [
  {
   give: [
    { id: ITEM_IDS.chisel, count: 1 },
-   { id: ITEM_IDS.uncut_opal, count: 20 },
-   { id: ITEM_IDS.uncut_sapphire, count: 4 },
-   { id: ITEM_IDS.uncut_emerald, count: 3 },
+   { id: ITEM_IDS.uncut_opal, count: 18 },
+   { id: ITEM_IDS.uncut_sapphire, count: 3 },
+   { id: ITEM_IDS.uncut_emerald, count: 6 },
   ],
   returnIds: [],
  },
  {
   give: [
-   { id: ITEM_IDS.uncut_ruby, count: 4 },
-   { id: ITEM_IDS.uncut_diamond, count: 10 },
-   { id: ITEM_IDS.uncut_dragonstone, count: 13 },
+   { id: ITEM_IDS.uncut_ruby, count: 3 },
+   { id: ITEM_IDS.uncut_diamond, count: 9 },
+   { id: ITEM_IDS.uncut_dragonstone, count: 15 },
   ],
   returnIds: [
    ITEM_IDS.opal,
@@ -76,18 +76,18 @@ export const CRAFTING_BATCHES: readonly CraftingBatchPlan[] = [
     : [ITEM_IDS.dragonstone],
  })),
  {
-  give: [{ id: ITEM_IDS.uncut_dragonstone, count: 21 }],
+  give: [{ id: ITEM_IDS.uncut_dragonstone, count: 19 }],
   returnIds: [ITEM_IDS.dragonstone],
  },
 ];
 
 export const CRAFTING_SUPPLY_BILL: readonly SupplyEntry[] = [
  { itemId: ITEM_IDS.chisel, item: 'Chisel', count: 1 },
- { itemId: ITEM_IDS.uncut_opal, item: 'Uncut opal', count: 20 },
- { itemId: ITEM_IDS.uncut_sapphire, item: 'Uncut sapphire', count: 4 },
- { itemId: ITEM_IDS.uncut_emerald, item: 'Uncut emerald', count: 3 },
- { itemId: ITEM_IDS.uncut_ruby, item: 'Uncut ruby', count: 4 },
- { itemId: ITEM_IDS.uncut_diamond, item: 'Uncut diamond', count: 10 },
+ { itemId: ITEM_IDS.uncut_opal, item: 'Uncut opal', count: 18 },
+ { itemId: ITEM_IDS.uncut_sapphire, item: 'Uncut sapphire', count: 3 },
+ { itemId: ITEM_IDS.uncut_emerald, item: 'Uncut emerald', count: 6 },
+ { itemId: ITEM_IDS.uncut_ruby, item: 'Uncut ruby', count: 3 },
+ { itemId: ITEM_IDS.uncut_diamond, item: 'Uncut diamond', count: 9 },
  { itemId: ITEM_IDS.uncut_dragonstone, item: 'Uncut dragonstone', count: 277 },
 ];
 
