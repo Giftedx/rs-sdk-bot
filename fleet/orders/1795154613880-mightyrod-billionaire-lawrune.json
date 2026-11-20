@@ -1,0 +1,22 @@
+{
+ "id": "1795154613880-mightyrod-billionaire-lawrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "Billionaire",
+ "item": "Law rune",
+ "count": 1,
+ "start": 1795154613880,
+ "end": 1795157013880,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
