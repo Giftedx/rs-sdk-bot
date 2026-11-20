@@ -168,9 +168,9 @@ test('specialist-supplier kits, parseKitArg, and resolveBaseId cert mapping work
 
 test('bench cases, aio-skiller routes, and progression catalog admit Prayer, Smithing, and Runecraft specialists', () => {
     expect(SPECIALIST_FAST_SKILLS_CASES.map(c => c.key)).toEqual([
-        'extra:specialist-prayer',
-        'extra:specialist-smithing',
-        'extra:specialist-runecraft',
+        'skiller:prayer:specialist',
+        'skiller:smithing:specialist',
+        'skiller:runecraft:specialist',
     ]);
 
     expect(resolveSkillerStep('prayer', 'specialist', ['CAP=1350']).script).toBe('scripts/prayer-specialist.ts');

@@ -224,11 +224,15 @@ export async function runSmithingSpecialist(
  let done = false;
  const ac = new AbortController();
 
- const [starterHelper, runnerC, runnerD] = helpers as [Session, Session, Session, ...Session[]];
- const runners: SmithRunnerState[] = [
-  { session: runnerC, task: { barId: ITEM_IDS.iron_bar, count: 25 }, claimed: false, ready: false },
-  { session: runnerD, task: { barId: ITEM_IDS.steel_bar, count: 25 }, claimed: false, ready: false },
- ];
+ const [starterHelper, ...varrockHelpers] = helpers as [Session, Session, Session, ...Session[]];
+ const initialTaskFor = (idx: number): SmithRunnerDelivery =>
+  idx === 0 ? { barId: ITEM_IDS.iron_bar, count: 25 } : { barId: ITEM_IDS.steel_bar, count: 25 };
+ const runners: SmithRunnerState[] = varrockHelpers.map((session, idx) => ({
+  session,
+  task: initialTaskFor(idx),
+  claimed: false,
+  ready: false,
+ }));
 
  const committedXp = (exclude: SmithRunnerState): number => {
   let xp = skillXp(spec, 'Smithing');
@@ -251,7 +255,6 @@ export async function runSmithingSpecialist(
 
  const keepSet = new Set<number>([
   ITEM_IDS.hammer,
-  ...GLORY_IDS,
   ITEM_IDS.bronze_bar,
   ITEM_IDS.iron_bar,
   ITEM_IDS.steel_bar,
@@ -285,12 +288,12 @@ export async function runSmithingSpecialist(
   await smithHeldBars(spec, target, deadline);
   await dropItemsFast(spec, keepSet, deadline);
 
-  let lastRunnerIdx = 1;
+  let lastRunnerIdx = runners.length - 1;
   while (skillLevel(spec, 'Smithing') < target && spec.tick() < deadline) {
    const wantBar = nextWantedBarId(skillLevel(spec, 'Smithing'));
    const pickRunner = () => {
-    const order = [1 - lastRunnerIdx, lastRunnerIdx];
-    for (const idx of order) {
+    for (let offset = 1; offset <= runners.length; offset++) {
+     const idx = (lastRunnerIdx + offset) % runners.length;
      const r = runners[idx]!;
      if (
       r.ready &&
@@ -359,7 +362,6 @@ export async function runSmithingExternal(
  const deadline = start + opts.cap;
  const keepSet = new Set<number>([
   ITEM_IDS.hammer,
-  ...GLORY_IDS,
   ITEM_IDS.bronze_bar,
   ITEM_IDS.iron_bar,
   ITEM_IDS.steel_bar,
