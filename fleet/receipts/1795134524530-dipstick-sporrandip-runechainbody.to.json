@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795134524530-dipstick-sporrandip-runechainbody",
+ "account": "SporranDip",
+ "partner": "Dipstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "4a8ee5b6-fc6b-4f6d-aa23-4f62c61a8d8b",
+ "count": 0,
+ "ok": false,
+ "at": 1795134589545,
+ "detail": "trade claimed"
+}
