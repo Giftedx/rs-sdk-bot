@@ -5,7 +5,7 @@ import {join} from 'node:path';
 import {gzipSync} from 'node:zlib';
 import {missionSignature} from '../../core/src/session-admission';
 import {xpForLevel} from '../../planner/src/curve';
-import {checkExpect, checkSpecialistSegment, isolatedStackOptions, rehearsalChildEnv, rehearseLockstep, resolveSegmentSuppliers, stopHelperProcs, SUPPLIER_ONLINE_TIMEOUT_MS, TickWindow, waitForSuppliersOnline, type HelperProcHandle, type Segment} from '../src/rehearse';
+import {checkExpect, checkSpecialistSegment, ISOLATED_ENGINE_ENV, isolatedStackOptions, rehearsalChildEnv, rehearseLockstep, resolveSegmentSuppliers, stopHelperProcs, SUPPLIER_ONLINE_TIMEOUT_MS, TickWindow, waitForSuppliersOnline, type HelperProcHandle, type Segment} from '../src/rehearse';
 import {confirmLivingSession, observedSupplies, scoredClock, SPECIALIST_TICK_MS, successfulWorkerLog} from '../src/specialist-rehearsal';
 
 function engineSave(playtime = 305, levelTick = 300, tickMs = 400, level = 99) {
@@ -271,4 +271,14 @@ test('checkExpect counts attained XP level 99 when current Hitpoints or Prayer i
         'skill.Prayer>=99': true,
         'skill.Agility>=99': false,
     });
+});
+
+test('ISOLATED_ENGINE_ENV keeps all worker ports below Linux ip_local_port_range (32768+)', () => {
+    for (const [key, value] of Object.entries(ISOLATED_ENGINE_ENV)) {
+        if (!key.endsWith('_PORT')) continue;
+        const port = Number(value);
+        expect(Number.isInteger(port)).toBe(true);
+        expect(port).toBeGreaterThan(1024);
+        expect(port).toBeLessThan(32_768);
+    }
 });

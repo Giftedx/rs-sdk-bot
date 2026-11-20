@@ -34,7 +34,7 @@ const root = resolve(import.meta.dir, '..', '..', '..');
 // Every port the engine and its login/friend/logger workers open, moved off the shared practice slot.
 export const ISOLATED = {engine: 8910, gateway: 7791, save: 8912} as const;
 export const ISOLATED_ENGINE_ENV: Record<string, string> = {
-    WEB_MANAGEMENT_PORT: '8911', NODE_PORT: '43610', LOGIN_PORT: '43611', FRIEND_PORT: '43612', LOGGER_PORT: '43613',
+    WEB_MANAGEMENT_PORT: '8911', NODE_PORT: '18910', LOGIN_PORT: '18911', FRIEND_PORT: '18912', LOGGER_PORT: '18913',
     BUILD_LIVE_RELOAD: 'false', BUILD_STARTUP: 'false',
     [SAVE_PORT_ENV]: String(ISOLATED.save),
 };

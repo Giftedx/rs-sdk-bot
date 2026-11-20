@@ -856,10 +856,6 @@ export async function fastTradeExternalReceive(
    continue;
   }
 
-  if (spec.sdk.getState()?.dialog?.isOpen) {
-   await spec.direct({ type: 'closeModal', reason: 'SDK' });
-  }
-
   if (st.screen === 'confirm') {
    sawConfirm = true;
    if (!st.myAccepted) {
