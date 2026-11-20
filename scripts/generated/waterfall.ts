@@ -649,9 +649,10 @@ try {
 
         if (opts.looseRailing) {
             await setPfm(true);
-            await walkNoHunters('maze in entry direct', [[2561, 3242, 4], [2502, 3191, 1]]);
+            const rIn = await walkPath(mazeWalker, [{ x: 2561, z: 3242, tol: 4 }, { x: 2533, z: 3156, tol: 2 }], { stop: () => died || T() > CAP || !!opts.stop?.() });
+            walkTicks += rIn.ticks;
             await setPfm(false);
-            await walkMazeLeg('maze in', 2533, 3156, 2);
+            if (!rIn.ok && !near(2533, 3156, 2)) await fail(`walk maze in direct: ${rIn.detail ?? 'incomplete'}`);
         } else {
             await walk('maze in entry', [[2502, 3191, 1]]);
             await walkMazeLeg('maze in', 2533, 3156, 2);
@@ -688,10 +689,11 @@ try {
         // 4. Glarial's tombstone: runes are refused in the tomb (quest_waterfall.rs2:70), so they wait on the ground
         // (300-tick drop timer). The pebble opens the tomb and sets 4.
         if (opts.looseRailing) {
-            await walkMazeLeg('maze out exit', 2502, 3191, 1);
             await setPfm(true);
-            await walkNoHunters('maze out direct', [[2561, 3242, 4], [2557, 3444, 2]]);
+            const rOut = await walkPath(mazeWalker, [{ x: 2561, z: 3242, tol: 4 }, { x: 2557, z: 3444, tol: 2 }], { stop: () => died || T() > CAP || !!opts.stop?.() });
+            walkTicks += rOut.ticks;
             await setPfm(false);
+            if (!rOut.ok && !near(2557, 3444, 2)) await fail(`walk maze out direct: ${rOut.detail ?? 'incomplete'}`);
         } else {
             await walkMazeLeg('maze out exit', 2502, 3191, 1);
             await walk('maze out', [[2557, 3444, 2]]);

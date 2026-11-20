@@ -110,11 +110,11 @@ export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 954, name: 'Rope', count: 1, stackable: false },
-    { id: 2434, name: 'Prayer potion(4)', count: 3, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
     { id: 385, name: 'Shark', count: 1, stackable: false },
     { id: 3016, name: 'Super energy(4)', count: 1, stackable: false },
     { id: 2436, name: 'Super attack(4)', count: 1, stackable: false },
-    { id: 2440, name: 'Super strength(4)', count: 4, stackable: false },
+    { id: 2440, name: 'Super strength(4)', count: 5, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
 
@@ -810,7 +810,7 @@ export async function runWildyPvpLoop(
                 const str = skillInfo(s, 'Strength');
                 const atk = skillInfo(s, 'Attack');
                 const maxStrBoost = 5 + Math.floor(str.baseLevel * 0.15);
-                const minStrBoost = opts.skill === 'Strength' && str.baseLevel < 95 ? maxStrBoost - 1 : maxStrBoost - 2;
+                const minStrBoost = maxStrBoost - 1;
                 const minAtkBoost = opts.skill === 'Strength' ? 12 : 10;
                 if (str.level <= str.baseLevel + minStrBoost) {
                     if (drinkFromList(SUPER_STRENGTH_IDS)) { lastDrinkTick = s.tick(); needReengage = true; }
@@ -830,7 +830,11 @@ export async function runWildyPvpLoop(
                 const sk = skillInfo(s, opts.skill);
                 console.log(`PVP_STATUS tick=${s.tick()} ${opts.skill}=${sk.baseLevel} xp=${sk.experience} hp=${st?.player?.hp} pray=${pts} tanks=${tanks.length} inCombat=${!!combat?.inCombat} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
             }
-            const currentAlive = combat?.inCombat && combat.targetType === 'player' && tanks.some(t => t.index === combat.targetIndex);
+            const currentTank = combat?.inCombat && combat.targetType === 'player'
+                ? tanks.find(t => t.index === combat.targetIndex)
+                : undefined;
+            const keepTank = tanks.find(t => d8({ x: t.x ?? t.worldX ?? 0, z: t.z ?? t.worldZ ?? 0 }, DESERTED_KEEP) <= 1);
+            const currentAlive = !!currentTank && (!keepTank || d8({ x: currentTank.x ?? currentTank.worldX ?? 0, z: currentTank.z ?? currentTank.worldZ ?? 0 }, DESERTED_KEEP) <= 1);
             // togglePrayer/consumption run p_clearpendingaction; re-send interactPlayer on the same tick after them so the next 4-tick swing is never delayed.
             if ((needReengage || !currentAlive) && tanks.length > 0) {
                 const target = tanks[0]!;
@@ -1060,18 +1064,26 @@ export async function runMeleePvpSpecialist(
     milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
 
     await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, opts.stop);
-    await walkWaypoints(s, [{ x: 2451, z: 3151, tol: 4 }], 100, opts.stop, 'castle wars to west road (2451,3151)', { onTickExtra: ensureRunAndEnergy });
-    await setPrayerState(s, PROTECT_MELEE_INDEX, true, opts.stop);
-    await walkWaypoints(s, [
-        { x: 2490, z: 3220, tol: 4 },
-        { x: 2527, z: 3240, tol: 4 },
-    ], 120, opts.stop, 'castle wars to khazard battlefield', { ignoreMeleeHunters: true, onTickExtra: ensureRunAndEnergy });
+    await walkWaypoints(
+        s,
+        [{ x: 2451, z: 3151, tol: 4 }, { x: 2522, z: 3494, tol: 2 }],
+        320,
+        opts.stop,
+        'castle wars to almera',
+        {
+            ignoreMeleeHunters: true,
+            onTickExtra: () => {
+                ensureRunAndEnergy();
+                const p = posOf(s);
+                const wantPfm = !!p && p.worldZ >= 3175 && p.worldZ <= 3275;
+                const pfmOn = !!s.sdk.getState()?.prayers?.activePrayers?.[PROTECT_MELEE_INDEX];
+                if (wantPfm !== pfmOn && (!wantPfm || (s.sdk.getState()?.prayers?.prayerPoints ?? 0) > 0)) {
+                    void s.direct({ type: 'togglePrayer', prayerIndex: PROTECT_MELEE_INDEX, reason: 'SDK' });
+                }
+            },
+        },
+    );
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
-    await walkWaypoints(s, [
-        { x: 2565, z: 3320, tol: 4 },
-        { x: 2565, z: 3380, tol: 4 },
-        { x: 2522, z: 3494, tol: 2 },
-    ], 160, opts.stop, 'khazard to almera', { onTickExtra: ensureRunAndEnergy });
     milestone('almera');
 
     await opts.runWaterfallFn({
@@ -1080,7 +1092,7 @@ export async function runMeleePvpSpecialist(
         cap: Math.max(300, opts.cap - elapsed()),
         food: { id: 385, heal: 20, count: 6, eatAt: 8, crossAt: 9 },
         mighty: false,
-        exitFalls: false,
+        exitFalls: true,
         keepAlive: true,
         protectMelee: true,
         tombHoldIds: [1333],
@@ -1090,15 +1102,7 @@ export async function runMeleePvpSpecialist(
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     milestone('waterfall', `atk=${skillInfo(s, 'Attack').baseLevel} str=${skillInfo(s, 'Strength').baseLevel} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
-    await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, opts.stop);
-    await walkWaypoints(s, [{ x: 2451, z: 3151, tol: 4 }], 100, opts.stop, 'cwars2 to west road', { onTickExtra: ensureRunAndEnergy });
-    await setPrayerState(s, PROTECT_MELEE_INDEX, true, opts.stop);
-    await walkWaypoints(s, [
-        { x: 2490, z: 3220, tol: 4 },
-        { x: 2527, z: 3240, tol: 4 },
-    ], 120, opts.stop, 'cwars2 to khazard battlefield', { ignoreMeleeHunters: true, onTickExtra: ensureRunAndEnergy });
-    await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
-    await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'khazard to ardougne lever', { onTickExtra: ensureRunAndEnergy });
+    await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall exit to ardougne lever', { onTickExtra: ensureRunAndEnergy });
     await pullArdougneLeverToWildy(s, opts.stop);
     milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
