@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795154613880-mightyrod-billionaire-lawrune",
+ "account": "Mightyrod",
+ "partner": "Billionaire",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 1,
+ "claim": "e72a13e4-7d13-41f9-8960-37313ee0a5c7",
+ "count": 0,
+ "ok": false,
+ "at": 1795154670878,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795154664894
+ },
+ "logout": {
+  "attemptId": "1795154657340-0000000408-0000000001",
+  "at": 1795154670863,
+  "sha256": "18f6e41addf831e5dcac45d18991f6d8bde7ea32980e991965af5225f9ca989f"
+ },
+ "screen": false
+}
