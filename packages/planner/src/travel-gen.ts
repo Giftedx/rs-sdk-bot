@@ -39,6 +39,7 @@ const cache: TravelCache = { generatedFrom: `world.json ${world.generatedFrom}; 
 // Price the current collision route so its gate metadata belongs to the same
 // path as its cost. A world.json nearest-bank cost alone retains no path gates.
 for (const [id, p] of Object.entries(places)) {
+    if (p.teleportOnly) continue;
     let best: { bank: string; runTicks: number;gates?:CachedPathLeg['gates'] } | null = null;
     for (const [b, bp] of Object.entries(banks)) {
         if ((bp.island?.id ?? '') !== (p.island?.id ?? '')) continue;

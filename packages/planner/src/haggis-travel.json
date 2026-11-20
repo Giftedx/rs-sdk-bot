@@ -140,35 +140,6 @@
     }
    ]
   },
-  "air-ruins>bank:castle-wars-bank:0": {
-   "tiles": 945,
-   "runTicks": 472.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "air-ruins>bank:catherby-bank:0": {
    "tiles": 390,
    "runTicks": 195,
@@ -869,10 +840,6 @@
   "almera>bank:ardougne-south-bank:0": {
    "tiles": 262,
    "runTicks": 131
-  },
-  "almera>bank:castle-wars-bank:0": {
-   "tiles": 496,
-   "runTicks": 248
   },
   "almera>bank:catherby-bank:0": {
    "tiles": 354,
@@ -1935,10 +1902,6 @@
   "ardougne-lever>bank:ardougne-south-bank:0": {
    "tiles": 100,
    "runTicks": 50
-  },
-  "ardougne-lever>bank:castle-wars-bank:0": {
-   "tiles": 284,
-   "runTicks": 142
   },
   "ardougne-lever>bank:catherby-bank:0": {
    "tiles": 299,
@@ -3023,10 +2986,6 @@
   "ardougne-market>bank:ardougne-south-bank:0": {
    "tiles": 49,
    "runTicks": 24.5
-  },
-  "ardougne-market>bank:castle-wars-bank:0": {
-   "tiles": 356,
-   "runTicks": 178
   },
   "ardougne-market>bank:catherby-bank:0": {
    "tiles": 207,
@@ -4679,10 +4638,6 @@
    "tiles": 75,
    "runTicks": 37.5
   },
-  "ardougne-zoo>bank:castle-wars-bank:0": {
-   "tiles": 289,
-   "runTicks": 144.5
-  },
   "ardougne-zoo>bank:catherby-bank:0": {
    "tiles": 283,
    "runTicks": 141.5
@@ -5872,48 +5827,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:al-kharid-bank:0>bank:castle-wars-bank:0": {
-   "tiles": 1299,
-   "runTicks": 659.5,
-   "toll": 10,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "border_gate_toll@0,3268,3227",
-     "source": "areas/area_alkharid/scripts/border_gate.rs2:28",
-     "requires": [
-      [
-       "coins:10"
-      ],
-      [
-       "quest:prince>=100"
-      ]
-     ]
-    },
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -7229,10 +7142,6 @@
    "tiles": 80,
    "runTicks": 40
   },
-  "bank:ardougne-north-bank:0>bank:castle-wars-bank:0": {
-   "tiles": 350,
-   "runTicks": 175
-  },
   "bank:ardougne-north-bank:0>bank:catherby-bank:0": {
    "tiles": 246,
    "runTicks": 123
@@ -8295,10 +8204,6 @@
    "tiles": 80,
    "runTicks": 40
   },
-  "bank:ardougne-south-bank:0>bank:castle-wars-bank:0": {
-   "tiles": 350,
-   "runTicks": 175
-  },
   "bank:ardougne-south-bank:0>bank:catherby-bank:0": {
    "tiles": 245,
    "runTicks": 122.5
@@ -9277,1599 +9182,6 @@
     }
    ]
   },
-  "bank:castle-wars-bank:0>air-ruins": {
-   "tiles": 945,
-   "runTicks": 472.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>almera": {
-   "tiles": 496,
-   "runTicks": 248
-  },
-  "bank:castle-wars-bank:0>ardougne-lever": {
-   "tiles": 284,
-   "runTicks": 142
-  },
-  "bank:castle-wars-bank:0>ardougne-market": {
-   "tiles": 356,
-   "runTicks": 178
-  },
-  "bank:castle-wars-bank:0>ardougne-zoo": {
-   "tiles": 289,
-   "runTicks": 144.5
-  },
-  "bank:castle-wars-bank:0>bank:al-kharid-bank:0": {
-   "tiles": 1299,
-   "runTicks": 659.5,
-   "toll": 10,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "border_gate_toll@0,3268,3227",
-     "source": "areas/area_alkharid/scripts/border_gate.rs2:28",
-     "requires": [
-      [
-       "coins:10"
-      ],
-      [
-       "quest:prince>=100"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>bank:ardougne-north-bank:0": {
-   "tiles": 350,
-   "runTicks": 175
-  },
-  "bank:castle-wars-bank:0>bank:ardougne-south-bank:0": {
-   "tiles": 350,
-   "runTicks": 175
-  },
-  "bank:castle-wars-bank:0>bank:catherby-bank:0": {
-   "tiles": 563,
-   "runTicks": 281.5,
-   "locked": [
-    "loc_2550@0,2674,3305"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>bank:draynor-bank:0": {
-   "tiles": 1066,
-   "runTicks": 533,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>bank:edgeville-bank:0": {
-   "tiles": 1067,
-   "runTicks": 533.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>bank:falador-east-bank:0": {
-   "tiles": 958,
-   "runTicks": 479,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>bank:falador-west-bank:0": {
-   "tiles": 933,
-   "runTicks": 466.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>bank:seers-village-bank:0": {
-   "tiles": 522,
-   "runTicks": 261
-  },
-  "bank:castle-wars-bank:0>bank:varrock-east-bank:0": {
-   "tiles": 1173,
-   "runTicks": 586.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>bank:varrock-west-bank:0": {
-   "tiles": 1103,
-   "runTicks": 551.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>barbarian-course": {
-   "tiles": 587,
-   "runTicks": 293.5,
-   "locked": [
-    "barbariangater@0,2545,3569"
-   ],
-   "gates": [
-    {
-     "id": "barbariangater@0,2545,3569",
-     "source": "scripts/areas/area_barbarian_outpost/scripts/outpost_gate.rs2:1",
-     "requires": [
-      [
-       "quest:barcrawl:2"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>barbarian-fly-spot": {
-   "tiles": 1017,
-   "runTicks": 508.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>body-ruins": {
-   "tiles": 967,
-   "runTicks": 483.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>camelot": {
-   "tiles": 579,
-   "runTicks": 289.5
-  },
-  "bank:castle-wars-bank:0>camelot-teleport": {
-   "tiles": 542,
-   "runTicks": 271
-  },
-  "bank:castle-wars-bank:0>caroline": {
-   "tiles": 411,
-   "runTicks": 205.5,
-   "locked": [
-    "loc_2550@0,2674,3305"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>catherby-shore": {
-   "tiles": 593,
-   "runTicks": 296.5,
-   "locked": [
-    "loc_2550@0,2674,3305"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>dimintheis": {
-   "tiles": 1193,
-   "runTicks": 596.5,
-   "locked": [
-    "guidorgaterclosed@0,3264,3406",
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "guidorgaterclosed@0,3264,3406",
-     "source": "areas/area_varrock/scripts/east_gate.rs2:5",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>doric": {
-   "tiles": 855,
-   "runTicks": 427.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>draynor-willows": {
-   "tiles": 1074,
-   "runTicks": 537,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>dueling-arena": {
-   "tiles": 1282,
-   "runTicks": 651,
-   "toll": 10,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "border_gate_toll@0,3268,3227",
-     "source": "areas/area_alkharid/scripts/border_gate.rs2:28",
-     "requires": [
-      [
-       "coins:10"
-      ],
-      [
-       "quest:prince>=100"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>dueling-castle-wars": {
-   "tiles": 7,
-   "runTicks": 3.5
-  },
-  "bank:castle-wars-bank:0>earth-ruins": {
-   "tiles": 1235,
-   "runTicks": 617.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>falador-castle": {
-   "tiles": 952,
-   "runTicks": 476,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>falador-teleport": {
-   "tiles": 917,
-   "runTicks": 458.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>falador-white-knights": {
-   "tiles": 955,
-   "runTicks": 477.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>fire-ruins": {
-   "tiles": 1279,
-   "runTicks": 649.5,
-   "toll": 10,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "border_gate_toll@0,3268,3227",
-     "source": "areas/area_alkharid/scripts/border_gate.rs2:28",
-     "requires": [
-      [
-       "coins:10"
-      ],
-      [
-       "quest:prince>=100"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>fm-line-lumbridge-north": {
-   "tiles": 1170,
-   "runTicks": 585,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>fm-line-lumbridge-north-end": {
-   "tiles": 1063,
-   "runTicks": 531.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>glider-al-kharid": {
-   "tiles": 1255,
-   "runTicks": 637.5,
-   "toll": 10,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "border_gate_toll@0,3268,3227",
-     "source": "areas/area_alkharid/scripts/border_gate.rs2:28",
-     "requires": [
-      [
-       "coins:10"
-      ],
-      [
-       "quest:prince>=100"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>glider-digsite": {
-   "tiles": 1281,
-   "runTicks": 640.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>glory-al-kharid": {
-   "tiles": 1302,
-   "runTicks": 661,
-   "toll": 10,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "border_gate_toll@0,3268,3227",
-     "source": "areas/area_alkharid/scripts/border_gate.rs2:28",
-     "requires": [
-      [
-       "coins:10"
-      ],
-      [
-       "quest:prince>=100"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>glory-draynor": {
-   "tiles": 1075,
-   "runTicks": 537.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>glory-edgeville": {
-   "tiles": 1067,
-   "runTicks": 533.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>goblin-village": {
-   "tiles": 903,
-   "runTicks": 451.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>guildmaster": {
-   "tiles": 1115,
-   "runTicks": 557.5,
-   "locked": [
-    "championdoor@0,3191,3363",
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "championdoor@0,3191,3363",
-     "source": "scripts/areas/area_varrock/scripts/champions_guild.rs2:1",
-     "requires": [
-      [
-       "questpoints:32"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>kaqemeex": {
-   "tiles": 859,
-   "runTicks": 429.5,
-   "locked": [
-    "loc_2550@0,2674,3305"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>lady-servil": {
-   "tiles": 252,
-   "runTicks": 126
-  },
-  "bank:castle-wars-bank:0>lava-maze-runite": {
-   "tiles": 1306,
-   "runTicks": 653,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>lawgof": {
-   "tiles": 440,
-   "runTicks": 220
-  },
-  "bank:castle-wars-bank:0>lumbridge-kitchen": {
-   "tiles": 1241,
-   "runTicks": 620.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>lumbridge-spawn": {
-   "tiles": 1219,
-   "runTicks": 609.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>mage-arena-lever": {
-   "tiles": 1469,
-   "runTicks": 734.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2948,3904",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "membergatel@0,2948,3904",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>mind-ruins": {
-   "tiles": 949,
-   "runTicks": 474.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>outpost-guard": {
-   "tiles": 568,
-   "runTicks": 284
-  },
-  "bank:castle-wars-bank:0>poison-spiders": {
-   "tiles": 1266,
-   "runTicks": 633,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>port-sarim-dock": {
-   "tiles": 1014,
-   "runTicks": 507,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>port-sarim-monks": {
-   "tiles": 1012,
-   "runTicks": 506,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>romeo": {
-   "tiles": 1123,
-   "runTicks": 561.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>rusty-anchor": {
-   "tiles": 1025,
-   "runTicks": 512.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>spirit-tree-khazard": {
-   "tiles": 231,
-   "runTicks": 115.5
-  },
-  "bank:castle-wars-bank:0>spirit-tree-varrock": {
-   "tiles": 1149,
-   "runTicks": 574.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>thormac": {
-   "tiles": 475,
-   "runTicks": 237.5
-  },
-  "bank:castle-wars-bank:0>varrock-east-iron": {
-   "tiles": 1203,
-   "runTicks": 601.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>varrock-teleport": {
-   "tiles": 1125,
-   "runTicks": 562.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>varrock-west-anvil": {
-   "tiles": 1099,
-   "runTicks": 549.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>water-ruins": {
-   "tiles": 1171,
-   "runTicks": 585.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>wilderness-course": {
-   "tiles": 1401,
-   "runTicks": 700.5,
-   "locked": [
-    "loc_2309@0,2998,3917",
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2948,3904",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "membergatel@0,2948,3904",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2309@0,2998,3917",
-     "source": "scripts/skill_agility/scripts/wilderness_course.rs2:1",
-     "requires": [
-      [
-       "skill:agility:52"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>witch-house": {
-   "tiles": 831,
-   "runTicks": 415.5,
-   "locked": [
-    "loc_2550@0,2674,3305"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:castle-wars-bank:0>wizard-tower": {
-   "tiles": 1151,
-   "runTicks": 575.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2933,3320"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2933,3320",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    }
-   ]
-  },
   "bank:catherby-bank:0>air-ruins": {
    "tiles": 390,
    "runTicks": 195,
@@ -10957,25 +9269,6 @@
   "bank:catherby-bank:0>bank:ardougne-south-bank:0": {
    "tiles": 245,
    "runTicks": 122.5
-  },
-  "bank:catherby-bank:0>bank:castle-wars-bank:0": {
-   "tiles": 563,
-   "runTicks": 281.5,
-   "locked": [
-    "loc_2550@0,2674,3305"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
   },
   "bank:catherby-bank:0>bank:draynor-bank:0": {
    "tiles": 511,
@@ -12123,35 +10416,6 @@
     }
    ]
   },
-  "bank:draynor-bank:0>bank:castle-wars-bank:0": {
-   "tiles": 1066,
-   "runTicks": 533,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "bank:draynor-bank:0>bank:catherby-bank:0": {
    "tiles": 511,
    "runTicks": 255.5,
@@ -12922,35 +11186,6 @@
     }
    ]
   },
-  "bank:edgeville-bank:0>bank:castle-wars-bank:0": {
-   "tiles": 1067,
-   "runTicks": 533.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "bank:edgeville-bank:0>bank:catherby-bank:0": {
    "tiles": 512,
    "runTicks": 256,
@@ -13687,35 +11922,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:falador-east-bank:0>bank:castle-wars-bank:0": {
-   "tiles": 958,
-   "runTicks": 479,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -14477,35 +12683,6 @@
     }
    ]
   },
-  "bank:falador-west-bank:0>bank:castle-wars-bank:0": {
-   "tiles": 933,
-   "runTicks": 466.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "bank:falador-west-bank:0>bank:catherby-bank:0": {
    "tiles": 378,
    "runTicks": 189,
@@ -15192,10 +13369,6 @@
   "bank:seers-village-bank:0>bank:ardougne-south-bank:0": {
    "tiles": 240,
    "runTicks": 120
-  },
-  "bank:seers-village-bank:0>bank:castle-wars-bank:0": {
-   "tiles": 522,
-   "runTicks": 261
   },
   "bank:seers-village-bank:0>bank:catherby-bank:0": {
    "tiles": 106,
@@ -16298,35 +14471,6 @@
     }
    ]
   },
-  "bank:varrock-east-bank:0>bank:castle-wars-bank:0": {
-   "tiles": 1173,
-   "runTicks": 586.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "bank:varrock-east-bank:0>bank:catherby-bank:0": {
    "tiles": 618,
    "runTicks": 309,
@@ -17033,35 +15177,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "bank:varrock-west-bank:0>bank:castle-wars-bank:0": {
-   "tiles": 1103,
-   "runTicks": 551.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -17803,35 +15918,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "barbarian-fly-spot>bank:castle-wars-bank:0": {
-   "tiles": 1017,
-   "runTicks": 508.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -18593,35 +16679,6 @@
     }
    ]
   },
-  "body-ruins>bank:castle-wars-bank:0": {
-   "tiles": 967,
-   "runTicks": 483.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "body-ruins>bank:catherby-bank:0": {
    "tiles": 412,
    "runTicks": 206,
@@ -19327,10 +17384,6 @@
   "camelot>bank:ardougne-south-bank:0": {
    "tiles": 285,
    "runTicks": 142.5
-  },
-  "camelot>bank:castle-wars-bank:0": {
-   "tiles": 579,
-   "runTicks": 289.5
   },
   "camelot>bank:catherby-bank:0": {
    "tiles": 102,
@@ -20393,10 +18446,6 @@
   "camelot-teleport>bank:ardougne-south-bank:0": {
    "tiles": 248,
    "runTicks": 124
-  },
-  "camelot-teleport>bank:castle-wars-bank:0": {
-   "tiles": 542,
-   "runTicks": 271
   },
   "camelot-teleport>bank:catherby-bank:0": {
    "tiles": 68,
@@ -21504,25 +19553,6 @@
   "caroline>bank:ardougne-south-bank:0": {
    "tiles": 93,
    "runTicks": 46.5
-  },
-  "caroline>bank:castle-wars-bank:0": {
-   "tiles": 411,
-   "runTicks": 205.5,
-   "locked": [
-    "loc_2551@0,2674,3304"
-   ],
-   "gates": [
-    {
-     "id": "loc_2551@0,2674,3304",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:16"
-      ]
-     ]
-    }
-   ]
   },
   "caroline>bank:catherby-bank:0": {
    "tiles": 176,
@@ -22641,25 +20671,6 @@
   "catherby-shore>bank:ardougne-south-bank:0": {
    "tiles": 275,
    "runTicks": 137.5
-  },
-  "catherby-shore>bank:castle-wars-bank:0": {
-   "tiles": 593,
-   "runTicks": 296.5,
-   "locked": [
-    "loc_2550@0,2674,3305"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
   },
   "catherby-shore>bank:catherby-bank:0": {
    "tiles": 38,
@@ -23888,45 +21899,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "dimintheis>bank:castle-wars-bank:0": {
-   "tiles": 1193,
-   "runTicks": 596.5,
-   "locked": [
-    "guidorgatelclosed@0,3264,3405",
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "guidorgatelclosed@0,3264,3405",
-     "source": "areas/area_varrock/scripts/east_gate.rs2:5",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -25387,35 +23359,6 @@
     }
    ]
   },
-  "doric>bank:castle-wars-bank:0": {
-   "tiles": 855,
-   "runTicks": 427.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "doric>bank:catherby-bank:0": {
    "tiles": 300,
    "runTicks": 150,
@@ -26152,35 +24095,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "draynor-willows>bank:castle-wars-bank:0": {
-   "tiles": 1074,
-   "runTicks": 537,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -27029,48 +24943,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "dueling-arena>bank:castle-wars-bank:0": {
-   "tiles": 1282,
-   "runTicks": 651,
-   "toll": 10,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "border_gate_toll@0,3268,3227",
-     "source": "areas/area_alkharid/scripts/border_gate.rs2:28",
-     "requires": [
-      [
-       "coins:10"
-      ],
-      [
-       "quest:prince>=100"
-      ]
-     ]
-    },
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -28319,10 +26191,6 @@
   "dueling-castle-wars>bank:ardougne-south-bank:0": {
    "tiles": 348,
    "runTicks": 174
-  },
-  "dueling-castle-wars>bank:castle-wars-bank:0": {
-   "tiles": 7,
-   "runTicks": 3.5
   },
   "dueling-castle-wars>bank:catherby-bank:0": {
    "tiles": 561,
@@ -29940,35 +27808,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "earth-ruins>bank:castle-wars-bank:0": {
-   "tiles": 1235,
-   "runTicks": 617.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -32033,35 +29872,6 @@
     }
    ]
   },
-  "falador-castle>bank:castle-wars-bank:0": {
-   "tiles": 952,
-   "runTicks": 476,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "falador-castle>bank:catherby-bank:0": {
    "tiles": 397,
    "runTicks": 198.5,
@@ -32818,35 +30628,6 @@
     }
    ]
   },
-  "falador-teleport>bank:castle-wars-bank:0": {
-   "tiles": 917,
-   "runTicks": 458.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "falador-teleport>bank:catherby-bank:0": {
    "tiles": 362,
    "runTicks": 181,
@@ -33598,35 +31379,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "falador-white-knights>bank:castle-wars-bank:0": {
-   "tiles": 955,
-   "runTicks": 477.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -34461,48 +32213,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "fire-ruins>bank:castle-wars-bank:0": {
-   "tiles": 1279,
-   "runTicks": 649.5,
-   "toll": 10,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "border_gate_toll@0,3268,3227",
-     "source": "areas/area_alkharid/scripts/border_gate.rs2:28",
-     "requires": [
-      [
-       "coins:10"
-      ],
-      [
-       "quest:prince>=100"
-      ]
-     ]
-    },
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -35786,35 +33496,6 @@
     }
    ]
   },
-  "fm-line-lumbridge-north>bank:castle-wars-bank:0": {
-   "tiles": 1170,
-   "runTicks": 585,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "fm-line-lumbridge-north>bank:catherby-bank:0": {
    "tiles": 615,
    "runTicks": 307.5,
@@ -36595,35 +34276,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "fm-line-lumbridge-north-end>bank:castle-wars-bank:0": {
-   "tiles": 1063,
-   "runTicks": 531.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -37487,48 +35139,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "glider-al-kharid>bank:castle-wars-bank:0": {
-   "tiles": 1255,
-   "runTicks": 637.5,
-   "toll": 10,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "border_gate_toll@0,3268,3227",
-     "source": "areas/area_alkharid/scripts/border_gate.rs2:28",
-     "requires": [
-      [
-       "coins:10"
-      ],
-      [
-       "quest:prince>=100"
-      ]
-     ]
-    },
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -38926,35 +36536,6 @@
     }
    ]
   },
-  "glider-digsite>bank:castle-wars-bank:0": {
-   "tiles": 1281,
-   "runTicks": 640.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "glider-digsite>bank:catherby-bank:0": {
    "tiles": 726,
    "runTicks": 363,
@@ -39956,48 +37537,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "glory-al-kharid>bank:castle-wars-bank:0": {
-   "tiles": 1302,
-   "runTicks": 661,
-   "toll": 10,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "border_gate_toll@0,3268,3227",
-     "source": "areas/area_alkharid/scripts/border_gate.rs2:28",
-     "requires": [
-      [
-       "coins:10"
-      ],
-      [
-       "quest:prince>=100"
-      ]
-     ]
-    },
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -41382,35 +38921,6 @@
     }
    ]
   },
-  "glory-draynor>bank:castle-wars-bank:0": {
-   "tiles": 1075,
-   "runTicks": 537.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "glory-draynor>bank:catherby-bank:0": {
    "tiles": 520,
    "runTicks": 260,
@@ -42196,35 +39706,6 @@
     }
    ]
   },
-  "glory-edgeville>bank:castle-wars-bank:0": {
-   "tiles": 1067,
-   "runTicks": 533.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "glory-edgeville>bank:catherby-bank:0": {
    "tiles": 512,
    "runTicks": 256,
@@ -42991,35 +40472,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "goblin-village>bank:castle-wars-bank:0": {
-   "tiles": 903,
-   "runTicks": 451.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2935,3451"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2935,3451",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -43847,45 +41299,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "guildmaster>bank:castle-wars-bank:0": {
-   "tiles": 1115,
-   "runTicks": 557.5,
-   "locked": [
-    "championdoor@0,3191,3363",
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "championdoor@0,3191,3363",
-     "source": "scripts/areas/area_varrock/scripts/champions_guild.rs2:1",
-     "requires": [
-      [
-       "questpoints:32"
-      ]
-     ]
-    },
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -45305,25 +42718,6 @@
    "tiles": 541,
    "runTicks": 270.5
   },
-  "kaqemeex>bank:castle-wars-bank:0": {
-   "tiles": 859,
-   "runTicks": 429.5,
-   "locked": [
-    "loc_2550@0,2674,3305"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "kaqemeex>bank:catherby-bank:0": {
    "tiles": 304,
    "runTicks": 152
@@ -46387,10 +43781,6 @@
   "lady-servil>bank:ardougne-south-bank:0": {
    "tiles": 120,
    "runTicks": 60
-  },
-  "lady-servil>bank:castle-wars-bank:0": {
-   "tiles": 252,
-   "runTicks": 126
   },
   "lady-servil>bank:catherby-bank:0": {
    "tiles": 328,
@@ -47493,35 +44883,6 @@
     }
    ]
   },
-  "lava-maze-runite>bank:castle-wars-bank:0": {
-   "tiles": 1306,
-   "runTicks": 653,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2935,3451"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2935,3451",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "lava-maze-runite>bank:catherby-bank:0": {
    "tiles": 751,
    "runTicks": 375.5,
@@ -48138,10 +45499,6 @@
   "lawgof>bank:ardougne-south-bank:0": {
    "tiles": 206,
    "runTicks": 103
-  },
-  "lawgof>bank:castle-wars-bank:0": {
-   "tiles": 440,
-   "runTicks": 220
   },
   "lawgof>bank:catherby-bank:0": {
    "tiles": 296,
@@ -49259,35 +46616,6 @@
     }
    ]
   },
-  "lumbridge-kitchen>bank:castle-wars-bank:0": {
-   "tiles": 1241,
-   "runTicks": 620.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "lumbridge-kitchen>bank:catherby-bank:0": {
    "tiles": 686,
    "runTicks": 343,
@@ -50068,35 +47396,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "lumbridge-spawn>bank:castle-wars-bank:0": {
-   "tiles": 1219,
-   "runTicks": 609.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -50895,35 +48194,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "mind-ruins>bank:castle-wars-bank:0": {
-   "tiles": 949,
-   "runTicks": 474.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2935,3451"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2935,3451",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -51940,10 +49210,6 @@
   "outpost-guard>bank:ardougne-south-bank:0": {
    "tiles": 334,
    "runTicks": 167
-  },
-  "outpost-guard>bank:castle-wars-bank:0": {
-   "tiles": 568,
-   "runTicks": 284
   },
   "outpost-guard>bank:catherby-bank:0": {
    "tiles": 426,
@@ -53061,35 +50327,6 @@
     }
    ]
   },
-  "poison-spiders>bank:castle-wars-bank:0": {
-   "tiles": 1266,
-   "runTicks": 633,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2935,3451"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2935,3451",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "poison-spiders>bank:catherby-bank:0": {
    "tiles": 711,
    "runTicks": 355.5,
@@ -53767,35 +51004,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "port-sarim-dock>bank:castle-wars-bank:0": {
-   "tiles": 1014,
-   "runTicks": 507,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -54571,35 +51779,6 @@
     }
    ]
   },
-  "port-sarim-monks>bank:castle-wars-bank:0": {
-   "tiles": 1012,
-   "runTicks": 506,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "port-sarim-monks>bank:catherby-bank:0": {
    "tiles": 457,
    "runTicks": 228.5,
@@ -55370,35 +52549,6 @@
     }
    ]
   },
-  "romeo>bank:castle-wars-bank:0": {
-   "tiles": 1123,
-   "runTicks": 561.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "romeo>bank:catherby-bank:0": {
    "tiles": 568,
    "runTicks": 284,
@@ -56140,35 +53290,6 @@
     }
    ]
   },
-  "rusty-anchor>bank:castle-wars-bank:0": {
-   "tiles": 1025,
-   "runTicks": 512.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "rusty-anchor>bank:catherby-bank:0": {
    "tiles": 470,
    "runTicks": 235,
@@ -56891,10 +54012,6 @@
   "spirit-tree-khazard>bank:ardougne-south-bank:0": {
    "tiles": 119,
    "runTicks": 59.5
-  },
-  "spirit-tree-khazard>bank:castle-wars-bank:0": {
-   "tiles": 231,
-   "runTicks": 115.5
   },
   "spirit-tree-khazard>bank:catherby-bank:0": {
    "tiles": 332,
@@ -58579,35 +55696,6 @@
     }
    ]
   },
-  "spirit-tree-varrock>bank:castle-wars-bank:0": {
-   "tiles": 1149,
-   "runTicks": 574.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "spirit-tree-varrock>bank:catherby-bank:0": {
    "tiles": 594,
    "runTicks": 297,
@@ -59269,10 +56357,6 @@
   "thormac>bank:ardougne-south-bank:0": {
    "tiles": 165,
    "runTicks": 82.5
-  },
-  "thormac>bank:castle-wars-bank:0": {
-   "tiles": 475,
-   "runTicks": 237.5
   },
   "thormac>bank:catherby-bank:0": {
    "tiles": 128,
@@ -60375,35 +57459,6 @@
     }
    ]
   },
-  "varrock-east-iron>bank:castle-wars-bank:0": {
-   "tiles": 1203,
-   "runTicks": 601.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "varrock-east-iron>bank:catherby-bank:0": {
    "tiles": 648,
    "runTicks": 324,
@@ -61124,35 +58179,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "varrock-teleport>bank:castle-wars-bank:0": {
-   "tiles": 1125,
-   "runTicks": 562.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -61899,35 +58925,6 @@
     }
    ]
   },
-  "varrock-west-anvil>bank:castle-wars-bank:0": {
-   "tiles": 1099,
-   "runTicks": 549.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergater@0,2935,3450"
-   ],
-   "gates": [
-    {
-     "id": "membergater@0,2935,3450",
-     "source": "doors/scripts/doubledoors.rs2:34",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "varrock-west-anvil>bank:catherby-bank:0": {
    "tiles": 544,
    "runTicks": 272,
@@ -62664,35 +59661,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "water-ruins>bank:castle-wars-bank:0": {
-   "tiles": 1171,
-   "runTicks": 585.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -63616,55 +60584,6 @@
      "requires": [
       [
        "members"
-      ]
-     ]
-    }
-   ]
-  },
-  "wilderness-course>bank:castle-wars-bank:0": {
-   "tiles": 1401,
-   "runTicks": 700.5,
-   "locked": [
-    "loc_2309@0,2998,3917",
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2935,3451",
-    "membergatel@0,2948,3904"
-   ],
-   "gates": [
-    {
-     "id": "loc_2309@0,2998,3917",
-     "source": "scripts/skill_agility/scripts/wilderness_course.rs2:1",
-     "requires": [
-      [
-       "skill:agility:52"
-      ]
-     ]
-    },
-    {
-     "id": "membergatel@0,2948,3904",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "membergatel@0,2935,3451",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
       ]
      ]
     }
@@ -65574,25 +62493,6 @@
    "tiles": 513,
    "runTicks": 256.5
   },
-  "witch-house>bank:castle-wars-bank:0": {
-   "tiles": 831,
-   "runTicks": 415.5,
-   "locked": [
-    "loc_2550@0,2674,3305"
-   ],
-   "gates": [
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "witch-house>bank:catherby-bank:0": {
    "tiles": 276,
    "runTicks": 138
@@ -66726,35 +63626,6 @@
     }
    ]
   },
-  "wizard-tower>bank:castle-wars-bank:0": {
-   "tiles": 1151,
-   "runTicks": 575.5,
-   "locked": [
-    "loc_2550@0,2674,3305",
-    "membergatel@0,2934,3320"
-   ],
-   "gates": [
-    {
-     "id": "membergatel@0,2934,3320",
-     "source": "doors/scripts/doubledoors.rs2:27",
-     "requires": [
-      [
-       "members"
-      ]
-     ]
-    },
-    {
-     "id": "loc_2550@0,2674,3305",
-     "source": "skill_thieving/scripts/doors/locked_door.rs2:154",
-     "requires": [
-      [
-       "members",
-       "skill:thieving:1"
-      ]
-     ]
-    }
-   ]
-  },
   "wizard-tower>bank:catherby-bank:0": {
    "tiles": 596,
    "runTicks": 298,
@@ -67627,31 +64498,6 @@
    "bank": "bank:al-kharid-bank:0",
    "runTicks": 24,
    "method": "path"
-  },
-  "glory-edgeville": {
-   "bank": "bank:edgeville-bank:0",
-   "runTicks": 4.5,
-   "method": "path"
-  },
-  "glory-draynor": {
-   "bank": "bank:draynor-bank:0",
-   "runTicks": 8,
-   "method": "path"
-  },
-  "glory-al-kharid": {
-   "bank": "bank:al-kharid-bank:0",
-   "runTicks": 23,
-   "method": "path"
-  },
-  "dueling-arena": {
-   "bank": "bank:al-kharid-bank:0",
-   "runTicks": 39.5,
-   "method": "path"
-  },
-  "dueling-castle-wars": {
-   "bank": "bank:castle-wars-bank:0",
-   "runTicks": 3.5,
-   "method": "path"
   }
  },
  "banks": {
@@ -67720,12 +64566,6 @@
    "z": 3493,
    "level": 0,
    "site": "bank:seers-village-bank:0"
-  },
-  "bank:castle-wars-bank:0": {
-   "x": 2443,
-   "z": 3083,
-   "level": 0,
-   "site": "bank:castle-wars-bank:0"
   }
  },
  "calibration": {

@@ -378,6 +378,7 @@
   "glory-edgeville": {
    "x": 3087,
    "z": 3496,
+   "teleportOnly": true,
    "note": "Amulet of glory Edgeville teleport (amulet_of_glory.rs2:30 0_48_54_15_40)"
   },
   "glory-karamja": {
@@ -390,26 +391,31 @@
     "boatTicks": 18,
     "source": "research/walking.md boat talk: 18, 20, 17 ticks from the Port Sarim seaman to the Musa Point deck (MEASURED practice)"
    },
+   "teleportOnly": true,
    "note": "Amulet of glory Karamja teleport (amulet_of_glory.rs2:31 0_45_49_38_40)"
   },
   "glory-draynor": {
    "x": 3105,
    "z": 3251,
+   "teleportOnly": true,
    "note": "Amulet of glory Draynor Village teleport (amulet_of_glory.rs2:32 0_48_50_33_51)"
   },
   "glory-al-kharid": {
    "x": 3293,
    "z": 3163,
+   "teleportOnly": true,
    "note": "Amulet of glory Al Kharid teleport (amulet_of_glory.rs2:33 0_51_49_29_27)"
   },
   "dueling-arena": {
    "x": 3315,
    "z": 3235,
+   "teleportOnly": true,
    "note": "Ring of dueling Al Kharid Duel Arena teleport (ring_of_dueling.rs2:21 0_51_50_51_35)"
   },
   "dueling-castle-wars": {
    "x": 2440,
    "z": 3090,
+   "teleportOnly": true,
    "note": "Ring of dueling Castle Wars Arena teleport (ring_of_dueling.rs2:23 0_38_48_8_18)"
   }
  },
