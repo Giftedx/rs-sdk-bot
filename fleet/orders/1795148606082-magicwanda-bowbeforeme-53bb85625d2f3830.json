@@ -1,0 +1,29 @@
+{
+ "id": "1795148606082-magicwanda-bowbeforeme-53bb85625d2f3830",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Magicwanda",
+ "to": "BowBeforeMe",
+ "item": "Amulet of glory(3)",
+ "count": 1,
+ "start": 1795148606082,
+ "end": 1795149806082,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3243,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3244,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Fly fishing rod",
+   "count": 1
+  }
+ ],
+ "takerWaits": true
+}
