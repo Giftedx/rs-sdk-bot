@@ -415,7 +415,9 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
     openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
    }
    if (specDlg) openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
-   if (hTarget) openActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
+   if ((!specDlg || opts.allowHelperOnSingleModal) && hTarget) {
+    openActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
+   }
    if (openActs.length) await Promise.all(openActs);
    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
    continue;
