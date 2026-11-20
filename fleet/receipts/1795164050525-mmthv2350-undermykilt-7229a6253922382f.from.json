@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795164050525-mmthv2350-undermykilt-7229a6253922382f",
+ "account": "mmthv2350",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 29000,
+ "claim": "9738fb96-091c-4972-85e7-09bf49316d2b",
+ "count": 0,
+ "ok": false,
+ "at": 1795164062823,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Cannonball",
+   "requested": 135,
+   "count": 0
+  }
+ ]
+}

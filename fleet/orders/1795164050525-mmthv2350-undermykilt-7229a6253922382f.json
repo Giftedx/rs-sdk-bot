@@ -1,0 +1,28 @@
+{
+ "id": "1795164050525-mmthv2350-undermykilt-7229a6253922382f",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmthv2350",
+ "to": "UnderMyKilt",
+ "item": "Coins",
+ "count": 29000,
+ "start": 1795164050525,
+ "end": 1795165550525,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Cannonball",
+   "count": 135
+  }
+ ]
+}
