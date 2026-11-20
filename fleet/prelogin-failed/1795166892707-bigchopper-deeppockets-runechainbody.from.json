@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795166892707-bigchopper-deeppockets-runechainbody",
+ "role": "from",
+ "account": "Bigchopper",
+ "partner": "Deeppockets",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795166949548,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] 2b24350f25765e0ed749660526635bd556f0888e -> fleet-trade-claim/bigchopper (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}
