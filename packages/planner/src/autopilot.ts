@@ -374,8 +374,8 @@ export const FEEDS: Record<string, string[]> = {
     coal: ['runite bar'],
     'rune arrowtips': ['rune arrow'],
     'headless arrow': ['rune arrow'],
-    'black dragonhide': ['black dragonhide body', 'black dragonhide chap', 'black dragonhide vambrace'],
-    'black dragon leather': ['black dragonhide body', 'black dragonhide chap', 'black dragonhide vambrace'],
+    dragonhide_black: ['black_dragonhide_body', 'black_dragonhide_chaps', 'black_dragon_vambraces'],
+    dragon_leather_black: ['black_dragonhide_body', 'black_dragonhide_chaps', 'black_dragon_vambraces'],
     'dragon dagger': ['dragon dagger(p)'],
     'weapon poison': ['dragon dagger(p)'],
     'vial of water': [
@@ -416,7 +416,7 @@ const feedUnits = (item: string, output: string) => {
     if (item === 'steel bar') return 1 / 4;
     if (item === 'runite bar') return output === 'rune arrowtips' || output === 'rune arrow' ? 1 / 15 : output === 'rune platebody' ? 5 : output === 'rune full helm' ? 2 : output === 'rune plateleg' || output === 'rune kiteshield' ? 3 : 1;
     if (item === 'coal') return 8;
-    if (item === 'black dragonhide' || item === 'black dragon leather') return output === 'black dragonhide body' ? 3 : output === 'black dragonhide chap' ? 2 : 1;
+    if (item === 'dragonhide_black' || item === 'dragon_leather_black') return output === 'black_dragonhide_body' ? 3 : output === 'black_dragonhide_chaps' ? 2 : 1;
     return 1;
 };
 export const norm = (s: string) => s.toLowerCase().replace(/\s*\((?:noted|quest)\)$/, '').trim().replace(/s$/, '');
@@ -1411,7 +1411,7 @@ export function plan(input: Inputs): Assignment[] {
         const member = byName.get([...byName.keys()].find(n => n.toLowerCase() === row.account) ?? '');
         if (!member || done.has(member.name) || gave.has(member.name) || gaveItems.has(member.name) || vacated.has(member.name) || inp.unfundable?.has(row.account)) continue;
         const cost = (p: Acct | undefined) => cachedWayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true);
-        const nonUniqueTradeNames = new Set(['black dragonhide body', 'black dragonhide chap', 'black dragonhide vambrace']);
+        const nonUniqueTradeNames = new Set(['black_dragonhide_body', 'black_dragonhide_chaps', 'black_dragon_vambraces']);
         for (const item of row.names) {
             if (nonUniqueTradeNames.has(item)) continue;
             const from = [...stock, ...memberStock.filter(s => freeMembers.has(s.name.toLowerCase()))].find(s => s.side === inp.side && s.name.toLowerCase() !== row.account && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= 1
@@ -2279,7 +2279,7 @@ export const SQUAD_UNIT_COST: Readonly<Record<string, number>> = {
     'super attack(3)': 400, 'super strength(3)': 500, 'super defence(3)': 600, 'ranging potion(3)': 650,
     'ring of recoil': 300, 'climbing boot': 12, 'dragon dagger': 30_000, 'dragon dagger(p)': 32_000,
     'magic shortbow': 1600, 'rune full helm': 35_200, 'rune platebody': 84_500, 'rune plateleg': 64_000, 'rune kiteshield': 54_400,
-    'black dragonhide body': 13_480, 'black dragonhide chap': 6_500, 'black dragonhide vambrace': 4_200,
+    black_dragonhide_body: 13_480, black_dragonhide_chaps: 6_500, black_dragon_vambraces: 4_200,
     'uncut sapphire': 250, 'eye of newt': 3, 'vial of water': 5,
 };
 // The essence of one water-rune craft run, as aio-air-runes (ESSENCE_TARGET=28).
@@ -2433,14 +2433,14 @@ export function squadSupplies(): Template[] {
         goal: 'slay Black dragons in Taverley Dungeon (non-Wilderness) for black dragonhide and blood/law runes',
         resources: ['squad:taverley-black-dragons'], squadOnly: true, repeats: false,
         needs: { combat: 85, items: { 'anti-dragon shield': 1, 'dusty key': 1 }, food: 8 },
-        yields: () => [{ item: 'black dragonhide', perTick: 0.01 }, { item: 'blood rune', perTick: 0.02 }, { item: 'law rune', perTick: 0.02 }],
+        yields: () => [{ item: 'dragonhide_black', perTick: 0.01 }, { item: 'blood rune', perTick: 0.02 }, { item: 'law rune', perTick: 0.02 }],
     };
     const blackDhideSets: Template = {
         id: 'squad-black-dhide-sets', family: 'aio:skiller:crafting:black-dhide-sets', script: 'scripts/black-dhide-sets.ts',
         args: [], role: 'crafting', goal: 'tan banked black dragonhide at Al Kharid and craft full black dragonhide sets for the gang squad',
         resources: ['squad:al-kharid-craft'], squadOnly: true, repeats: false,
-        needs: { skills: { Crafting: LEATHER_LEVEL }, items: { coins: SET_HIDES * TAN_COIN + SET_SHOP, 'black dragonhide': SET_HIDES } },
-        yields: () => [{ item: 'black dragonhide body', perTick: 0.02 }, { item: 'black dragonhide chap', perTick: 0.02 }, { item: 'black dragonhide vambrace', perTick: 0.02 }],
+        needs: { skills: { Crafting: LEATHER_LEVEL }, items: { coins: SET_HIDES * TAN_COIN + SET_SHOP, dragonhide_black: SET_HIDES } },
+        yields: () => [{ item: 'black_dragonhide_body', perTick: 0.02 }, { item: 'black_dragonhide_chaps', perTick: 0.02 }, { item: 'black_dragon_vambraces', perTick: 0.02 }],
     };
     // Rings of Recoil: mine gold ore -> smelt gold bars -> cut sapphires -> craft sapphire rings -> enchant lvl 1.
     const goldOre: Template = {
@@ -3333,11 +3333,11 @@ export function freshest(...observations: readonly any[]): any {
 // state, a snapshot row the complete ones by name), and the tile it stands on (a status only). No status: a fresh
 // account at level 1 (Hitpoints 10).
 const EXACT_ITEM_ALIASES: ReadonlyMap<number, string> = new Map([
-    [1747, 'black dragonhide'],
-    [2509, 'black dragon leather'],
-    [2503, 'black dragonhide body'],
-    [2497, 'black dragonhide chap'],
-    [2491, 'black dragonhide vambrace'],
+    [1747, 'dragonhide_black'],
+    [2509, 'dragon_leather_black'],
+    [2503, 'black_dragonhide_body'],
+    [2497, 'black_dragonhide_chaps'],
+    [2491, 'black_dragon_vambraces'],
     [3146, 'poorly cooked karambwan'],
     [91, 'guam potion (unf)'],
     [93, 'marrentill potion (unf)'],

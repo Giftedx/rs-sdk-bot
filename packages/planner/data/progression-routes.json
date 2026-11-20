@@ -29564,6 +29564,178 @@
    "maxBatch": 1000
   },
   {
+   "id": "recipe:inventory:brew:weapon_poison",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [
+    "herblore/potion-weapon-poison"
+   ],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22brew%3Aweapon_poison%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts; scripts/player/configs/skill_guide.dbrow:239",
+   "effects": {
+    "items": {
+     "187": 1
+    },
+    "xp": {
+     "herblore": 3437.5
+    }
+   },
+   "rate": {
+    "unitsPerTick": 5,
+    "basis": "model",
+    "evidence": "scripts/skill_herblore/scripts/brewing/brew_potion.rs2:98; vendor/rs-sdk/server/engine/src/network/game/client/ClientGameProtCategory.ts:6"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "105": 1,
+    "241": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 60
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    },
+    "quests": [
+     "Druidic Ritual"
+    ]
+   },
+   "members": true,
+   "modelRates": {
+    "skill": "herblore",
+    "perLevel": [
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5,
+     5
+    ]
+   },
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "brew:weapon_poison",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
    "id": "recipe:inventory:cut-bow:unstrung_longbow",
    "routeId": "skiller:fletching:inventory",
    "ladderIds": [
@@ -42304,6 +42476,186 @@
    "maxBatch": 1000
   },
   {
+   "id": "recipe:inventory:poison:dragon-dagger",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22poison%3Adragon-dagger%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "1231": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "187": 1,
+    "1215": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "poison:dragon-dagger",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:poison:dragon-spear",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22poison%3Adragon-spear%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "1263": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "187": 1,
+    "1249": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "poison:dragon-spear",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:poison:rune-arrow",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22poison%3Arune-arrow%22%2C%22target%22%3A5%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "893": 5
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "187": 1,
+    "892": 5
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "poison:rune-arrow",
+     "target": 5,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 5
+   },
+   "maxBatch": 1000
+  },
+  {
    "id": "recipe:inventory:prepare:cake",
    "routeId": "skiller:cooking:inventory",
    "ladderIds": [],
@@ -53526,6 +53878,230 @@
    "maxBatch": 1000
   },
   {
+   "id": "shop:gem_trader:1605",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "gem_trader",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Emerald$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "750",
+     "FLOAT": "1750",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_alkharid/configs/alkharid.inv:72",
+   "effects": {
+    "items": {
+     "1605": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 750
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:gem_trader:1605"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 750
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:gem_trader:1607",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "gem_trader",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Sapphire$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "375",
+     "FLOAT": "1375",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_alkharid/configs/alkharid.inv:71",
+   "effects": {
+    "items": {
+     "1607": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 375
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:gem_trader:1607"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 375
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:gem_trader:1621",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "gem_trader",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Uncut emerald$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "75",
+     "FLOAT": "1075",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_alkharid/configs/alkharid.inv:68",
+   "effects": {
+    "items": {
+     "1621": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 75
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:gem_trader:1621"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 75
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:gem_trader:1623",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "gem_trader",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Uncut sapphire$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "38",
+     "FLOAT": "1038",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_alkharid/configs/alkharid.inv:67",
+   "effects": {
+    "items": {
+     "1623": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 38
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:gem_trader:1623"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 38
+   },
+   "maxBatch": 1000
+  },
+  {
    "id": "shop:general_sarim:2132",
    "routeId": "market:shop-buy",
    "ladderIds": [],
@@ -53970,6 +54546,118 @@
      "STOCK_TARGET"
     ],
     "spendPerUnit": 5
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:herquin:1607",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "herquin",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Sapphire$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "375",
+     "FLOAT": "1375",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_falador/configs/falador.inv:13",
+   "effects": {
+    "items": {
+     "1607": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 375
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:herquin:1607"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 375
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:herquin:1623",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "herquin",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Uncut sapphire$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "38",
+     "FLOAT": "1038",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_falador/configs/falador.inv:9",
+   "effects": {
+    "items": {
+     "1623": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 38
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:herquin:1623"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 38
    },
    "maxBatch": 1000
   },
@@ -56081,6 +56769,62 @@
      "STOCK_TARGET"
     ],
     "spendPerUnit": 15
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:tiadeche:3142",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "tiadeche",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Raw karambwan$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "165",
+     "FLOAT": "1165",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_karamja/configs/karamja.inv:73",
+   "effects": {
+    "items": {
+     "3142": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 165
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:tiadeche:3142"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 165
    },
    "maxBatch": 1000
   },
@@ -93480,6 +94224,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/supply-bench-cases.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/talk-plans.ts",
    "intents": [
     "observe"
@@ -95204,12 +95957,6 @@
    "id": "fletching/fletching_steel_dart",
    "skill": "fletching",
    "source": "scripts/skill_fletching/configs/darts/darts.dbrow:16",
-   "workers": []
-  },
-  {
-   "id": "herblore/potion-weapon-poison",
-   "skill": "herblore",
-   "source": "scripts/player/configs/skill_guide.dbrow:239",
    "workers": []
   },
   {

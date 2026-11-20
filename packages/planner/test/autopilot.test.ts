@@ -2767,7 +2767,7 @@ test('every squad line has a template that fills it today, or is named as a gap;
         'rune arrow', 'water rune', 'nature rune', 'law rune', 'antipoison(3)', 'earth rune', 'air rune', 'fire rune', 'blood rune', 'cosmic rune',
         'cooked karambwan', 'prayer potion(3)', 'super attack(3)', 'super strength(3)', 'super defence(3)', 'ranging potion(3)',
         'ring of recoil', 'climbing boot', 'dragon dagger(p)', 'magic shortbow', 'rune full helm', 'rune platebody', 'rune plateleg', 'rune kiteshield',
-        'black dragonhide body', 'black dragonhide chap', 'black dragonhide vambrace', 'lobster',
+        'black_dragonhide_body', 'black_dragonhide_chaps', 'black_dragon_vambraces', 'lobster',
     ]) expect([item, fills(item).length > 0]).toEqual([item, true]);
     expect(fills('shark')).toContain('squad-sharks');
     expect(fills('rune arrow')).toEqual(expect.arrayContaining(['squad-rune-arrows', 'squad-fletch-rune-arrows-bank', 'squad-arrows-dargaud']));
@@ -2947,7 +2947,7 @@ test('squadHeld counts 4-dose and super potions cleanly, keeps karambwans separa
         inventory: [{ id: 2503, count: 2, name: 'Dragonhide body' }, { id: 1135, count: 1, name: 'Dragonhide body' }, { id: 3146, count: 3, name: 'Cooked karambwan' }, { id: 3144, count: 4, name: 'Cooked karambwan' }],
         bank: [{ id: 99, count: 5, name: 'Unfinished potion' }, { id: 207, count: 6, name: 'Herb' }],
     }, () => undefined);
-    expect(parsed.items['black dragonhide body']).toBe(2);
+    expect(parsed.items['black_dragonhide_body']).toBe(2);
     expect(parsed.items['dragonhide body']).toBe(1);
     expect(parsed.items['poorly cooked karambwan']).toBe(3);
     expect(parsed.items['cooked karambwan']).toBe(4);
@@ -2955,7 +2955,7 @@ test('squadHeld counts 4-dose and super potions cleanly, keeps karambwans separa
     expect(parsed.items['unidentified ranarr']).toBe(6);
 
     const squad: SquadInput = { active: true, hours: 4, all: ['Hunter'], members: [{ name: 'Hunter', items: { ...Object.fromEntries(Object.keys(SQUAD_HOURLY).filter(i => i !== 'food').map(i => [i === 'arrow' ? 'rune arrow' : i, 1000])), shark: 500, 'ring of recoil': 10, 'climbing boot': 5, 'dragon dagger(p)': 5, 'magic shortbow': 5, 'rune full helm': 5, 'rune platebody': 5, 'rune plateleg': 5, 'rune kiteshield': 5 } }] };
-    const donorItems = { 'black dragonhide body': 10, 'black dragonhide chap': 10, 'black dragonhide vambrace': 10 };
+    const donorItems = { black_dragonhide_body: 10, black_dragonhide_chaps: 10, black_dragon_vambraces: 10 };
     const out = plan(inputs([acct('Hunter', {}, { coin: 100 }), acct('Crafter', {}, donorItems)], { templates: [], bill: [], squad, stock: [{ name: 'Crafter', side, items: donorItems }] }));
     expect(out.find(x => x.account === 'Hunter')?.send).toBeUndefined();
 });

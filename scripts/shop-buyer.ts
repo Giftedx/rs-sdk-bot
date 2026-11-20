@@ -53,6 +53,12 @@ export const PROFILES: Record<string, {
     dialogOpen?: RegExp;
     // Dialogue-only purchase (no shop interface; e.g. Tenzing's Climbing boots at 12 coins each).
     dialogBuy?: { choices: readonly RegExp[]; cost: number; item: RegExp };
+    // Gated doorway crossed explicitly on entry and bank exit (e.g. Tenzing's hut door 3745).
+    door?: {
+        id: number; x: number; z: number;
+        outside: { x: number; z: number };
+        inside: (p: { worldX: number; worldZ: number }) => boolean;
+    };
 }> = {
     // khazardshop: NPC555 at2641,3171, swamp paste1941 stock500/restock20; actual observed price governs buys.
     khazard_paste: {
@@ -398,6 +404,13 @@ export const PROFILES: Record<string, {
         npcSpot: { x: 2820, z: 3556 },
         bankSpot: { x: 2946, z: 3368 }, // Falador West Bank
         items: [{ re: /^climbing boots$/i, buyPerTick: 1 }],
+        door: {
+            id: 3745,
+            x: 2822,
+            z: 3555,
+            outside: { x: 2823, z: 3555 },
+            inside: p => p.worldX <= 2822,
+        },
         dialogBuy: {
             choices: [/can i buy some climbing boots/i, /ok,\s*sounds good/i],
             cost: 12,
@@ -784,9 +797,28 @@ try {
         return off(pos()) <= tol;
     };
 
+    const passDoor = async (enter: boolean) => {
+        const door = conf.door;
+        if (!door) return;
+        const p = pos();
+        if (!p || enter === door.inside(p)) return;
+        const stand = enter ? door.outside : { x: door.x, z: door.z };
+        await walk(stand.x, stand.z, 0);
+        for (let i = 0; i < 4 && !over(); i++) {
+            const cur = pos();
+            if (cur && enter === door.inside(cur)) break;
+            await s.direct({ type: 'interactLoc', x: door.x, z: door.z, locId: door.id, optionIndex: 1, reason: 'SDK' });
+            await waitUntil(s, () => {
+                const now = pos();
+                return over() || (!!now && enter === door.inside(now));
+            }, { timeoutTicks: 10 });
+        }
+    };
+
     const bank = async (loadFloat = true) => {
         await blindSettle();
         if (s.sdk.getState()?.shop?.isOpen) await s.bot.closeInterface();
+        await passDoor(false);
         const spot = conf.realm && !conf.realm.inside(pos() ?? { worldX: 0, worldZ: 0 }) ? conf.realm.outBank : conf.bankSpot;
         await walk(spot.x, spot.z, 2);
         const b = await s.bot.openBank();
@@ -942,7 +974,8 @@ try {
         // Walk to shop
         const p = pos();
         if (!p || p.level !== (conf.npcSpot.level ?? 0) || Math.max(Math.abs(p.worldX - conf.npcSpot.x), Math.abs(p.worldZ - conf.npcSpot.z)) > 3) {
-            await approachShop(conf, p, walk, payToll, over);
+            await passDoor(true);
+            await approachShop(conf, pos(), walk, payToll, over);
         }
 
         if (over() || ended) break;

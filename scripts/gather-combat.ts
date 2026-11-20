@@ -109,7 +109,8 @@ export function conf0Drops(target:string):RegExp{
     return CONFIGS[target]?.drops??/$^/;
 }
 export function genericCombatNpc<T extends {id:number;distance:number;reachable?:boolean;inCombat?:boolean;targetIndex?:number}>(target:string,npcs:readonly T[],selfSlot?:number):T|undefined{
-    const id=target==='giant'?GIANT.npc:target==='druid'||target==='taverley_druid'?npcId('chaos druid'):target==='unicorn'?npcId('unicorn'):target==='wizard'?npcId('wizard'):target==='taverley_black_dragon'?npcId('black dragon'):target==='taverley_blue_dragon'?npcId('blue dragon'):undefined;
+    const baseId=target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid'):target==='unicorn'?npcId('unicorn'):target==='wizard'?npcId('wizard'):undefined;
+    const id=baseId??(target==='taverley_druid'?npcId('chaos druid'):target==='taverley_black_dragon'?npcId('black dragon'):target==='taverley_blue_dragon'?npcId('blue dragon'):undefined);
     const owned = (n:T) => selfSlot !== undefined && Number.isSafeInteger(selfSlot) && selfSlot >= 0 &&
         n.inCombat === true && n.targetIndex === 32768 + selfSlot;
     return npcs.filter(n => n.id === id && n.reachable === true &&
@@ -916,6 +917,8 @@ export const TAVERLEY_ROUTE = {
     DUSTY_GATE: { x: 2924, z: 9803, id: 2623 },
     DUSTY_KEY_ID: 1590,
     ANTI_DRAGON_SHIELD_ID: 1540,
+    GATE_CORRIDOR: [{ x: 2886, z: 9817 }, { x: 2889, z: 9831 }, { x: 2910, z: 9830 }],
+    BLACK_CORRIDOR: [{ x: 2895, z: 9792 }, { x: 2893, z: 9777 }, { x: 2885, z: 9769 }, { x: 2877, z: 9788 }, { x: 2860, z: 9799 }, { x: 2839, z: 9814 }],
 } as const;
 
 export function isNonWildernessGatherGoal(x: number, z: number): boolean {
@@ -961,6 +964,11 @@ export function createTaverleyTravel() {
                     if (!cur || !inDungeon(cur.worldZ)) return false;
                 }
                 if (behindDustyGate(goal.x, goal.z) && !behindDustyGate(cur.worldX, cur.worldZ)) {
+                    if (cur.worldX < TAVERLEY_ROUTE.DUSTY_GATE.x) {
+                        for (const wp of TAVERLEY_ROUTE.GATE_CORRIDOR) {
+                            if (!await ground(wp.x, wp.z, 4)) return false;
+                        }
+                    }
                     if (!await ground(TAVERLEY_ROUTE.DUSTY_GATE.x + 1, TAVERLEY_ROUTE.DUSTY_GATE.z, 2)) return false;
                     const key = s.sdk.getInventory().find(i => i.id === TAVERLEY_ROUTE.DUSTY_KEY_ID);
                     if (!key) throw Error('Dusty key (1590) required to unlock Taverley dragon gate');
@@ -972,11 +980,21 @@ export function createTaverleyTravel() {
                     }
                     cur = pos();
                     if (!cur || !behindDustyGate(cur.worldX, cur.worldZ)) return false;
+                    if (goal.x < 2880) {
+                        for (const wp of TAVERLEY_ROUTE.BLACK_CORRIDOR) {
+                            if (!await ground(wp.x, wp.z, 4)) return false;
+                        }
+                    }
                 }
                 return ground(goal.x, goal.z, tol);
             }
             if (inDungeon(cur.worldZ)) {
                 if (behindDustyGate(cur.worldX, cur.worldZ)) {
+                    if (cur.worldX < 2880) {
+                        for (const wp of [...TAVERLEY_ROUTE.BLACK_CORRIDOR].reverse()) {
+                            if (!await ground(wp.x, wp.z, 4)) return false;
+                        }
+                    }
                     if (!await ground(TAVERLEY_ROUTE.DUSTY_GATE.x - 1, TAVERLEY_ROUTE.DUSTY_GATE.z, 2)) return false;
                     for (let i = 0; i < 3 && !stop() && behindDustyGate(pos()?.worldX ?? 0, pos()?.worldZ ?? 0); i++) {
                         const gate = findNearLoc(s, TAVERLEY_ROUTE.DUSTY_GATE.id, /gate/i, TAVERLEY_ROUTE.DUSTY_GATE.x, TAVERLEY_ROUTE.DUSTY_GATE.z);
@@ -986,6 +1004,11 @@ export function createTaverleyTravel() {
                     }
                     cur = pos();
                     if (!cur || behindDustyGate(cur.worldX, cur.worldZ)) return false;
+                }
+                if (cur.worldX >= 2905) {
+                    for (const wp of [...TAVERLEY_ROUTE.GATE_CORRIDOR].reverse()) {
+                        if (!await ground(wp.x, wp.z, 4)) return false;
+                    }
                 }
                 if (!await ground(TAVERLEY_ROUTE.LADDER_UP.x, TAVERLEY_ROUTE.LADDER_UP.z, 2)) return false;
                 for (let i = 0; i < 3 && !stop() && inDungeon(pos()?.worldZ ?? 9999); i++) {
@@ -1203,7 +1226,7 @@ try {
     };
 
     const bank = async () => {
-        if(!await walk(conf.bankSpot.x,conf.bankSpot.z,2))throw Error('combat bank return unavailable');
+        if(!await walk(conf.bankSpot.x,conf.bankSpot.z,4))throw Error('combat bank return unavailable');
         await bankCombatLoot(s,conf.drops,[...alch?[995]:[],...potions?.depositIds??[]]);
 
         if (targetConf.dragonShield && !(s.sdk.getState()?.equipment ?? []).some(i => i.id === TAVERLEY_ROUTE.ANTI_DRAGON_SHIELD_ID)) {
@@ -1329,7 +1352,7 @@ try {
 
     // A drop in the pack now is this run's: the end step below (combatRecovery) banks the pack before the UNTIL_ITEM check.
     if(untilInPack())untilDeposited=true;
-    if(combatRecovery)await combatRecovery();
+    if(combatRecovery&&(!targetConf.gatherOnly||potions||alch||s.sdk.getInventory().some(i=>conf.drops.test(i.name))))await combatRecovery();
     if(potions){console.log('COMBAT_POTIONS_RESULT '+JSON.stringify({doses:potions.doses,delta:potions.delta,receipts:potions.receipts,blocked:potions.blocked,resumes:potions.resumes}));}
     if(alch){if(!cleanupScope)await bank();if(s.sdk.getInventory().some(i=>i.id===995||conf.drops.test(i.name)))throw Error('owned alchemy bank return unconfirmed');console.log('COMBAT_ALCH_RESULT '+JSON.stringify({casts:loot.alch!.casts,coins:loot.alch!.coins,consumed:loot.alch!.consumed,runes:loot.alch!.runes,receipts:loot.alch!.receipts,blocked:loot.alch!.blocked,itemsLooted,bankTrips,scope:'exact owned pickup and native alchemy; generic loot does not assert kill attribution'}));}
     let untilHeld:boolean|undefined;

@@ -48,9 +48,9 @@ export const SQUAD_SPARES: Readonly<Record<string, number>> = {
     'rune platebody': 2,
     'rune plateleg': 2,
     'rune kiteshield': 2,
-    'black dragonhide body': 2,
-    'black dragonhide chap': 2,
-    'black dragonhide vambrace': 2,
+    black_dragonhide_body: 2,
+    black_dragonhide_chaps: 2,
+    black_dragon_vambraces: 2,
 };
 // The arrows that count toward the arrow line, best first. A row asks for these, and the supply jobs make rune arrows.
 export const SQUAD_ARROWS: readonly string[] = ['rune arrow', 'adamant arrow'];

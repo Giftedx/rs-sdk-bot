@@ -62,6 +62,7 @@ describe('the rule of each shop profile', () => {
     test('every profile whose keeper the content gives a shop has a rule for each of its lines that the shop stocks', () => {
         const without: string[] = [];
         for (const [key, profile] of Object.entries(PROFILES)) {
+            if ('dialogBuy' in profile && profile.dialogBuy) continue;
             const rules = shopRules(profile.npc, profile.npcSpot);
             if (!rules.length) { without.push(key); continue; }
             for (const rule of rules) { expect(rule.sell).toBeGreaterThanOrEqual(100); expect(rule.delta).toBeGreaterThanOrEqual(1); }

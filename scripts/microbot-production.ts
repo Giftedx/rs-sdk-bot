@@ -180,7 +180,7 @@ export async function runInventoryBank(s:import('../packages/core/src/inprocess'
  const {depositObserved}=await import('../packages/core/src/deposit');
  const {componentId}=await import('../packages/core/src/logout');
  if(r.members&&!o.members)throw Error('production recipe requires confirmed members world');
- if(!await waitUntil(s,()=>!!s.sdk.getState()?.player&&!!s.sdk.getSkill(r.skill),{timeoutTicks:10}))throw Error('production state unavailable');
+ if(!await waitUntil(s,()=>!!s.sdk.getState()?.player&&!!s.sdk.getSkill(r.skill)&&(s.sdk.getSkill('Hitpoints')?.level??0)>0,{timeoutTicks:10}))throw Error('production state unavailable');
  const inv=()=>s.sdk.getInventory(),count=(id:number)=>inv().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  const initial=s.sdk.getState()!.player!,initialLife=initial.lifeId,initialRespawns=initial.respawnCount??0;let ended=false;void s.ended.then(()=>{ended=true;});
  const stopped=()=>{const p=s.sdk.getState()?.player;return ended||productionStopRequested(s.name,o.stop)||!p||p.isDead||(s.sdk.getSkill('Hitpoints')?.level??0)<=0||
