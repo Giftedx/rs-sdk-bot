@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795189813673-pocketpython-knightrider",
+ "account": "KnightRider",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 50180,
+ "claim": "8ff20864-21d1-479e-ba67-2f194bb4d2ae",
+ "count": 0,
+ "ok": false,
+ "at": 1795190491376,
+ "detail": "trade claimed"
+}

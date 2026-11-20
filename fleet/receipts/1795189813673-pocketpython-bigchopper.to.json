@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795189813673-pocketpython-bigchopper",
+ "account": "Bigchopper",
+ "partner": "Pocketpython",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 21500,
+ "claim": "490cbe6e-4156-45c6-9dd1-f3af87e39841",
+ "count": 21500,
+ "ok": true,
+ "at": 1795190498066,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 21500
+ },
+ "bank": {
+  "count": 21500,
+  "at": 1795190496857
+ },
+ "logout": {
+  "attemptId": "1795190485217-0000025628-0000000001",
+  "at": 1795190497597,
+  "sha256": "9e15c86e2278f0e60b0768f143b4607f18c5c3caa4e675d3395e97ed8237b1db"
+ },
+ "screen": true
+}
