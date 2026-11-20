@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795192230623-oreelse-bravehardon",
+ "role": "to",
+ "account": "BraveHardon",
+ "partner": "OreElse",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795192339591,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] 8fd8b67b305084553a05d7989f0035bde7b1472d -> fleet-trade-claim/bravehardon (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}
