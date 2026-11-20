@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795150211156-mightyrod-woodpecker-13b0909846bd1a71",
+ "account": "Woodpecker",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 985000,
+ "claim": "68a2e90b-e5c7-4cef-a438-d04a4ea7f6ab",
+ "count": 985000,
+ "ok": true,
+ "at": 1795150253118,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 985000
+ },
+ "bank": {
+  "count": 985000,
+  "at": 1795150252269
+ },
+ "logout": {
+  "attemptId": "1795150236629-0000030708-0000000001",
+  "at": 1795150253028,
+  "sha256": "13ffea3315f147bf90ba62abc6f8fb1fe5ee59fdaf6c30fca62ab3ff59d9debb"
+ },
+ "screen": true
+}

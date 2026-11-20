@@ -1,0 +1,23 @@
+{
+ "id": "1795150211156-mightyrod-woodpecker-13b0909846bd1a71",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "Woodpecker",
+ "item": "Coins",
+ "count": 985000,
+ "start": 1795150211156,
+ "end": 1795151411156,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
