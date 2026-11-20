@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795155813889-mightyrod-deeppockets-lawrune",
  "account": "Deeppockets",
  "partner": "Mightyrod",
@@ -12,6 +12,12 @@
  "claim": "8c49daf0-c49f-418d-9811-95a90757c4c6",
  "count": 0,
  "ok": false,
- "at": 1795156023848,
- "detail": "trade claimed"
+ "at": 1795158214322,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795156023857-0000015688-0000000001",
+  "at": 1795158214296,
+  "sha256": "d8474330a7b20ebc89f18536b296b12cec1dd703e6e506730612c5d6d25e299a"
+ },
+ "screen": false
 }
