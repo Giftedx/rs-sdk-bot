@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795206773238-pocketpython-bravehardon",
+ "account": "Pocketpython",
+ "partner": "BraveHardon",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 1821,
+ "claim": "6ae66b32-a1ec-4b46-b4ff-c2552c193fda",
+ "count": 1821,
+ "ok": true,
+ "at": 1795206872422,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1821,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795206834339-0000027664-0000000001",
+  "at": 1795206872405,
+  "sha256": "cd8259ad53de7e996db47b97643e1e8848c596f0386273b99047736a84adc770"
+ },
+ "screen": true
+}
