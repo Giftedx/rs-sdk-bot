@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795201272930-fingerblastr-mightyrod-ccbd0075354df3f1",
+ "account": "Mightyrod",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 30,
+ "claim": "666d2880-eeb5-4906-b9be-f9699a43ad66",
+ "count": 30,
+ "ok": true,
+ "at": 1795201368791,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Law rune",
+   "requested": 2,
+   "count": 2,
+   "inventory": {
+    "before": 0,
+    "after": 2
+   },
+   "bank": {
+    "count": 2,
+    "at": 1795201367954
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 30
+ },
+ "bank": {
+  "count": 30,
+  "at": 1795201367503
+ },
+ "logout": {
+  "attemptId": "1795201357869-0000032160-0000000001",
+  "at": 1795201368701,
+  "sha256": "5944d9402b7e84b221cbe8596502ead0711efcf97cf4d7ad9d4727308b3e1892"
+ },
+ "screen": true
+}
