@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795204373205-pocketpython-bravehardon",
  "account": "Pocketpython",
  "partner": "BraveHardon",
@@ -12,6 +12,16 @@
  "claim": "9def0200-bc40-49a4-a53c-13f3dedec7f2",
  "count": 0,
  "ok": false,
- "at": 1795204439487,
- "detail": "trade claimed"
+ "at": 1795204448957,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1821,
+  "at": 1795204448191
+ },
+ "logout": {
+  "attemptId": "1795204439494-0000011856-0000000001",
+  "at": 1795204448948,
+  "sha256": "69b01855cf4bf0c62e370d5e534961749905e6ce3e808b6e8d91c8ef66b966fe"
+ },
+ "screen": false
 }
