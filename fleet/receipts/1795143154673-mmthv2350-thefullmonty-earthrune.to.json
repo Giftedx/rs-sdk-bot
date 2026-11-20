@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795143154673-mmthv2350-thefullmonty-earthrune",
  "account": "TheFullMonty",
  "partner": "mmthv2350",
@@ -10,8 +10,22 @@
  "item": "Earth rune",
  "requested": 43,
  "claim": "4a3350b6-e5e5-41f0-a6cb-15ee0a182bdb",
- "count": 0,
- "ok": false,
- "at": 1795143199217,
- "detail": "trade claimed"
+ "count": 43,
+ "ok": true,
+ "at": 1795143231019,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 43
+ },
+ "bank": {
+  "count": 43,
+  "at": 1795143230240
+ },
+ "logout": {
+  "attemptId": "1795143199226-0000020460-0000000001",
+  "at": 1795143230930,
+  "sha256": "a8782b5609338d2c7de71c5785f23e4d4bdaeae49e14f5cea3d56f52b101aa43"
+ },
+ "screen": true
 }
