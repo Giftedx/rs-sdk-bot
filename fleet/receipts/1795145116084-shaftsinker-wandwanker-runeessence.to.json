@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795145116084-shaftsinker-wandwanker-runeessence",
  "account": "Wandwanker",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "Rune essence",
  "requested": 28,
  "claim": "0144de7b-c3e2-438d-aa26-6de7c38ed3c9",
- "count": 0,
- "ok": false,
- "at": 1795145209063,
- "detail": "trade claimed"
+ "count": 28,
+ "ok": true,
+ "at": 1795145401314,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 28
+ },
+ "bank": {
+  "count": 28,
+  "at": 1795145399808
+ },
+ "logout": {
+  "attemptId": "1795145209268-0000024680-0000000001",
+  "at": 1795145401292,
+  "sha256": "be272ebb0c527c5a7aa6351f0b698c65accb92b83259aff3d929b99a5f2d71e9"
+ },
+ "screen": true
 }
