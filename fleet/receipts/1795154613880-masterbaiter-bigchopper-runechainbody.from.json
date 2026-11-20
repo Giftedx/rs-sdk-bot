@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795154613880-masterbaiter-bigchopper-runechainbody",
+ "account": "Masterbaiter",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "bfb50662-4c1a-4959-bdb5-fc6eb22641ec",
+ "count": 0,
+ "ok": false,
+ "at": 1795154771305,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1,
+  "at": 1795154770482
+ },
+ "logout": {
+  "attemptId": "1795154761266-0000030548-0000000001",
+  "at": 1795154771224,
+  "sha256": "bd19a916dec9de4ca1963db4ae3f1c17570f1fdd94e99364b6eed31f23788f68"
+ },
+ "screen": false
+}
