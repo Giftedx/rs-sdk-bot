@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795157013915-masterbaiter-woodpecker-runechainbody",
  "account": "Masterbaiter",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "936585f4-3fa7-407f-a40a-9ede167cfb47",
- "count": 0,
- "ok": false,
- "at": 1795157064509,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795157081168,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795157073194
+ },
+ "logout": {
+  "attemptId": "1795157064518-0000030864-0000000001",
+  "at": 1795157081158,
+  "sha256": "d38670d785d77c687a1dcd72b63597b79f1cac274dce4ba248d67059deb09c13"
+ },
+ "screen": true
 }
