@@ -5,7 +5,7 @@ import { validateSupplies } from '../packages/core/src/launch-evidence';
 import { componentId } from '../packages/core/src/logout';
 import { evaluateProgressionWork, preflightProgressionWork } from '../packages/core/src/progression-session';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
-import { withoutSpells } from '../packages/core/src/walk';
+import { withoutJewelry, withoutSpells, withoutTeleports } from '../packages/core/src/walk';
 import { intentForEntry, loadProgressionCatalog } from '../packages/planner/src/progression-catalog';
 import { xpForLevel } from '../packages/planner/src/curve';
 import { observedSupplies } from '../packages/practice/src/specialist-rehearsal';
@@ -227,4 +227,25 @@ test('moveGroundTo exists and withoutSpells strips lawrune so full-kit suppliers
     } as any);
     expect(stripped.items).toEqual(['airrune', 'staffoffire']);
     expect(stripped.counts?.lawrune).toBe(0);
+});
+
+test('withoutJewelry and withoutTeleports strip charged teleport jewelry while leaving withoutSpells unchanged', () => {
+    const account = {
+        skills: {},
+        quests: [],
+        items: ['lawrune', 'amulet_of_glory_4', 'ring_of_dueling_8', 'games_necklace_8', 'staffoffire'],
+        counts: { lawrune: 30, amulet_of_glory_4: 1, ring_of_dueling_8: 1, games_necklace_8: 1, staffoffire: 1 },
+        coins: 200,
+    } as any;
+    expect(withoutSpells(account).items).toEqual(['amulet_of_glory_4', 'ring_of_dueling_8', 'games_necklace_8', 'staffoffire']);
+    const noJewel = withoutJewelry(account);
+    expect(noJewel.items).toEqual(['lawrune', 'staffoffire']);
+    expect(noJewel.counts?.amulet_of_glory_4).toBe(0);
+    expect(noJewel.counts?.ring_of_dueling_8).toBe(0);
+    expect(noJewel.counts?.games_necklace_8).toBe(0);
+    expect(noJewel.counts?.lawrune).toBe(30);
+    const noTp = withoutTeleports(account);
+    expect(noTp.items).toEqual(['staffoffire']);
+    expect(noTp.counts?.lawrune).toBe(0);
+    expect(noTp.counts?.amulet_of_glory_4).toBe(0);
 });

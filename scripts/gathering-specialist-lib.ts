@@ -322,11 +322,13 @@ export async function receiveTradeFast(
     expectedCounts: Readonly<Record<number, number>>,
     stop: () => boolean,
     existingArm?: TradeHelperArm,
+    acceptedAlts?: Readonly<Record<number, readonly number[]>>,
 ): Promise<number> {
     const t0 = main.tick();
     const expectedEntries = Object.entries(expectedCounts).map(([id, minQty]) => [Number(id), minQty] as const);
+    const qtyFor = (id: number) => itemQty(main, id) + (acceptedAlts?.[id]?.reduce((sum, altId) => sum + itemQty(main, altId), 0) ?? 0);
     const hasAllExpected = () =>
-        expectedEntries.every(([id, minQty]) => itemQty(main, id) >= minQty);
+        expectedEntries.every(([id, minQty]) => qtyFor(id) >= minQty);
     const uniqueSupplyCount = expectedEntries.length;
     const minUniqueOfferedBeforeAccept = Math.floor(uniqueSupplyCount / 5) * 5;
     const supplierName = helper?.name ?? externalSupplierName();

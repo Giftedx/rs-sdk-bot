@@ -20,15 +20,20 @@ export function parseTarget(args: string[]): { account: string; to: { x: number;
 }
 
 type WalkOperations = { planned(s: Session, to: Tile): Promise<{ ok: boolean }>; ground(s: Session, to: Tile): Promise<{ ok: boolean }> };
-export async function walkTarget(s: Session, to: Tile, ground: boolean, operations: WalkOperations = {
-    planned: async (s, to) => {
-        const world = await getWorld();
-        return ferryWalk(s, to, (tile, planBudgetMs) => goTo(s, world, tile, accountOf(s), { legTimeoutTicks: 100, planBudgetMs }));
-    },
-    ground: async (s, to) => walkPath(await sessionWalker(s), [{ ...to, tol: 1 }], { maxTicks: 600 }),
-}) {
+export async function walkTarget(s: Session, to: Tile, ground: boolean, operations?: WalkOperations, walkOpts?: { noJewelry?: boolean }) {
+    const ops: WalkOperations = operations ?? {
+        planned: async (s, to) => {
+            const world = await getWorld();
+            return ferryWalk(s, to, (tile, planBudgetMs) => goTo(s, world, tile, accountOf(s), {
+                legTimeoutTicks: 100,
+                planBudgetMs,
+                ...(walkOpts?.noJewelry ? { noJewelry: true } : {}),
+            }));
+        },
+        ground: async (s, to) => walkPath(await sessionWalker(s), [{ ...to, tol: 1 }], { maxTicks: 600 }),
+    };
     if (ground && s.sdk.getState()?.player?.level !== to.level) throw Error('ground walk requires a known start on the same plane');
-    return ground ? operations.ground(s, to) : operations.planned(s, to);
+    return ground ? ops.ground(s, to) : ops.planned(s, to);
 }
 
 // Banks where a walker fetches a ferry fare: Varrock West and East, Draynor, Falador East and West, and Ardougne's
