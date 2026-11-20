@@ -1,0 +1,17 @@
+{
+ "id": "1795142301994-bigchopper-bowbeforeme-dbf8b0d1197d4fe1",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "BowBeforeMe",
+ "item": "Rune arrowtips",
+ "count": 1000,
+ "start": 1795142301994,
+ "end": 1795144701994,
+ "extra": [
+  {
+   "item": "Adamant arrowtips",
+   "count": 500
+  }
+ ],
+ "takerWaits": true
+}
