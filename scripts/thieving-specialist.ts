@@ -172,8 +172,9 @@ if (import.meta.main) {
             const msgs = st.gameMessages ?? [];
             const newMsgs = msgs.filter(m => msgMark(m) > lastMsgMark);
             lastMsgMark = latestMark(msgs, lastMsgMark);
-            if (newMsgs.some(m => /you've been stunned/i.test(m.text)) || st.player.combat?.inCombat) {
-                if (newMsgs.some(m => /you've been stunned/i.test(m.text))) stuns++;
+            const stunned = newMsgs.some(m => /you've been stunned/i.test(m.text));
+            if (stunned || (restockingFood && st.player.combat?.inCombat)) {
+                if (stunned) stuns++;
                 if (st.player.hp <= tier.stunDamage) {
                     await eatAnyFood(main);
                 }
