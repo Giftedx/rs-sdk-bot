@@ -140,9 +140,11 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'crafting',method:'soften-clay',script:'scripts/soften-clay.ts',description:'Soften clay with water sources'},
  {skill:'crafting',method:'inventory',script:'scripts/microbot-production.ts',description:'Bank-staged inventory crafting (leather, gems, battle staves, pottery)'},
  {skill:'crafting',method:'progressive',script:'scripts/microbot-production-progressive.ts',description:'Progressive level-unlocked inventory crafting'},
+ {skill:'crafting',method:'specialist',script:'scripts/crafting-specialist.ts',description:'Fresh-clock 1-to-99 Crafting via 5-per-tick unnoted gem cutting'},
  // Herblore
  {skill:'herblore',method:'potions',script:'scripts/brew-potions.ts',description:'Clean herbs, make unfinished potions, and brew finished potions'},
  {skill:'herblore',method:'meats',script:'scripts/druid-meats.ts',description:'Gather/prepare meats for Druidic Ritual Herblore unlock'},
+ {skill:'herblore',method:'specialist',script:'scripts/herblore-specialist.ts',description:'Fresh-clock 1-to-99 Herblore via Games necklace Druidic Ritual and Edgeville 10-potion bank cycles'},
  // Runecraft
  {skill:'runecraft',method:'bank-craft',script:'scripts/rune-bank-craft.ts',description:'Craft banked essence at best unlocked F2P altar (air/mind/water/earth/fire/body)'},
  {skill:'runecraft',method:'nature',script:'scripts/microbot-rune-trip.ts',description:'Shilo Village Nature altar runecrafting trips'},
@@ -162,6 +164,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'magic',method:'alch-train',script:'scripts/alch-train.ts',description:'Alchemy on a cheap stackable item at the Ardougne north bank: Low Alchemy to Magic 55, then High Alchemy to the target level'},
  {skill:'magic',method:'splash',script:'scripts/splash-train.ts',description:'Curse casts over the fence of the Ardougne cow field to the target Magic level'},
  {skill:'magic',method:'splash-coop',script:'scripts/splash-train.ts',defaultEnv:{SPLASH_SITE:'coop'},description:'The record route opening: Wind Strike and Confuse from the starter pack at the Lumbridge coop, no bank'},
+ {skill:'magic',method:'specialist',script:'scripts/magic-specialist.ts',description:'Fresh-clock 1-to-99 Magic via enchant ladder, Mage Arena, and 5-per-tick Charge'},
  // Prayer
  {skill:'prayer',method:'bury',script:'scripts/train-prayer.ts',description:'Bury bones / big bones / dragon bones to target Prayer level'},
  {skill:'prayer',method:'flick',script:'scripts/microbot-prayer-flick.ts',description:'1-tick prayer flicking upkeep'},

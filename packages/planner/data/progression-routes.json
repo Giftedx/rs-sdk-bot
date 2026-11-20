@@ -3553,6 +3553,21 @@
    "description": "Soften clay with water sources"
   },
   {
+   "id": "skiller:crafting:specialist",
+   "category": "skiller",
+   "name": "crafting:specialist",
+   "script": "scripts/crafting-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "crafting"
+   ],
+   "description": "Fresh-clock 1-to-99 Crafting via 5-per-tick unnoted gem cutting"
+  },
+  {
    "id": "skiller:crafting:tanning",
    "category": "skiller",
    "name": "crafting:tanning",
@@ -3953,6 +3968,21 @@
    "description": "Clean herbs, make unfinished potions, and brew finished potions"
   },
   {
+   "id": "skiller:herblore:specialist",
+   "category": "skiller",
+   "name": "herblore:specialist",
+   "script": "scripts/herblore-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "herblore"
+   ],
+   "description": "Fresh-clock 1-to-99 Herblore via Games necklace Druidic Ritual and Edgeville 10-potion bank cycles"
+  },
+  {
    "id": "skiller:magic:alch-train",
    "category": "skiller",
    "name": "magic:alch-train",
@@ -4081,6 +4111,21 @@
     "magic"
    ],
    "description": "Combat/curse/bolt magic training order"
+  },
+  {
+   "id": "skiller:magic:specialist",
+   "category": "skiller",
+   "name": "magic:specialist",
+   "script": "scripts/magic-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "magic"
+   ],
+   "description": "Fresh-clock 1-to-99 Magic via enchant ladder, Mage Arena, and 5-per-tick Charge"
   },
   {
    "id": "skiller:magic:splash",
@@ -90481,8 +90526,10 @@
     "skiller:crafting:soften-clay",
     "skiller:crafting:inventory",
     "skiller:crafting:progressive",
+    "skiller:crafting:specialist",
     "skiller:herblore:potions",
     "skiller:herblore:meats",
+    "skiller:herblore:specialist",
     "skiller:runecraft:bank-craft",
     "skiller:runecraft:nature",
     "skiller:runecraft:supply",
@@ -90500,6 +90547,7 @@
     "skiller:magic:alch-train",
     "skiller:magic:splash",
     "skiller:magic:splash-coop",
+    "skiller:magic:specialist",
     "skiller:prayer:bury",
     "skiller:prayer:flick",
     "skiller:prayer:specialist",
@@ -90606,8 +90654,10 @@
     "skiller:crafting:soften-clay",
     "skiller:crafting:inventory",
     "skiller:crafting:progressive",
+    "skiller:crafting:specialist",
     "skiller:herblore:potions",
     "skiller:herblore:meats",
+    "skiller:herblore:specialist",
     "skiller:runecraft:bank-craft",
     "skiller:runecraft:nature",
     "skiller:runecraft:supply",
@@ -90625,6 +90675,7 @@
     "skiller:magic:alch-train",
     "skiller:magic:splash",
     "skiller:magic:splash-coop",
+    "skiller:magic:specialist",
     "skiller:prayer:bury",
     "skiller:prayer:flick",
     "skiller:prayer:specialist",
@@ -91048,6 +91099,18 @@
    ],
    "routeIds": [
     "skiller:crafting:legacy-jewelry"
+   ]
+  },
+  {
+   "script": "scripts/crafting-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "crafting"
+   ],
+   "routeIds": [
+    "skiller:crafting:specialist"
    ]
   },
   {
@@ -92361,6 +92424,18 @@
    "routeIds": []
   },
   {
+   "script": "scripts/herblore-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "herblore"
+   ],
+   "routeIds": [
+    "skiller:herblore:specialist"
+   ]
+  },
+  {
    "script": "scripts/hp-specialist.ts",
    "intents": [
     "train"
@@ -92408,6 +92483,18 @@
    ],
    "routeIds": [
     "skiller:magic:order"
+   ]
+  },
+  {
+   "script": "scripts/magic-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "magic"
+   ],
+   "routeIds": [
+    "skiller:magic:specialist"
    ]
   },
   {

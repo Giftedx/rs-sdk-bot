@@ -161,9 +161,12 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
  const specialistSkill=specialistGathering.get(script);
  if(specialistSkill)return{kind:'service',objective:`fresh-clock ${specialistSkill} 99 specialist`,units:1};
  const fastSkillSpecialists:Readonly<Record<string,{skill:string;cap:number}>>={
+  'scripts/crafting-specialist.ts':{skill:'crafting',cap:250},
+  'scripts/herblore-specialist.ts':{skill:'herblore',cap:600},
   'scripts/prayer-specialist.ts':{skill:'prayer',cap:1350},
   'scripts/smithing-specialist.ts':{skill:'smithing',cap:1350},
   'scripts/runecraft-specialist.ts':{skill:'runecraft',cap:2300},
+  'scripts/magic-specialist.ts':{skill:'magic',cap:1300},
  };
  if(script in fastSkillSpecialists){
   const spec=fastSkillSpecialists[script]!;
