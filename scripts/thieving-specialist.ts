@@ -15,6 +15,7 @@ import {
     walkWaypointsSafe,
     sailBrimhavenToArdougne,
     eatAnyFood,
+    hasAnyFood,
     isLiveSupplyVariant,
     itemQty,
     chebDist,
@@ -191,21 +192,28 @@ if (import.meta.main) {
                 continue;
             }
 
-            // Safety guard: never attempt a pickpocket while HP <= stunDamage. Steal emergency cakes in Ardougne Market if dry.
-            if (st.player.hp <= tier.stunDamage) {
-                if (await eatAnyFood(main)) {
+            // Safety guard: never attempt a pickpocket while HP <= stunDamage. Steal emergency food at north side of Baker's stall if empty.
+            if (st.player.hp <= tier.stunDamage || !hasAnyFood(main)) {
+                if (st.player.hp <= tier.stunDamage && await eatAnyFood(main)) {
                     await waitTicks(main, 1);
                     continue;
                 }
-                const freeSlots = 28 - st.inventory.length;
-                if (freeSlots > 0) {
-                    const stall = main.sdk.findNearbyLoc(/^baker's stall$/i);
-                    if (!stall || Math.max(Math.abs(stall.x - st.player.worldX), Math.abs(stall.z - st.player.worldZ)) > 2) {
-                        await main.bot.walkTo(2653, 3311, 2);
-                    } else {
-                        await main.bot.interactLoc(stall, 'Steal-from');
+                if (!hasAnyFood(main) && st.inventory.length < 28) {
+                    const northTile = { x: 2655, z: 3313 };
+                    if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, northTile) > 1) {
+                        await main.bot.walkTo(northTile.x, northTile.z, 1);
+                        await waitTicks(main, 1);
+                        continue;
+                    }
+                    const stall = st.nearbyLocs?.find(l => l.id === 2561 || /^baker's stall$/i.test(l.name ?? ''))
+                        ?? main.sdk.findNearbyLoc(/^baker's stall$/i);
+                    if (stall) {
+                        await main.sdk.sendInteractLoc(stall.x, stall.z, stall.id, 2);
                     }
                     await waitTicks(main, 2);
+                    if (main.sdk.getState()!.player!.hp <= tier.stunDamage) {
+                        await eatAnyFood(main);
+                    }
                     continue;
                 }
             }

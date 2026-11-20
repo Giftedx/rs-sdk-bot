@@ -113,10 +113,23 @@ export async function eatPineapplePizza(s: Session): Promise<boolean> {
     return true;
 }
 
+const HEALING_FOOD_IDS = [
+    OBJ_HALF_PINEAPPLE_PIZZA,
+    OBJ_PINEAPPLE_PIZZA,
+    OBJ_CAKE_SLICE,
+    OBJ_CAKE_2_3,
+    OBJ_CAKE,
+    OBJ_CHOCOLATE_SLICE,
+    OBJ_BREAD,
+    OBJ_SHARK,
+] as const;
+
+export const hasAnyFood = (s: Session): boolean =>
+    HEALING_FOOD_IDS.some(id => slotOfId(s, id) !== undefined);
+
 /** Eat partial/whole healing food (pizza, cake slices, bread, or shark), returning true if an eat packet was sent. */
 export async function eatAnyFood(s: Session): Promise<boolean> {
-    if (await eatPineapplePizza(s)) return true;
-    for (const id of [OBJ_CAKE_SLICE, OBJ_CAKE_2_3, OBJ_CAKE, OBJ_CHOCOLATE_SLICE, OBJ_BREAD, OBJ_SHARK]) {
+    for (const id of HEALING_FOOD_IDS) {
         const slot = slotOfId(s, id);
         if (slot !== undefined) {
             await s.direct({ type: 'useInventoryItem', slot, optionIndex: 1, reason: 'SDK' });
