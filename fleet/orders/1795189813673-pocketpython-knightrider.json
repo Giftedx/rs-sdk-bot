@@ -1,0 +1,22 @@
+{
+ "id": "1795189813673-pocketpython-knightrider",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Pocketpython",
+ "to": "KnightRider",
+ "item": "coins",
+ "count": 50180,
+ "start": 1795189813673,
+ "end": 1795192213673,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

@@ -1,0 +1,22 @@
+{
+ "id": "1795189813673-magicwanda-knightstick-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Magicwanda",
+ "to": "Knightstick",
+ "item": "Air rune",
+ "count": 3,
+ "start": 1795189813673,
+ "end": 1795192213673,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

@@ -1,0 +1,22 @@
+{
+ "id": "1795189813673-oreelse-shaftmaker-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "Shaftmaker",
+ "item": "Nature rune",
+ "count": 305,
+ "start": 1795189813673,
+ "end": 1795192213673,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

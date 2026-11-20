@@ -1,0 +1,22 @@
+{
+ "id": "1795189813673-pocketpython-dipstick",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Pocketpython",
+ "to": "Dipstick",
+ "item": "coins",
+ "count": 109456,
+ "start": 1795189813673,
+ "end": 1795192213673,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
