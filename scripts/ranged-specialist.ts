@@ -347,7 +347,7 @@ export function shouldDrinkSuperRestore(prayerPoints: number, basePrayer: number
 }
 
 export function shouldDrinkAntipoison(poisoned: boolean, ticksSinceDrink: number, superImmune = true): boolean {
-    return poisoned || (superImmune && ticksSinceDrink >= 540);
+    return poisoned || ticksSinceDrink >= (superImmune ? 540 : 140);
 }
 
 function readServerHost(root: string, bot: string): string {
@@ -857,14 +857,24 @@ async function runSpiderGrind(
     const goneSeen = (): number => tally.count(/your cannon has been destroyed/i);
     const poisonSeen = (): number => tally.count(/you have been poisoned/i);
 
-    const anti0 = inv().find(i => ITEM_IDS.antipoison.includes(i.id));
+    const drinkVerifiedAnti = async (): Promise<boolean> => {
+        const pot = inv().find(i => ITEM_IDS.antipoison.includes(i.id));
+        if (!pot || pot.slot === undefined) return false;
+        const before = totalDoses(inv(), ITEM_IDS.antipoison);
+        const res = ((await s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' })) as { success?: boolean } | undefined) ?? {};
+        if (!res.success) return false;
+        return await waitUntil(s, () => stop() || totalDoses(inv(), ITEM_IDS.antipoison) < before, { timeoutTicks: 3 });
+    };
+
     let lastAnti = -999;
     let antis = 0;
-    if (anti0 && anti0.slot !== undefined) {
-        await s.direct({ type: 'useInventoryItem', slot: anti0.slot, optionIndex: 1, reason: 'SDK' });
-        lastAnti = s.tick();
-        antis++;
-        await waitTicks(s, 2);
+    for (let attempt = 0; attempt < 2 && !stop(); attempt++) {
+        if (await drinkVerifiedAnti()) {
+            lastAnti = s.tick();
+            antis++;
+            break;
+        }
+        await waitTicks(s, 1);
     }
 
     // Turn Auto-Retaliate OFF (151) while setting up cannon so spider hits do not interrupt cannon_setup p_delay(0).
@@ -987,7 +997,7 @@ async function runSpiderGrind(
 
             // 2. Sustain (eating/drinking clears active NPC target, so re-acquire next tick).
             const hpStat = skillInfo(s, 'Hitpoints');
-            if (hpStat.level > 0 && hpStat.level <= Math.max(8, Math.floor(hpStat.baseLevel * 0.25))) {
+            if (hpStat.level > 0 && hpStat.level <= Math.max(10, Math.floor(hpStat.baseLevel * 0.30))) {
                 const food = inv().find(i => ITEM_IDS.cake.includes(i.id));
                 if (food && food.slot !== undefined) {
                     const res = await sendDirect({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
@@ -1008,8 +1018,13 @@ async function runSpiderGrind(
             const antiPot = inv().find(i => ITEM_IDS.antipoison.includes(i.id));
             const hasSuperAnti = !!antiPot && ITEM_IDS.superAntipoison.includes(antiPot.id);
             if (antiPot && antiPot.slot !== undefined && shouldDrinkAntipoison(poisonedNow, now - lastAnti, hasSuperAnti)) {
-                const res = await sendDirect({ type: 'useInventoryItem', slot: antiPot.slot, optionIndex: 1, reason: 'SDK' });
-                if (res.success) { poison0 = poisonSeen(); lastAnti = now; antis++; targetIdx = undefined; await waitTicks(s, 1); continue; }
+                if (await drinkVerifiedAnti()) {
+                    poison0 = poisonSeen();
+                    lastAnti = s.tick();
+                    antis++;
+                    targetIdx = undefined;
+                    continue;
+                }
             }
 
             if (now - lastRPot >= 12 && shouldDrinkRanging(r.baseLevel, r.level, totalDoses(inv(), ITEM_IDS.rangingPot))) {
