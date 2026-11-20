@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795163950579-pocketpool-yewfirst-1e6c35173dd81913",
  "account": "PocketPool",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Rune arrowtips",
  "requested": 66,
  "claim": "3b71f4a9-1375-4ed7-ab5a-1814ee131249",
- "count": 0,
- "ok": false,
- "at": 1795163967091,
- "detail": "trade claimed"
+ "count": 66,
+ "ok": true,
+ "at": 1795164000066,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 66,
+  "after": 0
+ },
+ "bank": {
+  "count": 66,
+  "at": 1795163984912
+ },
+ "logout": {
+  "attemptId": "1795163967101-0000026872-0000000001",
+  "at": 1795164000051,
+  "sha256": "98dc63e47ee4c03c39e3cabf1e2e2a30db9a06694831f6b913cd997ce62b2351"
+ },
+ "screen": true
 }

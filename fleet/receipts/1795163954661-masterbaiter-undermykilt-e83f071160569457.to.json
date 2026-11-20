@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795163954661-masterbaiter-undermykilt-e83f071160569457",
  "account": "UnderMyKilt",
  "partner": "Masterbaiter",
@@ -10,15 +10,37 @@
  "item": "Lobster",
  "requested": 5,
  "claim": "e3f0c8f1-ad1c-4603-a433-a65d6536c2b2",
- "count": 0,
- "ok": false,
- "at": 1795163976652,
- "detail": "trade claimed",
+ "count": 5,
+ "ok": true,
+ "at": 1795164000510,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Rune arrow",
    "requested": 494,
-   "count": 0
+   "count": 494,
+   "inventory": {
+    "before": 0,
+    "after": 494
+   },
+   "bank": {
+    "count": 494,
+    "at": 1795163999354
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 5
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795163998990
+ },
+ "logout": {
+  "attemptId": "1795163976661-0000030500-0000000001",
+  "at": 1795164000493,
+  "sha256": "527522700ad9076b2e3ab2cc4b82d7d941b8e7f4f48819f3cba633f37e50913b"
+ },
+ "screen": true
 }
