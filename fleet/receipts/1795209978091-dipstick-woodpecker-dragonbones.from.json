@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795209978091-dipstick-woodpecker-dragonbones",
+ "account": "Dipstick",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 15,
+ "claim": "b3d1dda6-33b0-4c49-9a9e-265364501ce1",
+ "count": 0,
+ "ok": false,
+ "at": 1795210027072,
+ "detail": "trade claimed"
+}
