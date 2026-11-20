@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795136521401-mightyrod-bigchopper-e79a21247c0fe81f",
+ "account": "Bigchopper",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 30,
+ "claim": "9c06217f-0d5f-47e1-b8f8-9148d1f7ec28",
+ "count": 30,
+ "ok": true,
+ "at": 1795136562028,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Air rune",
+   "requested": 300,
+   "count": 300,
+   "inventory": {
+    "before": 0,
+    "after": 300
+   },
+   "bank": {
+    "count": 300,
+    "at": 1795136561276
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 30
+ },
+ "bank": {
+  "count": 30,
+  "at": 1795136560862
+ },
+ "logout": {
+  "attemptId": "1795136545775-0000002796-0000000001",
+  "at": 1795136562015,
+  "sha256": "b835913dae3b05204a2807938c155fdca5ed3b8566df6036b924cdbf40f9cb21"
+ },
+ "screen": true
+}
