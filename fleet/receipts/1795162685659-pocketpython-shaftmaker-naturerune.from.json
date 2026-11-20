@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795162685659-pocketpython-shaftmaker-naturerune",
  "account": "Pocketpython",
  "partner": "Shaftmaker",
@@ -12,6 +12,16 @@
  "claim": "5fc59992-3f75-4b07-a95f-09ffe4cb211e",
  "count": 0,
  "ok": false,
- "at": 1795162774160,
- "detail": "trade claimed"
+ "at": 1795162960540,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 448,
+  "at": 1795162957038
+ },
+ "logout": {
+  "attemptId": "1795162774169-0000018324-0000000001",
+  "at": 1795162960521,
+  "sha256": "79d2a6055b0bc229a178dcc7f772497e9cab036e26bdfc19cdc20ee49154bce4"
+ },
+ "screen": false
 }
