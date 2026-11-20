@@ -136,10 +136,10 @@ export const MONKEYBARS_TRADE_1: readonly SupplyEntry[] = [
     { id: ITEMS.glory4, name: 'Amulet of glory(4)', count: 1 },
     { id: ITEMS.coins, name: 'Coins', count: 500 },
     { id: ITEMS.dragonBones, name: 'Dragon bones', count: 11 },
-    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 2 },
+    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 1 },
     { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 5 },
     { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 5 },
-    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 3 },
+    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 4 },
 ];
 
 export const MONKEYBARS_TRADE_1_NOPOT: readonly SupplyEntry[] = [
@@ -285,7 +285,7 @@ export function canPreClickNextObstacle(name: string, p: { worldX: number; world
 export function shouldDrinkAgilityPotion(baseLevel: number, currentLevel: number, atGate: boolean): boolean {
     if (baseLevel >= 99 || currentLevel >= 99) return false;
     if (atGate && currentLevel < 52) return true;
-    if (baseLevel < 70) return currentLevel <= baseLevel + 2;
+    if (baseLevel < 60) return currentLevel <= baseLevel + 2;
     return currentLevel <= Math.min(97, baseLevel + 1);
 }
 
@@ -1246,7 +1246,8 @@ async function train1To49Monkeybars(s: Session, usePotion: boolean, usePrayer = 
         }
         await waitTicks(s, 1);
     }
-    if (usePrayer) await setProtectFromMelee(s, true);
+    const manualPrayer = process.env.PRAYER_GUARD === '0';
+    if (usePrayer && manualPrayer) await setProtectFromMelee(s, true);
     await crossEdgevilleToMonkeybars(s, true, stop);
     await walkNear(s, { x: 3120, z: 9964, level: 0 }, 2, 120, { ignoreHunters: true, stop });
     const targetLvl = usePotion ? 49 : 52;
@@ -1257,8 +1258,8 @@ async function train1To49Monkeybars(s: Session, usePotion: boolean, usePrayer = 
         if (!p || p.isDead || p.worldZ < 9000) throw Error(`monkeybars left dungeon at ${p?.worldX},${p?.worldZ}`);
         if (skillCur(s, 'Hitpoints') <= 7) await drinkFirstMatching(s, [...ITEMS.chocolateCakeParts, ITEMS.shark]);
         if (usePrayer) {
-            await sipPrayer(s, 6);
-            await setProtectFromMelee(s, true);
+            await sipPrayer(s, 10);
+            if (manualPrayer) await setProtectFromMelee(s, true);
         }
         if (usePotion && skillCur(s, 'Agility') < 15) await drinkFirstMatching(s, ITEMS.agilityPot);
         const gained = skillXp(s, 'Agility') - mLastXp;
@@ -1277,7 +1278,7 @@ async function train1To49Monkeybars(s: Session, usePotion: boolean, usePrayer = 
         await waitTicks(s, 1);
     }
     if (skillLvl(s, 'Agility') < targetLvl) throw Error(`monkeybars did not reach Agility ${targetLvl} (lvl ${skillLvl(s, 'Agility')})`);
-    if (usePrayer) await setProtectFromMelee(s, false);
+    if (usePrayer && manualPrayer) await setProtectFromMelee(s, false);
     await rubGlory(s, /edgeville/i, { x: 3087, z: 3496 }, 25);
 }
 
@@ -1440,10 +1441,11 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
         await Promise.all(acts);
     };
 
+    const manualPrayer = process.env.PRAYER_GUARD === '0';
     try {
         const hpThreshold = () => {
             const maxHp = skillLvl(s, 'Hitpoints');
-            return maxHp <= 15 ? 7 : Math.max(5, Math.floor(maxHp * 0.55));
+            return maxHp <= 15 ? 5 : Math.max(5, Math.floor(maxHp * 0.55));
         };
         const maybeEat = async () => {
             if (skillCur(s, 'Hitpoints') <= hpThreshold()) {
@@ -1452,9 +1454,10 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
         };
         const syncPrayer = async (stepIdx: number) => {
             if (!cfg.usePrayer) return;
-            const needPrayer = inPit || stepIdx === 3;
+            await sipPrayer(s, 10);
+            if (!manualPrayer) return;
+            const needPrayer = inPit || stepIdx === 3 || stepIdx === 4;
             if (needPrayer) {
-                await sipPrayer(s, 6);
                 await setProtectFromMelee(s, true);
             } else {
                 await setProtectFromMelee(s, false);
@@ -1472,7 +1475,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
             await waitTicks(s, 1);
             const p = posOf(s);
             if (!p || p.isDead) continue;
-            if (skillCur(s, 'Hitpoints') <= 7) await maybeEat();
+            if (skillCur(s, 'Hitpoints') <= 5) await maybeEat();
             const key = `${p.worldX},${p.worldZ},${p.level}`;
             const moved = key !== lastPos;
             still = moved ? 0 : still + 1;
@@ -1635,8 +1638,11 @@ export async function runAgilitySpecialist(bot: string, argv: readonly string[] 
             if (supplier) {
                 await waitUntil(spec, () => stop() || supplier!.isReadyFor(phase) || !!supplier!.lastError(), { timeoutTicks });
                 if (supplier.lastError()) throw supplier.lastError()!;
+                const giveCounts = new Map<number, number>();
+                for (const w of want) giveCounts.set(w.id, (giveCounts.get(w.id) ?? 0) + w.count);
                 await burstTradeHost(spec, supplier.sessionHandle()!, {
                     giveIds: want.map(w => w.id),
+                    giveCounts,
                     deadlineTick: spec.tick() + timeoutTicks,
                     allowHelperOnSingleModal: true,
                 });
