@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795150482614-wandwaver-woodpecker-07d88db90c1d131f",
+ "account": "Wandwaver",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 230000,
+ "claim": "d6176671-3616-45fc-9215-df49f5b18f70",
+ "count": 0,
+ "ok": false,
+ "at": 1795150496913,
+ "detail": "trade claimed"
+}

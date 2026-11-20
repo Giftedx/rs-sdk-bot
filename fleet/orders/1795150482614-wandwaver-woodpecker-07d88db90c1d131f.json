@@ -1,0 +1,23 @@
+{
+ "id": "1795150482614-wandwaver-woodpecker-07d88db90c1d131f",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Wandwaver",
+ "to": "Woodpecker",
+ "item": "Coins",
+ "count": 230000,
+ "start": 1795150482614,
+ "end": 1795151682614,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
