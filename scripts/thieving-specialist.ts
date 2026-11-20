@@ -212,13 +212,13 @@ if (import.meta.main) {
                 }
             }
             const bites = foodBitesCount(main);
-            if ((bites <= 3 && hpNow >= 6) || bites === 0) restockingFood = true;
+            if ((bites <= 1 && hpNow >= 6) || bites === 0) restockingFood = true;
             if (restockingFood) {
-                if (bites >= 9 || st.inventory.length >= 28) {
+                if (bites >= 6 || st.inventory.length >= 28) {
                     restockingFood = false;
                 } else {
                     const guardAt = (tx: number, tz: number) =>
-                        st.nearbyNpcs.some(n => /^guard$/i.test(n.name) && chebDist({ x: n.x, z: n.z }, { x: tx, z: tz }) <= 6);
+                        st.nearbyNpcs.some(n => /^guard$/i.test(n.name) && chebDist({ x: n.x, z: n.z }, { x: tx, z: tz }) <= 4);
                     const eastStand = { x: 2667, z: 3312 };
                     const westStand = { x: 2655, z: 3313 };
                     const stand = !guardAt(eastStand.x, eastStand.z)
@@ -229,7 +229,7 @@ if (import.meta.main) {
                             lastStallWalk = main.tick();
                             await main.sdk.sendWalk(stand.x, stand.z, true);
                         }
-                    } else if (!guardAt(st.player.worldX, st.player.worldZ) && main.tick() - lastStallClick >= 2) {
+                    } else if (main.tick() - lastStallClick >= 2) {
                         const stalls = (st.nearbyLocs ?? [])
                             .filter(l => l.id === 2561 || /^baker's stall$/i.test(l.name ?? ''))
                             .sort((a, b) => chebDist(a, stand) - chebDist(b, stand));
