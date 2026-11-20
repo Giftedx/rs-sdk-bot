@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795158766018-knightrider-shaftsinker-31a090096caac942",
  "account": "Shaftsinker",
  "partner": "KnightRider",
@@ -12,6 +12,12 @@
  "claim": "e3158ae3-1c0a-4d51-82f6-56a4ee60c93d",
  "count": 0,
  "ok": false,
- "at": 1795158913855,
- "detail": "trade claimed"
+ "at": 1795158976654,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795158914203-0000008824-0000000001",
+  "at": 1795158976644,
+  "sha256": "2813dfc353dd8a7682526467f8b9b5d5d9baecb4a08f4ae21bc04238f253852b"
+ },
+ "screen": false
 }
