@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795165526077-nabtheknob-knightstick-375987cbf12a16aa",
+ "account": "Knightstick",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 223,
+ "claim": "260ec0f1-03e7-40be-8532-6d1af4e81487",
+ "count": 0,
+ "ok": false,
+ "at": 1795165541893,
+ "detail": "trade claimed"
+}
