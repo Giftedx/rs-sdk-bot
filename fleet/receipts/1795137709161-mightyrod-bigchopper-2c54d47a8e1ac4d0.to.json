@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795137709161-mightyrod-bigchopper-2c54d47a8e1ac4d0",
  "account": "Bigchopper",
  "partner": "Mightyrod",
@@ -12,13 +12,19 @@
  "claim": "61dd9747-29e9-4eef-aa72-9ea2dc2a2972",
  "count": 0,
  "ok": false,
- "at": 1795138616084,
- "detail": "trade claimed",
+ "at": 1795138909546,
+ "detail": "Error: order window ended during work",
  "lines": [
   {
    "item": "Law rune",
    "requested": 10,
    "count": 0
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1795138616095-0000020736-0000000001",
+  "at": 1795138909523,
+  "sha256": "788d245c4e2d678489bfb640811c1a1d174add7e2587c59db75c035aec7d9f62"
+ },
+ "screen": false
 }
