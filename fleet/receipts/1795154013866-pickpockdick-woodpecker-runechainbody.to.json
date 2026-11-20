@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795154013866-pickpockdick-woodpecker-runechainbody",
  "account": "Woodpecker",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "4379c8ae-4c3c-4075-bb9f-1ac67d5a071a",
- "count": 0,
- "ok": false,
- "at": 1795154122287,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795154139268,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795154138539
+ },
+ "logout": {
+  "attemptId": "1795154122641-0000025820-0000000001",
+  "at": 1795154139254,
+  "sha256": "e5733488733a6284361956b91f3cbf1d0b8b2a8e2b8d6224f655e18eacddad75"
+ },
+ "screen": true
 }
