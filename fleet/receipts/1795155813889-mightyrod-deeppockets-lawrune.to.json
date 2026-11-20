@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795155813889-mightyrod-deeppockets-lawrune",
+ "account": "Deeppockets",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 1,
+ "claim": "8c49daf0-c49f-418d-9811-95a90757c4c6",
+ "count": 0,
+ "ok": false,
+ "at": 1795156023848,
+ "detail": "trade claimed"
+}
