@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795141564666-mmsmk1232-bowbeforeme-f5cdef4d1abdb9ed",
  "account": "mmsmk1232",
  "partner": "BowBeforeMe",
@@ -10,15 +10,37 @@
  "item": "Steel arrowtips",
  "requested": 150,
  "claim": "c4666e2a-b421-4bb5-a694-eeca6cacd1c9",
- "count": 0,
- "ok": false,
- "at": 1795141872231,
- "detail": "trade claimed",
+ "count": 150,
+ "ok": true,
+ "at": 1795141923027,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Mithril arrowtips",
    "requested": 240,
-   "count": 0
+   "count": 240,
+   "inventory": {
+    "before": 240,
+    "after": 0
+   },
+   "bank": {
+    "count": 240,
+    "at": 1795141898610
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 150,
+  "after": 0
+ },
+ "bank": {
+  "count": 150,
+  "at": 1795141897841
+ },
+ "logout": {
+  "attemptId": "1795141872241-0000021324-0000000001",
+  "at": 1795141923009,
+  "sha256": "4a99228beadc59f140aa5195f6b38b016742b507f39e96099e9e251ee8c38abf"
+ },
+ "screen": true
 }
