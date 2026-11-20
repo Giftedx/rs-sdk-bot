@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795192597464,
+ "at": 1795192926298,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -240,6 +240,36 @@
    ]
   },
   {
+   "account": "Bigchopper",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "dargaud",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "rune arrow",
+    "STOCK_TARGET": "445",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "320200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "320000",
+    "AUTOPILOT_ORDER": "[45]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":445}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
+   "role": "bank",
+   "template": "squad-arrows-dargaud",
+   "autopilot": "local",
+   "resources": [
+    "shop:dargaud"
+   ]
+  },
+  {
    "account": "PickpockDick",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -271,7 +301,8 @@
     "COW_BANK_PROFILE": "north",
     "MAX_KILLS": "8",
     "COW_STAGE": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":60}}"
    },
    "enabled": true,
    "standing": true,
