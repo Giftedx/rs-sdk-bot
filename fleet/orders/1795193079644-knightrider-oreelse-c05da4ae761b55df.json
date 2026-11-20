@@ -1,0 +1,23 @@
+{
+ "id": "1795193079644-knightrider-oreelse-c05da4ae761b55df",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "OreElse",
+ "item": "Shark",
+ "count": 10,
+ "start": 1795193079644,
+ "end": 1795194279644,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
