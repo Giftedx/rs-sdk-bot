@@ -1,0 +1,60 @@
+{
+  "id": "defence-specialist",
+  "goal": "specialists",
+  "entry": "scripts/defence-specialist.ts",
+  "files": [
+    "scripts/defence-specialist.ts",
+    "scripts/combat-quest-specialists.ts",
+    "scripts/combat-quest-specialists.test.ts",
+    "scripts/specialist-supplier.ts",
+    "scripts/generated/waterfall.ts",
+    "scripts/measure/specialist-combat-quests-cases.ts",
+    "packages/practice/src/rehearse.ts",
+    "packages/practice/src/specialist-rehearsal.ts",
+    "packages/practice/test/specialist-rehearsal.test.ts"
+  ],
+  "consumer": "RockSolid completes the continuous fresh-clock Defence 99 specialist route from Tutorial Island through Waterfall Quest and Deserted Keep 2-tank PvP after receiving DEFENCE_SPECIALIST_KIT (target <= 4,236 ticks for a 2% margin under live #1 nickbicep 4,323t).",
+  "checks": [
+    {
+      "id": "defence-specialist-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/combat-quest-specialists.test.ts",
+        "packages/practice/test/specialist-rehearsal.test.ts",
+        "packages/core/test/specialist-launch.test.ts",
+        "packages/core/test/launch-evidence.test.ts",
+        "scripts/progression-catalog.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-defence-specialist",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "run",
+        "bench",
+        "fighter:specialist-defence",
+        "--budget",
+        "10"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "id": "defence-specialist-consumer-gate",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "test",
+        "scripts/combat-quest-specialists.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    }
+  ]
+}
