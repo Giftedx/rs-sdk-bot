@@ -1,0 +1,28 @@
+{
+ "id": "1795164438168-swordinhand-mightyrod-f8092af552b8040b",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordinhand",
+ "to": "Mightyrod",
+ "item": "Coins",
+ "count": 120000,
+ "start": 1795164438168,
+ "end": 1795165938168,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Rune arrow",
+   "count": 71
+  }
+ ]
+}

@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795164438168-swordinhand-mightyrod-f8092af552b8040b",
+ "account": "Swordinhand",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 120000,
+ "claim": "96f5ce06-de8b-4c62-bb14-38ed026a4afd",
+ "count": 0,
+ "ok": false,
+ "at": 1795164447150,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Rune arrow",
+   "requested": 71,
+   "count": 0
+  }
+ ]
+}
