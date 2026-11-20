@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795192583243-coincock-swordinhand",
  "account": "Swordinhand",
  "partner": "CoinCock",
@@ -12,6 +12,12 @@
  "claim": "36a638a8-4944-4635-a5d8-24a8e7febdc9",
  "count": 0,
  "ok": false,
- "at": 1795192668184,
- "detail": "trade claimed"
+ "at": 1795192779188,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795192668192-0000005548-0000000001",
+  "at": 1795192779168,
+  "sha256": "a8a4ccd104698dbce28794ff87d5593263985292d5a7dedc962a534de9fea940"
+ },
+ "screen": false
 }

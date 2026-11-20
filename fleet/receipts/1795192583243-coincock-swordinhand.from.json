@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795192583243-coincock-swordinhand",
  "account": "CoinCock",
  "partner": "Swordinhand",
@@ -12,6 +12,12 @@
  "claim": "66ae5463-f781-4ad7-b3c6-3954f93cca78",
  "count": 0,
  "ok": false,
- "at": 1795192663812,
- "detail": "trade claimed"
+ "at": 1795192778717,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
+ "logout": {
+  "attemptId": "1795192663820-0000028592-0000000001",
+  "at": 1795192778705,
+  "sha256": "ed203217168794fa7590a961b53d74f88fa11affd6a2a66a278f9537ad2fca56"
+ },
+ "screen": false
 }
