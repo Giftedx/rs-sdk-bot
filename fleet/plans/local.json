@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795194187620,
+ "at": 1795195444932,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -210,7 +210,7 @@
    "resources": []
   },
   {
-   "account": "Bigchopper",
+   "account": "Masterbaiter",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "dargaud",
@@ -218,15 +218,15 @@
    ],
    "env": {
     "ITEMS": "rune arrow",
-    "STOCK_TARGET": "445",
+    "STOCK_TARGET": "400",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
     "FLOAT": "320200",
     "COIN_RESERVE": "200",
     "MAX_SPEND": "320000",
-    "AUTOPILOT_ORDER": "[45]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":445}}"
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":400}}"
    },
    "enabled": true,
    "standing": true,

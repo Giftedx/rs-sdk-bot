@@ -1,0 +1,23 @@
+{
+ "id": "1795195369723-moneyshot-undermykilt-66e573fdac2c1011",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Moneyshot",
+ "to": "UnderMyKilt",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795195369723,
+ "end": 1795196569723,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
