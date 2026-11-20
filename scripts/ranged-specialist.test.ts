@@ -9,12 +9,14 @@ import { xpForLevel } from '../packages/planner/src/curve';
 import { observedSupplies } from '../packages/practice/src/specialist-rehearsal';
 import {
     assertSupplierAccount,
+    chooseDesiredArmor,
     chooseDesiredChaps,
     chooseDesiredWeapon,
     countAnyId,
     countById,
     hasAtLeastKit,
     hasExactKit,
+    isAdjacentToCannon,
     ITEM_IDS,
     kitRequirements,
     kitSlotTotal,
@@ -81,6 +83,23 @@ test('weapon, gear, potion, and sustain scheduling rules behave across Ranged 1.
     expect(chooseDesiredChaps(69, invKnives, [])).toBeUndefined();
     expect(chooseDesiredChaps(70, invKnives, [])?.id).toBe(ITEM_IDS.blackChaps);
     expect(chooseDesiredChaps(70, invKnives, [{ id: ITEM_IDS.blackChaps, slot: 7 }])).toBeUndefined();
+
+    const invArmor = [
+        { id: ITEM_IDS.blackChaps, slot: 0, count: 1 },
+        { id: ITEM_IDS.blackVambs, slot: 1, count: 1 },
+        { id: ITEM_IDS.robinHood, slot: 2, count: 1 },
+        { id: ITEM_IDS.rangerBoots, slot: 3, count: 1 },
+    ];
+    expect(chooseDesiredArmor(39, invArmor, [])).toBeUndefined();
+    expect(chooseDesiredArmor(40, invArmor, [])?.id).toBe(ITEM_IDS.robinHood);
+    expect(chooseDesiredArmor(40, invArmor, [{ id: ITEM_IDS.robinHood, slot: 0 }])?.id).toBe(ITEM_IDS.rangerBoots);
+    expect(chooseDesiredArmor(70, invArmor, [])?.id).toBe(ITEM_IDS.blackChaps);
+    expect(chooseDesiredArmor(70, invArmor, [{ id: ITEM_IDS.blackChaps, slot: 7 }])?.id).toBe(ITEM_IDS.blackVambs);
+
+    expect(isAdjacentToCannon({ x: 3291, z: 3814 }, { x: 3291, z: 3815 })).toBe(true);
+    expect(isAdjacentToCannon({ x: 3290, z: 3816 }, { x: 3291, z: 3815 })).toBe(true);
+    expect(isAdjacentToCannon({ x: 3290, z: 3814 }, { x: 3291, z: 3815 })).toBe(false);
+    expect(isAdjacentToCannon({ x: 3292, z: 3816 }, { x: 3291, z: 3815 })).toBe(false);
 
     const invMsb = [
         { id: ITEM_IDS.ironKnife, slot: 0, count: 250 },

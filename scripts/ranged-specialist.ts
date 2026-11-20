@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { accountOf, closeWithin, finish, getWorld, logoutSession, openBot } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { isLocalServer } from '../packages/core/src/localserver';
+import { componentId } from '../packages/core/src/logout';
 import { messageTally } from '../packages/core/src/message-tally';
 import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
@@ -12,7 +13,6 @@ import {
     bandTicks,
     CANNON_REFRESH,
     CANNON_SPOTS,
-    loadedBalls,
     MSB,
     pickupCannon,
     pickTarget,
@@ -48,11 +48,13 @@ export const RANGED_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 868, name: 'Rune knife', count: 2000, stackable: true },
     { id: 2448, name: 'Superantipoison(4)', count: 1, stackable: false },
     { id: 2444, name: 'Ranging potion(4)', count: 1, stackable: false },
-    { id: 3024, name: 'Super restore(4)', count: 4, stackable: false },
+    { id: 3024, name: 'Super restore(4)', count: 2, stackable: false },
     { id: 1897, name: 'Chocolate cake', count: 2, stackable: false },
+    { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
+    { id: 2491, name: 'Dragon vambraces', count: 1, stackable: false },
 ] as const;
 
-// Alternate 28 inventory slots swapping Rune knife + Black d'hide chaps for Magic shortbow + Rune arrows from level 50.
+// Alternate 28 inventory slots swapping Rune knife + Dragon vambraces for Magic shortbow + Rune arrows from level 50.
 export const RANGED_SPECIALIST_MSB_KIT: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
     { id: 6, name: 'Cannon base', count: 1, stackable: false },
@@ -67,8 +69,9 @@ export const RANGED_SPECIALIST_MSB_KIT: readonly KitSpecItem[] = [
     { id: 892, name: 'Rune arrow', count: 1000, stackable: true },
     { id: 2448, name: 'Superantipoison(4)', count: 1, stackable: false },
     { id: 2444, name: 'Ranging potion(4)', count: 1, stackable: false },
-    { id: 3024, name: 'Super restore(4)', count: 4, stackable: false },
-    { id: 1897, name: 'Chocolate cake', count: 1, stackable: false },
+    { id: 3024, name: 'Super restore(4)', count: 2, stackable: false },
+    { id: 1897, name: 'Chocolate cake', count: 2, stackable: false },
+    { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
 ] as const;
 
 export function variantKit(variant: RangedKitVariant = 'knives'): readonly KitSpecItem[] {
@@ -88,6 +91,7 @@ export const SPIDERS_CLEAR = { x: 3290, z: 3760, level: 0 } as const;
 export const ITEM_IDS = {
     cannonball: 2,
     cannonParts: [6, 8, 10, 12] as readonly number[],
+    cannonLocIds: [7, 8, 9, 6] as readonly number[],
     bones: 536,
     toolkit: 1,
     ironKnife: 863,
@@ -95,6 +99,9 @@ export const ITEM_IDS = {
     msb: MSB,
     runeArrow: 892,
     blackChaps: 2497,
+    blackVambs: 2491,
+    rangerBoots: 2577,
+    robinHood: 2581,
     duelRings: [2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566] as readonly number[],
     glories: [1712, 1710, 1708, 1706] as readonly number[],
     gloriesAll: [1712, 1710, 1708, 1706, 1704] as readonly number[],
@@ -106,9 +113,13 @@ export const ITEM_IDS = {
 } as const;
 
 const PROTECT_MELEE = 14;
+const RETALIATE_ON = 150;
+const HEAD_SLOT = 0;
+const NECK_SLOT = 2;
 const WEAPON_SLOT = 3;
 const LEGS_SLOT = 7;
-const NECK_SLOT = 2;
+const HANDS_SLOT = 9;
+const FEET_SLOT = 10;
 const AMMO_SLOT = 13;
 const ACCOUNT_RE = /^[A-Za-z0-9_ -]{1,12}$/;
 
@@ -186,6 +197,30 @@ export function chooseDesiredChaps(rangedLevel: number, inv: readonly InvItem[],
     if (rangedLevel < 70) return undefined;
     if (worn.some(w => w.slot === LEGS_SLOT && w.id === ITEM_IDS.blackChaps)) return undefined;
     return inv.find(i => i.id === ITEM_IDS.blackChaps);
+}
+
+const RANGED_ARMOR_TIERS: readonly { level: number; slot: number; id: number }[] = [
+    { level: 70, slot: LEGS_SLOT, id: ITEM_IDS.blackChaps },
+    { level: 70, slot: HANDS_SLOT, id: ITEM_IDS.blackVambs },
+    { level: 40, slot: HEAD_SLOT, id: ITEM_IDS.robinHood },
+    { level: 40, slot: FEET_SLOT, id: ITEM_IDS.rangerBoots },
+];
+
+export function chooseDesiredArmor(rangedLevel: number, inv: readonly InvItem[], worn: readonly WornItem[]): InvItem | undefined {
+    for (const tier of RANGED_ARMOR_TIERS) {
+        if (rangedLevel < tier.level) continue;
+        if (worn.some(w => w.slot === tier.slot && w.id === tier.id)) continue;
+        const found = inv.find(i => i.id === tier.id);
+        if (found) return found;
+    }
+    return undefined;
+}
+
+export function isAdjacentToCannon(me: { x: number; z: number }, cannon: { x: number; z: number }): boolean {
+    return (
+        ((me.z === cannon.z - 1 || me.z === cannon.z + 3) && me.x >= cannon.x && me.x <= cannon.x + 2)
+        || ((me.x === cannon.x - 1 || me.x === cannon.x + 3) && me.z >= cannon.z && me.z <= cannon.z + 2)
+    );
 }
 
 export function weaponReach(worn: readonly WornItem[]): number {
@@ -415,7 +450,10 @@ const CWARS_TO_LAWGOF_PATH: Point[] = [
 async function equipEarlyGearAndBuryBones(s: Session, variant: RangedKitVariant, stop: StopFn): Promise<void> {
     const inv = s.sdk.getInventory() as InvItem[];
     const knife = inv.find(i => i.id === ITEM_IDS.ironKnife);
-    if (knife) await equipItemFast(s, knife);
+    if (knife) {
+        await equipItemFast(s, knife);
+        await s.direct({ type: 'setCombatStyle', style: 1, reason: 'SDK' });
+    }
     if (variant === 'msb') {
         const arrows = inv.find(i => i.id === ITEM_IDS.runeArrow);
         if (arrows) await equipItemFast(s, arrows);
@@ -486,6 +524,95 @@ async function walkEdgevilleToSpiders(s: Session, spot: { x: number; z: number; 
     }
 }
 
+const CANNON_BUILD_STAGES: readonly { locId: number; partId: number; nextLocId: number }[] = [
+    { locId: 7, partId: 8, nextLocId: 8 },
+    { locId: 8, partId: 10, nextLocId: 9 },
+    { locId: 9, partId: 12, nextLocId: 6 },
+];
+
+async function ensureCannonSetup(
+    s: Session,
+    spotCentre: { x: number; z: number; level: number },
+    stop: StopFn,
+): Promise<PlacedCannon> {
+    const t0 = s.tick();
+    const origin = { x: spotCentre.x - 1, z: spotCentre.z - 1 };
+    const st = (): any => s.sdk.getState();
+    const inv = (): InvItem[] => st()?.inventory ?? [];
+    const hasPart = (id: number) => inv().some(i => i.id === id);
+    const findCannonLoc = (): any => (st()?.nearbyLocs ?? [])
+        .filter((l: any) => (/cannon/i.test(l.name ?? '') || ITEM_IDS.cannonLocIds.includes(l.id)) && d8(l, origin) <= 6)
+        .sort((a: any, b: any) => d8(a, origin) - d8(b, origin) || (a.distance ?? 0) - (b.distance ?? 0))[0];
+    const summarizeLocs = () => (st()?.nearbyLocs ?? [])
+        .filter((l: any) => d8(l, spotCentre) <= 5)
+        .slice(0, 12)
+        .map((l: any) => `${l.id}:${l.name}@${l.x},${l.z}`)
+        .join('|');
+
+    const tally = messageTally(() => st()?.gameMessages);
+    for (let attempt = 0; attempt < 3 && !stop(); attempt++) {
+        if (!findCannonLoc() && hasPart(ITEM_IDS.cannonParts[0]!)) {
+            try {
+                return await setupCannon(s, { centre: { x: spotCentre.x, z: spotCentre.z }, avoidOld: false });
+            } catch (err) {
+                const p = posOf(s);
+                console.log(`WARN cannon_setup attempt=${attempt} err=${String(err)} at=${p?.worldX},${p?.worldZ} inv=${inv().map(i => `${i.id}x${i.count}`).join(',')} nearby=${summarizeLocs()}`);
+            }
+        }
+
+        if (hasPart(ITEM_IDS.cannonParts[0]!) && !findCannonLoc()) {
+            await waitTicks(s, 2);
+            continue;
+        }
+
+        await waitUntil(s, () => stop() || !!findCannonLoc(), { timeoutTicks: 6 });
+        let loc = findCannonLoc();
+        const originCoord = loc ? { x: loc.x, z: loc.z } : origin;
+        if (!loc) {
+            console.log(`WARN cannon_loc_missing at_origin=${origin.x},${origin.z} nearby=${summarizeLocs()}`);
+        }
+
+        // Complete any remaining stand/barrels/furnace stages cleanly on the placed cannon.
+        for (const stage of CANNON_BUILD_STAGES) {
+            if (stop()) break;
+            loc = findCannonLoc();
+            if (loc && loc.id === 6) break;
+            const item = inv().find(i => i.id === stage.partId);
+            if (!item || item.slot === undefined) continue;
+            const useId = loc?.id ?? stage.locId;
+            const beforeCount = countById(inv(), stage.partId);
+            await s.direct({ type: 'useItemOnLoc', itemSlot: item.slot, x: originCoord.x, z: originCoord.z, locId: useId, reason: 'SDK' });
+            await waitUntil(s, () => {
+                const n = findCannonLoc();
+                return stop() || countById(inv(), stage.partId) < beforeCount || (!!n && n.id !== useId);
+            }, { timeoutTicks: 8 });
+        }
+
+        await waitUntil(s, () => stop() || findCannonLoc()?.id === 6, { timeoutTicks: 4 });
+        loc = findCannonLoc() ?? { x: originCoord.x, z: originCoord.z, id: 6, optionsWithIndex: [{ text: 'Fire', opIndex: 1 }] };
+
+        const balls = inv().find(i => i.id === ITEM_IDS.cannonball);
+        if (!balls || balls.slot === undefined) throw Error('no cannonballs in pack');
+        tally.pull();
+        const loadBefore = tally.count(/load the cannon|already full/i);
+        const ballsBefore = countInvOrZero(inv(), ITEM_IDS.cannonball);
+        await s.direct({ type: 'useItemOnLoc', itemSlot: balls.slot, x: loc.x, z: loc.z, locId: loc.id, reason: 'SDK' });
+        await waitUntil(s, () => {
+            tally.pull();
+            return stop() || tally.count(/load the cannon|already full/i) > loadBefore || countInvOrZero(inv(), ITEM_IDS.cannonball) < ballsBefore;
+        }, { timeoutTicks: 8 });
+        const fireOp = (loc.optionsWithIndex ?? []).find((o: any) => /^fire$/i.test(o.text ?? ''))?.opIndex ?? 1;
+        await s.direct({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: fireOp, reason: 'SDK' });
+        await waitTicks(s, 2);
+        return { x: loc.x, z: loc.z, id: loc.id, centre: { x: loc.x + 1, z: loc.z + 1 }, setupTicks: s.tick() - t0 };
+    }
+    throw Error('failed to setup cannon at spiders');
+}
+
+function countInvOrZero(items: readonly InvItem[], id: number): number {
+    return countById(items, id);
+}
+
 async function runSpiderGrind(
     s: Session,
     variant: RangedKitVariant,
@@ -496,8 +623,9 @@ async function runSpiderGrind(
     const st = (): any => s.sdk.getState();
     const inv = (): InvItem[] => st()?.inventory ?? [];
     const worn = (): WornItem[] => st()?.equipment ?? [];
+    const cvar = (id: number): number | undefined => (s.client as { var?: Int32Array | number[] } | undefined)?.var?.[id];
     const findLoc = (pred: (l: any) => boolean) => (st()?.nearbyLocs ?? []).filter(pred).sort((a: any, b: any) => a.distance - b.distance)[0];
-    const cannonAt = (c: { x: number; z: number }) => findLoc(l => l.x === c.x && l.z === c.z && /cannon/i.test(l.name ?? ''));
+    const cannonAt = (c: { x: number; z: number }) => findLoc(l => l.x === c.x && l.z === c.z && (/cannon/i.test(l.name ?? '') || ITEM_IDS.cannonLocIds.includes(l.id)));
     const countInv = (ids: readonly number[]) => countAnyId(inv(), ids);
 
     // Ensure protection, prayer headroom, and poison immunity before setting up cannon.
@@ -526,20 +654,15 @@ async function runSpiderGrind(
         await waitTicks(s, 2);
     }
 
-    // Turn auto-retaliate ON (Dwarf Cannon turned it off) and Rapid style ON (index 1).
-    await s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
-    await s.direct({ type: 'setCombatStyle', style: 1, reason: 'SDK' });
+    const cannon = await ensureCannonSetup(s, spotCentre, stop);
 
-    let cannon: PlacedCannon | undefined;
-    for (let attempt = 0; attempt < 3 && !cannon && !stop(); attempt++) {
-        try {
-            cannon = await setupCannon(s, { centre: { x: spotCentre.x, z: spotCentre.z }, avoidOld: true });
-        } catch (err) {
-            if (attempt === 2) throw err;
-            await waitTicks(s, 2);
-        }
+    // Enable Auto-Retaliate (150) and Rapid style (1) after cannon assembly.
+    if (st()?.autoRetaliateEnabled === false) {
+        await s.direct({ type: 'clickComponent', componentId: RETALIATE_ON, reason: 'SDK' });
     }
-    if (!cannon) throw Error('failed to setup cannon at spiders');
+    if (st()?.combatStyle?.currentStyle !== 1) {
+        await s.direct({ type: 'setCombatStyle', style: 1, reason: 'SDK' });
+    }
 
     // Sip first Ranging potion dose after cannon setup clears any p_delay(1).
     const rPot0 = inv().find(i => ITEM_IDS.rangingPot.includes(i.id));
@@ -552,8 +675,14 @@ async function runSpiderGrind(
         await waitTicks(s, 2);
     }
 
-    // Stand adjacent SW of cannon so reload takes zero walk ticks.
+    // Stand cardinal-adjacent SW of cannon so reloads take zero walk ticks.
     const stand = { x: cannon.x, z: cannon.z - 1 };
+    const pStart = posOf(s);
+    if (pStart && !isAdjacentToCannon({ x: pStart.worldX, z: pStart.worldZ }, cannon)) {
+        const w = await sessionWalker(s);
+        await walkPath(w, [{ x: stand.x, z: stand.z, tol: 0 }], { maxTicks: 8, stop });
+    }
+
     const combatT0 = s.tick();
     let placedAt = s.tick();
     let lastLoad = s.tick();
@@ -562,6 +691,11 @@ async function runSpiderGrind(
     let specials = 0;
     let lastAttack = -99;
     let lastSpec = -99;
+    let loadPending = -1;
+    let loadMark = 0;
+    let needFire = false;
+    let firePending = -1;
+    let missingLocStreak = 0;
     let currentWeapon = worn().find(w => w.slot === WEAPON_SLOT)?.id;
     const bandAt = new Map<number, number>([[skillInfo(s, 'Ranged').baseLevel, 0]]);
     const bad = new Map<number, number>();
@@ -569,10 +703,9 @@ async function runSpiderGrind(
     let seenBalls = countInv([ITEM_IDS.cannonball]);
 
     const tally = messageTally(() => st()?.gameMessages);
-    const loadSeen = (): number => Math.max(0, tally.count(/you load the cannon with|already full of ammo/i));
+    const loadSeen = (): number => tally.count(/you load the cannon with|already full of ammo/i);
     const emptySeen = (): number => tally.count(/out of ammo/i);
     const goneSeen = (): number => tally.count(/your cannon has been destroyed/i);
-    let loads0 = loadSeen();
     let empty0 = emptySeen();
     let gone0 = goneSeen();
     let empty = false;
@@ -583,19 +716,14 @@ async function runSpiderGrind(
 
     const reloadOnce = async (): Promise<boolean> => {
         const balls = inv().find(i => i.id === ITEM_IDS.cannonball);
-        const loc = cannonAt(cannon);
-        if (!balls || balls.slot === undefined || !loc) return false;
+        const loc = cannonAt(cannon) ?? { x: cannon.x, z: cannon.z, id: cannon.id };
+        if (!balls || balls.slot === undefined) return false;
         const r = await sendDirect({ type: 'useItemOnLoc', itemSlot: balls.slot, x: loc.x, z: loc.z, locId: loc.id, reason: 'SDK' });
         return !!r.success;
     };
 
     const off = s.onTick(() => {
         tally.pull();
-        if (loadSeen() > loads0) {
-            loads0 = loadSeen();
-            lastLoad = s.tick();
-            empty = false;
-        }
         if (emptySeen() > empty0) {
             empty0 = emptySeen();
             empty = true;
@@ -604,6 +732,7 @@ async function runSpiderGrind(
         if (nowBalls < seenBalls) {
             lastLoad = s.tick();
             empty = false;
+            loadPending = -1;
         }
         seenBalls = nowBalls;
     });
@@ -619,91 +748,144 @@ async function runSpiderGrind(
             if (r.baseLevel >= 99) break;
 
             // 1. Level-up modal pauses cannon_rotate and attacks: clear immediately.
-            if (s.sdk.getDialog()?.isOpen) {
-                await s.direct({ type: 'closeModal', reason: 'SDK' });
+            if (st()?.dialog?.isOpen || st()?.modalOpen) {
+                await sendDirect({ type: 'closeModal', reason: 'SDK' });
+                targetIdx = undefined;
+                await waitTicks(s, 1);
+                continue;
             }
 
-            // 2. Keep Protect from Melee active whenever points exist; sip Super restore cleanly.
+            // Keep Protect from Melee, Auto-Retaliate, and Rapid style active without interrupting combat.
             const prayPts = st()?.prayers?.prayerPoints ?? 0;
+            if (!st()?.prayers?.activePrayers?.[PROTECT_MELEE] && prayPts > 0) {
+                await sendDirect({ type: 'togglePrayer', prayerIndex: PROTECT_MELEE, reason: 'SDK' });
+            }
+            if (st()?.autoRetaliateEnabled === false) {
+                await sendDirect({ type: 'clickComponent', componentId: RETALIATE_ON, reason: 'SDK' });
+            }
+            if (st()?.combatStyle?.currentStyle !== 1) {
+                await sendDirect({ type: 'setCombatStyle', style: 1, reason: 'SDK' });
+            }
+
+            // 2. Sustain (eating/drinking clears active NPC target, so re-acquire next tick).
+            const curHp = skillInfo(s, 'Hitpoints').level;
+            if (curHp > 0 && curHp <= 4) {
+                const food = inv().find(i => ITEM_IDS.cake.includes(i.id));
+                if (food && food.slot !== undefined) {
+                    const res = await sendDirect({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
+                    if (res.success) { targetIdx = undefined; await waitTicks(s, 1); continue; }
+                }
+            }
+
             const basePray = skillInfo(s, 'Prayer').baseLevel;
             if (shouldDrinkSuperRestore(prayPts, basePray)) {
                 const pot = inv().find(i => ITEM_IDS.superRestore.includes(i.id));
                 if (pot && pot.slot !== undefined) {
                     const res = await sendDirect({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' });
-                    if (res.success) restores++;
+                    if (res.success) { restores++; targetIdx = undefined; await waitTicks(s, 1); continue; }
                 }
             }
-            if (!st()?.prayers?.activePrayers?.[PROTECT_MELEE] && prayPts > 0) {
-                await sendDirect({ type: 'togglePrayer', prayerIndex: PROTECT_MELEE, reason: 'SDK' });
-            }
 
-            // 3. Maintain poison immunity.
             const poisoned = !!st()?.player?.poisoned || (st()?.player?.poison ?? 0) > 0;
             if (shouldDrinkAntipoison(poisoned, now - lastAnti)) {
                 const pot = inv().find(i => ITEM_IDS.antipoison.includes(i.id));
                 if (pot && pot.slot !== undefined) {
                     const res = await sendDirect({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' });
-                    if (res.success) { lastAnti = now; antis++; }
+                    if (res.success) { lastAnti = now; antis++; targetIdx = undefined; await waitTicks(s, 1); continue; }
                 }
             }
 
-            // 4. Maintain HP safety via Chocolate cake if ever low.
-            const curHp = skillInfo(s, 'Hitpoints').level;
-            if (curHp > 0 && curHp <= 4) {
-                const food = inv().find(i => ITEM_IDS.cake.includes(i.id));
-                if (food && food.slot !== undefined) {
-                    await sendDirect({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
+            if (now - lastRPot >= 12 && shouldDrinkRanging(r.baseLevel, r.level, totalDoses(inv(), ITEM_IDS.rangingPot))) {
+                const pot = inv().find(i => ITEM_IDS.rangingPot.includes(i.id));
+                if (pot && pot.slot !== undefined) {
+                    const res = await sendDirect({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' });
+                    if (res.success) { lastRPot = now; rangePots++; targetIdx = undefined; await waitTicks(s, 1); continue; }
                 }
             }
 
-            // 5. Tier weapon/gear upgrades and Ranging potion boost schedule.
+            // 3. Tier weapon and armor upgrades.
             const curWorn = worn();
             const wantWeapon = chooseDesiredWeapon(r.baseLevel, inv(), curWorn, variant);
             if (wantWeapon) {
                 await equipItemFast(s, wantWeapon);
                 await sendDirect({ type: 'setCombatStyle', style: 1, reason: 'SDK' });
                 currentWeapon = wantWeapon.id;
-            } else {
-                const actualWep = curWorn.find(w => w.slot === WEAPON_SLOT)?.id;
-                if (actualWep && actualWep !== currentWeapon) {
-                    await sendDirect({ type: 'setCombatStyle', style: 1, reason: 'SDK' });
-                    currentWeapon = actualWep;
-                }
+                targetIdx = undefined;
+                await waitTicks(s, 1);
+                continue;
             }
-            const wantChaps = chooseDesiredChaps(r.baseLevel, inv(), curWorn);
-            if (wantChaps) await equipItemFast(s, wantChaps);
-
-            if (now - lastRPot >= 12 && shouldDrinkRanging(r.baseLevel, r.level, totalDoses(inv(), ITEM_IDS.rangingPot))) {
-                const pot = inv().find(i => ITEM_IDS.rangingPot.includes(i.id));
-                if (pot && pot.slot !== undefined) {
-                    const res = await sendDirect({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' });
-                    if (res.success) { lastRPot = now; rangePots++; }
-                }
+            const actualWep = curWorn.find(w => w.slot === WEAPON_SLOT)?.id;
+            if (actualWep && actualWep !== currentWeapon) {
+                await sendDirect({ type: 'setCombatStyle', style: 1, reason: 'SDK' });
+                currentWeapon = actualWep;
+            }
+            const wantArmor = chooseDesiredArmor(r.baseLevel, inv(), curWorn);
+            if (wantArmor) {
+                await equipItemFast(s, wantArmor);
+                await waitTicks(s, 1);
+                continue;
             }
 
-            // 6. Refresh decaying cannon or re-setup if vanished.
-            if (goneSeen() > gone0 || !cannonAt(cannon)) {
+            // 4. Refresh decaying cannon or re-setup if destroyed.
+            missingLocStreak = cannonAt(cannon) ? 0 : missingLocStreak + 1;
+            if (goneSeen() > gone0 || missingLocStreak >= 3) {
                 gone0 = goneSeen();
+                missingLocStreak = 0;
                 if (ITEM_IDS.cannonParts.some(id => countInv([id]) === 0)) {
                     throw Error('cannon missing and parts not in pack');
                 }
-                const nextCannon = await setupCannon(s, { centre: { x: spotCentre.x, z: spotCentre.z } });
+                const nextCannon = await ensureCannonSetup(s, spotCentre, stop);
                 cannon.x = nextCannon.x; cannon.z = nextCannon.z; cannon.id = nextCannon.id;
-                placedAt = s.tick(); lastLoad = s.tick(); refills++;
+                placedAt = s.tick(); lastLoad = s.tick(); loadPending = -1; needFire = false; refills++; targetIdx = undefined;
+                await waitTicks(s, 1);
+                continue;
             } else if (now - placedAt >= CANNON_REFRESH) {
                 if (await pickupCannon(s, cannon)) {
-                    const nextCannon = await setupCannon(s, { centre: { x: spotCentre.x, z: spotCentre.z } });
+                    const nextCannon = await ensureCannonSetup(s, spotCentre, stop);
                     cannon.x = nextCannon.x; cannon.z = nextCannon.z; cannon.id = nextCannon.id;
-                    placedAt = s.tick(); lastLoad = s.tick(); refills++;
+                    placedAt = s.tick(); lastLoad = s.tick(); loadPending = -1; needFire = false; refills++; targetIdx = undefined;
+                    await waitTicks(s, 1);
+                    continue;
                 }
             }
 
-            // 7. Reload cannon proactively when due or empty.
-            if (reloadDue({ now, lastLoad, interval: 22, empty }) && countInv([ITEM_IDS.cannonball]) > 0) {
-                if (await reloadOnce()) reloads++;
+            // 5. Cannon load and fire state machine.
+            if (loadPending >= 0) {
+                if (loadSeen() <= loadMark && now - loadPending < 5) {
+                    await waitTicks(s, 1);
+                    continue;
+                }
+                loadPending = -1;
+                if (needFire) {
+                    needFire = false;
+                    const loc = cannonAt(cannon) ?? { x: cannon.x, z: cannon.z, id: cannon.id };
+                    await sendDirect({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: 1, reason: 'SDK' });
+                    firePending = now;
+                    targetIdx = undefined;
+                    await waitTicks(s, 1);
+                    continue;
+                }
+            }
+            if (firePending >= 0 && now - firePending < 2) {
+                await waitTicks(s, 1);
+                continue;
+            }
+            firePending = -1;
+
+            if (reloadDue({ now, lastLoad, interval: 24, empty }) && countInv([ITEM_IDS.cannonball]) > 0) {
+                if (empty) { needFire = true; empty = false; }
+                loadMark = loadSeen();
+                if (await reloadOnce()) {
+                    loadPending = now;
+                    lastLoad = now;
+                    reloads++;
+                    targetIdx = undefined;
+                    await waitTicks(s, 1);
+                    continue;
+                }
             }
 
-            // 8. Special attack (Magic shortbow variant) and target engagement.
+            // 6. Special attack (Magic shortbow) and target engagement.
             const p = posOf(s);
             const me = { x: p?.worldX ?? cannon.centre.x, z: p?.worldZ ?? cannon.centre.z };
             const combat = (p as any)?.combat;
@@ -712,21 +894,23 @@ async function runSpiderGrind(
                 && specialDue({
                     special: variant === 'msb',
                     weapon: currentWeapon,
-                    energy: st()?.specialAttack?.energy,
-                    enabled: st()?.specialAttack?.enabled,
+                    energy: cvar(300),
+                    enabled: cvar(301),
                     fighting: !!combat?.inCombat && targetIdx !== undefined,
                 })
             ) {
-                const specRes = await sendDirect({ type: 'toggleSpecialAttack', reason: 'SDK' });
-                if (specRes.success) { specials++; lastSpec = now; }
+                await s.sdk.sendClickComponent(componentId('combat_bow:specbar'));
+                specials++;
+                lastSpec = now;
             }
 
+            const reach = weaponReach(curWorn);
             const npcs: TargetNpc[] = (st()?.nearbyNpcs ?? []) as TargetNpc[];
-            const alive = targetIdx !== undefined ? npcs.find(n => n.index === targetIdx && (n.hp ?? 1) > 0 && n.distance <= weaponReach(curWorn) + 1) : undefined;
+            const alive = targetIdx !== undefined ? npcs.find(n => n.index === targetIdx && (n.hp ?? 1) > 0 && d8(me, n) <= reach) : undefined;
             if (!alive && (!combat?.inCombat || combat?.targetIndex === -1)) {
-                if (d8(me, cannon.centre) > 3) {
+                if (!isAdjacentToCannon(me, cannon)) {
                     const w = await sessionWalker(s);
-                    await walkPath(w, [{ x: stand.x, z: stand.z, tol: 1 }], { maxTicks: 10, stop });
+                    await walkPath(w, [{ x: stand.x, z: stand.z, tol: 0 }], { maxTicks: 8, stop });
                 }
                 for (const [k, until] of bad) if (now >= until) bad.delete(k);
                 const pick = pickTarget(npcs, {
@@ -734,7 +918,7 @@ async function runSpiderGrind(
                     centre: cannon.centre,
                     me,
                     near: 12,
-                    reach: weaponReach(curWorn),
+                    reach,
                     skip: idx => (bad.get(idx) ?? 0) > now,
                 });
                 if (pick && now - lastAttack >= 2) {
@@ -755,6 +939,7 @@ async function runSpiderGrind(
 
     const combatTicks = s.tick() - combatT0;
     console.log('BAND_TICKS ' + JSON.stringify(bandTicks(bandAt, [1, 20, 40, 50, 70, 85, 95, 99])));
+    console.log(`SPIDER_SUMMARY variant=${variant} setupTicks=${cannon.setupTicks} combatTicks=${combatTicks} reloads=${reloads} specials=${specials} refills=${refills} rangePots=${rangePots} restores=${restores} antis=${antis} prayLeft=${st()?.prayers?.prayerPoints ?? 0} ballsLeft=${countInv([ITEM_IDS.cannonball])}`);
     return { setupTicks: cannon.setupTicks, combatTicks, reloads, specials, refills, rangePots, restores, antis, cannon };
 }
 
