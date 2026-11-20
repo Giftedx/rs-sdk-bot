@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795155294480-weequickie-shaftsinker-251f624c042421d9",
+ "account": "WeeQuickie",
+ "partner": "Shaftsinker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "d209040b-a782-434d-8889-0301ead54520",
+ "count": 0,
+ "ok": false,
+ "at": 1795155307381,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Iron ore",
+   "requested": 2,
+   "count": 0
+  }
+ ]
+}
