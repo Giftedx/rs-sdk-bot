@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795165526077-nabtheknob-knightstick-375987cbf12a16aa",
  "account": "NabTheKnob",
  "partner": "Knightstick",
@@ -10,8 +10,22 @@
  "item": "Rune arrowtips",
  "requested": 223,
  "claim": "794aeccd-a986-461b-9bc4-2bc2a0e019b7",
- "count": 0,
- "ok": false,
- "at": 1795165537250,
- "detail": "trade claimed"
+ "count": 223,
+ "ok": true,
+ "at": 1795165576401,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 223,
+  "after": 0
+ },
+ "bank": {
+  "count": 200,
+  "at": 1795165566495
+ },
+ "logout": {
+  "attemptId": "1795165537259-0000029120-0000000001",
+  "at": 1795165576389,
+  "sha256": "014b625c16bc224d9536d7aa79d0c086943fd14251d207640f9d325354004844"
+ },
+ "screen": true
 }
