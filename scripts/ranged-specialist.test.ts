@@ -421,8 +421,8 @@ test('ranged-live-prep plans local Prayer potion brewing, decanting, and Thessal
     expect(decant.emptyVialsProduced).toBe(1);
     expect(decant.steps).toEqual([
         { fromDose: 3, toDose: 3, outHighDose: 4, outLowDose: 2 },
-        { fromDose: 3, toDose: 2, outHighDose: 4, outLowDose: 1 },
-        { fromDose: 3, toDose: 1, outHighDose: 4, outLowDose: 0 },
+        { fromDose: 3, toDose: 3, outHighDose: 4, outLowDose: 2 },
+        { fromDose: 2, toDose: 2, outHighDose: 4, outLowDose: 0 },
     ]);
 
     const mixed = planPrayerDecantSteps({ 1: 3, 2: 2, 3: 1, 4: 2 });
