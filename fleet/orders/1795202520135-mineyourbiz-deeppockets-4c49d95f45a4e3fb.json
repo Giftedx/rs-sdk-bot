@@ -1,0 +1,32 @@
+{
+ "id": "1795202520135-mineyourbiz-deeppockets-4c49d95f45a4e3fb",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "Deeppockets",
+ "item": "Rune platelegs",
+ "count": 1,
+ "start": 1795202520135,
+ "end": 1795203720135,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Earth rune",
+   "count": 30
+  },
+  {
+   "item": "Water rune",
+   "count": 60
+  }
+ ]
+}

@@ -1,0 +1,28 @@
+{
+ "id": "1795202520140-mightyrod-deeppockets-1b86d37e28cd6ea9",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "Deeppockets",
+ "item": "Lobster",
+ "count": 25,
+ "start": 1795202520140,
+ "end": 1795203720140,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Law rune",
+   "count": 10
+  }
+ ]
+}
