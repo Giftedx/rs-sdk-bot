@@ -110,11 +110,12 @@ export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 555, name: 'Water rune', count: 6, stackable: true },
     { id: 1333, name: 'Rune scimitar', count: 1, stackable: false },
     { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
+    { id: 3105, name: 'Climbing boots', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 954, name: 'Rope', count: 1, stackable: false },
     { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
     { id: 385, name: 'Shark', count: 1, stackable: false },
-    { id: 3016, name: 'Super energy(4)', count: 7, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 6, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
 ] as const;
 
@@ -742,6 +743,9 @@ export async function runWildyPvpLoop(
     await setAutoRetaliate(s, false);
     await equipItemById(s, 1333, opts.stop, 'Rune scimitar');
     await equipFirstAvailableId(s, [1725, 1731], opts.stop, 'Amulet of strength/power');
+    if (s.sdk.getInventory().some(i => i.id === 3105)) {
+        await equipItemById(s, 3105, opts.stop, 'Climbing boots');
+    }
 
     // Verify exact Strength-only (Aggressive) or Defence-only (Defensive) combat style.
     await waitUntil(s, () => {
@@ -779,16 +783,24 @@ export async function runWildyPvpLoop(
     await walkWaypoints(s, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 30, opts.stop, 'step to specialist keep post');
 
     const flickPrayers = [ULTIMATE_STRENGTH_INDEX, INCREDIBLE_REFLEXES_INDEX];
+    const onTankPostTile = (p: any): boolean => {
+        const tx = p.x ?? p.worldX ?? 0;
+        const tz = p.z ?? p.worldZ ?? 0;
+        return (tx === 3154 && tz === 3924) || (tx === 3155 && tz === 3923);
+    };
 
     try {
         while (!opts.stop() && skillInfo(s, opts.skill).baseLevel < opts.targetLevel) {
-            if (activeContinueDialog(s)) void s.sdk.sendClickDialog(0);
+            if (activeContinueDialog(s)) {
+                void s.sdk.sendClickDialog(0);
+                needReengage = true;
+            }
 
             const st = s.sdk.getState();
             const pts = st?.prayers?.prayerPoints ?? 0;
             const curXp = skillInfo(s, opts.skill).experience;
             const animId = (st?.player as any)?.animId ?? -1;
-            if (curXp > prevSkillXp || (animId > 0 && animId !== 424 && s.tick() - lastSwingTick >= 4)) {
+            if (curXp > prevSkillXp || (animId > 0 && animId !== 424 && animId !== 829 && s.tick() - lastSwingTick >= 4)) {
                 lastSwingTick = s.tick();
                 prevSkillXp = curXp;
             }
@@ -851,17 +863,23 @@ export async function runWildyPvpLoop(
                 console.log(`PVP_STATUS tick=${s.tick()} ${opts.skill}=${sk.baseLevel} xp=${sk.experience} hp=${st?.player?.hp} pray=${pts} tanks=${tanks.length} inCombat=${!!combat?.inCombat} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
             }
 
-            const postTanks = tanks.filter(t => d8({ x: t.x ?? t.worldX ?? 0, z: t.z ?? t.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 1);
+            const exactTanks = tanks.filter(onTankPostTile);
+            const postTanks = exactTanks.length > 0 ? exactTanks : tanks.filter(t => d8({ x: t.x ?? t.worldX ?? 0, z: t.z ?? t.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 1);
             const activePool = postTanks.length > 0 ? postTanks : tanks;
             const currentTank = combat?.inCombat && combat.targetType === 'player'
                 ? tanks.find(t => t.index === combat.targetIndex)
                 : undefined;
-            // Never follow a banking tank toward the lever: switch immediately to any tank still beside KEEP_SPECIALIST_POST.
-            const currentAlive = !!currentTank && d8({ x: currentTank.x ?? currentTank.worldX ?? 0, z: currentTank.z ?? currentTank.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 1;
+            // Never chase a banking tank off KEEP_SPECIALIST_POST: switch immediately to any stationary post tank.
+            const currentAlive = !!currentTank && (exactTanks.length === 0 || onTankPostTile(currentTank)) && d8({ x: currentTank.x ?? currentTank.worldX ?? 0, z: currentTank.z ?? currentTank.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 1;
 
-            if ((needReengage || !currentAlive) && activePool.length > 0) {
+            if (d8({ x: posOf(s)?.worldX ?? 0, z: posOf(s)?.worldZ ?? 0 }, KEEP_SPECIALIST_POST) > 0 && !flickedThisTick && sinceSwing >= 1 && sinceSwing <= 2) {
+                void s.direct({ type: 'walkTo', x: KEEP_SPECIALIST_POST.x, z: KEEP_SPECIALIST_POST.z, running: true, reason: 'SDK' });
+                needReengage = true;
+            }
+
+            if ((needReengage || !currentAlive || sinceSwing >= 5) && activePool.length > 0) {
                 const target = activePool[0]!;
-                if (needReengage || target.index !== lastTargetIndex || s.tick() - lastAttackTick >= 2) {
+                if (needReengage || !currentAlive || target.index !== lastTargetIndex || s.tick() - lastAttackTick >= 2) {
                     needReengage = false;
                     lastTargetIndex = target.index;
                     lastAttackTick = s.tick();
@@ -1502,11 +1520,29 @@ export async function runMeleePvpSpecialist(
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     milestone('waterfall', `atk=${skillInfo(s, 'Attack').baseLevel} str=${skillInfo(s, 'Strength').baseLevel} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
-    // Drop Waterfall rewards and leftover energy pots on the move to Ardougne lever.
+    // Drop Waterfall rewards and equip Keep melee gear while running to Ardougne lever.
     const postWaterfallJunk = new Set<number>([1601, 2357, 299, 297, 298, 292, 293, 294, 295, 296, 229, 954]);
+    let preEquippedWait = -10;
     await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall exit to ardougne lever', {
         onTickExtra: () => {
             ensureRunAndEnergy();
+            if (s.tick() - preEquippedWait >= 2) {
+                const gear = s.sdk.getInventory().find(i => i.id === 1333 || i.id === 3105);
+                if (gear) {
+                    const wieldOp = (gear.optionsWithIndex ?? []).find((o: any) => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
+                    preEquippedWait = s.tick();
+                    void s.direct({ type: 'useInventoryItem', slot: gear.slot, optionIndex: wieldOp, reason: 'SDK' });
+                } else {
+                    const cs = s.sdk.getState()?.combatStyle;
+                    if (cs?.known && cs.weaponName === 'Rune scimitar') {
+                        const style = giantStyle(cs, skill);
+                        if (cs.currentStyle !== style.index) {
+                            preEquippedWait = s.tick();
+                            void s.sdk.sendSetCombatStyle(style.index);
+                        }
+                    }
+                }
+            }
             const junk = s.sdk.getInventory().find(i => postWaterfallJunk.has(i.id));
             if (junk) void s.direct({ type: 'dropItem', slot: junk.slot, reason: 'SDK' });
         },

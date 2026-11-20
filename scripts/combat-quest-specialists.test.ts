@@ -141,8 +141,9 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
         expect(DEFENCE_SPECIALIST_KIT).toBe(KIT_BY_BOARD.defence);
         for (const kit of [STRENGTH_SPECIALIST_KIT, DEFENCE_SPECIALIST_KIT]) {
             expect(kit.find(k => k.id === 1333)?.count).toBe(1);
+            expect(kit.find(k => k.id === 3105)?.count).toBe(1);
             expect(kit.find(k => k.id === 2434)?.count).toBeGreaterThanOrEqual(2);
-            expect(kit.find(k => k.id === 3016)?.count).toBeGreaterThanOrEqual(7);
+            expect(kit.find(k => k.id === 3016)?.count).toBeGreaterThanOrEqual(6);
         }
         expect(kitSlotTotal(KEEP_TOPUP_BY_BOARD.strength)).toBe(7);
         expect(KEEP_TOPUP_BY_BOARD.strength.find(k => k.id === 2440)?.count).toBeGreaterThanOrEqual(5);
