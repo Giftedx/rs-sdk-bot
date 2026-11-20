@@ -216,8 +216,25 @@ try {
     });
     const PFM = 14;
     const pfmOn = (): boolean => !!q.st()?.prayers?.activePrayers?.[PFM];
+    // A prayer potion goes in whenever points run low (Protect from Melee drains one point a few ticks), before and while the prayer is on.
+    let prayerPotCool = 0;
+    const drinkPrayerPot = (): boolean => {
+        const pot = ITEM.prayerPot.find(id => q.has(id));
+        if (pot === undefined) return false;
+        void q.s.direct({ type: 'useInventoryItem', slot: q.slot(pot)!, optionIndex: 1, reason: 'SDK' });
+        return true;
+    };
+    addTick(() => {
+        if (prayerPotCool > 0) { prayerPotCool--; return; }
+        if (!pfmOn() || (q.st()?.prayers?.prayerPoints ?? 99) > 4 || q.hp() <= 0) return;
+        if (drinkPrayerPot()) prayerPotCool = 3;
+    });
     const setPfm = async (on: boolean): Promise<void> => {
         if (pfmOn() === on) return;
+        if (on && (q.st()?.prayers?.prayerPoints ?? 0) <= 8) {
+            const p0 = q.st()?.prayers?.prayerPoints ?? 0;
+            if (drinkPrayerPot()) await q.waitUntil(() => (q.st()?.prayers?.prayerPoints ?? 0) > p0, 6);
+        }
         await q.step(`protect from melee ${on ? 'on' : 'off'}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn() === on, 3, 3);
     };
 

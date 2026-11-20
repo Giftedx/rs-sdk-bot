@@ -706,6 +706,7 @@ export async function runWildyPvpLoop(
     let lastDrinkTick = -10;
     let lastFlickTick = -10;
     let lastPrayPotionTick = -10;
+    let lastStatusTick = -100;
 
     const drinkFromList = async (ids: readonly number[]): Promise<boolean> => {
         for (const id of ids) {
@@ -758,6 +759,11 @@ export async function runWildyPvpLoop(
                 .sort((a, b) => d8({ x: a.x ?? a.worldX ?? 0, z: a.z ?? a.worldZ ?? 0 }, DESERTED_KEEP) - d8({ x: b.x ?? b.worldX ?? 0, z: b.z ?? b.worldZ ?? 0 }, DESERTED_KEEP));
 
             const combat = st?.player?.combat;
+            if (s.tick() - lastStatusTick >= 100) {
+                lastStatusTick = s.tick();
+                const sk = skillInfo(s, opts.skill);
+                console.log(`PVP_STATUS tick=${s.tick()} ${opts.skill}=${sk.baseLevel} xp=${sk.experience} hp=${st?.player?.hp} pray=${pts} tanks=${tanks.length} inCombat=${!!combat?.inCombat} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
+            }
             const currentAlive = combat?.inCombat && combat.targetType === 'player' && tanks.some(t => t.index === combat.targetIndex);
             if (!currentAlive && tanks.length > 0) {
                 const target = tanks[0]!;
