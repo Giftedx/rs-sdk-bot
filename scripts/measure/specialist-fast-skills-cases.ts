@@ -262,8 +262,13 @@ export const SPECIALIST_FAST_SKILLS_EXTERNAL_CASES: readonly BenchCase[] = [
  },
 ];
 
-export const RUNECRAFT_RUNNER_SWEEP_CASES: readonly BenchCase[] = [6, 8, 10, 12].map(runners => ({
- key: `extra:runecraft-r${runners}`,
+export const RUNECRAFT_RUNNER_SWEEP_CASES: readonly BenchCase[] = [
+ { key: 'extra:runecraft-r14', runners: 14, batch: 26 },
+ { key: 'extra:runecraft-r15', runners: 15, batch: 26 },
+ { key: 'extra:runecraft-r13-fast', runners: 13, batch: 27 },
+ { key: 'extra:runecraft-r14-fast', runners: 14, batch: 27 },
+].map(({ key, runners, batch }) => ({
+ key,
  script: 'scripts/measure/specialist-bench.ts',
  preset: 'fresh_lumbridge',
  presetConfig: freshTutorialStart(),
@@ -271,7 +276,8 @@ export const RUNECRAFT_RUNNER_SWEEP_CASES: readonly BenchCase[] = [6, 8, 10, 12]
   Array.from({ length: 1 + runners }, (_, i) => `{bot:${SUFFIXES[i]!}}`).join(','),
   'scripts/runecraft-specialist.ts',
   'SUPPLIER_KIT=runecraft',
-  'CAP=2800',
+  `RUNECRAFT_ESS_BATCH=${batch}`,
+  'CAP=2400',
  ],
  pass: okSpecialist,
  output: /ticks=(\d+)/,
@@ -290,9 +296,9 @@ export const RUNECRAFT_RUNNER_SWEEP_CASES: readonly BenchCase[] = [6, 8, 10, 12]
     position: { x: 3050, z: 3442, level: 0 },
     inventory: expandInventory([
      { id: ITEM_IDS.body_talisman, count: 1 },
-     { id: ITEM_IDS.blankrune, count: 26 },
+     { id: ITEM_IDS.blankrune, count: batch },
     ]),
-    bank: [{ id: ITEM_IDS.blankrune, count: 1100 }],
+    bank: [{ id: ITEM_IDS.blankrune, count: 800 }],
    },
   })),
  ],

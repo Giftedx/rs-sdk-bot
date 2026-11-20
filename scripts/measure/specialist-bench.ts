@@ -95,6 +95,7 @@ async function main(): Promise<void> {
             env: {
                 ...process.env,
                 ...(plan.childEnv.SUPPLIER_KIT ? { SUPPLIER_KIT: plan.childEnv.SUPPLIER_KIT } : {}),
+                ...(plan.childEnv.RUNECRAFT_ESS_BATCH ? { RUNECRAFT_ESS_BATCH: plan.childEnv.RUNECRAFT_ESS_BATCH } : {}),
                 ...(roleEnv ? { SUPPLIER_ROLE: roleEnv } : {}),
                 DEMO_OK: '',
                 LOOT_WATCH: '0',

@@ -592,6 +592,7 @@ export async function restockAtBank(
  done: () => boolean,
  deadline: number,
  signal?: AbortSignal,
+ skipCloseWait = false,
 ): Promise<boolean> {
  if (countItem(s.sdk.getInventory(), itemId) >= targetCount) return true;
  await navigateWorld(s, bankTile.x, bankTile.z, bankTile.level ?? 0, Math.max(10, deadline - s.tick()), signal);
@@ -622,15 +623,21 @@ export async function restockAtBank(
  if (bankItem && bankItem.count > 0) {
   const need = Math.min(targetCount - countItem(s.sdk.getInventory(), itemId), bankItem.count);
   if (need > 0) {
+   const freeSlots = 28 - s.sdk.getInventory().length;
+   const withdrawAmt = need === freeSlots && bankItem.count >= need ? -1 : need;
    const sentTick = s.tick();
-   await s.bot.withdrawItem(bankItem, need, { asNote: false });
+   await s.bot.withdrawItem(bankItem, withdrawAmt, { asNote: false });
    await waitUntil(s, () => s.tick() > sentTick && countItem(s.sdk.getInventory(), itemId) >= targetCount, { timeoutTicks: 5 });
   }
  }
  if (s.sdk.getState()?.bank?.isOpen) {
-  await s.bot.closeBank();
-  const closeTick = s.tick();
-  await waitUntil(s, () => s.tick() > closeTick && !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 4 });
+  if (skipCloseWait) {
+   await s.direct({ type: 'closeModal', reason: 'SDK' });
+  } else {
+   await s.bot.closeBank();
+   const closeTick = s.tick();
+   await waitUntil(s, () => s.tick() > closeTick && !s.sdk.getState()?.bank?.isOpen, { timeoutTicks: 4 });
+  }
  }
  return countItem(s.sdk.getInventory(), itemId) > 0;
 }

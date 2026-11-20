@@ -912,6 +912,9 @@ async function runServe(args: string[]): Promise<void> {
             }
 
             if (ok && role !== 'starter') {
+                const rawBatch = Number(process.env.RUNECRAFT_ESS_BATCH ?? 27);
+                const essBatch = Number.isFinite(rawBatch) ? Math.min(27, Math.max(1, Math.trunc(rawBatch))) : 27;
+                const skipCloseWait = essBatch >= 27;
                 const runnerBank =
                     role === 'runner' && (parsed.bankX !== undefined || parsed.bankZ !== undefined)
                         ? bankTile
@@ -938,7 +941,7 @@ async function runServe(args: string[]): Promise<void> {
                     const heldTalisman = countById(inv, ITEM_IDS.body_talisman);
                     const heldEss = countById(inv, ITEM_IDS.blankrune);
 
-                    if (!insideBody() && (heldTalisman < 1 || heldEss < 26)) {
+                    if (!insideBody() && (heldTalisman < 1 || heldEss < (trips === 0 ? Math.min(26, essBatch) : essBatch))) {
                         if (heldTalisman < 1) {
                             await moveTo(s, trips === 0 ? runnerBank : EDGEVILLE_BANK, 2, stop);
                             const bankObs = await openFreshBank(s);
@@ -960,10 +963,12 @@ async function runServe(args: string[]): Promise<void> {
                             s,
                             bankSpot,
                             ITEM_IDS.blankrune,
-                            26,
+                            essBatch,
                             keep,
                             () => stop() || s.tick() - t0 >= CAP,
                             t0 + CAP,
+                            undefined,
+                            skipCloseWait,
                         );
                     }
 
@@ -984,7 +989,7 @@ async function runServe(args: string[]): Promise<void> {
 
                     markReady();
                     await moveGroundTo(s, BODY_ALTAR_STAND, 0, stop);
-                    const batchCount = Math.min(26, countById(s.sdk.getInventory(), ITEM_IDS.blankrune));
+                    const batchCount = Math.min(essBatch, countById(s.sdk.getInventory(), ITEM_IDS.blankrune));
                     const res = await serveFastBatch(
                         s,
                         specialist,
