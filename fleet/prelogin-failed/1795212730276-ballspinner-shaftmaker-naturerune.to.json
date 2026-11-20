@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795212730276-ballspinner-shaftmaker-naturerune",
+ "role": "to",
+ "account": "Shaftmaker",
+ "partner": "Ballspinner",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795213078388,
+ "detail": "Error: account logout is not confirmed: Shaftmaker ended stopped"
+}
