@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795155213870-pickpockdick-woodpecker-runechainbody",
+ "account": "Woodpecker",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "a24cebae-c46c-48b0-aadb-86e38e6978e4",
+ "count": 1,
+ "ok": true,
+ "at": 1795155274045,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795155273266
+ },
+ "logout": {
+  "attemptId": "1795155263116-0000010776-0000000001",
+  "at": 1795155274019,
+  "sha256": "273a108e5924dc7c8ef52ca4fb9dbc38f3d760f9d2b08cd2a49faf7b08a69d46"
+ },
+ "screen": true
+}
