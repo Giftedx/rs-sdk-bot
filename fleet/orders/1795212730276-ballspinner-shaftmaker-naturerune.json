@@ -1,0 +1,22 @@
+{
+ "id": "1795212730276-ballspinner-shaftmaker-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Ballspinner",
+ "to": "Shaftmaker",
+ "item": "Nature rune",
+ "count": 349,
+ "start": 1795212730276,
+ "end": 1795215130276,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
