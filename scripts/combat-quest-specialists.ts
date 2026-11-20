@@ -97,14 +97,13 @@ export const STRENGTH_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 2435, name: 'Prayer potion(4)', count: 3, stackable: true },
     { id: 2437, name: 'Super attack(4)', count: 2, stackable: true },
     { id: 2441, name: 'Super strength(4)', count: 3, stackable: true },
-    { id: 3105, name: 'Climbing boots', count: 1, stackable: false },
     { id: 1333, name: 'Rune scimitar', count: 1, stackable: false },
     { id: 1725, name: 'Amulet of strength', count: 1, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
     { id: 954, name: 'Rope', count: 2, stackable: false },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
     { id: 2434, name: 'Prayer potion(4)', count: 2, stackable: false },
-    { id: 385, name: 'Shark', count: 2, stackable: false },
+    { id: 385, name: 'Shark', count: 3, stackable: false },
 ] as const;
 
 // 28 slots exact: Magic 1->80 (Enchant rings), Mage Arena (Zamorak Cape/Staff + Charge), and Flames of Zamorak Defensive PvP.
@@ -608,15 +607,22 @@ export async function rubRingOfDueling(
 }
 
 export async function openFreshBank(s: Session, stop: StopFn): Promise<void> {
-    if (!s.sdk.getState()?.bank?.isOpen) {
+    let lastMsg = 'unknown';
+    for (let attempt = 0; attempt < 5 && !stop(); attempt++) {
+        if (s.sdk.getState()?.bank?.isOpen) return;
+        await dismissContinueDialogs(s, stop, 3);
         await s.bot.dismissBlockingUI();
-        const r = await s.bot.openBank();
-        if (!r.success && !s.sdk.getState()?.bank?.isOpen) {
-            throw Error(`openBank failed: ${r.message ?? r.reason}`);
+        const r = await (s.bot as any).openBank(1500);
+        if (r.success || s.sdk.getState()?.bank?.isOpen) {
+            if (await waitUntil(s, () => !!s.sdk.getState()?.bank?.isOpen || stop(), { timeoutTicks: 10 })) {
+                return;
+            }
         }
+        lastMsg = r.message ?? r.reason ?? lastMsg;
+        await waitTicks(s, 1);
     }
-    if (!await waitUntil(s, () => !!s.sdk.getState()?.bank?.isOpen || stop(), { timeoutTicks: 15 })) {
-        throw Error('bank interface did not open');
+    if (!s.sdk.getState()?.bank?.isOpen) {
+        throw Error(`openBank failed: ${lastMsg}`);
     }
 }
 
@@ -700,9 +706,6 @@ export async function runWildyPvpLoop(
     await setAutoRetaliate(s, false);
     await equipItemById(s, 1333, opts.stop, 'Rune scimitar');
     await equipItemById(s, 1725, opts.stop, 'Amulet of strength');
-    if (s.sdk.getInventory().some(i => i.id === 3105)) {
-        await equipItemById(s, 3105, opts.stop, 'Climbing boots');
-    }
 
     // Verify exact Strength-only (Aggressive) or Defence-only (Defensive) combat style.
     await waitUntil(s, () => {
@@ -996,9 +999,6 @@ export async function runMeleePvpSpecialist(
     milestone('kit', `slots=${s.sdk.getInventory().length}`);
 
     await equipItemById(s, 1725, opts.stop, 'Amulet of strength');
-    if (s.sdk.getInventory().some(i => i.id === 3105)) {
-        await equipItemById(s, 3105, opts.stop, 'Climbing boots');
-    }
     await buryBonesTo43(s, opts.stop);
     milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
 
@@ -1145,6 +1145,8 @@ async function enchantRingsTo80AtBank(s: Session, stop: StopFn): Promise<void> {
             await s.direct({ type: 'spellOnItem', slot: ring.slot, spellComponent: spec.spell, reason: 'SDK' });
             await waitUntil(s, () => skillInfo(s, 'Magic').experience > xp0 || stop(), { timeoutTicks: 4 });
         }
+        await waitTicks(s, 2);
+        await dismissContinueDialogs(s, stop, 3);
     }
 
     await openFreshBank(s, stop);

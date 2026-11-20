@@ -123,7 +123,6 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
         expect(HP_SPECIALIST_KIT.find(k => k.id === 563)?.count).toBeGreaterThanOrEqual(18);
         expect(STRENGTH_SPECIALIST_KIT).toBe(KIT_BY_BOARD.strength);
         expect(DEFENCE_SPECIALIST_KIT).toBe(KIT_BY_BOARD.defence);
-        expect(STRENGTH_SPECIALIST_KIT.find(k => k.id === 3105)?.count).toBe(1);
         expect(DEFENCE_SPECIALIST_KIT.find(k => k.id === 565)?.count).toBeGreaterThanOrEqual(1600);
         expect(kitRequirements(STRENGTH_SPECIALIST_KIT).length).toBe(STRENGTH_SPECIALIST_KIT.length);
     });
@@ -142,7 +141,7 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
         expect(sup.inventory?.length).toBe(28);
         const tankSup = tankSupplierPresetConfig(STRENGTH_SPECIALIST_KIT);
         expect(tankSup.skills?.Defence).toBe(1);
-        expect(tankSup.skills?.Magic).toBe(1);
+        expect(tankSup.skills?.Magic).toBe(45);
         expect(tankSup.skills?.Ranged).toBe(99);
         expect(tankSup.bank?.some(b => b.id === 563 && b.count >= 50)).toBe(true);
         expect(tankSup.bank?.some(b => b.id === 391 && b.count >= 500)).toBe(true);
