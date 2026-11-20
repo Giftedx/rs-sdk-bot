@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795134524530-dipstick-sporrandip-runechainbody",
  "account": "Dipstick",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "c7220c1a-21bf-4204-ad86-390b05b08a2d",
- "count": 0,
- "ok": false,
- "at": 1795134579963,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795134602910,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795134585730
+ },
+ "logout": {
+  "attemptId": "1795134579971-0000015804-0000000001",
+  "at": 1795134602898,
+  "sha256": "e2a8e8d5ad43321a226db9c93e0dfcae35e82cc4438cae76dd3d4d06994cb7ea"
+ },
+ "screen": true
 }
