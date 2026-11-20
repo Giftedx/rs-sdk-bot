@@ -1,0 +1,22 @@
+{
+ "id": "1795146947057-sausagefest-magicwanda-bd0bcefbe4597667",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Sausagefest",
+ "to": "Magicwanda",
+ "item": "Coins",
+ "count": 1650000,
+ "start": 1795146947057,
+ "end": 1795148147057,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
