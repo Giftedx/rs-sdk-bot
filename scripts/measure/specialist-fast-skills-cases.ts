@@ -222,6 +222,64 @@ export const SPECIALIST_FAST_SKILLS_CASES: readonly BenchCase[] = [
 
 export const SPECIALIST_FAST_SKILLS_EXTERNAL_CASES: readonly BenchCase[] = [
  {
+  key: 'extra:specialist-smithing-nomithril',
+  script: 'scripts/aio-skiller.ts',
+  preset: 'fresh_lumbridge',
+  presetConfig: freshTutorialStart(),
+  scriptArgs: ['smithing', 'specialist', 'CAP=1350', 'SMITHING_VARIANT=nomithril', helperArg(4)],
+  pass: stdout => {
+   const result = stdout.match(/^RESULT ok\b.*$/m)?.[0] ?? '';
+   const ticks = Number(/\bticks=(\d+)/.exec(result)?.[1] ?? NaN);
+   return !!result && /\blevel=99\b/.test(result) && !/\bRESULT fail\b/.test(stdout) && ticks <= 1255;
+  },
+  output: /ticks=(\d+)/,
+  timeoutMs: 600_000,
+  companions: [
+   staticCompanion(0, { x: 3222, z: 3223, level: 0 }, [
+    { id: ITEM_IDS.hammer, count: 1 },
+    { id: ITEM_IDS.amulet_of_glory_4, count: 1 },
+    { id: ITEM_IDS.bronze_bar, count: 9 },
+    { id: ITEM_IDS.iron_bar, count: 17 },
+   ]),
+   {
+    suffix: 'c',
+    preset: 'fresh_lumbridge',
+    presetConfig: {
+     position: { x: 3185, z: 3436, level: 0 },
+     inventory: expandInventory([{ id: ITEM_IDS.iron_bar, count: 25 }]),
+     bank: [
+      { id: ITEM_IDS.steel_bar, count: 500 },
+      { id: ITEM_IDS.adamantite_bar, count: 350 },
+     ],
+    },
+   },
+   {
+    suffix: 'd',
+    preset: 'fresh_lumbridge',
+    presetConfig: {
+     position: { x: 3185, z: 3436, level: 0 },
+     inventory: expandInventory([{ id: ITEM_IDS.steel_bar, count: 25 }]),
+     bank: [
+      { id: ITEM_IDS.steel_bar, count: 500 },
+      { id: ITEM_IDS.adamantite_bar, count: 350 },
+     ],
+    },
+   },
+   {
+    suffix: 'e',
+    preset: 'fresh_lumbridge',
+    presetConfig: {
+     position: { x: 3185, z: 3436, level: 0 },
+     inventory: expandInventory([{ id: ITEM_IDS.steel_bar, count: 25 }]),
+     bank: [
+      { id: ITEM_IDS.steel_bar, count: 500 },
+      { id: ITEM_IDS.adamantite_bar, count: 350 },
+     ],
+    },
+   },
+  ],
+ },
+ {
   key: 'extra:specialist-runecraft',
   script: 'scripts/measure/specialist-bench.ts',
   preset: 'fresh_lumbridge',

@@ -23,7 +23,13 @@ import { MAGIC_SUPPLY_BILL } from './magic-specialist';
 import { SPECIALIST_FAST_SKILLS_CASES, SPECIALIST_FAST_SKILLS_EXTERNAL_CASES } from './measure/specialist-fast-skills-cases';
 import { PRAYER_BONES_NEEDED, PRAYER_SUPPLY_BILL } from './prayer-specialist';
 import { RUNECRAFT_SUPPLY_BILL } from './runecraft-specialist';
-import { SMITHING_RUNNER_QUEUE, SMITHING_SUPPLY_BILL } from './smithing-specialist';
+import {
+    parseSmithingVariant,
+    SMITHING_NOMITHRIL_RUNNER_QUEUE,
+    SMITHING_NOMITHRIL_SUPPLY_BILL,
+    SMITHING_RUNNER_QUEUE,
+    SMITHING_SUPPLY_BILL,
+} from './smithing-specialist';
 import {
     countById,
     CRAFTING_SPECIALIST_KIT,
@@ -40,6 +46,7 @@ import {
     resolveSupplierKit,
     resolveSupplierKitPlan,
     RUNECRAFT_SPECIALIST_KIT,
+    SMITHING_NOMITHRIL_KIT,
     SMITHING_SPECIALIST_KIT,
 } from './specialist-supplier';
 
@@ -72,6 +79,7 @@ test('all 6 fast-skill specialist supply bills use tradeable cataloged base IDs 
     const bills: readonly (readonly SupplyEntry[])[] = [
         PRAYER_SUPPLY_BILL,
         SMITHING_SUPPLY_BILL,
+        SMITHING_NOMITHRIL_SUPPLY_BILL,
         RUNECRAFT_SUPPLY_BILL,
         CRAFTING_SUPPLY_BILL,
         HERBLORE_SUPPLY_BILL,
@@ -135,6 +143,28 @@ test('supply bill quantities cover 1-to-99 XP and Smithing runner queue totals m
     expect(smithingById.get(ITEM_IDS.mithril_bar)).toBe(barTotals.get(ITEM_IDS.mithril_bar));
     expect(smithingById.get(ITEM_IDS.adamantite_bar)).toBe(barTotals.get(ITEM_IDS.adamantite_bar));
 
+    const noMithrilTotals = new Map<number, number>([[ITEM_IDS.bronze_bar, 9], [ITEM_IDS.iron_bar, 17]]);
+    for (const delivery of SMITHING_NOMITHRIL_RUNNER_QUEUE) {
+        noMithrilTotals.set(delivery.barId, (noMithrilTotals.get(delivery.barId) ?? 0) + delivery.count);
+    }
+    const noMithrilById = new Map(SMITHING_NOMITHRIL_SUPPLY_BILL.map(b => [b.itemId, b.count]));
+    expect(noMithrilById.get(ITEM_IDS.bronze_bar)).toBe(noMithrilTotals.get(ITEM_IDS.bronze_bar));
+    expect(noMithrilById.get(ITEM_IDS.iron_bar)).toBe(noMithrilTotals.get(ITEM_IDS.iron_bar));
+    expect(noMithrilById.get(ITEM_IDS.steel_bar)).toBe(noMithrilTotals.get(ITEM_IDS.steel_bar));
+    expect(noMithrilById.get(ITEM_IDS.mithril_bar)).toBeUndefined();
+    expect(noMithrilById.get(ITEM_IDS.adamantite_bar)).toBe(noMithrilTotals.get(ITEM_IDS.adamantite_bar));
+    const noMithrilXp =
+        9 * 312.5 +
+        42 * 625 +
+        (noMithrilById.get(ITEM_IDS.steel_bar) ?? 0) * 937.5 +
+        (noMithrilById.get(ITEM_IDS.adamantite_bar) ?? 0) * 1562.5;
+    expect(noMithrilXp).toBeGreaterThanOrEqual(goalXp());
+
+    expect(parseSmithingVariant([], {})).toBe('mithril');
+    expect(parseSmithingVariant(['SMITHING_VARIANT=nomithril'], {})).toBe('nomithril');
+    expect(parseSmithingVariant([], { SMITHING_VARIANT: 'nomithril' })).toBe('nomithril');
+    expect(() => parseSmithingVariant([], { SMITHING_VARIANT: 'bad' })).toThrow('unknown SMITHING_VARIANT');
+
     const rcEss = RUNECRAFT_SUPPLY_BILL.find(b => b.itemId === ITEM_IDS.blankrune);
     expect(rcEss?.count).toBe(25 + 205 * 26);
 });
@@ -159,6 +189,7 @@ test('specialist-supplier kits, parseKitArg, and resolveBaseId cert mapping work
     expect(parseKitArg([])).toBe('attack');
     expect(parseKitArg(['--kit=prayer'])).toBe('prayer');
     expect(parseKitArg(['--kit=smithing'])).toBe('smithing');
+    expect(parseKitArg(['--kit=smithing-nomithril'])).toBe('smithing-nomithril');
     expect(parseKitArg(['--kit=runecraft'])).toBe('runecraft');
     expect(parseKitArg(['--kit=crafting'])).toBe('crafting');
     expect(parseKitArg(['--kit=herblore'])).toBe('herblore');
@@ -167,6 +198,7 @@ test('specialist-supplier kits, parseKitArg, and resolveBaseId cert mapping work
 
     expect(resolveSupplierKit('prayer')).toBe(PRAYER_SPECIALIST_KIT);
     expect(resolveSupplierKit('smithing')).toBe(SMITHING_SPECIALIST_KIT);
+    expect(resolveSupplierKit('smithing-nomithril')).toBe(SMITHING_NOMITHRIL_KIT);
     expect(resolveSupplierKit('runecraft')).toBe(RUNECRAFT_SPECIALIST_KIT);
     expect(resolveSupplierKit('crafting')).toBe(CRAFTING_SPECIALIST_KIT);
     expect(resolveSupplierKit('herblore')).toBe(HERBLORE_SPECIALIST_KIT);
@@ -276,8 +308,11 @@ test('multi-supplier runecraft role parsing, cooldown partner selection, and ext
     );
     expect(lruPicked?.name).toBe('Runner2');
 
-    expect(SPECIALIST_FAST_SKILLS_EXTERNAL_CASES.map(c => c.key)).toEqual(['extra:specialist-runecraft']);
-    const rcExt = SPECIALIST_FAST_SKILLS_EXTERNAL_CASES[0]!;
+    expect(SPECIALIST_FAST_SKILLS_EXTERNAL_CASES.map(c => c.key)).toEqual([
+        'extra:specialist-smithing-nomithril',
+        'extra:specialist-runecraft',
+    ]);
+    const rcExt = SPECIALIST_FAST_SKILLS_EXTERNAL_CASES[1]!;
     expect(rcExt.companions).toHaveLength(23);
     expect(rcExt.scriptArgs[0]!.split(',')).toHaveLength(23);
     expect(rcExt.scriptArgs).toContain('SUPPLIER_KIT=runecraft');

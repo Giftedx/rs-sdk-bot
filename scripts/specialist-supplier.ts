@@ -33,7 +33,14 @@ import {
 } from './ranged-specialist';
 export { buildLeatherBodyShopInvocation, planPrayerBrewBatch, planPrayerDecantSteps } from './ranged-live-prep';
 import { BODY_ALTAR_STAND, BODY_RUINS, EDGEVILLE_BANK, RUNECRAFT_SUPPLY_BILL } from './runecraft-specialist';
-import { SMITHING_RUNNER_QUEUE, SMITHING_SUPPLY_BILL, VARROCK_WEST_ANVIL, VARROCK_WEST_BANK } from './smithing-specialist';
+import {
+    SMITHING_NOMITHRIL_RUNNER_QUEUE,
+    SMITHING_NOMITHRIL_SUPPLY_BILL,
+    SMITHING_RUNNER_QUEUE,
+    SMITHING_SUPPLY_BILL,
+    VARROCK_WEST_ANVIL,
+    VARROCK_WEST_BANK,
+} from './smithing-specialist';
 
 export { EDGEVILLE_BANK };
 
@@ -136,6 +143,7 @@ const billToKit = (bill: readonly { itemId: number; item: string; count: number 
 
 export const PRAYER_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(PRAYER_SUPPLY_BILL);
 export const SMITHING_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(SMITHING_SUPPLY_BILL);
+export const SMITHING_NOMITHRIL_KIT: readonly KitSpecItem[] = billToKit(SMITHING_NOMITHRIL_SUPPLY_BILL);
 export const RUNECRAFT_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(RUNECRAFT_SUPPLY_BILL);
 export const CRAFTING_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(CRAFTING_SUPPLY_BILL);
 export const HERBLORE_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(HERBLORE_SUPPLY_BILL);
@@ -164,6 +172,7 @@ export const SPECIALIST_KITS = {
     'thieving-live': THIEVING_SPECIALIST_LIVE_KIT,
     prayer: PRAYER_SPECIALIST_KIT,
     smithing: SMITHING_SPECIALIST_KIT,
+    'smithing-nomithril': SMITHING_NOMITHRIL_KIT,
     runecraft: RUNECRAFT_SPECIALIST_KIT,
     crafting: CRAFTING_SPECIALIST_KIT,
     herblore: HERBLORE_SPECIALIST_KIT,
@@ -769,7 +778,7 @@ async function runServe(args: string[]): Promise<void> {
         await waitUntil(s, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 });
         const t0 = s.tick();
         const kitName = plan.name;
-        if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'runecraft' && kitName !== 'crafting' && kitName !== 'magic') {
+        if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'smithing-nomithril' && kitName !== 'runecraft' && kitName !== 'crafting' && kitName !== 'magic') {
             const peerRe = exactNameRe(specialist);
             for (let legIdx = 0; legIdx < plan.legs.length; legIdx++) {
                 const leg = plan.legs[legIdx]!;
@@ -858,7 +867,8 @@ async function runServe(args: string[]): Promise<void> {
                 delivered += need;
             }
             allDone = delivered >= PRAYER_BONES_NEEDED;
-        } else if (kitName === 'smithing') {
+        } else if (kitName === 'smithing' || kitName === 'smithing-nomithril') {
+            const queue = kitName === 'smithing-nomithril' ? SMITHING_NOMITHRIL_RUNNER_QUEUE : SMITHING_RUNNER_QUEUE;
             const starter = [
                 invSpec(ITEM_IDS.hammer, 1),
                 invSpec(ITEM_IDS.amulet_of_glory_4, 1),
@@ -872,8 +882,8 @@ async function runServe(args: string[]): Promise<void> {
             emitReady();
             let ok = await serveOneBatch(s, specialist, starter, t0, CAP, stop);
             let idx = 0;
-            while (ok && !stop() && s.tick() - t0 < CAP && idx < SMITHING_RUNNER_QUEUE.length) {
-                const delivery = SMITHING_RUNNER_QUEUE[idx++]!;
+            while (ok && !stop() && s.tick() - t0 < CAP && idx < queue.length) {
+                const delivery = queue[idx++]!;
                 const batch = [invSpec(delivery.barId, delivery.count)];
                 if (!hasExactKit(s.sdk.getInventory(), batch)) {
                     await withdrawExactKit(s, batch, VARROCK_WEST_BANK, stop);
@@ -881,7 +891,7 @@ async function runServe(args: string[]): Promise<void> {
                 await moveGroundTo(s, VARROCK_WEST_ANVIL, 2, stop);
                 ok = await serveOneBatch(s, specialist, batch, t0, CAP, stop);
             }
-            allDone = ok && idx === SMITHING_RUNNER_QUEUE.length;
+            allDone = ok && idx === queue.length;
         } else if (kitName === 'runecraft') {
             const role = parseSupplierRole(args, process.env);
             const insideBody = () => {
