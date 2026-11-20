@@ -60,6 +60,8 @@ export const FLETCHING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 53, name: 'Headless arrow', count: 3600, stackable: true },
 ] as const;
 
+export const FLETCHING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = FLETCHING_SPECIALIST_KIT;
+
 // 12 inventory slots: nets/rods/bait/feathers + knife + 5 logs + glory for 3t Sea Slug/Trio/Barbarian fishing.
 export const FISHING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 303, name: 'Small fishing net', count: 1, stackable: false },
@@ -144,6 +146,7 @@ export const SPECIALIST_KITS = {
     'ranged-msb': RANGED_SPECIALIST_MSB_KIT,
     'ranged-live': RANGED_SPECIALIST_LIVE_KIT,
     fletching: FLETCHING_SPECIALIST_KIT,
+    'fletching-live': FLETCHING_SPECIALIST_LIVE_KIT,
     fishing: FISHING_SPECIALIST_KIT,
     mining: MINING_SPECIALIST_KIT,
     'mining-live': MINING_SPECIALIST_LIVE_KIT,
