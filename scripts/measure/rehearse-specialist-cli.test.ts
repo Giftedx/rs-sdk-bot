@@ -4,7 +4,6 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { SPECIALIST_BOARDS } from '../../packages/core/src/specialist-boards';
 import { checkSpecialistSegment, resolveSegmentSuppliers } from '../../packages/practice/src/rehearse';
-import { HP_SPECIALIST_KIT } from '../combat-quest-specialists';
 import { CRAFTING_SUPPLY_BILL } from '../crafting-specialist';
 import { HERBLORE_SUPPLY_BILL } from '../herblore-specialist';
 import { MAGIC_SUPPLY_BILL } from '../magic-specialist';
@@ -38,12 +37,11 @@ function countSupplyMap(items: readonly { id: number; count: number }[]): Record
     return out;
 }
 
-test('all 10 ready specialists construct valid --specialist segments matching board expectations and supply bills', () => {
+test('all 9 ready specialists construct valid --specialist segments matching board expectations and supply bills', () => {
     expect(READY_SPECIALIST_ACCOUNTS).toEqual([
         'HalfInch',
-        'NockAndLoad',
+        'TipMyShaft',
         'Shaftshooter',
-        'FullBlooded',
         'PouchStuffed',
         'CutMyJewels',
         'GrindMyHerb',
@@ -54,9 +52,8 @@ test('all 10 ready specialists construct valid --specialist segments matching bo
 
     const expectedBills: Record<string, readonly { id: number; count: number }[]> = {
         HalfInch: THIEVING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
-        NockAndLoad: FLETCHING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
+        TipMyShaft: FLETCHING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
         Shaftshooter: RANGED_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
-        FullBlooded: HP_SPECIALIST_KIT.map(k => ({ id: k.id, count: k.count })),
         PouchStuffed: RUNECRAFT_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         CutMyJewels: CRAFTING_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         GrindMyHerb: HERBLORE_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
@@ -67,9 +64,8 @@ test('all 10 ready specialists construct valid --specialist segments matching bo
 
     const expectedTargets: Record<string, number> = {
         HalfInch: 2221,
-        NockAndLoad: 54,
+        TipMyShaft: 54,
         Shaftshooter: 5483,
-        FullBlooded: 11116,
         PouchStuffed: 2207,
         CutMyJewels: 182,
         GrindMyHerb: 415,
@@ -116,6 +112,7 @@ test('all 10 ready specialists construct valid --specialist segments matching bo
 
     const rc = resolveSpecialistSegment('PouchStuffed');
     expect(rc.suppliers).toHaveLength(1 + BODY_RUNNER_COUNT);
+    expect(1 + rc.suppliers!.length).toBeLessThanOrEqual(25);
     expect(rc.suppliers![0]!.args).toContain('--role=starter');
     expect(rc.suppliers![0]!.save.position).toEqual({ x: 3223, z: 3222, level: 0 });
     for (let i = 1; i <= BODY_RUNNER_COUNT; i++) {
@@ -178,8 +175,8 @@ test('expandKitToSave and aggregateKitBank validate 28-slot limits and aggregate
 });
 
 test('parseCliArgs handles flags and positional account cleanly', () => {
-    expect(parseCliArgs(['NockAndLoad'])).toEqual({
-        account: 'NockAndLoad',
+    expect(parseCliArgs(['TipMyShaft'])).toEqual({
+        account: 'TipMyShaft',
         dryRun: false,
         out: undefined,
         planTicks: undefined,
@@ -204,19 +201,19 @@ test('parseCliArgs handles flags and positional account cleanly', () => {
 
 test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir, and reports receipt fields', async () => {
     const dryLogs: string[] = [];
-    const dry = await runHostedRehearsal(['NockAndLoad', '--dry-run'], { log: line => dryLogs.push(line) });
+    const dry = await runHostedRehearsal(['TipMyShaft', '--dry-run'], { log: line => dryLogs.push(line) });
     expect(dry.exitCode).toBe(0);
-    expect(JSON.parse(dryLogs.join('\n')).specialist).toBe('NockAndLoad');
+    expect(JSON.parse(dryLogs.join('\n')).specialist).toBe('TipMyShaft');
 
     const root = mkdtempSync(join(tmpdir(), 'hosted-rehearse-cli-'));
     try {
-        await expect(runHostedRehearsal(['NockAndLoad', '--out', 'outside/dir'], { root })).rejects.toThrow('inside .practice/');
+        await expect(runHostedRehearsal(['TipMyShaft', '--out', 'outside/dir'], { root })).rejects.toThrow('inside .practice/');
 
         const logs: string[] = [];
         let seenCmd: string[] = [];
-        const outDir = resolve(root, '.practice/hosted-rehearse/nockandload');
+        const outDir = resolve(root, '.practice/hosted-rehearse/tipmyshaft');
 
-        const result = await runHostedRehearsal(['NockAndLoad'], {
+        const result = await runHostedRehearsal(['TipMyShaft'], {
             root,
             log: line => logs.push(line),
             spawn: async cmd => {
@@ -228,12 +225,12 @@ test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir,
                 const segPath = cmd[segIdx + 1]!;
                 expect(existsSync(segPath)).toBe(true);
                 const writtenSeg = JSON.parse(readFileSync(segPath, 'utf8'));
-                expect(writtenSeg.specialist).toBe('NockAndLoad');
+                expect(writtenSeg.specialist).toBe('TipMyShaft');
 
                 mkdirSync(outDir, { recursive: true });
-                writeFileSync(join(outDir, 'nockandload-fletching.json'), JSON.stringify({
+                writeFileSync(join(outDir, 'tipmyshaft-fletching.json'), JSON.stringify({
                     ok: true,
-                    segment: 'nockandload-fletching',
+                    segment: 'tipmyshaft-fletching',
                     account: 'rhnoc1',
                     start: { fresh: true },
                     plan: writtenSeg.plan,
@@ -243,7 +240,7 @@ test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir,
                     end: null,
                     scope: 'One practice rehearsal',
                 }));
-                writeFileSync(join(outDir, 'nockandload-fletching.receipt.json'), JSON.stringify({
+                writeFileSync(join(outDir, 'tipmyshaft-fletching.receipt.json'), JSON.stringify({
                     version: 2,
                     context: 'a'.repeat(64),
                     endPlaytime: 54,
@@ -258,7 +255,7 @@ test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir,
         expect(seenCmd[1]).toBe('packages/practice/src/rehearse.ts');
         expect(seenCmd).toContain('--start');
         expect(seenCmd).toContain('--out');
-        expect(seenCmd[seenCmd.indexOf('--out') + 1]).toBe('.practice/hosted-rehearse/nockandload');
+        expect(seenCmd[seenCmd.indexOf('--out') + 1]).toBe('.practice/hosted-rehearse/tipmyshaft');
         expect(result.exitCode).toBe(0);
         expect(result.summary?.wholeClock).toBe(true);
         expect(result.summary?.boardTicks).toEqual({ Fletching: 54 });
@@ -266,7 +263,7 @@ test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir,
         expect(logs.some(l => l.startsWith('HOSTED_REHEARSAL_SUMMARY '))).toBe(true);
 
         // Existing outDir is rejected cleanly.
-        await expect(runHostedRehearsal(['NockAndLoad'], { root })).rejects.toThrow('already exists');
+        await expect(runHostedRehearsal(['TipMyShaft'], { root })).rejects.toThrow('already exists');
 
         // Failed rehearsal summary prints log tails and non-zero exit code.
         const failOut = resolve(root, '.practice/hosted-rehearse/steelrod-fail');

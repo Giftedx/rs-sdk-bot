@@ -20,10 +20,14 @@ test('each specialist has its own skill board and a name from the name lists', (
 test('the reserved list is the main account and every specialist', () => {
     expect([...RESERVED_ACCOUNTS].sort()).toEqual([
         'bigboner', 'bigswinger', 'castmyload', 'cutmyjewels', 'dipyourwick', 'fullblooded',
-        'grindmyherb', 'haggis', 'halfinch', 'hiltsdeep', 'justthetip', 'lochnessrod', 'mineshafted',
-        'nockandload', 'polevaulter', 'pouchstuffed', 'rocksolid', 'shaftshooter', 'steelrod',
+        'grindmyherb', 'haggis', 'halfinch', 'hiltsdeep', 'justthetip', 'lightmylog', 'lochnessrod',
+        'mineshafted', 'morningwood', 'nockandload', 'polevaulter', 'pouchstuffed', 'rocksolid',
+        'saltysausage', 'shaftshooter', 'steelrod', 'tipmyshaft',
     ]);
-    expect(SPECIALIST_BOARDS.nockandload).toEqual({ name: 'Fletching', category: 10 });
+    expect(SPECIALIST_BOARDS.tipmyshaft).toEqual({ name: 'Fletching', category: 10 });
+    expect(SPECIALIST_BOARDS.morningwood).toEqual({ name: 'Woodcutting', category: 9 });
+    expect(SPECIALIST_BOARDS.lightmylog).toEqual({ name: 'Firemaking', category: 12 });
+    expect(SPECIALIST_BOARDS.saltysausage).toEqual({ name: 'Cooking', category: 8 });
 });
 
 test('an ordinary account never receives a specialist name', () => {

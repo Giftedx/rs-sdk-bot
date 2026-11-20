@@ -22,7 +22,7 @@ export const NAMES = {
     prayer: ['Bigboner', 'BoneToPick', 'Bonezone'],
     agility: ['Polevaulter', 'PoleDancer', 'Tightsqueeze'],
     firemaking: ['Firecrotch', 'Lightmylog', 'Tinderballs'],
-    fletching: ['Shaftmaker', 'Nockitoff', 'JustTheTip', 'NockAndLoad'],
+    fletching: ['Shaftmaker', 'Nockitoff', 'JustTheTip', 'NockAndLoad', 'TipMyShaft'],
     smithing: ['Hammeredhard', 'Ironrod', 'Steelrod'],
     herblore: ['Stirmypot', 'Grindmyherb', 'Vialvirile'],
     bank: ['Moneyshot', 'SporranBulge', 'Fatstack', 'Deeppockets', 'Coinpurse'],

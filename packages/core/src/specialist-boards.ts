@@ -9,8 +9,11 @@ export const SPECIALIST_BOARDS: Readonly<Record<string, {name:string; category:n
     shaftshooter: {name:'Ranged', category:5},
     bigboner: {name:'Prayer', category:6},
     castmyload: {name:'Magic', category:7},
-    nockandload: {name:'Fletching', category:10},
+    saltysausage: {name:'Cooking', category:8},
+    morningwood: {name:'Woodcutting', category:9},
+    tipmyshaft: {name:'Fletching', category:10},
     lochnessrod: {name:'Fishing', category:11},
+    lightmylog: {name:'Firemaking', category:12},
     cutmyjewels: {name:'Crafting', category:13},
     steelrod: {name:'Smithing', category:14},
     mineshafted: {name:'Mining', category:15},
@@ -21,4 +24,4 @@ export const SPECIALIST_BOARDS: Readonly<Record<string, {name:string; category:n
 };
 
 // The main account and the specialists (including retired specialist clocks kept offline): no planner, recovery or transfer plan may put them online.
-export const RESERVED_ACCOUNTS: readonly string[] = ['haggis', 'justthetip', 'dipyourwick', ...Object.keys(SPECIALIST_BOARDS)];
+export const RESERVED_ACCOUNTS: readonly string[] = ['haggis', 'justthetip', 'dipyourwick', 'nockandload', ...Object.keys(SPECIALIST_BOARDS)];

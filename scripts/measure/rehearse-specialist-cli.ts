@@ -6,7 +6,6 @@ import { checkSpecialistSegment, type RehearsalReport, type Segment, type Suppli
 import type { SaveConfig } from '../../packages/practice/src/presets';
 import { playerSavePath } from '../../packages/practice/src/save-library';
 import { scoredClock } from '../../packages/practice/src/specialist-rehearsal';
-import { HP_SPECIALIST_KIT } from '../combat-quest-specialists';
 import { CRAFTING_BATCHES } from '../crafting-specialist';
 import { ITEM_IDS } from '../fast-skills-lib';
 import { HERBLORE_NOTED_SUPPLIES, HERBLORE_STARTER_BATCH } from '../herblore-specialist';
@@ -28,9 +27,8 @@ export type SpecialistSegmentSpec = Segment & { specialist: string };
 
 export const READY_SPECIALIST_ACCOUNTS = [
     'HalfInch',
-    'NockAndLoad',
+    'TipMyShaft',
     'Shaftshooter',
-    'FullBlooded',
     'PouchStuffed',
     'CutMyJewels',
     'GrindMyHerb',
@@ -149,8 +147,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         targetCap: 2221,
     },
     {
-        account: 'NockAndLoad',
-        id: 'nockandload-fletching',
+        account: 'TipMyShaft',
+        id: 'tipmyshaft-fletching',
         script: 'scripts/fletching-specialist.ts',
         env: { CAP: '200' },
         supplier: {
@@ -182,23 +180,6 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         planTicks: 4660,
         planSource: 'hosted-bench extra:ranged-specialist-live 4505-4774t (<=5483t vs #1 5595t)',
         targetCap: 5483,
-    },
-    {
-        account: 'FullBlooded',
-        id: 'fullblooded-hitpoints',
-        script: 'scripts/hp-specialist.ts',
-        env: { CAP: '12000' },
-        supplier: {
-            script: 'scripts/specialist-supplier.ts',
-            args: ['{ACTOR}', '--kit=hitpoints', '12500'],
-            save: () => ({
-                position: { x: 3223, z: 3222, level: 0 },
-                inventory: expandKitToSave(HP_SPECIALIST_KIT),
-            }),
-        },
-        planTicks: 8360,
-        planSource: 'hosted-bench fighter:specialist-hp 8159-8862t; 400ms rehearsal 8358t (<=11116t vs #1 11343t)',
-        targetCap: 11116,
     },
     {
         account: 'PouchStuffed',
