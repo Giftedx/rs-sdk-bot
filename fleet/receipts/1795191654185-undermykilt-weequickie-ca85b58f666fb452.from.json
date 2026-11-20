@@ -1,0 +1,89 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795191654185-undermykilt-weequickie-ca85b58f666fb452",
+ "account": "UnderMyKilt",
+ "partner": "WeeQuickie",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cannon base",
+ "requested": 1,
+ "claim": "eed28bb5-cd39-471c-9f4c-e3826ffba125",
+ "count": 0,
+ "ok": false,
+ "at": 1795191672984,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Cannon stand",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Cannon barrels",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Cannon furnace",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Cannonball",
+   "requested": 604,
+   "count": 0
+  },
+  {
+   "item": "Dragon bones",
+   "requested": 11,
+   "count": 0
+  },
+  {
+   "item": "Leather body",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Iron arrow",
+   "requested": 300,
+   "count": 0
+  },
+  {
+   "item": "Prayer potion(3)",
+   "requested": 8,
+   "count": 0
+  },
+  {
+   "item": "Prayer potion(4)",
+   "requested": 4,
+   "count": 0
+  },
+  {
+   "item": "Dragonhide chaps",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Dragon vambraces",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Antipoison(3)",
+   "requested": 8,
+   "count": 0
+  },
+  {
+   "item": "Rune arrow",
+   "requested": 909,
+   "count": 0
+  },
+  {
+   "item": "Lobster",
+   "requested": 5,
+   "count": 0
+  }
+ ]
+}
