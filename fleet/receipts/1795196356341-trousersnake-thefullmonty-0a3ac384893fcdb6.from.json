@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795196356341-trousersnake-thefullmonty-0a3ac384893fcdb6",
+ "account": "TrouserSnake",
+ "partner": "TheFullMonty",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 5,
+ "claim": "9f3f99a2-cdf4-4045-a25d-fbedfd6f6c72",
+ "count": 5,
+ "ok": true,
+ "at": 1795196461739,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20,
+  "after": 15
+ },
+ "logout": {
+  "attemptId": "1795196437387-0000028308-0000000001",
+  "at": 1795196461727,
+  "sha256": "c9ba0793ee446ae948c1f0b7fa560b212c094891652e765ba652e5a1ab9308c9"
+ },
+ "screen": true
+}

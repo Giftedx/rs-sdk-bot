@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795196356092-mightyrod-pocketpool-704384e84f5fd3b1",
+ "account": "Mightyrod",
+ "partner": "PocketPool",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 1,
+ "claim": "ace1b188-f9b2-4ed2-ac0c-c8fb831cfb8b",
+ "count": 0,
+ "ok": false,
+ "at": 1795196442394,
+ "detail": "trade claimed"
+}
