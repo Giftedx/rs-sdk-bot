@@ -80,7 +80,7 @@ async function rideSpiritTree(s: Session, treeTile: Point, choices: RegExp[], de
 
 async function enterGrandTreeSouthDoor(s: Session, stop: StopFn): Promise<void> {
     if ((posOf(s)?.worldZ ?? 0) >= 3493) return;
-    await moveToTile(s, { x: 2465, z: 3490, level: 0 }, 1, stop, 'to grand tree door');
+    await walkWaypoints(s, [{ x: 2465, z: 3490, tol: 1 }], 120, stop, 'to grand tree door');
     const deadline = s.tick() + 30;
     while (!stop() && (posOf(s)?.worldZ ?? 0) < 3493) {
         if (s.tick() >= deadline) throw Error('failed to enter Grand Tree south door');
@@ -144,7 +144,7 @@ async function travelAgilityCourseToGrandTree(s: Session, stop: StopFn): Promise
 }
 
 async function squeezeRailingToBolren(s: Session, stop: StopFn): Promise<void> {
-    await moveToTile(s, { x: 2515, z: 3160, level: 0 }, 0, stop, 'castle wars to railing');
+    await walkWaypoints(s, [{ x: 2515, z: 3160, tol: 1 }], 180, stop, 'castle wars to railing');
     for (let attempt = 0; attempt < 8 && !stop(); attempt++) {
         if ((posOf(s)?.worldZ ?? 0) >= 3161) break;
         await dismissContinueDialogs(s, stop, 1);
@@ -218,10 +218,8 @@ async function main(): Promise<void> {
         await teleportTo45Falador(s, stop);
         milestone('falador', `magic=${skillInfo(s, 'Magic').baseLevel} laws=${countById(s.sdk.getInventory(), 563)}`);
 
-        await moveToTile(s, { x: 2928, z: 3456, level: 0 }, 2, stop, 'falador to boy');
-        await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
+        await walkWaypoints(s, [{ x: 2928, z: 3456, tol: 2 }], 100, stop, 'falador to boy');
         await runQuestBall({ session: s, cap: Math.max(200, CAP - elapsed()), stop, food: [385, 379], eatAt: 6, keepAlive: true });
-        await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
         milestone('witchs_house', `hp=${skillInfo(s, 'Hitpoints').baseLevel} xp=${skillInfo(s, 'Hitpoints').experience}`);
 
         const wornGloves = s.sdk.getEquipment().find(e => e.id === 1059);

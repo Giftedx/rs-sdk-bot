@@ -198,12 +198,27 @@ try {
     let killed = false;
     let lastTarget = -1;
     let lastCast = -99;
-    for (let t = 0; t < 400 && !killed; t++) {
+    let lastPrayerPot = -10;
+    const PRAY_POTS = [2434, 139, 141, 143];
+    for (let t = 0; t < 600 && !killed; t++) {
         await q.guard('experiment');
         if (q.msgCount(/kill the shapeshifter once and for all/i) > 0) { killed = true; break; }
+        if (wantPfm) {
+            const pts = q.st()?.prayers?.prayerPoints ?? 0;
+            if (pts <= 6 && t - lastPrayerPot >= 4) {
+                const pot = PRAY_POTS.find(id => q.has(id));
+                if (pot) {
+                    lastPrayerPot = t;
+                    await q.s.direct({ type: 'useInventoryItem', slot: q.slot(pot)!, optionIndex: 1, reason: 'SDK' });
+                }
+            }
+            if ((q.st()?.prayers?.prayerPoints ?? 0) > 0 && !pfmOn()) {
+                await q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' });
+            }
+        }
         const n = exp();
         if (useMagic) {
-            if (n && q.T() - lastCast >= 5) {
+            if (n && !q.dialogOpen() && q.T() - lastCast >= 5) {
                 lastCast = q.T();
                 await q.s.direct({
                     type: 'spellOnNpc',

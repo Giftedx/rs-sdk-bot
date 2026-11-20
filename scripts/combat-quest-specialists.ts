@@ -599,7 +599,19 @@ export async function closeBankClean(s: Session, stop: StopFn): Promise<void> {
 }
 
 export async function pullArdougneLeverToWildy(s: Session, stop: StopFn): Promise<void> {
-    await moveToTile(s, { x: ARDY_LEVER.x, z: ARDY_LEVER.z, level: 0 }, 1, stop, 'walk to ardougne lever');
+    const p0 = posOf(s);
+    if (!p0 || d8({ x: p0.worldX, z: p0.worldZ }, ARDY_LEVER) > 140) {
+        await walkWaypoints(
+            s,
+            [{ x: 2660, z: 3405, tol: 3 }, { x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }],
+            260,
+            stop,
+            'walk camelot to ardougne lever',
+            { look: 1 },
+        );
+    } else {
+        await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 200, stop, 'walk to ardougne lever');
+    }
     const deadline = s.tick() + 50;
     while (!stop() && s.tick() < deadline) {
         const p = posOf(s);
@@ -734,29 +746,31 @@ export async function runWildyPvpLoop(
 }
 
 async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
-    // Climb Lumbridge Castle stairs (0 -> 1 -> 2) to bank, withdraw Law runes and Manta rays, Camelot -> Lever.
-    while (!stop() && (posOf(s)?.level ?? 0) < 2) {
-        const lvl = posOf(s)?.level ?? 0;
-        if (lvl === 0 && d8({ x: posOf(s)?.worldX ?? 0, z: posOf(s)?.worldZ ?? 0 }, LUMBRIDGE_STAIRS) > 4) {
-            await walkWaypoints(s, [{ x: LUMBRIDGE_STAIRS.x + 1, z: LUMBRIDGE_STAIRS.z, tol: 2 }], 60, stop, 'lumbridge stairs');
-        }
-        const stair = (s.sdk.getState()?.nearbyLocs ?? [])
-            .filter((l: any) => /stair/i.test(l.name ?? '') && d8(l, LUMBRIDGE_STAIRS) <= 4 && (l.optionsWithIndex ?? []).some((o: any) => /climb-up/i.test(o.text ?? '')))
-            .sort((a: any, b: any) => d8(a, LUMBRIDGE_STAIRS) - d8(b, LUMBRIDGE_STAIRS))[0];
-        if (stair) {
-            const op = stair.optionsWithIndex.find((o: any) => /climb-up/i.test(o.text ?? ''));
-            await s.sdk.sendInteractLoc(stair.x, stair.z, stair.id, op?.opIndex ?? 2);
-            await waitUntil(s, () => (posOf(s)?.level ?? 0) > lvl || stop(), { timeoutTicks: 8 });
-        } else {
-            await waitTicks(s, 1);
+    // Unequip worn Ring of dueling if needed, teleport to Castle Wars Chest, stock 1 Law + Manta rays, Camelot -> Lever.
+    const hasInvRing = () => s.sdk.getInventory().some(i => (DUELING_RING_IDS as readonly number[]).includes(i.id));
+    if (!hasInvRing()) {
+        const wornRing = s.sdk.getEquipment().find(e => (DUELING_RING_IDS as readonly number[]).includes(e.id));
+        if (wornRing) {
+            await s.direct({ type: 'unequipItem', slot: wornRing.slot, reason: 'SDK' });
+            await waitUntil(s, () => hasInvRing() || stop(), { timeoutTicks: 6 });
         }
     }
-    await walkWaypoints(s, [{ x: LUMBRIDGE_BANK.x, z: LUMBRIDGE_BANK.z, tol: 1 }], 40, stop, 'lumbridge top bank');
+    await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, stop);
+    await walkWaypoints(s, [{ x: CASTLE_WARS_BANK.x, z: CASTLE_WARS_BANK.z, tol: 1 }], 40, stop, 'castle wars bank');
     await openFreshBank(s, stop);
-    await withdrawExactCount(s, 563, 1, stop, 'Law rune');
+    await depositIds(s, [...DUELING_RING_IDS], stop);
+    if (!s.sdk.getEquipment().some(e => (DUELING_RING_IDS as readonly number[]).includes(e.id))) {
+        await withdrawExactCount(s, 2552, 1, stop, 'Ring of dueling(8)');
+    }
+    if (countById(s.sdk.getInventory(), 563) < 1) {
+        await withdrawExactCount(s, 563, 1, stop, 'Law rune');
+    }
     const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
     if (freeSlots > 0) await withdrawExactCount(s, 391, freeSlots, stop, 'Manta ray');
     await closeBankClean(s, stop);
+    if (s.sdk.getInventory().some(i => i.id === 2552)) {
+        await equipItemById(s, 2552, stop, 'Ring of dueling(8)');
+    }
 
     for (let attempt = 0; attempt < 5 && !stop(); attempt++) {
         const p = posOf(s);
@@ -783,7 +797,7 @@ async function pullKeepLeverOutAndRebank(s: Session, stop: StopFn): Promise<bool
     }, { timeoutTicks: 10 });
     if (!leftWildy || stop() || (posOf(s)?.worldZ ?? 9999) >= 3800) return false;
 
-    await moveToTile(s, ARDY_NORTH_BANK, 1, stop, 'ardougne north bank');
+    await walkWaypoints(s, [{ x: ARDY_NORTH_BANK.x, z: ARDY_NORTH_BANK.z, tol: 1 }], 120, stop, 'ardougne north bank');
     await openFreshBank(s, stop);
     const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
     if (freeSlots > 0) await withdrawExactCount(s, 391, freeSlots, stop, 'Manta ray');
@@ -920,7 +934,21 @@ export async function runMeleePvpSpecialist(
     milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
 
     await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, opts.stop);
-    await moveToTile(s, { x: 2522, z: 3494, level: 0 }, 2, opts.stop, 'castle wars to almera');
+    await walkWaypoints(
+        s,
+        [
+            { x: 2461, z: 3108, tol: 2 },
+            { x: 2499, z: 3150, tol: 2 },
+            { x: 2535, z: 3225, tol: 2 },
+            { x: 2559, z: 3311, tol: 2 },
+            { x: 2545, z: 3405, tol: 2 },
+            { x: 2522, z: 3494, tol: 2 },
+        ],
+        420,
+        opts.stop,
+        'castle wars to almera',
+        { look: 1 },
+    );
     milestone('almera');
 
     await opts.runWaterfallFn({

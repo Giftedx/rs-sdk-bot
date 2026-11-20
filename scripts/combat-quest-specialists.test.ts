@@ -145,6 +145,7 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
         expect(tankSup.bank?.some(b => b.id === 391 && b.count >= 500)).toBe(true);
         const tankPost = tankPostPresetConfig();
         expect(tankPost.position?.z).toBeGreaterThanOrEqual(3900);
+        expect(tankPost.equipment?.some(e => e.id === 2552 && e.slot === 12)).toBe(true);
         expect(tankPost.inventory?.length).toBe(28);
         expect(tankPost.inventory?.every(i => i.id === 391)).toBe(true);
     });

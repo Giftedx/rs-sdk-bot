@@ -48,6 +48,7 @@ const TANK_SKILLS = {
 
 const TANK_BANK = [
     { id: 563, count: 100 },
+    { id: 2552, count: 50 },
     { id: 391, count: 1000 },
 ];
 
@@ -66,7 +67,7 @@ export function tankSupplierPresetConfig(kit: readonly KitSpecItem[]): SaveConfi
         position: { x: 3222, z: 3222, level: 0 },
         skills: { ...TANK_SKILLS },
         inventory: kitToSaveInventory(kit),
-        equipment: [{ id: 1381, count: 1, slot: 3 }],
+        equipment: [{ id: 1381, count: 1, slot: 3 }, { id: 2552, count: 1, slot: 12 }],
         bank: [...TANK_BANK],
     };
 }
@@ -76,7 +77,7 @@ export function tankPostPresetConfig(): SaveConfig {
         position: { x: 3154, z: 3924, level: 0 },
         skills: { ...TANK_SKILLS },
         inventory: Array.from({ length: 28 }, () => ({ id: 391, count: 1 })),
-        equipment: [{ id: 1381, count: 1, slot: 3 }],
+        equipment: [{ id: 1381, count: 1, slot: 3 }, { id: 2552, count: 1, slot: 12 }],
         bank: [...TANK_BANK],
     };
 }
