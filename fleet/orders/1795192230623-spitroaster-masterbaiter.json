@@ -1,0 +1,22 @@
+{
+ "id": "1795192230623-spitroaster-masterbaiter",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Spitroaster",
+ "to": "Masterbaiter",
+ "item": "coins",
+ "count": 28504,
+ "start": 1795192230623,
+ "end": 1795194630623,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
