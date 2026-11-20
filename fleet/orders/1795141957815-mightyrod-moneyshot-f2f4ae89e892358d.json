@@ -1,0 +1,29 @@
+{
+ "id": "1795141957815-mightyrod-moneyshot-f2f4ae89e892358d",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "Moneyshot",
+ "item": "Air rune",
+ "count": 50,
+ "start": 1795141957815,
+ "end": 1795144357815,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Law rune",
+   "count": 10
+  }
+ ],
+ "takerWaits": true
+}
