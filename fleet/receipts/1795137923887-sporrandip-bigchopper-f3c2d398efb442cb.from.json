@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795137923887-sporrandip-bigchopper-f3c2d398efb442cb",
  "account": "SporranDip",
  "partner": "Bigchopper",
@@ -10,8 +10,22 @@
  "item": "Law rune",
  "requested": 8,
  "claim": "365c3c1b-608a-44b0-a36e-7d457db70176",
- "count": 0,
- "ok": false,
- "at": 1795137952365,
- "detail": "trade claimed"
+ "count": 8,
+ "ok": true,
+ "at": 1795138247174,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 8,
+  "after": 0
+ },
+ "bank": {
+  "count": 8,
+  "at": 1795137960889
+ },
+ "logout": {
+  "attemptId": "1795137952374-0000007200-0000000001",
+  "at": 1795138247167,
+  "sha256": "cb1dba16247e4f045a130653d729354e5ba43c93a6c6b5eb3769a5bd51e8482a"
+ },
+ "screen": true
 }
