@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795202908304-mightyrod-bigchopper-ca6f39f1981f1cef",
+ "role": "to",
+ "account": "Bigchopper",
+ "partner": "Mightyrod",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795202945232,
+ "detail": "Error: fleet trade claim held for order 1795202908075-fingersmith-bigchopper-02dcdfce112a15a8"
+}

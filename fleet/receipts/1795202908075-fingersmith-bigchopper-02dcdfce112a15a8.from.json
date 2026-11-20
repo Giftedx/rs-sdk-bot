@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795202908075-fingersmith-bigchopper-02dcdfce112a15a8",
  "account": "Fingersmith",
  "partner": "Bigchopper",
@@ -10,8 +10,18 @@
  "item": "Rune scimitar",
  "requested": 1,
  "claim": "9ce9283a-b155-414b-9a53-d4e2ad8d2ff3",
- "count": 0,
- "ok": false,
- "at": 1795202919951,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795202932821,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795202919959-0000008996-0000000001",
+  "at": 1795202932607,
+  "sha256": "8e75b90bf2001fd92265952a8476304b8e67ed528c5f50a4ff9f714f2bf44a77"
+ },
+ "screen": true
 }
