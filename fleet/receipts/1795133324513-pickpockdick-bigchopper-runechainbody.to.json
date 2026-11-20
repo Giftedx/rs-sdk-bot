@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795133324513-pickpockdick-bigchopper-runechainbody",
  "account": "Bigchopper",
  "partner": "PickpockDick",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "959d0e24-78ac-4594-8e1b-531b8bb29ac2",
- "count": 0,
- "ok": false,
- "at": 1795133405772,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795133427755,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795133427010
+ },
+ "logout": {
+  "attemptId": "1795133405784-0000020916-0000000001",
+  "at": 1795133427743,
+  "sha256": "a16ac6e6723c3a556a531ebc56051d0b0c3871f45533959c33581afbfb53bd2b"
+ },
+ "screen": true
 }
