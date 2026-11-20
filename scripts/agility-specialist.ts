@@ -15,6 +15,7 @@ import { componentId } from '../packages/core/src/logout';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { applyKnownDoorBlocks, sessionWalker, walkPath, type PathDeps } from '../packages/core/src/walk';
 import { fireSpell } from './fire-spells';
+import { burstTradeHost, fastTradeExternalReceive } from './fast-skills-lib';
 import { openQuest } from './generated/quest-lib';
 import { leaveRuneStarter } from './rune-starter';
 import { countById, exactNameRe } from './specialist-supplier';
@@ -222,7 +223,7 @@ export function resolveAgilityRouteConfig(
         route,
         usePotion: get('AGI_POTION', '1') !== '0',
         usePrayer: get('AGI_PRAY', '1') !== '0',
-        alignPipe: get('AGI_PIPE_ALIGN', '1') !== '0',
+        alignPipe: get('AGI_PIPE_ALIGN', '0') !== '0',
         cap: Number(get('CAP', get('AGI_CAP', capArg ?? '9000'))),
         supplier: get('AGI_SUPPLIER', supplierArg ?? (supplierEnv || `${bot}b`))!,
     };
@@ -576,6 +577,7 @@ class SupplierAgent {
     startEdgevilleMove(): void { this.edgevilleTrigger = true; }
     lastError(): Error | null { return this.error; }
     isReadyFor(phase: number): boolean { return this.readyPhase >= phase && !this.error; }
+    sessionHandle(): Session | null { return this.session; }
 
     async init(): Promise<void> {
         // The supplier idles at a bank until the runner arrives, which can exceed the 900-tick stall window: a stall stop
@@ -697,12 +699,14 @@ class SupplierAgent {
         }
     }
 
-    async runSingleLumbridgeFlow(runnerName: string, trade: readonly SupplyEntry[]): Promise<void> {
+    async runSingleLumbridgeFlow(_runnerName: string, _trade: readonly SupplyEntry[]): Promise<void> {
         try {
             const s = this.session!;
-            await waitUntil(s, () => invOf(s).length > 0, { timeoutTicks: 20 });
+            await waitUntil(s, () => this.stopFlag || invOf(s).length > 0, { timeoutTicks: 20 });
+            if (this.stopFlag) return;
             this.readyPhase = 1;
-            await this.giveBatch(runnerName, trade, 200);
+            const t0 = s.tick();
+            while (!this.stopFlag && s.tick() - t0 < 220) await waitTicks(s, 1);
             this.completedPhase = 1;
         } catch (err) {
             this.error = err instanceof Error ? err : Error(String(err));
@@ -750,11 +754,13 @@ async function runPrayerTo43(s: Session): Promise<void> {
     while (skillLvl(s, 'Prayer') < 43 && s.tick() - t0 < 80) {
         const bones = invOf(s).filter(i => i.id === ITEMS.dragonBones);
         if (!bones.length) break;
-        await clearDialogTick(s);
-        await s.direct({ type: 'useInventoryItem', slot: bones[0].slot, optionIndex: 1, reason: 'SDK' });
+        const acts: Promise<unknown>[] = [];
+        if (s.sdk.getState()?.dialog?.isOpen) acts.push(s.direct({ type: 'closeModal', reason: 'SDK' }));
+        acts.push(s.direct({ type: 'useInventoryItem', slot: bones[0].slot, optionIndex: 1, reason: 'SDK' }));
+        await Promise.all(acts);
         await waitTicks(s, 1);
     }
-    await clearAllDialogs(s, 8);
+    await clearDialogTick(s);
     if (skillLvl(s, 'Prayer') < 43) throw Error(`prayer reached ${skillLvl(s, 'Prayer')} (< 43)`);
 }
 
@@ -1157,7 +1163,6 @@ async function train1To49Monkeybars(s: Session, usePotion: boolean, usePrayer = 
         return [9590, 9591, 9589].find(z => !locs.some(l => l.id === 3576 && l.z === z && (l.x === 2801 || l.x === 2798))) ?? 9590;
     };
     for (let t = 0; t < 240 && skillLvl(s, 'Agility') < brimTarget; t++) {
-        await clearDialogTick(s);
         await maintainEnergy(s, 45);
         const p = posOf(s);
         if (!p) { await waitTicks(s, 1); continue; }
@@ -1177,7 +1182,10 @@ async function train1To49Monkeybars(s: Session, usePotion: boolean, usePrayer = 
                 .find(l => l.x === plankX && l.z === safeZ && (l.id === 3570 || l.id === 3571 || l.id === 3572));
             if (plank) {
                 crossing = true;
-                await s.direct({ type: 'interactLoc', x: plank.x, z: plank.z, locId: plank.id, optionIndex: 1, reason: 'SDK' });
+                const acts: Promise<unknown>[] = [];
+                if (s.sdk.getState()?.dialog?.isOpen) acts.push(s.direct({ type: 'closeModal', reason: 'SDK' }));
+                acts.push(s.direct({ type: 'interactLoc', x: plank.x, z: plank.z, locId: plank.id, optionIndex: 1, reason: 'SDK' }));
+                await Promise.all(acts);
                 still = 0;
             }
         }
@@ -1193,7 +1201,7 @@ async function train1To49Monkeybars(s: Session, usePotion: boolean, usePrayer = 
             await waitTicks(s, 1);
             continue;
         }
-        if (p.level === 3 && (!crossing || still >= 2)) {
+        if (p.level === 3 && (!crossing || still >= 1)) {
             const safeZ = safePlankZ();
             const onEast = p.worldX >= 2800;
             const plankX = onEast ? 2802 : 2797;
@@ -1201,7 +1209,10 @@ async function train1To49Monkeybars(s: Session, usePotion: boolean, usePrayer = 
                 .find(l => l.x === plankX && l.z === safeZ && (l.id === 3570 || l.id === 3571 || l.id === 3572));
             if (plank) {
                 crossing = true;
-                await s.direct({ type: 'interactLoc', x: plank.x, z: plank.z, locId: plank.id, optionIndex: 1, reason: 'SDK' });
+                const acts: Promise<unknown>[] = [];
+                if (s.sdk.getState()?.dialog?.isOpen) acts.push(s.direct({ type: 'closeModal', reason: 'SDK' }));
+                acts.push(s.direct({ type: 'interactLoc', x: plank.x, z: plank.z, locId: plank.id, optionIndex: 1, reason: 'SDK' }));
+                await Promise.all(acts);
             } else {
                 const entryX = onEast ? 2803 : 2796;
                 await s.direct({ type: 'walkTo', x: entryX, z: safeZ, running: true, reason: 'SDK' });
@@ -1211,7 +1222,7 @@ async function train1To49Monkeybars(s: Session, usePotion: boolean, usePrayer = 
         await waitTicks(s, 1);
     }
     if (skillLvl(s, 'Agility') < brimTarget) throw Error(`failed to reach Agility ${brimTarget} at Brimhaven (lvl ${skillLvl(s, 'Agility')})`);
-    await clearAllDialogs(s, 6);
+    await clearDialogTick(s);
 
     await rubGlory(s, /edgeville/i, { x: 3087, z: 3496 }, 20);
     await walkNear(s, { x: 3097, z: 3468, level: 0 }, 2, 35);
@@ -1363,7 +1374,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
         await waitTicks(s, 1);
     }
     if ((posOf(s)?.worldZ ?? 0) < 3930) throw Error(`failed to cross Wildy ridge gate (agi=${skillCur(s, 'Agility')})`);
-    await waitUntil(s, () => (posOf(s)?.worldZ ?? 0) >= 3932, { timeoutTicks: 8 });
+    await waitUntil(s, () => (posOf(s)?.worldZ ?? 0) >= 3931, { timeoutTicks: 8 });
     if (cfg.usePrayer) await setProtectFromMelee(s, false);
 
     if (cfg.alignPipe) {
@@ -1608,7 +1619,28 @@ export async function runAgilitySpecialist(bot: string, argv: readonly string[] 
 
         await dropAllMatching(spec, new Set(invOf(spec).map(i => i.id)), 6);
         await walkNear(spec, { x: 3222, z: 3218, level: 0 }, 2, 20);
-        await receiveTradeFrom(spec, cfg.supplier, trade1, 200, () => !supplier || supplier.isReadyFor(1));
+        if (cfg.route !== 'tourist') {
+            if (supplier) {
+                await waitUntil(spec, () => stop() || supplier!.isReadyFor(1) || !!supplier!.lastError(), { timeoutTicks: 200 });
+                if (supplier.lastError()) throw supplier.lastError()!;
+                await burstTradeHost(spec, supplier.sessionHandle()!, {
+                    giveIds: trade1.map(w => w.id),
+                    deadlineTick: spec.tick() + 200,
+                    allowHelperOnSingleModal: true,
+                });
+                supplier.stop();
+            } else {
+                const supplierNames = supplierEnv
+                    ? supplierEnv.split(',').map(v => v.trim()).filter(Boolean)
+                    : [cfg.supplier];
+                await fastTradeExternalReceive(spec, supplierNames, {
+                    acceptOffer: offer => trade1.every(w => countById(offer, w.id) >= w.count),
+                    deadlineTick: spec.tick() + 200,
+                });
+            }
+        } else {
+            await receiveTradeFrom(spec, cfg.supplier, trade1, 200, () => !supplier || supplier.isReadyFor(1));
+        }
         await spec.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
 
         let setupTicks = 0;

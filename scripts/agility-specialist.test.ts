@@ -153,7 +153,7 @@ describe('Route config, AIO catalog, and bench coverage', () => {
             route: 'monkeybars',
             usePotion: true,
             usePrayer: true,
-            alignPipe: true,
+            alignPipe: false,
             cap: 9000,
             supplier: 'Polevaulterb',
         });
@@ -161,7 +161,7 @@ describe('Route config, AIO catalog, and bench coverage', () => {
             route: 'monkeybars',
             usePotion: false,
             usePrayer: true,
-            alignPipe: true,
+            alignPipe: false,
             cap: 7500,
             supplier: 'test1b',
         });

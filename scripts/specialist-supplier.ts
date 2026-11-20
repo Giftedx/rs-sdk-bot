@@ -794,7 +794,7 @@ async function runServe(args: string[]): Promise<void> {
             }
         }
         const kitName = activePlan.name;
-        if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'runecraft' && kitName !== 'crafting' && kitName !== 'herblore' && kitName !== 'magic') {
+        if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'runecraft' && kitName !== 'crafting' && kitName !== 'herblore' && kitName !== 'magic' && kitName !== 'agility') {
             const peerRe = exactNameRe(specialist);
             for (let legIdx = 0; legIdx < activePlan.legs.length; legIdx++) {
                 const leg = activePlan.legs[legIdx]!;
@@ -1135,6 +1135,14 @@ async function runServe(args: string[]): Promise<void> {
                 if (!ok || stop() || s.tick() - t0 >= CAP) break;
             }
             allDone = ok;
+        } else if (kitName === 'agility') {
+            const batch = AGILITY_SPECIALIST_KIT.map(g => invSpec(g.id, g.count));
+            if (!hasExactKit(s.sdk.getInventory(), batch)) {
+                await withdrawExactKit(s, batch, bankTile, stop);
+            }
+            await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
+            emitReady();
+            allDone = (await serveFastBatch(s, specialist, batch, t0, CAP, stop)) === 'ok';
         } else {
             throw Error(`unhandled serve kit: ${kitName}`);
         }
