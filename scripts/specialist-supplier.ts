@@ -545,6 +545,7 @@ async function serveFastBatch(
         allowedReturnIds?: readonly number[];
         exitAfterAbsenceTicks?: number;
         insideCheck?: () => boolean;
+        primeOnArrival?: boolean;
     },
 ): Promise<'ok' | 'finished' | 'aborted'> {
     const specLower = specialist.toLowerCase();
@@ -563,6 +564,8 @@ async function serveFastBatch(
     let closedAfterConfirmTicks = 0;
     let sawSpecialist = false;
     let lastSeenSpecTick = s.tick();
+    let primeRemaining = opts?.primeOnArrival ? 2 : 0;
+    let lastPrimeTick = -10;
     const startCounts = new Map(batch.map(k => [k.id, countById(s.sdk.getInventory(), k.id)]));
 
     const hasTradeMsg = (re: RegExp) =>
@@ -619,6 +622,20 @@ async function serveFastBatch(
             if (reqMsg && specNearby && s.tick() - lastReplyTick >= 2) {
                 lastReqObsId = Math.max(lastReqObsId, reqMsg.observationId ?? 0);
                 lastReplyTick = s.tick();
+                primeRemaining = 0;
+                tradeObsBaseline = getMsgs().reduce((mx, m) => Math.max(mx, m.observationId ?? 0), 0);
+                tradeStartTick = s.tick();
+                await s.direct({ type: 'interactPlayer', playerIndex: specNearby.index, optionIndex: 4, reason: 'SDK' });
+            } else if (
+                primeRemaining > 0 &&
+                specNearby &&
+                s.tick() - lastReplyTick >= 2 &&
+                s.tick() - lastPrimeTick >= 3 &&
+                (primeRemaining === 2 || hasTradeMsg(/is busy at the moment/i))
+            ) {
+                primeRemaining--;
+                lastPrimeTick = s.tick();
+                lastReplyTick = s.tick();
                 tradeObsBaseline = getMsgs().reduce((mx, m) => Math.max(mx, m.observationId ?? 0), 0);
                 tradeStartTick = s.tick();
                 await s.direct({ type: 'interactPlayer', playerIndex: specNearby.index, optionIndex: 4, reason: 'SDK' });
@@ -660,7 +677,7 @@ async function serveFastBatch(
             if (!ht.myAccepted) {
                 acts.push(s.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
             }
-            if (ht.partnerAccepted) {
+            if (ht.myAccepted || (toOffer.length <= 3 && ht.partnerAccepted)) {
                 sawConfirm = true;
                 acts.push(s.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
             }
@@ -975,6 +992,7 @@ async function runServe(args: string[]): Promise<void> {
                         {
                             exitAfterAbsenceTicks: 120,
                             insideCheck: insideBody,
+                            primeOnArrival: trips > 0,
                         },
                     );
                     if (res === 'ok') {
