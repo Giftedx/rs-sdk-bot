@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795194386927-sporranbulge-weequickie-d10d95854d054621",
+ "account": "WeeQuickie",
+ "partner": "SporranBulge",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 100000,
+ "claim": "16881596-e292-4aed-b572-0b014e2026dc",
+ "count": 100000,
+ "ok": true,
+ "at": 1795194607157,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 100000
+ },
+ "bank": {
+  "count": 100000,
+  "at": 1795194606282
+ },
+ "logout": {
+  "attemptId": "1795194593920-0000026084-0000000001",
+  "at": 1795194607030,
+  "sha256": "5468f3b9f4bc897a444fb4395ac854eaa5f0117ee5aa4c5d4c043ab67a043abf"
+ },
+ "screen": true
+}

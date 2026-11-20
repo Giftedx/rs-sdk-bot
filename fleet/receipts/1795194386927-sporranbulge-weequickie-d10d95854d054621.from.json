@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795194386927-sporranbulge-weequickie-d10d95854d054621",
  "account": "SporranBulge",
  "partner": "WeeQuickie",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 100000,
  "claim": "80c174b4-cfb0-489e-8aee-6528b668bf20",
- "count": 0,
- "ok": false,
- "at": 1795194423402,
- "detail": "trade claimed"
+ "count": 100000,
+ "ok": true,
+ "at": 1795194605422,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 100000,
+  "after": 0
+ },
+ "bank": {
+  "count": 72104,
+  "at": 1795194587059
+ },
+ "logout": {
+  "attemptId": "1795194423410-0000002684-0000000001",
+  "at": 1795194605407,
+  "sha256": "5a577841d5cf6322e8ea35c00076635e8a75c0d7f2c14c26bca0794dce484cfb"
+ },
+ "screen": true
 }
