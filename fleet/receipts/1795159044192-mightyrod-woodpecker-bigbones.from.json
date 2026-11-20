@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795159044192-mightyrod-woodpecker-bigbones",
  "account": "Mightyrod",
  "partner": "Woodpecker",
@@ -10,8 +10,18 @@
  "item": "Big bones",
  "requested": 159,
  "claim": "d9c24e7a-5d2e-41c2-9a94-6da34f5dd5b4",
- "count": 0,
- "ok": false,
- "at": 1795159082014,
- "detail": "trade claimed"
+ "count": 159,
+ "ok": true,
+ "at": 1795159150248,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 159,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795159082022-0000024512-0000000001",
+  "at": 1795159150235,
+  "sha256": "4b63b33569027f358c2747cecfd0e94751a17137e87f4d00a4c971f463847841"
+ },
+ "screen": true
 }
