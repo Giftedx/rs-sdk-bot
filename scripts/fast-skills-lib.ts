@@ -686,6 +686,7 @@ export interface FastExternalReceiveOpts {
  maxDistance?: number;
  cooldownTicks?: number;
  cooldowns?: Map<string, number>;
+ lastTradedTick?: Map<string, number>;
  openTimeoutTicks?: number;
  offerTimeoutTicks?: number;
  canStand?: (p: ExternalPlayerCandidate) => boolean;
@@ -698,6 +699,7 @@ export function pickEligibleExternalSupplier<T extends ExternalPlayerCandidate>(
  tick: number,
  opts?: {
   maxDistance?: number;
+  lastTradedTick?: ReadonlyMap<string, number>;
   canStand?: (p: T) => boolean;
  },
 ): T | undefined {
@@ -707,18 +709,22 @@ export function pickEligibleExternalSupplier<T extends ExternalPlayerCandidate>(
   if (!order.has(lower)) order.set(lower, i);
  }
  let best: T | undefined;
+ let bestLast = Infinity;
  for (const p of nearby) {
   const lower = p.name.toLowerCase();
   if (!order.has(lower)) continue;
   if ((cooldowns.get(lower) ?? -Infinity) > tick) continue;
   if (opts?.maxDistance !== undefined && p.distance > opts.maxDistance) continue;
   if (opts?.canStand && !opts.canStand(p)) continue;
+  const last = opts?.lastTradedTick?.get(lower) ?? -Infinity;
   if (
    !best ||
-   p.distance < best.distance ||
-   (p.distance === best.distance && (order.get(lower) ?? 0) < (order.get(best.name.toLowerCase()) ?? 0))
+   last < bestLast ||
+   (last === bestLast && p.distance < best.distance) ||
+   (last === bestLast && p.distance === best.distance && (order.get(lower) ?? 0) < (order.get(best.name.toLowerCase()) ?? 0))
   ) {
    best = p;
+   bestLast = last;
   }
  }
  return best;
@@ -759,11 +765,15 @@ export async function fastTradeExternalReceive(
      if (partner && (opts.cooldownTicks ?? 0) > 0) {
       cooldowns.set(partner, spec.tick() + opts.cooldownTicks!);
      }
+     if (partner) opts.lastTradedTick?.set(partner, spec.tick());
      return partner;
     }
     if (hasTradeMsg(/(?:declined trade|enough inventory space)/i)) {
      const partner = openPartner ?? attemptPartner;
-     if (partner) cooldowns.set(partner, spec.tick() + 8);
+     if (partner) {
+      cooldowns.set(partner, spec.tick() + 8);
+      opts.lastTradedTick?.set(partner, spec.tick());
+     }
      sawConfirm = false;
      closedAfterConfirmTicks = 0;
      attemptPartner = undefined;
@@ -795,12 +805,14 @@ export async function fastTradeExternalReceive(
     : undefined;
    if (attemptPartner && (!target || spec.tick() - attemptStartTick >= openTimeoutTicks)) {
     cooldowns.set(attemptPartner, spec.tick() + 8);
+    opts.lastTradedTick?.set(attemptPartner, spec.tick());
     attemptPartner = undefined;
     target = undefined;
    }
    if (!target) {
     target = pickEligibleExternalSupplier(nearby, supplierNames, cooldowns, spec.tick(), {
      maxDistance: opts.maxDistance,
+     lastTradedTick: opts.lastTradedTick,
      canStand: opts.canStand,
     });
     if (target) {
@@ -863,7 +875,10 @@ export async function fastTradeExternalReceive(
    }
    if (acts.length) await Promise.all(acts);
   } else if (spec.tick() - openedTick >= offerTimeoutTicks) {
-   if (partnerLower) cooldowns.set(partnerLower, spec.tick() + 8);
+   if (partnerLower) {
+    cooldowns.set(partnerLower, spec.tick() + 8);
+    opts.lastTradedTick?.set(partnerLower, spec.tick());
+   }
    await spec.direct({ type: 'closeModal', reason: 'SDK' });
    attemptPartner = undefined;
    openPartner = undefined;

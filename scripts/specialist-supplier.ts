@@ -963,7 +963,7 @@ async function runServe(args: string[]): Promise<void> {
                     }
 
                     markReady();
-                    await moveGroundTo(s, BODY_ALTAR_STAND, 2, stop);
+                    await moveGroundTo(s, BODY_ALTAR_STAND, 0, stop);
                     const batchCount = Math.min(26, countById(s.sdk.getInventory(), ITEM_IDS.blankrune));
                     const res = await serveFastBatch(
                         s,

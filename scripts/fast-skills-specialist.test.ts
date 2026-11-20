@@ -263,6 +263,19 @@ test('multi-supplier runecraft role parsing, cooldown partner selection, and ext
     );
     expect(nextPicked?.name).toBe('Runner2');
 
+    // LRU tie-break picks least-recently-traded runner even when distance and index favor an earlier runner.
+    const lruPicked = pickEligibleExternalSupplier(
+        nearby,
+        ['Starter', 'Runner1', 'Runner2', 'FarRunner'],
+        new Map(),
+        100,
+        {
+            maxDistance: 4,
+            lastTradedTick: new Map([['starter', 80], ['runner1', 90]]),
+        },
+    );
+    expect(lruPicked?.name).toBe('Runner2');
+
     expect(SPECIALIST_FAST_SKILLS_EXTERNAL_CASES.map(c => c.key)).toEqual(['extra:specialist-runecraft']);
     const rcExt = SPECIALIST_FAST_SKILLS_EXTERNAL_CASES[0]!;
     expect(rcExt.companions).toHaveLength(23);
