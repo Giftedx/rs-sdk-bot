@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795202508534-bigpackage-bigchopper-57c657d9c0b72a67",
  "account": "Bigchopper",
  "partner": "Bigpackage",
@@ -10,20 +10,50 @@
  "item": "Rune platelegs",
  "requested": 1,
  "claim": "14e05113-df6f-4a3e-b2e0-4643545a4d67",
- "count": 0,
- "ok": false,
- "at": 1795202800214,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795202813029,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Iron arrow",
    "requested": 300,
-   "count": 0
+   "count": 300,
+   "inventory": {
+    "before": 0,
+    "after": 300
+   },
+   "bank": {
+    "count": 300,
+    "at": 1795202811860
+   }
   },
   {
    "item": "Water rune",
    "requested": 30,
-   "count": 0
+   "count": 30,
+   "inventory": {
+    "before": 0,
+    "after": 30
+   },
+   "bank": {
+    "count": 30,
+    "at": 1795202812260
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795202811475
+ },
+ "logout": {
+  "attemptId": "1795202800314-0000031696-0000000001",
+  "at": 1795202813020,
+  "sha256": "d7ec83f3b231055e8daf5f51e5d1db45ab735e5157bd00d6208807515b1d1a8d"
+ },
+ "screen": true
 }
