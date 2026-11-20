@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795159644159-knightrider-billionaire-shark",
+ "account": "KnightRider",
+ "partner": "Billionaire",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 6,
+ "claim": "d6dfb420-ed1f-4cfb-934b-87aec784b958",
+ "count": 0,
+ "ok": false,
+ "at": 1795159720207,
+ "detail": "trade claimed"
+}
