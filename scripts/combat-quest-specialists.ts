@@ -1163,21 +1163,29 @@ async function enchantRingsTo80AtBank(s: Session, stop: StopFn): Promise<void> {
     await closeBankClean(s, stop);
 }
 
-async function walkKeepToMageArenaHut(s: Session, stop: StopFn): Promise<void> {
-    await walkWaypoints(s, [{ x: 3096, z: 3957, tol: 1 }], 120, stop, 'keep to mage arena webs');
-    for (const wx of [3095, 3093]) {
-        const deadline = s.tick() + 40;
-        while (!stop() && s.tick() < deadline) {
-            const web = (s.sdk.getState()?.nearbyLocs ?? []).find(
-                (l: any) => l.x === wx && l.z === 3957 && (l.optionsWithIndex ?? []).some((o: any) => /slash/i.test(o.text ?? '')),
-            );
-            if (!web) break;
-            const knife = s.sdk.getInventory().find(i => i.id === 946);
-            if (!knife) throw Error('missing Knife to slash Mage Arena web');
-            await s.direct({ type: 'useItemOnLoc', itemSlot: knife.slot, x: wx, z: 3957, locId: web.id, reason: 'SDK' });
-            await waitTicks(s, 3);
-        }
+async function slashWebAt(s: Session, wx: number, wz: number, stop: StopFn): Promise<void> {
+    const deadline = s.tick() + 45;
+    while (!stop() && s.tick() < deadline) {
+        const web = (s.sdk.getState()?.nearbyLocs ?? []).find(
+            (l: any) => l.id === 733 && l.x === wx && l.z === wz && (l.optionsWithIndex ?? []).some((o: any) => /slash/i.test(o.text ?? '')),
+        );
+        if (!web) return;
+        const knife = s.sdk.getInventory().find(i => i.id === 946);
+        if (!knife) throw Error(`missing Knife to slash web at ${wx},${wz}`);
+        await s.direct({ type: 'useItemOnLoc', itemSlot: knife.slot, x: wx, z: wz, locId: web.id, reason: 'SDK' });
+        await waitTicks(s, 3);
     }
+    if ((s.sdk.getState()?.nearbyLocs ?? []).some((l: any) => l.id === 733 && l.x === wx && l.z === wz)) {
+        throw Error(`failed to slash web at ${wx},${wz}`);
+    }
+}
+
+async function walkKeepToMageArenaHut(s: Session, stop: StopFn): Promise<void> {
+    await walkWaypoints(s, [{ x: 3158, z: 3950, tol: 0 }], 60, stop, 'keep to north web');
+    await slashWebAt(s, 3158, 3951, stop);
+    await walkWaypoints(s, [{ x: 3096, z: 3957, tol: 1 }], 120, stop, 'keep web to mage arena webs');
+    await slashWebAt(s, 3095, 3957, stop);
+    await slashWebAt(s, 3093, 3957, stop);
     await walkWaypoints(s, [{ x: 3091, z: 3957, tol: 1 }], 30, stop, 'webs to mage arena ladder');
 }
 
@@ -1322,7 +1330,9 @@ export async function runMagicDefenceSpecialist(
     });
     milestone('mage_arena', `def=${skillInfo(s, 'Defence').baseLevel} defXp=${skillInfo(s, 'Defence').experience}`);
 
-    await walkWaypoints(s, [{ ...DESERTED_KEEP, tol: 1 }], 80, opts.stop, 'mage arena to keep');
+    await walkWaypoints(s, [{ x: 3158, z: 3952, tol: 0 }], 80, opts.stop, 'mage arena to keep north web');
+    await slashWebAt(s, 3158, 3951, opts.stop);
+    await walkWaypoints(s, [{ ...DESERTED_KEEP, tol: 1 }], 40, opts.stop, 'north web to keep');
     milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
     await runWildyMagicDefenceLoop(s, { targetLevel: 99, tankNames: opts.tankNames, stop: opts.stop });
