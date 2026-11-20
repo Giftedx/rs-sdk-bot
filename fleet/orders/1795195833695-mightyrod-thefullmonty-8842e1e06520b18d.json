@@ -1,0 +1,23 @@
+{
+ "id": "1795195833695-mightyrod-thefullmonty-8842e1e06520b18d",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "TheFullMonty",
+ "item": "Law rune",
+ "count": 2,
+ "start": 1795195833695,
+ "end": 1795197033695,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
