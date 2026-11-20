@@ -36,10 +36,15 @@ type RunnerState = {
  ready: boolean;
 };
 
-async function restockBonesAtDraynor(runner: RunnerState, done: () => boolean, deadline: number): Promise<void> {
+async function restockBonesAtDraynor(
+ runner: RunnerState,
+ done: () => boolean,
+ deadline: number,
+ signal: AbortSignal,
+): Promise<void> {
  const s = runner.session;
  const keep = new Set<number>();
- while (!done() && s.tick() < deadline) {
+ while (!done() && !signal.aborted && s.tick() < deadline) {
   if (runner.claimed) {
    await waitTicks(s, 1);
    continue;
@@ -52,16 +57,18 @@ async function restockBonesAtDraynor(runner: RunnerState, done: () => boolean, d
   }
   runner.ready = false;
   if (held < 28) {
-   const got = await restockAtBank(s, DRAYNOR_BANK, ITEM_IDS.dragon_bones, 28, keep, done, deadline);
+   const got = await restockAtBank(s, DRAYNOR_BANK, ITEM_IDS.dragon_bones, 28, keep, done, deadline, signal);
    if (!got) {
+    if (done() || signal.aborted) break;
     await waitTicks(s, 1);
     continue;
    }
   }
-  if (countItem(s.sdk.getInventory(), ITEM_IDS.dragon_bones) > 0) {
-   await navigateWorld(s, LUMBRIDGE_COURTYARD.x, LUMBRIDGE_COURTYARD.z, 0, Math.max(10, deadline - s.tick()));
+  if (!done() && !signal.aborted && countItem(s.sdk.getInventory(), ITEM_IDS.dragon_bones) > 0) {
+   await navigateWorld(s, LUMBRIDGE_COURTYARD.x, LUMBRIDGE_COURTYARD.z, 0, Math.max(10, deadline - s.tick()), signal);
    runner.ready = nearTile(s, LUMBRIDGE_COURTYARD.x, LUMBRIDGE_COURTYARD.z, 2);
   }
+  if (done() || signal.aborted) break;
   await waitTicks(s, 1);
  }
 }
@@ -94,13 +101,14 @@ export async function runPrayerSpecialist(
  const start = spec.tick();
  const deadline = start + opts.cap;
  let done = false;
+ const ac = new AbortController();
 
  const runners: RunnerState[] = helpers.map(session => ({
   session,
   claimed: false,
   ready: countItem(session.sdk.getInventory(), ITEM_IDS.dragon_bones) >= 28 && nearTile(session, LUMBRIDGE_COURTYARD.x, LUMBRIDGE_COURTYARD.z, 3),
  }));
- const tasks = runners.map(r => restockBonesAtDraynor(r, () => done, deadline));
+ const tasks = runners.map(r => restockBonesAtDraynor(r, () => done, deadline, ac.signal));
 
  try {
   await skipTutorialFast(spec, deadline);
@@ -143,6 +151,7 @@ export async function runPrayerSpecialist(
   };
  } finally {
   done = true;
+  ac.abort();
   await Promise.allSettled(tasks);
  }
 }

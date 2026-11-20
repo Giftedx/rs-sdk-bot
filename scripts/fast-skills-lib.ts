@@ -98,6 +98,17 @@ export const TRADE_OFFER_INV = 3322;
 export const TRADE_MAIN_ACCEPT = 3420;
 export const TRADE_CONFIRM_ACCEPT = 3546;
 export const LUMBRIDGE_COURTYARD = { x: 3222, z: 3222, level: 0 } as const;
+export const GLORY_IDS = [ITEM_IDS.amulet_of_glory_4, 1710, 1708, 1706] as const;
+export const GAMES_NECKLACE_IDS = [
+ ITEM_IDS.necklace_of_minigames_8,
+ 3855,
+ 3857,
+ 3859,
+ 3861,
+ 3863,
+ 3865,
+ 3867,
+] as const;
 
 export interface SupplyEntry {
  itemId: number;
@@ -307,11 +318,22 @@ export function findNpcBy(s: Session, pred: (npc: ReturnType<Session['sdk']['get
  return s.sdk.getNearbyNpcs().filter(pred).sort((a, b) => a.distance - b.distance)[0] ?? null;
 }
 
-export async function waitNearPlayer(mover: Session, target: Session, deadlineTick: number): Promise<void> {
+export async function waitNearPlayer(
+ mover: Session,
+ target: Session,
+ deadlineTick: number,
+ canStand?: (pos: NonNullable<ReturnType<typeof playerPos>>) => boolean,
+): Promise<void> {
  while (mover.tick() < deadlineTick) {
   const mp = playerPos(mover);
   const tp = playerPos(target);
-  if (mp && tp && mp.level === tp.level && Math.max(Math.abs(mp.worldX - tp.worldX), Math.abs(mp.worldZ - tp.worldZ)) <= 1) {
+  if (
+   mp &&
+   tp &&
+   mp.level === tp.level &&
+   Math.max(Math.abs(mp.worldX - tp.worldX), Math.abs(mp.worldZ - tp.worldZ)) <= 1 &&
+   (!canStand || canStand(mp))
+  ) {
    return;
   }
   if (tp) {
@@ -326,11 +348,12 @@ export interface BurstTradeSpec {
  giveIds?: readonly number[];
  returnIds?: readonly number[];
  deadlineTick: number;
+ canStand?: (pos: NonNullable<ReturnType<typeof playerPos>>) => boolean;
 }
 
-// Executes a decode-ordered 3-to-4-tick trade: helper packets enqueue before specialist packets.
+// Executes a 3-to-4-tick trade: closes dialogs + sends requests together, then pipelines offer/accept/confirm within USER_EVENT.limit=5.
 export async function burstTradeHost(spec: Session, helper: Session, opts: BurstTradeSpec): Promise<void> {
- await waitNearPlayer(helper, spec, opts.deadlineTick);
+ await waitNearPlayer(helper, spec, opts.deadlineTick, opts.canStand);
  const helperName = helper.name.toLowerCase();
  const specName = spec.name.toLowerCase();
  let sawConfirm = false;
@@ -343,17 +366,12 @@ export async function burstTradeHost(spec: Session, helper: Session, opts: Burst
    if (sawConfirm) return;
    const specDlg = !!spec.sdk.getState()?.dialog?.isOpen;
    const helpDlg = !!helper.sdk.getState()?.dialog?.isOpen;
-   if (specDlg || helpDlg) {
-    if (specDlg) await spec.direct({ type: 'closeModal', reason: 'SDK' });
-    if (helpDlg) await helper.direct({ type: 'closeModal', reason: 'SDK' });
-    // CloseModal clears on processQueues (next tick), so avoid wasted busy trade packets on this tick.
-    await waitTicks(spec, 1);
-    continue;
-   }
-
    const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperName);
    const sTarget = helper.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === specName);
+   // Server clears modal on CloseModal before processing InteractPlayer in the same tick.
+   if (helpDlg) await helper.direct({ type: 'closeModal', reason: 'SDK' });
    if (sTarget) await helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' });
+   if (specDlg) await spec.direct({ type: 'closeModal', reason: 'SDK' });
    if (hTarget) await spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' });
    await waitTicks(spec, 1);
    continue;
@@ -371,35 +389,42 @@ export async function burstTradeHost(spec: Session, helper: Session, opts: Burst
    continue;
   }
 
-  // First offer screen. Helper offers first so decode-ordered accept works in the same tick when spec returns 0 items.
   const hWantSet = opts.giveIds ? new Set(opts.giveIds) : null;
   const hDistinctSlots = uniqueSlotsForIds(helper.sdk.getInventory(), hWantSet, ht.myOffer);
   const sReturnSet = opts.returnIds?.length ? new Set(opts.returnIds) : null;
   const sDistinctSlots = sReturnSet ? uniqueSlotsForIds(spec.sdk.getInventory(), sReturnSet, st.myOffer) : [];
 
-  const hOffers = hDistinctSlots.slice(0, 4);
-  const sOffers = sDistinctSlots.slice(0, 4);
-
+  const specAddingItems = sDistinctSlots.length > 0;
+  const hMaxOffers = hDistinctSlots.length > 4 || specAddingItems ? 5 : 4;
+  const hOffers = hDistinctSlots.slice(0, hMaxOffers);
+  const helperOfferComplete = hDistinctSlots.length <= hOffers.length;
   if (hOffers.length) {
    await Promise.all(
     hOffers.map(slot => helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' })),
    );
   }
-  const helperOfferComplete = hDistinctSlots.length <= hOffers.length;
-  const specAddingItems = sDistinctSlots.length > 0;
-  // When returning items, helper waits until spec's remaining return slots clear so partner accept isn't reset.
-  if (helperOfferComplete && !specAddingItems && !ht.myAccepted) {
+  const hCanAccept = helperOfferComplete && !specAddingItems;
+  if (hCanAccept && !ht.myAccepted && hOffers.length <= 4) {
    await helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' });
   }
+  if (hCanAccept && (ht.myAccepted || hOffers.length <= 3)) {
+   await helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' });
+  }
 
+  const sMaxOffers = sDistinctSlots.length > 4 ? 5 : 4;
+  const sOffers = sDistinctSlots.slice(0, sMaxOffers);
+  const specOfferComplete = sDistinctSlots.length <= sOffers.length;
   if (sOffers.length) {
    await Promise.all(
     sOffers.map(slot => spec.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' })),
    );
   }
-  const specOfferComplete = sDistinctSlots.length <= sOffers.length;
-  if (specOfferComplete && !st.myAccepted) {
+  const specCanAccept = specOfferComplete && (helperOfferComplete || ht.myAccepted || (ht.myOffer?.length ?? 0) > 0);
+  if (specCanAccept && !st.myAccepted && sOffers.length <= 4) {
    await spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' });
+  }
+  if (specOfferComplete && (ht.myAccepted || (hCanAccept && hOffers.length <= 4)) && sOffers.length <= 3) {
+   await spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' });
   }
 
   await waitTicks(spec, 1);
@@ -443,18 +468,27 @@ export async function runTo(s: Session, x: number, z: number, tol = 2, maxTicks 
  }
 }
 
-export async function navigateWorld(s: Session, x: number, z: number, level = 0, timeoutTicks = 250): Promise<void> {
- if (nearTile(s, x, z, 2, level)) return;
+export async function navigateWorld(
+ s: Session,
+ x: number,
+ z: number,
+ level = 0,
+ timeoutTicks = 250,
+ signal?: AbortSignal,
+): Promise<void> {
+ if (signal?.aborted || nearTile(s, x, z, 2, level)) return;
  const p = playerPos(s);
  if (p && p.level === level && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= 24) {
   const walker = await sessionWalker(s);
-  const quick = await walkPath(walker, [{ x, z, tol: 2 }], { maxTicks: Math.max(10, Math.min(120, timeoutTicks)) });
-  if (quick.ok || nearTile(s, x, z, 2, level)) return;
+  const quick = await walkPath(walker, [{ x, z, tol: 2 }], { maxTicks: Math.max(10, Math.min(120, timeoutTicks)), signal });
+  if (signal?.aborted || quick.ok || nearTile(s, x, z, 2, level)) return;
  }
  const res = await goTo(s, await getWorld(), { x, z, level }, accountOf(s), {
   maxRetriesPerLeg: 1,
   legTimeoutTicks: Math.max(10, timeoutTicks),
+  signal,
  });
+ if (signal?.aborted) return;
  if (!res.ok && !nearTile(s, x, z, 2, level)) {
   throw Error(`goTo failed to ${x},${z},${level}: ${res.detail}`);
  }
@@ -462,11 +496,12 @@ export async function navigateWorld(s: Session, x: number, z: number, level = 0,
 
 export async function rubJewelryTeleport(
  s: Session,
- itemId: number,
+ itemIds: number | readonly number[],
  choiceRegex: RegExp,
  arrived: () => boolean,
  deadlineTick: number,
 ): Promise<void> {
+ const wanted = typeof itemIds === 'number' ? [itemIds] : itemIds;
  while (s.tick() < deadlineTick) {
   if (arrived()) return;
   const d = s.sdk.getDialog();
@@ -484,12 +519,12 @@ export async function rubJewelryTeleport(
    await waitTicks(s, 1);
    continue;
   }
-  const item = s.sdk.getInventory().find(i => i.id === itemId);
-  if (!item) throw Error(`jewelry item ${itemId} missing for teleport`);
+  const item = s.sdk.getInventory().find(i => wanted.includes(i.id));
+  if (!item) throw Error(`jewelry item ${wanted.join('/')} missing for teleport`);
   await s.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 4, reason: 'SDK' });
   await waitTicks(s, 1);
  }
- throw Error(`jewelry teleport ${itemId} exceeded cap`);
+ throw Error(`jewelry teleport ${wanted.join('/')} exceeded cap`);
 }
 
 export async function restockAtBank(
@@ -500,10 +535,11 @@ export async function restockAtBank(
  keepIds: ReadonlySet<number>,
  done: () => boolean,
  deadline: number,
+ signal?: AbortSignal,
 ): Promise<boolean> {
  if (countItem(s.sdk.getInventory(), itemId) >= targetCount) return true;
- await navigateWorld(s, bankTile.x, bankTile.z, bankTile.level ?? 0, Math.max(10, deadline - s.tick()));
- while (!done() && s.tick() < deadline && !s.sdk.getState()?.bank?.isOpen) {
+ await navigateWorld(s, bankTile.x, bankTile.z, bankTile.level ?? 0, Math.max(10, deadline - s.tick()), signal);
+ while (!done() && !signal?.aborted && s.tick() < deadline && !s.sdk.getState()?.bank?.isOpen) {
   const gen = s.bankObservation?.()?.generation ?? -1;
   const res = await s.bot.openBank();
   if (s.sdk.getState()?.bank?.isOpen) break;
@@ -516,7 +552,7 @@ export async function restockAtBank(
    await waitTicks(s, 1);
   }
  }
- if (done() || s.tick() >= deadline || !s.sdk.getState()?.bank?.isOpen) return false;
+ if (done() || signal?.aborted || s.tick() >= deadline || !s.sdk.getState()?.bank?.isOpen) return false;
 
  const seenUnwanted = new Set<number>();
  for (const item of s.sdk.getInventory()) {

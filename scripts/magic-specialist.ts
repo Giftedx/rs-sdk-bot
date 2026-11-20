@@ -51,7 +51,7 @@ export interface MagicBatchPlan {
 }
 
 export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
- // Batch 0 (27 slots total): staff + 8 rune stacks + 12 sapphire + 6 emerald rings
+ // Batch 0 (28 slots total): staff + 8 rune stacks + 12 sapphire + 5 emerald rings + 2 sharks
  {
   give: [
    { id: ITEM_IDS.staff_of_fire, count: 1 },
@@ -64,14 +64,15 @@ export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
    { id: ITEM_IDS.lawrune, count: 10 },
    { id: ITEM_IDS.bloodrune, count: 850 },
    { id: ITEM_IDS.sapphire_ring, count: 12 },
-   { id: ITEM_IDS.emerald_ring, count: 6 },
+   { id: ITEM_IDS.emerald_ring, count: 5 },
+   { id: ITEM_IDS.shark, count: 2 },
   ],
   returnIds: [],
  },
- // Batch 1 (21 emerald -> 27 emerald total, Lv 49)
+ // Batch 1 (22 emerald -> 27 emerald total, Lv 49)
  {
-  give: [{ id: ITEM_IDS.emerald_ring, count: 21 }],
-  returnIds: [],
+  give: [{ id: ITEM_IDS.emerald_ring, count: 22 }],
+  returnIds: [ITEM_IDS.ring_of_recoil, ITEM_IDS.ring_of_dueling_8],
  },
  // Batch 2 (16 ruby + 4 diamond)
  {
@@ -79,12 +80,12 @@ export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
    { id: ITEM_IDS.ruby_ring, count: 16 },
    { id: ITEM_IDS.diamond_ring, count: 4 },
   ],
-  returnIds: [],
+  returnIds: [ITEM_IDS.ring_of_dueling_8],
  },
  // Batch 3 (20 diamond)
  {
   give: [{ id: ITEM_IDS.diamond_ring, count: 20 }],
-  returnIds: [],
+  returnIds: [ITEM_IDS.ring_of_forging, ITEM_IDS.ring_of_life],
  },
  // Batch 4 (13 diamond = 37 diamond total -> Lv 68 + 7 dragonstone)
  {
@@ -97,7 +98,7 @@ export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
  // Batch 5 (20 dragonstone)
  {
   give: [{ id: ITEM_IDS.dragonstone_ring, count: 20 }],
-  returnIds: [],
+  returnIds: [ITEM_IDS.ring_of_life, ITEM_IDS.ring_of_wealth],
  },
  // Batch 6 (20 dragonstone)
  {
@@ -183,19 +184,38 @@ function magicKeepSet(): Set<number> {
  ]);
 }
 
+async function eatSharkIfLow(spec: Session): Promise<boolean> {
+ const hp = spec.sdk.getSkill('Hitpoints')?.level ?? 10;
+ if (hp > 7) return false;
+ const shark = spec.sdk.getInventory().find(i => i.id === ITEM_IDS.shark);
+ if (!shark) return false;
+ await spec.direct({ type: 'useInventoryItem', slot: shark.slot, optionIndex: 1, reason: 'SDK' });
+ return true;
+}
+
 async function castWindStrikeToLevel7(spec: Session, deadline: number): Promise<void> {
  const windStrike = componentId('magic:wind_strike');
- while (spec.tick() < deadline && skillLevel(spec, 'Magic') < 7) {
+ const isSafeTarget = (name: string) => /^(chicken|rat|giant rat|spider|giant spider|goblin|imp)$/i.test(name);
+ while (spec.tick() < deadline) {
+  const npcs = spec.sdk.getNearbyNpcs();
+  const attacker = npcs.find(
+   n => n.inCombat && n.distance <= 3 && /^(man|woman|goblin|spider|giant spider|rat|giant rat|imp)$/i.test(n.name),
+  );
+  if (skillLevel(spec, 'Magic') >= 7 && !attacker) break;
+  await eatSharkIfLow(spec);
   const st = spec.sdk.getState();
   if (st?.dialog?.isOpen) {
    await spec.direct({ type: 'closeModal', reason: 'SDK' });
-   await waitTicks(spec, 1);
-   continue;
   }
-  const npc = spec.sdk
-   .getNearbyNpcs()
-   .filter(n => /^(man|woman|goblin|spider|rat)$/i.test(n.name) && n.optionsWithIndex.some(o => /^attack$/i.test(o.text)))
-   .sort((a, b) => a.distance - b.distance)[0];
+  const npc =
+   attacker ??
+   npcs
+    .filter(
+     n =>
+      /^(chicken|rat|giant rat|spider|giant spider|goblin|imp|man|woman)$/i.test(n.name) &&
+      n.optionsWithIndex.some(o => /^attack$/i.test(o.text)),
+    )
+    .sort((a, b) => (isSafeTarget(a.name) ? 0 : 1) - (isSafeTarget(b.name) ? 0 : 1) || a.distance - b.distance)[0];
   if (npc) {
    await spec.direct({ type: 'spellOnNpc', npcIndex: npc.index, spellComponent: windStrike, reason: 'SDK' });
   }
@@ -205,19 +225,18 @@ async function castWindStrikeToLevel7(spec: Session, deadline: number): Promise<
 
 async function enchantHeldRings(spec: Session, target: number, deadline: number): Promise<void> {
  while (spec.tick() < deadline && skillLevel(spec, 'Magic') < target) {
+  await eatSharkIfLow(spec);
   const lvl = skillLevel(spec, 'Magic');
   const inv = spec.sdk.getInventory();
   const tier = ENCHANT_TIERS.find(t => lvl >= t.level && inv.some(i => i.id === t.ringId));
   if (!tier) return;
   const ring = inv.find(i => i.id === tier.ringId)!;
   const st = spec.sdk.getState();
-  if (st?.dialog?.isOpen && !st?.trade?.isOpen) {
-   await spec.direct({ type: 'closeModal', reason: 'SDK' });
-   await waitTicks(spec, 1);
-   continue;
-  }
   const beforeCount = countItem(inv, tier.ringId);
   const sentTick = spec.tick();
+  if (st?.dialog?.isOpen && !st?.trade?.isOpen) {
+   await spec.direct({ type: 'closeModal', reason: 'SDK' });
+  }
   await spec.direct({ type: 'spellOnItem', slot: ring.slot, spellComponent: tier.component, reason: 'SDK' });
   const done = await waitUntil(
    spec,
@@ -225,8 +244,8 @@ async function enchantHeldRings(spec: Session, target: number, deadline: number)
    { timeoutTicks: 5 },
   );
   if (done && countItem(spec.sdk.getInventory(), tier.ringId) < beforeCount) {
-   // enchant.rs2 sets p_delay(1) after inv_setslot (2 ticks remaining before next cast).
-   await waitTicks(spec, 2);
+   // enchant.rs2 sets p_delay(1): server clears delayed on T+2, so sleeping 1 tick aligns next cast on T+3.
+   await waitTicks(spec, 1);
   }
  }
 }
@@ -383,6 +402,7 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
    await waitTicks(spec, 1);
    continue;
   }
+  await spec.sdk.scanGroundItems(0);
   const groundCape = spec.sdk.getState()?.groundItems?.find((g: any) => g.id === 2414);
   if (groundCape) {
    await spec.direct({ type: 'pickupItem', x: groundCape.x, z: groundCape.z, itemId: 2414, reason: 'SDK' });
@@ -414,12 +434,9 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
 async function spamChargeTo99(spec: Session, target: number, deadline: number): Promise<void> {
  const charge = componentId('magic:charge');
  while (spec.tick() < deadline && skillLevel(spec, 'Magic') < target) {
-  const st = spec.sdk.getState();
-  const modalOpen = !!st?.dialog?.isOpen;
+  // charge.rs2 calls if_close on click and has zero p_delay: all 5 casts/tick resolve even over levelup modals.
   const acts: Promise<unknown>[] = [];
-  if (modalOpen) acts.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
-  const count = modalOpen ? 4 : 5;
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < 5; i++) {
    acts.push(spec.direct({ type: 'clickComponent', componentId: charge, reason: 'SDK' }));
   }
   await Promise.all(acts);
@@ -455,8 +472,8 @@ export async function runMagicSpecialist(
    const batch = MAGIC_BATCHES[i]!;
    const helper = helpers[i]!;
    if (i === MAGIC_BATCHES.length - 1) {
-    // Shed mind/cosmic/water/earth/finished rings before Mage Arena combat kit.
-    await dropItemsFast(spec, new Set([ITEM_IDS.airrune, ITEM_IDS.firerune, ITEM_IDS.lawrune, ITEM_IDS.bloodrune]), deadline);
+    // Shed mind/cosmic/water/earth/finished rings before Mage Arena combat kit; preserve any spare sharks.
+    await dropItemsFast(spec, new Set([ITEM_IDS.airrune, ITEM_IDS.firerune, ITEM_IDS.lawrune, ITEM_IDS.bloodrune, ITEM_IDS.shark]), deadline);
    } else if (i > 0 && batch.returnIds.length === 0) {
     await dropItemsFast(spec, keep, deadline);
    }

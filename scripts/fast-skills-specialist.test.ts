@@ -8,7 +8,7 @@ import { observedSupplies } from '../packages/practice/src/specialist-rehearsal'
 import { resolveSkillerStep } from './aio-skiller';
 import { CRAFTING_BATCHES, CRAFTING_SUPPLY_BILL } from './crafting-specialist';
 import { assertCatalogItems, loadItemCatalog, parseSpecialistArgs } from './fast-skills-lib';
-import { HERB_POTION_TIERS, HERBLORE_BATCHES, HERBLORE_SUPPLY_BILL } from './herblore-specialist';
+import { HERB_POTION_TIERS, HERBLORE_ALL_BATCHES, HERBLORE_BATCHES, HERBLORE_SUPPLY_BILL } from './herblore-specialist';
 import { ENCHANT_TIERS, MAGIC_BATCHES, MAGIC_SUPPLY_BILL } from './magic-specialist';
 import { benchCases } from './measure/aio-bench-cases';
 import { SPECIALIST_FAST_SKILLS_CASES, expandInventory } from './measure/specialist-fast-skills-cases';
@@ -76,10 +76,10 @@ describe('fast-skills specialist plans reach level 99 with valid inventory fits'
   expect(xpFromGems + 290 * 3437.5).toBeGreaterThan(xp99);
  });
 
- test('Herblore 18 Lumbridge Courtyard batches unlock sequentially from 1 to 99 with no Druidic Ritual', () => {
-  for (const b of HERBLORE_BATCHES) expect(expandInventory(b.give).length).toBeLessThanOrEqual(28);
+ test('Herblore starter + 18 Kaqemeex batches unlock sequentially from Druidic Ritual (6,250 XP) to 99', () => {
+  for (const b of HERBLORE_ALL_BATCHES) expect(expandInventory(b.give).length).toBeLessThanOrEqual(28);
 
-  let xp = 0;
+  let xp = 6250; // Druidic Ritual reward (Lv 26)
   for (const b of HERBLORE_BATCHES) {
    const counts = new Map<number, number>();
    for (const g of b.give) counts.set(g.id, (counts.get(g.id) ?? 0) + g.count);

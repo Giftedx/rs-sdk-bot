@@ -7,6 +7,7 @@ import {
  countItem,
  dropItemsFast,
  goalXp,
+ GLORY_IDS,
  ITEM_IDS,
  logPhase,
  navigateWorld,
@@ -21,6 +22,7 @@ import {
  waitTicks,
  waitUntil,
  withSpecialistFleet,
+ xpForLevel,
  type SupplyEntry,
 } from './fast-skills-lib';
 
@@ -89,26 +91,60 @@ function nextWantedBarId(lvl: number): number {
  return ITEM_IDS.adamantite_bar;
 }
 
+const SMITH_BAR_XP: Record<number, number> = {
+ [ITEM_IDS.iron_bar]: 625,
+ [ITEM_IDS.steel_bar]: 937.5,
+ [ITEM_IDS.mithril_bar]: 1250,
+ [ITEM_IDS.adamantite_bar]: 1562.5,
+};
+
+function anvilRoomOk(pos: { worldX: number; worldZ: number; level: number } | null): boolean {
+ return !!pos && pos.level === 0 && pos.worldZ >= 3425 && pos.worldX >= 3182 && pos.worldX <= 3190;
+}
+
+function nextDeliveryForCommittedXp(committedXp: number): SmithRunnerDelivery {
+ if (committedXp < xpForLevel(48)) return { barId: ITEM_IDS.iron_bar, count: 25 };
+ if (committedXp < xpForLevel(68)) return { barId: ITEM_IDS.steel_bar, count: 25 };
+ if (committedXp < xpForLevel(88)) return { barId: ITEM_IDS.mithril_bar, count: 25 };
+ return { barId: ITEM_IDS.adamantite_bar, count: 25 };
+}
+
+function isBarObsoleteForLevel(barId: number, specLvl: number): boolean {
+ if (barId === ITEM_IDS.iron_bar) return specLvl >= 48;
+ if (barId === ITEM_IDS.steel_bar) return specLvl >= 68;
+ if (barId === ITEM_IDS.mithril_bar) return specLvl >= 88;
+ return false;
+}
+
 async function runVarrockSmithRunner(
  runner: SmithRunnerState,
- claimNextDelivery: () => SmithRunnerDelivery | null,
+ spec: Session,
+ claimNextDelivery: (exclude: SmithRunnerState) => SmithRunnerDelivery,
  done: () => boolean,
  deadline: number,
+ signal: AbortSignal,
 ): Promise<void> {
  const s = runner.session;
  const keep = new Set<number>();
- while (!done() && s.tick() < deadline) {
+ while (!done() && !signal.aborted && s.tick() < deadline) {
   if (runner.claimed) {
    await waitTicks(s, 1);
    continue;
   }
   if (runner.task) {
+   if (isBarObsoleteForLevel(runner.task.barId, skillLevel(spec, 'Smithing'))) {
+    runner.ready = false;
+    runner.task = null;
+    continue;
+   }
    const held = countItem(s.sdk.getInventory(), runner.task.barId);
    if (held >= runner.task.count) {
-    if (!nearTile(s, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 2)) {
-     await navigateWorld(s, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 0, Math.max(10, deadline - s.tick()));
+    const pos = playerPos(s);
+    if (!nearTile(s, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 2) || !anvilRoomOk(pos)) {
+     await navigateWorld(s, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 0, Math.max(10, deadline - s.tick()), signal);
     }
-    runner.ready = nearTile(s, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 2) && held >= runner.task.count;
+    if (done() || signal.aborted) break;
+    runner.ready = nearTile(s, VARROCK_WEST_ANVIL.x, VARROCK_WEST_ANVIL.z, 2) && anvilRoomOk(playerPos(s)) && held >= runner.task.count;
     await waitTicks(s, 1);
     continue;
    }
@@ -116,16 +152,11 @@ async function runVarrockSmithRunner(
    runner.ready = false;
   }
 
-  const next = claimNextDelivery();
-  if (!next) {
-   await waitTicks(s, 1);
-   continue;
-  }
-  runner.task = next;
+  runner.task = claimNextDelivery(runner);
   runner.ready = false;
 
-  if (countItem(s.sdk.getInventory(), next.barId) < next.count) {
-   await restockAtBank(s, VARROCK_WEST_BANK, next.barId, next.count, keep, done, deadline);
+  if (countItem(s.sdk.getInventory(), runner.task.barId) < runner.task.count) {
+   await restockAtBank(s, VARROCK_WEST_BANK, runner.task.barId, runner.task.count, keep, done, deadline, signal);
   }
  }
 }
@@ -140,16 +171,14 @@ async function smithHeldBars(spec: Session, target: number, deadline: number): P
   const st = () => spec.sdk.getState();
   const ifaceOpen = () => !!st()?.interface?.isOpen && st()?.interface?.interfaceId === SMITHING_INTERFACE;
 
-  if (st()?.dialog?.isOpen && !st()?.trade?.isOpen) {
-   await spec.direct({ type: 'closeModal', reason: 'SDK' });
-   await waitTicks(spec, 1);
-   continue;
-  }
   if (!ifaceOpen()) {
    const anvil = spec.sdk.findNearbyLoc(/^anvil$/i);
    const bar = spec.sdk.getInventory().find(i => i.id === r.bar);
    if (!anvil || !bar) throw Error(`smithing anvil or bar ${r.bar} missing`);
    const sentTick = spec.tick();
+   if (st()?.dialog?.isOpen && !st()?.trade?.isOpen) {
+    await spec.direct({ type: 'closeModal', reason: 'SDK' });
+   }
    await spec.direct({ type: 'useItemOnLoc', itemSlot: bar.slot, x: anvil.x, z: anvil.z, locId: anvil.id, reason: 'SDK' });
    await waitUntil(spec, () => spec.tick() > sentTick && (ifaceOpen() || !!st()?.dialog?.isOpen), { timeoutTicks: 8 });
    if (!ifaceOpen()) continue;
@@ -190,27 +219,36 @@ export async function runSmithingSpecialist(
  const start = spec.tick();
  const deadline = start + opts.cap;
  let done = false;
+ const ac = new AbortController();
 
  const [starterHelper, runnerC, runnerD] = helpers as [Session, Session, Session, ...Session[]];
- let queueIndex = 2;
- const claimNextDelivery = (): SmithRunnerDelivery | null => {
-  if (queueIndex >= SMITHING_RUNNER_QUEUE.length) return null;
-  return SMITHING_RUNNER_QUEUE[queueIndex++]!;
- };
-
  const runners: SmithRunnerState[] = [
-  { session: runnerC, task: SMITHING_RUNNER_QUEUE[0]!, claimed: false, ready: false },
-  { session: runnerD, task: SMITHING_RUNNER_QUEUE[1]!, claimed: false, ready: false },
+  { session: runnerC, task: { barId: ITEM_IDS.iron_bar, count: 25 }, claimed: false, ready: false },
+  { session: runnerD, task: { barId: ITEM_IDS.steel_bar, count: 25 }, claimed: false, ready: false },
  ];
 
+ const committedXp = (exclude: SmithRunnerState): number => {
+  let xp = skillXp(spec, 'Smithing');
+  for (const item of spec.sdk.getInventory()) {
+   xp += (SMITH_BAR_XP[item.id] ?? 0) * item.count;
+  }
+  for (const r of runners) {
+   if (r === exclude || !r.task) continue;
+   xp += (SMITH_BAR_XP[r.task.barId] ?? 0) * r.task.count;
+  }
+  return xp;
+ };
+ const claimNextDelivery = (exclude: SmithRunnerState): SmithRunnerDelivery =>
+  nextDeliveryForCommittedXp(committedXp(exclude));
+
  const starterWaiter = (async () => {
-  while (!done && starterHelper.tick() < deadline) await waitTicks(starterHelper, 1);
+  while (!done && !ac.signal.aborted && starterHelper.tick() < deadline) await waitTicks(starterHelper, 1);
  })();
- const runnerTasks = runners.map(r => runVarrockSmithRunner(r, claimNextDelivery, () => done, deadline));
+ const runnerTasks = runners.map(r => runVarrockSmithRunner(r, spec, claimNextDelivery, () => done, deadline, ac.signal));
 
  const keepSet = new Set<number>([
   ITEM_IDS.hammer,
-  ITEM_IDS.amulet_of_glory_4,
+  ...GLORY_IDS,
   ITEM_IDS.bronze_bar,
   ITEM_IDS.iron_bar,
   ITEM_IDS.steel_bar,
@@ -229,7 +267,7 @@ export async function runSmithingSpecialist(
 
   await rubJewelryTeleport(
    spec,
-   ITEM_IDS.amulet_of_glory_4,
+   GLORY_IDS,
    /edgeville/i,
    () => {
     const p = playerPos(spec);
@@ -247,19 +285,33 @@ export async function runSmithingSpecialist(
   while (skillLevel(spec, 'Smithing') < target && spec.tick() < deadline) {
    const wantBar = nextWantedBarId(skillLevel(spec, 'Smithing'));
    let next = runners.find(
-    r => r.ready && !r.claimed && r.task?.barId === wantBar && countItem(r.session.sdk.getInventory(), wantBar) >= r.task.count,
+    r =>
+     r.ready &&
+     !r.claimed &&
+     r.task?.barId === wantBar &&
+     anvilRoomOk(playerPos(r.session)) &&
+     countItem(r.session.sdk.getInventory(), wantBar) >= r.task.count,
    );
    while (!next && spec.tick() < deadline) {
     await waitTicks(spec, 1);
     next = runners.find(
-     r => r.ready && !r.claimed && r.task?.barId === wantBar && countItem(r.session.sdk.getInventory(), wantBar) >= r.task.count,
+     r =>
+      r.ready &&
+      !r.claimed &&
+      r.task?.barId === wantBar &&
+      anvilRoomOk(playerPos(r.session)) &&
+      countItem(r.session.sdk.getInventory(), wantBar) >= r.task.count,
     );
    }
    if (!next) throw Error(`smithing runner missing bar ${wantBar}`);
    next.claimed = true;
    next.ready = false;
    try {
-    await burstTradeHost(spec, next.session, { giveIds: [wantBar], deadlineTick: deadline });
+    await burstTradeHost(spec, next.session, {
+     giveIds: [wantBar],
+     deadlineTick: deadline,
+     canStand: anvilRoomOk,
+    });
     next.task = null;
    } finally {
     next.claimed = false;
@@ -283,6 +335,7 @@ export async function runSmithingSpecialist(
   };
  } finally {
   done = true;
+  ac.abort();
   await Promise.allSettled([starterWaiter, ...runnerTasks]);
  }
 }

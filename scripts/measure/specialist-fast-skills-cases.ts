@@ -2,7 +2,7 @@
 import type { SaveConfig } from '../../vendor/rs-sdk/sdk/test/utils/save-generator';
 import { ITEM_IDS } from '../fast-skills-lib';
 import { CRAFTING_BATCHES } from '../crafting-specialist';
-import { HERBLORE_BATCHES } from '../herblore-specialist';
+import { HERBLORE_ALL_BATCHES, HERBLORE_BATCHES, HERBLORE_STARTER_BATCH, KAQEMEEX_SPOT } from '../herblore-specialist';
 import { MAGIC_BATCHES } from '../magic-specialist';
 import { PRAYER_RUNNER_COUNT } from '../prayer-specialist';
 import { BODY_RUNNER_COUNT } from '../runecraft-specialist';
@@ -79,11 +79,14 @@ export const SPECIALIST_FAST_SKILLS_CASES: readonly BenchCase[] = [
   script: 'scripts/herblore-specialist.ts',
   preset: 'fresh_lumbridge',
   presetConfig: freshTutorialStart(),
-  scriptArgs: ['CAP=350', helperArg(HERBLORE_BATCHES.length)],
+  scriptArgs: ['CAP=460', helperArg(HERBLORE_ALL_BATCHES.length)],
   pass: okSpecialist,
   output: /ticks=(\d+)/,
   timeoutMs: 600_000,
-  companions: HERBLORE_BATCHES.map((b, i) => staticCompanion(i, { x: 3222, z: 3223, level: 0 }, b.give)),
+  companions: [
+   staticCompanion(0, { x: 3222, z: 3223, level: 0 }, HERBLORE_STARTER_BATCH.give),
+   ...HERBLORE_BATCHES.map((b, i) => staticCompanion(1 + i, KAQEMEEX_SPOT, b.give)),
+  ],
  },
  {
   key: 'extra:specialist-prayer',

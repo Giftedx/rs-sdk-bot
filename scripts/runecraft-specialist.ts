@@ -7,6 +7,7 @@ import {
  dropItemsFast,
  findLocBy,
  goalXp,
+ GLORY_IDS,
  ITEM_IDS,
  logPhase,
  navigateWorld,
@@ -51,8 +52,9 @@ async function enterAltarWithTalisman(
  ruinsLocId: number,
  insideCheck: () => boolean,
  deadline: number,
+ signal?: AbortSignal,
 ): Promise<void> {
- while (s.tick() < deadline) {
+ while (!signal?.aborted && s.tick() < deadline) {
   if (insideCheck()) return;
   const ruins = findLocBy(s, l => l.id === ruinsLocId || /mysterious ruins/i.test(l.name));
   const talisman = s.sdk.getInventory().find(i => i.id === talismanId);
@@ -71,7 +73,12 @@ async function enterAltarWithTalisman(
  throw Error(`enterAltarWithTalisman(${talismanId}) exceeded cap`);
 }
 
-async function runBodyEssenceRunner(runner: RcRunnerState, done: () => boolean, deadline: number): Promise<void> {
+async function runBodyEssenceRunner(
+ runner: RcRunnerState,
+ done: () => boolean,
+ deadline: number,
+ signal: AbortSignal,
+): Promise<void> {
  const s = runner.session;
  const keep = new Set<number>([ITEM_IDS.body_talisman]);
  const insideBody = () => {
@@ -79,7 +86,7 @@ async function runBodyEssenceRunner(runner: RcRunnerState, done: () => boolean, 
   return !!p && p.worldZ > 4500 && p.worldX < 2600;
  };
 
- while (!done() && s.tick() < deadline) {
+ while (!done() && !signal.aborted && s.tick() < deadline) {
   if (runner.claimed) {
    await waitTicks(s, 1);
    continue;
@@ -107,13 +114,14 @@ async function runBodyEssenceRunner(runner: RcRunnerState, done: () => boolean, 
 
   runner.ready = false;
   if (heldEss < 26) {
-   await restockAtBank(s, EDGEVILLE_BANK, ITEM_IDS.blankrune, 26, keep, done, deadline);
+   await restockAtBank(s, EDGEVILLE_BANK, ITEM_IDS.blankrune, 26, keep, done, deadline, signal);
   }
-  if (done() || s.tick() >= deadline) break;
+  if (done() || signal.aborted || s.tick() >= deadline) break;
 
   if (countItem(s.sdk.getInventory(), ITEM_IDS.blankrune) >= 26) {
-   await navigateWorld(s, BODY_RUINS.x, BODY_RUINS.z, 0, Math.max(10, deadline - s.tick()));
-   await enterAltarWithTalisman(s, ITEM_IDS.body_talisman, 2457, insideBody, deadline);
+   await navigateWorld(s, BODY_RUINS.x, BODY_RUINS.z, 0, Math.max(10, deadline - s.tick()), signal);
+   if (done() || signal.aborted) break;
+   await enterAltarWithTalisman(s, ITEM_IDS.body_talisman, 2457, insideBody, deadline, signal);
   } else {
    await waitTicks(s, 1);
   }
@@ -161,17 +169,18 @@ export async function runRunecraftSpecialist(
  const start = spec.tick();
  const deadline = start + opts.cap;
  let done = false;
+ const ac = new AbortController();
 
  const [starterHelper, ...bodyHelpers] = helpers;
  const starterWaiter = (async () => {
-  while (!done && starterHelper!.tick() < deadline) await waitTicks(starterHelper!, 1);
+  while (!done && !ac.signal.aborted && starterHelper!.tick() < deadline) await waitTicks(starterHelper!, 1);
  })();
  const runners: RcRunnerState[] = bodyHelpers.map(session => ({
   session,
   claimed: false,
   ready: false,
  }));
- const runnerTasks = runners.map(r => runBodyEssenceRunner(r, () => done, deadline));
+ const runnerTasks = runners.map(r => runBodyEssenceRunner(r, () => done, deadline, ac.signal));
 
  try {
   await skipTutorialFast(spec, deadline);
@@ -184,7 +193,7 @@ export async function runRunecraftSpecialist(
 
   await rubJewelryTeleport(
    spec,
-   ITEM_IDS.amulet_of_glory_4,
+   GLORY_IDS,
    /draynor/i,
    () => {
     const p = playerPos(spec);
@@ -210,7 +219,7 @@ export async function runRunecraftSpecialist(
 
   await rubJewelryTeleport(
    spec,
-   ITEM_IDS.amulet_of_glory_4,
+   GLORY_IDS,
    /edgeville/i,
    () => {
     const p = playerPos(spec);
@@ -231,7 +240,7 @@ export async function runRunecraftSpecialist(
    deadline,
   );
 
-  await dropItemsFast(spec, new Set([ITEM_IDS.body_talisman, ITEM_IDS.bodyrune]), deadline);
+  await dropItemsFast(spec, new Set([ITEM_IDS.bodyrune]), deadline);
   await navigateWorld(spec, BODY_ALTAR_CRAFTER.x, BODY_ALTAR_CRAFTER.z, 0, Math.max(10, deadline - spec.tick()));
   logPhase(spec, start, 'rc_at_body_altar');
 
@@ -277,6 +286,7 @@ export async function runRunecraftSpecialist(
   };
  } finally {
   done = true;
+  ac.abort();
   await Promise.allSettled([starterWaiter, ...runnerTasks]);
  }
 }

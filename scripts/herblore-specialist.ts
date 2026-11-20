@@ -1,21 +1,33 @@
-// Fresh-account 1-to-99 Herblore specialist at Lumbridge Courtyard via 5-per-tick potion finishing (no Druidic Ritual gate).
+// Fresh-account 1-to-99 Herblore specialist via Games necklace Druidic Ritual (+6,250 XP) and Kaqemeex 5-per-tick brewing.
 import type { Session } from '../packages/core/src/inprocess';
 import { levelForXp } from '../packages/planner/src/curve';
+import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import {
  assertCatalogItems,
  burstTradeHost,
+ countItem,
  dropItemsFast,
+ findLocBy,
+ findNpcBy,
+ GAMES_NECKLACE_IDS,
  goalXp,
  ITEM_IDS,
  logPhase,
+ navigateWorld,
+ nearTile,
  parseSpecialistArgs,
+ playerPos,
+ rubJewelryTeleport,
  skipTutorialFast,
  skillLevel,
  skillXp,
  waitTicks,
+ waitUntil,
  withSpecialistFleet,
  type SupplyEntry,
 } from './fast-skills-lib';
+
+export const KAQEMEEX_SPOT = { x: 2925, z: 3486, level: 0 } as const;
 
 export interface HerbPotionRecipe {
  name: string;
@@ -26,7 +38,7 @@ export interface HerbPotionRecipe {
 }
 
 export const HERB_POTION_TIERS: readonly HerbPotionRecipe[] = [
- { name: 'Attack', level: 1, xp: 625, unf: ITEM_IDS.guamvial, sec: ITEM_IDS.eye_of_newt },
+ { name: 'Attack', level: 3, xp: 625, unf: ITEM_IDS.guamvial, sec: ITEM_IDS.eye_of_newt },
  { name: 'Antipoison', level: 5, xp: 937.5, unf: ITEM_IDS.marrentillvial, sec: ITEM_IDS.unicorn_horn_dust },
  { name: 'Strength', level: 12, xp: 1250, unf: ITEM_IDS.tarrominvial, sec: ITEM_IDS.limpwurt_root },
  { name: 'Energy', level: 26, xp: 1687.5, unf: ITEM_IDS.harralandervial, sec: ITEM_IDS.chocolate_dust },
@@ -45,109 +57,155 @@ export const HERB_POTION_TIERS: readonly HerbPotionRecipe[] = [
  { name: 'Zamorak', level: 78, xp: 4375, unf: ITEM_IDS.torstolvial, sec: ITEM_IDS.jangerberries },
 ];
 
+export const POTION_OUTPUT_IDS = {
+ energy_3: 3010,
+ prayer_3: 139,
+ super_attack_3: 145,
+ super_antipoison_3: 181,
+ fishing_3: 151,
+ super_energy_3: 3018,
+ super_strength_3: 157,
+ weapon_poison: 187,
+ super_restore_3: 3026,
+ super_defence_3: 163,
+ antifire_3: 2454,
+ ranging_3: 169,
+ magic_3: 3042,
+ zamorak_3: ITEM_IDS.zamorak_brew_3,
+} as const;
+
 export interface HerbloreBatchPlan {
  give: readonly { id: number; count: number }[];
  returnIds: readonly number[];
 }
 
+export const HERBLORE_STARTER_BATCH: HerbloreBatchPlan = {
+ // Starter kit traded at Lumbridge for Games necklace -> Burthorpe -> Druidic Ritual (+6,250 XP = Lv 26).
+ give: [
+  { id: ITEM_IDS.necklace_of_minigames_8, count: 1 },
+  { id: ITEM_IDS.raw_beef, count: 1 },
+  { id: ITEM_IDS.raw_rat_meat, count: 1 },
+  { id: ITEM_IDS.raw_bear_meat, count: 1 },
+  { id: ITEM_IDS.raw_chicken, count: 1 },
+  { id: ITEM_IDS.shark, count: 4 },
+ ],
+ returnIds: [],
+};
+
 export const HERBLORE_BATCHES: readonly HerbloreBatchPlan[] = [
- // Batch 0 (14 pairs): Attack(1), Antipoison(1), Strength(3), Energy(5), Prayer(4) -> 22,500 XP (Lv 44)
+ // Batch 1 (14 pairs from Lv 26 / 6,250 XP): Energy(5), Prayer(4), SupAtk(2), SupAnti(2), Fishing(1) -> 36,565 XP (Lv 51)
  {
   give: [
-   { id: ITEM_IDS.guamvial, count: 1 },
-   { id: ITEM_IDS.eye_of_newt, count: 1 },
-   { id: ITEM_IDS.marrentillvial, count: 1 },
-   { id: ITEM_IDS.unicorn_horn_dust, count: 1 },
-   { id: ITEM_IDS.tarrominvial, count: 3 },
-   { id: ITEM_IDS.limpwurt_root, count: 3 },
    { id: ITEM_IDS.harralandervial, count: 5 },
    { id: ITEM_IDS.chocolate_dust, count: 5 },
    { id: ITEM_IDS.ranarrvial, count: 4 },
-   { id: ITEM_IDS.snape_grass, count: 4 },
-  ],
-  returnIds: [],
- },
- // Batch 1 (14 pairs): Prayer(1), SupAtk(2), SupAnti(2), Fishing(1), SupEng(3), SupStr(5) -> 62,250 XP (Lv 59)
- {
-  give: [
-   { id: ITEM_IDS.ranarrvial, count: 1 },
-   { id: ITEM_IDS.snape_grass, count: 2 },
+   { id: ITEM_IDS.snape_grass, count: 5 },
    { id: ITEM_IDS.iritvial, count: 4 },
    { id: ITEM_IDS.eye_of_newt, count: 2 },
    { id: ITEM_IDS.unicorn_horn_dust, count: 2 },
+   { id: ITEM_IDS.avantoevial, count: 1 },
+  ],
+  returnIds: [],
+ },
+ // Batch 2 (14 pairs): Fishing(1), SupEng(3), SupStr(6), WepPoi(4) -> 80,690 XP (Lv 62)
+ {
+  give: [
    { id: ITEM_IDS.avantoevial, count: 4 },
+   { id: ITEM_IDS.snape_grass, count: 1 },
    { id: ITEM_IDS.mortmyremushroom, count: 3 },
-   { id: ITEM_IDS.kwuarmvial, count: 5 },
-   { id: ITEM_IDS.limpwurt_root, count: 5 },
-  ],
-  returnIds: [],
- },
- // Batch 2 (14 pairs): SupStr(2), WeaponPoison(4), SupRestore(6), SupDef(2) -> 111,125 XP (Lv 67)
- {
-  give: [
-   { id: ITEM_IDS.kwuarmvial, count: 6 },
-   { id: ITEM_IDS.limpwurt_root, count: 2 },
+   { id: ITEM_IDS.kwuarmvial, count: 10 },
+   { id: ITEM_IDS.limpwurt_root, count: 6 },
    { id: ITEM_IDS.dragon_scale_dust, count: 4 },
-   { id: ITEM_IDS.snapdragonvial, count: 6 },
-   { id: ITEM_IDS.red_spiders_eggs, count: 6 },
-   { id: ITEM_IDS.cadantinevial, count: 2 },
-   { id: ITEM_IDS.white_berries, count: 2 },
   ],
-  returnIds: [],
+  returnIds: [
+   POTION_OUTPUT_IDS.energy_3,
+   POTION_OUTPUT_IDS.prayer_3,
+   POTION_OUTPUT_IDS.super_attack_3,
+   POTION_OUTPUT_IDS.super_antipoison_3,
+   POTION_OUTPUT_IDS.fishing_3,
+  ],
  },
- // Batch 3 (14 pairs): SupDef(4), Antifire(7), Ranging(3) -> 165,875 XP (Lv 73)
+ // Batch 3 (14 pairs): WepPoi(1), SupRes(5), SupDef(6), Antifire(2) -> 132,315 XP (Lv 69)
  {
   give: [
-   { id: ITEM_IDS.cadantinevial, count: 4 },
-   { id: ITEM_IDS.white_berries, count: 4 },
-   { id: ITEM_IDS.lantadymevial, count: 7 },
-   { id: ITEM_IDS.dragon_scale_dust, count: 7 },
-   { id: ITEM_IDS.dwarfweedvial, count: 3 },
-   { id: ITEM_IDS.wine_of_zamorak, count: 3 },
-  ],
-  returnIds: [],
- },
- // Batch 4 (14 pairs): Ranging(9), Magic(5) -> 224,000 XP (Lv 77)
- {
-  give: [
-   { id: ITEM_IDS.dwarfweedvial, count: 9 },
-   { id: ITEM_IDS.wine_of_zamorak, count: 9 },
-   { id: ITEM_IDS.lantadymevial, count: 5 },
-   { id: ITEM_IDS.cactus_potato, count: 5 },
-  ],
-  returnIds: [],
- },
- // Batch 5 (14 pairs): Magic(2), Zamorak(12) -> 285,125 XP (Lv 81)
- {
-  give: [
+   { id: ITEM_IDS.kwuarmvial, count: 1 },
+   { id: ITEM_IDS.dragon_scale_dust, count: 3 },
+   { id: ITEM_IDS.snapdragonvial, count: 5 },
+   { id: ITEM_IDS.red_spiders_eggs, count: 5 },
+   { id: ITEM_IDS.cadantinevial, count: 6 },
+   { id: ITEM_IDS.white_berries, count: 6 },
    { id: ITEM_IDS.lantadymevial, count: 2 },
-   { id: ITEM_IDS.cactus_potato, count: 2 },
-   { id: ITEM_IDS.torstolvial, count: 12 },
-   { id: ITEM_IDS.jangerberries, count: 12 },
   ],
-  returnIds: [],
+  returnIds: [
+   POTION_OUTPUT_IDS.fishing_3,
+   POTION_OUTPUT_IDS.super_energy_3,
+   POTION_OUTPUT_IDS.super_strength_3,
+   POTION_OUTPUT_IDS.weapon_poison,
+  ],
  },
- // Batches 6..17 (12x14 Zamorak brews, returning finished Zamorak(3) on trades 7..17 -> >1,020,000 XP)
+ // Batch 4 (14 pairs): Antifire(6), Ranging(8) -> 188,440 XP (Lv 74)
+ {
+  give: [
+   { id: ITEM_IDS.lantadymevial, count: 6 },
+   { id: ITEM_IDS.dragon_scale_dust, count: 6 },
+   { id: ITEM_IDS.dwarfweedvial, count: 8 },
+   { id: ITEM_IDS.wine_of_zamorak, count: 8 },
+  ],
+  returnIds: [
+   POTION_OUTPUT_IDS.weapon_poison,
+   POTION_OUTPUT_IDS.super_restore_3,
+   POTION_OUTPUT_IDS.super_defence_3,
+   POTION_OUTPUT_IDS.antifire_3,
+  ],
+ },
+ // Batch 5 (14 pairs): Ranging(4), Magic(7), Zamorak(3) -> 248,002.5 XP (Lv 78)
+ {
+  give: [
+   { id: ITEM_IDS.dwarfweedvial, count: 4 },
+   { id: ITEM_IDS.wine_of_zamorak, count: 4 },
+   { id: ITEM_IDS.lantadymevial, count: 7 },
+   { id: ITEM_IDS.cactus_potato, count: 7 },
+   { id: ITEM_IDS.torstolvial, count: 3 },
+   { id: ITEM_IDS.jangerberries, count: 3 },
+  ],
+  returnIds: [POTION_OUTPUT_IDS.antifire_3, POTION_OUTPUT_IDS.ranging_3],
+ },
+ // Batches 6..17 (12x14 Zamorak brews -> 983,002.5 XP) + Batch 18 (5 Zamorak brews -> 1,004,877.5 XP)
  ...Array.from({ length: 12 }, (_, idx): HerbloreBatchPlan => ({
   give: [
    { id: ITEM_IDS.torstolvial, count: 14 },
    { id: ITEM_IDS.jangerberries, count: 14 },
   ],
-  returnIds: idx > 0 ? [ITEM_IDS.zamorak_brew_3] : [],
+  returnIds:
+   idx === 0
+    ? [POTION_OUTPUT_IDS.ranging_3, POTION_OUTPUT_IDS.magic_3, POTION_OUTPUT_IDS.zamorak_3]
+    : [POTION_OUTPUT_IDS.zamorak_3],
  })),
+ {
+  give: [
+   { id: ITEM_IDS.torstolvial, count: 5 },
+   { id: ITEM_IDS.jangerberries, count: 5 },
+  ],
+  returnIds: [POTION_OUTPUT_IDS.zamorak_3],
+ },
 ];
+
+export const HERBLORE_ALL_BATCHES: readonly HerbloreBatchPlan[] = [HERBLORE_STARTER_BATCH, ...HERBLORE_BATCHES];
 
 export const HERBLORE_SUPPLY_BILL: readonly SupplyEntry[] = aggregateHerbloreSupply();
 
 function aggregateHerbloreSupply(): SupplyEntry[] {
  const counts = new Map<number, number>();
- for (const batch of HERBLORE_BATCHES) {
+ for (const batch of HERBLORE_ALL_BATCHES) {
   for (const item of batch.give) counts.set(item.id, (counts.get(item.id) ?? 0) + item.count);
  }
  const names = new Map<number, string>([
-  [ITEM_IDS.guamvial, 'Guam potion (unf)'],
-  [ITEM_IDS.marrentillvial, 'Marrentill potion (unf)'],
-  [ITEM_IDS.tarrominvial, 'Tarromin potion (unf)'],
+  [ITEM_IDS.necklace_of_minigames_8, 'Games necklace(8)'],
+  [ITEM_IDS.raw_beef, 'Raw beef'],
+  [ITEM_IDS.raw_rat_meat, 'Raw rat meat'],
+  [ITEM_IDS.raw_bear_meat, 'Raw bear meat'],
+  [ITEM_IDS.raw_chicken, 'Raw chicken'],
+  [ITEM_IDS.shark, 'Shark'],
   [ITEM_IDS.harralandervial, 'Harralander potion (unf)'],
   [ITEM_IDS.ranarrvial, 'Ranarr potion (unf)'],
   [ITEM_IDS.iritvial, 'Irit potion (unf)'],
@@ -178,6 +236,212 @@ function aggregateHerbloreSupply(): SupplyEntry[] {
  }));
 }
 
+async function eatIfHurt(spec: Session): Promise<void> {
+ if ((spec.sdk.getSkill('Hitpoints')?.level ?? 10) > 6) return;
+ const shark = spec.sdk.getInventory().find(i => i.id === ITEM_IDS.shark);
+ if (shark) await spec.direct({ type: 'useInventoryItem', slot: shark.slot, optionIndex: 1, reason: 'SDK' });
+}
+
+function dialogSawText(spec: Session, re: RegExp): boolean {
+ const st = spec.sdk.getState();
+ const d = spec.sdk.getDialog();
+ if (d?.isOpen) {
+  const txt = [d.text ?? '', ...(d.allComponents ?? []).map((c: any) => c.text ?? '')].filter(Boolean).join(' ');
+  if (re.test(txt)) return true;
+ }
+ return (st?.recentDialogs ?? []).some((e: any) => re.test((e.text ?? []).join(' ')));
+}
+
+async function walkLocal(spec: Session, x: number, z: number, tol: number, deadline: number): Promise<void> {
+ if (nearTile(spec, x, z, tol, playerPos(spec)?.level ?? 0)) return;
+ const walker = await sessionWalker(spec);
+ const res = await walkPath(walker, [{ x, z, tol }], { maxTicks: Math.max(10, Math.min(100, deadline - spec.tick())) });
+ if (!res.ok && !nearTile(spec, x, z, tol, playerPos(spec)?.level ?? 0)) {
+  await navigateWorld(spec, x, z, playerPos(spec)?.level ?? 0, Math.max(10, deadline - spec.tick()));
+ }
+}
+
+async function climbLoc(spec: Session, locId: number, x: number, z: number, opRe: RegExp, done: () => boolean, deadline: number): Promise<void> {
+ while (spec.tick() < deadline) {
+  if (done()) return;
+  await eatIfHurt(spec);
+  const loc = findLocBy(spec, l => l.id === locId || (l.x === x && l.z === z));
+  if (loc) {
+   const op = loc.optionsWithIndex?.find(o => opRe.test(o.text))?.opIndex ?? 1;
+   await spec.direct({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: op, reason: 'SDK' });
+  } else {
+   await spec.direct({ type: 'walkTo', x, z, running: true, reason: 'SDK' });
+  }
+  await waitTicks(spec, 1);
+ }
+ throw Error(`climbLoc(${locId} at ${x},${z}) exceeded cap`);
+}
+
+async function talkQuestNpc(
+ spec: Session,
+ nameRe: RegExp,
+ optRes: RegExp[],
+ done: () => boolean,
+ anchor: { x: number; z: number },
+ deadline: number,
+): Promise<void> {
+ while (spec.tick() < deadline) {
+  if (done()) return;
+  await eatIfHurt(spec);
+  const d = spec.sdk.getDialog();
+  if (d?.isOpen) {
+   if (!d.isWaiting) {
+    const pick = d.options.find((o: any) => optRes.some(r => r.test(o.text)));
+    await spec.direct({ type: 'clickDialogOption', optionIndex: pick?.index ?? d.options[0]?.index ?? 0, reason: 'SDK' });
+   }
+  } else {
+   const npc = findNpcBy(spec, n => nameRe.test(n.name));
+   if (npc) {
+    await spec.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: 1, reason: 'SDK' });
+   } else {
+    await spec.direct({ type: 'walkTo', x: anchor.x, z: anchor.z, running: true, reason: 'SDK' });
+   }
+  }
+  await waitTicks(spec, 1);
+ }
+ throw Error(`talkQuestNpc(${nameRe.source}) exceeded cap`);
+}
+
+async function completeDruidicRitual(spec: Session, start: number, deadline: number): Promise<void> {
+ // Games necklace -> Burthorpe Games Room (2207,4940,0) -> stairs 4622 -> stairs 4627 -> Burthorpe (2899,3564,0)
+ await rubJewelryTeleport(
+  spec,
+  GAMES_NECKLACE_IDS,
+  /burthorpe/i,
+  () => {
+   const p = playerPos(spec);
+   return !!p && p.worldZ > 4500;
+  },
+  deadline,
+ );
+
+ while (spec.tick() < deadline) {
+  const p = playerPos(spec);
+  if (p && p.worldZ < 4000) break;
+  if (p?.level === 0) {
+   const st0 = findLocBy(spec, l => l.id === 4622);
+   if (st0) await spec.direct({ type: 'interactLoc', x: st0.x, z: st0.z, locId: st0.id, optionIndex: 1, reason: 'SDK' });
+  } else {
+   const st1 = findLocBy(spec, l => l.id === 4627);
+   if (st1) await spec.direct({ type: 'interactLoc', x: st1.x, z: st1.z, locId: st1.id, optionIndex: 1, reason: 'SDK' });
+  }
+  await waitTicks(spec, 1);
+ }
+
+ const walker = await sessionWalker(spec);
+ // Block Witch's House locked front door so pathing stays on the open street.
+ walker.blockDoor?.(0, { x: 2901, z: 3473 });
+
+ await navigateWorld(spec, KAQEMEEX_SPOT.x, KAQEMEEX_SPOT.z, 0, Math.max(10, deadline - spec.tick()));
+ logPhase(spec, start, 'herb_at_kaqemeex');
+
+ await talkQuestNpc(
+  spec,
+  /^kaqemeex$/i,
+  [/search of a quest/i, /will try and help/i],
+  () => dialogSawText(spec, /fellow.*sanfew|village south/i),
+  { x: 2924, z: 3486 },
+  deadline,
+ );
+
+ await walkLocal(spec, 2898, 3427, 1, deadline);
+ await climbLoc(spec, 1738, 2898, 3428, /climb-up/i, () => (playerPos(spec)?.level ?? 0) === 1, deadline);
+
+ await talkQuestNpc(
+  spec,
+  /^sanfew$/i,
+  [/sent to help purify/i, /i'll do that then/i],
+  () => dialogSawText(spec, /well thank you very much|ok, i'll do that then|where can i find/i),
+  { x: 2897, z: 3426 },
+  deadline,
+ );
+
+ await climbLoc(spec, 1740, 2898, 3428, /climb-down/i, () => (playerPos(spec)?.level ?? 1) === 0, deadline);
+ await walkLocal(spec, 2885, 3398, 1, deadline);
+ await climbLoc(spec, 1759, 2884, 3397, /climb-down/i, () => (playerPos(spec)?.worldZ ?? 0) > 9000, deadline);
+ logPhase(spec, start, 'herb_in_dungeon');
+
+ const insideRoom = () => {
+  const p = playerPos(spec);
+  return !!p && p.worldZ > 9000 && p.worldX >= 2889;
+ };
+ await walkLocal(spec, 2888, 9831, 0, deadline);
+
+ while (spec.tick() < deadline && !insideRoom()) {
+  await eatIfHurt(spec);
+  const door = findLocBy(spec, l => (l.id === 2143 || l.id === 2144) && l.x === 2889);
+  if (door) {
+   const op = door.optionsWithIndex?.find(o => /open/i.test(o.text))?.opIndex ?? 1;
+   await spec.direct({ type: 'interactLoc', x: door.x, z: door.z, locId: door.id, optionIndex: op, reason: 'SDK' });
+  }
+  await waitTicks(spec, 1);
+ }
+
+ const meatPairs = [
+  { raw: ITEM_IDS.raw_beef, ench: 522 },
+  { raw: ITEM_IDS.raw_rat_meat, ench: 523 },
+  { raw: ITEM_IDS.raw_bear_meat, ench: 524 },
+  { raw: ITEM_IDS.raw_chicken, ench: 525 },
+ ] as const;
+ while (spec.tick() < deadline) {
+  await eatIfHurt(spec);
+  const inv = spec.sdk.getInventory();
+  const pending = meatPairs.filter(m => countItem(inv, m.ench) === 0);
+  if (!pending.length) break;
+  const acts: Promise<unknown>[] = [];
+  for (const m of pending) {
+   const slotItem = inv.find(i => i.id === m.raw);
+   if (slotItem) {
+    acts.push(spec.direct({ type: 'useItemOnLoc', itemSlot: slotItem.slot, x: 2893, z: 9831, locId: 2142, reason: 'SDK' }));
+   }
+  }
+  if (acts.length) await Promise.all(acts);
+  await waitTicks(spec, 1);
+ }
+
+ while (spec.tick() < deadline && insideRoom()) {
+  await eatIfHurt(spec);
+  const door = findLocBy(spec, l => (l.id === 2143 || l.id === 2144) && l.x === 2889);
+  if (door) {
+   const op = door.optionsWithIndex?.find(o => /open/i.test(o.text))?.opIndex ?? 1;
+   await spec.direct({ type: 'interactLoc', x: door.x, z: door.z, locId: door.id, optionIndex: op, reason: 'SDK' });
+  }
+  await waitTicks(spec, 1);
+ }
+
+ await walkLocal(spec, 2884, 9798, 1, deadline);
+ await climbLoc(spec, 1755, 2884, 9797, /climb-up/i, () => (playerPos(spec)?.worldZ ?? 9999) < 9000, deadline);
+ await walkLocal(spec, 2898, 3427, 1, deadline);
+ await climbLoc(spec, 1738, 2898, 3428, /climb-up/i, () => (playerPos(spec)?.level ?? 0) === 1, deadline);
+
+ await talkQuestNpc(
+  spec,
+  /^sanfew$/i,
+  [],
+  () => [522, 523, 524, 525].every(id => countItem(spec.sdk.getInventory(), id) === 0),
+  { x: 2897, z: 3426 },
+  deadline,
+ );
+
+ await climbLoc(spec, 1740, 2898, 3428, /climb-down/i, () => (playerPos(spec)?.level ?? 1) === 0, deadline);
+ await walkLocal(spec, KAQEMEEX_SPOT.x, KAQEMEEX_SPOT.z, 2, deadline);
+
+ await talkQuestNpc(
+  spec,
+  /^kaqemeex$/i,
+  [],
+  () => skillXp(spec, 'Herblore') >= 6250,
+  { x: 2924, z: 3486 },
+  deadline,
+ );
+ logPhase(spec, start, `herb_druid_done lvl=${skillLevel(spec, 'Herblore')}`);
+}
+
 async function mixUnlockedPotions(spec: Session, target: number, deadline: number): Promise<void> {
  while (spec.tick() < deadline) {
   if (skillLevel(spec, 'Herblore') >= target) return;
@@ -185,11 +449,8 @@ async function mixUnlockedPotions(spec: Session, target: number, deadline: numbe
   let simXp = skillXp(spec, 'Herblore');
   const usedSlots = new Set<number>();
   const pairs: { unfSlot: number; secSlot: number }[] = [];
-  const st = spec.sdk.getState();
-  const modalOpen = !!st?.dialog?.isOpen && !st?.trade?.isOpen;
-  const maxActions = modalOpen ? 4 : 5;
 
-  for (let i = 0; i < maxActions; i++) {
+  for (let i = 0; i < 5; i++) {
    const simLvl = levelForXp(simXp);
    let chosen: { recipe: HerbPotionRecipe; unfSlot: number; secSlot: number } | undefined;
    for (let r = HERB_POTION_TIERS.length - 1; r >= 0; r--) {
@@ -209,15 +470,11 @@ async function mixUnlockedPotions(spec: Session, target: number, deadline: numbe
    simXp += chosen.recipe.xp;
   }
 
-  if (!pairs.length) {
-   if (spec.sdk.getState()?.dialog?.isOpen && !spec.sdk.getState()?.trade?.isOpen) {
-    await spec.direct({ type: 'closeModal', reason: 'SDK' });
-    await waitTicks(spec, 1);
-   }
-   return;
-  }
+  if (!pairs.length) return;
+  const st = spec.sdk.getState();
+  const modalOpen = !!st?.dialog?.isOpen && !st?.trade?.isOpen;
   const acts: Promise<unknown>[] = [];
-  if (modalOpen) acts.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+  if (modalOpen && pairs.length <= 4) acts.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
   for (const p of pairs) {
    acts.push(spec.direct({ type: 'useItemOnItem', sourceSlot: p.unfSlot, targetSlot: p.secSlot, reason: 'SDK' }));
   }
@@ -233,8 +490,8 @@ export async function runHerbloreSpecialist(
  opts: { cap: number; target?: number },
 ): Promise<{ ok: boolean; detail: string; ticks: number; level: number; xp: number }> {
  assertCatalogItems(HERBLORE_SUPPLY_BILL);
- if (helpers.length < HERBLORE_BATCHES.length) {
-  throw Error(`herblore specialist requires ${HERBLORE_BATCHES.length} helpers, got ${helpers.length}`);
+ if (helpers.length < HERBLORE_ALL_BATCHES.length) {
+  throw Error(`herblore specialist requires ${HERBLORE_ALL_BATCHES.length} helpers, got ${helpers.length}`);
  }
  const target = opts.target ?? 99;
  const start = spec.tick();
@@ -249,23 +506,24 @@ export async function runHerbloreSpecialist(
  try {
   await skipTutorialFast(spec, deadline);
   await dropItemsFast(spec, new Set(), deadline);
-  logPhase(spec, start, 'herblore_ready');
+
+  await burstTradeHost(spec, helpers[0]!, {
+   giveIds: HERBLORE_STARTER_BATCH.give.map(g => g.id),
+   deadlineTick: deadline,
+  });
+
+  await completeDruidicRitual(spec, start, deadline);
+  await dropItemsFast(spec, new Set(), deadline);
 
   for (let i = 0; i < HERBLORE_BATCHES.length && skillLevel(spec, 'Herblore') < target; i++) {
    const batch = HERBLORE_BATCHES[i]!;
-   const helper = helpers[i]!;
-   if (i > 0 && batch.returnIds.length === 0) {
-    await dropItemsFast(spec, new Set(), deadline);
-   } else if (i === 7) {
-    await dropItemsFast(spec, new Set([ITEM_IDS.zamorak_brew_3]), deadline);
-   }
+   const helper = helpers[1 + i]!;
    await burstTradeHost(spec, helper, {
     giveIds: batch.give.map(g => g.id),
     returnIds: batch.returnIds,
     deadlineTick: deadline,
    });
    await mixUnlockedPotions(spec, target, deadline);
-   if (i === 5) logPhase(spec, start, `herblore_zamorak_unlocked lvl=${skillLevel(spec, 'Herblore')}`);
   }
 
   const level = skillLevel(spec, 'Herblore');
@@ -287,9 +545,9 @@ export async function runHerbloreSpecialist(
 
 if (import.meta.main) {
  const cfg = parseSpecialistArgs(process.argv.slice(2), process.env, {
-  cap: 350,
+  cap: 460,
   target: 99,
-  defaultHelpers: HERBLORE_BATCHES.length,
+  defaultHelpers: HERBLORE_ALL_BATCHES.length,
  });
  await withSpecialistFleet(cfg.account, cfg.helpers, (spec, helpers) =>
   runHerbloreSpecialist(spec, helpers, { cap: cfg.cap, target: cfg.target }),

@@ -56,11 +56,14 @@ export const CRAFTING_BATCHES: readonly CraftingBatchPlan[] = [
    { id: ITEM_IDS.uncut_ruby, count: 6 },
    { id: ITEM_IDS.uncut_diamond, count: 10 },
   ],
-  returnIds: [],
+  returnIds: [ITEM_IDS.opal, 1633],
  },
- ...Array.from({ length: 10 }, (): CraftingBatchPlan => ({
+ ...Array.from({ length: 10 }, (_, idx): CraftingBatchPlan => ({
   give: [{ id: ITEM_IDS.uncut_dragonstone, count: 27 }],
-  returnIds: [ITEM_IDS.dragonstone],
+  returnIds:
+   idx === 0
+    ? [ITEM_IDS.sapphire, ITEM_IDS.emerald, ITEM_IDS.ruby, ITEM_IDS.diamond]
+    : [ITEM_IDS.dragonstone],
  })),
  {
   give: [{ id: ITEM_IDS.uncut_dragonstone, count: 20 }],
@@ -95,18 +98,12 @@ async function cutUnlockedGems(spec: Session, target: number, deadlineTick: numb
   const lvl = skillLevel(spec, 'Crafting');
   const unlocked = new Set(CRAFTING_GEMS.filter(t => lvl >= t.level).map(t => t.id));
   const gems = inv.filter(i => tierIds.has(i.id) && unlocked.has(i.id));
-  if (!gems.length) {
-   if (spec.sdk.getState()?.dialog?.isOpen && !spec.sdk.getState()?.trade?.isOpen) {
-    await spec.direct({ type: 'closeModal', reason: 'SDK' });
-    await waitTicks(spec, 1);
-   }
-   return;
-  }
+  if (!gems.length) return;
   const st = spec.sdk.getState();
   const modalOpen = !!st?.dialog?.isOpen && !st?.trade?.isOpen;
-  const batch = gems.slice(0, modalOpen ? 4 : 5);
+  const batch = gems.slice(0, 5);
   const actions: Promise<unknown>[] = [];
-  if (modalOpen) actions.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+  if (modalOpen && gems.length <= 4) actions.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
   for (const gem of batch) {
    actions.push(spec.direct({ type: 'useItemOnItem', sourceSlot: chisel.slot, targetSlot: gem.slot, reason: 'SDK' }));
   }
@@ -147,8 +144,6 @@ export async function runCraftingSpecialist(
    const helper = helpers[i]!;
    if (i > 0 && batch.returnIds.length === 0) {
     await dropItemsFast(spec, keepSetFor(false), deadline);
-   } else if (i === 2) {
-    await dropItemsFast(spec, keepSetFor(true), deadline);
    }
    await burstTradeHost(spec, helper, {
     giveIds: batch.give.map(g => g.id),
