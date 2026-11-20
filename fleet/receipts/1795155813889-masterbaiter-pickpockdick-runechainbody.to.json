@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795155813889-masterbaiter-pickpockdick-runechainbody",
+ "account": "PickpockDick",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "d2fec129-fd94-44c9-b392-c579c667b641",
+ "count": 0,
+ "ok": false,
+ "at": 1795155903679,
+ "detail": "trade claimed"
+}
