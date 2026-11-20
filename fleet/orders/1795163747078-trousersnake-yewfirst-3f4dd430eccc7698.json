@@ -1,0 +1,22 @@
+{
+ "id": "1795163747078-trousersnake-yewfirst-3f4dd430eccc7698",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TrouserSnake",
+ "to": "YewFirst",
+ "item": "Rune arrowtips",
+ "count": 500,
+ "start": 1795163747078,
+ "end": 1795164947078,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ]
+}

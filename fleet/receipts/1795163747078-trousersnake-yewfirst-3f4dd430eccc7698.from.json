@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795163747078-trousersnake-yewfirst-3f4dd430eccc7698",
+ "account": "TrouserSnake",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 500,
+ "claim": "f5e6a1f4-12af-40cc-9c49-8c98d10d3eef",
+ "count": 500,
+ "ok": true,
+ "at": 1795163810467,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 500,
+  "after": 0
+ },
+ "bank": {
+  "count": 500,
+  "at": 1795163806098
+ },
+ "logout": {
+  "attemptId": "1795163757050-0000016488-0000000001",
+  "at": 1795163810455,
+  "sha256": "e2ebbe3a61a2cbc72712ae4b082fc3240c6b1888e402b488e3a2228f10fecb75"
+ },
+ "screen": true
+}
