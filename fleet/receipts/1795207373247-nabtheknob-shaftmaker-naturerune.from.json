@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795207373247-nabtheknob-shaftmaker-naturerune",
  "account": "NabTheKnob",
  "partner": "Shaftmaker",
@@ -12,6 +12,16 @@
  "claim": "2b2ce4cd-cf51-4c18-b848-5eae25e25730",
  "count": 0,
  "ok": false,
- "at": 1795207409679,
- "detail": "trade claimed"
+ "at": 1795207561992,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 153,
+  "at": 1795207560918
+ },
+ "logout": {
+  "attemptId": "1795207409688-0000031480-0000000001",
+  "at": 1795207561983,
+  "sha256": "73acca4ca0cfa5ba97709005a8f205f84cf552463546fa6cb2dd85338303fa14"
+ },
+ "screen": false
 }
