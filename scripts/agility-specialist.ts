@@ -1517,13 +1517,33 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
 
 
 
+            // Pre-click: if current obstacle has visibly started, send the next obstacle's click
+            if (preBlock < 0 && startedWildernessObstacle(step.name, p)) {
+                if (sentTick !== s.tick()) {
+                    const nextIdx = (i + 1) % WILDERNESS_STEPS.length;
+                    preClicks++;
+                    if (nextIdx === 0) {
+                        if (cfg.alignPipe) {
+                            await s.direct({ type: 'walkTo', x: 3004, z: 3937, running: true, reason: 'SDK' });
+                        } else {
+                            await clickStep(WILDERNESS_STEPS[0]!);
+                        }
+                    } else {
+                        await syncPrayer(nextIdx);
+                        await maybeEat();
+                        await clickStep(WILDERNESS_STEPS[nextIdx]!);
+                    }
+                }
+                continue;
+            }
+
             if (i === 0 && cfg.alignPipe) {
-                if (p.worldX === 3004 && p.worldZ === 3937) {
+                if (p.worldX === 3004 && p.worldZ <= 3937 && p.worldZ >= 3935) {
                     await syncPrayer(0);
                     await maybeEat();
                     await clickStep(step);
                     still = 0;
-                } else if (still >= 1 || (moved && p.worldZ <= 3935)) {
+                } else if (still >= 1) {
                     await s.direct({ type: 'walkTo', x: 3004, z: 3937, running: true, reason: 'SDK' });
                     still = 0;
                 }

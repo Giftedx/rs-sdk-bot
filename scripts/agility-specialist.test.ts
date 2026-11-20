@@ -18,10 +18,16 @@ import {
     TOURIST_TRADE_3,
     trade1ForConfig,
 } from './agility-specialist';
-import { SPECIALIST_AGILITY_CASES } from './measure/specialist-agility-cases';
+import { SPECIALIST_AGILITY_CASES, FRESH_TUTORIAL_START } from './measure/specialist-agility-cases';
 import { benchCoverage } from './measure/aio-bench-cases';
 import { intentForEntry } from '../packages/planner/src/progression-catalog';
 import { xpForLevel } from '../packages/planner/src/curve';
+import {
+    AGILITY_SPECIALIST_KIT,
+    parseKitArg,
+    parseSupplierCliArgs,
+    resolveSupplierKitPlan,
+} from './specialist-supplier';
 
 const ROOT = resolve(import.meta.dir, '..');
 
@@ -163,5 +169,38 @@ describe('Route config, AIO catalog, and bench coverage', () => {
         expect(mainCase.pass('LOGOUT logged-out\nRESULT ok route=tourist agility=1->99 ticks=5100')).toBe(true);
         expect(mainCase.pass('LOGOUT logged-out\nRESULT ok route=tourist agility=1->98 ticks=9000')).toBe(false);
         expect(mainCase.pass('RESULT ok route=tourist agility=1->99 ticks=5100')).toBe(false);
+
+        const extCase = SPECIALIST_AGILITY_CASES.find(c => c.key === 'extra:specialist-agility')!;
+        expect(extCase).toBeDefined();
+        expect(extCase.script).toBe('scripts/measure/specialist-bench.ts');
+        expect(extCase.pass('LOGOUT logged-out\nRESULT ok route=monkeybars agility=1->99 ticks=5800')).toBe(true);
+    });
+
+    test('every bench case in SPECIALIST_AGILITY_CASES starts at FRESH_TUTORIAL_START', () => {
+        for (const bench of SPECIALIST_AGILITY_CASES) {
+            expect(bench.presetConfig).toEqual(FRESH_TUTORIAL_START);
+        }
+    });
+
+    test('specialist-supplier supports agility kit via CLI and inventory match', () => {
+        expect(parseKitArg(['--kit=agility'])).toBe('agility');
+        expect(parseSupplierCliArgs(['Holder', 'Polevaulter', '--kit=agility'])).toEqual({
+            kitArg: 'agility',
+            cap: undefined,
+            outArg: undefined,
+            bankX: undefined,
+            bankZ: undefined,
+            positional: ['Holder', 'Polevaulter'],
+        });
+        const plan = resolveSupplierKitPlan('agility');
+        expect(plan.name).toBe('agility');
+        expect(plan.combined).toEqual(AGILITY_SPECIALIST_KIT);
+        expect(plan.legs.length).toBe(1);
+    });
+
+    test('agility-specialist task consumer threshold is tightened to 6,031 ticks', () => {
+        const taskPath = join(ROOT, 'packages/router/tasks/agility-specialist.json');
+        const task = JSON.parse(readFileSync(taskPath, 'utf8'));
+        expect(task.consumer).toContain('within 6,031 ticks');
     });
 });

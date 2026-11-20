@@ -773,11 +773,20 @@ async function runServe(args: string[]): Promise<void> {
     try {
         await waitUntil(s, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 });
         const t0 = s.tick();
-        const kitName = plan.name;
+        let activePlan = plan;
+        if (!parsed.kitArg && !process.env.SUPPLIER_KIT) {
+            for (const [kName, kItems] of Object.entries(SPECIALIST_KITS)) {
+                if (hasExactKit(s.sdk.getInventory(), kItems)) {
+                    activePlan = resolveSupplierKitPlan(kName);
+                    break;
+                }
+            }
+        }
+        const kitName = activePlan.name;
         if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'runecraft' && kitName !== 'crafting' && kitName !== 'herblore' && kitName !== 'magic') {
             const peerRe = exactNameRe(specialist);
-            for (let legIdx = 0; legIdx < plan.legs.length; legIdx++) {
-                const leg = plan.legs[legIdx]!;
+            for (let legIdx = 0; legIdx < activePlan.legs.length; legIdx++) {
+                const leg = activePlan.legs[legIdx]!;
                 const legBank = legIdx === 0 && (parsed.bankX !== undefined || parsed.bankZ !== undefined) ? bankTile : leg.bank;
                 const concreteKit = hasExactKit(s.sdk.getInventory(), leg.kit)
                     ? resolveConcreteKit(leg.kit, s.sdk.getInventory())
@@ -787,9 +796,9 @@ async function runServe(args: string[]): Promise<void> {
                 console.log('SUPPLIER_READY ' + JSON.stringify({
                     holder,
                     specialist,
-                    kit: plan.name,
+                    kit: activePlan.name,
                     trade: legIdx + 1,
-                    totalTrades: plan.legs.length,
+                    totalTrades: activePlan.legs.length,
                     server: serverHost,
                     at: { x: p.worldX, z: p.worldZ, level: p.level },
                     slots: s.sdk.getInventory().length,
@@ -813,9 +822,9 @@ async function runServe(args: string[]): Promise<void> {
                         console.log('SUPPLIER_HANDOFF ' + JSON.stringify({
                             holder,
                             specialist,
-                            kit: plan.name,
+                            kit: activePlan.name,
                             trade: legIdx + 1,
-                            totalTrades: plan.legs.length,
+                            totalTrades: activePlan.legs.length,
                             tick: s.tick() - t0,
                             items: concreteKit.map(k => ({ id: k.id, count: k.count })),
                         }));
@@ -827,11 +836,11 @@ async function runServe(args: string[]): Promise<void> {
                     await waitTicks(s, 1);
                 }
                 if (!handoffDone) {
-                    await finish([s], false, `supplier did not complete ${plan.name} trade ${legIdx + 1}/${plan.legs.length} within ${CAP} ticks`);
+                    await finish([s], false, `supplier did not complete ${activePlan.name} trade ${legIdx + 1}/${activePlan.legs.length} within ${CAP} ticks`);
                     return;
                 }
             }
-            await finish([s], true, `supplied ${specialist} (${plan.name}, ${plan.legs.length} trade(s)) in ${s.tick() - t0} ticks`);
+            await finish([s], true, `supplied ${specialist} (${activePlan.name}, ${activePlan.legs.length} trade(s)) in ${s.tick() - t0} ticks`);
             return;
         }
 

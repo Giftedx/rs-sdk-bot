@@ -1,5 +1,6 @@
 // Practice bench cases for the Agility specialist levers (scripts/agility-specialist.ts).
 import type { BenchCase } from './aio-bench-cases';
+import type { SaveConfig } from '../../packages/practice/src/presets';
 import {
     ITEMS,
     TOURIST_TRADE_1,
@@ -20,6 +21,11 @@ function expandInventory(entries: readonly SupplyEntry[]): { id: number; count: 
     }
     return out;
 }
+
+export const FRESH_TUTORIAL_START: SaveConfig = {
+    position: { x: 3094, z: 3106, level: 0 },
+    varps: { 281: 0 },
+};
 
 const TOURIST_COMPANION = {
     suffix: 'b',
@@ -55,6 +61,7 @@ export const SPECIALIST_AGILITY_CASES: BenchCase[] = [
         key: 'skiller:agility:specialist',
         script: 'scripts/agility-specialist.ts',
         preset: 'fresh_lumbridge',
+        presetConfig: FRESH_TUTORIAL_START,
         scriptArgs: ['{bot:b}', 'AGI_ROUTE=monkeybars', 'AGI_POTION=1', 'AGI_PRAY=1', 'AGI_PIPE_ALIGN=1'],
         companions: [{
             suffix: 'b',
@@ -68,9 +75,27 @@ export const SPECIALIST_AGILITY_CASES: BenchCase[] = [
         timeoutMs: 900_000,
     },
     {
+        key: 'extra:specialist-agility',
+        script: 'scripts/measure/specialist-bench.ts',
+        preset: 'fresh_lumbridge',
+        presetConfig: FRESH_TUTORIAL_START,
+        companions: [{
+            suffix: 's',
+            preset: 'fresh_lumbridge',
+            presetConfig: {
+                position: { x: 3222, z: 3222, level: 0 },
+                inventory: expandInventory(MONKEYBARS_TRADE_1),
+            },
+        }],
+        scriptArgs: ['{bot:s}', 'scripts/agility-specialist.ts', 'SUPPLIER_EXTERNAL=1', 'SUPPLIER_KIT=agility', 'AGI_ROUTE=monkeybars', 'AGI_POTION=1', 'AGI_PRAY=1', 'AGI_PIPE_ALIGN=1'],
+        pass: ok,
+        timeoutMs: 900_000,
+    },
+    {
         key: 'extra:agility-specialist-monkeybars',
         script: 'scripts/agility-specialist.ts',
         preset: 'fresh_lumbridge',
+        presetConfig: FRESH_TUTORIAL_START,
         scriptArgs: ['{bot:b}', 'AGI_ROUTE=monkeybars', 'AGI_POTION=1', 'AGI_PRAY=1', 'AGI_PIPE_ALIGN=1'],
         companions: [{
             suffix: 'b',
@@ -87,6 +112,7 @@ export const SPECIALIST_AGILITY_CASES: BenchCase[] = [
         key: 'extra:agility-specialist-gnome',
         script: 'scripts/agility-specialist.ts',
         preset: 'fresh_lumbridge',
+        presetConfig: FRESH_TUTORIAL_START,
         scriptArgs: ['{bot:b}', 'AGI_ROUTE=gnome', 'AGI_POTION=1', 'AGI_PRAY=1', 'AGI_PIPE_ALIGN=1'],
         companions: [{
             suffix: 'b',
@@ -103,6 +129,7 @@ export const SPECIALIST_AGILITY_CASES: BenchCase[] = [
         key: 'extra:agility-specialist-nopray',
         script: 'scripts/agility-specialist.ts',
         preset: 'fresh_lumbridge',
+        presetConfig: FRESH_TUTORIAL_START,
         scriptArgs: ['{bot:b}', 'AGI_ROUTE=gnome', 'AGI_POTION=1', 'AGI_PRAY=0', 'AGI_PIPE_ALIGN=1'],
         companions: [{
             suffix: 'b',
@@ -119,6 +146,7 @@ export const SPECIALIST_AGILITY_CASES: BenchCase[] = [
         key: 'extra:agility-specialist-nopot',
         script: 'scripts/agility-specialist.ts',
         preset: 'fresh_lumbridge',
+        presetConfig: FRESH_TUTORIAL_START,
         scriptArgs: ['{bot:b}', 'AGI_ROUTE=monkeybars', 'AGI_POTION=0', 'AGI_PRAY=1', 'AGI_PIPE_ALIGN=1'],
         companions: [{
             suffix: 'b',
@@ -135,6 +163,7 @@ export const SPECIALIST_AGILITY_CASES: BenchCase[] = [
         key: 'extra:agility-specialist-noalign',
         script: 'scripts/agility-specialist.ts',
         preset: 'fresh_lumbridge',
+        presetConfig: FRESH_TUTORIAL_START,
         scriptArgs: ['{bot:b}', 'AGI_ROUTE=monkeybars', 'AGI_POTION=1', 'AGI_PRAY=1', 'AGI_PIPE_ALIGN=0'],
         companions: [{
             suffix: 'b',
@@ -151,6 +180,7 @@ export const SPECIALIST_AGILITY_CASES: BenchCase[] = [
         key: 'extra:agility-specialist-tourist',
         script: 'scripts/agility-specialist.ts',
         preset: 'fresh_lumbridge',
+        presetConfig: FRESH_TUTORIAL_START,
         scriptArgs: ['{bot:b}', 'AGI_ROUTE=tourist', 'AGI_POTION=1', 'AGI_PRAY=1', 'AGI_PIPE_ALIGN=1'],
         companions: [TOURIST_COMPANION],
         pass: ok,

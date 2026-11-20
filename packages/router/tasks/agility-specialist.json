@@ -9,7 +9,7 @@
     "packages/practice/src/rehearse.ts",
     "packages/practice/test/specialist-rehearsal.test.ts"
   ],
-  "consumer": "Polevaulter completes the continuous fresh-clock Agility 99 specialist route from Tutorial Island through Edgeville monkeybars and Wilderness Course within 6,155 ticks after receiving its staged supply kit.",
+  "consumer": "Polevaulter completes the continuous fresh-clock Agility 99 specialist route from Tutorial Island through Edgeville monkeybars and Wilderness Course within 6,031 ticks after receiving its staged supply kit.",
   "checks": [
     {
       "id": "agility-specialist-regressions",
