@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795166892707-sporranbulge-dipstick",
+ "account": "SporranBulge",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 27956,
+ "claim": "94555f88-63eb-443f-83d0-67f755a96794",
+ "count": 0,
+ "ok": false,
+ "at": 1795166939961,
+ "detail": "trade claimed"
+}
