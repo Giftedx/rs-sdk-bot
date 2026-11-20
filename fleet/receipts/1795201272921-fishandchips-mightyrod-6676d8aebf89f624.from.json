@@ -1,0 +1,42 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795201272921-fishandchips-mightyrod-6676d8aebf89f624",
+ "account": "FishAndChips",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 35,
+ "claim": "3950f655-ed21-42f0-a5f4-672782004583",
+ "count": 35,
+ "ok": true,
+ "at": 1795201321279,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Lobster",
+   "requested": 50,
+   "count": 50,
+   "inventory": {
+    "before": 750,
+    "after": 700
+   }
+  }
+ ],
+ "inventory": {
+  "before": 35,
+  "after": 0
+ },
+ "bank": {
+  "count": 35,
+  "at": 1795201311951
+ },
+ "logout": {
+  "attemptId": "1795201301697-0000016856-0000000001",
+  "at": 1795201321092,
+  "sha256": "e59fb4b14ac7cb5db2c556b78519ad07cd25ebdd6cc0665c756e303ec79e6de7"
+ },
+ "screen": true
+}

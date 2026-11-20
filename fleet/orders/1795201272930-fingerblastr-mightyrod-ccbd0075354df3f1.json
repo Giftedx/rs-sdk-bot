@@ -1,0 +1,28 @@
+{
+ "id": "1795201272930-fingerblastr-mightyrod-ccbd0075354df3f1",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingerblastr",
+ "to": "Mightyrod",
+ "item": "Earth rune",
+ "count": 30,
+ "start": 1795201272930,
+ "end": 1795202472930,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Law rune",
+   "count": 2
+  }
+ ]
+}

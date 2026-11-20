@@ -1,0 +1,28 @@
+{
+ "id": "1795201272921-fishandchips-mightyrod-6676d8aebf89f624",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "Mightyrod",
+ "item": "Shark",
+ "count": 35,
+ "start": 1795201272921,
+ "end": 1795202472921,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Lobster",
+   "count": 50
+  }
+ ]
+}
