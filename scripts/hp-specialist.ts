@@ -110,6 +110,24 @@ async function climbTreeLadder(s: Session, dir: 'up' | 'down', targetLevel: numb
     }
 }
 
+async function exitGrandTreeRoots(s: Session, stop: StopFn): Promise<void> {
+    const deadline = s.tick() + 60;
+    while (!stop() && (posOf(s)?.worldZ ?? 0) > 6400) {
+        if (s.tick() >= deadline) throw Error('failed to climb Grand Tree root exit ladder');
+        const p = posOf(s);
+        if (!p || d8({ x: p.worldX, z: p.worldZ }, { x: 2464, z: 9897 }) > 3) {
+            await walkWaypoints(s, [{ x: 2464, z: 9897, tol: 1 }], 50, stop, 'roots to exit ladder');
+        }
+        const ladder = (s.sdk.getState()?.nearbyLocs ?? [])
+            .filter((l: any) => /ladder/i.test(l.name ?? '') && (l.optionsWithIndex ?? []).some((o: any) => /climb/i.test(o.text ?? '')))
+            .sort((a: any, b: any) => d8(a, { x: 2463, z: 9897 }) - d8(b, { x: 2463, z: 9897 }))[0];
+        if (!ladder) throw Error('Grand Tree root exit ladder not found near 2463,9897');
+        const op = ladder.optionsWithIndex.find((o: any) => /climb/i.test(o.text ?? ''));
+        await s.sdk.sendInteractLoc(ladder.x, ladder.z, ladder.id, op?.opIndex ?? 1);
+        await waitUntil(s, () => (posOf(s)?.worldZ ?? 9999) < 6400 || stop(), { timeoutTicks: 8 });
+    }
+}
+
 async function travelAgilityCourseToGrandTree(s: Session, stop: StopFn): Promise<void> {
     const settleDeadline = s.tick() + 60;
     while (!stop() && (posOf(s)?.level ?? 0) > 0) {
@@ -255,6 +273,7 @@ async function main(): Promise<void> {
         await runQuestGrandTree({ session: s, cap: Math.max(200, CAP - elapsed()), stop, food: [385, 379], burst: true, keepAlive: true });
         milestone('grand_tree', `magic=${skillInfo(s, 'Magic').baseLevel} hp=${skillInfo(s, 'Hitpoints').baseLevel}`);
 
+        await exitGrandTreeRoots(s, stop);
         await climbTreeLadder(s, 'up', 1, stop);
         await walkWaypoints(s, [{ x: GRAND_TREE_BANK.x, z: GRAND_TREE_BANK.z, tol: 2 }], 40, stop, 'grand tree bank 2');
         await openFreshBank(s, stop);

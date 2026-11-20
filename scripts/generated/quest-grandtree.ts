@@ -14,7 +14,7 @@ import type { Session } from '../../packages/core/src/inprocess';
 const ITEM = {
     bark: 783, book: 784, journal: 785, scroll: 786, order: 787, key: 788,
     twigT: 789, twigU: 790, twigZ: 791, twigO: 792, rock: 793, plans: 794,
-    prayerPot: [2434, 139, 141, 143], antipoison: [2446, 175, 177, 179], food: 379,
+    prayerPot: [2434, 139, 141, 143], antipoison: [2448, 181, 183, 185, 2446, 175, 177, 179], food: 379,
 };
 const NARNODE = { x: 2466, z: 3497 };                 // ground floor of the Grand Tree (m38_54 npc 670)
 const NARNODE_UNDER = { x: 2464, z: 9897 };           // in the roots (m38_154 npc 670)
@@ -46,11 +46,11 @@ const ROOTS: [number, number][] = [[2467, 9896], [2465, 9891], [2468, 9890], [24
 const PFM = 14;
 
 // Dialogue bursts: 3/3 pass at seeds 7, 8, 9 and about 84 ticks less to the demon (research/quest-plan.md section 1g).
-export async function runQuestGrandTree(opts: { session?: Session; cap?: number; stop?: () => boolean; burst?: boolean } = {}): Promise<{ ok: boolean; detail: string }> {
+export async function runQuestGrandTree(opts: { session?: Session; cap?: number; stop?: () => boolean; burst?: boolean; food?: number[]; eatAt?: number; keepAlive?: boolean } = {}): Promise<{ ok: boolean; detail: string }> {
 const g = globalThis as { QUEST_SCRIPT_ID?: string };
 const prevScriptId = g.QUEST_SCRIPT_ID;
 g.QUEST_SCRIPT_ID = 'quest-grandtree';
-const q = await openQuest({ session: opts.session, stop: opts.stop, cap: opts.cap ?? 6000, eatAt: 6, food: [ITEM.food], burst: opts.burst ?? true });
+const q = await openQuest({ session: opts.session, stop: opts.stop, cap: opts.cap ?? 6000, eatAt: opts.eatAt ?? 6, food: opts.food ?? [ITEM.food], burst: opts.burst ?? true, ...(opts.keepAlive === undefined ? {} : { keepAlive: opts.keepAlive }) });
 let offDone: (() => void) | undefined, offWalk: (() => void) | undefined;
 try {
     const FROM = Number(process.env.GT_FROM ?? 0);
