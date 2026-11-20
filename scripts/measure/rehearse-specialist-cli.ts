@@ -1,0 +1,453 @@
+// Builds the --specialist Segment JSON and runs the isolated 400 ms practice rehearsal for one ready specialist account.
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
+import { SPECIALIST_BOARDS } from '../../packages/core/src/specialist-boards';
+import { checkSpecialistSegment, type RehearsalReport, type Segment } from '../../packages/practice/src/rehearse';
+import type { SaveConfig } from '../../packages/practice/src/presets';
+import { CRAFTING_BATCHES } from '../crafting-specialist';
+import { ITEM_IDS } from '../fast-skills-lib';
+import { HERBLORE_NOTED_SUPPLIES, HERBLORE_STARTER_BATCH } from '../herblore-specialist';
+import { MAGIC_BATCHES } from '../magic-specialist';
+import { PRAYER_BONES_NEEDED } from '../prayer-specialist';
+import { RANGED_SPECIALIST_LIVE_TRADE1, RANGED_SPECIALIST_LIVE_TRADE2 } from '../ranged-specialist';
+import {
+    FLETCHING_SPECIALIST_LIVE_KIT,
+    THIEVING_SPECIALIST_LIVE_KIT,
+    type KitSpecItem,
+} from '../specialist-supplier';
+
+const ROOT = resolve(import.meta.dir, '..', '..');
+const DEFAULT_OUT_BASE = '.practice/hosted-rehearse';
+
+export type SpecialistSegmentSpec = Segment & { specialist: string };
+
+export const READY_SPECIALIST_ACCOUNTS = [
+    'DipYourWick',
+    'NockAndLoad',
+    'Shaftshooter',
+    'CutMyJewels',
+    'GrindMyHerb',
+    'CastMyLoad',
+    'BigBoner',
+    'SteelRod',
+] as const;
+
+export type ReadySpecialistAccount = (typeof READY_SPECIALIST_ACCOUNTS)[number];
+
+const STACKABLE_SAVE_IDS = new Set<number>([
+    2, // Cannonball
+    39, // Bronze arrowtips
+    40, // Iron arrowtips
+    41, // Steel arrowtips
+    42, // Mithril arrowtips
+    43, // Adamant arrowtips
+    44, // Rune arrowtips
+    53, // Headless arrow
+    313, // Fishing bait
+    314, // Feather
+    884, // Iron arrow
+    892, // Rune arrow
+    995, // Coins
+    ITEM_IDS.airrune,
+    ITEM_IDS.waterrune,
+    ITEM_IDS.earthrune,
+    ITEM_IDS.firerune,
+    ITEM_IDS.mindrune,
+    ITEM_IDS.cosmicrune,
+    ITEM_IDS.lawrune,
+    ITEM_IDS.bloodrune,
+    ITEM_IDS.bodyrune,
+    ...HERBLORE_NOTED_SUPPLIES.map(s => s.certId),
+]);
+
+const SUPPLIER_GUARD_ENV: Record<string, string> = {
+    LOOT_WATCH: '0',
+    PRAYER_GUARD: '0',
+    EAT_GUARD: '0',
+    STALL_TICKS: '0',
+};
+
+export function expandKitToSave(items: readonly Pick<KitSpecItem, 'id' | 'count'>[], stackableMap?: ReadonlySet<number>): { id: number; count: number }[] {
+    const out: { id: number; count: number }[] = [];
+    for (const item of items) {
+        const isStackable = stackableMap?.has(item.id)
+            || STACKABLE_SAVE_IDS.has(item.id)
+            || ('stackable' in item && Boolean((item as KitSpecItem).stackable));
+        if (isStackable) {
+            out.push({ id: item.id, count: item.count });
+        } else {
+            for (let i = 0; i < item.count; i++) out.push({ id: item.id, count: 1 });
+        }
+    }
+    if (out.length > 28) {
+        throw Error(`rehearse-specialist-cli: supplier inventory exceeds 28 slots (${out.length})`);
+    }
+    return out;
+}
+
+export function aggregateKitBank(items: readonly { id: number; count: number }[]): { id: number; count: number }[] {
+    const totals = new Map<number, number>();
+    for (const item of items) {
+        totals.set(item.id, (totals.get(item.id) ?? 0) + item.count);
+    }
+    return [...totals.entries()].map(([id, count]) => ({ id, count }));
+}
+
+interface SpecialistSpecDefinition {
+    readonly account: ReadySpecialistAccount;
+    readonly id: string;
+    readonly script: string;
+    readonly args?: readonly string[];
+    readonly env: Readonly<Record<string, string>>;
+    readonly supplierScript: 'scripts/specialist-supplier.ts' | 'scripts/gathering-supplier.ts';
+    readonly supplierArgs: readonly string[];
+    readonly supplierSave: () => SaveConfig;
+    readonly planTicks: number;
+    readonly planSource: string;
+    readonly targetCap: number;
+}
+
+const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
+    {
+        account: 'DipYourWick',
+        id: 'dipyourwick-thieving',
+        script: 'scripts/thieving-specialist.ts',
+        env: { CAP: '3200', LIVE: '1' },
+        supplierScript: 'scripts/gathering-supplier.ts',
+        supplierArgs: ['{ACTOR}', '--kit=thieving-live', '3200'],
+        supplierSave: () => ({
+            position: { x: 3223, z: 3222, level: 0 },
+            inventory: expandKitToSave(THIEVING_SPECIALIST_LIVE_KIT),
+        }),
+        planTicks: 2070,
+        planSource: 'hosted-bench extra:specialist-thieving-live 1999-2143t (<=2221t vs #1 2267t)',
+        targetCap: 2221,
+    },
+    {
+        account: 'NockAndLoad',
+        id: 'nockandload-fletching',
+        script: 'scripts/fletching-specialist.ts',
+        env: { CAP: '200' },
+        supplierScript: 'scripts/gathering-supplier.ts',
+        supplierArgs: ['{ACTOR}', '--kit=fletching-live', '400'],
+        supplierSave: () => ({
+            position: { x: 3223, z: 3222, level: 0 },
+            inventory: expandKitToSave(FLETCHING_SPECIALIST_LIVE_KIT),
+        }),
+        planTicks: 54,
+        planSource: 'hosted-bench extra:specialist-fletching 54t (<=54t vs #1 56t)',
+        targetCap: 54,
+    },
+    {
+        account: 'Shaftshooter',
+        id: 'shaftshooter-ranged',
+        script: 'scripts/ranged-specialist.ts',
+        env: { CAP: '5600', VARIANT: 'live' },
+        supplierScript: 'scripts/specialist-supplier.ts',
+        supplierArgs: ['{ACTOR}', '--kit=ranged-live', '6000'],
+        supplierSave: () => ({
+            position: { x: 3223, z: 3222, level: 0 },
+            inventory: expandKitToSave(RANGED_SPECIALIST_LIVE_TRADE1),
+            bank: aggregateKitBank(RANGED_SPECIALIST_LIVE_TRADE2),
+        }),
+        planTicks: 4550,
+        planSource: 'hosted-bench extra:ranged-specialist-live 4505-4774t (<=5483t vs #1 5595t)',
+        targetCap: 5483,
+    },
+    {
+        account: 'CutMyJewels',
+        id: 'cutmyjewels-crafting',
+        script: 'scripts/crafting-specialist.ts',
+        env: { CAP: '2500' },
+        supplierScript: 'scripts/specialist-supplier.ts',
+        supplierArgs: ['{ACTOR}', '--kit=crafting', '3000'],
+        supplierSave: () => ({
+            position: { x: 3223, z: 3222, level: 0 },
+            inventory: expandKitToSave(CRAFTING_BATCHES[0]!.give),
+            bank: aggregateKitBank(CRAFTING_BATCHES.slice(1).flatMap(b => b.give)),
+        }),
+        planTicks: 181,
+        planSource: 'hosted-bench skiller:crafting:specialist 181t (<=182t vs #1 186t)',
+        targetCap: 182,
+    },
+    {
+        account: 'GrindMyHerb',
+        id: 'grindmyherb-herblore',
+        script: 'scripts/herblore-specialist.ts',
+        env: { CAP: '600' },
+        supplierScript: 'scripts/specialist-supplier.ts',
+        supplierArgs: ['{ACTOR}', '--kit=herblore', '1000'],
+        supplierSave: () => ({
+            position: { x: 3223, z: 3222, level: 0 },
+            inventory: expandKitToSave(HERBLORE_STARTER_BATCH.give),
+            bank: aggregateKitBank(HERBLORE_NOTED_SUPPLIES),
+        }),
+        planTicks: 411,
+        planSource: 'hosted-bench skiller:herblore:specialist 410-411t (<=415t vs #1 424t)',
+        targetCap: 415,
+    },
+    {
+        account: 'CastMyLoad',
+        id: 'castmyload-magic',
+        script: 'scripts/magic-specialist.ts',
+        env: { CAP: '2500' },
+        supplierScript: 'scripts/specialist-supplier.ts',
+        supplierArgs: ['{ACTOR}', '--kit=magic', '3000'],
+        supplierSave: () => ({
+            position: { x: 3223, z: 3222, level: 0 },
+            inventory: expandKitToSave(MAGIC_BATCHES[0]!.give),
+            bank: aggregateKitBank(MAGIC_BATCHES.slice(1).flatMap(b => b.give)),
+        }),
+        planTicks: 1170,
+        planSource: 'hosted-bench skiller:magic:specialist 1129-1213t (<=1236t vs #1 1262t)',
+        targetCap: 1236,
+    },
+    {
+        account: 'BigBoner',
+        id: 'bigboner-prayer',
+        script: 'scripts/prayer-specialist.ts',
+        env: { CAP: '3500' },
+        supplierScript: 'scripts/specialist-supplier.ts',
+        supplierArgs: ['{ACTOR}', '--kit=prayer', '4000'],
+        supplierSave: () => ({
+            position: { x: 3223, z: 3222, level: 0 },
+            inventory: expandKitToSave([{ id: ITEM_IDS.dragon_bones, count: 28 }]),
+            bank: [{ id: ITEM_IDS.dragon_bones, count: PRAYER_BONES_NEEDED - 28 }],
+        }),
+        planTicks: 1212,
+        planSource: 'hosted-bench skiller:prayer:specialist 1212-1214t (<=1246t vs #1 1272t)',
+        targetCap: 1246,
+    },
+    {
+        account: 'SteelRod',
+        id: 'steelrod-smithing',
+        script: 'scripts/smithing-specialist.ts',
+        env: { CAP: '1500' },
+        supplierScript: 'scripts/specialist-supplier.ts',
+        supplierArgs: ['{ACTOR}', '--kit=smithing', '2000'],
+        supplierSave: () => ({
+            position: { x: 3223, z: 3222, level: 0 },
+            inventory: expandKitToSave([
+                { id: ITEM_IDS.hammer, count: 1 },
+                { id: ITEM_IDS.amulet_of_glory_4, count: 1 },
+                { id: ITEM_IDS.bronze_bar, count: 9 },
+                { id: ITEM_IDS.iron_bar, count: 17 },
+            ]),
+            bank: [
+                { id: ITEM_IDS.iron_bar, count: 25 },
+                { id: ITEM_IDS.steel_bar, count: 100 },
+                { id: ITEM_IDS.mithril_bar, count: 275 },
+                { id: ITEM_IDS.adamantite_bar, count: 375 },
+            ],
+        }),
+        planTicks: 1230,
+        planSource: 'hosted-bench skiller:smithing:specialist 1197-1244t (<=1255t vs #1 1281t)',
+        targetCap: 1255,
+    },
+];
+
+const BY_ACCOUNT = new Map<string, SpecialistSpecDefinition>(
+    SPECIALIST_DEFINITIONS.map(def => [def.account.toLowerCase(), def]),
+);
+
+export function resolveSpecialistTargetCap(account: string): number {
+    const def = BY_ACCOUNT.get(account.trim().toLowerCase());
+    if (!def) {
+        throw Error(`rehearse-specialist-cli: unknown specialist "${account}" (expected ${READY_SPECIALIST_ACCOUNTS.join(', ')})`);
+    }
+    return def.targetCap;
+}
+
+export function resolveSpecialistSegment(account: string, opts?: { planTicks?: number }): SpecialistSegmentSpec {
+    const key = account.trim().toLowerCase();
+    const def = BY_ACCOUNT.get(key);
+    const board = SPECIALIST_BOARDS[key]?.name;
+    if (!def || !board) {
+        throw Error(`rehearse-specialist-cli: unknown specialist "${account}" (expected ${READY_SPECIALIST_ACCOUNTS.join(', ')})`);
+    }
+    const planTicks = opts?.planTicks ?? def.planTicks;
+    if (!Number.isSafeInteger(planTicks) || planTicks <= 0) {
+        throw Error(`rehearse-specialist-cli: invalid planTicks ${planTicks}`);
+    }
+    const seg: SpecialistSegmentSpec = {
+        id: def.id,
+        specialist: def.account,
+        start: { fresh: true },
+        script: def.script,
+        ...(def.args?.length ? { args: [...def.args] } : {}),
+        env: { ...def.env },
+        supplier: {
+            save: def.supplierSave(),
+            script: def.supplierScript,
+            args: [...def.supplierArgs],
+            env: { ...SUPPLIER_GUARD_ENV },
+        },
+        plan: {
+            ticks: planTicks,
+            source: def.planSource,
+        },
+        expect: {
+            skills: { [board]: 99 },
+        },
+        timeoutMs: Math.max(600_000, planTicks * 400 + 180_000),
+    };
+    checkSpecialistSegment(seg, seg.specialist);
+    return seg;
+}
+
+export interface ParsedCliArgs {
+    readonly account: string;
+    readonly dryRun: boolean;
+    readonly out?: string;
+    readonly planTicks?: number;
+}
+
+export function parseCliArgs(argv: readonly string[]): ParsedCliArgs {
+    let account = '';
+    let dryRun = false;
+    let out: string | undefined;
+    let planTicks: number | undefined;
+    for (let i = 0; i < argv.length; i++) {
+        const arg = argv[i]!;
+        if (arg === '--dry-run' || arg === '--print') {
+            dryRun = true;
+        } else if (arg === '--out') {
+            out = argv[++i];
+            if (!out) throw Error('usage: rehearse-specialist-cli.ts <specialistAccount> [--out <dir>] [--plan-ticks <n>] [--dry-run]');
+        } else if (arg.startsWith('--out=')) {
+            out = arg.slice(6);
+            if (!out) throw Error('usage: --out=<dir> requires a path');
+        } else if (arg === '--plan-ticks') {
+            planTicks = Number(argv[++i]);
+            if (!Number.isSafeInteger(planTicks) || planTicks <= 0) throw Error('usage: --plan-ticks requires a positive integer');
+        } else if (arg.startsWith('--plan-ticks=')) {
+            planTicks = Number(arg.slice(13));
+            if (!Number.isSafeInteger(planTicks) || planTicks <= 0) throw Error('usage: --plan-ticks=<n> requires a positive integer');
+        } else if (arg.startsWith('--')) {
+            throw Error(`rehearse-specialist-cli: unknown flag ${arg}`);
+        } else if (!account) {
+            account = arg;
+        } else {
+            throw Error(`rehearse-specialist-cli: unexpected positional argument ${arg}`);
+        }
+    }
+    if (!account) {
+        throw Error(`usage: rehearse-specialist-cli.ts <${READY_SPECIALIST_ACCOUNTS.join('|')}> [--out <dir>] [--plan-ticks <n>] [--dry-run]`);
+    }
+    return { account, dryRun, out, planTicks };
+}
+
+export interface RehearsalSummary {
+    readonly account: string;
+    readonly board: string;
+    readonly targetCap: number;
+    readonly ok: boolean;
+    readonly wholeClock: boolean;
+    readonly planTicks: number;
+    readonly ticks: RehearsalReport['ticks'] | null;
+    readonly checks: Record<string, boolean> | null;
+    readonly endPlaytime: number | null;
+    readonly boardTicks: Record<string, number> | null;
+    readonly externalSupplies: readonly { item: string; count: number; itemId?: number }[] | null;
+    readonly context: string | null;
+    readonly scope: string | null;
+    readonly outDir: string;
+}
+
+function readJsonIfExists<T>(path: string): T | null {
+    if (!existsSync(path)) return null;
+    return JSON.parse(readFileSync(path, 'utf8')) as T;
+}
+
+function tailLines(path: string, maxLines = 80): string {
+    if (!existsSync(path)) return '';
+    return readFileSync(path, 'utf8').split(/\r?\n/).slice(-maxLines).join('\n').trim();
+}
+
+export function collectRehearsalSummary(outDir: string, seg: SpecialistSegmentSpec): RehearsalSummary {
+    const board = Object.keys(seg.expect.skills ?? {})[0] ?? '';
+    const report = readJsonIfExists<RehearsalReport>(join(outDir, `${seg.id}.json`));
+    const receipt = readJsonIfExists<{
+        context?: string;
+        endPlaytime?: number;
+        boardTicks?: Record<string, number>;
+        externalSupplies?: { item: string; count: number; itemId?: number }[];
+    }>(join(outDir, `${seg.id}.receipt.json`));
+    return {
+        account: seg.specialist,
+        board,
+        targetCap: resolveSpecialistTargetCap(seg.specialist),
+        ok: report?.ok === true,
+        wholeClock: report?.checks?.wholeClock === true,
+        planTicks: seg.plan!.ticks,
+        ticks: report?.ticks ?? null,
+        checks: report?.checks ?? null,
+        endPlaytime: receipt?.endPlaytime ?? null,
+        boardTicks: receipt?.boardTicks ?? null,
+        externalSupplies: receipt?.externalSupplies ?? null,
+        context: receipt?.context ?? null,
+        scope: report?.scope ?? null,
+        outDir,
+    };
+}
+
+export type RehearseSpawnFn = (cmd: string[], cwd: string) => Promise<number>;
+
+const defaultSpawn: RehearseSpawnFn = async (cmd, cwd) => {
+    const proc = Bun.spawn(cmd, {
+        cwd,
+        stdout: 'inherit',
+        stderr: 'inherit',
+        windowsHide: true,
+    });
+    return proc.exited;
+};
+
+export async function runHostedRehearsal(
+    argv: readonly string[],
+    opts: { root?: string; spawn?: RehearseSpawnFn; log?: (line: string) => void } = {},
+): Promise<{ exitCode: number; seg: SpecialistSegmentSpec; summary?: RehearsalSummary }> {
+    const root = opts.root ?? ROOT;
+    const log = opts.log ?? console.log;
+    const parsed = parseCliArgs(argv);
+    const seg = resolveSpecialistSegment(parsed.account, { planTicks: parsed.planTicks });
+    if (parsed.dryRun) {
+        log(JSON.stringify(seg, null, 2));
+        return { exitCode: 0, seg };
+    }
+    const outRel = parsed.out ?? `${DEFAULT_OUT_BASE}/${seg.specialist.toLowerCase()}`;
+    const outAbs = resolve(root, outRel);
+    const normOut = relative(root, outAbs).replaceAll('\\', '/');
+    if (!normOut.startsWith('.practice/') || normOut.includes('..')) {
+        throw Error(`rehearse-specialist-cli: --out must be inside .practice/ (got ${outRel})`);
+    }
+    if (existsSync(outAbs)) {
+        throw Error(`rehearse-specialist-cli: output directory already exists: ${normOut}`);
+    }
+    const stageDir = resolve(root, DEFAULT_OUT_BASE);
+    mkdirSync(stageDir, { recursive: true });
+    const segFile = join(stageDir, `${seg.specialist.toLowerCase()}.segment.json`);
+    rmSync(segFile, { force: true });
+    writeFileSync(segFile, JSON.stringify(seg, null, 2) + '\n');
+
+    const spawn = opts.spawn ?? defaultSpawn;
+    const exitCode = await spawn(
+        ['bun', 'packages/practice/src/rehearse.ts', '--specialist', segFile, '--start', '--out', normOut],
+        root,
+    );
+    const summary = collectRehearsalSummary(outAbs, seg);
+    log(`HOSTED_REHEARSAL_SUMMARY ${JSON.stringify(summary)}`);
+
+    if (exitCode !== 0 || !summary.ok || !summary.wholeClock) {
+        for (const ext of ['log', 'err', 'supplier.log', 'supplier.err']) {
+            const tail = tailLines(join(outAbs, `${seg.id}.${ext}`), 60);
+            if (tail) log(`--- ${seg.id}.${ext} (tail) ---\n${tail}`);
+        }
+    }
+    return { exitCode: summary.ok && summary.wholeClock && exitCode === 0 ? 0 : (exitCode || 1), seg, summary };
+}
+
+if (import.meta.main) {
+    const res = await runHostedRehearsal(process.argv.slice(2));
+    process.exit(res.exitCode);
+}
