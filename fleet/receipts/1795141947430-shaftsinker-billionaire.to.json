@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795141947430-shaftsinker-billionaire",
  "account": "Billionaire",
  "partner": "Shaftsinker",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 22658,
  "claim": "839b0f77-a562-48a9-ab63-6fa75a5d8441",
- "count": 0,
- "ok": false,
- "at": 1795142082100,
- "detail": "trade claimed"
+ "count": 22658,
+ "ok": true,
+ "at": 1795142363401,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 28842,
+  "after": 51500
+ },
+ "bank": {
+  "count": 22658,
+  "at": 1795142357100
+ },
+ "logout": {
+  "attemptId": "1795142082110-0000001652-0000000001",
+  "at": 1795142363389,
+  "sha256": "b88fd00ce73ea2e2a6ffa248ecfa1e95895e04caeee9e626d5d834107d57515e"
+ },
+ "screen": true
 }
