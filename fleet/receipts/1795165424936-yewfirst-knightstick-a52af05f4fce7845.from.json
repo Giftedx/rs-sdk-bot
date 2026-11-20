@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795165424936-yewfirst-knightstick-a52af05f4fce7845",
  "account": "YewFirst",
  "partner": "Knightstick",
@@ -10,30 +10,76 @@
  "item": "Headless arrow",
  "requested": 3600,
  "claim": "bcea9f05-409f-4625-8897-0cae0248de6d",
- "count": 0,
- "ok": false,
- "at": 1795165435488,
- "detail": "trade claimed",
+ "count": 3600,
+ "ok": true,
+ "at": 1795165475181,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Steel arrowtips",
    "requested": 161,
-   "count": 0
+   "count": 161,
+   "inventory": {
+    "before": 161,
+    "after": 0
+   },
+   "bank": {
+    "count": 161,
+    "at": 1795165445650
+   }
   },
   {
    "item": "Mithril arrowtips",
    "requested": 212,
-   "count": 0
+   "count": 212,
+   "inventory": {
+    "before": 212,
+    "after": 0
+   },
+   "bank": {
+    "count": 212,
+    "at": 1795165446439
+   }
   },
   {
    "item": "Adamant arrowtips",
    "requested": 495,
-   "count": 0
+   "count": 495,
+   "inventory": {
+    "before": 495,
+    "after": 0
+   },
+   "bank": {
+    "count": 495,
+    "at": 1795165447239
+   }
   },
   {
    "item": "Rune arrowtips",
    "requested": 2113,
-   "count": 0
+   "count": 2113,
+   "inventory": {
+    "before": 2113,
+    "after": 0
+   },
+   "bank": {
+    "count": 2113,
+    "at": 1795165448106
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 3600,
+  "after": 0
+ },
+ "bank": {
+  "count": 3600,
+  "at": 1795165444851
+ },
+ "logout": {
+  "attemptId": "1795165435494-0000023704-0000000001",
+  "at": 1795165475171,
+  "sha256": "9f750b251c9553d4f0ece68bd657e210dca0cae5b092ec637adf54a60acc242d"
+ },
+ "screen": true
 }
