@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795160244169-knightrider-deeppockets-shark",
  "account": "KnightRider",
  "partner": "Deeppockets",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 6,
  "claim": "454b1954-9f92-4ecb-9ad9-5c0a9f85a868",
- "count": 0,
- "ok": false,
- "at": 1795160301233,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795160317400,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795160307452
+ },
+ "logout": {
+  "attemptId": "1795160301241-0000015772-0000000001",
+  "at": 1795160317389,
+  "sha256": "d2f4a2b50c78f5f51bc954e14ec75a5b5656b8e3b46d2f056820aa2455d3d5c5"
+ },
+ "screen": true
 }
