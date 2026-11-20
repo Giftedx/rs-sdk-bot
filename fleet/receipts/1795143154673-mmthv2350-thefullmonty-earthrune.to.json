@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795143154673-mmthv2350-thefullmonty-earthrune",
+ "account": "TheFullMonty",
+ "partner": "mmthv2350",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 43,
+ "claim": "4a3350b6-e5e5-41f0-a6cb-15ee0a182bdb",
+ "count": 0,
+ "ok": false,
+ "at": 1795143199217,
+ "detail": "trade claimed"
+}
