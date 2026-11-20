@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795155813889-mightyrod-deeppockets-lawrune",
  "account": "Mightyrod",
  "partner": "Deeppockets",
@@ -12,6 +12,12 @@
  "claim": "02072bb9-6eb8-4180-9f9f-2cec675d4fb8",
  "count": 0,
  "ok": false,
- "at": 1795155914790,
- "detail": "trade claimed"
+ "at": 1795155979200,
+ "detail": "fled at low hitpoints: flee_guard id=32 at=2618,3333 ticks=5",
+ "logout": {
+  "attemptId": "1795155914799-0000031736-0000000001",
+  "at": 1795155979188,
+  "sha256": "0c177426457b6c05649143038750505fc12f8d35dfbba99b33d7f341836efd72"
+ },
+ "screen": false
 }
