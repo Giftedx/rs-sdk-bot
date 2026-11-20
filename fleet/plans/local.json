@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795138558580,
+ "at": 1795140699803,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -55,6 +55,22 @@
    "enabled": false,
    "goal": "Combat reserve; qualify Ardougne cow entry before activation",
    "role": "combat"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "",
+   "enabled": false,
+   "repeat": false,
+   "goal": "reserved: specialist supply holder",
+   "role": "supplier"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "",
+   "enabled": false,
+   "repeat": false,
+   "goal": "reserved: specialist supply holder",
+   "role": "supplier"
   },
   {
    "account": "FishAndChips",
@@ -337,7 +353,6 @@
   "kiltlifter",
   "knightrider",
   "knightstick",
-  "quickhandjob",
   "sporrandip"
  ],
  "builds": {
