@@ -34,8 +34,8 @@ export interface KitSpecItem {
 
 export type RangedKitVariant = 'knives' | 'msb';
 
-// Exact 28 inventory slots for fresh-clock Ranged 1->99 with 2-tick knives, Dwarf Cannon, and jewellery teleports.
-export const RANGED_SPECIALIST_KIT: readonly KitSpecItem[] = [
+// Trade 1 (28 slots): Dragon bones buried immediately at Lumbridge plus starter weapon, armor, cannon, and pots.
+export const RANGED_SPECIALIST_TRADE1: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
     { id: 6, name: 'Cannon base', count: 1, stackable: false },
     { id: 8, name: 'Cannon stand', count: 1, stackable: false },
@@ -46,16 +46,23 @@ export const RANGED_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
     { id: 863, name: 'Iron knife', count: 250, stackable: true },
     { id: 868, name: 'Rune knife', count: 2000, stackable: true },
-    { id: 2448, name: 'Superantipoison(4)', count: 1, stackable: false },
-    { id: 2444, name: 'Ranging potion(4)', count: 1, stackable: false },
-    { id: 3024, name: 'Super restore(4)', count: 2, stackable: false },
-    { id: 1897, name: 'Chocolate cake', count: 2, stackable: false },
+    { id: 1129, name: 'Leather body', count: 1, stackable: false },
+    { id: 2581, name: 'Robin hood hat', count: 1, stackable: false },
+    { id: 2577, name: 'Ranger boots', count: 1, stackable: false },
     { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
     { id: 2491, name: 'Dragon vambraces', count: 1, stackable: false },
+    { id: 2448, name: 'Superantipoison(4)', count: 1, stackable: false },
+    { id: 2444, name: 'Ranging potion(4)', count: 2, stackable: false },
 ] as const;
 
-// Alternate 28 inventory slots swapping Rune knife + Dragon vambraces for Magic shortbow + Rune arrows from level 50.
-export const RANGED_SPECIALIST_MSB_KIT: readonly KitSpecItem[] = [
+// Trade 2 (10 slots) after bones are buried and starter gear worn: 32 Super restore doses and 2 Chocolate cakes.
+export const RANGED_SPECIALIST_TRADE2: readonly KitSpecItem[] = [
+    { id: 3024, name: 'Super restore(4)', count: 8, stackable: false },
+    { id: 1897, name: 'Chocolate cake', count: 2, stackable: false },
+] as const;
+
+// MSB Trade 1 (28 slots): replaces Rune knife and Leather body with Magic shortbow and Rune arrows.
+export const RANGED_SPECIALIST_MSB_TRADE1: readonly KitSpecItem[] = [
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },
     { id: 6, name: 'Cannon base', count: 1, stackable: false },
     { id: 8, name: 'Cannon stand', count: 1, stackable: false },
@@ -67,12 +74,36 @@ export const RANGED_SPECIALIST_MSB_KIT: readonly KitSpecItem[] = [
     { id: 863, name: 'Iron knife', count: 250, stackable: true },
     { id: 861, name: 'Magic shortbow', count: 1, stackable: false },
     { id: 892, name: 'Rune arrow', count: 1000, stackable: true },
-    { id: 2448, name: 'Superantipoison(4)', count: 1, stackable: false },
-    { id: 2444, name: 'Ranging potion(4)', count: 1, stackable: false },
-    { id: 3024, name: 'Super restore(4)', count: 2, stackable: false },
-    { id: 1897, name: 'Chocolate cake', count: 2, stackable: false },
+    { id: 2581, name: 'Robin hood hat', count: 1, stackable: false },
+    { id: 2577, name: 'Ranger boots', count: 1, stackable: false },
     { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
+    { id: 2491, name: 'Dragon vambraces', count: 1, stackable: false },
+    { id: 2448, name: 'Superantipoison(4)', count: 1, stackable: false },
+    { id: 2444, name: 'Ranging potion(4)', count: 2, stackable: false },
 ] as const;
+
+// MSB Trade 2 (11 slots) after bones are buried: 32 Super restore doses, 2 Chocolate cakes, and Leather body.
+export const RANGED_SPECIALIST_MSB_TRADE2: readonly KitSpecItem[] = [
+    { id: 3024, name: 'Super restore(4)', count: 8, stackable: false },
+    { id: 1897, name: 'Chocolate cake', count: 2, stackable: false },
+    { id: 1129, name: 'Leather body', count: 1, stackable: false },
+] as const;
+
+export const RANGED_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    ...RANGED_SPECIALIST_TRADE1,
+    ...RANGED_SPECIALIST_TRADE2,
+] as const;
+
+export const RANGED_SPECIALIST_MSB_KIT: readonly KitSpecItem[] = [
+    ...RANGED_SPECIALIST_MSB_TRADE1,
+    ...RANGED_SPECIALIST_MSB_TRADE2,
+] as const;
+
+export function variantTrades(variant: RangedKitVariant = 'knives'): { trade1: readonly KitSpecItem[]; trade2: readonly KitSpecItem[] } {
+    return variant === 'msb'
+        ? { trade1: RANGED_SPECIALIST_MSB_TRADE1, trade2: RANGED_SPECIALIST_MSB_TRADE2 }
+        : { trade1: RANGED_SPECIALIST_TRADE1, trade2: RANGED_SPECIALIST_TRADE2 };
+}
 
 export function variantKit(variant: RangedKitVariant = 'knives'): readonly KitSpecItem[] {
     return variant === 'msb' ? RANGED_SPECIALIST_MSB_KIT : RANGED_SPECIALIST_KIT;
@@ -98,6 +129,7 @@ export const ITEM_IDS = {
     runeKnife: 868,
     msb: MSB,
     runeArrow: 892,
+    leatherBody: 1129,
     blackChaps: 2497,
     blackVambs: 2491,
     rangerBoots: 2577,
@@ -114,6 +146,7 @@ export const ITEM_IDS = {
 
 const PROTECT_MELEE = 14;
 const RETALIATE_ON = 150;
+const RETALIATE_OFF = 151;
 const HEAD_SLOT = 0;
 const NECK_SLOT = 2;
 const WEAPON_SLOT = 3;
@@ -228,13 +261,17 @@ export function weaponReach(worn: readonly WornItem[]): number {
     return w === ITEM_IDS.msb ? 7 : 4;
 }
 
-// Schedule the 4 Ranging potion doses across the largest XP share (1, 40, 68, 86).
+// Schedule up to 8 Ranging potion doses across 1->99 so ranged level stays boosted continuously.
 export function shouldDrinkRanging(baseLevel: number, curLevel: number, dosesLeft: number): boolean {
     if (dosesLeft <= 0) return false;
-    if (dosesLeft >= 4) return curLevel <= baseLevel;
-    if (dosesLeft === 3) return baseLevel >= 40 && curLevel <= baseLevel + 2;
-    if (dosesLeft === 2) return baseLevel >= 68 && curLevel <= baseLevel + 3;
-    return baseLevel >= 86 && curLevel <= baseLevel + 5;
+    if (dosesLeft >= 8) return curLevel <= baseLevel;
+    if (dosesLeft === 7) return baseLevel >= 22 && curLevel <= baseLevel + 1;
+    if (dosesLeft === 6) return baseLevel >= 40 && curLevel <= baseLevel + 2;
+    if (dosesLeft === 5) return baseLevel >= 54 && curLevel <= baseLevel + 3;
+    if (dosesLeft === 4) return baseLevel >= 68 && curLevel <= baseLevel + 4;
+    if (dosesLeft === 3) return baseLevel >= 77 && curLevel <= baseLevel + 5;
+    if (dosesLeft === 2) return baseLevel >= 86 && curLevel <= baseLevel + 6;
+    return baseLevel >= 93 && curLevel <= baseLevel + 7;
 }
 
 export function shouldDrinkSuperRestore(prayerPoints: number, basePrayer: number): boolean {
@@ -454,6 +491,8 @@ async function equipEarlyGearAndBuryBones(s: Session, variant: RangedKitVariant,
         await equipItemFast(s, knife);
         await s.direct({ type: 'setCombatStyle', style: 1, reason: 'SDK' });
     }
+    const body = inv.find(i => i.id === ITEM_IDS.leatherBody);
+    if (body) await equipItemFast(s, body);
     if (variant === 'msb') {
         const arrows = inv.find(i => i.id === ITEM_IDS.runeArrow);
         if (arrows) await equipItemFast(s, arrows);
@@ -494,7 +533,7 @@ async function walkEdgevilleToSpiders(s: Session, spot: { x: number; z: number; 
         const st = s.sdk.getState();
         const pts = st?.prayers?.prayerPoints ?? 0;
         const basePray = skillInfo(s, 'Prayer').baseLevel;
-        if ((p?.worldZ ?? 0) >= 3720 || p?.combat?.inCombat || (p?.hp ?? 10) < 10) wantPray = true;
+        if ((p?.worldZ ?? 0) >= 3765 || p?.combat?.inCombat || (p?.hp ?? 10) < 10) wantPray = true;
         if (shouldDrinkSuperRestore(pts, basePray) && now - lastSip >= 3) {
             const pot = (s.sdk.getInventory() as InvItem[]).find(it => ITEM_IDS.superRestore.includes(it.id));
             if (pot && pot.slot !== undefined) {
@@ -510,7 +549,7 @@ async function walkEdgevilleToSpiders(s: Session, spot: { x: number; z: number; 
     try {
         for (let i = 0; i < legs.length && !stop(); i++) {
             const leg = legs[i]!;
-            if (leg.z >= 3740) wantPray = true;
+            if (leg.z >= 3765) wantPray = true;
             if (wantPray) await setProtectMelee(s, true, stop);
             await walkPath(walker, [leg], { maxTicks: 220, stop, look: 20 });
         }
@@ -644,6 +683,12 @@ async function runSpiderGrind(
     const glory = inv().find(i => ITEM_IDS.gloriesAll.includes(i.id));
     if (glory && !worn().some(w => w.slot === NECK_SLOT)) await equipItemFast(s, glory);
 
+    const tally = messageTally(() => st()?.gameMessages);
+    const loadSeen = (): number => tally.count(/you load the cannon with|already full of ammo/i);
+    const emptySeen = (): number => tally.count(/out of ammo/i);
+    const goneSeen = (): number => tally.count(/your cannon has been destroyed/i);
+    const poisonSeen = (): number => tally.count(/you have been poisoned/i);
+
     const anti0 = inv().find(i => ITEM_IDS.antipoison.includes(i.id));
     let lastAnti = -999;
     let antis = 0;
@@ -654,9 +699,14 @@ async function runSpiderGrind(
         await waitTicks(s, 2);
     }
 
+    // Turn Auto-Retaliate OFF (151) while setting up cannon so spider hits do not interrupt cannon_setup p_delay(0).
+    if (st()?.autoRetaliateEnabled !== false) {
+        await s.direct({ type: 'clickComponent', componentId: RETALIATE_OFF, reason: 'SDK' });
+    }
+
     const cannon = await ensureCannonSetup(s, spotCentre, stop);
 
-    // Enable Auto-Retaliate (150) and Rapid style (1) after cannon assembly.
+    // Re-enable Auto-Retaliate (150) and Rapid style (1) after cannon assembly.
     if (st()?.autoRetaliateEnabled === false) {
         await s.direct({ type: 'clickComponent', componentId: RETALIATE_ON, reason: 'SDK' });
     }
@@ -702,12 +752,10 @@ async function runSpiderGrind(
     let targetIdx: number | undefined;
     let seenBalls = countInv([ITEM_IDS.cannonball]);
 
-    const tally = messageTally(() => st()?.gameMessages);
-    const loadSeen = (): number => tally.count(/you load the cannon with|already full of ammo/i);
-    const emptySeen = (): number => tally.count(/out of ammo/i);
-    const goneSeen = (): number => tally.count(/your cannon has been destroyed/i);
+    tally.pull();
     let empty0 = emptySeen();
     let gone0 = goneSeen();
+    let poison0 = poisonSeen();
     let empty = false;
     let maxSaw = skillInfo(s, 'Ranged').baseLevel;
 
@@ -768,8 +816,8 @@ async function runSpiderGrind(
             }
 
             // 2. Sustain (eating/drinking clears active NPC target, so re-acquire next tick).
-            const curHp = skillInfo(s, 'Hitpoints').level;
-            if (curHp > 0 && curHp <= 4) {
+            const hpStat = skillInfo(s, 'Hitpoints');
+            if (hpStat.level > 0 && hpStat.level <= Math.max(8, Math.floor(hpStat.baseLevel * 0.25))) {
                 const food = inv().find(i => ITEM_IDS.cake.includes(i.id));
                 if (food && food.slot !== undefined) {
                     const res = await sendDirect({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
@@ -786,12 +834,12 @@ async function runSpiderGrind(
                 }
             }
 
-            const poisoned = !!st()?.player?.poisoned || (st()?.player?.poison ?? 0) > 0;
-            if (shouldDrinkAntipoison(poisoned, now - lastAnti)) {
+            const poisonedNow = poisonSeen() > poison0;
+            if (shouldDrinkAntipoison(poisonedNow, now - lastAnti)) {
                 const pot = inv().find(i => ITEM_IDS.antipoison.includes(i.id));
                 if (pot && pot.slot !== undefined) {
                     const res = await sendDirect({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' });
-                    if (res.success) { lastAnti = now; antis++; targetIdx = undefined; await waitTicks(s, 1); continue; }
+                    if (res.success) { poison0 = poisonSeen(); lastAnti = now; antis++; targetIdx = undefined; await waitTicks(s, 1); continue; }
                 }
             }
 
@@ -949,6 +997,7 @@ export interface RangedSpecialistOptions {
     variant?: RangedKitVariant;
     supplier?: string;
     benchSupplier?: string;
+    benchSupplier2?: string;
     spotCentre?: { x: number; z: number; level: number };
 }
 
@@ -961,16 +1010,20 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
     const CAP = opts.cap ?? Number(process.env.CAP ?? 4800);
     const variant: RangedKitVariant = opts.variant ?? (process.env.VARIANT === 'msb' ? 'msb' : 'knives');
     const kit = variantKit(variant);
+    const { trade1, trade2 } = variantTrades(variant);
     const spotCentre = opts.spotCentre ?? SPIDERS_CENTRE;
     const root = resolve(import.meta.dir, '..');
     const serverHost = readServerHost(root, opts.bot);
     const benchSupName = (opts.benchSupplier || process.env.BENCH_SUPPLIER || '').trim();
-    const [s, benchSup] = await Promise.all([
+    const benchSup2Name = (opts.benchSupplier2 || process.env.BENCH_SUPPLIER2 || '').trim();
+    const [s, benchSup, benchSup2] = await Promise.all([
         openBot(opts.bot),
         benchSupName ? openBot(benchSupName, { onSessionEnd: async () => {}, onStop: async () => {} }) : Promise.resolve(undefined),
+        benchSup2Name ? openBot(benchSup2Name, { onSessionEnd: async () => {}, onStop: async () => {} }) : Promise.resolve(undefined),
     ]);
     if (!serverHost) {
         if (benchSup) { await logoutSession(benchSup).catch(() => {}); await closeWithin([benchSup], 3000).catch(() => {}); }
+        if (benchSup2) { await logoutSession(benchSup2).catch(() => {}); await closeWithin([benchSup2], 3000).catch(() => {}); }
         await finish([s], false, `missing SERVER in bot.env for ${opts.bot}`);
         return;
     }
@@ -990,9 +1043,11 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
 
     try {
         const supplierName = (benchSupName || opts.supplier || process.env.PRACTICE_SUPPLIER || process.env.SUPPLIER || '').trim();
+        const supplierName2 = (benchSup2Name || supplierName).trim();
         if (!supplierName) throw Error('missing SUPPLIER / PRACTICE_SUPPLIER / BENCH_SUPPLIER');
 
-        const companionTask = benchSup ? serveBenchCompanion(benchSup, opts.bot, kit, stop) : undefined;
+        const companionTask1 = benchSup ? serveBenchCompanion(benchSup, opts.bot, trade1, stop) : undefined;
+        const companionTask2 = benchSup2 ? serveBenchCompanion(benchSup2, opts.bot, trade2, stop) : undefined;
 
         milestone('start', `variant=${variant}`);
         await leaveRuneStarter(s, stop);
@@ -1003,12 +1058,18 @@ export async function runRangedSpecialist(opts: RangedSpecialistOptions): Promis
         await dropItemsMatching(s, i => !allowed.has(i.id), stop, 'tutorial junk');
         milestone('tutorial');
 
-        await receiveSupplyKit(s, supplierName, kit, stop);
-        if (companionTask) await companionTask;
-        milestone('kit', `slots=${s.sdk.getInventory().length}`);
+        await receiveSupplyKit(s, supplierName, trade1, stop);
+        if (companionTask1) await companionTask1;
+        milestone('trade1', `slots=${s.sdk.getInventory().length}`);
 
         await equipEarlyGearAndBuryBones(s, variant, stop);
         milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
+
+        await receiveSupplyKit(s, supplierName2, trade2, stop);
+        if (companionTask2) await companionTask2;
+        const bodyPost = (s.sdk.getInventory() as InvItem[]).find(i => i.id === ITEM_IDS.leatherBody);
+        if (bodyPost) await equipItemFast(s, bodyPost);
+        milestone('kit', `slots=${s.sdk.getInventory().length}`);
 
         await rubJewellery(s, ITEM_IDS.duelRings, /castle wars/i, CASTLE_WARS, 10, stop, 'castle wars 1');
         milestone('cwars1');
@@ -1086,6 +1147,7 @@ export function parseSpecialistArgs(argv: readonly string[]): RangedSpecialistOp
         variant,
         supplier: kv.get('SUPPLIER'),
         benchSupplier: kv.get('BENCH_SUPPLIER'),
+        benchSupplier2: kv.get('BENCH_SUPPLIER2'),
         spotCentre: { x: sx, z: sz, level: 0 },
     };
 }

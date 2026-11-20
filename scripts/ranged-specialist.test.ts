@@ -23,11 +23,16 @@ import {
     parseSpecialistArgs,
     RANGED_SPECIALIST_KIT,
     RANGED_SPECIALIST_MSB_KIT,
+    RANGED_SPECIALIST_MSB_TRADE1,
+    RANGED_SPECIALIST_MSB_TRADE2,
+    RANGED_SPECIALIST_TRADE1,
+    RANGED_SPECIALIST_TRADE2,
     shouldDrinkAntipoison,
     shouldDrinkRanging,
     shouldDrinkSuperRestore,
     totalDoses,
     variantKit,
+    variantTrades,
     weaponReach,
 } from './ranged-specialist';
 import { SPECIALIST_RANGED_CASES } from './measure/specialist-ranged-cases';
@@ -37,28 +42,37 @@ const ITEMS: { id: number; name: string; tradeable?: boolean }[] = JSON.parse(
     readFileSync(join(ROOT, 'knowledge', 'items.json'), 'utf8'),
 );
 
-test('RANGED_SPECIALIST_KIT and MSB variant each fill 28 tradeable cataloged inventory slots', () => {
+test('RANGED_SPECIALIST two-trade kits and combined supplies use cataloged tradeable items within <=28 slots per trade', () => {
     const byId = new Map(ITEMS.map(item => [item.id, item]));
-    for (const kit of [RANGED_SPECIALIST_KIT, RANGED_SPECIALIST_MSB_KIT]) {
-        expect(kitSlotTotal(kit)).toBe(28);
-        for (const spec of kit) {
+    for (const [trade, expected] of [
+        [RANGED_SPECIALIST_TRADE1, 28],
+        [RANGED_SPECIALIST_TRADE2, 10],
+        [RANGED_SPECIALIST_MSB_TRADE1, 28],
+        [RANGED_SPECIALIST_MSB_TRADE2, 11],
+    ] as const) {
+        expect(kitSlotTotal(trade)).toBe(expected);
+        expect(expected).toBeLessThanOrEqual(28);
+        for (const spec of trade) {
             const entry = byId.get(spec.id);
             expect(entry).toBeDefined();
             expect(entry!.tradeable).toBe(true);
             expect(entry!.name).toBe(spec.name);
         }
-        const inv = kit.flatMap(spec =>
+        const inv = trade.flatMap(spec =>
             spec.stackable
                 ? [{ id: spec.id, count: spec.count }]
                 : Array.from({ length: spec.count }, () => ({ id: spec.id, count: 1 })),
         );
-        expect(inv.length).toBe(28);
-        expect(hasExactKit(inv, kit)).toBe(true);
-        expect(hasAtLeastKit([...inv, { id: 882, count: 10 }], kit)).toBe(true);
+        expect(inv.length).toBe(expected);
+        expect(hasExactKit(inv, trade)).toBe(true);
+        expect(hasAtLeastKit([...inv, { id: 882, count: 10 }], trade)).toBe(true);
     }
     expect(countById(RANGED_SPECIALIST_KIT, ITEM_IDS.cannonball)).toBe(2000);
+    expect(countById(RANGED_SPECIALIST_KIT, 3024)).toBe(8);
     expect(variantKit('knives')).toBe(RANGED_SPECIALIST_KIT);
     expect(variantKit('msb')).toBe(RANGED_SPECIALIST_MSB_KIT);
+    expect(variantTrades('knives')).toEqual({ trade1: RANGED_SPECIALIST_TRADE1, trade2: RANGED_SPECIALIST_TRADE2 });
+    expect(variantTrades('msb')).toEqual({ trade1: RANGED_SPECIALIST_MSB_TRADE1, trade2: RANGED_SPECIALIST_MSB_TRADE2 });
 });
 
 test('assertSupplierAccount rejects reserved specialists and invalid names', () => {
@@ -110,15 +124,18 @@ test('weapon, gear, potion, and sustain scheduling rules behave across Ranged 1.
     expect(weaponReach([{ id: ITEM_IDS.runeKnife, slot: 3 }])).toBe(4);
     expect(weaponReach([{ id: ITEM_IDS.msb, slot: 3 }])).toBe(7);
 
-    // 4-dose Ranging pot: doses scheduled at 1, 40, 68, 86 without burning late doses early.
-    expect(shouldDrinkRanging(1, 1, 4)).toBe(true);
-    expect(shouldDrinkRanging(1, 5, 4)).toBe(false);
-    expect(shouldDrinkRanging(25, 25, 3)).toBe(false);
-    expect(shouldDrinkRanging(40, 41, 3)).toBe(true);
-    expect(shouldDrinkRanging(67, 67, 2)).toBe(false);
-    expect(shouldDrinkRanging(68, 70, 2)).toBe(true);
-    expect(shouldDrinkRanging(85, 85, 1)).toBe(false);
-    expect(shouldDrinkRanging(86, 90, 1)).toBe(true);
+    // 8-dose Ranging pot: scheduled across 1, 22, 40, 54, 68, 77, 86, 93 without burning late doses early.
+    expect(shouldDrinkRanging(1, 1, 8)).toBe(true);
+    expect(shouldDrinkRanging(1, 5, 8)).toBe(false);
+    expect(shouldDrinkRanging(21, 21, 7)).toBe(false);
+    expect(shouldDrinkRanging(22, 23, 7)).toBe(true);
+    expect(shouldDrinkRanging(40, 42, 6)).toBe(true);
+    expect(shouldDrinkRanging(54, 57, 5)).toBe(true);
+    expect(shouldDrinkRanging(67, 67, 4)).toBe(false);
+    expect(shouldDrinkRanging(68, 72, 4)).toBe(true);
+    expect(shouldDrinkRanging(77, 82, 3)).toBe(true);
+    expect(shouldDrinkRanging(86, 92, 2)).toBe(true);
+    expect(shouldDrinkRanging(93, 99, 1)).toBe(true);
     expect(shouldDrinkRanging(99, 99, 0)).toBe(false);
 
     // Super restore threshold keeps Prayer above 0 without wasting overfill.
@@ -139,6 +156,7 @@ test('parseSpecialistArgs and bench cases validate cleanly', () => {
         variant: 'msb',
         supplier: undefined,
         benchSupplier: 'Sup',
+        benchSupplier2: undefined,
         spotCentre: { x: 3292, z: 3816, level: 0 },
     });
     expect(SPECIALIST_RANGED_CASES.map(c => c.key)).toEqual([
