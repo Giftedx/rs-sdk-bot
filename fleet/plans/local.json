@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795214049709,
+ "at": 1795214161938,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -220,36 +220,6 @@
    "role": "pvp"
   },
   {
-   "account": "TossTheCaber",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "jiminua",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "antipoison",
-    "STOCK_TARGET": "30",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "3656",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "3456",
-    "AUTOPILOT_ORDER": "[24]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"175\":30}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy antipoison(3) at Jiminua's in Karamja for the gang squad",
-   "role": "bank",
-   "template": "squad-antipoison-jiminua",
-   "autopilot": "local",
-   "resources": [
-    "shop:jiminua"
-   ]
-  },
-  {
    "account": "Bigchopper",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -356,42 +326,30 @@
    ]
   },
   {
-   "account": "Fingerblastr",
-   "script": "scripts/alch-train.ts",
-   "args": [
-    "99",
-    "5000"
-   ],
-   "env": {
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
-   "role": "combat",
-   "template": "army-alch-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "Kiltlifter",
-   "script": "scripts/alch-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99",
-    "5000"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":99}}"
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 99 with alchemy at the Ardougne north bank",
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-alch-magic-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   }
  ],
  "army": [
