@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795208834121,
+ "at": 1795208906612,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -387,6 +387,31 @@
    "resources": [
     "cow:ardougne-north"
    ]
+  },
+  {
+   "accounts": [
+    "UnderMyKilt",
+    "TrouserSnake",
+    "TheFullMonty",
+    "PocketPool"
+   ],
+   "script": "scripts/pk-squad.ts",
+   "args": [
+    "TARGETS=goondelf,ligma,sugma",
+    "POST=3067,3640",
+    "MAX_MINUTES=10",
+    "TRIPS=1",
+    "FOLLOW=1",
+    "MARCH=1",
+    "PULL=1",
+    "RESCUE=1",
+    "PICKUP=1"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "gang squad pilot: kill Goondelf, Ligma and Sugma before Lava Maze Runite",
+   "role": "pvp"
   }
  ],
  "army": [
