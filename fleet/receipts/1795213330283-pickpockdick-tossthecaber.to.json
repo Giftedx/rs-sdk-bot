@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795213330283-pickpockdick-tossthecaber",
+ "account": "TossTheCaber",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 1821,
+ "claim": "039ffc2c-4ff3-4ad1-8c6f-3124b7ff430f",
+ "count": 0,
+ "ok": false,
+ "at": 1795213486227,
+ "detail": "trade claimed"
+}
