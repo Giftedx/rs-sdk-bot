@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795136798420-masterbaiter-bigchopper-d10bac062eb31d29",
+ "account": "Masterbaiter",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Lobster",
+ "requested": 2,
+ "claim": "68c19de5-dfc1-494f-8fa9-45b0ae61d40f",
+ "count": 0,
+ "ok": false,
+ "at": 1795136840742,
+ "detail": "trade claimed"
+}
