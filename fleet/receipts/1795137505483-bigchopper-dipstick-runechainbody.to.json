@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795137505483-bigchopper-dipstick-runechainbody",
+ "account": "Dipstick",
+ "partner": "Bigchopper",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "80fbe97c-f48a-49cd-8c3f-4645a810408b",
+ "count": 0,
+ "ok": false,
+ "at": 1795137572505,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795137505483-shaftsinker-oreelse",
+ "account": "OreElse",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 71730,
+ "claim": "e80e3177-30e7-451d-9d50-08f7a011a55a",
+ "count": 71730,
+ "ok": true,
+ "at": 1795137582892,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 71730
+ },
+ "bank": {
+  "count": 71730,
+  "at": 1795137582031
+ },
+ "logout": {
+  "attemptId": "1795137563772-0000007788-0000000001",
+  "at": 1795137582779,
+  "sha256": "b3dfc45d91cae716d3db6f62ae8e97d7d98cb6014a7d4834e001be08cb9afeec"
+ },
+ "screen": true
+}
