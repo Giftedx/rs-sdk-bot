@@ -161,10 +161,35 @@ async function travelAgilityCourseToGrandTree(s: Session, stop: StopFn): Promise
 }
 
 async function walkToBolren(s: Session, stop: StopFn): Promise<void> {
-    await walkWaypoints(s, [{ x: 2451, z: 3151, tol: 3 }], 100, stop, 'castle wars west road');
-    await walkWaypoints(s, [{ x: 2490, z: 3220, tol: 3 }], 120, stop, 'west road north');
-    await walkWaypoints(s, [{ x: 2502, z: 3191, tol: 1 }], 100, stop, 'to gnome maze entry');
-    await walkWaypoints(s, [{ x: 2542, z: 3171, tol: 3 }], 160, stop, 'maze to bolren', { look: 4 });
+    await walkWaypoints(s, [{ x: 2451, z: 3151, tol: 2 }], 100, stop, 'castle wars west road');
+    await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
+    await walkWaypoints(s, [{ x: 2515, z: 3160, tol: 0 }], 240, stop, 'castle wars to loose railing', {
+        ignoreMeleeHunters: true,
+    });
+    for (let attempt = 0; attempt < 8 && !stop(); attempt++) {
+        if ((posOf(s)?.worldZ ?? 0) >= 3161) break;
+        await dismissContinueDialogs(s, stop, 1);
+        const locs: any[] = s.sdk.getState()?.nearbyLocs ?? [];
+        const railing = locs
+            .filter(l => (l.id === 2186 || /railing/i.test(l.name ?? '')) && (l.optionsWithIndex ?? []).some((o: any) => /squeeze/i.test(o.text ?? '')))
+            .sort((a, b) => d8(a, { x: 2515, z: 3161 }) - d8(b, { x: 2515, z: 3161 }))[0];
+        if (!railing) throw Error('loose railing not found at 2515,3161');
+        const op = railing.optionsWithIndex.find((o: any) => /squeeze/i.test(o.text ?? ''));
+        await s.sdk.sendInteractLoc(railing.x, railing.z, railing.id, op?.opIndex ?? 1);
+        await waitUntil(s, () => (posOf(s)?.worldZ ?? 0) >= 3161 || stop(), { timeoutTicks: 8 });
+    }
+    if ((posOf(s)?.worldZ ?? 0) < 3161) throw Error('failed to squeeze through loose railing');
+    await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
+    await walkWaypoints(
+        s,
+        [
+            { x: 2529, z: 3165, tol: 2 },
+            { x: 2542, z: 3169, tol: 1 },
+        ],
+        120,
+        stop,
+        'railing to bolren',
+    );
 }
 
 async function main(): Promise<void> {

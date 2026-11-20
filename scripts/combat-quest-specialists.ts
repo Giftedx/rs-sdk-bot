@@ -223,6 +223,8 @@ export async function walkWaypoints(
         const grid = await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
         const { withDanger } = await import('../packages/core/src/danger');
         const basePlan = walker.plan;
+        const baseHunters = walker.hunters;
+        walker.hunters = () => (protectedFromMelee(s.sdk.getState()) ? [] : (baseHunters?.() ?? []));
         walker.plan = (level, from, to, avoid) => {
             const pfm = protectedFromMelee(s.sdk.getState());
             if (!pfm) return basePlan(level, from, to, avoid);
@@ -928,10 +930,16 @@ export async function runMeleePvpSpecialist(
     milestone('prayer43', `prayer=${skillInfo(s, 'Prayer').baseLevel}`);
 
     await rubRingOfDueling(s, /castle wars/i, { x: 2440, z: 3090 }, opts.stop);
+    await walkWaypoints(s, [{ x: 2451, z: 3151, tol: 3 }], 100, opts.stop, 'castle wars to west road (2451,3151)');
+    await setPrayerState(s, PROTECT_MELEE_INDEX, true, opts.stop);
     for (const wp of [
-        { x: 2451, z: 3151, tol: 3 },
         { x: 2490, z: 3220, tol: 3 },
         { x: 2527, z: 3240, tol: 3 },
+    ]) {
+        await walkWaypoints(s, [wp], 120, opts.stop, `castle wars to almera (${wp.x},${wp.z})`, { ignoreMeleeHunters: true });
+    }
+    await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
+    for (const wp of [
         { x: 2576, z: 3320, tol: 3 },
         { x: 2577, z: 3380, tol: 3 },
         { x: 2554, z: 3470, tol: 3 },

@@ -10,7 +10,8 @@ import type { Session } from '../../packages/core/src/inprocess';
 import { openBot, finish, countItems } from '../../packages/core/src/bot';
 import { holdSessionEater } from '../../packages/core/src/sustain';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
-import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
+import { applyKnownDoorBlocks, sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
+import { withDoorPolicy } from '../../packages/core/src/door-policy';
 import { messageTally } from '../../packages/core/src/message-tally';
 
 const LOC = {
@@ -421,6 +422,22 @@ try {
     // Click-ahead walker (packages/core/src/walk.ts, research/walking.md): one click per tick at most, 20 tiles ahead,
     // opens shut doors on the path. bot.walkTo stays as the fallback for a leg it cannot finish.
     const walker = await sessionWalker(s as any);
+    const pfMaze: any = await import('../../vendor/rs-sdk/sdk/pathfinding');
+    const gridMaze: any = await import('../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+    // Inside the walled Gnome Maze, static outer-wall NPC spawns (e.g. Hill Giants outside z=3144) must not trigger guardWalk detours.
+    const mazeWalker: typeof walker = {
+        ...walker,
+        hunters: () => [],
+        plan: (level, from, to) => {
+            pfMaze.initPathfinding();
+            const blocks = applyKnownDoorBlocks(s.sdk, level, from, to).map((b: any) =>
+                b.whenAxis === undefined ? { ...b, ...pfMaze.getDoorAt(b.level, b.x, b.z) } : b,
+            );
+            return withDoorPolicy(gridMaze, blocks, () =>
+                pfMaze.findLongPath(level, from.x, from.z, to.x, to.z, 500, (s.sdk as any).temporaryDoorBlocks?.active?.() ?? []),
+            );
+        },
+    };
     let walkTicks = 0;
     const fast = async (pts: PathPoint[], look?: number, reclickAt?: number): Promise<number> => {
         const r = await walkPath(walker, pts, {
@@ -467,11 +484,19 @@ try {
             if (!near(x, z, 1)) await fail(`dash ${label} ${x},${z}`);
         }
     };
-    // Walk outer waypoints at default lookahead and maze corridors at look=4 so client clicks stay inside one hedge leg.
+    // Walk maze corridors with look=4 using mazeWalker so outer-hedge danger boxes cannot bend the path outside the fence.
     const walkMazeLeg = async (label: string, x: number, z: number, tol: number): Promise<void> => {
         if (near(x, z, tol)) return;
-        const done = await fast([{ x, z, tol }], 4, 2);
-        if (done < 1 && !(await walkPt(x, z, tol))) await fail(`walk ${label} ${x},${z}`);
+        const r = await walkPath(mazeWalker, [{ x, z, tol }], {
+            look: 4,
+            reclickAt: 2,
+            stop: () => died || T() > CAP || !!opts.stop?.(),
+        });
+        walkTicks += r.ticks;
+        if (!r.ok) {
+            const p = pos();
+            await fail(`walk ${label} ${x},${z}: ${r.detail ?? 'incomplete'} at=${p?.worldX},${p?.worldZ}`);
+        }
     };
 
     // Ladder or staircase with an option matching `re`, nearest to (x, z); waits for the plane or the z band to change.
