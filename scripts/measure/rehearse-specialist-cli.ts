@@ -26,7 +26,7 @@ const DEFAULT_OUT_BASE = '.practice/hosted-rehearse';
 export type SpecialistSegmentSpec = Segment & { specialist: string };
 
 export const READY_SPECIALIST_ACCOUNTS = [
-    'HalfInch',
+    'StickyFinger',
     'TipMyShaft',
     'Shaftshooter',
     'PouchStuffed',
@@ -130,8 +130,8 @@ interface SpecialistSpecDefinition {
 
 const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
     {
-        account: 'HalfInch',
-        id: 'halfinch-thieving',
+        account: 'StickyFinger',
+        id: 'stickyfinger-thieving',
         script: 'scripts/thieving-specialist.ts',
         env: { CAP: '3200', LIVE: '1' },
         supplier: {
@@ -277,8 +277,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
                 inventory: expandKitToSave(batch.give),
             }),
         })),
-        planTicks: 1145,
-        planSource: '400ms rehearsals 1135-1150t; hosted-bench skiller:magic:specialist 1137-1184t (<=1236t vs #1 1262t)',
+        planTicks: 1170,
+        planSource: '400ms rehearsals 1135-1208t (median 1150-1170t); hosted-bench skiller:magic:specialist 1137-1184t (<=1236t vs #1 1262t)',
         targetCap: 1236,
     },
     {
