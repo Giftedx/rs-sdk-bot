@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795165789025-billionaire-undermykilt-2e029bb44a311f4a",
  "account": "UnderMyKilt",
  "partner": "Billionaire",
@@ -12,13 +12,19 @@
  "claim": "84c679b7-0044-4b49-8976-6ed758d2ba83",
  "count": 0,
  "ok": false,
- "at": 1795165999249,
- "detail": "trade claimed",
+ "at": 1795166024769,
+ "detail": "Error: partner failed: no trade",
  "lines": [
   {
    "item": "Rune arrow",
    "requested": 212,
    "count": 0
   }
- ]
+ ],
+ "logout": {
+  "attemptId": "1795165999262-0000011268-0000000001",
+  "at": 1795166024757,
+  "sha256": "d3f018d5a1ee0b8b765d9701d989a3d1df114d3fcc63d28609c0cf6d00f4072b"
+ },
+ "screen": false
 }
