@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795209030435,
+ "at": 1795209195465,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -206,26 +206,6 @@
    "goal": "train Magic to 99 with alchemy on air runes at the Ardougne north bank",
    "role": "combat",
    "template": "army-alch-air-magic-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=861 QUANTITY=1 LIMIT_PRICE=60000 CASH_RESERVE=1000 ORDER_KEY=pickpockdick-kit27-861-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=563 QUANTITY=1 LIMIT_PRICE=1600 CASH_RESERVE=1000 ORDER_KEY=pickpockdick-kit27-563-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=6 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=pickpockdick-kit27-385-0to6 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Magic shortbow, 1 Law rune, 6 Shark on the Grand Exchange to kill Taverley's black dragons for their hides and bones, on rune arrows",
-   "role": "supply",
-   "template": "kit-buy:army-hunt-black-dragons-rune",
    "autopilot": "local",
    "resources": []
   },
