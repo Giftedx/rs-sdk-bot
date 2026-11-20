@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795159644159-knightrider-billionaire-shark",
  "account": "Billionaire",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 6,
  "claim": "5e4c3a80-b4d0-4593-a20d-07fd1c827a7e",
- "count": 0,
- "ok": false,
- "at": 1795159724472,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795159869074,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795159868258
+ },
+ "logout": {
+  "attemptId": "1795159724481-0000013540-0000000001",
+  "at": 1795159869012,
+  "sha256": "f0b118f2652dc57cb621932386c1cf1735e9c7a1613dc7e27f867f542b8094e9"
+ },
+ "screen": true
 }

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795159874212-shaftsinker-magicwanda-f193823601cb2bbf",
+ "account": "Shaftsinker",
+ "partner": "Magicwanda",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Cake",
+ "requested": 27,
+ "claim": "95fb3870-4c19-4382-b65c-778c66839d04",
+ "count": 0,
+ "ok": false,
+ "at": 1795159891265,
+ "detail": "trade claimed"
+}
