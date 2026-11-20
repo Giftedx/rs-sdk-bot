@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { admittedByLevels, handNamed } from '../packages/core/src/army-roster';
 import { OBSERVATION_FRESH_MS, reservedAccounts } from '../packages/planner/src/autopilot';
 import { loadOwners } from '../packages/core/src/fleet';
+import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
@@ -1213,7 +1214,7 @@ test('kitBuyRunning releases exit-4, orphaned and died kit buys while keeping ac
 });
 
 test('OFFLINE_GUARDED excludes main and specialists from stock transfers and planner work', () => {
-    expect([...OFFLINE_GUARDED].sort()).toEqual(['haggis', 'hiltsdeep', 'polevaulter', 'shaftshooter']);
+    expect([...OFFLINE_GUARDED].sort()).toEqual([...RESERVED_ACCOUNTS].sort());
     const owners = new Map([
         ['haggis', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
         ['shaftshooter', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
