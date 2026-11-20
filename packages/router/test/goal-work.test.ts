@@ -567,3 +567,42 @@ test('the last bank read of an account whose session ended stays known until a n
  expect(valueWith({ ...closed, bankAt: closed.at + 1 }, () => false)).toBeNull();
  expect(valueWith({ ...closed, bankAt: 0 }, () => false)).toBeNull();
 });
+
+test('bounded lava-maze-escorted-ore runs get Runite board support only when advancing holdings or expected ore',()=>{
+ const context={entryOf:(cap:string)=>cap==='lava-maze-escorted-ore'?'scripts/lava-maze-escorted-ore.ts':undefined};
+ const proof:CoordTask={id:'qualify-runite',kind:'qualify',goal:'gear',capability:'lava-maze-escorted-ore',dependsOn:[],priority:75,estimatedMs:900000,why:'Qualify Runite escort'};
+ const pilot=(patch:Partial<CoordTask>={}):CoordTask=>run('runite-pilot',{goal:'gear',capability:'lava-maze-escorted-ore',account:undefined,participants:['KnightRider','OreElse'],acceptIndex:1,dependsOn:['qualify-runite'],timeoutMs:1800000,env:{MAX_ORE:'1',EXPECTED_BANK_ORE:'0'},accept:{bank:{451:1}},...patch});
+ const knownZero=status('OreElse',{bank:[{id:1275,count:1}]});
+ const {state}=evaluate([proof,pilot()],goals(),[knownZero]);
+ const vals=goalWork(state,goals(),[knownZero],NOW,context);
+ expect(vals.get('runite-pilot')!.value).toBe(.01);
+ expect(vals.get('qualify-runite')!.value).toBe(.01);
+ // Already holding 1 Runite ore refuses a target of 1; advancing target=2 with EXPECTED_BANK_ORE=1 succeeds.
+ const knownOne=status('OreElse',{bank:[{id:451,count:1}]});
+ expect(goalWork(state,goals(),[knownOne],NOW,context).get('runite-pilot')!.value).toBe(0);
+ const stepTwo=evaluate([proof,pilot({env:{MAX_ORE:'1',EXPECTED_BANK_ORE:'1'},accept:{bank:{451:2}}})],goals(),[knownOne]);
+ expect(goalWork(stepTwo.state,goals(),[knownOne],NOW,context).get('runite-pilot')!.value).toBe(.01);
+ // Stale bank still allows EXPECTED_BANK_ORE + 1 pilot, while omitting EXPECTED_BANK_ORE requires observation.
+ const stale=status('OreElse',{bankAt:0});
+ expect(goalWork(state,goals(),[stale],NOW,context).get('runite-pilot')!.value).toBe(.01);
+ const noExpected=evaluate([pilot({dependsOn:[],env:{MAX_ORE:'1'}})]);
+ expect(goalWork(noExpected.state,goals(),[stale],NOW,context).get('runite-pilot')!.value).toBeNull();
+ // Unbounded MAX_ORE or wrong script or missing timeout gets zero.
+ expect(goalWork(evaluate([pilot({dependsOn:[],env:{MAX_ORE:'2',EXPECTED_BANK_ORE:'0'}})]).state,goals(),[knownZero],NOW,context).get('runite-pilot')!.value).toBe(0);
+ expect(goalWork(evaluate([pilot({dependsOn:[],timeoutMs:undefined})]).state,goals(),[knownZero],NOW,context).get('runite-pilot')!.value).toBe(0);
+ expect(goalWork(state,goals(),[knownZero],NOW,{entryOf:()=> 'scripts/goldfarm.ts'}).get('runite-pilot')!.value).toBe(0);
+});
+
+test('low-playtime Quest Points accounts earn quest credit for uncompleted journal quests even when fleet coverage completed them',()=>{
+ const doneBoard=goals({quests:{complete:1,total:1,remaining:[],observedAccounts:1,evidence:[]}});
+ const questRun=(account:string,quest='Lost City')=>run('qp-run',{account,accept:{quests:[quest]}});
+ // Low playtime (< 73,866t) + uncompleted in own journal earns 1.
+ const lowStatus=status('Quiverfull',{playtimeTicks:1560,quests:[{name:'Lost City',state:'not started'}]});
+ expect(goalWork(evaluate([questRun('Quiverfull')]).state,doneBoard,[lowStatus],NOW).get('qp-run')!.value).toBe(1);
+ // Already complete in own journal earns 0.
+ const completeOwn=status('Quiverfull',{playtimeTicks:1560,quests:[{name:'Lost City',state:'complete'}]});
+ expect(goalWork(evaluate([questRun('Quiverfull')]).state,doneBoard,[completeOwn],NOW).get('qp-run')!.value).toBe(0);
+ // High playtime (>= 73,866t) earns 0 when fleet already completed it.
+ const slowStatus=status('Mightyrod',{playtimeTicks:73866,quests:[{name:'Lost City',state:'not started'}]});
+ expect(goalWork(evaluate([questRun('Mightyrod')]).state,doneBoard,[slowStatus],NOW).get('qp-run')!.value).toBe(0);
+});
