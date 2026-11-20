@@ -1,0 +1,22 @@
+{
+ "id": "1795148084677-oreelse-woodpecker-dragonbones",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "Woodpecker",
+ "item": "Dragon bones",
+ "count": 14,
+ "start": 1795148084677,
+ "end": 1795150484677,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
