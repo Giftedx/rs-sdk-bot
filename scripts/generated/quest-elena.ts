@@ -34,7 +34,7 @@ const MUD_PILE = { id: 2533, x: 2561, z: 9738 };           // back to the garden
 const ITEM = { berries: 2126, water: 1929, spade: 952, rope: 954, dust: 1975, milk: 1927, snape: 231, choc: 1977, cure: 1504,
     mask: 1506, picture: 1510, book: 1509, note: 1508, warrant: 1503, key: 1507 };
 
-const q = await openQuest({ cap: 3000 });
+const q = await openQuest({ cap: 3000, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

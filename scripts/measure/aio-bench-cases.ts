@@ -969,6 +969,15 @@ const ROUTE_CASES: BenchCase[] = [
       varps: {...PRESETS.cannon_spiders_h_sci!.varps!, 176: 10},
       equipment: [[1731, 2], [1333, 3], [1129, 4], [1095, 7], [1059, 9], [1061, 10]].map(([id, slot]) => ({id: id!, count: 1, slot: slot!})).concat([{id: 892, count: 700, slot: 13}]),
       inventory: PRESETS.cannon_spiders_h_sci!.inventory!.map((item, i, all) => i === all.findIndex(x => x.id === 385) ? {id: 861, count: 1} : item)}},
+  {key: 'extra:cannon-spiders-post-mm', script: 'scripts/aio-fighter.ts', preset: 'cannon_spiders_h_sci',
+    scriptArgs: ['cannon', 'SPOT=spiders', 'STOP=Ranged=99,Strength=99,Defence=99,Hitpoints=99', 'PHASES=1333:1:Strength=99;1333:3:Defence=99;861:1', 'POTS=1', 'CAP=3200'],
+    pass: ok, timeoutMs: 600_000, output: /rangedXp=(\d+)/,
+    presetConfig: {...PRESETS.cannon_spiders_h_sci!,
+      skills: {Attack: 99, Strength: 97, Defence: 89, Hitpoints: 97, Prayer: 99, Magic: 80, Ranged: 1},
+      varps: {...PRESETS.cannon_spiders_h_sci!.varps!, 176: 10},
+      equipment: [[1725, 2], [1333, 3], [1061, 10]].map(([id, slot]) => ({id: id!, count: 1, slot: slot!})).concat([{id: 892, count: 700, slot: 13}]),
+      inventory: [...PRESETS.cannon_spiders_h_sci!.inventory!, {id: 861, count: 1}, {id: 2436, count: 1}, {id: 2440, count: 1}, {id: 2440, count: 1}]}},
+  {key: 'extra:magearena-staff', script: 'scripts/aio-quester.ts', preset: 'quest_magearena', scriptArgs: ['magearena', 'MA_STOP=staff'], pass: ok, timeoutMs: 300_000, output: /ticks=(\d+)/},
   // Recovery: %ownedmcannon (varp 4) holds 3286,3809 (packed (x << 14) | z) and %dropcannon (varp 2) = 4 (full cannon,
   // cannon.constant) with no cannon loc there, as after a decay. The worker talks to Nulodion beside him, who replaces a
   // cannon whose loc is gone (nulodion.rs2:91-143).

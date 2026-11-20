@@ -81,7 +81,7 @@ export async function takeSeaSlugPaste(q: PasteQuest): Promise<void> {
 
 // quest-sweep imports with an already owned session.
 if (import.meta.main || (globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) {
-const q = await openQuest({ cap: 2000, eatAt: 40, food: [ITEM.food] });
+const q = await openQuest({ cap: 2000, eatAt: 40, food: [ITEM.food], burst: true });
 if (!fixBridgedLocChanges((q.s as any).client)) console.log('WARN bridge fix not applied');
 try {
     let questDone = false;

@@ -52,6 +52,7 @@ export interface MageArenaOptions {
     earlyCharge?: boolean;
     defensive?: boolean;
     stopOutside?: boolean;
+    stopAtStaff?: boolean;
     keepAlive?: boolean;
 }
 
@@ -265,6 +266,12 @@ try {
     if (q.has(ITEM.cape)) await wear(ITEM.cape);
     if (q.has(ITEM.staff)) await wear(ITEM.staff);
     if (inCellar() && !inBank()) await locThen('pool to cellar', POOL_CHAMBER, () => q.near(2542, 4718, 4));
+    // Charge (charge.rs2:4) only requires %magearena >= 8 (staff given), not the 99 arena casts.
+    if (opts.stopAtStaff || process.env.MA_STOP === 'staff') {
+        q.milestone('complete');
+        await q.end(held(ITEM.cape) && held(ITEM.staff), `god=${GOD} mode=${MODE} spell=${SPELL} fought=${fought} fightXp=${fightXp || '-'} casts=0 charged=false lures=0 potions=${potions} prayerLeft=${points()} cape=${held(ITEM.cape)} staff=${held(ITEM.staff)} unlocked=staff`);
+        return;
+    }
 
     // 3. Up the ladder and through the webs, 99 casts of Flames of Zamorak in the arena, and back.
     const web = (w: { x: number; z: number }): any => q.findLoc(l => l.x === w.x && l.z === w.z && (l.optionsWithIndex ?? []).some((o: any) => /slash/i.test(o.text)));

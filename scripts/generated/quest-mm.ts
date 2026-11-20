@@ -64,7 +64,7 @@ const q = await openQuest({
     cap: opts.cap ?? Number(process.env.MM_CAP ?? 9000),
     eatAt: opts.eatAt ?? 0,
     food: opts.food ?? [ITEM.food],
-    burst: opts.burst,
+    burst: opts.burst ?? true,
     keepAlive: opts.keepAlive,
 });
 const tickOffs: (() => void)[] = [];

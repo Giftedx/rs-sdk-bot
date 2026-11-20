@@ -302,7 +302,7 @@ export async function reclaimCannon(s: Session, o: { at?: { x: number; z: number
     } finally { feed.off(); }
 }
 
-export type CannonFightOptions = { spot: CannonSpot; cap: number; stop: Record<string, number>; phases: Phase[]; reload: number; prayer: PrayerName | 'none'; eatAt?: number; special?: boolean; halt?: () => boolean; walk?: Walk };
+export type CannonFightOptions = { spot: CannonSpot; cap: number; stop: Record<string, number>; phases: Phase[]; reload: number; prayer: PrayerName | 'none'; eatAt?: number; special?: boolean; pots?: boolean; halt?: () => boolean; walk?: Walk };
 
 export function cannonWalker(s: Session, spot: CannonSpot, walk?: Walk): Walk {
     return walk ?? (async to => (await walkTarget(s, to, to === spot.clear)).ok);
@@ -403,6 +403,12 @@ export async function runCannonFight(s: Session, o: CannonFightOptions) {
         if (phase < o.phases.length - 1 && levelsMet(level, o.phases[phase]!.until)) { phase++; return 'phase'; }
         // 2. Food, prayer, antipoison. Each clears the attack, so the target is picked again on the next tick.
         if (hp() <= eatAt) { const f = slot(FOOD); if (f) { void s.direct({ type: 'useInventoryItem', slot: f.slot, optionIndex: 1, reason: 'eat' }); eats++; targetIndex = -1; return 'go'; } }
+        if (o.pots) {
+            const str = s.sdk.getSkill('Strength'), atk = s.sdk.getSkill('Attack');
+            const pot = (str && str.level <= str.baseLevel + 10 ? slot(/^super strength/i) : undefined)
+                ?? (atk && atk.level <= atk.baseLevel + 10 ? slot(/^super attack/i) : undefined);
+            if (pot) { void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'boost potion' }); potions++; targetIndex = -1; return 'go'; }
+        }
         if (prayerIndex >= 0) {
             const pray = s.sdk.getSkill('Prayer')?.level ?? 0;
             const pot = pray <= 10 ? slot(/^prayer potion/i) : undefined;
@@ -526,13 +532,13 @@ if (import.meta.main) {
         }
         const stop = env.STOP ? parseLevels(env.STOP) : { [env.STOP_SKILL ?? 'Ranged']: Number(env.STOP_LEVEL ?? 99) };
         const phases = env.PHASES ? parsePhases(env.PHASES) : [{ ...(env.STYLE === undefined ? {} : { style: Number(env.STYLE) }) }];
-        const r = await runCannonFight(s, { spot, cap: Number(env.CAP ?? 3000), stop, phases, reload: Number(env.RELOAD ?? 20), prayer, eatAt: env.EAT_AT === undefined ? undefined : Number(env.EAT_AT), special: env.SPECIAL !== '0', halt: () => halted, walk });
+        const r = await runCannonFight(s, { spot, cap: Number(env.CAP ?? 3000), stop, phases, reload: Number(env.RELOAD ?? 20), prayer, eatAt: env.EAT_AT === undefined ? undefined : Number(env.EAT_AT), special: env.SPECIAL !== '0', pots: env.POTS === '1', halt: () => halted, walk });
         const per = (n: number) => (n / Math.max(1, r.ticks)).toFixed(1);
         const kv = (m: Record<string, number>) => Object.entries(m).map(([k, v]) => `${k}:${v}`).join(',') || '-';
         // OK_ON_RECLAIM=1 (the death-recovery bench case): a death followed by the cannon back in the pack ends ok.
         const ok = r.ok || (env.OK_ON_RECLAIM === '1' && r.died && r.picked);
         await finish([s], ok, `cannon-fight spot=${env.SPOT ?? 'spiders'} ticks=${r.ticks} ${Object.keys(stop)[0]}=${r.startLevel}->${r.endLevels[Object.keys(stop)[0]!]} levels=${kv(r.endLevels)} done=${kv(r.doneAt)} ` +
-            `rangedXp=${r.gain.Ranged} rangedXpPerTick=${per(r.gain.Ranged!)} hpXp=${r.gain.Hitpoints} hpXpPerTick=${per(r.gain.Hitpoints!)} defXp=${r.gain.Defence} defXpPerTick=${per(r.gain.Defence!)} ` +
+            `rangedXp=${r.gain.Ranged} rangedXpPerTick=${per(r.gain.Ranged!)} hpXp=${r.gain.Hitpoints} hpXpPerTick=${per(r.gain.Hitpoints!)} defXp=${r.gain.Defence} defXpPerTick=${per(r.gain.Defence!)} strXp=${r.gain.Strength} strXpPerTick=${per(r.gain.Strength!)} atkXp=${r.gain.Attack} ` +
             `balls=${r.used.balls} ammo=${r.used.ammo} food=${r.used.food} potions=${r.potions} antis=${r.antis} reloads=${r.reloads} refires=${r.refires} refreshes=${r.refreshes} dialogs=${r.dialogs} specials=${r.specials} attacks=${r.attacks} idle=${r.idle} kills=${r.kills} hpMin=${r.hpMin} ` +
             `died=${r.died} picked=${r.picked} reclaimed=${r.reclaimed} clear=${r.clear} setupTicks=${r.setupTicks} msPerTick=${r.msPerTick} bands=${kv(r.bands)} stop=${r.stopped}`);
     } catch (e) { await finish([s], false, `cannon-fight: ${String(e)}`); }

@@ -10,7 +10,7 @@ const BARTENDER = { x: 3045, z: 3257 };
 const WARTFACE = { x: 2957, z: 3511 };
 const ITEM = { mail: 288, orange: 286, blue: 287, orangeDye: 1769, blueDye: 1767 };
 
-const q = await openQuest({ cap: 1500 });
+const q = await openQuest({ cap: 1500, burst: true });
 try {
     const craft0 = q.xp('Crafting');
 
