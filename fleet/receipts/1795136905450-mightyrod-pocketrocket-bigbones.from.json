@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "reconcile",
  "id": "1795136905450-mightyrod-pocketrocket-bigbones",
  "account": "Mightyrod",
  "partner": "Pocketrocket",
@@ -12,6 +12,12 @@
  "claim": "b5a38302-f070-4dd2-9be3-c58c0f7d91b7",
  "count": 0,
  "ok": false,
- "at": 1795137020385,
- "detail": "trade claimed"
+ "at": 1795137136392,
+ "detail": "fled at low hitpoints: flee_guard id=99 at=2618,3333 ticks=5",
+ "logout": {
+  "attemptId": "1795137020394-0000018768-0000000001",
+  "at": 1795137136380,
+  "sha256": "c75f5e3d0c58555dc618f0148b0db3caa518c6ea2d78df5f70eaa36826ab50e5"
+ },
+ "screen": false
 }
