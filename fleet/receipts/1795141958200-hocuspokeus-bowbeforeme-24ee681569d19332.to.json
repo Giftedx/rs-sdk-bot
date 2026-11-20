@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795141958200-hocuspokeus-bowbeforeme-24ee681569d19332",
  "account": "BowBeforeMe",
  "partner": "Hocuspokeus",
@@ -10,8 +10,22 @@
  "item": "Rune arrowtips",
  "requested": 1500,
  "claim": "1eed3ead-96f0-4c5c-b36c-ef1808312690",
- "count": 0,
- "ok": false,
- "at": 1795142267607,
- "detail": "trade claimed"
+ "count": 1500,
+ "ok": true,
+ "at": 1795142285774,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1500
+ },
+ "bank": {
+  "count": 1500,
+  "at": 1795142285074
+ },
+ "logout": {
+  "attemptId": "1795142267616-0000024636-0000000001",
+  "at": 1795142285764,
+  "sha256": "a90e523af4a4881b156f08ca4ed03be304ca8206251a342486a459179e094579"
+ },
+ "screen": true
 }
