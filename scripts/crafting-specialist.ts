@@ -111,7 +111,8 @@ async function cutUnlockedGems(spec: Session, target: number, deadlineTick: numb
   if (!gems.length) return;
   const st = spec.sdk.getState();
   const modalOpen = !!st?.dialog?.isOpen && !st?.trade?.isOpen;
-  const closeNow = modalOpen && (clearAllModals || gems.length <= 4);
+  const spare = Math.ceil(gems.length / 5) * 5 - gems.length;
+  const closeNow = modalOpen && (clearAllModals || spare > 0 || gems.length <= 4);
   const batch = gems.slice(0, closeNow ? 4 : 5);
   const actions: Promise<unknown>[] = [];
   if (closeNow) actions.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
@@ -141,8 +142,8 @@ async function executeCraftingLoop(
    await dropItemsFast(spec, keepSetFor(false), deadline);
   }
   await receiveBatch(batch, i);
-  // Batches 0..1 cross 20+ levels each; overlap closeModal on every cut tick to drain level-up modals without stalling the next trade.
-  await cutUnlockedGems(spec, target, deadline, i <= 1);
+  // Batches 0..2 cross 10-20+ levels each; later batches drain up to 3 free modals inside the same 6-tick cut window.
+  await cutUnlockedGems(spec, target, deadline, i <= 2);
   if (i === 1) logPhase(spec, start, `crafting_55_lvl=${skillLevel(spec, 'Crafting')}`);
  }
 
@@ -186,6 +187,7 @@ export async function runCraftingSpecialist(
     giveIds: batch.give.map(g => g.id),
     returnIds: batch.returnIds,
     deadlineTick: deadline,
+    allowHelperOnSingleModal: i >= 3,
    }),
   );
  } finally {
