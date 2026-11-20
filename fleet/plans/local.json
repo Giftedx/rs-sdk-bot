@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795214161938,
+ "at": 1795214421975,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -213,7 +213,7 @@
     "SQUAD_THREAT=1",
     "SQUAD_THREAT_PROTECT=0.4"
    ],
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": false,
    "goal": "gang squad pilot: kill Goondelf, Ligma and Sugma before Lava Maze Runite",
