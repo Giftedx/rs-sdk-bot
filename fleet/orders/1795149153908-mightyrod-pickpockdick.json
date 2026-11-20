@@ -1,0 +1,22 @@
+{
+ "id": "1795149153908-mightyrod-pickpockdick",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "PickpockDick",
+ "item": "coins",
+ "count": 221859,
+ "start": 1795149153908,
+ "end": 1795151553908,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
