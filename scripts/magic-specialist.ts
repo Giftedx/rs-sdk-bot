@@ -51,7 +51,7 @@ export interface MagicBatchPlan {
 }
 
 export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
- // Batch 0 (28 slots total): staff + 8 rune stacks + 12 sapphire + 5 emerald rings + 2 sharks
+ // Batch 0 (28 slots total): staff + 8 rune stacks + 12 sapphire + 6 emerald rings + 1 shark
  {
   give: [
    { id: ITEM_IDS.staff_of_fire, count: 1 },
@@ -64,14 +64,14 @@ export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
    { id: ITEM_IDS.lawrune, count: 10 },
    { id: ITEM_IDS.bloodrune, count: 850 },
    { id: ITEM_IDS.sapphire_ring, count: 12 },
-   { id: ITEM_IDS.emerald_ring, count: 5 },
-   { id: ITEM_IDS.shark, count: 2 },
+   { id: ITEM_IDS.emerald_ring, count: 6 },
+   { id: ITEM_IDS.shark, count: 1 },
   ],
   returnIds: [],
  },
- // Batch 1 (22 emerald -> 27 emerald total, Lv 49)
+ // Batch 1 (21 emerald -> 27 emerald total, Lv 49)
  {
-  give: [{ id: ITEM_IDS.emerald_ring, count: 22 }],
+  give: [{ id: ITEM_IDS.emerald_ring, count: 21 }],
   returnIds: [ITEM_IDS.ring_of_recoil, ITEM_IDS.ring_of_dueling_8],
  },
  // Batch 2 (16 ruby + 4 diamond)
@@ -474,6 +474,23 @@ export async function runMagicSpecialist(
    if (i === MAGIC_BATCHES.length - 1) {
     // Shed mind/cosmic/water/earth/finished rings before Mage Arena combat kit; preserve any spare sharks.
     await dropItemsFast(spec, new Set([ITEM_IDS.airrune, ITEM_IDS.firerune, ITEM_IDS.lawrune, ITEM_IDS.bloodrune, ITEM_IDS.shark]), deadline);
+   } else if (i === 1) {
+    // Shed leftover mind runes and Batch 0 shark so 7 rune stacks + 21 emerald rings fit cleanly inside 28 slots.
+    await dropItemsFast(
+     spec,
+     new Set([
+      ITEM_IDS.cosmicrune,
+      ITEM_IDS.waterrune,
+      ITEM_IDS.airrune,
+      ITEM_IDS.earthrune,
+      ITEM_IDS.firerune,
+      ITEM_IDS.lawrune,
+      ITEM_IDS.bloodrune,
+      ITEM_IDS.ring_of_recoil,
+      ITEM_IDS.ring_of_dueling_8,
+     ]),
+     deadline,
+    );
    } else if (i > 0 && batch.returnIds.length === 0) {
     await dropItemsFast(spec, keep, deadline);
    }

@@ -236,8 +236,13 @@ function aggregateHerbloreSupply(): SupplyEntry[] {
  }));
 }
 
-async function eatIfHurt(spec: Session): Promise<void> {
- if ((spec.sdk.getSkill('Hitpoints')?.level ?? 10) > 6) return;
+async function eatIfHurt(spec: Session, guard?: { lastTick: number }): Promise<void> {
+ if ((spec.sdk.getSkill('Hitpoints')?.level ?? 10) > 8) return;
+ if (guard) {
+  const now = spec.tick();
+  if (guard.lastTick === now) return;
+  guard.lastTick = now;
+ }
  const shark = spec.sdk.getInventory().find(i => i.id === ITEM_IDS.shark);
  if (shark) await spec.direct({ type: 'useInventoryItem', slot: shark.slot, optionIndex: 1, reason: 'SDK' });
 }
@@ -266,11 +271,20 @@ async function climbLoc(spec: Session, locId: number, x: number, z: number, opRe
   if (done()) return;
   await eatIfHurt(spec);
   const loc = findLocBy(spec, l => l.id === locId || (l.x === x && l.z === z));
-  if (loc) {
+  if (loc && loc.reachable !== false) {
    const op = loc.optionsWithIndex?.find(o => opRe.test(o.text))?.opIndex ?? 1;
    await spec.direct({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: op, reason: 'SDK' });
   } else {
-   await spec.direct({ type: 'walkTo', x, z, running: true, reason: 'SDK' });
+   const door = findLocBy(
+    spec,
+    l => /door/i.test(l.name) && l.distance <= 3 && !!l.optionsWithIndex?.some(o => /^open$/i.test(o.text)),
+   );
+   if (door) {
+    const op = door.optionsWithIndex?.find(o => /^open$/i.test(o.text))?.opIndex ?? 1;
+    await spec.direct({ type: 'interactLoc', x: door.x, z: door.z, locId: door.id, optionIndex: op, reason: 'SDK' });
+   } else {
+    await spec.direct({ type: 'walkTo', x, z, running: true, reason: 'SDK' });
+   }
   }
   await waitTicks(spec, 1);
  }
@@ -308,7 +322,12 @@ async function talkQuestNpc(
 }
 
 async function completeDruidicRitual(spec: Session, start: number, deadline: number): Promise<void> {
- // Games necklace -> Burthorpe Games Room (2207,4940,0) -> stairs 4622 -> stairs 4627 -> Burthorpe (2899,3564,0)
+ const eatGuard = { lastTick: -1 };
+ const offEat = spec.onTick(() => {
+  void eatIfHurt(spec, eatGuard);
+ });
+ try {
+ // Games necklace -> Burthorpe Games Room (2207,4940,0) -> west stairs 4622 -> stairs 4627 -> Burthorpe (2899,3564,0)
  await rubJewelryTeleport(
   spec,
   GAMES_NECKLACE_IDS,
@@ -324,11 +343,13 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   const p = playerPos(spec);
   if (p && p.worldZ < 4000) break;
   if (p?.level === 0) {
-   const st0 = findLocBy(spec, l => l.id === 4622);
+   const st0 = findLocBy(spec, l => l.id === 4622 && l.x <= 2208);
    if (st0) await spec.direct({ type: 'interactLoc', x: st0.x, z: st0.z, locId: st0.id, optionIndex: 1, reason: 'SDK' });
+   else await spec.direct({ type: 'walkTo', x: 2207, z: 4936, running: true, reason: 'SDK' });
   } else {
    const st1 = findLocBy(spec, l => l.id === 4627);
    if (st1) await spec.direct({ type: 'interactLoc', x: st1.x, z: st1.z, locId: st1.id, optionIndex: 1, reason: 'SDK' });
+   else await spec.direct({ type: 'walkTo', x: 2206, z: 4934, running: true, reason: 'SDK' });
   }
   await waitTicks(spec, 1);
  }
@@ -349,7 +370,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   deadline,
  );
 
- await walkLocal(spec, 2898, 3427, 1, deadline);
+ await walkLocal(spec, 2898, 3427, 0, deadline);
  await climbLoc(spec, 1738, 2898, 3428, /climb-up/i, () => (playerPos(spec)?.level ?? 0) === 1, deadline);
 
  await talkQuestNpc(
@@ -362,7 +383,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  );
 
  await climbLoc(spec, 1740, 2898, 3428, /climb-down/i, () => (playerPos(spec)?.level ?? 1) === 0, deadline);
- await walkLocal(spec, 2885, 3398, 1, deadline);
+ await walkLocal(spec, 2884, 3398, 0, deadline);
  await climbLoc(spec, 1759, 2884, 3397, /climb-down/i, () => (playerPos(spec)?.worldZ ?? 0) > 9000, deadline);
  logPhase(spec, start, 'herb_in_dungeon');
 
@@ -373,7 +394,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  await walkLocal(spec, 2888, 9831, 0, deadline);
 
  while (spec.tick() < deadline && !insideRoom()) {
-  await eatIfHurt(spec);
+  await eatIfHurt(spec, eatGuard);
   const door = findLocBy(spec, l => (l.id === 2143 || l.id === 2144) && l.x === 2889);
   if (door) {
    const op = door.optionsWithIndex?.find(o => /open/i.test(o.text))?.opIndex ?? 1;
@@ -389,7 +410,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   { raw: ITEM_IDS.raw_chicken, ench: 525 },
  ] as const;
  while (spec.tick() < deadline) {
-  await eatIfHurt(spec);
+  await eatIfHurt(spec, eatGuard);
   const inv = spec.sdk.getInventory();
   const pending = meatPairs.filter(m => countItem(inv, m.ench) === 0);
   if (!pending.length) break;
@@ -405,7 +426,7 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
  }
 
  while (spec.tick() < deadline && insideRoom()) {
-  await eatIfHurt(spec);
+  await eatIfHurt(spec, eatGuard);
   const door = findLocBy(spec, l => (l.id === 2143 || l.id === 2144) && l.x === 2889);
   if (door) {
    const op = door.optionsWithIndex?.find(o => /open/i.test(o.text))?.opIndex ?? 1;
@@ -414,9 +435,9 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   await waitTicks(spec, 1);
  }
 
- await walkLocal(spec, 2884, 9798, 1, deadline);
+ await walkLocal(spec, 2884, 9798, 0, deadline);
  await climbLoc(spec, 1755, 2884, 9797, /climb-up/i, () => (playerPos(spec)?.worldZ ?? 9999) < 9000, deadline);
- await walkLocal(spec, 2898, 3427, 1, deadline);
+ await walkLocal(spec, 2898, 3427, 0, deadline);
  await climbLoc(spec, 1738, 2898, 3428, /climb-up/i, () => (playerPos(spec)?.level ?? 0) === 1, deadline);
 
  await talkQuestNpc(
@@ -440,6 +461,9 @@ async function completeDruidicRitual(spec: Session, start: number, deadline: num
   deadline,
  );
  logPhase(spec, start, `herb_druid_done lvl=${skillLevel(spec, 'Herblore')}`);
+ } finally {
+  offEat();
+ }
 }
 
 async function mixUnlockedPotions(spec: Session, target: number, deadline: number): Promise<void> {

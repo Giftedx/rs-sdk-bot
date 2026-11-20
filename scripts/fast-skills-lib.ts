@@ -356,6 +356,21 @@ export async function burstTradeHost(spec: Session, helper: Session, opts: Burst
  await waitNearPlayer(helper, spec, opts.deadlineTick, opts.canStand);
  const helperName = helper.name.toLowerCase();
  const specName = spec.name.toLowerCase();
+ const getMsgs = () => spec.sdk.getState()?.gameMessages ?? [];
+ const startObsId = getMsgs().reduce((mx, m) => Math.max(mx, m.observationId ?? 0), 0);
+ const startTick = spec.tick();
+ const tradeAccepted = () =>
+  getMsgs().some(
+   m =>
+    /Accepted trade\./i.test(m.text) &&
+    (m.observationId !== undefined ? m.observationId > startObsId : m.tick > startTick),
+  );
+ const tradeDeclined = () =>
+  getMsgs().some(
+   m =>
+    /(?:declined trade|enough inventory space)/i.test(m.text) &&
+    (m.observationId !== undefined ? m.observationId > startObsId : m.tick > startTick),
+  );
  let sawConfirm = false;
 
  while (spec.tick() < opts.deadlineTick) {
@@ -363,7 +378,11 @@ export async function burstTradeHost(spec: Session, helper: Session, opts: Burst
   const ht = helper.sdk.getTradeState();
 
   if (!st.isOpen && !ht.isOpen) {
-   if (sawConfirm) return;
+   if (tradeAccepted()) return;
+   if (sawConfirm) {
+    if (!tradeDeclined()) return;
+    sawConfirm = false;
+   }
    const specDlg = !!spec.sdk.getState()?.dialog?.isOpen;
    const helpDlg = !!helper.sdk.getState()?.dialog?.isOpen;
    const hTarget = spec.sdk.getNearbyPlayers().find(p => p.name.toLowerCase() === helperName);

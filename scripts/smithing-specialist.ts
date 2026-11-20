@@ -99,7 +99,7 @@ const SMITH_BAR_XP: Record<number, number> = {
 };
 
 function anvilRoomOk(pos: { worldX: number; worldZ: number; level: number } | null): boolean {
- return !!pos && pos.level === 0 && pos.worldZ >= 3425 && pos.worldX >= 3182 && pos.worldX <= 3190;
+ return !!pos && pos.level === 0 && pos.worldZ >= 3424 && pos.worldX >= 3182 && pos.worldX <= 3190;
 }
 
 function nextDeliveryForCommittedXp(committedXp: number): SmithRunnerDelivery {
@@ -282,26 +282,30 @@ export async function runSmithingSpecialist(
   await smithHeldBars(spec, target, deadline);
   await dropItemsFast(spec, keepSet, deadline);
 
+  let lastRunnerIdx = 1;
   while (skillLevel(spec, 'Smithing') < target && spec.tick() < deadline) {
    const wantBar = nextWantedBarId(skillLevel(spec, 'Smithing'));
-   let next = runners.find(
-    r =>
-     r.ready &&
-     !r.claimed &&
-     r.task?.barId === wantBar &&
-     anvilRoomOk(playerPos(r.session)) &&
-     countItem(r.session.sdk.getInventory(), wantBar) >= r.task.count,
-   );
-   while (!next && spec.tick() < deadline) {
-    await waitTicks(spec, 1);
-    next = runners.find(
-     r =>
+   const pickRunner = () => {
+    const order = [1 - lastRunnerIdx, lastRunnerIdx];
+    for (const idx of order) {
+     const r = runners[idx]!;
+     if (
       r.ready &&
       !r.claimed &&
       r.task?.barId === wantBar &&
       anvilRoomOk(playerPos(r.session)) &&
-      countItem(r.session.sdk.getInventory(), wantBar) >= r.task.count,
-    );
+      countItem(r.session.sdk.getInventory(), wantBar) >= r.task.count
+     ) {
+      lastRunnerIdx = idx;
+      return r;
+     }
+    }
+    return undefined;
+   };
+   let next = pickRunner();
+   while (!next && spec.tick() < deadline) {
+    await waitTicks(spec, 1);
+    next = pickRunner();
    }
    if (!next) throw Error(`smithing runner missing bar ${wantBar}`);
    next.claimed = true;
