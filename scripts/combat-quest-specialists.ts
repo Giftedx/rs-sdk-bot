@@ -1183,6 +1183,7 @@ async function slashWebAt(s: Session, wx: number, wz: number, stop: StopFn): Pro
 async function walkKeepToMageArenaHut(s: Session, stop: StopFn): Promise<void> {
     await walkWaypoints(s, [{ x: 3158, z: 3950, tol: 0 }], 60, stop, 'keep to north web');
     await slashWebAt(s, 3158, 3951, stop);
+    await walkWaypoints(s, [{ x: 3158, z: 3952, tol: 0 }], 15, stop, 'step north past keep web');
     await walkWaypoints(s, [{ x: 3096, z: 3957, tol: 1 }], 120, stop, 'keep web to mage arena webs');
     await slashWebAt(s, 3095, 3957, stop);
     await slashWebAt(s, 3093, 3957, stop);
