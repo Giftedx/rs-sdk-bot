@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795192607115-weequickie-magicwanda-1c3763f5f39174d1",
  "account": "Magicwanda",
  "partner": "WeeQuickie",
@@ -12,6 +12,16 @@
  "claim": "26fd3923-54f1-4455-ba73-dd2999787068",
  "count": 0,
  "ok": false,
- "at": 1795192709024,
- "detail": "trade claimed"
+ "at": 1795193807465,
+ "detail": "Error: no matching trade completed: player_not_found: Player not found nearby: /^WeeQuickie$/i",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795192709034-0000018704-0000000001",
+  "at": 1795193807442,
+  "sha256": "3fd04cab2b0c6747899fe423ffe549eb71f1a6aa63f79bf825aeaf558eaefc21"
+ },
+ "screen": false
 }
