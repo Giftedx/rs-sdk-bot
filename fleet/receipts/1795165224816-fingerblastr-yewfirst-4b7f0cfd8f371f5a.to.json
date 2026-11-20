@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795165224816-fingerblastr-yewfirst-4b7f0cfd8f371f5a",
+ "account": "YewFirst",
+ "partner": "Fingerblastr",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 275,
+ "claim": "79794b4e-996b-4f0e-b1d2-4661eb029eaf",
+ "count": 0,
+ "ok": false,
+ "at": 1795165252816,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795165248047-0000009308-0000000001",
+  "at": 1795165252802,
+  "sha256": "8d997a3c2a2e980b4db3b35c70fa385f82b349ed212b997774bb36e36aaebfc7"
+ },
+ "screen": false
+}
