@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795189813673-pocketpython-hocuspokeus",
  "account": "Hocuspokeus",
  "partner": "Pocketpython",
@@ -12,6 +12,16 @@
  "claim": "b0d5ae38-d6d8-41db-b526-09ab3ec2b7f3",
  "count": 0,
  "ok": false,
- "at": 1795190666508,
- "detail": "trade claimed"
+ "at": 1795192216518,
+ "detail": "Error: order window ended during work",
+ "inventory": {
+  "before": 987,
+  "after": 987
+ },
+ "logout": {
+  "attemptId": "1795190666517-0000002044-0000000001",
+  "at": 1795192216491,
+  "sha256": "5e2ad5ac1e61af9229c0157360b6e2e908046b38d1045d6558ef7dd00a3fe4d5"
+ },
+ "screen": false
 }

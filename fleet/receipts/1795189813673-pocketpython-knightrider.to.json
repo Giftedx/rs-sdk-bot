@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795189813673-pocketpython-knightrider",
  "account": "KnightRider",
  "partner": "Pocketpython",
@@ -12,6 +12,12 @@
  "claim": "8ff20864-21d1-479e-ba67-2f194bb4d2ae",
  "count": 0,
  "ok": false,
- "at": 1795190491376,
- "detail": "trade claimed"
+ "at": 1795192213967,
+ "detail": "Error: order window ended during work",
+ "logout": {
+  "attemptId": "1795190491388-0000028904-0000000001",
+  "at": 1795192213938,
+  "sha256": "53fe24b183dadeefa8a9b39a21c4eb2740fde8b37886dd9a9f6bd29379fc0299"
+ },
+ "screen": false
 }

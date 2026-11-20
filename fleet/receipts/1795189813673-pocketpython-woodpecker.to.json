@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795189813673-pocketpython-woodpecker",
  "account": "Woodpecker",
  "partner": "Pocketpython",
@@ -12,6 +12,16 @@
  "claim": "c235d552-6934-41a5-aeee-11d82de917cb",
  "count": 0,
  "ok": false,
- "at": 1795190529168,
- "detail": "trade claimed"
+ "at": 1795192216516,
+ "detail": "Error: order window ended during work",
+ "inventory": {
+  "before": 0,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795190529186-0000027680-0000000001",
+  "at": 1795192216488,
+  "sha256": "529ee08936c9ef2dc462f6022f1c02c2122c1fa90dea935cc9c995e8992afeb1"
+ },
+ "screen": false
 }
