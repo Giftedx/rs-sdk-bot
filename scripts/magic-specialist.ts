@@ -29,7 +29,7 @@ import {
  type SupplyEntry,
 } from './fast-skills-lib';
 
-export const LUMBRIDGE_SAFE_SPOT = { x: 3205, z: 3209, level: 1 } as const;
+export const LUMBRIDGE_SAFE_SPOT = { x: 3222, z: 3222, level: 0 } as const;
 export const CAMELOT_SPOT = { x: 2757, z: 3478, level: 0 } as const;
 export const ARDOUGNE_LEVER = { x: 2561, z: 3311, level: 0 } as const;
 export const MAGE_ARENA_DOOR_AREA = { x: 3096, z: 3957, level: 0 } as const;
@@ -62,7 +62,7 @@ export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
   give: [
    { id: ITEM_IDS.staff_of_fire, count: 1 },
    { id: ITEM_IDS.mindrune, count: 25 },
-   { id: ITEM_IDS.cosmicrune, count: 165 },
+   { id: ITEM_IDS.cosmicrune, count: 150 },
    { id: ITEM_IDS.waterrune, count: 20 },
    { id: ITEM_IDS.airrune, count: 1500 },
    { id: ITEM_IDS.earthrune, count: 400 },
@@ -72,41 +72,41 @@ export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
   ],
   returnIds: [],
  },
- // Batch 1 (25 free slots after dropping mind/water/shark/finished rings: 18 emerald -> 27 total Lv 49 + 7 ruby)
+ // Batch 1 (18 emerald -> 27 total Lv 49 + 5 ruby; returns recoil/dueling)
  {
   give: [
    { id: ITEM_IDS.emerald_ring, count: 18 },
-   { id: ITEM_IDS.ruby_ring, count: 7 },
+   { id: ITEM_IDS.ruby_ring, count: 5 },
   ],
-  returnIds: [],
+  returnIds: [ITEM_IDS.ring_of_recoil, ITEM_IDS.ring_of_dueling_8],
  },
- // Batch 2 (25 free slots: 11 ruby -> 18 total Lv 57 + 14 diamond)
+ // Batch 2 (13 ruby -> 18 total Lv 57 + 10 diamond; returns dueling/forging)
  {
   give: [
-   { id: ITEM_IDS.ruby_ring, count: 11 },
-   { id: ITEM_IDS.diamond_ring, count: 14 },
+   { id: ITEM_IDS.ruby_ring, count: 13 },
+   { id: ITEM_IDS.diamond_ring, count: 10 },
   ],
-  returnIds: [],
+  returnIds: [ITEM_IDS.ring_of_dueling_8, ITEM_IDS.ring_of_forging],
  },
- // Batch 3 (25 free slots: 22 diamond -> 36 total Lv 68 + 3 ruby)
+ // Batch 3 (23 diamond -> 33 total; returns forging/life)
+ {
+  give: [{ id: ITEM_IDS.diamond_ring, count: 23 }],
+  returnIds: [ITEM_IDS.ring_of_forging, ITEM_IDS.ring_of_life],
+ },
+ // Batch 4 (3 diamond -> 36 total Lv 68 + 21 ruby; returns life)
  {
   give: [
-   { id: ITEM_IDS.diamond_ring, count: 22 },
-   { id: ITEM_IDS.ruby_ring, count: 3 },
+   { id: ITEM_IDS.diamond_ring, count: 3 },
+   { id: ITEM_IDS.ruby_ring, count: 21 },
   ],
-  returnIds: [],
+  returnIds: [ITEM_IDS.ring_of_life],
  },
- // Batch 4 (26 free slots after dropping earth runes: 26 ruby)
+ // Batch 5 (after dropping earth + life: 25 ruby; returns forging)
  {
-  give: [{ id: ITEM_IDS.ruby_ring, count: 26 }],
-  returnIds: [],
+  give: [{ id: ITEM_IDS.ruby_ring, count: 25 }],
+  returnIds: [ITEM_IDS.ring_of_forging],
  },
- // Batch 5 (26 free slots: 26 ruby)
- {
-  give: [{ id: ITEM_IDS.ruby_ring, count: 26 }],
-  returnIds: [],
- },
- // Batch 6 (8 ruby -> 81 total ~210.6k XP Lv 76 + Mage Arena combat & 38 Prayer kit = 26 slots)
+ // Batch 6 (8 ruby -> 72 total ~197.3k XP Lv 75+ + Mage Arena combat & 38 Prayer kit = 25 slots; returns forging)
  {
   give: [
    { id: ITEM_IDS.ruby_ring, count: 8 },
@@ -116,9 +116,9 @@ export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
    { id: ITEM_IDS.dragon_bones, count: 8 },
    { id: ITEM_IDS.prayer_potion_4, count: 2 },
    { id: ITEM_IDS.amulet_of_magic, count: 1 },
-   { id: ITEM_IDS.shark, count: 4 },
+   { id: ITEM_IDS.shark, count: 3 },
   ],
-  returnIds: [],
+  returnIds: [ITEM_IDS.ring_of_forging],
  },
 ];
 
@@ -469,11 +469,16 @@ async function executeMagicLoop(
  let enchantTicks = 0;
  for (let i = 0; i < MAGIC_BATCHES.length; i++) {
   const batch = MAGIC_BATCHES[i]!;
-  if (i >= 4) {
-   // Earth runes are no longer needed once all 36 Diamond rings finish in Batch 3.
-   await dropItemsFast(spec, new Set([ITEM_IDS.cosmicrune, ITEM_IDS.airrune]), deadline);
-  } else if (i > 0) {
-   await dropItemsFast(spec, new Set([ITEM_IDS.cosmicrune, ITEM_IDS.airrune, ITEM_IDS.earthrune]), deadline);
+  if (i === 1) {
+   // Drop leftover mind/water runes and Batch 0 shark; retain ring_of_recoil and ring_of_dueling_8 to return in Batch 1.
+   await dropItemsFast(
+    spec,
+    new Set([ITEM_IDS.cosmicrune, ITEM_IDS.airrune, ITEM_IDS.earthrune, ITEM_IDS.ring_of_recoil, ITEM_IDS.ring_of_dueling_8]),
+    deadline,
+   );
+  } else if (i === 5) {
+   // Drop Earth runes and Ring of life once all 36 Diamond rings finish so Batch 5 fits 25 Ruby rings.
+   await dropItemsFast(spec, new Set([ITEM_IDS.cosmicrune, ITEM_IDS.airrune, ITEM_IDS.ring_of_forging]), deadline);
   }
   const tr0 = spec.tick();
   await receiveBatch(batch, i);
@@ -484,20 +489,11 @@ async function executeMagicLoop(
    const w0 = spec.tick();
    await castWindStrikeToLevel7(spec, deadline);
    windTicks = spec.tick() - w0;
-   // Climb Lumbridge Castle stairs (1738 at 3204,3207) to 1st floor safe spot (level=1) so zero NPCs interrupt batch 1..6 trades.
-   if ((playerPos(spec)?.level ?? 0) !== LUMBRIDGE_SAFE_SPOT.level) {
-    const castleWalker = await sessionWalker(spec);
-    await walkPath(castleWalker, [{ x: 3206, z: 3209, tol: 3 }], {
-     maxTicks: Math.max(10, Math.min(35, deadline - spec.tick())),
+   if (!nearTile(spec, LUMBRIDGE_SAFE_SPOT.x, LUMBRIDGE_SAFE_SPOT.z, 2, LUMBRIDGE_SAFE_SPOT.level)) {
+    const courtyardWalker = await sessionWalker(spec);
+    await walkPath(courtyardWalker, [{ x: LUMBRIDGE_SAFE_SPOT.x, z: LUMBRIDGE_SAFE_SPOT.z, tol: 1 }], {
+     maxTicks: Math.max(10, Math.min(25, deadline - spec.tick())),
     });
-    while (spec.tick() < deadline && (playerPos(spec)?.level ?? 0) !== LUMBRIDGE_SAFE_SPOT.level) {
-     const stairs = findLocBy(spec, l => l.id === 1738 || (l.x === 3204 && l.z === 3207));
-     if (stairs) {
-      const op = stairs.optionsWithIndex?.find(o => /climb-up/i.test(o.text))?.opIndex ?? 1;
-      await spec.direct({ type: 'interactLoc', x: stairs.x, z: stairs.z, locId: stairs.id, optionIndex: op, reason: 'SDK' });
-     }
-     await waitTicks(spec, 1);
-    }
    }
   }
   const e0 = spec.tick();
