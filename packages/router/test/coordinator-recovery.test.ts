@@ -16,7 +16,7 @@ import {readMergedPlan,coordinatorJobsPath,writeCoordinatorJobs,emptyCoordinator
 const jobOf=(base:string,account:string)=>readMergedPlan(base).jobs.find((j:any)=>(j.accounts??[j.account]).includes(account));
 import {claimCoordinatorState,pauseCoordinator,reconcile,workerHolds,WORKER_CHECK_MS,WORKER_START_SLACK_MS} from '../src/coordinator-cli';
 import {acceptProposal,parseModelObject} from '../src/coordinator-planner';
-import {replaceAssignments,prepareLiveRecovery,requestLiveRecovery,requestAuthenticatedRecovery,recoveryQualification,installJob,awaitControllerDrain,ensureSwarm,preserveCompletedLiveEnd} from '../src/coordinator-live';
+import {replaceAssignments,prepareLiveRecovery,requestLiveRecovery,requestAuthenticatedRecovery,recoveryQualification,installJob,awaitControllerDrain,ensureSwarm,preserveCompletedLiveEnd,repairLogoutProof} from '../src/coordinator-live';
 import * as liveAdmission from '../src/coordinator-live';
 import type {CoordTask} from '../src/coordinator';
 const seed=()=>{const s=initialState();addTasks(s,[{id:'producer',goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:2,estimatedMs:1,why:'native producer'},{id:'consumer',goal:'gear',kind:'qualify',capability:'ammo-order',dependsOn:['producer'],priority:2,estimatedMs:1,why:'next useful consumer'}]);startTask(s,'producer',Date.now()-20000,'recovery-run');return s;};
@@ -643,4 +643,34 @@ test('after the recovery, the production install treats the parked hand job as r
  expect(()=>installJob(f.task,'Mightyrod','new.ts',f.run,'new',f.deps,{base:f.base,preflight:true,recovered:()=>true})).not.toThrow();
  const plain={...f.task};delete plain.sessionRecovery;
  expect(()=>installJob(plain,'Mightyrod','new.ts',f.run,'new',f.deps,{base:f.base,preflight:true,recovered:()=>true})).toThrow('not confirmed');
+});
+
+test('an unregistered specialist preflight and repair request use its fresh 404 snapshot when offline without status or attempts',async()=>{
+ const base=mkdtempSync(join(tmpdir(),'live-spec-repair-')),run='spec-run',prac=join(base,'.practice'),deaths=join(prac,'swarm-deaths.json'),file=join(prac,'swarm-repair.json'),now=Date.now();
+ try{
+  mkdirSync(join(prac,'status'),{recursive:true});mkdirSync(join(prac,'specialist-launch'),{recursive:true});mkdirSync(join(prac,'coordinator/runs',run),{recursive:true});
+  atomicJson(join(base,'swarm.json'),{minFreeGB:0,maxBots:17,jobs:[]});
+  atomicJson(deaths,{Mineshafted:{at:now-120_000,reason:'gave-up after 1 runs',revision:'["scripts/mining-specialist.ts"]'}});
+  expect(()=>repairLogoutProof('Mineshafted',now-120_000,base,now)).toThrow('hiscores snapshot');
+  atomicJson(join(prac,'specialist-launch/hiscores.json'),{base:'https://rs-sdk-demo.fly.dev',tickMs:400,takenAt:new Date(now-60_000).toISOString(),profiles:[{name:'mineshafted',status:404,at:now-150_000}]});
+  expect(()=>repairLogoutProof('Mineshafted',now-120_000,base,now)).toThrow('post-failure 404 profile');
+  atomicJson(join(prac,'specialist-launch/hiscores.json'),{base:'https://rs-sdk-demo.fly.dev',tickMs:400,takenAt:new Date(now-30_000).toISOString(),profiles:[{name:'mineshafted',status:404,at:now-30_000}]});
+  const proof=repairLogoutProof('Mineshafted',now-120_000,base,now);
+  expect(proof).toMatchObject({kind:'unregistered-specialist',account:'mineshafted',profileAt:now-30_000});
+  const controller=(async()=>{
+   while(!existsSync(file))await Bun.sleep(10);
+   renameSync(file,file+'.processing');
+   const request=JSON.parse(readFileSync(file+'.processing','utf8')),ends=loadEnded(deaths),root=join(prac,'session-lifecycle');
+   expect(applyEndRepair(request,ends,[],{
+    readProof:(a,s)=>readLogoutProof(a,s,{root}),verifyLegacy:c=>verifyLegacyLogout(c,{root}),
+    status:a=>existsSync(join(prac,'status',a+'.json'))?JSON.parse(readFileSync(join(prac,'status',a+'.json'),'utf8')):undefined,
+   }).changed).toBe(true);
+   persistEnded(deaths,ends);unlinkSync(file+'.processing');
+  })();
+  await requestLiveRecovery({account:'Mineshafted',endedAt:now-120_000},run,base,1500);await controller;
+  expect(loadEnded(deaths).has('Mineshafted')).toBe(false);
+  // Once a status file or producer attempt exists, the unregistered-specialist path is closed.
+  atomicJson(join(prac,'status/Mineshafted.json'),{name:'Mineshafted',server:'rs-sdk-demo.fly.dev',result:'ok'});
+  expect(()=>repairLogoutProof('Mineshafted',now-120_000,base,now)).toThrow('legacy logout claim');
+ }finally{fs.rmSync(base,{recursive:true,force:true});}
 });

@@ -1193,3 +1193,43 @@ test('the swarm state file is replaced whole: a failed write leaves the previous
   expect(readFileSync(file, 'utf8')).toBe('{"at":4}');
  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('an unregistered specialist failure clears with a fresh 404 snapshot, never with status or producer proof', async () => {
+    const { applyEndRepair } = await import('./swarm');
+    const { createHash } = await import('node:crypto');
+    const LIVE_SRV = 'rs-sdk-demo.fly.dev', now = 10_000_000;
+    const dir = mkdtempSync(join(tmpdir(), 'swarm-unreg-spec-'));
+    try {
+        const snapshotPath = join(dir, 'hiscores.json');
+        const writeSnap = (patch: any = {}) => {
+            const bytes = Buffer.from(JSON.stringify({
+                base: 'https://rs-sdk-demo.fly.dev', tickMs: 400, takenAt: new Date(now - 60_000).toISOString(),
+                profiles: [{ name: 'mineshafted', status: 404, at: now - 60_000 }], ...patch,
+            }));
+            writeFileSync(snapshotPath, bytes);
+            return createHash('sha256').update(bytes).digest('hex');
+        };
+        const sha256 = writeSnap();
+        const ended = () => new Map([['Mineshafted', { at: now - 120_000, reason: 'gave-up after 1 runs', revision: '["scripts/mining-specialist.ts"]' }]]);
+        const proofs = (over: any = {}) => ({
+            readProof: () => ({ state: 'none' }) as any, verifyLegacy: () => ({ state: 'refused', reason: 'x' }) as any,
+            now: () => now, status: () => undefined, ...over,
+        });
+        const req = (proofOver: any = {}, account = 'Mineshafted') => ({
+            account, endedAt: now - 120_000, server: LIVE_SRV,
+            proof: { kind: 'unregistered-specialist', account: account.toLowerCase(), snapshotPath, snapshotSha256: sha256, profileAt: now - 60_000, ...proofOver },
+        });
+        expect(applyEndRepair(req(), ended(), [], proofs()).changed).toBe(true);
+        expect(applyEndRepair(req(), ended(), [], proofs({ status: () => ({ name: 'Mineshafted' }) })).reason).toBe('status file exists for specialist account');
+        expect(applyEndRepair(req(), ended(), [], proofs({ readProof: () => ({ state: 'held', reason: 'active' }) })).reason).toBe('producer logout state is held');
+        expect(applyEndRepair(req({}, 'Mightyrod'), new Map([['Mightyrod', { at: now - 120_000, reason: 'gave-up after 1 runs' }]]), [], proofs()).reason)
+            .toBe('unregistered-specialist proof is reserved for specialist accounts');
+        expect(applyEndRepair(req({ profileAt: now - 180_000 }), ended(), [], proofs()).reason).toBe('invalid unregistered-specialist proof');
+        const staleSha = writeSnap({ profiles: [{ name: 'mineshafted', status: 404, at: now - 4_000_000 }] });
+        const olderEnded = new Map([['Mineshafted', { at: now - 5_000_000, reason: 'gave-up after 1 runs', revision: '["scripts/mining-specialist.ts"]' }]]);
+        expect(applyEndRepair({ ...req({ snapshotSha256: staleSha, profileAt: now - 4_000_000 }), endedAt: now - 5_000_000 }, olderEnded, [], proofs()).reason)
+            .toBe('specialist snapshot lacks fresh 404 profile');
+        writeSnap({ profiles: [{ name: 'mineshafted', status: 200, at: now - 60_000 }] });
+        expect(applyEndRepair(req(), ended(), [], proofs()).reason).toBe('specialist snapshot hash changed');
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+});
