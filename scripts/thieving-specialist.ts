@@ -7,6 +7,7 @@ import {
     waitTicks,
     skipTutorialFast,
     dropTutorialJunk,
+    startHelperTradeArm,
     receiveTradeFast,
     settleHelper,
     rubTeleport,
@@ -87,10 +88,17 @@ if (import.meta.main) {
 
     const elapsedNow = () => totalTicks + Math.max(0, main.tick() - sessStart);
 
+    const msgMark = (m: { observationId?: number; tick: number }) => m.observationId ?? m.tick;
+    const latestMark = (msgs: readonly { observationId?: number; tick: number }[], fallback: number) =>
+        msgs.reduce((max, m) => Math.max(max, msgMark(m)), fallback);
+
+    let readyForTrade = false;
+    const arm = startHelperTradeArm(helper, main.name, isStopped, () => readyForTrade);
     try {
-        const tutTicks = await skipTutorialFast(main, isStopped, helper);
-        await dropTutorialJunk(main, isStopped, 18, helper);
-        const tradeTicks = await receiveTradeFast(main, helper, THIEVING_SPECIALIST_SUPPLIES, isStopped);
+        const tutTicks = await skipTutorialFast(main, isStopped);
+        await dropTutorialJunk(main, isStopped, 18);
+        readyForTrade = true;
+        const tradeTicks = await receiveTradeFast(main, helper, THIEVING_SPECIALIST_SUPPLIES, isStopped, arm);
         helperDone = settleHelper(helper)
             .then(() => { helperSettled = true; })
             .catch(err => {
@@ -107,14 +115,14 @@ if (import.meta.main) {
         );
         await walkWaypointsSafe(
             main,
-            [[2900, 3168, 4], [2850, 3175, 5], [2800, 3200, 5], [2774, 3228, 3]],
+            [[2774, 3228, 3]],
             isStopped,
         );
         await sailBrimhavenToArdougne(main, isStopped);
-        await walkWaypointsSafe(main, [[2650, 3288, 3], [2621, 3293, 2]], isStopped);
+        await walkWaypointsSafe(main, [[2621, 3293, 2]], isStopped);
 
         const travelTicks = elapsedNow();
-        let lastMsgCount = main.sdk.getState()?.gameMessages?.length ?? 0;
+        let lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
         let lastPickTick = -99;
 
         while (!stopFlag && elapsedNow() < cap) {
@@ -131,10 +139,10 @@ if (import.meta.main) {
 
             const tier = selectPickpocketTier(lvl);
 
-            // Detect new stun messages since login. Heal on the stun tick before relogging so %action_delay resets on login.
+            // Detect new stun messages via monotonic message watermark (immune to ring-buffer length caps).
             const msgs = st.gameMessages ?? [];
-            const newMsgs = msgs.slice(lastMsgCount);
-            lastMsgCount = msgs.length;
+            const newMsgs = msgs.filter(m => msgMark(m) > lastMsgMark);
+            lastMsgMark = latestMark(msgs, lastMsgMark);
             if (newMsgs.some(m => /you've been stunned/i.test(m.text))) {
                 stuns++;
                 if (st.player.hp <= tier.stunDamage) {
@@ -152,7 +160,7 @@ if (import.meta.main) {
                 });
                 intentionalRelog = false;
                 sessStart = main.tick();
-                lastMsgCount = main.sdk.getState()?.gameMessages?.length ?? 0;
+                lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
                 lastPickTick = -99;
                 continue;
             }
@@ -197,6 +205,8 @@ if (import.meta.main) {
     } catch (error) {
         totalTicks = elapsedNow();
         detail = `${String(error)} totalTicks=${totalTicks} relogs=${relogs}`;
+    } finally {
+        arm.close();
     }
 
     await helperDone;

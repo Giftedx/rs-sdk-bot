@@ -7,6 +7,7 @@ import {
     openHelperAndMain,
     skipTutorialFast,
     dropTutorialJunk,
+    startHelperTradeArm,
     receiveTradeFast,
     settleHelper,
     rubTeleport,
@@ -111,15 +112,18 @@ if (import.meta.main) {
     let ok = false;
     let detail = '';
 
+    let readyForTrade = false;
+    const arm = startHelperTradeArm(helper, main.name, isStopped, () => readyForTrade);
     try {
-        const tutTicks = await skipTutorialFast(main, isStopped, helper);
-        await dropTutorialJunk(main, isStopped, 12, helper);
-        const tradeTicks = await receiveTradeFast(main, helper, MINING_SPECIALIST_SUPPLIES, isStopped);
+        const tutTicks = await skipTutorialFast(main, isStopped);
+        await dropTutorialJunk(main, isStopped, 12);
+        readyForTrade = true;
+        const tradeTicks = await receiveTradeFast(main, helper, MINING_SPECIALIST_SUPPLIES, isStopped, arm);
         helperDone = settleHelper(helper).catch(err => {
             console.log(`WARN helper settle: ${String(err)}`);
         });
 
-        // Glory option 1 -> Edgeville (3087,3496), then south of Black Knights/Dark Bears to Doric (2952,3451).
+        // Glory option 1 -> Edgeville (3087,3496), direct southern path around Ice Mountain to Doric (2952,3451).
         await rubTeleport(
             main,
             MINING_GLORY_IDS,
@@ -129,7 +133,7 @@ if (import.meta.main) {
         );
         await walkWaypointsSafe(
             main,
-            [[3045, 3455, 4], [2980, 3448, 4], [2952, 3451, 2]],
+            [[2952, 3451, 2]],
             isStopped,
         );
 
@@ -146,11 +150,11 @@ if (import.meta.main) {
         );
         await walkWaypointsSafe(
             main,
-            [[2900, 3168, 4], [2850, 3175, 5], [2800, 3200, 5], [2774, 3228, 3]],
+            [[2774, 3228, 3]],
             isStopped,
         );
         await sailBrimhavenToArdougne(main, isStopped);
-        await walkWaypointsSafe(main, [[2660, 3255, 4], [2603, 3234, 0]], isStopped);
+        await walkWaypointsSafe(main, [[2603, 3234, 1]], isStopped);
 
         const zooStart = main.tick() - t0;
         const ironProfile = miningProfiles().find(p => p.name === 'iron_rock_table');
@@ -196,6 +200,8 @@ if (import.meta.main) {
         detail = `level=${lvl} xp=${xp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} doric=${doricTicks} zooStart=${zooStart} ores=${rot.made}`;
     } catch (error) {
         detail = String(error);
+    } finally {
+        arm.close();
     }
 
     await helperDone;

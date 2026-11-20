@@ -80,11 +80,8 @@ export async function eatPineapplePizza(s: Session): Promise<boolean> {
     return true;
 }
 
-const stepSession = (main: Session, helper?: Session): Promise<void> =>
-    helper ? Promise.all([waitTicks(main, 1), waitTicks(helper, 1)]).then(() => {}) : waitTicks(main, 1);
-
 /** Skip Tutorial Island in 2 ticks by chaining dialog continue + multi2:com_1 ("Yes please.") on tick 2. */
-export async function skipTutorialFast(s: Session, stop: () => boolean, helper?: Session): Promise<number> {
+export async function skipTutorialFast(s: Session, stop: () => boolean): Promise<number> {
     const t0 = s.tick();
     let designSent = false;
     let guideClicked = false;
@@ -124,13 +121,13 @@ export async function skipTutorialFast(s: Session, stop: () => boolean, helper?:
                 }
             }
         }
-        await stepSession(s, helper);
+        await waitTicks(s, 1);
     }
     throw Error('tutorial skip exceeded tick budget');
 }
 
 /** Drop up to `maxCount` matching slots in 5-per-tick bursts to clear tutorial items quickly. */
-export async function dropTutorialJunk(s: Session, stop: () => boolean, dropSlotsNeeded: number, helper?: Session): Promise<void> {
+export async function dropTutorialJunk(s: Session, stop: () => boolean, dropSlotsNeeded: number): Promise<void> {
     let left = dropSlotsNeeded;
     for (let tick = 0; tick < 10 && left > 0 && !stop(); tick++) {
         const inv = s.sdk.getInventory();
@@ -140,8 +137,96 @@ export async function dropTutorialJunk(s: Session, stop: () => boolean, dropSlot
             await s.direct({ type: 'dropItem', slot: item.slot, reason: 'SDK' });
             left--;
         }
-        if (left > 0) await stepSession(s, helper);
+        if (left > 0) await waitTicks(s, 1);
     }
+}
+
+export interface TradeHelperArm {
+    readonly close: () => void;
+}
+
+/**
+ * Drive `helper` synchronously inside `helper.onTick` before lockstep `acknowledgeTick` schedules flush,
+ * and hold one lockstep waiter so packets never miss a tick behind `main`.
+ */
+export function startHelperTradeArm(
+    helper: Session,
+    mainName: string,
+    stop: () => boolean,
+    canRequest: () => boolean = () => true,
+): TradeHelperArm {
+    let done = false;
+    let lastReqTick = -10;
+    let lastOfferTick = -10;
+    let lastAcceptTick = -10;
+    let lastConfirmTick = -10;
+    const offeredIds = new Set<number>();
+    const mainLower = mainName.toLowerCase();
+    const ac = new AbortController();
+
+    const stepHelper = () => {
+        if (done || stop()) return;
+        const tHelp = helper.sdk.getTradeState();
+        const t = helper.tick();
+
+        if (!tHelp.isOpen) {
+            if (offeredIds.size > 0) offeredIds.clear();
+            if (canRequest() && t - lastReqTick >= 1) {
+                const pMain = helper.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === mainLower);
+                if (pMain) {
+                    lastReqTick = t;
+                    void helper.direct({ type: 'interactPlayer', playerIndex: pMain.index, optionIndex: 4, reason: 'SDK' });
+                }
+            }
+            return;
+        }
+
+        if (tHelp.screen === 'offer') {
+            if (t === lastOfferTick) return;
+            const remainingById = new Map<number, number>();
+            for (const item of helper.sdk.getInventory()) {
+                if (!offeredIds.has(item.id) && !remainingById.has(item.id)) remainingById.set(item.id, item.slot);
+            }
+            const batch = [...remainingById.entries()].slice(0, 5);
+            if (batch.length > 0) {
+                lastOfferTick = t;
+                for (const [id, slot] of batch) {
+                    offeredIds.add(id);
+                    void helper.direct({
+                        type: 'clickComponentWithOption',
+                        componentId: TRADE_SIDE_INV_ID,
+                        optionIndex: 4,
+                        slot,
+                        reason: 'SDK',
+                    });
+                }
+            }
+            const leftAfter = remainingById.size - batch.length;
+            if (leftAfter === 0 && batch.length < 5 && !tHelp.myAccepted && t - lastAcceptTick >= 1) {
+                lastAcceptTick = t;
+                void helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT_ID, reason: 'SDK' });
+            }
+            return;
+        }
+
+        if (tHelp.screen === 'confirm' && !tHelp.myAccepted && t - lastConfirmTick >= 1) {
+            lastConfirmTick = t;
+            void helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' });
+        }
+    };
+
+    const offTick = helper.onTick(stepHelper);
+    void waitUntil(helper, () => done || stop(), { timeoutTicks: 80, signal: ac.signal }).catch(() => {});
+    stepHelper();
+
+    return {
+        close: () => {
+            if (done) return;
+            done = true;
+            offTick();
+            ac.abort();
+        },
+    };
 }
 
 /**
@@ -153,88 +238,63 @@ export async function receiveTradeFast(
     helper: Session,
     expectedCounts: Readonly<Record<number, number>>,
     stop: () => boolean,
+    existingArm?: TradeHelperArm,
 ): Promise<number> {
     const t0 = main.tick();
+    const expectedEntries = Object.entries(expectedCounts).map(([id, minQty]) => [Number(id), minQty] as const);
     const hasAllExpected = () =>
-        Object.entries(expectedCounts).every(([id, minQty]) => itemQty(main, Number(id)) >= minQty);
+        expectedEntries.every(([id, minQty]) => itemQty(main, id) >= minQty);
+    const uniqueSupplyCount = expectedEntries.length;
+    const minUniqueOfferedBeforeAccept = Math.floor(uniqueSupplyCount / 5) * 5;
 
-    let tradeOpened = false;
-    let closedRun = 0;
-    const offeredIds = new Set<number>();
+    const arm = existingArm ?? startHelperTradeArm(helper, main.name, stop, () => true);
+    let lastReqTick = -10;
+    let lastOfferAcceptTick = -10;
+    let lastConfirmTick = -10;
 
-    for (let i = 0; i < 60 && !stop(); i++) {
-        const tMain = main.sdk.getTradeState();
-        const tHelp = helper.sdk.getTradeState();
-        if (hasAllExpected() && !tMain.isOpen) {
-            return main.tick() - t0;
-        }
+    try {
+        for (let i = 0; i < 60 && !stop(); i++) {
+            const tMain = main.sdk.getTradeState();
+            if (hasAllExpected() && !tMain.isOpen) {
+                return main.tick() - t0;
+            }
+            const t = main.tick();
 
-        if (tMain.isOpen || tHelp.isOpen) {
-            tradeOpened = true;
-            closedRun = 0;
-        } else {
-            closedRun++;
-        }
-
-        if (!tMain.isOpen && !tHelp.isOpen) {
-            if (!tradeOpened || closedRun >= 6) {
-                tradeOpened = false;
-                offeredIds.clear();
-                const pHelpOnMain = main.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === helper.name.toLowerCase());
-                const pMainOnHelp = helper.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === main.name.toLowerCase());
-                if (pHelpOnMain && pMainOnHelp) {
-                    await helper.direct({ type: 'interactPlayer', playerIndex: pMainOnHelp.index, optionIndex: 4, reason: 'SDK' });
-                    await main.direct({ type: 'interactPlayer', playerIndex: pHelpOnMain.index, optionIndex: 4, reason: 'SDK' });
-                } else {
-                    const pPos = main.sdk.getState()?.player;
-                    const hPos = helper.sdk.getState()?.player;
-                    if (pPos && hPos && Math.max(Math.abs(pPos.worldX - hPos.worldX), Math.abs(pPos.worldZ - hPos.worldZ)) > 3) {
-                        await helper.bot.walkTo(pPos.worldX + 1, pPos.worldZ, 1);
+            if (!tMain.isOpen) {
+                if (t - lastReqTick >= 1) {
+                    const pHelpOnMain = main.sdk.getState()?.nearbyPlayers.find(p => p.name.toLowerCase() === helper.name.toLowerCase());
+                    if (pHelpOnMain) {
+                        lastReqTick = t;
+                        await main.direct({ type: 'interactPlayer', playerIndex: pHelpOnMain.index, optionIndex: 4, reason: 'SDK' });
+                    } else {
+                        const pPos = main.sdk.getState()?.player;
+                        const hPos = helper.sdk.getState()?.player;
+                        if (pPos && hPos && Math.max(Math.abs(pPos.worldX - hPos.worldX), Math.abs(pPos.worldZ - hPos.worldZ)) > 3) {
+                            await helper.bot.walkTo(pPos.worldX + 1, pPos.worldZ, 1);
+                        }
                     }
                 }
-            }
-        } else if (tHelp.isOpen && tHelp.screen === 'offer' && tMain.isOpen && tMain.screen === 'offer') {
-            // Trade Offer-All (option 4) transfers every matching item ID across slots in one packet.
-            const remainingById = new Map<number, number>();
-            for (const item of helper.sdk.getInventory()) {
-                if (!offeredIds.has(item.id) && !remainingById.has(item.id)) remainingById.set(item.id, item.slot);
-            }
-            const batch = [...remainingById.entries()].slice(0, 5);
-            for (const [id, slot] of batch) {
-                offeredIds.add(id);
-                await helper.direct({
-                    type: 'clickComponentWithOption',
-                    componentId: TRADE_SIDE_INV_ID,
-                    optionIndex: 4,
-                    slot,
-                    reason: 'SDK',
-                });
-            }
-            const leftAfter = remainingById.size - batch.length;
-            if (leftAfter === 0 && batch.length < 5) {
-                if (!tHelp.myAccepted) {
-                    await helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT_ID, reason: 'SDK' });
-                }
-                if (!tMain.myAccepted) {
+            } else if (tMain.screen === 'offer') {
+                const seenUnique = new Set(tMain.theirOffer.map(x => x.id)).size;
+                if (!tMain.myAccepted && seenUnique >= minUniqueOfferedBeforeAccept && t - lastOfferAcceptTick >= 1) {
+                    lastOfferAcceptTick = t;
                     await main.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT_ID, reason: 'SDK' });
                     await main.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' });
                 }
-            }
-        } else if (tHelp.screen === 'confirm' || tMain.screen === 'confirm') {
-            if (tHelp.isOpen && tHelp.screen === 'confirm' && !tHelp.myAccepted) {
-                await helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' });
-            }
-            if (tMain.isOpen && tMain.screen === 'confirm' && !tMain.myAccepted) {
+            } else if (tMain.screen === 'confirm' && !tMain.myAccepted && t - lastConfirmTick >= 1) {
+                lastConfirmTick = t;
                 await main.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT_ID, reason: 'SDK' });
             }
-        }
 
-        await stepSession(main, helper);
-        if (hasAllExpected() && !main.sdk.getTradeState().isOpen) {
-            return main.tick() - t0;
+            await waitTicks(main, 1);
+            if (hasAllExpected() && !main.sdk.getTradeState().isOpen) {
+                return main.tick() - t0;
+            }
         }
+        throw Error(`receiveTradeFast timed out; inv=${JSON.stringify(main.sdk.getInventory().map(x => [x.id, x.count]))}`);
+    } finally {
+        arm.close();
     }
-    throw Error(`receiveTradeFast timed out; inv=${JSON.stringify(main.sdk.getInventory().map(x => [x.id, x.count]))}`);
 }
 
 export async function rubTeleport(
@@ -315,8 +375,8 @@ export async function walkWaypointsSafe(
     try {
         await drinkEnergyIfLow(s, 75);
         const pathPts = points.map(([x, z, tol]) => ({ x, z, tol }));
-        const budget = Math.max(240, points.length * 120);
-        const res = await walkPath(deps, pathPts, { maxTicks: budget, stop });
+        const budget = Math.max(320, points.length * 140);
+        const res = await walkPath(deps, pathPts, { maxTicks: budget, immediateHunterDetours: true, stop });
         if (!res.ok || !arrived()) {
             const rem = points.slice(Math.min(res.next, points.length - 1));
             for (const [x, z, tol] of rem) {

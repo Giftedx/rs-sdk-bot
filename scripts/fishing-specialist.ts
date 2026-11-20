@@ -7,6 +7,7 @@ import {
     openHelperAndMain,
     skipTutorialFast,
     dropTutorialJunk,
+    startHelperTradeArm,
     receiveTradeFast,
     settleHelper,
     rubTeleport,
@@ -50,10 +51,13 @@ if (import.meta.main) {
     let ok = false;
     let detail = '';
 
+    let readyForTrade = false;
+    const arm = startHelperTradeArm(helper, main.name, isStopped, () => readyForTrade);
     try {
-        const tutTicks = await skipTutorialFast(main, isStopped, helper);
-        await dropTutorialJunk(main, isStopped, 10, helper);
-        const tradeTicks = await receiveTradeFast(main, helper, FISHING_SPECIALIST_SUPPLIES, isStopped);
+        const tutTicks = await skipTutorialFast(main, isStopped);
+        await dropTutorialJunk(main, isStopped, 10);
+        readyForTrade = true;
+        const tradeTicks = await receiveTradeFast(main, helper, FISHING_SPECIALIST_SUPPLIES, isStopped, arm);
         helperDone = settleHelper(helper).catch(err => {
             console.log(`WARN helper settle: ${String(err)}`);
         });
@@ -159,6 +163,8 @@ if (import.meta.main) {
         detail = `level=${lvl} xp=${xp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} baitStart=${baitStart} flyStart=${flyStart}`;
     } catch (error) {
         detail = String(error);
+    } finally {
+        arm.close();
     }
 
     await helperDone;

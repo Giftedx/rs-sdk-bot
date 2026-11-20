@@ -3,6 +3,7 @@ import { levelForXp, xpForLevel } from '../packages/planner/src/curve';
 import {
     openHelperAndMain,
     skipTutorialFast,
+    startHelperTradeArm,
     receiveTradeFast,
     finish,
     waitTicks,
@@ -71,9 +72,10 @@ if (import.meta.main) {
     let ok = false;
     let detail = '';
 
+    const arm = startHelperTradeArm(helper, main.name, isStopped);
     try {
-        const tutTicks = await skipTutorialFast(main, isStopped, helper);
-        const tradeTicks = await receiveTradeFast(main, helper, FLETCHING_SPECIALIST_SUPPLIES, isStopped);
+        const tutTicks = await skipTutorialFast(main, isStopped);
+        const tradeTicks = await receiveTradeFast(main, helper, FLETCHING_SPECIALIST_SUPPLIES, isStopped, arm);
         const fletchStart = main.tick() - t0;
 
         let actionsSent = 0;
@@ -123,6 +125,8 @@ if (import.meta.main) {
         detail = `level=${finalLvl} xp=${finalXp} ticks=${totalTicks} tut=${tutTicks} trade=${tradeTicks} fletchStart=${fletchStart} actions=${actionsSent}`;
     } catch (error) {
         detail = String(error);
+    } finally {
+        arm.close();
     }
 
     await finish([helper, main], ok, detail);
