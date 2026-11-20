@@ -1082,3 +1082,72 @@ test('Wave A scaled clone-tribrid, threat, scattered-follow, single-way split, a
     expect(nospare.pass('RESULT ok squad accounts=2 kills=2 killReceipts=2 receiptDomain=practice gangDied=2 died=0 trips=2')).toBe(true);
     expect(nospare.pass('RESULT ok squad accounts=2 kills=2 killReceipts=2 receiptDomain=practice gangDied=2 died=0 trips=0')).toBe(false);
 });
+
+test('rescue unequips worn glory(4), rubs it, clicks Edgeville dialog to escape wild <= 30, and squadFallbackPlan retreats when dry', async () => {
+    expect(squadFallbackPlan({ z: 3640, hp: 85, maxHp: 99, foodCount: 0, enemyCount: 1, allyCount: 1, inMulti: true, hasGlory: true, hasTeleport: false, packFood: 18 })).toBe('glory');
+    expect(shouldBreakSingleWayChase({
+        now: 10, singleUntil: -1, aimInMulti: true,
+        self: { x: 3071, z: 3619, inMulti: true }, target: { x: 3068, z: 3619 },
+        hasMultiTargetInView: true, multiAllyCount: 3, anyAllyHasMultiTarget: false, anchor: { x: 3066, z: 3641 },
+        isInterloper: true,
+    })).toBe(false);
+    expect(shouldBreakSingleWayChase({
+        now: 10, singleUntil: -1, aimInMulti: true,
+        self: { x: 3071, z: 3619, inMulti: true }, target: { x: 3068, z: 3619 },
+        hasMultiTargetInView: false, multiAllyCount: 3, anyAllyHasMultiTarget: false, anchor: { x: 3066, z: 3641 },
+    })).toBe(false);
+
+    let ticks = 0, z = 3615, dialogOpen = false;
+    const eq: any[] = [{ id: 1712, slot: 2, count: 1, name: 'Amulet of glory(4)' }];
+    const inv: any[] = Array.from({ length: 27 }, (_, i) => ({
+        slot: i, id: 385, count: 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }],
+    }));
+    inv.push({ slot: 27, id: 229, count: 1, name: 'Vial', optionsWithIndex: [{ text: 'Drop', opIndex: 1 }] });
+    const events: string[] = [];
+    const mockSess: any = {
+        name: 'GloryBot',
+        tick: () => ticks,
+        client: {},
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp: 70, maxHp: 99, combatLevel: 126 },
+                inventory: inv,
+                equipment: eq,
+                skills: [{ name: 'Magic', level: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { activePrayers: [], prayerPoints: 80 },
+                combatEvents: [],
+                dialog: { isOpen: dialogOpen },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => eq,
+            getSkill: () => ({ level: 99, baseLevel: 99 }),
+            sendUseEquipmentItem: async (slot: number) => {
+                events.push(`unequip:${slot}`);
+                const idx = eq.findIndex(e => e.slot === slot);
+                if (idx >= 0) {
+                    const [removed] = eq.splice(idx, 1);
+                    inv.push({ slot: 27, id: removed.id, count: 1, name: removed.name, optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] });
+                }
+            },
+            clickDialogByText: async (pat: RegExp) => {
+                events.push(`dialog:${pat.source}`);
+                if (dialogOpen) { dialogOpen = false; z = 3496; }
+            },
+        },
+        direct: async (action: any) => {
+            events.push(`${action.type}:${action.slot}:${action.optionIndex}`);
+            const item = inv.find(i => i.slot === action.slot);
+            if (item?.id === 229) { inv.splice(inv.indexOf(item), 1); }
+            else if (item?.id === 1712) { dialogOpen = true; }
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => { ticks++; return true; });
+    try {
+        const res = await rescue(mockSess, () => {}, () => false, false);
+        expect(res).toBe(mockSess);
+        expect(z).toBe(3496);
+        expect(events).toEqual(['useInventoryItem:0:1', 'useInventoryItem:27:1', 'unequip:2', 'useInventoryItem:27:4', 'dialog:^Edgeville']);
+    } finally {
+        spyTick.mockRestore();
+    }
+});
