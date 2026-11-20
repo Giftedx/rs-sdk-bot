@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795165092686-mmthv2350-pocketpool-waterrune",
+ "account": "mmthv2350",
+ "partner": "PocketPool",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 197,
+ "claim": "4358b10a-2365-4995-8d0b-0897ca9027b1",
+ "count": 0,
+ "ok": false,
+ "at": 1795165205008,
+ "detail": "trade claimed"
+}

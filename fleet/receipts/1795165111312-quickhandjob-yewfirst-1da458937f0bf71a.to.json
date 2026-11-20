@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795165111312-quickhandjob-yewfirst-1da458937f0bf71a",
  "account": "YewFirst",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Rune arrowtips",
  "requested": 500,
  "claim": "42976aa2-3e00-407f-a4ce-dbdd4abf4fcb",
- "count": 0,
- "ok": false,
- "at": 1795165144259,
- "detail": "trade claimed"
+ "count": 500,
+ "ok": true,
+ "at": 1795165200020,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 500
+ },
+ "bank": {
+  "count": 500,
+  "at": 1795165199249
+ },
+ "logout": {
+  "attemptId": "1795165144271-0000008328-0000000001",
+  "at": 1795165199996,
+  "sha256": "e9b72114795e95ab56a0366ac960d58dd90bde3aed82bb86976f50b24d8fb416"
+ },
+ "screen": true
 }
