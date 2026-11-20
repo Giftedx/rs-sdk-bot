@@ -49,6 +49,13 @@ import {
     parseSupplierCliArgs,
     resolveSupplierKitPlan,
 } from './specialist-supplier';
+import {
+    buildLeatherBodyShopInvocation,
+    LIVE_PREP_IDS,
+    parseRangedLivePrepArgs,
+    planPrayerBrewBatch,
+    planPrayerDecantSteps,
+} from './ranged-live-prep';
 import { SPECIALIST_RANGED_CASES } from './measure/specialist-ranged-cases';
 
 const ROOT = resolve(import.meta.dir, '..');
@@ -386,4 +393,64 @@ test('observedSupplies and validateSupplies round-trip for RANGED_SPECIALIST_KIT
         ),
     };
     expect(() => validateSupplies(liveManifest, context, liveObserved, ITEMS, ['Helper', 'Moneyshot'], now, ref => liveRefs.get(ref.path), 'shaftshooter')).not.toThrow();
+});
+
+test('ranged-live-prep plans local Prayer potion brewing, decanting, and Thessalia Leather body purchases cleanly', () => {
+    const localStock = new Map<number, number>([
+        [LIVE_PREP_IDS.grimyRanarr, 2],
+        [LIVE_PREP_IDS.snapeGrass, 7],
+        [LIVE_PREP_IDS.vialOfWater, 939],
+    ]);
+    expect(planPrayerBrewBatch(localStock, 1).brewable).toBe(0);
+    expect(planPrayerBrewBatch(localStock, 25).brewable).toBe(0);
+    expect(planPrayerBrewBatch(localStock, 38)).toEqual({
+        herbloreLevel: 38,
+        canClean: true,
+        canBrew: true,
+        brewable: 2,
+        cleanNeeded: 2,
+        unfNeeded: 0,
+        vialsNeeded: 2,
+        snapeNeeded: 2,
+    });
+
+    // 4x Prayer(4) + 2x owned Prayer(3) + 2x brewed Prayer(3) = 7x Prayer(4) (28 doses) + 1 empty vial.
+    const decant = planPrayerDecantSteps({ 1: 0, 2: 0, 3: 4, 4: 4 });
+    expect(decant.totalDoses).toBe(28);
+    expect(decant.finalCounts).toEqual({ 1: 0, 2: 0, 3: 0, 4: 7 });
+    expect(decant.emptyVialsProduced).toBe(1);
+    expect(decant.steps).toEqual([
+        { fromDose: 3, toDose: 3, outHighDose: 4, outLowDose: 2 },
+        { fromDose: 3, toDose: 2, outHighDose: 4, outLowDose: 1 },
+        { fromDose: 3, toDose: 1, outHighDose: 4, outLowDose: 0 },
+    ]);
+
+    const mixed = planPrayerDecantSteps({ 1: 3, 2: 2, 3: 1, 4: 2 });
+    expect(mixed.totalDoses).toBe(18);
+    expect(mixed.finalCounts).toEqual({ 1: 0, 2: 1, 3: 0, 4: 4 });
+
+    expect(buildLeatherBodyShopInvocation('Moneyshot')).toEqual({
+        args: ['scripts/shop-buyer.ts', 'Moneyshot', 'data:clotheshop', '600'],
+        env: {
+            ITEMS: '^leather body$',
+            STOCK_TARGET: '1',
+            STOP_AT_TARGET: '1',
+            MAX_ITEMS: '1',
+            BANK_PACK: '1',
+            FLOAT: '500',
+            COIN_RESERVE: '0',
+            MAX_SPEND: '100',
+            NO_BUY_TICKS: '25',
+            BANK_AT: '1',
+        },
+    });
+
+    expect(parseRangedLivePrepArgs(['Moneyshot', '--mode=leather', '--bank=varrock_east', '--cap=800'])).toEqual({
+        account: 'Moneyshot',
+        mode: 'leather',
+        cap: 800,
+        bankSpot: { x: 3253, z: 3420, level: 0 },
+    });
+    expect(() => parseRangedLivePrepArgs(['Shaftshooter'])).toThrow('refuses reserved account');
+    expect(() => parseRangedLivePrepArgs(['Moneyshot', '--mode=bogus'])).toThrow('unknown --mode');
 });

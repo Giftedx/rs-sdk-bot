@@ -21,6 +21,7 @@ import {
     RANGED_SPECIALIST_MSB_KIT,
     variantTrades,
 } from './ranged-specialist';
+export { buildLeatherBodyShopInvocation, planPrayerBrewBatch, planPrayerDecantSteps } from './ranged-live-prep';
 import { BODY_ALTAR_STAND, BODY_RUINS, EDGEVILLE_BANK, RUNECRAFT_SUPPLY_BILL } from './runecraft-specialist';
 import { SMITHING_RUNNER_QUEUE, SMITHING_SUPPLY_BILL, VARROCK_WEST_ANVIL, VARROCK_WEST_BANK } from './smithing-specialist';
 
