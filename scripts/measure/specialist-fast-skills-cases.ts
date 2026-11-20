@@ -261,3 +261,39 @@ export const SPECIALIST_FAST_SKILLS_EXTERNAL_CASES: readonly BenchCase[] = [
   ],
  },
 ];
+
+export const RUNECRAFT_RUNNER_SWEEP_CASES: readonly BenchCase[] = [6, 8, 10, 12].map(runners => ({
+ key: `extra:runecraft-r${runners}`,
+ script: 'scripts/measure/specialist-bench.ts',
+ preset: 'fresh_lumbridge',
+ presetConfig: freshTutorialStart(),
+ scriptArgs: [
+  Array.from({ length: 1 + runners }, (_, i) => `{bot:${SUFFIXES[i]!}}`).join(','),
+  'scripts/runecraft-specialist.ts',
+  'SUPPLIER_KIT=runecraft',
+  'CAP=2800',
+ ],
+ pass: okSpecialist,
+ output: /ticks=(\d+)/,
+ timeoutMs: 600_000,
+ companions: [
+  staticCompanion(0, { x: 3222, z: 3223, level: 0 }, [
+   { id: ITEM_IDS.amulet_of_glory_4, count: 1 },
+   { id: ITEM_IDS.air_talisman, count: 1 },
+   { id: ITEM_IDS.body_talisman, count: 1 },
+   { id: ITEM_IDS.blankrune, count: 25 },
+  ]),
+  ...Array.from({ length: runners }, (_, i) => ({
+   suffix: SUFFIXES[1 + i]!,
+   preset: 'fresh_lumbridge',
+   presetConfig: {
+    position: { x: 3050, z: 3442, level: 0 },
+    inventory: expandInventory([
+     { id: ITEM_IDS.body_talisman, count: 1 },
+     { id: ITEM_IDS.blankrune, count: 26 },
+    ]),
+    bank: [{ id: ITEM_IDS.blankrune, count: 1100 }],
+   },
+  })),
+ ],
+}));
