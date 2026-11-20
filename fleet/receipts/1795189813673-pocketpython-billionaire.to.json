@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795189813673-pocketpython-billionaire",
  "account": "Billionaire",
  "partner": "Pocketpython",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 21560,
  "claim": "d081c6e0-4381-4002-8e90-69cb32542bdf",
- "count": 0,
- "ok": false,
- "at": 1795190671722,
- "detail": "trade claimed"
+ "count": 21560,
+ "ok": true,
+ "at": 1795191585967,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 21560
+ },
+ "bank": {
+  "count": 21560,
+  "at": 1795191585228
+ },
+ "logout": {
+  "attemptId": "1795190671731-0000025784-0000000001",
+  "at": 1795191585948,
+  "sha256": "17f0403f6aa7d7b8308f13cc0179ded427b2f106edb4fd2878df8d3eb377220f"
+ },
+ "screen": true
 }
