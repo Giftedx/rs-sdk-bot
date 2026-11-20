@@ -98,13 +98,13 @@ export const RANGED_SPECIALIST_LIVE_TRADE1: readonly KitSpecItem[] = [
     { id: 379, name: 'Lobster', count: 3, stackable: false },
 ] as const;
 
-// Live-stockable Trade 2 at Edgeville (19 slots): MSB + Rune arrows, black d'hide chaps/vambs, Karamja Antipoison(3), Prayer pots.
+// Live-stockable Trade 2 at Edgeville (20 slots): MSB + Rune arrows, black d'hide chaps/vambs, Karamja Antipoison(3), Prayer pots.
 export const RANGED_SPECIALIST_LIVE_TRADE2: readonly KitSpecItem[] = [
     { id: 861, name: 'Magic shortbow', count: 1, stackable: false },
     { id: 892, name: 'Rune arrow', count: 1000, stackable: true },
     { id: 2497, name: 'Dragonhide chaps', count: 1, stackable: false },
     { id: 2491, name: 'Dragon vambraces', count: 1, stackable: false },
-    { id: 175, name: 'Antipoison(3)', count: 5, stackable: false },
+    { id: 175, name: 'Antipoison(3)', count: 6, stackable: false },
     { id: 2434, name: 'Prayer potion(4)', count: 8, stackable: false },
     { id: 379, name: 'Lobster', count: 2, stackable: false },
 ] as const;
