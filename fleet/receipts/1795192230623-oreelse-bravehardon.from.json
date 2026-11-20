@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795192230623-oreelse-bravehardon",
  "account": "OreElse",
  "partner": "BraveHardon",
@@ -12,6 +12,12 @@
  "claim": "d47cef50-312f-4779-b98c-c8c6f6ddb657",
  "count": 0,
  "ok": false,
- "at": 1795192320483,
- "detail": "trade claimed"
+ "at": 1795192491923,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795192320491-0000014652-0000000001",
+  "at": 1795192491908,
+  "sha256": "c1bb4a360c41f3b89fc68681898dcae72a1a6325596a706b5d4080eba36051ca"
+ },
+ "screen": false
 }
