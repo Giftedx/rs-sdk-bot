@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795150342993-trousersnake-woodpecker-c619d4679e757ae3",
+ "account": "Woodpecker",
+ "partner": "TrouserSnake",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 515000,
+ "claim": "9d31f1e3-7b27-406a-81fb-6373775a7213",
+ "count": 0,
+ "ok": false,
+ "at": 1795150369103,
+ "detail": "trade claimed"
+}
