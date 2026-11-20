@@ -323,7 +323,7 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
    continue;
   }
   await spec.direct({ type: 'clickComponent', componentId: camelot, reason: 'SDK' });
-  await waitTicks(spec, 2);
+  await waitTicks(spec, 1);
  }
 
  // East Ardougne Wilderness lever -> Deserted Keep
@@ -470,7 +470,6 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
  }
  if (spec.sdk.getState()?.dialog?.isOpen) {
   await spec.direct({ type: 'closeModal', reason: 'SDK' });
-  await waitTicks(spec, 1);
  }
  logPhase(spec, start, 'magic_charge_unlocked');
 }
@@ -505,8 +504,8 @@ async function executeMagicLoop(
  for (let i = 0; i < MAGIC_BATCHES.length; i++) {
   const batch = MAGIC_BATCHES[i]!;
   if (i === MAGIC_BATCHES.length - 1) {
-   // Shed mind/cosmic/water/earth/finished rings before Mage Arena combat kit; preserve any spare sharks.
-   await dropItemsFast(spec, new Set([ITEM_IDS.airrune, ITEM_IDS.firerune, ITEM_IDS.lawrune, ITEM_IDS.bloodrune, ITEM_IDS.shark]), deadline);
+   // Shed mind/cosmic/water/earth/fire/finished rings before Mage Arena combat kit; preserve any spare sharks.
+   await dropItemsFast(spec, new Set([ITEM_IDS.airrune, ITEM_IDS.lawrune, ITEM_IDS.bloodrune, ITEM_IDS.shark]), deadline);
   } else if (i === 1) {
    // Shed leftover mind runes and Batch 0 shark so 7 rune stacks + 21 emerald rings fit cleanly inside 28 slots.
    await dropItemsFast(
@@ -559,21 +558,6 @@ async function executeMagicLoop(
   }
  }
 
- await dropItemsFast(
-  spec,
-  new Set([
-   ITEM_IDS.airrune,
-   ITEM_IDS.lawrune,
-   ITEM_IDS.bloodrune,
-   ITEM_IDS.knife,
-   ITEM_IDS.dragon_bones,
-   ITEM_IDS.prayer_potion_4,
-   ITEM_IDS.amulet_of_magic,
-   ITEM_IDS.boots_wizard,
-   ITEM_IDS.shark,
-  ]),
-  deadline,
- );
  for (const eqId of [ITEM_IDS.amulet_of_magic, ITEM_IDS.boots_wizard]) {
   const gear = spec.sdk.getInventory().find(x => x.id === eqId);
   if (gear) await spec.bot.equipItem(gear);
