@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795145446152-mmtha0205-knightstick-airrune",
+ "account": "Knightstick",
+ "partner": "mmtha0205",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 3,
+ "claim": "e83ba860-2eda-443b-a879-2b4f94c95588",
+ "count": 0,
+ "ok": false,
+ "at": 1795145641739,
+ "detail": "trade claimed"
+}

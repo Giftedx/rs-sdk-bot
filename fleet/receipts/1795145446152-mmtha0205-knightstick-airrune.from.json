@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795145446152-mmtha0205-knightstick-airrune",
+ "account": "mmtha0205",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 3,
+ "claim": "e8a15693-99e0-46d9-ae08-f0177b3476ce",
+ "count": 3,
+ "ok": true,
+ "at": 1795145670442,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795145655703
+ },
+ "logout": {
+  "attemptId": "1795145647446-0000018200-0000000001",
+  "at": 1795145670429,
+  "sha256": "dcfcc2a5a2220d870da12c5ab9c624747f3b8a981e6970ad89782f6323eeb1cd"
+ },
+ "screen": true
+}

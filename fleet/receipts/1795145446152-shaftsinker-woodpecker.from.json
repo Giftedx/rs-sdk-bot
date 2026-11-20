@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795145446152-shaftsinker-woodpecker",
  "account": "Shaftsinker",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 214278,
  "claim": "38872fb0-0b43-438c-b03e-4169d2e449bf",
- "count": 0,
- "ok": false,
- "at": 1795145531102,
- "detail": "trade claimed"
+ "count": 214278,
+ "ok": true,
+ "at": 1795145668021,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 214278,
+  "after": 0
+ },
+ "bank": {
+  "count": 214278,
+  "at": 1795145538888
+ },
+ "logout": {
+  "attemptId": "1795145531231-0000006888-0000000001",
+  "at": 1795145668012,
+  "sha256": "ac21159bbfd9fb88018246533f8f12b3c1d0b33d67a3468bda623c7fffb79c8a"
+ },
+ "screen": true
 }
