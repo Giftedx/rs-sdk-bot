@@ -1,0 +1,72 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795163573048-thefullmonty-yewfirst-4a16f942a9a99388",
+ "account": "YewFirst",
+ "partner": "TheFullMonty",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Knife",
+ "requested": 1,
+ "claim": "ae6d36f8-a1bb-4b4c-9def-c44f1260be95",
+ "count": 1,
+ "ok": true,
+ "at": 1795163618063,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Feather",
+   "requested": 2000,
+   "count": 2000,
+   "inventory": {
+    "before": 0,
+    "after": 2000
+   },
+   "bank": {
+    "count": 2000,
+    "at": 1795163616541
+   }
+  },
+  {
+   "item": "Rune arrowtips",
+   "requested": 272,
+   "count": 272,
+   "inventory": {
+    "before": 0,
+    "after": 272
+   },
+   "bank": {
+    "count": 272,
+    "at": 1795163616928
+   }
+  },
+  {
+   "item": "Adamant arrowtips",
+   "requested": 291,
+   "count": 291,
+   "inventory": {
+    "before": 0,
+    "after": 291
+   },
+   "bank": {
+    "count": 291,
+    "at": 1795163617313
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795163616156
+ },
+ "logout": {
+  "attemptId": "1795163591480-0000027656-0000000001",
+  "at": 1795163618052,
+  "sha256": "d8f9b0488646bdc68c4d112d78d05e9739dd1ea66031c8afb500d4efef42b631"
+ },
+ "screen": true
+}

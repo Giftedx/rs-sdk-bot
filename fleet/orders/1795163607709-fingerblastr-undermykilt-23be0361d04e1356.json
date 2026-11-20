@@ -1,0 +1,32 @@
+{
+ "id": "1795163607709-fingerblastr-undermykilt-23be0361d04e1356",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingerblastr",
+ "to": "UnderMyKilt",
+ "item": "Coins",
+ "count": 792000,
+ "start": 1795163607709,
+ "end": 1795165107709,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Prayer potion(4)",
+   "count": 1
+  },
+  {
+   "item": "Prayer potion(3)",
+   "count": 1
+  }
+ ]
+}

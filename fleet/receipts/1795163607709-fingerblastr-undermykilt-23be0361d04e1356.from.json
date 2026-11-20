@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795163607709-fingerblastr-undermykilt-23be0361d04e1356",
+ "account": "Fingerblastr",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 792000,
+ "claim": "98ad8d55-c503-4769-a4dd-dbf198027777",
+ "count": 0,
+ "ok": false,
+ "at": 1795163617616,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Prayer potion(4)",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Prayer potion(3)",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}

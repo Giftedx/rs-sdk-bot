@@ -1,0 +1,36 @@
+{
+ "id": "1795163573048-thefullmonty-yewfirst-4a16f942a9a99388",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TheFullMonty",
+ "to": "YewFirst",
+ "item": "Knife",
+ "count": 1,
+ "start": 1795163573048,
+ "end": 1795164773048,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Feather",
+   "count": 2000
+  },
+  {
+   "item": "Rune arrowtips",
+   "count": 272
+  },
+  {
+   "item": "Adamant arrowtips",
+   "count": 291
+  }
+ ]
+}
