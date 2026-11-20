@@ -1,0 +1,17 @@
+{
+ "id": "1795141327985-oreelse-bowbeforeme-f65347abc3b3c86d",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "BowBeforeMe",
+ "item": "Bronze arrowtips",
+ "count": 75,
+ "start": 1795141327985,
+ "end": 1795143727985,
+ "extra": [
+  {
+   "item": "Iron arrowtips",
+   "count": 105
+  }
+ ],
+ "takerWaits": true
+}

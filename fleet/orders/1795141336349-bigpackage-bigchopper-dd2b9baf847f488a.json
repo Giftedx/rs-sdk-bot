@@ -1,0 +1,23 @@
+{
+ "id": "1795141336349-bigpackage-bigchopper-dd2b9baf847f488a",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigpackage",
+ "to": "Bigchopper",
+ "item": "Rune arrowtips",
+ "count": 500,
+ "start": 1795141336349,
+ "end": 1795143736349,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

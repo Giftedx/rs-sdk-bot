@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795141304768-abracadickra-woodpecker",
+ "account": "Abracadickra",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 182695,
+ "claim": "f98140b0-a153-459a-b6b7-b4a1921cc1b8",
+ "count": 0,
+ "ok": false,
+ "at": 1795141332874,
+ "detail": "trade claimed"
+}

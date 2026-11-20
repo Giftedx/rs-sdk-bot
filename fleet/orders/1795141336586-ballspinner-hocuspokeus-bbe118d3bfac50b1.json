@@ -1,0 +1,23 @@
+{
+ "id": "1795141336586-ballspinner-hocuspokeus-bbe118d3bfac50b1",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Ballspinner",
+ "to": "Hocuspokeus",
+ "item": "Rune arrowtips",
+ "count": 500,
+ "start": 1795141336586,
+ "end": 1795143736586,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
