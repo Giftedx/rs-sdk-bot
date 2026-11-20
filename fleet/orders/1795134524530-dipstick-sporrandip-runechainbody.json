@@ -1,0 +1,22 @@
+{
+ "id": "1795134524530-dipstick-sporrandip-runechainbody",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Dipstick",
+ "to": "SporranDip",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795134524530,
+ "end": 1795136924530,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
