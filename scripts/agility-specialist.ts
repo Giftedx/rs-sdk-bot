@@ -136,10 +136,10 @@ export const MONKEYBARS_TRADE_1: readonly SupplyEntry[] = [
     { id: ITEMS.glory4, name: 'Amulet of glory(4)', count: 1 },
     { id: ITEMS.coins, name: 'Coins', count: 500 },
     { id: ITEMS.dragonBones, name: 'Dragon bones', count: 11 },
-    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 3 },
-    { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 6 },
-    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 1 },
-    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 5 },
+    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 1 },
+    { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 4 },
+    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 7 },
+    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 3 },
 ];
 
 export const MONKEYBARS_TRADE_1_NOPOT: readonly SupplyEntry[] = [
@@ -265,7 +265,7 @@ export function startedWildernessObstacle(name: string, p: { worldX: number; wor
         case 'pipe': return p.worldX === 3004 && p.worldZ >= 3940 && p.worldZ <= 3950;
         case 'ropeswing': return p.worldX === 3005 && p.worldZ >= 3953 && p.worldZ <= 3958;
         case 'stones': return p.worldZ === 3960 && p.worldX >= 2996 && p.worldX <= 3001;
-        case 'log': return p.worldZ === 3945 && p.worldX >= 2994 && p.worldX <= 3002;
+        case 'log': return p.worldZ === 3945 && p.worldX >= 2994 && p.worldX <= 3000;
         case 'rocks': return p.worldX >= 2993 && p.worldX <= 2995 && p.worldZ >= 3933 && p.worldZ <= 3936;
         default: return false;
     }
@@ -332,9 +332,17 @@ async function drinkFirstMatching(s: Session, ids: readonly number[]): Promise<b
     return true;
 }
 
-async function maintainEnergy(s: Session, threshold = 45): Promise<void> {
+async function ensureRunEnabled(s: Session): Promise<void> {
+    const var173 = ((s.client as { var?: number[] } | undefined)?.var?.[173] ?? 1);
+    if (var173 !== 1 && (posOf(s)?.runEnergy ?? 0) >= 5) {
+        await s.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
+    }
+}
+
+async function maintainEnergy(s: Session, threshold = 65): Promise<void> {
     const energy = posOf(s)?.runEnergy ?? 100;
     if (energy < threshold) await drinkFirstMatching(s, ITEMS.superEnergy);
+    await ensureRunEnabled(s);
 }
 
 // Keeps Protect from Melee points above `floor` (the prayer guard flicks it on for hunters) with the traded potions.
@@ -437,7 +445,7 @@ async function walkNear(
     target: { x: number; z: number; level?: number },
     tol = 2,
     maxTicks = 200,
-    opts?: { ignoreHunters?: boolean; stop?: () => boolean },
+    opts?: { ignoreHunters?: boolean; preDrinkAgility?: boolean; stop?: () => boolean },
 ): Promise<void> {
     const t0 = s.tick();
     const at = () => {
@@ -450,15 +458,26 @@ async function walkNear(
     if (p0 && cheb(p0, target) > 8) {
         let lastDrink = -10;
         let lastEat = -10;
+        let lastPot = -10;
         const off = s.onTick(() => {
-            if (s.tick() - lastDrink >= 3 && (posOf(s)?.runEnergy ?? 100) < 40) {
+            if (s.tick() - lastDrink >= 3 && (posOf(s)?.runEnergy ?? 100) < 70) {
                 const pot = invOf(s).find(i => ITEMS.superEnergy.includes(i.id));
                 if (pot) {
                     lastDrink = s.tick();
                     void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' });
                 }
             }
-            if (s.tick() - lastEat >= 3 && skillLvl(s, 'Hitpoints') <= 15 && skillCur(s, 'Hitpoints') <= 6) {
+            if (opts?.preDrinkAgility && s.tick() - lastPot >= 3 && skillCur(s, 'Agility') < 52) {
+                const pNow = posOf(s);
+                if (pNow && cheb(pNow, target) <= 15) {
+                    const ap = invOf(s).find(i => ITEMS.agilityPot.includes(i.id));
+                    if (ap) {
+                        lastPot = s.tick();
+                        void s.direct({ type: 'useInventoryItem', slot: ap.slot, optionIndex: 1, reason: 'SDK' });
+                    }
+                }
+            }
+            if (s.tick() - lastEat >= 3 && skillLvl(s, 'Hitpoints') <= 15 && skillCur(s, 'Hitpoints') <= 5) {
                 const food = invOf(s).find(i => ITEMS.chocolateCakeParts.includes(i.id) || i.id === ITEMS.shark);
                 if (food) {
                     lastEat = s.tick();
@@ -1350,10 +1369,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
     // Walk from Edgeville (or surface ladder) to Wilderness Ridge Gate (2998, 3916).
     if ((posOf(s)?.worldZ ?? 0) < 3916) {
         if (cfg.usePrayer) await setProtectFromMelee(s, true);
-        await walkNear(s, { x: 2998, z: 3915, level: 0 }, 3, 520, { ignoreHunters: true, stop });
-        if (cfg.usePotion && cntIds(s, ITEMS.agilityPot) > 0 && skillCur(s, 'Agility') < 52) {
-            await drinkFirstMatching(s, ITEMS.agilityPot);
-        }
+        await walkNear(s, { x: 2998, z: 3915, level: 0 }, 3, 520, { ignoreHunters: true, preDrinkAgility: cfg.usePotion, stop });
     }
 
     // Drink Agility potion if needed and enter Ridge Gate (2998, 3917).
@@ -1434,16 +1450,16 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
     try {
         const hpThreshold = () => {
             const maxHp = skillLvl(s, 'Hitpoints');
-            return maxHp <= 15 ? 7 : Math.max(5, Math.floor(maxHp * 0.55));
+            return maxHp <= 15 ? 4 : Math.max(5, Math.floor(maxHp * 0.55));
         };
         const maybeEat = async () => {
             if (skillCur(s, 'Hitpoints') <= hpThreshold()) {
                 await drinkFirstMatching(s, [...ITEMS.chocolateCakeParts, ITEMS.shark]);
             }
         };
-        const syncPrayer = async (stepIdx: number) => {
+        const syncPrayer = async (_stepIdx: number) => {
             if (!cfg.usePrayer) return;
-            const needPrayer = inPit || stepIdx === 3;
+            const needPrayer = inPit;
             if (needPrayer) {
                 await sipPrayer(s, 6);
                 await setProtectFromMelee(s, true);
@@ -1452,18 +1468,16 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
             }
         };
 
-        // Optional top-of-course potion & energy prep before clicking Pipe.
-        await sipAgilityPot();
-        await maintainEnergy(s, 45);
+        // Click Pipe first, then sip energy/potion during the sprint if needed.
         await syncPrayer(0);
-        await maybeEat();
         await clickStep(WILDERNESS_STEPS[0]!);
+        await maintainEnergy(s, 70);
+        await sipAgilityPot();
 
         while (skillLvl(s, 'Agility') < 99 && s.tick() - tStart < cfg.cap && !stop?.()) {
             await waitTicks(s, 1);
             const p = posOf(s);
             if (!p || p.isDead) continue;
-            if (skillCur(s, 'Hitpoints') <= 7) await maybeEat();
             const key = `${p.worldX},${p.worldZ},${p.level}`;
             const moved = key !== lastPos;
             still = moved ? 0 : still + 1;
@@ -1473,6 +1487,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
                 failSeen = 0;
                 fails++;
                 preBlock = s.tick();
+                await maybeEat();
             }
 
             const gained = skillXp(s, 'Agility') - stepXp;
@@ -1483,41 +1498,40 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
                 prog = nextWildernessProgress(prog, WILDERNESS_STEPS[i]!.name);
                 i = (i + 1) % WILDERNESS_STEPS.length;
                 if (i === 0) {
-                    await sipAgilityPot();
-                    await maintainEnergy(s, 45);
-                    await syncPrayer(0);
-                    await maybeEat();
                     if (cfg.alignPipe && (p.worldX !== 3004 || p.worldZ !== 3937)) {
                         await s.direct({ type: 'walkTo', x: 3004, z: 3937, running: true, reason: 'SDK' });
+                        await maintainEnergy(s, 70);
+                        await sipAgilityPot();
                         still = 0;
                         continue;
                     }
+                    await clickStep(WILDERNESS_STEPS[0]!);
+                    await maintainEnergy(s, 70);
+                    await sipAgilityPot();
                 } else {
-                    await syncPrayer(i);
-                    await maybeEat();
+                    await clickStep(WILDERNESS_STEPS[i]!);
                 }
-                await clickStep(WILDERNESS_STEPS[i]!);
                 still = 0;
                 continue;
             }
 
             const step = WILDERNESS_STEPS[i]!;
             if (step.name === 'rocks') {
-                const atEnd = p.worldZ <= 3933 && p.worldZ < 9000 && (still >= 1 || p.worldX >= 2996);
+                const atEnd = p.worldZ <= 3933 && p.worldZ < 9000;
                 if (atEnd && (prog !== 4 || still >= 3)) {
                     prog = nextWildernessProgress(prog, 'rocks');
                     i = 0;
                     stepXp = skillXp(s, 'Agility');
-                    await sipAgilityPot();
-                    await maintainEnergy(s, 45);
-                    await syncPrayer(0);
-                    await maybeEat();
                     if (cfg.alignPipe && (p.worldX !== 3004 || p.worldZ !== 3937)) {
                         await s.direct({ type: 'walkTo', x: 3004, z: 3937, running: true, reason: 'SDK' });
+                        await maintainEnergy(s, 70);
+                        await sipAgilityPot();
                         still = 0;
                         continue;
                     }
                     await clickStep(WILDERNESS_STEPS[0]!);
+                    await maintainEnergy(s, 70);
+                    await sipAgilityPot();
                     still = 0;
                     continue;
                 }
