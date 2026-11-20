@@ -230,8 +230,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
                 inventory: expandKitToSave(batch.give),
             }),
         })),
-        planTicks: 181,
-        planSource: 'hosted-bench skiller:crafting:specialist 181t (<=182t vs #1 186t)',
+        planTicks: 176,
+        planSource: '400ms rehearsals 174-179t; hosted-bench skiller:crafting:specialist 181t (<=182t vs #1 186t)',
         targetCap: 182,
     },
     {
@@ -277,8 +277,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
                 inventory: expandKitToSave(batch.give),
             }),
         })),
-        planTicks: 1170,
-        planSource: 'hosted-bench skiller:magic:specialist 1137-1184t; 400ms rehearsals 1142-1193t (<=1236t vs #1 1262t)',
+        planTicks: 1145,
+        planSource: '400ms rehearsals 1135-1150t; hosted-bench skiller:magic:specialist 1137-1184t (<=1236t vs #1 1262t)',
         targetCap: 1236,
     },
     {
