@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795135694334-dipstick-pickpockdick-runechainbody",
+ "account": "PickpockDick",
+ "partner": "Dipstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "60a02e37-3822-4e42-9ce1-c39756009c9a",
+ "count": 0,
+ "ok": false,
+ "at": 1795135764112,
+ "detail": "trade claimed"
+}

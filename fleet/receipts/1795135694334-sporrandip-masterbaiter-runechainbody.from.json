@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795135694334-sporrandip-masterbaiter-runechainbody",
+ "account": "SporranDip",
+ "partner": "Masterbaiter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "e1b2b7f2-f279-4ef0-9ac6-15799b76c88d",
+ "count": 0,
+ "ok": false,
+ "at": 1795135789150,
+ "detail": "trade claimed"
+}
