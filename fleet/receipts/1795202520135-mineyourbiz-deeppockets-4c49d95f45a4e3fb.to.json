@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795202520135-mineyourbiz-deeppockets-4c49d95f45a4e3fb",
  "account": "Deeppockets",
  "partner": "MineYourBiz",
@@ -10,20 +10,50 @@
  "item": "Rune platelegs",
  "requested": 1,
  "claim": "04ab7fdf-6aa7-4a3d-98c3-3ef0f449da95",
- "count": 0,
- "ok": false,
- "at": 1795202602762,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795202615119,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Earth rune",
    "requested": 30,
-   "count": 0
+   "count": 30,
+   "inventory": {
+    "before": 0,
+    "after": 30
+   },
+   "bank": {
+    "count": 30,
+    "at": 1795202613863
+   }
   },
   {
    "item": "Water rune",
    "requested": 60,
-   "count": 0
+   "count": 60,
+   "inventory": {
+    "before": 0,
+    "after": 60
+   },
+   "bank": {
+    "count": 60,
+    "at": 1795202614278
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795202613476
+ },
+ "logout": {
+  "attemptId": "1795202602771-0000032668-0000000001",
+  "at": 1795202615036,
+  "sha256": "9fc81f813c027664c7b92463183e73b898133cc069f0de84eaedfa4aafd118c7"
+ },
+ "screen": true
 }
