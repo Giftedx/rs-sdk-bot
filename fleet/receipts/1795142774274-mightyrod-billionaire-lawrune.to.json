@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795142774274-mightyrod-billionaire-lawrune",
+ "account": "Billionaire",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 1,
+ "claim": "ded82e14-d29c-4427-b572-990b2450d7d5",
+ "count": 0,
+ "ok": false,
+ "at": 1795142831034,
+ "detail": "trade claimed"
+}

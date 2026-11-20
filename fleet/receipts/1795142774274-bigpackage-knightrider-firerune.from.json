@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795142774274-bigpackage-knightrider-firerune",
+ "account": "Bigpackage",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Fire rune",
+ "requested": 1,
+ "claim": "4490eae3-d276-4f96-8343-65e746582ad6",
+ "count": 0,
+ "ok": false,
+ "at": 1795142825562,
+ "detail": "trade claimed"
+}
