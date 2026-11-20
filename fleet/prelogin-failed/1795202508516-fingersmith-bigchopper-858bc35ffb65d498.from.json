@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795202508516-fingersmith-bigchopper-858bc35ffb65d498",
+ "role": "from",
+ "account": "Fingersmith",
+ "partner": "Bigchopper",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795202594189,
+ "detail": "Error: no worker progress: active legacy/different release; wait offline for coordinated rollout"
+}

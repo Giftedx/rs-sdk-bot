@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795202508516-fingersmith-bigchopper-858bc35ffb65d498",
+ "account": "Fingersmith",
+ "partner": "Bigchopper",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "b1e0be72-b162-4901-969d-89215105d3e3",
+ "count": 0,
+ "ok": false,
+ "at": 1795202590382,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Cake",
+   "requested": 13,
+   "count": 0
+  }
+ ]
+}

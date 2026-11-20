@@ -1,0 +1,30 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795202508516-fingersmith-bigchopper-858bc35ffb65d498",
+ "account": "Bigchopper",
+ "partner": "Fingersmith",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune scimitar",
+ "requested": 1,
+ "claim": "91a419eb-e9fa-4bfb-bc88-5f4fd1e26ffa",
+ "count": 0,
+ "ok": false,
+ "at": 1795202594647,
+ "detail": "Error: partner failed: no trade",
+ "lines": [
+  {
+   "item": "Cake",
+   "requested": 13,
+   "count": 0
+  }
+ ],
+ "logout": {
+  "attemptId": "1795202586129-0000032012-0000000001",
+  "at": 1795202594635,
+  "sha256": "e3ba402f6916d7d89fca4fbb678afb11384bc1b1a14c81a2370b34513cfa025c"
+ },
+ "screen": false
+}
