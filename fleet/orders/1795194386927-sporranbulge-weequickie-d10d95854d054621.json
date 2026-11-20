@@ -1,0 +1,23 @@
+{
+ "id": "1795194386927-sporranbulge-weequickie-d10d95854d054621",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "SporranBulge",
+ "to": "WeeQuickie",
+ "item": "Coins",
+ "count": 100000,
+ "start": 1795194386927,
+ "end": 1795195586927,
+ "meet": [
+  {
+   "x": 3093,
+   "z": 3491,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
