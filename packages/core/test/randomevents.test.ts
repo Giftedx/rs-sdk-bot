@@ -268,3 +268,47 @@ test('the flight tile keeps away from NPCs that hunt players', async () => {
     expect(Math.max(Math.abs(walk.x - 3084), Math.abs(walk.z - 3241))).toBeGreaterThan(10);
     w.stop();
 });
+
+test('script-dropped fishing tools are not picked back up as big fish drops', async () => {
+    // s.direct dropItem (default LOOT_WATCH off): ignored, then unprompted later loss still triggers pickup.
+    const f = fake(base(3233, 3222));
+    const net = { slot: 0, id: 303, name: 'Small fishing net', count: 1, optionsWithIndex: [{ text: 'Drop', opIndex: 5 }] };
+    const groundNet = { id: 303, name: 'Small fishing net', count: 1, x: 3233, z: 3222, distance: 0 };
+    f.state.inventory = [net];
+    const w = f.watch();
+    await f.step();
+    await f.s.direct({ type: 'dropItem', slot: 0 });
+    f.state.inventory = [];
+    f.state.groundItems = [groundNet];
+    await f.step(5);
+    expect(f.lines.some(l => l.includes('big_fish tool-dropped'))).toBe(false);
+    expect(f.sent.some(a => a.type === 'pickupItem')).toBe(false);
+
+    // Subsequent real Big Fish loss without dropItem still recovers.
+    f.state.groundItems = [];
+    f.state.inventory = [net];
+    await f.step();
+    f.state.inventory = [];
+    f.state.groundItems = [groundNet];
+    await f.step();
+    expect(f.sent.at(-1)).toMatchObject({ type: 'pickupItem', itemId: 303 });
+    w.stop();
+
+    // sdk.send dropItem and useInventoryItem Drop option are ignored too.
+    for (const action of [
+        { type: 'dropItem', slot: 0 },
+        { type: 'useInventoryItem', slot: 0, optionIndex: 5 },
+    ]) {
+        const g = fake(base(3233, 3222));
+        g.state.inventory = [net];
+        const wg = g.watch();
+        await g.step();
+        g.s.sdk.send({ type: 'sdk_action', actionId: 'd1', action });
+        g.state.inventory = [];
+        g.state.groundItems = [groundNet];
+        await g.step(5);
+        expect(g.lines.some(l => l.includes('big_fish tool-dropped'))).toBe(false);
+        expect(g.sent.some(a => a.type === 'pickupItem')).toBe(false);
+        wg.stop();
+    }
+});

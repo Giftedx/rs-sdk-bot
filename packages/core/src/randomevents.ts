@@ -268,6 +268,24 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     const refusals = new Map<number, { n: number; at: number }>();
     const packNow = (): any[] => s.sdk.getState()?.inventory ?? [];
     const countOf = (pack: readonly any[], id: number) => pack.reduce((n, i) => (i.id === id ? n + (i.count ?? 1) : n), 0);
+    const DESTROY = /^(drop|destroy)$/i;
+    const scriptToolDrops = new Map<number, { at: number; left: number }>();
+    const noteToolDrop = (a: any) => {
+        if (!a) return;
+        const pack = packNow();
+        let slot: number | undefined;
+        if (a.type === 'dropItem') slot = a.slot;
+        else if (a.type === 'useInventoryItem') {
+            const item = pack.find(x => x.slot === a.slot);
+            if ((item?.optionsWithIndex ?? []).some((o: any) => o.opIndex === a.optionIndex && DESTROY.test(o.text ?? ''))) slot = a.slot;
+        }
+        const item = slot === undefined ? undefined : pack.find(x => x.slot === slot);
+        if (!item || !FISH_TOOLS.includes(item.id)) return;
+        const now = s.tick();
+        const prev = scriptToolDrops.get(item.id);
+        const left = prev && now - prev.at <= 6 ? prev.left + 1 : 1;
+        scriptToolDrops.set(item.id, { at: now, left });
+    };
     const noteScript = (a: any) => {
         if (!loot || !a) return;
         if (a.type === 'pickupItem' || a.type === 'interactGroundItem' || a.type === 'spellOnGroundItem') scriptPickupAt = s.tick();
@@ -280,7 +298,6 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
     // pack would then hold less than the kept count. After REFUSE_LIMIT refusals of one item (on different ticks)
     // the script wins: the item leaves the keep list, so a script that must empty its pack never stalls.
     const REFUSE_LIMIT = 3;
-    const DESTROY = /^(drop|destroy)$/i;
     // The value guard (opts.guard): the same refusal for any held item whose stack is worth guard.minValue or more, so
     // a script bug (a drop rule that matches too much) cannot throw away gear. After REFUSE_LIMIT refusals the item id
     // is released for the session, as a kept item is.
@@ -333,28 +350,44 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
 
     if (gateOn) {
         s.direct = (a: Act) => {
-            if (passes(a)) return rawDirect(a);
+            if (passes(a)) { noteToolDrop(a); return rawDirect(a); }
             noteType(a);
             noteScript(a);
             if (avoided(a)) return new Promise(r => later(r, fail('random event: target avoided')));
             const no = keptRefusal(a);
             if (no) return new Promise(r => later(r, fail(no, 'loot_kept')));
-            if (!holding()) return rawDirect(a);
-            return new Promise(r => held.push({ at: s.tick(), run: () => { const n = keptRefusal(a); n ? r(fail(n, 'loot_kept')) : r(rawDirect(a)); }, fail: () => r(fail('random event in progress')) }));
+            if (!holding()) { noteToolDrop(a); return rawDirect(a); }
+            return new Promise(r => held.push({
+                at: s.tick(),
+                run: () => {
+                    const n = keptRefusal(a);
+                    if (n) r(fail(n, 'loot_kept'));
+                    else { noteToolDrop(a); r(rawDirect(a)); }
+                },
+                fail: () => r(fail('random event in progress')),
+            }));
         };
         if (rawSend) sdkAny.send = (msg: any) => {
             if (msg?.type === 'sdk_action') {
-                if (passes(msg.action)) return rawSend.call(sdkAny, msg);
+                if (passes(msg.action)) { noteToolDrop(msg.action); return rawSend.call(sdkAny, msg); }
                 noteType(msg.action);
                 noteScript(msg.action);
                 if (avoided(msg.action)) { later(() => answer(msg, fail('random event: target avoided')), {}); return; }
                 const no = keptRefusal(msg.action);
                 if (no) { later(() => answer(msg, fail(no, 'loot_kept')), {}); return; }
                 if (holding()) {
-                    held.push({ at: s.tick(), run: () => { const n = keptRefusal(msg.action); n ? answer(msg, fail(n, 'loot_kept')) : rawSend.call(sdkAny, msg); },
-                        fail: () => answer(msg, fail('random event in progress')) });
+                    held.push({
+                        at: s.tick(),
+                        run: () => {
+                            const n = keptRefusal(msg.action);
+                            if (n) answer(msg, fail(n, 'loot_kept'));
+                            else { noteToolDrop(msg.action); rawSend.call(sdkAny, msg); }
+                        },
+                        fail: () => answer(msg, fail('random event in progress')),
+                    });
                     return;
                 }
+                noteToolDrop(msg.action);
             }
             return rawSend.call(sdkAny, msg);
         };
@@ -1068,12 +1101,27 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
             toolCounts.set(id, c);
             if (st?.trade?.isOpen) {
                 toolGone.delete(id);
+                scriptToolDrops.delete(id);
                 const key = `tool:${id}`;
                 if (active === jobs.get(key)) active = null;
                 jobs.delete(key);
                 continue;
             }
-            if (c < prev && !st?.bank?.isOpen) toolGone.set(id, now);
+            if (c < prev && !st?.bank?.isOpen) {
+                const lost = prev - c;
+                const drop = scriptToolDrops.get(id);
+                if (drop && now - drop.at <= 6 && drop.left > 0) {
+                    const explained = Math.min(drop.left, lost);
+                    const left = drop.left - explained;
+                    if (left > 0) scriptToolDrops.set(id, { at: drop.at, left });
+                    else scriptToolDrops.delete(id);
+                    if (lost > explained) toolGone.set(id, now);
+                    else toolGone.delete(id);
+                } else {
+                    scriptToolDrops.delete(id);
+                    toolGone.set(id, now);
+                }
+            }
             const gone = toolGone.get(id);
             if (gone !== undefined && now - gone <= 12 && (st?.groundItems ?? []).some((g: any) => g.id === id && g.distance <= 10)) {
                 toolGone.delete(id);
