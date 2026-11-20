@@ -1,0 +1,39 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795165424936-yewfirst-knightstick-a52af05f4fce7845",
+ "account": "YewFirst",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Headless arrow",
+ "requested": 3600,
+ "claim": "bcea9f05-409f-4625-8897-0cae0248de6d",
+ "count": 0,
+ "ok": false,
+ "at": 1795165435488,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Steel arrowtips",
+   "requested": 161,
+   "count": 0
+  },
+  {
+   "item": "Mithril arrowtips",
+   "requested": 212,
+   "count": 0
+  },
+  {
+   "item": "Adamant arrowtips",
+   "requested": 495,
+   "count": 0
+  },
+  {
+   "item": "Rune arrowtips",
+   "requested": 2113,
+   "count": 0
+  }
+ ]
+}

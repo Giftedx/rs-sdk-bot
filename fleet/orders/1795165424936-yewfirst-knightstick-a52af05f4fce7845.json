@@ -1,0 +1,40 @@
+{
+ "id": "1795165424936-yewfirst-knightstick-a52af05f4fce7845",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "Knightstick",
+ "item": "Headless arrow",
+ "count": 3600,
+ "start": 1795165424936,
+ "end": 1795166624936,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Steel arrowtips",
+   "count": 161
+  },
+  {
+   "item": "Mithril arrowtips",
+   "count": 212
+  },
+  {
+   "item": "Adamant arrowtips",
+   "count": 495
+  },
+  {
+   "item": "Rune arrowtips",
+   "count": 2113
+  }
+ ]
+}
