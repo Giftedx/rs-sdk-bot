@@ -1,0 +1,59 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795163836425-kiltlifter-undermykilt-75a562cbc6739501",
+ "account": "UnderMyKilt",
+ "partner": "Kiltlifter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 10000,
+ "claim": "863d370e-0a48-4dbd-8e0e-8340749cc686",
+ "count": 10000,
+ "ok": true,
+ "at": 1795163864474,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Prayer potion(4)",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795163863316
+   }
+  },
+  {
+   "item": "Dragon bones",
+   "requested": 8,
+   "count": 8,
+   "inventory": {
+    "before": 0,
+    "after": 8
+   },
+   "bank": {
+    "count": 8,
+    "at": 1795163863713
+   }
+  }
+ ],
+ "inventory": {
+  "before": 100,
+  "after": 10100
+ },
+ "bank": {
+  "count": 10000,
+  "at": 1795163862898
+ },
+ "logout": {
+  "attemptId": "1795163851828-0000031632-0000000001",
+  "at": 1795163864453,
+  "sha256": "1548013fde1f3d66a03871585f9e8d6965deed3e51e6a5422d2f6027676bf44a"
+ },
+ "screen": true
+}

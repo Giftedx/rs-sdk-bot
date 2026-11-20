@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795163846414-pocketpool-yewfirst-5007d2be308c8d82",
+ "role": "from",
+ "account": "PocketPool",
+ "partner": "YewFirst",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795163862674,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] 0468e9e8ae982f3283eed73ad639dc19862b3015 -> fleet-trade-claim/pocketpool (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}
