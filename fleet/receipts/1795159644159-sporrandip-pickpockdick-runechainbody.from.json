@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795159644159-sporrandip-pickpockdick-runechainbody",
+ "account": "SporranDip",
+ "partner": "PickpockDick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "ea441cf2-099c-4376-98fc-d7945b3b9e40",
+ "count": 1,
+ "ok": true,
+ "at": 1795159748307,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795159739889
+ },
+ "logout": {
+  "attemptId": "1795159733963-0000017992-0000000001",
+  "at": 1795159748217,
+  "sha256": "0b6cd6318619fa3d342c79b677b918d657e894d566ee94efd40a21c3ce58c3ef"
+ },
+ "screen": true
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795159644159-sporrandip-pickpockdick-runechainbody",
  "account": "PickpockDick",
  "partner": "SporranDip",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "b2e668fc-6335-4e6c-927f-f443055fcb59",
- "count": 0,
- "ok": false,
- "at": 1795159716392,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795159749881,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795159749068
+ },
+ "logout": {
+  "attemptId": "1795159716400-0000028940-0000000001",
+  "at": 1795159749836,
+  "sha256": "d51a1699edd36862bd30e4efabfc3ffbac082bbe00b7ae74572e1694f423b03a"
+ },
+ "screen": true
 }
