@@ -21,8 +21,9 @@ test('the reserved list is the main account and every specialist', () => {
     expect([...RESERVED_ACCOUNTS].sort()).toEqual([
         'bigboner', 'bigswinger', 'castmyload', 'cutmyjewels', 'dipyourwick', 'fullblooded',
         'grindmyherb', 'haggis', 'hiltsdeep', 'justthetip', 'lochnessrod', 'mineshafted',
-        'polevaulter', 'pouchstuffed', 'rocksolid', 'shaftshooter', 'steelrod',
+        'nockandload', 'polevaulter', 'pouchstuffed', 'rocksolid', 'shaftshooter', 'steelrod',
     ]);
+    expect(SPECIALIST_BOARDS.nockandload).toEqual({ name: 'Fletching', category: 10 });
 });
 
 test('an ordinary account never receives a specialist name', () => {
