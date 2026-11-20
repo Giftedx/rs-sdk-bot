@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795193079644-knightrider-oreelse-c05da4ae761b55df",
+ "account": "KnightRider",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 10,
+ "claim": "6387efab-bb70-4a5f-8ab9-d993d00b5f9e",
+ "count": 0,
+ "ok": false,
+ "at": 1795193135220,
+ "detail": "trade claimed"
+}
