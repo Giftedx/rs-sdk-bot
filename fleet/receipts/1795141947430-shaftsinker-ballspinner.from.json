@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795141947430-shaftsinker-ballspinner",
+ "account": "Shaftsinker",
+ "partner": "Ballspinner",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 50056,
+ "claim": "4869367f-6426-4bb3-8af6-795b214254b0",
+ "count": 0,
+ "ok": false,
+ "at": 1795142045731,
+ "detail": "trade claimed"
+}

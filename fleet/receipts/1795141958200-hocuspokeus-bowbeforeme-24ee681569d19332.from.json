@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795141958200-hocuspokeus-bowbeforeme-24ee681569d19332",
+ "account": "Hocuspokeus",
+ "partner": "BowBeforeMe",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune arrowtips",
+ "requested": 1500,
+ "claim": "9e131f18-abad-4668-b0bb-eb8bb47092c6",
+ "count": 0,
+ "ok": false,
+ "at": 1795142072259,
+ "detail": "trade claimed"
+}
