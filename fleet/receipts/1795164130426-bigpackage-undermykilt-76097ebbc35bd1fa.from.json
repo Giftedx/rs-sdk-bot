@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795164130426-bigpackage-undermykilt-76097ebbc35bd1fa",
  "account": "Bigpackage",
  "partner": "UnderMyKilt",
@@ -10,15 +10,37 @@
  "item": "Coins",
  "requested": 37000,
  "claim": "346b1b10-161a-4195-8c4c-e3141938eb88",
- "count": 0,
- "ok": false,
- "at": 1795164141303,
- "detail": "trade claimed",
+ "count": 37000,
+ "ok": true,
+ "at": 1795164158035,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Cannonball",
    "requested": 50,
-   "count": 0
+   "count": 50,
+   "inventory": {
+    "before": 50,
+    "after": 0
+   },
+   "bank": {
+    "count": 50,
+    "at": 1795164152496
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 37000,
+  "after": 0
+ },
+ "bank": {
+  "count": 37000,
+  "at": 1795164151302
+ },
+ "logout": {
+  "attemptId": "1795164141312-0000029292-0000000001",
+  "at": 1795164158019,
+  "sha256": "24e27669761626682587420c4c54530554aae0155b69a79ef32b5ed2da0f21bf"
+ },
+ "screen": true
 }
