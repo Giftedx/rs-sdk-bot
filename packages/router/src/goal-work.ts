@@ -7,6 +7,7 @@ export interface GoalWorkContext {entryOf?:(capability:string)=>string|undefined
 const key=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'');
 const combat=new Set(['attack','strength','defence','ranged','magic','prayer','hitpoints']);
 const pkEntries=new Set(['scripts/pk-hunt.ts','scripts/pk-roam.ts','scripts/pk-army.ts']);
+const QP_RECORD_TICKS=73866;
 const validTime=(value:unknown,now:number):value is number=>typeof value==='number'&&Number.isFinite(value)&&value>0&&value<=now;
 const fresh=(value:unknown,now:number)=>validTime(value,now)&&now-value<300000;
 
@@ -64,9 +65,29 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
   let value=0;
   const credit=(id:string,gain:number)=>{const prior=terms.get(id)??0;if(gain>prior){terms.set(id,gain);value+=gain-prior;}};
   const remaining=new Set(goals.quests.remaining.map(key));
-  for(const quest of new Set(task.accept?.quests??[]))if(remaining.has(key(quest))){credit('quest:'+key(quest),1);effects.push('quest '+quest);}
+  const preCheckOwn=account?observations.get(key(account)):undefined;
+  const rawPlaytime=[preCheckOwn?.playtimeTicks,preCheckOwn?.playtime,...(Array.isArray(preCheckOwn?.ranks)?preCheckOwn.ranks.map((r:any)=>r?.ticks):[])]
+   .find((v):v is number=>typeof v==='number'&&Number.isFinite(v)&&v>=0);
+  const lowPlaytimeQp=rawPlaytime!==undefined&&rawPlaytime<QP_RECORD_TICKS;
+  const rawJournal=Array.isArray(preCheckOwn?.questJournal)?preCheckOwn.questJournal:Array.isArray(preCheckOwn?.quests)?preCheckOwn.quests:null;
+  const ownQuestState=(quest:string)=>{
+   if(!rawJournal?.length)return undefined;
+   const hit=rawJournal.find((q:any)=>key(typeof q==='string'?q:q?.name??'')===key(quest));
+   if(!hit)return undefined;
+   return typeof hit==='string'?'complete':hit.state;
+  };
+  for(const quest of new Set(task.accept?.quests??[])){
+   if(remaining.has(key(quest))){credit('quest:'+key(quest),1);effects.push('quest '+quest);}
+   else if(account&&lowPlaytimeQp){
+    const state=ownQuestState(quest);
+    if(state==='not started'||state==='started'){
+     credit('quest:'+key(account)+':'+key(quest),1);
+     effects.push('Quest Points race '+account+' ('+rawPlaytime+'t < '+QP_RECORD_TICKS+'t): '+quest);
+    }
+   }
+  }
   if(!account)return{value:value>0?value:null,reason:effects.join(' ')||'Observe the bound account before selecting its goal effect.',consumers:[task.id]};
-  const own=observations.get(key(account));
+  const own=preCheckOwn;
   if(entry&&pkEntries.has(entry)&&task.timeoutMs!==undefined&&task.timeoutMs>0&&task.timeoutMs<=1800000
    &&names!.every(name=>goals.army.roster.some(member=>key(member)===key(name)))){
    credit('pk-proof:'+key(account),.01);effects.push('Bounded army PK proof supports the player-kill and Wilderness goals. The result remains unproved.');
@@ -85,6 +106,22 @@ export function goalWork(state:CoordinatorState,goals:OwnerGoals,statuses:readon
    return total;
   },new Map<number,number>());
   const held=bankKnown(account)?holdings(own.bank):null;
+  const runiteTarget=Number(task.accept?.bank?.[451]??task.accept?.bank?.['451']);
+  if(entry==='scripts/lava-maze-escorted-ore.ts'&&names?.length===2
+   &&task.timeoutMs!==undefined&&Number.isSafeInteger(task.timeoutMs)&&task.timeoutMs>0&&task.timeoutMs<=1800000
+   &&Number.isSafeInteger(runiteTarget)&&runiteTarget>0&&(task.env?.MAX_ORE===undefined||Number(task.env.MAX_ORE)===1)){
+   const rawExpected=task.env?.EXPECTED_BANK_ORE;
+   const expected=rawExpected!==undefined?Number(rawExpected):undefined;
+   const validExpected=expected!==undefined&&Number.isSafeInteger(expected)&&expected>=0;
+   const advancesKnown=held!==null&&runiteTarget>(held.get(451)??0)&&(expected===undefined||(validExpected&&runiteTarget===expected+1));
+   const advancesExpected=held===null&&validExpected&&runiteTarget===expected+1;
+   if(advancesKnown||advancesExpected){
+    credit('runite-board:'+key(account)+':451:'+runiteTarget,.01);
+    effects.push('Bounded Lava Maze Runite trip for '+account+' targets '+runiteTarget+' ore.');
+   }else if(held===null&&rawExpected===undefined){
+    unknown.push(account+' holdings of item 451');
+   }
+  }
   for(const [idText,target] of Object.entries(task.accept?.bank??{})){
    const id=Number(idText);
    if(!Number.isSafeInteger(id))continue;
