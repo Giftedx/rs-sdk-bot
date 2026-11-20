@@ -11,7 +11,7 @@
 import {appendFileSync, constants, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync} from 'node:fs';
 import {freemem} from 'node:os';
 import {join, relative, resolve} from 'node:path';
-import {localFile, sha, type Binding} from '../../core/src/launch-evidence';
+import {localFile, MAX_LOGOUT_DRAIN_TICKS, sha, type Binding} from '../../core/src/launch-evidence';
 import {FREE_FLOOR_GB, PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {isLocalServer} from '../../core/src/localserver';
 import {missionSignature} from '../../core/src/session-admission';
@@ -174,7 +174,7 @@ async function writeSpecialistReceipt(seg: Segment, scored: ScoredRun, actor: st
     if (/\[trade-ledger\].*failed/.test(readFileSync(scored.engineLog, 'utf8'))) throw Error('practice trade ledger write failed');
     const save = readFileSync(savePath), {endPlaytime, boardTick} = scoredClock(save, scored.board);
     const planTicks = seg.plan!.ticks;
-    if (Math.abs(endPlaytime - planTicks) > planTicks * .02 || Math.abs(boardTick - planTicks) > planTicks * .02)
+    if (Math.abs(boardTick - planTicks) > planTicks * .02 || endPlaytime > boardTick + Math.max(planTicks * .02, MAX_LOGOUT_DRAIN_TICKS))
         throw Error('saved specialist clocks differ from the plan by more than 2%');
     if (capabilityRevision(workerEntries(seg.script, seg.args ?? [], root), root) !== scored.source)
         throw Error('worker source changed during specialist rehearsal');

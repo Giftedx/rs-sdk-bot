@@ -2,7 +2,7 @@ import {existsSync, readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {processMatches} from '../../practice/src/proc';
 import {jobAccounts, readMergedPlan} from './coordinator-jobs';
-import {fresh, localFile, readBound, sha, validateRehearsals, validateSupplies, type Binding, type SupplyRequirement} from './launch-evidence';
+import {fresh, localFile, MAX_LOGOUT_DRAIN_TICKS, readBound, sha, validateRehearsals, validateSupplies, type Binding, type SupplyRequirement} from './launch-evidence';
 import {missionSignature} from './session-admission';
 import {listAttempts, readLogoutProof, type AttemptReceipt} from './session-lifecycle';
 
@@ -51,9 +51,10 @@ export function evaluateSpecialist(root:string, account:string, runId:string, so
         throw Error('need a recent 404 from the exact specialist profile');
     const rehearsal=bound(plan.rehearsal);
     const expiry=validateRehearsals([rehearsal],context,{[board.name]:plan.planTicks},now,bound,
-        {count:1,excludedActor:name,externalSupplies:plan.requirements,requireArtifacts:true});
+        {count:1,excludedActor:name,externalSupplies:plan.requirements,requireArtifacts:true,maxLogoutTailTicks:MAX_LOGOUT_DRAIN_TICKS});
     const margin=Math.ceil(leader.ticks*.02);
-    if(leader.level===99 && leader.ticks-Math.max(plan.planTicks,rehearsal.endPlaytime)<margin)
+    const boardTicks=rehearsal.boardTicks[board.name];
+    if(leader.level===99 && leader.ticks-Math.max(plan.planTicks,boardTicks)<margin)
         throw Error(`need a ${margin}-tick margin against the record`);
     let expiresAt=Math.min(now+FIRST_LOGIN_MS,at+HOUR,profile.at+HOUR,expiry);
     if(plan.requirements.length){

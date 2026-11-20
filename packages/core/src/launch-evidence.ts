@@ -3,6 +3,7 @@ import {readFileSync,readdirSync,realpathSync} from 'node:fs';
 import {resolve,relative,isAbsolute} from 'node:path';
 
 export const GATE_NAMES=['plan wins','rehearsed','supplies staged','fresh targets','machine clear'];
+export const MAX_LOGOUT_DRAIN_TICKS=120;
 export const fresh=(at:unknown,now:number,age:number)=>typeof at==='number'&&Number.isFinite(at)&&at>0&&at<=now&&now-at<age;
 const need=(ok:unknown,message:string)=>{if(!ok)throw Error(message)};
 const qty=(n:unknown)=>Number.isSafeInteger(n)&&Number(n)>0;
@@ -72,9 +73,10 @@ export function validateSupplies(s:any,context:string,requirements:SupplyRequire
  for(const [item,count] of demand)need(totals.get(item)===count,'Missing or excess reservation: '+item);
  return expiresAt;
 }
-export function validateRehearsals(runs:any[],context:string,expected:Record<string,number>,now:number,read:Read,options:{count:number;excludedActor:string;externalSupplies?:SupplyRequirement[];requireArtifacts?:boolean}={count:3,excludedActor:'haggis'}){
+export function validateRehearsals(runs:any[],context:string,expected:Record<string,number>,now:number,read:Read,options:{count:number;excludedActor:string;externalSupplies?:SupplyRequirement[];requireArtifacts?:boolean;maxLogoutTailTicks?:number}={count:3,excludedActor:'haggis'}){
  need(runs.length===options.count&&Object.keys(expected).length>0,options.count===3?'Need three complete rehearsals':'Need one complete rehearsal');
  const ids=new Set(),actors=new Set(),logs=new Set();
+ const maxTail=options.maxLogoutTailTicks??0;
  for(const r of runs){
   need(r?.version===2&&r.context===context&&fresh(r.at,now,7*86400000),'Stale or mismatched rehearsal');
   need(typeof r.runId==='string'&&r.runId&&typeof r.actor==='string'&&r.actor&&r.actor.toLowerCase()!==options.excludedActor&&/^(?:localhost|127\.0\.0\.1):\d+$/.test(r.server),'Invalid practice identity');
@@ -82,7 +84,7 @@ export function validateRehearsals(runs:any[],context:string,expected:Record<str
   need(r.ok===true&&r.died===false&&r.logout==='logged-out'&&r.startPlaytime===0&&qty(r.endPlaytime),'Incomplete whole-clock run');
   need(Object.keys(r.boardTicks??{}).length===Object.keys(expected).length,'Missing board stamps');
   for(const [id,ticks] of Object.entries(expected))need(Number.isFinite(ticks)&&ticks>0&&qty(r.boardTicks?.[id])&&r.boardTicks[id]<=r.endPlaytime&&Math.abs(r.boardTicks[id]-ticks)<=ticks*.02,'Rehearsal board mismatch: '+id);
-  need(r.planTicks===Math.max(...Object.values(expected))&&Math.abs(r.endPlaytime-r.planTicks)<=r.planTicks*.02,'Rehearsal clock mismatch');
+  need(r.planTicks===Math.max(...Object.values(expected))&&r.endPlaytime>=r.planTicks-r.planTicks*.02&&r.endPlaytime<=r.planTicks+Math.max(r.planTicks*.02,maxTail),'Rehearsal clock mismatch');
   const log=read(r.log,false);need(typeof log==='string'&&/^RESULT ok\b/m.test(log),'Missing successful raw log');
   const stamp=log.split(/\r?\n/).filter((line:string)=>line.startsWith('REHEARSAL '));
   need(stamp.length===1,'Need one raw whole-clock receipt');
