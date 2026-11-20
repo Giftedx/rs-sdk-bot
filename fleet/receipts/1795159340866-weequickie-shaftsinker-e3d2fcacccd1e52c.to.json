@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795159340866-weequickie-shaftsinker-e3d2fcacccd1e52c",
+ "account": "Shaftsinker",
+ "partner": "WeeQuickie",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "d3d56aea-ec50-444a-95c2-8015e9f0cc77",
+ "count": 1,
+ "ok": true,
+ "at": 1795159435248,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795159434279
+ },
+ "logout": {
+  "attemptId": "1795159426193-0000030068-0000000001",
+  "at": 1795159435046,
+  "sha256": "a987fbe21c0b79d7c6e3ceda836d62d6343620169967b46223ed219b94eed587"
+ },
+ "screen": true
+}
