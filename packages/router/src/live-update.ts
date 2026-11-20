@@ -464,6 +464,10 @@ export function coordinatorHolds(root: string, workspace: (capability: string) =
             if (t?.status !== 'running') continue;
             if (t.spec?.kind === 'qualify') qualifications.push(`qualification ${t.spec.id} runs`);
             if (t.spec?.kind === 'build' && typeof t.spec.capability === 'string') heldFiles.push(...ownedFiles(workspace(t.spec.capability)));
+            if (t.spec?.launch === 'specialist' || t.spec?.launch === 'main') {
+                const who = typeof t.spec.account === 'string' && t.spec.account ? t.spec.account : typeof t.spec.id === 'string' && t.spec.id ? t.spec.id : 'launch';
+                holds.push(`${t.spec.launch} launch ${who} runs`);
+            }
         }
     }
     return { holds, heldFiles, qualifications };
