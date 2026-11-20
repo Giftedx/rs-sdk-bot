@@ -1,0 +1,32 @@
+{
+ "id": "1795163886888-sausagefest-undermykilt-84f5368662c7bea6",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Sausagefest",
+ "to": "UnderMyKilt",
+ "item": "Coins",
+ "count": 11000,
+ "start": 1795163886888,
+ "end": 1795165386888,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Cannon furnace",
+   "count": 1
+  },
+  {
+   "item": "Iron arrow",
+   "count": 375
+  }
+ ]
+}

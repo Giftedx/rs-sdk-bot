@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795163886888-sausagefest-undermykilt-84f5368662c7bea6",
+ "account": "UnderMyKilt",
+ "partner": "Sausagefest",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 11000,
+ "claim": "43793b67-d8a9-4193-b5c4-c602e3d05a7e",
+ "count": 0,
+ "ok": false,
+ "at": 1795163899016,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Cannon furnace",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Iron arrow",
+   "requested": 375,
+   "count": 0
+  }
+ ]
+}

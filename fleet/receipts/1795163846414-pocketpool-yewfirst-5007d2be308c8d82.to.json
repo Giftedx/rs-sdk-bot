@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795163846414-pocketpool-yewfirst-5007d2be308c8d82",
  "account": "YewFirst",
  "partner": "PocketPool",
@@ -12,6 +12,12 @@
  "claim": "6d2868c5-d300-4584-bec5-6b2ff5a1f0b5",
  "count": 0,
  "ok": false,
- "at": 1795163867105,
- "detail": "trade claimed"
+ "at": 1795163871258,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795163867116-0000030608-0000000001",
+  "at": 1795163871245,
+  "sha256": "03118817a20b92519548eab32dd4a99db73b5cd9260b8fe52db90ee26a95c484"
+ },
+ "screen": false
 }
