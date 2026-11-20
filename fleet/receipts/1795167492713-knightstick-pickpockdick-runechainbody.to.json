@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795167492713-knightstick-pickpockdick-runechainbody",
+ "account": "PickpockDick",
+ "partner": "Knightstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "8e57e561-c595-4bba-8abd-c01f27e80ff8",
+ "count": 0,
+ "ok": false,
+ "at": 1795167578342,
+ "detail": "trade claimed"
+}
