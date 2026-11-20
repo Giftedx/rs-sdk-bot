@@ -10,6 +10,7 @@
 // TREE_FROM=<stage> starts later (debug presets with varp 111 set).
 import { openQuest, fireSpell } from './quest-lib';
 import { componentId } from '../../packages/core/src/logout';
+import type { Session } from '../../packages/core/src/inprocess';
 
 const BOLREN = { x: 2542, z: 3169 };
 // From the loose railing (2515,3161) to the king by the west side of the village (SDK path, maps/m39_49.jm2).
@@ -26,17 +27,23 @@ const CHEST = { x: 2506, z: 3259 };                        // chestclosed_khazar
 const ITEM = { logs: 1511, orb: 587, orbs: 588, amulet: 589, prayerPot: [2434, 139, 141, 143], food: 379 };
 const PFM = 14;                                            // protect_from_melee (sdk PRAYER_INDICES)
 
-const q = await openQuest({ cap: 3000, eatAt: 6, food: [ITEM.food] });
+export async function runQuestTree(opts: { session?: Session; cap?: number; stop?: () => boolean; burst?: boolean } = {}): Promise<{ ok: boolean; detail: string }> {
+const g = globalThis as { QUEST_SCRIPT_ID?: string };
+const prevScriptId = g.QUEST_SCRIPT_ID;
+g.QUEST_SCRIPT_ID = 'quest-tree';
+const q = await openQuest({ session: opts.session, stop: opts.stop, cap: opts.cap ?? 3000, eatAt: 6, food: [ITEM.food], ...(opts.burst === undefined ? {} : { burst: opts.burst }) });
+let offDone: (() => void) | undefined;
 try {
     const FROM = Number(process.env.TREE_FROM ?? 0);
     let questDone = false;
-    const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+tree gnome village/i) > 0) questDone = true; });
+    offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+tree gnome village/i) > 0) questDone = true; });
     const prayers = (): any => q.st()?.prayers;
     const pfmOn = (): boolean => !!prayers()?.activePrayers?.[PFM];
     const points = (): number => prayers()?.prayerPoints ?? 0;
     let potions = 0;
     const setPfm = async (on: boolean): Promise<void> => {
         if (pfmOn() === on) return;
+        if (on && points() <= 0) await keepPrayer();
         await q.step(`protect from melee ${on ? 'on' : 'off'}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn() === on, 3, 3);
     };
     // A prayer potion when the points run low, then the prayer back on (it switches off at 0).
@@ -185,7 +192,8 @@ try {
         console.log(`NOTE warlord down at ${q.T()} casts=${casts} prayer=${points()} potions=${potions}`);
         q.milestone(8);
         for (const [hx, hz] of [...BATTLEFIELD].reverse()) await q.dash(`back ${hx},${hz}`, hx, hz, 2, 30);
-        await q.dash('back to battlefield edge', 2504, 3226, 3, 30);
+        await q.dash('back 2496,3239', 2496, 3239, 2, 20);
+        await q.dash('back to battlefield edge', 2504, 3226, 3, 20);
         await setPfm(false);
     }
 
@@ -195,7 +203,14 @@ try {
     await q.talk('bolren 3', /^king bolren$/i, [], () => !q.has(ITEM.orbs) && (questDone || q.has(ITEM.amulet)), BOLREN, 120);
     await q.waitUntil(() => questDone, 20);
     q.milestone('complete');
-    offDone();
-    await q.end(questDone && q.has(ITEM.amulet), `qp=2 amulet=${q.has(ITEM.amulet)} questMsg=${questDone} potions=${potions} prayerLeft=${points()}`);
+    const detail = `qp=2 amulet=${q.has(ITEM.amulet)} questMsg=${questDone} potions=${potions} prayerLeft=${points()}`;
+    const ok = questDone && q.has(ITEM.amulet);
+    if (opts.session) { await q.dispose(); if (!ok) throw Error(detail); return { ok: true, detail }; }
+    await q.end(ok, detail);
+    return { ok, detail };
 
-} catch (e) { await q.fail(String(e)); }
+} catch (e) { if (opts.session) { await q.dispose(); throw e; } await q.fail(String(e)); return { ok: false, detail: String(e) }; }
+finally { offDone?.(); if (prevScriptId === undefined) delete g.QUEST_SCRIPT_ID; else g.QUEST_SCRIPT_ID = prevScriptId; }
+}
+
+if (import.meta.main || !!(globalThis as { QUEST_SESSION?: Session }).QUEST_SESSION) await runQuestTree();

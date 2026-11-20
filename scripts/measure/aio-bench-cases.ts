@@ -13,6 +13,7 @@ import { CLONE_NAMES, cloneProfileName, cloneSpec, pooledProfile, type CloneMode
 import {carrierAltar, type CarrierAltarName} from '../rune-carrier-altar';
 import {PROGRESSION_BENCH_CASES} from './progression-bench-cases';
 import {questSweepElenaPreset} from '../../packages/practice/src/quest-sweep-proof';
+import {ATTACK_SPECIALIST_KIT} from '../specialist-supplier';
 
 // Food that a bot eats has one inventory entry for each piece. An entry with count 5 is one slot of 5, and the server
 // deletes the whole slot on an eat (consume_effects.rs2, inv_delslot).
@@ -1895,6 +1896,19 @@ const EXTRA_CASES: BenchCase[] = [
   // ferryWalk). The wall time of the case and the ms of each WALK_NO_ROUTE line give the plan time.
   {key: 'extra:walk-varrock-ardougne', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '2619', '3332', '0'], pass: ok, timeoutMs: 600_000,
     presetConfig: {position: {x: 3185, z: 3436, level: 0}, inventory: [{id: 995, count: 60}]}},
+  // Fresh-clock Attack 99 specialist route from Tutorial Island through Tree Gnome Village, Gnome Agility 25,
+  // The Grand Tree, and Fight Arena, supplied at Lumbridge courtyard by companion `s`.
+  {key: 'extra:specialist-attack', script: 'scripts/measure/specialist-bench.ts', preset: 'fresh_lumbridge',
+    presetConfig: {position: {x: 3094, z: 3106, level: 0}},
+    companions: [{suffix: 's', preset: 'fresh_lumbridge', presetConfig: {position: {x: 3222, z: 3222, level: 0},
+      inventory: ATTACK_SPECIALIST_KIT.flatMap(spec => spec.stackable ? [{id: spec.id, count: spec.count}] : Array.from({length: spec.count}, () => ({id: spec.id, count: 1})))}}],
+    scriptArgs: ['{bot:s}', 'scripts/attack-specialist.ts', '5000', 'LOOT_WATCH=0', 'PRAYER_GUARD=0', 'EAT_GUARD=0'],
+    timeoutMs: 600_000,
+    pass: s => {
+      const result = s.match(/^RESULT ok\b.*$/m)?.[0] ?? '';
+      const ticks = Number(/\bticks=(\d+)/.exec(result)?.[1] ?? NaN);
+      return !!result && loggedOutOnce(s) && /\battack=99\b/.test(result) && !/^DEATH\b/m.test(s) && ticks <= 3942;
+    }},
 ];
 
 const KNOWN_QUEST: Readonly<Record<string, string>> = {
@@ -1931,6 +1945,8 @@ export const BLOCKED_ROUTES: Readonly<Record<string, string>> = {
   'logistics:give-to-banker': 'needs scripts/banker.ts running for the banker account',
   'logistics:take-from-banker': 'needs scripts/banker.ts running for the banker account',
   'logistics:supply-holder': 'serves trades from a specialist and a courier that other processes drive',
+  'logistics:specialist-supplier': 'serves trades from a specialist runner that another process drives; covered as companion in extra:specialist-attack',
+  'fighter:attack-specialist': 'needs scripts/specialist-supplier.ts running as a companion process; covered end-to-end in extra:specialist-attack',
   'quester:mode:hero-owned': 'needs an order file that names two owned accounts',
   'quester:mode:legends-owned': 'needs an order file that names the owned account',
   'logistics:loadout-import': 'offline setup conversion; the CLI and chain adapter are covered by unit tests without a game engine',

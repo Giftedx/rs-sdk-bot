@@ -29,11 +29,11 @@ const countItems=(rows:readonly {id:number|null;count?:number|null}[])=>Object.f
 function intents(category:string,name:string):CatalogIntent[]{
  if(category==='quester')return name==='items'?['acquire']:name==='seaslug-leave'?['service']:['quest'];
  if(category==='skiller')return name.startsWith('foraging:')?['acquire']:['train','produce'];
- if(category==='fighter')return /^(?:chicken|cow|giant|trooper|ranged(?:-starter|-gather|-camp)?|cannon)$/.test(name)?['train','acquire']:['acquire'];
+ if(category==='fighter')return name==='attack-specialist'?['service']:/^(?:chicken|cow|giant|trooper|ranged(?:-starter|-gather|-camp)?|cannon)$/.test(name)?['train','acquire']:['acquire'];
  if(category==='boss')return ['acquire'];
  if(category==='pvp')return name==='monitor'?['observe']:name==='stage-kit'?['acquire']:name==='standby'?['service']:['pvp'];
  if(category==='market')return name==='ge-plan'?['observe']:['acquire'];
- return ['banker','supply-holder','wine-stock','food-chain','supply-chain','bank-sort','loadout-import','restore-prayer','cure-poison','walk-to','walk-edge','relocate-bank','relocate-knight','arrive-draynor','loadout'].includes(name)?['service']:['acquire'];
+ return ['banker','supply-holder','specialist-supplier','wine-stock','food-chain','supply-chain','bank-sort','loadout-import','restore-prayer','cure-poison','walk-to','walk-edge','relocate-bank','relocate-knight','arrive-draynor','loadout'].includes(name)?['service']:['acquire'];
 }
 function knownStep(category:string,name:string,script:string):Step{
  try{return resolveAioStep(category,name.split(':'));}catch{return{script,args:[],env:{}};}

@@ -18,6 +18,7 @@
 // ARENA_FROM=<stage> starts later (debug presets with varp 17 set).
 import { openQuest, fireSpell } from './quest-lib';
 import { componentId } from '../../packages/core/src/logout';
+import type { Session } from '../../packages/core/src/inprocess';
 
 const SERVIL = { x: 2566, z: 3199 };
 const CHEST = { x: 2613, z: 3189 };                         // arena_guard_chest_shut (75), forceapproach north
@@ -32,16 +33,22 @@ const ITEM = { helmet: 74, armour: 75, keys: 76, brew: 77, prayerPot: [2434, 139
 const NPC = { guard2: 254 };
 const PFM = 14;                                             // protect_from_melee (sdk PRAYER_INDICES)
 
-const q = await openQuest({ cap: 2500, eatAt: 6, food: [ITEM.food] });
+export async function runQuestArena(opts: { session?: Session; cap?: number; stop?: () => boolean; burst?: boolean } = {}): Promise<{ ok: boolean; detail: string }> {
+const g = globalThis as { QUEST_SCRIPT_ID?: string };
+const prevScriptId = g.QUEST_SCRIPT_ID;
+g.QUEST_SCRIPT_ID = 'quest-arena';
+const q = await openQuest({ session: opts.session, stop: opts.stop, cap: opts.cap ?? 2500, eatAt: 6, food: [ITEM.food], ...(opts.burst === undefined ? {} : { burst: opts.burst }) });
+let offDone: (() => void) | undefined;
 try {
     const FROM = Number(process.env.ARENA_FROM ?? 0);
     let questDone = false;
-    const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+fight arena/i) > 0) questDone = true; });
+    offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+fight arena/i) > 0) questDone = true; });
     const prayers = (): any => q.st()?.prayers;
     const pfmOn = (): boolean => !!prayers()?.activePrayers?.[PFM];
     const points = (): number => prayers()?.prayerPoints ?? 0;
     let potions = 0, casts = 0;
     const setPfm = async (on: boolean): Promise<void> => {
+        if (on && points() <= 0) await keepPrayer();
         if (pfmOn() === on || (on && points() <= 0)) return;
         await q.step(`protect from melee ${on ? 'on' : 'off'}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn() === on, 3, 3);
     };
@@ -277,7 +284,13 @@ try {
     await q.talk('servil 2', /^lady servil$/i, [], () => questDone, SERVIL, 60);
     await q.waitUntil(() => questDone, 10);
     q.milestone('complete');
-    offDone();
-    await q.end(questDone, `qp=2 questMsg=${questDone} casts=${casts} potions=${potions} prayerLeft=${points()}`);
+    const detail = `qp=2 questMsg=${questDone} casts=${casts} potions=${potions} prayerLeft=${points()}`;
+    if (opts.session) { await q.dispose(); if (!questDone) throw Error(detail); return { ok: true, detail }; }
+    await q.end(questDone, detail);
+    return { ok: questDone, detail };
 
-} catch (e) { await q.fail(String(e)); }
+} catch (e) { if (opts.session) { await q.dispose(); throw e; } await q.fail(String(e)); return { ok: false, detail: String(e) }; }
+finally { offDone?.(); if (prevScriptId === undefined) delete g.QUEST_SCRIPT_ID; else g.QUEST_SCRIPT_ID = prevScriptId; }
+}
+
+if (import.meta.main || !!(globalThis as { QUEST_SESSION?: Session }).QUEST_SESSION) await runQuestArena();

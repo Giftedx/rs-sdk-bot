@@ -6,12 +6,11 @@
 // process only and drops it when the process ends. Other platforms have fine timers and need no call.
 // This module is also the engine's preload (packages/practice/src/stack.ts engineCommand): loaded with
 // SIM_LOCKSTEP=1 it makes the call.
-// SIM_FINE_TIMERS=1 turns it on. It is off by default: the timer itself is 10 times shorter, and three profile runs of
-// a gang case (14 sessions in one process) and of a quest case showed no shorter run, because those cases wait on the
-// JS thread and the engine cycle, not on a timer. Set it for a case whose profile shows waits in steps of 15 ms.
+// Fine timers are on by default on Windows lockstep runs so 1 ms and 5 ms polls run without 15 ms timer quantization;
+// set SIM_FINE_TIMERS=0 to opt out.
 let state: boolean | undefined;
 export function fineTimers(env: Record<string, string | undefined> = process.env, platform: string = process.platform): boolean {
-    if (platform !== 'win32' || env.SIM_FINE_TIMERS !== '1') return false;
+    if (platform !== 'win32' || env.SIM_FINE_TIMERS === '0') return false;
     if (state !== undefined) return state;
     try {
         const { dlopen } = require('bun:ffi') as typeof import('bun:ffi');

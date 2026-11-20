@@ -113,6 +113,7 @@ export const FIGHTER_PROFILES: readonly FighterProfileSpec[] = [
  {target:'ranged-camp',script:'scripts/microbot-a-ranged-camp.ts',description:'Safespot Ranged camp with optional telegrab/loot'},
  {target:'cannon',script:'scripts/cannon-fight.ts',defaultEnv:{SPOT:'spiders'},description:'Dwarf multicannon at a multiway spot (CANNON_SPOTS), kept loaded, while fighting beside it with the worn bow or weapon; picks up nothing'},
  {target:'loot-trip',script:'scripts/microbot-loot-trip.ts',description:'Dedicated ground-item loot and bank trip'},
+ {target:'attack-specialist',script:'scripts/attack-specialist.ts',description:'Run the fresh-clock Attack 99 specialist route from Tutorial Island through Tree Gnome Village, Grand Tree, and Fight Arena'},
 ];
 
 export function resolveFighterStep(targetInput: string, rest: readonly string[] = []): Step {

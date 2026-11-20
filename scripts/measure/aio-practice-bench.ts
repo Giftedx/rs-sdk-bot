@@ -257,6 +257,7 @@ export function computeCaseHash(c: BenchCase): string {
   let worker = c.script;
   const category = /aio-([a-z]+)\.ts$/.exec(c.script)?.[1];
   if (category) { try { worker = resolveAioStep(category, c.scriptArgs).script; } catch { /* a dispatcher-only case hashes the dispatcher */ } }
+  if (c.script === 'scripts/measure/specialist-bench.ts' && c.scriptArgs[1]) worker = c.scriptArgs[1];
   const h = createHash('sha256');
   h.update(JSON.stringify({ seed: SEED, key: c.key, script: c.script, args: c.scriptArgs, preset: c.presetConfig ?? PRESETS[c.preset], runs: RUNS,
     engineEnv: c.engineEnv, companions: c.companions?.map(k => ({suffix: k.suffix, preset: k.presetConfig ?? PRESETS[k.preset]})),

@@ -25,7 +25,7 @@ import {killTree} from './proc';
 import {runBotName} from './prove';
 import {SAVE_PORT_ENV} from './save-endpoint';
 import {addEntry, captureSave, loadSnapshot, onlineState, readLibrary, rsSdkRevision, summarize, LIBRARY_DIR, playerSavePath, SKILLS, type SaveSummary} from './save-library';
-import {startStack, type Stack} from './stack';
+import {startStack, type Stack, type StackOptions} from './stack';
 import {confirmLivingSession, observedSupplies, scoredClock, SPECIALIST_TICK_MS, successfulWorkerLog} from './specialist-rehearsal';
 
 const root = resolve(import.meta.dir, '..', '..', '..');
@@ -38,6 +38,12 @@ export const ISOLATED_ENGINE_ENV: Record<string, string> = {
 };
 
 type Where = 'inventory' | 'bank' | 'worn' | 'any';
+export interface SupplierSpec {
+    save: SaveConfig;
+    script: string;
+    args?: string[];
+    env?: Record<string, string>;
+}
 export interface Segment {
     id: string;
     route?: {file: string; step: string};
@@ -45,6 +51,7 @@ export interface Segment {
     script: string;
     args?: string[];
     env?: Record<string, string>;
+    supplier?: SupplierSpec;
     // Absent for a seed run that only captures a state.
     plan?: {ticks: number; source: string};
     expect: {
@@ -57,6 +64,8 @@ export interface Segment {
     timeoutMs?: number;
 }
 
+const FORBIDDEN_SPECIALIST_ENV = /PASSWORD|SECRET|TOKEN|HAGGIS_RUN|WORKER_|DEMO_OK|^BUN_|^COORDINATOR_|^TICK_RECORD|^REPLAY_ONLY|^PRACTICE_/i;
+
 export function checkSpecialistSegment(seg: Segment, account: string) {
     const name = typeof account === 'string' ? account.toLowerCase() : '';
     const board = Object.hasOwn(SPECIALIST_BOARDS, name) ? SPECIALIST_BOARDS[name]!.name : undefined;
@@ -68,8 +77,15 @@ export function checkSpecialistSegment(seg: Segment, account: string) {
         throw Error('specialist rehearsal needs a priced route plan');
     if (!/^[a-z0-9][a-z0-9-]{0,47}$/.test(seg.id) || !/^scripts\/[\w/-]+\.ts$/.test(seg.script))
         throw Error('invalid specialist segment or worker path');
-    if (Object.keys(seg.env ?? {}).some(k => !/^[_a-z][_a-z0-9]*$/i.test(k) || /PASSWORD|SECRET|TOKEN|HAGGIS_RUN|WORKER_|DEMO_OK|^BUN_|^COORDINATOR_|^TICK_RECORD|^REPLAY_ONLY/i.test(k)))
+    if (Object.keys(seg.env ?? {}).some(k => !/^[_a-z][_a-z0-9]*$/i.test(k) || FORBIDDEN_SPECIALIST_ENV.test(k)))
         throw Error('invalid specialist worker environment');
+    if (seg.supplier !== undefined) {
+        const sup = seg.supplier;
+        if (!sup || typeof sup !== 'object' || !sup.save || typeof sup.save !== 'object' || Array.isArray(sup.save) || !/^scripts\/[\w/-]+\.ts$/.test(sup.script ?? ''))
+            throw Error('invalid specialist supplier configuration');
+        if (Object.keys(sup.env ?? {}).some(k => !/^[_a-z][_a-z0-9]*$/i.test(k) || /PASSWORD|SECRET|TOKEN|HAGGIS_RUN|WORKER_|DEMO_OK|^BUN_|^COORDINATOR_|^TICK_RECORD|^REPLAY_ONLY/i.test(k)))
+            throw Error('invalid specialist supplier environment');
+    }
     return board;
 }
 
@@ -179,6 +195,45 @@ async function writeSpecialistReceipt(seg: Segment, scored: ScoredRun, actor: st
     return {receipt: bind(receipt), candidate: bind(candidate)};
 }
 
+export function rehearseLockstep(envVars: Record<string, string | undefined> = process.env): boolean {
+    return envVars.REHEARSE_REALTIME !== '1';
+}
+
+export function rehearsalChildEnv(
+    baseEnv: Record<string, string | undefined>,
+    segEnv: Record<string, string> | undefined,
+    opts: {scored: boolean; role: 'worker' | 'supplier'; supplier?: string},
+): Record<string, string | undefined> {
+    const lockstep = rehearseLockstep(baseEnv);
+    const out: Record<string, string | undefined> = opts.role === 'supplier'
+        ? (opts.scored
+            ? {...baseEnv, ...segEnv, DEMO_OK: '', TICK_RECORD: '0', COORDINATOR_RUN_ID: ''}
+            : {...baseEnv, RANDOM_EVENTS: '0', ...segEnv, DEMO_OK: ''})
+        : (opts.scored
+            ? {...baseEnv, ...segEnv, ...(opts.supplier ? {PRACTICE_SUPPLIER: opts.supplier} : {}), DEMO_OK: '', TICK_RECORD: '1', COORDINATOR_RUN_ID: ''}
+            : {...baseEnv, RANDOM_EVENTS: '0', ...segEnv, ...(opts.supplier ? {PRACTICE_SUPPLIER: opts.supplier} : {}), DEMO_OK: ''});
+    if (lockstep) out.SIM_LOCKSTEP = '1';
+    else delete out.SIM_LOCKSTEP;
+    return out;
+}
+
+export function isolatedStackOptions(
+    scored?: {ledger: string; market: string},
+    envVars: Record<string, string | undefined> = process.env,
+): StackOptions {
+    const env = scored ? {...ISOLATED_ENGINE_ENV, TRADE_LEDGER_FILE: scored.ledger, GE_ENABLED: 'false', GE_DATABASE: scored.market} : ISOLATED_ENGINE_ENV;
+    return {
+        tickMs: scored ? SPECIALIST_TICK_MS : Number(envVars.REHEARSE_TICK_MS ?? 150),
+        xpRate: 25,
+        gateway: false,
+        ...(rehearseLockstep(envVars) ? {lockstep: {ackMs: 30_000}} : {}),
+        ports: {engine: ISOLATED.engine, gateway: ISOLATED.gateway},
+        readyTimeoutMs: 300_000,
+        enginePreload: {module: resolve(import.meta.dir, 'save-endpoint.ts'), env},
+        instance: 'rehearse',
+    };
+}
+
 export async function rehearse(seg: Segment, opts: {out: string; port?: number; engine?: number; gateway?: number; scored?: ScoredRun}): Promise<RehearsalReport> {
     const port = opts.port ?? ISOLATED.save, engine = opts.engine ?? ISOLATED.engine, gateway = opts.gateway ?? ISOLATED.gateway;
     if (seg.capture?.when && !Object.keys(seg.capture.when).length) throw new Error(`${seg.id}: capture.when has no condition`);
@@ -209,49 +264,89 @@ export async function rehearse(seg: Segment, opts: {out: string; port?: number; 
     const saved = () => (statSync(savePath, {throwIfNoEntry: false})?.mtimeMs ?? 0) > loadedAt;
 
     const log = join(opts.out, `${seg.id}.log`);
-    const env = opts.scored ? {...process.env, ...seg.env, DEMO_OK: '', TICK_RECORD: '1', COORDINATOR_RUN_ID: ''} :
-        {...process.env, RANDOM_EVENTS: '0', ...seg.env, DEMO_OK: ''};
-    const proc = Bun.spawn(['bun', seg.script, account, ...(seg.args ?? [])], {cwd: root, env,
-        stdout: Bun.file(log), stderr: Bun.file(join(opts.out, `${seg.id}.err`)), windowsHide: true});
-    const window = new TickWindow();
-    let timedOut = false, captured: RehearsalReport['captured'], captureError = '';
-    const timer = setTimeout(() => { timedOut = true; void killTree(proc.pid); }, seg.timeoutMs ?? 600_000);
-    const poll = async () => {
-        const s = await onlineState(account, port);
-        window.observe(s.tick, s.online);
-        const cap = seg.capture;
-        if (cap && !captured && s.online && window.enter !== null && (cap.when || cap.afterTicks !== undefined)) {
-            try {
-                if (cap.when || s.tick - window.enter >= cap.afterTicks!) {
-                    const c = await captureSave(account, port);
-                    const {version: _v, ...now} = summarize(c.bytes);
-                    if (c.source.via === 'endpoint' && (!cap.when || Object.values(checkExpect(now, cap.when)).every(Boolean))) {
-                        addEntry({name: cap.name, bytes: c.bytes, source: c.source, segment: cap.segment, rsSdk: rsSdkRevision()});
-                        captured = {name: cap.name, via: c.source.via, tick: c.source.tick};
-                    }
-                }
-            } catch (e) { captureError = String(e); }
-        }
-        if (freemem() / 2 ** 30 < FREE_FLOOR_GB && !timedOut) { timedOut = true; void killTree(proc.pid); }
-    };
-    let code: number, settledSave = false;
+    let helper: string | undefined;
+    let helperProc: ReturnType<typeof Bun.spawn> | undefined;
     try {
-        let done = false;
-        void proc.exited.then(() => { done = true; });
-        while (!done) { await poll().catch(() => {}); await Bun.sleep(100); }
-        code = await proc.exited;
-        // The logout save lands after the client exits. Wait for the account to leave and the file to change.
-        const deadline = Date.now() + 20_000;
-        while (Date.now() < deadline) {
+        if (seg.supplier) {
+            helper = runBotName('sp' + seg.id.replace(/[^a-z0-9]/gi, '').slice(0, 3), 1);
+            if (existsSync(join(rsSdkRoot(), 'bots', helper))) throw new Error('fresh supplier account required');
+            const helperSave = playerSavePath(helper);
+            if (existsSync(helperSave)) throw new Error('fresh supplier account already has an engine save');
+            const helperState = await onlineState(helper, port);
+            if (helperState.online || helperState.pendingLogout) throw new Error('fresh supplier account already has an engine session');
+            const {envPath: helperEnvPath} = await createBot(helper);
+            pointBotAt(helperEnvPath, engine, gateway, host);
+            await applyPreset(helper, seg.supplier.save);
+            const helperArgs = (seg.supplier.args ?? []).map(a => a === '{ACTOR}' ? account : a);
+            const helperEnv = rehearsalChildEnv(process.env, seg.supplier.env, {scored: !!opts.scored, role: 'supplier'});
+            helperProc = Bun.spawn(['bun', seg.supplier.script, helper, ...helperArgs], {
+                cwd: root, env: helperEnv,
+                stdout: Bun.file(join(opts.out, `${seg.id}.supplier.log`)),
+                stderr: Bun.file(join(opts.out, `${seg.id}.supplier.err`)),
+                windowsHide: true,
+            });
+            const readyDeadline = Date.now() + 30_000;
+            let helperOnline = false;
+            while (Date.now() < readyDeadline) {
+                if (helperProc.exitCode !== null) throw new Error(`practice supplier exited early (${helperProc.exitCode})`);
+                const s = await onlineState(helper, port).catch(() => null);
+                if (s?.online) { helperOnline = true; break; }
+                let readyTimer: ReturnType<typeof setTimeout> | undefined;
+                await Promise.race([helperProc.exited, new Promise<void>(r => { readyTimer = setTimeout(r, 50); })]).finally(() => clearTimeout(readyTimer));
+            }
+            if (!helperOnline) throw new Error('practice supplier did not reach world within 30 s');
+        }
+        const env = rehearsalChildEnv(process.env, seg.env, {scored: !!opts.scored, role: 'worker', supplier: helper});
+        const proc = Bun.spawn(['bun', seg.script, account, ...(seg.args ?? [])], {cwd: root, env,
+            stdout: Bun.file(log), stderr: Bun.file(join(opts.out, `${seg.id}.err`)), windowsHide: true});
+        const window = new TickWindow();
+        let timedOut = false, captured: RehearsalReport['captured'], captureError = '';
+        const timer = setTimeout(() => { timedOut = true; void killTree(proc.pid); }, seg.timeoutMs ?? 600_000);
+        const poll = async () => {
             const s = await onlineState(account, port);
             window.observe(s.tick, s.online);
-            if (!s.online && !s.pendingLogout && saved()) {
-                settledSave = true;
-                break;
+            const cap = seg.capture;
+            if (cap && !captured && s.online && window.enter !== null && (cap.when || cap.afterTicks !== undefined)) {
+                try {
+                    if (cap.when || s.tick - window.enter >= cap.afterTicks!) {
+                        const c = await captureSave(account, port);
+                        const {version: _v, ...now} = summarize(c.bytes);
+                        if (c.source.via === 'endpoint' && (!cap.when || Object.values(checkExpect(now, cap.when)).every(Boolean))) {
+                            addEntry({name: cap.name, bytes: c.bytes, source: c.source, segment: cap.segment, rsSdk: rsSdkRevision()});
+                            captured = {name: cap.name, via: c.source.via, tick: c.source.tick};
+                        }
+                    }
+                } catch (e) { captureError = String(e); }
             }
-            await Bun.sleep(100);
-        }
-    } finally { clearTimeout(timer); if (proc.exitCode === null) await killTree(proc.pid); }
+            if (freemem() / 2 ** 30 < FREE_FLOOR_GB && !timedOut) { timedOut = true; void killTree(proc.pid); }
+        };
+        let code = 1, settledSave = false;
+        try {
+            let done = false;
+            void proc.exited.then(() => { done = true; });
+            while (!done) {
+                await poll().catch(() => {});
+                if (done) break;
+                let pollTimer: ReturnType<typeof setTimeout> | undefined;
+                await Promise.race([proc.exited, new Promise<void>(r => { pollTimer = setTimeout(r, 25); })]).finally(() => clearTimeout(pollTimer));
+            }
+            code = await proc.exited;
+            // The logout save lands after the client exits. Wait for the account to leave and the file to change.
+            if (!timedOut) {
+                const deadline = Date.now() + 20_000;
+                while (Date.now() < deadline) {
+                    const s = await onlineState(account, port).catch(() => null);
+                    if (s) {
+                        window.observe(s.tick, s.online);
+                        if (!s.online && !s.pendingLogout && saved()) {
+                            settledSave = true;
+                            break;
+                        }
+                    }
+                    await Bun.sleep(25);
+                }
+            }
+        } finally { clearTimeout(timer); if (proc.exitCode === null) await killTree(proc.pid); }
 
     let end: SaveSummary | null = null;
     const checks: Record<string, boolean> = {exit: code === 0 && !timedOut, saved: saved(), ticksMeasured: window.ticks !== null};
@@ -275,16 +370,21 @@ export async function rehearse(seg: Segment, opts: {out: string; port?: number; 
         ticks: {used, enter: window.enter, leave: window.leave, overPlan: used === null || !seg.plan ? null : used - seg.plan.ticks,
             afterCapture: captured?.tick != null && window.leave !== null ? window.leave - captured.tick : undefined},
         child: {code, timedOut}, checks, end, captured, specialist,
-        scope: `One practice rehearsal (local engine, ${opts.scored ? SPECIALIST_TICK_MS : process.env.REHEARSE_TICK_MS ?? 150} ms ticks, 25x XP). No live or speed claim.` + (captureError ? ` evidence error: ${captureError}` : '')};
+        scope: `One practice rehearsal (local engine, ${opts.scored ? SPECIALIST_TICK_MS : process.env.REHEARSE_TICK_MS ?? 150} ms ticks${rehearseLockstep() ? ', lockstep' : ''}, 25x XP). No live or speed claim.` + (captureError ? ` evidence error: ${captureError}` : '')};
     writeFileSync(join(opts.out, `${seg.id}.json`), JSON.stringify(report, null, 2));
-    return report;
+        return report;
+    } finally {
+        if (helperProc && helperProc.exitCode === null) {
+            let helperTimer: ReturnType<typeof setTimeout> | undefined;
+            await Promise.race([helperProc.exited, new Promise<void>(r => { helperTimer = setTimeout(r, 5_000); })]).finally(() => clearTimeout(helperTimer));
+            if (helperProc.exitCode === null) await killTree(helperProc.pid);
+        }
+    }
 }
 
 export async function startIsolatedStack(scored?: {ledger: string; market: string}): Promise<Stack> {
     if (freemem() / 2 ** 30 < PRACTICE_STARTUP_GB) throw new Error(`practice startup needs ${PRACTICE_STARTUP_GB} GiB free`);
-    const env = scored ? {...ISOLATED_ENGINE_ENV, TRADE_LEDGER_FILE: scored.ledger, GE_ENABLED: 'false', GE_DATABASE: scored.market} : ISOLATED_ENGINE_ENV;
-    return startStack({tickMs: scored ? SPECIALIST_TICK_MS : Number(process.env.REHEARSE_TICK_MS ?? 150), xpRate: 25, ports: {engine: ISOLATED.engine, gateway: ISOLATED.gateway},
-        readyTimeoutMs: 300_000, enginePreload: {module: resolve(import.meta.dir, 'save-endpoint.ts'), env}, instance: 'rehearse'});
+    return startStack(isolatedStackOptions(scored));
 }
 
 if (import.meta.main) {
