@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795152813845-weequickie-mightyrod",
  "account": "Mightyrod",
  "partner": "WeeQuickie",
@@ -12,6 +12,12 @@
  "claim": "0d0890c4-df99-45bb-a533-c8a1723d33c9",
  "count": 0,
  "ok": false,
- "at": 1795152879735,
- "detail": "trade claimed"
+ "at": 1795152906132,
+ "detail": "fled at low hitpoints: flee_guard id=99 at=2617,3333 ticks=5",
+ "logout": {
+  "attemptId": "1795152879745-0000008596-0000000001",
+  "at": 1795152906116,
+  "sha256": "b07e3808317fd5e2d41cd8e5354291ccea20e5edce9b2ddc7fdb87bbe15af0de"
+ },
+ "screen": false
 }

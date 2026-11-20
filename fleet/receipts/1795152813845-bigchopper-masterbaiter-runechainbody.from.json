@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795152813845-bigchopper-masterbaiter-runechainbody",
  "account": "Bigchopper",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "154497b8-2fb5-48c1-94ad-75270716f721",
- "count": 0,
- "ok": false,
- "at": 1795152883617,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795152906158,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795152889759
+ },
+ "logout": {
+  "attemptId": "1795152883625-0000028340-0000000001",
+  "at": 1795152906146,
+  "sha256": "0612ccc55edba03d357c37b1024b5a81b4f17083ed676016e88403ec1f2409f0"
+ },
+ "screen": true
 }
