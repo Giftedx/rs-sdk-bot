@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795147241312-magicwanda-hocuspokeus-77d70b8229129631",
+ "account": "Hocuspokeus",
+ "partner": "Magicwanda",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 4300000,
+ "claim": "cee24625-2e43-4a0c-8592-b67bf789d52c",
+ "count": 0,
+ "ok": false,
+ "at": 1795147271446,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Fly fishing rod",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}

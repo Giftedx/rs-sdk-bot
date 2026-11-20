@@ -1,0 +1,16 @@
+{
+ "id": "1795147241312-magicwanda-hocuspokeus-77d70b8229129631",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Magicwanda",
+ "to": "Hocuspokeus",
+ "item": "Coins",
+ "count": 4300000,
+ "start": 1795147241312,
+ "end": 1795148441312,
+ "extra": [
+  {
+   "item": "Fly fishing rod",
+   "count": 1
+  }
+ ]
+}
