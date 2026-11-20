@@ -66,12 +66,26 @@ export const RANGED_ARMOUR_TIERS: readonly { slot: string; items: readonly { id:
     { slot: 'torso', items: [{ id: 2503, ranged: 70, defence: 40 }, { id: 2501, ranged: 60, defence: 40 }, { id: 2499, ranged: 50, defence: 40 }, { id: 1133, ranged: 20, defence: 20 }, { id: 1129, ranged: 1 }] },
 ];
 
+export const MELEE_2H_TIERS: readonly { level: number; id: number; name: string }[] = [
+    { level: 40, id: 1319, name: 'Rune 2h sword' },
+    { level: 30, id: 1317, name: 'Adamant 2h sword' },
+    { level: 20, id: 1315, name: 'Mithril 2h sword' },
+    { level: 10, id: 1313, name: 'Black 2h sword' },
+    { level: 5, id: 1311, name: 'Steel 2h sword' },
+    { level: 1, id: 1309, name: 'Iron 2h sword' },
+    { level: 1, id: 1307, name: 'Bronze 2h sword' },
+];
+
 export const MELEE_KIT_IDS = {
     weapon: 1319, // Rune 2h sword
     fallbackWeapon: 1333, // Rune scimitar
     neck: [1725, 1704, 1731] as const,
     feet: [3105] as const, // Climbing boots
 } as const;
+
+export function selectMeleeWeapon(attackLevel: number, heldIds: ReadonlySet<number>): { level: number; id: number; name: string } | undefined {
+    return MELEE_2H_TIERS.find(w => attackLevel >= w.level && heldIds.has(w.id));
+}
 
 export function parsePvpSkill(raw: string): PvpCombatSkill {
     const key = raw.trim().toLowerCase();
@@ -179,7 +193,8 @@ async function equipBestGear(s: Session, skill: PvpCombatSkill, stop: () => bool
     }
 
     const ids = ownedIds(s);
-    const weaponId = ids.has(MELEE_KIT_IDS.weapon) ? MELEE_KIT_IDS.weapon : MELEE_KIT_IDS.fallbackWeapon;
+    const atk = skillInfo(s, 'Attack').baseLevel;
+    const weaponId = selectMeleeWeapon(atk, ids)?.id ?? (atk >= 40 && ids.has(MELEE_KIT_IDS.fallbackWeapon) ? MELEE_KIT_IDS.fallbackWeapon : MELEE_KIT_IDS.weapon);
     if (ids.has(weaponId)) await equipById(weaponId);
     const neckId = MELEE_KIT_IDS.neck.find(id => ids.has(id));
     if (neckId) await equipById(neckId);
@@ -244,7 +259,10 @@ async function rebankManagedTank(s: Session, stop: () => boolean): Promise<boole
             },
         });
         await openFreshBank(s, stop);
-        if (!s.sdk.getInventory().some(i => i.id === 3016)) {
+        for (const vial of s.sdk.getInventory().filter(i => i.id === 229)) {
+            await s.bot.depositItem(vial, -1);
+        }
+        if (!s.sdk.getInventory().some(i => (SUPER_ENERGY_IDS as readonly number[]).includes(i.id))) {
             const hasSuper = s.sdk.getState()?.bank?.items?.some((i: any) => i.id === 3016 && i.count > 0);
             if (hasSuper) await withdrawExactCount(s, 3016, 1, stop, 'Super energy(4)');
         }
@@ -481,9 +499,11 @@ async function runAttackerMain(args: string[]): Promise<void> {
             await finish(tankSessions, true, elapsedStr);
         }
 
-        // PlayerLoading clamps boosted stats on login; only Ranged bow/arrow/armour tier upgrades need mid-run equip.
-        const needTierUpgrade = skill === 'Ranged' && curStat.baseLevel !== lastCheckedGearLevel
-            && [5, 20, 30, 40, 50, 60, 70].includes(curStat.baseLevel);
+        // PlayerLoading clamps boosted stats on login; only Ranged bow/arrow/armour or Attack 2h tier upgrades need mid-run equip.
+        const needTierUpgrade = curStat.baseLevel !== lastCheckedGearLevel && (
+            (skill === 'Ranged' && [5, 20, 30, 40, 50, 60, 70].some(lvl => curStat.baseLevel >= lvl && lastCheckedGearLevel < lvl))
+            || (skill === 'Attack' && [5, 10, 20, 30, 40].some(lvl => curStat.baseLevel >= lvl && lastCheckedGearLevel < lvl))
+        );
         if (needTierUpgrade) {
             currentWeaponId = await equipBestGear(s, skill, isStopped);
             lastCheckedGearLevel = curStat.baseLevel;

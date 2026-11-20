@@ -399,6 +399,15 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   if(jobFile||entryName==='microbot-rune-trip')return{kind:'service',objective:`${scriptPath(script)}:${jobFile??'default'}`,units:1};
  }
  if(entryName==='rune-bank-craft'&&args.some(a=>a.startsWith('--staged=')))return{kind:'service',objective:'rune-carriers',units:1};
+ if(entryName==='pvp-relog-combat'){
+  const capText=setting(env,args,'CAP')??(args[0]==='--companion-tank'?args[4]:undefined);
+  const cap=capText===undefined?5000:Number(capText);
+  if(whole(cap)&&cap>0&&cap<=20000){
+   if(args[0]==='--companion-tank')return{kind:'service',objective:'pvp-relog-tank',units:1};
+   return{kind:'service',objective:'pvp-relog-combat:'+(args[0]??'combat'),units:1};
+  }
+  return null;
+ }
  const boundedServiceEntries=new Set([
   'gather-flax','spin-bowstrings','fletch-arrows','gather-fish','cook-food','gather-yews','gather-ore','gather-essence','blood-chest',
   'craft-jewelry','shark-supply','cook-stock','cook-wine','microbot-b-cooking','microbot-glass','druid-meats','goldfarm-stable','microbot-c-stalls',

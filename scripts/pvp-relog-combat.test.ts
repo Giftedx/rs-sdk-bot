@@ -1,6 +1,9 @@
 import { expect, test } from 'bun:test';
 import { componentId } from '../packages/core/src/logout';
-import { needsPotionDose, parsePvpSkill, rankTanksForSwing, selectRangedKit, styleComponentFor } from './pvp-relog-combat';
+import { evaluateProgressionWork } from '../packages/core/src/progression-session';
+import { createProgressionMonitor } from '../packages/core/src/progression-policy';
+import { intentForEntry, loadProgressionCatalog } from '../packages/planner/src/progression-catalog';
+import { needsPotionDose, parsePvpSkill, rankTanksForSwing, selectMeleeWeapon, selectRangedKit, styleComponentFor } from './pvp-relog-combat';
 
 test('parsePvpSkill normalizes supported combat skills', () => {
     expect(parsePvpSkill('atk')).toBe('Attack');
@@ -20,6 +23,15 @@ test('selectRangedKit respects bow and arrow tier locks', () => {
     expect(selectRangedKit(40, allHeld).arrow?.id).toBe(892);
     expect(selectRangedKit(50, allHeld).bow?.id).toBe(861);
     expect(selectRangedKit(50, allHeld).arrow?.id).toBe(892);
+});
+
+test('selectMeleeWeapon chooses highest usable 2h sword for attack level', () => {
+    const held = new Set([1309, 1311, 1313, 1315, 1317, 1319]);
+    expect(selectMeleeWeapon(1, held)?.id).toBe(1309);
+    expect(selectMeleeWeapon(5, held)?.id).toBe(1311);
+    expect(selectMeleeWeapon(20, held)?.id).toBe(1315);
+    expect(selectMeleeWeapon(39, held)?.id).toBe(1317);
+    expect(selectMeleeWeapon(40, held)?.id).toBe(1319);
 });
 
 test('styleComponentFor avoids clicks on default style 0 and selects heavysword styles for str/def', () => {
@@ -53,4 +65,22 @@ test('rankTanksForSwing round-robins healthy keep tanks and skips dead or bankin
     const lastHit = new Map([['t1', 5], ['t4', 2]]);
     const ranked = rankTanksForSwing(players, ['t1', 't2', 't3', 't4'], { x: 3154, z: 3924 }, lastHit, localState);
     expect(ranked.map(p => p.name)).toEqual(['t4', 't1']);
+});
+
+test('pvp-relog-combat attacker and tank entries pass progression policy without refusing Pull lever actions', () => {
+    const catalog = loadProgressionCatalog();
+    const attackerIntent = intentForEntry('scripts/pvp-relog-combat.ts', ['strength', '99', 'TANKS=t1', '--own-tanks', 'CAP=1200'], {}, undefined, catalog);
+    const tankIntent = intentForEntry('scripts/pvp-relog-combat.ts', ['--companion-tank', 't1', 'atk1', '0', '4000'], {}, undefined, catalog);
+    expect(attackerIntent?.kind).toBe('service');
+    expect(tankIntent?.kind).toBe('service');
+
+    const evalRes = evaluateProgressionWork({ script: 'scripts/pvp-relog-combat.ts', args: ['strength', '99', 'TANKS=t1', '--own-tanks', 'CAP=1200'], env: {} }, { name: 't1', at: Date.now(), skills: [] });
+    expect(evalRes.supported).toBe(true);
+
+    const monitor = createProgressionMonitor({
+        evaluate: () => evalRes,
+        onHandoff: () => {},
+    });
+    monitor.observe({ tick: 0, stateKey: 's1', bankGeneration: 0, inCombat: false });
+    expect(monitor.refusal({ type: 'interactLoc', progressionOption: 'Pull' })).toBeNull();
 });
