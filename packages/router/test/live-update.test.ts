@@ -651,3 +651,33 @@ test('a fleet trade session does not hold an update when its partner failed pre-
         expect(liveRuns(dir, 'live', closure, now, { fleetDir, side: 'local', checkLogout: () => {} })).toEqual([]);
     });
 });
+
+test('a running specialist or main launch holds live-update and returns wait naming it', () => {
+    scratch('rsbot-live-launch-', dir => {
+        const coordination = join(dir, '.practice', 'coordinator');
+        mkdirSync(coordination, { recursive: true });
+        writeFileSync(join(coordination, 'state.json'), JSON.stringify({
+            tasks: [
+                { status: 'succeeded', spec: { id: 'run-done', kind: 'run', launch: 'specialist', account: 'PrevSpec' } },
+                { status: 'running', spec: { id: 'run-ordinary', kind: 'run', launch: 'ordinary', account: 'Helper' } },
+                { status: 'running', spec: { id: 'run-shaftshooter', kind: 'run', launch: 'specialist', account: 'Shaftshooter' } },
+            ],
+        }));
+        const specHold = coordinatorHolds(dir, () => dir);
+        expect(specHold.holds).toEqual(['specialist launch Shaftshooter runs']);
+        expect(planUpdate({
+            branch: 'master', ahead: 0, behind: 1, incoming: ['packages/router/src/goal-work.ts'], dirty: [],
+            ...specHold,
+        })).toEqual({ action: 'wait', reason: 'specialist launch Shaftshooter runs' });
+
+        writeFileSync(join(coordination, 'state.json'), JSON.stringify({
+            tasks: [{ status: 'running', spec: { id: 'run-haggis', kind: 'run', launch: 'main', account: 'Haggis' } }],
+        }));
+        const mainHold = coordinatorHolds(dir, () => dir);
+        expect(mainHold.holds).toEqual(['main launch Haggis runs']);
+        expect(planUpdate({
+            branch: 'master', ahead: 0, behind: 1, incoming: ['README.md'], dirty: [],
+            ...mainHold,
+        })).toEqual({ action: 'wait', reason: 'main launch Haggis runs' });
+    });
+});
