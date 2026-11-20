@@ -1,0 +1,23 @@
+{
+ "id": "1795195535703-fishandchips-pocketpool-eeb6aae8e4f982b2",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "PocketPool",
+ "item": "Shark",
+ "count": 6,
+ "start": 1795195535703,
+ "end": 1795196735703,
+ "meet": [
+  {
+   "x": 2727,
+   "z": 3492,
+   "level": 0
+  },
+  {
+   "x": 2728,
+   "z": 3492,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
