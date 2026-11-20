@@ -1301,6 +1301,7 @@ export async function runSpecialistWaterfall(
     const inTomb = () => inBox(2520, 9795, 2560, 9850);
     await setPrayerState(s, PROTECT_MELEE_INDEX, true, stop);
     await stepAct('enter tomb', () => { syncWaterfallPfm(true); return useOnLoc(ITEM.pebble, LOC.tombstone); }, inTomb, 10, 4);
+    await walkFast([{ x: 2532, z: 9844, tol: 2 }], 30, 'to tomb chest', () => syncWaterfallPfm(true));
     await stepAct('tomb chest', async () => {
         syncWaterfallPfm(true);
         const shut = findLoc(l => l.id === LOC.chestClosed && l.x === LOC.chest.x && l.z === LOC.chest.z);
@@ -1311,7 +1312,9 @@ export async function runSpecialistWaterfall(
         const open = findLoc(l => l.id === LOC.chestOpen && l.x === LOC.chest.x && l.z === LOC.chest.z);
         if (open) await opLoc({ id: open.id, x: open.x, z: open.z }, /search/i);
     }, () => has(ITEM.amulet), 8, 5);
+    await walkFast([{ x: 2542, z: 9813, tol: 2 }], 45, 'to tomb coffin', () => syncWaterfallPfm(true));
     await stepAct('tomb coffin', () => { syncWaterfallPfm(true); return opLoc(LOC.coffin); }, () => has(ITEM.urn), 12, 4);
+    await walkFast([{ x: 2555, z: 9844, tol: 1 }], 45, 'to tomb ladder', () => syncWaterfallPfm(true));
     await climb('tomb up', 2556, 9844, /climb-up/i, () => (posOf(s)?.worldZ ?? 0) < 4000);
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, stop);
 
@@ -1500,7 +1503,7 @@ export async function runMeleePvpSpecialist(
     milestone('waterfall', `atk=${skillInfo(s, 'Attack').baseLevel} str=${skillInfo(s, 'Strength').baseLevel} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
     // Drop Waterfall rewards and leftover energy pots on the move to Ardougne lever.
-    const postWaterfallJunk = new Set<number>([1601, 2357, 299, 297, 298, 292, 294, 229, 954]);
+    const postWaterfallJunk = new Set<number>([1601, 2357, 299, 297, 298, 292, 293, 294, 295, 296, 229, 954]);
     await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall exit to ardougne lever', {
         onTickExtra: () => {
             ensureRunAndEnergy();
