@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795159874212-shaftsinker-magicwanda-f193823601cb2bbf",
  "account": "Shaftsinker",
  "partner": "Magicwanda",
@@ -10,8 +10,22 @@
  "item": "Cake",
  "requested": 27,
  "claim": "95fb3870-4c19-4382-b65c-778c66839d04",
- "count": 0,
- "ok": false,
- "at": 1795159891265,
- "detail": "trade claimed"
+ "count": 27,
+ "ok": true,
+ "at": 1795159913043,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 27,
+  "after": 0
+ },
+ "bank": {
+  "count": 27,
+  "at": 1795159899450
+ },
+ "logout": {
+  "attemptId": "1795159891273-0000011840-0000000001",
+  "at": 1795159913027,
+  "sha256": "314d845b2dbaa4e734dcc782f45e8cc54b05b341ffc7374a7ea1917a0ab0faa2"
+ },
+ "screen": true
 }
