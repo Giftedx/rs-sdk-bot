@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795159958138-shaftsinker-magicwanda-541b67e56363ca4b",
+ "account": "Magicwanda",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ring of dueling(8)",
+ "requested": 1,
+ "claim": "9e40dc5f-7c72-4196-b13d-761ef33186ff",
+ "count": 1,
+ "ok": true,
+ "at": 1795159994612,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795159993862
+ },
+ "logout": {
+  "attemptId": "1795159981339-0000011480-0000000001",
+  "at": 1795159994599,
+  "sha256": "09e424a0269e44f83b6fc41ed3424a2d19e63b2ecb74cc081bf74f7425d892c5"
+ },
+ "screen": true
+}

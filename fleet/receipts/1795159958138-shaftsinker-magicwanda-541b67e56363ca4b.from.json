@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795159958138-shaftsinker-magicwanda-541b67e56363ca4b",
  "account": "Shaftsinker",
  "partner": "Magicwanda",
@@ -10,8 +10,22 @@
  "item": "Ring of dueling(8)",
  "requested": 1,
  "claim": "bf0d39d4-1ab6-4743-857b-b845f055fdc3",
- "count": 0,
- "ok": false,
- "at": 1795159967667,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795159993016,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795159973843
+ },
+ "logout": {
+  "attemptId": "1795159968018-0000012908-0000000001",
+  "at": 1795159993004,
+  "sha256": "0fbc16cccb40209c7292ae73e9f44496e6a886f7fa5d3fe3c81509cd44cd0518"
+ },
+ "screen": true
 }
