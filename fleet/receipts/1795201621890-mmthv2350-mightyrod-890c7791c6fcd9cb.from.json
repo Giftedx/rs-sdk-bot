@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795201621890-mmthv2350-mightyrod-890c7791c6fcd9cb",
  "account": "mmthv2350",
  "partner": "Mightyrod",
@@ -10,8 +10,18 @@
  "item": "Water rune",
  "requested": 60,
  "claim": "171b6715-4789-4769-834f-369854668f93",
- "count": 0,
- "ok": false,
- "at": 1795201659050,
- "detail": "trade claimed"
+ "count": 60,
+ "ok": true,
+ "at": 1795201705102,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 197,
+  "after": 137
+ },
+ "logout": {
+  "attemptId": "1795201659059-0000024092-0000000001",
+  "at": 1795201705090,
+  "sha256": "ba981df3cb76f5d465bd4827a0f0150a852f484bf1a37439440607cf55302722"
+ },
+ "screen": true
 }
