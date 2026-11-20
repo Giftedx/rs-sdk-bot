@@ -115,7 +115,8 @@ export const MAGIC_BATCHES: readonly MagicBatchPlan[] = [
    { id: ITEM_IDS.dragon_bones, count: 8 },
    { id: ITEM_IDS.prayer_potion_4, count: 2 },
    { id: ITEM_IDS.amulet_of_magic, count: 1 },
-   { id: ITEM_IDS.shark, count: 3 },
+   { id: ITEM_IDS.super_energy_4, count: 1 },
+   { id: ITEM_IDS.shark, count: 2 },
   ],
   returnIds: [ITEM_IDS.ring_of_forging],
  },
@@ -146,6 +147,7 @@ function aggregateMagicSupply(): SupplyEntry[] {
   [ITEM_IDS.dragon_bones, 'Dragon bones'],
   [ITEM_IDS.prayer_potion_4, 'Prayer potion(4)'],
   [ITEM_IDS.amulet_of_magic, 'Amulet of magic'],
+  [ITEM_IDS.super_energy_4, 'Super energy(4)'],
   [ITEM_IDS.shark, 'Shark'],
  ]);
  return [...counts.entries()].map(([itemId, count]) => ({
@@ -281,6 +283,18 @@ async function keepProtectedInArena(spec: Session): Promise<void> {
 }
 
 async function completeMageArena(spec: Session, start: number, deadline: number): Promise<void> {
+ let lastEnergyTick = -10;
+ const superEnergyIds = [ITEM_IDS.super_energy_4, 3018, 3020, 3022];
+ const offEnergy = spec.onTick(() => {
+  if (spec.tick() - lastEnergyTick < 3) return;
+  const st = spec.sdk.getState();
+  if ((st?.player?.runEnergy ?? 100) >= 45 || st?.dialog?.isOpen) return;
+  const pot = spec.sdk.getInventory().find(i => superEnergyIds.includes(i.id));
+  if (!pot) return;
+  lastEnergyTick = spec.tick();
+  void spec.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' }).catch(() => {});
+ });
+ try {
  const camelot = componentId('magic:camelot_teleport');
  while (spec.tick() < deadline) {
   const p = playerPos(spec);
@@ -438,6 +452,9 @@ async function completeMageArena(spec: Session, start: number, deadline: number)
   await spec.direct({ type: 'closeModal', reason: 'SDK' });
  }
  logPhase(spec, start, 'magic_charge_unlocked');
+ } finally {
+  offEnergy();
+ }
 }
 
 async function spamChargeTo99(spec: Session, target: number, deadline: number): Promise<void> {

@@ -93,6 +93,7 @@ export const ITEM_IDS = {
  ring_of_life: 2570,
  ring_of_wealth: 2572,
  prayer_potion_4: 2434,
+ super_energy_4: 3016,
  shark: 385,
 } as const;
 
@@ -828,10 +829,12 @@ export async function fastTradeExternalReceive(
    }
 
    const specDlg = !!spec.sdk.getState()?.dialog?.isOpen;
-   const canRequest = (!specDlg || opts.allowSingleModal) && spec.tick() - lastOpenReqTick >= 3;
-   if (target && canRequest) {
+   if (target && spec.tick() - lastOpenReqTick >= 3) {
     lastOpenReqTick = spec.tick();
-    await spec.direct({ type: 'interactPlayer', playerIndex: target.index, optionIndex: 4, reason: 'SDK' });
+    const reqActs: Promise<unknown>[] = [];
+    if (specDlg && !opts.allowSingleModal) reqActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+    reqActs.push(spec.direct({ type: 'interactPlayer', playerIndex: target.index, optionIndex: 4, reason: 'SDK' }));
+    await Promise.all(reqActs);
    } else if (specDlg) {
     await spec.direct({ type: 'closeModal', reason: 'SDK' });
    }
@@ -878,7 +881,7 @@ export async function fastTradeExternalReceive(
    if (!st.myAccepted) {
     acts.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
    }
-   if (st.myAccepted || (sOffers.length <= 3 && st.partnerAccepted)) {
+   if (st.partnerAccepted && sOffers.length <= 3) {
     sawConfirm = true;
     acts.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
    }
