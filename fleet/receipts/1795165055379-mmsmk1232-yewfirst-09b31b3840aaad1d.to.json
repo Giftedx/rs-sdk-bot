@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795165055379-mmsmk1232-yewfirst-09b31b3840aaad1d",
+ "account": "YewFirst",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Steel arrowtips",
+ "requested": 135,
+ "claim": "634b8e1c-6067-48c1-8729-24875ac762a3",
+ "count": 0,
+ "ok": false,
+ "at": 1795165074150,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Mithril arrowtips",
+   "requested": 189,
+   "count": 0
+  }
+ ]
+}
