@@ -7,7 +7,7 @@
 //   50 the reinitialisation puzzle (raw OPHELD5, mm-puzzle.ts)     60 Daero, Waydar's glider to Crash Island
 //   70 Lumdo, Waydar orders him: chapter 2 cutscene, Ape Atoll (2801,2707)
 // MM_STOP=<n> ends the run (as a pass) at that milestone.
-import { openQuest, fireSpell } from './quest-lib';
+import { openQuest, fireSpell as resolveFireSpell } from './quest-lib';
 import type { Session } from '../../packages/core/src/inprocess';
 import { componentId } from '../../packages/core/src/logout';
 import { solve, solved, applyClick } from './mm-puzzle';
@@ -612,7 +612,7 @@ try {
             if (q.T() - last >= 5) {
                 last = q.T();
                 pestCasts++;
-                const comp = componentId(fireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id)));
+                const comp = componentId(resolveFireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id)));
                 await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: comp, reason: 'SDK' });
             }
             await q.waitTicks(1);
@@ -1292,7 +1292,7 @@ try {
             }
             if (!q.dialogOpen() && q.T() - lastCast >= 5 && q.T() - lastStep >= 2) {
                 casts++; lastCast = q.T();
-                const comp = componentId(fireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id)));
+                const comp = componentId(resolveFireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id)));
                 await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: comp, reason: 'SDK' });
             }
             if (lastMsg(/do not have enough/i) > runes0) await q.fail('out of runes');

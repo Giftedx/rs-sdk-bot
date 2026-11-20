@@ -6,7 +6,7 @@
 // The witch (Nora T. Hagg) patrols z 3463 from x 2930 to 2904 and catches a player within 3 tiles in line of sight
 // who is north or south of her and not behind a hedge (witch.rs2:1-34). A catch takes the shed key and the ball, sets
 // 3 back to 1 and puts the player outside at 2929,3456. A player on her own row (dz 0) is never caught.
-import { openQuest, fireSpell } from './quest-lib';
+import { openQuest, fireSpell as resolveFireSpell } from './quest-lib';
 import type { Session } from '../../packages/core/src/inprocess';
 import { componentId } from '../../packages/core/src/logout';
 
@@ -227,7 +227,7 @@ try {
                 await q.s.direct({
                     type: 'spellOnNpc',
                     npcIndex: n.index,
-                    spellComponent: componentId(fireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id))),
+                    spellComponent: componentId(resolveFireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id))),
                     reason: 'SDK',
                 });
             }
