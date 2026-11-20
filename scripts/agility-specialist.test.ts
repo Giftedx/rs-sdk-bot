@@ -2,11 +2,13 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
+    canPreClickNextObstacle,
     GNOME_TRADE_1,
     GNOME_TRADE_1_NOPRAY,
     inventorySlotsNeeded,
     ITEMS,
     MONKEYBARS_TRADE_1,
+    MONKEYBARS_TRADE_1_NOPOT,
     nextWildernessProgress,
     resolveAgilityRouteConfig,
     shouldDrinkAgilityPotion,
@@ -38,7 +40,7 @@ describe('Agility specialist supply bills and item IDs', () => {
     const byId = new Map(items.map(i => [i.id, i]));
 
     test('every trade batch and chocolate cake part exists in knowledge/items.json with exact tradeable ID', () => {
-        for (const batch of [TOURIST_TRADE_1, TOURIST_TRADE_2, TOURIST_TRADE_3, MONKEYBARS_TRADE_1, GNOME_TRADE_1, GNOME_TRADE_1_NOPRAY]) {
+        for (const batch of [TOURIST_TRADE_1, TOURIST_TRADE_2, TOURIST_TRADE_3, MONKEYBARS_TRADE_1, MONKEYBARS_TRADE_1_NOPOT, GNOME_TRADE_1, GNOME_TRADE_1_NOPRAY]) {
             for (const entry of batch) {
                 const row = byId.get(entry.id);
                 expect(row, `item ${entry.id} (${entry.name})`).toBeDefined();
@@ -58,9 +60,11 @@ describe('Agility specialist supply bills and item IDs', () => {
         expect(inventorySlotsNeeded(TOURIST_TRADE_2, STACKABLE_IDS)).toBeLessThanOrEqual(25);
         expect(inventorySlotsNeeded(TOURIST_TRADE_3, STACKABLE_IDS)).toBeLessThanOrEqual(24);
         expect(inventorySlotsNeeded(MONKEYBARS_TRADE_1, STACKABLE_IDS)).toBe(28);
+        expect(inventorySlotsNeeded(MONKEYBARS_TRADE_1_NOPOT, STACKABLE_IDS)).toBe(21);
         expect(inventorySlotsNeeded(GNOME_TRADE_1, STACKABLE_IDS)).toBe(28);
         expect(inventorySlotsNeeded(GNOME_TRADE_1_NOPRAY, STACKABLE_IDS)).toBe(28);
         expect(trade1ForConfig({ route: 'gnome', usePrayer: false })).toEqual(GNOME_TRADE_1_NOPRAY);
+        expect(trade1ForConfig({ route: 'monkeybars', usePrayer: true, usePotion: false })).toEqual(MONKEYBARS_TRADE_1_NOPOT);
 
         for (const bench of SPECIALIST_AGILITY_CASES) {
             for (const c of bench.companions ?? []) {
@@ -103,6 +107,15 @@ describe('Wilderness pre-clicks, progress transitions, and Agility potion logic'
         expect(startedWildernessObstacle('log', { worldX: 2998, worldZ: 3945 })).toBe(true);
         expect(startedWildernessObstacle('rocks', { worldX: 2994, worldZ: 3935 })).toBe(true);
         expect(startedWildernessObstacle('pipe', { worldX: 3004, worldZ: 3937 })).toBe(false);
+    });
+
+    test('recognizes arrival and transition zones for pre-clicking next obstacle', () => {
+        expect(canPreClickNextObstacle('pipe', { worldX: 3004, worldZ: 3949 })).toBe(true);
+        expect(canPreClickNextObstacle('pipe', { worldX: 3004, worldZ: 3940 })).toBe(false);
+        expect(canPreClickNextObstacle('ropeswing', { worldX: 3005, worldZ: 3958 })).toBe(true);
+        expect(canPreClickNextObstacle('stones', { worldX: 2996, worldZ: 3960 })).toBe(true);
+        expect(canPreClickNextObstacle('log', { worldX: 2994, worldZ: 3945 })).toBe(true);
+        expect(canPreClickNextObstacle('rocks', { worldX: 2994, worldZ: 3934 })).toBe(true);
     });
 
     test('tracks %wilderness_course_progress increments and resets after rocks', () => {

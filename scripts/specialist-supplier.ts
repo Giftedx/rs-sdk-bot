@@ -59,8 +59,16 @@ export const ATTACK_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 379, name: 'Lobster', count: 2, stackable: false },
 ] as const;
 
-// 28 inventory slots exact: 1 stackable (500 coins) + 1 glory + 11 dragon bones + 3 prayer pots + 6 agility pots + 1 super energy + 5 chocolate cake.
+// 21 inventory slots exact: 1 stackable (500 coins) + 1 glory + 11 dragon bones + 3 prayer pots + 5 chocolate cake (100% in stock).
 export const AGILITY_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
+    { id: 995, name: 'Coins', count: 500, stackable: true },
+    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 3, stackable: false },
+    { id: 1897, name: 'Chocolate cake', count: 5, stackable: false },
+] as const;
+
+export const AGILITY_SPECIALIST_POTION_KIT: readonly KitSpecItem[] = [
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
     { id: 995, name: 'Coins', count: 500, stackable: true },
     { id: 536, name: 'Dragon bones', count: 11, stackable: false },

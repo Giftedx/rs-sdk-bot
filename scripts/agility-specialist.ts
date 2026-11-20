@@ -141,6 +141,14 @@ export const MONKEYBARS_TRADE_1: readonly SupplyEntry[] = [
     { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 5 },
 ];
 
+export const MONKEYBARS_TRADE_1_NOPOT: readonly SupplyEntry[] = [
+    { id: ITEMS.glory4, name: 'Amulet of glory(4)', count: 1 },
+    { id: ITEMS.coins, name: 'Coins', count: 500 },
+    { id: ITEMS.dragonBones, name: 'Dragon bones', count: 11 },
+    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 3 },
+    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 5 },
+];
+
 export const GNOME_TRADE_1: readonly SupplyEntry[] = [
     { id: ITEMS.glory4, name: 'Amulet of glory(4)', count: 1 },
     { id: ITEMS.coins, name: 'Coins', count: 100 },
@@ -159,9 +167,10 @@ export const GNOME_TRADE_1_NOPRAY: readonly SupplyEntry[] = [
     { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 9 },
 ];
 
-export function trade1ForConfig(cfg: Pick<AgilityRouteConfig, 'route' | 'usePrayer'>): readonly SupplyEntry[] {
+export function trade1ForConfig(cfg: Pick<AgilityRouteConfig, 'route' | 'usePrayer'> & { usePotion?: boolean }): readonly SupplyEntry[] {
     if (cfg.route === 'tourist') return TOURIST_TRADE_1;
     if (cfg.route === 'monkeybars') {
+        if (cfg.usePotion === false) return MONKEYBARS_TRADE_1_NOPOT;
         return cfg.usePrayer
             ? MONKEYBARS_TRADE_1
             : [
@@ -257,6 +266,17 @@ export function startedWildernessObstacle(name: string, p: { worldX: number; wor
         case 'stones': return p.worldZ === 3960 && p.worldX >= 2996 && p.worldX <= 3001;
         case 'log': return p.worldZ === 3945 && p.worldX >= 2994 && p.worldX <= 3002;
         case 'rocks': return p.worldX >= 2993 && p.worldX <= 2995 && p.worldZ >= 3934 && p.worldZ <= 3935;
+        default: return false;
+    }
+}
+
+export function canPreClickNextObstacle(name: string, p: { worldX: number; worldZ: number }): boolean {
+    switch (name) {
+        case 'pipe': return p.worldX === 3004 && p.worldZ >= 3948 && p.worldZ <= 3950;
+        case 'ropeswing': return p.worldX === 3005 && p.worldZ >= 3957 && p.worldZ <= 3958;
+        case 'stones': return p.worldZ === 3960 && p.worldX <= 2997 && p.worldX >= 2996;
+        case 'log': return p.worldZ === 3945 && p.worldX <= 2995 && p.worldX >= 2994;
+        case 'rocks': return p.worldX >= 2993 && p.worldX <= 2995 && p.worldZ <= 3934 && p.worldZ >= 3933;
         default: return false;
     }
 }
@@ -1206,8 +1226,9 @@ async function train1To49Monkeybars(s: Session, usePotion: boolean, usePrayer = 
     if (usePrayer) await setProtectFromMelee(s, true);
     await crossEdgevilleToMonkeybars(s, true, stop);
     await walkNear(s, { x: 3120, z: 9964, level: 0 }, 2, 120, { ignoreHunters: true, stop });
+    const targetLvl = usePotion ? 49 : 52;
     let mLastXp = skillXp(s, 'Agility'), mStill = 0, mLastKey = '';
-    for (let t = 0; skillLvl(s, 'Agility') < 49 && t < 750 && !stop?.(); t++) {
+    for (let t = 0; skillLvl(s, 'Agility') < targetLvl && t < 1200 && !stop?.(); t++) {
         await clearDialogTick(s);
         await maintainEnergy(s, 45);
         const p = posOf(s);
@@ -1230,7 +1251,7 @@ async function train1To49Monkeybars(s: Session, usePotion: boolean, usePrayer = 
         }
         await waitTicks(s, 1);
     }
-    if (skillLvl(s, 'Agility') < 49) throw Error(`monkeybars did not reach Agility 49 (lvl ${skillLvl(s, 'Agility')})`);
+    if (skillLvl(s, 'Agility') < targetLvl) throw Error(`monkeybars did not reach Agility ${targetLvl} (lvl ${skillLvl(s, 'Agility')})`);
     if (usePrayer) await setProtectFromMelee(s, false);
     await rubGlory(s, /edgeville/i, { x: 3087, z: 3496 }, 25);
 }
@@ -1517,10 +1538,11 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
 
 
 
-            // Pre-click: if current obstacle has visibly started, send the next obstacle's click
-            if (preBlock < 0 && startedWildernessObstacle(step.name, p)) {
-                if (sentTick !== s.tick()) {
-                    const nextIdx = (i + 1) % WILDERNESS_STEPS.length;
+            // Pre-click: when near the end of current obstacle, queue the next obstacle once
+            if (preBlock < 0 && canPreClickNextObstacle(step.name, p)) {
+                const nextIdx = (i + 1) % WILDERNESS_STEPS.length;
+                if (preClickedIdx !== nextIdx && sentTick !== s.tick()) {
+                    preClickedIdx = nextIdx;
                     preClicks++;
                     if (nextIdx === 0) {
                         if (cfg.alignPipe) {
