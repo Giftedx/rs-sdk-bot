@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795203004916-mightyrod-bigchopper-0dd8e0101f4d50ff",
  "account": "Mightyrod",
  "partner": "Bigchopper",
@@ -10,15 +10,29 @@
  "item": "Lobster",
  "requested": 25,
  "claim": "53f8b6e8-73de-4434-98a5-d4ef4818df00",
- "count": 0,
- "ok": false,
- "at": 1795203017494,
- "detail": "trade claimed",
+ "count": 25,
+ "ok": true,
+ "at": 1795203033032,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Law rune",
    "requested": 10,
-   "count": 0
+   "count": 10,
+   "inventory": {
+    "before": 10,
+    "after": 0
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 25,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795203017503-0000025916-0000000001",
+  "at": 1795203033020,
+  "sha256": "abc090e96523ad6def03c4e31b12f04d633f860f8bb7deb9a25d9309cfd23bab"
+ },
+ "screen": true
 }
