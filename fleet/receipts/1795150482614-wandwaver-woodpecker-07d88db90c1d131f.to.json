@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795150482614-wandwaver-woodpecker-07d88db90c1d131f",
+ "account": "Woodpecker",
+ "partner": "Wandwaver",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 230000,
+ "claim": "d8d69a48-ccc3-42e2-ad15-879867f8d177",
+ "count": 230000,
+ "ok": true,
+ "at": 1795150533201,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 230000
+ },
+ "bank": {
+  "count": 230000,
+  "at": 1795150532252
+ },
+ "logout": {
+  "attemptId": "1795150515389-0000029276-0000000001",
+  "at": 1795150533046,
+  "sha256": "150cf15cdca0580f0402f7ccb37089f9a5ee2f5a343a4c4c64d14a25a60832c7"
+ },
+ "screen": true
+}

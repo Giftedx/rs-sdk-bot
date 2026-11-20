@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795150482614-wandwaver-woodpecker-07d88db90c1d131f",
  "account": "Wandwaver",
  "partner": "Woodpecker",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 230000,
  "claim": "d6176671-3616-45fc-9215-df49f5b18f70",
- "count": 0,
- "ok": false,
- "at": 1795150496913,
- "detail": "trade claimed"
+ "count": 230000,
+ "ok": true,
+ "at": 1795150531490,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 230000,
+  "after": 0
+ },
+ "bank": {
+  "count": 213450,
+  "at": 1795150505899
+ },
+ "logout": {
+  "attemptId": "1795150496923-0000006168-0000000001",
+  "at": 1795150531406,
+  "sha256": "54ba062d8798dc9e87724127ed14d2f2d0b44afc25c6438e7c4bf9566507c04e"
+ },
+ "screen": true
 }
