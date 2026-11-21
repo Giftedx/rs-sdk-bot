@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795239936632-shaftsinker-unsheathed-b0ab15c420d8bf5d",
  "account": "Unsheathed",
  "partner": "Shaftsinker",
@@ -10,15 +10,37 @@
  "item": "Law rune",
  "requested": 60,
  "claim": "ba8f43c3-a2b4-4304-be30-7301b24e22b0",
- "count": 0,
- "ok": false,
- "at": 1795240203869,
- "detail": "trade claimed",
+ "count": 60,
+ "ok": true,
+ "at": 1795240216842,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Vial of water",
    "requested": 20,
-   "count": 0
+   "count": 20,
+   "inventory": {
+    "before": 0,
+    "after": 20
+   },
+   "bank": {
+    "count": 20,
+    "at": 1795240216141
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 60
+ },
+ "bank": {
+  "count": 60,
+  "at": 1795240215683
+ },
+ "logout": {
+  "attemptId": "1795240203877-0000017296-0000000001",
+  "at": 1795240216818,
+  "sha256": "776cd89c6bcf5264f7113e15920bf1816369f7be3e3b79853dc5ad4b35fcdcf3"
+ },
+ "screen": true
 }
