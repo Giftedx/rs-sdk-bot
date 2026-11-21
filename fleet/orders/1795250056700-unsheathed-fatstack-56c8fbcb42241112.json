@@ -1,0 +1,25 @@
+{
+ "id": "1795250056700-unsheathed-fatstack-56c8fbcb42241112",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Unsheathed",
+ "to": "Fatstack",
+ "item": "Coins",
+ "count": 120000,
+ "start": 1795250056700,
+ "end": 1795251556700,
+ "extra": [
+  {
+   "item": "Prayer potion(3)",
+   "count": 1
+  },
+  {
+   "item": "Snape grass",
+   "count": 13
+  },
+  {
+   "item": "Vial of water",
+   "count": 15
+  }
+ ],
+ "takerWaits": true
+}
