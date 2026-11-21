@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795231748978-pocketpython-fingersmith",
  "account": "Pocketpython",
  "partner": "Fingersmith",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 31948,
  "claim": "ce8d761a-a5f5-4973-8df4-d059ea0308d3",
- "count": 0,
- "ok": false,
- "at": 1795231823081,
- "detail": "trade claimed"
+ "count": 31948,
+ "ok": true,
+ "at": 1795232017654,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 31948,
+  "after": 0
+ },
+ "bank": {
+  "count": 31948,
+  "at": 1795232006083
+ },
+ "logout": {
+  "attemptId": "1795231823093-0000032592-0000000001",
+  "at": 1795232017636,
+  "sha256": "a56023b975813735139d8137e4e5d87b6ef7cac9b921cf8738a0f1c5126ac624"
+ },
+ "screen": true
 }
