@@ -992,13 +992,21 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             for (let t = 0; t < 10 && worn(ITEMS.fireStaff); t++) await removeWornItem(s, ITEMS.fireStaff);
             if (worn(ITEMS.fireStaff)) await q.fail('failed to unequip fire staff before gate');
         };
-        const ensureFullPrayer = async () => {
+        const ensureFullPrayer = async (minFloor = 26) => {
             if (!_usePrayer) return;
-            const floor = Math.min(skillLvl(s, 'Prayer'), 44);
+            const floor = Math.min(minFloor, skillLvl(s, 'Prayer'), 44);
             for (let t = 0; t < 4 && Math.min(q.st()?.prayers?.prayerPoints ?? floor, skillCur(s, 'Prayer')) < floor; t++) {
                 if (!await drinkFirstMatching(s, ITEMS.prayerPot)) break;
                 await q.waitTicks(2);
             }
+        };
+        const walkCamp = async (label: string, pts: { x: number; z: number; tol?: number }[], maxTicks = 90) => {
+            await q.guard(label);
+            await ensureFullPrayer(26);
+            for (const pt of pts) {
+                await walkNear(s, pt, pt.tol ?? 1, maxTicks, { ignoreHunters: true });
+            }
+            await q.guard(label);
         };
         const escapePrisonCell = async () => {
             if (!inPrisonCell()) return;
@@ -1087,7 +1095,11 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                 for (let t = 0; t < 12 && worn(id); t++) await removeWornItem(s, id);
             }
             if (!inCamp()) return;
-            await q.walk('to gate inside', [{ x: 3274, z: 3029, tol: 0 }]);
+            if (z() >= 3032 && x() >= 3290) {
+                await walkCamp('to gate inside', [{ x: 3304, z: 3024, tol: 2 }, { x: 3278, z: 3018, tol: 2 }, { x: 3274, z: 3029, tol: 0 }]);
+            } else {
+                await walkCamp('to gate inside', [{ x: 3274, z: 3029, tol: 0 }]);
+            }
             await q.step('gate out', () => q.opLoc(loc(GATE), 1), () => x() <= 3273, 12, 4);
             await q.waitTicks(2);
         };
@@ -1104,9 +1116,10 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             await ensureFullPrayer();
             for (let attempt = 0; attempt < 3 && z() < 9427; attempt++) {
                 if (z() < 4000) {
-                    // Route up east wall (x>=3304) to keep clear of Rowdy Guard at (3296,3026).
-                    await q.walk('to mine doors', [
-                        ...(z() < 3024 ? [{ x: 3304, z: 3024, tol: 2 }] : []),
+                    // Route along south/east camp perimeter with ignoreHunters (PrayerGuard blocks melee Rowdy Guards).
+                    await walkCamp('to mine doors', [
+                        ...(x() < 3290 ? [{ x: 3278, z: 3018, tol: 2 }] : []),
+                        ...(z() < 3024 || x() < 3290 ? [{ x: 3304, z: 3024, tol: 2 }] : []),
                         { x: MINE_IN.x, z: MINE_IN.z - 1, tol: 0 },
                     ]);
                     await q.step('mine doors', () => q.opLoc(loc(MINE_IN), 1), () => z() > 9000, 12, 4);
@@ -1189,19 +1202,19 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             for (const id of [ITEMS.desertShirt, ITEMS.desertRobe, ITEMS.desertBoots]) await wearItem(s, id);
             // Keep prayer === 43 (so dangerSet admits Rowdy Guards) and route south via (3278,3018) -> (3302,3015) inside camp walls.
             if (z() > 3020 || x() < 3290) {
-                await q.walk('to slave', [
+                await walkCamp('to slave', [
                     { x: 3278, z: 3018, tol: 2 },
                     { x: SLAVE.x, z: SLAVE.z - 1, tol: 1 },
                 ]);
             } else {
-                await q.walk('to slave', [{ x: SLAVE.x, z: SLAVE.z - 1, tol: 1 }]);
+                await walkCamp('to slave', [{ x: SLAVE.x, z: SLAVE.z - 1, tol: 1 }]);
             }
             if (inPrisonCell()) { await escapePrisonCell(); continue; }
             const preGuard = findBlockingRowdyGuard(6);
             if (preGuard && ((preGuard.distance ?? 9) <= 4 || preGuard.inCombat)) {
                 await clearRowdyGuard(preGuard.index);
                 if (inPrisonCell()) { await escapePrisonCell(); continue; }
-                await q.walk('to slave post-clear', [{ x: SLAVE.x, z: SLAVE.z - 1, tol: 1 }]);
+                await walkCamp('to slave post-clear', [{ x: SLAVE.x, z: SLAVE.z - 1, tol: 1 }]);
                 if (inPrisonCell()) { await escapePrisonCell(); continue; }
             }
             for (let mw = 0; mw < 12; mw++) {
@@ -1269,7 +1282,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             await q.step('curtain', () => { const c = q.findLoc((l: any) => l.id === 1528 && l.x === 3291 && l.z === 3031); return c ? q.opLoc(c, 1) : waitTicks(s, 1); },
                 () => !q.findLoc((l: any) => l.id === 1528 && l.x === 3291 && l.z === 3031), 10, 3);
         };
-        await q.walk('to curtain', [{ x: 3291, z: 3030, tol: 0 }]);
+        await walkCamp('to curtain', [{ x: 3291, z: 3030, tol: 0 }]);
         await curtain();
         await q.dash('through curtain', 3291, 3032, 0, 8);
         await q.dash('to ladder', LADDER.x, LADDER.z - 1, 1, 12);
@@ -1337,41 +1350,35 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await walkNear(s, { x: 3280, z: 9415 }, 1, 80, { ignoreHunters: true });
         await q.guard('to cave guard 2');
         await q.talk('pineapple', /^mercenary$/i, [], () => !q.has(ITEMS.pineapple) && q.sawText(/a deal's a deal/i), { x: 3280, z: 9415 }, 50);
-        await q.walk('to cave', [{ x: CAVE_W.x - 1, z: CAVE_W.z, tol: 0 }]);
+        await walkCamp('to cave', [{ x: CAVE_W.x - 1, z: CAVE_W.z, tol: 0 }]);
         await q.step('cave east', () => q.opLoc(loc(CAVE_W), 1), () => x() >= 3285, 12, 4);
         await q.waitTicks(2);
 
-        await ensureFullPrayer();
-        await q.walk('to barrels', [{ x: 3302, z: 9418, tol: 1 }]);
+        await walkCamp('to barrels', [{ x: 3302, z: 9418, tol: 1 }]);
         await locTalk('empty barrel', () => { const b = q.findLoc((l: any) => l.id === 2681 && Math.abs(l.x - 3303) <= 3 && Math.abs(l.z - 9417) <= 3) ?? LOW_BARREL; return q.opLoc(b, q.opIndex(b, /search|take/i) === 1 ? 2 : q.opIndex(b, /search|take/i)); }, [/yeah, cool/i], () => q.has(ITEMS.barrel));
         await locTalk('low cart', () => { const c = loc(LOW_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() >= 9428 && x() >= 3310, 24);
 
         await maintainEnergy(s, 45);
-        await ensureFullPrayer();
-        await q.walk('to ana', [{ x: ANA.x, z: ANA.z - 1, tol: 3 }]);
+        await walkCamp('to ana', [{ x: ANA.x, z: ANA.z - 1, tol: 3 }]);
         await q.step('ana barrel', () => { const n = q.npc(/^ana$/i); return n ? q.useOnNpc(ITEMS.barrel, n) : waitTicks(s, 1); }, () => q.has(ITEMS.ana), 20, 4);
         await closeDlg();
 
-        await ensureFullPrayer();
-        await q.walk('to ana cart', [{ x: 3319, z: 9431, tol: 1 }]);
+        await walkCamp('to ana cart', [{ x: 3319, z: 9431, tol: 1 }]);
         await q.step('ana in cart', () => q.useOnLoc(ITEMS.ana, loc(ANA_CART)), () => !q.has(ITEMS.ana), 12, 3);
         await q.waitTicks(4);
         await locTalk('cart back', () => { const c = loc(ANA_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() <= 9420, 24);
         await locTalk('ana barrel 2', () => { const b = q.findLoc((l: any) => l.id === 2681 && Math.abs(l.x - 3303) <= 3 && Math.abs(l.z - 9417) <= 3) ?? LOW_BARREL; return q.opLoc(b, q.opIndex(b, /search|take/i) === 1 ? 2 : q.opIndex(b, /search|take/i)); }, [], () => q.has(ITEMS.ana));
 
-        await ensureFullPrayer();
-        await q.walk('to lift', [{ x: LIFT.x, z: LIFT.z - 1, tol: 1 }]);
+        await walkCamp('to lift', [{ x: LIFT.x, z: LIFT.z - 1, tol: 1 }]);
         await locTalk('lift', () => q.useOnLoc(ITEMS.ana, loc(LIFT)), [/yes please/i, /very gregarious/i], () => !q.has(ITEMS.ana) && q.sawText(/no one operating the lift/i));
 
-        await ensureFullPrayer();
-        await q.walk('to cave back', [{ x: CAVE_E.x + 1, z: CAVE_E.z, tol: 0 }]);
+        await walkCamp('to cave back', [{ x: CAVE_E.x + 1, z: CAVE_E.z, tol: 0 }]);
         await q.step('cave west', () => q.opLoc(loc(CAVE_E), 1), () => x() <= 3279, 12, 4);
         await q.waitTicks(2);
         await mineOut();
 
-        await ensureFullPrayer();
         // Keep along the east/south camp perimeter from mine exit to bypass Rowdy Guards at (3296,3026), (3287,3030) and (3280,3026).
-        await q.walk('to winch', [
+        await walkCamp('to winch', [
             { x: 3304, z: 3024, tol: 2 },
             { x: 3300, z: 3015, tol: 2 },
             { x: 3280, z: 3018, tol: 0 },
@@ -1379,7 +1386,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await locTalk('winch', () => { const w = loc(WINCH); return q.opLoc(w, q.opIndex(w, /operate|pull|use/i) === 1 ? 2 : q.opIndex(w, /operate|pull|use/i)); }, [], () => q.sawText(/get me out of here/i));
         await locTalk('up barrel', () => { const b = loc(UP_BARREL); return q.opLoc(b, q.opIndex(b, /search/i) === 1 ? 2 : q.opIndex(b, /search/i)); }, [], () => q.has(ITEMS.ana));
 
-        await q.walk('to cart', [{ x: CART.x - 1, z: CART.z, tol: 1 }]);
+        await walkCamp('to cart', [{ x: CART.x - 1, z: CART.z, tol: 1 }]);
         await locTalk('ana on cart', () => q.useOnLoc(ITEMS.ana, loc(CART)), [], () => !q.has(ITEMS.ana));
         await q.talk('driver', /^mine cart driver$/i, [/^nice cart/i, /one wagon wheel/i, /one good turn/i, /fired\.\.\. no, shot/i, /in for a penny/i, /it's like this/i, /prison riot/i, /you can't leave me here/i],
             () => q.sawText(/jump in the cart then|get in the cart or i'll go without you/i), { x: 3287, z: 3022 }, 90);
