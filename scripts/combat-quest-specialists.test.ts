@@ -8,6 +8,8 @@ import { observedSupplies } from '../packages/practice/src/specialist-rehearsal'
 import { validateDelivery } from '../packages/router/src/delivery';
 import { FIGHTER_PROFILES } from './aio-fighter';
 import {
+    CW_SPECIALIST_POST,
+    CW_TANK_POSTS,
     DEFENCE_SPECIALIST_KIT,
     HP_ANTIPOISON_ACCEPT_IDS,
     HP_SPECIALIST_KIT,
@@ -18,10 +20,13 @@ import {
     connectWithTransientRetry,
     countAntipoisonDoses,
     countById,
+    cwTankMantaReserve,
+    d8,
     hasAtLeastKit,
     hasExactKit,
     kitRequirements,
     kitSlotTotal,
+    parsePvpLocationMode,
     pickCourtyardMagicTarget,
     rankKeepRelogTanks,
     runSpecialistWaterfall,
@@ -37,6 +42,7 @@ import {
     buildCombatSpecialistRehearsalSegment,
     kitToSaveInventory,
     supplierPresetConfig,
+    tankCwPostPresetConfig,
     tankPostPresetConfig,
     tankSupplierPresetConfig,
 } from './measure/specialist-combat-quests-cases';
@@ -220,7 +226,10 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
             expect(bench).toBeDefined();
             expect(bench?.presetConfig).toEqual({});
         }
-        expect(SPECIALIST_COMBAT_QUESTS_CASES.length).toBe(3);
+        expect(SPECIALIST_COMBAT_QUESTS_CASES.length).toBe(5);
+        for (const extraTarget of ['extra:specialist-strength-cw', 'extra:specialist-defence-cw']) {
+            expect(benchCases().some(c => c.key === extraTarget)).toBe(true);
+        }
         expect(intentForEntry('scripts/hp-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'hitpoints', targetLevel: 99 });
         expect(intentForEntry('scripts/strength-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'strength', targetLevel: 99 });
         expect(intentForEntry('scripts/defence-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'defence', targetLevel: 99 });
@@ -379,5 +388,46 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
             async () => { throw Error('should not sleep when stopped'); },
         )).rejects.toThrow('Try again later');
         expect(stoppedCalls).toBe(1);
+    });
+
+    test('parsePvpLocationMode, Castle Wars posts, tank ranking, and opt-in rehearsal segments stay non-Wilderness', () => {
+        expect(parsePvpLocationMode([], undefined)).toBe('keep');
+        expect(parsePvpLocationMode(['--mode=castlewars'], undefined)).toBe('castlewars');
+        expect(parsePvpLocationMode([], 'castlewars')).toBe('castlewars');
+        expect(parsePvpLocationMode(['--mode=keep'], 'castlewars')).toBe('keep');
+
+        expect(CW_SPECIALIST_POST.z).toBeLessThan(3520);
+        for (const post of CW_TANK_POSTS) {
+            expect(post.z).toBeLessThan(3520);
+            expect(d8(post, CW_SPECIALIST_POST)).toBe(1);
+        }
+        const rankedCw = rankKeepRelogTanks(
+            [
+                { index: 1, name: 'zam1', x: CW_TANK_POSTS[0].x, z: CW_TANK_POSTS[0].z, hp: 99 },
+                { index: 2, name: 'zam2', x: CW_TANK_POSTS[1].x, z: CW_TANK_POSTS[1].z, hp: 99 },
+                { index: 3, name: 'zamFar', x: 2420, z: 3090, hp: 99 },
+            ],
+            ['zam1', 'zam2', 'zamFar'],
+            new Map([['zam1', 4], ['zam2', 1]]),
+            CW_SPECIALIST_POST,
+            3072,
+        );
+        expect(rankedCw.map(r => r.name)).toEqual(['zam2', 'zam1']);
+
+        expect(cwTankMantaReserve('castlewars', 1, false)).toBe(12);
+        expect(cwTankMantaReserve('castlewars', 1, true)).toBe(0);
+        expect(cwTankMantaReserve('castlewars', 0, false)).toBe(0);
+        expect(cwTankMantaReserve('keep', 1, false)).toBe(0);
+
+        const cwTank = tankCwPostPresetConfig();
+        expect(cwTank.position!.z).toBeLessThan(3520);
+        expect(cwTank.equipment!.some(e => e.slot === 0 || e.slot === 1)).toBe(false);
+
+        for (const acc of ['BigSwinger', 'RockSolid'] as const) {
+            const seg = buildCombatSpecialistRehearsalSegment(acc, { mode: 'castlewars' });
+            expect((seg as any).env.MODE).toBe('castlewars');
+            expect(resolveSegmentSuppliers(seg).length).toBe(2);
+            expect(checkSpecialistSegment(seg, acc)).toBe(acc === 'BigSwinger' ? 'Strength' : 'Defence');
+        }
     });
 });

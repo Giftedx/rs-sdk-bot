@@ -48,6 +48,21 @@ export const ARDY_LEVER = { x: 2561, z: 3311, level: 0 } as const;
 export const DESERTED_KEEP = { x: 3154, z: 3924, level: 0 } as const;
 export const KEEP_SPECIALIST_POST = { x: 3155, z: 3924, level: 0 } as const;
 export const KEEP_LEVER_TILE = { x: 3153, z: 3923, level: 0 } as const;
+export const CW_SARADOMIN_PORTAL = { id: 4387, x: 2436, z: 3096, level: 0 } as const;
+export const CW_ZAMORAK_PORTAL = { id: 4388, x: 2436, z: 3082, level: 0 } as const;
+export const CW_SPECIALIST_POST = { x: 2400, z: 3103, level: 0 } as const;
+export const CW_TANK_POSTS = [
+    { x: 2399, z: 3103, level: 0 },
+    { x: 2400, z: 3104, level: 0 },
+] as const;
+
+export type PvpLocationMode = 'keep' | 'castlewars';
+
+export function parsePvpLocationMode(args: readonly string[] = process.argv.slice(2), envMode = process.env.MODE): PvpLocationMode {
+    const cli = args.find(a => a.startsWith('--mode='))?.slice('--mode='.length);
+    const raw = (cli ?? envMode ?? 'keep').trim().toLowerCase();
+    return raw === 'castlewars' || raw === 'cw' ? 'castlewars' : 'keep';
+}
 
 export function configureSpecialistGuardEnv(): void {
     process.env.FLEE_GUARD = '0';
@@ -715,24 +730,170 @@ export function rankKeepRelogTanks<T extends { index: number; name?: string; x?:
     players: readonly T[],
     tankNames: readonly string[],
     lastHitSeq?: ReadonlyMap<string, number>,
+    postTile: { readonly x: number; readonly z: number } = KEEP_SPECIALIST_POST,
+    minZ = 3900,
 ): T[] {
     const tankRes = tankNames.map(exactNameRe);
     return players
         .filter(p => {
             if (!tankRes.some(re => re.test(p.name ?? ''))) return false;
             const z = p.z ?? p.worldZ ?? 0;
-            if (z < 3900) return false;
+            if (z < minZ) return false;
             if (p.hp !== undefined && p.hp !== null && p.hp <= 0) return false;
-            return d8({ x: p.x ?? p.worldX ?? 0, z }, KEEP_SPECIALIST_POST) <= 1;
+            return d8({ x: p.x ?? p.worldX ?? 0, z }, postTile) <= 1;
         })
         .sort((a, b) => {
             const sa = lastHitSeq?.get((a.name ?? '').toLowerCase()) ?? 0;
             const sb = lastHitSeq?.get((b.name ?? '').toLowerCase()) ?? 0;
             if (sa !== sb) return sa - sb;
-            const da = d8({ x: a.x ?? a.worldX ?? 0, z: a.z ?? a.worldZ ?? 0 }, KEEP_SPECIALIST_POST);
-            const db = d8({ x: b.x ?? b.worldX ?? 0, z: b.z ?? b.worldZ ?? 0 }, KEEP_SPECIALIST_POST);
+            const da = d8({ x: a.x ?? a.worldX ?? 0, z: a.z ?? a.worldZ ?? 0 }, postTile);
+            const db = d8({ x: b.x ?? b.worldX ?? 0, z: b.z ?? b.worldZ ?? 0 }, postTile);
             return da - db;
         });
+}
+
+const CW_TEAM_CFG = {
+    saradomin: {
+        portal: CW_SARADOMIN_PORTAL,
+        barrierId: 4469,
+        barrierLoc: { x: 2422, z: 3076 },
+        ladderLoc: { x: 2421, z: 3073 },
+        ladderApproach: { x: 2421, z: 3074 },
+        doorIds: [4423, 4424],
+        doorApproach: { x: 2426, z: 3087 },
+        doorOut: { x: 2426, z: 3090 },
+        inSpawn: (p: { level: number; worldX: number; worldZ: number }) =>
+            p.level === 1 && p.worldX >= 2423 && p.worldX <= 2431 && p.worldZ >= 3072 && p.worldZ <= 3080,
+        inCourtyard: (p: { level: number; worldX: number; worldZ: number }) =>
+            p.level === 0 && p.worldX >= 2415 && p.worldX <= 2431 && p.worldZ >= 3072 && p.worldZ <= 3087,
+    },
+    zamorak: {
+        portal: CW_ZAMORAK_PORTAL,
+        barrierId: 4470,
+        barrierLoc: { x: 2377, z: 3131 },
+        ladderLoc: { x: 2378, z: 3134 },
+        ladderApproach: { x: 2378, z: 3133 },
+        doorIds: [4427, 4428],
+        doorApproach: { x: 2372, z: 3120 },
+        doorOut: { x: 2372, z: 3117 },
+        inSpawn: (p: { level: number; worldX: number; worldZ: number }) =>
+            p.level === 1 && p.worldX >= 2368 && p.worldX <= 2376 && p.worldZ >= 3127 && p.worldZ <= 3135,
+        inCourtyard: (p: { level: number; worldX: number; worldZ: number }) =>
+            p.level === 0 && p.worldX >= 2368 && p.worldX <= 2384 && p.worldZ >= 3120 && p.worldZ <= 3135,
+    },
+} as const;
+
+export function inCwWaitingRoom(p?: { worldX: number; worldZ: number } | null): boolean {
+    return !!p && p.worldZ >= 9472 && p.worldZ <= 9535 && p.worldX >= 2368 && p.worldX <= 2431;
+}
+
+export function inCwArena(p?: { worldX: number; worldZ: number } | null): boolean {
+    return !!p && p.worldX >= 2368 && p.worldX <= 2431 && p.worldZ >= 3072 && p.worldZ <= 3135;
+}
+
+export function cwTankMantaReserve(mode: PvpLocationMode, postTileOffsetX: number | undefined, staggered: boolean): number {
+    return mode === 'castlewars' && postTileOffsetX === 1 && !staggered ? 12 : 0;
+}
+
+async function enterCwTeamAndPost(
+    s: Session,
+    team: 'saradomin' | 'zamorak',
+    postTile: { readonly x: number; readonly z: number; readonly level: number },
+    stop: StopFn,
+    onWaitingTick?: () => void,
+): Promise<void> {
+    const cfg = CW_TEAM_CFG[team];
+    while (!stop()) {
+        const cur = posOf(s);
+        if (inCwArena(cur) || inCwWaitingRoom(cur)) break;
+        if (!cur || d8({ x: cur.worldX, z: cur.worldZ }, CASTLE_WARS_LAND) > 25) {
+            await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, stop);
+            continue;
+        }
+        await dismissContinueDialogs(s, stop, 2);
+        // Remove any head or cape gear before Castle Wars waiting-room portal admission.
+        for (const e of s.sdk.getEquipment().filter(eq => eq.slot === 0 || eq.slot === 1)) {
+            await s.bot.unequipItem(e);
+            await waitTicks(s, 1);
+        }
+        await walkWaypoints(s, [{ x: cfg.portal.x + 1, z: cfg.portal.z, tol: 1 }], 30, stop, `cw ${team} portal`);
+        for (let attempt = 0; attempt < 60 && !stop() && !inCwWaitingRoom(posOf(s)) && !inCwArena(posOf(s)); attempt++) {
+            const loc = (s.sdk.getState()?.nearbyLocs ?? [])
+                .filter((l: any) => l.id === cfg.portal.id)
+                .sort((a: any, b: any) => d8(a, cfg.portal) - d8(b, cfg.portal))[0];
+            if (loc) {
+                const op = (loc.optionsWithIndex ?? [])[0];
+                await s.sdk.sendInteractLoc(loc.x, loc.z, loc.id, op?.opIndex ?? 1);
+            }
+            await waitUntil(s, () => inCwWaitingRoom(posOf(s)) || inCwArena(posOf(s)) || stop(), { timeoutTicks: 3 });
+        }
+    }
+
+    while (!stop() && inCwWaitingRoom(posOf(s))) {
+        onWaitingTick?.();
+        const d: any = s.sdk.getDialog();
+        if (d?.isOpen && !d.isWaiting) {
+            const yes = (d.options ?? []).find((o: any) => /yes please/i.test(o.text ?? ''));
+            await s.sdk.sendClickDialog(yes ? yes.index : 0);
+        }
+        await waitTicks(s, 1);
+    }
+
+    if (stop() || !inCwArena(posOf(s))) return;
+
+    for (let i = 0; i < 8 && !stop(); i++) {
+        const p = posOf(s);
+        if (!p || !inCwArena(p) || !cfg.inSpawn(p)) break;
+        const barrier = (s.sdk.getState()?.nearbyLocs ?? [])
+            .filter((l: any) => l.id === cfg.barrierId)
+            .sort((a: any, b: any) => d8(a, cfg.barrierLoc) - d8(b, cfg.barrierLoc))[0];
+        if (barrier) {
+            const op = (barrier.optionsWithIndex ?? [])[0];
+            await s.sdk.sendInteractLoc(barrier.x, barrier.z, barrier.id, op?.opIndex ?? 1);
+        }
+        await waitUntil(s, () => {
+            const np = posOf(s);
+            return !np || !inCwArena(np) || !cfg.inSpawn(np) || stop();
+        }, { timeoutTicks: 6 });
+    }
+
+    for (let i = 0; i < 8 && !stop(); i++) {
+        const p = posOf(s);
+        if (!p || !inCwArena(p) || p.level === 0) break;
+        if (d8({ x: p.worldX, z: p.worldZ }, cfg.ladderApproach) > 2) {
+            await walkWaypoints(s, [{ ...cfg.ladderApproach, tol: 1 }], 20, stop, `cw ${team} ladder`);
+        }
+        const lad = (s.sdk.getState()?.nearbyLocs ?? [])
+            .filter((l: any) => l.id === 4911 || l.id === 4415 || (/ladder|stair/i.test(l.name ?? '') && d8(l, cfg.ladderLoc) <= 3))
+            .sort((a: any, b: any) => d8(a, cfg.ladderLoc) - d8(b, cfg.ladderLoc))[0];
+        if (lad) {
+            const op = (lad.optionsWithIndex ?? []).find((o: any) => /climb/i.test(o.text ?? '')) ?? lad.optionsWithIndex?.[0];
+            await s.sdk.sendInteractLoc(lad.x, lad.z, lad.id, op?.opIndex ?? 1);
+        }
+        await waitUntil(s, () => {
+            const np = posOf(s);
+            return !np || !inCwArena(np) || np.level === 0 || stop();
+        }, { timeoutTicks: 6 });
+    }
+
+    const pLvl0 = posOf(s);
+    if (pLvl0 && inCwArena(pLvl0) && cfg.inCourtyard(pLvl0)) {
+        await walkWaypoints(s, [{ ...cfg.doorApproach, tol: 1 }], 25, stop, `cw ${team} maindoor`);
+        for (let i = 0; i < 4 && !stop(); i++) {
+            const shut = (s.sdk.getState()?.nearbyLocs ?? []).find(
+                (l: any) => (cfg.doorIds as readonly number[]).includes(l.id) && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text ?? '')),
+            );
+            if (!shut) break;
+            const op = shut.optionsWithIndex.find((o: any) => /^open$/i.test(o.text ?? ''));
+            await s.sdk.sendInteractLoc(shut.x, shut.z, shut.id, op?.opIndex ?? 1);
+            await waitTicks(s, 2);
+        }
+        await walkWaypoints(s, [{ ...cfg.doorOut, tol: 1 }], 15, stop, `cw ${team} door exit`);
+    }
+
+    if (inCwArena(posOf(s)) && d8({ x: posOf(s)!.worldX, z: posOf(s)!.worldZ }, postTile) > 0) {
+        await walkWaypoints(s, [{ ...postTile, tol: 0 }], 60, stop, `cw ${team} post`);
+    }
 }
 
 function readRelogCredentials(root: string, bot: string): { password: string; server: string } {
@@ -774,8 +935,12 @@ export async function runWildyPvpRelogLoop(
         cap: number;
         shouldStop: () => boolean;
         onRetireSession?: (s: Session) => void;
+        mode?: PvpLocationMode;
     },
 ): Promise<{ session: Session; totalTicks: number; swings: number }> {
+    const mode: PvpLocationMode = opts.mode ?? 'keep';
+    const postTile = mode === 'castlewars' ? CW_SPECIALIST_POST : KEEP_SPECIALIST_POST;
+    const minTankZ = mode === 'castlewars' ? 3072 : 3900;
     const root = resolve(import.meta.dir, '..');
     const creds = readRelogCredentials(root, opts.botName);
     const members = isLocalServer(creds.server) || process.env.NODE_MEMBERS === 'true' ? true : undefined;
@@ -787,6 +952,7 @@ export async function runWildyPvpRelogLoop(
 
     let totalTicks = opts.setupTicks;
     let swings = 0;
+    let emptyTankRelogs = 0;
     const lastHitSeq = new Map<string, number>();
 
     opts.onRetireSession?.(initSess);
@@ -824,7 +990,13 @@ export async function runWildyPvpRelogLoop(
                 return { session: finalSess, totalTicks, swings };
             }
 
-            if (!p0 || p0.worldZ < 3900) {
+            if (mode === 'castlewars') {
+                if (!p0 || !inCwArena(p0) || p0.level > 0 || CW_TEAM_CFG.saradomin.inCourtyard(p0)) {
+                    await enterCwTeamAndPost(sess, 'saradomin', postTile, opts.shouldStop);
+                } else if (d8({ x: p0.worldX, z: p0.worldZ }, postTile) > 0) {
+                    await walkWaypoints(sess, [{ ...postTile, tol: 0 }], 30, opts.shouldStop, 'recenter cw relog');
+                }
+            } else if (!p0 || p0.worldZ < 3900) {
                 if (!p0 || p0.worldZ < 3800) await pullArdougneLeverToWildy(sess, opts.shouldStop);
                 await walkWaypoints(sess, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 30, opts.shouldStop, 'walk keep relog');
             } else if (d8({ x: p0.worldX, z: p0.worldZ }, KEEP_SPECIALIST_POST) > 0) {
@@ -835,14 +1007,14 @@ export async function runWildyPvpRelogLoop(
                 await equipItemById(sess, 1319, opts.shouldStop, 'Rune 2h sword');
             }
 
-            let target = rankKeepRelogTanks(sess.sdk.getState()?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq)[0];
+            let target = rankKeepRelogTanks(sess.sdk.getState()?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq, postTile, minTankZ)[0];
             if (!target) {
                 await waitUntil(
                     sess,
-                    st => rankKeepRelogTanks(st?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq).length > 0 || opts.shouldStop(),
+                    st => rankKeepRelogTanks(st?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq, postTile, minTankZ).length > 0 || opts.shouldStop(),
                     { timeoutTicks: 40 },
                 );
-                target = rankKeepRelogTanks(sess.sdk.getState()?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq)[0];
+                target = rankKeepRelogTanks(sess.sdk.getState()?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq, postTile, minTankZ)[0];
             }
             if (!target) {
                 await logoutSession(sess);
@@ -850,8 +1022,12 @@ export async function runWildyPvpRelogLoop(
                 await closeWithin([sess], 5000);
                 if (rec) await Promise.race([rec.flushed, Bun.sleep(3000)]);
                 totalTicks += Math.max(0, tOut - tick0) + 1;
+                if (++emptyTankRelogs >= 10) {
+                    throw Error(`${opts.skill} relog PvP stalled: no tank at post for ${emptyTankRelogs} logins (totalTicks=${totalTicks})`);
+                }
                 continue;
             }
+            emptyTankRelogs = 0;
 
             const prayPts = sess.sdk.getState()?.prayers?.prayerPoints ?? 0;
             const prayBase = skillInfo(sess, 'Prayer').baseLevel;
@@ -894,8 +1070,7 @@ export async function runWildyPvpRelogLoop(
     throw Error(`${opts.skill} relog PvP stopped/capped at totalTicks=${totalTicks} swings=${swings}`);
 }
 
-async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
-    // Unequip worn Ring of dueling if needed, teleport to Castle Wars Chest, stock 1 Law + Manta rays, Camelot -> Lever.
+async function bankMantaRaysAtCastleWars(s: Session, stop: StopFn, needLaw: boolean): Promise<void> {
     const hasInvRing = () => s.sdk.getInventory().some(i => (DUELING_RING_IDS as readonly number[]).includes(i.id));
     if (!hasInvRing()) {
         const wornRing = s.sdk.getEquipment().find(e => (DUELING_RING_IDS as readonly number[]).includes(e.id));
@@ -911,7 +1086,7 @@ async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
     if (!s.sdk.getEquipment().some(e => (DUELING_RING_IDS as readonly number[]).includes(e.id))) {
         await withdrawExactCount(s, 2552, 1, stop, 'Ring of dueling(8)');
     }
-    if (countById(s.sdk.getInventory(), 563) < 1) {
+    if (needLaw && countById(s.sdk.getInventory(), 563) < 1) {
         await withdrawExactCount(s, 563, 1, stop, 'Law rune');
     }
     const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
@@ -920,6 +1095,11 @@ async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
     if (s.sdk.getInventory().some(i => i.id === 2552)) {
         await equipItemById(s, 2552, stop, 'Ring of dueling(8)');
     }
+}
+
+async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
+    // Unequip worn Ring of dueling if needed, stock 1 Law + Manta rays at Castle Wars, Camelot -> Lever.
+    await bankMantaRaysAtCastleWars(s, stop, true);
 
     for (let attempt = 0; attempt < 5 && !stop(); attempt++) {
         const p = posOf(s);
@@ -965,8 +1145,10 @@ export async function runCompanionRole(
         postTileOffsetX?: number;
         stopFile?: string;
         cap: number;
+        mode?: PvpLocationMode;
     },
 ): Promise<{ ok: boolean; detail: string }> {
+    const mode: PvpLocationMode = opts.mode ?? 'keep';
     const root = resolve(import.meta.dir, '..');
     const serverHost = readServerHost(root, s.name);
     const t0 = s.tick();
@@ -978,6 +1160,14 @@ export async function runCompanionRole(
 
     await waitUntil(s, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 });
     await setAutoRetaliate(s, false);
+
+    const postTile = mode === 'castlewars'
+        ? (opts.postTileOffsetX === 0 ? CW_TANK_POSTS[0] : CW_TANK_POSTS[1])
+        : (opts.postTileOffsetX === 0
+            ? { x: 3154, z: 3924, level: 0 }
+            : opts.postTileOffsetX === 1
+                ? { x: 3155, z: 3923, level: 0 }
+                : { x: 3154, z: 3923, level: 0 });
 
     if (opts.role === 'supplier' || opts.role === 'supplier-tank') {
         const kit = opts.kit!;
@@ -1006,52 +1196,67 @@ export async function runCompanionRole(
         if (opts.role === 'supplier') {
             return { ok: true, detail: `supplied ${opts.specialistName} in ${s.tick() - t0} ticks` };
         }
-        await bankAndReturnToKeep(s, stop);
+        if (mode === 'castlewars') {
+            await bankMantaRaysAtCastleWars(s, stop, false);
+            await enterCwTeamAndPost(s, 'zamorak', postTile, stop);
+        } else {
+            await bankAndReturnToKeep(s, stop);
+        }
     } else {
         const p = posOf(s)!;
         console.log('COMPANION_READY ' + JSON.stringify({ role: opts.role, name: s.name, at: { x: p.worldX, z: p.worldZ, level: p.level } }));
     }
 
-    // Specialist stands at (3155,3924); tanks occupy (3154,3924), (3155,3923), and (3154,3923), all d8=1 from specialist.
-    const postTile = opts.postTileOffsetX === 0
-        ? { x: 3154, z: 3924, level: 0 }
-        : opts.postTileOffsetX === 1
-            ? { x: 3155, z: 3923, level: 0 }
-            : { x: 3154, z: 3923, level: 0 };
     const specialistRe = exactNameRe(opts.specialistName);
     let lastEatTick = -10;
+    let reachedCwPost = false;
+    let cwStaggered = false;
     try {
         while (!stop()) {
             if (activeContinueDialog(s)) void s.sdk.sendClickDialog(0);
             const p = posOf(s);
+            if (reachedCwPost && mode === 'castlewars' && opts.postTileOffsetX === 1 && (p?.isDead || CW_TEAM_CFG.zamorak.inSpawn(p ?? { level: 0, worldX: 0, worldZ: 0 }))) {
+                cwStaggered = true;
+            }
             if (!p || p.isDead) {
                 await waitTicks(s, 2);
                 continue;
             }
-            if (p.worldZ < 3800) {
+            if (mode === 'castlewars') {
+                if (!inCwArena(p) || CW_TEAM_CFG.zamorak.inSpawn(p) || p.level > 0 || CW_TEAM_CFG.zamorak.inCourtyard(p)) {
+                    await setAutoRetaliate(s, false);
+                    await enterCwTeamAndPost(s, 'zamorak', postTile, stop);
+                    continue;
+                }
+            } else if (p.worldZ < 3800) {
                 await setAutoRetaliate(s, false);
                 await bankAndReturnToKeep(s, stop);
                 continue;
             }
             if (d8({ x: p.worldX, z: p.worldZ }, postTile) > 0) {
                 await walkWaypoints(s, [{ x: postTile.x, z: postTile.z, tol: 0 }], 20, stop, 'tank step to post');
+            } else if (mode === 'castlewars') {
+                reachedCwPost = true;
             }
             const mantaCount = countById(s.sdk.getInventory(), 391);
             const hp = skillInfo(s, 'Hitpoints').level;
-            const otherTanksAtPost = (s.sdk.getState()?.nearbyPlayers ?? []).filter((np: any) =>
-                !specialistRe.test(np.name ?? '') &&
-                d8({ x: np.x ?? np.worldX ?? 0, z: np.z ?? np.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 1 &&
-                (np.hp === undefined || np.hp === null || np.hp > 0),
-            ).length;
-            if (hp > 0 && hp <= 77 && mantaCount > 0 && s.tick() - lastEatTick >= 3) {
+            const mantaReserve = cwTankMantaReserve(mode, opts.postTileOffsetX, cwStaggered);
+            if (hp > 0 && hp <= 77 && mantaCount > mantaReserve && s.tick() - lastEatTick >= 3) {
                 const food = s.sdk.getInventory().find(i => i.id === 391);
                 if (food) {
                     lastEatTick = s.tick();
                     await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
                 }
             }
-            if ((mantaCount <= 10 && otherTanksAtPost >= 2) || (mantaCount <= 5 && otherTanksAtPost >= 1) || mantaCount <= 1) {
-                if (await pullKeepLeverOutAndRebank(s, stop)) continue;
+            if (mode === 'keep') {
+                const otherTanksAtPost = (s.sdk.getState()?.nearbyPlayers ?? []).filter((np: any) =>
+                    !specialistRe.test(np.name ?? '') &&
+                    d8({ x: np.x ?? np.worldX ?? 0, z: np.z ?? np.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 1 &&
+                    (np.hp === undefined || np.hp === null || np.hp > 0),
+                ).length;
+                if ((mantaCount <= 10 && otherTanksAtPost >= 2) || (mantaCount <= 5 && otherTanksAtPost >= 1) || mantaCount <= 1) {
+                    if (await pullKeepLeverOutAndRebank(s, stop)) continue;
+                }
             }
             await waitTicks(s, 1);
         }
@@ -1419,10 +1624,12 @@ export async function runMeleePvpSpecialist(
         cap: number;
         t0: number;
         stop: StopFn;
+        mode?: PvpLocationMode;
         onRetireSession?: (sess: Session) => void;
         runWaterfallFn?: (o: { session: Session; stop: StopFn; cap: number; food: { id: number; heal: number; count: number; eatAt: number; crossAt: number }; mighty: boolean; exitFalls: boolean; keepAlive: boolean; protectMelee?: boolean; tombHoldIds?: readonly number[]; looseRailing?: boolean; superEnergy?: boolean }) => Promise<unknown>;
     },
 ): Promise<{ session: Session; message: string }> {
+    const mode: PvpLocationMode = opts.mode ?? parsePvpLocationMode();
     const skill = opts.board === 'strength' ? 'Strength' : 'Defence';
     const kit = KIT_BY_BOARD[opts.board];
     const target = SPECIALIST_TARGETS[opts.board];
@@ -1502,28 +1709,35 @@ export async function runMeleePvpSpecialist(
     await setPrayerState(s, PROTECT_MELEE_INDEX, false, opts.stop);
     milestone('waterfall', `atk=${skillInfo(s, 'Attack').baseLevel} str=${skillInfo(s, 'Strength').baseLevel} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
-    // Drop Waterfall rewards and equip Keep melee gear while running to Ardougne lever.
+    // Drop Waterfall rewards and equip melee gear while moving to the PvP post.
     const postWaterfallJunk = new Set<number>([1601, 2357, 299, 297, 298, 292, 293, 294, 295, 296, 229, 954]);
     let preEquippedWait = -10;
-    await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall exit to ardougne lever', {
-        onTickExtra: () => {
-            ensureRunAndEnergy();
-            if (s.tick() - preEquippedWait >= 2) {
-                const gear = s.sdk.getInventory().find(i => i.id === 1319);
-                if (gear) {
-                    const wieldOp = (gear.optionsWithIndex ?? []).find((o: any) => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
-                    preEquippedWait = s.tick();
-                    void s.direct({ type: 'useInventoryItem', slot: gear.slot, optionIndex: wieldOp, reason: 'SDK' });
-                }
+    const equipAndDropPostWaterfall = () => {
+        ensureRunAndEnergy();
+        if (s.tick() - preEquippedWait >= 2) {
+            const gear = s.sdk.getInventory().find(i => i.id === 1319);
+            if (gear) {
+                const wieldOp = (gear.optionsWithIndex ?? []).find((o: any) => /wield|wear|equip/i.test(o.text ?? ''))?.opIndex ?? 2;
+                preEquippedWait = s.tick();
+                void s.direct({ type: 'useInventoryItem', slot: gear.slot, optionIndex: wieldOp, reason: 'SDK' });
             }
-            const junk = s.sdk.getInventory().find(i => postWaterfallJunk.has(i.id));
-            if (junk) void s.direct({ type: 'dropItem', slot: junk.slot, reason: 'SDK' });
-        },
-    });
-    await pullArdougneLeverToWildy(s, opts.stop);
-    milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
+        }
+        const junk = s.sdk.getInventory().find(i => postWaterfallJunk.has(i.id));
+        if (junk) void s.direct({ type: 'dropItem', slot: junk.slot, reason: 'SDK' });
+    };
+    if (mode === 'castlewars') {
+        await rubRingOfDueling(s, /castle wars/i, CASTLE_WARS_LAND, opts.stop);
+        await enterCwTeamAndPost(s, 'saradomin', CW_SPECIALIST_POST, opts.stop, equipAndDropPostWaterfall);
+        milestone('castlewars_post', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
+    } else {
+        await walkWaypoints(s, [{ x: ARDY_LEVER.x, z: ARDY_LEVER.z, tol: 1 }], 120, opts.stop, 'waterfall exit to ardougne lever', {
+            onTickExtra: equipAndDropPostWaterfall,
+        });
+        await pullArdougneLeverToWildy(s, opts.stop);
+        milestone('wildy_keep', `at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
 
-    await walkWaypoints(s, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 30, opts.stop, 'step to keep post');
+        await walkWaypoints(s, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 30, opts.stop, 'step to keep post');
+    }
     await setAutoRetaliate(s, false);
     await equipItemById(s, 1319, opts.stop, 'Rune 2h sword');
     await equipFirstAvailableId(s, [1725, 1731], opts.stop, 'Amulet of strength/power');
@@ -1537,6 +1751,7 @@ export async function runMeleePvpSpecialist(
         setupTicks: elapsed(),
         cap: opts.cap,
         shouldStop: opts.stop,
+        mode,
         onRetireSession: opts.onRetireSession,
     });
 

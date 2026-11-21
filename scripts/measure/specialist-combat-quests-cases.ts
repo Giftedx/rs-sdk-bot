@@ -13,8 +13,10 @@ import {
     KIT_BY_BOARD,
     SPECIALIST_TARGETS,
     STRENGTH_SPECIALIST_KIT,
+    parsePvpLocationMode,
     runCompanionRole,
     type KitSpecItem,
+    type PvpLocationMode,
 } from '../combat-quest-specialists';
 import type { BenchCase } from './aio-bench-cases';
 
@@ -84,6 +86,16 @@ export function tankPostPresetConfig(offsetX = 0): SaveConfig {
     };
 }
 
+export function tankCwPostPresetConfig(): SaveConfig {
+    return {
+        position: { x: 2440, z: 3088, level: 0 },
+        skills: { ...TANK_SKILLS },
+        inventory: Array.from({ length: 28 }, () => ({ id: 391, count: 1 })),
+        equipment: [{ id: 1381, count: 1, slot: 3 }, { id: 2552, count: 1, slot: 12 }],
+        bank: [...TANK_BANK],
+    };
+}
+
 const SPECIALIST_SCRIPT: Readonly<Record<'hp' | 'strength' | 'defence', string>> = {
     hp: 'scripts/hp-specialist.ts',
     strength: 'scripts/strength-specialist.ts',
@@ -135,6 +147,32 @@ export const SPECIALIST_COMBAT_QUESTS_CASES: BenchCase[] = [
         timeoutMs: 900_000,
         pass: s => ok(s) && /defence=99\b/.test(s) && observedTicks(s) <= SPECIALIST_TARGETS.defence.targetTicks && loggedOutOnce(s),
     },
+    {
+        key: 'extra:specialist-strength-cw',
+        script: 'scripts/measure/specialist-combat-quests-cases.ts',
+        preset: 'fresh_lumbridge',
+        presetConfig: {},
+        scriptArgs: ['--mode=castlewars', 'strength', '{bot:s}', '{bot:t}'],
+        companions: [
+            { suffix: 's', preset: 'fresh_lumbridge', presetConfig: tankSupplierPresetConfig(STRENGTH_SPECIALIST_KIT) },
+            { suffix: 't', preset: 'fresh_lumbridge', presetConfig: tankCwPostPresetConfig() },
+        ],
+        timeoutMs: 900_000,
+        pass: s => ok(s) && /strength=99\b/.test(s) && observedTicks(s) <= SPECIALIST_TARGETS.strength.targetTicks && loggedOutOnce(s),
+    },
+    {
+        key: 'extra:specialist-defence-cw',
+        script: 'scripts/measure/specialist-combat-quests-cases.ts',
+        preset: 'fresh_lumbridge',
+        presetConfig: {},
+        scriptArgs: ['--mode=castlewars', 'defence', '{bot:s}', '{bot:t}'],
+        companions: [
+            { suffix: 's', preset: 'fresh_lumbridge', presetConfig: tankSupplierPresetConfig(DEFENCE_SPECIALIST_KIT) },
+            { suffix: 't', preset: 'fresh_lumbridge', presetConfig: tankCwPostPresetConfig() },
+        ],
+        timeoutMs: 900_000,
+        pass: s => ok(s) && /defence=99\b/.test(s) && observedTicks(s) <= SPECIALIST_TARGETS.defence.targetTicks && loggedOutOnce(s),
+    },
 ];
 
 async function pumpPrefixed(
@@ -163,13 +201,14 @@ async function pumpPrefixed(
 }
 
 async function runCompanionMain(args: string[]): Promise<void> {
-    const [account, specialist, roleRaw, boardRaw, offsetRaw, stopFile] = args;
+    const pvpMode = parsePvpLocationMode(args);
+    const [account, specialist, roleRaw, boardRaw, offsetRaw, stopFile] = args.filter(a => !a.startsWith('-'));
     if (!account || !specialist || !roleRaw || !boardRaw) {
         throw Error('usage: --companion <account> <specialist> <supplier|supplier-tank|tank> <hitpoints|strength|defence> <offsetX> <stopFile>');
     }
     const role = roleRaw as 'supplier' | 'supplier-tank' | 'tank';
     const board = boardRaw as 'hitpoints' | 'strength' | 'defence';
-    const s = await openBot(account);
+    const s = await openBot(account, pvpMode === 'castlewars' ? { continueAfterDeath: true } : undefined);
     try {
         const res = await runCompanionRole(s, {
             role,
@@ -179,6 +218,7 @@ async function runCompanionMain(args: string[]): Promise<void> {
             postTileOffsetX: Number(offsetRaw ?? 0),
             stopFile,
             cap: 20000,
+            mode: pvpMode,
         });
         await finish([s], res.ok, res.detail);
     } catch (e) {
@@ -187,9 +227,10 @@ async function runCompanionMain(args: string[]): Promise<void> {
 }
 
 async function runCoordinatorMain(args: string[]): Promise<void> {
-    const [bot, modeRaw, supplier, ...tanks] = args;
+    const pvpMode = parsePvpLocationMode(args);
+    const [bot, modeRaw, supplier, ...tanks] = args.filter(a => !a.startsWith('-'));
     if (!bot || !modeRaw || !supplier || !(modeRaw in SPECIALIST_SCRIPT)) {
-        throw Error('usage: specialist-combat-quests-cases.ts <bot> <hp|strength|defence> <supplier> [tank...]');
+        throw Error('usage: specialist-combat-quests-cases.ts [--mode=castlewars] <bot> <hp|strength|defence> <supplier> [tank...]');
     }
     const mode = modeRaw as 'hp' | 'strength' | 'defence';
     const board = SPECIALIST_BOARD[mode];
@@ -216,6 +257,7 @@ async function runCoordinatorMain(args: string[]): Promise<void> {
     const companionEnv = {
         ...process.env,
         ...guardDisabledEnv,
+        MODE: pvpMode,
         STALL_TICKS: '0',
         DEMO_OK: '',
         COORDINATOR_RUN_ID: '',
@@ -288,6 +330,7 @@ async function runCoordinatorMain(args: string[]): Promise<void> {
             env: {
                 ...process.env,
                 ...guardDisabledEnv,
+                MODE: pvpMode,
                 PRACTICE_SUPPLIER: supplier,
                 PRACTICE_TANKS: tankEnv,
                 DEMO_OK: '',
@@ -332,10 +375,11 @@ const REHEARSE_GUARD_ENV: Record<string, string> = {
 
 export function buildCombatSpecialistRehearsalSegment(
     accountRaw: string,
-    opts?: { planTicks?: number },
+    opts?: { planTicks?: number; mode?: PvpLocationMode },
 ) {
     const key = accountRaw.trim().toLowerCase();
     const override = opts?.planTicks;
+    const pvpMode: PvpLocationMode = opts?.mode ?? parsePvpLocationMode([], process.env.MODE);
     if (key === 'fullblooded') {
         return {
             specialist: 'FullBlooded',
@@ -360,38 +404,54 @@ export function buildCombatSpecialistRehearsalSegment(
         const skill = isStr ? 'Strength' : 'Defence';
         const cap = isStr ? '6000' : '7500';
         const kit = isStr ? STRENGTH_SPECIALIST_KIT : DEFENCE_SPECIALIST_KIT;
-        const planTicks = override ?? (isStr ? 2230 : 2838);
+        const planTicks = override ?? (pvpMode === 'castlewars' ? (isStr ? 2650 : 3250) : (isStr ? 2230 : 2838));
+        const modeEnv: Record<string, string> = pvpMode === 'castlewars' ? { MODE: 'castlewars' } : {};
         return {
             specialist: isStr ? 'BigSwinger' : 'RockSolid',
             id: isStr ? 'bigswinger-strength' : 'rocksolid-defence',
             start: { fresh: true as const },
             script: isStr ? 'scripts/strength-specialist.ts' : 'scripts/defence-specialist.ts',
-            env: { CAP: cap },
-            suppliers: [
-                {
-                    script: 'scripts/measure/specialist-combat-quests-cases.ts',
-                    args: ['--companion', '{ACTOR}', 'supplier-tank', board, '1'],
-                    env: { ...REHEARSE_GUARD_ENV },
-                    save: tankSupplierPresetConfig(kit),
-                },
-                {
-                    script: 'scripts/measure/specialist-combat-quests-cases.ts',
-                    args: ['--companion', '{ACTOR}', 'tank', board, '0'],
-                    env: { ...REHEARSE_GUARD_ENV },
-                    save: tankPostPresetConfig(0),
-                },
-                {
-                    script: 'scripts/measure/specialist-combat-quests-cases.ts',
-                    args: ['--companion', '{ACTOR}', 'tank', board, '2'],
-                    env: { ...REHEARSE_GUARD_ENV },
-                    save: tankPostPresetConfig(2),
-                },
-            ],
+            env: { CAP: cap, ...modeEnv },
+            suppliers: pvpMode === 'castlewars'
+                ? [
+                    {
+                        script: 'scripts/measure/specialist-combat-quests-cases.ts',
+                        args: ['--companion', '{ACTOR}', 'supplier-tank', board, '1'],
+                        env: { ...REHEARSE_GUARD_ENV, ...modeEnv },
+                        save: tankSupplierPresetConfig(kit),
+                    },
+                    {
+                        script: 'scripts/measure/specialist-combat-quests-cases.ts',
+                        args: ['--companion', '{ACTOR}', 'tank', board, '0'],
+                        env: { ...REHEARSE_GUARD_ENV, ...modeEnv },
+                        save: tankCwPostPresetConfig(),
+                    },
+                ]
+                : [
+                    {
+                        script: 'scripts/measure/specialist-combat-quests-cases.ts',
+                        args: ['--companion', '{ACTOR}', 'supplier-tank', board, '1'],
+                        env: { ...REHEARSE_GUARD_ENV },
+                        save: tankSupplierPresetConfig(kit),
+                    },
+                    {
+                        script: 'scripts/measure/specialist-combat-quests-cases.ts',
+                        args: ['--companion', '{ACTOR}', 'tank', board, '0'],
+                        env: { ...REHEARSE_GUARD_ENV },
+                        save: tankPostPresetConfig(0),
+                    },
+                    {
+                        script: 'scripts/measure/specialist-combat-quests-cases.ts',
+                        args: ['--companion', '{ACTOR}', 'tank', board, '2'],
+                        env: { ...REHEARSE_GUARD_ENV },
+                        save: tankPostPresetConfig(2),
+                    },
+                ],
             plan: {
                 ticks: planTicks,
-                source: isStr
-                    ? 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=3222t vs #1 3288t)'
-                    : 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=4236t vs #1 4323t)',
+                source: pvpMode === 'castlewars'
+                    ? (isStr ? 'Waterfall + Castle Wars 1-tick Rune 2h relog PvP (<=3222t vs #1 3288t)' : 'Waterfall + Castle Wars 1-tick Rune 2h relog PvP (<=4236t vs #1 4323t)')
+                    : (isStr ? 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=3222t vs #1 3288t)' : 'Waterfall + 1-tick Rune 2h relog Keep PvP (<=4236t vs #1 4323t)'),
             },
             expect: { skills: { [skill]: 99 } },
             timeoutMs: 900_000,
@@ -403,11 +463,16 @@ export function buildCombatSpecialistRehearsalSegment(
 async function runRehearseMain(args: string[]): Promise<void> {
     const accounts: string[] = [];
     let planTicks: number | undefined;
+    let modeArg: string | undefined;
     let runs = 1;
     for (let i = 0; i < args.length; i++) {
         const a = args[i]!;
         if (a === '--all') {
             accounts.push('FullBlooded', 'BigSwinger', 'RockSolid');
+        } else if (a.startsWith('--mode=')) {
+            modeArg = a;
+        } else if (a === '--mode') {
+            modeArg = `--mode=${args[++i] ?? 'keep'}`;
         } else if (a.startsWith('--plan-ticks=')) {
             planTicks = Number(a.slice('--plan-ticks='.length));
         } else if (a === '--plan-ticks') {
@@ -420,7 +485,8 @@ async function runRehearseMain(args: string[]): Promise<void> {
             accounts.push(a);
         }
     }
-    if (accounts.length === 0) throw Error('usage: specialist-combat-quests-cases.ts --rehearse <FullBlooded|BigSwinger|RockSolid|--all> [--plan-ticks=<n>] [--runs=<n>]');
+    const mode = parsePvpLocationMode(modeArg ? [modeArg] : []);
+    if (accounts.length === 0) throw Error('usage: specialist-combat-quests-cases.ts --rehearse <FullBlooded|BigSwinger|RockSolid|--all> [--mode=keep|castlewars] [--plan-ticks=<n>] [--runs=<n>]');
 
     const engineDir = join(ROOT, 'vendor', 'rs-sdk', 'server', 'engine');
     if (!existsSync(join(engineDir, 'data', 'pack', 'server', 'script.dat'))) {
@@ -432,7 +498,7 @@ async function runRehearseMain(args: string[]): Promise<void> {
     mkdirSync(baseOut, { recursive: true });
     let allOk = true;
     for (const acc of accounts) {
-        const seg = buildCombatSpecialistRehearsalSegment(acc, { planTicks });
+        const seg = buildCombatSpecialistRehearsalSegment(acc, { planTicks, mode });
         const segFile = join(baseOut, `${seg.specialist.toLowerCase()}.segment.json`);
         writeFileSync(segFile, JSON.stringify(seg, null, 2) + '\n');
         for (let runIdx = 1; runIdx <= runs; runIdx++) {

@@ -4,11 +4,13 @@ import { join, resolve } from 'node:path';
 import { finish, openBot } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { isLocalServer } from '../packages/core/src/localserver';
-import { configureSpecialistGuardEnv, readServerHost, runMeleePvpSpecialist, type StopFn } from './combat-quest-specialists';
+import { configureSpecialistGuardEnv, parsePvpLocationMode, readServerHost, runMeleePvpSpecialist, type StopFn } from './combat-quest-specialists';
 
 async function main(): Promise<void> {
-    const bot = process.argv[2] ?? '';
-    const capArg = process.argv.slice(3).find(a => /^\d+$/.test(a));
+    const mode = parsePvpLocationMode();
+    const positional = process.argv.slice(2).filter(a => !a.startsWith('-'));
+    const bot = positional[0] ?? '';
+    const capArg = positional.slice(1).find(a => /^\d+$/.test(a));
     const CAP = Number(capArg ?? process.env.CAP ?? 6000);
     if (!bot) throw Error('usage: strength-specialist.ts <bot> [cap]');
     if (!Number.isSafeInteger(CAP) || CAP < 500 || CAP > 20000) throw Error(`invalid CAP: ${CAP}`);
@@ -59,6 +61,7 @@ async function main(): Promise<void> {
             cap: CAP,
             t0,
             stop,
+            mode,
             onRetireSession: sess => retired.add(sess),
         });
         await finish([res.session], true, res.message);
