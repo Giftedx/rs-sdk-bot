@@ -1,0 +1,29 @@
+{
+ "id": "1795239936632-shaftsinker-unsheathed-b0ab15c420d8bf5d",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftsinker",
+ "to": "Unsheathed",
+ "item": "Law rune",
+ "count": 60,
+ "start": 1795239936632,
+ "end": 1795241436632,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Vial of water",
+   "count": 20
+  }
+ ],
+ "takerWaits": true
+}

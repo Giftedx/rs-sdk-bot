@@ -1,0 +1,45 @@
+{
+ "id": "1795239936324-earlyshooter-woodenstaff-3aa292c51fd51a87",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Earlyshooter",
+ "to": "Woodenstaff",
+ "item": "Dragon bones",
+ "count": 11,
+ "start": 1795239936324,
+ "end": 1795241436324,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Death rune",
+   "count": 46
+  },
+  {
+   "item": "Staff of fire",
+   "count": 1
+  },
+  {
+   "item": "Law rune",
+   "count": 10
+  },
+  {
+   "item": "Shark",
+   "count": 20
+  },
+  {
+   "item": "Cheese",
+   "count": 1
+  }
+ ],
+ "takerWaits": true
+}
