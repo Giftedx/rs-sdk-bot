@@ -118,7 +118,7 @@ export const TOURIST_TRADE_2: readonly SupplyEntry[] = [
     { id: ITEMS.desertRobe, name: 'Desert robe', count: 1 },
     { id: ITEMS.desertBoots, name: 'Desert boots', count: 1 },
     { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 1 },
-    { id: ITEMS.pineapplePizza, name: 'Pineapple pizza', count: 2 },
+    { id: ITEMS.pineapplePizza, name: 'Pineapple pizza', count: 1 },
 ];
 
 export const TOURIST_TRADE_2B: readonly SupplyEntry[] = [
@@ -1121,16 +1121,19 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             await q.walk('to gate', [{ x: 3272, z: 3029, tol: 0 }]);
             await q.step('gate in', () => q.opLoc(loc(GATE), 1), () => x() >= 3274, 12, 4);
             await q.waitTicks(2);
+            if (q.has(ITEMS.slaveShirt) || q.has(ITEMS.slaveRobe) || q.has(ITEMS.slaveBoots)) await slaveClothes();
             await ensureFullPrayer();
         };
         const gateOut = async () => {
             for (const id of [ITEMS.slaveShirt, ITEMS.slaveRobe, ITEMS.slaveBoots]) {
                 for (let t = 0; t < 12 && worn(id); t++) await removeWornItem(s, id);
             }
-            if (!inCamp()) return;
-            await walkCamp('to gate inside', [{ x: 3274, z: 3029, tol: 0 }]);
-            await q.step('gate out', () => q.opLoc(loc(GATE), 1), () => x() <= 3273, 12, 4);
-            await q.waitTicks(2);
+            if (inCamp()) {
+                await walkCamp('to gate inside', [{ x: 3274, z: 3029, tol: 0 }]);
+                await q.step('gate out', () => q.opLoc(loc(GATE), 1), () => x() <= 3273, 12, 4);
+                await q.waitTicks(2);
+            }
+            if (!inCamp() && x() < 3274) await wearItem(s, ITEMS.fireStaff);
         };
         const slaveClothes = async () => {
             for (const id of [ITEMS.slaveShirt, ITEMS.slaveRobe, ITEMS.slaveBoots]) {
@@ -1296,7 +1299,6 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await gateOut();
 
         await maintainEnergy(s, 50);
-        console.log(`PRE_SHABIM inv=${invOf(s).length} ids=[${invOf(s).map(i => `${i.id}x${i.count}`).join(',')}] worn=[${wornOf(s).map(w => w.id).join(',')}]`);
         await shabim('shabim key', [/looking for a pineapple/i, /yes, i'm interested/i, /lost the key/i], () => q.has(ITEMS.bedKey));
         q.milestone(11);
         onHalfway?.();
@@ -1327,9 +1329,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             await q.talk('siad', /^captain siad$/i, [/wanted to have a chat/i, /you seem to have a lot of books/i, /interested in sailing/i, /cut of your jib/i], checkSiadDistracted, { x: 3291, z: 3032 }, 60, i > 0);
             if (i > 0) await closeDlg();
             const spot0 = q.msgCount(/spots you before you manage/i);
-            console.log(`PRE_CHEST try=${i} inv=${invOf(s).length} bedKey=${q.has(ITEMS.bedKey)} distracted=${checkSiadDistracted()}`);
             await locTalk('chest', () => { const c = loc(CHEST); return q.opLoc(c, q.opIndex(c, /open/i)); }, [], () => q.has(ITEMS.plans) || q.msgCount(/spots you before you manage/i) > spot0, 2);
-            console.log(`POST_CHEST try=${i} inv=${invOf(s).length} plans=${q.has(ITEMS.plans)} spot=${q.msgCount(/spots you before you manage/i) - spot0}`);
         }
         if (!q.has(ITEMS.plans)) await q.fail('no plans');
         await q.walk('to ladder top', [{ x: LADDER_TOP.x, z: LADDER_TOP.z - 1, tol: 0 }]);
