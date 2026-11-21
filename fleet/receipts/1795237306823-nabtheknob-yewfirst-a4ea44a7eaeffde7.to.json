@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795237306823-nabtheknob-yewfirst-a4ea44a7eaeffde7",
+ "account": "YewFirst",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 4697,
+ "claim": "ce9e6cc3-572d-4841-9e4e-9226930c0b85",
+ "count": 0,
+ "ok": false,
+ "at": 1795237382530,
+ "detail": "trade claimed"
+}

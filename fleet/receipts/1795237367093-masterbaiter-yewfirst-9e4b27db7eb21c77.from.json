@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795237367093-masterbaiter-yewfirst-9e4b27db7eb21c77",
+ "account": "Masterbaiter",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Feather",
+ "requested": 3703,
+ "claim": "bc175ed5-e641-4ea7-a1f1-89a37aefa869",
+ "count": 0,
+ "ok": false,
+ "at": 1795237376582,
+ "detail": "trade claimed"
+}
