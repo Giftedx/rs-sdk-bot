@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795239557228-packhorse-unsheathed-c2aa3d15e8207a00",
+ "account": "Packhorse",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 1,
+ "claim": "bd7ce114-260e-49aa-bc64-b9f68de6b691",
+ "count": 0,
+ "ok": false,
+ "at": 1795239795503,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Leather gloves",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Logs",
+   "requested": 6,
+   "count": 0
+  }
+ ]
+}
