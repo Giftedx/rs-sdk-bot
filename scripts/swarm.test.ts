@@ -888,7 +888,7 @@ test('a run another job of the account started is foreign to a job that is off o
     expect(foreignRun(planned, planned[0]!, { revision: 'changed-mission' })).toBe(false);
 });
 
-import { SWARM_STOP, clearSwarmStop, swarmWroteStop, standingRetryable, standingRetryDue, supplyExhaustedResult, writeSwarmStop, runningJobState } from './swarm';
+import { SWARM_STOP, clearSwarmStop, swarmWroteStop, standingEndRetryable, standingRetryable, standingRetryDue, supplyExhaustedResult, writeSwarmStop, runningJobState } from './swarm';
 
 for(const [enabled,stopAll,label] of [[false,false,'disabled job'],[true,true,'global stop']] as const){
     test(`a running ${label} preserves the owner's pause through automatic resume`,()=>{
@@ -977,6 +977,17 @@ test('a finite standing job keeps admission but opts out of standing retries', (
         expect(standingRetryable(reason,'RESULT fail unfinished order',false)).toBe(false);
     }
     for(const value of ['false',0,null])expect(parseJob({...job,standingRetry:value} as unknown as Job)).toEqual({error:'bad standingRetry'});
+});
+
+test('standingEndRetryable allows a new standing mission to clear a non-supply-exhausted stopped end', () => {
+    const finiteJob = { standingRetry: false, env: {} };
+    expect(standingEndRetryable({ reason: 'stopped after 1 runs', revision: 'old-rev' }, finiteJob, 'old-rev', 'ok fleet-trade x')).toBe(false);
+    expect(standingEndRetryable({ reason: 'stopped after 1 runs' }, finiteJob, 'new-rev', 'ok fleet-trade x')).toBe(false);
+    expect(standingEndRetryable({ reason: 'stopped after 1 runs', revision: 'old-rev' }, finiteJob, 'new-rev', 'ok fleet-trade x')).toBe(true);
+    expect(standingEndRetryable({ reason: 'stopped after 1 runs', revision: 'old-rev' }, finiteJob, 'new-rev', 'fail no food')).toBe(false);
+    expect(standingEndRetryable({ reason: 'stopped after 1 runs', revision: 'old-rev' }, finiteJob, 'new-rev')).toBe(false);
+    expect(standingEndRetryable({ reason: 'blocked after 1 runs', revision: 'old-rev' }, finiteJob, 'new-rev', 'fail x')).toBe(false);
+    expect(standingEndRetryable({ reason: 'died after 1 runs', revision: 'old-rev' }, finiteJob, 'new-rev', 'fail died')).toBe(false);
 });
 
 

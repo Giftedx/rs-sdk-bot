@@ -23,7 +23,7 @@ import { createHash } from 'node:crypto';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { fleetStatusRows, readSnapshotFiles, type SnapshotFile } from '../packages/core/src/fleet-snapshots';
 import { publishedSideHold } from '../packages/core/src/fleet-side-card';
-import { START_BUDGET_GB, activeExternalLive, clearSwarmStop, pendingStartupCount, swarmWroteStop } from './swarm';
+import { LIVE_SERVER, START_BUDGET_GB, activeExternalLive, clearSwarmStop, pendingStartupCount, standingRetryable, swarmWroteStop } from './swarm';
 import { spawnSyncTimed } from '../packages/practice/src/proc';
 import { STABLE_CAUSES, unplacedCause, type RefusalCause } from '../packages/core/src/order-refusal';
 import { freemem } from 'node:os';
@@ -340,11 +340,10 @@ export function readSwarmEnded(file: string): Map<string, EndedRecord> {
     }
     return out;
 }
-// The accounts whose last swarm run ended `stopped` and that run nothing now. The swarm starts no job of such an account
-// again, a new mission included (scripts/swarm.ts startable): a person or a disable-enable of the job clears the end. A
-// planner job given to one only holds a bot slot and a place that no bot uses, so the planner leaves these accounts out.
-export function stoppedAccounts(ended: ReadonlyMap<string, { reason?: string }>, active: ReadonlySet<string>): Set<string> {
-    return new Set([...ended].filter(([a, r]) => !active.has(a) && /^stopped\b/.test(r.reason ?? '')).map(([a]) => a));
+// Offline accounts whose stopped end is not cleared by a standing retry: missing or supply-exhausted ends stay excluded,
+// while a controller stop with a live non-supply-exhausted result resumes through the swarm's standing retry rule.
+export function stoppedAccounts(ended: ReadonlyMap<string, { reason?: string }>, active: ReadonlySet<string>, statusResult?: (accountLower: string) => string | undefined): Set<string> {
+    return new Set([...ended].filter(([a, r]) => !active.has(a) && /^stopped\b/.test(r.reason ?? '') && !standingRetryable(r.reason ?? '', statusResult?.(a))).map(([a]) => a));
 }
 export function isJobEnded(assigned: { at?: number } | undefined, status?: JobRunStatus): boolean {
     if (!status || status.active || !status.ended) return false;
@@ -723,7 +722,6 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     for (const [acctLower, rec] of endedAccounts) {
         if (!activeAccounts.has(acctLower) && /^died\b/.test(rec.reason ?? '')) diedAccounts.add(acctLower);
     }
-    const stoppedEnds = stoppedAccounts(endedAccounts, activeAccounts);
     const { paused, swarmStopped } = pauses(new Map(listedNames.flatMap(n => { const t = stopText(n); return t === undefined ? [] : [[n, t] as const]; })));
     const queue=readJson(join(prac,'coordinator/state.json'),null);
     if(swarm.coordination?.enabled&&(!queue||queue.version!==1||!Array.isArray(queue.tasks)))return['AUTOPILOT hold: owning coordinator queue is unavailable'];
@@ -804,6 +802,12 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     const published = readSnapshotFiles(join(fleetDir, 'snapshots'));
     // One read of each status file for the whole pass: the account list, the donors, the stock and the notes ask for it about 8 times each.
     const statusByName = new Map(statusFiles.map(f => [f.toLowerCase(), f] as const)), observedCache = new Map<string, ReturnType<typeof observedAccount>>();
+    const localResult = (acctLower: string): string | undefined => {
+        const file = statusByName.get(`${acctLower}.json`);
+        const status = file ? readJson(join(statusDir, file), null) : null;
+        return status?.server === LIVE_SERVER && typeof status?.result === 'string' ? status.result : undefined;
+    };
+    const stoppedEnds = stoppedAccounts(endedAccounts, activeAccounts, localResult);
     const observed = (n: string) => {
         const lower = n.toLowerCase();
         if (!observedCache.has(lower)) {
