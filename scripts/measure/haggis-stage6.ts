@@ -32,7 +32,6 @@ import {
     inv,
     level,
     meter,
-    nearestLoc,
     openBank,
     send,
     tick,
@@ -212,10 +211,13 @@ async function runSmithingTo99(main: Session, m: Meter, isStopped: () => boolean
             if (level(main, 'Smithing') < j.level) {
                 throw Error(`haggis-stage6: Smithing ${level(main, 'Smithing')} < required ${j.level} for ${j.band}`);
             }
-            let anvil = nearestLoc(main, /^anvil$/i, /.*/);
+            const findAnvil = () => ((main.sdk.getState()?.nearbyLocs ?? []) as any[])
+                .filter(l => /^anvil$/i.test(l.name ?? ''))
+                .sort((a, b) => (a.distance ?? 99) - (b.distance ?? 99))[0];
+            let anvil = findAnvil();
             if (!anvil) {
                 await walkPath(await sessionWalker(main), [{ x: 3188, z: 3426, tol: 3 }], { maxTicks: 20, stop: isStopped });
-                anvil = nearestLoc(main, /^anvil$/i, /.*/);
+                anvil = findAnvil();
             }
             if (!anvil) throw Error('haggis-stage6: Varrock west anvil not nearby');
             const bar = inv(main).find(x => x.id === j.bar);
@@ -223,7 +225,7 @@ async function runSmithingTo99(main: Session, m: Meter, isStopped: () => boolean
 
             const tw = main.tick();
             await clearDialogs(main, m, 'close');
-            const useAct = { type: 'useItemOnLoc', itemSlot: bar.slot, x: anvil.loc.x, z: anvil.loc.z, locId: anvil.loc.id };
+            const useAct = { type: 'useItemOnLoc', itemSlot: bar.slot, x: anvil.x, z: anvil.z, locId: anvil.id };
             await send(main, m, useAct);
             while (!(main.sdk.getState() as any)?.interface?.isOpen && main.tick() - tw < 40 && !isStopped()) {
                 await tick(main);
