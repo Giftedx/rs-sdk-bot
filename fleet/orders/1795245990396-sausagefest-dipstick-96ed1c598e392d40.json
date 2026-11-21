@@ -1,0 +1,11 @@
+{
+ "id": "1795245990396-sausagefest-dipstick-96ed1c598e392d40",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Sausagefest",
+ "to": "Dipstick",
+ "item": "Coins",
+ "count": 29000,
+ "start": 1795245990396,
+ "end": 1795248390396,
+ "takerWaits": true
+}

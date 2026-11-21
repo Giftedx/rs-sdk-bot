@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795245724156,
+ "at": 1795246004348,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -329,6 +329,112 @@
    "repeat": true
   },
   {
+   "account": "Deeppockets",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2653,3300"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2669,3298"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Fingerblastr",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2671,3313"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Kiltlifter",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2652,3318"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "NabTheKnob",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2653,3302"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2582,3297"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "2000",
+    "unicorn"
+   ],
+   "env": {
+    "MAX_KILLS": "6"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "taverley",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "pestle and mortar",
+    "STOCK_TARGET": "1",
+    "STOP_AT_TARGET": "1",
+    "MAX_ITEMS": "1",
+    "MAX_SPEND": "50",
+    "COIN_RESERVE": "0",
+    "FLOAT": "50"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
    "account": "Fatstack",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -405,11 +511,7 @@
   "Ballspinner",
   "SporranBulge",
   "Sausagefest",
-  "deeppockets",
   "dipstick",
-  "fingerblastr",
-  "fingersmith",
-  "kiltlifter",
   "knightstick",
   "quickhandjob",
   "sporrandip"
