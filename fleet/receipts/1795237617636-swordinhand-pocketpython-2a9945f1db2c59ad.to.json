@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795237617636-swordinhand-pocketpython-2a9945f1db2c59ad",
+ "account": "Pocketpython",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Snape grass",
+ "requested": 18,
+ "claim": "d7f93b69-2dce-4d59-bf8a-f0c4c399d3f9",
+ "count": 18,
+ "ok": true,
+ "at": 1795239113703,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 18
+ },
+ "bank": {
+  "count": 18,
+  "at": 1795239113004
+ },
+ "logout": {
+  "attemptId": "1795239089687-0000011680-0000000001",
+  "at": 1795239113691,
+  "sha256": "e0c9ff002c2e31ce538d7a863e67f1dc44c913629aa29e660de8da39a2cceb49"
+ },
+ "screen": true
+}
