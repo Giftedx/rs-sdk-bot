@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795295317326,
+ "at": 1795295915555,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -338,6 +338,25 @@
    ]
   },
   {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
+  },
+  {
    "account": "MineYourBiz",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -438,21 +457,23 @@
   },
   {
    "account": "Magicwanda",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "repeat": false,
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "knight:2652,3318"
+    "squad:ardougne-giants"
    ]
   },
   {
@@ -477,26 +498,28 @@
    ]
   },
   {
-   "account": "MeatNTwoVeg",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "account": "Spitroaster",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "repeat": false,
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "squad:ardougne-giants"
    ]
   },
   {
-   "account": "Spitroaster",
+   "account": "BoneToPick",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "ardy",
