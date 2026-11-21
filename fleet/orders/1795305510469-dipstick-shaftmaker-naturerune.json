@@ -1,0 +1,22 @@
+{
+ "id": "1795305510469-dipstick-shaftmaker-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Dipstick",
+ "to": "Shaftmaker",
+ "item": "Nature rune",
+ "count": 33,
+ "start": 1795305510469,
+ "end": 1795307910469,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
