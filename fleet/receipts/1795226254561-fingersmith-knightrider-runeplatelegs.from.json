@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795226254561-fingersmith-knightrider-runeplatelegs",
  "account": "Fingersmith",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Rune platelegs",
  "requested": 1,
  "claim": "08731ed3-e4f3-4745-9193-cf433f26a71a",
- "count": 0,
- "ok": false,
- "at": 1795226339100,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795226541924,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795226343940
+ },
+ "logout": {
+  "attemptId": "1795226339109-0000031032-0000000001",
+  "at": 1795226541911,
+  "sha256": "5e9036bbe2c9c1f8073fff2028d94e1726fb2098d5f22c658fc1c895f1cfa270"
+ },
+ "screen": true
 }
