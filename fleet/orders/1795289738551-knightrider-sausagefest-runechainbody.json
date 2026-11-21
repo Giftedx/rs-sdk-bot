@@ -1,0 +1,22 @@
+{
+ "id": "1795289738551-knightrider-sausagefest-runechainbody",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "Sausagefest",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795289738551,
+ "end": 1795292138551,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
