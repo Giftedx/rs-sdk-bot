@@ -1,0 +1,22 @@
+{
+ "id": "1795286127642-weequickie-yewfirst-runeaxe",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "WeeQuickie",
+ "to": "YewFirst",
+ "item": "Rune axe",
+ "count": 1,
+ "start": 1795286127642,
+ "end": 1795288527642,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

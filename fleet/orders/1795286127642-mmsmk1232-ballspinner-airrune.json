@@ -1,0 +1,22 @@
+{
+ "id": "1795286127642-mmsmk1232-ballspinner-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmsmk1232",
+ "to": "Ballspinner",
+ "item": "Air rune",
+ "count": 3,
+ "start": 1795286127642,
+ "end": 1795288527642,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
