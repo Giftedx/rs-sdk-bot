@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import {createHash} from 'node:crypto';
-import {inventoryRecipes,productionInputReserves,productionEffect,runInventoryProduction,runInventoryBank,type ProductionIO} from './microbot-production';
+import {inventoryRecipes,parseProductionCli,productionInputReserves,productionEffect,runInventoryProduction,runInventoryBank,type ProductionIO} from './microbot-production';
 test('native chicken stew and weapon poison variants append without changing any of the qualified178 descriptors',()=>{
  const recipes=inventoryRecipes();expect(recipes).toHaveLength(223);expect(createHash('sha256').update(JSON.stringify(recipes.slice(0,178))).digest('hex')).toBe('725b9e6775940ce8edbd2e73b083fc6db37d6c7832be746d12895920a138a126');
  expect(recipes.slice(178).map(r=>r.name)).toEqual([
@@ -265,4 +265,21 @@ test('decant production pairs two slots of the same potion and deposits product 
  expect(bank.get(2434)).toBe(1);
  expect(bank.get(141)).toBe(1);
  expect(bank.get(139)).toBe(0);
+});
+
+test('CLI KEY=VALUE args parse autopilot production options, preserve pure-env defaults, and reject unsupported args',()=>{
+ const cli=parseProductionCli(['bun','scripts/microbot-production.ts','BoneToPick','strip:swamp-toad','MAX_MAKE=2','CAP=1500','MEMBERS=1','ORDER_MODE=best-effort']);
+ expect(cli.account).toBe('BoneToPick');
+ expect(cli.recipe.name).toBe('strip:swamp-toad');
+ expect(cli).toMatchObject({maximum:2,cap:1500,maxAttempts:2,members:true,partial:true,reserve:0,inputReserves:undefined});
+
+ const envOnly=parseProductionCli(['bun','scripts/microbot-production.ts','Actor','cut-sapphire'],{MAX_MAKE:'10',CAP:'900',MAX_ATTEMPTS:'12',RAW_RESERVE:'1',INPUT_RESERVES:'{"1623":0}',MEMBERS:'1',ORDER_MODE:'best-effort'});
+ expect(envOnly.recipe.name).toBe('cut-sapphire');
+ expect(envOnly).toMatchObject({maximum:10,cap:900,maxAttempts:12,reserve:1,inputReserves:{1623:0},members:true,partial:true});
+
+ const overridden=parseProductionCli(['bun','scripts/microbot-production.ts','Actor','strip:swamp-toad','MAX_MAKE=4','MEMBERS=0','ORDER_MODE=exact'],{MAX_MAKE:'2',MEMBERS:'1',ORDER_MODE:'best-effort'});
+ expect(overridden).toMatchObject({maximum:4,cap:500,maxAttempts:4,members:false,partial:false});
+
+ expect(()=>parseProductionCli(['bun','scripts/microbot-production.ts','Actor','strip:swamp-toad','UNKNOWN_KEY=1'])).toThrow('unsupported production cli argument');
+ expect(()=>parseProductionCli(['bun','scripts/microbot-production.ts','Actor','strip:swamp-toad','bare-token'])).toThrow('unsupported production cli argument');
 });
