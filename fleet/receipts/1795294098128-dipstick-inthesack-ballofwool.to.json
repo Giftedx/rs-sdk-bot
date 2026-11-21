@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795294098128-dipstick-inthesack-ballofwool",
+ "account": "InTheSack",
+ "partner": "Dipstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ball of wool",
+ "requested": 2,
+ "claim": "0dbfce68-471a-493d-9a17-dcc8185b035d",
+ "count": 0,
+ "ok": false,
+ "at": 1795294223931,
+ "detail": "trade claimed"
+}

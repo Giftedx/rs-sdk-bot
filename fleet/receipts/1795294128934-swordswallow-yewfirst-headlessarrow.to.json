@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795294128934-swordswallow-yewfirst-headlessarrow",
+ "account": "YewFirst",
+ "partner": "Swordswallow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Headless arrow",
+ "requested": 510,
+ "claim": "f79b1816-12f8-4986-ac02-17a5810ad776",
+ "count": 0,
+ "ok": false,
+ "at": 1795294218925,
+ "detail": "trade claimed"
+}
