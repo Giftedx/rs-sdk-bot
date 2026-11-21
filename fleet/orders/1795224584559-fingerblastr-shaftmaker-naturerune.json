@@ -1,0 +1,22 @@
+{
+ "id": "1795224584559-fingerblastr-shaftmaker-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingerblastr",
+ "to": "Shaftmaker",
+ "item": "Nature rune",
+ "count": 323,
+ "start": 1795224584559,
+ "end": 1795226984559,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
