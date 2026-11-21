@@ -37,7 +37,7 @@ const ITEM = { excalibur: 35, scimitar: 1333, napkin: 15, whistle: 16, bell: 17,
 const NPC = { titan: 221 };
 const PFM = 14;
 
-const q = await openQuest({ cap: 5000, eatAt: 60, food: [ITEM.food], lumbridgeOk: false });
+const q = await openQuest({ cap: 5000, eatAt: 60, food: [ITEM.food], lumbridgeOk: false, burst: true });
 try {
     const FROM = Number(process.env.HG_FROM || 0);
     const STOP = Number(process.env.HG_STOP || 99);

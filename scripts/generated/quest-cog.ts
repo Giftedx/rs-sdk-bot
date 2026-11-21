@@ -31,7 +31,7 @@ const ITEM = { white: 20, black: 21, blue: 22, red: 23, poison: 24, water: 1929,
 const OPOBJU = 55;      // webclient/src/io/ClientProt.ts
 const INV_COM = 3214;
 
-const q = await openQuest({ cap: 3000 });
+const q = await openQuest({ cap: 3000, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

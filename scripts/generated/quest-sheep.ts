@@ -8,7 +8,7 @@ import { openQuest } from './quest-lib';
 const FRED = { x: 3189, z: 3273 };
 const WOOL = 1759;
 
-const q = await openQuest({ cap: 400 });
+const q = await openQuest({ cap: 400, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

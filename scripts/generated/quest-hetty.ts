@@ -26,7 +26,7 @@ export function observeHettyRat(q:Pick<Awaited<ReturnType<typeof openQuest>>, 's
 
 // The parent passes its session and owns logout. Direct/quest-sweep entry retains openQuest cleanup.
 export async function completeHetty(s:Session,cap:number,stop:()=>boolean=()=>false){
- const q=await openQuest({session:s,cap,stop,food:[],eatAt:0,lumbridgeOk:true});
+ const q=await openQuest({session:s,cap,stop,food:[],eatAt:0,lumbridgeOk:true,burst:true});
  try{return await executeHetty(q);}finally{await q.dispose();}
 }
 export async function executeHetty(q:Awaited<ReturnType<typeof openQuest>>){
@@ -103,6 +103,6 @@ export async function executeHetty(q:Awaited<ReturnType<typeof openQuest>>){
     return {ok:true as const,detail:'Hetty complete; four ingredient debits observed'};
 }
 if(import.meta.main||(globalThis as {QUEST_SESSION?:Session}).QUEST_SESSION){
- const q=await openQuest({cap:Number(process.env.CAP??600),food:[],eatAt:0,lumbridgeOk:true});
+ const q=await openQuest({cap:Number(process.env.CAP??600),food:[],eatAt:0,lumbridgeOk:true,burst:true});
  try{const r=await executeHetty(q);await q.end(r.ok,r.detail);}catch(e){await q.fail(String(e));}
 }

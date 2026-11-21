@@ -29,7 +29,7 @@ const FROM = process.env.UP_FROM ?? 'start';
 const STAGES = ['start', 'bridge', 'grid', 'orbs', 'area2', 'paladins', 'main', 'witch', 'demons', 'lower', 'dove', 'temple'];
 const from = (s: string) => STAGES.indexOf(FROM) <= STAGES.indexOf(s);
 
-const q = await openQuest({ cap: 9000, eatAt: 40, food: [385, 379, 2327, 2293] });
+const q = await openQuest({ cap: 9000, eatAt: 40, food: [385, 379, 2327, 2293], burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

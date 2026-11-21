@@ -16,7 +16,7 @@ const SINK = { id: 874, x: 3224, z: 3494 };                // sink2 in the palac
 const KEY3_AT = { x: 3225, z: 9897 };                      // obj_add 0_50_154_25_41 (demon_slayer.rs2:44)
 const ITEM = { coin: 995, bones: 526, bucket: 1925, water: 1929, key1: 2399, key2: 2400, key3: 2401, silverlight: 2402 };
 
-const q = await openQuest({ cap: 3000 });
+const q = await openQuest({ cap: 3000, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

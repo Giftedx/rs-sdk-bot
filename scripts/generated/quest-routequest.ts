@@ -28,7 +28,7 @@ const ANSWERS: Array<[RegExp, RegExp]> = [
     [/scholar/i, /^polmafi ferdygris$/i], [/boatman's name/i, /^cyreg paddlehorn$/i], [/rumoured to rule morytania/i, /^drakan$/i],
 ];
 
-const q = await openQuest({ cap: 4000 });
+const q = await openQuest({ cap: 4000, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/completed|quest complete/i) > 0) questDone = true; });

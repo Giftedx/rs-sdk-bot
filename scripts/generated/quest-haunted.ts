@@ -53,7 +53,7 @@ const SIDES: Record<string, [string, string]> = {
     '2to5': ['R2', 'R5'], '3to6': ['R3', 'R6'], '4to7': ['CA', 'S'], '5to8': ['R5', 'S'],
 };
 
-const q = await openQuest({ cap: 1500 });
+const q = await openQuest({ cap: 1500, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

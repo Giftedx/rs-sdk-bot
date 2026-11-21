@@ -27,7 +27,7 @@ if (import.meta.main || (globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSIO
     // CAP is a game-tick budget; the Magic-1 walk to Varrock and back needs more than the teleport route.
     const cap = Number(process.env.CAP ?? 1500);
     if (!Number.isSafeInteger(cap) || cap < 1) throw Error('Vampire CAP must be a positive integer');
-    const q = await openQuest({ cap });
+    const q = await openQuest({ cap, burst: true });
     try {
         const state = () => questFlags(q.s.client)?.find(f => f.name === 'Vampire Slayer')?.state ?? 'unknown';
         if (!await q.waitUntil(() => state() !== 'unknown' && Array.isArray(q.st()?.inventory) && !!q.pos(), 20))

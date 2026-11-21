@@ -20,7 +20,7 @@ const SACK = { id: 2212, x: 2389, z: 9454 };
 const TELESCOPE = { id: 2210, x: 2440, z: 3157 };
 const ITEM = { plank: 960, bronze: 2349, glass: 1775, key: 601, mould: 602, lens: 603 };
 
-const q = await openQuest({ cap: 3000 });
+const q = await openQuest({ cap: 3000, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

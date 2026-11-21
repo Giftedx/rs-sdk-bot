@@ -64,7 +64,7 @@ const CUPBOARD = { x: 2573, z: 3267 };
 const ITEM = { armour: 2405 };
 
 async function main() {
-const q = await openQuest({ cap: 3000, food: [385,379] });
+const q = await openQuest({ cap: 3000, food: [385,379], burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
