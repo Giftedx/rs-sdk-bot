@@ -73,7 +73,7 @@ const WC_KEEP_IDS = new Set<number>([
 export const WC_NORMAL_XP_25X = 625;
 export const WC_OAK_XP_25X = 937.5;
 
-// Draynor Jail West multiway hub (multiway.csv 0_48_50): 3 twin Oaks on x=3117 corridor + SW fallback Oak (3114,3239).
+// Draynor Jail West multiway hub (multiway.csv 0_48_50): 3 twin Oaks on x=3117 corridor beside Jail guard 4307.
 export const DRAYNOR_JAIL_SPOT = { x: 3115, z: 3244 } as const;
 export const DRAYNOR_JAIL_OAK_CENTERS: readonly [number, number][] = [
     [3114, 3239],
@@ -154,30 +154,23 @@ function findBestTree(
                 // Inner normal trees beside (3117,3246) keep arrival transition to Oak 15 near zero-walk.
                 return l.x >= 3113 && l.x <= 3119 && l.z >= 3244 && l.z <= 3251 && l.reachable !== false;
             }
-            // 3 northern Draynor Jail hub oaks on x=3117 corridor + SW fallback oak (3114,3239) to avoid simultaneous depletion waits.
+            // 3 northern Draynor Jail hub oaks around (3117,3246)/(3117,3249): all inside Jail guard 4307's (3121,3249) maxrange 7.
             return (
                 (l.x === 3115 && l.z === 3243)
                 || (l.x === 3118 && l.z === 3245)
                 || (l.x === 3115 && l.z === 3250)
-                || (l.x === 3114 && l.z === 3239)
             ) && l.reachable !== false;
         });
     if (activeTree) {
         const cur = cands.find(l => l.x === activeTree.x && l.z === activeTree.z);
         if (cur && isBesideTree(px, pz, cur.x, cur.z, treeSizeForLoc(cur.name))) return cur;
     }
-    // Strongly prefer the 3 tight corridor oaks (0..3t hops) over SW fallback (3114,3239).
     const isHubOak = (l: NearbyLoc) => (l.x === 3115 && l.z === 3243) || (l.x === 3118 && l.z === 3245);
-    const isCoreCorridor = (l: NearbyLoc) => isHubOak(l) || (l.x === 3115 && l.z === 3250);
     return cands.sort((a, b) => {
         const sizeA = treeSizeForLoc(a.name);
         const sizeB = treeSizeForLoc(b.name);
         const adjDiff = (isBesideTree(px, pz, a.x, a.z, sizeA) ? 0 : 1) - (isBesideTree(px, pz, b.x, b.z, sizeB) ? 0 : 1);
         if (adjDiff !== 0) return adjDiff;
-        if (wantOak) {
-            const coreDiff = (isCoreCorridor(a) ? 0 : 1) - (isCoreCorridor(b) ? 0 : 1);
-            if (coreDiff !== 0) return coreDiff;
-        }
         const distDiff = treeFootprintDist(px, pz, a.x, a.z, sizeA) - treeFootprintDist(px, pz, b.x, b.z, sizeB);
         if (distDiff !== 0) return distDiff;
         if (wantOak) {
@@ -205,9 +198,7 @@ function findReachableTreeStandTile(
             { x: tree.x + size, z: tree.z + i },
         );
     }
-    const filtered = (tree.x === 3114 && tree.z === 3239)
-        ? perimeter.filter(t => t.x >= 3115 && t.x <= 3117 && t.z >= 3241 && t.z <= 3242)
-        : perimeter.filter(t => t.x >= 3115 && t.x <= 3117 && t.z >= 3246 && t.z <= 3249);
+    const filtered = perimeter.filter(t => t.x >= 3115 && t.x <= 3117 && t.z >= 3246 && t.z <= 3249);
     const pool = filtered.length > 0 ? filtered : perimeter;
     const reachable: { x: number; z: number; wp: number; cheb: number; hub: number }[] = [];
     for (const t of pool) {

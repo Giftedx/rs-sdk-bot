@@ -54,8 +54,8 @@ export const THIEVING_DIRECT_CWARS_WAYPOINTS: readonly [number, number, number][
     [2476, 3197, 3],
     [2486, 3214, 3],
     [2506, 3233, 4],
-    [2555, 3234, 3],
-    [2586, 3260, 4],
+    [2555, 3236, 4],
+    [2602, 3276, 4],
     [2621, 3293, 2],
 ];
 
