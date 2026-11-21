@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795293934385-ballspinner-pullmybow",
+ "account": "Ballspinner",
+ "partner": "Pullmybow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 134,
+ "claim": "83fc1d16-c89e-4d04-bed9-3aa27a77c71e",
+ "count": 0,
+ "ok": false,
+ "at": 1795294038382,
+ "detail": "trade claimed"
+}
