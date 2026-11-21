@@ -446,7 +446,7 @@ export async function rescue(
                     suppressEat = true;
                     try {
                         for (let d = 0; d < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; d++) {
-                            if ((me()?.hp ?? start.maxHp) <= 52) survival.step(s.tick());
+                            survival.step(s.tick());
                             if (!await tick()) return false;
                         }
                     } finally {
@@ -461,14 +461,13 @@ export async function rescue(
                 const rubOp = invGlory?.optionsWithIndex?.find(x => /^Rub$/i.test(x.text));
                 if (invGlory && rubOp) {
                     if (!stopped()) await useItemAction(invGlory.slot, rubOp.opIndex);
-                    // Wait cleanly for dialog + Edgeville click without sending prayer/eat packets whose
-                    // p_clearpendingaction / clearPendingAction closes the Glory interface before teleporting.
+                    // Wait 1 tick without same-tick p_clearpendingaction before checking dialog, then keep survival active.
                     for (let t = 0; t < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; t++) {
                         if (await clickEdgeville()) {
                             suppressEat = true;
                             try {
                                 for (let d = 0; d < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; d++) {
-                                    if ((me()?.hp ?? start.maxHp) <= 52) survival.step(s.tick());
+                                    survival.step(s.tick());
                                     if (!await tick()) return false;
                                 }
                             } finally {
@@ -476,6 +475,7 @@ export async function rescue(
                             }
                             break;
                         }
+                        if (t > 0) survival.step(s.tick());
                         if (!await tick()) return false;
                     }
                     continue;
@@ -900,8 +900,8 @@ export function squadFallbackPlan(opts: {
     const isolatedPile = opts.inMulti && opts.allyCount === 0 && opts.enemyCount >= 3 && (opts.hp <= opts.maxHp * 0.85 || opts.foodCount <= 6 || opts.enemyCount >= 5);
     const outnumbered = opts.inMulti && opts.enemyCount - opts.allyCount >= 2 && opts.hp <= opts.maxHp * 0.78;
     const focusPile = opts.inMulti && (opts.targetingMe ?? 0) >= 3 && opts.hp <= opts.maxHp * 0.86;
-    const heavyFocus = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.hp <= opts.maxHp * 0.72;
-    const emergencyMulti = opts.inMulti && opts.enemyCount >= 4 && opts.hp <= opts.maxHp * 0.62;
+    const heavyFocus = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.hp <= opts.maxHp * 0.76;
+    const emergencyMulti = opts.inMulti && ((opts.enemyCount >= 6 && opts.hp <= opts.maxHp * 0.76) || (opts.enemyCount >= 4 && opts.hp <= opts.maxHp * 0.62));
     const lowSupplyPile = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.foodCount <= 3 && opts.hp <= opts.maxHp * 0.88;
     const dry = opts.foodCount <= 0 && ((opts.packFood ?? 0) >= 6 || opts.hp <= opts.maxHp * 0.75);
     if (!isolatedPile && !outnumbered && !focusPile && !heavyFocus && !emergencyMulti && !lowSupplyPile && !dry) return 'hold';
