@@ -19,9 +19,9 @@ export function spawnSyncTimed<
     const Err extends Bun.SpawnOptions.Readable = 'pipe',
 >(cmd: string[], options: TimedSpawnSyncOptions<In, Out, Err>): Bun.SyncSubprocess<Out, Err> {
     const started = Date.now();
-    const first = Bun.spawnSync(cmd, options);
+    const first = Bun.spawnSync(cmd, { ...options, windowsHide: true });
     if (first.exitCode === null && first.signalCode === 'SIGTERM' && Date.now() - started < options.timeout / 2) {
-        return Bun.spawnSync(cmd, options);
+        return Bun.spawnSync(cmd, { ...options, windowsHide: true });
     }
     return first;
 }
