@@ -1768,16 +1768,22 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const castFreeze = freezeWindowDue && (o.freezeStill !== true || (cheb(at, target) <= 10 && await lineOfSight(me.level ?? 0, at, target)));
         // freezeStill: a moving account stops on this tick and casts from its stand on the next.
         if (castFreeze && o.freezeStill === true && !stoodStill && !kiteTarget) { void sdk.sendWalk(at.x, at.z); continue; }
-        const { spec, specStyle, chainStun, freezeHeld, burstStun, stripBurstArmour } = specPlan;
+        const { spec, specStyle, specRange, chainStun, freezeHeld, burstStun, stripBurstArmour } = specPlan;
         const vs = o.volley && spec ? o.volley.state(targetName.toLowerCase()) : undefined, myKey = (s.name ?? '').toLowerCase();
         if (vs && vs.fired && o.volley!.clock() - vs.first >= Math.max(4, o.volley!.window + 3)) {
             vs.ready.clear(); vs.done.clear(); vs.first = -1; vs.fired = false;
         }
         if (vs && !vs.fired) {
-            if (specPlan.volleyJoinEligible) { vs.ready.add(myKey); if (vs.first < 0) vs.first = o.volley!.clock(); } else vs.ready.delete(myKey);
+            const allyNearTarget = (o.allies?.length ?? 0) > 0
+                ? state.nearbyPlayers.filter(p => o.allies!.includes(p.name.toLowerCase()) && cheb(p, target!) <= (specStyle === 'melee' ? 2 : specRange + 2)).length
+                : 0;
+            if (specPlan.volleyJoinEligible && (o.volley!.members <= 1 || vs.ready.size >= 2 || allyNearTarget > 0 || vs.first >= 0)) {
+                vs.ready.add(myKey);
+                if (vs.first < 0) vs.first = o.volley!.clock();
+            } else vs.ready.delete(myKey);
             if (vs.ready.size >= o.volley!.members || (vs.first >= 0 && o.volley!.clock() - vs.first >= o.volley!.window)) {
                 vs.fired = true; log(`PK volley with ${vs.ready.size} of ${o.volley!.members} ready`);
-            } else if (specPlan.volleyJoinEligible) continue;
+            } else if (specPlan.volleyJoinEligible && (vs.ready.has(myKey) && allyNearTarget > 0)) continue;
         }
         const volleying = (!!vs?.fired && !vs.done.has(myKey)) || freezeHeld || burstStun;
         if (spec && (specPlan.triggerNoVolley || (volleying && specPlan.volleyJoinEligible))) {

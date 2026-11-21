@@ -480,47 +480,66 @@ export async function safeGloryEdgeville(
     return false;
 }
 
-const lastDamageTakenTick = (events: readonly { type?: string; tick?: number }[] | undefined): number => {
+const lastCombatEventTick = (events: readonly { type?: string; tick?: number }[] | undefined): number => {
     let maxTick = -1;
     for (const e of events ?? []) {
-        if (e.type === 'damage_taken' && typeof e.tick === 'number' && e.tick > maxTick) maxTick = e.tick;
+        if ((e.type === 'damage_taken' || e.type === 'damage_dealt') && typeof e.tick === 'number' && e.tick > maxTick) maxTick = e.tick;
     }
     return maxTick;
 };
 
 // Clears residual Wilderness combat/Scorpion auto-retaliate and 16-tick logout lock on bench sessions after metrics settle.
 export async function settleBenchLogout(sessions: readonly Session[]): Promise<void> {
+    const tickOf = (s: Session) => typeof s.tick === 'function' ? s.tick() : 0;
     const active = sessions.filter(s => {
         const st = s.sdk?.getState?.();
         if (!st?.inGame || !st.player || st.player.isDead) return false;
-        if (wildernessLevel(st.player.worldZ) > 0) return true;
-        const hurt = lastDamageTakenTick(st.combatEvents);
-        return hurt >= 0 && s.tick() - hurt < 17;
+        if (wildernessLevel(st.player.worldZ) > 0 || st.player.combat?.inCombat) return true;
+        const hitAt = lastCombatEventTick(st.combatEvents);
+        return hitAt >= 0 && tickOf(s) - hitAt < 17;
     });
     if (!active.length) return;
     await Promise.all(active.map(async s => {
         await disableAutoRetaliate(s);
-        let castAt = -10, walkedAt = -10, lastZ: number | undefined, stalled = 0;
+        const hasClient = !!(s as { client?: unknown }).client;
+        let castAt = -10, castAttempts = 0, walkedAt = -10, lastZ: number | undefined, stalled = 0;
+        let usedPathWalk = false, combatSeenAt = -1, wildExitedAt = -1;
         const settled = (st: ReturnType<Session['sdk']['getState']>) => {
             const p = st?.player;
             if (!p || p.isDead) return true;
+            const now = tickOf(s);
+            if (p.combat?.inCombat) { combatSeenAt = Math.max(combatSeenAt, now); return false; }
             if (wildernessLevel(p.worldZ) > 0) return false;
-            const hurt = lastDamageTakenTick(st.combatEvents);
-            return hurt < 0 || s.tick() - hurt >= 17;
+            if (hasClient && wildExitedAt < 0) wildExitedAt = now;
+            const hitAt = Math.max(lastCombatEventTick(st.combatEvents), combatSeenAt);
+            if (hitAt >= 0 && now - hitAt < 17) return false;
+            // On live engine sessions, 0-damage hits / retaliate can set preventLogoutUntil without a nonzero combatEvent; allow 17 ticks post-exit (~0.01s lockstep).
+            if (hasClient && wildExitedAt >= 0 && now - wildExitedAt < 17) return false;
+            return true;
         };
-        for (let t = 0; t < 64; t++) {
+        for (let t = 0; t < 150; t++) {
             const st = s.sdk?.getState?.();
             if (settled(st)) break;
             const p = st!.player!;
             if (wildernessLevel(p.worldZ) > 0) {
+                if (p.combat?.inCombat) combatSeenAt = Math.max(combatSeenAt, tickOf(s));
                 const wornIds = (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : st?.equipment ?? []).map(e => e.id);
                 const magic = st?.skills?.find(k => k.name === 'Magic')?.level ?? 1;
-                const spell = squadEscapeSpell(p.worldZ, st?.inventory ?? [], wornIds, magic);
+                const spell = castAttempts < 2 ? squadEscapeSpell(p.worldZ, st?.inventory ?? [], wornIds, magic) : null;
                 if (spell !== null && typeof s.direct === 'function') {
                     if (t - castAt >= 6) {
                         castAt = t;
+                        castAttempts++;
                         await s.direct({ type: 'clickComponent', componentId: spell, reason: 'bench settle' });
                     }
+                } else if (!usedPathWalk && hasClient && typeof s.bot?.walkTo === 'function') {
+                    usedPathWalk = true;
+                    const walker = await sessionWalker(s);
+                    await walkPath(walker, [{ ...EDGEVILLE_BANK, tol: 4 }], { maxTicks: 140, idleMs: 9000, stop: () => {
+                        const q = s.sdk?.getState?.()?.player;
+                        return !q || q.isDead || wildernessLevel(q.worldZ) === 0;
+                    } });
+                    if (wildernessLevel(s.sdk?.getState?.()?.player?.worldZ ?? 0) === 0) wildExitedAt = tickOf(s);
                 } else if (typeof s.sdk.sendWalk === 'function') {
                     stalled = lastZ === p.worldZ ? stalled + 1 : 0;
                     lastZ = p.worldZ;
