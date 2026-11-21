@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795223984554-fatstack-yewfirst-bowstring",
+ "account": "YewFirst",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bow string",
+ "requested": 4,
+ "claim": "e4a949f1-cb2d-494c-96be-87e72f63563b",
+ "count": 0,
+ "ok": false,
+ "at": 1795224112514,
+ "detail": "trade claimed"
+}
