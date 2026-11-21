@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795226254561-fingersmith-knightrider-runeplatelegs",
+ "account": "Fingersmith",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune platelegs",
+ "requested": 1,
+ "claim": "08731ed3-e4f3-4745-9193-cf433f26a71a",
+ "count": 0,
+ "ok": false,
+ "at": 1795226339100,
+ "detail": "trade claimed"
+}
