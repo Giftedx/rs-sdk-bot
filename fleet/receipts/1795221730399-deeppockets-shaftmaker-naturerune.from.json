@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795221730399-deeppockets-shaftmaker-naturerune",
+ "account": "Deeppockets",
+ "partner": "Shaftmaker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 427,
+ "claim": "ceff0202-5ae1-4447-9f75-2ce42bcdf9a5",
+ "count": 0,
+ "ok": false,
+ "at": 1795221799135,
+ "detail": "trade claimed"
+}
