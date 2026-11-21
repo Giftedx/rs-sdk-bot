@@ -353,7 +353,7 @@ export function buildCombatSpecialistRehearsalSegment(
                 env: { ...REHEARSE_GUARD_ENV },
                 save: { position: { x: 3223, z: 3222, level: 0 }, inventory: kitToSaveInventory(HP_SPECIALIST_KIT) },
             },
-            plan: { ticks: override ?? 8620, source: 'hosted-bench fighter:specialist-hp (<=11116t vs #1 11343t)' },
+            plan: { ticks: override ?? 8450, source: '400ms rehearsal 8442t & hosted-bench fighter:specialist-hp 8600-9184t (<=11116t vs #1 11343t)' },
             expect: { skills: { Hitpoints: 99 } },
             timeoutMs: 900_000,
         };
@@ -364,7 +364,7 @@ export function buildCombatSpecialistRehearsalSegment(
         const skill = isStr ? 'Strength' : 'Defence';
         const cap = isStr ? '6000' : '7500';
         const kit = isStr ? STRENGTH_SPECIALIST_KIT : DEFENCE_SPECIALIST_KIT;
-        const planTicks = override ?? (isStr ? 2150 : 2250);
+        const planTicks = override ?? (isStr ? 2200 : 2850);
         return {
             specialist: isStr ? 'BigSwinger' : 'RockSolid',
             id: isStr ? 'bigswinger-strength' : 'rocksolid-defence',
@@ -407,6 +407,7 @@ export function buildCombatSpecialistRehearsalSegment(
 async function runRehearseMain(args: string[]): Promise<void> {
     const accounts: string[] = [];
     let planTicks: number | undefined;
+    let runs = 1;
     for (let i = 0; i < args.length; i++) {
         const a = args[i]!;
         if (a === '--all') {
@@ -415,11 +416,15 @@ async function runRehearseMain(args: string[]): Promise<void> {
             planTicks = Number(a.slice('--plan-ticks='.length));
         } else if (a === '--plan-ticks') {
             planTicks = Number(args[++i]);
+        } else if (a.startsWith('--runs=')) {
+            runs = Math.max(1, Number(a.slice('--runs='.length)));
+        } else if (a === '--runs') {
+            runs = Math.max(1, Number(args[++i]));
         } else if (!a.startsWith('-')) {
             accounts.push(a);
         }
     }
-    if (accounts.length === 0) throw Error('usage: specialist-combat-quests-cases.ts --rehearse <FullBlooded|BigSwinger|RockSolid|--all> [--plan-ticks=<n>]');
+    if (accounts.length === 0) throw Error('usage: specialist-combat-quests-cases.ts --rehearse <FullBlooded|BigSwinger|RockSolid|--all> [--plan-ticks=<n>] [--runs=<n>]');
 
     const engineDir = join(ROOT, 'vendor', 'rs-sdk', 'server', 'engine');
     if (!existsSync(join(engineDir, 'data', 'pack', 'server', 'script.dat'))) {
@@ -433,50 +438,55 @@ async function runRehearseMain(args: string[]): Promise<void> {
     for (const acc of accounts) {
         const seg = buildCombatSpecialistRehearsalSegment(acc, { planTicks });
         const segFile = join(baseOut, `${seg.specialist.toLowerCase()}.segment.json`);
-        const outRel = `.practice/hosted-rehearse/${seg.specialist.toLowerCase()}`;
-        const outAbs = resolve(ROOT, outRel);
-        rmSync(outAbs, { recursive: true, force: true });
         writeFileSync(segFile, JSON.stringify(seg, null, 2) + '\n');
-        const proc = Bun.spawn(['bun', 'packages/practice/src/rehearse.ts', '--specialist', segFile, '--start', '--out', outRel], {
-            cwd: ROOT,
-            stdout: 'inherit',
-            stderr: 'inherit',
-            windowsHide: true,
-        });
-        const code = await proc.exited;
-        const reportPath = join(outAbs, `${seg.id}.json`);
-        const receiptPath = join(outAbs, `${seg.id}.receipt.json`);
-        const report = existsSync(reportPath) ? (JSON.parse(readFileSync(reportPath, 'utf8')) as RehearsalReport) : null;
-        const receipt = existsSync(receiptPath) ? (JSON.parse(readFileSync(receiptPath, 'utf8')) as { endPlaytime?: number; boardTicks?: Record<string, number> }) : null;
-        let boardTicks = receipt?.boardTicks ?? null;
-        let endPlaytime = receipt?.endPlaytime ?? null;
-        const board = Object.keys(seg.expect.skills)[0]!;
-        if (!receipt && report?.account) {
-            try {
-                const c = scoredClock(readFileSync(playerSavePath(report.account)), board);
-                boardTicks = { [board]: c.boardTick };
-                endPlaytime = c.endPlaytime;
-            } catch { /* no save */ }
-        }
-        console.log('COMBAT_REHEARSAL_SUMMARY ' + JSON.stringify({
-            account: seg.specialist,
-            board,
-            code,
-            ok: report?.ok === true,
-            wholeClock: report?.checks?.wholeClock === true,
-            planTicks: seg.plan.ticks,
-            ticks: report?.ticks ?? null,
-            checks: report?.checks ?? null,
-            boardTicks,
-            endPlaytime,
-            scope: report?.scope ?? null,
-            outDir: relative(ROOT, outAbs).replaceAll('\\', '/'),
-        }));
-        if (code !== 0 || report?.ok !== true || report?.checks?.wholeClock !== true) {
-            allOk = false;
-            const logPath = join(outAbs, `${seg.id}.log`);
-            if (existsSync(logPath)) {
-                console.log(`--- ${seg.id}.log tail ---\n` + readFileSync(logPath, 'utf8').split(/\r?\n/).slice(-50).join('\n'));
+        for (let runIdx = 1; runIdx <= runs; runIdx++) {
+            const suffix = runs > 1 ? `-r${runIdx}` : '';
+            const outRel = `.practice/hosted-rehearse/${seg.specialist.toLowerCase()}${suffix}`;
+            const outAbs = resolve(ROOT, outRel);
+            rmSync(outAbs, { recursive: true, force: true });
+            const proc = Bun.spawn(['bun', 'packages/practice/src/rehearse.ts', '--specialist', segFile, '--start', '--out', outRel], {
+                cwd: ROOT,
+                stdout: 'inherit',
+                stderr: 'inherit',
+                windowsHide: true,
+            });
+            const code = await proc.exited;
+            const reportPath = join(outAbs, `${seg.id}.json`);
+            const receiptPath = join(outAbs, `${seg.id}.receipt.json`);
+            const report = existsSync(reportPath) ? (JSON.parse(readFileSync(reportPath, 'utf8')) as RehearsalReport) : null;
+            const receipt = existsSync(receiptPath) ? (JSON.parse(readFileSync(receiptPath, 'utf8')) as { endPlaytime?: number; boardTicks?: Record<string, number> }) : null;
+            let boardTicks = receipt?.boardTicks ?? null;
+            let endPlaytime = receipt?.endPlaytime ?? null;
+            const board = Object.keys(seg.expect.skills)[0]!;
+            if (!receipt && report?.account) {
+                try {
+                    const c = scoredClock(readFileSync(playerSavePath(report.account)), board);
+                    boardTicks = { [board]: c.boardTick };
+                    endPlaytime = c.endPlaytime;
+                } catch { /* no save */ }
+            }
+            console.log('COMBAT_REHEARSAL_SUMMARY ' + JSON.stringify({
+                account: seg.specialist,
+                run: runIdx,
+                runs,
+                board,
+                code,
+                ok: report?.ok === true,
+                wholeClock: report?.checks?.wholeClock === true,
+                planTicks: seg.plan.ticks,
+                ticks: report?.ticks ?? null,
+                checks: report?.checks ?? null,
+                boardTicks,
+                endPlaytime,
+                scope: report?.scope ?? null,
+                outDir: relative(ROOT, outAbs).replaceAll('\\', '/'),
+            }));
+            if (code !== 0 || report?.ok !== true || report?.checks?.wholeClock !== true) {
+                allOk = false;
+                const logPath = join(outAbs, `${seg.id}.log`);
+                if (existsSync(logPath)) {
+                    console.log(`--- ${seg.id}${suffix}.log tail ---\n` + readFileSync(logPath, 'utf8').split(/\r?\n/).slice(-50).join('\n'));
+                }
             }
         }
     }
