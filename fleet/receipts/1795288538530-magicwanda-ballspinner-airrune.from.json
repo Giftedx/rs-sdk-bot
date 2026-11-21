@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795288538530-magicwanda-ballspinner-airrune",
+ "account": "Magicwanda",
+ "partner": "Ballspinner",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 3,
+ "claim": "30f6f3a9-1d33-416f-9f56-71684cb28258",
+ "count": 0,
+ "ok": false,
+ "at": 1795288619908,
+ "detail": "trade claimed"
+}
