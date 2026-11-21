@@ -1,0 +1,11 @@
+{
+ "id": "1795246347294-fingersmith-undermykilt-0b3d0d879e01dd61",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingersmith",
+ "to": "UnderMyKilt",
+ "item": "Pestle and mortar",
+ "count": 1,
+ "start": 1795246347294,
+ "end": 1795248747294,
+ "takerWaits": true
+}
