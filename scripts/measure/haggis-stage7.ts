@@ -156,14 +156,28 @@ export function buildStage7Plan(magicBuffer = 4, herbBuffer = 2) {
     };
 }
 
-async function waitForClearedModals(main: Session, m: Meter): Promise<void> {
-    await clearDialogs(main, m, 'close');
-    for (let i = 0; i < 3; i++) {
-        await tick(main);
-        if (dialogOpen(main) || (main.sdk.getState() as any)?.modalOpen) {
-            await clearDialogs(main, m, 'close');
+async function rubGloryDest(
+    main: Session,
+    destRe: RegExp,
+    inDest: (p: { worldX: number; worldZ: number; level: number }) => boolean,
+    isStopped: () => boolean,
+): Promise<void> {
+    for (let i = 0; i < 40 && !isStopped(); i++) {
+        const st = main.sdk.getState();
+        if (st?.player && inDest(st.player)) return;
+        const dlg = main.sdk.getDialog();
+        const opt = dlg?.isOpen && !dlg.isWaiting ? dlg.options.find(o => destRe.test(o.text)) : undefined;
+        if (opt) {
+            await main.direct({ type: 'clickDialogOption', optionIndex: opt.index, reason: 'SDK' });
+        } else {
+            const glory = inv(main).find(it => (GLORY_IDS as readonly number[]).includes(it.id));
+            if (!glory) throw Error('haggis-stage7: Amulet of glory missing for teleport');
+            // Avoid pairing closeModal with rub; OpHeldHandler clears/closes any quest completion modal itself.
+            await main.direct({ type: 'useInventoryItem', slot: glory.slot, optionIndex: 4, reason: 'SDK' });
         }
+        await tick(main);
     }
+    throw Error(`haggis-stage7: Glory teleport matching ${destRe.source} failed`);
 }
 
 async function bankAndWithdrawKit(
@@ -460,7 +474,7 @@ async function runDruidicRitualLowCombat(
         } finally {
             await q.dispose();
         }
-        await waitForClearedModals(main, m);
+        await clearDialogs(main, m, 'close');
     } finally {
         offWatch();
     }
@@ -504,19 +518,17 @@ export async function runHaggisStage7(
             STAGE7_START_SPOT,
             isStopped,
         );
-        await rubTeleport(
+        await rubGloryDest(
             main,
-            GLORY_IDS,
             /draynor/i,
             p => p.level === 0 && p.worldX >= 3095 && p.worldX <= 3115 && p.worldZ >= 3240 && p.worldZ <= 3265,
             isStopped,
         );
         await runImpCatcher(main, Math.max(400, cap - (main.tick() - t0)));
         const magicAfterImp = level(main, 'Magic');
-        await waitForClearedModals(main, m);
-        await rubTeleport(
+        await clearDialogs(main, m, 'close');
+        await rubGloryDest(
             main,
-            GLORY_IDS,
             /edgeville/i,
             p => p.level === 0 && p.worldX >= 3070 && p.worldX <= 3110 && p.worldZ >= 3480 && p.worldZ <= 3515,
             isStopped,
@@ -575,9 +587,8 @@ export async function runHaggisStage7(
         if (herbloreAfterDruidic < 28 || xp(main, 'Herblore') < 6_250) {
             throw Error(`haggis-stage7: Druidic Ritual ended at Herblore ${herbloreAfterDruidic} (${xp(main, 'Herblore')} xp)`);
         }
-        await rubTeleport(
+        await rubGloryDest(
             main,
-            GLORY_IDS,
             /edgeville/i,
             p => p.level === 0 && p.worldX >= 3070 && p.worldX <= 3110 && p.worldZ >= 3480 && p.worldZ <= 3515,
             isStopped,
