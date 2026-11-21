@@ -1,0 +1,49 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795238417168-woodenstaff-mightyrod-ba995507c0b37e80",
+ "account": "Woodenstaff",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Limpwurt root",
+ "requested": 11,
+ "claim": "43b06e64-071d-40c4-a2b2-e0deeb171791",
+ "count": 0,
+ "ok": false,
+ "at": 1795238511795,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Guam leaf",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Dragon bones",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Flowers",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Rune axe",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Raw shark",
+   "requested": 20,
+   "count": 0
+  },
+  {
+   "item": "Tarromin",
+   "requested": 5,
+   "count": 0
+  }
+ ]
+}
