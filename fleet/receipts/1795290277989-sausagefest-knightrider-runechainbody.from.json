@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795290277989-sausagefest-knightrider-runechainbody",
  "account": "Sausagefest",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "9edaab83-6ff7-4b9f-9820-548c09090e8e",
- "count": 0,
- "ok": false,
- "at": 1795290394315,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795290408079,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795290399338
+ },
+ "logout": {
+  "attemptId": "1795290394324-0000016820-0000000001",
+  "at": 1795290407998,
+  "sha256": "e4bce88a8c811f75533c778c80e0860e74dc2fd95a6217f248bf8f8401c86feb"
+ },
+ "screen": true
 }
