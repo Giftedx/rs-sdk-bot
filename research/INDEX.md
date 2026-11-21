@@ -12,7 +12,7 @@ Use the [current plan](../docs/plans/joined-plan.md) for priorities and the [loo
 | What does each account of the dagger gang (Goondelf, Ligma, Sugma) do, and how sure is each value? | [gang-clones](gang-clones.md): the behaviour record `scripts/pk-gang-record/*.json`, its sources, its builder and the world feed collector |
 | Where do the ticks of a knight thief go, and which knight spot pays? | [goldfarm](goldfarm.md): live coins a tick by spot, the players that kill the market knights, the refuge rule of the worker |
 | Run the gang squad for hours: which account is ready, what to stage, the job, the watcher, the supplies | [gang-hunt-ops](gang-hunt-ops.md): `scripts/squad-ready.ts`, `scripts/squad-watch.ts` and the runbook; the fight and the gang are in [pvp-fight-loop](pvp-fight-loop.md) |
-| Main route and board rules | [haggis-run](haggis-run.md), [boards-special](boards-special.md), [overall-board](overall-board.md), [gap-closers](gap-closers.md) |
+| Main route and board rules | [haggis-run](haggis-run.md), [boards-special](boards-special.md), [overall-board](overall-board.md), [overall-lockstep-route](overall-lockstep-route.md), [gap-closers](gap-closers.md) |
 | Tick methods, movement and hazards | [pro-playbook](pro-playbook.md), [walking](walking.md), [gathering-tricks](gathering-tricks.md), [levelup-cost](levelup-cost.md) |
 | Skill rates and combat | [skill-rows-measured](skill-rows-measured.md), [combat-measure](combat-measure.md), [agility](agility.md), [supply-floors](supply-floors.md) |
 | Quest prerequisites and routes | [quest-plan](quest-plan.md), [quest-route](quest-route.md), [quest-xp](quest-xp.md), [heroes-partner](heroes-partner.md) |
