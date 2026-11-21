@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795241358859-shaftsinker-woodenstaff-93c2f7d11b55ce8a",
+ "account": "Woodenstaff",
+ "partner": "Shaftsinker",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 2480,
+ "claim": "65192e2a-bc12-42df-a73d-fbf2dd3bf36c",
+ "count": 2480,
+ "ok": true,
+ "at": 1795241461568,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2480
+ },
+ "bank": {
+  "count": 2480,
+  "at": 1795241460832
+ },
+ "logout": {
+  "attemptId": "1795241449297-0000023892-0000000001",
+  "at": 1795241461558,
+  "sha256": "7a1b8e65849d50f1e7610262ec7f746a8a455f407b7fdb0be21db0e240cb3b75"
+ },
+ "screen": true
+}
