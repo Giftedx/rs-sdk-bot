@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795295044072-swordswallow-dropmyload-ballofwool",
  "account": "Swordswallow",
  "partner": "DropMyLoad",
@@ -10,8 +10,22 @@
  "item": "Ball of wool",
  "requested": 2,
  "claim": "5bd28da1-ec85-43b9-9bd1-3ce0025b7588",
- "count": 0,
- "ok": false,
- "at": 1795295086473,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795295107019,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795295096299
+ },
+ "logout": {
+  "attemptId": "1795295086481-0000004652-0000000001",
+  "at": 1795295106986,
+  "sha256": "5fba62e24c1c08ade99c5e00f2ae8ce3ca4f9b5615c9026cdc67a1e89dee4af1"
+ },
+ "screen": true
 }
