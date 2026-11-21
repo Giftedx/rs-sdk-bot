@@ -402,16 +402,24 @@ export const PROFILES: Record<string, {
         ],
         fare: 60,
     },
-    // Tai Bwo Wannai Karambwan Stall (karamja.inv tbwt_tiadeche_final_inventory, npc 1164 at 2781,3057; approach tile 2782,3055): 10 raw karambwans (restock 10).
+    // Tai Bwo Wannai Karambwan Stall (karamja.inv tbwt_tiadeche_final_inventory, npc 1164 at 2781,3057 inside tbwt_bamboo_door 779 at 2782,3057): 10 raw karambwans (restock 10).
     tiadeche: {
         npc: /^tiadeche$/i,
-        npcSpot: { x: 2782, z: 3055 },
+        npcSpot: { x: 2781, z: 3057 },
         bankSpot: { x: 2654, z: 3283 }, // Ardougne South Bank
         items: [
             { re: /^raw karambwan$/i, buyPerTick: 5, shelf: 10 },
             { re: /^karambwan vessel$/i, buyPerTick: 1, shelf: 2 },
         ],
         fare: 60,
+        door: {
+            id: 779,
+            x: 2782,
+            z: 3057,
+            outside: { x: 2783, z: 3057 },
+            insideStand: { x: 2782, z: 3057 },
+            inside: p => p.worldX >= 2779 && p.worldX <= 2782 && p.worldZ >= 3056 && p.worldZ <= 3059,
+        },
         dialogOpen: /^yes\.?$/i,
     },
     // Oziach (edgeville.inv runeplateshop, npc 747 at 3069,3517, outside Wilderness z<3520): Dragon Slayer complete required.

@@ -2677,11 +2677,12 @@ export function squadSupplies(): Template[] {
             resize: n => ({ args: bankJobArg({ family: 'fishing', recipe: 'karambwan', target: n, batch: Math.min(9, n), cap: 3000, returnTicks: 600, members: true, reserve: 0, bank: { x: 2852, z: 2955, level: 0 }, site: { x: 2899, z: 3118, level: 0 } }) }) },
         yields: () => [{ item: 'raw karambwan', perTick: 0.02 }],
     };
+    const tiadecheDangerGate: readonly Needs[] = [{ skills: { Hitpoints: 22 } }, { combat: 32 }, { skills: { Prayer: 43 } }];
     const karambwanVessel: Template = {
         id: 'squad-karambwan-vessel', family: 'shop-buyer', script: 'scripts/shop-buyer.ts',
         args: ['tiadeche', '1200'], env: { ITEMS: 'karambwan vessel', STOCK_TARGET: '2', STOP_AT_TARGET: '1', BANK_PACK: '1', NO_BUY_TICKS: '25', FLOAT: '500', COIN_RESERVE: '200', MAX_SPEND: '200' },
         role: 'bank', goal: 'buy karambwan vessels from Tiadeche for squad karambwan fishing', resources: ['shop:tiadeche'], squadOnly: true, repeats: false,
-        needs: { quests: ['Tai Bwo Wannai Trio'], items: { coins: 500 }, holdsUnder: { 'karambwan vessel': 1 } },
+        needs: { quests: ['Tai Bwo Wannai Trio'], items: { coins: 500 }, holdsUnder: { 'karambwan vessel': 1 }, anyOf: tiadecheDangerGate },
         yields: () => [], provides: { item: 'karambwan vessel', unlocks: ['squad-karambwan-fish'] },
     };
     const karambwanCook: Template = {
@@ -3041,7 +3042,7 @@ export function squadSupplies(): Template[] {
         enchantGlory,
         shop('squad-arrows-dargaud', 'dargaud', 'rune arrow', 'rune arrow', 0.4, 'buy rune arrows in the Ranging Guild for the gang squad', { skills: { Ranged: 40 }, items: { coins: 30_000 } }),
         shop('squad-karambwan-shop', 'alfonse', 'cooked karambwan', 'cooked karambwan', 0.05, 'buy cooked karambwan at Brimhaven Fish Restaurant for the gang squad', { items: { coins: 32_000 } }),
-        shop('squad-raw-karambwan-shop', 'tiadeche', 'raw karambwan', 'raw karambwan', 0.05, 'buy raw karambwan from Tiadeche for the gang squad', { quests: ['Tai Bwo Wannai Trio'], items: { coins: 52_000 } }),
+        shop('squad-raw-karambwan-shop', 'tiadeche', 'raw karambwan', 'raw karambwan', 0.05, 'buy raw karambwan from Tiadeche for the gang squad', { quests: ['Tai Bwo Wannai Trio'], items: { coins: 52_000 }, anyOf: tiadecheDangerGate }),
         shop('squad-water-betty', 'betty', 'water rune', 'water rune', 0.7, "buy water runes at Betty's in Port Sarim for the gang squad", { items: { coins: 6000 } }),
         shop('squad-water-aubury', 'aubury', 'water rune', 'water rune', 0.7, "buy water runes at Aubury's in Varrock for the gang squad", { items: { coins: 6000 } }),
         shop('squad-water-guild', 'magic_guild_elemental', 'water rune', 'water rune', 0.7, 'buy water runes at the Magic Guild for the gang squad', { skills: { Magic: 66 }, items: { coins: 12_000 } }),

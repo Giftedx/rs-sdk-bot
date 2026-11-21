@@ -3755,6 +3755,9 @@ describe('continuous mainland supplies, strict 4-dose decanting, quest safety an
         const baitJob = JSON.parse(decodeURIComponent(baitPlan.template!.args![1]!.slice('--job='.length)));
         expect(baitJob).toMatchObject({ family: 'fishing', recipe: 'karambwanji', target: 100, batch: 25, returnTicks: 600, bank: { x: 2852, z: 2955, level: 0 }, site: { x: 2806, z: 3009, level: 0 } });
 
+        const lowTiadeche: Acct = { ...acct('LowTiadeche', { Fishing: 99, Hitpoints: 10, Prayer: 1 }, { 'small fishing net': 1, 'raw karambwanji': 30, coin: 1000 }), quests: kQuests };
+        expect(plan(inputs([lowTiadeche], { templates: catalogue().filter(t => ['squad-karambwan-vessel', 'squad-raw-karambwan-shop'].includes(t.id)), bill: [], squad: kSquad, prices: { ...prices, 'raw karambwan': 200 } }))[0]!.template).toBeUndefined();
+
         const needVessel: Acct = { ...acct('VesselBuyer', { Fishing: 99, Prayer: 43 }, { 'small fishing net': 1, 'raw karambwanji': 30, coin: 1000 }), quests: kQuests, pos: { x: 2654, z: 3283, level: 0 } };
         expect(plan(inputs([needVessel], { templates: kTemplates, bill: [], squad: kSquad, prices: { ...prices, 'raw karambwan': 200, 'raw karambwanji': 10 } }))[0]!.template?.id).toBe('squad-karambwan-vessel');
 
