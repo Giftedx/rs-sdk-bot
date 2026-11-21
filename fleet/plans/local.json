@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795248338863,
+ "at": 1795248519012,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -399,6 +399,32 @@
    "enabled": true,
    "standing": true,
    "repeat": false
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=386000 CASH_RESERVE=5000 ORDER_KEY=liveops-quick-ranarr-2 ORDER_MS=300000 FILL_WAIT_TICKS=120"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-to-bid.ts magic_guild 563 MAX_SPEND=50000 COIN_RESERVE=10000 UNITS=1000 MIN_NET=50 MIN_LOT=10000 LOTS=1"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
   }
  ],
  "army": [
@@ -436,7 +462,6 @@
   "kiltlifter",
   "knightrider",
   "knightstick",
-  "quickhandjob",
   "sporrandip"
  ],
  "builds": {

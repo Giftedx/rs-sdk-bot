@@ -1,0 +1,23 @@
+{
+ "id": "1795248495289-kiltlifter-knightrider-3da6ba678796a74f",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Kiltlifter",
+ "to": "KnightRider",
+ "item": "Coins",
+ "count": 123000,
+ "start": 1795248495289,
+ "end": 1795249995289,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
