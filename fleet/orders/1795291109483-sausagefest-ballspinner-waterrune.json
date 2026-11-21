@@ -1,0 +1,22 @@
+{
+ "id": "1795291109483-sausagefest-ballspinner-waterrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Sausagefest",
+ "to": "Ballspinner",
+ "item": "Water rune",
+ "count": 25,
+ "start": 1795291109483,
+ "end": 1795293509483,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

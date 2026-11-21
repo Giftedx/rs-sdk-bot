@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795289820767,
+ "at": 1795291147530,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -285,24 +285,6 @@
    "resources": [
     "knight:2669,3298"
    ]
-  },
-  {
-   "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=28 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=bowbeforeme-kit4-536-0to28 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 28 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Pocketpython",
