@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795248295753-sausagefest-quickhandjob-b7a539feffabb075",
  "account": "Quickhandjob",
  "partner": "Sausagefest",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 140000,
  "claim": "11cb4365-3622-4cf0-bc17-93aa3d721604",
- "count": 0,
- "ok": false,
- "at": 1795248436313,
- "detail": "trade claimed"
+ "count": 140000,
+ "ok": true,
+ "at": 1795248450537,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 140000
+ },
+ "bank": {
+  "count": 140000,
+  "at": 1795248449718
+ },
+ "logout": {
+  "attemptId": "1795248436321-0000030320-0000000001",
+  "at": 1795248450497,
+  "sha256": "ad0a3c0578d7a76b6206b0757a51dcea825c532d0b243a5b92332a1db2bb54a0"
+ },
+ "screen": true
 }

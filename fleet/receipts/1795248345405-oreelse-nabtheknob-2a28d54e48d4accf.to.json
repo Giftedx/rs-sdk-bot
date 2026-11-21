@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795248345405-oreelse-nabtheknob-2a28d54e48d4accf",
  "account": "NabTheKnob",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 70000,
  "claim": "36cb7a91-554e-4db5-a23d-e247aa8be1f0",
- "count": 0,
- "ok": false,
- "at": 1795248431654,
- "detail": "trade claimed"
+ "count": 70000,
+ "ok": true,
+ "at": 1795248454862,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 21400,
+  "after": 91400
+ },
+ "bank": {
+  "count": 70000,
+  "at": 1795248454098
+ },
+ "logout": {
+  "attemptId": "1795248431665-0000021272-0000000001",
+  "at": 1795248454851,
+  "sha256": "43a60f81de1eefd7a4b73385dfec050a2983d79fc747a34d2d4f0b1960438eb8"
+ },
+ "screen": true
 }

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795248319026-masterbaiter-knightrider-550e0b52cbb30c20",
  "account": "Masterbaiter",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 145000,
  "claim": "91a12cb8-4a65-4d97-abdb-0dcb8a906cdd",
- "count": 0,
- "ok": false,
- "at": 1795248390759,
- "detail": "trade claimed"
+ "count": 145000,
+ "ok": true,
+ "at": 1795248447658,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 145000,
+  "after": 0
+ },
+ "bank": {
+  "count": 122650,
+  "at": 1795248413754
+ },
+ "logout": {
+  "attemptId": "1795248390768-0000029860-0000000001",
+  "at": 1795248447644,
+  "sha256": "1475df6e8dd80761d2ddae4cd4317d0d1390bf11ad3de07d25a7803e8bf5fcbd"
+ },
+ "screen": true
 }

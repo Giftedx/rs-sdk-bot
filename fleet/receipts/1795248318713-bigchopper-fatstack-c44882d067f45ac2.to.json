@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795248318713-bigchopper-fatstack-c44882d067f45ac2",
  "account": "Fatstack",
  "partner": "Bigchopper",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 155000,
  "claim": "eeb774f4-1e09-4018-b192-788f3129178d",
- "count": 0,
- "ok": false,
- "at": 1795248426125,
- "detail": "trade claimed"
+ "count": 155000,
+ "ok": true,
+ "at": 1795248446460,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2500,
+  "after": 157500
+ },
+ "bank": {
+  "count": 155000,
+  "at": 1795248445717
+ },
+ "logout": {
+  "attemptId": "1795248426133-0000018236-0000000001",
+  "at": 1795248446445,
+  "sha256": "9e94dc7fc5e5454ae8f75962be93f5d6fb01e08c269492af76357682acd76dec"
+ },
+ "screen": true
 }
