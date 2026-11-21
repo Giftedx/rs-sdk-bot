@@ -165,13 +165,6 @@ function findBestTree(
                 || (l.x === 3115 && l.z === 3250)
             ) && l.reachable !== false;
         });
-    if (cands.length === 0 && wantOak && !safeWillow) {
-        for (const l of locs) {
-            if (/^oak$/i.test(l.name) && l.optionsWithIndex?.some(o => /chop/i.test(o.text)) && l.x >= 3115 && l.x <= 3121 && l.z >= 3243 && l.z <= 3256 && l.reachable !== false) {
-                cands.push(l);
-            }
-        }
-    }
     if (activeTree) {
         const cur = cands.find(l => l.x === activeTree.x && l.z === activeTree.z);
         if (cur && isBesideTree(px, pz, cur.x, cur.z, treeSizeForLoc(cur.name))) return cur;
@@ -212,7 +205,7 @@ function findReachableTreeStandTile(
     }
     const filtered = safeWillow
         ? perimeter
-        : perimeter.filter(t => t.x >= 3115 && t.x <= 3121 && t.z >= 3246 && t.z <= 3255);
+        : perimeter.filter(t => t.x >= 3115 && t.x <= 3117 && t.z >= 3246 && t.z <= 3249);
     const pool = filtered.length > 0 ? filtered : perimeter;
     const reachable: { x: number; z: number; wp: number; cheb: number; hub: number }[] = [];
     for (const t of pool) {
@@ -521,7 +514,7 @@ if (import.meta.main) {
                 const acts: Promise<unknown>[] = [];
                 const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
                 if (potAct) acts.push(potAct);
-                if (!potAct && main.sdk.getInventory().length >= 25) {
+                if (!potAct && main.sdk.getInventory().length >= 21) {
                     const oakSlot = slotOfId(main, OBJ_OAK_LOGS);
                     if (oakSlot !== undefined) acts.push(main.direct({ type: 'dropItem', slot: oakSlot, reason: 'SDK' }));
                 }
@@ -540,15 +533,7 @@ if (import.meta.main) {
             }
 
             if (now < actionDelayApprox) {
-                // Pending 3-tick knife roll: drop excess logs here so knife3 bursts stay <=3 script inputs (+2 PrayerGuard <= 5).
-                const waitActs: Promise<unknown>[] = [];
-                const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
-                if (potAct) waitActs.push(potAct);
-                if (main.sdk.getInventory().length >= 24) {
-                    const oakSlots = main.sdk.getInventory().filter(i => i.id === OBJ_OAK_LOGS).map(i => i.slot).slice(0, potAct ? 1 : 2);
-                    for (const slot of oakSlots) waitActs.push(main.direct({ type: 'dropItem', slot, reason: 'SDK' }));
-                }
-                if (waitActs.length > 0) await Promise.all(waitActs);
+                // Pending 3-tick knife roll: never send dropItem/drink (OpHeldHandler calls clearPendingAction and cancels p_oploc).
                 await waitTicks(main, 1);
                 continue;
             }
@@ -632,15 +617,20 @@ if (import.meta.main) {
                 continue;
             }
 
-            const idleActs: Promise<unknown>[] = [];
+            const oakDropSlot = main.sdk.getInventory().length >= 20 ? slotOfId(main, OBJ_OAK_LOGS) : undefined;
             const potAct = tryDrinkPrayerPotion(main, 15);
-            if (potAct) idleActs.push(potAct);
-            if (main.sdk.getInventory().length >= 24) {
-                const oakSlots = main.sdk.getInventory().filter(i => i.id === OBJ_OAK_LOGS).map(i => i.slot).slice(0, potAct ? 1 : 2);
-                for (const slot of oakSlots) idleActs.push(main.direct({ type: 'dropItem', slot, reason: 'SDK' }));
+            if (oakDropSlot !== undefined) {
+                // OpHeldHandler calls clearPendingAction(), clearing busy2 while dropping a log in 1 input.
+                await Promise.all([
+                    ...(potAct ? [potAct] : []),
+                    main.direct({ type: 'dropItem', slot: oakDropSlot, reason: 'SDK' }),
+                ]);
+            } else {
+                await Promise.all([
+                    ...(potAct ? [potAct] : []),
+                    clearInteraction(main),
+                ]);
             }
-            idleActs.push(clearInteraction(main));
-            await Promise.all(idleActs);
             clearSentForTick = now + 1;
             await waitTicks(main, 1);
         }
