@@ -1,0 +1,22 @@
+{
+ "id": "1795300684736-dipstick-bowbeforeme-runechainbody",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Dipstick",
+ "to": "BowBeforeMe",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795300684736,
+ "end": 1795303084736,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
