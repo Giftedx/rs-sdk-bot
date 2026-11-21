@@ -124,7 +124,7 @@ export const TOURIST_TRADE_2B: readonly SupplyEntry[] = [
     { id: ITEMS.waterskin4, name: 'Waterskin(4)', count: 1 },
     { id: ITEMS.feather, name: 'Feather', count: 200 },
     { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 2 },
-    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 3 },
+    { id: ITEMS.shark, name: 'Shark', count: 4 },
     { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 1 },
 ];
 
@@ -493,8 +493,8 @@ async function walkNear(
                     }
                 }
             }
-            if (s.tick() - lastEat >= 3 && skillLvl(s, 'Hitpoints') <= 15 && skillCur(s, 'Hitpoints') <= 5) {
-                const food = invOf(s).find(i => ITEMS.chocolateCakeParts.includes(i.id) || i.id === ITEMS.shark);
+            if (s.tick() - lastEat >= 3 && skillLvl(s, 'Hitpoints') <= 35 && skillCur(s, 'Hitpoints') <= Math.max(8, Math.ceil(skillLvl(s, 'Hitpoints') * 0.35))) {
+                const food = invOf(s).find(i => i.id === ITEMS.shark || ITEMS.chocolateCakeParts.includes(i.id));
                 if (food) {
                     lastEat = s.tick();
                     void s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
@@ -538,8 +538,8 @@ async function walkNear(
     while (!at() && !opts?.stop?.() && s.tick() - t0 < maxTicks) {
         await clearDialogTick(s);
         await maintainEnergy(s, 35);
-        if (skillLvl(s, 'Hitpoints') <= 15 && skillCur(s, 'Hitpoints') <= 6) {
-            await drinkFirstMatching(s, [...ITEMS.chocolateCakeParts, ITEMS.shark]);
+        if (skillLvl(s, 'Hitpoints') <= 35 && skillCur(s, 'Hitpoints') <= Math.max(8, Math.ceil(skillLvl(s, 'Hitpoints') * 0.35))) {
+            await drinkFirstMatching(s, [ITEMS.shark, ...ITEMS.chocolateCakeParts]);
         }
         await s.direct({ type: 'walkTo', x: target.x, z: target.z, running: true, reason: 'SDK' });
         await waitTicks(s, 2);
@@ -871,7 +871,16 @@ async function smithTo20AtVarrock(s: Session): Promise<void> {
     if (skillLvl(s, 'Smithing') < 20) throw Error(`smithing reached ${skillLvl(s, 'Smithing')} (< 20)`);
 }
 
+async function disableAutoRetaliate(s: Session): Promise<void> {
+    if (s.sdk.getState()?.autoRetaliateEnabled === false) return;
+    await clearAllDialogs(s, 3);
+    // Component 151 is controls:com_3 (Auto Retaliate OFF); keeps guard hits from cancelling NPC dialogue.
+    await s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
+    await waitTicks(s, 1);
+}
+
 async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, onHalfway?: () => void): Promise<void> {
+    await disableAutoRetaliate(s);
     // Enter Shantay Pass from Al Kharid glory spot.
     await walkNear(s, { x: 3304, z: 3118 }, 2, 70);
     const passGate = await waitNearbyLoc(s, /shantay pass/i, { x: 3302, z: 3116 }, 5, 15);
@@ -889,7 +898,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await waitTicks(s, 1);
     }
 
-    const q = await openQuest({ session: s, burst: true, cap, eatAt: 8, food: [ITEMS.chocolateCake, ITEMS.shark], lumbridgeOk: true });
+    const q = await openQuest({ session: s, burst: true, cap, eatAt: 10, food: [ITEMS.shark, ITEMS.chocolateCake], lumbridgeOk: true });
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
     try {
@@ -1027,8 +1036,9 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                 if ((q.st()?.prayers?.prayerPoints ?? 99) <= 10) {
                     if (await drinkFirstMatching(s, ITEMS.prayerPot)) await q.waitTicks(2);
                 }
-                for (let h = 0; h < 3 && q.hp() <= 7; h++) {
-                    if (!await drinkFirstMatching(s, [...ITEMS.chocolateCakeParts, ITEMS.shark])) break;
+                const eatFloor = Math.max(10, Math.ceil((skillLvl(s, 'Hitpoints') || 10) * 0.45));
+                for (let h = 0; h < 3 && q.hp() <= eatFloor; h++) {
+                    if (!await drinkFirstMatching(s, [ITEMS.shark, ...ITEMS.chocolateCakeParts])) break;
                     await q.waitTicks(2);
                 }
                 const curX = x(), slip0 = q.msgCount(/slip a little/i);
@@ -1189,7 +1199,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
 
         await mineIn();
         await ensureFullPrayer();
-        await q.walk('to cave guard', [{ x: 3280, z: 9415, tol: 1 }], l => console.log('CAVE_WALK', l));
+        await q.walk('to cave guard', [{ x: 3280, z: 9415, tol: 1 }]);
         await q.talk('cave guard', /^mercenary$/i, [/mine in a different area/i, /you're quite right sir/i, /we understand each other perfectly/i], () => q.sawText(/winks at you knowingly/i), { x: 3280, z: 9415 }, 50);
         await mineOut();
         await gateOut();
@@ -1268,7 +1278,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await gateIn();
         await mineIn();
         await ensureFullPrayer();
-        await q.walk('to cave guard', [{ x: 3280, z: 9415, tol: 1 }], l => console.log('CAVE_WALK', l));
+        await q.walk('to cave guard', [{ x: 3280, z: 9415, tol: 1 }]);
         await q.talk('pineapple', /^mercenary$/i, [], () => !q.has(ITEMS.pineapple) && q.sawText(/a deal's a deal/i), { x: 3280, z: 9415 }, 50);
         await q.walk('to cave', [{ x: CAVE_W.x - 1, z: CAVE_W.z, tol: 0 }]);
         await q.step('cave east', () => q.opLoc(loc(CAVE_W), 1), () => x() >= 3285, 12, 4);
@@ -1303,14 +1313,19 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await mineOut();
 
         await ensureFullPrayer();
-        await q.walk('to winch', [{ x: 3280, z: 3018, tol: 0 }]);
+        // Keep along the east/south camp perimeter from mine exit to bypass Rowdy Guards at (3296,3026), (3287,3030) and (3280,3026).
+        await q.walk('to winch', [
+            { x: 3304, z: 3024, tol: 2 },
+            { x: 3300, z: 3015, tol: 2 },
+            { x: 3280, z: 3018, tol: 0 },
+        ]);
         await locTalk('winch', () => { const w = loc(WINCH); return q.opLoc(w, q.opIndex(w, /operate|pull|use/i) === 1 ? 2 : q.opIndex(w, /operate|pull|use/i)); }, [], () => q.sawText(/get me out of here/i));
         await locTalk('up barrel', () => { const b = loc(UP_BARREL); return q.opLoc(b, q.opIndex(b, /search/i) === 1 ? 2 : q.opIndex(b, /search/i)); }, [], () => q.has(ITEMS.ana));
 
         await q.walk('to cart', [{ x: CART.x - 1, z: CART.z, tol: 1 }]);
         await locTalk('ana on cart', () => q.useOnLoc(ITEMS.ana, loc(CART)), [], () => !q.has(ITEMS.ana));
         await q.talk('driver', /^mine cart driver$/i, [/^nice cart/i, /one wagon wheel/i, /one good turn/i, /fired\.\.\. no, shot/i, /in for a penny/i, /it's like this/i, /prison riot/i, /you can't leave me here/i],
-            () => q.sawText(/jump in the cart then/i), { x: 3287, z: 3022 }, 70);
+            () => q.sawText(/jump in the cart then|get in the cart or i'll go without you/i), { x: 3287, z: 3022 }, 90);
         await locTalk('ride out', () => { const c = loc(CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, i'll get on/i], () => q.has(ITEMS.ana) && x() < 3270);
 
         await q.walk('to irena', [{ x: IRENA.x, z: IRENA.z - 1, tol: 2 }]);
