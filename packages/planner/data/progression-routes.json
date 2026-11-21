@@ -29967,6 +29967,66 @@
    "maxBatch": 1000
   },
   {
+   "id": "recipe:inventory:combine:crystal-key",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22combine%3Acrystal-key%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "989": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "985": 1,
+    "987": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "combine:crystal-key",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
    "id": "recipe:inventory:cut-bow:unstrung_longbow",
    "routeId": "skiller:fletching:inventory",
    "ladderIds": [
@@ -33774,6 +33834,65 @@
    "maxBatch": 1000
   },
   {
+   "id": "recipe:inventory:decant:magic_potion",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant%3Amagic_potion%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "3040": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "3042": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant:magic_potion",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
    "id": "recipe:inventory:decant:prayer_restore",
    "routeId": "skiller:herblore:inventory",
    "ladderIds": [],
@@ -33880,6 +33999,65 @@
     "bankJob": {
      "family": "inventory",
      "recipe": "decant:ranging_potion",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant:restore_potion",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant%3Arestore_potion%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2430": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "127": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant:restore_potion",
      "target": 1,
      "batch": 13,
      "cap": 20000,
@@ -34128,6 +34306,65 @@
    "maxBatch": 1000
   },
   {
+   "id": "recipe:inventory:decant:super_restore",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant%3Asuper_restore%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "3024": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "3026": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant:super_restore",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
    "id": "recipe:inventory:decant:super_strength",
    "routeId": "skiller:herblore:inventory",
    "ladderIds": [],
@@ -34187,6 +34424,65 @@
    "maxBatch": 1000
   },
   {
+   "id": "recipe:inventory:decant:zamorak_potion",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant%3Azamorak_potion%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2450": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "189": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant:zamorak_potion",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
    "id": "recipe:inventory:decant2:agility_potion",
    "routeId": "skiller:herblore:inventory",
    "ladderIds": [],
@@ -34234,6 +34530,65 @@
     "bankJob": {
      "family": "inventory",
      "recipe": "decant2:agility_potion",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant2:magic_potion",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant2%3Amagic_potion%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "3040": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "3044": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant2:magic_potion",
      "target": 1,
      "batch": 13,
      "cap": 20000,
@@ -34352,6 +34707,65 @@
     "bankJob": {
      "family": "inventory",
      "recipe": "decant2:ranging_potion",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant2:restore_potion",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant2%3Arestore_potion%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2430": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "129": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant2:restore_potion",
      "target": 1,
      "batch": 13,
      "cap": 20000,
@@ -34600,6 +35014,65 @@
    "maxBatch": 1000
   },
   {
+   "id": "recipe:inventory:decant2:super_restore",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant2%3Asuper_restore%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "3024": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "3028": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant2:super_restore",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
    "id": "recipe:inventory:decant2:super_strength",
    "routeId": "skiller:herblore:inventory",
    "ladderIds": [],
@@ -34647,6 +35120,65 @@
     "bankJob": {
      "family": "inventory",
      "recipe": "decant2:super_strength",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant2:zamorak_potion",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant2%3Azamorak_potion%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2450": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "191": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant2:zamorak_potion",
      "target": 1,
      "batch": 13,
      "cap": 20000,
@@ -34707,6 +35239,66 @@
     "bankJob": {
      "family": "inventory",
      "recipe": "decant31:agility_potion",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant31:magic_potion",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant31%3Amagic_potion%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "3040": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "3042": 1,
+    "3046": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant31:magic_potion",
      "target": 1,
      "batch": 13,
      "cap": 20000,
@@ -34827,6 +35419,66 @@
     "bankJob": {
      "family": "inventory",
      "recipe": "decant31:ranging_potion",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant31:restore_potion",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant31%3Arestore_potion%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2430": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "127": 1,
+    "131": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant31:restore_potion",
      "target": 1,
      "batch": 13,
      "cap": 20000,
@@ -35079,6 +35731,66 @@
    "maxBatch": 1000
   },
   {
+   "id": "recipe:inventory:decant31:super_restore",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant31%3Asuper_restore%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "3024": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "3026": 1,
+    "3030": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant31:super_restore",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
    "id": "recipe:inventory:decant31:super_strength",
    "routeId": "skiller:herblore:inventory",
    "ladderIds": [],
@@ -35127,6 +35839,66 @@
     "bankJob": {
      "family": "inventory",
      "recipe": "decant31:super_strength",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant31:zamorak_potion",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant31%3Azamorak_potion%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2450": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "189": 1,
+    "193": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant31:zamorak_potion",
      "target": 1,
      "batch": 13,
      "cap": 20000,
@@ -37689,6 +38461,67 @@
     "bankJob": {
      "family": "inventory",
      "recipe": "grind:blue_dragon_scale",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:grind:chocolate_bar",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22grind%3Achocolate_bar%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "1975": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "1973": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {
+     "233": 1
+    },
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "grind:chocolate_bar",
      "target": 1,
      "batch": 13,
      "cap": 20000,
@@ -49865,6 +50698,1840 @@
     "outputPerUnit": 1
    },
    "maxBatch": 1000
+  },
+  {
+   "id": "recipe:magic:enchant:diamond_ring",
+   "routeId": "skiller:magic:items",
+   "ladderIds": [
+    "magic/magic_spell_enchant_level4"
+   ],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22magic%22%2C%22recipe%22%3A%22enchant%3Adiamond_ring%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Afalse%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts; scripts/skill_magic/configs/magic_spells.dbrow:38",
+   "effects": {
+    "items": {
+     "2570": 1
+    },
+    "xp": {
+     "magic": 1675
+    }
+   },
+   "rate": {
+    "unitsPerTick": 0.3333313432835821,
+    "basis": "model",
+    "evidence": "scripts/skill_magic/scripts/spells/enchant.rs2:53; vendor/rs-sdk/server/engine/src/engine/script/handlers/PlayerOps.ts:378"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "557": 10,
+    "564": 1,
+    "1643": 1
+   },
+   "requirements": {
+    "levels": {
+     "magic": 57
+    }
+   },
+   "members": false,
+   "execution": {
+    "bankJob": {
+     "family": "magic",
+     "recipe": "enchant:diamond_ring",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": false,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000,
+   "modelRates": {
+    "skill": "magic",
+    "perLevel": [
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821
+    ]
+   }
+  },
+  {
+   "id": "recipe:magic:enchant:dragonstone_ring",
+   "routeId": "skiller:magic:items",
+   "ladderIds": [
+    "magic/magic_spell_enchant_level5"
+   ],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22magic%22%2C%22recipe%22%3A%22enchant%3Adragonstone_ring%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts; scripts/skill_magic/configs/magic_spells.dbrow:50",
+   "effects": {
+    "items": {
+     "2572": 1
+    },
+    "xp": {
+     "magic": 1950
+    }
+   },
+   "rate": {
+    "unitsPerTick": 0.3333333333333333,
+    "basis": "model",
+    "evidence": "scripts/skill_magic/scripts/spells/enchant.rs2:53; vendor/rs-sdk/server/engine/src/engine/script/handlers/PlayerOps.ts:378"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "555": 15,
+    "557": 15,
+    "564": 1,
+    "1645": 1
+   },
+   "requirements": {
+    "levels": {
+     "magic": 68
+    },
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "magic",
+     "recipe": "enchant:dragonstone_ring",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000,
+   "modelRates": {
+    "skill": "magic",
+    "perLevel": [
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333
+    ]
+   }
+  },
+  {
+   "id": "recipe:magic:enchant:emerald_ring",
+   "routeId": "skiller:magic:items",
+   "ladderIds": [
+    "magic/magic_spell_enchant_level2"
+   ],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22magic%22%2C%22recipe%22%3A%22enchant%3Aemerald_ring%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Afalse%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts; scripts/skill_magic/configs/magic_spells.dbrow:14",
+   "effects": {
+    "items": {
+     "2552": 1
+    },
+    "xp": {
+     "magic": 925
+    }
+   },
+   "rate": {
+    "unitsPerTick": 0.33332972972972974,
+    "basis": "model",
+    "evidence": "scripts/skill_magic/scripts/spells/enchant.rs2:53; vendor/rs-sdk/server/engine/src/engine/script/handlers/PlayerOps.ts:378"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "556": 3,
+    "564": 1,
+    "1639": 1
+   },
+   "requirements": {
+    "levels": {
+     "magic": 27
+    }
+   },
+   "members": false,
+   "execution": {
+    "bankJob": {
+     "family": "magic",
+     "recipe": "enchant:emerald_ring",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": false,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000,
+   "modelRates": {
+    "skill": "magic",
+    "perLevel": [
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974
+    ]
+   }
+  },
+  {
+   "id": "recipe:magic:enchant:ruby_ring",
+   "routeId": "skiller:magic:items",
+   "ladderIds": [
+    "magic/magic_spell_enchant_level3"
+   ],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22magic%22%2C%22recipe%22%3A%22enchant%3Aruby_ring%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Afalse%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts; scripts/skill_magic/configs/magic_spells.dbrow:26",
+   "effects": {
+    "items": {
+     "2568": 1
+    },
+    "xp": {
+     "magic": 1475
+    }
+   },
+   "rate": {
+    "unitsPerTick": 0.333335593220339,
+    "basis": "model",
+    "evidence": "scripts/skill_magic/scripts/spells/enchant.rs2:53; vendor/rs-sdk/server/engine/src/engine/script/handlers/PlayerOps.ts:378"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "554": 5,
+    "564": 1,
+    "1641": 1
+   },
+   "requirements": {
+    "levels": {
+     "magic": 49
+    }
+   },
+   "members": false,
+   "execution": {
+    "bankJob": {
+     "family": "magic",
+     "recipe": "enchant:ruby_ring",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": false,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000,
+   "modelRates": {
+    "skill": "magic",
+    "perLevel": [
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339
+    ]
+   }
+  },
+  {
+   "id": "recipe:magic:enchant:sapphire_necklace",
+   "routeId": "skiller:magic:items",
+   "ladderIds": [
+    "magic/magic_spell_enchant_level1"
+   ],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22magic%22%2C%22recipe%22%3A%22enchant%3Asapphire_necklace%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Afalse%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts; scripts/skill_magic/configs/magic_spells.dbrow:1",
+   "effects": {
+    "items": {
+     "3853": 1
+    },
+    "xp": {
+     "magic": 437.5
+    }
+   },
+   "rate": {
+    "unitsPerTick": 0.33332571428571434,
+    "basis": "model",
+    "evidence": "scripts/skill_magic/scripts/spells/enchant.rs2:53; vendor/rs-sdk/server/engine/src/engine/script/handlers/PlayerOps.ts:378"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "555": 1,
+    "564": 1,
+    "1656": 1
+   },
+   "requirements": {
+    "levels": {
+     "magic": 7
+    }
+   },
+   "members": false,
+   "execution": {
+    "bankJob": {
+     "family": "magic",
+     "recipe": "enchant:sapphire_necklace",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": false,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000,
+   "modelRates": {
+    "skill": "magic",
+    "perLevel": [
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434
+    ]
+   }
+  },
+  {
+   "id": "recipe:magic:enchant:sapphire_ring",
+   "routeId": "skiller:magic:items",
+   "ladderIds": [
+    "magic/magic_spell_enchant_level1"
+   ],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22magic%22%2C%22recipe%22%3A%22enchant%3Asapphire_ring%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Afalse%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts; scripts/skill_magic/configs/magic_spells.dbrow:1",
+   "effects": {
+    "items": {
+     "2550": 1
+    },
+    "xp": {
+     "magic": 437.5
+    }
+   },
+   "rate": {
+    "unitsPerTick": 0.33332571428571434,
+    "basis": "model",
+    "evidence": "scripts/skill_magic/scripts/spells/enchant.rs2:53; vendor/rs-sdk/server/engine/src/engine/script/handlers/PlayerOps.ts:378"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "555": 1,
+    "564": 1,
+    "1637": 1
+   },
+   "requirements": {
+    "levels": {
+     "magic": 7
+    }
+   },
+   "members": false,
+   "execution": {
+    "bankJob": {
+     "family": "magic",
+     "recipe": "enchant:sapphire_ring",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": false,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000,
+   "modelRates": {
+    "skill": "magic",
+    "perLevel": [
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434
+    ]
+   }
+  },
+  {
+   "id": "recipe:magic:enchant:strung_diamond_amulet",
+   "routeId": "skiller:magic:items",
+   "ladderIds": [
+    "magic/magic_spell_enchant_level4"
+   ],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22magic%22%2C%22recipe%22%3A%22enchant%3Astrung_diamond_amulet%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Afalse%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts; scripts/skill_magic/configs/magic_spells.dbrow:38",
+   "effects": {
+    "items": {
+     "1731": 1
+    },
+    "xp": {
+     "magic": 1675
+    }
+   },
+   "rate": {
+    "unitsPerTick": 0.3333313432835821,
+    "basis": "model",
+    "evidence": "scripts/skill_magic/scripts/spells/enchant.rs2:53; vendor/rs-sdk/server/engine/src/engine/script/handlers/PlayerOps.ts:378"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "557": 10,
+    "564": 1,
+    "1700": 1
+   },
+   "requirements": {
+    "levels": {
+     "magic": 57
+    }
+   },
+   "members": false,
+   "execution": {
+    "bankJob": {
+     "family": "magic",
+     "recipe": "enchant:strung_diamond_amulet",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": false,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000,
+   "modelRates": {
+    "skill": "magic",
+    "perLevel": [
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821,
+     0.3333313432835821
+    ]
+   }
+  },
+  {
+   "id": "recipe:magic:enchant:strung_dragonstone_amulet",
+   "routeId": "skiller:magic:items",
+   "ladderIds": [
+    "magic/magic_spell_enchant_level5"
+   ],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22magic%22%2C%22recipe%22%3A%22enchant%3Astrung_dragonstone_amulet%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts; scripts/skill_magic/configs/magic_spells.dbrow:50",
+   "effects": {
+    "items": {
+     "1704": 1
+    },
+    "xp": {
+     "magic": 1950
+    }
+   },
+   "rate": {
+    "unitsPerTick": 0.3333333333333333,
+    "basis": "model",
+    "evidence": "scripts/skill_magic/scripts/spells/enchant.rs2:53; vendor/rs-sdk/server/engine/src/engine/script/handlers/PlayerOps.ts:378"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "555": 15,
+    "557": 15,
+    "564": 1,
+    "1702": 1
+   },
+   "requirements": {
+    "levels": {
+     "magic": 68
+    },
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "magic",
+     "recipe": "enchant:strung_dragonstone_amulet",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000,
+   "modelRates": {
+    "skill": "magic",
+    "perLevel": [
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333,
+     0.3333333333333333
+    ]
+   }
+  },
+  {
+   "id": "recipe:magic:enchant:strung_emerald_amulet",
+   "routeId": "skiller:magic:items",
+   "ladderIds": [
+    "magic/magic_spell_enchant_level2"
+   ],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22magic%22%2C%22recipe%22%3A%22enchant%3Astrung_emerald_amulet%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Afalse%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts; scripts/skill_magic/configs/magic_spells.dbrow:14",
+   "effects": {
+    "items": {
+     "1729": 1
+    },
+    "xp": {
+     "magic": 925
+    }
+   },
+   "rate": {
+    "unitsPerTick": 0.33332972972972974,
+    "basis": "model",
+    "evidence": "scripts/skill_magic/scripts/spells/enchant.rs2:53; vendor/rs-sdk/server/engine/src/engine/script/handlers/PlayerOps.ts:378"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "556": 3,
+    "564": 1,
+    "1696": 1
+   },
+   "requirements": {
+    "levels": {
+     "magic": 27
+    }
+   },
+   "members": false,
+   "execution": {
+    "bankJob": {
+     "family": "magic",
+     "recipe": "enchant:strung_emerald_amulet",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": false,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000,
+   "modelRates": {
+    "skill": "magic",
+    "perLevel": [
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974,
+     0.33332972972972974
+    ]
+   }
+  },
+  {
+   "id": "recipe:magic:enchant:strung_ruby_amulet",
+   "routeId": "skiller:magic:items",
+   "ladderIds": [
+    "magic/magic_spell_enchant_level3"
+   ],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22magic%22%2C%22recipe%22%3A%22enchant%3Astrung_ruby_amulet%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Afalse%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts; scripts/skill_magic/configs/magic_spells.dbrow:26",
+   "effects": {
+    "items": {
+     "1725": 1
+    },
+    "xp": {
+     "magic": 1475
+    }
+   },
+   "rate": {
+    "unitsPerTick": 0.333335593220339,
+    "basis": "model",
+    "evidence": "scripts/skill_magic/scripts/spells/enchant.rs2:53; vendor/rs-sdk/server/engine/src/engine/script/handlers/PlayerOps.ts:378"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "554": 5,
+    "564": 1,
+    "1698": 1
+   },
+   "requirements": {
+    "levels": {
+     "magic": 49
+    }
+   },
+   "members": false,
+   "execution": {
+    "bankJob": {
+     "family": "magic",
+     "recipe": "enchant:strung_ruby_amulet",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": false,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000,
+   "modelRates": {
+    "skill": "magic",
+    "perLevel": [
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339,
+     0.333335593220339
+    ]
+   }
+  },
+  {
+   "id": "recipe:magic:enchant:strung_sapphire_amulet",
+   "routeId": "skiller:magic:items",
+   "ladderIds": [
+    "magic/magic_spell_enchant_level1"
+   ],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22magic%22%2C%22recipe%22%3A%22enchant%3Astrung_sapphire_amulet%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Afalse%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts; scripts/skill_magic/configs/magic_spells.dbrow:1",
+   "effects": {
+    "items": {
+     "1727": 1
+    },
+    "xp": {
+     "magic": 437.5
+    }
+   },
+   "rate": {
+    "unitsPerTick": 0.33332571428571434,
+    "basis": "model",
+    "evidence": "scripts/skill_magic/scripts/spells/enchant.rs2:53; vendor/rs-sdk/server/engine/src/engine/script/handlers/PlayerOps.ts:378"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "555": 1,
+    "564": 1,
+    "1694": 1
+   },
+   "requirements": {
+    "levels": {
+     "magic": 7
+    }
+   },
+   "members": false,
+   "execution": {
+    "bankJob": {
+     "family": "magic",
+     "recipe": "enchant:strung_sapphire_amulet",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": false,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000,
+   "modelRates": {
+    "skill": "magic",
+    "perLevel": [
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434,
+     0.33332571428571434
+    ]
+   }
   },
   {
    "id": "recipe:mining:adamantite_rock_table",

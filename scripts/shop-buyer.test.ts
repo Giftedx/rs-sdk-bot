@@ -429,4 +429,18 @@ test('mainland Skulgrimen, Shantay, black armour, Wydin chocolate, and Jiminua q
     expect(selectItems(PROFILES.wydin_choc!.items, 'cheese|chocolate bar')).toHaveLength(2);
     expect(selectItems(PROFILES.gem_trader!.items, 'uncut emerald|emerald')).toHaveLength(2);
     expect(selectItems(PROFILES.jiminua!.items, 'antipoison|papyrus|charcoal')).toHaveLength(3);
+    expect(PROFILES.dommik_moulds!.npc.test('Dommik')).toBe(true);
+    expect(selectItems(PROFILES.dommik_moulds!.items, 'necklace mould|amulet mould')).toHaveLength(2);
+    expect(PROFILES.siegfried!.npc.test('Siegfried Erkle')).toBe(true);
+    expect(PROFILES.siegfried!.npcSpot).toEqual({ x: 2725, z: 3381, level: 2 });
+    expect(PROFILES.siegfried!.door).toMatchObject({ id: 2391, x: 2728, z: 3349, outside: { x: 2728, z: 3348 }, insideStand: { x: 2728, z: 3350 } });
+    expect(PROFILES.siegfried!.door!.inside({ worldX: 2728, worldZ: 3350, level: 0 })).toBe(true);
+    expect(PROFILES.siegfried!.door!.inside({ worldX: 2728, worldZ: 3349, level: 0 })).toBe(false);
+    expect(selectItems(PROFILES.siegfried!.items, 'cape of legends|shield right half')).toHaveLength(2);
+    expect(PROFILES.helemos!.npc.test('Helemos')).toBe(true);
+    expect(PROFILES.helemos!.npcSpot).toEqual({ x: 2894, z: 3510, level: 1 });
+    expect(PROFILES.helemos!.door).toMatchObject({ id: 2624, x: 2902, z: 3510, outside: { x: 2903, z: 3510 }, insideStand: { x: 2901, z: 3510 } });
+    expect(PROFILES.helemos!.door!.inside({ worldX: 2901, worldZ: 3510, level: 0 })).toBe(true);
+    expect(PROFILES.helemos!.door!.inside({ worldX: 2902, worldZ: 3510, level: 0 })).toBe(false);
+    expect(selectItems(PROFILES.helemos!.items, 'dragon battleaxe|dragon mace')).toHaveLength(2);
 });

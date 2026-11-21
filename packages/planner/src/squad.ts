@@ -27,8 +27,8 @@ export const SQUAD_HOURLY: Readonly<Record<string, readonly [low: number, high: 
     'blood rune': [80, 140],
     'cosmic rune': [12, 20],
 };
-// Each member also holds this minimum escape stock (Teleport to Varrock, Wind Strike away from a fight).
-export const SQUAD_ESCAPE: Readonly<Record<string, number>> = { 'law rune': 2, 'air rune': 10 };
+// Each member also holds this minimum escape stock (Camelot Teleport away from a fight, matching tribrid-bis-zerk-glory-tele).
+export const SQUAD_ESCAPE: Readonly<Record<string, number>> = { 'law rune': 3, 'air rune': 15 };
 // Equivalent potion lines in 3-dose units (four-dose bottles count 4/3 of a three-dose bottle).
 export const SQUAD_POTION_ALIASES: Readonly<Record<string, readonly [name: string, doses: number][]>> = {
     'antipoison(3)': [['antipoison(3)', 3], ['superantipoison(3)', 3], ['antipoison(4)', 4], ['superantipoison(4)', 4]],
@@ -47,6 +47,7 @@ export const SQUAD_SPARES: Readonly<Record<string, number>> = {
     'dragon dagger(p)': 2,
     'magic shortbow': 2,
     'berserker helm': 2,
+    'amulet of glory(4)': 2,
     'rune full helm': 2,
     'rune platebody': 2,
     'rune plateleg': 2,
@@ -55,17 +56,66 @@ export const SQUAD_SPARES: Readonly<Record<string, number>> = {
     black_dragonhide_chaps: 2,
     black_dragon_vambraces: 2,
 };
-// The arrows that count toward the arrow line, best first. A row asks for these, and the supply jobs make rune arrows.
-export const SQUAD_ARROWS: readonly string[] = ['rune arrow', 'adamant arrow'];
+// Gear aliases accepted for spare armour/jewellery slots so Wave B/C Dragon upgrades or partially charged glories
+// satisfy their corresponding spare slot and are retained by donors.
+export const SQUAD_GEAR_ALIASES: Readonly<Record<string, readonly string[]>> = {
+    'amulet of glory(4)': ['amulet of glory(4)', 'amulet of glory(3)', 'amulet of glory(2)', 'amulet of glory(1)'],
+    'rune platebody': ['rune platebody', 'dragon chainbody'],
+    'rune kiteshield': ['rune kiteshield', 'dragon sq shield'],
+    'rune plateleg': ['rune plateleg', 'dragon plateleg'],
+};
+// The arrows that count toward the arrow line, best first. A row asks for poisoned rune arrows first, then unpoisoned.
+export const SQUAD_ARROWS: readonly string[] = ['rune arrow(p)', 'rune arrow', 'adamant arrow'];
 // What a member holds counts by the HP an item heals (a lobster held is still food); new food is sharks. Demand is in shark units.
 export const SQUAD_FOOD_HEAL: Readonly<Record<string, number>> = { shark: 20, swordfish: 14, lobster: 12 };
 export const SQUAD_FOOD = Object.keys(SQUAD_FOOD_HEAL);
+// Wave B/C BiS benchmark parameters (bench run 44858769973: tribrid-bis-zerk-glory-tele / tribrid-bis-zerk-tele-karam2).
+export const SQUAD_WAVE_BC = {
+    benchKits: ['tribrid-bis-zerk-glory-tele', 'tribrid-bis-zerk-tele-karam2'] as const,
+    optimalSquadRange: [8, 12] as const,
+    hourlyPerTribrid: {
+        shark: 31,
+        'cooked karambwan': 8,
+        'rune arrow(p)': 160,
+        'earth rune': 78,
+        'water rune': 78,
+        'nature rune': 62,
+        'law rune': 4,
+        'air rune': 16,
+        'prayer potion(4)': 0.5,
+        'super attack(4)': 1.5,
+        'super strength(4)': 1.5,
+        'super defence(4)': 1.5,
+        'ranging potion(4)': 1.5,
+        'superantipoison(4)': 1,
+    } as Readonly<Record<string, number>>,
+    tripEscape: { 'law rune': 3, 'air rune': 15 } as Readonly<Record<string, number>>,
+    wornNames: [
+        'berserker helm', 'cape of legends', 'amulet of glory(4)', 'dragon dagger(p)',
+        'dragon chainbody', 'dragon sq shield', 'dragon plateleg', 'black_dragon_vambraces',
+        'climbing boot', 'ring of recoil', 'rune arrow(p)',
+    ] as readonly string[],
+} as const;
+
+export function squadBurnBudget(tribrids = 10, hours = SQUAD_HOURS, opts: { comboFood?: boolean } = {}): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const [item, perHr] of Object.entries(SQUAD_WAVE_BC.hourlyPerTribrid)) {
+        if (item === 'cooked karambwan' && !opts.comboFood) continue;
+        const base = Math.ceil(perHr * tribrids * hours);
+        const floor = (SQUAD_WAVE_BC.tripEscape[item] ?? 0) * tribrids;
+        out[item] = Math.max(base, floor);
+    }
+    return out;
+}
+
 // The names that a row of a line asks for: sharks for food, the best arrows for the arrow line, potions in preferred order, else the item itself.
 export const squadLineNames = (item: string): string[] => {
     if (item === 'food') return ['shark'];
     if (item === 'arrow') return [...SQUAD_ARROWS];
     const potion = SQUAD_POTION_ALIASES[item];
     if (potion) return potion.map(([name]) => name);
+    const alias = SQUAD_GEAR_ALIASES[item];
+    if (alias) return [...alias];
     return [item];
 };
 
@@ -101,12 +151,18 @@ export function squadHeld(item: string, items: Readonly<Record<string, number>>)
     if (item === 'food') return Object.entries(SQUAD_FOOD_HEAL).reduce((n, [food, heal]) => n + (items[food] ?? 0) * heal / SQUAD_FOOD_HEAL.shark!, 0);
     const potion = SQUAD_POTION_ALIASES[item];
     if (potion) return potion.reduce((n, [name, doses]) => n + (items[name] ?? 0) * doses / 3, 0);
+    const alias = SQUAD_GEAR_ALIASES[item];
+    if (alias) return alias.reduce((n, name) => n + (items[name] ?? 0), 0);
     return items[item] ?? 0;
 }
 // The most of each item a squad member keeps for the squad, by item name: a donor that is a member gives only what it
 // holds above this. Each food item is kept up to the whole food target in its own units.
 export function squadKeeps(hours: number): Record<string, number> {
-    const keeps: Record<string, number> = { ...SQUAD_ESCAPE, ...SQUAD_SPARES };
+    const keeps: Record<string, number> = { ...SQUAD_ESCAPE, ...SQUAD_SPARES, 'cape of legend': 2 };
+    for (const [primary, names] of Object.entries(SQUAD_GEAR_ALIASES)) {
+        const cap = SQUAD_SPARES[primary] ?? 2;
+        for (const name of names) keeps[name] = Math.max(keeps[name] ?? 0, cap);
+    }
     for (const item of Object.keys(SQUAD_HOURLY)) {
         const target = Math.max(squadTarget(item, hours), SQUAD_ESCAPE[item] ?? 0);
         if (item === 'arrow') { for (const arrow of SQUAD_ARROWS) keeps[arrow] = target; continue; }
@@ -136,8 +192,8 @@ export function squadRows(squad: SquadInput | undefined, price: (item: string) =
     for (const m of squad.members) {
         const lines: [string, string[], number][] = [
             ...Object.keys(SQUAD_HOURLY).map(item => [item, squadLineNames(item), Math.max(squadTarget(item, squad.hours), SQUAD_ESCAPE[item] ?? 0)] as [string, string[], number]),
-            ...Object.entries(SQUAD_ESCAPE).filter(([item]) => !(item in SQUAD_HOURLY)).map(([item, n]) => [item, [item], n] as [string, string[], number]),
-            ...Object.entries(SQUAD_SPARES).filter(([item]) => !(item in SQUAD_HOURLY)).map(([item, n]) => [item, [item], n] as [string, string[], number]),
+            ...Object.entries(SQUAD_ESCAPE).filter(([item]) => !(item in SQUAD_HOURLY)).map(([item, n]) => [item, squadLineNames(item), n] as [string, string[], number]),
+            ...Object.entries(SQUAD_SPARES).filter(([item]) => !(item in SQUAD_HOURLY)).map(([item, n]) => [item, squadLineNames(item), n] as [string, string[], number]),
         ];
         for (const [item, names, target] of lines) {
             const units = Math.max(0, Math.ceil(target - squadHeld(item, m.items)));

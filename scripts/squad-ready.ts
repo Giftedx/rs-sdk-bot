@@ -67,6 +67,8 @@ export type Rule = {
     minHours?: number;
     requireQuests?: readonly string[];
     bisSupplies?: boolean;
+    waveBC?: boolean;
+    comboFood?: boolean;
 };
 export const SUPPLY_QUESTS = ['Lost City', 'Dragon Slayer', 'Death Plateau', 'Druidic Ritual', 'Tai Bwo Wannai Trio'] as const;
 export const TRIBRID_BIS_ITEMS = {
@@ -75,6 +77,7 @@ export const TRIBRID_BIS_ITEMS = {
     lobster: 379,
     cookedKarambwan: 3144,
     runeArrow: 892,
+    runeArrowP: 893,
     adamantArrow: 890,
     earthRune: 557,
     waterRune: 555,
@@ -85,8 +88,16 @@ export const TRIBRID_BIS_ITEMS = {
     bloodRune: 565,
     cosmicRune: 564,
     climbingBoots: 3105,
+    capeOfLegends: 1052,
+    amuletOfGlory4: 1712,
+    amuletOfGlory3: 1710,
+    amuletOfGlory2: 1708,
+    amuletOfGlory1: 1706,
     dragonDaggerP: 1231,
     magicShortbow: 861,
+    dragonChainbody: 3140,
+    dragonSqShield: 1187,
+    dragonPlatelegs: 4087,
     blackBody: 2503,
     blackChaps: 2497,
     blackVambs: 2491,
@@ -118,20 +129,40 @@ export const RULES: Readonly<Record<string, Rule>> = {
         requireQuests: ['Lost City', 'Dragon Slayer', 'Death Plateau', 'Druidic Ritual'],
         bisSupplies: true,
     },
+    'gang-tribrid-wave-bc': {
+        name: 'gang-tribrid-wave-bc',
+        benchKit: 'tribrid-bis-zerk-glory-tele',
+        maxBankAgeHours: 6,
+        maxDonorBankAgeHours: 168,
+        minArrows: 300,
+        antipoisonHolders: 8,
+        minHours: 4,
+        requireQuests: ['Lost City', 'Dragon Slayer', 'Death Plateau', 'Druidic Ritual', 'The Fremennik Trials', "Hero's Quest", 'Legends Quest'],
+        bisSupplies: true,
+        waveBC: true,
+    },
 };
 
 export function questBlockers(a: { quests: ReadonlySet<string> }, quests: readonly string[] = SUPPLY_QUESTS): string[] {
     return quests.filter(q => !a.quests.has(q.toLowerCase()));
 }
 
-export function enduranceHours(a: Account): { hours: number; limiting: string; foodHours: number; comboHours: number; ammoHours: number; runeHours: number; potionHours: number } {
+export function enduranceHours(a: Account, opts: { waveBC?: boolean; comboFood?: boolean } = {}): { hours: number; limiting: string; foodHours: number; comboHours: number; ammoHours: number; runeHours: number; potionHours: number } {
     const own = holdings(a);
     const qty = (id: number) => own.get(id)?.count ?? 0;
     const foodUnits = qty(TRIBRID_BIS_ITEMS.shark) + qty(TRIBRID_BIS_ITEMS.swordfish) * 14 / 20 + qty(TRIBRID_BIS_ITEMS.lobster) * 12 / 20;
-    const foodHours = foodUnits / 88.75;
-    const comboHours = qty(TRIBRID_BIS_ITEMS.cookedKarambwan) / 25;
-    const ammoHours = (qty(TRIBRID_BIS_ITEMS.runeArrow) + qty(TRIBRID_BIS_ITEMS.adamantArrow)) / 163.75;
-    const runeRates: [string, number, number][] = [
+    const wave = !!opts.waveBC;
+    const foodHours = foodUnits / (wave ? 31 : 88.75);
+    const checkCombo = !wave || !!opts.comboFood;
+    const comboHours = checkCombo ? qty(TRIBRID_BIS_ITEMS.cookedKarambwan) / (wave ? 8 : 25) : Infinity;
+    const ammoHours = (qty(TRIBRID_BIS_ITEMS.runeArrowP) + qty(TRIBRID_BIS_ITEMS.runeArrow) + qty(TRIBRID_BIS_ITEMS.adamantArrow)) / (wave ? 160 : 163.75);
+    const runeRates: [string, number, number][] = wave ? [
+        ['earth rune', TRIBRID_BIS_ITEMS.earthRune, 78],
+        ['water rune', TRIBRID_BIS_ITEMS.waterRune, 78],
+        ['nature rune', TRIBRID_BIS_ITEMS.natureRune, 62],
+        ['law rune', TRIBRID_BIS_ITEMS.lawRune, 4],
+        ['air rune', TRIBRID_BIS_ITEMS.airRune, 16],
+    ] : [
         ['earth rune', TRIBRID_BIS_ITEMS.earthRune, 80.75],
         ['water rune', TRIBRID_BIS_ITEMS.waterRune, 80.75],
         ['nature rune', TRIBRID_BIS_ITEMS.natureRune, 53.75],
@@ -144,7 +175,14 @@ export function enduranceHours(a: Account): { hours: number; limiting: string; f
         const h = qty(id) / perHr;
         if (h < runeHours) { runeHours = h; limitingRune = label; }
     }
-    const potionRates: [string, readonly [number, number][], number][] = [
+    const potionRates: [string, readonly [number, number][], number][] = wave ? [
+        ['prayer potion', TRIBRID_POTION_DOSE_IDS['Prayer potion(3)']!, 0.67],
+        ['super attack', TRIBRID_POTION_DOSE_IDS['Super attack(3)']!, 2],
+        ['super strength', TRIBRID_POTION_DOSE_IDS['Super strength(3)']!, 2],
+        ['super defence', TRIBRID_POTION_DOSE_IDS['Super defence(3)']!, 2],
+        ['ranging potion', TRIBRID_POTION_DOSE_IDS['Ranging potion(3)']!, 2],
+        ['antipoison', TRIBRID_POTION_DOSE_IDS['Antipoison(3)']!, 1.33],
+    ] : [
         ['prayer potion', TRIBRID_POTION_DOSE_IDS['Prayer potion(3)']!, 3],
         ['super attack', TRIBRID_POTION_DOSE_IDS['Super attack(3)']!, 1.5],
         ['super strength', TRIBRID_POTION_DOSE_IDS['Super strength(3)']!, 1.5],
@@ -160,7 +198,7 @@ export function enduranceHours(a: Account): { hours: number; limiting: string; f
     }
     const candidates: [string, number][] = [
         ['sharks/food', foodHours],
-        ['cooked karambwan', comboHours],
+        ...(checkCombo ? [['cooked karambwan', comboHours] as [string, number]] : []),
         ['rune arrows', ammoHours],
         [limitingRune, runeHours],
         [limitingPotion, potionHours],
@@ -239,17 +277,30 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     const benchWorn = new Map(kit.equipment.map(e => [e.slot, gear.get(e.id)] as const));
     const worn: Worn[] = [];
     const wear = (i: Item | undefined, slot: number, count = 1) => { if (i) worn.push({ id: i.id, name: i.name, count, slot }); };
-    // Armour: the piece of each slot with the most melee defence that the account can wear. Body and legs must reach
-    // half the defence of the bench kit's piece (green dragonhide chaps and mithril platelegs are under it).
-    for (const [slot, required] of [['hat', false], ['torso', true], ['legs', true], ['lefthand', false]] as const) {
-        const bench = benchWorn.get(SLOT[slot]!), floor = required && bench ? Math.ceil(armour(bench) / 2) : 1;
+    // Armour and accessory slots: body and legs must reach half the melee defence of the bench kit's piece.
+    // Back, hands, feet and ring allow 0 melee defence (Climbing boots, Ring of recoil) and only require/note when the bench kit specifies one.
+    for (const [slot, required] of [['hat', false], ['back', false], ['torso', true], ['legs', true], ['lefthand', false], ['hands', false], ['feet', false], ['ring', false]] as const) {
+        const bench = benchWorn.get(SLOT[slot]!);
+        const armourSlot = slot === 'hat' || slot === 'torso' || slot === 'legs' || slot === 'lefthand';
+        const floor = required && bench ? Math.ceil(armour(bench) / 2) : armourSlot ? 1 : 0;
+        const slotRank = (gRow: Gear) => slot === 'hands'
+            ? (gRow.bonuses.rangeAttack ?? 0) * 10 + armour(gRow)
+            : slot === 'feet'
+                ? (gRow.bonuses.strength ?? 0) * 100 + armour(gRow)
+                : slot === 'back' || slot === 'ring'
+                    ? (bench && gRow.id === bench.id ? 1000 : 0) + armour(gRow)
+                    : armour(gRow);
         const fits = (i: Item, who: (i: Item) => boolean) => { const row = g(i); return !!row && row.slot === slot && armour(row) >= floor && (slot !== 'lefthand' || /shield$/i.test(row.name)) && who(i); };
-        const best = owned.filter(i => fits(i, canWear)).sort((x, y) => armour(g(y)!) - armour(g(x)!))[0];
+        const best = owned.filter(i => fits(i, canWear)).sort((x, y) => slotRank(g(y)!) - slotRank(g(x)!))[0];
         wear(best, SLOT[slot]!);
         if (!best && required) needs.push({ what: `${slot === 'torso' ? 'body' : 'leg'} armour (melee defence ${floor} or more)`, count: 1, blocking: true, ...(bench ? { id: bench.id } : {}), accept: i => fits(i, canWear) && g(i)!.tradeable !== false });
-        else if (bench && (!best || armour(g(best)!) < armour(bench))) {
-            notes.push(best ? `${best.name} is weaker than the bench kit's ${bench.name}` : `no ${bench.name} or other ${slot} piece`);
-            needs.push({ what: bench.name, count: 1, blocking: false, id: bench.id, accept: i => fits(i, canWear) && armour(g(i)!) >= armour(bench) && g(i)!.tradeable !== false });
+        else if (bench && (!best || (armourSlot ? armour(g(best)!) < armour(bench) : slotRank(g(best)!) < slotRank(bench)))) {
+            if (!(!best && rule.waveBC && slot === 'back')) {
+                notes.push(best ? `${best.name} is weaker than the bench kit's ${bench.name}` : `no ${bench.name} or other ${slot} piece`);
+            }
+            if (bench.tradeable !== false) {
+                needs.push({ what: bench.name, count: 1, blocking: false, id: bench.id, accept: i => fits(i, canWear) && slotRank(g(i)!) >= slotRank(bench) && g(i)!.tradeable !== false });
+            }
         }
     }
     // Amulet: a charged glory, else the piece with the most strength.
@@ -268,8 +319,12 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     const isBow = (i: Item) => { const row = g(i); return !!row && row.slot === 'righthand' && row.tier !== undefined && BOW.test(row.name) && !CROSSBOW.test(row.name); };
     const bow = owned.filter(i => isBow(i) && canWear(i)).sort((x, y) => (g(y)!.bonuses.rangeAttack ?? 0) - (g(x)!.bonuses.rangeAttack ?? 0))[0];
     const wantArrows = kit.equipment.find(e => e.slot === 13)?.count ?? 300, bowTier = bow ? g(bow)!.tier! : 1;
-    const fires = (i: Item, tier: number) => { const row = g(i); return !!row && row.slot === 'quiver' && /arrow$/i.test(row.name) && (row.tier ?? 99) <= tier; };
-    const stacks = owned.filter(i => fires(i, bowTier)).sort((x, y) => (g(y)!.tier ?? 0) - (g(x)!.tier ?? 0));
+    const fires = (i: Item, tier: number) => { const row = g(i); return !!row && row.slot === 'quiver' && /arrows?(?:\(p(?:\+\+?)?\))?$/i.test(row.name) && (row.tier ?? 99) <= tier; };
+    const stacks = owned.filter(i => fires(i, bowTier)).sort((x, y) =>
+        (g(y)!.bonuses.rangeStrength ?? 0) - (g(x)!.bonuses.rangeStrength ?? 0)
+        || (g(y)!.tier ?? 0) - (g(x)!.tier ?? 0)
+        || Number(/\(p(?:\+\+?)?\)$/i.test(y.name)) - Number(/\(p(?:\+\+?)?\)$/i.test(x.name)),
+    );
     const benchBow = benchPiece(row => BOW.test(row.name)), benchArrow = kit.equipment.find(e => e.slot === 13)?.id;
     // Arrows as strong as the bench kit's first: the first live pilot shot bronze arrows on two accounts.
     const strength = (i: Item) => g(i)!.bonuses.rangeStrength ?? 0, benchStrength = benchArrow !== undefined ? gear.get(benchArrow)?.bonuses.rangeStrength ?? 0 : 0;
@@ -297,7 +352,10 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     const antipoison = owned.filter(isAntipoison).sort((x, y) => antipoisons.indexOf(x.id) % 4 - antipoisons.indexOf(y.id) % 4)[0];
     if (antipoison) carried.push({ id: antipoison.id, name: antipoison.name, count: 1 });
     else needs.push({ what: 'antipoison', count: 1, blocking: antipoisonRequired, ...(kit.inventory.find(i => antipoisons.includes(i.id)) ? { id: kit.inventory.find(i => antipoisons.includes(i.id))!.id } : {}), accept: isAntipoison });
-    const supplies = kit.inventory.filter(i => !isFood(i.id) && !antipoisons.includes(i.id) && !gear.has(i.id));
+    const rawSupplies = kit.inventory.filter(i => !isFood(i.id) && !antipoisons.includes(i.id) && !gear.has(i.id));
+    const supplyCounts = new Map<number, number>();
+    for (const s of rawSupplies) supplyCounts.set(s.id, (supplyCounts.get(s.id) ?? 0) + s.count);
+    const supplies = [...supplyCounts.entries()].map(([id, count]) => ({ id, count }));
     const short = new Map<number, number>();
     for (const s of supplies) {
         const have = own.get(s.id), take = Math.min(have?.count ?? 0, s.count);
@@ -314,7 +372,10 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
         needs.push({ what: own.get(s.id)?.name ?? nameOf(s.id) ?? `item ${s.id}`, id: s.id, count: n, blocking, accept: i => i.id === s.id });
     }
     // Food: each kind of the food list that the account holds, the first kind first, up to the free slots of the pack.
-    const foodSlots = PACK_SLOTS - carried.length, foodStock = FOOD_IDS.flatMap(id => (own.get(id)?.count ?? 0) > 0 ? [{ ...own.get(id)! }] : []);
+    // Unstackable multi-count supplies (multiple Prayer potion(4) or Karambwans) occupy multiple slots in the pack.
+    const slotCountedIds = new Set<number>([TRIBRID_BIS_ITEMS.cookedKarambwan, ...Object.values(TRIBRID_POTION_DOSE_IDS).flat().map(([id]) => id)]);
+    const extraSupplySlots = carried.reduce((n, c) => n + (slotCountedIds.has(c.id) && c.count > 1 ? c.count - 1 : 0), 0);
+    const foodSlots = Math.max(0, PACK_SLOTS - carried.length - extraSupplySlots), foodStock = FOOD_IDS.flatMap(id => (own.get(id)?.count ?? 0) > 0 ? [{ ...own.get(id)! }] : []);
     const foodHeld = foodStock.reduce((n, f) => n + f.count, 0), foodRows: Item[] = [];
     for (const f of foodStock) { const take = Math.min(f.count, foodSlots - foodRows.reduce((n, r) => n + r.count, 0)); if (take > 0) foodRows.push({ id: f.id, name: f.name, count: take }); }
     const food = foodRows.reduce((n, r) => n + r.count, 0);
@@ -346,7 +407,7 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     if (inWestArdougne(a.pos)) reasons.push('stands inside West Ardougne, which the walker cannot leave');
     if (wildernessLevel(a.pos.z) > 0) reasons.push(`stands in the Wilderness at level ${wildernessLevel(a.pos.z)}`);
     if (!maxed(a)) notes.push(`not 99 in ${COMBAT.filter(s => (a.levels[s.toLowerCase()] ?? 1) < 99).join(', ')}`);
-    const endurance = enduranceHours(a);
+    const endurance = enduranceHours(a, { waveBC: rule.waveBC, comboFood: rule.comboFood });
     const missingQuests = questBlockers(a, rule.requireQuests ?? SUPPLY_QUESTS);
     if (rule.bisSupplies) {
         for (const q of missingQuests) reasons.push(`quest blocker: ${q} incomplete`);
@@ -354,11 +415,13 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
             ['Climbing boots', TRIBRID_BIS_ITEMS.climbingBoots, 1],
             ['Dragon dagger(p)', TRIBRID_BIS_ITEMS.dragonDaggerP, 1],
             ['Magic shortbow', TRIBRID_BIS_ITEMS.magicShortbow, 1],
-            ["Black d'hide body", TRIBRID_BIS_ITEMS.blackBody, 1],
-            ["Black d'hide chaps", TRIBRID_BIS_ITEMS.blackChaps, 1],
+            ...(rule.waveBC ? [] : [
+                ["Black d'hide body", TRIBRID_BIS_ITEMS.blackBody, 1] as [string, number, number],
+                ["Black d'hide chaps", TRIBRID_BIS_ITEMS.blackChaps, 1] as [string, number, number],
+            ]),
             ["Black d'hide vambraces", TRIBRID_BIS_ITEMS.blackVambs, 1],
             ['Ring of recoil', TRIBRID_BIS_ITEMS.ringOfRecoil, 2],
-            ['Cooked karambwan', TRIBRID_BIS_ITEMS.cookedKarambwan, 25],
+            ...(!rule.waveBC || rule.comboFood ? [['Cooked karambwan', TRIBRID_BIS_ITEMS.cookedKarambwan, 25] as [string, number, number]] : []),
         ];
         for (const [label, id, count] of bisRequirements) {
             const held = own.get(id)?.count ?? 0;
@@ -368,9 +431,21 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
                 reasons.push(`no ${label}${shortCount > 1 ? ` (${shortCount} short)` : ''}`);
             }
         }
+        if (rule.waveBC) {
+            const gloryIds = new Set<number>([TRIBRID_BIS_ITEMS.amuletOfGlory4, TRIBRID_BIS_ITEMS.amuletOfGlory3, TRIBRID_BIS_ITEMS.amuletOfGlory2, TRIBRID_BIS_ITEMS.amuletOfGlory1]);
+            const glories = [...gloryIds].reduce((n, id) => n + (own.get(id)?.count ?? 0), 0);
+            if (glories < 1) {
+                needs.push({ what: 'Amulet of glory(4)', id: TRIBRID_BIS_ITEMS.amuletOfGlory4, count: 1, blocking: true, accept: i => gloryIds.has(i.id) });
+                reasons.push('no Amulet of glory(4)');
+            }
+            if ((own.get(TRIBRID_BIS_ITEMS.capeOfLegends)?.count ?? 0) < 1) {
+                notes.push('no Cape of legends (buy from Siegfried Erkle in Legends\' Guild)');
+            }
+        }
         if (a.quests.has('the fremennik trials') && (own.get(TRIBRID_BIS_ITEMS.berserkerHelm)?.count ?? 0) < 1) {
-            needs.push({ what: 'Berserker helm', id: TRIBRID_BIS_ITEMS.berserkerHelm, count: 1, blocking: false, accept: i => i.id === TRIBRID_BIS_ITEMS.berserkerHelm });
-            notes.push('no Berserker helm (upgrade over Rune full helm after The Fremennik Trials)');
+            needs.push({ what: 'Berserker helm', id: TRIBRID_BIS_ITEMS.berserkerHelm, count: 1, blocking: !!rule.waveBC, accept: i => i.id === TRIBRID_BIS_ITEMS.berserkerHelm });
+            if (rule.waveBC) reasons.push('no Berserker helm');
+            else notes.push('no Berserker helm (upgrade over Rune full helm after The Fremennik Trials)');
         }
         for (const [label, pairs] of Object.entries(TRIBRID_POTION_DOSE_IDS)) {
             if (label === 'Antipoison(3)') continue;
@@ -491,6 +566,8 @@ export const PROFILE_SHOP: Readonly<Record<string, string>> = {
     herquin: 'gemshop',
     gem_trader: 'gemshop2',
     taverley: 'herbloreshop',
+    siegfried: 'legendsguildshop',
+    helemos: 'dragonaxeshop',
 };
 export function shopSource(name: string, debugname: string, shops: readonly Shop[], profiles: Readonly<Record<string, { items: { re: RegExp }[]; need?: { skill: string; level: number } }>> = PROFILES): string | null {
     const out: string[] = [];

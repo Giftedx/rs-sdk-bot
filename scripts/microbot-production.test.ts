@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {createHash} from 'node:crypto';
 import {inventoryRecipes,productionInputReserves,productionEffect,runInventoryProduction,runInventoryBank,type ProductionIO} from './microbot-production';
 test('native chicken stew and weapon poison variants append without changing any of the qualified178 descriptors',()=>{
- const recipes=inventoryRecipes();expect(recipes).toHaveLength(209);expect(createHash('sha256').update(JSON.stringify(recipes.slice(0,178))).digest('hex')).toBe('725b9e6775940ce8edbd2e73b083fc6db37d6c7832be746d12895920a138a126');
+ const recipes=inventoryRecipes();expect(recipes).toHaveLength(223);expect(createHash('sha256').update(JSON.stringify(recipes.slice(0,178))).digest('hex')).toBe('725b9e6775940ce8edbd2e73b083fc6db37d6c7832be746d12895920a138a126');
  expect(recipes.slice(178).map(r=>r.name)).toEqual([
   'prepare:chicken-stew','prepare:uncooked-stew-chicken','poison:dragon-dagger','poison:dragon-spear','poison:rune-arrow','brew:weapon_poison',
   'strip:swamp-toad',
@@ -14,6 +14,11 @@ test('native chicken stew and weapon poison variants append without changing any
   'decant:super_energy','decant2:super_energy','decant31:super_energy',
   'decant:agility_potion','decant2:agility_potion','decant31:agility_potion',
   'decant:super_antipoison','decant2:super_antipoison','decant31:super_antipoison',
+  'grind:chocolate_bar','combine:crystal-key',
+  'decant:super_restore','decant2:super_restore','decant31:super_restore',
+  'decant:magic_potion','decant2:magic_potion','decant31:magic_potion',
+  'decant:zamorak_potion','decant2:zamorak_potion','decant31:zamorak_potion',
+  'decant:restore_potion','decant2:restore_potion','decant31:restore_potion',
  ]);
  for(const[name,raw,product]of[['prepare:chicken-stew',1921,1999],['prepare:uncooked-stew-chicken',1997,2001]]as const){const r=recipes.find(r=>r.name===name)!;expect(r.inputs).toEqual([{id:raw===1921?2140:1997,units:1},{id:raw===1921?1921:2140,units:1}]);expect(r.level).toBe(25);const b={items:{[raw]:1,2140:1,995:37},xp:100},a={items:{[product]:1,995:37},xp:100};expect(productionEffect(r,b,a)).toBe('made');expect(productionEffect(r,b,{...a,items:{...a.items,995:38}})).toBe('invalid');}
 });
@@ -226,6 +231,12 @@ test('weapon poison recipes target canonical unpoisoned items, weapon_poison, po
  expect(byName.get('decant:prayer_restore')).toMatchObject({inputs:[{id:139,units:2}],product:2434,byproducts:[{id:141,units:1}],level:1,xp:false,members:true});
  expect(byName.get('decant2:super_energy')).toMatchObject({inputs:[{id:3020,units:2}],product:3016,byproducts:[{id:229,units:1}],level:1,xp:false,members:true});
  expect(byName.get('decant31:agility_potion')).toMatchObject({inputs:[{id:3034,units:1},{id:3038,units:1}],product:3032,byproducts:[{id:229,units:1}],level:1,xp:false,members:true});
+ expect(byName.get('grind:chocolate_bar')).toMatchObject({inputs:[{id:1973,units:1}],tools:[233],product:1975,level:1,xp:false,members:true});
+ expect(byName.get('combine:crystal-key')).toMatchObject({inputs:[{id:985,units:1},{id:987,units:1}],tools:[],product:989,level:1,xp:false,members:true});
+ expect(byName.get('decant:super_restore')).toMatchObject({inputs:[{id:3026,units:2}],product:3024,byproducts:[{id:3028,units:1}],level:1,xp:false,members:true});
+ expect(byName.get('decant2:magic_potion')).toMatchObject({inputs:[{id:3044,units:2}],product:3040,byproducts:[{id:229,units:1}],level:1,xp:false,members:true});
+ expect(byName.get('decant31:zamorak_potion')).toMatchObject({inputs:[{id:189,units:1},{id:193,units:1}],product:2450,byproducts:[{id:229,units:1}],level:1,xp:false,members:true});
+ expect(byName.get('decant:restore_potion')).toMatchObject({inputs:[{id:127,units:2}],product:2430,byproducts:[{id:129,units:1}],level:1,xp:false,members:true});
 });
 
 test('decant production pairs two slots of the same potion and deposits product plus remainder',async()=>{

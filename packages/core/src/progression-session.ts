@@ -12,6 +12,7 @@ import {assessProgressionPerformance,type PerformanceWindow} from '../../planner
 import {cachedReleaseFor} from './worker-release';
 import {levelForXp} from '../../planner/src/curve';
 import {readProgressionMeasurements,writeProgressionEvidence} from './progression-evidence';
+import {DISEMBARK_PLANK_IDS} from './boat';
 
 const root=resolve(import.meta.dir,'../../..');
 const read=(file:string)=>{try{return JSON.parse(readFileSync(file,'utf8'));}catch{return null;}};
@@ -251,7 +252,7 @@ export function attachProgressionSession(s:Session,work:WorkDescriptor,server:st
    if(a?.type==='interactLoc'){
     const loc=state?.nearbyLocs?.find((l:any)=>l.id===a.locId&&l.x===a.x&&l.z===a.z);option=loc?.optionsWithIndex?.find((o:any)=>o.opIndex===a.optionIndex)?.text;
     bankCleanup=!!loc&&/bank booth|bank chest/i.test(loc.name)&&!/^closed/i.test(loc.name)&&/^(bank|use-quickly|use quickly|use)$/i.test(option??'');
-    portalExit=!!loc&&/^portal$/i.test(loc.name??'')&&/^use$/i.test(option??'');
+    portalExit=!!loc&&((/^portal$/i.test(loc.name??'')&&/^use$/i.test(option??''))||(DISEMBARK_PLANK_IDS.has(loc.id)&&/^cross$/i.test(option??'')));
     cannonCleanup=!!ownedCannon&&cannonLoc(loc)&&a.x===ownedCannon.x&&a.z===ownedCannon.z&&state?.player?.level===ownedCannon.level&&/^pick-up$/i.test(option??'');
    }
    const refusal=monitor.refusal({...a,...option?{progressionOption:option}:{},progressionBankCleanup:bankCleanup,progressionCannonCleanup:cannonCleanup,progressionPortalExit:portalExit});

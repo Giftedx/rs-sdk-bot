@@ -60,7 +60,7 @@ function sameInputs(rung:Rung,inputs:readonly {id:number;units:number}[]){
  return rung.inputs.length===inputs.length&&inputs.every(i=>rung.inputs.some(r=>r.id===i.id&&r.count===i.units));
 }
 function nativeMethod(family:string,recipe:string,skill:string,level:number,product:number,inputs:{id:number;units:number}[],tools:readonly number[],members:boolean,rungs:Rung[],xp=true,productUnits=1):CatalogMethod{
- const routeId=family==='inventory'?`skiller:${skill.toLowerCase()}:inventory`:`skiller:${skill.toLowerCase()}:${family}`;
+ const routeId=family==='inventory'?`skiller:${skill.toLowerCase()}:inventory`:family==='magic'?'skiller:magic:items':`skiller:${skill.toLowerCase()}:${family}`;
  const job={family,recipe,target:productUnits,batch:13,cap:20000,returnTicks:300,members,reserve:0};
  const step={script:'scripts/aio-skiller.ts',args:['bank-job','--job='+encodeURIComponent(JSON.stringify(job))],env:{}};
  const method=methodBase(`recipe:${family}:${recipe}`,routeId,step,'scripts/microbot-bank-jobs.ts');
@@ -193,6 +193,15 @@ export function buildProgressionCatalog(base=root):ProgressionCatalog{
   const method=methodBase(`magic/enchant-level${lvl}`,'skiller:magic:items',{script:'scripts/microbot-magic-items.ts',args:['enchant:'+item,'-','1','200'],env:rec.members?{MEMBERS:'1'}:{}},'scripts/microbot-magic-items.ts');
   method.inputs=rec.inputs;method.effects.items={[rec.product]:1};method.requirements={levels:{magic:rec.level},...(rec.members?{facts:{fact:'members'}}:{})};
   fromRung(method,rungs.find(r=>r.id===`magic/magic_spell_enchant_level${lvl}`));method.execution={unitArg:2};methods.push(method);
+ }
+ for(const [item,lvl]of [['sapphire_ring',1],['sapphire_necklace',1],['strung_sapphire_amulet',1],['emerald_ring',2],['strung_emerald_amulet',2],['ruby_ring',3],['strung_ruby_amulet',3],['diamond_ring',4],['strung_diamond_amulet',4],['dragonstone_ring',5],['strung_dragonstone_amulet',5]] as const){
+  const recipe='enchant:'+item,rec=itemMagicRecipe(recipe),inputs=Object.entries(rec.inputs).map(([id,units])=>({id:Number(id),units}));
+  const method=nativeMethod('magic',recipe,'magic',rec.level,rec.product,inputs,[],rec.members,rungs);
+  fromRung(method,rungs.find(r=>r.id===`magic/magic_spell_enchant_level${lvl}`));
+  method.members=rec.members;
+  method.requirements={levels:{magic:rec.level},...(rec.members?{facts:{fact:'members'}}:{})};
+  method.effects.items={[rec.product]:1};
+  methods.push(method);
  }
  for(const spell of ['wind_strike','confuse','water_strike','earth_strike','weaken','fire_strike','wind_bolt','curse','bind','water_bolt','earth_bolt','fire_bolt','crumble_undead','wind_blast','water_blast','iban_blast','snare','earth_blast','fire_blast','claws_of_guthix','flames_of_zamorak','saradomin_strike','wind_wave','water_wave','vulnerability','earth_wave','enfeeble','fire_wave','entangle','stun']){
   const sp=nativeNpcSpell(spell);

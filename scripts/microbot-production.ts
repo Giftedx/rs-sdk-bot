@@ -131,6 +131,16 @@ export function inventoryRecipes():InventoryRecipe[]{
   add('decant31:'+key,['3dose'+base,'1dose'+base],'4dose'+base,'Herblore',1,false,decant,[],true);
   recipes.at(-1)!.byproducts=[{id:id('vial_empty'),units:1}];
  }
+ add('grind:chocolate_bar',['chocolate_bar'],'chocolate_dust','Herblore',1,false,'scripts/skill_cooking/scripts/cooking_inv/scripts/cakes/cakes.rs2',['pestle_and_mortar'],true);
+ add('combine:crystal-key',['keyhalf1','keyhalf2'],'crystal_key','Herblore',1,false,'scripts/areas/area_taverly/scripts/crystal_key.rs2',[],true);
+ for(const [key,base]of [['super_restore','2restore'],['magic_potion','1magic'],['zamorak_potion','potionofzamorak'],['restore_potion','statrestore']] as const){
+  add('decant:'+key,['3dose'+base],'4dose'+base,'Herblore',1,false,decant,[],true);
+  recipes.at(-1)!.inputs[0]!.units=2;recipes.at(-1)!.byproducts=[{id:id('2dose'+base),units:1}];
+  add('decant2:'+key,['2dose'+base],'4dose'+base,'Herblore',1,false,decant,[],true);
+  recipes.at(-1)!.inputs[0]!.units=2;recipes.at(-1)!.byproducts=[{id:id('vial_empty'),units:1}];
+  add('decant31:'+key,['3dose'+base,'1dose'+base],'4dose'+base,'Herblore',1,false,decant,[],true);
+  recipes.at(-1)!.byproducts=[{id:id('vial_empty'),units:1}];
+ }
  if(new Set(recipes.map(r=>r.name)).size!==recipes.length)throw Error('duplicate inventory production profile');
  cachedInventoryRecipes=recipes;
  return cachedInventoryRecipes;

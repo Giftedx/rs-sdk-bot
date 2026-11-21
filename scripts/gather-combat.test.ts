@@ -670,3 +670,11 @@ test('ensureSurfaceGroundEntry descends one nearby staircase/gangplank or fails 
         expect(clicked).toEqual([2086]);
     } finally { ardougneDeck.cleanup(); }
 });
+
+test('non-Wilderness giant and Taverley supply configs capture crystal key halves and shield left halves', () => {
+    for (const key of ['giant', 'taverley_druid', 'taverley_black_knight', 'taverley_blue_dragon', 'taverley_black_dragon'] as const) {
+        expect(CONFIGS[key]!.drops.test('Half of a key')).toBe(true);
+    }
+    expect(CONFIGS.taverley_blue_dragon!.drops.test('Shield left half')).toBe(true);
+    expect(CONFIGS.taverley_black_dragon!.drops.test('Shield left half')).toBe(true);
+});

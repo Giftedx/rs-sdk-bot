@@ -220,7 +220,9 @@ describe('sources', () => {
     });
     test('a shop item with a new PK supply profile matches cleanly while unprofiled or Wilderness shops stay excluded', () => {
         expect(shopSource('Dragon dagger', 'dragon_dagger', shops)).toBe('shop-buyer profile jukat_dagger (dragonswordshop, shelf 2)');
-        expect(shopSource('Dragon battleaxe', 'dragon_battleaxe', shops)).toBe('dragonaxeshop stocks 2: no shop-buyer profile line');
+        expect(shopSource('Dragon battleaxe', 'dragon_battleaxe', shops)).toBe('shop-buyer profile helemos (dragonaxeshop, shelf 2)');
+        expect(shopSource('Cape of legends', 'cape_of_legends', shops)).toBe('shop-buyer profile siegfried (legendsguildshop, shelf 3)');
+        expect(shopSource('Silverlight', 'silverlight', shops)).toBe('legendsguildshop stocks 4: no shop-buyer profile line');
         const wildyOnly: Shop[] = [{ inv: 'magearena_runeshop', stock: [{ item: 'cosmicrune', count: 20 }] }];
         expect(WILDERNESS_SHOPS.has('magearena_runeshop')).toBe(true);
         expect(shopSource('Cosmic rune', 'cosmicrune', wildyOnly)).toBeNull();
@@ -361,4 +363,85 @@ test('gang-tribrid-bis checks quest blockers, BiS kit, 4h endurance, and malform
     expect(TRIBRID_BIS_ITEMS.berserkerHelm).toBe(3751);
     expect(shopSource('Berserker helm', 'viking_helmet_crush', shops)).toContain('skulgrimen');
     expect(shopSource('Waterskin(4)', 'water_skin4', shops)).toContain('shantay');
+});
+
+test('gang-tribrid-wave-bc validates Wave B/C BiS gear, Rune arrow(p) quiver priority, deduplicated owned pack, and guild quests', () => {
+    const waveRule = RULES['gang-tribrid-wave-bc']!;
+    const waveQuests = new Set(['lost city', 'dragon slayer', 'death plateau', 'druidic ritual', 'the fremennik trials', "hero's quest", 'legends quest']);
+    const bisAccount: Account = {
+        name: 'WaveMax',
+        at: NOW,
+        bankAt: NOW - HOUR,
+        pos: { x: 3094, z: 3491, level: 0 },
+        levels: MAXED,
+        quests: waveQuests,
+        prayerPoints: 99,
+        worn: [
+            worn(TRIBRID_BIS_ITEMS.berserkerHelm, 0),
+            worn(TRIBRID_BIS_ITEMS.capeOfLegends, 1),
+            worn(TRIBRID_BIS_ITEMS.amuletOfGlory4, 2),
+            worn(TRIBRID_BIS_ITEMS.dragonDaggerP, 3),
+            worn(TRIBRID_BIS_ITEMS.dragonChainbody, 4),
+            worn(TRIBRID_BIS_ITEMS.dragonSqShield, 5),
+            worn(TRIBRID_BIS_ITEMS.dragonPlatelegs, 7),
+            worn(TRIBRID_BIS_ITEMS.blackVambs, 9),
+            worn(TRIBRID_BIS_ITEMS.climbingBoots, 10),
+            worn(TRIBRID_BIS_ITEMS.ringOfRecoil, 12),
+            worn(TRIBRID_BIS_ITEMS.runeArrowP, 13, 300),
+        ],
+        pack: [],
+        bank: [
+            { id: TRIBRID_BIS_ITEMS.shark, name: 'Shark', count: 200 },
+            { id: TRIBRID_BIS_ITEMS.runeArrowP, name: 'Rune arrow(p)', count: 600 },
+            { id: TRIBRID_BIS_ITEMS.runeArrow, name: 'Rune arrow', count: 600 },
+            { id: TRIBRID_BIS_ITEMS.earthRune, name: 'Earth rune', count: 400 },
+            { id: TRIBRID_BIS_ITEMS.waterRune, name: 'Water rune', count: 400 },
+            { id: TRIBRID_BIS_ITEMS.natureRune, name: 'Nature rune', count: 300 },
+            { id: TRIBRID_BIS_ITEMS.lawRune, name: 'Law rune', count: 20 },
+            { id: TRIBRID_BIS_ITEMS.airRune, name: 'Air rune', count: 100 },
+            { id: TRIBRID_BIS_ITEMS.climbingBoots, name: 'Climbing boots', count: 2 },
+            { id: TRIBRID_BIS_ITEMS.dragonDaggerP, name: 'Dragon dagger(p)', count: 2 },
+            { id: TRIBRID_BIS_ITEMS.magicShortbow, name: 'Magic shortbow', count: 2 },
+            { id: TRIBRID_BIS_ITEMS.blackVambs, name: 'Dragon vambraces', count: 2 },
+            { id: TRIBRID_BIS_ITEMS.ringOfRecoil, name: 'Ring of recoil', count: 3 },
+            { id: 2434, name: 'Prayer potion(4)', count: 4 },
+            { id: 2436, name: 'Super attack(4)', count: 8 },
+            { id: 2440, name: 'Super strength(4)', count: 8 },
+            { id: 2442, name: 'Super defence(4)', count: 8 },
+            { id: 2444, name: 'Ranging potion(4)', count: 8 },
+            { id: 2448, name: 'Superantipoison(4)', count: 6 },
+        ],
+    };
+    const end = enduranceHours(bisAccount, { waveBC: true });
+    expect(end.hours).toBeGreaterThanOrEqual(4);
+    const readyPick = pickKit(bisAccount, gear, waveRule, NOW);
+    expect(readyPick.ready).toBe(true);
+    expect(readyPick.reasons).toEqual([]);
+    expect(readyPick.notes).toEqual([]);
+    expect(readyPick.foodSlots).toBe(14);
+    expect(readyPick.worn.find(w => w.slot === 1)?.id).toBe(TRIBRID_BIS_ITEMS.capeOfLegends);
+    expect(readyPick.worn.find(w => w.slot === 9)?.id).toBe(TRIBRID_BIS_ITEMS.blackVambs);
+    expect(readyPick.worn.find(w => w.slot === 10)?.id).toBe(TRIBRID_BIS_ITEMS.climbingBoots);
+    expect(readyPick.worn.find(w => w.slot === 12)?.id).toBe(TRIBRID_BIS_ITEMS.ringOfRecoil);
+    expect(readyPick.worn.find(w => w.slot === 13)?.id).toBe(TRIBRID_BIS_ITEMS.runeArrowP);
+    expect(readyPick.carried.find(c => c.id === 2434)?.count).toBe(2);
+    expect(() => validateOwnedKit(loadoutOf(readyPick, { x: 3094, z: 3491 }))).not.toThrow();
+
+    // Rune armour fallback remains non-blocking with upgrade notes; missing Berserker helm/Glory blocks under Wave B/C.
+    const runeFallback: Account = {
+        ...bisAccount,
+        worn: [
+            worn(TRIBRID_BIS_ITEMS.runeFullHelm, 0),
+            worn(TRIBRID_BIS_ITEMS.runePlatebody, 4),
+            worn(TRIBRID_BIS_ITEMS.runeKiteshield, 5),
+            worn(TRIBRID_BIS_ITEMS.runePlatelegs, 7),
+            worn(TRIBRID_BIS_ITEMS.runeArrowP, 13, 300),
+        ],
+        bank: bisAccount.bank.filter(i => i.id !== TRIBRID_BIS_ITEMS.amuletOfGlory4),
+    };
+    const missingPick = pickKit(runeFallback, gear, waveRule, NOW);
+    expect(missingPick.ready).toBe(false);
+    expect(missingPick.reasons).toEqual(expect.arrayContaining(['no Amulet of glory(4)', 'no Berserker helm']));
+    expect(missingPick.notes.filter(n => /Cape of legends/.test(n))).toEqual(["no Cape of legends (buy from Siegfried Erkle in Legends' Guild)"]);
+    expect(missingPick.notes.some(n => /Dragon chainbody/.test(n))).toBe(true);
 });

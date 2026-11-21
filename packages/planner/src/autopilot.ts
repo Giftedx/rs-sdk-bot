@@ -365,7 +365,7 @@ export const FEEDS: Record<string, string[]> = {
     'raw karambwanji': ['raw karambwan', 'cooked karambwan'],
     'raw karambwan': ['cooked karambwan'],
     cake: ['chocolate cake'],
-    'chocolate bar': ['chocolate cake'],
+    'chocolate bar': ['chocolate cake', 'chocolate dust'],
     log: ['arrow shaft', 'headless arrow'],
     logs: ['arrow shaft', 'headless arrow'],
     flax: ['bow string'],
@@ -375,25 +375,36 @@ export const FEEDS: Record<string, string[]> = {
     'rune essence': ['air rune', 'water rune', 'earth rune', 'fire rune'],
     'steel bar': ['cannonball', 'nail'],
     'gold ore': ['gold bar'],
-    'gold bar': ['sapphire ring', 'ring of recoil', 'emerald ring', 'ring of dueling(8)'],
+    'gold bar': ['sapphire ring', 'ring of recoil', 'emerald ring', 'ring of dueling(8)', 'dragonstone ring', 'dragon necklace', 'unstrung dragonstone amulet', 'strung dragonstone amulet', 'amulet of glory'],
     'uncut sapphire': ['sapphire', 'sapphire ring', 'ring of recoil'],
     sapphire: ['sapphire ring', 'ring of recoil'],
     'sapphire ring': ['ring of recoil'],
     'uncut emerald': ['emerald', 'emerald ring', 'ring of dueling(8)'],
     emerald: ['emerald ring', 'ring of dueling(8)'],
     'emerald ring': ['ring of dueling(8)'],
-    'cosmic rune': ['ring of recoil', 'ring of dueling(8)'],
+    'uncut dragonstone': ['dragonstone', 'dragonstone ring', 'dragon necklace', 'unstrung dragonstone amulet', 'strung dragonstone amulet', 'amulet of glory'],
+    dragonstone: ['dragonstone ring', 'dragon necklace', 'unstrung dragonstone amulet', 'strung dragonstone amulet', 'amulet of glory'],
+    'dragonstone ring': ['ring of wealth'],
+    'unstrung dragonstone amulet': ['strung dragonstone amulet', 'amulet of glory'],
+    'strung dragonstone amulet': ['amulet of glory'],
+    'ball of wool': ['strung dragonstone amulet', 'amulet of glory'],
+    'cosmic rune': ['ring of recoil', 'ring of dueling(8)', 'amulet of glory', 'ring of wealth'],
     'air rune': ['ring of dueling(8)'],
-    'runite bar': ['rune arrowtips', 'rune arrow', 'rune full helm', 'rune platebody', 'rune plateleg', 'rune kiteshield'],
+    'earth rune': ['amulet of glory', 'ring of wealth'],
+    'water rune': ['amulet of glory', 'ring of wealth'],
+    'runite bar': ['rune arrowtips', 'rune arrow', 'rune arrow(p)', 'rune full helm', 'rune platebody', 'rune plateleg', 'rune kiteshield'],
     'runite ore': ['runite bar'],
     coal: ['runite bar'],
-    'rune arrowtip': ['rune arrow'],
-    'rune arrowtips': ['rune arrow'],
-    'headless arrow': ['rune arrow'],
+    'rune arrowtip': ['rune arrow', 'rune arrow(p)'],
+    'rune arrowtips': ['rune arrow', 'rune arrow(p)'],
+    'headless arrow': ['rune arrow', 'rune arrow(p)'],
+    'rune arrow': ['rune arrow(p)'],
     dragonhide_black: ['black_dragonhide_body', 'black_dragonhide_chaps', 'black_dragon_vambraces'],
     dragon_leather_black: ['black_dragonhide_body', 'black_dragonhide_chaps', 'black_dragon_vambraces'],
     'dragon dagger': ['dragon dagger(p)'],
-    'weapon poison': ['dragon dagger(p)'],
+    'weapon poison': ['dragon dagger(p)', 'rune arrow(p)'],
+    keyhalf1: ['crystal key'],
+    keyhalf2: ['crystal key'],
     'vial of water': [
         'guam potion (unf)', 'tarromin potion (unf)', 'harralander potion (unf)', 'ranarr potion (unf)', 'toadflax potion (unf)',
         'irit potion (unf)', 'avantoe potion (unf)', 'kwuarm potion (unf)', 'snapdragon potion (unf)', 'cadantine potion (unf)',
@@ -401,16 +412,26 @@ export const FEEDS: Record<string, string[]> = {
         'prayer potion(3)', 'prayer potion(4)', 'super attack(3)', 'super attack(4)', 'super strength(3)', 'super strength(4)',
         'super defence(3)', 'super defence(4)', 'ranging potion(3)', 'ranging potion(4)',
         'super energy(3)', 'super energy(4)', 'agility potion(3)', 'agility potion(4)',
+        'super restore(3)', 'super restore(4)', 'magic potion(3)', 'magic potion(4)', 'zamorak potion(3)', 'zamorak potion(4)',
         'antipoison(3)', 'superantipoison(3)', 'superantipoison(4)', 'weapon poison',
     ],
     'harralander': ['harralander potion (unf)'],
     'unidentified harralander': ['harralander', 'harralander potion (unf)'],
-    'lantadyme': ['lantadyme potion (unf)'],
-    'unidentified lantadyme': ['lantadyme', 'lantadyme potion (unf)'],
-    'torstol': ['torstol potion (unf)'],
-    'unidentified torstol': ['torstol', 'torstol potion (unf)'],
-    'snapdragon': ['snapdragon potion (unf)'],
-    'unidentified snapdragon': ['snapdragon', 'snapdragon potion (unf)'],
+    'lantadyme': ['lantadyme potion (unf)', 'magic potion(3)', 'magic potion(4)'],
+    'unidentified lantadyme': ['lantadyme', 'lantadyme potion (unf)', 'magic potion(3)', 'magic potion(4)'],
+    'lantadyme potion (unf)': ['magic potion(3)', 'magic potion(4)'],
+    'potato cactu': ['magic potion(3)', 'magic potion(4)'],
+    'magic potion(3)': ['magic potion(4)'],
+    'torstol': ['torstol potion (unf)', 'zamorak potion(3)', 'zamorak potion(4)'],
+    'unidentified torstol': ['torstol', 'torstol potion (unf)', 'zamorak potion(3)', 'zamorak potion(4)'],
+    'torstol potion (unf)': ['zamorak potion(3)', 'zamorak potion(4)'],
+    jangerberrie: ['zamorak potion(3)', 'zamorak potion(4)'],
+    'zamorak potion(3)': ['zamorak potion(4)'],
+    'snapdragon': ['snapdragon potion (unf)', 'super restore(3)', 'super restore(4)'],
+    'unidentified snapdragon': ['snapdragon', 'snapdragon potion (unf)', 'super restore(3)', 'super restore(4)'],
+    'snapdragon potion (unf)': ['super restore(3)', 'super restore(4)'],
+    "red spiders' egg": ['super restore(3)', 'super restore(4)'],
+    'super restore(3)': ['super restore(4)'],
     'ranarr weed': ['ranarr potion (unf)', 'prayer potion(3)', 'prayer potion(4)'],
     'unidentified ranarr': ['ranarr weed', 'ranarr potion (unf)', 'prayer potion(3)', 'prayer potion(4)'],
     'ranarr potion (unf)': ['prayer potion(3)', 'prayer potion(4)'],
@@ -432,9 +453,9 @@ export const FEEDS: Record<string, string[]> = {
     'irit potion (unf)': ['super attack(3)', 'super attack(4)', 'superantipoison(3)', 'superantipoison(4)'],
     'eye of newt': ['super attack(3)', 'super attack(4)'],
     'super attack(3)': ['super attack(4)'],
-    kwuarm: ['kwuarm potion (unf)', 'super strength(3)', 'super strength(4)', 'weapon poison'],
-    'unidentified kwuarm': ['kwuarm', 'kwuarm potion (unf)', 'super strength(3)', 'super strength(4)', 'weapon poison'],
-    'kwuarm potion (unf)': ['super strength(3)', 'super strength(4)', 'weapon poison'],
+    kwuarm: ['kwuarm potion (unf)', 'super strength(3)', 'super strength(4)', 'weapon poison', 'rune arrow(p)'],
+    'unidentified kwuarm': ['kwuarm', 'kwuarm potion (unf)', 'super strength(3)', 'super strength(4)', 'weapon poison', 'rune arrow(p)'],
+    'kwuarm potion (unf)': ['super strength(3)', 'super strength(4)', 'weapon poison', 'rune arrow(p)'],
     'limpwurt root': ['super strength(3)', 'super strength(4)'],
     'super strength(3)': ['super strength(4)'],
     cadantine: ['cadantine potion (unf)', 'super defence(3)', 'super defence(4)'],
@@ -453,12 +474,13 @@ export const FEEDS: Record<string, string[]> = {
     'unicorn horn': ['unicorn horn dust', 'antipoison(3)', 'superantipoison(3)', 'superantipoison(4)'],
     'unicorn horn dust': ['antipoison(3)', 'superantipoison(3)', 'superantipoison(4)'],
     'superantipoison(3)': ['superantipoison(4)'],
-    'blue dragon scale': ['dragon scale dust', 'weapon poison'],
-    'dragon scale dust': ['weapon poison'],
+    'blue dragon scale': ['dragon scale dust', 'weapon poison', 'rune arrow(p)'],
+    'dragon scale dust': ['weapon poison', 'rune arrow(p)'],
 };
 const POTION_FEED_FOUR = new Set([
     'prayer potion(4)', 'super attack(4)', 'super strength(4)', 'super defence(4)',
     'ranging potion(4)', 'super energy(4)', 'agility potion(4)', 'superantipoison(4)',
+    'super restore(4)', 'magic potion(4)', 'zamorak potion(4)', 'restore potion(4)',
 ]);
 const feedUnits = (item: string, output: string) => {
     if (!(FEEDS[item] ?? []).includes(output)) return 0;
@@ -466,7 +488,9 @@ const feedUnits = (item: string, output: string) => {
     if (item === 'raw karambwanji') return 3;
     if (item === 'steel bar') return output === 'nail' ? 0.5 : 1 / 4;
     if (item === 'air rune' && output === 'ring of dueling(8)') return 3;
-    if (item === 'runite bar') return output === 'rune arrowtips' || output === 'rune arrow' ? 1 / 15 : output === 'rune platebody' ? 5 : output === 'rune full helm' ? 2 : output === 'rune plateleg' || output === 'rune kiteshield' ? 3 : 1;
+    if ((item === 'earth rune' || item === 'water rune') && (output === 'amulet of glory' || output === 'ring of wealth')) return 15;
+    if ((item === 'weapon poison' || item === 'dragon scale dust' || item === 'blue dragon scale' || item === 'kwuarm' || item === 'unidentified kwuarm' || item === 'kwuarm potion (unf)') && output === 'rune arrow(p)') return 1 / 5;
+    if (item === 'runite bar') return output === 'rune arrowtips' || output === 'rune arrow' || output === 'rune arrow(p)' ? 1 / 15 : output === 'rune platebody' ? 5 : output === 'rune full helm' ? 2 : output === 'rune plateleg' || output === 'rune kiteshield' ? 3 : 1;
     if (item === 'coal') return 8;
     if (item === 'dragonhide_black' || item === 'dragon_leather_black') return output === 'black_dragonhide_body' ? 3 : output === 'black_dragonhide_chaps' ? 2 : 1;
     if (POTION_FEED_FOUR.has(output)) return 4 / 3;
@@ -901,6 +925,30 @@ export const SPECIALIST_STAGE_BILLS: Readonly<Record<string, readonly Specialist
         { names: ['ruby ring'], count: 72 }, { names: ['diamond ring'], count: 36 }, { names: ['law rune'], count: 12 },
         { names: ['blood rune'], count: 850 }, { names: ['knife'], count: 1 }, { names: ['dragon bone'], count: 8 },
         { names: ['prayer potion(4)'], count: 2 }, { names: ['amulet of magic'], count: 1 }, { names: ['super energy(4)'], count: 1 },
+    ],
+    'cooking-live': [
+        { names: ['raw lobster'], count: 1000 }, { names: ['raw karambwan'], count: 1000 }, { names: ['raw shark'], count: 1000 },
+        { names: ['amulet of glory(4)'], count: 1 }, { names: ['ring of dueling(8)'], count: 1 },
+    ],
+    'woodcutting-live': [
+        { names: ['bronze axe'], count: 1 }, { names: ['steel axe'], count: 1 }, { names: ['mithril axe'], count: 1 },
+        { names: ['adamant axe'], count: 1 }, { names: ['rune axe'], count: 1 }, { names: ['amulet of glory(4)'], count: 1 },
+    ],
+    'firemaking-live': [
+        { names: ['tinderbox'], count: 1 }, { names: ['log'], count: 100 }, { names: ['oak log'], count: 200 },
+        { names: ['willow log'], count: 500 }, { names: ['maple log'], count: 800 }, { names: ['yew log'], count: 800 },
+        { names: ['magic log'], count: 500 },
+    ],
+    'agility-live': [
+        { names: ['summer pie'], count: 20 }, { names: ['super energy(4)'], count: 20 }, { names: ['shark'], count: 50 },
+        { names: ['ring of dueling(8)'], count: 1 }, { names: ['amulet of glory(4)'], count: 1 },
+    ],
+    'haggis-mainland': [
+        { names: ['uncut dragonstone'], count: 277 }, { names: ['gold bar'], count: 277 }, { names: ['ball of wool'], count: 277 },
+        { names: ['chisel'], count: 1 }, { names: ['ring mould'], count: 1 }, { names: ['necklace mould'], count: 1 },
+        { names: ['amulet mould'], count: 1 }, { names: ['amulet of glory(4)'], count: 2 }, { names: ['ring of dueling(8)'], count: 4 },
+        { names: ['games necklace(8)'], count: 2 }, { names: ['prayer potion(4)'], count: 25 }, { names: ['super restore(4)'], count: 10 },
+        { names: ['super energy(4)'], count: 20 }, { names: NON_WILDY_ANTIPOISON, count: 10 },
     ],
 };
 
@@ -2063,6 +2111,7 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     'shop:magic_guild_elemental': { x: 2612, z: 3093 }, 'shop:alfonse': { x: 2654, z: 3283 }, 'shop:tiadeche': { x: 2654, z: 3283 },
     'shop:oziach': { x: 3094, z: 3491 }, 'shop:herquin': { x: 2946, z: 3368 }, 'shop:gem_trader': { x: 3269, z: 3167 },
     'shop:tenzing': { x: 2946, z: 3368 }, 'shop:jukat_dagger': { x: 3152, z: 9578 }, 'shop:taverley': { x: 2934, z: 3376 },
+    'shop:siegfried': { x: 2654, z: 3283 }, 'shop:helemos': { x: 2946, z: 3368 },
     'aio:water-altar': DRAYNOR_BANK, 'fighter:wizards-tower': DRAYNOR_BANK, 'squad:catherby-sharks': CATHERBY_BANK,
     'squad:shilo-karambwan': { x: 2852, z: 2955 }, 'squad:catherby-cooking': CATHERBY_BANK,
     'squad:seers-magic-trees': SEERS_BANK, 'squad:seers-fletch': SEERS_BANK,
@@ -2071,12 +2120,13 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     'squad:chaos-temple-wine': { x: 2946, z: 3368 }, 'squad:edgeville-unicorns': { x: 3092, z: 3496 },
     'squad:ardougne-giants': ARMY_BANK, 'squad:taverley-druids': { x: 2946, z: 3368 },
     'squad:taverley-scales': { x: 2946, z: 3368 }, 'squad:taverley-black-dragons': { x: 2946, z: 3368 },
+    'squad:karamja-red-spiders-eggs': ARMY_BANK,
     'squad:herblore-bank': CATHERBY_BANK, 'squad:magic-enchant': DRAYNOR_BANK,
     'squad:ardougne-blood-chest': ARMY_BANK, 'squad:varrock-earth-altar': VARROCK_EAST_BANK,
     'squad:isafdar-berries': ARMY_BANK, 'squad:taverley-black-knights': { x: 2946, z: 3368 },
     'squad:barbarian-planks': SEERS_BANK, 'squad:gnome-toads': { x: 2449, z: 3482 },
     'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
-    'shop:zeke': { x: 3269, z: 3167 }, 'shop:dommik': { x: 3269, z: 3167 }, 'shop:jiminua': { x: 2654, z: 3283 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
+    'shop:zeke': { x: 3269, z: 3167 }, 'shop:dommik': { x: 3269, z: 3167 }, 'shop:dommik_moulds': { x: 3269, z: 3167 }, 'shop:jiminua': { x: 2654, z: 3283 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
     'shop:skulgrimen': SEERS_BANK, 'shop:shantay': { x: 3269, z: 3167 }, 'shop:horvik': VARROCK_EAST_BANK, 'shop:louie': { x: 3269, z: 3167 },
     'shop:valaine': { x: 3185, z: 3436 }, 'shop:wydin_choc': DRAYNOR_BANK, 'shop:thessalia': VARROCK_EAST_BANK, 'shop:thessalia_gown': VARROCK_EAST_BANK, 'shop:baker': { x: 2654, z: 3283 },
 };
@@ -2470,6 +2520,7 @@ export const SQUAD_RUN_MAX: Readonly<Record<string, number>> = {
     'rune arrow': 400, 'water rune': 1500, 'earth rune': 1500, 'air rune': 1500, 'fire rune': 1500,
     'nature rune': 1000, 'law rune': 200, 'blood rune': 200, 'death rune': 500, 'chaos rune': 1000, 'mind rune': 1000,
     'antipoison(3)': 12, 'cooked karambwan': 50, 'raw karambwan': 50, 'climbing boot': 10, 'dragon dagger': 2,
+    'cape of legend': 2, 'shield right half': 1, 'dragon battleaxe': 2, 'dragon mace': 2,
     'berserker helm': 2, 'rune platebody': 2, 'rune plateleg': 4, 'black full helm': 2, 'black platebody': 2, 'black plateleg': 2,
     'uncut sapphire': 28, 'uncut emerald': 28, 'eye of newt': 100, 'vial of water': 100,
     'waterskin(4)': 8, 'bronze bar': 20, 'chocolate bar': 28, cake: 28, 'priest gown': 4, 'leather glove': 4,
@@ -2478,16 +2529,22 @@ export const SQUAD_RUN_MAX: Readonly<Record<string, number>> = {
 // The shop cost of one unit (knowledge/items.json), the fallback of a run's spend cap: the rows are priced from the plan's
 // price table (`prices`, from priceTable) when it holds the item.
 export const SQUAD_UNIT_COST: Readonly<Record<string, number>> = {
-    'rune arrow': 400, 'rune arrowtips': 200, shark: 300, 'cooked karambwan': 320, 'raw karambwan': 240,
+    'rune arrow': 400, 'rune arrow(p)': 420, 'rune arrowtips': 200, shark: 300, 'cooked karambwan': 320, 'raw karambwan': 240,
     'water rune': 4, 'earth rune': 4, 'air rune': 4, 'fire rune': 4, 'nature rune': 20, 'law rune': 40,
     'cosmic rune': 50, 'blood rune': 550, 'death rune': 180, 'chaos rune': 90, 'mind rune': 4,
     'antipoison(3)': 288, 'prayer potion(3)': 500, 'prayer potion(4)': 667,
     'super attack(3)': 400, 'super attack(4)': 533, 'super strength(3)': 500, 'super strength(4)': 667,
     'super defence(3)': 600, 'super defence(4)': 800, 'ranging potion(3)': 650, 'ranging potion(4)': 867,
+    'super restore(3)': 240, 'super restore(4)': 320, 'magic potion(3)': 250, 'magic potion(4)': 333,
+    'zamorak potion(3)': 25, 'zamorak potion(4)': 33, 'restore potion(3)': 80, 'restore potion(4)': 107,
     'superantipoison(3)': 400, 'superantipoison(4)': 533,
     'super energy(3)': 230, 'super energy(4)': 300, 'agility potion(3)': 150, 'agility potion(4)': 200,
     'ring of recoil': 300, 'emerald ring': 1275, 'ring of dueling(8)': 1275,
-    'climbing boot': 12, 'dragon dagger': 30_000, 'dragon dagger(p)': 32_000,
+    'dragonstone': 10_000, 'uncut dragonstone': 10_000, 'dragonstone ring': 17_625, 'dragon necklace': 18_375,
+    'unstrung dragonstone amulet': 17_625, 'strung dragonstone amulet': 17_625, 'amulet of glory': 17_625, 'amulet of glory(4)': 25_000, 'ring of wealth': 17_625,
+    'climbing boot': 12, 'cape of legend': 675, 'dragon dagger': 30_000, 'dragon dagger(p)': 32_000,
+    'dragon battleaxe': 200_000, 'dragon mace': 50_000, 'shield right half': 750_000, 'crystal key': 1, keyhalf1: 1, keyhalf2: 1,
+    'dragon chainbody': 250_000, 'dragon sq shield': 1_250_000, 'dragon plateleg': 270_000,
     'magic shortbow': 1600, 'berserker helm': 78_000, 'rune full helm': 35_200, 'rune platebody': 84_500, 'rune plateleg': 64_000, 'rune kiteshield': 54_400,
     'black full helm': 1056, 'black platebody': 3840, 'black plateleg': 1920,
     black_dragonhide_body: 13_480, black_dragonhide_chaps: 6_500, black_dragon_vambraces: 4_200,
@@ -2864,6 +2921,10 @@ export function squadSupplies(): Template[] {
         ['super_energy', 'super energy'],
         ['agility_potion', 'agility potion'],
         ['super_antipoison', 'superantipoison'],
+        ['super_restore', 'super restore'],
+        ['magic_potion', 'magic potion'],
+        ['zamorak_potion', 'zamorak potion'],
+        ['restore_potion', 'restore potion'],
     ] as const).flatMap(([slug, label]) => [
         invMake(`squad-decant-${slug}`, `decant:${slug}`, `${label}(4)`, 1, { [`${label}(3)`]: 2 }, {}, 0.3,
             `decant ${label}(3) doses into ${label}(4) at the bank`, MAKE_BATCH, { strictOutput: true, ownSupply: [`${label}(3)`] }),
@@ -2872,6 +2933,57 @@ export function squadSupplies(): Template[] {
         invMake(`squad-decant31-${slug}`, `decant31:${slug}`, `${label}(4)`, 1, { [`${label}(3)`]: 1, [`${label}(1)`]: 1 }, {}, 0.4,
             `decant ${label}(3) and (1) doses into ${label}(4) at the bank`, MAKE_BATCH, { ownSupply: [`${label}(3)`, `${label}(1)`] }),
     ]);
+    const poisonArrowsArgs = (units: number) => ['poison:rune-arrow', `MAX_MAKE=${units * 5}`, 'CAP=1500', 'MEMBERS=1', 'ORDER_MODE=best-effort'];
+    const poisonRuneArrows: Template = {
+        id: 'squad-poison-rune-arrows', family: 'skiller:crafting:inventory', script: 'scripts/microbot-production.ts',
+        args: poisonArrowsArgs(MAKE_BATCH), role: 'herblore',
+        goal: 'poison banked rune arrows with weapon poison at the bank for the gang squad',
+        resources: ['squad:herblore-bank'], squadOnly: true, repeats: false,
+        needs: { skills: { Herblore: 1 }, items: { 'rune arrow': 5, 'weapon poison': 1 } },
+        production: {
+            output: 'rune arrow(p)', outputPerUnit: 5, maximum: MAKE_BATCH,
+            inputs: { 'rune arrow': 5, 'weapon poison': 1 },
+            resize: n => ({ args: poisonArrowsArgs(n) }),
+        },
+        yields: () => [{ item: 'rune arrow(p)', perTick: 0.5 }],
+    };
+    const karamjaRedSpidersEggs: Template = {
+        id: 'squad-karamja-red-spiders-eggs', family: 'gather-spawn', script: 'scripts/chain.ts',
+        args: ['scripts/walk-to.ts 2832 9586', 'scripts/gather-spawn.ts 223 27'], env: { TICKS: '3000', ROUNDS: '1' }, role: 'herblore',
+        goal: "gather red spiders' eggs in Karamja Volcano (non-Wilderness) for super restore potions",
+        resources: ['squad:karamja-red-spiders-eggs'], squadOnly: true, repeats: false,
+        needs: { items: { coins: 120 }, food: 4, anyOf: [{ skills: { Hitpoints: 23 } }, { combat: 34 }, { skills: { Prayer: 43 } }] },
+        yields: () => [{ item: "red spiders' egg", perTick: 0.04 }],
+    };
+    const cutDragonstone: Template = {
+        id: 'squad-cut-dragonstone', family: 'skiller:crafting:inventory', script: 'scripts/microbot-production.ts',
+        args: ['cut-dragonstone', `MAX_MAKE=${MAKE_BATCH}`, 'CAP=1500', 'MEMBERS=1', 'ORDER_MODE=best-effort'], role: 'crafting',
+        goal: 'cut banked uncut dragonstones into dragonstones for dragonstone jewellery', resources: ['squad:herblore-bank'], squadOnly: true, repeats: false,
+        needs: { skills: { Crafting: 55 }, items: { chisel: 1, 'uncut dragonstone': 1 } },
+        production: { output: 'dragonstone', outputPerUnit: 1, maximum: MAKE_BATCH, inputs: { 'uncut dragonstone': 1 },
+            resize: n => ({ args: ['cut-dragonstone', `MAX_MAKE=${n}`, 'CAP=1500', 'MEMBERS=1', 'ORDER_MODE=best-effort'] }) },
+        yields: () => [{ item: 'dragonstone', perTick: 0.15 }],
+    };
+    const dragonstoneJewellery = (id: string, recipe: string, output: string, level: number, mould: string): Template => ({
+        id, family: 'aio:skiller:crafting:jewellery-trip', script: 'scripts/aio.ts',
+        args: ['skiller', 'crafting', 'jewellery-trip', `RECIPE=${recipe}`, `TARGET=${RING_BATCH}`, `BATCH=${RING_BATCH}`, 'CAP=1500', 'MEMBERS=1'], role: 'crafting',
+        goal: `smith banked gold bars and cut dragonstones into ${output}s at Al Kharid`, resources: ['squad:al-kharid-craft'], squadOnly: true, repeats: false,
+        needs: { skills: { Crafting: level }, items: { [mould]: 1, 'gold bar': 1, dragonstone: 1 } },
+        production: { output, outputPerUnit: 1, maximum: RING_BATCH, inputs: { 'gold bar': 1, dragonstone: 1 },
+            resize: n => ({ args: ['skiller', 'crafting', 'jewellery-trip', `RECIPE=${recipe}`, `TARGET=${n}`, `BATCH=${n}`, 'CAP=1500', 'MEMBERS=1'] }) },
+        yields: () => [{ item: output, perTick: 0.05 }],
+    });
+    const DRAYNOR_TILE = { ...DRAYNOR_BANK, level: 0 };
+    const enchantGloryArgs = (n: number) => bankJobArg({ family: 'magic', recipe: 'enchant:strung_dragonstone_amulet', target: n, batch: Math.min(24, n), cap: 1500, returnTicks: 300, members: true, reserve: 0, bank: DRAYNOR_TILE, site: DRAYNOR_TILE });
+    const enchantGlory: Template = {
+        id: 'squad-enchant-glory', family: 'aio-skiller:bank-job', script: 'scripts/aio-skiller.ts',
+        args: enchantGloryArgs(24), role: 'magic',
+        goal: 'enchant banked strung dragonstone amulets into amulets of glory at the Draynor bank', resources: ['squad:magic-enchant'], squadOnly: true, repeats: false,
+        needs: { skills: { Magic: 68 }, items: { 'strung dragonstone amulet': 1, 'cosmic rune': 1, 'earth rune': 15, 'water rune': 15 } },
+        production: { output: 'amulet of glory', outputPerUnit: 1, maximum: 24, inputs: { 'strung dragonstone amulet': 1, 'cosmic rune': 1, 'earth rune': 15, 'water rune': 15 },
+            resize: n => ({ args: enchantGloryArgs(n) }) },
+        yields: () => [{ item: 'amulet of glory', perTick: 0.25 }],
+    };
     return [
         waterCraft, earthCraft, waterTalisman, runeArrows, fletchBankedRuneArrows, sharks,
         karambwanjiFish, karambwanFish, karambwanCook,
@@ -2888,6 +3000,10 @@ export function squadSupplies(): Template[] {
         ...cleanHerbs, ...unfPotions, ...decantPotions,
         invMake('squad-grind-unicorn-horn', 'grind:unicorn_horn', 'unicorn horn dust', 1, { 'unicorn horn': 1 }, { 'pestle and mortar': 1 }, 0.2),
         invMake('squad-grind-dragon-scale', 'grind:blue_dragon_scale', 'dragon scale dust', 1, { 'blue dragon scale': 1 }, { 'pestle and mortar': 1 }, 0.2),
+        invMake('squad-grind-chocolate', 'grind:chocolate_bar', 'chocolate dust', 1, { 'chocolate bar': 1 }, { 'pestle and mortar': 1 }, 0.2,
+            'grind banked chocolate bars into chocolate dust for potions and cakes'),
+        invMake('squad-combine-crystal-key', 'combine:crystal-key', 'crystal key', 1, { keyhalf1: 1, keyhalf2: 1 }, {}, 0.2,
+            'combine banked crystal key halves into crystal keys'),
         invMake('squad-strip-swamp-toad', 'strip:swamp-toad', "toad's leg", 1, { 'swamp toad': 1 }, {}, 0.2, "strip banked swamp toads into toad's legs"),
         invMake('squad-chocolate-cake', 'prepare:chocolate-cake', 'chocolate cake', 50, { cake: 1, 'chocolate bar': 1 }, {}, 0.15,
             'combine banked cakes and chocolate bars into chocolate cakes', MAKE_BATCH, { skill: 'Cooking', role: 'cooking', members: 0 }),
@@ -2898,10 +3014,22 @@ export function squadSupplies(): Template[] {
         invMake('squad-ranging-potion', 'brew:3doserangerspotion', 'ranging potion(3)', 72, { 'dwarf weed potion (unf)': 1, 'wine of zamorak': 1 }, {}),
         invMake('squad-super-energy', 'brew:3dose2energy', 'super energy(3)', 52, { 'avantoe potion (unf)': 1, 'mort myre fungi': 1 }, {}),
         invMake('squad-agility-potion', 'brew:3dose1agility', 'agility potion(3)', 34, { 'toadflax potion (unf)': 1, "toad's leg": 1 }, {}),
+        invMake('squad-super-restore', 'brew:3dose2restore', 'super restore(3)', 63, { 'snapdragon potion (unf)': 1, "red spiders' egg": 1 }, {}),
+        invMake('squad-magic-potion', 'brew:3dose1magic', 'magic potion(3)', 76, { 'lantadyme potion (unf)': 1, 'potato cactu': 1 }, {}),
+        invMake('squad-zamorak-potion', 'brew:3dosepotionofzamorak', 'zamorak potion(3)', 78, { 'torstol potion (unf)': 1, jangerberrie: 1 }, {}),
         invMake('squad-superantipoison', 'brew:3dose2antipoison', 'superantipoison(3)', 48, { 'irit potion (unf)': 1, 'unicorn horn dust': 1 }, {}),
         invMake('squad-antipoison-brew', 'brew:3doseantipoison', 'antipoison(3)', 5, { 'marrentill potion (unf)': 1, 'unicorn horn dust': 1 }, {}),
         invMake('squad-weapon-poison', 'brew:weapon_poison', 'weapon poison', 60, { 'kwuarm potion (unf)': 1, 'dragon scale dust': 1 }, {}),
         invMake('squad-poison-dds', 'poison:dragon-dagger', 'dragon dagger(p)', 1, { 'dragon dagger': 1, 'weapon poison': 1 }, {}),
+        poisonRuneArrows,
+        karamjaRedSpidersEggs,
+        cutDragonstone,
+        dragonstoneJewellery('squad-dragonstone-ring', 'dragonstone_ring', 'dragonstone ring', 55, 'ring mould'),
+        dragonstoneJewellery('squad-dragon-necklace', 'dragonstone_necklace', 'dragon necklace', 72, 'necklace mould'),
+        dragonstoneJewellery('squad-dragonstone-amulet', 'unstrung_dragonstone_amulet', 'unstrung dragonstone amulet', 80, 'amulet mould'),
+        invMake('squad-string-dragonstone-amulet', 'string-dragonstone-amulet', 'strung dragonstone amulet', 1, { 'unstrung dragonstone amulet': 1, 'ball of wool': 1 }, {}, 0.15,
+            'string banked unstrung dragonstone amulets with balls of wool', MAKE_BATCH, { skill: 'Crafting', role: 'crafting' }),
+        enchantGlory,
         shop('squad-arrows-dargaud', 'dargaud', 'rune arrow', 'rune arrow', 0.4, 'buy rune arrows in the Ranging Guild for the gang squad', { skills: { Ranged: 40 }, items: { coins: 30_000 } }),
         shop('squad-karambwan-shop', 'alfonse', 'cooked karambwan', 'cooked karambwan', 0.05, 'buy cooked karambwan at Brimhaven Fish Restaurant for the gang squad', { items: { coins: 32_000 } }),
         shop('squad-raw-karambwan-shop', 'tiadeche', 'raw karambwan', 'raw karambwan', 0.05, 'buy raw karambwan from Tiadeche for the gang squad', { quests: ['Tai Bwo Wannai Trio'], items: { coins: 24_000 } }),
@@ -2950,21 +3078,36 @@ export function squadSupplies(): Template[] {
         shop('squad-papyrus', 'ardy', 'papyrus', 'papyrus', 0.05, "buy papyrus from Aemad's store in East Ardougne", { items: { coins: 500 } }),
         shop('squad-ball-of-wool', 'ardy', 'ball of wool', 'ball of wool', 0.05, "buy balls of wool from Aemad's store in East Ardougne", { items: { coins: 500 } }),
         shop('squad-charcoal', 'jiminua', 'charcoal', 'charcoal', 0.02, "buy charcoal at Jiminua's Jungle Store on Karamja", { items: { coins: 1500 } }),
+        shop('squad-cape-of-legends', 'siegfried', 'cape of legend', 'cape of legends', 0.01, "buy capes of legends from Siegfried Erkle in the Legends' Guild", { quests: ['Legends Quest'], items: { coins: 2000 } }),
+        shop('squad-shield-right-half', 'siegfried', 'shield right half', 'shield right half', 0.005, "buy shield right halves from Siegfried Erkle in the Legends' Guild", { quests: ['Legends Quest'], items: { coins: 1_500_000 } }),
+        shop('squad-dragon-battleaxe', 'helemos', 'dragon battleaxe', 'dragon battleaxe', 0.005, "buy dragon battleaxes from Helemos in the Heroes' Guild", { quests: ["Hero's Quest"], items: { coins: 400_000 } }),
+        shop('squad-dragon-mace', 'helemos', 'dragon mace', 'dragon mace', 0.005, "buy dragon maces from Helemos in the Heroes' Guild", { quests: ["Hero's Quest"], items: { coins: 100_000 } }),
     ];
 }
 
 // The shop step of a maker whose only missing input is a ring mould: Dommik's Crafting Store in Al Kharid sells it
-// (scripts/shop-buyer.ts profile dommik: ring mould, shelf 4). The mould costs 5 coins in the item data and the run
-// stops at the first one held (STOCK_TARGET 1). It unlocks the four gem ring makers (GEM_RINGS); a ring maker that the
-// plan's `aio` list does not name is not unlocked.
+// (scripts/shop-buyer.ts profile dommik: ring mould shelf 4, necklace/amulet moulds shelf 2). The moulds cost 5 coins each in item data and the run
+// stops at the first one held (STOCK_TARGET 1).
 export const RING_MOULD_COINS = 100;
 export function makerShopSteps(): Template[] {
     return [{
         id: 'shop-ring-mould', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['dommik', '600'],
         env: { ITEMS: 'ring mould', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(RING_MOULD_COINS), COIN_RESERVE: '50', MAX_SPEND: '50' },
         role: 'supply', goal: "buy a ring mould from Dommik's Crafting Store in Al Kharid for the ring makers", repeats: false,
-        resources: ['shop:dommik'], yields: () => [], provides: { item: 'ring mould', unlocks: [...GEM_RINGS.map(([gem]) => `aio-${gem}-rings`), 'squad-sapphire-ring', 'squad-emerald-ring'] },
+        resources: ['shop:dommik'], yields: () => [], provides: { item: 'ring mould', unlocks: [...GEM_RINGS.map(([gem]) => `aio-${gem}-rings`), 'squad-sapphire-ring', 'squad-emerald-ring', 'squad-dragonstone-ring'] },
         needs: { items: { coins: RING_MOULD_COINS }, holdsUnder: { 'ring mould': 1 } },
+    }, {
+        id: 'shop-necklace-mould', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['dommik_moulds', '600'],
+        env: { ITEMS: 'necklace mould', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(RING_MOULD_COINS), COIN_RESERVE: '50', MAX_SPEND: '50' },
+        role: 'supply', goal: "buy a necklace mould from Dommik's Crafting Store in Al Kharid for necklace makers", repeats: false,
+        resources: ['shop:dommik_moulds'], yields: () => [], provides: { item: 'necklace mould', unlocks: ['squad-dragon-necklace'] },
+        needs: { items: { coins: RING_MOULD_COINS }, holdsUnder: { 'necklace mould': 1 } },
+    }, {
+        id: 'shop-amulet-mould', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['dommik_moulds', '600'],
+        env: { ITEMS: 'amulet mould', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: String(RING_MOULD_COINS), COIN_RESERVE: '50', MAX_SPEND: '50' },
+        role: 'supply', goal: "buy an amulet mould from Dommik's Crafting Store in Al Kharid for amulet makers", repeats: false,
+        resources: ['shop:dommik_moulds'], yields: () => [], provides: { item: 'amulet mould', unlocks: ['squad-dragonstone-amulet'] },
+        needs: { items: { coins: RING_MOULD_COINS }, holdsUnder: { 'amulet mould': 1 } },
     }];
 }
 export function makerChains(): Template[] {
@@ -3696,6 +3839,10 @@ const EXACT_ITEM_ALIASES: ReadonlyMap<number, string> = new Map([
     [2503, 'black_dragonhide_body'],
     [2497, 'black_dragonhide_chaps'],
     [2491, 'black_dragon_vambraces'],
+    [985, 'keyhalf1'],
+    [987, 'keyhalf2'],
+    [1683, 'unstrung dragonstone amulet'],
+    [1702, 'strung dragonstone amulet'],
     [3146, 'poorly cooked karambwan'],
     [91, 'guam potion (unf)'],
     [93, 'marrentill potion (unf)'],
