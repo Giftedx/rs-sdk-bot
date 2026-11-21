@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795299661715-mmsmk1232-fingersmith-airrune",
  "account": "mmsmk1232",
  "partner": "Fingersmith",
@@ -12,6 +12,12 @@
  "claim": "692e3360-373d-4b01-823e-98908170a4c7",
  "count": 0,
  "ok": false,
- "at": 1795300319715,
- "detail": "trade claimed"
+ "at": 1795300465627,
+ "detail": "stop file",
+ "logout": {
+  "attemptId": "1795300319724-0000023700-0000000001",
+  "at": 1795300465548,
+  "sha256": "bbbae00c4ebac47ba744cd1d5508387f15421cebd99813c3c3d23994d2f3c81b"
+ },
+ "screen": false
 }

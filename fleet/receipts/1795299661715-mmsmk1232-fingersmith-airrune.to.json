@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795299661715-mmsmk1232-fingersmith-airrune",
  "account": "Fingersmith",
  "partner": "mmsmk1232",
@@ -12,6 +12,12 @@
  "claim": "af1de33c-ab45-4510-8aba-df206197ec19",
  "count": 0,
  "ok": false,
- "at": 1795300314353,
- "detail": "trade claimed"
+ "at": 1795300465954,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795300314368-0000005976-0000000001",
+  "at": 1795300465942,
+  "sha256": "e7b20b89dc3baf108de0ebb337da85463fcfcbd5c4d99fe1d2deab3395a96a17"
+ },
+ "screen": false
 }
