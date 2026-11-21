@@ -1182,3 +1182,44 @@ test('ownPoisonHit reads a poison hitsplat (type 2) that is still showing on the
     expect(carriedSplat({})).toBe(0);
     expect(carriedSplat(undefined)).toBe(0);
 });
+
+test('fightPlayer prefers castable escapeSpell in Wild <= 20 even with worn glory and full pack', async () => {
+    let tick = 10;
+    const actions: string[] = [];
+    const client = { var: { 300: 0, 301: 0, 172: 1 }, players: [null, { headicons: 0, appearance: new Uint16Array(12), health: 99, totalHealth: 99 }] };
+    const state: any = {
+        player: { worldX: 3094, worldZ: 3600, combatLevel: 126, hp: 50, maxHp: 99, runEnergy: 100, lifeId: 1 },
+        skills: [{ name: 'Magic', level: 45, baseLevel: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+        prayers: { prayerPoints: 99, activePrayers: new Array(20).fill(false) },
+        inventory: [
+            { slot: 0, id: 563, name: 'Law rune', count: 2, optionsWithIndex: [] },
+            { slot: 1, id: 556, name: 'Air rune', count: 10, optionsWithIndex: [] },
+            ...Array.from({ length: 26 }, (_, i) => ({ slot: i + 2, id: ITEMS.shark, name: 'Shark', count: 1, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] })),
+        ],
+        equipment: [{ slot: 2, id: ITEMS.glory[0]!, name: 'Amulet of glory(4)', count: 1, optionsWithIndex: [] }],
+        nearbyPlayers: [{ index: 1, name: 'Dummy', combatLevel: 126, x: 3098, z: 3600, distance: 4 }],
+        combatEvents: [], gameMessages: [],
+    };
+    const session: any = {
+        client, tick: () => tick, ended: new Promise(() => {}),
+        onTick: (cb: () => void) => {
+            setTimeout(() => { tick++; cb(); }, 0);
+            return () => {};
+        },
+        sdk: {
+            getState: () => state,
+            sendUseItem: (slot: number) => { actions.push(`use:${slot}`); },
+            sendUseEquipmentItem: (slot: number) => { actions.push(`unequip:${slot}`); },
+            sendClickComponent: (id: number) => { actions.push(`click:${id}`); if (id === SPELLS.camelotTeleport) state.player.worldZ = 2757; },
+            sendInteractPlayer: () => {},
+            sendWalk: () => {},
+            sendTogglePrayer: () => {},
+        },
+    };
+    const res = await fightPlayer(session, 'Dummy', {
+        kit: { ranged: [861] }, rotation: ['ranged'], freeze: false, prayerFlick: false,
+        eatAt: 30, flee: true, escapeAt: 50, escapeSpell: SPELLS.camelotTeleport, log: () => {},
+    });
+    expect(res.outcome).toBe('escaped');
+    expect(actions).toEqual([`click:${SPELLS.camelotTeleport}`]);
+});

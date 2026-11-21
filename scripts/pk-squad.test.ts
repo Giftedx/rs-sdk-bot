@@ -1151,3 +1151,676 @@ test('rescue unequips worn glory(4), rubs it, clicks Edgeville dialog to escape 
         spyTick.mockRestore();
     }
 });
+
+test('squadKitFightDefaults enables comboFood, God spell + Charge, and freezeWear staff without breaking explicit rotation', () => {
+    const { squadKitFightDefaults } = require('./pk-squad');
+    // Combo food + carried mystic_fire_staff without blood runes -> freezeWear staff and no magic DPS turn.
+    const ent = squadKitFightDefaults(
+        [{ id: 2412 }],
+        [{ id: 3144, count: 1 }, { id: 1401, count: 1 }, { id: 561, count: 50 }],
+        { rotation: ['magic', 'ranged', 'melee'] },
+    );
+    expect(ent).toEqual({ comboFood: true, rotation: ['ranged', 'melee'], freezeWear: ['mystic_fire_staff'] });
+    // God staff + matching cape + Fire/Blood/Air runes enables God spell, Charge, strip castArmour, and magic rotation.
+    const god = squadKitFightDefaults(
+        [{ id: 2412 }],
+        [{ id: 2415, count: 1 }, { id: 554, count: 100 }, { id: 565, count: 50 }, { id: 556, count: 100 }],
+        { rotation: ['ranged', 'melee'] },
+    );
+    expect(god).toEqual({ damageSpell: 1190, charge: true, rotation: ['magic', 'ranged', 'melee'], castArmour: 'strip' });
+    // Explicit rotation in SQUAD_OPTS stays intact.
+    const explicit = squadKitFightDefaults(
+        [{ id: 2412 }],
+        [{ id: 2415, count: 1 }, { id: 554, count: 100 }, { id: 565, count: 50 }, { id: 556, count: 100 }],
+        { rotation: ['ranged', 'melee'] },
+        undefined,
+        true,
+    );
+    expect(explicit.rotation).toBeUndefined();
+});
+
+test('squadFallbackPlan escapes focus piles even with allies present and disableAutoRetaliate toggles off once', async () => {
+    const { disableAutoRetaliate } = require('./pk-squad');
+    // 3+ attackers targeting this member in multi triggers escape at <= 78% HP despite 10 nearby allies.
+    expect(squadFallbackPlan({ z: 3640, hp: 75, maxHp: 99, foodCount: 10, enemyCount: 6, allyCount: 10, targetingMe: 3, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('glory');
+    // 2 attackers targeting us when food is nearly exhausted also falls back early.
+    expect(squadFallbackPlan({ z: 3640, hp: 80, maxHp: 99, foodCount: 3, enemyCount: 4, allyCount: 6, targetingMe: 2, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('glory');
+    // Full HP or < 3 focus attackers with ample food holds the fight.
+    expect(squadFallbackPlan({ z: 3640, hp: 90, maxHp: 99, foodCount: 10, enemyCount: 6, allyCount: 10, targetingMe: 4, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('hold');
+
+    let enabled = true;
+    const clicks: number[] = [];
+    const s: any = {
+        sdk: { getState: () => ({ autoRetaliateEnabled: enabled }) },
+        direct: async (a: any) => { clicks.push(a.componentId); enabled = false; },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => true);
+    try {
+        await disableAutoRetaliate(s);
+        await disableAutoRetaliate(s);
+        expect(clicks).toEqual([151]);
+    } finally {
+        spyTick.mockRestore();
+    }
+});
+
+test('rescue skips eating while Glory Edgeville dialog is open so food never cancels teleport', async () => {
+    let ticks = 0, z = 3616, dialogOpen = false;
+    const eq: any[] = [];
+    const inv: any[] = [
+        { slot: 0, id: 385, count: 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+        { slot: 1, id: 1712, count: 1, name: 'Amulet of glory(4)', optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] },
+    ];
+    const events: string[] = [];
+    const mockSess: any = {
+        name: 'GloryDialogBot',
+        tick: () => ticks,
+        client: {},
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp: 65, maxHp: 99, combatLevel: 126 },
+                inventory: inv,
+                equipment: eq,
+                skills: [{ name: 'Magic', level: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { activePrayers: [], prayerPoints: 80 },
+                combatEvents: [],
+                dialog: { isOpen: dialogOpen, options: dialogOpen ? [{ text: 'Edgeville.' }] : [] },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => eq,
+            getSkill: () => ({ level: 99, baseLevel: 99 }),
+            clickDialogByText: async (pat: RegExp) => {
+                events.push(`dialog:${pat.source}`);
+                if (dialogOpen) { dialogOpen = false; z = 3496; }
+                return { success: true };
+            },
+        },
+        direct: async (action: any) => {
+            events.push(`${action.type}:${action.slot}:${action.optionIndex}`);
+            if (action.slot === 1) dialogOpen = true;
+            else inv.shift();
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => { ticks++; return true; });
+    try {
+        const res = await rescue(mockSess, () => {}, () => false, false);
+        expect(res).toBe(mockSess);
+        expect(z).toBe(3496);
+        expect(events).toEqual(['useInventoryItem:0:1', 'useInventoryItem:1:4', 'dialog:^Edgeville']);
+    } finally {
+        spyTick.mockRestore();
+    }
+});
+
+test('curePoisonAndEat drinks antipoison and eats above fatal poison ticks once in safe Edgeville, and isolatedPile guards full-HP re-entries', async () => {
+    const { curePoisonAndEat } = require('./pk-squad');
+    // Freshly banked lone re-entrant at full HP with 21 food does not endlessly Glory out before allies join.
+    expect(squadFallbackPlan({ z: 3640, hp: 99, maxHp: 99, foodCount: 21, enemyCount: 3, allyCount: 0, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('hold');
+    // Low-HP or outnumbered solo still escapes immediately.
+    expect(squadFallbackPlan({ z: 3640, hp: 80, maxHp: 99, foodCount: 21, enemyCount: 3, allyCount: 0, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('glory');
+
+    let hp = 12;
+    const inv: any[] = [
+        { slot: 0, id: 2448, count: 1, name: 'Superantipoison(4)', optionsWithIndex: [{ text: 'Drink', opIndex: 1 }] },
+        { slot: 1, id: 385, count: 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    const used: number[] = [];
+    const s: any = {
+        tick: () => 50,
+        client: {},
+        sdk: {
+            getState: () => ({ player: { worldX: 3087, worldZ: 3496, hp, maxHp: 99 } }),
+            getInventory: () => inv,
+        },
+        direct: async (a: any) => {
+            used.push(a.slot);
+            if (a.slot === 1) { hp += 20; inv.splice(inv.findIndex(x => x.slot === 1), 1); }
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => true);
+    try {
+        await curePoisonAndEat(s, () => false, true);
+        expect(used).toEqual([0, 1]);
+    } finally {
+        spyTick.mockRestore();
+    }
+});
+
+test('squadFallbackPlan catches 2+ hitter focus and 4+ enemy multi bursts, and rescue combo-heals on Glory entry and low-HP teleport windup', async () => {
+    expect(squadFallbackPlan({ z: 3604, hp: 85, maxHp: 99, foodCount: 14, enemyCount: 5, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 3 })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3604, hp: 71, maxHp: 99, foodCount: 14, enemyCount: 5, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 2 })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3604, hp: 61, maxHp: 99, foodCount: 14, enemyCount: 4, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 0 })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3604, hp: 75, maxHp: 99, foodCount: 14, enemyCount: 5, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 1 })).toBe('hold');
+
+    let z = 3604, hp = 64, ticks = 0, dialogOpen = false;
+    const inv: any[] = [
+        { slot: 0, id: 1712, count: 1, name: 'Amulet of glory(4)', optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] },
+        { slot: 1, id: 385, count: 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+        { slot: 2, id: 3144, count: 1, name: 'Cooked karambwan', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    const used: string[] = [];
+    const s: any = {
+        name: 'GloryHealBot',
+        tick: () => ticks,
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp, maxHp: 99, combatLevel: 126 },
+                inventory: inv,
+                equipment: [],
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { activePrayers: [], prayerPoints: 99 },
+                combatEvents: [],
+                dialog: dialogOpen ? { isOpen: true, isWaiting: false, options: [{ text: 'Edgeville' }] } : { isOpen: false },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => [],
+            getSkill: () => ({ level: 99, baseLevel: 99 }),
+            clickDialogByText: async () => {
+                dialogOpen = false;
+                used.push('clickEdgeville');
+                hp = 48; // simulate heavy spike during teleport windup
+                return { success: true };
+            },
+        },
+        direct: async (a: any) => {
+            used.push(`use:${a.slot}`);
+            if (a.slot === 0) dialogOpen = true;
+            if (a.slot === 1) hp += 20;
+            if (a.slot === 2) hp += 18;
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => {
+        ticks++;
+        if (ticks >= 2 && !dialogOpen && used.includes('clickEdgeville')) z = 3496;
+        return true;
+    });
+    try {
+        await rescue(s, () => {}, () => false, false);
+        expect(used[0]).toBe('use:1');
+        expect(used[1]).toBe('use:2');
+        expect(used).toContain('use:0');
+        expect(used).toContain('clickEdgeville');
+        expect(z).toBe(3496);
+    } finally {
+        spyTick.mockRestore();
+    }
+
+    // Prayer toggles / eats must not run during the 1-tick wait after Rub glory before Edgeville dialog appears.
+    let ticks2 = 0, z2 = 3604, dlg2 = false, rubTick = -1;
+    const inv2: any[] = [
+        { slot: 0, id: 1712, count: 1, name: 'Amulet of glory(4)', optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] },
+        { slot: 1, id: 385, count: 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    const log2: string[] = [];
+    const s2: any = {
+        name: 'NoClearModalBot',
+        tick: () => ticks2,
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z2, hp: 88, maxHp: 99, combatLevel: 126 },
+                inventory: inv2,
+                equipment: [],
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { activePrayers: [], prayerPoints: 99 },
+                combatEvents: [],
+                dialog: dlg2 ? { isOpen: true, isWaiting: false, options: [{ text: 'Edgeville.' }] } : { isOpen: false },
+            }),
+            getInventory: () => inv2,
+            getEquipment: () => [],
+            getSkill: () => ({ level: 99, baseLevel: 99 }),
+            sendTogglePrayer: async (p: number) => { log2.push(`pray:${p}@t${ticks2}`); },
+            clickDialogByText: async () => { log2.push(`edge@t${ticks2}`); dlg2 = false; z2 = 3496; return { success: true }; },
+        },
+        direct: async (a: any) => {
+            log2.push(`use:${a.slot}@t${ticks2}`);
+            if (a.slot === 0) rubTick = ticks2;
+        },
+    };
+    const spy2 = spyOn(pk, 'nextTick').mockImplementation(async () => {
+        ticks2++;
+        if (rubTick >= 0 && ticks2 === rubTick + 1) dlg2 = true;
+        return true;
+    });
+    try {
+        await rescue(s2, () => {}, () => false, false, { protect: () => 'melee', protectItem: () => true });
+        expect(z2).toBe(3496);
+        expect(log2.filter(x => x.endsWith('@t1'))).toEqual(['edge@t1']);
+    } finally {
+        spy2.mockRestore();
+    }
+});
+
+test('rescue retries Glory rub every tick on .if_close interruption and dispatches direct dialog/unequip actions when available', async () => {
+    expect(squadFallbackPlan({ z: 3604, hp: 75, maxHp: 99, foodCount: 14, enemyCount: 6, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 2 })).toBe('hold');
+    expect(squadFallbackPlan({ z: 3604, hp: 75, maxHp: 99, foodCount: 14, enemyCount: 6, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: true, targetingMe: 2 })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3604, hp: 75, maxHp: 99, foodCount: 14, enemyCount: 6, allyCount: 7, inMulti: true, hasGlory: false, hasTeleport: true, targetingMe: 2 })).toBe('teleport');
+
+    let ticks = 0, z = 3604, dlgOpen = false;
+    const eq: any[] = [{ slot: 2, id: 1712, count: 1, name: 'Amulet of glory(4)' }];
+    const inv: any[] = [];
+    const actions: string[] = [];
+    const s: any = {
+        name: 'DirectRetryBot',
+        client: { clickEquipmentSlot: () => true },
+        tick: () => ticks,
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp: 92, maxHp: 99, combatLevel: 126 },
+                inventory: inv,
+                equipment: eq,
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { activePrayers: [], prayerPoints: 99 },
+                combatEvents: [],
+                dialog: dlgOpen ? { isOpen: true, isWaiting: false, pageId: 'page-1', options: [{ index: 1, componentId: 2494, text: 'Edgeville.' }] } : { isOpen: false },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => eq,
+            getSkill: () => ({ level: 99, baseLevel: 99 }),
+            clickDialogByText: async () => { actions.push('queuedDialog'); return { success: true }; },
+            sendUseEquipmentItem: async () => { actions.push('queuedUnequip'); },
+        },
+        direct: async (a: any) => {
+            actions.push(`${a.type}@t${ticks}`);
+            if (a.type === 'useEquipmentItem') {
+                const [gl] = eq.splice(0, 1);
+                if (gl) inv.push({ slot: 0, id: gl.id, count: 1, name: gl.name, optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] });
+            } else if (a.type === 'clickDialogOption') {
+                expect(a.guard).toEqual({ pageId: 'page-1', componentId: 2494 });
+                dlgOpen = false;
+                z = 3496;
+            }
+            return { success: true };
+        },
+    };
+    let rubCount = 0;
+    const spy = spyOn(pk, 'nextTick').mockImplementation(async () => {
+        ticks++;
+        // First rub at t=1 gets closed by .if_close; second rub at t=2 succeeds and opens dialog at t=3.
+        if (actions.some(x => x.startsWith('useInventoryItem@'))) {
+            rubCount++;
+            if (rubCount === 2) dlgOpen = true;
+        }
+        return true;
+    });
+    try {
+        await rescue(s, () => {}, () => false, false);
+        expect(z).toBe(3496);
+        expect(actions).toEqual(['useEquipmentItem@t0', 'useInventoryItem@t1', 'useInventoryItem@t2', 'clickDialogOption@t3']);
+    } finally {
+        spy.mockRestore();
+    }
+});
+
+test('squadFallbackPlan outgunned triggers early Glory fallback, and rescue buffers <= 86 HP and aborts Edgeville dialog if spiked <= 68 HP', async () => {
+    expect(squadFallbackPlan({ z: 3604, hp: 75, maxHp: 99, foodCount: 14, enemyCount: 5, allyCount: 3, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 2 })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3604, hp: 71, maxHp: 99, foodCount: 14, enemyCount: 4, allyCount: 3, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 1 })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3604, hp: 75, maxHp: 99, foodCount: 14, enemyCount: 5, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 2 })).toBe('hold');
+
+    let ticks = 0, z = 3604, hp = 84, dlgOpen = false, rubCount = 0, rubTick = -1;
+    const inv: any[] = [
+        { slot: 0, id: 1712, count: 1, name: 'Amulet of glory(4)', optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] },
+        { slot: 1, id: 385, count: 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+        { slot: 2, id: 385, count: 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+        { slot: 3, id: 3144, count: 1, name: 'Cooked karambwan', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    const log: string[] = [];
+    const s: any = {
+        name: 'PreHealAndAbortBot',
+        tick: () => ticks,
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp, maxHp: 99, combatLevel: 126 },
+                inventory: inv,
+                equipment: [],
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { activePrayers: [], prayerPoints: 99 },
+                combatEvents: [],
+                dialog: dlgOpen ? { isOpen: true, isWaiting: false, pageId: 'p1', options: [{ index: 1, componentId: 2494, text: 'Edgeville.' }] } : { isOpen: false },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => [],
+            getSkill: () => ({ level: 99, baseLevel: 99 }),
+        },
+        direct: async (a: any) => {
+            log.push(`${a.type}:${a.slot ?? a.optionIndex}@t${ticks}`);
+            if (a.type === 'useInventoryItem') {
+                if (a.slot === 0) { rubCount++; rubTick = ticks; }
+                else {
+                    dlgOpen = false;
+                    const idx = inv.findIndex(i => i.slot === a.slot);
+                    if (idx >= 0) {
+                        const [food] = inv.splice(idx, 1);
+                        hp = Math.min(99, hp + (food.id === 3144 ? 18 : 20));
+                    }
+                }
+            } else if (a.type === 'clickDialogOption') {
+                dlgOpen = false;
+                z = 3496;
+            }
+            return { success: true };
+        },
+    };
+    const spy = spyOn(pk, 'nextTick').mockImplementation(async () => {
+        ticks++;
+        // Rub #1 opens dialog, then an enemy spike drops HP 99 -> 58 before Edgeville click.
+        if (rubTick >= 0 && ticks === rubTick + 1) {
+            dlgOpen = true;
+            if (rubCount === 1) hp = 58;
+        }
+        return true;
+    });
+    try {
+        await rescue(s, () => {}, () => false, false);
+        expect(z).toBe(3496);
+        // Eats Shark and rubs Glory on t0, waits out foodReady=3 on spike to 58, aborts dialog via Shark+Karambwan at t3, then rubs and clicks Edgeville.
+        expect(log).toEqual([
+            'useInventoryItem:1@t0',
+            'useInventoryItem:0@t0',
+            'useInventoryItem:2@t3',
+            'useInventoryItem:3@t3',
+            'useInventoryItem:0@t4',
+            'clickDialogOption:1@t5',
+        ]);
+    } finally {
+        spy.mockRestore();
+    }
+});
+
+test('squadEliteDefaults enables Entangle, zeroDrainFlick/offensiveFlick, fakieSwitch, eatAt:76, and specBelow:1 only for maxed supplied tribrids', () => {
+    const { ELITE_SQUAD_OPTS, squadEliteDefaults } = require('./pk-squad');
+    const maxSkills = [
+        { name: 'Magic', baseLevel: 99 },
+        { name: 'Prayer', baseLevel: 99 },
+        { name: 'Hitpoints', baseLevel: 99 },
+    ];
+    // Run-1 low Prayer or un-potted chainbind iron-arrow kits keep historical SQUAD_OPTS unchanged.
+    expect(squadEliteDefaults([{ name: 'Magic', baseLevel: 99 }, { name: 'Prayer', baseLevel: 1 }, { name: 'Hitpoints', baseLevel: 99 }], [{ id: 2434 }])).toEqual({});
+    expect(squadEliteDefaults(maxSkills, [{ id: 385 }, { id: 175 }])).toEqual({});
+    // Supplied maxed tribrid (carrying prayer restore or super combat/ranging boost) activates ELITE_SQUAD_OPTS and removes freezeMagicCap.
+    const elite = squadEliteDefaults(maxSkills, [{ id: 2434 }, { id: 385 }]);
+    expect(elite).toEqual(ELITE_SQUAD_OPTS);
+    const serialized = JSON.parse(JSON.stringify({ ...SQUAD_OPTS, ...elite }));
+    expect(serialized.freezeMagicCap).toBeUndefined();
+    expect(serialized.eatAt).toBe(76);
+    expect(serialized.comboAt).toBe(64);
+    expect(serialized.specBelow).toBe(1);
+    expect(serialized.zeroDrainFlick).toBe(true);
+    expect(serialized.offensiveFlick).toBe(true);
+    expect(serialized.fakieSwitch).toBe(true);
+    // Scaled BiS clone & team5 cases default to winning tribrid-bis-zerk-glory-tele (Camelot Teleport + Berserker + Dragon + Glory).
+    const clones4 = benchCases().find(c => c.key === 'extra:clone-bis-clones-4-x1')!;
+    const team5 = benchCases().find(c => c.key === 'extra:clone-bis-team5-4-x1')!;
+    expect(clones4.presetConfig!.inventory!.some(i => i.id === 563)).toBe(true);
+    expect(team5.presetConfig!.inventory!.some(i => i.id === 563)).toBe(true);
+});
+
+test('settleBenchLogout clears Wilderness combat timer and casts escape teleport before logout', async () => {
+    const { settleBenchLogout } = require('./pk-squad');
+    let ticks = 0, z = 3594, autoRet = true;
+    const actions: string[] = [];
+    const wildBot: any = {
+        sdk: {
+            getState: () => ({
+                inGame: true,
+                autoRetaliateEnabled: autoRet,
+                player: { worldX: 3076, worldZ: z, isDead: false },
+                skills: [{ name: 'Magic', level: 45 }],
+                inventory: [{ id: 563, count: 3 }, { id: 556, count: 15 }],
+                equipment: [],
+            }),
+            getEquipment: () => [],
+            sendWalk: async (x: number, wz: number) => { actions.push(`walk:${x},${wz}`); },
+        },
+        direct: async (a: any) => {
+            actions.push(`direct:${a.componentId}`);
+            if (a.componentId === 151) autoRet = false;
+            if (a.componentId === 1174) z = 3477;
+        },
+    };
+    const safeBot: any = {
+        sdk: { getState: () => ({ inGame: true, player: { worldX: 3087, worldZ: 3496, isDead: false } }) },
+    };
+    const spy = spyOn(pk, 'nextTick').mockImplementation(async () => { ticks++; return true; });
+    try {
+        await settleBenchLogout([safeBot, wildBot]);
+        expect(actions).toEqual(['direct:151', 'direct:1174']);
+        expect(ticks).toBe(0);
+    } finally {
+        spy.mockRestore();
+    }
+});
+
+test('rescue eats + unequips Glory on the same tick and clicks Edgeville immediately above 68 HP without stalling on open modal', async () => {
+    const actions: string[] = [];
+    let z = 3600, hp = 75, ticks = 0, worn = true, dlgOpen = false;
+    const inv: { id: number; count: number; slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [
+        { id: 385, count: 1, slot: 0, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    const mockSess: any = {
+        name: 'GloryFix',
+        tick: () => ticks,
+        ended: new Promise(() => {}),
+        client: { clickEquipmentSlot: () => {} },
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp, maxHp: 99 },
+                inventory: inv,
+                equipment: worn ? [{ id: 1712, slot: 2 }] : [],
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 43 }],
+                prayers: { prayerPoints: 99, activePrayers: [] },
+                dialog: dlgOpen ? { isOpen: true, isWaiting: false, pageId: 'p1', options: [{ index: 1, text: 'Edgeville.', componentId: 2494 }] } : { isOpen: false },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => (worn ? [{ id: 1712, slot: 2 }] : []),
+        },
+        direct: async (action: any) => {
+            actions.push(`${action.type}:${action.slot ?? action.optionIndex ?? action.componentId}`);
+            if (action.type === 'useInventoryItem' && action.slot === 0 && !dlgOpen) {
+                hp = 72;
+            } else if (action.type === 'useEquipmentItem') {
+                worn = false;
+                inv.push({ id: 1712, count: 1, slot: 1, optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] });
+            } else if (action.type === 'useInventoryItem' && action.slot === 1) {
+                dlgOpen = true;
+            } else if (action.type === 'clickDialogOption') {
+                dlgOpen = false;
+                z = 3496;
+            }
+            return { success: true };
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => { ticks++; return true; });
+    try {
+        const res = await rescue(mockSess, () => {}, () => false, false);
+        expect(res).toBe(mockSess);
+        expect(actions).toEqual(['useInventoryItem:0', 'useEquipmentItem:2', 'useInventoryItem:1', 'clickDialogOption:1']);
+    } finally {
+        spyTick.mockRestore();
+    }
+});
+
+test('rescue steps south after 2 interrupted Glory rubs (.if_close) instead of standing stationary', async () => {
+    const actions: string[] = [];
+    let z = 3600, ticks = 0, rubs = 0, dlgOpen = false;
+    const inv = [{ id: 1712, count: 1, slot: 0, optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] }];
+    const mockSess: any = {
+        name: 'GloryStepSouth',
+        tick: () => ticks,
+        ended: new Promise(() => {}),
+        client: {},
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp: 94, maxHp: 99 },
+                inventory: inv,
+                equipment: [],
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 43 }],
+                prayers: { prayerPoints: 99, activePrayers: [] },
+                dialog: dlgOpen ? { isOpen: true, isWaiting: false, pageId: 'p2', options: [{ index: 1, text: 'Edgeville.', componentId: 2494 }] } : { isOpen: false },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => [],
+            sendWalk: (x: number, toZ: number) => {
+                actions.push(`walk:${x},${toZ}`);
+                z = 3594;
+            },
+        },
+        direct: async (action: any) => {
+            actions.push(`${action.type}:${action.slot ?? action.optionIndex ?? action.componentId}`);
+            if (action.type === 'useInventoryItem') {
+                rubs++;
+                if (rubs >= 3) dlgOpen = true;
+            } else if (action.type === 'clickDialogOption') {
+                dlgOpen = false;
+                z = 3496;
+            }
+            return { success: true };
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => { ticks++; return true; });
+    try {
+        const res = await rescue(mockSess, () => {}, () => false, false);
+        expect(res).toBe(mockSess);
+        expect(actions).toContain('walk:3071,3594');
+        expect(actions.at(-1)).toBe('clickDialogOption:1');
+    } finally {
+        spyTick.mockRestore();
+    }
+});
+
+test('rescue with wornGlory and full 28-item pack keeps magic_shortbow, waits 1 tick after eating + praying, then unequips Glory', async () => {
+    const actions: string[] = [];
+    let z = 3600, hp = 80, ticks = 0, worn = true, dlgOpen = false, prayActive = false;
+    const inv: { id: number; count: number; slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [
+        { id: 861, count: 1, slot: 0, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }, { text: 'Drop', opIndex: 5 }] },
+        ...Array.from({ length: 26 }, (_, i) => ({
+            id: 2434, count: 1, slot: i + 1,
+            optionsWithIndex: [{ text: 'Drink', opIndex: 1 }, { text: 'Drop', opIndex: 5 }],
+        })),
+        { id: 385, count: 1, slot: 27, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }, { text: 'Drop', opIndex: 5 }] },
+    ];
+    let pendingEatRemoval = false;
+    const mockSess: any = {
+        name: 'FullPackGlory',
+        tick: () => ticks,
+        ended: new Promise(() => {}),
+        client: { clickEquipmentSlot: () => {} },
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp, maxHp: 99 },
+                inventory: inv,
+                equipment: worn ? [{ id: 1712, slot: 2 }] : [],
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { prayerPoints: 99, activePrayers: prayActive ? { 14: true } : [] },
+                dialog: dlgOpen ? { isOpen: true, isWaiting: false, pageId: 'p28', options: [{ index: 1, text: 'Edgeville.', componentId: 2494 }] } : { isOpen: false },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => (worn ? [{ id: 1712, slot: 2 }] : []),
+            getSkill: () => ({ level: 99, baseLevel: 99 }),
+            sendTogglePrayer: (id: number) => {
+                prayActive = true;
+                actions.push(`pray:${id}@t${ticks}`);
+            },
+        },
+        direct: async (action: any) => {
+            actions.push(`${action.type}:${action.slot ?? action.optionIndex ?? action.componentId}:${action.optionIndex ?? ''}@t${ticks}`);
+            if (action.type === 'useInventoryItem' && action.slot === 27 && action.optionIndex === 1) {
+                pendingEatRemoval = true;
+                hp = 99;
+            } else if (action.type === 'useEquipmentItem') {
+                worn = false;
+                inv.push({ id: 1712, count: 1, slot: 27, optionsWithIndex: [{ text: 'Rub', opIndex: 4 }, { text: 'Drop', opIndex: 5 }] });
+            } else if (action.type === 'useInventoryItem' && action.slot === 27 && action.optionIndex === 4) {
+                dlgOpen = true;
+            } else if (action.type === 'clickDialogOption') {
+                dlgOpen = false;
+                z = 3496;
+            }
+            return { success: true };
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => {
+        ticks++;
+        if (pendingEatRemoval) {
+            pendingEatRemoval = false;
+            const idx = inv.findIndex(x => x.slot === 27);
+            if (idx >= 0) inv.splice(idx, 1);
+        }
+        return true;
+    });
+    try {
+        const res = await rescue(mockSess, () => {}, () => false, false, { protect: () => 'melee' });
+        expect(res).toBe(mockSess);
+        expect(inv.some(x => x.id === 861)).toBe(true);
+        expect(actions.some(a => a.startsWith('useInventoryItem:0:'))).toBe(false);
+        expect(actions).toEqual([
+            'pray:14@t0',
+            'useInventoryItem:27:1@t0',
+            'useEquipmentItem:2:1@t1',
+            'useInventoryItem:27:4@t2',
+            'clickDialogOption:1:1@t2',
+        ]);
+    } finally {
+        spyTick.mockRestore();
+    }
+});
+
+test('rescue with wornGlory and 28 non-food items drops consumable instead of primary switch magic_shortbow', async () => {
+    const actions: string[] = [];
+    let z = 3600, ticks = 0, worn = true, dlgOpen = false;
+    const inv: { id: number; count: number; slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [
+        { id: 861, count: 1, slot: 0, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }, { text: 'Drop', opIndex: 5 }] },
+        { id: 561, count: 10, slot: 1, optionsWithIndex: [{ text: 'Drop', opIndex: 5 }] },
+        ...Array.from({ length: 26 }, (_, i) => ({
+            id: 2436, count: 1, slot: i + 2,
+            optionsWithIndex: [{ text: 'Drink', opIndex: 1 }, { text: 'Drop', opIndex: 5 }],
+        })),
+    ];
+    const mockSess: any = {
+        name: 'ZeroFoodFullPack',
+        tick: () => ticks,
+        ended: new Promise(() => {}),
+        client: { clickEquipmentSlot: () => {} },
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp: 95, maxHp: 99 },
+                inventory: inv,
+                equipment: worn ? [{ id: 1712, slot: 2 }] : [],
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { prayerPoints: 99, activePrayers: [] },
+                dialog: dlgOpen ? { isOpen: true, isWaiting: false, pageId: 'p0f', options: [{ index: 1, text: 'Edgeville.', componentId: 2494 }] } : { isOpen: false },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => (worn ? [{ id: 1712, slot: 2 }] : []),
+        },
+        direct: async (action: any) => {
+            actions.push(`${action.type}:${action.slot ?? action.optionIndex ?? action.componentId}:${action.optionIndex ?? ''}`);
+            if (action.type === 'useInventoryItem' && action.optionIndex === 5) {
+                const idx = inv.findIndex(i => i.slot === action.slot);
+                if (idx >= 0) inv.splice(idx, 1);
+            } else if (action.type === 'useEquipmentItem') {
+                worn = false;
+                inv.push({ id: 1712, count: 1, slot: 2, optionsWithIndex: [{ text: 'Rub', opIndex: 4 }, { text: 'Drop', opIndex: 5 }] });
+            } else if (action.type === 'useInventoryItem' && action.optionIndex === 4) {
+                dlgOpen = true;
+            } else if (action.type === 'clickDialogOption') {
+                dlgOpen = false;
+                z = 3496;
+            }
+            return { success: true };
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => { ticks++; return true; });
+    try {
+        const res = await rescue(mockSess, () => {}, () => false, false);
+        expect(res).toBe(mockSess);
+        expect(inv.some(x => x.id === 861)).toBe(true);
+        expect(actions).toEqual([
+            'useInventoryItem:2:5',
+            'useEquipmentItem:2:1',
+            'useInventoryItem:2:4',
+            'clickDialogOption:1:1',
+        ]);
+    } finally {
+        spyTick.mockRestore();
+    }
+});

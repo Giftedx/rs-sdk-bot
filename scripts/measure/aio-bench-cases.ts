@@ -220,9 +220,9 @@ const EDGE_BANK = [{id: 385, count: 200}, {id: 2436, count: 8}, {id: 2440, count
 // The same bank with the freeze runes of the snare kit (earth, water, nature).
 const EDGE_BANK_SNARE = [...EDGE_BANK, {id: 557, count: 500}, {id: 555, count: 500}, {id: 561, count: 400}];
 // Full maxed-tribrid bank stock for scaled multi-trip benches (sharks, boosts, prayer pots, glory, runes, rune arrows).
-const EDGE_BANK_TRIBRID = [...EDGE_BANK_SNARE, {id: 892, count: 2000}, {id: 2434, count: 20}, {id: 1712, count: 4}, {id: 565, count: 400}, {id: 554, count: 1000}];
+const EDGE_BANK_TRIBRID = [...EDGE_BANK_SNARE, {id: 892, count: 2000}, {id: 893, count: 2000}, {id: 3144, count: 100}, {id: 2434, count: 20}, {id: 2436, count: 20}, {id: 2440, count: 20}, {id: 2442, count: 20}, {id: 2444, count: 20}, {id: 2448, count: 20}, {id: 1712, count: 4}, {id: 2550, count: 10}, {id: 565, count: 400}, {id: 554, count: 1000}];
 // Multi-trip regression bank holding sharks, boosts, runes, prayer pots, and glory, with zero spare arrows.
-const EDGE_BANK_NOSPARE_ARROWS = EDGE_BANK_TRIBRID.filter(r => r.id !== 886 && r.id !== 892);
+const EDGE_BANK_NOSPARE_ARROWS = EDGE_BANK_TRIBRID.filter(r => r.id !== 886 && r.id !== 892 && r.id !== 893);
 // The bank of a gang account: sharks only, as the feed shows the gang with no potion.
 const GANG_BANK = [{id: 385, count: 200}];
 // The tile where the dagger gang stands between hunts.
@@ -1349,7 +1349,7 @@ const ROUTE_CASES: BenchCase[] = [
   // Multi-trip restock regression: three maxed tribrids start at post with 1 shark against 3 5-shark tribrid-food clones (3v3) and 0 spare arrows in bank; Trip 2+ must restock and finish.
   (() => {
     const base = cloneTribridSquad('extra:squad-2-trips-nospare-x1', 'tribrid-snare', 3,
-      ['MAX_MINUTES=14', 'TRIPS=6', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_GANG_KIT=tribrid-food', 'SQUAD_OPTS={"cureNow":true,"eatAt":88,"escapeAt":64,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}'],
+      ['MAX_MINUTES=14', 'TRIPS=6', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_GANG_KIT=tribrid-food', 'SQUAD_OPTS={"cureNow":true,"eatAt":88,"escapeAt":64,"escapeOutnumbered":null,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}'],
       'full', {x: 3066, z: 3641}, 1, EDGE_BANK_NOSPARE_ARROWS);
     const enemy = kitFixture('tribrid-food', GANKER_POST.x, GANKER_POST.z);
     const enemyInv = [...enemy.inventory!.filter(i => i.id !== 385), ...Array.from({length: 5}, () => ({id: 385, count: 1}))];
@@ -1359,6 +1359,43 @@ const ROUTE_CASES: BenchCase[] = [
       companions: base.companions!.map((comp, i) => (i >= 2 ? {...comp, presetConfig: {...enemy, inventory: enemyInv}} : comp)),
     };
   })(),
+  // Multi-trip combo-food restock regression: starts with 1 karambwan at post so bots retreat early and Trip 2+ restocks sharks and karambwans from bank.
+  (() => {
+    const base = cloneTribridSquad('extra:squad-2-trips-combo-x1', 'tribrid-bis-hybrid', 3,
+      ['MAX_MINUTES=14', 'TRIPS=6', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_GANG_KIT=tribrid-food', 'SQUAD_OPTS={"cureNow":true,"eatAt":95,"escapeAt":88,"escapeOutnumbered":null,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}'],
+      'full', {x: 3066, z: 3641}, undefined, EDGE_BANK_TRIBRID);
+    const keepStartFood = (inv: readonly {id: number; count: number}[]) => [
+      ...inv.filter(i => i.id !== 385 && i.id !== 3144),
+      {id: 3144, count: 1},
+    ];
+    const enemy = kitFixture('tribrid-food', GANKER_POST.x, GANKER_POST.z);
+    const enemyInv = [...enemy.inventory!.filter(i => i.id !== 385), ...Array.from({length: 18}, () => ({id: 385, count: 1}))];
+    return {
+      ...base,
+      presetConfig: {...base.presetConfig!, inventory: keepStartFood(base.presetConfig!.inventory!)},
+      pass: s => ok(s) && killReceiptsMatch(s) && /\bdied=0\b/.test(s) && /\btrips=([2-9]|\d{2,})\b/.test(s) && /\bgangDied=[23]\b/.test(s),
+      companions: base.companions!.map((comp, i) => (i < 2
+        ? {...comp, presetConfig: {...comp.presetConfig!, inventory: keepStartFood(comp.presetConfig!.inventory!)}}
+        : {...comp, presetConfig: {...enemy, inventory: enemyInv}})),
+    };
+  })(),
+  // Wave C Rev-289 Achievable BiS Kit Matrix against Goondelf/Ligma/Sugma clones and threat-team3, plus scaled BiS squad sizes (4..16).
+  ...(['rune', 'dhide', 'dragon', 'dragon-med-sharks', 'dragon-zerk', 'dragon-zerk-sharks', 'zerk-power-sharks', 'zerk-karam2', 'zerk-tele', 'zerk-glory-tele', 'zerk-tele-karam2', 'hybrid', 'hybrid-sharks', 'power-glory', 'dragon-power', 'hybrid-tele', 'swap', 'entangle', 'amulet-str', 'amulet-power', 'sara-cape', 'god-sara', 'god-guthix'] as const).map(v =>
+    cloneTribridSquad(`extra:clone-bis-${v}-x1`, `tribrid-bis-${v}`, 4, ['TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4'])),
+  (() => {
+    const base = cloneTribridSquad('extra:clone-bis-spear1-x1', 'tribrid-bis-hybrid', 4, ['TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_BURST_HOLD=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4']);
+    return {...base, presetConfig: {...kitFixture('tribrid-bis-spear', base.presetConfig!.position!.x, base.presetConfig!.position!.z), bank: base.presetConfig!.bank}};
+  })(),
+  ...(['rune', 'dhide', 'dragon', 'dragon-med-sharks', 'dragon-zerk', 'dragon-zerk-sharks', 'zerk-power-sharks', 'zerk-karam2', 'zerk-tele', 'zerk-glory-tele', 'zerk-tele-karam2', 'hybrid', 'hybrid-sharks', 'power-glory', 'dragon-power', 'hybrid-tele', 'swap', 'entangle', 'god-sara', 'god-guthix'] as const).map(v =>
+    cloneTribridThreatCase(`extra:clone-threat3-bis-${v}-x1`, `tribrid-bis-${v}`, 4, 'mage+ranger+tribrid-snare', 3)),
+  (() => {
+    const base = cloneTribridThreatCase('extra:clone-threat3-bis-spear1-x1', 'tribrid-bis-hybrid', 4, 'mage+ranger+tribrid-snare', 3, ['SQUAD_BURST_HOLD=1']);
+    return {...base, presetConfig: {...kitFixture('tribrid-bis-spear', base.presetConfig!.position!.x, base.presetConfig!.position!.z), bank: base.presetConfig!.bank}};
+  })(),
+  ...([4, 6, 8, 10, 12, 16] as const).map(n =>
+    cloneTribridSquad(`extra:clone-bis-clones-${n}-x1`, 'tribrid-bis-zerk-glory-tele', n, ['TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4'])),
+  ...([4, 6, 8, 10, 12, 16] as const).map(n =>
+    cloneTribridThreatCase(`extra:clone-bis-team5-${n}-x1`, 'tribrid-bis-zerk-glory-tele', n, 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5)),
   // The same against each mode of the clones: every clone walks out with its food gone (retreat), none does (stand),
   // the fewest sharks of the record's range (lean), the most (full).
   ...([4, 5] as const).flatMap(n => (['retreat', 'stand', 'lean', 'full'] as const).map(mode => cloneSquad(`extra:clone-squad-${n}-chainbind-${mode}-x1`, 'live-walker-iron-rune-chain-bind', n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1'], mode))),

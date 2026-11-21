@@ -35,7 +35,7 @@ export type KitSpec = {
     foodItem?: string;
     // Switch weapons for each style the build fights with, by name.
     switches: Partial<Record<Style, string[]>>;
-    options?: Pick<FightOptions, 'rotation' | 'damageSpell' | 'charge' | 'freezeWear' | 'comboFood' | 'comboAt' | 'zeroDrainFlick' | 'offensiveFlick' | 'fakieSwitch' | 'stepUnderFrozen' | 'burstOnStun'>;
+    options?: Pick<FightOptions, 'rotation' | 'damageSpell' | 'charge' | 'castArmour' | 'freezeWear' | 'comboFood' | 'comboAt' | 'zeroDrainFlick' | 'offensiveFlick' | 'fakieSwitch' | 'stepUnderFrozen' | 'burstOnStun'>;
     // Base levels of the build (default: 99 in the seven combat skills) and the varps it needs besides Lost City,
     // Dragon Slayer and full special energy.
     skills?: Record<string, number>;
@@ -182,6 +182,53 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
     'tribrid-sara-dls': { worn: { ...RUNE, cape: 'saradomin_cape', weapon: 'dragon_longsword', shield: 'rune_kiteshield', ammo: ['rune_arrow', 300] },
         carried: ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...BOOSTS], food: 18,
         switches: { ranged: ['magic_shortbow'], melee: ['dragon_longsword', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] } },
+    // Rev-289 Achievable BiS matrix kits for Wave B/C optimization sweeps.
+    ...(() => {
+        const FULL_BOOSTS = [...BOOSTS, '4dose2defense', '4dose2antipoison'];
+        const KARAM5 = Array.from({ length: 5 }, () => 'tbwt_cooked_karambwan');
+        const KARAM4 = KARAM5.slice(0, 4);
+        const ACC = { hat: 'viking_helmet_crush', cape: 'cape_of_legends', amulet: 'amulet_of_glory_4', hands: 'black_dragon_vambraces', feet: 'death_climbingboots', ring: 'ring_of_recoil', weapon: 'dragon_dagger_p', ammo: ['rune_arrow_p', 300] as [string, number] } as const;
+        const TANK = { ...ACC, torso: 'dragon_chainbody', legs: 'dragon_platelegs', shield: 'dragon_sq_shield' } as const;
+        const COMBO_PACK = ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...FULL_BOOSTS, ...KARAM5];
+        const SHARK_PACK = ['magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...FULL_BOOSTS];
+        const SW_DRG = { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'dragon_sq_shield'] };
+        const VARPS = { 314: 80 };
+        const hybrid: KitSpec = { worn: { ...TANK, legs: 'black_dragonhide_chaps' }, carried: COMBO_PACK, food: 11, switches: SW_DRG, options: { rotation: ['ranged', 'melee'], comboFood: true }, varps: VARPS };
+        const godKit = (god: 'saradomin' | 'guthix', spell: number, varp: number): KitSpec => ({
+            worn: { ...ACC, torso: 'black_dragonhide_body', legs: 'black_dragonhide_chaps', cape: `${god}_cape`, shield: 'dragon_sq_shield' },
+            carried: ['magic_shortbow', `${god}_staff`, ...FREEZE, ...WAVE, ['firerune', 500], ...PRAYER_POTS, ...FULL_BOOSTS, ...KARAM4],
+            food: 8,
+            switches: { magic: [`${god}_staff`], ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'dragon_sq_shield'] },
+            options: { rotation: ['magic', 'ranged', 'melee'], damageSpell: spell, charge: true, castArmour: 'strip', comboFood: true },
+            varps: { ...VARPS, 267: 8, [varp]: 99 },
+        });
+        return {
+            'tribrid-bis-rune': { worn: { ...ACC, torso: 'rune_platebody', legs: 'rune_platelegs', shield: 'rune_kiteshield' }, carried: SHARK_PACK, food: 16, switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'rune_kiteshield'] }, options: { rotation: ['ranged', 'melee'] }, varps: VARPS },
+            'tribrid-bis-dhide': { worn: { ...ACC, torso: 'black_dragonhide_body', legs: 'black_dragonhide_chaps', shield: 'dragon_sq_shield' }, carried: COMBO_PACK, food: 11, switches: SW_DRG, options: { rotation: ['ranged', 'melee'], comboFood: true }, varps: VARPS },
+            'tribrid-bis-dragon': { worn: { ...TANK, hat: 'dragon_med_helm' }, carried: COMBO_PACK, food: 11, switches: SW_DRG, options: { rotation: ['ranged', 'melee'], comboFood: true }, varps: VARPS },
+            'tribrid-bis-dragon-med-sharks': { worn: { ...TANK, hat: 'dragon_med_helm' }, carried: SHARK_PACK, food: 16, switches: SW_DRG, options: { rotation: ['ranged', 'melee'] }, varps: VARPS },
+            'tribrid-bis-dragon-zerk': { worn: TANK, carried: COMBO_PACK, food: 11, switches: SW_DRG, options: { rotation: ['ranged', 'melee'], comboFood: true }, varps: VARPS },
+            'tribrid-bis-dragon-zerk-sharks': { worn: TANK, carried: SHARK_PACK, food: 16, switches: SW_DRG, options: { rotation: ['ranged', 'melee'] }, varps: VARPS },
+            'tribrid-bis-zerk-power-sharks': { worn: { ...TANK, amulet: 'amulet_of_power' }, carried: ['amulet_of_glory_4', ...SHARK_PACK], food: 15, switches: SW_DRG, options: { rotation: ['ranged', 'melee'] }, varps: VARPS },
+            'tribrid-bis-zerk-karam2': { worn: { ...TANK, amulet: 'amulet_of_power' }, carried: ['amulet_of_glory_4', ...SHARK_PACK, ...KARAM5.slice(0, 2)], food: 13, switches: SW_DRG, options: { rotation: ['ranged', 'melee'], comboFood: true }, varps: VARPS },
+            'tribrid-bis-zerk-tele': { worn: { ...TANK, amulet: 'amulet_of_power' }, carried: [...SHARK_PACK, ['lawrune', 3], ['airrune', 15]], food: 14, switches: SW_DRG, options: { rotation: ['ranged', 'melee'] }, varps: VARPS },
+            'tribrid-bis-zerk-glory-tele': { worn: TANK, carried: [...SHARK_PACK, ['lawrune', 3], ['airrune', 15]], food: 14, switches: SW_DRG, options: { rotation: ['ranged', 'melee'] }, varps: VARPS },
+            'tribrid-bis-zerk-tele-karam2': { worn: TANK, carried: [...SHARK_PACK, ...KARAM5.slice(0, 2), ['lawrune', 3], ['airrune', 15]], food: 12, switches: SW_DRG, options: { rotation: ['ranged', 'melee'], comboFood: true }, varps: VARPS },
+            'tribrid-bis-hybrid': hybrid,
+            'tribrid-bis-hybrid-sharks': { ...hybrid, carried: SHARK_PACK, food: 16, options: { rotation: ['ranged', 'melee'] } },
+            'tribrid-bis-swap': { worn: TANK, carried: ['magic_shortbow', 'black_dragonhide_body', 'black_dragonhide_chaps', ...FREEZE, ...PRAYER_POTS, ...FULL_BOOSTS, ...KARAM4], food: 10, switches: { ranged: ['magic_shortbow', 'black_dragonhide_body', 'black_dragonhide_chaps'], melee: ['dragon_dagger_p', 'dragon_sq_shield', 'dragon_chainbody', 'dragon_platelegs'] }, options: { rotation: ['ranged', 'melee'], comboFood: true }, varps: VARPS },
+            'tribrid-bis-entangle': { worn: { ...ACC, torso: 'black_dragonhide_body', legs: 'black_dragonhide_chaps', cape: 'saradomin_cape', shield: 'dragon_sq_shield' }, carried: ['magic_shortbow', 'mystic_fire_staff', ...FREEZE, ...PRAYER_POTS, ...FULL_BOOSTS, ...KARAM4], food: 11, switches: SW_DRG, options: { rotation: ['ranged', 'melee'], freezeWear: ['mystic_fire_staff'], comboFood: true }, varps: VARPS },
+            'tribrid-bis-spear': { worn: { ...TANK, legs: 'black_dragonhide_chaps' }, carried: ['dragon_spear_p', 'magic_shortbow', ...FREEZE, ...PRAYER_POTS, ...FULL_BOOSTS, ...KARAM4], food: 11, switches: { ranged: ['magic_shortbow'], melee: ['dragon_dagger_p', 'dragon_sq_shield', 'dragon_spear_p'] }, options: { rotation: ['ranged', 'melee'], comboFood: true, burstOnStun: true }, varps: VARPS },
+            'tribrid-bis-amulet-str': { ...hybrid, worn: { ...hybrid.worn, amulet: 'amulet_of_strength' } },
+            'tribrid-bis-amulet-power': { ...hybrid, worn: { ...hybrid.worn, amulet: 'amulet_of_power' } },
+            'tribrid-bis-power-glory': { ...hybrid, worn: { ...hybrid.worn, amulet: 'amulet_of_power' }, carried: ['amulet_of_glory_4', ...COMBO_PACK], food: 10 },
+            'tribrid-bis-dragon-power': { worn: { ...TANK, amulet: 'amulet_of_power' }, carried: ['amulet_of_glory_4', ...COMBO_PACK], food: 10, switches: SW_DRG, options: { rotation: ['ranged', 'melee'], comboFood: true }, varps: VARPS },
+            'tribrid-bis-hybrid-tele': { ...hybrid, carried: [...COMBO_PACK, ['lawrune', 3], ['airrune', 15]], food: 9 },
+            'tribrid-bis-sara-cape': { ...hybrid, worn: { ...hybrid.worn, cape: 'saradomin_cape' } },
+            'tribrid-bis-god-sara': godKit('saradomin', SPELLS.saradominStrike, 268),
+            'tribrid-bis-god-guthix': godKit('guthix', SPELLS.clawsOfGuthix, 269),
+        };
+    })(),
     // The army's stunner: the snare kit with a dragon spear (two-handed) in place of the dagger and shield. Its special
     // holds the target 5 ticks with no input, so in multi-way combat the others hit a target that cannot eat.
     'tribrid-snare-spear': { worn: { ...RUNE, weapon: 'dragon_spear', ammo: ['rune_arrow', 300] },
@@ -543,7 +590,7 @@ const ITEM_QUEST: Readonly<Record<string, string>> = {
     dragon_dagger: 'Lost City', dragon_dagger_p: 'Lost City', dragon_longsword: 'Lost City', dragon_mace: "Hero's Quest", dragon_battleaxe: "Hero's Quest",
     dragon_halberd: 'Regicide', dragon_sq_shield: "Legends Quest", rune_platebody: 'Dragon Slayer', dragonhide_body: 'Dragon Slayer',
     viking_helmet_crush: 'The Fremennik Trials', viking_helmet_range: 'The Fremennik Trials', viking_helmet_slash: 'The Fremennik Trials', viking_helmet_magic: 'The Fremennik Trials',
-    ibanstaff: 'Underground Pass', zamorak_staff: 'Mage Arena', zamorak_cape: 'Mage Arena',
+    ibanstaff: 'Underground Pass', saradomin_staff: 'Mage Arena', saradomin_cape: 'Mage Arena', guthix_staff: 'Mage Arena', guthix_cape: 'Mage Arena', zamorak_staff: 'Mage Arena', zamorak_cape: 'Mage Arena',
 };
 const VARP_QUEST: Readonly<Record<number, string>> = { 139: "Legends Quest", 267: 'Mage Arena', 288: 'Underground Pass', 328: 'Regicide', 347: 'The Fremennik Trials' };
 // Each quest with the quests that it needs, as content folders (vendor/rs-sdk/server/content/scripts/quests). Lost
