@@ -5,6 +5,6 @@
  "account": "BowBeforeMe",
  "partner": "Dipstick",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795302890592,
+ "at": 1795302969276,
  "detail": "Error: account logout is not confirmed: BowBeforeMe session active or outcome unknown"
 }
