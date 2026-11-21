@@ -1256,6 +1256,8 @@ test('curePoisonAndEat drinks antipoison and eats above fatal poison ticks once 
     const { curePoisonAndEat } = require('./pk-squad');
     // Freshly banked lone re-entrant at full HP with 21 food does not endlessly Glory out before allies join.
     expect(squadFallbackPlan({ z: 3640, hp: 99, maxHp: 99, foodCount: 21, enemyCount: 3, allyCount: 0, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('hold');
+    expect(squadFallbackPlan({ z: 3640, hp: 93, maxHp: 99, foodCount: 21, enemyCount: 6, allyCount: 0, targetingMe: 0, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('hold');
+    expect(squadFallbackPlan({ z: 3640, hp: 90, maxHp: 99, foodCount: 21, enemyCount: 6, allyCount: 0, targetingMe: 2, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('glory');
     // Low-HP or outnumbered solo still escapes immediately.
     expect(squadFallbackPlan({ z: 3640, hp: 80, maxHp: 99, foodCount: 21, enemyCount: 3, allyCount: 0, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('glory');
 

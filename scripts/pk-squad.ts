@@ -1131,7 +1131,8 @@ export function squadFallbackPlan(opts: {
 }): 'hold' | 'out' | 'glory' | 'teleport' | 'run' {
     const wild = wildernessLevel(opts.z);
     if (wild === 0) return 'out';
-    const isolatedPile = opts.inMulti && opts.allyCount === 0 && opts.enemyCount >= 3 && (opts.hp <= opts.maxHp * 0.85 || opts.foodCount <= 6 || opts.enemyCount >= 5);
+    const isolatedPile = opts.inMulti && opts.allyCount === 0 && opts.enemyCount >= 3
+        && (opts.hp <= opts.maxHp * 0.85 || opts.foodCount <= 6 || (opts.enemyCount >= 5 && (opts.hp <= opts.maxHp * 0.88 || ((opts.targetingMe ?? 0) >= 2 && opts.hp <= opts.maxHp * 0.91))));
     const outnumbered = opts.inMulti && opts.enemyCount - opts.allyCount >= 2 && opts.hp <= opts.maxHp * 0.78;
     const focusPile = opts.inMulti && (opts.targetingMe ?? 0) >= 3 && opts.hp <= opts.maxHp * 0.86;
     const instantEscape = !!opts.hasTeleport && wild <= 20;
