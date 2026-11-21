@@ -112,7 +112,7 @@ export async function catchScorpion(q: CatchQuest, k: 'a' | 'b' | 'c', at: { x: 
 if (import.meta.main || (globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) {
 // The eater handles wounds. Antipoison cures the dungeon's poison, which Protect from Melee cannot prevent.
 let poison:ReturnType<typeof watchScorpionPoison>|undefined;
-const q = await openQuest({ cap: Number(process.env.CAP ?? 2500), eatAt: 50, lumbridgeOk: false, stop:()=>!!poison?.failure() });
+const q = await openQuest({ cap: Number(process.env.CAP ?? 2500), eatAt: 50, lumbridgeOk: false, stop:()=>!!poison?.failure(), burst: true });
 poison=watchScorpionPoison({
     onTick:cb=>q.s.onTick(cb),poisoned:()=>q.msgCount(/you have been poisoned/i),inventory:()=>q.st()?.inventory??[],
     use:slot=>q.s.direct({type:'useInventoryItem',slot,optionIndex:1,reason:'SDK'}),

@@ -42,7 +42,7 @@ const CLIMB = { id: 2231, x: 2794, z: 2979 };            // zqclimbingrocks (que
 const FIRE_STRIKE = componentId('magic:fire_strike');
 const SUPERHEAT = componentId('magic:superheat_item');
 
-const q = await openQuest({ cap: 4000 });
+const q = await openQuest({ cap: 4000, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the.*tai bwo wannai/i) > 0) questDone = true; });

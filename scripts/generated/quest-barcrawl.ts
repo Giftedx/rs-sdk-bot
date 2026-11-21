@@ -139,7 +139,7 @@ export async function runBarcrawl(q: Quest): Promise<{ done: boolean; signed: nu
 }
 
 async function main(): Promise<void> {
-    const q = await openQuest({ cap: Number(process.env.CAP ?? 4000), eatAt: 50, food: [379], lumbridgeOk: false });
+    const q = await openQuest({ cap: Number(process.env.CAP ?? 4000), eatAt: 50, food: [379], lumbridgeOk: false, burst: true });
     try {
         const result = await runBarcrawl(q);
         await q.end(result.done, `bars=${result.signed} card=${q.has(CARD)}`);

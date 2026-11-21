@@ -38,7 +38,7 @@ const L = {
 // The gate leaves (getDoorAt geometry: the west edge of x2504 z3062-3063, the south edge of x2549-2550 z3028).
 const GATES = [[2504, 3062], [2504, 3063], [2549, 3028], [2550, 3028]] as const;
 
-const q = await openQuest({ cap: 9000, eatAt: 60 });
+const q = await openQuest({ cap: 9000, eatAt: 60, burst: true });
 try {
     let questDone = false;
     q.s.onTick(() => { if (q.msgCount(/quest complete|finished the watchtower quest/i) > 0) questDone = true; });

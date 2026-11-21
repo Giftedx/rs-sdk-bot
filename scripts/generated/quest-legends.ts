@@ -60,7 +60,7 @@ const SOIL = { x: 2778, z: 2916 };
 
 type Q = Awaited<ReturnType<typeof openQuest>>;
 const helpers: Q[] = [];
-const q: Q = await openQuest({ cap: 12000, eatAt: 55, food: [ITEM.shark], others: () => helpers.map(h => h.s) });
+const q: Q = await openQuest({ cap: 12000, eatAt: 55, food: [ITEM.shark], burst: true, others: () => helpers.map(h => h.s) });
 try {
     const x = () => q.pos()?.worldX ?? 0;
     const z = () => q.pos()?.worldZ ?? 0;
@@ -250,7 +250,7 @@ try {
     const meet = async (who: 'B' | 'C') => {
         await walk(`meet ${who}`, MEET, 1);
         const name = KIT[who];
-        const h = await openQuest({ name, cap: 2000, others: () => [q.s] });
+        const h = await openQuest({ name, cap: 2000, burst: true, others: () => [q.s] });
         helpers.push(h);
         if (!(await h.waitUntil(() => (h.st()?.nearbyPlayers ?? []).some((p: any) => p.name.toLowerCase() === MAIN.toLowerCase()), 20))) await q.fail(`kit ${who}: helper does not see the main`);
         const names = [...new Set(h.inv().map((i: any) => i.name as string))];

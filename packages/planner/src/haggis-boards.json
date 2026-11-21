@@ -2212,10 +2212,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 1101,
-    "realistic": 1112,
+    "floor": 1003,
+    "realistic": 1039,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md: scripts/generated/waterfall.ts, preset quest_waterfall, lockstep bench case quester:quest:waterfall at seeds 7, 8 and 9: 1,112, 1,101, 1,103 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); starts beside Almera, so the walk there and the helper trade are not counted. Rival live leg: 979 (research/rival-atlas-2026-10-16.md:28 (third-party live leg time, UNVERIFIED))"
+    "source": "research/quest-plan.md: scripts/generated/waterfall.ts, preset quest_waterfall, hosted-bench run 44865391541 lockstep case quester:quest:waterfall at seeds 7, 8 and 9: 1,018, 1,003, 1,039 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); starts beside Almera, so the walk there and the helper trade are not counted. Rival live leg: 979 (research/rival-atlas-2026-10-16.md:28 (third-party live leg time, UNVERIFIED))"
    },
    "lump": true,
    "xp": {
@@ -2434,10 +2434,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 124,
-    "realistic": 126,
+    "floor": 118,
+    "realistic": 119,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md (Goblin Diplomacy): scripts/generated/quest-gobdip.ts, preset quest_gobdip (Haggis at the qp-filler row: every skill 99, rune set, 3 goblin mail, orange and blue dye, Falador teleport runes from a helper), lockstep bench case quester:quest:gobdip at seeds 7, 8 and 9: 124, 126, 126 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); bartender to General Wartface with a Falador teleport; the script opens the shut double door of the generals' hut (2957-2958,3509), without which 3 of 3 talks failed"
+    "source": "research/quest-plan.md (Goblin Diplomacy): scripts/generated/quest-gobdip.ts (burst: true), preset quest_gobdip (Haggis at the qp-filler row: every skill 99, rune set, 3 goblin mail, orange and blue dye, Falador teleport runes from a helper), hosted-bench run 44865391541 lockstep case quester:quest:gobdip at seeds 7, 8 and 9: 119, 118, 119 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); bartender to General Wartface with a Falador teleport; the script opens the shut double door of the generals' hut (2957-2958,3509), without which 3 of 3 talks failed"
    },
    "lump": true,
    "qp": 5,
@@ -2459,10 +2459,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 256,
-    "realistic": 265,
+    "floor": 253,
+    "realistic": 256,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md (Romeo & Juliet): scripts/generated/quest-rj.ts, preset quest_rj (Haggis at the qp-filler row: every skill 99, rune set, cadava berries and Varrock teleport runes from a helper), lockstep bench case quester:quest:rj at seeds 7, 8 and 9: 256, 265, 262 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); Romeo to Romeo, Juliet first, Varrock teleport for the last leg"
+    "source": "research/quest-plan.md (Romeo & Juliet): scripts/generated/quest-rj.ts (burst: true), preset quest_rj (Haggis at the qp-filler row: every skill 99, rune set, cadava berries and Varrock teleport runes from a helper), hosted-bench run 44865391541 lockstep case quester:quest:rj at seeds 7, 8 and 9: 253, 255, 256 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); Romeo to Romeo, Juliet first, Varrock teleport for the last leg"
    },
    "lump": true,
    "qp": 5,
@@ -2484,10 +2484,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 3364,
-    "realistic": 3561,
+    "floor": 3186,
+    "realistic": 3359,
     "evidence": "MEASURED",
-    "source": "research/quest-points-board.md \"The qp-filler row\": scripts/generated/quest-blackknight.ts, quest-haunted.ts, quest-prince.ts, quest-sheepherder.ts, 3/3 PASS each on practice from presets quest_blackknight / quest_haunted / quest_prince / quest_sheepherder (Haggis at the row: every skill 99, combat rune set; start beside the first NPC; the walks between the 4 quests not counted): Black Knights' Fortress 327/327/323, Ernest the Chicken 410/414/412, Prince Ali Rescue 638/621/607, Sheep Herder 1668/1580/1697; floor = sum of best runs (2,920), realistic = sum of worst runs (3,076); plus Witch's House 444/485 (row witch, MEASURED), which this row holds when lever combat-hp-bound is off"
+    "source": "research/quest-points-board.md \"The qp-filler row\": scripts/generated/quest-blackknight.ts (burst: true, hosted-bench run 44865391541), quest-haunted.ts, quest-prince.ts (burst: true, hosted-bench run 44865391541), quest-sheepherder.ts, 3/3 PASS each on practice from presets quest_blackknight / quest_haunted / quest_prince / quest_sheepherder (Haggis at the row: every skill 99, combat rune set; start beside the first NPC; the walks between the 4 quests not counted): Black Knights' Fortress 273/274/270, Ernest the Chicken 410/414/412, Prince Ali Rescue 485/482/489, Sheep Herder 1668/1580/1697; floor = sum of best runs (2,742), realistic = sum of worst runs (2,874); plus Witch's House 444/485 (row witch, MEASURED), which this row holds when lever combat-hp-bound is off"
    },
    "lump": true,
    "xp": {
@@ -2509,10 +2509,10 @@
       "xp": {},
       "qp": 14,
       "ticks": {
-       "floor": 2920,
-       "realistic": 3076,
+       "floor": 2742,
+       "realistic": 2874,
        "evidence": "MEASURED",
-       "source": "research/quest-points-board.md \"The qp-filler row\": scripts/generated/quest-blackknight.ts, quest-haunted.ts, quest-prince.ts, quest-sheepherder.ts, 3/3 PASS each on practice from presets quest_blackknight / quest_haunted / quest_prince / quest_sheepherder (Haggis at the row: every skill 99, combat rune set; start beside the first NPC; the walks between the 4 quests not counted): Black Knights' Fortress 327/327/323, Ernest the Chicken 410/414/412, Prince Ali Rescue 638/621/607, Sheep Herder 1668/1580/1697; floor = sum of best runs (2,920), realistic = sum of worst runs (3,076)"
+       "source": "research/quest-points-board.md \"The qp-filler row\": scripts/generated/quest-blackknight.ts (burst: true, hosted-bench run 44865391541), quest-haunted.ts, quest-prince.ts (burst: true, hosted-bench run 44865391541), quest-sheepherder.ts, 3/3 PASS each on practice from presets quest_blackknight / quest_haunted / quest_prince / quest_sheepherder (Haggis at the row: every skill 99, combat rune set; start beside the first NPC; the walks between the 4 quests not counted): Black Knights' Fortress 273/274/270, Ernest the Chicken 410/414/412, Prince Ali Rescue 485/482/489, Sheep Herder 1668/1580/1697; floor = sum of best runs (2,742), realistic = sum of worst runs (2,874)"
       }
      }
     },
@@ -2520,10 +2520,10 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 2920,
-       "realistic": 3076,
+       "floor": 2742,
+       "realistic": 2874,
        "evidence": "MEASURED",
-       "source": "research/quest-points-board.md \"The qp-filler row\": scripts/generated/quest-blackknight.ts, quest-haunted.ts, quest-prince.ts, quest-sheepherder.ts, 3/3 PASS each on practice from presets quest_blackknight / quest_haunted / quest_prince / quest_sheepherder (Haggis at the row: every skill 99, combat rune set; start beside the first NPC; the walks between the 4 quests not counted): Black Knights' Fortress 327/327/323, Ernest the Chicken 410/414/412, Prince Ali Rescue 638/621/607, Sheep Herder 1668/1580/1697; floor = sum of best runs (2,920), realistic = sum of worst runs (3,076); the rival burst run is not measured by us"
+       "source": "research/quest-points-board.md \"The qp-filler row\": scripts/generated/quest-blackknight.ts (burst: true, hosted-bench run 44865391541), quest-haunted.ts, quest-prince.ts (burst: true, hosted-bench run 44865391541), quest-sheepherder.ts, 3/3 PASS each on practice from presets quest_blackknight / quest_haunted / quest_prince / quest_sheepherder (Haggis at the row: every skill 99, combat rune set; start beside the first NPC; the walks between the 4 quests not counted): Black Knights' Fortress 273/274/270, Ernest the Chicken 410/414/412, Prince Ali Rescue 485/482/489, Sheep Herder 1668/1580/1697; floor = sum of best runs (2,742), realistic = sum of worst runs (2,874)"
       }
      }
     }
@@ -2539,10 +2539,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 382,
-    "realistic": 435,
+    "floor": 379,
+    "realistic": 432,
     "evidence": "MEASURED",
-    "source": "research/quest-points-board.md \"Cook's Assistant, Witch's House, Lost City\": scripts/generated/quest-ball.ts, preset quest_ball (every skill 99, rune set and leather gloves worn, cheese; start beside the boy; the walk to Taverley not counted), lockstep bench case quester:quest:ball at seeds 7, 8 and 9: 434, 382, 435 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); also 3/3 from quest_ball_partner (Defence 1, 10 HP, Protect from Melee): 522/454/448; the spread is the wait for the witch (61-111 ticks)"
+    "source": "research/quest-points-board.md \"Cook's Assistant, Witch's House, Lost City\": scripts/generated/quest-ball.ts (burst: true), preset quest_ball (every skill 99, rune set and leather gloves worn, cheese; start beside the boy; the walk to Taverley not counted), hosted-bench run 44865699954 lockstep case quester:quest:ball at seeds 7, 8 and 9: 390, 379, 432 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); also 3/3 from quest_ball_partner (Defence 1, 10 HP, Protect from Melee): 522/454/448; the spread is the wait for the witch (61-111 ticks)"
    },
    "lump": true,
    "xp": {
@@ -2563,10 +2563,10 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 382,
-       "realistic": 435,
+       "floor": 379,
+       "realistic": 432,
        "evidence": "MEASURED",
-       "source": "research/quest-points-board.md \"Cook's Assistant, Witch's House, Lost City\": scripts/generated/quest-ball.ts, preset quest_ball (every skill 99, rune set and leather gloves worn, cheese; start beside the boy; the walk to Taverley not counted), lockstep bench case quester:quest:ball at seeds 7, 8 and 9: 434, 382, 435 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); also 3/3 from quest_ball_partner (Defence 1, 10 HP, Protect from Melee): 522/454/448; the spread is the wait for the witch (61-111 ticks); the rival burst run is not measured by us"
+       "source": "research/quest-points-board.md \"Cook's Assistant, Witch's House, Lost City\": scripts/generated/quest-ball.ts (burst: true), preset quest_ball (every skill 99, rune set and leather gloves worn, cheese; start beside the boy; the walk to Taverley not counted), hosted-bench run 44865699954 lockstep case quester:quest:ball at seeds 7, 8 and 9: 390, 379, 432 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); also 3/3 from quest_ball_partner (Defence 1, 10 HP, Protect from Melee): 522/454/448; the spread is the wait for the witch (61-111 ticks)"
       }
      }
     },
@@ -2687,10 +2687,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 423,
-    "realistic": 453,
+    "floor": 429,
+    "realistic": 437,
     "evidence": "MEASURED",
-    "source": "research/aio-bench.md \"Planner quest rows\": scripts/generated/quest-elena.ts, preset quest_elena (in Edmond's house, East Ardougne; every skill 99; the walk to it not counted), lockstep bench case quester:quest:elena at seeds 7, 8 and 9: 430, 423, 453 ticks (floor = best seed, realistic = worst seed)"
+    "source": "research/aio-bench.md \"Planner quest rows\": scripts/generated/quest-elena.ts (burst: true), preset quest_elena (in Edmond's house, East Ardougne; every skill 99; the walk to it not counted), hosted-bench run 44865699954 lockstep case quester:quest:elena at seeds 7, 8 and 9: 437, 430, 429 ticks (floor = best seed, realistic = worst seed)"
    },
    "xp": {
     "mining": 60625
@@ -2705,7 +2705,7 @@
     "role": "add"
    },
    "evidence": "MEASURED",
-   "source": "quest_elena.rs2:12 stat_advance(mining, 24250) = 60,625 XP at 25x (CODE-READ); unlocks Ardougne Teleport (teleport.rs2:22,35); ticks MEASURED 430/423/453 (seeds 7/8/9, lockstep)",
+   "source": "quest_elena.rs2:12 stat_advance(mining, 24250) = 60,625 XP at 25x (CODE-READ); unlocks Ardougne Teleport (teleport.rs2:22,35); ticks MEASURED 437/430/429 (seeds 7/8/9, lockstep, hosted-bench 44865699954)",
    "supplies": [
     {
      "item": "dwellberries",
@@ -2889,10 +2889,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 1384,
-    "realistic": 1386,
+    "floor": 1363,
+    "realistic": 1373,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md section 1o: scripts/generated/quest-barcrawl.ts, preset barcrawl (outside the Barbarian Outpost gate; every skill 99, 500 coins, Falador, Varrock and Camelot Teleport runes), lockstep bench case quester:quest:barcrawl at seeds 7, 8 and 9: 1,385, 1,384, 1,386 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), the guard to the guard: 10 bars, 2 ships, 3 teleports"
+    "source": "research/quest-plan.md section 1o: scripts/generated/quest-barcrawl.ts (burst: true), preset barcrawl (outside the Barbarian Outpost gate; every skill 99, 500 coins, Falador, Varrock and Camelot Teleport runes), hosted-bench run 44865699954 lockstep case quester:quest:barcrawl at seeds 7, 8 and 9: 1,370, 1,373, 1,363 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), the guard to the guard: 10 bars, 2 ships, 3 teleports"
    },
    "lump": true,
    "xp": {},
@@ -2901,7 +2901,7 @@
     "tutorial"
    ],
    "evidence": "MEASURED",
-   "source": "research/quest-plan.md section 1o: scripts/generated/quest-barcrawl.ts, preset barcrawl (outside the Barbarian Outpost gate; every skill 99, 500 coins, Falador, Varrock and Camelot Teleport runes), lockstep bench case quester:quest:barcrawl at seeds 7, 8 and 9: 1,385, 1,384, 1,386 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), the guard to the guard: 10 bars, 2 ships, 3 teleports; the Barbarian Outpost gate opens only with %barcrawl = 2 (areas/area_barbarian_outpost/scripts/outpost_gate.rs2:1-5); not in general/configs/quest.constant, so no QP",
+   "source": "research/quest-plan.md section 1o: scripts/generated/quest-barcrawl.ts (burst: true), preset barcrawl (outside the Barbarian Outpost gate; every skill 99, 500 coins, Falador, Varrock and Camelot Teleport runes), hosted-bench run 44865699954 lockstep case quester:quest:barcrawl at seeds 7, 8 and 9: 1,370, 1,373, 1,363 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), the guard to the guard: 10 bars, 2 ships, 3 teleports; the Barbarian Outpost gate opens only with %barcrawl = 2 (areas/area_barbarian_outpost/scripts/outpost_gate.rs2:1-5); not in general/configs/quest.constant, so no QP",
    "at": "outpost-guard"
   },
   {
@@ -2912,10 +2912,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 886,
-    "realistic": 910,
+    "floor": 879,
+    "realistic": 893,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md section 1o: scripts/generated/quest-scorpion.ts, preset quest_scorpion (beside Thormac; every skill 99, rune set, Falador and Camelot Teleport runes, %barcrawl 77 = 2), lockstep bench case quester:quest:scorpion at seeds 7, 8 and 9: 886, 891, 910 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), Thormac to Thormac; includes the dusty key chain (Jailer, jail key on Velrak's cell door, Velrak, the dusty key on the gate at 2924,9803; 271-295 ticks from the dungeon ladder to the gate) because the corridor north of the secret wall has no other way in"
+    "source": "research/quest-plan.md section 1o: scripts/generated/quest-scorpion.ts (burst: true), preset quest_scorpion (beside Thormac; every skill 99, rune set, Falador and Camelot Teleport runes, %barcrawl 77 = 2), hosted-bench run 44865699954 lockstep case quester:quest:scorpion at seeds 7, 8 and 9: 893, 879, 880 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), Thormac to Thormac; includes the dusty key chain (Jailer, jail key on Velrak's cell door, Velrak, the dusty key on the gate at 2924,9803; 271-295 ticks from the dungeon ladder to the gate) because the corridor north of the secret wall has no other way in"
    },
    "lump": true,
    "xp": {
@@ -2944,10 +2944,10 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 886,
-       "realistic": 910,
+       "floor": 879,
+       "realistic": 893,
        "evidence": "MEASURED",
-       "source": "research/quest-plan.md section 1o: scripts/generated/quest-scorpion.ts, preset quest_scorpion (beside Thormac; every skill 99, rune set, Falador and Camelot Teleport runes, %barcrawl 77 = 2), lockstep bench case quester:quest:scorpion at seeds 7, 8 and 9: 886, 891, 910 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), Thormac to Thormac; includes the dusty key chain (Jailer, jail key on Velrak's cell door, Velrak, the dusty key on the gate at 2924,9803; 271-295 ticks from the dungeon ladder to the gate) because the corridor north of the secret wall has no other way in. The rival burst run is not measured by us"
+       "source": "research/quest-plan.md section 1o: scripts/generated/quest-scorpion.ts (burst: true), preset quest_scorpion (beside Thormac; every skill 99, rune set, Falador and Camelot Teleport runes, %barcrawl 77 = 2), hosted-bench run 44865699954 lockstep case quester:quest:scorpion at seeds 7, 8 and 9: 893, 879, 880 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), Thormac to Thormac; includes the dusty key chain (Jailer, jail key on Velrak's cell door, Velrak, the dusty key on the gate at 2924,9803; 271-295 ticks from the dungeon ladder to the gate) because the corridor north of the secret wall has no other way in"
       }
      }
     }
@@ -2964,10 +2964,10 @@
     "skill": "attack",
     "toLevel": 40,
     "xpPerTick": {
-     "floor": 48.8,
-     "realistic": 32.0,
+     "floor": 46.2,
+     "realistic": 35.2,
      "evidence": "MEASURED",
-     "source": "hosted-bench 44861217429 (commit fdc81a371a) overall:pvp-attack-40 seeds 7/8/9: 15,802/324=48.8, 15,910/331=48.1, 15,802/494=32.0 XP/tick (Attack 1->40 at Strength 1, Iron->Adamant 2h, 5 Combat-75 tanks)"
+     "source": "hosted-bench 44864025475 (commit 3b405a9728) extra:overall-pvp-attack-40 seeds 7/8/9: 15,910/363=43.8, 15,802/342=46.2, 15,802/449=35.2 XP/tick (Attack 1->40 at Strength 1, Iron->Adamant 2h, 5 Combat-75 tanks)"
     },
     "side": {
      "hitpoints": 0.333
@@ -2981,7 +2981,7 @@
     "role": "add"
    },
    "evidence": "MEASURED",
-   "source": "hosted-bench 44861217429 overall:pvp-attack-40 seeds 7/8/9 (324/331/494t) before Rune 2h Strength 1->99",
+   "source": "hosted-bench 44864025475 extra:overall-pvp-attack-40 seeds 7/8/9 (363/342/449t) before Rune 2h Strength 1->99",
    "supplies": [
     { "item": "iron 2h sword", "itemId": 1309, "count": 1 },
     { "item": "steel 2h sword", "itemId": 1311, "count": 1 },
@@ -3078,10 +3078,10 @@
        "skill": "strength",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 1095.4,
-        "realistic": 901.4,
+        "floor": 1049.9,
+        "realistic": 883.3,
         "evidence": "MEASURED",
-        "source": "hosted-bench 44787226268 (commit 5311e754d8) overall:pvp-strength seeds 7/8/9: 1,000,125/913=1095.4, 998,775/980=1019.2, 998,775/1108=901.4 XP/tick (Attack 40, Rune 2h, Ultimate Strength, 5 tanks)"
+        "source": "hosted-bench 44864025475 (commit 3b405a9728) extra:overall-pvp-strength seeds 7/8/9: 999,535/952=1049.9, 999,427/1024=976.0, 999,857/1132=883.3 XP/tick (Attack 40, Rune 2h, Ultimate Strength, 5 Combat-75 tanks)"
        },
        "side": {
         "hitpoints": 0.333
@@ -3172,10 +3172,10 @@
        "skill": "attack",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 1255.1,
-        "realistic": 1081.9,
+        "floor": 1163.8,
+        "realistic": 1013.9,
         "evidence": "MEASURED",
-        "source": "hosted-bench 44787226268 (commit 5311e754d8) overall:pvp-attack seeds 7/8/9: 1,000,350/797=1255.1, 999,000/818=1221.3, 998,550/923=1081.9 XP/tick (1->99 full run with Strength 99, Rune 2h, 5 tanks)"
+        "source": "hosted-bench 44864025475 (commit 3b405a9728) extra:overall-pvp-attack seeds 7/8/9: 998,567/858=1163.8, 998,675/926=1078.5, 999,750/986=1013.9 XP/tick (1->99 full run with Strength 99, Rune 2h, 5 Combat-75 tanks)"
        },
        "side": {
         "hitpoints": 0.333
@@ -3194,10 +3194,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 754,
-    "realistic": 763,
+    "floor": 751,
+    "realistic": 760,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md (Dwarf Cannon): scripts/generated/dwarfcannon.ts, preset quest_dwarfcannon (Haggis levels after Waterfall: Crafting, Smithing, Magic 99), lockstep bench case quester:quest:dwarfcannon at seeds 7, 8 and 9: 754, 756, 763 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); railing rolls (Crafting 99: 151/256) cause the spread; Falador and Camelot teleports for the Nulodion trip; starts beside the Dwarf Commander, so the walk from the Waterfall end is not counted"
+    "source": "research/quest-plan.md (Dwarf Cannon): scripts/generated/dwarfcannon.ts, preset quest_dwarfcannon (Haggis levels after Waterfall: Crafting, Smithing, Magic 99), hosted-bench run 44865391541 lockstep case quester:quest:dwarfcannon at seeds 7, 8 and 9: 751, 753, 760 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); railing rolls (Crafting 99: 151/256) cause the spread; Falador and Camelot teleports for the Nulodion trip; starts beside the Dwarf Commander, so the walk from the Waterfall end is not counted"
    },
    "lump": true,
    "qp": 1,
@@ -3471,10 +3471,10 @@
        "skill": "ranged",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 840.3,
-        "realistic": 714.3,
+        "floor": 814.8,
+        "realistic": 667.7,
         "evidence": "MEASURED",
-        "source": "hosted-bench 44860193471 (commit 5bad2c4e91) overall:pvp-ranged seeds 7/8/9: 1,000,012/1190=840.3, 999,562/1255=796.5, 1,000,012/1400=714.3 XP/tick (1->99 progressive bows/arrows/coif/leather boots/dhide, 5 tanks)"
+        "source": "hosted-bench 44864025475 (commit 3b405a9728) extra:overall-pvp-ranged seeds 7/8/9: 998,997/1226=814.8, 998,460/1343=743.5, 998,890/1496=667.7 XP/tick (1->99 progressive non-clue bows/arrows/coif/leather boots/dhide, 5 Combat-75 tanks)"
        },
        "side": {
         "hitpoints": 0.333
@@ -3808,10 +3808,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 1604,
-    "realistic": 1624,
+    "floor": 1146,
+    "realistic": 1151,
     "evidence": "MEASURED",
-    "source": "research/quest-points-board.md \"Long rest quests\": scripts/generated/quest-desertrescue.ts 1,617 / 1,604 / 1,624t MEASURED; Mercenary Captain safe under Protect from Melee + Magic 52 Wind Blast"
+    "source": "research/quest-points-board.md \"Long rest quests\": scripts/generated/quest-desertrescue.ts (burst: true, hosted-bench run 44865391541) 1,151 / 1,146 / 1,151t MEASURED; Mercenary Captain safe under Protect from Melee + Magic 52 Wind Blast"
    },
    "lump": true,
    "qp": 2,
@@ -3834,7 +3834,7 @@
     "option": "tourist-trap"
    },
    "evidence": "MEASURED",
-   "source": "scripts/generated/quest-desertrescue.ts 1,604 / 1,624t; irena.rs2:83 232,500 Agility XP",
+   "source": "scripts/generated/quest-desertrescue.ts 1,146 / 1,151t (burst: true, hosted-bench run 44865391541); irena.rs2:83 232,500 Agility XP",
    "at": "shantay-pass"
   },
   {
@@ -3886,10 +3886,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 703,
-    "realistic": 718,
+    "floor": 653,
+    "realistic": 703,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md section 1j: scripts/generated/quest-merlin.ts, preset quest_merlin (beside King Arthur; every skill 99, Dragon Slayer done), lockstep bench case quester:quest:merlin at seeds 7, 8 and 9: 712, 703, 718 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); Arthur to Arthur, the walk to Camelot not counted; helper items bucket of wax, bat bones, bread, tinderbox, 500 coins, teleport runes; QP: quest.constant:73"
+    "source": "research/quest-plan.md section 1j: scripts/generated/quest-merlin.ts (burst: true), preset quest_merlin (beside King Arthur; every skill 99, Dragon Slayer done), hosted-bench run 44865699954 lockstep case quester:quest:merlin at seeds 7, 8 and 9: 703, 657, 653 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); Arthur to Arthur, the walk to Camelot not counted; helper items bucket of wax, bat bones, bread, tinderbox, 500 coins, teleport runes; QP: quest.constant:73"
    },
    "lump": true,
    "qp": 6,
@@ -3897,7 +3897,7 @@
     "tutorial"
    ],
    "evidence": "MEASURED",
-   "source": "research/quest-plan.md section 1j: scripts/generated/quest-merlin.ts, preset quest_merlin (beside King Arthur; every skill 99, Dragon Slayer done), lockstep bench case quester:quest:merlin at seeds 7, 8 and 9: 712, 703, 718 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); Arthur to Arthur, the walk to Camelot not counted; helper items bucket of wax, bat bones, bread, tinderbox, 500 coins, teleport runes; QP: quest.constant:73",
+   "source": "research/quest-plan.md section 1j: scripts/generated/quest-merlin.ts (burst: true), preset quest_merlin (beside King Arthur; every skill 99, Dragon Slayer done), hosted-bench run 44865699954 lockstep case quester:quest:merlin at seeds 7, 8 and 9: 703, 657, 653 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); Arthur to Arthur, the walk to Camelot not counted; helper items bucket of wax, bat bones, bread, tinderbox, 500 coins, teleport runes; QP: quest.constant:73",
    "patches": [
     {
      "lever": "combat-hp-bound",
@@ -3911,10 +3911,10 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 703,
-       "realistic": 718,
+       "floor": 653,
+       "realistic": 703,
        "evidence": "MEASURED",
-       "source": "research/quest-plan.md section 1j: scripts/generated/quest-merlin.ts, preset quest_merlin (beside King Arthur; every skill 99, Dragon Slayer done), lockstep bench case quester:quest:merlin at seeds 7, 8 and 9: 712, 703, 718 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); Arthur to Arthur, the walk to Camelot not counted; helper items bucket of wax, bat bones, bread, tinderbox, 500 coins, teleport runes; QP: quest.constant:73; the rival burst run is not measured by us"
+       "source": "research/quest-plan.md section 1j: scripts/generated/quest-merlin.ts (burst: true), preset quest_merlin (beside King Arthur; every skill 99, Dragon Slayer done), hosted-bench run 44865699954 lockstep case quester:quest:merlin at seeds 7, 8 and 9: 703, 657, 653 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); Arthur to Arthur, the walk to Camelot not counted; helper items bucket of wax, bat bones, bread, tinderbox, 500 coins, teleport runes; QP: quest.constant:73"
       }
      }
     }
@@ -3986,10 +3986,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 1374,
-    "realistic": 1968,
+    "floor": 1261,
+    "realistic": 1810,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts, preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), lockstep bench case quester:quest:dig at seeds 7, 8 and 9: 1,374, 1,968, 1,477 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39). XP: quest_itexam.rs2:39-46"
+    "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts (burst: true), preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), hosted-bench run 44865699954 lockstep case quester:quest:dig at seeds 7, 8 and 9: 1,721, 1,261, 1,810 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39). XP: quest_itexam.rs2:39-46"
    },
    "lump": true,
    "xp": {
@@ -4008,16 +4008,16 @@
     "thieving": 25
    },
    "evidence": "MEASURED",
-   "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts, preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), lockstep bench case quester:quest:dig at seeds 7, 8 and 9: 1,374, 1,968, 1,477 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39). XP: quest_itexam.rs2:39-46",
+   "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts (burst: true), preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), hosted-bench run 44865699954 lockstep case quester:quest:dig at seeds 7, 8 and 9: 1,721, 1,261, 1,810 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39). XP: quest_itexam.rs2:39-46",
    "patches": [
     {
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 1374,
-       "realistic": 1968,
+       "floor": 1261,
+       "realistic": 1810,
        "evidence": "MEASURED",
-       "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts, preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), lockstep bench case quester:quest:dig at seeds 7, 8 and 9: 1,374, 1,968, 1,477 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39). XP: quest_itexam.rs2:39-46. The rival burst run is not measured by us"
+       "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts (burst: true), preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), hosted-bench run 44865699954 lockstep case quester:quest:dig at seeds 7, 8 and 9: 1,721, 1,261, 1,810 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39). XP: quest_itexam.rs2:39-46"
       }
      }
     },
@@ -4242,10 +4242,10 @@
        "skill": "defence",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 1364.3,
-        "realistic": 1177.0,
+        "floor": 1313.8,
+        "realistic": 1114.5,
         "evidence": "MEASURED",
-        "source": "hosted-bench 44787226268 (commit 5311e754d8) overall:pvp-defence seeds 7/8/9: 998,662/732=1364.3, 1,000,350/744=1344.6, 1,000,462/850=1177.0 XP/tick (1->99 full run with Attack/Strength 99, Rune 2h, 5 tanks)"
+        "source": "hosted-bench 44864025475 (commit 3b405a9728) extra:overall-pvp-defence seeds 7/8/9: 998,460/760=1313.8, 999,212/785=1272.9, 998,567/896=1114.5 XP/tick (1->99 full run with Attack/Strength 99, Rune 2h, 5 Combat-75 tanks)"
        },
        "side": {
         "hitpoints": 0.333
@@ -4315,10 +4315,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 14554,
-    "realistic": 16157,
+    "floor": 12951,
+    "realistic": 14145,
     "evidence": "MEASURED",
-    "source": "6 remaining quests measured at seeds 7, 8 and 9 on GitHub Actions lockstep bench (hosted-bench run 44700044593, 18/18 PASS, 0 capped): quester:quest:hero 1735/1766/1689, quester:quest:itwatchtower 2933/2751/3307, quester:quest:legends 4779/4242/4240, quester:quest:misc 1370/1356/1354, quester:quest:tbwt 1470/1496/1492, quester:quest:viking 3052/3439/3050; floor = sum of best seeds, realistic = sum of worst seeds"
+    "source": "6 remaining quests measured with burst: true at seeds 7, 8 and 9 on GitHub Actions lockstep bench (hosted-bench runs 44865391541 & 44865699954, 18/18 PASS, 0 capped): quester:quest:hero 1553/1738/1526, quester:quest:itwatchtower 2009/2115/1977, quester:quest:legends 4528/4122/4085, quester:quest:misc 1351/1359/1358, quester:quest:tbwt 1419/1404/1417, quester:quest:viking 2608/2680/2986; floor = sum of best seeds, realistic = sum of worst seeds"
    },
    "lump": true,
    "qp": 22,
@@ -4333,7 +4333,7 @@
     "quest-arrav"
    ],
    "evidence": "MEASURED",
-   "source": "145 QP over 68 quests (quest.constant:72-139); 6 remaining very long quests measured at seeds 7, 8 and 9 (hosted-bench run 44700044593, 18/18 PASS, 0 capped)",
+   "source": "145 QP over 68 quests (quest.constant:72-139); 6 remaining very long quests measured at seeds 7, 8 and 9 (hosted-bench runs 44865391541 & 44865699954, burst: true, 18/18 PASS, 0 capped)",
    "at": "anywhere"
   },
   {
@@ -4424,10 +4424,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 14396,
-    "realistic": 15510,
+    "floor": 13961,
+    "realistic": 15048,
     "evidence": "MEASURED",
-    "source": "research/quest-points-board.md \"Medium rest quests\": 19 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-medium.ts or presets-rest.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Pirate's Treasure 474/471/460 (quest-hunt.ts, 2 QP); The Knight's Sword 893/887/922 (quest-squire.ts, 1 QP); Plague City 430/423/453 (quest-elena.ts, 1 QP; lockstep bench seeds 7/8/9); Priest in Peril 1010/993/1011 (quest-priestperil.ts, 1 QP); Biohazard 1662/1655/1672 (quest-biohazard.ts, 3 QP); Nature Spirit 823/830/791 (quest-druidspirit.ts, 2 QP); In Search of the Myreque 819/852/846 (quest-routequest.ts, 2 QP); Haunted Mine 1423/1304/1574/1017/1163/1011 (quest-hauntedmine.ts, 2 QP); Demon Slayer 899/877/882 (quest-demon.ts, 3 QP); Jungle Potion 651/650/649 (quest-junglepotion.ts, 1 QP); Tribal Totem 340/352/343 (quest-totem.ts, 1 QP); Elemental Workshop 206/209/194 (quest-elemental.ts, 1 QP); Clock Tower 486/472/468 (quest-cog.ts, 1 QP); Hazeel Cult 435/426/435 (quest-hazeelcult.ts, 1 QP); Murder Mystery 302/345/338/270/289/353/395/288 (quest-murder.ts, 3 QP); Observatory Quest 550/555/550 (quest-itgronigen.ts, 2 QP); Death Plateau 1192/1193/1201 (quest-death.ts, 1 QP); Shades of Mort'ton 1908/1944/1956 (quest-mortton.ts, 3 QP; each run found the temple walls at level 0); Big Chompy Bird Hunting 491/583/483 (quest-chompybird.ts, 2 QP)"
+    "source": "research/quest-points-board.md \"Medium rest quests\": 19 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-medium.ts or presets-rest.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Pirate's Treasure 474/471/460 (quest-hunt.ts, 2 QP); The Knight's Sword 893/887/922 (quest-squire.ts, 1 QP); Plague City 437/430/429 (quest-elena.ts burst: true, 1 QP; hosted-bench run 44865699954 lockstep seeds 7/8/9); Priest in Peril 1010/993/1011 (quest-priestperil.ts, 1 QP); Biohazard 1226/1214/1224 (quest-biohazard.ts burst: true, 3 QP; hosted-bench run 44865699954 lockstep seeds 7/8/9); Nature Spirit 823/830/791 (quest-druidspirit.ts, 2 QP); In Search of the Myreque 819/852/846 (quest-routequest.ts, 2 QP); Haunted Mine 1423/1304/1574/1017/1163/1011 (quest-hauntedmine.ts, 2 QP); Demon Slayer 899/877/882 (quest-demon.ts, 3 QP); Jungle Potion 651/650/649 (quest-junglepotion.ts, 1 QP); Tribal Totem 340/352/343 (quest-totem.ts, 1 QP); Elemental Workshop 206/209/194 (quest-elemental.ts, 1 QP); Clock Tower 486/472/468 (quest-cog.ts, 1 QP); Hazeel Cult 435/426/435 (quest-hazeelcult.ts, 1 QP); Murder Mystery 302/345/338/270/289/353/395/288 (quest-murder.ts, 3 QP); Observatory Quest 550/555/550 (quest-itgronigen.ts, 2 QP); Death Plateau 1192/1193/1201 (quest-death.ts, 1 QP); Shades of Mort'ton 1908/1944/1956 (quest-mortton.ts, 3 QP; each run found the temple walls at level 0); Big Chompy Bird Hunting 491/583/483 (quest-chompybird.ts, 2 QP)"
    },
    "lump": true,
    "qp": 33,
@@ -4441,17 +4441,17 @@
     "waterfall"
    ],
    "evidence": "MEASURED",
-   "source": "research/quest-points-board.md \"Medium rest quests\": 19 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-medium.ts or presets-rest.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Pirate's Treasure 474/471/460 (quest-hunt.ts, 2 QP); The Knight's Sword 893/887/922 (quest-squire.ts, 1 QP); Plague City 430/423/453 (quest-elena.ts, 1 QP; lockstep bench seeds 7/8/9); Priest in Peril 1010/993/1011 (quest-priestperil.ts, 1 QP); Biohazard 1662/1655/1672 (quest-biohazard.ts, 3 QP); Nature Spirit 823/830/791 (quest-druidspirit.ts, 2 QP); In Search of the Myreque 819/852/846 (quest-routequest.ts, 2 QP); Haunted Mine 1423/1304/1574/1017/1163/1011 (quest-hauntedmine.ts, 2 QP); Demon Slayer 899/877/882 (quest-demon.ts, 3 QP); Jungle Potion 651/650/649 (quest-junglepotion.ts, 1 QP); Tribal Totem 340/352/343 (quest-totem.ts, 1 QP); Elemental Workshop 206/209/194 (quest-elemental.ts, 1 QP); Clock Tower 486/472/468 (quest-cog.ts, 1 QP); Hazeel Cult 435/426/435 (quest-hazeelcult.ts, 1 QP); Murder Mystery 302/345/338/270/289/353/395/288 (quest-murder.ts, 3 QP); Observatory Quest 550/555/550 (quest-itgronigen.ts, 2 QP); Death Plateau 1192/1193/1201 (quest-death.ts, 1 QP); Shades of Mort'ton 1908/1944/1956 (quest-mortton.ts, 3 QP; each run found the temple walls at level 0); Big Chompy Bird Hunting 491/583/483 (quest-chompybird.ts, 2 QP)",
+   "source": "research/quest-points-board.md \"Medium rest quests\": 19 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-medium.ts or presets-rest.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Pirate's Treasure 474/471/460 (quest-hunt.ts, 2 QP); The Knight's Sword 893/887/922 (quest-squire.ts, 1 QP); Plague City 437/430/429 (quest-elena.ts burst: true, 1 QP; hosted-bench run 44865699954 lockstep seeds 7/8/9); Priest in Peril 1010/993/1011 (quest-priestperil.ts, 1 QP); Biohazard 1226/1214/1224 (quest-biohazard.ts burst: true, 3 QP; hosted-bench run 44865699954 lockstep seeds 7/8/9); Nature Spirit 823/830/791 (quest-druidspirit.ts, 2 QP); In Search of the Myreque 819/852/846 (quest-routequest.ts, 2 QP); Haunted Mine 1423/1304/1574/1017/1163/1011 (quest-hauntedmine.ts, 2 QP); Demon Slayer 899/877/882 (quest-demon.ts, 3 QP); Jungle Potion 651/650/649 (quest-junglepotion.ts, 1 QP); Tribal Totem 340/352/343 (quest-totem.ts, 1 QP); Elemental Workshop 206/209/194 (quest-elemental.ts, 1 QP); Clock Tower 486/472/468 (quest-cog.ts, 1 QP); Hazeel Cult 435/426/435 (quest-hazeelcult.ts, 1 QP); Murder Mystery 302/345/338/270/289/353/395/288 (quest-murder.ts, 3 QP); Observatory Quest 550/555/550 (quest-itgronigen.ts, 2 QP); Death Plateau 1192/1193/1201 (quest-death.ts, 1 QP); Shades of Mort'ton 1908/1944/1956 (quest-mortton.ts, 3 QP; each run found the temple walls at level 0); Big Chompy Bird Hunting 491/583/483 (quest-chompybird.ts, 2 QP)",
    "patches": [
     {
      "lever": "spiders-combat",
      "set": {
       "qp": 32,
       "ticks": {
-       "floor": 13973,
-       "realistic": 15057,
+       "floor": 13532,
+       "realistic": 14611,
        "evidence": "MEASURED",
-       "source": "quests-medium without Plague City (423/453, 1 QP on row plague-city)"
+       "source": "quests-medium without Plague City (429/437, 1 QP on row plague-city)"
       }
      }
     }
@@ -4528,33 +4528,47 @@
   },
   {
    "id": "equip",
-   "label": "Wear best-in-slot gear traded in by helpers",
+   "label": "Wear best-in-slot Equipment set (1,366,450 cost, non-Wilderness sources)",
    "serves": [
     "equipment"
    ],
    "ticks": {
-    "floor": 5,
-    "realistic": 20,
+    "floor": 10,
+    "realistic": 25,
     "evidence": "ESTIMATE",
-    "source": "trade 12 ticks measured + wear; #1 value unknown"
+    "source": "research/boards-special.md (Equipment): trade 12 ticks measured + wear 10 items (1,366,450 total ObjType.cost tying #1 nickai3/#2 soko, Owner Decision E1)"
    },
    "requires": [
-    "tutorial"
+    "quests-rest",
+    "def-top",
+    "att-top"
    ],
-   "evidence": "ESTIMATE",
-   "source": "trade 12 ticks measured + wear; #1 value unknown",
+   "minLevel": {
+    "attack": 60,
+    "defence": 60,
+    "magic": 40,
+    "crafting": 72,
+    "smithing": 60
+   },
+   "evidence": "CODE-READ",
+   "source": "research/boards-special.md \"The maximum set\": 1,366,450 max worn cost (slot 13 quiver ignored per LoginServer.ts:229,235); shops 952,675 gp (dragon battleaxe 200k, right sq half 750k, cape of legends 675, splitbark fee 2k) + non-Wilderness drops/GE/crafting",
    "supplies": [
-    {
-     "item": "best-in-slot worn set (value above the #1 outfit)",
-     "count": 1
-    }
+    { "item": "dragon med helm", "itemId": 1149, "count": 1, "note": "cost 100,000; non-Wilderness Rare Drop Table or GE" },
+    { "item": "cape of legends", "itemId": 1052, "count": 1, "note": "cost 450; Legends' Guild shop 675 gp" },
+    { "item": "dragon necklace", "itemId": 1664, "count": 1, "note": "cost 18,375; Crafting 72 dragonstone + gold bar" },
+    { "item": "dragon battleaxe", "itemId": 1377, "count": 1, "note": "cost 200,000; Heroes' Guild shop 200,000 gp" },
+    { "item": "dragon chainbody", "itemId": 3140, "count": 1, "note": "cost 250,000; Kalphite Queen non-Wilderness or GE" },
+    { "item": "dragon sq shield", "itemId": 1187, "count": 1, "note": "cost 500,000; Legends' Guild right half 750,000 gp + RDT/GE left half, Smithing 60" },
+    { "item": "dragon platelegs", "itemId": 4087, "count": 1, "note": "cost 270,000; metal dragons non-Wilderness or GE" },
+    { "item": "splitbark gauntlets", "itemId": 3391, "count": 1, "note": "cost 5,000; Wizards' Tower 1,000 gp + hollow bark + fine cloth" },
+    { "item": "splitbark greaves", "itemId": 3393, "count": 1, "note": "cost 5,000; Wizards' Tower 1,000 gp + hollow bark + fine cloth" },
+    { "item": "dragonstone ring", "itemId": 1645, "count": 1, "note": "cost 17,625; Crafting 55 unenchanted ties ring of wealth (boards-special.md:18)" }
    ],
-   "pending": "replace with research/boards-special.md when it lands",
-   "at": "anywhere"
+   "at": "bank"
   },
   {
    "id": "bank-value",
-   "label": "Receive wealth into the bank",
+   "label": "Bank team wealth and craftable high-cost stores (Magic longbow / Rune 2h sword)",
    "serves": [
     "bank"
    ],
@@ -4562,20 +4576,18 @@
     "floor": 10,
     "realistic": 40,
     "evidence": "ESTIMATE",
-    "source": "trades of 28 slots, 12 ticks each measured; #1 value unknown"
+    "source": "research/boards-special.md (Bank): trades of 28 slots, 12 ticks each measured; #1 nickai3 17,239,359,614 vs Owner Decision B1"
    },
    "requires": [
-    "tutorial"
+    "quests-rest"
    ],
-   "evidence": "ESTIMATE",
-   "source": "trades of 28 slots, 12 ticks each measured; #1 value unknown",
+   "evidence": "CODE-READ",
+   "source": "research/boards-special.md (Bank): sum(ObjType.cost * count) across bank slots; Owner Decision B1 notes #1 17.24B requires team-scale wealth; non-Wilderness value stores: coins (1), magic_longbow (2,560), rune_2h_sword (64,000)",
    "supplies": [
-    {
-     "item": "coins and high-value items (above the #1 bank value)",
-     "count": 1
-    }
+    { "item": "coins", "itemId": 995, "count": 1, "note": "ObjType.cost 1; stack cap 2,147,483,647" },
+    { "item": "magic longbow", "itemId": 859, "count": 1, "note": "ObjType.cost 2,560; Fletching 85 magic logs + bow string" },
+    { "item": "rune 2h sword", "itemId": 1319, "count": 1, "note": "ObjType.cost 64,000; Smithing 99 3x runite bar" }
    ],
-   "pending": "replace with research/boards-special.md when it lands",
    "at": "bank"
   },
   {
@@ -4703,10 +4715,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 344,
-    "realistic": 348,
+    "floor": 311,
+    "realistic": 313,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md section 1n: scripts/generated/quest-seaslug.ts, preset quest_seaslug (beside Caroline; the planner state at tick 24,985, Firemaking 99, Fishing 1; swamp paste and an unlit torch from a helper), lockstep bench case quester:quest:seaslug at seeds 7, 8 and 9: 348, 344, 346 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), Caroline to Caroline; the bridged-tile door fix packages/core/src/bridgefix.ts. Rival ESTIMATE 304 / 495 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S19)"
+    "source": "research/quest-plan.md section 1n: scripts/generated/quest-seaslug.ts (burst: true), preset quest_seaslug (beside Caroline; the planner state at tick 24,985, Firemaking 99, Fishing 1; swamp paste and an unlit torch from a helper), hosted-bench run 44865391541 lockstep case quester:quest:seaslug at seeds 7, 8 and 9: 313, 312, 311 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"), Caroline to Caroline; the bridged-tile door fix packages/core/src/bridgefix.ts. Rival ESTIMATE 304 / 495 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S19)"
    },
    "lump": true,
    "xp": {

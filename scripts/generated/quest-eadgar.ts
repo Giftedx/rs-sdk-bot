@@ -47,7 +47,7 @@ const FROM = process.env.EA_FROM ?? 'start';
 const STAGES = ['start', 'sanfew', 'leg1', 'rack1', 'items', 'robe', 'potion', 'rack2', 'fakeman', 'store'];
 const from = (s: string) => STAGES.indexOf(FROM) <= STAGES.indexOf(s);
 
-const q = await openQuest({ cap: 7000, eatAt: 40, food: [385] });
+const q = await openQuest({ cap: 7000, eatAt: 40, food: [385], burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

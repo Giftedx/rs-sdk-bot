@@ -52,7 +52,7 @@ const q = await openQuest({
     cap: opts.cap ?? 1500,
     eatAt: opts.eatAt ?? 6,
     food: opts.food ?? [ITEM.food],
-    burst: opts.burst,
+    burst: opts.burst ?? true,
     keepAlive: opts.keepAlive,
 });
 let off: (() => void) | undefined;

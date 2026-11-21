@@ -508,8 +508,8 @@ test('specialist ranged and agility routes beat live targets without double-coun
     const acts = haggisActivities();
     const travel = haggisTravel();
     const only = (id: string) => new Set(boards.filter(b => b.id !== id).map(b => b.id));
-    const soloRanged = schedule(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel, sacrificed: only('ranged') });
-    const soloAgility = schedule(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), sacrificed: only('agility') });
+    const soloRanged = schedule(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel, sacrificed: only('ranged'), disable: new Set(['pvp-relog-combat']) });
+    const soloAgility = schedule(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), sacrificed: only('agility'), disable: new Set(['pvp-relog-combat']) });
     expect(soloRanged.blocked).toEqual([]);
     expect(finish(soloRanged, 'ranged').status).toBe('WIN');
     expect(finish(soloRanged, 'ranged').finish!).toBeLessThanOrEqual(5483);
@@ -528,7 +528,7 @@ test('overall route uses teleports, spirit trees, stun-guest chaining, and keeps
     expect(real.blocked).toEqual([]);
     expect(floor.qp).toBe(145);
     expect(real.qp).toBe(145);
-    // Ceilings above the measured pvp-relog-combat model: floor 27,004 and realistic 28,726 (< 29,372 target for 2% margin under 29,972).
+    // Ceilings above the measured pvp-relog-combat + quest burst model: floor 26,704 and realistic 28,386 (< 29,372 target for 2% margin under 29,972).
     expect(floor.overallFinish!).toBeLessThanOrEqual(27500);
     expect(real.overallFinish!).toBeLessThanOrEqual(29372);
     expect(real.route['agility-route']).toBe('tourist-trap');
@@ -597,6 +597,6 @@ test('jewellery teleports (Amulet of glory, Ring of dueling) unlock after trade-
     expect(real.overallFinish!).toBeLessThan(29372);
     const questsRest = acts.find(a => a.id === 'quests-rest')!;
     expect(questsRest.evidence).toBe('MEASURED');
-    expect(questsRest.ticks).toMatchObject({ floor: 14554, realistic: 16157, evidence: 'MEASURED' });
+    expect(questsRest.ticks).toMatchObject({ floor: 12951, realistic: 14145, evidence: 'MEASURED' });
     expect(finish(real, 'questpoints').finish!).toBeLessThan(103358);
 }, 15_000);

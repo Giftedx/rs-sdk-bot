@@ -55,7 +55,7 @@ export async function readRjStage(q: Pick<Quest, 's' | 'waitUntil'>): Promise<nu
 if (import.meta.main || (globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) {
     const cap = Number(process.env.CAP ?? 1500);
     if (!Number.isSafeInteger(cap) || cap < 1) throw Error('RJ CAP must be a positive integer');
-    const q = await openQuest({ cap });
+    const q = await openQuest({ cap, burst: true });
     try {
         const msgItem = () => hasJulietMessage(q.inv());
         const state = () => questFlags(q.s.client)?.find(f => f.name === 'Romeo & Juliet')?.state ?? 'unknown';
