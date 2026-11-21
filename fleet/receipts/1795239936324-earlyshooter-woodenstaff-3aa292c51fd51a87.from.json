@@ -1,0 +1,44 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795239936324-earlyshooter-woodenstaff-3aa292c51fd51a87",
+ "account": "Earlyshooter",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 11,
+ "claim": "499633bc-b665-4eef-aa04-19c217c1db90",
+ "count": 0,
+ "ok": false,
+ "at": 1795240115051,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Death rune",
+   "requested": 46,
+   "count": 0
+  },
+  {
+   "item": "Staff of fire",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Law rune",
+   "requested": 10,
+   "count": 0
+  },
+  {
+   "item": "Shark",
+   "requested": 20,
+   "count": 0
+  },
+  {
+   "item": "Cheese",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}
