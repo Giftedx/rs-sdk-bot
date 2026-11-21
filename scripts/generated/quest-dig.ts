@@ -51,7 +51,7 @@ const KEEP = new Set<number>([ITEM.tea, ITEM.opal, ITEM.rope, ITEM.vial, ITEM.ch
     ITEM.invite, ITEM.tablet, ITEM.powder, ITEM.nitrate, ITEM.liquid, ITEM.nitro, ITEM.ground, ITEM.mix1, ITEM.mix2,
     ITEM.compound, ITEM.root, ITEM.key, ITEM.law, ITEM.air, ITEM.fire, ITEM.lobster, 995]);
 
-const q = await openQuest({ cap: 6000 });
+const q = await openQuest({ cap: 6000, burst: true });
 try {
     let questDone = false;
     // Every game message once, with the script tick it was seen (gameMessages is a short rolling list).

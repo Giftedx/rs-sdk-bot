@@ -32,7 +32,7 @@ const ITEM = { wax: 30, unlit: 38, lit: 32, excalibur: 35, bones: 530, bread: 23
 const NPC = { mordred: 247 };
 const PFM = 14;
 
-const q = await openQuest({ cap: 5000, eatAt: 60, food: [ITEM.food], lumbridgeOk: false });
+const q = await openQuest({ cap: 5000, eatAt: 60, food: [ITEM.food], lumbridgeOk: false, burst: true });
 try {
     const FROM = Number(process.env.MC_FROM || 0);
     const STOP = Number(process.env.MC_STOP || 99);

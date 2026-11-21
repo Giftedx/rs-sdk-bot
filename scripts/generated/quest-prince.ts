@@ -18,7 +18,7 @@ const GATE = { x: 3268, z: 3227 };                          // Al Kharid toll ga
 const ALIDOOR = { id: 2881, x: 3123, z: 3243 };            // the cell door, north wall of 3123,3243 (maps/m48_50.jm2)
 const ITEM = { wool: 1759, dye: 1765, skirt: 1013, rope: 954, clay: 1761, bar: 2349, beer: 1917, wig: 2421, blond: 2419, paste: 2424, print: 2423, key: 2418 };
 
-const q = await openQuest({ cap: 2000, lumbridgeOk: true });
+const q = await openQuest({ cap: 2000, lumbridgeOk: true, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

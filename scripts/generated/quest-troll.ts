@@ -37,7 +37,7 @@ const FROM = process.env.TS_FROM ?? 'start';
 const STAGES = ['start', 'arena', 'inside', 'back'];
 const from = (s: string) => STAGES.indexOf(FROM) <= STAGES.indexOf(s);
 
-const q = await openQuest({ cap: 4000, eatAt: 50, food: [385] });
+const q = await openQuest({ cap: 4000, eatAt: 50, food: [385], burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

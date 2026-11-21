@@ -126,13 +126,31 @@ export function boardSupplyDemand(snapshot = join(root, 'research/hiscores-live.
     return { finish, supplies };
 }
 
+// Non-Wilderness supply demand for the value special boards ('equipment' = 1,366,450 worn set; 'bank' = wealth stores).
+export function specialBoardSupplyDemand(snapshot = join(root, 'research/hiscores-live.json'), board: 'equipment' | 'bank') {
+    const target = JSON.parse(readFileSync(snapshot, 'utf8')) as Parameters<typeof boardsFromSnapshot>[0];
+    const activities = haggisActivities(), boards = boardsFromSnapshot(target);
+    const meta = boards.find(b => b.id === board && b.rule.kind === 'value');
+    if (!meta) throw new Error(`no value board named ${board}`);
+    const row = activities.find(a => a.serves.includes(board));
+    if (!row) throw new Error(`no activity serving special board ${board}`);
+    const options = { mode: 'realistic' as const, tricks: new Set(SCENARIOS[2]!.tricks), travel: haggisTravel(), disable: new Set(['pvp-relog-combat']) };
+    const plan = schedule(boards, activities, options);
+    const finish = plan.boards.find(b => b.id === board)?.finish ?? null;
+    const supplies = (row.supplies ?? []).map(s => ({ ...s }));
+    return { board, label: meta.label, finish, supplies };
+}
+
 if (import.meta.main) {
     const args = process.argv.slice(2), at = args.indexOf('--board');
     const board = at >= 0 ? args[at + 1] : undefined;
     if (at >= 0 && !board) throw new Error('--board needs a skill name');
     const snapshot = args.find((a, i) => !a.startsWith('--') && i !== at + 1) ?? join(root, 'research/hiscores-live.json');
     if (board) {
-        const demand = boardSupplyDemand(snapshot, board.toLowerCase());
+        const key = board.toLowerCase();
+        const demand = key === 'equipment' || key === 'bank'
+            ? specialBoardSupplyDemand(snapshot, key)
+            : boardSupplyDemand(snapshot, key);
         if (!demand) throw new Error(`board ${board} has no modelled finish`);
         const items = JSON.parse(readFileSync(join(root, 'knowledge/items.json'), 'utf8'));
         const bill = supplyBill(demand.supplies, items, liveHelperStatuses());

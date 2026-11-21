@@ -34,7 +34,7 @@ const L = {
     stairs1: { id: 1738, x: 2960, z: 3338 },        // castle spiralstairs, level 1
 };
 
-const q = await openQuest({ cap: 1500 });
+const q = await openQuest({ cap: 1500, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

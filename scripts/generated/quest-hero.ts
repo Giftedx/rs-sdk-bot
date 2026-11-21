@@ -65,8 +65,8 @@ const exact = (n: string) => new RegExp(`^${n}$`, 'i');
 
 type Q = Awaited<ReturnType<typeof openQuest>>;
 let b: Q | undefined;
-const p: Q = await openQuest({ name: HELPER, cap: CAP, others: () => b ? [b.s] : [] });
-b = await openQuest({ name: MAIN, cap: CAP, others: () => [p.s] });
+const p: Q = await openQuest({ name: HELPER, cap: CAP, burst: true, others: () => b ? [b.s] : [] });
+b = await openQuest({ name: MAIN, cap: CAP, burst: true, others: () => [p.s] });
 const B: Q = b;
 
 // Shared state: each account's script waits on the other's flags.

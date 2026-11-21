@@ -37,7 +37,7 @@ const CASTLE_STAIRS = { id: 1722, x: 2571, z: 3295 };      // stairs -> stairsto
 const ITEM = { gown: 426, robe: 428, doctor: 430, feed: 422, pigeons: 424, apple: 1984, key: 423, distillator: 420,
     ethenea: 415, honey: 416, broline: 417, sample: 418, paper: 419 };
 
-const q = await openQuest({ cap: 5000 });
+const q = await openQuest({ cap: 5000, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

@@ -1,6 +1,7 @@
 import { test, expect } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { boardSupplyDemand, idsFor, supplyBill, liveHelperStatuses } from '../src/supply-bill';
+import { boardSupplyDemand, idsFor, supplyBill, liveHelperStatuses, specialBoardSupplyDemand } from '../src/supply-bill';
 import {unitValue} from '../src/autopilot';
 
 const items = [{ id: 536, name: 'Dragon bones' }, { id: 99, name: 'Unfinished potion', debugname: 'ranarrvial' }, { id: 109, name: 'Unfinished potion', debugname: 'dwarfweedvial' }, { id: 2970, name: 'Mort myre fungi' }];
@@ -160,4 +161,14 @@ test('a specialist board bill covers only the rows before that board reaches 99'
 test('a board bill names a clock board only', () => {
     expect(() => boardSupplyDemand(LIVE_SNAPSHOT, 'overall')).toThrow(/no clock board/);
     expect(() => boardSupplyDemand(LIVE_SNAPSHOT, 'nothing')).toThrow(/no clock board/);
+});
+test('specialBoardSupplyDemand covers non-Wilderness Equipment (1,366,450) and Bank value stores cleanly', async () => {
+    const { specialBoardSupplyDemand } = await import('../src/supply-bill');
+    const eq = specialBoardSupplyDemand(LIVE_SNAPSHOT, 'equipment');
+    const bk = specialBoardSupplyDemand(LIVE_SNAPSHOT, 'bank');
+    const ids = new Map((JSON.parse(readFileSync(join(import.meta.dir, '..', '..', '..', 'knowledge', 'items.json'), 'utf8')) as { id: number; cost?: number }[]).map(i => [i.id, i.cost ?? 1]));
+    const eqCost = eq.supplies.reduce((s, r) => s + (ids.get(r.itemId!) ?? 0) * r.count, 0);
+    expect(eq.supplies).toHaveLength(10);
+    expect(eqCost).toBe(1_366_450);
+    expect(bk.supplies.map(s => s.itemId)).toEqual([995, 859, 1319]);
 });

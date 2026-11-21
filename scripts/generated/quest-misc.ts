@@ -38,7 +38,7 @@ const from = (s: string) => STAGES.indexOf(FROM) <= STAGES.indexOf(s);
 
 
 
-const q = await openQuest({ cap: 4000 });
+const q = await openQuest({ cap: 4000, burst: true });
 try {
     let questDone = false;
     const seen = new Set<string>();
