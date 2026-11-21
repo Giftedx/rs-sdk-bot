@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795294698126-swordswallow-bonetopick-ballofwool",
+ "account": "BoneToPick",
+ "partner": "Swordswallow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ball of wool",
+ "requested": 2,
+ "claim": "249ab2e0-cc0d-4059-a5d0-0baac9bf49e8",
+ "count": 0,
+ "ok": false,
+ "at": 1795294817279,
+ "detail": "trade claimed"
+}
