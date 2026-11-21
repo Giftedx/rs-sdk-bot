@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795296498204-swordswallow-fatstack-ballofwool",
  "account": "Swordswallow",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Ball of wool",
  "requested": 2,
  "claim": "46ed354f-22d2-4f6b-9630-25a653f53001",
- "count": 0,
- "ok": false,
- "at": 1795296614176,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795296627203,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795296620991
+ },
+ "logout": {
+  "attemptId": "1795296614188-0000010064-0000000001",
+  "at": 1795296626933,
+  "sha256": "a780b8263614998a6a13c5b8998bf2f01ef14d6d668f05d6b6a083c58277c076"
+ },
+ "screen": true
 }
