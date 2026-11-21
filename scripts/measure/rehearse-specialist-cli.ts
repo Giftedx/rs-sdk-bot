@@ -346,8 +346,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
                 inventory: expandKitToSave(AGILITY_SPECIALIST_KIT),
             }),
         },
-        planTicks: 5915,
-        planSource: 'hosted-bench skiller:agility:specialist 5843-5913t / extra:specialist-agility 5989t (<=6031t vs #1 6155t)',
+        planTicks: 5913,
+        planSource: '400ms rehearsal Polevaulter 5884t (hosted extra:specialist-agility 5795/5971/5931t; <=6031t vs #1 6155t)',
         targetCap: 6031,
     },
 ];
