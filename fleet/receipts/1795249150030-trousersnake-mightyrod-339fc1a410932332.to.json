@@ -1,0 +1,59 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795249150030-trousersnake-mightyrod-339fc1a410932332",
+ "account": "Mightyrod",
+ "partner": "TrouserSnake",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 14000,
+ "claim": "ece87c74-4a52-4265-ad57-c4bf5672ebf0",
+ "count": 14000,
+ "ok": true,
+ "at": 1795249288008,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Snape grass",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795249286865
+   }
+  },
+  {
+   "item": "Ranarr weed",
+   "requested": 2,
+   "count": 2,
+   "inventory": {
+    "before": 0,
+    "after": 2
+   },
+   "bank": {
+    "count": 2,
+    "at": 1795249287262
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 14000
+ },
+ "bank": {
+  "count": 14000,
+  "at": 1795249286196
+ },
+ "logout": {
+  "attemptId": "1795249273259-0000017476-0000000001",
+  "at": 1795249288000,
+  "sha256": "e3ae00b5b3781487b83785eacbed0b68ec409ac14bcf5897b82fd20297395ef7"
+ },
+ "screen": true
+}

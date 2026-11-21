@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795249149430-fingersmith-coincock-a7b37ca3282482ad",
+ "account": "CoinCock",
+ "partner": "Fingersmith",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 34000,
+ "claim": "894a696a-5656-4e34-99b8-51447ffdf518",
+ "count": 0,
+ "ok": false,
+ "at": 1795249281162,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Snape grass",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}
