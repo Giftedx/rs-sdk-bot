@@ -306,3 +306,32 @@ test('acting on single-way cools single-way without blocking an escalation to re
     // Retreats cool down for 600 ticks once retreat is acted on.
     expect(retreatOf(w.step(100).actions)).toBeNull();
 });
+
+test('refineProtectActions prioritizes reachable threats targeting the member over out-of-range melee attacks', () => {
+    const BOW_ID = idOf('obj', 'magic_shortbow');
+    const FAR_HYBRID: Fake = { index: 9, name: 'Hybrid', combat: 126, x: 3078, z: 3640, weapon: SCIM };
+    const MAGE_ON_ME: Fake = { index: 10, name: 'MageThreat', combat: 126, x: 3074, z: 3643, weapon: STAFF, anim: CAST };
+    const root = mkdtempSync(join(tmpdir(), 'threat-refine-')); roots.push(root);
+    const a = session('Ours1', ME1, [ME2, FAR_HYBRID, MAGE_ON_ME], [9, 10]);
+    const b = session('Ours2', ME2, [ME1, FAR_HYBRID, MAGE_ON_ME], [9, 10]);
+    const w = new ThreatWatch({
+        sessions: () => [a.s, b.s], server: 'demo.example:43594', friends: new Set(['ours1', 'ours2']),
+        log: () => {}, recordRoot: root, odds: false, decide: { expected: new Set(['hybrid', 'magethreat']), outclasses: () => false },
+    });
+    // Tick 5: Hybrid at 8 tiles holding melee weapon cannot hit Ours1 in melee, while MageThreat is casting magic in range (dist 3 from Ours2 -> dangerous).
+    const step5 = w.step(5);
+    expect(protectOf(step5.actions, 'Ours1')).toBe('magic');
+    // Hybrid swings melee on tick 6 while another account makes it dangerous, then equips Magic Shortbow at 8 tiles targeting Ours1.
+    const slots = ((a.s as any).client.players as any[]);
+    slots[9] = { name: 'Hybrid', combatLevel: 126, headicons: 0, appearance: [0, 0, 0, 0x200 + SCIM], primaryAnim: idOf('seq', 'human_ddagger_lunge'), spotanimId: -1 };
+    w.step(6);
+    slots[9] = { name: 'Hybrid', combatLevel: 126, headicons: 0, appearance: [0, 0, 0, 0x200 + BOW_ID], primaryAnim: -1, spotanimId: -1 };
+    const curState = (a.s as any).sdk.getState;
+    (a.s as any).sdk.getState = () => {
+        const base = curState();
+        base.nearbyPlayers = base.nearbyPlayers.map((q: any) => q.index === 9 ? { ...q, combatTargetType: 'player', combatTargetIndex: 1 } : q);
+        return base;
+    };
+    const step7 = w.step(7);
+    expect(protectOf(step7.actions, 'Ours1')).toBe('ranged');
+});

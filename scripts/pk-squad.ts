@@ -1151,15 +1151,35 @@ export function needsSingleWayMove(pos: { worldX: number; worldZ: number }, to: 
     return true;
 }
 
-// SQUAD_FREEZE_ARMOUR=strip|torso|keep: what a freeze takes off (pk.ts freezeArmour), and SQUAD_PROTECT_ITEM=on|off|skulled: Protect Item (pk.ts protectItem, 'skulled' is on
-// only while our own skull shows). They win over the profile and SQUAD_OPTS. A value that is not listed throws.
+// SQUAD_FREEZE_ARMOUR=strip|torso|keep: what a freeze takes off (pk.ts freezeArmour), SQUAD_PROTECT_ITEM=on|off|skulled: Protect Item (pk.ts protectItem, 'skulled' is on
+// only while our own skull shows), SQUAD_FREEZE_FLOOR=[0..1]: skip adjacent non-fled 'low' freezes below target HP fraction. A value not listed throws.
 export function squadFightOverrides(get: (name: string, fallback: string) => string): Partial<FightOptions> {
     const out: Partial<FightOptions> = {};
     const armour = get('SQUAD_FREEZE_ARMOUR', '');
     if (armour) { if (!['strip', 'torso', 'keep'].includes(armour)) throw new Error(`SQUAD_FREEZE_ARMOUR is strip, torso or keep, got ${armour}`); out.freezeArmour = armour as 'strip' | 'torso' | 'keep'; }
     const item = get('SQUAD_PROTECT_ITEM', '');
     if (item) { if (!['on', 'off', 'skulled'].includes(item)) throw new Error(`SQUAD_PROTECT_ITEM is on, off or skulled, got ${item}`); out.protectItem = item === 'skulled' ? 'skulled' : item === 'on'; }
+    const floorRaw = get('SQUAD_FREEZE_FLOOR', '');
+    if (floorRaw) {
+        const floor = Number(floorRaw);
+        if (!Number.isFinite(floor) || floor < 0 || floor > 1) throw new Error(`SQUAD_FREEZE_FLOOR must be in [0, 1], got ${floorRaw}`);
+        out.freezeFloor = floor;
+    }
     return out;
+}
+
+/** Disables leftover active prayers once safely out of the Wilderness so Edgeville banking incurs zero prayer-guard holds or drain. */
+export async function clearSafeZonePrayers(s: Session, tick: () => Promise<boolean> = () => nextTick(s)): Promise<boolean> {
+    const z = s.sdk.getState?.()?.player?.worldZ;
+    if (z === undefined || wildernessLevel(z) > 0) return false;
+    const rawPrayers = s.sdk.getState?.()?.prayers?.activePrayers;
+    const activeIndices = Array.isArray(rawPrayers)
+        ? rawPrayers.flatMap((on, idx) => (on ? [idx] : []))
+        : Object.entries((rawPrayers ?? {}) as Record<string, boolean>).filter(([, on]) => Boolean(on)).map(([k]) => Number(k)).filter(Number.isFinite);
+    if (!activeIndices.length || typeof s.sdk.sendTogglePrayer !== 'function') return false;
+    for (const idx of activeIndices.slice(0, 4)) void s.sdk.sendTogglePrayer(idx);
+    await tick();
+    return true;
 }
 
 /** Derive safe per-member FightOptions defaults from carried/worn kit (comboFood, God spells + Charge, staff-only freezeWear). */
@@ -1335,26 +1355,16 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         o.log(`[${s.name}] SQUAD re-kitted after a death (${stats.rekits})`);
         return true;
     };
-    let lastHp = me()?.hp ?? 0, seenMessage = 0, refusedAt = -100, pullSince = -1;
+    let lastHp = me()?.hp ?? 0, seenMessage = 0, refusedAt = -100, pullSince = -1, holdPrayAt = -10;
     // The threat radar's armour swap (the worn items that it took off, to wear again) and its single-way hold (no pull and no walk back to the
     // multi-way post until this tick).
     const swapper = new KitSwapper(), tickOf = () => nextTick(s);
-    // A fight stops when the radar decides a retreat or a single-way move: a member inside a fight does not read the decision, and against a team the squad's
-    // fights are the whole run, so without this stop a decision would not reach a member that is fighting.
-    const radarMove = () => {
-        if (!o.threats?.act) return false;
-        const pos = me();
-        return o.threats.step(s.tick()).actions.some(a =>
-            a.kind === 'retreat'
-            || (a.kind === 'single-way' && (!pos || needsSingleWayMove(pos, a.to))),
-        );
-    };
     const alliesSet = new Set(o.allies.map(a => a.toLowerCase()));
     const recentHitters = new Map<number, number>();
     let seenCombatEv = 0;
     const fallbackAction = () => {
         const pos = me();
-        if (!pos) return { plan: 'out' as const, enemyCount: 0, allyCount: 0 };
+        if (!pos) return { plan: 'out' as const, enemyCount: 0, allyCount: 0, foodCount: 0 };
         const nowTick = s.tick();
         for (const [idx, t] of recentHitters) if (nowTick - t > 8) recentHitters.delete(idx);
         const curView = s.sdk.getState()?.nearbyPlayers ?? [];
@@ -1371,19 +1381,45 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         ).length;
         const allyCount = curView.filter(q => alliesSet.has(q.name.toLowerCase()) && q.distance <= 10).length;
         const invNow = s.sdk.getInventory();
+        const foodCount = invNow.filter(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text))).length;
         const plan = squadFallbackPlan({
             z: pos.worldZ, hp: pos.hp, maxHp: pos.maxHp,
-            foodCount: invNow.filter(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text))).length,
+            foodCount,
             packFood: pack.food,
             enemyCount, allyCount, targetingMe, inMulti: isMulti(pos.worldX, pos.worldZ),
             hasGlory: [...invNow, ...s.sdk.getEquipment()].some(i => /^amulet of glory\([1-4]\)$/i.test(i.name)),
             hasTeleport: !!squadEscapeSpell(pos.worldZ, invNow, s.sdk.getEquipment().map(e => e.id), s.sdk.getSkill('Magic')?.level ?? 1),
         });
-        return { plan, enemyCount, allyCount };
+        return { plan, enemyCount, allyCount, foodCount };
     };
     const fallbackDue = () => {
         const { plan } = fallbackAction();
         return plan !== 'hold' && plan !== 'out';
+    };
+    const effectiveRetreat = (actions: ReturnType<ThreatWatch['step']>['actions'], pos: ReturnType<typeof me>) => {
+        const reason = retreatOf(actions);
+        if (!reason) return null;
+        if (process.env.SQUAD_SINGLE_ANTI_ABANDON === '1' && reason.startsWith('lost fight:') && pos && !isMulti(pos.worldX, pos.worldZ) && pos.hp >= pos.maxHp * 0.72) {
+            const foodCount = s.sdk.getInventory().filter(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text))).length;
+            const curView = s.sdk.getState()?.nearbyPlayers ?? [];
+            const activeTargetsSet = curInterlopers.size ? new Set([...o.targets, ...curInterlopers]) : o.targets;
+            const hasWeakTarget = curView.some(q => {
+                if (!activeTargetsSet.has(q.name.toLowerCase())) return false;
+                const seen = observePlayer(s.client, q.index);
+                return !!seen && seen.totalHealth > 0 && seen.health > 0 && seen.health / seen.totalHealth <= 0.75;
+            });
+            if (foodCount >= 5 && hasWeakTarget) return null;
+        }
+        return reason;
+    };
+    // A fight stops when the radar decides a retreat or a single-way move: a member inside a fight does not read the decision, and against a team the squad's
+    // fights are the whole run, so without this stop a decision would not reach a member that is fighting.
+    const radarMove = () => {
+        if (!o.threats?.act) return false;
+        const pos = me();
+        const actions = o.threats.step(s.tick()).actions;
+        return !!effectiveRetreat(actions, pos)
+            || actions.some(a => a.kind === 'single-way' && (!pos || needsSingleWayMove(pos, a.to)));
     };
     let singleUntil = -1;
     const skip = new Map<string, number>();
@@ -1503,6 +1539,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                         for (let t = 0; t < 3; t++) if (!await nextTick(s)) break;
                     }
                 }
+                await clearSafeZonePrayers(s);
                 const fault = await trip(s, first);
                 const after = me();
                 if (after && ((life0 !== undefined && after.lifeId !== life0) || Math.max(Math.abs(after.worldX - 3222), Math.abs(after.worldZ - 3218)) <= 40)) { o.log(`[${s.name}] SQUAD died on a bank trip`); if (await recover()) continue; stats.died = true; break; }
@@ -1519,7 +1556,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             // The threat radar: each decision is logged with the record of the player that caused it (ThreatWatch). With `act` off it only logs.
             const threat = o.threats?.step(now);
             const protect = threat && o.threats!.act ? protectOf(threat.actions, s.name) : null;
-            const threatRetreat = threat && o.threats!.act ? retreatOf(threat.actions) : null;
+            const threatRetreat = threat && o.threats!.act ? effectiveRetreat(threat.actions, p) : null;
             if (threatRetreat) {
                 o.threats!.acted(now);
                 o.log(`[${s.name}] SQUAD threat retreat: ${threatRetreat}`);
@@ -1535,7 +1572,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     singleUntil = now + 120;
                     if (needsSingleWayMove(p, single.to) && !fallbackDue()) {
                         o.threats!.acted(now);
-                        if (protect) holdProtect(s, protect, now);
+                        if (protect && now - holdPrayAt >= 3) { holdProtect(s, protect, 0); holdPrayAt = now; }
                         o.log(`[${s.name}] SQUAD threat single-way: ${single.reason}, to ${single.to.x},${single.to.z}`);
                         let stuckTicks = 0, lastX = p.worldX, lastZ = p.worldZ, checkedTick = s.tick();
                         const walkDist = Math.max(Math.abs(p.worldX - single.to.x), Math.abs(p.worldZ - single.to.z));
@@ -1600,8 +1637,16 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 // A threat that can hit us keeps the protect prayer of its style on (holdProtect), at the cost of the drain.
                 // The protect prayer stays on while a target of the squad stands within reach (a skipped gang member next to us) or we took damage
                 // in the last 10 ticks (`keepPrayer`).
-                if (protect) holdProtect(s, protect, s.tick());
-                else if (!keepPrayer({ view, targets: o.targets, now: s.tick(), damagedAt, points: s.sdk.getSkill('Prayer')?.level, base: s.sdk.getSkill('Prayer')?.baseLevel }) && s.tick() % 3 === 0) for (const [i, on] of (s.sdk.getState()?.prayers.activePrayers ?? []).entries()) if (on) void s.sdk.sendTogglePrayer(i);
+                const holdNow = s.tick();
+                if (protect) {
+                    if (holdNow - holdPrayAt >= 3) { holdProtect(s, protect, 0); holdPrayAt = holdNow; }
+                } else if (!keepPrayer({ view, targets: o.targets, now: holdNow, damagedAt, points: s.sdk.getSkill('Prayer')?.level, base: s.sdk.getSkill('Prayer')?.baseLevel }) && holdNow - holdPrayAt >= 3) {
+                    const activePrayers = s.sdk.getState()?.prayers.activePrayers ?? [];
+                    if (activePrayers.some(Boolean)) {
+                        for (const [i, on] of activePrayers.entries()) if (on) void s.sdk.sendTogglePrayer(i);
+                        holdPrayAt = holdNow;
+                    }
+                }
                 // Back to the post between fights.
                 // At least a tick each pass: a walk to a step that cannot be reached fails at once.
                 if (now >= singleUntil && Math.max(Math.abs(p.worldX - o.post.x), Math.abs(p.worldZ - o.post.z)) > 2) {
@@ -1653,6 +1698,8 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 const curView = stNow?.nearbyPlayers ?? [];
                 const curTarget = curView.find(q => q.name.toLowerCase() === target.name.toLowerCase());
                 if (!curTarget) return false;
+                const curSeen = observePlayer(s.client, curTarget.index);
+                if (curSeen && curSeen.totalHealth > 0 && curSeen.health <= 0) return false;
                 if (o.pull !== false && s.tick() > began && splitFor(pos, curView, curTarget, allTargets)) return true;
                 if (!o.focus) return false;
                 const snap = o.focus.snapshot(s.tick());
@@ -2052,11 +2099,22 @@ if (import.meta.main) {
     const useVolley = get('SQUAD_VOLLEY', '0') === '1';
     const volleyMembers = Math.min(ours.length, Math.max(2, Number(get('SQUAD_VOLLEY_MEMBERS', '2'))));
     const volleyWindow = Math.max(1, Number(get('SQUAD_VOLLEY_WINDOW', '2')));
+    const volleyBelowRaw = get('SQUAD_VOLLEY_BELOW', '');
+    const volleyBelow = volleyBelowRaw !== '' ? Number(volleyBelowRaw) : undefined;
+    if (volleyBelow !== undefined && (!Number.isFinite(volleyBelow) || volleyBelow <= 0 || volleyBelow > 1)) {
+        throw new Error(`SQUAD_VOLLEY_BELOW must be in (0, 1], got ${volleyBelowRaw}`);
+    }
+    const specBelowRaw = get('SQUAD_SPEC_BELOW', '');
+    const specBelowOverride = specBelowRaw !== '' ? Number(specBelowRaw) : undefined;
+    if (specBelowOverride !== undefined && (!Number.isFinite(specBelowOverride) || specBelowOverride <= 0 || specBelowOverride > 1)) {
+        throw new Error(`SQUAD_SPEC_BELOW must be in (0, 1], got ${specBelowRaw}`);
+    }
     const squadVolley: FightOptions['volley'] = useVolley ? {
         state: (t: string) => volleys.get(t) ?? (volleys.set(t, newVolley()), volleys.get(t)!),
         members: volleyMembers,
         window: volleyWindow,
         clock: () => squad[0]!.tick(),
+        ...(volleyBelow !== undefined ? { below: volleyBelow } : {}),
     } : undefined;
     const waitForRally = async (member: Session, holdStopped: () => boolean) => {
         if (rallyWaitStart < 0) rallyWaitStart = member.tick();
@@ -2069,7 +2127,12 @@ if (import.meta.main) {
         const stNow = s.sdk.getState();
         const kit = kitFrom(stNow?.equipment ?? [], stNow?.inventory ?? []);
         const stunSpec = defaultStunSpec(kit);
-        const memberOpts = { ...SQUAD_OPTS, ...squadEliteDefaults(stNow?.skills ?? [], stNow?.inventory ?? []), ...explicitOpts };
+        const memberOpts = {
+            ...SQUAD_OPTS,
+            ...squadEliteDefaults(stNow?.skills ?? [], stNow?.inventory ?? []),
+            ...explicitOpts,
+            ...(specBelowOverride !== undefined ? { specBelow: specBelowOverride } : {}),
+        };
         const baseOpts = sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), JSON.stringify(memberOpts), kit, 1200);
         return hold(s, {
             targets, post, threats, focus: sharedFocus, cohesion: sharedCohesion, useRally, onRallyReady: name => { ralliedSet.add(name); }, waitForRally,

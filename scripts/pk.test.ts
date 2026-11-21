@@ -1321,3 +1321,72 @@ test('crowdPrayer follows direct attackers instead of ally attackers, fakieSwitc
     expect(actions.some(a => a === 'use:0@13')).toBe(true); // held bow decoy during cooldown after DDS p_delay(0) before wave 2 melee DDS spec
     expect(actions.filter(a => a.startsWith('atk:2@'))).toEqual(['atk:2@11', 'atk:2@15', 'atk:2@19']); // volley resets cleanly between waves
 });
+
+test('evaluateSpecPlan gates volleyJoinEligible on volleyBelow when supplied, and fightPlayer freezeFloor skips adjacent non-fled low freezes', async () => {
+    const base = {
+        dying: false, canReachMelee: true, fled: false, running: false, castFreezePending: false, kiteTarget: false, bursting: false,
+        at: { x: 3066, z: 3641 }, target: { index: 5, name: 'Target', combatLevel: 126, x: 3067, z: 3641, distance: 1, kind: 'player' as const },
+        guarded: new Set<'melee' | 'ranged' | 'magic'>(),
+        seen: { health: 90, totalHealth: 99, headicons: 0, worn: [], spotanim: -1 },
+        energy: 1000, lastSpecStyle: 'melee' as const, targetStunned: false, stunOpenForChain: true,
+        spec: { kit: [1215], bar: 'combat_stabsword:specbar', cost: 250, below: 0.72, style: 'melee' as const },
+        invLength: 10, hasWeaponAndShield: false, nearbyPlayers: [],
+    };
+    expect(evaluateSpecPlan({ ...base, volleyBelow: 0.72 }).volleyJoinEligible).toBe(false);
+    expect(evaluateSpecPlan({ ...base, volleyBelow: 0.72, seen: { health: 65, totalHealth: 99, headicons: 0, worn: [], spotanim: -1 } }).volleyJoinEligible).toBe(true);
+    expect(evaluateSpecPlan({ ...base, volleyBelow: 0.72, fled: true }).volleyJoinEligible).toBe(true);
+
+    // Adjacent target at 25/99 HP standing still (not fled): freezeFloor=0.35 skips Entangle so melee attack lands instead.
+    let tick = 10, spells = 0, attacks = 0;
+    const targetPlayer = {
+        index: 5, name: 'Target', combatLevel: 126, x: 3067, z: 3641,
+        health: 25, totalHealth: 99, headicons: 0, appearance: [], spotanimId: -1,
+    };
+    const state: any = {
+        tick: 10,
+        player: { worldX: 3066, worldZ: 3641, level: 0, hp: 99, maxHp: 99, runEnergy: 100, combatLevel: 126, isDead: false },
+        nearbyPlayers: [{ ...targetPlayer, distance: 1 }],
+        skills: [{ name: 'Magic', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }, { name: 'Attack', level: 99, baseLevel: 99 }, { name: 'Strength', level: 99, baseLevel: 99 }, { name: 'Ranged', level: 99, baseLevel: 99 }],
+        inventory: [
+            { id: 1215, slot: 0, count: 1, name: 'Dragon dagger', optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+            { id: 557, slot: 1, count: 100, optionsWithIndex: [] },
+            { id: 555, slot: 2, count: 100, optionsWithIndex: [] },
+            { id: 561, slot: 3, count: 100, optionsWithIndex: [] },
+        ],
+        equipment: [{ id: 4587, slot: 3, name: 'Dragon scimitar' }],
+        prayers: { prayerPoints: 99, activePrayers: Array(20).fill(false) },
+        gameMessages: [], combatEvents: [],
+    };
+    const players: any[] = []; players[5] = targetPlayer;
+    const sess: any = {
+        name: 'Tester',
+        tick: () => tick,
+        ended: new Promise(() => {}),
+        onTick: (cb: () => void) => {
+            setTimeout(() => { tick++; state.tick = tick; cb(); }, 0);
+            return () => {};
+        },
+        client: { players, localPlayer: {}, specialEnergy: 0, specialActive: false },
+        sdk: {
+            getState: () => state,
+            getInventory: () => state.inventory,
+            getEquipment: () => state.equipment,
+            getSkill: (n: string) => state.skills.find((k: any) => k.name === n),
+            sendSpellOnPlayer: () => { spells++; },
+            sendInteractPlayer: () => { attacks++; },
+            sendWalk: () => {},
+            sendTogglePrayer: () => {},
+            sendClickComponent: () => {},
+        },
+    };
+    await fightPlayer(sess, 'Target', {
+        kit: { melee: [4587], magic: [1401] },
+        rotation: ['melee'],
+        freeze: 'low',
+        freezeFloor: 0.35,
+        prayerFlick: false, protectItem: false, defencePrayer: false, overheadPrayer: false,
+        cap: 3, log: () => {},
+    });
+    expect(spells).toBe(0);
+    expect(attacks).toBeGreaterThanOrEqual(1);
+});

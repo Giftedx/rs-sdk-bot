@@ -1902,3 +1902,31 @@ test('rescue with wornGlory and 28 non-food items drops consumable instead of pr
         spyTick.mockRestore();
     }
 });
+
+test('squadFightOverrides parses SQUAD_FREEZE_FLOOR and clearSafeZonePrayers clears active prayers in Edgeville safe zone', async () => {
+    const env = (v: Record<string, string>) => (k: string, f: string) => v[k] ?? f;
+    expect(squadFightOverrides(env({ SQUAD_FREEZE_FLOOR: '0.35' }))).toEqual({ freezeFloor: 0.35 });
+    expect(() => squadFightOverrides(env({ SQUAD_FREEZE_FLOOR: '1.5' }))).toThrow('SQUAD_FREEZE_FLOOR');
+
+    let ticks = 0;
+    const toggled: number[] = [];
+    const activePrayers = Array(20).fill(false);
+    activePrayers[14] = true;
+    activePrayers[8] = true;
+    const mockSess: any = {
+        name: 'PrayerOffSafe',
+        tick: () => ticks,
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3093, worldZ: 3496, hp: 99, maxHp: 99 },
+                prayers: { prayerPoints: 90, activePrayers },
+            }),
+            sendTogglePrayer: async (idx: number) => { toggled.push(idx); activePrayers[idx] = !activePrayers[idx]; },
+        },
+    };
+    const cleared = await (require('./pk-squad').clearSafeZonePrayers)(mockSess, async () => { ticks++; return true; });
+    expect(cleared).toBe(true);
+    expect(toggled).toEqual([8, 14]);
+    expect(activePrayers.some(Boolean)).toBe(false);
+    expect(await (require('./pk-squad').clearSafeZonePrayers)(mockSess, async () => { ticks++; return true; })).toBe(false);
+});
