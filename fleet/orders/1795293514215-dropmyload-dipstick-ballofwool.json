@@ -1,0 +1,22 @@
+{
+ "id": "1795293514215-dropmyload-dipstick-ballofwool",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "DropMyLoad",
+ "to": "Dipstick",
+ "item": "Ball of wool",
+ "count": 2,
+ "start": 1795293514215,
+ "end": 1795295914215,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
