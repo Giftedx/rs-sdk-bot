@@ -63,7 +63,7 @@ const COM: Record<number, [string, boolean]> = {
 };
 const ITEM = { liftKey: 4078, rewardKey: 4077, fungus: 4075, chisel: 1755, shard: 4082 };
 
-const q = await openQuest({ cap: 4500, eatAt: 55, food: [385, 379] });
+const q = await openQuest({ cap: 4500, eatAt: 55, food: [385, 379], burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/completed a quest|quest complete/i) > 0) questDone = true; });
@@ -257,6 +257,24 @@ try {
 
     // 8. The boss door; the key wakes Treus Dayth (8, hauntedmine_boss_ghost.rs2:18-92).
     await go('boss door in', LOC.bossDoor!, () => x() < 2799, { x: 2800, z: 4453 });
+    // Remove melee armor before Fire Wave: rune helm/body/legs impose -57 Magic attack while boss carts,
+    // cranes, and pickaxes ignore player Defence (hauntedmine_boss_ghost.rs2:174-242).
+    const NEGATIVE_MAGIC_ARMOR = /(?:helm|chainbody|platebody|platelegs|plateskirt|kiteshield|sq shield|vamb|d'hide|coif)/i;
+    const removedArmor: number[] = [];
+    const stripMagicPenaltyArmor = async () => {
+        const order = [4, 7, 5, 0, 9, 10];
+        const worn = (q.st()?.equipment ?? []).filter((e: any) => e?.id > 0 && NEGATIVE_MAGIC_ARMOR.test(e.name ?? ''));
+        worn.sort((a: any, b: any) => (order.indexOf(a.slot) >>> 0) - (order.indexOf(b.slot) >>> 0));
+        for (const w of worn) {
+            if ((q.st()?.inventory?.length ?? 28) >= 28) break;
+            if ((await q.s.bot.unequipItem(w)).success) {
+                removedArmor.push(w.id);
+                await q.waitUntil(() => !(q.st()?.equipment ?? []).some((e: any) => e.slot === w.slot && e.id === w.id), 4);
+            }
+        }
+    };
+    await stripMagicPenaltyArmor();
+    if (removedArmor.length) console.log(`BOSS stripped armor=[${removedArmor.join(',')}] inv=${q.st()?.inventory?.length ?? '?'}`);
     const keyNpc = () => q.npc(/^innocent looking key$/i);
     const boss = () => q.npc(/^treus dayth$/i);
     const killed = () => q.sawText(/killing strike/i);
@@ -294,15 +312,17 @@ try {
     // column between the x 2785 track and the crane at 2787,4451 to the south, row 4454 then 4455 to the east, the
     // z 4461 row from its west end to the north.
     type Spot = { name: string; x: number; z: number; cast: Array<[number, number]>; route: (mx: number, mz: number) => Array<[number, number]> | undefined };
+    const exitNe = (mx: number, mz: number): Array<[number, number]> => (mx >= 2790 && mz >= 4455 ? [[2794, 4457], [2794, 4455], [2791, 4455], [HOME.x, HOME.z]] : []);
+    // Exiting row 4462 west of x=2790 steps south off the track at x=2780 so a parked cart at 2781,4462 is bypassed.
+    const exitNorthWest = (mx: number, mz: number): Array<[number, number]> => (mz >= 4462 && mx < 2790 ? [[2780, 4461], [2781, 4461], [2781, 4457]] : exitNe(mx, mz));
     const SPOTS: Spot[] = [
-        { name: 'E', x: 2794, z: 4452, cast: [[2794, 4454], [2794, 4453]], route: () => [[2790, 4454], [2791, 4455], [2793, 4455]] },
-        // NE: a cast from 2794,4455-4457 hits after the server walks the bot to 2794-2796,4457 (proof runs); 2796,4457
-        // is outside the crane zone of 2793,4458 (:216-223), so it is the first choice.
-        { name: 'NE', x: 2796, z: 4460, cast: [[2796, 4457], [2794, 4457], [2794, 4455]], route: () => [[2790, 4454], [2791, 4455], [2793, 4455]] },
-        { name: 'N', x: 2788, z: 4463, cast: [[NORTH.x, NORTH.z]], route: (mx, mz) => mz >= 4459 ? [] : [[2781, 4457], [2781, 4461]] },
-        { name: 'NW', x: 2780, z: 4460, cast: [[2780, 4459], [2779, 4458], [2780, 4460]], route: () => [] },
-        { name: 'W', x: 2780, z: 4454, cast: [[2782, 4454], [2786, 4454]], route: () => [] },
-        { name: 'S', x: 2787, z: 4444, cast: [[2786, 4446], [2786, 4448]], route: (mx) => mx === 2786 ? [] : [[2786, 4454], [2786, 4450]] },
+        { name: 'E', x: 2794, z: 4452, cast: [[2794, 4454], [2794, 4453]], route: (mx, mz) => [...exitNorthWest(mx, mz), [2790, 4454], [2791, 4455], [2793, 4455]] },
+        // NE: cross the z=4456 cart track cleanly at walkable x=2794 (x=2795,4455-4456 are blocked machinery).
+        { name: 'NE', x: 2796, z: 4460, cast: [[2796, 4457], [2794, 4457], [2794, 4455]], route: (mx, mz) => [...exitNorthWest(mx, mz), [2790, 4454], [2791, 4455], [2794, 4455], [2794, 4457]] },
+        { name: 'N', x: 2788, z: 4463, cast: [[NORTH.x, NORTH.z]], route: (mx, mz) => [...exitNe(mx, mz), ...(mz >= 4459 && mz <= 4461 && mx < 2790 ? [] : mz >= 4462 && mx < 2790 ? [[2780, 4461] as [number, number], [2783, 4461] as [number, number]] : [[2781, 4457] as [number, number], [2781, 4461] as [number, number]])] },
+        { name: 'NW', x: 2780, z: 4460, cast: [[2780, 4459], [2779, 4458], [2780, 4460]], route: (mx, mz) => (mz >= 4462 && mx < 2790 ? [[2780, 4461]] : exitNe(mx, mz)) },
+        { name: 'W', x: 2780, z: 4454, cast: [[2782, 4454], [2786, 4454]], route: exitNorthWest },
+        { name: 'S', x: 2787, z: 4444, cast: [[2786, 4446], [2786, 4448]], route: (mx, mz) => [...exitNorthWest(mx, mz), ...(mx === 2786 && mz < 4455 ? [] : [[2786, 4454] as [number, number], [2786, 4450] as [number, number]])] },
     ];
     const hitFrom = new Set<string>();   // tile>spot pairs that hit in this fight
     const bad = new Set<string>();   // tile>spot pairs that did not hit (a dry cast or a failed walk)
@@ -322,7 +342,12 @@ try {
     // (:117-123; the door zone x 2799-2807 does not count), so the bot steps out past the door zone and back, and the
     // key wakes a new ghost.
     let zeroT = -1;
-    for (let round = 0; round < 4 && !q.has(ITEM.rewardKey); round++) {
+    const exitToCenter = async () => {
+        for (let k = 0; k < 8 && x() >= 2790 && z() >= 4457; k++) { await via([[2794, 4457], [2794, 4455], [2791, 4455]]); if (z() >= 4457) await q.waitTicks(3); }
+        if (x() < 2790 && z() >= 4462) await via([[2780, 4461], [2781, 4461], [2781, 4457]]);
+        else if (x() < 2790 && z() >= 4459) await via([[2781, 4461], [2781, 4457]]);
+    };
+    for (let round = 0; round < 6 && !q.has(ITEM.rewardKey); round++) {
         seenT = q.T(); zeroT = -1;
         let stuckGhost = false;
         for (let i = 0; i < 900 && !killed(); i++) {
@@ -338,17 +363,24 @@ try {
             if (gh) seenT = q.T();
             else if (q.T() - seenT >= 20 && casts > 0 && q.near(HOME.x, HOME.z, 0)) break;
             else if (q.T() - seenT >= 6 && !q.near(HOME.x, HOME.z, 0) && !onTrack(mx, mz) && !ne(mx, mz)) {
-                await via(mz >= 4459 ? [[2781, 4461], [2781, 4457], [HOME.x, HOME.z]] : [[HOME.x, HOME.z]]);
+                await via(mx >= 2790 && mz >= 4455 ? exitNe(mx, mz) : mz >= 4462 && mx < 2790 ? [[2780, 4461], [2781, 4461], [2781, 4457], [HOME.x, HOME.z]] : mz >= 4459 ? [[2781, 4461], [2781, 4457], [HOME.x, HOME.z]] : [[HOME.x, HOME.z]]);
                 continue;
             }
             // A cast that made the server walk the bot: that tile does not see the ghost for the engine.
             if (castAt && q.T() - lastCast === 2 && `${mx},${mz}` !== castAt.split('>')[0]) console.log(`BOSS ${q.T()} cast walked: ${castAt} now ${mx},${mz}`);
-            // Pushed onto a track (or into a pocket): back to home at once.
-            if (onTrack(mx, mz) || ne(mx, mz)) {
+            // Pushed onto a track (or into a pocket): back to home at once unless already melee-fighting without runes.
+            const bCur = boss();
+            const hasWavePre = q.cnt(565) >= 1 && q.cnt(556) >= 5;
+            const bgx = bCur ? (bCur.tileX ?? bCur.x) : 0, bgz = bCur ? (bCur.tileZ ?? bCur.z) : 0;
+            const meleeDist = bCur ? Math.max(Math.abs(mx - bgx), Math.abs(mz - bgz)) : 99;
+            const meleeInNe = !hasWavePre && !!bCur && ne(bgx, bgz) && ne(mx, mz);
+            const meleeAdjacent = !hasWavePre && !!bCur && meleeDist <= 1;
+            if ((onTrack(mx, mz) && !meleeAdjacent) || (ne(mx, mz) && !meleeInNe) || (mz >= 4462 && mx < 2790 && !meleeAdjacent)) {
                 pushes++;
                 console.log(`BOSS ${q.T()} pushed to ${mx},${mz}`);
                 // Out of the pocket by its east side (2796,4457-4461); off the west half of the z 4462 track to row 4461.
-                if (ne(mx, mz) || (mz === 4462 && mx >= 2790)) await via([[2796, 4461], [2796, 4457], [2791, 4455], [HOME.x, HOME.z]]);
+                if (ne(mx, mz) || (mz === 4462 && mx >= 2790)) await via([[2796, 4457], [2794, 4457], [2794, 4455], [2791, 4455], [HOME.x, HOME.z]]);
+                else if (mz >= 4462 && mx <= 2781) await via([[2780, 4461], [2783, 4461]]);
                 else if (mz >= 4461) await via([[Math.min(mx, 2786), 4461]]);
                 else await via([[HOME.x, HOME.z]]);
                 continue;
@@ -362,10 +394,19 @@ try {
             }
             const b = boss();
             const hasWaveRunes = q.cnt(565) >= 1 && q.cnt(556) >= 5;
+            if (hasWaveRunes && (q.st()?.inventory?.length ?? 28) < 28 && (q.st()?.equipment ?? []).some((e: any) => e?.id > 0 && NEGATIVE_MAGIC_ARMOR.test(e.name ?? ''))) {
+                await stripMagicPenaltyArmor();
+            }
             // Space low-HP finishing casts by 7 ticks when the prior cast spent XP so its fade/death settles first.
             const castCooldown = b && (b.hp ?? 0) > 0 && (b.hp ?? 0) <= 22 && q.xp('Magic') > mxp ? 7 : 5;
             if (b && !q.dialogOpen() && !hasWaveRunes) {
-                if (q.T() - lastCast >= 4 && q.pos()?.combat?.targetIndex !== b.index) {
+                const gx = b.tileX ?? b.x, gz = b.tileZ ?? b.z;
+                const sp = SPOTS.reduce((m, o) => Math.max(Math.abs(o.x - gx), Math.abs(o.z - gz)) < Math.max(Math.abs(m.x - gx), Math.abs(m.z - gz)) ? o : m);
+                const dist = Math.max(Math.abs(mx - gx), Math.abs(mz - gz));
+                if (!sp.cast.some(([cx, cz]) => cx === mx && cz === mz) && dist > 2) {
+                    const [cx, cz] = sp.cast[0]!;
+                    await via([...(sp.route(mx, mz) ?? []), [cx, cz]]);
+                } else if (q.T() - lastCast >= 4 && (q.pos()?.combat?.targetIndex !== b.index || dist > 1)) {
                     lastCast = q.T();
                     await q.s.direct({ type: 'interactNpc', npcIndex: b.index, optionIndex: q.opIndex(b, /attack/i), reason: 'SDK' });
                 }
@@ -403,8 +444,7 @@ try {
         }
         if (stuckGhost && !killed()) {
             console.log(`BOSS ${q.T()} ghost at 0 hp: out past the door zone and back`);
-            for (let k = 0; k < 8 && x() >= 2790 && z() >= 4457; k++) { await via([[2791, 4455]]); if (z() >= 4457) await q.waitTicks(3); }
-            if (x() < 2790 && z() >= 4459) await via([[2781, 4461], [2781, 4457]]);
+            await exitToCenter();
             await go('boss door out', LOC.bossDoor!, () => x() >= 2799, { x: 2798, z: 4453 });
             await q.walk('past the door zone', [{ x: 2809, z: 4453, tol: 1 }]);
             await q.waitTicks(3);
@@ -413,10 +453,7 @@ try {
         await q.waitUntil(() => killed(), stuckGhost ? 1 : 40);
         if (!killed()) console.log(`WARN round ${round}: no kill page at ${q.T()}`);
         await shut();
-        // The north-east corner (x 2791-2797, z 4457-4461) joins the room only across the z 4456 track (SDK
-        // collision), and a cart on the track blocks the step: try again until the cart moves on.
-        for (let k = 0; k < 8 && x() >= 2790 && z() >= 4457; k++) { await via([[2791, 4455]]); if (z() >= 4457) await q.waitTicks(3); }
-        if (x() < 2790 && z() >= 4459) await via([[2781, 4461], [2781, 4457]]);
+        await exitToCenter();
         await q.walk('to key', [{ x: 2788, z: 4454, tol: 0 }]);
         const k = keyNpc();
         if (k) await q.s.direct({ type: 'interactNpc', npcIndex: k.index, optionIndex: q.opIndex(k, /take/i), reason: 'SDK' });
@@ -425,6 +462,10 @@ try {
         await q.waitUntil(() => q.has(ITEM.rewardKey) || !!boss(), 10);
     }
     if (!q.has(ITEM.rewardKey)) await q.fail('reward key');
+    for (const id of removedArmor) {
+        const item = q.inv().find((i: any) => i.id === id);
+        if (item) await q.s.bot.equipItem(item);
+    }
     q.milestone(9);
 
     // 10. Out of the boss room, down the light stairs, up the west stairs (light now, :36) to the reward door (10,

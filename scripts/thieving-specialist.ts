@@ -168,6 +168,127 @@ export function parseThievingCliArgs(argv: readonly string[], env: NodeJS.Proces
     return { account, helperName, cap, resume };
 }
 
+export interface StunRelogThievingResult {
+    session: Session;
+    readonly totalTicks: number;
+    readonly relogs: number;
+    readonly stuns: number;
+    readonly attempts: number;
+    readonly ok: boolean;
+    readonly finalLevel: number;
+    readonly finalXp: number;
+}
+
+const msgMark = (m: { observationId?: number; tick: number }) => m.observationId ?? m.tick;
+const latestMark = (msgs: readonly { observationId?: number; tick: number }[], fallback: number) =>
+    msgs.reduce((max, m) => Math.max(max, msgMark(m)), fallback);
+
+/** Runs Ardougne stun-relog pickpocketing from current Thieving level until goalLevel or stop/cap. */
+export async function runArdougneStunRelogThieving(opts: {
+    main: Session;
+    cap: number;
+    initialTicks?: number;
+    goalLevel?: number;
+    relogSession: (current: Session) => Promise<Session>;
+    isStopped: () => boolean;
+}): Promise<StunRelogThievingResult> {
+    let main = opts.main;
+    const goalLevel = opts.goalLevel ?? 99;
+    let totalTicks = opts.initialTicks ?? 0;
+    let sessStart = main.tick();
+    let relogs = 0;
+    let stuns = 0;
+    let attempts = 0;
+    let ok = false;
+    let lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
+    let lastPickTick = -99;
+    const elapsedNow = () => totalTicks + Math.max(0, main.tick() - sessStart);
+
+    while (!opts.isStopped() && elapsedNow() < opts.cap) {
+        const st = main.sdk.getState();
+        const lvl = main.sdk.getSkill('Thieving')?.baseLevel ?? 1;
+        if (lvl >= goalLevel) {
+            ok = true;
+            break;
+        }
+        if (!st?.player) {
+            await waitTicks(main, 1);
+            continue;
+        }
+
+        const tier = selectPickpocketTier(lvl);
+
+        // Detect new stun messages via monotonic message watermark (immune to ring-buffer length caps).
+        const msgs = st.gameMessages ?? [];
+        const newMsgs = msgs.filter(m => msgMark(m) > lastMsgMark);
+        lastMsgMark = latestMark(msgs, lastMsgMark);
+        if (newMsgs.some(m => /you've been stunned/i.test(m.text))) {
+            stuns++;
+            if (st.player.hp <= tier.stunDamage) {
+                await eatAnyFood(main);
+            }
+            totalTicks += Math.max(1, main.tick() - sessStart) + 1;
+            relogs++;
+            main = await opts.relogSession(main);
+            sessStart = main.tick();
+            lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
+            lastPickTick = -99;
+            continue;
+        }
+
+        // Safety guard: never attempt a pickpocket while HP <= stunDamage. Restock from Baker's stall only if all food runs out.
+        if (st.player.hp <= tier.stunDamage) {
+            if (await eatAnyFood(main)) {
+                await waitTicks(main, 1);
+                continue;
+            }
+            if (!hasAnyFood(main)) {
+                await stealEmergencyStallFood(main, () => opts.isStopped() || elapsedNow() >= opts.cap);
+                await eatAnyFood(main);
+                await waitTicks(main, 1);
+                continue;
+            }
+        }
+
+        const { target: npc, blocked } = selectPickpocketTarget(st.nearbyNpcs, tier);
+
+        if (!npc) {
+            if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, tier.anchor) > 4) {
+                await main.bot.walkTo(tier.anchor.x, tier.anchor.z, 2);
+            } else if (blocked) {
+                await main.bot.walkTo(blocked.x, blocked.z, 1);
+            } else {
+                await waitTicks(main, 1);
+            }
+            continue;
+        }
+
+        if (main.tick() - lastPickTick >= 2) {
+            const op = npc.optionsWithIndex.find(o => /^pickpocket$/i.test(o.text));
+            if (op) {
+                lastPickTick = main.tick();
+                attempts++;
+                await main.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: op.opIndex, reason: 'SDK' });
+            }
+        }
+        await waitTicks(main, 1);
+    }
+
+    totalTicks = elapsedNow();
+    const finalLevel = main.sdk.getSkill('Thieving')?.baseLevel ?? 0;
+    const finalXp = main.sdk.getSkillXp('Thieving') ?? 0;
+    return {
+        session: main,
+        totalTicks,
+        relogs,
+        stuns,
+        attempts,
+        ok: ok && finalLevel >= goalLevel,
+        finalLevel,
+        finalXp,
+    };
+}
+
 if (import.meta.main) {
     const { account, helperName, cap, resume } = parseThievingCliArgs(process.argv.slice(2), process.env);
 
@@ -192,10 +313,8 @@ if (import.meta.main) {
     });
 
     let helperDone: Promise<void> | undefined;
-    let sessStart = main.tick();
+    const sessStart = main.tick();
     let relogs = 0;
-    let stuns = 0;
-    let attempts = 0;
     let tutTicks = 0;
     let tradeTicks = 0;
     let travelTicks = 0;
@@ -203,10 +322,6 @@ if (import.meta.main) {
     let detail = '';
 
     const elapsedNow = () => totalTicks + Math.max(0, main.tick() - sessStart);
-
-    const msgMark = (m: { observationId?: number; tick: number }) => m.observationId ?? m.tick;
-    const latestMark = (msgs: readonly { observationId?: number; tick: number }[], fallback: number) =>
-        msgs.reduce((max, m) => Math.max(max, msgMark(m)), fallback);
 
     const supplies = isLiveSupplyVariant() ? THIEVING_SPECIALIST_LIVE_SUPPLIES : THIEVING_SPECIALIST_SUPPLIES;
     let readyForTrade = false;
@@ -264,93 +379,32 @@ if (import.meta.main) {
             }
             travelTicks = elapsedNow();
         }
-        let lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
-        let lastPickTick = -99;
-
-        while (!stopFlag && elapsedNow() < cap) {
-            const st = main.sdk.getState();
-            const lvl = main.sdk.getSkill('Thieving')?.baseLevel ?? 1;
-            if (lvl >= 99) {
-                ok = true;
-                break;
-            }
-            if (!st?.player) {
-                await waitTicks(main, 1);
-                continue;
-            }
-
-            const tier = selectPickpocketTier(lvl);
-
-            // Detect new stun messages via monotonic message watermark (immune to ring-buffer length caps).
-            const msgs = st.gameMessages ?? [];
-            const newMsgs = msgs.filter(m => msgMark(m) > lastMsgMark);
-            lastMsgMark = latestMark(msgs, lastMsgMark);
-            if (newMsgs.some(m => /you've been stunned/i.test(m.text))) {
-                stuns++;
-                if (st.player.hp <= tier.stunDamage) {
-                    await eatAnyFood(main);
-                }
-                totalTicks += Math.max(1, main.tick() - sessStart) + 1;
-                relogs++;
+        const res = await runArdougneStunRelogThieving({
+            main,
+            cap,
+            initialTicks: elapsedNow(),
+            isStopped: () => stopFlag,
+            relogSession: async current => {
                 intentionalRelog = true;
-                const out = await logoutSession(main);
-                if (out !== 'logged-out' && out !== 'disconnected') throw Error(`relog logout failed: ${out}`);
-                await closeWithin([main], 5000);
-                const nextToken = ++activeMainToken;
-                main = await openBot(account, {
-                    onStop: async (_s, why) => { if (nextToken === activeMainToken) { stopReason ||= why; stopFlag = true; } },
-                    onSessionEnd: onUnexpectedEnd,
-                });
-                intentionalRelog = false;
-                sessStart = main.tick();
-                lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
-                lastPickTick = -99;
-                continue;
-            }
-
-            // Safety guard: never attempt a pickpocket while HP <= stunDamage. Restock from Baker's stall only if all cakes run out.
-            if (st.player.hp <= tier.stunDamage) {
-                if (await eatAnyFood(main)) {
-                    await waitTicks(main, 1);
-                    continue;
+                try {
+                    const out = await logoutSession(current);
+                    if (out !== 'logged-out' && out !== 'disconnected') throw Error(`relog logout failed: ${out}`);
+                    await closeWithin([current], 5000);
+                    const nextToken = ++activeMainToken;
+                    return await openBot(account, {
+                        onStop: async (_s, why) => { if (nextToken === activeMainToken) { stopReason ||= why; stopFlag = true; } },
+                        onSessionEnd: onUnexpectedEnd,
+                    });
+                } finally {
+                    intentionalRelog = false;
                 }
-                if (!hasAnyFood(main)) {
-                    await stealEmergencyStallFood(main, () => stopFlag || elapsedNow() >= cap);
-                    await eatAnyFood(main);
-                    await waitTicks(main, 1);
-                    continue;
-                }
-            }
-
-            const { target: npc, blocked } = selectPickpocketTarget(st.nearbyNpcs, tier);
-
-            if (!npc) {
-                if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, tier.anchor) > 4) {
-                    await main.bot.walkTo(tier.anchor.x, tier.anchor.z, 2);
-                } else if (blocked) {
-                    await main.bot.walkTo(blocked.x, blocked.z, 1);
-                } else {
-                    await waitTicks(main, 1);
-                }
-                continue;
-            }
-
-            if (main.tick() - lastPickTick >= 2) {
-                const op = npc.optionsWithIndex.find(o => /^pickpocket$/i.test(o.text));
-                if (op) {
-                    lastPickTick = main.tick();
-                    attempts++;
-                    await main.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: op.opIndex, reason: 'SDK' });
-                }
-            }
-            await waitTicks(main, 1);
-        }
-
-        totalTicks = elapsedNow();
-        const finalLvl = main.sdk.getSkill('Thieving')?.baseLevel ?? 0;
-        const finalXp = main.sdk.getSkillXp('Thieving') ?? 0;
-        ok = ok && finalLvl >= 99;
-        detail = `level=${finalLvl} xp=${finalXp} totalTicks=${totalTicks} relogs=${relogs} stuns=${stuns} attempts=${attempts} tut=${tutTicks} trade=${tradeTicks} travel=${travelTicks}${stopReason ? ` stop=${stopReason}` : ''}`;
+            },
+        });
+        main = res.session;
+        totalTicks = res.totalTicks;
+        relogs = res.relogs;
+        ok = res.ok;
+        detail = `level=${res.finalLevel} xp=${res.finalXp} totalTicks=${totalTicks} relogs=${relogs} stuns=${res.stuns} attempts=${res.attempts} tut=${tutTicks} trade=${tradeTicks} travel=${travelTicks}${stopReason ? ` stop=${stopReason}` : ''}`;
     } catch (error) {
         totalTicks = elapsedNow();
         detail = `${String(error)} totalTicks=${totalTicks} relogs=${relogs}`;
