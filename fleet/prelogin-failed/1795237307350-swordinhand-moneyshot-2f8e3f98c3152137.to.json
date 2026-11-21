@@ -5,6 +5,6 @@
  "account": "Moneyshot",
  "partner": "Swordinhand",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795238621743,
- "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+ "at": 1795238729544,
+ "detail": "Error: account logout is not confirmed: Moneyshot session active or outcome unknown"
 }
