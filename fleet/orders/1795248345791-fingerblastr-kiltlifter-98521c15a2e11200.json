@@ -1,0 +1,23 @@
+{
+ "id": "1795248345791-fingerblastr-kiltlifter-98521c15a2e11200",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingerblastr",
+ "to": "Kiltlifter",
+ "item": "Coins",
+ "count": 62000,
+ "start": 1795248345791,
+ "end": 1795249845791,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

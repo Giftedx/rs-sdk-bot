@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795248345791-fingerblastr-kiltlifter-98521c15a2e11200",
+ "account": "Fingerblastr",
+ "partner": "Kiltlifter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 62000,
+ "claim": "393252e6-6317-4a02-a45f-16b1e719e8f5",
+ "count": 62000,
+ "ok": true,
+ "at": 1795248440103,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 62000,
+  "after": 0
+ },
+ "bank": {
+  "count": 56500,
+  "at": 1795248402572
+ },
+ "logout": {
+  "attemptId": "1795248379281-0000031604-0000000001",
+  "at": 1795248440088,
+  "sha256": "80e901bbc16d52a404b14008bc6367b88475abc563381ce8b6299f562db5875d"
+ },
+ "screen": true
+}

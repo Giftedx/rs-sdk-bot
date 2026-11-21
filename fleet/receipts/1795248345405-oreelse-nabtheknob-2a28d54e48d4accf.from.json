@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795248345405-oreelse-nabtheknob-2a28d54e48d4accf",
+ "account": "OreElse",
+ "partner": "NabTheKnob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 70000,
+ "claim": "73d1bbbd-ac50-4fd3-b951-7e8d26538b69",
+ "count": 0,
+ "ok": false,
+ "at": 1795248396771,
+ "detail": "trade claimed"
+}

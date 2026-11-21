@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795248318713-bigchopper-fatstack-c44882d067f45ac2",
+ "account": "Bigchopper",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 155000,
+ "claim": "7896614f-c9b8-4f75-8d8f-3f0ca2ce38e8",
+ "count": 155000,
+ "ok": true,
+ "at": 1795248444862,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 155000,
+  "after": 0
+ },
+ "bank": {
+  "count": 134600,
+  "at": 1795248406121
+ },
+ "logout": {
+  "attemptId": "1795248384533-0000015636-0000000001",
+  "at": 1795248444848,
+  "sha256": "8578c6d2246d3192f783f4e5f86d62e9288fec45a278a1de212da021993b4df5"
+ },
+ "screen": true
+}

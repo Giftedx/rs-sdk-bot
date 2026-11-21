@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795248295753-sausagefest-quickhandjob-b7a539feffabb075",
+ "account": "Quickhandjob",
+ "partner": "Sausagefest",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 140000,
+ "claim": "11cb4365-3622-4cf0-bc17-93aa3d721604",
+ "count": 0,
+ "ok": false,
+ "at": 1795248436313,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795248318713-bigchopper-fatstack-c44882d067f45ac2",
+ "account": "Fatstack",
+ "partner": "Bigchopper",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 155000,
+ "claim": "eeb774f4-1e09-4018-b192-788f3129178d",
+ "count": 0,
+ "ok": false,
+ "at": 1795248426125,
+ "detail": "trade claimed"
+}

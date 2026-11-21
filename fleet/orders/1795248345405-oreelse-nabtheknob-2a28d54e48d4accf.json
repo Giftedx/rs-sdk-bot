@@ -1,0 +1,23 @@
+{
+ "id": "1795248345405-oreelse-nabtheknob-2a28d54e48d4accf",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "NabTheKnob",
+ "item": "Coins",
+ "count": 70000,
+ "start": 1795248345405,
+ "end": 1795249845405,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
