@@ -99,13 +99,9 @@ try {
             await q.guard('crates');
             const n = (q.st()?.nearbyNpcs ?? []).find((m: any) => m.x === c.x && m.z === c.z && /crate/i.test(m.name));
             if (!n) { console.log(`WARN no crate npc at ${c.x},${c.z}`); continue; }
-            const pos = q.pos();
             for (const [dx, dz] of [[0, -1], [-1, 0], [1, 0], [0, 1]]) {
                 if (q.cheb(c.x, c.z) <= 1) break;
-                const tx = c.x + dx!, tz = c.z + dz!;
-                if (!pfm.isTileWalkable(0, tx, tz)) continue;
-                if (pos && pfm.findLongPath(0, pos.worldX, pos.worldZ, tx, tz).length === 0) continue;
-                await q.walk(`crate ${c.x},${c.z}`, [{ x: tx, z: tz, tol: 0 }]);
+                await q.s.bot.walkTo(c.x + dx!, c.z + dz!, 0);
             }
             const m0 = q.msgCount(/you find nothing/i);
             await q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.[0]?.opIndex ?? 1, reason: 'SDK' });

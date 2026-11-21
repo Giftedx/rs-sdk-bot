@@ -4465,10 +4465,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 13203,
-    "realistic": 14137,
+    "floor": 12870,
+    "realistic": 13624,
     "evidence": "MEASURED",
-    "source": "research/quest-points-board.md \"Long rest quests\" less The Tourist Trap (1,604 / 1,624, 2 QP on tourist-trap-post / tourist-trap-agility), lockstep bench seeds 7/8/9: Underground Pass 2789/2614/2745 (burst: true, 5 QP); Troll Stronghold 847/788/824 (burst: true, 1 QP); Shilo Village 2133/2478/2357 (2 QP); Eadgar's Ruse 2175/2161/2091 (burst: true, 1 QP); Temple of Ikov 934/1065/872 (burst: true, 1 QP); Troll Romance 961/974/952 (burst: true, 2 QP); Horror from the Deep 604/570/595 (burst: true, 2 QP); Regicide 3183/3191/3205 (burst: true, 3 QP)"
+    "source": "research/quest-points-board.md \"Long rest quests\" less The Tourist Trap (1,604 / 1,624, 2 QP on tourist-trap-post / tourist-trap-agility), lockstep bench seeds 7/8/9: Underground Pass 2789/2614/2745 (burst: true, 5 QP); Troll Stronghold 847/788/824 (burst: true, 1 QP); Shilo Village 1800/1846/1965 (hosted-bench 44873609812 burst: true, 2 QP); Eadgar's Ruse 2175/2161/2091 (burst: true, 1 QP); Temple of Ikov 934/1065/872 (burst: true, 1 QP); Troll Romance 961/974/952 (burst: true, 2 QP); Horror from the Deep 604/570/595 (burst: true, 2 QP); Regicide 3183/3191/3205 (burst: true, 3 QP)"
    },
    "lump": true,
    "qp": 17,

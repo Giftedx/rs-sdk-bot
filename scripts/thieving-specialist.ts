@@ -189,7 +189,7 @@ export async function runArdougneStunRelogThieving(opts: {
     cap: number;
     initialTicks?: number;
     goalLevel?: number;
-    openNextSession: () => Promise<Session>;
+    relogSession: (current: Session) => Promise<Session>;
     isStopped: () => boolean;
 }): Promise<StunRelogThievingResult> {
     let main = opts.main;
@@ -229,10 +229,7 @@ export async function runArdougneStunRelogThieving(opts: {
             }
             totalTicks += Math.max(1, main.tick() - sessStart) + 1;
             relogs++;
-            const out = await logoutSession(main);
-            if (out !== 'logged-out' && out !== 'disconnected') throw Error(`relog logout failed: ${out}`);
-            await closeWithin([main], 5000);
-            main = await opts.openNextSession();
+            main = await opts.relogSession(main);
             sessStart = main.tick();
             lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
             lastPickTick = -99;
@@ -387,9 +384,12 @@ if (import.meta.main) {
             cap,
             initialTicks: elapsedNow(),
             isStopped: () => stopFlag,
-            openNextSession: async () => {
+            relogSession: async current => {
                 intentionalRelog = true;
                 try {
+                    const out = await logoutSession(current);
+                    if (out !== 'logged-out' && out !== 'disconnected') throw Error(`relog logout failed: ${out}`);
+                    await closeWithin([current], 5000);
                     const nextToken = ++activeMainToken;
                     return await openBot(account, {
                         onStop: async (_s, why) => { if (nextToken === activeMainToken) { stopReason ||= why; stopFlag = true; } },

@@ -19,6 +19,7 @@ import {
     OBJ_PINEAPPLE_PIZZA,
     RING_OF_DUELING_IDS,
     closeWithin,
+    logoutSession,
     openBot,
     rubTeleport,
     settle,
@@ -117,8 +118,10 @@ export async function runHaggisStage3(
 
     let stopFlag = false;
     let activeToken = 1;
+    let intentionalRelog = false;
     let main = await openBot(cleanMain, {
         onStop: async () => { if (activeToken === 1) stopFlag = true; },
+        onSessionEnd: async (_s, detail) => { if (!intentionalRelog) throw Error(`unexpected stage3 end: ${detail}`); },
     });
     const t0 = main.tick();
     const isStopped = () => stopFlag;
@@ -147,11 +150,20 @@ export async function runHaggisStage3(
             initialTicks: preThieveTicks,
             goalLevel: 99,
             isStopped,
-            openNextSession: async () => {
-                const token = ++activeToken;
-                return await openBot(cleanMain, {
-                    onStop: async () => { if (token === activeToken) stopFlag = true; },
-                });
+            relogSession: async current => {
+                intentionalRelog = true;
+                try {
+                    const out = await logoutSession(current);
+                    if (out !== 'logged-out' && out !== 'disconnected') throw Error(`relog logout failed: ${out}`);
+                    await closeWithin([current], 5000);
+                    const token = ++activeToken;
+                    return await openBot(cleanMain, {
+                        onStop: async () => { if (token === activeToken) stopFlag = true; },
+                        onSessionEnd: async (_s, detail) => { if (!intentionalRelog) throw Error(`unexpected stage3 end: ${detail}`); },
+                    });
+                } finally {
+                    intentionalRelog = false;
+                }
             },
         });
         main = thieveRes.session;
@@ -187,7 +199,8 @@ export async function runHaggisStage3(
         };
     } catch (error) {
         stopFlag = true;
-        await closeWithin([main], 3000).catch(() => {});
+        console.error(`STAGE3_ERROR ${error instanceof Error ? error.stack ?? error.message : String(error)}`);
+        await settle([main], false, String(error)).catch(() => {});
         throw error;
     }
 }
