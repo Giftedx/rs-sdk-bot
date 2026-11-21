@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795287760723,
+ "at": 1795287955427,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -347,6 +347,31 @@
    ]
   },
   {
+   "account": "BoneToPick",
+   "script": "scripts/microbot-production.ts",
+   "args": [
+    "strip:swamp-toad",
+    "MAX_MAKE=2",
+    "CAP=1500",
+    "MEMBERS=1",
+    "ORDER_MODE=best-effort"
+   ],
+   "env": {
+    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"2152\":2}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "strip banked swamp toads into toad's legs",
+   "role": "herblore",
+   "template": "squad-strip-swamp-toad",
+   "autopilot": "local",
+   "resources": [
+    "squad:herblore-bank"
+   ]
+  },
+  {
    "account": "MineYourBiz",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -399,7 +424,28 @@
    ]
   },
   {
-   "account": "BoneToPick",
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts magic_guild 900 ITEMS=nature.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=46000 COIN_RESERVE=500 MAX_SPEND=45000",
+    "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "buy nature and air runes at the Magic Guild in Yanille for the alchemy band",
+   "role": "supply",
+   "template": "army-nature-guild",
+   "autopilot": "local",
+   "resources": [
+    "shop:magic_guild"
+   ]
+  },
+  {
+   "account": "DropMyLoad",
    "script": "scripts/microbot-production.ts",
    "args": [
     "strip:swamp-toad",
@@ -421,6 +467,36 @@
    "autopilot": "local",
    "resources": [
     "squad:herblore-bank"
+   ]
+  },
+  {
+   "account": "PackageDeal",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "wydin_choc",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "chocolate bar",
+    "STOCK_TARGET": "2",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "240",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "40",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1973\":2}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy chocolate bars at Wydin's Food Store in Port Sarim",
+   "role": "bank",
+   "template": "squad-chocolate-bar",
+   "autopilot": "local",
+   "resources": [
+    "shop:wydin_choc"
    ]
   }
  ],
