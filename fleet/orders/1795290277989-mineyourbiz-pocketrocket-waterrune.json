@@ -1,0 +1,22 @@
+{
+ "id": "1795290277989-mineyourbiz-pocketrocket-waterrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "Pocketrocket",
+ "item": "Water rune",
+ "count": 18,
+ "start": 1795290277989,
+ "end": 1795292677989,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
