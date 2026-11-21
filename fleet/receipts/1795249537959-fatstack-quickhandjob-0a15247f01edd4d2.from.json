@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795249537959-fatstack-quickhandjob-0a15247f01edd4d2",
+ "account": "Fatstack",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 126000,
+ "claim": "849954fc-aa42-4ff9-8799-a35437f8ebe2",
+ "count": 0,
+ "ok": false,
+ "at": 1795249615994,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Ranarr weed",
+   "requested": 2,
+   "count": 0
+  },
+  {
+   "item": "Snape grass",
+   "requested": 2,
+   "count": 0
+  }
+ ]
+}
