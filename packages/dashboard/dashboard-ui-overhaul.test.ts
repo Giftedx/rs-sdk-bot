@@ -911,7 +911,8 @@ test('9. Asset/DOM/copy hygiene: no empty img src, crisp rev-289 Hiscores icons,
   const equipHtml = boardUtils.skillIcon('Equipment (worn value)');
   const bankHtml = boardUtils.skillIcon('Bank (bank value)');
   const runiteHtml = boardUtils.skillIcon('Lava Maze Runite (ores)');
-  expect(equipHtml).toContain('/client-assets/tab-equipment.png');
+  expect(equipHtml).toContain('src="client-assets/tab-equipment.png"');
+  expect(equipHtml).not.toContain('/client-assets/');
   expect(bankHtml).not.toContain('ico none');
   expect(runiteHtml).not.toContain('ico none');
   expect(bankHtml).toContain('class="ico"');
