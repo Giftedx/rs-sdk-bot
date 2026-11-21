@@ -1,0 +1,44 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795250931047-swordinhand-mightyrod-796511893c8299ae",
+ "account": "Mightyrod",
+ "partner": "Swordinhand",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 89000,
+ "claim": "c6543c63-f500-4542-be2f-28ed4c2610b8",
+ "count": 0,
+ "ok": false,
+ "at": 1795251052302,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Ranarr weed",
+   "requested": 2,
+   "count": 0
+  },
+  {
+   "item": "Superantipoison(4)",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Superantipoison(3)",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Superantipoison(2)",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Unicorn horn",
+   "requested": 2,
+   "count": 0
+  }
+ ]
+}
