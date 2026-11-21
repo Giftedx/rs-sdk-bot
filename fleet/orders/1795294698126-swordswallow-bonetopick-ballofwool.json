@@ -1,0 +1,22 @@
+{
+ "id": "1795294698126-swordswallow-bonetopick-ballofwool",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordswallow",
+ "to": "BoneToPick",
+ "item": "Ball of wool",
+ "count": 2,
+ "start": 1795294698126,
+ "end": 1795297098126,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

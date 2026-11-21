@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795294569953,
+ "at": 1795294716964,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -338,6 +338,66 @@
    ]
   },
   {
+   "account": "Spitroaster",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "ardy",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "vial of water",
+    "STOCK_TARGET": "73",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "492",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "292",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"227\":73}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy vials of water from Aemad's store in East Ardougne",
+   "role": "bank",
+   "template": "squad-vial-of-water",
+   "autopilot": "local",
+   "resources": [
+    "shop:ardy"
+   ]
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "dargaud",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "rune arrow",
+    "STOCK_TARGET": "400",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "320200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "320000",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":400}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
+   "role": "bank",
+   "template": "squad-arrows-dargaud",
+   "autopilot": "local",
+   "resources": [
+    "shop:dargaud"
+   ]
+  },
+  {
    "account": "MineYourBiz",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -417,23 +477,24 @@
   },
   {
    "account": "Unsheathed",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "6000",
-    "giant"
+    "scripts/walk-to.ts 2832 9586",
+    "scripts/gather-spawn.ts 223 27"
    ],
    "env": {
-    "MAX_KILLS": "40"
+    "TICKS": "3000",
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
-   "role": "combat",
-   "template": "squad-ardougne-giants",
+   "goal": "gather red spiders' eggs in Karamja Volcano (non-Wilderness) for super restore potions",
+   "role": "herblore",
+   "template": "squad-karamja-red-spiders-eggs",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-giants"
+    "squad:karamja-red-spiders-eggs"
    ]
   },
   {
@@ -464,23 +525,21 @@
   },
   {
    "account": "Magicwanda",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "giant"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "MAX_KILLS": "40"
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
-   "role": "combat",
-   "template": "squad-ardougne-giants",
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-giants"
+    "knight:2652,3318"
    ]
   },
   {
@@ -502,66 +561,6 @@
    "autopilot": "local",
    "resources": [
     "squad:taverley-black-knights"
-   ]
-  },
-  {
-   "account": "Spitroaster",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "ardy",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "vial of water",
-    "STOCK_TARGET": "73",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "492",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "292",
-    "AUTOPILOT_ORDER": "[0]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"227\":73}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy vials of water from Aemad's store in East Ardougne",
-   "role": "bank",
-   "template": "squad-vial-of-water",
-   "autopilot": "local",
-   "resources": [
-    "shop:ardy"
-   ]
-  },
-  {
-   "account": "Knightstick",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "dargaud",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "rune arrow",
-    "STOCK_TARGET": "400",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "320200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "320000",
-    "AUTOPILOT_ORDER": "[0]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":400}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
-   "role": "bank",
-   "template": "squad-arrows-dargaud",
-   "autopilot": "local",
-   "resources": [
-    "shop:dargaud"
    ]
   }
  ],
