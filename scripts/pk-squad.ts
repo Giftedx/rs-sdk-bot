@@ -293,16 +293,21 @@ function createWildSurvival(
         protectItem?: () => boolean;
         canEat?: () => boolean;
     } = {},
-): { step: (now: number) => boolean; tryEat: (now: number) => boolean; foodWait: (now: number) => number; didEat: (now: number) => boolean } {
+): { step: (now: number) => boolean; prayStep: (now: number) => boolean; tryEat: (now: number) => boolean; foodWait: (now: number) => number; didEat: (now: number) => boolean } {
     let foodReady = -10, karamReady = -10, prayAt = -10, itemAt = -10, seenEvent = 0, hitStyle: CombatStyle | null = null, hitAt = -100, ateAt = -10;
+    const wildMe = () => {
+        const st = s.sdk.getState(), me = st?.player;
+        return st && me && !me.isDead && me.hp > 0 && wildernessLevel(me.worldZ) > 0 ? { st, me } : null;
+    };
     const sendEat = (slot: number, opIndex: number) => {
         if (opts.useDirect && typeof s.direct === 'function') void s.direct({ type: 'useInventoryItem', slot, optionIndex: opIndex, reason: 'SDK' });
         else if (typeof s.sdk.sendUseItem === 'function') void s.sdk.sendUseItem(slot, opIndex);
     };
     const comboThreshold = (maxHp: number) => opts.comboBelow ?? Math.min(55, maxHp);
     const tryEat = (now: number): boolean => {
-        const st = s.sdk.getState(), me = st?.player;
-        if (!st || !me || me.isDead || me.hp <= 0 || wildernessLevel(me.worldZ) === 0 || now < foodReady) return false;
+        const cur = wildMe();
+        if (!cur || now < foodReady) return false;
+        const { me } = cur;
         const inv = s.sdk.getInventory?.() ?? [];
         const food = bestFood(inv);
         const op = food?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
@@ -321,43 +326,51 @@ function createWildSurvival(
         }
         return true;
     };
+    const prayStep = (now: number): boolean => {
+        const cur = wildMe();
+        if (!cur) return false;
+        const { st } = cur;
+        let acted = false;
+        for (const e of st.combatEvents ?? []) {
+            const id = e.observationId ?? e.tick;
+            if (id <= seenEvent) continue;
+            seenEvent = id;
+            if (e.type === 'damage_taken' && e.sourceType === 'other_player') {
+                hitAt = now;
+                const players = (s.client as { players?: ({ primaryAnim?: number } | null)[] } | undefined)?.players;
+                const inferred = e.sourceIndex >= 0 ? attackStyleOfAnim(players?.[e.sourceIndex]?.primaryAnim ?? -1) : null;
+                if (inferred) hitStyle = inferred;
+            }
+        }
+        const prayers = st.prayers;
+        if (prayers && prayers.prayerPoints > 0) {
+            const style = opts.protect?.() ?? (now - hitAt <= 8 ? hitStyle : null);
+            if (style && now - prayAt >= 3) {
+                holdProtect(s, style, 0);
+                prayAt = now;
+                acted = true;
+            }
+            const active = prayers.activePrayers ?? [];
+            if (opts.protectItem?.() && (s.sdk.getSkill?.('Prayer')?.baseLevel ?? 1) >= 25 && !active[PRAYER.item] && now - itemAt >= 3 && typeof s.sdk.sendTogglePrayer === 'function') {
+                void s.sdk.sendTogglePrayer(PRAYER.item);
+                itemAt = now;
+                acted = true;
+            }
+        }
+        return acted;
+    };
     return {
         tryEat,
+        prayStep,
         foodWait: (now: number) => Math.max(0, foodReady - now),
         didEat: (now: number) => ateAt === now,
         step: (now: number) => {
-            let acted = false;
-            const st = s.sdk.getState(), me = st?.player;
-            if (!st || !me || me.isDead || me.hp <= 0 || wildernessLevel(me.worldZ) === 0) return false;
-            for (const e of st.combatEvents ?? []) {
-                const id = e.observationId ?? e.tick;
-                if (id <= seenEvent) continue;
-                seenEvent = id;
-                if (e.type === 'damage_taken' && e.sourceType === 'other_player') {
-                    hitAt = now;
-                    const players = (s.client as { players?: ({ primaryAnim?: number } | null)[] } | undefined)?.players;
-                    const inferred = e.sourceIndex >= 0 ? attackStyleOfAnim(players?.[e.sourceIndex]?.primaryAnim ?? -1) : null;
-                    if (inferred) hitStyle = inferred;
-                }
-            }
-            const prayers = st.prayers;
-            if (prayers && prayers.prayerPoints > 0) {
-                const style = opts.protect?.() ?? (now - hitAt <= 8 ? hitStyle : null);
-                if (style && now - prayAt >= 3) {
-                    holdProtect(s, style, 0);
-                    prayAt = now;
-                    acted = true;
-                }
-                const active = prayers.activePrayers ?? [];
-                if (opts.protectItem?.() && (s.sdk.getSkill?.('Prayer')?.baseLevel ?? 1) >= 25 && !active[PRAYER.item] && now - itemAt >= 3 && typeof s.sdk.sendTogglePrayer === 'function') {
-                    void s.sdk.sendTogglePrayer(PRAYER.item);
-                    itemAt = now;
-                    acted = true;
-                }
-            }
+            const cur = wildMe();
+            if (!cur) return false;
+            let acted = prayStep(now);
             if (opts.canEat && !opts.canEat()) return acted;
-            const eatAt = opts.eatBelow ?? Math.max(65, me.maxHp - 24);
-            if (me.hp <= eatAt && tryEat(now)) acted = true;
+            const eatAt = opts.eatBelow ?? Math.max(65, cur.me.maxHp - 24);
+            if (cur.me.hp <= eatAt && tryEat(now)) acted = true;
             return acted;
         },
     };
@@ -594,18 +607,55 @@ export async function rescue(
         const st = s.sdk.getState(), magic = st?.skills?.find(k => k.name === 'Magic')?.level ?? 1;
         const wornIds = ((typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : st?.equipment) ?? []).map(e => e.id);
         const escapeSpell = st ? squadEscapeSpell(start.worldZ, st.inventory ?? [], wornIds, magic) : null;
-        // Eat and cast an available escape teleport on the same tick to buffer delayed hits during teleport windup.
+        // Toggle survival prayers immediately, combo-heal below 69 HP (waiting out Karambwan p_delay(2)), then cast escape teleport.
         if (escapeSpell !== null) {
             for (let i = 0; i < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; i++) {
                 if (stopped()) return null;
-                const q = me();
+                survival.prayStep(s.tick());
+                const q = me(), eatTick = s.tick();
+                let usedKaram = false;
+                let sameTickEat: Promise<unknown> | null = null;
                 if (q && q.hp <= q.maxHp - 20) {
-                    const food = (s.sdk.getInventory?.() ?? []).find(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text)));
-                    const op = food?.optionsWithIndex.find(x => /^eat$/i.test(x.text));
-                    if (food && op) await useItemAction(food.slot, op.opIndex);
+                    const invNow = s.sdk.getInventory?.() ?? [];
+                    const food = bestFood(invNow);
+                    const op = food?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
+                    const karam = q.hp <= 68 && food && food.id !== ITEMS.karambwan
+                        ? invNow.find(f => f.id === ITEMS.karambwan && f.optionsWithIndex?.some(x => /^eat$/i.test(x.text)))
+                        : undefined;
+                    const kOp = karam?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
+                    if (food && op) {
+                        if (karam && kOp) {
+                            usedKaram = true;
+                            await Promise.all([useItemAction(food.slot, op.opIndex), useItemAction(karam.slot, kOp.opIndex)]);
+                        } else if (food.id === ITEMS.karambwan) {
+                            usedKaram = true;
+                            await useItemAction(food.slot, op.opIndex);
+                        } else {
+                            // Non-karambwan food uses %eat_delay with no p_delay lock, so eat and cast on the same tick.
+                            sameTickEat = useItemAction(food.slot, op.opIndex);
+                        }
+                    }
                 }
-                if (stopped()) return null;
-                await s.direct({ type: 'clickComponent', componentId: escapeSpell, reason: 'SDK' });
+                if (usedKaram) {
+                    const waitUntil = eatTick + 3;
+                    for (let w = 0; w < 3 && s.tick() < waitUntil && wildernessLevel(me()?.worldZ ?? 0) > 0; w++) {
+                        if (stopped()) return null;
+                        survival.prayStep(s.tick());
+                        if (!await tick()) return null;
+                    }
+                    if (stopped() || wildernessLevel(me()?.worldZ ?? 0) === 0) break;
+                    const postHp = me()?.hp;
+                    if (postHp && postHp <= 72) {
+                        const extra = bestFood(s.sdk.getInventory?.() ?? []);
+                        const eOp = extra && extra.id !== ITEMS.karambwan ? extra.optionsWithIndex?.find(x => /^eat$/i.test(x.text)) : undefined;
+                        if (extra && eOp) sameTickEat = useItemAction(extra.slot, eOp.opIndex);
+                    }
+                }
+                if (stopped()) { if (sameTickEat) await sameTickEat; return null; }
+                survival.prayStep(s.tick());
+                const cast = s.direct({ type: 'clickComponent', componentId: escapeSpell, reason: 'SDK' });
+                if (sameTickEat) await Promise.all([sameTickEat, cast]);
+                else await cast;
                 for (let t = 0; t < 6 && wildernessLevel(me()?.worldZ ?? 0) > 0; t++) {
                     survival.step(s.tick());
                     if (!await tick()) return null;
@@ -1142,6 +1192,7 @@ export function squadFallbackPlan(opts: {
     targetingMe?: number;
     singleFoodFloor?: number;
     singleHpFloor?: number;
+    multiSafeExit?: boolean;
 }): 'hold' | 'out' | 'glory' | 'teleport' | 'run' {
     const wild = wildernessLevel(opts.z);
     if (wild === 0) return 'out';
@@ -1151,8 +1202,9 @@ export function squadFallbackPlan(opts: {
     const focusPile = opts.inMulti && (opts.targetingMe ?? 0) >= 3 && opts.hp <= opts.maxHp * 0.86;
     const instantEscape = !!opts.hasTeleport && wild <= 20;
     const outgunned = opts.enemyCount > opts.allyCount;
-    const heavyFocus = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.hp <= opts.maxHp * ((instantEscape || outgunned) ? 0.76 : 0.72);
-    const emergencyMulti = opts.inMulti && (((instantEscape || outgunned) && opts.enemyCount >= 6 && opts.hp <= opts.maxHp * 0.76) || (opts.enemyCount >= 4 && opts.hp <= opts.maxHp * (outgunned ? 0.72 : 0.62)));
+    const instantOutgunned = opts.multiSafeExit === true && instantEscape && outgunned && opts.enemyCount >= 6;
+    const heavyFocus = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.hp <= opts.maxHp * (instantOutgunned ? 0.81 : (instantEscape || outgunned) ? 0.76 : 0.72);
+    const emergencyMulti = opts.inMulti && (((instantEscape || outgunned) && opts.enemyCount >= 6 && opts.hp <= opts.maxHp * (instantOutgunned ? 0.81 : 0.76)) || (opts.enemyCount >= 4 && opts.hp <= opts.maxHp * (outgunned ? 0.72 : 0.62)));
     const lowSupplyPile = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.foodCount <= 3 && opts.hp <= opts.maxHp * 0.88;
     const lowSingleSupply = !opts.inMulti && opts.enemyCount >= 4 && (
         ((opts.singleFoodFloor ?? 0) > 0 && opts.foodCount <= opts.singleFoodFloor! && opts.hp <= opts.maxHp * 0.80)
@@ -1390,6 +1442,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     const targetFirstBegan = new Map<string, number>();
     const singleFoodFloor = Number(process.env.SQUAD_SINGLE_FOOD_FLOOR ?? '0');
     const singleHpFloor = Number(process.env.SQUAD_SINGLE_HP_FLOOR ?? '0');
+    const multiSafeExit = process.env.SQUAD_MULTI_SAFE_EXIT === '1';
     if (!Number.isFinite(singleFoodFloor) || singleFoodFloor < 0) throw new Error(`SQUAD_SINGLE_FOOD_FLOOR must be >= 0, got ${process.env.SQUAD_SINGLE_FOOD_FLOOR}`);
     if (!Number.isFinite(singleHpFloor) || singleHpFloor < 0 || singleHpFloor > 1) throw new Error(`SQUAD_SINGLE_HP_FLOOR must be in [0, 1], got ${process.env.SQUAD_SINGLE_HP_FLOOR}`);
     const squadFeedWatch = s.lifecycle?.server ? killFeed(s.lifecycle.server) : undefined;
@@ -1469,7 +1522,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             enemyCount, allyCount, targetingMe, inMulti: isMulti(pos.worldX, pos.worldZ),
             hasGlory: [...invNow, ...s.sdk.getEquipment()].some(i => /^amulet of glory\([1-4]\)$/i.test(i.name)),
             hasTeleport: !!squadEscapeSpell(pos.worldZ, invNow, s.sdk.getEquipment().map(e => e.id), s.sdk.getSkill('Magic')?.level ?? 1),
-            singleFoodFloor, singleHpFloor,
+            singleFoodFloor, singleHpFloor, multiSafeExit,
         });
         return { plan, enemyCount, allyCount, foodCount };
     };

@@ -1971,4 +1971,70 @@ test('Wave F: single-way anti-PJ respects other allies, wounded straggler finish
     expect(squadFightOverrides(env({ SQUAD_NO_COMBO_EAT: '88', SQUAD_SAFE_STRIP: '1' }))).toEqual({ noComboEatAt: 88, safeStrip: true });
     expect(() => squadFightOverrides(env({ SQUAD_NO_COMBO_EAT: '120' }))).toThrow('SQUAD_NO_COMBO_EAT');
     expect(() => squadFightOverrides(env({ SQUAD_SAFE_STRIP: '2' }))).toThrow('SQUAD_SAFE_STRIP');
+
+    expect(squadFallbackPlan({ z: 3600, hp: 79, maxHp: 99, foodCount: 12, enemyCount: 8, allyCount: 7, inMulti: true, hasGlory: false, hasTeleport: true, targetingMe: 2 })).toBe('hold');
+    expect(squadFallbackPlan({ z: 3600, hp: 79, maxHp: 99, foodCount: 12, enemyCount: 8, allyCount: 7, inMulti: true, hasGlory: false, hasTeleport: true, targetingMe: 2, multiSafeExit: true })).toBe('teleport');
+});
+
+test('Wave F: rescue escapeSpell activates protect prayer, eats Shark+Karambwan combo via bestFood, and waits p_delay(2) before casting Camelot', async () => {
+    const events: string[] = [];
+    let z = 3601, hp = 53, ticks = 0;
+    const inv: any[] = [
+        { id: 3144, count: 1, slot: 0, name: 'Cooked karambwan', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+        { id: 563, count: 2, slot: 1, name: 'Law rune', optionsWithIndex: [] },
+        { id: 556, count: 10, slot: 2, name: 'Air rune', optionsWithIndex: [] },
+        { id: 385, count: 1, slot: 3, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    const activePrayers: boolean[] = [];
+    const mockSess: any = {
+        name: 'ComboTeleportBot',
+        tick: () => ticks,
+        ended: new Promise(() => {}),
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp, maxHp: 99 },
+                inventory: inv,
+                equipment: [],
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { activePrayers, prayerPoints: 99 },
+                combatEvents: [],
+            }),
+            getInventory: () => inv,
+            getEquipment: () => [],
+            getSkill: () => ({ level: 99, baseLevel: 99 }),
+            sendTogglePrayer: async (idx: number) => {
+                events.push(`pray:${idx}@t${ticks}`);
+                activePrayers[idx] = true;
+            },
+        },
+        direct: async (action: any) => {
+            events.push(`${action.type}:${action.componentId ?? action.slot}@t${ticks}`);
+            if (action.type === 'useInventoryItem') {
+                const idx = inv.findIndex(i => i.slot === action.slot);
+                if (idx >= 0) {
+                    const [food] = inv.splice(idx, 1);
+                    hp = Math.min(99, hp + (food.id === 3144 ? 18 : 20));
+                }
+            } else if (action.type === 'clickComponent' && action.componentId === 1174) {
+                z = 3480;
+            }
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => { ticks++; return true; });
+    try {
+        const res = await rescue(mockSess, () => {}, () => false, false, { protect: () => 'melee', protectItem: () => true });
+        expect(res).toBe(mockSess);
+        expect(hp).toBe(91);
+        expect(z).toBe(3480);
+        // Protect overhead + item toggle on tick 0, Shark (slot 3) before Karambwan (slot 0) on tick 0, then Camelot at t3 after p_delay(2).
+        expect(events.slice(0, 4)).toEqual([
+            `pray:${pk.PRAYER.melee}@t0`,
+            `pray:${pk.PRAYER.item}@t0`,
+            'useInventoryItem:3@t0',
+            'useInventoryItem:0@t0',
+        ]);
+        expect(events[events.length - 1]).toBe('clickComponent:1174@t3');
+    } finally {
+        spyTick.mockRestore();
+    }
 });
