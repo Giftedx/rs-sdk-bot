@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795241648108,
+ "at": 1795241875295,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -207,20 +207,6 @@
    "enabled": true,
    "standing": true,
    "repeat": true
-  },
-  {
-   "account": "Earlyshooter",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=558 QUANTITY=140 EXPECTED_OWNED=15 LIMIT_PRICE=40 CASH_RESERVE=5000 ORDER_KEY=liveops-mind-558-140-v1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=562 QUANTITY=220 EXPECTED_OWNED=0 LIMIT_PRICE=140 CASH_RESERVE=5000 ORDER_KEY=liveops-chaos-562-220-v1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
   }
  ],
  "army": [

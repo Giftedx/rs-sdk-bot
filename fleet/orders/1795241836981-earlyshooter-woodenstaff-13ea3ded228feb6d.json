@@ -1,0 +1,29 @@
+{
+ "id": "1795241836981-earlyshooter-woodenstaff-13ea3ded228feb6d",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Earlyshooter",
+ "to": "Woodenstaff",
+ "item": "Mind rune",
+ "count": 140,
+ "start": 1795241836981,
+ "end": 1795244236981,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Chaos rune",
+   "count": 220
+  }
+ ],
+ "takerWaits": true
+}
