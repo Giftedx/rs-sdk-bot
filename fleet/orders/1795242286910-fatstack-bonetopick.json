@@ -1,0 +1,22 @@
+{
+ "id": "1795242286910-fatstack-bonetopick",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "BoneToPick",
+ "item": "coins",
+ "count": 519,
+ "start": 1795242286910,
+ "end": 1795244686910,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
