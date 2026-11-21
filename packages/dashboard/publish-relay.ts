@@ -13,10 +13,96 @@ export const WHY_LIMIT=400,DETAIL_LIMIT=300,FINISHED_KEEP=200;
 // The page shows a line per task: texts are capped, and only the newest FINISHED_KEEP finished tasks travel.
 export function trimState(state:any){
  if(!Array.isArray(state?.coordination?.tasks))return state;
- const all=state.coordination.tasks.map((t:any)=>({...t,why:String(t.why??'').slice(0,WHY_LIMIT),detail:String(t.detail??'').slice(0,DETAIL_LIMIT)}));
+ const all=state.coordination.tasks.map((t:any)=>{
+  const next:any={...t,why:String(t.why??'').slice(0,WHY_LIMIT)};
+  const d=t.detail?String(t.detail).slice(0,DETAIL_LIMIT):'';
+  if(d)next.detail=d;else delete next.detail;
+  return next;
+ });
  const open=all.filter((t:any)=>t.status==='running'||t.status==='pending');
  const finished=all.filter((t:any)=>t.status!=='running'&&t.status!=='pending').sort((a:any,b:any)=>(b.finishedAt??b.createdAt??0)-(a.finishedAt??a.createdAt??0)).slice(0,FINISHED_KEEP);
  return {...state,coordination:{...state.coordination,tasks:[...open,...finished]}};
+}
+const FALSE_DEFAULTS=['practice','reserved','roleInferred','processActive','training','production','phaseExact','remote','bounded','seenInFeed'] as const;
+const EMPTY_DEFAULTS=['ground','spark'] as const;
+const NULL_DEFAULTS=['action','eta','finish','pace','lastRes','nativeProof','xpPerTick','xpPerHour','xpLeft','goalNow','goalXp','ranksAt','bankAt','questsAt','phaseSince','snapshotAt','uptime','death','outcome','flow','planJob','job','lastSeen','live'] as const;
+function compactItemList(list:any){
+ if(!Array.isArray(list))return list;
+ return list.map((it:any)=>{
+  if(!it||typeof it!=='object'||!('baseId'in it)||it.baseId!==it.id)return it;
+  const {baseId:_baseId,...rest}=it;
+  return rest;
+ });
+}
+function compactRanksList(list:any){
+ if(!Array.isArray(list))return list;
+ return list.map((r:any)=>{
+  if(!r||typeof r!=='object')return r;
+  const {hist:_hist,...rest}=r;
+  if(rest.delta===0)delete rest.delta;
+  if(rest.since==null)delete rest.since;
+  return rest;
+ });
+}
+function compactBotCommon(bot:any){
+ if(!bot||typeof bot!=='object')return bot;
+ const out:any={...bot};
+ if(Array.isArray(out.bank))out.bank=compactItemList(out.bank);
+ if(out.flow&&typeof out.flow==='object'){
+  const flow:any={...out.flow};
+  for(const k of ['loot','used'])if(Array.isArray(flow[k]))flow[k]=compactItemList(flow[k]);
+  out.flow=flow;
+ }
+ if(Array.isArray(out.ranks))out.ranks=compactRanksList(out.ranks);
+ if(out.equipmentObserved===true)delete out.equipmentObserved;
+ for(const k of FALSE_DEFAULTS)if(out[k]===false)delete out[k];
+ for(const k of EMPTY_DEFAULTS)if(Array.isArray(out[k])&&out[k].length===0)delete out[k];
+ for(const k of NULL_DEFAULTS)if(out[k]===null)delete out[k];
+ if(out.result===''||out.result===null)delete out.result;
+ return out;
+}
+function slimProgressionContext(pc:any){
+ if(!pc||typeof pc!=='object')return undefined;
+ const out:any={};
+ if(pc.target!==undefined)out.target=pc.target;
+ if(Array.isArray(pc.prayers))out.prayers=pc.prayers;
+ if(pc.style&&typeof pc.style==='object'){
+  const cs=pc.style;
+  out.style={currentStyle:cs.currentStyle,known:cs.known,...(Array.isArray(cs.styles)?{styles:cs.styles.filter((x:any)=>x&&x.index===cs.currentStyle)}:{})};
+ }
+ return Object.keys(out).length?out:undefined;
+}
+function controlScoreboard(sb:any){
+ if(!sb||typeof sb!=='object')return sb;
+ const g=sb.goals;
+ return {
+  available:sb.available,...(sb.version!==undefined?{version:sb.version}:{}),at:sb.at,
+  skillLevels:sb.skillLevels,skills99:sb.skills99,
+  quests:sb.quests?{live:sb.quests.live,total:sb.quests.total}:sb.quests,
+  items:sb.items?{held:sb.items.held,total:sb.items.total}:sb.items,
+  done:sb.done,remaining:sb.remaining,
+  ...(g?{goals:{
+   version:g.version,at:g.at,
+   ...(g.main?{main:{rank:g.main.rank,rankAt:g.main.rankAt}}:{main:null}),
+   ...(g.specialists?{specialists:{rank1s:g.specialists.rank1s}}:{}),
+   ...(g.quests?{quests:{complete:g.quests.complete,total:g.quests.total}}:{}),
+   ...(g.collection?{collection:{missing:g.collection.missing}}:{}),
+   ...(g.army?{army:{maxed:g.army.maxed,roster:g.army.roster}}:{}),
+  }}:{}),
+ };
+}
+function usedIcons(icons:any,roots:unknown[]){
+ if(!icons||typeof icons!=='object')return icons;
+ const seen=new Set<string>(),walk=(v:any)=>{
+  if(Array.isArray(v))v.forEach(walk);
+  else if(v&&typeof v==='object'){
+   if(typeof v.name==='string')seen.add(v.name);
+   if(typeof v.item==='string')seen.add(v.item);
+   for(const x of Object.values(v))if(x&&typeof x==='object')walk(x);
+  }
+ };
+ roots.forEach(walk);
+ return Object.fromEntries(Object.entries(icons).filter(([k])=>seen.has(k)));
 }
 // Each bot row names its fleet side, so the page can show worlds. A remote row keeps the side of the snapshot it came
 // from: a new cloud account can sync its snapshot before its fleet/owners.json entry arrives. Other rows use
@@ -25,9 +111,26 @@ export function withSides(state:any,owners:ReadonlyMap<string,{side:string}>){
  if(!Array.isArray(state?.bots))return state;
  return {...state,bots:state.bots.map((b:any)=>({...b,side:(b?.remote&&typeof b.side==='string'&&b.side)||(owners.get(String(b?.name??'').toLowerCase())?.side??'local')}))};
 }
+const CONTROL_STRIP_BOT=['inputs','progression','guildFacts','workRevision','sessionAttemptId','coordinatorRunId','doorStates'] as const;
 export function controlView(state:any,controlMeta:any,main=MAIN_ACCOUNT){
  const {nonce:_nonce,...meta}=controlMeta??{};
- return {...trimState(state),control:controlMeta?meta:null,revealName:main,hosted:{at:Date.now(),kind:'control'}};
+ const s=trimState(state);
+ const bots=Array.isArray(s?.bots)?s.bots.map((b:any)=>{
+  const next=compactBotCommon(b);
+  for(const k of CONTROL_STRIP_BOT)delete next[k];
+  if('progressionContext'in next){
+   const pc=slimProgressionContext(next.progressionContext);
+   if(pc)next.progressionContext=pc;else delete next.progressionContext;
+  }
+  return next;
+ }):s?.bots;
+ const vault=s?.vault&&typeof s.vault==='object'?(()=>{const {items:_items,holders:_holders,log:_log,...rest}=s.vault;return rest;})():s?.vault;
+ const scoreboard=s?.scoreboard?controlScoreboard(s.scoreboard):s?.scoreboard;
+ const fleetSides=s?.fleetSides&&typeof s.fleetSides==='object'&&Array.isArray(s.fleetSides.orders)
+  ?{...s.fleetSides,orders:s.fleetSides.orders.map(({id:_id,start:_start,late,...o}:any)=>late?{...o,late}:o)}:s?.fleetSides;
+ const icons=usedIcons(s?.icons,[bots?.map((b:any)=>([b?.inventory,b?.bank,b?.equipment,b?.flow])),s?.lookups,s?.collection?.items,s?.economy?.supplies,s?.economy?.gearTargets,s?.race?.supplies,scoreboard?.goals?.collection?.missing,vault?.flow]);
+ const control=controlMeta?{...meta,...(Array.isArray(meta.capabilities)?{capabilities:meta.capabilities.map((c:any)=>c&&Array.isArray(c.checks)?{...c,checks:c.checks.map(({id,phase,timeoutMs}:any)=>({id,phase,timeoutMs}))}:c)}:{})}:null;
+ return {...s,...(bots!==undefined?{bots}:{}),...(vault!==undefined?{vault}:{}),...(scoreboard!==undefined?{scoreboard}:{}),...(fleetSides!==undefined?{fleetSides}:{}),...(icons!==undefined?{icons}:{}),control,revealName:main,hosted:{at:Date.now(),kind:'control'}};
 }
 // The public page is open to anyone with its link, rival players included. It carries a whitelist, so a new state
 // field stays private until it is added here: what any player could learn in the game or on the public hiscores
@@ -104,7 +207,7 @@ export function publicView(state:any,main=MAIN_ACCOUNT,expectedDrops:readonly (P
  const pick=(o:any,keys:readonly string[])=>Object.fromEntries(keys.filter(k=>o&&k in o).map(k=>[k,o[k]]));
  // Practice bots play on this PC's local test server, not the public world: their runs are the owner's testing.
  const bots=(s.bots??[]).filter((b:any)=>!isMain(b?.name)&&!b?.reserved&&!b?.practice).map((b:any)=>{
-  const copy:any=pick(b,PUBLIC_BOT);
+  const copy:any=compactBotCommon(pick(b,PUBLIC_BOT));
   if(Object.hasOwn(b,'hpAt')){const at=observedAt(copy.hpAt,s.now),accountAt=observedAt(copy.at,s.now);copy.hpAt=at!==null&&accountAt!==null&&at<=accountAt?at:null;}else delete copy.hpAt;
   if(Object.hasOwn(b,'questPoints'))copy.questPoints=publicQuestPoints(copy.questPoints,s.now);else delete copy.questPoints;
   for(const k of ['goal','currentGoal'])if(k in copy)copy[k]=publicGoal(copy[k]);
@@ -139,8 +242,7 @@ export function publicView(state:any,main=MAIN_ACCOUNT,expectedDrops:readonly (P
  if(out.lookups&&typeof out.lookups==='object')out.lookups=Object.fromEntries(Object.entries(out.lookups).filter(([k,v]:any)=>!isMain(k)&&!isMain(v?.name)));
  if(Array.isArray(out.farms))out.farms=out.farms.map((g:any)=>({...g,names:(g.names??[]).filter((n:any)=>!isMain(n))}));
  // An icon entry names an item. The public keeps the icons of items it can see: packs, worn items and lookups.
- if(out.icons&&typeof out.icons==='object'){const seen=new Set<string>(),walk=(v:any)=>{if(Array.isArray(v))v.forEach(walk);else if(v&&typeof v==='object'){if(typeof v.name==='string')seen.add(v.name);for(const x of Object.values(v))if(x&&typeof x==='object')walk(x);}};
-  for(const b of out.bots)for(const k of ['inventory','equipment'])walk(b[k]);walk(out.lookups);out.icons=Object.fromEntries(Object.entries(out.icons).filter(([k])=>seen.has(k)));}
+ if(out.icons&&typeof out.icons==='object')out.icons=usedIcons(out.icons,[out.bots.map((b:any)=>[b.inventory,b.equipment]),out.lookups]);
  out.hosted={at:Date.now(),kind:'public'};
  const text=JSON.stringify(out);
  if(new RegExp(main.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(text))throw Error('public view still names the main account; nothing published');

@@ -1,5 +1,5 @@
 // Adapter for the reviewed rs-world build. The build runs as it is: the page talks to it by URL and message.
-export const VIEWER_MANIFEST_SHA256='597808E1445A163A48477DC30E90EFAE1D0736A12ED872D0B0663AEE5699CAFB';
+export const VIEWER_MANIFEST_SHA256='C2B192012AC9D5CB708FE2DBBE75A460AF11E4CB732444FA31B47BF0ED9E3322';
 
 export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relative:string}|'bad'|null {
     let decoded:string;try{decoded=decodeURIComponent(pathname);}catch{return 'bad';}
@@ -42,6 +42,8 @@ export const VIEWER_FEATURES: [what: string, text: string][] = [
     ['markers layer', 'drawMarkers('],                                      // drawn under the names at the ground height of each tile
     ['capture message', 'requestCapture('],                                 // {capture:{id}}: the next frame as a JPEG
     ['capture reply', 'viewerCapture'],                                     // {viewerCapture:{id,url}} to the page that asked
+    ['client camera preset', '.get("client")'],                             // ?client=1 close-up camera mode
+    ['camera release event', 'atlasCameraReleased'],                        // notified when user releases camera follow
 ];
 export function checkViewerBundle(text: string) {
     for (const [what, feature] of VIEWER_FEATURES) if (!text.includes(feature)) throw Error(`${what}: the rs-world build lacks ${feature}`);
@@ -69,6 +71,8 @@ export function installViewerBridge(host:any) {
     // Feed messages wait until the name filter has loaded, so a roster that arrives first is filtered too.
     let filterLoaded=false;const held:(()=>void)[]=[];
     const fnv=(value:string)=>{let h=0x811c9dc5;for(let i=0;i<value.length;i++){h^=value.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(16).padStart(8,'0');};
+    const learnHidden=(rows:any)=>{if(!hiddenHashes.size||!Array.isArray(rows))return;for(const p of rows)if(Array.isArray(p)&&typeof p[1]==='string'&&/^[A-Za-z0-9_ -]{1,12}$/.test(p[1])&&hiddenHashes.has(fnv(p[1].toLowerCase()))){const lc=p[1].toLowerCase();learned.add(lc);hiddenNames.add(lc);}};
+    const isHiddenName=(name:string)=>{const lc=name.toLowerCase();return hiddenNames.has(lc)||(hiddenHashes.size>0&&hiddenHashes.has(fnv(lc)));};
     const undo:(()=>void)[]=[];
     // The loading text names the step still open: the private-name filter, or the first drawn frame.
     const emit=(detail=!privacyReady?'Loading the 3D world… applying the name filter.':!renderReady?'Loading the 3D world… drawing the first frame.':'3D world ready.')=>{
@@ -192,19 +196,20 @@ export function installViewerBridge(host:any) {
                 // The first feed socket is the main view's: its area is the one the respawn timers follow.
                 if(!mainFeed){mainFeed=this;clearDepleted();}
                 this.addEventListener('open',()=>{openFeeds.add(this);feedConnected=true;emit();});
-                this.addEventListener('close',()=>{openFeeds.delete(this);feedConnected=openFeeds.size>0;emit();if(mainFeed===this){mainFeed=null;clearDepleted();}});
+                this.addEventListener('close',()=>{openFeeds.delete(this);feedConnected=openFeeds.size>0;emit();if(mainFeed===this){mainFeed=openFeeds.values().next().value??null;clearDepleted();}});
                 this.addEventListener('error',()=>{openFeeds.delete(this);feedConnected=openFeeds.size>0;emit();});
                 // The viewer reads the feed through onmessage: it gets each message with hash-listed names renamed.
                 let accessor:any=null;for(let p=Socket.prototype;p&&!accessor;p=Object.getPrototypeOf(p))accessor=Object.getOwnPropertyDescriptor(p,'onmessage');
                 // The feed sends one full roster (p), then changes (d:1): lv slots that left, j rows that joined or changed,
                 // m [slot,x,z,level,combat?] moves. The viewer applies changes itself. The bridge's own listener needs every
-                // player, so there each change becomes a full roster.
-                const rosterRows=new Map<number,any[]>();
+                // player, so there each change becomes a full roster once an initial full frame has arrived.
+                const rosterRows=new Map<number,any[]>();let hasFullRoster=false;
                 const fullRoster=(event:any)=>{
                     if(typeof event?.data!=='string'||event.data.length>2_000_000||!event.data.includes('"roster"'))return event;
                     try{
                         const m=JSON.parse(event.data);if(m.t!=='roster')return event;
-                        if(Array.isArray(m.p)){rosterRows.clear();for(const r of m.p)if(Array.isArray(r))rosterRows.set(r[0],r);return event;}
+                        if(Array.isArray(m.p)){hasFullRoster=true;rosterRows.clear();for(const r of m.p)if(Array.isArray(r))rosterRows.set(r[0],r);return event;}
+                        if(!hasFullRoster)return event;
                         for(const slot of Array.isArray(m.lv)?m.lv:[])rosterRows.delete(slot);
                         for(const r of Array.isArray(m.j)?m.j:[])if(Array.isArray(r))rosterRows.set(r[0],r);
                         for(const r of Array.isArray(m.m)?m.m:[]){const row=Array.isArray(r)?rosterRows.get(r[0]):undefined;if(row){row[2]=r[1];row[3]=r[2];row[4]=r[3];if(r.length>4)row[5]=r[4];}}
@@ -216,7 +221,7 @@ export function installViewerBridge(host:any) {
                 const rename=(event:any)=>{
                     if(!hiddenHashes.size||typeof event?.data!=='string')return event;
                     let data:string=event.data;
-                    if(data.includes('"roster"'))try{const m=JSON.parse(data);if(m.t==='roster')for(const p of [...(Array.isArray(m.p)?m.p:[]),...(Array.isArray(m.j)?m.j:[])])if(Array.isArray(p)&&typeof p[1]==='string'&&/^[A-Za-z0-9_ -]{1,12}$/.test(p[1])&&hiddenHashes.has(fnv(p[1].toLowerCase()))){learned.add(p[1].toLowerCase());hiddenNames.add(p[1].toLowerCase());}}catch{/* not JSON: left as it is */}
+                    if(data.includes('"roster"'))try{const m=JSON.parse(data);if(m.t==='roster'){learnHidden(m.p);learnHidden(m.j);}}catch{/* not JSON: left as it is */}
                     for(const name of learned)data=data.replace(new RegExp('\\b'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi'),HIDDEN_ALIAS);
                     return data===event.data?event:new host.MessageEvent('message',{data,origin:event.origin});
                 };
@@ -291,6 +296,7 @@ export function installViewerBridge(host:any) {
                     if(typeof event.data!=='string'||event.data.length>2_000_000)return;
                     let message:any;try{message=JSON.parse(event.data);}catch{return;}
                     if(message.t==='roster'&&Array.isArray(message.p)){
+                        learnHidden(message.p);
                         for(const p of message.p)if(Array.isArray(p)&&typeof p[0]==='number'&&typeof p[1]==='string')names.set(p[0],p[1]);
                         // The page's own data can be minutes old; each roster is the full list of players online now.
                         const sendRoster=()=>host.parent.postMessage({atlasRoster:{players:message.p.filter((p:any)=>Array.isArray(p)&&typeof p[1]==='string'&&[p[2],p[3],p[4],p[5]].every(Number.isFinite)).map((p:any)=>[hiddenHashes.has(fnv(p[1].toLowerCase()))?'⟦MAIN⟧':mask(p[1]),p[2],p[3],p[4],p[5]])}},host.location.origin);
@@ -394,7 +400,8 @@ export function installViewerBridge(host:any) {
             if(!down||down.pane<0||down.pane!==paneAt(event)||Math.hypot(event.clientX-down.x,event.clientY-down.y)>8)return;
             if(!privacyReady||!renderReady||failed||host.parent===host)return;
             const name=multiAsked[down.pane];
-            host.parent.postMessage({viewerMultiPick:hiddenNames.has(name.toLowerCase())?'⟦MAIN⟧':name,index:down.pane},host.location.origin);
+            if(!name)return;
+            host.parent.postMessage({viewerMultiPick:isHiddenName(name)?'⟦MAIN⟧':name,index:down.pane},host.location.origin);
         },true);
     }
     // The page owns the account order: [ and ] step through its accounts, not through every online player.
@@ -440,7 +447,7 @@ export function installViewerBridge(host:any) {
         publishedFollow=follow;
         // The page's own choice, written late, is not news to the page.
         if(follow.toLowerCase()===pageFollow)return;
-        host.parent.postMessage({atlasFollow:hiddenNames.has(follow.toLowerCase())?'⟦MAIN⟧':follow},host.location.origin);
+        host.parent.postMessage({atlasFollow:isHiddenName(follow)?'⟦MAIN⟧':follow},host.location.origin);
     },500);
 }
 

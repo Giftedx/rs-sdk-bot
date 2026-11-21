@@ -64,7 +64,11 @@ function ownerGoalCards(state:any):Lane[]|null{
  if(g?.version!==1||!validAt(g.at,now)||!g.main||!Array.isArray(g.specialists?.targets)||!Array.isArray(g.specialists.rank1s)
   ||!Array.isArray(g.quests?.remaining)||!Array.isArray(g.collection?.missing)||!Array.isArray(g.army?.roster)||!Array.isArray(g.army.accounts))return null;
  const row=(label:string,value:unknown,source:string,at?:number|null,tone:GoalRow['tone']='dm'):GoalRow=>({label,value:String(value),source,...(validAt(at,now)?{at:at!}:{}),tone});
- const source=(e:GoalEvidence[]|undefined)=>(e??[]).map(e=>e.source).join('; ')||'.practice/coordinator/scoreboard.json';
+ const source=(e:GoalEvidence[]|undefined)=>{
+  const list=[...new Set((e??[]).map(x=>x.source).filter(Boolean))];
+  if(!list.length)return '.practice/coordinator/scoreboard.json';
+  return list.length>6?`${list.slice(0,4).join('; ')}; +${list.length-4} more`:list.join('; ');
+ };
  const at=(e:GoalEvidence[]|undefined)=>(e??[]).find(e=>validAt(e.at,now))?.at;
  const evidenceRows=(e:GoalEvidence[]|undefined)=>(e??[]).map((e,i)=>row(`Evidence ${i+1}`,e.gap??(e.ageMs===null?'Observation date unknown':`${num(e.ageMs)} ms old at ledger build`),e.source,e.at,e.gap?'warn':'dm'));
  const pause=state.objectives?.paused?'After resume: ':'';

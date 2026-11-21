@@ -723,3 +723,49 @@ test('respawn timers: a closed main feed and a new watch list send the page an e
  page({respawnWatch:[451]});
  expect(last().list).toEqual([]);
 });
+
+test('fullRoster ignores delta frames received before the first full frame',async()=>{
+ const b=browser();class Socket {listeners=new Map<string,Function[]>();constructor(..._args:any[]){}addEventListener(t:string,fn:Function){this.listeners.set(t,[...(this.listeners.get(t)||[]),fn]);}message(m:any){for(const f of this.listeners.get('message')||[])f({data:JSON.stringify(m),origin:'wss://x'});}}
+ b.host.WebSocket=Socket;b.host.MessageEvent??=class{data:any;origin:any;constructor(_t:string,i:any){this.data=i.data;this.origin=i.origin;}};
+ installViewerBridge(b.host);const s:any=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
+ await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ s.message({t:'roster',k:10,d:1,lv:[],j:[[9,'Early',3100,3100,0,3]],m:[]});
+ expect(b.messages.filter(m=>m.data.atlasRoster)).toHaveLength(0);
+ s.message({t:'roster',k:20,p:[[8,'Worker',3201,3201,0,50]],npcs:0});
+ expect(b.messages.filter(m=>m.data.atlasRoster).at(-1)!.data.atlasRoster.players).toEqual([['Worker',3201,3201,0,50]]);
+});
+
+test('respawnWatch promotes an open secondary feed when the main feed closes',async()=>{
+ const b=browser(),hostListeners:Function[]=[];
+ b.host.addEventListener=(t:string,fn:Function)=>{if(t==='message')hostListeners.push(fn);};
+ class Socket {on:Record<string,Function[]>={};constructor(..._args:any[]){}addEventListener(t:string,fn:Function){(this.on[t]??=[]).push(fn);}open(){for(const f of this.on.open??[])f({});}message(m:any){const e={data:JSON.stringify(m),origin:'wss://x'};for(const f of this.on.message??[])f(e);}close(){for(const f of this.on.close??[])f({});}}
+ b.host.WebSocket=Socket;installViewerBridge(b.host);await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ const page=(data:any)=>{for(const f of hostListeners)f({data,origin:b.host.location.origin,source:b.host.parent,stopImmediatePropagation(){}});};
+ const lists=()=>b.messages.filter(m=>m.data.atlasDepleted).map(m=>m.data.atlasDepleted);
+ const s1:any=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed'),s2:any=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
+ s1.open();s2.open();page({respawnWatch:[450]});
+ s1.message({t:'tick',k:1,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ s1.message({t:'tick',k:2,ms:600,w:[{e:'la',x:3210,z:3220,l:0,id:450,s:10,r:0}]});
+ expect(lists().at(-1)).toEqual({tick:2,list:[[3210,3220,0,450,2]]});
+ s1.close();
+ expect(lists().at(-1)).toEqual({tick:0,list:[]});
+ s2.message({t:'tick',k:4,ms:600,w:[{e:'za',x:3200,z:3200,w:96,h:96,r:1}]});
+ s2.message({t:'tick',k:7,ms:600,w:[{e:'la',x:3210,z:3220,l:0,id:450,s:10,r:0}]});
+ expect(lists().at(-1)).toEqual({tick:7,list:[[3210,3220,0,450,7]]});
+});
+
+test('multi-view pointerup ignores cleared pane arrays without throwing',async()=>{
+ const b=browser(),on:Record<string,any[]>={};
+ b.host.addEventListener=(t:string,fn:any)=>{(on[t]??=[]).push(fn);};
+ let paned=false;
+ b.host.document={querySelector:()=>null,querySelectorAll:(q:string)=>q==='.multi-view .multi-pane[data-pane]'&&paned?[{dataset:{pane:'1'},style:{zIndex:'0'},getBoundingClientRect:()=>({left:0,right:100,top:0,bottom:100})}]:[]};
+ installViewerBridge(b.host);await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ for(const f of on.message??[])f({origin:'http://localhost:3102',source:b.host.parent,data:{multi:['Ann','Bob']},stopImmediatePropagation(){}});
+ paned=true;
+ for(const f of on.pointerdown??[])f({clientX:50,clientY:50,button:0,target:{tagName:'CANVAS'}});
+ for(const f of on.message??[])f({origin:'http://localhost:3102',source:b.host.parent,data:{multi:['Only']},stopImmediatePropagation(){}});
+ paned=false;
+ for(const f of on.pointerup??[])f({clientX:50,clientY:50,button:0,target:{tagName:'CANVAS'}});
+ expect(b.states().at(-1).state).toBe('ready');
+ expect(b.messages.some(m=>'viewerMultiPick'in m.data)).toBe(false);
+});
