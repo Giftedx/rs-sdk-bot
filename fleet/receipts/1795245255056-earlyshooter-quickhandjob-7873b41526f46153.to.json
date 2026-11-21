@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795245255056-earlyshooter-quickhandjob-7873b41526f46153",
+ "account": "Quickhandjob",
+ "partner": "Earlyshooter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 53000,
+ "claim": "1f8bfcde-ad9f-41b3-89a2-ff28be915ebf",
+ "count": 53000,
+ "ok": true,
+ "at": 1795245327832,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 53000
+ },
+ "bank": {
+  "count": 53000,
+  "at": 1795245327042
+ },
+ "logout": {
+  "attemptId": "1795245317981-0000008904-0000000001",
+  "at": 1795245327818,
+  "sha256": "3f101caa768c829a41cc1de989e99ae80ff663ca5ffffa9911057b1355d6557f"
+ },
+ "screen": true
+}
