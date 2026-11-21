@@ -54,3 +54,18 @@ test('order-file quest modes keep the account adapter in generic Steps and requi
   await expect(runAioQuester('Example', [`--mode=${mode}`])).rejects.toThrow('requires <order.json>');
  }
 });
+
+test('newly wired worn-kit, prayerCovers, QUEST_FINDS and pair gates reflect real sweep readiness', () => {
+ expect(assessQuestReadiness('ikov', packFor('ikov'), new Set(), { Ranged: 40, Thieving: 42, Prayer: 17 }).blockers).toEqual(['skill prayer 17/37']);
+ expect(assessQuestReadiness('ikov', { ...packFor('ikov'), 861: 0 }, new Set(), { Ranged: 40, Thieving: 42, Prayer: 37 }).missingItems).toEqual({ 861: 1 });
+ expect(assessQuestReadiness('desertrescue', packFor('desertrescue'), new Set(), { Fletching: 10, Smithing: 20 }).ready).toBe(true);
+ const drNoShirt = packFor('desertrescue'); delete drNoShirt[1833];
+ expect(assessQuestReadiness('desertrescue', drNoShirt, new Set(), { Fletching: 10, Smithing: 20 }).missingItems).toEqual({ 1833: 1 });
+ const ds = assessQuestReadiness('druidspirit', { 2961: 1, 552: 1 }, new Set(['priest', 'priestperil']));
+ expect(ds.ready).toBe(true);
+ expect(assessQuestReadiness('arrav', packFor('arrav')).blockers).toContain('Shield of Arrav requires a pair partner (scripts/generated/quest-arrav.ts <main> <helper>)');
+ const arenaNoPot = packFor('arena'); delete arenaNoPot[2434];
+ expect(assessQuestReadiness('arena', arenaNoPot, new Set(), { Prayer: 99 }).ready).toBe(true);
+ expect(assessQuestReadiness('arena', arenaNoPot, new Set(), { Prayer: 10 }).missingItems).toEqual({ 2434: 3 });
+ expect(assessQuestReadiness('legends', packFor('legends'), new Set(['hero', 'upass', 'waterfall', 'zombiequeen'])).blockers).toContain('quest Family Crest incomplete or unknown');
+});

@@ -44,6 +44,11 @@ test('a quest whose skill check the account fails is named with the shortfall', 
     expect(questShortfall('upass', [{ name: 'Thieving', level: 49 }])).toEqual(['thieving 49/50']);
     expect(questShortfall('regicide', [{ name: 'Agility', level: 69 }, { name: 'Crafting', level: 1 }, { name: 'Magic', level: 53 }])).toEqual(['crafting 1/10']);
     expect(questShortfall('regicide', [{ name: 'Agility', level: 56 }, { name: 'Crafting', level: 51 }, { name: 'Magic', level: 51 }])).toEqual([]);
+    expect(questShortfall('ikov', [{ name: 'Ranged', level: 40 }, { name: 'Thieving', level: 42 }, { name: 'Prayer', level: 17 }])).toEqual(['prayer 17/37']);
+    expect(questShortfall('desertrescue', [{ name: 'Fletching', level: 9 }, { name: 'Smithing', level: 20 }])).toEqual(['fletching 9/10']);
+    expect(questShortfall('horror', [{ name: 'Agility', level: 34 }, { name: 'Prayer', level: 40 }])).toEqual(['agility 34/35']);
+    expect(questShortfall('zombiequeen', [{ name: 'Crafting', level: 19 }, { name: 'Agility', level: 31 }])).toEqual(['crafting 19/20', 'agility 31/32']);
+    expect(questShortfall('itwatchtower', [{ name: 'Magic', level: 14 }, { name: 'Thieving', level: 15 }, { name: 'Agility', level: 25 }, { name: 'Herblore', level: 14 }, { name: 'Mining', level: 39 }])).toEqual(['mining 39/40']);
 });
 
 test('a stop before the first quest prevents the worker from opening', async () => {

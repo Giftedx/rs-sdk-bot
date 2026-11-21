@@ -169,6 +169,24 @@ async function knifeFishing(d:FishDriver,o:FishBatchOptions,state:()=>BotWorldSt
  return{caught,baitUsed:profile.bait?bait0-count(final,profile.bait):0,attempts:cycles,ticks:d.tick()-start,knife:{reset,dropped,stands}};
 }
 export interface FishBatchResult{caught:number;baitUsed:number;attempts:number;ticks:number;byproducts?:Record<number,number>;rawXp?:number;publicXpDelta?:number;knife?:{reset:FishReset;dropped:number;stands:number}}
+export function createFishingDriver(s:Session,stopped:()=>boolean):FishDriver{
+ return{
+  state:()=>s.sdk.getState(),
+  tick:()=>s.tick(),
+  stopped,
+  interact:(i,op)=>s.sdk.sendInteractNpc(i,op),
+  combine:(a,b)=>s.sdk.sendUseItemOnItem(a,b),
+  wait:(test,ticks)=>waitUntil(s,test,{timeoutTicks:ticks}),
+  step:()=>waitTicks(s,1),
+  send:async acts=>{for(const a of acts)await s.direct({...a,reason:'SDK'});},
+  stand:async(spot:NearbyNpc)=>{
+   const p=s.sdk.getState()?.player;if(!p)return false;
+   const tiles=[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dz])=>({x:spot.x+dx!,z:spot.z+dz!})).sort((a,b)=>Math.max(Math.abs(a.x-p.worldX),Math.abs(a.z-p.worldZ))-Math.max(Math.abs(b.x-p.worldX),Math.abs(b.z-p.worldZ)));
+   for(const t of tiles){const path=s.sdk.findPath(t.x,t.z);if(path.success&&path.reachedDestination===true)return(await walkPath(await sessionWalker(s),[{...t,tol:0}],{maxTicks:20,stop:stopped})).ok;}
+   return false;
+  },
+ };
+}
 export async function runStagedFishing(d:FishDriver,o:FishBatchOptions):Promise<FishBatchResult>{
  if(!FISH_PROFILES[o.method])throw Error('unknown fishing method');
  for(const [k,n] of Object.entries(o))if(k!=='method'&&k!=='knife'&&(!Number.isSafeInteger(n)||Number(n)<1))throw Error(`invalid fishing ${k}`);
@@ -277,9 +295,8 @@ if(import.meta.main){
  // Ticks of each catch (the Fishing XP rises), for FISH_RATE.
  const catches:{tick:number;xp:number}[]=[];let seen=entry?xp(entry):0;const offRate=s.onTick(()=>{const now=s.sdk.getState();const x=now?xp(now):seen;if(x>seen)catches.push({tick:s.tick(),xp:x});seen=x;});
  // A tile beside the spot (not a corner) that the path finder reaches, nearest first.
- const stand=async(spot:NearbyNpc)=>{const p=s.sdk.getState()?.player;if(!p)return false;const tiles=[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dz])=>({x:spot.x+dx!,z:spot.z+dz!})).sort((a,b)=>Math.max(Math.abs(a.x-p.worldX),Math.abs(a.z-p.worldZ))-Math.max(Math.abs(b.x-p.worldX),Math.abs(b.z-p.worldZ)));for(const t of tiles){const path=s.sdk.findPath(t.x,t.z);if(path.success&&path.reachedDestination===true)return(await walkPath(await sessionWalker(s),[{...t,tol:0}],{maxTicks:20,stop:stopped})).ok;}return false;};
  try{
-  const result=method==='shark'?await catchSharks(s,amount,()=>{const current=s.sdk.getState();return stopped()||s.tick()-start>=cap||!current?.player||entryHp<1||hp(current)!==entryHp||current.player.lifeId!==entry?.player?.lifeId||current.player.level!==entry?.player?.level;}):await runStagedFishing({state:()=>s.sdk.getState(),tick:()=>s.tick(),stopped,interact:(i,op)=>s.sdk.sendInteractNpc(i,op),combine:(a,b)=>s.sdk.sendUseItemOnItem(a,b),wait:(test,ticks)=>waitUntil(s,test,{timeoutTicks:ticks}),step:()=>waitTicks(s,1),send:async acts=>{for(const a of acts)await s.direct({...a,reason:'SDK'});},stand},{method:method as FishMethod,amount,cap,maxAttempts:Number(process.env.MAX_ATTEMPTS??100),progressTicks:Number(process.env.PROGRESS_TICKS??420),xpRate:Number(process.env.FISHING_XP_RATE??25),...(process.env.FISH_UNTIL_LEVEL?{untilLevel:Number(process.env.FISH_UNTIL_LEVEL)}:{}),knife});
+  const result=method==='shark'?await catchSharks(s,amount,()=>{const current=s.sdk.getState();return stopped()||s.tick()-start>=cap||!current?.player||entryHp<1||hp(current)!==entryHp||current.player.lifeId!==entry?.player?.lifeId||current.player.level!==entry?.player?.level;}):await runStagedFishing(createFishingDriver(s,stopped),{method:method as FishMethod,amount,cap,maxAttempts:Number(process.env.MAX_ATTEMPTS??100),progressTicks:Number(process.env.PROGRESS_TICKS??420),xpRate:Number(process.env.FISHING_XP_RATE??25),...(process.env.FISH_UNTIL_LEVEL?{untilLevel:Number(process.env.FISH_UNTIL_LEVEL)}:{}),knife});
   offRate();
   // Ticks per catch and XP per tick from the first catch to the last, so the walk and the login are not in it.
   if(catches.length>1){const a=catches[0]!,b=catches.at(-1)!,per=(b.tick-a.tick)/(catches.length-1);console.log(`FISH_RATE method=${method} knife=${knife?1:0} catches=${catches.length} ticksPerCatch=${per.toFixed(2)} xpPerTick=${((b.xp-a.xp)/(b.tick-a.tick)).toFixed(1)} runTicks=${s.tick()-start}`);}

@@ -9,6 +9,7 @@
 // Caroline. The ladder up needs a lit torch from stage 6 (quest_seaslug.rs2:65-79). The boat from Ardougne (and from
 // the island) puts a lit torch out (holgart_ardougne.rs2:152-167), so the torch is lit after the island.
 // Paths below are under vendor/rs-sdk/server/content/scripts/.
+import type { Session } from '../../packages/core/src/inprocess';
 import { openQuest } from './quest-lib';
 import { fixBridgedLocChanges } from '../../packages/core/src/bridgefix';
 
@@ -80,8 +81,19 @@ export async function takeSeaSlugPaste(q: PasteQuest): Promise<void> {
 }
 
 // quest-sweep imports with an already owned session.
-if (import.meta.main || (globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) {
-const q = await openQuest({ cap: 2000, eatAt: 40, food: [ITEM.food], burst: true });
+export async function runSeaSlugQuest(
+    session?: Session,
+    opts: { cap?: number; eatAt?: number; keepAlive?: boolean; stop?: () => boolean } = {},
+): Promise<boolean> {
+const q = await openQuest({
+    session,
+    stop: opts.stop,
+    cap: opts.cap ?? 2000,
+    eatAt: opts.eatAt ?? 40,
+    food: [ITEM.food],
+    burst: true,
+    keepAlive: opts.keepAlive,
+});
 if (!fixBridgedLocChanges((q.s as any).client)) console.log('WARN bridge fix not applied');
 try {
     let questDone = false;
@@ -181,7 +193,10 @@ try {
     q.milestone('complete');
     offDone();
     await q.end(questDone, `qp=1 questMsg=${questDone}`);
+    return questDone;
+} catch (e) { return await q.fail(String(e)); }
+}
 
-} catch (e) { await q.fail(String(e)); }
-
+if (import.meta.main || (globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) {
+    await runSeaSlugQuest();
 }

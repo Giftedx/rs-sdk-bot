@@ -2012,7 +2012,7 @@ test('the shop money of a pass comes on top of the coins the quest itself asks f
 import {PRAYER_QUESTS,SEERS_ALTAR,prayerShort,BARE as BARE_QUESTS} from './quest-sweep';
 test('an account short of prayer points prays at the Seers altar before the Camelot quests, and Holy Grail goes bare',()=>{
  // Practice: with no points Merlin's Crystal ended `step protect from melee on` in Keep Le Faye.
- expect(Object.keys(PRAYER_QUESTS).sort()).toEqual(['grail','merlin']);
+ expect(Object.keys(PRAYER_QUESTS).sort()).toEqual(['eadgar','grail','hauntedmine','horror','ikov','merlin','troll','trolllove']);
  expect(prayerShort(0,77,PRAYER_QUESTS.merlin!)).toBe(true);
  expect(prayerShort(PRAYER_QUESTS.merlin!-1,77,PRAYER_QUESTS.merlin!)).toBe(true);
  expect(prayerShort(PRAYER_QUESTS.merlin!,77,PRAYER_QUESTS.merlin!)).toBe(false);
@@ -2185,4 +2185,21 @@ test('the far walk takes a route worker fault as no plan and walks the ground; a
  // A world that searches on the game thread: not-ok is no plan.
  expect(await sweepPlan({offThread:false,route:()=>({ok:false,reason:'budget'})} as any,from,to,acct)).toBeNull();
  expect(await sweepPlan({offThread:false,route:()=>({ok:true,cost:7,legs})} as any,from,to,acct)).toEqual({cost:7,legs});
+});
+
+test('Ikov runs bare with excess food trimmed, and newly mapped quests enforce WORN_KIT and QUEST_FINDS', async () => {
+ const {ikovExcessMeals}=await import('./quest-sweep');
+ expect(BARE.has('ikov')).toBe(true);
+ const ikovFood=questNeeds(questPreset('ikov'),true,'ikov');
+ expect(ikovExcessMeals([{id:385,count:12},{id:225,count:20}],ikovFood)).toEqual([{id:385,deposit:10}]);
+ expect(ikovExcessMeals([{id:385,count:2}],ikovFood)).toEqual([]);
+ expect(wornKitPlan('ikov',questNeeds(questPreset('ikov'),false,'ikov'),[],[],[]).wear).toEqual([{id:861,required:true}]);
+ expect(wornKitPlan('desertrescue',questNeeds(questPreset('desertrescue'),false,'desertrescue'),[],[],[]).need.has(1833)).toBe(true);
+ expect(wornKitPlan('desertrescue',questNeeds(questPreset('desertrescue'),false,'desertrescue'),[],[],[]).need.has(1835)).toBe(true);
+ expect(wornKitPlan('desertrescue',questNeeds(questPreset('desertrescue'),false,'desertrescue'),[],[],[]).need.has(1837)).toBe(true);
+ expect(wornKitPlan('druidspirit',questNeeds(questPreset('druidspirit'),false,'druidspirit'),[],[],[]).need.has(552)).toBe(true);
+ expect(wornKitPlan('trolllove',questNeeds(questPreset('trolllove'),false,'trolllove'),[],[],[]).need.has(3105)).toBe(true);
+ expect(wornKitPlan('hauntedmine',questNeeds(questPreset('hauntedmine'),false,'hauntedmine'),[],[],[]).need.has(1387)).toBe(true);
+ const {QUEST_FINDS}=await import('./quest-sweep');
+ expect(QUEST_FINDS.druidspirit).toEqual([2952]);
 });
