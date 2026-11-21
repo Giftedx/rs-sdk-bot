@@ -55,7 +55,7 @@ export const THIEVING_DIRECT_CWARS_WAYPOINTS: readonly [number, number, number][
     [2486, 3214, 3],
     [2506, 3233, 4],
     [2555, 3234, 3],
-    [2598, 3242, 4],
+    [2586, 3260, 4],
     [2621, 3293, 2],
 ];
 
@@ -150,7 +150,7 @@ export const ARDOUGNE_PICKPOCKET_TIERS: readonly PickpocketTier[] = [
     { name: 'man', minLevel: 1, stunDamage: 1, pattern: /^(man|woman)$/i, anchor: { x: 2621, z: 3293 } },
     { name: 'warrior', minLevel: 25, stunDamage: 2, pattern: /^warrior woman$/i, anchor: { x: 2630, z: 3296 } },
     { name: 'guard', minLevel: 40, stunDamage: 2, pattern: /^guard$/i, anchor: { x: 2662, z: 3305 } },
-    { name: 'knight', minLevel: 55, stunDamage: 3, pattern: /^knight of ardougne$/i, anchor: { x: 2661, z: 3307 } },
+    { name: 'knight', minLevel: 55, stunDamage: 3, pattern: /^knight of ardougne$/i, anchor: { x: 2660, z: 3301 } },
 ];
 
 export function selectPickpocketTier(level: number): PickpocketTier {
@@ -175,16 +175,13 @@ export function selectPickpocketTarget<T extends {
 ): { target: T | undefined; blocked: T | undefined } {
     const matching = npcs
         .filter(n => tier.pattern.test(n.name) && n.optionsWithIndex.some(o => /^pickpocket$/i.test(o.text)));
-    const anchorRadius = tier.name === 'knight' ? 14 : 9;
     const nearAnchor = matching.filter(
-        n => Math.max(Math.abs(n.x - tier.anchor.x), Math.abs(n.z - tier.anchor.z)) <= anchorRadius,
+        n => Math.max(Math.abs(n.x - tier.anchor.x), Math.abs(n.z - tier.anchor.z)) <= 9,
     );
     const sticky = stickyIndex >= 0
         ? nearAnchor.find(n => n.index === stickyIndex && n.distance <= 3 && n.reachable !== false)
         : undefined;
     if (sticky) return { target: sticky, blocked: undefined };
-    const immediate = nearAnchor.find(n => n.distance <= 2 && n.reachable !== false);
-    if (immediate) return { target: immediate, blocked: undefined };
     const pool = (nearAnchor.length > 0 ? nearAnchor : matching).sort((a, b) => a.distance - b.distance);
     return {
         target: pool.find(n => n.reachable !== false),

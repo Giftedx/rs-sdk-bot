@@ -73,12 +73,12 @@ const WC_KEEP_IDS = new Set<number>([
 export const WC_NORMAL_XP_25X = 625;
 export const WC_OAK_XP_25X = 937.5;
 
-// Draynor Jail Courtyard multiway cluster (multiway.csv 0_48_50): 4 courtyard Oaks inside maxrange 7 of 2 Jail guards.
-export const DRAYNOR_JAIL_SPOT = { x: 3123, z: 3253 } as const;
+// Draynor Jail West multiway hub (multiway.csv 0_48_50): 3 twin Oaks on x=3117 corridor + SW fallback Oak (3114,3239).
+export const DRAYNOR_JAIL_SPOT = { x: 3115, z: 3244 } as const;
 export const DRAYNOR_JAIL_OAK_CENTERS: readonly [number, number][] = [
-    [3119, 3256],
-    [3124, 3254],
-    [3129, 3255],
+    [3114, 3239],
+    [3115, 3243],
+    [3115, 3250],
     [3118, 3245],
 ];
 
@@ -151,28 +151,33 @@ function findBestTree(
             if (!nameRe.test(l.name)) return false;
             if (!l.optionsWithIndex?.some(o => /chop/i.test(o.text))) return false;
             if (!wantOak) {
-                // Courtyard normal trees right beside (3123,3253) keep Lv 1->15 transition zero-walk.
-                return l.x >= 3117 && l.x <= 3131 && l.z >= 3247 && l.z <= 3257 && l.reachable !== false;
+                // Inner normal trees beside (3117,3246) keep arrival transition to Oak 15 near zero-walk.
+                return l.x >= 3113 && l.x <= 3119 && l.z >= 3244 && l.z <= 3251 && l.reachable !== false;
             }
-            // 4 Draynor Jail Courtyard multiway oaks inside maxrange 7..8 of both courtyard Jail guards (3121,3249) & (3127,3248).
+            // 3 northern Draynor Jail hub oaks on x=3117 corridor + SW fallback oak (3114,3239) to avoid simultaneous depletion waits.
             return (
-                (l.x === 3119 && l.z === 3256)
-                || (l.x === 3124 && l.z === 3254)
-                || (l.x === 3129 && l.z === 3255)
+                (l.x === 3115 && l.z === 3243)
                 || (l.x === 3118 && l.z === 3245)
+                || (l.x === 3115 && l.z === 3250)
+                || (l.x === 3114 && l.z === 3239)
             ) && l.reachable !== false;
         });
     if (activeTree) {
         const cur = cands.find(l => l.x === activeTree.x && l.z === activeTree.z);
         if (cur && isBesideTree(px, pz, cur.x, cur.z, treeSizeForLoc(cur.name))) return cur;
     }
-    // Prefer the 3 northern courtyard oaks (1-tile hops along z=3253..3255), falling back to SW oak (3118,3245) when depleted.
-    const isHubOak = (l: NearbyLoc) => (l.x === 3124 && l.z === 3254) || (l.x === 3119 && l.z === 3256) || (l.x === 3129 && l.z === 3255);
+    // Strongly prefer the 3 tight corridor oaks (0..3t hops) over SW fallback (3114,3239).
+    const isHubOak = (l: NearbyLoc) => (l.x === 3115 && l.z === 3243) || (l.x === 3118 && l.z === 3245);
+    const isCoreCorridor = (l: NearbyLoc) => isHubOak(l) || (l.x === 3115 && l.z === 3250);
     return cands.sort((a, b) => {
         const sizeA = treeSizeForLoc(a.name);
         const sizeB = treeSizeForLoc(b.name);
         const adjDiff = (isBesideTree(px, pz, a.x, a.z, sizeA) ? 0 : 1) - (isBesideTree(px, pz, b.x, b.z, sizeB) ? 0 : 1);
         if (adjDiff !== 0) return adjDiff;
+        if (wantOak) {
+            const coreDiff = (isCoreCorridor(a) ? 0 : 1) - (isCoreCorridor(b) ? 0 : 1);
+            if (coreDiff !== 0) return coreDiff;
+        }
         const distDiff = treeFootprintDist(px, pz, a.x, a.z, sizeA) - treeFootprintDist(px, pz, b.x, b.z, sizeB);
         if (distDiff !== 0) return distDiff;
         if (wantOak) {
@@ -200,14 +205,18 @@ function findReachableTreeStandTile(
             { x: tree.x + size, z: tree.z + i },
         );
     }
-    // Keep stand tiles inside the overlapping maxrange<=7 courtyard zone of both guards (3121,3249) & (3127,3248).
-    const filtered = perimeter.filter(t => t.x >= 3120 && t.x <= 3128 && t.z >= 3248 && t.z <= 3255);
+    const filtered = (tree.x === 3114 && tree.z === 3239)
+        ? perimeter.filter(t => t.x >= 3115 && t.x <= 3117 && t.z >= 3241 && t.z <= 3242)
+        : perimeter.filter(t => t.x >= 3115 && t.x <= 3117 && t.z >= 3246 && t.z <= 3249);
     const pool = filtered.length > 0 ? filtered : perimeter;
     const reachable: { x: number; z: number; wp: number; cheb: number; hub: number }[] = [];
     for (const t of pool) {
         const path = s.sdk.findPath(t.x, t.z);
         if (!path.success || path.reachedDestination !== true) continue;
-        const hub = Math.max(Math.abs(t.x - 3124), Math.abs(t.z - 3253));
+        // Prefer (3117,3246) for twin oaks (3115,3243)+(3118,3245), or (3117,3249) for (3115,3250) on x=3117 corridor.
+        const hub = (t.x === 3117 && t.z === 3246)
+            ? 0
+            : Math.max(Math.abs(t.x - 3117), Math.abs(t.z - 3246));
         reachable.push({
             x: t.x,
             z: t.z,
@@ -216,7 +225,7 @@ function findReachableTreeStandTile(
             hub,
         });
     }
-    reachable.sort((a, b) => (a.cheb - b.cheb) || (a.hub - b.hub) || (a.wp - b.wp));
+    reachable.sort((a, b) => (a.hub - b.hub) || (a.cheb - b.cheb) || (a.wp - b.wp));
     return reachable[0] ? { x: reachable[0].x, z: reachable[0].z } : undefined;
 }
 
@@ -230,8 +239,8 @@ function countAttackingGoblins(s: Session): number {
     const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
     let count = 0;
     for (const n of npcs) {
-        if (!/^jail guard$/i.test(n.name) || n.hp === 0) continue;
-        if (targetsPlayer(s, n.targetIndex) || (n.inCombat && n.distance <= 3)) count++;
+        if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0) continue;
+        if (targetsPlayer(s, n.targetIndex) || (n.inCombat && n.distance <= 2)) count++;
     }
     return count;
 }
@@ -239,14 +248,15 @@ function countAttackingGoblins(s: Session): number {
 function findUntaggedGoblin(s: Session, taggedAt: ReadonlyMap<number, number>, now: number) {
     const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
     const candidates = npcs.filter(n => {
-        if (!/^jail guard$/i.test(n.name) || n.hp === 0 || n.distance > 12) return false;
-        if (n.x < 3118 || n.x > 3133 || n.z < 3246 || n.z > 3257) return false;
+        if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0 || n.distance > 9) return false;
+        if (n.x < 3107 || n.x > 3123 || n.z < 3235 || n.z > 3251) return false;
         if ((n as { reachable?: boolean }).reachable === false) return false;
-        if ((taggedAt.get(n.index) ?? -999) >= now - 40) return false;
+        if ((taggedAt.get(n.index) ?? -999) >= now - 50) return false;
         if (targetsPlayer(s, n.targetIndex)) return false;
         return n.targetIndex < 0;
     });
-    candidates.sort((a, b) => a.distance - b.distance);
+    // Prefer level 26 Jail guards (aggressive_melee, attackrate 5, 32 HP).
+    candidates.sort((a, b) => (b.combatLevel - a.combatLevel) || (a.distance - b.distance));
     return candidates[0];
 }
 
@@ -378,7 +388,7 @@ if (import.meta.main) {
             // Single toggle chooses Protect from Melee while letting PrayerGuard 1t-flick with 0 Prayer drain.
             await main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' });
         }
-        await walkWaypointsSafe(main, [[3123, 3253, 1]], isStopped);
+        await walkWaypointsSafe(main, [[3117, 3246, 1]], isStopped);
         const arriveTick = main.tick() - t0;
 
         let rolls = 0;
@@ -386,7 +396,6 @@ if (import.meta.main) {
         let knifeRolls = 0;
         let lastHitTick = -99;
         let lastTagTick = -99;
-        let lastPerturbTick = -99;
         let tagCount = 0;
         let actionDelayApprox = 0;
         let lastRollServerTick = -99;
@@ -526,21 +535,20 @@ if (import.meta.main) {
                 continue;
             }
 
-            // Track active mod-5 swing phases from the 2 courtyard Jail guards (attackrate=5) over the last 6 ticks.
+            // Track active mod-5 guard swing phases from the last 6 ticks (covers attackrate=5 even during busy2/knife3).
             while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 11) recentHitTicks.shift();
             const recentHitsIn6 = recentHitTicks.filter(h => now - h <= 6);
             const activeHitMod5 = new Set<number>(recentHitsIn6.map(h => ((h % 5) + 5) % 5));
             const nextMod1 = ((now + 1) % 5 + 5) % 5;
-            const nextMod2 = ((now + 2) % 5 + 5) % 5;
             const activeHitIn1t = activeHitMod5.has(nextMod1);
-            const activeHitIn2t = activeHitMod5.has(nextMod2);
 
             const canTag = !outOfPrayer
                 && wantOak
                 && !needNormalLog
-                && tagCount < 10
+                && tagCount < 8
                 && gobs < 2
-                && now - lastTagTick >= 4
+                && recentHitsIn6.length === 0
+                && now - lastTagTick >= 15
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1
                 && itemQty(main, OBJ_MIND_RUNE) > 0;
@@ -550,7 +558,7 @@ if (import.meta.main) {
                     lastTagTick = now;
                     tagCount++;
                     taggedAt.set(target.index, now);
-                    actionDelayApprox = now + 1;
+                    actionDelayApprox = now + 3;
                     const acts: Promise<unknown>[] = [
                         main.direct({ type: 'spellOnNpc', npcIndex: target.index, spellComponent: WIND_STRIKE, reason: 'SDK' }),
                     ];
@@ -563,43 +571,8 @@ if (import.meta.main) {
                 }
             }
 
-            if (
-                !outOfPrayer
-                && wantOak
-                && !needNormalLog
-                && gobs >= 2
-                && activeHitMod5.size < 2
-                && recentHitsIn6.length >= 2
-                && !activeHitIn1t
-                && !activeHitIn2t
-                && now - lastPerturbTick >= 20
-                && meNow
-            ) {
-                let adjTile: { x: number; z: number } | undefined;
-                for (let dx = -1; dx <= 1 && !adjTile; dx++) {
-                    for (let dz = -1; dz <= 1; dz++) {
-                        if (dx === 0 && dz === 0) continue;
-                        const nx = meNow.worldX + dx;
-                        const nz = meNow.worldZ + dz;
-                        if (!isBesideTree(nx, nz, tree.x, tree.z, treeSize)) continue;
-                        const path = main.sdk.findPath(nx, nz);
-                        if (path.success && path.reachedDestination === true && path.waypoints.length <= 2) {
-                            adjTile = { x: nx, z: nz };
-                            break;
-                        }
-                    }
-                }
-                if (adjTile) {
-                    lastPerturbTick = now;
-                    await main.direct({ type: 'walkTo', x: adjTile.x, z: adjTile.z, running: true, reason: 'SDK' });
-                    clearSentForTick = -99;
-                    await waitTicks(main, 1);
-                    continue;
-                }
-            }
-
-            // Hold flinch rhythm on predicted now+1 hits, or now+2 when 2 guards are staggered across distinct mod-5 slots.
-            const keepFlinchWindow = !outOfPrayer && wantOak && !needNormalLog && (activeHitIn1t || (activeHitMod5.size >= 2 && activeHitIn2t));
+            // Clear busy2 only when an active guard is scheduled to swing on now+1 (flinch rolls at now+2); else 3t knife (now+3).
+            const keepFlinchWindow = !outOfPrayer && wantOak && !needNormalLog && activeHitIn1t;
             if (!keepFlinchWindow) {
                 const knifeSlot = slotOfId(main, OBJ_KNIFE);
                 const logSlot = slotOfId(main, OBJ_LOGS);
