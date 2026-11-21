@@ -1,18 +1,91 @@
 // Bounded one-shot extraction worker for offline stranded fleet accounts (ship decks, ship holds, upper floors,
 // dungeons, Paterdomus Temple, and off-hub islands). Routes safely to a mainland ground-level bank and logs out.
 // Usage: bun scripts/recover-trapped.ts <account> [capTicks=900] [--target=x,z,level]
-import { existsSync, readFileSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readFileSync, readSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { finish, getWorld, openBot, sessionDied } from '../packages/core/src/bot';
+import { readLabels, type Labels } from '../packages/core/src/components';
 import type { Session } from '../packages/core/src/inprocess';
+import { pathfindingDataKey } from '../packages/core/src/pathcache';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { BOARD_PLANK_IDS, DISEMBARK_PLANK_IDS, disembark, pickDisembarkPlank, type BoatSession } from '../packages/core/src/boat';
-import { DECK_REACH, goTo, leaveDeck, type Walker } from '../packages/core/src/walk';
+import { DECK_REACH, goTo, leaveDeck, sessionWalker, walkPath, type Walker } from '../packages/core/src/walk';
 import { inPaterdomusTemple } from './generated/quest-priestperil';
 import { classifyLocation, hubTargetFor, isWildernessTile, type LocationClassification } from './fleet-health';
+import { FLUFFS_FENCE, inLumberYard } from './quest-sweep';
 import { leaveTutorial, onTutorialIsland, walkTarget, walkTargetPersist } from './walk-to';
 
 const root = resolve(import.meta.dir, '..');
+const HUB_BANK_TILES = [
+    { x: 3185, z: 3436, level: 0 },
+    { x: 2619, z: 3332, level: 0 },
+    { x: 3013, z: 3355, level: 0 },
+] as const;
+const LUMBER_YARD_CRATES = [
+    { x: 3305, z: 3500 },
+    { x: 3310, z: 3499 },
+    { x: 3307, z: 3507 },
+    { x: 3303, z: 3506 },
+    { x: 3298, z: 3514 },
+    { x: 3311, z: 3511 },
+] as const;
+
+function resolveMainRoot(fromDir: string): string {
+    try {
+        const list = Bun.spawnSync(['git', '-C', fromDir, 'worktree', 'list', '--porcelain'], { stdout: 'pipe', stderr: 'ignore', windowsHide: true }).stdout.toString();
+        const main = /^worktree (.+)$/m.exec(list)?.[1];
+        if (main && existsSync(join(main, '.practice'))) return resolve(main);
+    } catch { /* fall back to fromDir */ }
+    return fromDir;
+}
+
+function readCompatibleHeaderSource(file: string, currentKey: string): string | null {
+    let fd: number | undefined;
+    try {
+        fd = openSync(file, 'r');
+        const head = Buffer.alloc(4);
+        if (readSync(fd, head, 0, 4, 0) !== 4) return null;
+        const hl = head.readUInt32LE(0);
+        if (hl <= 0 || hl > 65_536) return null;
+        const headerBytes = Buffer.alloc(hl);
+        if (readSync(fd, headerBytes, 0, hl, 4) !== hl) return null;
+        const hdr = JSON.parse(headerBytes.toString('utf8')) as { source?: string };
+        if (typeof hdr?.source !== 'string') return null;
+        const cur = JSON.parse(currentKey) as { v?: number; wasm?: string; data?: string };
+        const stored = JSON.parse(hdr.source) as { v?: number; wasm?: string; data?: string };
+        if (cur.v === stored.v && cur.wasm === stored.wasm && cur.data === stored.data) return hdr.source;
+        return null;
+    } catch {
+        return null;
+    } finally {
+        if (fd !== undefined) closeSync(fd);
+    }
+}
+
+function loadCachedLabels(rootDir: string): Labels | undefined {
+    const file = join(rootDir, '.practice', 'cache', 'route-areas.bin');
+    if (!existsSync(file)) return undefined;
+    const key = pathfindingDataKey();
+    const direct = readLabels(file, key);
+    if (direct) return direct;
+    // Allow cached area labels across commits that share the same map data/wasm even if initializer hash shifted.
+    const fallbackSource = readCompatibleHeaderSource(file, key);
+    return fallbackSource ? (readLabels(file, fallbackSource) ?? undefined) : undefined;
+}
+
+/** Loads cached connected-area labels and mainland hub area IDs so recovery classifies off-hub locations identically to fleet-health. */
+export function loadRecoveryLocationContext(
+    rootDir = resolveMainRoot(root),
+): { labels?: Labels; hubAreas?: ReadonlySet<number> } {
+    const labels = loadCachedLabels(rootDir);
+    if (!labels) return {};
+    const hubAreas = new Set<number>();
+    for (const h of HUB_BANK_TILES) {
+        const id = labels.area(h.level, h.x, h.z);
+        if (id >= 0) hubAreas.add(id);
+    }
+    return { labels, hubAreas: hubAreas.size > 0 ? hubAreas : undefined };
+}
 
 function isHealthyHubLoc(classification: LocationClassification): boolean {
     return classification.kind === 'ok';
@@ -78,15 +151,86 @@ async function tryOpenBlockingExitDoor(s: Session, stop: () => boolean): Promise
     }
 }
 
+// Exit Varrock Lumber Yard via the broken north/south fence (`FLUFFS_FENCE` 2618 at 3305,3493) since general walkers lack it.
+async function exitLumberYard(s: Session, stop: () => boolean): Promise<void> {
+    const cur = () => {
+        const p = s.sdk.getState()?.player;
+        return p ? { worldX: p.worldX, worldZ: p.worldZ, level: p.level } : undefined;
+    };
+    const p0 = cur();
+    if (!p0 || p0.level !== 0 || !inLumberYard(p0)) return;
+
+    const approach = { x: FLUFFS_FENCE.x, z: FLUFFS_FENCE.z + 1, level: 0, tol: 1 };
+    const dist = () => {
+        const p = cur();
+        return p ? Math.max(Math.abs(p.worldX - approach.x), Math.abs(p.worldZ - approach.z)) : Infinity;
+    };
+    if (dist() > 1) {
+        if ((s as any).client) {
+            const pfm = await import('../vendor/rs-sdk/sdk/pathfinding');
+            const grid = await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+            pfm.initPathfinding();
+            const crateTiles = new Map<string, { x: number; z: number; prevMask: number }>();
+            const npcs = ((s.sdk.getState()?.nearbyNpcs ?? []) as Array<{ x: number; z: number; name?: string }>)
+                .filter(n => /^crate$/i.test(n.name ?? ''));
+            for (const c of [...LUMBER_YARD_CRATES, ...npcs]) {
+                const key = `${c.x},${c.z}`;
+                if (crateTiles.has(key)) continue;
+                pfm.isTileWalkable(0, c.x, c.z);
+                let prevMask = 0;
+                for (let bit = 0; bit < 32; bit++) if (grid.isFlagged(c.x, c.z, 0, 1 << bit)) prevMask |= 1 << bit;
+                crateTiles.set(key, { x: c.x, z: c.z, prevMask });
+                grid.__set(c.x, c.z, 0, prevMask | 2097152);
+            }
+            try {
+                const walker = await sessionWalker(s);
+                await walkPath(walker, [approach], { maxTicks: 60, stop });
+            } finally {
+                for (const { x, z, prevMask } of crateTiles.values()) grid.__set(x, z, 0, prevMask);
+            }
+        } else {
+            await s.bot.walkTo(approach.x, approach.z, 0);
+        }
+    }
+
+    for (let tries = 0; tries < 4 && !stop() && inLumberYard(cur()); tries++) {
+        const fence = ((s.sdk.getState()?.nearbyLocs ?? []) as any[]).find(
+            l => l.id === FLUFFS_FENCE.id || (l.x === FLUFFS_FENCE.x && l.z === FLUFFS_FENCE.z),
+        );
+        if (fence) {
+            const op = (fence.optionsWithIndex ?? []).find((o: any) => /climb|squeeze|cross/i.test(o.text ?? ''))
+                ?? fence.optionsWithIndex?.[0];
+            await s.bot.interactLoc(fence, op?.opIndex ?? 1);
+        } else if (typeof (s as any).direct === 'function') {
+            await s.direct({ type: 'interactLoc', x: FLUFFS_FENCE.x, z: FLUFFS_FENCE.z, locId: FLUFFS_FENCE.id, optionIndex: 1, reason: 'SDK' });
+        } else {
+            await waitTicks(s, 1);
+            continue;
+        }
+        await waitUntil(s, () => stop() || !inLumberYard(cur()), { timeoutTicks: 8 });
+    }
+}
+
 export async function recoverSessionToHub(
     s: Session,
-    options: { capTicks?: number; target?: { x: number; z: number; level: number }; stop?: () => boolean } = {},
+    options: {
+        capTicks?: number;
+        target?: { x: number; z: number; level: number };
+        stop?: () => boolean;
+        labels?: Labels;
+        hubAreas?: ReadonlySet<number>;
+        rootDir?: string;
+        walkToHub?: (s: Session, target: { x: number; z: number; level: number }) => Promise<{ ok: boolean; reason?: string; detail?: string }>;
+    } = {},
 ): Promise<{ ok: boolean; kind: string; detail: string; from: string; to: string }> {
     const cap = options.capTicks ?? 900;
     const t0 = s.tick();
     const p0 = s.sdk.getState()?.player;
     const from = p0 ? `${p0.worldX},${p0.worldZ},${p0.level}` : 'unknown';
     const stop = () => !!options.stop?.() || s.tick() - t0 >= cap || (!!p0 && sessionDied(p0, s.sdk.getState()?.player));
+    const classOpts = options.labels !== undefined || options.hubAreas !== undefined
+        ? { labels: options.labels, hubAreas: options.hubAreas }
+        : loadRecoveryLocationContext(options.rootDir);
 
     const cur = () => {
         const p = s.sdk.getState()?.player;
@@ -95,7 +239,7 @@ export async function recoverSessionToHub(
     const pos = cur();
     if (!pos) return { ok: false, kind: 'unknown', detail: 'no player state on login', from, to: from };
 
-    const initial = classifyLocation(pos);
+    const initial = classifyLocation(pos, classOpts);
     const target = options.target ?? initial.targetHub ?? hubTargetFor(pos);
     if (isWildernessTile(pos) || !initial.autoFixable) {
         return { ok: false, kind: initial.kind, detail: initial.summary, from, to: from };
@@ -113,7 +257,7 @@ export async function recoverSessionToHub(
     }
 
     const afterTut = cur();
-    if (afterTut?.level === 0 && classifyLocation(afterTut).kind === 'ship_hold') {
+    if (afterTut?.level === 0 && classifyLocation(afterTut, classOpts).kind === 'ship_hold') {
         await climbOutOfHold(s, stop);
     }
 
@@ -130,29 +274,39 @@ export async function recoverSessionToHub(
     if (afterFloor && inPaterdomusTemple(afterFloor.worldX, afterFloor.worldZ, afterFloor.level)) {
         await tryOpenBlockingExitDoor(s, stop);
     }
+    await exitLumberYard(s, stop);
 
     const beforeRoute = cur();
     if (!beforeRoute) return { ok: false, kind: initial.kind, detail: 'lost player state during recovery', from, to: from };
 
     // Only walk all the way to the hub bank when off-hub, on an upper floor, in a dungeon, or > 20 tiles from hub.
     const distToTarget = beforeRoute.level === target.level ? Math.max(Math.abs(beforeRoute.worldX - target.x), Math.abs(beforeRoute.worldZ - target.z)) : Infinity;
-    const curClass = classifyLocation(beforeRoute);
+    const curClass = classifyLocation(beforeRoute, classOpts);
     if (beforeRoute.level !== 0 || !isHealthyHubLoc(curClass) || distToTarget > 20) {
-        const res = await walkTargetPersist(s, target, 4, t => walkTarget(s, t, false, undefined, { noJewelry: true }));
-        if (!res.ok) {
-            const world = await getWorld();
-            const fallback = await goTo(s, world, target, { skills: {}, varps: {}, items: [] }, { legTimeoutTicks: 120, noJewelry: true });
-            if (!fallback.ok) {
+        if (options.walkToHub) {
+            const routed = await options.walkToHub(s, target);
+            if (!routed.ok) {
                 const end = cur();
                 const at = end ? `${end.worldX},${end.worldZ},${end.level}` : 'unknown';
-                return { ok: false, kind: initial.kind, detail: `route failed: ${fallback.reason ?? res.reason ?? ''} ${fallback.detail ?? res.detail ?? ''}`.trim(), from, to: at };
+                return { ok: false, kind: initial.kind, detail: `route failed: ${routed.reason ?? ''} ${routed.detail ?? ''}`.trim(), from, to: at };
+            }
+        } else {
+            const res = await walkTargetPersist(s, target, 4, t => walkTarget(s, t, false, undefined, { noJewelry: true }));
+            if (!res.ok) {
+                const world = await getWorld();
+                const fallback = await goTo(s, world, target, { skills: {}, varps: {}, items: [] }, { legTimeoutTicks: 120, noJewelry: true });
+                if (!fallback.ok) {
+                    const end = cur();
+                    const at = end ? `${end.worldX},${end.worldZ},${end.level}` : 'unknown';
+                    return { ok: false, kind: initial.kind, detail: `route failed: ${fallback.reason ?? res.reason ?? ''} ${fallback.detail ?? res.detail ?? ''}`.trim(), from, to: at };
+                }
             }
         }
     }
 
     const end = cur();
     const to = end ? `${end.worldX},${end.worldZ},${end.level}` : 'unknown';
-    const finalClass = end ? classifyLocation(end) : initial;
+    const finalClass = end ? classifyLocation(end, classOpts) : initial;
     const ok = !!end && end.level === 0 && isHealthyHubLoc(finalClass);
     return {
         ok,
