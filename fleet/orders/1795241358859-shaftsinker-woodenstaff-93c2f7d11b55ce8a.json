@@ -1,0 +1,23 @@
+{
+ "id": "1795241358859-shaftsinker-woodenstaff-93c2f7d11b55ce8a",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Shaftsinker",
+ "to": "Woodenstaff",
+ "item": "Air rune",
+ "count": 2480,
+ "start": 1795241358859,
+ "end": 1795243758859,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
