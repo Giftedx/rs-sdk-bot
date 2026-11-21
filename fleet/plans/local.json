@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795234851103,
+ "at": 1795234908608,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -269,6 +269,25 @@
    ]
   },
   {
+   "account": "Woodenstaff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=421 EXPECTED_OWNED=4 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=woodenstaff-kit2-557-4to425 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=woodenstaff-kit2-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 421 Earth rune, 294 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "role": "supply",
+   "template": "kit-buy:army-splash-magic-66",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Shaftmaker",
    "script": "scripts/chain.ts",
    "args": [
@@ -290,26 +309,42 @@
    ]
   },
   {
-   "account": "Woodenstaff",
+   "account": "Woodpecker",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=421 EXPECTED_OWNED=4 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=woodenstaff-kit2-557-4to425 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=294 EXPECTED_OWNED=6 LIMIT_PRICE=110 CASH_RESERVE=1060 ORDER_KEY=woodenstaff-kit2-555-6to300 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=10 EXPECTED_OWNED=6 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=woodpecker-kit19-536-6to16 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "ROUNDS": "1"
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"536\":16}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 421 Earth rune, 294 Water rune on the Grand Exchange to train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "goal": "buy 10 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
    "role": "supply",
-   "template": "kit-buy:army-splash-magic-66",
+   "template": "kit-buy:army-bury-dragon-99",
    "autopilot": "local",
    "resources": []
   },
   {
    "account": "TossTheCaber",
+   "script": "scripts/blood-chest.ts",
+   "args": [],
+   "env": {},
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "loot the Ardougne Castle blood rune chests for the gang squad",
+   "role": "thieving",
+   "template": "squad-blood-chest",
+   "autopilot": "local",
+   "resources": [
+    "squad:ardougne-blood-chest"
+   ]
+  },
+  {
+   "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
     "aubury",
@@ -317,15 +352,15 @@
    ],
    "env": {
     "ITEMS": "water rune",
-    "STOCK_TARGET": "1506",
+    "STOCK_TARGET": "1509",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
     "FLOAT": "12200",
     "COIN_RESERVE": "200",
     "MAX_SPEND": "12000",
-    "AUTOPILOT_ORDER": "[6]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1506}}"
+    "AUTOPILOT_ORDER": "[9]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1509}}"
    },
    "enabled": true,
    "standing": true,
@@ -340,21 +375,23 @@
   },
   {
    "account": "Unsheathed",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "repeat": false,
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic runes, nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "squad:ardougne-giants"
    ]
   },
   {
@@ -382,27 +419,6 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=105630 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit2-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1079\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Rune platelegs on the Grand Exchange to wear rune armour",
-   "role": "supply",
-   "template": "kit-buy:army-armour-rune",
-   "autopilot": "local",
-   "resources": [
-    "ge:armour"
    ]
   }
  ],
