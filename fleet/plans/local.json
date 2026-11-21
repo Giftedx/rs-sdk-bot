@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795238413184,
+ "at": 1795238437634,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -185,35 +185,6 @@
    "resources": [
     "squad:taverley-druids"
    ]
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=2434 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=275000 CASH_RESERVE=1000 ORDER_KEY=liveops-ppot-2434-1-v3 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=253 QUANTITY=5 EXPECTED_OWNED=0 LIMIT_PRICE=29500 CASH_RESERVE=1000 ORDER_KEY=liveops-tarromin-253-5-v3 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=249 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=25500 CASH_RESERVE=1000 ORDER_KEY=liveops-guam-249-1-v3 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=8000 CASH_RESERVE=1000 ORDER_KEY=liveops-dbones-536-1-v3 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=383 QUANTITY=20 EXPECTED_OWNED=0 LIMIT_PRICE=650 CASH_RESERVE=1000 ORDER_KEY=liveops-rawshark-383-20-v3 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/walk-to.ts",
-   "args": [
-    "3185",
-    "3436",
-    "0"
-   ],
-   "enabled": true,
-   "standing": true,
-   "repeat": false
   },
   {
    "account": "TossTheCaber",
