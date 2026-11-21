@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795229807065-sporrandip-shaftmaker-naturerune",
+ "role": "from",
+ "account": "SporranDip",
+ "partner": "Shaftmaker",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795230235907,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] 52e0453bf1f5587e9dc973d307d0c7e814515877 -> fleet-trade-claim/sporrandip (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}
