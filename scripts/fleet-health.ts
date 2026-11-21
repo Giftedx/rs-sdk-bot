@@ -15,6 +15,7 @@ import { jobAccounts, mergedPlan, readCoordinatorJobs } from '../packages/core/s
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { pathfindingDataKey } from '../packages/core/src/pathcache';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
+import { cachedReleaseFor } from '../packages/core/src/worker-release';
 import { SWARM_STOP, swarmWroteStop } from './swarm';
 import { failLoops, readRecentResults, type FailLoop, type ResultRow } from './fail-loops';
 import { inPaterdomusTemple } from './generated/quest-priestperil';
@@ -22,9 +23,23 @@ import { inPaterdomusTemple } from './generated/quest-priestperil';
 const require = createRequire(import.meta.url);
 
 export const HEALTH_STOP_PREFIX = 'fleet-health auto-paused:';
+export const RECOVER_SCRIPT = 'scripts/recover-trapped.ts';
 export const RESCUE_COOLDOWN_MS = 30 * 60_000;
 export const LOOP_WINDOW_MS = 2 * 3600_000;
 export const DEFAULT_MAX_RECOVERIES = 2;
+
+export function recoverEnvironment(
+    rootDir: string,
+    env: Record<string, string | undefined> = process.env,
+    release = cachedReleaseFor([RECOVER_SCRIPT], rootDir),
+): Record<string, string | undefined> {
+    return {
+        ...env,
+        DEMO_OK: env.DEMO_OK ?? '1',
+        WORKER_ENTRY: RECOVER_SCRIPT,
+        WORKER_RELEASE: release,
+    };
+}
 
 export type TilePos = { worldX: number; worldZ: number; level: number };
 export type LocationKind =
@@ -533,8 +548,8 @@ export async function remediateFleetHealth(
     const freeGB = opts.freeMemGB ?? (() => freemem() / 2 ** 30);
     const timeoutMs = opts.recoveryTimeoutMs ?? 180_000;
     const defaultRunRecovery = async (account: string, target?: { x: number; z: number; level: number }) => {
-        const argv = [process.execPath, join(audit.root, 'scripts', 'recover-trapped.ts'), account, '900', ...(target ? [`--target=${target.x},${target.z},${target.level}`] : [])];
-        const env = { ...process.env, DEMO_OK: process.env.DEMO_OK ?? '1' };
+        const argv = [process.execPath, join(audit.root, RECOVER_SCRIPT), account, '900', ...(target ? [`--target=${target.x},${target.z},${target.level}`] : [])];
+        const env = recoverEnvironment(audit.root);
         const proc = Bun.spawn(argv, { cwd: audit.root, env, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
         let timedOut = false;
         const timer = setTimeout(() => { timedOut = true; try { proc.kill(); } catch { /* already exited */ } }, timeoutMs);
@@ -605,6 +620,10 @@ export async function remediateFleetHealth(
         }
         recoveriesDone++;
         const res = await runner(item.account, item.location.targetHub);
+        if (!res.ok && /no worker progress: (?:release|active legacy)/i.test(res.detail)) {
+            actions.push({ account: item.account, action: 'skipped', detail: res.detail });
+            continue;
+        }
         state.attempts[key] = { at: now, ok: res.ok, kind: item.location.kind, detail: res.detail.slice(0, 200) };
         saveState(stateFile, state);
         if (res.ok) {
