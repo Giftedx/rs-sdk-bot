@@ -1397,6 +1397,8 @@ const ROUTE_CASES: BenchCase[] = [
     cloneTribridSquad(`extra:clone-bis-clones-${n}-x1`, 'tribrid-bis-zerk-glory-tele', n, ['TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4'])),
   ...([4, 6, 8, 10, 12, 16] as const).map(n =>
     cloneTribridThreatCase(`extra:clone-bis-team5-${n}-x1`, 'tribrid-bis-zerk-glory-tele', n, 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5)),
+  ...([4, 8, 10, 12] as const).map(n =>
+    cloneTribridThreatCase(`extra:clone-bis-karam2-team5-${n}-x1`, 'tribrid-bis-zerk-tele-karam2', n, 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5)),
   // The same against each mode of the clones: every clone walks out with its food gone (retreat), none does (stand),
   // the fewest sharks of the record's range (lean), the most (full).
   ...([4, 5] as const).flatMap(n => (['retreat', 'stand', 'lean', 'full'] as const).map(mode => cloneSquad(`extra:clone-squad-${n}-chainbind-${mode}-x1`, 'live-walker-iron-rune-chain-bind', n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1'], mode))),

@@ -1590,6 +1590,83 @@ test('settleBenchLogout clears Wilderness combat timer and casts escape teleport
     }
 });
 
+test('settleBenchLogout walks non-teleporting clones all the way out of Wilderness and clears 17-tick hurt lock', async () => {
+    const { settleBenchLogout } = require('./pk-squad');
+    let ticks = 20, x = 3069, z = 3549;
+    const walked: string[] = [];
+    const cloneBot: any = {
+        tick: () => ticks,
+        sdk: {
+            getState: () => ({
+                inGame: true,
+                autoRetaliateEnabled: false,
+                player: { worldX: x, worldZ: z, isDead: false },
+                skills: [{ name: 'Magic', level: 1 }],
+                inventory: [],
+                equipment: [],
+                combatEvents: [{ type: 'damage_taken', tick: 20 }],
+            }),
+            getEquipment: () => [],
+            sendWalk: async (wx: number, wz: number) => { walked.push(`${wx},${wz}`); },
+        },
+    };
+    const spy = spyOn(pk, 'nextTick').mockImplementation(async () => {
+        ticks++;
+        if (z > 3519) z = Math.max(3519, z - 2);
+        return true;
+    });
+    try {
+        await settleBenchLogout([cloneBot]);
+        expect(walked[0]).toBe('3069,3519');
+        expect(z).toBe(3519);
+        expect(ticks - 20).toBe(17); // exited Wild 4 AND waited out 17-tick logout lock
+    } finally {
+        spy.mockRestore();
+    }
+});
+
+test('safeGloryEdgeville teleports from Camelot back to Edgeville using >=2-charge Glory while keeping last emergency charge', async () => {
+    const { safeGloryEdgeville } = require('./pk-squad');
+    let x = 2755, z = 3478, dlg = false, ticks = 0;
+    const actions: string[] = [];
+    const inv: any[] = [{ id: 1712, slot: 0, optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] }];
+    const mkSess = () => ({
+        name: 'CamBot',
+        tick: () => ticks,
+        sdk: {
+            getState: () => ({
+                player: { worldX: x, worldZ: z, hp: 99, maxHp: 99 },
+                inventory: inv,
+                equipment: [],
+                dialog: dlg ? { isOpen: true, isWaiting: false, pageId: 'g1', options: [{ index: 1, text: 'Edgeville.', componentId: 2494 }] } : { isOpen: false },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => [],
+            sendUseItem: async (slot: number, op: number) => { actions.push(`rub:${slot}:${op}`); dlg = true; },
+            clickDialogByText: async () => { x = 3087; z = 3496; dlg = false; return { success: true }; },
+        },
+    });
+    const spy = spyOn(pk, 'nextTick').mockImplementation(async () => { ticks++; return true; });
+    try {
+        expect(await safeGloryEdgeville(mkSess() as any, { x: 3092, z: 3496 })).toBe(true);
+        expect(x).toBe(3087);
+        // Single Glory(1) in hand stays reserved for emergency Wildy escape.
+        inv[0].id = 1706;
+        x = 2755; z = 3478;
+        expect(await safeGloryEdgeville(mkSess() as any, { x: 3092, z: 3496 })).toBe(false);
+    } finally {
+        spy.mockRestore();
+    }
+});
+
+test('scaled karam2 team5 bench cases exist alongside pure shark team5 cases', () => {
+    const keys = benchCases().map(c => c.key);
+    for (const n of [4, 8, 10, 12]) {
+        expect(keys).toContain(`extra:clone-bis-team5-${n}-x1`);
+        expect(keys).toContain(`extra:clone-bis-karam2-team5-${n}-x1`);
+    }
+});
+
 test('rescue eats + unequips Glory on the same tick and clicks Edgeville immediately above 68 HP without stalling on open modal', async () => {
     const actions: string[] = [];
     let z = 3600, hp = 75, ticks = 0, worn = true, dlgOpen = false;

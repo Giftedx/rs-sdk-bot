@@ -32,7 +32,7 @@ import { killReceiptProof } from '../packages/core/src/kill-receipt';
 import { RETALIATE_OFF } from '../packages/core/src/combat-end';
 import { bindActionScope } from '../packages/core/src/action-scope';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, bestFood, carriedPoison, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, getObjNames, ITEMS, isMulti, nextTick, observePlayer, ownSkull, poisonSplat, PRAYER, recordKillLoot, rewearStart, STUNNED_SHOVE_SPOTANIM, wildernessLevel, weaponStyle, type FightOptions } from './pk';
+import { attackable, bestFood, carriedPoison, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, getObjNames, ITEMS, isMulti, newVolley, nextTick, observePlayer, ownSkull, poisonSplat, PRAYER, recordKillLoot, rewearStart, STUNNED_SHOVE_SPOTANIM, wildernessLevel, weaponStyle, type FightOptions, type VolleyState } from './pk';
 import { bankTrip, MIN_TRIP_ARROWS, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { settleKillFeed } from './pk-kill-feed';
 import { EDGEVILLE_BANK, eatUp, FOOD_START_FLOOR, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
@@ -407,29 +407,132 @@ export async function disableAutoRetaliate(s: Session): Promise<void> {
     }
 }
 
+async function clickEdgevilleOption(s: Session): Promise<boolean> {
+    const dlg = s.sdk.getState()?.dialog as { isOpen?: boolean; isWaiting?: boolean; pageId?: string; options?: { text: string; index?: number; componentId?: number }[] } | undefined;
+    if (!dlg?.isOpen || dlg.isWaiting) return false;
+    const edgeOpt = Array.isArray(dlg.options) ? dlg.options.find(op => /^Edgeville/i.test(op.text)) : undefined;
+    if (Array.isArray(dlg.options) && !edgeOpt) return false;
+    if (typeof s.direct === 'function' && edgeOpt?.index !== undefined && edgeOpt.componentId !== undefined && dlg.pageId) {
+        const res = await s.direct({
+            type: 'clickDialogOption',
+            optionIndex: edgeOpt.index,
+            guard: { pageId: dlg.pageId, componentId: edgeOpt.componentId },
+            reason: 'SDK',
+        }) as { success?: boolean } | undefined;
+        return res?.success !== false;
+    }
+    if (typeof s.sdk.clickDialogByText !== 'function') return false;
+    const res = await s.sdk.clickDialogByText(/^Edgeville/i) as { success?: boolean } | undefined;
+    return res?.success !== false;
+}
+
+/** Teleports a safe-zone (Wilderness 0) member back to Edgeville when stranded far from Edgeville bank (e.g. post-Camelot) while preserving >=1 emergency charge. */
+export async function safeGloryEdgeville(
+    s: Session,
+    targetBank: { x: number; z: number },
+    stop: () => boolean = () => false,
+    log: (line: string) => void = () => {},
+): Promise<boolean> {
+    const me = () => s.sdk.getState()?.player;
+    const p0 = me();
+    if (!p0 || wildernessLevel(p0.worldZ) > 0 || targetBank.x !== EDGEVILLE_BANK.x) return false;
+    if (Math.max(Math.abs(p0.worldX - targetBank.x), Math.abs(p0.worldZ - targetBank.z)) <= 80) return false;
+    const inv0 = s.sdk.getInventory?.() ?? [];
+    const eq0 = (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : s.sdk.getState()?.equipment) ?? [];
+    const allGloryCount = [...inv0, ...eq0].filter(i => (ITEMS.glory as readonly number[]).includes(i.id)).length;
+    // Keep at least 1 emergency Wilderness-30 charge in hand unless multiple Glories are carried.
+    const usable = allGloryCount > 1 ? ITEMS.glory : ITEMS.glory.slice(0, 3);
+    const invGlory = inv0.find(i => (usable as readonly number[]).includes(i.id));
+    const wornGlory = eq0.find(e => (usable as readonly number[]).includes(e.id));
+    if (!invGlory && !wornGlory) return false;
+    if (!invGlory && wornGlory && inv0.length >= 28) {
+        const food = bestFood(inv0), eatOp = food?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
+        if (!food || !eatOp) return false;
+        await s.sdk.sendUseItem(food.slot, eatOp.opIndex);
+        if (!await nextTick(s)) return false;
+    }
+    if (stop()) return false;
+    const eqNow = (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : s.sdk.getState()?.equipment) ?? [];
+    let rubItem = (s.sdk.getInventory?.() ?? []).find(i => (usable as readonly number[]).includes(i.id));
+    if (!rubItem) {
+        const neck = eqNow.find(e => (usable as readonly number[]).includes(e.id));
+        if (!neck || (s.sdk.getInventory?.() ?? []).length >= 28) return false;
+        if (typeof s.sdk.sendUseEquipmentItem === 'function') await s.sdk.sendUseEquipmentItem(neck.slot, 1);
+        else return false;
+        if (!await nextTick(s) || stop()) return false;
+        rubItem = (s.sdk.getInventory?.() ?? []).find(i => (usable as readonly number[]).includes(i.id));
+    }
+    const rubOp = rubItem?.optionsWithIndex?.find(x => /^Rub$/i.test(x.text));
+    if (!rubItem || !rubOp) return false;
+    log('safe-zone Glory shortcut to Edgeville');
+    await s.sdk.sendUseItem(rubItem.slot, rubOp.opIndex);
+    for (let t = 0; t < 3 && !stop(); t++) {
+        if (await clickEdgevilleOption(s)) {
+            for (let w = 0; w < 5 && !stop(); w++) {
+                if (!await nextTick(s)) return false;
+                const cur = me();
+                if (cur && Math.max(Math.abs(cur.worldX - targetBank.x), Math.abs(cur.worldZ - targetBank.z)) <= 80) return true;
+            }
+            return true;
+        }
+        if (!await nextTick(s)) break;
+    }
+    return false;
+}
+
+const lastDamageTakenTick = (events: readonly { type?: string; tick?: number }[] | undefined): number => {
+    let maxTick = -1;
+    for (const e of events ?? []) {
+        if (e.type === 'damage_taken' && typeof e.tick === 'number' && e.tick > maxTick) maxTick = e.tick;
+    }
+    return maxTick;
+};
+
 // Clears residual Wilderness combat/Scorpion auto-retaliate and 16-tick logout lock on bench sessions after metrics settle.
 export async function settleBenchLogout(sessions: readonly Session[]): Promise<void> {
     const active = sessions.filter(s => {
         const st = s.sdk?.getState?.();
-        return !!st?.inGame && !!st.player && !st.player.isDead && wildernessLevel(st.player.worldZ) > 0;
+        if (!st?.inGame || !st.player || st.player.isDead) return false;
+        if (wildernessLevel(st.player.worldZ) > 0) return true;
+        const hurt = lastDamageTakenTick(st.combatEvents);
+        return hurt >= 0 && s.tick() - hurt < 17;
     });
     if (!active.length) return;
     await Promise.all(active.map(async s => {
         await disableAutoRetaliate(s);
-        const st = s.sdk?.getState?.();
-        const p = st?.player;
-        if (!p || wildernessLevel(p.worldZ) === 0) return;
-        const wornIds = (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : st?.equipment ?? []).map(e => e.id);
-        const magic = st?.skills?.find(k => k.name === 'Magic')?.level ?? 1;
-        const spell = squadEscapeSpell(p.worldZ, st?.inventory ?? [], wornIds, magic);
-        if (spell !== null && typeof s.direct === 'function') {
-            await s.direct({ type: 'clickComponent', componentId: spell, reason: 'bench settle' });
-        } else if (typeof s.sdk.sendWalk === 'function') {
-            void s.sdk.sendWalk(p.worldX, Math.max(3519, p.worldZ - 6), true);
-        }
-        for (let t = 0; t < 18; t++) {
-            const cur = s.sdk?.getState?.()?.player;
-            if (!cur || cur.isDead || wildernessLevel(cur.worldZ) === 0) break;
+        let castAt = -10, walkedAt = -10, lastZ: number | undefined, stalled = 0;
+        const settled = (st: ReturnType<Session['sdk']['getState']>) => {
+            const p = st?.player;
+            if (!p || p.isDead) return true;
+            if (wildernessLevel(p.worldZ) > 0) return false;
+            const hurt = lastDamageTakenTick(st.combatEvents);
+            return hurt < 0 || s.tick() - hurt >= 17;
+        };
+        for (let t = 0; t < 64; t++) {
+            const st = s.sdk?.getState?.();
+            if (settled(st)) break;
+            const p = st!.player!;
+            if (wildernessLevel(p.worldZ) > 0) {
+                const wornIds = (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : st?.equipment ?? []).map(e => e.id);
+                const magic = st?.skills?.find(k => k.name === 'Magic')?.level ?? 1;
+                const spell = squadEscapeSpell(p.worldZ, st?.inventory ?? [], wornIds, magic);
+                if (spell !== null && typeof s.direct === 'function') {
+                    if (t - castAt >= 6) {
+                        castAt = t;
+                        await s.direct({ type: 'clickComponent', componentId: spell, reason: 'bench settle' });
+                    }
+                } else if (typeof s.sdk.sendWalk === 'function') {
+                    stalled = lastZ === p.worldZ ? stalled + 1 : 0;
+                    lastZ = p.worldZ;
+                    if (t === 0 || stalled >= 3 || t - walkedAt >= 8) {
+                        walkedAt = t;
+                        const walkX = stalled >= 3 ? p.worldX + Math.sign(3085 - p.worldX) * 3 : p.worldX;
+                        stalled = 0;
+                        void s.sdk.sendWalk(walkX, 3519, true);
+                    }
+                }
+            }
+            if (settled(s.sdk?.getState?.())) break;
             if (!await nextTick(s)) break;
         }
     }));
@@ -468,24 +571,7 @@ export async function rescue(
             if (typeof s.direct === 'function') await s.direct({ type: 'useInventoryItem', slot, optionIndex: opIndex, reason: 'SDK' });
             else if (typeof s.sdk.sendUseItem === 'function') await s.sdk.sendUseItem(slot, opIndex);
         };
-        const clickEdgeville = async () => {
-            const dlg = s.sdk.getState()?.dialog as { isOpen?: boolean; isWaiting?: boolean; pageId?: string; options?: { text: string; index?: number; componentId?: number }[] } | undefined;
-            if (!dlg?.isOpen || dlg.isWaiting) return false;
-            const edgeOpt = Array.isArray(dlg.options) ? dlg.options.find(op => /^Edgeville/i.test(op.text)) : undefined;
-            if (Array.isArray(dlg.options) && !edgeOpt) return false;
-            if (typeof s.direct === 'function' && edgeOpt?.index !== undefined && edgeOpt.componentId !== undefined && dlg.pageId) {
-                const res = await s.direct({
-                    type: 'clickDialogOption',
-                    optionIndex: edgeOpt.index,
-                    guard: { pageId: dlg.pageId, componentId: edgeOpt.componentId },
-                    reason: 'SDK',
-                }) as { success?: boolean } | undefined;
-                return res?.success !== false;
-            }
-            if (typeof s.sdk.clickDialogByText !== 'function') return false;
-            const res = await s.sdk.clickDialogByText(/^Edgeville/i) as { success?: boolean } | undefined;
-            return res?.success !== false;
-        };
+        const clickEdgeville = () => clickEdgevilleOption(s);
         const st = s.sdk.getState(), magic = st?.skills?.find(k => k.name === 'Magic')?.level ?? 1;
         const wornIds = ((typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : st?.equipment) ?? []).map(e => e.id);
         const escapeSpell = st ? squadEscapeSpell(start.worldZ, st.inventory ?? [], wornIds, magic) : null;
@@ -1106,6 +1192,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     stunShareFor?: (target: string) => FightOptions['stunShare'];
     // The freeze of each target is shared by the squad: the members stagger their casts (SQUAD_FREEZE_SHARE=1; pk.ts freezeShare).
     freezeShareFor?: (target: string) => FightOptions['freezeShare']; burstOnHold?: boolean; burstOnStun?: boolean; stunSpec?: FightOptions['stunSpec'];
+    volley?: FightOptions['volley']; onClearTarget?: (target: string) => void;
     focus?: ReturnType<typeof createSquadFocus>;
     cohesion?: ReturnType<typeof createSquadCohesion>;
     useRally?: boolean; onRallyReady?: (name: string) => void; waitForRally?: (s: Session, stopped: () => boolean) => Promise<void>;
@@ -1167,6 +1254,14 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         try {
             return await locs.withLocs(async () => {
                 const targetAim = { ...(o.aim ?? o.post) };
+                const targetBank = bankNear(targetAim.x);
+                if (!fresh) {
+                    // Re-equip any stripped starting armour in safe zone before bankTrip counts free food slots (`27 - inv.length`).
+                    await rewearStart(a, wornAtStart.map(w => w.id), l => o.log(`[${a.name}] ${l}`));
+                    if (process.env.SQUAD_SAFE_GLORY === '1') {
+                        await safeGloryEdgeville(a, targetBank, () => !going(), l => o.log(`[${a.name}] SQUAD ${l}`));
+                    }
+                }
                 const eqNow = typeof a.sdk.getEquipment === 'function' ? a.sdk.getEquipment() : a.sdk.getState()?.equipment ?? [];
                 const invNow = a.sdk.getInventory();
                 const needsReplacementGlory = !fresh && startWornGlory
@@ -1175,7 +1270,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 const tripPack = needsReplacementGlory
                     ? { ...pack, items: [...pack.items, { id: ITEMS.glory[0], count: 1, minCharges: 1, maxSlots: 1 }] }
                     : pack;
-                const bankRun = bankTrip(bankNear(targetAim.x), targetAim, tripPack, kit, () => !going(), bankEaten, {
+                const bankRun = bankTrip(targetBank, targetAim, tripPack, kit, () => !going(), bankEaten, {
                     altar: process.env.SQUAD_TRIP_ALTAR === '1',
                     prayerFloor: Number(process.env.SQUAD_TRIP_PRAYER_FLOOR ?? '0.7'),
                     minFood: squadStartFood(0, pack.food).floor,
@@ -1183,6 +1278,9 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     log: l => o.log(`[${s.name}] SQUAD ${l}`),
                     route: from => marchLegs(from, targetAim),
                     beforeReturn: async isFresh => {
+                        if (!isFresh) {
+                            await rewearStart(a, wornAtStart.map(w => w.id), l => o.log(`[${a.name}] ${l}`));
+                        }
                         if (!isFresh && startWornGlory && !(typeof a.sdk.getEquipment === 'function' ? a.sdk.getEquipment() : a.sdk.getState()?.equipment ?? []).some(e => (ITEMS.glory as readonly number[]).includes(e.id))) {
                             const invGlory = a.sdk.getInventory().find(i => (ITEMS.glory as readonly number[]).includes(i.id));
                             const wearOp = invGlory?.optionsWithIndex?.find(x => /^(Wield|Wear)$/i.test(x.text));
@@ -1571,6 +1669,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 ...(o.burstOnHold !== undefined ? { burstOnHold: o.burstOnHold } : {}),
                 ...(o.burstOnStun !== undefined ? { burstOnStun: o.burstOnStun } : {}),
                 ...(o.stunSpec ? { stunSpec: o.stunSpec } : {}),
+                ...(o.volley ? { volley: o.volley } : {}),
                 allies: o.allies, cap: Math.max(1, o.deadline - s.tick()), stop: () => !going() || refusedAt > began || radarMove() || fallbackDue() || focusYield(),
                 log: l => {
                     if (/^PK freeze cast\b/.test(l)) { lastFreezeCastTick = s.tick(); freezePending = true; }
@@ -1586,7 +1685,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             if (going() && r.outcome !== 'session ended' && !urgentEscape) await rewearStart(s, wornAtStart.map(w => w.id), l => o.log(`[${s.name}] ${l}`));
             if (refusedAt > began) skip.set(target.name.toLowerCase(), s.tick() + 8);
             const gone = !(s.sdk.getState()?.nearbyPlayers ?? []).some(q => q.name.toLowerCase() === target.name.toLowerCase());
-            if (r.outcome === 'kill' || gone) o.focus?.clear(target.name);
+            if (r.outcome === 'kill' || gone) { o.focus?.clear(target.name); o.onClearTarget?.(target.name); }
             if (r.outcome === 'kill') { stats.kills++; killTicks += r.ticks ?? 0; if (interlopers.has(target.name.toLowerCase())) stats.interlopers = (stats.interlopers ?? 0) + 1; }
             if (r.receipt) stats.receipts.push(r.receipt);
             const activeInterlopers = o.threats?.act ? o.threats.step(s.tick()).interlopers.length : 0;
@@ -1927,6 +2026,16 @@ if (import.meta.main) {
     const sharedCohesion = createSquadCohesion();
     const useFreezeShare = get('SQUAD_FREEZE_SHARE', ours.length >= 2 ? '1' : '0') === '1';
     const useBurstHold = get('SQUAD_BURST_HOLD', '0') === '1';
+    const volleys = new Map<string, VolleyState>();
+    const useVolley = get('SQUAD_VOLLEY', '0') === '1';
+    const volleyMembers = Math.min(ours.length, Math.max(2, Number(get('SQUAD_VOLLEY_MEMBERS', '2'))));
+    const volleyWindow = Math.max(1, Number(get('SQUAD_VOLLEY_WINDOW', '2')));
+    const squadVolley: FightOptions['volley'] = useVolley ? {
+        state: (t: string) => volleys.get(t) ?? (volleys.set(t, newVolley()), volleys.get(t)!),
+        members: volleyMembers,
+        window: volleyWindow,
+        clock: () => squad[0]!.tick(),
+    } : undefined;
     const waitForRally = async (member: Session, holdStopped: () => boolean) => {
         if (rallyWaitStart < 0) rallyWaitStart = member.tick();
         while (!tryReleaseRally(member.tick()) && !holdStopped() && !stopped() && !dropped.has(member.name)) {
@@ -1948,6 +2057,7 @@ if (import.meta.main) {
             options: { ...baseOpts, ...squadKitFightDefaults(stNow?.equipment ?? [], stNow?.inventory ?? [], baseOpts, undefined, explicitRotation), ...fightOverrides, ...(tankList.length ? { rotation: [tankList.includes(squad.indexOf(s)) ? 'melee' as const : 'ranged' as const] } : {}) },
             ...(useFreezeShare ? { freezeShareFor, burstOnHold: useBurstHold } : {}),
             ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
+            ...(squadVolley ? { volley: squadVolley, onClearTarget: (t: string) => { volleys.delete(t.toLowerCase()); } } : {}),
             allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup, pull: get('PULL', '1') === '1', tripping, aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), run: runDeaths,
             locs: squadLocs.get(s),
             onDeath: near => { recordPvpDeath({ account: s.name, server: squadServer, at: Date.now(), script: 'scripts/pk-squad.ts', near }); }, deadline,

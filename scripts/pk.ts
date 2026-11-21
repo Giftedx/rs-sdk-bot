@@ -131,6 +131,8 @@ export type FightOptions = {
     // before: the roll then goes against a bare 99 Defence, about 83% to hit where full rune gives about 27%. Both
     // arrows land on one tick from 3 tiles or less.
     bowBurst?: number;
+    // 'keep' retains torso/legs armour and Steel Skin during bowBurst (safer in multi-way); default ('strip') drops them per pvp_magic_shortbow.rs2:39.
+    bowBurstArmour?: 'strip' | 'keep';
     // Prayer flick: prayer points drain on a 5-tick timer that starts when the first prayer goes on and is cleared when
     // none is on (skill_prayer/scripts/prayer.rs2:30-43). Every 4 ticks, on a cooldown tick, the loop turns every
     // active prayer off and on again in one tick, so the timer never fires and the prayers cost no points. One tick
@@ -999,6 +1001,87 @@ export function kitRotation(asked: readonly Style[] | undefined, kit: Kit): read
 export type VolleyState = { ready: Set<string>; first: number; fired: boolean; done: Set<string> };
 export const newVolley = (): VolleyState => ({ ready: new Set(), first: -1, fired: false, done: new Set() });
 
+export type SpecPlanInput = {
+    dying: boolean;
+    canReachMelee: boolean;
+    fled: boolean;
+    running: boolean;
+    castFreezePending: boolean;
+    kiteTarget: boolean;
+    at: { x: number; z: number };
+    target: NearbyPlayer;
+    guarded: ReadonlySet<Style>;
+    seen: Observed | null;
+    energy: number;
+    lastSpecStyle: Style | null;
+    targetStunned: boolean;
+    stunOpenForChain: boolean;
+    spec?: SpecConfig;
+    stunSpec?: SpecConfig;
+    burstBow?: SpecConfig;
+    bursting: boolean;
+    bowBurstArmour?: 'strip' | 'keep';
+    bowSpecFallback?: SpecConfig;
+    fledSpec?: boolean;
+    specReserve?: number;
+    burstOnHold?: boolean;
+    burstOnStun?: boolean;
+    freezeShareHeld?: boolean;
+    stunShare?: { until: number; overlap?: number; clock: () => number };
+    hasWeaponAndShield: boolean;
+    invLength: number;
+    nearbyPlayers: readonly NearbyPlayer[];
+    allies?: readonly string[];
+    names?: Map<number, string>;
+};
+
+/** Evaluates active special selection, burst armour-strip eligibility, prayer/range gates, and melee prayer likelihood once per tick. */
+export function evaluateSpecPlan(i: SpecPlanInput) {
+    const names = i.names ?? getObjNames();
+    const stunOverlap = i.stunShare?.overlap ?? 1;
+    const canSecondaryStun = !i.dying && !!i.stunSpec && i.canReachMelee && !i.bursting
+        && i.energy >= i.stunSpec.cost && i.stunOpenForChain
+        && (i.fled || lowHealth(i.seen, i.stunSpec.below) || !!i.stunShare);
+    const meleeSpecReady = !!i.spec && i.spec.style !== 'ranged' && i.energy >= i.spec.cost && i.canReachMelee;
+    const spec: SpecConfig | undefined = canSecondaryStun ? i.stunSpec
+        : i.bursting ? (i.lastSpecStyle === 'ranged' && meleeSpecReady ? i.spec : i.burstBow)
+        : i.spec && i.fled && i.spec.style !== 'ranged' && !i.canReachMelee ? i.bowSpecFallback ?? i.spec : i.spec;
+    const specStyle: Style = spec?.style ?? 'melee';
+    const stripBurstArmour = i.bursting && spec === i.burstBow && i.bowBurstArmour !== 'keep';
+    const specRange = specStyle === 'ranged' && spec ? weaponRange(spec.kit[0]!, names) ?? BOW_RANGE : BOW_RANGE;
+    const gap = cheb(i.at, i.target);
+    const specWaits = i.running && ((i.castFreezePending && !(spec?.stun && adjacent(i.at, i.target))) || (specStyle === 'ranged' && gap > specRange));
+    const stunWaits = !!spec?.stun && !!i.stunShare && i.stunShare.clock() < i.stunShare.until - stunOverlap;
+    const chainStun = !!spec?.stun && !!i.stunShare && i.stunShare.until >= 0 && i.stunOpenForChain;
+    const freezeHeld = !!i.burstOnHold && !!i.freezeShareHeld;
+    const burstStun = !!i.burstOnStun && !spec?.stun && i.targetStunned;
+    const specNeedsRoom = !!spec?.kit.some(id => isDragonSpearName(names.get(id) ?? '')) && i.hasWeaponAndShield && i.invLength >= 28;
+    const axeHitsAlly = thrownAxeHitsAlly(spec, i.nearbyPlayers, i.allies, names);
+    const baseReady = !!spec && !i.dying && !axeHitsAlly && !specNeedsRoom && !i.kiteTarget && !specWaits && !stunWaits && i.energy >= spec.cost && (specStyle !== 'melee' || i.canReachMelee);
+    const prayerAllowed = !!spec && (!!spec.stun || !i.guarded.has(specStyle) || lowHealth(i.seen, 0.25));
+    const threatPass = !!spec && ((i.fled && i.fledSpec !== false) || i.bursting || freezeHeld || burstStun || chainStun || lowHealth(i.seen, spec.below));
+    const reservePass = !!spec && (i.fled || i.bursting || freezeHeld || burstStun || chainStun || lowHealth(i.seen, 0.3) || i.energy - spec.cost >= (i.specReserve ?? 0));
+    const inRange = gap <= (specStyle === 'melee' ? 1 : specRange);
+    const triggerNoVolley = baseReady && prayerAllowed && threatPass && reservePass;
+    return {
+        spec,
+        specStyle,
+        specRange,
+        specWaits,
+        stunWaits,
+        chainStun,
+        freezeHeld,
+        burstStun,
+        specNeedsRoom,
+        axeHitsAlly,
+        stripBurstArmour,
+        inRange,
+        volleyJoinEligible: baseReady && prayerAllowed && inRange,
+        triggerNoVolley,
+        specMeleeLikely: triggerNoVolley && specStyle === 'melee',
+    };
+}
+
 // The entry script of this process, for the owner field of a kill receipt.
 const KILL_SCRIPT = process.argv[1] ? relative(resolve(import.meta.dir, '..'), process.argv[1]).split(sep).join('/') : null;
 export async function fightPlayer(s: Session, targetName: string, o: FightOptions): Promise<FightResult> {
@@ -1103,8 +1186,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const hostile = o.escapeOutnumbered != null || o.crowdPrayer
             ? state.nearbyPlayers.filter(p => p.distance <= 10 && !allyIdx.has(p.index) && !o.allies?.includes(p.name.toLowerCase())).map(p => ({ p, f: faceOf(p.index) - 32768 })).filter(x => x.f >= 0)
             : [];
-        // Those that face us count for the escape; those that face us or an ally set the crowd's prayer.
-        const facing = hostile.filter(x => !visibleIdx.has(x.f)).length;
+        // Those that face us directly (`!visibleIdx.has(x.f)`) count for self crowd/escape checks instead of drowning in ally attackers.
+        const directFacers = hostile.filter(x => !visibleIdx.has(x.f)).map(x => x.p);
+        const facing = directFacers.length;
         const facers = hostile.filter(x => !visibleIdx.has(x.f) || allyIdx.has(x.f)).map(x => x.p);
         const sources = Math.max(new Set(hits.filter(h => now - h.tick <= 8 && h.src >= 0).map(h => h.src)).size, hits.some(h => now - h.tick <= 8) ? facing : 0);
         if (o.escapeOutnumbered != null && !outnumbered && isMulti(at.x, at.z) && sources - alliesNear >= o.escapeOutnumbered) {
@@ -1414,7 +1498,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // PK_TRACE=1: one line for each tick of what the loop reads, to find where two runs with one seed part.
         if (process.env.PK_TRACE === '1') log(`PKT ${result.ticks} hp=${me.hp} run=${me.runEnergy ?? '?'} at=${at.x},${at.z} t=${target.x},${target.z} th=${seen?.health}/${seen?.totalHealth} hi=${seen?.headicons} w=${seen?.worn.join('.')} pp=${state.prayers.prayerPoints} na=${nextAttack - start} hits=${hits.map(h => h.damage).join('.')} dealt=${result.dealt} ev=${state.combatEvents.length} inv=${inv.length}`);
         const prayerBase = state.skills.find(k => k.name === 'Prayer')?.baseLevel ?? 99;
-        const lastHit = [...hits].reverse().find(h => now - h.tick <= 10);
+        const lastHit = [...hits].reverse().find(h => now - h.tick <= 5);
         const hitter = !o.facedPrayer && lastHit && lastHit.src !== target.index ? observePlayer(s.client, lastHit.src) : null;
         if (seen) {
             const shown = weaponStyle(seen.worn[3]);
@@ -1429,16 +1513,19 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const left = [...predictor.seen()].filter(st => st !== shownGuard);
         const countered = o.counterRead && shownGuard && predictor.seen().size === 2 && left.length === 1 ? left[0]! : null;
         const predicted = o.predictPrayer && !hitter && (!o.snapPrayer || now >= oppDue - (o.snapLead ?? 1)) ? countered ?? predictor.predict() : null;
-        // crowdPrayer: two or more players face us: the overhead covers the style that most of them hold.
-        const crowdStyle = o.crowdPrayer && !o.facedPrayer && facers.length >= 2 && isMulti(at.x, at.z) ? (() => {
+        // crowdPrayer: two or more hostiles in multi-way facing US directly set the plurality overhead; a lone off-target direct facer sets offTargetFacer.
+        const pluralityStyle = (list: readonly NearbyPlayer[]) => {
             const n = new Map<Style, number>();
-            for (const p of facers) { const w = observePlayer(s.client, p.index); const st = weaponStyle(w?.worn[3]); n.set(st, (n.get(st) ?? 0) + 1); }
+            for (const p of list) { const w = observePlayer(s.client, p.index); const st = weaponStyle(w?.worn[3]); n.set(st, (n.get(st) ?? 0) + 1); }
             return [...n].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-        })() : null;
+        };
+        const crowdStyle = o.crowdPrayer && !o.facedPrayer && isMulti(at.x, at.z) && directFacers.length >= 2 ? pluralityStyle(directFacers) : null;
+        const offTargetFacer = o.crowdPrayer && !o.facedPrayer && directFacers.length === 1 && directFacers[0]!.index !== target.index
+            ? weaponStyle(observePlayer(s.client, directFacers[0]!.index)?.worn[3]) : null;
         // threatPrayer: the style of a threat that is not the opponent (the threat radar of scripts/pk-threat.ts). A hitter, the opponent's
         // own hits, still come first.
         const threatStyle = o.threatPrayer?.() ?? null;
-        let wantedOverhead = o.overheadPrayer === false ? null : crowdStyle ? PROTECT_FROM[crowdStyle] : hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : threatStyle ? PROTECT_FROM[threatStyle] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
+        let wantedOverhead = o.overheadPrayer === false ? null : crowdStyle ? PROTECT_FROM[crowdStyle] : hitter ? PROTECT_FROM[weaponStyle(hitter.worn[3])] : threatStyle ? PROTECT_FROM[threatStyle] : offTargetFacer ? PROTECT_FROM[offTargetFacer] : predicted ? PROTECT_FROM[predicted] : seen ? PROTECT_FROM[weaponStyle(seen.worn[3])] : adjacent(at, target) ? PRAYER.melee : PRAYER.magic;
         if (o.prayerLag?.length) {
             if (lagHas === undefined) lagWant = lagHas = wantedOverhead;
             else if (wantedOverhead !== lagWant) { lagWant = wantedOverhead; lagAt = now + pickWeighted(o.prayerLag, rand); }
@@ -1548,6 +1635,29 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 if (best && cheb(best, target) > gap && walk(best.x, best.z)) stepAt = now;
             }
         }
+        // Cooldown and attack ticks share one freeze/special readiness evaluation so prayer flicks, fakie decoys, and burst armour stripping stay consistent.
+        const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
+        const hasFreezeRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
+        const freezeMagic = Math.min(magicLevel, o.freezeMagicCap ?? magicLevel);
+        const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(freezeMagic, inv) : freezeSpell(freezeMagic)) : null;
+        const freezeWindowDue = freeze !== null && !dying && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
+            && (freezeRule === true || now < fleeingUntil || (o.openFreeze === true && !hasAttacked) || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)))
+            && !(o.freezeShare && o.freezeShare.clock() < o.freezeShare.until);
+        const energy = special(s.client);
+        const stunOverlap = o.stunShare?.overlap ?? 1;
+        const targetStunned = now < targetStunnedUntil || (!!o.stunShare && o.stunShare.clock() < (o.stunShare.stunnedUntil ?? -1));
+        const stunOpenForChain = o.stunShare ? o.stunShare.clock() >= o.stunShare.until - stunOverlap : !targetStunned;
+        const specPlan = evaluateSpecPlan({
+            dying, canReachMelee, fled, running: now < fleeingUntil, castFreezePending: freezeWindowDue,
+            kiteTarget, at, target, guarded, seen, energy: energy.energy, lastSpecStyle, targetStunned, stunOpenForChain,
+            spec: o.spec, stunSpec: o.stunSpec, burstBow, bursting, bowBurstArmour: o.bowBurstArmour,
+            bowSpecFallback: o.spec ? bowSpec(o.kit, names) : undefined,
+            fledSpec: o.fledSpec, specReserve: o.specReserve, burstOnHold: o.burstOnHold, burstOnStun: o.burstOnStun,
+            freezeShareHeld: !!o.freezeShare && o.freezeShare.clock() < (o.freezeShare.heldUntil ?? -1),
+            stunShare: o.stunShare,
+            hasWeaponAndShield: state.equipment.some(e => e.slot === 3) && state.equipment.some(e => e.slot === 5),
+            invLength: inv.length, nearbyPlayers: state.nearbyPlayers, allies: o.allies, names,
+        });
         // Cooldown ticks: never send OpHeld/InvButton (which call clearPendingAction on the server), but configure
         // prayers and one-time combat-style settings once any melee approach walk has finished.
         if (now < nextAttack || unattackableSince >= 0) {
@@ -1584,8 +1694,8 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                     prayerFlick: o.prayerFlick !== false,
                     offensiveFlick: o.offensiveFlick === true,
                     upcomingStyle: upcomingTurn?.style ?? null,
-                    specMeleeLikely: !!o.spec && lowHealth(seen, o.spec.below),
-                    defencePrayer: o.defencePrayer !== false && !bursting,
+                    specMeleeLikely: specPlan.specMeleeLikely,
+                    defencePrayer: o.defencePrayer !== false && !specPlan.stripBurstArmour,
                     protectItem: protectItemNow(),
                     budget,
                 });
@@ -1603,19 +1713,20 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
                 rapidSet = true;
                 budget--;
             }
-            // The tick before a bow special of the burst: armour off, as far as packets and free pack slots allow.
-            if (bursting && now === nextAttack - 1 && typeof sdk.sendUseEquipmentItem === 'function' && budget > 1) {
+            // The tick before a bow special of the burst: armour off when stripBurstArmour holds, as far as packets and free pack slots allow.
+            if (specPlan.stripBurstArmour && now === nextAttack - 1 && typeof sdk.sendUseEquipmentItem === 'function' && budget > 1) {
                 const free = 28 - inv.length - 1;
                 for (const eq of negativeCastArmour(state.equipment, 'magic', new Set(), names).filter(e => !(torsoLocked && DRAGON_SLAYER_BODY.test(names.get(e.id) ?? ''))).slice(0, Math.max(0, Math.min(budget - 1, free)))) {
                     tankIds.add(eq.id); void sdk.sendUseEquipmentItem(eq.slot, 1); budget--;
                     log(`PK burst takes off ${names.get(eq.id)}`);
                 }
             }
-            // 1-tick fakie switch: hold a decoy weapon style during cooldown, then swap back on the attack tick.
+            // 1-tick fakie switch: hold a decoy weapon style during cooldown (accounting for upcoming melee/ranged specs), then swap back on the attack tick.
             const castingFreeze = now <= freezeCastAt + 3 && !(now < frozenUntil && now >= freezeCastAt + 2);
-            if (o.fakieSwitch && upcomingTurn && hasAttacked && now > lastAttackAt && now < nextAttack - 1 && !walkingToMelee && !castingFreeze && lastFakieAt < lastAttackAt && budget >= 1) {
+            const fakieRealStyle = specPlan.triggerNoVolley ? specPlan.specStyle : freezeWindowDue ? 'magic' : upcomingTurn?.style;
+            if (o.fakieSwitch && fakieRealStyle && hasAttacked && now > lastAttackAt && now < nextAttack - 1 && !walkingToMelee && !castingFreeze && lastFakieAt < lastAttackAt && budget >= 1) {
                 const decoy = pickFakieWeapon({
-                    kit: o.kit, realStyle: upcomingTurn.style, preferred: o.fakieSwitch,
+                    kit: o.kit, realStyle: fakieRealStyle, preferred: o.fakieSwitch,
                     inventory: inv, equipment: state.equipment, names,
                 });
                 if (decoy) {
@@ -1630,10 +1741,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         if (kiteTarget && !kiteCast) continue;
         // Charge goes out on an attack tick, in place of that attack: a button on a cooldown tick could clear an attack
         // that the server still has in hand. One try each 6 ticks, until the game confirms it or varp 272 > 0.
-        const magicSkill = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
         const chargeVarp = chargeVarpTicks(s.client);
         if (chargeVarp !== undefined) charged = chargeVarp > 0;
-        if (o.charge && !charged && now - chargeAt >= 6 && canCastChargeNow(magicSkill, inv, chargeVarp)) {
+        if (o.charge && !charged && now - chargeAt >= 6 && canCastChargeNow(magicLevel, inv, chargeVarp)) {
             log('PK cast Charge');
             void sdk.sendClickComponent(SPELLS.charge);
             chargeAt = now; nextAttack = now + 2;
@@ -1642,7 +1752,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // Dragon Battleaxe warcry (specwep.rs2:61-78): 100% energy immediate Strength buff when carrying item 1377.
         const hasBattleaxe = state.equipment.some(e => e.id === ITEMS.dragonBattleaxe) || inv.some(i => i.id === ITEMS.dragonBattleaxe);
         const strSkill = state.skills.find(k => k.name === 'Strength');
-        if (o.battleaxeBuff && hasBattleaxe && !kiteTarget && now - battleaxeAt >= 12 && special(s.client).energy >= 1000
+        if (o.battleaxeBuff && hasBattleaxe && !kiteTarget && now - battleaxeAt >= 12 && energy.energy >= 1000
             && (!strSkill || strSkill.level <= strSkill.baseLevel + 4)) {
             const axeItem = state.equipment.some(e => e.id === ITEMS.dragonBattleaxe) ? undefined : slotOf([ITEMS.dragonBattleaxe]);
             if (axeItem) use(axeItem, /^(Wield|Wear)$/i);
@@ -1655,58 +1765,22 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         }
         // When not cardinally adjacent, client interactPlayer/spellOnPlayer emits MOVE_OPCLICK + OPPLAYER* (2 USER_EVENT packets).
         const attackPackets = adjacent(at, target) ? 1 : 2;
-        // The special: equip its kit, toggle its specbar, and attack in the same tick (OpHeldHandler updates tabs[0]
-        // during decodeIn before IfButtonHandler checks isComponentVisible). Keep total USER_EVENT packets <= 5.
-        const magicLevel = state.skills.find(k => k.name === 'Magic')?.level ?? 1;
-        const hasFreezeRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
-        const freezeMagic = Math.min(magicLevel, o.freezeMagicCap ?? magicLevel);
-        const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(freezeMagic, inv) : freezeSpell(freezeMagic)) : null;
-        // A kit with the runes of a freeze and no staff still casts it: the cast keeps the weapon in hand.
-        const castFreeze = freeze !== null && !dying && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
-            && (freezeRule === true || now < fleeingUntil || (o.openFreeze === true && !hasAttacked) || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)))
-            && !(o.freezeShare && o.freezeShare.clock() < o.freezeShare.until)
-            && (o.freezeStill !== true || (cheb(at, target) <= 10 && await lineOfSight(me.level ?? 0, at, target)));
+        const castFreeze = freezeWindowDue && (o.freezeStill !== true || (cheb(at, target) <= 10 && await lineOfSight(me.level ?? 0, at, target)));
         // freezeStill: a moving account stops on this tick and casts from its stand on the next.
         if (castFreeze && o.freezeStill === true && !stoodStill && !kiteTarget) { void sdk.sendWalk(at.x, at.z); continue; }
-        // A target that has fled is out of food: from then on every special goes out at once, whatever its health bar
-        // shows, and past melee reach the bow special replaces a melee one.
-        const energy = special(s.client);
-        const stunOverlap = o.stunShare?.overlap ?? 1;
-        const targetStunned = now < targetStunnedUntil || (!!o.stunShare && o.stunShare.clock() < (o.stunShare.stunnedUntil ?? -1));
-        const stunOpenForChain = o.stunShare ? o.stunShare.clock() >= o.stunShare.until - stunOverlap : !targetStunned;
-        const canSecondaryStun = !dying && !!o.stunSpec && canReachMelee && !bursting && energy.energy >= o.stunSpec.cost && stunOpenForChain
-            && (fled || lowHealth(seen, o.stunSpec.below) || !!o.stunShare);
-        // In a burst the bow special goes first, then a melee special if one is ready, then the bow again: the target
-        // prays against the weapon it saw last, so each lands off its prayer.
-        const meleeSpecReady = !!o.spec && o.spec.style !== 'ranged' && energy.energy >= o.spec.cost && canReachMelee;
-        const spec: SpecConfig | undefined = canSecondaryStun ? o.stunSpec
-            : bursting ? (lastSpecStyle === 'ranged' && meleeSpecReady ? o.spec : burstBow)
-            : o.spec && fled && o.spec.style !== 'ranged' && !canReachMelee ? bowSpec(o.kit, names) ?? o.spec : o.spec;
-        const specStyle: Style = spec?.style ?? 'melee';
-        // A target that runs is held first: while a freeze is ready the special waits for it (except adjacent stun-lock).
-        // A bow special on a target beyond the bow's range never leaves the bow and wastes the turn.
-        const running = now < fleeingUntil;
-        const specRange = specStyle === 'ranged' && spec ? weaponRange(spec.kit[0]!, names) ?? BOW_RANGE : BOW_RANGE;
-        const specWaits = running && ((castFreeze && !(spec?.stun && adjacent(at, target))) || (specStyle === 'ranged' && cheb(at, target) > specRange));
+        const { spec, specStyle, chainStun, freezeHeld, burstStun, stripBurstArmour } = specPlan;
         const vs = o.volley && spec ? o.volley.state(targetName.toLowerCase()) : undefined, myKey = (s.name ?? '').toLowerCase();
+        if (vs && vs.fired && o.volley!.clock() - vs.first >= Math.max(4, o.volley!.window + 3)) {
+            vs.ready.clear(); vs.done.clear(); vs.first = -1; vs.fired = false;
+        }
         if (vs && !vs.fired) {
-            const readyNow = energy.energy >= spec!.cost && now >= nextAttack && cheb(at, target) <= (specStyle === 'melee' ? 1 : specRange);
-            if (readyNow) { vs.ready.add(myKey); if (vs.first < 0) vs.first = o.volley!.clock(); } else vs.ready.delete(myKey);
+            if (specPlan.volleyJoinEligible) { vs.ready.add(myKey); if (vs.first < 0) vs.first = o.volley!.clock(); } else vs.ready.delete(myKey);
             if (vs.ready.size >= o.volley!.members || (vs.first >= 0 && o.volley!.clock() - vs.first >= o.volley!.window)) {
                 vs.fired = true; log(`PK volley with ${vs.ready.size} of ${o.volley!.members} ready`);
-            } else if (readyNow) continue;
+            } else if (specPlan.volleyJoinEligible) continue;
         }
-        const stunWaits = !!spec?.stun && !!o.stunShare && o.stunShare.clock() < o.stunShare.until - stunOverlap;
-        const chainStun = !!spec?.stun && !!o.stunShare && o.stunShare.until >= 0 && stunOpenForChain;
-        const volleying = (!!vs?.fired && !vs.done.has(myKey))
-            || (!!o.burstOnHold && !!o.freezeShare && o.freezeShare.clock() < (o.freezeShare.heldUntil ?? -1))
-            || (!!o.burstOnStun && !spec?.stun && targetStunned);
-        const specNeedsRoom = !!spec?.kit.some(id => isDragonSpearName(names.get(id) ?? '')) && state.equipment.some(e => e.slot === 3) && state.equipment.some(e => e.slot === 5) && inv.length >= 28;
-        // An axe special that would chain onto an ally within 3 tiles of us is not thrown (thrownAxeHitsAlly).
-        const axeHitsAlly = thrownAxeHitsAlly(spec, state.nearbyPlayers, o.allies, names);
-        if (spec && !dying && !axeHitsAlly && !specNeedsRoom && !kiteTarget && !specWaits && !stunWaits && energy.energy >= spec.cost && ((fled && o.fledSpec !== false) || bursting || volleying || chainStun || lowHealth(seen, spec.below))
-            && (fled || bursting || volleying || chainStun || lowHealth(seen, 0.3) || energy.energy - spec.cost >= (o.specReserve ?? 0)) && (specStyle !== 'melee' || canReachMelee)
-            && (spec.stun || !guarded.has(specStyle) || lowHealth(seen, 0.25))) {
+        const volleying = (!!vs?.fired && !vs.done.has(myKey)) || freezeHeld || burstStun;
+        if (spec && (specPlan.triggerNoVolley || (volleying && specPlan.volleyJoinEligible))) {
             let budget = 5 - sentEvents - attackPackets - (energy.on ? 0 : 1);
             const toWield: { slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [];
             const specWieldIds = spec.kit.some(id => isDragonSpearName(names.get(id) ?? '')) ? spec.kit : [...spec.kit, ...(specStyle === 'melee' ? tankIds : [])];
@@ -1718,7 +1792,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             budget -= toWield.length;
             if (o.meleeStyle !== undefined && specStyle === 'melee' && state.combatStyle && state.combatStyle.currentStyle !== o.meleeStyle && budget > 0) { void sdk.sendSetCombatStyle?.(o.meleeStyle); budget--; }
             if (prayers.prayerPoints > 0 && budget > 0) {
-                const { want: wantPray } = combatPrayers(prayerBase, overhead, specStyle === 'melee', o.defencePrayer !== false && !bursting, protectItemNow());
+                const { want: wantPray } = combatPrayers(prayerBase, overhead, specStyle === 'melee', o.defencePrayer !== false && !stripBurstArmour, protectItemNow());
                 const orderedPray = [...wantPray].sort((a, b) => Number(b === overhead || isOverheadPrayer(b)) - Number(a === overhead || isOverheadPrayer(a)));
                 const hadPrayer = prayers.activePrayers.some(Boolean);
                 let turnedOn = 0;
