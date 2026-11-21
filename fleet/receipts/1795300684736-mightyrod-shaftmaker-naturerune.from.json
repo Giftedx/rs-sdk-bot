@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795300684736-mightyrod-shaftmaker-naturerune",
+ "account": "Mightyrod",
+ "partner": "Shaftmaker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 56,
+ "claim": "b30e712f-e623-450e-af62-39798102e173",
+ "count": 0,
+ "ok": false,
+ "at": 1795300779137,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 56,
+  "at": 1795300777995
+ },
+ "logout": {
+  "attemptId": "1795300769161-0000022924-0000000001",
+  "at": 1795300779125,
+  "sha256": "6cedeb53304af719333617504e62f65d69fba83867c4e4e3a965fe033818f320"
+ },
+ "screen": false
+}
