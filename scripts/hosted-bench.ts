@@ -13,11 +13,11 @@ import {copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync} 
 import {join, resolve} from 'node:path';
 
 export const MAX_JOBS = 40;
-export const POLL_MS = 2_500;
+export const POLL_MS = 2_000;
 export type PlanRow = {id: string; pattern: string; seed: string; seeds?: string; seedJobs?: string; parallel?: string};
 export type PlanOptions = {batch?: number; seedJobs?: number};
 
-/** Computes runner-packing defaults for 4-vCPU runners so multi-case and multi-arm sweeps stay inside one wave. */
+/** Computes runner-packing defaults for 4-vCPU runners so multi-case and multi-arm sweeps stay inside one wave without saturating vCPUs. */
 export function autoPlanOptions(
     patternCount: number,
     seedCount: number,
@@ -27,13 +27,17 @@ export function autoPlanOptions(
     const explicitBatch = opts.batch !== undefined ? Math.max(1, Math.min(8, Math.trunc(opts.batch))) : undefined;
     const explicitSeedJobs = opts.seedJobs !== undefined ? Math.max(1, Math.min(4, Math.trunc(opts.seedJobs))) : undefined;
     if (explicitBatch !== undefined || explicitSeedJobs !== undefined) {
-        const seedJobs = explicitSeedJobs ?? (seedCount >= 2 ? Math.min(4, seedCount) : 1);
+        const seedJobs = explicitSeedJobs ?? (seedCount >= 2 ? Math.min(2, seedCount) : 1);
         return {batch: explicitBatch ?? 1, seedJobs};
     }
     const arms = Math.max(1, Math.trunc(opts.arms ?? 1));
     if (seedCount >= 2) {
-        const seedJobs = Math.min(4, seedCount);
-        const runners = arms * patternCount * Math.ceil(seedCount / seedJobs);
+        let seedJobs = Math.min(2, seedCount);
+        let runners = arms * patternCount * Math.ceil(seedCount / seedJobs);
+        if (runners > 20) {
+            seedJobs = Math.min(4, seedCount);
+            runners = arms * patternCount * Math.ceil(seedCount / seedJobs);
+        }
         const batch = runners > 20 && patternCount > 1 ? Math.min(4, patternCount, Math.ceil(runners / 20)) : 1;
         return {batch, seedJobs};
     }

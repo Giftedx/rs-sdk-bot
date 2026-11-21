@@ -1,6 +1,6 @@
 import {mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {join, resolve} from 'node:path';
 import {expect, test} from 'bun:test';
 import {autoPlanOptions, benchPlan, checkArgs, decodeSetB64, expandMultiSeedArtifacts, extractPlanOpts, MAX_JOBS, POLL_MS, resultLines} from './hosted-bench';
 
@@ -54,11 +54,11 @@ test('--set-b64 decodes standard and URL-safe base64 JSON payloads and rejects m
         expect(() => checkArgs(`--set-b64 ${bad}`)).toThrow();
     }
     expect(() => checkArgs('--set-b64')).toThrow();
-    expect(POLL_MS).toBe(2_500);
+    expect(POLL_MS).toBe(2_000);
 });
 
 test('batching and multi-seed fan-out pack patterns and seeds cleanly onto 4-vCPU runners', () => {
-    expect(autoPlanOptions(3, 4)).toEqual({batch: 1, seedJobs: 4});
+    expect(autoPlanOptions(3, 4)).toEqual({batch: 1, seedJobs: 2});
     expect(autoPlanOptions(6, 1)).toEqual({batch: 4, seedJobs: 1});
     expect(autoPlanOptions(3, 4, {arms: 4})).toEqual({batch: 1, seedJobs: 4});
     expect(autoPlanOptions(6, 4, {arms: 4})).toEqual({batch: 2, seedJobs: 4});
@@ -99,4 +99,20 @@ test('expandMultiSeedArtifacts fans out multi-seed runner downloads into bench-p
     } finally {
         rmSync(dir, {recursive: true, force: true});
     }
+});
+
+test('ci.yml bench-plan node planner matches benchPlan and enforces arg checks', () => {
+    const yml = readFileSync(resolve(import.meta.dir, '../.github/workflows/ci.yml'), 'utf8');
+    const m = /bench-plan:[\s\S]*?node -e '\r?\n([\s\S]*?)\r?\n\s*' >>/.exec(yml);
+    expect(m).not.toBeNull();
+    const runPlan = (env: Record<string, string>) => Bun.spawnSync(['bun', '-e', m![1]!], {
+        env: {...process.env, ...env},
+        stdout: 'pipe',
+        stderr: 'pipe',
+    });
+    const ok = runPlan({BENCH_PATTERN: '^a$ ^b$', BENCH_SEEDS: '1,2,3,4', BENCH_ARGS: '--profile --seed-jobs 2 --set-b64 SQ=eyJ4IjoxfQ=='});
+    expect(ok.exitCode).toBe(0);
+    expect(ok.stdout.toString().trim()).toBe(`matrix=${JSON.stringify({include: benchPlan('^a$ ^b$', '1,2,3,4', {batch: 1, seedJobs: 2})})}`);
+    const bad = runPlan({BENCH_PATTERN: '^a$', BENCH_SEEDS: '1', BENCH_ARGS: '--seed-jobs 9'});
+    expect(bad.exitCode).not.toBe(0);
 });
