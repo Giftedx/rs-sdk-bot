@@ -1,0 +1,25 @@
+{
+ "id": "1795250271139-fatstack-mightyrod-31ae9b7caa946649",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "Mightyrod",
+ "item": "Coins",
+ "count": 125000,
+ "start": 1795250271139,
+ "end": 1795251771139,
+ "extra": [
+  {
+   "item": "Prayer potion(3)",
+   "count": 1
+  },
+  {
+   "item": "Snape grass",
+   "count": 13
+  },
+  {
+   "item": "Vial of water",
+   "count": 15
+  }
+ ],
+ "takerWaits": true
+}
