@@ -4,7 +4,7 @@ import type { SquadInput } from '../squad';
 import type { GearWantRow } from '../gear-want-jobs';
 import { parseStep, tokenizeStep, type Step } from '../../../core/src/chain-step';
 import { validateBankRouteJob, type BankRouteJob } from '../../../core/src/bank-trip';
-import { resolveRouteStep, resolveSkillerMethod } from '../../../../scripts/aio-route-step';
+import { resolveRouteStep, resolveSkillerMethod } from '../../../core/src/route-step';
 
 // `combat`: the combat level the account's status reports (absent: worked out from `skills`). `quests`: the quests its
 // status reports complete, by norm() name (absent: none known complete). `questPoints`: the quest points its status

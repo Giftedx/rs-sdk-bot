@@ -106,3 +106,33 @@ test('packages/planner/src/autopilot submodules never import the autopilot facad
     expect(violations).toEqual([]);
     expect(tarjanSccs(submoduleFiles)).toEqual([]);
 });
+
+test('packages/planner/src production modules never import from practice, router, dashboard, or scripts', () => {
+    const plannerFiles = walkTs(join(repoRoot, 'packages', 'planner', 'src'));
+    const bannedRoots = ['packages/practice/', 'packages/router/', 'packages/dashboard/', 'scripts/'];
+    const bannedSpecs = ['@rsbot/practice', '@rsbot/router', '@rsbot/dashboard'];
+    const violations: string[] = [];
+
+    for (const rel of plannerFiles) {
+        const abs = join(repoRoot, rel);
+        const info = ts.preProcessFile(readFileSync(abs, 'utf8'), true, true);
+        for (const imp of info.importedFiles) {
+            const spec = imp.fileName;
+            if (bannedSpecs.some(b => spec === b || spec.startsWith(`${b}/`))) {
+                violations.push(`${rel} -> ${spec}`);
+                continue;
+            }
+            if (!spec.startsWith('.')) {
+                if (bannedRoots.some(r => spec === r.slice(0, -1) || spec.startsWith(r))) {
+                    violations.push(`${rel} -> ${spec}`);
+                }
+                continue;
+            }
+            const target = relative(repoRoot, resolve(dirname(abs), spec)).replace(/\\/g, '/');
+            if (bannedRoots.some(r => target === r.slice(0, -1) || target.startsWith(r))) {
+                violations.push(`${rel} -> ${target}`);
+            }
+        }
+    }
+    expect(violations).toEqual([]);
+});

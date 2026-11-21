@@ -1,10 +1,10 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { proveInProcess } from '../../practice/src/prove';
-import { parseRate, summarize } from './measure';
-import type { MeasuredRate as Rate } from './rates';
+import { proveInProcess } from './prove';
+import { parseRate, summarize } from '../../planner/src/measure';
+import type { MeasuredRate as Rate } from '../../planner/src/rates';
 
-// Usage: bun packages/planner/src/measure-cli.ts <method> <preset> <runs> <ticks> [tickMs=300] [level=1]
+// Usage: bun packages/practice/src/measure-cli.ts <method> <preset> <runs> <ticks> [tickMs=300] [level=1]
 // Needs a running practice stack. Merges the result into knowledge/rates.json.
 const [method, preset, runsArg, ticksArg, tickMsArg, levelArg] = process.argv.slice(2);
 const tickMs = Number(tickMsArg ?? 300);
@@ -34,7 +34,7 @@ const s: Rate = {
     runs: sum.runs,
     tickMs,
     source: 'measured',
-    evidence: `packages/planner/src/measure-cli.ts ${method} ${preset}: ${samples.map(x => `${x.xp} XP / ${x.ticks} ticks`).join(', ')} (median)`,
+    evidence: `packages/practice/src/measure-cli.ts ${method} ${preset}: ${samples.map(x => `${x.xp} XP / ${x.ticks} ticks`).join(', ')} (median)`,
 };
 const file = join(resolve(import.meta.dir, '..', '..', '..'), 'knowledge', 'rates.json');
 const all: Rate[] = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : [];
