@@ -1,15 +1,7 @@
 {
  "side": "local",
- "at": 1795247660648,
+ "at": 1795247728934,
  "jobs": [
-  {
-   "account": "TrouserSnake",
-   "script": "",
-   "enabled": false,
-   "repeat": false,
-   "goal": "reserved: gang squad (Goondelf, Ligma, Sugma), staged at Edgeville",
-   "role": "pvp"
-  },
   {
    "account": "TheFullMonty",
    "script": "",
@@ -377,6 +369,46 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1779 QUANTITY=6009 SELL_PRICE=80 FLOOR_PRICE=80 RESERVE_ITEMS=0 ORDER_KEY=liveops-flax-1779-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=892 QUANTITY=298 SELL_PRICE=2020 FLOOR_PRICE=2020 RESERVE_ITEMS=0 ORDER_KEY=liveops-rarrow-892-1 ORDER_MS=300000 FILL_WAIT_TICKS=120",
+    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1201 QUANTITY=1 SELL_PRICE=157100 FLOOR_PRICE=157100 RESERVE_ITEMS=0 ORDER_KEY=liveops-rkite-1201-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=536 QUANTITY=215 SELL_PRICE=5256 FLOOR_PRICE=5256 RESERVE_ITEMS=0 ORDER_KEY=liveops-dbones-536-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "Sausagefest",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1127 QUANTITY=2 SELL_PRICE=80000 FLOOR_PRICE=80000 RESERVE_ITEMS=0 ORDER_KEY=liveops-rplate-1127-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
    ],
    "env": {
     "ROUNDS": "1"

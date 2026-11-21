@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795247605815-quickhandjob-undermykilt-0fef4721d12689ec",
+ "account": "UnderMyKilt",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Irit leaf",
+ "requested": 3,
+ "claim": "17f89188-f686-420d-a2c0-d1a090d7c0a5",
+ "count": 3,
+ "ok": true,
+ "at": 1795247726493,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795247725732
+ },
+ "logout": {
+  "attemptId": "1795247716346-0000003480-0000000001",
+  "at": 1795247726480,
+  "sha256": "805ea464a94b762587ae228134fe2bf11d4b04fbc0d43b71303cb70949755ccf"
+ },
+ "screen": true
+}
