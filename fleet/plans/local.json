@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795293961552,
+ "at": 1795293979972,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -473,25 +473,6 @@
    ]
   },
   {
-   "account": "Spitroaster",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=1 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=spitroaster-kit2-385-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 1 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "supply",
-   "template": "kit-buy:aio-blood-chest",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "MineYourBiz",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -571,23 +552,21 @@
   },
   {
    "account": "Unsheathed",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "giant"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "MAX_KILLS": "40"
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
-   "role": "combat",
-   "template": "squad-ardougne-giants",
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-giants"
+    "knight:2669,3298"
    ]
   },
   {
@@ -618,23 +597,21 @@
   },
   {
    "account": "Magicwanda",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "giant"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "MAX_KILLS": "40"
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
-   "role": "combat",
-   "template": "squad-ardougne-giants",
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-giants"
+    "knight:2652,3318"
    ]
   },
   {
