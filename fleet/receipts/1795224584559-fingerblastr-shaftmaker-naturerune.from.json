@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795224584559-fingerblastr-shaftmaker-naturerune",
+ "account": "Fingerblastr",
+ "partner": "Shaftmaker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 323,
+ "claim": "6adbb3b9-0d8a-4556-980f-f08ac1460b7d",
+ "count": 0,
+ "ok": false,
+ "at": 1795224674024,
+ "detail": "trade claimed"
+}

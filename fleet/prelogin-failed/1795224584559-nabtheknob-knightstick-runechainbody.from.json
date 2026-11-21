@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795224584559-nabtheknob-knightstick-runechainbody",
+ "role": "from",
+ "account": "NabTheKnob",
+ "partner": "Knightstick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795224669486,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] 8bcb7b5b7a36bd5537d057f6ab7a0fcd3b9f59b8 -> fleet-trade-claim/nabtheknob (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}
