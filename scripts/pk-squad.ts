@@ -32,9 +32,9 @@ import { killReceiptProof } from '../packages/core/src/kill-receipt';
 import { RETALIATE_OFF } from '../packages/core/src/combat-end';
 import { bindActionScope } from '../packages/core/src/action-scope';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, bestFood, carriedPoison, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, getObjNames, ITEMS, isMulti, newVolley, nextTick, observePlayer, ownSkull, poisonSplat, PRAYER, recordKillLoot, rewearStart, STUNNED_SHOVE_SPOTANIM, wildernessLevel, weaponStyle, type FightOptions, type VolleyState } from './pk';
+import { attackable, bestFood, carriedPoison, defaultSpec, defaultStunSpec, emitKillReceipt, escapeCastable, extractKillVictim, fightPlayer, getObjNames, ITEMS, isMulti, newVolley, nextTick, observePlayer, ownSkull, poisonSplat, PRAYER, recordKillLoot, rewearStart, STUNNED_SHOVE_SPOTANIM, wildernessLevel, weaponStyle, type FightOptions, type VolleyState } from './pk';
 import { bankTrip, MIN_TRIP_ARROWS, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
-import { settleKillFeed } from './pk-kill-feed';
+import { killFeed, settleKillFeed } from './pk-kill-feed';
 import { EDGEVILLE_BANK, eatUp, FOOD_START_FLOOR, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
 import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../packages/core/src/pvp-deaths';
 import { attackStyleOfAnim, holdProtect, KitSwapper, protectOf, retreatOf, ThreatWatch, threatOptions } from './pk-threat';
@@ -901,7 +901,7 @@ export function squadTarget<P extends { name: string; index: number; distance: n
 }
 
 // Multi-way pile & anti-PJ target focus: prioritizes multi-way targets when preferMulti is set, then priority interlopers, stunned targets, lowest HP%, scouted target, and skips busy single-way fights.
-export function pickSquadFocus<P extends { name: string; index: number; distance: number; x?: number; z?: number; combatLevel?: number; inCombat?: boolean }>(opts: {
+export function pickSquadFocus<P extends { name: string; index: number; distance: number; x?: number; z?: number; combatLevel?: number; inCombat?: boolean; combatTargetType?: string; combatTargetIndex?: number }>(opts: {
     view: readonly P[];
     targets: ReadonlySet<string>;
     health: (p: P) => number;
@@ -914,8 +914,9 @@ export function pickSquadFocus<P extends { name: string; index: number; distance
     priority?: ReadonlySet<string>;
     activeFocus?: string;
     scoutTarget?: string;
+    selfIndex?: number;
 }): P | undefined {
-    const { view, targets, health, skip = new Set(), me, inMulti, preferMulti, stunned = new Set(), priority = new Set<string>(), activeFocus, scoutTarget } = opts;
+    const { view, targets, health, skip = new Set(), me, inMulti, preferMulti, stunned = new Set(), priority = new Set<string>(), activeFocus, scoutTarget, selfIndex } = opts;
     const active = activeFocus?.toLowerCase();
     const scout = scoutTarget?.toLowerCase();
     const selfMulti = inMulti ?? true;
@@ -924,9 +925,15 @@ export function pickSquadFocus<P extends { name: string; index: number; distance
         const key = p.name.toLowerCase();
         if (!targets.has(key) || skip.has(key)) return false;
         if (me && p.z !== undefined && !attackable(me, { z: p.z, combatLevel: p.combatLevel ?? me.combatLevel })) return false;
-        // Anti-PJ in single-way: avoid hopping onto someone already actively engaged by another attacker unless it's our own active focus.
+        // Anti-PJ in single-way: avoid hopping onto someone already actively engaged by another attacker.
+        // Shared activeFocus applies to multi-way piles, not single-way fights owned by another ally.
         const targetMulti = isTargetMulti(p);
-        if ((!selfMulti || !targetMulti) && p.inCombat && key !== active) return false;
+        const engagedByOther = p.inCombat && (
+            selfIndex !== undefined && selfIndex >= 0 && p.combatTargetType === 'player' && p.combatTargetIndex !== undefined
+                ? p.combatTargetIndex !== selfIndex
+                : key !== active
+        );
+        if ((!selfMulti || !targetMulti) && engagedByOther) return false;
         return true;
     });
     return eligible.sort((a, b) => {
@@ -997,7 +1004,7 @@ export function createSquadFocus(ttlTicks = 12) {
         snapshot(now: number): SquadFocusEntry | null {
             return stale(now) ? null : current;
         },
-        pick<P extends { name: string; index: number; distance: number; x?: number; z?: number; combatLevel?: number; inCombat?: boolean }>(opts: {
+        pick<P extends { name: string; index: number; distance: number; x?: number; z?: number; combatLevel?: number; inCombat?: boolean; combatTargetType?: string; combatTargetIndex?: number }>(opts: {
             view: readonly P[];
             targets: ReadonlySet<string>;
             health: (p: P) => number;
@@ -1008,6 +1015,7 @@ export function createSquadFocus(ttlTicks = 12) {
             stunned?: ReadonlySet<string>;
             priority?: ReadonlySet<string>;
             scoutTarget?: string;
+            selfIndex?: number;
             now: number;
         }): P | undefined {
             const activeFocus = stale(opts.now) ? undefined : current!.target;
@@ -1089,6 +1097,7 @@ export function shouldBreakSingleWayChase(o: {
     aimInMulti: boolean;
     self: { x: number; z: number; inMulti: boolean };
     target: { x?: number; z?: number };
+    targetHp?: number;
     hasMultiTargetInView: boolean;
     focusInMulti?: boolean;
     multiAllyCount: number;
@@ -1103,10 +1112,13 @@ export function shouldBreakSingleWayChase(o: {
     const selfCloseDist = o.target.x !== undefined && o.target.z !== undefined
         ? Math.max(Math.abs(o.self.x - o.target.x), Math.abs(o.self.z - o.target.z))
         : Infinity;
+    const noMultiTargets = !o.hasMultiTargetInView && !o.focusInMulti && !o.anyAllyHasMultiTarget;
     // Standing in multi-way within bow/spell reach of a nearby single-way target (interloper or no multi-way target left)
     // lets `singleHold` return fire from multi-way without splitting or turning our back.
-    if (o.self.inMulti && selfCloseDist <= 10 && (o.isInterloper || (!o.hasMultiTargetInView && !o.focusInMulti && !o.anyAllyHasMultiTarget))) return false;
-    if (o.hasMultiTargetInView || o.focusInMulti || o.anyAllyHasMultiTarget) return true;
+    if (o.self.inMulti && selfCloseDist <= 10 && (o.isInterloper || noMultiTargets)) return false;
+    if (!noMultiTargets) return true;
+    // Do not recall a lone chaser finishing a wounded single-way straggler when zero multi-way targets exist anywhere.
+    if (o.targetHp !== undefined && o.targetHp <= 0.70 && selfCloseDist <= 10) return false;
     if (o.multiAllyCount > 0 && !o.self.inMulti) return true;
     if (!o.anchor || o.target.x === undefined || o.target.z === undefined) return false;
     const leash = o.leash ?? SINGLE_WAY_CHASE_LEASH;
@@ -1128,6 +1140,8 @@ export function squadFallbackPlan(opts: {
     hasTeleport: boolean;
     packFood?: number;
     targetingMe?: number;
+    singleFoodFloor?: number;
+    singleHpFloor?: number;
 }): 'hold' | 'out' | 'glory' | 'teleport' | 'run' {
     const wild = wildernessLevel(opts.z);
     if (wild === 0) return 'out';
@@ -1140,8 +1154,12 @@ export function squadFallbackPlan(opts: {
     const heavyFocus = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.hp <= opts.maxHp * ((instantEscape || outgunned) ? 0.76 : 0.72);
     const emergencyMulti = opts.inMulti && (((instantEscape || outgunned) && opts.enemyCount >= 6 && opts.hp <= opts.maxHp * 0.76) || (opts.enemyCount >= 4 && opts.hp <= opts.maxHp * (outgunned ? 0.72 : 0.62)));
     const lowSupplyPile = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.foodCount <= 3 && opts.hp <= opts.maxHp * 0.88;
+    const lowSingleSupply = !opts.inMulti && opts.enemyCount >= 4 && (
+        ((opts.singleFoodFloor ?? 0) > 0 && opts.foodCount <= opts.singleFoodFloor! && opts.hp <= opts.maxHp * 0.80)
+        || ((opts.singleHpFloor ?? 0) > 0 && opts.hp <= opts.maxHp * opts.singleHpFloor!)
+    );
     const dry = opts.foodCount <= 0 && ((opts.packFood ?? 0) >= 6 || opts.hp <= opts.maxHp * 0.75);
-    if (!isolatedPile && !outnumbered && !focusPile && !heavyFocus && !emergencyMulti && !lowSupplyPile && !dry) return 'hold';
+    if (!isolatedPile && !outnumbered && !focusPile && !heavyFocus && !emergencyMulti && !lowSupplyPile && !lowSingleSupply && !dry) return 'hold';
     return escapeStep(wild, { glory: opts.hasGlory, teleport: opts.hasTeleport });
 }
 
@@ -1152,8 +1170,7 @@ export function needsSingleWayMove(pos: { worldX: number; worldZ: number }, to: 
     return true;
 }
 
-// SQUAD_FREEZE_ARMOUR=strip|torso|keep: what a freeze takes off (pk.ts freezeArmour), SQUAD_PROTECT_ITEM=on|off|skulled: Protect Item (pk.ts protectItem, 'skulled' is on
-// only while our own skull shows), SQUAD_FREEZE_FLOOR=[0..1]: skip adjacent non-fled 'low' freezes below target HP fraction. A value not listed throws.
+// SQUAD_FREEZE_ARMOUR=strip|torso|keep, SQUAD_PROTECT_ITEM=on|off|skulled, SQUAD_FREEZE_FLOOR=[0..1], SQUAD_NO_COMBO_EAT=(0..99], SQUAD_SAFE_STRIP=0|1.
 export function squadFightOverrides(get: (name: string, fallback: string) => string): Partial<FightOptions> {
     const out: Partial<FightOptions> = {};
     const armour = get('SQUAD_FREEZE_ARMOUR', '');
@@ -1165,6 +1182,17 @@ export function squadFightOverrides(get: (name: string, fallback: string) => str
         const floor = Number(floorRaw);
         if (!Number.isFinite(floor) || floor < 0 || floor > 1) throw new Error(`SQUAD_FREEZE_FLOOR must be in [0, 1], got ${floorRaw}`);
         out.freezeFloor = floor;
+    }
+    const noComboRaw = get('SQUAD_NO_COMBO_EAT', '');
+    if (noComboRaw) {
+        const eat = Number(noComboRaw);
+        if (!Number.isFinite(eat) || eat <= 0 || eat > 99) throw new Error(`SQUAD_NO_COMBO_EAT must be in (0, 99], got ${noComboRaw}`);
+        out.noComboEatAt = eat;
+    }
+    const safeStripRaw = get('SQUAD_SAFE_STRIP', '');
+    if (safeStripRaw) {
+        if (safeStripRaw !== '0' && safeStripRaw !== '1') throw new Error(`SQUAD_SAFE_STRIP must be 0 or 1, got ${safeStripRaw}`);
+        out.safeStrip = safeStripRaw === '1';
     }
     return out;
 }
@@ -1357,6 +1385,60 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         return true;
     };
     let lastHp = me()?.hp ?? 0, seenMessage = 0, refusedAt = -100, pullSince = -1, holdPrayAt = -10;
+    const holdStartTick = s.tick();
+    const seenKillKeys = new Set<string>();
+    const targetFirstBegan = new Map<string, number>();
+    const singleFoodFloor = Number(process.env.SQUAD_SINGLE_FOOD_FLOOR ?? '0');
+    const singleHpFloor = Number(process.env.SQUAD_SINGLE_HP_FLOOR ?? '0');
+    if (!Number.isFinite(singleFoodFloor) || singleFoodFloor < 0) throw new Error(`SQUAD_SINGLE_FOOD_FLOOR must be >= 0, got ${process.env.SQUAD_SINGLE_FOOD_FLOOR}`);
+    if (!Number.isFinite(singleHpFloor) || singleHpFloor < 0 || singleHpFloor > 1) throw new Error(`SQUAD_SINGLE_HP_FLOOR must be in [0, 1], got ${process.env.SQUAD_SINGLE_HP_FLOOR}`);
+    const squadFeedWatch = s.lifecycle?.server ? killFeed(s.lifecycle.server) : undefined;
+    const selfSlotIndex = () => {
+        const clientView = s.client as { localPlayer?: unknown; players?: unknown[]; selfSlot?: number } | undefined;
+        return typeof clientView?.selfSlot === 'number' && Number.isSafeInteger(clientView.selfSlot) && clientView.selfSlot >= 0
+            ? clientView.selfSlot
+            : (clientView?.players && clientView.localPlayer ? clientView.players.indexOf(clientView.localPlayer) : -1);
+    };
+    const creditSquadKill = (victimName: string, messageText: string, tick: number) => {
+        const stNow = s.sdk.getState(), posNow = stNow?.player;
+        const victimLower = victimName.toLowerCase();
+        const victimPlayer = (stNow?.nearbyPlayers ?? []).find(q => q.name.toLowerCase() === victimLower);
+        const displayVictim = victimPlayer?.name ?? victimName;
+        const startTick = targetFirstBegan.get(victimLower) ?? tick;
+        const ticks = Math.max(1, tick - startTick);
+        targetFirstBegan.delete(victimLower);
+        o.log(`[${s.name}] PK kill ${displayVictim} after ${ticks} ticks`);
+        stats.kills++;
+        killTicks += ticks;
+        if (curInterlopers.has(victimLower)) stats.interlopers = (stats.interlopers ?? 0) + 1;
+        o.focus?.clear(displayVictim);
+        o.onClearTarget?.(displayVictim);
+        if (posNow) {
+            const receipt = emitKillReceipt({
+                s, victimName: displayVictim, messageText, tick,
+                at: { x: posNow.worldX, z: posNow.worldZ, level: posNow.level ?? 0 },
+                victimCombat: victimPlayer?.combatLevel ?? null,
+                victimTile: victimPlayer ? { x: victimPlayer.x, z: victimPlayer.z } : null,
+                equipment: stNow?.equipment ?? [], kit: o.options.kit,
+                fight: { ticks, dealt: 0, taken: 0, eaten: 0, specs: 0 },
+                killReceiptRoot: o.options.killReceiptRoot, feedWatch: squadFeedWatch,
+                log: l => o.log(`[${s.name}] ${l}`),
+            });
+            if (receipt) stats.receipts.push(receipt);
+        }
+    };
+    const scanKillMessages = (tick: number) => {
+        for (const m of s.sdk.getState()?.gameMessages ?? []) {
+            if (m.type !== 0 || m.tick < holdStartTick) continue;
+            const id = m.observationId ?? m.tick;
+            const msgKey = `${id}:${m.text.trim().toLowerCase()}`;
+            if (seenKillKeys.has(msgKey)) continue;
+            const victim = extractKillVictim(m.text);
+            if (!victim) continue;
+            seenKillKeys.add(msgKey);
+            creditSquadKill(victim, m.text, tick);
+        }
+    };
     // The threat radar's armour swap (the worn items that it took off, to wear again) and its single-way hold (no pull and no walk back to the
     // multi-way post until this tick).
     const swapper = new KitSwapper(), tickOf = () => nextTick(s);
@@ -1370,10 +1452,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         for (const [idx, t] of recentHitters) if (nowTick - t > 8) recentHitters.delete(idx);
         const curView = s.sdk.getState()?.nearbyPlayers ?? [];
         const curSelf = { x: pos.worldX, z: pos.worldZ, combatLevel: pos.combatLevel };
-        const clientView = s.client as { localPlayer?: unknown; players?: unknown[]; selfSlot?: number } | undefined;
-        const selfIndex = typeof clientView?.selfSlot === 'number' && Number.isSafeInteger(clientView.selfSlot) && clientView.selfSlot >= 0
-            ? clientView.selfSlot
-            : (clientView?.players && clientView.localPlayer ? clientView.players.indexOf(clientView.localPlayer) : -1);
+        const selfIndex = selfSlotIndex();
         const enemies = curView.filter(q => !alliesSet.has(q.name.toLowerCase()) && q.distance <= 10 && attackable(curSelf, { z: q.z, combatLevel: q.combatLevel }));
         const enemyCount = enemies.length;
         const targetingMe = enemies.filter(q =>
@@ -1390,6 +1469,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             enemyCount, allyCount, targetingMe, inMulti: isMulti(pos.worldX, pos.worldZ),
             hasGlory: [...invNow, ...s.sdk.getEquipment()].some(i => /^amulet of glory\([1-4]\)$/i.test(i.name)),
             hasTeleport: !!squadEscapeSpell(pos.worldZ, invNow, s.sdk.getEquipment().map(e => e.id), s.sdk.getSkill('Magic')?.level ?? 1),
+            singleFoodFloor, singleHpFloor,
         });
         return { plan, enemyCount, allyCount, foodCount };
     };
@@ -1444,8 +1524,8 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     };
     const splitFor = (
         pos: { worldX: number; worldZ: number; combatLevel: number },
-        curView: readonly { name: string; x?: number; z?: number; combatLevel?: number }[],
-        cand: { name?: string; x?: number; z?: number },
+        curView: readonly { name: string; index?: number; x?: number; z?: number; combatLevel?: number }[],
+        cand: { name?: string; index?: number; x?: number; z?: number },
         activeTargetsSet: ReadonlySet<string>,
     ): boolean => {
         const aimTile = o.aim ?? o.post;
@@ -1458,12 +1538,15 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         const nowTick = s.tick();
         const coh = o.cohesion?.snapshot(nowTick, s.name.toLowerCase());
         const focusSnap = o.focus?.snapshot(nowTick);
+        const candSeen = typeof cand.index === 'number' ? observePlayer(s.client, cand.index) : null;
+        const targetHp = candSeen && candSeen.totalHealth > 0 ? candSeen.health / candSeen.totalHealth : undefined;
         return shouldBreakSingleWayChase({
             now: nowTick,
             singleUntil,
             aimInMulti: isMulti(aimTile.x, aimTile.z),
             self: { x: pos.worldX, z: pos.worldZ, inMulti: isMulti(pos.worldX, pos.worldZ) },
             target: cand,
+            targetHp,
             hasMultiTargetInView,
             focusInMulti: focusSnap?.inMulti,
             multiAllyCount: coh?.multiAllyCount ?? 0,
@@ -1497,6 +1580,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             o.cohesion.update(s.name, { x: pos.worldX, z: pos.worldZ, inMulti: isMulti(pos.worldX, pos.worldZ), hasMultiTarget, tick: s.tick() });
         }
         for (const m of s.sdk.getState()?.gameMessages ?? []) { const id = m.observationId ?? m.tick; if (id <= seenMessage) continue; seenMessage = id; if (/already under attack|already fighting your opponent/i.test(m.text)) refusedAt = s.tick(); }
+        if (!inFight && going()) scanKillMessages(s.tick());
     });
     try {
         await disableAutoRetaliate(s);
@@ -1518,6 +1602,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 if (stats.trips >= o.trips) {
                     await disableAutoRetaliate(s);
                     await curePoisonAndEat(s, () => o.exitStopped?.() ?? false, true);
+                    await clearSafeZonePrayers(s);
                     if (typeof s.sdk.sendWalk === 'function') void s.sdk.sendWalk(p.worldX, p.worldZ);
                     o.log(`[${s.name}] SQUAD no trips left`);
                     break;
@@ -1630,7 +1715,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             const filteredView = o.pull !== false && aimInMulti && now >= singleUntil
                 ? view.filter(q => !allTargets.has(q.name.toLowerCase()) || !splitFor(p, view, q, allTargets))
                 : view;
-            const focusArgs = { view: filteredView, targets: allTargets, priority: interlopers, health, skip: new Set(skip.keys()), me: self, inMulti: isMulti(p.worldX, p.worldZ), preferMulti: aimInMulti && now >= singleUntil, stunned };
+            const focusArgs = { view: filteredView, targets: allTargets, priority: interlopers, health, skip: new Set(skip.keys()), me: self, inMulti: isMulti(p.worldX, p.worldZ), preferMulti: aimInMulti && now >= singleUntil, stunned, selfIndex: selfSlotIndex() };
             const target = o.focus ? o.focus.pick({ ...focusArgs, now }) : pickSquadFocus(focusArgs);
             if (!target) {
                 // No prayer while it waits: an active prayer drains with no fight loop to flick it (in one live meeting
@@ -1658,7 +1743,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                         if (!q) return false;
                         const curSelf = { x: q.worldX, z: q.worldZ, combatLevel: q.combatLevel };
                         const tNow = s.tick();
-                        const cand = pickSquadFocus({ view: curView, targets: allTargets, priority: interlopers, health, skip: new Set(skip.keys()), me: curSelf, inMulti: isMulti(q.worldX, q.worldZ), preferMulti: aimInMulti && tNow >= singleUntil, stunned });
+                        const cand = pickSquadFocus({ view: curView, targets: allTargets, priority: interlopers, health, skip: new Set(skip.keys()), me: curSelf, inMulti: isMulti(q.worldX, q.worldZ), preferMulti: aimInMulti && tNow >= singleUntil, stunned, selfIndex: selfSlotIndex() });
                         if (!cand) return false;
                         if (o.pull !== false && splitFor(q, curView, cand, allTargets)) return false;
                         if (o.pull !== false && aimInMulti && tNow >= singleUntil && !isMulti(q.worldX, q.worldZ)) return false;
@@ -1721,10 +1806,13 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 });
             };
             const targetInSingle = target.x !== undefined && target.z !== undefined && !isMulti(target.x, target.z);
+            const targetKey = target.name.toLowerCase();
+            if (!targetFirstBegan.has(targetKey)) targetFirstBegan.set(targetKey, began);
             const singleHold = (now < singleUntil && !isMulti(p.worldX, p.worldZ) && target.x !== undefined && target.z !== undefined && isMulti(target.x, target.z))
                 || (o.pull !== false && aimInMulti && now >= singleUntil && isMulti(p.worldX, p.worldZ) && targetInSingle);
             const singleStyles = singleHold ? (['ranged', 'magic'] as const).filter(stName => (o.options.kit[stName]?.length ?? 0) > 0) : [];
             let lastFreezeCastTick = -100, freezePending = false;
+            scanKillMessages(began);
             inFight = true;
             const r = await fightPlayer(s, target.name, {
                 ...o.options,
@@ -1740,6 +1828,8 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 ...(o.burstOnStun !== undefined ? { burstOnStun: o.burstOnStun } : {}),
                 ...(o.stunSpec ? { stunSpec: o.stunSpec } : {}),
                 ...(o.volley ? { volley: o.volley } : {}),
+                seenKillKeys,
+                onOtherKill: (victim, info) => creditSquadKill(victim, info.text, info.tick),
                 allies: o.allies, cap: Math.max(1, o.deadline - s.tick()), stop: () => !going() || refusedAt > began || radarMove() || fallbackDue() || focusYield(),
                 log: l => {
                     if (/^PK freeze cast\b/.test(l)) { lastFreezeCastTick = s.tick(); freezePending = true; }
@@ -1748,15 +1838,16 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     o.log(`[${s.name}] ${l}`);
                 },
             }).finally(() => { inFight = false; });
+            scanKillMessages(s.tick());
             freezesCast += r.freezes ?? 0;
             if (r.outcome === 'escaped') escapes++;
             const urgentEscape = radarMove() || fallbackDue();
             // The armour that a freeze stripped goes back on (pk.ts rewearStart).
             if (going() && r.outcome !== 'session ended' && !urgentEscape) await rewearStart(s, wornAtStart.map(w => w.id), l => o.log(`[${s.name}] ${l}`));
-            if (refusedAt > began) skip.set(target.name.toLowerCase(), s.tick() + 8);
-            const gone = !(s.sdk.getState()?.nearbyPlayers ?? []).some(q => q.name.toLowerCase() === target.name.toLowerCase());
-            if (r.outcome === 'kill' || gone) { o.focus?.clear(target.name); o.onClearTarget?.(target.name); }
-            if (r.outcome === 'kill') { stats.kills++; killTicks += r.ticks ?? 0; if (interlopers.has(target.name.toLowerCase())) stats.interlopers = (stats.interlopers ?? 0) + 1; }
+            if (refusedAt > began) skip.set(targetKey, s.tick() + (targetInSingle ? 20 : 8));
+            const gone = !(s.sdk.getState()?.nearbyPlayers ?? []).some(q => q.name.toLowerCase() === targetKey);
+            if (r.outcome === 'kill' || gone) { o.focus?.clear(target.name); o.onClearTarget?.(target.name); targetFirstBegan.delete(targetKey); }
+            if (r.outcome === 'kill') { stats.kills++; killTicks += r.ticks ?? 0; if (interlopers.has(targetKey)) stats.interlopers = (stats.interlopers ?? 0) + 1; }
             if (r.receipt) stats.receipts.push(r.receipt);
             const activeInterlopers = o.threats?.act ? o.threats.step(s.tick()).interlopers.length : 0;
             if (o.pickup && !urgentEscape && s.tick() >= singleUntil && activeInterlopers === 0 && (r.outcome === 'kill' || gone)) {

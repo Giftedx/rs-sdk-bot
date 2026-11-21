@@ -335,3 +335,26 @@ test('refineProtectActions prioritizes reachable threats targeting the member ov
     const step7 = w.step(7);
     expect(protectOf(step7.actions, 'Ours1')).toBe('ranged');
 });
+
+test('refineProtectActions switches cover to melee when a hybrid steps within 2 tiles wielding a melee weapon after a prior magic cast', () => {
+    const ROOT_HYBRID: Fake = { index: 9, name: 'Tribrid', combat: 126, x: 3074, z: 3640, weapon: STAFF, anim: CAST };
+    const root = mkdtempSync(join(tmpdir(), 'threat-hybrid-')); roots.push(root);
+    const a = session('Ours1', ME1, [ME2, ROOT_HYBRID], [9]);
+    const b = session('Ours2', ME2, [ME1, ROOT_HYBRID], [9]);
+    const w = new ThreatWatch({
+        sessions: () => [a.s, b.s], server: 'demo.example:43594', friends: new Set(['ours1', 'ours2']),
+        log: () => {}, recordRoot: root, odds: false, decide: { expected: new Set(['tribrid']), outclasses: () => false },
+    });
+    // Tick 10: Tribrid casts magic from 4 tiles -> Protect from Magic.
+    expect(protectOf(w.step(10).actions, 'Ours1')).toBe('magic');
+    // Tick 11: Tribrid walks to distance 1 with a Dragon dagger equipped (idle anim) -> switch immediately to Protect from Melee.
+    const slots = ((a.s as any).client.players as any[]);
+    slots[9] = { name: 'Tribrid', combatLevel: 126, headicons: 0, appearance: [0, 0, 0, 0x200 + SCIM], primaryAnim: -1, spotanimId: -1 };
+    const curState = (a.s as any).sdk.getState;
+    (a.s as any).sdk.getState = () => {
+        const base = curState();
+        base.nearbyPlayers = base.nearbyPlayers.map((q: any) => q.index === 9 ? { ...q, x: 3071, z: 3640, distance: 1, combatTargetType: 'player', combatTargetIndex: 1 } : q);
+        return base;
+    };
+    expect(protectOf(w.step(11).actions, 'Ours1')).toBe('melee');
+});

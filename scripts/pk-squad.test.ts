@@ -1939,3 +1939,36 @@ test('squadFightOverrides parses SQUAD_FREEZE_FLOOR and clearSafeZonePrayers cle
     expect(activePrayers.some(Boolean)).toBe(false);
     expect(await (require('./pk-squad').clearSafeZonePrayers)(mockSess, async () => { ticks++; return true; })).toBe(false);
 });
+
+test('Wave F: single-way anti-PJ respects other allies, wounded straggler finish works when multi is empty, and overrides/fallbacks parse single-way reserves', () => {
+    const view = [
+        { name: 'Engaged', index: 1, distance: 2, x: 3071, z: 3599, combatLevel: 126, inCombat: true, combatTargetType: 'player', combatTargetIndex: 9 },
+        { name: 'FreeTarget', index: 2, distance: 4, x: 3071, z: 3598, combatLevel: 126, inCombat: false },
+    ];
+    const hp: Record<number, number> = { 1: 0.2, 2: 0.5 };
+    // Even if shared activeFocus is 'engaged', another member (selfIndex 3 !== 9) skips Engaged in single-way and hits FreeTarget.
+    expect(pickSquadFocus({ view, targets: new Set(['engaged', 'freetarget']), health: p => hp[p.index]!, inMulti: false, activeFocus: 'engaged', selfIndex: 3 })?.name).toBe('FreeTarget');
+    // The member actually fighting Engaged (selfIndex 9 === 9) stays on Engaged.
+    expect(pickSquadFocus({ view, targets: new Set(['engaged', 'freetarget']), health: p => hp[p.index]!, inMulti: false, activeFocus: 'engaged', selfIndex: 9 })?.name).toBe('Engaged');
+
+    // Wounded single-way straggler (18/99 HP) is finished rather than abandoned when no multi-way targets exist anywhere.
+    expect(shouldBreakSingleWayChase({
+        now: 20, singleUntil: -1, aimInMulti: true,
+        self: { x: 3071, z: 3596, inMulti: false }, target: { x: 3071, z: 3594 }, targetHp: 0.18,
+        hasMultiTargetInView: false, multiAllyCount: 9, anyAllyHasMultiTarget: false, anchor: { x: 3071, z: 3628 },
+    })).toBe(false);
+    // Full-HP single-way decoy still breaks when past leash or multi allies wait.
+    expect(shouldBreakSingleWayChase({
+        now: 20, singleUntil: -1, aimInMulti: true,
+        self: { x: 3071, z: 3596, inMulti: false }, target: { x: 3071, z: 3594 }, targetHp: 1.0,
+        hasMultiTargetInView: false, multiAllyCount: 9, anyAllyHasMultiTarget: false, anchor: { x: 3071, z: 3628 },
+    })).toBe(true);
+
+    // Single-way low food/HP reserve and new fight overrides parse cleanly.
+    expect(squadFallbackPlan({ z: 3600, hp: 69, maxHp: 99, foodCount: 2, enemyCount: 6, allyCount: 2, inMulti: false, hasGlory: true, hasTeleport: true, singleFoodFloor: 2 })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3600, hp: 38, maxHp: 99, foodCount: 5, enemyCount: 6, allyCount: 2, inMulti: false, hasGlory: false, hasTeleport: true, singleHpFloor: 0.40 })).toBe('teleport');
+    const env = (v: Record<string, string>) => (k: string, f: string) => v[k] ?? f;
+    expect(squadFightOverrides(env({ SQUAD_NO_COMBO_EAT: '88', SQUAD_SAFE_STRIP: '1' }))).toEqual({ noComboEatAt: 88, safeStrip: true });
+    expect(() => squadFightOverrides(env({ SQUAD_NO_COMBO_EAT: '120' }))).toThrow('SQUAD_NO_COMBO_EAT');
+    expect(() => squadFightOverrides(env({ SQUAD_SAFE_STRIP: '2' }))).toThrow('SQUAD_SAFE_STRIP');
+});
