@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795289255520-ballspinner-sausagefest-bronzearrow",
+ "account": "Ballspinner",
+ "partner": "Sausagefest",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Bronze arrow",
+ "requested": 84,
+ "claim": "2f4d0aa8-9285-412c-9f86-c0848c954d1a",
+ "count": 0,
+ "ok": false,
+ "at": 1795289290984,
+ "detail": "trade claimed"
+}
