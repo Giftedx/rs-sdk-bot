@@ -635,7 +635,7 @@ export async function rescue(
                     const curSpell = cur ? squadEscapeSpell(cur.worldZ, invNow, eqNow, curMagic) : escapeSpell;
                     if (curSpell === null) break;
                     const normalInv = invNow.filter(f => f.id !== ITEMS.karambwan);
-                    const food = cur && cur.hp <= cur.maxHp - 20 && now >= nextNormalEat ? bestFood(normalInv) : undefined;
+                    const food = cur && cur.hp <= cur.maxHp - 8 && now >= nextNormalEat ? bestFood(normalInv) : undefined;
                     const op = food?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
                     let eatCall: Promise<unknown> | null = null;
                     if (food && op) {
@@ -1241,13 +1241,18 @@ export function squadFightOverrides(get: (name: string, fallback: string) => str
 export async function clearSafeZonePrayers(s: Session, tick: () => Promise<boolean> = () => nextTick(s)): Promise<boolean> {
     const z = s.sdk.getState?.()?.player?.worldZ;
     if (z === undefined || wildernessLevel(z) > 0) return false;
-    const rawPrayers = s.sdk.getState?.()?.prayers?.activePrayers;
-    const activeIndices = Array.isArray(rawPrayers)
-        ? rawPrayers.flatMap((on, idx) => (on ? [idx] : []))
-        : Object.entries((rawPrayers ?? {}) as Record<string, boolean>).filter(([, on]) => Boolean(on)).map(([k]) => Number(k)).filter(Number.isFinite);
+    const readActive = () => {
+        const rawPrayers = s.sdk.getState?.()?.prayers?.activePrayers;
+        return Array.isArray(rawPrayers)
+            ? rawPrayers.flatMap((on, idx) => (on ? [idx] : []))
+            : Object.entries((rawPrayers ?? {}) as Record<string, boolean>).filter(([, on]) => Boolean(on)).map(([k]) => Number(k)).filter(Number.isFinite);
+    };
+    const activeIndices = readActive();
     if (!activeIndices.length || typeof s.sdk.sendTogglePrayer !== 'function') return false;
     for (const idx of activeIndices.slice(0, 4)) void s.sdk.sendTogglePrayer(idx);
-    await tick();
+    for (let w = 0; w < 3 && readActive().length > 0; w++) {
+        if (!await tick()) break;
+    }
     return true;
 }
 
@@ -1639,6 +1644,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             if (wildernessLevel(p.worldZ) > 0) enteredWilderness = true;
             if (outTripDue(p.worldZ, enteredWilderness, stats.trips)) {
                 enteredWilderness = false;
+                await clearSafeZonePrayers(s);
                 if (stats.trips >= o.trips) {
                     await disableAutoRetaliate(s);
                     await curePoisonAndEat(s, () => o.exitStopped?.() ?? false, true);
