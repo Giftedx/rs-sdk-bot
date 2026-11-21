@@ -603,6 +603,12 @@ test('non-Wilderness mainland supply configs resolve valid targets, guard Wilder
     ]);
 
     await expect(travel.walk(s, 'taverley_druid', { x: 3115, z: 9928 }, ground, () => false, 2)).rejects.toThrow('Wilderness goal forbidden');
+
+    actions.length = 0;
+    // Edgeville Dungeon (z>=6400 outside Taverley) must not route through Taverley corridors.
+    player.worldX = 3095; player.worldZ = 9830;
+    expect(await travel.walk(s, 'taverley_druid', { x: 2946, z: 3368 }, ground, () => false, 2)).toBe(false);
+    expect(actions).toEqual([]);
 });
 
 test('ensureSurfaceGroundEntry descends one nearby staircase/gangplank or fails fast with level !== 0', async () => {
@@ -650,4 +656,16 @@ test('ensureSurfaceGroundEntry descends one nearby staircase/gangplank or fails 
         await expect(ensureSurfaceGroundEntry(noExit.s, () => false, 2)).rejects.toThrow('level !== 0');
         expect(noExit.clicks()).toBe(0);
     } finally { noExit.cleanup(); }
+
+    // On a ship deck, Ship's ladder (id 273) and boarding plank (id 2085) are skipped in favor of disembark gangplank (id 2086).
+    const holdLadder = { id: 273, name: "Ship's ladder", distance: 4, optionsWithIndex: [{ opIndex: 1, text: 'Climb-down' }] };
+    const boardPlank = { id: 2085, name: 'Gangplank', distance: 5, optionsWithIndex: [{ opIndex: 1, text: 'Cross' }] };
+    const exitPlank = { id: 2086, name: 'Gangplank', distance: 5, optionsWithIndex: [{ opIndex: 1, text: 'Cross' }] };
+    const clicked: number[] = [];
+    const ardougneDeck = mk(1, [holdLadder, boardPlank, exitPlank], false);
+    ardougneDeck.s.bot.interactLoc = async (loc: any) => { clicked.push(loc.id); if (loc.id === 2086) ardougneDeck.s.sdk.getState().player.level = 0; return { success: true }; };
+    try {
+        await ensureSurfaceGroundEntry(ardougneDeck.s, () => false, 5);
+        expect(clicked).toEqual([2086]);
+    } finally { ardougneDeck.cleanup(); }
 });

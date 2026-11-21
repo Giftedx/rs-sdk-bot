@@ -1834,6 +1834,19 @@
    "description": "Walk account to any world coordinate (x, z, level) using doors/transports"
   },
   {
+   "id": "logistics:recover-trapped",
+   "category": "logistics",
+   "name": "recover-trapped",
+   "script": "scripts/recover-trapped.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [],
+   "description": "Bounded extraction worker returning stranded accounts to ground mainland hub banks"
+  },
+  {
    "id": "logistics:wine-stock",
    "category": "logistics",
    "name": "wine-stock",
@@ -95570,6 +95583,16 @@
    "skills": [],
    "routeIds": [
     "logistics:walk-to"
+   ]
+  },
+  {
+   "script": "scripts/recover-trapped.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [],
+   "routeIds": [
+    "logistics:recover-trapped"
    ]
   },
   {

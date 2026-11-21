@@ -16,7 +16,8 @@
 // DEMO_OK=1 is required for live; funding and route admission are separate gates.
 import { openBot, finish, countItems, getWorld, accountOf } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
-import { walkPath, sessionWalker, goTo } from '../packages/core/src/walk';
+import { walkPath, sessionWalker, goTo, leaveDeck, type Walker } from '../packages/core/src/walk';
+import { pickDisembarkPlank, type BoatSession } from '../packages/core/src/boat';
 import { walkTargetPersist } from './walk-to';
 import { bankCargo, courierWaiting, exactItem } from '../packages/core/src/cargo';
 import { depositPack } from '../packages/core/src/deposit';
@@ -787,7 +788,12 @@ try {
         for (let i = 0; i < 3 && !over(); i++) {
             const p = pos();
             if (off(p) <= tol) break;
-            const r = p?.level === level ? await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: over }) : { ok: false, detail: `on level ${p?.level}`, ticks: 0 };
+            if (p?.level === 1 && pickDisembarkPlank(s as unknown as BoatSession)) {
+                await leaveDeck(s as unknown as Walker, over);
+            }
+            const cur = pos();
+            if (off(cur) <= tol) break;
+            const r = cur?.level === level ? await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: over }) : { ok: false, detail: `on level ${cur?.level}`, ticks: 0 };
             if (!r.ok) {
                 console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
                 // The local walk can be refused (a fence, a door the plan does not know): try the world walker.
@@ -1106,8 +1112,13 @@ try {
     // The ladder is on the shop's side of the toll door, so a realm run leaves first and banks at the ladder's top.
     if (!ended) await leaveRealm();
     if (!ended) await bank(false);
+    if (!ended && (pos()?.level ?? 0) === 1 && !conf.realm?.inside(pos() ?? { worldX: 0, worldZ: 0 }) && pickDisembarkPlank(s as unknown as BoatSession)) {
+        await leaveDeck(s as unknown as Walker, () => ended);
+        if (!ended && pos()?.level === 0) await bank(false);
+    }
+    const strandedOnDeck = !ended && (pos()?.level ?? 0) === 1 && !conf.realm?.inside(pos() ?? { worldX: 0, worldZ: 0 }) && !!pickDisembarkPlank(s as unknown as BoatSession);
     const targetMet = shopTargetsMet(conf.items, s.sdk.getInventory(), stock, stockTarget);
-    await finish([s], shopFinishOk(boughtTotal, targetMet, stopReason), `ticks=${used()} boughtTotal=${boughtTotal} bankedTotal=${bankedTotal} bankTrips=${bankTrips} shopTrips=${shopTrips} coinsLeft=${coins()} spentTotal=${spentTotal} coinReserve=${COIN_RESERVE} maxSpend=${MAX_SPEND} maxItems=${MAX_ITEMS} stop=${stopReason} targetMet=${targetMet ? 1 : 0} noBuyTicks=${noBuyTicks} noBuyLimit=${NO_BUY_TICKS} fareTotal=${fareTotal}${BLIND_BUY ? ` blindRequests=${blindRequests}` : ''}`);
+    await finish([s], !strandedOnDeck && shopFinishOk(boughtTotal, targetMet, stopReason), `${strandedOnDeck ? `stranded on deck level=${pos()?.level} ` : ''}ticks=${used()} boughtTotal=${boughtTotal} bankedTotal=${bankedTotal} bankTrips=${bankTrips} shopTrips=${shopTrips} coinsLeft=${coins()} spentTotal=${spentTotal} coinReserve=${COIN_RESERVE} maxSpend=${MAX_SPEND} maxItems=${MAX_ITEMS} stop=${stopReason} targetMet=${targetMet ? 1 : 0} noBuyTicks=${noBuyTicks} noBuyLimit=${NO_BUY_TICKS} fareTotal=${fareTotal}${BLIND_BUY ? ` blindRequests=${blindRequests}` : ''}`);
 } catch (e) {
     await finish([s], false, String(e));
 }

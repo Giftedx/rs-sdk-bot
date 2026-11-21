@@ -37,7 +37,8 @@ import {existsSync} from 'node:fs';
 import {resolve} from 'node:path';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { goTo, walkPath, sessionWalker, expandPath, type PathDeps, type PathPoint, type PathTile } from '../packages/core/src/walk';
-import { ferryWalk } from './walk-to';
+import { BOARD_PLANK_IDS, DISEMBARK_PLANK_IDS, disembark, pickDisembarkPlank, type BoatSession } from '../packages/core/src/boat';
+import { ferryWalk, walkTargetPersist } from './walk-to';
 import { npcId, objId } from '../packages/core/src/content-facts';
 
 // Local bear spawn clusters from rev289 maps / cow-path-probe.json. Expand by7:
@@ -928,7 +929,8 @@ export function isNonWildernessGatherGoal(x: number, z: number): boolean {
 }
 
 export function createTaverleyTravel() {
-    const inDungeon = (z: number) => z >= 6400;
+    // Taverley Dungeon spans map squares m44_152..m46_154; bounding X/Z avoids matching Edgeville Dungeon or Dwarven Mine.
+    const inDungeon = (x: number, z: number) => x >= 2816 && x <= 2960 && z >= 9664 && z <= 9860;
     const behindDustyGate = (x: number, z: number) =>
         (x >= 2895 && x < TAVERLEY_ROUTE.DUSTY_GATE.x && z >= 9792 && z <= 9818) ||
         (x < 2880 && z >= 9792 && z <= 9850);
@@ -951,17 +953,24 @@ export function createTaverleyTravel() {
             const pos = () => s.sdk.getState()?.player;
             let cur = pos();
             if (!cur) return false;
-            if (inDungeon(goal.z)) {
-                if (!inDungeon(cur.worldZ)) {
+            if (cur.worldZ >= 6400 && !inDungeon(cur.worldX, cur.worldZ)) {
+                // Starting in another underground dungeon (e.g. Edgeville Dungeon): escape to Taverley surface via world route.
+                if (typeof s.sdk.findNearbyLoc !== 'function') return false;
+                const routed = await walkTargetPersist(s, { x: TAVERLEY_ROUTE.LADDER_DOWN.x, z: TAVERLEY_ROUTE.LADDER_DOWN.z, level: 0 });
+                cur = pos();
+                if (!routed.ok || !cur || (cur.worldZ >= 6400 && !inDungeon(cur.worldX, cur.worldZ))) return false;
+            }
+            if (inDungeon(goal.x, goal.z)) {
+                if (!inDungeon(cur.worldX, cur.worldZ)) {
                     if (!await ground(TAVERLEY_ROUTE.LADDER_DOWN.x, TAVERLEY_ROUTE.LADDER_DOWN.z, 2)) return false;
-                    for (let i = 0; i < 3 && !stop() && !inDungeon(pos()?.worldZ ?? 0); i++) {
+                    for (let i = 0; i < 3 && !stop() && !inDungeon(pos()?.worldX ?? 0, pos()?.worldZ ?? 0); i++) {
                         const ladder = findNearLoc(s, TAVERLEY_ROUTE.LADDER_DOWN.id, /ladder/i, TAVERLEY_ROUTE.LADDER_DOWN.x, TAVERLEY_ROUTE.LADDER_DOWN.z);
                         if (!ladder) { await waitTicks(s, 1); continue; }
                         await s.bot.interactLoc(ladder, /climb-down/i);
-                        await waitUntil(s, () => stop() || inDungeon(pos()?.worldZ ?? 0), { timeoutTicks: 10 });
+                        await waitUntil(s, () => stop() || inDungeon(pos()?.worldX ?? 0, pos()?.worldZ ?? 0), { timeoutTicks: 10 });
                     }
                     cur = pos();
-                    if (!cur || !inDungeon(cur.worldZ)) return false;
+                    if (!cur || !inDungeon(cur.worldX, cur.worldZ)) return false;
                 }
                 if (behindDustyGate(goal.x, goal.z) && !behindDustyGate(cur.worldX, cur.worldZ)) {
                     if (cur.worldX < TAVERLEY_ROUTE.DUSTY_GATE.x) {
@@ -988,7 +997,7 @@ export function createTaverleyTravel() {
                 }
                 return ground(goal.x, goal.z, tol);
             }
-            if (inDungeon(cur.worldZ)) {
+            if (inDungeon(cur.worldX, cur.worldZ)) {
                 if (behindDustyGate(cur.worldX, cur.worldZ)) {
                     if (cur.worldX < 2880) {
                         for (const wp of [...TAVERLEY_ROUTE.BLACK_CORRIDOR].reverse()) {
@@ -1011,14 +1020,14 @@ export function createTaverleyTravel() {
                     }
                 }
                 if (!await ground(TAVERLEY_ROUTE.LADDER_UP.x, TAVERLEY_ROUTE.LADDER_UP.z, 2)) return false;
-                for (let i = 0; i < 3 && !stop() && inDungeon(pos()?.worldZ ?? 9999); i++) {
+                for (let i = 0; i < 3 && !stop() && inDungeon(pos()?.worldX ?? 0, pos()?.worldZ ?? 9999); i++) {
                     const ladder = findNearLoc(s, TAVERLEY_ROUTE.LADDER_UP.id, /ladder/i, TAVERLEY_ROUTE.LADDER_UP.x, TAVERLEY_ROUTE.LADDER_UP.z);
                     if (!ladder) { await waitTicks(s, 1); continue; }
                     await s.bot.interactLoc(ladder, /climb-up/i);
-                    await waitUntil(s, () => stop() || !inDungeon(pos()?.worldZ ?? 9999), { timeoutTicks: 10 });
+                    await waitUntil(s, () => stop() || !inDungeon(pos()?.worldX ?? 0, pos()?.worldZ ?? 9999), { timeoutTicks: 10 });
                 }
                 cur = pos();
-                if (!cur || inDungeon(cur.worldZ)) return false;
+                if (!cur || inDungeon(cur.worldX, cur.worldZ)) return false;
             }
             return ground(goal.x, goal.z, tol);
         },
@@ -1125,19 +1134,32 @@ export async function ensureSurfaceGroundEntry(
 ): Promise<void> {
     const level = () => s.sdk.getState()?.player?.level ?? 0;
     if (level() === 0) return;
+    const isShipHoldLadder = (l: any) => l.id === 273 || l.id === 287 || /ship'?s?\s*ladder/i.test(l.name ?? '');
     const locs = s.sdk.getState()?.nearbyLocs ?? [];
-    const descent = locs
-        .map((l: any) => {
-            const opts = l.optionsWithIndex ?? [];
-            const opt = opts.find((o: any) => /^climb-?down$/i.test(o.text))
-                ?? (/(gang)?plank/i.test(l.name ?? '') ? opts.find((o: any) => /^cross$/i.test(o.text)) : undefined);
-            return opt ? { loc: l, opt, distance: l.distance ?? 0 } : null;
-        })
-        .filter((entry): entry is NonNullable<typeof entry> => !!entry && entry.distance <= 20)
-        .sort((a, b) => a.distance - b.distance)[0];
-    if (descent) {
-        await s.bot.interactLoc(descent.loc, descent.opt.opIndex);
-        await waitUntil(s as Session, () => stop() || level() === 0, { timeoutTicks });
+    const bs = s as unknown as BoatSession;
+    const hasDeckPlank = locs.some((l: any) => /(gang)?plank/i.test(l.name ?? '') && (l.distance ?? 0) <= 20 && !BOARD_PLANK_IDS.has(l.id ?? -1));
+    if (level() === 1 && hasDeckPlank && typeof bs.sdk.findNearbyLoc === 'function' && typeof bs.sdk.getDialog === 'function') {
+        await disembark(bs, { stop, crossTicks: timeoutTicks });
+    } else {
+        // Gangplank disembark outranks Climb-down on a ship deck: Ship's ladder (id 273) drops into a sealed hold.
+        const entry = (rank: number, l: any, opt: any) => ({ loc: l, opt, rank, distance: l.distance ?? 0 });
+        const descent = locs
+            .map((l: any) => {
+                const opts = l.optionsWithIndex ?? [];
+                if (/(gang)?plank/i.test(l.name ?? '') && !BOARD_PLANK_IDS.has(l.id ?? -1)) {
+                    const cross = opts.find((o: any) => /^cross$/i.test(o.text));
+                    if (cross) return entry(DISEMBARK_PLANK_IDS.has(l.id ?? -1) ? 0 : 1, l, cross);
+                }
+                if (isShipHoldLadder(l)) return null;
+                const down = opts.find((o: any) => /^climb-?down$/i.test(o.text));
+                return down ? entry(2, l, down) : null;
+            })
+            .filter((cand): cand is NonNullable<typeof cand> => !!cand && cand.distance <= 20)
+            .sort((a, b) => (a.rank - b.rank) || (a.distance - b.distance))[0];
+        if (descent) {
+            await s.bot.interactLoc(descent.loc, descent.opt.opIndex);
+            await waitUntil(s as Session, () => stop() || level() === 0, { timeoutTicks });
+        }
     }
     const remaining = level();
     if (remaining !== 0) {
@@ -1312,6 +1334,7 @@ try {
     let untilDeposited=false; // the drop was in the pack during this run (it is banked by the end)
     const bankUntil=async()=>{const had=untilInPack();await bank();if(had)untilDeposited=true;};
 
+    let stuckWalks = 0;
     while (!over()&&(!cleanupScope||!cowStop.stop())) {
         if(untilDeposited||untilInPack()||untilBanked())break;
         if(potions)await potions.poll();
@@ -1331,9 +1354,15 @@ try {
         if (!p) { await waitTicks(s, 1); continue; }
 
         if (Math.max(Math.abs(p.worldX - conf.spot.x), Math.abs(p.worldZ - conf.spot.z)) > 15) {
-            await walk(conf.spot.x, conf.spot.z, 4);
+            if (await walk(conf.spot.x, conf.spot.z, 4)) {
+                stuckWalks = 0;
+            } else {
+                stuckWalks++;
+                if (stuckWalks >= 3) throw Error(`combat travel blocked at ${p.worldX},${p.worldZ},${p.level}`);
+            }
             continue;
         }
+        stuckWalks = 0;
 
         // Check for ground loot
         if (invSpace > 0) {
