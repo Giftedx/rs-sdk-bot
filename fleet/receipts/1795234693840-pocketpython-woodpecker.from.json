@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795234693840-pocketpython-woodpecker",
+ "account": "Pocketpython",
+ "partner": "Woodpecker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 99334,
+ "claim": "f548cddf-4b70-4ce9-8471-ffd56a2f2c9e",
+ "count": 99334,
+ "ok": true,
+ "at": 1795234820369,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 99334,
+  "after": 0
+ },
+ "bank": {
+  "count": 99334,
+  "at": 1795234808391
+ },
+ "logout": {
+  "attemptId": "1795234797405-0000014644-0000000001",
+  "at": 1795234820334,
+  "sha256": "c7f60bace7473e3df3a09d689ff06d62f43d1375f3ae968649c2d5b0b3857bc9"
+ },
+ "screen": true
+}
