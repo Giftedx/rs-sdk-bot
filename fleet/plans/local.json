@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795289754752,
+ "at": 1795289820767,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -290,7 +290,7 @@
    "account": "BowBeforeMe",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=28 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=bowbeforeme-kit3-536-0to28 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=28 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=bowbeforeme-kit4-536-0to28 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -317,8 +317,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,

@@ -1,0 +1,22 @@
+{
+ "id": "1795289795642-mineyourbiz-fatstack-waterrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "Fatstack",
+ "item": "Water rune",
+ "count": 25,
+ "start": 1795289795642,
+ "end": 1795292195642,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
