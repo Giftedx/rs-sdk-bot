@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795297214978-swordswallow-dipstick-ballofwool",
+ "role": "from",
+ "account": "Swordswallow",
+ "partner": "Dipstick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795297265080,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}
