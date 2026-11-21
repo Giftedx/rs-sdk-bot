@@ -116,6 +116,7 @@ export const TOURIST_TRADE_2: readonly SupplyEntry[] = [
     { id: ITEMS.desertRobe, name: 'Desert robe', count: 1 },
     { id: ITEMS.desertBoots, name: 'Desert boots', count: 1 },
     { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 1 },
+    { id: ITEMS.shark, name: 'Shark', count: 2 },
 ];
 
 export const TOURIST_TRADE_2B: readonly SupplyEntry[] = [
@@ -735,7 +736,7 @@ class SupplierAgent {
             await this.restockAtBank({ x: 3094, z: 3491 }, TOURIST_TRADE_3);
             await walkNear(s, { x: 3093, z: 3491 }, 1, 20);
             this.readyPhase = 4;
-            await waitUntil(s, () => this.stopFlag || this.completedPhase >= 4, { timeoutTicks: 1500 });
+            await waitUntil(s, () => this.stopFlag || this.completedPhase >= 4, { timeoutTicks: 2500 });
         } catch (err) {
             this.error = err instanceof Error ? err : Error(String(err));
         }
@@ -898,7 +899,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await waitTicks(s, 1);
     }
 
-    const q = await openQuest({ session: s, burst: true, cap, eatAt: 10, food: [ITEMS.shark, ITEMS.chocolateCake], lumbridgeOk: true });
+    const q = await openQuest({ session: s, burst: true, cap, eatAt: 13, food: [ITEMS.shark, ITEMS.chocolateCake], lumbridgeOk: true });
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
     try {
@@ -1036,7 +1037,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                 if ((q.st()?.prayers?.prayerPoints ?? 99) <= 10) {
                     if (await drinkFirstMatching(s, ITEMS.prayerPot)) await q.waitTicks(2);
                 }
-                const eatFloor = Math.max(10, Math.ceil((skillLvl(s, 'Hitpoints') || 10) * 0.45));
+                const eatFloor = Math.max(14, Math.ceil((skillLvl(s, 'Hitpoints') || 10) * 0.6));
                 for (let h = 0; h < 3 && q.hp() <= eatFloor; h++) {
                     if (!await drinkFirstMatching(s, [ITEMS.shark, ...ITEMS.chocolateCakeParts])) break;
                     await q.waitTicks(2);
@@ -1056,7 +1057,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                             await s.direct({ type: 'clickDialogOption', optionIndex: idx, reason: 'SDK' });
                         }
                     } else if (rockIdle === 0 || rockIdle >= 12) {
-                        const rock = q.findLoc((l: any) => l.id === rid);
+                        const rock = q.findLoc((l: any) => l.id === rid && l.reachable !== false) ?? q.findLoc((l: any) => l.id === rid);
                         if (rock) {
                             const op = q.opIndex(rock, /climb/i);
                             await s.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: op === 1 ? 2 : op, reason: 'SDK' });
@@ -1331,7 +1332,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await ensureFullPrayer();
         await q.walk('to barrels', [{ x: 3302, z: 9418, tol: 1 }]);
         await locTalk('empty barrel', () => { const b = q.findLoc((l: any) => l.id === 2681 && Math.abs(l.x - 3303) <= 3 && Math.abs(l.z - 9417) <= 3) ?? LOW_BARREL; return q.opLoc(b, q.opIndex(b, /search|take/i) === 1 ? 2 : q.opIndex(b, /search|take/i)); }, [/yeah, cool/i], () => q.has(ITEMS.barrel));
-        await locTalk('low cart', () => { const c = loc(LOW_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() >= 9428 && x() >= 3310, 8);
+        await locTalk('low cart', () => { const c = loc(LOW_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() >= 9428 && x() >= 3310, 24);
 
         await maintainEnergy(s, 45);
         await ensureFullPrayer();
@@ -1343,7 +1344,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await q.walk('to ana cart', [{ x: 3319, z: 9431, tol: 1 }]);
         await q.step('ana in cart', () => q.useOnLoc(ITEMS.ana, loc(ANA_CART)), () => !q.has(ITEMS.ana), 12, 3);
         await q.waitTicks(4);
-        await locTalk('cart back', () => { const c = loc(ANA_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() <= 9420, 8);
+        await locTalk('cart back', () => { const c = loc(ANA_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() <= 9420, 24);
         await locTalk('ana barrel 2', () => { const b = q.findLoc((l: any) => l.id === 2681 && Math.abs(l.x - 3303) <= 3 && Math.abs(l.z - 9417) <= 3) ?? LOW_BARREL; return q.opLoc(b, q.opIndex(b, /search|take/i) === 1 ? 2 : q.opIndex(b, /search|take/i)); }, [], () => q.has(ITEMS.ana));
 
         await ensureFullPrayer();
@@ -1985,7 +1986,11 @@ export async function runAgilitySpecialist(bot: string, argv: readonly string[] 
             await wearItem(spec, ITEMS.desertRobe);
             await wearItem(spec, ITEMS.desertBoots);
             await smithTo20AtVarrock(spec);
-            await dropExcept(spec, new Set([...GLORY_IDS, ITEMS.airRune, ITEMS.chaosRune, ITEMS.hammer]), 8);
+            for (const id of [ITEMS.fireStaff, ITEMS.desertShirt, ITEMS.desertRobe, ITEMS.desertBoots]) await wearItem(spec, id);
+            await dropExcept(spec, new Set([...GLORY_IDS, ITEMS.airRune, ITEMS.chaosRune, ITEMS.hammer, ITEMS.shark]), 8);
+            if (invOf(spec).length > 6) {
+                throw Error(`pre-trade-2b inventory too full (${invOf(spec).length}): ${invOf(spec).map(i => i.id).join(',')}`);
+            }
             await walkNear(spec, { x: 3185, z: 3436, level: 0 }, 2, 30);
             await receiveTradePhase(TOURIST_TRADE_2B, 3, 450);
             await rubGlory(spec, /al kharid/i, { x: 3293, z: 3163 }, 20);
