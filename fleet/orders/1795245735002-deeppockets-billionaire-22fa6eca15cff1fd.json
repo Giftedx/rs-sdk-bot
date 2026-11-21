@@ -1,0 +1,11 @@
+{
+ "id": "1795245735002-deeppockets-billionaire-22fa6eca15cff1fd",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Deeppockets",
+ "to": "Billionaire",
+ "item": "Coins",
+ "count": 104000,
+ "start": 1795245735002,
+ "end": 1795248135002,
+ "takerWaits": true
+}

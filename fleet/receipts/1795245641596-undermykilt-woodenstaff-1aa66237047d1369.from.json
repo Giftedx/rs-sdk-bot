@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795245641596-undermykilt-woodenstaff-1aa66237047d1369",
  "account": "UnderMyKilt",
  "partner": "Woodenstaff",
@@ -10,15 +10,33 @@
  "item": "Prayer potion(4)",
  "requested": 2,
  "claim": "869741b5-3c09-4804-a8ca-cf3706f14007",
- "count": 0,
- "ok": false,
- "at": 1795245701222,
- "detail": "trade claimed",
+ "count": 2,
+ "ok": true,
+ "at": 1795245729778,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Prayer potion(1)",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795245706635
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795245701233-0000020548-0000000001",
+  "at": 1795245729764,
+  "sha256": "f396da9b59ec54dad9103ba8b949924ba154f3ff275327ef6b09e6ef0de5a99f"
+ },
+ "screen": true
 }
