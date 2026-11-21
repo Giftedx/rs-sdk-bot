@@ -47,7 +47,19 @@ const LOC = {
 const CROSSBOWS = [{ x: 3243, z: 3383 }, { x: 3245, z: 3385 }];  // level 1 obj spawns (maps/m50_52.jm2)
 const exact = (n: string) => new RegExp(`^${n}$`, 'i');
 
+export const ARRAV_SPOTS = [
+    ...Object.values(AT),
+    { x: LOC.bookcase.x, z: LOC.bookcase.z },
+    { x: LOC.cellar.x, z: LOC.cellar.z },
+    { x: LOC.hqLadder.x, z: LOC.hqLadder.z },
+    { x: LOC.chest.x, z: LOC.chest.z },
+    { x: LOC.storeDoor.x, z: LOC.storeDoor.z },
+    { x: LOC.baDoor.x, z: LOC.baDoor.z },
+    { x: LOC.cupboard.x, z: LOC.cupboard.z },
+];
+
 type Q = Awaited<ReturnType<typeof openQuest>>;
+export async function runQuestArrav(): Promise<void> {
 let m: Q | undefined;
 const h: Q = await openQuest({ name: HELPER, cap: 6000, others: () => m ? [m.s] : [] });
 const done = (q: Q) => { let d = false; q.s.onTick(() => { if (!d && q.msgCount(/quest complete/i) > 0) d = true; }); return () => d; };
@@ -204,6 +216,13 @@ try {
     await q.climb('ba stairs up', () => loc(q, LOC.baStairs, /stair/i), /climb-up/i, () => q.lvl() === 1);
     await searchFor(q, 'cupboard', LOC.cupboard, 2401, ITEM.half2);
     q.milestone('half2');
+    // Climb down and clear the Black Arm door first when the account cannot cast Varrock Teleport.
+    if (!q.canCast('magic:varrock_teleport')) {
+        await q.climb('ba stairs down', () => q.findLoc((l: any) => l.x === LOC.baStairsTop.x && l.z === LOC.baStairsTop.z && (l.optionsWithIndex ?? []).some((o: any) => /climb-down/i.test(o.text))) ?? LOC.baStairsTop, /climb-down/i, () => q.lvl() === 0);
+        await q.walk('ba door out walk', [{ x: LOC.baDoor.x, z: LOC.baDoor.z, tol: 0 }]);
+        await q.step('ba door out', () => q.opLoc(loc(q, LOC.baDoor), 1), () => (q.pos()?.worldZ ?? 9999) < LOC.baDoor.z, 10, 4);
+        await q.waitTicks(4);
+    }
     // Varrock teleport from the cupboard (3212,3424, 43 tiles from the museum): the walk from the HQ door was 56 ticks.
     await q.teleport('varrock teleport', 'magic:varrock_teleport', 3212, 3424);
     // 6. The curator: both halves give 2 certificates (curator.rs2:7-23).
@@ -223,3 +242,8 @@ try {
     const tail = await Promise.race([helperTail, new Promise<string>(r => setTimeout(() => r('helper timeout'), 120_000))]);
     await q.end(mainDone() && tail === 'ok' && helperDone(), `qp=1 mainTicks=${mainTicks} helperPrep=${READY ? 'preset' : helperPrep} helper=${tail} helperDone=${helperDone()} helperTicks=${h.T()}`);
 } catch (e) { await (m ?? h).fail(String(e)); }
+}
+
+if (import.meta.main || !!(globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) {
+    await runQuestArrav();
+}
