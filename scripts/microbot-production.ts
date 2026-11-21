@@ -259,13 +259,26 @@ export async function runInventoryBank(s:import('../packages/core/src/inprocess'
  if(stopped()){result.ok=false;result.failure='production session stopped';}
  console.log('MICROBOT_PRODUCTION '+JSON.stringify(result));return result;
 }
-if(import.meta.main){
- const r=inventoryRecipes().find(r=>r.name===process.argv[3]);if(!r)throw Error('unknown inventory recipe');
- const maximum=Number(process.env.MAX_MAKE??1),cap=Number(process.env.CAP??500),maxAttempts=Number(process.env.MAX_ATTEMPTS??maximum);
+const PRODUCTION_CLI_KEYS=new Set(['MAX_MAKE','CAP','MAX_ATTEMPTS','ORDER_MODE','RAW_RESERVE','MEMBERS','INPUT_RESERVES']);
+export function parseProductionCli(argv:readonly string[],env:Readonly<Record<string,string|undefined>>={}){
+ const overrides:Record<string,string>={};
+ for(const token of argv.slice(4)){
+  const match=token.match(/^([A-Z][A-Z0-9_]*)=([\s\S]*)$/);
+  if(!match||!PRODUCTION_CLI_KEYS.has(match[1]!))throw Error('unsupported production cli argument: '+token);
+  overrides[match[1]!]=match[2]!;
+ }
+ const effective={...env,...overrides};
+ const r=inventoryRecipes().find(r=>r.name===argv[3]);if(!r)throw Error('unknown inventory recipe');
+ const maximum=Number(effective.MAX_MAKE??1),cap=Number(effective.CAP??500),maxAttempts=Number(effective.MAX_ATTEMPTS??maximum);
  if(![maximum,cap,maxAttempts].every(n=>Number.isSafeInteger(n)&&n>0)||maximum%(r.productUnits??1)||maxAttempts<maximum/(r.productUnits??1))throw Error('invalid production limits');
- const inputReserves=process.env.INPUT_RESERVES?JSON.parse(process.env.INPUT_RESERVES):undefined;productionInputReserves(r,Number(process.env.RAW_RESERVE??0),inputReserves);
+ const reserve=Number(effective.RAW_RESERVE??0),inputReserves=effective.INPUT_RESERVES?JSON.parse(effective.INPUT_RESERVES):undefined;
+ productionInputReserves(r,reserve,inputReserves);
+ return{account:argv[2],recipe:r,maximum,cap,maxAttempts,partial:effective.ORDER_MODE==='best-effort',reserve,inputReserves,members:effective.MEMBERS==='1'};
+}
+if(import.meta.main){
+ const cli=parseProductionCli(process.argv,process.env);
  const {openBot,finish}=await import('../packages/core/src/bot');let stop=false;
- const s=await openBot(process.argv[2]!,{onStop:async()=>{stop=true;}});
- try{const result=await runInventoryBank(s,r,{maximum,cap,maxAttempts,partial:process.env.ORDER_MODE==='best-effort',reserve:Number(process.env.RAW_RESERVE??0),inputReserves,members:process.env.MEMBERS==='1',stop:()=>stop});await finish([s],result.ok,JSON.stringify(result));}
+ const s=await openBot(cli.account!,{onStop:async()=>{stop=true;}});
+ try{const result=await runInventoryBank(s,cli.recipe,{maximum:cli.maximum,cap:cli.cap,maxAttempts:cli.maxAttempts,partial:cli.partial,reserve:cli.reserve,inputReserves:cli.inputReserves,members:cli.members,stop:()=>stop});await finish([s],result.ok,JSON.stringify(result));}
  catch(e){await finish([s],false,String(e));}
 }
