@@ -1,0 +1,22 @@
+{
+ "id": "1795295044072-swordswallow-dropmyload-ballofwool",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordswallow",
+ "to": "DropMyLoad",
+ "item": "Ball of wool",
+ "count": 2,
+ "start": 1795295044072,
+ "end": 1795297444072,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

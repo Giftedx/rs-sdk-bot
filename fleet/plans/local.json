@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795294769014,
+ "at": 1795295067952,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -424,32 +424,6 @@
    ]
   },
   {
-   "account": "mmtha0205",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Strength",
-    "TARGET_LEVEL": "99",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Strength to 99 on the Khazard troopers",
-   "role": "combat",
-   "template": "army-trooper-strength-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
-   ]
-  },
-  {
    "account": "Pocketpython",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -480,7 +454,7 @@
    "script": "scripts/gather-combat.ts",
    "args": [
     "6000",
-    "giant"
+    "taverley_black_knight"
    ],
    "env": {
     "MAX_KILLS": "40"
@@ -488,12 +462,12 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
+   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
    "role": "combat",
-   "template": "squad-ardougne-giants",
+   "template": "squad-taverley-black-knights",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-giants"
+    "squad:taverley-black-knights"
    ]
   },
   {
@@ -562,6 +536,27 @@
    "autopilot": "local",
    "resources": [
     "squad:taverley-black-knights"
+   ]
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
+   "env": {
+    "MAX_KILLS": "40"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
+   "autopilot": "local",
+   "resources": [
+    "squad:ardougne-giants"
    ]
   }
  ],
