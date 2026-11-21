@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795219330369-ballspinner-shaftmaker-naturerune",
+ "account": "Ballspinner",
+ "partner": "Shaftmaker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 349,
+ "claim": "94f41fbb-3d11-4117-b191-f737d0fcabbe",
+ "count": 0,
+ "ok": false,
+ "at": 1795219457714,
+ "detail": "trade claimed"
+}
