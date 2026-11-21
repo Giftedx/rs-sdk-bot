@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795291109483-sausagefest-ballspinner-waterrune",
+ "account": "Ballspinner",
+ "partner": "Sausagefest",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 25,
+ "claim": "9fd09f86-c969-4997-93e1-eff9d47cfbab",
+ "count": 0,
+ "ok": false,
+ "at": 1795291151100,
+ "detail": "trade claimed"
+}
