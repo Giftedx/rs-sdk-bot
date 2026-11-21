@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795290277989-sausagefest-knightrider-runechainbody",
+ "account": "KnightRider",
+ "partner": "Sausagefest",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "5b36c4d6-abae-4577-be8a-49ef365e9c06",
+ "count": 0,
+ "ok": false,
+ "at": 1795290381093,
+ "detail": "trade claimed"
+}
