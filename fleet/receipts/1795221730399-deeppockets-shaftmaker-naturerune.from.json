@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795221730399-deeppockets-shaftmaker-naturerune",
  "account": "Deeppockets",
  "partner": "Shaftmaker",
@@ -12,6 +12,16 @@
  "claim": "ceff0202-5ae1-4447-9f75-2ce42bcdf9a5",
  "count": 0,
  "ok": false,
- "at": 1795221799135,
- "detail": "trade claimed"
+ "at": 1795221971707,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 407,
+  "at": 1795221970950
+ },
+ "logout": {
+  "attemptId": "1795221799144-0000029688-0000000001",
+  "at": 1795221971691,
+  "sha256": "d1badad9fc5f00f5675fd86476b761bcfaf73686f3b523df71748cc406a9e2d9"
+ },
+ "screen": false
 }
