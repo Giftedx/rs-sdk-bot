@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795294716964,
+ "at": 1795294769014,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -477,24 +477,23 @@
   },
   {
    "account": "Unsheathed",
-   "script": "scripts/chain.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "scripts/walk-to.ts 2832 9586",
-    "scripts/gather-spawn.ts 223 27"
+    "6000",
+    "giant"
    ],
    "env": {
-    "TICKS": "3000",
-    "ROUNDS": "1"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "gather red spiders' eggs in Karamja Volcano (non-Wilderness) for super restore potions",
-   "role": "herblore",
-   "template": "squad-karamja-red-spiders-eggs",
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "squad:karamja-red-spiders-eggs"
+    "squad:ardougne-giants"
    ]
   },
   {
@@ -525,21 +524,23 @@
   },
   {
    "account": "Magicwanda",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "repeat": false,
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "knight:2652,3318"
+    "squad:ardougne-giants"
    ]
   },
   {
