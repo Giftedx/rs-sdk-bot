@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795231748978-pocketpython-fingersmith",
+ "account": "Pocketpython",
+ "partner": "Fingersmith",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 31948,
+ "claim": "ce8d761a-a5f5-4973-8df4-d059ea0308d3",
+ "count": 0,
+ "ok": false,
+ "at": 1795231823081,
+ "detail": "trade claimed"
+}
