@@ -105,7 +105,7 @@ export const TOURIST_TRADE_1: readonly SupplyEntry[] = [
     { id: ITEMS.lawRune, name: 'Law rune', count: 10 },
     { id: ITEMS.headlessArrow, name: 'Headless arrow', count: 150 },
     { id: ITEMS.bronzeArrowtips, name: 'Bronze arrowtips', count: 150 },
-    { id: ITEMS.dragonBones, name: 'Dragon bones', count: 11 },
+    { id: ITEMS.dragonBones, name: 'Dragon bones', count: 14 },
     { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 1 },
 ];
 
@@ -791,9 +791,9 @@ async function runFletchingTo10(s: Session): Promise<void> {
     if (skillLvl(s, 'Fletching') < 10) throw Error(`fletching reached ${skillLvl(s, 'Fletching')} (< 10)`);
 }
 
-async function runPrayerTo43(s: Session): Promise<void> {
+async function runPrayerTo43(s: Session, targetLevel = 43): Promise<void> {
     const t0 = s.tick();
-    while (skillLvl(s, 'Prayer') < 43 && s.tick() - t0 < 80) {
+    while (skillLvl(s, 'Prayer') < targetLevel && s.tick() - t0 < 80) {
         const bones = invOf(s).filter(i => i.id === ITEMS.dragonBones);
         if (!bones.length) break;
         const acts: Promise<unknown>[] = [];
@@ -925,8 +925,9 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         const closeDlg = async () => { if (q.dialogOpen()) await q.converse([], () => !q.dialogOpen(), 8); };
         const loc = (l: { id: number; x: number; z: number }) => q.locAt(l.x, l.z) ?? l;
         const worn = (id: number) => wornOf(s).some(e => e.id === id);
-        const inCamp = () => x() >= 3274 && x() <= 3306 && z() >= 3011 && z() <= 3043;
         const inPrisonCell = () => lvl() === 0 && x() >= 3284 && x() <= 3287 && z() >= 3031 && z() <= 3037;
+        const onPrisonCliff = () => lvl() === 0 && x() >= 3280 && x() <= 3283 && z() >= 3032 && z() <= 3039;
+        const inCamp = () => !(inPrisonCell() || onPrisonCliff()) && x() >= 3274 && x() <= 3306 && z() >= 3011 && z() <= 3043;
         const locTalk = async (label: string, sendFn: () => unknown, pats: RegExp[], okFn: () => boolean, tries = 4, ticks = 35) => {
             for (let i = 0; i < tries && !okFn(); i++) {
                 await q.guard(label);
@@ -982,7 +983,8 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         };
         const ensureFullPrayer = async () => {
             if (!_usePrayer) return;
-            for (let t = 0; t < 4 && Math.min(q.st()?.prayers?.prayerPoints ?? 43, skillCur(s, 'Prayer')) < 43; t++) {
+            const floor = Math.min(skillLvl(s, 'Prayer'), 44);
+            for (let t = 0; t < 4 && Math.min(q.st()?.prayers?.prayerPoints ?? floor, skillCur(s, 'Prayer')) < floor; t++) {
                 if (!await drinkFirstMatching(s, ITEMS.prayerPot)) break;
                 await q.waitTicks(2);
             }
@@ -1019,8 +1021,8 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                 await q.waitTicks(1);
             }
             if (inPrisonCell()) await q.fail('step cell window');
-            if (x() >= 3281) await walkNear(s, { x: 3281, z: 3038 }, 1, 25);
-            for (let retry = 0; retry < 25 && x() > 3271 && !inPrisonCell(); retry++) {
+            if (x() >= 3281) await walkNear(s, { x: 3282, z: 3037 }, 0, 20);
+            for (let retry = 0; retry < 40 && x() > 3272 && !inPrisonCell(); retry++) {
                 await q.guard('cell rock');
                 if ((q.st()?.prayers?.prayerPoints ?? 99) <= 10) {
                     if (await drinkFirstMatching(s, ITEMS.prayerPot)) await q.waitTicks(2);
@@ -1047,7 +1049,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                         const rock = q.findLoc((l: any) => l.id === rid);
                         if (rock) {
                             const op = q.opIndex(rock, /climb/i);
-                            await q.opLoc(rock, op === 1 ? 2 : op);
+                            await s.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: op === 1 ? 2 : op, reason: 'SDK' });
                         }
                         rockIdle = 1;
                     } else {
@@ -1056,10 +1058,11 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                     await q.waitTicks(1);
                 }
             }
+            if (x() > 3272 || inPrisonCell()) await q.fail(`failed prison cliff escape at ${x()},${z()}`);
             await ensureFullPrayer();
         };
         const gateIn = async () => {
-            if (inPrisonCell()) await escapePrisonCell();
+            if (inPrisonCell() || onPrisonCliff()) await escapePrisonCell();
             if (!q.has(ITEMS.metalKey)) await fightCaptainForKey();
             if (inCamp()) return;
             for (let t = 0; t < 10 && worn(ITEMS.fireStaff); t++) await removeWornItem(s, ITEMS.fireStaff);
@@ -1137,7 +1140,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         // Picklock Male Slave at Thieving 1 (~8.6%/try); if 3rd fail within 10 tiles of a guard jails player, recover cell+key and retry.
         for (let attempt = 0; attempt < 24 && !gotClothes(); attempt++) {
             await q.guard('slave loop');
-            if (inPrisonCell()) await escapePrisonCell();
+            if (inPrisonCell() || onPrisonCliff()) await escapePrisonCell();
             if (!q.has(ITEMS.metalKey)) await fightCaptainForKey();
             await ensureFullPrayer();
             if (!inCamp()) await gateIn();
@@ -1184,7 +1187,8 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         q.milestone(8);
 
         await mineIn();
-        await q.walk('to cave guard', [{ x: 3280, z: 9415, tol: 1 }]);
+        await ensureFullPrayer();
+        await q.walk('to cave guard', [{ x: 3280, z: 9415, tol: 1 }], l => console.log('CAVE_WALK', l));
         await q.talk('cave guard', /^mercenary$/i, [/mine in a different area/i, /you're quite right sir/i, /we understand each other perfectly/i], () => q.sawText(/winks at you knowingly/i), { x: 3280, z: 9415 }, 50);
         await mineOut();
         await gateOut();
@@ -1262,7 +1266,8 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await maintainEnergy(s, 50);
         await gateIn();
         await mineIn();
-        await q.walk('to cave guard', [{ x: 3280, z: 9415, tol: 1 }]);
+        await ensureFullPrayer();
+        await q.walk('to cave guard', [{ x: 3280, z: 9415, tol: 1 }], l => console.log('CAVE_WALK', l));
         await q.talk('pineapple', /^mercenary$/i, [], () => !q.has(ITEMS.pineapple) && q.sawText(/a deal's a deal/i), { x: 3280, z: 9415 }, 50);
         await q.walk('to cave', [{ x: CAVE_W.x - 1, z: CAVE_W.z, tol: 0 }]);
         await q.step('cave east', () => q.opLoc(loc(CAVE_W), 1), () => x() >= 3285, 12, 4);
@@ -1906,7 +1911,7 @@ export async function runAgilitySpecialist(bot: string, argv: readonly string[] 
         if (cfg.route === 'tourist') {
             await wearItem(spec, ITEMS.fireStaff);
             await runFletchingTo10(spec);
-            await runPrayerTo43(spec);
+            await runPrayerTo43(spec, 46);
             await runImpCatcherAndEnchant(spec, cfg.cap);
 
             await walkNear(spec, { x: 3185, z: 3436, level: 0 }, 2, 40);
