@@ -5,6 +5,6 @@
  "account": "Moneyshot",
  "partner": "Swordinhand",
  "server": "rs-sdk-demo.fly.dev",
- "at": 1795238109809,
+ "at": 1795238212282,
  "detail": "Error: account logout is not confirmed: Moneyshot session active or outcome unknown"
 }
