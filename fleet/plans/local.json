@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795244972752,
+ "at": 1795245137700,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -182,130 +182,6 @@
    ]
   },
   {
-   "account": "Hocuspokeus",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "4000",
-    "taverley_druid"
-   ],
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "4000",
-    "taverley_druid"
-   ],
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "TICKS": "6000",
-    "KNIGHT_SPOT": "2653,3300"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "TICKS": "6000",
-    "KNIGHT_SPOT": "2669,3298"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "TICKS": "6000",
-    "KNIGHT_SPOT": "2671,3313"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "TICKS": "6000",
-    "KNIGHT_SPOT": "2652,3318"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "TICKS": "6000",
-    "KNIGHT_SPOT": "2582,3297"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "TICKS": "6000",
-    "KNIGHT_SPOT": "2653,3302"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "Bigchopper",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "dargaud",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "rune arrow",
-    "STOCK_TARGET": "445",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "320200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "320000",
-    "AUTOPILOT_ORDER": "[45]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":445}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
-   "role": "bank",
-   "template": "squad-arrows-dargaud",
-   "autopilot": "local",
-   "resources": [
-    "shop:dargaud"
-   ]
-  },
-  {
    "account": "YewFirst",
    "script": "scripts/aio.ts",
    "args": [
@@ -410,6 +286,112 @@
    "resources": [
     "shop:wydin_choc"
    ]
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "4000",
+    "taverley_druid"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "4000",
+    "taverley_druid"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2653,3300"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2669,3298"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2671,3313"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2652,3318"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2582,3297"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2653,3302"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2669,3298"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true
   }
  ],
  "army": [

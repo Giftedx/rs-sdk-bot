@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795244772467-woodenstaff-earlyshooter-bde2611e5e777d53",
  "account": "Woodenstaff",
  "partner": "Earlyshooter",
@@ -10,8 +10,18 @@
  "item": "Coins",
  "requested": 44000,
  "claim": "1f6f8b8c-34a6-4864-9fe1-281f4247b9b5",
- "count": 0,
- "ok": false,
- "at": 1795244999360,
- "detail": "trade claimed"
+ "count": 44000,
+ "ok": true,
+ "at": 1795245132656,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 44000,
+  "after": 0
+ },
+ "logout": {
+  "attemptId": "1795244999370-0000023652-0000000001",
+  "at": 1795245132644,
+  "sha256": "044384149987c452d4d33f6357594da02eb29b4a675752fc867f9ba6e806f501"
+ },
+ "screen": true
 }

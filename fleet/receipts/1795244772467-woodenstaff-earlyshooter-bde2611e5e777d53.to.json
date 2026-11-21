@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795244772467-woodenstaff-earlyshooter-bde2611e5e777d53",
+ "account": "Earlyshooter",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 44000,
+ "claim": "7064a521-c121-4eb8-a0d2-a34696005849",
+ "count": 44000,
+ "ok": true,
+ "at": 1795245135043,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 44000
+ },
+ "bank": {
+  "count": 44000,
+  "at": 1795245134263
+ },
+ "logout": {
+  "attemptId": "1795245122494-0000006424-0000000001",
+  "at": 1795245135013,
+  "sha256": "cc9491c4f9864aa08837e06eebfee37a5d28956ab35c378378714d7060b1d567"
+ },
+ "screen": true
+}
