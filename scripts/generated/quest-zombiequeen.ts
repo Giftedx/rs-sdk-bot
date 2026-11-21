@@ -35,7 +35,7 @@ const FROM = process.env.ZQ_FROM ?? 'start';
 const STAGES = ['start', 'mound', 'azr', 'cairn', 'bury', 'door', 'tomb', 'final'];
 const from = (s: string) => STAGES.indexOf(FROM) <= STAGES.indexOf(s);
 
-const q = await openQuest({ cap: 9000, eatAt: 45, food: FOOD });
+const q = await openQuest({ cap: 9000, eatAt: 45, food: FOOD, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the shilo village/i) > 0) questDone = true; });
@@ -331,28 +331,36 @@ try {
         await topUp(90);
         await pfm(true);
         const dol = () => q.findLoc((l: any) => l.id === 2258 && l.z === 9487) ?? { id: 2258, x: 2892, z: 9487 };
-        await act('dolmen', () => q.opLoc(dol(), 2), [], () => !!q.npc(/^nazastarool$/i), 20, 3);
+        const appeared = () => q.sawText(/something appear on the dolmen/i) || msgSince(/something appear on the dolmen/i, 0);
+        const summon = async (label: string) => {
+            await act(label, () => q.opLoc(dol(), 2), [], () => !!q.npc(/^nazastarool$/i) || appeared(), 30, 4);
+        };
+        await summon('dolmen');
         const kill = async (label: string) => {
             for (let i = 0; i < 40; i++) {
                 await q.guard(label);
                 const n = q.npc(/^nazastarool$/i);
                 if (!n) return;
                 await q.attack(n);
-                await q.waitUntil(() => !(q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index), 6);
-                if (q.dialogOpen()) await q.converse([], () => !q.dialogOpen(), 6, false);
+                await q.waitUntil(() => !(q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index) || q.dialogOpen() || appeared(), 8);
+                if (q.dialogOpen()) await q.converse([], () => !q.dialogOpen(), 8, false);
             }
         };
-        for (let f = 1; f <= 3; f++) {
+        for (let f = 1; f <= 3 && !appeared(); f++) {
+            await clearUndead(`nazastarool ${f}`);
+            if (!q.npc(/^nazastarool$/i) && !appeared()) {
+                await q.converse([], () => !!q.npc(/^nazastarool$/i) || appeared(), 25, false);
+            }
+            if (!q.npc(/^nazastarool$/i) && !appeared()) await summon(`dolmen ${f}`);
             await kill(`nazastarool ${f}`);
             // Single-step phase-transition mesboxes so @summon_nazastarool and its npc_delay(1) settle cleanly.
-            await q.converse([], () => !!q.npc(/^nazastarool$/i) || q.sawText(/something appear on the dolmen/i) || msgSince(/something appear on the dolmen/i, 0), 20, false);
+            await q.converse([], () => !!q.npc(/^nazastarool$/i) || appeared(), 25, false);
             q.milestone(`naza${f}`);
-            if (q.sawText(/something appear on the dolmen/i) || msgSince(/something appear on the dolmen/i, 0)) break;
         }
         await q.converse([], () => !q.dialogOpen(), 10, false);
         // After the fight the bot can stand outside the door on 2893,9480 (2 of 3 runs), where the dolmen answers "I can't
         // reach that!": the door moves it back in (:1359-1364). No undead chase here: that is a way out of the room.
-        for (let i = 0; i < 8 && !q.has(ITEM.corpse); i++) {
+        for (let i = 0; i < 10 && !q.has(ITEM.corpse); i++) {
             await q.guard('remains');
             if (z() <= 9480) {
                 const d = q.findLoc((l: any) => l.id >= 2246 && l.id <= 2251 && l.z === 9480);
@@ -360,8 +368,13 @@ try {
                 await q.waitUntil(() => z() > 9480, 6);
                 continue;
             }
+            if (q.npc(/^nazastarool$/i)) {
+                await kill('nazastarool remains');
+                await q.converse([], () => appeared() || !q.dialogOpen(), 15, false);
+                continue;
+            }
             await q.opLoc(dol(), 2);
-            await answer([], () => q.has(ITEM.corpse), 15);
+            await answer([], () => q.has(ITEM.corpse) || !!q.npc(/^nazastarool$/i), 15);
         }
         if (!q.has(ITEM.corpse)) await q.fail('remains');
         await answer([], () => !q.dialogOpen(), 8);

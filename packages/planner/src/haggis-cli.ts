@@ -1,7 +1,7 @@
 // Prints the Haggis 24-board schedule for the three trick scenarios.
 // Usage: bun packages/planner/src/haggis-cli.ts [path/to/hiscores.json] [--order] [--supplies] [--evidence] [--levers] [--travel] [--no-travel]
 import { join, resolve } from 'node:path';
-import { bestSet as rawBestSet, haggisActivities, haggisTravel, LEVERS, loadSnapshot, schedule as rawSchedule, scheduleOverall, SCENARIOS, suppliesFor, TRICKS, type Activity, type Board, type BoardResult, type Mode, type ScheduleOptions } from './haggis';
+import { bestSet as rawBestSet, haggisActivities, haggisTravel, LEVERS, loadSnapshot, schedule as rawSchedule, scheduleOverall, scheduleQpSpecialist, SCENARIOS, suppliesFor, TRICKS, type Activity, type Board, type BoardResult, type Mode, type ScheduleOptions } from './haggis';
 import { MEASURED_LEGS, RUN_TICKS_PER_TILE, START_TICKS } from './travel';
 
 const args = process.argv.slice(2);
@@ -37,6 +37,13 @@ for (const sc of SCENARIOS) {
         const best = bestSet(boards, activities, { mode, tricks });
         const won = best.result.boards.filter(b => b.status === 'WIN').map(b => b.id);
         console.log(`Best set (${mode}): ${won.length} boards win: ${won.join(', ')}. Moved to the end: ${best.sacrificed.join(', ') || 'none'}`);
+    }
+    if (sc.id === 'a') {
+        const qpFloor = scheduleQpSpecialist(boards, activities, { mode: 'floor', tricks, travel });
+        const qpReal = scheduleQpSpecialist(boards, activities, { mode: 'realistic', tricks, travel });
+        const qpF = qpFloor.boards.find(b => b.id === 'questpoints')!;
+        const qpR = qpReal.boards.find(b => b.id === 'questpoints')!;
+        console.log(`Dedicated Quest Points specialist (145 QP, quest gates only): floor ${fmt(qpF.finish)} (${sl(qpF)} ${qpF.status}; travel ${fmt(qpFloor.travel)}), realistic ${fmt(qpR.finish)} (${sl(qpR)} ${qpR.status}; travel ${fmt(qpReal.travel)})`);
     }
     if (args.includes('--order')) {
         console.log('\n| # | Activity | Start | End | XP lands | Ticks | EDF deadline |');

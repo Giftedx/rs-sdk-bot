@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { applyLevers, bestSet, haggisActivities, haggisTravel, haggisUnsourceable, LEVERS, loadSnapshot, overallRequirementsFor, schedule, scheduleOverall, SCENARIOS, suppliesFor, TRICKS, XP99, type Activity, type Board } from '../src/haggis';
+import { applyLevers, bestSet, haggisActivities, haggisTravel, haggisUnsourceable, LEVERS, loadSnapshot, overallRequirementsFor, schedule, scheduleOverall, scheduleQpSpecialist, SCENARIOS, suppliesFor, TRICKS, XP99, type Activity, type Board } from '../src/haggis';
 import { leg, place, resolve, RUN_TICKS_PER_TILE, START_TICKS, TRAVEL_FILE, type TravelModel } from '../src/travel';
 import { join } from 'node:path';
 import { xpForLevel } from '../src/curve';
@@ -603,4 +603,22 @@ test('jewellery teleports (Amulet of glory, Ring of dueling) unlock after trade-
     expect(qpFinish).toBeLessThan(93000);
     expect(finish(floor, 'questpoints').finish!).toBeLessThan(86500);
     expect(real.order.find(p => p.id === 'runite')!.start).toBeGreaterThanOrEqual(qpFinish);
+}, 15_000);
+
+test('dedicated Quest Points specialist omits non-quest 99s and beats #1 stunquestv3 within <= 72,388t margin', () => {
+    const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-live.json'));
+    const acts = haggisActivities();
+    const travel = haggisTravel();
+    const floor = scheduleQpSpecialist(boards, acts, { mode: 'floor', tricks: new Set(TRICKS), travel });
+    const real = scheduleQpSpecialist(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel });
+    expect(floor.blocked).toEqual([]);
+    expect(real.blocked).toEqual([]);
+    expect(floor.qp).toBe(145);
+    expect(real.qp).toBe(145);
+    expect(finish(floor, 'questpoints').status).toBe('WIN');
+    expect(finish(real, 'questpoints').status).toBe('WIN');
+    expect(finish(floor, 'questpoints').finish!).toBeLessThanOrEqual(65000);
+    expect(finish(real, 'questpoints').finish!).toBeLessThanOrEqual(72388);
+    expect(real.order.some(p => p.id === 'quests-rest')).toBe(true);
+    expect(real.order.some(p => p.id === 'runecraft' || p.id === 'mine' || p.id === 'att-top')).toBe(false);
 }, 15_000);

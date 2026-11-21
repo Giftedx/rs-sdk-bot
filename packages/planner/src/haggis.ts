@@ -215,6 +215,10 @@ function routeScore(r: ScheduleResult, boards: Board[], raw: number, sacrificed?
     const isClock = (id: BoardId) => boards.find(x => x.id === id)?.rule.kind === 'clock';
     if (sacrificed?.has('overall')) {
         const active = r.boards.filter(b => !sacrificed.has(b.id) && b.id !== 'overall' && isClock(b.id));
+        if (active.length === 0 && !sacrificed.has('questpoints')) {
+            const qpFinish = r.boards.find(b => b.id === 'questpoints')?.finish ?? Infinity;
+            return [qpFinish, r.blocked.length, overall, raw];
+        }
         const activeFinish = active.reduce((m, b) => Math.max(m, b.finish ?? Infinity), 0);
         const activeSlack = active.reduce((s, b) => s + (b.slack ?? -1_000_000), 0);
         return [activeFinish, -activeSlack, overall, raw];
@@ -343,6 +347,102 @@ export function scheduleOverall(boards: Board[], activities: Activity[], opts: S
     }
     for (const c of candidates) if (finish(c) < finish(best)) best = c;
     return best;
+}
+
+const QP_SPECIALIST_OMITTED_IDS = new Set([
+    'att-40', 'att-top', 'str-top', 'def-top', 'hp-top', 'prayer', 'mine', 'runecraft',
+    'agility', 'agility-52', 'agility-gt', 'agility-tt', 'fish', 'fish-35', 'fish-53', 'fish-74',
+    'herb', 'herb-drops', 'herb-unf', 'smith', 'smith-anvil', 'smith-trade',
+    'crest', 'magic-43', 'smith-40', 'superheat', 'magic-top', 'magic-45', 'magic-anvil',
+    'mage-arena', 'charge', 'superheat-75', 'superheat-99', 'superheat-stun',
+    'ranged-entry', 'ranged-entry-melee', 'equip', 'bank-value', 'runite', 'wc-pray',
+]);
+
+// Max rev 289 quest gates across all 68 quests (quest-reqs.json + haggis-boards boss gates).
+const QP_SPECIALIST_MAX_GATES: Partial<Record<Skill, number>> = {
+    attack: 20, strength: 50, prayer: 43, magic: 59, cooking: 53, woodcutting: 50,
+    fletching: 25, fishing: 53, firemaking: 30, crafting: 50, smithing: 50, mining: 52,
+    herblore: 45, agility: 56, thieving: 50, ranged: 40,
+};
+
+/** Adapts the Haggis activity table for a dedicated 145-QP specialist that trains only to quest gates. */
+export function qpSpecialistActivities(activities: Activity[]): Activity[] {
+    const out: Activity[] = [];
+    for (const raw of activities) {
+        if (QP_SPECIALIST_OMITTED_IDS.has(raw.id)) continue;
+        const a: Activity = { ...raw, ...(raw.patches ? { patches: raw.patches.map(p => ({ ...p })) } : {}) };
+        if (a.id === 'login-wine') {
+            a.xp = { cooking: xpForLevel(53) };
+            a.serves = ['questpoints'];
+        } else if (a.id === 'fletch') {
+            delete a.ticks;
+            delete a.xp;
+            a.serves = ['questpoints'];
+            a.train = { skill: 'fletching', toLevel: 25, xpPerTick: { floor: 500, realistic: 500, evidence: 'CODE-READ', source: 'fletch-10 arrow pack rate' } };
+        } else if (a.id === 'fm-burn') {
+            delete a.ticks;
+            delete a.xp;
+            delete a.patches;
+            a.serves = ['questpoints'];
+            a.at = 'lumbridge-spawn';
+            a.train = { skill: 'firemaking', toLevel: 30, xpPerTick: { floor: 230, realistic: 184, evidence: 'CODE-READ', source: '1->30 normal/oak logs at 4-5t per log' } };
+        } else if (a.id === 'craft') {
+            delete a.ticks;
+            delete a.xp;
+            a.serves = ['questpoints'];
+            a.train = { skill: 'crafting', toLevel: 50, xpPerTick: { floor: 700, realistic: 550, evidence: 'MEASURED', source: 'conservative 1->50 gem cutting from floor-crafting.ts' } };
+        } else if (a.id === 'woodcut') {
+            delete a.ticks;
+            delete a.xp;
+            delete a.patches;
+            a.serves = ['questpoints'];
+            a.train = { skill: 'woodcutting', toLevel: 50, xpPerTick: { floor: 200, realistic: 170, evidence: 'MEASURED', source: '1->85 3-tick oak rate from floor-woodcut.ts' } };
+        } else if (a.id === 'thieve') {
+            delete a.ticks;
+            delete a.xp;
+            delete a.patches;
+            delete a.deadTicks;
+            delete a.trickSpeedup;
+            a.serves = ['questpoints'];
+            a.requires = ['trade-start'];
+            a.at = 'ardougne-market';
+            a.train = { skill: 'thieving', toLevel: 50, xpPerTick: { floor: 160, realistic: 130, evidence: 'MEASURED', source: '1->50 Ardougne stun-relog tiers from thieving-specialist.ts' } };
+        } else if (a.id === 'thieving-25') {
+            a.requires = [...new Set([...(a.requires ?? []), 'thieve'])];
+        } else if (a.id === 'ranged') {
+            delete a.patches;
+            a.serves = ['questpoints'];
+            a.requires = ['tutorial'];
+            a.at = 'lumbridge-spawn';
+            a.train = { skill: 'ranged', toLevel: 40, xpPerTick: { floor: 274.2, realistic: 206.0, evidence: 'MEASURED', source: 'research/combat-measure.md band-40 ranged rate' } };
+        } else if (a.id === 'magic' || a.id === 'magic-teleport') {
+            delete a.ticks;
+            delete a.xp;
+            delete a.patches;
+            delete a.inside;
+            a.serves = ['questpoints'];
+            a.train = {
+                skill: 'magic',
+                toLevel: 75,
+                xpPerTick: a.id === 'magic'
+                    ? { floor: 567, realistic: 525, evidence: 'MEASURED', source: 'floor-magic.ts enchant rate' }
+                    : { floor: 290, realistic: 260, evidence: 'MEASURED', source: 'floor-teleport.ts 1->75 rate' },
+            };
+        } else if (a.id === 'quests-medium') {
+            a.xp = { ...(a.xp ?? {}), smithing: 318125 };
+        } else if (a.id === 'quests-rest') {
+            a.minLevel = { ...QP_SPECIALIST_MAX_GATES, ...(a.minLevel ?? {}) };
+            a.requires = [...new Set([...(a.requires ?? []), 'barcrawl', 'smith-20', 'tourist-trap-agility', 'rival-seaslug', 'quests-medium'])];
+        }
+        out.push(a);
+    }
+    return out;
+}
+
+/** Schedules a dedicated 145-QP specialist (sacrificing skill 99s and Overall to beat #1 stunquestv3). */
+export function scheduleQpSpecialist(boards: Board[], activities: Activity[], opts: ScheduleOptions): ScheduleResult {
+    const sacrificed = new Set<BoardId>(boards.filter(b => b.id !== 'questpoints').map(b => b.id));
+    return schedule(boards, qpSpecialistActivities(activities), { ...opts, sacrificed });
 }
 
 // Schedule with opts.force where given and the raw-tick choice for the other variant groups.

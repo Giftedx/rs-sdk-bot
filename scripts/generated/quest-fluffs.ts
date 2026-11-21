@@ -17,7 +17,7 @@ const ITEM = { milk: 1927, sardine: 1552, kitten: 1554 };
 // kittens_mew "Crate" npcs; the kitten is at one of them (quest_fluffs.rs2:221-228, 271-279).
 const CRATES = [{ x: 3305, z: 3500 }, { x: 3310, z: 3499 }, { x: 3307, z: 3507 }, { x: 3303, z: 3506 }, { x: 3298, z: 3514 }, { x: 3311, z: 3511 }];
 
-const q = await openQuest({ cap: 1500 });
+const q = await openQuest({ cap: 1500, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
@@ -99,9 +99,13 @@ try {
             await q.guard('crates');
             const n = (q.st()?.nearbyNpcs ?? []).find((m: any) => m.x === c.x && m.z === c.z && /crate/i.test(m.name));
             if (!n) { console.log(`WARN no crate npc at ${c.x},${c.z}`); continue; }
+            const pos = q.pos();
             for (const [dx, dz] of [[0, -1], [-1, 0], [1, 0], [0, 1]]) {
                 if (q.cheb(c.x, c.z) <= 1) break;
-                await q.s.bot.walkTo(c.x + dx!, c.z + dz!, 0);
+                const tx = c.x + dx!, tz = c.z + dz!;
+                if (!pfm.isTileWalkable(0, tx, tz)) continue;
+                if (pos && pfm.findLongPath(0, pos.worldX, pos.worldZ, tx, tz).length === 0) continue;
+                await q.walk(`crate ${c.x},${c.z}`, [{ x: tx, z: tz, tol: 0 }]);
             }
             const m0 = q.msgCount(/you find nothing/i);
             await q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.[0]?.opIndex ?? 1, reason: 'SDK' });

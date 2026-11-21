@@ -63,7 +63,7 @@ const COM: Record<number, [string, boolean]> = {
 };
 const ITEM = { liftKey: 4078, rewardKey: 4077, fungus: 4075, chisel: 1755, shard: 4082 };
 
-const q = await openQuest({ cap: 4500, eatAt: 55, food: [385, 379] });
+const q = await openQuest({ cap: 4500, eatAt: 55, food: [385, 379], burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/completed a quest|quest complete/i) > 0) questDone = true; });
