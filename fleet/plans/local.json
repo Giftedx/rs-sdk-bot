@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795234719563,
+ "at": 1795234749384,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -336,23 +336,21 @@
   },
   {
    "account": "Unsheathed",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "giant"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "MAX_KILLS": "40"
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic runes, nature runes and herbs",
-   "role": "combat",
-   "template": "squad-ardougne-giants",
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-giants"
+    "knight:2653,3300"
    ]
   },
   {
@@ -380,26 +378,6 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "TackleBox",
-   "script": "scripts/generated/thieving60.ts",
-   "args": [],
-   "env": {
-    "TARGET": "55",
-    "CAP": "2500",
-    "CLEAN_FOOD": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Thieving to 55 for a knight spot",
-   "role": "thieving",
-   "template": "thieving55",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
    ]
   }
  ],
