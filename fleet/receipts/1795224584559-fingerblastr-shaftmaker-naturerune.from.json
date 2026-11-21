@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795224584559-fingerblastr-shaftmaker-naturerune",
  "account": "Fingerblastr",
  "partner": "Shaftmaker",
@@ -12,6 +12,16 @@
  "claim": "6adbb3b9-0d8a-4556-980f-f08ac1460b7d",
  "count": 0,
  "ok": false,
- "at": 1795224674024,
- "detail": "trade claimed"
+ "at": 1795224682393,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 323,
+  "at": 1795224681714
+ },
+ "logout": {
+  "attemptId": "1795224674035-0000014816-0000000001",
+  "at": 1795224682381,
+  "sha256": "e5b80d28f05a5533d4dea866e87162092a95ab2214e138833b6f738ed3cc2824"
+ },
+ "screen": false
 }

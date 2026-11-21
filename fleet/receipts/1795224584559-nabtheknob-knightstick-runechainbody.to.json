@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795224584559-nabtheknob-knightstick-runechainbody",
+ "account": "Knightstick",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "25837c02-177e-4fc6-aaca-d79108bd969b",
+ "count": 0,
+ "ok": false,
+ "at": 1795224678080,
+ "detail": "trade claimed"
+}
