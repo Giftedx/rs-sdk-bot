@@ -1,0 +1,34 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795249412519-unsheathed-mightyrod-8d1475d4343fd32b",
+ "account": "Unsheathed",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 120000,
+ "claim": "1cf49bbe-e758-4458-b9e8-a4db61785238",
+ "count": 0,
+ "ok": false,
+ "at": 1795249454358,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Prayer potion(3)",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Snape grass",
+   "requested": 13,
+   "count": 0
+  },
+  {
+   "item": "Vial of water",
+   "requested": 15,
+   "count": 0
+  }
+ ]
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795249150295-bigpackage-deeppockets-b050b8f8b71fd7ec",
  "account": "Bigpackage",
  "partner": "Deeppockets",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 62000,
  "claim": "f8090aa0-d4fa-4059-bca6-8f30cfceeec9",
- "count": 0,
- "ok": false,
- "at": 1795249385120,
- "detail": "trade claimed"
+ "count": 62000,
+ "ok": true,
+ "at": 1795249438429,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 62000,
+  "after": 0
+ },
+ "bank": {
+  "count": 44800,
+  "at": 1795249408441
+ },
+ "logout": {
+  "attemptId": "1795249385131-0000010172-0000000001",
+  "at": 1795249438417,
+  "sha256": "b600580b80998c075b4449296fdd43aed66999efd9d2a88079b09c7d04648266"
+ },
+ "screen": true
 }
