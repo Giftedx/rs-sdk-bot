@@ -671,6 +671,222 @@
    "Prayer": 99,
    "Hitpoints": 99
   },
+  "tribrid-bis-amulet-power": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-amulet-str": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-dhide": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-dragon": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-dragon-med-sharks": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-dragon-power": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-dragon-zerk": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-dragon-zerk-sharks": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-entangle": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-god-guthix": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-god-sara": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-hybrid": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-hybrid-sharks": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-hybrid-tele": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-power-glory": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-rune": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-sara-cape": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-spear": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-swap": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-zerk-glory-tele": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-zerk-karam2": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-zerk-power-sharks": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-zerk-tele": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
+  "tribrid-bis-zerk-tele-karam2": {
+   "Attack": 99,
+   "Strength": 99,
+   "Defence": 99,
+   "Ranged": 99,
+   "Magic": 99,
+   "Prayer": 99,
+   "Hitpoints": 99
+  },
   "tribrid-combo": {
    "Attack": 99,
    "Strength": 99,
