@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795292688940-mightyrod-bonetopick",
  "account": "Mightyrod",
  "partner": "BoneToPick",
@@ -10,8 +10,18 @@
  "item": "coins",
  "requested": 970,
  "claim": "87ed9b0a-7634-4c29-94ba-bdf4f0445435",
- "count": 0,
- "ok": false,
- "at": 1795292744579,
- "detail": "trade claimed"
+ "count": 970,
+ "ok": true,
+ "at": 1795292819913,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 106230,
+  "after": 105260
+ },
+ "logout": {
+  "attemptId": "1795292744589-0000016780-0000000001",
+  "at": 1795292819900,
+  "sha256": "3114d2c834982730d23268e6e0a272e22504c13c9fda8e037e9666e29022bcb8"
+ },
+ "screen": true
 }
