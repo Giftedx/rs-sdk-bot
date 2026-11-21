@@ -966,6 +966,7 @@ export async function runWildyPvpRelogLoop(
             sess = await connectInProcess({ name: opts.botName, password: creds.password, server: creds.server, ...(members ? { members } : {}), work });
             await awaitBotReady(sess, () => {});
             const p0 = posOf(sess);
+            if (p0?.isDead) throw Error(`${opts.skill} relog PvP died on entry`);
             sess.lifecycle?.record('ready', `${p0?.worldX ?? 0} ${p0?.worldZ ?? 0} ${p0?.level ?? 0}`);
             rec = createTickRecorder({ account: opts.botName, server: creds.server, script: work.script, argv: work.args, startedAt: Date.now() });
             if (rec && sess.record) sess.record(rec);
@@ -974,9 +975,10 @@ export async function runWildyPvpRelogLoop(
             const curStat = skillInfo(sess, opts.skill);
             if (curStat.baseLevel >= opts.targetLevel) {
                 await logoutSession(sess);
+                const doneTick = sess.tick();
                 await closeWithin([sess], 5000);
                 if (rec) await Promise.race([rec.flushed, Bun.sleep(3000)]);
-                totalTicks += Math.max(0, sess.tick() - tick0) + 1;
+                totalTicks += Math.max(0, doneTick - tick0) + 1;
 
                 const finalSess = await openBot(opts.botName, { log: () => {} });
                 await dismissContinueDialogs(finalSess, () => true, 4);
@@ -1004,8 +1006,8 @@ export async function runWildyPvpRelogLoop(
                 target = rankKeepRelogTanks(sess.sdk.getState()?.nearbyPlayers ?? [], opts.tankNames, lastHitSeq)[0];
             }
             if (!target) {
-                const tOut = sess.tick();
                 await logoutSession(sess);
+                const tOut = sess.tick();
                 await closeWithin([sess], 5000);
                 if (rec) await Promise.race([rec.flushed, Bun.sleep(3000)]);
                 totalTicks += Math.max(0, tOut - tick0) + 1;
@@ -1025,10 +1027,15 @@ export async function runWildyPvpRelogLoop(
                 sess.ended.then(e => e.reason),
                 waitTicks(sess, 4).then(() => 'timeout'),
             ]);
-            const endTick = sess.tick();
             if (endReason === 'timeout') await logoutSession(sess);
+            const endTick = sess.tick();
+            const deadAfter = posOf(sess)?.isDead === true;
             await closeWithin([sess], 5000);
             if (rec) await Promise.race([rec.flushed, Bun.sleep(3000)]);
+            if (deadAfter) throw Error(`${opts.skill} relog PvP died during combat at swing ${swings}`);
+            if (endReason !== 'timeout' && endReason !== 'logged-out') {
+                throw Error(`${opts.skill} relog PvP unexpected session end: ${endReason}`);
+            }
             swings++;
             totalTicks += Math.max(0, endTick - tick0) + 1;
 
@@ -1708,14 +1715,20 @@ export async function runMeleePvpSpecialist(
         onRetireSession: opts.onRetireSession,
     });
 
-    await finalSess.bot.dismissBlockingUI();
-    const sk = skillInfo(finalSess, skill);
-    console.log(`MILESTONE complete tick=${totalTicks} ${opts.board}=${sk.baseLevel} xp=${sk.experience} targetTicks=${target.targetTicks}`);
-    if (sk.baseLevel < 99) throw Error(`${skill} finished at ${sk.baseLevel} (< 99), xp=${sk.experience}`);
-    return {
-        session: finalSess,
-        message: `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${totalTicks} liveTarget=${target.targetTicks}`,
-    };
+    try {
+        await finalSess.bot.dismissBlockingUI();
+        const sk = skillInfo(finalSess, skill);
+        console.log(`MILESTONE complete tick=${totalTicks} ${opts.board}=${sk.baseLevel} xp=${sk.experience} targetTicks=${target.targetTicks}`);
+        if (sk.baseLevel < 99) throw Error(`${skill} finished at ${sk.baseLevel} (< 99), xp=${sk.experience}`);
+        return {
+            session: finalSess,
+            message: `${opts.board}=${sk.baseLevel} xp=${sk.experience} ticks=${totalTicks} liveTarget=${target.targetTicks}`,
+        };
+    } catch (err) {
+        await logoutSession(finalSess).catch(() => {});
+        await closeWithin([finalSess], 3000).catch(() => {});
+        throw err;
+    }
 }
 
 async function trainMagicToLevel(s: Session, targetLevel: number, stop: StopFn): Promise<void> {

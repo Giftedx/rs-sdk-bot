@@ -150,10 +150,13 @@ try {
         while (level() > to) await ladder(`tree down ${level()}`, TREE_LADDER, 'down', level() - 1);
     };
     // Talk; answer with `choose` (the option index for this page, or -1 for continue); stop when ok().
-    const talkChoose = async (label: string, re: RegExp, choose: (opts: string[]) => number, ok: () => boolean, max: number, home?: { x: number; z: number }, must = true): Promise<void> => {
+    const talkChoose = async (label: string, re: RegExp, choose: (opts: string[]) => number, ok: () => boolean, max: number, home?: { x: number; z: number }, must = true, onRetry?: () => Promise<void>): Promise<void> => {
         for (let i = 0; i < 3 && !ok(); i++) {
             await q.guard(label);
-            if (i > 0) q.stats.retries++;
+            if (i > 0) {
+                q.stats.retries++;
+                await onRetry?.();
+            }
             let n = q.npc(re);
             if (!n && home) { await walk(`${label} approach`, [{ x: home.x, z: home.z, tol: 4 }]); n = q.npc(re); }
             if (!n) { await q.waitTicks(2); continue; }
@@ -401,22 +404,69 @@ try {
 
     // 70. Waydar ("Where are we?"), Lumdo (refuses), Waydar orders him: the chapter 2 cutscene, then Ape Atoll.
     if (FROM < 70) {
-        await talkChoose('waydar island', /^waydar$/i, () => -1, () => q.sawText(/did our glider survive|of course/i) && !q.dialogOpen(), 30);
-        await talkChoose('lumdo', /^lumdo$/i, () => -1, () => q.sawText(/will not take orders from you/i) && !q.dialogOpen(), 60);
+        // Melee hits on Crash Island call if_close even at 0 damage (npc_combat_melee.rs2:36); clear nearby
+        // scorpions (15 HP, respawn 100) before multi-page Waydar/Lumdo talks when fire spell runes are present.
+        const clearCrashScorpions = async (r = 3): Promise<void> => {
+            if (!(q.st()?.equipment ?? []).some((e: any) => e?.id === 1387) && q.has(1387)) {
+                const staff = q.inv().find((i: any) => i.id === 1387);
+                if (staff) {
+                    await q.s.bot.equipItem(staff);
+                    await q.waitUntil(() => (q.st()?.equipment ?? []).some((e: any) => e?.id === 1387), 5);
+                }
+            }
+            const hasStaff = (q.st()?.equipment ?? []).some((e: any) => e?.id === 1387);
+            const canFire = q.cnt(556) >= 5 && (hasStaff || q.cnt(554) >= 5) && (q.has(565) || q.has(560) || q.has(562));
+            let last = -99;
+            for (let t = 0; t < 40; t++) {
+                await q.guard('crash scorpions');
+                const p = q.pos();
+                if (!p) return;
+                const dd = (k: any) => Math.max(Math.abs(k.x - p.worldX), Math.abs(k.z - p.worldZ));
+                const n = (q.st()?.nearbyNpcs ?? [])
+                    .filter((k: any) => /scorpion/i.test(k.name) && dd(k) <= r)
+                    .sort((a: any, b: any) => dd(a) - dd(b))[0];
+                if (!n) return;
+                if (!canFire) {
+                    await walk('crash scorpion retreat', [{ x: CRASH_ISLAND.x, z: CRASH_ISLAND.z, tol: 1 }]);
+                    return;
+                }
+                if (q.dialogOpen()) void q.s.sdk.sendClickDialog(0);
+                if (q.T() - last >= 5) {
+                    last = q.T();
+                    const comp = componentId(resolveFireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id)));
+                    await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: comp, reason: 'SDK' });
+                }
+                await q.waitTicks(1);
+            }
+        };
+        const crashClear = () => clearCrashScorpions(3);
+        await crashClear();
+        await talkChoose('waydar island', /^waydar$/i, () => -1, () => q.sawText(/did our glider survive|of course/i) && !q.dialogOpen(), 30, undefined, true, crashClear);
+        await crashClear();
+        await talkChoose('lumdo', /^lumdo$/i, () => -1, () => q.sawText(/will not take orders from you/i) && !q.dialogOpen(), 60, undefined, true, crashClear);
         // The cutscene runs in region 0_40_71 (2560-2623, 4544-4607); its pages are continued like any dialog.
         const inCut = (): boolean => { const p = q.pos(); return !!p && p.worldX >= 2560 && p.worldX < 2624 && p.worldZ >= 4544 && p.worldZ < 4608; };
         // Waydar orders Lumdo only when Lumdo is within 10 tiles of the player (mm_waydar.rs2:83, .npc_find(coord, ...)),
-        // else the talk ends with no cutscene (practice: a full run failed here), so the bot stands near Lumdo first.
+        // else the talk ends with no cutscene, so the bot stands on Waydar's Lumdo-facing side within 9 tiles.
         const cut2 = (): boolean => inCut() || q.near(ATOLL.x, ATOLL.z, 6);
-        for (let i = 0; i < 4 && !cut2(); i++) {
+        for (let i = 0; i < 6 && !cut2(); i++) {
+            await crashClear();
+            for (let wait = 0; wait < 10 && !cut2(); wait++) {
+                const l = q.npc(/^lumdo$/i);
+                const w = q.npc(/^waydar$/i);
+                if (!l || !w || Math.max(Math.abs(l.x - w.x), Math.abs(l.z - w.z)) <= 9) break;
+                await q.waitTicks(1);
+            }
             const l = q.npc(/^lumdo$/i);
             const w = q.npc(/^waydar$/i);
-            if (l && w && Math.max(Math.abs(l.x - w.x), Math.abs(l.z - w.z)) <= 12) {
-                const tx = Math.round((l.x + w.x) / 2), tz = Math.round((l.z + w.z) / 2);
+            if (l && w) {
+                const sx = w.x + Math.sign(l.x - w.x), sz = w.z + Math.sign(l.z - w.z);
                 const p = q.pos();
-                if (p && Math.max(Math.abs(p.worldX - l.x), Math.abs(p.worldZ - l.z)) > 6) await walk('to lumdo side', [{ x: tx, z: tz, tol: 1 }]);
+                if (p && Math.max(Math.abs(p.worldX - l.x), Math.abs(p.worldZ - l.z)) > 8) {
+                    await walk('to lumdo side', [{ x: sx, z: sz, tol: 1 }]);
+                }
             }
-            await talkChoose('waydar lumdo', /^waydar$/i, pick(/cannot convince lumdo/i), cut2, 60, undefined, i === 3);
+            await talkChoose('waydar lumdo', /^waydar$/i, pick(/cannot convince lumdo/i), cut2, 60, undefined, i === 5, crashClear);
         }
         await q.converse([], () => q.near(ATOLL.x, ATOLL.z, 6), 250);
         if (!q.near(ATOLL.x, ATOLL.z, 6)) await q.fail('chapter 2 cutscene');
