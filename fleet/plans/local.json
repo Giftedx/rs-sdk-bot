@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795246398118,
+ "at": 1795246483460,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -278,7 +278,7 @@
    ],
    "enabled": true,
    "standing": true,
-   "repeat": true
+   "repeat": false
   },
   {
    "account": "Deeppockets",
