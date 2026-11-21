@@ -15,6 +15,7 @@ import { RANGED_SPECIALIST_LIVE_TRADE1, RANGED_SPECIALIST_LIVE_TRADE2 } from '..
 import { BODY_RUNNER_COUNT } from '../runecraft-specialist';
 import { SMITHING_RUNNER_QUEUE, VARROCK_WEST_BANK } from '../smithing-specialist';
 import {
+    AGILITY_SPECIALIST_KIT,
     FLETCHING_SPECIALIST_LIVE_KIT,
     THIEVING_SPECIALIST_LIVE_KIT,
     type KitSpecItem,
@@ -35,6 +36,7 @@ export const READY_SPECIALIST_ACCOUNTS = [
     'CastMyLoad',
     'BigBoner',
     'SteelRod',
+    'Polevaulter',
 ] as const;
 
 export type ReadySpecialistAccount = (typeof READY_SPECIALIST_ACCOUNTS)[number];
@@ -330,6 +332,23 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         planTicks: 1230,
         planSource: 'hosted-bench skiller:smithing:specialist 1197-1244t (<=1255t vs #1 1281t)',
         targetCap: 1255,
+    },
+    {
+        account: 'Polevaulter',
+        id: 'polevaulter-agility',
+        script: 'scripts/agility-specialist.ts',
+        env: { CAP: '6500', AGI_ROUTE: 'monkeybars', AGI_POTION: '1', AGI_PRAY: '1', AGI_PIPE_ALIGN: '0' },
+        supplier: {
+            script: 'scripts/specialist-supplier.ts',
+            args: ['{ACTOR}', '--kit=agility', '6500'],
+            save: () => ({
+                position: { x: 3223, z: 3222, level: 0 },
+                inventory: expandKitToSave(AGILITY_SPECIALIST_KIT),
+            }),
+        },
+        planTicks: 5915,
+        planSource: 'hosted-bench skiller:agility:specialist 5843-5913t / extra:specialist-agility 5989t (<=6031t vs #1 6155t)',
+        targetCap: 6031,
     },
 ];
 

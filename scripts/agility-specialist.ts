@@ -285,7 +285,7 @@ export function canPreClickNextObstacle(name: string, p: { worldX: number; world
 export function shouldDrinkAgilityPotion(baseLevel: number, currentLevel: number, atGate: boolean): boolean {
     if (baseLevel >= 99 || currentLevel >= 99) return false;
     if (atGate && currentLevel < 52) return true;
-    if (baseLevel < 60) return currentLevel <= baseLevel + 2;
+    if (baseLevel < 65) return currentLevel <= baseLevel + 2;
     return currentLevel <= Math.min(97, baseLevel + 1);
 }
 
@@ -1360,9 +1360,10 @@ async function train1To49Gnome(s: Session, stop?: () => boolean): Promise<void> 
 async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop?: () => boolean): Promise<{
     laps: number; fails: number; doses: number; preClicks: number; closes: number; courseTicks: number;
 }> {
+    const manualPrayer = process.env.PRAYER_GUARD === '0';
     // Walk from Edgeville (or surface ladder) to Wilderness Ridge Gate (2998, 3916).
     if ((posOf(s)?.worldZ ?? 0) < 3916) {
-        if (cfg.usePrayer) await setProtectFromMelee(s, true);
+        if (cfg.usePrayer && manualPrayer) await setProtectFromMelee(s, true);
         await walkNear(s, { x: 2998, z: 3915, level: 0 }, 3, 520, { ignoreHunters: true, preDrinkAgility: cfg.usePotion, stop });
     }
 
@@ -1385,7 +1386,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
     }
     if ((posOf(s)?.worldZ ?? 0) < 3930) throw Error(`failed to cross Wildy ridge gate (agi=${skillCur(s, 'Agility')})`);
     await waitUntil(s, () => (posOf(s)?.worldZ ?? 0) >= 3931, { timeoutTicks: 8 });
-    if (cfg.usePrayer) await setProtectFromMelee(s, false);
+    if (cfg.usePrayer && manualPrayer) await setProtectFromMelee(s, false);
 
     if (cfg.alignPipe) {
         await s.direct({ type: 'walkTo', x: 3004, z: 3937, running: true, reason: 'SDK' });
@@ -1441,7 +1442,6 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
         await Promise.all(acts);
     };
 
-    const manualPrayer = process.env.PRAYER_GUARD === '0';
     try {
         const hpThreshold = () => {
             const maxHp = skillLvl(s, 'Hitpoints');
@@ -1599,7 +1599,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
         }
     } finally {
         offMsg();
-        if (cfg.usePrayer) await setProtectFromMelee(s, false);
+        if (cfg.usePrayer && manualPrayer) await setProtectFromMelee(s, false);
     }
     return { laps, fails, doses, preClicks, closes, courseTicks: s.tick() - tStart };
 }

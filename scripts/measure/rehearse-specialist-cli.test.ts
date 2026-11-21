@@ -12,6 +12,7 @@ import { RANGED_SPECIALIST_LIVE_KIT } from '../ranged-specialist';
 import { BODY_RUNNER_COUNT, RUNECRAFT_SUPPLY_BILL } from '../runecraft-specialist';
 import { SMITHING_SUPPLY_BILL } from '../smithing-specialist';
 import {
+    AGILITY_SPECIALIST_KIT,
     FLETCHING_SPECIALIST_LIVE_KIT,
     parseKitArg,
     resolveBaseId,
@@ -37,7 +38,7 @@ function countSupplyMap(items: readonly { id: number; count: number }[]): Record
     return out;
 }
 
-test('all 9 ready specialists construct valid --specialist segments matching board expectations and supply bills', () => {
+test('all 10 ready specialists construct valid --specialist segments matching board expectations and supply bills', () => {
     expect(READY_SPECIALIST_ACCOUNTS).toEqual([
         'StickyFinger',
         'TipMyShaft',
@@ -48,6 +49,7 @@ test('all 9 ready specialists construct valid --specialist segments matching boa
         'CastMyLoad',
         'BigBoner',
         'SteelRod',
+        'Polevaulter',
     ]);
 
     const expectedBills: Record<string, readonly { id: number; count: number }[]> = {
@@ -60,6 +62,7 @@ test('all 9 ready specialists construct valid --specialist segments matching boa
         CastMyLoad: MAGIC_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         BigBoner: PRAYER_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         SteelRod: SMITHING_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
+        Polevaulter: AGILITY_SPECIALIST_KIT.map(k => ({ id: k.id, count: k.count })),
     };
 
     const expectedTargets: Record<string, number> = {
@@ -72,6 +75,7 @@ test('all 9 ready specialists construct valid --specialist segments matching boa
         CastMyLoad: 1236,
         BigBoner: 1246,
         SteelRod: 1255,
+        Polevaulter: 6031,
     };
 
     for (const account of READY_SPECIALIST_ACCOUNTS) {
