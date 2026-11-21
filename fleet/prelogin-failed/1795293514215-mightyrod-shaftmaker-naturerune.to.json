@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795293514215-mightyrod-shaftmaker-naturerune",
+ "role": "to",
+ "account": "Shaftmaker",
+ "partner": "Mightyrod",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795293579947,
+ "detail": "Error: account logout is not confirmed: Shaftmaker ended stopped"
+}

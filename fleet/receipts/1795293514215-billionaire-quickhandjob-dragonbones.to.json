@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795293514215-billionaire-quickhandjob-dragonbones",
+ "account": "Quickhandjob",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 14,
+ "claim": "c3185633-b89d-47da-96f8-17adcba5e482",
+ "count": 0,
+ "ok": false,
+ "at": 1795293587225,
+ "detail": "trade claimed"
+}

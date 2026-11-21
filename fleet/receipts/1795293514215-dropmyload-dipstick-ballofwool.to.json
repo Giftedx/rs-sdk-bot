@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795293514215-dropmyload-dipstick-ballofwool",
+ "account": "Dipstick",
+ "partner": "DropMyLoad",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ball of wool",
+ "requested": 2,
+ "claim": "975616d4-d294-427f-b307-1bae8b6b9d66",
+ "count": 0,
+ "ok": false,
+ "at": 1795293591200,
+ "detail": "trade claimed"
+}
