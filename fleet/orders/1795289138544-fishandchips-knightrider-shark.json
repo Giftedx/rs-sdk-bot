@@ -1,0 +1,22 @@
+{
+ "id": "1795289138544-fishandchips-knightrider-shark",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "KnightRider",
+ "item": "Shark",
+ "count": 5,
+ "start": 1795289138544,
+ "end": 1795291538544,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
