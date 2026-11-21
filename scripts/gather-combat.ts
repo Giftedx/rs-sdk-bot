@@ -1078,20 +1078,20 @@ export const CONFIGS: Record<string, {
         npc: /^(?:hill )?giant$/i,
         spot: { x: 2545, z: 3144 }, // Surface Giant117 camp
         bankSpot: { x: 2655, z: 3283 }, // Ardougne south bank
-        drops: /(big bones|limpwurt root|iron arrow|nature rune|cosmic rune|law rune|death rune|chaos rune|uncut |herb)/i,
+        drops: /(big bones|limpwurt root|iron arrow|nature rune|cosmic rune|law rune|death rune|chaos rune|uncut |herb|half of a key)/i,
     },
     taverley_druid: {
         npc: /^chaos druid$/i,
         spot: { x: 2933, z: 9849 }, // Taverley Dungeon Chaos Druids (non-Wilderness)
         bankSpot: { x: 2946, z: 3368 }, // Falador West Bank
-        drops: /(herb|snape grass|nature rune|law rune|air rune|vial of water|uncut )/i,
+        drops: /(herb|snape grass|nature rune|law rune|air rune|vial of water|uncut |half of a key)/i,
         taverley: true,
     },
     taverley_black_knight: {
         npc: /^black knight$/i,
         spot: { x: 2939, z: 9812 }, // Taverley Dungeon Black Knights before Dusty gate (non-Wilderness)
         bankSpot: { x: 2946, z: 3368 }, // Falador West Bank
-        drops: /(cosmic rune|death rune|chaos rune|law rune|steel bar|mithril arrow|herb)/i,
+        drops: /(cosmic rune|death rune|chaos rune|law rune|steel bar|mithril arrow|herb|half of a key)/i,
         taverley: true,
     },
     taverley_scales: {
@@ -1108,7 +1108,7 @@ export const CONFIGS: Record<string, {
         npc: /^blue dragon$/i,
         spot: { x: 2908, z: 9803 },
         bankSpot: { x: 2946, z: 3368 },
-        drops: /(blue dragon scale|blue dragonhide|dragonhide|dragon bones|nature rune|water rune|rune dagger|adamant full helm|herb)/i,
+        drops: /(blue dragon scale|blue dragonhide|dragonhide|dragon bones|nature rune|water rune|rune dagger|adamant full helm|herb|half of a key|shield left half)/i,
         taverley: true,
         dustyKey: true,
         dragonShield: true,
@@ -1117,7 +1117,7 @@ export const CONFIGS: Record<string, {
         npc: /^black dragon$/i,
         spot: { x: 2832, z: 9825 }, // Taverley Black Dragons (non-Wilderness)
         bankSpot: { x: 2946, z: 3368 },
-        drops: /(black dragonhide|dragonhide|dragon bones|rune knife|blood rune|law rune|adamant platebody|rune longsword|adamant javelin|fire rune)/i,
+        drops: /(black dragonhide|dragonhide|dragon bones|rune knife|blood rune|law rune|adamant platebody|rune longsword|adamant javelin|fire rune|half of a key|shield left half)/i,
         taverley: true,
         dustyKey: true,
         dragonShield: true,

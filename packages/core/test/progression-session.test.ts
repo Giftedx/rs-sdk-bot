@@ -274,3 +274,17 @@ test('an obsolete route can still open a bank booth through the SDK Use-quickly 
   expect(p.refusal({type:'interactLoc',locId:2213,x:3253,z:3420,optionIndex:1})).toBeNull();
  }finally{rmSync(base,{recursive:true,force:true});}
 });
+
+test('a finished acquire goal lets the player cross an _off gangplank off a ship deck while still refusing _on boarding planks',()=>{
+ const base=mkdtempSync(join(tmpdir(),'progression-disembark-'));
+ const state:any={inGame:true,player:{worldX:3032,worldZ:3217,level:1,combat:{inCombat:false}},skills:[{name:'Hitpoints',baseLevel:40,level:40,experience:37224}],inventory:[{id:223,count:2}],equipment:[],nearbyLocs:[
+  {id:2084,x:3031,z:3217,name:'Gangplank',optionsWithIndex:[{opIndex:1,text:'Cross'}]},
+  {id:2083,x:3030,z:3217,name:'Gangplank',optionsWithIndex:[{opIndex:1,text:'Cross'}]},
+ ]};
+ const s:any={name:'Fixture',sdk:{getState:()=>state},tick:()=>1,onTick:()=>()=>{},bankObservation:()=>null,ended:new Promise(()=>{})};
+ try{
+  const p=attachProgressionSession(s,{script:'scripts/gather-spawn.ts',args:['223','2'],env:{}},'localhost:8888',{base,log:()=>{}});
+  expect(p.refusal({type:'interactLoc',locId:2084,x:3031,z:3217,optionIndex:1})).toBeNull();
+  expect(p.refusal({type:'interactLoc',locId:2083,x:3030,z:3217,optionIndex:1})).toContain('progression');
+ }finally{rmSync(base,{recursive:true,force:true});}
+});

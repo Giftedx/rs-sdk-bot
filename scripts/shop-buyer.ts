@@ -58,11 +58,12 @@ export const PROFILES: Record<string, {
     dialogOpen?: RegExp;
     // Dialogue-only purchase (no shop interface; e.g. Tenzing's Climbing boots at 12 coins each).
     dialogBuy?: { choices: readonly RegExp[]; cost: number; item: RegExp };
-    // Gated doorway crossed explicitly on entry and bank exit (e.g. Tenzing's hut door 3745).
+    // Gated doorway crossed explicitly on entry and bank exit (e.g. Tenzing's hut door 3745, Legends' gate, Heroes' door).
     door?: {
         id: number; x: number; z: number;
         outside: { x: number; z: number };
-        inside: (p: { worldX: number; worldZ: number }) => boolean;
+        insideStand?: { x: number; z: number };
+        inside: (p: { worldX: number; worldZ: number; level?: number }) => boolean;
     };
 }> = {
     // khazardshop: NPC555 at2641,3171, swamp paste1941 stock500/restock20; actual observed price governs buys.
@@ -160,6 +161,16 @@ export const PROFILES: Record<string, {
         items: [
             { re: /^ring mould$/i, buyPerTick: 1, shelf: 4 },
             { re: /^chisel$/i, buyPerTick: 1, shelf: 2 },
+        ],
+    },
+    // Dommik's Crafting Store necklace and amulet moulds (craftingshop2: necklace_mould 2, amulet_mould 2) for glory/necklace crafting.
+    dommik_moulds: {
+        npc: /^dommik$/i,
+        npcSpot: { x: 3320, z: 3194 },
+        bankSpot: { x: 3269, z: 3167 }, // Al Kharid bank
+        items: [
+            { re: /^necklace mould$/i, buyPerTick: 1, shelf: 2 },
+            { re: /^amulet mould$/i, buyPerTick: 1, shelf: 2 },
         ],
     },
     general_sarim: {
@@ -466,6 +477,42 @@ export const PROFILES: Record<string, {
             toll: { id: 2411, x: 3238, z: 9558, stand: { x: 3237, z: 9558 }, item: /^diamond$/i, say: /^okay/i },
             ladder: { id: 2410, x: 3253, z: 9591, say: /ready to leave/i },
             outBank: { x: 3269, z: 3167 },
+        },
+    },
+    // Siegfried Erkle in the Legends' Guild (legends_guild.inv: cape_of_legends shelf 3 at 675 gp, dragonshield_b shelf 1 at 750,000 gp).
+    siegfried: {
+        npc: /^siegfried erkle$/i,
+        npcSpot: { x: 2725, z: 3381, level: 2 },
+        bankSpot: { x: 2654, z: 3283 }, // East Ardougne South Bank
+        items: [
+            { re: /^cape of legends$/i, buyPerTick: 1, shelf: 3 },
+            { re: /^shield right half$/i, buyPerTick: 1, shelf: 1 },
+        ],
+        door: {
+            id: 2391,
+            x: 2728,
+            z: 3349,
+            outside: { x: 2728, z: 3348 },
+            insideStand: { x: 2728, z: 3350 },
+            inside: p => (p.level ?? 0) > 0 || p.worldZ >= 3350,
+        },
+    },
+    // Helemos in the Heroes' Guild (heroes_guild.inv: dragon_battleaxe shelf 2 at 200,000 gp, dragon_mace shelf 1 at 50,000 gp).
+    helemos: {
+        npc: /^helemos$/i,
+        npcSpot: { x: 2894, z: 3510, level: 1 },
+        bankSpot: { x: 2946, z: 3368 }, // Falador West Bank
+        items: [
+            { re: /^dragon battleaxe$/i, buyPerTick: 1, shelf: 2 },
+            { re: /^dragon mace$/i, buyPerTick: 1, shelf: 1 },
+        ],
+        door: {
+            id: 2624,
+            x: 2902,
+            z: 3510,
+            outside: { x: 2903, z: 3510 },
+            insideStand: { x: 2901, z: 3510 },
+            inside: p => (p.level ?? 0) > 0 || p.worldX <= 2901,
         },
     },
     // Magic Guild Store water & earth rune shelves (magic_guild.inv: 3,000 water & earth runes, restock 18t, Magic 66).
@@ -903,7 +950,7 @@ try {
         if (!door) return;
         const p = pos();
         if (!p || enter === door.inside(p)) return;
-        const stand = enter ? door.outside : { x: door.x, z: door.z };
+        const stand = enter ? door.outside : (door.insideStand ?? { x: door.x, z: door.z });
         await walk(stand.x, stand.z, 0);
         for (let i = 0; i < 4 && !over(); i++) {
             const cur = pos();

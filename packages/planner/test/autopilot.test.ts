@@ -2719,7 +2719,7 @@ test('a vacant slot names the nearest template and the first gate that stopped i
     expect(reason(acct('Rookie'), [supply('any-job')], { bill: [] })).toBe('vacant: no finite route or army supply demand');
 });
 
-import { SQUAD_ESCAPE, SQUAD_HOURLY, SQUAD_POTION_ALIASES, SQUAD_SPARES, squadBlock, squadHeld, squadKeeps, squadRows, squadTarget, type SquadInput } from '../src/squad';
+import { SQUAD_ESCAPE, SQUAD_GEAR_ALIASES, SQUAD_HOURLY, SQUAD_POTION_ALIASES, SQUAD_SPARES, SQUAD_WAVE_BC, squadBlock, squadBurnBudget, squadHeld, squadKeeps, squadRows, squadTarget, type SquadInput } from '../src/squad';
 import { squadSupplies, SQUAD_RESTOCK, SQUAD_UNIT_COST } from '../src/autopilot';
 
 test('the squad block reads members and hours; only an active block with members is active', () => {
@@ -2751,8 +2751,8 @@ test('the squad rows are a stock target of the member minus what it holds, food 
     expect(squadRows(squad({ ...SQUAD_ESCAPE, ...full, shark: 355 }))).toEqual([]);
     expect(squadRows(squad({ ...SQUAD_ESCAPE, ...full, lobster: 592 }))).toEqual([]);
     expect(squadRows(squad({ ...SQUAD_ESCAPE, ...full, lobster: 296 }))[0]).toMatchObject({ names: ['shark'], short: 178 });
-    // The arrow line counts rune and adamant arrows, and asks for rune arrows first; iron arrows held do not count.
-    expect(squadRows(squad({ ...SQUAD_ESCAPE, ...full, shark: 355, 'rune arrow': 0, 'iron arrow': 5000 }))[0]).toMatchObject({ names: ['rune arrow', 'adamant arrow'], short: squadTarget('arrow', 4) });
+    // The arrow line counts rune (poisoned and unpoisoned) and adamant arrows, and asks for poisoned rune arrows first; iron arrows held do not count.
+    expect(squadRows(squad({ ...SQUAD_ESCAPE, ...full, shark: 355, 'rune arrow': 0, 'iron arrow': 5000 }))[0]).toMatchObject({ names: ['rune arrow(p)', 'rune arrow', 'adamant arrow'], short: squadTarget('arrow', 4) });
     expect(squadHeld('food', { shark: 10, lobster: 20 })).toBe(22);
     expect(squadRows(squad({}, false))).toEqual([]);
     expect(squadRows(undefined)).toEqual([]);
@@ -2944,12 +2944,12 @@ test('the squad rows are priced from the plan and capped by maxCoins, first line
     expect(all.length).toBe(Object.keys(SQUAD_HOURLY).length + Object.keys(SQUAD_SPARES).length);
     // Food first: 355 sharks at 250 coins, 88,750. A cap of 90,750 leaves 2,000: arrows (1,965) and climbing boots (24) fit.
     // With a 90,000 cap (1,250 left), arrows (1,965), earth (1,292), water (1,292) and nature exceed it, so antipoison (1,152) and climbing boots (24) stay.
-    const prices = { ...SQUAD_UNIT_COST, shark: 250, 'rune arrow': 3, 'earth rune': 4, 'water rune': 4, 'nature rune': 20, 'antipoison(3)': 288, 'law rune': 40, 'air rune': 4 } as Record<string, number>;
+    const prices = { ...SQUAD_UNIT_COST, shark: 250, 'rune arrow(p)': 3, 'rune arrow': 3, 'earth rune': 4, 'water rune': 4, 'nature rune': 20, 'antipoison(3)': 288, 'law rune': 40, 'air rune': 4 } as Record<string, number>;
     expect(squadRows(squad(90_750), item => prices[item]).map(r => r.consumer.split(': ')[1])).toEqual(['food', 'arrow', 'climbing boot']);
     expect(squadRows(squad(90_000), item => prices[item]).map(r => r.consumer.split(': ')[1])).toEqual(['food', 'antipoison(3)', 'climbing boot']);
     expect(squadRows(squad(0), () => 1).length).toBe(0);
     // The fallback table prices a line the plan has no price for: 1,965 coins of arrows do not fit a cap of 1,000.
-    const lines = squadRows(squad(1000), () => undefined, { 'rune arrow': 3 }).map(r => r.consumer.split(': ')[1]);
+    const lines = squadRows(squad(1000), () => undefined, { 'rune arrow(p)': 3, 'rune arrow': 3 }).map(r => r.consumer.split(': ')[1]);
     expect(lines).not.toContain('arrow');
     expect(lines).not.toContain('food');
 });
@@ -3659,5 +3659,81 @@ describe('continuous mainland supplies, strict 4-dose decanting, quest safety an
         expect(f30.band).toBeLessThan(QUEST_DEMAND_BAND);
         expect(buildBand(f30, acct('Pure', { Fletching: 20 }), { Attack: 60, Strength: 99, Defence: 1 }, ['Lost City'])).toBeNull();
         expect(buildBand(f30, acct('Main', { Fletching: 20 }))?.id).toBe('army-quest-fletch-30');
+    });
+
+    test('Wave B/C supply pipelines cover poisoned arrows, Legends/Heroes guild shops, dragonstone glory chain, extra potions, and specialist mainland bills', () => {
+        expect(SQUAD_WAVE_BC.optimalSquadRange).toEqual([8, 12]);
+        expect(SQUAD_ESCAPE).toEqual({ 'law rune': 3, 'air rune': 15 });
+        const budget10 = squadBurnBudget(10, 4);
+        expect(budget10['shark']).toBe(1240);
+        expect(budget10['rune arrow(p)']).toBe(6400);
+        expect(budget10['cooked karambwan']).toBeUndefined();
+        expect(squadBurnBudget(10, 4, { comboFood: true })['cooked karambwan']).toBe(320);
+
+        expect(Object.keys(SQUAD_GEAR_ALIASES)).toEqual(expect.arrayContaining(['amulet of glory(4)', 'rune platebody', 'rune kiteshield', 'rune plateleg']));
+        expect(squadHeld('amulet of glory(4)', { 'amulet of glory(2)': 2 })).toBe(2);
+        expect(squadHeld('rune platebody', { 'dragon chainbody': 2 })).toBe(2);
+        expect(squadHeld('rune kiteshield', { 'dragon sq shield': 2 })).toBe(2);
+        expect(squadHeld('rune plateleg', { 'dragon plateleg': 2 })).toBe(2);
+        expect(squadKeeps(4)['dragon chainbody']).toBe(2);
+        expect(squadKeeps(4)['cape of legend']).toBe(2);
+
+        const parsed = accountFrom('AliasTest', side, {
+            bank: [
+                { id: 985, count: 1, name: 'Half of a key' },
+                { id: 987, count: 2, name: 'Half of a key' },
+                { id: 1683, count: 3, name: 'Dragonstoneamulet' },
+                { id: 1702, count: 4, name: 'Dragonstoneamulet' },
+            ],
+        }, () => undefined);
+        expect(parsed.items.keyhalf1).toBe(1);
+        expect(parsed.items.keyhalf2).toBe(2);
+        expect(parsed.items['unstrung dragonstone amulet']).toBe(3);
+        expect(parsed.items['strung dragonstone amulet']).toBe(4);
+
+        const poisoner = acct('Poisoner', { Herblore: 1 }, { 'rune arrow': 50, 'weapon poison': 10 });
+        const poisonPlan = plan(inputs([poisoner], {
+            templates: catalogue().filter(t => t.id === 'squad-poison-rune-arrows'),
+            bill: [],
+            squad: { active: true, hours: 4, members: [{ name: 'Hunter', items: {} }] },
+        }));
+        expect(poisonPlan[0]!.template?.id).toBe('squad-poison-rune-arrows');
+        expect(poisonPlan[0]!.template?.args).toContain('MAX_MAKE=50');
+
+        const allIds = new Set(catalogue().map(t => t.id));
+        for (const id of [
+            'squad-poison-rune-arrows', 'squad-grind-chocolate', 'squad-combine-crystal-key',
+            'squad-karamja-red-spiders-eggs', 'squad-super-restore', 'squad-magic-potion', 'squad-zamorak-potion',
+            'squad-decant-super_restore', 'squad-decant2-magic_potion', 'squad-decant31-zamorak_potion', 'squad-decant-restore_potion',
+            'squad-cut-dragonstone', 'squad-dragonstone-ring', 'squad-dragon-necklace', 'squad-dragonstone-amulet',
+            'squad-string-dragonstone-amulet', 'squad-enchant-glory', 'squad-cape-of-legends',
+            'squad-shield-right-half', 'squad-dragon-battleaxe', 'squad-dragon-mace',
+            'shop-necklace-mould', 'shop-amulet-mould',
+        ]) expect([id, allIds.has(id)]).toEqual([id, true]);
+
+        expect(Object.keys(SPECIALIST_STAGE_BILLS)).toEqual(expect.arrayContaining(['cooking-live', 'woodcutting-live', 'firemaking-live', 'agility-live', 'haggis-mainland']));
+
+        // Karamja Red spiders' eggs refuses level-3 skillers (Deadly red spiders combat 34) and admits HP>=23 or Prayer>=43.
+        const eggTemplate = catalogue().filter(t => t.id === 'squad-karamja-red-spiders-eggs');
+        const eggSquad: SquadInput = { active: true, hours: 4, members: [{ name: 'Hunter', items: { 'prayer potion(3)': 100 } }] };
+        const eggBill = [row('super restore(3)', 20)];
+        const frailEgg = acct('Skiller3', { Hitpoints: 10 }, { coin: 500, trout: 4 });
+        expect(plan(inputs([frailEgg], { templates: eggTemplate, bill: eggBill, squad: eggSquad }))[0]!.template).toBeUndefined();
+        const safeEgg = acct('PrayerOrHp', { Hitpoints: 23 }, { coin: 500, trout: 4 });
+        expect(plan(inputs([safeEgg], { templates: eggTemplate, bill: eggBill, squad: eggSquad }))[0]!.template?.id).toBe('squad-karamja-red-spiders-eggs');
+        const combatEgg = acct('Combat34', { Attack: 50, Strength: 50, Hitpoints: 10 }, { coin: 500, trout: 4 });
+        expect(plan(inputs([combatEgg], { templates: eggTemplate, bill: eggBill, squad: eggSquad }))[0]!.template?.id).toBe('squad-karamja-red-spiders-eggs');
+        const prayEgg = acct('Prayer43', { Hitpoints: 10, Prayer: 43 }, { coin: 500, trout: 4 });
+        expect(plan(inputs([prayEgg], { templates: eggTemplate, bill: eggBill, squad: eggSquad }))[0]!.template?.id).toBe('squad-karamja-red-spiders-eggs');
+
+        // Glory enchantment runs via aio-skiller bank-job with members: true and resized batch<=24.
+        const gloryTemplate = catalogue().filter(t => t.id === 'squad-enchant-glory');
+        const enchanter = acct('Enchanter', { Magic: 68 }, { 'strung dragonstone amulet': 3, 'cosmic rune': 10, 'earth rune': 100, 'water rune': 100 });
+        const gloryPlan = plan(inputs([enchanter], { templates: gloryTemplate, bill: [row('amulet of glory', 10)], squad: eggSquad }))[0]!;
+        expect(gloryPlan.template?.id).toBe('squad-enchant-glory');
+        expect(gloryPlan.template?.script).toBe('scripts/aio-skiller.ts');
+        expect(gloryPlan.template?.args?.[0]).toBe('bank-job');
+        const decodedJob = JSON.parse(decodeURIComponent(gloryPlan.template!.args![1]!.slice('--job='.length)));
+        expect(decodedJob).toMatchObject({ family: 'magic', recipe: 'enchant:strung_dragonstone_amulet', target: 3, batch: 3, members: true, bank: { x: 3092, z: 3243, level: 0 }, site: { x: 3092, z: 3243, level: 0 } });
     });
 });
