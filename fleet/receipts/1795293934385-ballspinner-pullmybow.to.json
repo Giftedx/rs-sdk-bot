@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795293934385-ballspinner-pullmybow",
  "account": "Pullmybow",
  "partner": "Ballspinner",
@@ -12,6 +12,12 @@
  "claim": "7263edb5-afbe-4de4-bc87-4cdb0f47fb19",
  "count": 0,
  "ok": false,
- "at": 1795294034175,
- "detail": "trade claimed"
+ "at": 1795294152270,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795294034183-0000023944-0000000001",
+  "at": 1795294152263,
+  "sha256": "eef1b5636eafc36f2dbc8b7b1c12e3860d526a3433b736fae08914110ed8f1fb"
+ },
+ "screen": false
 }
