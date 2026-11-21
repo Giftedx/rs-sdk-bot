@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795240846292,
+ "at": 1795240923852,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -215,7 +215,7 @@
     "scripts/fletch-arrows.ts 3000 headless MAX_MAKE=10530 SHAFT_RESERVE=100 FEATHER_RESERVE=100"
    ],
    "enabled": true,
-   "standing": false,
+   "standing": true,
    "repeat": false
   }
  ],
