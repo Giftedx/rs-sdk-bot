@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795243867075,
+ "at": 1795243915286,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -350,7 +350,7 @@
     "TICKS": "6000",
     "KNIGHT_SPOT": "2653,3302"
    },
-   "enabled": false,
+   "enabled": true,
    "standing": true,
    "repeat": true
   }
