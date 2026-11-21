@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795242604075-sausagefest-pocketrocket-waterrune",
+ "role": "from",
+ "account": "Sausagefest",
+ "partner": "Pocketrocket",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795242721403,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] a9bbebdff7501e319edfd1eeb1648e4fd898f755 -> fleet-trade-claim/sausagefest (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}
