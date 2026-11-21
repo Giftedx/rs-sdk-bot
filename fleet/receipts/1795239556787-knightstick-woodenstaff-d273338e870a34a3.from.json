@@ -1,0 +1,34 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795239556787-knightstick-woodenstaff-d273338e870a34a3",
+ "account": "Knightstick",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 11,
+ "claim": "1cb5e681-0eb5-4817-92f7-7f3bc9b0447b",
+ "count": 0,
+ "ok": false,
+ "at": 1795239617995,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Death rune",
+   "requested": 36,
+   "count": 0
+  },
+  {
+   "item": "Staff of fire",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Law rune",
+   "requested": 10,
+   "count": 0
+  }
+ ]
+}
