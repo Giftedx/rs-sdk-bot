@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795239785084,
+ "at": 1795239979618,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -198,6 +198,39 @@
    "repeat": true
   },
   {
+   "account": "Wandwaver",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "4000",
+    "taverley_druid"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "SporranDip",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "4000",
+    "taverley_druid"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "4000",
+    "taverley_druid"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
    "account": "Mightyrod",
    "script": "scripts/quest-sweep.ts",
    "args": [
@@ -243,9 +276,7 @@
   "fingersmith",
   "kiltlifter",
   "knightrider",
-  "knightstick",
-  "quickhandjob",
-  "sporrandip"
+  "quickhandjob"
  ],
  "builds": {
   "NabTheKnob": "tribrid",
