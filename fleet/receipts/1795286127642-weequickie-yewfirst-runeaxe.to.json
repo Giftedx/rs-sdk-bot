@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795286127642-weequickie-yewfirst-runeaxe",
+ "account": "YewFirst",
+ "partner": "WeeQuickie",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune axe",
+ "requested": 1,
+ "claim": "12b10eef-8a7a-4cde-8a96-7fa990050d69",
+ "count": 0,
+ "ok": false,
+ "at": 1795286821620,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795286127642-weequickie-yewfirst-runeaxe",
+ "role": "from",
+ "account": "WeeQuickie",
+ "partner": "YewFirst",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795286822716,
+ "detail": "Error: account plan writer waits for its existing owner"
+}

@@ -1,0 +1,16 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795286127642-mightyrod-fatstack",
+ "account": "Mightyrod",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 106230,
+ "claim": "497dfa31-374a-4f48-b765-2ed1853896a1",
+ "count": 0,
+ "ok": false,
+ "at": 1795286826590,
+ "detail": "Error: partner fail

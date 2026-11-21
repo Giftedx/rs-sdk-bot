@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795286127642-abracadickra-knightstick",
+ "role": "from",
+ "account": "Abracadickra",
+ "partner": "Knightstick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795286822717,
+ "detail": "Error: account plan writer waits for its existing owner"
+}

@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795286127642-mightyrod-fatstack",
+ "role": "to",
+ "account": "Fatstack",
+ "partner": "Mightyrod",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795286822731,
+ "detail": "Error: account plan writer waits for its existing owner"
+}

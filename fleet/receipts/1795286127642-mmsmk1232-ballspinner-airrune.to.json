@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795286127642-mmsmk1232-ballspinner-airrune",
+ "account": "Ballspinner",
+ "partner": "mmsmk1232",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 3,
+ "claim": "0d40b0d7-5783-42e0-9e58-fd04fc96b546",
+ "count": 0,
+ "ok": false,
+ "at": 1795286823409,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795286812054-0000011112-0000000001",
+  "at": 1795286823393,
+  "sha256": "1923fc7e682c579b0cc83b1f9e87dc7e263ebde0a6bc828bfb3841007fcabf58"
+ },
+ "screen": false
+}

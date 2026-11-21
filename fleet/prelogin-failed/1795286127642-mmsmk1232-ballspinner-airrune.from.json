@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795286127642-mmsmk1232-ballspinner-airrune",
+ "role": "from",
+ "account": "mmsmk1232",
+ "partner": "Ballspinner",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795286822732,
+ "detail": "Error: account plan writer waits for its existing owner"
+}
