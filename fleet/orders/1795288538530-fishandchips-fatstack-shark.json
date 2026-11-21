@@ -1,0 +1,22 @@
+{
+ "id": "1795288538530-fishandchips-fatstack-shark",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "Fatstack",
+ "item": "Shark",
+ "count": 6,
+ "start": 1795288538530,
+ "end": 1795290938530,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

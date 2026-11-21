@@ -1,0 +1,22 @@
+{
+ "id": "1795288538530-magicwanda-ballspinner-airrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Magicwanda",
+ "to": "Ballspinner",
+ "item": "Air rune",
+ "count": 3,
+ "start": 1795288538530,
+ "end": 1795290938530,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

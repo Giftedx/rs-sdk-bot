@@ -1,0 +1,22 @@
+{
+ "id": "1795288538530-mightyrod-shaftmaker-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "Shaftmaker",
+ "item": "Nature rune",
+ "count": 56,
+ "start": 1795288538530,
+ "end": 1795290938530,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
