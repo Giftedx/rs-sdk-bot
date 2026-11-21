@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795229807065-sporrandip-shaftmaker-naturerune",
+ "role": "to",
+ "account": "Shaftmaker",
+ "partner": "SporranDip",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795230219284,
+ "detail": "Error: account logout is not confirmed: Shaftmaker ended stopped"
+}
