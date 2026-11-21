@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795245642096-meatntwoveg-dipstick-cd3c8ed471be2ceb",
+ "account": "MeatNTwoVeg",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 20500,
+ "claim": "4d8c599e-1883-4e45-8649-4990f62b73df",
+ "count": 0,
+ "ok": false,
+ "at": 1795245722599,
+ "detail": "trade claimed"
+}

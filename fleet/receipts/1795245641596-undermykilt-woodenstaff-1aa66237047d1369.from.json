@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795245641596-undermykilt-woodenstaff-1aa66237047d1369",
+ "account": "UnderMyKilt",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 2,
+ "claim": "869741b5-3c09-4804-a8ca-cf3706f14007",
+ "count": 0,
+ "ok": false,
+ "at": 1795245701222,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Prayer potion(1)",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}

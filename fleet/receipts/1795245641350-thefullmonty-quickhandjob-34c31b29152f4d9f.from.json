@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "reconcile",
+ "id": "1795245641350-thefullmonty-quickhandjob-34c31b29152f4d9f",
+ "account": "TheFullMonty",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 71000,
+ "claim": "49e807a6-96c2-427d-9825-25c54964487f",
+ "count": 0,
+ "ok": false,
+ "at": 1795245719019,
+ "detail": "Error: sender withdrawal debit or pack credit not confirmed: Coins",
+ "logout": {
+  "attemptId": "1795245696050-0000028168-0000000001",
+  "at": 1795245719007,
+  "sha256": "cad20615b98ea96cab514dee7e664b3b7dc16b030d31796d0baac1f3ee1b40dc"
+ },
+ "screen": false
+}

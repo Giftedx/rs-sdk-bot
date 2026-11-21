@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795245550433,
+ "at": 1795245724156,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -182,112 +182,6 @@
    ]
   },
   {
-   "account": "Hocuspokeus",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "4000",
-    "taverley_druid"
-   ],
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "4000",
-    "taverley_druid"
-   ],
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "TICKS": "6000",
-    "KNIGHT_SPOT": "2653,3300"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "TICKS": "6000",
-    "KNIGHT_SPOT": "2669,3298"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "TICKS": "6000",
-    "KNIGHT_SPOT": "2671,3313"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "TICKS": "6000",
-    "KNIGHT_SPOT": "2652,3318"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "TICKS": "6000",
-    "KNIGHT_SPOT": "2582,3297"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "Masterbaiter",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "TICKS": "6000",
-    "KNIGHT_SPOT": "2653,3302"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "Bigchopper",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "TICKS": "6000",
-    "KNIGHT_SPOT": "2669,3298"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
    "account": "YewFirst",
    "script": "scripts/chain.ts",
    "args": [
@@ -411,6 +305,76 @@
    "resources": [
     "squad:herblore-bank"
    ]
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "4000",
+    "taverley_druid"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "4000",
+    "taverley_druid"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Fatstack",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2652,3318"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "KnightRider",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2582,3297"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2653,3302"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2669,3298"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
   }
  ],
  "army": [
@@ -441,6 +405,7 @@
   "Ballspinner",
   "SporranBulge",
   "Sausagefest",
+  "deeppockets",
   "dipstick",
   "fingerblastr",
   "fingersmith",

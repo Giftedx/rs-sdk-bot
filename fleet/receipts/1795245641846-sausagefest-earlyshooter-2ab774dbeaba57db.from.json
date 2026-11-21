@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795245641846-sausagefest-earlyshooter-2ab774dbeaba57db",
+ "account": "Sausagefest",
+ "partner": "Earlyshooter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 28500,
+ "claim": "e478e960-e80b-4630-94ac-59b863440c80",
+ "count": 0,
+ "ok": false,
+ "at": 1795245713134,
+ "detail": "trade claimed"
+}
