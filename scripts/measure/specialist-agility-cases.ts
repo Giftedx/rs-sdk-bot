@@ -49,7 +49,7 @@ const TOURIST_COMPANION = {
             { id: ITEMS.waterskin4, count: 2 },
             { id: ITEMS.feather, count: 200 },
             { id: ITEMS.prayerPot4, count: 6 },
-            { id: ITEMS.pineapplePizza, count: 6 },
+            { id: ITEMS.pineapplePizza, count: 8 },
             { id: ITEMS.shark, count: 8 },
             { id: ITEMS.chocolateCake, count: 7 },
             { id: ITEMS.agilityPot4, count: 8 },

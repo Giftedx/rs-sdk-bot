@@ -127,7 +127,7 @@ export const TOURIST_TRADE_2B: readonly SupplyEntry[] = [
     { id: ITEMS.waterskin4, name: 'Waterskin(4)', count: 1 },
     { id: ITEMS.feather, name: 'Feather', count: 200 },
     { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 1 },
-    { id: ITEMS.pineapplePizza, name: 'Pineapple pizza', count: 2 },
+    { id: ITEMS.pineapplePizza, name: 'Pineapple pizza', count: 5 },
     { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 1 },
 ];
 
@@ -1098,7 +1098,9 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             if (x() >= 3281 && z() <= 3037) await walkNear(s, { x: 3282, z: 3037 }, 0, 20);
             const hasQuestFood = () => cntIds(s, [ITEMS.pineapplePizza, ITEMS.halfPineapplePizza, ITEMS.shark, ITEMS.chocolateCake]) > 0;
             const rockOp = async (rid: number) => {
-                const rock = q.findLoc((l: any) => l.id === rid && l.reachable !== false) ?? q.findLoc((l: any) => l.id === rid);
+                const rock = q.findLoc((l: any) => l.id === rid && l.reachable !== false)
+                    ?? q.findLoc((l: any) => l.id >= 2694 && l.id <= 2697 && l.reachable !== false)
+                    ?? q.findLoc((l: any) => l.id === rid);
                 if (!rock) return false;
                 const op = q.opIndex(rock, /climb/i);
                 await s.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: op === 1 ? 2 : op, reason: 'SDK' });
@@ -1160,6 +1162,16 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             await ensureFullPrayer();
         };
         const gateOut = async () => {
+            const remainingSlave = [ITEMS.slaveShirt, ITEMS.slaveRobe, ITEMS.slaveBoots].filter(id => worn(id)).length;
+            if (remainingSlave > 0 && invOf(s).length + remainingSlave > 28) {
+                await dropAllMatching(s, new Set([ITEMS.vial, ITEMS.shantayDisclaimer]), 4);
+                for (let d = 0; d < 4 && invOf(s).length + remainingSlave > 28; d++) {
+                    const drop = invOf(s).find(i => i.id === ITEMS.pineapplePizza || i.id === ITEMS.halfPineapplePizza);
+                    if (!drop) break;
+                    await s.direct({ type: 'dropItem', slot: drop.slot, reason: 'SDK' });
+                    await waitTicks(s, 1);
+                }
+            }
             for (const id of [ITEMS.slaveShirt, ITEMS.slaveRobe, ITEMS.slaveBoots]) {
                 for (let t = 0; t < 12 && worn(id); t++) await removeWornItem(s, id);
             }
