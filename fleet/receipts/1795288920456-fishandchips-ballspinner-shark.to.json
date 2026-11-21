@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795288920456-fishandchips-ballspinner-shark",
  "account": "Ballspinner",
  "partner": "FishAndChips",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 6,
  "claim": "0757c6aa-4be4-4c69-9da7-308b8dc5f475",
- "count": 0,
- "ok": false,
- "at": 1795289032584,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795289056485,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 6
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795289055771
+ },
+ "logout": {
+  "attemptId": "1795289032593-0000012020-0000000001",
+  "at": 1795289056475,
+  "sha256": "ab6cb81d1a73e2754902a0478da056ffd6f95c8d3b3c0f233e38d1d5e395a6ef"
+ },
+ "screen": true
 }
