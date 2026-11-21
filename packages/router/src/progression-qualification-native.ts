@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';import {join} from 'node:path';import {createHash} from 'node:crypto';import {isDeepStrictEqual as same} from 'node:util';
 import {capabilityRevision} from '../../core/src/worker-release';
 import {rangedComparisonChecks,rangedEntryProofChecks} from '../../practice/src/ranged-progression-case';
-import {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave} from '../../practice/src/fleet-player-save';
 import {deliveryFingerprint} from './delivery-cli';import type {DeliveryTask,DeliveryResult} from './delivery';
 import {registerProgressionQualification} from './progression-qualification';
 

@@ -1,7 +1,7 @@
 import {createReadStream} from 'node:fs';
 import {createInterface} from 'node:readline';
 import {createGunzip} from 'node:zlib';
-import {parsePracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {parsePracticeSave} from './fleet-player-save';
 import {resolveBaseId} from '../../../scripts/specialist-supplier';
 import type {SupplyRequirement} from '../../core/src/launch-evidence';
 import {xpForLevel} from '../../planner/src/curve';

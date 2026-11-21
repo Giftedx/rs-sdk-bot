@@ -10,7 +10,7 @@ import {Database} from 'bun:sqlite';
 import {createHash} from 'node:crypto';
 import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {join, resolve} from 'node:path';
-import {parsePracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {parsePracticeSave} from './fleet-player-save';
 import {isLocalServer} from '../../core/src/localserver';
 import {rsSdkRoot} from './paths';
 

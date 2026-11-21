@@ -10,7 +10,7 @@ import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
 import {killTree} from '../../core/src/proc';
 import {capabilityRevision} from '../../core/src/worker-release';
-import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {GLASS_BANK,GLASS_RETURN_BANK,glassSupplyLedger,glassSupplyOptions,planGlassSupply,type GlassStock} from '../../../scripts/microbot-glass';
 

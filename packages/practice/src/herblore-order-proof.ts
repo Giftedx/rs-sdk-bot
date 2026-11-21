@@ -11,7 +11,7 @@ import {runBotName} from './prove';
 import {rsSdkRoot} from './paths';
 import {killTree} from '../../core/src/proc';
 import {selectQuestSweepProofEndpoints,questSweepProofAccountEnv,startQuestSweepProofStack} from './quest-sweep-proof';
-import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {reconcile} from '../../../scripts/brew-potions';
 const root=resolve(import.meta.dir,'../../..');
 type Save=ReturnType<typeof readPracticeSave>;

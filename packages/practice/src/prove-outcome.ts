@@ -1,7 +1,7 @@
 import { copyFileSync, mkdirSync, readFileSync, renameSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
-import { readPracticeSave, waitPracticeSave } from '../../../scripts/measure/fleet-player-save';
+import { readPracticeSave, waitPracticeSave } from './fleet-player-save';
 import { practiceDir, rsSdkRoot } from './paths';
 
 export interface SaveSnapshot {

@@ -19,7 +19,7 @@ import {readMergedPlan} from '../../core/src/coordinator-jobs';
 import {proveSwarmRecoveryContinuation} from './swarm-recovery-chain';
 import {admissionDecision,admitRecovery,startable,applyEndRepair} from '../../../scripts/swarm';
 import {missionSignature} from '../../core/src/session-admission';
-import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {canBind} from './ports';
 import {killTree,safeKill,sleeperCommand} from '../../core/src/proc';
 import {createBot} from './bots';

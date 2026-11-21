@@ -117,3 +117,33 @@ test('packages/practice/src production modules have zero circular dependencies',
     expect(practiceFiles.length).toBeGreaterThanOrEqual(60);
     expect(tarjanSccs(practiceFiles)).toEqual([]);
 });
+
+test('packages/practice/src production modules never import promoted shared libraries from scripts', () => {
+    const practiceFiles = walkTs(join(repoRoot, 'packages', 'practice', 'src'));
+    const bannedTargets = new Set(['scripts/measure/fleet-player-save.ts', 'scripts/fleet-trade-settlement.ts']);
+    const bannedBare = new Set([
+        'scripts/measure/fleet-player-save',
+        'scripts/measure/fleet-player-save.ts',
+        'scripts/fleet-trade-settlement',
+        'scripts/fleet-trade-settlement.ts',
+    ]);
+    const violations: string[] = [];
+
+    for (const rel of practiceFiles) {
+        const abs = join(repoRoot, rel);
+        const info = ts.preProcessFile(readFileSync(abs, 'utf8'), true, true);
+        for (const imp of info.importedFiles) {
+            const spec = imp.fileName;
+            if (bannedBare.has(spec)) {
+                violations.push(`${rel} -> ${spec}`);
+                continue;
+            }
+            if (!spec.startsWith('.')) continue;
+            const target = resolveImportTarget(abs, spec);
+            if (bannedTargets.has(target)) {
+                violations.push(`${rel} -> ${target}`);
+            }
+        }
+    }
+    expect(violations).toEqual([]);
+});

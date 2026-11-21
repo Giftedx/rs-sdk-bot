@@ -12,7 +12,7 @@ import {runBotName} from './prove';
 import {killTree} from '../../core/src/proc';
 import {analyzeSharkDiagnostic} from './shark-fishing-diagnostic';
 import {workerSourceRevision} from '../../core/src/worker-release';
-import {readPracticeSave,waitPracticeSave,setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,waitPracticeSave,setPracticeSkills} from './fleet-player-save';
 import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 
 type Save=ReturnType<typeof readPracticeSave>;

@@ -4,7 +4,7 @@ import { freemem } from 'node:os';
 import { join, resolve } from 'node:path';
 import { PRACTICE_STARTUP_GB } from '../../core/src/memory';
 import { capabilityRevision } from '../../core/src/worker-release';
-import { readPracticeSave, waitPracticeSave } from '../../../scripts/measure/fleet-player-save';
+import { readPracticeSave, waitPracticeSave } from './fleet-player-save';
 import { createBot } from './bots';
 import { ironProofAccountEnv, selectIronProofEndpoints, startIronProofStack } from './iron-progress-order-proof';
 import { applyPreset } from './presets';

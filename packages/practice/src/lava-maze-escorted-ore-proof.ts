@@ -13,7 +13,7 @@ import { killTree } from '../../core/src/proc';
 import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 import { releaseRevision } from '../../core/src/worker-release';
 import { readLogoutProof } from '../../core/src/session-lifecycle';
-import { readPracticeSave, waitPracticeSave } from '../../../scripts/measure/fleet-player-save';
+import { readPracticeSave, waitPracticeSave } from './fleet-player-save';
 import { BANK, STAGE, type RosterPlayer } from '../../../scripts/lava-maze-escorted-ore';
 
 const root=resolve(import.meta.dir,'../../..'),entry='scripts/lava-maze-escorted-ore.ts';

@@ -16,7 +16,7 @@ import {readLogoutProof} from '../../core/src/session-lifecycle';
 import {capabilityRevision} from '../../core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {performFleetTransfer,runOrderWork,watchTradeScreen,type Order} from '../../../scripts/fleet-trade';
-import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {xpForLevel} from '../../planner/src/curve';
 
 const root=resolve(import.meta.dir,'../../..'),QUANTITY=12,TARGET=72,HOLD_TICKS=25;
