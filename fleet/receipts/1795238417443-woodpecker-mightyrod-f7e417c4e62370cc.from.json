@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795238417443-woodpecker-mightyrod-f7e417c4e62370cc",
  "account": "Woodpecker",
  "partner": "Mightyrod",
@@ -12,6 +12,12 @@
  "claim": "6cf9c5c7-cdcb-41ac-a6fc-922951a34711",
  "count": 0,
  "ok": false,
- "at": 1795238519720,
- "detail": "trade claimed"
+ "at": 1795238653837,
+ "detail": "stop file",
+ "logout": {
+  "attemptId": "1795238519730-0000018268-0000000001",
+  "at": 1795238653738,
+  "sha256": "395e35caf4bb076724598d73c282d5237910e221088fbfd4a5a839275c4ac144"
+ },
+ "screen": false
 }
