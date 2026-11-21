@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795244024112-pullmybow-dipstick-d06c211af02bec37",
+ "account": "Pullmybow",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 32000,
+ "claim": "9be27ae7-7f8d-4d2f-9de1-a6634c767671",
+ "count": 0,
+ "ok": false,
+ "at": 1795244130348,
+ "detail": "trade claimed"
+}

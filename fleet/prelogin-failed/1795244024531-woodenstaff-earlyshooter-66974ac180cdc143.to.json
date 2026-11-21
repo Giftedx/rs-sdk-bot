@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795244024531-woodenstaff-earlyshooter-66974ac180cdc143",
+ "role": "to",
+ "account": "Earlyshooter",
+ "partner": "Woodenstaff",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795244141085,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] 151de4f1ef2851496851737173495e83576d2f93 -> fleet-trade-claim/earlyshooter (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}
