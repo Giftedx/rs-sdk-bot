@@ -1228,7 +1228,7 @@ test('evaluateSpecPlan keeps specMeleeLikely accurate, skips burst strip on mele
     const kit = { ranged: [861, 892], melee: [1231, 1187] };
     const spec = { ...defaultSpec(kit)!, below: 1 };
     const burstBow = { kit: [861], bar: 'combat_bow:specbar', cost: 550, below: 1, style: 'ranged' as const };
-    const target = { index: 1, name: 'Foe', combatLevel: 126, x: 3093, z: 3555, distance: 1 };
+    const target = { index: 1, name: 'Foe', combatLevel: 126, x: 3093, z: 3555, distance: 1, kind: 'player' as const };
     const base = {
         dying: false, canReachMelee: true, fled: false, running: false, castFreezePending: false, kiteTarget: false,
         at: { x: 3092, z: 3555 }, target, guarded: new Set<'magic' | 'ranged' | 'melee'>(),
