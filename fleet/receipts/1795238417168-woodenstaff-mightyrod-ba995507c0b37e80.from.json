@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795238417168-woodenstaff-mightyrod-ba995507c0b37e80",
  "account": "Woodenstaff",
  "partner": "Mightyrod",
@@ -10,40 +10,102 @@
  "item": "Limpwurt root",
  "requested": 11,
  "claim": "43b06e64-071d-40c4-a2b2-e0deeb171791",
- "count": 0,
- "ok": false,
- "at": 1795238511795,
- "detail": "trade claimed",
+ "count": 11,
+ "ok": true,
+ "at": 1795238547724,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Guam leaf",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795238521018
+   }
   },
   {
    "item": "Dragon bones",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795238521360
+   }
   },
   {
    "item": "Flowers",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795238521763
+   }
   },
   {
    "item": "Rune axe",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795238522144
+   }
   },
   {
    "item": "Raw shark",
    "requested": 20,
-   "count": 0
+   "count": 20,
+   "inventory": {
+    "before": 20,
+    "after": 0
+   },
+   "bank": {
+    "count": 20,
+    "at": 1795238523371
+   }
   },
   {
    "item": "Tarromin",
    "requested": 5,
-   "count": 0
+   "count": 5,
+   "inventory": {
+    "before": 5,
+    "after": 0
+   },
+   "bank": {
+    "count": 5,
+    "at": 1795238523774
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 11,
+  "after": 0
+ },
+ "bank": {
+  "count": 11,
+  "at": 1795238520163
+ },
+ "logout": {
+  "attemptId": "1795238511801-0000006348-0000000001",
+  "at": 1795238547714,
+  "sha256": "ea10641abfc31bf24740ed923c4d411f5e03a117101bd4dd0ecb21d357afaf82"
+ },
+ "screen": true
 }
