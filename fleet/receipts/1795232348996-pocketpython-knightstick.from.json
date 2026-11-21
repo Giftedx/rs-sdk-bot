@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795232348996-pocketpython-knightstick",
+ "account": "Pocketpython",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 60309,
+ "claim": "57b85a3d-3d7a-4b3a-b7f2-1cfe699394a6",
+ "count": 0,
+ "ok": false,
+ "at": 1795232426292,
+ "detail": "trade claimed"
+}
