@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795248190666,
+ "at": 1795248264708,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -163,7 +163,7 @@
     "TICKS": "6000",
     "KNIGHT_SPOT": "2653,3300"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true
   },
@@ -175,7 +175,7 @@
     "TICKS": "6000",
     "KNIGHT_SPOT": "2669,3298"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true
   },
@@ -187,7 +187,7 @@
     "TICKS": "6000",
     "KNIGHT_SPOT": "2671,3313"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true
   },
@@ -199,7 +199,7 @@
     "TICKS": "6000",
     "KNIGHT_SPOT": "2652,3318"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true
   },
@@ -211,7 +211,7 @@
     "TICKS": "6000",
     "KNIGHT_SPOT": "2653,3302"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true
   },
@@ -223,7 +223,7 @@
     "TICKS": "6000",
     "KNIGHT_SPOT": "2582,3297"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true
   },
@@ -235,7 +235,7 @@
     "TICKS": "6000",
     "KNIGHT_SPOT": "2652,3318"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true
   },
@@ -247,7 +247,7 @@
     "TICKS": "6000",
     "KNIGHT_SPOT": "2582,3297"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true
   },
@@ -259,7 +259,7 @@
     "TICKS": "6000",
     "KNIGHT_SPOT": "2653,3302"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true
   },
@@ -271,52 +271,9 @@
     "TICKS": "6000",
     "KNIGHT_SPOT": "2669,3298"
    },
-   "enabled": true,
+   "enabled": false,
    "standing": true,
    "repeat": true
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=561 QUANTITY=399 SELL_PRICE=241 FLOOR_PRICE=241 RESERVE_ITEMS=0 ORDER_KEY=liveops-ball-561-1 ORDER_MS=300000 FILL_WAIT_TICKS=120",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=386000 CASH_RESERVE=5000 ORDER_KEY=liveops-ball-ranarr-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1333 QUANTITY=1 SELL_PRICE=120000 FLOOR_PRICE=120000 RESERVE_ITEMS=0 ORDER_KEY=liveops-quick-1333-1 ORDER_MS=300000 FILL_WAIT_TICKS=120",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=386000 CASH_RESERVE=5000 ORDER_KEY=liveops-quick-ranarr-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1333 QUANTITY=1 SELL_PRICE=120000 FLOOR_PRICE=120000 RESERVE_ITEMS=0 ORDER_KEY=liveops-trou-1333-1 ORDER_MS=300000 FILL_WAIT_TICKS=120",
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=561 QUANTITY=461 SELL_PRICE=241 FLOOR_PRICE=241 RESERVE_ITEMS=0 ORDER_KEY=liveops-trou-561-1 ORDER_MS=300000 FILL_WAIT_TICKS=120",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=386000 CASH_RESERVE=5000 ORDER_KEY=liveops-trou-ranarr-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
   },
   {
    "account": "UnderMyKilt",
@@ -387,32 +344,6 @@
    ]
   },
   {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=231 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=150000 CASH_RESERVE=5000 ORDER_KEY=liveops-yew-snape-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=231 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=150000 CASH_RESERVE=5000 ORDER_KEY=liveops-cock-snape-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
    "account": "Fingersmith",
    "script": "scripts/chain.ts",
    "args": [
@@ -469,9 +400,16 @@
   "Ballspinner",
   "SporranBulge",
   "Sausagefest",
+  "deeppockets",
   "dipstick",
+  "fatstack",
+  "fingerblastr",
+  "kiltlifter",
+  "knightrider",
   "knightstick",
-  "sporrandip"
+  "quickhandjob",
+  "sporrandip",
+  "trousersnake"
  ],
  "builds": {
   "NabTheKnob": "tribrid",
