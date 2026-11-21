@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795303723194,
+ "at": 1795304382543,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -394,24 +394,6 @@
    ]
   },
   {
-   "account": "BowBeforeMe",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=28 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=bowbeforeme-kit8-536-0to28 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 28 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
-   "role": "supply",
-   "template": "kit-buy:army-bury-dragon-99",
-   "autopilot": "local",
-   "resources": []
-  },
-  {
    "account": "MineYourBiz",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -445,19 +427,20 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
+    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Defence\":99}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
+   "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-attack-99",
+   "template": "army-trooper-defence-99",
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
