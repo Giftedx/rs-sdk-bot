@@ -20,7 +20,6 @@ import {
     isLiveSupplyVariant,
     itemQty,
     chebDist,
-    CWARS_TO_ARDY_MARKET_WAYPOINTS,
     OBJ_COINS,
     OBJ_CHOCOLATE_CAKE,
     OBJ_GLORY_4,
@@ -50,13 +49,19 @@ export const THIEVING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>>
     [OBJ_CHOCOLATE_CAKE]: THIEVING_CAKES,
 };
 
+export const THIEVING_DIRECT_CWARS_WAYPOINTS: readonly [number, number, number][] = [
+    [2455, 3168, 4],
+    [2560, 3259, 4],
+    [2621, 3293, 2],
+];
+
 const BAKERS_STALL_SAFE_CENTER = { x: 2667, z: 3310 };
 const BAKERS_STALL_SIDE_OFFSETS: readonly [number, number][] = [
     [2, 0], [2, 1], [-1, 0], [-1, 1], [0, -1], [1, -1], [0, 2], [1, 2],
 ];
 
 /** Steal an emergency food buffer from an Ardougne Baker's stall using native sight + walkability checks. */
-async function stealEmergencyStallFood(main: Session, stop: () => boolean, targetBites = 8, maxAttempts = 18): Promise<boolean> {
+async function stealEmergencyStallFood(main: Session, stop: () => boolean, targetBites = 4, maxSteals = 4): Promise<boolean> {
     const startBites = foodBitesCount(main);
     const curPos = main.sdk.getState()?.player;
     if (curPos && chebDist({ x: curPos.worldX, z: curPos.worldZ }, BAKERS_STALL_SAFE_CENTER) > 8) {
@@ -73,7 +78,7 @@ async function stealEmergencyStallFood(main: Session, stop: () => boolean, targe
     const blockedTiles = new Set<string>();
     let noTileStreak = 0;
 
-    for (let i = 0; i < maxAttempts && !stop() && foodBitesCount(main) < targetBites && main.sdk.getInventory().length < 28; i++) {
+    for (let step = 0, steals = 0; step < 36 && steals < maxSteals && !stop() && foodBitesCount(main) < targetBites && main.sdk.getInventory().length < 28; step++) {
         const st = main.sdk.getState();
         const me = st?.player;
         if (!st || !me) {
@@ -120,6 +125,7 @@ async function stealEmergencyStallFood(main: Session, stop: () => boolean, targe
         const op = pick.stall.optionsWithIndex.find(o => /steal/i.test(o.text));
         if (!op) break;
         const before = foodBitesCount(main);
+        steals++;
         await main.direct({ type: 'interactLoc', x: pick.stall.x, z: pick.stall.z, locId: pick.stall.id, optionIndex: op.opIndex, reason: 'SDK' });
         for (let w = 0; w < 4 && !stop() && foodBitesCount(main) === before; w++) {
             await waitTicks(main, 1);
@@ -292,10 +298,11 @@ export async function runArdougneStunRelogThieving(opts: {
             continue;
         }
 
-        // Proactive food restock only once down to the 1 reserve bite (never waste trips at 2-3 bites when 99 is close).
+        // Proactive food restock when empty or down to 1 reserve bite (skip trip at lv>=98 while hp still >= stun+3).
         const bites = foodBitesCount(main);
-        if (bites <= 1 && elapsedNow() >= stallCooldownUntil) {
-            const restocked = await stealEmergencyStallFood(main, () => opts.isStopped() || elapsedNow() >= opts.cap, 5, 10);
+        const needRestock = bites === 0 || (bites <= 1 && (lvl < 98 || st.player.hp <= tier.stunDamage + 3));
+        if (needRestock && elapsedNow() >= stallCooldownUntil) {
+            const restocked = await stealEmergencyStallFood(main, () => opts.isStopped() || elapsedNow() >= opts.cap, 4, 4);
             if (!restocked) {
                 stallCooldownUntil = elapsedNow() + 6;
             }
@@ -454,7 +461,7 @@ if (import.meta.main) {
                 if (ringSlot !== undefined) {
                     await main.direct({ type: 'dropItem', slot: ringSlot, reason: 'SDK' });
                 }
-                await walkWaypointsSafe(main, CWARS_TO_ARDY_MARKET_WAYPOINTS, isStopped);
+                await walkWaypointsSafe(main, THIEVING_DIRECT_CWARS_WAYPOINTS, isStopped);
                 const energyJunk = main.sdk.getInventory().find(i => i.id === 229 || i.id === 3016 || i.id === 3018 || i.id === 3020 || i.id === 3022)?.slot;
                 if (energyJunk !== undefined) {
                     await main.direct({ type: 'dropItem', slot: energyJunk, reason: 'SDK' });

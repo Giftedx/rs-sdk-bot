@@ -155,17 +155,28 @@ function findBestTree(
             if (!l.optionsWithIndex?.some(o => /chop/i.test(o.text))) return false;
             if (safeWillow) return l.x >= 3078 && l.x <= 3098 && l.z >= 3224 && l.z <= 3242;
             if (!wantOak) {
-                // Allow all 4 fence-free inner normal trees (never stall waiting on a 120-200t single-tree respawn).
-                return l.x >= 3113 && l.x <= 3120 && l.z >= 3238 && l.z <= 3251 && l.reachable !== false;
+                // Inner normal trees beside (3117,3246) keep arrival transition to Oak 15 near zero-walk.
+                return l.x >= 3113 && l.x <= 3119 && l.z >= 3244 && l.z <= 3251 && l.reachable !== false;
             }
-            // Southern Draynor Jail clearing keeps all 3 yard Jail guards within maxrange+1 (=8) of hub (3117, 3242).
-            return l.x >= 3114 && l.x <= 3119 && l.z >= 3238 && l.z <= 3246 && l.reachable !== false;
+            // 3 northern Draynor Jail hub oaks around (3117,3246)/(3117,3249): all inside Jail guard 4307's (3121,3249) maxrange 7.
+            return (
+                (l.x === 3115 && l.z === 3243)
+                || (l.x === 3118 && l.z === 3245)
+                || (l.x === 3115 && l.z === 3250)
+            ) && l.reachable !== false;
         });
+    if (cands.length === 0 && wantOak && !safeWillow) {
+        for (const l of locs) {
+            if (/^oak$/i.test(l.name) && l.optionsWithIndex?.some(o => /chop/i.test(o.text)) && l.x >= 3115 && l.x <= 3121 && l.z >= 3243 && l.z <= 3256 && l.reachable !== false) {
+                cands.push(l);
+            }
+        }
+    }
     if (activeTree) {
         const cur = cands.find(l => l.x === activeTree.x && l.z === activeTree.z);
         if (cur && isBesideTree(px, pz, cur.x, cur.z, treeSizeForLoc(cur.name))) return cur;
     }
-    const isHubOak = (l: NearbyLoc) => (l.x === 3114 && l.z === 3239) || (l.x === 3115 && l.z === 3243);
+    const isHubOak = (l: NearbyLoc) => (l.x === 3115 && l.z === 3243) || (l.x === 3118 && l.z === 3245);
     return cands.sort((a, b) => {
         const sizeA = treeSizeForLoc(a.name);
         const sizeB = treeSizeForLoc(b.name);
@@ -201,14 +212,16 @@ function findReachableTreeStandTile(
     }
     const filtered = safeWillow
         ? perimeter
-        : perimeter.filter(t => t.x >= 3113 && t.x <= 3119 && t.z >= 3237 && t.z <= 3253);
+        : perimeter.filter(t => t.x >= 3115 && t.x <= 3121 && t.z >= 3246 && t.z <= 3255);
     const pool = filtered.length > 0 ? filtered : perimeter;
     const reachable: { x: number; z: number; wp: number; cheb: number; hub: number }[] = [];
     for (const t of pool) {
         const path = s.sdk.findPath(t.x, t.z);
         if (!path.success || path.reachedDestination !== true) continue;
-        // Prefer (3117, 3242) with 3 open cardinal melee tiles (E/S/W) around player so all 3 Jail guards surround and hit cleanly.
-        const hub = Math.max(Math.abs(t.x - 3117), Math.abs(t.z - 3242));
+        // Prefer (3117,3246) for twin oaks (3115,3243)+(3118,3245), or (3117,3249) for (3115,3250) on x=3117 corridor.
+        const hub = (t.x === 3117 && t.z === 3246)
+            ? 0
+            : Math.max(Math.abs(t.x - 3117), Math.abs(t.z - 3246));
         reachable.push({
             x: t.x,
             z: t.z,
@@ -217,7 +230,7 @@ function findReachableTreeStandTile(
             hub,
         });
     }
-    reachable.sort((a, b) => (a.cheb - b.cheb) || (a.hub - b.hub) || (a.wp - b.wp));
+    reachable.sort((a, b) => (a.hub - b.hub) || (a.cheb - b.cheb) || (a.wp - b.wp));
     return reachable[0] ? { x: reachable[0].x, z: reachable[0].z } : undefined;
 }
 
@@ -373,15 +386,14 @@ if (import.meta.main) {
             OBJ_MONK_ROBE_TOP,
             OBJ_MONK_ROBE_BOTTOM,
             OBJ_SHORTBOW,
+            OBJ_HOLY_SYMBOL,
         ]);
         await rubTeleport(main, WOODCUTTING_GLORY_IDS, /draynor/i, inDraynorJail, isStopped);
-        await equipWcGear(main, [OBJ_HOLY_SYMBOL]);
-        await walkWaypointsSafe(main, [[3108, 3242, 2], [3117, 3242, 2]], isStopped);
         if ((main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43 && !isProtectMeleeOn(main.sdk.getState())) {
             // Single toggle chooses Protect from Melee while letting PrayerGuard 1t-flick with 0 Prayer drain.
             await main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' });
-            await waitTicks(main, 1);
         }
+        await walkWaypointsSafe(main, [[3117, 3246, 1]], isStopped);
         const arriveTick = main.tick() - t0;
 
         let rolls = 0;
@@ -390,10 +402,6 @@ if (import.meta.main) {
         let lastHitTick = -99;
         let lastTagTick = -99;
         let tagCount = 0;
-        let noStaggerTicks = 0;
-        let knifeStreakSinceFlinch = 0;
-        let lastPhaseTick = -99;
-        let phaseAttempts = 0;
         let actionDelayApprox = 0;
         let lastRollServerTick = -99;
         let clearSentForTick = -99;
@@ -442,6 +450,13 @@ if (import.meta.main) {
             const st = main.sdk.getState();
             const hitTick = drainHitEvents(st);
             if (hitTick >= 0) lastHitTick = Math.max(lastHitTick, hitTick);
+            if (traceMode && (now - t0) % 20 === 0 && now - t0 <= 260) {
+                const guards = (st?.nearbyNpcs ?? [])
+                    .filter(n => /jail guard/i.test(n.name))
+                    .map(n => `${n.index}@${n.x},${n.z}(d${n.distance},tgt${n.targetIndex},ic${n.inCombat ? 1 : 0})`)
+                    .join(' ');
+                console.log(`WC_TRACE state t=${now - t0} pos=${st?.player?.worldX},${st?.player?.worldZ} lvl=${main.sdk.getSkill('Woodcutting')?.baseLevel} rolls=${rolls}(f${flinchRolls}/k${knifeRolls}) hits=${hitEventsTotal} gobs=${countAttackingGoblins(main)} guards=[${guards}]`);
+            }
 
             const wantOak = wcLvl >= 15;
             const prayPts = main.sdk.getSkill('Prayer')?.level ?? 0;
@@ -456,8 +471,8 @@ if (import.meta.main) {
                 }
             }
 
-            // playerhit_n_retaliate only sets %action_delay = map_clock + 1 when busy2 = false and %action_delay < map_clock.
-            const validFlinchHit = !outOfPrayer && hitTick === now && clearSentForTick === now && now + 1 >= actionDelayApprox;
+            // playerhit_n_retaliate sets %action_delay = map_clock + 1 when busy2 = false and %action_delay < map_clock.
+            const validFlinchHit = !outOfPrayer && hitTick === now && clearSentForTick === now && now >= actionDelayApprox;
             const gobs = !outOfPrayer && wantOak ? countAttackingGoblins(main) : 0;
             const needNormalLog = wantOak && slotOfId(main, OBJ_LOGS) === undefined;
             const safeWillow = outOfPrayer && wcLvl >= 30;
@@ -504,16 +519,15 @@ if (import.meta.main) {
             if (validFlinchHit && !needNormalLog) {
                 // playerhit_n_retaliate set %action_delay = now + 1; interactLoc runs in processClientsIn of now + 1 and rolls immediately!
                 const acts: Promise<unknown>[] = [];
-                if (main.sdk.getInventory().length >= 25) {
+                const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
+                if (potAct) acts.push(potAct);
+                if (!potAct && main.sdk.getInventory().length >= 25) {
                     const oakSlot = slotOfId(main, OBJ_OAK_LOGS);
                     if (oakSlot !== undefined) acts.push(main.direct({ type: 'dropItem', slot: oakSlot, reason: 'SDK' }));
                 }
-                const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
-                if (potAct) acts.push(potAct);
                 acts.push(main.direct({ type: 'interactLoc', x: tree.x, z: tree.z, locId: tree.id, optionIndex: chopOp, reason: 'SDK' }));
                 await Promise.all(acts);
                 flinchRolls++;
-                knifeStreakSinceFlinch = 0;
                 rolls++;
                 lastRollServerTick = now + 1;
                 actionDelayApprox = now + 1;
@@ -526,48 +540,32 @@ if (import.meta.main) {
             }
 
             if (now < actionDelayApprox) {
-                // Pending 3-tick knife roll: never send clearInteraction until now >= actionDelayApprox.
+                // Pending 3-tick knife roll: drop excess logs here so knife3 bursts stay <=3 script inputs (+2 PrayerGuard <= 5).
+                const waitActs: Promise<unknown>[] = [];
                 const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
-                if (potAct) await potAct;
+                if (potAct) waitActs.push(potAct);
+                if (main.sdk.getInventory().length >= 24) {
+                    const oakSlots = main.sdk.getInventory().filter(i => i.id === OBJ_OAK_LOGS).map(i => i.slot).slice(0, potAct ? 1 : 2);
+                    for (const slot of oakSlots) waitActs.push(main.direct({ type: 'dropItem', slot, reason: 'SDK' }));
+                }
+                if (waitActs.length > 0) await Promise.all(waitActs);
                 await waitTicks(main, 1);
                 continue;
             }
 
-            // Count non-adjacent staggered hits in strict 10-tick span [now-9..now] (2 cycles of attackrate=5 -> 1 or in-phase = <=2, staggered >=2 = 3..5).
-            while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 10) recentHitTicks.shift();
-            let spacedHits10 = 0;
-            let prevSpaced = -99;
-            for (const ht of recentHitTicks) {
-                if (ht - prevSpaced >= 2) {
-                    spacedHits10++;
-                    prevSpaced = ht;
-                }
-            }
-            const staggeredHits10 = recentHitTicks.length;
-            if (wantOak && !needNormalLog && gobs >= 2 && spacedHits10 < 3) {
-                noStaggerTicks++;
-            } else {
-                noStaggerTicks = 0;
-            }
-            // Perturb coincided or adjacent guard timers 1 tile along the south edge of Oak (3115, 3243) so hits separate by >=2t.
-            const needPhaseShift = noStaggerTicks >= 15 || knifeStreakSinceFlinch >= 3;
-            if (!outOfPrayer && wantOak && !needNormalLog && gobs >= 2 && meNow.worldZ === 3242 && (meNow.worldX === 3116 || meNow.worldX === 3117) && needPhaseShift && phaseAttempts < 6 && now - lastPhaseTick >= 35) {
-                noStaggerTicks = 0;
-                knifeStreakSinceFlinch = 0;
-                lastPhaseTick = now;
-                phaseAttempts++;
-                const stepX = meNow.worldX === 3116 ? 3117 : 3116;
-                await main.direct({ type: 'walkTo', x: stepX, z: 3242, running: true, reason: 'SDK' });
-                clearSentForTick = -99;
-                await waitTicks(main, 1);
-                continue;
-            }
+            // Track active mod-5 guard swing phases from the last 6 ticks (covers attackrate=5 even during busy2/knife3).
+            while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 11) recentHitTicks.shift();
+            const recentHitsIn6 = recentHitTicks.filter(h => now - h <= 6);
+            const activeHitMod5 = new Set<number>(recentHitsIn6.map(h => ((h % 5) + 5) % 5));
+            const nextMod1 = ((now + 1) % 5 + 5) % 5;
+            const activeHitIn1t = activeHitMod5.has(nextMod1);
+
             const canTag = !outOfPrayer
                 && wantOak
                 && !needNormalLog
-                && tagCount < 16
-                && gobs < 3
-                && spacedHits10 < 4
+                && tagCount < 8
+                && gobs < 2
+                && recentHitsIn6.length === 0
                 && now - lastTagTick >= 15
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1
@@ -591,23 +589,25 @@ if (import.meta.main) {
                 }
             }
 
-            // Hold busy2 clear for <=2t only when >=2 spaced attackers hit cleanly (>=3 spaced hit ticks/10t); else pure 3t knife.
-            const flinchViable = gobs >= 2 || spacedHits10 >= 3;
-            const keepFlinchWindow = !outOfPrayer && wantOak && !needNormalLog && flinchViable && spacedHits10 >= 3 && now - lastRollServerTick < 2;
+            // Clear busy2 only when an active guard is scheduled to swing on now+1 (flinch rolls at now+2); else 3t knife (now+3).
+            const keepFlinchWindow = !outOfPrayer && wantOak && !needNormalLog && activeHitIn1t;
             if (!keepFlinchWindow) {
                 const knifeSlot = slotOfId(main, OBJ_KNIFE);
                 const logSlot = slotOfId(main, OBJ_LOGS);
                 if (knifeSlot !== undefined && logSlot !== undefined && !needNormalLog) {
-                    // Single-tick wc-3tick burst (drop -> knife -> Make 1 -> Chop in strict order): rolls at now + 3 without consuming OBJ_LOGS.
-                    if (main.sdk.getInventory().length >= 25) {
-                        const dropSlots = main.sdk.getInventory().filter(i => i.id === OBJ_OAK_LOGS || i.id === 1519).map(i => i.slot).slice(0, 1);
-                        for (const slot of dropSlots) await main.direct({ type: 'dropItem', slot, reason: 'SDK' });
+                    // Strictly 3 inputs (+ up to 2 PrayerGuard toggles = 5 USER_EVENT limit) so interactLoc never spills across ticks.
+                    if (main.sdk.getInventory().length >= 28) {
+                        const dropSlot = main.sdk.getInventory().find(i => i.id === OBJ_OAK_LOGS || i.id === 1519)?.slot;
+                        if (dropSlot !== undefined) {
+                            await main.direct({ type: 'dropItem', slot: dropSlot, reason: 'SDK' });
+                            await waitTicks(main, 1);
+                            continue;
+                        }
                     }
                     await main.direct({ type: 'useItemOnItem', sourceSlot: knifeSlot, targetSlot: logSlot, reason: 'SDK' });
                     await main.direct({ type: 'clickComponent', componentId: SKILL_MULTI3_MAKE1_A, reason: 'SDK' });
                     await main.direct({ type: 'interactLoc', x: tree.x, z: tree.z, locId: tree.id, optionIndex: chopOp, reason: 'SDK' });
                     knifeRolls++;
-                    if (wantOak && spacedHits10 >= 3) knifeStreakSinceFlinch++;
                     rolls++;
                     lastRollServerTick = now + 3;
                     actionDelayApprox = now + 3;
@@ -633,12 +633,12 @@ if (import.meta.main) {
             }
 
             const idleActs: Promise<unknown>[] = [];
-            if (main.sdk.getInventory().length >= 24) {
-                const oakSlots = main.sdk.getInventory().filter(i => i.id === OBJ_OAK_LOGS).map(i => i.slot).slice(0, 3);
-                for (const slot of oakSlots) idleActs.push(main.direct({ type: 'dropItem', slot, reason: 'SDK' }));
-            }
             const potAct = tryDrinkPrayerPotion(main, 15);
             if (potAct) idleActs.push(potAct);
+            if (main.sdk.getInventory().length >= 24) {
+                const oakSlots = main.sdk.getInventory().filter(i => i.id === OBJ_OAK_LOGS).map(i => i.slot).slice(0, potAct ? 1 : 2);
+                for (const slot of oakSlots) idleActs.push(main.direct({ type: 'dropItem', slot, reason: 'SDK' }));
+            }
             idleActs.push(clearInteraction(main));
             await Promise.all(idleActs);
             clearSentForTick = now + 1;
