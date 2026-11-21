@@ -1,0 +1,23 @@
+{
+ "id": "1795249150295-bigpackage-deeppockets-b050b8f8b71fd7ec",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigpackage",
+ "to": "Deeppockets",
+ "item": "Coins",
+ "count": 62000,
+ "start": 1795249150295,
+ "end": 1795250650295,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

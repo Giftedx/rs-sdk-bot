@@ -1,0 +1,17 @@
+{
+ "id": "1795249149778-sporranbulge-quickhandjob-dd6eb9c622d39fa3",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "SporranBulge",
+ "to": "Quickhandjob",
+ "item": "Coins",
+ "count": 22000,
+ "start": 1795249149778,
+ "end": 1795250649778,
+ "extra": [
+  {
+   "item": "Snape grass",
+   "count": 2
+  }
+ ],
+ "takerWaits": true
+}

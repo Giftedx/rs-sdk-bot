@@ -1,0 +1,17 @@
+{
+ "id": "1795249149430-fingersmith-coincock-a7b37ca3282482ad",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fingersmith",
+ "to": "CoinCock",
+ "item": "Coins",
+ "count": 34000,
+ "start": 1795249149430,
+ "end": 1795250649430,
+ "extra": [
+  {
+   "item": "Snape grass",
+   "count": 1
+  }
+ ],
+ "takerWaits": true
+}
