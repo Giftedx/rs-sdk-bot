@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795243379716-knightrider-earlyshooter-14415c1257450f8c",
  "account": "Earlyshooter",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 91000,
  "claim": "515c83d9-41a2-4826-83e9-50c0345d9982",
- "count": 0,
- "ok": false,
- "at": 1795243467318,
- "detail": "trade claimed"
+ "count": 91000,
+ "ok": true,
+ "at": 1795243481491,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 91000
+ },
+ "bank": {
+  "count": 91000,
+  "at": 1795243480743
+ },
+ "logout": {
+  "attemptId": "1795243467326-0000023628-0000000001",
+  "at": 1795243481474,
+  "sha256": "f90d5a2c90a19e3d39b98b02a74939a37f615beeb0f403d57592efdff79affce"
+ },
+ "screen": true
 }
