@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795245735002-deeppockets-billionaire-22fa6eca15cff1fd",
+ "account": "Deeppockets",
+ "partner": "Billionaire",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 104000,
+ "claim": "841ced12-b8fb-4b64-a8cd-5c3160910f97",
+ "count": 0,
+ "ok": false,
+ "at": 1795245821478,
+ "detail": "trade claimed"
+}
