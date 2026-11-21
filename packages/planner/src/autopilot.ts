@@ -1073,7 +1073,13 @@ export function plan(input: Inputs): Assignment[] {
         // of the way is a coin need of the job, so an account without the fare is funded as for any coin need.
         const finite=finiteOrder(band,a);if(!finite){miss(a,band,'demand');continue;}
         const selected=inp.templateFor?.(finite,a)??finite;
-        const fare = cachedWayCost(a.pos, placeOf(selected), inp.mountain?.(a) ?? true);
+        const place = placeOf(selected);
+        // Surface combat workers only walk/route from ground level (level 0); upstairs accounts wait until recovered.
+        if (selected.script === 'scripts/gather-combat.ts' && (place?.level ?? 0) === 0 && a.pos && a.pos.level !== 0) {
+            miss(a, selected, 'reach');
+            continue;
+        }
+        const fare = cachedWayCost(a.pos, place, inp.mountain?.(a) ?? true);
         if (fare === null) { miss(a, selected, 'reach'); continue; }
         const t = fare ? withFare(selected, fare) : selected;
         if (t.quest && t.tier !== 'goal') {

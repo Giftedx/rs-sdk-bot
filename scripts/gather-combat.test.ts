@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {GIANT,GIANT_HERBS,TROOPER_FOODS,TROOPER_SITE,COW_BEAR_BOXES,CONFIGS,TAVERLEY_ROUTE,isNonWildernessGatherGoal,createTaverleyTravel} from './gather-combat';
+import {GIANT,GIANT_HERBS,TROOPER_FOODS,TROOPER_SITE,COW_BEAR_BOXES,CONFIGS,TAVERLEY_ROUTE,isNonWildernessGatherGoal,createTaverleyTravel,ensureSurfaceGroundEntry} from './gather-combat';
 import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP,cowReleased,COW_RELEASE,selectGiantArmour,COW_FOOD_BITES} from './gather-combat';
 import {gearById} from '../packages/planner/src/gear-progression';
 import type {Session} from '../packages/core/src/inprocess';
@@ -603,4 +603,51 @@ test('non-Wilderness mainland supply configs resolve valid targets, guard Wilder
     ]);
 
     await expect(travel.walk(s, 'taverley_druid', { x: 3115, z: 9928 }, ground, () => false, 2)).rejects.toThrow('Wilderness goal forbidden');
+});
+
+test('ensureSurfaceGroundEntry descends one nearby staircase/gangplank or fails fast with level !== 0', async () => {
+    const mk = (level: number, nearbyLocs: any[], dropTo0: boolean) => {
+        const player = { worldX: 2686, worldZ: 3268, level };
+        let tick = 0, clicks = 0;
+        const listeners = new Set<() => void>();
+        const timer = setInterval(() => { tick++; for (const cb of [...listeners]) cb(); }, 1);
+        const s: any = {
+            tick: () => tick,
+            onTick: (cb: () => void) => { listeners.add(cb); return () => listeners.delete(cb); },
+            sdk: { getState: () => ({ player, nearbyLocs }) },
+            bot: {
+                interactLoc: async () => {
+                    clicks++;
+                    if (dropTo0) player.level = 0;
+                    return { success: true };
+                },
+            },
+        };
+        return { s, clicks: () => clicks, cleanup: () => clearInterval(timer) };
+    };
+
+    const g0 = mk(0, [], false);
+    try {
+        await ensureSurfaceGroundEntry(g0.s);
+        expect(g0.clicks()).toBe(0);
+    } finally { g0.cleanup(); }
+
+    const plank = { id: 2086, name: 'Gangplank', distance: 4, optionsWithIndex: [{ opIndex: 1, text: 'Cross' }] };
+    const ship = mk(1, [plank], true);
+    try {
+        await ensureSurfaceGroundEntry(ship.s, () => false, 5);
+        expect(ship.clicks()).toBe(1);
+    } finally { ship.cleanup(); }
+
+    const stuck = mk(1, [plank], false);
+    try {
+        await expect(ensureSurfaceGroundEntry(stuck.s, () => false, 2)).rejects.toThrow('level !== 0');
+        expect(stuck.clicks()).toBe(1);
+    } finally { stuck.cleanup(); }
+
+    const noExit = mk(2, [{ id: 1, name: 'Table', distance: 1, optionsWithIndex: [] }], false);
+    try {
+        await expect(ensureSurfaceGroundEntry(noExit.s, () => false, 2)).rejects.toThrow('level !== 0');
+        expect(noExit.clicks()).toBe(0);
+    } finally { noExit.cleanup(); }
 });

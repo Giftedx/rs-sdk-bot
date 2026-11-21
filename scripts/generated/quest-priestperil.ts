@@ -7,10 +7,50 @@
 // Server truth: areas/area_varrock/scripts/king_roald.rs2:39-81, quests/quest_priestperil/scripts/temple_doors.rs2,
 // trapped_drezel.rs2, evil_monks.rs2:52-56 (the golden key drop), vampire_coffin.rs2, areas/area_mausoleum/scripts/
 // temple_guardian.rs2, gates.rs2, monuments.rs2, well.rs2, drezel.rs2.
-import { openQuest } from './quest-lib';
+import { openQuest, readQuestJournalStage, type JournalQuestReader } from './quest-lib';
 
 const ROALD = { x: 3218, z: 3475 };                        // he stands west of the throne room wall (spawn 3222,3476)
 const TEMPLE_DOOR = { id: 3489, x: 3408, z: 3489 };        // priestperiltempledoorl (r: 3490 at 3408,3488), east edge
+
+/**
+ * Reports whether tile `(x, z, level)` lies inside Paterdomus ground floor east of the outer wall and doors.
+ * Includes the `x = 3408` nave alcoves while excluding the two west porch tiles `(3408, 3488..3489)`.
+ */
+export function inPaterdomusTemple(x: number, z: number, level = 0): boolean {
+    if (level !== 0 || z < 3480 || z > 3500 || x > 3420) return false;
+    if (x >= 3409) return true;
+    return x === 3408 && (z < 3488 || z > 3489);
+}
+
+/** Parses `%priestperil` (302) stage from `priestperil_journal.rs2` text ordered from highest stage down. */
+export function priestPerilJournalStage(body: string): number | undefined {
+    const text = body.replace(/@[a-z0-9]+@/gi, '').replace(/<[^>]*>/g, '').replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
+    if (/QUEST COMPLETE!/i.test(text)) return 60;
+    if (/I need to bring Drezel fifty rune essences/i.test(text)) return 10;
+    if (/I should head downstairs to the monument like Drezel asked/i.test(text)) return 8;
+    if (/I should speak to Drezel again/i.test(text)) return 7;
+    if (/but I still have to do something about that vampire/i.test(text)) return 6;
+    if (/I need to find the key to his cell and free him/i.test(text)) return 5;
+    if (/I must return to the temple and find out what happened to the real Drezel/i.test(text)) return 4;
+    if (/I should tell King Roald everything's fine with Drezel now I have killed that dog/i.test(text)) return 3;
+    if (/He told me that there was an annoying dog below the temple, and has asked me to kill it for him/i.test(text)) return 2;
+    if (/I spoke to King Roald who asked me to investigate why his friend Priest Drezel has stopped communicating with him/i.test(text)
+        && /Drezel lives in a temple to the east of Varrock Palace/i.test(text)) return 1;
+    if (/I can start this quest by speaking to King Roald/i.test(text)) return 0;
+    return undefined;
+}
+
+/** Reads the live `%priestperil` stage from `PRIEST_FROM` env override or the `questlist:priestperil` journal. */
+export async function readPriestPerilStage(q: JournalQuestReader): Promise<number> {
+    if (process.env.PRIEST_FROM !== undefined) {
+        const from = Number(process.env.PRIEST_FROM);
+        if (!Number.isSafeInteger(from) || from < 0) throw Error(`Invalid PRIEST_FROM: ${process.env.PRIEST_FROM}`);
+        return from;
+    }
+    const stage = await readQuestJournalStage(q, 'priestperil', /Priest in Peril/i, priestPerilJournalStage);
+    console.log(`PRIEST_STAGE ${JSON.stringify({ stage })}`);
+    return stage;
+}
 const NORTH_TRAPDOOR = { id: 1568, x: 3405, z: 3507 };     // trapdoor north of the temple -> dog corridor
 const DOG = { x: 3405, z: 9902 };
 const CELLAR_LADDER = { id: 1755, x: 3405, z: 9907 };
@@ -32,6 +72,7 @@ const MONUMENTS = [
 ];
 const ITEM = { bucket: 1925, ess: 1436, goldKey: 2944, ironKey: 2945, murky: 2953, blessed: 2954, dagger: 2952 };
 
+async function runPriestPeril(): Promise<void> {
 const q = await openQuest({ cap: 4000 });
 try {
     let questDone = false;
@@ -59,142 +100,262 @@ try {
         }
         if (!done()) await q.fail(`kill ${label}`);
     };
+    const upToDrezel = async (label: string): Promise<void> => {
+        if (q.lvl() === 0) await q.climb(`${label} stairs up`, () => q.findLoc(l => l.id === STAIRS_UP.id && l.distance <= 12) ?? STAIRS_UP, /climb-up|^climb$/i, () => q.lvl() === 1);
+        if (q.lvl() === 1) await q.climb(`${label} ladder up`, () => q.findLoc(l => l.id === LADDER_UP.id && l.distance <= 12) ?? LADDER_UP, /climb-up/i, () => q.lvl() === 2);
+    };
+    const downFromDrezel = async (label: string): Promise<void> => {
+        if (q.lvl() === 2) await q.climb(`${label} ladder down`, () => q.findLoc(l => /ladder/i.test(l.name) && l.distance <= 12), /climb-down/i, () => q.lvl() === 1);
+        if (q.lvl() === 1) await q.climb(`${label} stairs down`, () => q.findLoc(l => /stair/i.test(l.name) && l.distance <= 12), /climb-down|^climb$/i, () => q.lvl() === 0);
+    };
+    const leaveTemple = async (label: string): Promise<void> => {
+        if (q.lvl() > 0 && !under()) await downFromDrezel(label);
+        if (!inPaterdomusTemple(x(), z(), q.lvl())) return;
+        // Stand strictly on (3409, 3489) east of the east-edge doors so check_axis treats opening as exiting.
+        await q.walk(`${label} temple door`, [{ x: TEMPLE_DOOR.x + 1, z: TEMPLE_DOOR.z, tol: 0 }]);
+        await q.step(`${label} temple door out`, () => { const d = q.locAt(TEMPLE_DOOR.x, TEMPLE_DOOR.z) ?? TEMPLE_DOOR; return q.opLoc(d, q.opIndex(d, /^open$/i)); }, () => x() <= TEMPLE_DOOR.x || !q.shutAt(TEMPLE_DOOR.x, TEMPLE_DOOR.z), 8, 5);
+        await q.dash(`${label} out of temple`, TEMPLE_DOOR.x - 2, TEMPLE_DOOR.z, 1, 8);
+    };
     const toTrapdoor = async (label: string): Promise<void> => {
-        // Inside the temple the only way out is the west door, which the planner treats as open.
-        if (x() >= 3409 && x() <= 3420 && (q.pos()?.worldZ ?? 0) >= 3480 && (q.pos()?.worldZ ?? 0) <= 3500) {
-            await q.walk(`${label} temple door`, [{ x: TEMPLE_DOOR.x + 1, z: TEMPLE_DOOR.z, tol: 1 }]);
-            await q.step(`${label} temple door out`, () => { const d = q.locAt(TEMPLE_DOOR.x, TEMPLE_DOOR.z) ?? TEMPLE_DOOR; return q.opLoc(d, q.opIndex(d, /^open$/i)); }, () => x() <= TEMPLE_DOOR.x || !q.shutAt(TEMPLE_DOOR.x, TEMPLE_DOOR.z), 8, 5);
-            await q.dash(`${label} out of temple`, TEMPLE_DOOR.x - 2, TEMPLE_DOOR.z, 1, 8);
-        }
+        if (under()) return;
+        await leaveTemple(label);
         await q.walk(`${label} to trapdoor`, [...(x() < 3290 ? EAST : []), { x: NORTH_TRAPDOOR.x, z: NORTH_TRAPDOOR.z - 1, tol: 1 }]);
         await q.climb(`${label} trapdoor`, () => q.locAt(NORTH_TRAPDOOR.x, NORTH_TRAPDOOR.z) ?? NORTH_TRAPDOOR, /climb-down|^open$/i, under, 6);
     };
     const upCellar = async (label: string): Promise<void> => {
+        if (!under()) return;
         await q.walk(`${label} to cellar ladder`, [{ x: CELLAR_LADDER.x, z: CELLAR_LADDER.z - 1, tol: 1 }]);
         await q.climb(`${label} cellar ladder`, () => q.locAt(CELLAR_LADDER.x, CELLAR_LADDER.z) ?? CELLAR_LADDER, /climb-up/i, () => !under());
     };
     const intoTemple = async (label: string): Promise<void> => {
+        if (under()) await upCellar(label);
+        if (inPaterdomusTemple(x(), z(), q.lvl()) || (q.lvl() > 0 && !under())) return;
         await q.walk(`${label} to temple`, [...(x() < 3290 ? EAST : []), { x: TEMPLE_DOOR.x - 1, z: TEMPLE_DOOR.z, tol: 1 }]);
         await cross(`${label} temple door`, TEMPLE_DOOR, /^open$/i, () => x() >= TEMPLE_DOOR.x + 1 && !under());
     };
-    const upToDrezel = async (label: string): Promise<void> => {
-        await q.climb(`${label} stairs up`, () => q.findLoc(l => l.id === STAIRS_UP.id && l.distance <= 12) ?? STAIRS_UP, /climb-up|^climb$/i, () => q.lvl() === 1);
-        await q.climb(`${label} ladder up`, () => q.findLoc(l => l.id === LADDER_UP.id && l.distance <= 12) ?? LADDER_UP, /climb-up/i, () => q.lvl() === 2);
-    };
-    const downFromDrezel = async (label: string): Promise<void> => {
-        await q.climb(`${label} ladder down`, () => q.findLoc(l => /ladder/i.test(l.name) && l.distance <= 12), /climb-down/i, () => q.lvl() === 1);
-        await q.climb(`${label} stairs down`, () => q.findLoc(l => /stair/i.test(l.name) && l.distance <= 12), /climb-down|^climb$/i, () => q.lvl() === 0);
-    };
+
+    if (!await q.waitUntil(() => (q.s.client as any)?.ingame === true && !!q.pos(), 20))
+        await q.fail('priestperil entry state unobserved');
+    const stage = await readPriestPerilStage(q);
+    if (stage >= 60) throw Error('Priest in Peril already complete');
+    if (stage > 0) {
+        console.log(`NOTE priest in peril resumed at stage ${stage} at ${x()},${z()},${q.lvl()}`);
+        q.milestone(1);
+    }
+
+    // Before stage 4 the west temple doors block entry from outside; exit first if trapped inside Paterdomus.
+    if (stage < 4 && (inPaterdomusTemple(x(), z(), q.lvl()) || (q.lvl() > 0 && !under()))) {
+        await leaveTemple('resume');
+    }
 
     // 1. King Roald: "Sure." sets 1 (king_roald.rs2:46-55, priestperil.rs2:1-5).
-    await q.talk('roald 1', roald, [/^sure\.?$/i], () => q.sawText(/many thanks adventurer/i), ROALD, 60);
-    q.milestone(1);
+    if (stage < 1) {
+        await q.talk('roald 1', roald, [/^sure\.?$/i], () => q.sawText(/many thanks adventurer/i), ROALD, 60);
+        q.milestone(1);
+    }
     // 2. The temple door, Knock-at: "Roald sent me to check on Drezel.", "Sure." sets 2 (temple_doors.rs2:22-31,63-82).
-    await q.walk('to temple', [...EAST, { x: TEMPLE_DOOR.x - 1, z: TEMPLE_DOOR.z, tol: 1 }]);
-    await q.step('knock', () => { const k = q.locAt(TEMPLE_DOOR.x, TEMPLE_DOOR.z) ?? TEMPLE_DOOR; return q.opLoc(k, q.opIndex(k, /knock/i)); }, () => q.dialogOpen(), 12, 4);
-    await q.converse([/roald sent me to check on drezel/i, /^sure\.?$/i], () => q.sawText(/one dead dog coming up/i), 60);
-    await q.converse([], () => !q.dialogOpen(), 6);
-    q.milestone(2);
+    if (stage < 2) {
+        await q.walk('to temple', [...(x() < 3290 ? EAST : []), { x: TEMPLE_DOOR.x - 1, z: TEMPLE_DOOR.z, tol: 1 }]);
+        await q.step('knock', () => { const k = q.locAt(TEMPLE_DOOR.x, TEMPLE_DOOR.z) ?? TEMPLE_DOOR; return q.opLoc(k, q.opIndex(k, /knock/i)); }, () => q.dialogOpen(), 12, 4);
+        await q.converse([/roald sent me to check on drezel/i, /^sure\.?$/i], () => q.sawText(/one dead dog coming up/i), 60);
+        await q.converse([], () => !q.dialogOpen(), 6);
+        q.milestone(2);
+    }
     // 3. The trapdoor north of the temple; the temple guardian (temple_guardian.rs2:1-11 sets 3 on its death).
-    await toTrapdoor('dog');
-    await q.waitUntil(() => !!q.npc(/^temple guardian$/i), 10);
-    if (!q.npc(/^temple guardian$/i)) await q.walk('to dog', [{ x: DOG.x, z: DOG.z + 2, tol: 2 }]);
-    await kill('dog', () => q.npc(/^temple guardian$/i), () => !q.npc(/^temple guardian$/i), 60);
-    q.milestone(3);
+    if (stage < 3) {
+        await toTrapdoor('dog');
+        await q.waitUntil(() => !!q.npc(/^temple guardian$/i), 10);
+        if (!q.npc(/^temple guardian$/i)) await q.walk('to dog', [{ x: DOG.x, z: DOG.z + 2, tol: 2 }]);
+        await kill('dog', () => q.npc(/^temple guardian$/i), () => !q.npc(/^temple guardian$/i), 60);
+        q.milestone(3);
+    }
     // 4. Varrock teleport, King Roald: 4 (king_roald.rs2:69-81).
-    await q.teleport('varrock teleport 1', 'magic:varrock_teleport', 3212, 3424);
-    await q.walk('to roald', [{ x: ROALD.x, z: ROALD.z, tol: 1 }]);
-    await q.talk('roald 2', roald, [], () => q.sawText(/see you beheaded for high treason/i), ROALD, 80);
-    q.milestone(4);
+    if (stage < 4) {
+        if (under() && q.canCast('magic:varrock_teleport') !== undefined) await upCellar('roald 2');
+        await q.teleport('varrock teleport 1', 'magic:varrock_teleport', 3212, 3424);
+        await q.walk('to roald', [{ x: ROALD.x, z: ROALD.z, tol: 1 }]);
+        await q.talk('roald 2', roald, [], () => q.sawText(/see you beheaded for high treason/i), ROALD, 80);
+        q.milestone(4);
+    }
     // 5. The temple doors open now; a level 30 monk (priestperilevilmonk3) drops the golden key while %priestperil < 6
     // (evil_monks.rs2:52-56). Up to Drezel; through the cell door: "Tell me anyway.", "Yes." sets 5.
-    await intoTemple('drezel');
-    await kill('monk', () => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^monk of zamorak$/i.test(n.name) && n.combatLevel === 30).sort((a: any, b: any) => a.distance - b.distance)[0],
-        () => q.has(ITEM.goldKey) || (q.st()?.groundItems ?? []).some((g: any) => g.id === ITEM.goldKey), 60);
-    for (let i = 0; i < 10 && !q.has(ITEM.goldKey); i++) {
-        const g = (q.st()?.groundItems ?? []).find((x: any) => x.id === ITEM.goldKey);
-        if (g && i % 3 === 0) await q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' });
-        await q.waitTicks(1);
+    if (stage < 5) {
+        await intoTemple('drezel');
+        if (!q.has(ITEM.goldKey) && !q.has(ITEM.ironKey)) {
+            if (q.lvl() > 0) await downFromDrezel('monk');
+            await kill('monk', () => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^monk of zamorak$/i.test(n.name) && n.combatLevel === 30).sort((a: any, b: any) => a.distance - b.distance)[0],
+                () => q.has(ITEM.goldKey) || (q.st()?.groundItems ?? []).some((g: any) => g.id === ITEM.goldKey), 60);
+            for (let i = 0; i < 10 && !q.has(ITEM.goldKey); i++) {
+                const g = (q.st()?.groundItems ?? []).find((x: any) => x.id === ITEM.goldKey);
+                if (g && i % 3 === 0) await q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' });
+                await q.waitTicks(1);
+            }
+            if (!q.has(ITEM.goldKey)) await q.fail('no golden key');
+            q.milestone('key');
+        }
+        await upToDrezel('drezel 1');
+        await q.walk('to cell', [{ x: CELL.x, z: CELL.z, tol: 1 }]);
+        await q.step('talk-through', () => { const k = q.locAt(CELL.x, CELL.z) ?? CELL; return q.opLoc(k, q.opIndex(k, /talk/i)); }, () => q.dialogOpen(), 12, 4);
+        await q.converse([/^tell me anyway/i, /^yes\.?$/i], () => q.sawText(/let's get you out of here/i), 120);
+        await q.converse([], () => !q.dialogOpen(), 6);
+        q.milestone(5);
     }
-    if (!q.has(ITEM.goldKey)) await q.fail('no golden key');
-    q.milestone('key');
-    await upToDrezel('drezel 1');
-    await q.walk('to cell', [{ x: CELL.x, z: CELL.z, tol: 1 }]);
-    await q.step('talk-through', () => { const k = q.locAt(CELL.x, CELL.z) ?? CELL; return q.opLoc(k, q.opIndex(k, /talk/i)); }, () => q.dialogOpen(), 12, 4);
-    await q.converse([/^tell me anyway/i, /^yes\.?$/i], () => q.sawText(/let's get you out of here/i), 120);
-    await q.converse([], () => !q.dialogOpen(), 6);
-    q.milestone(5);
+    const fetchMurkyWater = async () => {
+        if (q.lvl() > 0 && !under()) await downFromDrezel('well');
+        if (!under()) await toTrapdoor('well');
+        if (z() >= GATE1.z) {
+            await q.walk('to gate 1 well', [{ x: GATE1.x, z: GATE1.z, tol: 0 }]);
+            await cross('gate 1 well', GATE1, /^open$/i, () => z() < GATE1.z);
+        }
+        await q.step('well', () => q.useOnLoc(ITEM.bucket, q.locAt(WELL.x, WELL.z) ?? WELL), () => q.has(ITEM.murky), 20, 4);
+    };
     // 6. Down, out, the north trapdoor, gate 1 (open at 5); the golden key on each monument until it swaps for the
-    // iron key; the bucket on the well (murky water).
-    await downFromDrezel('key');
-    await toTrapdoor('key');
-    await q.walk('to gate 1', [{ x: GATE1.x, z: GATE1.z, tol: 0 }]);
-    await cross('gate 1', GATE1, /^open$/i, () => z() < GATE1.z);
-    for (const m of MONUMENTS) {
-        if (q.has(ITEM.ironKey)) break;
-        await q.guard('monuments');
-        const n0 = q.msgCount(/nothing interesting|you swap/i);
-        await q.useOnLoc(ITEM.goldKey, q.locAt(m.x, m.z) ?? m);
-        await q.waitUntil(() => q.has(ITEM.ironKey) || q.msgCount(/nothing interesting|you swap/i) > n0, 25);
+    // iron key; the bucket on the well (murky water); back up to Drezel and unlock the cell door (6).
+    if (stage < 6) {
+        if (!q.has(ITEM.ironKey)) {
+            if (!q.has(ITEM.goldKey)) {
+                if (under()) {
+                    if (z() < GATE1.z) {
+                        await q.walk('to gate 1 monk', [{ x: GATE1.x, z: GATE1.z - 1, tol: 0 }]);
+                        await cross('gate 1 monk', GATE1, /^open$/i, () => z() >= GATE1.z);
+                    }
+                    await upCellar('monk');
+                }
+                await intoTemple('monk');
+                if (q.lvl() > 0) await downFromDrezel('monk');
+                await kill('monk', () => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^monk of zamorak$/i.test(n.name) && n.combatLevel === 30).sort((a: any, b: any) => a.distance - b.distance)[0],
+                    () => q.has(ITEM.goldKey) || (q.st()?.groundItems ?? []).some((g: any) => g.id === ITEM.goldKey), 60);
+                for (let i = 0; i < 10 && !q.has(ITEM.goldKey); i++) {
+                    const g = (q.st()?.groundItems ?? []).find((x: any) => x.id === ITEM.goldKey);
+                    if (g && i % 3 === 0) await q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' });
+                    await q.waitTicks(1);
+                }
+                if (!q.has(ITEM.goldKey)) await q.fail('no golden key');
+            }
+            if (q.lvl() > 0 && !under()) await downFromDrezel('key');
+            if (!under()) await toTrapdoor('key');
+            if (z() >= GATE1.z) {
+                await q.walk('to gate 1', [{ x: GATE1.x, z: GATE1.z, tol: 0 }]);
+                await cross('gate 1', GATE1, /^open$/i, () => z() < GATE1.z);
+            }
+            for (const m of MONUMENTS) {
+                if (q.has(ITEM.ironKey)) break;
+                await q.guard('monuments');
+                const n0 = q.msgCount(/nothing interesting|you swap/i);
+                await q.useOnLoc(ITEM.goldKey, q.locAt(m.x, m.z) ?? m);
+                await q.waitUntil(() => q.has(ITEM.ironKey) || q.msgCount(/nothing interesting|you swap/i) > n0, 25);
+            }
+            if (!q.has(ITEM.ironKey)) await q.fail('no iron key');
+            q.milestone('iron');
+        }
+        if (!q.has(ITEM.murky) && !q.has(ITEM.blessed)) await fetchMurkyWater();
+        if (under() && z() < GATE1.z) {
+            await q.walk('to gate 1 back', [{ x: GATE1.x, z: GATE1.z - 1, tol: 0 }]);
+            await cross('gate 1 back', GATE1, /^open$/i, () => z() >= GATE1.z);
+        }
+        await upCellar('key');
+        await intoTemple('drezel 2');
+        await upToDrezel('drezel 2');
+        await q.walk('to cell 2', [{ x: CELL.x, z: CELL.z, tol: 1 }]);
+        await q.step('iron key', () => q.useOnLoc(ITEM.ironKey, q.locAt(CELL.x, CELL.z) ?? CELL), () => !q.has(ITEM.ironKey), 12, 4);
+        await q.converse([], () => !q.dialogOpen(), 8);
+        q.milestone(6);
     }
-    if (!q.has(ITEM.ironKey)) await q.fail('no iron key');
-    q.milestone('iron');
-    await q.step('well', () => q.useOnLoc(ITEM.bucket, q.locAt(WELL.x, WELL.z) ?? WELL), () => q.has(ITEM.murky), 20, 4);
-    // 7. Back up: gate 1, the cellar ladder, the temple, the iron key on the cell door (6); Drezel blesses the murky
-    // water; the blessed water on the coffin (7); Drezel (8) (trapped_drezel.rs2:1-21,54-67, vampire_coffin.rs2:8-17).
-    await q.walk('to gate 1 back', [{ x: GATE1.x, z: GATE1.z - 1, tol: 0 }]);
-    await cross('gate 1 back', GATE1, /^open$/i, () => z() >= GATE1.z);
-    await upCellar('key');
-    await intoTemple('drezel 2');
-    await upToDrezel('drezel 2');
-    await q.walk('to cell 2', [{ x: CELL.x, z: CELL.z, tol: 1 }]);
-    await q.step('iron key', () => q.useOnLoc(ITEM.ironKey, q.locAt(CELL.x, CELL.z) ?? CELL), () => !q.has(ITEM.ironKey), 12, 4);
-    await q.converse([], () => !q.dialogOpen(), 8);
-    q.milestone(6);
-    await cross('cell door', CELL, /^open$/i, () => x() > CELL.x);
-    await q.talk('drezel bless', /^drezel$/i, [], () => q.has(ITEM.blessed), DREZEL, 60);
-    await cross('cell door out', CELL, /^open$/i, () => x() <= CELL.x);
-    await q.step('coffin', () => q.useOnLoc(ITEM.blessed, q.locAt(COFFIN.x, COFFIN.z) ?? COFFIN), () => !q.has(ITEM.blessed), 12, 4);
-    q.milestone(7);
-    await cross('cell door 2', CELL, /^open$/i, () => x() > CELL.x);
-    await q.talk('drezel free', /^drezel$/i, [], () => q.sawText(/meet you down by the monument/i), DREZEL, 60);
-    q.milestone(8);
+    // 7. Drezel blesses the murky water; the blessed water on the coffin (7); Drezel (8).
+    if (stage < 7) {
+        if (!q.has(ITEM.blessed)) {
+            if (!q.has(ITEM.murky)) await fetchMurkyWater();
+            if (under() && z() < GATE1.z) {
+                await q.walk('to gate 1 bless', [{ x: GATE1.x, z: GATE1.z - 1, tol: 0 }]);
+                await cross('gate 1 bless', GATE1, /^open$/i, () => z() >= GATE1.z);
+            }
+            await upCellar('bless');
+            await intoTemple('bless');
+            await upToDrezel('bless');
+            if (x() <= CELL.x) {
+                await q.walk('to cell bless', [{ x: CELL.x, z: CELL.z, tol: 1 }]);
+                await cross('cell door', CELL, /^open$/i, () => x() > CELL.x);
+            }
+            await q.talk('drezel bless', /^drezel$/i, [], () => q.has(ITEM.blessed), DREZEL, 60);
+        } else {
+            await intoTemple('coffin');
+            await upToDrezel('coffin');
+        }
+        if (x() > CELL.x) await cross('cell door out', CELL, /^open$/i, () => x() <= CELL.x);
+        await q.step('coffin', () => q.useOnLoc(ITEM.blessed, q.locAt(COFFIN.x, COFFIN.z) ?? COFFIN), () => !q.has(ITEM.blessed), 12, 4);
+        q.milestone(7);
+    }
+    if (stage < 8) {
+        await intoTemple('drezel free');
+        await upToDrezel('drezel free');
+        if (x() <= CELL.x) {
+            await q.walk('to cell free', [{ x: CELL.x, z: CELL.z, tol: 1 }]);
+            await cross('cell door 2', CELL, /^open$/i, () => x() > CELL.x);
+        }
+        await q.talk('drezel free', /^drezel$/i, [], () => q.sawText(/meet you down by the monument/i), DREZEL, 60);
+        q.milestone(8);
+    }
     // 8. Down to the mausoleum: gates 1 and 2, Drezel (10); the essence (10 + n, drezel.rs2:30-56,85-113).
-    await cross('cell door out 2', CELL, /^open$/i, () => x() <= CELL.x);
-    await downFromDrezel('mausoleum');
-    await toTrapdoor('mausoleum');
-    await q.walk('to gate 1 c', [{ x: GATE1.x, z: GATE1.z, tol: 0 }]);
-    await cross('gate 1 c', GATE1, /^open$/i, () => z() < GATE1.z);
-    await q.walk('to gate 2', [{ x: GATE2.x, z: GATE2.z, tol: 0 }]);
-    await cross('gate 2', GATE2, /^open$/i, () => x() > GATE2.x);
-    await q.talk('drezel 10', /^drezel$/i, [], () => q.sawText(/fifty should be sufficient/i), DREZEL2, 80);
-    q.milestone(10);
+    const enterMausoleum = async (label: string): Promise<void> => {
+        if (q.lvl() === 2 && x() > CELL.x) await cross('cell door out 2', CELL, /^open$/i, () => x() <= CELL.x);
+        if (q.lvl() > 0 && !under()) await downFromDrezel(label);
+        if (!under()) await toTrapdoor(label);
+        if (z() >= GATE1.z) {
+            await q.walk(`to gate 1 ${label}`, [{ x: GATE1.x, z: GATE1.z, tol: 0 }]);
+            await cross(`gate 1 ${label}`, GATE1, /^open$/i, () => z() < GATE1.z);
+        }
+        if (x() <= GATE2.x) {
+            await q.walk(`to gate 2 ${label}`, [{ x: GATE2.x, z: GATE2.z, tol: 0 }]);
+            await cross(`gate 2 ${label}`, GATE2, /^open$/i, () => x() > GATE2.x);
+        }
+    };
+    if (stage < 10) {
+        await enterMausoleum('mausoleum');
+        await q.talk('drezel 10', /^drezel$/i, [], () => q.sawText(/fifty should be sufficient/i), DREZEL2, 80);
+        q.milestone(10);
+    }
     const giveEss = async (label: string): Promise<void> => {
         await q.step(label, () => { const d = q.npc(/^drezel$/i); return d ? q.useOnNpc(ITEM.ess, d) : q.waitTicks(1); }, () => !q.has(ITEM.ess) || questDone, 20, 4);
         await q.converse([], () => !q.dialogOpen() || questDone, 10);
     };
-    await giveEss('essence 1');
-    q.milestone(32);
+    if (q.has(ITEM.ess)) {
+        await enterMausoleum('essence 1');
+        if (!q.npc(/^drezel$/i)) await q.walk('to drezel', [{ x: DREZEL2.x, z: DREZEL2.z, tol: 3 }]);
+        await giveEss('essence 1');
+        q.milestone(32);
+    }
     // 9. Varrock teleport, the east bank (27 essence), the walk back to Drezel; the rest completes the quest.
-    await q.teleport('varrock teleport 2', 'magic:varrock_teleport', 3212, 3424);
-    await q.walk('to bank', [{ x: BANK.x, z: BANK.z, tol: 1 }]);
-    const o = await q.s.bot.openBank();
-    if (!o.success) await q.fail(`openBank ${o.message}`);
-    await q.waitTicks(1);
-    const w = await q.s.bot.withdrawItem(/^rune essence$/i, 27);
-    if (!w.success) console.log(`WARN withdraw ${w.message}`);
-    await q.s.bot.closeBank();
-    if (!q.has(ITEM.ess)) await q.fail('no essence from bank');
-    await toTrapdoor('essence');
-    await q.walk('to gate 1 d', [{ x: GATE1.x, z: GATE1.z, tol: 0 }]);
-    await cross('gate 1 d', GATE1, /^open$/i, () => z() < GATE1.z);
-    await q.walk('to gate 2 d', [{ x: GATE2.x, z: GATE2.z, tol: 0 }]);
-    await cross('gate 2 d', GATE2, /^open$/i, () => x() > GATE2.x);
-    if (!q.npc(/^drezel$/i)) await q.walk('to drezel', [{ x: DREZEL2.x, z: DREZEL2.z, tol: 3 }]);
-    await giveEss('essence 2');
-    await q.waitUntil(() => questDone, 20);
-    await q.converse([], () => !q.dialogOpen(), 10);
+    for (let trip = 0; trip < 2 && !questDone; trip++) {
+        if (under() && q.canCast('magic:varrock_teleport') !== undefined) {
+            if (x() > GATE2.x) {
+                await q.walk('to gate 2 out', [{ x: GATE2.x + 1, z: GATE2.z, tol: 0 }]);
+                await cross('gate 2 out', GATE2, /^open$/i, () => x() <= GATE2.x);
+            }
+            if (z() < GATE1.z) {
+                await q.walk('to gate 1 out', [{ x: GATE1.x, z: GATE1.z - 1, tol: 0 }]);
+                await cross('gate 1 out', GATE1, /^open$/i, () => z() >= GATE1.z);
+            }
+            await upCellar('bank');
+        }
+        await q.teleport(`varrock teleport ${trip + 2}`, 'magic:varrock_teleport', 3212, 3424);
+        await q.walk('to bank', [{ x: BANK.x, z: BANK.z, tol: 1 }]);
+        const o = await q.s.bot.openBank();
+        if (!o.success) await q.fail(`openBank ${o.message}`);
+        await q.waitTicks(1);
+        const w = await q.s.bot.withdrawItem(/^rune essence$/i, 27);
+        if (!w.success) console.log(`WARN withdraw ${w.message}`);
+        await q.s.bot.closeBank();
+        if (!q.has(ITEM.ess)) await q.fail('no essence from bank');
+        await enterMausoleum(`essence ${trip + 2}`);
+        if (!q.npc(/^drezel$/i)) await q.walk('to drezel', [{ x: DREZEL2.x, z: DREZEL2.z, tol: 3 }]);
+        await giveEss(`essence ${trip + 2}`);
+        await q.waitUntil(() => questDone, 20);
+        await q.converse([], () => !q.dialogOpen(), 10);
+    }
     q.milestone(100);
     off();
     await q.end(questDone, 'qp=1');
 } catch (e) { await q.fail(String(e)); }
+}
+
+if (import.meta.main || (globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) await runPriestPeril();

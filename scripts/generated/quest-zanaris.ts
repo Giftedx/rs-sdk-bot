@@ -8,7 +8,7 @@
 // drop tables/scripts/zombie.rs2:102-111 (the Entrana zombie drops a bronze axe 50/128).
 import { componentId } from '../../packages/core/src/logout';
 import { lostCityRoute } from '../quest-zanaris-plan';
-import { openQuest } from './quest-lib';
+import { openQuest, readQuestJournalStage, type JournalQuestReader } from './quest-lib';
 import { walkTargetPersist, ZANARIS_SHED } from '../walk-to';
 
 const WARRIOR = { x: 3145, z: 3202 };
@@ -23,6 +23,57 @@ const SHED_DOOR = { id: 2406, x: 3202, z: 3169 };           // zanarisdoor, maps
 const ITEM = { axe: 1351, knife: 946, branch: 771, staff: 772, prayerPot: [2434, 139, 141, 143] };
 const PFM = 14, ULT_STR = 10, INC_REF = 11;     // skill_prayer/configs/prayers.dbrow order (quest-grail.ts)
 
+export const ZANARIS_MIN_FOOD = 6;
+export const ZANARIS_PRAYER_MIN = 43;
+
+/** Parses `%zanaris` (147) stage from `zanaris_journal.rs2` text ordered from highest stage down. */
+export function zanarisJournalStage(body: string): number | undefined {
+    const text = body.replace(/@[a-z0-9]+@/gi, '').replace(/<[^>]*>/g, '').replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
+    if (/QUEST COMPLETE!/i.test(text)) return 6;
+    if (/I should enter Zanaris by going to the shed/i.test(text)) return 5;
+    if (/I should craft the branch from the tree into a staff/i.test(text)) return 4;
+    if (/With the Spirit defeated I can cut a branch from the tree/i.test(text)) return 3;
+    if (/I can find a Dramen Tree in a cave on Entrana/i.test(text)) return 2;
+    if (/leprechaun hiding in a tree nearby/i.test(text)) return 1;
+    if (/I can start this quest by speaking to the Adventurers/i.test(text)) return 0;
+    return undefined;
+}
+
+/** Reads the live `%zanaris` stage from `ZANARIS_FROM` env override or the `questlist:zanaris` journal. */
+export async function readZanarisStage(q: JournalQuestReader): Promise<number> {
+    if (process.env.ZANARIS_FROM !== undefined) {
+        const from = Number(process.env.ZANARIS_FROM);
+        if (!Number.isSafeInteger(from) || from < 0) throw Error(`Invalid ZANARIS_FROM: ${process.env.ZANARIS_FROM}`);
+        return from;
+    }
+    const stage = await readQuestJournalStage(q, 'zanaris', /Lost City/i, zanarisJournalStage);
+    console.log(`ZANARIS_STAGE ${JSON.stringify({ stage })}`);
+    return stage;
+}
+
+/**
+ * Enforces Entrana dungeon survival prerequisites before the cave monk drains 95% of Prayer points.
+ * Requires >= 6 sharks/lobsters/swordfish and (when base Prayer >= 43 and not using Wind Bolt) either >= 43
+ * current Prayer points or >= 1 Prayer potion dose before descending to fight the level-101 Tree Spirit.
+ */
+export function validateEntranaDungeonEntry(input: {
+    foodCount: number;
+    prayerBase: number;
+    prayerPoints: number;
+    prayerPotCount: number;
+    windBolt: boolean;
+}): string | null {
+    if (input.foodCount < ZANARIS_MIN_FOOD) {
+        return `Lost City entry unsafe before cave monk: need >= ${ZANARIS_MIN_FOOD} sharks/lobsters/swordfish, held ${input.foodCount}`;
+    }
+    if (!input.windBolt && input.prayerBase >= ZANARIS_PRAYER_MIN
+        && input.prayerPoints < ZANARIS_PRAYER_MIN && input.prayerPotCount < 1) {
+        return `Lost City entry unsafe before cave monk: need Prayer points >= ${ZANARIS_PRAYER_MIN} or >= 1 Prayer potion before 95% drain (Prayer ${input.prayerPoints}/${input.prayerBase})`;
+    }
+    return null;
+}
+
+async function runLostCity(): Promise<void> {
 const route = lostCityRoute(process.env.LOST_CITY_ROUTE);
 const windBolt = route.windBolt;
 // The default route eats lobster, swordfish or shark, whichever the pack holds (the sweep packs the best meals banked).
@@ -41,7 +92,12 @@ try {
     }
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
+    const x = () => q.pos()?.worldX ?? 0;
     const z = () => q.pos()?.worldZ ?? 0;
+    const wornItem = (id: number) => (q.st()?.equipment ?? []).some((e: any) => e.id === id);
+    const inEntranaIsland = () => q.lvl() === 0 && x() >= 2795 && x() <= 2875 && z() >= 3325 && z() <= 3395;
+    const inEntranaDungeon = () => z() > 9000 && x() < 2900;
+    const hasStaff = () => q.has(ITEM.staff) || wornItem(ITEM.staff);
     const shut = () => q.converse([], () => !q.dialogOpen(), 12);
     const lvl0 = () => q.lvl() === 0;
     const points = (): number => q.st()?.prayers?.prayerPoints ?? 0;
@@ -65,6 +121,7 @@ try {
     });
     const wield = async (id: number) => {
         const worn = () => (q.st()?.equipment ?? []).some((e: any) => e.id === id);
+        if (worn()) return;
         await q.step(`wield ${id}`, () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(id)!, optionIndex: 2, reason: 'SDK' }), worn, 3, 3);
     };
     const disembark = async (label: string) => {
@@ -79,125 +136,161 @@ try {
         if (!lvl0()) await q.fail(label);
     };
 
+    if (!await q.waitUntil(() => (q.s.client as any)?.ingame === true && !!q.pos(), 20))
+        await q.fail('zanaris entry state unobserved');
+    const stage = await readZanarisStage(q);
+    if (stage >= 6) throw Error('Lost City already complete');
+    if (stage > 0) {
+        console.log(`NOTE lost city resumed at stage ${stage} at ${x()},${z()},${q.lvl()}`);
+        q.milestone(1);
+    }
+
     // 1. The warrior: "What are you camped here for?", "What makes you think it's out here?", "If it's hidden how are
     // you planning to find it?", "Looks like you don't know either." sets 1 (warrior_zanaris.rs2:30-72).
-    await q.talk('warrior', /^warrior$/i, [/what are you camped here for/i, /what makes you think it's out here/i, /if it's hidden how are you planning/i, /looks like you don't know either/i],
-        () => q.sawText(/so a leprechaun knows where zanaris is/i), WARRIOR, 80);
-    q.milestone(1);
+    if (stage < 1 && !inEntranaIsland() && !inEntranaDungeon()) {
+        await q.talk('warrior', /^warrior$/i, [/what are you camped here for/i, /what makes you think it's out here/i, /if it's hidden how are you planning/i, /looks like you don't know either/i],
+            () => q.sawText(/so a leprechaun knows where zanaris is/i), WARRIOR, 80);
+        q.milestone(1);
+    }
 
     // 2. Chop Shamus's tree with an axe in the pack: Shamus appears and walks 10 tiles east (quest_zanaris.rs2:11-26);
     // "How does it fit in a shed then?" sets 2 (shamus.rs2:15-25,146-153).
-    await q.step('shamus tree', () => q.opLoc(SHAMUS_TREE, 1), () => !!q.npc(/^shamus$/i), 10, 4);
-    await q.talk('shamus', /^shamus$/i, [/how does it fit in a shed then/i], () => q.sawText(/ship from port sarim to entrana/i), SHAMUS_TREE, 60);
-    q.milestone(2);
+    if (stage < 2 && !inEntranaIsland() && !inEntranaDungeon()) {
+        await q.step('shamus tree', () => q.opLoc(SHAMUS_TREE, 1), () => !!q.npc(/^shamus$/i), 10, 4);
+        await q.talk('shamus', /^shamus$/i, [/how does it fit in a shed then/i], () => q.sawText(/ship from port sarim to entrana/i), SHAMUS_TREE, 60);
+        q.milestone(2);
+    }
 
-    // 3. No axe on Entrana (monk_of_entrana.rs2:26-53): drop it. The monk at Port Sarim: "Yes, okay, I'm ready to go."
-    if (q.has(ITEM.axe)) { await q.s.direct({ type: 'dropItem', slot: q.slot(ITEM.axe)!, reason: 'SDK' }); await q.waitTicks(1); }
-    await q.walk('to monks', [{ x: MONKS.x, z: MONKS.z + 2, tol: 3 }]);
-    await q.talk('ship monk', /^monk of entrana$/i, [/yes, okay, i'm ready to go/i], () => q.lvl() === 1 && q.near(2834, 3331, 6), MONKS, 60, true);
-    await shut();
-    await disembark('entrana gangplank');
-    q.milestone('entrana');
-
-    // 4. The cave monk: "Well that is a risk I will have to take." puts the bot in the dungeon and drains Prayer by 95%
-    // (cave_monk.rs2:3-15).
-    await q.talk('cave monk', /^cave monk$/i, [/well that is a risk i will have to take/i], () => z() > 9000, CAVE_MONK, 60, true);
-    await shut();
-    q.milestone('dungeon');
-
-    // 5. Zombies until a bronze axe drops (zombie.rs2:102-111). The axe stayed at Port Sarim, so the bot kicks: the
-    // fight gives XP to Strength and Hitpoints only, and an account with a Defence 1 build keeps its build.
-    await q.strengthStyle('zombies');
-    const axeOnGround = (): any => (q.st()?.groundItems ?? []).filter((g: any) => g.id === ITEM.axe).sort((a: any, b: any) => (a.distance ?? 0) - (b.distance ?? 0))[0];
     let zombies = 0;
-    let lastZombie = -1;
-    const axeRuneFloor = windBolt ? Math.max(windBolt.spiritCasts, q.cnt(562) - windBolt.axeCasts) : 0;
-    // The axe is a chance drop: 600 ticks ran out at one seed in four, so the hunt has a wide bound.
-    for (let t = 0; t < 1500 && !q.has(ITEM.axe); t++) {
-        await q.guard('zombies');
-        const g = axeOnGround();
-        if (g) { if (t % 3 === 0) await q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' }); }
-        else {
-            const n = q.npc(/^zombie$/i);
-            if (!n) { if (t % 10 === 0) await q.dash('to zombies', ZOMBIES.x, ZOMBIES.z, 3); }
-            else if (windBolt ? q.cnt(562) > axeRuneFloor && t % 5 === 0 :
-                q.pos()?.targetIndex !== n.index && t % 4 === 0) {
-                if (n.index !== lastZombie) zombies++;
-                lastZombie = n.index;
-                if (windBolt) await castWindBolt(n.index);
-                else await attack(n);
-            }
+    const needDungeon = !hasStaff() && (stage < 4 || !q.has(ITEM.branch));
+    if (needDungeon) {
+        // 3. No axe on Entrana (monk_of_entrana.rs2:26-53): drop it. The monk at Port Sarim: "Yes, okay, I'm ready to go."
+        if (!inEntranaIsland() && !inEntranaDungeon()) {
+            if (q.has(ITEM.axe)) { await q.s.direct({ type: 'dropItem', slot: q.slot(ITEM.axe)!, reason: 'SDK' }); await q.waitTicks(1); }
+            await q.walk('to monks', [{ x: MONKS.x, z: MONKS.z + 2, tol: 3 }]);
+            await q.talk('ship monk', /^monk of entrana$/i, [/yes, okay, i'm ready to go/i], () => q.lvl() === 1 && q.near(2834, 3331, 6), MONKS, 60, true);
+            await shut();
+            await disembark('entrana gangplank');
+            q.milestone('entrana');
         }
-        await q.waitTicks(1);
-    }
-    if (windBolt) console.log('AXE_HUNT '+JSON.stringify({
-        zombieTargets: zombies, chaosRemaining: q.cnt(562), axe: q.has(ITEM.axe),
-    }));
-    if (!q.has(ITEM.axe)) await q.fail('no bronze axe');
-    q.milestone('axe');
-    await wield(ITEM.axe);
-    // The axe has its own style tab: Hack is its Strength style.
-    await q.strengthStyle('tree spirit');
 
-    // 6. The dramen tree spawns the tree spirit (2860,9737), which attacks; kill it under Protect from Melee (3), then
-    // chop a branch (4), the knife on the branch makes the staff (5).
-    await q.walk('to tree', [{ x: TREE.x, z: TREE.z + 2, tol: 1 }]);
-    await q.step('tree', () => q.opLoc(TREE, 1), () => !!q.npc(/^tree spirit$/i), 10, 4);
-    // The spirit hits up to 10 (attack 90, strength 95): Protect from Melee first (a trial without it fell to 37 HP of
-    // 99 and ate 3 lobsters), then Ultimate Strength and Incredible Reflexes while the points last.
-    const fightPrayers = [PFM, ULT_STR, INC_REF];
-    const retaliate = () => q.s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
-    await retaliate();
-    let spiritDead = false;
-    for (let t = 0; t < 600 && !spiritDead; t++) {
-        await q.guard('tree spirit');
-        if (q.sawText(/tree spirit defeated/i)) { spiritDead = true; break; }
-        await keepPrayer();
-        for (const i of fightPrayers) if (!prayOn(i) && points() > 0) await setPrayer(i, true);
-        const n = q.npc(/^tree spirit$/i);
-        if (n && windBolt && q.cnt(562) > 0) {
-            if (t % 5 === 0) await castWindBolt(n.index);
-        } else if (n && q.pos()?.targetIndex !== n.index && t % 4 === 0) await attack(n);
-        await q.waitTicks(1);
+        // 4. Hard survival gate before cave monk drains Prayer by 95% (cave_monk.rs2:3-15).
+        if (!inEntranaDungeon()) {
+            const unsafe = validateEntranaDungeonEntry({
+                foodCount: q.cnt(385) + q.cnt(373) + q.cnt(379),
+                prayerBase: q.s.sdk.getSkill('Prayer')?.baseLevel ?? 0,
+                prayerPoints: points(),
+                prayerPotCount: ITEM.prayerPot.reduce((sum, id) => sum + q.cnt(id), 0),
+                windBolt: !!windBolt,
+            });
+            if (unsafe) await q.fail(unsafe);
+            await q.talk('cave monk', /^cave monk$/i, [/well that is a risk i will have to take/i], () => z() > 9000, CAVE_MONK, 60, true);
+            await shut();
+            q.milestone('dungeon');
+        }
+
+        // 5. Zombies until a bronze axe drops (zombie.rs2:102-111).
+        if (!q.has(ITEM.axe) && !wornItem(ITEM.axe)) {
+            await q.strengthStyle('zombies');
+            const axeOnGround = (): any => (q.st()?.groundItems ?? []).filter((g: any) => g.id === ITEM.axe).sort((a: any, b: any) => (a.distance ?? 0) - (b.distance ?? 0))[0];
+            let lastZombie = -1;
+            const axeRuneFloor = windBolt ? Math.max(windBolt.spiritCasts, q.cnt(562) - windBolt.axeCasts) : 0;
+            for (let t = 0; t < 1500 && !q.has(ITEM.axe); t++) {
+                await q.guard('zombies');
+                const g = axeOnGround();
+                if (g) { if (t % 3 === 0) await q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' }); }
+                else {
+                    const n = q.npc(/^zombie$/i);
+                    if (!n) { if (t % 10 === 0) await q.dash('to zombies', ZOMBIES.x, ZOMBIES.z, 3); }
+                    else if (windBolt ? q.cnt(562) > axeRuneFloor && t % 5 === 0 :
+                        q.pos()?.targetIndex !== n.index && t % 4 === 0) {
+                        if (n.index !== lastZombie) zombies++;
+                        lastZombie = n.index;
+                        if (windBolt) await castWindBolt(n.index);
+                        else await attack(n);
+                    }
+                }
+                await q.waitTicks(1);
+            }
+            if (windBolt) console.log('AXE_HUNT '+JSON.stringify({
+                zombieTargets: zombies, chaosRemaining: q.cnt(562), axe: q.has(ITEM.axe),
+            }));
+            if (!q.has(ITEM.axe)) await q.fail('no bronze axe');
+            q.milestone('axe');
+        }
+        await wield(ITEM.axe);
+        await q.strengthStyle('tree spirit');
+
+        // 6. The dramen tree spawns the tree spirit (2860,9737), which attacks; kill it under Protect from Melee (3), then
+        // chop a branch (4), the knife on the branch makes the staff (5).
+        if (stage < 3) {
+            await q.walk('to tree', [{ x: TREE.x, z: TREE.z + 2, tol: 1 }]);
+            await q.step('tree', () => q.opLoc(TREE, 1), () => !!q.npc(/^tree spirit$/i), 10, 4);
+            const fightPrayers = [PFM, ULT_STR, INC_REF];
+            const retaliate = () => q.s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
+            await retaliate();
+            let spiritDead = false;
+            for (let t = 0; t < 600 && !spiritDead; t++) {
+                await q.guard('tree spirit');
+                if (q.sawText(/tree spirit defeated/i)) { spiritDead = true; break; }
+                await keepPrayer();
+                for (const i of fightPrayers) if (!prayOn(i) && points() > 0) await setPrayer(i, true);
+                const n = q.npc(/^tree spirit$/i);
+                if (n && windBolt && q.cnt(562) > 0) {
+                    if (t % 5 === 0) await castWindBolt(n.index);
+                } else if (n && q.pos()?.targetIndex !== n.index && t % 4 === 0) await attack(n);
+                await q.waitTicks(1);
+            }
+            await retaliate();
+            if (!spiritDead) await q.fail('tree spirit');
+            await shut();
+            for (const i of fightPrayers) await setPrayer(i, false);
+            q.milestone(3);
+        }
+        if (stage < 4 && !q.has(ITEM.branch)) {
+            await q.walk('to tree branch', [{ x: TREE.x, z: TREE.z + 2, tol: 1 }]);
+            await q.step('branch', () => q.opLoc(TREE, 1), () => q.has(ITEM.branch), 10, 4);
+            q.milestone(4);
+        }
     }
-    await retaliate();
-    if (!spiritDead) await q.fail('tree spirit');
-    await shut();
-    for (const i of fightPrayers) await setPrayer(i, false);
-    q.milestone(3);
-    // The axe is worn: the woodcutting check accepts a worn axe (woodcutting_axe_checker).
-    await q.step('branch', () => q.opLoc(TREE, 1), () => q.has(ITEM.branch), 10, 4);
-    q.milestone(4);
-    await q.step('staff', () => q.useOnItem(ITEM.knife, ITEM.branch), () => q.has(ITEM.staff), 5, 3);
-    await wield(ITEM.staff);
-    q.milestone(5);
+
+    if (!hasStaff()) {
+        await q.step('staff', () => q.useOnItem(ITEM.knife, ITEM.branch), () => q.has(ITEM.staff), 5, 3);
+        await wield(ITEM.staff);
+        q.milestone(5);
+    } else if (!wornItem(ITEM.staff)) {
+        await wield(ITEM.staff);
+    }
 
     // 7. The magic door to the Wilderness (3250,3772, level 32), south to level 20 (z 3679), Lumbridge teleport, the
     // swamp shed with the staff worn (quest_zanaris.rs2:89-101).
-    const doorApproach = { x: MAGIC_DOOR.x - 1, z: MAGIC_DOOR.z, tol: 1 };
-    const exitRoute = windBolt ? [
-        { x: 2860, z: 9741, tol: 0 }, { x: 2860, z: 9745, tol: 0 },
-        { x: 2864, z: 9748, tol: 0 }, { x: 2871, z: 9749, tol: 0 }, doorApproach,
-    ] : [doorApproach];
-    const traceExit = windBolt && process.env.LOST_CITY_TRACE_EXIT === '1';
-    await q.walk('to magic door', exitRoute, traceExit ? line => console.log('LOST_CITY_EXIT ' + line) : undefined);
-    await q.step('magic door', () => q.opLoc(MAGIC_DOOR, 1), () => z() < 9000, 8, 4);
-    q.milestone('wilderness');
-    await q.walk('wilderness south', [{ x: 3250, z: 3676, tol: 2 }]);
-    await q.teleport('lumbridge teleport', 'magic:lumbridge_teleport', 3221, 3218);
-    // The SDK route goes round the castle's north side and in by the west of the swamp (96-118 ticks): a trial with
-    // waypoints south of the castle met a dead end at 3232,3215.
+    if (inEntranaDungeon()) {
+        const doorApproach = { x: MAGIC_DOOR.x - 1, z: MAGIC_DOOR.z, tol: 1 };
+        const exitRoute = windBolt ? [
+            { x: 2860, z: 9741, tol: 0 }, { x: 2860, z: 9745, tol: 0 },
+            { x: 2864, z: 9748, tol: 0 }, { x: 2871, z: 9749, tol: 0 }, doorApproach,
+        ] : [doorApproach];
+        const traceExit = windBolt && process.env.LOST_CITY_TRACE_EXIT === '1';
+        await q.walk('to magic door', exitRoute, traceExit ? line => console.log('LOST_CITY_EXIT ' + line) : undefined);
+        await q.step('magic door', () => q.opLoc(MAGIC_DOOR, 1), () => z() < 9000, 8, 4);
+        q.milestone('wilderness');
+    }
+    if (z() > 3520 && z() < 9000 && x() >= 3200) {
+        await q.walk('wilderness south', [{ x: 3250, z: 3676, tol: 2 }]);
+        await q.teleport('lumbridge teleport', 'magic:lumbridge_teleport', 3221, 3218);
+    }
+    // The SDK route goes round the castle's north side and in by the west of the swamp (96-118 ticks).
     await q.walk('to shed', [{ x: SHED_DOOR.x - 1, z: SHED_DOOR.z, tol: 0 }]);
     await q.step('shed door', () => q.opLoc(SHED_DOOR, 1), () => questDone, 10, 4);
     await shut();
     q.milestone(6);
     off();
-    // The quest ends inside Zanaris, and a next job with its own walker may take that cave for another dungeon (live:
-    // the dusty key run started at 3220,9592 and looked for the Jailer there). Leave by the entrance to the swamp
-    // shed. A failed step out does not undo the quest: scripts/walk-to.ts takes the same step first.
     if (questDone) {
         const out = await walkTargetPersist(q.s, ZANARIS_SHED);
         if (out.ok) q.milestone('shed'); else console.log(`LOST_CITY_EXIT failed ${out.reason ?? ''} ${out.detail ?? ''}`);
     }
     await q.end(questDone, `qp=3 zombies=${zombies}`);
 } catch (e) { await q.fail(String(e)); }
+}
+
+if (import.meta.main || (globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) await runLostCity();

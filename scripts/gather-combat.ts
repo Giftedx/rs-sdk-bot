@@ -1116,6 +1116,37 @@ export const CONFIGS: Record<string, {
     },
 };
 
+/**
+ * Ensures surface combat gatherers start on ground level (level 0) before dispatching surface travel.
+ * Attempts one nearby downward ladder/staircase or ship gangplank descent, then fails fast with `level !== 0`.
+ */
+export async function ensureSurfaceGroundEntry(
+    s: Pick<Session, 'sdk' | 'bot' | 'onTick' | 'tick'>,
+    stop: () => boolean = () => false,
+    timeoutTicks = 20,
+): Promise<void> {
+    const level = () => s.sdk.getState()?.player?.level ?? 0;
+    if (level() === 0) return;
+    const locs = s.sdk.getState()?.nearbyLocs ?? [];
+    const descent = locs
+        .map((l: any) => {
+            const opts = l.optionsWithIndex ?? [];
+            const opt = opts.find((o: any) => /^climb-?down$/i.test(o.text))
+                ?? (/(gang)?plank/i.test(l.name ?? '') ? opts.find((o: any) => /^cross$/i.test(o.text)) : undefined);
+            return opt ? { loc: l, opt, distance: l.distance ?? 0 } : null;
+        })
+        .filter((entry): entry is NonNullable<typeof entry> => !!entry && entry.distance <= 20)
+        .sort((a, b) => a.distance - b.distance)[0];
+    if (descent) {
+        await s.bot.interactLoc(descent.loc, descent.opt.opIndex);
+        await waitUntil(s as Session, () => stop() || level() === 0, { timeoutTicks });
+    }
+    const remaining = level();
+    if (remaining !== 0) {
+        throw Error(`combat prerequisite: surface entry requires level 0 (level !== 0: at level ${remaining})`);
+    }
+}
+
 if(import.meta.main){
 const TARGET_KEY = (process.argv[4] ?? process.env.TARGET ?? 'druid').toLowerCase();
 const CAP = Number(process.argv[3] ?? process.env.CAP ?? 15000);
@@ -1161,6 +1192,8 @@ if(giantTrained&&(potionPolicy||maximum!==undefined||alch||telegrab))
     await finish([],false,'surface giant training cannot use the generic combat loot options');
 const cowStop=cowStopControl(TARGET_KEY,()=>existsSync(resolve(import.meta.dir,'../.practice',`stop-${botName}`)),giantTrained||!!potionPolicy||maximum!==undefined);
 const ownedSession=await openBot(botName,cowStop.options).catch(e=>finish([],false,`login: ${String(e)}`));
+try { await ensureSurfaceGroundEntry(ownedSession, cowStop.stop); }
+catch (e) { await finishCombat(ownedSession, false, String(e)); }
 if(giantTrained){
     // TROOPER_COOK=1: cook banked raw beef into trooper food first, when the account owns too little (scripts/trooper-food.ts).
     if(TARGET_KEY==='trooper'&&process.env.TROOPER_COOK==='1')try{const {stageTrooperFood}=await import('./trooper-food'),{walkTargetPersist}=await import('./walk-to');
@@ -1198,6 +1231,7 @@ try {
         const a = s.tick();
         for (let i = 0; i < 3 && !travelStop(); i++) {
             const p = pos();
+            if (p && p.level !== 0) throw Error(`combat travel aborted: level !== 0 (${p.level})`);
             if (p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol) break;
             const r = await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: travelStop, maxTicks: 500 });
             if (!r.ok) {

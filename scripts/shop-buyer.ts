@@ -24,6 +24,10 @@ import { knownBanks } from '../packages/core/src/trip';
 import { contentUnitBound, shopRules, type ShopRule } from './shop-price';
 import { dataProfile } from './shop-profiles';
 
+// Zanaris lies in squares m49_149..m50_149; bounding X/Z avoids matching other dungeons (e.g. Dwarven Mine at z=9774).
+export const inZanarisRealm = (p: { worldX: number; worldZ: number }): boolean =>
+    p.worldX >= 3130 && p.worldX <= 3270 && p.worldZ >= 9530 && p.worldZ <= 9600;
+
 export const PROFILES: Record<string, {
     npc: RegExp;
     npcSpot: { x: number; z: number; level?: number };
@@ -285,7 +289,7 @@ export const PROFILES: Record<string, {
         bankSpot: { x: 3152, z: 9578 },
         items: [{ re: /^dragon longsword$/i, buyPerTick: 2, shelf: 2 }],
         realm: {
-            inside: p => p.worldZ > 9000,
+            inside: inZanarisRealm,
             wear: /^dramen staff$/i,
             stand: { x: 3201, z: 3169 },
             door: { id: 2406, x: 3202, z: 3169 },
@@ -424,7 +428,7 @@ export const PROFILES: Record<string, {
         bankSpot: { x: 3152, z: 9578 },
         items: [{ re: /^dragon dagger$/i, buyPerTick: 2, shelf: 2 }],
         realm: {
-            inside: p => p.worldZ > 9000,
+            inside: inZanarisRealm,
             wear: /^dramen staff$/i,
             stand: { x: 3201, z: 3169 },
             door: { id: 2406, x: 3202, z: 3169 },
