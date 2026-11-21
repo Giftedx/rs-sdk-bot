@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795294698126-swordswallow-bonetopick-ballofwool",
  "account": "BoneToPick",
  "partner": "Swordswallow",
@@ -10,8 +10,22 @@
  "item": "Ball of wool",
  "requested": 2,
  "claim": "249ab2e0-cc0d-4059-a5d0-0baac9bf49e8",
- "count": 0,
- "ok": false,
- "at": 1795294817279,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795294829827,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795294829147
+ },
+ "logout": {
+  "attemptId": "1795294817290-0000013996-0000000001",
+  "at": 1795294829817,
+  "sha256": "8aa510e24fb385e1e185cf42cff99c9661473c946488fa327103edbd5a70128b"
+ },
+ "screen": true
 }
