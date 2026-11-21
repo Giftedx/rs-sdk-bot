@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import {
     attackable, battleaxeWarcryMath, bestDamageSpell, bestFood, canCastChargeNow, castableFreeze, chargeVarpTicks, combatPrayers, dangerReason, defaultSpec, defaultStunSpec,
-    estMaxHit, fightPlayer, freezeDuration, freezeSpell, hasStyle, isDying, ITEMS, killMessage, lowHealth, rewearStart, carriedPoison, carriedSplat, fledEnds, noteFightPoison, ownPoisonHit, poisonSplat, POISON_HOLD, specReasons,
+    estMaxHit, evaluateSpecPlan, fightPlayer, freezeDuration, freezeSpell, hasStyle, isDying, ITEMS, killMessage, lowHealth, newVolley, rewearStart, carriedPoison, carriedSplat, fledEnds, noteFightPoison, ownPoisonHit, poisonSplat, POISON_HOLD, specReasons,
     kitRotation, meleeWeaponDelay, negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, pickFakieWeapon,
     deathRisk, deathSkullFields, itemCostOf, ownSkull,
     pickFrozenKiteTile, pickWeighted, planPrayerTick, PRAYER, protectedStyles, seededRandom, shouldComboEat, skulled,
@@ -1222,4 +1222,102 @@ test('fightPlayer prefers castable escapeSpell in Wild <= 20 even with worn glor
     });
     expect(res.outcome).toBe('escaped');
     expect(actions).toEqual([`click:${SPELLS.camelotTeleport}`]);
+});
+
+test('evaluateSpecPlan keeps specMeleeLikely accurate, skips burst strip on melee alternate/keep, and gates volleyJoinEligible on melee overhead', () => {
+    const kit = { ranged: [861, 892], melee: [1231, 1187] };
+    const spec = { ...defaultSpec(kit)!, below: 1 };
+    const burstBow = { kit: [861], bar: 'combat_bow:specbar', cost: 550, below: 1, style: 'ranged' as const };
+    const target = { index: 1, name: 'Foe', combatLevel: 126, x: 3093, z: 3555, distance: 1, kind: 'player' as const };
+    const base = {
+        dying: false, canReachMelee: true, fled: false, running: false, castFreezePending: false, kiteTarget: false,
+        at: { x: 3092, z: 3555 }, target, guarded: new Set<'magic' | 'ranged' | 'melee'>(),
+        seen: { headicons: 0, worn: [], health: 99, totalHealth: 99, spotanim: -1 },
+        energy: 1000, lastSpecStyle: null as 'magic' | 'ranged' | 'melee' | null, targetStunned: false, stunOpenForChain: true,
+        spec, burstBow, bursting: false, bowSpecFallback: burstBow, hasWeaponAndShield: false, invLength: 10, nearbyPlayers: [target],
+    };
+    expect(evaluateSpecPlan({ ...base, energy: 0 }).specMeleeLikely).toBe(false);
+    expect(evaluateSpecPlan({ ...base, canReachMelee: false }).specMeleeLikely).toBe(false);
+    expect(evaluateSpecPlan({ ...base, guarded: new Set(['melee']) }).specMeleeLikely).toBe(false);
+    expect(evaluateSpecPlan({ ...base, guarded: new Set(['melee']) }).volleyJoinEligible).toBe(false);
+    expect(evaluateSpecPlan({ ...base }).specMeleeLikely).toBe(true);
+    // bowBurst: strip only applies to bow burst turn (not alternating DDS turn, and never when bowBurstArmour is 'keep').
+    const bowTurn = evaluateSpecPlan({ ...base, bursting: true });
+    expect(bowTurn.spec).toBe(burstBow);
+    expect(bowTurn.stripBurstArmour).toBe(true);
+    expect(bowTurn.specMeleeLikely).toBe(false);
+    const keepTurn = evaluateSpecPlan({ ...base, bursting: true, bowBurstArmour: 'keep' });
+    expect(keepTurn.stripBurstArmour).toBe(false);
+    const ddsAltTurn = evaluateSpecPlan({ ...base, bursting: true, lastSpecStyle: 'ranged' });
+    expect(ddsAltTurn.spec).toBe(spec);
+    expect(ddsAltTurn.stripBurstArmour).toBe(false);
+    expect(ddsAltTurn.specMeleeLikely).toBe(true);
+});
+
+test('crowdPrayer follows direct attackers instead of ally attackers, fakieSwitch hides melee spec, and volley resets between waves', async () => {
+    let tick = 10;
+    const actions: string[] = [];
+    const enemyApp = (wep: number) => { const a = new Uint16Array(12); a[3] = wep + 512; return a; };
+    const state: any = {
+        player: { worldX: 3067, worldZ: 3640, combatLevel: 126, hp: 99, maxHp: 99, runEnergy: 100, lifeId: 1 },
+        skills: [{ name: 'Magic', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+        prayers: { prayerPoints: 99, activePrayers: new Array(20).fill(false) },
+        inventory: [
+            { slot: 0, id: 861, name: 'Magic shortbow', count: 1, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] },
+        ],
+        equipment: [{ slot: 3, id: 1231, name: 'Dragon dagger(p)', count: 1, optionsWithIndex: [] }],
+        nearbyPlayers: [
+            { index: 1, name: 'Target', combatLevel: 126, x: 3068, z: 3640, distance: 1 },
+            { index: 2, name: 'Ally1', combatLevel: 126, x: 3066, z: 3640, distance: 1 },
+            { index: 3, name: 'AllyHit1', combatLevel: 126, x: 3065, z: 3640, distance: 2 },
+            { index: 4, name: 'AllyHit2', combatLevel: 126, x: 3065, z: 3641, distance: 2 },
+            { index: 5, name: 'MageOnMe', combatLevel: 126, x: 3069, z: 3640, distance: 2 },
+        ],
+        combatEvents: [], gameMessages: [],
+    };
+    const clientsPlayers: any[] = [];
+    clientsPlayers[1] = { headicons: 0, appearance: enemyApp(1231), health: 99, totalHealth: 99, faceEntity: 32768 + 2 }; // target faces Ally1
+    clientsPlayers[2] = { headicons: 0, appearance: enemyApp(1231), health: 99, totalHealth: 99, faceEntity: 32768 + 1 };
+    clientsPlayers[3] = { headicons: 0, appearance: enemyApp(1231), health: 99, totalHealth: 99, faceEntity: 32768 + 2 }; // faces Ally1
+    clientsPlayers[4] = { headicons: 0, appearance: enemyApp(1231), health: 99, totalHealth: 99, faceEntity: 32768 + 2 }; // faces Ally1
+    clientsPlayers[5] = { headicons: 0, appearance: enemyApp(1401), health: 99, totalHealth: 99, faceEntity: 32768 + 0 }; // mage faces US
+    const vs = newVolley();
+    const session: any = {
+        name: 'WaveDBot',
+        client: { var: { 300: 1000, 301: 0, 172: 1 }, players: clientsPlayers },
+        tick: () => tick, ended: new Promise(() => {}),
+        onTick: (cb: () => void) => {
+            setTimeout(() => { tick++; cb(); }, 0);
+            return () => {};
+        },
+        sdk: {
+            getState: () => state,
+            sendUseItem: (slot: number) => {
+                actions.push(`use:${slot}@${tick}`);
+                const i = state.inventory.findIndex((x: any) => x.slot === slot);
+                if (i >= 0) {
+                    const prev = state.equipment[0];
+                    const next = state.inventory.splice(i, 1)[0];
+                    state.inventory.push({ ...prev, slot: next.slot, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }] });
+                    state.equipment = [{ ...next, slot: 3 }];
+                }
+            },
+            sendSpellOnPlayer: () => {},
+            sendInteractPlayer: (_idx: number, op: number) => { actions.push(`atk:${op}@${tick}`); },
+            sendWalk: () => {},
+            sendTogglePrayer: (p: number) => { state.prayers.activePrayers[p] = !state.prayers.activePrayers[p]; actions.push(`pray:${p}@${tick}`); },
+            sendClickComponent: (id: number) => { actions.push(`comp:${id}@${tick}`); },
+        },
+    };
+    const kit = { ranged: [861, 892], melee: [1231] };
+    await fightPlayer(session, 'Target', {
+        kit, rotation: ['ranged', 'melee'], spec: { ...defaultSpec(kit)!, below: 1 },
+        freeze: false, crowdPrayer: true, fakieSwitch: true, prayerFlick: false, protectItem: false, defencePrayer: false,
+        volley: { state: () => vs, members: 1, window: 1, clock: () => tick },
+        cap: 11, log: () => {},
+    });
+    // MageOnMe + Target directly face us -> Protect from Magic or Melee, then fakie switches to MSB decoy (slot 0) before melee DDS spec!
+    expect(actions.some(a => a.startsWith(`pray:${PRAYER.magic}@`))).toBe(true);
+    expect(actions.some(a => a === 'use:0@13')).toBe(true); // held bow decoy during cooldown after DDS p_delay(0) before wave 2 melee DDS spec
+    expect(actions.filter(a => a.startsWith('atk:2@'))).toEqual(['atk:2@11', 'atk:2@15', 'atk:2@19']); // volley resets cleanly between waves
 });
