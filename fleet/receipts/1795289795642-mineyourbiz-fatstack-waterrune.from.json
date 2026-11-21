@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795289795642-mineyourbiz-fatstack-waterrune",
+ "account": "MineYourBiz",
+ "partner": "Fatstack",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 25,
+ "claim": "58d82b30-c4e7-4954-b5cb-0abd49b9a3b1",
+ "count": 0,
+ "ok": false,
+ "at": 1795289846701,
+ "detail": "trade claimed"
+}
