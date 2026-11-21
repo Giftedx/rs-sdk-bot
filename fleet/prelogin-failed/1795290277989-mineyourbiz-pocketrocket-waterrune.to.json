@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795290277989-mineyourbiz-pocketrocket-waterrune",
+ "role": "to",
+ "account": "Pocketrocket",
+ "partner": "MineYourBiz",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795290368617,
+ "detail": "Error: account logout is not confirmed: Pocketrocket ended disconnected"
+}
