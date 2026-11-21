@@ -73,7 +73,7 @@ const WC_KEEP_IDS = new Set<number>([
 export const WC_NORMAL_XP_25X = 625;
 export const WC_OAK_XP_25X = 937.5;
 
-// Draynor Jail multiway cluster (multiway.csv 0_48_50): 5 Oaks surrounded by 4 aggressive attackrate-5 Jail guards (hp 32).
+// Barbarian Village SE multiway cluster (multiway.csv 0_48_53): 3 Oaks surrounded by 5 attackrate-6 armed Goblins (maxrange 17).
 export const DRAYNOR_JAIL_SPOT = { x: 3115, z: 3244 } as const;
 export const DRAYNOR_JAIL_OAK_CENTERS: readonly [number, number][] = [
     [3114, 3239],
@@ -83,8 +83,7 @@ export const DRAYNOR_JAIL_OAK_CENTERS: readonly [number, number][] = [
     [3119, 3256],
 ];
 
-// Kept for test imports; active runtime uses Draynor Jail aggressive Jail guards + nearby Oaks.
-export const BARB_VILLAGE_SPOT = { x: 3126, z: 3434 } as const;
+export const BARB_VILLAGE_SPOT = { x: 3125, z: 3433 } as const;
 export const BARB_NORMAL_CENTERS: readonly [number, number][] = [
     [3121, 3433],
     [3121, 3438],
@@ -116,8 +115,8 @@ export function planWoodcuttingTotals(goalXp = xpForLevel(99)): {
 const WIND_STRIKE = componentId('magic:wind_strike');
 const AUTO_RETALIATE_ON_COMP = 150;
 
-const inDraynorJail = (p: { level: number; worldX: number; worldZ: number }): boolean =>
-    p.level === 0 && p.worldX >= 3075 && p.worldX <= 3115 && p.worldZ >= 3230 && p.worldZ <= 3260;
+const inEdgevilleArea = (p: { level: number; worldX: number; worldZ: number }): boolean =>
+    p.level === 0 && p.worldX >= 3075 && p.worldX <= 3140 && p.worldZ >= 3420 && p.worldZ <= 3508;
 
 type NearbyLoc = NonNullable<NonNullable<ReturnType<Session['sdk']['getState']>>['nearbyLocs']>[number];
 
@@ -142,34 +141,32 @@ function findBestTree(
     s: Session,
     wantOak: boolean,
     activeTree: { x: number; z: number } | null,
-    safeWillow = false,
 ): NearbyLoc | undefined {
     const st = s.sdk.getState();
-    const px = st?.player?.worldX ?? DRAYNOR_JAIL_SPOT.x;
-    const pz = st?.player?.worldZ ?? DRAYNOR_JAIL_SPOT.z;
+    const px = st?.player?.worldX ?? BARB_VILLAGE_SPOT.x;
+    const pz = st?.player?.worldZ ?? BARB_VILLAGE_SPOT.z;
     const locs = st?.nearbyLocs ?? [];
-    const nameRe = safeWillow ? /^willow$/i : (wantOak ? /^oak$/i : /^tree$/i);
+    const nameRe = wantOak ? /^oak$/i : /^tree$/i;
     const cands = locs
         .filter(l => {
             if (!nameRe.test(l.name)) return false;
             if (!l.optionsWithIndex?.some(o => /chop/i.test(o.text))) return false;
-            if (safeWillow) return l.x >= 3078 && l.x <= 3098 && l.z >= 3224 && l.z <= 3242;
             if (!wantOak) {
-                // Inner normal trees beside (3117,3246) keep arrival transition to Oak 15 near zero-walk.
-                return l.x >= 3113 && l.x <= 3119 && l.z >= 3244 && l.z <= 3251 && l.reachable !== false;
+                // Inner normal trees inside Barbarian SE clearing keep transition to Lv 15 Oaks near zero-walk.
+                return l.x >= 3118 && l.x <= 3136 && l.z >= 3424 && l.z <= 3442 && l.reachable !== false;
             }
-            // 3 northern Draynor Jail hub oaks around (3117,3246)/(3117,3249): all inside Jail guard 4307's (3121,3249) maxrange 7.
+            // 3 Barbarian Village SE multiway oaks (inside maxrange 17 of all 5 attackrate-6 armed Goblins).
             return (
-                (l.x === 3115 && l.z === 3243)
-                || (l.x === 3118 && l.z === 3245)
-                || (l.x === 3115 && l.z === 3250)
+                (l.x === 3126 && l.z === 3437)
+                || (l.x === 3131 && l.z === 3432)
+                || (l.x === 3120 && l.z === 3428)
             ) && l.reachable !== false;
         });
     if (activeTree) {
         const cur = cands.find(l => l.x === activeTree.x && l.z === activeTree.z);
         if (cur && isBesideTree(px, pz, cur.x, cur.z, treeSizeForLoc(cur.name))) return cur;
     }
-    const isHubOak = (l: NearbyLoc) => (l.x === 3115 && l.z === 3243) || (l.x === 3118 && l.z === 3245);
+    const isHubOak = (l: NearbyLoc) => (l.x === 3126 && l.z === 3437) || (l.x === 3131 && l.z === 3432);
     return cands.sort((a, b) => {
         const sizeA = treeSizeForLoc(a.name);
         const sizeB = treeSizeForLoc(b.name);
@@ -177,7 +174,7 @@ function findBestTree(
         if (adjDiff !== 0) return adjDiff;
         const distDiff = treeFootprintDist(px, pz, a.x, a.z, sizeA) - treeFootprintDist(px, pz, b.x, b.z, sizeB);
         if (distDiff !== 0) return distDiff;
-        if (wantOak && !safeWillow) {
+        if (wantOak) {
             const hubDiff = (isHubOak(a) ? 0 : 1) - (isHubOak(b) ? 0 : 1);
             if (hubDiff !== 0) return hubDiff;
         }
@@ -189,11 +186,10 @@ function findReachableTreeStandTile(
     s: Session,
     tree: NearbyLoc,
     size: number,
-    safeWillow: boolean,
 ): { x: number; z: number } | undefined {
     const p = s.sdk.getState()?.player;
-    const px = p?.worldX ?? DRAYNOR_JAIL_SPOT.x;
-    const pz = p?.worldZ ?? DRAYNOR_JAIL_SPOT.z;
+    const px = p?.worldX ?? BARB_VILLAGE_SPOT.x;
+    const pz = p?.worldZ ?? BARB_VILLAGE_SPOT.z;
     const perimeter: { x: number; z: number }[] = [];
     for (let i = 0; i < size; i++) {
         perimeter.push(
@@ -203,18 +199,14 @@ function findReachableTreeStandTile(
             { x: tree.x + size, z: tree.z + i },
         );
     }
-    const filtered = safeWillow
-        ? perimeter
-        : perimeter.filter(t => t.x >= 3115 && t.x <= 3117 && t.z >= 3246 && t.z <= 3249);
+    const filtered = perimeter.filter(t => t.x >= 3119 && t.x <= 3133 && t.z >= 3427 && t.z <= 3441);
     const pool = filtered.length > 0 ? filtered : perimeter;
     const reachable: { x: number; z: number; wp: number; cheb: number; hub: number }[] = [];
     for (const t of pool) {
         const path = s.sdk.findPath(t.x, t.z);
         if (!path.success || path.reachedDestination !== true) continue;
-        // Prefer (3117,3246) for twin oaks (3115,3243)+(3118,3245), or (3117,3249) for (3115,3250) on x=3117 corridor.
-        const hub = (t.x === 3117 && t.z === 3246)
-            ? 0
-            : Math.max(Math.abs(t.x - 3117), Math.abs(t.z - 3246));
+        // Prefer inward-facing edges between (3126,3437), (3131,3432), and (3120,3428) so switching costs 1-3 ticks.
+        const hub = Math.max(Math.abs(t.x - 3127), Math.abs(t.z - 3434));
         reachable.push({
             x: t.x,
             z: t.z,
@@ -223,7 +215,7 @@ function findReachableTreeStandTile(
             hub,
         });
     }
-    reachable.sort((a, b) => (a.hub - b.hub) || (a.cheb - b.cheb) || (a.wp - b.wp));
+    reachable.sort((a, b) => (a.cheb - b.cheb) || (a.hub - b.hub) || (a.wp - b.wp));
     return reachable[0] ? { x: reachable[0].x, z: reachable[0].z } : undefined;
 }
 
@@ -237,8 +229,8 @@ function countAttackingGoblins(s: Session): number {
     const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
     let count = 0;
     for (const n of npcs) {
-        if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0) continue;
-        if (targetsPlayer(s, n.targetIndex) || (n.inCombat && n.distance <= 2)) count++;
+        if (!/^goblin$/i.test(n.name) || n.hp === 0) continue;
+        if (targetsPlayer(s, n.targetIndex) || (n.inCombat && n.distance <= 3)) count++;
     }
     return count;
 }
@@ -246,15 +238,14 @@ function countAttackingGoblins(s: Session): number {
 function findUntaggedGoblin(s: Session, taggedAt: ReadonlyMap<number, number>, now: number) {
     const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
     const candidates = npcs.filter(n => {
-        if (!/^(jail guard|goblin)$/i.test(n.name) || n.hp === 0 || n.distance > 9) return false;
-        if (n.x < 3107 || n.x > 3123 || n.z < 3235 || n.z > 3251) return false;
+        if (!/^goblin$/i.test(n.name) || n.hp === 0 || n.distance > 15) return false;
+        if (n.x < 3112 || n.x > 3138 || n.z < 3416 || n.z > 3456) return false;
         if ((n as { reachable?: boolean }).reachable === false) return false;
-        if ((taggedAt.get(n.index) ?? -999) >= now - 50) return false;
+        if ((taggedAt.get(n.index) ?? -999) >= now - 40) return false;
         if (targetsPlayer(s, n.targetIndex)) return false;
         return n.targetIndex < 0;
     });
-    // Prefer level 26 Jail guards (aggressive_melee, attackrate 5, 32 HP).
-    candidates.sort((a, b) => (b.combatLevel - a.combatLevel) || (a.distance - b.distance));
+    candidates.sort((a, b) => a.distance - b.distance);
     return candidates[0];
 }
 
@@ -381,12 +372,12 @@ if (import.meta.main) {
             OBJ_SHORTBOW,
             OBJ_HOLY_SYMBOL,
         ]);
-        await rubTeleport(main, WOODCUTTING_GLORY_IDS, /draynor/i, inDraynorJail, isStopped);
+        await rubTeleport(main, WOODCUTTING_GLORY_IDS, /edgeville/i, inEdgevilleArea, isStopped);
         if ((main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43 && !isProtectMeleeOn(main.sdk.getState())) {
             // Single toggle chooses Protect from Melee while letting PrayerGuard 1t-flick with 0 Prayer drain.
             await main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' });
         }
-        await walkWaypointsSafe(main, [[3117, 3246, 1]], isStopped);
+        await walkWaypointsSafe(main, [[3102, 3485, 4], [3105, 3465, 3], [3104, 3456, 3], [3123, 3435, 2]], isStopped);
         const arriveTick = main.tick() - t0;
 
         let rolls = 0;
@@ -394,6 +385,7 @@ if (import.meta.main) {
         let knifeRolls = 0;
         let lastHitTick = -99;
         let lastTagTick = -99;
+        let lastPerturbTick = -99;
         let tagCount = 0;
         let actionDelayApprox = 0;
         let lastRollServerTick = -99;
@@ -444,11 +436,11 @@ if (import.meta.main) {
             const hitTick = drainHitEvents(st);
             if (hitTick >= 0) lastHitTick = Math.max(lastHitTick, hitTick);
             if (traceMode && (now - t0) % 20 === 0 && now - t0 <= 260) {
-                const guards = (st?.nearbyNpcs ?? [])
-                    .filter(n => /jail guard/i.test(n.name))
+                const gobsLog = (st?.nearbyNpcs ?? [])
+                    .filter(n => /^goblin$/i.test(n.name))
                     .map(n => `${n.index}@${n.x},${n.z}(d${n.distance},tgt${n.targetIndex},ic${n.inCombat ? 1 : 0})`)
                     .join(' ');
-                console.log(`WC_TRACE state t=${now - t0} pos=${st?.player?.worldX},${st?.player?.worldZ} lvl=${main.sdk.getSkill('Woodcutting')?.baseLevel} rolls=${rolls}(f${flinchRolls}/k${knifeRolls}) hits=${hitEventsTotal} gobs=${countAttackingGoblins(main)} guards=[${guards}]`);
+                console.log(`WC_TRACE state t=${now - t0} pos=${st?.player?.worldX},${st?.player?.worldZ} lvl=${main.sdk.getSkill('Woodcutting')?.baseLevel} rolls=${rolls}(f${flinchRolls}/k${knifeRolls}) hits=${hitEventsTotal} gobs=${countAttackingGoblins(main)} goblins=[${gobsLog}]`);
             }
 
             const wantOak = wcLvl >= 15;
@@ -468,16 +460,11 @@ if (import.meta.main) {
             const validFlinchHit = !outOfPrayer && hitTick === now && clearSentForTick === now && now >= actionDelayApprox;
             const gobs = !outOfPrayer && wantOak ? countAttackingGoblins(main) : 0;
             const needNormalLog = wantOak && slotOfId(main, OBJ_LOGS) === undefined;
-            const safeWillow = outOfPrayer && wcLvl >= 30;
             const tree: NearbyLoc | undefined = (needNormalLog ? findBestTree(main, false, null) : undefined)
-                ?? findBestTree(main, wantOak, activeTree, safeWillow);
+                ?? findBestTree(main, wantOak, activeTree);
             activeTree = tree ? { x: tree.x, z: tree.z } : null;
 
             if (!tree) {
-                if (safeWillow) {
-                    await walkWaypointsSafe(main, [[3086, 3233, 2]], isStopped);
-                    continue;
-                }
                 const acts: Promise<unknown>[] = [];
                 const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
                 if (potAct) acts.push(potAct);
@@ -495,7 +482,7 @@ if (import.meta.main) {
             const besideTree = !!meNow && isBesideTree(meNow.worldX, meNow.worldZ, tree.x, tree.z, treeSize);
 
             if (!besideTree) {
-                const standTile = findReachableTreeStandTile(main, tree, treeSize, safeWillow);
+                const standTile = findReachableTreeStandTile(main, tree, treeSize);
                 const destX = standTile?.x ?? tree.x;
                 const destZ = standTile?.z ?? tree.z;
                 const acts: Promise<unknown>[] = [
@@ -514,7 +501,7 @@ if (import.meta.main) {
                 const acts: Promise<unknown>[] = [];
                 const potAct = outOfPrayer ? null : tryDrinkPrayerPotion(main, 15);
                 if (potAct) acts.push(potAct);
-                if (!potAct && main.sdk.getInventory().length >= 21) {
+                if (!potAct && main.sdk.getInventory().length >= 26) {
                     const oakSlot = slotOfId(main, OBJ_OAK_LOGS);
                     if (oakSlot !== undefined) acts.push(main.direct({ type: 'dropItem', slot: oakSlot, reason: 'SDK' }));
                 }
@@ -538,20 +525,27 @@ if (import.meta.main) {
                 continue;
             }
 
-            // Track active mod-5 guard swing phases from the last 6 ticks (covers attackrate=5 even during busy2/knife3).
-            while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 11) recentHitTicks.shift();
-            const recentHitsIn6 = recentHitTicks.filter(h => now - h <= 6);
-            const activeHitMod5 = new Set<number>(recentHitsIn6.map(h => ((h % 5) + 5) % 5));
-            const nextMod1 = ((now + 1) % 5 + 5) % 5;
-            const activeHitIn1t = activeHitMod5.has(nextMod1);
+            // Track active mod-6 swing phases from armed Goblins (attackrate=6) over the last 7 ticks.
+            while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 14) recentHitTicks.shift();
+            const recentHitsIn7 = recentHitTicks.filter(h => now - h <= 7);
+            const activeHitMod6 = new Set<number>(recentHitsIn7.map(h => ((h % 6) + 6) % 6));
+            const sortedMods = [...activeHitMod6].sort((a, b) => a - b);
+            const maxHitGap = sortedMods.length < 2
+                ? 6
+                : Math.max(
+                    6 + sortedMods[0]! - sortedMods[sortedMods.length - 1]!,
+                    ...sortedMods.slice(1).map((m, i) => m - sortedMods[i]!),
+                );
+            const nextMod1 = ((now + 1) % 6 + 6) % 6;
+            const nextMod2 = ((now + 2) % 6 + 6) % 6;
+            const activeHitIn1t = activeHitMod6.has(nextMod1);
+            const activeHitIn2t = activeHitMod6.has(nextMod2);
 
             const canTag = !outOfPrayer
                 && wantOak
                 && !needNormalLog
-                && tagCount < 8
-                && gobs < 2
-                && recentHitsIn6.length === 0
-                && now - lastTagTick >= 15
+                && tagCount < 16
+                && ((gobs < 3 && now - lastTagTick >= 3) || (gobs < 4 && maxHitGap >= 3 && now - lastTagTick >= 6))
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1
                 && itemQty(main, OBJ_MIND_RUNE) > 0;
@@ -561,7 +555,7 @@ if (import.meta.main) {
                     lastTagTick = now;
                     tagCount++;
                     taggedAt.set(target.index, now);
-                    actionDelayApprox = now + 3;
+                    actionDelayApprox = now + 1;
                     const acts: Promise<unknown>[] = [
                         main.direct({ type: 'spellOnNpc', npcIndex: target.index, spellComponent: WIND_STRIKE, reason: 'SDK' }),
                     ];
@@ -574,8 +568,43 @@ if (import.meta.main) {
                 }
             }
 
-            // Clear busy2 only when an active guard is scheduled to swing on now+1 (flinch rolls at now+2); else 3t knife (now+3).
-            const keepFlinchWindow = !outOfPrayer && wantOak && !needNormalLog && activeHitIn1t;
+            if (
+                !outOfPrayer
+                && wantOak
+                && !needNormalLog
+                && gobs >= 3
+                && maxHitGap >= 3
+                && recentHitsIn7.length >= 2
+                && !activeHitIn1t
+                && !activeHitIn2t
+                && now - lastPerturbTick >= 20
+                && meNow
+            ) {
+                let adjTile: { x: number; z: number } | undefined;
+                for (let dx = -1; dx <= 1 && !adjTile; dx++) {
+                    for (let dz = -1; dz <= 1; dz++) {
+                        if (dx === 0 && dz === 0) continue;
+                        const nx = meNow.worldX + dx;
+                        const nz = meNow.worldZ + dz;
+                        if (!isBesideTree(nx, nz, tree.x, tree.z, treeSize)) continue;
+                        const path = main.sdk.findPath(nx, nz);
+                        if (path.success && path.reachedDestination === true && path.waypoints.length <= 2) {
+                            adjTile = { x: nx, z: nz };
+                            break;
+                        }
+                    }
+                }
+                if (adjTile) {
+                    lastPerturbTick = now;
+                    await main.direct({ type: 'walkTo', x: adjTile.x, z: adjTile.z, running: true, reason: 'SDK' });
+                    clearSentForTick = -99;
+                    await waitTicks(main, 1);
+                    continue;
+                }
+            }
+
+            // Hold flinch rhythm whenever a staggered Goblin swing falls on now+1 or now+2 (avoids knife3 canceling hit resets).
+            const keepFlinchWindow = !outOfPrayer && wantOak && !needNormalLog && (activeHitIn1t || activeHitIn2t);
             if (!keepFlinchWindow) {
                 const knifeSlot = slotOfId(main, OBJ_KNIFE);
                 const logSlot = slotOfId(main, OBJ_LOGS);

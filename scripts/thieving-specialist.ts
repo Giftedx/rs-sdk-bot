@@ -51,7 +51,11 @@ export const THIEVING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>>
 
 export const THIEVING_DIRECT_CWARS_WAYPOINTS: readonly [number, number, number][] = [
     [2455, 3168, 4],
-    [2560, 3259, 4],
+    [2476, 3197, 3],
+    [2486, 3214, 3],
+    [2506, 3233, 4],
+    [2555, 3234, 3],
+    [2598, 3235, 3],
     [2621, 3293, 2],
 ];
 
