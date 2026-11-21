@@ -1,0 +1,23 @@
+{
+ "id": "1795244772467-woodenstaff-earlyshooter-bde2611e5e777d53",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodenstaff",
+ "to": "Earlyshooter",
+ "item": "Coins",
+ "count": 44000,
+ "start": 1795244772467,
+ "end": 1795247172467,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
