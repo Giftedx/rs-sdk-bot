@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795248114036,
+ "at": 1795248190666,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -319,33 +319,6 @@
    "repeat": false
   },
   {
-   "account": "Fingersmith",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=561 QUANTITY=462 SELL_PRICE=241 FLOOR_PRICE=241 RESERVE_ITEMS=0 ORDER_KEY=liveops-fin-561-1 ORDER_MS=300000 FILL_WAIT_TICKS=120",
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1079 QUANTITY=1 SELL_PRICE=80000 FLOOR_PRICE=80000 RESERVE_ITEMS=0 ORDER_KEY=liveops-fin-1079-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "SporranBulge",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=231 QUANTITY=2 EXPECTED_OWNED=0 LIMIT_PRICE=150000 CASH_RESERVE=5000 ORDER_KEY=liveops-sporran-snape-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
    "account": "UnderMyKilt",
    "script": "scripts/chain.ts",
    "args": [
@@ -431,6 +404,34 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/buy-owned-ge-item.ts ITEM_ID=231 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=150000 CASH_RESERVE=5000 ORDER_KEY=liveops-cock-snape-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=231 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=150000 CASH_RESERVE=5000 ORDER_KEY=liveops-fin-snape-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/microbot-production.ts identify:ranarr_weed MAX_MAKE=1 CAP=200 MEMBERS=1",
+    "scripts/ranged-live-prep.ts --mode=brew --bank=varrock_west --cap=400",
+    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1359 QUANTITY=1 SELL_PRICE=101690 FLOOR_PRICE=101690 RESERVE_ITEMS=0 ORDER_KEY=liveops-mighty-1359-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
    ],
    "env": {
     "ROUNDS": "1"
