@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795288538530-magicwanda-ballspinner-airrune",
  "account": "Ballspinner",
  "partner": "Magicwanda",
@@ -10,8 +10,22 @@
  "item": "Air rune",
  "requested": 3,
  "claim": "0b4f6fd3-a944-4cc0-a3a1-103631d40ddb",
- "count": 0,
- "ok": false,
- "at": 1795288615652,
- "detail": "trade claimed"
+ "count": 3,
+ "ok": true,
+ "at": 1795288784490,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 3
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795288783786
+ },
+ "logout": {
+  "attemptId": "1795288615660-0000024696-0000000001",
+  "at": 1795288784480,
+  "sha256": "0a7ea218213f1f280bbedbd9e8f453f5dc167abd4f9ce60ed580466b7bf4151d"
+ },
+ "screen": true
 }
