@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795237153568-pickpockdick-woodenstaff-waterrune",
  "account": "PickpockDick",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 53,
  "claim": "c65f4a42-ee79-45a5-9757-e385b8f62295",
- "count": 0,
- "ok": false,
- "at": 1795237179522,
- "detail": "trade claimed"
+ "count": 53,
+ "ok": true,
+ "at": 1795237321390,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 53,
+  "after": 0
+ },
+ "bank": {
+  "count": 53,
+  "at": 1795237310244
+ },
+ "logout": {
+  "attemptId": "1795237179530-0000026180-0000000001",
+  "at": 1795237321374,
+  "sha256": "3edf21ebc80538e9294f986afcdbc970952d45877edef9e20b504520ddf715e9"
+ },
+ "screen": true
 }

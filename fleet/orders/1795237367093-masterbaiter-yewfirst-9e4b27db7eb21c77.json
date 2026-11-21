@@ -1,0 +1,22 @@
+{
+ "id": "1795237367093-masterbaiter-yewfirst-9e4b27db7eb21c77",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "YewFirst",
+ "item": "Feather",
+ "count": 3703,
+ "start": 1795237367093,
+ "end": 1795238867093,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

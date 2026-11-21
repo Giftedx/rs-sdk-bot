@@ -1,0 +1,22 @@
+{
+ "id": "1795237306823-nabtheknob-yewfirst-a4ea44a7eaeffde7",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "NabTheKnob",
+ "to": "YewFirst",
+ "item": "Feather",
+ "count": 4697,
+ "start": 1795237306823,
+ "end": 1795238806823,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

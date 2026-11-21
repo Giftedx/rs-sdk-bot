@@ -1,0 +1,22 @@
+{
+ "id": "1795237307350-swordinhand-moneyshot-2f8e3f98c3152137",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordinhand",
+ "to": "Moneyshot",
+ "item": "Snape grass",
+ "count": 18,
+ "start": 1795237307350,
+ "end": 1795238807350,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ]
+}
