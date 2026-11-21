@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795292900709,
+ "at": 1795293517320,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -287,70 +287,74 @@
    ]
   },
   {
-   "account": "DropMyLoad",
-   "script": "scripts/microbot-production.ts",
+   "account": "Abracadickra",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "strip:swamp-toad",
-    "MAX_MAKE=2",
-    "CAP=1500",
-    "MEMBERS=1",
-    "ORDER_MODE=best-effort"
+    "aubury",
+    "1200"
    ],
    "env": {
-    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"2152\":2}}"
+    "ITEMS": "water rune",
+    "STOCK_TARGET": "1500",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "12200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "12000",
+    "AUTOPILOT_ORDER": "[0]"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "strip banked swamp toads into toad's legs",
-   "role": "herblore",
-   "template": "squad-strip-swamp-toad",
+   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
+   "role": "bank",
+   "template": "squad-water-aubury",
    "autopilot": "local",
    "resources": [
-    "squad:herblore-bank"
+    "shop:aubury"
    ]
   },
   {
-   "account": "Abracadickra",
-   "script": "scripts/gather-combat.ts",
+   "account": "BowBeforeMe",
+   "script": "scripts/chain.ts",
    "args": [
-    "6000",
-    "giant"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=105630 CASH_RESERVE=1000 ORDER_KEY=bowbeforeme-kit6-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "MAX_KILLS": "40"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
-   "role": "combat",
-   "template": "squad-ardougne-giants",
+   "goal": "buy 1 Rune platelegs on the Grand Exchange to wear rune armour",
+   "role": "supply",
+   "template": "kit-buy:army-armour-rune",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-giants"
+    "ge:armour"
    ]
   },
   {
    "account": "FishAndChips",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/shark-supply.ts",
    "args": [
-    "6000",
-    "giant"
+    "25",
+    "9000"
    ],
    "env": {
-    "MAX_KILLS": "40"
+    "SHARK_CONSUMER": "gang squad",
+    "AUTOPILOT_ORDER": "[442]"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
-   "role": "combat",
-   "template": "squad-ardougne-giants",
+   "goal": "fish and cook sharks at Catherby for the gang squad",
+   "role": "fishing",
+   "template": "squad-sharks",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-giants"
+    "squad:catherby-sharks"
    ]
   },
   {
@@ -383,38 +387,38 @@
    "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
-    "aubury",
+    "ardy",
     "1200"
    ],
    "env": {
-    "ITEMS": "water rune",
-    "STOCK_TARGET": "1509",
+    "ITEMS": "vial of water",
+    "STOCK_TARGET": "73",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
     "NO_BUY_TICKS": "25",
-    "FLOAT": "12200",
+    "FLOAT": "492",
     "COIN_RESERVE": "200",
-    "MAX_SPEND": "12000",
-    "AUTOPILOT_ORDER": "[9]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1509}}"
+    "MAX_SPEND": "292",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"227\":73}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
+   "goal": "buy vials of water from Aemad's store in East Ardougne",
    "role": "bank",
-   "template": "squad-water-aubury",
+   "template": "squad-vial-of-water",
    "autopilot": "local",
    "resources": [
-    "shop:aubury"
+    "shop:ardy"
    ]
   },
   {
-   "account": "Magicwanda",
+   "account": "Unsheathed",
    "script": "scripts/gather-combat.ts",
    "args": [
     "6000",
-    "taverley_black_knight"
+    "giant"
    ],
    "env": {
     "MAX_KILLS": "40"
@@ -422,12 +426,33 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
    "role": "combat",
-   "template": "squad-taverley-black-knights",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "squad:taverley-black-knights"
+    "squad:ardougne-giants"
+   ]
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
+   "env": {
+    "MAX_KILLS": "40"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
+   "autopilot": "local",
+   "resources": [
+    "squad:ardougne-giants"
    ]
   },
   {
@@ -449,6 +474,29 @@
    "autopilot": "local",
    "resources": [
     "squad:taverley-black-knights"
+   ]
+  },
+  {
+   "account": "MeatNTwoVeg",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 2832 9586",
+    "scripts/gather-spawn.ts 223 27"
+   ],
+   "env": {
+    "TICKS": "3000",
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"223\":27}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "gather red spiders' eggs in Karamja Volcano (non-Wilderness) for super restore potions",
+   "role": "herblore",
+   "template": "squad-karamja-red-spiders-eggs",
+   "autopilot": "local",
+   "resources": [
+    "squad:karamja-red-spiders-eggs"
    ]
   },
   {
@@ -474,6 +522,36 @@
    "autopilot": "local",
    "resources": [
     "squad:herblore-bank"
+   ]
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "dargaud",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "rune arrow",
+    "STOCK_TARGET": "400",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "320200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "320000",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":400}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
+   "role": "bank",
+   "template": "squad-arrows-dargaud",
+   "autopilot": "local",
+   "resources": [
+    "shop:dargaud"
    ]
   }
  ],
