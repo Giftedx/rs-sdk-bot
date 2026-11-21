@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795242286910-sausagefest-oreelse-waterrune",
  "account": "Sausagefest",
  "partner": "OreElse",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 7,
  "claim": "1118335d-9f84-4960-8042-030c648a1f49",
- "count": 0,
- "ok": false,
- "at": 1795242379871,
- "detail": "trade claimed"
+ "count": 7,
+ "ok": true,
+ "at": 1795242575533,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 7,
+  "after": 0
+ },
+ "bank": {
+  "count": 7,
+  "at": 1795242564355
+ },
+ "logout": {
+  "attemptId": "1795242379880-0000016464-0000000001",
+  "at": 1795242575522,
+  "sha256": "64a9d83e27b44adf38c61a07e79148c69b53acc7f373d1dc096ac6ee84c70344"
+ },
+ "screen": true
 }
