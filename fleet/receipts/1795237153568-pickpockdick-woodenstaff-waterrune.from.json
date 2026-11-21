@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795237153568-pickpockdick-woodenstaff-waterrune",
+ "account": "PickpockDick",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 53,
+ "claim": "c65f4a42-ee79-45a5-9757-e385b8f62295",
+ "count": 0,
+ "ok": false,
+ "at": 1795237179522,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,22 @@
+{
+ "id": "1795237153568-pickpockdick-woodenstaff-waterrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "PickpockDick",
+ "to": "Woodenstaff",
+ "item": "Water rune",
+ "count": 53,
+ "start": 1795237153568,
+ "end": 1795239553568,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
