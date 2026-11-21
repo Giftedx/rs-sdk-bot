@@ -1,0 +1,37 @@
+{
+ "id": "1795239778318-knightstick-earlyshooter-2162bc6078814554",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Knightstick",
+ "to": "Earlyshooter",
+ "item": "Dragon bones",
+ "count": 11,
+ "start": 1795239778318,
+ "end": 1795241278318,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Death rune",
+   "count": 36
+  },
+  {
+   "item": "Staff of fire",
+   "count": 1
+  },
+  {
+   "item": "Law rune",
+   "count": 10
+  }
+ ],
+ "takerWaits": true
+}
