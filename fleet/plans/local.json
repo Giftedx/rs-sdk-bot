@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795293536514,
+ "at": 1795293811416,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -358,36 +358,6 @@
    ]
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "ardy",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "vial of water",
-    "STOCK_TARGET": "73",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "492",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "292",
-    "AUTOPILOT_ORDER": "[0]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"227\":73}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy vials of water from Aemad's store in East Ardougne",
-   "role": "bank",
-   "template": "squad-vial-of-water",
-   "autopilot": "local",
-   "resources": [
-    "shop:ardy"
-   ]
-  },
-  {
    "account": "Knightstick",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -430,8 +400,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -492,6 +461,29 @@
    ]
   },
   {
+   "account": "Quickhandjob",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "BURY_HELD": "1",
+    "BONE_ID": "536",
+    "BONE_RESERVE": "6",
+    "CAP": "4000",
+    "AUTOPILOT_ORDER": "4",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "train Prayer to 99 burying bought dragon bones",
+   "role": "combat",
+   "template": "army-bury-dragon-99",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
    "account": "Magicwanda",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -534,7 +526,7 @@
    ]
   },
   {
-   "account": "MeatNTwoVeg",
+   "account": "Spitroaster",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/walk-to.ts 2832 9586",
@@ -558,6 +550,36 @@
   },
   {
    "account": "BoneToPick",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "ardy",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "vial of water",
+    "STOCK_TARGET": "73",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "492",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "292",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"227\":73}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy vials of water from Aemad's store in East Ardougne",
+   "role": "bank",
+   "template": "squad-vial-of-water",
+   "autopilot": "local",
+   "resources": [
+    "shop:ardy"
+   ]
+  },
+  {
+   "account": "DropMyLoad",
    "script": "scripts/microbot-production.ts",
    "args": [
     "strip:swamp-toad",

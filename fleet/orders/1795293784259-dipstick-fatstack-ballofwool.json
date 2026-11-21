@@ -1,0 +1,22 @@
+{
+ "id": "1795293784259-dipstick-fatstack-ballofwool",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Dipstick",
+ "to": "Fatstack",
+ "item": "Ball of wool",
+ "count": 2,
+ "start": 1795293784259,
+ "end": 1795296184259,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
