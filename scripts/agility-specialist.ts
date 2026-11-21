@@ -133,7 +133,7 @@ export const TOURIST_TRADE_3: readonly SupplyEntry[] = [
     { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 6 },
     { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 3 },
     { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 4 },
-    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 3 },
+    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 4 },
 ];
 
 export const MONKEYBARS_TRADE_1: readonly SupplyEntry[] = [
@@ -778,7 +778,7 @@ async function doLumbridgePrepTourist(s: Session): Promise<void> {
 
 async function runFletchingTo10(s: Session): Promise<void> {
     const t0 = s.tick();
-    while (skillLvl(s, 'Fletching') < 20 && s.tick() - t0 < 10) {
+    while (skillLvl(s, 'Fletching') < 10 && s.tick() - t0 < 10) {
         const heads = invOf(s).find(i => i.id === ITEMS.headlessArrow);
         const tips = invOf(s).find(i => i.id === ITEMS.bronzeArrowtips);
         if (!heads || !tips) break;
@@ -1013,7 +1013,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             await closeDlg();
             await walkNear(s, { x: 3284, z: 3032 }, 1, 20);
             let idle = 0;
-            for (let t = 0; t < 80 && inPrisonCell(); t++) {
+            for (let t = 0; t < 180 && inPrisonCell(); t++) {
                 await q.guard('cell window');
                 if ((q.st()?.prayers?.prayerPoints ?? 99) <= 10) {
                     if (await drinkFirstMatching(s, ITEMS.prayerPot)) await q.waitTicks(2);
@@ -1095,11 +1095,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                 for (let t = 0; t < 12 && worn(id); t++) await removeWornItem(s, id);
             }
             if (!inCamp()) return;
-            if (z() >= 3032 && x() >= 3290) {
-                await walkCamp('to gate inside', [{ x: 3304, z: 3024, tol: 2 }, { x: 3278, z: 3018, tol: 2 }, { x: 3274, z: 3029, tol: 0 }]);
-            } else {
-                await walkCamp('to gate inside', [{ x: 3274, z: 3029, tol: 0 }]);
-            }
+            await walkCamp('to gate inside', [{ x: 3274, z: 3029, tol: 0 }]);
             await q.step('gate out', () => q.opLoc(loc(GATE), 1), () => x() <= 3273, 12, 4);
             await q.waitTicks(2);
         };
@@ -1116,12 +1112,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             await ensureFullPrayer();
             for (let attempt = 0; attempt < 3 && z() < 9427; attempt++) {
                 if (z() < 4000) {
-                    // Route along south/east camp perimeter with ignoreHunters (PrayerGuard blocks melee Rowdy Guards).
-                    await walkCamp('to mine doors', [
-                        ...(x() < 3290 ? [{ x: 3278, z: 3018, tol: 2 }] : []),
-                        ...(z() < 3024 || x() < 3290 ? [{ x: 3304, z: 3024, tol: 2 }] : []),
-                        { x: MINE_IN.x, z: MINE_IN.z - 1, tol: 0 },
-                    ]);
+                    await walkCamp('to mine doors', [{ x: MINE_IN.x, z: MINE_IN.z - 1, tol: 0 }]);
                     await q.step('mine doors', () => q.opLoc(loc(MINE_IN), 1), () => z() > 9000, 12, 4);
                 }
                 // open_and_close_double_door2 opens 2690/2691 for 3 ticks after p_delay(0) and teleports to (3278,9427).
