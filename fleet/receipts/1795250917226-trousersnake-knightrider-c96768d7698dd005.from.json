@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795250917226-trousersnake-knightrider-c96768d7698dd005",
+ "account": "TrouserSnake",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 204000,
+ "claim": "ee28c39f-8701-45e7-a601-8a8567831158",
+ "count": 204000,
+ "ok": true,
+ "at": 1795251035135,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 204000,
+  "after": 0
+ },
+ "bank": {
+  "count": 204000,
+  "at": 1795251020770
+ },
+ "logout": {
+  "attemptId": "1795251012802-0000031340-0000000001",
+  "at": 1795251035124,
+  "sha256": "0bf5ed45035eac28ce88ce91e1e98d7583c370a9da483a581c42f60dd8bb0355"
+ },
+ "screen": true
+}
