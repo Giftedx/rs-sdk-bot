@@ -8,7 +8,7 @@ import type { Session } from '../../packages/core/src/inprocess';
 import { PRACTICE_STARTUP_GB } from '../../packages/core/src/memory';
 import { RESERVED_ACCOUNTS } from '../../packages/core/src/specialist-boards';
 import { waitUntil } from '../../packages/core/src/ticks';
-import { goTo } from '../../packages/core/src/walk';
+import { goTo, sessionWalker, walkPath } from '../../packages/core/src/walk';
 import { xpForLevel } from '../../packages/planner/src/curve';
 import { createBot } from '../../packages/practice/src/bots';
 import { rsSdkRoot } from '../../packages/practice/src/paths';
@@ -163,7 +163,12 @@ async function runSmithingTo99(main: Session, m: Meter, isStopped: () => boolean
     while (i < jobs.length && !isStopped()) {
         await clearDialogs(main, m, 'close');
         const tb = main.tick();
-        if (await openBank(main, m) < 0) throw Error(`haggis-stage6: Varrock west bank did not open at smithing job ${i}`);
+        if (await openBank(main, m) < 0) {
+            await walkPath(await sessionWalker(main), [{ ...VARROCK_WEST_BANK_SPOT, tol: 1 }], { maxTicks: 25, stop: isStopped });
+            if (await openBank(main, m) < 0) {
+                throw Error(`haggis-stage6: Varrock west bank did not open at smithing job ${i}`);
+            }
+        }
         const seen = new Set<number>();
         for (const it of inv(main)) {
             if (it.id === OBJ_HAMMER || seen.has(it.id)) continue;
@@ -207,7 +212,11 @@ async function runSmithingTo99(main: Session, m: Meter, isStopped: () => boolean
             if (level(main, 'Smithing') < j.level) {
                 throw Error(`haggis-stage6: Smithing ${level(main, 'Smithing')} < required ${j.level} for ${j.band}`);
             }
-            const anvil = nearestLoc(main, /^anvil$/i, /.*/);
+            let anvil = nearestLoc(main, /^anvil$/i, /.*/);
+            if (!anvil) {
+                await walkPath(await sessionWalker(main), [{ x: 3188, z: 3426, tol: 3 }], { maxTicks: 20, stop: isStopped });
+                anvil = nearestLoc(main, /^anvil$/i, /.*/);
+            }
             if (!anvil) throw Error('haggis-stage6: Varrock west anvil not nearby');
             const bar = inv(main).find(x => x.id === j.bar);
             if (!bar) throw Error(`haggis-stage6: missing bar ${j.bar} in inventory`);
@@ -342,6 +351,8 @@ export async function runHaggisStage6(
             { legTimeoutTicks: 90, noJewelry: true },
         );
         if (!toVarrock.ok) throw Error(`haggis-stage6: walk to Varrock west bank failed: ${toVarrock.detail ?? toVarrock.reason ?? 'unknown'}`);
+        // Stand by the southern booth (3185,3435) so both the bank booths and smithy anvils (3188,3425) stay in range.
+        await walkPath(await sessionWalker(main), [{ ...VARROCK_WEST_BANK_SPOT, tol: 1 }], { maxTicks: 25, stop: isStopped });
         const toVarrockBankTicks = main.tick() - travelStart;
 
         const sm = meter(main, 'Smithing');
