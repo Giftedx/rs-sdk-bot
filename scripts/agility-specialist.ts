@@ -981,7 +981,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             if (worn(ITEMS.fireStaff)) await q.fail('failed to unequip fire staff before gate');
         };
         const ensureFullPrayer = async () => {
-            if (!usePrayer) return;
+            if (!_usePrayer) return;
             for (let t = 0; t < 4 && Math.min(q.st()?.prayers?.prayerPoints ?? 43, skillCur(s, 'Prayer')) < 43; t++) {
                 if (!await drinkFirstMatching(s, ITEMS.prayerPot)) break;
                 await q.waitTicks(2);
