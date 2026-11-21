@@ -1,0 +1,23 @@
+{
+ "id": "1795243192176-knightrider-earlyshooter-e56c1f24b18ed060",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "Earlyshooter",
+ "item": "Coins",
+ "count": 91000,
+ "start": 1795243192176,
+ "end": 1795245592176,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
