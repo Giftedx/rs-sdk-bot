@@ -1,0 +1,11 @@
+{
+ "id": "1795250917226-trousersnake-knightrider-c96768d7698dd005",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "TrouserSnake",
+ "to": "KnightRider",
+ "item": "Coins",
+ "count": 204000,
+ "start": 1795250917226,
+ "end": 1795252417226,
+ "takerWaits": true
+}

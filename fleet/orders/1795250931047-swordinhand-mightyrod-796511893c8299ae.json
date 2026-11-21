@@ -1,0 +1,33 @@
+{
+ "id": "1795250931047-swordinhand-mightyrod-796511893c8299ae",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordinhand",
+ "to": "Mightyrod",
+ "item": "Coins",
+ "count": 89000,
+ "start": 1795250931047,
+ "end": 1795252431047,
+ "extra": [
+  {
+   "item": "Ranarr weed",
+   "count": 2
+  },
+  {
+   "item": "Superantipoison(4)",
+   "count": 1
+  },
+  {
+   "item": "Superantipoison(3)",
+   "count": 1
+  },
+  {
+   "item": "Superantipoison(2)",
+   "count": 1
+  },
+  {
+   "item": "Unicorn horn",
+   "count": 2
+  }
+ ],
+ "takerWaits": true
+}
