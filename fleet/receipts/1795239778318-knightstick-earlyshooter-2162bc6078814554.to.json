@@ -1,0 +1,72 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795239778318-knightstick-earlyshooter-2162bc6078814554",
+ "account": "Earlyshooter",
+ "partner": "Knightstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 11,
+ "claim": "09c49331-f2c1-45b6-bef2-96f366112f86",
+ "count": 11,
+ "ok": true,
+ "at": 1795239918478,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Death rune",
+   "requested": 36,
+   "count": 36,
+   "inventory": {
+    "before": 0,
+    "after": 36
+   },
+   "bank": {
+    "count": 36,
+    "at": 1795239912522
+   }
+  },
+  {
+   "item": "Staff of fire",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795239912930
+   }
+  },
+  {
+   "item": "Law rune",
+   "requested": 10,
+   "count": 10,
+   "inventory": {
+    "before": 0,
+    "after": 10
+   },
+   "bank": {
+    "count": 10,
+    "at": 1795239913721
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 11
+ },
+ "bank": {
+  "count": 11,
+  "at": 1795239912123
+ },
+ "logout": {
+  "attemptId": "1795239895934-0000023408-0000000001",
+  "at": 1795239918455,
+  "sha256": "7c0fc594a5264186978e1a65ce47a769b39f7fffde70123eb0f3fb9ca3e8bd3a"
+ },
+ "screen": true
+}
