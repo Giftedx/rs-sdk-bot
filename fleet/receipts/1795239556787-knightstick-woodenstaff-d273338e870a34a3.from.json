@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795239556787-knightstick-woodenstaff-d273338e870a34a3",
  "account": "Knightstick",
  "partner": "Woodenstaff",
@@ -12,23 +12,45 @@
  "claim": "1cb5e681-0eb5-4817-92f7-7f3bc9b0447b",
  "count": 0,
  "ok": false,
- "at": 1795239617995,
- "detail": "trade claimed",
+ "at": 1795239656061,
+ "detail": "Error: partner failed: no trade",
  "lines": [
   {
    "item": "Death rune",
    "requested": 36,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 36,
+    "at": 1795239629302
+   }
   },
   {
    "item": "Staff of fire",
    "requested": 1,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 1,
+    "at": 1795239630117
+   }
   },
   {
    "item": "Law rune",
    "requested": 10,
-   "count": 0
+   "count": 0,
+   "bank": {
+    "count": 10,
+    "at": 1795239630939
+   }
   }
- ]
+ ],
+ "bank": {
+  "count": 11,
+  "at": 1795239628518
+ },
+ "logout": {
+  "attemptId": "1795239618003-0000028532-0000000001",
+  "at": 1795239656048,
+  "sha256": "34ec31c6c40778bc36c495d7e881fc87eb3124bd1d851bfb151d1e0b9497d428"
+ },
+ "screen": false
 }
