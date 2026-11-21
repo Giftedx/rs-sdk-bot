@@ -154,8 +154,12 @@ function findBestTree(
             if (!nameRe.test(l.name)) return false;
             if (!l.optionsWithIndex?.some(o => /chop/i.test(o.text))) return false;
             if (safeWillow) return l.x >= 3078 && l.x <= 3098 && l.z >= 3224 && l.z <= 3242;
-            // Southern Draynor Jail clearing keeps all 3 yard Jail guards within maxrange+1 (=8) of hub (3116, 3242).
-            return l.x >= 3114 && l.x <= 3119 && l.z >= 3238 && l.z <= 3247 && l.reachable !== false;
+            if (!wantOak) {
+                // Allow all 4 fence-free inner normal trees (never stall waiting on a 120-200t single-tree respawn).
+                return l.x >= 3113 && l.x <= 3120 && l.z >= 3238 && l.z <= 3251 && l.reachable !== false;
+            }
+            // Southern Draynor Jail clearing keeps all 3 yard Jail guards within maxrange+1 (=8) of hub (3117, 3242).
+            return l.x >= 3114 && l.x <= 3119 && l.z >= 3238 && l.z <= 3246 && l.reachable !== false;
         });
     if (activeTree) {
         const cur = cands.find(l => l.x === activeTree.x && l.z === activeTree.z);
@@ -203,8 +207,8 @@ function findReachableTreeStandTile(
     for (const t of pool) {
         const path = s.sdk.findPath(t.x, t.z);
         if (!path.success || path.reachedDestination !== true) continue;
-        // Prefer (3116, 3242) between Oak (3114, 3239) and Oak (3115, 3243) so all 3 Jail guards keep aggro and switching takes 0 steps.
-        const hub = Math.max(Math.abs(t.x - 3116), Math.abs(t.z - 3242));
+        // Prefer (3117, 3242) with 3 open cardinal melee tiles (E/S/W) around player so all 3 Jail guards surround and hit cleanly.
+        const hub = Math.max(Math.abs(t.x - 3117), Math.abs(t.z - 3242));
         reachable.push({
             x: t.x,
             z: t.z,
@@ -372,7 +376,7 @@ if (import.meta.main) {
         ]);
         await rubTeleport(main, WOODCUTTING_GLORY_IDS, /draynor/i, inDraynorJail, isStopped);
         await equipWcGear(main, [OBJ_HOLY_SYMBOL]);
-        await walkWaypointsSafe(main, [[3108, 3242, 2], [3116, 3242, 2]], isStopped);
+        await walkWaypointsSafe(main, [[3108, 3242, 2], [3117, 3242, 2]], isStopped);
         if ((main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43 && !isProtectMeleeOn(main.sdk.getState())) {
             // Single toggle chooses Protect from Melee while letting PrayerGuard 1t-flick with 0 Prayer drain.
             await main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' });
@@ -387,6 +391,7 @@ if (import.meta.main) {
         let lastTagTick = -99;
         let tagCount = 0;
         let noStaggerTicks = 0;
+        let knifeStreakSinceFlinch = 0;
         let lastPhaseTick = -99;
         let phaseAttempts = 0;
         let actionDelayApprox = 0;
@@ -508,6 +513,7 @@ if (import.meta.main) {
                 acts.push(main.direct({ type: 'interactLoc', x: tree.x, z: tree.z, locId: tree.id, optionIndex: chopOp, reason: 'SDK' }));
                 await Promise.all(acts);
                 flinchRolls++;
+                knifeStreakSinceFlinch = 0;
                 rolls++;
                 lastRollServerTick = now + 1;
                 actionDelayApprox = now + 1;
@@ -527,17 +533,27 @@ if (import.meta.main) {
                 continue;
             }
 
-            // Pull outdoor Jail guards once if staggered hit cadence (< 4 distinct hit ticks in 10t) without killing them.
-            while (recentHitTicks.length > 0 && recentHitTicks[0]! < now - 10) recentHitTicks.shift();
+            // Count non-adjacent staggered hits in strict 10-tick span [now-9..now] (2 cycles of attackrate=5 -> 1 or in-phase = <=2, staggered >=2 = 3..5).
+            while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 10) recentHitTicks.shift();
+            let spacedHits10 = 0;
+            let prevSpaced = -99;
+            for (const ht of recentHitTicks) {
+                if (ht - prevSpaced >= 2) {
+                    spacedHits10++;
+                    prevSpaced = ht;
+                }
+            }
             const staggeredHits10 = recentHitTicks.length;
-            if (wantOak && !needNormalLog && gobs >= 2 && staggeredHits10 < 3) {
+            if (wantOak && !needNormalLog && gobs >= 2 && spacedHits10 < 3) {
                 noStaggerTicks++;
             } else {
                 noStaggerTicks = 0;
             }
-            // Perturb coincided attack timers 1 tile along the south edge of Oak (3115, 3243) so >=2 guards stagger out of phase.
-            if (!outOfPrayer && wantOak && !needNormalLog && meNow.worldZ === 3242 && (meNow.worldX === 3116 || meNow.worldX === 3117) && noStaggerTicks >= 15 && phaseAttempts < 4 && now - lastPhaseTick >= 50) {
+            // Perturb coincided or adjacent guard timers 1 tile along the south edge of Oak (3115, 3243) so hits separate by >=2t.
+            const needPhaseShift = noStaggerTicks >= 15 || knifeStreakSinceFlinch >= 3;
+            if (!outOfPrayer && wantOak && !needNormalLog && gobs >= 2 && meNow.worldZ === 3242 && (meNow.worldX === 3116 || meNow.worldX === 3117) && needPhaseShift && phaseAttempts < 6 && now - lastPhaseTick >= 35) {
                 noStaggerTicks = 0;
+                knifeStreakSinceFlinch = 0;
                 lastPhaseTick = now;
                 phaseAttempts++;
                 const stepX = meNow.worldX === 3116 ? 3117 : 3116;
@@ -551,7 +567,7 @@ if (import.meta.main) {
                 && !needNormalLog
                 && tagCount < 16
                 && gobs < 3
-                && staggeredHits10 < 4
+                && spacedHits10 < 4
                 && now - lastTagTick >= 15
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1
@@ -575,9 +591,9 @@ if (import.meta.main) {
                 }
             }
 
-            // Hold busy2 clear for <=2t only when >=2 staggered attackers hit regularly (>=3 hit ticks/10t); else pure 3t knife.
-            const flinchViable = gobs >= 2 || staggeredHits10 >= 3;
-            const keepFlinchWindow = !outOfPrayer && wantOak && !needNormalLog && flinchViable && staggeredHits10 >= 3 && now - lastRollServerTick < 2;
+            // Hold busy2 clear for <=2t only when >=2 spaced attackers hit cleanly (>=3 spaced hit ticks/10t); else pure 3t knife.
+            const flinchViable = gobs >= 2 || spacedHits10 >= 3;
+            const keepFlinchWindow = !outOfPrayer && wantOak && !needNormalLog && flinchViable && spacedHits10 >= 3 && now - lastRollServerTick < 2;
             if (!keepFlinchWindow) {
                 const knifeSlot = slotOfId(main, OBJ_KNIFE);
                 const logSlot = slotOfId(main, OBJ_LOGS);
@@ -591,6 +607,7 @@ if (import.meta.main) {
                     await main.direct({ type: 'clickComponent', componentId: SKILL_MULTI3_MAKE1_A, reason: 'SDK' });
                     await main.direct({ type: 'interactLoc', x: tree.x, z: tree.z, locId: tree.id, optionIndex: chopOp, reason: 'SDK' });
                     knifeRolls++;
+                    if (wantOak && spacedHits10 >= 3) knifeStreakSinceFlinch++;
                     rolls++;
                     lastRollServerTick = now + 3;
                     actionDelayApprox = now + 3;

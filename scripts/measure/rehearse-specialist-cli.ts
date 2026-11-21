@@ -207,8 +207,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
                 bank: cfg.bank,
             }),
         })),
-        planTicks: 640,
-        planSource: '400ms rehearsal <=646t (629t firemaking.rs2 zero-fail floor vs #1 660t)',
+        planTicks: 749,
+        planSource: '400ms rehearsals 741-757t (waitLogs=0 across 3 seeds vs 667t zero-setup stat_random floor in supply-floors.md)',
         targetCap: 646,
     },
     {
@@ -426,8 +426,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
                 inventory: expandKitToSave(FISHING_SPECIALIST_KIT),
             }),
         },
-        planTicks: 2707,
-        planSource: '400ms rehearsal Lochnessrod 2680-2734t (FM 1-30 + Sea Slug burst 179,375 XP + 3t Barbarian Village Fly 54-99 <=2924t vs #1 2984t)',
+        planTicks: 2778,
+        planSource: '400ms rehearsals Lochnessrod 2712-2844t (FM 1-30 + Sea Slug burst 179,375 XP + 3t Barbarian Village Fly 54-99 <=2924t vs #1 2984t)',
         targetCap: 2924,
     },
     {

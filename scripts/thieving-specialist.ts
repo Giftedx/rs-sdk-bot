@@ -34,7 +34,7 @@ import type { Session } from '../packages/core/src/inprocess';
 export const THIEVING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
 
 export const THIEVING_PIZZAS = 25;
-export const THIEVING_CAKES = 27;
+export const THIEVING_CAKES = 26;
 
 export const THIEVING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_GLORY_4]: 1,
@@ -43,9 +43,10 @@ export const THIEVING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_PINEAPPLE_PIZZA]: THIEVING_PIZZAS,
 };
 
-// Live-stockable variant: 0 Glory, 0 Super energy, 0 Pineapple pizza (local Ring of dueling(8) + 27 Chocolate cakes).
+// Live-stockable variant: Ring of dueling(8) + Super energy(4) + 26 Chocolate cakes (local stockable, 0 Glory / 0 Pineapple pizza).
 export const THIEVING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_DUELING_8]: 1,
+    [OBJ_SUPER_ENERGY_4]: 1,
     [OBJ_CHOCOLATE_CAKE]: THIEVING_CAKES,
 };
 
@@ -454,6 +455,10 @@ if (import.meta.main) {
                     await main.direct({ type: 'dropItem', slot: ringSlot, reason: 'SDK' });
                 }
                 await walkWaypointsSafe(main, CWARS_TO_ARDY_MARKET_WAYPOINTS, isStopped);
+                const energyJunk = main.sdk.getInventory().find(i => i.id === 229 || i.id === 3016 || i.id === 3018 || i.id === 3020 || i.id === 3022)?.slot;
+                if (energyJunk !== undefined) {
+                    await main.direct({ type: 'dropItem', slot: energyJunk, reason: 'SDK' });
+                }
             }
             travelTicks = elapsedNow();
         }

@@ -166,10 +166,11 @@ export const CRAFTING_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(CRAFTIN
 export const HERBLORE_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(HERBLORE_SUPPLY_BILL);
 export const MAGIC_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(MAGIC_SUPPLY_BILL);
 
-// 28 inventory slots: live Thieving kit using Ring of dueling(8) + 27 Chocolate cakes (405 HP; Ring dropped after Castle Wars teleport).
+// 28 inventory slots: live Thieving kit using Ring of dueling(8) + Super energy(4) + 26 Chocolate cakes (390 HP; Ring/pot dropped for coins).
 export const THIEVING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = [
-    { id: 1897, name: 'Chocolate cake', count: 27, stackable: false },
+    { id: 1897, name: 'Chocolate cake', count: 26, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 1, stackable: false },
 ] as const;
 
 // 10 inventory slots: noted Unfermented wine + Ring of dueling(8) + 4 Fruit Blast cocktail bases/slices (fits free tutorial slots).
