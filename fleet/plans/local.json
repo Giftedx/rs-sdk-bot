@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795293811416,
+ "at": 1795293893904,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -388,6 +388,87 @@
    ]
   },
   {
+   "account": "BoneToPick",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "ardy",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "vial of water",
+    "STOCK_TARGET": "73",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "492",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "292",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"227\":73}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy vials of water from Aemad's store in East Ardougne",
+   "role": "bank",
+   "template": "squad-vial-of-water",
+   "autopilot": "local",
+   "resources": [
+    "shop:ardy"
+   ]
+  },
+  {
+   "account": "DropMyLoad",
+   "script": "scripts/microbot-production.ts",
+   "args": [
+    "strip:swamp-toad",
+    "MAX_MAKE=2",
+    "CAP=1500",
+    "MEMBERS=1",
+    "ORDER_MODE=best-effort"
+   ],
+   "env": {
+    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"2152\":2}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "strip banked swamp toads into toad's legs",
+   "role": "herblore",
+   "template": "squad-strip-swamp-toad",
+   "autopilot": "local",
+   "resources": [
+    "squad:herblore-bank"
+   ]
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "1500",
+    "trooper"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
+   "role": "combat",
+   "template": "army-trooper-prayer-99",
+   "autopilot": "local",
+   "resources": [
+    "trooper:battlefield"
+   ]
+  },
+  {
    "account": "mmtha0205",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -440,68 +521,100 @@
    ]
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/gather-combat.ts",
+   "account": "Swordswallow",
+   "script": "scripts/shop-buyer.ts",
    "args": [
-    "6000",
-    "giant"
+    "wydin_choc",
+    "1200"
    ],
    "env": {
-    "MAX_KILLS": "40"
+    "ITEMS": "chocolate bar",
+    "STOCK_TARGET": "1",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "220",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "20",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1973\":1}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
-   "role": "combat",
-   "template": "squad-ardougne-giants",
+   "goal": "buy chocolate bars at Wydin's Food Store in Port Sarim",
+   "role": "bank",
+   "template": "squad-chocolate-bar",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-giants"
+    "shop:wydin_choc"
+   ]
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 2832 9586",
+    "scripts/gather-spawn.ts 223 27"
+   ],
+   "env": {
+    "TICKS": "3000",
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "gather red spiders' eggs in Karamja Volcano (non-Wilderness) for super restore potions",
+   "role": "herblore",
+   "template": "squad-karamja-red-spiders-eggs",
+   "autopilot": "local",
+   "resources": [
+    "squad:karamja-red-spiders-eggs"
    ]
   },
   {
    "account": "Quickhandjob",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "536",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "4",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying bought dragon bones",
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-bury-dragon-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   },
   {
    "account": "Magicwanda",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "giant"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "MAX_KILLS": "40"
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
-   "role": "combat",
-   "template": "squad-ardougne-giants",
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-giants"
+    "knight:2653,3300"
    ]
   },
   {
@@ -529,57 +642,23 @@
    "account": "Spitroaster",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/walk-to.ts 2832 9586",
-    "scripts/gather-spawn.ts 223 27"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=1 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=spitroaster-kit2-385-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
-    "TICKS": "3000",
     "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"223\":27}}"
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":1}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "gather red spiders' eggs in Karamja Volcano (non-Wilderness) for super restore potions",
-   "role": "herblore",
-   "template": "squad-karamja-red-spiders-eggs",
+   "goal": "buy 1 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "supply",
+   "template": "kit-buy:aio-blood-chest",
    "autopilot": "local",
-   "resources": [
-    "squad:karamja-red-spiders-eggs"
-   ]
+   "resources": []
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "ardy",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "vial of water",
-    "STOCK_TARGET": "73",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "492",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "292",
-    "AUTOPILOT_ORDER": "[0]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"227\":73}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy vials of water from Aemad's store in East Ardougne",
-   "role": "bank",
-   "template": "squad-vial-of-water",
-   "autopilot": "local",
-   "resources": [
-    "shop:ardy"
-   ]
-  },
-  {
-   "account": "DropMyLoad",
+   "account": "InTheSack",
    "script": "scripts/microbot-production.ts",
    "args": [
     "strip:swamp-toad",
