@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795295044072-swordswallow-dropmyload-ballofwool",
+ "account": "DropMyLoad",
+ "partner": "Swordswallow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ball of wool",
+ "requested": 2,
+ "claim": "9c6e03b4-e876-4bf3-bad7-4743e0fcab83",
+ "count": 0,
+ "ok": false,
+ "at": 1795295096527,
+ "detail": "trade claimed"
+}
