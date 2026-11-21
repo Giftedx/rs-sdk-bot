@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { supervise } from '../packages/practice/src/supervise';
-import { planShopPurchases, maximumUnitCost, buyWithBudget, PROFILES, shopTargetsMet, stockWaitStatus, shopFinishOk, dialogClick, blindBuyNow, blindBuyObserved, BLIND_SETTLE_TICKS, selectItems, profileRefusal, approachLegs, approachShop } from './shop-buyer';
+import { planShopPurchases, maximumUnitCost, buyWithBudget, PROFILES, shopTargetsMet, stockWaitStatus, shopFinishOk, dialogClick, blindBuyNow, blindBuyObserved, BLIND_SETTLE_TICKS, selectItems, profileRefusal, approachLegs, approachShop, handleDialogShopOpen, runDialogBuyStep } from './shop-buyer';
 
 const target = (name: string, buyPerTick: number) => ({ re: new RegExp(`^${name}$`, 'i'), buyPerTick });
 const item = (name: string, count = 100, buyPrice = 1) => ({ name, count, buyPrice });
@@ -340,4 +340,63 @@ test('the dommik profile buys a ring mould and a chisel at the Al Kharid craftin
     expect(p.items.map(i => [i.re.test('Ring mould'), i.re.test('Chisel')])).toEqual([[true, false], [false, true]]);
     expect(p.items.map(i => i.shelf)).toEqual([4, 2]);
     expect(p.bankSpot).toEqual({ x: 3269, z: 3167 });
+});
+
+test('PK supply profiles cover Jakut dragon daggers, Magic Guild water/earth runes, Brimhaven/TBWT karambwans, Oziach, gem shops, and Tenzing climbing boots', () => {
+    expect(selectItems(PROFILES.jukat_dagger!.items, 'dragon dagger').map(i => i.re.source)).toEqual(['^dragon dagger$']);
+    expect(PROFILES.jukat_dagger!.items.find(i => i.re.test('Dragon dagger'))?.shelf).toBe(2);
+    expect(selectItems(PROFILES.magic_guild_elemental!.items, 'water rune|earth rune')).toHaveLength(2);
+    expect(selectItems(PROFILES.magic_guild!.items, 'blood rune|law rune|nature rune')).toHaveLength(3);
+    expect(PROFILES.alfonse!.npc.test('Alfonse the waiter')).toBe(true);
+    expect(selectItems(PROFILES.alfonse!.items, 'cooked karambwan').map(i => i.shelf)).toEqual([3]);
+    expect(PROFILES.tiadeche!.npc.test('Tiadeche')).toBe(true);
+    expect(selectItems(PROFILES.tiadeche!.items, 'raw karambwan').map(i => i.shelf)).toEqual([10]);
+    expect(PROFILES.oziach!.npc.test('Oziach')).toBe(true);
+    expect(PROFILES.oziach!.npcSpot.z).toBeLessThan(3520);
+    expect(PROFILES.tenzing!.npcSpot.x).toBeLessThan(2944);
+    expect(selectItems(PROFILES.gem_trader!.items, 'uncut sapphire|sapphire')).toHaveLength(2);
+    expect(selectItems(PROFILES.herquin!.items, 'uncut sapphire|sapphire')).toHaveLength(2);
+});
+
+test('handleDialogShopOpen steps through Oziach quest completion dialogue until shop opens', async () => {
+    let step = 0, shopOpen = false;
+    const steps = [
+        { isOpen: true, isWaiting: false, options: [{ index: 0, text: 'Click here to continue' }] },
+        { isOpen: true, isWaiting: false, options: [{ index: 0, text: 'Can I buy a rune plate mail body now please?' }, { index: 1, text: 'Thank you.' }] },
+    ];
+    const sdk = {
+        getState: () => ({ shop: { isOpen: shopOpen } }),
+        getDialog: () => shopOpen || step >= steps.length ? null : steps[step]!,
+        sendClickDialog: async (index: number) => {
+            if (step === 1) expect(index).toBe(0);
+            step++;
+            if (step >= steps.length) shopOpen = true;
+        },
+    };
+    expect(await handleDialogShopOpen(sdk, PROFILES.oziach!.dialogOpen!, async () => {})).toBe(true);
+    expect(step).toBe(2);
+});
+
+test('runDialogBuyStep purchases Tenzing climbing boots and enforces coin reserve and spend limit', async () => {
+    let coins = 100, boots = 0, step = -1;
+    const inv = () => [{ name: 'Coins', count: coins }, ...(boots > 0 ? Array.from({ length: boots }, () => ({ name: 'Climbing boots', count: 1 })) : [])];
+    const dialogs = [
+        { isOpen: true, isWaiting: false, options: [{ index: 0, text: 'Can I buy some Climbing boots?' }, { index: 1, text: 'Nothing, thanks!' }] },
+        { isOpen: true, isWaiting: false, options: [{ index: 0, text: 'OK, sounds good.' }, { index: 1, text: 'No, thanks.' }] },
+    ];
+    const sdk = {
+        getInventory: inv,
+        getDialog: () => step >= 0 && step < dialogs.length ? dialogs[step]! : null,
+        sendClickDialog: async (idx: number) => {
+            if (step === 0) expect(idx).toBe(0);
+            if (step === 1) { expect(idx).toBe(0); coins -= 12; boots += 1; }
+            step++;
+        },
+    };
+    const bot = { talkTo: async () => { step = 0; return { success: true }; } };
+    expect(await runDialogBuyStep(sdk, bot, PROFILES.tenzing!.npc, PROFILES.tenzing!.dialogBuy!, 50, 24, 5, async () => {})).toEqual({ bought: 1, spent: 12 });
+    expect(coins).toBe(88);
+    expect(boots).toBe(1);
+    // Reserve + remaining spend guard stops when remaining budget cannot afford another pair.
+    expect(await runDialogBuyStep(sdk, bot, PROFILES.tenzing!.npc, PROFILES.tenzing!.dialogBuy!, 80, 12, 5, async () => {})).toEqual({ bought: 0, spent: 0 });
 });

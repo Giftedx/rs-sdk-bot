@@ -57,10 +57,116 @@ export type Gear = { id: number; name: string; slot: string; tier?: number; spec
 // antipoisonHolders: the first accounts of the list that must hold an antipoison. The gang clone bench (five of ours,
 // seeds 1 to 3, hosted run 44262314889) killed 9 of 9 with no death with a potion on all five, on the first two, on the
 // first one and on none; the others carry the extra food (2 lobsters or 1 shark a kill).
-export type Rule = { name: string; benchKit: string; maxBankAgeHours: number; maxDonorBankAgeHours: number; minArrows: number; antipoisonHolders: number };
+export type Rule = {
+    name: string;
+    benchKit: string;
+    maxBankAgeHours: number;
+    maxDonorBankAgeHours: number;
+    minArrows: number;
+    antipoisonHolders: number;
+    minHours?: number;
+    requireQuests?: readonly string[];
+    bisSupplies?: boolean;
+};
+export const SUPPLY_QUESTS = ['Lost City', 'Dragon Slayer', 'Death Plateau', 'Druidic Ritual', 'Tai Bwo Wannai Trio'] as const;
+export const TRIBRID_BIS_ITEMS = {
+    shark: 385,
+    swordfish: 373,
+    lobster: 379,
+    cookedKarambwan: 3144,
+    runeArrow: 892,
+    adamantArrow: 890,
+    earthRune: 557,
+    waterRune: 555,
+    natureRune: 561,
+    lawRune: 563,
+    airRune: 556,
+    fireRune: 554,
+    bloodRune: 565,
+    cosmicRune: 564,
+    climbingBoots: 3105,
+    dragonDaggerP: 1231,
+    magicShortbow: 861,
+    blackBody: 2503,
+    blackChaps: 2497,
+    blackVambs: 2491,
+    ringOfRecoil: 2550,
+    runeFullHelm: 1163,
+    runePlatebody: 1127,
+    runePlatelegs: 1079,
+    runeKiteshield: 1201,
+} as const;
+export const TRIBRID_POTION_DOSE_IDS: Readonly<Record<string, readonly [id: number, doses: number][]>> = {
+    'Prayer potion(3)': [[139, 3], [2434, 4]],
+    'Super attack(3)': [[145, 3], [2436, 4]],
+    'Super strength(3)': [[157, 3], [2440, 4]],
+    'Super defence(3)': [[163, 3], [2442, 4]],
+    'Ranging potion(3)': [[169, 3], [2444, 4]],
+    'Antipoison(3)': [[175, 3], [2446, 4], [181, 3], [2448, 4]],
+};
 export const RULES: Readonly<Record<string, Rule>> = {
     'gang-chain-bind': { name: 'gang-chain-bind', benchKit: 'live-walker-iron-rune-chain-bind', maxBankAgeHours: 6, maxDonorBankAgeHours: 168, minArrows: 100, antipoisonHolders: 2 },
+    'gang-tribrid-bis': {
+        name: 'gang-tribrid-bis',
+        benchKit: 'live-walker-iron-rune-chain-bind',
+        maxBankAgeHours: 6,
+        maxDonorBankAgeHours: 168,
+        minArrows: 100,
+        antipoisonHolders: 4,
+        minHours: 4,
+        requireQuests: ['Lost City', 'Dragon Slayer', 'Death Plateau', 'Druidic Ritual'],
+        bisSupplies: true,
+    },
 };
+
+export function questBlockers(a: { quests: ReadonlySet<string> }, quests: readonly string[] = SUPPLY_QUESTS): string[] {
+    return quests.filter(q => !a.quests.has(q.toLowerCase()));
+}
+
+export function enduranceHours(a: Account): { hours: number; limiting: string; foodHours: number; comboHours: number; ammoHours: number; runeHours: number; potionHours: number } {
+    const own = holdings(a);
+    const qty = (id: number) => own.get(id)?.count ?? 0;
+    const foodUnits = qty(TRIBRID_BIS_ITEMS.shark) + qty(TRIBRID_BIS_ITEMS.swordfish) * 14 / 20 + qty(TRIBRID_BIS_ITEMS.lobster) * 12 / 20;
+    const foodHours = foodUnits / 88.75;
+    const comboHours = qty(TRIBRID_BIS_ITEMS.cookedKarambwan) / 25;
+    const ammoHours = (qty(TRIBRID_BIS_ITEMS.runeArrow) + qty(TRIBRID_BIS_ITEMS.adamantArrow)) / 163.75;
+    const runeRates: [string, number, number][] = [
+        ['earth rune', TRIBRID_BIS_ITEMS.earthRune, 80.75],
+        ['water rune', TRIBRID_BIS_ITEMS.waterRune, 80.75],
+        ['nature rune', TRIBRID_BIS_ITEMS.natureRune, 53.75],
+        ['law rune', TRIBRID_BIS_ITEMS.lawRune, 5],
+        ['air rune', TRIBRID_BIS_ITEMS.airRune, 75],
+        ['blood rune', TRIBRID_BIS_ITEMS.bloodRune, 27.5],
+    ];
+    let runeHours = Infinity, limitingRune = 'runes';
+    for (const [label, id, perHr] of runeRates) {
+        const h = qty(id) / perHr;
+        if (h < runeHours) { runeHours = h; limitingRune = label; }
+    }
+    const potionRates: [string, readonly [number, number][], number][] = [
+        ['prayer potion', TRIBRID_POTION_DOSE_IDS['Prayer potion(3)']!, 3],
+        ['super attack', TRIBRID_POTION_DOSE_IDS['Super attack(3)']!, 1.5],
+        ['super strength', TRIBRID_POTION_DOSE_IDS['Super strength(3)']!, 1.5],
+        ['super defence', TRIBRID_POTION_DOSE_IDS['Super defence(3)']!, 1.5],
+        ['ranging potion', TRIBRID_POTION_DOSE_IDS['Ranging potion(3)']!, 1.5],
+        ['antipoison', TRIBRID_POTION_DOSE_IDS['Antipoison(3)']!, 1],
+    ];
+    let potionHours = Infinity, limitingPotion = 'potions';
+    for (const [label, pairs, perHr] of potionRates) {
+        const eq3 = pairs.reduce((n, [id, d]) => n + qty(id) * d / 3, 0);
+        const h = eq3 / perHr;
+        if (h < potionHours) { potionHours = h; limitingPotion = label; }
+    }
+    const candidates: [string, number][] = [
+        ['sharks/food', foodHours],
+        ['cooked karambwan', comboHours],
+        ['rune arrows', ammoHours],
+        [limitingRune, runeHours],
+        [limitingPotion, potionHours],
+    ];
+    const [limiting, hours] = candidates.sort((x, y) => x[1] - y[1])[0]!;
+    return { hours, limiting, foodHours, comboHours, ammoHours, runeHours, potionHours };
+}
 
 const SLOT: Readonly<Record<string, number>> = { hat: 0, back: 1, front: 2, righthand: 3, torso: 4, lefthand: 5, legs: 7, hands: 9, feet: 10, ring: 12, quiver: 13 };
 const COMBAT = ['Attack', 'Strength', 'Defence', 'Ranged', 'Magic', 'Prayer', 'Hitpoints'] as const;
@@ -91,7 +197,8 @@ export function wearable(g: Gear, a: Account): boolean {
 // for a class of items).
 export type Need = { what: string; count: number; blocking: boolean; id?: number; accept: (item: Item) => boolean };
 export type Pick = { account: string; ready: boolean; reasons: string[]; notes: string[]; worn: Worn[]; carried: Item[]; food: number; foodRows: Item[]; foodSlots: number; foodHeld: number; foodStock: Item[];
-    styles: string[]; special: string | null; escape: string | null; freeze: string | null; needs: Need[]; pack: ReturnType<typeof packOf> };
+    styles: string[]; special: string | null; escape: string | null; freeze: string | null; needs: Need[]; pack: ReturnType<typeof packOf>;
+    endurance?: ReturnType<typeof enduranceHours>; questBlockers?: string[] };
 
 const SPELL_NAME: Readonly<Record<number, string>> = { 1174: 'Camelot Teleport', 1164: 'Varrock Teleport' };
 
@@ -238,8 +345,44 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     if (inWestArdougne(a.pos)) reasons.push('stands inside West Ardougne, which the walker cannot leave');
     if (wildernessLevel(a.pos.z) > 0) reasons.push(`stands in the Wilderness at level ${wildernessLevel(a.pos.z)}`);
     if (!maxed(a)) notes.push(`not 99 in ${COMBAT.filter(s => (a.levels[s.toLowerCase()] ?? 1) < 99).join(', ')}`);
+    const endurance = enduranceHours(a);
+    const missingQuests = questBlockers(a, rule.requireQuests ?? SUPPLY_QUESTS);
+    if (rule.bisSupplies) {
+        for (const q of missingQuests) reasons.push(`quest blocker: ${q} incomplete`);
+        const bisRequirements: readonly [label: string, id: number, minCount: number][] = [
+            ['Climbing boots', TRIBRID_BIS_ITEMS.climbingBoots, 1],
+            ['Dragon dagger(p)', TRIBRID_BIS_ITEMS.dragonDaggerP, 1],
+            ['Magic shortbow', TRIBRID_BIS_ITEMS.magicShortbow, 1],
+            ["Black d'hide body", TRIBRID_BIS_ITEMS.blackBody, 1],
+            ["Black d'hide chaps", TRIBRID_BIS_ITEMS.blackChaps, 1],
+            ["Black d'hide vambraces", TRIBRID_BIS_ITEMS.blackVambs, 1],
+            ['Ring of recoil', TRIBRID_BIS_ITEMS.ringOfRecoil, 2],
+            ['Cooked karambwan', TRIBRID_BIS_ITEMS.cookedKarambwan, 25],
+        ];
+        for (const [label, id, count] of bisRequirements) {
+            const held = own.get(id)?.count ?? 0;
+            if (held < count) {
+                const shortCount = count - held;
+                needs.push({ what: label, id, count: shortCount, blocking: true, accept: i => i.id === id });
+                reasons.push(`no ${label}${shortCount > 1 ? ` (${shortCount} short)` : ''}`);
+            }
+        }
+        for (const [label, pairs] of Object.entries(TRIBRID_POTION_DOSE_IDS)) {
+            if (label === 'Antipoison(3)') continue;
+            const eq3 = pairs.reduce((n, [id, d]) => n + (own.get(id)?.count ?? 0) * d / 3, 0);
+            if (eq3 < 4) {
+                const shortCount = Math.ceil(4 - eq3);
+                const ids = new Set(pairs.map(([id]) => id));
+                needs.push({ what: label, id: pairs[0]![0], count: shortCount, blocking: true, accept: i => ids.has(i.id) });
+                reasons.push(`no ${label} (${shortCount} short)`);
+            }
+        }
+    }
+    if (rule.minHours !== undefined && endurance.hours < rule.minHours) {
+        reasons.push(`trip endurance ${endurance.hours.toFixed(1)} h under ${rule.minHours}.0 h floor (limiting: ${endurance.limiting})`);
+    }
     return { account: a.name, ready: reasons.length === 0, reasons, notes, worn, carried, food, foodRows, foodSlots, foodHeld, foodStock, styles: Object.keys(fight), special,
-        escape: escapeSpell === null ? null : SPELL_NAME[escapeSpell] ?? `spell ${escapeSpell}`, freeze: freezeSpell === null ? null : 'Bind', needs, pack };
+        escape: escapeSpell === null ? null : SPELL_NAME[escapeSpell] ?? `spell ${escapeSpell}`, freeze: freezeSpell === null ? null : 'Bind', needs, pack, endurance, questBlockers: missingQuests };
 }
 
 export type Move = { from: string; to: string; id: number; item: string; count: number; blocking: boolean; distance: number; donorBankAgeHours: number; reserved: boolean };
@@ -314,10 +457,30 @@ export function orderCommands(moves: readonly Move[], posOf: (name: string) => {
 // Where a missing item comes from when no account has a spare one: the shop-buyer profile whose shop stocks it
 // (knowledge/shops.json through `shops`), then the Grand Exchange ask of .practice/market-all.json.
 export type Shop = { inv: string; stock: { item: string; count: number }[] };
-export const PROFILE_SHOP: Readonly<Record<string, string>> = { jiminua: 'junglestore', lowe: 'archeryshop', catherby_arrows: 'archeryshop2', aubury: 'runeshop', magic_guild: 'magicguildshop', scavvo: 'runiteshop', jukat: 'dragonswordshop' };
+export const WILDERNESS_SHOPS: ReadonlySet<string> = new Set(['magearena_runeshop', 'magearena_staffshop']);
+export const PROFILE_SHOP: Readonly<Record<string, string>> = {
+    jiminua: 'junglestore',
+    lowe: 'archeryshop',
+    catherby_arrows: 'archeryshop2',
+    dargaud: 'ranging_guild_bowshop',
+    aubury: 'runeshop',
+    betty: 'magicshop',
+    magic_guild: 'magicguildshop',
+    magic_guild_elemental: 'magicguildshop',
+    scavvo: 'runiteshop',
+    oziach: 'runeplateshop',
+    jukat: 'dragonswordshop',
+    jukat_dagger: 'dragonswordshop',
+    alfonse: 'karamja_fishrestaurant',
+    tiadeche: 'tbwt_tiadeche_final_inventory',
+    herquin: 'gemshop',
+    gem_trader: 'gemshop2',
+    taverley: 'herbloreshop',
+};
 export function shopSource(name: string, debugname: string, shops: readonly Shop[], profiles: Readonly<Record<string, { items: { re: RegExp }[]; need?: { skill: string; level: number } }>> = PROFILES): string | null {
     const out: string[] = [];
     for (const shop of shops) {
+        if (WILDERNESS_SHOPS.has(shop.inv)) continue;
         const row = shop.stock.find(s => s.item === debugname && s.count > 0);
         if (!row) continue;
         const profile = Object.entries(PROFILE_SHOP).find(([key, inv]) => inv === shop.inv && profiles[key]?.items.some(i => i.re.test(name)))?.[0];
@@ -345,13 +508,24 @@ export function receiptOf(p: Pick, a: { at: number; bankAt: number | null }, rul
     return { schema: 'squad-ready/1', account: p.account, ok: p.ready, rule, at: now, statusAt: a.at, bankAt: a.bankAt, statusSha256: createHash('sha256').update(statusBytes).digest('hex'), reasons: p.reasons };
 }
 export function accountOf(status: any, owner?: { side?: string; reservation?: string }): Account | null {
-    if (!status || typeof status.name !== 'string' || !status.pos || !Array.isArray(status.skills)) return null;
-    const items = (rows: any): Item[] => (Array.isArray(rows) ? rows : []).filter((i: any) => Number.isSafeInteger(i?.id) && typeof i.name === 'string' && i.count > 0).map((i: any) => ({ id: i.baseId ?? i.id, name: i.name, count: i.count }));
-    return { name: status.name, at: Number(status.at) || 0, bankAt: Number.isFinite(status.bankAt) ? status.bankAt : null, pos: { x: status.pos.x, z: status.pos.z, level: status.pos.level ?? 0 },
-        levels: Object.fromEntries(status.skills.map((s: any) => [String(s.name).toLowerCase(), s.level])),
-        ...(Number.isFinite(status.skills.find((s: any) => s?.name === 'Prayer')?.currentLevel) ? { prayerPoints: status.skills.find((s: any) => s?.name === 'Prayer').currentLevel as number } : {}), quests: new Set((status.quests ?? []).filter((q: any) => q?.state === 'complete').map((q: any) => String(q.name).toLowerCase())),
-        worn: (Array.isArray(status.equipment) ? status.equipment : []).filter((i: any) => Number.isSafeInteger(i?.id)).map((i: any) => ({ id: i.baseId ?? i.id, name: i.name, count: i.count, slot: i.slot })),
-        pack: items(status.inventory), bank: items(status.bank), ...(owner?.side ? { side: owner.side } : {}), ...(owner?.reservation ? { reservation: owner.reservation } : {}) };
+    if (!status || typeof status.name !== 'string' || !status.name.trim() || !status.pos || !Number.isFinite(status.pos.x) || !Number.isFinite(status.pos.z) || !Array.isArray(status.skills)) return null;
+    const validSkills = status.skills.filter((s: any) => s && typeof s.name === 'string' && Number.isFinite(s.level));
+    const items = (rows: any): Item[] => (Array.isArray(rows) ? rows : []).filter((i: any) => i && Number.isSafeInteger(i.id) && typeof i.name === 'string' && Number.isFinite(i.count) && i.count > 0).map((i: any) => ({ id: Number.isSafeInteger(i.baseId) ? i.baseId : i.id, name: i.name, count: i.count }));
+    const prayerCurrent = validSkills.find((s: any) => s.name === 'Prayer')?.currentLevel;
+    return {
+        name: status.name,
+        at: Number.isFinite(status.at) ? Number(status.at) : 0,
+        bankAt: Number.isFinite(status.bankAt) ? status.bankAt : null,
+        pos: { x: status.pos.x, z: status.pos.z, level: Number.isSafeInteger(status.pos.level) ? status.pos.level : 0 },
+        levels: Object.fromEntries(validSkills.map((s: any) => [String(s.name).toLowerCase(), s.level])),
+        ...(Number.isFinite(prayerCurrent) ? { prayerPoints: prayerCurrent as number } : {}),
+        quests: new Set((Array.isArray(status.quests) ? status.quests : []).filter((q: any) => q && typeof q.name === 'string' && q.state === 'complete').map((q: any) => String(q.name).toLowerCase())),
+        worn: (Array.isArray(status.equipment) ? status.equipment : []).filter((i: any) => i && Number.isSafeInteger(i.id) && Number.isSafeInteger(i.slot) && typeof i.name === 'string').map((i: any) => ({ id: Number.isSafeInteger(i.baseId) ? i.baseId : i.id, name: i.name, count: Number.isFinite(i.count) && i.count > 0 ? i.count : 1, slot: i.slot })),
+        pack: items(status.inventory),
+        bank: items(status.bank),
+        ...(owner?.side ? { side: owner.side } : {}),
+        ...(owner?.reservation ? { reservation: owner.reservation } : {}),
+    };
 }
 
 const hours = (ms: number) => `${(ms / 3_600_000).toFixed(1)} h`;
@@ -363,6 +537,7 @@ export function report(plan: Plan, accounts: readonly Account[], rule: Rule, now
         out.push(`  wears    ${[['helm', 0], ['body', 4], ['legs', 7], ['shield', 5], ['amulet', 2], ['weapon', 3]].map(([label, n]) => `${label} ${slot(n as number)?.name ?? '-'}`).join(' | ')} | quiver ${slot(13) ? `${slot(13)!.count} ${slot(13)!.name}` : '-'}`);
         out.push(`  carries  ${p.carried.map(c => (c.count > 1 ? `${c.count} ` : '') + c.name).join(', ') || '-'} | food ${p.food} of ${p.foodSlots}${p.foodRows.length ? ` (${p.foodRows.map(r => `${r.count} ${r.name}`).join(', ')})` : ''}; holds ${p.foodStock.map(f => `${f.count} ${f.name}`).join(', ') || 'none'}: ${Math.floor(p.foodHeld / Math.max(1, p.foodSlots))} full packs`);
         out.push(`  fights   ${p.styles.join('+') || 'no style'}${p.special ? ` with a ${p.special} special attack` : ''} | escape ${p.escape ?? 'none'} | freeze ${p.freeze ?? 'none'}`);
+        if (p.endurance) out.push(`  sustain  ${p.endurance.hours.toFixed(1)} h (limiting: ${p.endurance.limiting}; food ${p.endurance.foodHours.toFixed(1)}h, combo ${p.endurance.comboHours.toFixed(1)}h, ammo ${p.endurance.ammoHours.toFixed(1)}h, runes ${p.endurance.runeHours.toFixed(1)}h, pots ${p.endurance.potionHours.toFixed(1)}h) | quests missing: ${p.questBlockers?.join(', ') || 'none'}`);
         for (const r of p.reasons) out.push(`  blocked  ${r}`);
         for (const n of p.notes) out.push(`  note     ${n}`);
         for (const m of plan.moves.filter(m => m.to === p.account)) out.push(`  ${m.blocking ? 'missing ' : 'wanted  '} ${m.count} ${m.item} <- ${m.from} (${m.distance} tiles, bank read ${m.donorBankAgeHours.toFixed(1)} h ago${m.reserved ? ', coordinator reservation' : ''})`);
@@ -380,7 +555,10 @@ if (import.meta.main) {
     const here = resolve(import.meta.dir, '..');
     const mainOf = (dir: string) => { try { const m = readFileSync(join(dir, '.git'), 'utf8').match(/^gitdir: (.+?)[\\/]\.git[\\/]worktrees[\\/]/m); return m ? resolve(m[1]!) : dir; } catch { return dir; } };
     const root = resolve(flag('--root') ?? mainOf(here)), now = Date.now();
-    const rule = { ...RULES[flag('--rule') ?? 'gang-chain-bind']!, ...(flag('--max-age') ? { maxBankAgeHours: Number(flag('--max-age')) } : {}) };
+    const ruleName = flag('--rule') ?? 'gang-chain-bind';
+    const baseRule = RULES[ruleName];
+    if (!baseRule) throw Error(`unknown squad-ready rule: ${ruleName}`);
+    const rule = { ...baseRule, ...(flag('--max-age') ? { maxBankAgeHours: Number(flag('--max-age')) } : {}) };
     const read = (file: string) => JSON.parse(readFileSync(file, 'utf8'));
     const gearRows = read(join(here, 'knowledge', 'gear.json')) as Gear[], gear = new Map(gearRows.map(r => [r.id, r]));
     const items = read(join(here, 'knowledge', 'items.json')) as { id: number; name: string; debugname: string }[];
@@ -389,14 +567,14 @@ if (import.meta.main) {
     const owners = new Map(Object.entries((ownersFile ? read(ownersFile).accounts : {}) as Record<string, { side: string; server: string; reservation?: string }>).map(([n, o]) => [n.toLowerCase(), o]));
     const side = process.env.FLEET_SIDE || 'local', server = 'rs-sdk-demo.fly.dev';
     const statusDir = join(root, '.practice', 'status');
-    const fleet = readdirSync(statusDir).filter(f => f.endsWith('.json')).flatMap(f => {
+    const fleet = existsSync(statusDir) ? readdirSync(statusDir).filter(f => f.endsWith('.json')).flatMap(f => {
         try {
             const status = read(join(statusDir, f)), owner = owners.get(String(status?.name).toLowerCase());
             if (status?.server !== server || !owner || owner.side !== side || String(status.name).toLowerCase() === 'haggis') return [];
             const a = accountOf(status, owner);
             return a ? [a] : [];
         } catch { return []; }
-    });
+    }) : [];
     // No account named: the maxed accounts, the one with the fewest blocking faults first.
     const nameOf = (id: number) => items.find(i => i.id === id)?.name;
     const blockers = (a: Account) => pickKit(a, gear, rule, now).reasons.length;
@@ -414,7 +592,7 @@ if (import.meta.main) {
     try { market = read(join(root, '.practice', 'market-all.json')).items; } catch { /* no market file: the plan names no price */ }
     const source = (gap: Gap) => {
         const row = gap.id !== undefined ? items.find(i => i.id === gap.id) : undefined, m = gap.id !== undefined ? market[String(gap.id)] : undefined;
-        const shop = row ? shopSource(row.name, row.debugname, shops) : null;
+        const shop = row?.id === TRIBRID_BIS_ITEMS.climbingBoots ? 'shop-buyer profile tenzing (Death Plateau dialog, 12 coins)' : row ? shopSource(row.name, row.debugname, shops) : null;
         return [shop, m?.ask ? `Grand Exchange ask ${m.ask} each (${m.sell} on sale), ${gap.count * m.ask} for ${gap.count}` : row ? 'no Grand Exchange seller' : null].filter(Boolean).join('; ') || 'see the plan';
     };
     if (args.includes('--json')) console.log(JSON.stringify({ rule, now, picks: plan.picks.map(({ needs, ...p }) => ({ ...p, needs: needs.map(({ accept: _accept, ...n }) => n) })), moves: plan.moves, gaps: plan.gaps }, null, 1));

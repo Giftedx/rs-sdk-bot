@@ -2719,7 +2719,7 @@ test('a vacant slot names the nearest template and the first gate that stopped i
     expect(reason(acct('Rookie'), [supply('any-job')], { bill: [] })).toBe('vacant: no finite route or army supply demand');
 });
 
-import { SQUAD_ESCAPE, SQUAD_HOURLY, squadBlock, squadHeld, squadKeeps, squadRows, squadTarget, type SquadInput } from '../src/squad';
+import { SQUAD_ESCAPE, SQUAD_HOURLY, SQUAD_POTION_ALIASES, SQUAD_SPARES, squadBlock, squadHeld, squadKeeps, squadRows, squadTarget, type SquadInput } from '../src/squad';
 import { squadSupplies, SQUAD_RESTOCK, SQUAD_UNIT_COST } from '../src/autopilot';
 
 test('the squad block reads members and hours; only an active block with members is active', () => {
@@ -2740,16 +2740,19 @@ test('the squad rows are a stock target of the member minus what it holds, food 
     expect(squadTarget('food', 4)).toBe(355);
     const squad = (items: Record<string, number>, active = true): SquadInput => ({ active, hours: 4, members: [{ name: 'Hunter', items }] });
     const rows = squadRows(squad({}));
-    expect(rows.map(r => r.consumer)).toEqual(['food', 'arrow', 'earth rune', 'water rune', 'nature rune', 'antipoison(3)', 'law rune', 'air rune'].map(i => `gang squad Hunter: ${i}`));
+    expect(rows.map(r => r.consumer)).toEqual([...Object.keys(SQUAD_HOURLY), ...Object.keys(SQUAD_SPARES)].map(i => `gang squad Hunter: ${i}`));
     expect(rows.every(r => r.account === 'hunter')).toBe(true);
     expect(rows.find(r => /: arrow$/.test(r.consumer))!.short).toBe(squadTarget('arrow', 4));
     // Held stock counts first; a line at its target gives no row. Lobsters held count 12/20 of a shark; new food is sharks.
-    const full = Object.fromEntries(Object.keys(SQUAD_HOURLY).filter(i => i !== 'food').map(i => [i === 'arrow' ? 'rune arrow' : i, squadTarget(i, 4)]));
-    expect(squadRows(squad({ ...full, ...SQUAD_ESCAPE, shark: 355 }))).toEqual([]);
-    expect(squadRows(squad({ ...full, ...SQUAD_ESCAPE, lobster: 592 }))).toEqual([]);
-    expect(squadRows(squad({ ...full, ...SQUAD_ESCAPE, lobster: 296 }))[0]).toMatchObject({ names: ['shark'], short: 178 });
+    const full = {
+        ...Object.fromEntries(Object.keys(SQUAD_HOURLY).filter(i => i !== 'food').map(i => [i === 'arrow' ? 'rune arrow' : i, Math.max(squadTarget(i, 4), SQUAD_ESCAPE[i] ?? 0)])),
+        ...SQUAD_SPARES,
+    };
+    expect(squadRows(squad({ ...SQUAD_ESCAPE, ...full, shark: 355 }))).toEqual([]);
+    expect(squadRows(squad({ ...SQUAD_ESCAPE, ...full, lobster: 592 }))).toEqual([]);
+    expect(squadRows(squad({ ...SQUAD_ESCAPE, ...full, lobster: 296 }))[0]).toMatchObject({ names: ['shark'], short: 178 });
     // The arrow line counts rune and adamant arrows, and asks for rune arrows first; iron arrows held do not count.
-    expect(squadRows(squad({ ...full, ...SQUAD_ESCAPE, shark: 355, 'rune arrow': 0, 'iron arrow': 5000 }))[0]).toMatchObject({ names: ['rune arrow', 'adamant arrow'], short: squadTarget('arrow', 4) });
+    expect(squadRows(squad({ ...SQUAD_ESCAPE, ...full, shark: 355, 'rune arrow': 0, 'iron arrow': 5000 }))[0]).toMatchObject({ names: ['rune arrow', 'adamant arrow'], short: squadTarget('arrow', 4) });
     expect(squadHeld('food', { shark: 10, lobster: 20 })).toBe(22);
     expect(squadRows(squad({}, false))).toEqual([]);
     expect(squadRows(undefined)).toEqual([]);
@@ -2758,12 +2761,25 @@ test('the squad rows are a stock target of the member minus what it holds, food 
 });
 
 test('every squad line has a template that fills it today, or is named as a gap; the antipoison filter matches its item', () => {
-    const all = catalogue(), a = acct('X', { Magic: 99, Hitpoints: 99 });
+    const all = catalogue(), a = acct('X', { Magic: 99, Hitpoints: 99, Herblore: 99, Cooking: 99, Fletching: 99, Smithing: 99, Crafting: 99, Mining: 99, Woodcutting: 99, Thieving: 99, Fishing: 99, Ranged: 99 }, { 'pestle and mortar': 1, hammer: 1, knife: 1, chisel: 1 });
     const fills = (item: string) => all.filter(t => t.yields(a).some(f => norm(f.item) === norm(item) && f.perTick > 0)).map(t => t.id);
-    for (const item of ['rune arrow', 'water rune', 'nature rune', 'law rune', 'antipoison(3)', 'earth rune', 'air rune', 'lobster']) expect([item, fills(item).length > 0]).toEqual([item, true]);
+    for (const item of [
+        'rune arrow', 'water rune', 'nature rune', 'law rune', 'antipoison(3)', 'earth rune', 'air rune', 'fire rune', 'blood rune', 'cosmic rune',
+        'cooked karambwan', 'prayer potion(3)', 'super attack(3)', 'super strength(3)', 'super defence(3)', 'ranging potion(3)',
+        'ring of recoil', 'climbing boot', 'dragon dagger(p)', 'magic shortbow', 'rune full helm', 'rune platebody', 'rune plateleg', 'rune kiteshield',
+        'black_dragonhide_body', 'black_dragonhide_chaps', 'black_dragon_vambraces', 'lobster',
+    ]) expect([item, fills(item).length > 0]).toEqual([item, true]);
     expect(fills('shark')).toContain('squad-sharks');
-    expect(fills('rune arrow')).toEqual(expect.arrayContaining(['squad-rune-arrows', 'squad-arrows-dargaud']));
-    for (const t of squadSupplies()) expect(placeOf(t)).toBeDefined();
+    expect(fills('rune arrow')).toEqual(expect.arrayContaining(['squad-rune-arrows', 'squad-fletch-rune-arrows-bank', 'squad-arrows-dargaud']));
+    for (const t of squadSupplies()) {
+        expect(t.squadOnly).toBe(true);
+        const spot = placeOf(t);
+        expect(spot).toBeDefined();
+        const inWildySurface = spot!.x >= 2944 && spot!.x <= 3391 && spot!.z >= 3520 && spot!.z < 6400;
+        const inWildyDungeon = spot!.x >= 2944 && spot!.x <= 3391 && spot!.z >= 9920;
+        expect(inWildySurface || inWildyDungeon).toBe(false);
+        expect(t.resources?.some(r => /magearena/i.test(r))).toBe(false);
+    }
 });
 
 test('an active squad gives free accounts supply jobs with no hand edit and stops when inactive', () => {
@@ -2775,8 +2791,12 @@ test('an active squad gives free accounts supply jobs with no hand edit and stop
     // Inactive or absent: no demand, no job.
     expect(run(squad(false)).template).toBeUndefined();
     expect(run(undefined).template).toBeUndefined();
-    // The member holdings count first: a member that holds every target and escape item needs nothing.
-    const stocked = { ...Object.fromEntries(Object.keys(SQUAD_HOURLY).filter(i => i !== 'food').map(i => [i, squadTarget(i, 4)])), ...SQUAD_ESCAPE, shark: 400 };
+    // The member holdings count first: a member that holds every target, escape and spare item needs nothing.
+    const stocked = {
+        ...SQUAD_ESCAPE,
+        ...Object.fromEntries(Object.keys(SQUAD_HOURLY).filter(i => i !== 'food').map(i => [i, Math.max(squadTarget(i, 4), SQUAD_ESCAPE[i] ?? 0)])),
+        ...SQUAD_SPARES, shark: 400,
+    };
     expect(run(squad(true, stocked)).template).toBeUndefined();
 });
 
@@ -2903,16 +2923,41 @@ test('the squad spare of a member is what it holds above the squad reserve, neve
 test('the squad rows are priced from the plan and capped by maxCoins, first lines first', () => {
     const squad = (maxCoins?: number): SquadInput => ({ active: true, hours: 4, ...(maxCoins === undefined ? {} : { maxCoins }), members: [{ name: 'Hunter', items: {} }] });
     const all = squadRows(squad(), item => ({ 'rune arrow': 3 } as Record<string, number | undefined>)[item]);
-    expect(all.length).toBe(8);
-    // Food first: 355 sharks at 250 coins, 88,750. A cap of 90,000 leaves 1,250: the arrows (1,965) and runes that do not fit are
-    // dropped, and the antipoison (1,152) and the law runes (80) that fit stay.
-    const prices = { shark: 250, 'rune arrow': 3, 'earth rune': 4, 'water rune': 4, 'nature rune': 20, 'antipoison(3)': 288, 'law rune': 40, 'air rune': 4 } as Record<string, number>;
-    expect(squadRows(squad(90_000), item => prices[item]).map(r => r.consumer.split(': ')[1])).toEqual(['food', 'antipoison(3)', 'law rune']);
+    expect(all.length).toBe(Object.keys(SQUAD_HOURLY).length + Object.keys(SQUAD_SPARES).length);
+    // Food first: 355 sharks at 250 coins, 88,750. A cap of 90,750 leaves 2,000: arrows (1,965) and climbing boots (24) fit.
+    // With a 90,000 cap (1,250 left), arrows (1,965), earth (1,292), water (1,292) and nature exceed it, so antipoison (1,152) and climbing boots (24) stay.
+    const prices = { ...SQUAD_UNIT_COST, shark: 250, 'rune arrow': 3, 'earth rune': 4, 'water rune': 4, 'nature rune': 20, 'antipoison(3)': 288, 'law rune': 40, 'air rune': 4 } as Record<string, number>;
+    expect(squadRows(squad(90_750), item => prices[item]).map(r => r.consumer.split(': ')[1])).toEqual(['food', 'arrow', 'climbing boot']);
+    expect(squadRows(squad(90_000), item => prices[item]).map(r => r.consumer.split(': ')[1])).toEqual(['food', 'antipoison(3)', 'climbing boot']);
     expect(squadRows(squad(0), () => 1).length).toBe(0);
     // The fallback table prices a line the plan has no price for: 1,965 coins of arrows do not fit a cap of 1,000.
     const lines = squadRows(squad(1000), () => undefined, { 'rune arrow': 3 }).map(r => r.consumer.split(': ')[1]);
     expect(lines).not.toContain('arrow');
     expect(lines).not.toContain('food');
+});
+
+test('squadHeld counts 4-dose and super potions cleanly, keeps karambwans separate from sharks, and skips non-unique black dhide trades', () => {
+    expect(Object.keys(SQUAD_POTION_ALIASES)).toContain('prayer potion(3)');
+    expect(squadHeld('prayer potion(3)', { 'prayer potion(4)': 9 })).toBe(12);
+    expect(squadHeld('antipoison(3)', { 'superantipoison(4)': 3 })).toBe(4);
+    expect(squadHeld('food', { 'cooked karambwan': 50 })).toBe(0);
+    expect(squadHeld('cooked karambwan', { shark: 500, 'cooked karambwan': 15 })).toBe(15);
+
+    const parsed = accountFrom('Skiller', side, {
+        inventory: [{ id: 2503, count: 2, name: 'Dragonhide body' }, { id: 1135, count: 1, name: 'Dragonhide body' }, { id: 3146, count: 3, name: 'Cooked karambwan' }, { id: 3144, count: 4, name: 'Cooked karambwan' }],
+        bank: [{ id: 99, count: 5, name: 'Unfinished potion' }, { id: 207, count: 6, name: 'Herb' }],
+    }, () => undefined);
+    expect(parsed.items['black_dragonhide_body']).toBe(2);
+    expect(parsed.items['dragonhide body']).toBe(1);
+    expect(parsed.items['poorly cooked karambwan']).toBe(3);
+    expect(parsed.items['cooked karambwan']).toBe(4);
+    expect(parsed.items['ranarr potion (unf)']).toBe(5);
+    expect(parsed.items['unidentified ranarr']).toBe(6);
+
+    const squad: SquadInput = { active: true, hours: 4, all: ['Hunter'], members: [{ name: 'Hunter', items: { ...Object.fromEntries(Object.keys(SQUAD_HOURLY).filter(i => i !== 'food').map(i => [i === 'arrow' ? 'rune arrow' : i, 1000])), shark: 500, 'ring of recoil': 10, 'climbing boot': 5, 'dragon dagger(p)': 5, 'magic shortbow': 5, 'rune full helm': 5, 'rune platebody': 5, 'rune plateleg': 5, 'rune kiteshield': 5 } }] };
+    const donorItems = { black_dragonhide_body: 10, black_dragonhide_chaps: 10, black_dragon_vambraces: 10 };
+    const out = plan(inputs([acct('Hunter', {}, { coin: 100 }), acct('Crafter', {}, donorItems)], { templates: [], bill: [], squad, stock: [{ name: 'Crafter', side, items: donorItems }] }));
+    expect(out.find(x => x.account === 'Hunter')?.send).toBeUndefined();
 });
 
 test('a held squad member (live hunt) is still held out of jobs and donor stock: every block member drives the hold-out', () => {

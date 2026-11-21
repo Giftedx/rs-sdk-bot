@@ -350,10 +350,75 @@ export const selfServePilot = (t: Template): boolean => !!t.pilot && !t.tier && 
     && (!!t.production || !!t.aio?.startsWith('skiller:'));
 // Inputs that feed a bill line: a feather is needed while headless arrows are short, even with the feather line met.
 // A steel bar is on no line of the bill: it is needed while cannonballs are short (one bar casts 4, cannonballs.rs2).
-export const FEEDS: Record<string, string[]> = { feather: ['headless arrow'], 'arrow shaft': ['headless arrow'], 'raw lobster': ['lobster'],
-    log: ['arrow shaft', 'headless arrow'], flax: ['bow string'], 'rune essence': ['air rune'], 'steel bar': ['cannonball'] };
-const feedUnits = (item: string, output: string) => !(FEEDS[item] ?? []).includes(output) ? 0
-    : item === 'log' ? 1 / 15 : item === 'steel bar' ? 1 / 4 : 1;
+export const FEEDS: Record<string, string[]> = {
+    feather: ['headless arrow'],
+    'arrow shaft': ['headless arrow'],
+    'raw lobster': ['lobster'],
+    'raw karambwan': ['cooked karambwan'],
+    log: ['arrow shaft', 'headless arrow'],
+    logs: ['arrow shaft', 'headless arrow'],
+    flax: ['bow string'],
+    'magic log': ['magic shortbow', 'unstrung magic shortbow'],
+    'bow string': ['magic shortbow', 'yew shortbow'],
+    'unstrung magic shortbow': ['magic shortbow'],
+    'rune essence': ['air rune', 'water rune', 'earth rune', 'fire rune'],
+    'steel bar': ['cannonball'],
+    'gold ore': ['gold bar'],
+    'gold bar': ['sapphire ring', 'ring of recoil'],
+    'uncut sapphire': ['sapphire', 'sapphire ring', 'ring of recoil'],
+    sapphire: ['sapphire ring', 'ring of recoil'],
+    'sapphire ring': ['ring of recoil'],
+    'cosmic rune': ['ring of recoil'],
+    'runite bar': ['rune arrowtips', 'rune arrow', 'rune full helm', 'rune platebody', 'rune plateleg', 'rune kiteshield'],
+    'runite ore': ['runite bar'],
+    coal: ['runite bar'],
+    'rune arrowtips': ['rune arrow'],
+    'headless arrow': ['rune arrow'],
+    dragonhide_black: ['black_dragonhide_body', 'black_dragonhide_chaps', 'black_dragon_vambraces'],
+    dragon_leather_black: ['black_dragonhide_body', 'black_dragonhide_chaps', 'black_dragon_vambraces'],
+    'dragon dagger': ['dragon dagger(p)'],
+    'weapon poison': ['dragon dagger(p)'],
+    'vial of water': [
+        'ranarr potion (unf)', 'irit potion (unf)', 'kwuarm potion (unf)', 'cadantine potion (unf)', 'dwarf weed potion (unf)', 'marrentill potion (unf)',
+        'prayer potion(3)', 'super attack(3)', 'super strength(3)', 'super defence(3)', 'ranging potion(3)', 'antipoison(3)', 'superantipoison(3)', 'weapon poison',
+    ],
+    'ranarr weed': ['ranarr potion (unf)', 'prayer potion(3)'],
+    'unidentified ranarr': ['ranarr weed', 'ranarr potion (unf)', 'prayer potion(3)'],
+    'ranarr potion (unf)': ['prayer potion(3)'],
+    'snape grass': ['prayer potion(3)'],
+    'irit leaf': ['irit potion (unf)', 'super attack(3)', 'superantipoison(3)'],
+    'unidentified irit': ['irit leaf', 'irit potion (unf)', 'super attack(3)', 'superantipoison(3)'],
+    'irit potion (unf)': ['super attack(3)', 'superantipoison(3)'],
+    'eye of newt': ['super attack(3)'],
+    kwuarm: ['kwuarm potion (unf)', 'super strength(3)', 'weapon poison'],
+    'unidentified kwuarm': ['kwuarm', 'kwuarm potion (unf)', 'super strength(3)', 'weapon poison'],
+    'kwuarm potion (unf)': ['super strength(3)', 'weapon poison'],
+    'limpwurt root': ['super strength(3)'],
+    cadantine: ['cadantine potion (unf)', 'super defence(3)'],
+    'unidentified cadantine': ['cadantine', 'cadantine potion (unf)', 'super defence(3)'],
+    'cadantine potion (unf)': ['super defence(3)'],
+    'white berrie': ['super defence(3)'],
+    'dwarf weed': ['dwarf weed potion (unf)', 'ranging potion(3)'],
+    'unidentified dwarf weed': ['dwarf weed', 'dwarf weed potion (unf)', 'ranging potion(3)'],
+    'dwarf weed potion (unf)': ['ranging potion(3)'],
+    'wine of zamorak': ['ranging potion(3)'],
+    marrentill: ['marrentill potion (unf)', 'antipoison(3)'],
+    'unidentified marentill': ['marrentill', 'marrentill potion (unf)', 'antipoison(3)'],
+    'marrentill potion (unf)': ['antipoison(3)'],
+    'unicorn horn': ['unicorn horn dust', 'antipoison(3)', 'superantipoison(3)'],
+    'unicorn horn dust': ['antipoison(3)', 'superantipoison(3)'],
+    'blue dragon scale': ['dragon scale dust', 'weapon poison'],
+    'dragon scale dust': ['weapon poison'],
+};
+const feedUnits = (item: string, output: string) => {
+    if (!(FEEDS[item] ?? []).includes(output)) return 0;
+    if (item === 'log' || item === 'logs') return 1 / 15;
+    if (item === 'steel bar') return 1 / 4;
+    if (item === 'runite bar') return output === 'rune arrowtips' || output === 'rune arrow' ? 1 / 15 : output === 'rune platebody' ? 5 : output === 'rune full helm' ? 2 : output === 'rune plateleg' || output === 'rune kiteshield' ? 3 : 1;
+    if (item === 'coal') return 8;
+    if (item === 'dragonhide_black' || item === 'dragon_leather_black') return output === 'black_dragonhide_body' ? 3 : output === 'black_dragonhide_chaps' ? 2 : 1;
+    return 1;
+};
 export const norm = (s: string) => s.toLowerCase().replace(/\s*\((?:noted|quest)\)$/, '').trim().replace(/s$/, '');
 export const pairKey = (account: string, template: string) => `${account.toLowerCase()}:${template}`;
 // HP one held item heals over all its bites, by item name. The content gives it (consume_normal.dbrow heal of each
@@ -1346,7 +1411,9 @@ export function plan(input: Inputs): Assignment[] {
         const member = byName.get([...byName.keys()].find(n => n.toLowerCase() === row.account) ?? '');
         if (!member || done.has(member.name) || gave.has(member.name) || gaveItems.has(member.name) || vacated.has(member.name) || inp.unfundable?.has(row.account)) continue;
         const cost = (p: Acct | undefined) => cachedWayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true);
+        const nonUniqueTradeNames = new Set(['black_dragonhide_body', 'black_dragonhide_chaps', 'black_dragon_vambraces']);
         for (const item of row.names) {
+            if (nonUniqueTradeNames.has(item)) continue;
             const from = [...stock, ...memberStock.filter(s => freeMembers.has(s.name.toLowerCase()))].find(s => s.side === inp.side && s.name.toLowerCase() !== row.account && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= 1
                 && !inp.noSend?.has(`${s.name}>${member.name}`.toLowerCase()) && (cost(byName.get(s.name)) ?? -1) >= 0 && (cost(member) ?? -1) >= 0);
             if (!from) continue;
@@ -1755,7 +1822,7 @@ export function questKitCaps(rows: readonly { items: Readonly<Record<string, num
 const coinItem = (item: string) => item === 'coin';
 for (const [item, cap] of Object.entries(questKitCaps())) (KIT_PRICE_CAPS as Record<string, number>)[item] ??= cap;
 // CAPACITY: accounts at one resource at a time. Every number is policy (a place, a market or a spot holds this many), not a game fact.
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, [WEAPON_MARKET]: WEAPON_BUYERS, [ARMOUR_MARKET]: ARMOUR_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, [QUEST_DEMAND]: QUEST_DEMAND_PLACES, ...Object.fromEntries(QUEST_DEMAND_ROWS.map(q => [questResource(q.slug), 1])), ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, 'squad:catherby-sharks': 3, 'squad:taverley-druids': 2, 'squad:taverley-scales': 2, 'squad:taverley-black-dragons': 2, 'squad:chaos-temple-wine': 2, 'squad:seers-magic-trees': 2, 'squad:edgeville-unicorns': 2, 'squad:ardougne-giants': 2, 'squad:hobgoblin-snape': 2, [WEAPON_MARKET]: WEAPON_BUYERS, [ARMOUR_MARKET]: ARMOUR_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, [QUEST_DEMAND]: QUEST_DEMAND_PLACES, ...Object.fromEntries(QUEST_DEMAND_ROWS.map(q => [questResource(q.slug), 1])), ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // The reach rule: a job goes only to an account that has a way to its place. One route query between the Varrock
 // side and Kandarin runs for more than 30 s (research/walking.md, Planner reach rule), so the planner asks none. It
@@ -1795,7 +1862,20 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     [COW_FIELD]: ARMY_BANK, [STRIKE_TILE]: ARMY_BANK, [SPLASH_FENCE]: ARMY_BANK, [TROOPER_FIELD]: ARMY_BANK,
     'catherby:lobster': CATHERBY_BANK, [AIO_PLACES.flax]: { x: 2744, z: 3445 }, [AIO_PLACES.yews]: SEERS_BANK,
     'shop:ardy': { x: 2654, z: 3283 }, 'shop:catherby': CATHERBY_BANK, 'shop:catherby_arrows': CATHERBY_BANK, 'shop:dargaud': SEERS_BANK, 'shop:magic_guild': { x: 2612, z: 3093 },
+    'shop:magic_guild_elemental': { x: 2612, z: 3093 }, 'shop:alfonse': { x: 2654, z: 3283 }, 'shop:tiadeche': { x: 2654, z: 3283 },
+    'shop:oziach': { x: 3094, z: 3491 }, 'shop:herquin': { x: 2946, z: 3368 }, 'shop:gem_trader': { x: 3269, z: 3167 },
+    'shop:tenzing': { x: 2946, z: 3368 }, 'shop:jukat_dagger': { x: 3152, z: 9578 }, 'shop:taverley': { x: 2934, z: 3376 },
     'aio:water-altar': DRAYNOR_BANK, 'fighter:wizards-tower': DRAYNOR_BANK, 'squad:catherby-sharks': CATHERBY_BANK,
+    'squad:shilo-karambwan': { x: 2852, z: 2955 }, 'squad:catherby-cooking': CATHERBY_BANK,
+    'squad:seers-magic-trees': SEERS_BANK, 'squad:seers-fletch': SEERS_BANK,
+    'squad:varrock-smithing': { x: 3185, z: 3436 }, 'squad:al-kharid-craft': { x: 3269, z: 3167 },
+    'squad:rimmington-gold': { x: 2946, z: 3368 }, 'squad:hobgoblin-snape': { x: 2946, z: 3368 },
+    'squad:chaos-temple-wine': { x: 2946, z: 3368 }, 'squad:edgeville-unicorns': { x: 3092, z: 3496 },
+    'squad:ardougne-giants': ARMY_BANK, 'squad:taverley-druids': { x: 2946, z: 3368 },
+    'squad:taverley-scales': { x: 2946, z: 3368 }, 'squad:taverley-black-dragons': { x: 2946, z: 3368 },
+    'squad:herblore-bank': CATHERBY_BANK, 'squad:magic-enchant': DRAYNOR_BANK,
+    'squad:ardougne-blood-chest': ARMY_BANK, 'squad:varrock-earth-altar': VARROCK_EAST_BANK,
+    'squad:isafdar-berries': ARMY_BANK,
     'shop:sarim': DRAYNOR_BANK, 'shop:betty': DRAYNOR_BANK, 'shop:aubury': VARROCK_EAST_BANK, 'shop:lowe': VARROCK_EAST_BANK, 'shop:zaff': { x: 3185, z: 3436 },
     'shop:zeke': { x: 3269, z: 3167 }, 'shop:dommik': { x: 3269, z: 3167 }, 'shop:jiminua': { x: 2654, z: 3283 }, 'shop:nurmof': { x: 3013, z: 3355 }, 'shop:scavvo': { x: 3185, z: 3436 },
 };
@@ -2184,10 +2264,24 @@ export function aioTemplates(): Template[] {
 // active, so a plan with no squad block never values it. Lines that already have a template: earth and air runes
 // (shop-runes). Food is sharks (squad-sharks) and arrows are rune arrows (squad-rune-arrows, squad-arrows-dargaud). Antipoison(3): the shop run is a
 // fallback with a small cap, and a maker (Herblore) takes the line by yielding `antipoison(3)`.
-export const SQUAD_RUN_MAX: Readonly<Record<string, number>> = { 'rune arrow': 400, 'water rune': 1500, 'nature rune': 1000, 'law rune': 200, 'antipoison(3)': 12 };
+export const SQUAD_RUN_MAX: Readonly<Record<string, number>> = {
+    'rune arrow': 400, 'water rune': 1500, 'earth rune': 1500, 'air rune': 1500, 'fire rune': 1500,
+    'nature rune': 1000, 'law rune': 200, 'blood rune': 200, 'antipoison(3)': 12,
+    'cooked karambwan': 50, 'raw karambwan': 50, 'climbing boot': 10, 'dragon dagger': 2,
+    'rune platebody': 2, 'rune plateleg': 4, 'uncut sapphire': 28, 'eye of newt': 100, 'vial of water': 100,
+};
 // The shop cost of one unit (knowledge/items.json), the fallback of a run's spend cap: the rows are priced from the plan's
 // price table (`prices`, from priceTable) when it holds the item.
-export const SQUAD_UNIT_COST: Readonly<Record<string, number>> = { 'rune arrow': 400, 'rune arrowtips': 200, shark: 300, 'water rune': 4, 'nature rune': 20, 'law rune': 40, 'antipoison(3)': 288 };
+export const SQUAD_UNIT_COST: Readonly<Record<string, number>> = {
+    'rune arrow': 400, 'rune arrowtips': 200, shark: 300, 'cooked karambwan': 320, 'raw karambwan': 240,
+    'water rune': 4, 'earth rune': 4, 'air rune': 4, 'fire rune': 4, 'nature rune': 20, 'law rune': 40,
+    'cosmic rune': 50, 'blood rune': 550, 'antipoison(3)': 288, 'prayer potion(3)': 500,
+    'super attack(3)': 400, 'super strength(3)': 500, 'super defence(3)': 600, 'ranging potion(3)': 650,
+    'ring of recoil': 300, 'climbing boot': 12, 'dragon dagger': 30_000, 'dragon dagger(p)': 32_000,
+    'magic shortbow': 1600, 'rune full helm': 35_200, 'rune platebody': 84_500, 'rune plateleg': 64_000, 'rune kiteshield': 54_400,
+    black_dragonhide_body: 13_480, black_dragonhide_chaps: 6_500, black_dragon_vambraces: 4_200,
+    'uncut sapphire': 250, 'eye of newt': 3, 'vial of water': 5,
+};
 // The essence of one water-rune craft run, as aio-air-runes (ESSENCE_TARGET=28).
 export const SQUAD_CRAFT_ESSENCE = 28;
 // The 15-arrow sets of one rune-arrow run, and the sharks of one shark run (the default count of scripts/shark-supply.ts).
@@ -2203,6 +2297,29 @@ export function squadSupplies(): Template[] {
             yields: () => [{ item, perTick }], spends: () => [{ item: 'coins', perTick: perTick * cost }], repeats: false,
             production: { output: item, outputPerUnit: 1, maximum: max, inputs: {}, resize: sized } };
     };
+    const invMake = (id: string, recipe: string, item: string, level: number, inputs: Readonly<Record<string, number>>, tools: Readonly<Record<string, number>>, perTick = 0.1, goal = `make ${item} at the bank for the gang squad`, max = MAKE_BATCH): Template => {
+        const argsFor = (n: number) => [recipe, `MAX_MAKE=${n}`, 'CAP=1500', 'MEMBERS=1', 'ORDER_MODE=best-effort'];
+        const firstInput = Object.keys(inputs)[0]!;
+        return {
+            id, family: 'skiller:crafting:inventory', script: 'scripts/microbot-production.ts', args: argsFor(max), role: 'herblore',
+            goal, resources: ['squad:herblore-bank'], squadOnly: true, repeats: false,
+            needs: { skills: { Herblore: level }, items: { ...inputs, ...tools } },
+            production: { output: item, outputPerUnit: 1, maximum: max, inputs, resize: n => ({ args: argsFor(n) }) },
+            yields: () => [{ item, perTick }],
+            ...(firstInput ? {} : {}),
+        };
+    };
+    const bankJobArg = (job: Record<string, unknown>) => ['bank-job', `--job=${encodeURIComponent(JSON.stringify(job))}`];
+    const smithAnvil = (id: string, productId: number, item: string, level: number, bars: number, outputPerUnit = 1, max = Math.max(1, Math.floor(27 / bars))): Template => {
+        const argsFor = (n: number) => ['skiller', 'smithing', 'anvil', '1500', 'ORDER_ACTION=smith', `PRODUCT_ID=${productId}`, `MAX_MAKE=${n}`, 'BAR_RESERVE=0'];
+        return {
+            id, family: 'aio:skiller:smithing:anvil', script: 'scripts/aio.ts', args: argsFor(max), role: 'smithing',
+            goal: `smith ${item} from banked runite bars at Varrock West for the gang squad`, resources: ['squad:varrock-smithing'], squadOnly: true, repeats: false,
+            needs: { skills: { Smithing: level }, items: { hammer: 1, 'runite bar': bars, coins: 10 } },
+            production: { output: item, outputPerUnit, maximum: max, inputs: { 'runite bar': bars }, resize: n => ({ args: argsFor(n) }) },
+            yields: () => [{ item, perTick: 0.005 * outputPerUnit }],
+        };
+    };
     // Water runes crafted from banked rune essence at the water altar (scripts/rune-bank-craft.ts RUNE_ALTAR=water, bench case
     // extra:water-supply): one rune for each essence under Runecraft 19. The talisman is held for good; the essence comes from
     // the fleet's stock through the planner's item orders. The bench case makes 10 runes in 399 to 403 ticks from the Draynor
@@ -2214,6 +2331,13 @@ export function squadSupplies(): Template[] {
         production: { output: 'water rune', outputPerUnit: 1, maximum: SQUAD_CRAFT_ESSENCE, inputs: { 'rune essence': 1 },
             resize: n => ({ args: ['skiller', 'runecraft', 'bank-craft', '99', 'RUNE_ALTAR=water', `ESSENCE_TARGET=${n}`, 'CAP=4000'] }) },
         yields: () => [{ item: 'water rune', perTick: 0.08 }] };
+    const earthCraft: Template = { id: 'squad-earth-craft', family: 'aio:skiller:runecraft:bank-craft', script: 'scripts/aio.ts', aio: 'skiller:runecraft:bank-craft',
+        worker: 'scripts/rune-bank-craft.ts', args: ['skiller', 'runecraft', 'bank-craft', '99', 'RUNE_ALTAR=earth', `ESSENCE_TARGET=${SQUAD_CRAFT_ESSENCE}`, 'CAP=4000'],
+        role: 'magic', goal: 'craft banked rune essence into earth runes at the earth altar for the gang squad', resources: ['squad:varrock-earth-altar'], squadOnly: true,
+        needs: { skills: { Runecraft: 9 }, items: { 'earth talisman': 1, 'rune essence': SQUAD_CRAFT_ESSENCE } }, repeats: false,
+        production: { output: 'earth rune', outputPerUnit: 1, maximum: SQUAD_CRAFT_ESSENCE, inputs: { 'rune essence': 1 },
+            resize: n => ({ args: ['skiller', 'runecraft', 'bank-craft', '99', 'RUNE_ALTAR=earth', `ESSENCE_TARGET=${n}`, 'CAP=4000'] }) },
+        yields: () => [{ item: 'earth rune', perTick: 0.08 }] };
     // The water talisman that squad-water-craft needs: wizards at the Wizards' Tower until one drops (3 in 128; scripts/
     // gather-combat.ts TARGET=wizard UNTIL_ITEM, bench case fighter:wizard). No shop sells one and the Grand Exchange holds none.
     const waterTalisman: Template = { id: 'squad-water-talisman', family: 'aio:fighter:wizard', script: 'scripts/aio.ts', aio: 'fighter:wizard',
@@ -2236,6 +2360,19 @@ export function squadSupplies(): Template[] {
         needs: { skills: { Fletching: 75 }, items: { coins: SQUAD_RUNE_SETS * 15 * SQUAD_UNIT_COST['rune arrowtips']! * 2 + 200, 'headless arrow': SQUAD_RUNE_SETS * 15 } },
         production: { output: 'rune arrow', outputPerUnit: 15, maximum: SQUAD_RUNE_SETS, inputs: { 'headless arrow': 15 }, resize: n => ({ args: runeSteps(n) }) },
         yields: () => [{ item: 'rune arrow', perTick: 1 }], spends: () => [{ item: 'coins', perTick: SQUAD_UNIT_COST['rune arrowtips']! }] };
+    const bankedRuneArrowSets = SQUAD_RUNE_SETS * 2;
+    const fletchBankedRuneArrows: Template = {
+        id: 'squad-fletch-rune-arrows-bank', family: 'fletch', script: 'scripts/fletch-arrows.ts',
+        args: ['3000', 'native-arrows', 'rune'], env: { MAX_MAKE: String(bankedRuneArrowSets * 15), HEADLESS_RESERVE: '0', TIP_RESERVE: '0' },
+        role: 'fletching', goal: 'fletch banked rune arrowtips and headless arrows into rune arrows for the gang squad',
+        resources: ['squad:herblore-bank'], squadOnly: true, repeats: false,
+        needs: { skills: { Fletching: 75 }, items: { 'headless arrow': 15, 'rune arrowtips': 15 } },
+        production: {
+            output: 'rune arrow', outputPerUnit: 15, maximum: bankedRuneArrowSets, inputs: { 'headless arrow': 15, 'rune arrowtips': 15 },
+            resize: n => ({ args: ['3000', 'native-arrows', 'rune'], env: { MAX_MAKE: String(n * 15), HEADLESS_RESERVE: '0', TIP_RESERVE: '0' } }),
+        },
+        yields: () => [{ item: 'rune arrow', perTick: 2 }],
+    };
     // Sharks fished and cooked at Catherby (scripts/shark-supply.ts: Fishing 76, Cooking 80; it buys a harpoon when it has none,
     // and it carries two banked trout, salmon or lobsters for the way back). Bench case extra:shark-supply: 3 sharks in 182, 250 and
     // 348 ticks (hosted run 44470543603, seeds 1 to 3); the rate is from those runs.
@@ -2245,14 +2382,225 @@ export function squadSupplies(): Template[] {
         needs: { skills: { Fishing: 76, Cooking: 80 }, items: { lobster: 2 } },
         production: { output: 'shark', outputPerUnit: 1, maximum: SQUAD_SHARK_RUN, inputs: {}, resize: n => sharkSteps(n) },
         yields: () => [{ item: 'shark', perTick: 0.01 }] };
+    // Karambwanji and karambwan fishing (Shilo Village + Tai Bwo Wannai Trio), plus Catherby karambwan cooking.
+    const karambwanjiFish: Template = {
+        id: 'squad-karambwanji-fish', family: 'aio-skiller:bank-job', script: 'scripts/aio-skiller.ts',
+        args: bankJobArg({ family: 'fishing', recipe: 'karambwanji', target: 50, batch: 25, cap: 2000, returnTicks: 300, members: true, reserve: 0, bank: { x: 2852, z: 2955, level: 0 }, site: { x: 2791, z: 3019, level: 0 } }),
+        role: 'fishing', goal: 'fish raw karambwanji near Tai Bwo Wannai for karambwan bait', resources: ['squad:shilo-karambwan'], squadOnly: true, repeats: false,
+        needs: { skills: { Fishing: 5 }, quests: ['Shilo Village', 'Tai Bwo Wannai Trio'], items: { 'small fishing net': 1 } },
+        yields: () => [{ item: 'raw karambwanji', perTick: 0.05 }],
+    };
+    const karambwanFish: Template = {
+        id: 'squad-karambwan-fish', family: 'aio-skiller:bank-job', script: 'scripts/aio-skiller.ts',
+        args: bankJobArg({ family: 'fishing', recipe: 'karambwan', target: 25, batch: 25, cap: 2500, returnTicks: 300, members: true, reserve: 0, bank: { x: 2852, z: 2955, level: 0 }, site: { x: 2899, z: 3119, level: 0 } }),
+        role: 'fishing', goal: 'fish raw karambwan north of Tai Bwo Wannai and bank at Shilo Village', resources: ['squad:shilo-karambwan'], squadOnly: true, repeats: false,
+        needs: { skills: { Fishing: 65 }, quests: ['Shilo Village', 'Tai Bwo Wannai Trio'], items: { 'karambwan vessel': 1, 'raw karambwanji': 75 } },
+        production: { output: 'raw karambwan', outputPerUnit: 1, maximum: 25, inputs: { 'raw karambwanji': 3 },
+            resize: n => ({ args: bankJobArg({ family: 'fishing', recipe: 'karambwan', target: n, batch: Math.min(25, n), cap: 2500, returnTicks: 300, members: true, reserve: 0, bank: { x: 2852, z: 2955, level: 0 }, site: { x: 2899, z: 3119, level: 0 } }) }) },
+        yields: () => [{ item: 'raw karambwan', perTick: 0.02 }],
+    };
+    const karambwanCook: Template = {
+        id: 'squad-karambwan-cook', family: 'aio-skiller:bank-job', script: 'scripts/aio-skiller.ts',
+        args: bankJobArg({ family: 'cooking', recipe: 'cooking_generic_karambwan', target: 28, batch: 28, cap: 1500, returnTicks: 300, members: true, reserve: 0 }),
+        role: 'cooking', goal: 'cook banked raw karambwan at Catherby range for the gang squad', resources: ['squad:catherby-cooking'], squadOnly: true, repeats: false,
+        needs: { skills: { Cooking: 30 }, quests: ['Tai Bwo Wannai Trio'], items: { 'raw karambwan': 28 } },
+        production: { output: 'cooked karambwan', outputPerUnit: 1, maximum: 28, inputs: { 'raw karambwan': 1 },
+            resize: n => ({ args: bankJobArg({ family: 'cooking', recipe: 'cooking_generic_karambwan', target: n, batch: Math.min(28, n), cap: 1500, returnTicks: 300, members: true, reserve: 0 }) }) },
+        yields: () => [{ item: 'cooked karambwan', perTick: 0.15 }],
+    };
+    // Magic logs and Magic shortbow stringing chain at Seers' Village.
+    const magicLogs: Template = {
+        id: 'squad-magic-logs', family: 'aio:skiller:woodcutting:yews', script: 'scripts/aio.ts',
+        args: ['skiller', 'woodcutting', 'yews', '3000', '27', 'MAX_TRIPS=4', 'TREE=magic', 'WOOD_GROVE=native-processing'],
+        role: 'woodcutting', goal: "chop magic logs at Seers' Village for squad magic shortbows", resources: ['squad:seers-magic-trees'], squadOnly: true, repeats: false,
+        needs: { skills: { Woodcutting: 75 }, pieces: { of: AXES, count: 1 } },
+        yields: () => [{ item: 'magic log', perTick: 0.01 }],
+    };
+    const bowStep = (recipe: string, n: number) => `scripts/aio.ts skiller crafting inventory ${recipe} MAX_MAKE=${n} CAP=1500 MEMBERS=1 ORDER_MODE=best-effort`;
+    const magicShortbow: Template = {
+        id: 'squad-magic-shortbow', family: 'fletch', script: 'scripts/chain.ts',
+        args: [bowStep('cut-bow:unstrung_magic_shortbow', 4), bowStep('bow-string:magic_shortbow', 4)], env: { ROUNDS: '1' },
+        role: 'fletching', goal: 'cut banked magic logs into magic shortbows and string them for the gang squad', resources: ['squad:seers-fletch'], squadOnly: true, repeats: false,
+        needs: { skills: { Fletching: 80 }, items: { knife: 1, 'magic log': 1, 'bow string': 1 } },
+        production: { output: 'magic shortbow', outputPerUnit: 1, maximum: 4, inputs: { 'magic log': 1, 'bow string': 1 },
+            resize: n => ({ args: [bowStep('cut-bow:unstrung_magic_shortbow', n), bowStep('bow-string:magic_shortbow', n)] }) },
+        yields: () => [{ item: 'magic shortbow', perTick: 0.02 }],
+    };
+    // Black dragonhide from non-Wilderness Taverley Black Dragons -> tanned and crafted sets at Al Kharid.
+    const taverleyBlackDragons: Template = {
+        id: 'squad-taverley-black-dragon', family: 'combat', script: 'scripts/gather-combat.ts',
+        args: ['6000', 'taverley_black_dragon'], env: { MAX_KILLS: '10' }, role: 'combat',
+        goal: 'slay Black dragons in Taverley Dungeon (non-Wilderness) for black dragonhide and blood/law runes',
+        resources: ['squad:taverley-black-dragons'], squadOnly: true, repeats: false,
+        needs: { combat: 85, items: { 'anti-dragon shield': 1, 'dusty key': 1 }, food: 8 },
+        yields: () => [{ item: 'dragonhide_black', perTick: 0.01 }, { item: 'blood rune', perTick: 0.02 }, { item: 'law rune', perTick: 0.02 }],
+    };
+    const blackDhideSets: Template = {
+        id: 'squad-black-dhide-sets', family: 'aio:skiller:crafting:black-dhide-sets', script: 'scripts/black-dhide-sets.ts',
+        args: [], role: 'crafting', goal: 'tan banked black dragonhide at Al Kharid and craft full black dragonhide sets for the gang squad',
+        resources: ['squad:al-kharid-craft'], squadOnly: true, repeats: false,
+        needs: { skills: { Crafting: LEATHER_LEVEL }, items: { coins: SET_HIDES * TAN_COIN + SET_SHOP, dragonhide_black: SET_HIDES } },
+        yields: () => [{ item: 'black_dragonhide_body', perTick: 0.02 }, { item: 'black_dragonhide_chaps', perTick: 0.02 }, { item: 'black_dragon_vambraces', perTick: 0.02 }],
+    };
+    // Rings of Recoil: mine gold ore -> smelt gold bars -> cut sapphires -> craft sapphire rings -> enchant lvl 1.
+    const goldOre: Template = {
+        id: 'squad-gold-ore', family: 'aio-skiller:bank-job', script: 'scripts/aio-skiller.ts',
+        args: bankJobArg({ family: 'mining', recipe: 'gold_rock_table', target: 28, batch: 28, cap: 2500, returnTicks: 300, members: true, reserve: 0, bank: { x: 2946, z: 3368, level: 0 }, site: { x: 2977, z: 3233, level: 0 } }),
+        role: 'mining', goal: 'mine gold ore at Rimmington and bank at Falador West for sapphire rings', resources: ['squad:rimmington-gold'], squadOnly: true, repeats: false,
+        needs: { skills: { Mining: 40 }, pieces: { of: PICKAXES, count: 1 } },
+        yields: () => [{ item: 'gold ore', perTick: 0.05 }],
+    };
+    const goldBars: Template = {
+        id: 'squad-gold-bars', family: 'aio:skiller:smithing:smelt', script: 'scripts/aio.ts',
+        args: ['skiller', 'smithing', 'smelt', '1500', 'gold', 'MAX_MAKE=28', 'ORE_RESERVE=0'], role: 'smithing',
+        goal: 'smelt banked gold ore into gold bars at Al Kharid for sapphire rings', resources: ['squad:al-kharid-craft'], squadOnly: true, repeats: false,
+        needs: { skills: { Smithing: 40 }, items: { 'gold ore': 28 } },
+        production: { output: 'gold bar', outputPerUnit: 1, maximum: 28, inputs: { 'gold ore': 1 },
+            resize: n => ({ args: ['skiller', 'smithing', 'smelt', '1500', 'gold', `MAX_MAKE=${n}`, 'ORE_RESERVE=0'] }) },
+        yields: () => [{ item: 'gold bar', perTick: 0.08 }],
+    };
+    const cutSapphire: Template = {
+        id: 'squad-cut-sapphire', family: 'skiller:crafting:inventory', script: 'scripts/microbot-production.ts',
+        args: ['cut-sapphire', `MAX_MAKE=${MAKE_BATCH}`, 'CAP=1500', 'MEMBERS=0', 'ORDER_MODE=best-effort'], role: 'crafting',
+        goal: 'cut banked uncut sapphires for sapphire rings', resources: ['squad:herblore-bank'], squadOnly: true, repeats: false,
+        needs: { skills: { Crafting: 20 }, items: { chisel: 1, 'uncut sapphire': 1 } },
+        production: { output: 'sapphire', outputPerUnit: 1, maximum: MAKE_BATCH, inputs: { 'uncut sapphire': 1 },
+            resize: n => ({ args: ['cut-sapphire', `MAX_MAKE=${n}`, 'CAP=1500', 'MEMBERS=0', 'ORDER_MODE=best-effort'] }) },
+        yields: () => [{ item: 'sapphire', perTick: 0.15 }],
+    };
+    const enchantRecoil: Template = {
+        id: 'squad-ring-of-recoil', family: 'aio:skiller:magic:items', script: 'scripts/aio.ts',
+        args: ['skiller', 'magic', 'items', 'enchant:sapphire_ring', '-', '27', '1500'], role: 'magic',
+        goal: 'enchant banked sapphire rings into rings of recoil at the Draynor bank', resources: ['squad:magic-enchant'], squadOnly: true, repeats: false,
+        needs: { skills: { Magic: 7 }, items: { 'sapphire ring': 1, 'cosmic rune': 1, 'water rune': 1 } },
+        production: { output: 'ring of recoil', outputPerUnit: 1, maximum: 27, inputs: { 'sapphire ring': 1, 'cosmic rune': 1, 'water rune': 1 },
+            resize: n => ({ args: ['skiller', 'magic', 'items', 'enchant:sapphire_ring', '-', String(n), '1500'] }) },
+        yields: () => [{ item: 'ring of recoil', perTick: 0.25 }],
+    };
+    // Non-Wilderness mainland gatherers for potions, secondaries and runes.
+    const taverleyDruids: Template = {
+        id: 'squad-taverley-druids', family: 'combat', script: 'scripts/gather-combat.ts',
+        args: ['6000', 'taverley_druid'], env: { MAX_KILLS: '40' }, role: 'combat',
+        goal: 'farm Taverley Dungeon Chaos druids (non-Wilderness) for herbs, snape grass, law and nature runes',
+        resources: ['squad:taverley-druids'], squadOnly: true, repeats: false,
+        needs: { combat: 25, food: 4 },
+        yields: () => [
+            { item: 'unidentified ranarr', perTick: 0.01 }, { item: 'unidentified irit', perTick: 0.01 },
+            { item: 'unidentified kwuarm', perTick: 0.008 }, { item: 'unidentified cadantine', perTick: 0.006 },
+            { item: 'unidentified dwarf weed', perTick: 0.006 }, { item: 'unidentified marentill', perTick: 0.012 },
+            { item: 'snape grass', perTick: 0.005 }, { item: 'nature rune', perTick: 0.02 }, { item: 'law rune', perTick: 0.015 },
+        ],
+    };
+    const ardougneGiants: Template = {
+        id: 'squad-ardougne-giants', family: 'combat', script: 'scripts/gather-combat.ts',
+        args: ['6000', 'giant'], env: { MAX_KILLS: '40' }, role: 'combat',
+        goal: 'farm surface Hill Giants for limpwurt roots, cosmic runes, nature runes and herbs',
+        resources: ['squad:ardougne-giants'], squadOnly: true, repeats: false,
+        needs: { combat: 30, food: 4 },
+        yields: () => [{ item: 'limpwurt root', perTick: 0.02 }, { item: 'nature rune', perTick: 0.03 }, { item: 'cosmic rune', perTick: 0.015 }, { item: 'law rune', perTick: 0.015 }, { item: 'unidentified ranarr', perTick: 0.005 }],
+    };
+    const edgevilleUnicorns: Template = {
+        id: 'squad-edgeville-unicorns', family: 'combat', script: 'scripts/gather-combat.ts',
+        args: ['6000', 'unicorn'], env: { MAX_KILLS: '28' }, role: 'combat',
+        goal: 'hunt Edgeville surface Unicorns (south of Wilderness border) for unicorn horns',
+        resources: ['squad:edgeville-unicorns'], squadOnly: true, repeats: false,
+        needs: { combat: 25, food: 2 },
+        yields: () => [{ item: 'unicorn horn', perTick: 0.06 }],
+    };
+    const snapeGrass: Template = {
+        id: 'squad-snape-grass', family: 'gather-spawn', script: 'scripts/gather-spawn.ts',
+        args: ['231', '27'], env: { TICKS: '3000' }, role: 'herblore',
+        goal: 'gather snape grass at Hobgoblin peninsula (non-Wilderness) for prayer potions',
+        resources: ['squad:hobgoblin-snape'], squadOnly: true, repeats: false,
+        yields: () => [{ item: 'snape grass', perTick: 0.08 }],
+    };
+    const taverleyScales: Template = {
+        id: 'squad-taverley-scales', family: 'combat', script: 'scripts/gather-combat.ts',
+        args: ['4000', 'taverley_scales'], env: { MAX_KILLS: '27' }, role: 'herblore',
+        goal: 'gather blue dragon scales in Taverley Dungeon (Dusty key + Anti-dragon shield) for weapon poison',
+        resources: ['squad:taverley-scales'], squadOnly: true, repeats: false,
+        needs: { items: { 'anti-dragon shield': 1, 'dusty key': 1 }, food: 4 },
+        yields: () => [{ item: 'blue dragon scale', perTick: 0.04 }],
+    };
+    const chaosWine: Template = {
+        id: 'squad-chaos-wine', family: 'combat', script: 'scripts/gather-combat.ts',
+        args: ['4000', 'chaos_wine'], env: { MAX_KILLS: '25', TELEGRAB_MAX: '25' }, role: 'magic',
+        goal: 'telekinetic-grab Wine of Zamorak at the Chaos Temple south of Wilderness for ranging potions',
+        resources: ['squad:chaos-temple-wine'], squadOnly: true, repeats: false,
+        needs: { skills: { Magic: 33 }, items: { 'law rune': 25, 'air rune': 25 } },
+        yields: () => [{ item: 'wine of zamorak', perTick: 0.03 }],
+    };
+    const whiteBerries: Template = {
+        id: 'squad-white-berries', family: 'gather-spawn', script: 'scripts/gather-spawn.ts',
+        args: ['239', '27'], env: { TICKS: '3000' }, role: 'herblore',
+        goal: 'gather white berries in Isafdar (post-Regicide) for super defence potions',
+        resources: ['squad:isafdar-berries'], squadOnly: true, repeats: false,
+        needs: { quests: ['Regicide'] },
+        yields: () => [{ item: 'white berrie', perTick: 0.05 }],
+    };
+    const bloodChest: Template = {
+        id: 'squad-blood-chest', family: 'aio:skiller:thieving:blood-chest', script: 'scripts/blood-chest.ts',
+        args: [], role: 'thieving', goal: 'loot the Ardougne Castle blood rune chests for the gang squad',
+        resources: ['squad:ardougne-blood-chest'], squadOnly: true, repeats: false,
+        needs: { skills: { Thieving: 59 }, pieces: { of: BLOOD_FOOD, count: BLOOD_MEALS } },
+        yields: () => [{ item: 'blood rune', perTick: 0.01 }, { item: 'coins', perTick: 2.5 }],
+    };
+    // Herb cleaning templates feeding existing aio-unf-* unfinished potion brewers.
+    const cleanHerbs = ([
+        ['ranarr', 'identify:ranarr_weed', 'unidentified ranarr', 'ranarr weed', 25],
+        ['irit', 'identify:irit_leaf', 'unidentified irit', 'irit leaf', 40],
+        ['kwuarm', 'identify:kwuarm', 'unidentified kwuarm', 'kwuarm', 54],
+        ['cadantine', 'identify:cadantine', 'unidentified cadantine', 'cadantine', 65],
+        ['dwarf-weed', 'identify:dwarf_weed', 'unidentified dwarf weed', 'dwarf weed', 70],
+        ['marentill', 'identify:marentill', 'unidentified marentill', 'marrentill', 5],
+    ] as const).map(([slug, recipe, raw, clean, lvl]) =>
+        invMake(`squad-identify-${slug}`, recipe, clean, lvl, { [raw]: 1 }, {}, 0.2, `identify banked ${raw} for squad potions`));
     return [
-        waterCraft, waterTalisman, runeArrows, sharks,
+        waterCraft, earthCraft, waterTalisman, runeArrows, fletchBankedRuneArrows, sharks,
+        karambwanjiFish, karambwanFish, karambwanCook,
+        smithAnvil('squad-smith-rune-tips', 44, 'rune arrowtips', 90, 1, 15, 27),
+        smithAnvil('squad-smith-rune-full-helm', 1163, 'rune full helm', 92, 2, 1, 10),
+        smithAnvil('squad-smith-rune-kiteshield', 1201, 'rune kiteshield', 97, 3, 1, 8),
+        smithAnvil('squad-smith-rune-platelegs', 1079, 'rune plateleg', 99, 3, 1, 8),
+        smithAnvil('squad-smith-rune-platebody', 1127, 'rune platebody', 99, 5, 1, 5),
+        magicLogs, magicShortbow, taverleyBlackDragons, blackDhideSets,
+        goldOre, goldBars, cutSapphire, enchantRecoil,
+        taverleyDruids, ardougneGiants, edgevilleUnicorns, snapeGrass, taverleyScales, chaosWine, whiteBerries, bloodChest,
+        ...cleanHerbs,
+        invMake('squad-prayer-potion', 'brew:3doseprayerrestore', 'prayer potion(3)', 38, { 'ranarr potion (unf)': 1, 'snape grass': 1 }, {}),
+        invMake('squad-super-attack', 'brew:3dose2attack', 'super attack(3)', 45, { 'irit potion (unf)': 1, 'eye of newt': 1 }, {}),
+        invMake('squad-super-strength', 'brew:3dose2strength', 'super strength(3)', 55, { 'kwuarm potion (unf)': 1, 'limpwurt root': 1 }, {}),
+        invMake('squad-super-defence', 'brew:3dose2defense', 'super defence(3)', 66, { 'cadantine potion (unf)': 1, 'white berrie': 1 }, {}),
+        invMake('squad-ranging-potion', 'brew:3doserangerspotion', 'ranging potion(3)', 72, { 'dwarf weed potion (unf)': 1, 'wine of zamorak': 1 }, {}),
+        invMake('squad-superantipoison', 'brew:3dose2antipoison', 'superantipoison(3)', 48, { 'irit potion (unf)': 1, 'unicorn horn dust': 1 }, {}),
+        invMake('squad-antipoison-brew', 'brew:3doseantipoison', 'antipoison(3)', 5, { 'marrentill potion (unf)': 1, 'unicorn horn dust': 1 }, {}),
+        invMake('squad-weapon-poison', 'brew:weapon_poison', 'weapon poison', 60, { 'kwuarm potion (unf)': 1, 'dragon scale dust': 1 }, {}),
+        invMake('squad-poison-dds', 'poison:dragon-dagger', 'dragon dagger(p)', 1, { 'dragon dagger': 1, 'weapon poison': 1 }, {}),
         shop('squad-arrows-dargaud', 'dargaud', 'rune arrow', 'rune arrow', 0.4, 'buy rune arrows in the Ranging Guild for the gang squad', { skills: { Ranged: 40 }, items: { coins: 30_000 } }),
+        shop('squad-karambwan-shop', 'alfonse', 'cooked karambwan', 'cooked karambwan', 0.05, 'buy cooked karambwan at Brimhaven Fish Restaurant for the gang squad', { items: { coins: 32_000 } }),
+        shop('squad-raw-karambwan-shop', 'tiadeche', 'raw karambwan', 'raw karambwan', 0.05, 'buy raw karambwan from Tiadeche for the gang squad', { quests: ['Tai Bwo Wannai Trio'], items: { coins: 24_000 } }),
         shop('squad-water-betty', 'betty', 'water rune', 'water rune', 0.7, "buy water runes at Betty's in Port Sarim for the gang squad", { items: { coins: 6000 } }),
         shop('squad-water-aubury', 'aubury', 'water rune', 'water rune', 0.7, "buy water runes at Aubury's in Varrock for the gang squad", { items: { coins: 6000 } }),
+        shop('squad-water-guild', 'magic_guild_elemental', 'water rune', 'water rune', 0.7, 'buy water runes at the Magic Guild for the gang squad', { skills: { Magic: 66 }, items: { coins: 12_000 } }),
+        shop('squad-earth-betty', 'betty', 'earth rune', 'earth rune', 0.7, "buy earth runes at Betty's in Port Sarim for the gang squad", { items: { coins: 6000 } }),
+        shop('squad-earth-guild', 'magic_guild_elemental', 'earth rune', 'earth rune', 0.7, 'buy earth runes at the Magic Guild for the gang squad', { skills: { Magic: 66 }, items: { coins: 12_000 } }),
+        shop('squad-air-betty', 'betty', 'air rune', 'air rune', 0.7, "buy air runes at Betty's in Port Sarim for the gang squad", { items: { coins: 6000 } }),
+        shop('squad-air-aubury', 'aubury', 'air rune', 'air rune', 0.7, "buy air runes at Aubury's in Varrock for the gang squad", { items: { coins: 6000 } }),
+        shop('squad-fire-betty', 'betty', 'fire rune', 'fire rune', 0.7, "buy fire runes at Betty's in Port Sarim for the gang squad", { items: { coins: 6000 } }),
+        shop('squad-fire-aubury', 'aubury', 'fire rune', 'fire rune', 0.7, "buy fire runes at Aubury's in Varrock for the gang squad", { items: { coins: 6000 } }),
+        shop('squad-fire-guild', 'magic_guild', 'fire rune', 'fire rune', 0.7, 'buy fire runes at the Magic Guild for the gang squad', { skills: { Magic: 66 }, items: { coins: 12_000 } }),
+        shop('squad-blood-guild', 'magic_guild', 'blood rune', 'blood rune', 0.2, 'buy blood runes at the Magic Guild for the gang squad', { skills: { Magic: 66 }, items: { coins: 110_000 } }),
         shop('squad-nature-guild', 'magic_guild', 'nature rune', 'nature rune', 0.4, 'buy nature runes at the Magic Guild for the gang squad', { skills: { Magic: 66 }, items: { coins: 40_000 } }),
         shop('squad-law-guild', 'magic_guild', 'law rune', 'law rune', 0.4, 'buy law runes at the Magic Guild for the gang squad', { skills: { Magic: 66 }, items: { coins: 17_000 } }),
         shop('squad-antipoison-jiminua', 'jiminua', 'antipoison(3)', 'antipoison', 0.02, "buy antipoison(3) at Jiminua's in Karamja for the gang squad", { items: { coins: 8000 } }),
+        shop('squad-dragon-dagger', 'jukat_dagger', 'dragon dagger', 'dragon dagger', 0.01, 'buy dragon daggers from Jakut in Zanaris for weapon poisoning', { quests: ['Lost City'], items: { coins: 130_000, diamond: 1 } }),
+        shop('squad-oziach-platebody', 'oziach', 'rune platebody', 'rune platebody', 0.01, 'buy rune platebodies from Oziach after Dragon Slayer for the gang squad', { quests: ['Dragon Slayer'], items: { coins: 170_000 } }),
+        shop('squad-scavvo-platelegs', 'scavvo', 'rune plateleg', 'rune platelegs', 0.01, "buy rune platelegs from Scavvo at the Champions' Guild for the gang squad", { quests: ['Dragon Slayer'], items: { coins: 130_000 } }),
+        shop('squad-tenzing-boots', 'tenzing', 'climbing boot', 'climbing boots', 0.05, 'buy climbing boots from Tenzing after Death Plateau for the gang squad', { quests: ['Death Plateau'], items: { coins: 300 } }),
+        shop('squad-sapphire-herquin', 'herquin', 'uncut sapphire', 'uncut sapphire', 0.02, "buy uncut sapphires at Herquin's in Falador for rings of recoil", { items: { coins: 15_000 } }),
+        shop('squad-sapphire-gem-trader', 'gem_trader', 'uncut sapphire', 'uncut sapphire', 0.02, 'buy uncut sapphires in Al Kharid for rings of recoil', { items: { coins: 15_000 } }),
+        shop('squad-eye-of-newt', 'taverley', 'eye of newt', 'eye of newt', 0.3, "buy eye of newt at Jatix's Herblore shop in Taverley", { items: { coins: 1000 } }),
+        shop('squad-vial-of-water', 'taverley', 'vial of water', 'vial of water', 0.3, "buy vials of water at Jatix's Herblore shop in Taverley", { items: { coins: 1500 } }),
     ];
 }
 
@@ -2984,6 +3332,42 @@ export function freshest(...observations: readonly any[]): any {
 // base levels, pack, bank and worn counts by item name, and its complete quests (a status lists every quest with a
 // state, a snapshot row the complete ones by name), and the tile it stands on (a status only). No status: a fresh
 // account at level 1 (Hitpoints 10).
+const EXACT_ITEM_ALIASES: ReadonlyMap<number, string> = new Map([
+    [1747, 'dragonhide_black'],
+    [2509, 'dragon_leather_black'],
+    [2503, 'black_dragonhide_body'],
+    [2497, 'black_dragonhide_chaps'],
+    [2491, 'black_dragon_vambraces'],
+    [3146, 'poorly cooked karambwan'],
+    [91, 'guam potion (unf)'],
+    [93, 'marrentill potion (unf)'],
+    [95, 'tarromin potion (unf)'],
+    [97, 'harralander potion (unf)'],
+    [99, 'ranarr potion (unf)'],
+    [101, 'irit potion (unf)'],
+    [103, 'avantoe potion (unf)'],
+    [105, 'kwuarm potion (unf)'],
+    [107, 'cadantine potion (unf)'],
+    [109, 'dwarf weed potion (unf)'],
+    [111, 'torstol potion (unf)'],
+    [2483, 'lantadyme potion (unf)'],
+    [3002, 'toadflax potion (unf)'],
+    [3004, 'snapdragon potion (unf)'],
+    [199, 'unidentified guam'],
+    [201, 'unidentified marentill'],
+    [203, 'unidentified tarromin'],
+    [205, 'unidentified harralander'],
+    [207, 'unidentified ranarr'],
+    [209, 'unidentified irit'],
+    [211, 'unidentified avantoe'],
+    [213, 'unidentified kwuarm'],
+    [215, 'unidentified cadantine'],
+    [217, 'unidentified dwarf weed'],
+    [219, 'unidentified torstol'],
+    [2485, 'unidentified lantadyme'],
+    [3049, 'unidentified toadflax'],
+    [3051, 'unidentified snapdragon'],
+]);
 export function accountFrom(name: string, side: string, status: any, itemName: (id: number) => string | undefined): Acct {
     const skills: Record<string, number> = { Hitpoints: 10 }, items: Record<string, number> = {}, exact: Record<string, number> = {};
     for (const k of Array.isArray(status?.skills) ? status.skills : []) if (typeof k?.name === 'string' && Number.isFinite(k.level)) skills[k.name] = k.level;
@@ -2992,7 +3376,9 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
     const currentHP = validHP(status?.hp?.now) ? status.hp.now : validHP(sharedHP) ? sharedHP : undefined;
     for (const r of [status?.inventory, status?.bank, status?.equipment].flatMap(x => Array.isArray(x) ? x : [])) {
         const n = typeof r?.name === 'string' ? r.name : itemName(r?.baseId ?? r?.id);
-        const bow = bowStockNames.get(r?.baseId ?? r?.id), key = bow ?? (n && !(norm(n) in BOW_IDS) ? norm(n) : undefined);
+        const itemId = r?.baseId ?? r?.id;
+        const alias = bowStockNames.get(itemId) ?? EXACT_ITEM_ALIASES.get(itemId);
+        const key = alias ?? (n && !(norm(n) in BOW_IDS) ? norm(n) : undefined);
         if (key && Number.isFinite(r.count)) items[key] = (items[key] ?? 0) + r.count;
         if (key && Number.isFinite(r.count) && (r?.baseId === undefined || r.baseId === r.id)) exact[key] = (exact[key] ?? 0) + r.count;
         // The held-bones Prayer worker deposits and buries only id526. Keep notes in generic stock for trades and
