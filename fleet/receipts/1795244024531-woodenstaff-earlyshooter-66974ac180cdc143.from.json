@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795244024531-woodenstaff-earlyshooter-66974ac180cdc143",
  "account": "Woodenstaff",
  "partner": "Earlyshooter",
@@ -12,6 +12,16 @@
  "claim": "22818a9d-d0ac-4f30-b9c3-ad95715f4d67",
  "count": 0,
  "ok": false,
- "at": 1795244115712,
- "detail": "trade claimed"
+ "at": 1795244154703,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 44000,
+  "at": 1795244123510
+ },
+ "logout": {
+  "attemptId": "1795244115721-0000019932-0000000001",
+  "at": 1795244154657,
+  "sha256": "84a8a51bca4937bba186e65a2651230f3c206308a4759842d8c265869b63e582"
+ },
+ "screen": false
 }
