@@ -1,0 +1,22 @@
+{
+ "id": "1795292878198-inthesack-billionaire-ballofwool",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "InTheSack",
+ "to": "Billionaire",
+ "item": "Ball of wool",
+ "count": 2,
+ "start": 1795292878198,
+ "end": 1795295278198,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

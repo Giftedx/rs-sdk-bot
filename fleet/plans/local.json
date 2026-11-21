@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795292700595,
+ "at": 1795292900709,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -287,6 +287,73 @@
    ]
   },
   {
+   "account": "DropMyLoad",
+   "script": "scripts/microbot-production.ts",
+   "args": [
+    "strip:swamp-toad",
+    "MAX_MAKE=2",
+    "CAP=1500",
+    "MEMBERS=1",
+    "ORDER_MODE=best-effort"
+   ],
+   "env": {
+    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"2152\":2}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "strip banked swamp toads into toad's legs",
+   "role": "herblore",
+   "template": "squad-strip-swamp-toad",
+   "autopilot": "local",
+   "resources": [
+    "squad:herblore-bank"
+   ]
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
+   "env": {
+    "MAX_KILLS": "40"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
+   "autopilot": "local",
+   "resources": [
+    "squad:ardougne-giants"
+   ]
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
+   "env": {
+    "MAX_KILLS": "40"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
+   "autopilot": "local",
+   "resources": [
+    "squad:ardougne-giants"
+   ]
+  },
+  {
    "account": "Pocketpython",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -343,7 +410,49 @@
    ]
   },
   {
-   "account": "DropMyLoad",
+   "account": "Magicwanda",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "taverley_black_knight"
+   ],
+   "env": {
+    "MAX_KILLS": "40"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
+   "role": "combat",
+   "template": "squad-taverley-black-knights",
+   "autopilot": "local",
+   "resources": [
+    "squad:taverley-black-knights"
+   ]
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "taverley_black_knight"
+   ],
+   "env": {
+    "MAX_KILLS": "40"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
+   "role": "combat",
+   "template": "squad-taverley-black-knights",
+   "autopilot": "local",
+   "resources": [
+    "squad:taverley-black-knights"
+   ]
+  },
+  {
+   "account": "BoneToPick",
    "script": "scripts/microbot-production.ts",
    "args": [
     "strip:swamp-toad",
