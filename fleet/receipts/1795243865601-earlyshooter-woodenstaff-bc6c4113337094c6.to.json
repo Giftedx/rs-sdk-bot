@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795243865601-earlyshooter-woodenstaff-bc6c4113337094c6",
+ "account": "Woodenstaff",
+ "partner": "Earlyshooter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 1,
+ "claim": "9b978cc3-4cc9-4447-9fb3-a2e873d0f401",
+ "count": 1,
+ "ok": true,
+ "at": 1795243960347,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795243957586
+ },
+ "logout": {
+  "attemptId": "1795243948350-0000015472-0000000001",
+  "at": 1795243960255,
+  "sha256": "66f112c543c05bbf27f8e43a4f60668e06a57e8aebd72626186c06313a0fcf6a"
+ },
+ "screen": true
+}

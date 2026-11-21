@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795243865601-earlyshooter-woodenstaff-bc6c4113337094c6",
  "account": "Earlyshooter",
  "partner": "Woodenstaff",
@@ -10,8 +10,22 @@
  "item": "Prayer potion(4)",
  "requested": 1,
  "claim": "cf2d6166-c0fc-4e2b-a618-9cbbb16dc4ef",
- "count": 0,
- "ok": false,
- "at": 1795243929721,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795243956689,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795243938316
+ },
+ "logout": {
+  "attemptId": "1795243929731-0000020808-0000000001",
+  "at": 1795243956667,
+  "sha256": "d3d16c62a3d5f241fafe6f3545551737566984af40480df9106c2993f921aeaa"
+ },
+ "screen": true
 }
