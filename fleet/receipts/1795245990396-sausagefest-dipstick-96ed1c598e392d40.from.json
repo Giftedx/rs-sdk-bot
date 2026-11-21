@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795245990396-sausagefest-dipstick-96ed1c598e392d40",
+ "account": "Sausagefest",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 29000,
+ "claim": "936d8a0b-dacd-4f57-af60-eb7c0d0fed76",
+ "count": 29000,
+ "ok": true,
+ "at": 1795246120614,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 29000,
+  "after": 0
+ },
+ "bank": {
+  "count": 500,
+  "at": 1795246101840
+ },
+ "logout": {
+  "attemptId": "1795246094321-0000002192-0000000001",
+  "at": 1795246120601,
+  "sha256": "cd23e5228348362aca4bdf9ae130418a76a18d0d84b6b2603267d12d561cdd69"
+ },
+ "screen": true
+}
