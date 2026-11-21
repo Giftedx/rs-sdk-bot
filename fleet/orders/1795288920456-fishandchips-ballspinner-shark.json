@@ -1,0 +1,22 @@
+{
+ "id": "1795288920456-fishandchips-ballspinner-shark",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "FishAndChips",
+ "to": "Ballspinner",
+ "item": "Shark",
+ "count": 6,
+ "start": 1795288920456,
+ "end": 1795291320456,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

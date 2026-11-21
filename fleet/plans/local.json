@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795288552758,
+ "at": 1795288948334,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -287,31 +287,6 @@
    ]
   },
   {
-   "account": "DropMyLoad",
-   "script": "scripts/microbot-production.ts",
-   "args": [
-    "strip:swamp-toad",
-    "MAX_MAKE=2",
-    "CAP=1500",
-    "MEMBERS=1",
-    "ORDER_MODE=best-effort"
-   ],
-   "env": {
-    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"2152\":2}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "strip banked swamp toads into toad's legs",
-   "role": "herblore",
-   "template": "squad-strip-swamp-toad",
-   "autopilot": "local",
-   "resources": [
-    "squad:herblore-bank"
-   ]
-  },
-  {
    "account": "BowBeforeMe",
    "script": "scripts/chain.ts",
    "args": [
@@ -463,32 +438,6 @@
    "autopilot": "local",
    "resources": [
     "squad:herblore-bank"
-   ]
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "1500",
-    "trooper"
-   ],
-   "env": {
-    "TRAIN_SKILL": "Hitpoints",
-    "GIANT_KILLS": "500",
-    "GIANT_FOOD": "20",
-    "GIANT_BURY": "1",
-    "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "train Prayer to 99 burying trooper bones on the field",
-   "role": "combat",
-   "template": "army-trooper-prayer-99",
-   "autopilot": "local",
-   "resources": [
-    "trooper:battlefield"
    ]
   },
   {
