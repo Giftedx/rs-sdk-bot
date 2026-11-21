@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795245735269-pickpockdick-pullmybow-50fc58d638d82401",
  "account": "PickpockDick",
  "partner": "Pullmybow",
@@ -12,6 +12,12 @@
  "claim": "85580def-0eca-4bcd-ba5f-a47847e9421b",
  "count": 0,
  "ok": false,
- "at": 1795245815709,
- "detail": "trade claimed"
+ "at": 1795245882734,
+ "detail": "stop file",
+ "logout": {
+  "attemptId": "1795245815721-0000016756-0000000001",
+  "at": 1795245882564,
+  "sha256": "8afe6e25c791208e76d7711d16de19241f59e076091833e7966875f2273ee180"
+ },
+ "screen": false
 }

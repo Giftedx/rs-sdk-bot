@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795245641846-sausagefest-earlyshooter-2ab774dbeaba57db",
  "account": "Sausagefest",
  "partner": "Earlyshooter",
@@ -12,6 +12,16 @@
  "claim": "e478e960-e80b-4630-94ac-59b863440c80",
  "count": 0,
  "ok": false,
- "at": 1795245713134,
- "detail": "trade claimed"
+ "at": 1795245899801,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 28500,
+  "at": 1795245883818
+ },
+ "logout": {
+  "attemptId": "1795245713144-0000031796-0000000001",
+  "at": 1795245899762,
+  "sha256": "3271e9d571700d6019076cf2322a4ac188d9534a01d6b44718fc36a9c21a34a2"
+ },
+ "screen": false
 }
