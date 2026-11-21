@@ -1,0 +1,33 @@
+{
+ "id": "1795239557228-packhorse-unsheathed-c2aa3d15e8207a00",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Packhorse",
+ "to": "Unsheathed",
+ "item": "Ranarr weed",
+ "count": 1,
+ "start": 1795239557228,
+ "end": 1795241057228,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Leather gloves",
+   "count": 1
+  },
+  {
+   "item": "Logs",
+   "count": 6
+  }
+ ],
+ "takerWaits": true
+}

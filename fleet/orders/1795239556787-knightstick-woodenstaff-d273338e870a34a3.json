@@ -1,0 +1,37 @@
+{
+ "id": "1795239556787-knightstick-woodenstaff-d273338e870a34a3",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Knightstick",
+ "to": "Woodenstaff",
+ "item": "Dragon bones",
+ "count": 11,
+ "start": 1795239556787,
+ "end": 1795241056787,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Death rune",
+   "count": 36
+  },
+  {
+   "item": "Staff of fire",
+   "count": 1
+  },
+  {
+   "item": "Law rune",
+   "count": 10
+  }
+ ],
+ "takerWaits": true
+}
