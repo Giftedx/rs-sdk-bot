@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795303089736-mightyrod-yewfirst",
+ "account": "Mightyrod",
+ "partner": "YewFirst",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 4725,
+ "claim": "8adbee43-2fbc-422a-aa82-f84b7d20f4f2",
+ "count": 4725,
+ "ok": true,
+ "at": 1795303161451,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4725,
+  "after": 0
+ },
+ "bank": {
+  "count": 4725,
+  "at": 1795303155515
+ },
+ "logout": {
+  "attemptId": "1795303148805-0000012500-0000000001",
+  "at": 1795303161441,
+  "sha256": "20c29f854eb9b3b4be48b17ed9174474d672f8717915f3d1027b4e70a3482d52"
+ },
+ "screen": true
+}

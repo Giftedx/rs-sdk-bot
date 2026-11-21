@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795303089736-pocketpython-shaftmaker-naturerune",
+ "account": "Pocketpython",
+ "partner": "Shaftmaker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 448,
+ "claim": "7210db11-8cc7-4839-a094-f18c1df9b32f",
+ "count": 0,
+ "ok": false,
+ "at": 1795303157530,
+ "detail": "trade claimed"
+}
