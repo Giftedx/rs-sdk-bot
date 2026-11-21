@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795223384548-masterbaiter-fingersmith-runechainbody",
  "account": "Fingersmith",
  "partner": "Masterbaiter",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "512da3a7-0d5e-45ef-9b5a-f739adb10ef0",
- "count": 0,
- "ok": false,
- "at": 1795223442039,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795223520496,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795223519371
+ },
+ "logout": {
+  "attemptId": "1795223442049-0000010420-0000000001",
+  "at": 1795223520471,
+  "sha256": "d2fbd11714fba411952766e56e16354afc0f015baf4c9c9364cfbe5cec66f995"
+ },
+ "screen": true
 }
