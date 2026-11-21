@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795299661715-mightyrod-dipstick",
  "account": "Dipstick",
  "partner": "Mightyrod",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 106465,
  "claim": "e48a381d-61d1-4abe-8b11-1f077148afcd",
- "count": 0,
- "ok": false,
- "at": 1795300323154,
- "detail": "trade claimed"
+ "count": 106465,
+ "ok": true,
+ "at": 1795300387582,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 106465
+ },
+ "bank": {
+  "count": 106465,
+  "at": 1795300386834
+ },
+ "logout": {
+  "attemptId": "1795300323161-0000017000-0000000001",
+  "at": 1795300387568,
+  "sha256": "9acb2ed3f76120c86e71622845576137d8f23a199043aa8da9f72ed60e7dd0ac"
+ },
+ "screen": true
 }
