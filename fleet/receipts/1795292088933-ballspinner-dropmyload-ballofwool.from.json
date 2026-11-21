@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795292088933-ballspinner-dropmyload-ballofwool",
+ "account": "Ballspinner",
+ "partner": "DropMyLoad",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ball of wool",
+ "requested": 2,
+ "claim": "048c249a-503d-44bd-857a-af1b78a627a6",
+ "count": 0,
+ "ok": false,
+ "at": 1795292209384,
+ "detail": "trade claimed"
+}
