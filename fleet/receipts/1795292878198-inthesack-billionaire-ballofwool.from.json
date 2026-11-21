@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795292878198-inthesack-billionaire-ballofwool",
  "account": "InTheSack",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Ball of wool",
  "requested": 2,
  "claim": "d10d32fc-63fb-4ff1-95f0-46f8ab82a690",
- "count": 0,
- "ok": false,
- "at": 1795292946727,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795293098721,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795292956412
+ },
+ "logout": {
+  "attemptId": "1795292946737-0000025132-0000000001",
+  "at": 1795293098710,
+  "sha256": "72499086d5510bbae92d073fea654246d1c5e4cc8db0677262f573622d087068"
+ },
+ "screen": true
 }
