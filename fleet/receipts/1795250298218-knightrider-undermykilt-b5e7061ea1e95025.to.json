@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795250298218-knightrider-undermykilt-b5e7061ea1e95025",
+ "account": "UnderMyKilt",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 104000,
+ "claim": "1ffebf2e-1611-4002-8086-3aaebcc873c2",
+ "count": 0,
+ "ok": false,
+ "at": 1795250365604,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Ranarr weed",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}

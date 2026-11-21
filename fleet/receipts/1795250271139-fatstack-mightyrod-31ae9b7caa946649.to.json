@@ -1,0 +1,72 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795250271139-fatstack-mightyrod-31ae9b7caa946649",
+ "account": "Mightyrod",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 125000,
+ "claim": "52fd6351-8faf-4f08-b23f-72f8a668a142",
+ "count": 125000,
+ "ok": true,
+ "at": 1795250368355,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Prayer potion(3)",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795250366820
+   }
+  },
+  {
+   "item": "Snape grass",
+   "requested": 13,
+   "count": 13,
+   "inventory": {
+    "before": 0,
+    "after": 13
+   },
+   "bank": {
+    "count": 13,
+    "at": 1795250367249
+   }
+  },
+  {
+   "item": "Vial of water",
+   "requested": 15,
+   "count": 15,
+   "inventory": {
+    "before": 0,
+    "after": 15
+   },
+   "bank": {
+    "count": 15,
+    "at": 1795250367612
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 125000
+ },
+ "bank": {
+  "count": 125000,
+  "at": 1795250366465
+ },
+ "logout": {
+  "attemptId": "1795250352671-0000016732-0000000001",
+  "at": 1795250368340,
+  "sha256": "368a20efdabde7bcc888891b8429b10eea7b1e9a1141f4767a2e643d5544f4e2"
+ },
+ "screen": true
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795250298532-deeppockets-quickhandjob-7a3b320734762050",
+ "account": "Quickhandjob",
+ "partner": "Deeppockets",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 119000,
+ "claim": "4a5da565-0e98-405c-add0-c47e7460aa98",
+ "count": 0,
+ "ok": false,
+ "at": 1795250369774,
+ "detail": "trade claimed"
+}
