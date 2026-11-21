@@ -41,7 +41,11 @@ export function autoPlanOptions(
         const batch = runners > 20 && patternCount > 1 ? Math.min(4, patternCount, Math.ceil(runners / 20)) : 1;
         return {batch, seedJobs};
     }
-    return {batch: Math.min(4, Math.max(1, patternCount)), seedJobs: 1};
+    let batch = Math.min(2, Math.max(1, patternCount));
+    if (arms * Math.ceil(patternCount / batch) > 20 && patternCount > 1) {
+        batch = Math.min(4, patternCount, Math.ceil((arms * patternCount) / 20));
+    }
+    return {batch, seedJobs: 1};
 }
 
 // The matrix of the hosted job: packs patterns by `batch` and seeds by `seedJobs` (defaults to 1x1 when unpassed).

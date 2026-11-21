@@ -59,7 +59,8 @@ test('--set-b64 decodes standard and URL-safe base64 JSON payloads and rejects m
 
 test('batching and multi-seed fan-out pack patterns and seeds cleanly onto 4-vCPU runners', () => {
     expect(autoPlanOptions(3, 4)).toEqual({batch: 1, seedJobs: 2});
-    expect(autoPlanOptions(6, 1)).toEqual({batch: 4, seedJobs: 1});
+    expect(autoPlanOptions(6, 1)).toEqual({batch: 2, seedJobs: 1});
+    expect(autoPlanOptions(6, 1, {arms: 8})).toEqual({batch: 3, seedJobs: 1});
     expect(autoPlanOptions(3, 4, {arms: 4})).toEqual({batch: 1, seedJobs: 4});
     expect(autoPlanOptions(6, 4, {arms: 4})).toEqual({batch: 2, seedJobs: 4});
     expect(autoPlanOptions(6, 4, {noBatch: true})).toEqual({batch: 1, seedJobs: 1});
