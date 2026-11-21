@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795240228604-woodenstaff-unsheathed-a5035ac03543529b",
+ "account": "Unsheathed",
+ "partner": "Woodenstaff",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Snape grass",
+ "requested": 18,
+ "claim": "d5212666-d1d4-4c16-ab72-b3c3fdb67e98",
+ "count": 18,
+ "ok": true,
+ "at": 1795240310461,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Ranarr weed",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795240309691
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 18
+ },
+ "bank": {
+  "count": 18,
+  "at": 1795240309279
+ },
+ "logout": {
+  "attemptId": "1795240299899-0000023448-0000000001",
+  "at": 1795240310442,
+  "sha256": "c5f9f231630b5b4f9fbd67924527762980c5ffbd446e6aeefc7d5603247f9ad7"
+ },
+ "screen": true
+}
