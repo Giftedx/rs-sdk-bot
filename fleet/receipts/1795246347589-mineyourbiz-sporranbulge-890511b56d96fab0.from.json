@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795246347589-mineyourbiz-sporranbulge-890511b56d96fab0",
  "account": "MineYourBiz",
  "partner": "SporranBulge",
@@ -10,8 +10,22 @@
  "item": "Unicorn horn",
  "requested": 6,
  "claim": "0e5ff775-4a6e-411e-97ae-656471b8eeca",
- "count": 0,
- "ok": false,
- "at": 1795246602801,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795246671473,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795246649384
+ },
+ "logout": {
+  "attemptId": "1795246602810-0000010844-0000000001",
+  "at": 1795246670996,
+  "sha256": "ce3c9c8c004c589784b8975966e56ee40d5ae62532d48ed2b5dbb720738b8f0f"
+ },
+ "screen": true
 }
