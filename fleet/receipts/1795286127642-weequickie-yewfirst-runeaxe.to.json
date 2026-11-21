@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795286127642-weequickie-yewfirst-runeaxe",
  "account": "YewFirst",
  "partner": "WeeQuickie",
@@ -12,6 +12,12 @@
  "claim": "12b10eef-8a7a-4cde-8a96-7fa990050d69",
  "count": 0,
  "ok": false,
- "at": 1795286821620,
- "detail": "trade claimed"
+ "at": 1795286830591,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795286821628-0000021560-0000000001",
+  "at": 1795286830577,
+  "sha256": "415376c7beca346ea643d25f3518ff1084c8dcd83fc0da177a187b202419f35f"
+ },
+ "screen": false
 }

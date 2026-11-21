@@ -13,4 +13,15 @@
  "count": 0,
  "ok": false,
  "at": 1795286826590,
- "detail": "Error: partner fail
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 106230,
+  "at": 1795286825929
+ },
+ "logout": {
+  "attemptId": "1795286817385-0000007224-0000000001",
+  "at": 1795286826573,
+  "sha256": "5ffafd945b0717d523d9ebdd1432f81956999b8c5c4f6cea41596f1b120f4708"
+ },
+ "screen": false
+}
