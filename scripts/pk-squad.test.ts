@@ -1939,3 +1939,108 @@ test('squadFightOverrides parses SQUAD_FREEZE_FLOOR and clearSafeZonePrayers cle
     expect(activePrayers.some(Boolean)).toBe(false);
     expect(await (require('./pk-squad').clearSafeZonePrayers)(mockSess, async () => { ticks++; return true; })).toBe(false);
 });
+
+test('Wave F: single-way anti-PJ respects other allies, wounded straggler finish works when multi is empty, and overrides/fallbacks parse single-way reserves', () => {
+    const view = [
+        { name: 'Engaged', index: 1, distance: 2, x: 3071, z: 3599, combatLevel: 126, inCombat: true, combatTargetType: 'player', combatTargetIndex: 9 },
+        { name: 'FreeTarget', index: 2, distance: 4, x: 3071, z: 3598, combatLevel: 126, inCombat: false },
+    ];
+    const hp: Record<number, number> = { 1: 0.2, 2: 0.5 };
+    // Even if shared activeFocus is 'engaged', another member (selfIndex 3 !== 9) skips Engaged in single-way and hits FreeTarget.
+    expect(pickSquadFocus({ view, targets: new Set(['engaged', 'freetarget']), health: p => hp[p.index]!, inMulti: false, activeFocus: 'engaged', selfIndex: 3 })?.name).toBe('FreeTarget');
+    // The member actually fighting Engaged (selfIndex 9 === 9) stays on Engaged.
+    expect(pickSquadFocus({ view, targets: new Set(['engaged', 'freetarget']), health: p => hp[p.index]!, inMulti: false, activeFocus: 'engaged', selfIndex: 9 })?.name).toBe('Engaged');
+
+    // Wounded single-way straggler (18/99 HP) is finished rather than abandoned when no multi-way targets exist anywhere.
+    expect(shouldBreakSingleWayChase({
+        now: 20, singleUntil: -1, aimInMulti: true,
+        self: { x: 3071, z: 3596, inMulti: false }, target: { x: 3071, z: 3594 }, targetHp: 0.18,
+        hasMultiTargetInView: false, multiAllyCount: 9, anyAllyHasMultiTarget: false, anchor: { x: 3071, z: 3628 },
+    })).toBe(false);
+    // Full-HP single-way decoy still breaks when past leash or multi allies wait.
+    expect(shouldBreakSingleWayChase({
+        now: 20, singleUntil: -1, aimInMulti: true,
+        self: { x: 3071, z: 3596, inMulti: false }, target: { x: 3071, z: 3594 }, targetHp: 1.0,
+        hasMultiTargetInView: false, multiAllyCount: 9, anyAllyHasMultiTarget: false, anchor: { x: 3071, z: 3628 },
+    })).toBe(true);
+
+    // Single-way low food/HP reserve and new fight overrides parse cleanly.
+    expect(squadFallbackPlan({ z: 3600, hp: 69, maxHp: 99, foodCount: 2, enemyCount: 6, allyCount: 2, inMulti: false, hasGlory: true, hasTeleport: true, singleFoodFloor: 2 })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3600, hp: 38, maxHp: 99, foodCount: 5, enemyCount: 6, allyCount: 2, inMulti: false, hasGlory: false, hasTeleport: true, singleHpFloor: 0.40 })).toBe('teleport');
+    const env = (v: Record<string, string>) => (k: string, f: string) => v[k] ?? f;
+    expect(squadFightOverrides(env({ SQUAD_NO_COMBO_EAT: '88', SQUAD_SAFE_STRIP: '1' }))).toEqual({ noComboEatAt: 88, safeStrip: true });
+    expect(() => squadFightOverrides(env({ SQUAD_NO_COMBO_EAT: '120' }))).toThrow('SQUAD_NO_COMBO_EAT');
+    expect(() => squadFightOverrides(env({ SQUAD_SAFE_STRIP: '2' }))).toThrow('SQUAD_SAFE_STRIP');
+});
+
+test('Wave F: rescue escapeSpell activates protect prayer, skips Karambwan p_delay(2), and retries every tick past leftover p_delay until windup starts', async () => {
+    const events: string[] = [];
+    let z = 3601, hp = 53, ticks = 0, animId = -1, castStartedAt = -1;
+    const inv: any[] = [
+        { id: 3144, count: 1, slot: 0, name: 'Cooked karambwan', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+        { id: 563, count: 2, slot: 1, name: 'Law rune', optionsWithIndex: [] },
+        { id: 556, count: 10, slot: 2, name: 'Air rune', optionsWithIndex: [] },
+        { id: 385, count: 1, slot: 3, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    const activePrayers: boolean[] = [];
+    const mockSess: any = {
+        name: 'RetryTeleportBot',
+        tick: () => ticks,
+        ended: new Promise(() => {}),
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp, maxHp: 99, animId },
+                inventory: inv,
+                equipment: [],
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { activePrayers, prayerPoints: 99 },
+                combatEvents: [],
+            }),
+            getInventory: () => inv,
+            getEquipment: () => [],
+            getSkill: () => ({ level: 99, baseLevel: 99 }),
+            sendTogglePrayer: async (idx: number) => {
+                events.push(`pray:${idx}@t${ticks}`);
+                activePrayers[idx] = true;
+            },
+        },
+        direct: async (action: any) => {
+            events.push(`${action.type}:${action.componentId ?? action.slot}@t${ticks}`);
+            // Simulate tick 0 blocked by leftover p_delay(2) from fightPlayer; tick 1 executes cleanly.
+            if (ticks < 1) return { success: true };
+            if (action.type === 'useInventoryItem') {
+                const idx = inv.findIndex(i => i.slot === action.slot);
+                if (idx >= 0) {
+                    const [food] = inv.splice(idx, 1);
+                    hp = Math.min(99, hp + (food.id === 3144 ? 18 : 20));
+                }
+            } else if (action.type === 'clickComponent' && action.componentId === 1174 && castStartedAt < 0) {
+                inv[1].count -= 1;
+                animId = 714;
+                castStartedAt = ticks;
+            }
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => {
+        ticks++;
+        if (castStartedAt >= 0 && ticks >= castStartedAt + 3) z = 3480;
+        return true;
+    });
+    try {
+        const res = await rescue(mockSess, () => {}, () => false, false, { protect: () => 'melee', protectItem: () => true });
+        expect(res).toBe(mockSess);
+        expect(hp).toBe(73);
+        expect(z).toBe(3480);
+        // Tick 0 toggles prayers and attempts Shark (slot 3, not Karambwan slot 0) + Camelot; tick 1 retries immediately when p_delay clears.
+        expect(events).toEqual([
+            `pray:${pk.PRAYER.melee}@t0`,
+            `pray:${pk.PRAYER.item}@t0`,
+            'useInventoryItem:3@t0',
+            'clickComponent:1174@t0',
+            'useInventoryItem:3@t1',
+            'clickComponent:1174@t1',
+        ]);
+    } finally {
+        spyTick.mockRestore();
+    }
+});

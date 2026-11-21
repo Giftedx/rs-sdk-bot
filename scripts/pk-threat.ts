@@ -241,9 +241,15 @@ export class ThreatWatch {
 const tileDist = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(b.z - a.z));
 const effectiveCoverForMember = (m: Member, c: ThreatClass): CombatStyle | null => {
     if (!c.cover) return null;
+    if (!c.record.inView) return c.cover;
+    const dist = tileDist(m, c.record);
     // A hybrid enemy whose recent attack was melee at someone else cannot reach us with melee from >2 tiles while holding bow/staff.
-    if (c.cover === 'melee' && tileDist(m, c.record) > 2 && c.record.inView && c.record.weaponStyle !== 'melee') {
-        return c.record.weaponStyle;
+    if (c.cover === 'melee' && dist > 2 && c.record.weaponStyle !== 'melee') return c.record.weaponStyle;
+    // Once a previous attack is >=1 tick behind and a visible attacker holds melee in reach or a bow after magic/hybrid, cover the armed weapon.
+    const staleAttack = !c.record.lastAttack || c.record.tick > c.record.lastAttack.tick;
+    if (staleAttack && c.record.weaponStyle !== c.cover) {
+        if (c.record.weaponStyle === 'melee' && dist <= 2) return 'melee';
+        if (c.record.weaponStyle === 'ranged' && (c.cover === 'magic' || c.style === 'hybrid')) return 'ranged';
     }
     return c.cover;
 };
@@ -277,7 +283,7 @@ export function refineProtectActions(
             .sort((a, b) => a.tier - b.tier || a.dist - b.dist);
         const best = mine[0];
         if (!best) continue;
-        const newReason = `${best.c.record.name} ${best.c.style} by ${best.c.by}, ${best.dist} tiles`;
+        const newReason = `${best.c.record.name} ${best.c.style} by ${best.style === best.c.cover ? best.c.by : 'weapon'}, ${best.dist} tiles`;
         if (best.style === curProtect.style && curProtect.reason === newReason) continue;
         out[protectIdx] = { kind: 'protect', member: m.name, style: best.style, reason: newReason };
         if (best.style !== curProtect.style && counterFor) {

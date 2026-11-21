@@ -10,7 +10,7 @@ import { loadGear } from './gear';
 import { readFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
-import { amendKillReceipt, killMessage, killReceiptProof, writeKillReceipt } from '../packages/core/src/kill-receipt';
+import { amendKillReceipt, KILL_MESSAGES, killMessage, killReceiptProof, writeKillReceipt } from '../packages/core/src/kill-receipt';
 import { componentId } from '../packages/core/src/logout';
 import { weaponNameStyle } from '../packages/core/src/opponent';
 import { questFlags } from '../packages/core/src/quest-status';
@@ -294,6 +294,14 @@ export type FightOptions = {
     // (specwep.rs2:61-78 drains Attack/Defence/Ranged/Magic by 10% and boosts Strength by 10 + sum/4).
     // 'restore' also prioritizes super restore/attack potion after buffing to recover drained combat stats.
     battleaxeBuff?: boolean | 'restore';
+    // Eat threshold override used whenever the account currently holds no karambwan (e.g. Pure Sharks or after combo food is exhausted).
+    noComboEatAt?: number;
+    // Only strip full freeze armour when fleeing or safely above combo-eat HP under single-attacker pressure; otherwise strip torso only.
+    safeStrip?: boolean;
+    // Shared game-message deduplication keys across fight calls so delayed/cross-target PvP kills credit exactly once.
+    seenKillKeys?: Set<string>;
+    // Invoked when a PvP death message for a player other than the current `targetName` arrives during combat (e.g. recoil, poison, or post-switch).
+    onOtherKill?: (victim: string, info: { text: string; tick: number }) => void;
     maxWild?: number;
     maxDistance?: number;
     stop?: () => boolean;
@@ -733,6 +741,53 @@ const DRAGON_SLAYER_BODY = /^(rune_platebody|dragonhide_body)/;
 
 // The killer's message for a PvP death is in packages/core/src/kill-receipt.ts, which also reads the receipts.
 export { killMessage };
+const KILL_PATTERNS = KILL_MESSAGES.map(tmpl => {
+    const [before, after] = tmpl.split('{}').map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    return new RegExp(`^${before}(.+?)${after}$`, 'i');
+});
+/** Extracts the defeated player name from any PvP kill message template, or null if not a PvP kill line. */
+export function extractKillVictim(text: string): string | null {
+    const normalized = text.trim().replace(/[_\u00a0]/g, ' ');
+    for (const re of KILL_PATTERNS) {
+        const m = normalized.match(re);
+        if (m?.[1]) return m[1].trim();
+    }
+    return null;
+}
+/** Writes a PvP kill receipt and schedules optional world-feed correlation, returning the receipt path when written. */
+export function emitKillReceipt(o: {
+    s: Session;
+    victimName: string;
+    messageText: string;
+    tick: number;
+    at: { x: number; z: number; level: number };
+    victimCombat: number | null;
+    victimTile: { x: number; z: number } | null;
+    equipment: readonly { slot: number; id: number; name?: string }[];
+    kit: Kit;
+    fight: { ticks: number; dealt: number; taken: number; eaten: number; specs: number };
+    killReceiptRoot?: string;
+    feedWatch?: ReturnType<typeof killFeed>;
+    log: (line: string) => void;
+}): string | undefined {
+    if (!o.s.lifecycle && !o.killReceiptRoot) return undefined;
+    try {
+        const { file, receipt } = writeKillReceipt({
+            session: o.s.lifecycle ? { server: o.s.lifecycle.server, attemptId: o.s.lifecycle.attemptId } : null,
+            account: o.s.name, victim: o.victimName, tick: o.tick, tile: o.at,
+            wilderness: wildernessLevel(o.at.z), multi: isMulti(o.at.x, o.at.z), message: o.messageText,
+            victimCombat: o.victimCombat, victimTile: o.victimTile,
+            kit: { worn: o.equipment.map(e => ({ slot: e.slot, id: e.id, name: e.name })), switches: { magic: [...(o.kit.magic ?? [])], ranged: [...(o.kit.ranged ?? [])], melee: [...(o.kit.melee ?? [])] } },
+            fight: o.fight,
+        }, { script: KILL_SCRIPT, ...(o.killReceiptRoot ? { root: o.killReceiptRoot } : {}) });
+        o.log(`PK kill receipt ${receipt.domain} ${receipt.id} wilderness ${receipt.wilderness} ${receipt.multi ? 'multi' : 'single'}`);
+        if (o.feedWatch) checkKillFeed(o.feedWatch, receipt.victim, receipt.at, match => {
+            amendKillReceipt(file, { feed: match });
+            o.log(`PK kill feed ${match.matched ? `matched at feed tick ${match.feedTick}` : `no match: ${match.reason}`}`);
+        });
+        return file;
+    } catch (e) { o.log(`PK kill receipt failed: ${String(e)}`); return undefined; }
+}
 // Adds the items that a pickup took after a kill to the receipt of that kill. `picked` maps an object id to its count
 // (scripts/pk-gang.ts pickUp). A fight with no receipt changes nothing.
 export function recordKillLoot(r: Pick<FightResult, 'receipt'>, picked: Record<string, number>, names = getObjNames()): void {
@@ -1205,31 +1260,32 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             const id = m.observationId ?? m.tick;
             if (id <= seenMessage || m.tick < start) continue;
             if (id > maxMessage) maxMessage = id;
+            const msgKey = `${id}:${m.text.trim().toLowerCase()}`;
             // A dead player stands at its respawn point, and an attack click that is still in hand would walk our account
             // after it: a walk to our own tile ends that click.
             if (m.type === 0 && killMessage(m.text, targetName)) {
+                if (o.seenKillKeys?.has(msgKey)) continue;
+                o.seenKillKeys?.add(msgKey);
                 if (typeof sdk.sendWalk === 'function') void sdk.sendWalk(at.x, at.z);
                 result.outcome = 'kill'; log(`PK kill ${targetName} after ${result.ticks} ticks`);
-                // The receipt is the record of the kill for the owner goal. A failed write must not end the run: the
-                // log line names the failure and the fight result has no receipt.
-                if (s.lifecycle || o.killReceiptRoot) try {
-                    const victim = state.nearbyPlayers.find(p => p.name.toLowerCase() === want);
-                    const { file, receipt } = writeKillReceipt({
-                        session: s.lifecycle ? { server: s.lifecycle.server, attemptId: s.lifecycle.attemptId } : null,
-                        account: s.name, victim: victim?.name ?? targetName, tick: now, tile: { x: at.x, z: at.z, level: me.level ?? 0 },
-                        wilderness: wildernessLevel(at.z), multi: isMulti(at.x, at.z), message: m.text,
-                        victimCombat: victim?.combatLevel ?? target?.combatLevel ?? null, victimTile: victim ? { x: victim.x, z: victim.z } : result.targetAt ?? null,
-                        kit: { worn: state.equipment.map(e => ({ slot: e.slot, id: e.id, name: e.name })), switches: { magic: [...(o.kit.magic ?? [])], ranged: [...(o.kit.ranged ?? [])], melee: [...(o.kit.melee ?? [])] } },
-                        fight: { ticks: result.ticks, dealt: result.dealt, taken: result.taken, eaten: result.eaten, specs: result.specs },
-                    }, { script: KILL_SCRIPT, ...(o.killReceiptRoot ? { root: o.killReceiptRoot } : {}) });
-                    result.receipt = file;
-                    log(`PK kill receipt ${receipt.domain} ${receipt.id} wilderness ${receipt.wilderness} ${receipt.multi ? 'multi' : 'single'}`);
-                    if (feedWatch) checkKillFeed(feedWatch, receipt.victim, receipt.at, match => {
-                        amendKillReceipt(file, { feed: match });
-                        log(`PK kill feed ${match.matched ? `matched at feed tick ${match.feedTick}` : `no match: ${match.reason}`}`);
-                    });
-                } catch (e) { log(`PK kill receipt failed: ${String(e)}`); }
+                const victim = state.nearbyPlayers.find(p => p.name.toLowerCase() === want);
+                result.receipt = emitKillReceipt({
+                    s, victimName: victim?.name ?? targetName, messageText: m.text, tick: now,
+                    at: { x: at.x, z: at.z, level: me.level ?? 0 },
+                    victimCombat: victim?.combatLevel ?? target?.combatLevel ?? null,
+                    victimTile: victim ? { x: victim.x, z: victim.z } : result.targetAt ?? null,
+                    equipment: state.equipment, kit: o.kit,
+                    fight: { ticks: result.ticks, dealt: result.dealt, taken: result.taken, eaten: result.eaten, specs: result.specs },
+                    killReceiptRoot: o.killReceiptRoot, feedWatch, log,
+                });
                 return result;
+            }
+            if (m.type === 0 && o.onOtherKill) {
+                const otherVictim = extractKillVictim(m.text);
+                if (otherVictim && !o.seenKillKeys?.has(msgKey)) {
+                    o.seenKillKeys?.add(msgKey);
+                    o.onOtherKill(otherVictim, { text: m.text, tick: now });
+                }
             }
             if (/magical force stops you from moving|you're stunned/i.test(m.text) && now >= selfFrozenUntil) selfFrozenUntil = now + 8;
             if (/already held by a magical force|currently immune to that spell/i.test(m.text)) {
@@ -1371,7 +1427,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // A worn glory needs a pack slot before it can be rubbed, unless an instant teleport spell is castable in Wild <= 20.
         const gloryRoom = !instantSpellOut && escapeNow(inv) && wildernessLevel(at.z) <= 30 && !!wornGlory && !slotOf(ITEMS.glory)
             && inv.length >= 28 && typeof sdk.sendUseEquipmentItem === 'function';
-        if ((!castShield || gloryRoom) && (gloryRoom || me.hp < me.maxHp && me.hp <= Math.max(eatAt, oppMax + 8)) && now >= foodReady) {
+        const hasKarambwan = slotOf([ITEMS.karambwan]) !== undefined;
+        const effEatAt = !hasKarambwan && o.noComboEatAt !== undefined ? Math.max(eatAt, o.noComboEatAt) : eatAt;
+        if ((!castShield || gloryRoom) && (gloryRoom || me.hp < me.maxHp && me.hp <= Math.max(effEatAt, oppMax + 8)) && now >= foodReady) {
             const food = bestFood(inv);
             if (food && use(food, /^Eat$/i)) {
                 foodReady = now + 3;
@@ -1891,7 +1949,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // A freeze on a target that has fled decides the chase, and the runner does not hit back: every piece that
         // cuts the magic attack roll comes off for it (platelegs -21, kiteshield -8, full helm -6), as far as the
         // packets and free pack slots of this tick allow. Any other cast takes off the torso alone.
-        const strip = (castFreeze && fled && o.freezeStrip !== false) || (armourStrip && me.hp > oppMax + 12);
+        const hasKaramStrip = o.comboFood === true && slotOf([ITEMS.karambwan]) !== undefined;
+        const safeStandingStrip = !o.safeStrip || (hasKaramStrip && sources <= 1 && me.hp >= Math.round(me.maxHp * 0.72));
+        const strip = (castFreeze && fled && o.freezeStrip !== false) || (armourStrip && safeStandingStrip && me.hp > oppMax + 12);
         // castArmour governs a shot or a damage spell, freezeArmour a freeze (default 'torso'): a freeze that misses lets
         // a runner go, and plate leaves the magic roll near 0. The freeze on a fled target strips under freezeStrip.
         const armourRule = castFreeze ? (o.freezeArmour ?? 'torso') : (o.castArmour ?? 'torso');

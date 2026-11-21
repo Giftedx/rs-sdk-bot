@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import {
     attackable, battleaxeWarcryMath, bestDamageSpell, bestFood, canCastChargeNow, castableFreeze, chargeVarpTicks, combatPrayers, dangerReason, defaultSpec, defaultStunSpec,
-    estMaxHit, evaluateSpecPlan, fightPlayer, freezeDuration, freezeSpell, hasStyle, isDying, ITEMS, killMessage, lowHealth, newVolley, rewearStart, carriedPoison, carriedSplat, fledEnds, noteFightPoison, ownPoisonHit, poisonSplat, POISON_HOLD, specReasons,
+    estMaxHit, evaluateSpecPlan, extractKillVictim, fightPlayer, freezeDuration, freezeSpell, hasStyle, isDying, ITEMS, killMessage, lowHealth, newVolley, rewearStart, carriedPoison, carriedSplat, fledEnds, noteFightPoison, ownPoisonHit, poisonSplat, POISON_HOLD, specReasons,
     kitRotation, meleeWeaponDelay, negativeCastArmour, newSplats, nextStyle, nextTick, observePlayer, pickFakieWeapon,
     deathRisk, deathSkullFields, itemCostOf, ownSkull,
     pickFrozenKiteTile, pickWeighted, planPrayerTick, PRAYER, protectedStyles, seededRandom, shouldComboEat, skulled,
@@ -1389,4 +1389,62 @@ test('evaluateSpecPlan gates volleyJoinEligible on volleyBelow when supplied, an
     });
     expect(spells).toBe(0);
     expect(attacks).toBeGreaterThanOrEqual(1);
+});
+
+test('extractKillVictim parses every PvP death message template and onOtherKill deduplicates delayed cross-target kills', async () => {
+    const { KILL_MESSAGES } = await import('../packages/core/src/kill-receipt');
+    for (const tmpl of KILL_MESSAGES) {
+        expect(extractKillVictim(tmpl.replace('{}', 'Goondelf_Jr'))).toBe('Goondelf Jr');
+    }
+    expect(extractKillVictim('You are already under attack.')).toBeNull();
+
+    let tick = 20;
+    const otherKills: string[] = [];
+    const seenKillKeys = new Set<string>();
+    const targetPlayer = { index: 5, name: 'MainTarget', combatLevel: 126, x: 3067, z: 3641, health: 90, totalHealth: 99, headicons: 0, appearance: [], spotanimId: -1 };
+    const state: any = {
+        tick: 20,
+        player: { worldX: 3066, worldZ: 3641, level: 0, hp: 99, maxHp: 99, runEnergy: 100, combatLevel: 126, isDead: false },
+        nearbyPlayers: [{ ...targetPlayer, distance: 1 }],
+        skills: [{ name: 'Magic', level: 99, baseLevel: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }, { name: 'Attack', level: 99, baseLevel: 99 }, { name: 'Strength', level: 99, baseLevel: 99 }, { name: 'Ranged', level: 99, baseLevel: 99 }],
+        inventory: [],
+        equipment: [{ id: 4587, slot: 3, name: 'Dragon scimitar' }],
+        prayers: { prayerPoints: 99, activePrayers: Array(20).fill(false) },
+        gameMessages: [{ observationId: 101, tick: 21, type: 0, text: 'You have defeated StragglerX.' }],
+        combatEvents: [],
+    };
+    const players: any[] = []; players[5] = targetPlayer;
+    const sess: any = {
+        name: 'Tester',
+        tick: () => tick,
+        ended: new Promise(() => {}),
+        onTick: (cb: () => void) => {
+            setTimeout(() => { tick++; state.tick = tick; cb(); }, 0);
+            return () => {};
+        },
+        client: { players, localPlayer: {}, specialEnergy: 0, specialActive: false },
+        sdk: {
+            getState: () => state,
+            getInventory: () => state.inventory,
+            getEquipment: () => state.equipment,
+            getSkill: (n: string) => state.skills.find((k: any) => k.name === n),
+            sendSpellOnPlayer: () => {},
+            sendInteractPlayer: () => {},
+            sendWalk: () => {},
+            sendTogglePrayer: () => {},
+            sendClickComponent: () => {},
+        },
+    };
+    const res = await fightPlayer(sess, 'MainTarget', {
+        kit: { melee: [4587] },
+        rotation: ['melee'],
+        freeze: false,
+        prayerFlick: false, protectItem: false, defencePrayer: false, overheadPrayer: false,
+        seenKillKeys,
+        onOtherKill: (v) => otherKills.push(v),
+        cap: 2, log: () => {},
+    });
+    expect(res.outcome).toBe('timeout');
+    expect(otherKills).toEqual(['StragglerX']);
+    expect(seenKillKeys.has('101:you have defeated stragglerx.')).toBe(true);
 });
