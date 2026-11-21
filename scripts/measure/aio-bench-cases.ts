@@ -217,6 +217,10 @@ export const GANG_EDGE = {x: 3087, z: 3522};
 const EDGE_BANK = [{id: 385, count: 200}, {id: 2436, count: 8}, {id: 2440, count: 8}, {id: 2444, count: 8}, {id: 2442, count: 8}, {id: 2448, count: 8}, {id: 886, count: 2000}, {id: 563, count: 40}, {id: 556, count: 200}, {id: 163, count: 8}, {id: 175, count: 8}];
 // The same bank with the freeze runes of the snare kit (earth, water, nature).
 const EDGE_BANK_SNARE = [...EDGE_BANK, {id: 557, count: 500}, {id: 555, count: 500}, {id: 561, count: 400}];
+// Full maxed-tribrid bank stock for scaled multi-trip benches (sharks, boosts, prayer pots, glory, runes, rune arrows).
+const EDGE_BANK_TRIBRID = [...EDGE_BANK_SNARE, {id: 892, count: 2000}, {id: 2434, count: 20}, {id: 1712, count: 4}, {id: 565, count: 400}, {id: 554, count: 1000}];
+// Multi-trip regression bank holding sharks, boosts, runes, prayer pots, and glory, with zero spare arrows.
+const EDGE_BANK_NOSPARE_ARROWS = EDGE_BANK_TRIBRID.filter(r => r.id !== 886 && r.id !== 892);
 // The bank of a gang account: sharks only, as the feed shows the gang with no potion.
 const GANG_BANK = [{id: 385, count: 200}];
 // The tile where the dagger gang stands between hunts.
@@ -287,6 +291,62 @@ const cloneGang = (key: string, kit: string, names: readonly CloneName[], groups
 const cloneSquad = (key: string, kit: string, n: number, args: string[], mode: CloneMode = 'seen', start = {x: 3093, z: 3501}, food?: number): BenchCase => {
   const c = squadCase(key, kit, 'ganker-dds-skull', n, [`SPAR_B_OPTS=${JSON.stringify(pooledProfile(mode))}`, ...args], food, start);
   return {...c, companions: c.companions!.map((comp, i) => (i < n - 1 ? comp : {...comp, presetConfig: cloneFixture(CLONE_NAMES[i - (n - 1)]!, mode, GANKER_POST.x, GANKER_POST.z)}))};
+};
+// Scaled maxed tribrid squad against the full per-clone profiles (clone-goondelf + clone-ligma + clone-sugma), hard-failing on any death.
+const cloneTribridSquad = (key: string, kit: string, n: number, args: string[] = [], mode: CloneMode = 'seen', start = {x: 3093, z: 3501}, food?: number, bank: readonly {id: number; count: number}[] = EDGE_BANK_TRIBRID): BenchCase => {
+  const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, n + 2).split('');
+  const ours = (x: number, z: number): SaveConfig => {
+    const c = kitFixture(kit, x, z);
+    const inv = food !== undefined
+      ? [...c.inventory!.filter(i => i.id !== 385 && i.id !== 3144), ...Array.from({length: food}, () => ({id: 385, count: 1}))]
+      : c.inventory!;
+    return {...c, bank: [...bank], inventory: inv};
+  };
+  return {
+    key, engineEnv: SPAR_ENGINE, script: 'scripts/aio-pvp.ts', preset: 'fresh_lumbridge',
+    pass: s => ok(s) && killReceiptsMatch(s) && /\bdied=0\b/.test(s),
+    presetConfig: ours(start.x + 1, start.z - 1), output: /kills=(\d+)/,
+    scriptArgs: [
+      'squad', ...letters.map(l => `{bot:${l}}`),
+      'SQUAD_GANG=3', 'MAX_MINUTES=8', 'STALL_TICKS=3000',
+      'SQUAD_GANG_PROFILES=clone-goondelf+clone-ligma+clone-sugma',
+      'SPAR_B_OPTS={}', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1',
+      ...args,
+    ],
+    companions: letters.map((suffix, i) => ({
+      suffix, preset: 'fresh_lumbridge',
+      presetConfig: i < n - 1
+        ? ours(start.x + (i % 3), start.z)
+        : cloneFixture(CLONE_NAMES[i - (n - 1)]!, mode, GANKER_POST.x, GANKER_POST.z),
+    })),
+  };
+};
+// Maxed tribrid squad against the three full clones plus an unexpected third-party attacker team starting at (3088, 3665).
+const cloneTribridThreatCase = (key: string, kit: string, n: number, threatKit: string, threatCount: number, args: string[] = []): BenchCase => {
+  const base = cloneTribridSquad(key, kit, n, args);
+  const kits = threatKit.split('+');
+  const totalCompanions = n - 1 + 3 + threatCount;
+  const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, totalCompanions).split('');
+  const allKits = ['ganker-dds-skull', 'ganker-dds-skull', 'ganker-dds-skull', ...Array.from({length: threatCount}, (_, i) => kits[i % kits.length]!)];
+  const profiles = ['clone-goondelf', 'clone-ligma', 'clone-sugma', ...Array.from({length: threatCount}, () => 'attacker-fight')];
+  const rest = base.scriptArgs!.filter(x => !/^\{bot:/.test(x) && x !== 'squad' && !/^(SQUAD_GANG|SQUAD_GANG_PROFILES|SPAR_B_OPTS)=/.test(x));
+  return {
+    ...base,
+    companions: letters.map((suffix, i) => (
+      i < n - 1 + 3
+        ? {...base.companions![i]!, suffix}
+        : {suffix, preset: 'fresh_lumbridge', presetConfig: kitFixture(allKits[i - (n - 1)]!, 3088, 3665)}
+    )),
+    scriptArgs: [
+      'squad', ...letters.map(l => `{bot:${l}}`),
+      `SQUAD_GANG=${3 + threatCount}`, 'SQUAD_TARGET_COUNT=3',
+      `SQUAD_GANG_KIT=${allKits.join('+')}`,
+      `SQUAD_GANG_PROFILES=${profiles.join('+')}`,
+      `SQUAD_GANG_PREY=${['0', '1', '0', ...Array.from({length: threatCount}, () => '1')].join(',')}`,
+      'SPAR_B_OPTS={}', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4', 'SQUAD_FREEZE_SHARE=1', 'TRIPS=2', 'FOLLOW=1',
+      ...rest,
+    ],
+  };
 };
 // The first live squad run (scripts/pk-gang-record/run-1.json, research/gang-clones.md "The first live squad run"): the four
 // members as they started, in their own loadouts, against the clones. The members had no prayer points, and the bench
@@ -1251,6 +1311,52 @@ const ROUTE_CASES: BenchCase[] = [
   // snare runes (rune), dragonhide (dhide).
   ...([3, 4, 5, 6] as const).flatMap(n => ([['chainbind', 'live-walker-iron-rune-chain-bind'], ['chainbare', 'live-walker-iron-rune-chain-bare'], ['rune', 'live-walker-iron-snare-rune-nopot'], ['dhide', 'tribrid-snare-dhide']] as const)
     .map(([tag, kit]) => cloneSquad(`extra:clone-squad-${n}-${tag}-x1`, kit, n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1']))),
+  // Wave A scaled maxed tribrid benches (4, 6, 8, 10, 12, 16) vs full per-clone Goondelf, Ligma, Sugma (0 deaths required).
+  ...([4, 6, 8, 10, 12, 16] as const).map(n =>
+    cloneTribridSquad(`extra:clone-tribrid-${n}-x1`, 'tribrid-snare', n, ['TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4'])),
+  // Maxed tribrids under third-party threats (ranger, spear+radar, team3, team5) and scattered mainland starts.
+  cloneTribridThreatCase('extra:clone-tribrid-threat-ranger-x1', 'tribrid-snare', 4, 'ranger', 1),
+  cloneTribridThreatCase('extra:clone-tribrid-threat-spear-radar-x1', 'tribrid-snare', 4, 'tribrid-spear-dds', 1),
+  cloneTribridThreatCase('extra:clone-tribrid-threat-team3-x1', 'tribrid-snare', 4, 'mage+ranger+tribrid-snare', 3),
+  cloneTribridThreatCase('extra:clone-tribrid-threat-team5-x1', 'tribrid-snare', 4, 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5),
+  (() => {
+    const c = cloneTribridSquad('extra:clone-tribrid-scattered-follow-x1', 'tribrid-snare', 4,
+      ['MAX_MINUTES=10', 'TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4']);
+    const starts = [{x: 2888, z: 3345, level: 0}, {x: 3185, z: 3436, level: 0}, {x: 3013, z: 3356, level: 0}, {x: 3093, z: 3501, level: 0}];
+    return {
+      ...c,
+      presetConfig: {...c.presetConfig!, position: starts[0]!},
+      companions: c.companions!.map((comp, i) => (i < 3 ? {...comp, presetConfig: {...comp.presetConfig!, position: starts[i + 1]!}} : comp)),
+    };
+  })(),
+  // 2v2/4v3 single-way split regression: a Wild 1 decoy sits on the march approach (3071, 3525) while two clones hold multi-way (3068, 3640).
+  (() => {
+    const base = cloneTribridSquad('extra:squad-4-singleway-split-x1', 'tribrid-snare', 4,
+      ['MAX_MINUTES=5', 'TRIPS=2', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4']);
+    return {
+      ...base,
+      pass: s => ok(s) && killReceiptsMatch(s) && /\bdied=0\b/.test(s) && /\bgangDied=[23]\b/.test(s),
+      scriptArgs: [...base.scriptArgs!.filter(a => a !== 'SQUAD_GANG_HUNT=1'), 'SQUAD_GANG_HUNT=0'],
+      companions: base.companions!.map((comp, i) => (
+        i === 3 ? {...comp, presetConfig: {...comp.presetConfig!, position: {x: 3071, z: 3525, level: 0}}}
+          : i > 3 ? {...comp, presetConfig: {...comp.presetConfig!, position: {x: 3068 + (i - 4), z: 3640, level: 0}}}
+            : comp
+      )),
+    };
+  })(),
+  // Multi-trip restock regression: three maxed tribrids start at post with 1 shark against 3 5-shark tribrid-food clones (3v3) and 0 spare arrows in bank; Trip 2+ must restock and finish.
+  (() => {
+    const base = cloneTribridSquad('extra:squad-2-trips-nospare-x1', 'tribrid-snare', 3,
+      ['MAX_MINUTES=14', 'TRIPS=6', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_GANG_KIT=tribrid-food', 'SQUAD_OPTS={"cureNow":true,"eatAt":88,"escapeAt":64,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}'],
+      'full', {x: 3066, z: 3641}, 1, EDGE_BANK_NOSPARE_ARROWS);
+    const enemy = kitFixture('tribrid-food', GANKER_POST.x, GANKER_POST.z);
+    const enemyInv = [...enemy.inventory!.filter(i => i.id !== 385), ...Array.from({length: 5}, () => ({id: 385, count: 1}))];
+    return {
+      ...base,
+      pass: s => ok(s) && killReceiptsMatch(s) && /\bdied=0\b/.test(s) && /\btrips=([1-9]|\d{2,})\b/.test(s) && /\bgangDied=[23]\b/.test(s),
+      companions: base.companions!.map((comp, i) => (i >= 2 ? {...comp, presetConfig: {...enemy, inventory: enemyInv}} : comp)),
+    };
+  })(),
   // The same against each mode of the clones: every clone walks out with its food gone (retreat), none does (stand),
   // the fewest sharks of the record's range (lean), the most (full).
   ...([4, 5] as const).flatMap(n => (['retreat', 'stand', 'lean', 'full'] as const).map(mode => cloneSquad(`extra:clone-squad-${n}-chainbind-${mode}-x1`, 'live-walker-iron-rune-chain-bind', n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1'], mode))),

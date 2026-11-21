@@ -1,7 +1,7 @@
 import { expect, spyOn, test } from 'bun:test';
 import * as walking from '../packages/core/src/walk';
 import * as pk from './pk';
-import { bankTrip, gangSummary, gangValid, packOf, pickAttacker, pickUp, plannedPickups, PICKUP_ITEMS, pickRunner, startsAttack, tripPrayerDue, type GangResult } from './pk-gang';
+import { bankTrip, gangSummary, gangValid, MIN_TRIP_ARROWS, packOf, pickAttacker, pickUp, plannedPickups, PICKUP_ITEMS, pickRunner, startsAttack, tripPrayerDue, type GangResult } from './pk-gang';
 import { PROFILES, sparOptions } from './pk-spar';
 import { combatLevel, itemId, kitCost, kitItems, kitOptions, kitRoute, KITS, kitSkills, kitSwitches, kitVarps } from './pk-kits';
 import { benchCases, GANKER_POST } from './measure/aio-bench-cases';
@@ -208,17 +208,21 @@ test('plannedPickups takes the wanted stacks within the radius, nearest first', 
 });
 
 // The second visit of a gang bank trip: eat up with the food in the pack, then refill the pack from the bank (sharks, then lobsters).
-async function runBankTrip(o: { pack: { id: number; count: number; name: string }[]; bank: { id: number; count: number }[]; hp: number; prayer?: { points: number; base: number }; altar?: boolean; prayerFails?: boolean; route?: boolean }) {
+async function runBankTrip(o: { pack: { id: number; count: number; name: string }[]; bank: { id: number; count: number }[]; equipment?: { id: number; count: number; slot: number }[]; hp: number; magic?: number; prayer?: { points: number; base: number }; altar?: boolean; prayerFails?: boolean; route?: boolean; minFood?: number; requireEscape?: boolean }) {
     // One slot for each piece of food, as in the game.
-    const inventory: any[] = o.pack.flatMap(p => Array.from({ length: p.count }, () => ({ id: p.id, name: p.name, count: 1, optionsWithIndex: /Shark|Lobster/.test(p.name) ? [{ text: 'Eat', opIndex: 1 }] : [] })))
-        .map((p, i) => ({ ...p, slot: i }));
+    const inventory: any[] = o.pack.flatMap(p => (p.id === 385 || p.id === 379
+        ? Array.from({ length: p.count }, () => ({ id: p.id, name: p.name, count: 1, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] }))
+        : [{ id: p.id, name: p.name, count: p.count, optionsWithIndex: [] }])).map((p, i) => ({ ...p, slot: i }));
+    const equipment = (o.equipment ?? []).map(e => ({ ...e }));
     const prayedAt: string[] = [], logs: string[] = [], walked: { x: number; z: number }[][] = [], bank = o.bank.map(r => ({ ...r })), withdrawals: { id: number; count: number }[] = [], eaten: number[] = [];
     const player: any = { worldX: 3094, worldZ: 3492, hp: o.hp, maxHp: 99 };
     let tick = 0;
     const s: any = {
         tick: () => tick, client: {}, ended: new Promise(() => {}),
         sdk: {
-            getState: () => ({ player, inventory }), getSkill: (n: string) => (n === 'Prayer' && o.prayer ? { level: o.prayer.points, baseLevel: o.prayer.base } : undefined), getInventory: () => inventory, getBankItems: () => bank, getEquipment: () => [],
+            getState: () => ({ player, inventory, equipment }),
+            getSkill: (n: string) => (n === 'Prayer' && o.prayer ? { level: o.prayer.points, baseLevel: o.prayer.base } : n === 'Magic' && o.magic !== undefined ? { level: o.magic, baseLevel: o.magic } : undefined),
+            getInventory: () => inventory, getBankItems: () => bank, getEquipment: () => equipment,
             sendUseItem: async (slot: number) => {
                 const at = inventory.findIndex(i => i.slot === slot), item = inventory[at];
                 if (!item) return;
@@ -239,7 +243,11 @@ async function runBankTrip(o: { pack: { id: number; count: number; name: string 
         spyOn(altars, 'prayAtAltar').mockImplementation(async (_s: any, altar: any) => { prayedAt.push(altar.label); return { ok: !o.prayerFails, detail: 'mock failure' }; }),
     ];
     try {
-        const fault = await bankTrip({ x: 3094, z: 3492 }, { x: 3070, z: 3640 }, { food: 18, items: [] }, {}, () => false, undefined, { altar: o.altar, log: (l: string) => logs.push(l), ...(o.route ? { route: (from: { x: number; z: number }) => [{ x: 3071, z: 3519 }, { x: 3071, z: 3600 }, { x: 3070, z: 3640 }] } : {}) })(s, !o.altar);
+        const fresh = o.minFood === undefined && o.requireEscape === undefined ? !o.altar : false;
+        const fault = await bankTrip({ x: 3094, z: 3492 }, { x: 3070, z: 3640 }, { food: 18, items: [] }, {}, () => false, undefined, {
+            altar: o.altar, minFood: o.minFood, requireEscape: o.requireEscape, log: (l: string) => logs.push(l),
+            ...(o.route ? { route: (from: { x: number; z: number }) => [{ x: 3071, z: 3519 }, { x: 3071, z: 3600 }, { x: 3070, z: 3640 }] } : {}),
+        })(s, fresh);
         return { fault, withdrawals, eaten, hp: player.hp, inventory, prayedAt, logs, walked };
     } finally { for (const mock of mocks) mock.mockRestore(); }
 }
@@ -289,4 +297,75 @@ test('the walk back goes through the route of the squad: the edge, the entry and
     expect(routed.walked).toEqual([[{ x: 3094, z: 3492 }], [{ x: 3071, z: 3519 }, { x: 3071, z: 3600 }, { x: 3070, z: 3640 }]]);
     const plain = await runBankTrip({ ...base, prayer: { points: 99, base: 99 }, altar: true });
     expect(plain.walked).toEqual([[{ x: 3094, z: 3492 }], [{ x: 3070, z: 3640 }]]);
+});
+
+test('packOf with minArrows and minRunes sets safe floors, merges inv+quiver arrows, and normalizes glory charges & prayer pots', () => {
+    const pack = packOf(
+        [
+            { id: 892, count: 20, optionsWithIndex: [] },
+            { id: 1710, count: 1, optionsWithIndex: [] },
+            { id: 139, count: 1, optionsWithIndex: [{ text: 'Drink' }] },
+            { id: 563, count: 4, optionsWithIndex: [] },
+            { id: 556, count: 20, optionsWithIndex: [] },
+            { id: 557, count: 50, optionsWithIndex: [] },
+            { id: 555, count: 50, optionsWithIndex: [] },
+            { id: 561, count: 40, optionsWithIndex: [] },
+        ],
+        [{ id: 892, count: 280, slot: 13 }],
+        { minArrows: MIN_TRIP_ARROWS, minRunes: true },
+    );
+    expect(pack.items).toEqual([
+        { id: 892, count: 300, minCount: 100 },
+        { id: 563, count: 4, minCount: 1 },
+        { id: 556, count: 20, minCount: 5 },
+        { id: 557, count: 50, minCount: 5 },
+        { id: 555, count: 50, minCount: 5 },
+        { id: 561, count: 40, minCount: 4 },
+        { id: 2434, count: 1, minDoses: 1, maxSlots: 1 },
+        { id: 1712, count: 1, minCharges: 1, maxSlots: 1 },
+    ]);
+});
+
+test('bankTrip aborts before walking back if post-eat food drops below minFood or if requireEscape lacks glory and castable teleport', async () => {
+    const lowFood = await runBankTrip({
+        pack: [{ id: 385, count: 5, name: 'Shark' }],
+        bank: [{ id: 385, count: 1 }],
+        hp: 20,
+        minFood: 9,
+    });
+    expect(lowFood.fault).toContain('bank lacks trip food');
+    expect(lowFood.walked).toHaveLength(1);
+
+    const noEscape = await runBankTrip({
+        pack: [{ id: 385, count: 10, name: 'Shark' }],
+        bank: [{ id: 385, count: 10 }],
+        hp: 99,
+        minFood: 9,
+        requireEscape: true,
+        magic: 45,
+    });
+    expect(noEscape.fault).toBe('bank lacks castable escape');
+    expect(noEscape.walked).toHaveLength(1);
+
+    const withGlory = await runBankTrip({
+        pack: [{ id: 385, count: 10, name: 'Shark' }],
+        bank: [{ id: 385, count: 10 }],
+        equipment: [{ id: 1710, count: 1, slot: 2 }],
+        hp: 99,
+        minFood: 9,
+        requireEscape: true,
+    });
+    expect(withGlory.fault).toBeNull();
+    expect(withGlory.walked).toHaveLength(2);
+
+    const withCamelot = await runBankTrip({
+        pack: [{ id: 385, count: 10, name: 'Shark' }, { id: 563, count: 1, name: 'Law rune' }, { id: 556, count: 5, name: 'Air rune' }],
+        bank: [{ id: 385, count: 10 }],
+        hp: 99,
+        minFood: 9,
+        requireEscape: true,
+        magic: 45,
+    });
+    expect(withCamelot.fault).toBeNull();
+    expect(withCamelot.walked).toHaveLength(2);
 });

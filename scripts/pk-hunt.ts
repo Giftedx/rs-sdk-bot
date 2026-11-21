@@ -67,7 +67,7 @@ export const KIT_IDS = { mysticFireStaff: 1401, magicShortbow: 861, runeArrow: 8
 export const TRIBRID_KIT: Kit = { magic: [KIT_IDS.mysticFireStaff], ranged: [KIT_IDS.magicShortbow], melee: [KIT_IDS.dragonDaggerP, KIT_IDS.runeKiteshield] };
 // What a trip carries besides food: the switch weapons, Fire Wave runes (air, blood; the staff gives fire), two prayer
 // potions and a glory for the escape.
-export type TripItem = ItemCount & { minDoses?: number; minCharges?: number; maxSlots?: number };
+export type TripItem = ItemCount & { minDoses?: number; minCharges?: number; minCount?: number; maxSlots?: number };
 export const TRIP: readonly TripItem[] = [
     { id: KIT_IDS.mysticFireStaff, count: 1 }, { id: KIT_IDS.magicShortbow, count: 1 },
     { id: ITEMS.airRune, count: 300 }, { id: ITEMS.bloodRune, count: 60 }, { id: 2434, count: 2 }, { id: ITEMS.glory[0], count: 1, minCharges: 1, maxSlots: 1 },
@@ -148,23 +148,33 @@ export const BOOST_POTIONS = [ITEMS.superAttack, ITEMS.superStrength, ITEMS.rang
 export const BOW_TRIP: readonly TripItem[] = [{ id: KIT_IDS.magicShortbow, count: 1 }, { id: 2434, count: 2 }, { id: ITEMS.glory[0], count: 1, minCharges: 1, maxSlots: 1 }] as const;
 export type TripPick = { name: 'bow' | 'snare' | 'staff'; kit: Kit; trip: readonly TripItem[]; moreFood: number; resolution: RequirementResolution };
 
-export function tripRequirements(trip: readonly TripItem[], worn: readonly ItemCount[] = []): ItemRequirement[] {
+export function tripRequirements(trip: readonly TripItem[], worn: readonly ItemCount[] = [], stock?: readonly ItemCount[]): ItemRequirement[] {
     const whole = (n: unknown, max = 2147483647) => typeof n === 'number' && Number.isSafeInteger(n) && n >= 1 && n <= max;
+    const whole0 = (n: unknown, max = 2147483647) => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 && n <= max;
     if (!Array.isArray(trip) || trip.length > 28 || trip.some(row => !row || typeof row !== 'object'
         || !Number.isSafeInteger(row.id) || row.id < 0 || row.id > 2147483647 || !whole(row.count)
         || row.minDoses !== undefined && !whole(row.minDoses) || row.minCharges !== undefined && !whole(row.minCharges)
-        || row.maxSlots !== undefined && !whole(row.maxSlots, 28) || row.minDoses !== undefined && row.minCharges !== undefined)) return [{ id: -1, count: NaN }];
+        || row.minCount !== undefined && !whole0(row.minCount)
+        || row.maxSlots !== undefined && !whole(row.maxSlots, 28)
+        || row.minDoses !== undefined && row.minCharges !== undefined
+        || row.minCount !== undefined && (row.minDoses !== undefined || row.minCharges !== undefined))) return [{ id: -1, count: NaN }];
     return trip.flatMap((row): ItemRequirement[] => {
         const unit = nativeRequirementMetadata(row.id)?.unit;
-        if (row.minDoses !== undefined && row.minCharges !== undefined || !Number.isSafeInteger(row.count) || row.count < 1) return [{ id: row.id, count: NaN }];
+        if (row.minDoses !== undefined && row.minCharges !== undefined || (row.minCount !== undefined && unit?.kind !== undefined) || !Number.isSafeInteger(row.count) || row.count < 1) return [{ id: row.id, count: NaN }];
         const kind = row.minDoses !== undefined ? 'doses' : row.minCharges !== undefined ? 'charges' : unit?.kind;
         if (kind) return [{ id: row.id, kind, minUnits: row.minDoses ?? row.minCharges ?? row.count * (unit?.units ?? NaN), maxSlots: row.maxSlots ?? row.count }];
-        const count = row.count - worn.filter(item => item.id === row.id).reduce((n, item) => n + item.count, 0);
+        const wornCount = worn.filter(item => item.id === row.id).reduce((n, item) => n + item.count, 0);
+        const wantNeed = Math.max(0, row.count - wornCount);
+        if (row.minCount === undefined) return wantNeed > 0 ? [{ id: row.id, count: wantNeed }] : [];
+        const minNeed = Math.max(0, Math.min(row.count, row.minCount) - wornCount);
+        if (!stock) return minNeed > 0 ? [{ id: row.id, count: minNeed }] : [];
+        const have = stock.filter(item => item.id === row.id).reduce((n, item) => n + item.count, 0);
+        const count = have >= wantNeed ? wantNeed : have >= minNeed ? have : minNeed;
         return count > 0 ? [{ id: row.id, count }] : [];
     });
 }
 const resolveTrip = (stock: readonly ItemCount[], trip: readonly TripItem[], worn: readonly ItemCount[] = []) =>
-    resolveItemRequirements(tripRequirements(trip, worn), stock, nativeRequirementMetadata);
+    resolveItemRequirements(tripRequirements(trip, worn, stock), stock, nativeRequirementMetadata);
 const invalidTrip = (trip: readonly TripItem[]) => resolveTrip([], trip).shortages.filter(row => ['invalid', 'unknown', 'noted'].includes(row.reason));
 // The trip a bank can fill. `shallow`: every hunt spot is at Wilderness level 30 or less; the bow trip is first there.
 // Else the snare trip where the bank holds all of it, else the staff trip.
@@ -182,12 +192,16 @@ export async function restock(s: Session, food: number, trip: readonly TripItem[
     const invalid = invalidTrip(trip);
     if (invalid.length) return 'invalid trip requirements ' + JSON.stringify(invalid);
     const equip = typeof s.sdk.getEquipment === 'function' ? () => s.sdk.getEquipment() : () => s.sdk.getState()?.equipment ?? [];
+    const gloryIds = new Set<number>(ITEMS.glory);
+    let gloryWorn = equip().some(e => gloryIds.has(e.id));
     let switched = false;
     for (const item of [...s.sdk.getInventory()]) {
-        if (!(kit.melee ?? []).includes(item.id) && !/(platebody|chainbody)/i.test(item.name)) continue;
-        if (equip().some(e => e.id === item.id)) continue;
+        const wantGlory = gloryIds.has(item.id) && !gloryWorn;
+        const wantArmour = /(platebody|chainbody|platelegs|plateskirt|full helm|med helm|kiteshield|sq shield|berserker helm)/i.test(item.name);
+        if (!(kit.melee ?? []).includes(item.id) && !wantArmour && !wantGlory) continue;
+        if (!wantGlory && equip().some(e => e.id === item.id)) continue;
         const op = item.optionsWithIndex?.find(x => /^(Wield|Wear)$/i.test(x.text));
-        if (op) { await s.sdk.sendUseItem(item.slot, op.opIndex); switched = true; }
+        if (op) { await s.sdk.sendUseItem(item.slot, op.opIndex); switched = true; if (wantGlory) gloryWorn = true; }
     }
     if (switched && typeof s.onTick === 'function') await nextTick(s);
     if (!(await s.bot.openBank()).success) return 'bank did not open';

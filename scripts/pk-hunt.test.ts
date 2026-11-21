@@ -2,7 +2,7 @@ import { expect, spyOn, test } from 'bun:test';
 import { classify } from '../packages/practice/src/supervise-host';
 import { supervise } from '../packages/practice/src/supervise';
 import { DEFAULT_MAX_DEATHS, huntEnd, maxDeathsOf } from './pk-hunt';
-import { kitToWear, BOW_TRIP, EDGEVILLE_BANK, rekitAfterDeath, RESPAWN_TICKS, FOOD_LIST, foodHeld, healOf, planFood, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget, pickTrip, resolveHuntSpots, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, verdict } from './pk-hunt';
+import { kitToWear, BOW_TRIP, EDGEVILLE_BANK, rekitAfterDeath, RESPAWN_TICKS, FOOD_LIST, foodHeld, healOf, planFood, fleetNames, hitByPlayer, hunt, HUNT_PRESETS, loot, pickTarget, pickTrip, resolveHuntSpots, restock, SNARE_TRIP, TRIBRID_KIT, TRIP, tripRequirements, verdict } from './pk-hunt';
 import { assessWildernessThreat, planWildernessEscape, restockPlan, restockPlanFromStock, slashWebThrough, WILDERNESS_ESCAPES, wildernessCombatMargin, wildernessDepth } from './pk-roam';
 import { pvpCombatBracket } from './aio-pvp';
 import * as pk from './pk';
@@ -730,4 +730,67 @@ test('shortageText names each item with what the trip needs and what the bank ho
     expect(shortageText([{ id: 884, unit: 'items', required: 75, available: 33 }, { id: 563, required: 1, available: 0 }, { id: 2446, unit: 'doses', required: 4, available: 3 }], id => names.get(id)))
         .toBe('iron arrow: 75 items needed, 33 in the bank; law rune: 1 items needed, 0 in the bank; item 2446: 4 doses needed, 3 in the bank');
     expect(shortageText([], () => undefined)).toBe('');
+});
+
+test('tripRequirements and restock allow worn arrows at or over minCount when bank has 0 spare, top up available arrows, and block under floor', async () => {
+    // Live Trip 2 failure case: 298 worn rune arrows (target 300, floor 100) and 0 spare arrows in bank.
+    const noSpare = supplyBank([{ id: 385, count: 20 }], [{ id: 892, count: 298, slot: 13 }]);
+    expect(await restock(noSpare.s, 2, [{ id: 892, count: 300, minCount: 100 }], {})).toBeNull();
+    expect(noSpare.withdrawals.filter(r => r.id === 892)).toEqual([]);
+
+    // Bank holds 1 spare arrow (less than full 2 deficit): top up with that 1 instead of aborting.
+    const oneSpare = supplyBank([{ id: 385, count: 20 }, { id: 892, count: 1 }], [{ id: 892, count: 298, slot: 13 }]);
+    expect(await restock(oneSpare.s, 2, [{ id: 892, count: 300, minCount: 100 }], {})).toBeNull();
+    expect(oneSpare.withdrawals.filter(r => r.id === 892)).toEqual([{ id: 892, count: 1 }]);
+
+    // Bank holds plenty: top up back to the starting 300.
+    const fullSpare = supplyBank([{ id: 385, count: 20 }, { id: 892, count: 500 }], [{ id: 892, count: 298, slot: 13 }]);
+    expect(await restock(fullSpare.s, 2, [{ id: 892, count: 300, minCount: 100 }], {})).toBeNull();
+    expect(fullSpare.withdrawals.filter(r => r.id === 892)).toEqual([{ id: 892, count: 2 }]);
+
+    // Under the arrow floor (80 worn + 15 bank = 95 < 100): restock blocks; 80 worn + 25 bank = 105 >= 100 tops up all 25.
+    const shortFloor = supplyBank([{ id: 385, count: 20 }, { id: 892, count: 15 }], [{ id: 892, count: 80, slot: 13 }]);
+    expect(await restock(shortFloor.s, 2, [{ id: 892, count: 300, minCount: 100 }], {})).toContain('lacks');
+    expect(shortFloor.withdrawals).toEqual([]);
+
+    const passFloor = supplyBank([{ id: 385, count: 20 }, { id: 892, count: 25 }], [{ id: 892, count: 80, slot: 13 }]);
+    expect(await restock(passFloor.s, 2, [{ id: 892, count: 300, minCount: 100 }], {})).toBeNull();
+    expect(passFloor.withdrawals.filter(r => r.id === 892)).toEqual([{ id: 892, count: 25 }]);
+
+    // Invalid minCount combinations fail cleanly before touching bank.
+    expect(tripRequirements([{ id: 892, count: 300, minCount: -1 }])).toEqual([{ id: -1, count: Number.NaN }]);
+    expect(tripRequirements([{ id: 2434, count: 1, minCount: 1 }])).toEqual([{ id: 2434, count: Number.NaN }]);
+
+    // Rubbed glory and stripped legs sitting in inventory when returning to bank are re-equipped before deposit.
+    const invGlory: any[] = [
+        { slot: 0, id: 1710, name: 'Amulet of glory(3)', count: 1, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] },
+        { slot: 1, id: 1079, name: 'Rune platelegs', count: 1, optionsWithIndex: [{ text: 'Wear', opIndex: 2 }] },
+    ];
+    const eqGlory: any[] = [{ slot: 13, id: 892, count: 298 }];
+    const bankGlory: any[] = [{ id: 385, count: 20 }];
+    const sGlory: any = {
+        sdk: {
+            getInventory: () => invGlory,
+            getEquipment: () => eqGlory,
+            getBankItems: () => bankGlory,
+            sendUseItem: async (slot: number) => {
+                const idx = invGlory.findIndex(i => i.slot === slot);
+                if (idx >= 0) eqGlory.push(invGlory.splice(idx, 1)[0]);
+            },
+        },
+        bot: {
+            openBank: async () => ({ success: true }),
+            closeBank: async () => {},
+            depositItem: async (item: any) => {
+                const idx = invGlory.findIndex(i => i.id === item.id);
+                if (idx >= 0) invGlory.splice(idx, 1);
+            },
+            withdrawItem: async (row: any, need: number) => {
+                row.count -= need;
+                invGlory.push({ slot: invGlory.length, id: row.id, count: need });
+            },
+        },
+    };
+    expect(await restock(sGlory, 2, [{ id: 892, count: 300, minCount: 100 }], TRIBRID_KIT)).toBeNull();
+    expect(eqGlory.map(e => e.id).sort((a, b) => a - b)).toEqual([892, 1079, 1710]);
 });
