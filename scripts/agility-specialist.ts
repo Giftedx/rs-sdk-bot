@@ -279,11 +279,11 @@ export function startedWildernessObstacle(name: string, p: { worldX: number; wor
 
 export function canPreClickNextObstacle(name: string, p: { worldX: number; worldZ: number }): boolean {
     switch (name) {
-        case 'pipe': return p.worldX === 3004 && p.worldZ >= 3947 && p.worldZ <= 3950;
+        case 'pipe': return p.worldX === 3004 && p.worldZ >= 3948 && p.worldZ <= 3950;
         case 'ropeswing': return p.worldX === 3005 && p.worldZ >= 3957 && p.worldZ <= 3958;
-        case 'stones': return p.worldZ === 3960 && p.worldX <= 2998 && p.worldX >= 2996;
-        case 'log': return p.worldZ === 3945 && p.worldX <= 2996 && p.worldX >= 2994;
-        case 'rocks': return p.worldX >= 2993 && p.worldX <= 2995 && p.worldZ <= 3935 && p.worldZ >= 3933;
+        case 'stones': return p.worldZ === 3960 && p.worldX <= 2997 && p.worldX >= 2996;
+        case 'log': return p.worldZ === 3945 && p.worldX <= 2995 && p.worldX >= 2994;
+        case 'rocks': return p.worldX >= 2993 && p.worldX <= 2995 && p.worldZ <= 3934 && p.worldZ >= 3933;
         default: return false;
     }
 }
@@ -809,7 +809,7 @@ async function runPrayerTo43(s: Session, targetLevel = 43): Promise<void> {
     if (skillLvl(s, 'Prayer') < 43) throw Error(`prayer reached ${skillLvl(s, 'Prayer')} (< 43)`);
 }
 
-async function pickpocketLumbridgeMen(s: Session, targetLevel = 16, maxTicks = 70): Promise<void> {
+async function pickpocketLumbridgeMen(s: Session, targetLevel = 14, maxTicks = 55): Promise<void> {
     const t0 = s.tick();
     const stunCount = () => (s.sdk.getState()?.gameMessages ?? []).filter((m: any) => /you've been stunned/i.test(m.text)).length;
     let stunUntil = -1;
@@ -1801,6 +1801,11 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
         return { st, c, seenLoc };
     };
 
+    const canReachStep = (step: WildyStep): boolean => {
+        const { seenLoc } = nearestLocForStep(step);
+        return !!seenLoc && seenLoc.reachable !== false;
+    };
+
     const clickStep = async (step: WildyStep) => {
         const { st, c, seenLoc } = nearestLocForStep(step);
         const op = seenLoc?.optionsWithIndex?.[0]?.opIndex ?? 1;
@@ -1938,15 +1943,19 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
                 continue;
             }
 
-            // V2 wilderness pre-click: send next obstacle's click on finishing tiles so the first non-delayed tick catches it immediately.
+            // V2 wilderness pre-click: stay silent mid-obstacle so current crosses uninterrupted and PrayerGuard avoids
+            // false interactLoc holds, then send next obstacle's click on finishing tiles once reachable.
             if (preBlock < 0 && startedWildernessObstacle(step.name, p)) {
                 const nextIdx = (i + 1) % WILDERNESS_STEPS.length;
                 const readyToPreClick = step.name === 'ropeswing' || canPreClickNextObstacle(step.name, p);
                 if (readyToPreClick && sentTick !== s.tick()) {
-                    preClicks++;
                     if (nextIdx === 0 && cfg.alignPipe) {
+                        preClicks++;
                         await s.direct({ type: 'walkTo', x: 3004, z: 3937, running: true, reason: 'SDK' });
-                    } else {
+                    } else if (canReachStep(WILDERNESS_STEPS[nextIdx]!)) {
+                        preClicks++;
+                        await syncPrayer(nextIdx);
+                        await maybeEat();
                         await clickStep(WILDERNESS_STEPS[nextIdx]!);
                     }
                 }
@@ -2052,7 +2061,7 @@ export async function runAgilitySpecialist(bot: string, argv: readonly string[] 
             await wearItem(spec, ITEMS.fireStaff);
             await runFletchingTo10(spec);
             await runPrayerTo43(spec, 46);
-            await pickpocketLumbridgeMen(spec, 16, 70);
+            await pickpocketLumbridgeMen(spec, 14, 55);
             await runImpCatcherAndEnchant(spec, cfg.cap);
 
             await walkNear(spec, { x: 3185, z: 3436, level: 0 }, 2, 40);
