@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795249149430-fingersmith-coincock-a7b37ca3282482ad",
  "account": "Fingersmith",
  "partner": "CoinCock",
@@ -10,15 +10,37 @@
  "item": "Coins",
  "requested": 34000,
  "claim": "e43b224e-9cef-4a42-9e39-418c84743b85",
- "count": 0,
- "ok": false,
- "at": 1795249265204,
- "detail": "trade claimed",
+ "count": 34000,
+ "ok": true,
+ "at": 1795249291624,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Snape grass",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795249273641
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 34000,
+  "after": 0
+ },
+ "bank": {
+  "count": 34000,
+  "at": 1795249273255
+ },
+ "logout": {
+  "attemptId": "1795249265212-0000010400-0000000001",
+  "at": 1795249291611,
+  "sha256": "acb115ef2341d7e6f78c3b7d65ec0db0d6ebcc6a031d24001918a174bdff1ed6"
+ },
+ "screen": true
 }
