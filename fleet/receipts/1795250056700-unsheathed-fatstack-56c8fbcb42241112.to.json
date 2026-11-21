@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795250056700-unsheathed-fatstack-56c8fbcb42241112",
  "account": "Fatstack",
  "partner": "Unsheathed",
@@ -10,25 +10,63 @@
  "item": "Coins",
  "requested": 120000,
  "claim": "637c352f-27f3-4f3f-85eb-b4050371451d",
- "count": 0,
- "ok": false,
- "at": 1795250200361,
- "detail": "trade claimed",
+ "count": 120000,
+ "ok": true,
+ "at": 1795250221969,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Prayer potion(3)",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795250220408
+   }
   },
   {
    "item": "Snape grass",
    "requested": 13,
-   "count": 0
+   "count": 13,
+   "inventory": {
+    "before": 0,
+    "after": 13
+   },
+   "bank": {
+    "count": 13,
+    "at": 1795250220785
+   }
   },
   {
    "item": "Vial of water",
    "requested": 15,
-   "count": 0
+   "count": 15,
+   "inventory": {
+    "before": 0,
+    "after": 15
+   },
+   "bank": {
+    "count": 15,
+    "at": 1795250221262
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 120000
+ },
+ "bank": {
+  "count": 120000,
+  "at": 1795250220002
+ },
+ "logout": {
+  "attemptId": "1795250200369-0000013824-0000000001",
+  "at": 1795250221958,
+  "sha256": "a6627c08626ee2032b73bdea987df6d1489398858940d6bb0e4880ae8836ae8d"
+ },
+ "screen": true
 }
