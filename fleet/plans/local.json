@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795251325193,
+ "at": 1795251472070,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -306,21 +306,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=1 EXPECTED_OWNED=12 LIMIT_PRICE=386000 CASH_RESERVE=5000 ORDER_KEY=liveops-mighty-ranarr-13 ORDER_MS=300000 FILL_WAIT_TICKS=120",
-    "scripts/ranged-live-prep.ts --mode=brew --bank=varrock_west --cap=400",
-    "scripts/ranged-live-prep.ts --mode=decant --bank=varrock_west --cap=400"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
   }
  ],
  "army": [
