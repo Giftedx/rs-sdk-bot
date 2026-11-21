@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795247728934,
+ "at": 1795247830604,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -416,6 +416,37 @@
    "enabled": true,
    "standing": true,
    "repeat": false
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/microbot-production.ts brew:unf_irit_potion MAX_MAKE=3 CAP=300 MEMBERS=1",
+    "scripts/microbot-production.ts brew:3dose2antipoison MAX_MAKE=3 CAP=300 MEMBERS=1",
+    "scripts/microbot-production.ts decant:super_antipoison MAX_MAKE=1 CAP=300 MEMBERS=1",
+    "scripts/microbot-production.ts decant2:super_antipoison MAX_MAKE=1 CAP=300 MEMBERS=1",
+    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=892 QUANTITY=198 SELL_PRICE=2020 FLOOR_PRICE=2020 RESERVE_ITEMS=0 ORDER_KEY=liveops-umk-892-1 ORDER_MS=300000 FILL_WAIT_TICKS=120",
+    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1201 QUANTITY=1 SELL_PRICE=157100 FLOOR_PRICE=157100 RESERVE_ITEMS=0 ORDER_KEY=liveops-umk-1201-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=561 QUANTITY=997 SELL_PRICE=241 FLOOR_PRICE=241 RESERVE_ITEMS=0 ORDER_KEY=liveops-nat-561-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
   }
  ],
  "army": [
@@ -449,9 +480,7 @@
   "dipstick",
   "fingersmith",
   "knightstick",
-  "quickhandjob",
-  "sporrandip",
-  "undermykilt"
+  "sporrandip"
  ],
  "builds": {
   "NabTheKnob": "tribrid",
