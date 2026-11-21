@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795223398727,
+ "at": 1795223994415,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -241,36 +241,6 @@
    ]
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "aubury",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "water rune",
-    "STOCK_TARGET": "303",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "2552",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "2352",
-    "AUTOPILOT_ORDER": "[9]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":303}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
-   "role": "bank",
-   "template": "squad-water-aubury",
-   "autopilot": "local",
-   "resources": [
-    "shop:aubury"
-   ]
-  },
-  {
    "account": "Bigchopper",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -305,6 +275,55 @@
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
+    "KNIGHT_SPOT": "2653,3300",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2653,3300",
+   "role": "thieving",
+   "template": "goldfarm@2653,3300",
+   "autopilot": "local",
+   "resources": [
+    "knight:2653,3300"
+   ]
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "aubury",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "water rune",
+    "STOCK_TARGET": "303",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "2552",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "2352",
+    "AUTOPILOT_ORDER": "[9]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":303}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
+   "role": "bank",
+   "template": "squad-water-aubury",
+   "autopilot": "local",
+   "resources": [
+    "shop:aubury"
+   ]
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
     "KNIGHT_SPOT": "2582,3297",
     "TICKS": "9000"
    },
@@ -317,27 +336,6 @@
    "autopilot": "local",
    "resources": [
     "knight:2582,3297"
-   ]
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "taverley_druid"
-   ],
-   "env": {
-    "MAX_KILLS": "40"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "farm Taverley Dungeon Chaos druids (non-Wilderness) for herbs, snape grass, law and nature runes",
-   "role": "combat",
-   "template": "squad-taverley-druids",
-   "autopilot": "local",
-   "resources": [
-    "squad:taverley-druids"
    ]
   },
   {
@@ -365,6 +363,35 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Packhorse",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "nurmof",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "^iron pickaxe$",
+    "STOCK_TARGET": "1",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "BANK_AT": "0",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "300",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "200"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy iron pickaxe from Nurmof in the Dwarven Mine",
+   "role": "mining",
+   "template": "tool-pickaxe-iron",
+   "autopilot": "local",
+   "resources": [
+    "shop:nurmof"
    ]
   }
  ],
