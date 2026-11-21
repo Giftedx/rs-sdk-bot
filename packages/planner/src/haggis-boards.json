@@ -3471,10 +3471,10 @@
        "skill": "ranged",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 821.1,
-        "realistic": 726.0,
+        "floor": 840.3,
+        "realistic": 714.3,
         "evidence": "MEASURED",
-        "source": "hosted-bench 44787226268 (commit 5311e754d8) overall:pvp-ranged seeds 7/8/9: 1,000,125/1218=821.1, 998,662/1280=780.2, 999,675/1377=726.0 XP/tick (1->99 progressive bows/arrows/dhide, 5 tanks)"
+        "source": "hosted-bench 44860193471 (commit 5bad2c4e91) overall:pvp-ranged seeds 7/8/9: 1,000,012/1190=840.3, 999,562/1255=796.5, 1,000,012/1400=714.3 XP/tick (1->99 progressive bows/arrows/coif/leather boots/dhide, 5 tanks)"
        },
        "side": {
         "hitpoints": 0.333

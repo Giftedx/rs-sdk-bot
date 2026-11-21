@@ -3,13 +3,13 @@ import type { SaveConfig } from '../../packages/practice/src/presets';
 import type { BenchCase } from './aio-bench-cases';
 
 const PVP_TANK_SKILLS: SaveConfig['skills'] = {
-    Attack: 99,
-    Strength: 99,
+    Attack: 78,
+    Strength: 78,
     Defence: 1,
     Hitpoints: 99,
-    Prayer: 99,
-    Magic: 45,
-    Ranged: 99,
+    Prayer: 1,
+    Magic: 1,
+    Ranged: 1,
 };
 
 function pvpTankPresetConfig(index: number): SaveConfig {

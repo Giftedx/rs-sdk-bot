@@ -464,6 +464,12 @@ async function runAttackerMain(args: string[]): Promise<void> {
             const elapsedStr = `skill=${skill} level=${curStat.baseLevel} xp=${finalXp} xpGain=${finalXp - startXp} totalTicks=${totalTicks} swings=${swings}`;
             await finish(tankSessions, true, elapsedStr);
         }
+        if (swings >= 50 && curStat.experience === startXp) {
+            stopTanks = true;
+            await logoutSession(s);
+            await closeWithin([s], 5000);
+            await finish(tankSessions, false, `zero XP after ${swings} swings skill=${skill} totalTicks=${totalTicks}`);
+        }
 
         // PlayerLoading clamps boosted stats on login; only Ranged bow/arrow/armour or Attack 2h tier upgrades need mid-run equip.
         const needTierUpgrade = curStat.baseLevel !== lastCheckedGearLevel && (
