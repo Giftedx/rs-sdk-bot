@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795293874274-fatstack-dipstick-ballofwool",
+ "account": "Dipstick",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ball of wool",
+ "requested": 2,
+ "claim": "e053f29c-f20f-4489-ac50-615a7d592cc6",
+ "count": 0,
+ "ok": false,
+ "at": 1795293942343,
+ "detail": "trade claimed"
+}
