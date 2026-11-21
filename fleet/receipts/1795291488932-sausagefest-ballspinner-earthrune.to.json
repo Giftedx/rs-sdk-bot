@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795291488932-sausagefest-ballspinner-earthrune",
  "account": "Ballspinner",
  "partner": "Sausagefest",
@@ -10,8 +10,22 @@
  "item": "Earth rune",
  "requested": 30,
  "claim": "8b99520c-ef56-40f8-b694-65ef22e43d43",
- "count": 0,
- "ok": false,
- "at": 1795291591840,
- "detail": "trade claimed"
+ "count": 30,
+ "ok": true,
+ "at": 1795291614761,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 30
+ },
+ "bank": {
+  "count": 30,
+  "at": 1795291614038
+ },
+ "logout": {
+  "attemptId": "1795291592037-0000021704-0000000001",
+  "at": 1795291614749,
+  "sha256": "405d53a0036216b9869641388d59e4c6d815f01d46d6f98db73a8888df1bf73c"
+ },
+ "screen": true
 }
