@@ -1,0 +1,22 @@
+{
+ "id": "1795296498204-mmtha0205-shaftmaker-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "mmtha0205",
+ "to": "Shaftmaker",
+ "item": "Nature rune",
+ "count": 45,
+ "start": 1795296498204,
+ "end": 1795298898204,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
