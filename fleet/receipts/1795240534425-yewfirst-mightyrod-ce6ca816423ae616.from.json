@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795240534425-yewfirst-mightyrod-ce6ca816423ae616",
  "account": "YewFirst",
  "partner": "Mightyrod",
@@ -10,15 +10,37 @@
  "item": "Arrow shaft",
  "requested": 10605,
  "claim": "be205645-a8a5-428e-b437-e1ee9e7cd63b",
- "count": 0,
- "ok": false,
- "at": 1795240630750,
- "detail": "trade claimed",
+ "count": 10605,
+ "ok": true,
+ "at": 1795240700493,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Feather",
    "requested": 8653,
-   "count": 0
+   "count": 8653,
+   "inventory": {
+    "before": 8653,
+    "after": 0
+   },
+   "bank": {
+    "count": 8653,
+    "at": 1795240642873
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 10605,
+  "after": 0
+ },
+ "bank": {
+  "count": 10605,
+  "at": 1795240642044
+ },
+ "logout": {
+  "attemptId": "1795240630761-0000022032-0000000001",
+  "at": 1795240700478,
+  "sha256": "df8b960caf40281a3abcd4a2c835de3c41dc801e7c43a69d425bee387770cf38"
+ },
+ "screen": true
 }
