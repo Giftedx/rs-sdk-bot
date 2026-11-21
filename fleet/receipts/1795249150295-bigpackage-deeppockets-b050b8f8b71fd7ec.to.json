@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795249150295-bigpackage-deeppockets-b050b8f8b71fd7ec",
+ "account": "Deeppockets",
+ "partner": "Bigpackage",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 62000,
+ "claim": "acc1c4c9-dbe0-4f88-bf09-560c174e5208",
+ "count": 0,
+ "ok": false,
+ "at": 1795249415410,
+ "detail": "trade claimed"
+}
