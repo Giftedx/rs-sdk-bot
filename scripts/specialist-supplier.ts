@@ -21,6 +21,7 @@ import {
     TRADE_MAIN_ACCEPT,
     TRADE_OFFER_INV,
 } from './fast-skills-lib';
+import { FIREMAKING_SPECIALIST_SUPPLIES, serveFiremakingSupplier } from './firemaking-specialist';
 import { HERBLORE_BANK_HELPER_SPOT, HERBLORE_NOTED_BATCH, HERBLORE_STARTER_BATCH, HERBLORE_SUPPLY_BILL } from './herblore-specialist';
 import { LUMBRIDGE_SAFE_SPOT, MAGIC_BATCHES, MAGIC_SUPPLY_BILL } from './magic-specialist';
 import { PRAYER_BONES_NEEDED, PRAYER_SUPPLY_BILL } from './prayer-specialist';
@@ -94,16 +95,18 @@ export const FLETCHING_SPECIALIST_KIT: readonly KitSpecItem[] = [
 
 export const FLETCHING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = FLETCHING_SPECIALIST_KIT;
 
-// 12 inventory slots: nets/rods/bait/feathers + knife + 5 logs + glory for 3t Sea Slug/Trio/Barbarian fishing.
+// 16 inventory slots: Sea Slug (1->30 FM logs + paste + torch + coins) + fly rod/feathers/knife/logs + glory + super energy.
 export const FISHING_SPECIALIST_KIT: readonly KitSpecItem[] = [
-    { id: 303, name: 'Small fishing net', count: 1, stackable: false },
-    { id: 307, name: 'Fishing rod', count: 1, stackable: false },
     { id: 309, name: 'Fly fishing rod', count: 1, stackable: false },
-    { id: 313, name: 'Fishing bait', count: 60, stackable: true },
-    { id: 314, name: 'Feather', count: 1500, stackable: true },
+    { id: 314, name: 'Feather', count: 1200, stackable: true },
+    { id: 596, name: 'Torch', count: 1, stackable: false },
     { id: 946, name: 'Knife', count: 1, stackable: false },
-    { id: 1511, name: 'Logs', count: 5, stackable: false },
+    { id: 995, name: 'Coins', count: 100, stackable: true },
+    { id: 1511, name: 'Logs', count: 4, stackable: false },
+    { id: 1521, name: 'Oak logs', count: 4, stackable: false },
     { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false, altIds: [1710, 1708] },
+    { id: 1941, name: 'Swamp paste', count: 1, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 1, stackable: false },
 ] as const;
 
 // 21 inventory slots: Doric quest ores + Rune pickaxe + 3t knife/logs + coins + glory + 2x super energy + games neck.
@@ -163,10 +166,47 @@ export const CRAFTING_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(CRAFTIN
 export const HERBLORE_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(HERBLORE_SUPPLY_BILL);
 export const MAGIC_SPECIALIST_KIT: readonly KitSpecItem[] = billToKit(MAGIC_SUPPLY_BILL);
 
-// 28 inventory slots: live Thieving kit using Ring of dueling(8) + 27 Chocolate cakes (405 HP; Ring dropped after Castle Wars teleport).
+// 28 inventory slots: live Thieving kit using Ring of dueling(8) + Super energy(4) + 26 Chocolate cakes (390 HP; Ring/pot dropped for coins).
 export const THIEVING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = [
-    { id: 1897, name: 'Chocolate cake', count: 27, stackable: false },
+    { id: 1897, name: 'Chocolate cake', count: 26, stackable: false },
     { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 1, stackable: false },
+] as const;
+
+// 10 inventory slots: noted Unfermented wine + Ring of dueling(8) + 4 Fruit Blast cocktail bases/slices (fits free tutorial slots).
+export const COOKING_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 1996, name: 'Unfermented wine', count: 6000, stackable: true },
+    { id: 2552, name: 'Ring of dueling(8)', count: 1, stackable: false },
+    { id: 2082, name: 'Unfinished cocktail', count: 4, stackable: false },
+    { id: 2106, name: 'Lemon slices', count: 4, stackable: false },
+] as const;
+
+export const COOKING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = COOKING_SPECIALIST_KIT;
+
+// 24 inventory slots: Rune axe + Knife + normal Logs + Glory(4) + Monk robes + Holy symbol + Air/Mind runes + 11 Dragon bones + 4 Prayer potions(4).
+export const WOODCUTTING_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 1359, name: 'Rune axe', count: 1, stackable: false },
+    { id: 946, name: 'Knife', count: 1, stackable: false },
+    { id: 1511, name: 'Logs', count: 1, stackable: false },
+    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false, altIds: [1710, 1708, 1706] },
+    { id: 542, name: "Monk's robe", count: 1, stackable: false },
+    { id: 544, name: "Monk's robe", count: 1, stackable: false },
+    { id: 1718, name: 'Holy symbol', count: 1, stackable: false },
+    { id: 556, name: 'Air rune', count: 150, stackable: true },
+    { id: 558, name: 'Mind rune', count: 150, stackable: true },
+    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 4, stackable: false },
+] as const;
+
+export const WOODCUTTING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = WOODCUTTING_SPECIALIST_KIT;
+
+export const FIREMAKING_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 1511, name: 'Logs', count: FIREMAKING_SPECIALIST_SUPPLIES[1511] ?? 2, stackable: false },
+    { id: 1521, name: 'Oak logs', count: FIREMAKING_SPECIALIST_SUPPLIES[1521] ?? 4, stackable: false },
+    { id: 1519, name: 'Willow logs', count: FIREMAKING_SPECIALIST_SUPPLIES[1519] ?? 7, stackable: false },
+    { id: 1517, name: 'Maple logs', count: FIREMAKING_SPECIALIST_SUPPLIES[1517] ?? 13, stackable: false },
+    { id: 1515, name: 'Yew logs', count: FIREMAKING_SPECIALIST_SUPPLIES[1515] ?? 24, stackable: false },
+    { id: 1513, name: 'Magic logs', count: FIREMAKING_SPECIALIST_SUPPLIES[1513] ?? 107, stackable: false },
 ] as const;
 
 export const SPECIALIST_KITS = {
@@ -185,6 +225,11 @@ export const SPECIALIST_KITS = {
     'mining-live': MINING_SPECIALIST_LIVE_KIT,
     thieving: THIEVING_SPECIALIST_KIT,
     'thieving-live': THIEVING_SPECIALIST_LIVE_KIT,
+    cooking: COOKING_SPECIALIST_KIT,
+    'cooking-live': COOKING_SPECIALIST_LIVE_KIT,
+    woodcutting: WOODCUTTING_SPECIALIST_KIT,
+    'woodcutting-live': WOODCUTTING_SPECIALIST_LIVE_KIT,
+    firemaking: FIREMAKING_SPECIALIST_KIT,
     prayer: PRAYER_SPECIALIST_KIT,
     smithing: SMITHING_SPECIALIST_KIT,
     runecraft: RUNECRAFT_SPECIALIST_KIT,
@@ -794,7 +839,7 @@ async function runServe(args: string[]): Promise<void> {
             }
         }
         const kitName = activePlan.name;
-        if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'runecraft' && kitName !== 'crafting' && kitName !== 'herblore' && kitName !== 'magic' && kitName !== 'agility') {
+        if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'runecraft' && kitName !== 'crafting' && kitName !== 'herblore' && kitName !== 'magic' && kitName !== 'firemaking' && kitName !== 'agility') {
             const peerRe = exactNameRe(specialist);
             for (let legIdx = 0; legIdx < activePlan.legs.length; legIdx++) {
                 const leg = activePlan.legs[legIdx]!;
@@ -1135,6 +1180,22 @@ async function runServe(args: string[]): Promise<void> {
                 if (!ok || stop() || s.tick() - t0 >= CAP) break;
             }
             allDone = ok;
+        } else if (kitName === 'firemaking') {
+            const roleRaw = parseSupplierRole(args, process.env);
+            const role = roleRaw === 'starter' ? 'starter' : roleRaw === 'runner' ? 'runner' : 'all';
+            const res = await serveFiremakingSupplier(s, specialist, role, () => stop() || s.tick() - t0 >= CAP, {
+                onWave1Ready: emitReady,
+                tradeWave0: async batch =>
+                    (await serveFastBatch(
+                        s,
+                        specialist,
+                        batch.map(b => invSpec(b.id, b.count)),
+                        t0,
+                        CAP,
+                        () => stop() || s.tick() - t0 >= CAP,
+                    )) === 'ok',
+            });
+            allDone = res.ok;
         } else if (kitName === 'agility') {
             const batch = AGILITY_SPECIALIST_KIT.map(g => invSpec(g.id, g.count));
             if (!hasExactKit(s.sdk.getInventory(), batch)) {

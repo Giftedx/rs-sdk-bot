@@ -20,7 +20,6 @@ import {
     isLiveSupplyVariant,
     itemQty,
     chebDist,
-    CWARS_TO_ARDY_MARKET_WAYPOINTS,
     OBJ_COINS,
     OBJ_CHOCOLATE_CAKE,
     OBJ_GLORY_4,
@@ -34,7 +33,7 @@ import type { Session } from '../packages/core/src/inprocess';
 export const THIEVING_GLORY_IDS = [1712, 1710, 1708, 1706] as const;
 
 export const THIEVING_PIZZAS = 25;
-export const THIEVING_CAKES = 27;
+export const THIEVING_CAKES = 26;
 
 export const THIEVING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_GLORY_4]: 1,
@@ -43,55 +42,100 @@ export const THIEVING_SPECIALIST_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_PINEAPPLE_PIZZA]: THIEVING_PIZZAS,
 };
 
-// Live-stockable variant: 0 Glory, 0 Super energy, 0 Pineapple pizza (local Ring of dueling(8) + 27 Chocolate cakes).
+// Live-stockable variant: Ring of dueling(8) + Super energy(4) + 26 Chocolate cakes (local stockable, 0 Glory / 0 Pineapple pizza).
 export const THIEVING_SPECIALIST_LIVE_SUPPLIES: Readonly<Record<number, number>> = {
     [OBJ_DUELING_8]: 1,
+    [OBJ_SUPER_ENERGY_4]: 1,
     [OBJ_CHOCOLATE_CAKE]: THIEVING_CAKES,
 };
+
+export const THIEVING_DIRECT_CWARS_WAYPOINTS: readonly [number, number, number][] = [
+    [2455, 3168, 4],
+    [2476, 3197, 3],
+    [2486, 3214, 3],
+    [2506, 3233, 4],
+    [2555, 3236, 4],
+    [2602, 3276, 4],
+    [2621, 3293, 2],
+];
 
 const BAKERS_STALL_SAFE_CENTER = { x: 2667, z: 3310 };
 const BAKERS_STALL_SIDE_OFFSETS: readonly [number, number][] = [
     [2, 0], [2, 1], [-1, 0], [-1, 1], [0, -1], [1, -1], [0, 2], [1, 2],
 ];
 
-/** Steal a small emergency food buffer from the Ardougne Baker's stall only when no Knight/Baker can spot the tile. */
-async function stealEmergencyStallFood(main: Session, stop: () => boolean, targetBites = 8): Promise<void> {
-    if (chebDist({ x: main.sdk.getState()?.player?.worldX ?? 0, z: main.sdk.getState()?.player?.worldZ ?? 0 }, BAKERS_STALL_SAFE_CENTER) > 6) {
-        await main.bot.walkTo(BAKERS_STALL_SAFE_CENTER.x + 2, BAKERS_STALL_SAFE_CENTER.z, 2);
+/** Steal an emergency food buffer from an Ardougne Baker's stall using native sight + walkability checks. */
+async function stealEmergencyStallFood(main: Session, stop: () => boolean, targetBites = 4, maxSteals = 4): Promise<boolean> {
+    const startBites = foodBitesCount(main);
+    const curPos = main.sdk.getState()?.player;
+    if (curPos && chebDist({ x: curPos.worldX, z: curPos.worldZ }, BAKERS_STALL_SAFE_CENTER) > 8) {
+        await walkWaypointsSafe(main, [[2662, 3305, 2], [BAKERS_STALL_SAFE_CENTER.x + 2, BAKERS_STALL_SAFE_CENTER.z, 1]], stop);
     }
-    for (let i = 0; i < 40 && !stop() && foodBitesCount(main) < targetBites && main.sdk.getInventory().length < 28; i++) {
+    const pf = await import('../vendor/rs-sdk/sdk/pathfinding').catch(() => undefined);
+    if (pf) {
+        const { loadPathfinding } = await import('../packages/core/src/pathcache');
+        await loadPathfinding();
+    }
+    const { stallRecipes, stallSight, stallWatched } = await import('./microbot-c-stalls');
+    const bakeryRecipe = stallRecipes().find(r => r.name === 'stealing_bakery_stall');
+    const sight = bakeryRecipe ? await stallSight(main, bakeryRecipe) : undefined;
+    const blockedTiles = new Set<string>();
+    let noTileStreak = 0;
+
+    for (let step = 0, steals = 0; step < 36 && steals < maxSteals && !stop() && foodBitesCount(main) < targetBites && main.sdk.getInventory().length < 28; step++) {
         const st = main.sdk.getState();
         const me = st?.player;
         if (!st || !me) {
             await waitTicks(main, 1);
             continue;
         }
-        const stall = st.nearbyLocs.find(l => /^baker'?s stall$/i.test(l.name) && l.optionsWithIndex.some(o => /steal/i.test(o.text)));
-        if (!stall) {
+        const stalls = st.nearbyLocs
+            .filter(l => /^baker'?s stall$/i.test(l.name) && l.x >= 2664 && l.optionsWithIndex.some(o => /steal/i.test(o.text)));
+        const useStalls = stalls.length > 0 ? stalls : st.nearbyLocs.filter(l => /^baker'?s stall$/i.test(l.name) && l.optionsWithIndex.some(o => /steal/i.test(o.text)));
+        if (useStalls.length === 0) {
             await waitTicks(main, 1);
             continue;
         }
-        const watchers = st.nearbyNpcs.filter(n => /^(knight of ardougne|baker)$/i.test(n.name));
-        const safeTile = BAKERS_STALL_SIDE_OFFSETS
-            .map(([dx, dz]) => ({ x: stall.x + dx, z: stall.z + dz }))
-            .filter(t => watchers.every(w => chebDist({ x: w.x, z: w.z }, t) > 5))
-            .sort((a, b) => chebDist(a, { x: me.worldX, z: me.worldZ }) - chebDist(b, { x: me.worldX, z: me.worldZ }))[0];
-        if (!safeTile) {
+        const watchers = st.nearbyNpcs.filter(n => /^(guard|baker)$/i.test(n.name));
+        const tileWatched = (x: number, z: number) => bakeryRecipe && sight
+            ? stallWatched(bakeryRecipe, { worldX: x, worldZ: z, level: me.level ?? 0 }, st.nearbyNpcs, sight)
+            : watchers.some(w => chebDist({ x: w.x, z: w.z }, { x, z }) <= 5);
+        const candidates = useStalls.flatMap(stall =>
+            BAKERS_STALL_SIDE_OFFSETS
+                .map(([dx, dz]) => ({ stall, x: stall.x + dx, z: stall.z + dz }))
+                .filter(t => !blockedTiles.has(`${t.x},${t.z}`))
+                .filter(t => !pf || pf.isTileWalkable(me.level ?? 0, t.x, t.z))
+                .filter(t => !tileWatched(t.x, t.z)),
+        ).sort((a, b) => chebDist(a, { x: me.worldX, z: me.worldZ }) - chebDist(b, { x: me.worldX, z: me.worldZ }));
+        const pick = candidates[0];
+        if (!pick) {
+            if (++noTileStreak >= 6) break;
             await waitTicks(main, 1);
             continue;
         }
-        if (me.worldX !== safeTile.x || me.worldZ !== safeTile.z) {
-            await main.bot.walkTo(safeTile.x, safeTile.z, 0);
+        noTileStreak = 0;
+        if (me.worldX !== pick.x || me.worldZ !== pick.z) {
+            const walkRes = await main.bot.walkTo(pick.x, pick.z, 0);
+            const after = main.sdk.getState()?.player;
+            if (!walkRes.success || (after?.worldX === me.worldX && after?.worldZ === me.worldZ)) {
+                blockedTiles.add(`${pick.x},${pick.z}`);
+            }
             continue;
         }
-        const op = stall.optionsWithIndex.find(o => /steal/i.test(o.text));
+        if (tileWatched(me.worldX, me.worldZ)) {
+            await waitTicks(main, 1);
+            continue;
+        }
+        const op = pick.stall.optionsWithIndex.find(o => /steal/i.test(o.text));
         if (!op) break;
         const before = foodBitesCount(main);
-        await main.direct({ type: 'interactLoc', x: stall.x, z: stall.z, locId: stall.id, optionIndex: op.opIndex, reason: 'SDK' });
+        steals++;
+        await main.direct({ type: 'interactLoc', x: pick.stall.x, z: pick.stall.z, locId: pick.stall.id, optionIndex: op.opIndex, reason: 'SDK' });
         for (let w = 0; w < 4 && !stop() && foodBitesCount(main) === before; w++) {
             await waitTicks(main, 1);
         }
     }
+    return foodBitesCount(main) > startBites || foodBitesCount(main) >= targetBites;
 }
 
 export interface PickpocketTier {
@@ -106,7 +150,7 @@ export const ARDOUGNE_PICKPOCKET_TIERS: readonly PickpocketTier[] = [
     { name: 'man', minLevel: 1, stunDamage: 1, pattern: /^(man|woman)$/i, anchor: { x: 2621, z: 3293 } },
     { name: 'warrior', minLevel: 25, stunDamage: 2, pattern: /^warrior woman$/i, anchor: { x: 2630, z: 3296 } },
     { name: 'guard', minLevel: 40, stunDamage: 2, pattern: /^guard$/i, anchor: { x: 2662, z: 3305 } },
-    { name: 'knight', minLevel: 55, stunDamage: 3, pattern: /^knight of ardougne$/i, anchor: { x: 2654, z: 3301 } },
+    { name: 'knight', minLevel: 55, stunDamage: 3, pattern: /^knight of ardougne$/i, anchor: { x: 2660, z: 3301 } },
 ];
 
 export function selectPickpocketTier(level: number): PickpocketTier {
@@ -117,6 +161,7 @@ export function selectPickpocketTier(level: number): PickpocketTier {
 }
 
 export function selectPickpocketTarget<T extends {
+    readonly index?: number;
     readonly name: string;
     readonly distance: number;
     readonly x: number;
@@ -126,13 +171,21 @@ export function selectPickpocketTarget<T extends {
 }>(
     npcs: readonly T[],
     tier: PickpocketTier,
+    stickyIndex = -1,
 ): { target: T | undefined; blocked: T | undefined } {
     const matching = npcs
-        .filter(n => tier.pattern.test(n.name) && n.optionsWithIndex.some(o => /^pickpocket$/i.test(o.text)))
-        .sort((a, b) => a.distance - b.distance);
+        .filter(n => tier.pattern.test(n.name) && n.optionsWithIndex.some(o => /^pickpocket$/i.test(o.text)));
+    const nearAnchor = matching.filter(
+        n => Math.max(Math.abs(n.x - tier.anchor.x), Math.abs(n.z - tier.anchor.z)) <= 9,
+    );
+    const sticky = stickyIndex >= 0
+        ? nearAnchor.find(n => n.index === stickyIndex && n.distance <= 3 && n.reachable !== false)
+        : undefined;
+    if (sticky) return { target: sticky, blocked: undefined };
+    const pool = (nearAnchor.length > 0 ? nearAnchor : matching).sort((a, b) => a.distance - b.distance);
     return {
-        target: matching.find(n => n.reachable !== false),
-        blocked: matching.find(n => n.reachable === false),
+        target: pool.find(n => n.reachable !== false),
+        blocked: pool.find(n => n.reachable === false),
     };
 }
 
@@ -202,6 +255,9 @@ export async function runArdougneStunRelogThieving(opts: {
     let ok = false;
     let lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
     let lastPickTick = -99;
+    let lastPickDist = 99;
+    let lastPickTarget = -1;
+    let stallCooldownUntil = 0;
     const elapsedNow = () => totalTicks + Math.max(0, main.tick() - sessStart);
 
     while (!opts.isStopped() && elapsedNow() < opts.cap) {
@@ -224,7 +280,15 @@ export async function runArdougneStunRelogThieving(opts: {
         lastMsgMark = latestMark(msgs, lastMsgMark);
         if (newMsgs.some(m => /you've been stunned/i.test(m.text))) {
             stuns++;
-            if (st.player.hp <= tier.stunDamage) {
+            const bites = foodBitesCount(main);
+            if (st.player.hp <= Math.max(3, tier.stunDamage) && bites === 0) {
+                // Never call logoutSession at <= FLEE_HP with no food: flee_guard holds clickComponent until timeout.
+                await waitTicks(main, 2);
+                lastPickTick = -99;
+                continue;
+            }
+            // Keep >= 1 emergency bite in inventory so randomevents flee_guard never triggers on 0-food HP<=3 stuns.
+            if (bites >= 2 && st.player.hp <= Math.max(4, (st.player.maxHp ?? 10) - 5)) {
                 await eatAnyFood(main);
             }
             totalTicks += Math.max(1, main.tick() - sessStart) + 1;
@@ -233,24 +297,43 @@ export async function runArdougneStunRelogThieving(opts: {
             sessStart = main.tick();
             lastMsgMark = latestMark(main.sdk.getState()?.gameMessages ?? [], -1);
             lastPickTick = -99;
+            lastPickDist = 99;
+            lastPickTarget = -1;
             continue;
         }
 
-        // Safety guard: never attempt a pickpocket while HP <= stunDamage. Restock from Baker's stall only if all food runs out.
-        if (st.player.hp <= tier.stunDamage) {
-            if (await eatAnyFood(main)) {
-                await waitTicks(main, 1);
-                continue;
+        // Proactive food restock when empty or down to 1 reserve bite (skip trip at lv>=98 while hp still >= stun+3).
+        const bites = foodBitesCount(main);
+        const needRestock = bites === 0 || (bites <= 1 && (lvl < 98 || st.player.hp <= tier.stunDamage + 3));
+        if (needRestock && elapsedNow() >= stallCooldownUntil) {
+            const restocked = await stealEmergencyStallFood(main, () => opts.isStopped() || elapsedNow() >= opts.cap, 4, 4);
+            if (!restocked) {
+                stallCooldownUntil = elapsedNow() + 6;
             }
-            if (!hasAnyFood(main)) {
-                await stealEmergencyStallFood(main, () => opts.isStopped() || elapsedNow() >= opts.cap);
+            if (foodBitesCount(main) >= 2 && st.player.hp <= tier.stunDamage) {
                 await eatAnyFood(main);
+            }
+            lastPickTick = -99;
+            if (restocked) continue;
+        }
+
+        // Never pickpocket into <= 3 HP without at least 2 bites left (reserve 1 bite keeps flee_guard disarmed).
+        if (foodBitesCount(main) <= 1 && st.player.hp <= tier.stunDamage + 3) {
+            await waitTicks(main, 1);
+            continue;
+        }
+
+        // Safety guard: never attempt a pickpocket while HP <= stunDamage.
+        if (st.player.hp <= tier.stunDamage) {
+            await eatAnyFood(main);
+            if ((main.sdk.getState()?.player?.hp ?? 0) <= tier.stunDamage) {
+                stallCooldownUntil = 0;
                 await waitTicks(main, 1);
                 continue;
             }
         }
 
-        const { target: npc, blocked } = selectPickpocketTarget(st.nearbyNpcs, tier);
+        const { target: npc, blocked } = selectPickpocketTarget(st.nearbyNpcs, tier, lastPickTarget);
 
         if (!npc) {
             if (chebDist({ x: st.player.worldX, z: st.player.worldZ }, tier.anchor) > 4) {
@@ -263,10 +346,17 @@ export async function runArdougneStunRelogThieving(opts: {
             continue;
         }
 
-        if (main.tick() - lastPickTick >= 2) {
+        const sincePick = main.tick() - lastPickTick;
+        // Running covers <= 2 tiles inside the interact tick itself, so distance <= 2 completes on tick + 2.
+        const approachWait = lastPickTarget === npc.index && lastPickDist > 2
+            ? Math.min(4, Math.ceil(lastPickDist / 2) + 1)
+            : 2;
+        if (sincePick >= approachWait) {
             const op = npc.optionsWithIndex.find(o => /^pickpocket$/i.test(o.text));
             if (op) {
                 lastPickTick = main.tick();
+                lastPickDist = npc.distance;
+                lastPickTarget = npc.index;
                 attempts++;
                 await main.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: op.opIndex, reason: 'SDK' });
             }
@@ -357,11 +447,11 @@ if (import.meta.main) {
                 );
                 await walkWaypointsSafe(
                     main,
-                    [[2774, 3228, 3]],
+                    [[2920, 3160, 5], [2850, 3175, 5], [2800, 3200, 5], [2774, 3228, 3]],
                     isStopped,
                 );
                 await sailBrimhavenToArdougne(main, isStopped);
-                await walkWaypointsSafe(main, [[2621, 3293, 2]], isStopped);
+                await walkWaypointsSafe(main, [[2654, 3288, 3], [2621, 3293, 2]], isStopped);
             } else {
                 await rubTeleport(
                     main,
@@ -375,7 +465,11 @@ if (import.meta.main) {
                 if (ringSlot !== undefined) {
                     await main.direct({ type: 'dropItem', slot: ringSlot, reason: 'SDK' });
                 }
-                await walkWaypointsSafe(main, CWARS_TO_ARDY_MARKET_WAYPOINTS, isStopped);
+                await walkWaypointsSafe(main, THIEVING_DIRECT_CWARS_WAYPOINTS, isStopped);
+                const energyJunk = main.sdk.getInventory().find(i => i.id === 229 || i.id === 3016 || i.id === 3018 || i.id === 3020 || i.id === 3022)?.slot;
+                if (energyJunk !== undefined) {
+                    await main.direct({ type: 'dropItem', slot: energyJunk, reason: 'SDK' });
+                }
             }
             travelTicks = elapsedNow();
         }
@@ -391,10 +485,17 @@ if (import.meta.main) {
                     if (out !== 'logged-out' && out !== 'disconnected') throw Error(`relog logout failed: ${out}`);
                     await closeWithin([current], 5000);
                     const nextToken = ++activeMainToken;
-                    return await openBot(account, {
-                        onStop: async (_s, why) => { if (nextToken === activeMainToken) { stopReason ||= why; stopFlag = true; } },
-                        onSessionEnd: onUnexpectedEnd,
-                    });
+                    for (let attempt = 0; ; attempt++) {
+                        try {
+                            return await openBot(account, {
+                                onStop: async (_s, why) => { if (nextToken === activeMainToken) { stopReason ||= why; stopFlag = true; } },
+                                onSessionEnd: onUnexpectedEnd,
+                            });
+                        } catch (err) {
+                            if (attempt >= 3 || !/already logged in|try again|econnreset|timeout/i.test(String(err))) throw err;
+                            await Bun.sleep(100);
+                        }
+                    }
                 } finally {
                     intentionalRelog = false;
                 }

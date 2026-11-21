@@ -101,15 +101,18 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'cooking',method:'mixed-wine',script:'scripts/microbot-wine.ts',description:'Bank-staged wine fermentation with exact ferm/bad-wine reconciliation'},
  {skill:'cooking',method:'batch',script:'scripts/microbot-b-cooking.ts',description:'Staged range/fire cooking batch for any native recipe'},
  {skill:'cooking',method:'ge-cook',script:'scripts/microbot-ge-cooking.ts',description:'GE-restocked cooking batch'},
+ {skill:'cooking',method:'specialist',script:'scripts/cooking-specialist.ts',description:'Fresh-clock specialist Cooking 1 to 99 via noted wine fermentation and 4 Fruit Blasts'},
  // Woodcutting
  {skill:'woodcutting',method:'edgeville',script:'scripts/edgeville-woodcut-order.ts',description:'Edgeville tree/oak/yew woodcutting order'},
  {skill:'woodcutting',method:'yews',script:'scripts/gather-yews.ts',description:'Chop and bank yew logs'},
  {skill:'woodcutting',method:'fresh45',script:'scripts/generated/woodcutting.ts',description:'Fresh account to Woodcutting 45 with the knife reset (axe from Bob, trees then willows)'},
  {skill:'woodcutting',method:'loop',script:'scripts/wc-loop.ts',description:'Continuous woodcutting loop'},
+ {skill:'woodcutting',method:'specialist',script:'scripts/woodcutting-specialist.ts',description:'Fresh-clock specialist Woodcutting 1 to 99 with 2-tick goblin flinch / 3-tick knife-reset Oaks'},
  // Firemaking
  {skill:'firemaking',method:'order',script:'scripts/firemaking-order.ts',description:'Line firemaking order from banked logs (normal/oak/willow/maple/yew/magic)'},
  {skill:'firemaking',method:'line',script:'scripts/firemaking-line.ts',description:'Train a runner on a firemaking line supplied by named owned helper accounts'},
  {skill:'firemaking',method:'ge',script:'scripts/microbot-ge-firemaking.ts',description:'GE-supplied firemaking batch'},
+ {skill:'firemaking',method:'specialist',script:'scripts/firemaking-specialist.ts',description:'Fresh-clock specialist Firemaking 1 to 99 lighting pre-dropped Lumbridge ground log lines'},
  // Fletching
  {skill:'fletching',method:'arrows',script:'scripts/fletch-arrows.ts',description:'Fletch shafts, headless arrows, and tipped arrows (bronze..rune)'},
  {skill:'fletching',method:'shafts',script:'scripts/fletch-arrows.ts',defaultEnv:{MODE:'shafts'},description:'Fletch arrow shafts from banked logs'},

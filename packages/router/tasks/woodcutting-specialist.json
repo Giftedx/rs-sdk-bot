@@ -1,0 +1,57 @@
+{
+  "id": "woodcutting-specialist",
+  "goal": "specialists",
+  "entry": "scripts/woodcutting-specialist.ts",
+  "files": [
+    "scripts/woodcutting-specialist.ts",
+    "scripts/gathering-specialist-lib.ts",
+    "scripts/specialist-supplier.ts",
+    "scripts/measure/specialist-gathering-cases.ts",
+    "scripts/measure/rehearse-specialist-cli.ts",
+    "scripts/woodcutting-specialist.test.ts",
+    "packages/practice/src/rehearse.ts",
+    "packages/practice/test/specialist-rehearsal.test.ts"
+  ],
+  "consumer": "Morningwood completes the continuous fresh-clock Woodcutting 99 specialist route from Tutorial Island in ~3,240 ticks (targetCap 2,818 held offline) by trading Rune axe, Knife, Logs, Glory, Monk's robes, Holy symbol, 11 Dragon bones, and 4 Prayer potions(4) at Lumbridge, unlocking Protect from Melee, and running hybrid 2-tick Rapid Shortbow flinch / 3-tick knife-reset multi-tree Oaks at Draynor Jail.",
+  "checks": [
+    {
+      "id": "woodcutting-specialist-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/woodcutting-specialist.test.ts",
+        "packages/practice/test/specialist-rehearsal.test.ts",
+        "packages/core/test/specialist-launch.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-woodcutting-specialist",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "run",
+        "bench",
+        "skiller:woodcutting:specialist",
+        "--budget",
+        "10"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "id": "woodcutting-specialist-consumer-gate",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "test",
+        "scripts/woodcutting-specialist.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    }
+  ]
+}

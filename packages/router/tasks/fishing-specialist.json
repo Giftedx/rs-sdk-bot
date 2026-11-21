@@ -11,7 +11,7 @@
     "packages/practice/src/rehearse.ts",
     "packages/practice/test/specialist-rehearsal.test.ts"
   ],
-  "consumer": "LochNessRod completes the continuous fresh-clock Fishing 99 specialist route from Tutorial Island within 3,261 ticks after receiving its staged supply kit.",
+  "consumer": "LochNessRod completes the continuous fresh-clock Fishing 99 specialist route from Tutorial Island within 2,924 ticks after receiving its staged supply kit.",
   "checks": [
     {
       "id": "fishing-specialist-regressions",

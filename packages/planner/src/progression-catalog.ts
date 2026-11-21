@@ -157,6 +157,9 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   ['scripts/fishing-specialist.ts','fishing'],
   ['scripts/mining-specialist.ts','mining'],
   ['scripts/thieving-specialist.ts','thieving'],
+  ['scripts/cooking-specialist.ts','cooking'],
+  ['scripts/firemaking-specialist.ts','firemaking'],
+  ['scripts/woodcutting-specialist.ts','woodcutting'],
  ]);
  const specialistSkill=specialistGathering.get(script);
  if(specialistSkill)return{kind:'service',objective:`fresh-clock ${specialistSkill} 99 specialist`,units:1};

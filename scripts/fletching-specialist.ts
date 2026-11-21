@@ -102,12 +102,13 @@ if (import.meta.main) {
 
             let simXp = xp;
             let burst = 0;
+            const acts: Promise<unknown>[] = [];
             while (burst < 5 && simXp < goalXp) {
                 const tier = pickNextFletchTier(simXp, counts);
                 if (!tier) break;
                 const tipSlot = slots[tier.tipId];
                 if (tipSlot === undefined) break;
-                await main.direct({ type: 'useItemOnItem', sourceSlot: tipSlot, targetSlot: headlessSlot, reason: 'SDK' });
+                acts.push(main.direct({ type: 'useItemOnItem', sourceSlot: tipSlot, targetSlot: headlessSlot, reason: 'SDK' }));
                 counts[OBJ_HEADLESS_ARROW] = (counts[OBJ_HEADLESS_ARROW] ?? 0) - 15;
                 counts[tier.tipId] = (counts[tier.tipId] ?? 0) - 15;
                 simXp += tier.xpPerAction;
@@ -115,6 +116,7 @@ if (import.meta.main) {
                 actionsSent++;
             }
             if (burst === 0) throw Error(`stalled at xp=${xp} counts=${JSON.stringify(counts)}`);
+            await Promise.all(acts);
             await waitTicks(main, 1);
         }
 

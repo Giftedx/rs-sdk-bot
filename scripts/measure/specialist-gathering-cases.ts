@@ -1,12 +1,15 @@
 // Bench cases for the fresh-clock gathering specialists, with the helper in process and with an external supplier.
 import type { BenchCase } from './aio-bench-cases';
 import type { SaveConfig } from '../../packages/practice/src/presets';
+import { COOKING_SPECIALIST_SUPPLIES } from '../cooking-specialist';
+import { buildFiremakingSupplierConfigs } from '../firemaking-specialist';
 import { FLETCHING_SPECIALIST_SUPPLIES } from '../fletching-specialist';
 import { FISHING_SPECIALIST_SUPPLIES } from '../fishing-specialist';
 import { MINING_SPECIALIST_SUPPLIES, MINING_SPECIALIST_LIVE_SUPPLIES } from '../mining-specialist';
 import { THIEVING_SPECIALIST_SUPPLIES, THIEVING_SPECIALIST_LIVE_SUPPLIES } from '../thieving-specialist';
+import { WOODCUTTING_SPECIALIST_SUPPLIES } from '../woodcutting-specialist';
 
-const STACKABLE_SUPPLY_IDS = new Set([53, 39, 40, 41, 42, 43, 44, 313, 314, 995]);
+const STACKABLE_SUPPLY_IDS = new Set([53, 39, 40, 41, 42, 43, 44, 313, 314, 556, 558, 995, 1996]);
 
 export function expandSupplyInventory(counts: Readonly<Record<number, number>>): { id: number; count: number }[] {
     const items: { id: number; count: number }[] = [];
@@ -81,6 +84,43 @@ export const SPECIALIST_GATHERING_CASES: BenchCase[] = [
         timeoutMs: 600_000,
         output: /\btotalTicks=(\d+)/,
     },
+    {
+        key: 'skiller:cooking:specialist',
+        script: 'scripts/aio-skiller.ts',
+        preset: 'fresh_lumbridge',
+        presetConfig: FRESH_TUTORIAL_START,
+        scriptArgs: ['cooking', 'specialist', '{bot:b}'],
+        companions: [{ suffix: 'b', preset: 'fresh_lumbridge', presetConfig: helperBesideLumbridge(COOKING_SPECIALIST_SUPPLIES) }],
+        pass: specialistPass,
+        timeoutMs: 600_000,
+        output: /\bticks=(\d+)/,
+    },
+    {
+        key: 'skiller:firemaking:specialist',
+        script: 'scripts/aio-skiller.ts',
+        preset: 'fresh_lumbridge',
+        presetConfig: FRESH_TUTORIAL_START,
+        scriptArgs: ['firemaking', 'specialist', '{bot:b}', '{bot:c}'],
+        companions: buildFiremakingSupplierConfigs().map((cfg, idx) => ({
+            suffix: idx === 0 ? 'b' : 'c',
+            preset: 'fresh_lumbridge',
+            presetConfig: { position: cfg.position, inventory: cfg.inventory, bank: cfg.bank },
+        })),
+        pass: specialistPass,
+        timeoutMs: 600_000,
+        output: /\bticks=(\d+)/,
+    },
+    {
+        key: 'skiller:woodcutting:specialist',
+        script: 'scripts/aio-skiller.ts',
+        preset: 'fresh_lumbridge',
+        presetConfig: FRESH_TUTORIAL_START,
+        scriptArgs: ['woodcutting', 'specialist', '{bot:b}'],
+        companions: [{ suffix: 'b', preset: 'fresh_lumbridge', presetConfig: helperBesideLumbridge(WOODCUTTING_SPECIALIST_SUPPLIES) }],
+        pass: specialistPass,
+        timeoutMs: 600_000,
+        output: /\bticks=(\d+)/,
+    },
 ];
 
 // The same routes (plus live-stockable variants) with the kit held by a separate supplier process (scripts/gathering-supplier.ts).
@@ -121,4 +161,8 @@ export const SPECIALIST_GATHERING_EXTERNAL_CASES: BenchCase[] = [
         timeoutMs: 600_000,
         output: /\btotalTicks=(\d+)/,
     },
+    externalCase('cooking', COOKING_SPECIALIST_SUPPLIES, /\bticks=(\d+)/),
+    externalCase('cooking', COOKING_SPECIALIST_SUPPLIES, /\bticks=(\d+)/, true),
+    externalCase('woodcutting', WOODCUTTING_SPECIALIST_SUPPLIES, /\bticks=(\d+)/),
+    externalCase('woodcutting', WOODCUTTING_SPECIALIST_SUPPLIES, /\bticks=(\d+)/, true),
 ];
