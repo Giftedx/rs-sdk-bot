@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795243379716-knightrider-earlyshooter-14415c1257450f8c",
+ "account": "Earlyshooter",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 91000,
+ "claim": "515c83d9-41a2-4826-83e9-50c0345d9982",
+ "count": 0,
+ "ok": false,
+ "at": 1795243467318,
+ "detail": "trade claimed"
+}
