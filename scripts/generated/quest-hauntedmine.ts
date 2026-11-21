@@ -257,6 +257,23 @@ try {
 
     // 8. The boss door; the key wakes Treus Dayth (8, hauntedmine_boss_ghost.rs2:18-92).
     await go('boss door in', LOC.bossDoor!, () => x() < 2799, { x: 2800, z: 4453 });
+    // Remove melee armor before Fire Wave: rune helm/body/legs impose -57 Magic attack while boss carts,
+    // cranes, and pickaxes ignore player Defence (hauntedmine_boss_ghost.rs2:174-242).
+    const NEGATIVE_MAGIC_ARMOR = /(?:helm|chainbody|platebody|platelegs|plateskirt|kiteshield|sq shield|vamb|d'hide|coif)/i;
+    const removedArmor: number[] = [];
+    const stripMagicPenaltyArmor = async () => {
+        const order = [4, 7, 5, 0, 9, 10];
+        const worn = (q.st()?.equipment ?? []).filter((e: any) => e?.id > 0 && NEGATIVE_MAGIC_ARMOR.test(e.name ?? ''));
+        worn.sort((a: any, b: any) => (order.indexOf(a.slot) >>> 0) - (order.indexOf(b.slot) >>> 0));
+        for (const w of worn) {
+            if ((q.st()?.inventory?.length ?? 28) >= 28) break;
+            if ((await q.s.bot.unequipItem(w)).success) {
+                removedArmor.push(w.id);
+                await q.waitUntil(() => !(q.st()?.equipment ?? []).some((e: any) => e.slot === w.slot && e.id === w.id), 4);
+            }
+        }
+    };
+    await stripMagicPenaltyArmor();
     const keyNpc = () => q.npc(/^innocent looking key$/i);
     const boss = () => q.npc(/^treus dayth$/i);
     const killed = () => q.sawText(/killing strike/i);
@@ -362,10 +379,19 @@ try {
             }
             const b = boss();
             const hasWaveRunes = q.cnt(565) >= 1 && q.cnt(556) >= 5;
+            if (hasWaveRunes && (q.st()?.inventory?.length ?? 28) < 28 && (q.st()?.equipment ?? []).some((e: any) => e?.id > 0 && NEGATIVE_MAGIC_ARMOR.test(e.name ?? ''))) {
+                await stripMagicPenaltyArmor();
+            }
             // Space low-HP finishing casts by 7 ticks when the prior cast spent XP so its fade/death settles first.
             const castCooldown = b && (b.hp ?? 0) > 0 && (b.hp ?? 0) <= 22 && q.xp('Magic') > mxp ? 7 : 5;
             if (b && !q.dialogOpen() && !hasWaveRunes) {
-                if (q.T() - lastCast >= 4 && q.pos()?.combat?.targetIndex !== b.index) {
+                const gx = b.tileX ?? b.x, gz = b.tileZ ?? b.z;
+                const sp = SPOTS.reduce((m, o) => Math.max(Math.abs(o.x - gx), Math.abs(o.z - gz)) < Math.max(Math.abs(m.x - gx), Math.abs(m.z - gz)) ? o : m);
+                const dist = Math.max(Math.abs(mx - gx), Math.abs(mz - gz));
+                if (!sp.cast.some(([cx, cz]) => cx === mx && cz === mz) && dist > 2) {
+                    const [cx, cz] = sp.cast[0]!;
+                    await via([...(sp.route(mx, mz) ?? []), [cx, cz]]);
+                } else if (q.T() - lastCast >= 4 && (q.pos()?.combat?.targetIndex !== b.index || dist > 1)) {
                     lastCast = q.T();
                     await q.s.direct({ type: 'interactNpc', npcIndex: b.index, optionIndex: q.opIndex(b, /attack/i), reason: 'SDK' });
                 }
@@ -425,6 +451,10 @@ try {
         await q.waitUntil(() => q.has(ITEM.rewardKey) || !!boss(), 10);
     }
     if (!q.has(ITEM.rewardKey)) await q.fail('reward key');
+    for (const id of removedArmor) {
+        const item = q.inv().find((i: any) => i.id === id);
+        if (item) await q.s.bot.equipItem(item);
+    }
     q.milestone(9);
 
     // 10. Out of the boss room, down the light stairs, up the west stairs (light now, :36) to the reward door (10,
