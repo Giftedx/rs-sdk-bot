@@ -361,6 +361,7 @@ test('PK supply profiles cover Jakut dragon daggers, Magic Guild water/earth run
     expect(selectItems(PROFILES.alfonse!.items, 'cooked karambwan').map(i => i.shelf)).toEqual([3]);
     expect(PROFILES.tiadeche!.npc.test('Tiadeche')).toBe(true);
     expect(selectItems(PROFILES.tiadeche!.items, 'raw karambwan').map(i => i.shelf)).toEqual([10]);
+    expect(selectItems(PROFILES.tiadeche!.items, 'karambwan vessel').map(i => i.shelf)).toEqual([2]);
     expect(PROFILES.oziach!.npc.test('Oziach')).toBe(true);
     expect(PROFILES.oziach!.npcSpot.z).toBeLessThan(3520);
     expect(PROFILES.tenzing!.npcSpot.x).toBeLessThan(2944);

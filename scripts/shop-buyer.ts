@@ -407,7 +407,10 @@ export const PROFILES: Record<string, {
         npc: /^tiadeche$/i,
         npcSpot: { x: 2781, z: 3057 },
         bankSpot: { x: 2654, z: 3283 }, // Ardougne South Bank
-        items: [{ re: /^raw karambwan$/i, buyPerTick: 5, shelf: 10 }],
+        items: [
+            { re: /^raw karambwan$/i, buyPerTick: 5, shelf: 10 },
+            { re: /^karambwan vessel$/i, buyPerTick: 1, shelf: 2 },
+        ],
         fare: 60,
         dialogOpen: /^yes\.?$/i,
     },

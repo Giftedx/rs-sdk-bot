@@ -73,6 +73,14 @@ export const SUPPLY_BENCH_CASES: readonly BenchCase[] = [
         pass: s => loggedOut(s) && s.includes('"ok":true'),
     },
     {
+        key: 'extra:supply-tiadeche-karambwan',
+        script: 'scripts/aio-market.ts',
+        preset: 'fresh_lumbridge',
+        scriptArgs: ['shop-buy', 'tiadeche', '2500', 'ITEMS=raw karambwan', 'STOCK_TARGET=2', 'STOP_AT_TARGET=1', 'BANK_PACK=1', 'BANK_AT=0', 'NO_BUY_TICKS=25', 'FLOAT=1000', 'COIN_RESERVE=200', 'MAX_SPEND=800'],
+        presetConfig: { position: { x: 2654, z: 3283, level: 0 }, varps: { 320: 6, 321: 7 }, bank: [{ id: 995, count: 10_000 }] },
+        pass: s => ok(s) && /boughtTotal=2 bankedTotal=2 /.test(s),
+    },
+    {
         key: 'extra:supply-smith-rune-tips',
         script: 'scripts/aio-skiller.ts',
         preset: 'fresh_lumbridge',
