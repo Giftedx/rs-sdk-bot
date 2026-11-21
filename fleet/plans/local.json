@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795232966925,
+ "at": 1795233572203,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -272,18 +272,23 @@
   },
   {
    "account": "TossTheCaber",
-   "script": "scripts/blood-chest.ts",
-   "args": [],
-   "env": {},
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
+   "env": {
+    "MAX_KILLS": "40"
+   },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "loot the Ardougne Castle blood rune chests for the gang squad",
-   "role": "thieving",
-   "template": "squad-blood-chest",
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic runes, nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-blood-chest"
+    "squad:ardougne-giants"
    ]
   },
   {
