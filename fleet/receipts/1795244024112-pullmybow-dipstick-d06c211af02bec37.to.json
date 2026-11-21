@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795244024112-pullmybow-dipstick-d06c211af02bec37",
  "account": "Dipstick",
  "partner": "Pullmybow",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 32000,
  "claim": "4e644699-d75a-499f-abbc-8f804aa47973",
- "count": 0,
- "ok": false,
- "at": 1795244305743,
- "detail": "trade claimed"
+ "count": 32000,
+ "ok": true,
+ "at": 1795244471065,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 21240,
+  "after": 53240
+ },
+ "bank": {
+  "count": 32000,
+  "at": 1795244470285
+ },
+ "logout": {
+  "attemptId": "1795244305752-0000028952-0000000001",
+  "at": 1795244471050,
+  "sha256": "0be5217c9fa5c42c228c689d4849dcb48810d5b7558d9c4b321d401b6e844010"
+ },
+ "screen": true
 }

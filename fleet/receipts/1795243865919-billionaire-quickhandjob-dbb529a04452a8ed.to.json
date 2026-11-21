@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795243865919-billionaire-quickhandjob-dbb529a04452a8ed",
  "account": "Quickhandjob",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 80000,
  "claim": "fd339f4f-0ea1-43a1-954b-62e1f9022005",
- "count": 0,
- "ok": false,
- "at": 1795244250709,
- "detail": "trade claimed"
+ "count": 80000,
+ "ok": true,
+ "at": 1795244474675,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 28440,
+  "after": 108440
+ },
+ "bank": {
+  "count": 80000,
+  "at": 1795244473892
+ },
+ "logout": {
+  "attemptId": "1795244250718-0000004880-0000000001",
+  "at": 1795244474630,
+  "sha256": "9d61a559bfb8e47e7ddb056c69c897110c78ec6e16479eea88e1256b2d51357e"
+ },
+ "screen": true
 }
