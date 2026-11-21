@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795249412829-coincock-fatstack-c54891f9ba5869f5",
  "account": "Fatstack",
  "partner": "CoinCock",
@@ -10,20 +10,50 @@
  "item": "Coins",
  "requested": 65000,
  "claim": "bfc16c48-9b8f-4770-8f03-710143b8e087",
- "count": 0,
- "ok": false,
- "at": 1795249492452,
- "detail": "trade claimed",
+ "count": 65000,
+ "ok": true,
+ "at": 1795249506032,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Ranarr weed",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795249504845
+   }
   },
   {
    "item": "Snape grass",
    "requested": 2,
-   "count": 0
+   "count": 2,
+   "inventory": {
+    "before": 0,
+    "after": 2
+   },
+   "bank": {
+    "count": 2,
+    "at": 1795249505265
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 65000
+ },
+ "bank": {
+  "count": 65000,
+  "at": 1795249504440
+ },
+ "logout": {
+  "attemptId": "1795249492461-0000024560-0000000001",
+  "at": 1795249506022,
+  "sha256": "91c1fe41edb05b5000c5643e77dfee46b1e7cecfc67ad084230d9f3f9112dc89"
+ },
+ "screen": true
 }

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795249413175-yewfirst-quickhandjob-db5d31eafb40fbdc",
  "account": "YewFirst",
  "partner": "Quickhandjob",
@@ -10,20 +10,50 @@
  "item": "Coins",
  "requested": 21000,
  "claim": "62864b80-b84d-4016-a5b9-c2920048cebf",
- "count": 0,
- "ok": false,
- "at": 1795249473974,
- "detail": "trade claimed",
+ "count": 21000,
+ "ok": true,
+ "at": 1795249498399,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Ranarr weed",
    "requested": 4,
-   "count": 0
+   "count": 4,
+   "inventory": {
+    "before": 4,
+    "after": 0
+   },
+   "bank": {
+    "count": 4,
+    "at": 1795249481288
+   }
   },
   {
    "item": "Snape grass",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795249482066
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 21000,
+  "after": 0
+ },
+ "bank": {
+  "count": 21000,
+  "at": 1795249480037
+ },
+ "logout": {
+  "attemptId": "1795249473983-0000021092-0000000001",
+  "at": 1795249498387,
+  "sha256": "20d7135ff794fd5f68d0727cb5dff08310b85a120f43ee0bbdfb8a1d08c9c0bc"
+ },
+ "screen": true
 }
