@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795244772130-dipstick-quickhandjob-feeba6422aafe069",
  "account": "Quickhandjob",
  "partner": "Dipstick",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 56000,
  "claim": "783cbcea-cb61-4dc9-a7c2-d8b7d3036456",
- "count": 0,
- "ok": false,
- "at": 1795244888171,
- "detail": "trade claimed"
+ "count": 56000,
+ "ok": true,
+ "at": 1795244899801,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 56000
+ },
+ "bank": {
+  "count": 56000,
+  "at": 1795244899055
+ },
+ "logout": {
+  "attemptId": "1795244888179-0000014796-0000000001",
+  "at": 1795244899792,
+  "sha256": "93528493e0a5f25fec703d77eee78b87f792ac7d15e58c084226e250c26225a6"
+ },
+ "screen": true
 }
