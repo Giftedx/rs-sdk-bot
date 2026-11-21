@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795244989509-woodenstaff-quickhandjob-61c2a5523f271a08",
+ "account": "Woodenstaff",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 44000,
+ "claim": "9fd65fc0-ddd7-46e9-9aa6-46428ad36614",
+ "count": 0,
+ "ok": false,
+ "at": 1795245209858,
+ "detail": "Error: stock short: Coins 5589 banked + 0 held < 44000",
+ "logout": {
+  "attemptId": "1795245203276-0000032316-0000000001",
+  "at": 1795245209806,
+  "sha256": "189ea12b9e6f247dddb711b52ffc9276c81dbf50e56eebd2f19cd29435ef22ee"
+ },
+ "screen": false
+}
