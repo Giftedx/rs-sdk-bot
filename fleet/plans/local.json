@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795227509458,
+ "at": 1795228096828,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -366,28 +366,6 @@
    "resources": [
     "cow:ardougne-north"
    ]
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/train-prayer.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "532",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "2"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying bought big bones",
-   "role": "combat",
-   "template": "army-bury-big-99",
-   "autopilot": "local",
-   "resources": []
   }
  ],
  "army": [
