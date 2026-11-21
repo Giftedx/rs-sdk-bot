@@ -753,6 +753,10 @@ export function coordinatedAdmission(job:Job,scoped:boolean):boolean{
     const j=job as Job & {coordinatorOwner?:string;standing?:boolean};
     return !scoped||j.coordinatorOwner==='coordinator'||j.standing===true;
 }
+export function unadmittedState(job: Job): 'reserved' | 'disabled' | 'existing assignment; awaiting coordinator qualification' {
+    if (isReservation(job)) return 'reserved';
+    return job.enabled === false ? 'disabled' : 'existing assignment; awaiting coordinator qualification';
+}
 
 if (import.meta.main) {
     const root = resolve(import.meta.dir, '..');
@@ -1022,12 +1026,12 @@ if (import.meta.main) {
         try { owners = loadOwners(); } catch (e) { console.log(`SWARM owners unreadable; new starts paused: ${String(e)}`); return; }
         const resumeOwners=activeExternalLive(statuses,[],Date.now()).concat(recoveryDispatch.active?[recoveryDispatch.active.account]:[],inheritedRecoveries.map(r=>r.account));
         for (const raw of plan.jobs) {
-            if(!coordinatedAdmission(raw,!!coordinatorOwner)){
-                state.push({account:raw.account,accounts:raw.accounts,script:raw.script,state:'existing assignment; awaiting coordinator qualification'});
-                continue;
-            }
             if (isReservation(raw)) {
                 state.push({ account: raw.account, script: '', role: raw.role, goal: raw.goal, enabled: false, repeat: false, note: raw.note, state: 'reserved', since: null });
+                continue;
+            }
+            if(!coordinatedAdmission(raw,!!coordinatorOwner)){
+                state.push({account:raw.account,accounts:raw.accounts,script:raw.script,enabled:raw.enabled,state:unadmittedState(raw)});
                 continue;
             }
             const p = parseJob(raw);
