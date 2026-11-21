@@ -1,0 +1,34 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795250056700-unsheathed-fatstack-56c8fbcb42241112",
+ "account": "Fatstack",
+ "partner": "Unsheathed",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 120000,
+ "claim": "637c352f-27f3-4f3f-85eb-b4050371451d",
+ "count": 0,
+ "ok": false,
+ "at": 1795250200361,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Prayer potion(3)",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Snape grass",
+   "requested": 13,
+   "count": 0
+  },
+  {
+   "item": "Vial of water",
+   "requested": 15,
+   "count": 0
+  }
+ ]
+}

@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795250019915-pickpockdick-swordinhand",
  "account": "PickpockDick",
  "partner": "Swordinhand",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 29776,
  "claim": "9204e86a-9ad1-4052-893e-f6caafa2691d",
- "count": 0,
- "ok": false,
- "at": 1795250116495,
- "detail": "trade claimed"
+ "count": 29776,
+ "ok": true,
+ "at": 1795250198411,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 29776,
+  "after": 0
+ },
+ "bank": {
+  "count": 14486,
+  "at": 1795250187223
+ },
+ "logout": {
+  "attemptId": "1795250116508-0000030168-0000000001",
+  "at": 1795250198389,
+  "sha256": "346b5ea212b92bbe4732c25924da219f8e6a2f9ab8b5475207c70e2ff58de854"
+ },
+ "screen": true
 }
