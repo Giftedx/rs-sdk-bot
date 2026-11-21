@@ -1553,3 +1553,39 @@ test('squadEliteDefaults enables Entangle, zeroDrainFlick/offensiveFlick, fakieS
     expect(clones4.presetConfig!.inventory!.some(i => i.id === 563)).toBe(true);
     expect(team5.presetConfig!.inventory!.some(i => i.id === 563)).toBe(true);
 });
+
+test('settleBenchLogout clears Wilderness combat timer and casts escape teleport before logout', async () => {
+    const { settleBenchLogout } = require('./pk-squad');
+    let ticks = 0, z = 3594, autoRet = true;
+    const actions: string[] = [];
+    const wildBot: any = {
+        sdk: {
+            getState: () => ({
+                inGame: true,
+                autoRetaliateEnabled: autoRet,
+                player: { worldX: 3076, worldZ: z, isDead: false },
+                skills: [{ name: 'Magic', level: 45 }],
+                inventory: [{ id: 563, count: 3 }, { id: 556, count: 15 }],
+                equipment: [],
+            }),
+            getEquipment: () => [],
+            sendWalk: async (x: number, wz: number) => { actions.push(`walk:${x},${wz}`); },
+        },
+        direct: async (a: any) => {
+            actions.push(`direct:${a.componentId}`);
+            if (a.componentId === 151) autoRet = false;
+            if (a.componentId === 1174) z = 3477;
+        },
+    };
+    const safeBot: any = {
+        sdk: { getState: () => ({ inGame: true, player: { worldX: 3087, worldZ: 3496, isDead: false } }) },
+    };
+    const spy = spyOn(pk, 'nextTick').mockImplementation(async () => { ticks++; return true; });
+    try {
+        await settleBenchLogout([safeBot, wildBot]);
+        expect(actions).toEqual(['direct:151', 'direct:1174']);
+        expect(ticks).toBe(0);
+    } finally {
+        spy.mockRestore();
+    }
+});

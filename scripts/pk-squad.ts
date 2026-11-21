@@ -405,6 +405,34 @@ export async function disableAutoRetaliate(s: Session): Promise<void> {
     }
 }
 
+// Clears residual Wilderness combat/Scorpion auto-retaliate and 16-tick logout lock on bench sessions after metrics settle.
+export async function settleBenchLogout(sessions: readonly Session[]): Promise<void> {
+    const active = sessions.filter(s => {
+        const st = s.sdk?.getState?.();
+        return !!st?.inGame && !!st.player && !st.player.isDead && wildernessLevel(st.player.worldZ) > 0;
+    });
+    if (!active.length) return;
+    await Promise.all(active.map(async s => {
+        await disableAutoRetaliate(s);
+        const st = s.sdk?.getState?.();
+        const p = st?.player;
+        if (!p || wildernessLevel(p.worldZ) === 0) return;
+        const wornIds = (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : st?.equipment ?? []).map(e => e.id);
+        const magic = st?.skills?.find(k => k.name === 'Magic')?.level ?? 1;
+        const spell = squadEscapeSpell(p.worldZ, st?.inventory ?? [], wornIds, magic);
+        if (spell !== null && typeof s.direct === 'function') {
+            await s.direct({ type: 'clickComponent', componentId: spell, reason: 'bench settle' });
+        } else if (typeof s.sdk.sendWalk === 'function') {
+            void s.sdk.sendWalk(p.worldX, Math.max(3519, p.worldZ - 6), true);
+        }
+        for (let t = 0; t < 18; t++) {
+            const cur = s.sdk?.getState?.()?.player;
+            if (!cur || cur.isDead || wildernessLevel(cur.worldZ) === 0) break;
+            if (!await nextTick(s)) break;
+        }
+    }));
+}
+
 // A dropped account logged in again: settle on fresh login, cast an available escape teleport or rub a glory (wild <= 30)
 // immediately, else eat and walk to the nearer bank (bankNear) while protecting prayer and healing every tick.
 export async function rescue(
@@ -1909,5 +1937,6 @@ if (import.meta.main) {
     const end = squadEnd({ accounts: results.length, kills: sum(r => r.kills), gangDied: gang.length ? gang.filter(gangDead).length : undefined, deaths: results.filter(r => r.died).length,
         taken: sum(r => r.taken), trips: sum(r => r.trips), fights: sum(r => r.fights), picked, dropped: [...dropped.keys()], stranded, halted, rekits: results.reduce((n, r) => n + r.rekits, 0), ...(threats ? { interlopers: results.reduce((n, r) => n + (r.interlopers ?? 0), 0) } : {}), receiptProof: killReceiptProof(results.flatMap(r => r.receipts)), diedAccounts: results.filter(r => r.died).map(r => r.name) });
     await settleKillFeed();
+    if (gang.length) await settleBenchLogout(all.filter(s => !dropped.has(s.name)));
     await finish(all, end.ok, end.detail);
 }

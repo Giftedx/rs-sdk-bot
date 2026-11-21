@@ -1361,7 +1361,7 @@ const ROUTE_CASES: BenchCase[] = [
   // Multi-trip combo-food restock regression: starts with 1 karambwan at post so bots retreat early and Trip 2+ restocks sharks and karambwans from bank.
   (() => {
     const base = cloneTribridSquad('extra:squad-2-trips-combo-x1', 'tribrid-bis-hybrid', 3,
-      ['MAX_MINUTES=14', 'TRIPS=6', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_GANG_KIT=tribrid-food', 'SQUAD_OPTS={"cureNow":true,"eatAt":95,"escapeAt":88,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}'],
+      ['MAX_MINUTES=14', 'TRIPS=6', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_GANG_KIT=tribrid-food', 'SQUAD_OPTS={"cureNow":true,"eatAt":95,"escapeAt":88,"escapeOutnumbered":null,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}'],
       'full', {x: 3066, z: 3641}, undefined, EDGE_BANK_TRIBRID);
     const keepStartFood = (inv: readonly {id: number; count: number}[]) => [
       ...inv.filter(i => i.id !== 385 && i.id !== 3144),
