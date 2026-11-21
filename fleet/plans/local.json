@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795232363668,
+ "at": 1795232966925,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -272,23 +272,18 @@
   },
   {
    "account": "TossTheCaber",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "giant"
-   ],
-   "env": {
-    "MAX_KILLS": "40"
-   },
+   "script": "scripts/blood-chest.ts",
+   "args": [],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic runes, nature runes and herbs",
-   "role": "combat",
-   "template": "squad-ardougne-giants",
+   "goal": "loot the Ardougne Castle blood rune chests for the gang squad",
+   "role": "thieving",
+   "template": "squad-blood-chest",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-giants"
+    "squad:ardougne-blood-chest"
    ]
   },
   {
@@ -393,26 +388,6 @@
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
-   ]
-  },
-  {
-   "account": "TackleBox",
-   "script": "scripts/generated/thieving60.ts",
-   "args": [],
-   "env": {
-    "TARGET": "55",
-    "CAP": "2500",
-    "CLEAN_FOOD": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "train Thieving to 55 for a knight spot",
-   "role": "thieving",
-   "template": "thieving55",
-   "autopilot": "local",
-   "resources": [
-    "knight:2653,3300"
    ]
   }
  ],
