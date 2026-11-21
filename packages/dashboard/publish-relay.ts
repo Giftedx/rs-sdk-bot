@@ -47,7 +47,7 @@ function compactRanksList(list:any){
 function compactBotCommon(bot:any){
  if(!bot||typeof bot!=='object')return bot;
  const out:any={...bot};
- for(const k of ['inventory','equipment','bank'])if(Array.isArray(out[k]))out[k]=compactItemList(out[k]);
+ if(Array.isArray(out.bank))out.bank=compactItemList(out.bank);
  if(out.flow&&typeof out.flow==='object'){
   const flow:any={...out.flow};
   for(const k of ['loot','used'])if(Array.isArray(flow[k]))flow[k]=compactItemList(flow[k]);

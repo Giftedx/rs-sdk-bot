@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { actionLabel, compactNpcDrops, itemSources, mapIcons, npcDrops, pretty, thinSourceTiles, type SourceCost } from './gen-map-data';
+import { actionLabel, compactItemSources, compactNpcDrops, itemSources, mapIcons, npcDrops, pretty, thinSourceTiles, type SourceCost } from './gen-map-data';
 
 test('npc drops retain exact spawn identities and separate source facts instead of the highest chance', () => {
     const out = npcDrops([
@@ -307,6 +307,8 @@ test('thinSourceTiles leaves small sources intact and thins dense tile lists by 
     dense.push(3201, 3201, 1); // same X/Z cell on floor 1 stays distinct
     dense.push(3220, 3220, 0); // next 16x16 cell on floor 0 stays distinct
     expect(thinSourceTiles(dense)).toEqual([3200, 3200, 0, 3201, 3201, 1, 3220, 3220, 0]);
+    const full = { '1511': [['gather', 'Tree', dense] as [string, string, number[]]] };
+    expect(compactItemSources(full)).toEqual({ '1511': [['gather', 'Tree', [3200, 3200, 0, 3201, 3201, 1, 3220, 3220, 0]]] });
 });
 
 test('compactNpcDrops retains byId rows, summaries, and fact display text while shedding unused structured fields', () => {

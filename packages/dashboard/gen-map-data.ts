@@ -41,6 +41,17 @@ export function compactNpcDrops(drops: NpcDrops): { byId: Record<string, { id: n
     }
     return { byId, byName: {} };
 }
+
+export function compactItemSources(sources: Record<string, Source[]>): Record<string, Source[]> {
+    const out: Record<string, Source[]> = {};
+    for (const [id, rows] of Object.entries(sources)) {
+        out[id] = rows.map((row): Source => {
+            const thinned = thinSourceTiles(row[2]);
+            return row[3] ? [row[0], row[1], thinned, row[3]] : [row[0], row[1], thinned];
+        });
+    }
+    return out;
+}
 type CostBasis = 'content' | 'model' | 'measured';
 // Each known dimension has its own basis and conditions; helper time and conditional wall wait stay separate.
 export type SourceCost = {
@@ -171,11 +182,7 @@ export function itemSources(items: any[], names: Names): Record<string, Source[]
             if (seen) seen[2].push(...r[2]);
             else byLabel.set(key, r[3] ? [r[0], r[1], [...r[2]], r[3]] : [r[0], r[1], [...r[2]]]);
         }
-        const outRows = [...byLabel.values()].slice(0, 12).map((row): Source => {
-            const thinned = thinSourceTiles(row[2]);
-            return row[3] ? [row[0], row[1], thinned, row[3]] : [row[0], row[1], thinned];
-        });
-        if (outRows.length && Number.isInteger(it.id)) out[String(it.id)] = outRows;
+        if (byLabel.size && Number.isInteger(it.id)) out[String(it.id)] = [...byLabel.values()].slice(0, 12);
     }
     return out;
 }
@@ -223,7 +230,7 @@ if (import.meta.main) {
     const items = k('item-sources.json').items;
     const icons = mapIcons(k('teleports.json').teleports, k('shortcuts.json').edges, items, names), sources = itemSources(items, names);
     writeFileSync(join(import.meta.dir, 'client-assets', 'map-icons.json'), JSON.stringify(icons));
-    writeFileSync(join(import.meta.dir, 'client-assets', 'item-sources.json'), JSON.stringify(sources));
+    writeFileSync(join(import.meta.dir, 'client-assets', 'item-sources.json'), JSON.stringify(compactItemSources(sources)));
     const drops = npcDrops(items, names, npcs);
     writeFileSync(join(import.meta.dir, 'client-assets', 'npc-drops.json'), JSON.stringify(compactNpcDrops(drops)));
     const by = (kind: string) => icons.filter(i => i[3] === kind).length;

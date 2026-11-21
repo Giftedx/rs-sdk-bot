@@ -264,7 +264,7 @@ test('relay Views strip redundant defaults, raw collector blobs, unused vault ta
  const ctlMeta={goals:['wealth'],capabilities:[{id:'cap',goal:'wealth',entry:'scripts/cap.ts',consumer:'c',files:['a.ts'],checks:[{id:'unit',phase:'regression',command:['bun','test'],timeoutMs:5000}]}]};
 
  const pub=publicView(raw);
- expect(pub.bots[0].inventory).toEqual([{id:379,name:'Lobster',count:2},{id:380,baseId:379,name:'Lobster',count:5}]);
+ expect(pub.bots[0].inventory).toEqual([{id:379,baseId:379,name:'Lobster',count:2},{id:380,baseId:379,name:'Lobster',count:5}]);
  expect(pub.bots[0].ranks).toEqual([{board:'Overall',rank:4}]);
  expect(pub.boards[0].best.hist).toEqual([10,4]);
  expect(pub.bots[0].skills[0].currentLevel).toBe(43);
