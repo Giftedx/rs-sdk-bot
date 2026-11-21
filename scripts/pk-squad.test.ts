@@ -1151,3 +1151,30 @@ test('rescue unequips worn glory(4), rubs it, clicks Edgeville dialog to escape 
         spyTick.mockRestore();
     }
 });
+
+test('squadKitFightDefaults enables comboFood, God spell + Charge, and freezeWear staff without breaking explicit rotation', () => {
+    const { squadKitFightDefaults } = require('./pk-squad');
+    // Combo food + carried mystic_fire_staff without blood runes -> freezeWear staff and no magic DPS turn.
+    const ent = squadKitFightDefaults(
+        [{ id: 2412 }],
+        [{ id: 3144, count: 1 }, { id: 1401, count: 1 }, { id: 561, count: 50 }],
+        { rotation: ['magic', 'ranged', 'melee'] },
+    );
+    expect(ent).toEqual({ comboFood: true, rotation: ['ranged', 'melee'], freezeWear: ['mystic_fire_staff'] });
+    // God staff + matching cape + Fire/Blood/Air runes enables God spell, Charge, strip castArmour, and magic rotation.
+    const god = squadKitFightDefaults(
+        [{ id: 2412 }],
+        [{ id: 2415, count: 1 }, { id: 554, count: 100 }, { id: 565, count: 50 }, { id: 556, count: 100 }],
+        { rotation: ['ranged', 'melee'] },
+    );
+    expect(god).toEqual({ damageSpell: 1190, charge: true, rotation: ['magic', 'ranged', 'melee'], castArmour: 'strip' });
+    // Explicit rotation in SQUAD_OPTS stays intact.
+    const explicit = squadKitFightDefaults(
+        [{ id: 2412 }],
+        [{ id: 2415, count: 1 }, { id: 554, count: 100 }, { id: 565, count: 50 }, { id: 556, count: 100 }],
+        { rotation: ['ranged', 'melee'] },
+        undefined,
+        true,
+    );
+    expect(explicit.rotation).toBeUndefined();
+});

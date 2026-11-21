@@ -369,3 +369,26 @@ test('bankTrip aborts before walking back if post-eat food drops below minFood o
     expect(withCamelot.fault).toBeNull();
     expect(withCamelot.walked).toHaveLength(2);
 });
+
+test('packOf with minRunes preserves cooked karambwans with minCount 0 so Trip 2 restock tops up combo food without aborting', () => {
+    const pack = packOf(
+        [
+            { id: 385, count: 1, optionsWithIndex: [{ text: 'Eat' }] },
+            { id: 385, count: 1, optionsWithIndex: [{ text: 'Eat' }] },
+            { id: 3144, count: 1, optionsWithIndex: [{ text: 'Eat' }] },
+            { id: 3144, count: 1, optionsWithIndex: [{ text: 'Eat' }] },
+            { id: 3144, count: 1, optionsWithIndex: [{ text: 'Eat' }] },
+            { id: 2436, count: 1, optionsWithIndex: [{ text: 'Drink' }] },
+        ],
+        [{ id: 892, count: 250, slot: 13 }],
+        { minArrows: MIN_TRIP_ARROWS, minRunes: true },
+    );
+    expect(pack.food).toBe(3);
+    expect(pack.items).toEqual([{ id: 3144, count: 3, minCount: 0 }, { id: 892, count: 250, minCount: 100 }]);
+    const full = resolveItemRequirements(tripRequirements(pack.items, [{ id: 892, count: 250 }], [{ id: 3144, count: 10 }, { id: 892, count: 0 }]), [{ id: 3144, count: 10 }], nativeRequirementMetadata);
+    expect([full.ok, full.items]).toEqual([true, [{ id: 3144, count: 3 }]]);
+    const partial = resolveItemRequirements(tripRequirements(pack.items, [{ id: 892, count: 250 }], [{ id: 3144, count: 1 }]), [{ id: 3144, count: 1 }], nativeRequirementMetadata);
+    expect([partial.ok, partial.items]).toEqual([true, [{ id: 3144, count: 1 }]]);
+    const empty = resolveItemRequirements(tripRequirements(pack.items, [{ id: 892, count: 250 }], []), [], nativeRequirementMetadata);
+    expect([empty.ok, empty.items]).toEqual([true, []]);
+});

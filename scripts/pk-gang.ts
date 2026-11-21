@@ -165,8 +165,9 @@ export function packOf(
     opts?: { minArrows?: number; minRunes?: boolean },
 ): { food: number; items: TripItem[] } {
     const boost = (id: number) => BOOST_POTIONS.some(doses => (doses as readonly number[]).includes(id)), edible = (i: { optionsWithIndex: { text: string }[] }) => i.optionsWithIndex.some(o => /^eat$/i.test(o.text));
+    const keepCombo = (i: { id: number }) => !!opts?.minRunes && i.id === ITEMS.karambwan;
     const items = new Map<number, number>(), quiverIds = new Set<number>();
-    for (const i of inventory) if (!edible(i) && !boost(i.id)) items.set(i.id, (items.get(i.id) ?? 0) + i.count);
+    for (const i of inventory) if ((!edible(i) || keepCombo(i)) && !boost(i.id)) items.set(i.id, (items.get(i.id) ?? 0) + i.count);
     // A potion is asked for by its doses: for each one carried, a slot with a dose or more, and the trip takes the
     // fullest that the bank holds (scripts/pk-hunt.ts tripRequirements). A request by count needs 4 doses in a slot, and
     // the one shop with antipoison sells it with 3 doses (junglestore).
@@ -180,8 +181,9 @@ export function packOf(
     }
     for (const e of equipment) if (e.slot === 13) { items.set(e.id, (items.get(e.id) ?? 0) + e.count); quiverIds.add(e.id); }
     return {
-        food: inventory.filter(i => edible(i) || boost(i.id)).length,
+        food: inventory.filter(i => (edible(i) && !keepCombo(i)) || boost(i.id)).length,
         items: [...items].map(([id, count]): TripItem => {
+            if (opts?.minRunes && id === ITEMS.karambwan) return { id, count, minCount: 0 };
             if (potions.has(id)) return { id, count, minDoses: Math.max(1, (count - 1) * 4 + 1), maxSlots: count };
             if (charges.has(id)) return { id, count, minCharges: Math.max(1, (count - 1) * 4 + 1), maxSlots: count };
             if (opts?.minArrows !== undefined && quiverIds.has(id)) return { id, count, minCount: Math.min(count, opts.minArrows) };

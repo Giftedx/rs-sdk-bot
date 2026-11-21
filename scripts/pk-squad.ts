@@ -31,7 +31,7 @@ import { closeWithin } from '../packages/core/src/bot';
 import { killReceiptProof } from '../packages/core/src/kill-receipt';
 import { bindActionScope } from '../packages/core/src/action-scope';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, bestFood, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, ITEMS, isMulti, nextTick, observePlayer, ownSkull, PRAYER, recordKillLoot, rewearStart, STUNNED_SHOVE_SPOTANIM, wildernessLevel, type FightOptions } from './pk';
+import { attackable, bestFood, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, getObjNames, ITEMS, isMulti, nextTick, observePlayer, ownSkull, PRAYER, recordKillLoot, rewearStart, STUNNED_SHOVE_SPOTANIM, wildernessLevel, weaponStyle, type FightOptions } from './pk';
 import { bankTrip, MIN_TRIP_ARROWS, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { settleKillFeed } from './pk-kill-feed';
 import { EDGEVILLE_BANK, eatUp, FOOD_START_FLOOR, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
@@ -39,7 +39,7 @@ import { pvpDeathLimits, pvpDeathRefusal, recordPvpDeath } from '../packages/cor
 import { attackStyleOfAnim, holdProtect, KitSwapper, protectOf, retreatOf, ThreatWatch, threatOptions } from './pk-threat';
 type CombatStyle = NonNullable<ReturnType<typeof protectOf>>;
 import { connectRadar, escapeStep, kitFrom, pickScoutTargetForSquad, Radar, readScoutIntel } from './pk-roam';
-import { kitOptions, kitSwitches } from './pk-kits';
+import { GOD_LOADOUTS, kitOptions, kitSwitches } from './pk-kits';
 import { sparOptions } from './pk-spar';
 
 export const GANG = ['goondelf', 'ligma', 'sugma'];
@@ -849,6 +849,42 @@ export function squadFightOverrides(get: (name: string, fallback: string) => str
     return out;
 }
 
+/** Derive safe per-member FightOptions defaults from carried/worn kit (comboFood, God spells + Charge, staff-only freezeWear). */
+export function squadKitFightDefaults(
+    equipment: readonly { id: number }[],
+    inventory: readonly { id: number; count: number }[],
+    base: FightOptions,
+    names = getObjNames(),
+    explicitRotation = false,
+): Partial<FightOptions> {
+    const out: Partial<FightOptions> = {};
+    if (base.comboFood === undefined && inventory.some(i => i.id === ITEMS.karambwan)) out.comboFood = true;
+    const all = [...equipment, ...inventory];
+    const countOf = (id: number) => inventory.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
+    const god = Object.values(GOD_LOADOUTS).find(g => all.some(i => i.id === g.staffId) && all.some(i => i.id === g.capeId));
+    const canGod = !!god && countOf(ITEMS.fireRune) >= god.runes.fire && countOf(ITEMS.bloodRune) >= god.runes.blood && countOf(ITEMS.airRune) >= god.runes.air;
+    if (canGod) {
+        if (base.damageSpell === undefined) out.damageSpell = god.spell;
+        if (base.charge === undefined && countOf(ITEMS.fireRune) >= 3 && countOf(ITEMS.bloodRune) >= 3 && countOf(ITEMS.airRune) >= 3) out.charge = true;
+        if (!explicitRotation) out.rotation = ['magic', 'ranged', 'melee'];
+        out.castArmour = 'strip';
+        return out;
+    }
+    const staff = all.find(i => weaponStyle(i.id, names) === 'magic');
+    const hasDamageRunes = countOf(ITEMS.bloodRune) > 0 || countOf(ITEMS.deathRune) > 0 || countOf(ITEMS.chaosRune) > 0;
+    if (staff && !hasDamageRunes && base.damageSpell === undefined && !explicitRotation) {
+        const filtered = (base.rotation ?? ['ranged', 'melee']).filter(s => s !== 'magic');
+        if (filtered.length) out.rotation = filtered;
+    }
+    if (base.freezeWear === undefined) {
+        const capes = Object.values(GOD_LOADOUTS).filter(g => inventory.some(i => i.id === g.capeId)).map(g => g.cape);
+        const staffName = staff && inventory.some(i => i.id === staff.id) ? names.get(staff.id) : undefined;
+        const wear = [...new Set([...(staffName ? [staffName] : []), ...capes])];
+        if (wear.length) out.freezeWear = wear;
+    }
+    return out;
+}
+
 // The end of a squad run: its ok and the detail of its RESULT line. A squad with a death is not a finished squad: the supervisor reads
 // `RESULT fail died` as a death and does not start the squad again with an account that holds no kit (packages/practice/src/supervise.ts and
 // supervise-host.ts classify), and scripts/squad-watch.ts reads it as a death. `diedAccounts=A,B` names the accounts that died, early in the line
@@ -1321,10 +1357,14 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 for (const [id, n] of Object.entries(got)) stats.picked[id] = (stats.picked[id] ?? 0) + n;
             }
             if (r.outcome === 'died') { if (await recover()) continue; stats.died = true; break; }
+            const qAfter = me();
+            if (qAfter && diedNow(qAfter)) { if (await recover()) continue; stats.died = true; break; }
             if (urgentEscape && (s.tick() > began || r.outcome !== 'timeout')) continue;
             if (!await nextTick(s)) break;
         }
     } finally {
+        const qEnd = me();
+        if (!stats.died && qEnd && diedNow(qEnd)) stats.died = true;
         unwatch();
         o.cohesion?.remove(s.name);
         if (origSendUseItem) s.sdk.sendUseItem = origSendUseItem;
@@ -1642,15 +1682,18 @@ if (import.meta.main) {
             if (!await nextTick(member)) break;
         }
     };
+    const explicitRotation = Object.prototype.hasOwnProperty.call(JSON.parse(optsJson) as object, 'rotation');
     const results = await Promise.all(squad.map(s => {
-        const kit = kitFrom(s.sdk.getState()?.equipment ?? [], s.sdk.getState()?.inventory ?? []);
+        const stNow = s.sdk.getState();
+        const kit = kitFrom(stNow?.equipment ?? [], stNow?.inventory ?? []);
         const stunSpec = defaultStunSpec(kit);
+        const baseOpts = sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200);
         return hold(s, {
             targets, post, threats, focus: sharedFocus, cohesion: sharedCohesion, useRally, onRallyReady: name => { ralliedSet.add(name); }, waitForRally,
             // SQUAD_TANK=<member index>,...: the tank lock (bench only): the listed members hold melee and every other member holds
             // ranged. A gang account prays against the weapon of the member it faces (live run 3), so the faced member's melee turns
             // draw Protect from Melee and the bow shots of the others meet no overhead.
-            options: { ...sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200), ...fightOverrides, ...(tankList.length ? { rotation: [tankList.includes(squad.indexOf(s)) ? 'melee' as const : 'ranged' as const] } : {}) },
+            options: { ...baseOpts, ...squadKitFightDefaults(stNow?.equipment ?? [], stNow?.inventory ?? [], baseOpts, undefined, explicitRotation), ...fightOverrides, ...(tankList.length ? { rotation: [tankList.includes(squad.indexOf(s)) ? 'melee' as const : 'ranged' as const] } : {}) },
             ...(useFreezeShare ? { freezeShareFor, burstOnHold: useBurstHold } : {}),
             ...(spearLock ? { stunShareFor, burstOnStun: true, ...(stunSpec && !defaultSpec(kit)?.stun ? { stunSpec } : {}) } : {}),
             allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup, pull: get('PULL', '1') === '1', tripping, aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), run: runDeaths,
