@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795288538530-fishandchips-fatstack-shark",
+ "account": "Fatstack",
+ "partner": "FishAndChips",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 6,
+ "claim": "30b50229-4f8c-4ce8-be4c-697402a79edf",
+ "count": 0,
+ "ok": false,
+ "at": 1795288611403,
+ "detail": "trade claimed"
+}
