@@ -24,7 +24,7 @@ test('actual native GE fixture descriptors reach progression without an unmapped
  expect(()=>geProofFixtureRecord(['--sell','flgesell1','2357','2','0'])).toThrow('finite native GE fixture');
  expect(()=>geProofFixtureRecord(['--snapshot','flgebuy1','extra'])).toThrow('finite native GE fixture');
 });
-test('native GE proof binds the acquired worker closure',()=>{expect(geProofRuntime()).toBe(capabilityRevision(['scripts/buy-owned-ge-item.ts']));});
+test('native GE proof binds the acquired worker closure',()=>{expect(geProofRuntime()).toBe(capabilityRevision(['scripts/buy-owned-ge-item.ts']));},20_000); // Two un-memoized closure hashes exceed bun's 5 s default on loaded Windows
 
 const save=(bank:{id:number;count:number}[],pack:{id:number;count:number}[]=[])=>({version:9,position:{x:3185,z:3436,level:0},vars:{},
  skills:Array.from({length:21},(_,i)=>({index:i,level:i===3?10:1,xp:0,rawExperience:0})),
@@ -60,7 +60,7 @@ test('elapsed verification delay alone does not invalidate same-source saved GE 
   metadata();writeFileSync(join(dir,'buy.log'),input.buy.log.replace('LOGOUT logged-out','LOGOUT timeout'));
   expect(verifyCase(dir).checks.logout).toBe(false);
  }finally{clock.mockRestore();rmSync(dir,{recursive:true,force:true});}
-},20_000); // Three saved-state verifications: about 7 s on the loaded Windows PC, past bun's 5 s default
+},40_000); // Eight un-memoized closure hashes exceed 20 s on a loaded Windows PC
 
 // --verify runs four saved checks against one source pin. A shared memo hashes the closure once, so the 30 s consumer check ends.
 test('saved verifications that share one memo reuse the worker closure hash and still pass',()=>{
