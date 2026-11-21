@@ -1,0 +1,11 @@
+{
+ "id": "1795248295753-sausagefest-quickhandjob-b7a539feffabb075",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Sausagefest",
+ "to": "Quickhandjob",
+ "item": "Coins",
+ "count": 140000,
+ "start": 1795248295753,
+ "end": 1795249795753,
+ "takerWaits": true
+}

@@ -1,0 +1,23 @@
+{
+ "id": "1795248318713-bigchopper-fatstack-c44882d067f45ac2",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Bigchopper",
+ "to": "Fatstack",
+ "item": "Coins",
+ "count": 155000,
+ "start": 1795248318713,
+ "end": 1795249818713,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
