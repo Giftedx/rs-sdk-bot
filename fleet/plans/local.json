@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795249675893,
+ "at": 1795249839813,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -280,15 +280,6 @@
    "resources": [
     "shop:aubury"
    ]
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": ".practice/specialist-launch/decant-antipoison.ts",
-   "args": [],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": false
   }
  ],
  "army": [
@@ -329,7 +320,8 @@
   "knightstick",
   "quickhandjob",
   "sporrandip",
-  "trousersnake"
+  "trousersnake",
+  "undermykilt"
  ],
  "builds": {
   "NabTheKnob": "tribrid",

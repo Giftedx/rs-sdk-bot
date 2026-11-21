@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795249723486-quickhandjob-mightyrod-c4ddb9c3451eddb4",
+ "role": "from",
+ "account": "Quickhandjob",
+ "partner": "Mightyrod",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795249776722,
+ "detail": "Error: no worker progress: release peer state unknown; verify offline before rollout"
+}
