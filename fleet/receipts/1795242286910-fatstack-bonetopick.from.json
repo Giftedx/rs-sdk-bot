@@ -1,0 +1,27 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795242286910-fatstack-bonetopick",
+ "account": "Fatstack",
+ "partner": "BoneToPick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 519,
+ "claim": "b63ffa6a-1648-40bb-91d0-d842feb16307",
+ "count": 519,
+ "ok": true,
+ "at": 1795242397581,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4185,
+  "after": 3666
+ },
+ "logout": {
+  "attemptId": "1795242374934-0000015972-0000000001",
+  "at": 1795242397570,
+  "sha256": "c09569cf587e97027ad34093d738ff2e61eb5ba7cc7ba494255bb673d30eb1f3"
+ },
+ "screen": true
+}

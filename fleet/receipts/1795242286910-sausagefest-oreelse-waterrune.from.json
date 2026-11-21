@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795242286910-sausagefest-oreelse-waterrune",
+ "account": "Sausagefest",
+ "partner": "OreElse",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Water rune",
+ "requested": 7,
+ "claim": "1118335d-9f84-4960-8042-030c648a1f49",
+ "count": 0,
+ "ok": false,
+ "at": 1795242379871,
+ "detail": "trade claimed"
+}
