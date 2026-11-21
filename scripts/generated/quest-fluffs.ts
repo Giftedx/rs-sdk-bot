@@ -105,6 +105,7 @@ try {
             if (!n) { console.log(`WARN no crate npc at ${c.x},${c.z}`); continue; }
             for (const [dx, dz] of [[0, -1], [-1, 0], [1, 0], [0, 1]]) {
                 if (q.cheb(c.x, c.z) <= 1) break;
+                if (!pfm.isTileWalkable(0, c.x + dx!, c.z + dz!)) continue;
                 await q.s.bot.walkTo(c.x + dx!, c.z + dz!, 0);
             }
             const m0 = q.msgCount(/you find nothing/i);
