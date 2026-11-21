@@ -1,0 +1,22 @@
+{
+ "id": "1795292088933-ballspinner-dropmyload-ballofwool",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Ballspinner",
+ "to": "DropMyLoad",
+ "item": "Ball of wool",
+ "count": 2,
+ "start": 1795292088933,
+ "end": 1795294488933,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
