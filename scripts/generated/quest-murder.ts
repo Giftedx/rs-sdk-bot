@@ -31,7 +31,7 @@ const LADDER = { x: 2737, z: 3582 };
 const SALESMAN = { x: 2737, z: 3491 };
 const ITEM = { flour: 1933, pot: 1931, paper: 1811, dagger: 1813, daggerDust: 1814, print1: 1822, printOk: 1815 };
 
-const q = await openQuest({ cap: 3500 });
+const q = await openQuest({ cap: 3500, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

@@ -71,7 +71,7 @@ const MONUMENTS = [
 const ITEM = { bucket: 1925, ess: 1436, goldKey: 2944, ironKey: 2945, murky: 2953, blessed: 2954, dagger: 2952 };
 
 async function runPriestPeril(): Promise<void> {
-const q = await openQuest({ cap: 4000 });
+const q = await openQuest({ cap: 4000, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

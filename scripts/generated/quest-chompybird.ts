@@ -35,7 +35,7 @@ const BUBBLES = { x: 2600, z: 2966 };
 const CLEARING = { x: 2635, z: 2967 };
 const SEASON: Record<string, number> = { potato: ITEM.potato, onion: ITEM.onion, 'equa leaves': ITEM.equa, cabbage: ITEM.cabbage, tomato: ITEM.tomato, 'doogle leaves': ITEM.doogle };
 
-const q = await openQuest({ cap: 4000 });
+const q = await openQuest({ cap: 4000, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

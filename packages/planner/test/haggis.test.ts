@@ -598,5 +598,9 @@ test('jewellery teleports (Amulet of glory, Ring of dueling) unlock after trade-
     const questsRest = acts.find(a => a.id === 'quests-rest')!;
     expect(questsRest.evidence).toBe('MEASURED');
     expect(questsRest.ticks).toMatchObject({ floor: 12951, realistic: 14145, evidence: 'MEASURED' });
-    expect(finish(real, 'questpoints').finish!).toBeLessThan(103358);
+    // Quest Points schedules before value boards (runite) and reflects verified burst quest savings.
+    const qpFinish = finish(real, 'questpoints').finish!;
+    expect(qpFinish).toBeLessThan(93000);
+    expect(finish(floor, 'questpoints').finish!).toBeLessThan(86500);
+    expect(real.order.find(p => p.id === 'runite')!.start).toBeGreaterThanOrEqual(qpFinish);
 }, 15_000);

@@ -95948,6 +95948,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/haggis-stage2.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/hp-train.ts",
    "intents": [
     "observe"

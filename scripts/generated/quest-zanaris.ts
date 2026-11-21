@@ -75,7 +75,7 @@ async function runLostCity(): Promise<void> {
 const route = lostCityRoute(process.env.LOST_CITY_ROUTE);
 const windBolt = route.windBolt;
 // The default route eats lobster, swordfish or shark, whichever the pack holds (the sweep packs the best meals banked).
-const q = await openQuest({ cap: 3000, eatAt: route.eatAt, food: windBolt ? [route.food] : [route.food, 373, 385], lumbridgeOk: true });
+const q = await openQuest({ cap: 3000, eatAt: route.eatAt, food: windBolt ? [route.food] : [route.food, 373, 385], lumbridgeOk: true, burst: true });
 try {
     if (windBolt) {
         const casts = windBolt.axeCasts + windBolt.spiritCasts;

@@ -29,7 +29,7 @@ const ITEM = {
 const COM = { rings: 4233, necklaces: 4239 };            // crafting_jewelry:rings_inv / necklaces_inv, slot 3 = ruby
 const BLASTS = ['magic:wind_blast', 'magic:water_blast', 'magic:earth_blast', 'magic:fire_blast'];
 
-const q = await openQuest({ cap: 4000, eatAt: 65, food: [385, 379], lumbridgeOk: true });
+const q = await openQuest({ cap: 4000, eatAt: 65, food: [385, 379], lumbridgeOk: true, burst: true });
 try {
     const FROM = Number(process.env.CREST_FROM ?? 0);
     let questDone = false;

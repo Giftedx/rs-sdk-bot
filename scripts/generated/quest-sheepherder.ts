@@ -46,7 +46,7 @@ function nextPush(sx: number, sz: number, occ: Set<number>, strict = true): [num
     return null;
 }
 
-const q = await openQuest({ cap: 4000 });
+const q = await openQuest({ cap: 4000, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

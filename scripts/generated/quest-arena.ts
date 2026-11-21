@@ -37,7 +37,7 @@ export async function runQuestArena(opts: { session?: Session; cap?: number; sto
 const g = globalThis as { QUEST_SCRIPT_ID?: string };
 const prevScriptId = g.QUEST_SCRIPT_ID;
 g.QUEST_SCRIPT_ID = 'quest-arena';
-const q = await openQuest({ session: opts.session, stop: opts.stop, cap: opts.cap ?? 2500, eatAt: 6, food: [ITEM.food], ...(opts.burst === undefined ? {} : { burst: opts.burst }) });
+const q = await openQuest({ session: opts.session, stop: opts.stop, cap: opts.cap ?? 2500, eatAt: 6, food: [ITEM.food], burst: opts.burst ?? true });
 let offDone: (() => void) | undefined;
 try {
     const FROM = Number(process.env.ARENA_FROM ?? 0);

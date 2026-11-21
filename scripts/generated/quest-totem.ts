@@ -216,6 +216,6 @@ if (import.meta.main || (globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSIO
     if (!Number.isSafeInteger(cap) || cap < 1) throw Error('Totem CAP must be a positive integer');
     // Food: sharks, swordfish, lobsters, salmon, trout and cake, whatever the pack holds (an account at Hitpoints 17 fell to 8
     // on the mansion stairs trap with sharks it never ate under the library's lobster-only default).
-    const q = await openQuest({cap,food:[385,373,379,329,333,1891,1893,1895]});
+    const q = await openQuest({cap,food:[385,373,379,329,333,1891,1893,1895], burst: true});
     try { await completeTotem(q); } catch (e) { await q.fail(String(e)); }
 }

@@ -19,7 +19,7 @@ const LADDER_UP = { x: 3103, z: 9576 };
 const SKULL_AT = { x: 3120, z: 9567 };                    // obj 553 in maps/m48_149.jm2 (0 48 31)
 const ITEM = { amulet: 552, skull: 553 };
 
-const q = await openQuest({ cap: 1500, lumbridgeOk: true });
+const q = await openQuest({ cap: 1500, lumbridgeOk: true, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

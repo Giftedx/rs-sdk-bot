@@ -13,7 +13,7 @@ const DEN_LADDER = { id: 1755, x: 2561, z: 9622 };         // ladder_from_cellar
 const BLANKET = { id: 90, x: 2570, z: 9604 };              // obj in maps/m40_150.jm2 (0 10 4)
 const ITEM = { blanket: 90, water: 1937, logs: 1511 };
 
-const q = await openQuest({ cap: 1500 });
+const q = await openQuest({ cap: 1500, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

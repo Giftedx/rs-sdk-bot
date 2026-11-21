@@ -8,6 +8,7 @@
 // Server truth: areas/area_mausoleum/scripts/drezel.rs2:1-19,138-147,160-332, holy_barrier.rs2, quests/quest_druidspirit/
 // scripts/quest_druidspirit.rs2, filliman.rs2, ghast.rs2, swamp_decay.rs2.
 import { openQuest } from './quest-lib';
+import { questFlags } from '../../packages/core/src/quest-status';
 
 const DREZEL = { x: 3440, z: 9895 };
 const BARRIER = { id: 3443, x: 3440, z: 9886 };            // pip_underground_wall_side_withportal -> 3423,3485
@@ -32,7 +33,7 @@ const ITEM = {
 };
 const GROWN = [3509, 3511, 3513];                          // log_druidicspirit2, branch_druidicspirit2, peartree_druidicspirit2
 
-const q = await openQuest({ cap: 5000, food: [379, 2327, 2323] });
+const q = await openQuest({ cap: 5000, food: [379, 2327, 2323], burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
@@ -90,20 +91,33 @@ try {
         await closeDialog();
     };
 
-    // 1. Drezel: the barrier talk (302 = 61, drezel.rs2:138-147), then "Is there anything else interesting to do around
-    // here?", "Well, what is it, I may be able to help?", "Yes, I'll go and look for him.", "Yes, I'm sure." (5,
-    // drezel.rs2:275-332); he hands over 3 meat pies and 3 apple pies.
-    await q.talk('drezel barrier', drezel, [], () => q.sawText(/keep it equipped whenever i fight werewolves/i), DREZEL, 80);
-    await q.talk('drezel start', drezel, [/anything else interesting/i, /what is it, i may be able to help/i, /yes, i'll go and look for him/i, /yes, i'm sure/i],
-        () => q.has(2327), DREZEL, 80);
-    q.milestone(5);
-    // 2. The holy barrier to 3423,3485; the Mort Myre gate (10, quest_druidspirit.rs2:4-16); the walk round the swamp to
-    // the south side of the camp; the bridge jump.
-    await q.walk('to barrier', [{ x: BARRIER.x, z: BARRIER.z + 1, tol: 1 }]);
-    await q.climb('barrier', () => q.findLoc(l => l.id === BARRIER.id && l.distance <= 6) ?? BARRIER, /pass/i, () => !under(), 4);
-    await gateIn('in 1');
+    // 1. Drezel: skip barrier & quest-start dialog if Nature Spirit is already started (e.g. Mightyrod live resume).
+    const journalState = () => questFlags((q.s as any).client)?.find(f => /^nature spirit$/i.test(f.name))?.state ?? 'unknown';
+    await q.waitUntil(() => journalState() !== 'unknown', 15);
+    if (journalState() === 'started') {
+        if (under()) {
+            await q.walk('to barrier', [{ x: BARRIER.x, z: BARRIER.z + 1, tol: 1 }]);
+            await q.climb('barrier', () => q.findLoc(l => l.id === BARRIER.id && l.distance <= 6) ?? BARRIER, /pass/i, () => !under() || q.sawText(/speak to me first/i), 3);
+            if (under() && q.sawText(/speak to me first/i)) {
+                await q.talk('drezel barrier', drezel, [], () => q.sawText(/keep it equipped whenever i fight werewolves/i), DREZEL, 80);
+                await q.walk('to barrier', [{ x: BARRIER.x, z: BARRIER.z + 1, tol: 1 }]);
+                await q.climb('barrier', () => q.findLoc(l => l.id === BARRIER.id && l.distance <= 6) ?? BARRIER, /pass/i, () => !under(), 4);
+            }
+        }
+        if (!inCamp() && x() <= 3445 && z() >= 3458) await gateIn('in 1');
+    } else {
+        await q.talk('drezel barrier', drezel, [], () => q.sawText(/keep it equipped whenever i fight werewolves/i), DREZEL, 80);
+        await q.talk('drezel start', drezel, [/anything else interesting/i, /what is it, i may be able to help/i, /yes, i'll go and look for him/i, /yes, i'm sure/i],
+            () => q.has(2327), DREZEL, 80);
+        q.milestone(5);
+        // 2. The holy barrier to 3423,3485; the Mort Myre gate (10, quest_druidspirit.rs2:4-16); the walk round the swamp to
+        // the south side of the camp; the bridge jump.
+        await q.walk('to barrier', [{ x: BARRIER.x, z: BARRIER.z + 1, tol: 1 }]);
+        await q.climb('barrier', () => q.findLoc(l => l.id === BARRIER.id && l.distance <= 6) ?? BARRIER, /pass/i, () => !under(), 4);
+        await gateIn('in 1');
+    }
     q.milestone(10);
-    await jump('camp 1', true);
+    if (!inCamp()) await jump('camp 1', true);
     q.milestone('camp');
     // 3. The bowl (opobj3 at 3437,3337) puts the mirror under it (quest_druidspirit.rs2:63-78).
     await pickup('bowl', ITEM.bowl, BOWL);

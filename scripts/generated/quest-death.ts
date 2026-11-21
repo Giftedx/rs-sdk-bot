@@ -42,7 +42,7 @@ const DICE_ROLL = 8421;      // death_dice:com_28 (pack/interface.pack)
 const DICE_PAUSE = 8423;     // death_dice:com_30, buttontype=pause
 const RESUME_PAUSEBUTTON = 166;
 
-const q = await openQuest({ cap: 4000 });
+const q = await openQuest({ cap: 4000, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

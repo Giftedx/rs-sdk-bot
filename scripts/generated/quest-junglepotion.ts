@@ -18,7 +18,7 @@ const HERBS: Array<[string, number, { x: number; z: number }, number, number]> =
     ['rogues purse', 2583, { x: 2869, z: 9517 }, 1533, 1534], // fungus covered cavern wall (m44_148)
 ];
 
-const q = await openQuest({ cap: 3000 });
+const q = await openQuest({ cap: 3000, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

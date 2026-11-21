@@ -299,7 +299,10 @@ function crossing(events: XpEvent[], start: number, skill: Skill, target: number
 
 function boardDeadline(b: Board, sacrificed: ReadonlySet<BoardId>, overallDeadline: number): number {
     if (b.rule.kind === 'clock') return sacrificed.has(b.id) && b.id !== 'overall' ? overallDeadline : b.rule.deadline;
-    return Infinity; // qp (wins on points) and value boards have no clock deadline
+    if (b.rule.kind === 'qp' && !sacrificed.has(b.id)) {
+        return Number.isFinite(overallDeadline) ? Math.max(overallDeadline + 1, b.rule.leaderTicks) : b.rule.leaderTicks;
+    }
+    return Infinity; // value boards have no clock deadline
 }
 
 // Schedule with the route of opts.route (default: the earliest Overall finish, chooseRoute).
@@ -543,7 +546,7 @@ function scheduleRoute(boards: Board[], allActivities: Activity[], opts: Schedul
         };
         ready.sort((x, y) => eff.get(x.id)! - eff.get(y.id)!
             || (prerequisiteFirst ? (dependants.get(y.id) ?? 0) - (dependants.get(x.id) ?? 0) : 0)
-            || (prerequisiteFirst && opts.travel ? walkCost(x) - walkCost(y) : 0)
+            || ((prerequisiteFirst || eff.get(x.id)! > overallDeadline) && opts.travel ? walkCost(x) - walkCost(y) : 0)
             || activities.indexOf(x) - activities.indexOf(y));
         const a = ready[0]!;
         pending.splice(pending.indexOf(a), 1);

@@ -27,7 +27,7 @@ const CHEST = { id: 2079, x: 3218, z: 3396 };              // piratechest on lev
 const DIG = { x: 2999, z: 3383 };                          // 0_46_52_55_55 (general_use/scripts/spade.rs2:3)
 const ITEM = { rum: 431, key: 432, message: 433, banana: 1963, apron: 1005, spade: 952 };
 
-const q = await openQuest({ cap: 2500, lumbridgeOk: false });
+const q = await openQuest({ cap: 2500, lumbridgeOk: false, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
