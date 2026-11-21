@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795224584559-nabtheknob-knightstick-runechainbody",
  "account": "Knightstick",
  "partner": "NabTheKnob",
@@ -10,8 +10,22 @@
  "item": "Rune chainbody",
  "requested": 1,
  "claim": "25837c02-177e-4fc6-aaca-d79108bd969b",
- "count": 0,
- "ok": false,
- "at": 1795224678080,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795224839567,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795224838931
+ },
+ "logout": {
+  "attemptId": "1795224678089-0000027572-0000000001",
+  "at": 1795224839554,
+  "sha256": "10f15d8e405fbd68eab3291e9ce3fa58646c5d48cabd2f3687c747fbc1b9c1bd"
+ },
+ "screen": true
 }
