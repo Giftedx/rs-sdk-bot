@@ -134,3 +134,28 @@ test('disembark queries findNearbyLoc for a reachable Cross gangplank', async ()
         expect(calls[0]).toEqual([/^gangplank$/i, { withOption: /^cross$/i, reachable: true }]);
     } finally { deck.stop(); }
 });
+
+test('leaveDeck reaches a distant ship deck (5 tiles at Ardougne) and disembark prefers _off gangplanks, clears arrival dialogs, and falls back to sendInteractLoc', async () => {
+    const deck = fake({ deck: { x: 2683, z: 3269 } });
+    const interactions: Array<[number, number, number, number]> = [];
+    let dialogOpen = true;
+    deck.s.sdk.getDialog = () => (dialogOpen ? { isOpen: true, options: [{ index: 0, text: 'Click here to continue' }] } : { isOpen: false, options: [] });
+    deck.s.sdk.sendClickDialog = async () => { dialogOpen = false; };
+    const boardPlank = { id: 2085, name: 'Gangplank', x: 2683, z: 3270, distance: 5, optionsWithIndex: [{ text: 'Cross', opIndex: 1 }] };
+    const exitPlank = { id: 2086, name: 'Gangplank', x: 2683, z: 3269, distance: 5, optionsWithIndex: [{ text: 'Cross', opIndex: 1 }] };
+    deck.s.sdk.getState = () => ({ player: deck.player, nearbyLocs: [boardPlank, exitPlank] });
+    deck.s.sdk.findNearbyLoc = () => boardPlank;
+    deck.s.bot.interactLoc = async () => ({ success: false, reason: 'timeout' });
+    (deck.s.sdk as any).sendInteractLoc = async (x: number, z: number, id: number, op: number) => {
+        interactions.push([x, z, id, op]);
+        if (id === 2086) deck.player.level = 0;
+        return { success: true };
+    };
+    try {
+        Object.assign(deck.player, { worldX: 2678, worldZ: 3268, level: 1 });
+        expect(await leaveDeck(deck.s as any)).toBe('ground');
+        expect(dialogOpen).toBe(false);
+        expect(deck.player.level).toBe(0);
+        expect(interactions).toEqual([[2683, 3269, 2086, 1]]);
+    } finally { deck.stop(); }
+});

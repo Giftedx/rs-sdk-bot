@@ -6,7 +6,7 @@ import type { TickSource } from './ticks';
 import { blockedDoorsNear,installDoorPolicy,transportAllowed,interactionApproach,canonicalTransportLeg, type Account, type Door, type Leg, type Tile, type World, ROUTE_BUDGET_MS,type DoorBlock } from './world';
 import {accountForSdk,withDoorPolicy} from './door-policy';
 import {guardWalk,liveHunters,protectedFromMelee,withDanger} from './danger';
-import {disembark,type BoatSession} from './boat';
+import {disembark,pickDisembarkPlank,type BoatSession} from './boat';
 import {componentId} from './logout';
 import {clientReach} from './reach';
 import {planTripOffThread} from './route-plan';
@@ -327,11 +327,11 @@ function climbLegInner(s: Walker, leg: Extract<Leg, { kind: 'transport' }>, opts
 
 // Off a ship's deck by its gangplank: 'ground' when the account stood on a deck and now stands on level 0, 'none'
 // when it was not on a deck (level 1 with a gangplank within DECK_REACH tiles), 'stuck' when the crossing failed.
-export const DECK_REACH = 3;
+export const DECK_REACH = 8;
 export async function leaveDeck(s: Walker, stop: () => boolean = () => false): Promise<'none' | 'ground' | 'stuck'> {
     const p = s.sdk.getState()?.player, b = s as unknown as BoatSession;
     if (!p || p.level !== 1 || typeof b.sdk.findNearbyLoc !== 'function') return 'none';
-    const plank = b.sdk.findNearbyLoc(/^gangplank$/i, { withOption: /^cross$/i, reachable: true }) as { x?: number; z?: number; distance?: number } | null | undefined;
+    const plank = pickDisembarkPlank(b, DECK_REACH);
     const near = !!plank && (plank.distance ?? Math.max(Math.abs((plank.x ?? 0) - p.worldX), Math.abs((plank.z ?? 0) - p.worldZ))) <= DECK_REACH;
     if (!near) return 'none';
     const off = await disembark(b, { stop });
@@ -542,11 +542,14 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
     // Karamja scorpions moved swung the bot between the road and the far side of the volcano for 200 ticks (seed 5).
     const DETOUR = 15, HOLD = 50, SHORT = 4;
     let held = 0;
+    const endDist = (pathTiles: readonly PathTile[]) => pathTiles.length ? d8(pathTiles[pathTiles.length - 1]!, goal) : Infinity;
     const buildAround = (from: PathTile, firstPoint: number) => {
         if (squares.length && build(from, firstPoint, closed())) {
-            if (opts.immediateHunterDetours || held >= HOLD) return;
-            const round = { tiles, seg };
-            build(from, firstPoint);
+            const round = { tiles, seg }, roundEnd = endDist(round.tiles);
+            const plainPlanned = build(from, firstPoint), plainEnd = endDist(tiles);
+            // Reject an avoidance detour whose corridor is severed short of the goal when the open plan reaches it.
+            if (roundEnd > Math.max(3, goalTol + 2) && plainPlanned && plainEnd + 3 < roundEnd) return;
+            if (opts.immediateHunterDetours || held >= HOLD) { tiles = round.tiles; seg = round.seg; return; }
             if (!tiles.length || round.tiles.length <= tiles.length + DETOUR) { tiles = round.tiles; seg = round.seg; }
             return;
         }
@@ -571,6 +574,9 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
     let movementEpoch = 0, rejectedWalks = 0, movementRepaths = 0;
     let rejectionReplan = false, rejectionReplanned = false;
     let dodged = '', dodges = 0;
+    let bestGoalDist = d8(start, points[0] ?? goal), maxSeg = 0, progressTick = 0, progressDoors = 0;
+    let boxMinX = start.x, boxMaxX = start.x, boxMinZ = start.z, boxMaxZ = start.z, boxRepaths = 0;
+    const boxVisited = new Set<string>([`${start.x},${start.z}`]);
     let walkReply: (reply: unknown, from: { x: number; z: number; level: number }, to: PathTile, epoch: number) => void = () => {};
 
     const shutDoorAt = (from: number, to: number): { l: PathLoc; i: number } | null => {
@@ -663,7 +669,7 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
     };
     const replan = (p: PathTile, why: string): boolean => {
         buildAround(p, seg[Math.max(0, idx)] ?? 0);
-        idx = -1; target = -1; res.repaths++;
+        idx = -1; target = -1; res.repaths++; boxRepaths++;
         log(`re-plan: ${why}`);
         if (tiles.length === 0) return false;
         idx = nearest(p).i;
@@ -731,6 +737,30 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
                 // Off the planned path (the client routed round something): plan again from here.
                 if (!replan(p, `off path by ${n.d}`)) return finish(false, `no path from ${p.x},${p.z}`);
             } else idx = n.i;
+
+            const curSeg = seg[Math.max(0, idx)] ?? 0;
+            const advancedSeg = curSeg > maxSeg;
+            if (advancedSeg) maxSeg = curSeg;
+            const activeTarget = points[Math.min(points.length - 1, maxSeg)] ?? goal;
+            const gd = d8(p, activeTarget);
+            if (advancedSeg || gd <= bestGoalDist - 2 || res.doors !== progressDoors) {
+                bestGoalDist = advancedSeg ? gd : Math.min(bestGoalDist, gd);
+                progressTick = ticks;
+                progressDoors = res.doors;
+                boxMinX = boxMaxX = p.x;
+                boxMinZ = boxMaxZ = p.z;
+                boxRepaths = 0;
+                boxVisited.clear();
+                boxVisited.add(`${p.x},${p.z}`);
+            } else {
+                boxMinX = Math.min(boxMinX, p.x); boxMaxX = Math.max(boxMaxX, p.x);
+                boxMinZ = Math.min(boxMinZ, p.z); boxMaxZ = Math.max(boxMaxZ, p.z);
+                if (boxVisited.size < 32) boxVisited.add(`${p.x},${p.z}`);
+                // Require at least two visited tiles so a pure stationary stall still hits its tick budget.
+                if (ticks - progressTick >= 120 && boxVisited.size >= 2 && Math.max(boxMaxX - boxMinX, boxMaxZ - boxMinZ) <= 28 && boxRepaths >= 8) {
+                    return finish(false, `no progress: walk oscillating near ${p.x},${p.z} target=${goal.x},${goal.z}`);
+                }
+            }
 
             // A live hunter's square reaches the next lookahead of path: plan round it, once for each set of squares.
             if (deps.hunters) {

@@ -2919,6 +2919,11 @@ test('accounts above ground level are excluded from surface combat gather dispat
     const upstairsCow = at(acct('Train', { Strength: 10, Hitpoints: 30 }, { 'bronze sword': 1, 'wooden shield': 1, trout: 20, coin: 1000 }), { x: 2686, z: 3268, level: 1 });
     expect(plan(inputs([upstairsCow], { templates: cow, army: new Set(['train']) }))[0]!.template).toBeUndefined();
     expect(plan(inputs([at(upstairsCow, { x: 2686, z: 3268, level: 0 })], { templates: cow, army: new Set(['train']) }))[0]!.template?.id).toBe('army-cow-strength-45');
+    const goldfarm = catalogue().filter(t => t.script === 'scripts/goldfarm.ts');
+    if (goldfarm.length) {
+        const upstairsThief = at(acct('Toss', { Thieving: 99, Hitpoints: 30 }, { lobster: 20, coin: 1000 }), { x: 2678, z: 3268, level: 1 });
+        expect(plan(inputs([upstairsThief], { templates: goldfarm }))[0]!.template).toBeUndefined();
+    }
 });
 
 test('the squad spare of a member is what it holds above the squad reserve, never negative', () => {

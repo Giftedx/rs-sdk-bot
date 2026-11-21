@@ -33,6 +33,8 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/courier-route-evidence.ts': 'evidence check for one recorded courier return; it starts no game work',
  'scripts/eat-to-full.ts': 'hand tool: eats the pack\'s meals to full hitpoints out of combat, before a walk onto dangerous ground',
  'scripts/fleet-agent.ts': 'fleet control: syncs fleet data and runs this side of each order',
+ 'scripts/fleet-health.ts': 'fleet control: audits owned accounts for stranding or loops and automates bounded recovery (scripts/autopilot.ts)',
+ 'scripts/recover-trapped.ts': 'fleet recovery worker: one-shot extraction of stranded accounts to ground mainland hub banks (scripts/fleet-health.ts)',
  'scripts/fleet-inspect.ts': 'fleet tool: refreshes the saved state of one account',
  'scripts/fleet-order.ts': 'fleet control: places a transfer order between two sides',
  'scripts/route-stage.ts': 'fleet control: places the fleet orders of one route step at the bank the route account visits next',

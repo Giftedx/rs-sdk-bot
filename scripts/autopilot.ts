@@ -31,6 +31,7 @@ import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { reloadDue, respawnDaemon } from '../packages/core/src/live-reload';
 import { controllerNamed, leaseHolder, releaseLease, renewLease, saveLaunch, takeLease } from '../packages/core/src/controllers';
 import { matchingJobLines } from '../packages/core/src/job-log';
+import { auditFleetHealth, remediateFleetHealth } from './fleet-health';
 import { squadBlock, type SquadInput } from '../packages/planner/src/squad';
 import { admittedByLevels, armyBatchOf, meleeTotal } from '../packages/core/src/army-roster';
 import { exempt } from '../packages/core/src/fleet-assign';
@@ -1060,6 +1061,24 @@ if (import.meta.main) {
         return true;
     };
     await once(); setInterval(() => { if (!lostLease()) void once(); }, PASS_EVERY_MS);
+    const HEALTH_EVERY_MS = 5 * 60_000;
+    let healthInFlight = false;
+    const runHealthPass = async () => {
+        if (dry || healthInFlight || inFlight || swarmPaused() || lostLease()) return;
+        healthInFlight = true;
+        try {
+            const audit = auditFleetHealth({ root });
+            const actions = await remediateFleetHealth(audit, { dry: false });
+            if (audit.flaggedAccounts.length || actions.length) {
+                console.log(`FLEET_HEALTH flagged=${audit.flaggedAccounts.length} actions=${actions.map(a => `${a.account}:${a.action}`).join(',') || 'none'}`);
+            }
+        } catch (error) {
+            console.log(`FLEET_HEALTH error ${String(error)}`);
+        } finally {
+            healthInFlight = false;
+        }
+    };
+    setInterval(() => { void runHealthPass(); }, HEALTH_EVERY_MS);
     const seen = new Set<string>();
     setInterval(() => {
         if (lostLease()) return;
