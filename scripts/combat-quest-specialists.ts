@@ -1190,8 +1190,23 @@ export async function runSpecialistWaterfall(
     const str0 = skillInfo(s, 'Strength').experience;
 
     // 1. Almera -> Raft -> Hudon -> Rock -> Tree -> Barrel -> Hadley bookcase.
-    const talkAlmera = await s.bot.talkTo(/^almera$/i);
-    if (!talkAlmera.success) throw Error(`talk Almera failed: ${talkAlmera.message}`);
+    let almeraErr = 'Dialog did not open';
+    for (let attempt = 0; attempt < 5 && !s.sdk.getDialog()?.isOpen && !stop(); attempt++) {
+        opts.onEnergy?.();
+        if (attempt > 0 || !inBox(2520, 3493, 2524, 3497)) {
+            await walkFast([{ x: 2522, z: 3494, tol: 1 }], 25, 'to almera');
+        }
+        const a = s.sdk.findNearbyNpc(/^almera$/i);
+        if (a) {
+            await s.direct({ type: 'interactNpc', npcIndex: a.index, optionIndex: 1, reason: 'SDK' });
+            if (await waitUntil(s, () => !!s.sdk.getDialog()?.isOpen || stop(), { timeoutTicks: 8 })) break;
+        }
+        const talkAlmera = await s.bot.talkTo(/^almera$/i);
+        if (talkAlmera.success || s.sdk.getDialog()?.isOpen) break;
+        almeraErr = talkAlmera.message ?? almeraErr;
+        await waitTicks(s, 1);
+    }
+    if (!s.sdk.getDialog()?.isOpen) throw Error(`talk Almera failed: ${almeraErr}`);
     const almeraDone = await converse([/how can i help/i], () => sawDialog(/small raft out back|you are kind/i) && !s.sdk.getDialog()?.isOpen, 40);
     if (!almeraDone) throw Error('Almera dialogue incomplete');
 
@@ -1450,7 +1465,7 @@ export async function runMeleePvpSpecialist(
         s,
         [
             { x: 2470, z: 3170, tol: 4 },
-            { x: 2522, z: 3494, tol: 2 },
+            { x: 2522, z: 3494, tol: 1 },
         ],
         340,
         opts.stop,
