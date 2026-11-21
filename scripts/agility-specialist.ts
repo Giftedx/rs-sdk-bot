@@ -1600,7 +1600,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
             // false interactLoc holds, then send next obstacle's click on finishing tiles once reachable.
             if (preBlock < 0 && startedWildernessObstacle(step.name, p)) {
                 const nextIdx = (i + 1) % WILDERNESS_STEPS.length;
-                const readyToPreClick = step.name === 'ropeswing' || finishingWildernessObstacle(step.name, p);
+                const readyToPreClick = step.name === 'ropeswing' || canPreClickNextObstacle(step.name, p);
                 if (readyToPreClick && sentTick !== s.tick()) {
                     if (nextIdx === 0 && cfg.alignPipe) {
                         preClicks++;
