@@ -1,0 +1,29 @@
+{
+ "id": "1795240534425-yewfirst-mightyrod-ce6ca816423ae616",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "YewFirst",
+ "to": "Mightyrod",
+ "item": "Arrow shaft",
+ "count": 10605,
+ "start": 1795240534425,
+ "end": 1795242034425,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Feather",
+   "count": 8653
+  }
+ ],
+ "takerWaits": true
+}
