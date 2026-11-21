@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795241483427,
+ "at": 1795241648108,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -207,16 +207,6 @@
    "enabled": true,
    "standing": true,
    "repeat": true
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/aio-quester.ts",
-   "args": [
-    "fluffs"
-   ],
-   "enabled": true,
-   "standing": true,
-   "repeat": false
   },
   {
    "account": "Earlyshooter",
