@@ -1525,3 +1525,31 @@ test('squadFallbackPlan outgunned triggers early Glory fallback, and rescue buff
         spy.mockRestore();
     }
 });
+
+test('squadEliteDefaults enables Entangle, zeroDrainFlick/offensiveFlick, fakieSwitch, eatAt:76, and specBelow:1 only for maxed supplied tribrids', () => {
+    const { ELITE_SQUAD_OPTS, squadEliteDefaults } = require('./pk-squad');
+    const maxSkills = [
+        { name: 'Magic', baseLevel: 99 },
+        { name: 'Prayer', baseLevel: 99 },
+        { name: 'Hitpoints', baseLevel: 99 },
+    ];
+    // Run-1 low Prayer or un-potted chainbind iron-arrow kits keep historical SQUAD_OPTS unchanged.
+    expect(squadEliteDefaults([{ name: 'Magic', baseLevel: 99 }, { name: 'Prayer', baseLevel: 1 }, { name: 'Hitpoints', baseLevel: 99 }], [{ id: 2434 }])).toEqual({});
+    expect(squadEliteDefaults(maxSkills, [{ id: 385 }, { id: 175 }])).toEqual({});
+    // Supplied maxed tribrid (carrying prayer restore or super combat/ranging boost) activates ELITE_SQUAD_OPTS and removes freezeMagicCap.
+    const elite = squadEliteDefaults(maxSkills, [{ id: 2434 }, { id: 385 }]);
+    expect(elite).toEqual(ELITE_SQUAD_OPTS);
+    const serialized = JSON.parse(JSON.stringify({ ...SQUAD_OPTS, ...elite }));
+    expect(serialized.freezeMagicCap).toBeUndefined();
+    expect(serialized.eatAt).toBe(76);
+    expect(serialized.comboAt).toBe(64);
+    expect(serialized.specBelow).toBe(1);
+    expect(serialized.zeroDrainFlick).toBe(true);
+    expect(serialized.offensiveFlick).toBe(true);
+    expect(serialized.fakieSwitch).toBe(true);
+    // Scaled BiS clone & team5 cases default to winning tribrid-bis-zerk-glory-tele (Camelot Teleport + Berserker + Dragon + Glory).
+    const clones4 = benchCases().find(c => c.key === 'extra:clone-bis-clones-4-x1')!;
+    const team5 = benchCases().find(c => c.key === 'extra:clone-bis-team5-4-x1')!;
+    expect(clones4.presetConfig!.inventory!.some(i => i.id === 563)).toBe(true);
+    expect(team5.presetConfig!.inventory!.some(i => i.id === 563)).toBe(true);
+});

@@ -1348,7 +1348,7 @@ const ROUTE_CASES: BenchCase[] = [
   // Multi-trip restock regression: three maxed tribrids start at post with 1 shark against 3 5-shark tribrid-food clones (3v3) and 0 spare arrows in bank; Trip 2+ must restock and finish.
   (() => {
     const base = cloneTribridSquad('extra:squad-2-trips-nospare-x1', 'tribrid-snare', 3,
-      ['MAX_MINUTES=14', 'TRIPS=6', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_GANG_KIT=tribrid-food', 'SQUAD_OPTS={"cureNow":true,"eatAt":88,"escapeAt":64,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}'],
+      ['MAX_MINUTES=14', 'TRIPS=6', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_GANG_KIT=tribrid-food', 'SQUAD_OPTS={"cureNow":true,"eatAt":88,"escapeAt":64,"escapeOutnumbered":null,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}'],
       'full', {x: 3066, z: 3641}, 1, EDGE_BANK_NOSPARE_ARROWS);
     const enemy = kitFixture('tribrid-food', GANKER_POST.x, GANKER_POST.z);
     const enemyInv = [...enemy.inventory!.filter(i => i.id !== 385), ...Array.from({length: 5}, () => ({id: 385, count: 1}))];
@@ -1391,12 +1391,10 @@ const ROUTE_CASES: BenchCase[] = [
     const base = cloneTribridThreatCase('extra:clone-threat3-bis-spear1-x1', 'tribrid-bis-hybrid', 4, 'mage+ranger+tribrid-snare', 3, ['SQUAD_BURST_HOLD=1']);
     return {...base, presetConfig: {...kitFixture('tribrid-bis-spear', base.presetConfig!.position!.x, base.presetConfig!.position!.z), bank: base.presetConfig!.bank}};
   })(),
-  ...([4, 6, 8, 10, 12, 16] as const).map(n => {
-    const base = cloneTribridSquad(`extra:clone-bis-clones-${n}-x1`, 'tribrid-bis-hybrid', n, ['TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_BURST_HOLD=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4']);
-    return {...base, presetConfig: {...kitFixture('tribrid-bis-spear', base.presetConfig!.position!.x, base.presetConfig!.position!.z), bank: base.presetConfig!.bank}};
-  }),
   ...([4, 6, 8, 10, 12, 16] as const).map(n =>
-    cloneTribridThreatCase(`extra:clone-bis-team5-${n}-x1`, 'tribrid-bis-hybrid', n, 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5)),
+    cloneTribridSquad(`extra:clone-bis-clones-${n}-x1`, 'tribrid-bis-zerk-glory-tele', n, ['TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4'])),
+  ...([4, 6, 8, 10, 12, 16] as const).map(n =>
+    cloneTribridThreatCase(`extra:clone-bis-team5-${n}-x1`, 'tribrid-bis-zerk-glory-tele', n, 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5)),
   // The same against each mode of the clones: every clone walks out with its food gone (retreat), none does (stand),
   // the fewest sharks of the record's range (lean), the most (full).
   ...([4, 5] as const).flatMap(n => (['retreat', 'stand', 'lean', 'full'] as const).map(mode => cloneSquad(`extra:clone-squad-${n}-chainbind-${mode}-x1`, 'live-walker-iron-rune-chain-bind', n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1'], mode))),

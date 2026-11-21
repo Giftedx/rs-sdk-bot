@@ -59,6 +59,24 @@ const MAIN = new Set(['haggis']);
 // specBelow 0.45: the special waits for a gang account at 45% or less (one-on-one in the pilot's kit with Bind: 13 kills
 // of 16 at 89 HP a kill, against 12 at 107 with the profile's special at once; the squad case the same within the noise).
 export const SQUAD_OPTS = { cureNow: true, eatAt: 60, freeze: 'flee', focusRunner: 0.4, chaseBelow: 0.4, freezeMagicCap: 49, dropForStrip: null, specBelow: 0.45 } as const;
+// Proven Wave B/C defaults for maxed, supplied tribrids when SQUAD_OPTS does not pin those keys; preserves historical SQUAD_OPTS for low-Prayer Run-1 / un-potted chainbind replays.
+export const ELITE_SQUAD_OPTS = { eatAt: 76, comboAt: 64, freeze: 'low', freezeMagicCap: undefined, specBelow: 1, zeroDrainFlick: true, offensiveFlick: true, fakieSwitch: true } as const;
+
+const PRAYER_RESTORE_IDS = new Set([2434, 139, 141, 143]);
+const BOOST_POTION_IDS = new Set([2436, 145, 147, 149, 2440, 157, 159, 161, 2442, 163, 165, 167, 2444, 169, 171, 173]);
+
+export function squadEliteDefaults(
+    skills: readonly { name: string; baseLevel?: number; level?: number }[],
+    inventory: readonly { id: number }[],
+): Partial<typeof ELITE_SQUAD_OPTS> {
+    const lvl = (name: string) => {
+        const sk = skills.find(x => x.name === name);
+        return sk?.baseLevel ?? sk?.level ?? 1;
+    };
+    if (lvl('Magic') < 79 || lvl('Prayer') < 43 || lvl('Hitpoints') < 90) return {};
+    if (!inventory.some(i => PRAYER_RESTORE_IDS.has(i.id) || BOOST_POTION_IDS.has(i.id))) return {};
+    return { ...ELITE_SQUAD_OPTS };
+}
 
 // FOLLOW=1: where the squad goes when the targets stay out of view. The nearest multi-way Wilderness tile, at
 // Wilderness level `maxWild` or less, within `radius` tiles of the targets' middle (their own tile when it is multi-way),
@@ -1666,7 +1684,9 @@ if (import.meta.main) {
     const deadline = squad[0]!.tick() + Math.round(Number(get('MAX_MINUTES', '30')) * 100);
     const maxKills = Number(get('MAX_KILLS', '0'));
     let kills = 0;
-    const optsJson = get('SQUAD_OPTS', JSON.stringify(SQUAD_OPTS));
+    const rawOpts = get('SQUAD_OPTS', '');
+    const explicitOpts = rawOpts ? JSON.parse(rawOpts) as Record<string, unknown> : {};
+    const optsJson = rawOpts || JSON.stringify(SQUAD_OPTS);
     const log = (l: string) => console.log(l);
     // Bench: the gang accounts each fight the nearest of ours in view until they walk out (profile ganker-live).
     // SQUAD_GANG_SPLIT=1: gang account i takes our account i (i mod the squad), as the live gang split on the first
@@ -1846,12 +1866,13 @@ if (import.meta.main) {
             if (!await nextTick(member)) break;
         }
     };
-    const explicitRotation = Object.prototype.hasOwnProperty.call(JSON.parse(optsJson) as object, 'rotation');
+    const explicitRotation = Object.prototype.hasOwnProperty.call(explicitOpts, 'rotation');
     const results = await Promise.all(squad.map(s => {
         const stNow = s.sdk.getState();
         const kit = kitFrom(stNow?.equipment ?? [], stNow?.inventory ?? []);
         const stunSpec = defaultStunSpec(kit);
-        const baseOpts = sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), optsJson, kit, 1200);
+        const memberOpts = { ...SQUAD_OPTS, ...squadEliteDefaults(stNow?.skills ?? [], stNow?.inventory ?? []), ...explicitOpts };
+        const baseOpts = sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), JSON.stringify(memberOpts), kit, 1200);
         return hold(s, {
             targets, post, threats, focus: sharedFocus, cohesion: sharedCohesion, useRally, onRallyReady: name => { ralliedSet.add(name); }, waitForRally,
             // SQUAD_TANK=<member index>,...: the tank lock (bench only): the listed members hold melee and every other member holds
