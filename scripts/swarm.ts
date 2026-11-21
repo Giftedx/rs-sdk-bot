@@ -347,6 +347,12 @@ export function standingRetryable(reason: string, result?: string, retry?: boole
     if (/^stopped after \d+ runs$/.test(reason)) return typeof result === 'string' && !supplyExhaustedResult(result, env);
     return /^(?:blocked|gave-up)\b|^exit unknown$/.test(reason) && !supplyExhaustedResult(result, env);
 }
+// A brand-new standing mission clears an offline non-supply-exhausted stopped end even when standingRetry is false.
+export function standingEndRetryable(end: Pick<EndRecord, 'reason' | 'revision'>, job: Pick<Job, 'standingRetry' | 'env'>, revision: string, result?: string): boolean {
+    const sameMission = !end.revision || end.revision === revision;
+    const retry = !sameMission && /^stopped after \d+ runs$/.test(end.reason) ? undefined : job.standingRetry;
+    return standingRetryable(end.reason, result, retry, job.env);
+}
 // Whether the account of a retryable end is offline. `settled` is a confirmed logout on the live server. An account
 // with no status file has only that proof: without this rule its end stays for good.
 export function standingRetryDue(status: { server?: string; result?: string; at?: number } | undefined, settled: boolean, now: number): boolean {
@@ -1077,7 +1083,7 @@ if (import.meta.main) {
                     const key = [...ended.keys()].find(n => n.toLowerCase() === a.toLowerCase()), end = key ? ended.get(key) : undefined;
                     if (!end) continue;
                     let s: any; try { s = JSON.parse(readFileSync(join(prac, 'status', `${a}.json`), 'utf8')); } catch { /* no status file: the logout proof decides */ }
-                    if (!standingRetryable(end.reason, s?.result, job.standingRetry, job.env)) continue;
+                    if (!standingEndRetryable(end, job, missionSignature(job), s?.result)) continue;
                     // A host-run account writes no status result; its confirmed producer logout (2 min old) shows it offline.
                     let settled = false;
                     try { const lp = readLogoutProof(a, LIVE_SERVER); settled = lp.state === 'confirmed' && Date.now() - lp.loggedOutAt >= 120_000; } catch { /* unreadable: use the status rule */ }

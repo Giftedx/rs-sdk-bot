@@ -1167,6 +1167,22 @@ test('the planner leaves out an account whose stopped end the swarm holds, as th
     expect(JSON.stringify(r)).toContain('fin');
 });
 
+test('stoppedAccounts admits offline controller-stopped accounts whose status shows a retryable result while holding supply-exhausted or missing ends', () => {
+    const ended = new Map([
+        ['shaftsinker', { reason: 'stopped after 1 runs' }],
+        ['magicwanda', { reason: 'stopped after 0 runs' }],
+        ['backdoorman', { reason: 'stopped after 1 runs' }],
+        ['missing', { reason: 'stopped after 1 runs' }],
+        ['busy', { reason: 'stopped after 1 runs' }],
+    ]);
+    const results: Record<string, string> = {
+        shaftsinker: 'ok fleet-trade 1795241358859-shaftsinker-woodenstaff',
+        magicwanda: 'ok fleet-trade 1795288538530-magicwanda-ballspinner-air',
+        backdoorman: 'fail no food (frail: 10 Hitpoints) ticks=5 picks=0 fail',
+    };
+    expect([...stoppedAccounts(ended, new Set(['busy']), a => results[a])]).toEqual(['backdoorman', 'missing']);
+});
+
 test('kitMarket pins exact green dragonhide item ids ahead of blue, red and black variants', () => {
     const table = kitMarket([
         { id: 2499, name: 'Dragonhide body', debugname: 'blue_dragonhide_body' },
