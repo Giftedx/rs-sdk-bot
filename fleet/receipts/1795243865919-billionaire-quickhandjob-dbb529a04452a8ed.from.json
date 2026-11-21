@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795243865919-billionaire-quickhandjob-dbb529a04452a8ed",
+ "account": "Billionaire",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 80000,
+ "claim": "e59ed4db-5e97-4601-bc10-b5c5d6f891a2",
+ "count": 0,
+ "ok": false,
+ "at": 1795244229374,
+ "detail": "trade claimed"
+}
