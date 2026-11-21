@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795243192176-knightrider-earlyshooter-e56c1f24b18ed060",
  "account": "KnightRider",
  "partner": "Earlyshooter",
@@ -12,6 +12,16 @@
  "claim": "731bbfa3-0e5b-4a2f-a679-74c3dd0666b2",
  "count": 0,
  "ok": false,
- "at": 1795243282470,
- "detail": "trade claimed"
+ "at": 1795243308320,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 91000,
+  "at": 1795243292332
+ },
+ "logout": {
+  "attemptId": "1795243282479-0000026432-0000000001",
+  "at": 1795243308298,
+  "sha256": "e83c7a0d4c48d834242197ec82cd2d07af10622fffd88ad488cd87dab2f33326"
+ },
+ "screen": false
 }
