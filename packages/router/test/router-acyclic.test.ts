@@ -126,12 +126,21 @@ test('packages/router/src production modules have zero circular dependencies', (
 
 test('packages/router/src production modules never import promoted shared libraries from scripts', () => {
     const routerFiles = walkTs(join(repoRoot, 'packages', 'router', 'src'));
-    const bannedTargets = new Set(['scripts/fleet-trade-settlement.ts', 'scripts/fail-loops.ts']);
+    const bannedTargets = new Set([
+        'scripts/fleet-trade-settlement.ts',
+        'scripts/fail-loops.ts',
+        'scripts/fleet-owner-claim.ts',
+        'scripts/heavy-admission.ts',
+    ]);
     const bannedBare = new Set([
         'scripts/fleet-trade-settlement',
         'scripts/fleet-trade-settlement.ts',
         'scripts/fail-loops',
         'scripts/fail-loops.ts',
+        'scripts/fleet-owner-claim',
+        'scripts/fleet-owner-claim.ts',
+        'scripts/heavy-admission',
+        'scripts/heavy-admission.ts',
     ]);
     const violations: string[] = [];
 

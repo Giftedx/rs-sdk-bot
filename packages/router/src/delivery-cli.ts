@@ -16,7 +16,7 @@ export const GROUP_START_GAP_MS=5000;
 // Source preparation needs SOURCE_STARTUP_GB free: the free-memory floor and a reserve (packages/core/src/memory.ts).
 // Native launch requires PRACTICE_STARTUP_GB; this is checked at the actual child boundary.
 import {SOURCE_STARTUP_GB,PRACTICE_STARTUP_GB as NATIVE_STARTUP_GB,BENCH_FLEET_STOP_EXIT,BENCH_START_REFUSED_EXIT,HOST_DEFERRED_EXIT,benchStartGB} from '../../core/src/memory';
-import {fleet,floorGB,type Fleet} from '../../../scripts/heavy-admission';
+import {fleet,floorGB,type Fleet} from '../../core/src/heavy-admission';
 export {SOURCE_STARTUP_GB,NATIVE_STARTUP_GB};
 // A check that runs the AIO bench (`bun run bench ...` or the bench script) and the engines that it starts at one time.
 export function benchEngines(check:Pick<DeliveryCheck,'command'>):number|null{
