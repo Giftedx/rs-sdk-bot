@@ -360,7 +360,14 @@ test('PK supply profiles cover Jakut dragon daggers, Magic Guild water/earth run
     expect(PROFILES.alfonse!.npc.test('Alfonse the waiter')).toBe(true);
     expect(selectItems(PROFILES.alfonse!.items, 'cooked karambwan').map(i => i.shelf)).toEqual([3]);
     expect(PROFILES.tiadeche!.npc.test('Tiadeche')).toBe(true);
+    expect(PROFILES.tiadeche!.npcSpot).toEqual({ x: 2781, z: 3057 });
+    expect(PROFILES.tiadeche!.door).toMatchObject({ id: 779, x: 2782, z: 3057, outside: { x: 2783, z: 3057 }, insideStand: { x: 2782, z: 3057 } });
+    expect(PROFILES.tiadeche!.door!.inside({ worldX: 2782, worldZ: 3057 })).toBe(true);
+    expect(PROFILES.tiadeche!.door!.inside({ worldX: 2781, worldZ: 3056 })).toBe(true);
+    expect(PROFILES.tiadeche!.door!.inside({ worldX: 2783, worldZ: 3057 })).toBe(false);
+    expect(PROFILES.tiadeche!.door!.inside({ worldX: 2782, worldZ: 3055 })).toBe(false);
     expect(selectItems(PROFILES.tiadeche!.items, 'raw karambwan').map(i => i.shelf)).toEqual([10]);
+    expect(selectItems(PROFILES.tiadeche!.items, 'karambwan vessel').map(i => i.shelf)).toEqual([2]);
     expect(PROFILES.oziach!.npc.test('Oziach')).toBe(true);
     expect(PROFILES.oziach!.npcSpot.z).toBeLessThan(3520);
     expect(PROFILES.tenzing!.npcSpot.x).toBeLessThan(2944);

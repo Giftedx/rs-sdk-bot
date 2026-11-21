@@ -3662,13 +3662,18 @@ describe('continuous mainland supplies, strict 4-dose decanting, quest safety an
     });
 
     test('Wave B/C supply pipelines cover poisoned arrows, Legends/Heroes guild shops, dragonstone glory chain, extra potions, and specialist mainland bills', () => {
+        expect(SQUAD_WAVE_BC.winnerKit).toBe('tribrid-bis-zerk-tele-karam2');
         expect(SQUAD_WAVE_BC.optimalSquadRange).toEqual([8, 12]);
+        expect(SQUAD_WAVE_BC.tripFood).toEqual({ shark: 12, 'cooked karambwan': 2 });
         expect(SQUAD_ESCAPE).toEqual({ 'law rune': 3, 'air rune': 15 });
         const budget10 = squadBurnBudget(10, 4);
-        expect(budget10['shark']).toBe(1240);
+        expect(budget10['shark']).toBe(1200);
+        expect(budget10['cooked karambwan']).toBe(200);
         expect(budget10['rune arrow(p)']).toBe(6400);
-        expect(budget10['cooked karambwan']).toBeUndefined();
-        expect(squadBurnBudget(10, 4, { comboFood: true })['cooked karambwan']).toBe(320);
+        expect(squadBurnBudget(10, 4, { comboFood: false })['cooked karambwan']).toBeUndefined();
+        expect(squadBurnBudget(8, 4)).toMatchObject({ shark: 960, 'cooked karambwan': 160 });
+        expect(squadBurnBudget(12, 4)).toMatchObject({ shark: 1440, 'cooked karambwan': 240 });
+        expect(squadTarget('cooked karambwan', 4)).toBe(60);
 
         expect(Object.keys(SQUAD_GEAR_ALIASES)).toEqual(expect.arrayContaining(['amulet of glory(4)', 'rune platebody', 'rune kiteshield', 'rune plateleg']));
         expect(squadHeld('amulet of glory(4)', { 'amulet of glory(2)': 2 })).toBe(2);
@@ -3735,5 +3740,41 @@ describe('continuous mainland supplies, strict 4-dose decanting, quest safety an
         expect(gloryPlan.template?.args?.[0]).toBe('bank-job');
         const decodedJob = JSON.parse(decodeURIComponent(gloryPlan.template!.args![1]!.slice('--job='.length)));
         expect(decodedJob).toMatchObject({ family: 'magic', recipe: 'enchant:strung_dragonstone_amulet', target: 3, batch: 3, members: true, bank: { x: 3092, z: 3243, level: 0 }, site: { x: 3092, z: 3243, level: 0 } });
+
+        // Mainland Shilo/Tai Bwo Wannai karambwan chain enforces Prayer 43 + returnTicks >= 400 + walkable shore sites,
+        // separates bait vs karambwan resource concurrency, and reacquires a karambwan vessel from Tiadeche when absent.
+        const kQuests = new Set(['shilo village', 'tai bwo wannai trio']);
+        const kSquad: SquadInput = { active: true, hours: 4, members: [{ name: 'Hunter', items: { shark: 355 } }] };
+        const kTemplates = catalogue().filter(t => ['squad-karambwanji-fish', 'squad-karambwan-fish', 'squad-karambwan-vessel', 'squad-karambwan-cook'].includes(t.id));
+        const noPrayer: Acct = { ...acct('NoPray', { Fishing: 99, Cooking: 99, Prayer: 1 }, { 'small fishing net': 1, 'karambwan vessel': 1, 'raw karambwanji': 75 }), quests: kQuests };
+        expect(plan(inputs([noPrayer], { templates: kTemplates, bill: [], squad: kSquad }))[0]!.template).toBeUndefined();
+
+        const fisher: Acct = { ...acct('Fisher', { Fishing: 99, Cooking: 99, Prayer: 43 }, { 'small fishing net': 1 }), quests: kQuests, pos: { x: 2852, z: 2955, level: 0 } };
+        const baitPlan = plan(inputs([fisher], { templates: kTemplates, bill: [], squad: kSquad }))[0]!;
+        expect(baitPlan.template?.id).toBe('squad-karambwanji-fish');
+        const baitJob = JSON.parse(decodeURIComponent(baitPlan.template!.args![1]!.slice('--job='.length)));
+        expect(baitJob).toMatchObject({ family: 'fishing', recipe: 'karambwanji', target: 100, batch: 25, returnTicks: 600, bank: { x: 2852, z: 2955, level: 0 }, site: { x: 2806, z: 3009, level: 0 } });
+
+        const lowTiadeche: Acct = { ...acct('LowTiadeche', { Fishing: 99, Hitpoints: 10, Prayer: 1 }, { 'small fishing net': 1, 'raw karambwanji': 30, coin: 1000 }), quests: kQuests };
+        expect(plan(inputs([lowTiadeche], { templates: catalogue().filter(t => ['squad-karambwan-vessel', 'squad-raw-karambwan-shop'].includes(t.id)), bill: [], squad: kSquad, prices: { ...prices, 'raw karambwan': 200 } }))[0]!.template).toBeUndefined();
+
+        const needVessel: Acct = { ...acct('VesselBuyer', { Fishing: 99, Prayer: 43 }, { 'small fishing net': 1, 'raw karambwanji': 30, coin: 1000 }), quests: kQuests, pos: { x: 2654, z: 3283, level: 0 } };
+        expect(plan(inputs([needVessel], { templates: kTemplates, bill: [], squad: kSquad, prices: { ...prices, 'raw karambwan': 200, 'raw karambwanji': 10 } }))[0]!.template?.id).toBe('squad-karambwan-vessel');
+
+        const catcher: Acct = { ...acct('Catcher', { Fishing: 99, Prayer: 43 }, { 'karambwan vessel': 1, 'raw karambwanji': 30 }), quests: kQuests, pos: { x: 2852, z: 2955, level: 0 } };
+        const fishPlan = plan(inputs([catcher], { templates: kTemplates, bill: [], squad: kSquad }))[0]!;
+        expect(fishPlan.template?.id).toBe('squad-karambwan-fish');
+        const fishJob = JSON.parse(decodeURIComponent(fishPlan.template!.args![1]!.slice('--job='.length)));
+        expect(fishJob).toMatchObject({ family: 'fishing', recipe: 'karambwan', target: 10, batch: 9, returnTicks: 600, bank: { x: 2852, z: 2955, level: 0 }, site: { x: 2899, z: 3118, level: 0 } });
+
+        const cooker: Acct = { ...acct('Cooker', { Cooking: 99 }, { 'raw karambwan': 56 }), quests: kQuests, pos: { x: 2809, z: 3441, level: 0 } };
+        const cookPlan = plan(inputs([cooker], { templates: kTemplates, bill: [], squad: kSquad }))[0]!;
+        expect(cookPlan.template?.id).toBe('squad-karambwan-cook');
+        const cookJob = JSON.parse(decodeURIComponent(cookPlan.template!.args![1]!.slice('--job='.length)));
+        expect(cookJob).toMatchObject({ family: 'cooking', recipe: 'cooking_generic_karambwan', target: 56, batch: 28 });
+
+        expect(CAPACITY['squad:shilo-karambwanji']).toBe(2);
+        expect(CAPACITY['squad:shilo-karambwan']).toBe(2);
+        expect(CAPACITY['squad:catherby-cooking']).toBe(2);
     });
 });

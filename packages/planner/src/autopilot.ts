@@ -2068,7 +2068,7 @@ export function questKitCaps(rows: readonly { items: Readonly<Record<string, num
 const coinItem = (item: string) => item === 'coin';
 for (const [item, cap] of Object.entries(questKitCaps())) (KIT_PRICE_CAPS as Record<string, number>)[item] ??= cap;
 // CAPACITY: accounts at one resource at a time. Every number is policy (a place, a market or a spot holds this many), not a game fact.
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, 'squad:catherby-sharks': 3, 'squad:taverley-druids': 2, 'squad:taverley-black-knights': 2, 'squad:barbarian-planks': 1, 'squad:gnome-toads': 1, 'squad:taverley-scales': 2, 'squad:taverley-black-dragons': 2, 'squad:chaos-temple-wine': 2, 'squad:seers-magic-trees': 2, 'squad:edgeville-unicorns': 2, 'squad:ardougne-giants': 2, 'squad:hobgoblin-snape': 2, [WEAPON_MARKET]: WEAPON_BUYERS, [ARMOUR_MARKET]: ARMOUR_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, [QUEST_DEMAND]: QUEST_DEMAND_PLACES, ...Object.fromEntries(QUEST_DEMAND_ROWS.map(q => [questResource(q.slug), 1])), ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, 'squad:catherby-sharks': 3, 'squad:shilo-karambwanji': 2, 'squad:shilo-karambwan': 2, 'squad:catherby-cooking': 2, 'squad:taverley-druids': 2, 'squad:taverley-black-knights': 2, 'squad:barbarian-planks': 1, 'squad:gnome-toads': 1, 'squad:taverley-scales': 2, 'squad:taverley-black-dragons': 2, 'squad:chaos-temple-wine': 2, 'squad:seers-magic-trees': 2, 'squad:edgeville-unicorns': 2, 'squad:ardougne-giants': 2, 'squad:hobgoblin-snape': 2, [WEAPON_MARKET]: WEAPON_BUYERS, [ARMOUR_MARKET]: ARMOUR_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, [QUEST_DEMAND]: QUEST_DEMAND_PLACES, ...Object.fromEntries(QUEST_DEMAND_ROWS.map(q => [questResource(q.slug), 1])), ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // The reach rule: a job goes only to an account that has a way to its place. One route query between the Varrock
 // side and Kandarin runs for more than 30 s (research/walking.md, Planner reach rule), so the planner asks none. It
@@ -2113,7 +2113,7 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     'shop:tenzing': { x: 2946, z: 3368 }, 'shop:jukat_dagger': { x: 3152, z: 9578 }, 'shop:taverley': { x: 2934, z: 3376 },
     'shop:siegfried': { x: 2654, z: 3283 }, 'shop:helemos': { x: 2946, z: 3368 },
     'aio:water-altar': DRAYNOR_BANK, 'fighter:wizards-tower': DRAYNOR_BANK, 'squad:catherby-sharks': CATHERBY_BANK,
-    'squad:shilo-karambwan': { x: 2852, z: 2955 }, 'squad:catherby-cooking': CATHERBY_BANK,
+    'squad:shilo-karambwanji': { x: 2852, z: 2955 }, 'squad:shilo-karambwan': { x: 2852, z: 2955 }, 'squad:catherby-cooking': CATHERBY_BANK,
     'squad:seers-magic-trees': SEERS_BANK, 'squad:seers-fletch': SEERS_BANK,
     'squad:varrock-smithing': { x: 3185, z: 3436 }, 'squad:al-kharid-craft': { x: 3269, z: 3167 },
     'squad:rimmington-gold': { x: 2946, z: 3368 }, 'squad:hobgoblin-snape': { x: 2946, z: 3368 },
@@ -2519,7 +2519,7 @@ export function aioTemplates(): Template[] {
 export const SQUAD_RUN_MAX: Readonly<Record<string, number>> = {
     'rune arrow': 400, 'water rune': 1500, 'earth rune': 1500, 'air rune': 1500, 'fire rune': 1500,
     'nature rune': 1000, 'law rune': 200, 'blood rune': 200, 'death rune': 500, 'chaos rune': 1000, 'mind rune': 1000,
-    'antipoison(3)': 12, 'cooked karambwan': 50, 'raw karambwan': 50, 'climbing boot': 10, 'dragon dagger': 2,
+    'antipoison(3)': 12, 'cooked karambwan': 50, 'raw karambwan': 108, 'climbing boot': 10, 'dragon dagger': 2,
     'cape of legend': 2, 'shield right half': 1, 'dragon battleaxe': 2, 'dragon mace': 2,
     'berserker helm': 2, 'rune platebody': 2, 'rune plateleg': 4, 'black full helm': 2, 'black platebody': 2, 'black plateleg': 2,
     'uncut sapphire': 28, 'uncut emerald': 28, 'eye of newt': 100, 'vial of water': 100,
@@ -2529,7 +2529,7 @@ export const SQUAD_RUN_MAX: Readonly<Record<string, number>> = {
 // The shop cost of one unit (knowledge/items.json), the fallback of a run's spend cap: the rows are priced from the plan's
 // price table (`prices`, from priceTable) when it holds the item.
 export const SQUAD_UNIT_COST: Readonly<Record<string, number>> = {
-    'rune arrow': 400, 'rune arrow(p)': 420, 'rune arrowtips': 200, shark: 300, 'cooked karambwan': 320, 'raw karambwan': 240,
+    'rune arrow': 400, 'rune arrow(p)': 420, 'rune arrowtips': 200, shark: 300, 'cooked karambwan': 320, 'raw karambwan': 240, 'karambwan vessel': 5,
     'water rune': 4, 'earth rune': 4, 'air rune': 4, 'fire rune': 4, 'nature rune': 20, 'law rune': 40,
     'cosmic rune': 50, 'blood rune': 550, 'death rune': 180, 'chaos rune': 90, 'mind rune': 4,
     'antipoison(3)': 288, 'prayer potion(3)': 500, 'prayer potion(4)': 667,
@@ -2658,29 +2658,39 @@ export function squadSupplies(): Template[] {
         needs: { skills: { Fishing: 76, Cooking: 80 }, items: { lobster: 2 } },
         production: { output: 'shark', outputPerUnit: 1, maximum: SQUAD_SHARK_RUN, inputs: {}, resize: n => sharkSteps(n) },
         yields: () => [{ item: 'shark', perTick: 0.01 }] };
-    // Karambwanji and karambwan fishing (Shilo Village + Tai Bwo Wannai Trio), plus Catherby karambwan cooking.
+    // Karambwanji and karambwan fishing (Shilo Village + Tai Bwo Wannai Trio), vessel buy fallback, and Catherby cooking.
     const karambwanjiFish: Template = {
         id: 'squad-karambwanji-fish', family: 'aio-skiller:bank-job', script: 'scripts/aio-skiller.ts',
-        args: bankJobArg({ family: 'fishing', recipe: 'karambwanji', target: 50, batch: 25, cap: 2000, returnTicks: 300, members: true, reserve: 0, bank: { x: 2852, z: 2955, level: 0 }, site: { x: 2791, z: 3019, level: 0 } }),
-        role: 'fishing', goal: 'fish raw karambwanji near Tai Bwo Wannai for karambwan bait', resources: ['squad:shilo-karambwan'], squadOnly: true, repeats: false,
-        needs: { skills: { Fishing: 5 }, quests: ['Shilo Village', 'Tai Bwo Wannai Trio'], items: { 'small fishing net': 1 } },
+        args: bankJobArg({ family: 'fishing', recipe: 'karambwanji', target: 100, batch: 25, cap: 3000, returnTicks: 600, members: true, reserve: 0, bank: { x: 2852, z: 2955, level: 0 }, site: { x: 2806, z: 3009, level: 0 } }),
+        role: 'fishing', goal: 'fish raw karambwanji near Tai Bwo Wannai for karambwan bait', resources: ['squad:shilo-karambwanji'], squadOnly: true, repeats: false,
+        needs: { skills: { Fishing: 5, Prayer: 43 }, quests: ['Shilo Village', 'Tai Bwo Wannai Trio'], items: { 'small fishing net': 1 } },
+        production: { output: 'raw karambwanji', outputPerUnit: 1, maximum: 100, inputs: {},
+            resize: n => ({ args: bankJobArg({ family: 'fishing', recipe: 'karambwanji', target: n, batch: Math.min(25, n), cap: 3000, returnTicks: 600, members: true, reserve: 0, bank: { x: 2852, z: 2955, level: 0 }, site: { x: 2806, z: 3009, level: 0 } }) }) },
         yields: () => [{ item: 'raw karambwanji', perTick: 0.05 }],
     };
     const karambwanFish: Template = {
         id: 'squad-karambwan-fish', family: 'aio-skiller:bank-job', script: 'scripts/aio-skiller.ts',
-        args: bankJobArg({ family: 'fishing', recipe: 'karambwan', target: 25, batch: 25, cap: 2500, returnTicks: 300, members: true, reserve: 0, bank: { x: 2852, z: 2955, level: 0 }, site: { x: 2899, z: 3119, level: 0 } }),
+        args: bankJobArg({ family: 'fishing', recipe: 'karambwan', target: 27, batch: 9, cap: 3000, returnTicks: 600, members: true, reserve: 0, bank: { x: 2852, z: 2955, level: 0 }, site: { x: 2899, z: 3118, level: 0 } }),
         role: 'fishing', goal: 'fish raw karambwan north of Tai Bwo Wannai and bank at Shilo Village', resources: ['squad:shilo-karambwan'], squadOnly: true, repeats: false,
-        needs: { skills: { Fishing: 65 }, quests: ['Shilo Village', 'Tai Bwo Wannai Trio'], items: { 'karambwan vessel': 1, 'raw karambwanji': 75 } },
-        production: { output: 'raw karambwan', outputPerUnit: 1, maximum: 25, inputs: { 'raw karambwanji': 3 },
-            resize: n => ({ args: bankJobArg({ family: 'fishing', recipe: 'karambwan', target: n, batch: Math.min(25, n), cap: 2500, returnTicks: 300, members: true, reserve: 0, bank: { x: 2852, z: 2955, level: 0 }, site: { x: 2899, z: 3119, level: 0 } }) }) },
+        needs: { skills: { Fishing: 65, Prayer: 43 }, quests: ['Shilo Village', 'Tai Bwo Wannai Trio'], items: { 'karambwan vessel': 1, 'raw karambwanji': 27 } },
+        production: { output: 'raw karambwan', outputPerUnit: 1, maximum: 27, inputs: { 'raw karambwanji': 3 },
+            resize: n => ({ args: bankJobArg({ family: 'fishing', recipe: 'karambwan', target: n, batch: Math.min(9, n), cap: 3000, returnTicks: 600, members: true, reserve: 0, bank: { x: 2852, z: 2955, level: 0 }, site: { x: 2899, z: 3118, level: 0 } }) }) },
         yields: () => [{ item: 'raw karambwan', perTick: 0.02 }],
+    };
+    const tiadecheDangerGate: readonly Needs[] = [{ skills: { Hitpoints: 22 } }, { combat: 32 }, { skills: { Prayer: 43 } }];
+    const karambwanVessel: Template = {
+        id: 'squad-karambwan-vessel', family: 'shop-buyer', script: 'scripts/shop-buyer.ts',
+        args: ['tiadeche', '1200'], env: { ITEMS: 'karambwan vessel', STOCK_TARGET: '2', STOP_AT_TARGET: '1', BANK_PACK: '1', NO_BUY_TICKS: '25', FLOAT: '500', COIN_RESERVE: '200', MAX_SPEND: '200' },
+        role: 'bank', goal: 'buy karambwan vessels from Tiadeche for squad karambwan fishing', resources: ['shop:tiadeche'], squadOnly: true, repeats: false,
+        needs: { quests: ['Tai Bwo Wannai Trio'], items: { coins: 500 }, holdsUnder: { 'karambwan vessel': 1 }, anyOf: tiadecheDangerGate },
+        yields: () => [], provides: { item: 'karambwan vessel', unlocks: ['squad-karambwan-fish'] },
     };
     const karambwanCook: Template = {
         id: 'squad-karambwan-cook', family: 'aio-skiller:bank-job', script: 'scripts/aio-skiller.ts',
-        args: bankJobArg({ family: 'cooking', recipe: 'cooking_generic_karambwan', target: 28, batch: 28, cap: 1500, returnTicks: 300, members: true, reserve: 0 }),
+        args: bankJobArg({ family: 'cooking', recipe: 'cooking_generic_karambwan', target: 112, batch: 28, cap: 1500, returnTicks: 300, members: true, reserve: 0 }),
         role: 'cooking', goal: 'cook banked raw karambwan at Catherby range for the gang squad', resources: ['squad:catherby-cooking'], squadOnly: true, repeats: false,
-        needs: { skills: { Cooking: 30 }, quests: ['Tai Bwo Wannai Trio'], items: { 'raw karambwan': 28 } },
-        production: { output: 'cooked karambwan', outputPerUnit: 1, maximum: 28, inputs: { 'raw karambwan': 1 },
+        needs: { skills: { Cooking: 30 }, quests: ['Tai Bwo Wannai Trio'], items: { 'raw karambwan': 1 } },
+        production: { output: 'cooked karambwan', outputPerUnit: 1, maximum: 112, inputs: { 'raw karambwan': 1 },
             resize: n => ({ args: bankJobArg({ family: 'cooking', recipe: 'cooking_generic_karambwan', target: n, batch: Math.min(28, n), cap: 1500, returnTicks: 300, members: true, reserve: 0 }) }) },
         yields: () => [{ item: 'cooked karambwan', perTick: 0.15 }],
     };
@@ -2986,7 +2996,7 @@ export function squadSupplies(): Template[] {
     };
     return [
         waterCraft, earthCraft, waterTalisman, runeArrows, fletchBankedRuneArrows, sharks,
-        karambwanjiFish, karambwanFish, karambwanCook,
+        karambwanjiFish, karambwanFish, karambwanVessel, karambwanCook,
         smithAnvil('squad-smith-rune-tips', 44, 'rune arrowtips', 90, 1, 15, 27),
         smithAnvil('squad-smith-rune-full-helm', 1163, 'rune full helm', 92, 2, 1, 10),
         smithAnvil('squad-smith-rune-kiteshield', 1201, 'rune kiteshield', 97, 3, 1, 8),
@@ -3032,7 +3042,7 @@ export function squadSupplies(): Template[] {
         enchantGlory,
         shop('squad-arrows-dargaud', 'dargaud', 'rune arrow', 'rune arrow', 0.4, 'buy rune arrows in the Ranging Guild for the gang squad', { skills: { Ranged: 40 }, items: { coins: 30_000 } }),
         shop('squad-karambwan-shop', 'alfonse', 'cooked karambwan', 'cooked karambwan', 0.05, 'buy cooked karambwan at Brimhaven Fish Restaurant for the gang squad', { items: { coins: 32_000 } }),
-        shop('squad-raw-karambwan-shop', 'tiadeche', 'raw karambwan', 'raw karambwan', 0.05, 'buy raw karambwan from Tiadeche for the gang squad', { quests: ['Tai Bwo Wannai Trio'], items: { coins: 24_000 } }),
+        shop('squad-raw-karambwan-shop', 'tiadeche', 'raw karambwan', 'raw karambwan', 0.05, 'buy raw karambwan from Tiadeche for the gang squad', { quests: ['Tai Bwo Wannai Trio'], items: { coins: 52_000 }, anyOf: tiadecheDangerGate }),
         shop('squad-water-betty', 'betty', 'water rune', 'water rune', 0.7, "buy water runes at Betty's in Port Sarim for the gang squad", { items: { coins: 6000 } }),
         shop('squad-water-aubury', 'aubury', 'water rune', 'water rune', 0.7, "buy water runes at Aubury's in Varrock for the gang squad", { items: { coins: 6000 } }),
         shop('squad-water-guild', 'magic_guild_elemental', 'water rune', 'water rune', 0.7, 'buy water runes at the Magic Guild for the gang squad', { skills: { Magic: 66 }, items: { coins: 12_000 } }),

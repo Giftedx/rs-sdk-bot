@@ -445,3 +445,95 @@ test('gang-tribrid-wave-bc validates Wave B/C BiS gear, Rune arrow(p) quiver pri
     expect(missingPick.notes.filter(n => /Cape of legends/.test(n))).toEqual(["no Cape of legends (buy from Siegfried Erkle in Legends' Guild)"]);
     expect(missingPick.notes.some(n => /Dragon chainbody/.test(n))).toBe(true);
 });
+
+test('wildernessLevel checks x and z bounds so Taverley Dungeon and far-west/mainland dungeon tiles never false-positive as Wilderness', () => {
+    const mainlandSpots: [string, { x: number; z: number; level: number }][] = [
+        ['Taverley Dungeon', { x: 2933, z: 9846, level: 0 }],
+        ['Rellekka coast', { x: 2727, z: 3650, level: 0 }],
+        ['Dwarven Mine', { x: 3040, z: 9770, level: 0 }],
+    ];
+    for (const [label, pos] of mainlandSpots) {
+        const res = pickKit(full(`Safe_${label}`, { pos }), gear, rule, NOW);
+        expect(res.ready).toBe(true);
+        expect(res.reasons).toEqual([]);
+        const donor = full('DonorMainland', { pos, bank: [it(385, 60), it(1163, 2)] });
+        const needy = full('Needy', { worn: KIT_WORN.filter(w => w.slot !== 0) });
+        expect(stagingPlan([needy], [needy, donor], gear, rule, NOW).picks[0]?.ready).toBe(true);
+    }
+
+    const wildySpots: [string, { x: number; z: number; level: number }, number][] = [
+        ['surface level 1', { x: 3092, z: 3524, level: 0 }, 1],
+        ['underground level 4', { x: 3118, z: 9948, level: 0 }, 4],
+    ];
+    for (const [label, pos, level] of wildySpots) {
+        const res = pickKit(full(`Wildy_${label}`, { pos }), gear, rule, NOW);
+        expect(res.ready).toBe(false);
+        expect(res.reasons).toEqual([`stands in the Wilderness at level ${level}`]);
+        const wildDonor = full('DonorWildy', { pos, worn: [...KIT_WORN, worn(1163, 0)], bank: [it(385, 60), it(1163, 2)] });
+        const starved = full('Starved', { pack: without(KIT_PACK, 563) });
+        const plan = stagingPlan([starved], [starved, wildDonor], gear, rule, NOW);
+        expect(plan.moves.some(m => m.from === 'DonorWildy')).toBe(false);
+    }
+});
+
+test('gang-tribrid-wave-d enforces Wave D 12 sharks + 2 cooked karambwans + 3 law + 15 air with 6:1 sustainability and deduplicated needs', () => {
+    const waveDRule = RULES['gang-tribrid-wave-d']!;
+    const waveQuests = new Set(['lost city', 'dragon slayer', 'death plateau', 'druidic ritual', 'the fremennik trials', "hero's quest", 'legends quest']);
+    const waveDAccount: Account = {
+        name: 'WaveDKaram2',
+        at: NOW,
+        bankAt: NOW - HOUR,
+        pos: { x: 3094, z: 3491, level: 0 },
+        levels: MAXED,
+        quests: waveQuests,
+        prayerPoints: 99,
+        worn: [
+            worn(TRIBRID_BIS_ITEMS.berserkerHelm, 0),
+            worn(TRIBRID_BIS_ITEMS.capeOfLegends, 1),
+            worn(TRIBRID_BIS_ITEMS.amuletOfGlory4, 2),
+            worn(TRIBRID_BIS_ITEMS.dragonDaggerP, 3),
+            worn(TRIBRID_BIS_ITEMS.dragonChainbody, 4),
+            worn(TRIBRID_BIS_ITEMS.dragonSqShield, 5),
+            worn(TRIBRID_BIS_ITEMS.dragonPlatelegs, 7),
+            worn(TRIBRID_BIS_ITEMS.blackVambs, 9),
+            worn(TRIBRID_BIS_ITEMS.climbingBoots, 10),
+            worn(TRIBRID_BIS_ITEMS.ringOfRecoil, 12),
+            worn(TRIBRID_BIS_ITEMS.runeArrowP, 13, 300),
+        ],
+        pack: [],
+        bank: [
+            { id: TRIBRID_BIS_ITEMS.shark, name: 'Shark', count: 120 },
+            { id: TRIBRID_BIS_ITEMS.cookedKarambwan, name: 'Cooked karambwan', count: 20 },
+            { id: TRIBRID_BIS_ITEMS.runeArrowP, name: 'Rune arrow(p)', count: 640 },
+            { id: TRIBRID_BIS_ITEMS.earthRune, name: 'Earth rune', count: 320 },
+            { id: TRIBRID_BIS_ITEMS.waterRune, name: 'Water rune', count: 320 },
+            { id: TRIBRID_BIS_ITEMS.natureRune, name: 'Nature rune', count: 250 },
+            { id: TRIBRID_BIS_ITEMS.lawRune, name: 'Law rune', count: 16 },
+            { id: TRIBRID_BIS_ITEMS.airRune, name: 'Air rune', count: 64 },
+            { id: TRIBRID_BIS_ITEMS.magicShortbow, name: 'Magic shortbow', count: 1 },
+            { id: 2434, name: 'Prayer potion(4)', count: 4 },
+            { id: 2436, name: 'Super attack(4)', count: 6 },
+            { id: 2440, name: 'Super strength(4)', count: 6 },
+            { id: 2442, name: 'Super defence(4)', count: 6 },
+            { id: 2444, name: 'Ranging potion(4)', count: 6 },
+            { id: 2448, name: 'Superantipoison(4)', count: 4 },
+            { id: TRIBRID_BIS_ITEMS.ringOfRecoil, name: 'Ring of recoil', count: 2 },
+        ],
+    };
+    const end = enduranceHours(waveDAccount, { waveBC: true, comboFood: true });
+    expect([end.foodHours, end.comboHours, end.hours]).toEqual([4, 4, 4]);
+    const pick = pickKit(waveDAccount, gear, waveDRule, NOW);
+    expect(pick.ready).toBe(true);
+    expect(pick.reasons).toEqual([]);
+    expect(pick.foodSlots).toBe(12);
+    expect(pick.carried.find(c => c.id === TRIBRID_BIS_ITEMS.cookedKarambwan)?.count).toBe(2);
+    expect(pick.carried.find(c => c.id === TRIBRID_BIS_ITEMS.lawRune)?.count).toBe(3);
+    expect(pick.carried.find(c => c.id === TRIBRID_BIS_ITEMS.airRune)?.count).toBe(15);
+    expect(() => validateOwnedKit(loadoutOf(pick, { x: 3094, z: 3491 }))).not.toThrow();
+
+    const noKaram = pickKit({ ...waveDAccount, bank: waveDAccount.bank.filter(i => i.id !== TRIBRID_BIS_ITEMS.cookedKarambwan) }, gear, waveDRule, NOW);
+    expect(noKaram.ready).toBe(false);
+    expect(noKaram.needs.filter(n => n.id === TRIBRID_BIS_ITEMS.cookedKarambwan)).toHaveLength(1);
+    expect(noKaram.needs.find(n => n.id === TRIBRID_BIS_ITEMS.cookedKarambwan)?.count).toBe(20);
+    expect(noKaram.reasons).toEqual(expect.arrayContaining(['no Cooked karambwan (20 short)', 'trip endurance 0.0 h under 4.0 h floor (limiting: cooked karambwan)']));
+});

@@ -17,7 +17,7 @@ export const SQUAD_HOURLY: Readonly<Record<string, readonly [low: number, high: 
     'antipoison(3)': [3, 5],
     'law rune': [16, 24],
     'air rune': [240, 360],
-    'cooked karambwan': [80, 120],
+    'cooked karambwan': [50, 70],
     'prayer potion(3)': [8, 16],
     'super attack(3)': [4, 8],
     'super strength(3)': [4, 8],
@@ -69,13 +69,14 @@ export const SQUAD_ARROWS: readonly string[] = ['rune arrow(p)', 'rune arrow', '
 // What a member holds counts by the HP an item heals (a lobster held is still food); new food is sharks. Demand is in shark units.
 export const SQUAD_FOOD_HEAL: Readonly<Record<string, number>> = { shark: 20, swordfish: 14, lobster: 12 };
 export const SQUAD_FOOD = Object.keys(SQUAD_FOOD_HEAL);
-// Wave B/C BiS benchmark parameters (bench run 44858769973: tribrid-bis-zerk-glory-tele / tribrid-bis-zerk-tele-karam2).
+// Wave B/C/D BiS benchmark parameters (Wave D winner tribrid-bis-zerk-tele-karam2: 12 sharks + 2 cooked karambwans + 3 law + 15 air).
 export const SQUAD_WAVE_BC = {
     benchKits: ['tribrid-bis-zerk-glory-tele', 'tribrid-bis-zerk-tele-karam2'] as const,
+    winnerKit: 'tribrid-bis-zerk-tele-karam2' as const,
     optimalSquadRange: [8, 12] as const,
     hourlyPerTribrid: {
-        shark: 31,
-        'cooked karambwan': 8,
+        shark: 30,
+        'cooked karambwan': 5,
         'rune arrow(p)': 160,
         'earth rune': 78,
         'water rune': 78,
@@ -89,6 +90,7 @@ export const SQUAD_WAVE_BC = {
         'ranging potion(4)': 1.5,
         'superantipoison(4)': 1,
     } as Readonly<Record<string, number>>,
+    tripFood: { shark: 12, 'cooked karambwan': 2 } as Readonly<Record<string, number>>,
     tripEscape: { 'law rune': 3, 'air rune': 15 } as Readonly<Record<string, number>>,
     wornNames: [
         'berserker helm', 'cape of legends', 'amulet of glory(4)', 'dragon dagger(p)',
@@ -98,11 +100,11 @@ export const SQUAD_WAVE_BC = {
 } as const;
 
 export function squadBurnBudget(tribrids = 10, hours = SQUAD_HOURS, opts: { comboFood?: boolean } = {}): Record<string, number> {
-    const out: Record<string, number> = {};
+    const comboFood = opts.comboFood ?? true, out: Record<string, number> = {};
     for (const [item, perHr] of Object.entries(SQUAD_WAVE_BC.hourlyPerTribrid)) {
-        if (item === 'cooked karambwan' && !opts.comboFood) continue;
+        if (item === 'cooked karambwan' && !comboFood) continue;
         const base = Math.ceil(perHr * tribrids * hours);
-        const floor = (SQUAD_WAVE_BC.tripEscape[item] ?? 0) * tribrids;
+        const floor = ((SQUAD_WAVE_BC.tripEscape[item] ?? 0) + (SQUAD_WAVE_BC.tripFood[item] ?? 0)) * tribrids;
         out[item] = Math.max(base, floor);
     }
     return out;

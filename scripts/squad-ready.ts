@@ -29,9 +29,11 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { wildernessLevel } from '../packages/core/src/prayer-guard';
+import { SQUAD_WAVE_BC } from '../packages/planner/src/squad';
 import { BANK_MEETS } from './coin-courier';
 import { makeOrder, writeFleetOrder } from './fleet-order';
-import { castableFreeze, defaultSpec, ITEMS, wildernessLevel } from './pk';
+import { castableFreeze, defaultSpec, ITEMS } from './pk';
 import { packOf } from './pk-gang';
 import { FOOD_LIST } from './pk-hunt';
 import { kitItems } from './pk-kits';
@@ -141,6 +143,19 @@ export const RULES: Readonly<Record<string, Rule>> = {
         bisSupplies: true,
         waveBC: true,
     },
+    'gang-tribrid-wave-d': {
+        name: 'gang-tribrid-wave-d',
+        benchKit: 'tribrid-bis-zerk-tele-karam2',
+        maxBankAgeHours: 6,
+        maxDonorBankAgeHours: 168,
+        minArrows: 300,
+        antipoisonHolders: 8,
+        minHours: 4,
+        requireQuests: ['Lost City', 'Dragon Slayer', 'Death Plateau', 'Druidic Ritual', 'The Fremennik Trials', "Hero's Quest", 'Legends Quest'],
+        bisSupplies: true,
+        waveBC: true,
+        comboFood: true,
+    },
 };
 
 export function questBlockers(a: { quests: ReadonlySet<string> }, quests: readonly string[] = SUPPLY_QUESTS): string[] {
@@ -151,10 +166,11 @@ export function enduranceHours(a: Account, opts: { waveBC?: boolean; comboFood?:
     const own = holdings(a);
     const qty = (id: number) => own.get(id)?.count ?? 0;
     const foodUnits = qty(TRIBRID_BIS_ITEMS.shark) + qty(TRIBRID_BIS_ITEMS.swordfish) * 14 / 20 + qty(TRIBRID_BIS_ITEMS.lobster) * 12 / 20;
-    const wave = !!opts.waveBC;
-    const foodHours = foodUnits / (wave ? 31 : 88.75);
-    const checkCombo = !wave || !!opts.comboFood;
-    const comboHours = checkCombo ? qty(TRIBRID_BIS_ITEMS.cookedKarambwan) / (wave ? 8 : 25) : Infinity;
+    const wave = !!opts.waveBC, checkCombo = !wave || !!opts.comboFood;
+    const foodPerHr = wave ? (opts.comboFood ? SQUAD_WAVE_BC.hourlyPerTribrid.shark! : 31) : 88.75;
+    const comboPerHr = wave ? SQUAD_WAVE_BC.hourlyPerTribrid['cooked karambwan']! : 15;
+    const foodHours = foodUnits / foodPerHr;
+    const comboHours = checkCombo ? qty(TRIBRID_BIS_ITEMS.cookedKarambwan) / comboPerHr : Infinity;
     const ammoHours = (qty(TRIBRID_BIS_ITEMS.runeArrowP) + qty(TRIBRID_BIS_ITEMS.runeArrow) + qty(TRIBRID_BIS_ITEMS.adamantArrow)) / (wave ? 160 : 163.75);
     const runeRates: [string, number, number][] = wave ? [
         ['earth rune', TRIBRID_BIS_ITEMS.earthRune, 78],
@@ -365,9 +381,11 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     const wornIds = worn.map(w => w.id), magic = a.levels.magic ?? 1;
     const escapeSpell = squadEscapeSpell(post.z, carried, wornIds, magic), freezeSpell = castableFreeze(Math.min(magic, SQUAD_OPTS.freezeMagicCap), carried);
     const freezeRunes: readonly number[] = [ITEMS.earthRune, ITEMS.waterRune, ITEMS.natureRune];
+    const karamManaged = !!rule.bisSupplies && (!rule.waveBC || !!rule.comboFood);
     for (const s of supplies) {
         const n = short.get(s.id);
         if (!n) continue;
+        if (karamManaged && s.id === TRIBRID_BIS_ITEMS.cookedKarambwan) continue;
         const blocking = freezeRunes.includes(s.id) ? freezeSpell === null : escapeSpell === null;
         needs.push({ what: own.get(s.id)?.name ?? nameOf(s.id) ?? `item ${s.id}`, id: s.id, count: n, blocking, accept: i => i.id === s.id });
     }
@@ -405,7 +423,8 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
     const prayerBase = a.levels.prayer ?? 1;
     if (a.prayerPoints !== undefined && a.prayerPoints < prayerFloor(prayerBase)) reasons.push(`prayer points ${a.prayerPoints} of ${prayerBase}, under the floor of ${prayerFloor(prayerBase)}: bun scripts/pray-at-altar.ts ${a.name} ALTAR=${PRAYER_ALTAR}`);
     if (inWestArdougne(a.pos)) reasons.push('stands inside West Ardougne, which the walker cannot leave');
-    if (wildernessLevel(a.pos.z) > 0) reasons.push(`stands in the Wilderness at level ${wildernessLevel(a.pos.z)}`);
+    const wildLevel = wildernessLevel(a.pos.x, a.pos.z);
+    if (wildLevel > 0) reasons.push(`stands in the Wilderness at level ${wildLevel}`);
     if (!maxed(a)) notes.push(`not 99 in ${COMBAT.filter(s => (a.levels[s.toLowerCase()] ?? 1) < 99).join(', ')}`);
     const endurance = enduranceHours(a, { waveBC: rule.waveBC, comboFood: rule.comboFood });
     const missingQuests = questBlockers(a, rule.requireQuests ?? SUPPLY_QUESTS);
@@ -421,7 +440,7 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
             ]),
             ["Black d'hide vambraces", TRIBRID_BIS_ITEMS.blackVambs, 1],
             ['Ring of recoil', TRIBRID_BIS_ITEMS.ringOfRecoil, 2],
-            ...(!rule.waveBC || rule.comboFood ? [['Cooked karambwan', TRIBRID_BIS_ITEMS.cookedKarambwan, 25] as [string, number, number]] : []),
+            ...(!rule.waveBC || rule.comboFood ? [['Cooked karambwan', TRIBRID_BIS_ITEMS.cookedKarambwan, rule.waveBC ? 20 : 25] as [string, number, number]] : []),
         ];
         for (const [label, id, count] of bisRequirements) {
             const held = own.get(id)?.count ?? 0;
@@ -479,7 +498,7 @@ export function stagingPlan(candidates: readonly Account[], fleet: readonly Acco
     const spare = new Map<string, Map<number, Item>>();
     for (const a of fleet) {
         // No donor with an old bank read, and none that cannot walk to a meeting.
-        if (a.bankAt === null || (now - a.bankAt) / 3_600_000 > rule.maxDonorBankAgeHours || inWestArdougne(a.pos) || wildernessLevel(a.pos.z) > 0) continue;
+        if (a.bankAt === null || (now - a.bankAt) / 3_600_000 > rule.maxDonorBankAgeHours || inWestArdougne(a.pos) || wildernessLevel(a.pos.x, a.pos.z) > 0) continue;
         const pick = byName.get(a.name.toLowerCase()), stock = new Map<number, Item>();
         for (const i of pick ? [...holdings(a).values()].filter(i => gear.has(i.id) && gear.get(i.id)!.slot !== 'quiver') : a.bank) stock.set(i.id, { id: i.id, name: i.name, count: (stock.get(i.id)?.count ?? 0) + i.count });
         if (pick) {
