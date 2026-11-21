@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795251723136-quickhandjob-yewfirst-earthrune",
  "account": "YewFirst",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Earth rune",
  "requested": 15,
  "claim": "a1d0e728-35de-4349-afc0-b740d1886f35",
- "count": 0,
- "ok": false,
- "at": 1795251806109,
- "detail": "trade claimed"
+ "count": 15,
+ "ok": true,
+ "at": 1795251996306,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 15
+ },
+ "bank": {
+  "count": 15,
+  "at": 1795251995586
+ },
+ "logout": {
+  "attemptId": "1795251806117-0000031944-0000000001",
+  "at": 1795251996294,
+  "sha256": "36da38e7d3d1cc562efbbbe3dd6aee727a817c54230f169f4a8ecf124d5959f5"
+ },
+ "screen": true
 }
