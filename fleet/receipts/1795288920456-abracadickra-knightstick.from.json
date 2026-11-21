@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795288920456-abracadickra-knightstick",
+ "account": "Abracadickra",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 24050,
+ "claim": "210d5ac5-6d65-4dd9-98e4-11738c5cd8f9",
+ "count": 0,
+ "ok": false,
+ "at": 1795289026373,
+ "detail": "trade claimed"
+}

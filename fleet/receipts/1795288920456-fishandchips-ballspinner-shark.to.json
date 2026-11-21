@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795288920456-fishandchips-ballspinner-shark",
+ "account": "Ballspinner",
+ "partner": "FishAndChips",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 6,
+ "claim": "0757c6aa-4be4-4c69-9da7-308b8dc5f475",
+ "count": 0,
+ "ok": false,
+ "at": 1795289032584,
+ "detail": "trade claimed"
+}
