@@ -1,0 +1,22 @@
+{
+ "id": "1795297214978-swordswallow-dipstick-ballofwool",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordswallow",
+ "to": "Dipstick",
+ "item": "Ball of wool",
+ "count": 2,
+ "start": 1795297214978,
+ "end": 1795299614978,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

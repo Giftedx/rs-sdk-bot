@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795297118509,
+ "at": 1795297235956,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -408,7 +408,7 @@
     "trooper"
    ],
    "env": {
-    "TRAIN_SKILL": "Attack",
+    "TRAIN_SKILL": "Defence",
     "TARGET_LEVEL": "99",
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
@@ -418,9 +418,9 @@
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Attack to 99 on the Khazard troopers",
+   "goal": "train Defence to 99 on the Khazard troopers",
    "role": "combat",
-   "template": "army-trooper-attack-99",
+   "template": "army-trooper-defence-99",
    "autopilot": "local",
    "resources": [
     "trooper:battlefield"
@@ -431,7 +431,7 @@
    "script": "scripts/gather-combat.ts",
    "args": [
     "6000",
-    "taverley_black_knight"
+    "giant"
    ],
    "env": {
     "MAX_KILLS": "40"
@@ -439,12 +439,12 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
    "role": "combat",
-   "template": "squad-taverley-black-knights",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "squad:taverley-black-knights"
+    "squad:ardougne-giants"
    ]
   },
   {
@@ -496,23 +496,21 @@
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "taverley_black_knight"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "MAX_KILLS": "40"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
-   "role": "combat",
-   "template": "squad-taverley-black-knights",
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "squad:taverley-black-knights"
+    "knight:2582,3297"
    ]
   },
   {
