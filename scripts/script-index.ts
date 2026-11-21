@@ -64,6 +64,7 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/preparation-route-state.ts': 'helper of scripts/preparation-report.ts',
  'scripts/provision-readiness.ts': 'fleet control: checks the crew of an account provision',
  'scripts/progression-catalog.ts': 'developer tool: generates checked declarative progression metadata; no gameplay',
+ 'scripts/pvp-relog-combat.ts': 'overall combat trainer: 1-tick action_delay PvP relog trainer at Deserted Keep for Haggis Overall',
  'scripts/route-audit-components.ts': 'helper of scripts/route-audit.ts',
  'scripts/route-audit.ts': 'developer tool: offline navigation audit',
  'scripts/script-descriptions.ts': 'helper of scripts/script-index.ts',

@@ -94071,6 +94071,15 @@
    "practiceOnly": true
   },
   {
+   "script": "scripts/measure/overall-pvp-cases.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
    "script": "scripts/measure/pick-cycle.ts",
    "intents": [
     "observe"
@@ -95368,6 +95377,19 @@
    "routeIds": [
     "pvp:stage-kit"
    ]
+  },
+  {
+   "script": "scripts/pvp-relog-combat.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "attack",
+    "strength",
+    "defence",
+    "ranged"
+   ],
+   "routeIds": []
   },
   {
    "script": "scripts/pvp-standby.ts",

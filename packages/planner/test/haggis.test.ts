@@ -326,7 +326,7 @@ test('rival levers (research/rival-gap-list.md): ESTIMATE rows, no blocks on or 
         expect(r.qp).toBe(145); // MAX_QP: every quest (research/quest-points-board.md)
     }
     // A retired rival lever (rival-dragon-combat) only runs when named; Doric's 1 QP moves out of quests-short.
-    const r = schedule(boards, acts, { mode: 'realistic', tricks: new Set(), owner: new Set(['rival-dragon-combat']) });
+    const r = schedule(boards, acts, { mode: 'realistic', tricks: new Set(), disable: new Set(['pvp-relog-combat']), owner: new Set(['rival-dragon-combat']) });
     expect(r.blocked).toEqual([]);
     expect(r.qp).toBe(145);
     expect(r.order.findIndex(p => p.id === 'dragon')).toBeLessThan(r.order.findIndex(p => p.id === 'def-top'));
@@ -473,7 +473,7 @@ test('waterfall-late and def-at-ranged-spot (research/combat-measure.md section 
     const acts = haggisActivities();
     const travel = haggisTravel();
     for (const mode of ['floor', 'realistic'] as const) {
-        const run = (disable: string[]) => schedule(boards, acts, { mode, tricks: new Set(), travel, disable: new Set(disable) });
+        const run = (disable: string[]) => schedule(boards, acts, { mode, tricks: new Set(), travel, disable: new Set(['pvp-relog-combat', ...disable]) });
         const all = run([]);
         expect(all.blocked).toEqual([]);
         const overall = finish(all, 'overall').finish!;
@@ -528,18 +528,32 @@ test('overall route uses teleports, spirit trees, stun-guest chaining, and keeps
     expect(real.blocked).toEqual([]);
     expect(floor.qp).toBe(145);
     expect(real.qp).toBe(145);
-    // Ceilings above the measured model: floor 34,263 and realistic 35,940 (the runecraft row holds our measured pack cycle; the Grand Tree row its Prayer 99 ticks).
-    expect(floor.overallFinish!).toBeLessThanOrEqual(34400);
-    expect(real.overallFinish!).toBeLessThanOrEqual(36050);
-    expect(real.route['agility-route']).toBe('grandtree');
-    // Superheat inside thieve unlocks Magic 80 so charge absorbs inside the same thieve host without blocking.
-    expect(real.order.find(p => p.id === 'superheat-stun')!.ticks).toBe(0);
-    expect(real.order.find(p => p.id === 'charge')!.ticks).toBe(0);
+    // Ceilings above the measured pvp-relog-combat model: floor 27,004 and realistic 28,726 (< 29,372 target for 2% margin under 29,972).
+    expect(floor.overallFinish!).toBeLessThanOrEqual(27500);
+    expect(real.overallFinish!).toBeLessThanOrEqual(29372);
+    expect(real.route['agility-route']).toBe('tourist-trap');
+    // PvP relog combat keeps Waterfall/Dragon/Cannon/MM/Fight Arena/Witch after Overall and trains at Deserted Keep.
+    const overall = finish(real, 'overall').finish!;
+    for (const id of ['waterfall', 'dragon', 'cannon', 'rival-mm', 'rival-fight-arena', 'witch']) {
+        expect(real.order.find(p => p.id === id)!.start).toBeGreaterThanOrEqual(overall);
+    }
+    expect(real.order.find(p => p.id === 'str-top')!.travel ?? 0).toBe(0);
+    expect(real.order.find(p => p.id === 'def-top')!.travel ?? 0).toBe(0);
+    expect(real.order.find(p => p.id === 'ranged')!.travel ?? 0).toBe(0);
     // Spirit tree cuts travel after tree completes, and deep Wildy exits via lever rather than teleporting.
     expect(real.order.some(p => p.method === 'spirit-tree')).toBe(true);
     const arenaExit = real.order.find(p => p.from === 'mage-arena-lever')!;
     expect(arenaExit.method).toBe('wildy-exit-lever');
-});
+}, 15_000);
+
+test('legacy stun-guest route absorbs superheat-stun and charge inside thieve when pvp-relog-combat is disabled', () => {
+    const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-live.json'));
+    const acts = haggisActivities();
+    const travel = haggisTravel();
+    const legacyReal = scheduleOverall(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel, disable: new Set(['pvp-relog-combat']) });
+    expect(legacyReal.order.find(p => p.id === 'superheat-stun')!.ticks).toBe(0);
+    expect(legacyReal.order.find(p => p.id === 'charge')!.ticks).toBe(0);
+}, 15_000);
 
 test('superheat-stun and q-burst levers reduce smithing and burst quests cleanly', () => {
     const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-live.json'));
@@ -550,9 +564,9 @@ test('superheat-stun and q-burst levers reduce smithing and burst quests cleanly
         'herblore-method': 'herb', firemaking: 'burn', 'magic-smithing': 'anvil',
         'agility-route': 'grandtree', 'ranged-entry-method': 'melee-cannon',
     };
-    const real = scheduleOverall(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel, force });
-    const noSuperheat = scheduleOverall(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel, force, disable: new Set(['superheat-stun']) });
-    const noBurst = scheduleOverall(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel, force, disable: new Set(['q-burst']) });
+    const real = scheduleOverall(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel, force, disable: new Set(['pvp-relog-combat']) });
+    const noSuperheat = scheduleOverall(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel, force, disable: new Set(['pvp-relog-combat', 'superheat-stun']) });
+    const noBurst = scheduleOverall(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), travel, force, disable: new Set(['pvp-relog-combat', 'q-burst']) });
     expect(real.order.find(p => p.id === 'smith-anvil')!.ticks).toBeLessThan(noSuperheat.order.find(p => p.id === 'smith-anvil')!.ticks);
     expect(real.order.find(p => p.id === 'tree')!.ticks).toBe(noBurst.order.find(p => p.id === 'tree')!.ticks - 114);
     expect(real.order.find(p => p.id === 'druid')!.ticks).toBe(noBurst.order.find(p => p.id === 'druid')!.ticks - 31);
@@ -566,7 +580,7 @@ test('a Haggis travel model built with a leg cache path prices the same route as
     const model = haggisTravel(undefined, TRAVEL_FILE);
     expect((model as { start?: string }).start).toBe('lumbridge-spawn');
     expect(finish(model)).toBe(finish(haggisTravel()));
-});
+}, 15_000);
 
 test('jewellery teleports (Amulet of glory, Ring of dueling) unlock after trade-start and quests-rest uses 3-seed measurements', () => {
     const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-live.json'));
@@ -578,11 +592,11 @@ test('jewellery teleports (Amulet of glory, Ring of dueling) unlock after trade-
     const jewelleryLegs = real.order.filter(p => p.method?.startsWith('teleport:glory-') || p.method?.startsWith('teleport:dueling-'));
     expect(jewelleryLegs.length).toBeGreaterThan(0);
     for (const p of jewelleryLegs) expect(p.start).toBeGreaterThanOrEqual(tradeStartAt);
-    expect(real.travel).toBeLessThan(2622);
-    expect(floor.overallFinish!).toBeLessThan(33524);
-    expect(real.overallFinish!).toBeLessThan(35053);
+    expect(real.travel).toBeLessThan(2800);
+    expect(floor.overallFinish!).toBeLessThan(27500);
+    expect(real.overallFinish!).toBeLessThan(29372);
     const questsRest = acts.find(a => a.id === 'quests-rest')!;
     expect(questsRest.evidence).toBe('MEASURED');
     expect(questsRest.ticks).toMatchObject({ floor: 14554, realistic: 16157, evidence: 'MEASURED' });
     expect(finish(real, 'questpoints').finish!).toBeLessThan(103358);
-});
+}, 15_000);

@@ -961,6 +961,7 @@ export const LEVERS: { id: string; owner: boolean; label: string; retired?: bool
     // Retired: Cairn's order (research/community-and-upstream.md section 7) loses 628 ticks in our model.
     // Dragon Slayer replaces the Strength and Defence top-ups, but Hitpoints then needs Witch's House at the end.
     { id: 'rival-dragon-combat', owner: false, retired: true, label: 'Dragon Slayer before the melee top-ups, Doric for the 32 QP (RETIRED: loses ticks in the model)' },
+    { id: 'pvp-relog-combat', owner: false, label: '1-tick PvP relog combat at Deserted Keep (Attack, Strength, Defence, Ranged 1->99), free Hitpoints side XP, zero pre-Overall combat/Cannon quests, standalone Thieving' },
 ];
 export const SCENARIOS: { id: string; label: string; tricks: Trick[] }[] = [
     { id: 'a', label: 'All server mechanics (default)', tricks: TRICKS },
