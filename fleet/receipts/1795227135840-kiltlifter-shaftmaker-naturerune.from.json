@@ -1,0 +1,23 @@
+{
+ "version": 2,
+ "state": "failed",
+ "id": "1795227135840-kiltlifter-shaftmaker-naturerune",
+ "account": "Kiltlifter",
+ "partner": "Shaftmaker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 197,
+ "claim": "ce411606-a126-49b6-8018-151baac6dd32",
+ "count": 0,
+ "ok": false,
+ "at": 1795227243050,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795227234297-0000018556-0000000001",
+  "at": 1795227243039,
+  "sha256": "43221c64b1a842c97cee0c6d864319b3b12c3d4ecf5dc0d0e5d45a7e9b2fa478"
+ },
+ "screen": false
+}
