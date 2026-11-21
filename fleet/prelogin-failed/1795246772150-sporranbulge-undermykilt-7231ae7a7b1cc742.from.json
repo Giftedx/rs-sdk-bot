@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795246772150-sporranbulge-undermykilt-7231ae7a7b1cc742",
+ "role": "from",
+ "account": "SporranBulge",
+ "partner": "UnderMyKilt",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795246863033,
+ "detail": "Error: no worker progress: active legacy/different release; wait offline for coordinated rollout"
+}
