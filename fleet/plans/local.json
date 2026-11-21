@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795242632165,
+ "at": 1795242697809,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -260,6 +260,36 @@
    ]
   },
   {
+   "account": "BoneToPick",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "wydin_choc",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "chocolate bar",
+    "STOCK_TARGET": "2",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "240",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "40",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1973\":2}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy chocolate bars at Wydin's Food Store in Port Sarim",
+   "role": "bank",
+   "template": "squad-chocolate-bar",
+   "autopilot": "local",
+   "resources": [
+    "shop:wydin_choc"
+   ]
+  },
+  {
    "account": "Bigchopper",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -291,51 +321,72 @@
   },
   {
    "account": "Unsheathed",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/shop-buyer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "wydin_choc",
-    "1200"
+    "6000",
+    "taverley_black_knight"
    ],
    "env": {
-    "ITEMS": "chocolate bar",
-    "STOCK_TARGET": "2",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "240",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "40",
-    "AUTOPILOT_ORDER": "[0]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1973\":2}}"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy chocolate bars at Wydin's Food Store in Port Sarim",
-   "role": "bank",
-   "template": "squad-chocolate-bar",
+   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
+   "role": "combat",
+   "template": "squad-taverley-black-knights",
    "autopilot": "local",
    "resources": [
-    "shop:wydin_choc"
+    "squad:taverley-black-knights"
+   ]
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Stirmypot",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 2832 9586",
+    "scripts/gather-spawn.ts 223 27"
+   ],
+   "env": {
+    "TICKS": "3000",
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "gather red spiders' eggs in Karamja Volcano (non-Wilderness) for super restore potions",
+   "role": "herblore",
+   "template": "squad-karamja-red-spiders-eggs",
+   "autopilot": "local",
+   "resources": [
+    "squad:karamja-red-spiders-eggs"
    ]
   },
   {
@@ -349,7 +400,8 @@
     "ORDER_MODE=best-effort"
    ],
    "env": {
-    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]"
+    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"2152\":2}}"
    },
    "enabled": true,
    "standing": true,
