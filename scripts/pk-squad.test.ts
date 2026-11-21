@@ -1178,3 +1178,76 @@ test('squadKitFightDefaults enables comboFood, God spell + Charge, and freezeWea
     );
     expect(explicit.rotation).toBeUndefined();
 });
+
+test('squadFallbackPlan escapes focus piles even with allies present and disableAutoRetaliate toggles off once', async () => {
+    const { disableAutoRetaliate } = require('./pk-squad');
+    // 3+ attackers targeting this member in multi triggers escape at <= 78% HP despite 10 nearby allies.
+    expect(squadFallbackPlan({ z: 3640, hp: 75, maxHp: 99, foodCount: 10, enemyCount: 6, allyCount: 10, targetingMe: 3, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('glory');
+    // 2 attackers targeting us when food is nearly exhausted also falls back early.
+    expect(squadFallbackPlan({ z: 3640, hp: 80, maxHp: 99, foodCount: 3, enemyCount: 4, allyCount: 6, targetingMe: 2, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('glory');
+    // Full HP or < 3 focus attackers with ample food holds the fight.
+    expect(squadFallbackPlan({ z: 3640, hp: 90, maxHp: 99, foodCount: 10, enemyCount: 6, allyCount: 10, targetingMe: 4, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('hold');
+
+    let enabled = true;
+    const clicks: number[] = [];
+    const s: any = {
+        sdk: { getState: () => ({ autoRetaliateEnabled: enabled }) },
+        direct: async (a: any) => { clicks.push(a.componentId); enabled = false; },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => true);
+    try {
+        await disableAutoRetaliate(s);
+        await disableAutoRetaliate(s);
+        expect(clicks).toEqual([151]);
+    } finally {
+        spyTick.mockRestore();
+    }
+});
+
+test('rescue skips eating while Glory Edgeville dialog is open so food never cancels teleport', async () => {
+    let ticks = 0, z = 3616, dialogOpen = false;
+    const eq: any[] = [];
+    const inv: any[] = [
+        { slot: 0, id: 385, count: 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+        { slot: 1, id: 1712, count: 1, name: 'Amulet of glory(4)', optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] },
+    ];
+    const events: string[] = [];
+    const mockSess: any = {
+        name: 'GloryDialogBot',
+        tick: () => ticks,
+        client: {},
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp: 65, maxHp: 99, combatLevel: 126 },
+                inventory: inv,
+                equipment: eq,
+                skills: [{ name: 'Magic', level: 99 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { activePrayers: [], prayerPoints: 80 },
+                combatEvents: [],
+                dialog: { isOpen: dialogOpen, options: dialogOpen ? [{ text: 'Edgeville.' }] : [] },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => eq,
+            getSkill: () => ({ level: 99, baseLevel: 99 }),
+            clickDialogByText: async (pat: RegExp) => {
+                events.push(`dialog:${pat.source}`);
+                if (dialogOpen) { dialogOpen = false; z = 3496; }
+                return { success: true };
+            },
+        },
+        direct: async (action: any) => {
+            events.push(`${action.type}:${action.slot}:${action.optionIndex}`);
+            if (action.slot === 1) dialogOpen = true;
+            else inv.shift();
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => { ticks++; return true; });
+    try {
+        const res = await rescue(mockSess, () => {}, () => false, false);
+        expect(res).toBe(mockSess);
+        expect(z).toBe(3496);
+        expect(events).toEqual(['useInventoryItem:0:1', 'useInventoryItem:1:4', 'dialog:^Edgeville']);
+    } finally {
+        spyTick.mockRestore();
+    }
+});

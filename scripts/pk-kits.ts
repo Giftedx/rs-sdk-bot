@@ -35,7 +35,7 @@ export type KitSpec = {
     foodItem?: string;
     // Switch weapons for each style the build fights with, by name.
     switches: Partial<Record<Style, string[]>>;
-    options?: Pick<FightOptions, 'rotation' | 'damageSpell' | 'charge' | 'freezeWear' | 'comboFood' | 'comboAt' | 'zeroDrainFlick' | 'offensiveFlick' | 'fakieSwitch' | 'stepUnderFrozen' | 'burstOnStun'>;
+    options?: Pick<FightOptions, 'rotation' | 'damageSpell' | 'charge' | 'castArmour' | 'freezeWear' | 'comboFood' | 'comboAt' | 'zeroDrainFlick' | 'offensiveFlick' | 'fakieSwitch' | 'stepUnderFrozen' | 'burstOnStun'>;
     // Base levels of the build (default: 99 in the seven combat skills) and the varps it needs besides Lost City,
     // Dragon Slayer and full special energy.
     skills?: Record<string, number>;
@@ -207,6 +207,7 @@ export const KITS: Readonly<Record<string, KitSpec>> = {
             'tribrid-bis-dhide': { worn: { ...ACC, torso: 'black_dragonhide_body', legs: 'black_dragonhide_chaps', shield: 'dragon_sq_shield' }, carried: COMBO_PACK, food: 11, switches: SW_DRG, options: { rotation: ['ranged', 'melee'], comboFood: true }, varps: VARPS },
             'tribrid-bis-dragon': { worn: { ...TANK, hat: 'dragon_med_helm' }, carried: COMBO_PACK, food: 11, switches: SW_DRG, options: { rotation: ['ranged', 'melee'], comboFood: true }, varps: VARPS },
             'tribrid-bis-dragon-zerk': { worn: TANK, carried: COMBO_PACK, food: 11, switches: SW_DRG, options: { rotation: ['ranged', 'melee'], comboFood: true }, varps: VARPS },
+            'tribrid-bis-dragon-zerk-sharks': { worn: TANK, carried: SHARK_PACK, food: 16, switches: SW_DRG, options: { rotation: ['ranged', 'melee'] }, varps: VARPS },
             'tribrid-bis-hybrid': hybrid,
             'tribrid-bis-hybrid-sharks': { ...hybrid, carried: SHARK_PACK, food: 16, options: { rotation: ['ranged', 'melee'] } },
             'tribrid-bis-swap': { worn: TANK, carried: ['magic_shortbow', 'black_dragonhide_body', 'black_dragonhide_chaps', ...FREEZE, ...PRAYER_POTS, ...FULL_BOOSTS, ...KARAM4], food: 10, switches: { ranged: ['magic_shortbow', 'black_dragonhide_body', 'black_dragonhide_chaps'], melee: ['dragon_dagger_p', 'dragon_sq_shield', 'dragon_chainbody', 'dragon_platelegs'] }, options: { rotation: ['ranged', 'melee'], comboFood: true }, varps: VARPS },

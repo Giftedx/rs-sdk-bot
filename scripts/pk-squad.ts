@@ -29,6 +29,7 @@ import { isLocalServer } from '../packages/core/src/localserver';
 import type { Session } from '../packages/core/src/inprocess';
 import { closeWithin } from '../packages/core/src/bot';
 import { killReceiptProof } from '../packages/core/src/kill-receipt';
+import { RETALIATE_OFF } from '../packages/core/src/combat-end';
 import { bindActionScope } from '../packages/core/src/action-scope';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
 import { attackable, bestFood, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, getObjNames, ITEMS, isMulti, nextTick, observePlayer, ownSkull, PRAYER, recordKillLoot, rewearStart, STUNNED_SHOVE_SPOTANIM, wildernessLevel, weaponStyle, type FightOptions } from './pk';
@@ -272,6 +273,7 @@ function createWildSurvival(
         comboBelow?: number;
         useDirect?: boolean;
         protectItem?: () => boolean;
+        canEat?: () => boolean;
     } = {},
 ): { step: (now: number) => void } {
     let foodReady = -10, karamReady = -10, prayAt = -10, itemAt = -10, seenEvent = 0, hitStyle: CombatStyle | null = null, hitAt = -100;
@@ -307,6 +309,7 @@ function createWildSurvival(
                     itemAt = now;
                 }
             }
+            if (opts.canEat && !opts.canEat()) return;
             const eatAt = opts.eatBelow ?? Math.max(65, me.maxHp - 24);
             const comboAt = opts.comboBelow ?? 55;
             if (now >= foodReady && me.hp <= eatAt) {
@@ -331,6 +334,17 @@ function createWildSurvival(
     };
 }
 
+// Turning auto-retaliate off stops server-side [queue,pvp_retaliate] from walking an escaped or finished
+// member back out of Edgeville bank into the Wilderness when hit during teleport windup.
+export async function disableAutoRetaliate(s: Session): Promise<void> {
+    const state = s.sdk.getState?.() as { autoRetaliateEnabled?: boolean } | undefined;
+    if (!state || state.autoRetaliateEnabled !== true || typeof s.direct !== 'function') return;
+    await s.direct({ type: 'clickComponent', componentId: RETALIATE_OFF, reason: 'squad auto-retaliate off' });
+    for (let t = 0; t < 3 && (s.sdk.getState?.() as { autoRetaliateEnabled?: boolean } | undefined)?.autoRetaliateEnabled === true; t++) {
+        if (!await nextTick(s)) break;
+    }
+}
+
 // A dropped account logged in again: settle on fresh login, cast an available escape teleport or rub a glory (wild <= 30)
 // immediately, else eat and walk to the nearer bank (bankNear) while protecting prayer and healing every tick.
 export async function rescue(
@@ -347,7 +361,8 @@ export async function rescue(
     if (!start) return null;
     log(`[${s.name}] SQUAD rescue at ${start.worldX},${start.worldZ} wild ${wildernessLevel(start.worldZ)} hp ${start.hp}`);
     if (wildernessLevel(start.worldZ) > 0) {
-        const survival = createWildSurvival(s, { protect: opts.protect, protectItem: opts.protectItem, eatBelow: Math.max(70, start.maxHp - 22), comboBelow: 55, useDirect: true });
+        let suppressEat = false;
+        const survival = createWildSurvival(s, { protect: opts.protect, protectItem: opts.protectItem, eatBelow: Math.max(72, start.maxHp - 20), comboBelow: 58, useDirect: true, canEat: () => !suppressEat && !s.sdk.getState()?.dialog?.isOpen });
         const hasChargedGlory = () => {
             const st = s.sdk.getState(), inv = s.sdk.getInventory?.() ?? [], eq = (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : st?.equipment) ?? [];
             return [...inv, ...eq].some(i => (ITEMS.glory as readonly number[]).includes(i.id));
@@ -357,11 +372,11 @@ export async function rescue(
             else if (typeof s.sdk.sendUseItem === 'function') await s.sdk.sendUseItem(slot, opIndex);
         };
         const clickEdgeville = async () => {
-            if (s.sdk.getState()?.dialog?.isOpen && typeof s.sdk.clickDialogByText === 'function') {
-                await s.sdk.clickDialogByText(/^Edgeville/i);
-                return true;
-            }
-            return false;
+            const dlg = s.sdk.getState()?.dialog as { isOpen?: boolean; isWaiting?: boolean; options?: { text: string }[] } | undefined;
+            if (!dlg?.isOpen || dlg.isWaiting || typeof s.sdk.clickDialogByText !== 'function') return false;
+            if (Array.isArray(dlg.options) && !dlg.options.some(op => /^Edgeville/i.test(op.text))) return false;
+            const res = await s.sdk.clickDialogByText(/^Edgeville/i) as { success?: boolean } | undefined;
+            return res?.success !== false;
         };
         const st = s.sdk.getState(), magic = st?.skills?.find(k => k.name === 'Magic')?.level ?? 1;
         const wornIds = ((typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : st?.equipment) ?? []).map(e => e.id);
@@ -385,36 +400,56 @@ export async function rescue(
             }
         }
         const tryGloryEscape = async (): Promise<boolean> => {
-            for (let attempt = 0; attempt < 10 && wildernessLevel(me()?.worldZ ?? 0) > 0 && wildernessLevel(me()?.worldZ ?? 0) <= 30; attempt++) {
+            let atePreRub = false;
+            for (let attempt = 0; attempt < 24 && wildernessLevel(me()?.worldZ ?? 0) > 0 && wildernessLevel(me()?.worldZ ?? 0) <= 30; attempt++) {
                 if (stopped()) return false;
-                survival.step(s.tick());
                 if (await clickEdgeville()) {
-                    for (let t = 0; t < 4 && wildernessLevel(me()?.worldZ ?? 0) > 0; t++) {
-                        survival.step(s.tick());
-                        if (!await tick()) return false;
+                    suppressEat = true;
+                    try {
+                        for (let d = 0; d < 4 && wildernessLevel(me()?.worldZ ?? 0) > 0; d++) {
+                            survival.step(s.tick());
+                            if (!await tick()) return false;
+                        }
+                    } finally {
+                        suppressEat = false;
                     }
                     continue;
                 }
+                const invNow = s.sdk.getInventory?.() ?? [], qNow = me();
+                const hasInvGlory = invNow.some(i => (ITEMS.glory as readonly number[]).includes(i.id));
+                const needPreHeal = !atePreRub && hasInvGlory && qNow && qNow.hp <= 42 && !!bestFood(invNow);
+                survival.step(s.tick());
                 const q = me(), inv = s.sdk.getInventory?.() ?? [], stNow = s.sdk.getState();
                 const eq = (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : stNow?.equipment) ?? [];
                 const invGlory = inv.find(i => (ITEMS.glory as readonly number[]).includes(i.id));
                 const rubOp = invGlory?.optionsWithIndex?.find(x => /^Rub$/i.test(x.text));
                 if (invGlory && rubOp) {
-                    if (q && q.hp <= 42) {
+                    if (needPreHeal && q && q.hp <= 42 && !atePreRub) {
                         const food = bestFood(inv);
                         const op = food?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
-                        if (food && op) await useItemAction(food.slot, op.opIndex);
+                        if (food && op) {
+                            atePreRub = true;
+                            await useItemAction(food.slot, op.opIndex);
+                            if (!await tick()) return false;
+                            continue;
+                        }
                     }
+                    atePreRub = false;
                     if (!stopped()) await useItemAction(invGlory.slot, rubOp.opIndex);
-                    for (let t = 0; t < 5 && wildernessLevel(me()?.worldZ ?? 0) > 0; t++) {
-                        survival.step(s.tick());
+                    for (let t = 0; t < 4 && wildernessLevel(me()?.worldZ ?? 0) > 0; t++) {
                         if (await clickEdgeville()) {
-                            for (let d = 0; d < 4 && wildernessLevel(me()?.worldZ ?? 0) > 0; d++) {
-                                survival.step(s.tick());
-                                if (!await tick()) return false;
+                            suppressEat = true;
+                            try {
+                                for (let d = 0; d < 4 && wildernessLevel(me()?.worldZ ?? 0) > 0; d++) {
+                                    survival.step(s.tick());
+                                    if (!await tick()) return false;
+                                }
+                            } finally {
+                                suppressEat = false;
                             }
                             break;
                         }
+                        survival.step(s.tick());
                         if (!await tick()) return false;
                     }
                     continue;
@@ -433,8 +468,11 @@ export async function rescue(
                     const dropOp = vial?.optionsWithIndex?.find(x => /^Drop$/i.test(x.text));
                     const food = bestFood(inv);
                     const eatOp = food?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
+                    const spareDrop = inv.find(i => !(ITEMS.glory as readonly number[]).includes(i.id) && i.optionsWithIndex?.some(x => /^Drop$/i.test(x.text)));
+                    const spareOp = spareDrop?.optionsWithIndex?.find(x => /^Drop$/i.test(x.text));
                     if (vial && dropOp) await useItemAction(vial.slot, dropOp.opIndex);
                     else if (food && eatOp) await useItemAction(food.slot, eatOp.opIndex);
+                    else if (spareDrop && spareOp) await useItemAction(spareDrop.slot, spareOp.opIndex);
                     else break;
                     if (!await tick()) return false;
                     continue;
@@ -475,6 +513,13 @@ export async function rescue(
         }
     }
     const end = me();
+    if (!stopped() && end && wildernessLevel(end.worldZ) === 0) {
+        const retaliating = (s.sdk.getState?.() as { autoRetaliateEnabled?: boolean } | undefined)?.autoRetaliateEnabled === true;
+        if (retaliating) {
+            await disableAutoRetaliate(s);
+            if (typeof s.sdk.sendWalk === 'function') void s.sdk.sendWalk(end.worldX, end.worldZ);
+        }
+    }
     log(`[${s.name}] SQUAD rescue ends at ${end?.worldX},${end?.worldZ} wild ${wildernessLevel(end?.worldZ ?? 0)}`);
     return !stopped() && end && wildernessLevel(end.worldZ) === 0 ? s : null;
 }
@@ -821,13 +866,16 @@ export function squadFallbackPlan(opts: {
     hasGlory: boolean;
     hasTeleport: boolean;
     packFood?: number;
+    targetingMe?: number;
 }): 'hold' | 'out' | 'glory' | 'teleport' | 'run' {
     const wild = wildernessLevel(opts.z);
     if (wild === 0) return 'out';
     const isolatedPile = opts.inMulti && opts.allyCount === 0 && opts.enemyCount >= 3;
-    const outnumbered = opts.inMulti && opts.enemyCount - opts.allyCount >= 2 && opts.hp <= opts.maxHp * 0.75;
-    const dry = opts.foodCount <= 0 && ((opts.packFood ?? 0) >= 6 || opts.hp <= opts.maxHp * 0.6);
-    if (!isolatedPile && !outnumbered && !dry) return 'hold';
+    const outnumbered = opts.inMulti && opts.enemyCount - opts.allyCount >= 2 && opts.hp <= opts.maxHp * 0.78;
+    const focusPile = opts.inMulti && (opts.targetingMe ?? 0) >= 3 && opts.hp <= opts.maxHp * 0.78;
+    const lowSupplyPile = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.foodCount <= 3 && opts.hp <= opts.maxHp * 0.85;
+    const dry = opts.foodCount <= 0 && ((opts.packFood ?? 0) >= 6 || opts.hp <= opts.maxHp * 0.75);
+    if (!isolatedPile && !outnumbered && !focusPile && !lowSupplyPile && !dry) return 'hold';
     return escapeStep(wild, { glory: opts.hasGlory, teleport: opts.hasTeleport });
 }
 
@@ -1030,14 +1078,18 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         if (!pos) return { plan: 'out' as const, enemyCount: 0, allyCount: 0 };
         const curView = s.sdk.getState()?.nearbyPlayers ?? [];
         const curSelf = { x: pos.worldX, z: pos.worldZ, combatLevel: pos.combatLevel };
-        const enemyCount = curView.filter(q => !alliesSet.has(q.name.toLowerCase()) && q.distance <= 10 && attackable(curSelf, { z: q.z, combatLevel: q.combatLevel })).length;
+        const clientView = s.client as { localPlayer?: unknown; players?: unknown[] } | undefined;
+        const selfIndex = clientView?.players && clientView.localPlayer ? clientView.players.indexOf(clientView.localPlayer) : -1;
+        const enemies = curView.filter(q => !alliesSet.has(q.name.toLowerCase()) && q.distance <= 10 && attackable(curSelf, { z: q.z, combatLevel: q.combatLevel }));
+        const enemyCount = enemies.length;
+        const targetingMe = selfIndex >= 0 ? enemies.filter(q => q.combatTargetType === 'player' && q.combatTargetIndex === selfIndex).length : 0;
         const allyCount = curView.filter(q => alliesSet.has(q.name.toLowerCase()) && q.distance <= 10).length;
         const invNow = s.sdk.getInventory();
         const plan = squadFallbackPlan({
             z: pos.worldZ, hp: pos.hp, maxHp: pos.maxHp,
             foodCount: invNow.filter(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text))).length,
             packFood: pack.food,
-            enemyCount, allyCount, inMulti: isMulti(pos.worldX, pos.worldZ),
+            enemyCount, allyCount, targetingMe, inMulti: isMulti(pos.worldX, pos.worldZ),
             hasGlory: [...invNow, ...s.sdk.getEquipment()].some(i => /^amulet of glory\([1-4]\)$/i.test(i.name)),
             hasTeleport: !!squadEscapeSpell(pos.worldZ, invNow, s.sdk.getEquipment().map(e => e.id), s.sdk.getSkill('Magic')?.level ?? 1),
         });
@@ -1115,6 +1167,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         for (const m of s.sdk.getState()?.gameMessages ?? []) { const id = m.observationId ?? m.tick; if (id <= seenMessage) continue; seenMessage = id; if (/already under attack|already fighting your opponent/i.test(m.text)) refusedAt = s.tick(); }
     });
     try {
+        await disableAutoRetaliate(s);
         while (going()) {
             const p = me();
             if (!p) { if (!await nextTick(s)) break; continue; }
@@ -1130,7 +1183,12 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             if (wildernessLevel(p.worldZ) > 0) enteredWilderness = true;
             if (outTripDue(p.worldZ, enteredWilderness, stats.trips)) {
                 enteredWilderness = false;
-                if (stats.trips >= o.trips) { o.log(`[${s.name}] SQUAD no trips left`); break; }
+                if (stats.trips >= o.trips) {
+                    await disableAutoRetaliate(s);
+                    if (typeof s.sdk.sendWalk === 'function') void s.sdk.sendWalk(p.worldX, p.worldZ);
+                    o.log(`[${s.name}] SQUAD no trips left`);
+                    break;
+                }
                 stats.trips++;
                 // The first visit, before any fight, is at the pack that the account logged in with: nothing is banked, so
                 // no shark of the pack has to come back from the bank (`fresh`). A restock there asked for the whole pack

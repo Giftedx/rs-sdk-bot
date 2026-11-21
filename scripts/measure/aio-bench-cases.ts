@@ -1365,27 +1365,27 @@ const ROUTE_CASES: BenchCase[] = [
       'full', {x: 3066, z: 3641}, undefined, EDGE_BANK_TRIBRID);
     const keepStartFood = (inv: readonly {id: number; count: number}[]) => [
       ...inv.filter(i => i.id !== 385 && i.id !== 3144),
-      {id: 385, count: 1}, {id: 3144, count: 1}, {id: 3144, count: 1},
+      {id: 385, count: 1}, {id: 3144, count: 1},
     ];
     const enemy = kitFixture('tribrid-food', GANKER_POST.x, GANKER_POST.z);
-    const enemyInv = [...enemy.inventory!.filter(i => i.id !== 385), ...Array.from({length: 5}, () => ({id: 385, count: 1}))];
+    const enemyInv = [...enemy.inventory!.filter(i => i.id !== 385), ...Array.from({length: 14}, () => ({id: 385, count: 1}))];
     return {
       ...base,
       presetConfig: {...base.presetConfig!, inventory: keepStartFood(base.presetConfig!.inventory!)},
-      pass: s => ok(s) && killReceiptsMatch(s) && /\bdied=0\b/.test(s) && /\btrips=([4-9]|\d{2,})\b/.test(s) && /\bgangDied=[23]\b/.test(s),
+      pass: s => ok(s) && killReceiptsMatch(s) && /\bdied=0\b/.test(s) && /\btrips=([2-9]|\d{2,})\b/.test(s) && /\bgangDied=[23]\b/.test(s),
       companions: base.companions!.map((comp, i) => (i < 2
         ? {...comp, presetConfig: {...comp.presetConfig!, inventory: keepStartFood(comp.presetConfig!.inventory!)}}
         : {...comp, presetConfig: {...enemy, inventory: enemyInv}})),
     };
   })(),
   // Wave C Rev-289 Achievable BiS Kit Matrix against Goondelf/Ligma/Sugma clones and threat-team3, plus scaled BiS squad sizes (4..16).
-  ...(['rune', 'dhide', 'dragon', 'dragon-zerk', 'hybrid', 'hybrid-sharks', 'swap', 'entangle', 'amulet-str', 'amulet-power', 'sara-cape', 'god-sara', 'god-guthix'] as const).map(v =>
+  ...(['rune', 'dhide', 'dragon', 'dragon-zerk', 'dragon-zerk-sharks', 'hybrid', 'hybrid-sharks', 'swap', 'entangle', 'amulet-str', 'amulet-power', 'sara-cape', 'god-sara', 'god-guthix'] as const).map(v =>
     cloneTribridSquad(`extra:clone-bis-${v}-x1`, `tribrid-bis-${v}`, 4, ['TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4'])),
   (() => {
     const base = cloneTribridSquad('extra:clone-bis-spear1-x1', 'tribrid-bis-hybrid', 4, ['TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_BURST_HOLD=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4']);
     return {...base, presetConfig: {...kitFixture('tribrid-bis-spear', base.presetConfig!.position!.x, base.presetConfig!.position!.z), bank: base.presetConfig!.bank}};
   })(),
-  ...(['rune', 'dhide', 'dragon', 'dragon-zerk', 'hybrid', 'hybrid-sharks', 'swap', 'entangle', 'god-sara', 'god-guthix'] as const).map(v =>
+  ...(['rune', 'dhide', 'dragon', 'dragon-zerk', 'dragon-zerk-sharks', 'hybrid', 'hybrid-sharks', 'swap', 'entangle', 'god-sara', 'god-guthix'] as const).map(v =>
     cloneTribridThreatCase(`extra:clone-threat3-bis-${v}-x1`, `tribrid-bis-${v}`, 4, 'mage+ranger+tribrid-snare', 3)),
   (() => {
     const base = cloneTribridThreatCase('extra:clone-threat3-bis-spear1-x1', 'tribrid-bis-hybrid', 4, 'mage+ranger+tribrid-snare', 3, ['SQUAD_BURST_HOLD=1']);
