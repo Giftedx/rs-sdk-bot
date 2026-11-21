@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795293514215-dropmyload-dipstick-ballofwool",
  "account": "DropMyLoad",
  "partner": "Dipstick",
@@ -10,8 +10,22 @@
  "item": "Ball of wool",
  "requested": 2,
  "claim": "75150070-7aa1-4e94-a6bc-bd1229fe964f",
- "count": 0,
- "ok": false,
- "at": 1795293599658,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795293743907,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795293607516
+ },
+ "logout": {
+  "attemptId": "1795293599670-0000023152-0000000001",
+  "at": 1795293743900,
+  "sha256": "d9658d4040df0c84cb8ab8630ae76b59bccc7d516582ede299e98e36d46146d4"
+ },
+ "screen": true
 }
