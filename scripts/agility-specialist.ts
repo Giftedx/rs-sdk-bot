@@ -120,7 +120,7 @@ export const TOURIST_TRADE_2: readonly SupplyEntry[] = [
 ];
 
 export const TOURIST_TRADE_2B: readonly SupplyEntry[] = [
-    { id: ITEMS.bronzeBar, name: 'Bronze bar', count: 12 },
+    { id: ITEMS.bronzeBar, name: 'Bronze bar', count: 11 },
     { id: ITEMS.shantayPass, name: 'Shantay pass', count: 1 },
     { id: ITEMS.waterskin4, name: 'Waterskin(4)', count: 1 },
     { id: ITEMS.feather, name: 'Feather', count: 200 },
@@ -898,8 +898,9 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         }
         await waitTicks(s, 1);
     }
+    await dropAllMatching(s, new Set([ITEMS.shantayDisclaimer]), 6);
 
-    const q = await openQuest({ session: s, burst: true, cap, eatAt: 13, food: [ITEMS.shark, ITEMS.chocolateCake], lumbridgeOk: true });
+    const q = await openQuest({ session: s, burst: true, cap, eatAt: 10, food: [ITEMS.shark, ITEMS.chocolateCake], lumbridgeOk: true });
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
     try {
@@ -1037,10 +1038,8 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                 if ((q.st()?.prayers?.prayerPoints ?? 99) <= 10) {
                     if (await drinkFirstMatching(s, ITEMS.prayerPot)) await q.waitTicks(2);
                 }
-                const eatFloor = Math.max(14, Math.ceil((skillLvl(s, 'Hitpoints') || 10) * 0.6));
-                for (let h = 0; h < 3 && q.hp() <= eatFloor; h++) {
-                    if (!await drinkFirstMatching(s, [ITEMS.shark, ...ITEMS.chocolateCakeParts])) break;
-                    await q.waitTicks(2);
+                if (q.hp() <= 10 && q.has(ITEMS.shark)) {
+                    await q.waitUntil(() => q.hp() > 10 || !q.has(ITEMS.shark), 6);
                 }
                 const curX = x(), slip0 = q.msgCount(/slip a little/i);
                 const rid = curX >= 3280 ? 2694 : curX >= 3278 ? 2695 : curX >= 3276 ? 2696 : 2697;
@@ -1205,6 +1204,13 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                 await q.walk('to slave post-clear', [{ x: SLAVE.x, z: SLAVE.z - 1, tol: 1 }]);
                 if (inPrisonCell()) { await escapePrisonCell(); continue; }
             }
+            for (let mw = 0; mw < 12; mw++) {
+                const nearMerc = (q.st()?.nearbyNpcs ?? []).some((n: any) =>
+                    /^mercenary$/i.test(n.name) && Math.max(Math.abs((n.x ?? 0) - x()), Math.abs((n.z ?? 0) - z())) <= 10,
+                );
+                if (!nearMerc || findBlockingRowdyGuard(4) || inPrisonCell() || !inCamp()) break;
+                await q.waitTicks(1);
+            }
             const slaveNpc = (q.st()?.nearbyNpcs ?? [])
                 .filter((n: any) => /^male slave$/i.test(n.name) && (n.z ?? 0) <= 3020)
                 .sort((a: any, b: any) => Math.hypot((a.x ?? 0) - SLAVE.x, (a.z ?? 0) - SLAVE.z) - Math.hypot((b.x ?? 0) - SLAVE.x, (b.z ?? 0) - SLAVE.z))[0]
@@ -1244,7 +1250,10 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
 
         await mineIn();
         await ensureFullPrayer();
-        await q.walk('to cave guard', [{ x: 3280, z: 9415, tol: 1 }]);
+        await q.guard('to cave guard');
+        await walkNear(s, { x: 3275, z: 9459 }, 3, 60, { ignoreHunters: true });
+        await walkNear(s, { x: 3280, z: 9415 }, 1, 80, { ignoreHunters: true });
+        await q.guard('to cave guard');
         await q.talk('cave guard', /^mercenary$/i, [/mine in a different area/i, /you're quite right sir/i, /we understand each other perfectly/i], () => q.sawText(/winks at you knowingly/i), { x: 3280, z: 9415 }, 50);
         await mineOut();
         await gateOut();
@@ -1323,7 +1332,10 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await gateIn();
         await mineIn();
         await ensureFullPrayer();
-        await q.walk('to cave guard', [{ x: 3280, z: 9415, tol: 1 }]);
+        await q.guard('to cave guard 2');
+        await walkNear(s, { x: 3275, z: 9459 }, 3, 60, { ignoreHunters: true });
+        await walkNear(s, { x: 3280, z: 9415 }, 1, 80, { ignoreHunters: true });
+        await q.guard('to cave guard 2');
         await q.talk('pineapple', /^mercenary$/i, [], () => !q.has(ITEMS.pineapple) && q.sawText(/a deal's a deal/i), { x: 3280, z: 9415 }, 50);
         await q.walk('to cave', [{ x: CAVE_W.x - 1, z: CAVE_W.z, tol: 0 }]);
         await q.step('cave east', () => q.opLoc(loc(CAVE_W), 1), () => x() >= 3285, 12, 4);
