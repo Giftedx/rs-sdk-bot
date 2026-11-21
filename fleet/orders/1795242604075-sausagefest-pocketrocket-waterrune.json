@@ -1,0 +1,22 @@
+{
+ "id": "1795242604075-sausagefest-pocketrocket-waterrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Sausagefest",
+ "to": "Pocketrocket",
+ "item": "Water rune",
+ "count": 3,
+ "start": 1795242604075,
+ "end": 1795245004075,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
