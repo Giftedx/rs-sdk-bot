@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795245900125-billionaire-quickhandjob-dc0a1fafb0d93df7",
+ "account": "Quickhandjob",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 104000,
+ "claim": "cdca634e-e314-45a0-b9ac-da8c3ac22e40",
+ "count": 104000,
+ "ok": true,
+ "at": 1795246613342,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 104000
+ },
+ "bank": {
+  "count": 104000,
+  "at": 1795246612594
+ },
+ "logout": {
+  "attemptId": "1795246598161-0000020940-0000000001",
+  "at": 1795246613330,
+  "sha256": "a495028bdea02fa070eab7be796b4beb7d372cd9596c6e1f99c7fa7053467fa6"
+ },
+ "screen": true
+}

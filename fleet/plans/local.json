@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795246531475,
+ "at": 1795246615694,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -237,11 +237,16 @@
   },
   {
    "account": "Wandwaver",
-   "script": "scripts/gather-combat.ts",
+   "script": "scripts/microbot-production.ts",
    "args": [
-    "4000",
-    "taverley_druid"
+    "identify:ranarr_weed"
    ],
+   "env": {
+    "MAX_MAKE": "5",
+    "CAP": "200",
+    "MEMBERS": "1",
+    "ORDER_MODE": "best-effort"
+   },
    "enabled": true,
    "standing": true,
    "repeat": false

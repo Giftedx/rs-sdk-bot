@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795246347589-mineyourbiz-sporranbulge-890511b56d96fab0",
+ "account": "MineYourBiz",
+ "partner": "SporranBulge",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 6,
+ "claim": "0e5ff775-4a6e-411e-97ae-656471b8eeca",
+ "count": 0,
+ "ok": false,
+ "at": 1795246602801,
+ "detail": "trade claimed"
+}

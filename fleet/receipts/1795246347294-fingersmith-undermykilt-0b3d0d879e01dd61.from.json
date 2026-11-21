@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795246347294-fingersmith-undermykilt-0b3d0d879e01dd61",
+ "account": "Fingersmith",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "28d391ab-fcd9-4543-ace8-d6f90efc05e9",
+ "count": 0,
+ "ok": false,
+ "at": 1795246607309,
+ "detail": "trade claimed"
+}
