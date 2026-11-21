@@ -294,14 +294,15 @@ try {
     // column between the x 2785 track and the crane at 2787,4451 to the south, row 4454 then 4455 to the east, the
     // z 4461 row from its west end to the north.
     type Spot = { name: string; x: number; z: number; cast: Array<[number, number]>; route: (mx: number, mz: number) => Array<[number, number]> | undefined };
+    const exitNe = (mx: number, mz: number): Array<[number, number]> => (mx >= 2790 && mz >= 4455 ? [[2795, 4455], [2791, 4455], [HOME.x, HOME.z]] : []);
     const SPOTS: Spot[] = [
         { name: 'E', x: 2794, z: 4452, cast: [[2794, 4454], [2794, 4453]], route: () => [[2790, 4454], [2791, 4455], [2793, 4455]] },
         // NE: avoid stepping onto the z=4456 cart track (x=2791..2794) by routing round x=2795.
         { name: 'NE', x: 2796, z: 4460, cast: [[2794, 4455], [2796, 4457], [2794, 4457]], route: () => [[2790, 4454], [2791, 4455], [2795, 4455]] },
-        { name: 'N', x: 2788, z: 4463, cast: [[NORTH.x, NORTH.z]], route: (mx, mz) => mz >= 4459 ? [] : [[2781, 4457], [2781, 4461]] },
-        { name: 'NW', x: 2780, z: 4460, cast: [[2780, 4459], [2779, 4458], [2780, 4460]], route: () => [] },
-        { name: 'W', x: 2780, z: 4454, cast: [[2782, 4454], [2786, 4454]], route: () => [] },
-        { name: 'S', x: 2787, z: 4444, cast: [[2786, 4446], [2786, 4448]], route: (mx) => mx === 2786 ? [] : [[2786, 4454], [2786, 4450]] },
+        { name: 'N', x: 2788, z: 4463, cast: [[NORTH.x, NORTH.z]], route: (mx, mz) => [...exitNe(mx, mz), ...(mz >= 4459 && mx < 2790 ? [] : [[2781, 4457] as [number, number], [2781, 4461] as [number, number]])] },
+        { name: 'NW', x: 2780, z: 4460, cast: [[2780, 4459], [2779, 4458], [2780, 4460]], route: exitNe },
+        { name: 'W', x: 2780, z: 4454, cast: [[2782, 4454], [2786, 4454]], route: exitNe },
+        { name: 'S', x: 2787, z: 4444, cast: [[2786, 4446], [2786, 4448]], route: (mx, mz) => [...exitNe(mx, mz), ...(mx === 2786 && mz < 4455 ? [] : [[2786, 4454] as [number, number], [2786, 4450] as [number, number]])] },
     ];
     const hitFrom = new Set<string>();   // tile>spot pairs that hit in this fight
     const bad = new Set<string>();   // tile>spot pairs that did not hit (a dry cast or a failed walk)
@@ -337,7 +338,7 @@ try {
             if (gh) seenT = q.T();
             else if (q.T() - seenT >= 20 && casts > 0 && q.near(HOME.x, HOME.z, 0)) break;
             else if (q.T() - seenT >= 6 && !q.near(HOME.x, HOME.z, 0) && !onTrack(mx, mz) && !ne(mx, mz)) {
-                await via(mz >= 4459 ? [[2781, 4461], [2781, 4457], [HOME.x, HOME.z]] : [[HOME.x, HOME.z]]);
+                await via(mx >= 2790 && mz >= 4455 ? exitNe(mx, mz) : mz >= 4459 ? [[2781, 4461], [2781, 4457], [HOME.x, HOME.z]] : [[HOME.x, HOME.z]]);
                 continue;
             }
             // A cast that made the server walk the bot: that tile does not see the ghost for the engine.

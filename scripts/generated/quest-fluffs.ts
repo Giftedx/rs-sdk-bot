@@ -26,6 +26,10 @@ try {
     const cat = () => q.npc(/^gertrudes cat$/i);
     const down = (label: string) => q.climb(label, () => q.findLoc(l => l.x === LADDER.x && l.z === LADDER.z && (l.optionsWithIndex ?? []).some((o: any) => /climb-down/i.test(o.text))) ?? { ...LADDER, id: 1746 }, /climb-down/i, levelIs(0));
     const up = async (label: string): Promise<void> => {
+        if ((q.pos()?.worldX ?? 0) <= 3308 && (q.pos()?.worldZ ?? 0) <= 3507) {
+            await q.dash(`${label} clear`, 3306, 3506, 0);
+            await q.dash(`${label} north`, 3306, 3508, 0);
+        }
         await q.walk(`${label} ladder`, [{ x: LADDER.x, z: LADDER.z - 1, tol: 1 }]);
         await q.climb(`${label} ladder up`, () => q.locAt(LADDER.x, LADDER.z) ?? LADDER, /climb-up/i, levelIs(1));
     };
