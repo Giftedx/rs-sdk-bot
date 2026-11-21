@@ -30,9 +30,9 @@ test('the owner overlay shows current goal evidence without a target for every b
  expect(fleetOverlay({...goals,main:{rank:null,rankAt:null}})).toContain('Rank unknown');
 });
 
-test('the public overlay uses observed hiscores and omits private owner goals',()=>{
+test('the public overlay uses observed fleet hiscores and omits private owner goals',()=>{
  const html=fleetOverlay({version:1,main:{rank:2},quests:{complete:45,total:68}},false);
- expect(html).toContain('Hiscores');expect(html).toContain('Boards at #1');
+ expect(html).toContain('Fleet hiscores');expect(html).toContain('Boards at #1');
  expect(html).not.toContain('Project goals');expect(html).not.toContain('45 / 68');
  expect(html).not.toContain('Race to #1');expect(html).not.toContain(' / 1');
 });
@@ -423,7 +423,7 @@ test('the wall status counts the views that show their player, from a viewer sta
  w.message({viewerMulti:{names:['Ann','Bob','Cat'],shown:['ann'],offline:['Cat','Eve']}});
  const t=w.tiles();
  expect([t.get('Ann').dot.className,t.get('Bob').dot.className,t.get('Cat').dot.className]).toEqual(['wall-dot on','wall-dot finding','wall-dot off']);
- expect([t.get('Ann').note.textContent,t.get('Bob').note.textContent,t.get('Cat').note.textContent]).toEqual(['Fishing sharks','finding…','not online']);
+ expect([t.get('Ann').note.textContent,t.get('Bob').note.textContent,t.get('Cat').note.textContent]).toEqual(['Fishing sharks','Loading map…','Offline']);
 });
 
 test('a click on a view focuses it; a second click on the same view follows that account through pick()',()=>{

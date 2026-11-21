@@ -28,7 +28,7 @@
   dock.innerHTML='<nav class="dock-tabs" aria-label="Journal views"><button data-dock="events" class="on">Journal</button><button data-dock="boards">24 boards</button><button data-dock="allocation">Allocation</button><div class="dock-end"><span id="journal-age">Read-only observations</span><button id="toggle-dock" aria-label="Collapse journal" aria-expanded="true">−</button></div></nav><div class="dock-body"><div id="world-journal"></div></div>';
   app.append(dock);$('.dock-body').append($('.boards'),$('#allocation-panel'));$('.boards').hidden=true;$('#allocation-panel').hidden=true;
   const controls=document.createElement('div');controls.className='map-place';
-  controls.innerHTML='<select id="atlas-place" aria-label="Map destination">'+PLACES.map(([name,x,z])=>`<option value="${x},${z}">${E(name)}</option>`).join('')+'</select><button id="atlas-go" title="Move the camera; does not move a game account">Go</button>';
+  controls.innerHTML='<select id="atlas-place" aria-label="Map destination">'+PLACES.map(([name,x,z])=>`<option value="${x},${z}">${E(name)}</option>`).join('')+'</select><button id="atlas-go" aria-label="Go to place" title="Move the camera; does not move a game account">Go</button>';
   app.append(controls);
   const quality=document.createElement('select');quality.id='atlas-quality';quality.setAttribute('aria-label','Map render quality');quality.title='Render resolution; lower it to reduce GPU use';
   quality.innerHTML='<option value="1">Sharp</option><option value="0.75">Balanced</option><option value="0.5">Light</option>';$('#world-panel>.bar').append(quality);

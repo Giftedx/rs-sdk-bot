@@ -15,18 +15,49 @@
         store[bot.name] = fresh;
         return fresh;
     }
-    // serverRate: the page's own rate for the goal skill ({skill, xpPerHour}), which smooths over the last minutes.
+    // Pick the active skill reported for the account (preferring explicit rateSkill over goalSkill, ignoring "all skills").
+    function activeSkill(bot) {
+        if (!bot || typeof bot !== 'object') return null;
+        for (const raw of [bot.rateSkill, bot.goalSkill]) {
+            if (typeof raw !== 'string') continue;
+            const s = raw.trim();
+            if (!s || /^all skills$/i.test(s) || /^stat\d+$/i.test(s) || /^overall$/i.test(s)) continue;
+            return ehpKey(s) || s;
+        }
+        if (typeof bot.role === 'string') {
+            const k = ehpKey(bot.role);
+            if (k) return k;
+        }
+        return null;
+    }
+    // serverRate: the page's own rate for the active/goal skill ({skill, xpPerHour}), which smooths over the last minutes.
     function rows(bot, base, now, serverRate) {
         const hours = Math.max((now - base.at) / 3.6e6, 1 / 3600);
-        return (bot.skills || []).filter(k => k.name !== 'Overall' && typeof k.xp === 'number').map(k => {
+        const skills = Array.isArray(bot?.skills) ? bot.skills : [];
+        const out = skills.filter(k => k.name !== 'Overall' && typeof k.xp === 'number').map(k => {
             // A skill that the baseline did not hold starts its count here, and the baseline keeps it.
             if (base.xp[k.name] == null) base.xp[k.name] = k.xp;
             const start = base.xp[k.name], gained = Math.max(0, k.xp - start);
             const level = levelForXp(k.xp), next = Math.min(99, level + 1), floor = xpForLevel(level), ceil = xpForLevel(next);
-            const rate = serverRate && serverRate.skill === k.name && serverRate.xpPerHour > 0 ? serverRate.xpPerHour : gained / hours;
+            const reported = !!(serverRate && serverRate.skill && serverRate.skill.toLowerCase() === k.name.toLowerCase() && serverRate.xpPerHour > 0);
+            const rate = reported ? serverRate.xpPerHour : gained / hours;
             const left = Math.max(0, ceil - k.xp);
-            return { skill: k.name, xp: k.xp, level, next, gained, rate: Math.round(rate), progress: ceil > floor ? Math.min(1, (k.xp - floor) / (ceil - floor)) : 1, left, ttl: rate > 0 && level < 99 ? left / rate * 3.6e6 : null };
-        }).filter(r => r.gained > 0 || r.rate > 0).sort((a, b) => b.gained - a.gained || b.rate - a.rate);
+            return { skill: k.name, xp: k.xp, level, next, gained, rate: Math.round(rate), rateSource: reported ? 'reported' : 'live', progress: ceil > floor ? Math.min(1, (k.xp - floor) / (ceil - floor)) : 1, left, ttl: rate > 0 && level < 99 ? left / rate * 3.6e6 : null };
+        });
+        // Hosted/remote snapshots can report active rateSkill/xpPerHour + skill level without numeric XP.
+        if (serverRate && serverRate.skill && serverRate.xpPerHour > 0 && !out.some(r => r.skill.toLowerCase() === serverRate.skill.toLowerCase())) {
+            const match = skills.find(k => typeof k?.name === 'string' && k.name.toLowerCase() === serverRate.skill.toLowerCase());
+            const lvRaw = Number.isFinite(match?.level) ? match.level : (Number.isFinite(bot?.goalNow) && bot.goalSkill?.toLowerCase() === serverRate.skill.toLowerCase() ? bot.goalNow : null);
+            if (Number.isInteger(lvRaw) && lvRaw >= 1 && lvRaw <= 99) {
+                const level = lvRaw, next = Math.min(99, level + 1), floor = xpForLevel(level), ceil = xpForLevel(next);
+                const xp = Number.isFinite(bot?.goalXp) && bot.goalSkill?.toLowerCase() === serverRate.skill.toLowerCase() ? bot.goalXp : floor;
+                const progress = ceil > floor ? Math.min(1, Math.max(0, (xp - floor) / (ceil - floor))) : 1;
+                const left = level >= 99 ? 0 : Math.max(0, ceil - xp);
+                const rate = Math.round(serverRate.xpPerHour);
+                out.push({ skill: match?.name || ehpKey(serverRate.skill) || serverRate.skill, xp, level, next, gained: 0, rate, rateSource: 'reported', levelOnly: !(Number.isFinite(bot?.goalXp) && bot.goalSkill?.toLowerCase() === serverRate.skill.toLowerCase()), progress, left, ttl: rate > 0 && level < 99 ? left / rate * 3.6e6 : null });
+            }
+        }
+        return out.filter(r => r.gained > 0 || r.rate > 0).sort((a, b) => b.gained - a.gained || b.rate - a.rate);
     }
     // The bar of a row to a goal level past the next one (RuneLite's XP tracker goal with level markers): the progress from the floor of the level now to the goal, the XP left, the time left, and a mark at each level between. Null when the goal is not past the next level.
     function goalBar(row, goalLevel) {
@@ -234,5 +265,5 @@
         out[accountKey] = [entry, ...deduped].slice(0, Math.max(1, maxEntries));
         return out;
     }
-    global.atlasXp = { TABLE, xpForLevel, levelForXp, virtualLevel, baseline, rows, goalBar, total, combat, efficiency, TICK_KINDS, EHP_XP_PER_TICK, ehpRate, ehpHours, sessionEhp, remainingEhp, supplyBillProgress, archiveSession, recordSessionHistory };
+    global.atlasXp = { TABLE, xpForLevel, levelForXp, virtualLevel, baseline, activeSkill, rows, goalBar, total, combat, efficiency, TICK_KINDS, EHP_XP_PER_TICK, ehpRate, ehpHours, sessionEhp, remainingEhp, supplyBillProgress, archiveSession, recordSessionHistory };
 })(globalThis);
