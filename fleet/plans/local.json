@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795246615694,
+ "at": 1795246753379,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -234,22 +234,6 @@
    "enabled": true,
    "standing": true,
    "repeat": true
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/microbot-production.ts",
-   "args": [
-    "identify:ranarr_weed"
-   ],
-   "env": {
-    "MAX_MAKE": "5",
-    "CAP": "200",
-    "MEMBERS": "1",
-    "ORDER_MODE": "best-effort"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
   },
   {
    "account": "Deeppockets",
