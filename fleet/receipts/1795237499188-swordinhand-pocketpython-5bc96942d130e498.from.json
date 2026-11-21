@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795237499188-swordinhand-pocketpython-5bc96942d130e498",
  "account": "Swordinhand",
  "partner": "Pocketpython",
@@ -12,6 +12,20 @@
  "claim": "9ecad4c7-3878-4a75-b095-7d6fa507e461",
  "count": 0,
  "ok": false,
- "at": 1795238916840,
- "detail": "trade claimed"
+ "at": 1795238999698,
+ "detail": "Error: no matching trade completed",
+ "inventory": {
+  "before": 18,
+  "after": 18
+ },
+ "bank": {
+  "count": 18,
+  "at": 1795238978529
+ },
+ "logout": {
+  "attemptId": "1795238916852-0000010612-0000000001",
+  "at": 1795238999685,
+  "sha256": "5bee0736e72cc37477c5ec19972364ea25695aa1f1c8844d033df292518ed9c5"
+ },
+ "screen": false
 }
