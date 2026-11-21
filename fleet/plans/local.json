@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795227150707,
+ "at": 1795227297060,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -321,21 +321,23 @@
   },
   {
    "account": "TossTheCaber",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "taverley_druid"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "repeat": false,
+   "goal": "farm Taverley Dungeon Chaos druids (non-Wilderness) for herbs, snape grass, law and nature runes",
+   "role": "combat",
+   "template": "squad-taverley-druids",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "squad:taverley-druids"
    ]
   },
   {
@@ -366,21 +368,21 @@
    ]
   },
   {
-   "account": "Fingersmith",
+   "account": "Sausagefest",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=532 QUANTITY=33 LIMIT_PRICE=2600 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit0-532-0to33 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=10 EXPECTED_OWNED=6 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=sausagefest-kit33-536-6to16 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"532\":33}}"
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"536\":16}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 33 Big bones on the Grand Exchange to train Prayer to 99 burying bought big bones",
+   "goal": "buy 10 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
    "role": "supply",
-   "template": "kit-buy:army-bury-big-99",
+   "template": "kit-buy:army-bury-dragon-99",
    "autopilot": "local",
    "resources": []
   }
