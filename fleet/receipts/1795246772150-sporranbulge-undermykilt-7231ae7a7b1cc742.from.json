@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795246772150-sporranbulge-undermykilt-7231ae7a7b1cc742",
+ "account": "SporranBulge",
+ "partner": "UnderMyKilt",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Unicorn horn",
+ "requested": 6,
+ "claim": "eea889f9-272a-4131-a8cc-6337994f0dde",
+ "count": 0,
+ "ok": false,
+ "at": 1795247141225,
+ "detail": "trade claimed"
+}
