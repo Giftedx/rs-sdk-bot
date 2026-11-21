@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795239365095-coincock-knightstick-e657254c50ab3ed7",
  "account": "CoinCock",
  "partner": "Knightstick",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 11,
  "claim": "e01b4767-3e44-42ce-8c65-251f133802af",
- "count": 0,
- "ok": false,
- "at": 1795239435079,
- "detail": "trade claimed"
+ "count": 11,
+ "ok": true,
+ "at": 1795239462898,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 11,
+  "after": 0
+ },
+ "bank": {
+  "count": 11,
+  "at": 1795239444110
+ },
+ "logout": {
+  "attemptId": "1795239435089-0000028720-0000000001",
+  "at": 1795239462881,
+  "sha256": "23d67f8c6b4b6780b8267450fdd206a67c4b351f9c5fc5446710ca91732ef568"
+ },
+ "screen": true
 }
