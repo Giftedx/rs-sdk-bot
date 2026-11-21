@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795219330369-ballspinner-shaftmaker-naturerune",
  "account": "Ballspinner",
  "partner": "Shaftmaker",
@@ -12,6 +12,16 @@
  "claim": "94f41fbb-3d11-4117-b191-f737d0fcabbe",
  "count": 0,
  "ok": false,
- "at": 1795219457714,
- "detail": "trade claimed"
+ "at": 1795219608229,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 349,
+  "at": 1795219607477
+ },
+ "logout": {
+  "attemptId": "1795219457739-0000007008-0000000001",
+  "at": 1795219608217,
+  "sha256": "717e744dc0c9d97c552b0345657307a3e1e9c27af4058a335c3f6e3b7a48dcdc"
+ },
+ "screen": false
 }
