@@ -243,8 +243,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
             }),
         },
         planTicks: 4660,
-        planSource: 'hosted-bench extra:ranged-specialist-live 4505-4774t (<=5483t vs #1 5595t)',
-        targetCap: 5483,
+        planSource: 'hosted-bench extra:ranged-specialist-live 4505-4774t (above targetCap 4379t vs #1 4469t; offline)',
+        targetCap: 4379,
     },
     {
         account: 'PouchStuffed',
@@ -279,8 +279,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
             })),
         ],
         planTicks: 2155,
-        planSource: 'hosted-bench extra:specialist-runecraft 2147-2161t (<=2207t vs #1 2253t)',
-        targetCap: 2207,
+        planSource: 'hosted-bench extra:specialist-runecraft 2147-2161t (above targetCap 1845t vs #1 1883t; offline)',
+        targetCap: 1845,
     },
     {
         account: 'CutMyJewels',
@@ -361,8 +361,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
             }),
         })),
         planTicks: 1213,
-        planSource: 'hosted-bench skiller:prayer:specialist 1212-1214t (<=1246t vs #1 1272t)',
-        targetCap: 1246,
+        planSource: 'hosted-bench skiller:prayer:specialist 1212-1214t (above targetCap 1143t vs #1 1167t; offline)',
+        targetCap: 1143,
     },
     {
         account: 'SteelRod',
@@ -410,8 +410,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
             }),
         },
         planTicks: 3800,
-        planSource: 'hosted-bench skiller:mining:specialist 3789-3807t (<=3884t vs #1 3964t)',
-        targetCap: 3884,
+        planSource: 'hosted-bench skiller:mining:specialist 3789-3807t (above targetCap 3557t vs #1 3630t; offline)',
+        targetCap: 3557,
     },
     {
         account: 'Lochnessrod',

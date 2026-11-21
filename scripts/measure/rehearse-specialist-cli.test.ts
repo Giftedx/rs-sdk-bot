@@ -87,14 +87,14 @@ test('all 15 ready specialists construct valid --specialist segments matching bo
         Lightmylog: 646,
         Morningwood: 2818,
         Lochnessrod: 2924,
-        Shaftshooter: 5483,
-        PouchStuffed: 2207,
+        Shaftshooter: 4379,
+        PouchStuffed: 1845,
         CutMyJewels: 182,
         GrindMyHerb: 415,
         CastMyLoad: 1236,
-        BigBoner: 1246,
+        BigBoner: 1143,
         SteelRod: 1255,
-        Mineshafted: 3884,
+        Mineshafted: 3557,
         Polevaulter: 6031,
     };
 
@@ -108,8 +108,8 @@ test('all 15 ready specialists construct valid --specialist segments matching bo
         expect(seg.start).toEqual({ fresh: true });
         expect(seg.expect.skills).toEqual({ [expectedBoard]: 99 });
         expect(seg.plan!.ticks).toBeGreaterThan(0);
-        // Lightmylog (749t vs 646t) and Morningwood (3240t vs 2818t) hold honest empirical whole-clock baselines while targetCap remains strict (stay offline).
-        const maxPlanTicks = account === 'Lightmylog' ? 760 : account === 'Morningwood' ? 3300 : expectedTargets[account]!;
+        // Empirical whole-clock baselines above strict targetCap stay offline while targetCap tracks the 2% record margin.
+        const maxPlanTicks = ({ Lightmylog: 760, Morningwood: 3300, Shaftshooter: 4700, PouchStuffed: 2200, BigBoner: 1250, Mineshafted: 3850 } as Record<string, number>)[account] ?? expectedTargets[account]!;
         expect(seg.plan!.ticks).toBeLessThanOrEqual(maxPlanTicks);
         expect(resolveSpecialistTargetCap(account)).toBe(expectedTargets[account]!);
         expect(seg.timeoutMs).toBeGreaterThanOrEqual(seg.plan!.ticks * 400 + 120_000);
