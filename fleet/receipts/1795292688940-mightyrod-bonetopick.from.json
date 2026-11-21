@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795292688940-mightyrod-bonetopick",
+ "account": "Mightyrod",
+ "partner": "BoneToPick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 970,
+ "claim": "87ed9b0a-7634-4c29-94ba-bdf4f0445435",
+ "count": 0,
+ "ok": false,
+ "at": 1795292744579,
+ "detail": "trade claimed"
+}
