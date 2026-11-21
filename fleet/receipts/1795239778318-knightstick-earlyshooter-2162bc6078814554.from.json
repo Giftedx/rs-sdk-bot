@@ -1,0 +1,34 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795239778318-knightstick-earlyshooter-2162bc6078814554",
+ "account": "Knightstick",
+ "partner": "Earlyshooter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 11,
+ "claim": "6b043658-e859-43cf-952b-32ede9f507b1",
+ "count": 0,
+ "ok": false,
+ "at": 1795239879814,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Death rune",
+   "requested": 36,
+   "count": 0
+  },
+  {
+   "item": "Staff of fire",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Law rune",
+   "requested": 10,
+   "count": 0
+  }
+ ]
+}

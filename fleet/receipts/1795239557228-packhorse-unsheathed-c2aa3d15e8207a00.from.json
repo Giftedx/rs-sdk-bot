@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795239557228-packhorse-unsheathed-c2aa3d15e8207a00",
  "account": "Packhorse",
  "partner": "Unsheathed",
@@ -10,20 +10,50 @@
  "item": "Ranarr weed",
  "requested": 1,
  "claim": "bd7ce114-260e-49aa-bc64-b9f68de6b691",
- "count": 0,
- "ok": false,
- "at": 1795239795503,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795239888529,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Leather gloves",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795239804092
+   }
   },
   {
    "item": "Logs",
    "requested": 6,
-   "count": 0
+   "count": 6,
+   "inventory": {
+    "before": 6,
+    "after": 0
+   },
+   "bank": {
+    "count": 6,
+    "at": 1795239805289
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795239803711
+ },
+ "logout": {
+  "attemptId": "1795239795511-0000004884-0000000001",
+  "at": 1795239888509,
+  "sha256": "f8c978df3e8774da76849f138dda9f0760f62cfd120a88fcb1bad6d642427933"
+ },
+ "screen": true
 }
