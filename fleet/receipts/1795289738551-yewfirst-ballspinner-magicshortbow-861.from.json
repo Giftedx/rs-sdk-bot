@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795289738551-yewfirst-ballspinner-magicshortbow-861",
+ "account": "YewFirst",
+ "partner": "Ballspinner",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Magic shortbow",
+ "requested": 1,
+ "claim": "29017dbd-eda7-4492-b819-745d6275ca27",
+ "count": 0,
+ "ok": false,
+ "at": 1795289868876,
+ "detail": "trade claimed"
+}

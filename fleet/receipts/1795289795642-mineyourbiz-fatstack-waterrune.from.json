@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795289795642-mineyourbiz-fatstack-waterrune",
  "account": "MineYourBiz",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 25,
  "claim": "58d82b30-c4e7-4954-b5cb-0abd49b9a3b1",
- "count": 0,
- "ok": false,
- "at": 1795289846701,
- "detail": "trade claimed"
+ "count": 25,
+ "ok": true,
+ "at": 1795289868850,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 25,
+  "after": 0
+ },
+ "bank": {
+  "count": 25,
+  "at": 1795289856953
+ },
+ "logout": {
+  "attemptId": "1795289846865-0000014436-0000000001",
+  "at": 1795289868829,
+  "sha256": "02ea8a6eab8cf6c144a259aadf883ff4cac3f6664f271dae4cc1d1ca8fa4bdf7"
+ },
+ "screen": true
 }
