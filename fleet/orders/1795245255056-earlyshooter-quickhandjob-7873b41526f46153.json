@@ -1,0 +1,23 @@
+{
+ "id": "1795245255056-earlyshooter-quickhandjob-7873b41526f46153",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Earlyshooter",
+ "to": "Quickhandjob",
+ "item": "Coins",
+ "count": 53000,
+ "start": 1795245255056,
+ "end": 1795247655056,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
