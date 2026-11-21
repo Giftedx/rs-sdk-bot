@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795300163330,
+ "at": 1795300907928,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -499,23 +499,21 @@
   },
   {
    "account": "Magicwanda",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "giant"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "MAX_KILLS": "40"
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
-   "role": "combat",
-   "template": "squad-ardougne-giants",
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-giants"
+    "knight:2671,3313"
    ]
   },
   {
