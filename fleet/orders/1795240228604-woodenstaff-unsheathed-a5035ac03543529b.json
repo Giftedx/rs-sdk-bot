@@ -1,0 +1,29 @@
+{
+ "id": "1795240228604-woodenstaff-unsheathed-a5035ac03543529b",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodenstaff",
+ "to": "Unsheathed",
+ "item": "Snape grass",
+ "count": 18,
+ "start": 1795240228604,
+ "end": 1795241728604,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Ranarr weed",
+   "count": 1
+  }
+ ],
+ "takerWaits": true
+}
