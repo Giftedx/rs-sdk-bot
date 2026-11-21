@@ -497,7 +497,7 @@ async function walkNear(
                 }
             }
             if (s.tick() - lastEat >= 3 && skillLvl(s, 'Hitpoints') <= 35 && skillCur(s, 'Hitpoints') <= Math.max(8, Math.ceil(skillLvl(s, 'Hitpoints') * 0.35))) {
-                const food = invOf(s).find(i => i.id === ITEMS.shark || ITEMS.chocolateCakeParts.includes(i.id));
+                const food = invOf(s).find(i => i.id === ITEMS.pineapplePizza || i.id === ITEMS.halfPineapplePizza || i.id === ITEMS.shark || ITEMS.chocolateCakeParts.includes(i.id));
                 if (food) {
                     lastEat = s.tick();
                     void s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
