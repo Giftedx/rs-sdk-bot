@@ -1,0 +1,22 @@
+{
+ "id": "1795231148971-woodpecker-masterbaiter-runechainbody",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodpecker",
+ "to": "Masterbaiter",
+ "item": "Rune chainbody",
+ "count": 1,
+ "start": 1795231148971,
+ "end": 1795233548971,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
