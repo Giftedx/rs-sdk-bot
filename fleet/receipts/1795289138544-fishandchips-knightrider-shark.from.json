@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795289138544-fishandchips-knightrider-shark",
  "account": "FishAndChips",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 5,
  "claim": "6fb72adb-28c7-42d1-8876-83aac6bed851",
- "count": 0,
- "ok": false,
- "at": 1795289202691,
- "detail": "trade claimed"
+ "count": 5,
+ "ok": true,
+ "at": 1795289382861,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 5,
+  "after": 0
+ },
+ "bank": {
+  "count": 5,
+  "at": 1795289212175
+ },
+ "logout": {
+  "attemptId": "1795289202699-0000008156-0000000001",
+  "at": 1795289382849,
+  "sha256": "4bca138445da40bed2a26863447fd2fd1acc20cdcbe1df2f9190736023083d01"
+ },
+ "screen": true
 }
