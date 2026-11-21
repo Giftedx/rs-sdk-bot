@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795235927358,
+ "at": 1795236068544,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -187,128 +187,6 @@
    ]
   },
   {
-   "account": "FishAndChips",
-   "script": "scripts/shark-supply.ts",
-   "args": [
-    "100",
-    "9000"
-   ],
-   "env": {
-    "ORDER_KEY": "liveops-shark-100-1",
-    "SHARK_CONSUMER": "FullBlooded + PK squad sustained food"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "Knightstick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/walk-to.ts 3092 3243 0",
-    "scripts/shop-buyer.ts betty 1800 ITEMS=death.rune STOCK_TARGET=420 STOP_AT_TARGET=1 FLOAT=105000 MAX_SPEND=100000 COIN_RESERVE=500 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=60"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=555 QUANTITY=800 EXPECTED_OWNED=6 LIMIT_PRICE=55 CASH_RESERVE=1000 ORDER_KEY=liveops-water-555-800-v1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/walk-to.ts 2654 3283 0",
-    "scripts/shop-buyer.ts alfonse 1200 ITEMS=cooked.karambwan STOCK_TARGET=3 STOP_AT_TARGET=1 FLOAT=10000 MAX_SPEND=9000 COIN_RESERVE=500 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=60"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "4000",
-    "taverley_druid"
-   ],
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/quest-sweep.ts upass",
-    "scripts/quest-sweep.ts druidspirit"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/microbot-production.ts cut-bow:unstrung_yew_longbow MAX_MAKE=1 MAX_ATTEMPTS=1 MEMBERS=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
-    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
    "account": "Bigchopper",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -386,6 +264,114 @@
    "resources": [
     "shop:aubury"
    ]
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/shark-supply.ts",
+   "args": [
+    "100",
+    "9000"
+   ],
+   "env": {
+    "ORDER_KEY": "liveops-shark-100-1",
+    "SHARK_CONSUMER": "FullBlooded + PK squad sustained food"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 3092 3243 0",
+    "scripts/shop-buyer.ts betty 1800 ITEMS=death.rune STOCK_TARGET=420 STOP_AT_TARGET=1 FLOAT=105000 MAX_SPEND=100000 COIN_RESERVE=500 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=60"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=300 EXPECTED_OWNED=0 LIMIT_PRICE=65 CASH_RESERVE=1000 ORDER_KEY=liveops-earth-557-300-v1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "4000",
+    "taverley_druid"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/quest-sweep.ts upass",
+    "scripts/quest-sweep.ts druidspirit"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/microbot-production.ts cut-bow:unstrung_yew_longbow MAX_MAKE=1 MAX_ATTEMPTS=1 MEMBERS=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1",
+    "scripts/fletch-arrows.ts 600 shafts MAX_MAKE=25 LOG_RESERVE=0 BANK_KNIFE=1"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
   }
  ],
  "army": [
