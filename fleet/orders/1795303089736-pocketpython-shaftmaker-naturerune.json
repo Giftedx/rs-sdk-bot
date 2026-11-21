@@ -1,0 +1,22 @@
+{
+ "id": "1795303089736-pocketpython-shaftmaker-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Pocketpython",
+ "to": "Shaftmaker",
+ "item": "Nature rune",
+ "count": 448,
+ "start": 1795303089736,
+ "end": 1795305489736,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

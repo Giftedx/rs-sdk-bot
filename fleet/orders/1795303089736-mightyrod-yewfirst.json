@@ -1,0 +1,22 @@
+{
+ "id": "1795303089736-mightyrod-yewfirst",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "YewFirst",
+ "item": "coins",
+ "count": 4725,
+ "start": 1795303089736,
+ "end": 1795305489736,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
