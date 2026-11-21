@@ -117,3 +117,24 @@ test('ci.yml bench-plan node planner matches benchPlan and enforces arg checks',
     const bad = runPlan({BENCH_PATTERN: '^a$', BENCH_SEEDS: '1', BENCH_ARGS: '--seed-jobs 9'});
     expect(bad.exitCode).not.toBe(0);
 });
+
+test('ci.yml caches Bun/route/pack across route-key-parity, measure, and rebalanced windows parts', () => {
+    const yml = readFileSync(resolve(import.meta.dir, '../.github/workflows/ci.yml'), 'utf8');
+    const winMatch = /\n  windows:[\s\S]*?part:\s*\[([^\]]+)\][\s\S]*?--part \$\{\{ matrix\.part \}\}\/(\d+)/.exec(yml);
+    expect(winMatch).not.toBeNull();
+    const parts = winMatch![1]!.split(',').map(s => Number(s.trim()));
+    expect(parts).toEqual(Array.from({length: Number(winMatch![2]!)}, (_, i) => i + 1));
+    expect(parts.length).toBe(6);
+
+    const measureSection = /\n  measure:[\s\S]*?(?=\n  \w[\w-]*:)/.exec(yml)?.[0] ?? '';
+    expect(measureSection).toContain('~/.bun/install/cache');
+    expect(measureSection).toContain('actions/cache/restore@v4');
+    expect(measureSection).toContain('engine-pack-v3');
+    expect(measureSection).toContain('.practice/hosted-rehearse/**');
+    expect(measureSection).toContain('.practice/specialist-launch/**');
+
+    const paritySection = /\n  route-key-parity:[\s\S]*?(?=\n  \w[\w-]*:)/.exec(yml)?.[0] ?? '';
+    expect(paritySection).toContain('~/.bun/install/cache');
+    expect(paritySection).toContain('actions/cache/restore@v4');
+    expect(paritySection).toContain('route-caches-v2');
+});
