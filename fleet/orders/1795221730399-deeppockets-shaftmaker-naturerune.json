@@ -1,0 +1,22 @@
+{
+ "id": "1795221730399-deeppockets-shaftmaker-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Deeppockets",
+ "to": "Shaftmaker",
+ "item": "Nature rune",
+ "count": 427,
+ "start": 1795221730399,
+ "end": 1795224130399,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
