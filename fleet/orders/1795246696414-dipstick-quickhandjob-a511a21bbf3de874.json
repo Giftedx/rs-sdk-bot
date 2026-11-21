@@ -1,0 +1,11 @@
+{
+ "id": "1795246696414-dipstick-quickhandjob-a511a21bbf3de874",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Dipstick",
+ "to": "Quickhandjob",
+ "item": "Coins",
+ "count": 49500,
+ "start": 1795246696414,
+ "end": 1795249096414,
+ "takerWaits": true
+}

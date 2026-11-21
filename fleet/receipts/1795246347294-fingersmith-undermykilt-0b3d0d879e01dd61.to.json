@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795246347294-fingersmith-undermykilt-0b3d0d879e01dd61",
+ "account": "UnderMyKilt",
+ "partner": "Fingersmith",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Pestle and mortar",
+ "requested": 1,
+ "claim": "9cef6ae1-b3e3-4149-802e-06422540f25c",
+ "count": 1,
+ "ok": true,
+ "at": 1795246720002,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795246715592
+ },
+ "logout": {
+  "attemptId": "1795246701020-0000022200-0000000001",
+  "at": 1795246719740,
+  "sha256": "437e8be5a1c28455396530729d0dbfaa5aad8219f22a76fe079d46583e3a21cd"
+ },
+ "screen": true
+}

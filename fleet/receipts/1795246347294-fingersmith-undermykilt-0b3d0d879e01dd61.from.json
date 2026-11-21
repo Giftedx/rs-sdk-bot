@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795246347294-fingersmith-undermykilt-0b3d0d879e01dd61",
  "account": "Fingersmith",
  "partner": "UnderMyKilt",
@@ -10,8 +10,22 @@
  "item": "Pestle and mortar",
  "requested": 1,
  "claim": "28d391ab-fcd9-4543-ace8-d6f90efc05e9",
- "count": 0,
- "ok": false,
- "at": 1795246607309,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795246713440,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795246692995
+ },
+ "logout": {
+  "attemptId": "1795246607318-0000003516-0000000001",
+  "at": 1795246712647,
+  "sha256": "26b19250402dbdb04bfb22113e07ea6316a5397ff7c144fa40fc7ee4508149ac"
+ },
+ "screen": true
 }
