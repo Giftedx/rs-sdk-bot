@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795221730399-deeppockets-shaftmaker-naturerune",
+ "role": "to",
+ "account": "Shaftmaker",
+ "partner": "Deeppockets",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795221785870,
+ "detail": "Error: account logout is not confirmed: Shaftmaker ended stopped"
+}
