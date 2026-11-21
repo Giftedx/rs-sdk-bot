@@ -73,17 +73,16 @@ const WC_KEEP_IDS = new Set<number>([
 export const WC_NORMAL_XP_25X = 625;
 export const WC_OAK_XP_25X = 937.5;
 
-// Barbarian Village SE multiway cluster (multiway.csv 0_48_53): 3 Oaks surrounded by 5 attackrate-6 armed Goblins (maxrange 17).
-export const DRAYNOR_JAIL_SPOT = { x: 3115, z: 3244 } as const;
+// Draynor Jail Courtyard multiway cluster (multiway.csv 0_48_50): 4 courtyard Oaks inside maxrange 7 of 2 Jail guards.
+export const DRAYNOR_JAIL_SPOT = { x: 3123, z: 3253 } as const;
 export const DRAYNOR_JAIL_OAK_CENTERS: readonly [number, number][] = [
-    [3114, 3239],
-    [3115, 3243],
-    [3115, 3250],
-    [3118, 3245],
     [3119, 3256],
+    [3124, 3254],
+    [3129, 3255],
+    [3118, 3245],
 ];
 
-export const BARB_VILLAGE_SPOT = { x: 3125, z: 3433 } as const;
+export const BARB_VILLAGE_SPOT = { x: 3126, z: 3434 } as const;
 export const BARB_NORMAL_CENTERS: readonly [number, number][] = [
     [3121, 3433],
     [3121, 3438],
@@ -115,8 +114,8 @@ export function planWoodcuttingTotals(goalXp = xpForLevel(99)): {
 const WIND_STRIKE = componentId('magic:wind_strike');
 const AUTO_RETALIATE_ON_COMP = 150;
 
-const inEdgevilleArea = (p: { level: number; worldX: number; worldZ: number }): boolean =>
-    p.level === 0 && p.worldX >= 3075 && p.worldX <= 3140 && p.worldZ >= 3420 && p.worldZ <= 3508;
+const inDraynorJail = (p: { level: number; worldX: number; worldZ: number }): boolean =>
+    p.level === 0 && p.worldX >= 3075 && p.worldX <= 3135 && p.worldZ >= 3230 && p.worldZ <= 3260;
 
 type NearbyLoc = NonNullable<NonNullable<ReturnType<Session['sdk']['getState']>>['nearbyLocs']>[number];
 
@@ -143,8 +142,8 @@ function findBestTree(
     activeTree: { x: number; z: number } | null,
 ): NearbyLoc | undefined {
     const st = s.sdk.getState();
-    const px = st?.player?.worldX ?? BARB_VILLAGE_SPOT.x;
-    const pz = st?.player?.worldZ ?? BARB_VILLAGE_SPOT.z;
+    const px = st?.player?.worldX ?? DRAYNOR_JAIL_SPOT.x;
+    const pz = st?.player?.worldZ ?? DRAYNOR_JAIL_SPOT.z;
     const locs = st?.nearbyLocs ?? [];
     const nameRe = wantOak ? /^oak$/i : /^tree$/i;
     const cands = locs
@@ -152,21 +151,23 @@ function findBestTree(
             if (!nameRe.test(l.name)) return false;
             if (!l.optionsWithIndex?.some(o => /chop/i.test(o.text))) return false;
             if (!wantOak) {
-                // Inner normal trees inside Barbarian SE clearing keep transition to Lv 15 Oaks near zero-walk.
-                return l.x >= 3118 && l.x <= 3136 && l.z >= 3424 && l.z <= 3442 && l.reachable !== false;
+                // Courtyard normal trees right beside (3123,3253) keep Lv 1->15 transition zero-walk.
+                return l.x >= 3117 && l.x <= 3131 && l.z >= 3247 && l.z <= 3257 && l.reachable !== false;
             }
-            // 3 Barbarian Village SE multiway oaks (inside maxrange 17 of all 5 attackrate-6 armed Goblins).
+            // 4 Draynor Jail Courtyard multiway oaks inside maxrange 7..8 of both courtyard Jail guards (3121,3249) & (3127,3248).
             return (
-                (l.x === 3126 && l.z === 3437)
-                || (l.x === 3131 && l.z === 3432)
-                || (l.x === 3120 && l.z === 3428)
+                (l.x === 3119 && l.z === 3256)
+                || (l.x === 3124 && l.z === 3254)
+                || (l.x === 3129 && l.z === 3255)
+                || (l.x === 3118 && l.z === 3245)
             ) && l.reachable !== false;
         });
     if (activeTree) {
         const cur = cands.find(l => l.x === activeTree.x && l.z === activeTree.z);
         if (cur && isBesideTree(px, pz, cur.x, cur.z, treeSizeForLoc(cur.name))) return cur;
     }
-    const isHubOak = (l: NearbyLoc) => (l.x === 3126 && l.z === 3437) || (l.x === 3131 && l.z === 3432);
+    // Prefer the 3 northern courtyard oaks (1-tile hops along z=3253..3255), falling back to SW oak (3118,3245) when depleted.
+    const isHubOak = (l: NearbyLoc) => (l.x === 3124 && l.z === 3254) || (l.x === 3119 && l.z === 3256) || (l.x === 3129 && l.z === 3255);
     return cands.sort((a, b) => {
         const sizeA = treeSizeForLoc(a.name);
         const sizeB = treeSizeForLoc(b.name);
@@ -188,8 +189,8 @@ function findReachableTreeStandTile(
     size: number,
 ): { x: number; z: number } | undefined {
     const p = s.sdk.getState()?.player;
-    const px = p?.worldX ?? BARB_VILLAGE_SPOT.x;
-    const pz = p?.worldZ ?? BARB_VILLAGE_SPOT.z;
+    const px = p?.worldX ?? DRAYNOR_JAIL_SPOT.x;
+    const pz = p?.worldZ ?? DRAYNOR_JAIL_SPOT.z;
     const perimeter: { x: number; z: number }[] = [];
     for (let i = 0; i < size; i++) {
         perimeter.push(
@@ -199,14 +200,14 @@ function findReachableTreeStandTile(
             { x: tree.x + size, z: tree.z + i },
         );
     }
-    const filtered = perimeter.filter(t => t.x >= 3119 && t.x <= 3133 && t.z >= 3427 && t.z <= 3441);
+    // Keep stand tiles inside the overlapping maxrange<=7 courtyard zone of both guards (3121,3249) & (3127,3248).
+    const filtered = perimeter.filter(t => t.x >= 3120 && t.x <= 3128 && t.z >= 3248 && t.z <= 3255);
     const pool = filtered.length > 0 ? filtered : perimeter;
     const reachable: { x: number; z: number; wp: number; cheb: number; hub: number }[] = [];
     for (const t of pool) {
         const path = s.sdk.findPath(t.x, t.z);
         if (!path.success || path.reachedDestination !== true) continue;
-        // Prefer inward-facing edges between (3126,3437), (3131,3432), and (3120,3428) so switching costs 1-3 ticks.
-        const hub = Math.max(Math.abs(t.x - 3127), Math.abs(t.z - 3434));
+        const hub = Math.max(Math.abs(t.x - 3124), Math.abs(t.z - 3253));
         reachable.push({
             x: t.x,
             z: t.z,
@@ -229,7 +230,7 @@ function countAttackingGoblins(s: Session): number {
     const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
     let count = 0;
     for (const n of npcs) {
-        if (!/^goblin$/i.test(n.name) || n.hp === 0) continue;
+        if (!/^jail guard$/i.test(n.name) || n.hp === 0) continue;
         if (targetsPlayer(s, n.targetIndex) || (n.inCombat && n.distance <= 3)) count++;
     }
     return count;
@@ -238,8 +239,8 @@ function countAttackingGoblins(s: Session): number {
 function findUntaggedGoblin(s: Session, taggedAt: ReadonlyMap<number, number>, now: number) {
     const npcs = s.sdk.getState()?.nearbyNpcs ?? [];
     const candidates = npcs.filter(n => {
-        if (!/^goblin$/i.test(n.name) || n.hp === 0 || n.distance > 15) return false;
-        if (n.x < 3112 || n.x > 3138 || n.z < 3416 || n.z > 3456) return false;
+        if (!/^jail guard$/i.test(n.name) || n.hp === 0 || n.distance > 12) return false;
+        if (n.x < 3118 || n.x > 3133 || n.z < 3246 || n.z > 3257) return false;
         if ((n as { reachable?: boolean }).reachable === false) return false;
         if ((taggedAt.get(n.index) ?? -999) >= now - 40) return false;
         if (targetsPlayer(s, n.targetIndex)) return false;
@@ -372,12 +373,12 @@ if (import.meta.main) {
             OBJ_SHORTBOW,
             OBJ_HOLY_SYMBOL,
         ]);
-        await rubTeleport(main, WOODCUTTING_GLORY_IDS, /edgeville/i, inEdgevilleArea, isStopped);
+        await rubTeleport(main, WOODCUTTING_GLORY_IDS, /draynor/i, inDraynorJail, isStopped);
         if ((main.sdk.getSkill('Prayer')?.baseLevel ?? 1) >= 43 && !isProtectMeleeOn(main.sdk.getState())) {
             // Single toggle chooses Protect from Melee while letting PrayerGuard 1t-flick with 0 Prayer drain.
             await main.direct({ type: 'togglePrayer', prayerIndex: PROTECT_FROM_MELEE_PRAYER, reason: 'SDK' });
         }
-        await walkWaypointsSafe(main, [[3102, 3485, 4], [3105, 3465, 3], [3104, 3456, 3], [3123, 3435, 2]], isStopped);
+        await walkWaypointsSafe(main, [[3123, 3253, 1]], isStopped);
         const arriveTick = main.tick() - t0;
 
         let rolls = 0;
@@ -436,11 +437,11 @@ if (import.meta.main) {
             const hitTick = drainHitEvents(st);
             if (hitTick >= 0) lastHitTick = Math.max(lastHitTick, hitTick);
             if (traceMode && (now - t0) % 20 === 0 && now - t0 <= 260) {
-                const gobsLog = (st?.nearbyNpcs ?? [])
-                    .filter(n => /^goblin$/i.test(n.name))
+                const guardsLog = (st?.nearbyNpcs ?? [])
+                    .filter(n => /^jail guard$/i.test(n.name))
                     .map(n => `${n.index}@${n.x},${n.z}(d${n.distance},tgt${n.targetIndex},ic${n.inCombat ? 1 : 0})`)
                     .join(' ');
-                console.log(`WC_TRACE state t=${now - t0} pos=${st?.player?.worldX},${st?.player?.worldZ} lvl=${main.sdk.getSkill('Woodcutting')?.baseLevel} rolls=${rolls}(f${flinchRolls}/k${knifeRolls}) hits=${hitEventsTotal} gobs=${countAttackingGoblins(main)} goblins=[${gobsLog}]`);
+                console.log(`WC_TRACE state t=${now - t0} pos=${st?.player?.worldX},${st?.player?.worldZ} lvl=${main.sdk.getSkill('Woodcutting')?.baseLevel} rolls=${rolls}(f${flinchRolls}/k${knifeRolls}) hits=${hitEventsTotal} gobs=${countAttackingGoblins(main)} guards=[${guardsLog}]`);
             }
 
             const wantOak = wcLvl >= 15;
@@ -525,27 +526,21 @@ if (import.meta.main) {
                 continue;
             }
 
-            // Track active mod-6 swing phases from armed Goblins (attackrate=6) over the last 7 ticks.
-            while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 14) recentHitTicks.shift();
-            const recentHitsIn7 = recentHitTicks.filter(h => now - h <= 7);
-            const activeHitMod6 = new Set<number>(recentHitsIn7.map(h => ((h % 6) + 6) % 6));
-            const sortedMods = [...activeHitMod6].sort((a, b) => a - b);
-            const maxHitGap = sortedMods.length < 2
-                ? 6
-                : Math.max(
-                    6 + sortedMods[0]! - sortedMods[sortedMods.length - 1]!,
-                    ...sortedMods.slice(1).map((m, i) => m - sortedMods[i]!),
-                );
-            const nextMod1 = ((now + 1) % 6 + 6) % 6;
-            const nextMod2 = ((now + 2) % 6 + 6) % 6;
-            const activeHitIn1t = activeHitMod6.has(nextMod1);
-            const activeHitIn2t = activeHitMod6.has(nextMod2);
+            // Track active mod-5 swing phases from the 2 courtyard Jail guards (attackrate=5) over the last 6 ticks.
+            while (recentHitTicks.length > 0 && recentHitTicks[0]! <= now - 11) recentHitTicks.shift();
+            const recentHitsIn6 = recentHitTicks.filter(h => now - h <= 6);
+            const activeHitMod5 = new Set<number>(recentHitsIn6.map(h => ((h % 5) + 5) % 5));
+            const nextMod1 = ((now + 1) % 5 + 5) % 5;
+            const nextMod2 = ((now + 2) % 5 + 5) % 5;
+            const activeHitIn1t = activeHitMod5.has(nextMod1);
+            const activeHitIn2t = activeHitMod5.has(nextMod2);
 
             const canTag = !outOfPrayer
                 && wantOak
                 && !needNormalLog
-                && tagCount < 16
-                && ((gobs < 3 && now - lastTagTick >= 3) || (gobs < 4 && maxHitGap >= 3 && now - lastTagTick >= 6))
+                && tagCount < 10
+                && gobs < 2
+                && now - lastTagTick >= 4
                 && now >= actionDelayApprox
                 && itemQty(main, OBJ_AIR_RUNE) > 1
                 && itemQty(main, OBJ_MIND_RUNE) > 0;
@@ -572,9 +567,9 @@ if (import.meta.main) {
                 !outOfPrayer
                 && wantOak
                 && !needNormalLog
-                && gobs >= 3
-                && maxHitGap >= 3
-                && recentHitsIn7.length >= 2
+                && gobs >= 2
+                && activeHitMod5.size < 2
+                && recentHitsIn6.length >= 2
                 && !activeHitIn1t
                 && !activeHitIn2t
                 && now - lastPerturbTick >= 20
@@ -603,8 +598,8 @@ if (import.meta.main) {
                 }
             }
 
-            // Hold flinch rhythm whenever a staggered Goblin swing falls on now+1 or now+2 (avoids knife3 canceling hit resets).
-            const keepFlinchWindow = !outOfPrayer && wantOak && !needNormalLog && (activeHitIn1t || activeHitIn2t);
+            // Hold flinch rhythm on predicted now+1 hits, or now+2 when 2 guards are staggered across distinct mod-5 slots.
+            const keepFlinchWindow = !outOfPrayer && wantOak && !needNormalLog && (activeHitIn1t || (activeHitMod5.size >= 2 && activeHitIn2t));
             if (!keepFlinchWindow) {
                 const knifeSlot = slotOfId(main, OBJ_KNIFE);
                 const logSlot = slotOfId(main, OBJ_LOGS);
