@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795242701706-fatstack-earlyshooter-629d4e1cb8365903",
  "account": "Fatstack",
  "partner": "Earlyshooter",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 129000,
  "claim": "981107b6-cec5-425b-a5ea-ee0695d32f72",
- "count": 0,
- "ok": false,
- "at": 1795242799856,
- "detail": "trade claimed"
+ "count": 129000,
+ "ok": true,
+ "at": 1795242970367,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 129000,
+  "after": 0
+ },
+ "bank": {
+  "count": 125394,
+  "at": 1795242950778
+ },
+ "logout": {
+  "attemptId": "1795242799865-0000023608-0000000001",
+  "at": 1795242970332,
+  "sha256": "54d8d8f192fdd30fb955c5d2331e5f361e00ec3c05aa6b43d0e4ca17e2b03cee"
+ },
+ "screen": true
 }

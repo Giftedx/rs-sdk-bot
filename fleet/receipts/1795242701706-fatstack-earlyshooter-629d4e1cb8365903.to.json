@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795242701706-fatstack-earlyshooter-629d4e1cb8365903",
+ "account": "Earlyshooter",
+ "partner": "Fatstack",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 129000,
+ "claim": "112b8d54-5589-402c-929d-cea24c64b283",
+ "count": 129000,
+ "ok": true,
+ "at": 1795242972318,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 129000
+ },
+ "bank": {
+  "count": 129000,
+  "at": 1795242971577
+ },
+ "logout": {
+  "attemptId": "1795242959124-0000026692-0000000001",
+  "at": 1795242972298,
+  "sha256": "e0f39932a8bb3227cbccb833049f919007e51da67d2bee01a01ef4b97145c730"
+ },
+ "screen": true
+}
