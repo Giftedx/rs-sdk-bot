@@ -1344,4 +1344,48 @@ test('squadFallbackPlan catches 2+ hitter focus and 4+ enemy multi bursts, and r
     } finally {
         spyTick.mockRestore();
     }
+
+    // Prayer toggles / eats must not run during the 1-tick wait after Rub glory before Edgeville dialog appears.
+    let ticks2 = 0, z2 = 3604, dlg2 = false, rubTick = -1;
+    const inv2: any[] = [
+        { slot: 0, id: 1712, count: 1, name: 'Amulet of glory(4)', optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] },
+        { slot: 1, id: 385, count: 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    const log2: string[] = [];
+    const s2: any = {
+        name: 'NoClearModalBot',
+        tick: () => ticks2,
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z2, hp: 70, maxHp: 99, combatLevel: 126 },
+                inventory: inv2,
+                equipment: [],
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { activePrayers: [], prayerPoints: 99 },
+                combatEvents: [],
+                dialog: dlg2 ? { isOpen: true, isWaiting: false, options: [{ text: 'Edgeville.' }] } : { isOpen: false },
+            }),
+            getInventory: () => inv2,
+            getEquipment: () => [],
+            getSkill: () => ({ level: 99, baseLevel: 99 }),
+            sendTogglePrayer: async (p: number) => { log2.push(`pray:${p}@t${ticks2}`); },
+            clickDialogByText: async () => { log2.push(`edge@t${ticks2}`); dlg2 = false; z2 = 3496; return { success: true }; },
+        },
+        direct: async (a: any) => {
+            log2.push(`use:${a.slot}@t${ticks2}`);
+            if (a.slot === 0) rubTick = ticks2;
+        },
+    };
+    const spy2 = spyOn(pk, 'nextTick').mockImplementation(async () => {
+        ticks2++;
+        if (rubTick >= 0 && ticks2 === rubTick + 1) dlg2 = true;
+        return true;
+    });
+    try {
+        await rescue(s2, () => {}, () => false, false, { protect: () => 'melee', protectItem: () => true });
+        expect(z2).toBe(3496);
+        expect(log2.filter(x => x.endsWith('@t1'))).toEqual(['edge@t1']);
+    } finally {
+        spy2.mockRestore();
+    }
 });

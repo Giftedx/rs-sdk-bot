@@ -440,13 +440,13 @@ export async function rescue(
             }
         }
         const tryGloryEscape = async (): Promise<boolean> => {
-            for (let attempt = 0; attempt < 24 && wildernessLevel(me()?.worldZ ?? 0) > 0 && wildernessLevel(me()?.worldZ ?? 0) <= 30; attempt++) {
+            for (let attempt = 0; attempt < 60 && wildernessLevel(me()?.worldZ ?? 0) > 0 && wildernessLevel(me()?.worldZ ?? 0) <= 30 && hasChargedGlory(); attempt++) {
                 if (stopped()) return false;
                 if (await clickEdgeville()) {
                     suppressEat = true;
                     try {
                         for (let d = 0; d < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; d++) {
-                            survival.step(s.tick());
+                            if ((me()?.hp ?? start.maxHp) <= 52) survival.step(s.tick());
                             if (!await tick()) return false;
                         }
                     } finally {
@@ -461,12 +461,14 @@ export async function rescue(
                 const rubOp = invGlory?.optionsWithIndex?.find(x => /^Rub$/i.test(x.text));
                 if (invGlory && rubOp) {
                     if (!stopped()) await useItemAction(invGlory.slot, rubOp.opIndex);
-                    for (let t = 0; t < 4 && wildernessLevel(me()?.worldZ ?? 0) > 0; t++) {
+                    // Wait cleanly for dialog + Edgeville click without sending prayer/eat packets whose
+                    // p_clearpendingaction / clearPendingAction closes the Glory interface before teleporting.
+                    for (let t = 0; t < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; t++) {
                         if (await clickEdgeville()) {
                             suppressEat = true;
                             try {
                                 for (let d = 0; d < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; d++) {
-                                    survival.step(s.tick());
+                                    if ((me()?.hp ?? start.maxHp) <= 52) survival.step(s.tick());
                                     if (!await tick()) return false;
                                 }
                             } finally {
@@ -474,7 +476,6 @@ export async function rescue(
                             }
                             break;
                         }
-                        survival.step(s.tick());
                         if (!await tick()) return false;
                     }
                     continue;
