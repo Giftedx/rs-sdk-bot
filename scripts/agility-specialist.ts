@@ -113,12 +113,12 @@ export const TOURIST_TRADE_1: readonly SupplyEntry[] = [
 
 export const TOURIST_TRADE_2: readonly SupplyEntry[] = [
     { id: ITEMS.hammer, name: 'Hammer', count: 1 },
-    { id: ITEMS.bronzeBar, name: 'Bronze bar', count: 14 },
+    { id: ITEMS.bronzeBar, name: 'Bronze bar', count: 11 },
     { id: ITEMS.desertShirt, name: 'Desert shirt', count: 1 },
     { id: ITEMS.desertRobe, name: 'Desert robe', count: 1 },
     { id: ITEMS.desertBoots, name: 'Desert boots', count: 1 },
     { id: ITEMS.shantayPass, name: 'Shantay pass', count: 1 },
-    { id: ITEMS.waterskin4, name: 'Waterskin(4)', count: 2 },
+    { id: ITEMS.waterskin4, name: 'Waterskin(4)', count: 1 },
     { id: ITEMS.feather, name: 'Feather', count: 200 },
     { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 1 },
     { id: ITEMS.shark, name: 'Shark', count: 1 },
@@ -1668,7 +1668,11 @@ export async function runAgilitySpecialist(bot: string, argv: readonly string[] 
             await runImpCatcherAndEnchant(spec, cfg.cap);
 
             await walkNear(spec, { x: 3185, z: 3436, level: 0 }, 2, 40);
+            await clearAllDialogs(spec, 3);
             await dropExcept(spec, new Set([...GLORY_IDS, ITEMS.airRune, ITEMS.chaosRune]), 8);
+            if (invOf(spec).length > 7) {
+                throw Error(`pre-trade-2 inventory too full (${invOf(spec).length}): ${invOf(spec).map(i => i.id).join(',')}`);
+            }
             await receiveTradePhase(TOURIST_TRADE_2, 2, 450);
             await smithTo20AtVarrock(spec);
             await wearItem(spec, ITEMS.desertShirt);
