@@ -3,7 +3,7 @@ import { isAbsolute, join, resolve } from 'node:path';
 import type { Subprocess } from 'bun';
 import { practiceDir, rsSdkRoot } from './paths';
 import { canBind, portInUse } from './ports';
-import { killTree, safeKill } from './proc';
+import { killTree, safeKill } from '../../core/src/proc';
 import { isReady, type Service } from './ready';
 
 export interface Stack {
@@ -117,7 +117,7 @@ export async function waitHttpReady(proc: Subprocess, url: string, logFile: stri
     throw new Error(`http not ready at ${url} after ${timeoutMs} ms${lastError ? `: ${lastError}` : ''}\n${tail(logFile)}`);
 }
 
-export { killTree } from './proc';
+export { killTree } from '../../core/src/proc';
 
 // Saved with each PID so a stale pids.json never kills an unrelated process (Windows reuses PIDs).
 export const MARKERS = { engine: 'src/app.ts', gateway: 'gateway.ts' } as const;

@@ -18,7 +18,8 @@ export function goalPlan(text: string) {
     return { paused: /\*\*Execution paused by the user/.test(text), available: lanes.length === titles.length, lanes };
 }
 
-export type GoalRow = { label:string; value:string; at?:number; source:string; tone?:'warn'|'good'|'dm' };
+import type { GoalRow } from './goal-types';
+export type { GoalRow } from './goal-types';
 type Lane = { title:string; metric:string; meta:string; level:string; blocker:string; next:string; rows:GoalRow[] };
 export type GoalInputs = { requirements:{item:string;count:number;itemId?:number}[]|null; items:any[]; quests:any[]; questConstants:string; receipts:Record<string,any> };
 const validAt=(at:any,now:number)=>Number.isFinite(at)&&at>0&&at<=now;

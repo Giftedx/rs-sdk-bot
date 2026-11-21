@@ -1,4 +1,4 @@
-import type {GoalRow} from './goals';
+import type {GoalRow} from './goal-types';
 import {createHash} from 'node:crypto';
 
 export const COST_RECEIPTS={

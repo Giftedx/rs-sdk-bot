@@ -25,6 +25,8 @@ import { assertSpentRecoveryConnection, type RecoveryConnectionAdmission } from 
 import { assertWorkerRelease } from './worker-release';
 import { assertActionScope } from './action-scope';
 import type { TickRecorder } from './tick-record';
+import type { BankObservation, SessionCore } from './session-types';
+export type { BankObservation, SessionCore } from './session-types';
 import {attachProgressionSession,preflightProgressionWork,processWork,type ProgressionSession} from './progression-session';
 import type {WorkDescriptor} from './progression-policy';
 // The longest single hold of a lockstep tick for a route search, under the 60 s idle limit of the client session.
@@ -65,12 +67,6 @@ export interface ClientLike {
     ptype0?: number;
     packetsReceived?: number;
     mainModalId?: number;
-}
-
-export interface BankObservation {
-    generation: number;
-    at: number;
-    items: { id: number; name: string; count: number }[];
 }
 
 export interface Shim {
@@ -480,24 +476,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     };
 }
 
-export interface Session {
-    name: string;
-    sdk: BotSDK;
-    bot: BotActions;
-    tick(): number;
-    onTick(cb: () => void): () => void;
-    direct(action: { type: string; [k: string]: unknown }): Promise<unknown>;
-    close(): Promise<void>;
-    ended: Promise<{ reason: string }>;
-    // The LiteClient itself, for packets the action layer has no action for (quest-mm.ts: OPHELD5 on a puzzle
-    // component). Absent on sessions that are not in-process.
-    client?: unknown;
-    // Local readiness contract; does not change the vendored SDK's state schema.
-    bankObservation?(): BankObservation | null;
-    // This session's own lifecycle attempt (session-lifecycle.ts). Absent on test doubles.
-    lifecycle?: SessionAttempt;
-    // Per-tick run record (tick-record.ts). Absent on test doubles.
-    record?(recorder: TickRecorder | null): void;
+export interface Session extends SessionCore {
     progression?:ProgressionSession;
 }
 

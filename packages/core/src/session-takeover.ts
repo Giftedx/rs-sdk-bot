@@ -1,5 +1,5 @@
 import {listAttempts,type LogoutProof} from './session-lifecycle';
-import {laterProcessHolds,processStartTimes} from '../../practice/src/proc';
+import {laterProcessHolds,processStartTimes} from './proc';
 
 // Servers proven to hand a re-login to the Player still in the world (rs-sdk 97725db3 and db0cc51e): the new client
 // attaches, no save is reloaded, and a death, delay or combat lock carries on. Each entry names its evidence.

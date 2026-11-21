@@ -14,16 +14,8 @@ import { REST_PRESETS } from './presets-rest';
 import { LONG_PRESETS } from './presets-long';
 import { LEGENDS_PRESETS } from './presets-legends';
 
-// Mirrors SaveConfig in vendor/rs-sdk/sdk/test/utils/save-generator.ts. createSaveData sets tutorial varp 281 = 1000 itself.
-export interface SaveConfig {
-    position?: { x: number; z: number; level?: number };
-    skills?: Record<string, number>;
-    inventory?: Array<{ id: number; count: number }>;
-    equipment?: Array<{ id: number; count: number; slot: number }>;
-    bank?: Array<{ id: number; count: number }>;
-    coins?: number;
-    varps?: Record<number, number>;
-}
+import type { SaveConfig } from './preset-types';
+export type { SaveConfig } from './preset-types';
 
 const LUMBRIDGE = { x: 3222, z: 3218, level: 0 };
 const COMBAT70 = { Attack: 70, Strength: 70, Defence: 70, Hitpoints: 70 };

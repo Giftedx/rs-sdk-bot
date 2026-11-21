@@ -1,5 +1,5 @@
 import { questDefinitions, QUEST_SOURCE } from '../core/src/quest-status';
-import type { GoalRow } from './goals';
+import type { GoalRow } from './goal-types';
 
 const recent=(at:any,now:number)=>Number.isFinite(at)&&at>0&&at<=now&&now-at<300000;
 const dated=(at:any,now:number)=>Number.isFinite(at)&&at>0&&at<=now;

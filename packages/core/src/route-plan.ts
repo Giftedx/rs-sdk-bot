@@ -1,7 +1,7 @@
 // The bot side of route-worker.ts: one worker per process, shared by every bot in it (host mode included).
 // Requests queue in the worker, so two bots planning at once wait their turn without blocking either game loop.
 import type { BankStock, TripPlan } from './trip';
-import type { Account, Tile } from './world';
+import type { Account, Tile } from './world-types';
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
 // Bun workers have ref/unref: an idle worker does not keep the process alive.

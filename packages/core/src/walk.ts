@@ -2,7 +2,7 @@ import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 import { atTile, checked, levelIs, type Outcome } from './act';
 import { waitTicks } from './ticks';
 import { watchTickStream } from './tick-stream';
-import type { TickSource } from './ticks';
+import { cancellable, cheb, walkLeg, type WalkOptions, type Walker } from './walk-leg';
 import { blockedDoorsNear,installDoorPolicy,transportAllowed,interactionApproach,canonicalTransportLeg, type Account, type Door, type Leg, type Tile, type World, ROUTE_BUDGET_MS,type DoorBlock } from './world';
 import {accountForSdk,withDoorPolicy} from './door-policy';
 import {guardWalk,liveHunters,protectedFromMelee,withDanger} from './danger';
@@ -16,20 +16,7 @@ import {bankStock,planTrip,takeItems,type TripPlan} from './trip';
 import {travelAllowed} from './travel';
 import {refreshGuildEvidence} from './guild-observation';
 
-export interface Walker extends TickSource {
-    client?:unknown;
-    sdk: TickSource['sdk'] & { blockDoorTemporarily?(level: number, x: number, z: number, ttlMs?: number): boolean };
-    bot: {
-        walkTo(x: number, z: number, tolerance?: number): Promise<unknown>;
-        interactLoc(target: unknown, option?: number | string | RegExp): Promise<unknown>;
-        openDoor?(target?: unknown): Promise<unknown>;
-    };
-}
-
-// planBudgetMs bounds the route search (world.ts ROUTE_BUDGET_MS when absent); a search over budget is 'no route (budget)'.
-export interface WalkOptions { maxRetriesPerLeg?: number; legTimeoutTicks?: number; signal?: AbortSignal; planBudgetMs?: number; noJewelry?: boolean }
-
-const cheb = (a: Tile, b: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - b.worldX), Math.abs(a.z - b.worldZ));
+export type { WalkOptions, Walker } from './walk-leg';
 
 // Runs route legs in order. Each leg is a checked action; a leg is retried from wherever the bot really is,
 // so a non-exact arrival (Review Focus 4) just becomes the next leg's start.
@@ -217,27 +204,6 @@ async function openNearestDoor(s: Walker, near: Tile): Promise<void> {
     if (doors.length > 0 && s.bot.openDoor) await s.bot.openDoor(doors[0].l);
 }
 
-// Runs one leg's bot.* call inside its own SDK execution context (sdk/execution-context.ts). The context's
-// signal fires when the leg's outcome is decided or the caller aborts (reflex), so a long bot.walkTo stops
-// instead of fighting the flee walk.
-async function cancellable(opts: WalkOptions, leg: (send: (f: () => Promise<unknown>) => () => Promise<unknown>, signal: AbortSignal) => Promise<Outcome>): Promise<Outcome> {
-    const ac = new AbortController();
-    const parent = executionContext.getStore();
-    const parents = [...new Set([opts.signal, parent?.signal].filter((s): s is AbortSignal => !!s))];
-    const listeners = parents.map(signal => {
-        const abort = () => ac.abort(signal.reason ?? 'aborted');
-        if (signal.aborted) abort(); else signal.addEventListener('abort', abort, { once: true });
-        return () => signal.removeEventListener('abort', abort);
-    });
-    const wrap = (f: () => Promise<unknown>) => () => executionContext.run({ ...parent, signal: ac.signal }, f).catch(e => ({ success: false, message: String(e) }));
-    try {
-        return await executionContext.run({ ...parent, signal: ac.signal }, () => leg(wrap, ac.signal));
-    } finally {
-        for (const off of listeners) off();
-        if (!ac.signal.aborted) ac.abort('leg done');
-    }
-}
-
 // A long walk leg (a world-graph region can span hundreds of tiles) goes through walkPath: one findLongPath plan,
 // then 20-tile client clicks. bot.walkTo re-queries a 500-waypoint path every step, which used 183 s of CPU on an
 // Ardougne-to-Varrock leg and froze the session ('walk to 2897,3428,0: no effect in 100 ticks').
@@ -252,25 +218,6 @@ async function walkFar(s: Walker, to: Tile, opts: WalkOptions, tolerance: number
     const r = await walkPath(deps, [{ x: to.x, z: to.z, tol: tolerance }], { maxTicks: budget, signal: opts.signal });
     return r.ok ? { ok: true, ticks: s.tick() - start }
         : { ok: false, reason: opts.signal?.aborted ? 'aborted' : 'timeout', detail: `far walk to ${to.x},${to.z},${to.level}: ${r.detail ?? 'not arrived'}`, ticks: s.tick() - start };
-}
-
-function walkLeg(s: Walker, to: Tile, opts: WalkOptions,tolerance:number): Promise<Outcome> {
-    return cancellable(opts, (wrap, signal) => walkLegInner(s, to, { ...opts, signal }, wrap,tolerance));
-}
-
-function walkLegInner(s: Walker, to: Tile, opts: WalkOptions, wrap: (f: () => Promise<unknown>) => () => Promise<unknown>,tolerance:number): Promise<Outcome> {
-    const p = s.sdk.getState()?.player;
-    // A long walk keeps running inside walkTo, so the budget grows with distance.
-    const budget = opts.legTimeoutTicks ?? (p ? cheb(to, p) * 2 + 30 : 60);
-    return checked(s, {
-        name: `walk to ${to.x},${to.z},${to.level}`,
-        pre: st => (st?.player?.level === to.level ? null : `on level ${st?.player?.level}, leg is on level ${to.level}`),
-        send: wrap(() => s.bot.walkTo(to.x, to.z, tolerance)),
-        rejectOnFeedback: false,
-        effect: atTile(to.x, to.z, to.level, tolerance),
-        timeoutTicks: budget,
-        signal: opts.signal,
-    });
 }
 
 function climbLeg(s: Walker, leg: Extract<Leg, { kind: 'transport' }>, opts: WalkOptions): Promise<Outcome> {

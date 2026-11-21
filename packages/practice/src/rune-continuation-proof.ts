@@ -9,7 +9,7 @@ import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
-import {killTree} from './proc';
+import {killTree} from '../../core/src/proc';
 import {PRACTICE_STARTUP_GB,FREE_FLOOR_GB} from '../../core/src/memory';
 import {releaseRevision} from '../../core/src/worker-release';
 const root=resolve(import.meta.dir,'../../..'),CAP=2800,TICK_MS=400;

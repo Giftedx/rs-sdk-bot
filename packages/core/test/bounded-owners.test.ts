@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {randomUUID} from 'node:crypto';
 import {observeBoundedOwners,boundedProcessAlive} from '../src/bounded-owners';
 import {prepareCoinProofRoot,removeCoinProofRoot} from '../../practice/src/coin-courier-proof';
-import {killTree} from '../../practice/src/proc';
+import {killTree} from '../src/proc';
 import {initialState} from '../../router/src/coordinator';
 const source=resolve(import.meta.dir,'../../..');
 test('a journaled successor, unknown owner or surviving child cannot prove bounded shutdown',()=>{

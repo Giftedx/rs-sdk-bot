@@ -1,4 +1,4 @@
-import type { SaveConfig } from './presets';
+import type { SaveConfig } from './preset-types';
 import { QP_BEFORE_DRAGON } from './presets-dragon';
 
 // Shield of Arrav as a pair (scripts/generated/quest-arrav.ts, research/quest-points-board.md). The main joins the

@@ -1,4 +1,4 @@
-import type { SaveConfig } from './presets';
+import type { SaveConfig } from './preset-types';
 
 // Monkey Madness (scripts/generated/quest-mm.ts) at the planner's state for the rival-mm row (scenario a, order
 // row 24, after Fight Arena; research/quest-plan.md section 1h): Attack 99 (Tree Gnome Village 286,250 + The Grand

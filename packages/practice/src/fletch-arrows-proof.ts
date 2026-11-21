@@ -6,7 +6,7 @@ import {applyPreset} from './presets';
 import {runBotName} from './prove';
 import {startStack} from './stack';
 import {rsSdkRoot,practiceDir} from './paths';
-import {killTree} from './proc';
+import {killTree} from '../../core/src/proc';
 import {selectAmmoProofEndpoints,ammoProofAccountEnv,startAmmoProofStack,ammoChildConfiguration,ammoRegistrationArgs} from './ammo-order-proof';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {workerSourceRevision} from '../../core/src/worker-release';

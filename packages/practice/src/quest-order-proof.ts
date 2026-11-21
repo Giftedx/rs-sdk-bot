@@ -6,7 +6,7 @@ import {startStack} from './stack';
 import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
-import {killTree} from './proc';
+import {killTree} from '../../core/src/proc';
 import {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {questSpec,questSavedChecks,savedQuest,questCompleted,runQuestOrder,questOrderRuntime} from '../../../scripts/quest-order';
 import {workerSourceRevision} from '../../core/src/worker-release';

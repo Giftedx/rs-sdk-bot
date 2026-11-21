@@ -66,7 +66,7 @@ test('a confirmed logout still returns producer proof on a takeover server',()=>
 });
 
 import {savedProcessAlive} from '../src/session-takeover';
-import {PID_START_SLACK_MS} from '../../practice/src/proc';
+import {PID_START_SLACK_MS} from '../src/proc';
 test('a live process id is the saved process only when its process started before the record',()=>{
  const savedAt=1_000_000,alive=()=>true,gone=()=>false,starts=(at:number|null)=>()=>at===null?null:new Map([[77,at]]);
  // The process started before the record was written: it is the saved process.

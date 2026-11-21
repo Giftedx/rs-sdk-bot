@@ -1,7 +1,7 @@
 import {existsSync,readFileSync,readdirSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
-import type {Session,BankObservation} from './inprocess';
+import type {SessionCore as Session,BankObservation} from './session-types';
 import {isLocalServer} from './localserver';
 import {equipmentObserved} from './container-observation';
 import {questFlags} from './quest-status';
@@ -157,7 +157,7 @@ function writeDecision(base:string,s:Session,work:WorkDescriptor,evaluation:Poli
  writeProgressionEvidence(file,value,console.warn);
 }
 
-export function attachProgressionSession(s:Session,work:WorkDescriptor,server:string,options:{base?:string;evaluate?:(status:any)=>PolicyEvaluation;log?:(line:string)=>void}={}):ProgressionSession{
+export function attachProgressionSession(s:Session&{progression?:ProgressionSession},work:WorkDescriptor,server:string,options:{base?:string;evaluate?:(status:any)=>PolicyEvaluation;log?:(line:string)=>void}={}):ProgressionSession{
  const base=options.base??root,log=options.log??console.log;
  work=structuredClone(work);
  const consumer=parentProgressionAccept(work,s.name,base);

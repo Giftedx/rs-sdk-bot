@@ -2,7 +2,7 @@ import { test, expect } from 'bun:test';
 import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join, resolve } from 'node:path';
-import { commandLine, safeKill } from '../../practice/src/proc';
+import { commandLine, safeKill } from '../../core/src/proc';
 
 // A fake CLI exercises the real runner in a separate process, keeping PATH and model configuration out of other tests.
 async function model(mode: string, inherited: NodeJS.ProcessEnv = process.env) {

@@ -18,7 +18,7 @@ import {questFlags,type QuestFlag} from '../packages/core/src/quest-status';
 import {sessionWalker,walkPath,type PathPoint} from '../packages/core/src/walk';
 import {readPracticeSave,waitPracticeSave} from './measure/fleet-player-save';
 import {walkQuestCorridor} from './quest-walk';
-import {killTree} from '../packages/practice/src/proc';
+import {killTree} from '../packages/core/src/proc';
 
 const root=resolve(import.meta.dir,'..');
 type Item={id:number;name:string;count:number};

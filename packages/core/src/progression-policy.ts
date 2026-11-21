@@ -1,6 +1,6 @@
 import type {Step} from './chain-step';
 import {readFileSync} from 'node:fs';
-import type {BankObservation} from './inprocess';
+import type {BankObservation} from './session-types';
 import type {WorkIntent,ProgressionDecision,ProgressionMethod,ObservedAccount} from '../../planner/src/progression';
 import {trainingTargets} from '../../planner/src/progression';
 import {intentForEntry} from '../../planner/src/progression-catalog';

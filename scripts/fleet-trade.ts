@@ -22,7 +22,7 @@ import { liveLogoutRef } from '../packages/core/src/session-admission';
 import { cachedReleaseFor, releaseEntries } from '../packages/core/src/worker-release';
 import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { pidAlive } from '../packages/core/src/session-takeover';
-import { laterProcessHolds, processStartTimes } from '../packages/practice/src/proc';
+import { laterProcessHolds, processStartTimes } from '../packages/core/src/proc';
 import { isLocalServer } from '../packages/core/src/localserver';
 import { meetingTiles } from './coin-courier';
 import type { Session } from '../packages/core/src/inprocess';

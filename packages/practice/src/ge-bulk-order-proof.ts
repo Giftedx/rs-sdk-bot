@@ -8,7 +8,7 @@ import {randomUUID} from 'node:crypto';
 import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
-import {killTree,commandLine} from './proc';
+import {killTree,commandLine} from '../../core/src/proc';
 import {rsSdkRoot,practiceDir} from './paths';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
 import {capabilityRevision,type ReleaseMemo} from '../../core/src/worker-release';

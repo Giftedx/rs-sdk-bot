@@ -1,6 +1,6 @@
 import {existsSync,readFileSync,readdirSync} from 'node:fs';
 import {join,resolve} from 'node:path';
-import {commandLine} from '../../practice/src/proc';
+import {commandLine} from './proc';
 
 export type BoundedOwnerBinding={watchId:string;plan:string;side:string};
 export function boundedOwnerBinding(base:string,env:NodeJS.ProcessEnv=process.env):BoundedOwnerBinding|undefined{

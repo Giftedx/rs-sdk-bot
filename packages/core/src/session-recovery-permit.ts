@@ -4,11 +4,11 @@ import {join,resolve,dirname,sep} from 'node:path';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {capabilityRevision,cachedLaunchRevision} from './worker-release';
-import {processMatchesRecent,safeKill,commandLine,processStartTimes} from '../../practice/src/proc';
+import {processMatchesRecent,safeKill,commandLine,processStartTimes} from './proc';
 import {readLogoutProof,listAttempts} from './session-lifecycle';
 import {savedProcessAlive,type ProcessStarts} from './session-takeover';
 import {isLocalServer} from './localserver';
-import {missionSignature,successfulEnd} from './session-admission';
+import {missionSignature,successfulEnd} from './session-mission';
 import {readMergedPlan,ownerPlanPath} from './coordinator-jobs';
 
 export const RECOVERY_SCHEMA='session-recovery/1';

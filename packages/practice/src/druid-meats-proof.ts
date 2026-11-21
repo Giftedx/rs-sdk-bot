@@ -7,7 +7,7 @@ import {startStack} from './stack';
 import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
-import {killTree} from './proc';
+import {killTree} from '../../core/src/proc';
 import {canBind} from './ports';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {workerSourceRevision} from '../../core/src/worker-release';

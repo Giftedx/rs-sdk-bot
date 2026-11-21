@@ -11,7 +11,7 @@ import {practiceDir,rsSdkRoot} from './paths';
 import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
-import {killTree} from './proc';
+import {killTree} from '../../core/src/proc';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
 import {magicXpForLevel,CAST_SITE,TELE_RUNE_IDS,teleportEffect,TELEPORTS,alchemyEffect,type RuneCounts} from '../../../scripts/magic-order';

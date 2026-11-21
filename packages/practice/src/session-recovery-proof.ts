@@ -21,7 +21,7 @@ import {admissionDecision,admitRecovery,startable,applyEndRepair} from '../../..
 import {missionSignature} from '../../core/src/session-admission';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {canBind} from './ports';
-import {killTree,safeKill,sleeperCommand} from './proc';
+import {killTree,safeKill,sleeperCommand} from '../../core/src/proc';
 import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';

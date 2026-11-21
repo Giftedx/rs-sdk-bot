@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 import {serverFromEnv} from '../../packages/core/src/bot';
 import {isLocalServer} from '../../packages/core/src/localserver';
 import {readLogoutProof} from '../../packages/core/src/session-lifecycle';
-import {killTree} from '../../packages/practice/src/proc';
+import {killTree} from '../../packages/core/src/proc';
 import {plan,aioTemplates,jobFor} from '../../packages/planner/src/autopilot';
 import {capabilityRevision} from '../../packages/core/src/worker-release';
 import {levelForXp} from '../../packages/planner/src/curve';

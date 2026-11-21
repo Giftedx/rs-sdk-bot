@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { DeliveryTask, DeliveryResult } from './delivery';
-import { killTree } from '../../practice/src/proc';
+import { killTree } from '../../core/src/proc';
 
 // Phase 3 v1: a model writes a game script, the practice harness proves it, and failures go back to the model.
 // The model runs through the owner's subscription CLI (`claude -p`), headless, with only file and bun tools.
