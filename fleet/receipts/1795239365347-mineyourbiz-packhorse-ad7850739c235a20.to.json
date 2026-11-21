@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795239365347-mineyourbiz-packhorse-ad7850739c235a20",
  "account": "Packhorse",
  "partner": "MineYourBiz",
@@ -10,15 +10,37 @@
  "item": "Ranarr weed",
  "requested": 1,
  "claim": "86f2b639-199b-4b12-bb8b-46cf1eddca11",
- "count": 0,
- "ok": false,
- "at": 1795239489109,
- "detail": "trade claimed",
+ "count": 1,
+ "ok": true,
+ "at": 1795239522085,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Logs",
    "requested": 6,
-   "count": 0
+   "count": 6,
+   "inventory": {
+    "before": 0,
+    "after": 6
+   },
+   "bank": {
+    "count": 6,
+    "at": 1795239521331
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795239520926
+ },
+ "logout": {
+  "attemptId": "1795239489123-0000018748-0000000001",
+  "at": 1795239522071,
+  "sha256": "f7b67d54599d67eb9c2e5a7de06608e01b66277c1429c672fdefcef17c0ceaa8"
+ },
+ "screen": true
 }

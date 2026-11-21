@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795239389634,
+ "at": 1795239528699,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -219,6 +219,59 @@
    "enabled": true,
    "standing": true,
    "repeat": false
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "dargaud",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "rune arrow",
+    "STOCK_TARGET": "445",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "320200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "320000",
+    "AUTOPILOT_ORDER": "[45]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":445}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
+   "role": "bank",
+   "template": "squad-arrows-dargaud",
+   "autopilot": "local",
+   "resources": [
+    "shop:dargaud"
+   ]
+  },
+  {
+   "account": "FishAndChips",
+   "script": "scripts/shark-supply.ts",
+   "args": [
+    "25",
+    "9000"
+   ],
+   "env": {
+    "SHARK_CONSUMER": "gang squad",
+    "AUTOPILOT_ORDER": "[459]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":484}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "fish and cook sharks at Catherby for the gang squad",
+   "role": "fishing",
+   "template": "squad-sharks",
+   "autopilot": "local",
+   "resources": [
+    "squad:catherby-sharks"
+   ]
   }
  ],
  "army": [
