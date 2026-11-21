@@ -809,6 +809,42 @@ async function runPrayerTo43(s: Session, targetLevel = 43): Promise<void> {
     if (skillLvl(s, 'Prayer') < 43) throw Error(`prayer reached ${skillLvl(s, 'Prayer')} (< 43)`);
 }
 
+async function pickpocketLumbridgeMen(s: Session, targetLevel = 14, maxTicks = 65): Promise<void> {
+    const t0 = s.tick();
+    const stunCount = () => (s.sdk.getState()?.gameMessages ?? []).filter((m: any) => /you've been stunned/i.test(m.text)).length;
+    let stunUntil = -1;
+    let lastStuns = stunCount();
+    while (skillLvl(s, 'Thieving') < targetLevel && s.tick() - t0 < maxTicks) {
+        const hp = s.sdk.getSkill('Hitpoints')?.level ?? 10;
+        if (hp <= 4) break;
+        const stunsNow = stunCount();
+        if (stunsNow > lastStuns) {
+            lastStuns = stunsNow;
+            stunUntil = s.tick() + 8;
+        }
+        if (s.tick() < stunUntil) {
+            await waitTicks(s, 1);
+            continue;
+        }
+        await clearDialogTick(s);
+        const target = ((s.sdk.getState()?.nearbyNpcs ?? []) as any[])
+            .filter(n => /^(man|woman)$/i.test(n.name) && n.hp !== 0 && n.reachable !== false && n.optionsWithIndex?.some((o: any) => /^pickpocket$/i.test(o.text)))
+            .sort((a, b) => (a.distance ?? 99) - (b.distance ?? 99))[0];
+        if (!target) {
+            await walkNear(s, { x: 3221, z: 3219, level: 0 }, 3, 12);
+            continue;
+        }
+        const op = target.optionsWithIndex.find((o: any) => /^pickpocket$/i.test(o.text))!.opIndex;
+        const xp0 = skillXp(s, 'Thieving');
+        const s0 = stunCount();
+        await s.direct({ type: 'interactNpc', npcIndex: target.index, optionIndex: op, reason: 'SDK' });
+        await waitTicks(s, 2);
+        for (let w = 0; w < 3 && skillXp(s, 'Thieving') === xp0 && stunCount() === s0; w++) {
+            await waitTicks(s, 1);
+        }
+    }
+}
+
 async function runImpCatcherAndEnchant(s: Session, cap: number): Promise<void> {
     await rubGlory(s, /draynor/i, { x: 3105, z: 3251 }, 20);
     const q = await openQuest({ session: s, burst: true, cap, eatAt: 6, food: [ITEMS.shark], lumbridgeOk: true });
@@ -1244,7 +1280,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                 await walkCamp('to slave post-clear', [{ x: SLAVE.x, z: SLAVE.z - 1, tol: 1 }]);
                 if (inPrisonCell()) { await escapePrisonCell(); continue; }
             }
-            for (let mw = 0; mw < 12; mw++) {
+            for (let mw = 0; mw < 3; mw++) {
                 const nearMerc = (q.st()?.nearbyNpcs ?? []).some((n: any) =>
                     /^mercenary$/i.test(n.name) && Math.max(Math.abs((n.x ?? 0) - x()), Math.abs((n.z ?? 0) - z())) <= 10,
                 );
@@ -1396,7 +1432,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         ]);
         await clearCaveRowdy(5);
         await locTalk('empty barrel', () => { const b = q.findLoc((l: any) => l.id === 2681 && Math.abs(l.x - 3303) <= 3 && Math.abs(l.z - 9417) <= 3) ?? LOW_BARREL; return q.opLoc(b, q.opIndex(b, /search|take/i) === 1 ? 2 : q.opIndex(b, /search|take/i)); }, [/yeah, cool/i], () => q.has(ITEMS.barrel), 4, 35, () => clearCaveRowdy(6));
-        await locTalk('low cart', () => { const c = loc(LOW_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() >= 9428 && x() >= 3310, 4, 24, () => clearCaveRowdy(6));
+        await locTalk('low cart', () => { const c = loc(LOW_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() >= 9428 && x() >= 3310, 18, 24, () => clearCaveRowdy(6));
 
         await maintainEnergy(s, 45);
         await walkCamp('to ana', [{ x: ANA.x, z: ANA.z - 1, tol: 3 }]);
@@ -1406,7 +1442,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await walkCamp('to ana cart', [{ x: 3319, z: 9431, tol: 1 }]);
         await q.step('ana in cart', () => q.useOnLoc(ITEMS.ana, loc(ANA_CART)), () => !q.has(ITEMS.ana), 12, 3);
         await q.waitTicks(4);
-        await locTalk('cart back', () => { const c = loc(ANA_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() <= 9420, 4, 24, () => clearCaveRowdy(6));
+        await locTalk('cart back', () => { const c = loc(ANA_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() <= 9420, 18, 24, () => clearCaveRowdy(6));
         await locTalk('ana barrel 2', () => { const b = q.findLoc((l: any) => l.id === 2681 && Math.abs(l.x - 3303) <= 3 && Math.abs(l.z - 9417) <= 3) ?? LOW_BARREL; return q.opLoc(b, q.opIndex(b, /search|take/i) === 1 ? 2 : q.opIndex(b, /search|take/i)); }, [], () => q.has(ITEMS.ana), 4, 35, () => clearCaveRowdy(6));
 
         await walkCamp('to lift', [{ x: LIFT.x, z: LIFT.z - 1, tol: 1 }]);
@@ -2032,6 +2068,7 @@ export async function runAgilitySpecialist(bot: string, argv: readonly string[] 
             await wearItem(spec, ITEMS.fireStaff);
             await runFletchingTo10(spec);
             await runPrayerTo43(spec, 46);
+            await pickpocketLumbridgeMen(spec, 14, 65);
             await runImpCatcherAndEnchant(spec, cfg.cap);
 
             await walkNear(spec, { x: 3185, z: 3436, level: 0 }, 2, 40);
