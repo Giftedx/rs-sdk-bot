@@ -1,0 +1,22 @@
+{
+ "id": "1795251723136-knightrider-shaftmaker-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "Shaftmaker",
+ "item": "Nature rune",
+ "count": 282,
+ "start": 1795251723136,
+ "end": 1795254123136,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
