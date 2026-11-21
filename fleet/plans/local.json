@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795246483460,
+ "at": 1795246531475,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -180,40 +180,6 @@
    "resources": [
     "squad:ardougne-giants"
    ]
-  },
-  {
-   "account": "MineYourBiz",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "2000",
-    "unicorn"
-   ],
-   "env": {
-    "MAX_KILLS": "6"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "Fingersmith",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "taverley",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "pestle and mortar",
-    "STOCK_TARGET": "1",
-    "STOP_AT_TARGET": "1",
-    "MAX_ITEMS": "1",
-    "MAX_SPEND": "50",
-    "COIN_RESERVE": "0",
-    "FLOAT": "50"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
   },
   {
    "account": "YewFirst",
@@ -430,6 +396,7 @@
   "SporranBulge",
   "Sausagefest",
   "dipstick",
+  "fingersmith",
   "knightstick",
   "quickhandjob",
   "sporrandip"
