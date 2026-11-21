@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795286127642-abracadickra-knightstick",
  "account": "Knightstick",
  "partner": "Abracadickra",
@@ -12,6 +12,12 @@
  "claim": "762aa548-8cc6-420b-84a9-3365d3dc2730",
  "count": 0,
  "ok": false,
- "at": 1795286825372,
- "detail": "trade claimed"
+ "at": 1795286882167,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795286825381-0000025328-0000000001",
+  "at": 1795286882156,
+  "sha256": "2b29c658eeea865c2365d1e59b92c782ac74781fb86ea09143c4d20282f2e661"
+ },
+ "screen": false
 }
