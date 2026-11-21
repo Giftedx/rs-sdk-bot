@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795297098176-mightyrod-pullmybow",
+ "account": "Pullmybow",
+ "partner": "Mightyrod",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 134,
+ "claim": "b6063a64-6673-4fc0-9ab2-bb12f855f85a",
+ "count": 0,
+ "ok": false,
+ "at": 1795297164651,
+ "detail": "trade claimed"
+}

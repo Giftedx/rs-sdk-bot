@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795297098176-swordswallow-knightrider-ballofwool",
  "account": "Swordswallow",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Ball of wool",
  "requested": 2,
  "claim": "d0ef4e6c-fbae-48bc-804d-63e6f87735cb",
- "count": 0,
- "ok": false,
- "at": 1795297156264,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795297171357,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795297166966
+ },
+ "logout": {
+  "attemptId": "1795297156275-0000022712-0000000001",
+  "at": 1795297171342,
+  "sha256": "8cc7c38558b580889443e2a0c6ce423fb729f66371b73f28aa9b50c77e3ca5ef"
+ },
+ "screen": true
 }

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795297098176-swordswallow-knightrider-ballofwool",
+ "account": "KnightRider",
+ "partner": "Swordswallow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ball of wool",
+ "requested": 2,
+ "claim": "e5563624-c6ca-4174-937a-6afdc467f6f2",
+ "count": 0,
+ "ok": false,
+ "at": 1795297160232,
+ "detail": "trade claimed"
+}
