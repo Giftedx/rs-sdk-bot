@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795237793055,
+ "at": 1795238126193,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -217,92 +217,6 @@
    ]
   },
   {
-   "account": "Hocuspokeus",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "4000",
-    "taverley_druid"
-   ],
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "Woodpecker",
-   "script": "scripts/gather-yews.ts",
-   "args": [
-    "3500",
-    "5"
-   ],
-   "env": {
-    "TREE": "maple",
-    "WOOD_GROVE": "native-processing",
-    "MAX_TRIPS": "1",
-    "MEMBERS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "Woodenstaff",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=560 QUANTITY=110 EXPECTED_OWNED=0 LIMIT_PRICE=2900 CASH_RESERVE=1000 ORDER_KEY=liveops-death-560-110-v2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=225 QUANTITY=11 EXPECTED_OWNED=0 LIMIT_PRICE=29500 CASH_RESERVE=1000 ORDER_KEY=liveops-limp-225-11-v2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1359 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=490000 CASH_RESERVE=1000 ORDER_KEY=liveops-runeaxe-1359-1-v2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=2472 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=90000 CASH_RESERVE=1000 ORDER_KEY=liveops-flowers-2472-1-v2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=8 EXPECTED_OWNED=0 LIMIT_PRICE=47000 CASH_RESERVE=1000 ORDER_KEY=liveops-ranarr-257-8-v2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=383 QUANTITY=20 EXPECTED_OWNED=0 LIMIT_PRICE=650 CASH_RESERVE=1000 ORDER_KEY=liveops-rawshark-383-20-v2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "desertrescue"
-   ],
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "Bigchopper",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "dargaud",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "rune arrow",
-    "STOCK_TARGET": "445",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "320200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "320000",
-    "AUTOPILOT_ORDER": "[45]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":445}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
-   "role": "bank",
-   "template": "squad-arrows-dargaud",
-   "autopilot": "local",
-   "resources": [
-    "shop:dargaud"
-   ]
-  },
-  {
    "account": "TossTheCaber",
    "script": "scripts/blood-chest.ts",
    "args": [],
@@ -317,6 +231,46 @@
    "resources": [
     "squad:ardougne-blood-chest"
    ]
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "4000",
+    "taverley_druid"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=2434 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=275000 CASH_RESERVE=1000 ORDER_KEY=liveops-ppot-2434-1-v3 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=253 QUANTITY=5 EXPECTED_OWNED=0 LIMIT_PRICE=29500 CASH_RESERVE=1000 ORDER_KEY=liveops-tarromin-253-5-v3 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=249 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=25500 CASH_RESERVE=1000 ORDER_KEY=liveops-guam-249-1-v3 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=8000 CASH_RESERVE=1000 ORDER_KEY=liveops-dbones-536-1-v3 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=383 QUANTITY=20 EXPECTED_OWNED=0 LIMIT_PRICE=650 CASH_RESERVE=1000 ORDER_KEY=liveops-rawshark-383-20-v3 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/walk-to.ts",
+   "args": [
+    "3185",
+    "3436",
+    "0"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": false
   }
  ],
  "army": [
