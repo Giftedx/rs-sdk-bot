@@ -1763,12 +1763,20 @@ export async function runAgilitySpecialist(bot: string, argv: readonly string[] 
                 if (supplier.lastError()) throw supplier.lastError()!;
                 const giveCounts = new Map<number, number>();
                 for (const w of want) giveCounts.set(w.id, (giveCounts.get(w.id) ?? 0) + w.count);
-                await burstTradeHost(spec, supplier.sessionHandle()!, {
-                    giveIds: want.map(w => w.id),
-                    giveCounts,
-                    deadlineTick: spec.tick() + timeoutTicks,
-                    allowHelperOnSingleModal: true,
-                });
+                const sup = supplier.sessionHandle()!;
+                try {
+                    await burstTradeHost(spec, sup, {
+                        giveIds: want.map(w => w.id),
+                        giveCounts,
+                        deadlineTick: spec.tick() + timeoutTicks,
+                        allowHelperOnSingleModal: true,
+                    });
+                } catch (err) {
+                    const fmtInv = (ses: Session) => invOf(ses).map(i => `${i.id}:${i.name}x${i.count}`).join(',');
+                    const fmtMsg = (ses: Session) => (ses.sdk.getState()?.gameMessages ?? []).slice(-6).map((m: any) => m.text).join(' | ');
+                    console.log(`TRADE_FAIL phase=${phase} specInv=[${fmtInv(spec)}] supInv=[${fmtInv(sup)}] specTrade=${JSON.stringify(spec.sdk.getTradeState())} supTrade=${JSON.stringify(sup.sdk.getTradeState())} specMsgs=[${fmtMsg(spec)}] supMsgs=[${fmtMsg(sup)}]`);
+                    throw err;
+                }
                 supplier.markPhaseDone(phase);
                 if (stopSupplierAfter) supplier.stop();
             } else {
