@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795239936324-earlyshooter-woodenstaff-3aa292c51fd51a87",
  "account": "Earlyshooter",
  "partner": "Woodenstaff",
@@ -10,35 +10,89 @@
  "item": "Dragon bones",
  "requested": 11,
  "claim": "499633bc-b665-4eef-aa04-19c217c1db90",
- "count": 0,
- "ok": false,
- "at": 1795240115051,
- "detail": "trade claimed",
+ "count": 11,
+ "ok": true,
+ "at": 1795240158410,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Death rune",
    "requested": 46,
-   "count": 0
+   "count": 46,
+   "inventory": {
+    "before": 46,
+    "after": 0
+   },
+   "bank": {
+    "count": 46,
+    "at": 1795240124944
+   }
   },
   {
    "item": "Staff of fire",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795240125706
+   }
   },
   {
    "item": "Law rune",
    "requested": 10,
-   "count": 0
+   "count": 10,
+   "inventory": {
+    "before": 10,
+    "after": 0
+   },
+   "bank": {
+    "count": 10,
+    "at": 1795240126481
+   }
   },
   {
    "item": "Shark",
    "requested": 20,
-   "count": 0
+   "count": 20,
+   "inventory": {
+    "before": 20,
+    "after": 0
+   },
+   "bank": {
+    "count": 20,
+    "at": 1795240127284
+   }
   },
   {
    "item": "Cheese",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795240128498
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 11,
+  "after": 0
+ },
+ "bank": {
+  "count": 11,
+  "at": 1795240124130
+ },
+ "logout": {
+  "attemptId": "1795240115108-0000014856-0000000001",
+  "at": 1795240158400,
+  "sha256": "d7b55d9c38f0398346719a066c55340040bbe32aa8284df3b3b528f26420320f"
+ },
+ "screen": true
 }
