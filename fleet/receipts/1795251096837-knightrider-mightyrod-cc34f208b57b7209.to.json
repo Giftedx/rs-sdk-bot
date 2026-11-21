@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795251096837-knightrider-mightyrod-cc34f208b57b7209",
+ "account": "Mightyrod",
+ "partner": "KnightRider",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 319000,
+ "claim": "126fdb8b-657f-4031-a3c1-ed7f3061aa3d",
+ "count": 319000,
+ "ok": true,
+ "at": 1795251213534,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 319000
+ },
+ "bank": {
+  "count": 319000,
+  "at": 1795251212782
+ },
+ "logout": {
+  "attemptId": "1795251202613-0000010872-0000000001",
+  "at": 1795251213516,
+  "sha256": "24560426ad447c86ce11f68068746aafe93925a9da1ec5945fb69d0714f5da9f"
+ },
+ "screen": true
+}

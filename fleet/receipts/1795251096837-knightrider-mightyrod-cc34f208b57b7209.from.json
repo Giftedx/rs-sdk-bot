@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795251096837-knightrider-mightyrod-cc34f208b57b7209",
  "account": "KnightRider",
  "partner": "Mightyrod",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 319000,
  "claim": "50cd617a-f2c1-47d0-8cf8-95e49d18a883",
- "count": 0,
- "ok": false,
- "at": 1795251117183,
- "detail": "trade claimed"
+ "count": 319000,
+ "ok": true,
+ "at": 1795251211929,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 319000,
+  "after": 0
+ },
+ "bank": {
+  "count": 319000,
+  "at": 1795251123962
+ },
+ "logout": {
+  "attemptId": "1795251117302-0000025460-0000000001",
+  "at": 1795251211917,
+  "sha256": "858610d361b8a2c2c50f5361b1f4b34348aab7f23e71275c56370609289be3ab"
+ },
+ "screen": true
 }
