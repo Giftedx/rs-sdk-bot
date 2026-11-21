@@ -512,7 +512,7 @@ test('specialist ranged and agility routes beat live targets without double-coun
     const soloAgility = schedule(boards, acts, { mode: 'realistic', tricks: new Set(TRICKS), sacrificed: only('agility'), disable: new Set(['pvp-relog-combat']) });
     expect(soloRanged.blocked).toEqual([]);
     expect(finish(soloRanged, 'ranged').status).toBe('WIN');
-    expect(finish(soloRanged, 'ranged').finish!).toBeLessThanOrEqual(5483);
+    expect(finish(soloRanged, 'ranged').finish!).toBeLessThanOrEqual(4379);
     expect(soloAgility.blocked).toEqual([]);
     expect(finish(soloAgility, 'agility').status).toBe('WIN');
     expect(finish(soloAgility, 'agility').finish!).toBeLessThanOrEqual(6031);
@@ -537,8 +537,9 @@ test('overall route uses teleports, spirit trees, stun-guest chaining, and keeps
     for (const id of ['waterfall', 'dragon', 'cannon', 'rival-mm', 'rival-fight-arena', 'witch']) {
         expect(real.order.find(p => p.id === id)!.start).toBeGreaterThanOrEqual(overall);
     }
+    // Co-located Deserted Keep combat blocks share zero internal travel (att-40 -> str-top -> att-top and def-top -> ranged).
     expect(real.order.find(p => p.id === 'str-top')!.travel ?? 0).toBe(0);
-    expect(real.order.find(p => p.id === 'def-top')!.travel ?? 0).toBe(0);
+    expect(real.order.find(p => p.id === 'att-top')!.travel ?? 0).toBe(0);
     expect(real.order.find(p => p.id === 'ranged')!.travel ?? 0).toBe(0);
     // Spirit tree cuts travel after tree completes, and deep Wildy exits via lever rather than teleporting.
     expect(real.order.some(p => p.method === 'spirit-tree')).toBe(true);
