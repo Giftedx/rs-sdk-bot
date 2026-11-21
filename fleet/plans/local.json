@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795247830604,
+ "at": 1795247919411,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -352,63 +352,11 @@
    ]
   },
   {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=861 QUANTITY=17 SELL_PRICE=95000 FLOOR_PRICE=95000 RESERVE_ITEMS=0 ORDER_KEY=liveops-msb-861-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1779 QUANTITY=6009 SELL_PRICE=80 FLOOR_PRICE=80 RESERVE_ITEMS=0 ORDER_KEY=liveops-flax-1779-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
    "account": "TrouserSnake",
    "script": "scripts/chain.ts",
    "args": [
     "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=892 QUANTITY=298 SELL_PRICE=2020 FLOOR_PRICE=2020 RESERVE_ITEMS=0 ORDER_KEY=liveops-rarrow-892-1 ORDER_MS=300000 FILL_WAIT_TICKS=120",
     "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1201 QUANTITY=1 SELL_PRICE=157100 FLOOR_PRICE=157100 RESERVE_ITEMS=0 ORDER_KEY=liveops-rkite-1201-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "CoinCock",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=536 QUANTITY=215 SELL_PRICE=5256 FLOOR_PRICE=5256 RESERVE_ITEMS=0 ORDER_KEY=liveops-dbones-536-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "Sausagefest",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1127 QUANTITY=2 SELL_PRICE=80000 FLOOR_PRICE=80000 RESERVE_ITEMS=0 ORDER_KEY=liveops-rplate-1127-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
    ],
    "env": {
     "ROUNDS": "1"
@@ -440,6 +388,47 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=561 QUANTITY=997 SELL_PRICE=241 FLOOR_PRICE=241 RESERVE_ITEMS=0 ORDER_KEY=liveops-nat-561-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=3 EXPECTED_OWNED=0 LIMIT_PRICE=386000 CASH_RESERVE=5000 ORDER_KEY=liveops-yew-ranarr-1 ORDER_MS=300000 FILL_WAIT_TICKS=120",
+    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=861 QUANTITY=4 SELL_PRICE=55713 FLOOR_PRICE=55713 RESERVE_ITEMS=0 ORDER_KEY=liveops-yew-msb-2 ORDER_MS=300000 FILL_WAIT_TICKS=120"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=386000 CASH_RESERVE=5000 ORDER_KEY=liveops-cock-ranarr-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=561 QUANTITY=399 SELL_PRICE=241 FLOOR_PRICE=241 RESERVE_ITEMS=0 ORDER_KEY=liveops-ball-561-1 ORDER_MS=300000 FILL_WAIT_TICKS=120",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=386000 CASH_RESERVE=5000 ORDER_KEY=liveops-ball-ranarr-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
    ],
    "env": {
     "ROUNDS": "1"
