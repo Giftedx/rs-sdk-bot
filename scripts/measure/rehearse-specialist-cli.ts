@@ -155,8 +155,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
                 inventory: expandKitToSave(THIEVING_SPECIALIST_LIVE_KIT),
             }),
         },
-        planTicks: 2065,
-        planSource: '400ms rehearsal 1990..2099t (<=2221t vs #1 2267t, Castle Wars + Super energy(4) + 26 Chocolate cake)',
+        planTicks: 2142,
+        planSource: '400ms rehearsal median across 2084..2217t (<=2221t vs #1 2267t, Castle Wars + Super energy(4) + 26 Chocolate cake)',
         targetCap: 2221,
     },
     {
