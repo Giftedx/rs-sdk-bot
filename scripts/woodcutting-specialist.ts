@@ -627,6 +627,14 @@ if (import.meta.main) {
         if (main.sdk.getState()?.dialog?.isOpen || main.sdk.getState()?.modalOpen) {
             await main.direct({ type: 'closeModal', reason: 'SDK' });
         }
+        // Step west out of Draynor Jail guard range and clear combat_preventlogout before finish() logs out.
+        const endPos = main.sdk.getState()?.player;
+        if (endPos && endPos.worldX >= 3112 && endPos.worldX <= 3130 && endPos.worldZ >= 3236 && endPos.worldZ <= 3258) {
+            const safePot = tryDrinkPrayerPotion(main, 15);
+            if (safePot) await safePot;
+            await main.bot.walkTo(3105, 3250, 2);
+            await waitTicks(main, 16);
+        }
         if (!helperSettled) await Promise.race([helperDone, waitTicks(main, 4)]);
         const totalTicks = main.tick() - t0;
         const finalLvl = main.sdk.getSkill('Woodcutting')?.baseLevel ?? 0;
