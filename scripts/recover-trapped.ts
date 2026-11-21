@@ -9,7 +9,7 @@ import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { BOARD_PLANK_IDS, DISEMBARK_PLANK_IDS, disembark, pickDisembarkPlank, type BoatSession } from '../packages/core/src/boat';
 import { DECK_REACH, goTo, leaveDeck, type Walker } from '../packages/core/src/walk';
 import { inPaterdomusTemple } from './generated/quest-priestperil';
-import { classifyLocation, hubTargetFor, type LocationClassification } from './fleet-health';
+import { classifyLocation, hubTargetFor, isWildernessTile, type LocationClassification } from './fleet-health';
 import { leaveTutorial, onTutorialIsland, walkTarget, walkTargetPersist } from './walk-to';
 
 const root = resolve(import.meta.dir, '..');
@@ -97,8 +97,11 @@ export async function recoverSessionToHub(
 
     const initial = classifyLocation(pos);
     const target = options.target ?? initial.targetHub ?? hubTargetFor(pos);
-    if (!initial.autoFixable) {
+    if (isWildernessTile(pos) || !initial.autoFixable) {
         return { ok: false, kind: initial.kind, detail: initial.summary, from, to: from };
+    }
+    if (isWildernessTile({ worldX: target.x, worldZ: target.z, level: target.level })) {
+        return { ok: false, kind: 'wilderness', detail: `refusing Wilderness recovery target ${target.x},${target.z}`, from, to: from };
     }
 
     if (onTutorialIsland(s.sdk.getState()?.player)) {

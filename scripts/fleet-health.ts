@@ -29,6 +29,7 @@ export const DEFAULT_MAX_RECOVERIES = 2;
 export type TilePos = { worldX: number; worldZ: number; level: number };
 export type LocationKind =
     | 'ok'
+    | 'wilderness'
     | 'tutorial_island'
     | 'paterdomus_trapped'
     | 'ship_deck'
@@ -39,6 +40,9 @@ export type LocationKind =
     | 'entrana_dungeon'
     | 'zanaris'
     | 'off_hub_area';
+
+export const isWildernessTile = (p: TilePos): boolean =>
+    p.worldX >= 2944 && p.worldX <= 3391 && ((p.worldZ >= 3520 && p.worldZ < 6400) || p.worldZ >= 9920);
 
 export interface LocationClassification {
     kind: LocationKind;
@@ -145,6 +149,14 @@ export function classifyLocation(
     const offHub = !!hubs && hubs.size > 0 && area !== undefined && area >= 0 && !hubs.has(area);
     const targetHub = hubTargetFor(pos);
 
+    if (isWildernessTile(pos)) {
+        return {
+            kind: 'wilderness',
+            stranded: true,
+            autoFixable: false,
+            summary: `Wilderness at ${pos.worldX},${pos.worldZ},${pos.level} (manual hold avoids live Wilderness login)`,
+        };
+    }
     if (pos.level === 0 && inBox(pos, 3055, 3155, 3055, 3136)) {
         return { kind: 'tutorial_island', stranded: true, autoFixable: true, targetHub: { x: 3222, z: 3218, level: 0 }, summary: `Tutorial Island at ${pos.worldX},${pos.worldZ}` };
     }
@@ -160,7 +172,8 @@ export function classifyLocation(
     if (pos.level !== 0) {
         return { kind: 'upstairs_stranded', stranded: true, autoFixable: true, targetHub, summary: `upper plane level=${pos.level} at ${pos.worldX},${pos.worldZ}` };
     }
-    if (inBox(pos, 3070, 3155, 9820, 9950)) {
+    // Non-Wilderness Edgeville Dungeon stays south of the Wilderness Chaos Druid boundary (z <= 9919).
+    if (inBox(pos, 3070, 3155, 9820, 9919)) {
         return { kind: 'edgeville_dungeon', stranded: true, autoFixable: true, targetHub: HUB_BANKS.varrockWest, summary: `Edgeville Dungeon at ${pos.worldX},${pos.worldZ}` };
     }
     if (inBox(pos, 2985, 3070, 9730, 9855) || inBox(pos, 3070, 3085, 9730, 9819)) {
@@ -187,7 +200,7 @@ export function classifyLocation(
 export function jobMatchesLocation(job: { script?: string; template?: string; env?: Record<string, string>; args?: string[] } | undefined, kind: LocationKind): boolean {
     if (!job) return false;
     const text = `${job.script ?? ''} ${job.template ?? ''} ${(job.args ?? []).join(' ')} ${Object.entries(job.env ?? {}).map(([k, v]) => `${k}=${v}`).join(' ')}`.toLowerCase();
-    if (kind === 'edgeville_dungeon') return /\bedgeville\b|\btarget=druid\b|\bdruid\b/.test(text) && !/\btaverley_druid\b/.test(text);
+    if (kind === 'edgeville_dungeon') return /\bedgeville\b|\btarget=giant\b|\bgiant\b/.test(text) && !/\btaverley_druid\b/.test(text);
     if (kind === 'dwarven_mine') return /\b(mine|mining|knightssword|thurgo|coal|iron|mithril)\b/.test(text);
     if (kind === 'zanaris') return /\b(jukat|zanaris|lostcity|cosmic)\b/.test(text);
     if (kind === 'paterdomus_trapped') return /\bpriestperil\b/.test(text);
@@ -497,6 +510,7 @@ export async function remediateFleetHealth(
         now?: number;
         maxRecoveries?: number;
         cooldownMs?: number;
+        recoveryTimeoutMs?: number;
         freeMemGB?: () => number;
         runRecovery?: (account: string, target?: { x: number; z: number; level: number }) => Promise<{ ok: boolean; detail: string }>;
         clearResolved?: boolean;
@@ -517,13 +531,26 @@ export async function remediateFleetHealth(
     let recoveriesDone = 0;
 
     const freeGB = opts.freeMemGB ?? (() => freemem() / 2 ** 30);
+    const timeoutMs = opts.recoveryTimeoutMs ?? 180_000;
     const defaultRunRecovery = async (account: string, target?: { x: number; z: number; level: number }) => {
         const argv = [process.execPath, join(audit.root, 'scripts', 'recover-trapped.ts'), account, '900', ...(target ? [`--target=${target.x},${target.z},${target.level}`] : [])];
         const env = { ...process.env, DEMO_OK: process.env.DEMO_OK ?? '1' };
-        const proc = Bun.spawnSync(argv, { cwd: audit.root, env, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
-        const out = `${proc.stdout?.toString() ?? ''}\n${proc.stderr?.toString() ?? ''}`.trim();
-        const tail = out.split(/\r?\n/).slice(-3).join(' | ');
-        return { ok: proc.exitCode === 0 && /RESULT ok\b/.test(out), detail: tail || `exit=${proc.exitCode}` };
+        const proc = Bun.spawn(argv, { cwd: audit.root, env, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
+        let timedOut = false;
+        const timer = setTimeout(() => { timedOut = true; try { proc.kill(); } catch { /* already exited */ } }, timeoutMs);
+        try {
+            const [exitCode, stdoutText, stderrText] = await Promise.all([
+                proc.exited,
+                proc.stdout ? new Response(proc.stdout).text() : Promise.resolve(''),
+                proc.stderr ? new Response(proc.stderr).text() : Promise.resolve(''),
+            ]);
+            const out = `${stdoutText}\n${stderrText}`.trim();
+            const tail = out.split(/\r?\n/).slice(-3).join(' | ');
+            if (timedOut) return { ok: false, detail: `timeout after ${timeoutMs}ms${tail ? ` | ${tail}` : ''}` };
+            return { ok: exitCode === 0 && /RESULT ok\b/.test(out), detail: tail || `exit=${exitCode}` };
+        } finally {
+            clearTimeout(timer);
+        }
     };
     const runner = opts.runRecovery ?? defaultRunRecovery;
 
@@ -549,7 +576,7 @@ export async function remediateFleetHealth(
             continue;
         }
 
-        if (item.fixAction !== 'recover_location') continue;
+        if (item.fixAction !== 'recover_location' || !item.location.autoFixable || (item.pos && isWildernessTile(item.pos))) continue;
 
         const prev = state.attempts[key];
         if (prev && now - prev.at < cooldownMs) {

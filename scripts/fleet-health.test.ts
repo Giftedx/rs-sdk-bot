@@ -43,6 +43,12 @@ test('classifyLocation identifies ship decks, sealed ship holds, dungeons, Pater
     expect(classifyLocation({ worldX: 3095, worldZ: 9830, level: 0 }, { labels, hubAreas }).kind).toBe('edgeville_dungeon');
     expect(classifyLocation({ worldX: 3035, worldZ: 9803, level: 0 }, { labels, hubAreas }).kind).toBe('dwarven_mine');
     expect(classifyLocation({ worldX: 3077, worldZ: 9774, level: 0 }, { labels, hubAreas }).kind).toBe('dwarven_mine');
+    const wildSurface = classifyLocation({ worldX: 3100, worldZ: 3530, level: 0 }, { labels, hubAreas });
+    expect(wildSurface.kind).toBe('wilderness');
+    expect(wildSurface.autoFixable).toBe(false);
+    const wildEdge = classifyLocation({ worldX: 3115, worldZ: 9928, level: 0 }, { labels, hubAreas });
+    expect(wildEdge.kind).toBe('wilderness');
+    expect(wildEdge.autoFixable).toBe(false);
     const entrana = classifyLocation({ worldX: 2861, worldZ: 9737, level: 0 }, { labels, hubAreas });
     expect(entrana.kind).toBe('entrana_dungeon');
     expect(entrana.autoFixable).toBe(false);
@@ -60,7 +66,8 @@ test('auditFleetHealth catches trapped/looping accounts while guarding owner hol
         ['bravehardon', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
         ['unsheathed', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
         ['tossthecaber', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
-        ['gooddruid', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
+        ['goodgiant', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
+        ['wildybot', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
         ['healed', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
     ]);
 
@@ -74,14 +81,15 @@ test('auditFleetHealth catches trapped/looping accounts while guarding owner hol
         { name: 'BraveHardon', server: 'rs-sdk-demo.fly.dev', pos: { x: 2686, z: 3268, level: 1 }, at: now - 1000, result: 'RESULT fail Error: combat travel aborted: level !== 0' },
         { name: 'Unsheathed', server: 'rs-sdk-demo.fly.dev', pos: { x: 3095, z: 9830, level: 0 }, at: now - 1000, result: 'RESULT fail Error: combat bank return unavailable' },
         { name: 'TossTheCaber', server: 'rs-sdk-demo.fly.dev', pos: { x: 2618, z: 3332, level: 0 }, at: now - 1000, result: 'RESULT ok fleet-trade' },
-        { name: 'GoodDruid', server: 'rs-sdk-demo.fly.dev', pos: { x: 3115, z: 9928, level: 0 }, at: now - 1000, result: 'RESULT ok' },
+        { name: 'GoodGiant', server: 'rs-sdk-demo.fly.dev', pos: { x: 3117, z: 9850, level: 0 }, at: now - 1000, result: 'RESULT ok' },
+        { name: 'WildyBot', server: 'rs-sdk-demo.fly.dev', pos: { x: 3115, z: 9928, level: 0 }, at: now - 1000 },
         { name: 'Healed', server: 'rs-sdk-demo.fly.dev', pos: { x: 3185, z: 3436, level: 0 }, at: now - 1000, result: 'RESULT ok' },
     ];
 
     const swarmPlan = {
         jobs: [
             { name: 'u', account: 'Unsheathed', script: 'scripts/gather-combat.ts', args: ['Unsheathed', '6000', 'taverley_druid'], enabled: true },
-            { name: 'g', account: 'GoodDruid', script: 'scripts/gather-combat.ts', args: ['GoodDruid', '6000', 'druid'], enabled: true },
+            { name: 'g', account: 'GoodGiant', script: 'scripts/gather-combat.ts', args: ['GoodGiant', '6000', 'giant'], enabled: true },
         ],
     };
 
@@ -115,7 +123,9 @@ test('auditFleetHealth catches trapped/looping accounts while guarding owner hol
     expect(byName.get('Unsheathed')?.location.kind).toBe('edgeville_dungeon');
     expect(byName.get('Unsheathed')?.fixAction).toBe('recover_location');
     expect(byName.get('TossTheCaber')?.issues).toEqual([]);
-    expect(byName.get('GoodDruid')?.issues).toEqual([]);
+    expect(byName.get('GoodGiant')?.issues).toEqual([]);
+    expect(byName.get('WildyBot')?.location.kind).toBe('wilderness');
+    expect(byName.get('WildyBot')?.fixAction).toBe('manual_hold');
     expect(byName.get('Healed')?.fixAction).toBe('clear_stale_health_stop');
     expect(byName.get('PickpockDick')?.issues).toEqual([]);
     expect(byName.get('StuckWorker')?.fixAction).toBe('manual_hold');
@@ -216,4 +226,19 @@ test('recoverSessionToHub climbs out of a sealed ship hold, disembarks the deck 
     } finally {
         clearInterval(timer);
     }
+});
+
+test('recoverSessionToHub refuses Wilderness positions and targets without dispatching any game action', async () => {
+    let inputs = 0;
+    for (const pos of [{ worldX: 3100, worldZ: 3530, level: 0 }, { worldX: 3115, worldZ: 9928, level: 0 }]) {
+        const s: any = {
+            tick: () => 1,
+            sdk: { getState: () => ({ player: { ...pos, lifeId: 1, respawnCount: 0, isDead: false } }) },
+            bot: { interactLoc: async () => { inputs++; return { success: true }; }, walkTo: async () => { inputs++; return { success: true }; } },
+        };
+        const res = await recoverSessionToHub(s, { capTicks: 100 });
+        expect(res.ok).toBe(false);
+        expect(res.kind).toBe('wilderness');
+    }
+    expect(inputs).toBe(0);
 });
