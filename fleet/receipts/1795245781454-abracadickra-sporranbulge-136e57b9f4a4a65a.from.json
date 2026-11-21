@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795245781454-abracadickra-sporranbulge-136e57b9f4a4a65a",
  "account": "Abracadickra",
  "partner": "SporranBulge",
@@ -12,6 +12,12 @@
  "claim": "3dfb5b7f-c79f-43d0-a84c-84ae71be2dfe",
  "count": 0,
  "ok": false,
- "at": 1795245811097,
- "detail": "trade claimed"
+ "at": 1795245918973,
+ "detail": "Error: route to 3183, 3440: precondition no route to 3183,3440,0",
+ "logout": {
+  "attemptId": "1795245811106-0000008244-0000000001",
+  "at": 1795245917174,
+  "sha256": "ffdce2673313cd6db0dc367274e109b33c45341e934af79e3db32fb42248a94a"
+ },
+ "screen": false
 }
