@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795288538530-fishandchips-fatstack-shark",
  "account": "FishAndChips",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Shark",
  "requested": 6,
  "claim": "b448bb76-6995-45fa-ba2b-330002efdcc5",
- "count": 0,
- "ok": false,
- "at": 1795288624697,
- "detail": "trade claimed"
+ "count": 6,
+ "ok": true,
+ "at": 1795288766507,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 6,
+  "after": 0
+ },
+ "bank": {
+  "count": 6,
+  "at": 1795288696542
+ },
+ "logout": {
+  "attemptId": "1795288624706-0000010236-0000000001",
+  "at": 1795288766496,
+  "sha256": "f59b94e657ad4ecf311c0e2d624ddaf9e2979d87c559df920b50c0f410ef4bbb"
+ },
+ "screen": true
 }
