@@ -2,8 +2,19 @@ import {test,expect} from 'bun:test';
 import {createHash} from 'node:crypto';
 import {inventoryRecipes,productionInputReserves,productionEffect,runInventoryProduction,runInventoryBank,type ProductionIO} from './microbot-production';
 test('native chicken stew and weapon poison variants append without changing any of the qualified178 descriptors',()=>{
- const recipes=inventoryRecipes();expect(recipes).toHaveLength(184);expect(createHash('sha256').update(JSON.stringify(recipes.slice(0,178))).digest('hex')).toBe('725b9e6775940ce8edbd2e73b083fc6db37d6c7832be746d12895920a138a126');
- expect(recipes.slice(178).map(r=>r.name)).toEqual(['prepare:chicken-stew','prepare:uncooked-stew-chicken','poison:dragon-dagger','poison:dragon-spear','poison:rune-arrow','brew:weapon_poison']);
+ const recipes=inventoryRecipes();expect(recipes).toHaveLength(209);expect(createHash('sha256').update(JSON.stringify(recipes.slice(0,178))).digest('hex')).toBe('725b9e6775940ce8edbd2e73b083fc6db37d6c7832be746d12895920a138a126');
+ expect(recipes.slice(178).map(r=>r.name)).toEqual([
+  'prepare:chicken-stew','prepare:uncooked-stew-chicken','poison:dragon-dagger','poison:dragon-spear','poison:rune-arrow','brew:weapon_poison',
+  'strip:swamp-toad',
+  'decant:prayer_restore','decant2:prayer_restore','decant31:prayer_restore',
+  'decant:super_attack','decant2:super_attack','decant31:super_attack',
+  'decant:super_strength','decant2:super_strength','decant31:super_strength',
+  'decant:super_defense','decant2:super_defense','decant31:super_defense',
+  'decant:ranging_potion','decant2:ranging_potion','decant31:ranging_potion',
+  'decant:super_energy','decant2:super_energy','decant31:super_energy',
+  'decant:agility_potion','decant2:agility_potion','decant31:agility_potion',
+  'decant:super_antipoison','decant2:super_antipoison','decant31:super_antipoison',
+ ]);
  for(const[name,raw,product]of[['prepare:chicken-stew',1921,1999],['prepare:uncooked-stew-chicken',1997,2001]]as const){const r=recipes.find(r=>r.name===name)!;expect(r.inputs).toEqual([{id:raw===1921?2140:1997,units:1},{id:raw===1921?1921:2140,units:1}]);expect(r.level).toBe(25);const b={items:{[raw]:1,2140:1,995:37},xp:100},a={items:{[product]:1,995:37},xp:100};expect(productionEffect(r,b,a)).toBe('made');expect(productionEffect(r,b,{...a,items:{...a.items,995:38}})).toBe('invalid');}
 });
 test('every inventory recipe resolves native IDs and preserves tools in its receipt',()=>{
@@ -211,4 +222,36 @@ test('weapon poison recipes target canonical unpoisoned items, weapon_poison, po
  expect(byName.get('poison:dragon-spear')).toMatchObject({inputs:[{id:1249,units:1},{id:187,units:1}],product:1263,byproducts:[{id:229,units:1}],level:1,xp:false,members:true});
  expect(byName.get('poison:rune-arrow')).toMatchObject({inputs:[{id:892,units:5},{id:187,units:1}],product:893,productUnits:5,byproducts:[{id:229,units:1}],level:1,xp:false,members:true});
  expect(byName.get('brew:weapon_poison')).toMatchObject({inputs:[{id:241,units:1},{id:105,units:1}],product:187,level:60,xp:true,members:true});
+ expect(byName.get('strip:swamp-toad')).toMatchObject({inputs:[{id:2150,units:1}],product:2152,itemOption:1,level:1,xp:false,members:true});
+ expect(byName.get('decant:prayer_restore')).toMatchObject({inputs:[{id:139,units:2}],product:2434,byproducts:[{id:141,units:1}],level:1,xp:false,members:true});
+ expect(byName.get('decant2:super_energy')).toMatchObject({inputs:[{id:3020,units:2}],product:3016,byproducts:[{id:229,units:1}],level:1,xp:false,members:true});
+ expect(byName.get('decant31:agility_potion')).toMatchObject({inputs:[{id:3034,units:1},{id:3038,units:1}],product:3032,byproducts:[{id:229,units:1}],level:1,xp:false,members:true});
+});
+
+test('decant production pairs two slots of the same potion and deposits product plus remainder',async()=>{
+ const r=inventoryRecipes().find(x=>x.name==='decant:prayer_restore')!;
+ const pack:{id:number;count:number;slot:number;name:string}[]=[];
+ const bank=new Map([[139,2]]);
+ let bankOpen=false,generation=0;
+ const bankItems=()=>[...bank.entries()].filter(([,c])=>c>0).map(([id,count],slot)=>({id,count,slot,name:'item-'+id}));
+ const s:any={name:'Owned',tick:()=>0,ended:new Promise(()=>{}),onTick:()=>()=>{},
+  sdk:{getInventory:()=>pack,getSkill:()=>({level:99}),getSkillXp:()=>0,getDialog:()=>({isOpen:false}),
+   getState:()=>({player:{lifeId:1,respawnCount:0},inventory:pack,bank:{isOpen:bankOpen,items:bankItems()},interface:{isOpen:false},dialog:{isOpen:false}}),
+   sendUseItemOnItem:async(a:number,b:number)=>{
+    expect(a).not.toBe(b);
+    const s1=pack.find(p=>p.slot===a)!,s2=pack.find(p=>p.slot===b)!;
+    expect([s1.id,s2.id]).toEqual([139,139]);
+    s1.id=2434;s1.name='item-2434';s2.id=141;s2.name='item-141';
+    return{success:true};
+   }},
+  bankObservation:()=>({generation,items:bankItems()}),
+  bot:{openBank:async()=>{bankOpen=true;generation++;return{success:true};},closeBank:async()=>{bankOpen=false;return{success:true};},
+   withdrawItem:async(item:{id:number},n:number)=>{const held=bank.get(item.id)??0;expect(held).toBeGreaterThanOrEqual(n);bank.set(item.id,held-n);for(let i=0;i<n;i++)pack.push({id:item.id,count:1,slot:pack.length,name:'item-'+item.id});generation++;return{success:true};},
+   depositItem:async(item:{id:number})=>{const idx=pack.findIndex(p=>p.id===item.id);if(idx>=0){bank.set(item.id,(bank.get(item.id)??0)+pack[idx]!.count);pack.splice(idx,1);}generation++;return{success:true};}},
+  direct:async()=>({success:true})};
+ const out=await runInventoryBank(s,r,{maximum:1,cap:20,maxAttempts:1,members:true});
+ expect(out.ok).toBe(true);
+ expect(bank.get(2434)).toBe(1);
+ expect(bank.get(141)).toBe(1);
+ expect(bank.get(139)).toBe(0);
 });

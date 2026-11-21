@@ -354,4 +354,11 @@ test('gang-tribrid-bis checks quest blockers, BiS kit, 4h endurance, and malform
         'no Cooked karambwan (25 short)',
         'trip endurance 0.0 h under 4.0 h floor (limiting: cooked karambwan)',
     ]));
+
+    const withFrem = pickKit({ ...fullAccount, quests: new Set([...fullAccount.quests, 'the fremennik trials']) }, gear, rule, NOW);
+    expect(withFrem.ready).toBe(true);
+    expect(withFrem.notes).toContain('no Berserker helm (upgrade over Rune full helm after The Fremennik Trials)');
+    expect(TRIBRID_BIS_ITEMS.berserkerHelm).toBe(3751);
+    expect(shopSource('Berserker helm', 'viking_helmet_crush', shops)).toContain('skulgrimen');
+    expect(shopSource('Waterskin(4)', 'water_skin4', shops)).toContain('shantay');
 });

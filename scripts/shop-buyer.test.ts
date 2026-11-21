@@ -410,3 +410,23 @@ test('runDialogBuyStep purchases Tenzing climbing boots and enforces coin reserv
     // Reserve + remaining spend guard stops when remaining budget cannot afford another pair.
     expect(await runDialogBuyStep(sdk, bot, PROFILES.tenzing!.npc, PROFILES.tenzing!.dialogBuy!, 80, 12, 5, async () => {})).toEqual({ bought: 0, spent: 0 });
 });
+
+test('mainland Skulgrimen, Shantay, black armour, Wydin chocolate, and Jiminua quest profiles resolve cleanly without Wilderness', () => {
+    expect(PROFILES.skulgrimen!.npc.test('Skulgrimen')).toBe(true);
+    expect(PROFILES.skulgrimen!.npcSpot).toEqual({ x: 2663, z: 3694 });
+    expect(PROFILES.skulgrimen!.npcSpot.x).toBeLessThan(2944);
+    expect(selectItems(PROFILES.skulgrimen!.items, 'berserker helm|warrior helm|archer helm|farseer helm')).toHaveLength(4);
+    expect(PROFILES.shantay!.npc.test('Shantay')).toBe(true);
+    expect(selectItems(PROFILES.shantay!.items, 'waterskin|bronze bar')).toHaveLength(2);
+    expect(PROFILES.horvik!.npc.test('Horvik')).toBe(true);
+    expect(selectItems(PROFILES.horvik!.items, 'black platebody')).toHaveLength(1);
+    expect(selectItems(PROFILES.horvik!.items, 'steel platebody')).toHaveLength(0);
+    expect(PROFILES.louie!.npc.test('Louie legs')).toBe(true);
+    expect(selectItems(PROFILES.louie!.items, 'black platelegs')).toHaveLength(1);
+    expect(PROFILES.valaine!.npc.test('Valaine')).toBe(true);
+    expect(PROFILES.valaine!.npcSpot.level).toBe(1);
+    expect(selectItems(PROFILES.valaine!.items, 'black full helm|black platelegs')).toHaveLength(2);
+    expect(selectItems(PROFILES.wydin_choc!.items, 'cheese|chocolate bar')).toHaveLength(2);
+    expect(selectItems(PROFILES.gem_trader!.items, 'uncut emerald|emerald')).toHaveLength(2);
+    expect(selectItems(PROFILES.jiminua!.items, 'antipoison|papyrus|charcoal')).toHaveLength(3);
+});

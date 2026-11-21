@@ -111,10 +111,10 @@ export function conf0Drops(target:string):RegExp{
 }
 export function genericCombatNpc<T extends {id:number;distance:number;reachable?:boolean;inCombat?:boolean;targetIndex?:number}>(target:string,npcs:readonly T[],selfSlot?:number):T|undefined{
     const baseId=target==='giant'?GIANT.npc:target==='druid'?npcId('chaos druid'):target==='unicorn'?npcId('unicorn'):target==='wizard'?npcId('wizard'):undefined;
-    const id=baseId??(target==='taverley_druid'?npcId('chaos druid'):target==='taverley_black_dragon'?npcId('black dragon'):target==='taverley_blue_dragon'?npcId('blue dragon'):undefined);
+    const ids=target==='taverley_black_knight'?new Set([178,179]):new Set([baseId??(target==='taverley_druid'?npcId('chaos druid'):target==='taverley_black_dragon'?npcId('black dragon'):target==='taverley_blue_dragon'?npcId('blue dragon'):undefined)]);
     const owned = (n:T) => selfSlot !== undefined && Number.isSafeInteger(selfSlot) && selfSlot >= 0 &&
         n.inCombat === true && n.targetIndex === 32768 + selfSlot;
-    return npcs.filter(n => n.id === id && n.reachable === true &&
+    return npcs.filter(n => ids.has(n.id) && n.reachable === true &&
         (owned(n) || n.inCombat === false && n.targetIndex === -1) &&
         Number.isFinite(n.distance) && n.distance >= 0 && n.distance <= 15)
         .sort((a,b) => Number(owned(b)) - Number(owned(a)) || a.distance - b.distance)[0];
@@ -1078,13 +1078,20 @@ export const CONFIGS: Record<string, {
         npc: /^(?:hill )?giant$/i,
         spot: { x: 2545, z: 3144 }, // Surface Giant117 camp
         bankSpot: { x: 2655, z: 3283 }, // Ardougne south bank
-        drops: /(big bones|limpwurt root|iron arrow|nature rune|cosmic rune|law rune|herb)/i,
+        drops: /(big bones|limpwurt root|iron arrow|nature rune|cosmic rune|law rune|death rune|chaos rune|uncut |herb)/i,
     },
     taverley_druid: {
         npc: /^chaos druid$/i,
         spot: { x: 2933, z: 9849 }, // Taverley Dungeon Chaos Druids (non-Wilderness)
         bankSpot: { x: 2946, z: 3368 }, // Falador West Bank
         drops: /(herb|snape grass|nature rune|law rune|air rune|vial of water|uncut )/i,
+        taverley: true,
+    },
+    taverley_black_knight: {
+        npc: /^black knight$/i,
+        spot: { x: 2939, z: 9812 }, // Taverley Dungeon Black Knights before Dusty gate (non-Wilderness)
+        bankSpot: { x: 2946, z: 3368 }, // Falador West Bank
+        drops: /(cosmic rune|death rune|chaos rune|law rune|steel bar|mithril arrow|herb)/i,
         taverley: true,
     },
     taverley_scales: {
@@ -1341,6 +1348,12 @@ try {
         const invSpace = 28 - s.sdk.getInventory().length;
         if (invSpace <= 1) {
             await bankUntil();
+            continue;
+        }
+        if (targetConf.requireTelegrab && needsBankPrep()) {
+            const hadLoot = s.sdk.getInventory().some(i => conf.drops.test(i.name));
+            try { await bankUntil(); }
+            catch (e) { if (hadLoot || itemsLooted > 0) break; throw e; }
             continue;
         }
 

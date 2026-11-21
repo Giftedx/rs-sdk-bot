@@ -33700,6 +33700,1430 @@
    "maxBatch": 1000
   },
   {
+   "id": "recipe:inventory:decant:agility_potion",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant%3Aagility_potion%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "3032": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "3034": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant:agility_potion",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant:prayer_restore",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant%3Aprayer_restore%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2434": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "139": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant:prayer_restore",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant:ranging_potion",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant%3Aranging_potion%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2444": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "169": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant:ranging_potion",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant:super_antipoison",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant%3Asuper_antipoison%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2448": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "181": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant:super_antipoison",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant:super_attack",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant%3Asuper_attack%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2436": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "145": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant:super_attack",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant:super_defense",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant%3Asuper_defense%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2442": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "163": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant:super_defense",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant:super_energy",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant%3Asuper_energy%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "3016": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "3018": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant:super_energy",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant:super_strength",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant%3Asuper_strength%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2440": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "157": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant:super_strength",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant2:agility_potion",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant2%3Aagility_potion%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "3032": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "3036": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant2:agility_potion",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant2:prayer_restore",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant2%3Aprayer_restore%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2434": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "141": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant2:prayer_restore",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant2:ranging_potion",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant2%3Aranging_potion%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2444": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "171": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant2:ranging_potion",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant2:super_antipoison",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant2%3Asuper_antipoison%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2448": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "183": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant2:super_antipoison",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant2:super_attack",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant2%3Asuper_attack%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2436": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "147": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant2:super_attack",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant2:super_defense",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant2%3Asuper_defense%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2442": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "165": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant2:super_defense",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant2:super_energy",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant2%3Asuper_energy%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "3016": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "3020": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant2:super_energy",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant2:super_strength",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant2%3Asuper_strength%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2440": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "159": 2
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant2:super_strength",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant31:agility_potion",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant31%3Aagility_potion%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "3032": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "3034": 1,
+    "3038": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant31:agility_potion",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant31:prayer_restore",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant31%3Aprayer_restore%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2434": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "139": 1,
+    "143": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant31:prayer_restore",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant31:ranging_potion",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant31%3Aranging_potion%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2444": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "169": 1,
+    "173": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant31:ranging_potion",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant31:super_antipoison",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant31%3Asuper_antipoison%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2448": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "181": 1,
+    "185": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant31:super_antipoison",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant31:super_attack",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant31%3Asuper_attack%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2436": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "145": 1,
+    "149": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant31:super_attack",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant31:super_defense",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant31%3Asuper_defense%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2442": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "163": 1,
+    "167": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant31:super_defense",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant31:super_energy",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant31%3Asuper_energy%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "3016": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "3018": 1,
+    "3022": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant31:super_energy",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "recipe:inventory:decant31:super_strength",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22decant31%3Asuper_strength%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2440": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "157": 1,
+    "161": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "decant31:super_strength",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
    "id": "recipe:inventory:dough:bread:bowl_water",
    "routeId": "skiller:cooking:inventory",
    "ladderIds": [],
@@ -44020,6 +45444,65 @@
    "maxBatch": 1000
   },
   {
+   "id": "recipe:inventory:strip:swamp-toad",
+   "routeId": "skiller:herblore:inventory",
+   "ladderIds": [],
+   "sourceEntry": "scripts/aio-skiller.ts",
+   "step": {
+    "script": "scripts/aio-skiller.ts",
+    "args": [
+     "bank-job",
+     "--job=%7B%22family%22%3A%22inventory%22%2C%22recipe%22%3A%22strip%3Aswamp-toad%22%2C%22target%22%3A1%2C%22batch%22%3A13%2C%22cap%22%3A20000%2C%22returnTicks%22%3A300%2C%22members%22%3Atrue%2C%22reserve%22%3A0%7D"
+    ],
+    "env": {}
+   },
+   "source": "scripts/microbot-bank-jobs.ts",
+   "effects": {
+    "items": {
+     "2152": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "2150": 1
+   },
+   "requirements": {
+    "levels": {
+     "herblore": 1
+    },
+    "items": {},
+    "facts": {
+     "fact": "members"
+    }
+   },
+   "members": true,
+   "execution": {
+    "bankJob": {
+     "family": "inventory",
+     "recipe": "strip:swamp-toad",
+     "target": 1,
+     "batch": 13,
+     "cap": 20000,
+     "returnTicks": 300,
+     "members": true,
+     "reserve": 0
+    },
+    "outputPerUnit": 1
+   },
+   "maxBatch": 1000
+  },
+  {
    "id": "recipe:inventory:tip-bolts:barbed_bolt",
    "routeId": "skiller:fletching:inventory",
    "ladderIds": [],
@@ -52134,6 +53617,118 @@
    "maxBatch": 1000
   },
   {
+   "id": "shop:baker:1891",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "baker",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Cake$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "75",
+     "FLOAT": "1075",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_ardougne_east/configs/ardougne_east.inv:25",
+   "effects": {
+    "items": {
+     "1891": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 75
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:baker:1891"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 75
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:baker:2309",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "baker",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Bread$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "18",
+     "FLOAT": "1018",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_ardougne_east/configs/ardougne_east.inv:24",
+   "effects": {
+    "items": {
+     "2309": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 18
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:baker:2309"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 18
+   },
+   "maxBatch": 1000
+  },
+  {
    "id": "shop:betty:221",
    "routeId": "market:shop-buy",
    "ladderIds": [],
@@ -56985,6 +58580,286 @@
      "STOCK_TARGET"
     ],
     "spendPerUnit": 15
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:shantay:1937",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "shantay",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Jug of water$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "2",
+     "FLOAT": "1002",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_desert/configs/shantaypass.inv:13",
+   "effects": {
+    "items": {
+     "1937": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 2
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:shantay:1937"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 2
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:shantay:2347",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "shantay",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Hammer$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "2",
+     "FLOAT": "1002",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_desert/configs/shantaypass.inv:22",
+   "effects": {
+    "items": {
+     "2347": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 2
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:shantay:2347"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 2
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:shantay:2349",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "shantay",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Bronze bar$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "12",
+     "FLOAT": "1012",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_desert/configs/shantaypass.inv:20",
+   "effects": {
+    "items": {
+     "2349": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 12
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:shantay:2349"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 12
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:shantay:314",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "shantay",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Feather$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "3",
+     "FLOAT": "1003",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_desert/configs/shantaypass.inv:21",
+   "effects": {
+    "items": {
+     "314": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 3
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:shantay:314"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 3
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:shantay:946",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "shantay",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Knife$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "9",
+     "FLOAT": "1009",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_desert/configs/shantaypass.inv:16",
+   "effects": {
+    "items": {
+     "946": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 9
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:shantay:946"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 9
    },
    "maxBatch": 1000
   },

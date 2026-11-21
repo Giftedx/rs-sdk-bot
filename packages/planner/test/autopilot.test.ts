@@ -5,7 +5,7 @@ import { alchSupplies } from '../src/alch-plan';
 import { orderRefusal } from '../../core/src/order-refusal';
 import { DRAIN_RESULT } from '../src/autopilot';
 import { AIR_STOCK, NATURE_STOCK, ARROW_LOW, ARROW_STOCK, FEATHER_STOCK, FIRE_STOCK, BONE_KEEP, BONE_PURSE, BONE_SKILL, BONE_START, LOWE_STOCK, WEAPON, WEAPON_HELD, WEAPON_MARKET, AIO_PLACES, TRAIN_SHARE, aioTemplates, combatLevel, CAPACITY, STRIKE_TILE, COW_BANDS, COW_FIELD_CAPACITY, TROOPER_FIELD_CAPACITY, FEATHER_TARGET, KNIGHT_SHARE, KNIGHT_SPOTS, SHARED, recoveringOwnerJobs, accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, CHICKEN_PENS, PEN_QUEST_POINTS, type Acct, type Inputs, type Template } from '../src/autopilot';
-import { PILOT_FALLBACK_SHARE, selfServePilot, GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, STEW_BATCH, UNF_POTIONS, makerChains, priceTable, norm, usableTool } from '../src/autopilot';
+import { PILOT_FALLBACK_SHARE, selfServePilot, GEM_RINGS, MAKE_BATCH, RING_BATCH, RUNE_ARROW_COST, RUNE_ARROW_SPEND, SPECIALIST_STAGE_BILLS, specialistStagingNeeds, buildBand, STEW_BATCH, UNF_POTIONS, makerChains, priceTable, norm, usableTool } from '../src/autopilot';
 
 const side = 'claude-cloud';
 // A fixture that can pick the knights (Thieving 55) has 20 Hitpoints, so the frail rule of the goldfarm job
@@ -2972,7 +2972,7 @@ test('squadHeld counts 4-dose and super potions cleanly, keeps karambwans separa
     expect(parsed.items['ranarr potion (unf)']).toBe(5);
     expect(parsed.items['unidentified ranarr']).toBe(6);
 
-    const squad: SquadInput = { active: true, hours: 4, all: ['Hunter'], members: [{ name: 'Hunter', items: { ...Object.fromEntries(Object.keys(SQUAD_HOURLY).filter(i => i !== 'food').map(i => [i === 'arrow' ? 'rune arrow' : i, 1000])), shark: 500, 'ring of recoil': 10, 'climbing boot': 5, 'dragon dagger(p)': 5, 'magic shortbow': 5, 'rune full helm': 5, 'rune platebody': 5, 'rune plateleg': 5, 'rune kiteshield': 5 } }] };
+    const squad: SquadInput = { active: true, hours: 4, all: ['Hunter'], members: [{ name: 'Hunter', items: { ...Object.fromEntries(Object.keys(SQUAD_HOURLY).filter(i => i !== 'food').map(i => [i === 'arrow' ? 'rune arrow' : i, 1000])), shark: 500, 'ring of recoil': 10, 'climbing boot': 5, 'dragon dagger(p)': 5, 'magic shortbow': 5, 'berserker helm': 5, 'rune full helm': 5, 'rune platebody': 5, 'rune plateleg': 5, 'rune kiteshield': 5 } }] };
     const donorItems = { black_dragonhide_body: 10, black_dragonhide_chaps: 10, black_dragon_vambraces: 10 };
     const out = plan(inputs([acct('Hunter', {}, { coin: 100 }), acct('Crafter', {}, donorItems)], { templates: [], bill: [], squad, stock: [{ name: 'Crafter', side, items: donorItems }] }));
     expect(out.find(x => x.account === 'Hunter')?.send).toBeUndefined();
@@ -3579,5 +3579,85 @@ describe('pilot fallback for a free account', () => {
         const listed = plan(aioInputs([chopper()], ['aio-yews']))[0]!, fallback = run([chopper()], { pilotFallback: true })[0]!;
         expect(fallback.template?.id).toBe('aio-yews');
         expect(fallback.value).toBeCloseTo(listed.value * PILOT_FALLBACK_SHARE, 6);
+    });
+});
+
+describe('continuous mainland supplies, strict 4-dose decanting, quest safety and specialist staging', () => {
+    test('squad-vial-of-water uses ardy and new mainland supply chains cover nails, toads, planks, chocolate cake and dueling rings', () => {
+        const supply = squadSupplies();
+        const byId = new Map(supply.map(t => [t.id, t]));
+        expect(byId.get('squad-vial-of-water')?.resources).toEqual(['shop:ardy']);
+        expect(byId.get('squad-berserker-helm')?.resources).toEqual(['shop:skulgrimen']);
+        expect(byId.get('squad-berserker-helm')?.needs).toMatchObject({ quests: ['The Fremennik Trials'], skills: { Hitpoints: 45 } });
+        expect(byId.get('squad-smith-steel-nails')?.production).toMatchObject({ output: 'nail', outputPerUnit: 2, inputs: { 'steel bar': 1 } });
+        expect(byId.get('squad-chocolate-cake')?.production).toMatchObject({ output: 'chocolate cake', inputs: { cake: 1, 'chocolate bar': 1 } });
+        expect(byId.get('squad-strip-swamp-toad')?.production).toMatchObject({ output: "toad's leg", inputs: { 'swamp toad': 1 } });
+        expect(byId.get('squad-ring-of-dueling')?.production).toMatchObject({ output: 'ring of dueling(8)', inputs: { 'emerald ring': 1, 'cosmic rune': 1, 'air rune': 3 } });
+        expect(byId.get('squad-barbarian-planks')?.script).toBe('scripts/chain.ts');
+        expect(byId.get('squad-barbarian-planks')?.args).toContain('scripts/walk-to.ts 2552 3574');
+        expect(byId.get('squad-white-berries')?.args).toContain('scripts/walk-to.ts 2262 3168');
+        expect(byId.get('squad-gnome-toads')?.args).toContain('scripts/walk-to.ts 2417 3512');
+    });
+
+    test('strictOutput keeps 3-dose potions intact for squad trade unless a 4-dose-only demand exists, while partial 2-dose vials decant cleanly', () => {
+        const decantOnly = catalogue().filter(t => t.id === 'squad-decant-prayer_restore' || t.id === 'squad-decant2-prayer_restore');
+        const holder = acct('PotionMaker', { Herblore: 38 }, { 'prayer potion(3)': 6 });
+        const squadOnly = plan(inputs([holder], {
+            templates: decantOnly,
+            bill: [],
+            squad: { active: true, hours: 4, members: [{ name: 'Hunter', items: {} }] },
+        }));
+        expect(squadOnly[0]!.template).toBeUndefined();
+
+        const forSpecialist = plan(inputs([holder], {
+            templates: decantOnly,
+            bill: [],
+            specialists: ['hitpoints'],
+        }));
+        expect(forSpecialist[0]!.template?.id).toBe('squad-decant-prayer_restore');
+
+        const twoDoseHolder = acct('HalfMaker', { Herblore: 38 }, { 'prayer potion(2)': 4 });
+        const recoverPartial = plan(inputs([twoDoseHolder], {
+            templates: decantOnly,
+            bill: [],
+            squad: { active: true, hours: 4, members: [{ name: 'Hunter', items: {} }] },
+        }));
+        expect(recoverPartial[0]!.template?.id).toBe('squad-decant2-prayer_restore');
+    });
+
+    test('Inputs.specialists drives mainland supply demand from free stock and excludes held specialist counts once gathered', () => {
+        expect(Object.keys(SPECIALIST_STAGE_BILLS)).toEqual(expect.arrayContaining(['hitpoints', 'thieving-live', 'ranged-live', 'fletching-live']));
+        const bare = acct('Supplier', { Cooking: 50 }, { coin: 10_000, cake: 10, 'chocolate bar': 10 });
+        const needs = specialistStagingNeeds(inputs([bare], { bill: [], specialists: ['thieving-live'] }), [bare]);
+        expect(needs).toEqual([
+            { names: ['chocolate cake'], short: 27, consumer: 'specialist thieving-live: chocolate cake' },
+            { names: ['ring of dueling(8)'], short: 1, consumer: 'specialist thieving-live: ring of dueling(8)' },
+        ]);
+        const cakeJob = plan(inputs([bare], { templates: catalogue().filter(t => t.id === 'squad-chocolate-cake'), bill: [], specialists: ['thieving-live'] }));
+        expect(cakeJob[0]!.template?.id).toBe('squad-chocolate-cake');
+        expect(cakeJob[0]!.template?.args).toContain('MAX_MAKE=10');
+
+        const done = acct('Supplier', { Cooking: 50 }, { 'chocolate cake': 27, 'ring of dueling(8)': 1 });
+        expect(specialistStagingNeeds(inputs([done], { bill: [], specialists: ['thieving-live'] }), [done])).toEqual([]);
+        expect(plan(inputs([done], { templates: catalogue().filter(t => t.id === 'squad-chocolate-cake'), bill: [], specialists: ['thieving-live'] }))[0]!.template).toBeUndefined();
+    });
+
+    test('quest-crest stays excluded by default unless allowWilderness is enabled, and army-quest-fletch-30 trains unrestricted soldiers while restricted builds skip it', () => {
+        const crestRow = QUEST_DEMAND_ROWS.find(r => r.slug === 'crest')!;
+        const crestSoldier: Acct = {
+            ...acct('CrestBot', { ...crestRow.skills, Attack: 99, Strength: 99, Defence: 99, Prayer: 99, Ranged: 99, Hitpoints: 99 }, {
+                ...Object.fromEntries(Object.entries(crestRow.items).map(([i, n]) => [norm(i), n])),
+                shark: crestRow.meals, coin: 50_000,
+            }),
+            quests: new Set(['lost city']),
+        };
+        const crestTemplates = catalogue().filter(t => t.id === 'quest-crest');
+        expect(plan(inputs([crestSoldier], { templates: crestTemplates, army: new Set(['crestbot']), pilots: new Set(['quest-crest']), questsDone: new Set() }))[0]!.template).toBeUndefined();
+        expect(plan(inputs([crestSoldier], { templates: crestTemplates, army: new Set(['crestbot']), pilots: new Set(['quest-crest']), questsDone: new Set(), allowWilderness: true }))[0]!.template?.id).toBe('quest-crest');
+
+        const f30 = catalogue().find(t => t.id === 'army-quest-fletch-30')!;
+        expect(f30.band).toBeLessThan(QUEST_DEMAND_BAND);
+        expect(buildBand(f30, acct('Pure', { Fletching: 20 }), { Attack: 60, Strength: 99, Defence: 1 }, ['Lost City'])).toBeNull();
+        expect(buildBand(f30, acct('Main', { Fletching: 20 }))?.id).toBe('army-quest-fletch-30');
     });
 });
