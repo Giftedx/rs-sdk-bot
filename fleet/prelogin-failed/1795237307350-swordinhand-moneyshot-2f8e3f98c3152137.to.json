@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795237307350-swordinhand-moneyshot-2f8e3f98c3152137",
+ "role": "to",
+ "account": "Moneyshot",
+ "partner": "Swordinhand",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795237370338,
+ "detail": "Error: account logout is not confirmed: Moneyshot session active or outcome unknown"
+}
