@@ -59,8 +59,8 @@ const MAIN = new Set(['haggis']);
 // specBelow 0.45: the special waits for a gang account at 45% or less (one-on-one in the pilot's kit with Bind: 13 kills
 // of 16 at 89 HP a kill, against 12 at 107 with the profile's special at once; the squad case the same within the noise).
 export const SQUAD_OPTS = { cureNow: true, eatAt: 60, freeze: 'flee', focusRunner: 0.4, chaseBelow: 0.4, freezeMagicCap: 49, dropForStrip: null, specBelow: 0.45 } as const;
-// Proven Wave B/C defaults for maxed, supplied tribrids when SQUAD_OPTS does not pin those keys; preserves historical SQUAD_OPTS for low-Prayer Run-1 / un-potted chainbind replays.
-export const ELITE_SQUAD_OPTS = { eatAt: 76, comboAt: 64, freeze: 'low', freezeMagicCap: undefined, specBelow: 1, zeroDrainFlick: true, offensiveFlick: true, fakieSwitch: true } as const;
+// Proven Wave B/C/D defaults for maxed, supplied tribrids when SQUAD_OPTS does not pin those keys; preserves historical SQUAD_OPTS for low-Prayer Run-1 / un-potted chainbind replays.
+export const ELITE_SQUAD_OPTS = { eatAt: 76, comboAt: 64, freeze: 'low', freezeMagicCap: undefined, specBelow: 1, zeroDrainFlick: true, offensiveFlick: true, fakieSwitch: true, crowdPrayer: true } as const;
 
 const PRAYER_RESTORE_IDS = new Set([2434, 139, 141, 143]);
 const BOOST_POTION_IDS = new Set([2436, 145, 147, 149, 2440, 157, 159, 161, 2442, 163, 165, 167, 2444, 169, 171, 173]);
@@ -1277,7 +1277,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 if (!fresh) {
                     // Re-equip any stripped starting armour in safe zone before bankTrip counts free food slots (`27 - inv.length`).
                     await rewearStart(a, wornAtStart.map(w => w.id), l => o.log(`[${a.name}] ${l}`));
-                    if (process.env.SQUAD_SAFE_GLORY === '1') {
+                    if (process.env.SQUAD_SAFE_GLORY !== '0') {
                         await safeGloryEdgeville(a, targetBank, () => !going(), l => o.log(`[${a.name}] SQUAD ${l}`));
                     }
                 }
@@ -1492,13 +1492,16 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 // the slots of the meals from the bank.
                 const first = stats.fights === 0 && stats.trips === 1;
                 if (first) await eatUp(s, () => o.stopped());
-                // Eat up first: a teleport out (Camelot) leaves a long walk, and the gang's daggers poison.
-                else for (let i = 0; i < 12 && !o.stopped(); i++) {
-                    const q = me(), food = s.sdk.getInventory().find(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text)));
-                    const op = food?.optionsWithIndex.find(x => /^eat$/i.test(x.text));
-                    if (!q || !food || !op || q.hp >= q.maxHp - 20) break;
-                    await s.sdk.sendUseItem(food.slot, op.opIndex);
-                    for (let t = 0; t < 3; t++) if (!await nextTick(s)) break;
+                // Eat up and cure lingering poison first before starting a post-escape return trip.
+                else {
+                    await curePoisonAndEat(s, () => o.stopped(), false);
+                    for (let i = 0; i < 12 && !o.stopped(); i++) {
+                        const q = me(), food = s.sdk.getInventory().find(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text)));
+                        const op = food?.optionsWithIndex.find(x => /^eat$/i.test(x.text));
+                        if (!q || !food || !op || q.hp >= q.maxHp - 20) break;
+                        await s.sdk.sendUseItem(food.slot, op.opIndex);
+                        for (let t = 0; t < 3; t++) if (!await nextTick(s)) break;
+                    }
                 }
                 const fault = await trip(s, first);
                 const after = me();

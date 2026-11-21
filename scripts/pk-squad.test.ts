@@ -1547,6 +1547,7 @@ test('squadEliteDefaults enables Entangle, zeroDrainFlick/offensiveFlick, fakieS
     expect(serialized.zeroDrainFlick).toBe(true);
     expect(serialized.offensiveFlick).toBe(true);
     expect(serialized.fakieSwitch).toBe(true);
+    expect(serialized.crowdPrayer).toBe(true);
     // Scaled BiS clone & team5 cases default to winning tribrid-bis-zerk-glory-tele (Camelot Teleport + Berserker + Dragon + Glory).
     const clones4 = benchCases().find(c => c.key === 'extra:clone-bis-clones-4-x1')!;
     const team5 = benchCases().find(c => c.key === 'extra:clone-bis-team5-4-x1')!;
