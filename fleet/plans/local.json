@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795235027279,
+ "at": 1795235181159,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -376,7 +376,7 @@
     "1200"
    ],
    "env": {
-    "ITEMS": "^leather gloves$",
+    "ITEMS": "leather gloves",
     "STOCK_TARGET": "5",
     "STOP_AT_TARGET": "1",
     "BANK_PACK": "1",
@@ -397,7 +397,7 @@
     "2400"
    ],
    "env": {
-    "ITEMS": "^death rune$",
+    "ITEMS": "death rune",
     "STOCK_TARGET": "420",
     "STOP_AT_TARGET": "1",
     "FLOAT": "106500",
@@ -416,7 +416,7 @@
    "script": "scripts/chain.ts",
    "args": [
     "scripts/walk-to.ts 3092 3243 0",
-    "scripts/shop-buyer.ts magic_guild 2400 ITEMS=^law.rune$ STOCK_TARGET=100 STOP_AT_TARGET=1 FLOAT=29000 MAX_SPEND=28000 COIN_RESERVE=500 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=120"
+    "scripts/shop-buyer.ts magic_guild 2400 ITEMS=law.rune STOCK_TARGET=100 STOP_AT_TARGET=1 FLOAT=29000 MAX_SPEND=28000 COIN_RESERVE=500 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=120"
    ],
    "env": {
     "ROUNDS": "1"
