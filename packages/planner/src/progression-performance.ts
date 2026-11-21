@@ -1,7 +1,5 @@
-import type {ConditionalMeasuredSample,StateBand} from './progression';
-export interface PerformanceWindow{units:number;ticks:number;setupTicks:number;serverDrainTicks?:number;source:string;conditions:string}
-export interface PerformanceExpectation{unitsPerTick:number|null;minimumTicks:number;minimumFraction:number;sustainedWindows:number;source:string;conditions:string}
-export interface PerformanceAssessment{state:'within-range'|'needs-observation'|'replan';observedRate:number|null;expectedRate:number|null;consecutiveSlow:number;reason:string}
+import type {ConditionalMeasuredSample,PerformanceAssessment,PerformanceExpectation,PerformanceWindow,StateBand} from '../../core/src/progression-adapter';
+export type {PerformanceAssessment,PerformanceExpectation,PerformanceWindow};
 export function assessProgressionPerformance(expected:PerformanceExpectation,windows:readonly PerformanceWindow[]):PerformanceAssessment{
  const result:PerformanceAssessment={state:'needs-observation',observedRate:null,expectedRate:typeof expected.unitsPerTick==='number'&&Number.isFinite(expected.unitsPerTick)&&expected.unitsPerTick>0?expected.unitsPerTick:null,consecutiveSlow:0,reason:'A matched useful-work window is required.'};
  if(!Number.isFinite(expected.unitsPerTick)||expected.unitsPerTick===null||expected.unitsPerTick<=0||!Number.isSafeInteger(expected.minimumTicks)||expected.minimumTicks<1||!Number.isSafeInteger(expected.sustainedWindows)||expected.sustainedWindows<1||!(expected.minimumFraction>0&&expected.minimumFraction<=1))return {...result,reason:'Expected rate or comparison bounds are unknown or invalid.'};

@@ -29,6 +29,7 @@ import type { BankObservation, SessionCore } from './session-types';
 export type { BankObservation, SessionCore } from './session-types';
 import {attachProgressionSession,preflightProgressionWork,processWork,type ProgressionSession} from './progression-session';
 import type {WorkDescriptor} from './progression-policy';
+import {getProgressionAdapter,type ProgressionAdapter} from './progression-adapter';
 // The longest single hold of a lockstep tick for a route search, under the 60 s idle limit of the client session.
 export const ROUTE_HOLD_MS = 45_000;
 export const routeHold = (routeMs: number): number => Math.min(routeMs, ROUTE_HOLD_MS);
@@ -554,7 +555,7 @@ export type TradeAdmission = {
     prepare(claim: FleetTradeClaim): void;
 };
 
-export async function connectInProcess(opts: { name: string; password: string; server?: string; members?: boolean; lifecycleRoot?:string; beforeConnect?:()=>void; lockPlan?: boolean; recoverSwarm?: RecoveryConnectionAdmission; trade?: TradeAdmission; work?:WorkDescriptor }): Promise<Session> {
+export async function connectInProcess(opts: { name: string; password: string; server?: string; members?: boolean; lifecycleRoot?:string; beforeConnect?:()=>void; lockPlan?: boolean; recoverSwarm?: RecoveryConnectionAdmission; trade?: TradeAdmission; work?:WorkDescriptor; progression?:ProgressionAdapter }): Promise<Session> {
     if(opts.lifecycleRoot&&!isLocalServer(opts.server??'localhost:8888'))throw Error('lifecycle root override is local-only');
     const server = opts.server ?? 'localhost:8888';
     const live = !isLocalServer(server);
@@ -593,11 +594,12 @@ export async function connectInProcess(opts: { name: string; password: string; s
             lifecycle.owner = {...lifecycleOwner(), specialistAuthorization: {ticket: currentTicket, mission: process.env.SWARM_MISSION_HASH!}};
         }
         opts.trade?.check(server);
-        preflightProgressionWork(opts.work??processWork(),server,undefined,opts.name);
+        preflightProgressionWork(opts.work??processWork(),server,undefined,opts.name,opts.progression??getProgressionAdapter());
     };
     return startInProcessSession(opts, { startSession, sdk: new BotSDK(inProcessSdkConfig(opts)), Actions: BotActions, cacheDir,
         beforeConnect,planLock:opts.lockPlan||ticket||opts.trade?planLockDir:undefined,lifecycle,
-        sharedAccount:live?{root:repoRoot,side:mySide(),recover:!!opts.recoverSwarm,admission:opts.recoverSwarm,trade:opts.trade}:undefined });
+        sharedAccount:live?{root:repoRoot,side:mySide(),recover:!!opts.recoverSwarm,admission:opts.recoverSwarm,trade:opts.trade}:undefined,
+        progression:opts.progression });
 }
 
 // Read-only observation of the lite bootstrap HTTP calls (session.ts /api/version, cache.ts /crc and archives,
@@ -643,8 +645,8 @@ export const soloProcess = (env: Record<string, string | undefined> = process.en
 export type StartSession = (o: any) => Promise<{ client: unknown; stop(): void; stopped: Promise<unknown> }>;
 // The network part of connectInProcess. The lifecycle intent is written first; if it cannot be written, no
 // connection starts. Every later event comes from this session's own callbacks. Tests pass a fake startSession.
-export async function startInProcessSession(opts: { name: string; password: string; server?: string; members?: boolean; work?:WorkDescriptor },
-    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void; planLock?: string; sharedAccount?:{root:string;side:string;recover?:boolean;admission?:RecoveryConnectionAdmission;trade?:TradeAdmission}; claimSwarm?: typeof acquireFleetSwarmClaim; soloProcess?: boolean; countBots?: () => number }): Promise<Session> {
+export async function startInProcessSession(opts: { name: string; password: string; server?: string; members?: boolean; work?:WorkDescriptor; progression?:ProgressionAdapter },
+    deps: { startSession: StartSession; sdk: BotSDK; Actions: new (sdk: BotSDK) => BotActions; cacheDir: string; lifecycle?: Parameters<typeof beginSessionAttempt>[1]; recordOwned?: typeof recordOwnedAccount;beforeConnect?:()=>void; planLock?: string; sharedAccount?:{root:string;side:string;recover?:boolean;admission?:RecoveryConnectionAdmission;trade?:TradeAdmission}; claimSwarm?: typeof acquireFleetSwarmClaim; soloProcess?: boolean; countBots?: () => number; progression?:ProgressionAdapter }): Promise<Session> {
     const { startSession, sdk, Actions, cacheDir } = deps;
     let endResolve!: (v: { reason: string }) => void;
     const ended = new Promise<{ reason: string }>(r => { endResolve = r; });
@@ -766,7 +768,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
             releaseConfirmed();
         },
     };
-    const progression=attachProgressionSession(result,opts.work??processWork(),host);
+    const progression=attachProgressionSession(result,opts.work??processWork(),host,{adapter:deps.progression??opts.progression??getProgressionAdapter()});
     sh.setProgressionGuard(action=>progression.refusal(action));
     return result;
 }

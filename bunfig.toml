@@ -1,4 +1,4 @@
-preload = ["./packages/core/src/collision-lazy.ts", "./packages/core/src/bunzip-cache.ts"]
+preload = ["./packages/core/src/collision-lazy.ts", "./packages/core/src/bunzip-cache.ts", "./packages/planner/src/progression-adapter.ts"]
 
 [test]
-preload = ["./packages/core/src/collision-lazy.ts", "./packages/core/src/bunzip-cache.ts"]
+preload = ["./packages/core/src/collision-lazy.ts", "./packages/core/src/bunzip-cache.ts", "./packages/planner/src/progression-adapter.ts"]

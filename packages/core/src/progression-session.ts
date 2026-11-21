@@ -6,19 +6,16 @@ import {isLocalServer} from './localserver';
 import {equipmentObserved} from './container-observation';
 import {questFlags} from './quest-status';
 import {createProgressionMonitor,methodSupportsWork,snapshotForProgression,type WorkDescriptor,type PolicyEvaluation} from './progression-policy';
-import {chooseProgression,trainingTargets,type ObservedAccount,type ProgressionAdmission,type ProgressionDecision,type ProgressionMethod,type WorkIntent} from '../../planner/src/progression';
-import {accountFromStatus,intentForEntry,loadProgressionCatalog,progressionMethods,progressionStep,type CatalogAccept,type ProgressionCatalog} from '../../planner/src/progression-catalog';
-import {assessProgressionPerformance,type PerformanceWindow} from '../../planner/src/progression-performance';
+import {requireProgressionAdapter,type CatalogAccept,type ObservedAccount,type PerformanceWindow,type ProgressionAdapter,type ProgressionAdmission,type ProgressionCatalog,type ProgressionDecision,type ProgressionMethod,type WorkIntent} from './progression-adapter';
 import {cachedReleaseFor} from './worker-release';
-import {levelForXp} from '../../planner/src/curve';
 import {readProgressionMeasurements,writeProgressionEvidence} from './progression-evidence';
 import {DISEMBARK_PLANK_IDS} from './boat';
 
 const root=resolve(import.meta.dir,'../../..');
 const read=(file:string)=>{try{return JSON.parse(readFileSync(file,'utf8'));}catch{return null;}};
 const entry=(file:string)=>file.replace(/\\/g,'/').replace(/^.*?\/(scripts|packages)\//,'$1/');
-let loaded:ProgressionCatalog|undefined;
-const catalog=()=>loaded??=loadProgressionCatalog(root);
+const catalogs=new WeakMap<ProgressionAdapter,ProgressionCatalog>();
+const catalog=(adapter:ProgressionAdapter)=>{let c=catalogs.get(adapter);if(!c){c=adapter.loadProgressionCatalog(root);catalogs.set(adapter,c);}return c;};
 export function processWork(script=process.argv[1]??'',argv=process.argv.slice(3),env=process.env):WorkDescriptor{return{script:entry(script),args:[...argv],env:{...env}};}
 
 export interface ProgressionSession{
@@ -46,13 +43,14 @@ export function parentProgressionAccept(work:WorkDescriptor,account?:string,base
  if(record)return finiteProgressionAccept(record.spec?.accept);
  try{return finiteProgressionAccept(JSON.parse(work.env.PROGRESSION_CONSUMER??'null'));}catch{return;}
 }
-export function preflightProgressionWork(work:WorkDescriptor,server:string,c= catalog(),account?:string):void{
+export function preflightProgressionWork(work:WorkDescriptor,server:string,c?:ProgressionCatalog,account?:string,adapter?:ProgressionAdapter):void{
  if(isLocalServer(server))return;
  if(work.env.PROGRESSION_SOURCE&&work.env.WORKER_RELEASE&&work.env.PROGRESSION_SOURCE!==work.env.WORKER_RELEASE)throw Error('progression source claim differs from the admitted worker release');
- const file=entry(work.script),record=c.entries.find(e=>entry(e.script)===file);
+ const p=requireProgressionAdapter(adapter),cat=c??catalog(p);
+ const file=entry(work.script),record=cat.entries.find(e=>entry(e.script)===file);
  if(!record)throw Error('progression entry is unmapped: '+file);
  if((record as {practiceOnly?:boolean}).practiceOnly)throw Error('progression measurement entry is local practice only: '+file);
- if(!intentForEntry(file,work.args,work.env,parentProgressionAccept(work,account),c))throw Error('progression entry requires a finite goal: '+file);
+ if(!p.intentForEntry(file,work.args,work.env,parentProgressionAccept(work,account),cat))throw Error('progression entry requires a finite goal: '+file);
 }
 
 export function progressionProofs(base=root):Record<string,{source:string;bands:any[];samples?:any[]}>{
@@ -88,13 +86,14 @@ function measuredWorkRates(methods:ProgressionMethod[],work:WorkDescriptor,statu
    samples:windows.map((w:any)=>({units:w.units,ticks:w.ticks,setupTicks:w.setupTicks,evidence:path,source,conditions:{levels:{[skill]:{min:level,max:level}},loadout:status.equipment?.map((i:any)=>i.id),server:status.server}}))}};
  });
 }
-export function evaluateProgressionWork(work:WorkDescriptor,status:any,options:{now?:number;catalog?:ProgressionCatalog;accept?:CatalogAccept;requireQualification?:boolean;continuing?:boolean;currentMethod?:string;admitted?:ProgressionAdmission;base?:string}={}):PolicyEvaluation{
- const c=options.catalog??catalog(),now=options.now??Date.now(),base=options.base??root,intent=intentForEntry(entry(work.script),work.args,work.env,options.accept??parentProgressionAccept(work,status?.name,base),c);
+export function evaluateProgressionWork(work:WorkDescriptor,status:any,options:{now?:number;catalog?:ProgressionCatalog;accept?:CatalogAccept;requireQualification?:boolean;continuing?:boolean;currentMethod?:string;admitted?:ProgressionAdmission;base?:string;adapter?:ProgressionAdapter}={}):PolicyEvaluation{
+ const p=requireProgressionAdapter(options.adapter);
+ const c=options.catalog??catalog(p),now=options.now??Date.now(),base=options.base??root,intent=p.intentForEntry(entry(work.script),work.args,work.env,options.accept??parentProgressionAccept(work,status?.name,base),c);
  if(!intent)return{supported:false,intent:null,decision:null,reason:'unmapped progression entry or finite consumer: '+entry(work.script)};
  const plan=read(join(base,'swarm.json')),kit=Object.entries(plan?.builds??{}).find(([name])=>name.toLowerCase()===status?.name?.toLowerCase())?.[1];
- const account=accountFromStatus(status?.name??'unknown',status,now);
+ const account=p.accountFromStatus(status?.name??'unknown',status,now);
  if(typeof kit==='string'&&c.buildLimits?.[kit])account.build={maxLevels:c.buildLimits[kit]};
- const listed=progressionMethods(intent,account,c,{now});
+ const listed=p.progressionMethods(intent,account,c,{now});
  const sources:Record<string,string>={},qualifications:Record<string,NonNullable<ProgressionMethod['qualification']>>={};
  // A native state-band proof is additional to the controller's existing source
  // qualification. It cannot authorize an entry whose worker pin differs.
@@ -105,22 +104,22 @@ export function evaluateProgressionWork(work:WorkDescriptor,status:any,options:{
   if(proof.source!==source)continue;
   sources[method.id]=source;qualifications[method.id]={source,bands:proof.bands};
  }
- const methods=measuredWorkRates(Object.keys(qualifications).length?progressionMethods(intent,account,c,{now,sources,qualifications}).methods:listed.methods,work,status,base);
- const current=methods.find(m=>m.id===options.currentMethod)??methods.find(m=>methodSupportsWork(m.step,work));
+ const methods=measuredWorkRates(Object.keys(qualifications).length?p.progressionMethods(intent,account,c,{now,sources,qualifications}).methods:listed.methods,work,status,base);
+ const current=methods.find(m=>m.id===options.currentMethod)??methods.find(m=>methodSupportsWork(m.step,work,p));
  // Unpriced methods stay in the evidence ledger. They cannot participate in a
  // timed route yet; excluding them from the search avoids repeated quadratic
  // dependency scans over the same unresolved catalog rows on every boundary.
  const timed=methods.filter(m=>m.rate.unitsPerTick!==null&&Object.values(m.costs).every(v=>v!==null));
- const decision=chooseProgression(intent,account,timed,{now,currentMethod:current?.id,continuing:options.continuing,admitted:options.admitted,requireQualification:options.requireQualification??false,crowding:status.progressionCrowding,maxSearchNodes:256,maxDepth:6});
+ const decision=p.chooseProgression(intent,account,timed,{now,currentMethod:current?.id,continuing:options.continuing,admitted:options.admitted,requireQualification:options.requireQualification??false,crowding:status.progressionCrowding,maxSearchNodes:256,maxDepth:6});
  let projected=account;
  for(const path of decision.path){const method=methods.find(m=>m.id===path.method);if(method){
   const gain=intent.kind==='train'?Object.entries(method.effects.xp??{}).find(([name])=>name.toLowerCase()===intent.skill.toLowerCase())?.[1]??0:0;
   const from=intent.kind==='train'?Object.entries(projected.skills).find(([name])=>name.toLowerCase()===intent.skill.toLowerCase())?.[1].xp??0:0;
-  const boundary=intent.kind==='train'&&gain>0?{...intent,targetLevel:Math.min(intent.targetLevel,levelForXp(from+path.units*gain))}:intent;
-  path.step=progressionStep(method,path.units,boundary,projected,c);
+  const boundary=intent.kind==='train'&&gain>0?{...intent,targetLevel:Math.min(intent.targetLevel,p.levelForXp(from+path.units*gain))}:intent;
+  path.step=p.progressionStep(method,path.units,boundary,projected,c);
   const skills={...projected.skills};for(const [skill,xpGain]of Object.entries(method.effects.xp??{})){
    const name=Object.keys(skills).find(name=>name.toLowerCase()===skill.toLowerCase())??skill,xp=(skills[name]?.xp??0)+xpGain*path.units;
-   skills[name]={xp,level:levelForXp(xp)};
+   skills[name]={xp,level:p.levelForXp(xp)};
   }
   projected={...projected,skills};
  }}
@@ -130,13 +129,13 @@ export function evaluateProgressionWork(work:WorkDescriptor,status:any,options:{
  // Unknown comparisons request evidence. They do not turn an already admitted,
  // finite authored job into either a measured winner or an unbounded idle loop.
  const expired=!!options.currentMethod&&!!qualifications[options.currentMethod]&&decision.alternatives.some(a=>a.method===options.currentMethod&&a.state==='qualify');
- const targets=trainingTargets(intent),aboveBuild=targets&&Object.entries(account.build?.maxLevels??{}).some(([skill,cap])=>targets[skill.toLowerCase()]!==undefined&&targets[skill.toLowerCase()]!>cap);
+ const targets=p.trainingTargets(intent),aboveBuild=targets&&Object.entries(account.build?.maxLevels??{}).some(([skill,cap])=>targets[skill.toLowerCase()]!==undefined&&targets[skill.toLowerCase()]!>cap);
  const missingTargets=intent.kind==='train-all'&&(!targets||account.at<=0||account.at>now||now-account.at>300000||Object.keys(targets).some(skill=>!Object.hasOwn(account.skills,skill)));
  const unknownBuild=!!current&&Object.keys(account.build?.maxLevels??{}).some(skill=>Object.entries(current.effects.xp??{}).some(([name,gain])=>name.toLowerCase()===skill.toLowerCase()&&gain>0)&&!Object.keys(account.skills).some(name=>name.toLowerCase()===skill.toLowerCase()));
  const constraint=aboveBuild?'finite goal exceeds the account build ceiling':missingTargets?'finite training goal needs valid observations for every target':unknownBuild?'side XP requires observations for the account build':account.clock?.protected&&!account.clock.authorized?'protected account clock needs its authorized launch':decision.state==='blocked'&&decision.followUps.some(f=>f.reason.some(r=>r.includes('account build')))?'side XP exceeds the account build ceiling':undefined;
  if(intent.kind==='train-all')decision.gaps.push('Compound training has no scalar live-rate sample; compare source/state-matched per-skill effects before claiming a measured finish time.');
  const claimed=work.env.PROGRESSION_METHOD,claimMismatch=!!claimed&&decision.state==='execute'&&claimed!==decision.selected;
- const supported=decision.state==='complete'||expired||constraint||claimMismatch?false:decision.state!=='execute'||!selected?true:methodSupportsWork(selected,work);
+ const supported=decision.state==='complete'||expired||constraint||claimMismatch?false:decision.state!=='execute'||!selected?true:methodSupportsWork(selected,work,p);
  const reason=supported?undefined:constraint??(claimMismatch?'progression resource claim '+claimed+' does not cover selected method '+decision.selected:decision.state==='complete'?'finite progression goal complete':expired?'current method left its qualified state band':selected?'selected method '+decision.selected+' requires '+selected.script:'progression needs an observed supported route');
  return{supported,intent,decision,reason,methods,account};
 }
@@ -157,7 +156,7 @@ function writeDecision(base:string,s:Session,work:WorkDescriptor,evaluation:Poli
  writeProgressionEvidence(file,value,console.warn);
 }
 
-export function attachProgressionSession(s:Session&{progression?:ProgressionSession},work:WorkDescriptor,server:string,options:{base?:string;evaluate?:(status:any)=>PolicyEvaluation;log?:(line:string)=>void}={}):ProgressionSession{
+export function attachProgressionSession(s:Session&{progression?:ProgressionSession},work:WorkDescriptor,server:string,options:{base?:string;evaluate?:(status:any)=>PolicyEvaluation;log?:(line:string)=>void;adapter?:ProgressionAdapter}={}):ProgressionSession{
  const base=options.base??root,log=options.log??console.log;
  work=structuredClone(work);
  const consumer=parentProgressionAccept(work,s.name,base);
@@ -189,7 +188,7 @@ export function attachProgressionSession(s:Session&{progression?:ProgressionSess
  let window:{tick:number;xp:number;setup:number;started:boolean;lastTick:number;conditions:string}|null=null;
  const evaluate=()=>{
   prior=observedStatus(s,prior,Date.now());
-  current=options.evaluate?.(prior)??evaluateProgressionWork(work,prior,{base,accept:consumer,requireQualification:true,continuing:!!executing,currentMethod:executing,admitted});
+  current=options.evaluate?.(prior)??evaluateProgressionWork(work,prior,{base,accept:consumer,requireQualification:true,continuing:!!executing,currentMethod:executing,admitted,adapter:options.adapter});
   const key=JSON.stringify([current.supported,current.decision?.selected,current.decision?.state,current.decision?.followUps]);
   if(key!==lastWritten){
    writeDecision(base,s,work,current,Date.now(),undefined,executing);lastWritten=key;
@@ -224,13 +223,13 @@ export function attachProgressionSession(s:Session&{progression?:ProgressionSess
   if(row.experience>window.xp)window.started=true;
   if(!window.started||state.bank?.isOpen||state.shop?.isOpen)window.setup+=delta;
   if(s.tick()-window.tick<150)return;
-  const observed=accountFromStatus(s.name,prior,Date.now()),method=progressionMethods(intent,observed).methods.find(m=>m.id===executing);
+  const p=requireProgressionAdapter(options.adapter),observed=p.accountFromStatus(s.name,prior,Date.now()),method=p.progressionMethods(intent,observed,catalog(p)).methods.find(m=>m.id===executing);
   if(!method){window=null;return;}
   const gain=Object.entries(method.effects.xp??{}).find(([name])=>name.toLowerCase()===intent.skill.toLowerCase())?.[1]??0;
   if(gain<=0){window=null;return;}
   const sample:PerformanceWindow={units:Math.max(0,row.experience-window.xp)/gain,ticks:s.tick()-window.tick,setupTicks:window.setup,source:work.env.WORKER_RELEASE??method.source,conditions};
   windows.push(sample);if(windows.length>16)windows.shift();
-  const assessment=assessProgressionPerformance({unitsPerTick:method.rate.unitsPerTick,minimumTicks:100,minimumFraction:.5,sustainedWindows:2,source:sample.source,conditions},windows);
+  const assessment=p.assessProgressionPerformance({unitsPerTick:method.rate.unitsPerTick,minimumTicks:100,minimumFraction:.5,sustainedWindows:2,source:sample.source,conditions},windows);
   const dir=join(base,'.practice/progression-system/measurements',createHash('sha256').update(executing+'|'+sample.source+'|'+conditions).digest('hex'));
   const file=join(dir,s.name.toLowerCase()+'.json');
   const record={method:executing,source:sample.source,account:s.name,at:Date.now(),conditions:JSON.parse(conditions),basis:method.rate.basis,expectedRate:method.rate.unitsPerTick,windows:[...(read(file)?.windows??[]),sample].slice(-32),assessment};
@@ -266,17 +265,18 @@ export function attachProgressionSession(s:Session&{progression?:ProgressionSess
    return refusal;
   },onHandoff(next){handler=next;const e=monitor.current();if(e&&!e.supported&&e.decision?.state!=='complete'&&s.sdk.getState()?.player?.combat?.inCombat!==true)handler('progression handoff: '+(e.reason??e.decision?.reason??'unmapped worker'));},
   executing(method){
-   const status=observedStatus(s,prior,Date.now()),account=accountFromStatus(s.name,status,Date.now()),intent=intentForEntry(work.script,work.args,work.env,consumer);
+   const p=requireProgressionAdapter(options.adapter);
+   const status=observedStatus(s,prior,Date.now()),account=p.accountFromStatus(s.name,status,Date.now()),intent=p.intentForEntry(work.script,work.args,work.env,consumer,catalog(p));
    if(!intent)throw Error('progression cannot bind an unknown consumer');
-   const candidate=progressionMethods(intent,account).methods.find(m=>m.id===method);
-   if(!candidate||!methodSupportsWork(candidate.step,work))throw Error('progression method does not belong to this worker: '+method);
+   const candidate=p.progressionMethods(intent,account,catalog(p)).methods.find(m=>m.id===method);
+   if(!candidate||!methodSupportsWork(candidate.step,work,p))throw Error('progression method does not belong to this worker: '+method);
    const claimed=work.env.PROGRESSION_METHOD;
    if(claimed&&claimed!==method){
     const reason='progression resource claim '+claimed+' does not cover selected method '+method;
     const evaluation:PolicyEvaluation={...current,supported:false,intent,decision:current?.decision??null,reason};
     writeDecision(base,s,work,evaluation,Date.now());handler?.(reason);throw Error(reason);
    }
-   const checked=evaluateProgressionWork(work,status,{base,accept:consumer,requireQualification:!isLocalServer(server),continuing:executing===method,currentMethod:method,admitted});
+   const checked=evaluateProgressionWork(work,status,{base,accept:consumer,requireQualification:!isLocalServer(server),continuing:executing===method,currentMethod:method,admitted,adapter:p});
    const bound=checked.methods?.find(m=>m.id===method);
    if(!isLocalServer(server)&&(!bound?.qualification||checked.decision?.state!=='execute'||checked.decision.selected!==method))throw Error('progression method lacks current source/state admission: '+method);
    if(bound?.qualification&&checked.account&&checked.intent)admitted=structuredClone({method,source:bound.source,intent:checked.intent,account:checked.account});

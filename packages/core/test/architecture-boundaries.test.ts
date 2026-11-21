@@ -79,10 +79,10 @@ function tarjanSccs(files: readonly string[]): string[][] {
     return sccs;
 }
 
-test('packages/core/src production modules never import from practice, router, dashboard, or scripts', () => {
+test('packages/core/src production modules never import from planner, practice, router, dashboard, or scripts', () => {
     const coreFiles = walkTs(join(repoRoot, 'packages', 'core', 'src'));
-    const bannedRoots = ['packages/practice/', 'packages/router/', 'packages/dashboard/', 'scripts/'];
-    const bannedSpecs = ['@rsbot/practice', '@rsbot/router', '@rsbot/dashboard'];
+    const bannedRoots = ['packages/planner/', 'packages/practice/', 'packages/router/', 'packages/dashboard/', 'scripts/'];
+    const bannedSpecs = ['@rsbot/planner', '@rsbot/practice', '@rsbot/router', '@rsbot/dashboard'];
     const violations: string[] = [];
 
     for (const rel of coreFiles) {
