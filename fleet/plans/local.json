@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795246773347,
+ "at": 1795246840727,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -158,27 +158,6 @@
    "autopilot": "local",
    "resources": [
     "squad:taverley-druids"
-   ]
-  },
-  {
-   "account": "TossTheCaber",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "giant"
-   ],
-   "env": {
-    "MAX_KILLS": "40"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
-   "role": "combat",
-   "template": "squad-ardougne-giants",
-   "autopilot": "local",
-   "resources": [
-    "squad:ardougne-giants"
    ]
   },
   {
