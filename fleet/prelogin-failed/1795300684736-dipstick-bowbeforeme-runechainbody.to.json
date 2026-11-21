@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795300684736-dipstick-bowbeforeme-runechainbody",
+ "role": "to",
+ "account": "BowBeforeMe",
+ "partner": "Dipstick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795300763234,
+ "detail": "Error: account logout is not confirmed: BowBeforeMe session active or outcome unknown"
+}
