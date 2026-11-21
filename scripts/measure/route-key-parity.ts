@@ -7,8 +7,11 @@
 // The set has trips of a strong and of a weak account (two sets of closed danger ground), a trip that ends inside
 // closed ground and a trip that starts there (the keep tiles that stay in the key).
 // Usage: bun scripts/measure/route-key-parity.ts      exit 0 when every plan is equal, 1 when one differs.
+import {availableParallelism} from 'node:os';
 import {resolve} from 'node:path';
 import type {Account, Tile} from '../../packages/core/src/world';
+
+export const DEFAULT_PARITY_CONCURRENCY = 4;
 
 const strong = {skills: {Attack: 70, Strength: 70, Defence: 70, Hitpoints: 70, Ranged: 80, Magic: 50, Prayer: 43}, varps: {}, items: [], coins: 5000} as unknown as Account;
 const weak = {skills: {Attack: 1, Strength: 1, Defence: 1, Hitpoints: 10, Ranged: 1, Magic: 1, Prayer: 1}, varps: {}, items: [], coins: 5000} as unknown as Account;
@@ -43,6 +46,63 @@ async function plan(list: Trip[]): Promise<string[]> {
     return list.map(t => JSON.stringify(planTrip(world, t.from, t.to, t.acct, undefined)));
 }
 
+/** Extracts the serialized PLANS output from an isolated parity child process. */
+export function parsePlansLine(stdout: string, argsLabel: string, stderr = '', exitCode = 0): string[] {
+    const line = stdout.split(/\r?\n/).find(l => l.startsWith('PLANS '));
+    if (exitCode !== 0 || !line) {
+        const tail = stderr.trim().split('\n').at(-1) || stdout.trim().split('\n').at(-1) || `exit ${exitCode}`;
+        throw new Error(`route-key-parity: a planning process failed (${argsLabel}): ${tail}`);
+    }
+    return JSON.parse(line.slice(6));
+}
+
+/** Runs async tasks with a fixed worker limit while preserving input index order. */
+export async function mapWithConcurrency<T, R>(
+    items: readonly T[],
+    concurrency: number,
+    fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+    const limit = Math.max(1, Math.trunc(concurrency));
+    const results = new Array<R>(items.length);
+    let next = 0;
+    const worker = async () => {
+        for (;;) {
+            const index = next++;
+            if (index >= items.length) return;
+            results[index] = await fn(items[index]!, index);
+        }
+    };
+    await Promise.all(Array.from({length: Math.min(limit, items.length)}, worker));
+    return results;
+}
+
+/** Runs `--shared` plus each isolated `--one <i>` check concurrently inside the worker bound. */
+export async function runParityChecks(
+    tripCount: number,
+    runChild: (args: readonly string[]) => Promise<string[]>,
+    concurrency = DEFAULT_PARITY_CONCURRENCY,
+): Promise<{shared: string[]; alone: string[]}> {
+    const tasks: string[][] = [['--shared'], ...Array.from({length: tripCount}, (_, i) => ['--one', String(i)])];
+    const [shared, ...aloneRows] = await mapWithConcurrency(tasks, concurrency, args => runChild(args));
+    return {shared: shared ?? [], alone: aloneRows.map(row => row[0]!)};
+}
+
+async function spawnParityChild(scriptPath: string, args: readonly string[], cwd: string): Promise<string[]> {
+    const proc = Bun.spawn(['bun', scriptPath, ...args], {
+        cwd,
+        env: {...process.env, ROUTE_LEG_CACHE: '0'},
+        stdout: 'pipe',
+        stderr: 'pipe',
+        windowsHide: true,
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+        proc.exited,
+    ]);
+    return parsePlansLine(stdout, args.join(' '), stderr, exitCode);
+}
+
 if (import.meta.main) {
     const root = resolve(import.meta.dir, '..', '..'), all = await trips(), one = process.argv.indexOf('--one');
     if (one >= 0 || process.argv.includes('--shared')) {
@@ -51,19 +111,17 @@ if (import.meta.main) {
         console.log('PLANS ' + JSON.stringify(await plan(picked)));
         process.exit(0);
     }
-    const child = (args: string[]): string[] => {
-        const r = Bun.spawnSync(['bun', import.meta.path, ...args], {cwd: root, env: {...process.env, ROUTE_LEG_CACHE: '0'}, stdout: 'pipe', stderr: 'pipe', windowsHide: true});
-        const line = r.stdout.toString().split(/\r?\n/).find(l => l.startsWith('PLANS '));
-        if (r.exitCode !== 0 || !line) throw new Error(`route-key-parity: a planning process failed (${args.join(' ')}): ${r.stderr.toString().trim().split('\n').at(-1)}`);
-        return JSON.parse(line.slice(6));
-    };
-    const started = performance.now(), shared = child(['--shared']);
+    const envConc = Number(process.env.ROUTE_PARITY_CONCURRENCY);
+    const defaultConc = Math.max(1, Math.min(DEFAULT_PARITY_CONCURRENCY, availableParallelism?.() ?? DEFAULT_PARITY_CONCURRENCY));
+    const concurrency = Number.isSafeInteger(envConc) && envConc > 0 ? Math.min(8, envConc) : defaultConc;
+    const started = performance.now();
+    const {shared, alone} = await runParityChecks(all.length, args => spawnParityChild(import.meta.path, args, root), concurrency);
     let different = 0, withRoute = 0;
     for (const [i, trip] of all.entries()) {
-        const alone = child(['--one', String(i)])[0]!, same = alone === shared[i];
+        const onePlan = alone[i]!, same = onePlan === shared[i];
         if (!same) different++;
-        if (alone !== 'null') withRoute++;
-        console.log(`${same ? 'equal' : 'DIFFERENT'}  ${trip.name}  ${alone === 'null' ? 'no route' : `cost ${JSON.parse(alone).cost}, ${JSON.parse(alone).legs.length} legs`}${same ? '' : `\n  alone:  ${alone.slice(0, 300)}\n  shared: ${shared[i]!.slice(0, 300)}`}`);
+        if (onePlan !== 'null') withRoute++;
+        console.log(`${same ? 'equal' : 'DIFFERENT'}  ${trip.name}  ${onePlan === 'null' ? 'no route' : `cost ${JSON.parse(onePlan).cost}, ${JSON.parse(onePlan).legs.length} legs`}${same ? '' : `\n  alone:  ${onePlan.slice(0, 300)}\n  shared: ${shared[i]!.slice(0, 300)}`}`);
     }
     const closedTrips = all.filter(t => t.name.includes('closed ground')).length;
     console.log(`RESULT ${different || !closedTrips || withRoute < 4 ? 'fail' : 'ok'} route-key-parity trips=${all.length} different=${different} withRoute=${withRoute} closedGroundTrips=${closedTrips} seconds=${Math.round((performance.now() - started) / 1000)}`);
