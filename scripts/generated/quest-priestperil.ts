@@ -12,17 +12,15 @@ import { openQuest, readQuestJournalStage, type JournalQuestReader } from './que
 const ROALD = { x: 3218, z: 3475 };                        // he stands west of the throne room wall (spawn 3222,3476)
 const TEMPLE_DOOR = { id: 3489, x: 3408, z: 3489 };        // priestperiltempledoorl (r: 3490 at 3408,3488), east edge
 
-/**
- * Reports whether tile `(x, z, level)` lies inside Paterdomus ground floor east of the outer wall and doors.
- * Includes the `x = 3408` nave alcoves while excluding the two west porch tiles `(3408, 3488..3489)`.
- */
+// Reports whether tile (x, z, level) lies inside Paterdomus ground floor east of the outer wall and doors.
+// Includes the x = 3408 nave alcoves while excluding the two west porch tiles (3408, 3488..3489).
 export function inPaterdomusTemple(x: number, z: number, level = 0): boolean {
     if (level !== 0 || z < 3480 || z > 3500 || x > 3420) return false;
     if (x >= 3409) return true;
     return x === 3408 && (z < 3488 || z > 3489);
 }
 
-/** Parses `%priestperil` (302) stage from `priestperil_journal.rs2` text ordered from highest stage down. */
+// Parses %priestperil (302) stage from priestperil_journal.rs2 text ordered from highest stage down.
 export function priestPerilJournalStage(body: string): number | undefined {
     const text = body.replace(/@[a-z0-9]+@/gi, '').replace(/<[^>]*>/g, '').replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
     if (/QUEST COMPLETE!/i.test(text)) return 60;
@@ -40,7 +38,7 @@ export function priestPerilJournalStage(body: string): number | undefined {
     return undefined;
 }
 
-/** Reads the live `%priestperil` stage from `PRIEST_FROM` env override or the `questlist:priestperil` journal. */
+// Reads the live %priestperil stage from PRIEST_FROM env override or the questlist:priestperil journal.
 export async function readPriestPerilStage(q: JournalQuestReader): Promise<number> {
     if (process.env.PRIEST_FROM !== undefined) {
         const from = Number(process.env.PRIEST_FROM);
@@ -80,6 +78,9 @@ try {
     const under = () => (q.pos()?.worldZ ?? 0) > 9000;
     const x = () => q.pos()?.worldX ?? 0;
     const z = () => q.pos()?.worldZ ?? 0;
+    // The northern dog corridor ends at GATE1 (x <= 3412, z >= 9895); the monument chamber wraps north to z = 9897.
+    const inNorthCellar = () => under() && x() <= 3412 && z() >= GATE1.z;
+    const inSanctum = () => under() && x() > GATE2.x;
     const roald = /^king roald$/i;
     // East of Varrock the SDK plans past lockeddoor1 at 3268,3435 (maps/m51_53.jm2); the server does not let the bot
     // through there, and the walk stalled for 251 ticks in two trials (the walker clicks the locked door). These
@@ -203,7 +204,7 @@ try {
     const fetchMurkyWater = async () => {
         if (q.lvl() > 0 && !under()) await downFromDrezel('well');
         if (!under()) await toTrapdoor('well');
-        if (z() >= GATE1.z) {
+        if (inNorthCellar()) {
             await q.walk('to gate 1 well', [{ x: GATE1.x, z: GATE1.z, tol: 0 }]);
             await cross('gate 1 well', GATE1, /^open$/i, () => z() < GATE1.z);
         }
@@ -215,7 +216,11 @@ try {
         if (!q.has(ITEM.ironKey)) {
             if (!q.has(ITEM.goldKey)) {
                 if (under()) {
-                    if (z() < GATE1.z) {
+                    if (inSanctum()) {
+                        await q.walk('to gate 2 monk', [{ x: GATE2.x + 1, z: GATE2.z, tol: 0 }]);
+                        await cross('gate 2 monk', GATE2, /^open$/i, () => x() <= GATE2.x);
+                    }
+                    if (!inNorthCellar()) {
                         await q.walk('to gate 1 monk', [{ x: GATE1.x, z: GATE1.z - 1, tol: 0 }]);
                         await cross('gate 1 monk', GATE1, /^open$/i, () => z() >= GATE1.z);
                     }
@@ -234,7 +239,7 @@ try {
             }
             if (q.lvl() > 0 && !under()) await downFromDrezel('key');
             if (!under()) await toTrapdoor('key');
-            if (z() >= GATE1.z) {
+            if (inNorthCellar()) {
                 await q.walk('to gate 1', [{ x: GATE1.x, z: GATE1.z, tol: 0 }]);
                 await cross('gate 1', GATE1, /^open$/i, () => z() < GATE1.z);
             }
@@ -249,7 +254,7 @@ try {
             q.milestone('iron');
         }
         if (!q.has(ITEM.murky) && !q.has(ITEM.blessed)) await fetchMurkyWater();
-        if (under() && z() < GATE1.z) {
+        if (under() && !inNorthCellar()) {
             await q.walk('to gate 1 back', [{ x: GATE1.x, z: GATE1.z - 1, tol: 0 }]);
             await cross('gate 1 back', GATE1, /^open$/i, () => z() >= GATE1.z);
         }
@@ -265,7 +270,7 @@ try {
     if (stage < 7) {
         if (!q.has(ITEM.blessed)) {
             if (!q.has(ITEM.murky)) await fetchMurkyWater();
-            if (under() && z() < GATE1.z) {
+            if (under() && !inNorthCellar()) {
                 await q.walk('to gate 1 bless', [{ x: GATE1.x, z: GATE1.z - 1, tol: 0 }]);
                 await cross('gate 1 bless', GATE1, /^open$/i, () => z() >= GATE1.z);
             }
@@ -297,10 +302,11 @@ try {
     }
     // 8. Down to the mausoleum: gates 1 and 2, Drezel (10); the essence (10 + n, drezel.rs2:30-56,85-113).
     const enterMausoleum = async (label: string): Promise<void> => {
+        if (inSanctum()) return;
         if (q.lvl() === 2 && x() > CELL.x) await cross('cell door out 2', CELL, /^open$/i, () => x() <= CELL.x);
         if (q.lvl() > 0 && !under()) await downFromDrezel(label);
         if (!under()) await toTrapdoor(label);
-        if (z() >= GATE1.z) {
+        if (inNorthCellar()) {
             await q.walk(`to gate 1 ${label}`, [{ x: GATE1.x, z: GATE1.z, tol: 0 }]);
             await cross(`gate 1 ${label}`, GATE1, /^open$/i, () => z() < GATE1.z);
         }
@@ -327,11 +333,11 @@ try {
     // 9. Varrock teleport, the east bank (27 essence), the walk back to Drezel; the rest completes the quest.
     for (let trip = 0; trip < 2 && !questDone; trip++) {
         if (under() && q.canCast('magic:varrock_teleport') !== undefined) {
-            if (x() > GATE2.x) {
+            if (inSanctum()) {
                 await q.walk('to gate 2 out', [{ x: GATE2.x + 1, z: GATE2.z, tol: 0 }]);
                 await cross('gate 2 out', GATE2, /^open$/i, () => x() <= GATE2.x);
             }
-            if (z() < GATE1.z) {
+            if (!inNorthCellar()) {
                 await q.walk('to gate 1 out', [{ x: GATE1.x, z: GATE1.z - 1, tol: 0 }]);
                 await cross('gate 1 out', GATE1, /^open$/i, () => z() >= GATE1.z);
             }

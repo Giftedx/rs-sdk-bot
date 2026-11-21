@@ -896,10 +896,8 @@ export type JournalQuestReader = {
     waitUntil: (f: () => boolean, ticks: number) => Promise<boolean>;
 };
 
-/**
- * Reads the live quest journal modal (interface 8134) when the server does not transmit the quest varp.
- * Closes any open modal first, opens `questlist:<questKey>`, parses the journal text, and closes the modal.
- */
+// Reads the live quest journal modal (interface 8134) when the server does not transmit the quest varp.
+// Closes any open modal first, opens questlist:<questKey>, parses the journal text, and closes the modal.
 export async function readQuestJournalStage<T>(
     q: JournalQuestReader,
     questKey: string,

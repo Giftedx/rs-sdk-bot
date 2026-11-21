@@ -26,7 +26,7 @@ const PFM = 14, ULT_STR = 10, INC_REF = 11;     // skill_prayer/configs/prayers.
 export const ZANARIS_MIN_FOOD = 6;
 export const ZANARIS_PRAYER_MIN = 43;
 
-/** Parses `%zanaris` (147) stage from `zanaris_journal.rs2` text ordered from highest stage down. */
+// Parses %zanaris (147) stage from zanaris_journal.rs2 text ordered from highest stage down.
 export function zanarisJournalStage(body: string): number | undefined {
     const text = body.replace(/@[a-z0-9]+@/gi, '').replace(/<[^>]*>/g, '').replace(/\|/g, ' ').replace(/\s+/g, ' ').trim();
     if (/QUEST COMPLETE!/i.test(text)) return 6;
@@ -39,7 +39,7 @@ export function zanarisJournalStage(body: string): number | undefined {
     return undefined;
 }
 
-/** Reads the live `%zanaris` stage from `ZANARIS_FROM` env override or the `questlist:zanaris` journal. */
+// Reads the live %zanaris stage from ZANARIS_FROM env override or the questlist:zanaris journal.
 export async function readZanarisStage(q: JournalQuestReader): Promise<number> {
     if (process.env.ZANARIS_FROM !== undefined) {
         const from = Number(process.env.ZANARIS_FROM);
@@ -51,11 +51,9 @@ export async function readZanarisStage(q: JournalQuestReader): Promise<number> {
     return stage;
 }
 
-/**
- * Enforces Entrana dungeon survival prerequisites before the cave monk drains 95% of Prayer points.
- * Requires >= 6 sharks/lobsters/swordfish and (when base Prayer >= 43 and not using Wind Bolt) either >= 43
- * current Prayer points or >= 1 Prayer potion dose before descending to fight the level-101 Tree Spirit.
- */
+// Enforces Entrana dungeon survival prerequisites before the cave monk drains 95% of Prayer points.
+// Requires >= 6 sharks/lobsters/swordfish and (when base Prayer >= 43 and not using Wind Bolt) either >= 43
+// current Prayer points or >= 1 Prayer potion dose before descending to fight the level-101 Tree Spirit.
 export function validateEntranaDungeonEntry(input: {
     foodCount: number;
     prayerBase: number;

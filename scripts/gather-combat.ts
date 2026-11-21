@@ -1116,10 +1116,8 @@ export const CONFIGS: Record<string, {
     },
 };
 
-/**
- * Ensures surface combat gatherers start on ground level (level 0) before dispatching surface travel.
- * Attempts one nearby downward ladder/staircase or ship gangplank descent, then fails fast with `level !== 0`.
- */
+// Ensures surface combat gatherers start on ground level (level 0) before dispatching surface travel.
+// Attempts one nearby downward ladder/staircase or ship gangplank descent, then fails fast with level !== 0.
 export async function ensureSurfaceGroundEntry(
     s: Pick<Session, 'sdk' | 'bot' | 'onTick' | 'tick'>,
     stop: () => boolean = () => false,
