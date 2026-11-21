@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795291109483-sausagefest-ballspinner-waterrune",
  "account": "Sausagefest",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "Water rune",
  "requested": 25,
  "claim": "2a61e890-5de1-4b5c-9b59-1c569b12170b",
- "count": 0,
- "ok": false,
- "at": 1795291154538,
- "detail": "trade claimed"
+ "count": 25,
+ "ok": true,
+ "at": 1795291171589,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 25,
+  "after": 0
+ },
+ "bank": {
+  "count": 25,
+  "at": 1795291163216
+ },
+ "logout": {
+  "attemptId": "1795291154547-0000017168-0000000001",
+  "at": 1795291171571,
+  "sha256": "ec895f15478e5ea14abed130f9bc8f41d6df46a88999016df0649594043a0f3c"
+ },
+ "screen": true
 }
