@@ -1,0 +1,2134 @@
+{
+  "benchmarks": {
+    "baselineRealistic": 28416,
+    "baselineFloor": 26734,
+    "baselineHalfRealistic": 14208,
+    "baselineHalfFloor": 13367,
+    "liveRecordOkayDen": 29972,
+    "liveRecordHalf": 14986,
+    "round2Realistic": 26623,
+    "round2Floor": 25441,
+    "round2HalfRealistic": 13312,
+    "round2HalfFloor": 12721
+  },
+  "halvingChecks": {
+    "maxRealBeatsBaselineHalf17146": false,
+    "maxFloorBeatsBaselineHalf16408": false,
+    "maxFloorBeatsLiveHalf14986": false,
+    "maxRealBeatsLiveHalf14986": false,
+    "maxRealVsRound2Half13311": 7998
+  },
+  "routeR6_Max": {
+    "realistic": 21310,
+    "realisticFg": 20043,
+    "realisticTravel": 1267,
+    "realisticEstTravel": 391,
+    "realisticRelogs": 4712,
+    "realisticHpXp": 1222191,
+    "allMaxedReal": true,
+    "floor": 21003,
+    "floorFg": 19736,
+    "floorTravel": 1267,
+    "floorRelogs": 4686,
+    "allMaxedFloor": true,
+    "trawlerHelpersFloor": 27,
+    "trawlerHelpersReal": 29,
+    "stepsRealistic": [
+      {
+        "id": "tutorial",
+        "label": "Tutorial skip",
+        "fg": 10,
+        "at": "lumbridge-spawn",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:tutorial",
+        "stepNum": 1,
+        "fromPlace": "lumbridge-spawn",
+        "toPlace": "lumbridge-spawn",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 0,
+        "end": 10,
+        "landsAt": 10,
+        "cumHpXp": 980
+      },
+      {
+        "id": "runecraft-air",
+        "label": "Runecraft 1->44 (Air altar 7x27 ess @ 8t/pack)",
+        "fg": 56,
+        "at": "air-ruins",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:runecraft Air 1->44",
+        "xp": {
+          "runecraft": 23625
+        },
+        "stepNum": 2,
+        "fromPlace": "lumbridge-spawn",
+        "toPlace": "air-ruins",
+        "travel": 142,
+        "travelMethod": "path",
+        "travelEvidence": "PATH",
+        "start": 152,
+        "end": 208,
+        "landsAt": 208,
+        "cumHpXp": 980
+      },
+      {
+        "id": "trade-start",
+        "label": "Trade 1: Glory, Dueling, talismans, noted supplies, combat & Trawler kits",
+        "fg": 12,
+        "at": "anywhere",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:trade-start",
+        "stepNum": 3,
+        "fromPlace": "air-ruins",
+        "toPlace": "air-ruins",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 208,
+        "end": 220,
+        "landsAt": 220,
+        "cumHpXp": 980
+      },
+      {
+        "id": "fletch",
+        "label": "Fletching 1->99 (5/t arrows during 159t glory-karamja->nature-ruins run = 0 fg)",
+        "fg": 0,
+        "at": "anywhere",
+        "evidence": "MEASURED",
+        "source": "round2-final:walk_0t_open_road",
+        "xp": {
+          "fletching": "to99"
+        },
+        "stepNum": 4,
+        "fromPlace": "air-ruins",
+        "toPlace": "air-ruins",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 220,
+        "end": 220,
+        "landsAt": 220,
+        "cumHpXp": 980
+      },
+      {
+        "id": "runecraft-nature",
+        "label": "Runecraft 44->99 (Nature altar 161x27 ess via tickTransfer @ 8.00 t/pack)",
+        "fg": 1292,
+        "at": "nature-ruins",
+        "evidence": "MEASURED",
+        "source": "round2-final + round6 exact 8.00t/pack engine floor",
+        "xp": {
+          "runecraft": "to99"
+        },
+        "stepNum": 5,
+        "fromPlace": "air-ruins",
+        "toPlace": "nature-ruins",
+        "travel": 164,
+        "travelMethod": "teleport:glory-karamja",
+        "travelEvidence": "TELEPORT",
+        "start": 384,
+        "end": 1676,
+        "landsAt": 1676,
+        "cumHpXp": 980
+      },
+      {
+        "id": "woodcut-prayer",
+        "label": "Woodcutting 1->99 + Prayer 1->99 (Draynor 3t knife Oaks->Willows + bone givers)",
+        "fg": 3329,
+        "at": "draynor-willows",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:woodcut (woodcut-givers)",
+        "xp": {
+          "woodcutting": "to99",
+          "prayer": "to99"
+        },
+        "stepNum": 6,
+        "fromPlace": "nature-ruins",
+        "toPlace": "draynor-willows",
+        "travel": 23,
+        "travelMethod": "teleport:glory-draynor",
+        "travelEvidence": "TELEPORT",
+        "start": 1699,
+        "end": 5028,
+        "landsAt": 5028,
+        "cumHpXp": 980
+      },
+      {
+        "id": "druid",
+        "label": "Druidic Ritual (Herblore 1->3, q-burst)",
+        "fg": 177,
+        "at": "kaqemeex",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:druid (q-burst 177t)",
+        "xp": {
+          "herblore": 6250
+        },
+        "stepNum": 7,
+        "fromPlace": "draynor-willows",
+        "toPlace": "kaqemeex",
+        "travel": 141,
+        "travelMethod": "teleport:glory-edgeville",
+        "travelEvidence": "TELEPORT",
+        "start": 5169,
+        "end": 5346,
+        "landsAt": 5346,
+        "cumHpXp": 980
+      },
+      {
+        "id": "doric",
+        "label": "Doric's Quest (Mining 1->49)",
+        "fg": 18,
+        "at": "doric",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:doric",
+        "xp": {
+          "mining": 32500
+        },
+        "stepNum": 8,
+        "fromPlace": "kaqemeex",
+        "toPlace": "doric",
+        "travel": 30,
+        "travelMethod": "path",
+        "travelEvidence": "PATH",
+        "start": 5376,
+        "end": 5394,
+        "landsAt": 5394,
+        "cumHpXp": 980
+      },
+      {
+        "id": "smith-anvil",
+        "label": "Smithing 1->99 (Varrock west anvil, courier burst trade)",
+        "fg": 992,
+        "at": "varrock-west-anvil",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:smith-anvil + round6 smith_anvil_ticktransfer",
+        "xp": {
+          "smithing": "to99"
+        },
+        "stepNum": 9,
+        "fromPlace": "doric",
+        "toPlace": "varrock-west-anvil",
+        "travel": 91,
+        "travelMethod": "teleport:glory-edgeville",
+        "travelEvidence": "TELEPORT",
+        "start": 5485,
+        "end": 6477,
+        "landsAt": 6477,
+        "cumHpXp": 980
+      },
+      {
+        "id": "herb-tail",
+        "label": "Herblore post-boat tail (93t; remainder inside Trawler deck)",
+        "fg": 93,
+        "at": "bank",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:herb remainder",
+        "xp": {
+          "herblore": 375103
+        },
+        "stepNum": 10,
+        "fromPlace": "varrock-west-anvil",
+        "toPlace": "bank:varrock-west-bank:0",
+        "travel": 11,
+        "travelMethod": "path",
+        "travelEvidence": "PATH",
+        "start": 6488,
+        "end": 6581,
+        "landsAt": 6581,
+        "cumHpXp": 980
+      },
+      {
+        "id": "mine",
+        "label": "Mining 49->99 (Ardougne Zoo 6-rock 3t iron)",
+        "fg": 3507,
+        "at": "ardougne-zoo",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:mine (276.0/275.5 XP/t); Wildy 8-iron refuted",
+        "xp": {
+          "mining": "to99"
+        },
+        "stepNum": 11,
+        "fromPlace": "bank:varrock-west-bank:0",
+        "toPlace": "ardougne-zoo",
+        "travel": 152,
+        "travelMethod": "teleport:dueling-castle-wars",
+        "travelEvidence": "TELEPORT",
+        "start": 6733,
+        "end": 10240,
+        "landsAt": 10240,
+        "cumHpXp": 980
+      },
+      {
+        "id": "rival-fight-arena",
+        "label": "Fight Arena (304,375 Atk -> 83; 54,375 Thieving -> 57)",
+        "fg": 526,
+        "at": "lady-servil",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:rival-fight-arena",
+        "xp": {
+          "attack": 304375,
+          "thieving": 54375
+        },
+        "stepNum": 12,
+        "fromPlace": "ardougne-zoo",
+        "toPlace": "lady-servil",
+        "travel": 26,
+        "travelMethod": "path",
+        "travelEvidence": "PATH",
+        "start": 10266,
+        "end": 10792,
+        "landsAt": 10792,
+        "cumHpXp": 980
+      },
+      {
+        "id": "thieve",
+        "label": "Thieving 57->99 (Knights -> Boxed Spice Stall 2t relog @ 1,012.5 XP/t)",
+        "fg": 1041,
+        "at": "ardougne-spice-stall",
+        "endAt": "ardougne-market",
+        "relogs": 462,
+        "evidence": "MEASURED",
+        "source": "round6-verified:thieve_stall_2t_boxed + thieve_spice_3x_repeat",
+        "xp": {
+          "thieving": "to99"
+        },
+        "notes": "Knights 57->65 + Boxed Spice Stall 65->99 @ 1,012.5 XP/t (2t playtime/steal; note ~166t/steal offline respawn wall-clock)",
+        "stepNum": 13,
+        "fromPlace": "lady-servil",
+        "toPlace": "ardougne-spice-stall",
+        "travel": 62,
+        "travelMethod": "estimate",
+        "travelEvidence": "ESTIMATE",
+        "start": 10854,
+        "end": 11895,
+        "landsAt": 11895,
+        "cumHpXp": 980
+      },
+      {
+        "id": "rival-seaslug",
+        "label": "Sea Slug (Fishing 1->74, 179,375 XP)",
+        "fg": 348,
+        "at": "caroline",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:rival-seaslug",
+        "xp": {
+          "fishing": 179375
+        },
+        "stepNum": 14,
+        "fromPlace": "ardougne-market",
+        "toPlace": "caroline",
+        "travel": 30,
+        "travelMethod": "path",
+        "travelEvidence": "PATH",
+        "start": 11925,
+        "end": 12273,
+        "landsAt": 12273,
+        "cumHpXp": 980
+      },
+      {
+        "id": "fish-pre-boat",
+        "label": "Fishing 74->78 via 3t fly (144t so +3 Fish Pot hits 81 Manta Ray)",
+        "fg": 144,
+        "at": "caroline",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:fish rate (371.5 XP/t)",
+        "xp": {
+          "fishing": 53126
+        },
+        "stepNum": 15,
+        "fromPlace": "caroline",
+        "toPlace": "caroline",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 12273,
+        "end": 12417,
+        "landsAt": 12417,
+        "cumHpXp": 980
+      },
+      {
+        "id": "trawler-4in1",
+        "label": "Trawler Boat 4-in-1 (29 helpers: Fish 78+3->99 + FM 1->99 + Craft 1->99 + 153t Herb + Wine prep)",
+        "fg": 1076,
+        "at": "trawler-pier",
+        "evidence": "MEASURED",
+        "source": "round3-trawler (1076t total boat+lobby+net) + trawler_win.rs2 exact EV",
+        "xp": {
+          "fishing": "to99",
+          "firemaking": "to99",
+          "crafting": "to99",
+          "herblore": "to99"
+        },
+        "absorbedInside": [
+          "firemaking:to99",
+          "crafting:to99",
+          "herblore:153t"
+        ],
+        "stepNum": 16,
+        "fromPlace": "caroline",
+        "toPlace": "trawler-pier",
+        "travel": 82,
+        "travelMethod": "estimate",
+        "travelEvidence": "ESTIMATE",
+        "start": 12499,
+        "end": 13575,
+        "landsAt": 13575,
+        "cumHpXp": 980
+      },
+      {
+        "id": "relog-wine",
+        "label": "Login-wine Cooking 1->99 (2t relog + 22t background ferment)",
+        "fg": 8,
+        "bg": 22,
+        "at": "anywhere",
+        "relogs": 1,
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:bank-wine+relog+login-wine",
+        "xp": {
+          "cooking": "to99"
+        },
+        "stepNum": 17,
+        "fromPlace": "trawler-pier",
+        "toPlace": "trawler-pier",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 13575,
+        "end": 13583,
+        "landsAt": 13605,
+        "cumHpXp": 980
+      },
+      {
+        "id": "agility-brimhaven",
+        "label": "Brimhaven Agility Arena 1->99 (Relog-scout MDP, 2t abort, 136 tickets = 10+25+100+)",
+        "fg": 3476,
+        "relogs": 613,
+        "at": "brimhaven-arena",
+        "evidence": "MDP-CALIBRATED",
+        "source": "m43_149.jm2 38-edge MDP calibrated to round3 hitDist1=14t + round6 brimhaven_2t_abort=2.00t",
+        "xp": {
+          "agility": "to99"
+        },
+        "stepNum": 18,
+        "fromPlace": "trawler-pier",
+        "toPlace": "brimhaven-arena",
+        "travel": 73,
+        "travelMethod": "teleport:glory-karamja",
+        "travelEvidence": "ESTIMATE",
+        "start": 13656,
+        "end": 17132,
+        "landsAt": 17132,
+        "cumHpXp": 980
+      },
+      {
+        "id": "imp-catcher",
+        "label": "Imp Catcher (Magic 1->44, q-burst)",
+        "fg": 9,
+        "at": "wizard-tower",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:imp-catcher q-burst (9/9/9t)",
+        "xp": {
+          "magic": 21875
+        },
+        "stepNum": 19,
+        "fromPlace": "brimhaven-arena",
+        "toPlace": "wizard-tower",
+        "travel": 51,
+        "travelMethod": "teleport:glory-draynor",
+        "travelEvidence": "TELEPORT",
+        "start": 17183,
+        "end": 17192,
+        "landsAt": 17192,
+        "cumHpXp": 980
+      },
+      {
+        "id": "magic-44-50",
+        "label": "Enchant 44->50 (8 Ruby enchants)",
+        "fg": 26,
+        "at": "bank",
+        "evidence": "SCALED",
+        "source": "2.96/3.23 t/cast * 8 casts",
+        "xp": {
+          "magic": 11800
+        },
+        "stepNum": 20,
+        "fromPlace": "wizard-tower",
+        "toPlace": "bank:draynor-bank:0",
+        "travel": 15,
+        "travelMethod": "teleport:glory-draynor",
+        "travelEvidence": "TELEPORT",
+        "start": 17207,
+        "end": 17233,
+        "landsAt": 17233,
+        "cumHpXp": 980
+      },
+      {
+        "id": "relog-str",
+        "label": "Multiway 1t Relog Strength 1->99 (R2H + 118/118 + UltStr vs CB 101)",
+        "fg": 925,
+        "at": "multiway-relog",
+        "relogs": 835,
+        "evidence": "MEASURED",
+        "source": "round5 r2h_bis_70_str/99_str + round6 combat_cb100_r2h_str99",
+        "xp": {
+          "strength": "to99",
+          "hitpoints": 330490
+        },
+        "stepNum": 21,
+        "fromPlace": "bank:draynor-bank:0",
+        "toPlace": "multiway-relog",
+        "travel": 174,
+        "travelMethod": "wildy-lever(teleport:camelot->ardougne-lever)",
+        "travelEvidence": "ESTIMATE",
+        "start": 17407,
+        "end": 18332,
+        "landsAt": 18332,
+        "cumHpXp": 331470
+      },
+      {
+        "id": "relog-atk",
+        "label": "Multiway 1t Relog Attack 83->99 (R2H + 118/118 + UltStr)",
+        "fg": 475,
+        "at": "multiway-relog",
+        "relogs": 475,
+        "evidence": "MEASURED",
+        "source": "round4 r2h_bis_99_atk (1,462.48 XP/t)",
+        "xp": {
+          "attack": "to99",
+          "hitpoints": 229741
+        },
+        "stepNum": 22,
+        "fromPlace": "multiway-relog",
+        "toPlace": "multiway-relog",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 18332,
+        "end": 18807,
+        "landsAt": 18807,
+        "cumHpXp": 561211
+      },
+      {
+        "id": "relog-def",
+        "label": "Multiway 1t Relog Defence 1->99 (R2H + 118/118 + UltStr)",
+        "fg": 671,
+        "at": "multiway-relog",
+        "relogs": 671,
+        "evidence": "MEASURED",
+        "source": "round5 r2h_bis_99_def (1,489.48 XP/t)",
+        "xp": {
+          "defence": "to99",
+          "hitpoints": 330490
+        },
+        "stepNum": 23,
+        "fromPlace": "multiway-relog",
+        "toPlace": "multiway-relog",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 18807,
+        "end": 19478,
+        "landsAt": 19478,
+        "cumHpXp": 891701
+      },
+      {
+        "id": "relog-rng",
+        "label": "Multiway 1t Relog Ranged 1->99 (Xbow barbed -> MLB rune arrows + pot)",
+        "fg": 1285,
+        "at": "multiway-relog",
+        "relogs": 1168,
+        "evidence": "MEASURED",
+        "source": "round3 mlb_1t_rngpot + round4 mlb_bis_70/90",
+        "xp": {
+          "ranged": "to99",
+          "hitpoints": 330490
+        },
+        "stepNum": 24,
+        "fromPlace": "multiway-relog",
+        "toPlace": "multiway-relog",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 19478,
+        "end": 20763,
+        "landsAt": 20763,
+        "cumHpXp": 1222191
+      },
+      {
+        "id": "relog-magic-curses",
+        "label": "Multiway 1t Relog Curses 50->99 (Snare->Vuln->Enfeeble->Stun, skips Mage Arena)",
+        "fg": 547,
+        "at": "multiway-relog",
+        "relogs": 487,
+        "evidence": "MEASURED",
+        "source": "round3-combat: curse_1t_snare_50..curse_1t_stun_80 (954.6..1,968.75 XP/t)",
+        "xp": {
+          "magic": "to99"
+        },
+        "stepNum": 25,
+        "fromPlace": "multiway-relog",
+        "toPlace": "multiway-relog",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 20763,
+        "end": 21310,
+        "landsAt": 21310,
+        "cumHpXp": 1222191
+      }
+    ],
+    "stepsFloor": [
+      {
+        "id": "tutorial",
+        "label": "Tutorial skip",
+        "fg": 10,
+        "at": "lumbridge-spawn",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:tutorial",
+        "stepNum": 1,
+        "fromPlace": "lumbridge-spawn",
+        "toPlace": "lumbridge-spawn",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 0,
+        "end": 10,
+        "landsAt": 10,
+        "cumHpXp": 980
+      },
+      {
+        "id": "runecraft-air",
+        "label": "Runecraft 1->44 (Air altar 7x27 ess @ 8t/pack)",
+        "fg": 56,
+        "at": "air-ruins",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:runecraft Air 1->44",
+        "xp": {
+          "runecraft": 23625
+        },
+        "stepNum": 2,
+        "fromPlace": "lumbridge-spawn",
+        "toPlace": "air-ruins",
+        "travel": 142,
+        "travelMethod": "path",
+        "travelEvidence": "PATH",
+        "start": 152,
+        "end": 208,
+        "landsAt": 208,
+        "cumHpXp": 980
+      },
+      {
+        "id": "trade-start",
+        "label": "Trade 1: Glory, Dueling, talismans, noted supplies, combat & Trawler kits",
+        "fg": 5,
+        "at": "anywhere",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:trade-start",
+        "stepNum": 3,
+        "fromPlace": "air-ruins",
+        "toPlace": "air-ruins",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 208,
+        "end": 213,
+        "landsAt": 213,
+        "cumHpXp": 980
+      },
+      {
+        "id": "fletch",
+        "label": "Fletching 1->99 (5/t arrows during 159t glory-karamja->nature-ruins run = 0 fg)",
+        "fg": 0,
+        "at": "anywhere",
+        "evidence": "MEASURED",
+        "source": "round2-final:walk_0t_open_road",
+        "xp": {
+          "fletching": "to99"
+        },
+        "stepNum": 4,
+        "fromPlace": "air-ruins",
+        "toPlace": "air-ruins",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 213,
+        "end": 213,
+        "landsAt": 213,
+        "cumHpXp": 980
+      },
+      {
+        "id": "runecraft-nature",
+        "label": "Runecraft 44->99 (Nature altar 161x27 ess via tickTransfer @ 8.00 t/pack)",
+        "fg": 1292,
+        "at": "nature-ruins",
+        "evidence": "MEASURED",
+        "source": "round2-final + round6 exact 8.00t/pack engine floor",
+        "xp": {
+          "runecraft": "to99"
+        },
+        "stepNum": 5,
+        "fromPlace": "air-ruins",
+        "toPlace": "nature-ruins",
+        "travel": 164,
+        "travelMethod": "teleport:glory-karamja",
+        "travelEvidence": "TELEPORT",
+        "start": 377,
+        "end": 1669,
+        "landsAt": 1669,
+        "cumHpXp": 980
+      },
+      {
+        "id": "woodcut-prayer",
+        "label": "Woodcutting 1->99 + Prayer 1->99 (Draynor 3t knife Oaks->Willows + bone givers)",
+        "fg": 3223,
+        "at": "draynor-willows",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:woodcut (woodcut-givers)",
+        "xp": {
+          "woodcutting": "to99",
+          "prayer": "to99"
+        },
+        "stepNum": 6,
+        "fromPlace": "nature-ruins",
+        "toPlace": "draynor-willows",
+        "travel": 23,
+        "travelMethod": "teleport:glory-draynor",
+        "travelEvidence": "TELEPORT",
+        "start": 1692,
+        "end": 4915,
+        "landsAt": 4915,
+        "cumHpXp": 980
+      },
+      {
+        "id": "druid",
+        "label": "Druidic Ritual (Herblore 1->3, q-burst)",
+        "fg": 177,
+        "at": "kaqemeex",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:druid (q-burst 177t)",
+        "xp": {
+          "herblore": 6250
+        },
+        "stepNum": 7,
+        "fromPlace": "draynor-willows",
+        "toPlace": "kaqemeex",
+        "travel": 141,
+        "travelMethod": "teleport:glory-edgeville",
+        "travelEvidence": "TELEPORT",
+        "start": 5056,
+        "end": 5233,
+        "landsAt": 5233,
+        "cumHpXp": 980
+      },
+      {
+        "id": "doric",
+        "label": "Doric's Quest (Mining 1->49)",
+        "fg": 18,
+        "at": "doric",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:doric",
+        "xp": {
+          "mining": 32500
+        },
+        "stepNum": 8,
+        "fromPlace": "kaqemeex",
+        "toPlace": "doric",
+        "travel": 30,
+        "travelMethod": "path",
+        "travelEvidence": "PATH",
+        "start": 5263,
+        "end": 5281,
+        "landsAt": 5281,
+        "cumHpXp": 980
+      },
+      {
+        "id": "smith-anvil",
+        "label": "Smithing 1->99 (Varrock west anvil, courier burst trade)",
+        "fg": 991,
+        "at": "varrock-west-anvil",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:smith-anvil + round6 smith_anvil_ticktransfer",
+        "xp": {
+          "smithing": "to99"
+        },
+        "stepNum": 9,
+        "fromPlace": "doric",
+        "toPlace": "varrock-west-anvil",
+        "travel": 91,
+        "travelMethod": "teleport:glory-edgeville",
+        "travelEvidence": "TELEPORT",
+        "start": 5372,
+        "end": 6363,
+        "landsAt": 6363,
+        "cumHpXp": 980
+      },
+      {
+        "id": "herb-tail",
+        "label": "Herblore post-boat tail (71t; remainder inside Trawler deck)",
+        "fg": 71,
+        "at": "bank",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:herb remainder",
+        "xp": {
+          "herblore": 286369
+        },
+        "stepNum": 10,
+        "fromPlace": "varrock-west-anvil",
+        "toPlace": "bank:varrock-west-bank:0",
+        "travel": 11,
+        "travelMethod": "path",
+        "travelEvidence": "PATH",
+        "start": 6374,
+        "end": 6445,
+        "landsAt": 6445,
+        "cumHpXp": 980
+      },
+      {
+        "id": "mine",
+        "label": "Mining 49->99 (Ardougne Zoo 6-rock 3t iron)",
+        "fg": 3500,
+        "at": "ardougne-zoo",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:mine (276.0/275.5 XP/t); Wildy 8-iron refuted",
+        "xp": {
+          "mining": "to99"
+        },
+        "stepNum": 11,
+        "fromPlace": "bank:varrock-west-bank:0",
+        "toPlace": "ardougne-zoo",
+        "travel": 152,
+        "travelMethod": "teleport:dueling-castle-wars",
+        "travelEvidence": "TELEPORT",
+        "start": 6597,
+        "end": 10097,
+        "landsAt": 10097,
+        "cumHpXp": 980
+      },
+      {
+        "id": "rival-fight-arena",
+        "label": "Fight Arena (304,375 Atk -> 83; 54,375 Thieving -> 57)",
+        "fg": 500,
+        "at": "lady-servil",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:rival-fight-arena",
+        "xp": {
+          "attack": 304375,
+          "thieving": 54375
+        },
+        "stepNum": 12,
+        "fromPlace": "ardougne-zoo",
+        "toPlace": "lady-servil",
+        "travel": 26,
+        "travelMethod": "path",
+        "travelEvidence": "PATH",
+        "start": 10123,
+        "end": 10623,
+        "landsAt": 10623,
+        "cumHpXp": 980
+      },
+      {
+        "id": "thieve",
+        "label": "Thieving 57->99 (Knights -> Boxed Spice Stall 2t relog @ 1,012.5 XP/t)",
+        "fg": 1024,
+        "at": "ardougne-spice-stall",
+        "endAt": "ardougne-market",
+        "relogs": 462,
+        "evidence": "MEASURED",
+        "source": "round6-verified:thieve_stall_2t_boxed + thieve_spice_3x_repeat",
+        "xp": {
+          "thieving": "to99"
+        },
+        "notes": "Knights 57->65 + Boxed Spice Stall 65->99 @ 1,012.5 XP/t (2t playtime/steal; note ~166t/steal offline respawn wall-clock)",
+        "stepNum": 13,
+        "fromPlace": "lady-servil",
+        "toPlace": "ardougne-spice-stall",
+        "travel": 62,
+        "travelMethod": "estimate",
+        "travelEvidence": "ESTIMATE",
+        "start": 10685,
+        "end": 11709,
+        "landsAt": 11709,
+        "cumHpXp": 980
+      },
+      {
+        "id": "rival-seaslug",
+        "label": "Sea Slug (Fishing 1->74, 179,375 XP)",
+        "fg": 344,
+        "at": "caroline",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:rival-seaslug",
+        "xp": {
+          "fishing": 179375
+        },
+        "stepNum": 14,
+        "fromPlace": "ardougne-market",
+        "toPlace": "caroline",
+        "travel": 30,
+        "travelMethod": "path",
+        "travelEvidence": "PATH",
+        "start": 11739,
+        "end": 12083,
+        "landsAt": 12083,
+        "cumHpXp": 980
+      },
+      {
+        "id": "fish-pre-boat",
+        "label": "Fishing 74->78 via 3t fly (144t so +3 Fish Pot hits 81 Manta Ray)",
+        "fg": 144,
+        "at": "caroline",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:fish rate (371.5 XP/t)",
+        "xp": {
+          "fishing": 53126
+        },
+        "stepNum": 15,
+        "fromPlace": "caroline",
+        "toPlace": "caroline",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 12083,
+        "end": 12227,
+        "landsAt": 12227,
+        "cumHpXp": 980
+      },
+      {
+        "id": "trawler-4in1",
+        "label": "Trawler Boat 4-in-1 (27 helpers: Fish 78+3->99 + FM 1->99 + Craft 1->99 + 175t Herb + Wine prep)",
+        "fg": 1076,
+        "at": "trawler-pier",
+        "evidence": "MEASURED",
+        "source": "round3-trawler (1076t total boat+lobby+net) + trawler_win.rs2 exact EV",
+        "xp": {
+          "fishing": "to99",
+          "firemaking": "to99",
+          "crafting": "to99",
+          "herblore": "to99"
+        },
+        "absorbedInside": [
+          "firemaking:to99",
+          "crafting:to99",
+          "herblore:175t"
+        ],
+        "stepNum": 16,
+        "fromPlace": "caroline",
+        "toPlace": "trawler-pier",
+        "travel": 82,
+        "travelMethod": "estimate",
+        "travelEvidence": "ESTIMATE",
+        "start": 12309,
+        "end": 13385,
+        "landsAt": 13385,
+        "cumHpXp": 980
+      },
+      {
+        "id": "relog-wine",
+        "label": "Login-wine Cooking 1->99 (2t relog + 22t background ferment)",
+        "fg": 4,
+        "bg": 21,
+        "at": "anywhere",
+        "relogs": 1,
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:bank-wine+relog+login-wine",
+        "xp": {
+          "cooking": "to99"
+        },
+        "stepNum": 17,
+        "fromPlace": "trawler-pier",
+        "toPlace": "trawler-pier",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 13385,
+        "end": 13389,
+        "landsAt": 13410,
+        "cumHpXp": 980
+      },
+      {
+        "id": "agility-brimhaven",
+        "label": "Brimhaven Agility Arena 1->99 (Relog-scout MDP, 2t abort, 136 tickets = 10+25+100+)",
+        "fg": 3476,
+        "relogs": 613,
+        "at": "brimhaven-arena",
+        "evidence": "MDP-CALIBRATED",
+        "source": "m43_149.jm2 38-edge MDP calibrated to round3 hitDist1=14t + round6 brimhaven_2t_abort=2.00t",
+        "xp": {
+          "agility": "to99"
+        },
+        "stepNum": 18,
+        "fromPlace": "trawler-pier",
+        "toPlace": "brimhaven-arena",
+        "travel": 73,
+        "travelMethod": "teleport:glory-karamja",
+        "travelEvidence": "ESTIMATE",
+        "start": 13462,
+        "end": 16938,
+        "landsAt": 16938,
+        "cumHpXp": 980
+      },
+      {
+        "id": "imp-catcher",
+        "label": "Imp Catcher (Magic 1->44, q-burst)",
+        "fg": 9,
+        "at": "wizard-tower",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:imp-catcher q-burst (9/9/9t)",
+        "xp": {
+          "magic": 21875
+        },
+        "stepNum": 19,
+        "fromPlace": "brimhaven-arena",
+        "toPlace": "wizard-tower",
+        "travel": 51,
+        "travelMethod": "teleport:glory-draynor",
+        "travelEvidence": "TELEPORT",
+        "start": 16989,
+        "end": 16998,
+        "landsAt": 16998,
+        "cumHpXp": 980
+      },
+      {
+        "id": "magic-44-50",
+        "label": "Enchant 44->50 (8 Ruby enchants)",
+        "fg": 24,
+        "at": "bank",
+        "evidence": "SCALED",
+        "source": "2.96/3.23 t/cast * 8 casts",
+        "xp": {
+          "magic": 11800
+        },
+        "stepNum": 20,
+        "fromPlace": "wizard-tower",
+        "toPlace": "bank:draynor-bank:0",
+        "travel": 15,
+        "travelMethod": "teleport:glory-draynor",
+        "travelEvidence": "TELEPORT",
+        "start": 17013,
+        "end": 17037,
+        "landsAt": 17037,
+        "cumHpXp": 980
+      },
+      {
+        "id": "relog-str",
+        "label": "Multiway 1t Relog Strength 1->99 (R2H + 118/118 + UltStr vs CB 101)",
+        "fg": 870,
+        "at": "multiway-relog",
+        "relogs": 809,
+        "evidence": "MEASURED",
+        "source": "round5 r2h_bis_70_str/99_str + round6 combat_cb100_r2h_str99",
+        "xp": {
+          "strength": "to99",
+          "hitpoints": 330490
+        },
+        "stepNum": 21,
+        "fromPlace": "bank:draynor-bank:0",
+        "toPlace": "multiway-relog",
+        "travel": 174,
+        "travelMethod": "wildy-lever(teleport:camelot->ardougne-lever)",
+        "travelEvidence": "ESTIMATE",
+        "start": 17211,
+        "end": 18081,
+        "landsAt": 18081,
+        "cumHpXp": 331470
+      },
+      {
+        "id": "relog-atk",
+        "label": "Multiway 1t Relog Attack 83->99 (R2H + 118/118 + UltStr)",
+        "fg": 475,
+        "at": "multiway-relog",
+        "relogs": 475,
+        "evidence": "MEASURED",
+        "source": "round4 r2h_bis_99_atk (1,462.48 XP/t)",
+        "xp": {
+          "attack": "to99",
+          "hitpoints": 229741
+        },
+        "stepNum": 22,
+        "fromPlace": "multiway-relog",
+        "toPlace": "multiway-relog",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 18081,
+        "end": 18556,
+        "landsAt": 18556,
+        "cumHpXp": 561211
+      },
+      {
+        "id": "relog-def",
+        "label": "Multiway 1t Relog Defence 1->99 (R2H + 118/118 + UltStr)",
+        "fg": 671,
+        "at": "multiway-relog",
+        "relogs": 671,
+        "evidence": "MEASURED",
+        "source": "round5 r2h_bis_99_def (1,489.48 XP/t)",
+        "xp": {
+          "defence": "to99",
+          "hitpoints": 330490
+        },
+        "stepNum": 23,
+        "fromPlace": "multiway-relog",
+        "toPlace": "multiway-relog",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 18556,
+        "end": 19227,
+        "landsAt": 19227,
+        "cumHpXp": 891701
+      },
+      {
+        "id": "relog-rng",
+        "label": "Multiway 1t Relog Ranged 1->99 (Xbow barbed -> MLB rune arrows + pot)",
+        "fg": 1252,
+        "at": "multiway-relog",
+        "relogs": 1168,
+        "evidence": "MEASURED",
+        "source": "round3 mlb_1t_rngpot + round4 mlb_bis_70/90",
+        "xp": {
+          "ranged": "to99",
+          "hitpoints": 330490
+        },
+        "stepNum": 24,
+        "fromPlace": "multiway-relog",
+        "toPlace": "multiway-relog",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 19227,
+        "end": 20479,
+        "landsAt": 20479,
+        "cumHpXp": 1222191
+      },
+      {
+        "id": "relog-magic-curses",
+        "label": "Multiway 1t Relog Curses 50->99 (Snare->Vuln->Enfeeble->Stun, skips Mage Arena)",
+        "fg": 524,
+        "at": "multiway-relog",
+        "relogs": 487,
+        "evidence": "MEASURED",
+        "source": "round3-combat: curse_1t_snare_50..curse_1t_stun_80 (954.6..1,968.75 XP/t)",
+        "xp": {
+          "magic": "to99"
+        },
+        "stepNum": 25,
+        "fromPlace": "multiway-relog",
+        "toPlace": "multiway-relog",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 20479,
+        "end": 21003,
+        "landsAt": 21003,
+        "cumHpXp": 1222191
+      }
+    ]
+  },
+  "routeR6_Practical": {
+    "realistic": 23020,
+    "realisticFg": 21753,
+    "realisticTravel": 1267,
+    "realisticEstTravel": 391,
+    "realisticRelogs": 4192,
+    "realisticHpXp": 1222191,
+    "allMaxedReal": true,
+    "floor": 22567,
+    "floorFg": 21300,
+    "floorTravel": 1267,
+    "floorRelogs": 4166,
+    "allMaxedFloor": true,
+    "trawlerHelpers": 20,
+    "stepsRealistic": [
+      {
+        "id": "tutorial",
+        "label": "Tutorial skip",
+        "fg": 10,
+        "at": "lumbridge-spawn",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:tutorial",
+        "stepNum": 1,
+        "fromPlace": "lumbridge-spawn",
+        "toPlace": "lumbridge-spawn",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 0,
+        "end": 10,
+        "landsAt": 10,
+        "cumHpXp": 980
+      },
+      {
+        "id": "runecraft-air",
+        "label": "Runecraft 1->44 (Air altar 7x27 ess @ 8t/pack)",
+        "fg": 56,
+        "at": "air-ruins",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:runecraft Air 1->44",
+        "xp": {
+          "runecraft": 23625
+        },
+        "stepNum": 2,
+        "fromPlace": "lumbridge-spawn",
+        "toPlace": "air-ruins",
+        "travel": 142,
+        "travelMethod": "path",
+        "travelEvidence": "PATH",
+        "start": 152,
+        "end": 208,
+        "landsAt": 208,
+        "cumHpXp": 980
+      },
+      {
+        "id": "trade-start",
+        "label": "Trade 1: Glory, Dueling, talismans, noted supplies, combat & Trawler kits",
+        "fg": 12,
+        "at": "anywhere",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:trade-start",
+        "stepNum": 3,
+        "fromPlace": "air-ruins",
+        "toPlace": "air-ruins",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 208,
+        "end": 220,
+        "landsAt": 220,
+        "cumHpXp": 980
+      },
+      {
+        "id": "fletch",
+        "label": "Fletching 1->99 (5/t arrows during 159t glory-karamja->nature-ruins run = 0 fg)",
+        "fg": 0,
+        "at": "anywhere",
+        "evidence": "MEASURED",
+        "source": "round2-final:walk_0t_open_road",
+        "xp": {
+          "fletching": "to99"
+        },
+        "stepNum": 4,
+        "fromPlace": "air-ruins",
+        "toPlace": "air-ruins",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 220,
+        "end": 220,
+        "landsAt": 220,
+        "cumHpXp": 980
+      },
+      {
+        "id": "runecraft-nature",
+        "label": "Runecraft 44->99 (Nature altar 161x27 ess via tickTransfer @ 8.00 t/pack)",
+        "fg": 1292,
+        "at": "nature-ruins",
+        "evidence": "MEASURED",
+        "source": "round2-final + round6 exact 8.00t/pack engine floor",
+        "xp": {
+          "runecraft": "to99"
+        },
+        "stepNum": 5,
+        "fromPlace": "air-ruins",
+        "toPlace": "nature-ruins",
+        "travel": 164,
+        "travelMethod": "teleport:glory-karamja",
+        "travelEvidence": "TELEPORT",
+        "start": 384,
+        "end": 1676,
+        "landsAt": 1676,
+        "cumHpXp": 980
+      },
+      {
+        "id": "woodcut-prayer",
+        "label": "Woodcutting 1->99 + Prayer 1->99 (Draynor 3t knife Oaks->Willows + bone givers)",
+        "fg": 3329,
+        "at": "draynor-willows",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:woodcut (woodcut-givers)",
+        "xp": {
+          "woodcutting": "to99",
+          "prayer": "to99"
+        },
+        "stepNum": 6,
+        "fromPlace": "nature-ruins",
+        "toPlace": "draynor-willows",
+        "travel": 23,
+        "travelMethod": "teleport:glory-draynor",
+        "travelEvidence": "TELEPORT",
+        "start": 1699,
+        "end": 5028,
+        "landsAt": 5028,
+        "cumHpXp": 980
+      },
+      {
+        "id": "druid",
+        "label": "Druidic Ritual (Herblore 1->3, q-burst)",
+        "fg": 177,
+        "at": "kaqemeex",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:druid (q-burst 177t)",
+        "xp": {
+          "herblore": 6250
+        },
+        "stepNum": 7,
+        "fromPlace": "draynor-willows",
+        "toPlace": "kaqemeex",
+        "travel": 141,
+        "travelMethod": "teleport:glory-edgeville",
+        "travelEvidence": "TELEPORT",
+        "start": 5169,
+        "end": 5346,
+        "landsAt": 5346,
+        "cumHpXp": 980
+      },
+      {
+        "id": "doric",
+        "label": "Doric's Quest (Mining 1->49)",
+        "fg": 18,
+        "at": "doric",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:doric",
+        "xp": {
+          "mining": 32500
+        },
+        "stepNum": 8,
+        "fromPlace": "kaqemeex",
+        "toPlace": "doric",
+        "travel": 30,
+        "travelMethod": "path",
+        "travelEvidence": "PATH",
+        "start": 5376,
+        "end": 5394,
+        "landsAt": 5394,
+        "cumHpXp": 980
+      },
+      {
+        "id": "smith-anvil",
+        "label": "Smithing 1->99 (Varrock west anvil, courier burst trade)",
+        "fg": 992,
+        "at": "varrock-west-anvil",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:smith-anvil + round6 smith_anvil_ticktransfer",
+        "xp": {
+          "smithing": "to99"
+        },
+        "stepNum": 9,
+        "fromPlace": "doric",
+        "toPlace": "varrock-west-anvil",
+        "travel": 91,
+        "travelMethod": "teleport:glory-edgeville",
+        "travelEvidence": "TELEPORT",
+        "start": 5485,
+        "end": 6477,
+        "landsAt": 6477,
+        "cumHpXp": 980
+      },
+      {
+        "id": "herb-tail",
+        "label": "Herblore post-boat tail (93t; remainder inside Trawler deck)",
+        "fg": 93,
+        "at": "bank",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:herb remainder",
+        "xp": {
+          "herblore": 375103
+        },
+        "stepNum": 10,
+        "fromPlace": "varrock-west-anvil",
+        "toPlace": "bank:varrock-west-bank:0",
+        "travel": 11,
+        "travelMethod": "path",
+        "travelEvidence": "PATH",
+        "start": 6488,
+        "end": 6581,
+        "landsAt": 6581,
+        "cumHpXp": 980
+      },
+      {
+        "id": "mine",
+        "label": "Mining 49->99 (Ardougne Zoo 6-rock 3t iron)",
+        "fg": 3507,
+        "at": "ardougne-zoo",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:mine (276.0/275.5 XP/t); Wildy 8-iron refuted",
+        "xp": {
+          "mining": "to99"
+        },
+        "stepNum": 11,
+        "fromPlace": "bank:varrock-west-bank:0",
+        "toPlace": "ardougne-zoo",
+        "travel": 152,
+        "travelMethod": "teleport:dueling-castle-wars",
+        "travelEvidence": "TELEPORT",
+        "start": 6733,
+        "end": 10240,
+        "landsAt": 10240,
+        "cumHpXp": 980
+      },
+      {
+        "id": "rival-fight-arena",
+        "label": "Fight Arena (304,375 Atk -> 83; 54,375 Thieving -> 57)",
+        "fg": 526,
+        "at": "lady-servil",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:rival-fight-arena",
+        "xp": {
+          "attack": 304375,
+          "thieving": 54375
+        },
+        "stepNum": 12,
+        "fromPlace": "ardougne-zoo",
+        "toPlace": "lady-servil",
+        "travel": 26,
+        "travelMethod": "path",
+        "travelEvidence": "PATH",
+        "start": 10266,
+        "end": 10792,
+        "landsAt": 10792,
+        "cumHpXp": 980
+      },
+      {
+        "id": "thieve",
+        "label": "Thieving 57->99 (Ardougne Knights relog-on-fail, ~90 relogs)",
+        "fg": 1794,
+        "at": "ardougne-spice-stall",
+        "endAt": "ardougne-market",
+        "relogs": 90,
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:thieve * 0.8547",
+        "xp": {
+          "thieving": "to99"
+        },
+        "notes": "Ardougne Knights relog-on-fail (~90 relogs, ~30 min wall-clock)",
+        "stepNum": 13,
+        "fromPlace": "lady-servil",
+        "toPlace": "ardougne-spice-stall",
+        "travel": 62,
+        "travelMethod": "estimate",
+        "travelEvidence": "ESTIMATE",
+        "start": 10854,
+        "end": 12648,
+        "landsAt": 12648,
+        "cumHpXp": 980
+      },
+      {
+        "id": "rival-seaslug",
+        "label": "Sea Slug (Fishing 1->74, 179,375 XP)",
+        "fg": 348,
+        "at": "caroline",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:rival-seaslug",
+        "xp": {
+          "fishing": 179375
+        },
+        "stepNum": 14,
+        "fromPlace": "ardougne-market",
+        "toPlace": "caroline",
+        "travel": 30,
+        "travelMethod": "path",
+        "travelEvidence": "PATH",
+        "start": 12678,
+        "end": 13026,
+        "landsAt": 13026,
+        "cumHpXp": 980
+      },
+      {
+        "id": "fish-pre-boat",
+        "label": "Fishing 74->78 via 3t fly (144t so +3 Fish Pot hits 81 Manta Ray)",
+        "fg": 144,
+        "at": "caroline",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:fish rate (371.5 XP/t)",
+        "xp": {
+          "fishing": 53126
+        },
+        "stepNum": 15,
+        "fromPlace": "caroline",
+        "toPlace": "caroline",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 13026,
+        "end": 13170,
+        "landsAt": 13170,
+        "cumHpXp": 980
+      },
+      {
+        "id": "trawler-4in1",
+        "label": "Trawler Boat 4-in-1 (20 helpers: Fish 78+3->99 + FM 1->99 + Craft 1->99 + 153t Herb + Wine prep)",
+        "fg": 1076,
+        "at": "trawler-pier",
+        "evidence": "MEASURED",
+        "source": "round3-trawler (1076t total boat+lobby+net) + trawler_win.rs2 exact EV",
+        "xp": {
+          "fishing": 552407,
+          "firemaking": "to99",
+          "crafting": "to99",
+          "herblore": "to99"
+        },
+        "absorbedInside": [
+          "firemaking:to99",
+          "crafting:to99",
+          "herblore:153t"
+        ],
+        "stepNum": 16,
+        "fromPlace": "caroline",
+        "toPlace": "trawler-pier",
+        "travel": 82,
+        "travelMethod": "estimate",
+        "travelEvidence": "ESTIMATE",
+        "start": 13252,
+        "end": 14328,
+        "landsAt": 14328,
+        "cumHpXp": 980
+      },
+      {
+        "id": "fish-cleanup",
+        "label": "Fishing top-off to 99 via 3t fly (~213,550 XP left after 20-helper Trawler)",
+        "fg": 575,
+        "at": "trawler-pier",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:fish rate (371.5 XP/t)",
+        "xp": {
+          "fishing": "to99"
+        },
+        "stepNum": 17,
+        "fromPlace": "trawler-pier",
+        "toPlace": "trawler-pier",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 14328,
+        "end": 14903,
+        "landsAt": 14903,
+        "cumHpXp": 980
+      },
+      {
+        "id": "relog-wine",
+        "label": "Login-wine Cooking 1->99 (2t relog + 22t background ferment)",
+        "fg": 8,
+        "bg": 22,
+        "at": "anywhere",
+        "relogs": 1,
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:bank-wine+relog+login-wine",
+        "xp": {
+          "cooking": "to99"
+        },
+        "stepNum": 18,
+        "fromPlace": "trawler-pier",
+        "toPlace": "trawler-pier",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 14903,
+        "end": 14911,
+        "landsAt": 14933,
+        "cumHpXp": 980
+      },
+      {
+        "id": "agility-brimhaven",
+        "label": "Brimhaven Agility Arena 1->99 (Relog-scout MDP, 2t abort, 135 tickets = 10+25+100+)",
+        "fg": 3858,
+        "relogs": 465,
+        "at": "brimhaven-arena",
+        "evidence": "MDP-CALIBRATED",
+        "source": "m43_149.jm2 38-edge MDP calibrated to round3 hitDist1=14t + round6 brimhaven_2t_abort=2.00t",
+        "xp": {
+          "agility": "to99"
+        },
+        "stepNum": 19,
+        "fromPlace": "trawler-pier",
+        "toPlace": "brimhaven-arena",
+        "travel": 73,
+        "travelMethod": "teleport:glory-karamja",
+        "travelEvidence": "ESTIMATE",
+        "start": 14984,
+        "end": 18842,
+        "landsAt": 18842,
+        "cumHpXp": 980
+      },
+      {
+        "id": "imp-catcher",
+        "label": "Imp Catcher (Magic 1->44, q-burst)",
+        "fg": 9,
+        "at": "wizard-tower",
+        "evidence": "MEASURED",
+        "source": "haggis-boards.json:imp-catcher q-burst (9/9/9t)",
+        "xp": {
+          "magic": 21875
+        },
+        "stepNum": 20,
+        "fromPlace": "brimhaven-arena",
+        "toPlace": "wizard-tower",
+        "travel": 51,
+        "travelMethod": "teleport:glory-draynor",
+        "travelEvidence": "TELEPORT",
+        "start": 18893,
+        "end": 18902,
+        "landsAt": 18902,
+        "cumHpXp": 980
+      },
+      {
+        "id": "magic-44-50",
+        "label": "Enchant 44->50 (8 Ruby enchants)",
+        "fg": 26,
+        "at": "bank",
+        "evidence": "SCALED",
+        "source": "2.96/3.23 t/cast * 8 casts",
+        "xp": {
+          "magic": 11800
+        },
+        "stepNum": 21,
+        "fromPlace": "wizard-tower",
+        "toPlace": "bank:draynor-bank:0",
+        "travel": 15,
+        "travelMethod": "teleport:glory-draynor",
+        "travelEvidence": "TELEPORT",
+        "start": 18917,
+        "end": 18943,
+        "landsAt": 18943,
+        "cumHpXp": 980
+      },
+      {
+        "id": "relog-str",
+        "label": "Multiway 1t Relog Strength 1->99 (R2H + 118/118 + UltStr vs CB 101)",
+        "fg": 925,
+        "at": "multiway-relog",
+        "relogs": 835,
+        "evidence": "MEASURED",
+        "source": "round5 r2h_bis_70_str/99_str + round6 combat_cb100_r2h_str99",
+        "xp": {
+          "strength": "to99",
+          "hitpoints": 330490
+        },
+        "stepNum": 22,
+        "fromPlace": "bank:draynor-bank:0",
+        "toPlace": "multiway-relog",
+        "travel": 174,
+        "travelMethod": "wildy-lever(teleport:camelot->ardougne-lever)",
+        "travelEvidence": "ESTIMATE",
+        "start": 19117,
+        "end": 20042,
+        "landsAt": 20042,
+        "cumHpXp": 331470
+      },
+      {
+        "id": "relog-atk",
+        "label": "Multiway 1t Relog Attack 83->99 (R2H + 118/118 + UltStr)",
+        "fg": 475,
+        "at": "multiway-relog",
+        "relogs": 475,
+        "evidence": "MEASURED",
+        "source": "round4 r2h_bis_99_atk (1,462.48 XP/t)",
+        "xp": {
+          "attack": "to99",
+          "hitpoints": 229741
+        },
+        "stepNum": 23,
+        "fromPlace": "multiway-relog",
+        "toPlace": "multiway-relog",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 20042,
+        "end": 20517,
+        "landsAt": 20517,
+        "cumHpXp": 561211
+      },
+      {
+        "id": "relog-def",
+        "label": "Multiway 1t Relog Defence 1->99 (R2H + 118/118 + UltStr)",
+        "fg": 671,
+        "at": "multiway-relog",
+        "relogs": 671,
+        "evidence": "MEASURED",
+        "source": "round5 r2h_bis_99_def (1,489.48 XP/t)",
+        "xp": {
+          "defence": "to99",
+          "hitpoints": 330490
+        },
+        "stepNum": 24,
+        "fromPlace": "multiway-relog",
+        "toPlace": "multiway-relog",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 20517,
+        "end": 21188,
+        "landsAt": 21188,
+        "cumHpXp": 891701
+      },
+      {
+        "id": "relog-rng",
+        "label": "Multiway 1t Relog Ranged 1->99 (Xbow barbed -> MLB rune arrows + pot)",
+        "fg": 1285,
+        "at": "multiway-relog",
+        "relogs": 1168,
+        "evidence": "MEASURED",
+        "source": "round3 mlb_1t_rngpot + round4 mlb_bis_70/90",
+        "xp": {
+          "ranged": "to99",
+          "hitpoints": 330490
+        },
+        "stepNum": 25,
+        "fromPlace": "multiway-relog",
+        "toPlace": "multiway-relog",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 21188,
+        "end": 22473,
+        "landsAt": 22473,
+        "cumHpXp": 1222191
+      },
+      {
+        "id": "relog-magic-curses",
+        "label": "Multiway 1t Relog Curses 50->99 (Snare->Vuln->Enfeeble->Stun, skips Mage Arena)",
+        "fg": 547,
+        "at": "multiway-relog",
+        "relogs": 487,
+        "evidence": "MEASURED",
+        "source": "round3-combat: curse_1t_snare_50..curse_1t_stun_80 (954.6..1,968.75 XP/t)",
+        "xp": {
+          "magic": "to99"
+        },
+        "stepNum": 26,
+        "fromPlace": "multiway-relog",
+        "toPlace": "multiway-relog",
+        "travel": 0,
+        "travelMethod": "same",
+        "travelEvidence": "SAME",
+        "start": 22473,
+        "end": 23020,
+        "landsAt": 23020,
+        "cumHpXp": 1222191
+      }
+    ]
+  },
+  "ablationDecisions": {
+    "lawAltarIncluded": false,
+    "lawComparison": {
+      "natureOnlyTotal": 21310,
+      "withLawTotal": 21361,
+      "netDelta": 51
+    },
+    "skipMageArenaSelected": true,
+    "mageArenaComparison": {
+      "skipMATotal": 21310,
+      "mageArenaTotal": 21911,
+      "netDelta": -601
+    },
+    "brimhavenModels": {
+      "max2tAbort": {
+        "totalTicks": 3476,
+        "totalRelogs": 613,
+        "ticketsEarned": 136,
+        "finalAgiXp": 1004040,
+        "avgTicksPerTicket": 25.56
+      },
+      "practical3tAbort": {
+        "totalTicks": 3858,
+        "totalRelogs": 465,
+        "ticketsEarned": 135,
+        "finalAgiXp": 1008837,
+        "avgTicksPerTicket": 28.58
+      }
+    },
+    "trawlerEvCheck": {
+      "evLv74": 1021.27,
+      "evLv81": 1421.9,
+      "boatFishXpPrac": 552407,
+      "pracCleanupFlyTicks": 575
+    },
+    "wcComparison": {
+      "draynor3tPlusBones": 3329,
+      "wildy4Oak2tStandalone": 3138,
+      "note": "3t Draynor absorbs 1,260t of Dragon Bone burial inside 3,223/3,329t"
+    },
+    "combatPooledStr99Rate_real": 1604.24
+  },
+  "sensitivity": [
+    {
+      "extraPerRelog": 0,
+      "r6Max_real": 21310,
+      "r6Max_relogs": 4712,
+      "r6Max_marginVsLive": 8662,
+      "r6Max_vsHalfLive": 6324,
+      "r6Prac_real": 23020,
+      "r6Prac_relogs": 4192,
+      "r6Prac_marginVsLive": 6952,
+      "r6MaxKnights_real": 22063,
+      "r6MaxKnights_relogs": 4340
+    },
+    {
+      "extraPerRelog": 0.5,
+      "r6Max_real": 23666,
+      "r6Max_relogs": 4712,
+      "r6Max_marginVsLive": 6306,
+      "r6Max_vsHalfLive": 8680,
+      "r6Prac_real": 25116,
+      "r6Prac_relogs": 4192,
+      "r6Prac_marginVsLive": 4856,
+      "r6MaxKnights_real": 24233,
+      "r6MaxKnights_relogs": 4340
+    },
+    {
+      "extraPerRelog": 1,
+      "r6Max_real": 26022,
+      "r6Max_relogs": 4712,
+      "r6Max_marginVsLive": 3950,
+      "r6Max_vsHalfLive": 11036,
+      "r6Prac_real": 27212,
+      "r6Prac_relogs": 4192,
+      "r6Prac_marginVsLive": 2760,
+      "r6MaxKnights_real": 26403,
+      "r6MaxKnights_relogs": 4340
+    },
+    {
+      "extraPerRelog": 2,
+      "r6Max_real": 30734,
+      "r6Max_relogs": 4712,
+      "r6Max_marginVsLive": -762,
+      "r6Max_vsHalfLive": 15748,
+      "r6Prac_real": 31404,
+      "r6Prac_relogs": 4192,
+      "r6Prac_marginVsLive": -1432,
+      "r6MaxKnights_real": 30743,
+      "r6MaxKnights_relogs": 4340
+    }
+  ],
+  "engineHardLowerBounds": [
+    {
+      "skill": "Attack",
+      "floorTicks": 475,
+      "source": "Atk 83 (Fight Arena) + 1.00t/swing BiS R2H @ 1,462.48 XP/t (plus 500t Fight Arena); limited by World.ts:1008/1035 1-tick relog minimum"
+    },
+    {
+      "skill": "Strength",
+      "floorTicks": 890,
+      "source": "pvp_combat.rs2:148 (max 1.125x CB>=100 cap) + World.ts:1008 1-tick relog cadence"
+    },
+    {
+      "skill": "Defence",
+      "floorTicks": 671,
+      "source": "r2h_bis_99_def measured 1,489.48 XP/t @ 1.00t/swing (998,458 / 1,489.48)"
+    },
+    {
+      "skill": "Hitpoints",
+      "floorTicks": 0,
+      "source": "0fg passive side-XP (1.33x/4 damage during Atk/Str/Def/Rng >= 1,288,000 HP XP > 998,458)"
+    },
+    {
+      "skill": "Ranged",
+      "floorTicks": 1096,
+      "source": "pvp_ranged.rs2 + World.ts:1008 1t relog BiS MLB (879 -> 1,046 XP/t)"
+    },
+    {
+      "skill": "Magic",
+      "floorTicks": 540,
+      "source": "1t Stun (1,968.75 XP/t = 31,500 XP/t raw) or Charge 5/t (NetworkPlayer.ts:70 limit=5 -> 37t) gated by Mage Arena"
+    },
+    {
+      "skill": "Prayer",
+      "floorTicks": 0,
+      "source": "100% absorbed in Draynor 3t WC+bone-givers (woodcut-givers: 3,223/3,329t covering WC+Prayer; bury_bone.rs2 p_delay(0))"
+    },
+    {
+      "skill": "Firemaking",
+      "floorTicks": 0,
+      "source": "100% absorbed inside 1,047t Trawler Boat (fmAllowedLv1=true; 642t/667t @ firemaking.rs2:62 4t/log cap)"
+    },
+    {
+      "skill": "Crafting",
+      "floorTicks": 0,
+      "source": "100% absorbed inside 1,047t Trawler Boat (gems/battlestaves @ 5/t USER_EVENT cap, NetworkPlayer.ts:70)"
+    },
+    {
+      "skill": "Herblore",
+      "floorTicks": 71,
+      "source": "Druid (177t) + 175t/153t absorbed inside Trawler Boat + 71/93t post-boat tail (5/t cap)"
+    },
+    {
+      "skill": "Cooking",
+      "floorTicks": 4,
+      "source": "login-wine (22t offline/bg fermentation) + 4/8t prep+relog"
+    },
+    {
+      "skill": "Fletching",
+      "floorTicks": 0,
+      "source": "5/t darts/arrows absorbed during open-road 159t run (walk_0t_open_road)"
+    },
+    {
+      "skill": "Smithing",
+      "floorTicks": 991,
+      "source": "smithing.rs2:272,286 p_delay(1)+p_delay(2) = 25t/5 plates + 7-8t burst trade (~32-33t/25 bars)"
+    },
+    {
+      "skill": "Runecraft",
+      "floorTicks": 1292,
+      "source": "runecraft.rs2:99 p_delay(3) + World.ts:888 (4t lock) + 4t tickTransfer = 8.00t/pack exact floor (proved in R2+R6)"
+    },
+    {
+      "skill": "Mining",
+      "floorTicks": 3500,
+      "source": "mining.rs2:77,202 %action_delay + Zoo 3t 276.0 XP/t ceiling (20t iron respawn; Wildy 8-iron refuted at 140-173 XP/t)"
+    },
+    {
+      "skill": "Woodcutting",
+      "floorTicks": 3223,
+      "source": "woodcut.rs2:59,175 %action_delay+3; Draynor 3t+bones covers WC+Prayer (Multiway Willows unreachable)"
+    },
+    {
+      "skill": "Thieving",
+      "floorTicks": 894,
+      "source": "stealing.rs2:70 p_delay(0) + World.ts:1008 relog = 2t/steal (Spice Stall 1,012.5 XP/t proved)"
+    },
+    {
+      "skill": "Agility",
+      "floorTicks": 3476,
+      "source": "agilityarena_clerk.rs2:85 98t global switch + 2t abort (round6 [2,2,2]) + m43_149.jm2 shortest-path MDP"
+    },
+    {
+      "skill": "Fishing",
+      "floorTicks": 1563,
+      "source": "trawler_control.rs2:13 exact 200x5t boat (1,076t) + Sea Slug (344t) + 74->78 3t fly (~143t)"
+    }
+  ],
+  "round6Probes": {
+    "mine_2t_wildy_8iron_49": {
+      "id": "mine_2t_wildy_8iron_49",
+      "levelStart": 49,
+      "levelEnd": 54,
+      "elapsedTicks": 81,
+      "oresMined": 16,
+      "ticksPerOre": 5.06,
+      "xpGained": 14000,
+      "xpPerTick": 172.84,
+      "dropped": 16,
+      "rollsAttempted": 40,
+      "rollTicks": [
+        5,
+        7,
+        14,
+        18,
+        24,
+        26,
+        32,
+        36,
+        42,
+        46,
+        50,
+        56,
+        62,
+        68,
+        72,
+        78
+      ],
+      "dmgTaken": 0,
+      "npcHits": 8,
+      "pvpHits": 34
+    },
+    "thieve_stall_2t_boxed_initial": {
+      "id": "thieve_stall_2t_boxed_initial",
+      "spice_north": {
+        "playtimeDelta": 2,
+        "xpGained": 2025,
+        "xpPerPlaytimeTick": 1012.5
+      },
+      "bakers_east": {
+        "playtimeDelta": 2,
+        "xpGained": 400,
+        "xpPerPlaytimeTick": 200
+      },
+      "silver_south": {
+        "playtimeDelta": 1,
+        "xpGained": 0,
+        "xpPerPlaytimeTick": 0
+      }
+    },
+    "smith_anvil_ticktransfer": {
+      "id": "smith_anvil_ticktransfer",
+      "packs": 4,
+      "packTicks": [
+        33,
+        32,
+        33,
+        34
+      ],
+      "ticksMeasured": 132,
+      "ticksPerPack": 33,
+      "xpGained": 156250,
+      "xpPerTick": 1183.71
+    },
+    "rc_nature_7t_ticktransfer": {
+      "id": "rc_nature_7t_ticktransfer",
+      "packs": 4,
+      "packDurations": [
+        3,
+        7,
+        7,
+        7
+      ],
+      "craftToCraftTicks": [
+        8,
+        8,
+        8
+      ],
+      "note": "craftAt tick=5 -> 13 -> 21 -> 29 => exact 8.00 t/pack engine floor (4t p_delay(3) + 4t trade+craft)",
+      "xpGained": 24300,
+      "xpPerTickSteady": 759.38
+    },
+    "combat_cb100_r2h_str99": {
+      "id": "combat_cb100_r2h_str99",
+      "equippedBoots": true,
+      "tankCombatLevel": 101,
+      "cycles": 25,
+      "playtimeTicks": 25,
+      "sameTickWorked": 25,
+      "hits": 0,
+      "xpGained": 36000,
+      "hpXpGained": 11902,
+      "xpPerTick": 1440,
+      "hpXpPerTick": 476.08
+    },
+    "brimhaven_2t_abort": {
+      "id": "brimhaven_2t_abort",
+      "hintsCaptured": 2,
+      "abortPlaytimeDeltas": [
+        2,
+        2,
+        2
+      ],
+      "avgAbortPlaytime": 2,
+      "blockedMsgs": [
+        [],
+        [],
+        []
+      ]
+    },
+    "mine_2t_wildy_8iron_85": {
+      "id": "mine_2t_wildy_8iron_85",
+      "levelStart": 85,
+      "levelEnd": 85,
+      "elapsedTicks": 81,
+      "oresMined": 13,
+      "ticksPerOre": 6.23,
+      "xpGained": 11375,
+      "xpPerTick": 140.43,
+      "dropped": 13,
+      "rollsAttempted": 24,
+      "rollTicks": [
+        5,
+        7,
+        11,
+        15,
+        19,
+        25,
+        29,
+        34,
+        38,
+        63,
+        67,
+        71,
+        75
+      ],
+      "dmgTaken": 31,
+      "npcHits": 13,
+      "pvpHits": 19,
+      "sampleEvents": [
+        "t=5 dmg=0 src=other_player#2",
+        "t=7 dmg=0 src=other_player#2",
+        "t=7 dmg=3 src=other_player#-1",
+        "t=9 dmg=0 src=other_player#2",
+        "t=11 dmg=0 src=other_player#2",
+        "t=11 dmg=2 src=other_player#-1",
+        "t=13 dmg=0 src=other_player#2",
+        "t=15 dmg=0 src=npc#-1",
+        "t=15 dmg=5 src=other_player#-1",
+        "t=17 dmg=0 src=other_player#2",
+        "t=19 dmg=0 src=npc#-1",
+        "t=19 dmg=7 src=other_player#-1",
+        "t=21 dmg=0 src=other_player#2",
+        "t=23 dmg=0 src=npc#-1",
+        "t=23 dmg=7 src=other_player#-1"
+      ]
+    },
+    "wc_2t_multi_willow_65": {
+      "id": "wc_2t_multi_willow_65",
+      "feasible": false,
+      "hitsObserved": 0,
+      "elapsedTicks": 81,
+      "logsCut": 0,
+      "xpGained": 0,
+      "xpPerTick": 0,
+      "rollsAttempted": 0,
+      "rollTicks": [],
+      "dmgTaken": 0,
+      "npcDiag": [
+        "t+9: mg1=2691,3215 mg2=2696,3217 mainSees=Necromancer@2668,3240",
+        "t+19: mg1=2691,3215 mg2=2696,3217 mainSees=Necromancer@2668,3240",
+        "t+29: mg1=2691,3215 mg2=2696,3217 mainSees=Necromancer@2668,3240",
+        "t+39: mg1=2691,3215 mg2=2696,3217 mainSees=Necromancer@2668,3241"
+      ],
+      "sampleEvents": []
+    },
+    "wc_2t_multi_willow_90": {
+      "id": "wc_2t_multi_willow_90",
+      "feasible": false,
+      "hitsObserved": 0,
+      "elapsedTicks": 81,
+      "logsCut": 0,
+      "xpGained": 0,
+      "xpPerTick": 0,
+      "rollsAttempted": 0,
+      "rollTicks": [],
+      "dmgTaken": 0,
+      "npcDiag": [
+        "t+9: mg1=2691,3215 mg2=2696,3217 mainSees=Necromancer@2670,3241",
+        "t+19: mg1=2691,3215 mg2=2696,3217 mainSees=Necromancer@2670,3241",
+        "t+29: mg1=2691,3215 mg2=2696,3217 mainSees=Necromancer@2672,3241",
+        "t+39: mg1=2691,3215 mg2=2696,3217 mainSees=Necromancer@2671,3240"
+      ],
+      "sampleEvents": []
+    },
+    "thieve_spice_3x_repeat": {
+      "id": "thieve_spice_3x_repeat",
+      "trials": [
+        {
+          "cycle": 1,
+          "foundStall": true,
+          "playtimeDelta": 2,
+          "xpGained": 2025,
+          "msgs": [
+            "Welcome to RuneScape."
+          ]
+        },
+        {
+          "cycle": 2,
+          "foundStall": true,
+          "playtimeDelta": 2,
+          "xpGained": 2025,
+          "msgs": [
+            "Welcome to RuneScape."
+          ]
+        },
+        {
+          "cycle": 3,
+          "foundStall": true,
+          "playtimeDelta": 1,
+          "xpGained": 0,
+          "msgs": [
+            "Welcome to RuneScape."
+          ]
+        }
+      ],
+      "successCount": 2,
+      "totalPlaytime": 5,
+      "totalXp": 4050,
+      "xpPerTickOverall": 810
+    }
+  }
+}
