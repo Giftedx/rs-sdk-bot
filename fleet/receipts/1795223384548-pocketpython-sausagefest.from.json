@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795223384548-pocketpython-sausagefest",
+ "account": "Pocketpython",
+ "partner": "Sausagefest",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 101000,
+ "claim": "53145b1f-a4da-4513-9503-8fef900831d9",
+ "count": 101000,
+ "ok": true,
+ "at": 1795223460830,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 101000,
+  "after": 0
+ },
+ "bank": {
+  "count": 101000,
+  "at": 1795223446938
+ },
+ "logout": {
+  "attemptId": "1795223437636-0000022112-0000000001",
+  "at": 1795223460821,
+  "sha256": "345caeca0180a05c7049bb04ef19871ae078db41821f31c4d7d1a70b2d55f444"
+ },
+ "screen": true
+}

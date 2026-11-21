@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795223384548-masterbaiter-fingersmith-runechainbody",
+ "account": "Fingersmith",
+ "partner": "Masterbaiter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune chainbody",
+ "requested": 1,
+ "claim": "512da3a7-0d5e-45ef-9b5a-f739adb10ef0",
+ "count": 0,
+ "ok": false,
+ "at": 1795223442039,
+ "detail": "trade claimed"
+}
