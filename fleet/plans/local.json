@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795243551817,
+ "at": 1795243779265,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -359,7 +359,7 @@
     "ROUNDS": "1"
    },
    "enabled": true,
-   "standing": false,
+   "standing": true,
    "repeat": false
   }
  ],
