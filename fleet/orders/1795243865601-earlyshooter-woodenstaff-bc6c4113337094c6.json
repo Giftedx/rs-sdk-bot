@@ -1,0 +1,23 @@
+{
+ "id": "1795243865601-earlyshooter-woodenstaff-bc6c4113337094c6",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Earlyshooter",
+ "to": "Woodenstaff",
+ "item": "Prayer potion(4)",
+ "count": 1,
+ "start": 1795243865601,
+ "end": 1795246265601,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,23 @@
+{
+ "id": "1795243865919-billionaire-quickhandjob-dbb529a04452a8ed",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Billionaire",
+ "to": "Quickhandjob",
+ "item": "Coins",
+ "count": 80000,
+ "start": 1795243865919,
+ "end": 1795246265919,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
