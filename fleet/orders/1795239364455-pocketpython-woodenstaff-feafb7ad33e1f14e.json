@@ -1,0 +1,37 @@
+{
+ "id": "1795239364455-pocketpython-woodenstaff-feafb7ad33e1f14e",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Pocketpython",
+ "to": "Woodenstaff",
+ "item": "Death rune",
+ "count": 65,
+ "start": 1795239364455,
+ "end": 1795240864455,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Gold bar",
+   "count": 1
+  },
+  {
+   "item": "Ball of wool",
+   "count": 1
+  },
+  {
+   "item": "Snape grass",
+   "count": 18
+  }
+ ],
+ "takerWaits": true
+}

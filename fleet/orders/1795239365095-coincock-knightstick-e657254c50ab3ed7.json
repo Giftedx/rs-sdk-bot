@@ -1,0 +1,23 @@
+{
+ "id": "1795239365095-coincock-knightstick-e657254c50ab3ed7",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "CoinCock",
+ "to": "Knightstick",
+ "item": "Dragon bones",
+ "count": 11,
+ "start": 1795239365095,
+ "end": 1795240865095,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

@@ -1,0 +1,29 @@
+{
+ "id": "1795239365347-mineyourbiz-packhorse-ad7850739c235a20",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "MineYourBiz",
+ "to": "Packhorse",
+ "item": "Ranarr weed",
+ "count": 1,
+ "start": 1795239365347,
+ "end": 1795240865347,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Logs",
+   "count": 6
+  }
+ ],
+ "takerWaits": true
+}
