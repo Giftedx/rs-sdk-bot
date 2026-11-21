@@ -43,7 +43,7 @@ test('a failed market page cannot publish fresh prices or partial data',async()=
 test('opponent information retries a failed NPC table load',async()=>{
  const code=shell.slice(shell.indexOf('  let npcNames=null'),shell.indexOf("  window.addEventListener('message'",shell.indexOf('  let npcNames=null')));
  const el={hidden:true,innerHTML:''};let calls=0;
- const run=new Function('fetch','asset','hud','window','$','E',`${code};return opponentBox;`)(async()=>++calls===1?new Response('unavailable',{status:503}):Response.json([['Goblin',2]]),(s:string)=>s,{querySelector:()=>el},{},()=>null,String);
+ const run=new Function('fetch','asset','hud','window','$','E',`${code};return opponentBox;`)(async(url:any)=>String(url).includes('npc-drops.json')?Response.json({}):++calls===1?new Response('unavailable',{status:503}):Response.json([['Goblin',2]]),(s:string)=>s,{querySelector:()=>el},{},()=>null,String);
  await run({kind:'npc',type:0,hp:[3,5]});await run({kind:'npc',type:0,hp:[2,5]});
  expect(calls).toBe(2);expect(el.innerHTML).toContain('Goblin');
 });

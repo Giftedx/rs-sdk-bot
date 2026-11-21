@@ -153,7 +153,17 @@ test('a follow is asked again once the feed has the account, and only once',()=>
 
 test('fleet filters count each account once and the total level leaves out unnamed skills',()=>{
  const ops=readFileSync(new URL('./operations.js',import.meta.url),'utf8');
- expect(ops).toContain("['held','Offline',bots().filter(b=>b.operation!=='observed'&&!issues().includes(b)).length]");
+ const fleetHelpers=ops.slice(ops.indexOf(' // Fleet deck:'),ops.indexOf(' function account(){'));
+ const run=new Function('S','window','E','nf','age','dur','safeName',
+  `let fleetFilter='all',fleetQuery='',sel=null;const isOwner=()=>true,bots=()=>S.bots.filter(b=>!b.practice),issues=()=>bots().filter(b=>['blocked','failed','died','active-stale','unobserved'].includes(b.operation)),page=h=>h,title=()=>'',button=()=>'',allocation=()=>'unknown',resultSummary=E,st=b=>['on',b.operation||'offline'];${fleetHelpers};return fleet();`,
+ )(
+  {bots:[{name:'A',operation:'observed',inWorld:true},{name:'B',operation:'failed'},{name:'C',operation:'paused'},{name:'D',operation:'offline',inWorld:true},{name:'E',operation:'offline'}],world:{players:2},results:[]},
+  {atlasOperator:()=>true},String,String,()=>'1s',()=>'1m',String,
+ );
+ const counts=Object.fromEntries([...run.matchAll(/data-value="([^"]+)"[^>]*>[^<]*<span class="op-count">(\d+)<\/span>/g)].map(m=>[m[1],Number(m[2])]));
+ expect(counts.working+counts.attention+counts.paused+counts.held).toBe(counts.all);
+ expect(counts.held).toBe(2);
+ expect(counts.inworld).toBe(2);
  const line=ops.slice(ops.indexOf('const totalLevel='),ops.indexOf('\n',ops.indexOf('const totalLevel=')));
  const total=new Function(line+';return totalLevel;')();
  expect(total({skills:[{name:'Attack',level:99},{name:'Stat18',level:1},{name:'Overall',level:100}]})).toBe(99);

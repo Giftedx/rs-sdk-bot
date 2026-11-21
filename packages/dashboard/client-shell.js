@@ -17,7 +17,7 @@
   const PUBLIC_HIDDEN=['account','activity'];window.atlasPublicHidden=PUBLIC_HIDDEN;
   // A plugin with nothing to show a spectator now stays off the toolbar until it has: the XP Tracker needs an account
   // that plays with XP in its snapshot (the other machines share levels only).
-  window.atlasPluginIdle=id=>id==='xp'&&!window.atlasOperator()&&typeof S!=='undefined'&&!!S&&!S.bots.some(b=>b.fresh&&!b.practice&&!b.reserved&&!b.remote);
+  window.atlasPluginIdle=id=>id==='xp'&&!window.atlasOperator()&&typeof S!=='undefined'&&!!S&&!S.bots.some(b=>!b.practice&&!b.reserved&&(b.fresh&&!b.remote||b.xpPerHour>0));
   // Only the tabs with observed data and no plugin that shows the same: Fleet holds the stopped accounts (the old
   // Ignore List) and Account overview the account summary (the old Account Management tab).
   const tabs=[['skills','Skills'],['quests','Quest Journal'],['inventory','Inventory'],['equipment','Worn Equipment'],['prayer','Prayer'],['magic','Magic'],['friends','Friends List'],['logout','Logout'],['settings','Game Options']];
@@ -53,17 +53,19 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const placesBox=document.createElement('div');placesBox.className='game-places';placesBox.hidden=true;placesBox.innerHTML='<strong>Places</strong><button class="game-control" data-viewer-worldmap hidden>World map: every player</button>';if(places)placesBox.append(places);hud.append(placesBox);
   let selectedTab='inventory',selectedPlugin='fleet',context=null,questDetail=null,questFilter='all',questQuery='',xpHideMaxed=false;
   const chat=[],seen=new Set(),seenChat=new Set();
-  let tourTimer=null,touring=false;
+  let tourTimer=null,touring=false,chatSeq=0;
   const account=()=>window.atlasFollowOther?null:S?.bots?.find(b=>b.name===sel);
   // A text node is replaced only when its text changes.
   const setText=(el,text)=>{if(el.textContent!==text)el.textContent=text;};
-  const notify=text=>{chat.push({kind:'Game',text,at:Date.now()});if(chat.length>200)chat.shift();renderChat();};
+  const toBrowserAt=at=>{const off=typeof S!=='undefined'&&S&&Number.isFinite(S.clockOffset)?S.clockOffset:0;return Number.isFinite(at)?at-off:Date.now();};
+  const pushChat=(...items)=>{let pushed=false;for(const item of items){if(!item)continue;chat.push({...item,at:Number.isFinite(item.at)?item.at:Date.now(),_seq:++chatSeq});pushed=true;}if(!pushed)return;chat.sort((a,b)=>(a.at-b.at)||(a._seq-b._seq));while(chat.length>200)chat.shift();renderChat();};
+  const notify=text=>pushChat({kind:'Game',text,at:Date.now()});
   const stamp=at=>at?`<span class="chat-time">[${new Date(at).toTimeString().slice(0,5)}]</span> `:'';
   const KV=/(^|\s)([A-Za-z][A-Za-z0-9]*)=(\S+)/g;const kvWord=k=>k==='t'?'tick':k.replace(/([a-z0-9])([A-Z])/g,'$1 $2').toLowerCase();const kvValue=v=>/^\d{4,}$/.test(v)?Number(v).toLocaleString():v;
   function pretty(text){const t=String(text??'');const pairs=[...t.matchAll(KV)];if(pairs.length<2)return E(t);const head=t.slice(0,pairs[0].index).trim(),tail=t.slice(pairs[pairs.length-1].index+pairs[pairs.length-1][0].length).trim();const body=pairs.map((p,i)=>{const next=pairs[i+1],mid=next?t.slice(p.index+p[0].length,next.index).trim():'';return E(kvWord(p[2]))+' '+E(kvValue(p[3]))+(mid?' '+E(mid):'');}).join(' · ');return `<span title="${E(t)}">${head?E(head)+' ':''}${body}${tail?' '+E(tail):''}</span>`;}
   // Chat notifications (RuneLite): the name of one of our accounts in a public line is marked. The text is escaped before the mark, and a name is letters and digits, so the mark cannot change the markup. The four names that are also HTML entity words are left out.
   function mention(html){const names=(S?.bots||[]).filter(b=>!b.practice&&safeName(b.name)===b.name&&b.name.length>2&&!/^(amp|lt|gt|quot)$/i.test(b.name)).map(b=>b.name);if(!names.length)return html;const key=names.join('|');if(mention.key!==key){mention.key=key;mention.re=new RegExp('\\b('+key+')\\b','gi');}return html.replace(/<[^>]*>|[^<]+/g,part=>part[0]==='<'?part:part.replace(mention.re,'<span class="chat-hl">$1</span>'));}
-  function renderChat(){const rows=chat.filter(r=>!chatOff.has(r.kind)),was=hud.querySelector('.game-chat-lines'),atEnd=was.scrollHeight-was.scrollTop-was.clientHeight<8;hud.querySelector('.game-chat-lines').innerHTML=rows.map(r=>`<p class="${r.kind==='Public'?'chat-public':r.kind==='Private'?'chat-private':'chat-system'}">${stamp(r.at)}${r.name?'<b>'+E(r.name)+'</b>: ':''}${r.kind==='Public'?mention(pretty(r.text)):pretty(r.text)}</p>`).join('')||`<p class="chat-system">${chat.length?'These lines are hidden. Press a chat button to show them.':'No fleet events yet.'}</p>`;const log=hud.querySelector('.game-chat-lines');if(atEnd)log.scrollTop=log.scrollHeight;}
+  function renderChat(){const rows=chat.filter(r=>!chatOff.has(r.kind)),log=hud.querySelector('.game-chat-lines');if(!log)return;const atEnd=log.scrollHeight-log.scrollTop-log.clientHeight<8,html=rows.map(r=>`<p class="${r.kind==='Public'?'chat-public':r.kind==='Private'?'chat-private':'chat-system'}">${stamp(r.at)}${r.name?'<b>'+E(r.name)+'</b>: ':''}${r.kind==='Public'?mention(pretty(r.text)):pretty(r.text)}</p>`).join('')||`<p class="chat-system">${chat.length?'These lines are hidden. Press a chat button to show them.':'No fleet events yet.'}</p>`;if(log._h!==html){log._h=html;log.innerHTML=html;}if(atEnd)log.scrollTop=log.scrollHeight;}
   // Game: fleet events and finished jobs. Private: stopped jobs and deaths. Public: chat the 3D viewer overhears.
   const channels=['Public','Private','Game'],chatOff=new Set(),CHAT_LABEL={Public:'Public chat',Private:'Private chat',Game:'Game'};
   hud.querySelector('.chat-channels').innerHTML=channels.map(c=>`<button data-chat="${c}" aria-pressed="true" title="${CHAT_LABEL[c]}: show or hide these lines">${CHAT_LABEL[c]}<small>On</small></button>`).join('');
@@ -393,12 +395,13 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const restore=key==='quest'&&questDetail?'[data-quest-back]':key==='questBack'&&!questDetail&&panel._questDetail?'[data-quest="'+CSS.escape(panel._questDetail)+'"]':selector;
     const typing=key==='questSearch'?[active.selectionStart,active.selectionEnd]:null;
     panel._account=b?.name??null;panel._questDetail=questDetail;
+    if(panel.dataset.tab!==selectedTab)panel.dataset.tab=selectedTab;
     put(panel,html);
     if(key&&(sameAccount||key==='friend')&&!active.isConnected){
       const next=panel.querySelector(restore)||(key.startsWith('quest')?(panel.querySelector('[data-quest-search]')||panel.querySelector('[data-quest-back]')||panel.querySelector('[data-quest-scope]')):null);
       next?.focus({preventScroll:true});if(typing&&next?.matches('[data-quest-search]'))next.setSelectionRange(typing[0],typing[1]);
     }
-    hud.querySelectorAll('[data-game-tab]').forEach(el=>{el.classList.toggle('active',el.dataset.gameTab===selectedTab);el.setAttribute('aria-pressed',String(el.dataset.gameTab===selectedTab));});
+    hud.querySelectorAll('[data-game-tab]').forEach(el=>{const on=el.dataset.gameTab===selectedTab,s=String(on);if(el.classList.contains('active')!==on)el.classList.toggle('active',on);if(el.getAttribute('aria-pressed')!==s)el.setAttribute('aria-pressed',s);});
     if(selectedTab==='settings')$('#game-quality').value=String(window.atlasQuality||1);
   }
   // The XP Tracker plugin (RuneLite's): gains since the account's login, XP an hour, level progress, time to level.
@@ -523,7 +526,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const tickStrip=(timeline,cls='xp-ticks')=>{const t=String(timeline||'').split('').filter(k=>k in window.atlasXp.TICK_KINDS),n=t.length;return `<div class="${cls}" aria-label="Last ${n} ticks">${t.map((k,i)=>{const kind=window.atlasXp.TICK_KINDS[k];return `<i style="background:var(--c-${kind})" title="${n-i} ticks ago: ${TICK_LABEL[kind]}"></i>`;}).join('')}</div>`;};
   function efficiencyBox(b){
     const e=window.atlasXp.efficiency(b.timeline);
-    if(!e)return '<div class="xp-box"><div class="xp-head"><span>Tick efficiency</span></div><span class="xp-muted">No tick timeline reported.</span></div>';
+    if(!e)return '<div class="xp-box"><div class="xp-head"><span>Tick efficiency</span></div><span class="xp-muted">'+(b?.xpPerHour>0?'Public snapshot: live tick timeline is omitted; active training rate is reported from the worker.':'No tick timeline reported.')+'</span></div>';
     const c=b.counters||{},extra=[['walkTicks','walk ticks'],['shopTicks','shop ticks'],['stuns','stuns'],['eaten','eaten']].filter(([k])=>Number.isFinite(c[k])).map(([k,label])=>`<span>${E(label)} <b>${nf(c[k])}</b></span>`).join('');
     const stale=!b.fresh?'<span class="xp-muted">Status '+age(b.at)+' old: these ticks are not live.</span>':'';
     // Session statistics: the status `ledger` counts each kind of tick since the session started, not only the last 300.
@@ -607,9 +610,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     return `<div class="xp-box calc" id="xp-calculator"><div class="xp-head"><span>Skill Calculator · ${E(calcSkill)}</span><button class="xp-reset" data-calc-close>Close</button></div><div class="calc-levels"><span>Current <b>${lvl}</b> <i class="xp-muted">${nf(k.xp)} xp</i></span>${targetLabel}</div>${bestSpotLine(b,lvl)}<div class="xp-meta"><span><b>${nf(left)}</b> xp left</span><span>${left&&rate?'TTL '+dur(left/rate*3.6e6)+' at '+nf(Math.round(rate))+'/hr':left?'no rate yet':'done'}</span></div>${ehpRem?`<div class="xp-meta"><span>EHP <b>${ehpRem.ehpHours.toFixed(2)}h</b> remaining</span><span>@${nf(Math.round(ehpRem.ehpRate))}/hr</span></div>`:''}${acts.length?'<div class="calc-list">'+list+'</div>':'<span class="xp-muted">The server has no action table for this skill.</span>'}</div>`;
   }
   const XP_STORE='atlas-xp-baselines';
-  let xpPointer=null,xpDeferred=null,xpReleaseFrame=0;
+  let xpPointer=null,xpDeferred=null,xpReleaseFrame=0,xpStoreCache=null,xpStoreRaw=null;
   function finishXpPointer(){if(xpPointer==null)return;xpPointer=null;cancelAnimationFrame(xpReleaseFrame);xpReleaseFrame=0;const pending=xpDeferred;xpDeferred=null;if(pending)refreshXp(pending.forceCalc,pending.focusSkill);}
-  const xpStore=()=>{try{const raw=JSON.parse(localStorage.getItem(XP_STORE)||'{}');return raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};}catch{return {};}},saveXpStore=store=>{try{localStorage.setItem(XP_STORE,JSON.stringify(store));}catch{/* private window */}};
+  const xpStore=()=>{try{const raw=localStorage.getItem(XP_STORE)||'{}';if(xpStoreCache&&raw===xpStoreRaw)return xpStoreCache;const parsed=JSON.parse(raw);const clean=parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{};xpStoreCache=clean;xpStoreRaw=raw;return clean;}catch{return {};}},saveXpStore=store=>{try{const raw=JSON.stringify(store);xpStoreCache=store;if(raw===xpStoreRaw)return;xpStoreRaw=raw;localStorage.setItem(XP_STORE,raw);}catch{/* private window */}};
   function xpHistoryBox(store,b){
     const list=b&&store.__history?.[safeName(b.name)];
     if(!Array.isArray(list)||!list.length)return '';
@@ -627,28 +630,35 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(!sameAccount)calcTarget=null;if(calcSkill&&!known){calcSkill=null;calcTarget=null;}calcAccount=b?.name||null;
     const calcEditing=!forceCalc&&sameAccount&&known&&X.levelForXp(selected.xp)<99&&active?.matches?.('[data-calc-target]')&&owned;
     const restore=()=>{if(!owned||calcEditing)return;const rowSkill=focusSkill||((attribute?.startsWith('data-calc-')||attribute==='data-best-pin')?calcSkill:null),row=rowSkill?[...panel.querySelectorAll('[data-calc-skill]')].find(el=>el.dataset.calcSkill===rowSkill):null,target=focusSkill?row:attribute?[...panel.querySelectorAll('['+attribute+']')].find(el=>el.getAttribute(attribute)===value):null;(target||row||panel.querySelector('[data-xp-pause]')||panel.querySelector('[data-xp-sort]')||panel.querySelector('[data-xp-focus]'))?.focus({preventScroll:true});};
-    if(!b||b.remote){
-      const live=S.bots.filter(x=>x.fresh&&!x.practice&&!x.reserved&&!x.remote),idle=x=>window.atlasXp.efficiency(x.timeline)?.idle??-1;
+    const hasXpData=!!b&&(!b.remote||b.xpPerHour>0||(b.skills||[]).some(k=>Number.isFinite(k?.xp)));
+    if(!b||!hasXpData){
+      const botsList=typeof S!=='undefined'&&S&&Array.isArray(S.bots)?S.bots:[];
+      const live=botsList.filter(x=>x.fresh&&!x.practice&&!x.reserved&&(!x.remote||x.xpPerHour>0)),idle=x=>window.atlasXp.efficiency(x.timeline)?.idle??-1;
       live.sort(xpSort==='waste'?(x,y)=>idle(y)-idle(x):(x,y)=>(y.xpPerHour||0)-(x.xpPerHour||0));
       const sort=live.length?`<div class="xp-buttons"><span class="xp-muted">Sort</span><button class="xp-reset${xpSort==='rate'?' on':''}" data-xp-sort="rate">XP/hr</button><button class="xp-reset${xpSort==='waste'?' on':''}" data-xp-sort="waste">Most idle</button></div>`:'';
-      put(panel,'<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>'+(b?E(safeName(b.name)):'XP Tracker')+'</span></div><span class="xp-muted">'+(!b?'Choose an account in the title bar, or one below.':window.atlasOperator()?'The '+E(b.side)+' side shares levels, not XP.':'No XP data for this account.')+'</span>'+sort+'</div>'+(live.map(x=>{const e=window.atlasXp.efficiency(x.timeline);return `<button class="xp-box xp-row xp-pick" data-xp-focus="${E(x.name)}"><img src="${asset(trainedSkill(x)?'skill-'+skillFile(trainedSkill(x))+'.png':'rl-xp.png')}" alt=""><span class="xp-pick-main"><span class="xp-pick-line"><span class="xp-name">${E(safeName(x.name))}</span><span class="xp-gain">${x.xpPerHour?nf(Math.round(x.xpPerHour))+' XP/hr':'—'}</span></span>${e?tickStrip(x.timeline.slice(-100),'xp-ticks xp-ticks-small')+`<span class="xp-meta"><span class="${e.idle>=25?'xp-bad':''}">${Math.round(e.idle)}% idle</span><span>${e.waste?TICK_LABEL[e.waste.kind]+' '+Math.round(e.waste.share)+'%':''}</span></span>`:''}</span></button>`;}).join('')||(b?'':'<div class="xp-box"><span class="xp-muted">No account with XP data is playing now.</span></div>'))+'</div>');restore();return;}
+      put(panel,'<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>'+(b?E(safeName(b.name)):'XP Tracker')+'</span></div><span class="xp-muted">'+(!b?'Choose an account in the title bar, or one below.':window.atlasOperator()?'The '+E(b.side)+' side shares levels, not XP.':'No XP data for this account.')+'</span>'+sort+'</div>'+(live.map(x=>{const e=window.atlasXp.efficiency(x.timeline),ts=typeof trainedSkill==='function'?trainedSkill(x):X.activeSkill?.(x);return `<button class="xp-box xp-row xp-pick" data-xp-focus="${E(x.name)}"><img src="${asset(ts?'skill-'+skillFile(ts)+'.png':'rl-xp.png')}" alt=""><span class="xp-pick-main"><span class="xp-pick-line"><span class="xp-name">${E(safeName(x.name))}</span><span class="xp-gain">${x.xpPerHour?nf(Math.round(x.xpPerHour))+' XP/hr':'—'}</span></span>${e?tickStrip(x.timeline.slice(-100),'xp-ticks xp-ticks-small')+`<span class="xp-meta"><span class="${e.idle>=25?'xp-bad':''}">${Math.round(e.idle)}% idle</span><span>${e.waste?TICK_LABEL[e.waste.kind]+' '+Math.round(e.waste.share)+'%':''}</span></span>`:''}</span></button>`;}).join('')||(b?'':'<div class="xp-box"><span class="xp-muted">No account with XP data is playing now.</span></div>'))+'</div>');restore();return;}
     const store=xpStore(),prevBase=store[b.name];
     if(prevBase&&prevBase.started!==(b.started??null)&&prevBase.xp&&X.archiveSession){const entry=X.archiveSession(store,b,now,{tickMs});if(entry)store.__history=X.recordSessionHistory?.(store.__history,safeName(b.name),entry);}
     const base=X.baseline(store,b,now);
     // Paused: the rows and the clock stay as they were at the pause (RuneLite xptracker pause).
     const at=base.paused?.at??now,seen=base.paused?{...b,skills:(b.skills||[]).map(k=>({...k,xp:base.paused.xp[k.name]??k.xp}))}:b;
-    const all=X.rows(seen,base,at,b.goalSkill&&!base.paused?{skill:b.goalSkill,xpPerHour:b.xpPerHour}:null),rows=xpHideMaxed?all.filter(r=>r.level<99):all,total=X.total(all),hours=(at-base.at)/3.6e6;
+    const validSkill=s=>typeof s==='string'&&s&&!/^all skills$/i.test(s)&&!/^overall$/i.test(s)&&(/^[\w ]+$/.test(s))&&((b.skills||[]).some(k=>k?.name?.toLowerCase()===s.toLowerCase())||X.ehpRate?.(s,tickMs)||s.toLowerCase()===(b.goalSkill||'').toLowerCase());
+    const serverSkill=X.activeSkill?.(b)||[b.rateSkill,b.goalSkill,typeof trainedSkill==='function'?trainedSkill(b):null].find(validSkill)||null;
+    const serverRate=serverSkill&&b.xpPerHour>0&&!base.paused?{skill:serverSkill,xpPerHour:b.xpPerHour}:null;
+    const all=X.rows(seen,base,at,serverRate),rows=xpHideMaxed?all.filter(r=>r.level<99):all,total=X.total(all),hours=(at-base.at)/3.6e6;
     saveXpStore(store);
     // Keep an uncommitted target only for this account's known, non-maxed skill.
     if(!calcEditing)put(panel,'<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>Overall</span><span class="xp-account"></span></div><div class="xp-stats"></div><div class="xp-buttons"><button class="xp-reset" data-xp-pause>Pause</button><button class="xp-reset" data-xp-reset>Reset</button><label class="xp-hide"><input type="checkbox" data-xp-hide-maxed> Hide maxed</label></div></div>'+efficiencyBox(b)+'<div class="xp-calc"></div><div class="xp-results"></div><div class="xp-history"></div></div>');
     if(!calcEditing)put(panel.querySelector('.xp-calc'),calcBox(b,all.find(r=>r.skill===calcSkill)));
     if(forceCalc){const input=panel.querySelector('[data-calc-target]');if(input)input.value=input.defaultValue;}
-    const ehpSum=X.sessionEhp?.(all,tickMs);
+    const ehpSum=X.sessionEhp?.(all,tickMs),liveRate=hours>0.001?Math.round(total/hours):0,reportedRate=!base.paused&&b.xpPerHour>0?Math.round(b.xpPerHour):0;
+    const rateSummary=reportedRate>0?(total>0?`<span>Live XP/hr <b>${nf(liveRate)}</b></span><span>Reported rate <b>${nf(reportedRate)}/hr</b></span>`:`<span>Reported rate <b>${nf(reportedRate)}/hr</b></span>`):`<span>XP/hr <b>${nf(liveRate)}</b></span>`;
+    const ehpLine=ehpSum&&(ehpSum.gainedEhp>0||ehpSum.ehpPerHour>0||total>0)?`<span>EHP <b>${ehpSum.gainedEhp.toFixed(2)}</b> (${ehpSum.ehpPerHour.toFixed(2)}/hr)</span>`:'';
     panel.querySelector('.xp-account').textContent=safeName(b.name);
-    put(panel.querySelector('.xp-stats'),`<span>XP gained <b>${nf(total)}</b></span><span>XP/hr <b>${nf(Math.round(hours>0.001?total/hours:0))}</b></span>${ehpSum?`<span>EHP <b>${ehpSum.gainedEhp.toFixed(2)}</b> (${ehpSum.ehpPerHour.toFixed(2)}/hr)</span>`:''}<span>Tracked <b>${dur(at-base.at)}</b>${base.paused?' (paused)':''}</span>`);
+    put(panel.querySelector('.xp-stats'),`<span>XP gained <b>${nf(total)}</b></span>${rateSummary}${ehpLine}<span>Tracked <b>${dur(at-base.at)}</b>${base.paused?' (paused)':''}</span>`);
     panel.querySelector('[data-xp-pause]').textContent=base.paused?'Resume':'Pause';
     panel.querySelector('[data-xp-hide-maxed]').checked=xpHideMaxed;
-    put(panel.querySelector('.xp-results'),rows.length?rows.map(r=>{const g=r.skill===b.goalSkill?X.goalBar(r,b.goalLevel):null,v=g||r,er=X.ehpRate?.(r.skill,tickMs),epct=er&&r.rate>0?Math.round(r.rate*100/er):null;return `<div class="xp-box xp-row" data-calc-skill="${E(r.skill)}" role="button" tabindex="0" aria-expanded="${calcSkill===r.skill}" aria-controls="xp-calculator" title="Open the Skill Calculator${er?' · Rev 289 EHP '+nf(Math.round(er))+'/hr':''}"><img src="${asset('skill-'+skillFile(r.skill)+'.png')}" alt="" title="${E(r.skill)}"><div class="xp-main"><div class="xp-head"><span>${E(r.skill)}</span><span class="xp-gain">+${nf(r.gained)} xp</span></div><div class="xp-bar"${g?' title="To the goal level '+g.goal+'. Each mark is a level."':''}><i style="width:${Math.round(v.progress*100)}%"></i>${g?g.marks.map(m=>'<u style="left:'+m+'%"></u>').join(''):''}<span>${r.level} → ${g?g.goal:r.next} · ${Math.round(v.progress*100)}%</span></div><div class="xp-meta"><span>${nf(r.rate)} XP/hr${epct!=null?' ('+epct+'% EHP)':''}</span><span>${v.ttl!=null?'TTL '+dur(v.ttl):nf(v.left)+' xp to level'}</span></div></div></div>`;}).join(''):'<div class="xp-box"><span class="xp-muted">'+(xpHideMaxed&&all.length?'Maxed skills are hidden.':window.atlasOperator()?'No XP gained since tracking started.':'No XP gained since you opened the page.')+'</span></div>');
+    put(panel.querySelector('.xp-results'),rows.length?rows.map(r=>{const g=r.skill===b.goalSkill?X.goalBar(r,b.goalLevel):null,v=g||r,er=X.ehpRate?.(r.skill,tickMs),epct=er&&r.rate>0?Math.round(r.rate*100/er):null,isRep=r.rateSource==='reported'||!!(serverRate&&serverRate.skill&&serverRate.skill.toLowerCase()===r.skill.toLowerCase()&&r.rate===Math.round(serverRate.xpPerHour)),rateTag=isRep?'<span class="xp-rate-tag reported" title="Reported by account snapshot">reported</span>':(r.gained>0?'<span class="xp-rate-tag live" title="Measured from live XP delta while watching">live</span>':'');return `<div class="xp-box xp-row" data-calc-skill="${E(r.skill)}" role="button" tabindex="0" aria-expanded="${calcSkill===r.skill}" aria-controls="xp-calculator" title="Open the Skill Calculator${er?' · Rev 289 EHP '+nf(Math.round(er))+'/hr':''}"><img src="${asset('skill-'+skillFile(r.skill)+'.png')}" alt="" title="${E(r.skill)}"><div class="xp-main"><div class="xp-head"><span>${E(r.skill)}</span><span class="xp-gain">${r.gained>0?'+'+nf(r.gained)+' xp':isRep?'active rate':'+0 xp'}</span></div><div class="xp-bar"${g?' title="To the goal level '+g.goal+'. Each mark is a level."':''}><i style="width:${Math.round(v.progress*100)}%"></i>${g?g.marks.map(m=>'<u style="left:'+m+'%"></u>').join(''):''}<span>${r.level} → ${g?g.goal:r.next} · ${Math.round(v.progress*100)}%</span></div><div class="xp-meta"><span>${nf(r.rate)} XP/hr${rateTag}${epct!=null?' ('+epct+'% EHP)':''}</span><span>${r.levelOnly&&r.level<99?'~':''}${v.ttl!=null?'TTL '+dur(v.ttl):nf(v.left)+' xp to level'}</span></div></div></div>`;}).join(''):reportedRate>0&&!xpHideMaxed?`<div class="xp-box xp-row"><img src="${asset('rl-xp.png')}" alt="" title="Active training"><div class="xp-main"><div class="xp-head"><span>Active training (${E(b.rateSkill||'all skills')})</span><span class="xp-gain">${nf(reportedRate)} XP/hr</span></div><div class="xp-meta"><span>Observed snapshot rate<span class="xp-rate-tag reported">reported</span></span><span>${b.eta?'ETA '+E(b.eta):'Waiting for next XP delta'}</span></div></div></div>`:'<div class="xp-box"><span class="xp-muted">'+(xpHideMaxed&&all.length?'Maxed skills are hidden.':window.atlasOperator()?'No XP gained since tracking started.':'No XP gained since you opened the page.')+'</span></div>');
     const histNode=panel.querySelector('.xp-history');if(histNode)put(histNode,xpHistoryBox(store,b));
     restore();
   }
@@ -1362,8 +1372,17 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const el=hud.querySelector('.game-infoboxes'),b=account();
     if(typeof aggroTrack==='function'){const now=Date.now();for(const x of S?.bots||[]){aggroTrack(x,now);regenTrack(x,now);}}
     const set=html=>{if(el._h!==html){el._h=html;el.innerHTML=html;}};
-    const box=(img,text,title,name)=>`<button class="infobox" title="${E(title)}" ${name?'data-xp-focus="'+E(name)+'"':''}><img src="${img}" alt=""><span>${E(text)}</span></button>`;
-    const short=ms=>ms==null?'':ms<3600e3?Math.floor(ms/6e4)+'m':Math.floor(ms/36e5)+'h'+String(Math.floor(ms%36e5/6e4)).padStart(2,'0');
+    const box=(img,text,title,name)=>`<button class="infobox" title="${E(title)}" ${name?'data-xp-focus="'+E(name)+'"':''}>${img?`<img src="${img}" alt="">`:''}<span>${E(text)}</span></button>`;
+    const short=ms=>ms==null?'':ms<3600e3?Math.floor(ms/6e4)+'m':Math.floor(ms/3600e3)+'h'+String(Math.floor(ms%3600e3/6e4)).padStart(2,'0');
+    const sessionInfo=bot=>{
+      if(!bot?.uptime||bot.inWorld===false)return null;
+      const now=Date.now(),off=typeof S!=='undefined'&&S&&Number.isFinite(S.clockOffset)?S.clockOffset:0,serverNow=now+off;
+      const liveFeed=Boolean((bot.live&&Number.isFinite(bot.live.seen)&&now-bot.live.seen<=30_000)||(typeof window!=='undefined'&&window.atlasLiveRoster?.()&&typeof S!=='undefined'&&Array.isArray(S?.roster)&&S.roster.some(r=>String(r?.[0]).toLowerCase()===String(bot.name).toLowerCase())));
+      const hasSnapAt=Number.isFinite(bot.at)&&bot.at>0,snapAge=hasSnapAt?Math.max(0,serverNow-bot.at):0;
+      if(liveFeed)return {ms:bot.uptime+snapAge,stale:false};
+      if(hasSnapAt&&snapAge>30_000)return {ms:bot.uptime,stale:true};
+      return {ms:bot.uptime,stale:false};
+    };
     // Nearby players (RuneLite's member counter): how many players stand within 15 tiles on the account's plane, and how many of them are ours.
     const nearPos=b=>(typeof aggroPos==='function'?aggroPos(b):null)||(b?.live&&Number.isFinite(b.live.x)&&Number.isFinite(b.live.z)?b.live:b?.pos);
     const nearby=b=>{const bp=nearPos(b),rows=typeof S!=='undefined'?S?.roster||[]:[];return !b?.inWorld||!bp?[]:rows.filter(r=>r[3]===(bp.level||0)&&Math.max(Math.abs(r[1]-bp.x),Math.abs(r[2]-bp.z))<=15&&String(r[0]).toLowerCase()!==b.name.toLowerCase());};
@@ -1372,7 +1391,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // Food (RuneLite's supplies count): the food in the pack (item-stats.json: what heals) with its count; red at 2 or fewer.
     const foodBox=b=>{const f=typeof foodOf==='function'?foodOf(b):{total:0};if(!f.total)return '';const top=f.items[0],hp=f.items.reduce((n,i)=>n+(Number(String(itemStats[i.name]||'').match(/heals (\d+)/)?.[1])||0)*i.count,0);return `<button class="infobox${f.total<=2?' boost-down':''}" title="${E('Food: '+f.items.map(i=>i.name+' × '+i.count).join(', ')+(hp?' · heals '+hp+' hitpoints in all':''))}">${icon(top.name,24)}<span>${f.total}</span></button>`;};
     const ammoBox=b=>{const a=b.equipmentObserved===false?null:b.equipment?.find(e=>e.slot===13&&e.count>0);return a?`<button class="infobox ammo" title="${E(a.name)} × ${E(a.count)}">${icon(a,24)}<span>${a.count>=1e5?Math.floor(a.count/1e3)+'K':E(a.count)}</span></button>`:'';};
-    if(b){set((b.uptime?box(asset('rl-activity.png'),short(b.uptime),'Session: '+dur(b.uptime)):'')+(b.goalSkill&&!(b.goalNow>=b.goalLevel)?box(asset('skill-'+skillFile(b.goalSkill)+'.png'),b.eta||String(b.goalNow??''),b.goalSkill+' '+(b.goalNow??'?')+' → '+b.goalLevel+(b.eta?' in '+b.eta:'')):'')+(b.death?box(asset('skill-hitpoints.png'),'died','Died '+age(b.death.at)+' ago: '+b.death.text+' · click for the recap').replace('class="infobox"','class="infobox boost-down" data-death="'+E(b.name)+'"'):'')+foodBox(b)+ammoBox(b)+nearBox(b)
+    if(b){const sess=sessionInfo(b);set((sess?box(asset('rl-activity.png'),short(sess.ms),(sess.stale?'Session (stale snapshot): ':'Session: ')+dur(sess.ms)):'')+(b.goalSkill&&!(b.goalNow>=b.goalLevel)?box(asset('skill-'+skillFile(b.goalSkill)+'.png'),b.eta||String(b.goalNow??''),b.goalSkill+' '+(b.goalNow??'?')+' → '+b.goalLevel+(b.eta?' in '+b.eta:'')):'')+(b.death?box(asset('skill-hitpoints.png'),'died','Died '+age(b.death.at)+' ago: '+b.death.text+' · click for the recap').replace('class="infobox"','class="infobox boost-down" data-death="'+E(b.name)+'"'):'')+foodBox(b)+ammoBox(b)+nearBox(b)
       // NPC aggression timer: the time left until the NPCs that spawn here stop hunting the account.
       +(()=>{if(typeof aggroText!=='function')return '';const a=aggroText(b,Date.now());return a?box(asset('skill-attack.png'),a.text,a.title).replace('class="infobox"','class="infobox'+(a.red?' boost-down':'')+'"'):'';})()
       // Item charges: teleport jewellery on its last charge, or used up (an amulet of glory with no charges has no number).
@@ -1381,7 +1400,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       +(()=>{const p=b.inWorld&&b.pos&&wildLevel(b.pos)?pvpState(b):null,who=n=>typeof safeName==='function'?safeName(n):n;return p?.threats.length?box(asset('prayer-protect-item.png'),String(p.threats.length),p.threats.length+(p.threats.length===1?' player':' players')+' can attack'+(p.multi?' (multi-way)':'')+': '+p.threats.slice(0,6).map(t=>who(t.name)+' ('+t.combat+', '+t.dist+' tiles)').join(', ')).replace('class="infobox"','class="infobox boost-down"'):'';})()
       // Boosts (RuneLite boosts): a skill whose current level differs from its base; Hitpoints and Prayer are the orbs.
       +(b.skills||[]).filter(s=>realSkill(s)&&s.name!=='Hitpoints'&&s.name!=='Prayer'&&s.currentLevel!=null&&s.currentLevel!==s.level).map(s=>box(asset('skill-'+skillFile(s.name)+'.png'),s.currentLevel+'/'+s.level,s.name+(s.currentLevel>s.level?' boosted':' drained')+': '+s.currentLevel+' / '+s.level+(typeof regenStatText==='function'?regenStatText(b,s,Date.now()):'')).replace('class="infobox"','class="infobox '+(s.currentLevel>s.level?'boost-up':'boost-down')+'"')).join(''));return;}
-    set(S.bots.filter(x=>x.fresh&&!x.practice&&!x.reserved).slice(0,12).map(x=>{const t=trainedSkill(x);return box(asset(t?'skill-'+skillFile(t)+'.png':'rl-activity.png'),short(x.uptime),safeName(x.name)+(t?' · '+t+(x.goalNow!=null&&t===x.goalSkill?' '+x.goalNow:''):'')+(x.phaseShort?' · '+String(x.phaseShort).slice(0,60):'')+' · '+dur(x.uptime||0),x.name);}).join(''));
+    set((typeof S!=='undefined'?S?.bots||[]:[]).filter(x=>x.fresh&&!x.practice&&!x.reserved).slice(0,12).map(x=>{const t=trainedSkill(x),ms=sessionInfo(x)?.ms??x.uptime;return box(asset(t?'skill-'+skillFile(t)+'.png':'rl-activity.png'),short(ms),safeName(x.name)+(t?' · '+t+(x.goalNow!=null&&t===x.goalSkill?' '+x.goalNow:''):'')+(x.phaseShort?' · '+String(x.phaseShort).slice(0,60):'')+' · '+dur(ms||0),x.name);}).join(''));
   }
   // Board progress (the coordinator's scoreboard): what remains, the fleet's best live level per skill, quests and items.
   function progressPanel(){
@@ -1468,7 +1487,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // One header names the columns, so a row holds numbers only. A long number is cut short; the row's tooltip has it whole.
     const trend=typeof geTrend==='function'?geTrend(S?.economy?.supplies||[]):{at:null,change:new Map()},arrow=i=>{const p=trend.change.get(String(i.id));return p==null?'':'<small class="'+(p>0?'ge-up':'ge-down')+'" title="'+(p>0?'+':'')+p+'% since '+age(trend.at)+' ago">'+(p>0?'▲':'▼')+Math.abs(p)+'%</small>';};
     const exact=v=>v==null?'—':nf(Math.round(v))+' gp',short=v=>v==null?'—':v>=1e6?+(v/1e6).toFixed(2)+'M':v>=1e5?Math.round(v/1e3)+'k':nf(Math.round(v));
-    return [`<div class="xp-meta"><span>Showing ${shown.length} of ${rows.length} ${owner?'route supplies':'items'}</span><span>prices ${S.economy?.pricesAt?age(S.economy.pricesAt)+' old':'unknown'}</span></div><div class="ge-sort" role="group" aria-label="Sort">${[['stock','Stock','Most stock first'],['flip','Flip','Buy at the bid + 1, sell at the ask - 1 but no higher than the 7-day average, less the 5% tax'],['alch','Alch','Buy at the ask, cast high alchemy with one nature rune']].map(([id,label,tip])=>`<button class="xp-reset${gs===id?' on':''}" data-ge-sort="${id}" title="${tip}" aria-pressed="${gs===id}">${label}</button>`).join('')}</div>${hidden?`<button class="game-control" data-ge-all>${geAll?'Hide':'Show'} the ${hidden} with no offer</button>`:''}${rows.length?`<div class="ge-row ge-cols${owner?' ge-owner':''}"><span></span><span>Item</span><span title="The price to buy one, in gp">Buy</span><span title="The price to sell one, in gp">Sell</span><span${profit?' title="The profit of one, in gp"':''}>${profit?(gs==='flip'?'Flip':'Alch')+' +':'Stock'}</span>${owner?'<span title="Held in our banks">Ours</span>':''}</div>`:''}`,
+    const noun=owner?'route supplies':'items',scope=profit?' (profitable)':hidden?(geAll?` (${rows.length-hidden} active, ${hidden} with no offer)`:' (active offers)'):'';
+    return [`<div class="xp-meta"><span>Showing ${shown.length} of ${rows.length} ${noun}${scope}</span><span>prices ${S.economy?.pricesAt?age(S.economy.pricesAt)+' old':'unknown'}</span></div><div class="ge-sort" role="group" aria-label="Sort">${[['stock','Stock','Most stock first'],['flip','Flip','Buy at the bid + 1, sell at the ask - 1 but no higher than the 7-day average, less the 5% tax'],['alch','Alch','Buy at the ask, cast high alchemy with one nature rune']].map(([id,label,tip])=>`<button class="xp-reset${gs===id?' on':''}" data-ge-sort="${id}" title="${tip}" aria-pressed="${gs===id}">${label}</button>`).join('')}</div>${!profit&&hidden?`<button class="game-control" data-ge-all>${geAll?'Hide':'Show'} ${hidden} with no offer${!geAll?' ('+all.length+' total)':''}</button>`:''}${rows.length?`<div class="ge-row ge-cols${owner?' ge-owner':''}"><span></span><span>Item</span><span title="The price to buy one, in gp">Buy</span><span title="The price to sell one, in gp">Sell</span><span${profit?' title="The profit of one, in gp"':''}>${profit?(gs==='flip'?'Flip':'Alch')+' +':'Stock'}</span>${owner?'<span title="Held in our banks">Ours</span>':''}</div>`:''}`,
       shown.map(i=>`<div class="ge-row${owner?' ge-owner':''}${geOpen===String(i.id)?' ge-open':''}" data-ge-src="${E(i.id)}" data-ge-name="${E(geName(i))}" role="button" tabindex="0" aria-expanded="${geOpen===String(i.id)}" aria-controls="ge-sources-${E(i.id)}" title="${E(geName(i))}: buy ${exact(i.ask)}, sell ${exact(i.bid)}, stock ${nf(i.stock||0)}, average ${exact(i.vwap)}, shop ${exact(i.base)}${profit?(gs==='flip'?', flip ':', alch ')+'+'+exact(profit.get(i))+' each':''}"><span class="ge-icon">${icon(i,24)}</span><span class="ge-name">${E(geName(i))}${arrow(i)}</span><b>${short(i.ask)}</b><b>${short(i.bid)}</b><span${profit?' class="ge-up"':''}>${profit?'+'+short(profit.get(i)):short(i.stock||0)}</span>${owner?`<span class="ge-ours">${heldCount(i)}</span>`:''}</div>`+(geOpen===String(i.id)?geSources(String(i.id)):'')).join('')+(shown.length<rows.length?'<button class="game-control" data-ge-more>Show more · '+nf(rows.length-shown.length)+' remaining</button>':'')+(rows.length?'':'<p class="xp-muted">'+(profit?'No item gives a '+(gs==='flip'?'flip':'high alch')+' profit at the prices now.':'No item matches.')+'</p>')];
   }
   // Pull requests plugin: the bot repository's open and lately merged pull requests, by the agent whose branch they are.
@@ -1816,7 +1836,16 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // content written after that does not animate.
   const enterTimers=new WeakMap();
   function enter(el){const next=el.classList.contains('enter-a')?'enter-b':'enter-a';el.classList.remove('enter-a','enter-b');el.classList.add(next);clearTimeout(enterTimers.get(el));enterTimers.set(el,setTimeout(()=>el.classList.remove('enter-a','enter-b'),320));}
-  const syncSidebar=()=>$('#client-sidebar').setAttribute('aria-expanded',String(!app.classList.contains('client-collapsed')));
+  const syncSidebar=()=>{
+    const collapsed=app.classList.contains('client-collapsed')||(narrowViewport.matches&&!app.classList.contains('mobile-plugin'));
+    $('#client-sidebar')?.setAttribute('aria-expanded',String(!collapsed));
+    plugin.setAttribute('aria-hidden',String(collapsed));
+    if('inert' in plugin)plugin.inert=collapsed;else if(collapsed)plugin.setAttribute('inert','');else plugin.removeAttribute('inert');
+    if(collapsed&&plugin.contains(document.activeElement))$('#client-sidebar')?.focus?.({preventScroll:true});
+  };
+  const narrowViewport=typeof matchMedia==='function'?matchMedia('(max-width:740px)'):{matches:false,addEventListener:()=>{}};
+  narrowViewport.addEventListener?.('change',syncSidebar);
+  window.atlasSyncSidebar=syncSidebar;
   function showPlugin(id){if(!window.atlasOperator()&&OPERATOR_PLUGINS.includes(id)){toast('Sign in as owner for the command tools.');id='fleet';}
     // A spectator's click on a board opens that board's top 10 (Hiscores, Rivals); a board with no top 10 has no more to show.
     if(!window.atlasOperator()){if(PUBLIC_HIDDEN.includes(id))id='fleet';else if(id==='board'){const key=typeof chosenBoard==='string'&&typeof boardKey==='function'?boardKey(chosenBoard):'',top=(S?.rivals||[]).find(x=>boardKey(x.board)===key);if(!top)return;rivalBoard=top.board;hiscoresMode='rivals';id='boards';}}
@@ -1983,13 +2012,15 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     // Only the pixels of the map hole stay: the frame is a cut-out, and it does not hide the rest of the square.
     if(D.hole){g.globalCompositeOperation='destination-in';g.drawImage(D.hole,0,0);g.globalCompositeOperation='source-over';}}
   // A click on the minimap in 2D moves the camera to that tile (free camera); in 3D the view itself moves the camera.
+  let miniRaf=0;
+  function minimapSoon(){if(miniRaf||typeof requestAnimationFrame!=='function'){if(typeof requestAnimationFrame!=='function')minimap();return;}miniRaf=requestAnimationFrame(()=>{miniRaf=0;minimap();});}
   const miniCanvas=hud.querySelector('.game-minimap canvas'),miniAt=e=>{const r=miniCanvas.getBoundingClientRect(),x=(e.clientX-r.left)*miniCanvas.width/r.width,y=(e.clientY-r.top)*miniCanvas.height/r.height,v=miniView,dx=x-(miniCanvas.width>>1),dy=y-(miniCanvas.height>>1),cos=Math.cos(v.angle),sin=Math.sin(v.angle);return {x,y,tx:Math.round(v.cx+(dx*cos+dy*sin)/v.PX),tz:Math.round(v.cz-(dy*cos-dx*sin)/v.PX)};};
   miniCanvas?.addEventListener('click',e=>{if(e.shiftKey){const t=miniAt(e);toast((toggleMark(t.tx,t.tz,miniView.floor??0)?'Marked ':'Removed the marker at ')+t.tx+', '+t.tz+'.');return;}if(typeof mode!=='undefined'&&mode==='3d'){toast('In 3D, drag the view to move the camera.');return;}const t=miniAt(e);window.atlasCamera.goto(t.tx,t.tz);});
   // The wheel zooms the minimap (the game's minimap zoom): 2 to 8 pixels a tile, kept for the next visit.
   const MINI_ZOOMS=[2,3,4,6,8];try{const z=Number(localStorage.getItem('atlasMiniZoom'));if(MINI_ZOOMS.includes(z))minimap.zoom=z;}catch{/* no storage: 4 px a tile */}
   miniCanvas?.addEventListener('wheel',e=>{e.preventDefault();const now=minimap.zoom||4,next=MINI_ZOOMS[Math.max(0,Math.min(MINI_ZOOMS.length-1,MINI_ZOOMS.indexOf(now)+(e.deltaY<0?1:-1)))];if(next===now)return;minimap.zoom=next;try{localStorage.setItem('atlasMiniZoom',String(next));}catch{/* the zoom holds for this visit */}minimap();},{passive:false});
   // The pointer on the minimap names the tile under it, and the players whose dots it touches.
-  miniCanvas?.addEventListener('mousemove',e=>{const t=miniAt(e),tip=hud.querySelector('.game-tip'),cb=new Map((S?.roster||[]).map(r=>[String(r[0]).toLowerCase(),r[4]])),names=[...new Set((minimap.hits||[]).filter(h=>Math.abs(h[0]-t.x)<=3&&Math.abs(h[1]-t.y)<=3).map(h=>{const c=cb.get(String(h[2]).toLowerCase());return safeName(h[2])+(Number.isFinite(c)?' ('+c+')':'');}))];
+  miniCanvas?.addEventListener('mousemove',e=>{const t=miniAt(e),tip=hud.querySelector('.game-tip');if(minimap.rosterRef!==S?.roster){minimap.rosterRef=S?.roster;minimap.cbMap=new Map((S?.roster||[]).map(r=>[String(r[0]).toLowerCase(),r[4]]));}const cb=minimap.cbMap,names=[...new Set((minimap.hits||[]).filter(h=>Math.abs(h[0]-t.x)<=3&&Math.abs(h[1]-t.y)<=3).map(h=>{const c=cb.get(String(h[2]).toLowerCase());return safeName(h[2])+(Number.isFinite(c)?' ('+c+')':'');}))];
     tip.textContent=(names.length?names.slice(0,4).join(', ')+(names.length>4?' +'+(names.length-4):'')+' · ':'')+t.tx+', '+t.tz;tip.hidden=false;const h=hud.getBoundingClientRect();tip.style.left=Math.max(0,e.clientX-h.left-tip.offsetWidth-10)+'px';tip.style.top=(e.clientY-h.top+12)+'px';});
   // Only a player dot looks up: the hits also hold floor items, markers and icons, whose labels can look like a name.
   const playerNames=()=>new Set([...(S?.roster||[]).map(r=>String(r[0]).toLowerCase()),...(S?.bots||[]).map(b=>String(b.name).toLowerCase())]);
@@ -2022,14 +2053,14 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function overlay(){
     const b=account(),el=hud.querySelector('.game-overlay');
     // The box is written only when its text changes. The infoboxes sit below the box, whatever its height.
-    const set=html=>{if(el._h!==html){el._h=html;el.innerHTML=html;}const ib=hud.querySelector('.game-infoboxes');if(ib&&el.offsetHeight){const top=el.offsetTop+el.offsetHeight+4+'px';if(ib.style.top!==top)ib.style.top=top;}};
+    const set=html=>{if(el._h===html)return;el._h=html;el.innerHTML=html;const ib=hud.querySelector('.game-infoboxes'),h=ib?el.offsetHeight:0;if(h){const top=el.offsetTop+h+4+'px';if(ib.style.top!==top)ib.style.top=top;}};
     const line=(k,v)=>`<div><span>${E(k)}</span><b>${E(v)}</b></div>`;
     // Owner targets come from the goal ledger. Public hiscores describe observations without an all-board target.
     const ranked=(S.boards||[]).filter(x=>x.best?.rank),near=ranked.filter(x=>x.gap&&!x.gap.ahead&&x.best.rank>1).sort((a,b)=>(b.gap.close||0)-(a.gap.close||0))[0];
     const goals=window.atlasOperator()?S.scoreboard?.goals:null,now=Number.isFinite(S.hosted?.at)&&Number.isFinite(S.hostedAge)?S.hosted.at+S.hostedAge:Number.isFinite(S.now)?S.now:Date.now(),recent=at=>Number.isFinite(at)&&at>0&&at<=now&&now-at<3600000;
     const main=goals?.main,mainRank=main?.rank==null?'Rank unknown':recent(main.rankAt)?'#'+nf(main.rank):'Rank stale';
     const held=new Set((goals?.specialists?.rank1s||[]).filter(r=>recent(r.at)).map(r=>String(r.board).toLowerCase())).size;
-    const race=goals?.version===1?'<h4 class="race">Project goals</h4>'+line('Main Overall',mainRank)+line('Specialist #1s',held+' observed')+line('Quests',(goals.quests?.complete??'—')+' / '+(goals.quests?.total??'—'))+line('Maxed tribrids',(goals.army?.maxed??'—')+' / '+(goals.army?.roster?.length??'—')):ranked.length?'<h4 class="race">Hiscores</h4>'+line('Boards at #1',ranked.filter(x=>x.best.rank===1).length)+(near?line('Closest',near.board+' '+Math.round((near.gap.close||0)*100)+'%'):''):'';
+    const race=goals?.version===1?'<h4 class="race">Project goals</h4>'+line('Main Overall',mainRank)+line('Specialist #1s',held+' observed')+line('Quests',(goals.quests?.complete??'—')+' / '+(goals.quests?.total??'—'))+line('Maxed tribrids',(goals.army?.maxed??'—')+' / '+(goals.army?.roster?.length??'—')):ranked.length?'<h4 class="race">Fleet hiscores</h4>'+line('Boards at #1',ranked.filter(x=>x.best.rank===1).length)+(near?line('Closest',near.board+' '+Math.round((near.gap.close||0)*100)+'%'):''):'';
     // The 3D camera on another player (a lookup's Follow in 3D): what the page knows of them, from the lookup.
     const other=window.atlasFollowOther;
     if(other){const l=followLookup(other),ov=l?.rows?.find(r=>r.board==='Overall'),seen=S.roster?.find(r=>String(r[0]).toLowerCase()===other.toLowerCase());
@@ -2044,8 +2075,19 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       return line(SESSION_VERB[String(b.goalSkill||'').toLowerCase()]||'Gained',t.name+' '+nf(t.count)+' · '+nf(Math.round(t.count/hours))+'/hr')+(burnt&&made?line('Burnt',nf(burnt)+' · '+Math.round(burnt*100/(burnt+made))+'% burn rate'):'');};
     // PvP Tools lines: in the Wilderness, the risk, what a death keeps and loses, and the players who can attack now.
     const wildLine=b=>{const w=b.inWorld?wildLevel(b.pos):0;if(!w)return '';const p=pvpState(b),names=p.threats.slice(0,3).map(t=>t.name+' ('+t.combat+')').join(', ');return line('Wilderness','Level '+w+(b.combat?' · '+Math.max(3,b.combat-w)+'-'+Math.min(126,b.combat+w):'')+(p.multi?' · multi-way':' · single-way'))+line(p.incomplete?'Known risk':'Risk',gp(p.risk)+(p.unpriced?' + '+p.unpriced+' unpriced':'')+(p.unobserved?' · '+p.unobserved+' not reported':''))+line('Kept · lost',p.incomplete?'unknown':gp(p.keptValue)+' · '+gp(p.lost))+line('Can attack',p.threats.length?p.threats.length+': '+names.slice(0,60):'nobody in 30 tiles');};
+    const sessionOf=bot=>{
+      if(!bot?.uptime||!bot.inWorld)return null;
+      const nowMs=Date.now(),off=typeof S!=='undefined'&&S&&Number.isFinite(S.clockOffset)?S.clockOffset:0,srv=nowMs+off;
+      const live=Boolean((bot.live&&Number.isFinite(bot.live.seen)&&nowMs-bot.live.seen<=30_000)||(typeof window!=='undefined'&&window.atlasLiveRoster?.()&&typeof S!=='undefined'&&Array.isArray(S?.roster)&&S.roster.some(r=>String(r?.[0]).toLowerCase()===String(bot.name).toLowerCase())));
+      const hasSnapAt=Number.isFinite(bot.at)&&bot.at>0,snapAge=hasSnapAt?Math.max(0,srv-bot.at):0;
+      if(live)return {ms:bot.uptime+snapAge,stale:false};
+      if(hasSnapAt&&snapAge>30_000)return {ms:bot.uptime,stale:true};
+      return {ms:bot.uptime,stale:false};
+    };
+    const sess=sessionOf(b),seenAt=Number.isFinite(b.lastSeen)&&b.lastSeen>0?b.lastSeen:b.at;
+    const seenAge=seenAt?((typeof S!=='undefined'&&S?.now&&seenAt>S.now)?ago(Math.max(0,Date.now()-seenAt)):age(seenAt)):'';
     const goalText=(b.goalSkill&&!(b.goalNow>=b.goalLevel)?b.goalSkill+' '+b.goalLevel:'')||String(b.goal||'').slice(0,60);
-    set('<h4>'+E(safeName(b.name))+'</h4>'+(b.practice?line('World','practice · 2D'):'')+line('Status',state)+(goalText||window.atlasOperator()?line('Goal',goalText||'—'):'')+(b.phaseShort?line('Phase',String(b.phaseShort).slice(0,60)):'')+(b.xpPerHour?line('XP/hr',nf(Math.round(b.xpPerHour))):'')+(b.eta&&b.xpLeft>0?line('To target',b.eta):'')+(b.uptime&&b.inWorld?line('Session',dur(b.uptime)):'')+(!b.inWorld&&b.at?line('Last seen',age(b.at)+' ago'):'')+sessionLine(b)+wildLine(b)+race);
+    set('<h4>'+E(safeName(b.name))+'</h4>'+(b.practice?line('World','practice · 2D'):'')+line('Status',state)+(goalText||window.atlasOperator()?line('Goal',goalText||'—'):'')+(b.phaseShort?line('Phase',String(b.phaseShort).slice(0,60)):'')+(b.xpPerHour?line('XP/hr',nf(Math.round(b.xpPerHour))):'')+(b.eta&&b.xpLeft>0?line('To target',b.eta):'')+(sess?line('Session',dur(sess.ms)+(sess.stale?' (stale)':'')):'')+(!b.inWorld&&seenAt?line('Last seen',seenAge+' ago'):'')+sessionLine(b)+wildLine(b)+race);
   }
   // Skills tab tooltip (2004): XP, next level at, remaining.
   hud.addEventListener('mouseover',e=>{const sk=e.target.closest('[data-skill]');const tip=hud.querySelector('.game-tip');if(!sk){tip.hidden=true;return;}const s=level(sk.dataset.skill),X=window.atlasXp;if(!s||!X){tip.hidden=true;return;}const lvl=Math.min(99,s.level),next=X.xpForLevel(Math.min(99,lvl+1));
@@ -2058,11 +2100,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function chatFeed(){
     const owner=window.atlasOperator(),rows=[...(S.events||[]).filter(e=>!e.practice).map(e=>({at:e.at,name:e.name,text:e.full||e.text,kind:'Game'})),...(S.results||[]).filter(r=>!r.practice&&(owner||!window.atlasHousekeeping(r.text))).map(r=>({at:r.at,name:r.name,text:(r.ok?'finished: ':'stopped: ')+(owner?String(r.text):window.atlasJobName(r.text)).slice(0,120),kind:r.ok||!owner?'Game':'Private'}))]
       .sort((a,b)=>a.at-b.at).slice(-60);
-    let added=0;
-    for(const r of rows){const key=r.kind+'|'+r.at+'|'+r.name+'|'+r.text;if(seen.has(key))continue;seen.add(key);if(seen.size>800)seen.delete(seen.values().next().value);chat.push({kind:r.kind,name:safeName(r.name),text:r.text,at:r.at});added++;}
-    if(!welcomed){welcomed=true;added++;chat.push({kind:'Game',text:'Welcome to RuneScape.',at:Date.now()});if(!window.atlasOperator())chat.push({kind:'Game',text:'You are watching our bot team live. ::help lists the chat commands.',at:Date.now()});}
-    while(chat.length>200)chat.shift();
-    if(added)renderChat();
+    const items=[];
+    for(const r of rows){const key=r.kind+'|'+r.at+'|'+r.name+'|'+r.text;if(seen.has(key))continue;seen.add(key);if(seen.size>800)seen.delete(seen.values().next().value);items.push({kind:r.kind,name:safeName(r.name),text:r.text,at:toBrowserAt(r.at)});}
+    if(!welcomed){welcomed=true;items.push({kind:'Game',text:'Welcome to RuneScape.',at:Date.now()});if(!window.atlasOperator())items.push({kind:'Game',text:'You are watching our bot team live. ::help lists the chat commands.',at:Date.now()});}
+    if(items.length)pushChat(...items);
   }
   // Desktop notifications (RuneLite's notifier): level-ups, deaths and idling, when the owner switched them on.
   const NOTIFY_KEY='atlas-notify';
@@ -2105,7 +2146,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const trainedSkill=b=>lastGain.get(b.name)||b.goalSkill||skills.find(n=>n.toLowerCase()===String(b.role||'').toLowerCase())||null;
   // Deaths in the game's words; the deaths already on record when the page opens are not announced again.
   const deathsSeen=new Set();let deathsPrimed=false;
-  function deaths(){for(const b of S.bots){if(b.practice||!b.death)continue;const key=b.name+'|'+b.death.at;if(deathsSeen.has(key))continue;deathsSeen.add(key);if(deathsPrimed){chat.push({kind:'Private',name:safeName(b.name),text:'Oh dear, you are dead!',at:b.death.at});renderChat();desktopNotify(safeName(b.name)+': Oh dear, you are dead!');shotFor(b,'death','Death');}}deathsPrimed=true;}
+  function deaths(){for(const b of S.bots){if(b.practice||!b.death)continue;const key=b.name+'|'+b.death.at;if(deathsSeen.has(key))continue;deathsSeen.add(key);if(deathsPrimed){pushChat({kind:'Private',name:safeName(b.name),text:'Oh dear, you are dead!',at:toBrowserAt(b.death.at)});desktopNotify(safeName(b.name)+': Oh dear, you are dead!');shotFor(b,'death','Death');}}deathsPrimed=true;}
   // Logins, logouts and rank moves as chat lines (RuneLite's Friend List notifications). The state on record when the page opens is not announced. More than four logins or logouts in one snapshot make one line.
   const worldSeen=new Map(),rankSeen=new Map();let momentsPrimed=false;
   // Session summary on a logout line: while an account is in the world, its XP when this page first saw it in the world
@@ -2128,18 +2169,18 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const parts=[gains[0]?'+'+nf(Math.round(gains[0][1]))+' '+gains[0][0]+' XP':'',top&&top.count>0?nf(top.count)+' '+top.name:'',value>=1||unpriced?'≈ '+gp(Math.round(value))+' gp of loot'+(unpriced?' + '+unpriced+' unpriced':''):''].filter(Boolean);
     return (last.uptime?' after '+dur(last.uptime):'')+(parts.length?': '+parts.join(', '):'');
   }
-  function moments(){let n=0;const say=(kind,text)=>{chat.push({kind,text,at:Date.now()});if(chat.length>200)chat.shift();n++;};
+  function moments(){const queued=[];const say=(kind,text)=>{queued.push({kind,text,at:Date.now()});};
     const moved={in:[],out:[]};
     for(const b of S.bots){if(b.practice)continue;const was=worldSeen.get(b.name),is=!!b.inWorld;worldSeen.set(b.name,is);if(momentsPrimed&&was!==undefined&&was!==is)moved[is?'in':'out'].push(is?safeName(b.name):{name:safeName(b.name),text:sessionText(b.name)});else if(!is){sessionXp.delete(b.name);sessionLast.delete(b.name);}trackSession(b);}
     for(const [k,names] of Object.entries(moved)){if(names.length>4)say('Private',names.length+' accounts have logged '+k+'.');else for(const name of names)say('Private',typeof name==='string'?name+' has logged '+k+'.':name.name+' has logged out'+name.text+'.');}
     // A board's best rank is one account's; a move is announced for the same account, and another account taking the best
     // rank is its own line (comparing two accounts' ranks made lines such as "up from" another account's rank).
     for(const x of S.boards||[]){const r=x.best?.rank,who=x.best?.name;if(!r||!who)continue;const was=rankSeen.get(x.board);rankSeen.set(x.board,{r,who});if(!momentsPrimed||!was)continue;if(was.who===who){if(was.r!==r)say('Game',safeName(who)+' is now rank '+r+' on '+x.board+' ('+(r<was.r?'up':'down')+' from '+was.r+').');}else say('Game',safeName(who)+' now holds our best '+x.board+' rank: '+r+'.');}
-    momentsPrimed=true;if(n)renderChat();}
+    momentsPrimed=true;if(queued.length){if(typeof pushChat==='function')pushChat(...queued);else{for(const item of queued)chat.push({...item,at:Number.isFinite(item.at)?item.at:Date.now()});chat.sort((a,b)=>(a.at-b.at)||((a._seq||0)-(b._seq||0)));while(chat.length>200)chat.shift();renderChat();}}}
   function levelUps(){
     for(const b of S.bots){if(b.practice||!Array.isArray(b.skills))continue;const prev=levelsSeen.get(b.name);const now={};for(const k of b.skills)now[k.name]=k.level;
       const xpBefore=xpSeen.get(b.name),xpNow={};let best=0;for(const k of b.skills.filter(realSkill)){xpNow[k.name]=k.xp;const d=xpBefore?.[k.name]!=null?k.xp-xpBefore[k.name]:0;if(d>best){best=d;lastGain.set(b.name,k.name);}}xpSeen.set(b.name,xpNow);
-      if(prev)for(const [skill,lvl] of Object.entries(now))if(prev[skill]!=null&&lvl>prev[skill]&&skill!=='Overall'){chat.push({kind:'Game',name:safeName(b.name),text:`Congratulations, you've just advanced ${/^[AEIOU]/.test(skill)?'an':'a'} ${skill} level. Your ${skill} level is now ${lvl}.`,at:Date.now()});if(chat.length>200)chat.shift();renderChat();desktopNotify(safeName(b.name)+' advanced '+(/^[AEIOU]/.test(skill)?'an':'a')+' '+skill+' level: '+lvl);shotFor(b,'level','Level '+lvl+' '+skill);}
+      if(prev)for(const [skill,lvl] of Object.entries(now))if(prev[skill]!=null&&lvl>prev[skill]&&skill!=='Overall'){pushChat({kind:'Game',name:safeName(b.name),text:`Congratulations, you've just advanced ${/^[AEIOU]/.test(skill)?'an':'a'} ${skill} level. Your ${skill} level is now ${lvl}.`,at:Date.now()});desktopNotify(safeName(b.name)+' advanced '+(/^[AEIOU]/.test(skill)?'an':'a')+' '+skill+' level: '+lvl);shotFor(b,'level','Level '+lvl+' '+skill);}
       levelsSeen.set(b.name,now);}
   }
   // XP globes (RuneLite): a ring of progress to the next level for each skill gained in the last ten seconds.
@@ -2153,11 +2194,12 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // The hosted page's stale bar already reports old data, and the 3D view keeps its own live world feed.
   function screens(){const loading=hud.querySelector('#game-loading'),lost=hud.querySelector('#game-lost'),live=typeof mode!=='undefined'&&mode==='3d'&&typeof VIEWER!=='undefined'&&VIEWER.state==='ready'&&VIEWER.feed===true&&typeof window!=='undefined'&&window.atlasLiveRoster?.();if(loading&&S)loading.hidden=true;if(lost)lost.hidden=!(S&&!live&&!document.documentElement.classList.contains('fleet-stale')&&(typeof connected!=='undefined'&&!connected||typeof lastReceived!=='undefined'&&Date.now()-lastReceived>10000));}
   setInterval(screens,2000);
+  setInterval(()=>{const b=typeof account==='function'?account():null;if(S&&b?.inWorld&&b.uptime){overlay();infoboxes();}},1000);
   // Map squares (map-squares/<mx>_<mz>.png, 4 px a tile): loaded as the view needs them, drawn when ready.
   const squares=new Map(),squareRetryAt=new Map();
   window.atlasSquare=(mx,mz)=>{
     const key=mx+'_'+mz;if(Date.now()<(squareRetryAt.get(key)||0))return null;let img=squares.get(key);
-    if(!img){img=new Image();img.onload=()=>{squareRetryAt.delete(key);if(typeof drawMap==='function')drawMap();minimap();};img.onerror=()=>{squares.delete(key);squareRetryAt.set(key,Date.now()+(mz>57?600000:30000));/* North of the surface export most missing files mean no map data, so those retry rarely. */};img.src='/map-squares/'+key+'.png';squares.set(key,img);}
+    if(!img){img=new Image();img.onload=()=>{squareRetryAt.delete(key);if(typeof drawMap==='function')drawMap();if(typeof minimapSoon==='function')minimapSoon();else minimap();};img.onerror=()=>{squares.delete(key);squareRetryAt.set(key,Date.now()+(mz>57?600000:30000));/* North of the surface export most missing files mean no map data, so those retry rarely. */};img.src='/map-squares/'+key+'.png';squares.set(key,img);}
     return img.complete&&img.naturalWidth?img:null;
   };
   // The 2D camera, the game's view: it follows the watched account at FOLLOW_PX a tile and flies to a new target;
@@ -2246,7 +2288,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const health=recordedHp(b),healthCurrent=currentHp(b);
     const orbBox=hud.querySelector('.game-orbs'),orbHtml=!b?'':[['hp','Hitpoints',health?.now,health?.max],['prayer','Prayer',level('Prayer')?.currentLevel,level('Prayer')?.level],['run','Run energy',b.runEnergy,100]].filter(o=>o[2]!=null).map(([id,label,value,max])=>`<div class="game-orb orb-${id}" title="${label}: ${Math.floor(value)} / ${max}${id==='hp'?healthNote(b)+(typeof regenHpText==='function'?regenHpText(b,Date.now()):''):''}${id==='prayer'&&typeof prayerText==='function'?E(prayerText(b)):''}"><canvas class="orb-art" width="60" height="34" data-orb="${id}" data-frac="${value!=null&&max?Math.max(0,Math.min(1,value/max)):0}"></canvas><span class="orb-num" style="color:${id==='hp'&&!healthCurrent?'#b8b8b8':orbColour(value,max)}">${Math.floor(value)}</span></div>`).join('');if(orbBox._h!==orbHtml){orbBox._h=orbHtml;orbBox.innerHTML=orbHtml;orbBox.querySelectorAll('canvas').forEach(drawOrb);}if(!(selectedTab==='settings'&&$('#game-panel').contains(document.activeElement)))gamePanel();}
   const previousRender=render;render=function(){previousRender();refresh();};
-  const previousDrawMap=drawMap;drawMap=function(){previousDrawMap();minimap();};
+  const previousDrawMap=drawMap;drawMap=function(){previousDrawMap();minimapSoon();};
   const previousPick=pick;pick=function(name){if(name)linkRead=true;wallEnd(false);if(!touring)tourSet(false);const from=focusTarget(),b=S?.bots?.find(b=>b.name===name);previousPick(name);cam.user=false;if(mode==='2d'&&window.atlasFreeCamera&&b?.pos)window.atlasCamera.goto(b.pos.x,b.pos.z);focusMoved(from,name);refresh();};
   rail.onclick=e=>{const b=e.target.closest('[data-client-plugin]');if(b){showPlugin(b.dataset.clientPlugin);writeLink();}};
   title.addEventListener('click',e=>{const p=e.target.closest('[data-open-plugin]');if(p){showPlugin(p.dataset.openPlugin);writeLink();}});
@@ -2411,7 +2453,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     focusOpen(false);
     const main=names.find(n=>wallSame(n,wallPrefs.main))??names[0];
     // The wall keeps the page's follow state and the tour, and gives them back when it closes.
-    wall={names,sent:wallKey(names),shown:0,tour:!!tourTimer,state:{sel,free:window.atlasFreeCamera,other:window.atlasFollowOther},
+    wall={names,sent:wallKey(names),shown:0,reported:false,tour:!!tourTimer,state:{sel,free:window.atlasFreeCamera,other:window.atlasFollowOther},
       layout:wallPrefs.layout,back:'grid',main,focus:main,ordered:wallPrefs.order.length>0,ratio:wallPrefs.ratio,locked:new Set(wallPrefs.locked),shares:{grid:wallSharesOf(wallPrefs.shares.grid),columns:wallSharesOf(wallPrefs.shares.columns)},strip:wallPrefs.strip,custom:false,rects:null,move:null,moving:false,seen:new Set(),offline:new Set(),hover:null,click:null};
     clearInterval(tourTimer);tourTimer=null;focusRowsHtml='';flightTo=null;focus.classList.remove('flying');focusNote.classList.remove('flying');
     window.atlasOpponentClear?.();
@@ -2455,7 +2497,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const was=wall.names,before=wallShown(),plain=wallOrdered(now,was),heir=name=>{const i=was.indexOf(name);return [...was.slice(i+1),...was.slice(0,Math.max(i,0)).reverse()].find(n=>plain.includes(n))??plain[0];};
     const next=plain.includes(wall.main)?wall.main:heir(wall.main),held=wallHold([next,...plain.filter(n=>n!==next)],before),names=held??plain;
     const main=held?held[0]:next,to=names.includes(wall.focus)?wall.focus:heir(wall.focus);
-    wall.names=names;wall.sent=key;wall.shown=Math.min(wall.shown,names.length);wall.rects=null;
+    wall.names=names;wall.sent=key;wall.seen=new Set([...wall.seen].filter(n=>names.includes(n)));wall.offline=new Set([...wall.offline].filter(n=>names.includes(n)));wall.shown=names.filter(n=>wall.seen.has(n)&&!wall.offline.has(n)).length;wall.rects=null;
     wallPost({multi:names});
     if(held)wallPost({multiOrder:names});
     if(main!==wall.main){wall.main=main;wallPost({multiLayout:{main}});}
@@ -2684,8 +2726,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const list=v=>Array.isArray(v)&&v.length<=WALL_MAX&&v.every(n=>typeof n==='string'&&n.length<=12),m=data.viewerMulti;
     if(m&&typeof m==='object'&&list(m.names)&&list(m.shown)&&m.names.length===wall.names.length&&m.shown.length<=m.names.length){
       const own=v=>new Set(list(v)?wall.names.filter(n=>v.some(x=>x===n||wallSame(x,n))):[]);
-      wall.seen=own(m.shown);wall.offline=own(m.offline);
-      if(m.shown.length!==wall.shown){wall.shown=m.shown.length;focusPaint();}
+      wall.reported=true;wall.seen=own(m.shown);wall.offline=own(m.offline);
+      const activeShown=wall.names.filter(n=>wall.seen.has(n)&&!wall.offline.has(n)).length;
+      if(activeShown!==wall.shown){wall.shown=activeShown;focusPaint();}
       wallPaint();
     }
     const l=data.viewerMultiLayout;
@@ -2752,7 +2795,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const still=!move||!(move.ms>0)||wallStill(),delay=still?'':'-'+Math.round(Math.min(Math.max(now-move.at,0),move.ms))+'ms';
     let dx=0,dy=0;
     // A frame at a rectangle, or shrunk about its centre as the viewer shrinks a view that opens or closes.
-    const put=(s,r,k=1)=>{const w=Math.round(r.w*k),h=Math.round(r.h*k);s.left=(r.x+dx+Math.round((r.w-w)/2))+'px';s.top=(r.y+dy+Math.round((r.h-h)/2))+'px';s.width=w+'px';s.height=h+'px';};
+    const put=(s,r,k=1)=>{const w=Math.round(r.w*k),h=Math.round(r.h*k),left=(r.x+dx+Math.round((r.w-w)/2))+'px',top=(r.y+dy+Math.round((r.h-h)/2))+'px',width=w+'px',height=h+'px';if(s.left!==left)s.left=left;if(s.top!==top)s.top=top;if(s.width!==width)s.width=width;if(s.height!==height)s.height=height;};
     if(move){
       const frame=$('#rsw').getBoundingClientRect(),box=wallRoot.getBoundingClientRect();dx=Math.round(frame.left-box.left);dy=Math.round(frame.top-box.top);
       wallRoot.classList.toggle('still',still);if(!still)wallRoot.style.setProperty('--wall-ms',move.ms+'ms');
@@ -2777,7 +2820,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       if(!t)return;
       const b=S.bots.find(x=>x.name===name),place=shown.indexOf(name)+1;
       const state=wall.offline.has(name)?'off':!wall.seen.has(name)?'finding':b&&st(b)[1]==='playing'?'on':'idle';
-      const note=state==='off'?'not online':state==='finding'?'finding…':String(b?.phaseShort||b?.goal||(b?.combat?'level-'+b.combat:'')).slice(0,40);
+      const note=state==='off'?'Offline':state==='finding'?(wall.reported?'Loading map…':'Connecting…'):String(b?.phaseShort||b?.goal||(b?.combat?'level-'+b.combat:'Idle')).slice(0,40);
       const locked=wallLocked(name),drag=wallDrag?.on?wallDrag:null;
       const cls='wall-tile'+(name===wall.focus?' wall-focus':'')+(name===wall.main?' wall-main':'')+(name===wall.hover?' wall-hover':'')+(locked?' wall-locked':'')+(drag?.name===name?' wall-drag':'')+(drag&&drag.over===name?(locked?' wall-nodrop':' wall-drop'):'');
       if(t.pin.getAttribute('aria-pressed')!==String(locked)){t.pin.setAttribute('aria-pressed',String(locked));t.pin.title=locked?'Pinned in its place · p to unpin':'Pin this view in its place · p';}
@@ -2840,16 +2883,26 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(tourAsked){tourSet(true);return;}
     if(window.atlasOperator())return;
     try{if(localStorage.getItem(WELCOME_KEY))return;localStorage.setItem(WELCOME_KEY,'1');}catch{/* private window: the card shows on each visit */}
-    const card=document.createElement('div');card.className='visitor-card';card.setAttribute('role','dialog');card.setAttribute('aria-label','About this page');
-    card.innerHTML='<h2>Watch our bots play, live</h2><p>This is a live game world on the rs-sdk demo server. Gold names are our bot team, climbing the hiscores. Everyone else is another player.</p><p>The arrows in the title bar swap to the next account.</p><div><button data-card="tour">Tour the accounts</button><button data-card="boards">See the hiscores</button><button data-card="close">Just watch</button></div>';
-    card.onclick=e=>{const a=e.target.closest('[data-card]')?.dataset.card;if(!a)return;card.remove();if(a==='tour')tourSet(true);if(a==='boards')showPlugin('boards');};
-    hud.append(card);
+    hud.querySelector('.visitor-backdrop')?.remove();
+    const opener=document.activeElement;
+    const back=document.createElement('div');back.className='visitor-backdrop';
+    const card=document.createElement('div');card.className='visitor-card';card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-labelledby','visitor-card-title');card.tabIndex=-1;
+    card.innerHTML='<div class="visitor-card-head"><h2 id="visitor-card-title">Watch our bots play, live</h2><button class="visitor-close" data-card="close" aria-label="Close welcome dialog">×</button></div><p>This is a live game world on the rs-sdk demo server. Gold names are our bot team, climbing the hiscores. Everyone else is another player.</p><p>The arrows in the title bar swap to the next account.</p><div class="visitor-card-actions"><button data-card="tour">Tour the accounts</button><button data-card="boards">See the hiscores</button><button data-card="close">Just watch</button></div>';
+    const dismiss=act=>{const owned=back.contains(document.activeElement);back.remove();if(act==='tour')tourSet(true);else if(act==='boards')showPlugin('boards');if(opener?.isConnected&&(owned||document.activeElement===document.body))opener.focus?.({preventScroll:true});};
+    back.onclick=e=>{if(e.target===back){dismiss('close');return;}const a=e.target.closest('[data-card]')?.dataset.card;if(a)dismiss(a);};
+    back.onkeydown=e=>{
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();dismiss('close');return;}
+      if(e.key==='Tab'){const btns=[...card.querySelectorAll('button')];if(!btns.length)return;const i=btns.indexOf(document.activeElement),next=e.shiftKey?btns[(i<=0?btns.length:i)-1]:btns[(i+1)%btns.length];e.preventDefault();next.focus({preventScroll:true});}
+    };
+    back._dismiss=()=>dismiss('close');
+    back.append(card);hud.append(back);
+    (card.querySelector('[data-card="tour"]')||card).focus?.({preventScroll:true});
   }
   function openShot(s,opener){
     if(document.querySelector('.shot-view'))return;
     const view=document.createElement('dialog');view.className='shot-view';view.tabIndex=-1;
     view.setAttribute('aria-label','Screenshot. Press Escape or click to close.');view.setAttribute('aria-describedby','shot-caption');
-    view.innerHTML='<img alt=""><p id="shot-caption"></p>';view.querySelector('img').src=s.url;view.querySelector('img').alt='Screenshot of '+safeName(s.name);
+    view.innerHTML='<img alt=""><p id="shot-caption"></p>';const shotImg=view.querySelector('img');if(s?.url){shotImg.src=s.url;shotImg.alt='Screenshot of '+safeName(s.name);}else shotImg.remove();
     view.querySelector('p').textContent=safeName(s.name)+' · '+s.text+' · '+new Date(s.at).toLocaleString();
     view.addEventListener('click',()=>view.close());
     view.addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();view.focus();}});
@@ -2919,7 +2972,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       if(!send){notify(verb==='request'?'::request needs the request text.':verb==='swarm'||verb==='coordinator'?'::'+verb+' pause or ::'+verb+' resume.':verb==='job'?'::job <account> on or off.':'::'+verb+' needs an account name.');return;}
       notify('Sending '+send.action+(send.extra.account?' '+send.extra.account:'')+'…');
       window.atlasCommand(send.action,send.extra).then(r=>notify(send.action+': '+String(r?.status||'sent').replaceAll('-',' ')),e=>notify('Refused: '+(e?.message||e)));
-    }else if(/^!(lvl|level|total|qp|cmb|price)\b/i.test(text)){const reply=chatLookup(text);chat.push({kind:'Game',name:'',text:reply,at:Date.now()});if(chat.length>200)chat.shift();renderChat();}
+    }else if(/^!(lvl|level|total|qp|cmb|price)\b/i.test(text)){const reply=chatLookup(text);pushChat({kind:'Game',name:'',text:reply,at:Date.now()});}
     else notify('Chat is view-only in spectator mode. Commands: !lvl <skill> · !total · !qp · !cmb · !price <item> · ::plugin · ::focus · ::help');};
   // Chat commands (RuneLite chatcommands): !lvl <skill>, !total, !qp and !cmb answer for the followed account in the
   // chat, with the level and its demo hiscore rank.
@@ -2939,8 +2992,12 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // level (npc-names.json, from the server's npc configs) and hitpoints; it stays 5 seconds after combat ends.
   // One shared table load; while it loads, only the newest update draws, into the one box.
   // An NPC opponent's route-item drops retain its exact type and each source's quantity and conditions.
-  let npcNames=null,npcNamesLoad=null,opponentHide=0,opponentLatest=null,npcDrops=null;
-  fetch(asset('npc-drops.json')).then(r=>r.ok?r.json():null).then(j=>{if(j&&typeof j==='object')npcDrops=j.byId?j:Object.fromEntries(Object.entries(j).map(([k,v])=>[k.toLowerCase(),v]));},()=>{});
+  let npcNames=null,npcNamesLoad=null,opponentHide=0,opponentLatest=null,npcDrops=null,npcDropsLoad=null;
+  const loadNpcDrops=()=>{
+    if(npcDrops||npcDropsLoad||typeof fetch!=='function'||typeof asset!=='function')return npcDropsLoad;
+    npcDropsLoad=fetch(asset('npc-drops.json')).then(r=>r.ok?r.json():null).then(j=>{if(j&&typeof j==='object')npcDrops=j.byId?j:Object.fromEntries(Object.entries(j).map(([k,v])=>[k.toLowerCase(),v]));},()=>{}).finally(()=>{npcDropsLoad=null;});
+    return npcDropsLoad;
+  };
   function opponentDropsHtml(type,name){
     const rows=npcDrops?.byId?npcDrops.byId[type]:npcDrops?.[String(name).toLowerCase()];if(!rows?.length)return '';
     const detail=r=>Array.isArray(r)?r[0]+' · '+r[1]:(r.facts||[]).map(f=>f.text).filter(Boolean).join('\n');
@@ -2956,12 +3013,15 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     opponentLatest=o;
     if(!o){clearTimeout(opponentHide);opponentHide=setTimeout(()=>{const el=hud.querySelector('.game-opponent');if(el)el.hidden=true;},5000);return;}
     clearTimeout(opponentHide);
-    if(o.kind==='npc'&&!npcNames){npcNamesLoad??=fetch(asset('npc-names.json'),{signal:AbortSignal.timeout(5000)}).then(r=>r.ok?r.json():null).catch(()=>null).finally(()=>{npcNamesLoad=null;});npcNames=await npcNamesLoad;if(opponentLatest!==o)return;}
+    if(o.kind==='npc'){
+      if(!npcNames){npcNamesLoad??=fetch(asset('npc-names.json'),{signal:AbortSignal.timeout(5000)}).then(r=>r.ok?r.json():null).catch(()=>null).finally(()=>{npcNamesLoad=null;});npcNames=await npcNamesLoad;if(opponentLatest!==o)return;}
+      if(npcNames&&!npcDrops){await loadNpcDrops();if(opponentLatest!==o)return;}
+    }
     const [cur,max]=o.hp,npc=o.kind==='npc'?npcNames?.[o.type]:null,name=o.kind==='player'?String(o.name).slice(0,12):npc?.[0]??'Unknown npc',lvl=npc?.[1];
     let el=hud.querySelector('.game-opponent');if(!el){el=document.createElement('div');el.className='game-opponent';el.setAttribute('aria-live','polite');hud.append(el);}
     el.hidden=false;el.innerHTML='<b>'+E(name)+(lvl?' <small>(level-'+lvl+')</small>':'')+'</b><div class="opponent-hp"><i style="width:'+Math.max(0,Math.min(100,Math.round(cur/Math.max(1,max)*100)))+'%"></i><span>'+cur+' / '+max+'</span></div>'+(o.kind==='npc'?opponentDropsHtml(o.type,name):'');
   }
-  window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==$('#rsw').contentWindow||!e.data||typeof e.data!=='object')return;if(e.data?.viewerTiming&&!wall)focusLanded();wallMessage(e.data);wallFrameKey(e.data.atlasWallKey);if(e.data.viewerCapture)shotReply(e.data.viewerCapture);if(mode==='3d'&&VIEWER.state==='ready'&&e.data.atlasDepleted&&Array.isArray(e.data.atlasDepleted.list)){depletedNow={tick:Number(e.data.atlasDepleted.tick)||0,list:e.data.atlasDepleted.list.slice(0,500),at:Date.now()};if(selectedPlugin==='world'&&body.dataset.plugin==='world')refreshWorld();}if(e.data?.viewerState&&S){wallSync();focusPaint();}if(e.data?.atlasStep===1||e.data?.atlasStep===-1)focusStep(e.data.atlasStep);if(e.data?.atlasRoster)window.atlasRosterIn(e.data.atlasRoster);if(e.data&&'atlasOpponent' in e.data){const o=e.data.atlasOpponent;if(o?.kind==='npc'&&Number.isInteger(o.type)){const who=account()?.name??null;if(who!==targetsFor){targetsFor=who;recentTargets=[];}if(!recentTargets.includes(o.type)){recentTargets=[o.type,...recentTargets].slice(0,3);overlaySync();}}opponentBox(o&&Array.isArray(o.hp)&&o.hp.length===2&&o.hp.every(Number.isFinite)&&(o.kind==='npc'?Number.isInteger(o.type):typeof o.name==='string')?o:null);}const c3=e.data?.atlasCamera3d;if(c3&&[c3.x,c3.z,c3.yaw].every(Number.isFinite)){window.atlasCam3d={x:c3.x,z:c3.z,yaw:c3.yaw,at:Date.now()};minimap();}const m=e.data?.atlasChat;if(typeof e.data?.atlasWorldMap==='boolean')hud.classList.toggle('worldmap-open',e.data.atlasWorldMap);if(!m||typeof m.text!=='string'||typeof m.name!=='string'||typeof m.key!=='string'||seenChat.has(m.key))return;seenChat.add(m.key);if(seenChat.size>500)seenChat.delete(seenChat.values().next().value);chat.push({kind:'Public',name:m.name.slice(0,32),text:m.text.slice(0,500),at:Date.now()});if(chat.length>200)chat.shift();renderChat();});
+  window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==$('#rsw').contentWindow||!e.data||typeof e.data!=='object')return;if(e.data?.viewerTiming&&!wall)focusLanded();wallMessage(e.data);wallFrameKey(e.data.atlasWallKey);if(e.data.viewerCapture)shotReply(e.data.viewerCapture);if(mode==='3d'&&VIEWER.state==='ready'&&e.data.atlasDepleted&&Array.isArray(e.data.atlasDepleted.list)){depletedNow={tick:Number(e.data.atlasDepleted.tick)||0,list:e.data.atlasDepleted.list.slice(0,500),at:Date.now()};if(selectedPlugin==='world'&&body.dataset.plugin==='world')refreshWorld();}if(e.data?.viewerState&&S){wallSync();focusPaint();}if(e.data?.atlasStep===1||e.data?.atlasStep===-1)focusStep(e.data.atlasStep);if(e.data?.atlasRoster)window.atlasRosterIn(e.data.atlasRoster);if(e.data&&'atlasOpponent' in e.data){const o=e.data.atlasOpponent;if(o?.kind==='npc'&&Number.isInteger(o.type)){const who=account()?.name??null;if(who!==targetsFor){targetsFor=who;recentTargets=[];}if(!recentTargets.includes(o.type)){recentTargets=[o.type,...recentTargets].slice(0,3);overlaySync();}}opponentBox(o&&Array.isArray(o.hp)&&o.hp.length===2&&o.hp.every(Number.isFinite)&&(o.kind==='npc'?Number.isInteger(o.type):typeof o.name==='string')?o:null);}const c3=e.data?.atlasCamera3d;if(c3&&[c3.x,c3.z,c3.yaw].every(Number.isFinite)){window.atlasCam3d={x:c3.x,z:c3.z,yaw:c3.yaw,at:Date.now()};minimapSoon();}const m=e.data?.atlasChat;if(typeof e.data?.atlasWorldMap==='boolean')hud.classList.toggle('worldmap-open',e.data.atlasWorldMap);if(!m||typeof m.text!=='string'||typeof m.name!=='string'||typeof m.key!=='string'||seenChat.has(m.key))return;seenChat.add(m.key);if(seenChat.size>500)seenChat.delete(seenChat.values().next().value);pushChat({kind:'Public',name:m.name.slice(0,32),text:m.text.slice(0,500),at:toBrowserAt(Number.isFinite(m.at)?m.at:Date.now())});});
   window.addEventListener('keydown',e=>{
     if(document.querySelector?.('dialog[open]')||e.target.closest?.('.op-palette-overlay,.op-detail-overlay,.game-bank'))return;
     if(e.key==='Tab'&&e.target===document.body)e.stopPropagation();
@@ -2969,7 +3029,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     if(e.key==='\\'&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&!wallButton.hidden&&!wallButton.disabled){e.preventDefault();wallToggle();}
     // The wall's keys. Enter and Space on a button or a link stay that control's own.
     if(window.atlasWallOn?.()&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)&&!((/^(?:BUTTON|A|SUMMARY)$/.test(e.target.tagName)||e.target.getAttribute?.('role')==='button')&&(e.key==='Enter'||e.key===' '))&&wallPress(e.key,e.shiftKey)){e.preventDefault();e.stopPropagation();return;}
-    if(e.key==='Escape'){if(focus.classList.contains('open'))focusOpen(false);if(wallEnd())render();context?.remove();hud.querySelector('.game-bank')?.remove();hud.querySelector('.game-toast')?.remove();}
+    if(e.key==='Escape'){const vb=hud.querySelector('.visitor-backdrop');if(vb){vb._dismiss?vb._dismiss():vb.remove();}if(focus.classList.contains('open'))focusOpen(false);if(wallEnd())render();context?.remove();hud.querySelector('.game-bank')?.remove();hud.querySelector('.game-toast')?.remove();}
     const F_KEYS={F2:'skills',F3:'quests',F4:'inventory',F5:'equipment',F8:'friends',F10:'settings'};
     if(F_KEYS[e.key]&&!e.shiftKey&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();selectedTab=F_KEYS[e.key];hud.classList.remove('game-panel-hidden');gamePanel();}
     if(e.key==='/'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();e.stopPropagation();showPlugin('fleet');($('#op-fleet-search')||$('#search'))?.focus();}
