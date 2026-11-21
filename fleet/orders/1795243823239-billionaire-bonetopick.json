@@ -1,0 +1,10 @@
+{
+ "id": "1795243823239-billionaire-bonetopick",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Billionaire",
+ "to": "BoneToPick",
+ "item": "coins",
+ "count": 10,
+ "start": 1795243823239,
+ "end": 1795246223239
+}
