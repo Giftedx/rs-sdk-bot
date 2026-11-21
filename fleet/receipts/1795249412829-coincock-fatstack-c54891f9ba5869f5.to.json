@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795249412829-coincock-fatstack-c54891f9ba5869f5",
+ "account": "Fatstack",
+ "partner": "CoinCock",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 65000,
+ "claim": "bfc16c48-9b8f-4770-8f03-710143b8e087",
+ "count": 0,
+ "ok": false,
+ "at": 1795249492452,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Ranarr weed",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Snape grass",
+   "requested": 2,
+   "count": 0
+  }
+ ]
+}

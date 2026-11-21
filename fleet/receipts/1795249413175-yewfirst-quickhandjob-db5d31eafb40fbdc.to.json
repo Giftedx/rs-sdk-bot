@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795249413175-yewfirst-quickhandjob-db5d31eafb40fbdc",
+ "account": "Quickhandjob",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 21000,
+ "claim": "e1faae4e-fa55-4e78-a6b0-1b566969755c",
+ "count": 0,
+ "ok": false,
+ "at": 1795249487842,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Ranarr weed",
+   "requested": 4,
+   "count": 0
+  },
+  {
+   "item": "Snape grass",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}
