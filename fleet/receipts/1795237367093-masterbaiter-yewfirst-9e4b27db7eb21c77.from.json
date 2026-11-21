@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795237367093-masterbaiter-yewfirst-9e4b27db7eb21c77",
  "account": "Masterbaiter",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Feather",
  "requested": 3703,
  "claim": "bc175ed5-e641-4ea7-a1f1-89a37aefa869",
- "count": 0,
- "ok": false,
- "at": 1795237376582,
- "detail": "trade claimed"
+ "count": 3703,
+ "ok": true,
+ "at": 1795237529373,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 3703,
+  "after": 0
+ },
+ "bank": {
+  "count": 3703,
+  "at": 1795237387500
+ },
+ "logout": {
+  "attemptId": "1795237376592-0000021320-0000000001",
+  "at": 1795237529361,
+  "sha256": "6689d3dc4e0f60d65b6ef8bb83850d37f9285575a77a4a2c9f57c93579b78ffe"
+ },
+ "screen": true
 }
