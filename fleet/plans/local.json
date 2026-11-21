@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795289147678,
+ "at": 1795289182232,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -287,10 +287,52 @@
    ]
   },
   {
+   "account": "mmsmk1232",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=5 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=mmsmk1232-kit15-385-0to5 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":5}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 5 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
+   "role": "supply",
+   "template": "kit-buy:aio-blood-chest",
+   "autopilot": "local",
+   "resources": []
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 2727 3492",
+    "scripts/aio.ts skiller crafting inventory cut-bow:unstrung_magic_shortbow MAX_MAKE=4 CAP=1500 MEMBERS=1 ORDER_MODE=best-effort",
+    "scripts/aio.ts skiller crafting inventory bow-string:magic_shortbow MAX_MAKE=4 CAP=1500 MEMBERS=1 ORDER_MODE=best-effort"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "AUTOPILOT_ORDER": "[89,[\"bow string\",4],[\"magic log\",4]]"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "cut banked magic logs into magic shortbows and string them for the gang squad",
+   "role": "fletching",
+   "template": "squad-magic-shortbow",
+   "autopilot": "local",
+   "resources": [
+    "squad:seers-fletch"
+   ]
+  },
+  {
    "account": "BowBeforeMe",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=1331 QUANTITY=1 LIMIT_PRICE=80000 CASH_RESERVE=1000 ORDER_KEY=bowbeforeme-kit3-1331-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=536 QUANTITY=28 LIMIT_PRICE=10000 CASH_RESERVE=1000 ORDER_KEY=bowbeforeme-kit3-536-0to28 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -298,13 +340,11 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy 1 Adamant scimitar on the Grand Exchange to fight with an adamant scimitar",
+   "goal": "buy 28 Dragon bones on the Grand Exchange to train Prayer to 99 burying bought dragon bones",
    "role": "supply",
-   "template": "kit-buy:army-weapon",
+   "template": "kit-buy:army-bury-dragon-99",
    "autopilot": "local",
-   "resources": [
-    "ge:weapon"
-   ]
+   "resources": []
   },
   {
    "account": "MineYourBiz",
@@ -331,25 +371,6 @@
    "resources": [
     "trooper:battlefield"
    ]
-  },
-  {
-   "account": "mmsmk1232",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=385 QUANTITY=5 LIMIT_PRICE=1200 CASH_RESERVE=1000 ORDER_KEY=mmsmk1232-kit15-385-0to5 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"385\":5}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy 5 Shark on the Grand Exchange to loot the Ardougne blood rune chests 6 times and bank the runes",
-   "role": "supply",
-   "template": "kit-buy:aio-blood-chest",
-   "autopilot": "local",
-   "resources": []
   },
   {
    "account": "Pocketpython",
@@ -402,29 +423,6 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/walk-to.ts 2727 3492",
-    "scripts/aio.ts skiller crafting inventory cut-bow:unstrung_magic_shortbow MAX_MAKE=4 CAP=1500 MEMBERS=1 ORDER_MODE=best-effort",
-    "scripts/aio.ts skiller crafting inventory bow-string:magic_shortbow MAX_MAKE=4 CAP=1500 MEMBERS=1 ORDER_MODE=best-effort"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "AUTOPILOT_ORDER": "[89,[\"bow string\",4],[\"magic log\",4]]"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "cut banked magic logs into magic shortbows and string them for the gang squad",
-   "role": "fletching",
-   "template": "squad-magic-shortbow",
-   "autopilot": "local",
-   "resources": [
-    "squad:seers-fletch"
    ]
   },
   {
