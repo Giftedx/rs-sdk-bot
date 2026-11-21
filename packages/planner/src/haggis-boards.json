@@ -2964,10 +2964,10 @@
     "skill": "attack",
     "toLevel": 40,
     "xpPerTick": {
-     "floor": 180,
-     "realistic": 120,
-     "evidence": "ESTIMATE",
-     "source": "Iron/Steel/Black/Mithril/Adamant 2h at Strength 1 against 1-Defence tank (14,893 XP = ~83 / 124 ticks at 1-tick action_delay relog)"
+     "floor": 48.8,
+     "realistic": 32.0,
+     "evidence": "MEASURED",
+     "source": "hosted-bench 44861217429 (commit fdc81a371a) overall:pvp-attack-40 seeds 7/8/9: 15,802/324=48.8, 15,910/331=48.1, 15,802/494=32.0 XP/tick (Attack 1->40 at Strength 1, Iron->Adamant 2h, 5 Combat-75 tanks)"
     },
     "side": {
      "hitpoints": 0.333
@@ -2980,8 +2980,8 @@
     "id": "pvp-relog-combat",
     "role": "add"
    },
-   "evidence": "ESTIMATE",
-   "source": "1-tick action_delay PvP relog Attack 1->40 gate before Rune 2h Strength 1->99",
+   "evidence": "MEASURED",
+   "source": "hosted-bench 44861217429 overall:pvp-attack-40 seeds 7/8/9 (324/331/494t) before Rune 2h Strength 1->99",
    "supplies": [
     { "item": "iron 2h sword", "itemId": 1309, "count": 1 },
     { "item": "steel 2h sword", "itemId": 1311, "count": 1 },
