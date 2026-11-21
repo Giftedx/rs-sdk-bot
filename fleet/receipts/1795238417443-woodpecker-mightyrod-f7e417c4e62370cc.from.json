@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795238417443-woodpecker-mightyrod-f7e417c4e62370cc",
+ "account": "Woodpecker",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Maple logs",
+ "requested": 2,
+ "claim": "6cf9c5c7-cdcb-41ac-a6fc-922951a34711",
+ "count": 0,
+ "ok": false,
+ "at": 1795238519720,
+ "detail": "trade claimed"
+}
