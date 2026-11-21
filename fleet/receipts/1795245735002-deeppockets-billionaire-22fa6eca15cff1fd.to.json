@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795245735002-deeppockets-billionaire-22fa6eca15cff1fd",
+ "account": "Billionaire",
+ "partner": "Deeppockets",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 104000,
+ "claim": "65470d8a-6ae4-4de5-8063-eaf7ae02bb16",
+ "count": 104000,
+ "ok": true,
+ "at": 1795245875788,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 104000
+ },
+ "bank": {
+  "count": 104000,
+  "at": 1795245875039
+ },
+ "logout": {
+  "attemptId": "1795245865773-0000004312-0000000001",
+  "at": 1795245875775,
+  "sha256": "b2e2d2a1a6205acb0997f54da0f2192d078bbf616bf79bc175691174c7062f6f"
+ },
+ "screen": true
+}

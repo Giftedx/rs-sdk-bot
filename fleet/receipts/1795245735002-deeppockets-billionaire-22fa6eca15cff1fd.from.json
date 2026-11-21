@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795245735002-deeppockets-billionaire-22fa6eca15cff1fd",
  "account": "Deeppockets",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 104000,
  "claim": "841ced12-b8fb-4b64-a8cd-5c3160910f97",
- "count": 0,
- "ok": false,
- "at": 1795245821478,
- "detail": "trade claimed"
+ "count": 104000,
+ "ok": true,
+ "at": 1795245874153,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 104000,
+  "after": 0
+ },
+ "bank": {
+  "count": 84900,
+  "at": 1795245859442
+ },
+ "logout": {
+  "attemptId": "1795245821489-0000027536-0000000001",
+  "at": 1795245874144,
+  "sha256": "0f37b04fff69c74cf6ed8770ae14e2b04543fe6ec3e7c20c331f94a694deda74"
+ },
+ "screen": true
 }
