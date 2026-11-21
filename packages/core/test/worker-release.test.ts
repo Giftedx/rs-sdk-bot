@@ -406,3 +406,44 @@ test('the whole-tree proof revision scans the imports of a file once for its byt
   expect(scans()).toEqual({value:repaired.value,scanned:2});
  }finally{rmSync(root,{recursive:true,force:true});}
 });
+
+test('bunfig top-level preloads pin the preloaded module closure without putting bunfig in releaseFiles or reading [test] preloads',()=>{
+ const root=fixture();
+ try{
+  mkdirSync(join(root,'packages/planner/src'),{recursive:true});
+  mkdirSync(join(root,'packages/planner/data'),{recursive:true});
+  writeFileSync(join(root,'packages/planner/data/routes.json'),'{"routes":1}');
+  writeFileSync(join(root,'packages/planner/src/progression-catalog.ts'),"export const data='packages/planner/data/routes.json';\n");
+  writeFileSync(join(root,'packages/planner/src/progression-adapter.ts'),"export function load(){return require('./progression-catalog');}\n");
+  writeFileSync(join(root,'packages/planner/src/test-only-preload.ts'),'export const onlyForTest=1;\n');
+  expect(releaseFiles(['scripts/worker.ts'],root)).not.toContain('packages/planner/src/progression-adapter.ts');
+  writeFileSync(join(root,'bunfig.toml'),[
+   'preload = ["./packages/planner/src/progression-adapter.ts"]',
+   '',
+   '[test]',
+   'preload = ["./packages/planner/src/progression-adapter.ts", "./packages/planner/src/test-only-preload.ts"]',
+   '',
+  ].join('\n'));
+  const files=releaseFiles(['scripts/worker.ts'],root);
+  expect(files).toContain('packages/planner/src/progression-adapter.ts');
+  expect(files).toContain('packages/planner/src/progression-catalog.ts');
+  expect(files).toContain('packages/planner/data/routes.json');
+  expect(files).not.toContain('packages/planner/src/test-only-preload.ts');
+  expect(files).not.toContain('bunfig.toml');
+  const pin=cachedReleaseFor(['scripts/worker.ts'],root);
+  writeFileSync(join(root,'packages/planner/data/routes.json'),'{"routes":2}');
+  const afterData=cachedReleaseFor(['scripts/worker.ts'],root);
+  expect(afterData).not.toBe(pin);
+  writeFileSync(join(root,'bunfig.toml'),'preload = ["./packages/planner/src/progression-adapter.ts", "./packages/planner/src/test-only-preload.ts"]\n');
+  expect(releaseFiles(['scripts/worker.ts'],root)).toContain('packages/planner/src/test-only-preload.ts');
+  expect(cachedReleaseFor(['scripts/worker.ts'],root)).not.toBe(afterData);
+  writeFileSync(join(root,'bunfig.toml'),'preload = ["./packages/planner/src/missing.ts"]\n');
+  expect(()=>releaseFiles(['scripts/worker.ts'],root)).toThrow('release preload unresolved');
+ }finally{rmSync(root,{recursive:true,force:true});}
+
+ const repo=resolve(import.meta.dir,'../../..');
+ const repoFiles=releaseFiles(['packages/core/src/host.ts'],repo);
+ expect(repoFiles).toContain('packages/planner/src/progression-adapter.ts');
+ expect(repoFiles).toContain('packages/planner/src/progression-catalog.ts');
+ expect(repoFiles).toContain('packages/planner/data/progression-routes.json');
+});

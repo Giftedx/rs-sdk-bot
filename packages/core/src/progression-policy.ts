@@ -1,9 +1,7 @@
 import type {Step} from './chain-step';
 import {readFileSync} from 'node:fs';
 import type {BankObservation} from './session-types';
-import type {WorkIntent,ProgressionDecision,ProgressionMethod,ObservedAccount} from '../../planner/src/progression';
-import {trainingTargets} from '../../planner/src/progression';
-import {intentForEntry} from '../../planner/src/progression-catalog';
+import {getProgressionAdapter,requireProgressionAdapter,type ObservedAccount,type ProgressionAdapter,type ProgressionDecision,type ProgressionMethod,type WorkIntent} from './progression-adapter';
 
 export interface WorkDescriptor{script:string;args:string[];env:Record<string,string|undefined>}
 export interface PolicyEvaluation{supported:boolean;intent:WorkIntent|null;decision:ProgressionDecision|null;reason?:string;methods?:ProgressionMethod[];account?:ObservedAccount}
@@ -19,13 +17,14 @@ function bankJobIdentity(args:readonly string[]):string|null{
   return JSON.stringify([job.family,job.recipe,job.site?.x,job.site?.z,job.site?.level,job.bank?.x,job.bank?.z,job.bank?.level,job.heat,job.tool,job.alchemyTarget,job.members??false,job.xpRate??25,canonical(job.fishingProtection??null)]);
  }catch{return 'invalid';}
 }
-export function methodSupportsWork(step:Step,work:WorkDescriptor):boolean{
- if(entry(step.script)!==entry(work.script))return !!step.alsoRuns?.some(alt=>methodSupportsWork({script:alt.script,args:alt.args,env:alt.env},work));
+export function methodSupportsWork(step:Step,work:WorkDescriptor,adapter:ProgressionAdapter|undefined=getProgressionAdapter()):boolean{
+ if(entry(step.script)!==entry(work.script))return !!step.alsoRuns?.some(alt=>methodSupportsWork({script:alt.script,args:alt.args,env:alt.env},work,adapter));
  if(entry(step.script)==='scripts/cannon-fight.ts'){
-  const expected=intentForEntry(step.script,step.args,step.env),actual=intentForEntry(work.script,work.args,work.env);
+  const p=requireProgressionAdapter(adapter);
+  const expected=p.intentForEntry(step.script,step.args,step.env),actual=p.intentForEntry(work.script,work.args,work.env);
   if(expected?.kind==='train-all'||actual?.kind==='train-all'){
    if(expected?.kind!=='train-all'||actual?.kind!=='train-all')return false;
-   const targets=(intent:WorkIntent)=>JSON.stringify(Object.entries(trainingTargets(intent)??{}).sort());
+   const targets=(intent:WorkIntent)=>JSON.stringify(Object.entries(p.trainingTargets(intent)??{}).sort());
    if(targets(expected)!==targets(actual))return false;
   }
  }

@@ -1,15 +1,9 @@
-import type {Step} from '../../core/src/chain-step';
-import {requirements,type Requirement,type Truth} from './requirements';
+import type {ConditionalMeasuredSample,Observation,ObservedAccount,ProgressionAdmission,ProgressionAlternative,ProgressionDecision,ProgressionMethod,ProgressionPathStep,Requirement,SelectionContext,StateBand,Truth,WorkIntent} from '../../core/src/progression-adapter';
+import {requirements} from './requirements';
 import {createHash} from 'node:crypto';
 import {levelForXp,xpForLevel} from './curve';
 
-export type WorkIntent =
- | {kind:'train';skill:string;targetLevel:number}
- | {kind:'train-all';targets:Record<string,number>}
- | {kind:'produce';items:Record<number,number>;consumer:string}
- | {kind:'acquire';items:Record<number,number>;consumer:string}
- | {kind:'quest';quest:string}
- | {kind:'pvp'|'observe'|'service';objective:string;units?:number};
+export type {ConditionalMeasuredSample,Observation,ObservedAccount,ProgressionAdmission,ProgressionAlternative,ProgressionDecision,ProgressionMethod,ProgressionPathStep,SelectionContext,StateBand,WorkIntent};
 export const TRAINING_SKILLS=['attack','defence','strength','hitpoints','ranged','prayer','magic','cooking','woodcutting','fletching','fishing','firemaking','crafting','smithing','mining','herblore','agility','thieving','runecraft'] as const;
 /** Read all training targets without changing the serialized single-skill intent. Invalid targets stay unknown. */
 export function trainingTargets(intent:WorkIntent):Record<string,number>|null{
@@ -23,40 +17,6 @@ export function trainingTargets(intent:WorkIntent):Record<string,number>|null{
   targets[skill]=target;
  }
  return targets;
-}
-export interface Observation<T>{at:number;value:T;source?:string;generation?:number}
-export interface ObservedAccount{
- account:string;at:number;server?:string;role?:string;source?:string;
- skills:Record<string,{level:number;xp:number}>;
- inventory:Observation<Record<number,number>>|null;equipment:Observation<Record<number,number>>|null;bank:Observation<Record<number,number>>|null;
- quests:Observation<Record<string,Truth>>|null;position?:Observation<{x:number;z:number;level:number}>|null;currentHP?:number;
- reservations?:Record<number,number>;facts?:Record<string,Truth>;
- build?:{maxLevels?:Record<string,number>};clock?:{protected:boolean;fresh:boolean;authorized:boolean};
-}
-// gainXp: the XP of a skill that one step may add at most: the XP that the proof run made. The bound is XP, not
-// levels, because XP is the work: the same levels cost many times the kills at a higher level.
-// kit: the items that the proof run fought with (a bow and its arrows). The method must use these same items for
-// the account now: its requirements name the kit it chose, so an account with a better bow in the bank, which the
-// worker would take, is not admitted by a proof of the lesser bow.
-export interface StateBand{levels?:Record<string,{min?:number;max?:number}>;gainXp?:Record<string,number>;kit?:number[];items?:Record<number,number>;quests?:string[];server?:string;loadout?:number[];maxCrowding?:number}
-export interface ConditionalMeasuredSample{xp?:Record<string,number>;units:number;ticks:number;elapsedMs?:number;evidence:string;source:string;conditions:StateBand;setupTicks?:number}
-export interface ProgressionMethod{
- id:string;step:Step;source:string;
- effects:{xp?:Record<string,number>;items?:Record<number,number>;quests?:string[];outcome?:string};
- inputs?:Record<number,number>;requirements?:{levels?:Record<string,number>;quests?:string[];items?:Record<number,number>;facts?:Requirement};
- rate:{unitsPerTick:number|null;basis:'measured'|'model'|'unknown';evidence:string;conditions?:StateBand;samples?:ConditionalMeasuredSample[]};
- costs:{setupTicks:number|null;travelTicks:number|null;acquisitionTicks:number|null;unlockTicks:number|null;resupply?:{everyUnits:number;ticks:number|null};measured?:{source:string;evidence:string;conditions?:StateBand}};
- repeatable?:boolean;maxUnits?:number;qualification?:{source:string;bands:StateBand[]};
-}
-export interface ProgressionAdmission{method:string;source:string;intent:WorkIntent;account:ObservedAccount}
-export interface SelectionContext{now:number;maxAgeMs?:number;currentMethod?:string;continuing?:boolean;admitted?:ProgressionAdmission;maxSearchNodes?:number;maxDepth?:number;requireQualification?:boolean;crowding?:number;requirementGraph?:Record<string,Requirement>}
-export interface ProgressionPathStep{method:string;step:Step;units:number;ticks:number;inputs:Record<number,number>}
-export interface ProgressionAlternative{method:string;state:'ready'|'observe'|'acquire'|'qualify'|'measure'|'blocked';ticks:number|null;reason:string[]}
-export interface ProgressionDecision{
- state:'execute'|'observe'|'acquire'|'qualify'|'measure'|'complete'|'blocked';selected:string|null;step:Step|null;
- path:ProgressionPathStep[];expectedTicks:number|null;basis:'measured'|'model'|'unknown';
- alternatives:ProgressionAlternative[];followUps:{method:string;state:ProgressionAlternative['state'];reason:string[]}[];
- stateFingerprint:string;reason:string;gaps:string[];search:{nodes:number;bound:number;depth:number;exhausted:boolean};
 }
 
 const key=(s:string)=>s.toLowerCase().replace(/\s+/g,' ').trim();

@@ -188,10 +188,32 @@ function fileLinks(base:string,file:string,memo:ReleaseMemo):{files:string[];dir
     const links={files,dirs};memo.set(key,links);return links;
 }
 const inRuntimeTree=(p:string)=>runtimeTrees.some(t=>p===t||p.startsWith(t+'/'));
+function bunfigPreloads(base:string,memo:ReleaseMemo):string[]{
+    if(kind(base,'bunfig.toml')!=='file')return [];
+    memo.set('dirs:bunfig.toml',['bunfig.toml']);
+    const lines=readFileSync(join(base,'bunfig.toml'),'utf8').replaceAll('\r\n','\n').split('\n'),out:string[]=[];
+    let inPreload=false;
+    for(const raw of lines){
+        const line=raw.replace(/#.*$/,'').trim();
+        if(!line)continue;
+        if(!inPreload&&line.startsWith('['))break;
+        const rhs=inPreload?line:/^preload\s*=\s*(.*)$/.exec(line)?.[1];
+        if(rhs===undefined)continue;
+        for(const m of rhs.matchAll(/["']([^"']+)["']/g)){
+            const spec=m[1]!,p=repoPath(base,resolve(base,spec));
+            if(p&&kind(base,p)==='file')out.push(p);
+            else if(spec.startsWith('.'))throw Error('no worker progress: release preload unresolved: '+spec);
+        }
+        if(!inPreload&&rhs.includes('[')&&!rhs.includes(']'))inPreload=true;
+        else if(inPreload&&rhs.includes(']'))inPreload=false;
+    }
+    return out;
+}
 export function releaseFiles(entries:readonly string[],base=root,memo:ReleaseMemo=new Map()):string[]{
     const files=new Set<string>(releaseRootFiles),queue:string[]=[];
     const add=(p:string)=>{if(!files.has(p)){files.add(p);queue.push(p);}};
     for(const t of runtimeTrees)for(const p of treeFiles(base,t,memo))files.add(p);
+    for(const p of bunfigPreloads(base,memo))add(p);
     for(const entry of entries){
         const p=repoPath(base,resolve(base,entry));
         if(!p||kind(base,p)!=='file')throw Error('no worker progress: release entry missing: '+entry);

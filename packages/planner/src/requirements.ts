@@ -1,5 +1,5 @@
-export type Truth=true|false|null;
-export type Requirement={fact:string}|{ref:string}|{all:Requirement[]}|{any:Requirement[]};
+import type {Requirement,Truth} from '../../core/src/progression-adapter';
+export type {Requirement,Truth};
 export type RequirementResult={state:Truth;blockers:string[]};
 
 // Facts belong to one dated account snapshot. This checks readiness; it does not

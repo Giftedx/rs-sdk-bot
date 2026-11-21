@@ -1,21 +1,13 @@
 import {existsSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
-import type {ObservedAccount,ProgressionMethod,WorkIntent} from './progression';
+import type {CatalogAccept,CatalogEntry,CatalogGap,CatalogIntent,CatalogMethod,CatalogOptions,CatalogQuest,CatalogRoute,ObservedAccount,ProgressionCatalog,ProgressionMethod,WorkIntent} from '../../core/src/progression-adapter';
 import {TRAINING_SKILLS,trainingTargets} from './progression';
 import {parseStep,type Step} from '../../core/src/chain-step';
 import {levelForXp,xpForLevel} from './curve';
 import {rangedProgressionMethods} from './progression-ranged';
 
 export const PROGRESSION_SKILLS=TRAINING_SKILLS;
-export type CatalogIntent=WorkIntent['kind'];
-export interface CatalogRoute{id:string;category:string;name:string;script:string;args:string[];env:Record<string,string>;intents:CatalogIntent[];skills:string[];description:string;discriminator?:{env?:Record<string,string>;args?:Record<number,string>}}
-export type CatalogMethod=ProgressionMethod&{routeId:string;ladderIds:string[];sourceEntry?:string;members?:boolean|null;execution?:{bankJob?:Record<string,unknown>;outputPerUnit?:number;targetEnv?:string[];unitEnv?:string[];stockEnv?:string[];targetArg?:number;unitArg?:number;spendPerUnit?:number};maxBatch?:number;modelRates?:{skill:string;perLevel:(number|null)[]}};
-export interface CatalogQuest{id:string;name:string;script:string;xp:Record<string,number>;source:string;requirements?:ProgressionMethod['requirements']}
-export interface CatalogEntry{script:string;intents:CatalogIntent[];skills:string[];routeIds:string[];practiceOnly?:boolean}
-export interface CatalogGap{method:string;action:'build'|'measure'|'inspect'|'acquire';reason:string;consumer:string;source?:string;capability?:string}
-export interface ProgressionCatalog{version:1;generatedBy:string;skills:string[];routes:CatalogRoute[];methods:CatalogMethod[];quests:CatalogQuest[];entries:CatalogEntry[];buildLimits?:Record<string,Record<string,number>>;unmapped?:{id:string;skill:string;source:string;workers:string[]}[]}
-export interface CatalogAccept{skills?:Record<string,number>;bank?:Record<number,number>;quests?:string[];counters?:Record<string,number>}
-export interface CatalogOptions{extraMethods?:readonly ProgressionMethod[];now?:number;maxAgeMs?:number;sources?:Readonly<Record<string,string>>;qualifications?:Readonly<Record<string,NonNullable<ProgressionMethod['qualification']>>>}
+export type {CatalogAccept,CatalogEntry,CatalogGap,CatalogIntent,CatalogMethod,CatalogOptions,CatalogQuest,CatalogRoute,ProgressionCatalog};
 const root=resolve(import.meta.dir,'../../..');
 const key=(s:string)=>s.trim().toLowerCase().replace(/\s+/g,' ');
 const whole=(v:unknown):v is number=>typeof v==='number'&&Number.isSafeInteger(v)&&v>=0;
