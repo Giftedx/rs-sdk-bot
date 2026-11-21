@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795232348996-fingersmith-shaftmaker-naturerune",
+ "role": "to",
+ "account": "Shaftmaker",
+ "partner": "Fingersmith",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795232409887,
+ "detail": "Error: account logout is not confirmed: Shaftmaker ended stopped"
+}
