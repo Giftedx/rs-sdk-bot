@@ -2,8 +2,10 @@ import { afterEach, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { labelAreas, writeLabels } from '../packages/core/src/components';
+import { pathfindingDataKey } from '../packages/core/src/pathcache';
 import { beginSessionAttempt } from '../packages/core/src/session-lifecycle';
-import { auditFleetHealth, classifyLocation, HEALTH_STOP_PREFIX, RECOVER_SCRIPT, recoverEnvironment, remediateFleetHealth } from './fleet-health';
+import { auditFleetHealth, classifyLocation, HEALTH_STOP_PREFIX, loadCachedLabels, RECOVER_SCRIPT, recoverEnvironment, remediateFleetHealth } from './fleet-health';
 import { recoverSessionToHub } from './recover-trapped';
 
 const dirs: string[] = [];
@@ -274,4 +276,38 @@ test('recoverEnvironment pins WORKER_ENTRY and WORKER_RELEASE, and transient rel
     expect(existsSync(join(prac, 'stop-Hocuspokeus'))).toBe(false);
     const savedState = JSON.parse(readFileSync(join(prac, 'fleet-health', 'state.json'), 'utf8'));
     expect(savedState.attempts).toEqual({});
+});
+
+test('loadCachedLabels and auditFleetHealth load route-areas.bin across compatible initializer shifts and reject stale data', () => {
+    const root = tempWorkspace();
+    mkdirSync(join(root, '.practice', 'cache'), { recursive: true });
+    const cacheFile = join(root, '.practice', 'cache', 'route-areas.bin');
+    const built = labelAreas(
+        [[0, 3184, 3432], [0, 3008, 3352], [0, 2616, 3328], [0, 2928, 9848]],
+        (_l, x, z) =>
+            (x >= 3184 && x < 3192 && z >= 3432 && z < 3440)
+            || (x >= 3008 && x < 3016 && z >= 3352 && z < 3360)
+            || (x >= 2616 && x < 2624 && z >= 3328 && z < 3336)
+            || (x === 2930 && z === 9848),
+        () => true,
+    );
+    const keyParsed = JSON.parse(pathfindingDataKey()) as Record<string, unknown>;
+    writeLabels(cacheFile, JSON.stringify({ ...keyParsed, initializer: '0'.repeat(64) }), built);
+
+    expect(loadCachedLabels(root)).toBeDefined();
+    const audit = auditFleetHealth({
+        root,
+        side: 'local',
+        now: 1_000_000,
+        owners: new Map([['sporrantest', { side: 'local', server: 'rs-sdk-demo.fly.dev' }]]),
+        statusRows: [{ name: 'SporranTest', server: 'rs-sdk-demo.fly.dev', pos: { x: 2930, z: 9848, level: 0 }, at: 999_000 }],
+        swarmPlan: { jobs: [] },
+        results: [],
+        deaths: {},
+    });
+    expect(audit.flaggedAccounts[0]?.location.kind).toBe('off_hub_area');
+    expect(audit.flaggedAccounts[0]?.fixAction).toBe('recover_location');
+
+    writeLabels(cacheFile, JSON.stringify({ ...keyParsed, data: 'f'.repeat(64) }), built);
+    expect(loadCachedLabels(root)).toBeUndefined();
 });
