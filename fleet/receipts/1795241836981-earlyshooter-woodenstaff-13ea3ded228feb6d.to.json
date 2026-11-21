@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795241836981-earlyshooter-woodenstaff-13ea3ded228feb6d",
  "account": "Woodenstaff",
  "partner": "Earlyshooter",
@@ -10,15 +10,37 @@
  "item": "Mind rune",
  "requested": 140,
  "claim": "2b0fd613-4429-421e-b215-6663887ddeb2",
- "count": 0,
- "ok": false,
- "at": 1795241916041,
- "detail": "trade claimed",
+ "count": 140,
+ "ok": true,
+ "at": 1795241940353,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Chaos rune",
    "requested": 220,
-   "count": 0
+   "count": 220,
+   "inventory": {
+    "before": 0,
+    "after": 220
+   },
+   "bank": {
+    "count": 220,
+    "at": 1795241939589
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 140
+ },
+ "bank": {
+  "count": 140,
+  "at": 1795241939190
+ },
+ "logout": {
+  "attemptId": "1795241916050-0000023144-0000000001",
+  "at": 1795241940337,
+  "sha256": "eac1ed5718a7bb877182ac25604c26db530d19cb6ea424b8fe04e1bd919dc2a6"
+ },
+ "screen": true
 }
