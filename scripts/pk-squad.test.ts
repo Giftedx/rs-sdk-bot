@@ -1292,7 +1292,7 @@ test('squadFallbackPlan catches 2+ hitter focus and 4+ enemy multi bursts, and r
     expect(squadFallbackPlan({ z: 3604, hp: 61, maxHp: 99, foodCount: 14, enemyCount: 4, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 0 })).toBe('glory');
     expect(squadFallbackPlan({ z: 3604, hp: 75, maxHp: 99, foodCount: 14, enemyCount: 5, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 1 })).toBe('hold');
 
-    let z = 3604, hp = 76, ticks = 0, dialogOpen = false;
+    let z = 3604, hp = 64, ticks = 0, dialogOpen = false;
     const inv: any[] = [
         { slot: 0, id: 1712, count: 1, name: 'Amulet of glory(4)', optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] },
         { slot: 1, id: 385, count: 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
@@ -1357,7 +1357,7 @@ test('squadFallbackPlan catches 2+ hitter focus and 4+ enemy multi bursts, and r
         tick: () => ticks2,
         sdk: {
             getState: () => ({
-                player: { worldX: 3071, worldZ: z2, hp: 70, maxHp: 99, combatLevel: 126 },
+                player: { worldX: 3071, worldZ: z2, hp: 75, maxHp: 99, combatLevel: 126 },
                 inventory: inv2,
                 equipment: [],
                 skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
@@ -1387,5 +1387,66 @@ test('squadFallbackPlan catches 2+ hitter focus and 4+ enemy multi bursts, and r
         expect(log2.filter(x => x.endsWith('@t1'))).toEqual(['edge@t1']);
     } finally {
         spy2.mockRestore();
+    }
+});
+
+test('rescue retries Glory rub every tick on .if_close interruption and dispatches direct dialog/unequip actions when available', async () => {
+    expect(squadFallbackPlan({ z: 3604, hp: 75, maxHp: 99, foodCount: 14, enemyCount: 6, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 2 })).toBe('hold');
+    expect(squadFallbackPlan({ z: 3604, hp: 75, maxHp: 99, foodCount: 14, enemyCount: 6, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: true, targetingMe: 2 })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3604, hp: 75, maxHp: 99, foodCount: 14, enemyCount: 6, allyCount: 7, inMulti: true, hasGlory: false, hasTeleport: true, targetingMe: 2 })).toBe('teleport');
+
+    let ticks = 0, z = 3604, dlgOpen = false;
+    const eq: any[] = [{ slot: 2, id: 1712, count: 1, name: 'Amulet of glory(4)' }];
+    const inv: any[] = [];
+    const actions: string[] = [];
+    const s: any = {
+        name: 'DirectRetryBot',
+        client: { clickEquipmentSlot: () => true },
+        tick: () => ticks,
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp: 92, maxHp: 99, combatLevel: 126 },
+                inventory: inv,
+                equipment: eq,
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { activePrayers: [], prayerPoints: 99 },
+                combatEvents: [],
+                dialog: dlgOpen ? { isOpen: true, isWaiting: false, pageId: 'page-1', options: [{ index: 1, componentId: 2494, text: 'Edgeville.' }] } : { isOpen: false },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => eq,
+            getSkill: () => ({ level: 99, baseLevel: 99 }),
+            clickDialogByText: async () => { actions.push('queuedDialog'); return { success: true }; },
+            sendUseEquipmentItem: async () => { actions.push('queuedUnequip'); },
+        },
+        direct: async (a: any) => {
+            actions.push(`${a.type}@t${ticks}`);
+            if (a.type === 'useEquipmentItem') {
+                const [gl] = eq.splice(0, 1);
+                if (gl) inv.push({ slot: 0, id: gl.id, count: 1, name: gl.name, optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] });
+            } else if (a.type === 'clickDialogOption') {
+                expect(a.guard).toEqual({ pageId: 'page-1', componentId: 2494 });
+                dlgOpen = false;
+                z = 3496;
+            }
+            return { success: true };
+        },
+    };
+    let rubCount = 0;
+    const spy = spyOn(pk, 'nextTick').mockImplementation(async () => {
+        ticks++;
+        // First rub at t=1 gets closed by .if_close; second rub at t=2 succeeds and opens dialog at t=3.
+        if (actions.some(x => x.startsWith('useInventoryItem@'))) {
+            rubCount++;
+            if (rubCount === 2) dlgOpen = true;
+        }
+        return true;
+    });
+    try {
+        await rescue(s, () => {}, () => false, false);
+        expect(z).toBe(3496);
+        expect(actions).toEqual(['useEquipmentItem@t0', 'useInventoryItem@t1', 'useInventoryItem@t2', 'clickDialogOption@t3']);
+    } finally {
+        spy.mockRestore();
     }
 });

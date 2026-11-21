@@ -275,7 +275,7 @@ function createWildSurvival(
         protectItem?: () => boolean;
         canEat?: () => boolean;
     } = {},
-): { step: (now: number) => void } {
+): { step: (now: number) => boolean } {
     let foodReady = -10, karamReady = -10, prayAt = -10, itemAt = -10, seenEvent = 0, hitStyle: CombatStyle | null = null, hitAt = -100;
     const sendEat = (slot: number, opIndex: number) => {
         if (opts.useDirect && typeof s.direct === 'function') void s.direct({ type: 'useInventoryItem', slot, optionIndex: opIndex, reason: 'SDK' });
@@ -283,8 +283,9 @@ function createWildSurvival(
     };
     return {
         step: (now: number) => {
+            let acted = false;
             const st = s.sdk.getState(), me = st?.player;
-            if (!st || !me || me.isDead || me.hp <= 0 || wildernessLevel(me.worldZ) === 0) return;
+            if (!st || !me || me.isDead || me.hp <= 0 || wildernessLevel(me.worldZ) === 0) return false;
             for (const e of st.combatEvents ?? []) {
                 const id = e.observationId ?? e.tick;
                 if (id <= seenEvent) continue;
@@ -302,14 +303,16 @@ function createWildSurvival(
                 if (style && now - prayAt >= 3) {
                     holdProtect(s, style, 0);
                     prayAt = now;
+                    acted = true;
                 }
                 const active = prayers.activePrayers ?? [];
                 if (opts.protectItem?.() && (s.sdk.getSkill?.('Prayer')?.baseLevel ?? 1) >= 25 && !active[PRAYER.item] && now - itemAt >= 3 && typeof s.sdk.sendTogglePrayer === 'function') {
                     void s.sdk.sendTogglePrayer(PRAYER.item);
                     itemAt = now;
+                    acted = true;
                 }
             }
-            if (opts.canEat && !opts.canEat()) return;
+            if (opts.canEat && !opts.canEat()) return acted;
             const eatAt = opts.eatBelow ?? Math.max(65, me.maxHp - 24);
             const comboAt = opts.comboBelow ?? 55;
             if (now >= foodReady && me.hp <= eatAt) {
@@ -318,6 +321,7 @@ function createWildSurvival(
                 const op = food?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
                 if (food && op) {
                     sendEat(food.slot, op.opIndex);
+                    acted = true;
                     foodReady = now + 3;
                     if (food.id === ITEMS.karambwan) karamReady = now + 3;
                     else if (me.hp <= comboAt && now >= karamReady) {
@@ -330,6 +334,7 @@ function createWildSurvival(
                     }
                 }
             }
+            return acted;
         },
     };
 }
@@ -412,9 +417,20 @@ export async function rescue(
             else if (typeof s.sdk.sendUseItem === 'function') await s.sdk.sendUseItem(slot, opIndex);
         };
         const clickEdgeville = async () => {
-            const dlg = s.sdk.getState()?.dialog as { isOpen?: boolean; isWaiting?: boolean; options?: { text: string }[] } | undefined;
-            if (!dlg?.isOpen || dlg.isWaiting || typeof s.sdk.clickDialogByText !== 'function') return false;
-            if (Array.isArray(dlg.options) && !dlg.options.some(op => /^Edgeville/i.test(op.text))) return false;
+            const dlg = s.sdk.getState()?.dialog as { isOpen?: boolean; isWaiting?: boolean; pageId?: string; options?: { text: string; index?: number; componentId?: number }[] } | undefined;
+            if (!dlg?.isOpen || dlg.isWaiting) return false;
+            const edgeOpt = Array.isArray(dlg.options) ? dlg.options.find(op => /^Edgeville/i.test(op.text)) : undefined;
+            if (Array.isArray(dlg.options) && !edgeOpt) return false;
+            if (typeof s.direct === 'function' && edgeOpt?.index !== undefined && edgeOpt.componentId !== undefined && dlg.pageId) {
+                const res = await s.direct({
+                    type: 'clickDialogOption',
+                    optionIndex: edgeOpt.index,
+                    guard: { pageId: dlg.pageId, componentId: edgeOpt.componentId },
+                    reason: 'SDK',
+                }) as { success?: boolean } | undefined;
+                return res?.success !== false;
+            }
+            if (typeof s.sdk.clickDialogByText !== 'function') return false;
             const res = await s.sdk.clickDialogByText(/^Edgeville/i) as { success?: boolean } | undefined;
             return res?.success !== false;
         };
@@ -440,54 +456,68 @@ export async function rescue(
             }
         }
         const tryGloryEscape = async (): Promise<boolean> => {
+            const waitTeleport = async () => {
+                suppressEat = true;
+                try {
+                    for (let d = 0; d < 4 && wildernessLevel(me()?.worldZ ?? 0) > 0; d++) {
+                        survival.step(s.tick());
+                        if (!await tick()) return false;
+                    }
+                } finally {
+                    suppressEat = false;
+                }
+                return true;
+            };
+            const unequipGlory = async (slot: number) => {
+                const hasClientUnequip = typeof (s.client as { clickEquipmentSlot?: unknown } | undefined)?.clickEquipmentSlot === 'function';
+                if (hasClientUnequip && typeof s.direct === 'function') {
+                    await s.direct({ type: 'useEquipmentItem', slot, optionIndex: 1, reason: 'SDK' });
+                    return;
+                }
+                if (typeof s.sdk.sendUseEquipmentItem === 'function') await s.sdk.sendUseEquipmentItem(slot, 1);
+            };
             for (let attempt = 0; attempt < 60 && wildernessLevel(me()?.worldZ ?? 0) > 0 && wildernessLevel(me()?.worldZ ?? 0) <= 30 && hasChargedGlory(); attempt++) {
                 if (stopped()) return false;
                 if (await clickEdgeville()) {
-                    suppressEat = true;
-                    try {
-                        for (let d = 0; d < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; d++) {
-                            survival.step(s.tick());
-                            if (!await tick()) return false;
-                        }
-                    } finally {
-                        suppressEat = false;
-                    }
+                    if (!await waitTeleport()) return false;
                     continue;
                 }
-                survival.step(s.tick());
-                const inv = s.sdk.getInventory?.() ?? [], stNow = s.sdk.getState();
+                const stNow = s.sdk.getState(), inv = s.sdk.getInventory?.() ?? [];
                 const eq = (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : stNow?.equipment) ?? [];
+                const curHp = me()?.hp ?? start.maxHp;
                 const invGlory = inv.find(i => (ITEMS.glory as readonly number[]).includes(i.id));
                 const rubOp = invGlory?.optionsWithIndex?.find(x => /^Rub$/i.test(x.text));
                 if (invGlory && rubOp) {
+                    if (curHp <= 70 && survival.step(s.tick())) {
+                        if (!await tick()) return false;
+                        continue;
+                    }
                     if (!stopped()) await useItemAction(invGlory.slot, rubOp.opIndex);
-                    // Wait 1 tick without same-tick p_clearpendingaction before checking dialog, then keep survival active.
-                    for (let t = 0; t < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; t++) {
+                    // Dialog opens 1 tick later unless an enemy hit (.if_close) closed it on the rub tick; retry immediately instead of idling.
+                    let opened = false;
+                    for (let t = 0; t < 2 && wildernessLevel(me()?.worldZ ?? 0) > 0; t++) {
                         if (await clickEdgeville()) {
-                            suppressEat = true;
-                            try {
-                                for (let d = 0; d < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; d++) {
-                                    survival.step(s.tick());
-                                    if (!await tick()) return false;
-                                }
-                            } finally {
-                                suppressEat = false;
-                            }
+                            opened = true;
+                            if (!await waitTeleport()) return false;
                             break;
                         }
-                        if (t > 0) survival.step(s.tick());
+                        if (t === 0 && !await tick()) return false;
+                    }
+                    if (!opened && wildernessLevel(me()?.worldZ ?? 0) > 0 && (me()?.hp ?? start.maxHp) <= 76 && survival.step(s.tick())) {
                         if (!await tick()) return false;
                     }
                     continue;
                 }
                 const wornGlory = eq.find(e => (ITEMS.glory as readonly number[]).includes(e.id));
                 if (wornGlory) {
-                    if (inv.length < 28 && typeof s.sdk.sendUseEquipmentItem === 'function') {
-                        await s.sdk.sendUseEquipmentItem(wornGlory.slot, 1);
-                        for (let t = 0; t < 2 && !(s.sdk.getInventory?.() ?? []).some(i => (ITEMS.glory as readonly number[]).includes(i.id)); t++) {
-                            survival.step(s.tick());
+                    const acted = curHp <= 70 ? survival.step(s.tick()) : false;
+                    if (inv.length < 28 && (typeof s.sdk.sendUseEquipmentItem === 'function' || typeof s.direct === 'function')) {
+                        if (acted) {
                             if (!await tick()) return false;
+                            continue;
                         }
+                        await unequipGlory(wornGlory.slot);
+                        if (!await tick()) return false;
                         continue;
                     }
                     const vial = inv.find(i => i.id === 229);
@@ -497,9 +527,9 @@ export async function rescue(
                     const spareDrop = inv.find(i => !(ITEMS.glory as readonly number[]).includes(i.id) && i.optionsWithIndex?.some(x => /^Drop$/i.test(x.text)));
                     const spareOp = spareDrop?.optionsWithIndex?.find(x => /^Drop$/i.test(x.text));
                     if (vial && dropOp) await useItemAction(vial.slot, dropOp.opIndex);
-                    else if (food && eatOp) await useItemAction(food.slot, eatOp.opIndex);
+                    else if (!acted && food && eatOp) await useItemAction(food.slot, eatOp.opIndex);
                     else if (spareDrop && spareOp) await useItemAction(spareDrop.slot, spareOp.opIndex);
-                    else break;
+                    else if (!acted) break;
                     if (!await tick()) return false;
                     continue;
                 }
@@ -900,8 +930,9 @@ export function squadFallbackPlan(opts: {
     const isolatedPile = opts.inMulti && opts.allyCount === 0 && opts.enemyCount >= 3 && (opts.hp <= opts.maxHp * 0.85 || opts.foodCount <= 6 || opts.enemyCount >= 5);
     const outnumbered = opts.inMulti && opts.enemyCount - opts.allyCount >= 2 && opts.hp <= opts.maxHp * 0.78;
     const focusPile = opts.inMulti && (opts.targetingMe ?? 0) >= 3 && opts.hp <= opts.maxHp * 0.86;
-    const heavyFocus = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.hp <= opts.maxHp * 0.76;
-    const emergencyMulti = opts.inMulti && ((opts.enemyCount >= 6 && opts.hp <= opts.maxHp * 0.76) || (opts.enemyCount >= 4 && opts.hp <= opts.maxHp * 0.62));
+    const instantEscape = !!opts.hasTeleport && wild <= 20;
+    const heavyFocus = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.hp <= opts.maxHp * (instantEscape ? 0.76 : 0.72);
+    const emergencyMulti = opts.inMulti && ((instantEscape && opts.enemyCount >= 6 && opts.hp <= opts.maxHp * 0.76) || (opts.enemyCount >= 4 && opts.hp <= opts.maxHp * 0.62));
     const lowSupplyPile = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.foodCount <= 3 && opts.hp <= opts.maxHp * 0.88;
     const dry = opts.foodCount <= 0 && ((opts.packFood ?? 0) >= 6 || opts.hp <= opts.maxHp * 0.75);
     if (!isolatedPile && !outnumbered && !focusPile && !heavyFocus && !emergencyMulti && !lowSupplyPile && !dry) return 'hold';

@@ -1276,9 +1276,11 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         // freezeStill: the ticks after a cast until the hold shows (the target stood: held two ticks after the cast).
         const freezeHolding = o.freezeStill === true && now <= freezeCastAt + 3 && !(now < frozenUntil && now >= freezeCastAt + 2 && !!frozenTile);
         const wornGlory = state.equipment.find(e => e.slot === 2 && (ITEMS.glory as readonly number[]).includes(e.id));
-        // A worn glory needs a pack slot before it can be rubbed. Eat for that slot even at full HP, then read the
-        // credited inventory on the next tick before removing it. With no food, the walking fallback still applies.
-        const gloryRoom = escapeNow(inv) && wildernessLevel(at.z) <= 30 && !!wornGlory && !slotOf(ITEMS.glory)
+        // The escape spell counts only when its runes, staff and level allow a cast (escapeCastable).
+        const spellReady = o.escapeSpell !== undefined && escapeCastable(o.escapeSpell, inv, state.equipment.map(e => e.id), state.skills.find(k => k.name === 'Magic')?.level ?? 1);
+        const instantSpellOut = spellReady && wildernessLevel(at.z) <= 20;
+        // A worn glory needs a pack slot before it can be rubbed, unless an instant teleport spell is castable in Wild <= 20.
+        const gloryRoom = !instantSpellOut && escapeNow(inv) && wildernessLevel(at.z) <= 30 && !!wornGlory && !slotOf(ITEMS.glory)
             && inv.length >= 28 && typeof sdk.sendUseEquipmentItem === 'function';
         if ((!castShield || gloryRoom) && (gloryRoom || me.hp < me.maxHp && me.hp <= Math.max(eatAt, oppMax + 8)) && now >= foodReady) {
             const food = bestFood(inv);
@@ -1320,8 +1322,6 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         }
         // The game rubs a glory only from the pack (amulet_of_glory.rs2 has no worn option), so a worn one comes off first:
         // the amulet that an account wears is then its way out, and its pack needs no second one.
-        // The escape spell counts only when its runes, staff and level allow a cast (escapeCastable).
-        const spellReady = o.escapeSpell !== undefined && escapeCastable(o.escapeSpell, inv, state.equipment.map(e => e.id), state.skills.find(k => k.name === 'Magic')?.level ?? 1);
         const reach = slotOf(ITEMS.glory) || wornGlory ? 30 : spellReady ? 20 : 0;
         // No teleport at all (no glory, no escape spell): the way out is a run south, at any level, or the escape
         // stands beside its attacker until its cap (review of PR #804).
@@ -1335,14 +1335,14 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             const glory = slotOf(ITEMS.glory);
             const dropVial = !glory && wornGlory && !ateThisTick && inv.length >= 28 ? slotOf([229]) : undefined;
             const slotFood = !glory && wornGlory && !ateThisTick && inv.length >= 28 && !dropVial && now >= foodReady ? bestFood(inv) : undefined;
-            if (glory && (rubbed < 0 || now - rubbed > 6) && !state.dialog?.isOpen) { log(`PK rub glory at HP ${me.hp}`); use(glory, /^Rub$/i); rubbed = now; }
+            // Instant 1-tick teleport spell beats Glory's rub dialog in Wild <= 20 because enemy hits close chat dialogs (.if_close).
+            if (spellReady && o.escapeSpell !== undefined && wildernessLevel(at.z) <= 20 && (rubbed < 0 || now - rubbed > 6)) {
+                log(`PK teleport spell at HP ${me.hp}`); void sdk.sendClickComponent(o.escapeSpell); rubbed = now;
+            } else if (glory && (rubbed < 0 || now - rubbed >= 2) && !state.dialog?.isOpen) { log(`PK rub glory at HP ${me.hp}`); use(glory, /^Rub$/i); rubbed = now; }
             else if (!glory && wornGlory && inv.length < 28 && typeof sdk.sendUseEquipmentItem === 'function') { if (now - gloryOffAt > 2) { log(`PK takes its glory off at HP ${me.hp}`); void sdk.sendUseEquipmentItem(wornGlory.slot, 1); gloryOffAt = now; } }
             else if (dropVial && use(dropVial, /^Drop$/i)) { log(`PK drops vial for glory at HP ${me.hp}`); }
             else if (slotFood && use(slotFood, /^Eat$/i)) { foodReady = now + 3; result.eaten++; log(`PK eats for glory slot at HP ${me.hp}`); }
             else if (!glory && wornGlory && ateThisTick && inv.length >= 28) { /* wait one tick for eaten food to free a pack slot */ }
-            else if (!glory && spellReady && o.escapeSpell !== undefined && wildernessLevel(at.z) <= 20 && (rubbed < 0 || now - rubbed > 6)) {
-                log(`PK teleport spell at HP ${me.hp}`); void sdk.sendClickComponent(o.escapeSpell); rubbed = now;
-            }
             // A worn glory with a full pack and nothing to drop or eat, or a spell out of its reach: run south.
             else if (!glory && (!wornGlory || inv.length >= 28) && (!spellReady || wildernessLevel(at.z) > 20) && !state.dialog?.isOpen) runSouth();
             if (state.dialog?.isOpen) void sdk.clickDialogByText(/^Edgeville/i);
