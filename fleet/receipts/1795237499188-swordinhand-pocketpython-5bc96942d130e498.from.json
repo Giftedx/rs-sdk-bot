@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795237499188-swordinhand-pocketpython-5bc96942d130e498",
+ "account": "Swordinhand",
+ "partner": "Pocketpython",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Snape grass",
+ "requested": 18,
+ "claim": "9ecad4c7-3878-4a75-b095-7d6fa507e461",
+ "count": 0,
+ "ok": false,
+ "at": 1795238916840,
+ "detail": "trade claimed"
+}
