@@ -3529,6 +3529,21 @@
    "description": "Gnome Stronghold / Barbarian / Wilderness agility course order"
   },
   {
+   "id": "skiller:agility:specialist",
+   "category": "skiller",
+   "name": "agility:specialist",
+   "script": "scripts/agility-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "agility"
+   ],
+   "description": "Fresh-clock 1 to 99 Agility specialist route (Tourist Trap + boosted Wilderness course)"
+  },
+  {
    "id": "skiller:cooking:batch",
    "category": "skiller",
    "name": "cooking:batch",
@@ -93055,6 +93070,18 @@
    ]
   },
   {
+   "script": "scripts/agility-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "agility"
+   ],
+   "routeIds": [
+    "skiller:agility:specialist"
+   ]
+  },
+  {
    "script": "scripts/aio-boss.ts",
    "intents": [
     "acquire"
@@ -93387,6 +93414,7 @@
     "skiller:prayer:flick",
     "skiller:prayer:specialist",
     "skiller:agility:order",
+    "skiller:agility:specialist",
     "skiller:thieving:knights",
     "skiller:thieving:knights-stable",
     "skiller:thieving:stun-base",
@@ -93515,6 +93543,7 @@
     "skiller:prayer:flick",
     "skiller:prayer:specialist",
     "skiller:agility:order",
+    "skiller:agility:specialist",
     "skiller:thieving:knights",
     "skiller:thieving:knights-stable",
     "skiller:thieving:stun-base",
@@ -96253,6 +96282,15 @@
   },
   {
    "script": "scripts/measure/snapshot-restore-memory.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/specialist-agility-cases.ts",
    "intents": [
     "observe"
    ],

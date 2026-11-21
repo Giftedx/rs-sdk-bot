@@ -13,6 +13,7 @@ import { CLONE_NAMES, cloneProfileName, cloneSpec, pooledProfile, type CloneMode
 import {carrierAltar, type CarrierAltarName} from '../rune-carrier-altar';
 import {PROGRESSION_BENCH_CASES} from './progression-bench-cases';
 import {SPECIALIST_RANGED_CASES} from './specialist-ranged-cases';
+import {SPECIALIST_AGILITY_CASES} from './specialist-agility-cases';
 import {SPECIALIST_GATHERING_CASES, SPECIALIST_GATHERING_EXTERNAL_CASES} from './specialist-gathering-cases';
 import {SPECIALIST_FAST_SKILLS_CASES, SPECIALIST_FAST_SKILLS_EXTERNAL_CASES} from './specialist-fast-skills-cases';
 import {SPECIALIST_COMBAT_QUESTS_CASES} from './specialist-combat-quests-cases';
@@ -2058,6 +2059,7 @@ const EXTRA_CASES: BenchCase[] = [
       presetConfig: {...preset, skills: before, ...(KITS[kit]!.noRoute ? {inventory: sharks} : {})}};
   }),
   ...SAME_JOB_CASES,
+  ...SPECIALIST_AGILITY_CASES,
   // From the Varrock West bank to the Ardougne north bank with the 60-coin fare of the two ferries (scripts/walk-to.ts
   // ferryWalk). The wall time of the case and the ms of each WALK_NO_ROUTE line give the plan time.
   {key: 'extra:walk-varrock-ardougne', script: 'scripts/aio-logistics.ts', preset: 'fresh_lumbridge', scriptArgs: ['walk-to', '2619', '3332', '0'], pass: ok, timeoutMs: 600_000,

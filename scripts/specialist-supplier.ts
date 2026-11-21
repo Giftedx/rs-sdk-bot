@@ -59,6 +59,28 @@ export const ATTACK_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 379, name: 'Lobster', count: 2, stackable: false },
 ] as const;
 
+// 21 inventory slots exact: 1 stackable (500 coins) + 1 glory + 11 dragon bones + 3 prayer pots + 5 chocolate cake (100% in stock).
+export const AGILITY_SPECIALIST_NOPOT_KIT: readonly KitSpecItem[] = [
+    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
+    { id: 995, name: 'Coins', count: 500, stackable: true },
+    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 3, stackable: false },
+    { id: 1897, name: 'Chocolate cake', count: 5, stackable: false },
+] as const;
+
+// 28 inventory slots exact: 1 stackable (500 coins) + 1 glory + 11 dragon bones + 3 prayer pots + 6 agility pots + 2 super energy + 4 cakes.
+export const AGILITY_SPECIALIST_KIT: readonly KitSpecItem[] = [
+    { id: 1712, name: 'Amulet of glory(4)', count: 1, stackable: false },
+    { id: 995, name: 'Coins', count: 500, stackable: true },
+    { id: 536, name: 'Dragon bones', count: 11, stackable: false },
+    { id: 2434, name: 'Prayer potion(4)', count: 3, stackable: false },
+    { id: 3032, name: 'Agility potion(4)', count: 6, stackable: false },
+    { id: 3016, name: 'Super energy(4)', count: 2, stackable: false },
+    { id: 1897, name: 'Chocolate cake', count: 4, stackable: false },
+] as const;
+
+export const AGILITY_SPECIALIST_POTION_KIT: readonly KitSpecItem[] = AGILITY_SPECIALIST_KIT;
+
 // 7 stackable slots: exact 240 arrow-fletching actions (1-99, 0 spare buffer; 100% in local stock).
 export const FLETCHING_SPECIALIST_KIT: readonly KitSpecItem[] = [
     { id: 39, name: 'Bronze arrowtips', count: 60, stackable: true },
@@ -149,6 +171,7 @@ export const THIEVING_SPECIALIST_LIVE_KIT: readonly KitSpecItem[] = [
 
 export const SPECIALIST_KITS = {
     attack: ATTACK_SPECIALIST_KIT,
+    agility: AGILITY_SPECIALIST_KIT,
     hitpoints: HP_SPECIALIST_KIT,
     strength: STRENGTH_SPECIALIST_KIT,
     defence: DEFENCE_SPECIALIST_KIT,
@@ -761,11 +784,20 @@ async function runServe(args: string[]): Promise<void> {
     try {
         await waitUntil(s, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 });
         const t0 = s.tick();
-        const kitName = plan.name;
-        if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'runecraft' && kitName !== 'crafting' && kitName !== 'herblore' && kitName !== 'magic') {
+        let activePlan = plan;
+        if (!parsed.kitArg && !process.env.SUPPLIER_KIT) {
+            for (const [kName, kItems] of Object.entries(SPECIALIST_KITS)) {
+                if (hasExactKit(s.sdk.getInventory(), kItems)) {
+                    activePlan = resolveSupplierKitPlan(kName);
+                    break;
+                }
+            }
+        }
+        const kitName = activePlan.name;
+        if (kitName !== 'prayer' && kitName !== 'smithing' && kitName !== 'runecraft' && kitName !== 'crafting' && kitName !== 'herblore' && kitName !== 'magic' && kitName !== 'agility') {
             const peerRe = exactNameRe(specialist);
-            for (let legIdx = 0; legIdx < plan.legs.length; legIdx++) {
-                const leg = plan.legs[legIdx]!;
+            for (let legIdx = 0; legIdx < activePlan.legs.length; legIdx++) {
+                const leg = activePlan.legs[legIdx]!;
                 const legBank = legIdx === 0 && (parsed.bankX !== undefined || parsed.bankZ !== undefined) ? bankTile : leg.bank;
                 const concreteKit = hasExactKit(s.sdk.getInventory(), leg.kit)
                     ? resolveConcreteKit(leg.kit, s.sdk.getInventory())
@@ -775,9 +807,9 @@ async function runServe(args: string[]): Promise<void> {
                 console.log('SUPPLIER_READY ' + JSON.stringify({
                     holder,
                     specialist,
-                    kit: plan.name,
+                    kit: activePlan.name,
                     trade: legIdx + 1,
-                    totalTrades: plan.legs.length,
+                    totalTrades: activePlan.legs.length,
                     server: serverHost,
                     at: { x: p.worldX, z: p.worldZ, level: p.level },
                     slots: s.sdk.getInventory().length,
@@ -801,9 +833,9 @@ async function runServe(args: string[]): Promise<void> {
                         console.log('SUPPLIER_HANDOFF ' + JSON.stringify({
                             holder,
                             specialist,
-                            kit: plan.name,
+                            kit: activePlan.name,
                             trade: legIdx + 1,
-                            totalTrades: plan.legs.length,
+                            totalTrades: activePlan.legs.length,
                             tick: s.tick() - t0,
                             items: concreteKit.map(k => ({ id: k.id, count: k.count })),
                         }));
@@ -815,11 +847,11 @@ async function runServe(args: string[]): Promise<void> {
                     await waitTicks(s, 1);
                 }
                 if (!handoffDone) {
-                    await finish([s], false, `supplier did not complete ${plan.name} trade ${legIdx + 1}/${plan.legs.length} within ${CAP} ticks`);
+                    await finish([s], false, `supplier did not complete ${activePlan.name} trade ${legIdx + 1}/${activePlan.legs.length} within ${CAP} ticks`);
                     return;
                 }
             }
-            await finish([s], true, `supplied ${specialist} (${plan.name}, ${plan.legs.length} trade(s)) in ${s.tick() - t0} ticks`);
+            await finish([s], true, `supplied ${specialist} (${activePlan.name}, ${activePlan.legs.length} trade(s)) in ${s.tick() - t0} ticks`);
             return;
         }
 
@@ -1103,6 +1135,14 @@ async function runServe(args: string[]): Promise<void> {
                 if (!ok || stop() || s.tick() - t0 >= CAP) break;
             }
             allDone = ok;
+        } else if (kitName === 'agility') {
+            const batch = AGILITY_SPECIALIST_KIT.map(g => invSpec(g.id, g.count));
+            if (!hasExactKit(s.sdk.getInventory(), batch)) {
+                await withdrawExactKit(s, batch, bankTile, stop);
+            }
+            await moveGroundTo(s, LUMBRIDGE_HANDOFF, 2, stop);
+            emitReady();
+            allDone = (await serveFastBatch(s, specialist, batch, t0, CAP, stop)) === 'ok';
         } else {
             throw Error(`unhandled serve kit: ${kitName}`);
         }

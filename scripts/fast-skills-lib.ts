@@ -351,6 +351,7 @@ export async function waitNearPlayer(
 
 export interface BurstTradeSpec {
  giveIds?: readonly number[];
+ giveCounts?: ReadonlyMap<number, number> | Readonly<Record<number, number>>;
  returnIds?: readonly number[];
  deadlineTick: number;
  canStand?: (pos: NonNullable<ReturnType<typeof playerPos>>) => boolean;
@@ -448,37 +449,39 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
   }
 
   const hWantSet = opts.giveIds ? new Set(opts.giveIds) : null;
-  const hDistinctSlots = uniqueSlotsForIds(helper.sdk.getInventory(), hWantSet, ht.myOffer);
+  const hWantCounts = toWantCountMap(opts.giveCounts);
+  const hOfferOps = offerOpsForIds(helper.sdk.getInventory(), hWantSet, hWantCounts, ht.myOffer);
   const sReturnSet = opts.returnIds?.length ? new Set(opts.returnIds) : null;
-  const sDistinctSlots = sReturnSet ? uniqueSlotsForIds(spec.sdk.getInventory(), sReturnSet, st.myOffer) : [];
+  const sOfferOps = sReturnSet ? offerOpsForIds(spec.sdk.getInventory(), sReturnSet, null, st.myOffer) : [];
 
   const hMainActs: Promise<unknown>[] = [];
   const sMainActs: Promise<unknown>[] = [];
-  const sMaxOffers = sDistinctSlots.length > 4 ? 5 : 4;
-  const sOffers = sDistinctSlots.slice(0, sMaxOffers);
-  const specOfferComplete = sDistinctSlots.length <= sOffers.length;
-  const hMaxOffers = hDistinctSlots.length > 4 ? 5 : 4;
-  const hOffers = hDistinctSlots.slice(0, hMaxOffers);
-  const helperOfferComplete = hDistinctSlots.length <= hOffers.length;
-  for (const slot of hOffers) {
-   hMainActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
+  const sMaxOffers = sOfferOps.length > 4 ? 5 : 4;
+  const sOffers = sOfferOps.slice(0, sMaxOffers);
+  const specOfferComplete = sOfferOps.length <= sOffers.length;
+  const hMaxOffers = hOfferOps.length > 4 ? 5 : 4;
+  const hOffers = hOfferOps.slice(0, hMaxOffers);
+  const helperOfferComplete = hOfferOps.length <= hOffers.length;
+  for (const offer of hOffers) {
+   hMainActs.push(helper.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: offer.op, slot: offer.slot, reason: 'SDK' }));
   }
-  const hCanAccept = helperOfferComplete && specOfferComplete;
+  const multiTickOffer = ht.myOffer.length > 0 || st.myOffer.length > 0;
+  const hCanAccept = helperOfferComplete && specOfferComplete && (!multiTickOffer || hOffers.length === 0);
   if (hCanAccept && !ht.myAccepted && hOffers.length <= 4) {
    hMainActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
   }
-  if (hCanAccept && (ht.myAccepted || (hOffers.length <= 3 && sOffers.length <= 3))) {
+  if (hCanAccept && (ht.myAccepted || (!multiTickOffer && hOffers.length <= 3 && sOffers.length <= 3))) {
    hMainActs.push(helper.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
 
-  for (const slot of sOffers) {
-   sMainActs.push(spec.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
+  for (const offer of sOffers) {
+   sMainActs.push(spec.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: offer.op, slot: offer.slot, reason: 'SDK' }));
   }
-  const specCanAccept = specOfferComplete && helperOfferComplete;
+  const specCanAccept = specOfferComplete && helperOfferComplete && (!multiTickOffer || (hOffers.length === 0 && sOffers.length === 0));
   if (specCanAccept && !st.myAccepted && sOffers.length <= 4) {
    sMainActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_MAIN_ACCEPT, reason: 'SDK' }));
   }
-  if (specCanAccept && (st.myAccepted || (sOffers.length <= 3 && hOffers.length <= 3))) {
+  if (specCanAccept && (st.myAccepted || (!multiTickOffer && sOffers.length <= 3 && hOffers.length <= 3))) {
    sMainActs.push(spec.direct({ type: 'clickComponent', componentId: TRADE_CONFIRM_ACCEPT, reason: 'SDK' }));
   }
   if (hMainActs.length) await Promise.all(hMainActs);
@@ -490,11 +493,23 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
  throw Error(`burstTradeHost with ${helper.name} exceeded cap`);
 }
 
-function uniqueSlotsForIds(
+function toWantCountMap(giveCounts?: ReadonlyMap<number, number> | Readonly<Record<number, number>>): Map<number, number> | null {
+ if (!giveCounts) return null;
+ if (giveCounts instanceof Map) return new Map(giveCounts);
+ const map = new Map<number, number>();
+ for (const [k, v] of Object.entries(giveCounts as Readonly<Record<string, number>>)) {
+  const id = Number(k);
+  if (Number.isSafeInteger(id) && typeof v === 'number' && v > 0) map.set(id, v);
+ }
+ return map;
+}
+
+function offerOpsForIds(
  inv: readonly { id: number; count: number; slot: number }[],
  wantIds: ReadonlySet<number> | null,
+ wantCounts: ReadonlyMap<number, number> | null,
  alreadyOffered: readonly { id: number; count: number }[],
-): number[] {
+): { slot: number; op: number }[] {
  const offeredCounts = new Map<number, number>();
  for (const o of alreadyOffered) offeredCounts.set(o.id, (offeredCounts.get(o.id) ?? 0) + o.count);
  const totalInv = new Map<number, number>();
@@ -504,11 +519,21 @@ function uniqueSlotsForIds(
   totalInv.set(item.id, (totalInv.get(item.id) ?? 0) + item.count);
   if (!firstSlot.has(item.id)) firstSlot.set(item.id, item.slot);
  }
- const slots: number[] = [];
- for (const [id, needed] of totalInv) {
-  if ((offeredCounts.get(id) ?? 0) < needed) slots.push(firstSlot.get(id)!);
+ const ops: { slot: number; op: number }[] = [];
+ for (const [id, have] of totalInv) {
+  const target = wantCounts?.get(id) ?? have;
+  const needed = Math.min(target, have);
+  let rem = needed - (offeredCounts.get(id) ?? 0);
+  if (rem <= 0) continue;
+  if (target >= have) {
+   ops.push({ slot: firstSlot.get(id)!, op: 4 });
+   continue;
+  }
+  const slot = firstSlot.get(id)!;
+  const op = rem >= 10 ? 3 : rem >= 5 ? 2 : 1;
+  ops.push({ slot, op });
  }
- return slots;
+ return ops;
 }
 
 export async function runTo(s: Session, x: number, z: number, tol = 2, maxTicks = 200): Promise<void> {
@@ -868,13 +893,13 @@ export async function fastTradeExternalReceive(
    continue;
   }
 
-  const sDistinctSlots = returnSet ? uniqueSlotsForIds(spec.sdk.getInventory(), returnSet, st.myOffer) : [];
-  const sMaxOffers = sDistinctSlots.length > 4 ? 5 : 4;
-  const sOffers = sDistinctSlots.slice(0, sMaxOffers);
-  const myOfferComplete = sDistinctSlots.length <= sOffers.length;
+  const sOfferOps = returnSet ? offerOpsForIds(spec.sdk.getInventory(), returnSet, null, st.myOffer) : [];
+  const sMaxOffers = sOfferOps.length > 4 ? 5 : 4;
+  const sOffers = sOfferOps.slice(0, sMaxOffers);
+  const myOfferComplete = sOfferOps.length <= sOffers.length;
   const acts: Promise<unknown>[] = [];
-  for (const slot of sOffers) {
-   acts.push(spec.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: 4, slot, reason: 'SDK' }));
+  for (const offer of sOffers) {
+   acts.push(spec.direct({ type: 'clickComponentWithOption', componentId: TRADE_OFFER_INV, optionIndex: offer.op, slot: offer.slot, reason: 'SDK' }));
   }
   const canAccept = myOfferComplete && opts.acceptOffer(st.theirOffer);
   if (canAccept && sOffers.length <= 4) {

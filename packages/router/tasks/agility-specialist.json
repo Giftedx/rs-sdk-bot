@@ -1,0 +1,56 @@
+{
+  "id": "agility-specialist",
+  "goal": "specialists",
+  "entry": "scripts/agility-specialist.ts",
+  "files": [
+    "scripts/agility-specialist.ts",
+    "scripts/agility-specialist.test.ts",
+    "scripts/specialist-supplier.ts",
+    "packages/practice/src/rehearse.ts",
+    "packages/practice/test/specialist-rehearsal.test.ts"
+  ],
+  "consumer": "Polevaulter completes the continuous fresh-clock Agility 99 specialist route from Tutorial Island through Edgeville monkeybars and Wilderness Course within 6,031 ticks after receiving its staged supply kit.",
+  "checks": [
+    {
+      "id": "agility-specialist-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/agility-specialist.test.ts",
+        "packages/practice/test/specialist-rehearsal.test.ts",
+        "packages/core/test/specialist-launch.test.ts",
+        "packages/core/test/launch-evidence.test.ts",
+        "scripts/progression-catalog.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-agility-specialist",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "run",
+        "bench",
+        "skiller:agility:specialist",
+        "--budget",
+        "10"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "id": "agility-specialist-consumer-gate",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "test",
+        "scripts/agility-specialist.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    }
+  ]
+}
