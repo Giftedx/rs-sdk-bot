@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { actionLabel, itemSources, mapIcons, npcDrops, pretty, type SourceCost } from './gen-map-data';
+import { actionLabel, compactNpcDrops, itemSources, mapIcons, npcDrops, pretty, thinSourceTiles, type SourceCost } from './gen-map-data';
 
 test('npc drops retain exact spawn identities and separate source facts instead of the highest chance', () => {
     const out = npcDrops([
@@ -296,4 +296,29 @@ test('item-source labels retain access gates and map pins while blocked sources 
     ]);
     const shipped = JSON.parse(readFileSync(new URL('./client-assets/item-sources.json', import.meta.url), 'utf8'));
     expect(shipped['1436'][0][1]).toContain('quest Rune Mysteries');
+});
+
+test('thinSourceTiles leaves small sources intact and thins dense tile lists by 16x16 grid and floor', () => {
+    const small = [3000, 3000, 0, 3001, 3001, 0];
+    expect(thinSourceTiles(small)).toEqual(small);
+
+    const dense: number[] = [];
+    for (let i = 0; i < 60; i++) dense.push(3200 + (i % 8), 3200 + Math.floor(i / 8), 0);
+    dense.push(3201, 3201, 1); // same X/Z cell on floor 1 stays distinct
+    dense.push(3220, 3220, 0); // next 16x16 cell on floor 0 stays distinct
+    expect(thinSourceTiles(dense)).toEqual([3200, 3200, 0, 3201, 3201, 1, 3220, 3220, 0]);
+});
+
+test('compactNpcDrops retains byId rows, summaries, and fact display text while shedding unused structured fields', () => {
+    const full = npcDrops([
+        { item: 'big_bones', id: 532, sources: [{ kind: 'drop', npc: 'death_drop', chance: 1, countMin: 1, countMax: 1, conditional: false, src: 'table:1', places: [{ npc: 'one' }] }] },
+    ], names, [{ id: 1, debugname: 'one', name: 'One' }]);
+    const compacted = compactNpcDrops(full);
+    expect(compacted.byName).toEqual({});
+    expect(compacted.byId['1']).toEqual([{
+        id: 532,
+        name: 'Big bones',
+        summary: 'quantity 1 · always',
+        facts: [{ text: full.byId['1']![0]!.facts[0]!.text }],
+    }]);
 });

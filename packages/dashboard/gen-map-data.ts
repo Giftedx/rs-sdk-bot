@@ -16,6 +16,31 @@ type Tile = { x: number; z: number; level?: number };
 // An icon may end with its skill requirement [skill, level] (a teleport spell's Magic level, a shortcut's Agility level).
 export type Icon = [number, number, number, 't' | 'p' | 'a' | 's', string] | [number, number, number, 't' | 'p' | 'a' | 's', string, [string, number]];
 const ANYWHERE = new Set(['spell', 'jewellery', 'item']);
+const SOURCE_THIN_LIMIT = 48 * 3;
+const SOURCE_THIN_CELL = 16;
+
+// Thin only dense world-wide tile lists (>48 tiles) to one tile per 16x16 cell per floor so minimap/3D pins keep full coverage without thousands of redundant log/tree tiles.
+export function thinSourceTiles(tiles: number[], limit = SOURCE_THIN_LIMIT, cell = SOURCE_THIN_CELL): number[] {
+    if (tiles.length <= limit) return tiles;
+    const seen = new Set<string>(), out: number[] = [];
+    for (let i = 0; i + 2 < tiles.length; i += 3) {
+        const x = tiles[i]!, z = tiles[i + 1]!, level = tiles[i + 2]!;
+        const key = `${level}:${Math.floor(x / cell)}:${Math.floor(z / cell)}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(x, z, level);
+    }
+    return out;
+}
+
+// Shipped npc-drops.json omits byName and structured metadata because client-shell.js reads only byId[id] rows' {name, summary, facts[].text}.
+export function compactNpcDrops(drops: NpcDrops): { byId: Record<string, { id: number; name: string; summary: string; facts: { text: string }[] }[]>; byName: Record<string, never> } {
+    const byId: Record<string, { id: number; name: string; summary: string; facts: { text: string }[] }[]> = {};
+    for (const [id, rows] of Object.entries(drops.byId)) {
+        byId[id] = rows.map(row => ({ id: row.id, name: row.name, summary: row.summary, facts: row.facts.map(f => ({ text: f.text })) }));
+    }
+    return { byId, byName: {} };
+}
 type CostBasis = 'content' | 'model' | 'measured';
 // Each known dimension has its own basis and conditions; helper time and conditional wall wait stay separate.
 export type SourceCost = {
@@ -146,7 +171,11 @@ export function itemSources(items: any[], names: Names): Record<string, Source[]
             if (seen) seen[2].push(...r[2]);
             else byLabel.set(key, r[3] ? [r[0], r[1], [...r[2]], r[3]] : [r[0], r[1], [...r[2]]]);
         }
-        if (byLabel.size && Number.isInteger(it.id)) out[String(it.id)] = [...byLabel.values()].slice(0, 12);
+        const outRows = [...byLabel.values()].slice(0, 12).map((row): Source => {
+            const thinned = thinSourceTiles(row[2]);
+            return row[3] ? [row[0], row[1], thinned, row[3]] : [row[0], row[1], thinned];
+        });
+        if (outRows.length && Number.isInteger(it.id)) out[String(it.id)] = outRows;
     }
     return out;
 }
@@ -196,7 +225,7 @@ if (import.meta.main) {
     writeFileSync(join(import.meta.dir, 'client-assets', 'map-icons.json'), JSON.stringify(icons));
     writeFileSync(join(import.meta.dir, 'client-assets', 'item-sources.json'), JSON.stringify(sources));
     const drops = npcDrops(items, names, npcs);
-    writeFileSync(join(import.meta.dir, 'client-assets', 'npc-drops.json'), JSON.stringify(drops));
+    writeFileSync(join(import.meta.dir, 'client-assets', 'npc-drops.json'), JSON.stringify(compactNpcDrops(drops)));
     const by = (kind: string) => icons.filter(i => i[3] === kind).length;
     console.log(`map-icons.json: ${by('t')} teleports, ${by('p')} fixed transports, ${by('a')} shortcuts, ${by('s')} shops; item-sources.json: ${Object.keys(sources).length} items; npc-drops.json: ${Object.keys(drops.byId).length} npcs`);
 }

@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import vm from 'node:vm';
 import { VIEWER_FEATURES, VIEWER_MANIFEST_SHA256, checkViewerBundle, viewerEntry } from '../viewer';
 import { earlyCacheScript, hostedIndex, hostedScript, hostedStyle, nameHash } from './export-viewer';
 
@@ -19,12 +20,84 @@ test('the early cache script follows the bridge, fetches only files the browser 
     expect(() => earlyCacheScript('a"b', [])).toThrow('unsafe');
     expect(() => earlyCacheScript('ok', ['../x'])).toThrow('unsafe');
     // Run the script body with a store that already holds the .dat file: only the index file is fetched.
-    const fetched: string[] = [], opened: string[] = [];
-    const body = script.slice('<script>'.length, -'</script>'.length);
-    const run = new Function('document', 'caches', 'fetch', `return ${body}`);
-    await run({ baseURI: 'https://example.test/site/viewer/' }, { open: async (n: string) => { opened.push(n); return { match: async (u: string) => u.endsWith('.dat') ? {} : undefined }; } }, (u: string) => { fetched.push(u); return Promise.resolve(); });
-    expect(opened).toEqual(['rs-sdk-289']);
-    expect(fetched).toEqual(['/site/viewer/caches/rs-sdk-289/main_file_cache.idx0']);
+    const prevPrefetch = (globalThis as any).__atlasCachePrefetch;
+    try {
+        delete (globalThis as any).__atlasCachePrefetch;
+        const fetched: string[] = [], opened: string[] = [], stored: string[] = [];
+        const body = script.slice('<script>'.length, -'</script>'.length);
+        const run = new Function('document', 'caches', 'fetch', `return ${body}`);
+        await run(
+            { baseURI: 'https://example.test/site/viewer/' },
+            { open: async (n: string) => { opened.push(n); return { match: async (u: string) => u.endsWith('.dat') ? {} : undefined, put: async (u: string) => { stored.push(u); } }; } },
+            (u: string) => { fetched.push(u); return Promise.resolve({ ok: true, status: 200, headers: new Headers() }); }
+        );
+        expect(opened).toEqual(['rs-sdk-289']);
+        expect(fetched).toEqual(['/site/viewer/caches/rs-sdk-289/main_file_cache.idx0']);
+        await Promise.all([...(globalThis as any).__atlasCachePrefetch.files.values()]);
+        expect(stored).toEqual(['/site/viewer/caches/rs-sdk-289/main_file_cache.idx0']);
+
+        // Shared __atlasCachePrefetch suppresses duplicate fetches across reloads or parent shim prefetch.
+        fetched.length = 0; stored.length = 0;
+        await run(
+            { baseURI: 'https://example.test/site/viewer/' },
+            { open: async () => ({ match: async (u: string) => u.endsWith('.dat') ? {} : undefined, put: async (u: string) => { stored.push(u); } }) },
+            (u: string) => { fetched.push(u); return Promise.resolve({ ok: true, status: 200, headers: new Headers() }); }
+        );
+        expect(fetched).toEqual([]);
+        expect(stored).toEqual([]);
+
+        // A sibling in-flight entry already registered in __atlasCachePrefetch.files is skipped even on a cold cache.
+        (globalThis as any).__atlasCachePrefetch.files.set('/site/viewer/caches/rs-sdk-289/main_file_cache.dat', Promise.resolve(true));
+        fetched.length = 0; stored.length = 0;
+        await run(
+            { baseURI: 'https://example.test/site/viewer/' },
+            { open: async () => ({ match: async () => undefined, put: async (u: string) => { stored.push(u); } }) },
+            (u: string) => { fetched.push(u); return Promise.resolve({ ok: true, status: 200, headers: new Headers() }); }
+        );
+        expect(fetched).toEqual([]);
+        expect(stored).toEqual([]);
+
+        // Partial (206 / Content-Range) responses are neither stored nor retained in files so CacheFiles.ts can resume them.
+        (globalThis as any).__atlasCachePrefetch.files.clear();
+        fetched.length = 0; stored.length = 0;
+        let finishFetch!: (r: unknown) => void;
+        const pendingFetch = new Promise(resolve => { finishFetch = resolve; });
+        await run(
+            { baseURI: 'https://example.test/site/viewer/' },
+            { open: async () => ({ match: async () => undefined, put: async (u: string) => { stored.push(u); } }) },
+            (u: string) => { fetched.push(u); return pendingFetch; }
+        );
+        expect((globalThis as any).__atlasCachePrefetch.files.size).toBe(2);
+        finishFetch({ ok: true, status: 206, headers: new Headers({ 'Content-Range': 'bytes 0-10/20' }) });
+        const partialResults = await Promise.all([...(globalThis as any).__atlasCachePrefetch.files.values()]);
+        expect(partialResults).toEqual([false, false]);
+        expect(fetched).toEqual(['/site/viewer/caches/rs-sdk-289/main_file_cache.dat', '/site/viewer/caches/rs-sdk-289/main_file_cache.idx0']);
+        expect(stored).toEqual([]);
+        expect((globalThis as any).__atlasCachePrefetch.files.size).toBe(0);
+
+        // Cross-realm parent Map (as when shim.js runs in window.parent) is recognized by duck-typing and reused cleanly.
+        const ParentMap = vm.runInNewContext('Map') as typeof Map;
+        const crossFiles = new ParentMap<string, Promise<boolean>>([
+            ['/site/viewer/caches/rs-sdk-289/main_file_cache.dat', Promise.resolve(true)],
+            ['/site/viewer/caches/rs-sdk-289/main_file_cache.idx0', Promise.resolve(true)],
+        ]);
+        expect(crossFiles instanceof Map).toBe(false);
+        fetched.length = 0; stored.length = 0;
+        const iframeGlobal: any = {
+            parent: { __atlasCachePrefetch: { ready: Promise.resolve(), files: crossFiles } },
+            document: { baseURI: 'https://example.test/site/viewer/' },
+            caches: { open: async () => ({ match: async () => undefined, put: async (u: string) => { stored.push(u); } }) },
+            fetch: (u: string) => { fetched.push(u); return Promise.resolve({ ok: true, status: 200, headers: new Headers() }); },
+            URL, Promise, Map,
+        };
+        await vm.runInNewContext(body, iframeGlobal);
+        expect(iframeGlobal.__atlasCachePrefetch.files).toBe(crossFiles);
+        expect(fetched).toEqual([]);
+        expect(stored).toEqual([]);
+    } finally {
+        if (prevPrefetch === undefined) delete (globalThis as any).__atlasCachePrefetch;
+        else (globalThis as any).__atlasCachePrefetch = prevPrefetch;
+    }
 });
 // A main bundle in one short text: its two root paths and every feature the page drives.
 const BUNDLE = 'x,n.p="/",y;const de="/caches/";' + VIEWER_FEATURES.map(f => f[1]).join(';');

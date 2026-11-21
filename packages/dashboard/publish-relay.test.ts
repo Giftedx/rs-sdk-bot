@@ -238,3 +238,46 @@ test('the public view keeps only the icons of items it shows, and a death withou
  expect(Object.keys(p.icons).sort()).toEqual(['Dragon longsword','Lobster','Rune scimitar']);
  expect(p.bots[0].death).toEqual({at:5,text:'died'});
 });
+
+test('relay Views strip redundant defaults, raw collector blobs, unused vault tables and unreferenced icons while preserving UI contracts',()=>{
+ const raw:any={
+  now:100,
+  bots:[{
+   name:'CoinCock',pos:{x:1,z:2},
+   skills:[{name:'Prayer',level:43,currentLevel:43,xp:51000}],
+   inventory:[{id:379,baseId:379,name:'Lobster',count:2},{id:380,baseId:379,name:'Lobster',count:5}],
+   equipment:[{id:1333,baseId:1333,name:'Rune scimitar',slot:3}],
+   bank:[{id:995,baseId:995,name:'Coins',count:5000}],
+   ranks:[{board:'Overall',rank:4,delta:0,since:null,hist:[10,4]}],
+   equipmentObserved:true,practice:false,reserved:false,ground:[],spark:[],action:null,eta:null,flow:null,
+   inputs:{huge:true},progression:{step:1},guildFacts:{varps:{}},workRevision:9,sessionAttemptId:'s1',coordinatorRunId:'r1',doorStates:{a:1},
+   progressionContext:{target:{x:3200,z:3200,level:0},prayers:[true],varps:{huge:1},style:{currentStyle:1,known:true,styles:[{index:0,name:'Accurate'},{index:1,name:'Aggressive'}]}},
+  }],
+  boards:[{board:'Overall',best:{board:'Overall',rank:4,hist:[10,4]}}],
+  vault:{coins:5000,value:5000,countsComplete:true,items:[{id:995}],holders:{h:1},log:[{at:1}],flow:[{from:'A',to:'B',items:[{name:'Coins',count:5}]}]},
+  scoreboard:{available:true,version:1,at:99,skillLevels:100,skills99:1,quests:{live:2,total:3,remaining:['Q3']},items:{held:4,total:5},done:false,remaining:['Q3'],
+   metrics:{heavy:1},goals:{version:1,at:99,main:{rank:2,rankAt:98,extra:1},specialists:{rank1s:[{board:'Cooking',at:99}],targets:{big:1}},quests:{complete:2,total:3,evidence:[]},collection:{missing:[{item:'Whip',need:1}],evidence:[]},army:{maxed:1,roster:[{name:'A'}],accounts:[{big:1}]}}},
+  fleetSides:{at:99,sides:[{side:'local',accounts:[]}],orders:[{id:'o1',start:10,end:20,from:'A',to:'B',item:'Coins',count:100,state:'open',late:false}]},
+  race:{supplies:[{item:'Shark',need:10}]},
+  icons:{Lobster:379,'Rune scimitar':1333,Coins:995,Shark:385,Whip:4151,'Unused item':999},
+ };
+ const ctlMeta={goals:['wealth'],capabilities:[{id:'cap',goal:'wealth',entry:'scripts/cap.ts',consumer:'c',files:['a.ts'],checks:[{id:'unit',phase:'regression',command:['bun','test'],timeoutMs:5000}]}]};
+
+ const pub=publicView(raw);
+ expect(pub.bots[0].inventory).toEqual([{id:379,name:'Lobster',count:2},{id:380,baseId:379,name:'Lobster',count:5}]);
+ expect(pub.bots[0].ranks).toEqual([{board:'Overall',rank:4}]);
+ expect(pub.boards[0].best.hist).toEqual([10,4]);
+ expect(pub.bots[0].skills[0].currentLevel).toBe(43);
+ for(const omitted of ['equipmentObserved','practice','reserved','ground','spark','action','eta','flow'])expect(omitted in pub.bots[0]).toBe(false);
+
+ const ctl=controlView(raw,ctlMeta);
+ expect(ctl.bots[0].bank).toEqual([{id:995,name:'Coins',count:5000}]);
+ expect(ctl.bots[0].ranks).toEqual([{board:'Overall',rank:4}]);
+ for(const k of ['inputs','progression','guildFacts','workRevision','sessionAttemptId','coordinatorRunId','doorStates'])expect(k in ctl.bots[0]).toBe(false);
+ expect(ctl.bots[0].progressionContext).toEqual({target:{x:3200,z:3200,level:0},prayers:[true],style:{currentStyle:1,known:true,styles:[{index:1,name:'Aggressive'}]}});
+ expect(ctl.vault).toEqual({coins:5000,value:5000,countsComplete:true,flow:[{from:'A',to:'B',items:[{name:'Coins',count:5}]}]});
+ expect('metrics'in ctl.scoreboard).toBe(false);expect('accounts'in ctl.scoreboard.goals.army).toBe(false);expect(ctl.scoreboard.goals.collection.missing).toHaveLength(1);
+ expect(ctl.fleetSides.orders).toEqual([{end:20,from:'A',to:'B',item:'Coins',count:100,state:'open'}]);
+ expect(ctl.control.capabilities[0].checks).toEqual([{id:'unit',phase:'regression',timeoutMs:5000}]);
+ expect(Object.keys(ctl.icons).sort()).toEqual(['Coins','Lobster','Rune scimitar','Shark','Whip']);
+});

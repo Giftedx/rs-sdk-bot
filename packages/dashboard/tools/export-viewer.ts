@@ -24,7 +24,7 @@ export function nameHash(name: string) {
 // 10 minutes). A later visit finds the files in the store and this script fetches nothing.
 export function earlyCacheScript(cacheName: string, files: string[]) {
     for (const name of [cacheName, ...files]) if (!/^[\w.-]+$/.test(name) || name.includes('..')) throw Error(`cache name or file has an unsafe character: ${name}`);
-    return `<script>(async()=>{try{const b=new URL(${JSON.stringify(`caches/${cacheName}/`)},document.baseURI).pathname,c=await caches.open(${JSON.stringify(cacheName)});for(const f of ${JSON.stringify(files)})if(!await c.match(b+f))fetch(b+f).catch(()=>{})}catch{}})()</script>`;
+    return `<script>(async()=>{const g=globalThis,m=v=>!!(v&&typeof v.has==='function'&&typeof v.get==='function'&&typeof v.set==='function'&&typeof v.delete==='function');let p;try{p=g.parent&&g.parent.__atlasCachePrefetch}catch{}const f=m(p&&p.files)?p.files:(m(g.__atlasCachePrefetch&&g.__atlasCachePrefetch.files)?g.__atlasCachePrefetch.files:new Map());const s=g.__atlasCachePrefetch={files:f,ready:null};const r=(async()=>{try{if(p&&p.ready)await p.ready;const b=new URL(${JSON.stringify(`caches/${cacheName}/`)},document.baseURI).pathname,c=await caches.open(${JSON.stringify(cacheName)});for(const n of ${JSON.stringify(files)}){const u=b+n;if(f.has(u)||await c.match(u))continue;const q=fetch(u).then(async d=>{if(d&&d.ok&&d.status===200&&(!d.headers||!d.headers.get('Content-Range'))){if(c.put)await c.put(u,d);return true}f.delete(u);return false},()=>{f.delete(u);return false});f.set(u,q)}}catch{}})();s.ready=r;await r})()</script>`;
 }
 export function hostedIndex(html: string, early = '') {
     html = once(html, /<script src="\/coi-serviceworker\.js"><\/script>/, '', 'coi service worker');

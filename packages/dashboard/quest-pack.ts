@@ -12,7 +12,8 @@ export function packQuests<T extends {quests?:unknown}>(bots:T[]):{bots:any[];qu
  const out=bots.map((b:any)=>{
   if(!Array.isArray(b.quests)||!b.quests.length||sig(b.quests)!==key)return b;
   const {quests,...rest}=b,pick=(state:string)=>quests.filter((q:QuestRow)=>q.state===state).map((q:QuestRow)=>q.id);
-  return {...rest,questsDone:pick('complete'),questsStarted:pick('started'),questsUnknown:pick('unknown')};
+  const done=pick('complete'),started=pick('started'),unknown=pick('unknown');
+  return {...rest,questsDone:done,...(started.length?{questsStarted:started}:{}),...(unknown.length?{questsUnknown:unknown}:{})};
  });
  return {bots:out,questList:list};
 }

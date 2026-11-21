@@ -4,7 +4,7 @@ import {mkdirSync,mkdtempSync,rmSync,writeFileSync,cpSync,existsSync,readFileSyn
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {pushPublicCommit,run,verifyStaticBundle} from './publish';
+import {pushPublicCommit,pushSingleCommit,run,verifyStaticBundle} from './publish';
 import {publicView} from './publish-relay';
 
 test('a command that outlives its limit is stopped and reported as a failure',async()=>{
@@ -139,5 +139,31 @@ test('verifyStaticBundle enforces sibling import-page contracts including relati
   const brokenAudit=verifyStaticBundle(bundle,'Haggis',{verifyImportContract:true,allowWebpImages:true});
   expect(brokenAudit.ok).toBe(false);
   expect(brokenAudit.missing).toContain('contract:connectViewerControls-keydown-end');
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('pushSingleCommit refreshes the author timestamp when amending an older commit',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'fleet-data-')),remote=join(dir,'remote'),data=join(dir,'data');
+ const git=async(cwd:string,...args:string[])=>{
+  const result=await run(['git',...args],cwd,5000);
+  if(!result.ok)throw Error(result.out);
+  return result.out;
+ };
+ try{
+  await git(dir,'init','-q','--bare',remote);
+  mkdirSync(data);
+  await git(data,'init','-q','-b','data');
+  await git(data,'config','user.name','Publisher test');
+  await git(data,'config','user.email','publisher@example.test');
+  await git(data,'remote','add','origin',remote);
+  writeFileSync(join(data,'control.json'),'{"v":1}');
+  await git(data,'add','-A');
+  await git(data,'commit','-q','--date=2020-01-01T00:00:00Z','-m','Old commit');
+  const beforeSec=Math.floor(Date.now()/1000);
+  writeFileSync(join(data,'control.json'),'{"v":2}');
+  expect(await pushSingleCommit(data,'data','Publish control')).toBe('pushed');
+  const authorSec=Number(await git(data,'log','-1','--format=%at'));
+  expect(authorSec).toBeGreaterThanOrEqual(beforeSec-5);
+  expect(await git(data,'rev-list','--count','HEAD')).toBe('1');
  }finally{rmSync(dir,{recursive:true,force:true});}
 });

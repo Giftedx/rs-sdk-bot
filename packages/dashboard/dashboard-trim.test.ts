@@ -15,6 +15,8 @@ test('packed quests expand to the same journal and shrink the bot row',()=>{
  const packed=packQuests(bots);
  expect(packed.questList).toHaveLength(4);
  expect(packed.bots[0].quests).toBeUndefined();expect(packed.bots[0].questsDone).toEqual([1,3]);expect(packed.bots[0].questsStarted).toEqual([2]);
+ expect('questsUnknown' in packed.bots[0]).toBe(false);
+ expect(packed.bots[1].questsDone).toEqual([]);expect('questsStarted' in packed.bots[1]).toBe(false);
  expect(packed.bots[2].quests).toBeNull();                       // never observed stays null
  expect(packed.bots[3].quests).toHaveLength(1);                   // a different journal stays whole
  expect(JSON.stringify(packed.bots).length).toBeLessThan(before.length);

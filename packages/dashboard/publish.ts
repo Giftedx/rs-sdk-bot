@@ -90,11 +90,11 @@ async function ensureClone(){
  return main;
 }
 // Keep the private control branch at one commit so old control snapshots leave its history.
-async function pushSingleCommit(dir:string,branch:string,message:string):Promise<string>{
+export async function pushSingleCommit(dir:string,branch:string,message:string):Promise<string>{
  await git(dir,'add','-A');
  const hasHead=(await git(dir,'rev-parse','--verify','HEAD')).ok;
  if(hasHead&&(await git(dir,'diff','--cached','--quiet')).ok)return 'unchanged';
- const c=await (hasHead?git(dir,'commit','--amend','-q','-m',message):git(dir,'commit','-q','-m',message));
+ const c=await (hasHead?git(dir,'commit','--amend','--date=now','-q','-m',message):git(dir,'commit','-q','-m',message));
  if(!c.ok)throw Error(`commit ${branch}: ${c.out}`);
  const p=await git(dir,'push','--force','-q','origin',`HEAD:refs/heads/${branch}`);
  if(!p.ok)throw Error(`push ${branch}: ${p.out}`);
