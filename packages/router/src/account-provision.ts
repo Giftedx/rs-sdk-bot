@@ -3,7 +3,7 @@ import {resolve,join} from 'node:path';
 import {NAMES,pickName,type Role} from '../../core/src/names';
 import {accountPassword,createAccount} from '../../../scripts/fleet';
 import type {ProvisionCrew} from '../../../scripts/provision-readiness';
-import {reserveFleetOwner} from '../../../scripts/fleet-owner-claim';
+import {reserveFleetOwner} from '../../core/src/fleet-owner-claim';
 import {mySide} from '../../core/src/fleet';
 import {killTree} from '../../core/src/proc';
 
