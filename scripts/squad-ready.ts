@@ -540,16 +540,41 @@ export function meetNear(pos: { x: number; z: number }): { bank: string; x: numb
     const rows = BANK_MEETS.map(r => ({ bank: r.bank, x: r.tiles[0]![0], z: r.tiles[0]![1] }));
     return rows.sort((a, b) => cheb(a, pos) - cheb(b, pos))[0]!;
 }
+let collidingTradeNames: Set<string> | undefined;
+function isCollidingTradeName(name: string): boolean {
+    if (!collidingTradeNames) {
+        const counts = new Map<string, number>();
+        try {
+            const rows = JSON.parse(readFileSync(join(resolve(import.meta.dir, '..'), 'knowledge', 'items.json'), 'utf8')) as { name?: string; debugname?: string; tradeable?: boolean }[];
+            for (const r of rows) {
+                if (!r.name || r.tradeable === false || /^cert_/.test(r.debugname ?? '')) continue;
+                const k = r.name.toLowerCase();
+                counts.set(k, (counts.get(k) ?? 0) + 1);
+            }
+        } catch {}
+        collidingTradeNames = new Set([...counts].filter(([, c]) => c > 1).map(([k]) => k));
+    }
+    return collidingTradeNames.has(name.toLowerCase());
+}
 // One fleet order command for each donor and receiver pair: `bun scripts/fleet-order.ts <from> <to> <count> <item>`
 // with `--with` for each further line, to run when the pause is lifted (an order's window starts at its writing).
-export function orderCommands(moves: readonly Move[], posOf: (name: string) => { x: number; z: number }): { from: string; to: string; meet: string; lines: { item: string; count: number }[]; command: string }[] {
+export function orderCommands(moves: readonly Move[], posOf: (name: string) => { x: number; z: number }): { from: string; to: string; meet: string; lines: { item: string; count: number; itemId?: number }[]; command: string }[] {
     const pairs = new Map<string, Move[]>();
     for (const m of moves) pairs.set(`${m.from}>${m.to}`, [...(pairs.get(`${m.from}>${m.to}`) ?? []), m]);
     return [...pairs.values()].map(rows => {
-        const lines = [...rows.reduce((acc, m) => acc.set(m.item, (acc.get(m.item) ?? 0) + m.count), new Map<string, number>())].map(([item, count]) => ({ item, count }));
+        const grouped = new Map<string, { item: string; count: number; itemId?: number }>();
+        for (const m of rows) {
+            const itemId = isCollidingTradeName(m.item) ? m.id : undefined;
+            const k = `${itemId ?? ''}\0${m.item}`;
+            const cur = grouped.get(k);
+            grouped.set(k, { item: m.item, count: (cur?.count ?? 0) + m.count, ...(itemId !== undefined ? { itemId } : {}) });
+        }
+        const lines = [...grouped.values()];
         const first = lines[0]!, meet = meetNear(posOf(rows[0]!.to)).bank;
+        const firstIdFlag = first.itemId !== undefined ? ` --id ${first.itemId}` : '';
+        const extraFlags = lines.slice(1).map(l => l.itemId !== undefined ? ` --with-id ${l.itemId} "${l.count} ${l.item}"` : ` --with "${l.count} ${l.item}"`).join('');
         return { from: rows[0]!.from, to: rows[0]!.to, meet, lines,
-            command: `MEET=${meet} TAKER_WAITS=1 bun scripts/fleet-order.ts ${rows[0]!.from} ${rows[0]!.to} ${first.count} ${first.item}${lines.slice(1).map(l => ` --with "${l.count} ${l.item}"`).join('')}` };
+            command: `MEET=${meet} TAKER_WAITS=1 bun scripts/fleet-order.ts ${rows[0]!.from} ${rows[0]!.to} ${first.count} ${first.item}${firstIdFlag}${extraFlags}` };
     });
 }
 
@@ -587,6 +612,7 @@ export const PROFILE_SHOP: Readonly<Record<string, string>> = {
     taverley: 'herbloreshop',
     siegfried: 'legendsguildshop',
     helemos: 'dragonaxeshop',
+    bob: 'axeshop',
 };
 export function shopSource(name: string, debugname: string, shops: readonly Shop[], profiles: Readonly<Record<string, { items: { re: RegExp }[]; need?: { skill: string; level: number } }>> = PROFILES): string | null {
     const out: string[] = [];
@@ -742,7 +768,7 @@ if (import.meta.main) {
         const fleetOwners = new Map([...owners].map(([n, o]) => [n, { side: o.side, server: o.server }]));
         for (const o of orderCommands(plan.moves, name => fleet.find(a => a.name === name)!.pos)) {
             const meet = BANK_MEETS.find(r => r.bank === o.meet)!.meet;
-            const order = { ...makeOrder(o.from, o.to, o.lines[0]!.count, o.lines[0]!.item, now, 15, 40, fleetOwners, meet, o.lines.slice(1)), takerWaits: true as const };
+            const order = { ...makeOrder(o.from, o.to, o.lines[0]!.count, o.lines[0]!.item, now, 15, 40, fleetOwners, meet, o.lines.slice(1), o.lines[0]!.itemId), takerWaits: true as const };
             console.log(`ORDER_FILE ${writeFleetOrder(orderDir, order)}`);
         }
     }

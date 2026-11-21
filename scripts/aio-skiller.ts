@@ -146,7 +146,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'herblore',method:'meats',script:'scripts/druid-meats.ts',description:'Gather/prepare meats for Druidic Ritual Herblore unlock'},
  {skill:'herblore',method:'specialist',script:'scripts/herblore-specialist.ts',description:'Fresh-clock 1-to-99 Herblore via Games necklace Druidic Ritual and Edgeville 10-potion bank cycles'},
  // Runecraft
- {skill:'runecraft',method:'bank-craft',script:'scripts/rune-bank-craft.ts',description:'Craft banked essence at best unlocked F2P altar (air/mind/water/earth/fire/body)'},
+ {skill:'runecraft',method:'bank-craft',script:'scripts/rune-bank-craft.ts',description:'Craft banked essence at best unlocked altar (air/mind/water/earth/fire/body/cosmic)'},
  {skill:'runecraft',method:'nature',script:'scripts/microbot-rune-trip.ts',description:'Shilo Village Nature altar runecrafting trips'},
  {skill:'runecraft',method:'supply',script:'scripts/rune-supply.ts',description:'Full fresh-account Rune Mysteries + essence + air runecraft chain'},
  {skill:'runecraft',method:'air',script:'scripts/generated/rcair.ts',description:'Direct Air altar runecrafting'},
@@ -196,6 +196,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'foraging',method:'care',script:'scripts/microbot-c-care.ts',description:'Kitten care (feed/wool/stroke), Miscellania weeding, and Druid pouch filling'},
  {skill:'foraging',method:'miscellania-coffer',script:'scripts/microbot-misc-coffer.ts',description:'Manage Kingdom of Miscellania coffer and approval'},
  {skill:'foraging',method:'qol',script:'scripts/microbot-c-qol.ts',description:'Auto Cannon refill, prayer hold, special bar enable, and inventory drop patterns'},
+ {skill:'foraging',method:'crystal-chest',script:'scripts/crystal-chest.ts',description:'Combine key halves and open Taverley crystal chests from Falador West Bank for uncut dragonstones'},
 ];
 
 export {DEFAULT_METHOD};

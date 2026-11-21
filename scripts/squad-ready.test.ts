@@ -201,6 +201,13 @@ describe('stagingPlan', () => {
         const plan = stagingPlan([a], [a, donor], gear, rule, NOW, undefined, name);
         const orders = orderCommands(plan.moves, () => a.pos);
         expect(orders.map(o => o.command)).toEqual(['MEET=edgeville TAKER_WAITS=1 bun scripts/fleet-order.ts Donor A 1 Antipoison(3) --with "2 Law rune"']);
+        const colliding = orderCommands([
+            { from: 'Donor', to: 'A', id: TRIBRID_BIS_ITEMS.blackVambs, item: 'Dragon vambraces', count: 1, blocking: true, distance: 1, donorBankAgeHours: 1, reserved: false },
+            { from: 'Donor', to: 'A', id: TRIBRID_BIS_ITEMS.blackChaps, item: 'Dragonhide chaps', count: 1, blocking: true, distance: 1, donorBankAgeHours: 1, reserved: false },
+        ], () => a.pos);
+        expect(colliding.map(o => o.command)).toEqual([
+            'MEET=edgeville TAKER_WAITS=1 bun scripts/fleet-order.ts Donor A 1 Dragon vambraces --id 2491 --with-id 2497 "1 Dragonhide chaps"',
+        ]);
         expect(meetNear({ x: 2655, z: 3283 }).bank).toBe('ardougne-south');
     });
     test('the report names the verdict, the kit and each source', () => {

@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
-import {settleRuneEntryModal,dispatchRuneEntry,runeEntryWarning,runeEntrySnapshot,runeBankTarget,runeBankOptions,runeBankXpBalanced,runRuneBankCraft,runeBankBalanced,runeBankDone,runeBankOk,chooseRuneAltar,RUNE_ALTARS,ruinTarget,inRuinFootprint,runeAltarStaging,RUINS,type RuneBankLedger} from './rune-bank-craft';
+import {settleRuneEntryModal,dispatchRuneEntry,runeEntryWarning,runeEntrySnapshot,runeBankTarget,runeBankOptions,runeBankXpBalanced,runRuneBankCraft,runeBankBalanced,runeBankDone,runeBankOk,chooseRuneAltar,RUNE_ALTARS,COSMIC_ALTAR,inZanarisCosmic,ruinTarget,inRuinFootprint,runeAltarStaging,RUINS,type RuneBankLedger} from './rune-bank-craft';
 import type {Session} from '../packages/core/src/inprocess';
 import type {BotWorldState} from '../vendor/rs-sdk/sdk/types';
 import {parseJm2} from '../packages/knowledge/src/jm2';
@@ -234,4 +234,32 @@ test('pass needs observed progress, an empty pack, no stop and a finished order'
  // No essence at entry is acquisition work, not a pass.
  expect(runeBankOk({...base,ledger:ledger({essence0:0,consumed:0,crafted:0,air:30})})).toBe(false);
  expect(runeBankOk({...base,level0:99,level:99,bankEssence:7,ledger:ledger({essence0:7,essence:7,consumed:0,crafted:0,air:30})})).toBe(true);
+});
+
+test('explicit RUNE_ALTAR=cosmic validates pinned Zanaris ruins, Cosmic altar, and 2471 portal',()=>{
+ const root=new URL('../vendor/rs-sdk/server/content/',import.meta.url);
+ const rows=readFileSync(new URL('scripts/skill_runecraft/configs/runecraft.dbrow',root),'utf8');
+ const pack=readFileSync(new URL('pack/obj.pack',root),'utf8');
+ const locPack=readFileSync(new URL('pack/loc.pack',root),'utf8');
+ const row=rows.split('[runecraft_cosmic]')[1]!.split('[')[0]!;
+ const field=(name:string)=>row.match(new RegExp(`^data=${name},(.+)$`,'m'))![1]!.trim();
+ expect(Number(field('level'))).toBe(COSMIC_ALTAR.level);
+ expect(Number(field('experience'))/10).toBe(COSMIC_ALTAR.xp);
+ expect(Number(field('multiplier'))).toBe(COSMIC_ALTAR.multiplier);
+ expect(pack).toContain(`${COSMIC_ALTAR.talisman}=cosmic_talisman`);
+ expect(pack).toContain(`${COSMIC_ALTAR.rune}=cosmicrune`);
+ expect(locPack).toContain(`2458=cosmictemple_ruined`);
+ expect(locPack).toContain(`${COSMIC_ALTAR.portal}=cosmictemple_exit_portal`);
+ const templeAltar=parseJm2('m33_75.jm2',readFileSync(new URL('maps/m33_75.jm2',root),'utf8')).locs.find(l=>l.id===2484);
+ expect(templeAltar).toMatchObject({x:2141,z:4832,level:0});
+ expect(Math.max(Math.abs(COSMIC_ALTAR.inside.x-templeAltar!.x),Math.abs(COSMIC_ALTAR.inside.z-templeAltar!.z))).toBeLessThanOrEqual(2);
+ const {at,q}=ruinTarget(COSMIC_ALTAR),file=q.src.slice('maps/'.length);
+ const placed=parseJm2(file,readFileSync(new URL(q.src,root),'utf8')).locs.filter(l=>l.id===q.id);
+ expect(placed.map(({x,z,level,shape,angle})=>({x,z,level,shape,angle}))).toEqual([{...at,shape:q.shape,angle:q.angle}]);
+ expect(chooseRuneAltar(99,new Set([1454]),'cosmic').altar).toBe(COSMIC_ALTAR);
+ expect(()=>chooseRuneAltar(26,new Set([1454]),'cosmic')).toThrow('requires Runecraft27');
+ expect(runeBankOptions({altar:'cosmic',essenceTarget:27}).altar).toBe('cosmic');
+ expect(inZanarisCosmic({worldX:3173,worldZ:9501,level:0})).toBe(true);
+ expect(inZanarisCosmic({worldX:3152,worldZ:9578,level:0})).toBe(true);
+ expect(inZanarisCosmic({worldX:3092,worldZ:3243,level:0})).toBe(false);
 });

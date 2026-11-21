@@ -450,4 +450,8 @@ test('mainland Skulgrimen, Shantay, black armour, Wydin chocolate, and Jiminua q
     expect(PROFILES.helemos!.door!.inside({ worldX: 2901, worldZ: 3510, level: 0 })).toBe(true);
     expect(PROFILES.helemos!.door!.inside({ worldX: 2902, worldZ: 3510, level: 0 })).toBe(false);
     expect(selectItems(PROFILES.helemos!.items, 'dragon battleaxe|dragon mace')).toHaveLength(2);
+    expect(PROFILES.bob!.npc.test('Bob')).toBe(true);
+    expect(PROFILES.bob!.npcSpot).toEqual({ x: 3231, z: 3203 });
+    expect(PROFILES.bob!.bankSpot).toEqual({ x: 3092, z: 3243 });
+    expect(selectItems(PROFILES.bob!.items, 'steel axe|iron axe')).toHaveLength(2);
 });

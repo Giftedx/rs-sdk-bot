@@ -1764,6 +1764,19 @@
    "description": "Standing banker/mule account that receives and holds fleet supplies"
   },
   {
+   "id": "logistics:charge-glory",
+   "category": "logistics",
+   "name": "charge-glory",
+   "script": "scripts/charge-glory.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "acquire"
+   ],
+   "skills": [],
+   "description": "Recharge uncharged or partial amulets of glory at the Fountain of Heroes from Falador West Bank"
+  },
+  {
    "id": "logistics:coin-courier",
    "category": "logistics",
    "name": "coin-courier",
@@ -4076,6 +4089,19 @@
    "description": "Kitten care (feed/wool/stroke), Miscellania weeding, and Druid pouch filling"
   },
   {
+   "id": "skiller:foraging:crystal-chest",
+   "category": "skiller",
+   "name": "foraging:crystal-chest",
+   "script": "scripts/crystal-chest.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "acquire"
+   ],
+   "skills": [],
+   "description": "Combine key halves and open Taverley crystal chests from Falador West Bank for uncut dragonstones"
+  },
+  {
    "id": "skiller:foraging:feathers",
    "category": "skiller",
    "name": "foraging:feathers",
@@ -4628,7 +4654,7 @@
    "skills": [
     "runecraft"
    ],
-   "description": "Craft banked essence at best unlocked F2P altar (air/mind/water/earth/fire/body)"
+   "description": "Craft banked essence at best unlocked altar (air/mind/water/earth/fire/body/cosmic)"
   },
   {
    "id": "skiller:runecraft:nature",
@@ -56980,6 +57006,118 @@
    "maxBatch": 1000
   },
   {
+   "id": "shop:bob:1265",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "bob",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Bronze pickaxe$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "2",
+     "FLOAT": "1002",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_lumbridge/configs/lumbridge.inv:9",
+   "effects": {
+    "items": {
+     "1265": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 2
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:bob:1265"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 2
+   },
+   "maxBatch": 1000
+  },
+  {
+   "id": "shop:bob:1351",
+   "routeId": "market:shop-buy",
+   "ladderIds": [],
+   "sourceEntry": "scripts/shop-buyer.ts",
+   "step": {
+    "script": "scripts/shop-buyer.ts",
+    "args": [
+     "bob",
+     "1200"
+    ],
+    "env": {
+     "ITEMS": "^Bronze axe$",
+     "STOCK_TARGET": "1",
+     "STOP_AT_TARGET": "1",
+     "BANK_PACK": "1",
+     "BANK_AT": "0",
+     "MAX_SPEND": "24",
+     "FLOAT": "1024",
+     "COIN_RESERVE": "500"
+    }
+   },
+   "source": "scripts/areas/area_lumbridge/configs/lumbridge.inv:10",
+   "effects": {
+    "items": {
+     "1351": 1
+    }
+   },
+   "rate": {
+    "unitsPerTick": null,
+    "basis": "unknown",
+    "evidence": "Whole-job rate requires a matching practice or live measurement"
+   },
+   "costs": {
+    "setupTicks": null,
+    "travelTicks": null,
+    "acquisitionTicks": null,
+    "unlockTicks": null
+   },
+   "repeatable": true,
+   "inputs": {
+    "995": 24
+   },
+   "requirements": {
+    "facts": {
+     "fact": "shop-stock:bob:1351"
+    }
+   },
+   "execution": {
+    "stockEnv": [
+     "STOCK_TARGET"
+    ],
+    "spendPerUnit": 24
+   },
+   "maxBatch": 1000
+  },
+  {
    "id": "shop:catherby:39",
    "routeId": "market:shop-buy",
    "ladderIds": [],
@@ -95964,6 +96102,7 @@
     "logistics:walk-edge",
     "logistics:restore-prayer",
     "logistics:cure-poison",
+    "logistics:charge-glory",
     "logistics:relocate-bank",
     "logistics:relocate-knight",
     "logistics:arrive-draynor"
@@ -96231,7 +96370,8 @@
     "skiller:foraging:grapes",
     "skiller:foraging:care",
     "skiller:foraging:miscellania-coffer",
-    "skiller:foraging:qol"
+    "skiller:foraging:qol",
+    "skiller:foraging:crystal-chest"
    ]
   },
   {
@@ -96361,6 +96501,7 @@
     "skiller:foraging:care",
     "skiller:foraging:miscellania-coffer",
     "skiller:foraging:qol",
+    "skiller:foraging:crystal-chest",
     "fighter:chicken",
     "fighter:cow",
     "fighter:druid",
@@ -96454,6 +96595,7 @@
     "logistics:walk-edge",
     "logistics:restore-prayer",
     "logistics:cure-poison",
+    "logistics:charge-glory",
     "logistics:relocate-bank",
     "logistics:relocate-knight",
     "logistics:arrive-draynor",
@@ -96665,6 +96807,16 @@
    ]
   },
   {
+   "script": "scripts/charge-glory.ts",
+   "intents": [
+    "acquire"
+   ],
+   "skills": [],
+   "routeIds": [
+    "logistics:charge-glory"
+   ]
+  },
+  {
    "script": "scripts/claim-account.ts",
    "intents": [
     "service"
@@ -96772,6 +96924,16 @@
    ],
    "routeIds": [
     "skiller:crafting:specialist"
+   ]
+  },
+  {
+   "script": "scripts/crystal-chest.ts",
+   "intents": [
+    "acquire"
+   ],
+   "skills": [],
+   "routeIds": [
+    "skiller:foraging:crystal-chest"
    ]
   },
   {

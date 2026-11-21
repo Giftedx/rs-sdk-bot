@@ -464,7 +464,7 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   'microbot-b-kbd','microbot-trawler-trip','microbot-b-trawler','pvp-kit-stage','buy-owned-sword','sell-owned-ge-item','foodcourier','supply-bootstrap',
   'microbot-c-clues','microbot-c-clue-guardian','microbot-c-clue-puzzle','quest-cook-job','quest-order','quest-items-order','quest-sweep',
   'generated/quest-hero-owned','generated/quest-legends-owned','generated/quest-tbwt-owned','generated/quest-itwatchtower-owned',
-  'owned-logistics-entry','ranged-progression-case',
+  'owned-logistics-entry','ranged-progression-case','crystal-chest','charge-glory',
  ]);
  if(boundedServiceEntries.has(entryName)){
   // The entry states its bound: a CAP or TICKS setting, or a count among its positional arguments. No number, a zero

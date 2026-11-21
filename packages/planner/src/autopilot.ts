@@ -17,7 +17,7 @@ import { parseStep, tokenizeStep, type Step } from '../../core/src/chain-step';
 import { alchSupplies } from './alch-plan';
 import { validateBankRouteJob, type BankRouteJob } from '../../core/src/bank-trip';
 import { resolveRouteStep, resolveSkillerMethod } from '../../../scripts/aio-route-step';
-import { SQUAD_FOOD_HEAL, SQUAD_POTION_ALIASES, squadKeeps, squadRows, type SquadInput } from './squad';
+import { SQUAD_FOOD_HEAL, SQUAD_POTION_ALIASES, squadKeeps, squadRows, squadTarget, type SquadInput } from './squad';
 import { ownsWearableMeleeWeapon, type CombatFocus } from './gear-progression';
 import { GEAR_GE_ID, GEAR_GE_PILOT, GEAR_SHOP_PILOT, gearJobFor, gearShopId, type GearWantRow } from './gear-want-jobs';
 import { cowFoodIds, foodTotalHeal } from '../../core/src/sustain';
@@ -124,7 +124,7 @@ export type Template = {
 export type Lack = { of: readonly string[]; count: number };
 // `send`: a free account (this side first, then another side) gives the item; scripts/autopilot.ts places the fleet
 // order, and the account takes the band on the pass after the item arrives.
-export type ItemFunding = { from: string; to: string; item: string; count: number; template: string };
+export type ItemFunding = { from: string; to: string; item: string; count: number; template: string; itemId?: number };
 // A free account that can give: no enabled job on its side, no stop file, no open order. `items` by norm() name.
 export type Stock = { name: string; side: string; items: Record<string, number> };
 // Items a kit buy may order on the Grand Exchange, by norm() name: the item id, its display name and the unit price cap.
@@ -359,39 +359,43 @@ export const selfServePilot = (t: Template): boolean => !!t.pilot && !t.tier && 
 // Inputs that feed a bill line: a feather is needed while headless arrows are short, even with the feather line met.
 // A steel bar is on no line of the bill: it is needed while cannonballs are short (one bar casts 4, cannonballs.rs2).
 export const FEEDS: Record<string, string[]> = {
-    feather: ['headless arrow'],
-    'arrow shaft': ['headless arrow'],
+    feather: ['headless arrow', 'rune arrow', 'rune arrow(p)'],
+    'arrow shaft': ['headless arrow', 'rune arrow', 'rune arrow(p)'],
     'raw lobster': ['lobster'],
     'raw karambwanji': ['raw karambwan', 'cooked karambwan'],
     'raw karambwan': ['cooked karambwan'],
     cake: ['chocolate cake'],
     'chocolate bar': ['chocolate cake', 'chocolate dust'],
-    log: ['arrow shaft', 'headless arrow'],
-    logs: ['arrow shaft', 'headless arrow'],
+    log: ['arrow shaft', 'headless arrow', 'rune arrow', 'rune arrow(p)'],
+    logs: ['arrow shaft', 'headless arrow', 'rune arrow', 'rune arrow(p)'],
     flax: ['bow string'],
     'magic log': ['magic shortbow', 'unstrung magic shortbow'],
     'bow string': ['magic shortbow', 'yew shortbow'],
     'unstrung magic shortbow': ['magic shortbow'],
-    'rune essence': ['air rune', 'water rune', 'earth rune', 'fire rune'],
+    'rune essence': ['air rune', 'water rune', 'earth rune', 'fire rune', 'cosmic rune'],
     'steel bar': ['cannonball', 'nail'],
     'gold ore': ['gold bar'],
-    'gold bar': ['sapphire ring', 'ring of recoil', 'emerald ring', 'ring of dueling(8)', 'dragonstone ring', 'dragon necklace', 'unstrung dragonstone amulet', 'strung dragonstone amulet', 'amulet of glory'],
+    'gold bar': ['sapphire ring', 'ring of recoil', 'emerald ring', 'ring of dueling(8)', 'dragonstone ring', 'dragon necklace', 'unstrung dragonstone amulet', 'strung dragonstone amulet', 'amulet of glory', 'amulet of glory(4)'],
     'uncut sapphire': ['sapphire', 'sapphire ring', 'ring of recoil'],
     sapphire: ['sapphire ring', 'ring of recoil'],
     'sapphire ring': ['ring of recoil'],
     'uncut emerald': ['emerald', 'emerald ring', 'ring of dueling(8)'],
     emerald: ['emerald ring', 'ring of dueling(8)'],
     'emerald ring': ['ring of dueling(8)'],
-    'uncut dragonstone': ['dragonstone', 'dragonstone ring', 'dragon necklace', 'unstrung dragonstone amulet', 'strung dragonstone amulet', 'amulet of glory'],
-    dragonstone: ['dragonstone ring', 'dragon necklace', 'unstrung dragonstone amulet', 'strung dragonstone amulet', 'amulet of glory'],
+    'uncut dragonstone': ['dragonstone', 'dragonstone ring', 'dragon necklace', 'unstrung dragonstone amulet', 'strung dragonstone amulet', 'amulet of glory', 'amulet of glory(4)'],
+    dragonstone: ['dragonstone ring', 'dragon necklace', 'unstrung dragonstone amulet', 'strung dragonstone amulet', 'amulet of glory', 'amulet of glory(4)'],
     'dragonstone ring': ['ring of wealth'],
-    'unstrung dragonstone amulet': ['strung dragonstone amulet', 'amulet of glory'],
-    'strung dragonstone amulet': ['amulet of glory'],
-    'ball of wool': ['strung dragonstone amulet', 'amulet of glory'],
-    'cosmic rune': ['ring of recoil', 'ring of dueling(8)', 'amulet of glory', 'ring of wealth'],
+    'unstrung dragonstone amulet': ['strung dragonstone amulet', 'amulet of glory', 'amulet of glory(4)'],
+    'strung dragonstone amulet': ['amulet of glory', 'amulet of glory(4)'],
+    'amulet of glory': ['amulet of glory(4)'],
+    'amulet of glory(1)': ['amulet of glory(4)'],
+    'amulet of glory(2)': ['amulet of glory(4)'],
+    'amulet of glory(3)': ['amulet of glory(4)'],
+    'ball of wool': ['strung dragonstone amulet', 'amulet of glory', 'amulet of glory(4)'],
+    'cosmic rune': ['ring of recoil', 'ring of dueling(8)', 'amulet of glory', 'amulet of glory(4)', 'ring of wealth'],
     'air rune': ['ring of dueling(8)'],
-    'earth rune': ['amulet of glory', 'ring of wealth'],
-    'water rune': ['amulet of glory', 'ring of wealth'],
+    'earth rune': ['amulet of glory', 'amulet of glory(4)', 'ring of wealth'],
+    'water rune': ['amulet of glory', 'amulet of glory(4)', 'ring of wealth'],
     'runite bar': ['rune arrowtips', 'rune arrow', 'rune arrow(p)', 'rune full helm', 'rune platebody', 'rune plateleg', 'rune kiteshield'],
     'runite ore': ['runite bar'],
     coal: ['runite bar'],
@@ -403,8 +407,9 @@ export const FEEDS: Record<string, string[]> = {
     dragon_leather_black: ['black_dragonhide_body', 'black_dragonhide_chaps', 'black_dragon_vambraces'],
     'dragon dagger': ['dragon dagger(p)'],
     'weapon poison': ['dragon dagger(p)', 'rune arrow(p)'],
-    keyhalf1: ['crystal key'],
-    keyhalf2: ['crystal key'],
+    'crystal key': ['uncut dragonstone', 'dragonstone', 'unstrung dragonstone amulet', 'strung dragonstone amulet', 'amulet of glory', 'amulet of glory(4)'],
+    keyhalf1: ['crystal key', 'uncut dragonstone', 'dragonstone', 'unstrung dragonstone amulet', 'strung dragonstone amulet', 'amulet of glory', 'amulet of glory(4)'],
+    keyhalf2: ['crystal key', 'uncut dragonstone', 'dragonstone', 'unstrung dragonstone amulet', 'strung dragonstone amulet', 'amulet of glory', 'amulet of glory(4)'],
     'vial of water': [
         'guam potion (unf)', 'tarromin potion (unf)', 'harralander potion (unf)', 'ranarr potion (unf)', 'toadflax potion (unf)',
         'irit potion (unf)', 'avantoe potion (unf)', 'kwuarm potion (unf)', 'snapdragon potion (unf)', 'cadantine potion (unf)',
@@ -488,7 +493,7 @@ const feedUnits = (item: string, output: string) => {
     if (item === 'raw karambwanji') return 3;
     if (item === 'steel bar') return output === 'nail' ? 0.5 : 1 / 4;
     if (item === 'air rune' && output === 'ring of dueling(8)') return 3;
-    if ((item === 'earth rune' || item === 'water rune') && (output === 'amulet of glory' || output === 'ring of wealth')) return 15;
+    if ((item === 'earth rune' || item === 'water rune') && (output === 'amulet of glory' || output === 'amulet of glory(4)' || output === 'ring of wealth')) return 15;
     if ((item === 'weapon poison' || item === 'dragon scale dust' || item === 'blue dragon scale' || item === 'kwuarm' || item === 'unidentified kwuarm' || item === 'kwuarm potion (unf)') && output === 'rune arrow(p)') return 1 / 5;
     if (item === 'runite bar') return output === 'rune arrowtips' || output === 'rune arrow' || output === 'rune arrow(p)' ? 1 / 15 : output === 'rune platebody' ? 5 : output === 'rune full helm' ? 2 : output === 'rune plateleg' || output === 'rune kiteshield' ? 3 : 1;
     if (item === 'coal') return 8;
@@ -517,11 +522,30 @@ export function unitValue(item: string, bill: readonly BillRow[], prices: Readon
 // name is no item's name takes the highest cost of the item ids of the line (supply-bill.ts idsFor): every unfinished
 // potion is the item "Unfinished potion", and the line "mort myre fungus" is the item "Mort myre fungi". Without the
 // entry a maker of such a line has no value.
+const PRICE_EXACT_ALIAS_IDS: readonly (readonly [number, string])[] = [
+    [1747, 'dragonhide_black'],
+    [2509, 'dragon_leather_black'],
+    [2503, 'black_dragonhide_body'],
+    [2497, 'black_dragonhide_chaps'],
+    [2491, 'black_dragon_vambraces'],
+    [985, 'keyhalf1'],
+    [987, 'keyhalf2'],
+    [1683, 'unstrung dragonstone amulet'],
+    [1702, 'strung dragonstone amulet'],
+];
 export function priceTable(items: readonly { id: number; name?: string; debugname?: string; cost?: number }[], bill: readonly BillRow[]): Record<string, number> {
     const prices: Record<string, number> = {}, cost = new Map(items.map(i => [i.id, i.cost ?? 0]));
     for (const i of items) if (typeof i.name === 'string' && !/^cert_/.test(i.debugname ?? '') && !(norm(i.name) in prices)) prices[norm(i.name)] = i.cost ?? 0;
+    for (const [id, alias] of PRICE_EXACT_ALIAS_IDS) if (cost.has(id)) {
+        const c = cost.get(id)!;
+        if (!(alias in prices)) prices[alias] = c;
+        if (!(norm(alias) in prices)) prices[norm(alias)] = c;
+    }
     for (const r of bill) for (const name of [r.item, ...(r.aliases ?? [])])
         if (r.ids.length && !(norm(name) in prices)) prices[norm(name)] = Math.max(...r.ids.map(id => cost.get(id) ?? 0));
+    if ('crystal key' in prices) prices['crystal key'] = Math.max(prices['crystal key']!, 500);
+    if ('keyhalf1' in prices) prices.keyhalf1 = Math.max(prices.keyhalf1!, 250);
+    if ('keyhalf2' in prices) prices.keyhalf2 = Math.max(prices.keyhalf2!, 250);
     return prices;
 }
 
@@ -812,7 +836,7 @@ function armourItemsFor(a: Acct, inp: Inputs, styles: KitStyles = { melee: true,
 }
 function toolUpgradeNeed(a: Acct, routeDemand: ReadonlySet<string>): string | null {
     const miningDemand = ['iron ore', 'mithril bar', 'adamantite bar', 'steel bar', 'rune essence', 'coal'].some(x => routeDemand.has(x));
-    const wcDemand = ['yew log', 'maple log', 'yew shortbow', 'arrow shaft'].some(x => routeDemand.has(x));
+    const wcDemand = ['yew log', 'maple log', 'yew shortbow', 'magic log', 'magic logs', 'magic shortbow', 'unstrung magic shortbow', 'arrow shaft'].some(x => routeDemand.has(x));
     if (miningDemand) {
         const mining = a.skills.Mining ?? 1;
         for (const [lvl, item] of PICKAXE_LADDER) {
@@ -1060,6 +1084,15 @@ export function goalNeeds(inp: Inputs, mine: readonly Acct[]): GoalNeed[] {
     // The gang squad's stock targets, after every kit line: a row has no coin budget, so it never takes coins that a
     // member's own kit buy or a route purchase needs, and it never counts toward their funding.
     for (const row of squadRows(inp.squad, item => inp.prices[item] ?? inp.market?.[item]?.limit, SQUAD_UNIT_COST)) needs.push({ names: row.names, short: row.short, consumer: row.consumer, account: row.account });
+    if (inp.squad?.active) {
+        const arrowTarget = squadTarget('arrow', inp.squad.hours);
+        for (const m of inp.squad.members) {
+            const shortPoison = Math.max(0, arrowTarget - (m.items['rune arrow(p)'] ?? 0));
+            if (shortPoison > 0 && !needs.some(n => n.account === m.name.toLowerCase() && n.names[0] === 'rune arrow(p)')) {
+                needs.push({ names: ['rune arrow(p)'], short: shortPoison, consumer: `gang squad ${m.name}: poison rune arrows`, account: m.name.toLowerCase() });
+            }
+        }
+    }
     for (const row of specialistStagingNeeds(inp, mine)) needs.push(row);
     return needs;
 }
@@ -1226,8 +1259,11 @@ export function plan(input: Inputs): Assignment[] {
         strictDirectCache = new Map<string, number>();
         downstreamCache = new Map<string, number>();
         for (const d of demand) if (!d.budget && d.short > 0) {
-            for (const name of d.names) directCache.set(name, (directCache.get(name) ?? 0) + d.short);
-            if (d.names.length === 1) strictDirectCache.set(d.names[0]!, (strictDirectCache.get(d.names[0]!) ?? 0) + d.short);
+            for (const name of new Set(d.names.flatMap(n => [n, norm(n)]))) directCache.set(name, (directCache.get(name) ?? 0) + d.short);
+            if (d.names.length === 1) {
+                for (const name of new Set([d.names[0]!, norm(d.names[0]!)]))
+                    strictDirectCache.set(name, (strictDirectCache.get(name) ?? 0) + d.short);
+            }
         }
     };
     const direct = (item: string, strict = false) => { ensureDemandCaches(); return (strict ? strictDirectCache : directCache).get(item) ?? 0; };
@@ -1260,7 +1296,7 @@ export function plan(input: Inputs): Assignment[] {
             needs:{...t.needs,items},production:{...p,maximum:units}};
     };
     const consume = (item: string, count: number, account?: string, bought = false) => {
-        for (const d of demand) if (count > 0 && !d.budget && d.names.includes(item) && (account === undefined || d.account === account.toLowerCase())) {
+        for (const d of demand) if (count > 0 && !d.budget && d.names.some(n => n === item || norm(n) === item) && (account === undefined || d.account === account.toLowerCase())) {
             const used = Math.min(d.short, count); d.short -= used; count -= used;
             if (bought) d.bought = (d.bought ?? 0) + used;
             if (used > 0) fundingEpoch++;
@@ -1616,7 +1652,8 @@ export function plan(input: Inputs): Assignment[] {
             gaveItems.add(from.name); pool.delete(from.name); pool.delete(c.account);
             const resources = c.template.id === FRAIL_FOOD_BUY_ID ? c.resources : [];
             for (const resource of resources) used.set(resource, (used.get(resource) ?? 0) + 1);
-            done.set(c.account, { account: c.account, template: c.template, value: 0, reason: `${c.reason}, sent ${count} ${item} by ${from.name}`, resources, send: { from: from.name, to: c.account, item, count, template: c.template.id } });
+            const sendId = exactItemIds().get(item);
+            done.set(c.account, { account: c.account, template: c.template, value: 0, reason: `${c.reason}, sent ${count} ${item} by ${from.name}`, resources, send: { from: from.name, to: c.account, item, count, template: c.template.id, ...(sendId !== undefined ? { itemId: sendId } : {}) } });
             reserveKit(c.account, [{ item, quantity: count }], false);
             if(c.supply)reserveOutput(c.supply.template,c.supply.account);
             return;
@@ -1657,17 +1694,16 @@ export function plan(input: Inputs): Assignment[] {
         const member = byName.get([...byName.keys()].find(n => n.toLowerCase() === row.account) ?? '');
         if (!member || done.has(member.name) || gave.has(member.name) || gaveItems.has(member.name) || vacated.has(member.name) || inp.unfundable?.has(row.account)) continue;
         const cost = (p: Acct | undefined) => cachedWayCost(p?.pos, ARMY_BANK, p ? inp.mountain?.(p) ?? true : true);
-        const nonUniqueTradeNames = new Set(['black_dragonhide_body', 'black_dragonhide_chaps', 'black_dragon_vambraces']);
         for (const item of row.names) {
-            if (nonUniqueTradeNames.has(item)) continue;
             const from = [...stock, ...memberStock.filter(s => freeMembers.has(s.name.toLowerCase()))].find(s => s.side === inp.side && s.name.toLowerCase() !== row.account && !done.has(s.name) && !gave.has(s.name) && !gaveItems.has(s.name) && spare(s, item) >= 1
                 && !inp.noSend?.has(`${s.name}>${member.name}`.toLowerCase()) && (cost(byName.get(s.name)) ?? -1) >= 0 && (cost(member) ?? -1) >= 0);
             if (!from) continue;
             // A food row is in lobsters (squad.ts): a donor's item is counted by the HP it heals against the lobster's.
             const count = Math.min(spare(from, item), item in SQUAD_FOOD_HEAL ? Math.ceil(row.short * SQUAD_FOOD_HEAL.shark! / SQUAD_FOOD_HEAL[item]!) : row.short);
+            const sendId = exactItemIds().get(item);
             gaveItems.add(from.name); pool.delete(from.name); pool.delete(member.name);
             done.set(member.name, { account: member.name, template: SQUAD_RESTOCK, value: 0, reason: `restocks ${count} ${item} for the gang squad, sent by ${from.name}`, resources: [],
-                send: { from: from.name, to: member.name, item, count, template: SQUAD_RESTOCK.id } });
+                send: { from: from.name, to: member.name, item, count, template: SQUAD_RESTOCK.id, ...(sendId !== undefined ? { itemId: sendId } : {}) } });
             break;
         }
     }
@@ -2068,7 +2104,7 @@ export function questKitCaps(rows: readonly { items: Readonly<Record<string, num
 const coinItem = (item: string) => item === 'coin';
 for (const [item, cap] of Object.entries(questKitCaps())) (KIT_PRICE_CAPS as Record<string, number>)[item] ??= cap;
 // CAPACITY: accounts at one resource at a time. Every number is policy (a place, a market or a spot holds this many), not a game fact.
-export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, 'squad:catherby-sharks': 3, 'squad:shilo-karambwanji': 2, 'squad:shilo-karambwan': 2, 'squad:catherby-cooking': 2, 'squad:taverley-druids': 1, 'squad:taverley-black-knights': 2, 'squad:barbarian-planks': 1, 'squad:gnome-toads': 1, 'squad:taverley-scales': 2, 'squad:taverley-black-dragons': 2, 'squad:chaos-temple-wine': 2, 'squad:seers-magic-trees': 2, 'squad:edgeville-unicorns': 2, 'squad:ardougne-giants': 2, 'squad:hobgoblin-snape': 2, [WEAPON_MARKET]: WEAPON_BUYERS, [ARMOUR_MARKET]: ARMOUR_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, [QUEST_DEMAND]: QUEST_DEMAND_PLACES, ...Object.fromEntries(QUEST_DEMAND_ROWS.map(q => [questResource(q.slug), 1])), ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
+export const CAPACITY: Readonly<Record<string, number>> = { 'catherby:lobster': 3, 'squad:catherby-sharks': 3, 'squad:shilo-karambwanji': 2, 'squad:shilo-karambwan': 2, 'squad:catherby-cooking': 2, 'squad:herblore-bank': 4, 'squad:magic-enchant': 4, 'squad:al-kharid-craft': 3, 'squad:varrock-smithing': 2, 'squad:seers-fletch': 3, 'squad:crystal-chest': 2, 'squad:heroes-fountain': 2, 'squad:cosmic-altar': 2, 'squad:taverley-druids': 1, 'squad:taverley-black-knights': 2, 'squad:barbarian-planks': 1, 'squad:gnome-toads': 1, 'squad:taverley-scales': 2, 'squad:taverley-black-dragons': 2, 'squad:chaos-temple-wine': 2, 'squad:seers-magic-trees': 2, 'squad:edgeville-unicorns': 2, 'squad:ardougne-giants': 2, 'squad:hobgoblin-snape': 2, [WEAPON_MARKET]: WEAPON_BUYERS, [ARMOUR_MARKET]: ARMOUR_BUYERS, [LOST_CITY]: LOST_CITY_PLACES, [GRAIL_PLACE]: GRAIL_PLACES, [FREMENNIK]: FREMENNIK_PLACES, [UPASS]: UPASS_PLACES, [QUEST_DEMAND]: QUEST_DEMAND_PLACES, ...Object.fromEntries(QUEST_DEMAND_ROWS.map(q => [questResource(q.slug), 1])), ...Object.fromEntries(Object.values(AIO_PLACES).map(p => [p, 1])), [COW_FIELD]: COW_FIELD_CAPACITY, [TROOPER_FIELD]: TROOPER_FIELD_CAPACITY, [STRIKE_TILE]: 1, [SPLASH_FENCE]: SPLASH_PLACES, [BLACK_CAVE]: BLACK_CAVE_PLACES, ...Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARE])) };
 export const SHARED: Readonly<Record<string, number>> = Object.fromEntries(KNIGHT_SPOTS.map(s => [`knight:${s}`, KNIGHT_SHARED_RATE]));
 // The reach rule: a job goes only to an account that has a way to its place. One route query between the Varrock
 // side and Kandarin runs for more than 30 s (research/walking.md, Planner reach rule), so the planner asks none. It
@@ -2111,8 +2147,9 @@ export const PLACES: Readonly<Record<string, Spot>> = {
     'shop:magic_guild_elemental': { x: 2612, z: 3093 }, 'shop:alfonse': { x: 2654, z: 3283 }, 'shop:tiadeche': { x: 2654, z: 3283 },
     'shop:oziach': { x: 3094, z: 3491 }, 'shop:herquin': { x: 2946, z: 3368 }, 'shop:gem_trader': { x: 3269, z: 3167 },
     'shop:tenzing': { x: 2946, z: 3368 }, 'shop:jukat_dagger': { x: 3152, z: 9578 }, 'shop:taverley': { x: 2934, z: 3376 },
-    'shop:siegfried': { x: 2654, z: 3283 }, 'shop:helemos': { x: 2946, z: 3368 },
-    'aio:water-altar': DRAYNOR_BANK, 'fighter:wizards-tower': DRAYNOR_BANK, 'squad:catherby-sharks': CATHERBY_BANK,
+    'shop:siegfried': { x: 2654, z: 3283 }, 'shop:helemos': { x: 2946, z: 3368 }, 'shop:bob': DRAYNOR_BANK,
+    'aio:water-altar': DRAYNOR_BANK, 'squad:cosmic-altar': DRAYNOR_BANK, 'fighter:wizards-tower': DRAYNOR_BANK, 'squad:catherby-sharks': CATHERBY_BANK,
+    'squad:crystal-chest': { x: 2946, z: 3368 }, 'squad:heroes-fountain': { x: 2946, z: 3368 },
     'squad:shilo-karambwanji': { x: 2852, z: 2955 }, 'squad:shilo-karambwan': { x: 2852, z: 2955 }, 'squad:catherby-cooking': CATHERBY_BANK,
     'squad:seers-magic-trees': SEERS_BANK, 'squad:seers-fletch': SEERS_BANK,
     'squad:varrock-smithing': { x: 3185, z: 3436 }, 'squad:al-kharid-craft': { x: 3269, z: 3167 },
@@ -2543,12 +2580,12 @@ export const SQUAD_UNIT_COST: Readonly<Record<string, number>> = {
     'dragonstone': 10_000, 'uncut dragonstone': 10_000, 'dragonstone ring': 17_625, 'dragon necklace': 18_375,
     'unstrung dragonstone amulet': 17_625, 'strung dragonstone amulet': 17_625, 'amulet of glory': 17_625, 'amulet of glory(4)': 25_000, 'ring of wealth': 17_625,
     'climbing boot': 12, 'cape of legend': 675, 'dragon dagger': 30_000, 'dragon dagger(p)': 32_000,
-    'dragon battleaxe': 200_000, 'dragon mace': 50_000, 'shield right half': 750_000, 'crystal key': 1, keyhalf1: 1, keyhalf2: 1,
+    'dragon battleaxe': 200_000, 'dragon mace': 50_000, 'shield right half': 750_000, 'crystal key': 500, keyhalf1: 250, keyhalf2: 250,
     'dragon chainbody': 250_000, 'dragon sq shield': 1_250_000, 'dragon plateleg': 270_000,
     'magic shortbow': 1600, 'berserker helm': 78_000, 'rune full helm': 35_200, 'rune platebody': 84_500, 'rune plateleg': 64_000, 'rune kiteshield': 54_400,
     'black full helm': 1056, 'black platebody': 3840, 'black plateleg': 1920,
     black_dragonhide_body: 13_480, black_dragonhide_chaps: 6_500, black_dragon_vambraces: 4_200,
-    'uncut sapphire': 250, 'uncut emerald': 500, emerald: 500, 'eye of newt': 3, 'vial of water': 5,
+    'uncut sapphire': 25, 'uncut emerald': 500, emerald: 500, 'eye of newt': 3, 'vial of water': 2,
     'waterskin(4)': 30, 'bronze bar': 16, nail: 3, plank: 1, 'swamp toad': 2, "toad's leg": 2,
     'chocolate bar': 10, 'chocolate dust': 2, cake: 50, 'chocolate cake': 70,
     'priest gown': 5, 'leather glove': 6, 'fishing bait': 3, papyrus: 10, 'ball of wool': 2, charcoal: 45,
@@ -2614,6 +2651,13 @@ export function squadSupplies(): Template[] {
         production: { output: 'earth rune', outputPerUnit: 1, maximum: SQUAD_CRAFT_ESSENCE, inputs: { 'rune essence': 1 },
             resize: n => ({ args: ['skiller', 'runecraft', 'bank-craft', '99', 'RUNE_ALTAR=earth', `ESSENCE_TARGET=${n}`, 'CAP=4000'] }) },
         yields: () => [{ item: 'earth rune', perTick: 0.08 }] };
+    const cosmicCraft: Template = { id: 'squad-cosmic-craft', family: 'aio:skiller:runecraft:bank-craft', script: 'scripts/aio.ts', aio: 'skiller:runecraft:bank-craft',
+        worker: 'scripts/rune-bank-craft.ts', args: ['skiller', 'runecraft', 'bank-craft', '99', 'RUNE_ALTAR=cosmic', `ESSENCE_TARGET=${SQUAD_CRAFT_ESSENCE}`, 'CAP=4000'],
+        role: 'magic', goal: 'craft banked rune essence into cosmic runes in Zanaris for ring of recoil enchanting', resources: ['squad:cosmic-altar'], squadOnly: true,
+        needs: { skills: { Runecraft: 27 }, quests: ['Lost City'], items: { 'dramen staff': 1, 'cosmic talisman': 1, 'rune essence': SQUAD_CRAFT_ESSENCE } }, repeats: false,
+        production: { output: 'cosmic rune', outputPerUnit: 1, maximum: SQUAD_CRAFT_ESSENCE, inputs: { 'rune essence': 1 },
+            resize: n => ({ args: ['skiller', 'runecraft', 'bank-craft', '99', 'RUNE_ALTAR=cosmic', `ESSENCE_TARGET=${n}`, 'CAP=4000'] }) },
+        yields: () => [{ item: 'cosmic rune', perTick: 0.08 }] };
     // The water talisman that squad-water-craft needs: wizards at the Wizards' Tower until one drops (3 in 128; scripts/
     // gather-combat.ts TARGET=wizard UNTIL_ITEM, bench case fighter:wizard). No shop sells one and the Grand Exchange holds none.
     const waterTalisman: Template = { id: 'squad-water-talisman', family: 'aio:fighter:wizard', script: 'scripts/aio.ts', aio: 'fighter:wizard',
@@ -2699,20 +2743,21 @@ export function squadSupplies(): Template[] {
         id: 'squad-magic-logs', family: 'aio:skiller:woodcutting:yews', script: 'scripts/aio.ts',
         args: ['skiller', 'woodcutting', 'yews', '3000', '27', 'MAX_TRIPS=4', 'TREE=magic', 'WOOD_GROVE=native-processing'],
         role: 'woodcutting', goal: "chop magic logs at Seers' Village for squad magic shortbows", resources: ['squad:seers-magic-trees'], squadOnly: true, repeats: false,
-        needs: { skills: { Woodcutting: 75 }, pieces: { of: AXES, count: 1 } },
+        needs: { skills: { Woodcutting: 75 }, pieces: { of: ['rune axe', 'adamant axe', 'mithril axe', 'black axe', 'steel axe'], count: 1 } },
         yields: () => [{ item: 'magic log', perTick: 0.01 }],
     };
     const bowStep = (recipe: string, n: number) => `scripts/aio.ts skiller crafting inventory ${recipe} MAX_MAKE=${n} CAP=1500 MEMBERS=1 ORDER_MODE=best-effort`;
+    const bowBankWalk = `scripts/walk-to.ts ${SEERS_BANK.x} ${SEERS_BANK.z}`;
     const magicShortbow: Template = {
         id: 'squad-magic-shortbow', family: 'fletch', script: 'scripts/chain.ts',
-        args: [bowStep('cut-bow:unstrung_magic_shortbow', 4), bowStep('bow-string:magic_shortbow', 4)], env: { ROUNDS: '1' },
+        args: [bowBankWalk, bowStep('cut-bow:unstrung_magic_shortbow', 4), bowStep('bow-string:magic_shortbow', 4)], env: { ROUNDS: '1' },
         role: 'fletching', goal: 'cut banked magic logs into magic shortbows and string them for the gang squad', resources: ['squad:seers-fletch'], squadOnly: true, repeats: false,
         needs: { skills: { Fletching: 80 }, items: { knife: 1, 'magic log': 1, 'bow string': 1 } },
         production: { output: 'magic shortbow', outputPerUnit: 1, maximum: 4, inputs: { 'magic log': 1, 'bow string': 1 },
-            resize: n => ({ args: [bowStep('cut-bow:unstrung_magic_shortbow', n), bowStep('bow-string:magic_shortbow', n)] }) },
+            resize: n => ({ args: [bowBankWalk, bowStep('cut-bow:unstrung_magic_shortbow', n), bowStep('bow-string:magic_shortbow', n)] }) },
         yields: () => [{ item: 'magic shortbow', perTick: 0.02 }],
     };
-    // Black dragonhide from non-Wilderness Taverley Black Dragons -> tanned and crafted sets at Al Kharid.
+    // Black dragonhide from non-Wilderness Taverley Black Dragons -> tanned and crafted sets/vambraces at Al Kharid.
     const taverleyBlackDragons: Template = {
         id: 'squad-taverley-black-dragon', family: 'combat', script: 'scripts/gather-combat.ts',
         args: ['6000', 'taverley_black_dragon'], env: { MAX_KILLS: '10' }, role: 'combat',
@@ -2727,6 +2772,14 @@ export function squadSupplies(): Template[] {
         resources: ['squad:al-kharid-craft'], squadOnly: true, repeats: false,
         needs: { skills: { Crafting: LEATHER_LEVEL }, items: { coins: SET_HIDES * TAN_COIN + SET_SHOP, dragonhide_black: SET_HIDES } },
         yields: () => [{ item: 'black_dragonhide_body', perTick: 0.02 }, { item: 'black_dragonhide_chaps', perTick: 0.02 }, { item: 'black_dragon_vambraces', perTick: 0.02 }],
+    };
+    const blackDhideVambraces: Template = {
+        id: 'squad-black-dhide-vambraces', family: 'aio:skiller:crafting:black-dhide-sets', script: 'scripts/black-dhide-sets.ts',
+        args: [], env: { PIECE: 'vambraces', SETS: '0' }, role: 'crafting',
+        goal: 'tan banked black dragonhide or craft black dragon leather into black dragonhide vambraces at Al Kharid',
+        resources: ['squad:al-kharid-craft'], squadOnly: true, repeats: false,
+        needs: { skills: { Crafting: 79 }, items: { coins: TAN_COIN + SET_SHOP }, anyOf: [{ items: { dragonhide_black: 1 } }, { items: { dragon_leather_black: 1 } }] },
+        yields: () => [{ item: 'black_dragon_vambraces', perTick: 0.02 }],
     };
     // Rings of Recoil: mine gold ore -> smelt gold bars -> cut sapphires -> craft sapphire rings -> enchant lvl 1.
     const goldOre: Template = {
@@ -2994,8 +3047,32 @@ export function squadSupplies(): Template[] {
             resize: n => ({ args: enchantGloryArgs(n) }) },
         yields: () => [{ item: 'amulet of glory', perTick: 0.25 }],
     };
+    const crystalChest: Template = {
+        id: 'squad-crystal-chest', family: 'crystal-chest', script: 'scripts/crystal-chest.ts',
+        args: ['2000'], env: { MAX_KEYS: '4' }, role: 'crafting',
+        goal: 'open Taverley crystal chests with banked crystal keys or key halves for uncut dragonstones and cosmic runes',
+        resources: ['squad:crystal-chest'], squadOnly: true, repeats: false,
+        needs: { anyOf: [{ items: { 'crystal key': 1 } }, { items: { keyhalf1: 1, keyhalf2: 1 } }] },
+        yields: () => [{ item: 'uncut dragonstone', perTick: 0.05 }, { item: 'cosmic rune', perTick: 0.03 }],
+    };
+    const chargeGlory: Template = {
+        id: 'squad-charge-glory', family: 'charge-glory', script: 'scripts/charge-glory.ts',
+        args: ['2000'], env: { MAX_GLORIES: '28' }, role: 'magic',
+        goal: 'recharge uncharged or partial amulets of glory at the Fountain of Heroes for the gang squad',
+        resources: ['squad:heroes-fountain'], squadOnly: true, repeats: false,
+        needs: {
+            quests: ["Hero's Quest"], skills: { Hitpoints: 75 },
+            anyOf: [
+                { items: { 'amulet of glory': 1 } },
+                { items: { 'amulet of glory(1)': 1 } },
+                { items: { 'amulet of glory(2)': 1 } },
+                { items: { 'amulet of glory(3)': 1 } },
+            ],
+        },
+        yields: () => [{ item: 'amulet of glory(4)', perTick: 0.08 }],
+    };
     return [
-        waterCraft, earthCraft, waterTalisman, runeArrows, fletchBankedRuneArrows, sharks,
+        waterCraft, earthCraft, cosmicCraft, waterTalisman, runeArrows, fletchBankedRuneArrows, sharks,
         karambwanjiFish, karambwanFish, karambwanVessel, karambwanCook,
         smithAnvil('squad-smith-rune-tips', 44, 'rune arrowtips', 90, 1, 15, 27),
         smithAnvil('squad-smith-rune-full-helm', 1163, 'rune full helm', 92, 2, 1, 10),
@@ -3003,7 +3080,7 @@ export function squadSupplies(): Template[] {
         smithAnvil('squad-smith-rune-platelegs', 1079, 'rune plateleg', 99, 3, 1, 8),
         smithAnvil('squad-smith-rune-platebody', 1127, 'rune platebody', 99, 5, 1, 5),
         smithAnvil('squad-smith-steel-nails', 1539, 'nail', 34, 1, 2, 27, 'steel bar'),
-        magicLogs, magicShortbow, taverleyBlackDragons, blackDhideSets,
+        magicLogs, magicShortbow, taverleyBlackDragons, blackDhideSets, blackDhideVambraces, crystalChest, chargeGlory,
         goldOre, goldBars, cutSapphire, cutEmerald, sapphireRings, emeraldRings, enchantRecoil, enchantDueling,
         taverleyDruids, taverleyBlackKnights, ardougneGiants, edgevilleUnicorns, snapeGrass, taverleyScales, chaosWine, whiteBerries,
         barbarianPlanks, gnomeToads, bloodChest,
@@ -3611,9 +3688,17 @@ export function catalogue(): Template[] {
     const ardyIronAxe: Template = {
         id: 'tool-axe-iron', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['ardy', '1200'],
         env: { ITEMS: 'iron axe', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '300', COIN_RESERVE: '100', MAX_SPEND: '200' },
-        role: 'woodcutting', goal: "buy iron axe from Aemad in East Ardougne (Bob's Axes has no profile)", repeats: false,
+        role: 'woodcutting', goal: 'buy iron axe from Aemad in East Ardougne', repeats: false,
         resources: ['shop:ardy'], yields: () => [{ item: 'iron axe', perTick: 0.01 }],
         needs: { items: { coins: 300 }, holdsUnder: holdsUnderKeys(['iron axe', 'steel axe', 'black axe', 'mithril axe', 'adamant axe', 'rune axe']) },
+    };
+    const bobSteelAxe: Template = {
+        id: 'tool-axe-steel', family: 'shop-buyer', script: 'scripts/shop-buyer.ts', args: ['bob', '1200'],
+        env: { ITEMS: 'steel axe', STOCK_TARGET: '1', STOP_AT_TARGET: '1', BANK_PACK: '1', BANK_AT: '0', NO_BUY_TICKS: '25', FLOAT: '350', COIN_RESERVE: '100', MAX_SPEND: '220' },
+        role: 'woodcutting', goal: "buy steel axe from Bob's Brilliant Axes in Lumbridge", repeats: false,
+        resources: ['shop:bob'], yields: () => [{ item: 'steel axe', perTick: 0.01 }],
+        provides: { item: 'steel axe', unlocks: ['squad-magic-logs'] },
+        needs: { skills: { Woodcutting: 6 }, items: { coins: 350 }, holdsUnder: holdsUnderKeys(['steel axe', 'black axe', 'mithril axe', 'adamant axe', 'rune axe']) },
     };
     return [
         ...goldfarm,
@@ -3663,6 +3748,7 @@ export function catalogue(): Template[] {
         scavvoArmour,
         ...nurmofPickaxes,
         ardyIronAxe,
+        bobSteelAxe,
         dhideSets,
         leatherFlax,
         leatherSpin,
@@ -3883,6 +3969,13 @@ const EXACT_ITEM_ALIASES: ReadonlyMap<number, string> = new Map([
     [3049, 'unidentified toadflax'],
     [3051, 'unidentified snapdragon'],
 ]);
+let exactItemIdCache: ReadonlyMap<string, number> | undefined;
+function exactItemIds(): ReadonlyMap<string, number> {
+    return exactItemIdCache ??= new Map([
+        ...Array.from(bowStockNames, ([id, name]) => [name, id] as const),
+        ...Array.from(EXACT_ITEM_ALIASES, ([id, name]) => [name, id] as const),
+    ]);
+}
 export function accountFrom(name: string, side: string, status: any, itemName: (id: number) => string | undefined): Acct {
     const skills: Record<string, number> = { Hitpoints: 10 }, items: Record<string, number> = {}, exact: Record<string, number> = {};
     for (const k of Array.isArray(status?.skills) ? status.skills : []) if (typeof k?.name === 'string' && Number.isFinite(k.level)) skills[k.name] = k.level;
