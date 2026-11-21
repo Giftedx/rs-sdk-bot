@@ -52,6 +52,7 @@ export const OUTSIDE_CATALOG: Readonly<Record<string, string>> = {
  'scripts/haggis-gate.ts': 'the launch gate of the main account',
  'scripts/heavy-admission.ts': 'developer tool: sizes a test or type check job by the free memory',
  'scripts/hosted-bench.ts': 'developer tool: runs bench cases on hosted runners and prints the result of each case',
+ 'scripts/item-sources.ts': 'developer tool: enriches knowledge/item-sources with owned fleet stock and shared market quotes; no gameplay',
  'scripts/learn.ts': 'report: reads the run records on disk',
  'scripts/loop-watch.ts': 'report: finds accounts that repeat work with no result',
  'scripts/market-snapshot.ts': 'report: fetches the supply prices',
