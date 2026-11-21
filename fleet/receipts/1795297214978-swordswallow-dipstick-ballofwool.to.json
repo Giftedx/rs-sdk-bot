@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795297214978-swordswallow-dipstick-ballofwool",
  "account": "Dipstick",
  "partner": "Swordswallow",
@@ -12,6 +12,12 @@
  "claim": "5a49f7ad-32a3-4784-b2d9-bec14206e99b",
  "count": 0,
  "ok": false,
- "at": 1795297267912,
- "detail": "trade claimed"
+ "at": 1795297274918,
+ "detail": "Error: partner failed: no trade",
+ "logout": {
+  "attemptId": "1795297267921-0000016980-0000000001",
+  "at": 1795297274905,
+  "sha256": "13eaf4aeb2a68660cf956393b4dccc8450938d8bda192a9cdde1987b99b7ad35"
+ },
+ "screen": false
 }

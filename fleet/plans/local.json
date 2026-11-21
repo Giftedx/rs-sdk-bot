@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795297235956,
+ "at": 1795297280146,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -431,7 +431,7 @@
    "script": "scripts/gather-combat.ts",
    "args": [
     "6000",
-    "giant"
+    "taverley_black_knight"
    ],
    "env": {
     "MAX_KILLS": "40"
@@ -439,12 +439,12 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
+   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
    "role": "combat",
-   "template": "squad-ardougne-giants",
+   "template": "squad-taverley-black-knights",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-giants"
+    "squad:taverley-black-knights"
    ]
   },
   {
@@ -475,27 +475,6 @@
   },
   {
    "account": "Magicwanda",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "giant"
-   ],
-   "env": {
-    "MAX_KILLS": "40"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
-   "role": "combat",
-   "template": "squad-ardougne-giants",
-   "autopilot": "local",
-   "resources": [
-    "squad:ardougne-giants"
-   ]
-  },
-  {
-   "account": "Shaftsinker",
    "script": "scripts/goldfarm.ts",
    "args": [],
    "env": {
@@ -511,6 +490,27 @@
    "autopilot": "local",
    "resources": [
     "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "taverley_black_knight"
+   ],
+   "env": {
+    "MAX_KILLS": "40"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
+   "role": "combat",
+   "template": "squad-taverley-black-knights",
+   "autopilot": "local",
+   "resources": [
+    "squad:taverley-black-knights"
    ]
   },
   {
@@ -571,6 +571,29 @@
    "autopilot": "local",
    "resources": [
     "shop:dargaud"
+   ]
+  },
+  {
+   "account": "Pullmybow",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/walk-to.ts 2832 9586",
+    "scripts/gather-spawn.ts 223 27"
+   ],
+   "env": {
+    "TICKS": "3000",
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"223\":27}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "gather red spiders' eggs in Karamja Volcano (non-Wilderness) for super restore potions",
+   "role": "herblore",
+   "template": "squad-karamja-red-spiders-eggs",
+   "autopilot": "local",
+   "resources": [
+    "squad:karamja-red-spiders-eggs"
    ]
   }
  ],
