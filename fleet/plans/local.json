@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795289182232,
+ "at": 1795289274417,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -304,29 +304,6 @@
    "template": "kit-buy:aio-blood-chest",
    "autopilot": "local",
    "resources": []
-  },
-  {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/walk-to.ts 2727 3492",
-    "scripts/aio.ts skiller crafting inventory cut-bow:unstrung_magic_shortbow MAX_MAKE=4 CAP=1500 MEMBERS=1 ORDER_MODE=best-effort",
-    "scripts/aio.ts skiller crafting inventory bow-string:magic_shortbow MAX_MAKE=4 CAP=1500 MEMBERS=1 ORDER_MODE=best-effort"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "AUTOPILOT_ORDER": "[89,[\"bow string\",4],[\"magic log\",4]]"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "cut banked magic logs into magic shortbows and string them for the gang squad",
-   "role": "fletching",
-   "template": "squad-magic-shortbow",
-   "autopilot": "local",
-   "resources": [
-    "squad:seers-fletch"
-   ]
   },
   {
    "account": "BowBeforeMe",

@@ -1,0 +1,22 @@
+{
+ "id": "1795289255520-ballspinner-sausagefest-bronzearrow",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Ballspinner",
+ "to": "Sausagefest",
+ "item": "Bronze arrow",
+ "count": 84,
+ "start": 1795289255520,
+ "end": 1795291655520,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
