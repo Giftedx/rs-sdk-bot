@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {test,expect} from 'bun:test';
-import {chopProcessingTree,processingTreeEdges,seersProcessingGrove,treeAfterBank,runDraynorOak,oakGrove,westOakPathAllowed,woodTreeOrder,normalGrove,reconcileWoodcuttingAxeAtBank} from './gather-yews';
+import {chopProcessingTree,processingTreeEdges,seersProcessingGrove,treeAfterBank,runDraynorOak,oakGrove,westOakPathAllowed,woodTreeOrder,normalGrove,reconcileWoodcuttingAxeAtBank,woodStallTicks} from './gather-yews';
 import type {Session} from '../packages/core/src/inprocess';
 
 const woodTree=(x:number,distance:number)=>({x,z:3285,distance,reachable:true,optionsWithIndex:[{text:'Chop down',opIndex:1}]});
@@ -282,4 +282,9 @@ test('reconcileWoodcuttingAxeAtBank recovers coins on empty Bob stock and cools 
     } finally {
         clearInterval(timer);
     }
+});
+
+test('woodStallTicks scales stall tolerance for slow magic trees', () => {
+    expect(woodStallTicks('magic')).toBe(700);
+    expect(woodStallTicks('yew')).toBe(220);
 });

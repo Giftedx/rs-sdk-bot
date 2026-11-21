@@ -50,3 +50,20 @@ test('--with adds lines that move in the same trade, and a coin line on any line
     const snapshots = { local: { accounts: [{ name: 'Pocketpython', bank: coins(1_000_000), inventory: [] }] } };
     expect(orderWarnings(order, {}, snapshots, owners)).toEqual(['Pocketpython held 1000000 coins at its last snapshot, fewer than the 2000000 ordered']);
 });
+
+test('--id and --with-id bind exact itemId without altering plain --with behavior', async () => {
+    const { parseOrderArgs } = await import('./fleet-order');
+    const parsed = parseOrderArgs(['Pocketpython', 'TheFullMonty', '2', 'Dragon', 'vambraces', '--id', '2491', '--with-id', '2497', '1 Dragonhide chaps']);
+    expect(parsed).toEqual({
+        rest: ['Pocketpython', 'TheFullMonty', '2', 'Dragon', 'vambraces'],
+        itemId: 2491,
+        extra: [{ item: 'Dragonhide chaps', count: 1, itemId: 2497 }],
+    });
+    const order = makeOrder('Pocketpython', 'TheFullMonty', 2, 'Dragon vambraces', 1_000_000, 0, 60, owners, undefined, parsed.extra, parsed.itemId);
+    expect(order.itemId).toBe(2491);
+    expect(order.extra).toEqual([{ item: 'Dragonhide chaps', count: 1, itemId: 2497 }]);
+    expect(validOrder(order)).toBe(true);
+    // Same display name with two distinct explicit itemIds is valid; colliding without IDs remains invalid.
+    const twoVambs = makeOrder('Pocketpython', 'TheFullMonty', 1, 'Dragon vambraces', 1_000_000, 0, 60, owners, undefined, [{ item: 'Dragon vambraces', count: 1, itemId: 1065 }], 2491);
+    expect(validOrder(twoVambs)).toBe(true);
+});

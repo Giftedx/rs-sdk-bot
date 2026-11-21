@@ -3,7 +3,7 @@
 // with a FLEET_ORDER_WARN line for each party the sides' published plans (fleet/plans) show in an enabled job, since
 // that side's fleet agent skips such an account until the job is off, and for a coin donor whose published snapshot
 // holds fewer coins than the order: an order that no agent can run lapses at the end of its window unnoticed.
-// Usage: bun scripts/fleet-order.ts <from> <to> <count> <item name...> [--with "<count> <item name>"]...
+// Usage: bun scripts/fleet-order.ts <from> <to> <count> <item name...> [--id <itemId>] [--with "<count> <item name>"]... [--with-id <itemId> "<count> <item name>"]...
 // Env: IN (default 15), MINUTES (default 40). Each --with adds a line that moves in the same trade (up to 28 lines).
 // TAKER_WAITS=1 keeps the receiver offline until the giver is at the meet (both accounts on one side).
 // MEET=<bank x>,<bank z> or MEET=<bank name> meets at that bank's tile pair (scripts/coin-courier.ts BANK_MEETS) instead
@@ -28,22 +28,33 @@ export function orderMeet(text: string | undefined): Order['meet'] {
 // knowledge/items.json (the ammo mould among them). A trade of one ends `reconcile 0/1` on both sides after both
 // accounts walked to the meet. A name that one tradeable item shares stays allowed.
 let untradeableNames: Set<string> | undefined;
+let itemRows: { id: number; name?: string; tradeable?: boolean }[] | undefined;
+const loadItemRows = (): { id: number; name?: string; tradeable?: boolean }[] => itemRows ??= JSON.parse(readFileSync(join(import.meta.dir, '..', 'knowledge', 'items.json'), 'utf8'));
 export function untradeable(item: string): boolean {
     if (!untradeableNames) {
-        const rows = JSON.parse(readFileSync(join(import.meta.dir, '..', 'knowledge', 'items.json'), 'utf8')) as { name?: string; tradeable?: boolean }[];
+        const rows = loadItemRows();
         const tradeable = new Set(rows.filter(i => i.tradeable !== false && typeof i.name === 'string').map(i => i.name!.toLowerCase()));
         untradeableNames = new Set(rows.filter(i => i.tradeable === false && typeof i.name === 'string').map(i => i.name!.toLowerCase()).filter(n => !tradeable.has(n)));
     }
     return untradeableNames.has(item.toLowerCase());
 }
+export function untradeableId(itemId: number): boolean {
+    const row = loadItemRows().find(r => r.id === itemId);
+    return !!row && row.tradeable === false;
+}
 
-export function makeOrder(from: string, to: string, count: number, item: string, now: number, inMin: number, minutes: number, owners = loadOwners(), meet?: Order['meet'], extra?: OrderLine[]): Order {
-    const refused = [item, ...(extra ?? []).map(l => l.item)].filter(untradeable);
+export function makeOrder(from: string, to: string, count: number, item: string, now: number, inMin: number, minutes: number, owners = loadOwners(), meet?: Order['meet'], extra?: OrderLine[], itemId?: number): Order {
+    if (itemId !== undefined && (!Number.isSafeInteger(itemId) || itemId < 0)) throw Error(`invalid itemId: ${itemId}`);
+    const refused = [
+        ...(itemId !== undefined ? (untradeableId(itemId) ? [`${item}#${itemId}`] : []) : untradeable(item) ? [item] : []),
+        ...(extra ?? []).flatMap(l => l.itemId !== undefined ? (untradeableId(l.itemId) ? [`${l.item}#${l.itemId}`] : []) : untradeable(l.item) ? [l.item] : []),
+    ];
     if (refused.length) throw Error(`not tradeable: ${refused.join(', ')}`);
     const a = owners.get(from.toLowerCase()), b = owners.get(to.toLowerCase());
     if (!a || !b) throw Error(`both accounts must be listed in fleet/owners.json: ${!a ? from : to}`);
     if (a.server !== b.server) throw Error('both accounts must use one server');
-    const start = now + inMin * 60_000, order: Order = { id: `${start}-${from}-${to}-${randomBytes(8).toString('hex')}`.toLowerCase(), server: a.server, from, to, item, count, start, end: start + minutes * 60_000,
+    const start = now + inMin * 60_000, order: Order = { id: `${start}-${from}-${to}-${randomBytes(8).toString('hex')}`.toLowerCase(), server: a.server, from, to, item, count,
+        ...(itemId !== undefined ? { itemId } : {}), start, end: start + minutes * 60_000,
         ...(meet ? { meet } : {}), ...(extra?.length ? { extra } : {}) };
     if (!validOrder(order)) throw Error('invalid order');
     return order;
@@ -84,21 +95,40 @@ export function orderWarnings(order: Order, plans: Readonly<Record<string, { job
 
 // `--with "<count> <item name>"`, once for each extra line. Returns the other arguments and the lines.
 export function parseWith(args: readonly string[]): { rest: string[]; extra: OrderLine[] } {
+    const { rest, extra } = parseOrderArgs(args);
+    return { rest, extra };
+}
+export function parseOrderArgs(args: readonly string[]): { rest: string[]; extra: OrderLine[]; itemId?: number } {
     const rest: string[] = [], extra: OrderLine[] = [];
+    let itemId: number | undefined;
     for (let i = 0; i < args.length; i++) {
+        if (args[i] === '--id') {
+            const raw = (args[++i] ?? '').trim();
+            const parsed = Number(raw);
+            if (!raw || !Number.isSafeInteger(parsed) || parsed < 0) throw Error(`--id takes a nonnegative integer, not ${args[i] ?? 'nothing'}`);
+            itemId = parsed;
+            continue;
+        }
+        if (args[i] === '--with-id') {
+            const idRaw = (args[++i] ?? '').trim(), specRaw = (args[++i] ?? '').trim();
+            const lineId = Number(idRaw), m = specRaw.match(/^(\d+)\s+(.+)$/);
+            if (!idRaw || !Number.isSafeInteger(lineId) || lineId < 0 || !m) throw Error(`--with-id takes <itemId> "<count> <item name>", not ${args[i - 1] ?? ''} ${args[i] ?? ''}`);
+            extra.push({ item: m[2]!.trim(), count: Number(m[1]), itemId: lineId });
+            continue;
+        }
         if (args[i] !== '--with') { rest.push(args[i]!); continue; }
         const m = (args[++i] ?? '').trim().match(/^(\d+)\s+(.+)$/);
         if (!m) throw Error(`--with takes "<count> <item name>", not ${args[i] ?? 'nothing'}`);
         extra.push({ item: m[2]!.trim(), count: Number(m[1]) });
     }
-    return { rest, extra };
+    return { rest, extra, ...(itemId !== undefined ? { itemId } : {}) };
 }
 const readJson = (f: string) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return null; } };
 
 if (import.meta.main) {
-    const { rest, extra } = parseWith(process.argv.slice(2));
+    const { rest, extra, itemId } = parseOrderArgs(process.argv.slice(2));
     const [from, to, countText, ...name] = rest;
-    const made = makeOrder(from ?? '', to ?? '', Number(countText), name.join(' '), Date.now(), Number(process.env.IN ?? 15), Number(process.env.MINUTES ?? 40), undefined, orderMeet(process.env.MEET), extra);
+    const made = makeOrder(from ?? '', to ?? '', Number(countText), name.join(' '), Date.now(), Number(process.env.IN ?? 15), Number(process.env.MINUTES ?? 40), undefined, orderMeet(process.env.MEET), extra, itemId);
     // TAKER_WAITS=1: the receiver stays offline until the giver is at the meet. The giver marks that on its own machine.
     const partySides = new Set([made.from, made.to].map(n => loadOwners().get(n.toLowerCase())?.side ?? 'local'));
     if (process.env.TAKER_WAITS === '1' && partySides.size !== 1) throw Error('TAKER_WAITS needs both accounts on one side');

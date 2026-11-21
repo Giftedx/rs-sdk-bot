@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { BLACK_HIDE, BLACK_LEATHER, SET_LEATHER, SET_LEVEL, SET_PIECES, SHOP_COINS, TAN_COST, TAN_TRIP, setPlan } from './black-dhide-sets';
+import { BLACK_HIDE, BLACK_LEATHER, SET_LEATHER, SET_LEVEL, SET_PIECES, SHOP_COINS, TAN_COST, TAN_TRIP, piecePlan, setPlan } from './black-dhide-sets';
 import { inventoryRecipes } from './microbot-production';
 import { ARMOUR_SETS, LEATHER_LEVEL, SET_HIDES, SET_SHOP, TAN_COIN, catalogue } from '../packages/planner/src/autopilot';
 
@@ -38,4 +38,10 @@ test('the planner asks what the worker needs', () => {
     expect(t.worker).toBe('scripts/black-dhide-sets.ts');
     expect(t.needs).toMatchObject({ skills: { Crafting: SET_LEVEL }, holds: { dragonhide: SET_LEATHER } });
     expect(t.stock).toEqual({ item: 'dragonhide body', to: ARMOUR_SETS });
+});
+
+test('piecePlan crafts single black dragonhide vambraces from 1 hide or leather at Crafting 79', () => {
+    expect(piecePlan('vambraces', 0, 3, 0, 0, 200)).toEqual({ count: 3, tan: 3, thread: 2, coins: 3 * TAN_COST + SHOP_COINS });
+    expect(piecePlan('vambraces', 2, 1, 2, 2, 200)).toEqual({ count: 2, tan: 0, thread: 0, coins: 0 });
+    expect(piecePlan('vambraces', 0, 3, 0, 0, 120).count).toBe(1);
 });

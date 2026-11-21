@@ -96,6 +96,8 @@ async function walkViaRoute(s: Session, spot: { x: number; z: number; level?: nu
     return (await walkTargetPersist(s, { x: spot.x, z: spot.z, level: spot.level ?? 0 }, 4, t => approach(s, t, stop))).ok;
 }
 
+export const woodStallTicks = (tree: string) => tree.toLowerCase() === 'magic' ? 700 : 220;
+
 export async function reconcileWoodcuttingAxeAtBank(
     s: Session,
     options: {
@@ -402,7 +404,8 @@ try {
         const actual=banked+yewLogs();
         if(actual>chops) progressTick=s.tick();
         chops=actual;
-        if(s.tick()-progressTick>220) throw new Error('no wood progress for 220 ticks');
+        const stallTicks = woodStallTicks(TREE);
+        if(s.tick()-progressTick>stallTicks) throw new Error(`no wood progress for ${stallTicks} ticks`);
         if (yewLogs() >= BANK_AT || freeSpace() === 0) {
             await bank();
             continue;

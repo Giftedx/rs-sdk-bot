@@ -24,31 +24,54 @@ export const SET_PIECES = [
     { recipe: 'leather:black_dragonhide_chaps', product: 2497, leather: 2, level: 82 },
     { recipe: 'leather:black_dragon_vambraces', product: 2491, leather: 1, level: 79 },
 ] as const;
+export type DhidePiece = 'body' | 'chaps' | 'vambraces';
+const PIECE_BY_NAME: Readonly<Record<DhidePiece, typeof SET_PIECES[number]>> = {
+    body: SET_PIECES[0], chaps: SET_PIECES[1], vambraces: SET_PIECES[2],
+};
 export const SET_LEATHER = SET_PIECES.reduce((n, p) => n + p.leather, 0), SET_LEVEL = Math.max(...SET_PIECES.map(p => p.level));
 export const TAN_TRIP = 27, SHOP_COINS = 100;
 const AL_KHARID_BANK = { x: 3269, z: 3167, level: 0 }, TANNER = { x: 3274, z: 3191, level: 0 }, DOMMIK = { x: 3320, z: 3194, level: 0 };
 
+function planFor(pieces: readonly (typeof SET_PIECES[number])[], want: number, hides: number, leather: number, thread: number, coins: number): { count: number; tan: number; thread: number; coins: number } {
+    if (![want, hides, leather, thread, coins].every(n => Number.isSafeInteger(n) && n >= 0)) return { count: 0, tan: 0, thread: 0, coins: 0 };
+    const totalLeather = pieces.reduce((n, p) => n + p.leather, 0);
+    let count = Math.floor((hides + leather) / totalLeather);
+    if (want > 0) count = Math.min(count, want);
+    const cost = (n: number) => {
+        const tan = Math.max(0, n * totalLeather - leather);
+        const buy = Math.max(0, Math.ceil(n * pieces.length / THREAD_MAKES) + 1 - thread);
+        return { count: n, tan, thread: buy, coins: tan * TAN_COST + (buy > 0 ? SHOP_COINS : 0) };
+    };
+    while (count > 0 && cost(count).coins > coins) count--;
+    return cost(count);
+}
+
 // What a run does with the account's stock: the sets it makes, the hides it tans for them and the thread it buys (a
 // reel more than the makes use: a reel the account began earlier ends early).
 export function setPlan(want: number, hides: number, leather: number, thread: number, coins: number): { sets: number; tan: number; thread: number; coins: number } {
-    if (![want, hides, leather, thread, coins].every(n => Number.isSafeInteger(n) && n >= 0)) return { sets: 0, tan: 0, thread: 0, coins: 0 };
-    let sets = Math.floor((hides + leather) / SET_LEATHER);
-    if (want > 0) sets = Math.min(sets, want);
-    const cost = (n: number) => { const tan = Math.max(0, n * SET_LEATHER - leather), buy = Math.max(0, Math.ceil(n * SET_PIECES.length / THREAD_MAKES) + 1 - thread); return { sets: n, tan, thread: buy, coins: tan * TAN_COST + (buy > 0 ? SHOP_COINS : 0) }; };
-    while (sets > 0 && cost(sets).coins > coins) sets--;
-    return cost(sets);
+    const r = planFor(SET_PIECES, want, hides, leather, thread, coins);
+    return { sets: r.count, tan: r.tan, thread: r.thread, coins: r.coins };
+}
+
+export function piecePlan(piece: DhidePiece, want: number, hides: number, leather: number, thread: number, coins: number): { count: number; tan: number; thread: number; coins: number } {
+    return planFor([PIECE_BY_NAME[piece]], want, hides, leather, thread, coins);
 }
 
 if (import.meta.main) {
-    const want = Number(process.env.SETS ?? 0);
+    const argEnv = Object.fromEntries(process.argv.slice(2).flatMap(a => { const m = a.match(/^([A-Z_]+)=(.*)$/); return m ? [[m[1]!, m[2]!]] : []; }));
+    const want = Number(argEnv.SETS ?? process.env.SETS ?? 0);
+    const pieceName = (argEnv.PIECE ?? process.env.PIECE)?.trim().toLowerCase() as DhidePiece | '' | undefined;
+    const selected = pieceName ? (pieceName in PIECE_BY_NAME ? [PIECE_BY_NAME[pieceName as DhidePiece]] : null) : [...SET_PIECES];
     const q = await openQuest({ cap: 4000, eatAt: 50, lumbridgeOk: true });
     try {
+        if (!selected) await q.fail(`unknown PIECE=${pieceName}`);
         if (!Number.isSafeInteger(want) || want < 0 || want > 50) await q.fail('SETS 0-50');
         const s = q.s, start = s.tick();
         const held = (id: number) => s.sdk.getInventory().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
         const banked = (id: number) => (s.bankObservation?.()?.items ?? []).filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
         const level = s.sdk.getSkill('Crafting')?.level ?? 1;
-        if (level < SET_LEVEL) await q.fail(`Crafting ${level}, a set asks ${SET_LEVEL}`);
+        const reqLevel = Math.max(...selected!.map(p => p.level)), leatherPer = selected!.reduce((n, p) => n + p.leather, 0);
+        if (level < reqLevel) await q.fail(`Crafting ${level}, ${pieceName || 'a set'} asks ${reqLevel}`);
         const openBank = async (label: string) => {
             const generation = s.bankObservation?.()?.generation ?? 0;
             if (!(await s.bot.openBank()).success || !await q.waitUntil(() => !!q.st()?.bank?.isOpen && (s.bankObservation?.()?.generation ?? 0) > generation, 20)) await q.fail(`${label}: bank did not open`);
@@ -74,10 +97,10 @@ if (import.meta.main) {
         await go(AL_KHARID_BANK, 'the Al Kharid bank');
         await openBank('stage');
         await bankPack('stage');
-        const plan = setPlan(want, banked(BLACK_HIDE), banked(BLACK_LEATHER), banked(THREAD), banked(COINS));
+        const plan = planFor(selected!, want, banked(BLACK_HIDE), banked(BLACK_LEATHER), banked(THREAD), banked(COINS));
         const needle = banked(NEEDLE) < 1;
-        if (plan.sets < 1) { await closeBank(); await q.fail(`no set: ${banked(BLACK_HIDE)} hides, ${banked(BLACK_LEATHER)} leather, ${banked(COINS)} coins, a set is ${SET_LEATHER} leather`); }
-        q.milestone(`plan sets=${plan.sets} tan=${plan.tan} thread=${plan.thread}`);
+        if (plan.count < 1) { await closeBank(); await q.fail(`no craft: ${banked(BLACK_HIDE)} hides, ${banked(BLACK_LEATHER)} leather, ${banked(COINS)} coins, asks ${leatherPer} leather`); }
+        q.milestone(`plan ${pieceName || 'sets'}=${plan.count} tan=${plan.tan} thread=${plan.thread}`);
         // 2. The tanner, TAN_TRIP hides a trip.
         let tanned = 0, spent = 0;
         while (tanned < plan.tan) {
@@ -110,18 +133,19 @@ if (import.meta.main) {
             await openBank('shop'); await bankPack('shop');
         }
         await closeBank();
-        // 4. The sets, one piece a bank visit.
+        // 4. The sets or selected piece, one piece a bank visit.
         const made: number[] = [];
-        for (const piece of SET_PIECES) {
+        for (const piece of selected!) {
             const recipe = inventoryRecipes().find(r => r.name === piece.recipe);
             if (!recipe) await q.fail(`no recipe ${piece.recipe}`);
-            const r = await runInventoryBank(s, recipe!, { maximum: plan.sets, cap: 100 + plan.sets * 40, maxAttempts: plan.sets, members: true });
+            const r = await runInventoryBank(s, recipe!, { maximum: plan.count, cap: 100 + plan.count * 40, maxAttempts: plan.count, members: true });
             made.push(r.made);
-            if (!r.ok) await q.fail(`craft ${piece.recipe}: ${r.failure} made=${r.made} of ${plan.sets}`);
+            if (!r.ok) await q.fail(`craft ${piece.recipe}: ${r.failure} made=${r.made} of ${plan.count}`);
         }
         await openBank('end'); await bankPack('end');
-        const sets = Math.min(...SET_PIECES.map(p => banked(p.product))), hidesLeft = banked(BLACK_HIDE), leatherLeft = banked(BLACK_LEATHER);
+        const sets = Math.min(...selected!.map(p => banked(p.product))), hidesLeft = banked(BLACK_HIDE), leatherLeft = banked(BLACK_LEATHER);
         await closeBank();
-        await q.end(made.every(n => n === plan.sets), `sets=${plan.sets} banked=${sets} bodies=${made[0]} chaps=${made[1]} vambraces=${made[2]} tanned=${tanned} spent=${spent} hidesLeft=${hidesLeft} leatherLeft=${leatherLeft} crafting=${s.sdk.getSkill('Crafting')?.level ?? 0} ticks=${s.tick() - start}`);
+        const detail = selected!.map((p, idx) => `${p.recipe.endsWith('body') ? 'bodies' : p.recipe.endsWith('chaps') ? 'chaps' : 'vambraces'}=${made[idx]}`).join(' ');
+        await q.end(made.every(n => n === plan.count), `sets=${plan.count} banked=${sets} ${detail} tanned=${tanned} spent=${spent} hidesLeft=${hidesLeft} leatherLeft=${leatherLeft} crafting=${s.sdk.getSkill('Crafting')?.level ?? 0} ticks=${s.tick() - start}`);
     } catch (e) { await q.fail(String(e)); }
 }

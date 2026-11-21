@@ -151,10 +151,11 @@ export function coinOrder(from: string, to: string, coins: number, server: strin
 export const ARMY_MEET: NonNullable<Order['meet']> = [{ x: 2618, z: 3333, level: 0 }, { x: 2617, z: 3333, level: 0 }];
 // A kit item order: the same window as a coin order, at the army's home bank. The id carries the item, so two orders
 // for one pair in one pass differ.
-export function itemOrder(from: string, to: string, item: string, count: number, server: string, now: number, leadMs=15 * 60_000): Order {
-    if(!Number.isSafeInteger(leadMs)||leadMs<0||leadMs>15*60_000)throw Error('invalid item order lead');
+export function itemOrder(from: string, to: string, item: string, count: number, server: string, now: number, leadMs = 15 * 60_000, itemId?: number): Order {
+    if (!Number.isSafeInteger(leadMs) || leadMs < 0 || leadMs > 15 * 60_000) throw Error('invalid item order lead');
     const start = now + leadMs;
-    return { id: `${start}-${from}-${to}-${item.replace(/[^A-Za-z0-9]+/g, '')}`.toLowerCase().slice(0, 64), server, from, to, item, count, start, end: start + 40 * 60_000, meet: ARMY_MEET };
+    const suffix = `${item.replace(/[^A-Za-z0-9]+/g, '')}${itemId !== undefined ? `-${itemId}` : ''}`;
+    return { id: `${start}-${from}-${to}-${suffix}`.toLowerCase().slice(0, 64), server, from, to, item, count, ...(itemId !== undefined ? { itemId } : {}), start, end: start + 40 * 60_000, meet: ARMY_MEET };
 }
 // A side's free accounts as kit donors, from its published snapshot and plan (fleet/snapshots, fleet/plans): the side
 // published a plan within `maxAgeMs` (SIDE_STOCK_MAX_AGE_MS: its fleet agent syncs every 10 minutes, so it runs and
@@ -907,8 +908,9 @@ export function pass(planFile: string, dry: boolean, isPaused = swarmPaused, def
     const serverOf = (to: string) => owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev';
     const lead=(from:string,to:string)=>owners.get(from.toLowerCase())?.side===side&&owners.get(to.toLowerCase())?.side===side?0:15*60_000;
     const funding = fundOrders(refined.assignments, open, (from, to, coins, meet) => coinOrder(from, to, coins, serverOf(to), now, meet === 'ardougne' ? ARMY_MEET : undefined,lead(from,to)),
-        s => itemOrder(s.from, s.to, market[s.item]?.name ?? items.find(i => typeof i.name === 'string' && norm(i.name) === s.item && !/^cert_/.test(i.debugname ?? ''))?.name ?? s.item, s.count, serverOf(s.to), now,
-            lead(s.from,s.to)));
+        s => itemOrder(s.from, s.to,
+            s.itemId !== undefined ? byId.get(s.itemId) ?? s.item : market[s.item]?.name ?? items.find(i => typeof i.name === 'string' && norm(i.name) === s.item && !/^cert_/.test(i.debugname ?? ''))?.name ?? s.item,
+            s.count, serverOf(s.to), now, lead(s.from, s.to), s.itemId));
     const out = funding.assignments;
     log.push(...funding.log);
     const goalOf = (n: string) => String(swarm.jobs.find((j: any) => j?.autopilot !== side && !j?.script && [j?.account, ...(j?.accounts ?? [])].some((x: any) => String(x).toLowerCase() === n.toLowerCase()))?.goal ?? 'reserved by a swarm.json reservation');

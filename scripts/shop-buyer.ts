@@ -508,6 +508,18 @@ export const PROFILES: Record<string, {
             inside: p => (p.level ?? 0) > 0 || p.worldZ >= 3350,
         },
     },
+    // Bob's Brilliant Axes in Lumbridge (lumbridge.inv axeshop, npc 519 at 3232,3203, op3 Trade): steel, iron, bronze axes & bronze pickaxe.
+    bob: {
+        npc: /^bob$/i,
+        npcSpot: { x: 3231, z: 3203 },
+        bankSpot: { x: 3092, z: 3243 }, // Draynor Bank
+        items: [
+            { re: /^steel axe$/i, buyPerTick: 1, shelf: 3 },
+            { re: /^iron axe$/i, buyPerTick: 1, shelf: 5 },
+            { re: /^bronze axe$/i, buyPerTick: 1, shelf: 10 },
+            { re: /^bronze pickaxe$/i, buyPerTick: 1, shelf: 5 },
+        ],
+    },
     // Helemos in the Heroes' Guild (heroes_guild.inv: dragon_battleaxe shelf 2 at 200,000 gp, dragon_mace shelf 1 at 50,000 gp).
     helemos: {
         npc: /^helemos$/i,

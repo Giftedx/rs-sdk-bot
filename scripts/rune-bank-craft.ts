@@ -53,8 +53,11 @@ export async function dispatchRuneEntry(s:Session,p:{dispatch:(attempt:number)=>
  return result('entry warning retries exhausted');
 }
 
-export const ESSENCE=1436,AIR=556,TALISMAN=1438;
+export const ESSENCE=1436,AIR=556,TALISMAN=1438,DRAMEN_STAFF=772;
 export const BANK={x:3013,z:3355,level:0},RUINS={x:2986,z:3294,level:0};
+export const ZANARIS_BANK:Tile={x:3152,z:9578,level:0},DRAYNOR_BANK:Tile={x:3092,z:3243,level:0};
+export const inZanarisCosmic=(p:{worldX:number;worldZ:number;level:number}|null|undefined)=>
+ !!p&&p.level===0&&p.worldX>=3130&&p.worldX<=3270&&p.worldZ>=9472&&p.worldZ<=9600;
 type RuneAltar={name:string;level:number;xp:number;multiplier:number;rune:number;talisman:number;ruins:Tile;inside:Tile;outside:Tile;portal:number};
 const tile=(x:number,z:number,level=0):Tile=>({x,z,level});
 // Pinned skill_runecraft/configs/runecraft.dbrow and content/pack/{obj,loc}.pack.
@@ -66,9 +69,13 @@ export const RUNE_ALTARS:readonly RuneAltar[]=[
  {name:'fire',level:14,xp:7,multiplier:35,rune:554,talisman:1442,ruins:tile(3313,3255),inside:tile(2576,4848),outside:tile(3310,3252),portal:2469},
  {name:'body',level:20,xp:7.5,multiplier:46,rune:559,talisman:1446,ruins:tile(3053,3445),inside:tile(2523,4838),outside:tile(3050,3442),portal:2470},
 ];
+// Pinned members Cosmic altar (runecraft_cosmic in runecraft.dbrow; m49_148/m33_75.jm2); only selectable explicitly via RUNE_ALTAR=cosmic.
+export const COSMIC_ALTAR:RuneAltar={name:'cosmic',level:27,xp:8,multiplier:59,rune:564,talisman:1454,ruins:tile(3176,9497),inside:tile(2142,4831),outside:tile(3173,9501),portal:2471};
+const COSMIC_EXIT_APPROACH=tile(2142,4815);
+const ALL_ALTARS:readonly RuneAltar[]=[...RUNE_ALTARS,COSMIC_ALTAR];
 export function chooseRuneAltar(level:number,owned:ReadonlySet<number>,forced?:string){
  if(forced!==undefined){
-  const altar=RUNE_ALTARS.find(a=>a.name===forced);
+  const altar=ALL_ALTARS.find(a=>a.name===forced);
   if(!altar)throw Error(`unknown rune altar: ${forced}`);
   if(!Number.isSafeInteger(level)||level<altar.level)throw Error(`${forced} altar requires Runecraft${altar.level}, observed${level}`);
   if(!owned.has(altar.talisman))throw Error(`next acquisition: ${forced} talisman${altar.talisman} required for requested altar`);
@@ -78,11 +85,11 @@ export function chooseRuneAltar(level:number,owned:ReadonlySet<number>,forced?:s
  const altar=usable.find(a=>owned.has(a.talisman));
  return {altar,wanted:usable.filter(a=>(!altar||a.xp>altar.xp)&&!owned.has(a.talisman)).map(a=>a.name)};
 }
-// Pinned maps/*.jm2 place each ruin (runecraft.loc 3x3, no forceapproach) as shape10 angle0, origin one tile
+// Pinned maps/*.jm2 place each ruin (runecraft.loc 3x3, no forceapproach) as shape10, origin one tile
 // south-west of its altar_coord centre. The centre is blocked, so travel stages at exit_coord outside the footprint.
 export function ruinTarget(a:RuneAltar):{at:Tile;q:InteractionTarget}{
- const at=tile(a.ruins.x-1,a.ruins.z-1,a.ruins.level),id=2452+RUNE_ALTARS.indexOf(a);
- return {at,q:{id,shape:10,angle:0,width:3,height:3,blockAccessFlags:0,
+ const at=tile(a.ruins.x-1,a.ruins.z-1,a.ruins.level),id=2452+ALL_ALTARS.indexOf(a);
+ return {at,q:{id,shape:10,angle:a.name==='cosmic'?2:0,width:3,height:3,blockAccessFlags:0,
   src:`maps/m${Math.floor(at.x/64)}_${Math.floor(at.z/64)}.jm2`,configSrc:'scripts/skill_runecraft/configs/runecraft.loc'}};
 }
 export const inRuinFootprint=(a:RuneAltar,t:Tile)=>{const {at,q}=ruinTarget(a);
@@ -98,7 +105,7 @@ export type RuneBankOptions={cap?:number;stop?:()=>boolean;altar?:string;essence
 export function runeBankOptions(options:RuneBankOptions={}){
  const cap=options.cap??20000;
  if(!Number.isSafeInteger(cap)||cap<1)throw Error('invalid rune bank craft tick cap');
- if(options.altar!==undefined&&!RUNE_ALTARS.some(a=>a.name===options.altar))throw Error(`unknown rune altar: ${options.altar}`);
+ if(options.altar!==undefined&&!ALL_ALTARS.some(a=>a.name===options.altar))throw Error(`unknown rune altar: ${options.altar}`);
  if(options.essenceTarget!==undefined&&(!Number.isSafeInteger(options.essenceTarget)||options.essenceTarget<1))
   throw Error('rune essence target must be a positive safe integer');
  return {...options,cap};
@@ -144,7 +151,9 @@ export async function runRuneBankCraft(s:Session,target=99,options:RuneBankOptio
  let ledger:RuneBankLedger|undefined,consumed=0,crafted=0,trips=0,level0=0,xp0=0;
  const tripResults:{altar:string;level:number;consumed:number;crafted:number;xp:number}[]=[];
  let chosen:RuneAltar|undefined;
- const runeCount=()=>RUNE_ALTARS.reduce((n,a)=>n+count(a.rune),0);
+ const activeAltars=forced==='cosmic'?[COSMIC_ALTAR]:RUNE_ALTARS;
+ const bankSpot=forced==='cosmic'?ZANARIS_BANK:BANK;
+ const runeCount=()=>activeAltars.reduce((n,a)=>n+count(a.rune),0);
  const action=async<T>(name:string,work:()=>Promise<T>):Promise<T>=>{
   const record=(phase:string)=>console.log('RUNE_BANK_ACTION '+JSON.stringify({tick:s.tick(),stage,action:name,phase,
    position:pos()?{x:pos()!.worldX,z:pos()!.worldZ,level:pos()!.level}:null,essence:count(ESSENCE),air:count(AIR),
@@ -179,7 +188,11 @@ export async function runRuneBankCraft(s:Session,target=99,options:RuneBankOptio
   if(a.name==='air'&&!production)await action('craft-air',()=>craftAirRunes(s,stop));
   else{
    await s.bot.dismissBlockingUI();check();
-   const altar=s.sdk.findNearbyLoc(/^altar$/i,{withOption:/craft/i});
+   let altar=s.sdk.findNearbyLoc(/^altar$/i,{withOption:/craft/i});
+   if(!altar){
+    await action(`approach-${a.name}-altar`,async()=>walkPath(await sessionWalker(s),[{x:a.inside.x,z:a.inside.z,tol:5}],{maxTicks:60,stop}));check();
+    altar=s.sdk.findNearbyLoc(/^altar$/i,{withOption:/craft/i});
+   }
    if(!altar)throw Error(`${a.name} craft altar unobserved`);
    await action(`craft-${a.name}`,()=>s.bot.interactLoc(altar,/craft/i));
    if(!await waitUntil(s,()=>stop()||count(ESSENCE)===0&&count(a.rune)>before.runes&&(production||xp()>before.xp),{timeoutTicks:15}))
@@ -229,11 +242,19 @@ export async function runRuneBankCraft(s:Session,target=99,options:RuneBankOptio
  };
  const exit=async(a:RuneAltar)=>{
   check();if(a.name==='air'){await action('exit-air',()=>exitAirAltar(s,stop));return;}
-  const portal=state()?.nearbyLocs.find(l=>l.id===a.portal&&l.optionsWithIndex.some(o=>o.opIndex===1&&/^use$/i.test(o.text)));
-  if(!portal)throw Error(`${a.name} exit portal unobserved`);
-  const edges=[tile(portal.x,portal.z+1,a.inside.level),tile(portal.x+1,portal.z,a.inside.level),tile(portal.x,portal.z-1,a.inside.level),tile(portal.x-1,portal.z,a.inside.level)];
-  const edge=edges.find(e=>{const p=s.sdk.findPath(e.x,e.z);return p.success&&p.reachedDestination===true;});
-  if(!edge)throw Error(`${a.name} exit approach unavailable`);
+  let portals=(state()?.nearbyLocs??[]).filter(l=>l.id===a.portal&&l.optionsWithIndex.some(o=>o.opIndex===1&&/^use$/i.test(o.text))).sort((x,y)=>x.distance-y.distance);
+  if(!portals.length&&a.name==='cosmic'){
+   await action('approach-cosmic-portal',async()=>walkPath(await sessionWalker(s),[{x:COSMIC_EXIT_APPROACH.x,z:COSMIC_EXIT_APPROACH.z,tol:4}],{maxTicks:40,stop}));check();
+   portals=(state()?.nearbyLocs??[]).filter(l=>l.id===a.portal&&l.optionsWithIndex.some(o=>o.opIndex===1&&/^use$/i.test(o.text))).sort((x,y)=>x.distance-y.distance);
+  }
+  let portal:typeof portals[number]|undefined,edge:Tile|undefined;
+  for(const cand of portals){
+   const edges=[tile(cand.x,cand.z+1,a.inside.level),tile(cand.x+1,cand.z,a.inside.level),tile(cand.x,cand.z-1,a.inside.level),tile(cand.x-1,cand.z,a.inside.level)];
+   const found=edges.find(e=>{const p=s.sdk.findPath(e.x,e.z);return p.success&&p.reachedDestination===true;});
+   if(found){portal=cand;edge=found;break;}
+  }
+  if(!portals.length)throw Error(`${a.name} exit portal unobserved`);
+  if(!portal||!edge)throw Error(`${a.name} exit approach unavailable`);
   const walked=await action(`approach-${a.name}-portal`,()=>s.bot.walkTo(edge.x,edge.z,0,{timeout:10000}));check();
   if(!walked.success||pos()?.worldX!==edge.x||pos()?.worldZ!==edge.z||pos()?.level!==edge.level)throw Error(`${a.name} exit approach unobserved`);
   const reply=await action(`exit-${a.name}`,()=>s.sdk.sendInteractLoc(portal.x,portal.z,portal.id,1));
@@ -242,7 +263,7 @@ export async function runRuneBankCraft(s:Session,target=99,options:RuneBankOptio
   if(!await waitUntil(s,()=>stop()||outside(),{timeoutTicks:20}))throw Error(`${a.name} exit unobserved`);
   check();if(!outside())throw Error(`${a.name} exit stopped`);
  };
- const xpBalanced=()=>runeBankXpBalanced(xp0,xp(),tripResults.reduce((n,t)=>n+t.consumed*RUNE_ALTARS.find(a=>a.name===t.altar)!.xp,0));
+ const xpBalanced=()=>runeBankXpBalanced(xp0,xp(),tripResults.reduce((n,t)=>n+t.consumed*ALL_ALTARS.find(a=>a.name===t.altar)!.xp,0));
  const summary=()=>({target,essenceTarget,stage,trips,consumed,crafted,ledger,tripResults,altar:chosen?.name,level0,level:level(),xp:xp()-xp0,
   ...production?{xpBalanced:xpBalanced()}:{},
   held:{essence:count(ESSENCE),air:count(AIR),runes:runeCount()},ticks:s.tick()-start,position:pos()});
@@ -252,9 +273,9 @@ export async function runRuneBankCraft(s:Session,target=99,options:RuneBankOptio
   if(production&&!runeBankXpBalanced(xp0,xp0,0))throw Error('entry Runecraft XP unobserved or outside pinned cap');
   if(production&&(!Number.isSafeInteger(currentLevel())||currentLevel()<1))throw Error('entry current Runecraft level unobserved');
   const held0={essence:count(ESSENCE),air:count(AIR)};
-  const initialRunes=Object.fromEntries(RUNE_ALTARS.map(a=>[a.rune,count(a.rune)]));
+  const initialRunes=Object.fromEntries(activeAltars.map(a=>[a.rune,count(a.rune)]));
   // Resume an interrupted trip from its observed position. The bank is unchanged by crafting.
-  const resumed=RUNE_ALTARS.find(a=>insideRuneAltar(a,pos()));
+  const resumed=activeAltars.find(a=>insideRuneAltar(a,pos()));
   if(resumed){
    stage='altar-resume';chosen=resumed;
    const requested=forced===undefined||resumed.name===forced;
@@ -263,11 +284,32 @@ export async function runRuneBankCraft(s:Session,target=99,options:RuneBankOptio
    if(count(ESSENCE)>0&&requested&&bounded&&accessible)await craft(resumed);
    await exit(resumed);
   }
+  if(forced==='cosmic'&&!inZanarisCosmic(pos())){
+   stage='zanaris-entry';
+   const wornStaff=()=>(state()?.equipment??[]).some(e=>e.id===DRAMEN_STAFF);
+   if(!wornStaff()&&count(DRAMEN_STAFF)<1){
+    await travel(DRAYNOR_BANK);await open();
+    for(const id of new Set(inv().map(i=>i.id)))if(id!==COSMIC_ALTAR.talisman&&id!==DRAMEN_STAFF){
+     const item=inv().find(i=>i.id===id);if(item)await action(`deposit:${id}`,()=>depositObserved(s,item));
+    }
+    if(bankCount(DRAMEN_STAFF)<1)throw Error('next acquisition: dramen staff 772 required for cosmic altar');
+    await withdraw(DRAMEN_STAFF,1);await close();
+   }
+   const staff=inv().find(i=>i.id===DRAMEN_STAFF);
+   if(!wornStaff()&&staff){await s.bot.equipItem(staff);if(!await waitUntil(s,()=>stop()||wornStaff(),{timeoutTicks:8}))throw Error('cosmic zanaris entry: dramen staff equip failed');}
+   if(!wornStaff())throw Error('next acquisition: dramen staff 772 required for cosmic altar');
+   await travel({x:3201,z:3169,level:0});
+   for(let i=0;i<4&&!inZanarisCosmic(pos())&&!stop();i++){
+    await s.direct({type:'interactLoc',x:3202,z:3169,locId:2406,optionIndex:1,reason:'SDK'});
+    await waitUntil(s,()=>stop()||inZanarisCosmic(pos()),{timeoutTicks:10});
+   }
+   if(!inZanarisCosmic(pos()))throw Error('cosmic zanaris entry: shed door 2406 did not enter Zanaris');
+  }
   let bankEssence=NaN;
   while(true){
-   check();stage='bank';await travel(BANK);await open();
+   check();stage='bank';await travel(bankSpot);await open();
    ledger??={essence0:held0.essence+bankCount(ESSENCE),essence:0,air0:held0.air+bankCount(AIR),air:0,consumed:0,crafted:0,
-    runes:Object.fromEntries(RUNE_ALTARS.map(a=>[a.rune,{before:initialRunes[a.rune]!+bankCount(a.rune),after:0,
+    runes:Object.fromEntries(activeAltars.map(a=>[a.rune,{before:initialRunes[a.rune]!+bankCount(a.rune),after:0,
      crafted:tripResults.filter(t=>t.altar===a.name).reduce((n,t)=>n+t.crafted,0)}]))};
    const owned=new Set([...inv(),...(s.bankObservation?.()?.items??[])].filter(i=>i.count>0).map(i=>i.id));
    const selection=chooseRuneAltar(forced===undefined?level():currentLevel(),owned,forced);
@@ -291,7 +333,7 @@ export async function runRuneBankCraft(s:Session,target=99,options:RuneBankOptio
   }
   stage='final';
   Object.assign(ledger,{essence:bankCount(ESSENCE)+count(ESSENCE),air:bankCount(AIR)+count(AIR),consumed,crafted});
-  for(const a of RUNE_ALTARS)if(ledger?.runes)ledger.runes[a.rune]!.after=bankCount(a.rune)+count(a.rune);
+  for(const a of activeAltars)if(ledger?.runes)ledger.runes[a.rune]!.after=bankCount(a.rune)+count(a.rune);
   const result=summary();await close();
   if(production&&!xpBalanced())throw Error('rune bank whole-order XP receipt failed');
   const ok=runeBankOk({ledger,level0,level:result.level,target,bankEssence,held:result.held,stopped:stop(),essenceTarget});

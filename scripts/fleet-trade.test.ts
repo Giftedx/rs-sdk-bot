@@ -928,3 +928,44 @@ test('a pre-login admission failure signals the partner without writing a failed
         expect(pickOrder([trade], [claimedReceipt('from')], 'Taker', 2000)?.order.id).toBe(trade.id);
     } finally { rmSync(base, { recursive: true, force: true }); }
 });
+
+test('an order with exact itemId accepts its noted/unnoted itemId and rejects colliding-name wrong itemIds', async () => {
+    const blackVambs = { id: 2491, name: 'Dragon vambraces', count: 1, slot: 0 };
+    const notedBlackVambs = { id: 2492, name: 'Dragon vambraces', count: 2, slot: 0 };
+    const greenVambs = { id: 1065, name: 'Dragon vambraces', count: 1, slot: 0 };
+    expect(validOrder(order({ item: 'Dragon vambraces', count: 2, itemId: 2491 }))).toBe(true);
+    expect(validOrder(order({ item: 'Dragon vambraces', count: 2, itemId: -1 }))).toBe(false);
+
+    // Receiver refuses colliding green dragon vambraces (1065) and accepts noted black dragon vambraces (2492 -> certlink 2491).
+    let pack: { id: number; name: string; count: number; slot: number }[] = [];
+    const bank: { id: number; name: string; count: number }[] = [];
+    let acceptedFlags: boolean[] = [];
+    const receiver = {
+        sdk: { getState: () => ({ inventory: pack }), getInventory: () => pack },
+        client: { objType: (id: number) => id === 2492
+            ? { stackable: true, certtemplate: 799, certlink: 2491 }
+            : { stackable: false, certtemplate: -1, certlink: -1 } },
+        bankObservation: () => ({ at: 2300 }),
+        bot: {
+            openBank: async () => ({ success: true }), closeBank: async () => ({ success: true }),
+            trade: async (_peer: RegExp, opts: Parameters<Session['bot']['trade']>[1]) => {
+                acceptedFlags.push(opts!.accept!([greenVambs, greenVambs]));
+                const ok = opts!.accept!([notedBlackVambs]);
+                acceptedFlags.push(ok);
+                pack = [notedBlackVambs];
+                return { success: true, partner: 'Giver', received: [notedBlackVambs], gave: [] };
+            },
+        },
+        ended: new Promise(() => {}),
+    } as unknown as Session;
+    const blackOrder = order({ item: 'Dragon vambraces', count: 2, itemId: 2491 });
+    const progress: { uncertain: boolean; count: number; bank?: { count: number; at: number } } = { uncertain: false, count: 0 };
+    await performFleetTransfer(receiver, blackOrder, 'to', progress, {
+        now: () => 2200, wait: async (_s, p) => p(null),
+        deposit: async (_s, item) => { bank.push({ id: item.id, name: item.name, count: 2 }); pack = []; return 2; },
+    });
+    expect(acceptedFlags).toEqual([false, true]);
+    expect(bank).toEqual([{ id: 2492, name: 'Dragon vambraces', count: 2 }]);
+    expect(progress.bank).toEqual({ count: 2, at: 2300 });
+    expect(blackVambs.id).toBe(2491);
+});

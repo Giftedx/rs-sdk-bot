@@ -177,7 +177,21 @@ export async function waitForGiver(order: Order, { ready, failed, now = Date.now
     }
 }
 
-const itemDefinition = (s: Session, id: number) => (s.client as { objType?: (id: number) => { stackable: boolean } } | undefined)?.objType?.(id);
+const itemDefinition = (s: Session, id: number) => (s.client as { objType?: (id: number) => { stackable: boolean; certtemplate?: number; certlink?: number } } | undefined)?.objType?.(id);
+const matchesLineId = (s: Session, id: number | undefined, itemId: number | undefined): boolean => {
+    if (itemId === undefined) return true;
+    if (id === undefined) return false;
+    const def = itemDefinition(s, id);
+    if (def && typeof def.certtemplate === 'number') {
+        const base = def.certtemplate !== -1 && typeof def.certlink === 'number' && def.certlink >= 0 ? def.certlink : id;
+        return base === itemId;
+    }
+    return id === itemId;
+};
+const countLineItems = (s: Session, re: RegExp, itemId?: number) =>
+    itemId === undefined
+        ? countItems(s, re)
+        : s.sdk.getInventory().filter(i => re.test(i.name) && matchesLineId(s, i.id, itemId)).reduce((n, i) => n + i.count, 0);
 let tradeItems: { id: number; name: string; tradeable: boolean }[] | undefined;
 // Before the offer is visible, allow for loose units of each ordered nonstackable item. A quantity over one
 // pack must arrive stacked (normally noted). The accept policy checks the actual offered IDs, including notes.
@@ -185,7 +199,7 @@ function receiverReservation(s: Session, order: Order): number {
     tradeItems ??= JSON.parse(readFileSync(join(root, 'knowledge/items.json'), 'utf8'));
     const pack = s.sdk.getInventory();
     return Math.min(28, orderLines(order).reduce((slots, line) => {
-        const ids = tradeItems!.filter(i => i.tradeable && i.name.toLowerCase() === line.item.toLowerCase()).map(i => i.id);
+        const ids = tradeItems!.filter(i => i.tradeable && (line.itemId !== undefined ? i.id === line.itemId : i.name.toLowerCase() === line.item.toLowerCase())).map(i => i.id);
         if (ids.length && ids.every(id => itemDefinition(s, id)?.stackable === true))
             return slots + (ids.every(id => pack.some(i => i.id === id)) ? 0 : 1);
         return slots + (line.count > 28 ? 1 : line.count);
@@ -241,17 +255,19 @@ export async function performFleetTransfer(s: Session, order: Order, role: Trade
         if (28 - s.sdk.getInventory().length < receiverReservation(s, order)) throw Error('receiver capacity unavailable before trade');
     }
     const lines = orderLines(order).map(line => {
-        const re = exactItem(line.item), before = countItems(s, re);
-        return { re, count: line.count, before, diff: () => role === 'from' ? before - countItems(s, re) : countItems(s, re) - before };
+        const re = exactItem(line.item), before = countLineItems(s, re, line.itemId);
+        return { re, itemId: line.itemId, count: line.count, before, diff: () => role === 'from' ? before - countLineItems(s, re, line.itemId) : countLineItems(s, re, line.itemId) - before };
     });
-    const lineOf = (name: string) => lines.findIndex(l => l.re.test(name));
-    const pack = () => s.sdk.getInventory().filter(i => lineOf(i.name) >= 0);
+    const matchesLine = (item: { id?: number; name: string }, l: { re: RegExp; itemId?: number }) =>
+        l.re.test(item.name) && matchesLineId(s, item.id, l.itemId);
+    const lineOf = (item: { id?: number; name: string }) => lines.findIndex(l => matchesLine(item, l));
+    const pack = () => s.sdk.getInventory().filter(i => lineOf(i) >= 0);
     const beforeById = new Map<number, number>();
     for (const row of pack()) beforeById.set(row.id, (beforeById.get(row.id) ?? 0) + row.count);
     const moved = () => lines.every(l => l.diff() === l.count), still = () => lines.every(l => l.diff() === 0);
     // The offer holds every line, at its exact count, and nothing else.
-    const exactOffer = (offer: readonly { name: string; count: number }[]) => offer.every(o => lineOf(o.name) >= 0)
-        && lines.every(l => offer.filter(o => l.re.test(o.name)).reduce((n, o) => n + o.count, 0) === l.count);
+    const exactOffer = (offer: readonly { id?: number; name: string; count: number }[]) => offer.every(o => lineOf(o) >= 0)
+        && lines.every(l => offer.filter(o => matchesLine(o, l)).reduce((n, o) => n + o.count, 0) === l.count);
     let result: TradeResult | undefined, capacityDetail: string | undefined;
     if (left() <= 0) throw Error('order window ended before trade');
     if (role === 'from') {
@@ -308,7 +324,7 @@ export async function performFleetTransfer(s: Session, order: Order, role: Trade
     for (const id of new Set(transferred.map(i => i.id))) {
         const rows = s.sdk.getInventory().filter(i => i.id === id), stack = rows[0];
         const incoming = transferred.filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
-        const amount = rows.reduce((n, i) => n + i.count, 0), line = lineOf(transferred.find(i => i.id === id)!.name);
+        const amount = rows.reduce((n, i) => n + i.count, 0), line = lineOf(transferred.find(i => i.id === id)!);
         if (!stack || amount - (beforeById.get(id) ?? 0) !== incoming) throw Error('receiver item delta differs from trade');
         if (await deposit(s, stack) !== amount) throw Error('receiver bank credit was not confirmed');
         const observation = s.bankObservation?.();
@@ -422,30 +438,46 @@ if (import.meta.main) {
             const there = await walkTarget(s, tile, false, undefined, { noJewelry: true }) as Outcome;
             if (!there.ok) throw Error(`route to ${tile.x}, ${tile.z}: ${there.reason} ${there.detail}`);
             await s.bot.walkTo(tile.x, tile.z, 0);
-            // The giver takes out of its bank what each line needs beyond what it holds, one bank visit for all lines.
-            const short = role === 'from' ? orderLines(order).map((line, i) => ({ line, i, item: exactItem(line.item) })).filter(l => countItems(s, l.item) < l.line.count) : [];
-            if (short.length) {
+            // The giver takes out of its bank what each line needs beyond what it holds, one bank visit for all lines,
+            // depositing any colliding-name wrong-ID items first when a line specifies an exact itemId.
+            const prep = role === 'from' ? orderLines(order).map((line, i) => {
+                const item = exactItem(line.item);
+                const wrongId = line.itemId !== undefined && s.sdk.getInventory().some(r => item.test(r.name) && !matchesLineId(s, r.id, line.itemId));
+                return { line, i, item, wrongId, need: countLineItems(s, item, line.itemId) < line.count };
+            }).filter(l => l.need || l.wrongId) : [];
+            if (prep.length) {
                 if (!(await s.bot.openBank()).success || !await waitUntil(s, () => !!s.bankObservation?.(), { timeoutTicks: 20 })) throw Error('bank did not open');
-                for (const { line, i, item } of short) {
-                    const held = () => countItems(s, item);
+                for (const { line, i, item } of prep) {
+                    const held = () => countLineItems(s, item, line.itemId);
+                    if (line.itemId !== undefined) {
+                        for (const wrong of [...new Map(s.sdk.getInventory().filter(r => item.test(r.name) && !matchesLineId(s, r.id, line.itemId)).map(r => [r.id, r])).values()]) {
+                            const generation = s.bankObservation?.()?.generation ?? -1;
+                            progress.uncertain = true;
+                            await s.bot.depositItem(wrong, -1);
+                            if (!await waitUntil(s, () => (s.bankObservation?.()?.generation ?? -1) > generation && !s.sdk.getInventory().some(r => r.id === wrong.id), { timeoutTicks: 10 }))
+                                throw Error(`sender conflicting ${line.item}#${wrong.id} deposit not confirmed`);
+                            progress.uncertain = false;
+                        }
+                    }
                     // Loose items beside a noted stack of the same item: the offer took the loose rows only (live: 23 loose
                     // dragon bones offered of 347, and the receiver refused the short offer). The loose ones go back in
                     // first, so the whole line comes out as one noted stack.
-                    const loose = s.sdk.getInventory().filter(r => item.test(r.name) && r.count === 1);
+                    const loose = s.sdk.getInventory().filter(r => item.test(r.name) && matchesLineId(s, r.id, line.itemId) && r.count === 1);
                     if (line.count > 1 && !/^coins$/i.test(line.item) && loose.length) {
                         const generation = s.bankObservation?.()?.generation ?? -1;
                         progress.uncertain = true;
                         await s.bot.depositItem(loose[0]!, -1);
-                        if (!await waitUntil(s, () => (s.bankObservation?.()?.generation ?? -1) > generation && !s.sdk.getInventory().some(r => item.test(r.name) && r.count === 1), { timeoutTicks: 10 }))
+                        if (!await waitUntil(s, () => (s.bankObservation?.()?.generation ?? -1) > generation && !s.sdk.getInventory().some(r => item.test(r.name) && matchesLineId(s, r.id, line.itemId) && r.count === 1), { timeoutTicks: 10 }))
                             throw Error(`sender loose ${line.item} deposit not confirmed`);
                         progress.uncertain = false;
                     }
-                    const bankBefore = s.bankObservation?.(), row = bankBefore?.items.find(r => item.test(r.name));
+                    if (held() >= line.count) continue;
+                    const bankBefore = s.bankObservation?.(), row = bankBefore?.items.find(r => item.test(r.name) && matchesLineId(s, r.id, line.itemId));
                     const amount = line.count - held(), bankCount = row?.count ?? 0;
                     if (!bankBefore || !row || bankCount < amount) throw Error(`stock short: ${line.item} ${bankCount} banked + ${held()} held < ${line.count}`);
                     const target = s.sdk.getState()?.bank.items.find(r => r.id === row.id);
                     if (!target) throw Error(`sender bank item is unavailable: ${line.item}`);
-                    const stack = s.sdk.getInventory().find(r => item.test(r.name));
+                    const stack = s.sdk.getInventory().find(r => item.test(r.name) && matchesLineId(s, r.id, line.itemId));
                     const asNote = amount > 1 && !/^coins$/i.test(line.item) && !(stack && stack.count > 1);
                     progress.uncertain = true;
                     await s.bot.withdrawItem(target, amount, { asNote });

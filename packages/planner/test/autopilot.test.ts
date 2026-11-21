@@ -2954,7 +2954,7 @@ test('the squad rows are priced from the plan and capped by maxCoins, first line
     expect(lines).not.toContain('food');
 });
 
-test('squadHeld counts 4-dose and super potions cleanly, keeps karambwans separate from sharks, and skips non-unique black dhide trades', () => {
+test('squadHeld counts 4-dose and super potions cleanly, keeps karambwans separate from sharks, and dispatches exact itemId black dhide trades', () => {
     expect(Object.keys(SQUAD_POTION_ALIASES)).toContain('prayer potion(3)');
     expect(squadHeld('prayer potion(3)', { 'prayer potion(4)': 9 })).toBe(12);
     expect(squadHeld('antipoison(3)', { 'superantipoison(4)': 3 })).toBe(4);
@@ -2975,7 +2975,7 @@ test('squadHeld counts 4-dose and super potions cleanly, keeps karambwans separa
     const squad: SquadInput = { active: true, hours: 4, all: ['Hunter'], members: [{ name: 'Hunter', items: { ...Object.fromEntries(Object.keys(SQUAD_HOURLY).filter(i => i !== 'food').map(i => [i === 'arrow' ? 'rune arrow' : i, 1000])), shark: 500, 'ring of recoil': 10, 'climbing boot': 5, 'dragon dagger(p)': 5, 'magic shortbow': 5, 'berserker helm': 5, 'rune full helm': 5, 'rune platebody': 5, 'rune plateleg': 5, 'rune kiteshield': 5 } }] };
     const donorItems = { black_dragonhide_body: 10, black_dragonhide_chaps: 10, black_dragon_vambraces: 10 };
     const out = plan(inputs([acct('Hunter', {}, { coin: 100 }), acct('Crafter', {}, donorItems)], { templates: [], bill: [], squad, stock: [{ name: 'Crafter', side, items: donorItems }] }));
-    expect(out.find(x => x.account === 'Hunter')?.send).toBeUndefined();
+    expect(out.find(x => x.account === 'Hunter')?.send).toEqual({ from: 'Crafter', to: 'Hunter', item: 'black_dragonhide_body', itemId: 2503, count: 2, template: 'squad-restock' });
 });
 
 test('a held squad member (live hunt) is still held out of jobs and donor stock: every block member drives the hold-out', () => {
@@ -3778,5 +3778,50 @@ describe('continuous mainland supplies, strict 4-dose decanting, quest safety an
         expect(CAPACITY['squad:catherby-cooking']).toBe(2);
         expect(CAPACITY['squad:taverley-druids']).toBe(1);
         expect(PLACES['squad:ardougne-giants']).toEqual({ x: 3092, z: 3496 });
+    });
+
+    test('Wave D supply fixes unlock steel axe Bob upgrade, vambrace crafting, crystal chest, glory recharge, cosmic craft, herblore bank parallelism, and rune arrow(p) demand', () => {
+        const itemsJson = JSON.parse(readFileSync(new URL('../../../knowledge/items.json', import.meta.url), 'utf8')) as { id: number; name?: string; debugname?: string; cost?: number }[];
+        const realPrices = priceTable(itemsJson, []);
+        expect(realPrices.black_dragon_vambraces).toBe(4320);
+        expect(realPrices.black_dragonhide_body).toBe(13480);
+        expect(realPrices['crystal key']).toBe(500);
+
+        const fullSquad: SquadInput = { active: true, hours: 4, members: [{ name: 'Hunter', items: { 'rune arrow': 1000, 'amulet of glory(4)': 0 } }] };
+        const needs = goalNeeds(inputs([acct('Hunter', {}, {})], { squad: fullSquad, prices: realPrices }), []);
+        expect(needs.some(n => n.names[0] === 'rune arrow(p)' && n.consumer === 'gang squad Hunter: poison rune arrows')).toBe(true);
+
+        // Bronze axe + 670 coins Woodcutter upgrades via tool-axe-steel at Bob before chopping Magic logs.
+        const logger = acct('YewFirst', { Woodcutting: 99, Hitpoints: 99 }, { 'bronze axe': 1, coin: 670 });
+        const wcTemplates = catalogue().filter(t => ['tool-axe-steel', 'squad-magic-logs'].includes(t.id));
+        expect(plan(inputs([logger], { templates: wcTemplates, bill: [], squad: fullSquad, prices: realPrices }))[0]!.template?.id).toBe('tool-axe-steel');
+        const withSteel = acct('YewFirst', { Woodcutting: 99, Hitpoints: 99 }, { 'steel axe': 1, coin: 470 });
+        expect(plan(inputs([withSteel], { templates: wcTemplates, bill: [], squad: fullSquad, prices: realPrices }))[0]!.template?.id).toBe('squad-magic-logs');
+
+        // Crafting 79+ with <6 hides makes vambraces cleanly via squad-black-dhide-vambraces.
+        const vambCrafter = acct('UnderMyKilt', { Crafting: 85, Hitpoints: 99 }, { dragonhide_black: 3, coin: 500 });
+        const dhideTemplates = catalogue().filter(t => ['squad-black-dhide-sets', 'squad-black-dhide-vambraces'].includes(t.id));
+        const vambPlan = plan(inputs([vambCrafter], { templates: dhideTemplates, bill: [], squad: fullSquad, prices: realPrices }))[0]!;
+        expect(vambPlan.template?.id).toBe('squad-black-dhide-vambraces');
+
+        // Sapphire + vial shop buys stay positive value after unit cost alignment.
+        const buyer = acct('GemBuyer', { Magic: 68 }, { coin: 30_000 });
+        const shopPlan = plan(inputs([buyer], { templates: catalogue().filter(t => ['squad-sapphire-herquin', 'squad-vial-of-water'].includes(t.id)), bill: [], squad: fullSquad, prices: realPrices }))[0]!;
+        expect(shopPlan.value).toBeGreaterThan(0);
+
+        // Crystal chest, Glory recharge (Hero's Quest + HP>=75), Cosmic altar, and 4x herblore-bank capacity all admit cleanly.
+        const opener = acct('ChestOpener', { Hitpoints: 99 }, { keyhalf1: 1, keyhalf2: 1 });
+        expect(plan(inputs([opener], { templates: catalogue().filter(t => t.id === 'squad-crystal-chest'), bill: [], squad: fullSquad, prices: realPrices }))[0]!.template?.id).toBe('squad-crystal-chest');
+
+        const charger: Acct = { ...acct('HeroCharger', { Hitpoints: 99 }, { 'amulet of glory(2)': 2 }), quests: new Set(["hero's quest"]) };
+        expect(plan(inputs([charger], { templates: catalogue().filter(t => t.id === 'squad-charge-glory'), bill: [], squad: fullSquad, prices: realPrices }))[0]!.template?.id).toBe('squad-charge-glory');
+
+        const cosmicRc: Acct = { ...acct('CosmicRc', { Runecraft: 99, Hitpoints: 99 }, { 'dramen staff': 1, 'cosmic talisman': 1, 'rune essence': 56 }), quests: new Set(['lost city']) };
+        expect(plan(inputs([cosmicRc], { templates: catalogue().filter(t => t.id === 'squad-cosmic-craft'), bill: [], squad: fullSquad, prices: realPrices }))[0]!.template?.id).toBe('squad-cosmic-craft');
+
+        expect(CAPACITY['squad:herblore-bank']).toBe(4);
+        const bankSkillers = Array.from({ length: 4 }, (_, idx) => acct(`Herb${idx}`, { Herblore: 99, Hitpoints: 99 }, { 'unidentified ranarr': 10 }));
+        const herbOut = plan(inputs(bankSkillers, { templates: catalogue().filter(t => t.id === 'squad-identify-ranarr'), capacity: CAPACITY, bill: [row('ranarr weed', 40)], squad: fullSquad, prices: realPrices }));
+        expect(herbOut.filter(a => a.template?.id === 'squad-identify-ranarr')).toHaveLength(4);
     });
 });
