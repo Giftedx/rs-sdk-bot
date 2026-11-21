@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795242701706-fatstack-earlyshooter-629d4e1cb8365903",
+ "account": "Fatstack",
+ "partner": "Earlyshooter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 129000,
+ "claim": "981107b6-cec5-425b-a5ea-ee0695d32f72",
+ "count": 0,
+ "ok": false,
+ "at": 1795242799856,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795242702085-masterbaiter-knightrider-0c969b7c631386d3",
+ "account": "Masterbaiter",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 29000,
+ "claim": "3ab70adc-71fb-4cd8-ab19-5aca2d5e9ce0",
+ "count": 0,
+ "ok": false,
+ "at": 1795242806138,
+ "detail": "trade claimed"
+}
