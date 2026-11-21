@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795245781454-abracadickra-sporranbulge-136e57b9f4a4a65a",
+ "account": "Abracadickra",
+ "partner": "SporranBulge",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 86000,
+ "claim": "3dfb5b7f-c79f-43d0-a84c-84ae71be2dfe",
+ "count": 0,
+ "ok": false,
+ "at": 1795245811097,
+ "detail": "trade claimed"
+}

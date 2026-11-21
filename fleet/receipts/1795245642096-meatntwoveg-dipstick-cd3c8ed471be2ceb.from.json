@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795245642096-meatntwoveg-dipstick-cd3c8ed471be2ceb",
  "account": "MeatNTwoVeg",
  "partner": "Dipstick",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 20500,
  "claim": "4d8c599e-1883-4e45-8649-4990f62b73df",
- "count": 0,
- "ok": false,
- "at": 1795245722599,
- "detail": "trade claimed"
+ "count": 20500,
+ "ok": true,
+ "at": 1795245813785,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 20500,
+  "after": 0
+ },
+ "bank": {
+  "count": 12500,
+  "at": 1795245794639
+ },
+ "logout": {
+  "attemptId": "1795245722608-0000004864-0000000001",
+  "at": 1795245813767,
+  "sha256": "01163d7ac245c7bc95933ba9e84e0680e4e749cc2aabafb0d2275c1c683b449b"
+ },
+ "screen": true
 }

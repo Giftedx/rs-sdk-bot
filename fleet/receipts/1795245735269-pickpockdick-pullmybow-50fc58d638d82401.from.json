@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795245735269-pickpockdick-pullmybow-50fc58d638d82401",
+ "account": "PickpockDick",
+ "partner": "Pullmybow",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 95500,
+ "claim": "85580def-0eca-4bcd-ba5f-a47847e9421b",
+ "count": 0,
+ "ok": false,
+ "at": 1795245815709,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795245642096-meatntwoveg-dipstick-cd3c8ed471be2ceb",
+ "account": "Dipstick",
+ "partner": "MeatNTwoVeg",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 20500,
+ "claim": "98efa1bd-7dd9-48e6-b6b5-a79780139794",
+ "count": 20500,
+ "ok": true,
+ "at": 1795245815470,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 20500
+ },
+ "bank": {
+  "count": 20500,
+  "at": 1795245814620
+ },
+ "logout": {
+  "attemptId": "1795245801130-0000009832-0000000001",
+  "at": 1795245815401,
+  "sha256": "6dc0579c9c1370fd8d7b951c0942bb0c395111eb03d327f07e072f8bea30caab"
+ },
+ "screen": true
+}
