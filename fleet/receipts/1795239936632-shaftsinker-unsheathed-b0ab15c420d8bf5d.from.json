@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795239936632-shaftsinker-unsheathed-b0ab15c420d8bf5d",
+ "account": "Shaftsinker",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Law rune",
+ "requested": 60,
+ "claim": "c4c57aa4-d295-437d-86df-2cd454ffc4e2",
+ "count": 0,
+ "ok": false,
+ "at": 1795240100192,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Vial of water",
+   "requested": 20,
+   "count": 0
+  }
+ ]
+}
