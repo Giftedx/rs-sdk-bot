@@ -59,8 +59,8 @@ const MAIN = new Set(['haggis']);
 // specBelow 0.45: the special waits for a gang account at 45% or less (one-on-one in the pilot's kit with Bind: 13 kills
 // of 16 at 89 HP a kill, against 12 at 107 with the profile's special at once; the squad case the same within the noise).
 export const SQUAD_OPTS = { cureNow: true, eatAt: 60, freeze: 'flee', focusRunner: 0.4, chaseBelow: 0.4, freezeMagicCap: 49, dropForStrip: null, specBelow: 0.45 } as const;
-// Proven Wave B/C/D defaults for maxed, supplied tribrids when SQUAD_OPTS does not pin those keys; preserves historical SQUAD_OPTS for low-Prayer Run-1 / un-potted chainbind replays.
-export const ELITE_SQUAD_OPTS = { eatAt: 76, comboAt: 64, freeze: 'low', freezeMagicCap: undefined, specBelow: 1, zeroDrainFlick: true, offensiveFlick: true, fakieSwitch: true, crowdPrayer: true } as const;
+// Proven Wave B-E defaults for maxed, supplied tribrids when SQUAD_OPTS does not pin those keys; preserves historical SQUAD_OPTS for low-Prayer Run-1 / un-potted chainbind replays.
+export const ELITE_SQUAD_OPTS = { eatAt: 80, comboAt: 70, koComboAt: 54, freeze: 'low', freezeArmour: 'strip', freezeFloor: 0.35, freezeMagicCap: undefined, specBelow: 1, zeroDrainFlick: true, offensiveFlick: true, fakieSwitch: true, crowdPrayer: true } as const;
 
 const PRAYER_RESTORE_IDS = new Set([2434, 139, 141, 143]);
 const BOOST_POTION_IDS = new Set([2436, 145, 147, 149, 2440, 157, 159, 161, 2442, 163, 165, 167, 2444, 169, 171, 173]);
@@ -1400,7 +1400,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     const effectiveRetreat = (actions: ReturnType<ThreatWatch['step']>['actions'], pos: ReturnType<typeof me>) => {
         const reason = retreatOf(actions);
         if (!reason) return null;
-        if (process.env.SQUAD_SINGLE_ANTI_ABANDON === '1' && reason.startsWith('lost fight:') && pos && !isMulti(pos.worldX, pos.worldZ) && pos.hp >= pos.maxHp * 0.72) {
+        if (process.env.SQUAD_SINGLE_ANTI_ABANDON !== '0' && reason.startsWith('lost fight:') && pos && !isMulti(pos.worldX, pos.worldZ) && pos.hp >= pos.maxHp * 0.72) {
             const foodCount = s.sdk.getInventory().filter(f => f.optionsWithIndex.some(op => /^eat$/i.test(op.text))).length;
             const curView = s.sdk.getState()?.nearbyPlayers ?? [];
             const activeTargetsSet = curInterlopers.size ? new Set([...o.targets, ...curInterlopers]) : o.targets;
@@ -1871,7 +1871,9 @@ if (import.meta.main) {
     let fightOverrides: Partial<FightOptions>, threatConfig: ReturnType<typeof threatOptions> | undefined;
     try {
         fightOverrides = squadFightOverrides(get);
-        threatConfig = get('SQUAD_THREAT', '0') === '1' ? threatOptions(get('SQUAD_THREAT_OPTS', ''), get) : undefined;
+        threatConfig = get('SQUAD_THREAT', '0') === '1'
+            ? threatOptions(get('SQUAD_THREAT_OPTS', ''), (k, d) => get(k, k === 'SQUAD_THREAT_SINGLE' ? '1.1' : d))
+            : undefined;
         // The profile and the extra options of the members: sparOptions throws on an unknown profile and on bad JSON. The kit comes from each member's state after login, so this
         // call uses an empty one; it only checks the settings.
         sparOptions(get('SQUAD_PROFILE', 'gang-hunter'), get('SQUAD_OPTS', JSON.stringify(SQUAD_OPTS)), {}, 1200);
@@ -2066,12 +2068,12 @@ if (import.meta.main) {
     const squadHasSpear = squad.some(s => [...(s.sdk.getState()?.equipment ?? []), ...(s.sdk.getState()?.inventory ?? [])].some(i => /^dragon spear/i.test(i.name)));
     const spearLock = get('SPEAR_LOCK', squadHasSpear ? '1' : '0') === '1';
     const freezeShares = new Map<string, NonNullable<FightOptions['freezeShare']>>();
-    // SQUAD_FREEZE_SHARE=1: the squad shares one freeze clock for each target (the same stagger of 3 ticks that the bench of the freeze share used), so that 2 to 4
-    // members do not cast Bind on the same tick (run 3).
+    // SQUAD_FREEZE_SHARE=1: the squad shares one freeze clock for each target (2-tick stagger proved optimal on Sweep E1/E2),
+    // so members do not pile Entangle on the same tick while quickly re-casting on splashes.
     const freezeShareFor = (t: string) => {
         const key = t.toLowerCase();
         let share = freezeShares.get(key);
-        if (!share) { share = { clock: () => squad[0]!.tick(), until: -1, stagger: Number(get('SQUAD_FREEZE_STAGGER', '3')) }; freezeShares.set(key, share); }
+        if (!share) { share = { clock: () => squad[0]!.tick(), until: -1, stagger: Number(get('SQUAD_FREEZE_STAGGER', '2')) }; freezeShares.set(key, share); }
         return share;
     };
     const stunShares = new Map<string, NonNullable<FightOptions['stunShare']>>();

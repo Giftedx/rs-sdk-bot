@@ -1528,7 +1528,7 @@ test('squadFallbackPlan outgunned triggers early Glory fallback, and rescue buff
     }
 });
 
-test('squadEliteDefaults enables Entangle, zeroDrainFlick/offensiveFlick, fakieSwitch, eatAt:76, and specBelow:1 only for maxed supplied tribrids', () => {
+test('squadEliteDefaults enables Wave E Entangle strip/floor, eatAt:80/comboAt:70/koComboAt:54, zeroDrainFlick/offensiveFlick, fakieSwitch, and specBelow:1 only for maxed supplied tribrids', () => {
     const { ELITE_SQUAD_OPTS, squadEliteDefaults } = require('./pk-squad');
     const maxSkills = [
         { name: 'Magic', baseLevel: 99 },
@@ -1543,18 +1543,25 @@ test('squadEliteDefaults enables Entangle, zeroDrainFlick/offensiveFlick, fakieS
     expect(elite).toEqual(ELITE_SQUAD_OPTS);
     const serialized = JSON.parse(JSON.stringify({ ...SQUAD_OPTS, ...elite }));
     expect(serialized.freezeMagicCap).toBeUndefined();
-    expect(serialized.eatAt).toBe(76);
-    expect(serialized.comboAt).toBe(64);
+    expect(serialized.eatAt).toBe(80);
+    expect(serialized.comboAt).toBe(70);
+    expect(serialized.koComboAt).toBe(54);
+    expect(serialized.freezeArmour).toBe('strip');
+    expect(serialized.freezeFloor).toBe(0.35);
     expect(serialized.specBelow).toBe(1);
     expect(serialized.zeroDrainFlick).toBe(true);
     expect(serialized.offensiveFlick).toBe(true);
     expect(serialized.fakieSwitch).toBe(true);
     expect(serialized.crowdPrayer).toBe(true);
-    // Scaled BiS clone & team5 cases default to winning tribrid-bis-zerk-glory-tele (Camelot Teleport + Berserker + Dragon + Glory).
-    const clones4 = benchCases().find(c => c.key === 'extra:clone-bis-clones-4-x1')!;
-    const team5 = benchCases().find(c => c.key === 'extra:clone-bis-team5-4-x1')!;
+    // Scaled BiS clone & team5 cases plus Wave E adversarial cases exist with expected kits and threat configs.
+    const cases = benchCases();
+    const clones4 = cases.find(c => c.key === 'extra:clone-bis-clones-4-x1')!;
+    const team5 = cases.find(c => c.key === 'extra:clone-bis-team5-4-x1')!;
     expect(clones4.presetConfig!.inventory!.some(i => i.id === 563)).toBe(true);
     expect(team5.presetConfig!.inventory!.some(i => i.id === 563)).toBe(true);
+    for (const key of ['extra:clone-bis-stand-team5-4-x1', 'extra:clone-bis-karam2-scattered-team5-x1', 'extra:clone-bis-split-single-x1', 'extra:clone-bis-deep21-team5-4-x1']) {
+        expect(cases.some(c => c.key === key)).toBe(true);
+    }
 });
 
 test('settleBenchLogout clears Wilderness combat timer and casts escape teleport before logout', async () => {
