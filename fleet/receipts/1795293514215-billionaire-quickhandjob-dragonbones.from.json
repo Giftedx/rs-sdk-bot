@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795293514215-billionaire-quickhandjob-dragonbones",
  "account": "Billionaire",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Dragon bones",
  "requested": 14,
  "claim": "26a2617b-558c-4c6e-9b52-491cf09c95bb",
- "count": 0,
- "ok": false,
- "at": 1795293596185,
- "detail": "trade claimed"
+ "count": 14,
+ "ok": true,
+ "at": 1795293614270,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 14,
+  "after": 0
+ },
+ "bank": {
+  "count": 14,
+  "at": 1795293606319
+ },
+ "logout": {
+  "attemptId": "1795293596257-0000011948-0000000001",
+  "at": 1795293614258,
+  "sha256": "da6c751604b69c1c415d77ec7bd1d5e03a05264bf872ac7e99bac9fb09d03ea0"
+ },
+ "screen": true
 }
