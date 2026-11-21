@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795252833058-mightyrod-ballbag",
  "account": "Mightyrod",
  "partner": "Ballbag",
@@ -12,6 +12,16 @@
  "claim": "4b71a3de-a9fe-4a7f-85cb-b10098fa4441",
  "count": 0,
  "ok": false,
- "at": 1795252900658,
- "detail": "trade claimed"
+ "at": 1795252957467,
+ "detail": "Error: partner failed: no trade",
+ "bank": {
+  "count": 1481,
+  "at": 1795252907599
+ },
+ "logout": {
+  "attemptId": "1795252900666-0000021956-0000000001",
+  "at": 1795252957454,
+  "sha256": "76e61f59093ec6b0012bc7f69ada52f531bf96ca6a86b731fcf0448fadb537ea"
+ },
+ "screen": false
 }
