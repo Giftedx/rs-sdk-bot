@@ -8,7 +8,7 @@ import type {Step} from '../packages/core/src/chain-step';
 import {resolveRouteStep} from './aio-route-step';
 import {QUEST_NAMES,questShortfall} from './quest-chain';
 import {QUEST_ORDERS,questSpec,questPreflight,questSavedChecks} from './quest-order';
-import {presetFor,needs,wornKitPlan} from './quest-sweep';
+import {presetFor,needs,PRAYER_POTIONS,QUEST_FINDS,prayerCovers,wornKitPlan} from './quest-sweep';
 import {walkQuestCorridor} from './quest-walk';
 import {retainedGhostSkull,retainedGhostBankSkull,leaveGhostBasement,inGhostBasement} from './ghost-basement-exit';
 
@@ -85,6 +85,10 @@ const questKey = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
 // regicide_kings_messenger.rs2:1-3 and druidspirit_journal.rs2:23-35.
 const QUEST_PREREQUISITES: Readonly<Record<string, readonly string[]>> = {
  grail: ['merlin'], upass: ['biohazard'], regicide: ['upass'], druidspirit: ['priest', 'priestperil'],
+ troll: ['death'], trolllove: ['death', 'troll'], eadgar: ['druid', 'troll'],
+ zombiequeen: ['junglepotion'], mortton: ['priestperil'], routequest: ['druidspirit'],
+ hauntedmine: ['priestperil'], tbwt: ['junglepotion'], hero: ['zanaris', 'dragon', 'merlin', 'arrav'],
+ misc: ['hero', 'viking'], legends: ['hero', 'upass', 'waterfall', 'zombiequeen', 'crest'],
 };
 
 export function assessQuestReadiness(questInput: string, ownedItems: Readonly<Record<number, number>>, completedQuests: ReadonlySet<string> = new Set(), skills?: Readonly<Record<string, number>>) {
@@ -103,12 +107,16 @@ export function assessQuestReadiness(questInput: string, ownedItems: Readonly<Re
  blockers.push(...questShortfall(slug, observedSkills).map(short => `skill ${short}`));
  for (const q of QUEST_PREREQUISITES[slug] ?? []) if (!isComplete(q)) blockers.push(`quest ${QUEST_NAMES[q] ?? q} incomplete or unknown`);
  if (slug === 'hero') blockers.push('Heroes requires an explicit owned pair order');
+ if (slug === 'arrav') blockers.push('Shield of Arrav requires a pair partner (scripts/generated/quest-arrav.ts <main> <helper>)');
  try {
   const preset = presetFor(slug);
   const missingItems: Record<number, number> = {};
   // Share the sweep's required pack and worn kit; duplicate preset rows are summed,
   // while optional food and walking teleports do not block an otherwise ready quest.
   const required = wornKitPlan(slug, needs(preset, false, slug), [], [], []).need;
+  for (const id of QUEST_FINDS[slug] ?? []) required.delete(id);
+  const prayerLevel = skills?.Prayer ?? skills?.prayer ?? 1;
+  if (prayerCovers(slug, prayerLevel)) for (const id of PRAYER_POTIONS) required.delete(id);
   for (const [id, count] of required) {
    const have = ownedItems[id] ?? 0;
    if (have < count) missingItems[id] = count - have;

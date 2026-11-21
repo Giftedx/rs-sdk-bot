@@ -69,6 +69,11 @@ try {
     const prayer = async (on: boolean) => {
         const p: any = q.st()?.prayers;
         if (!!p?.activePrayers?.[PROTECT_MAGIC] === on) return;
+        const points = p?.prayerPoints ?? 0;
+        const prayerLevel = q.s.sdk.getSkill('Prayer')?.baseLevel ?? 1;
+        if (on && (points <= 0 || prayerLevel < 37)) {
+            await q.fail(`protect magic requires Prayer 37 and points > 0 (level=${prayerLevel}, points=${points})`);
+        }
         await q.step(`protect magic ${on}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PROTECT_MAGIC, reason: 'SDK' }), () => !!(q.st() as any)?.prayers?.activePrayers?.[PROTECT_MAGIC] === on, 3, 3);
     };
     // A door op that moves the bot: retried until arrived().
@@ -125,14 +130,36 @@ try {
         await door('dark stairs up', DARK_UP, () => z() > 9790);
         // 4. The door of fear (pendant worn); the lava bridge with weight below 0 (boots -10 lb, no armour); the lever
         // piece; the bridge back (ikov_dungeon.rs2:12-23,36-82).
+        const ensureLightWeight = async (label: string) => {
+            const weight = () => (q.pos() as { runWeight?: number } | undefined)?.runWeight;
+            if (typeof weight() !== 'number' || (weight() ?? -1) < 0) return;
+            const keepWorn = new Set([ITEM.pendantL, ITEM.bootsWorn, ITEM.bow]);
+            for (const eq of [...q.s.sdk.getEquipment()]) {
+                if (!keepWorn.has(eq.id)) {
+                    await q.s.bot.unequipItem(eq);
+                    await q.waitTicks(1);
+                }
+            }
+            for (const id of [385, 373, 379, 365, 361, 333, 329, ITEM.knife, ITEM.candle]) {
+                while ((weight() ?? -1) >= 0 && q.has(id)) {
+                    await drop([id]);
+                    await q.waitTicks(1);
+                }
+            }
+            if ((weight() ?? -1) >= 0) {
+                await q.fail(`${label}: bridge requires weight < 0 (runWeight=${weight()}kg)`);
+            }
+        };
         await q.walk('to fear door', [{ x: FEAR.x, z: FEAR.z - 1, tol: 0 }]);
         await fearNorth();
         await q.walk('to bridge', [{ x: 2651, z: 9828, tol: 0 }]);
+        await ensureLightWeight('bridge west');
         await q.step('bridge west', () => q.s.direct({ type: 'walkTo', x: 2649, z: 9828, running: false, reason: 'SDK' }), () => x() <= 2647, 10, 4);
         await q.waitTicks(1);
         await q.walk('to lever piece', [{ x: LEVER_PIECE.x, z: LEVER_PIECE.z + 1, tol: 1 }]);
         await pickup('lever piece', ITEM.lever, LEVER_PIECE.x, LEVER_PIECE.z);
         await q.walk('to bridge back', [{ x: 2647, z: 9828, tol: 0 }]);
+        await ensureLightWeight('bridge east');
         await q.step('bridge east', () => q.s.direct({ type: 'walkTo', x: 2649, z: 9828, running: false, reason: 'SDK' }), () => x() >= 2651, 10, 4);
         await q.waitTicks(1);
         await q.walk('to fear door back', [{ x: FEAR.x, z: FEAR.z, tol: 0 }]);

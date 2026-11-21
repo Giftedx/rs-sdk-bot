@@ -124,7 +124,13 @@ const count=(rows:readonly Item[],id:number)=>rows.filter(r=>r.id===id).reduce((
 // Tree Gnome Village and The Grand Tree cast Fire Bolt with the staff of fire worn (the presets wear it; the packs carry
 // no fire runes), so the staff is a required worn item.
 const WORN_KIT:Record<string,readonly {id:number;required:boolean}[]>={ball:[{id:1059,required:true},{id:1331,required:false}],
- tree:[{id:1387,required:true}],grandtree:[{id:1387,required:true}]};
+ tree:[{id:1387,required:true}],grandtree:[{id:1387,required:true}],
+ ikov:[{id:861,required:true}],
+ druidspirit:[{id:552,required:true}],
+ desertrescue:[{id:1833,required:true},{id:1835,required:true},{id:1837,required:true},{id:1333,required:false}],
+ troll:[{id:3105,required:true}],trolllove:[{id:3105,required:true}],eadgar:[{id:3105,required:true}],
+ hauntedmine:[{id:1387,required:true}],arena:[{id:1387,required:false}],
+ chompybird:[{id:2866,required:false}]};
 export function wornKitPlan(quest:string,base:ReadonlyMap<number,number>,pack:readonly Item[],bank:readonly Item[],equipment:readonly Item[]){
  const wear=(WORN_KIT[quest]??[]).filter(i=>i.required||count(bank,i.id)>0||count(pack,i.id)>0||count(equipment,i.id)>0);
  const need=new Map(base);
@@ -228,7 +234,7 @@ export function scorpionAntipoisonNeeds(base:ReadonlyMap<number,number>,pack:rea
 }
 // Items a quest script gets for itself when the account holds none, so they go with the food rows too: Monkey Madness
 // kills a Karamja monkey by the Gandius glider for its bones (quest-mm.ts monkeyBones).
-export const QUEST_FINDS:Record<string,readonly number[]>={mm:[3183]};
+export const QUEST_FINDS:Record<string,readonly number[]>={mm:[3183],druidspirit:[2952]};
 export const prayerCovers=(quest:string,prayer:number)=>PRAYER_USED[quest]!==undefined&&prayer>=PRAYER_USED[quest]!+PRAYER_MARGIN;
 // The quests whose scripts cast scripts/fire-spells.ts fireSpell: only their packs' cast runes follow the Magic level.
 // Other presets keep their runes (Mage Arena's blood runes cast Flames of Zamorak).
@@ -249,7 +255,19 @@ export const buildPack=(quest:string,level:(skill:string)=>number):Item[]=>
 // everything the account wears and every pack item the quest does not use, and runs even with the pack complete.
 // The Fremennik Trials start bare too: Peer banks everything worn before his trial, and the quest script fights the
 // Draugen and Koschei unarmed, with the style that trains only Strength (a bow has no such style).
-export const BARE=new Set(['zanaris','grail','viking']);
+export const BARE=new Set(['zanaris','grail','viking','ikov']);
+export function ikovExcessMeals(pack:readonly Item[],food:ReadonlyMap<number,number>):{id:number;deposit:number}[]{
+ let allowance=[...food].filter(([id])=>MEALS.includes(id)).reduce((n,[,c])=>n+c,0);
+ const deposits:{id:number;deposit:number}[]=[];
+ for(const id of MEALS){
+  const held=count(pack,id);
+  if(!held)continue;
+  const keep=Math.min(held,allowance);
+  allowance-=keep;
+  if(held>keep)deposits.push({id,deposit:held-keep});
+ }
+ return deposits;
+}
 // The coins to take from the bank for the shops, fares and paid recipes of a pass: what they cost beyond the coins the
 // account carries over the quest's own need. The quest's coins are not shop money (practice: Merlin's Crystal asks 500
 // coins, the pass bought bread and a tinderbox for 13 of them and ended `withdraw short 995:13`).
@@ -717,7 +735,7 @@ export const SWEEP_PLAN_BUDGET_MS=15_000;
 // Seers' Village church: altar 409 at 2694,3462, prayed at from the tile east of it, about 70 tiles from King Arthur.
 // Practice with no points: Merlin's Crystal ended `step protect from melee on` in the keep.
 export const SEERS_ALTAR={id:409,x:2694,z:3462,level:0,stand:{x:2695,z:3462,level:0}} as const;
-export const PRAYER_QUESTS:Record<string,number>={merlin:30,grail:60};
+export const PRAYER_QUESTS:Record<string,number>={merlin:30,grail:60,ikov:37,hauntedmine:40,horror:40,eadgar:40,troll:43,trolllove:43};
 export const prayerShort=(points:number,level:number,wanted:number)=>points<Math.min(level,wanted);
 export async function prayBefore(s:Session,world:World,quest:string):Promise<string|null>{
  const wanted=PRAYER_QUESTS[quest];
@@ -1439,7 +1457,7 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
  const skill=(name:string)=>st()?.skills?.find((k:any)=>k.name===name)?.baseLevel??1;
  // A skill the quest wants and the account lacks sends the account through the bank pass too, with every supply held.
  const tradeableId=(id:number)=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable;
- const bare=(BARE.has(quest)||build.length>0)&&(s.sdk.getEquipment().length>0||bareDeposits(quest,pack(),need,food,tradeableId).length>0);
+ const bare=(BARE.has(quest)||build.length>0)&&(s.sdk.getEquipment().length>0||bareDeposits(quest,pack(),need,food,tradeableId).length>0||(quest==='ikov'&&ikovExcessMeals(pack(),food).length>0));
  if(bare||seekGhostSkull||WORN_KIT[quest]?.some(i=>!i.required&&!s.sdk.getEquipment().some(e=>e.id===i.id))||plan(need,pack(),[]).missing.length||foodShort(food,pack(),need)||questSkillTraining(quest,skill)){
   const exit=await leaveStronghold(s);
   if(!exit.ok)return fail(exit.detail!);
@@ -1472,6 +1490,20 @@ export async function sweepPreset(account:string,quest:string,fresh?:string){
      if(!row)continue;
      await s.bot.depositItem(row,-1);
      if(!await waitUntil(s,()=>count(pack(),id)===0,{timeoutTicks:10}))return `bare deposit unobserved ${id}`;
+    }
+    if(quest==='ikov'){
+     for(const {id,deposit} of ikovExcessMeals(pack(),food)){
+      let rem=deposit;
+      while(rem>0){
+       const row=(st()?.inventory??[]).find((i:any)=>i.id===id);
+       if(!row)break;
+       const n=Math.min(rem,row.count);
+       const before=count(pack(),id);
+       await s.bot.depositItem(row,n);
+       if(!await waitUntil(s,()=>count(pack(),id)<=before-n,{timeoutTicks:10}))return `bare meal trim unobserved ${id}`;
+       rem-=n;
+      }
+     }
     }
     return null;
    };

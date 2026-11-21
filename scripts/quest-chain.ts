@@ -46,6 +46,22 @@ export const QUEST_SKILLS: Record<string, Record<string, number>> = {
     seaslug: { firemaking: 30 }, junglepotion: { herblore: 3 }, zanaris: { woodcutting: 36, crafting: 31 },
     dig: { herblore: 10, agility: 10, thieving: 25 }, elemental: { mining: 20, smithing: 20, crafting: 20 },
     upass: { thieving: 50 }, regicide: { agility: 56, crafting: 10, magic: 51 },
+    ikov: { ranged: 40, thieving: 42, prayer: 37 },
+    desertrescue: { fletching: 10, smithing: 20 },
+    horror: { agility: 35, prayer: 40 },
+    zombiequeen: { crafting: 20, agility: 32 },
+    chompybird: { fletching: 5, cooking: 30, ranged: 30 },
+    viking: { woodcutting: 40, crafting: 40, fletching: 25 },
+    itwatchtower: { magic: 14, thieving: 15, agility: 25, herblore: 14, mining: 40 },
+    mortton: { crafting: 20, herblore: 15, firemaking: 5 },
+    routequest: { agility: 25 },
+    troll: { agility: 15, thieving: 30, prayer: 43 },
+    trolllove: { agility: 28, prayer: 43 },
+    eadgar: { herblore: 31, prayer: 40 },
+    hauntedmine: { agility: 15, crafting: 35, prayer: 40 },
+    crest: { mining: 40, crafting: 40, smithing: 40, magic: 59 },
+    tbwt: { agility: 15, cooking: 30, fishing: 5, firemaking: 30 },
+    misc: { herblore: 35, woodcutting: 45 },
 };
 // The skills a quest needs that the account lacks, as "skill have/need"; empty when it can run.
 export function questShortfall(quest: string, skills: { name: string; level: number }[] | undefined): string[] {

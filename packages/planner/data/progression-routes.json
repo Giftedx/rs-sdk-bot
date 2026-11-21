@@ -15192,8 +15192,7 @@
     "levels": {},
     "items": {
      "565": 60,
-     "995": 20,
-     "2434": 3
+     "995": 20
     },
     "facts": {
      "fact": "quest-entry:arena"
@@ -15407,7 +15406,11 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
+    "levels": {
+     "fletching": 5,
+     "cooking": 30,
+     "ranged": 30
+    },
     "items": {
      "314": 8,
      "946": 1,
@@ -15545,7 +15548,12 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
+    "levels": {
+     "mining": 40,
+     "crafting": 40,
+     "smithing": 40,
+     "magic": 59
+    },
     "items": {
      "315": 1,
      "560": 24,
@@ -15680,10 +15688,16 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
+    "levels": {
+     "fletching": 10,
+     "smithing": 20
+    },
     "items": {
      "314": 40,
      "1823": 2,
+     "1833": 1,
+     "1835": 1,
+     "1837": 1,
      "2347": 1,
      "2349": 5
     },
@@ -15926,7 +15940,7 @@
    "requirements": {
     "levels": {},
     "items": {
-     "2952": 1,
+     "552": 1,
      "2961": 1
     },
     "facts": {
@@ -16055,7 +16069,10 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
+    "levels": {
+     "herblore": 31,
+     "prayer": 40
+    },
     "items": {
      "99": 1,
      "233": 1,
@@ -16064,7 +16081,8 @@
      "1947": 10,
      "2015": 1,
      "2116": 1,
-     "2138": 5
+     "2138": 5,
+     "3105": 1
     },
     "facts": {
      "fact": "quest-entry:eadgar"
@@ -16396,8 +16414,7 @@
     "levels": {},
     "items": {
      "562": 80,
-     "1387": 1,
-     "2434": 3
+     "1387": 1
     },
     "facts": {
      "fact": "quest-entry:grandtree"
@@ -16481,9 +16498,14 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
+    "levels": {
+     "agility": 15,
+     "crafting": 35,
+     "prayer": 40
+    },
     "items": {
      "565": 40,
+     "1387": 1,
      "1755": 1
     },
     "facts": {
@@ -16679,7 +16701,10 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
+    "levels": {
+     "agility": 35,
+     "prayer": 40
+    },
     "items": {
      "565": 40,
      "590": 1,
@@ -16774,10 +16799,15 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
+    "levels": {
+     "ranged": 40,
+     "thieving": 42,
+     "prayer": 37
+    },
     "items": {
      "33": 1,
      "225": 20,
+     "861": 1,
      "946": 1
     },
     "facts": {
@@ -16914,7 +16944,13 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
+    "levels": {
+     "magic": 14,
+     "thieving": 15,
+     "agility": 25,
+     "herblore": 14,
+     "mining": 40
+    },
     "items": {
      "33": 1,
      "227": 1,
@@ -17098,7 +17134,10 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
+    "levels": {
+     "herblore": 35,
+     "woodcutting": 45
+    },
     "items": {
      "841": 1,
      "1511": 1,
@@ -17149,8 +17188,7 @@
      "1759": 1,
      "2357": 1,
      "2434": 7,
-     "2448": 1,
-     "3183": 1
+     "2448": 1
     },
     "facts": {
      "fact": "quest-entry:mm"
@@ -17192,7 +17230,11 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
+    "levels": {
+     "crafting": 20,
+     "herblore": 15,
+     "firemaking": 5
+    },
     "items": {
      "227": 1,
      "253": 1,
@@ -17523,7 +17565,9 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
+    "levels": {
+     "agility": 25
+    },
     "items": {
      "960": 6,
      "995": 20,
@@ -17827,7 +17871,12 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
+    "levels": {
+     "agility": 15,
+     "cooking": 30,
+     "fishing": 5,
+     "firemaking": 30
+    },
     "items": {
      "233": 1,
      "303": 1,
@@ -17929,8 +17978,7 @@
     "items": {
      "562": 80,
      "1387": 1,
-     "1511": 6,
-     "2434": 2
+     "1511": 6
     },
     "facts": {
      "fact": "quest-entry:tree"
@@ -17969,8 +18017,14 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
-    "items": {},
+    "levels": {
+     "agility": 15,
+     "thieving": 30,
+     "prayer": 43
+    },
+    "items": {
+     "3105": 1
+    },
     "facts": {
      "fact": "quest-entry:troll"
     }
@@ -18008,14 +18062,18 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
+    "levels": {
+     "agility": 28,
+     "prayer": 43
+    },
     "items": {
      "30": 1,
      "954": 1,
      "1517": 1,
      "1887": 1,
      "1939": 1,
-     "2351": 1
+     "2351": 1,
+     "3105": 1
     },
     "facts": {
      "fact": "quest-entry:trolllove"
@@ -18161,7 +18219,11 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
+    "levels": {
+     "woodcutting": 40,
+     "crafting": 40,
+     "fletching": 25
+    },
     "items": {
      "383": 1,
      "590": 1,
@@ -18303,7 +18365,10 @@
    },
    "repeatable": false,
    "requirements": {
-    "levels": {},
+    "levels": {
+     "crafting": 20,
+     "agility": 32
+    },
     "items": {
      "33": 1,
      "526": 3,
@@ -94736,8 +94801,7 @@
     "items": {
      "562": 80,
      "1387": 1,
-     "1511": 6,
-     "2434": 2
+     "1511": 6
     },
     "facts": {
      "fact": "quest-entry:tree"
@@ -94758,8 +94822,7 @@
     "levels": {},
     "items": {
      "562": 80,
-     "1387": 1,
-     "2434": 3
+     "1387": 1
     },
     "facts": {
      "fact": "quest-entry:grandtree"
@@ -94852,8 +94915,7 @@
     "levels": {},
     "items": {
      "565": 60,
-     "995": 20,
-     "2434": 3
+     "995": 20
     },
     "facts": {
      "fact": "quest-entry:arena"
@@ -94910,7 +94972,11 @@
    },
    "source": "scripts/general/scripts/quests.rs2:113",
    "requirements": {
-    "levels": {},
+    "levels": {
+     "fletching": 5,
+     "cooking": 30,
+     "ranged": 30
+    },
     "items": {
      "314": 8,
      "946": 1,
@@ -94953,7 +95019,12 @@
    "xp": {},
    "source": "scripts/general/scripts/quests.rs2:239",
    "requirements": {
-    "levels": {},
+    "levels": {
+     "mining": 40,
+     "crafting": 40,
+     "smithing": 40,
+     "magic": 59
+    },
     "items": {
      "315": 1,
      "560": 24,
@@ -94975,10 +95046,16 @@
    "xp": {},
    "source": "scripts/general/scripts/quests.rs2:245",
    "requirements": {
-    "levels": {},
+    "levels": {
+     "fletching": 10,
+     "smithing": 20
+    },
     "items": {
      "314": 40,
      "1823": 2,
+     "1833": 1,
+     "1835": 1,
+     "1837": 1,
      "2347": 1,
      "2349": 5
     },
@@ -95026,7 +95103,7 @@
    "requirements": {
     "levels": {},
     "items": {
-     "2952": 1,
+     "552": 1,
      "2961": 1
     },
     "facts": {
@@ -95043,7 +95120,10 @@
    },
    "source": "scripts/general/scripts/quests.rs2:290",
    "requirements": {
-    "levels": {},
+    "levels": {
+     "herblore": 31,
+     "prayer": 40
+    },
     "items": {
      "99": 1,
      "233": 1,
@@ -95052,7 +95132,8 @@
      "1947": 10,
      "2015": 1,
      "2116": 1,
-     "2138": 5
+     "2138": 5,
+     "3105": 1
     },
     "facts": {
      "fact": "quest-entry:eadgar"
@@ -95113,9 +95194,14 @@
    },
    "source": "scripts/general/scripts/quests.rs2:299",
    "requirements": {
-    "levels": {},
+    "levels": {
+     "agility": 15,
+     "crafting": 35,
+     "prayer": 40
+    },
     "items": {
      "565": 40,
+     "1387": 1,
      "1755": 1
     },
     "facts": {
@@ -95175,7 +95261,10 @@
    },
    "source": "scripts/general/scripts/quests.rs2:287",
    "requirements": {
-    "levels": {},
+    "levels": {
+     "agility": 35,
+     "prayer": 40
+    },
     "items": {
      "565": 40,
      "590": 1,
@@ -95240,10 +95329,15 @@
    },
    "source": "scripts/general/scripts/quests.rs2:215",
    "requirements": {
-    "levels": {},
+    "levels": {
+     "ranged": 40,
+     "thieving": 42,
+     "prayer": 37
+    },
     "items": {
      "33": 1,
      "225": 20,
+     "861": 1,
      "946": 1
     },
     "facts": {
@@ -95284,7 +95378,13 @@
    },
    "source": "scripts/general/scripts/quests.rs2:248",
    "requirements": {
-    "levels": {},
+    "levels": {
+     "magic": 14,
+     "thieving": 15,
+     "agility": 25,
+     "herblore": 14,
+     "mining": 40
+    },
     "items": {
      "33": 1,
      "227": 1,
@@ -95310,7 +95410,10 @@
    "xp": {},
    "source": "scripts/general/scripts/quests.rs2:251",
    "requirements": {
-    "levels": {},
+    "levels": {
+     "herblore": 35,
+     "woodcutting": 45
+    },
     "items": {
      "841": 1,
      "1511": 1,
@@ -95336,8 +95439,7 @@
      "1759": 1,
      "2357": 1,
      "2434": 7,
-     "2448": 1,
-     "3183": 1
+     "2448": 1
     },
     "facts": {
      "fact": "quest-entry:mm"
@@ -95354,7 +95456,11 @@
    },
    "source": "scripts/general/scripts/quests.rs2:278",
    "requirements": {
-    "levels": {},
+    "levels": {
+     "crafting": 20,
+     "herblore": 15,
+     "firemaking": 5
+    },
     "items": {
      "227": 1,
      "253": 1,
@@ -95433,7 +95539,9 @@
    },
    "source": "scripts/general/scripts/quests.rs2:296",
    "requirements": {
-    "levels": {},
+    "levels": {
+     "agility": 25
+    },
     "items": {
      "960": 6,
      "995": 20,
@@ -95459,7 +95567,12 @@
    "xp": {},
    "source": "scripts/general/scripts/quests.rs2:275",
    "requirements": {
-    "levels": {},
+    "levels": {
+     "agility": 15,
+     "cooking": 30,
+     "fishing": 5,
+     "firemaking": 30
+    },
     "items": {
      "233": 1,
      "303": 1,
@@ -95505,8 +95618,14 @@
    "xp": {},
    "source": "scripts/general/scripts/quests.rs2:269",
    "requirements": {
-    "levels": {},
-    "items": {},
+    "levels": {
+     "agility": 15,
+     "thieving": 30,
+     "prayer": 43
+    },
+    "items": {
+     "3105": 1
+    },
     "facts": {
      "fact": "quest-entry:troll"
     }
@@ -95519,14 +95638,18 @@
    "xp": {},
    "source": "scripts/generated/quest-trolllove.ts",
    "requirements": {
-    "levels": {},
+    "levels": {
+     "agility": 28,
+     "prayer": 43
+    },
     "items": {
      "30": 1,
      "954": 1,
      "1517": 1,
      "1887": 1,
      "1939": 1,
-     "2351": 1
+     "2351": 1,
+     "3105": 1
     },
     "facts": {
      "fact": "quest-entry:trolllove"
@@ -95577,7 +95700,11 @@
    },
    "source": "scripts/general/scripts/quests.rs2:284",
    "requirements": {
-    "levels": {},
+    "levels": {
+     "woodcutting": 40,
+     "crafting": 40,
+     "fletching": 25
+    },
     "items": {
      "383": 1,
      "590": 1,
@@ -95624,7 +95751,10 @@
    },
    "source": "scripts/general/scripts/quests.rs2:236",
    "requirements": {
-    "levels": {},
+    "levels": {
+     "crafting": 20,
+     "agility": 32
+    },
     "items": {
      "33": 1,
      "526": 3,
@@ -98625,6 +98755,15 @@
   },
   {
    "script": "scripts/measure/haggis-stage3.ts",
+   "intents": [
+    "observe"
+   ],
+   "skills": [],
+   "routeIds": [],
+   "practiceOnly": true
+  },
+  {
+   "script": "scripts/measure/haggis-stage4.ts",
    "intents": [
     "observe"
    ],
