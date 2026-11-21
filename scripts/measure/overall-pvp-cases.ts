@@ -1,3 +1,4 @@
+// Overall 1-tick PvP relog combat practice cases (Strength, Attack, Defence, Ranged 1->99 at Deserted Keep).
 import type { SaveConfig } from '../../packages/practice/src/presets';
 import type { BenchCase } from './aio-bench-cases';
 

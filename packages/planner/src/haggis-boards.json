@@ -1915,6 +1915,32 @@
       "rival-fight-arena",
       "rival-mm"
      ]
+    },
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "label": "Standalone Ardougne stun-relog Thieving 1->99 (no quest prerequisites)",
+      "ticks": {
+       "floor": 1920,
+       "realistic": 1942,
+       "evidence": "MEASURED",
+       "source": "hosted-bench 44772768163 skiller:thieving:specialist seeds 7/8/9: 2,077-157=1,920, 2,101-159=1,942, 2,083-160=1,923 ticks (excl. tutorial/trade/travel; zero quest prerequisites)"
+      },
+      "trickSpeedup": {
+       "trick": "stunRelog",
+       "factor": 1
+      },
+      "deadTicks": {
+       "floor": 0,
+       "realistic": 0,
+       "evidence": "MEASURED",
+       "source": "thieving-specialist relogs on stun ticks rather than idling"
+      },
+      "requires": [
+       "tutorial"
+      ],
+      "at": "ardougne-market"
+     }
     }
    ],
    "at": "lumbridge-spawn",
@@ -2130,6 +2156,14 @@
      "addRequires": [
       "rival-fight-arena"
      ]
+    },
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "requires": [
+       "tutorial"
+      ]
+     }
     }
    ],
    "at": "lumbridge-spawn"
@@ -2528,6 +2562,14 @@
        "source": "research/quest-points-board.md \"Cook's Assistant, Witch's House, Lost City\": scripts/generated/quest-ball.ts, preset quest_ball (every skill 99, rune set and leather gloves worn, cheese; start beside the boy; the walk to Taverley not counted), lockstep bench case quester:quest:ball at seeds 7, 8 and 9: 434, 382, 435 ticks (floor = best seed, realistic = worst seed; research/aio-bench.md \"Planner quest rows\"); also 3/3 from quest_ball_partner (Defence 1, 10 HP, Protect from Melee): 522/454/448; the spread is the wait for the witch (61-111 ticks); the rival burst run is not measured by us"
       }
      }
+    },
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "serves": [
+       "questpoints"
+      ]
+     }
     }
    ],
    "at": "witch-house"
@@ -2817,6 +2859,14 @@
       "minLevelSource": "Cairn route (research/community-and-upstream.md section 7): Dragon Slayer before the last spiders takes Strength 97-99 and Defence 89-98. Champions' Guild door needs 32 QP; the real QP of these rows: Cook's Assistant 1, Druidic Ritual 4, Goblin Diplomacy 5, Romeo & Juliet 5, Tree Gnome Village 2, The Grand Tree 5, Fight Arena 2, Monkey Madness 3, Dwarf Cannon 1, Sea Slug 1, The Dig Site 2, Doric's Quest 1 = 32 (the rival rows keep qp 0 because their QP stay inside quests-rest). minQp is 0 under this lever because the planner QP counter leaves those rival QP in quests-rest; requires carries the real 32-QP gate.",
       "minQp": 0
      }
+    },
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "serves": [
+       "questpoints"
+      ]
+     }
     }
    ],
    "at": "guildmaster",
@@ -2898,6 +2948,43 @@
    "at": "thormac"
   },
   {
+   "id": "att-40",
+   "label": "1-tick PvP relog Attack 1->40 at Deserted Keep (Iron->Adamant 2h)",
+   "serves": [
+    "strength"
+   ],
+   "train": {
+    "skill": "attack",
+    "toLevel": 40,
+    "xpPerTick": {
+     "floor": 180,
+     "realistic": 120,
+     "evidence": "ESTIMATE",
+     "source": "Iron/Steel/Black/Mithril/Adamant 2h at Strength 1 against 1-Defence tank (14,893 XP = ~83 / 124 ticks at 1-tick action_delay relog)"
+    },
+    "side": {
+     "hitpoints": 0.333
+    }
+   },
+   "requires": [
+    "prayer-43"
+   ],
+   "lever": {
+    "id": "pvp-relog-combat",
+    "role": "add"
+   },
+   "evidence": "ESTIMATE",
+   "source": "1-tick action_delay PvP relog Attack 1->40 gate before Rune 2h Strength 1->99",
+   "supplies": [
+    { "item": "iron 2h sword", "itemId": 1309, "count": 1 },
+    { "item": "steel 2h sword", "itemId": 1311, "count": 1 },
+    { "item": "black 2h sword", "itemId": 1313, "count": 1 },
+    { "item": "mithril 2h sword", "itemId": 1315, "count": 1 },
+    { "item": "adamant 2h sword", "itemId": 1317, "count": 1 }
+   ],
+   "at": "deserted-keep-lever"
+  },
+  {
    "id": "str-top",
    "label": "Melee top-up to Strength 99",
    "serves": [
@@ -2971,6 +3058,34 @@
      "addRequires": [
       "dragon"
      ]
+    },
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "label": "1-tick PvP relog Strength 1->99 at Deserted Keep (5 tanks)",
+      "at": "deserted-keep-lever",
+      "requires": [
+       "att-40"
+      ],
+      "train": {
+       "skill": "strength",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 1095.4,
+        "realistic": 901.4,
+        "evidence": "MEASURED",
+        "source": "hosted-bench 44787226268 (commit 5311e754d8) overall:pvp-strength seeds 7/8/9: 1,000,125/913=1095.4, 998,775/980=1019.2, 998,775/1108=901.4 XP/tick (Attack 40, Rune 2h, Ultimate Strength, 5 tanks)"
+       },
+       "side": {
+        "hitpoints": 0.333
+       }
+      },
+      "supplies": [
+       { "item": "rune 2h sword", "itemId": 1319, "count": 1 },
+       { "item": "amulet of strength", "itemId": 1725, "count": 1 },
+       { "item": "climbing boots", "itemId": 3105, "count": 1 }
+      ]
+     }
     }
    ],
    "at": "falador-white-knights"
@@ -3037,6 +3152,29 @@
        "rival-mm"
       ]
      }
+    },
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "label": "1-tick PvP relog Attack 40->99 at Deserted Keep (5 tanks)",
+      "at": "deserted-keep-lever",
+      "requires": [
+       "str-top"
+      ],
+      "train": {
+       "skill": "attack",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 1255.1,
+        "realistic": 1081.9,
+        "evidence": "MEASURED",
+        "source": "hosted-bench 44787226268 (commit 5311e754d8) overall:pvp-attack seeds 7/8/9: 1,000,350/797=1255.1, 999,000/818=1221.3, 998,550/923=1081.9 XP/tick (1->99 full run with Strength 99, Rune 2h, 5 tanks)"
+       },
+       "side": {
+        "hitpoints": 0.333
+       }
+      }
+     }
     }
    ],
    "at": "falador-white-knights"
@@ -3061,6 +3199,16 @@
    ],
    "evidence": "MEASURED",
    "source": "XP: quest_mcannon.rs2:24-26 (stat_advance(crafting, 7500) = 18,750 at 25x), measured 18,870 Crafting per run with the 4 repairs; ticks research/quest-plan.md",
+   "patches": [
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "serves": [
+       "questpoints"
+      ]
+     }
+    }
+   ],
    "at": "lawgof",
    "xp": {
     "crafting": 18870
@@ -3157,6 +3305,32 @@
      "count": 1
     }
    ],
+   "patches": [
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "serves": [],
+      "requires": [
+       "tutorial"
+      ],
+      "minLevel": {},
+      "ticks": {
+       "floor": 0,
+       "realistic": 0
+      },
+      "train": {
+       "skill": "ranged",
+       "toLevel": 1,
+       "xpPerTick": {
+        "floor": 1,
+        "realistic": 1
+       }
+      },
+      "supplies": [],
+      "at": "deserted-keep-lever"
+     }
+    }
+   ],
    "at": "poison-spiders"
   },
   {
@@ -3197,6 +3371,31 @@
    },
    "evidence": "MEASURED",
    "source": "research/combat-measure.md 6b extra:cannon-spiders-r1: Attack 99 + rune scimitar + cannon at Poison Spiders (74/76/78 ticks 1->50)",
+   "patches": [
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "serves": [],
+      "requires": [
+       "tutorial"
+      ],
+      "minLevel": {},
+      "ticks": {
+       "floor": 0,
+       "realistic": 0
+      },
+      "train": {
+       "skill": "ranged",
+       "toLevel": 1,
+       "xpPerTick": {
+        "floor": 1,
+        "realistic": 1
+       }
+      },
+      "at": "deserted-keep-lever"
+     }
+    }
+   ],
    "at": "poison-spiders"
   },
   {
@@ -3316,6 +3515,80 @@
      "item": "coif",
      "itemId": 1169,
      "count": 1
+    }
+   ],
+   "patches": [
+    {
+     "lever": "spiders-combat",
+     "set": {
+      "label": "Rapid magic shortbow + special + cannon 55 -> 99 at Poison Spiders",
+      "at": "poison-spiders",
+      "requires": [
+       "cannon",
+       "prayer-43"
+      ],
+      "minLevel": {
+       "ranged": 55,
+       "prayer": 43
+      },
+      "train": {
+       "skill": "ranged",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 553,
+        "realistic": 526.7,
+        "evidence": "MEASURED",
+        "source": "research/combat-measure.md sections 6b & 6c: fighter:cannon 55 -> 99 (1,973 / 1,889 / 1,792 ticks, mean 1,885) minus 6c magic shortbow special savings (49 / 73 / 101 ticks across seeds 7/8/9, mean 73 ticks) = 1,720 floor / 1,812 mean -> 553.0 / 526.7 XP/tick"
+       },
+       "side": {
+        "hitpoints": 0.12
+       }
+      }
+     }
+    },
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "label": "1-tick PvP relog Ranged 1->99 at Deserted Keep (5 tanks)",
+      "at": "deserted-keep-lever",
+      "requires": [
+       "def-top"
+      ],
+      "minLevel": {},
+      "train": {
+       "skill": "ranged",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 821.1,
+        "realistic": 726.0,
+        "evidence": "MEASURED",
+        "source": "hosted-bench 44787226268 (commit 5311e754d8) overall:pvp-ranged seeds 7/8/9: 1,000,125/1218=821.1, 998,662/1280=780.2, 999,675/1377=726.0 XP/tick (1->99 progressive bows/arrows/dhide, 5 tanks)"
+       },
+       "side": {
+        "hitpoints": 0.333
+       }
+      },
+      "supplies": [
+       { "item": "shortbow", "itemId": 841, "count": 1 },
+       { "item": "oak shortbow", "itemId": 843, "count": 1 },
+       { "item": "willow shortbow", "itemId": 849, "count": 1 },
+       { "item": "maple shortbow", "itemId": 853, "count": 1 },
+       { "item": "yew shortbow", "itemId": 857, "count": 1 },
+       { "item": "magic shortbow", "itemId": 861, "count": 1 },
+       { "item": "iron arrow", "itemId": 884, "count": 100 },
+       { "item": "steel arrow", "itemId": 886, "count": 150 },
+       { "item": "mithril arrow", "itemId": 888, "count": 150 },
+       { "item": "adamant arrow", "itemId": 890, "count": 200 },
+       { "item": "rune arrow", "itemId": 892, "count": 2500 },
+       { "item": "coif", "itemId": 1169, "count": 1 },
+       { "item": "robin hood hat", "itemId": 2581, "count": 1 },
+       { "item": "ranger boots", "itemId": 2577, "count": 1 },
+       { "item": "amulet of glory", "itemId": 1704, "count": 1 },
+       { "item": "black dragonhide body", "itemId": 2503, "count": 1 },
+       { "item": "black dragonhide chaps", "itemId": 2497, "count": 1 },
+       { "item": "black dragon vambraces", "itemId": 2491, "count": 1 }
+      ]
+     }
     }
    ],
    "at": "falador-white-knights"
@@ -3980,6 +4253,29 @@
      "addRequires": [
       "dragon"
      ]
+    },
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "label": "1-tick PvP relog Defence 1->99 at Deserted Keep (5 tanks)",
+      "at": "deserted-keep-lever",
+      "requires": [
+       "att-top"
+      ],
+      "train": {
+       "skill": "defence",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 1364.3,
+        "realistic": 1177.0,
+        "evidence": "MEASURED",
+        "source": "hosted-bench 44787226268 (commit 5311e754d8) overall:pvp-defence seeds 7/8/9: 998,662/732=1364.3, 1,000,350/744=1344.6, 1,000,462/850=1177.0 XP/tick (1->99 full run with Attack/Strength 99, Rune 2h, 5 tanks)"
+       },
+       "side": {
+        "hitpoints": 0.333
+       }
+      }
+     }
     }
    ],
    "at": "falador-white-knights"
@@ -4356,6 +4652,16 @@
    "evidence": "ESTIMATE",
    "source": "XP: quest_arena.rs2:270-271 stat_advance(attack, 121750), (thieving, 21750) (CODE-READ); ticks rival (ESTIMATE for us); its 2 QP stay inside quests-rest (the 142-QP total), so qp is 0 here",
    "at": "lady-servil",
+   "patches": [
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "serves": [
+       "questpoints"
+      ]
+     }
+    }
+   ],
    "minLevel": {
     "prayer": 43,
     "magic": 35
@@ -4397,6 +4703,16 @@
    "evidence": "MEASURED",
    "source": "XP: mm_daero.rs2:294-302 option 1 (CODE-READ), MEASURED practice (875,000 Strength and Hitpoints, 500,000 Attack and Defence in every full pass); gate %grandtree and %treequest complete (king_narnode.rs2:7-10 per rival, not traced by us); ticks rival; its 3 QP stay inside quests-rest (the 142-QP total), so qp is 0 here",
    "at": "narnode",
+   "patches": [
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "serves": [
+       "questpoints"
+      ]
+     }
+    }
+   ],
    "minLevel": {
     "prayer": 43,
     "magic": 75
