@@ -1,0 +1,22 @@
+{
+ "id": "1795226254561-pocketpython-tossthecaber",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Pocketpython",
+ "to": "TossTheCaber",
+ "item": "coins",
+ "count": 796,
+ "start": 1795226254561,
+ "end": 1795228654561,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
