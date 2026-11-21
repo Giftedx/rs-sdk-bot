@@ -1,0 +1,17 @@
+{
+ "id": "1795245641596-undermykilt-woodenstaff-1aa66237047d1369",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "UnderMyKilt",
+ "to": "Woodenstaff",
+ "item": "Prayer potion(4)",
+ "count": 2,
+ "start": 1795245641596,
+ "end": 1795248041596,
+ "extra": [
+  {
+   "item": "Prayer potion(1)",
+   "count": 1
+  }
+ ],
+ "takerWaits": true
+}

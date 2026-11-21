@@ -1,0 +1,11 @@
+{
+ "id": "1795245641846-sausagefest-earlyshooter-2ab774dbeaba57db",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Sausagefest",
+ "to": "Earlyshooter",
+ "item": "Coins",
+ "count": 28500,
+ "start": 1795245641846,
+ "end": 1795248041846,
+ "takerWaits": true
+}
