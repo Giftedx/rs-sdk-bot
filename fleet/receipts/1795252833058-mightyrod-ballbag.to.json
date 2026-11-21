@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795252833058-mightyrod-ballbag",
  "account": "Ballbag",
  "partner": "Mightyrod",
@@ -12,6 +12,12 @@
  "claim": "89f6ac44-8292-4a9c-bf75-ebb9aed9ca5d",
  "count": 0,
  "ok": false,
- "at": 1795252904797,
- "detail": "trade claimed"
+ "at": 1795252944688,
+ "detail": "fled at low hitpoints: flee_guard id=101 at=3150,3417 ticks=5",
+ "logout": {
+  "attemptId": "1795252904806-0000010232-0000000001",
+  "at": 1795252944616,
+  "sha256": "0e2d3f404049dd9f4799ce684d05aea0d636c4526fb0a1aa11ddc4ee8846de3e"
+ },
+ "screen": false
 }
