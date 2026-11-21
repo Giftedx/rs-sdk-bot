@@ -219,10 +219,13 @@ export type FightOptions = {
     // and prays as usual (a group's opening in one tick).
     holdFire?: () => boolean;
     holdRange?: number;
+    // Skip non-fled 'low' freezes when cardinally adjacent to a standing target at or below this health fraction (so KO swings/specs land cleanly).
+    freezeFloor?: number;
     // The army's volley (scripts/pk-army.ts VOLLEY=1): the first special on a target waits, attacks and all, until
     // `members` accounts stand next to the target with a special ready, or `window` ticks of `clock` after the first
-    // did; then every one of them specials at once, so the hits land inside the target's eat delay.
-    volley?: { state: (target: string) => VolleyState; members: number; window: number; clock: () => number };
+    // did; then every one of them specials at once, so the hits land inside the target's eat delay. Optional `below`
+    // gates joining until the target is fled, bursting, or below that health fraction.
+    volley?: { state: (target: string) => VolleyState; members: number; window: number; clock: () => number; below?: number };
     // In multi-way combat, against two or more players that face us or an ally, the overhead prayer covers the style
     // most of them hold (a crowd's hits all carry the source we face, so the last hitter names no one).
     crowdPrayer?: boolean;
@@ -1032,6 +1035,7 @@ export type SpecPlanInput = {
     invLength: number;
     nearbyPlayers: readonly NearbyPlayer[];
     allies?: readonly string[];
+    volleyBelow?: number;
     names?: Map<number, string>;
 };
 
@@ -1060,6 +1064,7 @@ export function evaluateSpecPlan(i: SpecPlanInput) {
     const baseReady = !!spec && !i.dying && !axeHitsAlly && !specNeedsRoom && !i.kiteTarget && !specWaits && !stunWaits && i.energy >= spec.cost && (specStyle !== 'melee' || i.canReachMelee);
     const prayerAllowed = !!spec && (!!spec.stun || !i.guarded.has(specStyle) || lowHealth(i.seen, 0.25));
     const threatPass = !!spec && ((i.fled && i.fledSpec !== false) || i.bursting || freezeHeld || burstStun || chainStun || lowHealth(i.seen, spec.below));
+    const volleyThresholdPass = i.volleyBelow === undefined || (i.fled && i.fledSpec !== false) || i.bursting || freezeHeld || burstStun || chainStun || lowHealth(i.seen, i.volleyBelow);
     const reservePass = !!spec && (i.fled || i.bursting || freezeHeld || burstStun || chainStun || lowHealth(i.seen, 0.3) || i.energy - spec.cost >= (i.specReserve ?? 0));
     const inRange = gap <= (specStyle === 'melee' ? 1 : specRange);
     const triggerNoVolley = baseReady && prayerAllowed && threatPass && reservePass;
@@ -1076,7 +1081,7 @@ export function evaluateSpecPlan(i: SpecPlanInput) {
         axeHitsAlly,
         stripBurstArmour,
         inRange,
-        volleyJoinEligible: baseReady && prayerAllowed && inRange,
+        volleyJoinEligible: baseReady && prayerAllowed && inRange && volleyThresholdPass,
         triggerNoVolley,
         specMeleeLikely: triggerNoVolley && specStyle === 'melee',
     };
@@ -1640,7 +1645,9 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
         const hasFreezeRunes = inv.some(i => i.id === ITEMS.natureRune || i.id === ITEMS.earthRune || i.id === ITEMS.waterRune);
         const freezeMagic = Math.min(magicLevel, o.freezeMagicCap ?? magicLevel);
         const freeze = freezeRule ? (hasFreezeRunes ? castableFreeze(freezeMagic, inv) : freezeSpell(freezeMagic)) : null;
-        const freezeWindowDue = freeze !== null && !dying && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
+        const belowFreezeFloor = freezeRule === 'low' && o.freezeFloor !== undefined && now >= fleeingUntil && adjacent(at, target)
+            && !!seen && seen.totalHealth > 0 && seen.health > 0 && seen.health / seen.totalHealth <= o.freezeFloor;
+        const freezeWindowDue = freeze !== null && !dying && !belowFreezeFloor && (hasStyle(o.kit, 'magic') || hasFreezeRunes) && now >= freezeReady && now >= frozenUntil
             && (freezeRule === true || now < fleeingUntil || (o.openFreeze === true && !hasAttacked) || (freezeRule === 'low' && earlyFreezes < (o.freezeEarlyMax ?? Infinity) && lowHealth(seen, o.freezeBelow ?? 0.62)))
             && !(o.freezeShare && o.freezeShare.clock() < o.freezeShare.until);
         const energy = special(s.client);
@@ -1656,7 +1663,7 @@ async function fightLoop(s: Session, targetName: string, o: FightOptions, guardF
             freezeShareHeld: !!o.freezeShare && o.freezeShare.clock() < (o.freezeShare.heldUntil ?? -1),
             stunShare: o.stunShare,
             hasWeaponAndShield: state.equipment.some(e => e.slot === 3) && state.equipment.some(e => e.slot === 5),
-            invLength: inv.length, nearbyPlayers: state.nearbyPlayers, allies: o.allies, names,
+            invLength: inv.length, nearbyPlayers: state.nearbyPlayers, allies: o.allies, volleyBelow: o.volley?.below, names,
         });
         // Cooldown ticks: never send OpHeld/InvButton (which call clearPendingAction on the server), but configure
         // prayers and one-time combat-style settings once any melee approach walk has finished.

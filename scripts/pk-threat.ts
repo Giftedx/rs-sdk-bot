@@ -8,7 +8,7 @@ import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renam
 import { join } from 'node:path';
 import type { Session } from '../packages/core/src/inprocess';
 import { decodeHeadicons, decodeWorn, wornWeaponStyle, type CombatStyle } from '../packages/core/src/opponent';
-import { classifyThreat, DEFAULT_ODDS, decideAdapt, threatLine, ThreatBook, type OddsParams, type Adapt, type DecideOptions, type Member, type ProtectLevels, type Sighting, type ThreatClass, type ThreatRecord } from '../packages/core/src/pvp-threat';
+import { classifyThreat, DEFAULT_ODDS, decideAdapt, threatLine, ThreatBook, type Adapt, type CounterSwap, type DecideOptions, type Member, type OddsParams, type ProtectLevels, type Sighting, type ThreatClass, type ThreatRecord } from '../packages/core/src/pvp-threat';
 import { parsePack } from '../packages/knowledge/src/pack';
 import { contentRoot } from '../packages/knowledge/src/paths';
 import { PRAYER } from './pk';
@@ -132,7 +132,12 @@ export class ThreatWatch {
         const records = this.book.observe(tick, members, [...sightings.values()].filter(x => members.some(m => Math.max(Math.abs(m.x - x.x), Math.abs(m.z - x.z)) <= 40)));
         const classes = records.map(r => classifyThreat(r, members, { canAttack: (m, t) => canAttack(m, t) }));
         const levelOf = (s: Session, skill: string) => s.sdk.getSkill(skill)?.level ?? 1;
-        const decided = decideAdapt(classes, members, {
+        const counterFor = (member: string, style: CombatStyle) => {
+            const s = sessions.find(x => x.name === member);
+            return s ? planCounterSwap({ worn: s.sdk.getEquipment().map(e => e.id), pack: s.sdk.getInventory().map(i => i.id), style,
+                levels: { attack: levelOf(s, 'Attack'), strength: levelOf(s, 'Strength'), defence: levelOf(s, 'Defence'), ranged: levelOf(s, 'Ranged'), magic: levelOf(s, 'Magic') } }) : null;
+        };
+        const decided = refineProtectActions(classes, members, decideAdapt(classes, members, {
             outclasses: (m, t) => outclasses({ combat: m.combat }, { combatLevel: t.combat }),
             multiAt: isMulti,
             protectLevels: protectLevels(),
@@ -140,13 +145,9 @@ export class ThreatWatch {
             // The nearest single-way tile, away from the dangerous players.
             singleWayFrom: at => nearestSingleWay(at, { multiAt: isMulti, wildAt: wildLevel, avoid: classes.filter(c => c.dangerous).map(c => ({ x: c.record.x, z: c.record.z })) }),
             // The armour of the pack that defends better against the threat's style (scripts/pk-threat-kit.ts).
-            counterFor: (member, style) => {
-                const s = sessions.find(x => x.name === member);
-                return s ? planCounterSwap({ worn: s.sdk.getEquipment().map(e => e.id), pack: s.sdk.getInventory().map(i => i.id), style,
-                    levels: { attack: levelOf(s, 'Attack'), strength: levelOf(s, 'Strength'), defence: levelOf(s, 'Defence'), ranged: levelOf(s, 'Ranged'), magic: levelOf(s, 'Magic') } }) : null;
-            },
+            counterFor,
             ...this.o.decide,
-        });
+        }), counterFor);
         const actions = this.cooldown(tick, classes, decided);
         // The interlopers: dangerous players that the squad did not come for. They are targets (the squad switches to them, one at a time).
         const expected = this.o.decide?.expected;
@@ -235,6 +236,61 @@ export class ThreatWatch {
             appendFileSync(file, JSON.stringify(line) + '\n');
         } catch (error) { this.o.log(`THREAT record write failed: ${String(error)}`); }
     }
+}
+
+const tileDist = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(b.z - a.z));
+const effectiveCoverForMember = (m: Member, c: ThreatClass): CombatStyle | null => {
+    if (!c.cover) return null;
+    // A hybrid enemy whose recent attack was melee at someone else cannot reach us with melee from >2 tiles while holding bow/staff.
+    if (c.cover === 'melee' && tileDist(m, c.record) > 2 && c.record.inView && c.record.weaponStyle !== 'melee') {
+        return c.record.weaponStyle;
+    }
+    return c.cover;
+};
+
+/** Refines per-member protect and kit actions to prioritize threats actively targeting that member or able to hit at current distance. */
+export function refineProtectActions(
+    classes: readonly ThreatClass[],
+    members: readonly Member[],
+    actions: Adapt[],
+    counterFor?: (member: string, style: CombatStyle) => CounterSwap | null,
+): Adapt[] {
+    const danger = classes.filter(c => c.dangerous);
+    if (!danger.length || !members.length) return actions;
+    const out = [...actions];
+    for (const m of members) {
+        const protectIdx = out.findIndex(a => a.kind === 'protect' && a.member === m.name);
+        if (protectIdx < 0) continue;
+        const curProtect = out[protectIdx] as Extract<Adapt, { kind: 'protect' }>;
+        const mine = danger
+            .filter(c => c.canHit.includes(m.name))
+            .map(c => {
+                const dist = tileDist(m, c.record);
+                const style = effectiveCoverForMember(m, c);
+                if (!style) return null;
+                const canReachNow = style !== 'melee' || dist <= 2;
+                const hitsMe = c.record.targeting !== null && c.record.targeting.toLowerCase() === m.name.toLowerCase();
+                const tier = (hitsMe ? 0 : 1) + (canReachNow ? 0 : 2);
+                return { c, dist, style, tier };
+            })
+            .filter((x): x is NonNullable<typeof x> => x !== null)
+            .sort((a, b) => a.tier - b.tier || a.dist - b.dist);
+        const best = mine[0];
+        if (!best) continue;
+        const newReason = `${best.c.record.name} ${best.c.style} by ${best.c.by}, ${best.dist} tiles`;
+        if (best.style === curProtect.style && curProtect.reason === newReason) continue;
+        out[protectIdx] = { kind: 'protect', member: m.name, style: best.style, reason: newReason };
+        if (best.style !== curProtect.style && counterFor) {
+            const kept = out.filter(a => !(a.kind === 'kit' && a.member === m.name));
+            out.length = 0;
+            out.push(...kept);
+            const swap = counterFor(m.name, best.style);
+            if (swap && swap.wear.length) {
+                out.push({ kind: 'kit', member: m.name, style: best.style, wear: swap.wear, gain: swap.gain, reason: `${best.c.record.name} ${best.c.style}: wear ${swap.wear.join('+')} (+${swap.gain})` });
+            }
+        }
+    }
+    return out;
 }
 
 // The protect prayer to hold now for a member, from the decisions: the style of the nearest dangerous player that can hit it, or null.

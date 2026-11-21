@@ -1256,6 +1256,8 @@ test('curePoisonAndEat drinks antipoison and eats above fatal poison ticks once 
     const { curePoisonAndEat } = require('./pk-squad');
     // Freshly banked lone re-entrant at full HP with 21 food does not endlessly Glory out before allies join.
     expect(squadFallbackPlan({ z: 3640, hp: 99, maxHp: 99, foodCount: 21, enemyCount: 3, allyCount: 0, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('hold');
+    expect(squadFallbackPlan({ z: 3640, hp: 93, maxHp: 99, foodCount: 21, enemyCount: 6, allyCount: 0, targetingMe: 0, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('hold');
+    expect(squadFallbackPlan({ z: 3640, hp: 90, maxHp: 99, foodCount: 21, enemyCount: 6, allyCount: 0, targetingMe: 2, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('glory');
     // Low-HP or outnumbered solo still escapes immediately.
     expect(squadFallbackPlan({ z: 3640, hp: 80, maxHp: 99, foodCount: 21, enemyCount: 3, allyCount: 0, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('glory');
 
@@ -1526,7 +1528,7 @@ test('squadFallbackPlan outgunned triggers early Glory fallback, and rescue buff
     }
 });
 
-test('squadEliteDefaults enables Entangle, zeroDrainFlick/offensiveFlick, fakieSwitch, eatAt:76, and specBelow:1 only for maxed supplied tribrids', () => {
+test('squadEliteDefaults enables Wave E Entangle strip/floor, eatAt:80/comboAt:70/koComboAt:54, zeroDrainFlick/offensiveFlick, fakieSwitch, and specBelow:1 only for maxed supplied tribrids', () => {
     const { ELITE_SQUAD_OPTS, squadEliteDefaults } = require('./pk-squad');
     const maxSkills = [
         { name: 'Magic', baseLevel: 99 },
@@ -1541,18 +1543,25 @@ test('squadEliteDefaults enables Entangle, zeroDrainFlick/offensiveFlick, fakieS
     expect(elite).toEqual(ELITE_SQUAD_OPTS);
     const serialized = JSON.parse(JSON.stringify({ ...SQUAD_OPTS, ...elite }));
     expect(serialized.freezeMagicCap).toBeUndefined();
-    expect(serialized.eatAt).toBe(76);
-    expect(serialized.comboAt).toBe(64);
+    expect(serialized.eatAt).toBe(80);
+    expect(serialized.comboAt).toBe(70);
+    expect(serialized.koComboAt).toBe(54);
+    expect(serialized.freezeArmour).toBe('strip');
+    expect(serialized.freezeFloor).toBe(0.35);
     expect(serialized.specBelow).toBe(1);
     expect(serialized.zeroDrainFlick).toBe(true);
     expect(serialized.offensiveFlick).toBe(true);
     expect(serialized.fakieSwitch).toBe(true);
     expect(serialized.crowdPrayer).toBe(true);
-    // Scaled BiS clone & team5 cases default to winning tribrid-bis-zerk-glory-tele (Camelot Teleport + Berserker + Dragon + Glory).
-    const clones4 = benchCases().find(c => c.key === 'extra:clone-bis-clones-4-x1')!;
-    const team5 = benchCases().find(c => c.key === 'extra:clone-bis-team5-4-x1')!;
+    // Scaled BiS clone & team5 cases plus Wave E adversarial cases exist with expected kits and threat configs.
+    const cases = benchCases();
+    const clones4 = cases.find(c => c.key === 'extra:clone-bis-clones-4-x1')!;
+    const team5 = cases.find(c => c.key === 'extra:clone-bis-team5-4-x1')!;
     expect(clones4.presetConfig!.inventory!.some(i => i.id === 563)).toBe(true);
     expect(team5.presetConfig!.inventory!.some(i => i.id === 563)).toBe(true);
+    for (const key of ['extra:clone-bis-stand-team5-4-x1', 'extra:clone-bis-karam2-scattered-team5-x1', 'extra:clone-bis-split-single-x1', 'extra:clone-bis-deep21-team5-4-x1']) {
+        expect(cases.some(c => c.key === key)).toBe(true);
+    }
 });
 
 test('settleBenchLogout clears Wilderness combat timer and casts escape teleport before logout', async () => {
@@ -1901,4 +1910,32 @@ test('rescue with wornGlory and 28 non-food items drops consumable instead of pr
     } finally {
         spyTick.mockRestore();
     }
+});
+
+test('squadFightOverrides parses SQUAD_FREEZE_FLOOR and clearSafeZonePrayers clears active prayers in Edgeville safe zone', async () => {
+    const env = (v: Record<string, string>) => (k: string, f: string) => v[k] ?? f;
+    expect(squadFightOverrides(env({ SQUAD_FREEZE_FLOOR: '0.35' }))).toEqual({ freezeFloor: 0.35 });
+    expect(() => squadFightOverrides(env({ SQUAD_FREEZE_FLOOR: '1.5' }))).toThrow('SQUAD_FREEZE_FLOOR');
+
+    let ticks = 0;
+    const toggled: number[] = [];
+    const activePrayers = Array(20).fill(false);
+    activePrayers[14] = true;
+    activePrayers[8] = true;
+    const mockSess: any = {
+        name: 'PrayerOffSafe',
+        tick: () => ticks,
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3093, worldZ: 3496, hp: 99, maxHp: 99 },
+                prayers: { prayerPoints: 90, activePrayers },
+            }),
+            sendTogglePrayer: async (idx: number) => { toggled.push(idx); activePrayers[idx] = !activePrayers[idx]; },
+        },
+    };
+    const cleared = await (require('./pk-squad').clearSafeZonePrayers)(mockSess, async () => { ticks++; return true; });
+    expect(cleared).toBe(true);
+    expect(toggled).toEqual([8, 14]);
+    expect(activePrayers.some(Boolean)).toBe(false);
+    expect(await (require('./pk-squad').clearSafeZonePrayers)(mockSess, async () => { ticks++; return true; })).toBe(false);
 });

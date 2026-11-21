@@ -325,13 +325,14 @@ const cloneTribridSquad = (key: string, kit: string, n: number, args: string[] =
   };
 };
 // Maxed tribrid squad against the three full clones plus an unexpected third-party attacker team starting at (3088, 3665).
-const cloneTribridThreatCase = (key: string, kit: string, n: number, threatKit: string, threatCount: number, args: string[] = []): BenchCase => {
-  const base = cloneTribridSquad(key, kit, n, args);
+const cloneTribridThreatCase = (key: string, kit: string, n: number, threatKit: string, threatCount: number, args: string[] = [], mode: CloneMode = 'seen'): BenchCase => {
+  const base = cloneTribridSquad(key, kit, n, args, mode);
   const kits = threatKit.split('+');
   const totalCompanions = n - 1 + 3 + threatCount;
   const letters = 'bcdefghijklmnopqrstuvwxyz0123456789'.slice(0, totalCompanions).split('');
   const allKits = ['ganker-dds-skull', 'ganker-dds-skull', 'ganker-dds-skull', ...Array.from({length: threatCount}, (_, i) => kits[i % kits.length]!)];
-  const profiles = ['clone-goondelf', 'clone-ligma', 'clone-sugma', ...Array.from({length: threatCount}, () => 'attacker-fight')];
+  const cloneSuffix = mode === 'stand' || mode === 'retreat' ? `-${mode}` : '';
+  const profiles = [...CLONE_NAMES.map(name => `clone-${name}${cloneSuffix}`), ...Array.from({length: threatCount}, () => 'attacker-fight')];
   const rest = base.scriptArgs!.filter(x => !/^\{bot:/.test(x) && x !== 'squad' && !/^(SQUAD_GANG|SQUAD_GANG_PROFILES|SPAR_B_OPTS)=/.test(x));
   return {
     ...base,
@@ -1399,6 +1400,40 @@ const ROUTE_CASES: BenchCase[] = [
     cloneTribridThreatCase(`extra:clone-bis-team5-${n}-x1`, 'tribrid-bis-zerk-glory-tele', n, 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5)),
   ...([4, 8, 10, 12] as const).map(n =>
     cloneTribridThreatCase(`extra:clone-bis-karam2-team5-${n}-x1`, 'tribrid-bis-zerk-tele-karam2', n, 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5)),
+  // Wave E worst-case adversarial scenarios: non-retreating stand-mode clones + team5, scattered mainland rally into team5 ambush,
+  // BiS Wild-1 decoy split regression under threat radar, and Wilderness level 21 multi ambush where escape spells fail (>20).
+  cloneTribridThreatCase('extra:clone-bis-stand-team5-4-x1', 'tribrid-bis-zerk-tele-karam2', 4, 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5, ['MAX_MINUTES=10'], 'stand'),
+  (() => {
+    const c = cloneTribridThreatCase('extra:clone-bis-karam2-scattered-team5-x1', 'tribrid-bis-zerk-tele-karam2', 4, 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5, ['MAX_MINUTES=10']);
+    const starts = [{x: 2888, z: 3345, level: 0}, {x: 3185, z: 3436, level: 0}, {x: 3013, z: 3356, level: 0}, {x: 3093, z: 3501, level: 0}];
+    return {
+      ...c,
+      presetConfig: {...c.presetConfig!, position: starts[0]!},
+      companions: c.companions!.map((comp, i) => (i < 3 ? {...comp, presetConfig: {...comp.presetConfig!, position: starts[i + 1]!}} : comp)),
+    };
+  })(),
+  (() => {
+    const base = cloneTribridSquad('extra:clone-bis-split-single-x1', 'tribrid-bis-zerk-glory-tele', 4,
+      ['MAX_MINUTES=6', 'TRIPS=2', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4']);
+    return {
+      ...base,
+      companions: base.companions!.map((comp, i) => i === base.companions!.length - 3
+        ? {...comp, presetConfig: {...comp.presetConfig!, position: {x: 3071, z: 3525, level: 0}}}
+        : comp),
+    };
+  })(),
+  (() => {
+    const base = cloneTribridThreatCase('extra:clone-bis-deep21-team5-4-x1', 'tribrid-bis-zerk-tele-karam2', 4, 'mage+ranger+tribrid-snare+tribrid-snare+mage', 5,
+      ['MAX_MINUTES=8', 'POST=3066,3685']);
+    return {
+      ...base,
+      companions: base.companions!.map((comp, i) => (i >= 3 && i < 6
+        ? {...comp, presetConfig: {...comp.presetConfig!, position: {x: 3066, z: 3685, level: 0}}}
+        : i >= 6
+        ? {...comp, presetConfig: {...comp.presetConfig!, position: {x: 3060, z: 3695, level: 0}}}
+        : comp)),
+    };
+  })(),
   // The same against each mode of the clones: every clone walks out with its food gone (retreat), none does (stand),
   // the fewest sharks of the record's range (lean), the most (full).
   ...([4, 5] as const).flatMap(n => (['retreat', 'stand', 'lean', 'full'] as const).map(mode => cloneSquad(`extra:clone-squad-${n}-chainbind-${mode}-x1`, 'live-walker-iron-rune-chain-bind', n, ['MAX_MINUTES=8', 'SQUAD_GANG_HUNT=1', 'SQUAD_GANG_SPLIT=1'], mode))),
