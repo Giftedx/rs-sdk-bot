@@ -262,6 +262,16 @@ test('the ladder talk continues each line and takes the leave choice', () => {
     expect(dialogClick({ isOpen: true, isWaiting: false, options: [{ index: 1, text: "I think I'll stay down here a bit longer." }, { index: 2, text: "Yes, I'm ready to leave." }] }, say)).toBe(2);
 });
 
+test('Jakut realms exclude non-Zanaris dungeons such as Dwarven Mine', () => {
+    for (const profile of [PROFILES.jukat!, PROFILES.jukat_dagger!]) {
+        expect(profile.realm!.inside({ worldX: 3152, worldZ: 9578 })).toBe(true);
+        expect(profile.realm!.inside({ worldX: 3252, worldZ: 9572 })).toBe(true);
+        expect(profile.realm!.inside({ worldX: 3077, worldZ: 9774 })).toBe(false);
+        expect(profile.realm!.inside({ worldX: 3115, worldZ: 9928 })).toBe(false);
+        expect(profile.realm!.inside({ worldX: 3201, worldZ: 3169 })).toBe(false);
+    }
+});
+
 test('a blind request needs room for one more unit than the requests still open', () => {
     const base = { unit: 101000, wallet: 400000, reserve: 5000, remainingSpend: Infinity, remainingItems: Infinity, wanted: 5, freeSlots: 20, pending: 0 };
     expect(blindBuyNow(base)).toBe(true);

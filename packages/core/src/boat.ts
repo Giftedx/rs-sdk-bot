@@ -5,16 +5,31 @@ import { waitTicks, waitUntil, type TickSource } from './ticks';
 
 type Pos = { worldX: number; worldZ: number; level: number };
 type DialogOption = { index: number; text: string };
+type NearbyPlank = {
+    id?: number;
+    name?: string;
+    x?: number;
+    z?: number;
+    distance?: number;
+    optionsWithIndex?: Array<{ text: string; opIndex: number }>;
+};
+
+// Gangplank loc IDs from vendor/rs-sdk gangplank.loc: `_off` exits ship decks, `_on` boards ships.
+export const DISEMBARK_PLANK_IDS = new Set([2082, 2084, 2086, 2088, 2413, 2415]);
+export const BOARD_PLANK_IDS = new Set([2081, 2083, 2085, 2087, 2412, 2414]);
+
 export interface BoatSession extends TickSource {
     sdk: {
         getState(): any;
         getDialog(): { isOpen: boolean; isWaiting?: boolean; options: DialogOption[] } | null | undefined;
         sendClickDialog(index: number): Promise<unknown>;
         findNearbyLoc(pattern: RegExp, options?: { withOption?: string | RegExp; reachable?: boolean }): unknown;
+        sendInteractLoc?(x: number, z: number, locId: number, optionIndex: number): Promise<unknown>;
     };
     bot: {
         talkTo(npc: RegExp): Promise<{ success: boolean; message?: string }>;
         interactLoc(loc: any, option: string): Promise<unknown>;
+        walkTo?(x: number, z: number, tol?: number): Promise<unknown>;
     };
 }
 export interface BoatLimits {
@@ -85,6 +100,29 @@ export async function sail(s: BoatSession, o: SailOptions): Promise<BoatResult> 
     return done(rejected === talks && talks > 0 ? 'rejected' : 'unobserved', `no deck arrival talks=${talks} rejected=${rejected} at=${at(pos(s))}`);
 }
 
+// Pick the deck exit gangplank, excluding dockside boarding (_on) planks when an _off exit is present.
+export function pickDisembarkPlank(s: BoatSession, maxDist = 12): NearbyPlank | null | undefined {
+    const queried = s.sdk.findNearbyLoc(/^gangplank$/i, { withOption: /^cross$/i, reachable: true }) as NearbyPlank | null | undefined;
+    const p = pos(s);
+    const dist = (l: NearbyPlank) => l.distance ?? (p && l.x !== undefined && l.z !== undefined ? Math.max(Math.abs(l.x - p.worldX), Math.abs(l.z - p.worldZ)) : 0);
+    const locs = (s.sdk.getState()?.nearbyLocs ?? []) as NearbyPlank[];
+    const hasCross = (l: NearbyPlank) => /^gangplank$/i.test(l.name ?? '') && (l.optionsWithIndex ?? []).some(o => /^cross$/i.test(o.text));
+    const exits = locs.filter(l => hasCross(l) && l.id !== undefined && DISEMBARK_PLANK_IDS.has(l.id) && dist(l) <= maxDist).sort((a, b) => dist(a) - dist(b));
+    if (exits.length) return exits[0];
+    if (queried && !BOARD_PLANK_IDS.has(queried.id ?? -1)) return queried;
+    const nonBoard = locs.filter(l => hasCross(l) && !BOARD_PLANK_IDS.has(l.id ?? -1) && dist(l) <= maxDist).sort((a, b) => dist(a) - dist(b));
+    return nonBoard[0] ?? queried;
+}
+
+async function flushDialog(s: BoatSession, halted: () => BoatOutcome | null, maxPages = 6): Promise<void> {
+    for (let k = 0; k < maxPages && pos(s)?.level !== 0 && !halted(); k++) {
+        const d = s.sdk.getDialog();
+        if (!d?.isOpen) return;
+        if (!d.isWaiting) await s.sdk.sendClickDialog(0);
+        await waitTicks(s, 1);
+    }
+}
+
 // Cross the gangplank until the player stands on level 0.
 export async function disembark(s: BoatSession, o: DisembarkOptions = {}): Promise<BoatResult> {
     const start = s.tick(), { halted, left } = limits(s, o);
@@ -94,14 +132,32 @@ export async function disembark(s: BoatSession, o: DisembarkOptions = {}): Promi
         if (pos(s)?.level === 0) return done('arrived', `ground at=${at(pos(s))}`);
         if ((why = halted())) return done(why, `${why} on deck at=${at(pos(s))}`);
         await o.before?.();
-        const d = s.sdk.getDialog();
-        if (d?.isOpen) { await s.sdk.sendClickDialog(0); await waitTicks(s, 1); continue; }
-        const plank = s.sdk.findNearbyLoc(/^gangplank$/i, { withOption: /^cross$/i, reachable: true });
+        await flushDialog(s, halted);
+        if (pos(s)?.level === 0) return done('arrived', `ground at=${at(pos(s))}`);
+        if ((why = halted())) return done(why, `${why} on deck at=${at(pos(s))}`);
+        const plank = pickDisembarkPlank(s);
         if (!plank) { const n = left(o.missTicks ?? 2); if (n > 0) await waitTicks(s, n); continue; }
         crossings++;
         await s.bot.interactLoc(plank, 'Cross');
         const n = left(o.crossTicks ?? 10);
         if (n > 0) await waitUntil(s, st => st?.player?.level === 0, { timeoutTicks: n });
+        if (pos(s)?.level === 0) return done('arrived', `ground at=${at(pos(s))}`);
+        if ((why = halted())) return done(why, `${why} on deck at=${at(pos(s))}`);
+        await flushDialog(s, halted);
+        if (pos(s)?.level === 0) return done('arrived', `ground at=${at(pos(s))}`);
+        // Fallback: bot.interactLoc can time out on gangplank tiles; walk beside the plank and send the loc packet directly.
+        if (typeof s.sdk.sendInteractLoc === 'function' && plank.x !== undefined && plank.z !== undefined && plank.id !== undefined) {
+            const cur = pos(s);
+            if (cur && Math.max(Math.abs(plank.x - cur.worldX), Math.abs(plank.z - cur.worldZ)) > 1 && typeof s.bot.walkTo === 'function') {
+                await s.bot.walkTo(plank.x, plank.z, 1);
+                if (pos(s)?.level === 0) return done('arrived', `ground at=${at(pos(s))}`);
+                if ((why = halted())) return done(why, `${why} on deck at=${at(pos(s))}`);
+            }
+            const opIndex = plank.optionsWithIndex?.find(opt => /^cross$/i.test(opt.text))?.opIndex ?? 1;
+            await s.sdk.sendInteractLoc(plank.x, plank.z, plank.id, opIndex);
+            const n2 = left(o.crossTicks ?? 10);
+            if (n2 > 0) await waitUntil(s, st => st?.player?.level === 0, { timeoutTicks: n2 });
+        }
     }
     if (pos(s)?.level === 0) return done('arrived', `ground at=${at(pos(s))}`);
     return done(halted() ?? 'unobserved', `no ground arrival crossings=${crossings} at=${at(pos(s))}`);

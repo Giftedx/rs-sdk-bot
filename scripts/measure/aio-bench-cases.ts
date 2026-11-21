@@ -1947,6 +1947,12 @@ const EXTRA_CASES: BenchCase[] = [
   // stays: the run passes only when the quest is complete and no XP went to Attack, Defence, Ranged, Magic or Prayer.
   {key: 'extra:lostcity-pure-pray', script: 'scripts/aio-quester.ts', preset: 'quest_zanaris', scriptArgs: ['zanaris'], pass: lostCityKeepsBuild, timeoutMs: 900_000,
     presetConfig: {...PRESETS.quest_zanaris!, skills: {...kitSkills('pure-pray'), Woodcutting: 56, Crafting: 51}}},
+  {key: 'extra:priestperil-paterdomus-resume', script: 'scripts/aio-quester.ts', preset: 'quest_priestperil', scriptArgs: ['priestperil'], timeoutMs: 900_000,
+    presetConfig: {...PRESETS.quest_priestperil!, position: {x: 3408, z: 3485, level: 0}, varps: {...PRESETS.quest_priestperil!.varps, 302: 1}},
+    pass: s => ok(s) && s.includes('NOTE priest in peril resumed at stage 1') && s.includes('qp=1')},
+  {key: 'extra:zanaris-shamus-resume', script: 'scripts/aio-quester.ts', preset: 'quest_zanaris', scriptArgs: ['zanaris'], timeoutMs: 900_000,
+    presetConfig: {...PRESETS.quest_zanaris!, varps: {...PRESETS.quest_zanaris!.varps, 147: 1}},
+    pass: s => ok(s) && s.includes('NOTE lost city resumed at stage 1') && s.includes('qp=3')},
   // The Fremennik Trials on an account of a build with a Fremennik helm, at the levels the build has before the quest
   // (levelsBeforeRoute). The whole quest, and for a short loop the two stages with a fight: `-draugen` starts at the
   // Draugen hunt and `-thorvald` at Koschei (run those with `--set VK_FROM=draugen` or `--set VK_FROM=thorvald`).

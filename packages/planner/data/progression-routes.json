@@ -95274,6 +95274,14 @@
    ]
   },
   {
+   "script": "scripts/recover-trapped.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [],
+   "routeIds": []
+  },
+  {
    "script": "scripts/relocate-bank.ts",
    "intents": [
     "service"

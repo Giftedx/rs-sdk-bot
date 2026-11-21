@@ -143,9 +143,9 @@ try {
     // takes the bot to the south bank first; a hand-made Lumbridge-Ardougne walk killed mmtha0205 near 2906,3375.
     // From Varrock it has no westbound land route (live: "no route to 2654,3283,0"), so the walk takes the ferry fallback.
     const p0 = s.sdk.getState()?.player;
-    if (!p0 || Math.max(Math.abs(p0.worldX - 2655), Math.abs(p0.worldZ - 3300)) > 60) {
+    if (!p0 || p0.level !== 0 || Math.max(Math.abs(p0.worldX - 2655), Math.abs(p0.worldZ - 3300)) > 60) {
         const there = await walkTargetPersist(s, { x: 2654, z: 3283, level: 0 }) as { ok: boolean; reason?: string; detail?: string };
-        if (!there.ok) await finish([s], false, `travel to Ardougne from ${p0?.worldX},${p0?.worldZ} failed: ${there.reason} ${there.detail}`);
+        if (!there.ok) await finish([s], false, `travel to Ardougne from ${p0?.worldX},${p0?.worldZ},${p0?.level ?? 0} failed: ${there.reason} ${there.detail}`);
     }
     const st = () => s.sdk.getState();
     const pos = () => st()?.player;
@@ -227,7 +227,12 @@ try {
         const w0 = s.tick();
         for (let i = 0; i < 3 && !died; i++) {
             const p = pos();
-            if (p && cheb(t, p) <= tol + 1) break;
+            if (p && p.level === 0 && cheb(t, p) <= tol + 1) break;
+            if (p && p.level !== 0) {
+                const routeRes = await walkTargetPersist(s, { x: t.x, z: t.z, level: 0 }) as { ok: boolean; reason?: string; detail?: string };
+                if (!routeRes.ok) lastFail = `walkRoute:${routeRes.reason ?? ''} ${routeRes.detail ?? ''}`.trim();
+                continue;
+            }
             const r = await s.bot.walkTo(t.x, t.z, tol);
             if (!r.success) lastFail = `walk:${r.message}`;
         }

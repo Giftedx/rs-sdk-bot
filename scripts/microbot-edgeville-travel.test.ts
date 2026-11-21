@@ -15,7 +15,8 @@ test('generic combat uses native transitions rather than a surface-to-dungeon wa
 });
 test('same-region travel keeps explicit custom routes, while unknown dungeon crossings reject before input',()=>{
  expect(edgevilleRoute({x:3183,z:3432,level:0},{x:3185,z:3436,level:0},'druid')).toEqual([{kind:'walk',x:3185,z:3436,level:0,tol:2}]);
- for(const from of [{x:2800,z:9800,level:0},{x:3092,z:3496,level:1}])expect(()=>edgevilleRoute(from,{x:3092,z:3496,level:0},'druid')).toThrow();
+ expect(()=>edgevilleRoute({x:2800,z:9800,level:0},{x:3092,z:3496,level:0},'druid')).toThrow();
+ expect(()=>edgevilleRoute({x:3092,z:3496,level:1},{x:3092,z:3496,level:0},'druid')).toThrow('level !== 0');
 });
 test('journey rejects stops, replaced executors and blocked ground before any transition',async()=>{
  for(const mode of ['stop','owner','ground','life','respawn']){let inputs=0;const player={worldX:3092,worldZ:3496,level:0,lifeId:1,respawnCount:0},client:any={executeBotAction:()=>{}},s:any={client,ended:new Promise(()=>{}),sdk:{getState:()=>({player}),getSkill:()=>({level:99})}},travel=createEdgevilleTravel(s);

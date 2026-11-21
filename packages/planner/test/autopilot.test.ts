@@ -2908,6 +2908,24 @@ test('an active squad member never gives its kit or supplies to another account,
     expect(out.find(x => x.account === 'Member')!.reason).not.toMatch(/^vacant: gives/);
 });
 
+test('accounts above ground level are excluded from surface combat gather dispatch until back at level 0', () => {
+    const druids = squadSupplies().filter(t => t.id === 'squad-taverley-druids');
+    const cow = catalogue().filter(t => t.id === 'army-cow-strength-45');
+    const squad: SquadInput = { active: true, hours: 4, members: [{ name: 'Hunter', items: {} }] };
+    const upstairs = at(acct('BraveHardon', { Attack: 50, Strength: 13, Defence: 1, Hitpoints: 36, Prayer: 47, Magic: 31 }, { trout: 20, coin: 1000 }), { x: 2686, z: 3268, level: 1 });
+    const ground = at(upstairs, { x: 2686, z: 3268, level: 0 });
+    expect(plan(inputs([upstairs], { templates: druids, squad, prices: { 'unidentified ranarr': 2000 } }))[0]!.template).toBeUndefined();
+    expect(plan(inputs([ground], { templates: druids, squad, prices: { 'unidentified ranarr': 2000 } }))[0]!.template?.id).toBe('squad-taverley-druids');
+    const upstairsCow = at(acct('Train', { Strength: 10, Hitpoints: 30 }, { 'bronze sword': 1, 'wooden shield': 1, trout: 20, coin: 1000 }), { x: 2686, z: 3268, level: 1 });
+    expect(plan(inputs([upstairsCow], { templates: cow, army: new Set(['train']) }))[0]!.template).toBeUndefined();
+    expect(plan(inputs([at(upstairsCow, { x: 2686, z: 3268, level: 0 })], { templates: cow, army: new Set(['train']) }))[0]!.template?.id).toBe('army-cow-strength-45');
+    const goldfarm = catalogue().filter(t => t.script === 'scripts/goldfarm.ts');
+    if (goldfarm.length) {
+        const upstairsThief = at(acct('Toss', { Thieving: 99, Hitpoints: 30 }, { lobster: 20, coin: 1000 }), { x: 2678, z: 3268, level: 1 });
+        expect(plan(inputs([upstairsThief], { templates: goldfarm }))[0]!.template).toBeUndefined();
+    }
+});
+
 test('the squad spare of a member is what it holds above the squad reserve, never negative', () => {
     // A member short of its own target gives nothing; a member above it gives only the excess, to another member.
     const squad: SquadInput = { active: true, hours: 4, members: [{ name: 'Rich', items: { 'rune arrow': 5000 } }, { name: 'Poor', items: {} }] };

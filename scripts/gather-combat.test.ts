@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {GIANT,GIANT_HERBS,TROOPER_FOODS,TROOPER_SITE,COW_BEAR_BOXES,CONFIGS,TAVERLEY_ROUTE,isNonWildernessGatherGoal,createTaverleyTravel} from './gather-combat';
+import {GIANT,GIANT_HERBS,TROOPER_FOODS,TROOPER_SITE,COW_BEAR_BOXES,CONFIGS,TAVERLEY_ROUTE,isNonWildernessGatherGoal,createTaverleyTravel,ensureSurfaceGroundEntry} from './gather-combat';
 import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP,cowReleased,COW_RELEASE,selectGiantArmour,COW_FOOD_BITES} from './gather-combat';
 import {gearById} from '../packages/planner/src/gear-progression';
 import type {Session} from '../packages/core/src/inprocess';
@@ -603,4 +603,69 @@ test('non-Wilderness mainland supply configs resolve valid targets, guard Wilder
     ]);
 
     await expect(travel.walk(s, 'taverley_druid', { x: 3115, z: 9928 }, ground, () => false, 2)).rejects.toThrow('Wilderness goal forbidden');
+
+    actions.length = 0;
+    // Edgeville Dungeon (z>=6400 outside Taverley) must not route through Taverley corridors.
+    player.worldX = 3095; player.worldZ = 9830;
+    expect(await travel.walk(s, 'taverley_druid', { x: 2946, z: 3368 }, ground, () => false, 2)).toBe(false);
+    expect(actions).toEqual([]);
+});
+
+test('ensureSurfaceGroundEntry descends one nearby staircase/gangplank or fails fast with level !== 0', async () => {
+    const mk = (level: number, nearbyLocs: any[], dropTo0: boolean) => {
+        const player = { worldX: 2686, worldZ: 3268, level };
+        let tick = 0, clicks = 0;
+        const listeners = new Set<() => void>();
+        const timer = setInterval(() => { tick++; for (const cb of [...listeners]) cb(); }, 1);
+        const s: any = {
+            tick: () => tick,
+            onTick: (cb: () => void) => { listeners.add(cb); return () => listeners.delete(cb); },
+            sdk: { getState: () => ({ player, nearbyLocs }) },
+            bot: {
+                interactLoc: async () => {
+                    clicks++;
+                    if (dropTo0) player.level = 0;
+                    return { success: true };
+                },
+            },
+        };
+        return { s, clicks: () => clicks, cleanup: () => clearInterval(timer) };
+    };
+
+    const g0 = mk(0, [], false);
+    try {
+        await ensureSurfaceGroundEntry(g0.s);
+        expect(g0.clicks()).toBe(0);
+    } finally { g0.cleanup(); }
+
+    const plank = { id: 2086, name: 'Gangplank', distance: 4, optionsWithIndex: [{ opIndex: 1, text: 'Cross' }] };
+    const ship = mk(1, [plank], true);
+    try {
+        await ensureSurfaceGroundEntry(ship.s, () => false, 5);
+        expect(ship.clicks()).toBe(1);
+    } finally { ship.cleanup(); }
+
+    const stuck = mk(1, [plank], false);
+    try {
+        await expect(ensureSurfaceGroundEntry(stuck.s, () => false, 2)).rejects.toThrow('level !== 0');
+        expect(stuck.clicks()).toBe(1);
+    } finally { stuck.cleanup(); }
+
+    const noExit = mk(2, [{ id: 1, name: 'Table', distance: 1, optionsWithIndex: [] }], false);
+    try {
+        await expect(ensureSurfaceGroundEntry(noExit.s, () => false, 2)).rejects.toThrow('level !== 0');
+        expect(noExit.clicks()).toBe(0);
+    } finally { noExit.cleanup(); }
+
+    // On a ship deck, Ship's ladder (id 273) and boarding plank (id 2085) are skipped in favor of disembark gangplank (id 2086).
+    const holdLadder = { id: 273, name: "Ship's ladder", distance: 4, optionsWithIndex: [{ opIndex: 1, text: 'Climb-down' }] };
+    const boardPlank = { id: 2085, name: 'Gangplank', distance: 5, optionsWithIndex: [{ opIndex: 1, text: 'Cross' }] };
+    const exitPlank = { id: 2086, name: 'Gangplank', distance: 5, optionsWithIndex: [{ opIndex: 1, text: 'Cross' }] };
+    const clicked: number[] = [];
+    const ardougneDeck = mk(1, [holdLadder, boardPlank, exitPlank], false);
+    ardougneDeck.s.bot.interactLoc = async (loc: any) => { clicked.push(loc.id); if (loc.id === 2086) ardougneDeck.s.sdk.getState().player.level = 0; return { success: true }; };
+    try {
+        await ensureSurfaceGroundEntry(ardougneDeck.s, () => false, 5);
+        expect(clicked).toEqual([2086]);
+    } finally { ardougneDeck.cleanup(); }
 });

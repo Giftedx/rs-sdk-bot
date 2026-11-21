@@ -546,3 +546,56 @@ test('walkPath steps no nearer to a hunter whose square already holds the bot', 
     expect(r.ok).toBe(true);
     expect(f.nearest()).toBeGreaterThanOrEqual(2);
 });
+
+test('walkPath falls back to the open plan when a hunter detour truncates short of the goal', async () => {
+    const start = { x: 3095, z: 9830, level: 0 };
+    const goal = { x: 3096, z: 9850, tol: 1 };
+    let pos = { ...start };
+    let tick = 0;
+    const listeners = new Set<() => void>();
+    const plan = (_lvl: number, from: { x: number; z: number }, to: { x: number; z: number }, avoid?: readonly { x: number; z: number }[]) => {
+        if (avoid?.length) return [{ x: from.x, z: Math.min(from.z + 2, 9835) }];
+        const pts: { x: number; z: number }[] = [];
+        for (let z = from.z + 1; z <= to.z; z++) pts.push({ x: to.x, z });
+        return pts;
+    };
+    const done = walkPath({
+        pos: () => pos,
+        onTick: fn => { listeners.add(fn); return () => listeners.delete(fn); },
+        plan: plan as any,
+        locs: () => [],
+        walk: async (x, z) => { pos = { x, z, level: 0 }; return { success: true }; },
+        interactLoc: async () => ({ success: false }),
+        hunters: () => [{ x: 3096, z: 9838, r: 2 }],
+    }, [goal], { maxTicks: 100 });
+    for (let i = 0; i < 110 && tick < 110; i++) { tick++; await Promise.resolve(); for (const l of listeners) l(); await Promise.resolve(); }
+    const res = await done;
+    expect(res.ok).toBe(true);
+    expect(pos.z).toBeGreaterThanOrEqual(9849);
+});
+
+test('walkPath aborts early when oscillating in a tight box without progress', async () => {
+    const start = { x: 2679, z: 3437, level: 0 };
+    const goal = { x: 2673, z: 3434, tol: 0 };
+    let pos = { ...start };
+    const listeners = new Set<() => void>();
+    let stepCount = 0;
+    const done = walkPath({
+        pos: () => pos,
+        onTick: fn => { listeners.add(fn); return () => listeners.delete(fn); },
+        plan: () => [{ x: 2678, z: 3437 }, { x: 2680, z: 3438 }],
+        locs: () => [],
+        walk: async () => {
+            stepCount++;
+            // Move side-to-side after every stall so rejectedWalks stays 0 while repaths accumulate without progress.
+            if (stepCount % 3 === 0) pos = { x: pos.x === 2679 ? 2680 : 2679, z: 3437, level: 0 };
+            return { success: true };
+        },
+        interactLoc: async () => ({ success: false }),
+    }, [goal], { maxTicks: 600 });
+    for (let i = 0; i < 200; i++) { await Promise.resolve(); for (const l of listeners) l(); await Promise.resolve(); }
+    const res = await done;
+    expect(res.ok).toBe(false);
+    expect(res.detail).toMatch(/walk oscillating/);
+    expect(res.ticks).toBeLessThan(200);
+});
