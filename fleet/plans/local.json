@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795298459276,
+ "at": 1795299050699,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -375,6 +375,45 @@
    "resources": []
   },
   {
+   "account": "Unsheathed",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "local",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1079 QUANTITY=1 LIMIT_PRICE=105630 CASH_RESERVE=1000 ORDER_KEY=bowbeforeme-kit7-1079-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Rune platelegs on the Grand Exchange to wear rune armour",
+   "role": "supply",
+   "template": "kit-buy:army-armour-rune",
+   "autopilot": "local",
+   "resources": [
+    "ge:armour"
+   ]
+  },
+  {
    "account": "MineYourBiz",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -427,22 +466,24 @@
    ]
   },
   {
-   "account": "Unsheathed",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "account": "Shaftmaker",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts magic_guild 900 ITEMS=nature.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=46000 COIN_RESERVE=500 MAX_SPEND=45000",
+    "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "ROUNDS": "1"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "goal": "buy nature and air runes at the Magic Guild in Yanille for the alchemy band",
+   "role": "supply",
+   "template": "army-nature-guild",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "shop:magic_guild"
    ]
   },
   {
@@ -497,7 +538,7 @@
    "script": "scripts/gather-combat.ts",
    "args": [
     "6000",
-    "giant"
+    "taverley_black_knight"
    ],
    "env": {
     "MAX_KILLS": "40"
@@ -505,12 +546,12 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
+   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
    "role": "combat",
-   "template": "squad-ardougne-giants",
+   "template": "squad-taverley-black-knights",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-giants"
+    "squad:taverley-black-knights"
    ]
   },
   {
