@@ -1,6 +1,7 @@
 import {expect,test} from 'bun:test';
-import {readFileSync} from 'node:fs';
-import {resolve} from 'node:path';
+import {mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,resolve} from 'node:path';
 import {validateSmeltOrder} from '../../../scripts/smelt-batch';
 import {parseCoins} from '../../../scripts/coin-courier';
 import {accountFromStatus,catalogCoverage,intentForEntry,loadProgressionCatalog,matchingProgressionRoutes,progressionMethods,progressionStep,type ProgressionCatalog} from '../src/progression-catalog';
@@ -402,4 +403,26 @@ test('a time limit in a flag is a stated bound: quest-order with --timeout-ms ha
  // The flag states a bound for the entries that need one and changes none that did not.
  expect(intentForEntry('scripts/goldfarm-stable.ts',[],{},undefined,c)).toBeNull();
  expect(intentForEntry('scripts/goldfarm-stable.ts',['--timeout-ms=1000'],{},undefined,c)).toMatchObject({kind:'service'});
+});
+
+test('bounded bank-to-GE and shop-to-bid market routes admit valid finite requests and reject malformed inputs',()=>{
+ const c=loadProgressionCatalog();
+ expect(intentForEntry('scripts/sell-owned-ge-item.ts',[],{FROM_BANK:'1',ITEM_ID:'861',QUANTITY:'17',SELL_PRICE:'95000',FLOOR_PRICE:'95000',ORDER_MS:'60000'},undefined,c)).toEqual({kind:'service',objective:'sell-owned-ge-item:861:17:95000',units:1});
+ expect(intentForEntry('scripts/sell-owned-ge-item.ts',[],{ITEM_ID:'995',QUANTITY:'17',SELL_PRICE:'1',FLOOR_PRICE:'1'},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/sell-owned-ge-item.ts',[],{ITEM_ID:'861',QUANTITY:'17',SELL_PRICE:'90000',FLOOR_PRICE:'95000'},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/shop-to-bid.ts',['sarim','313'],{LOTS:'1',UNITS:'5000',MIN_NET:'50'},undefined,c)).toEqual({kind:'service',objective:'shop-to-bid:sarim:313',units:1});
+ expect(intentForEntry('scripts/shop-to-bid.ts',['--scan'],{},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/shop-to-bid.ts',['sarim','0'],{},undefined,c)).toBeNull();
+ expect(intentForEntry('scripts/shop-to-bid.ts',['sarim','313'],{LOTS:'0'},undefined,c)).toBeNull();
+ const dir=mkdtempSync(join(tmpdir(),'ge-cat-'));
+ try{
+  const tripFile=join(dir,'trip.json'),sellerFile=join(dir,'seller.json');
+  writeFileSync(tripFile,JSON.stringify({actor:'YewFirst',server:'rs-sdk-demo.fly.dev',goal:'bid-861',item:861,quantity:17,price:95000,floor:95000,reserve:0,deadline:Date.now()+60000,fillWait:40,cap:1200}));
+  writeFileSync(sellerFile,JSON.stringify({actor:'Ballspinner',server:'rs-sdk-demo.fly.dev',goal:'flax-bid',allTradeable:true,protect:[],reserves:{},maxItems:1,maxUnits:24,perItem:24,discount:0,floor:1,unitCap:100,fillWait:40,deadline:Date.now()+60000,cap:1500,childCap:1200}));
+  expect(intentForEntry('scripts/microbot-ge-trip.ts',[tripFile],{},undefined,c)).toEqual({kind:'service',objective:'ge-trip:861:17:95000',units:1});
+  expect(intentForEntry('scripts/microbot-ge-trip.ts',[join(dir,'missing.json')],{},undefined,c)).toBeNull();
+  expect(intentForEntry('scripts/microbot-bank-seller.ts',[sellerFile],{},undefined,c)).toEqual({kind:'service',objective:'bank-seller:flax-bid:1:24',units:1});
+  writeFileSync(sellerFile,JSON.stringify({actor:'Ballspinner',server:'rs-sdk-demo.fly.dev',goal:'bad',allTradeable:false}));
+  expect(intentForEntry('scripts/microbot-bank-seller.ts',[sellerFile],{},undefined,c)).toBeNull();
+ }finally{rmSync(dir,{recursive:true,force:true});}
 });

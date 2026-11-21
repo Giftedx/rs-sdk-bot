@@ -301,6 +301,50 @@ export function intentForEntry(script:string,args:readonly string[]=[],env:Reado
   const item=Number(setting(env,args,'ITEM_ID')),quantity=Number(setting(env,args,'QUANTITY')),owned=Number(setting(env,args,'EXPECTED_OWNED')??0);
   if(whole(item)&&item>0&&whole(quantity)&&quantity>0&&whole(owned)&&whole(owned+quantity))return{kind:'acquire',items:{[item]:owned+quantity},consumer};
  }
+ if(script==='scripts/sell-owned-ge-item.ts'){
+  const item=Number(setting(env,args,'ITEM_ID')),quantity=Number(setting(env,args,'QUANTITY')),price=Number(setting(env,args,'SELL_PRICE')),floor=Number(setting(env,args,'FLOOR_PRICE'));
+  const reserve=Number(setting(env,args,'RESERVE_ITEMS')??0),wait=Number(setting(env,args,'FILL_WAIT_TICKS')??40),capText=setting(env,args,'CAP')??setting(env,args,'TICKS');
+  if(whole(item)&&item>0&&item!==995&&whole(quantity)&&quantity>0&&whole(price)&&whole(floor)&&floor>0&&price>=floor&&whole(price*quantity)&&price*quantity<=2147483647
+   &&whole(reserve)&&whole(wait)&&wait<=200&&(capText===undefined||whole(Number(capText))&&Number(capText)>0)){
+   return{kind:'service',objective:`sell-owned-ge-item:${item}:${quantity}:${price}`,units:1};
+  }
+ }
+ if(script==='scripts/microbot-ge-trip.ts'){
+  try{
+   const file=args.find(a=>a.endsWith('.json')&&!a.includes('='));if(!file)return null;
+   const r=JSON.parse(readFileSync(file,'utf8'));
+   if(!/^[a-z0-9]{1,12}$/i.test(r?.actor??'')||!r?.server||!/^[a-z0-9_-]{1,64}$/i.test(r?.goal??'')
+    ||![r.item,r.quantity,r.price,r.floor,r.deadline].every(whole)||r.item<1||r.item===995
+    ||r.quantity<1||r.quantity>24||r.floor<1||r.price<r.floor||r.price*r.quantity>2147483647
+    ||!whole(r.reserve)||!whole(r.fillWait)||r.fillWait>200||!whole(r.cap)||r.cap<500||r.cap>100000)return null;
+   return{kind:'service',objective:`ge-trip:${r.item}:${r.quantity}:${r.price}`,units:1};
+  }catch{return null;}
+ }
+ if(script==='scripts/microbot-bank-seller.ts'){
+  try{
+   const file=args.find(a=>a.endsWith('.json')&&!a.includes('='));if(!file)return null;
+   const r=JSON.parse(readFileSync(file,'utf8'));
+   if(!r||r.allTradeable!==true||!Array.isArray(r.protect)||r.protect.some((id:unknown)=>!whole(id))
+    ||!r.reserves||typeof r.reserves!=='object'||Object.entries(r.reserves).some(([id,n])=>!/^\d+$/.test(id)||!whole(n))
+    ||!whole(r.maxItems)||r.maxItems<1||r.maxItems>32||!whole(r.maxUnits)||r.maxUnits<1||r.maxUnits>768
+    ||!whole(r.perItem)||r.perItem<1||r.perItem>24||![0,5,10,50].includes(r.discount)
+    ||!whole(r.floor)||r.floor<1||!whole(r.unitCap)||r.unitCap<r.floor
+    ||!whole(r.childCap)||r.childCap<600||r.childCap>100000||!whole(r.cap)||r.cap<r.childCap+200||r.cap>100000
+    ||!whole(r.fillWait)||r.fillWait>200||!whole(r.deadline)||r.deadline<1||!/^[a-z0-9_-]{1,20}$/i.test(r.goal??''))return null;
+   return{kind:'service',objective:`bank-seller:${r.goal}:${r.maxItems}:${r.maxUnits}`,units:1};
+  }catch{return null;}
+ }
+ if(script==='scripts/shop-to-bid.ts'){
+  const positional=args.filter(a=>!a.includes('=')&&!a.startsWith('-'));
+  const offset=positional.length===3&&/^[a-z0-9]{1,12}$/i.test(positional[0]!)&&!positional[0]!.includes(',')?1:0;
+  const profiles=positional[offset]?.toLowerCase(),itemIds=positional[offset+1];
+  const bounds=[['UNITS',1],['LOTS',1],['MIN_NET',0],['COIN_RESERVE',0],['MAX_SPEND',0],['WAIT_TICKS',0],['MIN_LOT',0]] as const;
+  if(positional.length-offset!==2||!profiles||!/^[a-z0-9_]+(?:,[a-z0-9_]+)*$/.test(profiles)||!itemIds||!/^[1-9]\d*(?:,[1-9]\d*)*$/.test(itemIds)
+   ||bounds.some(([k,min])=>{const raw=setting(env,args,k);return raw!==undefined&&(!whole(Number(raw))||Number(raw)<min);})){
+   return null;
+  }
+  return{kind:'service',objective:`shop-to-bid:${profiles}:${itemIds}`,units:1};
+ }
  if(script==='scripts/earth-shop.ts'){
   const profile=args[0],cap=Number(args[1]),target=Number(setting(env,args,'STOCK_TARGET')),maximum=Number(setting(env,args,'MAX_ITEMS')),spend=Number(setting(env,args,'MAX_SPEND')),reserve=Number(setting(env,args,'COIN_RESERVE')),seedUsed=Number(setting(env,args,'EARTH_SEED_USED')??0);
   return(profile==='aubury'||profile==='betty')&&[cap,target,maximum,spend,reserve].every(whole)&&[0,1].includes(seedUsed)&&cap>=1&&cap<=16000&&target>=1&&maximum>=1&&maximum<=target
