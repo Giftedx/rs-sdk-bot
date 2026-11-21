@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795251723136-quickhandjob-yewfirst-earthrune",
+ "account": "YewFirst",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 15,
+ "claim": "a1d0e728-35de-4349-afc0-b740d1886f35",
+ "count": 0,
+ "ok": false,
+ "at": 1795251806109,
+ "detail": "trade claimed"
+}
