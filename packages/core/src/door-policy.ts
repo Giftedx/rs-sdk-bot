@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import type {Account,DoorBlock,Door} from './world-types';
-import {completedQuestUnlocks,guildActorFacts} from './guild-observation';
+import {completedQuestUnlocks,guildActorFacts} from './guild-facts';
 import {equipmentObserved} from './container-observation';
 const clients=new WeakMap<object,unknown>();
 export function registerRouteActor(sdk:object,client:unknown):void {if(client&&typeof client==='object')clients.set(sdk,client);}

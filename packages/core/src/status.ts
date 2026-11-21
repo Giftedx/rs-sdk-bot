@@ -1,9 +1,9 @@
 import { mkdirSync, renameSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { NAMES } from './names';
-import type { BankObservation } from './inprocess';
+import type { BankObservation } from './session-types';
 import { questFlags, questDefinitions, type QuestFlag } from './quest-status';
-import {guildActorFacts} from './guild-observation';
+import {guildActorFacts} from './guild-facts';
 import {equipmentObserved} from './container-observation';
 import {readLogoutProof} from './session-lifecycle';
 import {observedDoorStates} from './door-policy';
