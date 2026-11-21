@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795288920456-abracadickra-knightstick",
  "account": "Abracadickra",
  "partner": "Knightstick",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 24050,
  "claim": "210d5ac5-6d65-4dd9-98e4-11738c5cd8f9",
- "count": 0,
- "ok": false,
- "at": 1795289026373,
- "detail": "trade claimed"
+ "count": 24050,
+ "ok": true,
+ "at": 1795289112460,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 24050,
+  "after": 0
+ },
+ "bank": {
+  "count": 9710,
+  "at": 1795289102109
+ },
+ "logout": {
+  "attemptId": "1795289026382-0000007576-0000000001",
+  "at": 1795289112452,
+  "sha256": "e0681931083d821ce329a38fd01f4e419dc6c4e377cbec5a4c8dafe25a149e50"
+ },
+ "screen": true
 }
