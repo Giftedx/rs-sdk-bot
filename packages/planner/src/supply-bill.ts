@@ -117,7 +117,8 @@ export function boardSupplyDemand(snapshot = join(root, 'research/hiscores-live.
     const target = JSON.parse(readFileSync(snapshot, 'utf8')) as Parameters<typeof boardsFromSnapshot>[0];
     const activities = haggisActivities(), boards = boardsFromSnapshot(target);
     if (!boards.some(b => b.id === board && b.rule.kind === 'clock' && b.id !== 'overall')) throw new Error(`no clock board named ${board}`);
-    const options = { mode: 'realistic' as const, tricks: new Set(SCENARIOS[2]!.tricks), travel: haggisTravel() };
+// Solo specialist skill boards run without the 5-tank Deserted Keep PvP relog route.
+    const options = { mode: 'realistic' as const, tricks: new Set(SCENARIOS[2]!.tricks), travel: haggisTravel(), disable: new Set(['pvp-relog-combat']) };
     const plan = schedule(boards, activities, { ...options, sacrificed: new Set(boards.filter(b => b.id !== board).map(b => b.id)) });
     const finish = plan.boards.find(b => b.id === board)?.finish ?? null;
     if (finish === null) return null;

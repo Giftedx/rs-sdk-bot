@@ -308,6 +308,7 @@ export function buildProgressionCatalog(base=root):ProgressionCatalog{
  entries.set('scripts/courier-handoff.ts',{script:'scripts/courier-handoff.ts',intents:['service'],skills:[],routeIds:[]});
  entries.set('scripts/recover-trapped.ts',{script:'scripts/recover-trapped.ts',intents:['service'],skills:[],routeIds:[]});
  entries.set('scripts/ranged-live-prep.ts',{script:'scripts/ranged-live-prep.ts',intents:['service'],skills:['herblore'],routeIds:[]});
+ entries.set('scripts/pvp-relog-combat.ts',{script:'scripts/pvp-relog-combat.ts',intents:['service'],skills:['attack','strength','defence','ranged'],routeIds:[]});
  entries.set('scripts/handoff-inputs.ts',{script:'scripts/handoff-inputs.ts',intents:['acquire','produce','service'],skills:['fletching'],routeIds:[]});
  entries.set('packages/practice/src/ge-bulk-order-proof.ts',{script:'packages/practice/src/ge-bulk-order-proof.ts',intents:['service','observe'],skills:[],routeIds:[],practiceOnly:true});
  // The practice proofs log a seeded account in once to register it (3 ticks, no game action): an observe entry.
