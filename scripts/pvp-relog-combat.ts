@@ -14,9 +14,7 @@ import {
     DESERTED_KEEP,
     DUELING_RING_IDS,
     SPELLS,
-    SUPER_ATTACK_IDS,
     SUPER_ENERGY_IDS,
-    SUPER_STRENGTH_IDS,
     assertNonReservedAccount,
     configureSpecialistGuardEnv,
     countById,
@@ -37,8 +35,6 @@ import {
 
 export type PvpCombatSkill = 'Attack' | 'Strength' | 'Defence' | 'Ranged';
 
-export const RANGING_POT_IDS = [2444, 169, 171, 173] as const;
-
 export const BOW_TIERS: readonly { level: number; id: number; name: string }[] = [
     { level: 50, id: 861, name: 'Magic shortbow' },
     { level: 40, id: 857, name: 'Yew shortbow' },
@@ -58,8 +54,8 @@ export const ARROW_TIERS: readonly { level: number; id: number; name: string }[]
 ];
 
 export const RANGED_ARMOUR_TIERS: readonly { slot: string; items: readonly { id: number; ranged: number; defence?: number }[] }[] = [
-    { slot: 'hat', items: [{ id: 2581, ranged: 40 }, { id: 1169, ranged: 20 }, { id: 1167, ranged: 1 }] },
-    { slot: 'feet', items: [{ id: 2577, ranged: 40 }, { id: 1061, ranged: 1 }] },
+    { slot: 'hat', items: [{ id: 1169, ranged: 20 }, { id: 1167, ranged: 1 }] },
+    { slot: 'feet', items: [{ id: 1061, ranged: 1 }] },
     { slot: 'front', items: [{ id: 1704, ranged: 1 }, { id: 1731, ranged: 1 }] },
     { slot: 'hands', items: [{ id: 2491, ranged: 70 }, { id: 2489, ranged: 60 }, { id: 2487, ranged: 50 }, { id: 1065, ranged: 40 }, { id: 1063, ranged: 1 }] },
     { slot: 'legs', items: [{ id: 2497, ranged: 70 }, { id: 2495, ranged: 60 }, { id: 2493, ranged: 50 }, { id: 1099, ranged: 40 }, { id: 1097, ranged: 20 }, { id: 1095, ranged: 1 }] },
@@ -114,11 +110,6 @@ export function styleComponentFor(skill: PvpCombatSkill, weaponId: number): numb
         return componentId(skill === 'Strength' ? 'combat_heavysword:heavy1' : 'combat_heavysword:heavy3');
     }
     return componentId(skill === 'Strength' ? 'combat_hacksword:hack1' : 'combat_hacksword:hack3');
-}
-
-export function needsPotionDose(baseLevel: number, boostedLevel: number, kind: 'melee' | 'ranged', margin = 3): boolean {
-    const maxBoost = kind === 'ranged' ? 4 + Math.floor(baseLevel * 0.10) : 5 + Math.floor(baseLevel * 0.15);
-    return boostedLevel < baseLevel + Math.max(1, maxBoost - margin);
 }
 
 export function rankTanksForSwing<T extends { index: number; name?: string; x?: number; z?: number; worldX?: number; worldZ?: number; hp?: number | null }>(
@@ -201,39 +192,6 @@ async function equipBestGear(s: Session, skill: PvpCombatSkill, stop: () => bool
     const feetId = MELEE_KIT_IDS.feet.find(id => ids.has(id));
     if (feetId) await equipById(feetId);
     return s.sdk.getEquipment().find(e => e.slot === 3)?.id ?? weaponId;
-}
-
-async function applyPotionsIfNeeded(s: Session, skill: PvpCombatSkill, debug = false): Promise<boolean> {
-    let drank = false;
-    const drinkOne = async (ids: readonly number[]) => {
-        for (const id of ids) {
-            const item = s.sdk.getInventory().find(i => i.id === id);
-            if (!item) continue;
-            const res = await s.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 1, reason: 'SDK' });
-            if (debug) console.log(`DBG_DRINK id=${item.id} slot=${item.slot} res=${JSON.stringify(res)}`);
-            await waitTicks(s, 3);
-            drank = true;
-            return;
-        }
-    };
-
-    if (skill === 'Ranged') {
-        const r = skillInfo(s, 'Ranged');
-        if (needsPotionDose(r.baseLevel, r.level, 'ranged', 2)) {
-            await drinkOne(RANGING_POT_IDS);
-        }
-        return drank;
-    }
-
-    const atk = skillInfo(s, 'Attack');
-    if (needsPotionDose(atk.baseLevel, atk.level, 'melee', 3)) {
-        await drinkOne(SUPER_ATTACK_IDS);
-    }
-    const str = skillInfo(s, 'Strength');
-    if (needsPotionDose(str.baseLevel, str.level, 'melee', 3)) {
-        await drinkOne(SUPER_STRENGTH_IDS);
-    }
-    return drank;
 }
 
 async function rebankManagedTank(s: Session, stop: () => boolean): Promise<boolean> {
@@ -480,10 +438,18 @@ async function runAttackerMain(args: string[]): Promise<void> {
         } catch (err) {
             if (s) await closeWithin([s], 3000);
             if (isStopped()) break;
+            stopTanks = true;
+            await finish(tankSessions, false, `reconnect failed skill=${skill} totalTicks=${totalTicks}: ${String(err)}`);
             throw err;
         }
 
         const tick0 = s.tick();
+        if (s.sdk.getState()?.player?.isDead) {
+            stopTanks = true;
+            await logoutSession(s);
+            await closeWithin([s], 5000);
+            await finish(tankSessions, false, `attacker died skill=${skill} totalTicks=${totalTicks} swings=${swings}`);
+        }
         const curStat = skillInfo(s, skill);
         if (debug) {
             const nearby = (s.sdk.getState()?.nearbyPlayers ?? []).map((p: any) => `${p.name}:${p.index}@${p.x ?? p.worldX},${p.z ?? p.worldZ}`);
@@ -561,13 +527,19 @@ async function runAttackerMain(args: string[]): Promise<void> {
             s.ended.then(e => e.reason),
             waitTicks(s, 4).then(() => 'timeout'),
         ]);
+        if (endReason === 'timeout') {
+            await logoutSession(s);
+        } else if (endReason !== 'logged-out') {
+            const endTick = s.tick();
+            totalTicks += Math.max(0, endTick - tick0) + 1;
+            stopTanks = true;
+            await closeWithin([s], 5000);
+            await finish(tankSessions, false, `unexpected end (${endReason}) skill=${skill} totalTicks=${totalTicks} swings=${swings}`);
+        }
         const endTick = s.tick();
         if (debug) {
             const postXp = skillInfo(s, skill).experience;
             console.log(`DBG_SWING target=${target.name}(${target.index}) styleCom=${styleCom} end=${endReason} dt=${endTick - tick0} xp=${curStat.experience}->${postXp}`);
-        }
-        if (endReason === 'timeout') {
-            await logoutSession(s);
         }
         await closeWithin([s], 5000);
         swings++;

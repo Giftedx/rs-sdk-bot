@@ -1937,7 +1937,14 @@
        "source": "thieving-specialist relogs on stun ticks rather than idling"
       },
       "requires": [
-       "tutorial"
+       "trade-start"
+      ],
+      "supplies": [
+       {
+        "item": "pineapple pizza",
+        "itemId": 2301,
+        "count": 25
+       }
       ],
       "at": "ardougne-market"
      }
@@ -3450,6 +3457,49 @@
        }
       }
      }
+    },
+    {
+     "lever": "pvp-relog-combat",
+     "set": {
+      "label": "1-tick PvP relog Ranged 1->99 at Deserted Keep (5 tanks)",
+      "at": "deserted-keep-lever",
+      "requires": [
+       "def-top"
+      ],
+      "minLevel": {},
+      "train": {
+       "skill": "ranged",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 821.1,
+        "realistic": 726.0,
+        "evidence": "MEASURED",
+        "source": "hosted-bench 44787226268 (commit 5311e754d8) overall:pvp-ranged seeds 7/8/9: 1,000,125/1218=821.1, 998,662/1280=780.2, 999,675/1377=726.0 XP/tick (1->99 progressive bows/arrows/dhide, 5 tanks)"
+       },
+       "side": {
+        "hitpoints": 0.333
+       }
+      },
+      "supplies": [
+       { "item": "shortbow", "itemId": 841, "count": 1 },
+       { "item": "oak shortbow", "itemId": 843, "count": 1 },
+       { "item": "willow shortbow", "itemId": 849, "count": 1 },
+       { "item": "maple shortbow", "itemId": 853, "count": 1 },
+       { "item": "yew shortbow", "itemId": 857, "count": 1 },
+       { "item": "magic shortbow", "itemId": 861, "count": 1 },
+       { "item": "iron arrow", "itemId": 884, "count": 100 },
+       { "item": "steel arrow", "itemId": 886, "count": 150 },
+       { "item": "mithril arrow", "itemId": 888, "count": 150 },
+       { "item": "adamant arrow", "itemId": 890, "count": 200 },
+       { "item": "rune arrow", "itemId": 892, "count": 2500 },
+       { "item": "coif", "itemId": 1169, "count": 1 },
+       { "item": "leather boots", "itemId": 1061, "count": 1 },
+       { "item": "amulet of glory", "itemId": 1704, "count": 1 },
+       { "item": "black dragonhide body", "itemId": 2503, "count": 1 },
+       { "item": "black dragonhide chaps", "itemId": 2497, "count": 1 },
+       { "item": "black dragon vambraces", "itemId": 2491, "count": 1 }
+      ]
+     }
     }
    ],
    "evidence": "MEASURED",
@@ -3515,80 +3565,6 @@
      "item": "coif",
      "itemId": 1169,
      "count": 1
-    }
-   ],
-   "patches": [
-    {
-     "lever": "spiders-combat",
-     "set": {
-      "label": "Rapid magic shortbow + special + cannon 55 -> 99 at Poison Spiders",
-      "at": "poison-spiders",
-      "requires": [
-       "cannon",
-       "prayer-43"
-      ],
-      "minLevel": {
-       "ranged": 55,
-       "prayer": 43
-      },
-      "train": {
-       "skill": "ranged",
-       "toLevel": 99,
-       "xpPerTick": {
-        "floor": 553,
-        "realistic": 526.7,
-        "evidence": "MEASURED",
-        "source": "research/combat-measure.md sections 6b & 6c: fighter:cannon 55 -> 99 (1,973 / 1,889 / 1,792 ticks, mean 1,885) minus 6c magic shortbow special savings (49 / 73 / 101 ticks across seeds 7/8/9, mean 73 ticks) = 1,720 floor / 1,812 mean -> 553.0 / 526.7 XP/tick"
-       },
-       "side": {
-        "hitpoints": 0.12
-       }
-      }
-     }
-    },
-    {
-     "lever": "pvp-relog-combat",
-     "set": {
-      "label": "1-tick PvP relog Ranged 1->99 at Deserted Keep (5 tanks)",
-      "at": "deserted-keep-lever",
-      "requires": [
-       "def-top"
-      ],
-      "minLevel": {},
-      "train": {
-       "skill": "ranged",
-       "toLevel": 99,
-       "xpPerTick": {
-        "floor": 821.1,
-        "realistic": 726.0,
-        "evidence": "MEASURED",
-        "source": "hosted-bench 44787226268 (commit 5311e754d8) overall:pvp-ranged seeds 7/8/9: 1,000,125/1218=821.1, 998,662/1280=780.2, 999,675/1377=726.0 XP/tick (1->99 progressive bows/arrows/dhide, 5 tanks)"
-       },
-       "side": {
-        "hitpoints": 0.333
-       }
-      },
-      "supplies": [
-       { "item": "shortbow", "itemId": 841, "count": 1 },
-       { "item": "oak shortbow", "itemId": 843, "count": 1 },
-       { "item": "willow shortbow", "itemId": 849, "count": 1 },
-       { "item": "maple shortbow", "itemId": 853, "count": 1 },
-       { "item": "yew shortbow", "itemId": 857, "count": 1 },
-       { "item": "magic shortbow", "itemId": 861, "count": 1 },
-       { "item": "iron arrow", "itemId": 884, "count": 100 },
-       { "item": "steel arrow", "itemId": 886, "count": 150 },
-       { "item": "mithril arrow", "itemId": 888, "count": 150 },
-       { "item": "adamant arrow", "itemId": 890, "count": 200 },
-       { "item": "rune arrow", "itemId": 892, "count": 2500 },
-       { "item": "coif", "itemId": 1169, "count": 1 },
-       { "item": "robin hood hat", "itemId": 2581, "count": 1 },
-       { "item": "ranger boots", "itemId": 2577, "count": 1 },
-       { "item": "amulet of glory", "itemId": 1704, "count": 1 },
-       { "item": "black dragonhide body", "itemId": 2503, "count": 1 },
-       { "item": "black dragonhide chaps", "itemId": 2497, "count": 1 },
-       { "item": "black dragon vambraces", "itemId": 2491, "count": 1 }
-      ]
-     }
     }
    ],
    "at": "falador-white-knights"

@@ -3,7 +3,7 @@ import { componentId } from '../packages/core/src/logout';
 import { evaluateProgressionWork } from '../packages/core/src/progression-session';
 import { createProgressionMonitor } from '../packages/core/src/progression-policy';
 import { intentForEntry, loadProgressionCatalog } from '../packages/planner/src/progression-catalog';
-import { needsPotionDose, parsePvpSkill, rankTanksForSwing, selectMeleeWeapon, selectRangedKit, styleComponentFor } from './pvp-relog-combat';
+import { RANGED_ARMOUR_TIERS, parsePvpSkill, rankTanksForSwing, selectMeleeWeapon, selectRangedKit, styleComponentFor } from './pvp-relog-combat';
 
 test('parsePvpSkill normalizes supported combat skills', () => {
     expect(parsePvpSkill('atk')).toBe('Attack');
@@ -41,12 +41,12 @@ test('styleComponentFor avoids clicks on default style 0 and selects heavysword 
     expect(styleComponentFor('Defence', 1319)).toBe(componentId('combat_heavysword:heavy3'));
 });
 
-test('needsPotionDose triggers when boost drops below margin', () => {
-    expect(needsPotionDose(83, 83, 'melee', 3)).toBe(true);
-    expect(needsPotionDose(83, 100, 'melee', 3)).toBe(false);
-    expect(needsPotionDose(90, 100, 'melee', 3)).toBe(true);
-    expect(needsPotionDose(50, 59, 'ranged', 2)).toBe(false);
-    expect(needsPotionDose(50, 50, 'ranged', 2)).toBe(true);
+test('RANGED_ARMOUR_TIERS avoids clue-rare items and uses obtainable coif and leather boots', () => {
+    const ids = new Set(RANGED_ARMOUR_TIERS.flatMap(g => g.items.map(i => i.id)));
+    expect(ids.has(2581)).toBe(false);
+    expect(ids.has(2577)).toBe(false);
+    expect(ids.has(1169)).toBe(true);
+    expect(ids.has(1061)).toBe(true);
 });
 
 test('rankTanksForSwing round-robins healthy keep tanks and skips dead or banking tanks', () => {

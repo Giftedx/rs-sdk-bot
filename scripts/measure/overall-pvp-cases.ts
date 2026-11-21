@@ -55,8 +55,7 @@ const RANGED_PVP_INV: SaveConfig['inventory'] = [
     { id: 892, count: 5000 }, // Rune arrow
     { id: 1167, count: 1 }, // Leather cowl
     { id: 1169, count: 1 }, // Coif
-    { id: 2581, count: 1 }, // Robin hood hat
-    { id: 2577, count: 1 }, // Ranger boots
+    { id: 1061, count: 1 }, // Leather boots
     { id: 1704, count: 1 }, // Amulet of glory
     { id: 1063, count: 1 }, // Leather vambraces
     { id: 1065, count: 1 }, // Green d'hide vambraces
@@ -86,6 +85,22 @@ function companionsOf(suffixes: readonly string[]): BenchCase['companions'] {
 }
 
 export const OVERALL_PVP_CASES: BenchCase[] = [
+    {
+        key: 'overall:pvp-attack-40',
+        engineEnv: { NODE_MEMBERS: 'true' },
+        script: 'scripts/pvp-relog-combat.ts',
+        preset: 'tutorial_done',
+        presetConfig: {
+            position: { x: 3154, z: 3924, level: 0 },
+            skills: { Attack: 1, Strength: 1, Defence: 1, Hitpoints: 10, Prayer: 43, Magic: 80, Ranged: 1 },
+            inventory: MELEE_PVP_INV,
+        },
+        companions: companionsOf(['t', 'u', 'v', 'w', 'x']),
+        scriptArgs: ['attack', '40', 'TANKS={bot}t,{bot}u,{bot}v,{bot}w,{bot}x', '--own-tanks', 'CAP=800'],
+        timeoutMs: 300_000,
+        output: /\btotalTicks=(\d+)/,
+        pass: passPvp('Attack', 40),
+    },
     {
         key: 'overall:pvp-strength',
         engineEnv: { NODE_MEMBERS: 'true' },
