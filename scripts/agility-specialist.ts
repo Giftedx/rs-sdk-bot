@@ -1098,15 +1098,13 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             if (x() >= 3281 && z() <= 3037) await walkNear(s, { x: 3282, z: 3037 }, 0, 20);
             const hasQuestFood = () => cntIds(s, [ITEMS.pineapplePizza, ITEMS.halfPineapplePizza, ITEMS.shark, ITEMS.chocolateCake]) > 0;
             const rockOp = async (rid: number) => {
-                const rock = q.findLoc((l: any) => l.id === rid && l.reachable !== false)
-                    ?? q.findLoc((l: any) => l.id >= 2694 && l.id <= 2697 && l.reachable !== false)
-                    ?? q.findLoc((l: any) => l.id === rid);
+                const rock = q.findLoc((l: any) => l.id === rid && l.reachable !== false) ?? q.findLoc((l: any) => l.id === rid);
                 if (!rock) return false;
                 const op = q.opIndex(rock, /climb/i);
                 await s.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: op === 1 ? 2 : op, reason: 'SDK' });
                 return true;
             };
-            // Climb cliff rocks sequentially via reachable fallbackId (2694->2695->2696->2697) to (3270,3039) without cant_reach delays.
+            // Climb cliff rocks sequentially (2694->2695->2696->2697) to (3270,3039); step back to (3282,3037) if tumbled east onto unreachable cliff tiles.
             for (let retry = 0; retry < 40 && x() > 3272 && !inPrisonCell(); retry++) {
                 await q.guard('cell rock');
                 if ((q.st()?.prayers?.prayerPoints ?? 99) <= 10) {
@@ -1114,6 +1112,9 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                 }
                 if (q.hp() <= 10 && hasQuestFood()) {
                     await q.waitUntil(() => q.hp() > 10 || !hasQuestFood(), 6);
+                }
+                if (x() >= 3281 && !q.findLoc((l: any) => l.id === 2694 && l.reachable !== false)) {
+                    await walkNear(s, { x: 3282, z: 3037 }, 0, 12);
                 }
                 const startX = x(), startZ = z(), slip0 = q.msgCount(/slip a little/i);
                 const rid = startX >= 3281 ? 2694 : (startX === 3279 || (startX === 3280 && startZ >= 3039)) ? 2695 : (startX === 3277 || (startX === 3278 && startZ >= 3040)) ? 2696 : 2697;
@@ -1157,8 +1158,8 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             for (let t = 0; t < 10 && worn(ITEMS.fireStaff); t++) await removeWornItem(s, ITEMS.fireStaff);
             await q.walk('to gate', [{ x: 3272, z: 3029, tol: 0 }]);
             await q.step('gate in', () => q.opLoc(loc(GATE), 1), () => x() >= 3274, 12, 4);
-            await q.waitTicks(2);
             if (q.has(ITEMS.slaveShirt) || q.has(ITEMS.slaveRobe) || q.has(ITEMS.slaveBoots)) await slaveClothes();
+            await q.waitTicks(2);
             await ensureFullPrayer();
         };
         const gateOut = async () => {
@@ -1334,7 +1335,16 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await walkNear(s, { x: 3275, z: 9459 }, 3, 60, { ignoreHunters: true });
         await walkNear(s, { x: 3280, z: 9415 }, 1, 80, { ignoreHunters: true });
         await q.guard('to cave guard');
-        await q.talk('cave guard', /^mercenary$/i, [/mine in a different area/i, /you're quite right sir/i, /we understand each other perfectly/i], () => q.sawText(/winks at you knowingly/i), { x: 3280, z: 9415 }, 50);
+        for (let talkTry = 0; talkTry < 2; talkTry++) {
+            // Do not equip Fire staff near west-cave Mercenaries (equip.rs2:20 jails in x <= 3283); let PrayerGuard settle first.
+            await q.waitUntil(() => !q.st()?.prayers?.activePrayers?.[PRAYER_MELEE], 6);
+            try {
+                await q.talk('cave guard', /^mercenary$/i, [/mine in a different area/i, /you're quite right sir/i, /we understand each other perfectly/i], () => q.sawText(/winks at you knowingly/i), { x: 3280, z: 9415 }, 60);
+                break;
+            } catch (e) {
+                if (talkTry === 1 || q.sawText(/winks at you knowingly/i)) { if (q.sawText(/winks at you knowingly/i)) break; throw e; }
+            }
+        }
         await mineOut();
         await gateOut();
 
@@ -1343,15 +1353,26 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         q.milestone(11);
         onHalfway?.();
 
-        await gateIn();
         const curtain = async () => {
             if (!q.findLoc((l: any) => l.id === 1528 && l.x === 3291 && l.z === 3031)) return;
             await q.step('curtain', () => { const c = q.findLoc((l: any) => l.id === 1528 && l.x === 3291 && l.z === 3031); return c ? q.opLoc(c, 1) : waitTicks(s, 1); },
                 () => !q.findLoc((l: any) => l.id === 1528 && l.x === 3291 && l.z === 3031), 10, 3);
         };
-        await walkCamp('to curtain', [{ x: 3291, z: 3030, tol: 0 }]);
-        await curtain();
-        await q.dash('through curtain', 3291, 3032, 0, 8);
+        for (let gateTry = 0; gateTry < 3; gateTry++) {
+            await gateIn();
+            if (!inCamp() || inPrisonCell() || onPrisonCliff()) continue;
+            try {
+                await walkCamp('to curtain', [{ x: 3291, z: 3030, tol: 0 }], 35);
+            } catch (e) {
+                if (!inPrisonCell() && !onPrisonCliff()) throw e;
+                continue;
+            }
+            if (!inCamp() || inPrisonCell() || onPrisonCliff()) continue;
+            await curtain();
+            await q.dash('through curtain', 3291, 3032, 0, 8);
+            if (!inPrisonCell() && !onPrisonCliff() && z() >= 3032) break;
+        }
+        if (inPrisonCell() || onPrisonCliff() || z() < 3032) await q.fail(`failed entering siad building at ${x()},${z()}`);
         await q.dash('to ladder', LADDER.x, LADDER.z - 1, 1, 12);
         await q.climb('ladder up', () => q.locAt(LADDER.x, LADDER.z) ?? LADDER, /climb-up|^climb/i, () => lvl() === 1);
         await q.walk('to bookcase', [{ x: 3285, z: 3032, tol: 0 }]);
@@ -1419,7 +1440,15 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await walkNear(s, { x: 3275, z: 9459 }, 3, 60, { ignoreHunters: true });
         await walkNear(s, { x: 3280, z: 9415 }, 1, 80, { ignoreHunters: true });
         await q.guard('to cave guard 2');
-        await q.talk('pineapple', /^mercenary$/i, [], () => !q.has(ITEMS.pineapple) && q.sawText(/a deal's a deal/i), { x: 3280, z: 9415 }, 50);
+        for (let talkTry = 0; talkTry < 2; talkTry++) {
+            await q.waitUntil(() => !q.st()?.prayers?.activePrayers?.[PRAYER_MELEE], 6);
+            try {
+                await q.talk('pineapple', /^mercenary$/i, [], () => !q.has(ITEMS.pineapple) && q.sawText(/a deal's a deal/i), { x: 3280, z: 9415 }, 60);
+                break;
+            } catch (e) {
+                if (talkTry === 1 || (!q.has(ITEMS.pineapple) && q.sawText(/a deal's a deal/i))) { if (!q.has(ITEMS.pineapple) && q.sawText(/a deal's a deal/i)) break; throw e; }
+            }
+        }
         await walkCamp('to cave', [{ x: CAVE_W.x - 1, z: CAVE_W.z, tol: 0 }]);
         await q.step('cave east', () => q.opLoc(loc(CAVE_W), 1), () => x() >= 3285, 12, 4);
         await q.waitTicks(2);
