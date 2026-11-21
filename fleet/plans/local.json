@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795293979972,
+ "at": 1795294121977,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -443,36 +443,6 @@
    ]
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "wydin_choc",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "chocolate bar",
-    "STOCK_TARGET": "1",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "220",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "20",
-    "AUTOPILOT_ORDER": "[0]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"1973\":1}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy chocolate bars at Wydin's Food Store in Port Sarim",
-   "role": "bank",
-   "template": "squad-chocolate-bar",
-   "autopilot": "local",
-   "resources": [
-    "shop:wydin_choc"
-   ]
-  },
-  {
    "account": "MineYourBiz",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -552,21 +522,23 @@
   },
   {
    "account": "Unsheathed",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2669,3298",
-    "TICKS": "9000"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2669,3298",
-   "role": "thieving",
-   "template": "goldfarm@2669,3298",
+   "repeat": false,
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "knight:2669,3298"
+    "squad:ardougne-giants"
    ]
   },
   {
@@ -597,21 +569,23 @@
   },
   {
    "account": "Magicwanda",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "repeat": false,
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "knight:2652,3318"
+    "squad:ardougne-giants"
    ]
   },
   {
