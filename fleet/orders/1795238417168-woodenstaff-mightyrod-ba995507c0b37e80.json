@@ -1,0 +1,49 @@
+{
+ "id": "1795238417168-woodenstaff-mightyrod-ba995507c0b37e80",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Woodenstaff",
+ "to": "Mightyrod",
+ "item": "Limpwurt root",
+ "count": 11,
+ "start": 1795238417168,
+ "end": 1795239617168,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Guam leaf",
+   "count": 1
+  },
+  {
+   "item": "Dragon bones",
+   "count": 1
+  },
+  {
+   "item": "Flowers",
+   "count": 1
+  },
+  {
+   "item": "Rune axe",
+   "count": 1
+  },
+  {
+   "item": "Raw shark",
+   "count": 20
+  },
+  {
+   "item": "Tarromin",
+   "count": 5
+  }
+ ],
+ "takerWaits": true
+}
