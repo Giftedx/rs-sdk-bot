@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795299318675,
+ "at": 1795299360937,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -452,8 +452,7 @@
     "GIANT_FOOD": "20",
     "GIANT_BURY": "1",
     "TROOPER_COOK": "1",
-    "LOOT_WATCH": "0",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Attack\":99}}"
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
@@ -541,40 +540,44 @@
   },
   {
    "account": "Magicwanda",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "repeat": false,
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "squad:ardougne-giants"
    ]
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "taverley_black_knight"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
+   "repeat": false,
+   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
+   "role": "combat",
+   "template": "squad-taverley-black-knights",
    "autopilot": "local",
    "resources": [
-    "knight:2582,3297"
+    "squad:taverley-black-knights"
    ]
   },
   {
