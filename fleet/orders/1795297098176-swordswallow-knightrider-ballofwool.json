@@ -1,0 +1,22 @@
+{
+ "id": "1795297098176-swordswallow-knightrider-ballofwool",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordswallow",
+ "to": "KnightRider",
+ "item": "Ball of wool",
+ "count": 2,
+ "start": 1795297098176,
+ "end": 1795299498176,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
