@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795250527218,
+ "at": 1795250838834,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -277,86 +277,6 @@
    ]
   },
   {
-   "account": "UnderMyKilt",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=1 EXPECTED_OWNED=1 LIMIT_PRICE=386000 CASH_RESERVE=5000 ORDER_KEY=liveops-umk-ranarr-2 ORDER_MS=300000 FILL_WAIT_TICKS=120",
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1333 QUANTITY=1 SELL_PRICE=47250 FLOOR_PRICE=47250 RESERVE_ITEMS=0 ORDER_KEY=liveops-umk-1333-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=1 EXPECTED_OWNED=9 LIMIT_PRICE=386000 CASH_RESERVE=5000 ORDER_KEY=liveops-mighty-ranarr-10 ORDER_MS=300000 FILL_WAIT_TICKS=120",
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=563 QUANTITY=120 SELL_PRICE=421 FLOOR_PRICE=421 RESERVE_ITEMS=0 ORDER_KEY=liveops-mighty-563-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "Quickhandjob",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1333 QUANTITY=1 SELL_PRICE=47250 FLOOR_PRICE=47250 RESERVE_ITEMS=0 ORDER_KEY=liveops-quick-1333-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "TrouserSnake",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1079 QUANTITY=1 SELL_PRICE=80000 FLOOR_PRICE=80000 RESERVE_ITEMS=0 ORDER_KEY=liveops-trou-1079-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1333 QUANTITY=1 SELL_PRICE=47250 FLOOR_PRICE=47250 RESERVE_ITEMS=0 ORDER_KEY=liveops-kr-1333-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "Fatstack",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1333 QUANTITY=1 SELL_PRICE=47250 FLOOR_PRICE=47250 RESERVE_ITEMS=0 ORDER_KEY=liveops-fat-1333-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
    "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -440,11 +360,16 @@
   "Sausagefest",
   "deeppockets",
   "dipstick",
+  "fatstack",
   "fingerblastr",
   "fingersmith",
   "kiltlifter",
+  "knightrider",
   "knightstick",
-  "sporrandip"
+  "quickhandjob",
+  "sporrandip",
+  "trousersnake",
+  "undermykilt"
  ],
  "builds": {
   "NabTheKnob": "tribrid",
