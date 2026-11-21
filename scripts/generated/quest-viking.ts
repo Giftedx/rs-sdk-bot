@@ -112,14 +112,38 @@ const FROM = process.env.VK_FROM ?? 'start';
 const STAGES = ['start', 'olaf1', 'chain', 'east2', 'draugen', 'manni', 'olaf', 'peer', 'thorvald', 'end'];
 const from = (s: string) => STAGES.indexOf(FROM) <= STAGES.indexOf(s);
 
-const q = await openQuest({ cap: 24000, eatAt: 40, food: [385], burst: true });
+// Ordinary meals acceptable in live quest sweeps without touching edible quest ingredients.
+export const VIKING_FOOD_IDS = [385, 373, 379, 365, 361, 329, 333] as const;
+export const VIKING_RESERVED_FOOD: Readonly<Record<number, number>> = {
+    [ITEM.beer]: 1,
+    [ITEM.cabbage]: 1,
+    [ITEM.potato]: 1,
+    [ITEM.onion]: 1,
+    [ITEM.rawShark]: 1,
+    [ITEM.herring]: 1,
+};
+export const VIKING_LOCATE_STEPS = 300;
+export const VIKING_DRAUGEN_SPAWNS = 16;
+export const VIKING_DRAUGEN_FIGHT_TICKS = 1050;
+export const VIKING_DRAUGEN_PHASE_TICKS = 16000;
+export const VIKING_SPOTS = [
+    ...Object.values(NPC).map(n => n.at),
+    LOC.mazeTop, LOC.tree, LOC.cauldron, LOC.wheel, LOC.altar, LOC.pipe, LOC.backstage, LOC.warriorLadder, LOC.door1, LOC.door2,
+];
+
+/** Return whether the Draugen combat loop should re-issue an attack click to keep combat and prayer offence active. */
+export function shouldAttackDraugen(targetIndex: number, nowTick: number, lastIndex: number, lastAttackTick: number, inCombat?: boolean): boolean {
+    return targetIndex !== lastIndex || nowTick - lastAttackTick >= 5 || !inCombat;
+}
+
+export async function runQuestViking(): Promise<void> {
+const q = await openQuest({ cap: 24000, eatAt: 40, food: [...VIKING_FOOD_IDS], reservedFood: VIKING_RESERVED_FOOD, burst: true });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+trials/i) > 0) questDone = true; });
     const x = () => q.pos()?.worldX ?? 0;
     const z = () => q.pos()?.worldZ ?? 0;
     const lv = () => q.lvl();
-    const lastMsg = (): string => ((q.st()?.gameMessages ?? []).filter((m: any) => m.type === 0).slice(-1)[0]?.text ?? '');
     const msgs = (re: RegExp) => q.msgCount(re);
     const loc = (l: { id: number; x: number; z: number }) => q.findLoc((k: any) => k.id === l.id && Math.abs(k.x - l.x) <= 1 && Math.abs(k.z - l.z) <= 1) ?? q.locAt(l.x, l.z) ?? l;
     const opNo = (l: any, re: RegExp, def = 1) => (l?.optionsWithIndex ?? []).find((o: any) => re.test(o.text))?.opIndex ?? def;
@@ -288,17 +312,37 @@ try {
         await closeDlg();
         await q.strengthStyle('draugen');
         const dr = () => (q.st()?.nearbyNpcs ?? []).find((n: any) => n.id === DRAUGEN);
-        let seen = false, hop = [14, 14], prev: [number, number] | undefined, stuck = 0;
-        for (let i = 0; i < 300 && !q.has(ITEM.talisman); i++) {
+        const draugenT0 = q.T();
+        let seen = false, hop = [14, 14], prev: [number, number] | undefined, stuck = 0, locateSteps = 0, spawns = 0;
+        while (!q.has(ITEM.talisman) && locateSteps < VIKING_LOCATE_STEPS && spawns < VIKING_DRAUGEN_SPAWNS && q.T() - draugenT0 < VIKING_DRAUGEN_PHASE_TICKS) {
             await q.guard('draugen');
             const d = dr();
             if (d) {
                 seen = true;
-                await q.s.bot.attack(d as any);
-                await q.waitUntil(() => !dr() || q.has(ITEM.talisman), 8);
+                spawns++;
+                let fightTicks = 0, lastDrIdx = -1, lastAtk = -99;
+                while (!q.has(ITEM.talisman) && fightTicks < VIKING_DRAUGEN_FIGHT_TICKS) {
+                    await q.guard('draugen fight');
+                    const cur = dr();
+                    if (!cur) break;
+                    const inCombat = !!q.pos()?.combat?.inCombat && q.pos()?.combat?.targetIndex === cur.index;
+                    if (shouldAttackDraugen(cur.index, q.T(), lastDrIdx, lastAtk, inCombat)) {
+                        lastDrIdx = cur.index;
+                        lastAtk = q.T();
+                        await q.attack(cur);
+                    }
+                    await q.waitTicks(1);
+                    fightTicks++;
+                }
+                if (!q.has(ITEM.talisman)) await q.waitUntil(() => q.has(ITEM.talisman) || !!dr(), 4);
+                if (!q.has(ITEM.talisman) && !dr()) {
+                    // The 1,000-tick Draugen timer expired: reset binary search state for the next butterfly.
+                    hop = [14, 14]; prev = undefined; stuck = 0;
+                }
                 continue;
             }
-            if (seen) { await q.waitUntil(() => q.has(ITEM.talisman) || !!dr(), 4); if (q.has(ITEM.talisman)) break; }
+            locateSteps++;
+            const moved0 = msgs(/moved elsewhere/i);
             const m0 = msgs(/talisman guides you|draugen is here|moved elsewhere/i);
             await invOp(ITEM.talismanUn, /locate/i);
             await q.waitUntil(() => msgs(/talisman guides you|draugen is here|moved elsewhere/i) > m0 || !!dr(), 4);
@@ -306,7 +350,7 @@ try {
             const m = (q.st()?.gameMessages ?? []).filter((g: any) => g.type === 0).map((g: any) => g.text).reverse().find((t: string) => /talisman guides you|draugen is here/i.test(t)) ?? '';
             console.log(`DRAUGEN ${q.T()} ${x()},${z()} hop=${hop.join('/')} ${m}`);
             if (/draugen is here/i.test(m) || dr()) { await q.waitUntil(() => !!dr(), 5); continue; }
-            if (/moved elsewhere/i.test(lastMsg())) { hop = [14, 14]; prev = undefined; }
+            if (msgs(/moved elsewhere/i) > moved0) { hop = [14, 14]; prev = undefined; }
             const g = m.match(/guides you ([a-z-]+)/i)?.[1]?.toLowerCase();
             const v = g ? DIRS[g] : undefined;
             if (!v) { await q.waitTicks(2); continue; }
@@ -322,7 +366,7 @@ try {
             stuck = `${x()},${z()}` === from0 ? stuck + 1 : 0;
             if (stuck >= 2 && !dr()) { await q.walk('draugen open ground', [{ x: 2660, z: 3620, tol: 4 }]); stuck = 0; hop = [14, 14]; prev = undefined; }
         }
-        if (!q.has(ITEM.talisman)) await q.fail(`draugen seen=${seen}`);
+        if (!q.has(ITEM.talisman)) await q.fail(`draugen seen=${seen} spawns=${spawns} locateSteps=${locateSteps}`);
         q.milestone('draugen');
         await talk('sigli vote', 'sigli', [], () => !q.has(ITEM.talisman));
         q.milestone('sigli');
@@ -363,8 +407,10 @@ try {
         // 19. Peer: "Ask about becoming a Fremennik", "Yes", "Yes": the riddle set and everything banked
         // (viking_peer.rs2:18-45,160-215).
         // Peer banks the food and Koschei's first 3 forms cost up to 45 hp; only form 4 ends in the trial's safe death.
-        for (let i = 0; i < 4 && q.hp() < 80 && q.has(385); i++) {
-            await q.s.direct({ type: 'useInventoryItem', slot: q.slot(385)!, optionIndex: 1, reason: 'SDK' });
+        for (let i = 0; i < 4 && q.hp() < 80; i++) {
+            const foodId = VIKING_FOOD_IDS.find(id => q.has(id));
+            if (!foodId) break;
+            await q.s.direct({ type: 'useInventoryItem', slot: q.slot(foodId)!, optionIndex: 1, reason: 'SDK' });
             await q.waitTicks(3);
         }
         await talk('peer start', 'peer', [BECOME, YES], () => (q.inv().length === 0) && !(q.st()?.equipment ?? []).some((e: any) => e?.id > 0));
@@ -456,10 +502,11 @@ try {
                 // low Attack level can lose a form to that limit. The ladder up ends the trial, and the ladder down
                 // starts it again with the first form (viking_warrior_ladder_up, spawn_viking_enemy).
                 if (lastId !== 0 && ++gone > KOSCHEI_GONE && tries < KOSCHEI_TRIES) {
-                    tries++; gone = 0; lastId = 0;
+                    tries++; gone = 0; lastId = 0; blind = false; lastHit = -99;
                     console.log(`KOSCHEI left at ${q.T()}, try ${tries + 1}`);
                     const up = () => q.findLoc((l: any) => /ladder/i.test(l.name ?? '') && (l.optionsWithIndex ?? []).some((o: any) => /climb-up/i.test(o.text)));
-                    await q.step('arena ladder up', () => { const l = up(); return l ? q.opLoc(l, q.opIndex(l, /climb-up/i)) : q.waitTicks(1); }, () => z() < 9000, 12, 4);
+                    if (!up()) await q.walk('to arena ladder', [{ x: 2671, z: 10098, tol: 3 }]);
+                    await q.step('arena ladder up', () => { const l = up(); return l ? q.opLoc(l, q.opIndex(l, /climb-up/i)) : q.waitTicks(1); }, () => z() < 9000, 15, 4);
                     await q.walk('to warrior ladder again', [{ x: LOC.warriorLadder.x, z: LOC.warriorLadder.z - 1, tol: 1 }]);
                     await op('warrior ladder again', LOC.warriorLadder, /climb-down/i, () => z() > 9000, 12);
                 }
@@ -497,4 +544,9 @@ try {
     await q.end(true, 'qp=3');
 } catch (e) {
     await q.fail(`error ${(e as Error).message}`);
+}
+}
+
+if (import.meta.main || !!(globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) {
+    await runQuestViking();
 }

@@ -1,4 +1,4 @@
-import{test,expect}from'bun:test';import{readFileSync}from'node:fs';import{HEROES_ITEMS,HEROES_REWARDS,heroesLureGrip,heroesQuestSpellReach,heroesRestaurantCrossing,heroesRestaurantFront,heroesKaramjaPassage,heroesOwnedPairPhase,heroesQuestHitPosition,heroesClearWear,heroesEntranaKit,heroesEntranaPassage,heroesRangeHeat,heroesRoute,heroesDepositPack,heroesPackEffect,heroesRewardEffect,heroesAdmission,heroesContext,heroesSpellComponent,heroesRemainingSpellKit,heroesCoinStage,heroesLavaBank,heroesLavaLedger,validateHeroesOrder,runHeroesPair,type HeroesOrder}from'./quest-hero-owned';import{BotActions}from'../../vendor/rs-sdk/sdk/actions';import{nativeNpcSpell}from'../microbot-magic-npc';import{questDefinitions}from'../../packages/core/src/quest-status';
+import{test,expect}from'bun:test';import{readFileSync}from'node:fs';import{HEROES_ITEMS,HEROES_REWARDS,heroesLureGrip,heroesQuestSpellReach,heroesRestaurantCrossing,heroesRestaurantFront,heroesKaramjaPassage,heroesOwnedPairPhase,heroesQuestHitPosition,heroesClearWear,heroesEntranaKit,heroesEntranaPassage,heroesRangeHeat,heroesRoute,heroesDepositPack,heroesPackEffect,heroesRewardEffect,heroesAdmission,heroesContext,heroesSpellComponent,heroesRemainingSpellKit,heroesCoinStage,heroesLavaBank,heroesLavaLedger,heroesQuestDoor,heroesKillTarget,validateHeroesOrder,runHeroesPair,type HeroesOrder}from'./quest-hero-owned';import{BotActions}from'../../vendor/rs-sdk/sdk/actions';import{nativeNpcSpell}from'../microbot-magic-npc';import{questDefinitions}from'../../packages/core/src/quest-status';
 const order:HeroesOrder={blackArm:'heroblack',phoenix:'herophoenix',server:'localhost:19081',goal:'unit',cap:20000,returnTicks:3000,xpRate:25,maximumCasts:25,maximumBait:3,coinBudget:1000};
 function actor(){const player={lifeId:1,respawnCount:0,level:0,isDead:false},state:any={player,inventory:[],autoRetaliateEnabled:false,combatStyle:{known:true,weaponName:'Unarmed',currentStyle:0},equipment:[],prayers:{activePrayers:Array(15).fill(false)}},client:any={ingame:true,membersAccount:1,var:Array(109).fill(0),executeBotAction:()=>{},ifType:(id:number)=>({colour:id===7363?0xf80000:0x00f800})};let calls=0;const s:any={name:'heroblack',client,lifecycle:{server:'localhost:19081'},ended:new Promise(()=>{}),tick:()=>0,sdk:{getState:()=>state,getSkill:()=>({level:99,baseLevel:99}),getInventory:()=>state.inventory,getEquipment:()=>state.equipment},direct:async()=>{calls++;return{success:true};}};return{s,player,state,client,calls:()=>calls};}
 test('Heroes Native exact trophy IDs and12 reward rows retain ordinary1/25 rate contracts',()=>{const native=readFileSync('vendor/rs-sdk/server/content/scripts/quests/quest_hero/scripts/quest_hero.rs2','utf8'),names={attack:'Attack',defence:'Defence',strength:'Strength',hitpoints:'Hitpoints',ranged:'Ranged',fishing:'Fishing',cooking:'Cooking',woodcutting:'Woodcutting',firemaking:'Firemaking',smithing:'Smithing',mining:'Mining',herblore:'Herblore'}as Record<string,string>,rows=Object.fromEntries([...native.matchAll(/stat_advance\((\w+), (\d+)\)/g)].map(m=>[names[m[1]!]!,+m[2]!]));expect(rows).toEqual(HEROES_REWARDS);for(const rate of[1,25]){const b={Magic:100,Attack:17},a={...b,...Object.fromEntries(Object.entries(HEROES_REWARDS).map(([name,raw])=>[name,(b[name as keyof typeof b]??0)+raw*rate/10]))};expect(heroesRewardEffect(b,a,rate)).toBe(true);expect(heroesRewardEffect(b,{...a,Magic:101},rate)).toBe(false);}const pack=readFileSync('vendor/rs-sdk/server/content/pack/obj.pack','utf8');for(const[name,id]of[['hot_feather',1583],['lava_eel',2149],['master_thief_armband',1579],['grip_keys',1588],['id_papers',1584]]as const)expect(pack).toMatch(new RegExp('^'+id+'='+name+'$','m'));expect(HEROES_ITEMS.gripKeys).toBe(1588);});
@@ -102,4 +102,50 @@ test('observed blocked Grip lure may retry an unpaid closed-dialog cycle on the 
 });
 test('unresolved Grip dialog refuses relure and all closed-dialog retries remain finite',async()=>{
  for(const open of[true,false]){let attempts=0;const n:any={id:792,index:7,x:2774,z:3192,hp:25},s:any={client:{npc:{7:{}}},sdk:{getState:()=>({nearbyNpcs:[n],nearbyLocs:[{id:2636,x:2775,z:3196,level:0}]})}},q:any={walk:async()=>{},opLoc:async()=>{attempts++;},dialogOpen:()=>open,sawText:()=>true,converse:async()=>false};await expect(heroesLureGrip(s,q,()=>{})).rejects.toThrow();expect(attempts).toBe(open?1:8);}
+});
+
+test('heroesQuestDoor waits for stand, exact open_and_close landing, and 4-tick inviswall settlement including lost ACK',async()=>{
+ for(const mode of['ok','lost','blocked']as const){
+  let tick=0,landedAt=-1,pending:any,inputs=0,walks=0;const inv=[{id:995,count:37}];
+  const player:any={worldX:2808,worldZ:3170,level:0};
+  const s:any={tick:()=>tick,onTick:(f:any)=>{const h=setInterval(()=>{tick++;if(pending){Object.assign(player,pending);pending=undefined;landedAt=tick;}f();},1);return()=>clearInterval(h);},sdk:{getInventory:()=>inv,getState:()=>({player,skills:[]})}};
+  const q:any={dialogOpen:()=>mode==='blocked',walk:async(_l:string,[to]:any)=>{walks++;Object.assign(player,{worldX:to.x,worldZ:to.z});},opLoc:async()=>{inputs++;pending={worldX:2811,worldZ:3170};if(mode==='lost')throw Error('lost ACK');}};
+  if(mode==='blocked'){
+   await expect(heroesQuestDoor(s,q,{id:2626,x:2811,z:3170},{x:2810,z:3170},{x:2811,z:3170},'Grubor in',()=>{})).rejects.toThrow('dialogue');
+   expect(inputs).toBe(0);
+  }else{
+   await heroesQuestDoor(s,q,{id:2626,x:2811,z:3170},{x:2810,z:3170},{x:2811,z:3170},'Grubor in',()=>{});
+   expect(walks).toBe(1);expect(inputs).toBe(1);expect([player.worldX,player.worldZ]).toEqual([2811,3170]);expect(tick-landedAt).toBeGreaterThanOrEqual(4);
+  }
+ }
+});
+
+test('heroesKillTarget tolerates multi-cast approaches beyond cast 2 and arrow-slit Grip relures',async()=>{
+ const spell=nativeNpcSpell('fire_strike');
+ // Firebird moving out of sight after cast 2 approaches and kills cleanly instead of failing on attempt > 1.
+ {
+  let tick=0,magicXp=1000,casts=0,approaches=0,paidDrops=0;
+  const p={worldX:2847,worldZ:3386,level:0},npc={id:139,index:3,x:2849,z:3386,hp:5,inCombat:false,targetIndex:-1};
+  const inv=[{id:558,count:10},{id:554,count:30},{id:556,count:20}],ground:any[]=[];
+  const spend=()=>{inv[0]!.count-=1;inv[1]!.count-=3;inv[2]!.count-=2;magicXp+=30;};
+  const s:any={tick:()=>tick,onTick:(f:any)=>{const h=setInterval(()=>{tick++;f();},1);return()=>clearInterval(h);},client:{selfSlot:0,npc:{3:{}}},sdk:{getInventory:()=>inv,getEquipment:()=>[],getSkillXp:()=>magicXp,findPath:(x:number,z:number)=>({success:true,reachedDestination:true,waypoints:[{x,z}]}),getState:()=>({player:p,nearbyPlayers:[],nearbyNpcs:npc.hp>0?[npc]:[],groundItems:ground})},bot:{castSpell:async()=>{casts++;spend();if(casts===2){npc.x=2854;npc.z=3386;}if(casts>=3){npc.hp=0;ground.push({id:1583,x:npc.x,z:npc.z,count:1});}return{success:true};}}};
+  const q:any={walk:async(label:string,[to]:any)=>{if(label==='quest spell approach')approaches++;Object.assign(p,{worldX:to.x,worldZ:to.z});},waitUntil:async(fn:any)=>{for(let i=0;i<10;i++){if(fn())return true;await new Promise(r=>setTimeout(r,1));}return fn();},opLoc:async()=>{},converse:async()=>true,dialogOpen:()=>false,sawText:()=>true};
+  const sight=(from:any,to:any)=>Math.abs(from.x-to.x)<=3;
+  await heroesKillTarget({caster:{s,q,stop:()=>false,fatal:()=>false,getCasts:()=>casts,onCast:()=>{}},picker:{s,q,stop:()=>false,fatal:()=>false,paid:async(_l,delta)=>{expect(delta).toEqual({1583:1});paidDrops++;}},npcId:139,drop:1583,home:{x:2847,z:3386},maximumCasts:10,pairNames:new Set(),spell,deps:{sight,hitPosition:async()=>({x:npc.x,z:npc.z})}});
+  expect(casts).toBe(3);expect(approaches).toBe(1);expect(paidDrops).toBe(1);
+ }
+ // Grip takes 6+ Fire Strikes and relures at (2780,3198) when stepping off row 3198 after cast 2.
+ {
+  let tick=0,magicXp=1000,casts=0,lures=0,paidDrops=0;
+  const p={worldX:2781,worldZ:3197,level:0},bp={worldX:2775,worldZ:3197,level:0},grip={id:792,index:9,x:2777,z:3198,hp:25,inCombat:false,targetIndex:-1};
+  const inv=[{id:558,count:15},{id:554,count:45},{id:556,count:30}],ground:any[]=[];
+  const makeState=(pl:any)=>({player:pl,nearbyPlayers:[],nearbyNpcs:grip.hp>0?[grip]:[],groundItems:ground});
+  const s:any={tick:()=>tick,onTick:(f:any)=>{const h=setInterval(()=>{tick++;f();},1);return()=>clearInterval(h);},client:{selfSlot:0,npc:{9:{}}},sdk:{getInventory:()=>inv,getEquipment:()=>[],getSkillXp:()=>magicXp,getState:()=>makeState(p)},bot:{castSpell:async()=>{casts++;inv[0]!.count-=1;inv[1]!.count-=3;inv[2]!.count-=2;magicXp+=30;if(casts===3)grip.z=3196;if(casts>=6){grip.hp=0;ground.push({id:1588,x:2777,z:3198,count:1});}return{success:true};}}};
+  const ps:any={tick:()=>tick,onTick:s.onTick,client:s.client,sdk:{getState:()=>makeState(bp)}};
+  const q:any={walk:async(_l:string,[to]:any)=>Object.assign(p,{worldX:to.x,worldZ:to.z}),waitUntil:async(fn:any)=>fn(),opLoc:async()=>{},converse:async()=>true,dialogOpen:()=>false,sawText:()=>true};
+  const pq:any={walk:async(_l:string,[to]:any)=>Object.assign(bp,{worldX:to.x,worldZ:to.z}),waitUntil:async(fn:any)=>fn(),opLoc:async()=>{},converse:async()=>true,dialogOpen:()=>false,sawText:()=>true};
+  const sight=(from:any,to:any)=>from.x===2780&&from.z===3198&&to.z===3198;
+  await heroesKillTarget({caster:{s,q,stop:()=>false,fatal:()=>false,getCasts:()=>casts,onCast:()=>{}},picker:{s:ps,q:pq,stop:()=>false,fatal:()=>false,paid:async(_l,delta)=>{expect(delta).toEqual({1588:1});paidDrops++;}},npcId:792,drop:1588,home:{x:2780,z:3198},maximumCasts:15,pairNames:new Set(),spell,deps:{sight,lureGrip:async()=>{lures++;grip.z=3198;},hitPosition:async()=>({x:grip.x,z:grip.z})}});
+  expect(casts).toBe(6);expect(lures).toBe(1);expect(paidDrops).toBe(1);expect([p.worldX,p.worldZ]).toEqual([2780,3198]);
+ }
 });
