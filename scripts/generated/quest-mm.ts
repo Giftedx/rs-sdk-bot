@@ -551,6 +551,7 @@ try {
         const sig = d?.isOpen ? `${d.isWaiting ? 'W ' : ''}${(d.options ?? []).map((o: any) => o.text).join('|')}#${String(d.text ?? '').slice(0, 40)}` : '-';
         if (sig !== dlg0) { dlg0 = sig; console.log(`DLG ${q.T()} ${sig}`); }
     });
+    let rejails = 0;
     const knockout = async (label: string): Promise<void> => {
         want = 'auto';   // the archers win in auto; jungle spiders and snakes on the way get Protect from Melee
         if (!inCell()) {
@@ -566,12 +567,17 @@ try {
         // The only way out is north up the lane (x 2772-2773, z 2796-2802) and west through the guards' room. The
         // patrol (enum mm_jail_patrol_route) holds the lane for points 2-10, then hands over in the rest zone; a pick
         // only in the handover window (tried) waited 60-275 ticks a jailing against about 70 for this rule.
+        const strictLane = rejails > 0 || /rejail/i.test(label);
         const t0 = q.T();
-        for (let i = 0; i < 160 && inCell(); i++) {
+        for (let i = 0; i < 240 && inCell(); i++) {
             await q.guard(`${label} lock`);
             const d: any = q.s.sdk.getDialog();
             if (d?.isOpen && !d.isWaiting) { void q.s.sdk.sendClickDialog(0); await q.waitTicks(1); continue; }
-            const g = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^(aberab|trefaji)$/i.test(n.name) && Math.max(Math.abs(n.x - DOOR.x), Math.abs(n.z - (DOOR.z + 1))) <= 3);
+            const g = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^(aberab|trefaji)$/i.test(n.name) && (
+                strictLane
+                    ? (n.x >= 2770 && n.x <= 2775 && n.z >= 2795 && n.z <= 2801)
+                    : Math.max(Math.abs(n.x - DOOR.x), Math.abs(n.z - (DOOR.z + 1))) <= 4
+            ));
             if (g.length > 0) { await q.waitTicks(1); continue; }
             const door = q.findLoc(l => l.x === DOOR.x && l.z === DOOR.z && /jail door/i.test(l.name));
             if (!door) { await q.waitTicks(1); continue; }
@@ -580,17 +586,21 @@ try {
             await q.waitUntil(() => !inCell() || q.msgCount(/fail to pick the lock/i) > f1, 6);
         }
         if (inCell()) await q.fail(`${label}: lock`);
+        const dExit: any = q.s.sdk.getDialog();
+        if (dExit?.isOpen && !dExit.isWaiting) void q.s.sdk.sendClickDialog(0);
         console.log(`NOTE ${label} out at ${q.T()} wait=${q.T() - t0} lockFails=${q.msgCount(/fail to pick the lock/i) - fails0}`);
     };
 
     // A village walk as a human: a patrol guard or a summoned guard can knock the bot back into the cell on the way, so
-    // a jailing picks the lock again and walks on (up to 3 times).
-    let rejails = 0;
+    // a jailing picks the lock again and walks on.
     const walkAtoll = async (label: string, pts0: { x: number; z: number; tol?: number }[], retry?: { x: number; z: number; tol?: number }[]): Promise<void> => {
         const g = pts0[pts0.length - 1]!;
-        for (let i = 0; i < 7 && !q.near(g.x, g.z, g.tol ?? 2); i++) {
+        for (let i = 0; i < 12 && !q.near(g.x, g.z, g.tol ?? 2); i++) {
             if (inCell()) { rejails++; await knockout(`${label} rejail`); }
             await walkStop(label, i === 0 ? pts0 : (retry ?? [g]), inCell);
+            if (!q.near(g.x, g.z, (g.tol ?? 2) + 1) && !inCell()) {
+                await q.waitUntil(() => inCell() || q.near(g.x, g.z, (g.tol ?? 2) + 1), 6);
+            }
         }
         if (!q.near(g.x, g.z, (g.tol ?? 2) + 1)) await q.fail(`walk ${label}`);
     };

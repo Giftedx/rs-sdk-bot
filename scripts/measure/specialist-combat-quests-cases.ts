@@ -364,7 +364,7 @@ export function buildCombatSpecialistRehearsalSegment(
         const skill = isStr ? 'Strength' : 'Defence';
         const cap = isStr ? '6000' : '7500';
         const kit = isStr ? STRENGTH_SPECIALIST_KIT : DEFENCE_SPECIALIST_KIT;
-        const planTicks = override ?? (isStr ? 2230 : 2775);
+        const planTicks = override ?? (isStr ? 2230 : 2838);
         return {
             specialist: isStr ? 'BigSwinger' : 'RockSolid',
             id: isStr ? 'bigswinger-strength' : 'rocksolid-defence',
