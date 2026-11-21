@@ -402,10 +402,10 @@ export const PROFILES: Record<string, {
         ],
         fare: 60,
     },
-    // Tai Bwo Wannai Karambwan Stall (karamja.inv tbwt_tiadeche_final_inventory, npc 1164 at 2781,3057): 10 raw karambwans (restock 10).
+    // Tai Bwo Wannai Karambwan Stall (karamja.inv tbwt_tiadeche_final_inventory, npc 1164 at 2781,3057; approach tile 2782,3055): 10 raw karambwans (restock 10).
     tiadeche: {
         npc: /^tiadeche$/i,
-        npcSpot: { x: 2781, z: 3057 },
+        npcSpot: { x: 2782, z: 3055 },
         bankSpot: { x: 2654, z: 3283 }, // Ardougne South Bank
         items: [
             { re: /^raw karambwan$/i, buyPerTick: 5, shelf: 10 },
