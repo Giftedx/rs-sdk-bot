@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795250842464-pickpockdick-knightrider-be2630f09ed036ce",
+ "account": "PickpockDick",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 65000,
+ "claim": "1ac488c9-433f-442c-ae38-1ab5582111ff",
+ "count": 65000,
+ "ok": true,
+ "at": 1795250888726,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 65000,
+  "after": 0
+ },
+ "bank": {
+  "count": 65000,
+  "at": 1795250872806
+ },
+ "logout": {
+  "attemptId": "1795250866922-0000007548-0000000001",
+  "at": 1795250888714,
+  "sha256": "229e988f515c1cd2311b2ceb499856b7cff72e0b671fa2e25eadf8064a5b5f14"
+ },
+ "screen": true
+}

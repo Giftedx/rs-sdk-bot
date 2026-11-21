@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795250842221-quickhandjob-trousersnake-ec21abe926ef6c86",
+ "account": "Quickhandjob",
+ "partner": "TrouserSnake",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 124000,
+ "claim": "068a5eb0-50db-423a-8cb7-2bffd3f6a6fa",
+ "count": 124000,
+ "ok": true,
+ "at": 1795250891140,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 124000,
+  "after": 0
+ },
+ "bank": {
+  "count": 124000,
+  "at": 1795250876464
+ },
+ "logout": {
+  "attemptId": "1795250870408-0000031992-0000000001",
+  "at": 1795250891119,
+  "sha256": "11c7684a0e733d453d2c6adf3d1a9487b2f7afc502b5b64cb7fac4c3b273f22c"
+ },
+ "screen": true
+}

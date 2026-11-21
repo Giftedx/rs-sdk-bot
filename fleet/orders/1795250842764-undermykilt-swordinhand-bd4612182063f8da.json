@@ -1,0 +1,33 @@
+{
+ "id": "1795250842764-undermykilt-swordinhand-bd4612182063f8da",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "UnderMyKilt",
+ "to": "Swordinhand",
+ "item": "Coins",
+ "count": 59000,
+ "start": 1795250842764,
+ "end": 1795252342764,
+ "extra": [
+  {
+   "item": "Ranarr weed",
+   "count": 2
+  },
+  {
+   "item": "Superantipoison(4)",
+   "count": 1
+  },
+  {
+   "item": "Superantipoison(3)",
+   "count": 1
+  },
+  {
+   "item": "Superantipoison(2)",
+   "count": 1
+  },
+  {
+   "item": "Unicorn horn",
+   "count": 2
+  }
+ ],
+ "takerWaits": true
+}

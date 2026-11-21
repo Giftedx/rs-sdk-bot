@@ -1,0 +1,11 @@
+{
+ "id": "1795250842221-quickhandjob-trousersnake-ec21abe926ef6c86",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Quickhandjob",
+ "to": "TrouserSnake",
+ "item": "Coins",
+ "count": 124000,
+ "start": 1795250842221,
+ "end": 1795252342221,
+ "takerWaits": true
+}

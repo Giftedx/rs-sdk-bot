@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795250842221-quickhandjob-trousersnake-ec21abe926ef6c86",
+ "account": "TrouserSnake",
+ "partner": "Quickhandjob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 124000,
+ "claim": "a94fa080-bc3b-4fac-ab41-83c3c456a6db",
+ "count": 0,
+ "ok": false,
+ "at": 1795250881966,
+ "detail": "trade claimed"
+}

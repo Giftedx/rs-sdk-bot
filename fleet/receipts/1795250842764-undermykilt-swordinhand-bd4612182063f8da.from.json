@@ -1,0 +1,44 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795250842764-undermykilt-swordinhand-bd4612182063f8da",
+ "account": "UnderMyKilt",
+ "partner": "Swordinhand",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 59000,
+ "claim": "2f7df98f-5dad-4110-9baf-661439b1bb7a",
+ "count": 0,
+ "ok": false,
+ "at": 1795250874431,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Ranarr weed",
+   "requested": 2,
+   "count": 0
+  },
+  {
+   "item": "Superantipoison(4)",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Superantipoison(3)",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Superantipoison(2)",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Unicorn horn",
+   "requested": 2,
+   "count": 0
+  }
+ ]
+}
