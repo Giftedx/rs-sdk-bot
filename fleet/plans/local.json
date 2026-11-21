@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795251736842,
+ "at": 1795251799752,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -252,15 +252,38 @@
    "repeat": true
   },
   {
+   "account": "BoneToPick",
+   "script": "scripts/microbot-production.ts",
+   "args": [
+    "strip:swamp-toad",
+    "MAX_MAKE=2",
+    "CAP=1500",
+    "MEMBERS=1",
+    "ORDER_MODE=best-effort"
+   ],
+   "env": {
+    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"2152\":2}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "strip banked swamp toads into toad's legs",
+   "role": "herblore",
+   "template": "squad-strip-swamp-toad",
+   "autopilot": "local",
+   "resources": [
+    "squad:herblore-bank"
+   ]
+  },
+  {
    "account": "Woodenstaff",
    "script": "scripts/splash-train.ts",
    "args": [
     "66",
     "6000"
    ],
-   "env": {
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Magic\":66}}"
-   },
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": true,
@@ -326,31 +349,6 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/microbot-production.ts",
-   "args": [
-    "strip:swamp-toad",
-    "MAX_MAKE=2",
-    "CAP=1500",
-    "MEMBERS=1",
-    "ORDER_MODE=best-effort"
-   ],
-   "env": {
-    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"2152\":2}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "strip banked swamp toads into toad's legs",
-   "role": "herblore",
-   "template": "squad-strip-swamp-toad",
-   "autopilot": "local",
-   "resources": [
-    "squad:herblore-bank"
    ]
   }
  ],
