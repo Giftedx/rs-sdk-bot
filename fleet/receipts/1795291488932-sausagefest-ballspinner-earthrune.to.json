@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795291488932-sausagefest-ballspinner-earthrune",
+ "account": "Ballspinner",
+ "partner": "Sausagefest",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 30,
+ "claim": "8b99520c-ef56-40f8-b694-65ef22e43d43",
+ "count": 0,
+ "ok": false,
+ "at": 1795291591840,
+ "detail": "trade claimed"
+}
