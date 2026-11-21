@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795294128934-swordswallow-yewfirst-headlessarrow",
  "account": "Swordswallow",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Headless arrow",
  "requested": 510,
  "claim": "1f881c10-7621-460e-9e94-9b06742ce755",
- "count": 0,
- "ok": false,
- "at": 1795294205068,
- "detail": "trade claimed"
+ "count": 510,
+ "ok": true,
+ "at": 1795294331078,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 510,
+  "after": 0
+ },
+ "bank": {
+  "count": 510,
+  "at": 1795294319901
+ },
+ "logout": {
+  "attemptId": "1795294205076-0000022080-0000000001",
+  "at": 1795294331069,
+  "sha256": "4743d2bfbc98b7772cc28cdc231c2b29d3656d2a94a922daece773bd7b1ea684"
+ },
+ "screen": true
 }
