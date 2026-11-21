@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795232348996-pocketpython-knightstick",
  "account": "Knightstick",
  "partner": "Pocketpython",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 60309,
  "claim": "f3e6e082-7b4f-4612-99f0-674f8df2c5fc",
- "count": 0,
- "ok": false,
- "at": 1795232431602,
- "detail": "trade claimed"
+ "count": 60309,
+ "ok": true,
+ "at": 1795232630791,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1884,
+  "after": 62193
+ },
+ "bank": {
+  "count": 60309,
+  "at": 1795232630064
+ },
+ "logout": {
+  "attemptId": "1795232431614-0000005420-0000000001",
+  "at": 1795232630779,
+  "sha256": "2385fe54d2e1e89589241885a457e1409fb0f7ae4b79e0602a6153d3a17e315e"
+ },
+ "screen": true
 }
