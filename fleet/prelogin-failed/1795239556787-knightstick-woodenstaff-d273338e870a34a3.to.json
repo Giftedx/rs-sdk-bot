@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795239556787-knightstick-woodenstaff-d273338e870a34a3",
+ "role": "to",
+ "account": "Woodenstaff",
+ "partner": "Knightstick",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795239649643,
+ "detail": "Error: fleet trade claim authority unavailable or changed: spawnSync git ETIMEDOUT"
+}
