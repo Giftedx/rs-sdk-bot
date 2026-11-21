@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795228696769,
+ "at": 1795228709100,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -369,26 +369,29 @@
   },
   {
    "account": "Sausagefest",
-   "script": "scripts/train-prayer.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "99"
+    "1500",
+    "trooper"
    ],
    "env": {
-    "BURY_HELD": "1",
-    "BONE_ID": "536",
-    "BONE_RESERVE": "6",
-    "CAP": "4000",
-    "AUTOPILOT_ORDER": "34",
-    "PROGRESSION_CONSUMER": "{\"skills\":{\"Prayer\":99}}"
+    "TRAIN_SKILL": "Hitpoints",
+    "GIANT_KILLS": "500",
+    "GIANT_FOOD": "20",
+    "GIANT_BURY": "1",
+    "TROOPER_COOK": "1",
+    "LOOT_WATCH": "0"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "train Prayer to 99 burying bought dragon bones",
+   "repeat": true,
+   "goal": "train Prayer to 99 burying trooper bones on the field",
    "role": "combat",
-   "template": "army-bury-dragon-99",
+   "template": "army-trooper-prayer-99",
    "autopilot": "local",
-   "resources": []
+   "resources": [
+    "trooper:battlefield"
+   ]
   }
  ],
  "army": [
