@@ -1,0 +1,72 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795239364455-pocketpython-woodenstaff-feafb7ad33e1f14e",
+ "account": "Pocketpython",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Death rune",
+ "requested": 65,
+ "claim": "14a2d34e-b6b5-42eb-8ba3-ddfd8b61ee7c",
+ "count": 65,
+ "ok": true,
+ "at": 1795239453294,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Gold bar",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795239428936
+   }
+  },
+  {
+   "item": "Ball of wool",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795239429343
+   }
+  },
+  {
+   "item": "Snape grass",
+   "requested": 18,
+   "count": 18,
+   "inventory": {
+    "before": 18,
+    "after": 0
+   },
+   "bank": {
+    "count": 18,
+    "at": 1795239430531
+   }
+  }
+ ],
+ "inventory": {
+  "before": 65,
+  "after": 0
+ },
+ "bank": {
+  "count": 65,
+  "at": 1795239428149
+ },
+ "logout": {
+  "attemptId": "1795239419386-0000019072-0000000001",
+  "at": 1795239453283,
+  "sha256": "8ac5f4f62c339a4e5718c127c1de16541b1534d77db5b1bd0674078188671d54"
+ },
+ "screen": true
+}

@@ -1,0 +1,46 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795239364835-sporranbulge-unsheathed-bf6eca7f0b469e38",
+ "account": "SporranBulge",
+ "partner": "Unsheathed",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ranarr weed",
+ "requested": 1,
+ "claim": "2208edb4-9275-4853-8337-d034fbe37682",
+ "count": 1,
+ "ok": true,
+ "at": 1795239454056,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Ring of dueling(8)",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795239430929
+   }
+  }
+ ],
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795239430529
+ },
+ "logout": {
+  "attemptId": "1795239424500-0000023100-0000000001",
+  "at": 1795239454045,
+  "sha256": "04d7222e45bdd79eac9d925a383aaa0a14c8cec37db991d5bd9644267347edf5"
+ },
+ "screen": true
+}

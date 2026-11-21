@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795239365095-coincock-knightstick-e657254c50ab3ed7",
+ "account": "CoinCock",
+ "partner": "Knightstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon bones",
+ "requested": 11,
+ "claim": "e01b4767-3e44-42ce-8c65-251f133802af",
+ "count": 0,
+ "ok": false,
+ "at": 1795239435079,
+ "detail": "trade claimed"
+}
