@@ -1044,12 +1044,15 @@ try {
                 // Each talk ends at a state step (mm_monkey_child.rs2), so 2 shut ticks end it (the default 6 cost 6
                 // ticks a step); once the child wants bananas, the bananas go on him (opnpcu: no greeting pages).
                 const child = q.npc(/^monkey child$/i);
-                if (!eatBananas && q.cnt(ITEM.banana) >= 5 && q.sawText(/only if you promise to let me borrow/i) && child && !q.dialogOpen()) {
+                // Line 160 sets %mm_monkey_child before "Ok Uncle!", whereas page 159 ("only if you promise...") can be cut by the aunt.
+                if (!eatBananas && q.cnt(ITEM.banana) >= 5 && i % 2 === 0 && q.sawText(/ok uncle!|did you get any bananas/i) && child && !q.dialogOpen()) {
                     await q.useOnNpc(ITEM.banana, child);
                     await q.waitUntil(() => q.dialogOpen() || ok(), 10);
                     let shut = 0;
                     await converse1(pats, () => { shut = q.dialogOpen() ? 0 : shut + 1; return ok() || shut >= 2; }, 40);
-                    continue;
+                    if (ok()) break;
+                    await toOutside();
+                    await auntClear(150);
                 }
                 await talk1(label, /^monkey child$/i, pats, ok, 60, CHILD, 1, false, 2);
             }
