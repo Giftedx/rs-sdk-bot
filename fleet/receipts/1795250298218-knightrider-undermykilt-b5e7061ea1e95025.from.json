@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795250298218-knightrider-undermykilt-b5e7061ea1e95025",
  "account": "KnightRider",
  "partner": "UnderMyKilt",
@@ -10,15 +10,37 @@
  "item": "Coins",
  "requested": 104000,
  "claim": "f43cb077-d383-4146-9987-1d28ffc17e14",
- "count": 0,
- "ok": false,
- "at": 1795250347980,
- "detail": "trade claimed",
+ "count": 104000,
+ "ok": true,
+ "at": 1795250375975,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Ranarr weed",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795250359202
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 104000,
+  "after": 0
+ },
+ "bank": {
+  "count": 104000,
+  "at": 1795250358818
+ },
+ "logout": {
+  "attemptId": "1795250347990-0000005080-0000000001",
+  "at": 1795250375961,
+  "sha256": "6a7c769690b8b664850419368ad81f65d10a7bc91ec4ec4251667423d69d3360"
+ },
+ "screen": true
 }

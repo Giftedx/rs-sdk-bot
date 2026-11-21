@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795250298532-deeppockets-quickhandjob-7a3b320734762050",
  "account": "Deeppockets",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 119000,
  "claim": "32c49c0d-df14-4752-9bd3-33c7fd49a923",
- "count": 0,
- "ok": false,
- "at": 1795250340711,
- "detail": "trade claimed"
+ "count": 119000,
+ "ok": true,
+ "at": 1795250381165,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 119000,
+  "after": 0
+ },
+ "bank": {
+  "count": 118940,
+  "at": 1795250362427
+ },
+ "logout": {
+  "attemptId": "1795250340721-0000005700-0000000001",
+  "at": 1795250381152,
+  "sha256": "caf987a844196c608b984f87088bb6b49e9942eaa11dc42a32c9f473cde3ff08"
+ },
+ "screen": true
 }
