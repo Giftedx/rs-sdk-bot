@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795230564237,
+ "at": 1795230609396,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -272,18 +272,23 @@
   },
   {
    "account": "TossTheCaber",
-   "script": "scripts/blood-chest.ts",
-   "args": [],
-   "env": {},
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
+   "env": {
+    "MAX_KILLS": "40"
+   },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "loot the Ardougne Castle blood rune chests for the gang squad",
-   "role": "thieving",
-   "template": "squad-blood-chest",
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic runes, nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-blood-chest"
+    "squad:ardougne-giants"
    ]
   },
   {
@@ -335,6 +340,33 @@
    "autopilot": "local",
    "resources": [
     "squad:ardougne-giants"
+   ]
+  },
+  {
+   "account": "CoinCock",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "3000",
+    "cow"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
    ]
   },
   {
