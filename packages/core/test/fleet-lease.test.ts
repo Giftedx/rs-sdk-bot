@@ -286,8 +286,11 @@ test('the same commit is pushed again after a remote that was busy, never after 
     const busy = 'fleet swarm claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] ea11789128b8337ca211d92c0c94a1c4b8682222 -> fleet-trade-claim/sausagefest (failed)';
     expect(fleetGitRetryable(Error(busy))).toBe(false);
     expect(fleetPushRetryable(Error(busy))).toBe(true);
-    for (const reason of ['failed to lock', 'failed to update ref'])
-        expect(fleetPushRetryable(Error(`x unavailable or changed: ! [remote rejected] abc -> fleet-trade-claim/x (${reason})`)), reason).toBe(true);
+    for (const reason of ['failed to lock', 'failed to update ref', 'missing necessary objects']) {
+        const msg = `x unavailable or changed: ! [remote rejected] abc -> fleet-trade-claim/x (${reason})`;
+        expect(fleetGitRetryable(Error(msg)), reason).toBe(false);
+        expect(fleetPushRetryable(Error(msg)), reason).toBe(true);
+    }
     expect(fleetPushRetryable(Error('fleet swarm claim authority unavailable or changed: spawnSync git ETIMEDOUT'))).toBe(true);
     for (const text of ['x unavailable or changed: ! [rejected] abc -> fleet-trade-claim/x (fetch first)', 'x unavailable or changed: ! [rejected] abc -> fleet-trade-claim/x (non-fast-forward)',
         'x unavailable or changed: ! [remote rejected] abc -> fleet-trade-claim/x (pre-receive hook declined)', 'x unavailable or changed: ! [remote rejected] abc -> x (protected branch hook declined)',

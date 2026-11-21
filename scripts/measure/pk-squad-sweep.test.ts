@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { decodeSetB64 } from '../hosted-bench';
-import { encodeHostedArgs, formatSweepTable, parseCandidateSpec, parseCandidatesFile, rankSweepRows, summarizeCandidateDir, type SweepRow } from './pk-squad-sweep';
+import { encodeHostedArgs, formatByCaseTable, formatSweepSummary, formatSweepTable, parseCandidateSpec, parseCandidatesFile, rankSweepRows, summarizeCandidateByCase, summarizeCandidateDir, type SweepRow } from './pk-squad-sweep';
 
 test('parseCandidateSpec and parseCandidatesFile handle bare, JSON, and KEY=VALUE specs', () => {
     expect(parseCandidateSpec('baseline')).toEqual({ name: 'baseline', env: {} });
@@ -81,7 +81,33 @@ test('summarizeCandidateDir reads hosted-bench artifact folders with SQUAD_METRI
             freezePct: 75,
             suppliesPerKill: 1,
         });
+        const byCase = summarizeCandidateByCase('test-cand', '999', dir);
+        expect(byCase).toHaveLength(1);
+        expect(formatByCaseTable(byCase)).toContain('| `extra:clone-squad-4-chainbind-x1` | 1 | `test-cand` |');
     } finally {
         rmSync(dir, { recursive: true, force: true });
     }
+});
+
+test('formatSweepSummary renders winner delta vs baseline and per-arm timings', () => {
+    const mk = (candidate: string, runId: string, o: Partial<SweepRow['row']>, elapsedMs?: number): SweepRow => ({
+        candidate,
+        runId,
+        elapsedMs,
+        ok: true,
+        row: {
+            batch: candidate, condition: 'c', runs: [], kills: 12, gang: 12, deaths: 0,
+            hpAKill: 30, ticksARun: 250, killsAnHour: 20, accountTicksAKill: 300, coinsAKill: 450,
+            avgKillTicks: 40, ticksPerKill: 40, minHp: 55, sharksEaten: 10, karamEaten: 2,
+            freezesCast: 8, freezesLanded: 6, freezePct: 75, suppliesPerKill: 1, escapes: 0, hasMetrics: true,
+            ...o,
+        },
+    });
+    const text = formatSweepSummary([
+        mk('baseline', '100', { kills: 10, hpAKill: 35, killsAnHour: 16.5, ticksPerKill: 50, minHp: 48 }, 42_000),
+        mk('combo', '101', { kills: 12, hpAKill: 25, killsAnHour: 21.0, ticksPerKill: 38, minHp: 61 }, 39_500),
+    ], 42_500);
+    expect(text).toContain('winner: combo');
+    expect(text).toContain('delta vs baseline: kills +2, deaths 0, hp/kill -10, kills/hr +4.5, ticks/kill -12, minHp +13');
+    expect(text).toContain('timings: combo=39.5s (ok), baseline=42.0s (ok) | sweep 42.5s');
 });

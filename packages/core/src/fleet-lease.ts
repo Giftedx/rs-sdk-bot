@@ -33,11 +33,10 @@ export const fleetGitRetryable = (error: unknown): boolean => {
     const text = String((error as Error)?.message ?? error);
     return !REF_REJECTION.test(text) && (/ timed out$|\bETIMEDOUT\b/.test(text) || TRANSIENT_GIT.test(text));
 };
-// A push that the remote did not take for a reason of its own: its ref was locked or the update failed. That is not
-// final for the ref. The remote gives "[remote rejected] ... (failed)" while an earlier push of the same ref, one that
-// timed out for its client, is still in work. Only a push of the same commit may use this rule: that push is no
-// change if the commit is the head, and the fast-forward rule refuses it if the commit of another writer is.
-const REMOTE_BUSY = /\[remote rejected\][^\n]*\((?:failed|failed to lock|failed to update ref)\)/i;
+// A push that the remote did not take for a transient remote state (ref locked, update failed, or recently pushed
+// objects still propagating) is not final for the ref. Only a push of the exact same commit may retry after it:
+// if that commit already landed it is a no-op, and fast-forward refuses it if another writer advanced the ref.
+const REMOTE_BUSY = /\[remote rejected\][^\n]*\((?:failed|failed to lock|failed to update ref|missing necessary objects)\)/i;
 export const fleetPushRetryable = (error: unknown): boolean => fleetGitRetryable(error) || REMOTE_BUSY.test(String((error as Error)?.message ?? error));
 const sanitizeGitError = maskUrlCredentials;
 // Keep the first cause and bounded tail after removing URL credentials. Classification uses the complete text.
