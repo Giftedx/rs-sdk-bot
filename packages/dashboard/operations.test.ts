@@ -372,10 +372,10 @@ test('server diagnostics mark stale leases cleanly and exclude protected main ac
  const {mkdtempSync,rmSync,writeFileSync}=await import('node:fs');
  const {tmpdir}=await import('node:os');
  const {join}=await import('node:path');
- const {failLoops,LOOP_WINDOW_MS}=await import('../../scripts/fail-loops');
+ const {failLoops,LOOP_WINDOW_MS}=await import('../core/src/fail-loops');
  const {LEASE_MAX_AGE_MS,SIDE_NAME}=await import('../core/src/fleet');
- const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
- const code=new Bun.Transpiler({loader:'ts'}).transformSync(server.slice(server.indexOf('function readLeaseDiagnostics('),server.indexOf('let gearCatalogCache:')));
+ const server=readFileSync(new URL('./server/state.ts',import.meta.url),'utf8');
+ const code=new Bun.Transpiler({loader:'ts'}).transformSync(server.slice(server.indexOf('function readLeaseDiagnostics('),server.indexOf('// ---------- state')));
  const dir=mkdtempSync(join(tmpdir(),'dash-leases-'));
  try{
   const now=10_000_000;

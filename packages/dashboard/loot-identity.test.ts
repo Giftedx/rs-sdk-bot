@@ -5,7 +5,8 @@ import {buildItemPrices,expectedLootPrices,projectItemPrices} from './item-price
 import {MAIN_ACCOUNT,publicView} from './publish-relay';
 
 const shell=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
-const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
+const server=readFileSync(new URL('./server/state.ts',import.meta.url),'utf8');
+const market=readFileSync(new URL('./server/market.ts',import.meta.url),'utf8');
 const transpile=(text:string)=>new Bun.Transpiler({loader:'ts'}).transformSync(text);
 
 function loot(rows:any[],economy:any){
@@ -32,8 +33,8 @@ test('legacy expected-loot tuples retain safe name pricing',()=>{
 
 test('the actual state price projection includes expected drops that no account holds',()=>{
  const rows={'Test NPC':[['Herb',1,199],['Herb',1,201],['Herb',1,999],['Herb',1,null],['Big bones',1]]};
- const load=server.slice(server.indexOf('const npcLootPrices ='),server.indexOf('let pricesAt ='));
- const npcLootPrices=new Function('cached','join','BASE','expectedLootPrices',transpile(load).replaceAll('import.meta.dir','BASE')+';return npcLootPrices;')(
+ const load=market.slice(market.indexOf('const npcLootPrices ='),market.indexOf('let pricesAt ='));
+ const npcLootPrices=new Function('cached','join','dashboardDir','expectedLootPrices',transpile(load)+';return npcLootPrices;')(
   (_file:string,parse:(text:string)=>any)=>parse(JSON.stringify(rows)),join,import.meta.dir,expectedLootPrices);
  const itemPrices=buildItemPrices([{id:199,name:'Herb',basePrice:10},{id:201,name:'Herb',basePrice:100},
   {id:532,name:'Big bones',basePrice:300},{id:5555,name:'Private bank stock',basePrice:999}],

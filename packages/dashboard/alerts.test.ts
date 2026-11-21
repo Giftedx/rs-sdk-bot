@@ -4,8 +4,8 @@ import {snapshot} from '../../scripts/fleet-sync';
 import {productionReview} from './collection';
 import {dashboardStatuses,remoteBots} from './fleet-view';
 
-const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
-const start=server.indexOf('function alerts('),end=server.indexOf('// Named places on the food-chain route',start);
+const server=readFileSync(new URL('./server/state.ts',import.meta.url),'utf8');
+const start=server.indexOf('function alerts('),end=server.indexOf('// ---------- role-aware row data',start);
 if(start<0||end<start)throw Error('Missing dashboard alerts consumer');
 const code=new Bun.Transpiler({loader:'ts'}).transformSync(server.slice(start,end));
 const alerts=(bots:any[],now:number)=>new Function('productionReview',`

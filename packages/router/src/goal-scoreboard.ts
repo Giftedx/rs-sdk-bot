@@ -8,7 +8,7 @@ import {readBound} from '../../core/src/launch-evidence';
 import {readKillReceipts} from '../../core/src/kill-receipt';
 import {boardsFromSnapshot,haggisActivities,haggisTravel,scheduleOverall,overallRequirementsFor,SKILLS,TRICKS} from '../../planner/src/haggis';
 import {supplyBill,type BillRow} from '../../planner/src/supply-bill';
-import {kitItems} from '../../../scripts/pk-kits';
+import {kitItems} from '../../planner/src/pk-kits';
 import {handNamed,ruleRoster} from '../../core/src/army-roster';
 
 export const COMBAT_SKILLS=['Attack','Strength','Defence','Ranged','Magic','Prayer','Hitpoints'] as const;
@@ -177,7 +177,7 @@ export function buildOwnerGoals({root,now,statuses,questNames,fleetDir=join(root
  for(const [account,build]of builds)try{
   const kit=kitItems(build),catalog=read(join(root,'knowledge/items.json'))??[];
   for(const i of [...kit.equipment,...kit.inventory])demands.push({item:catalog.find((c:any)=>c.id===i.id)?.name??`item ${i.id}`,itemId:i.id,count:i.count,consumer:`army:${account}:${build}`});
- }catch(error){armyEvidence.push(ev('scripts/pk-kits.ts',undefined,`${account}: ${String(error)}`));}
+ }catch(error){armyEvidence.push(ev('packages/planner/src/pk-kits.ts',undefined,`${account}: ${String(error)}`));}
  armyEvidence.push(ev('.practice/status; fleet/snapshots',undefined,'Missing level observations are unverified target levels, not measured level deficits; no accepted Wilderness-control receipt'));
  // Kill receipts of this machine (packages/core/src/kill-receipt.ts). Only the live tree of the live server is read, and a
  // receipt gives credit only when its own fields also say live. With no credited receipt the count stays unknown.

@@ -98,7 +98,7 @@ test('a fresh lookup feed does not make invalid, future or expired player sighti
  expect(lookupView('Nobody',[],7,undefined,now)).toEqual({name:'Nobody',at:7,rows:[],online:false,x:null,z:null,plane:null,combat:null,lastSeen:null,worn:null,wornAt:null});
 });
 
-const serverSource=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
+const serverSource=readFileSync(new URL('./server/routes.ts',import.meta.url),'utf8');
 const playerRouteAt=serverSource.indexOf("        if (url.pathname === '/api/player') {"),playerRouteEnd=serverSource.indexOf("        if (url.pathname === '/api/viewer-health')",playerRouteAt);
 if(playerRouteAt<0||playerRouteEnd<0)throw Error('Missing native player lookup route');
 const playerRoute=serverSource.slice(playerRouteAt,playerRouteEnd);

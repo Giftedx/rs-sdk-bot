@@ -104,7 +104,7 @@ test('goal rows show selected QP source and original date without adding quest c
  expect(goalProgress(state([{...shared,guildFacts:null,ranksAt:null}]),inputs())[2]!.rows.some(r=>r.label==='Worker recorded QP')).toBe(false);
 });
 test('server projection attaches selected dated QP after local and remote rank observations join',()=>{
- const source=readFileSync(new URL('./server.ts',import.meta.url),'utf8'),start=source.indexOf('    const local = new Set(bots.map');
+ const source=readFileSync(new URL('./server/state.ts',import.meta.url),'utf8'),start=source.indexOf('    const local = new Set(bots.map');
  const code=new Bun.Transpiler({loader:'ts'}).transformSync(source.slice(start,source.indexOf('    // In the world now',start)));
  const server='rs-sdk-demo.fly.dev',local={...bot('Local'),guildFacts:{varps:{qp:55}},ranksAt:now-2000,ranks:[{board:'Quest Points',level:50}]};
  const bots:any[]=[local,{...bot('Practice'),practice:true,guildFacts:{varps:{qp:999}}}];
