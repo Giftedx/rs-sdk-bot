@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795237618073-oreelse-pocketpython-95e2e844996eaad9",
+ "account": "OreElse",
+ "partner": "Pocketpython",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Molten glass",
+ "requested": 2,
+ "claim": "8fe49de9-86f6-4ed1-b0fd-0d5404b22b0c",
+ "count": 0,
+ "ok": false,
+ "at": 1795237733023,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Nails",
+   "requested": 10,
+   "count": 0
+  },
+  {
+   "item": "Gold bar",
+   "requested": 1,
+   "count": 0
+  }
+ ]
+}
