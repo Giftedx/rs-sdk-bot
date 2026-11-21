@@ -35,6 +35,27 @@ import {
 
 export type PvpCombatSkill = 'Attack' | 'Strength' | 'Defence' | 'Ranged';
 
+// Match ROUTE_HOLD_MS (45s) in packages/core/src/inprocess.ts so pathfinding in one tank does not trip wait timeouts.
+const LOCKSTEP_WAIT_IDLE_MS = 60_000;
+
+export async function connectWithRetry<T>(
+    connect: () => Promise<T>,
+    waitTick: () => Promise<void>,
+    isStopped: () => boolean,
+    maxAttempts = 12,
+): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+        try {
+            return await connect();
+        } catch (err) {
+            const msg = String(err instanceof Error ? err.message : err);
+            const retryable = /already logged in|too many incorrect|try again/i.test(msg);
+            if (!retryable || attempt + 1 >= maxAttempts || isStopped()) throw err;
+            await waitTick();
+        }
+    }
+}
+
 export const BOW_TIERS: readonly { level: number; id: number; name: string }[] = [
     { level: 50, id: 861, name: 'Magic shortbow' },
     { level: 40, id: 857, name: 'Yew shortbow' },
@@ -204,7 +225,7 @@ async function rebankManagedTank(s: Session, stop: () => boolean): Promise<boole
         if (!outLever) return false;
         const op = (outLever.optionsWithIndex ?? [])[0];
         await s.sdk.sendInteractLoc(outLever.x, outLever.z, outLever.id, op?.opIndex ?? 1);
-        const left = await waitUntil(s, () => (posOf(s)?.worldZ ?? 9999) < 3800 || stop(), { timeoutTicks: 10 });
+        const left = await waitUntil(s, () => (posOf(s)?.worldZ ?? 9999) < 3800 || stop(), { timeoutTicks: 10, idleMs: LOCKSTEP_WAIT_IDLE_MS });
         if (!left || stop() || (posOf(s)?.worldZ ?? 9999) >= 3800) return false;
 
         await walkWaypoints(s, [{ x: ARDY_NORTH_BANK.x, z: ARDY_NORTH_BANK.z, tol: 1 }], 120, stop, 'tank ardy bank', {
@@ -248,7 +269,7 @@ async function rebankManagedTank(s: Session, stop: () => boolean): Promise<boole
             await waitUntil(s, () => {
                 const p = posOf(s);
                 return (!!p && p.level === 0 && p.worldX <= 2800 && p.worldZ >= 3440) || stop();
-            }, { timeoutTicks: 8 });
+            }, { timeoutTicks: 8, idleMs: LOCKSTEP_WAIT_IDLE_MS });
         }
     }
     await pullArdougneLeverToWildy(s, stop);
@@ -275,43 +296,55 @@ async function runManagedTank(
     void (async () => {
         let lastEatTick = -10;
         while (!stopFn()) {
-            const p = posOf(s);
-            const mantaCount = countById(s.sdk.getInventory(), 391);
-            const hp = skillInfo(s, 'Hitpoints').level;
-            const atKeep = !!p && !p.isDead && p.worldZ >= 3900;
-            localTankState.set(key, { hp: atKeep ? hp : 0, banking: !atKeep || bankLocks.has(key) });
+            try {
+                const p = posOf(s);
+                const mantaCount = countById(s.sdk.getInventory(), 391);
+                const hp = skillInfo(s, 'Hitpoints').level;
+                const atKeep = !!p && !p.isDead && p.worldZ >= 3900;
+                localTankState.set(key, { hp: atKeep ? hp : 0, banking: !atKeep || bankLocks.has(key) });
 
-            if (!p || p.isDead) {
-                await waitTicks(s, 2);
-                continue;
-            }
-            if (p.worldZ < 3800) {
-                bankLocks.add(key);
-                localTankState.set(key, { hp: 0, banking: true });
-                await setAutoRetaliate(s, false);
-                await rebankManagedTank(s, stopFn);
-                bankLocks.delete(key);
-                continue;
-            }
-            if (d8({ x: p.worldX, z: p.worldZ }, postTile) > 0) {
-                await walkWaypoints(s, [{ x: postTile.x, z: postTile.z, tol: 0 }], 20, stopFn, 'tank post');
-            }
-            if (hp > 0 && hp <= 76 && mantaCount > 0 && s.tick() - lastEatTick >= 3) {
-                const food = s.sdk.getInventory().find(i => i.id === 391);
-                if (food) {
-                    lastEatTick = s.tick();
-                    await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
+                if (!p || p.isDead) {
+                    await waitTicks(s, 2, { idleMs: LOCKSTEP_WAIT_IDLE_MS });
+                    continue;
                 }
-            }
-            const shouldBank = mantaCount <= 1 || (mantaCount <= 12 && bankLocks.size < maxBankers);
-            if (shouldBank) {
-                bankLocks.add(key);
-                localTankState.set(key, { hp: 0, banking: true });
-                const okBank = await rebankManagedTank(s, stopFn);
+                if (p.worldZ < 3800) {
+                    bankLocks.add(key);
+                    localTankState.set(key, { hp: 0, banking: true });
+                    await setAutoRetaliate(s, false);
+                    await rebankManagedTank(s, stopFn);
+                    bankLocks.delete(key);
+                    continue;
+                }
+                if (d8({ x: p.worldX, z: p.worldZ }, postTile) > 0) {
+                    await walkWaypoints(s, [{ x: postTile.x, z: postTile.z, tol: 0 }], 20, stopFn, 'tank post');
+                }
+                if (hp > 0 && hp <= 76 && mantaCount > 0 && s.tick() - lastEatTick >= 3) {
+                    const food = s.sdk.getInventory().find(i => i.id === 391);
+                    if (food) {
+                        lastEatTick = s.tick();
+                        await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
+                    }
+                }
+                const shouldBank = mantaCount <= 1 || (mantaCount <= 12 && bankLocks.size < maxBankers);
+                if (shouldBank) {
+                    bankLocks.add(key);
+                    localTankState.set(key, { hp: 0, banking: true });
+                    const okBank = await rebankManagedTank(s, stopFn);
+                    bankLocks.delete(key);
+                    if (okBank) continue;
+                }
+                await waitTicks(s, 1, { idleMs: LOCKSTEP_WAIT_IDLE_MS });
+            } catch (err) {
                 bankLocks.delete(key);
-                if (okBank) continue;
+                if (stopFn()) break;
+                const msg = String(err);
+                if (/TickStallError|tick stream stalled/i.test(msg)) {
+                    console.log(`WARN tank ${name}: ${msg}`);
+                    await waitTicks(s, 1, { idleMs: LOCKSTEP_WAIT_IDLE_MS }).catch(() => {});
+                    continue;
+                }
+                throw err;
             }
-            await waitTicks(s, 1);
         }
     })().catch(err => {
         if (!stopFn()) console.log(`WARN tank ${name}: ${String(err)}`);
@@ -433,8 +466,19 @@ async function runAttackerMain(args: string[]): Promise<void> {
     while (!isStopped()) {
         let s: Session | undefined;
         try {
-            s = await connectInProcess({ name: account, password: creds.password, server: creds.server, members });
-            await waitUntil(s, st => !!(st?.inGame && st?.player), { timeoutTicks: 30 });
+            s = await connectWithRetry(
+                () => connectInProcess({ name: account, password: creds.password, server: creds.server, members }),
+                async () => {
+                    totalTicks += 1;
+                    if (tankSessions[0]) {
+                        await waitTicks(tankSessions[0], 1, { idleMs: LOCKSTEP_WAIT_IDLE_MS });
+                    } else {
+                        await new Promise(resolve => setTimeout(resolve, 150));
+                    }
+                },
+                isStopped,
+            );
+            await waitUntil(s, st => !!(st?.inGame && st?.player), { timeoutTicks: 30, idleMs: LOCKSTEP_WAIT_IDLE_MS });
         } catch (err) {
             if (s) await closeWithin([s], 3000);
             if (isStopped()) break;
@@ -501,7 +545,7 @@ async function runAttackerMain(args: string[]): Promise<void> {
                 DESERTED_KEEP,
                 lastHitSeq,
                 ownTanks ? localTankState : undefined,
-            ).length > 0 || isStopped(), { timeoutTicks: 80 });
+            ).length > 0 || isStopped(), { timeoutTicks: 80, idleMs: LOCKSTEP_WAIT_IDLE_MS });
             target = rankTanksForSwing(
                 s.sdk.getState()?.nearbyPlayers ?? [],
                 tankNames,
@@ -531,7 +575,7 @@ async function runAttackerMain(args: string[]): Promise<void> {
 
         const endReason = await Promise.race([
             s.ended.then(e => e.reason),
-            waitTicks(s, 4).then(() => 'timeout'),
+            waitTicks(s, 4, { idleMs: LOCKSTEP_WAIT_IDLE_MS }).then(() => 'timeout'),
         ]);
         if (endReason === 'timeout') {
             await logoutSession(s);

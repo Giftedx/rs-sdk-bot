@@ -86,7 +86,7 @@ function companionsOf(suffixes: readonly string[]): BenchCase['companions'] {
 
 export const OVERALL_PVP_CASES: BenchCase[] = [
     {
-        key: 'overall:pvp-attack-40',
+        key: 'extra:overall-pvp-attack-40',
         engineEnv: { NODE_MEMBERS: 'true' },
         script: 'scripts/pvp-relog-combat.ts',
         preset: 'tutorial_done',
@@ -102,7 +102,7 @@ export const OVERALL_PVP_CASES: BenchCase[] = [
         pass: passPvp('Attack', 40),
     },
     {
-        key: 'overall:pvp-strength',
+        key: 'extra:overall-pvp-strength',
         engineEnv: { NODE_MEMBERS: 'true' },
         script: 'scripts/pvp-relog-combat.ts',
         preset: 'tutorial_done',
@@ -118,7 +118,7 @@ export const OVERALL_PVP_CASES: BenchCase[] = [
         pass: passPvp('Strength', 99),
     },
     {
-        key: 'overall:pvp-attack',
+        key: 'extra:overall-pvp-attack',
         engineEnv: { NODE_MEMBERS: 'true' },
         script: 'scripts/pvp-relog-combat.ts',
         preset: 'tutorial_done',
@@ -134,7 +134,7 @@ export const OVERALL_PVP_CASES: BenchCase[] = [
         pass: passPvp('Attack', 99),
     },
     {
-        key: 'overall:pvp-defence',
+        key: 'extra:overall-pvp-defence',
         engineEnv: { NODE_MEMBERS: 'true' },
         script: 'scripts/pvp-relog-combat.ts',
         preset: 'tutorial_done',
@@ -150,7 +150,7 @@ export const OVERALL_PVP_CASES: BenchCase[] = [
         pass: passPvp('Defence', 99),
     },
     {
-        key: 'overall:pvp-ranged',
+        key: 'extra:overall-pvp-ranged',
         engineEnv: { NODE_MEMBERS: 'true' },
         script: 'scripts/pvp-relog-combat.ts',
         preset: 'tutorial_done',

@@ -3,7 +3,7 @@ import { componentId } from '../packages/core/src/logout';
 import { evaluateProgressionWork } from '../packages/core/src/progression-session';
 import { createProgressionMonitor } from '../packages/core/src/progression-policy';
 import { intentForEntry, loadProgressionCatalog } from '../packages/planner/src/progression-catalog';
-import { RANGED_ARMOUR_TIERS, parsePvpSkill, rankTanksForSwing, selectMeleeWeapon, selectRangedKit, styleComponentFor } from './pvp-relog-combat';
+import { RANGED_ARMOUR_TIERS, connectWithRetry, parsePvpSkill, rankTanksForSwing, selectMeleeWeapon, selectRangedKit, styleComponentFor } from './pvp-relog-combat';
 
 test('parsePvpSkill normalizes supported combat skills', () => {
     expect(parsePvpSkill('atk')).toBe('Attack');
@@ -83,4 +83,29 @@ test('pvp-relog-combat attacker and tank entries pass progression policy without
     });
     monitor.observe({ tick: 0, stateKey: 's1', bankGeneration: 0, inCombat: false });
     expect(monitor.refusal({ type: 'interactLoc', progressionOption: 'Pull' })).toBeNull();
+});
+
+test('connectWithRetry retries transient already-logged-in errors and aborts on non-transient errors', async () => {
+    let tries = 0;
+    let waits = 0;
+    const ok = await connectWithRetry(
+        async () => {
+            tries++;
+            if (tries < 3) throw Error('LoginError: Account already logged in');
+            return 'session';
+        },
+        async () => { waits++; },
+        () => false,
+    );
+    expect(ok).toBe('session');
+    expect(tries).toBe(3);
+    expect(waits).toBe(2);
+
+    let fatalWaits = 0;
+    await expect(connectWithRetry(
+        async () => { throw Error('Invalid credentials'); },
+        async () => { fatalWaits++; },
+        () => false,
+    )).rejects.toThrow(/Invalid credentials/);
+    expect(fatalWaits).toBe(0);
 });
