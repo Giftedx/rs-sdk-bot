@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795246696414-dipstick-quickhandjob-a511a21bbf3de874",
+ "account": "Quickhandjob",
+ "partner": "Dipstick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 49500,
+ "claim": "4240a8fe-77ad-4498-9909-b20436cccab3",
+ "count": 0,
+ "ok": false,
+ "at": 1795246776174,
+ "detail": "trade claimed"
+}
