@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795296498204-swordswallow-fatstack-ballofwool",
+ "account": "Fatstack",
+ "partner": "Swordswallow",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ball of wool",
+ "requested": 2,
+ "claim": "ed6ae289-e181-4771-9159-f6bfbadc216e",
+ "count": 0,
+ "ok": false,
+ "at": 1795296618606,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795296498204-mmtha0205-shaftmaker-naturerune",
+ "role": "to",
+ "account": "Shaftmaker",
+ "partner": "mmtha0205",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795296614407,
+ "detail": "Error: account logout is not confirmed: Shaftmaker ended stopped"
+}
