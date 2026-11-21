@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795236068544,
+ "at": 1795236209489,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -218,21 +218,28 @@
   },
   {
    "account": "Woodenstaff",
-   "script": "scripts/splash-train.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "66",
-    "6000"
+    "3000",
+    "cow"
    ],
-   "env": {},
+   "env": {
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "60",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0"
+   },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "train Magic to 66 with a curse cast over the fence of the Ardougne cow field",
+   "goal": "train Strength to 60 on the Ardougne cows",
    "role": "combat",
-   "template": "army-splash-magic-66",
+   "template": "army-cow-strength-60",
    "autopilot": "local",
    "resources": [
-    "splash:ardougne-cow-fence"
+    "cow:ardougne-north"
    ]
   },
   {
@@ -266,6 +273,27 @@
    ]
   },
   {
+   "account": "Unsheathed",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
+   "env": {
+    "MAX_KILLS": "40"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic runes, nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
+   "autopilot": "local",
+   "resources": [
+    "squad:ardougne-giants"
+   ]
+  },
+  {
    "account": "FishAndChips",
    "script": "scripts/shark-supply.ts",
    "args": [
@@ -284,21 +312,8 @@
    "account": "Knightstick",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/walk-to.ts 3092 3243 0",
-    "scripts/shop-buyer.ts betty 1800 ITEMS=death.rune STOCK_TARGET=420 STOP_AT_TARGET=1 FLOAT=105000 MAX_SPEND=100000 COIN_RESERVE=500 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=60"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "PickpockDick",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=557 QUANTITY=300 EXPECTED_OWNED=0 LIMIT_PRICE=65 CASH_RESERVE=1000 ORDER_KEY=liveops-earth-557-300-v1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=383 QUANTITY=4 EXPECTED_OWNED=0 LIMIT_PRICE=700 CASH_RESERVE=1000 ORDER_KEY=liveops-rawshark-383-4-v1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=560 QUANTITY=36 EXPECTED_OWNED=0 LIMIT_PRICE=2820 CASH_RESERVE=1000 ORDER_KEY=liveops-death-560-36-v1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
