@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795289738551-yewfirst-ballspinner-magicshortbow-861",
  "account": "YewFirst",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "Magic shortbow",
  "requested": 1,
  "claim": "29017dbd-eda7-4492-b819-745d6275ca27",
- "count": 0,
- "ok": false,
- "at": 1795289868876,
- "detail": "trade claimed"
+ "count": 1,
+ "ok": true,
+ "at": 1795289926820,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795289917281
+ },
+ "logout": {
+  "attemptId": "1795289868884-0000022860-0000000001",
+  "at": 1795289926812,
+  "sha256": "2857085b1a2629ee037339b8a2e7d9151e59daad16208c06463eeb1d3a64f8f3"
+ },
+ "screen": true
 }
