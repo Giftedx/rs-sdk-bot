@@ -13,7 +13,8 @@ type Step=({kind:'walk';tol:number}&Tile)|{kind:'enter'|'exit'};
 const dungeon=(p:Tile)=>p.z>=9000;
 const knownDungeon=(p:Tile)=>p.x>=3070&&p.x<=3145&&p.z>=9830&&p.z<=9950;
 export function edgevilleRoute(from:Tile,to:Tile,target:'druid'|'giant',tol=2):Step[]{
- if(from.level!==0||to.level!==0||![from.x,from.z,to.x,to.z,tol].every(Number.isSafeInteger)||tol<0)throw Error('combat travel needs observed native ground');
+ if(from.level!==0||to.level!==0)throw Error(`combat travel needs observed native ground (level !== 0: from=${from.level} to=${to.level})`);
+ if(![from.x,from.z,to.x,to.z,tol].every(Number.isSafeInteger)||tol<0)throw Error('combat travel needs observed native ground');
  const goal:Step={kind:'walk',...to,tol};if(dungeon(from)===dungeon(to))return[goal];
  if(dungeon(from)&&!knownDungeon(from)||dungeon(to)&&!knownDungeon(to))throw Error('combat travel unknown dungeon crossing');
  const point=(x:number,z:number,tol=1):Step=>({kind:'walk',x,z,level:0,tol});
@@ -26,7 +27,7 @@ export function createEdgevilleTravel(original:Session){
  const client=original.client as any,first=original.sdk.getState()?.player,approach={x:3097,z:3467},life=first?.lifeId,respawns=first?.respawnCount??0,restore=installOrbFloorBridge(client,approach),executor=client.executeBotAction;
  let ended=false,closed=false;const close=()=>{if(!closed){closed=true;restore();}};void original.ended.then(()=>{ended=true;close();});
  return{close,async walk(s:Session,target:'druid'|'giant',to:Tile,ground:(x:number,z:number,tol:number)=>Promise<boolean>,stop:()=>boolean,tol=2){
-  const guard=()=>{const p=s.sdk.getState()?.player;if(closed||ended||stop()||s.client!==client||client.executeBotAction!==executor||!Number.isSafeInteger(life)||!p||p.isDead||p.lifeId!==life||(p.respawnCount??0)!==respawns||p.level!==0||(s.sdk.getSkill('Hitpoints')?.level??0)<=0)throw Error('combat travel original owner/life/stop');return p;};
+  const guard=()=>{const p=s.sdk.getState()?.player;if(closed||ended||stop()||s.client!==client||client.executeBotAction!==executor||!Number.isSafeInteger(life)||!p||p.isDead||p.lifeId!==life||(p.respawnCount??0)!==respawns||(s.sdk.getSkill('Hitpoints')?.level??0)<=0)throw Error('combat travel original owner/life/stop');if(p.level!==0)throw Error(`combat travel aborted: level !== 0 (${p.level})`);return p;};
   const near=(at:Tile,r=3)=>{const p=guard();return p.level===at.level&&Math.max(Math.abs(p.worldX-at.x),Math.abs(p.worldZ-at.z))<=r;};
   const move=async(x:number,z:number,tol:number)=>{guard();if(!await ground(x,z,tol)||!near({x,z,level:0},tol))throw Error('combat travel ground arrival missing');guard();};
   const cross=async(id:number,at:Tile,landed:()=>boolean)=>{
