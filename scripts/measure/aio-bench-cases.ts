@@ -1358,17 +1358,17 @@ const ROUTE_CASES: BenchCase[] = [
       companions: base.companions!.map((comp, i) => (i >= 2 ? {...comp, presetConfig: {...enemy, inventory: enemyInv}} : comp)),
     };
   })(),
-  // Multi-trip combo-food restock regression: starts with 1 shark + 2 karambwans at post so bots retreat and Trip 2+ restocks both from bank.
+  // Multi-trip combo-food restock regression: starts with 1 karambwan at post so bots retreat early and Trip 2+ restocks sharks and karambwans from bank.
   (() => {
     const base = cloneTribridSquad('extra:squad-2-trips-combo-x1', 'tribrid-bis-hybrid', 3,
-      ['MAX_MINUTES=14', 'TRIPS=6', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_GANG_KIT=tribrid-food', 'SQUAD_OPTS={"cureNow":true,"eatAt":92,"escapeAt":80,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}'],
+      ['MAX_MINUTES=14', 'TRIPS=6', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_GANG_KIT=tribrid-food', 'SQUAD_OPTS={"cureNow":true,"eatAt":95,"escapeAt":88,"freeze":"flee","focusRunner":0.4,"chaseBelow":0.4,"freezeMagicCap":49,"dropForStrip":null,"specBelow":0.45}'],
       'full', {x: 3066, z: 3641}, undefined, EDGE_BANK_TRIBRID);
     const keepStartFood = (inv: readonly {id: number; count: number}[]) => [
       ...inv.filter(i => i.id !== 385 && i.id !== 3144),
-      {id: 385, count: 1}, {id: 3144, count: 1},
+      {id: 3144, count: 1},
     ];
     const enemy = kitFixture('tribrid-food', GANKER_POST.x, GANKER_POST.z);
-    const enemyInv = [...enemy.inventory!.filter(i => i.id !== 385), ...Array.from({length: 14}, () => ({id: 385, count: 1}))];
+    const enemyInv = [...enemy.inventory!.filter(i => i.id !== 385), ...Array.from({length: 18}, () => ({id: 385, count: 1}))];
     return {
       ...base,
       presetConfig: {...base.presetConfig!, inventory: keepStartFood(base.presetConfig!.inventory!)},
@@ -1379,13 +1379,13 @@ const ROUTE_CASES: BenchCase[] = [
     };
   })(),
   // Wave C Rev-289 Achievable BiS Kit Matrix against Goondelf/Ligma/Sugma clones and threat-team3, plus scaled BiS squad sizes (4..16).
-  ...(['rune', 'dhide', 'dragon', 'dragon-zerk', 'dragon-zerk-sharks', 'hybrid', 'hybrid-sharks', 'swap', 'entangle', 'amulet-str', 'amulet-power', 'sara-cape', 'god-sara', 'god-guthix'] as const).map(v =>
+  ...(['rune', 'dhide', 'dragon', 'dragon-zerk', 'dragon-zerk-sharks', 'hybrid', 'hybrid-sharks', 'power-glory', 'dragon-power', 'hybrid-tele', 'swap', 'entangle', 'amulet-str', 'amulet-power', 'sara-cape', 'god-sara', 'god-guthix'] as const).map(v =>
     cloneTribridSquad(`extra:clone-bis-${v}-x1`, `tribrid-bis-${v}`, 4, ['TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4'])),
   (() => {
     const base = cloneTribridSquad('extra:clone-bis-spear1-x1', 'tribrid-bis-hybrid', 4, ['TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_BURST_HOLD=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4']);
     return {...base, presetConfig: {...kitFixture('tribrid-bis-spear', base.presetConfig!.position!.x, base.presetConfig!.position!.z), bank: base.presetConfig!.bank}};
   })(),
-  ...(['rune', 'dhide', 'dragon', 'dragon-zerk', 'dragon-zerk-sharks', 'hybrid', 'hybrid-sharks', 'swap', 'entangle', 'god-sara', 'god-guthix'] as const).map(v =>
+  ...(['rune', 'dhide', 'dragon', 'dragon-zerk', 'dragon-zerk-sharks', 'hybrid', 'hybrid-sharks', 'power-glory', 'dragon-power', 'hybrid-tele', 'swap', 'entangle', 'god-sara', 'god-guthix'] as const).map(v =>
     cloneTribridThreatCase(`extra:clone-threat3-bis-${v}-x1`, `tribrid-bis-${v}`, 4, 'mage+ranger+tribrid-snare', 3)),
   (() => {
     const base = cloneTribridThreatCase('extra:clone-threat3-bis-spear1-x1', 'tribrid-bis-hybrid', 4, 'mage+ranger+tribrid-snare', 3, ['SQUAD_BURST_HOLD=1']);

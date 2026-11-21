@@ -1251,3 +1251,37 @@ test('rescue skips eating while Glory Edgeville dialog is open so food never can
         spyTick.mockRestore();
     }
 });
+
+test('curePoisonAndEat drinks antipoison and eats above fatal poison ticks once in safe Edgeville, and isolatedPile guards full-HP re-entries', async () => {
+    const { curePoisonAndEat } = require('./pk-squad');
+    // Freshly banked lone re-entrant at full HP with 21 food does not endlessly Glory out before allies join.
+    expect(squadFallbackPlan({ z: 3640, hp: 99, maxHp: 99, foodCount: 21, enemyCount: 3, allyCount: 0, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('hold');
+    // Low-HP or outnumbered solo still escapes immediately.
+    expect(squadFallbackPlan({ z: 3640, hp: 80, maxHp: 99, foodCount: 21, enemyCount: 3, allyCount: 0, inMulti: true, hasGlory: true, hasTeleport: false })).toBe('glory');
+
+    let hp = 12;
+    const inv: any[] = [
+        { slot: 0, id: 2448, count: 1, name: 'Superantipoison(4)', optionsWithIndex: [{ text: 'Drink', opIndex: 1 }] },
+        { slot: 1, id: 385, count: 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    const used: number[] = [];
+    const s: any = {
+        tick: () => 50,
+        client: {},
+        sdk: {
+            getState: () => ({ player: { worldX: 3087, worldZ: 3496, hp, maxHp: 99 } }),
+            getInventory: () => inv,
+        },
+        direct: async (a: any) => {
+            used.push(a.slot);
+            if (a.slot === 1) { hp += 20; inv.splice(inv.findIndex(x => x.slot === 1), 1); }
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => true);
+    try {
+        await curePoisonAndEat(s, () => false, true);
+        expect(used).toEqual([0, 1]);
+    } finally {
+        spyTick.mockRestore();
+    }
+});

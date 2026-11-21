@@ -32,7 +32,7 @@ import { killReceiptProof } from '../packages/core/src/kill-receipt';
 import { RETALIATE_OFF } from '../packages/core/src/combat-end';
 import { bindActionScope } from '../packages/core/src/action-scope';
 import { sessionWalker, walkPath } from '../packages/core/src/walk';
-import { attackable, bestFood, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, getObjNames, ITEMS, isMulti, nextTick, observePlayer, ownSkull, PRAYER, recordKillLoot, rewearStart, STUNNED_SHOVE_SPOTANIM, wildernessLevel, weaponStyle, type FightOptions } from './pk';
+import { attackable, bestFood, carriedPoison, defaultSpec, defaultStunSpec, escapeCastable, fightPlayer, getObjNames, ITEMS, isMulti, nextTick, observePlayer, ownSkull, poisonSplat, PRAYER, recordKillLoot, rewearStart, STUNNED_SHOVE_SPOTANIM, wildernessLevel, weaponStyle, type FightOptions } from './pk';
 import { bankTrip, MIN_TRIP_ARROWS, packOf, pickUp, PICKUP_ITEMS } from './pk-gang';
 import { settleKillFeed } from './pk-kill-feed';
 import { EDGEVILLE_BANK, eatUp, FOOD_START_FLOOR, maxDeathsOf, rekitAfterDeath } from './pk-hunt';
@@ -334,6 +334,39 @@ function createWildSurvival(
     };
 }
 
+// Cures lingering poison and eats above fatal poison ticks once safe out of the Wilderness.
+export async function curePoisonAndEat(s: Session, stop: () => boolean = () => false, always = false): Promise<void> {
+    const me = () => s.sdk.getState()?.player;
+    const p0 = me();
+    if (!p0 || wildernessLevel(p0.worldZ) > 0) return;
+    const poisoned = carriedPoison(s.client, s.tick()) || poisonSplat(s.client) > 0;
+    const hpLow = p0.hp <= Math.min(20, p0.maxHp - 30);
+    if (!always && !poisoned && !hpLow) return;
+    const inv0 = s.sdk.getInventory?.() ?? [];
+    const anti = inv0.find(i => (ITEMS.antipoison as readonly number[]).includes(i.id));
+    const antiOp = anti?.optionsWithIndex?.find(x => /^drink$/i.test(x.text));
+    if (anti && antiOp && (poisoned || always) && !stop()) {
+        if (typeof s.direct === 'function') await s.direct({ type: 'useInventoryItem', slot: anti.slot, optionIndex: antiOp.opIndex, reason: 'SDK' });
+        else if (typeof s.sdk.sendUseItem === 'function') await s.sdk.sendUseItem(anti.slot, antiOp.opIndex);
+        await nextTick(s);
+    }
+    const eatUntil = always ? p0.maxHp - 15 : Math.min(p0.maxHp - 15, 72);
+    for (let i = 0; i < 6 && !stop(); i++) {
+        const q = me();
+        if (!q || q.hp >= eatUntil) break;
+        const invBefore = s.sdk.getInventory?.() ?? [];
+        const food = bestFood(invBefore);
+        const op = food?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
+        if (!food || !op) break;
+        if (typeof s.direct === 'function') await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: op.opIndex, reason: 'SDK' });
+        else if (typeof s.sdk.sendUseItem === 'function') await s.sdk.sendUseItem(food.slot, op.opIndex);
+        for (let t = 0; t < 3 && !stop(); t++) if (!await nextTick(s)) break;
+        const qAfter = me();
+        const invAfter = s.sdk.getInventory?.() ?? [];
+        if (qAfter && qAfter.hp <= q.hp && invAfter.length >= invBefore.length && invAfter.find(x => x.slot === food.slot)?.id === food.id) break;
+    }
+}
+
 // Turning auto-retaliate off stops server-side [queue,pvp_retaliate] from walking an escaped or finished
 // member back out of Edgeville bank into the Wilderness when hit during teleport windup.
 export async function disableAutoRetaliate(s: Session): Promise<void> {
@@ -400,7 +433,6 @@ export async function rescue(
             }
         }
         const tryGloryEscape = async (): Promise<boolean> => {
-            let atePreRub = false;
             for (let attempt = 0; attempt < 24 && wildernessLevel(me()?.worldZ ?? 0) > 0 && wildernessLevel(me()?.worldZ ?? 0) <= 30; attempt++) {
                 if (stopped()) return false;
                 if (await clickEdgeville()) {
@@ -415,26 +447,12 @@ export async function rescue(
                     }
                     continue;
                 }
-                const invNow = s.sdk.getInventory?.() ?? [], qNow = me();
-                const hasInvGlory = invNow.some(i => (ITEMS.glory as readonly number[]).includes(i.id));
-                const needPreHeal = !atePreRub && hasInvGlory && qNow && qNow.hp <= 42 && !!bestFood(invNow);
                 survival.step(s.tick());
-                const q = me(), inv = s.sdk.getInventory?.() ?? [], stNow = s.sdk.getState();
+                const inv = s.sdk.getInventory?.() ?? [], stNow = s.sdk.getState();
                 const eq = (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : stNow?.equipment) ?? [];
                 const invGlory = inv.find(i => (ITEMS.glory as readonly number[]).includes(i.id));
                 const rubOp = invGlory?.optionsWithIndex?.find(x => /^Rub$/i.test(x.text));
                 if (invGlory && rubOp) {
-                    if (needPreHeal && q && q.hp <= 42 && !atePreRub) {
-                        const food = bestFood(inv);
-                        const op = food?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
-                        if (food && op) {
-                            atePreRub = true;
-                            await useItemAction(food.slot, op.opIndex);
-                            if (!await tick()) return false;
-                            continue;
-                        }
-                    }
-                    atePreRub = false;
                     if (!stopped()) await useItemAction(invGlory.slot, rubOp.opIndex);
                     for (let t = 0; t < 4 && wildernessLevel(me()?.worldZ ?? 0) > 0; t++) {
                         if (await clickEdgeville()) {
@@ -519,6 +537,7 @@ export async function rescue(
             await disableAutoRetaliate(s);
             if (typeof s.sdk.sendWalk === 'function') void s.sdk.sendWalk(end.worldX, end.worldZ);
         }
+        await curePoisonAndEat(s, stopped, false);
     }
     log(`[${s.name}] SQUAD rescue ends at ${end?.worldX},${end?.worldZ} wild ${wildernessLevel(end?.worldZ ?? 0)}`);
     return !stopped() && end && wildernessLevel(end.worldZ) === 0 ? s : null;
@@ -870,9 +889,9 @@ export function squadFallbackPlan(opts: {
 }): 'hold' | 'out' | 'glory' | 'teleport' | 'run' {
     const wild = wildernessLevel(opts.z);
     if (wild === 0) return 'out';
-    const isolatedPile = opts.inMulti && opts.allyCount === 0 && opts.enemyCount >= 3;
+    const isolatedPile = opts.inMulti && opts.allyCount === 0 && opts.enemyCount >= 3 && (opts.hp <= opts.maxHp * 0.85 || opts.foodCount <= 6 || opts.enemyCount >= 5);
     const outnumbered = opts.inMulti && opts.enemyCount - opts.allyCount >= 2 && opts.hp <= opts.maxHp * 0.78;
-    const focusPile = opts.inMulti && (opts.targetingMe ?? 0) >= 3 && opts.hp <= opts.maxHp * 0.78;
+    const focusPile = opts.inMulti && (opts.targetingMe ?? 0) >= 3 && opts.hp <= opts.maxHp * 0.82;
     const lowSupplyPile = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.foodCount <= 3 && opts.hp <= opts.maxHp * 0.85;
     const dry = opts.foodCount <= 0 && ((opts.packFood ?? 0) >= 6 || opts.hp <= opts.maxHp * 0.75);
     if (!isolatedPile && !outnumbered && !focusPile && !lowSupplyPile && !dry) return 'hold';
@@ -949,7 +968,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
     focus?: ReturnType<typeof createSquadFocus>;
     cohesion?: ReturnType<typeof createSquadCohesion>;
     useRally?: boolean; onRallyReady?: (name: string) => void; waitForRally?: (s: Session, stopped: () => boolean) => Promise<void>;
-    trips: number; deadline: number; stopped: () => boolean; killsLeft: () => boolean; log: (l: string) => void;
+    trips: number; deadline: number; stopped: () => boolean; exitStopped?: () => boolean; killsLeft: () => boolean; log: (l: string) => void;
     // Deaths that the account recovers from in the run (default 0: a death ends the account's part).
     // `onDeath` is called for each death of the account, at its tile (the death ledger of packages/core/src/pvp-deaths.ts).
     // `run`: the deaths of all the members in the run. The death that brings `deaths` to `limit` is not recovered (PVP_DEATH_LIMITS.perRun).
@@ -1185,6 +1204,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 enteredWilderness = false;
                 if (stats.trips >= o.trips) {
                     await disableAutoRetaliate(s);
+                    await curePoisonAndEat(s, () => o.exitStopped?.() ?? false, true);
                     if (typeof s.sdk.sendWalk === 'function') void s.sdk.sendWalk(p.worldX, p.worldZ);
                     o.log(`[${s.name}] SQUAD no trips left`);
                     break;
@@ -1266,12 +1286,7 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                     }
                 }
                 // The armour that defends better against the threat's style, from the pack: worn before the next fight, and put back after the threat has been gone for 60 ticks.
-                if (await swapper.step(s, threat.actions, now, tickOf, o.log)) continue;
             }
-            const view = s.sdk.getState()?.nearbyPlayers ?? [];
-            const health = (q: { index: number }) => { const seen = observePlayer(s.client, q.index); return seen && seen.totalHealth > 0 ? seen.health / seen.totalHealth : 1; };
-            const stunned = new Set(view.filter(q => observePlayer(s.client, q.index)?.spotanim === STUNNED_SHOVE_SPOTANIM).map(q => q.name.toLowerCase()));
-            const self = { x: p.worldX, z: p.worldZ, combatLevel: p.combatLevel };
             const { plan: fallback, enemyCount, allyCount } = fallbackAction();
             if (fallback !== 'hold' && fallback !== 'out') {
                 o.log(`[${s.name}] SQUAD coordinated fallback (${fallback}) hp=${p.hp} enemies=${enemyCount} allies=${allyCount}`);
@@ -1280,6 +1295,13 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
                 escapes++;
                 continue;
             }
+            if (threat && o.threats!.act) {
+                if (await swapper.step(s, threat.actions, now, tickOf, o.log)) continue;
+            }
+            const view = s.sdk.getState()?.nearbyPlayers ?? [];
+            const health = (q: { index: number }) => { const seen = observePlayer(s.client, q.index); return seen && seen.totalHealth > 0 ? seen.health / seen.totalHealth : 1; };
+            const stunned = new Set(view.filter(q => observePlayer(s.client, q.index)?.spotanim === STUNNED_SHOVE_SPOTANIM).map(q => q.name.toLowerCase()));
+            const self = { x: p.worldX, z: p.worldZ, combatLevel: p.combatLevel };
             // Interlopers (dangerous players that are not the squad's targets) become targets, first: lowest health first among them. When they are dead or gone
             // the squad goes back to its own targets.
             const interlopers = new Set((threat && o.threats!.act ? threat.interlopers : []).map(n => n.toLowerCase()));
@@ -1419,6 +1441,16 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
             if (qAfter && diedNow(qAfter)) { if (await recover()) continue; stats.died = true; break; }
             if (urgentEscape && (s.tick() > began || r.outcome !== 'timeout')) continue;
             if (!await nextTick(s)) break;
+        }
+        const endTile = me();
+        if (!stats.died && endTile && wildernessLevel(endTile.worldZ) > 0 && !(o.exitStopped?.() ?? o.stopped())) {
+            inRescue = true;
+            try {
+                const escaped = await locs.withLocs(() => rescue(s, o.log, o.exitStopped ?? o.stopped, false, rescueOpts));
+                if (!escaped) retreatEnded();
+            } finally {
+                inRescue = false;
+            }
         }
     } finally {
         const qEnd = me();
@@ -1757,7 +1789,7 @@ if (import.meta.main) {
             allies: ours.filter(n => n !== s.name).map(n => n.toLowerCase()), pickup, pull: get('PULL', '1') === '1', tripping, aim, trips: Number(get('TRIPS', '10')), maxDeaths: maxDeathsOf(get('SQUAD_MAX_DEATHS', '1'), 1), run: runDeaths,
             locs: squadLocs.get(s),
             onDeath: near => { recordPvpDeath({ account: s.name, server: squadServer, at: Date.now(), script: 'scripts/pk-squad.ts', near }); }, deadline,
-            stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (isKillLine(l)) kills++; log(l); },
+            stopped: () => stopped() || dropped.has(s.name) || existsSync(`.practice/stop-${s.name}`), exitStopped: () => halted !== undefined || dropped.has(s.name) || existsSync('.practice/stop-pk-squad') || existsSync(`.practice/stop-${s.name}`), killsLeft: () => !maxKills || kills < maxKills, log: l => { if (isKillLine(l)) kills++; log(l); },
         }).finally(() => { finished.add(s.name); });
     }));
     squadDone = true;
