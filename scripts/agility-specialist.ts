@@ -77,6 +77,8 @@ export const ITEMS = {
     superEnergy4: 3016,
     superEnergy: [3016, 3018, 3020, 3022] as readonly number[],
     shark: 385,
+    pineapplePizza: 2301,
+    halfPineapplePizza: 2303,
     chocolateCake: 1897,
     chocolateCakeParts: [1901, 1899, 1897] as readonly number[],
     slaveShirt: 1844,
@@ -116,7 +118,7 @@ export const TOURIST_TRADE_2: readonly SupplyEntry[] = [
     { id: ITEMS.desertRobe, name: 'Desert robe', count: 1 },
     { id: ITEMS.desertBoots, name: 'Desert boots', count: 1 },
     { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 1 },
-    { id: ITEMS.shark, name: 'Shark', count: 2 },
+    { id: ITEMS.pineapplePizza, name: 'Pineapple pizza', count: 2 },
 ];
 
 export const TOURIST_TRADE_2B: readonly SupplyEntry[] = [
@@ -124,8 +126,8 @@ export const TOURIST_TRADE_2B: readonly SupplyEntry[] = [
     { id: ITEMS.shantayPass, name: 'Shantay pass', count: 1 },
     { id: ITEMS.waterskin4, name: 'Waterskin(4)', count: 1 },
     { id: ITEMS.feather, name: 'Feather', count: 200 },
-    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 2 },
-    { id: ITEMS.shark, name: 'Shark', count: 4 },
+    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 1 },
+    { id: ITEMS.pineapplePizza, name: 'Pineapple pizza', count: 2 },
     { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 1 },
 ];
 
@@ -900,7 +902,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
     }
     await dropAllMatching(s, new Set([ITEMS.shantayDisclaimer]), 6);
 
-    const q = await openQuest({ session: s, burst: true, cap, eatAt: 10, food: [ITEMS.shark, ITEMS.chocolateCake], lumbridgeOk: true });
+    const q = await openQuest({ session: s, burst: true, cap, eatAt: 11, food: [ITEMS.pineapplePizza, ITEMS.shark, ITEMS.chocolateCake], lumbridgeOk: true });
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
     try {
@@ -939,9 +941,18 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         const inPrisonCell = () => lvl() === 0 && x() >= 3284 && x() <= 3287 && z() >= 3031 && z() <= 3037;
         const onPrisonCliff = () => lvl() === 0 && x() >= 3280 && x() <= 3283 && z() >= 3032 && z() <= 3039;
         const inCamp = () => !(inPrisonCell() || onPrisonCliff()) && x() >= 3274 && x() <= 3306 && z() >= 3011 && z() <= 3043;
-        const locTalk = async (label: string, sendFn: () => unknown, pats: RegExp[], okFn: () => boolean, tries = 4, ticks = 35) => {
+        const locTalk = async (
+            label: string,
+            sendFn: () => unknown,
+            pats: RegExp[],
+            okFn: () => boolean,
+            tries = 4,
+            ticks = 35,
+            onRetry?: () => Promise<void>,
+        ) => {
             for (let i = 0; i < tries && !okFn(); i++) {
                 await q.guard(label);
+                if (i > 0) await onRetry?.();
                 await maintainEnergy(s, 40);
                 await closeDlg();
                 await sendFn();
@@ -1009,50 +1020,63 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             await q.guard(label);
         };
         const escapePrisonCell = async () => {
-            if (!inPrisonCell()) return;
+            if (!inPrisonCell() && !onPrisonCliff()) return;
             await closeDlg();
-            await walkNear(s, { x: 3284, z: 3032 }, 1, 20);
-            let idle = 0;
-            for (let t = 0; t < 180 && inPrisonCell(); t++) {
-                await q.guard('cell window');
-                if ((q.st()?.prayers?.prayerPoints ?? 99) <= 10) {
-                    if (await drinkFirstMatching(s, ITEMS.prayerPot)) await q.waitTicks(2);
-                }
-                const d: any = q.s.sdk.getDialog();
-                if (d?.isOpen) {
-                    idle = 0;
-                    if (!d.isWaiting) {
-                        const opts = d.options ?? [];
-                        const bend = opts.find((o: any) => /yes, i'll bend the bar/i.test(o.text));
-                        const idx = bend ? bend.index : (opts.length === 1 ? opts[0].index : 0);
-                        await s.direct({ type: 'clickDialogOption', optionIndex: idx, reason: 'SDK' });
+            if (inPrisonCell()) {
+                await walkNear(s, { x: 3284, z: 3032 }, 1, 20);
+                let idle = 0;
+                for (let t = 0; t < 180 && inPrisonCell(); t++) {
+                    await q.guard('cell window');
+                    if ((q.st()?.prayers?.prayerPoints ?? 99) <= 10) {
+                        if (await drinkFirstMatching(s, ITEMS.prayerPot)) await q.waitTicks(2);
                     }
-                } else if (idle === 0 || idle >= 10) {
-                    const win = q.findLoc((l: any) => l.id === 2683 && l.x === 3284 && l.z === 3032);
-                    if (win) {
-                        const op = q.opIndex(win, /search/i);
-                        await q.opLoc(win, op === 1 ? 2 : op);
+                    const d: any = q.s.sdk.getDialog();
+                    if (d?.isOpen) {
+                        idle = 0;
+                        if (!d.isWaiting) {
+                            const opts = d.options ?? [];
+                            const bend = opts.find((o: any) => /yes, i'll bend the bar/i.test(o.text));
+                            const idx = bend ? bend.index : (opts.length === 1 ? opts[0].index : 0);
+                            await s.direct({ type: 'clickDialogOption', optionIndex: idx, reason: 'SDK' });
+                        }
+                    } else if (idle === 0 || idle >= 10) {
+                        const win = q.findLoc((l: any) => l.id === 2683 && l.x === 3284 && l.z === 3032);
+                        if (win) {
+                            const op = q.opIndex(win, /search/i);
+                            await q.opLoc(win, op === 1 ? 2 : op);
+                        }
+                        idle = 1;
+                    } else {
+                        idle++;
                     }
-                    idle = 1;
-                } else {
-                    idle++;
+                    await q.waitTicks(1);
                 }
-                await q.waitTicks(1);
+                if (inPrisonCell()) await q.fail('step cell window');
             }
-            if (inPrisonCell()) await q.fail('step cell window');
-            if (x() >= 3281) await walkNear(s, { x: 3282, z: 3037 }, 0, 20);
+            if (x() >= 3281 && z() <= 3037) await walkNear(s, { x: 3282, z: 3037 }, 0, 20);
+            const hasQuestFood = () => cntIds(s, [ITEMS.pineapplePizza, ITEMS.halfPineapplePizza, ITEMS.shark, ITEMS.chocolateCake]) > 0;
+            const rockOp = async (rid: number) => {
+                const rock = q.findLoc((l: any) => l.id === rid && l.reachable !== false) ?? q.findLoc((l: any) => l.id === rid);
+                if (!rock) return false;
+                const op = q.opIndex(rock, /climb/i);
+                await s.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: op === 1 ? 2 : op, reason: 'SDK' });
+                return true;
+            };
+            // Direct ap-range climb on westernmost ttcellclimbrock4 (2697) lands at (3270,3039) whether pass or fail (<=7 dmg).
+            let allowDirect = true;
             for (let retry = 0; retry < 40 && x() > 3272 && !inPrisonCell(); retry++) {
                 await q.guard('cell rock');
                 if ((q.st()?.prayers?.prayerPoints ?? 99) <= 10) {
                     if (await drinkFirstMatching(s, ITEMS.prayerPot)) await q.waitTicks(2);
                 }
-                if (q.hp() <= 10 && q.has(ITEMS.shark)) {
-                    await q.waitUntil(() => q.hp() > 10 || !q.has(ITEMS.shark), 6);
+                if (q.hp() <= 10 && hasQuestFood()) {
+                    await q.waitUntil(() => q.hp() > 10 || !hasQuestFood(), 6);
                 }
-                const curX = x(), slip0 = q.msgCount(/slip a little/i);
-                const rid = curX >= 3280 ? 2694 : curX >= 3278 ? 2695 : curX >= 3276 ? 2696 : 2697;
-                let rockIdle = 0;
-                for (let t = 0; t < 24 && x() === curX && q.msgCount(/slip a little/i) === slip0 && !inPrisonCell(); t++) {
+                const startX = x(), startZ = z(), slip0 = q.msgCount(/slip a little/i);
+                const fallbackId = startX >= 3281 ? 2694 : (startX === 3279 || (startX === 3280 && startZ >= 3039)) ? 2695 : (startX === 3277 || (startX === 3278 && startZ >= 3040)) ? 2696 : 2697;
+                const rid = allowDirect ? 2697 : fallbackId;
+                let rockIdle = 0, lastX = startX, lastZ = startZ, moved = false, settled = 0;
+                for (let t = 0; t < 26 && x() > 3272 && !inPrisonCell(); t++) {
                     await q.guard('cell rock');
                     const d: any = q.s.sdk.getDialog();
                     if (d?.isOpen) {
@@ -1063,19 +1087,28 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                             const idx = tryClimb ? tryClimb.index : (opts.length === 1 ? opts[0].index : 0);
                             await s.direct({ type: 'clickDialogOption', optionIndex: idx, reason: 'SDK' });
                         }
-                    } else if (rockIdle === 0 || rockIdle >= 12) {
-                        const rock = q.findLoc((l: any) => l.id === rid && l.reachable !== false) ?? q.findLoc((l: any) => l.id === rid);
-                        if (rock) {
-                            const op = q.opIndex(rock, /climb/i);
-                            await s.direct({ type: 'interactLoc', x: rock.x, z: rock.z, locId: rock.id, optionIndex: op === 1 ? 2 : op, reason: 'SDK' });
-                        }
+                    } else if (x() !== lastX || z() !== lastZ) {
+                        moved = true;
+                        settled = 0;
+                        rockIdle = 1;
+                        lastX = x();
+                        lastZ = z();
+                    } else if (moved || q.msgCount(/slip a little/i) > slip0) {
+                        if (++settled >= 3) break;
+                    } else if (rockIdle === 0) {
+                        await rockOp(rid);
                         rockIdle = 1;
                     } else {
                         rockIdle++;
+                        if (allowDirect && rid === 2697 && rockIdle >= 6) {
+                            allowDirect = false;
+                            break;
+                        }
+                        if (rockIdle >= 12) break;
                     }
                     await q.waitTicks(1);
                 }
-                await q.waitTicks(1);
+                if (!moved && rid === 2697 && allowDirect) allowDirect = false;
             }
             if (x() > 3272 || inPrisonCell()) await q.fail(`failed prison cliff escape at ${x()},${z()}`);
             await ensureFullPrayer();
@@ -1166,7 +1199,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             let lastCast = -999;
             for (let t = 0; t < 150; t++) {
                 await q.guard('clear guard');
-                if (inPrisonCell() || !inCamp()) break;
+                if (inPrisonCell() || (!inCamp() && z() < 9000)) break;
                 if ((q.st()?.prayers?.prayerPoints ?? 0) <= 5) await drinkFirstMatching(s, ITEMS.prayerPot);
                 if (q.dialogOpen()) await closeDlg();
                 const g = (q.st()?.nearbyNpcs ?? []).find((n: any) => n.index === guardIndex);
@@ -1248,8 +1281,8 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         if (!gotClothes()) {
             await q.fail('failed male slave clothes trade');
         }
-        // Now Male Slave succeeded: drop combat magic items to leave inventory clear for barrel/plans.
-        await dropAllMatching(s, new Set([ITEMS.fireStaff, ITEMS.airRune, ITEMS.chaosRune, ITEMS.vial, ITEMS.shantayDisclaimer]), 5);
+        // Keep Fire Staff, Air/Chaos runes for cave Rowdy Guard clears; only drop stray empty vials and disclaimers.
+        await dropAllMatching(s, new Set([ITEMS.vial, ITEMS.shantayDisclaimer]), 5);
         q.milestone(8);
 
         await mineIn();
@@ -1345,9 +1378,19 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await q.step('cave east', () => q.opLoc(loc(CAVE_W), 1), () => x() >= 3285, 12, 4);
         await q.waitTicks(2);
 
-        await walkCamp('to barrels', [{ x: 3302, z: 9418, tol: 1 }]);
-        await locTalk('empty barrel', () => { const b = q.findLoc((l: any) => l.id === 2681 && Math.abs(l.x - 3303) <= 3 && Math.abs(l.z - 9417) <= 3) ?? LOW_BARREL; return q.opLoc(b, q.opIndex(b, /search|take/i) === 1 ? 2 : q.opIndex(b, /search|take/i)); }, [/yeah, cool/i], () => q.has(ITEMS.barrel));
-        await locTalk('low cart', () => { const c = loc(LOW_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() >= 9428 && x() >= 3310, 24);
+        const clearCaveRowdy = async (maxDist = 5) => {
+            const g = findBlockingRowdyGuard(maxDist);
+            if (g) await clearRowdyGuard(g.index);
+        };
+        // Detour north along z=9420 past the aggressive Rowdy Guard at (3287,9414), and clear any guard that chases onto low cart.
+        await walkCamp('to barrels', [
+            { x: 3285, z: 9420, tol: 1 },
+            { x: 3294, z: 9420, tol: 1 },
+            { x: 3302, z: 9418, tol: 1 },
+        ]);
+        await clearCaveRowdy(5);
+        await locTalk('empty barrel', () => { const b = q.findLoc((l: any) => l.id === 2681 && Math.abs(l.x - 3303) <= 3 && Math.abs(l.z - 9417) <= 3) ?? LOW_BARREL; return q.opLoc(b, q.opIndex(b, /search|take/i) === 1 ? 2 : q.opIndex(b, /search|take/i)); }, [/yeah, cool/i], () => q.has(ITEMS.barrel), 4, 35, () => clearCaveRowdy(6));
+        await locTalk('low cart', () => { const c = loc(LOW_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() >= 9428 && x() >= 3310, 4, 24, () => clearCaveRowdy(6));
 
         await maintainEnergy(s, 45);
         await walkCamp('to ana', [{ x: ANA.x, z: ANA.z - 1, tol: 3 }]);
@@ -1357,8 +1400,8 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await walkCamp('to ana cart', [{ x: 3319, z: 9431, tol: 1 }]);
         await q.step('ana in cart', () => q.useOnLoc(ITEMS.ana, loc(ANA_CART)), () => !q.has(ITEMS.ana), 12, 3);
         await q.waitTicks(4);
-        await locTalk('cart back', () => { const c = loc(ANA_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() <= 9420, 24);
-        await locTalk('ana barrel 2', () => { const b = q.findLoc((l: any) => l.id === 2681 && Math.abs(l.x - 3303) <= 3 && Math.abs(l.z - 9417) <= 3) ?? LOW_BARREL; return q.opLoc(b, q.opIndex(b, /search|take/i) === 1 ? 2 : q.opIndex(b, /search|take/i)); }, [], () => q.has(ITEMS.ana));
+        await locTalk('cart back', () => { const c = loc(ANA_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() <= 9420, 4, 24, () => clearCaveRowdy(6));
+        await locTalk('ana barrel 2', () => { const b = q.findLoc((l: any) => l.id === 2681 && Math.abs(l.x - 3303) <= 3 && Math.abs(l.z - 9417) <= 3) ?? LOW_BARREL; return q.opLoc(b, q.opIndex(b, /search|take/i) === 1 ? 2 : q.opIndex(b, /search|take/i)); }, [], () => q.has(ITEMS.ana), 4, 35, () => clearCaveRowdy(6));
 
         await walkCamp('to lift', [{ x: LIFT.x, z: LIFT.z - 1, tol: 1 }]);
         await locTalk('lift', () => q.useOnLoc(ITEMS.ana, loc(LIFT)), [/yes please/i, /very gregarious/i], () => !q.has(ITEMS.ana) && q.sawText(/no one operating the lift/i));
@@ -1997,7 +2040,7 @@ export async function runAgilitySpecialist(bot: string, argv: readonly string[] 
             await wearItem(spec, ITEMS.desertBoots);
             await smithTo20AtVarrock(spec);
             for (const id of [ITEMS.fireStaff, ITEMS.desertShirt, ITEMS.desertRobe, ITEMS.desertBoots]) await wearItem(spec, id);
-            await dropExcept(spec, new Set([...GLORY_IDS, ITEMS.airRune, ITEMS.chaosRune, ITEMS.hammer, ITEMS.shark]), 8);
+            await dropExcept(spec, new Set([...GLORY_IDS, ITEMS.airRune, ITEMS.chaosRune, ITEMS.hammer, ITEMS.pineapplePizza, ITEMS.halfPineapplePizza, ITEMS.shark]), 8);
             if (invOf(spec).length > 6) {
                 throw Error(`pre-trade-2b inventory too full (${invOf(spec).length}): ${invOf(spec).map(i => i.id).join(',')}`);
             }
