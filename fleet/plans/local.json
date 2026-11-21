@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795240333918,
+ "at": 1795240489662,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -229,20 +229,6 @@
    "enabled": true,
    "standing": true,
    "repeat": true
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/ranged-live-prep.ts --mode=brew",
-    "scripts/ranged-live-prep.ts --mode=decant"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
   },
   {
    "account": "Mightyrod",

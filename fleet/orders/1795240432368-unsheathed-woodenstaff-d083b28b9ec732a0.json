@@ -1,0 +1,45 @@
+{
+ "id": "1795240432368-unsheathed-woodenstaff-d083b28b9ec732a0",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Unsheathed",
+ "to": "Woodenstaff",
+ "item": "Prayer potion(4)",
+ "count": 3,
+ "start": 1795240432368,
+ "end": 1795241932368,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Law rune",
+   "count": 60
+  },
+  {
+   "item": "Ring of dueling(8)",
+   "count": 1
+  },
+  {
+   "item": "Leather gloves",
+   "count": 1
+  },
+  {
+   "item": "Logs",
+   "count": 6
+  },
+  {
+   "item": "Antipoison(3)",
+   "count": 3
+  }
+ ],
+ "takerWaits": true
+}

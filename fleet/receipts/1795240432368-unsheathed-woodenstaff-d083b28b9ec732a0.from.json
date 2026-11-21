@@ -1,0 +1,98 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795240432368-unsheathed-woodenstaff-d083b28b9ec732a0",
+ "account": "Unsheathed",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 3,
+ "claim": "6787d9a0-5588-4996-ba4e-43a6224319cc",
+ "count": 3,
+ "ok": true,
+ "at": 1795240485626,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Law rune",
+   "requested": 60,
+   "count": 60,
+   "inventory": {
+    "before": 60,
+    "after": 0
+   },
+   "bank": {
+    "count": 60,
+    "at": 1795240461278
+   }
+  },
+  {
+   "item": "Ring of dueling(8)",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795240462148
+   }
+  },
+  {
+   "item": "Leather gloves",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795240462473
+   }
+  },
+  {
+   "item": "Logs",
+   "requested": 6,
+   "count": 6,
+   "inventory": {
+    "before": 6,
+    "after": 0
+   },
+   "bank": {
+    "count": 6,
+    "at": 1795240463672
+   }
+  },
+  {
+   "item": "Antipoison(3)",
+   "requested": 3,
+   "count": 3,
+   "inventory": {
+    "before": 3,
+    "after": 0
+   },
+   "bank": {
+    "count": 3,
+    "at": 1795240464524
+   }
+  }
+ ],
+ "inventory": {
+  "before": 3,
+  "after": 0
+ },
+ "bank": {
+  "count": 3,
+  "at": 1795240460465
+ },
+ "logout": {
+  "attemptId": "1795240453988-0000022548-0000000001",
+  "at": 1795240485615,
+  "sha256": "a47770fb2b195343b692783480743fa92a748a94bb7c864ded7a913f194cc1ce"
+ },
+ "screen": true
+}
