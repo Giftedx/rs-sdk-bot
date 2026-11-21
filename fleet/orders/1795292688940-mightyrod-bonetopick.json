@@ -1,0 +1,22 @@
+{
+ "id": "1795292688940-mightyrod-bonetopick",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "BoneToPick",
+ "item": "coins",
+ "count": 970,
+ "start": 1795292688940,
+ "end": 1795295088940,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
