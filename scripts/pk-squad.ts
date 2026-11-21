@@ -293,7 +293,7 @@ function createWildSurvival(
         protectItem?: () => boolean;
         canEat?: () => boolean;
     } = {},
-): { step: (now: number) => boolean; tryEat: (now: number) => boolean; foodWait: (now: number) => number } {
+): { step: (now: number) => boolean; tryEat: (now: number) => boolean; foodWait: (now: number) => number; didEat: (now: number) => boolean } {
     let foodReady = -10, karamReady = -10, prayAt = -10, itemAt = -10, seenEvent = 0, hitStyle: CombatStyle | null = null, hitAt = -100, ateAt = -10;
     const sendEat = (slot: number, opIndex: number) => {
         if (opts.useDirect && typeof s.direct === 'function') void s.direct({ type: 'useInventoryItem', slot, optionIndex: opIndex, reason: 'SDK' });
