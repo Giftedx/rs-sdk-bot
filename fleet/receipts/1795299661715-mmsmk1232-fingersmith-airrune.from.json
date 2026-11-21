@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795299661715-mmsmk1232-fingersmith-airrune",
+ "account": "mmsmk1232",
+ "partner": "Fingersmith",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Air rune",
+ "requested": 3,
+ "claim": "692e3360-373d-4b01-823e-98908170a4c7",
+ "count": 0,
+ "ok": false,
+ "at": 1795300319715,
+ "detail": "trade claimed"
+}

@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795299661715-mightyrod-dipstick",
+ "account": "Mightyrod",
+ "partner": "Dipstick",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 106465,
+ "claim": "48948416-2f27-43aa-82e7-49d05e0a9732",
+ "count": 0,
+ "ok": false,
+ "at": 1795300310547,
+ "detail": "trade claimed"
+}
