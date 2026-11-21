@@ -353,7 +353,7 @@ export function buildCombatSpecialistRehearsalSegment(
                 env: { ...REHEARSE_GUARD_ENV },
                 save: { position: { x: 3223, z: 3222, level: 0 }, inventory: kitToSaveInventory(HP_SPECIALIST_KIT) },
             },
-            plan: { ticks: override ?? 8450, source: '400ms rehearsal 8442t & hosted-bench fighter:specialist-hp 8600-9184t (<=11116t vs #1 11343t)' },
+            plan: { ticks: override ?? 8200, source: '400ms rehearsals 8032-8442t & hosted-bench fighter:specialist-hp 8336-9184t (<=11116t vs #1 11343t)' },
             expect: { skills: { Hitpoints: 99 } },
             timeoutMs: 900_000,
         };
@@ -364,7 +364,7 @@ export function buildCombatSpecialistRehearsalSegment(
         const skill = isStr ? 'Strength' : 'Defence';
         const cap = isStr ? '6000' : '7500';
         const kit = isStr ? STRENGTH_SPECIALIST_KIT : DEFENCE_SPECIALIST_KIT;
-        const planTicks = override ?? (isStr ? 2200 : 2850);
+        const planTicks = override ?? (isStr ? 2200 : 2775);
         return {
             specialist: isStr ? 'BigSwinger' : 'RockSolid',
             id: isStr ? 'bigswinger-strength' : 'rocksolid-defence',
