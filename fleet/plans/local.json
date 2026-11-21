@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795224598242,
+ "at": 1795225199311,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -272,21 +272,23 @@
   },
   {
    "account": "TossTheCaber",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "repeat": false,
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic runes, nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "squad:ardougne-giants"
    ]
   },
   {
@@ -321,23 +323,21 @@
   },
   {
    "account": "Unsheathed",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "taverley_druid"
-   ],
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "MAX_KILLS": "40"
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
-   "repeat": false,
-   "goal": "farm Taverley Dungeon Chaos druids (non-Wilderness) for herbs, snape grass, law and nature runes",
-   "role": "combat",
-   "template": "squad-taverley-druids",
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
    "autopilot": "local",
    "resources": [
-    "squad:taverley-druids"
+    "knight:2582,3297"
    ]
   },
   {
@@ -365,54 +365,6 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
-   ]
-  },
-  {
-   "account": "Deeppockets",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
-   ]
-  },
-  {
-   "account": "Packhorse",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "nurmof",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "^iron pickaxe$",
-    "STOCK_TARGET": "1",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "BANK_AT": "0",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "300",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "200"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy iron pickaxe from Nurmof in the Dwarven Mine",
-   "role": "mining",
-   "template": "tool-pickaxe-iron",
-   "autopilot": "local",
-   "resources": [
-    "shop:nurmof"
    ]
   }
  ],
