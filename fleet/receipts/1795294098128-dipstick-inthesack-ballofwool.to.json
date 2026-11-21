@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795294098128-dipstick-inthesack-ballofwool",
  "account": "InTheSack",
  "partner": "Dipstick",
@@ -10,8 +10,22 @@
  "item": "Ball of wool",
  "requested": 2,
  "claim": "0dbfce68-471a-493d-9a17-dcc8185b035d",
- "count": 0,
- "ok": false,
- "at": 1795294223931,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795294235454,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795294234698
+ },
+ "logout": {
+  "attemptId": "1795294223941-0000024908-0000000001",
+  "at": 1795294235444,
+  "sha256": "c9672bb6a798305ef3f51b54c9540e60fbfc6e0522ad50524372eb4493730349"
+ },
+ "screen": true
 }
