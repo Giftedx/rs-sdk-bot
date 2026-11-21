@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795293784259-dipstick-fatstack-ballofwool",
  "account": "Dipstick",
  "partner": "Fatstack",
@@ -10,8 +10,22 @@
  "item": "Ball of wool",
  "requested": 2,
  "claim": "c8ecab2b-d718-408e-909b-555358a3ed45",
- "count": 0,
- "ok": false,
- "at": 1795293839716,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795293855861,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795293847519
+ },
+ "logout": {
+  "attemptId": "1795293840065-0000004056-0000000001",
+  "at": 1795293855851,
+  "sha256": "11c5624bf46980e6ee4be3176dd904f6159bf2cb11488c2d582e065495c0cfb9"
+ },
+ "screen": true
 }
