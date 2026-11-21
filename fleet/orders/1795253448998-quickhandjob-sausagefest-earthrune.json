@@ -1,0 +1,22 @@
+{
+ "id": "1795253448998-quickhandjob-sausagefest-earthrune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Quickhandjob",
+ "to": "Sausagefest",
+ "item": "Earth rune",
+ "count": 3,
+ "start": 1795253448998,
+ "end": 1795255848998,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
