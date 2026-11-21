@@ -53,6 +53,7 @@ export const CWARS_TO_ARDY_MARKET_WAYPOINTS: readonly [number, number, number][]
     [2476, 3197, 3],
     [2486, 3214, 3],
     [2506, 3233, 4],
+    [2555, 3234, 3],
     [2598, 3235, 3],
     [2621, 3293, 2],
 ];
@@ -214,10 +215,8 @@ export async function dropTutorialJunk(s: Session, stop: () => boolean, dropSlot
         const inv = s.sdk.getInventory();
         const batch = inv.slice(0, Math.min(5, left));
         if (!batch.length) return;
-        for (const item of batch) {
-            await s.direct({ type: 'dropItem', slot: item.slot, reason: 'SDK' });
-            left--;
-        }
+        left -= batch.length;
+        await Promise.all(batch.map(item => s.direct({ type: 'dropItem', slot: item.slot, reason: 'SDK' })));
         if (left > 0) await waitTicks(s, 1);
     }
 }
@@ -237,6 +236,7 @@ export function startHelperTradeArm(
     mainName: string,
     stop: () => boolean,
     canRequest: () => boolean = () => true,
+    allowedIds?: ReadonlySet<number>,
 ): TradeHelperArm {
     // An external supplier process (scripts/gathering-supplier.ts) runs this arm on its own session.
     if (!helper) return { close: () => {} };
@@ -276,6 +276,7 @@ export function startHelperTradeArm(
         if (tHelp.screen === 'offer') {
             const remainingById = new Map<number, number>();
             for (const item of helper.sdk.getInventory()) {
+                if (allowedIds && !allowedIds.has(item.id)) continue;
                 if (!offeredIds.has(item.id) && !remainingById.has(item.id)) remainingById.set(item.id, item.slot);
             }
             // Pipeline all offers plus main/confirm accepts together: the server decodes 5 USER_EVENT packets
@@ -335,6 +336,7 @@ export async function receiveTradeFast(
     stop: () => boolean,
     existingArm?: TradeHelperArm,
     acceptedAlts?: Readonly<Record<number, readonly number[]>>,
+    supplierOverride?: string,
 ): Promise<number> {
     const t0 = main.tick();
     const expectedEntries = Object.entries(expectedCounts).map(([id, minQty]) => [Number(id), minQty] as const);
@@ -345,7 +347,7 @@ export async function receiveTradeFast(
     const minUniqueOfferedBeforeAccept = uniqueSupplyCount <= 5
         ? uniqueSupplyCount
         : Math.floor((uniqueSupplyCount - 1) / 5) * 5;
-    const supplierName = helper?.name ?? externalSupplierName();
+    const supplierName = supplierOverride ?? helper?.name ?? externalSupplierName();
     if (!supplierName) throw Error('receiveTradeFast needs a helper session or SUPPLIER/PRACTICE_SUPPLIER');
     const supplierLower = supplierName.toLowerCase();
 

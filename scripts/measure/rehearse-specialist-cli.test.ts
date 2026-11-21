@@ -13,10 +13,15 @@ import { BODY_RUNNER_COUNT, RUNECRAFT_SUPPLY_BILL } from '../runecraft-specialis
 import { SMITHING_SUPPLY_BILL } from '../smithing-specialist';
 import {
     AGILITY_SPECIALIST_KIT,
+    COOKING_SPECIALIST_LIVE_KIT,
+    FIREMAKING_SPECIALIST_KIT,
+    FISHING_SPECIALIST_KIT,
     FLETCHING_SPECIALIST_LIVE_KIT,
+    MINING_SPECIALIST_LIVE_KIT,
     parseKitArg,
     resolveBaseId,
     THIEVING_SPECIALIST_LIVE_KIT,
+    WOODCUTTING_SPECIALIST_LIVE_KIT,
 } from '../specialist-supplier';
 import {
     aggregateKitBank,
@@ -38,10 +43,14 @@ function countSupplyMap(items: readonly { id: number; count: number }[]): Record
     return out;
 }
 
-test('all 10 ready specialists construct valid --specialist segments matching board expectations and supply bills', () => {
+test('all 15 ready specialists construct valid --specialist segments matching board expectations and supply bills', () => {
     expect(READY_SPECIALIST_ACCOUNTS).toEqual([
         'StickyFinger',
         'TipMyShaft',
+        'Saltysausage',
+        'Lightmylog',
+        'Morningwood',
+        'Lochnessrod',
         'Shaftshooter',
         'PouchStuffed',
         'CutMyJewels',
@@ -49,12 +58,17 @@ test('all 10 ready specialists construct valid --specialist segments matching bo
         'CastMyLoad',
         'BigBoner',
         'SteelRod',
+        'Mineshafted',
         'Polevaulter',
     ]);
 
     const expectedBills: Record<string, readonly { id: number; count: number }[]> = {
         StickyFinger: THIEVING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
         TipMyShaft: FLETCHING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
+        Saltysausage: COOKING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
+        Lightmylog: FIREMAKING_SPECIALIST_KIT.map(k => ({ id: k.id, count: k.count })),
+        Morningwood: WOODCUTTING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
+        Lochnessrod: FISHING_SPECIALIST_KIT.map(k => ({ id: k.id, count: k.count })),
         Shaftshooter: RANGED_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
         PouchStuffed: RUNECRAFT_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         CutMyJewels: CRAFTING_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
@@ -62,12 +76,17 @@ test('all 10 ready specialists construct valid --specialist segments matching bo
         CastMyLoad: MAGIC_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         BigBoner: PRAYER_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
         SteelRod: SMITHING_SUPPLY_BILL.map(b => ({ id: b.itemId, count: b.count })),
+        Mineshafted: MINING_SPECIALIST_LIVE_KIT.map(k => ({ id: k.id, count: k.count })),
         Polevaulter: AGILITY_SPECIALIST_KIT.map(k => ({ id: k.id, count: k.count })),
     };
 
     const expectedTargets: Record<string, number> = {
         StickyFinger: 2221,
         TipMyShaft: 54,
+        Saltysausage: 20,
+        Lightmylog: 646,
+        Morningwood: 2818,
+        Lochnessrod: 2924,
         Shaftshooter: 5483,
         PouchStuffed: 2207,
         CutMyJewels: 182,
@@ -75,6 +94,7 @@ test('all 10 ready specialists construct valid --specialist segments matching bo
         CastMyLoad: 1236,
         BigBoner: 1246,
         SteelRod: 1255,
+        Mineshafted: 3884,
         Polevaulter: 6031,
     };
 
@@ -164,7 +184,7 @@ test('account lookup is case-insensitive and rejects unknown accounts or invalid
     expect(ranged.plan!.ticks).toBe(4600);
     expect(ranged.env?.VARIANT).toBe('live');
 
-    expect(lower.plan!.ticks).toBe(2167);
+    expect(lower.plan!.ticks).toBe(1965);
     expect(resolveSpecialistSegment('Shaftshooter').plan!.ticks).toBe(4660);
 
     expect(() => resolveSpecialistSegment('Haggis')).toThrow('unknown specialist');
@@ -201,6 +221,9 @@ test('parseCliArgs handles flags and positional account cleanly', () => {
     expect(() => parseCliArgs(['StickyFinger', '--bogus'])).toThrow('unknown flag');
     expect(() => parseCliArgs(['StickyFinger', 'extra'])).toThrow('unexpected positional');
     expect(() => parseCliArgs(['StickyFinger', '--plan-ticks', 'abc'])).toThrow('positive integer');
+    expect(parseCliArgs(['StickyFinger', '--seeds', '7,8,9']).seeds).toEqual([7, 8, 9]);
+    expect(parseCliArgs(['StickyFinger', '--seed=8']).seeds).toEqual([8]);
+    expect(() => parseCliArgs(['StickyFinger', '--seeds', 'foo'])).toThrow('positive integers');
 });
 
 test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir, and reports receipt fields', async () => {
@@ -291,6 +314,36 @@ test('runHostedRehearsal supports --dry-run, invokes rehearse.ts outside outDir,
         expect(failRes.summary?.wholeClock).toBe(false);
         expect(failLogs.some(l => l.includes('steelrod-smithing.log (tail)'))).toBe(true);
         expect(collectRehearsalSummary(failOut, failRes.seg).scope).toContain('differ from the plan');
+
+        const batchLogs: string[] = [];
+        const seenSeeds: Array<string | undefined> = [];
+        const batchRes = await runHostedRehearsal(['TipMyShaft', '--seeds', '7,8,9', '--out', '.practice/hosted-rehearse/tip-batch'], {
+            root,
+            log: line => batchLogs.push(line),
+            spawn: async (cmd, _cwd, extraEnv) => {
+                seenSeeds.push(extraEnv?.SIM_SEED);
+                const outArg = cmd[cmd.indexOf('--out') + 1]!;
+                const outDirBatch = resolve(root, outArg);
+                mkdirSync(outDirBatch, { recursive: true });
+                writeFileSync(join(outDirBatch, 'tipmyshaft-fletching.json'), JSON.stringify({
+                    ok: true,
+                    checks: { exit: true, wholeClock: true },
+                    ticks: { used: 77, enter: 24, leave: 101, overPlan: 23 },
+                    scope: 'One practice rehearsal',
+                }));
+                writeFileSync(join(outDirBatch, 'tipmyshaft-fletching.receipt.json'), JSON.stringify({
+                    endPlaytime: 77,
+                    boardTicks: { Fletching: 54 },
+                    externalSupplies: [],
+                    context: 'ctx',
+                }));
+                return 0;
+            },
+        });
+        expect(batchRes.exitCode).toBe(0);
+        expect(seenSeeds).toEqual(['7', '8', '9']);
+        expect(batchRes.summaries).toHaveLength(3);
+        expect(batchLogs.some(l => l.startsWith('HOSTED_REHEARSAL_BATCH '))).toBe(true);
     } finally {
         rmSync(root, { recursive: true, force: true });
     }

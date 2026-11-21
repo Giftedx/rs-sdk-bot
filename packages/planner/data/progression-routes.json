@@ -3621,6 +3621,21 @@
    "description": "Bank-staged wine fermentation with exact ferm/bad-wine reconciliation"
   },
   {
+   "id": "skiller:cooking:specialist",
+   "category": "skiller",
+   "name": "cooking:specialist",
+   "script": "scripts/cooking-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "cooking"
+   ],
+   "description": "Fresh-clock specialist Cooking 1 to 99 via noted wine fermentation and 4 Fruit Blasts"
+  },
+  {
    "id": "skiller:cooking:stock",
    "category": "skiller",
    "name": "cooking:stock",
@@ -3874,6 +3889,21 @@
     "firemaking"
    ],
    "description": "Line firemaking order from banked logs (normal/oak/willow/maple/yew/magic)"
+  },
+  {
+   "id": "skiller:firemaking:specialist",
+   "category": "skiller",
+   "name": "firemaking:specialist",
+   "script": "scripts/firemaking-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "firemaking"
+   ],
+   "description": "Fresh-clock specialist Firemaking 1 to 99 lighting pre-dropped Lumbridge ground log lines"
   },
   {
    "id": "skiller:fishing:cage",
@@ -5006,6 +5036,21 @@
     "woodcutting"
    ],
    "description": "Continuous woodcutting loop"
+  },
+  {
+   "id": "skiller:woodcutting:specialist",
+   "category": "skiller",
+   "name": "woodcutting:specialist",
+   "script": "scripts/woodcutting-specialist.ts",
+   "args": [],
+   "env": {},
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "woodcutting"
+   ],
+   "description": "Fresh-clock specialist Woodcutting 1 to 99 with 2-tick goblin flinch / 3-tick knife-reset Oaks"
   },
   {
    "id": "skiller:woodcutting:yews",
@@ -96291,13 +96336,16 @@
     "skiller:cooking:mixed-wine",
     "skiller:cooking:batch",
     "skiller:cooking:ge-cook",
+    "skiller:cooking:specialist",
     "skiller:woodcutting:edgeville",
     "skiller:woodcutting:yews",
     "skiller:woodcutting:fresh45",
     "skiller:woodcutting:loop",
+    "skiller:woodcutting:specialist",
     "skiller:firemaking:order",
     "skiller:firemaking:line",
     "skiller:firemaking:ge",
+    "skiller:firemaking:specialist",
     "skiller:fletching:arrows",
     "skiller:fletching:shafts",
     "skiller:fletching:worker",
@@ -96421,13 +96469,16 @@
     "skiller:cooking:mixed-wine",
     "skiller:cooking:batch",
     "skiller:cooking:ge-cook",
+    "skiller:cooking:specialist",
     "skiller:woodcutting:edgeville",
     "skiller:woodcutting:yews",
     "skiller:woodcutting:fresh45",
     "skiller:woodcutting:loop",
+    "skiller:woodcutting:specialist",
     "skiller:firemaking:order",
     "skiller:firemaking:line",
     "skiller:firemaking:ge",
+    "skiller:firemaking:specialist",
     "skiller:fletching:arrows",
     "skiller:fletching:shafts",
     "skiller:fletching:worker",
@@ -96894,6 +96945,18 @@
    ]
   },
   {
+   "script": "scripts/cooking-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "cooking"
+   ],
+   "routeIds": [
+    "skiller:cooking:specialist"
+   ]
+  },
+  {
    "script": "scripts/courier-handoff.ts",
    "intents": [
     "service"
@@ -97041,6 +97104,18 @@
    ],
    "routeIds": [
     "skiller:firemaking:order"
+   ]
+  },
+  {
+   "script": "scripts/firemaking-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "firemaking"
+   ],
+   "routeIds": [
+    "skiller:firemaking:specialist"
    ]
   },
   {
@@ -100782,6 +100857,18 @@
    "skills": [],
    "routeIds": [
     "boss:green-dragon"
+   ]
+  },
+  {
+   "script": "scripts/woodcutting-specialist.ts",
+   "intents": [
+    "service"
+   ],
+   "skills": [
+    "woodcutting"
+   ],
+   "routeIds": [
+    "skiller:woodcutting:specialist"
    ]
   }
  ],

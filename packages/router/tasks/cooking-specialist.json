@@ -1,0 +1,57 @@
+{
+  "id": "cooking-specialist",
+  "goal": "specialists",
+  "entry": "scripts/cooking-specialist.ts",
+  "files": [
+    "scripts/cooking-specialist.ts",
+    "scripts/gathering-specialist-lib.ts",
+    "scripts/specialist-supplier.ts",
+    "scripts/measure/specialist-gathering-cases.ts",
+    "scripts/measure/rehearse-specialist-cli.ts",
+    "scripts/cooking-specialist.test.ts",
+    "packages/practice/src/rehearse.ts",
+    "packages/practice/test/specialist-rehearsal.test.ts"
+  ],
+  "consumer": "Saltysausage reaches Cooking 99 at the 20-tick engine floor from Tutorial Island by banking noted unfermented wines at Castle Wars and boosting to Cooking 28 via Fruit Blasts before the login fermenting_wine timer fires.",
+  "checks": [
+    {
+      "id": "cooking-specialist-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/cooking-specialist.test.ts",
+        "packages/practice/test/specialist-rehearsal.test.ts",
+        "packages/core/test/specialist-launch.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-cooking-specialist",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "run",
+        "bench",
+        "skiller:cooking:specialist",
+        "--budget",
+        "10"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "id": "cooking-specialist-consumer-gate",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "test",
+        "scripts/cooking-specialist.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    }
+  ]
+}

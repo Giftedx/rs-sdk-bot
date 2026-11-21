@@ -5,6 +5,8 @@ import { xpForLevel } from '../packages/planner/src/curve';
 import { intentForEntry } from '../packages/planner/src/progression-catalog';
 import { validateDelivery, type DeliveryTask } from '../packages/router/src/delivery';
 import type { Session } from '../packages/core/src/inprocess';
+import { COOKING_SPECIALIST_SUPPLIES } from './cooking-specialist';
+import { FIREMAKING_SPECIALIST_SUPPLIES } from './firemaking-specialist';
 import { planFletchingActionCounts, pickNextFletchTier, FLETCHING_SPECIALIST_SUPPLIES, OBJ_HEADLESS_ARROW } from './fletching-specialist';
 import { FISHING_SPECIALIST_SUPPLIES } from './fishing-specialist';
 import { MINING_SPECIALIST_SUPPLIES, MINING_SPECIALIST_LIVE_SUPPLIES, remainingIronOresTo99, IRON_ORE_XP_25X } from './mining-specialist';
@@ -17,6 +19,7 @@ import {
     THIEVING_SPECIALIST_LIVE_SUPPLIES,
     THIEVING_PIZZAS,
 } from './thieving-specialist';
+import { WOODCUTTING_SPECIALIST_SUPPLIES } from './woodcutting-specialist';
 import {
     OBJ_GAMES_8,
     OBJ_PINEAPPLE_PIZZA,
@@ -36,6 +39,7 @@ import {
     kitSlotTotal,
     parseKitArg,
     parseKitOption,
+    resolveBaseId,
     resolveConcreteKit,
     resolveSupplierKitPlan,
     SPECIALIST_KITS,
@@ -87,16 +91,16 @@ describe('gathering specialists supply & progression plans', () => {
         const thieveSlots = expandSupplyInventory(THIEVING_SPECIALIST_SUPPLIES).length;
 
         expect(fletchSlots).toBe(7);
-        expect(fishSlots).toBeLessThanOrEqual(14);
+        expect(fishSlots).toBeLessThanOrEqual(16);
         expect(mineSlots).toBe(21);
         expect(thieveSlots).toBe(28);
         expect(MINING_SPECIALIST_SUPPLIES[OBJ_GAMES_8]).toBe(1);
         expect(MINING_SPECIALIST_SUPPLIES[OBJ_SUPER_ENERGY_4]).toBe(2);
         expect(THIEVING_PIZZAS).toBe(25);
         expect(THIEVING_SPECIALIST_SUPPLIES[OBJ_PINEAPPLE_PIZZA]).toBe(25);
-        // 18 tutorial slots -> main drops 0 (fletch), 10 (fish), 13 (mine), 18 (thieve).
+        // 18 tutorial slots -> main drops 0 (fletch), 15 (fish, keeps tinderbox), 13 (mine), 18 (thieve).
         expect(28 - 18).toBeGreaterThanOrEqual(fletchSlots);
-        expect(28 - (18 - 10) - fishSlots).toBeGreaterThanOrEqual(1);
+        expect(28 - (18 - 15) - fishSlots).toBeGreaterThanOrEqual(1);
         expect(28 - (18 - 13) - mineSlots).toBeGreaterThanOrEqual(1);
         expect(28 - (18 - 18) - thieveSlots).toBeGreaterThanOrEqual(0);
     });
@@ -148,20 +152,28 @@ describe('gathering specialists supply & progression plans', () => {
 });
 
 describe('bench registration and catalog integration', () => {
-    test('all 4 specialist bench cases are registered with fresh tutorial=0 fixtures and strict pass checks', () => {
+    test('all 7 specialist bench cases are registered with fresh tutorial=0 fixtures and strict pass checks', () => {
         const cases = benchCases();
-        for (const key of ['skiller:fletching:specialist', 'skiller:fishing:specialist', 'skiller:mining:specialist', 'skiller:thieving:specialist']) {
+        for (const [key, expectedCompanions] of [
+            ['skiller:fletching:specialist', 1],
+            ['skiller:fishing:specialist', 1],
+            ['skiller:mining:specialist', 1],
+            ['skiller:thieving:specialist', 1],
+            ['skiller:cooking:specialist', 1],
+            ['skiller:firemaking:specialist', 2],
+            ['skiller:woodcutting:specialist', 1],
+        ] as const) {
             const c = cases.find(x => x.key === key);
             expect(c, key).toBeDefined();
             expect(c!.presetConfig?.varps?.[281]).toBe(0);
-            expect(c!.companions?.length).toBe(1);
+            expect(c!.companions?.length).toBe(expectedCompanions);
             expect(c!.pass('LOGOUT logged-out\nRESULT ok level=99 ticks=53')).toBe(true);
             expect(c!.pass('LOGOUT logged-out logged-out\nRESULT ok level=99 ticks=53')).toBe(true);
             expect(c!.pass('LOGOUT logged-out\nRESULT ok level=98 ticks=53')).toBe(false);
             expect(c!.pass('LOGOUT logged-out\nRESULT ok helper supplied\nRESULT fail cap')).toBe(false);
             expect(c!.pass('RESULT ok level=99 ticks=53')).toBe(false);
         }
-        expect(SPECIALIST_GATHERING_CASES.length).toBe(4);
+        expect(SPECIALIST_GATHERING_CASES.length).toBe(7);
         expect(benchCoverage().gaps).toEqual([]);
     });
 
@@ -175,6 +187,11 @@ describe('bench registration and catalog integration', () => {
             'mining-live': MINING_SPECIALIST_LIVE_SUPPLIES,
             thieving: THIEVING_SPECIALIST_SUPPLIES,
             'thieving-live': THIEVING_SPECIALIST_LIVE_SUPPLIES,
+            cooking: COOKING_SPECIALIST_SUPPLIES,
+            'cooking-live': COOKING_SPECIALIST_SUPPLIES,
+            woodcutting: WOODCUTTING_SPECIALIST_SUPPLIES,
+            'woodcutting-live': WOODCUTTING_SPECIALIST_SUPPLIES,
+            firemaking: FIREMAKING_SPECIALIST_SUPPLIES,
         } as const;
         expect(parseKitArg(['--kit=fletching-live'])).toBe('fletching-live');
         expect(resolveSupplierKitPlan('fletching-live').combined).toBe(FLETCHING_SPECIALIST_LIVE_KIT);
@@ -188,7 +205,7 @@ describe('bench registration and catalog integration', () => {
             expect(kitSlotTotal(kit)).toBe(expanded.length);
             expect(hasExactKit(expanded, kit)).toBe(true);
             for (const spec of kit) {
-                const entry = byId.get(spec.id);
+                const entry = byId.get(resolveBaseId(spec.id));
                 expect(entry, `${skill}:${spec.id}`).toBeDefined();
                 expect(entry!.tradeable).toBe(true);
                 expect(entry!.name).toBe(spec.name);
@@ -235,6 +252,9 @@ describe('bench registration and catalog integration', () => {
             ['scripts/fishing-specialist.ts', 'fishing'],
             ['scripts/mining-specialist.ts', 'mining'],
             ['scripts/thieving-specialist.ts', 'thieving'],
+            ['scripts/cooking-specialist.ts', 'cooking'],
+            ['scripts/firemaking-specialist.ts', 'firemaking'],
+            ['scripts/woodcutting-specialist.ts', 'woodcutting'],
         ] as const) {
             const intent = intentForEntry(script, ['botb'], {}, { skills: { [skill]: 99 } });
             expect(intent).toEqual({ kind: 'service', objective: `fresh-clock ${skill} 99 specialist`, units: 1 });
