@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795250842221-quickhandjob-trousersnake-ec21abe926ef6c86",
  "account": "TrouserSnake",
  "partner": "Quickhandjob",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 124000,
  "claim": "a94fa080-bc3b-4fac-ab41-83c3c456a6db",
- "count": 0,
- "ok": false,
- "at": 1795250881966,
- "detail": "trade claimed"
+ "count": 124000,
+ "ok": true,
+ "at": 1795250892741,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 124000
+ },
+ "bank": {
+  "count": 124000,
+  "at": 1795250891969
+ },
+ "logout": {
+  "attemptId": "1795250881974-0000025764-0000000001",
+  "at": 1795250892730,
+  "sha256": "b57e314d56040de135525493724ebbed5959f3ae843be1c723a5f7853365ca31"
+ },
+ "screen": true
 }

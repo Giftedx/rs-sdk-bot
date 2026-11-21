@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795250842764-undermykilt-swordinhand-bd4612182063f8da",
  "account": "Swordinhand",
  "partner": "UnderMyKilt",
@@ -10,35 +10,89 @@
  "item": "Coins",
  "requested": 59000,
  "claim": "55a96a56-6ca2-4f34-a8a7-4b78f5bd7d05",
- "count": 0,
- "ok": false,
- "at": 1795250891563,
- "detail": "trade claimed",
+ "count": 59000,
+ "ok": true,
+ "at": 1795250910334,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Ranarr weed",
    "requested": 2,
-   "count": 0
+   "count": 2,
+   "inventory": {
+    "before": 0,
+    "after": 2
+   },
+   "bank": {
+    "count": 2,
+    "at": 1795250907963
+   }
   },
   {
    "item": "Superantipoison(4)",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795250908376
+   }
   },
   {
    "item": "Superantipoison(3)",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795250908760
+   }
   },
   {
    "item": "Superantipoison(2)",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795250909175
+   }
   },
   {
    "item": "Unicorn horn",
    "requested": 2,
-   "count": 0
+   "count": 2,
+   "inventory": {
+    "before": 0,
+    "after": 2
+   },
+   "bank": {
+    "count": 2,
+    "at": 1795250909586
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 59000
+ },
+ "bank": {
+  "count": 59000,
+  "at": 1795250907562
+ },
+ "logout": {
+  "attemptId": "1795250891569-0000016792-0000000001",
+  "at": 1795250910322,
+  "sha256": "c6797027c27de11832368c4371ef81b6556e99944c98c391cbf14f49d1e3d30f"
+ },
+ "screen": true
 }
