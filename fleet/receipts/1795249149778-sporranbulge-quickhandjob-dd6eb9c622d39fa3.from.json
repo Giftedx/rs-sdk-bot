@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795249149778-sporranbulge-quickhandjob-dd6eb9c622d39fa3",
+ "account": "SporranBulge",
+ "partner": "Quickhandjob",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 22000,
+ "claim": "e176f261-8ac2-43dd-83f8-5eebdfe8db42",
+ "count": 0,
+ "ok": false,
+ "at": 1795249252032,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Snape grass",
+   "requested": 2,
+   "count": 0
+  }
+ ]
+}

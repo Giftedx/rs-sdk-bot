@@ -1,0 +1,29 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795249150030-trousersnake-mightyrod-339fc1a410932332",
+ "account": "TrouserSnake",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 14000,
+ "claim": "a7065c75-78c6-4d5b-9b90-1d0d9671d295",
+ "count": 0,
+ "ok": false,
+ "at": 1795249256469,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Snape grass",
+   "requested": 1,
+   "count": 0
+  },
+  {
+   "item": "Ranarr weed",
+   "requested": 2,
+   "count": 0
+  }
+ ]
+}
