@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795246753379,
+ "at": 1795246773347,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -182,49 +182,6 @@
    ]
   },
   {
-   "account": "YewFirst",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/aio.ts skiller crafting inventory cut-bow:unstrung_magic_shortbow MAX_MAKE=4 CAP=1500 MEMBERS=1 ORDER_MODE=best-effort",
-    "scripts/aio.ts skiller crafting inventory bow-string:magic_shortbow MAX_MAKE=4 CAP=1500 MEMBERS=1 ORDER_MODE=best-effort"
-   ],
-   "env": {
-    "ROUNDS": "1",
-    "AUTOPILOT_ORDER": "[106,[\"bow string\",4],[\"magic log\",4]]"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "cut banked magic logs into magic shortbows and string them for the gang squad",
-   "role": "fletching",
-   "template": "squad-magic-shortbow",
-   "autopilot": "local",
-   "resources": [
-    "squad:seers-fletch"
-   ]
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "taverley_black_knight"
-   ],
-   "env": {
-    "MAX_KILLS": "40"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
-   "role": "combat",
-   "template": "squad-taverley-black-knights",
-   "autopilot": "local",
-   "resources": [
-    "squad:taverley-black-knights"
-   ]
-  },
-  {
    "account": "Hocuspokeus",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -354,6 +311,49 @@
    "enabled": true,
    "standing": true,
    "repeat": true
+  },
+  {
+   "account": "YewFirst",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/aio.ts skiller crafting inventory cut-bow:unstrung_magic_shortbow MAX_MAKE=4 CAP=1500 MEMBERS=1 ORDER_MODE=best-effort",
+    "scripts/aio.ts skiller crafting inventory bow-string:magic_shortbow MAX_MAKE=4 CAP=1500 MEMBERS=1 ORDER_MODE=best-effort"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "AUTOPILOT_ORDER": "[106,[\"bow string\",4],[\"magic log\",4]]"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "cut banked magic logs into magic shortbows and string them for the gang squad",
+   "role": "fletching",
+   "template": "squad-magic-shortbow",
+   "autopilot": "local",
+   "resources": [
+    "squad:seers-fletch"
+   ]
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "taverley_black_knight"
+   ],
+   "env": {
+    "MAX_KILLS": "40"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
+   "role": "combat",
+   "template": "squad-taverley-black-knights",
+   "autopilot": "local",
+   "resources": [
+    "squad:taverley-black-knights"
+   ]
   }
  ],
  "army": [
