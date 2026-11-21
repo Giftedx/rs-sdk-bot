@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795225646300-deeppockets-fingersmith-runeplatelegs",
+ "account": "Fingersmith",
+ "partner": "Deeppockets",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Rune platelegs",
+ "requested": 1,
+ "claim": "e8740b65-12ad-4d92-9737-7d50dee12234",
+ "count": 1,
+ "ok": true,
+ "at": 1795225760044,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 1
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795225758061
+ },
+ "logout": {
+  "attemptId": "1795225727209-0000025184-0000000001",
+  "at": 1795225759971,
+  "sha256": "467a46be0decfddc507576edd799e2dd759ca165c17fec8fbc6698f2c26370b4"
+ },
+ "screen": true
+}
