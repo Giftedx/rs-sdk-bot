@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795237618073-oreelse-pocketpython-95e2e844996eaad9",
  "account": "OreElse",
  "partner": "Pocketpython",
@@ -10,20 +10,50 @@
  "item": "Molten glass",
  "requested": 2,
  "claim": "8fe49de9-86f6-4ed1-b0fd-0d5404b22b0c",
- "count": 0,
- "ok": false,
- "at": 1795237733023,
- "detail": "trade claimed",
+ "count": 2,
+ "ok": true,
+ "at": 1795239201694,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Nails",
    "requested": 10,
-   "count": 0
+   "count": 10,
+   "inventory": {
+    "before": 10,
+    "after": 0
+   },
+   "bank": {
+    "count": 10,
+    "at": 1795237797876
+   }
   },
   {
    "item": "Gold bar",
    "requested": 1,
-   "count": 0
+   "count": 1,
+   "inventory": {
+    "before": 1,
+    "after": 0
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795237798694
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795237797124
+ },
+ "logout": {
+  "attemptId": "1795237733047-0000016668-0000000001",
+  "at": 1795239201678,
+  "sha256": "f96599be0ddba117934f505f57335b3366dab0535f4e423286b00f1960533b0f"
+ },
+ "screen": true
 }

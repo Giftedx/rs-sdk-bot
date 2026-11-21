@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795238923853,
+ "at": 1795239205007,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -201,8 +201,7 @@
    "account": "Unsheathed",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/walk-to.ts 3185 3436 0",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=95000 CASH_RESERVE=1000 ORDER_KEY=liveops-ranarr-257-1-unsheathed-v1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=1 EXPECTED_OWNED=1 LIMIT_PRICE=52000 CASH_RESERVE=1000 ORDER_KEY=liveops-ranarr-257-1-unsheathed-v2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -215,8 +214,7 @@
    "account": "SporranBulge",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/walk-to.ts 3185 3436 0",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=2552 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=55000 CASH_RESERVE=1000 ORDER_KEY=liveops-dueling-2552-1-v2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=48000 CASH_RESERVE=1000 ORDER_KEY=liveops-ranarr-257-1-sporran-v1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -227,17 +225,26 @@
   },
   {
    "account": "Earlyshooter",
-   "script": "scripts/buy-owned-ge-item.ts",
+   "script": "scripts/chain.ts",
    "args": [
-    "ITEM_ID=257",
-    "QUANTITY=2",
-    "EXPECTED_OWNED=0",
-    "LIMIT_PRICE=74000",
-    "CASH_RESERVE=1000",
-    "ORDER_KEY=liveops-ranarr-257-2-early-v1",
-    "ORDER_MS=900000",
-    "FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=2 EXPECTED_OWNED=0 LIMIT_PRICE=65000 CASH_RESERVE=1000 ORDER_KEY=liveops-ranarr-257-2-early-v2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=1 EXPECTED_OWNED=1 LIMIT_PRICE=48000 CASH_RESERVE=1000 ORDER_KEY=liveops-ranarr-257-1-wood-v1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
    "enabled": true,
    "standing": true,
    "repeat": false
@@ -251,36 +258,6 @@
    "enabled": true,
    "standing": true,
    "repeat": false
-  },
-  {
-   "account": "Bigchopper",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "dargaud",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "rune arrow",
-    "STOCK_TARGET": "445",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "320200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "320000",
-    "AUTOPILOT_ORDER": "[45]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":445}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
-   "role": "bank",
-   "template": "squad-arrows-dargaud",
-   "autopilot": "local",
-   "resources": [
-    "shop:dargaud"
-   ]
   }
  ],
  "army": [

@@ -1,0 +1,59 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795237618073-oreelse-pocketpython-95e2e844996eaad9",
+ "account": "Pocketpython",
+ "partner": "OreElse",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Molten glass",
+ "requested": 2,
+ "claim": "98374a03-a573-4808-b8f3-0c243085cbdd",
+ "count": 2,
+ "ok": true,
+ "at": 1795239204078,
+ "detail": "transfer observed",
+ "lines": [
+  {
+   "item": "Nails",
+   "requested": 10,
+   "count": 10,
+   "inventory": {
+    "before": 0,
+    "after": 10
+   },
+   "bank": {
+    "count": 10,
+    "at": 1795239202955
+   }
+  },
+  {
+   "item": "Gold bar",
+   "requested": 1,
+   "count": 1,
+   "inventory": {
+    "before": 0,
+    "after": 1
+   },
+   "bank": {
+    "count": 1,
+    "at": 1795239203334
+   }
+  }
+ ],
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795239202524
+ },
+ "logout": {
+  "attemptId": "1795239184658-0000001112-0000000001",
+  "at": 1795239204067,
+  "sha256": "7bcde801f587dc96b0b3af84cb4f42a758311da35df46f0d891c75f5e2831344"
+ },
+ "screen": true
+}
