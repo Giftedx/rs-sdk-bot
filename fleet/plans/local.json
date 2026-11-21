@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795249432009,
+ "at": 1795249540011,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -280,33 +280,6 @@
    "resources": [
     "shop:aubury"
    ]
-  },
-  {
-   "account": "KnightRider",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1079 QUANTITY=1 SELL_PRICE=80000 FLOOR_PRICE=80000 RESERVE_ITEMS=0 ORDER_KEY=liveops-kr-1079-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
-   "account": "UnderMyKilt",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=1079 QUANTITY=1 SELL_PRICE=80000 FLOOR_PRICE=80000 RESERVE_ITEMS=0 ORDER_KEY=liveops-umk-1079-1 ORDER_MS=300000 FILL_WAIT_TICKS=120",
-    "scripts/sell-owned-ge-item.ts FROM_BANK=1 ITEM_ID=561 QUANTITY=170 SELL_PRICE=241 FLOOR_PRICE=241 RESERVE_ITEMS=0 ORDER_KEY=liveops-umk-561-1 ORDER_MS=300000 FILL_WAIT_TICKS=120"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
   }
  ],
  "army": [
@@ -343,10 +316,12 @@
   "fingerblastr",
   "fingersmith",
   "kiltlifter",
+  "knightrider",
   "knightstick",
   "quickhandjob",
   "sporrandip",
-  "trousersnake"
+  "trousersnake",
+  "undermykilt"
  ],
  "builds": {
   "NabTheKnob": "tribrid",

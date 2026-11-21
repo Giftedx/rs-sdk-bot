@@ -1,0 +1,17 @@
+{
+ "id": "1795249538247-ballspinner-yewfirst-3dc24e9106d9b7bd",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Ballspinner",
+ "to": "YewFirst",
+ "item": "Coins",
+ "count": 58000,
+ "start": 1795249538247,
+ "end": 1795251038247,
+ "extra": [
+  {
+   "item": "Ranarr weed",
+   "count": 1
+  }
+ ],
+ "takerWaits": true
+}
