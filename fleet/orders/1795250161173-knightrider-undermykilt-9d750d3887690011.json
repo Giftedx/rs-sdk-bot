@@ -1,0 +1,17 @@
+{
+ "id": "1795250161173-knightrider-undermykilt-9d750d3887690011",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "KnightRider",
+ "to": "UnderMyKilt",
+ "item": "Coins",
+ "count": 104000,
+ "start": 1795250161173,
+ "end": 1795251661173,
+ "extra": [
+  {
+   "item": "Ranarr weed",
+   "count": 1
+  }
+ ],
+ "takerWaits": true
+}
