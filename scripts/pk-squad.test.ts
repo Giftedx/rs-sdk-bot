@@ -1357,7 +1357,7 @@ test('squadFallbackPlan catches 2+ hitter focus and 4+ enemy multi bursts, and r
         tick: () => ticks2,
         sdk: {
             getState: () => ({
-                player: { worldX: 3071, worldZ: z2, hp: 75, maxHp: 99, combatLevel: 126 },
+                player: { worldX: 3071, worldZ: z2, hp: 88, maxHp: 99, combatLevel: 126 },
                 inventory: inv2,
                 equipment: [],
                 skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
@@ -1446,6 +1446,81 @@ test('rescue retries Glory rub every tick on .if_close interruption and dispatch
         await rescue(s, () => {}, () => false, false);
         expect(z).toBe(3496);
         expect(actions).toEqual(['useEquipmentItem@t0', 'useInventoryItem@t1', 'useInventoryItem@t2', 'clickDialogOption@t3']);
+    } finally {
+        spy.mockRestore();
+    }
+});
+
+test('squadFallbackPlan outgunned triggers early Glory fallback, and rescue buffers <= 86 HP and aborts Edgeville dialog if spiked <= 68 HP', async () => {
+    expect(squadFallbackPlan({ z: 3604, hp: 75, maxHp: 99, foodCount: 14, enemyCount: 5, allyCount: 3, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 2 })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3604, hp: 71, maxHp: 99, foodCount: 14, enemyCount: 4, allyCount: 3, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 1 })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3604, hp: 75, maxHp: 99, foodCount: 14, enemyCount: 5, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 2 })).toBe('hold');
+
+    let ticks = 0, z = 3604, hp = 84, dlgOpen = false, rubCount = 0, rubTick = -1;
+    const inv: any[] = [
+        { slot: 0, id: 1712, count: 1, name: 'Amulet of glory(4)', optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] },
+        { slot: 1, id: 385, count: 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+        { slot: 2, id: 385, count: 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+        { slot: 3, id: 3144, count: 1, name: 'Cooked karambwan', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    const log: string[] = [];
+    const s: any = {
+        name: 'PreHealAndAbortBot',
+        tick: () => ticks,
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp, maxHp: 99, combatLevel: 126 },
+                inventory: inv,
+                equipment: [],
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { activePrayers: [], prayerPoints: 99 },
+                combatEvents: [],
+                dialog: dlgOpen ? { isOpen: true, isWaiting: false, pageId: 'p1', options: [{ index: 1, componentId: 2494, text: 'Edgeville.' }] } : { isOpen: false },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => [],
+            getSkill: () => ({ level: 99, baseLevel: 99 }),
+        },
+        direct: async (a: any) => {
+            log.push(`${a.type}:${a.slot ?? a.optionIndex}@t${ticks}`);
+            if (a.type === 'useInventoryItem') {
+                if (a.slot === 0) { rubCount++; rubTick = ticks; }
+                else {
+                    dlgOpen = false;
+                    const idx = inv.findIndex(i => i.slot === a.slot);
+                    if (idx >= 0) {
+                        const [food] = inv.splice(idx, 1);
+                        hp = Math.min(99, hp + (food.id === 3144 ? 18 : 20));
+                    }
+                }
+            } else if (a.type === 'clickDialogOption') {
+                dlgOpen = false;
+                z = 3496;
+            }
+            return { success: true };
+        },
+    };
+    const spy = spyOn(pk, 'nextTick').mockImplementation(async () => {
+        ticks++;
+        // Rub #1 opens dialog, then an enemy spike drops HP 99 -> 58 before Edgeville click.
+        if (rubTick >= 0 && ticks === rubTick + 1) {
+            dlgOpen = true;
+            if (rubCount === 1) hp = 58;
+        }
+        return true;
+    });
+    try {
+        await rescue(s, () => {}, () => false, false);
+        expect(z).toBe(3496);
+        // Eats Shark at hp=84 before first Rub, waits out foodReady=3 on spike to 58, aborts dialog via Shark+Karambwan at t3, then rubs and clicks Edgeville.
+        expect(log).toEqual([
+            'useInventoryItem:1@t0',
+            'useInventoryItem:0@t1',
+            'useInventoryItem:2@t3',
+            'useInventoryItem:3@t3',
+            'useInventoryItem:0@t4',
+            'clickDialogOption:1@t5',
+        ]);
     } finally {
         spy.mockRestore();
     }

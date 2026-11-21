@@ -275,13 +275,36 @@ function createWildSurvival(
         protectItem?: () => boolean;
         canEat?: () => boolean;
     } = {},
-): { step: (now: number) => boolean } {
+): { step: (now: number) => boolean; tryEat: (now: number) => boolean; foodWait: (now: number) => number } {
     let foodReady = -10, karamReady = -10, prayAt = -10, itemAt = -10, seenEvent = 0, hitStyle: CombatStyle | null = null, hitAt = -100;
     const sendEat = (slot: number, opIndex: number) => {
         if (opts.useDirect && typeof s.direct === 'function') void s.direct({ type: 'useInventoryItem', slot, optionIndex: opIndex, reason: 'SDK' });
         else if (typeof s.sdk.sendUseItem === 'function') void s.sdk.sendUseItem(slot, opIndex);
     };
+    const comboThreshold = (maxHp: number) => opts.comboBelow ?? Math.min(55, maxHp);
+    const tryEat = (now: number): boolean => {
+        const st = s.sdk.getState(), me = st?.player;
+        if (!st || !me || me.isDead || me.hp <= 0 || wildernessLevel(me.worldZ) === 0 || now < foodReady) return false;
+        const inv = s.sdk.getInventory?.() ?? [];
+        const food = bestFood(inv);
+        const op = food?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
+        if (!food || !op) return false;
+        sendEat(food.slot, op.opIndex);
+        foodReady = now + 3;
+        if (food.id === ITEMS.karambwan) karamReady = now + 3;
+        else if (me.hp <= comboThreshold(me.maxHp) && now >= karamReady) {
+            const karam = inv.find(i => i.id === ITEMS.karambwan && i.optionsWithIndex?.some(x => /^eat$/i.test(x.text)));
+            const kOp = karam?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
+            if (karam && kOp) {
+                sendEat(karam.slot, kOp.opIndex);
+                karamReady = now + 3;
+            }
+        }
+        return true;
+    };
     return {
+        tryEat,
+        foodWait: (now: number) => Math.max(0, foodReady - now),
         step: (now: number) => {
             let acted = false;
             const st = s.sdk.getState(), me = st?.player;
@@ -314,26 +337,7 @@ function createWildSurvival(
             }
             if (opts.canEat && !opts.canEat()) return acted;
             const eatAt = opts.eatBelow ?? Math.max(65, me.maxHp - 24);
-            const comboAt = opts.comboBelow ?? 55;
-            if (now >= foodReady && me.hp <= eatAt) {
-                const inv = s.sdk.getInventory?.() ?? [];
-                const food = bestFood(inv);
-                const op = food?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
-                if (food && op) {
-                    sendEat(food.slot, op.opIndex);
-                    acted = true;
-                    foodReady = now + 3;
-                    if (food.id === ITEMS.karambwan) karamReady = now + 3;
-                    else if (me.hp <= comboAt && now >= karamReady) {
-                        const karam = inv.find(i => i.id === ITEMS.karambwan && i.optionsWithIndex?.some(x => /^eat$/i.test(x.text)));
-                        const kOp = karam?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
-                        if (karam && kOp) {
-                            sendEat(karam.slot, kOp.opIndex);
-                            karamReady = now + 3;
-                        }
-                    }
-                }
-            }
+            if (me.hp <= eatAt && tryEat(now)) acted = true;
             return acted;
         },
     };
@@ -476,19 +480,31 @@ export async function rescue(
                 }
                 if (typeof s.sdk.sendUseEquipmentItem === 'function') await s.sdk.sendUseEquipmentItem(slot, 1);
             };
+            // Buffer above p_delay(3) lockout (~86 -> 99 HP) and abort open dialog to eat if spiked <= 68 HP.
+            const clickOrHeal = async (): Promise<'teleported' | 'healed' | 'stopped' | 'none'> => {
+                const dlg = s.sdk.getState()?.dialog as { isOpen?: boolean; isWaiting?: boolean } | undefined;
+                if (dlg?.isOpen && !dlg.isWaiting && (me()?.hp ?? start.maxHp) <= 68) {
+                    const now = s.tick();
+                    if (survival.tryEat(now) || (survival.foodWait(now) > 0 && bestFood(s.sdk.getInventory?.() ?? []))) {
+                        if (!await tick()) return 'stopped';
+                        return 'healed';
+                    }
+                }
+                if (await clickEdgeville()) return (await waitTeleport()) ? 'teleported' : 'stopped';
+                return 'none';
+            };
             for (let attempt = 0; attempt < 60 && wildernessLevel(me()?.worldZ ?? 0) > 0 && wildernessLevel(me()?.worldZ ?? 0) <= 30 && hasChargedGlory(); attempt++) {
                 if (stopped()) return false;
-                if (await clickEdgeville()) {
-                    if (!await waitTeleport()) return false;
-                    continue;
-                }
+                const top = await clickOrHeal();
+                if (top === 'stopped') return false;
+                if (top !== 'none') continue;
                 const stNow = s.sdk.getState(), inv = s.sdk.getInventory?.() ?? [];
                 const eq = (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : stNow?.equipment) ?? [];
                 const curHp = me()?.hp ?? start.maxHp;
                 const invGlory = inv.find(i => (ITEMS.glory as readonly number[]).includes(i.id));
                 const rubOp = invGlory?.optionsWithIndex?.find(x => /^Rub$/i.test(x.text));
                 if (invGlory && rubOp) {
-                    if (curHp <= 70 && survival.step(s.tick())) {
+                    if (curHp <= 86 && survival.step(s.tick())) {
                         if (!await tick()) return false;
                         continue;
                     }
@@ -496,21 +512,19 @@ export async function rescue(
                     // Dialog opens 1 tick later unless an enemy hit (.if_close) closed it on the rub tick; retry immediately instead of idling.
                     let opened = false;
                     for (let t = 0; t < 2 && wildernessLevel(me()?.worldZ ?? 0) > 0; t++) {
-                        if (await clickEdgeville()) {
-                            opened = true;
-                            if (!await waitTeleport()) return false;
-                            break;
-                        }
+                        const res = await clickOrHeal();
+                        if (res === 'stopped') return false;
+                        if (res !== 'none') { opened = true; break; }
                         if (t === 0 && !await tick()) return false;
                     }
-                    if (!opened && wildernessLevel(me()?.worldZ ?? 0) > 0 && (me()?.hp ?? start.maxHp) <= 76 && survival.step(s.tick())) {
+                    if (!opened && wildernessLevel(me()?.worldZ ?? 0) > 0 && (me()?.hp ?? start.maxHp) <= 86 && survival.step(s.tick())) {
                         if (!await tick()) return false;
                     }
                     continue;
                 }
                 const wornGlory = eq.find(e => (ITEMS.glory as readonly number[]).includes(e.id));
                 if (wornGlory) {
-                    const acted = curHp <= 70 ? survival.step(s.tick()) : false;
+                    const acted = curHp <= 86 ? survival.step(s.tick()) : false;
                     if (inv.length < 28 && (typeof s.sdk.sendUseEquipmentItem === 'function' || typeof s.direct === 'function')) {
                         if (acted) {
                             if (!await tick()) return false;
@@ -931,8 +945,9 @@ export function squadFallbackPlan(opts: {
     const outnumbered = opts.inMulti && opts.enemyCount - opts.allyCount >= 2 && opts.hp <= opts.maxHp * 0.78;
     const focusPile = opts.inMulti && (opts.targetingMe ?? 0) >= 3 && opts.hp <= opts.maxHp * 0.86;
     const instantEscape = !!opts.hasTeleport && wild <= 20;
-    const heavyFocus = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.hp <= opts.maxHp * (instantEscape ? 0.76 : 0.72);
-    const emergencyMulti = opts.inMulti && ((instantEscape && opts.enemyCount >= 6 && opts.hp <= opts.maxHp * 0.76) || (opts.enemyCount >= 4 && opts.hp <= opts.maxHp * 0.62));
+    const outgunned = opts.enemyCount > opts.allyCount;
+    const heavyFocus = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.hp <= opts.maxHp * ((instantEscape || outgunned) ? 0.76 : 0.72);
+    const emergencyMulti = opts.inMulti && (((instantEscape || outgunned) && opts.enemyCount >= 6 && opts.hp <= opts.maxHp * 0.76) || (opts.enemyCount >= 4 && opts.hp <= opts.maxHp * (outgunned ? 0.72 : 0.62)));
     const lowSupplyPile = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.foodCount <= 3 && opts.hp <= opts.maxHp * 0.88;
     const dry = opts.foodCount <= 0 && ((opts.packFood ?? 0) >= 6 || opts.hp <= opts.maxHp * 0.75);
     if (!isolatedPile && !outnumbered && !focusPile && !heavyFocus && !emergencyMulti && !lowSupplyPile && !dry) return 'hold';
