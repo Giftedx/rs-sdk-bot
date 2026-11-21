@@ -7,7 +7,7 @@
 // fall hurts a low-level account), a use-item, a first step (via) or a held-item check.
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import type { Account, Tile } from './world';
+import type { Account, Tile } from './world-types';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 const content = join(repoRoot, 'vendor', 'rs-sdk', 'server', 'content');

@@ -4,7 +4,7 @@
 import { existsSync, linkSync, mkdirSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { laterProcessHolds, processStartTimes } from '../../practice/src/proc';
+import { laterProcessHolds, processStartTimes } from './proc';
 
 export const planLockDir = join(resolve(import.meta.dir, '../../..'), '.practice/coordinator');
 const lockPath = (directory: string) => join(directory, 'plan-write-lock.json');

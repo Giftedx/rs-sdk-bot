@@ -1,4 +1,4 @@
-import type { SaveConfig } from './presets';
+import type { SaveConfig } from './preset-types';
 
 // Legends' Quest (scripts/generated/quest-legends.ts). Every skill 99, combat rune set worn with the rune scimitar. DONE holds
 // each quest varp below 309 at its complete value, so the login recount (general/scripts/quests.rs2) gives over 107 QP and

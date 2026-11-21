@@ -5,7 +5,7 @@ import {accountPassword,createAccount} from '../../../scripts/fleet';
 import type {ProvisionCrew} from '../../../scripts/provision-readiness';
 import {reserveFleetOwner} from '../../../scripts/fleet-owner-claim';
 import {mySide} from '../../core/src/fleet';
-import {killTree} from '../../practice/src/proc';
+import {killTree} from '../../core/src/proc';
 
 export interface AccountProvisionRequest {
     role:Role;

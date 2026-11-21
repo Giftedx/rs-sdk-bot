@@ -1,5 +1,5 @@
 import { test, expect, spyOn } from 'bun:test';
-import { commandLine, killTree, processMatches, processMatchesRecent, processStartTimes, safeKill, sleeperCommand, spawnSyncTimed, POWERSHELL_TIMEOUT_MS } from '../src/proc';
+import { commandLine, killTree, processMatches, processMatchesRecent, processStartTimes, safeKill, sleeperCommand, spawnSyncTimed, POWERSHELL_TIMEOUT_MS } from '../../core/src/proc';
 
 function alive(pid: number): boolean {
     try { process.kill(pid, 0); return true; } catch { return false; }

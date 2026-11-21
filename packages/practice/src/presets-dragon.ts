@@ -1,4 +1,4 @@
-import type { SaveConfig } from './presets';
+import type { SaveConfig } from './preset-types';
 
 // The planner's state at the dragon, merlin and grail rows: they run after the last 99 (haggis-cli --order rows
 // 46-49), so every skill is 99. Rune helm, body, legs and scimitar worn (the dragon row's "rune armour set" supply).

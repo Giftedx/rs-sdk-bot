@@ -8,7 +8,7 @@ import { readPracticeSave, waitPracticeSave } from '../../../scripts/measure/fle
 import { createBot } from './bots';
 import { ironProofAccountEnv, selectIronProofEndpoints, startIronProofStack } from './iron-progress-order-proof';
 import { applyPreset } from './presets';
-import { killTree } from './proc';
+import { killTree } from '../../core/src/proc';
 import { runBotName } from './prove';
 import { startStack } from './stack';
 

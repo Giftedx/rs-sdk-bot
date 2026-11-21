@@ -9,7 +9,7 @@ import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
 import {rsSdkRoot} from './paths';
-import {killTree} from './proc';
+import {killTree} from '../../core/src/proc';
 import {selectQuestSweepProofEndpoints,questSweepProofAccountEnv,startQuestSweepProofStack} from './quest-sweep-proof';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {reconcile} from '../../../scripts/brew-potions';

@@ -1,6 +1,6 @@
 import {existsSync, readFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {processMatches} from '../../practice/src/proc';
+import {processMatches} from './proc';
 import {jobAccounts, readMergedPlan} from './coordinator-jobs';
 import {fresh, localFile, MAX_LOGOUT_DRAIN_TICKS, readBound, sha, validateRehearsals, validateSupplies, type Binding, type SupplyRequirement} from './launch-evidence';
 import {missionSignature} from './session-admission';

@@ -1,4 +1,4 @@
-import type { SaveConfig } from './presets';
+import type { SaveConfig } from './preset-types';
 import { QP_BEFORE_DRAGON } from './presets-dragon';
 
 // Cook's Assistant, Witch's House and Lost City (scripts/generated/quest-cook.ts, quest-ball.ts, quest-zanaris.ts).

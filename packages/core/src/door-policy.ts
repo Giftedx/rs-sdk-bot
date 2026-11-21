@@ -1,5 +1,5 @@
 import {readFileSync} from 'node:fs';
-import type {Account,DoorBlock,Door} from './world';
+import type {Account,DoorBlock,Door} from './world-types';
 import {completedQuestUnlocks,guildActorFacts} from './guild-observation';
 import {equipmentObserved} from './container-observation';
 const clients=new WeakMap<object,unknown>();

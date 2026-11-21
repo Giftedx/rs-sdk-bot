@@ -1,4 +1,4 @@
-import type { SaveConfig } from './presets';
+import type { SaveConfig } from './preset-types';
 import { QP_BEFORE_DRAGON } from './presets-dragon';
 
 // The 4 quests of the planner's `qp-filler` row (scripts/generated/quest-<name>.ts, research/quest-points-board.md).

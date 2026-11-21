@@ -9,7 +9,7 @@ import { applyPreset } from './presets';
 import { runBotName } from './prove';
 import { startStack } from './stack';
 import { ironProofAccountEnv, selectIronProofEndpoints, startIronProofStack } from './iron-progress-order-proof';
-import { killTree } from './proc';
+import { killTree } from '../../core/src/proc';
 import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 import { releaseRevision } from '../../core/src/worker-release';
 import { readLogoutProof } from '../../core/src/session-lifecycle';

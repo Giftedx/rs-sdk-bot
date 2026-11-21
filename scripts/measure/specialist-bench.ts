@@ -1,7 +1,7 @@
 // Runs a fresh-clock specialist worker beside its supplier companion inside the AIO bench harness.
 import { existsSync, rmSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
-import { killTree } from '../../packages/practice/src/proc';
+import { killTree } from '../../packages/core/src/proc';
 import { playerSavePath } from '../../packages/practice/src/save-library';
 
 const ROOT = resolve(import.meta.dir, '..', '..');

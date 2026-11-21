@@ -5,7 +5,7 @@
 // canStepLocal, canReachAdjacentTile and canReachLocal are adapted from rs2b0t
 // src/bot/event/webwalk/geometry/localReach.ts (commit ae56ccc9, MIT License, Copyright (c) 2026 N64Jive).
 // research/walking.md "Long-route walker: source decision" records the source decision.
-import type { Tile } from './world';
+import type { Tile } from './world-types';
 
 export type FlagsAt = (lx: number, lz: number) => number | null;
 export type LocalPoint = { lx: number; lz: number };

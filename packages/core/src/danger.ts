@@ -5,7 +5,7 @@
 // Wolf Mountain kill an 11 HP account on the Catherby-Taverley path.
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import type { Account, Tile } from './world';
+import type { Account, Tile } from './world-types';
 import { npcAttackStyles } from '../../knowledge/src/npc-attack-styles';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');

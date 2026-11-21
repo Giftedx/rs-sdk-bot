@@ -1,4 +1,4 @@
-import type { SaveConfig } from './presets';
+import type { SaveConfig } from './preset-types';
 import { QP_BEFORE_DRAGON } from './presets-dragon';
 
 // Quests on the main account's path that the planner places before the quests-rest block

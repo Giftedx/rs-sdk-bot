@@ -9,7 +9,7 @@ import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
 import {rsSdkRoot} from './paths';
-import {killTree} from './proc';
+import {killTree} from '../../core/src/proc';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {capabilityRevision,cachedReleaseFor} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';

@@ -16,7 +16,7 @@ import {applyEndRepair,type ScriptHold} from '../../../scripts/swarm';
 import {recoveryHeldDiagnostic,recoveryBoundary,recoveryDiagnosticFromLog} from '../src/session-recovery';
 import {missionSignature,liveLogoutRef} from '../src/session-admission';
 import {budgetRefusal,MAX_WAITS,spentAttempts,waitedAttempts,retainedRecoveryTasks} from '../../../scripts/cloud-recover';
-import * as recoveryProcesses from '../../practice/src/proc';
+import * as recoveryProcesses from '../src/proc';
 const source='a'.repeat(64),runner='b'.repeat(64),now=1793258000000;
 import {useScratch} from './recovery-scratch';
 const scratch=useScratch();

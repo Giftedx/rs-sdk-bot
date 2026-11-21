@@ -15,7 +15,7 @@ import {validOrder,type Order,type Receipt} from '../../../scripts/fleet-trade-s
 import {readHeldFleetTradeClaims} from '../../core/src/fleet-trade-claim';
 import {cachedLaunchRevision,cachedReleaseFor,capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
 import {hashImportClosure} from './delivery-cli';
-import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
+import {processMatches,safeKill,safeKillOne} from '../../core/src/proc';
 import {acceptStatus,boundedWorkerEndMessage,boundAccounts,type CoordTask,type CoordinatorState} from './coordinator';
 import {projectRoot,coordinationDir,atomicJson,spawnDetached,withPlanWrite} from './coordinator-store';
 import {RECOVERY_SCHEMA,assertNoRecoveryLease,heldRecoveryOwners,recoveredSessionForRun,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';

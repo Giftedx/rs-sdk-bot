@@ -1,4 +1,4 @@
-import type { SaveConfig } from './presets';
+import type { SaveConfig } from './preset-types';
 import { QP_BEFORE_DRAGON } from './presets-dragon';
 
 // Quests of the planner's `quests-rest` row that no other preset file covers (scripts/generated/quest-<name>.ts,

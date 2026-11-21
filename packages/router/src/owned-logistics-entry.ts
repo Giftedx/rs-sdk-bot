@@ -6,7 +6,7 @@ import {spawn} from 'node:child_process';
 import {serverFromEnv} from '../../core/src/bot';
 import {isLocalServer} from '../../core/src/localserver';
 import {prepareReplayRoot,removeReplayRoot} from './build-workspace';
-import {killTree} from '../../practice/src/proc';
+import {killTree} from '../../core/src/proc';
 import {accountDir} from '../../core/src/session-lifecycle';
 import {jobAccounts,readMergedPlan} from '../../core/src/coordinator-jobs';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';

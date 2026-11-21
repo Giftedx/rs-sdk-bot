@@ -24,7 +24,7 @@ import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { fleetStatusRows, readSnapshotFiles, type SnapshotFile } from '../packages/core/src/fleet-snapshots';
 import { publishedSideHold } from '../packages/core/src/fleet-side-card';
 import { LIVE_SERVER, START_BUDGET_GB, activeExternalLive, clearSwarmStop, pendingStartupCount, standingRetryable, swarmWroteStop } from './swarm';
-import { spawnSyncTimed } from '../packages/practice/src/proc';
+import { spawnSyncTimed } from '../packages/core/src/proc';
 import { STABLE_CAUSES, unplacedCause, type RefusalCause } from '../packages/core/src/order-refusal';
 import { freemem } from 'node:os';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';

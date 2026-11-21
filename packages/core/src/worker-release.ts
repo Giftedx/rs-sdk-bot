@@ -4,7 +4,7 @@ import {join,resolve,dirname,relative,extname} from 'node:path';
 import type TS from 'typescript';
 import {isLocalServer} from './localserver';
 import {readLogoutProof,listAttempts,type LogoutProof} from './session-lifecycle';
-import {commandLine} from '../../practice/src/proc';
+import {commandLine} from './proc';
 import {RELEASE_DIGEST_VERSION,releaseFileDigest,runtimeImports} from './release-digest';
 
 const root=resolve(import.meta.dir,'../../..');

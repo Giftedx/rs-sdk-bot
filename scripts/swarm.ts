@@ -34,7 +34,7 @@ import {assertNoRecoveryLease,heldRecoveryOwners,releaseExpiredRecoveryLeases} f
 import {createRecoveryDispatch} from '../packages/core/src/session-recovery-dispatch';
 import { createHash } from 'node:crypto';
 import { jobLogStart } from '../packages/core/src/job-log';
-import { laterProcessHolds, PID_START_SLACK_MS, processStartTimes } from '../packages/practice/src/proc';
+import { laterProcessHolds, PID_START_SLACK_MS, processStartTimes } from '../packages/core/src/proc';
 import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { mergedPlan, readCoordinatorJobs, readMergedPlan, emptyCoordinatorJobs, ownerPlanPath } from '../packages/core/src/coordinator-jobs';

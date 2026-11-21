@@ -7,7 +7,7 @@ import { runBotName } from './prove';
 import { startStack, PROOF_TICK_MS, type StackOptions } from './stack';
 import { canBind } from './ports';
 import { practiceDir, rsSdkRoot } from './paths';
-import { killTree } from './proc';
+import { killTree } from '../../core/src/proc';
 import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 import { readPracticeSave, waitPracticeSave } from '../../../scripts/measure/fleet-player-save';
 import { exactCoinDelta } from '../../../scripts/coin-courier';

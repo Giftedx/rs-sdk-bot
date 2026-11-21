@@ -1,4 +1,4 @@
-import type { SaveConfig } from './presets';
+import type { SaveConfig } from './preset-types';
 import { QP_BEFORE_DRAGON } from './presets-dragon';
 
 // Short quests inside the planner's `quests-rest` row (scripts/generated/quest-<name>.ts, research/quest-points-board.md).

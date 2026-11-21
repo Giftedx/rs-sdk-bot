@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { practiceDir, rsSdkRoot } from './paths';
-import { killTree, processMatches, safeKill } from './proc';
+import { killTree, processMatches, safeKill } from '../../core/src/proc';
 import { waitReady } from './stack';
 
 export interface LiteHandle {

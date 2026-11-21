@@ -28,7 +28,7 @@ import type {RecoveryTarget} from '../packages/core/src/bounded-recovery';
 import {withPlanWrite} from '../packages/core/src/plan-lock';
 import {randomUUID} from 'node:crypto';
 import {observeBoundedOwners,boundedProcessAlive,boundedGroupMembers,type BoundedOwnerBinding} from '../packages/core/src/bounded-owners';
-import {commandLine} from '../packages/practice/src/proc';
+import {commandLine} from '../packages/core/src/proc';
 import {workspaceRoot} from '../packages/core/src/build-workspace-root';
 import {isDeepStrictEqual} from 'node:util';
 

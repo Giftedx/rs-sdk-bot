@@ -15,7 +15,7 @@ import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,ownerPlanPath,jo
 import {validateBoundedRecovery,assertBoundedRecoveryQueue} from '../../core/src/bounded-recovery';
 import {boundedOwnerBinding} from '../../core/src/bounded-owners';
 import {assignedWorker,type ModelWorker} from './model-worker';
-import {commandLine,processMatches,processStartTimes,safeKill} from '../../practice/src/proc';
+import {commandLine,processMatches,processStartTimes,safeKill} from '../../core/src/proc';
 import {observePracticeTurn} from '../../practice/src/proof-lock';
 import {SWARM_STOP,writeSwarmStop,swarmWroteStop} from '../../../scripts/swarm';
 import {prepareWorkspace,sharedWorkspacePlan} from './build-workspace';

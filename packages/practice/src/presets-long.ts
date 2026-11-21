@@ -1,4 +1,4 @@
-import type { SaveConfig } from './presets';
+import type { SaveConfig } from './preset-types';
 import { QP_BEFORE_DRAGON } from './presets-dragon';
 
 // Long and very long quests of the planner's `quests-rest` row (scripts/generated/quest-<name>.ts,

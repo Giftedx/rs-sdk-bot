@@ -11,7 +11,7 @@ import {readPracticeSave,setPracticeSkills,waitPracticeSave} from '../../../scri
 import {serverFromEnv} from '../../core/src/bot';
 import {isLocalServer} from '../../core/src/localserver';
 import {capabilityRevision} from '../../core/src/worker-release';
-import {killTree} from './proc';
+import {killTree} from '../../core/src/proc';
 import {levelForXp} from '../../planner/src/curve';
 
 const root=resolve(import.meta.dir,'../../..');

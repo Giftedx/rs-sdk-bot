@@ -83,7 +83,7 @@ if(import.meta.main){
                 const {openBot,settle}=await import('../packages/core/src/bot');const s=await openBot(actor,{onStop:async()=>{signalled=true;}});
                 try{const r=await runWoodProductDrop(s,id,amount,cap,stop);console.log('WOOD_PRODUCT_DROP '+JSON.stringify(r));if(!await settle([s],r.ok,JSON.stringify(r)))process.exitCode=1;}catch(e){await settle([s],false,String(e));process.exitCode=1;}
             }else{
-                const job=validateWoodProcessingJob(JSON.parse(readFileSync(resolve(process.argv[4]??''),'utf8'))),{killTree}=await import('../packages/practice/src/proc');
+                const job=validateWoodProcessingJob(JSON.parse(readFileSync(resolve(process.argv[4]??''),'utf8'))),{killTree}=await import('../packages/core/src/proc');
                 const r=await runWoodProcessingCycle({stopped:stop,run:async(script,env,args=[])=>{
                     if(stop())return{exit:1,output:'RESULT fail stop file'};
                     const child=Bun.spawn(['bun',script,actor,...args],{cwd:root,env:{...process.env,...env},stdout:'pipe',stderr:'pipe',windowsHide:true});let output='';

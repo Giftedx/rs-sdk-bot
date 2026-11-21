@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {readFileSync,readdirSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import ts from 'typescript';
-import {commandLine} from '../../practice/src/proc';
+import {commandLine} from '../../core/src/proc';
 import {claudeArgs} from '../src/author';
 
 test('project background launchers explicitly hide their Windows windows',()=>{

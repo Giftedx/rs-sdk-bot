@@ -22,7 +22,7 @@ import {levelForXp} from '../../planner/src/curve';
 import {createBot} from './bots';
 import {practiceDir, rsSdkRoot} from './paths';
 import {applyPreset, PRESETS, type SaveConfig} from './presets';
-import {killTree} from './proc';
+import {killTree} from '../../core/src/proc';
 import {runBotName} from './prove';
 import {SAVE_PORT_ENV} from './save-endpoint';
 import {addEntry, captureSave, loadSnapshot, onlineState, readLibrary, rsSdkRevision, summarize, LIBRARY_DIR, playerSavePath, SKILLS, type SaveSummary} from './save-library';

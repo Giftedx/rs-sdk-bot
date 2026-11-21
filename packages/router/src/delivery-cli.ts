@@ -6,7 +6,7 @@ import {existsSync} from 'node:fs';
 import {freemem} from 'node:os';
 import {capabilityRevision} from '../../core/src/worker-release';
 import {releaseFileDigest,runtimeImports} from '../../core/src/release-digest';
-import {killTree} from '../../practice/src/proc';
+import {killTree} from '../../core/src/proc';
 import {PRACTICE_TURN_WAIT_EXPIRED,recoverProofLock,withPracticeTurn} from '../../practice/src/proof-lock';
 import {deliver,validateDelivery,type DeliveryTask,type DeliveryCheck} from './delivery';
 

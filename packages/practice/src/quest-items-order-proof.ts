@@ -6,7 +6,7 @@ import {freemem} from 'node:os';
 import {startStack} from './stack';
 import {createBot} from './bots';
 import {runBotName} from './prove';
-import {killTree} from './proc';
+import {killTree} from '../../core/src/proc';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
 import {questSpec,questSavedChecks} from '../../../scripts/quest-order';

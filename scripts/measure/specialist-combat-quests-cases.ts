@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { dirname, join, relative, resolve } from 'node:path';
 import { finish, openBot } from '../../packages/core/src/bot';
 import type { SaveConfig } from '../../packages/practice/src/presets';
-import { killTree } from '../../packages/practice/src/proc';
+import { killTree } from '../../packages/core/src/proc';
 import type { RehearsalReport } from '../../packages/practice/src/rehearse';
 import { playerSavePath } from '../../packages/practice/src/save-library';
 import { scoredClock } from '../../packages/practice/src/specialist-rehearsal';

@@ -8,7 +8,7 @@ import {applyPreset} from './presets';
 import {runBotName} from './prove';
 import {withPracticeTurn} from './proof-lock';
 import {selectCoinProofEndpoints,startCoinProofStack,coinProofAccountEnv,coinChildConfiguration,coinRegistrationArgs} from './coin-courier-proof';
-import {killTree} from './proc';
+import {killTree} from '../../core/src/proc';
 import {openBot,settle} from '../../core/src/bot';
 import type {Session} from '../../core/src/inprocess';
 import {waitUntil} from '../../core/src/ticks';

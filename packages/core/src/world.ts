@@ -2,19 +2,15 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {withDoorPolicy,accountForSdk,registerRouteActor} from './door-policy';
 import type {TransportMeta,InteractionTarget} from '../../knowledge/src/transports';
-import type {OpenDoorVariant} from '../../knowledge/src/doors';
-
-export type Tile = { x: number; z: number; level: number };
+import type { Tile, Account, Door, DoorBlock } from './world-types';
+export type { Tile, Account, Door, DoorBlock } from './world-types';
 export type Leg =
     | { kind: 'walk'; to: Tile;tolerance?:number }
     | ({ kind: 'transport'; loc: string; option: string; at: Tile; to: Tile; exact: boolean }&TransportMeta)
     | { kind: 'travel'; travel: Travel; at: Tile | null; to: Tile };
 export const routeFares = (legs: readonly Leg[]) => legs.reduce((n, l) => n + (l.kind === 'travel' ? l.travel.coins : 0), 0);
-export interface Account { skills: Record<string, number>; varps: Record<string, number>; items: string[]; coins?: number; counts?: Record<string, number>; worn?:string[]; unlocks?:string[];questStages?:Record<string,number>;castlewarsTeam?:0|1;doorStates?:Record<string,boolean>;visibleLocs?:ReadonlyArray<Tile&{id:number}> }
 
 export interface Transport extends TransportMeta { locName: string; option: string; from: Tile; to: Tile; exact: boolean; src: string; toSrc: string; handler: string }
-export interface Door { id: number; loc: string; x: number; z: number; level: number; angle?:number; shape?:number;open?:OpenDoorVariant; kind: string; need?: { skill?: string; level?: number; varp?: string; item?: string;worn?:string;whenAxis?:boolean;minimum?:number;team?:0|1 }; trigger: string; src: string }
-export type DoorBlock=Tile&{whenAxis?:boolean;angle?:number;shape?:number;blockrange?:boolean};
 
 // Walk cost on one level, or null when the path cannot end within `tol` tiles of `to`. `blocked` are door
 // tiles to keep shut. Stair and ladder tiles are objects, not floor, so they are reached from next to them.

@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { questDefinitions, questFlags } from './quest-status';
 import { waitUntil, waitTicks } from './ticks';
-import type { Session } from './inprocess';
+import type { SessionCore as Session } from './session-types';
+import { walkLeg } from './walk-leg';
 
 export interface GuildActorFacts {
     varps: Record<string, number>;
@@ -196,9 +197,8 @@ async function refreshPrayer(s: Session, c: any): Promise<void> {
                 // Reuse the core's bounded/cancellable ordinary walk. Re-find
                 // this server index afterwards, as BotActions.talkTo does.
                 if(abbot.distance>2){
-                    const {walkRoute}=await import('./walk');
                     const budget=Math.min(30,deadline-s.tick());if(budget<=0)return;
-                    const walked=await walkRoute(s,[{kind:'walk',to:{x:abbot.x,z:abbot.z,level:0},tolerance:2}],{maxRetriesPerLeg:1,legTimeoutTicks:budget});
+                    const walked=await walkLeg(s,{x:abbot.x,z:abbot.z,level:0},{legTimeoutTicks:budget},2);
                     if(!walked.ok)return;
                 }
                 const current=s.sdk.getState()?.nearbyNpcs.find(n=>n.id===801&&n.index===abbot.index);

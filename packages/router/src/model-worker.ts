@@ -2,7 +2,7 @@ import {existsSync,mkdirSync,mkdtempSync,readFileSync,realpathSync} from 'node:f
 import {join,dirname} from 'node:path';
 import {runClaude} from './author';
 import {projectRoot,coordinationDir} from './coordinator-store';
-import {killTree} from '../../practice/src/proc';
+import {killTree} from '../../core/src/proc';
 export type ModelWorker='codex'|'claude';
 export interface ModelRunOptions{purpose?:'planner'}
 // The receipts a review prompt carries: the task's own dependencies and this capability's history, newest first, within
