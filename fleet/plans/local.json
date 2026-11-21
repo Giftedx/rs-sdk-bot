@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795248574215,
+ "at": 1795248648360,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -276,55 +276,6 @@
    "repeat": true
   },
   {
-   "account": "Swordswallow",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "aubury",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "water rune",
-    "STOCK_TARGET": "1509",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "12200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "12000",
-    "AUTOPILOT_ORDER": "[9]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1509}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
-   "role": "bank",
-   "template": "squad-water-aubury",
-   "autopilot": "local",
-   "resources": [
-    "shop:aubury"
-   ]
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
-   "autopilot": "local",
-   "resources": [
-    "knight:2652,3318"
-   ]
-  },
-  {
    "account": "Fingersmith",
    "script": "scripts/chain.ts",
    "args": [
@@ -425,6 +376,55 @@
    "enabled": true,
    "standing": true,
    "repeat": false
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "aubury",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "water rune",
+    "STOCK_TARGET": "1509",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "12200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "12000",
+    "AUTOPILOT_ORDER": "[9]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1509}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
+   "role": "bank",
+   "template": "squad-water-aubury",
+   "autopilot": "local",
+   "resources": [
+    "shop:aubury"
+   ]
+  },
+  {
+   "account": "Unsheathed",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
+   ]
   }
  ],
  "army": [
