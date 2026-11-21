@@ -3,7 +3,7 @@
 //   AGI_ROUTE=monkeybars|gnome|tourist   (default: monkeybars)
 //   AGI_POTION=1|0                       (default: 1, continuous +3 Agility potion boost and 49+ Wildy gate boost)
 //   AGI_PRAY=1|0                         (default: 1, Protect from Melee for Mercenary Captain / safety)
-//   AGI_PIPE_ALIGN=1|0                   (default: 1, align to (3004,3937) before Wildy pipe to skip server walk delay)
+//   AGI_PIPE_ALIGN=1|0                   (default: 0, align to (3004,3937) before Wildy pipe to skip server walk delay)
 //   AGI_CAP=<ticks>                      (default: 9000)
 //   SUPPLIER_EXTERNAL=1                  (default: 0; when 0 and <supplier>/bot.env exists, runs built-in supplier)
 import { existsSync } from 'node:fs';
@@ -100,11 +100,9 @@ export const TOURIST_TRADE_1: readonly SupplyEntry[] = [
     { id: ITEMS.yellowBead, name: 'Yellow bead', count: 1 },
     { id: ITEMS.blackBead, name: 'Black bead', count: 1 },
     { id: ITEMS.whiteBead, name: 'White bead', count: 1 },
-    { id: ITEMS.emeraldRing, name: 'Emerald ring', count: 1 },
     { id: ITEMS.airRune, name: 'Air rune', count: 400 },
     { id: ITEMS.chaosRune, name: 'Chaos rune', count: 100 },
     { id: ITEMS.lawRune, name: 'Law rune', count: 10 },
-    { id: ITEMS.cosmicRune, name: 'Cosmic rune', count: 5 },
     { id: ITEMS.headlessArrow, name: 'Headless arrow', count: 150 },
     { id: ITEMS.bronzeArrowtips, name: 'Bronze arrowtips', count: 150 },
     { id: ITEMS.dragonBones, name: 'Dragon bones', count: 11 },
@@ -113,23 +111,28 @@ export const TOURIST_TRADE_1: readonly SupplyEntry[] = [
 
 export const TOURIST_TRADE_2: readonly SupplyEntry[] = [
     { id: ITEMS.hammer, name: 'Hammer', count: 1 },
-    { id: ITEMS.bronzeBar, name: 'Bronze bar', count: 11 },
+    { id: ITEMS.bronzeBar, name: 'Bronze bar', count: 10 },
     { id: ITEMS.desertShirt, name: 'Desert shirt', count: 1 },
     { id: ITEMS.desertRobe, name: 'Desert robe', count: 1 },
     { id: ITEMS.desertBoots, name: 'Desert boots', count: 1 },
+    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 1 },
+];
+
+export const TOURIST_TRADE_2B: readonly SupplyEntry[] = [
+    { id: ITEMS.bronzeBar, name: 'Bronze bar', count: 12 },
     { id: ITEMS.shantayPass, name: 'Shantay pass', count: 1 },
     { id: ITEMS.waterskin4, name: 'Waterskin(4)', count: 1 },
     { id: ITEMS.feather, name: 'Feather', count: 200 },
     { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 1 },
-    { id: ITEMS.shark, name: 'Shark', count: 1 },
+    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 3 },
     { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 1 },
 ];
 
 export const TOURIST_TRADE_3: readonly SupplyEntry[] = [
-    { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 8 },
-    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 8 },
-    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 6 },
-    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 1 },
+    { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 6 },
+    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 3 },
+    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 4 },
+    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 2 },
 ];
 
 export const MONKEYBARS_TRADE_1: readonly SupplyEntry[] = [
@@ -708,12 +711,18 @@ class SupplierAgent {
             await waitUntil(s, () => this.stopFlag || this.completedPhase >= 1, { timeoutTicks: 240 });
             if (this.stopFlag) return;
 
-            // Teleport Edgeville using supplier Glory -> walk to Varrock West Bank for combined Trade 2.
+            // Teleport Edgeville using supplier Glory -> walk to Varrock West Bank for Trade 2 (Smithing 20) + Trade 2B (Tourist Trap).
             await rubGlory(s, /edgeville/i, { x: 3087, z: 3496 }, 25);
             await this.restockAtBank({ x: 3185, z: 3436 }, TOURIST_TRADE_2);
             await walkNear(s, { x: 3186, z: 3436 }, 1, 20);
             this.readyPhase = 2;
             await waitUntil(s, () => this.stopFlag || this.completedPhase >= 2, { timeoutTicks: 1500 });
+            if (this.stopFlag) return;
+
+            await this.restockAtBank({ x: 3185, z: 3436 }, TOURIST_TRADE_2B);
+            await walkNear(s, { x: 3186, z: 3436 }, 1, 20);
+            this.readyPhase = 3;
+            await waitUntil(s, () => this.stopFlag || this.completedPhase >= 3, { timeoutTicks: 1500 });
             if (this.stopFlag) return;
 
             // Wait partway into Tourist Trap so Supplier never crosses the 900-tick stall window idle at Edgeville.
@@ -723,8 +732,8 @@ class SupplierAgent {
 
             await this.restockAtBank({ x: 3094, z: 3491 }, TOURIST_TRADE_3);
             await walkNear(s, { x: 3093, z: 3491 }, 1, 20);
-            this.readyPhase = 3;
-            await waitUntil(s, () => this.stopFlag || this.completedPhase >= 3, { timeoutTicks: 1500 });
+            this.readyPhase = 4;
+            await waitUntil(s, () => this.stopFlag || this.completedPhase >= 4, { timeoutTicks: 1500 });
         } catch (err) {
             this.error = err instanceof Error ? err : Error(String(err));
         }
@@ -816,18 +825,9 @@ async function runImpCatcherAndEnchant(s: Session, cap: number): Promise<void> {
         off();
         await q.dispose();
     }
-    // Enchant Emerald Ring -> 35 Magic, then cast Varrock Teleport.
+    // Imp Catcher gives 21,875 XP (Level 44 Magic on curve.ts), unlocking both Varrock Teleport and Fire Bolt directly.
     await clearAllDialogs(s, 6);
-    const enchantComp = componentId('magic:enchant_lvl2');
-    for (let t = 0; t < 15 && skillLvl(s, 'Magic') < 35; t++) {
-        await clearDialogTick(s);
-        const ring = invOf(s).find(i => i.id === ITEMS.emeraldRing);
-        if (ring) await s.direct({ type: 'spellOnItem', slot: ring.slot, spellComponent: enchantComp, reason: 'SDK' });
-        await waitTicks(s, 1);
-    }
     if (skillLvl(s, 'Magic') < 35) throw Error(`magic reached ${skillLvl(s, 'Magic')} (< 35)`);
-    await clearAllDialogs(s, 6);
-    await dropAllMatching(s, new Set([ITEMS.duel8, ITEMS.cosmicRune]), 4);
     const teleComp = componentId('magic:varrock_teleport');
     for (let t = 0; t < 20; t++) {
         const p = posOf(s);
@@ -869,7 +869,7 @@ async function smithTo20AtVarrock(s: Session): Promise<void> {
     if (skillLvl(s, 'Smithing') < 20) throw Error(`smithing reached ${skillLvl(s, 'Smithing')} (< 20)`);
 }
 
-async function runFastTouristTrap(s: Session, cap: number, usePrayer: boolean, onHalfway?: () => void): Promise<void> {
+async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, onHalfway?: () => void): Promise<void> {
     // Enter Shantay Pass from Al Kharid glory spot.
     await walkNear(s, { x: 3304, z: 3118 }, 2, 70);
     const passGate = await waitNearbyLoc(s, /shantay pass/i, { x: 3302, z: 3116 }, 5, 15);
@@ -887,7 +887,7 @@ async function runFastTouristTrap(s: Session, cap: number, usePrayer: boolean, o
         await waitTicks(s, 1);
     }
 
-    const q = await openQuest({ session: s, burst: true, cap, eatAt: 5, food: [ITEMS.shark] });
+    const q = await openQuest({ session: s, burst: true, cap, eatAt: 8, food: [ITEMS.chocolateCake, ITEMS.shark], lumbridgeOk: true });
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
     try {
@@ -918,15 +918,13 @@ async function runFastTouristTrap(s: Session, cap: number, usePrayer: boolean, o
 
         const x = () => q.pos()?.worldX ?? 0;
         const z = () => q.pos()?.worldZ ?? 0;
+        const lvl = () => q.pos()?.level ?? 0;
         const msgSince = (re: RegExp, t: number) => (q.st()?.gameMessages ?? []).some((m: any) => m.type === 0 && m.tick >= t && re.test(m.text));
         const closeDlg = async () => { if (q.dialogOpen()) await q.converse([], () => !q.dialogOpen(), 8); };
         const loc = (l: { id: number; x: number; z: number }) => q.locAt(l.x, l.z) ?? l;
         const worn = (id: number) => wornOf(s).some(e => e.id === id);
-        const setPfm = async (on: boolean) => {
-            const pfmOn = () => !!q.st()?.prayers?.activePrayers?.[PRAYER_MELEE];
-            if (pfmOn() === on || (on && (q.st()?.prayers?.prayerPoints ?? 0) <= 0)) return;
-            await q.step(`pfm ${on}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PRAYER_MELEE, reason: 'SDK' }), () => pfmOn() === on, 3, 2);
-        };
+        const inCamp = () => x() >= 3274 && x() <= 3306 && z() >= 3011 && z() <= 3043;
+        const inPrisonCell = () => lvl() === 0 && x() >= 3284 && x() <= 3288 && z() >= 3032 && z() <= 3036;
         const locTalk = async (label: string, sendFn: () => unknown, pats: RegExp[], okFn: () => boolean, tries = 4, ticks = 35) => {
             for (let i = 0; i < tries && !okFn(); i++) {
                 await q.guard(label);
@@ -939,70 +937,145 @@ async function runFastTouristTrap(s: Session, cap: number, usePrayer: boolean, o
             }
             if (!okFn()) await q.fail(`step ${label}`);
         };
-        const inCamp = () => x() >= 3274 && x() <= 3306 && z() >= 3011 && z() <= 3043;
+        const fightCaptainForKey = async () => {
+            await closeDlg();
+            await wearItem(s, ITEMS.fireStaff);
+            await walkNear(s, { x: CAPTAIN.x + 1, z: CAPTAIN.z }, 1, 70);
+            for (let w = 0; w < 60 && !q.npc(/^mercenary captain$/i); w++) await q.waitTicks(1);
+            await q.talk('captain', /^mercenary captain$/i, [/wow! a real captain/i, /love to work for a tough guy/i, /can't i do something for a strong captain/i, /sorry sir, i don't think/i, /funny captain who can't fight/i, /i've some information/i],
+                () => q.sawText(/guards gather around to watch the fight|run you through myself/i), CAPTAIN, 70);
+            // Wait for Captain to initiate melee so %npc_attacking_uid is set (otherwise spellOnNpc triggers "Are you sure").
+            const fightStart = q.s.tick();
+            const hp0 = q.hp();
+            await q.waitUntil(() => q.hp() < hp0 || (((q.npc(/^mercenary captain$/i)?.distance ?? 9) <= 1) && q.s.tick() - fightStart >= 3), 8);
+            const spellComp = componentId(fireSpell(skillLvl(s, 'Magic'), id => q.has(id)));
+            let lastCast = -999;
+            for (let t = 0; t < 180 && !q.has(ITEMS.metalKey); t++) {
+                await q.guard('captain fight');
+                if ((q.st()?.prayers?.prayerPoints ?? 0) <= 5) await drinkFirstMatching(s, ITEMS.prayerPot);
+                if (q.dialogOpen()) {
+                    const d: any = q.s.sdk.getDialog();
+                    const no = (d?.options ?? []).find((o: any) => /no thanks, i've had second/i.test(o.text));
+                    if (no) {
+                        await q.s.sdk.sendClickDialog(no.index);
+                        await q.waitTicks(3);
+                        continue;
+                    }
+                    await closeDlg();
+                }
+                const n = q.npc(/^mercenary captain$/i);
+                if (n && q.s.tick() - lastCast >= 5) {
+                    lastCast = q.s.tick();
+                    await s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: spellComp, reason: 'SDK' });
+                }
+                await q.waitTicks(1);
+            }
+            if (!q.has(ITEMS.metalKey)) await q.fail('no metal key');
+            await closeDlg();
+            // Unequip weapon inside inventory before entering camp (camp guards arrest worn weapons/armour).
+            for (let t = 0; t < 10 && worn(ITEMS.fireStaff); t++) await removeWornItem(s, ITEMS.fireStaff);
+            if (worn(ITEMS.fireStaff)) await q.fail('failed to unequip fire staff before gate');
+        };
+        const escapePrisonCell = async () => {
+            if (!inPrisonCell()) return;
+            await closeDlg();
+            for (let t = 0; t < 20 && inPrisonCell(); t++) {
+                const win = q.findLoc((l: any) => l.id === 2683 && Math.abs(l.x - 3284) <= 2 && Math.abs(l.z - 3032) <= 2);
+                if (!win) { await q.waitTicks(1); continue; }
+                const op = q.opIndex(win, /search/i);
+                await locTalk('cell window', () => q.opLoc(win, op === 1 ? 2 : op), [/yes, i'll bend the bar/i], () => !inPrisonCell(), 4, 30);
+            }
+            const rocks = [
+                { id: 2694, destX: 3279 },
+                { id: 2695, destX: 3277 },
+                { id: 2696, destX: 3275 },
+                { id: 2697, destX: 3271 },
+            ] as const;
+            for (const step of rocks) {
+                if (x() <= step.destX) continue;
+                for (let retry = 0; retry < 8 && x() > step.destX; retry++) {
+                    await q.guard('cell rock');
+                    if (q.hp() <= 7) await drinkFirstMatching(s, [ITEMS.chocolateCake, 1899, 1901, ITEMS.shark]);
+                    const rock = q.findLoc((l: any) => l.id === step.id);
+                    if (!rock) break;
+                    const op = q.opIndex(rock, /climb/i);
+                    await locTalk(`cell rock ${step.id}`, () => q.opLoc(rock, op === 1 ? 2 : op), [/yes, i'll give it a try/i], () => x() <= step.destX, 3, 20);
+                }
+            }
+        };
         const gateIn = async () => {
+            if (inPrisonCell()) await escapePrisonCell();
+            if (!q.has(ITEMS.metalKey)) await fightCaptainForKey();
             if (inCamp()) return;
+            for (let t = 0; t < 10 && worn(ITEMS.fireStaff); t++) await removeWornItem(s, ITEMS.fireStaff);
             await q.walk('to gate', [{ x: 3272, z: 3029, tol: 0 }]);
-            await q.step('gate in', () => q.opLoc(loc(GATE), 1), () => x() >= 3274, 10, 3);
+            await q.step('gate in', () => q.opLoc(loc(GATE), 1), () => x() >= 3274, 12, 4);
+            await q.waitTicks(2);
         };
         const gateOut = async () => {
-            for (const id of [ITEMS.slaveShirt, ITEMS.slaveRobe, ITEMS.slaveBoots]) await removeWornItem(s, id);
+            for (const id of [ITEMS.slaveShirt, ITEMS.slaveRobe, ITEMS.slaveBoots]) {
+                for (let t = 0; t < 12 && worn(id); t++) await removeWornItem(s, id);
+            }
             if (!inCamp()) return;
             await q.walk('to gate inside', [{ x: 3274, z: 3029, tol: 0 }]);
-            await q.step('gate out', () => q.opLoc(loc(GATE), 1), () => x() <= 3273, 10, 3);
+            await q.step('gate out', () => q.opLoc(loc(GATE), 1), () => x() <= 3273, 12, 4);
+            await q.waitTicks(2);
         };
-        const slaveClothes = async () => { for (const id of [ITEMS.slaveShirt, ITEMS.slaveRobe, ITEMS.slaveBoots]) await wearItem(s, id); };
+        const slaveClothes = async () => {
+            for (const id of [ITEMS.slaveShirt, ITEMS.slaveRobe, ITEMS.slaveBoots]) {
+                for (let t = 0; t < 12 && !worn(id); t++) {
+                    await closeDlg();
+                    await wearItem(s, id);
+                }
+            }
+        };
         const mineIn = async () => {
             await slaveClothes();
             await q.walk('to mine doors', [{ x: MINE_IN.x, z: MINE_IN.z - 1, tol: 0 }]);
-            await q.step('mine doors', () => q.opLoc(loc(MINE_IN), 1), () => z() > 9000, 10, 3);
+            await q.step('mine doors', () => q.opLoc(loc(MINE_IN), 1), () => z() > 9000, 12, 4);
+            await q.waitTicks(2);
             await closeDlg();
         };
         const mineOut = async () => {
-            await q.step('mine exit', () => q.opLoc(loc(MINE_OUT), 1), () => z() < 4000, 20, 3);
+            await q.step('mine exit', () => q.opLoc(loc(MINE_OUT), 1), () => z() < 4000, 25, 4);
+            await q.waitTicks(2);
         };
         const shabim = (label: string, pats: RegExp[], okFn: () => boolean) => q.talk(label, /^al shabim$/i, pats, okFn, SHABIM, 60);
 
         await q.talk('irena', /^irena$/i, [/what's the matter/i, /is there a reward/i, /okay irena, calm down/i], () => q.sawText(/red silk scarf/i), IRENA, 60);
         q.milestone(1);
 
-        // Mercenary Captain: Activate Protect from Melee and fire Bolt immediately after talk.
+        // Mercenary Captain: PrayerGuard auto-activates Protect from Melee without switching manual=true.
         await maintainEnergy(s, 50);
-        await q.walk('to captain', [{ x: CAPTAIN.x + 2, z: CAPTAIN.z, tol: 2 }]);
-        if (usePrayer) await setPfm(true);
-        await q.talk('captain', /^mercenary captain$/i, [/wow! a real captain/i, /love to work for a tough guy/i, /can't i do something for a strong captain/i, /sorry sir, i don't think/i, /funny captain who can't fight/i],
-            () => q.sawText(/guards gather around to watch the fight/i), CAPTAIN, 70);
-        const spellComp = componentId(fireSpell(skillLvl(s, 'Magic'), id => q.has(id)));
-        let lastCast = -999;
-        for (let t = 0; t < 160 && !q.has(ITEMS.metalKey); t++) {
-            await q.guard('captain fight');
-            if ((q.st()?.prayers?.prayerPoints ?? 0) <= 5 && usePrayer) await drinkFirstMatching(s, ITEMS.prayerPot);
-            if (q.dialogOpen()) {
-                const d: any = q.s.sdk.getDialog();
-                const no = (d?.options ?? []).find((o: any) => /no thanks, i've had second/i.test(o.text));
-                if (no) { await q.s.sdk.sendClickDialog(no.index); await waitTicks(s, 1); continue; }
-                await closeDlg();
-            }
-            const n = q.npc(/^mercenary captain$/i);
-            if (n && s.tick() - lastCast >= 5) {
-                lastCast = s.tick();
-                await s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: spellComp, reason: 'SDK' });
-            }
-            await waitTicks(s, 1);
-        }
-        if (usePrayer) await setPfm(false);
-        if (!q.has(ITEMS.metalKey)) await q.fail('no metal key');
-        await closeDlg();
-        // Drop combat supplies + unequip weapon so camp guards never jail on entry.
-        await removeWornItem(s, ITEMS.fireStaff);
-        await dropAllMatching(s, new Set([ITEMS.fireStaff, ITEMS.airRune, ITEMS.chaosRune, ITEMS.vial, ITEMS.shantayDisclaimer]), 5);
+        await fightCaptainForKey();
         q.milestone(4);
 
         await gateIn();
         q.milestone(5);
-        await q.walk('to slave', [{ x: SLAVE.x - 1, z: SLAVE.z, tol: 1 }]);
-        await q.talk('slave', /^male slave$/i, [/i've just arrived/i, /oh yes, that sounds interesting/i, /what's that then/i, /i can try to undo them/i, /funny you should say that/i, /let's give it a go/i, /give it another go/i, /yes, i'll trade/i],
-            () => worn(ITEMS.slaveShirt) && worn(ITEMS.slaveRobe) && worn(ITEMS.slaveBoots), SLAVE, 140);
+        // Picklock Male Slave at Thieving 1 (~8.6%/try); if 3rd fail within 10 tiles of a guard jails player, recover cell+key and retry.
+        for (let attempt = 0; attempt < 12 && !(worn(ITEMS.slaveShirt) && worn(ITEMS.slaveRobe) && worn(ITEMS.slaveBoots)); attempt++) {
+            await q.guard('slave loop');
+            if (inPrisonCell()) await escapePrisonCell();
+            if (!q.has(ITEMS.metalKey)) await fightCaptainForKey();
+            if (!inCamp()) await gateIn();
+            for (const id of [ITEMS.desertShirt, ITEMS.desertRobe, ITEMS.desertBoots]) await wearItem(s, id);
+            await q.walk('to slave', [{ x: SLAVE.x - 1, z: SLAVE.z, tol: 1 }]);
+            const gotClothes = () => worn(ITEMS.slaveShirt) && worn(ITEMS.slaveRobe) && worn(ITEMS.slaveBoots);
+            await q.talk(
+                attempt === 0 ? 'slave' : 'slave retry',
+                /^male slave$/i,
+                [/i've just arrived/i, /oh yes, that sounds interesting/i, /what's that then/i, /i can try to undo them/i, /funny you should say that/i, /let's give it a go/i, /give it another go/i, /yes, i'll trade/i],
+                () => gotClothes() || inPrisonCell() || !inCamp(),
+                SLAVE,
+                55,
+            );
+            await closeDlg();
+        }
+        if (!(worn(ITEMS.slaveShirt) && worn(ITEMS.slaveRobe) && worn(ITEMS.slaveBoots))) {
+            await q.fail('failed male slave clothes trade');
+        }
+        // Now Male Slave succeeded: drop combat magic items to leave inventory clear for barrel/plans.
+        await dropAllMatching(s, new Set([ITEMS.fireStaff, ITEMS.airRune, ITEMS.chaosRune, ITEMS.vial, ITEMS.shantayDisclaimer]), 5);
         q.milestone(8);
 
         await mineIn();
@@ -1026,16 +1099,24 @@ async function runFastTouristTrap(s: Session, cap: number, usePrayer: boolean, o
         await curtain();
         await q.dash('through curtain', 3291, 3032, 0, 8);
         await q.dash('to ladder', LADDER.x, LADDER.z - 1, 1, 12);
-        await q.climb('ladder up', () => q.locAt(LADDER.x, LADDER.z) ?? LADDER, /climb-up|^climb/i, () => q.lvl() === 1);
+        await q.climb('ladder up', () => q.locAt(LADDER.x, LADDER.z) ?? LADDER, /climb-up|^climb/i, () => lvl() === 1);
         await q.walk('to bookcase', [{ x: 3285, z: 3032, tol: 0 }]);
         await locTalk('bookcase', () => { const b = loc(BOOKCASE); return q.opLoc(b, q.opIndex(b, /search/i) === 1 ? 2 : q.opIndex(b, /search/i)); }, [], () => q.sawText(/subject of sailing/i));
         for (let i = 0; i < 4 && !q.has(ITEMS.plans); i++) {
-            await q.talk('siad', /^captain siad$/i, [/wanted to have a chat/i, /you seem to have a lot of books/i, /interested in sailing/i, /cut of your jib/i], () => q.sawText(/looks quite distracted/i), { x: 3291, z: 3032 }, 60);
-            await locTalk('chest', () => { const c = loc(CHEST); return q.opLoc(c, q.opIndex(c, /open/i)); }, [], () => q.has(ITEMS.plans) || q.sawText(/spots you before you manage/i), 2);
+            let siadDone = false;
+            await q.talk('siad', /^captain siad$/i, [/wanted to have a chat/i, /you seem to have a lot of books/i, /interested in sailing/i, /cut of your jib/i], () => {
+                if (i === 0) return q.sawText(/looks quite distracted/i);
+                if (q.dialogOpen() && /looks quite distracted/i.test([q.s.sdk.getDialog()?.text ?? '', ...(q.s.sdk.getDialog()?.allComponents ?? []).map((c: any) => c.text ?? '')].join(' '))) {
+                    siadDone = true;
+                }
+                return siadDone;
+            }, { x: 3291, z: 3032 }, 60);
+            const tChest = q.s.tick();
+            await locTalk('chest', () => { const c = loc(CHEST); return q.opLoc(c, q.opIndex(c, /open/i)); }, [], () => q.has(ITEMS.plans) || msgSince(/spots you before you manage/i, tChest), 2);
         }
         if (!q.has(ITEMS.plans)) await q.fail('no plans');
         await q.walk('to ladder top', [{ x: LADDER_TOP.x, z: LADDER_TOP.z - 1, tol: 0 }]);
-        await q.climb('ladder down', () => q.locAt(LADDER_TOP.x, LADDER_TOP.z) ?? LADDER_TOP, /climb-down|^climb/i, () => q.lvl() === 0);
+        await q.climb('ladder down', () => q.locAt(LADDER_TOP.x, LADDER_TOP.z) ?? LADDER_TOP, /climb-down|^climb/i, () => lvl() === 0);
         await q.dash('to curtain inside', 3291, 3031, 0, 14);
         await curtain();
         await q.dash('out of curtain', 3291, 3029, 1, 8);
@@ -1079,27 +1160,30 @@ async function runFastTouristTrap(s: Session, cap: number, usePrayer: boolean, o
         await q.walk('to cave guard', [{ x: 3280, z: 9415, tol: 1 }]);
         await q.talk('pineapple', /^mercenary$/i, [], () => !q.has(ITEMS.pineapple) && q.sawText(/a deal's a deal/i), { x: 3280, z: 9415 }, 50);
         await q.walk('to cave', [{ x: CAVE_W.x - 1, z: CAVE_W.z, tol: 0 }]);
-        await q.step('cave east', () => q.opLoc(loc(CAVE_W), 1), () => x() >= 3285, 10, 3);
+        await q.step('cave east', () => q.opLoc(loc(CAVE_W), 1), () => x() >= 3285, 12, 4);
+        await q.waitTicks(2);
 
         await q.walk('to barrels', [{ x: 3302, z: 9418, tol: 1 }]);
         await locTalk('empty barrel', () => { const b = q.findLoc((l: any) => l.id === 2681 && Math.abs(l.x - 3303) <= 3 && Math.abs(l.z - 9417) <= 3) ?? LOW_BARREL; return q.opLoc(b, q.opIndex(b, /search|take/i) === 1 ? 2 : q.opIndex(b, /search|take/i)); }, [/yeah, cool/i], () => q.has(ITEMS.barrel));
-        await locTalk('low cart', () => { const c = loc(LOW_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() >= 9428 && x() >= 3310, 5);
+        await locTalk('low cart', () => { const c = loc(LOW_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() >= 9428 && x() >= 3310, 8);
 
         await maintainEnergy(s, 45);
         await q.walk('to ana', [{ x: ANA.x, z: ANA.z - 1, tol: 3 }]);
-        await q.step('ana barrel', () => { const n = q.npc(/^ana$/i); return n ? q.useOnNpc(ITEMS.barrel, n) : waitTicks(s, 1); }, () => q.has(ITEMS.ana), 20, 3);
+        await q.step('ana barrel', () => { const n = q.npc(/^ana$/i); return n ? q.useOnNpc(ITEMS.barrel, n) : waitTicks(s, 1); }, () => q.has(ITEMS.ana), 20, 4);
         await closeDlg();
 
         await q.walk('to ana cart', [{ x: 3319, z: 9431, tol: 1 }]);
         await q.step('ana in cart', () => q.useOnLoc(ITEMS.ana, loc(ANA_CART)), () => !q.has(ITEMS.ana), 12, 3);
-        await locTalk('cart back', () => { const c = loc(ANA_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() <= 9420, 5);
+        await q.waitTicks(4);
+        await locTalk('cart back', () => { const c = loc(ANA_CART); return q.opLoc(c, q.opIndex(c, /search/i) === 1 ? 2 : q.opIndex(c, /search/i)); }, [/yes, of course/i], () => z() <= 9420, 8);
         await locTalk('ana barrel 2', () => { const b = q.findLoc((l: any) => l.id === 2681 && Math.abs(l.x - 3303) <= 3 && Math.abs(l.z - 9417) <= 3) ?? LOW_BARREL; return q.opLoc(b, q.opIndex(b, /search|take/i) === 1 ? 2 : q.opIndex(b, /search|take/i)); }, [], () => q.has(ITEMS.ana));
 
         await q.walk('to lift', [{ x: LIFT.x, z: LIFT.z - 1, tol: 1 }]);
         await locTalk('lift', () => q.useOnLoc(ITEMS.ana, loc(LIFT)), [/yes please/i, /very gregarious/i], () => !q.has(ITEMS.ana) && q.sawText(/no one operating the lift/i));
 
         await q.walk('to cave back', [{ x: CAVE_E.x + 1, z: CAVE_E.z, tol: 0 }]);
-        await q.step('cave west', () => q.opLoc(loc(CAVE_E), 1), () => x() <= 3279, 10, 3);
+        await q.step('cave west', () => q.opLoc(loc(CAVE_E), 1), () => x() <= 3279, 12, 4);
+        await q.waitTicks(2);
         await mineOut();
 
         await q.walk('to winch', [{ x: 3280, z: 3018, tol: 0 }]);
@@ -1708,22 +1792,25 @@ export async function runAgilitySpecialist(bot: string, argv: readonly string[] 
 
             await walkNear(spec, { x: 3185, z: 3436, level: 0 }, 2, 40);
             await clearAllDialogs(spec, 3);
-            await dropExcept(spec, new Set([...GLORY_IDS, ITEMS.airRune, ITEMS.chaosRune]), 8);
-            if (invOf(spec).length > 7) {
+            await dropExcept(spec, new Set([...GLORY_IDS, ITEMS.airRune, ITEMS.chaosRune, ...ITEMS.superEnergy]), 8);
+            if (invOf(spec).length > 6) {
                 throw Error(`pre-trade-2 inventory too full (${invOf(spec).length}): ${invOf(spec).map(i => i.id).join(',')}`);
             }
             await receiveTradePhase(TOURIST_TRADE_2, 2, 450);
-            await smithTo20AtVarrock(spec);
             await wearItem(spec, ITEMS.desertShirt);
             await wearItem(spec, ITEMS.desertRobe);
             await wearItem(spec, ITEMS.desertBoots);
+            await smithTo20AtVarrock(spec);
+            await dropExcept(spec, new Set([...GLORY_IDS, ITEMS.airRune, ITEMS.chaosRune, ITEMS.hammer, ...ITEMS.superEnergy]), 8);
+            await walkNear(spec, { x: 3185, z: 3436, level: 0 }, 2, 30);
+            await receiveTradePhase(TOURIST_TRADE_2B, 3, 450);
             await rubGlory(spec, /al kharid/i, { x: 3293, z: 3163 }, 20);
 
             await runFastTouristTrap(spec, cfg.cap, cfg.usePrayer, () => supplier?.startEdgevilleMove());
             await rubGlory(spec, /edgeville/i, { x: 3087, z: 3496 }, 20);
             await walkNear(spec, { x: 3094, z: 3491, level: 0 }, 2, 25);
             await dropAllMatching(spec, new Set(invOf(spec).map(i => i.id).filter(id => !GLORY_IDS.includes(id))), 8);
-            await receiveTradePhase(TOURIST_TRADE_3, 3, 450, true);
+            await receiveTradePhase(TOURIST_TRADE_3, 4, 450, true);
             if (supplierTask) {
                 await supplierTask;
                 if (supplier?.lastError()) throw supplier.lastError()!;

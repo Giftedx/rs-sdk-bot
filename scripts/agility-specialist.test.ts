@@ -17,6 +17,7 @@ import {
     startedWildernessObstacle,
     TOURIST_TRADE_1,
     TOURIST_TRADE_2,
+    TOURIST_TRADE_2B,
     TOURIST_TRADE_3,
     trade1ForConfig,
 } from './agility-specialist';
@@ -40,7 +41,7 @@ describe('Agility specialist supply bills and item IDs', () => {
     const byId = new Map(items.map(i => [i.id, i]));
 
     test('every trade batch and chocolate cake part exists in knowledge/items.json with exact tradeable ID', () => {
-        for (const batch of [TOURIST_TRADE_1, TOURIST_TRADE_2, TOURIST_TRADE_3, MONKEYBARS_TRADE_1, MONKEYBARS_TRADE_1_NOPOT, GNOME_TRADE_1, GNOME_TRADE_1_NOPRAY]) {
+        for (const batch of [TOURIST_TRADE_1, TOURIST_TRADE_2, TOURIST_TRADE_2B, TOURIST_TRADE_3, MONKEYBARS_TRADE_1, MONKEYBARS_TRADE_1_NOPOT, GNOME_TRADE_1, GNOME_TRADE_1_NOPRAY]) {
             for (const entry of batch) {
                 const row = byId.get(entry.id);
                 expect(row, `item ${entry.id} (${entry.name})`).toBeDefined();
@@ -57,7 +58,8 @@ describe('Agility specialist supply bills and item IDs', () => {
 
     test('every trade batch and companion inventory fits within 28 slots and covers tourist bank demand', () => {
         expect(inventorySlotsNeeded(TOURIST_TRADE_1, STACKABLE_IDS)).toBeLessThanOrEqual(26);
-        expect(inventorySlotsNeeded(TOURIST_TRADE_2, STACKABLE_IDS)).toBeLessThanOrEqual(25);
+        expect(inventorySlotsNeeded(TOURIST_TRADE_2, STACKABLE_IDS)).toBeLessThanOrEqual(22);
+        expect(inventorySlotsNeeded(TOURIST_TRADE_2B, STACKABLE_IDS)).toBeLessThanOrEqual(22);
         expect(inventorySlotsNeeded(TOURIST_TRADE_3, STACKABLE_IDS)).toBeLessThanOrEqual(24);
         expect(inventorySlotsNeeded(MONKEYBARS_TRADE_1, STACKABLE_IDS)).toBe(28);
         expect(inventorySlotsNeeded(MONKEYBARS_TRADE_1_NOPOT, STACKABLE_IDS)).toBe(21);
@@ -76,7 +78,7 @@ describe('Agility specialist supply bills and item IDs', () => {
             (touristCase?.companions?.[0]?.presetConfig?.bank ?? []).map(b => [b.id, b.count]),
         );
         const need = new Map<number, number>();
-        for (const batch of [TOURIST_TRADE_2, TOURIST_TRADE_3]) {
+        for (const batch of [TOURIST_TRADE_2, TOURIST_TRADE_2B, TOURIST_TRADE_3]) {
             for (const entry of batch) need.set(entry.id, (need.get(entry.id) ?? 0) + entry.count);
         }
         for (const [id, req] of need) {
@@ -94,8 +96,8 @@ describe('Setup XP curves and threshold calculations', () => {
         expect(10 * 19.5 * 25).toBeGreaterThanOrEqual(xpForLevel(20));
         // 11 dragon bones -> 11 * 72 * 25 = 19,800 XP >= Level 43 (19,684 XP)
         expect(11 * 72 * 25).toBeGreaterThanOrEqual(xpForLevel(43));
-        // Imp Catcher (875 * 25 = 21,875 XP) + 1 Emerald ring enchant (37 * 25 = 925 XP) >= Level 35 (22,406 XP)
-        expect(875 * 25 + 37 * 25).toBeGreaterThanOrEqual(xpForLevel(35));
+        // Imp Catcher (875 * 25 = 21,875 XP) >= Level 35 (10,847 XP) and Level 43 (19,684 XP) on curve.ts
+        expect(875 * 25).toBeGreaterThanOrEqual(xpForLevel(35));
     });
 });
 
