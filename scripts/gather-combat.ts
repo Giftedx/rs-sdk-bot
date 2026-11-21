@@ -38,7 +38,7 @@ import {resolve} from 'node:path';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { goTo, walkPath, sessionWalker, expandPath, type PathDeps, type PathPoint, type PathTile } from '../packages/core/src/walk';
 import { BOARD_PLANK_IDS, DISEMBARK_PLANK_IDS, disembark, pickDisembarkPlank, type BoatSession } from '../packages/core/src/boat';
-import { ferryWalk, walkTargetPersist } from './walk-to';
+import { approach, ferryWalk, walkTargetPersist } from './walk-to';
 import { npcId, objId } from '../packages/core/src/content-facts';
 
 // Local bear spawn clusters from rev289 maps / cow-path-probe.json. Expand by7:
@@ -579,6 +579,20 @@ export function retreatWaypoints(trail:readonly PathTile[],at:PathTile,bank:Path
 // A target that fights another player: in combat and facing a player slot that is not this account's.
 export const anothersFight=(npc:{inCombat?:boolean;targetIndex?:number}|undefined,selfSlot:number|undefined)=>
     !!npc?.inCombat&&selfSlot!==undefined&&(npc.targetIndex??-1)>=32768&&npc.targetIndex!==32768+selfSlot;
+export function needsLongSurfaceWalk(from: { x: number; z: number; level: number }, to: { x: number; z: number }, maxLocal = 40): boolean {
+    return from.level === 0 && from.z < 6400 && to.z < 6400 && Math.max(Math.abs(from.x - to.x), Math.abs(from.z - to.z)) > maxLocal;
+}
+export type CombatWaitState = {
+    player?: { combat?: { inCombat?: boolean; targetType?: string; targetIndex?: number } } | null;
+    nearbyNpcs?: readonly { index: number; distance?: number; inCombat?: boolean; targetIndex?: number }[];
+} | null | undefined;
+export function combatTargetFinished(state: CombatWaitState, monsterIndex: number, selfSlot: number | undefined, idleTicks: number, idleLimit = 4): { done: boolean; dead: boolean } {
+    const npc = state?.nearbyNpcs?.find(n => n.index === monsterIndex);
+    if (!npc) return { done: true, dead: true };
+    if (anothersFight(npc, selfSlot)) return { done: true, dead: false };
+    if (!state?.player?.combat?.inCombat && !npc.inCombat && idleTicks >= idleLimit) return { done: true, dead: false };
+    return { done: false, dead: false };
+}
 export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targetLevel?:number;maximum?:number;food?:number;ammo?:number;ammoPickup?:boolean;rangedKit?:{bow:number;arrow:number};bury?:boolean;eatAt?:number;noProgress?:number;stop?:()=>boolean;walk?:(x:number,z:number,tol:number,signal?:AbortSignal)=>Promise<boolean>;site?:CombatSite}){
     const site=o.site??GIANT_SITE,label=site.label;
     const maximum=giantKillLimit(o.maximum);
@@ -1260,6 +1274,13 @@ try {
             const p = pos();
             if (p && p.level !== 0) throw Error(`combat travel aborted: level !== 0 (${p.level})`);
             if (p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol) break;
+            if (p && needsLongSurfaceWalk({ x: p.worldX, z: p.worldZ, level: p.level }, { x, z })) {
+                const longWalk = await walkTargetPersist(s, { x, z, level: 0 }, 3, to => approach(s, to, travelStop));
+                if (travelStop()) break;
+                const after = pos();
+                if (after && Math.max(Math.abs(after.worldX - x), Math.abs(after.worldZ - z)) <= tol) break;
+                if (!longWalk.ok) console.log(`LONG_WALK fail ${longWalk.detail ?? longWalk.reason ?? 'unknown'}`);
+            }
             const r = await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: travelStop, maxTicks: 500 });
             if (!r.ok) {
                 console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
@@ -1411,9 +1432,21 @@ try {
 
         const a = await s.bot.attack(monster);
         if (a.success) {
-            // Wait until dead or out of combat
-            let dead:boolean;
-            if(cleanupScope){const began=s.tick();while(!over()&&!cowStop.stop()&&s.tick()-began<100&&s.sdk.getState()?.nearbyNpcs.some(n=>n.index===monster.index)){if(potions&&s.sdk.getState()?.player?.combat.targetType==='npc'&&s.sdk.getState()?.player?.combat.targetIndex===monster.index)await potions.poll(monster);await waitTicks(s,1);}dead=!s.sdk.getState()?.nearbyNpcs.some(n=>n.index===monster.index);}else dead = await waitUntil(s, st => !(st?.nearbyNpcs ?? []).some((n: any) => n.index === monster.index), { timeoutTicks: 100 });
+            // Wait until dead, taken by another player, or idle after disengagement.
+            const began = s.tick();
+            let engaged = false, idleTicks = 0, dead = false;
+            while (!over() && !cowStop.stop() && s.tick() - began < 100) {
+                const st = s.sdk.getState();
+                const npc = st?.nearbyNpcs.find(n => n.index === monster.index);
+                if (npc && (st?.player?.combat?.targetType === 'npc' && st.player.combat.targetIndex === monster.index || npc.inCombat)) engaged = true;
+                const outcome = combatTargetFinished(st, monster.index, selfSlot, idleTicks);
+                if (outcome.done) { dead = outcome.dead; break; }
+                const active = !!st?.player?.combat?.inCombat || !!npc?.inCombat;
+                if (active) idleTicks = 0;
+                else if (engaged || (npc?.distance ?? 99) <= 2 || s.tick() - began >= 15) idleTicks++;
+                if (potions && st?.player?.combat.targetType === 'npc' && st.player.combat.targetIndex === monster.index) await potions.poll(monster);
+                await waitTicks(s, 1);
+            }
             if (dead) {
                 kills++;
                 // Wait 1 tick for loot to appear on ground

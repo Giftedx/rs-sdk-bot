@@ -3776,5 +3776,7 @@ describe('continuous mainland supplies, strict 4-dose decanting, quest safety an
         expect(CAPACITY['squad:shilo-karambwanji']).toBe(2);
         expect(CAPACITY['squad:shilo-karambwan']).toBe(2);
         expect(CAPACITY['squad:catherby-cooking']).toBe(2);
+        expect(CAPACITY['squad:taverley-druids']).toBe(1);
+        expect(PLACES['squad:ardougne-giants']).toEqual({ x: 3092, z: 3496 });
     });
 });

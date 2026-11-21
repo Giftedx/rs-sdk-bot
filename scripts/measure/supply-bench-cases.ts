@@ -111,6 +111,20 @@ export const SUPPLY_BENCH_CASES: readonly BenchCase[] = [
         pass: s => ok(s) && /kills=2 /.test(s),
     },
     {
+        key: 'extra:supply-giant-catherby-travel',
+        script: 'scripts/gather-combat.ts',
+        preset: 'fresh_lumbridge',
+        scriptArgs: ['3500', 'giant', 'MAX_KILLS=1'],
+        presetConfig: {
+            position: { x: 2862, z: 3440, level: 0 },
+            skills: { Attack: 50, Strength: 50, Defence: 40, Hitpoints: 50 },
+            equipment: [{ id: 1333, count: 1, slot: 3 }],
+            inventory: [{ id: 385, count: 5 }, { id: 995, count: 200 }],
+            bank: [{ id: 385, count: 10 }, { id: 995, count: 1000 }],
+        },
+        pass: s => ok(s) && /kills=1 /.test(s),
+    },
+    {
         key: 'extra:supply-taverley-scales',
         script: 'scripts/gather-combat.ts',
         preset: 'fresh_lumbridge',

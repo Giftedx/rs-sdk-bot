@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {GIANT,GIANT_HERBS,TROOPER_FOODS,TROOPER_SITE,COW_BEAR_BOXES,CONFIGS,TAVERLEY_ROUTE,isNonWildernessGatherGoal,createTaverleyTravel,ensureSurfaceGroundEntry} from './gather-combat';
+import {GIANT,GIANT_HERBS,TROOPER_FOODS,TROOPER_SITE,COW_BEAR_BOXES,CONFIGS,TAVERLEY_ROUTE,isNonWildernessGatherGoal,createTaverleyTravel,ensureSurfaceGroundEntry,needsLongSurfaceWalk,combatTargetFinished} from './gather-combat';
 import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl,genericCombatNpc,bankCombatLoot,cowFoodBites,cowFoodPick,cowFoodHeal,COW_FOOD_HP,cowReleased,COW_RELEASE,selectGiantArmour,COW_FOOD_BITES} from './gather-combat';
 import {gearById} from '../packages/planner/src/gear-progression';
 import type {Session} from '../packages/core/src/inprocess';
@@ -677,4 +677,31 @@ test('non-Wilderness giant and Taverley supply configs capture crystal key halve
     }
     expect(CONFIGS.taverley_blue_dragon!.drops.test('Shield left half')).toBe(true);
     expect(CONFIGS.taverley_black_dragon!.drops.test('Shield left half')).toBe(true);
+});
+
+test('needsLongSurfaceWalk enables ferry/planned travel only for >40-tile level-0 surface routes', () => {
+    expect(needsLongSurfaceWalk({ x: 2862, z: 3440, level: 0 }, { x: 3097, z: 3468 })).toBe(true);
+    expect(needsLongSurfaceWalk({ x: 3092, z: 3496, level: 0 }, { x: 3097, z: 3468 })).toBe(false);
+    expect(needsLongSurfaceWalk({ x: 3117, z: 9850, level: 0 }, { x: 3097, z: 9868 })).toBe(false);
+    expect(needsLongSurfaceWalk({ x: 2862, z: 3440, level: 1 }, { x: 3097, z: 3468 })).toBe(false);
+});
+
+test('combatTargetFinished detects kill, stolen aggro, and sustained disengagement without stalling', () => {
+    expect(combatTargetFinished({ player: { combat: { inCombat: false } }, nearbyNpcs: [] }, 42, 2, 0)).toEqual({ done: true, dead: true });
+    expect(combatTargetFinished({
+        player: { combat: { inCombat: false } },
+        nearbyNpcs: [{ index: 42, inCombat: true, targetIndex: 32768 + 5 }],
+    }, 42, 2, 0)).toEqual({ done: true, dead: false });
+    expect(combatTargetFinished({
+        player: { combat: { inCombat: true, targetType: 'npc', targetIndex: 42 } },
+        nearbyNpcs: [{ index: 42, inCombat: true, targetIndex: 32768 + 2 }],
+    }, 42, 2, 10)).toEqual({ done: false, dead: false });
+    expect(combatTargetFinished({
+        player: { combat: { inCombat: false } },
+        nearbyNpcs: [{ index: 42, inCombat: false, targetIndex: -1 }],
+    }, 42, 2, 3)).toEqual({ done: false, dead: false });
+    expect(combatTargetFinished({
+        player: { combat: { inCombat: false } },
+        nearbyNpcs: [{ index: 42, inCombat: false, targetIndex: -1 }],
+    }, 42, 2, 4)).toEqual({ done: true, dead: false });
 });
