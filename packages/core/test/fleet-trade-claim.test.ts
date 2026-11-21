@@ -1,34 +1,63 @@
-import { expect, test, spyOn } from 'bun:test';
+import { expect, test as bunTest, spyOn, afterAll } from 'bun:test';
 import { execFileSync } from 'node:child_process';
 import * as childProcess from 'node:child_process';
-import { mkdtempSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { cpSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpus, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { createInterface } from 'node:readline';
+import { fileURLToPath } from 'node:url';
 import { acquireFleetSwarmClaim, acquireFleetTradeClaim, readAllFleetAccountClaims, readFleetAccountClaim, readFleetTradeClaim, readHeldFleetTradeClaims, releaseFleetTradeClaim } from '../src/fleet-trade-claim';
 import { beginSessionAttempt, lifecycleOwner } from '../src/session-lifecycle';
+import { savedProcessAlive } from '../src/session-takeover';
 import { acquireFleetLease, fleetGitWindow } from '../src/fleet-lease';
 import { ORPHAN_CLAIM_MS } from '../src/fleet-trade-claim';
 import * as claimApi from '../src/fleet-trade-claim';
 
+const isWorker = process.env.FLEET_CLAIM_WORKER === '1';
 const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe', timeout: 5000, windowsHide: true });
 const server = 'rs-sdk-demo.fly.dev';
 const input = { account: 'Trader', server, side: 'local', orderId: 'order-one', role: 'from' as const };
 
+type RepoTemplate = { dir: string; remoteUrl: string; cfgA: string; cfgB: string };
+let repoTemplate: RepoTemplate | undefined = isWorker && process.env.FLEET_CLAIM_TEMPLATE ? JSON.parse(process.env.FLEET_CLAIM_TEMPLATE) : undefined;
+
+function createRepoTemplate(): RepoTemplate {
+    const dir = mkdtempSync(join(tmpdir(), 'fleet-trade-claim-tpl-'));
+    const remote = join(dir, 'origin.git'), remoteUrl = remote.replaceAll('\\', '/');
+    const a = join(dir, 'a'), b = join(dir, 'b');
+    git(dir, 'init', '--bare', remote);
+    for (const d of [a, b]) {
+        mkdirSync(d);
+        git(d, 'init');
+        git(d, 'remote', 'add', 'origin', remoteUrl);
+    }
+    return {
+        dir,
+        remoteUrl,
+        cfgA: readFileSync(join(a, '.git', 'config'), 'utf8'),
+        cfgB: readFileSync(join(b, '.git', 'config'), 'utf8'),
+    };
+}
+
 async function withRepos(run: (a: string, b: string) => void | Promise<void>) {
+    const tpl = (repoTemplate ??= createRepoTemplate());
     const base = mkdtempSync(join(tmpdir(), 'fleet-trade-claim-'));
     try {
-        const remote = join(base, 'origin.git'), a = join(base, 'a'), b = join(base, 'b');
-        git(base, 'init', '--bare', remote);
-        for (const dir of [a, b]) {
-            mkdirSync(dir);
-            git(dir, 'init');
-            git(dir, 'remote', 'add', 'origin', remote);
-        }
+        cpSync(tpl.dir, base, { recursive: true });
+        const remoteUrl = join(base, 'origin.git').replaceAll('\\', '/');
+        const a = join(base, 'a'), b = join(base, 'b');
+        writeFileSync(join(a, '.git', 'config'), tpl.cfgA.replaceAll(tpl.remoteUrl, remoteUrl));
+        writeFileSync(join(b, '.git', 'config'), tpl.cfgB.replaceAll(tpl.remoteUrl, remoteUrl));
         await run(a, b);
     } finally {
         if (dirname(base) === tmpdir()) rmSync(base, { recursive: true, force: true, maxRetries: 5 });
     }
 }
+
+const CONCURRENT_CASES: Array<{ name: string; fn: () => void | Promise<void>; timeout: number }> = [];
+const test = (name: string, fn: () => void | Promise<void>, timeout = 30_000) => {
+    CONCURRENT_CASES.push({ name, fn, timeout });
+};
 
 test('atomic trade claim release frees both exact nonces and rejects replacement claims', async () => {
     await withRepos((a) => {
@@ -167,7 +196,8 @@ test('a dead swarm producer remains held, and pre-network recovery refusal resto
         { cwd: a, stdout: 'ignore', stderr: 'pipe', timeout: 15_000, windowsHide: true });
         expect(await interrupted.exited).toBe(0);
         expect(() => acquireFleetTradeClaim(a, input)).toThrow('held');
-        const replacement = acquireFleetSwarmClaim(a, input, { recover: true });
+        // Exclude prior.pid (awaited dead above) so fast Windows PID reuse inside PID_START_SLACK_MS cannot flake.
+        const replacement = acquireFleetSwarmClaim(a, input, { recover: true, ownerAlive: (pid, at) => pid !== prior!.pid && savedProcessAlive(pid, at) });
         expect(replacement.nonce).not.toBe(prior?.nonce);
         replacement.abortBeforeNetwork();
         expect(readFleetAccountClaim(b, input)).toEqual(prior);
@@ -646,3 +676,160 @@ test('a patient acquireFleetSwarmClaim still refuses immediately when H1 has a d
         expect(readFleetAccountClaim(a, swarmInput)).toMatchObject({ phase: 'held', nonce: winnerNonce });
     });
 }, 60_000);
+
+function rejectPushOnAttempts(failAttempts: ReadonlySet<number>, reason = 'missing necessary objects') {
+    let pushes = 0, commits = 0;
+    const budgets: Array<number | undefined> = [];
+    const window = ((root: string, authority?: string, budgetMs?: number) => {
+        budgets.push(budgetMs);
+        return fleetGitWindow(root, authority, budgetMs, (args, { input: stdin, timeout }) => {
+            if (args.includes('commit-tree')) commits++;
+            if (args.includes('push') && failAttempts.has(++pushes)) {
+                throw Object.assign(Error('Command failed: git push'), {
+                    status: 1,
+                    stdout: '',
+                    stderr: `To https://github.com/Giftedx/rs-sdk-bot.git\n ! [remote rejected] deadbeef -> fleet-trade-claim/earlyshooter (${reason})\nerror: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'`,
+                });
+            }
+            return execFileSync('git', args, { cwd: root, input: stdin, stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout, windowsHide: true });
+        });
+    }) as typeof fleetGitWindow;
+    return { window, counts: () => ({ pushes, commits, budgets: [...budgets] }) };
+}
+
+test('trade acquire, single release, and atomic batch release retry remote-busy pushes without duplicate commits', async () => {
+    await withRepos((a, b) => {
+        const earlyshooter = { ...input, account: 'Earlyshooter' };
+        const waits: number[] = [];
+        const acqSpy = rejectPushOnAttempts(new Set([1]), 'missing necessary objects');
+        const claim = acquireFleetTradeClaim(a, earlyshooter, () => T0, { gitWindow: acqSpy.window, wait: ms => waits.push(ms) });
+        expect(acqSpy.counts()).toMatchObject({ pushes: 2, commits: 1 });
+        expect(waits).toEqual([claimApi.SWARM_CLAIM_PAUSE_MS]);
+        expect(readFleetTradeClaim(b, earlyshooter)?.nonce).toBe(claim.nonce);
+
+        const relWaits: number[] = [];
+        const relSpy = rejectPushOnAttempts(new Set([1]), 'missing necessary objects');
+        releaseFleetTradeClaim(a, { ...earlyshooter, nonce: claim.nonce }, () => T0 + 1, { gitWindow: relSpy.window, wait: ms => relWaits.push(ms) });
+        expect(relSpy.counts()).toMatchObject({ pushes: 2, commits: 1 });
+        expect(relWaits).toEqual([claimApi.SWARM_CLAIM_PAUSE_MS]);
+        expect(readFleetTradeClaim(b, earlyshooter)).toMatchObject({ phase: 'released', nonce: claim.nonce });
+
+        const giver = acquireFleetTradeClaim(a, { ...earlyshooter, orderId: 'order-two' }, () => T0 + 2);
+        const taker = acquireFleetTradeClaim(a, { ...input, account: 'Receiver', orderId: 'order-two', role: 'to' }, () => T0 + 2);
+        const batchSpy = rejectPushOnAttempts(new Set([1]), 'missing necessary objects');
+        expect(claimApi.releaseFleetTradeClaims(a, [giver, taker], () => T0 + 3, { gitWindow: batchSpy.window, wait: () => {} })).toBe(2);
+        expect(batchSpy.counts()).toMatchObject({ pushes: 2, commits: 2 });
+        expect([giver, taker].map(t => readFleetTradeClaim(b, t)?.phase)).toEqual(['released', 'released']);
+
+        // Non-retryable ref rejections still fail immediately on the first push.
+        const rejectedSpy = rejectPushOnAttempts(new Set([1]), 'non-fast-forward');
+        expect(() => acquireFleetTradeClaim(a, { ...earlyshooter, orderId: 'order-three' }, () => T0 + 4, { gitWindow: rejectedSpy.window, wait: () => {} })).toThrow('unavailable or changed');
+        expect(rejectedSpy.counts().pushes).toBe(1);
+    });
+}, 60_000);
+
+test('a non-patient swarm claim retries remote-busy acquire and release pushes inside its single Git windows', async () => {
+    await withRepos((a, b) => {
+        const earlyshooter = { ...swarmInput, account: 'Earlyshooter' };
+        // Attempt 1 fails on acquire push (missing necessary objects), attempt 2 lands;
+        // attempt 3 fails on abortBeforeNetwork release push, attempt 4 lands.
+        const spy = rejectPushOnAttempts(new Set([1, 3]), 'missing necessary objects');
+        const waits: number[] = [];
+        const claim = acquireFleetSwarmClaim(a, earlyshooter, { gitWindow: spy.window, wait: ms => waits.push(ms) });
+        expect(readFleetAccountClaim(b, earlyshooter)).toMatchObject({ phase: 'held', nonce: claim.nonce });
+        claim.abortBeforeNetwork();
+        expect(readFleetAccountClaim(b, earlyshooter)).toMatchObject({ phase: 'released', nonce: claim.nonce });
+        expect(spy.counts()).toEqual({ pushes: 4, commits: 2, budgets: [undefined, 4000] });
+        expect(waits).toEqual([200, 200]);
+    });
+}, 60_000);
+
+if (!isWorker) {
+    const tpl = (repoTemplate ??= createRepoTemplate());
+    const scriptPath = fileURLToPath(import.meta.url);
+    const spawnSlot = () => Bun.spawn([process.execPath, 'run', scriptPath], {
+        stdin: 'pipe',
+        stdout: 'pipe',
+        stderr: 'pipe',
+        windowsHide: true,
+        env: { ...process.env, FLEET_CLAIM_WORKER: '1', FLEET_CLAIM_TEMPLATE: JSON.stringify(tpl) },
+    });
+    type Job = { name: string; resolve: () => void; reject: (err: Error) => void };
+    type WorkerSlot = { proc: ReturnType<typeof spawnSlot> };
+    const idle: WorkerSlot[] = [], queue: Job[] = [];
+    const pending = new Map<number, Job & { slot: WorkerSlot }>();
+    let seq = 0, closed = false;
+    const dispatch = (slot: WorkerSlot, job: Job) => {
+        const id = ++seq;
+        pending.set(id, { slot, ...job });
+        slot.proc.stdin.write(JSON.stringify({ id, name: job.name }) + '\n');
+    };
+    const workers = Array.from({ length: Math.max(2, Math.min(6, Math.floor(cpus().length / 2))) }, () => {
+        const proc = spawnSlot(), slot: WorkerSlot = { proc };
+        const failAll = (err: Error) => {
+            for (const [id, entry] of pending) {
+                if (entry.slot === slot) { pending.delete(id); entry.reject(err); }
+            }
+        };
+        void (async () => {
+            const reader = proc.stdout.getReader(), decoder = new TextDecoder();
+            let buf = '';
+            while (true) {
+                const { value, done } = await reader.read();
+                if (value) buf += decoder.decode(value, { stream: true });
+                let nl: number;
+                while ((nl = buf.indexOf('\n')) >= 0) {
+                    const line = buf.slice(0, nl).trim();
+                    buf = buf.slice(nl + 1);
+                    if (!line.startsWith('__FTC__:')) continue;
+                    const { id, error } = JSON.parse(line.slice(8)) as { id: number; error?: string };
+                    const entry = pending.get(id);
+                    if (!entry) continue;
+                    pending.delete(id);
+                    const next = queue.shift();
+                    if (next && !closed) dispatch(slot, next);
+                    else if (!closed) idle.push(slot);
+                    if (error) entry.reject(new Error(error));
+                    else entry.resolve();
+                }
+                if (done) break;
+            }
+        })();
+        void proc.exited.then(async code => {
+            if (!closed && code !== 0) failAll(new Error(`claim test worker exited with ${code}: ${await new Response(proc.stderr).text()}`));
+        });
+        idle.push(slot);
+        return slot;
+    });
+    const runInPool = (name: string) => new Promise<void>((resolve, reject) => {
+        const slot = idle.pop(), job = { name, resolve, reject };
+        if (slot) dispatch(slot, job);
+        else queue.push(job);
+    });
+    afterAll(async () => {
+        closed = true;
+        await Promise.all(workers.map(async ({ proc }) => {
+            try { proc.stdin.end(); } catch { /* exited */ }
+            await proc.exited;
+        }));
+        if (dirname(tpl.dir) === tmpdir()) rmSync(tpl.dir, { recursive: true, force: true, maxRetries: 5 });
+    });
+    // Longest-timeout cases launch first; bound wait-plus-run above queue delay under busy 4-vCPU CI shards.
+    for (const { name, timeout } of [...CONCURRENT_CASES].sort((a, b) => b.timeout - a.timeout)) {
+        bunTest.concurrent(name, () => runInPool(name), Math.max(timeout, 60_000));
+    }
+} else {
+    const rl = createInterface({ input: process.stdin, crlfDelay: Infinity });
+    rl.on('line', async line => {
+        if (!line.trim()) return;
+        const { id, name } = JSON.parse(line) as { id: number; name: string };
+        try {
+            const entry = CONCURRENT_CASES.find(c => c.name === name);
+            if (!entry) throw new Error(`missing test case ${name}`);
+            await entry.fn();
+            process.stdout.write(`__FTC__:${JSON.stringify({ id })}\n`);
+        } catch (error) {
+            process.stdout.write(`__FTC__:${JSON.stringify({ id, error: error instanceof Error ? (error.stack ?? error.message) : String(error) })}\n`);
+        }
+    });
+}
