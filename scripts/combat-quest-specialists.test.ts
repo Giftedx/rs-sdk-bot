@@ -15,6 +15,7 @@ import {
     SPECIALIST_TARGETS,
     STRENGTH_SPECIALIST_KIT,
     assertNonReservedAccount,
+    connectWithTransientRetry,
     countAntipoisonDoses,
     countById,
     hasAtLeastKit,
@@ -22,6 +23,8 @@ import {
     kitRequirements,
     kitSlotTotal,
     pickCourtyardMagicTarget,
+    rankKeepRelogTanks,
+    runSpecialistWaterfall,
 } from './combat-quest-specialists';
 import { runQuestBall } from './generated/quest-ball';
 import { runQuestGrandTree } from './generated/quest-grandtree';
@@ -31,11 +34,13 @@ import { runWaterfall } from './generated/waterfall';
 import { benchCases } from './measure/aio-bench-cases';
 import {
     SPECIALIST_COMBAT_QUESTS_CASES,
+    buildCombatSpecialistRehearsalSegment,
     kitToSaveInventory,
     supplierPresetConfig,
     tankPostPresetConfig,
     tankSupplierPresetConfig,
 } from './measure/specialist-combat-quests-cases';
+import { checkSpecialistSegment, resolveSegmentSuppliers } from '../packages/practice/src/rehearse';
 import {
     hasExactKit as supplierHasExactKit,
     resolveBaseId,
@@ -128,21 +133,21 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
             expect(dragonBones * 72 * 25).toBeGreaterThanOrEqual(rev289XpForLevel(43));
         }
 
-        expect(HP_SPECIALIST_KIT.find(k => k.id === 386)?.count).toBeGreaterThanOrEqual(3 + 2 + 3 + 6);
-        expect(HP_SPECIALIST_KIT.find(k => k.id === 2435)?.count).toBeGreaterThanOrEqual(1 + 2 + 3 + 8);
-        expect(HP_SPECIALIST_KIT.find(k => k.id === 176)?.count).toBeGreaterThanOrEqual(3);
-        expect(countAntipoisonDoses(HP_SPECIALIST_KIT)).toBeGreaterThanOrEqual(9);
+        expect(HP_SPECIALIST_KIT.find(k => k.id === 386)?.count).toBeGreaterThanOrEqual(3 + 2 + 3 + 8);
+        expect(HP_SPECIALIST_KIT.find(k => k.id === 2435)?.count).toBeGreaterThanOrEqual(1 + 2 + 3 + 9);
+        expect(countAntipoisonDoses(HP_SPECIALIST_KIT)).toBeGreaterThanOrEqual(8);
         expect(countAntipoisonDoses([{ id: 2449, count: 2 }])).toBe(8);
         expect(HP_ANTIPOISON_ACCEPT_IDS).toContain(175);
+        expect(HP_ANTIPOISON_ACCEPT_IDS).toContain(2449);
         expect(HP_SPECIALIST_KIT.find(k => k.id === 563)?.count).toBeGreaterThanOrEqual(18);
         expect(STRENGTH_SPECIALIST_KIT).toBe(KIT_BY_BOARD.strength);
         expect(DEFENCE_SPECIALIST_KIT).toBe(KIT_BY_BOARD.defence);
         for (const kit of [STRENGTH_SPECIALIST_KIT, DEFENCE_SPECIALIST_KIT]) {
-            expect(kit.find(k => k.id === 1333)?.count).toBe(1);
+            expect(kit.find(k => k.id === 1319)?.count).toBe(1);
             expect(kit.find(k => k.id === 2434)?.count).toBeGreaterThanOrEqual(2);
-            expect(kit.find(k => k.id === 2440)?.count).toBeGreaterThanOrEqual(5);
-            expect(kit.find(k => k.id === 3016)?.count).toBeGreaterThanOrEqual(1);
+            expect(kit.find(k => k.id === 3016)?.count).toBeGreaterThanOrEqual(7);
         }
+        expect(typeof runSpecialistWaterfall).toBe('function');
         expect(kitRequirements(STRENGTH_SPECIALIST_KIT).length).toBe(STRENGTH_SPECIALIST_KIT.length);
     });
 
@@ -169,6 +174,18 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
         expect(tankPost.equipment?.some(e => e.id === 2552 && e.slot === 12)).toBe(true);
         expect(tankPost.inventory?.length).toBe(28);
         expect(tankPost.inventory?.every(i => i.id === 391)).toBe(true);
+
+        const ranked = rankKeepRelogTanks(
+            [
+                { index: 1, name: 'tankA', x: 3154, z: 3924, hp: 99 },
+                { index: 2, name: 'tankB', x: 3155, z: 3923, hp: 99 },
+                { index: 3, name: 'tankFar', x: 3157, z: 3924, hp: 99 },
+                { index: 4, name: 'tankDead', x: 3154, z: 3923, hp: 0 },
+            ],
+            ['tankA', 'tankB', 'tankFar', 'tankDead'],
+            new Map([['tanka', 5], ['tankb', 2]]),
+        );
+        expect(ranked.map(r => r.name)).toEqual(['tankB', 'tankA']);
     });
 });
 
@@ -207,6 +224,16 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
         expect(intentForEntry('scripts/hp-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'hitpoints', targetLevel: 99 });
         expect(intentForEntry('scripts/strength-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'strength', targetLevel: 99 });
         expect(intentForEntry('scripts/defence-specialist.ts', [], {}, undefined)).toEqual({ kind: 'train', skill: 'defence', targetLevel: 99 });
+
+        for (const [acc, board, minSup] of [
+            ['FullBlooded', 'Hitpoints', 1],
+            ['BigSwinger', 'Strength', 3],
+            ['RockSolid', 'Defence', 3],
+        ] as const) {
+            const seg = buildCombatSpecialistRehearsalSegment(acc);
+            expect(checkSpecialistSegment(seg, acc)).toBe(board);
+            expect(resolveSegmentSuppliers(seg).length).toBe(minSup);
+        }
     });
 
     test('observedSupplies, validateSupplies, and validateDelivery round-trip for combat specialist kits and tasks', () => {
@@ -294,5 +321,63 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
 
         const unnotedInv = HP_SPECIALIST_KIT.map(k => ({ id: resolveBaseId(k.id), baseId: resolveBaseId(k.id), count: k.count }));
         expect(supplierHasExactKit(unnotedInv, HP_SPECIALIST_KIT)).toBe(false);
+    });
+
+    test('connectWithTransientRetry retries transient login rejections and aborts on fatal or stop', async () => {
+        const waits: number[] = [];
+        let calls = 0;
+        const ok = await connectWithTransientRetry(
+            async () => {
+                calls++;
+                if (calls === 1) throw Error('Your account is already logged in');
+                if (calls === 2) throw Error('Error connecting to server, please try again');
+                if (calls === 3) throw Error('Too many incorrect logins from your address');
+                return 'session-ok';
+            },
+            () => false,
+            6,
+            async attempt => { waits.push(attempt); },
+        );
+        expect(ok).toBe('session-ok');
+        expect(calls).toBe(4);
+        expect(waits).toEqual([0, 1, 2]);
+
+        let fatalCalls = 0;
+        await expect(connectWithTransientRetry(
+            async () => {
+                fatalCalls++;
+                throw Error('Invalid username or password');
+            },
+            () => false,
+            6,
+            async () => { throw Error('should not sleep on non-retryable failure'); },
+        )).rejects.toThrow('Invalid username or password');
+        expect(fatalCalls).toBe(1);
+
+        let capCalls = 0;
+        const capWaits: number[] = [];
+        await expect(connectWithTransientRetry(
+            async () => {
+                capCalls++;
+                throw Error('Your account is already logged in');
+            },
+            () => false,
+            3,
+            async attempt => { capWaits.push(attempt); },
+        )).rejects.toThrow('already logged in');
+        expect(capCalls).toBe(3);
+        expect(capWaits).toEqual([0, 1]);
+
+        let stoppedCalls = 0;
+        await expect(connectWithTransientRetry(
+            async () => {
+                stoppedCalls++;
+                throw Error('Try again later');
+            },
+            () => true,
+            5,
+            async () => { throw Error('should not sleep when stopped'); },
+        )).rejects.toThrow('Try again later');
+        expect(stoppedCalls).toBe(1);
     });
 });

@@ -150,10 +150,13 @@ try {
         while (level() > to) await ladder(`tree down ${level()}`, TREE_LADDER, 'down', level() - 1);
     };
     // Talk; answer with `choose` (the option index for this page, or -1 for continue); stop when ok().
-    const talkChoose = async (label: string, re: RegExp, choose: (opts: string[]) => number, ok: () => boolean, max: number, home?: { x: number; z: number }, must = true): Promise<void> => {
+    const talkChoose = async (label: string, re: RegExp, choose: (opts: string[]) => number, ok: () => boolean, max: number, home?: { x: number; z: number }, must = true, onRetry?: () => Promise<void>): Promise<void> => {
         for (let i = 0; i < 3 && !ok(); i++) {
             await q.guard(label);
-            if (i > 0) q.stats.retries++;
+            if (i > 0) {
+                q.stats.retries++;
+                await onRetry?.();
+            }
             let n = q.npc(re);
             if (!n && home) { await walk(`${label} approach`, [{ x: home.x, z: home.z, tol: 4 }]); n = q.npc(re); }
             if (!n) { await q.waitTicks(2); continue; }
@@ -399,24 +402,89 @@ try {
         await ms(60);
     }
 
+    const MELEE = /scorpion|spider|snake|zombie|skeleton|^monkey guard$/i;
+    const greegree = (): boolean => (q.st()?.equipment ?? []).some((e: any) => e?.id === ITEM.greegree);
+    // A hit closes the open dialog even at 0 damage (npc_combat_melee.rs2:36, npc_combat_ranged.rs2:48), so
+    // aggressive pests within `r` tiles (scorpions 15, warehouse spiders 2, snakes 35) die by fire spell before a
+    // dialog step. Not as a monkey: the greegree hides the spellbook (quest_mm.rs2:1148-1155).
+    let pestCasts = 0;
+    const clearPests = async (
+        label: string,
+        r = 2,
+        opts: { count?: boolean; re?: RegExp; retreat?: { x: number; z: number }; equipStaff?: boolean } = {},
+    ): Promise<void> => {
+        const re = opts.re ?? MELEE;
+        if (greegree()) return;
+        const dd0 = (k: any, px: number, pz: number) => Math.max(Math.abs(k.x - px), Math.abs(k.z - pz));
+        const p0 = q.pos();
+        if (!p0) return;
+        const hasInitial = (q.st()?.nearbyNpcs ?? []).some(
+            (k: any) => re.test(k.name) && !/monkey guard/i.test(k.name) && dd0(k, p0.worldX, p0.worldZ) <= r,
+        );
+        if (!hasInitial) return;
+        if (opts.equipStaff && !(q.st()?.equipment ?? []).some((e: any) => e?.id === 1387) && q.has(1387)) {
+            const staff = q.inv().find((i: any) => i.id === 1387);
+            if (staff) {
+                await q.s.bot.equipItem(staff);
+                await q.waitUntil(() => (q.st()?.equipment ?? []).some((e: any) => e?.id === 1387), 5);
+            }
+        }
+        const hasStaff = (q.st()?.equipment ?? []).some((e: any) => e?.id === 1387);
+        const canFire = q.cnt(556) >= 5 && (hasStaff || q.cnt(554) >= 5) && (q.has(565) || q.has(560) || q.has(562));
+        if (!canFire) {
+            if (opts.retreat) await walk(`${label} retreat`, [{ x: opts.retreat.x, z: opts.retreat.z, tol: 1 }]);
+            return;
+        }
+        let last = -99;
+        for (let t = 0; t < 60 && !greegree(); t++) {
+            await q.guard(`${label} pests`);
+            const p = q.pos();
+            if (!p) return;
+            const n = (q.st()?.nearbyNpcs ?? [])
+                .filter((k: any) => re.test(k.name) && !/monkey guard/i.test(k.name) && dd0(k, p.worldX, p.worldZ) <= r)
+                .sort((a: any, b: any) => dd0(a, p.worldX, p.worldZ) - dd0(b, p.worldX, p.worldZ))[0];
+            if (!n) return;
+            if (q.dialogOpen()) void q.s.sdk.sendClickDialog(0);
+            if (q.T() - last >= 5) {
+                last = q.T();
+                if (opts.count !== false) pestCasts++;
+                const comp = componentId(resolveFireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id)));
+                await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: comp, reason: 'SDK' });
+            }
+            await q.waitTicks(1);
+        }
+    };
+    const crashClear = () => clearPests('crash island', 3, { count: false, re: /scorpion/i, retreat: CRASH_ISLAND, equipStaff: true });
+
     // 70. Waydar ("Where are we?"), Lumdo (refuses), Waydar orders him: the chapter 2 cutscene, then Ape Atoll.
     if (FROM < 70) {
-        await talkChoose('waydar island', /^waydar$/i, () => -1, () => q.sawText(/did our glider survive|of course/i) && !q.dialogOpen(), 30);
-        await talkChoose('lumdo', /^lumdo$/i, () => -1, () => q.sawText(/will not take orders from you/i) && !q.dialogOpen(), 60);
+        await crashClear();
+        await talkChoose('waydar island', /^waydar$/i, () => -1, () => q.sawText(/did our glider survive|of course/i) && !q.dialogOpen(), 30, undefined, true, crashClear);
+        await crashClear();
+        await talkChoose('lumdo', /^lumdo$/i, () => -1, () => q.sawText(/will not take orders from you/i) && !q.dialogOpen(), 60, undefined, true, crashClear);
         // The cutscene runs in region 0_40_71 (2560-2623, 4544-4607); its pages are continued like any dialog.
         const inCut = (): boolean => { const p = q.pos(); return !!p && p.worldX >= 2560 && p.worldX < 2624 && p.worldZ >= 4544 && p.worldZ < 4608; };
         // Waydar orders Lumdo only when Lumdo is within 10 tiles of the player (mm_waydar.rs2:83, .npc_find(coord, ...)),
-        // else the talk ends with no cutscene (practice: a full run failed here), so the bot stands near Lumdo first.
+        // else the talk ends with no cutscene, so the bot stands on Waydar's Lumdo-facing side within 9 tiles.
         const cut2 = (): boolean => inCut() || q.near(ATOLL.x, ATOLL.z, 6);
-        for (let i = 0; i < 4 && !cut2(); i++) {
+        for (let i = 0; i < 6 && !cut2(); i++) {
+            await crashClear();
+            for (let wait = 0; wait < 10 && !cut2(); wait++) {
+                const l = q.npc(/^lumdo$/i);
+                const w = q.npc(/^waydar$/i);
+                if (!l || !w || Math.max(Math.abs(l.x - w.x), Math.abs(l.z - w.z)) <= 9) break;
+                await q.waitTicks(1);
+            }
             const l = q.npc(/^lumdo$/i);
             const w = q.npc(/^waydar$/i);
-            if (l && w && Math.max(Math.abs(l.x - w.x), Math.abs(l.z - w.z)) <= 12) {
-                const tx = Math.round((l.x + w.x) / 2), tz = Math.round((l.z + w.z) / 2);
+            if (l && w) {
+                const sx = w.x + Math.sign(l.x - w.x), sz = w.z + Math.sign(l.z - w.z);
                 const p = q.pos();
-                if (p && Math.max(Math.abs(p.worldX - l.x), Math.abs(p.worldZ - l.z)) > 6) await walk('to lumdo side', [{ x: tx, z: tz, tol: 1 }]);
+                if (p && Math.max(Math.abs(p.worldX - l.x), Math.abs(p.worldZ - l.z)) > 8) {
+                    await walk('to lumdo side', [{ x: sx, z: sz, tol: 1 }]);
+                }
             }
-            await talkChoose('waydar lumdo', /^waydar$/i, pick(/cannot convince lumdo/i), cut2, 60, undefined, i === 3);
+            await talkChoose('waydar lumdo', /^waydar$/i, pick(/cannot convince lumdo/i), cut2, 60, undefined, i === 5, crashClear);
         }
         await q.converse([], () => q.near(ATOLL.x, ATOLL.z, 6), 250);
         if (!q.near(ATOLL.x, ATOLL.z, 6)) await q.fail('chapter 2 cutscene');
@@ -449,7 +517,6 @@ try {
     // 5 ticks for each). A monkey (greegree) needs none (mm_archer.rs2:24, aa_monkey_guard.rs2:27).
     let want: number | 'auto' | null = null;
     let quiet = 0;
-    const MELEE = /scorpion|spider|snake|zombie|skeleton|^monkey guard$/i;
     const offWant = addTick(() => {
         if (want === null || pts() <= 0) return;
         let w: number | null = typeof want === 'number' ? want : null;
@@ -468,7 +535,6 @@ try {
         if (w !== null) { quiet = 0; if (!prayOn(w)) void q.s.direct({ type: 'togglePrayer', prayerIndex: w, reason: 'SDK' }); return; }
         if (++quiet >= 3) for (const i of [PFM, PFMISS]) if (prayOn(i)) { void q.s.direct({ type: 'togglePrayer', prayerIndex: i, reason: 'SDK' }); break; }
     });
-    const greegree = (): boolean => (q.st()?.equipment ?? []).some((e: any) => e?.id === ITEM.greegree);
     const inCell = (): boolean => { const p = q.pos(); return !!p && p.level === 0 && p.worldX >= 2770 && p.worldX <= 2776 && p.worldZ >= 2793 && p.worldZ <= 2795; };
     const { walkPath, sessionWalker } = await import('../../packages/core/src/walk');
     const walker = await sessionWalker(q.s as any);
@@ -501,6 +567,7 @@ try {
         const sig = d?.isOpen ? `${d.isWaiting ? 'W ' : ''}${(d.options ?? []).map((o: any) => o.text).join('|')}#${String(d.text ?? '').slice(0, 40)}` : '-';
         if (sig !== dlg0) { dlg0 = sig; console.log(`DLG ${q.T()} ${sig}`); }
     });
+    let rejails = 0;
     const knockout = async (label: string): Promise<void> => {
         want = 'auto';   // the archers win in auto; jungle spiders and snakes on the way get Protect from Melee
         if (!inCell()) {
@@ -516,12 +583,17 @@ try {
         // The only way out is north up the lane (x 2772-2773, z 2796-2802) and west through the guards' room. The
         // patrol (enum mm_jail_patrol_route) holds the lane for points 2-10, then hands over in the rest zone; a pick
         // only in the handover window (tried) waited 60-275 ticks a jailing against about 70 for this rule.
+        const strictLane = rejails > 0 || /rejail/i.test(label);
         const t0 = q.T();
-        for (let i = 0; i < 160 && inCell(); i++) {
+        for (let i = 0; i < 240 && inCell(); i++) {
             await q.guard(`${label} lock`);
             const d: any = q.s.sdk.getDialog();
             if (d?.isOpen && !d.isWaiting) { void q.s.sdk.sendClickDialog(0); await q.waitTicks(1); continue; }
-            const g = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^(aberab|trefaji)$/i.test(n.name) && Math.max(Math.abs(n.x - DOOR.x), Math.abs(n.z - (DOOR.z + 1))) <= 3);
+            const g = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^(aberab|trefaji)$/i.test(n.name) && (
+                strictLane
+                    ? (n.x >= 2770 && n.x <= 2775 && n.z >= 2795 && n.z <= 2801)
+                    : Math.max(Math.abs(n.x - DOOR.x), Math.abs(n.z - (DOOR.z + 1))) <= 4
+            ));
             if (g.length > 0) { await q.waitTicks(1); continue; }
             const door = q.findLoc(l => l.x === DOOR.x && l.z === DOOR.z && /jail door/i.test(l.name));
             if (!door) { await q.waitTicks(1); continue; }
@@ -530,17 +602,21 @@ try {
             await q.waitUntil(() => !inCell() || q.msgCount(/fail to pick the lock/i) > f1, 6);
         }
         if (inCell()) await q.fail(`${label}: lock`);
+        const dExit: any = q.s.sdk.getDialog();
+        if (dExit?.isOpen && !dExit.isWaiting) void q.s.sdk.sendClickDialog(0);
         console.log(`NOTE ${label} out at ${q.T()} wait=${q.T() - t0} lockFails=${q.msgCount(/fail to pick the lock/i) - fails0}`);
     };
 
     // A village walk as a human: a patrol guard or a summoned guard can knock the bot back into the cell on the way, so
-    // a jailing picks the lock again and walks on (up to 3 times).
-    let rejails = 0;
+    // a jailing picks the lock again and walks on.
     const walkAtoll = async (label: string, pts0: { x: number; z: number; tol?: number }[], retry?: { x: number; z: number; tol?: number }[]): Promise<void> => {
         const g = pts0[pts0.length - 1]!;
-        for (let i = 0; i < 7 && !q.near(g.x, g.z, g.tol ?? 2); i++) {
+        for (let i = 0; i < 12 && !q.near(g.x, g.z, g.tol ?? 2); i++) {
             if (inCell()) { rejails++; await knockout(`${label} rejail`); }
             await walkStop(label, i === 0 ? pts0 : (retry ?? [g]), inCell);
+            if (!q.near(g.x, g.z, (g.tol ?? 2) + 1) && !inCell()) {
+                await q.waitUntil(() => inCell() || q.near(g.x, g.z, (g.tol ?? 2) + 1), 6);
+            }
         }
         if (!q.near(g.x, g.z, (g.tol ?? 2) + 1)) await q.fail(`walk ${label}`);
     };
@@ -595,29 +671,6 @@ try {
         if (must && !ok()) await q.fail(`talk ${label}`);
     };
     // A loc on a named tile: op it, click through pages (answers `pats`), until ok().
-    // A hit closes the open dialog even at 0 damage (npc_combat_melee.rs2:36, npc_combat_ranged.rs2:48), so the
-    // aggressive pests within `r` tiles (warehouse spiders 2 HP, scorpions 15, spiders and snakes 35) die by Fire Wave
-    // before a dialog step. Not as a monkey: the greegree hides the spellbook (quest_mm.rs2:1148-1155).
-    let pestCasts = 0;
-    const clearPests = async (label: string, r = 2): Promise<void> => {
-        let last = -99;
-        for (let t = 0; t < 60 && !greegree(); t++) {
-            await q.guard(`${label} pests`);
-            const p = q.pos()!;
-            const dd = (k: any) => Math.max(Math.abs(k.x - p.worldX), Math.abs(k.z - p.worldZ));
-            const n = (q.st()?.nearbyNpcs ?? []).filter((k: any) => (MELEE.test(k.name) && !/monkey guard/i.test(k.name) && dd(k) <= r))
-                .sort((a: any, b: any) => a.distance - b.distance)[0];
-            if (!n) return;
-            if (q.dialogOpen()) void q.s.sdk.sendClickDialog(0);
-            if (q.T() - last >= 5) {
-                last = q.T();
-                pestCasts++;
-                const comp = componentId(resolveFireSpell(q.s.sdk.getSkill('Magic')?.level ?? 1, id => q.has(id)));
-                await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: comp, reason: 'SDK' });
-            }
-            await q.waitTicks(1);
-        }
-    };
     class Jailed extends Error {}
     const locOp = async (label: string, at: { x: number; z: number }, re: RegExp, op: RegExp, pats: RegExp[], ok: () => boolean, ticks = 30, tries = 8, pests = true): Promise<void> => {
         for (let i = 0; i < tries && !ok(); i++) {
@@ -966,6 +1019,7 @@ try {
             await shutDialog();
             await talk1('waydar back b', /^waydar$/i, [/^yes/i], () => q.near(CRASH_ISLAND.x, CRASH_ISLAND.z, 8), 40);
             await shutDialog();
+            await crashClear();
             await talk1('lumdo back b', /^lumdo$/i, [], () => q.near(2802, 2707, 6), 20, { x: 2891, z: 2724 });
             await shutDialog();
             await knockout('jail3');
@@ -990,12 +1044,15 @@ try {
                 // Each talk ends at a state step (mm_monkey_child.rs2), so 2 shut ticks end it (the default 6 cost 6
                 // ticks a step); once the child wants bananas, the bananas go on him (opnpcu: no greeting pages).
                 const child = q.npc(/^monkey child$/i);
-                if (!eatBananas && q.cnt(ITEM.banana) >= 5 && q.sawText(/only if you promise to let me borrow/i) && child && !q.dialogOpen()) {
+                // Line 160 sets %mm_monkey_child before "Ok Uncle!", whereas page 159 ("only if you promise...") can be cut by the aunt.
+                if (!eatBananas && q.cnt(ITEM.banana) >= 5 && i % 2 === 0 && q.sawText(/ok uncle!|did you get any bananas/i) && child && !q.dialogOpen()) {
                     await q.useOnNpc(ITEM.banana, child);
                     await q.waitUntil(() => q.dialogOpen() || ok(), 10);
                     let shut = 0;
                     await converse1(pats, () => { shut = q.dialogOpen() ? 0 : shut + 1; return ok() || shut >= 2; }, 40);
-                    continue;
+                    if (ok()) break;
+                    await toOutside();
+                    await auntClear(150);
                 }
                 await talk1(label, /^monkey child$/i, pats, ok, 60, CHILD, 1, false, 2);
             }
@@ -1172,23 +1229,30 @@ try {
         await talk1('lumdo out', /^lumdo$/i, [], () => (q.pos()?.worldX ?? 0) > 2880, 20, { x: 2803, z: 2707 });
         await shutDialog();
         // A prayer click closes the open talk (auto toggled at a scorpion 4 tiles off, the menu shut 3 tries running), so
-        // the prayer stays fixed on for it.
+        // the prayer stays fixed on for it, and nearby scorpions are cleared first to avoid 0-damage if_close interrupts.
         want = PFM;
-        await talk1('waydar home', /^waydar$/i, [/return to your kingdom/i], () => q.near(2393, 3466, 10), 40, { x: 2897, z: 2727 });
+        for (let i = 0; i < 4 && !q.near(2393, 3466, 10); i++) {
+            await crashClear();
+            await talk1('waydar home', /^waydar$/i, [/return to your kingdom/i], () => q.near(2393, 3466, 10), 40, { x: 2897, z: 2727 }, 1, i === 3);
+        }
         want = 'auto';
         await shutDialog();
         await spirit('stronghold tree', { x: 2461, z: 3444 }, [/where can i go/i, /battlefield of khazard/i], { x: 2555, z: 3259 });
         // Round the locked door of the Khazard building (2567-2569,3237-3239) that the SDK plans through.
         await walk('to zoo', [{ x: 2561, z: 3241, tol: 2 }, { x: 2566, z: 3232, tol: 2 }, { x: 2576, z: 3230, tol: 2 }, { x: 2581, z: 3248, tol: 2 }, { x: 2598, z: 3268, tol: 2 }, { x: 2603, z: 3272, tol: 2 }]);
         await wearGreegree('zoo greegree');
-        const minder = (): any => q.npc(/^monkey minder$/i);
+        const minder = (): any => (q.st()?.nearbyNpcs ?? [])
+            .filter((n: any) => /^monkey minder$/i.test(n.name))
+            .sort((a: any, b: any) => (a.distance ?? 99) - (b.distance ?? 99))[0];
         await talk1('minder cage', minder, [], () => inCage() && !q.dialogOpen(), 40, { x: 2602, z: 3274 });
         const zooMonkey = (): any => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^monkey$/i.test(n.name) && (n.optionsWithIndex ?? []).some((o: any) => /talk/i.test(o.text)))
             .sort((a: any, b: any) => a.distance - b.distance)[0];
         await talk1('zoo monkey', zooMonkey, [], () => q.has(ITEM.backpackMonkey) && !q.dialogOpen(), 60);
         await unwearGreegree();
-        // From inside the cage the bot cannot walk to the minder: the talk starts only when his walk brings him beside
-        // the bars. At seed 9 he stayed away for 100 ticks, so the bot keeps trying for up to 20 talks.
+        // Stand beside the south gate (near minder spawn 2602,3274) and target the nearest minder within apnpc1 range 5.
+        if (inCage() && !q.near(2602, 3276, 1)) {
+            await walk('to minder gate', [{ x: 2602, z: 3276, tol: 1 }]);
+        }
         await talk1('minder out', minder, [], () => !inCage() && !q.dialogOpen(), 40, undefined, 20);
         q.milestone('zoo');
         // The stronghold's south gate (gnome_areagate 190 at 2459,3383, gnome_gate.rs2) is not a door in the SDK
@@ -1209,6 +1273,7 @@ try {
         await shutDialog();
         await talk1('waydar back', /^waydar$/i, [/^yes/i], () => q.near(CRASH_ISLAND.x, CRASH_ISLAND.z, 8), 40);
         await shutDialog();
+        await crashClear();
         await talk1('lumdo back', /^lumdo$/i, [], () => q.near(2802, 2707, 6), 20, { x: 2891, z: 2724 });
         await shutDialog();
         await wearGreegree('atoll greegree');
