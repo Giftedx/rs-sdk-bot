@@ -8,7 +8,7 @@ import {startStack} from './stack';
 import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
-import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {killTree} from '../../core/src/proc';
 import {PRACTICE_STARTUP_GB,FREE_FLOOR_GB} from '../../core/src/memory';
 import {xpForLevel,levelForXp} from '../../planner/src/curve';

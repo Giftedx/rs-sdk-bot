@@ -12,7 +12,7 @@ import{killTree}from'../../core/src/proc';
 import{stopStack}from'./stack';
 import{selectGeProofEndpoints,startGeProofStack,geProofAccountEnv,assertGeProofAccount,HEADROOM_WAIT_MS,waitFreeMemory}from'./order-proof-shared';
 export{HEADROOM_WAIT_MS,waitFreeMemory};
-import{readPracticeSave,waitPracticeSave}from'../../../scripts/measure/fleet-player-save';
+import{readPracticeSave,waitPracticeSave}from'./fleet-player-save';
 import{capabilityRevision,type ReleaseMemo}from'../../core/src/worker-release';
 import{readLogoutProof}from'../../core/src/session-lifecycle';
 import{orderPaths}from'../../../scripts/buy-owned-ge-item';

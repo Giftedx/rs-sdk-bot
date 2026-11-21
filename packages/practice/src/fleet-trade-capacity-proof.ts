@@ -12,8 +12,8 @@ import {rsSdkRoot} from './paths';
 import {killTree} from '../../core/src/proc';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {capabilityRevision,cachedReleaseFor} from '../../core/src/worker-release';
-import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
-import {validOrder,type Order} from '../../../scripts/fleet-trade-settlement';
+import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
+import {validOrder,type Order} from '../../core/src/fleet-trade-settlement';
 
 const root=resolve(import.meta.dir,'../../..');
 const sourceFiles=['packages/practice/src/fleet-trade-capacity-proof.ts','scripts/fleet-trade.ts','knowledge/items.json',

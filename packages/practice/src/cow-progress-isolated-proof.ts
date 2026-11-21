@@ -10,7 +10,7 @@ import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
 import {killTree} from '../../core/src/proc';
 import {workerSourceRevision} from '../../core/src/worker-release';
-import {readPracticeSave,setPracticeSkills,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,setPracticeSkills,waitPracticeSave} from './fleet-player-save';
 import {verifyCompletedRecoveryDelivery} from './session-recovery-proof';
 import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 

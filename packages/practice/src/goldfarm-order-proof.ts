@@ -11,7 +11,7 @@ import {runBotName} from './prove';
 import {killTree} from '../../core/src/proc';
 import {practiceDir} from './paths';
 import {workerSourceRevision} from '../../core/src/worker-release';
-import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {farmStartProblem} from '../../../scripts/goldfarm-stable';
 // The tick of this proof: 75 ms. At 75 ms the game outcome equals the one at 150 ms (hosted rounds 44446240837, 44447190266 and 44447293486: same results, items and XP; only wall seconds differ), at half the wall time.
 const TICK_MS=75;

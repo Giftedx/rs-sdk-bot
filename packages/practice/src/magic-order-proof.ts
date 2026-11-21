@@ -13,7 +13,7 @@ import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
 import {killTree} from '../../core/src/proc';
 import {workerSourceRevision} from '../../core/src/worker-release';
-import {readPracticeSave,waitPracticeSave,setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,waitPracticeSave,setPracticeSkills} from './fleet-player-save';
 import {magicXpForLevel,CAST_SITE,TELE_RUNE_IDS,teleportEffect,TELEPORTS,alchemyEffect,type RuneCounts} from '../../../scripts/magic-order';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 

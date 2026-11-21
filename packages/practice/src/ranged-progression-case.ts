@@ -7,7 +7,7 @@ import {applyPreset,type SaveConfig} from './presets';
 import {pointBotAt} from './rehearse';
 import {RANGED_BOT_HOST} from './ranged-train-proof';
 import {runBotName} from './prove';
-import {readPracticeSave,setPracticeSkills,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,setPracticeSkills,waitPracticeSave} from './fleet-player-save';
 import {serverFromEnv} from '../../core/src/bot';
 import {isLocalServer} from '../../core/src/localserver';
 import {capabilityRevision} from '../../core/src/worker-release';

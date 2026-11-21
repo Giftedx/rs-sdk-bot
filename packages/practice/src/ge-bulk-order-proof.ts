@@ -8,7 +8,7 @@ import {applyPreset} from './presets';
 import {runBotName} from './prove';
 import {killTree,commandLine} from '../../core/src/proc';
 import {rsSdkRoot,practiceDir} from './paths';
-import {readPracticeSave,waitPracticeSave,setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,waitPracticeSave,setPracticeSkills} from './fleet-player-save';
 import {capabilityRevision,type ReleaseMemo} from '../../core/src/worker-release';
 // One --verify shares a memo: each fresh closure hash costs seconds under load and four of them overran the 30 s check.
 export const geProofRuntime=(memo:ReleaseMemo=new Map())=>capabilityRevision(['scripts/buy-owned-ge-item.ts'],resolve(import.meta.dir,'../../..'),memo);

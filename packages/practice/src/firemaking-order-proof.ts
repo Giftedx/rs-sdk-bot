@@ -11,7 +11,7 @@ import {runBotName} from './prove';
 import {killTree} from '../../core/src/proc';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
-import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {levelForXp,lineTiles,firemakingSite,DRAYNOR_BANK,LOGS,TINDERBOX,COINS} from '../../../scripts/firemaking-order';
 
 type Save=ReturnType<typeof readPracticeSave>;

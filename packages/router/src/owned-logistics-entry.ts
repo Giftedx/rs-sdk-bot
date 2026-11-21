@@ -9,7 +9,7 @@ import {prepareReplayRoot,removeReplayRoot} from './build-workspace';
 import {killTree} from '../../core/src/proc';
 import {accountDir} from '../../core/src/session-lifecycle';
 import {jobAccounts,readMergedPlan} from '../../core/src/coordinator-jobs';
-import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,waitPracticeSave} from '../../practice/src/fleet-player-save';
 
 const SOURCE=resolve(import.meta.dir,'../../..');
 const MODES=['coin-courier','coin-fanout','item-fanin','note-courier'] as const;

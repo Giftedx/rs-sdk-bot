@@ -9,7 +9,7 @@ import {accountDir,readLogoutProof} from '../../core/src/session-lifecycle';
 import {assertNativeFixtureRoot} from '../../core/src/session-recovery-permit';
 import {acquireFleetTradeClaim,readAllFleetAccountClaims} from '../../core/src/fleet-trade-claim';
 import {fleetGitWindow} from '../../core/src/fleet-lease';
-import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {killTree} from '../../core/src/proc';
 import {SWARM_STOP,clearSwarmStop} from '../../../scripts/swarm';
 import {withPlanWrite} from '../../core/src/plan-lock';
