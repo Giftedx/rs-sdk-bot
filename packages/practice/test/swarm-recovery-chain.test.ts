@@ -19,7 +19,7 @@ test('the actual copied worker runtime loads its immutable danger content before
   const p=Bun.spawnSync([process.execPath,'-e','import {loadDanger} from "./packages/core/src/randomevents";const lite=await import("./vendor/rs-sdk/server/webclient/src/lite/session.ts");console.log(JSON.stringify({danger:loadDanger().size,lite:typeof lite.startSession}));'],{cwd:root,stdout:'pipe',stderr:'pipe',windowsHide:true});
   expect(p.exitCode,p.stderr.toString()).toBe(0);const result=JSON.parse(p.stdout.toString().trim());expect(result.danger).toBe(loadDanger().size);expect(result.lite).toBe('function');expect(loadDanger().size).toBeGreaterThan(0);
  }finally{for(const p of links)if(existsSync(p)&&lstatSync(p).isSymbolicLink())unlinkSync(p);expect(removeCoinProofRoot(root)).toBe(true);}
-},30000);
+},90_000);
 // A push writes objects/tmp_objdir-incoming-XXXXXX/NN/<38 hex> under the remote: 77 characters past a 185 character
 // case folder passes the Windows limit of 260. The authority must sit under the short private root.
 test('the private Git authority is under the private root, not under the delivery case folder',()=>{

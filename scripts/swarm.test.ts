@@ -1,5 +1,5 @@
 import { test, expect, describe, afterEach } from 'bun:test';
-import { coordinatedAdmission,demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,botCountEnv,persistentEnd,writeStateFile } from './swarm';
+import { coordinatedAdmission,unadmittedState,demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery,botCountEnv,persistentEnd,writeStateFile } from './swarm';
 
 test('recovery uses the real admission policy, including inherited startup reserves, before checking release',()=>{
  const v={account:'Rod',active:[] as string[],running:0,external:0,pending:0,freeGB:10,minFreeGB:0,maxBots:17};let releases=0;
@@ -552,6 +552,9 @@ test('scoped coordinator starts only its qualified assignments while ordinary sw
  expect(coordinatedAdmission(old,false)).toBe(true);expect(coordinatedAdmission(old,true)).toBe(false);
  expect(coordinatedAdmission({...old,coordinatorOwner:'coordinator'} as Job,true)).toBe(true);
  expect(coordinatedAdmission({...old,standing:true} as Job,true)).toBe(true);
+ expect(unadmittedState(old)).toBe('existing assignment; awaiting coordinator qualification');
+ expect(unadmittedState({...old,enabled:false} as Job)).toBe('disabled');
+ expect(unadmittedState({account:'Reserved',script:'',enabled:false} as Job)).toBe('reserved');
 });
 
 test('the older logout that start admission takes past a dead socket failure is never a repair proof',()=>{
