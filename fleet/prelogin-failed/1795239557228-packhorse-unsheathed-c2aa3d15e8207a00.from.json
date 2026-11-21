@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795239557228-packhorse-unsheathed-c2aa3d15e8207a00",
+ "role": "from",
+ "account": "Packhorse",
+ "partner": "Unsheathed",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795239712495,
+ "detail": "Error: fleet trade claim authority unavailable or changed: To https://github.com/Giftedx/rs-sdk-bot.git ! [remote rejected] 9328e29dc151bd26eb41702a7785c3309259b38b -> fleet-trade-claim/packhorse (failed) error: failed to push some refs to 'https://github.com/Giftedx/rs-sdk-bot.git'"
+}
