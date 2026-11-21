@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795289138544-fishandchips-knightrider-shark",
+ "account": "KnightRider",
+ "partner": "FishAndChips",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Shark",
+ "requested": 5,
+ "claim": "ee8f7aba-822b-4321-99a8-3aeb827c7787",
+ "count": 0,
+ "ok": false,
+ "at": 1795289199306,
+ "detail": "trade claimed"
+}
