@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795241836981-earlyshooter-woodenstaff-13ea3ded228feb6d",
+ "account": "Woodenstaff",
+ "partner": "Earlyshooter",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Mind rune",
+ "requested": 140,
+ "claim": "2b0fd613-4429-421e-b215-6663887ddeb2",
+ "count": 0,
+ "ok": false,
+ "at": 1795241916041,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Chaos rune",
+   "requested": 220,
+   "count": 0
+  }
+ ]
+}
