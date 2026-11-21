@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795236209489,
+ "at": 1795236463783,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -309,11 +309,10 @@
    "repeat": false
   },
   {
-   "account": "Knightstick",
+   "account": "Pocketpython",
    "script": "scripts/chain.ts",
    "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=383 QUANTITY=4 EXPECTED_OWNED=0 LIMIT_PRICE=700 CASH_RESERVE=1000 ORDER_KEY=liveops-rawshark-383-4-v1 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=560 QUANTITY=36 EXPECTED_OWNED=0 LIMIT_PRICE=2820 CASH_RESERVE=1000 ORDER_KEY=liveops-death-560-36-v1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+    "scripts/buy-owned-ge-item.ts ITEM_ID=560 QUANTITY=65 EXPECTED_OWNED=0 LIMIT_PRICE=2820 CASH_RESERVE=1000 ORDER_KEY=liveops-death-560-65-v1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
    ],
    "env": {
     "ROUNDS": "1"
@@ -424,6 +423,7 @@
   "fingersmith",
   "kiltlifter",
   "knightrider",
+  "knightstick",
   "quickhandjob",
   "sporrandip"
  ],
