@@ -113,11 +113,15 @@ describe('Wilderness pre-clicks, progress transitions, and Agility potion logic'
     });
 
     test('recognizes arrival and transition zones for pre-clicking next obstacle', () => {
+        expect(canPreClickNextObstacle('pipe', { worldX: 3004, worldZ: 3947 })).toBe(true);
         expect(canPreClickNextObstacle('pipe', { worldX: 3004, worldZ: 3949 })).toBe(true);
         expect(canPreClickNextObstacle('pipe', { worldX: 3004, worldZ: 3940 })).toBe(false);
         expect(canPreClickNextObstacle('ropeswing', { worldX: 3005, worldZ: 3958 })).toBe(true);
+        expect(canPreClickNextObstacle('stones', { worldX: 2998, worldZ: 3960 })).toBe(true);
         expect(canPreClickNextObstacle('stones', { worldX: 2996, worldZ: 3960 })).toBe(true);
+        expect(canPreClickNextObstacle('log', { worldX: 2996, worldZ: 3945 })).toBe(true);
         expect(canPreClickNextObstacle('log', { worldX: 2994, worldZ: 3945 })).toBe(true);
+        expect(canPreClickNextObstacle('rocks', { worldX: 2994, worldZ: 3935 })).toBe(true);
         expect(canPreClickNextObstacle('rocks', { worldX: 2994, worldZ: 3934 })).toBe(true);
     });
 
