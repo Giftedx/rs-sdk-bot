@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795226264671,
+ "at": 1795226870441,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -260,33 +260,54 @@
    ]
   },
   {
-   "account": "Bigchopper",
-   "script": "scripts/shop-buyer.ts",
+   "account": "TossTheCaber",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "dargaud",
-    "1200"
+    "6000",
+    "taverley_druid"
    ],
    "env": {
-    "ITEMS": "rune arrow",
-    "STOCK_TARGET": "445",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "320200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "320000",
-    "AUTOPILOT_ORDER": "[45]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":445}}"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
-   "role": "bank",
-   "template": "squad-arrows-dargaud",
+   "goal": "farm Taverley Dungeon Chaos druids (non-Wilderness) for herbs, snape grass, law and nature runes",
+   "role": "combat",
+   "template": "squad-taverley-druids",
    "autopilot": "local",
    "resources": [
-    "shop:dargaud"
+    "squad:taverley-druids"
+   ]
+  },
+  {
+   "account": "Swordswallow",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "aubury",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "water rune",
+    "STOCK_TARGET": "303",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "2552",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "2352",
+    "AUTOPILOT_ORDER": "[9]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":303}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
+   "role": "bank",
+   "template": "squad-water-aubury",
+   "autopilot": "local",
+   "resources": [
+    "shop:aubury"
    ]
   },
   {
@@ -314,6 +335,27 @@
    "autopilot": "local",
    "resources": [
     "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "Fingersmith",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1333 QUANTITY=1 LIMIT_PRICE=50000 CASH_RESERVE=1000 ORDER_KEY=fingersmith-kit0-1333-0to1 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"1333\":1}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy 1 Rune scimitar on the Grand Exchange to fight with a rune blade",
+   "role": "supply",
+   "template": "kit-buy:army-weapon-rune",
+   "autopilot": "local",
+   "resources": [
+    "ge:weapon"
    ]
   }
  ],
