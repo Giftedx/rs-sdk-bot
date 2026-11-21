@@ -100,7 +100,11 @@ export function bankTrip(at: { x: number; z: number }, back: { x: number; z: num
         }
         const boosts = () => a.sdk.getInventory().filter(i => PREPOT.some(doses => (doses as readonly number[]).includes(i.id)));
         for (const potion of boosts()) { const op = potion.optionsWithIndex.find(o => /^drink$/i.test(o.text)); if (op) { await a.sdk.sendUseItem(potion.slot, op.opIndex); await pause(3); } }
-        if (!(await a.bot.openBank()).success) return 'bank did not open for the second visit';
+        if (!(await a.bot.openBank()).success) {
+            if (halt()) return 'stopped';
+            await go(at);
+            if (!(await a.bot.openBank()).success) return 'bank did not open for the second visit';
+        }
         for (const potion of boosts()) await a.bot.depositItem(potion, -1);
         let room = more.fill === false ? pack.food - a.sdk.getInventory().filter(edible).length : 27 - a.sdk.getInventory().length;
         for (const kind of FOOD_LIST) {

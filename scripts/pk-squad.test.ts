@@ -1285,3 +1285,63 @@ test('curePoisonAndEat drinks antipoison and eats above fatal poison ticks once 
         spyTick.mockRestore();
     }
 });
+
+test('squadFallbackPlan catches 2+ hitter focus and 4+ enemy multi bursts, and rescue combo-heals on Glory entry and low-HP teleport windup', async () => {
+    expect(squadFallbackPlan({ z: 3604, hp: 85, maxHp: 99, foodCount: 14, enemyCount: 5, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 3 })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3604, hp: 71, maxHp: 99, foodCount: 14, enemyCount: 5, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 2 })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3604, hp: 61, maxHp: 99, foodCount: 14, enemyCount: 4, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 0 })).toBe('glory');
+    expect(squadFallbackPlan({ z: 3604, hp: 75, maxHp: 99, foodCount: 14, enemyCount: 5, allyCount: 7, inMulti: true, hasGlory: true, hasTeleport: false, targetingMe: 1 })).toBe('hold');
+
+    let z = 3604, hp = 76, ticks = 0, dialogOpen = false;
+    const inv: any[] = [
+        { slot: 0, id: 1712, count: 1, name: 'Amulet of glory(4)', optionsWithIndex: [{ text: 'Rub', opIndex: 4 }] },
+        { slot: 1, id: 385, count: 1, name: 'Shark', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+        { slot: 2, id: 3144, count: 1, name: 'Cooked karambwan', optionsWithIndex: [{ text: 'Eat', opIndex: 1 }] },
+    ];
+    const used: string[] = [];
+    const s: any = {
+        name: 'GloryHealBot',
+        tick: () => ticks,
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp, maxHp: 99, combatLevel: 126 },
+                inventory: inv,
+                equipment: [],
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { activePrayers: [], prayerPoints: 99 },
+                combatEvents: [],
+                dialog: dialogOpen ? { isOpen: true, isWaiting: false, options: [{ text: 'Edgeville' }] } : { isOpen: false },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => [],
+            getSkill: () => ({ level: 99, baseLevel: 99 }),
+            clickDialogByText: async () => {
+                dialogOpen = false;
+                used.push('clickEdgeville');
+                hp = 48; // simulate heavy spike during teleport windup
+                return { success: true };
+            },
+        },
+        direct: async (a: any) => {
+            used.push(`use:${a.slot}`);
+            if (a.slot === 0) dialogOpen = true;
+            if (a.slot === 1) hp += 20;
+            if (a.slot === 2) hp += 18;
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => {
+        ticks++;
+        if (ticks >= 2 && !dialogOpen && used.includes('clickEdgeville')) z = 3496;
+        return true;
+    });
+    try {
+        await rescue(s, () => {}, () => false, false);
+        expect(used[0]).toBe('use:1');
+        expect(used[1]).toBe('use:2');
+        expect(used).toContain('use:0');
+        expect(used).toContain('clickEdgeville');
+        expect(z).toBe(3496);
+    } finally {
+        spyTick.mockRestore();
+    }
+});

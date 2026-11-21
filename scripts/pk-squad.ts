@@ -395,7 +395,14 @@ export async function rescue(
     log(`[${s.name}] SQUAD rescue at ${start.worldX},${start.worldZ} wild ${wildernessLevel(start.worldZ)} hp ${start.hp}`);
     if (wildernessLevel(start.worldZ) > 0) {
         let suppressEat = false;
-        const survival = createWildSurvival(s, { protect: opts.protect, protectItem: opts.protectItem, eatBelow: Math.max(72, start.maxHp - 20), comboBelow: 58, useDirect: true, canEat: () => !suppressEat && !s.sdk.getState()?.dialog?.isOpen });
+        const survival = createWildSurvival(s, {
+            protect: opts.protect,
+            protectItem: opts.protectItem,
+            eatBelow: Math.max(85, start.maxHp - 8),
+            comboBelow: Math.max(76, start.maxHp - 18),
+            useDirect: true,
+            canEat: () => !s.sdk.getState()?.dialog?.isOpen && (!suppressEat || (me()?.hp ?? start.maxHp) <= 52),
+        });
         const hasChargedGlory = () => {
             const st = s.sdk.getState(), inv = s.sdk.getInventory?.() ?? [], eq = (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : st?.equipment) ?? [];
             return [...inv, ...eq].some(i => (ITEMS.glory as readonly number[]).includes(i.id));
@@ -438,7 +445,7 @@ export async function rescue(
                 if (await clickEdgeville()) {
                     suppressEat = true;
                     try {
-                        for (let d = 0; d < 4 && wildernessLevel(me()?.worldZ ?? 0) > 0; d++) {
+                        for (let d = 0; d < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; d++) {
                             survival.step(s.tick());
                             if (!await tick()) return false;
                         }
@@ -458,7 +465,7 @@ export async function rescue(
                         if (await clickEdgeville()) {
                             suppressEat = true;
                             try {
-                                for (let d = 0; d < 4 && wildernessLevel(me()?.worldZ ?? 0) > 0; d++) {
+                                for (let d = 0; d < 3 && wildernessLevel(me()?.worldZ ?? 0) > 0; d++) {
                                     survival.step(s.tick());
                                     if (!await tick()) return false;
                                 }
@@ -891,10 +898,12 @@ export function squadFallbackPlan(opts: {
     if (wild === 0) return 'out';
     const isolatedPile = opts.inMulti && opts.allyCount === 0 && opts.enemyCount >= 3 && (opts.hp <= opts.maxHp * 0.85 || opts.foodCount <= 6 || opts.enemyCount >= 5);
     const outnumbered = opts.inMulti && opts.enemyCount - opts.allyCount >= 2 && opts.hp <= opts.maxHp * 0.78;
-    const focusPile = opts.inMulti && (opts.targetingMe ?? 0) >= 3 && opts.hp <= opts.maxHp * 0.82;
-    const lowSupplyPile = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.foodCount <= 3 && opts.hp <= opts.maxHp * 0.85;
+    const focusPile = opts.inMulti && (opts.targetingMe ?? 0) >= 3 && opts.hp <= opts.maxHp * 0.86;
+    const heavyFocus = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.hp <= opts.maxHp * 0.72;
+    const emergencyMulti = opts.inMulti && opts.enemyCount >= 4 && opts.hp <= opts.maxHp * 0.62;
+    const lowSupplyPile = opts.inMulti && (opts.targetingMe ?? 0) >= 2 && opts.foodCount <= 3 && opts.hp <= opts.maxHp * 0.88;
     const dry = opts.foodCount <= 0 && ((opts.packFood ?? 0) >= 6 || opts.hp <= opts.maxHp * 0.75);
-    if (!isolatedPile && !outnumbered && !focusPile && !lowSupplyPile && !dry) return 'hold';
+    if (!isolatedPile && !outnumbered && !focusPile && !heavyFocus && !emergencyMulti && !lowSupplyPile && !dry) return 'hold';
     return escapeStep(wild, { glory: opts.hasGlory, teleport: opts.hasTeleport });
 }
 
@@ -1092,16 +1101,25 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         );
     };
     const alliesSet = new Set(o.allies.map(a => a.toLowerCase()));
+    const recentHitters = new Map<number, number>();
+    let seenCombatEv = 0;
     const fallbackAction = () => {
         const pos = me();
         if (!pos) return { plan: 'out' as const, enemyCount: 0, allyCount: 0 };
+        const nowTick = s.tick();
+        for (const [idx, t] of recentHitters) if (nowTick - t > 8) recentHitters.delete(idx);
         const curView = s.sdk.getState()?.nearbyPlayers ?? [];
         const curSelf = { x: pos.worldX, z: pos.worldZ, combatLevel: pos.combatLevel };
-        const clientView = s.client as { localPlayer?: unknown; players?: unknown[] } | undefined;
-        const selfIndex = clientView?.players && clientView.localPlayer ? clientView.players.indexOf(clientView.localPlayer) : -1;
+        const clientView = s.client as { localPlayer?: unknown; players?: unknown[]; selfSlot?: number } | undefined;
+        const selfIndex = typeof clientView?.selfSlot === 'number' && Number.isSafeInteger(clientView.selfSlot) && clientView.selfSlot >= 0
+            ? clientView.selfSlot
+            : (clientView?.players && clientView.localPlayer ? clientView.players.indexOf(clientView.localPlayer) : -1);
         const enemies = curView.filter(q => !alliesSet.has(q.name.toLowerCase()) && q.distance <= 10 && attackable(curSelf, { z: q.z, combatLevel: q.combatLevel }));
         const enemyCount = enemies.length;
-        const targetingMe = selfIndex >= 0 ? enemies.filter(q => q.combatTargetType === 'player' && q.combatTargetIndex === selfIndex).length : 0;
+        const targetingMe = enemies.filter(q =>
+            (selfIndex >= 0 && q.combatTargetType === 'player' && q.combatTargetIndex === selfIndex)
+            || ((recentHitters.get(q.index) ?? -999) >= nowTick - 8)
+        ).length;
         const allyCount = curView.filter(q => alliesSet.has(q.name.toLowerCase()) && q.distance <= 10).length;
         const invNow = s.sdk.getInventory();
         const plan = squadFallbackPlan({
@@ -1169,8 +1187,17 @@ export async function hold(s: Session, o: { targets: ReadonlySet<string>; post: 
         });
     };
     const unwatch = s.onTick(() => {
-        const pos = me();
+        const stTick = s.sdk.getState();
+        const pos = stTick?.player;
         const hp = pos?.hp; if (hp !== undefined) { if (hp < lastHp) { stats.taken += lastHp - hp; damagedAt = s.tick(); } lastHp = hp; minHp = minHp === undefined ? hp : Math.min(minHp, hp); }
+        for (const e of stTick?.combatEvents ?? []) {
+            const id = e.observationId ?? e.tick;
+            if (id <= seenCombatEv) continue;
+            seenCombatEv = id;
+            if (e.type === 'damage_taken' && e.sourceType === 'other_player' && typeof e.sourceIndex === 'number' && e.sourceIndex >= 0) {
+                recentHitters.set(e.sourceIndex, s.tick());
+            }
+        }
         if (!inFight && !inRescue && going()) wildSurvival.step(s.tick());
         if (pos && o.cohesion) {
             const stNow = s.sdk.getState();

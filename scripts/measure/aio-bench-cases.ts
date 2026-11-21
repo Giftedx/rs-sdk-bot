@@ -1379,13 +1379,13 @@ const ROUTE_CASES: BenchCase[] = [
     };
   })(),
   // Wave C Rev-289 Achievable BiS Kit Matrix against Goondelf/Ligma/Sugma clones and threat-team3, plus scaled BiS squad sizes (4..16).
-  ...(['rune', 'dhide', 'dragon', 'dragon-zerk', 'dragon-zerk-sharks', 'hybrid', 'hybrid-sharks', 'power-glory', 'dragon-power', 'hybrid-tele', 'swap', 'entangle', 'amulet-str', 'amulet-power', 'sara-cape', 'god-sara', 'god-guthix'] as const).map(v =>
+  ...(['rune', 'dhide', 'dragon', 'dragon-med-sharks', 'dragon-zerk', 'dragon-zerk-sharks', 'zerk-power-sharks', 'zerk-karam2', 'zerk-tele', 'hybrid', 'hybrid-sharks', 'power-glory', 'dragon-power', 'hybrid-tele', 'swap', 'entangle', 'amulet-str', 'amulet-power', 'sara-cape', 'god-sara', 'god-guthix'] as const).map(v =>
     cloneTribridSquad(`extra:clone-bis-${v}-x1`, `tribrid-bis-${v}`, 4, ['TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4'])),
   (() => {
     const base = cloneTribridSquad('extra:clone-bis-spear1-x1', 'tribrid-bis-hybrid', 4, ['TRIPS=2', 'FOLLOW=1', 'MARCH=1', 'PULL=1', 'RESCUE=1', 'PICKUP=1', 'SQUAD_FREEZE_SHARE=1', 'SQUAD_BURST_HOLD=1', 'SQUAD_THREAT=1', 'SQUAD_THREAT_PROTECT=0.4']);
     return {...base, presetConfig: {...kitFixture('tribrid-bis-spear', base.presetConfig!.position!.x, base.presetConfig!.position!.z), bank: base.presetConfig!.bank}};
   })(),
-  ...(['rune', 'dhide', 'dragon', 'dragon-zerk', 'dragon-zerk-sharks', 'hybrid', 'hybrid-sharks', 'power-glory', 'dragon-power', 'hybrid-tele', 'swap', 'entangle', 'god-sara', 'god-guthix'] as const).map(v =>
+  ...(['rune', 'dhide', 'dragon', 'dragon-med-sharks', 'dragon-zerk', 'dragon-zerk-sharks', 'zerk-power-sharks', 'zerk-karam2', 'zerk-tele', 'hybrid', 'hybrid-sharks', 'power-glory', 'dragon-power', 'hybrid-tele', 'swap', 'entangle', 'god-sara', 'god-guthix'] as const).map(v =>
     cloneTribridThreatCase(`extra:clone-threat3-bis-${v}-x1`, `tribrid-bis-${v}`, 4, 'mage+ranger+tribrid-snare', 3)),
   (() => {
     const base = cloneTribridThreatCase('extra:clone-threat3-bis-spear1-x1', 'tribrid-bis-hybrid', 4, 'mage+ranger+tribrid-snare', 3, ['SQUAD_BURST_HOLD=1']);
