@@ -1,0 +1,22 @@
+{
+ "id": "1795303827951-mightyrod-knightrider-dragondagger",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Mightyrod",
+ "to": "KnightRider",
+ "item": "Dragon dagger",
+ "count": 1,
+ "start": 1795303827951,
+ "end": 1795306227951,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
