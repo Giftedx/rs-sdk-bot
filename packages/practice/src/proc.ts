@@ -4,12 +4,34 @@ import { readFileSync } from 'node:fs';
 // commandLine gives null and processStartTimes gives null. A coordinator loop must not wait on a hung read for good.
 export const POWERSHELL_TIMEOUT_MS = 20_000;
 
+export type TimedSpawnSyncOptions<
+    In extends Bun.SpawnOptions.Writable = 'ignore',
+    Out extends Bun.SpawnOptions.Readable = 'pipe',
+    Err extends Bun.SpawnOptions.Readable = 'pipe',
+> = Bun.SpawnOptions.SpawnSyncOptions<In, Out, Err> & { timeout: number };
+
+// In Bun v1.3.14 on Windows, Bun.spawnSync reuses a sync libuv loop whose cached clock lags behind after an async sleep
+// or external wait, so the first call with a timeout can fail immediately with null exitCode and SIGTERM even when the
+// process completes quickly. A single immediate retry runs with a refreshed clock while real hangs still time out.
+export function spawnSyncTimed<
+    const In extends Bun.SpawnOptions.Writable = 'ignore',
+    const Out extends Bun.SpawnOptions.Readable = 'pipe',
+    const Err extends Bun.SpawnOptions.Readable = 'pipe',
+>(cmd: string[], options: TimedSpawnSyncOptions<In, Out, Err>): Bun.SyncSubprocess<Out, Err> {
+    const started = Date.now();
+    const first = Bun.spawnSync(cmd, options);
+    if (first.exitCode === null && first.signalCode === 'SIGTERM' && Date.now() - started < options.timeout / 2) {
+        return Bun.spawnSync(cmd, options);
+    }
+    return first;
+}
+
 // The command line of a live process, or null. Used to check that a saved PID is still our process:
 // Windows reuses PIDs, so a stale pids.json could otherwise point at an unrelated program.
 export function commandLine(pid: number): string | null {
     if (!Number.isInteger(pid) || pid <= 0) return null;
     if (process.platform === 'win32') {
-        const r = Bun.spawnSync(['powershell', '-NoProfile', '-Command', `(Get-CimInstance Win32_Process -Filter "ProcessId=${pid}").CommandLine`], { stdout: 'pipe', stderr: 'ignore' ,windowsHide:true, timeout: POWERSHELL_TIMEOUT_MS});
+        const r = spawnSyncTimed(['powershell', '-NoProfile', '-Command', `(Get-CimInstance Win32_Process -Filter "ProcessId=${pid}").CommandLine`], { stdout: 'pipe', stderr: 'ignore', windowsHide: true, timeout: POWERSHELL_TIMEOUT_MS });
         const out = r.stdout.toString().trim();
         return out.length > 0 ? out : null;
     }
@@ -48,7 +70,7 @@ export function processStartTimes(pids: readonly number[]): Map<number, number> 
     if (process.platform !== 'win32') return null;
     // The last line proves that the query ran to its end: a failed query stops the script before it.
     const script = `$ErrorActionPreference='Stop'; Get-CimInstance Win32_Process -Filter "${ids.map(p => `ProcessId=${p}`).join(' OR ')}" | ForEach-Object { if ($_.CreationDate) { '{0}|{1}' -f $_.ProcessId, ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() } }; 'read'`;
-    const r = Bun.spawnSync(['powershell', '-NoProfile', '-Command', script], { stdout: 'pipe', stderr: 'ignore', windowsHide: true, timeout: POWERSHELL_TIMEOUT_MS });
+    const r = spawnSyncTimed(['powershell', '-NoProfile', '-Command', script], { stdout: 'pipe', stderr: 'ignore', windowsHide: true, timeout: POWERSHELL_TIMEOUT_MS });
     const lines = r.stdout.toString().trim().split(/\r?\n/);
     if (r.exitCode !== 0 || lines.pop() !== 'read') return null;
     for (const line of lines) {
