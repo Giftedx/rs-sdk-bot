@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { SIDE_NAME } from './fleet';
-import { appendFleetGitRecord, commitFleetGitRecord, fleetGitRetryable, fleetPushRetryable, pushFleetGitRecord, fleetCheckoutId, fleetCheckoutLastSeen, fleetGitWindow, fleetLeaseLastSeen, readFleetGitRefs,recoveryHostLease,fleetLeaseAllowsWorker,FLEET_LEASE_TTL_MS } from './fleet-lease';
+import { commitFleetGitRecord, fleetGitRetryable, fleetPushRetryable, pushFleetGitRecord, fleetCheckoutId, fleetCheckoutLastSeen, fleetGitWindow, fleetLeaseLastSeen, readFleetGitRefs,recoveryHostLease,fleetLeaseAllowsWorker,FLEET_LEASE_TTL_MS } from './fleet-lease';
 import {assertSpentRecoveryConnection,type RecoveryConnectionAdmission} from './session-recovery-permit';
 import { listAttempts, readLogoutProof } from './session-lifecycle';
 import { pidAlive, savedProcessAlive } from './session-takeover';
@@ -22,7 +22,23 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const ACCOUNT = /^[a-z0-9_-]{1,12}$/;
 const SERVER = /^[a-z0-9][a-z0-9.:-]{0,252}$/;
 const CLAIM_PREFIX = 'refs/heads/fleet-trade-claim/';
-const gitForTrade = (root: string) => fleetGitWindow(root, 'fleet trade claim authority');
+export const SWARM_CLAIM_READ_MS = 15_000, SWARM_CLAIM_PUSH_MS = 20_000, SWARM_CLAIM_TRIES = 3, SWARM_CLAIM_PAUSE_MS = 1000;
+const REMOTE_BUSY_PAUSE_MS = 200;
+const TRADE_AUTHORITY = 'fleet trade claim authority';
+const claimPause = (ms: number) => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); };
+const gitForTrade = (root: string, budgetMs?: number, gitWindow = fleetGitWindow) => gitWindow(root, TRADE_AUTHORITY, budgetMs);
+const isRemoteBusyPush = (error: unknown) => fleetPushRetryable(error) && !fleetGitRetryable(error);
+type TradePushOptions = { wait?: (ms: number) => void; gitWindow?: typeof fleetGitWindow };
+
+function retryAttempt<T>(action: () => T, retryable: (error: unknown) => boolean, tries: number, wait: (ms: number) => void, pauseMs = SWARM_CLAIM_PAUSE_MS): T {
+    for (let n = 1; ; n++) {
+        try { return action(); }
+        catch (error) {
+            if (n >= tries || !retryable(error)) throw error;
+            wait(pauseMs * (2 * n - 1));
+        }
+    }
+}
 
 function accountName(account: string) {
     if (!/^[A-Za-z0-9_ -]{1,12}$/.test(account)) throw Error('invalid fleet account claim account');
@@ -74,8 +90,15 @@ function loadClaim(git: ReturnType<typeof gitForTrade>, account: string, server:
     // including when stale callers disagree on its server or side.
     const ref = CLAIM_PREFIX + account, head = readFleetGitRefs(git, [ref]).get(ref);
     if (!head) return { ref, head, claim: null };
-    git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', head]);
-    const claim = parseClaim(git(['show', '-s', '--format=%b', head]), account, server);
+    // Read the commit locally when present; commit SHAs bind exact content so local heads need no remote fetch.
+    let body: string;
+    try { body = git(['show', '-s', '--format=%b', head]); }
+    catch (error) {
+        if (!/bad object|unknown revision|not a valid object|does not exist/i.test(String(error))) throw error;
+        git(['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', 'origin', head]);
+        body = git(['show', '-s', '--format=%b', head]);
+    }
+    const claim = parseClaim(body, account, server);
     return { ref, head, claim };
 }
 
@@ -135,13 +158,26 @@ export function readAllFleetAccountClaims(git: ReturnType<typeof fleetGitWindow>
     return out;
 }
 
-function appendClaim(git: ReturnType<typeof gitForTrade>, ref: string, head: string | undefined, subject: string, claim: FleetAccountClaim) {
-    const tree = git(['hash-object', '-w', '-t', 'tree', '--stdin'], '');
-    return appendFleetGitRecord(git, ref, head, tree, subject + '\n\n' + JSON.stringify(claim));
+const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+const missingGitObject = (error: unknown) => /not a valid object|invalid object|does not exist/i.test(String(error));
+
+function commitClaimWithFallback(git: ReturnType<typeof gitForTrade>, head: string | undefined, message: string, cachedTree?: string) {
+    const tree = cachedTree ?? (head ? EMPTY_TREE : undefined);
+    if (tree) {
+        try { return commitFleetGitRecord(git, head, tree, message); }
+        catch (error) { if (!missingGitObject(error)) throw error; }
+    }
+    return commitFleetGitRecord(git, head, git(['hash-object', '-w', '-t', 'tree', '--stdin'], ''), message);
 }
+
 function commitClaim(git: ReturnType<typeof gitForTrade>, head: string | undefined, subject: string, claim: FleetAccountClaim) {
-    const tree = git(['hash-object', '-w', '-t', 'tree', '--stdin'], '');
-    return commitFleetGitRecord(git, head, tree, subject + '\n\n' + JSON.stringify(claim));
+    return commitClaimWithFallback(git, head, subject + '\n\n' + JSON.stringify(claim));
+}
+
+function commitAndPushTradeClaim(root: string, git: ReturnType<typeof gitForTrade>, ref: string, head: string | undefined, subject: string, claim: FleetAccountClaim, { wait = claimPause, gitWindow = fleetGitWindow }: TradePushOptions) {
+    const next = commitClaim(git, head, subject, claim);
+    retryAttempt(() => pushFleetGitRecord(gitForTrade(root, SWARM_CLAIM_PUSH_MS, gitWindow), ref, next), fleetPushRetryable, SWARM_CLAIM_TRIES, wait);
+    return next;
 }
 
 const pendingDir = (root: string) => join(root, '.practice', 'fleet-account-pending');
@@ -204,19 +240,19 @@ function cleanPending(root: string, nonce: string) {
 
 // The caller supplies the exact nonce only after it proves settlement and logout,
 // or proves that the held attempt never connected. A stale caller cannot clear a new claim.
-export function releaseFleetTradeClaim(root: string, target: Identity & { nonce: string }, now = Date.now): void {
-    const { account, server } = identity(target), git = gitForTrade(root);
+export function releaseFleetTradeClaim(root: string, target: Identity & { nonce: string }, now = Date.now, options: TradePushOptions = {}): void {
+    const { account, server } = identity(target), git = gitForTrade(root, undefined, options.gitWindow);
     const { ref, head, claim } = loadClaim(git, account, server);
     if (!claim || isSwarmClaim(claim) || claim.nonce !== target.nonce) throw Error('fleet trade claim changed');
     if (claim.phase === 'released') return;
-    appendClaim(git, ref, head, 'Fleet trade released', { ...claim, phase: 'released', at: now() });
+    commitAndPushTradeClaim(root, git, ref, head, 'Fleet trade released', { ...claim, phase: 'released', at: now() }, options);
 }
 
 // The caller proves every trade's outcome and logout before releasing a group. One remote transaction keeps a
 // reconciled pair together: a changed ref refuses the entire push, and a lost response can be checked by nonce.
-export function releaseFleetTradeClaims(root: string, targets: readonly (Identity & { nonce: string })[], now = Date.now): number {
+export function releaseFleetTradeClaims(root: string, targets: readonly (Identity & { nonce: string })[], now = Date.now, { wait = claimPause, gitWindow = fleetGitWindow }: TradePushOptions = {}): number {
     if (!targets.length) return 0;
-    const git = gitForTrade(root), seen = new Set<string>();
+    const git = gitForTrade(root, undefined, gitWindow), seen = new Set<string>();
     const pending = targets.flatMap(target => {
         const { account, server } = identity(target);
         if (seen.has(account)) throw Error('duplicate fleet trade release account');
@@ -226,22 +262,22 @@ export function releaseFleetTradeClaims(root: string, targets: readonly (Identit
         return claim.phase === 'held' ? [{ ref, head, claim }] : [];
     });
     if (!pending.length) return 0;
-    const tree = git(['hash-object', '-w', '-t', 'tree', '--stdin'], ''), at = now();
+    const at = now();
     const updates = pending.map(({ ref, head, claim }) => {
-        const commit = commitFleetGitRecord(git, head, tree, 'Fleet trade released\n\n' + JSON.stringify({ ...claim, phase: 'released', at }));
+        const commit = commitClaimWithFallback(git, head, 'Fleet trade released\n\n' + JSON.stringify({ ...claim, phase: 'released', at }), EMPTY_TREE);
         return commit + ':' + ref;
     });
-    git(['-c', 'push.followTags=false', 'push', '--quiet', '--atomic', 'origin', ...updates]);
+    retryAttempt(() => gitForTrade(root, SWARM_CLAIM_PUSH_MS, gitWindow)(['-c', 'push.followTags=false', 'push', '--quiet', '--atomic', 'origin', ...updates]), fleetPushRetryable, SWARM_CLAIM_TRIES, wait);
     return pending.length;
 }
 
 // Acquisition is the durable attempt intent. A held claim has no wall-clock
 // timeout, since a killed client can leave its transfer or logout uncertain.
-export function acquireFleetTradeClaim(root: string, input: TradeClaimInput, now = Date.now) {
+export function acquireFleetTradeClaim(root: string, input: TradeClaimInput, now = Date.now, options: TradePushOptions = {}) {
     const { account, server } = identity(input);
     const { side, orderId, role } = input;
     if (!SIDE_NAME.test(side) || !ORDER_ID.test(orderId) || (role !== 'from' && role !== 'to')) throw Error('invalid fleet trade claim order');
-    const git = gitForTrade(root), { ref, head, claim } = loadClaim(git, account, server);
+    const git = gitForTrade(root, undefined, options.gitWindow), { ref, head, claim } = loadClaim(git, account, server);
     const pending = claim?.phase === 'held' ? abandonedPending(root, claim, input) : undefined;
     if (claim?.phase === 'held' && !(pending && !pending.inherited)) {
         if (!isSwarmClaim(claim)) throw Error('fleet trade claim held for order ' + claim.orderId);
@@ -259,13 +295,13 @@ export function acquireFleetTradeClaim(root: string, input: TradeClaimInput, now
     if (earlier && !(sameAbandoned && earlier === head)) throw Error('fleet trade order role already claimed');
     const record: FleetTradeClaim = { account, server, side, orderId, role, nonce: randomUUID(), phase: 'held', at: now(), ...claimOwner(root) };
     writePending(root, record);
-    appendClaim(git, ref, head, subject, record);
+    commitAndPushTradeClaim(root, git, ref, head, subject, record, options);
     if (pending && claim) cleanPending(root, claim.nonce);
     return {
         ...record,
         armNetwork: () => forgetPending(root, record.nonce),
         release: () => {
-            releaseFleetTradeClaim(root, record, now);
+            releaseFleetTradeClaim(root, record, now, options);
             cleanPending(root, record.nonce);
         },
     };
@@ -332,8 +368,6 @@ function pendingHostWitness(root:string,head:string,inherited:FleetSwarmClaim,wi
 // then fails with `spawnSync git ETIMEDOUT`. A patient claim gives the reads, the commit and the push their own
 // windows and tries the reads and the push again, SWARM_CLAIM_TRIES times at most, after a failure that says nothing
 // about the ref. Its longest wait is about 130 s: 3 reads and 1 commit of 15 s, 3 pushes of 20 s and the pauses.
-export const SWARM_CLAIM_READ_MS = 15_000, SWARM_CLAIM_PUSH_MS = 20_000, SWARM_CLAIM_TRIES = 3, SWARM_CLAIM_PAUSE_MS = 1000;
-const claimPause = (ms: number) => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); };
 export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { recover = false, admission=undefined as RecoveryConnectionAdmission|undefined, now = Date.now, ownerAlive = savedProcessAlive as (pid: number, savedAt: number) => boolean,
     patient = false, gitWindow = fleetGitWindow, wait = claimPause } = {}) {
     const { account, server } = identity(input), { side } = input;
@@ -341,12 +375,7 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
     const authorized=admission?assertSpentRecoveryConnection(admission,account,server,root):undefined;
     const authority = 'fleet swarm claim authority', tries = patient ? SWARM_CLAIM_TRIES : 1;
     // An action that changes nothing, or changes the same thing, is tried again after a failure that says nothing about the ref.
-    const again = <T>(action: () => T, retryable = fleetGitRetryable): T => {
-        for (let n = 1; ; n++) {
-            try { return action(); }
-            catch (error) { if (n >= tries || !retryable(error)) throw error; wait(SWARM_CLAIM_PAUSE_MS * (2 * n - 1)); }
-        }
-    };
+    const again = <T>(action: () => T, retryable = fleetGitRetryable): T => retryAttempt(action, retryable, tries, wait);
     // A login under the plan lock keeps the one short window for its reads and its push.
     let git = gitWindow(root, authority, patient ? SWARM_CLAIM_READ_MS : undefined);
     const read = (git: ReturnType<typeof gitForTrade>) => {
@@ -391,8 +420,10 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
         writePending(root, record, inheritedHold,inheritedHead);
         const subject = orphan ? `Fleet swarm attempt, replacing the orphaned ${orphan.side} claim ${orphan.nonce}` : 'Fleet swarm attempt';
         let owned: string;
-        if (!patient) owned = appendClaim(git, ref, head, subject, record);
-        else {
+        if (!patient) {
+            owned = commitClaim(git, head, subject, record);
+            retryAttempt(() => pushFleetGitRecord(git, ref, owned), isRemoteBusyPush, SWARM_CLAIM_TRIES, wait, REMOTE_BUSY_PAUSE_MS);
+        } else {
             // One record, made one time. A push that timed out can have reached the remote, and the same commit pushed again
             // is then no change. A push that the fast-forward rule rejected means that another writer has the ref: it is
             // never pushed again, unless a lagged ref check caught our own checkout releasing the held claim we read.
@@ -417,8 +448,11 @@ export function acquireFleetSwarmClaim(root: string, input: ClaimIdentity, { rec
             if (released) return;
             const releaseSubject = restore ? 'Fleet swarm inherited hold restored' : 'Fleet swarm released';
             const releaseBody = restore ?? { ...record, phase: 'released', at: now() };
-            if (!patient) appendClaim(gitWindow(root, authority, 4000), ref, owned, releaseSubject, releaseBody);
-            else {
+            if (!patient) {
+                const releaseGit = gitWindow(root, authority, 4000);
+                const rel = commitClaim(releaseGit, owned, releaseSubject, releaseBody);
+                retryAttempt(() => pushFleetGitRecord(releaseGit, ref, rel), isRemoteBusyPush, SWARM_CLAIM_TRIES, wait, REMOTE_BUSY_PAUSE_MS);
+            } else {
                 const rel = commitClaim(gitWindow(root, authority, SWARM_CLAIM_READ_MS), owned, releaseSubject, releaseBody);
                 again(() => pushFleetGitRecord(gitWindow(root, authority, SWARM_CLAIM_PUSH_MS), ref, rel), fleetPushRetryable);
             }
