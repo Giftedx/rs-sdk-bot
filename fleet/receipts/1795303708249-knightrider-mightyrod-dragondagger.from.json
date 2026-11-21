@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795303708249-knightrider-mightyrod-dragondagger",
+ "account": "KnightRider",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Dragon dagger",
+ "requested": 1,
+ "claim": "be0f1097-9db9-495a-a17c-d9f506bdafd3",
+ "count": 1,
+ "ok": true,
+ "at": 1795303775882,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 1,
+  "after": 0
+ },
+ "bank": {
+  "count": 1,
+  "at": 1795303767038
+ },
+ "logout": {
+  "attemptId": "1795303758138-0000018928-0000000001",
+  "at": 1795303775792,
+  "sha256": "dc582f098881fd436b31762f4deb5c35e423b9fbf4991f099c5f3a345a20e4fe"
+ },
+ "screen": true
+}
