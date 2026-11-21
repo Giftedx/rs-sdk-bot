@@ -1031,10 +1031,10 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                     if (!await drinkFirstMatching(s, [...ITEMS.chocolateCakeParts, ITEMS.shark])) break;
                     await q.waitTicks(2);
                 }
-                const curX = x(), t0 = q.s.tick();
+                const curX = x(), slip0 = q.msgCount(/slip a little/i);
                 const rid = curX >= 3280 ? 2694 : curX >= 3278 ? 2695 : curX >= 3276 ? 2696 : 2697;
                 let rockIdle = 0;
-                for (let t = 0; t < 24 && x() === curX && !msgSince(/slip a little/i, t0) && !inPrisonCell(); t++) {
+                for (let t = 0; t < 24 && x() === curX && q.msgCount(/slip a little/i) === slip0 && !inPrisonCell(); t++) {
                     await q.guard('cell rock');
                     const d: any = q.s.sdk.getDialog();
                     if (d?.isOpen) {
@@ -1057,6 +1057,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                     }
                     await q.waitTicks(1);
                 }
+                await q.waitTicks(1);
             }
             if (x() > 3272 || inPrisonCell()) await q.fail(`failed prison cliff escape at ${x()},${z()}`);
             await ensureFullPrayer();
@@ -1220,8 +1221,8 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                 }
                 return siadDone;
             }, { x: 3291, z: 3032 }, 60);
-            const tChest = q.s.tick();
-            await locTalk('chest', () => { const c = loc(CHEST); return q.opLoc(c, q.opIndex(c, /open/i)); }, [], () => q.has(ITEMS.plans) || msgSince(/spots you before you manage/i, tChest), 2);
+            const spot0 = q.msgCount(/spots you before you manage/i);
+            await locTalk('chest', () => { const c = loc(CHEST); return q.opLoc(c, q.opIndex(c, /open/i)); }, [], () => q.has(ITEMS.plans) || q.msgCount(/spots you before you manage/i) > spot0, 2);
         }
         if (!q.has(ITEMS.plans)) await q.fail('no plans');
         await q.walk('to ladder top', [{ x: LADDER_TOP.x, z: LADDER_TOP.z - 1, tol: 0 }]);
@@ -1236,8 +1237,8 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await q.talk('bedabin guard', /^bedabin nomad guard$/i, [], () => z() >= 3046, BED_GUARD, 30);
 
         for (let i = 0; i < 16 && !q.has(ITEMS.dartTip) && q.has(ITEMS.bronzeBar); i++) {
-            const t0 = q.s.tick();
-            const rolled = () => q.has(ITEMS.dartTip) || msgSince(/waste the bronze bar/i, t0);
+            const waste0 = q.msgCount(/waste the bronze bar/i);
+            const rolled = () => q.has(ITEMS.dartTip) || q.msgCount(/waste the bronze bar/i) > waste0;
             await q.guard('anvil');
             await closeDlg();
             await q.useOnLoc(ITEMS.bronzeBar, loc(ANVIL));
