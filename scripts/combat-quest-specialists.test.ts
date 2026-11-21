@@ -11,11 +11,11 @@ import {
     DEFENCE_SPECIALIST_KIT,
     HP_ANTIPOISON_ACCEPT_IDS,
     HP_SPECIALIST_KIT,
-    KEEP_TOPUP_BY_BOARD,
     KIT_BY_BOARD,
     SPECIALIST_TARGETS,
     STRENGTH_SPECIALIST_KIT,
     assertNonReservedAccount,
+    connectWithTransientRetry,
     countAntipoisonDoses,
     countById,
     hasAtLeastKit,
@@ -146,13 +146,6 @@ describe('Combat-quest specialists: targets, kits, and saves', () => {
             expect(kit.find(k => k.id === 1319)?.count).toBe(1);
             expect(kit.find(k => k.id === 2434)?.count).toBeGreaterThanOrEqual(2);
             expect(kit.find(k => k.id === 3016)?.count).toBeGreaterThanOrEqual(7);
-        }
-        expect(kitSlotTotal(KEEP_TOPUP_BY_BOARD.strength)).toBe(7);
-        expect(KEEP_TOPUP_BY_BOARD.strength.find(k => k.id === 2440)?.count).toBeGreaterThanOrEqual(5);
-        expect(kitSlotTotal(KEEP_TOPUP_BY_BOARD.defence)).toBe(11);
-        expect(KEEP_TOPUP_BY_BOARD.defence.find(k => k.id === 2440)?.count).toBeGreaterThanOrEqual(9);
-        for (const topup of [KEEP_TOPUP_BY_BOARD.strength, KEEP_TOPUP_BY_BOARD.defence]) {
-            for (const spec of topup) expect(itemsById.get(spec.id)?.tradeable).toBe(true);
         }
         expect(typeof runSpecialistWaterfall).toBe('function');
         expect(kitRequirements(STRENGTH_SPECIALIST_KIT).length).toBe(STRENGTH_SPECIALIST_KIT.length);
@@ -328,5 +321,63 @@ describe('Combat-quest specialists: safety, targeting, and registration', () => 
 
         const unnotedInv = HP_SPECIALIST_KIT.map(k => ({ id: resolveBaseId(k.id), baseId: resolveBaseId(k.id), count: k.count }));
         expect(supplierHasExactKit(unnotedInv, HP_SPECIALIST_KIT)).toBe(false);
+    });
+
+    test('connectWithTransientRetry retries transient login rejections and aborts on fatal or stop', async () => {
+        const waits: number[] = [];
+        let calls = 0;
+        const ok = await connectWithTransientRetry(
+            async () => {
+                calls++;
+                if (calls === 1) throw Error('Your account is already logged in');
+                if (calls === 2) throw Error('Error connecting to server, please try again');
+                if (calls === 3) throw Error('Too many incorrect logins from your address');
+                return 'session-ok';
+            },
+            () => false,
+            6,
+            async attempt => { waits.push(attempt); },
+        );
+        expect(ok).toBe('session-ok');
+        expect(calls).toBe(4);
+        expect(waits).toEqual([0, 1, 2]);
+
+        let fatalCalls = 0;
+        await expect(connectWithTransientRetry(
+            async () => {
+                fatalCalls++;
+                throw Error('Invalid username or password');
+            },
+            () => false,
+            6,
+            async () => { throw Error('should not sleep on non-retryable failure'); },
+        )).rejects.toThrow('Invalid username or password');
+        expect(fatalCalls).toBe(1);
+
+        let capCalls = 0;
+        const capWaits: number[] = [];
+        await expect(connectWithTransientRetry(
+            async () => {
+                capCalls++;
+                throw Error('Your account is already logged in');
+            },
+            () => false,
+            3,
+            async attempt => { capWaits.push(attempt); },
+        )).rejects.toThrow('already logged in');
+        expect(capCalls).toBe(3);
+        expect(capWaits).toEqual([0, 1]);
+
+        let stoppedCalls = 0;
+        await expect(connectWithTransientRetry(
+            async () => {
+                stoppedCalls++;
+                throw Error('Try again later');
+            },
+            () => true,
+            5,
+            async () => { throw Error('should not sleep when stopped'); },
+        )).rejects.toThrow('Try again later');
+        expect(stoppedCalls).toBe(1);
     });
 });

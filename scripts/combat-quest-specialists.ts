@@ -11,7 +11,6 @@ import { RESERVED_ACCOUNTS } from '../packages/core/src/specialist-boards';
 import { createTickRecorder } from '../packages/core/src/tick-record';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { applyKnownDoorBlocks, goTo, sessionWalker, walkPath } from '../packages/core/src/walk';
-import { giantStyle } from './gather-combat';
 import { leaveRuneStarter, onStarterIsland } from './rune-starter';
 
 export interface SpecialistBoardTarget {
@@ -36,8 +35,6 @@ export interface KitSpecItem {
 
 export const DUELING_RING_IDS = [2552, 2554, 2556, 2558, 2560, 2562, 2564, 2566] as const;
 export const PRAYER_POT_IDS = [2434, 139, 141, 143] as const;
-export const SUPER_ATTACK_IDS = [2436, 145, 147, 149] as const;
-export const SUPER_STRENGTH_IDS = [2440, 157, 159, 161] as const;
 export const SUPER_ENERGY_IDS = [3016, 3018, 3020, 3022] as const;
 
 export const LUMBRIDGE_HANDOFF = { x: 3222, z: 3222, level: 0 } as const;
@@ -121,23 +118,6 @@ export const MELEE_PVP_SPECIALIST_KIT: readonly KitSpecItem[] = [
 
 export const STRENGTH_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
 export const DEFENCE_SPECIALIST_KIT: readonly KitSpecItem[] = MELEE_PVP_SPECIALIST_KIT;
-
-export const STRENGTH_KEEP_KIT: readonly KitSpecItem[] = [
-    { id: 2440, name: 'Super strength(4)', count: 5, stackable: false },
-    { id: 2436, name: 'Super attack(4)', count: 1, stackable: false },
-    { id: 2434, name: 'Prayer potion(4)', count: 1, stackable: false },
-] as const;
-
-export const DEFENCE_KEEP_KIT: readonly KitSpecItem[] = [
-    { id: 2440, name: 'Super strength(4)', count: 9, stackable: false },
-    { id: 2436, name: 'Super attack(4)', count: 1, stackable: false },
-    { id: 2434, name: 'Prayer potion(4)', count: 1, stackable: false },
-] as const;
-
-export const KEEP_TOPUP_BY_BOARD: Readonly<Record<'strength' | 'defence', readonly KitSpecItem[]>> = {
-    strength: STRENGTH_KEEP_KIT,
-    defence: DEFENCE_KEEP_KIT,
-};
 
 export const KIT_BY_BOARD: Readonly<Record<'hitpoints' | 'strength' | 'defence', readonly KitSpecItem[]>> = {
     hitpoints: HP_SPECIALIST_KIT,
@@ -731,169 +711,6 @@ export async function pullArdougneLeverToWildy(s: Session, stop: StopFn): Promis
     }
 }
 
-export async function runWildyPvpLoop(
-    s: Session,
-    opts: {
-        skill: 'Strength' | 'Defence';
-        targetLevel: number;
-        tankNames: readonly string[];
-        stop: StopFn;
-    },
-): Promise<void> {
-    await setAutoRetaliate(s, false);
-    await equipItemById(s, 1333, opts.stop, 'Rune scimitar');
-    await equipFirstAvailableId(s, [1725, 1731], opts.stop, 'Amulet of strength/power');
-
-    // Verify exact Strength-only (Aggressive) or Defence-only (Defensive) combat style.
-    await waitUntil(s, () => {
-        const c = s.sdk.getState()?.combatStyle;
-        return (!!c?.known && c.weaponName === 'Rune scimitar') || opts.stop();
-    }, { timeoutTicks: 10 });
-    const style = giantStyle(s.sdk.getState()?.combatStyle, opts.skill);
-    if (s.sdk.getState()?.combatStyle?.currentStyle !== style.index) {
-        await s.sdk.sendSetCombatStyle(style.index);
-        if (!await waitUntil(s, () => s.sdk.getState()?.combatStyle?.currentStyle === style.index || opts.stop(), { timeoutTicks: 10 })) {
-            throw Error(`failed to switch combat style to ${style.name} (${opts.skill})`);
-        }
-    }
-
-    const tankRes = opts.tankNames.map(exactNameRe);
-    let lastAttackTick = -10;
-    let lastTargetIndex = -1;
-    let lastDrinkTick = -10;
-    let lastPrayPotionTick = -10;
-    let lastStatusTick = -100;
-    let lastSwingTick = -10;
-    let prevSkillXp = skillInfo(s, opts.skill).experience;
-    let needReengage = false;
-
-    const drinkFromList = (ids: readonly number[]): boolean => {
-        for (const id of ids) {
-            const item = s.sdk.getInventory().find(i => i.id === id);
-            if (!item) continue;
-            void s.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 1, reason: 'SDK' });
-            return true;
-        }
-        return false;
-    };
-
-    await walkWaypoints(s, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 30, opts.stop, 'step to specialist keep post');
-
-    const flickPrayers = [ULTIMATE_STRENGTH_INDEX, INCREDIBLE_REFLEXES_INDEX];
-    const onTankPostTile = (p: any): boolean => {
-        const tx = p.x ?? p.worldX ?? 0;
-        const tz = p.z ?? p.worldZ ?? 0;
-        return (tx === 3154 && tz === 3924) || (tx === 3155 && tz === 3923);
-    };
-
-    try {
-        while (!opts.stop() && skillInfo(s, opts.skill).baseLevel < opts.targetLevel) {
-            if (activeContinueDialog(s)) {
-                void s.sdk.sendClickDialog(0);
-                needReengage = true;
-            }
-
-            const st = s.sdk.getState();
-            const pts = st?.prayers?.prayerPoints ?? 0;
-            const curXp = skillInfo(s, opts.skill).experience;
-            const animId = (st?.player as any)?.animId ?? -1;
-            if (curXp > prevSkillXp || (animId > 0 && animId !== 424 && animId !== 829 && s.tick() - lastSwingTick >= 4)) {
-                lastSwingTick = s.tick();
-                prevSkillXp = curXp;
-            }
-
-            const combat = st?.player?.combat;
-            const sinceSwing = lastSwingTick < 0 ? 99 : s.tick() - lastSwingTick;
-            let flickedThisTick = false;
-
-            // Flick 1 tick after a swing (4 toggles + 1 re-engage = 5 actions, exact server USER_EVENT.limit).
-            if (pts > 0 && skillInfo(s, 'Prayer').baseLevel >= 34) {
-                const needOn = flickPrayers.some(idx => !st?.prayers?.activePrayers?.[idx]);
-                if (needOn) {
-                    flickedThisTick = true;
-                    for (const idx of flickPrayers) {
-                        if (!st?.prayers?.activePrayers?.[idx]) {
-                            void s.direct({ type: 'togglePrayer', prayerIndex: idx, reason: 'SDK' });
-                        }
-                    }
-                } else if (sinceSwing === 1) {
-                    flickedThisTick = true;
-                    for (const idx of flickPrayers) {
-                        void s.direct({ type: 'togglePrayer', prayerIndex: idx, reason: 'SDK' });
-                    }
-                    for (const idx of flickPrayers) {
-                        void s.direct({ type: 'togglePrayer', prayerIndex: idx, reason: 'SDK' });
-                    }
-                }
-            }
-            if (flickedThisTick) needReengage = true;
-
-            // Drink pots only on sinceSwing === 2 (or out of combat before swing 1) so <= 5 actions/tick & zero swing loss.
-            const potionWindow = (!flickedThisTick && sinceSwing === 2) || (!flickedThisTick && !combat?.inCombat && sinceSwing >= 4);
-            if (potionWindow) {
-                if (pts <= 10 && s.tick() - lastPrayPotionTick >= 4) {
-                    if (drinkFromList(PRAYER_POT_IDS)) { lastPrayPotionTick = s.tick(); needReengage = true; }
-                } else if (s.tick() - lastDrinkTick >= 3) {
-                    const str = skillInfo(s, 'Strength');
-                    const atk = skillInfo(s, 'Attack');
-                    const maxStrBoost = 5 + Math.floor(str.baseLevel * 0.15);
-                    // Keep boosted Strength at exact max (e.g. 100 on 83 base = maxhit 23 instead of 99 = maxhit 22).
-                    const minAtkBoost = 12;
-                    if (str.level < str.baseLevel + maxStrBoost) {
-                        if (drinkFromList(SUPER_STRENGTH_IDS)) { lastDrinkTick = s.tick(); needReengage = true; }
-                    } else if (atk.level < atk.baseLevel + minAtkBoost) {
-                        if (drinkFromList(SUPER_ATTACK_IDS)) { lastDrinkTick = s.tick(); needReengage = true; }
-                    }
-                }
-                const vial = s.sdk.getInventory().find(i => i.id === 229);
-                if (vial && !needReengage) void s.direct({ type: 'dropItem', slot: vial.slot, reason: 'SDK' });
-            }
-
-            const players: any[] = st?.nearbyPlayers ?? [];
-            const tanks = players
-                .filter(p => tankRes.some(re => re.test(p.name ?? '')) && (p.z ?? p.worldZ ?? 0) >= 3900 && (p.hp === undefined || p.hp === null || p.hp > 0))
-                .sort((a, b) => d8({ x: a.x ?? a.worldX ?? 0, z: a.z ?? a.worldZ ?? 0 }, KEEP_SPECIALIST_POST) - d8({ x: b.x ?? b.worldX ?? 0, z: b.z ?? b.worldZ ?? 0 }, KEEP_SPECIALIST_POST));
-
-            if (s.tick() - lastStatusTick >= 100) {
-                lastStatusTick = s.tick();
-                const sk = skillInfo(s, opts.skill);
-                console.log(`PVP_STATUS tick=${s.tick()} ${opts.skill}=${sk.baseLevel} xp=${sk.experience} hp=${st?.player?.hp} pray=${pts} tanks=${tanks.length} inCombat=${!!combat?.inCombat} at=${posOf(s)?.worldX},${posOf(s)?.worldZ}`);
-            }
-
-            const exactTanks = tanks.filter(onTankPostTile);
-            const postTanks = exactTanks.length > 0 ? exactTanks : tanks.filter(t => d8({ x: t.x ?? t.worldX ?? 0, z: t.z ?? t.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 1);
-            const activePool = postTanks.length > 0 ? postTanks : tanks;
-            const currentTank = combat?.inCombat && combat.targetType === 'player'
-                ? tanks.find(t => t.index === combat.targetIndex)
-                : undefined;
-            // Never chase a banking tank off KEEP_SPECIALIST_POST: switch immediately to any stationary post tank.
-            const currentAlive = !!currentTank && (exactTanks.length === 0 || onTankPostTile(currentTank)) && d8({ x: currentTank.x ?? currentTank.worldX ?? 0, z: currentTank.z ?? currentTank.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 1;
-
-            if (d8({ x: posOf(s)?.worldX ?? 0, z: posOf(s)?.worldZ ?? 0 }, KEEP_SPECIALIST_POST) > 0 && !flickedThisTick && sinceSwing >= 1 && sinceSwing <= 2) {
-                void s.direct({ type: 'walkTo', x: KEEP_SPECIALIST_POST.x, z: KEEP_SPECIALIST_POST.z, running: true, reason: 'SDK' });
-                needReengage = true;
-            }
-
-            if ((needReengage || !currentAlive || sinceSwing >= 5) && activePool.length > 0) {
-                const target = activePool[0]!;
-                if (needReengage || !currentAlive || target.index !== lastTargetIndex || s.tick() - lastAttackTick >= 2) {
-                    needReengage = false;
-                    lastTargetIndex = target.index;
-                    lastAttackTick = s.tick();
-                    void s.direct({ type: 'interactPlayer', playerIndex: target.index, optionIndex: 2, reason: 'SDK' });
-                }
-            } else if (!tanks.length && d8({ x: posOf(s)?.worldX ?? 0, z: posOf(s)?.worldZ ?? 0 }, KEEP_SPECIALIST_POST) > 1) {
-                await walkWaypoints(s, [{ ...KEEP_SPECIALIST_POST, tol: 0 }], 40, opts.stop, 'recenter deserted keep');
-            }
-
-            await waitTicks(s, 1);
-        }
-    } finally {
-        await setPrayerState(s, ULTIMATE_STRENGTH_INDEX, false, () => true);
-        await setPrayerState(s, INCREDIBLE_REFLEXES_INDEX, false, () => true);
-    }
-}
-
 export function rankKeepRelogTanks<T extends { index: number; name?: string; x?: number; z?: number; worldX?: number; worldZ?: number; hp?: number | null }>(
     players: readonly T[],
     tankNames: readonly string[],
@@ -924,6 +741,25 @@ function readRelogCredentials(root: string, bot: string): { password: string; se
     const server = raw.match(/^SERVER=(.*)$/m)?.[1]?.trim() ?? '';
     if (!password || !server) throw Error(`missing credentials in bots/${bot}/bot.env`);
     return { password, server };
+}
+
+export async function connectWithTransientRetry<T>(
+    connect: () => Promise<T>,
+    isStopped: () => boolean,
+    maxAttempts = 8,
+    waitRetry: (attempt: number) => Promise<void> = () => Bun.sleep(600),
+): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+        try {
+            return await connect();
+        } catch (err) {
+            const msg = String(err instanceof Error ? err.message : err);
+            const retryable = /already logged in|too many incorrect|try again/i.test(msg);
+            if (!retryable || attempt + 1 >= maxAttempts || isStopped()) throw err;
+            await waitRetry(attempt);
+            if (isStopped()) throw err;
+        }
+    }
 }
 
 export async function runWildyPvpRelogLoop(
@@ -963,7 +799,10 @@ export async function runWildyPvpRelogLoop(
         let sess: Session | undefined;
         let rec: ReturnType<typeof createTickRecorder> = null;
         try {
-            sess = await connectInProcess({ name: opts.botName, password: creds.password, server: creds.server, ...(members ? { members } : {}), work });
+            sess = await connectWithTransientRetry(
+                () => connectInProcess({ name: opts.botName, password: creds.password, server: creds.server, ...(members ? { members } : {}), work }),
+                () => opts.shouldStop() || totalTicks >= opts.cap,
+            );
             await awaitBotReady(sess, () => {});
             const p0 = posOf(sess);
             if (p0?.isDead) throw Error(`${opts.skill} relog PvP died on entry`);
@@ -1055,8 +894,8 @@ export async function runWildyPvpRelogLoop(
     throw Error(`${opts.skill} relog PvP stopped/capped at totalTicks=${totalTicks} swings=${swings}`);
 }
 
-async function bankAndReturnToKeep(s: Session, stop: StopFn, keepKit?: readonly KitSpecItem[]): Promise<void> {
-    // Unequip worn Ring of dueling if needed, teleport to Castle Wars Chest, stock 1 Law + Keep pots + Manta rays, Camelot -> Lever.
+async function bankAndReturnToKeep(s: Session, stop: StopFn): Promise<void> {
+    // Unequip worn Ring of dueling if needed, teleport to Castle Wars Chest, stock 1 Law + Manta rays, Camelot -> Lever.
     const hasInvRing = () => s.sdk.getInventory().some(i => (DUELING_RING_IDS as readonly number[]).includes(i.id));
     if (!hasInvRing()) {
         const wornRing = s.sdk.getEquipment().find(e => (DUELING_RING_IDS as readonly number[]).includes(e.id));
@@ -1074,9 +913,6 @@ async function bankAndReturnToKeep(s: Session, stop: StopFn, keepKit?: readonly 
     }
     if (countById(s.sdk.getInventory(), 563) < 1) {
         await withdrawExactCount(s, 563, 1, stop, 'Law rune');
-    }
-    for (const spec of keepKit ?? []) {
-        await withdrawExactCount(s, spec.id, spec.count, stop, spec.name);
     }
     const freeSlots = Math.max(0, 28 - s.sdk.getInventory().length);
     if (freeSlots > 0) await withdrawExactCount(s, 391, freeSlots, stop, 'Manta ray');
@@ -1126,7 +962,6 @@ export async function runCompanionRole(
         specialistName: string;
         board?: 'hitpoints' | 'strength' | 'defence';
         kit?: readonly KitSpecItem[];
-        keepKit?: readonly KitSpecItem[];
         postTileOffsetX?: number;
         stopFile?: string;
         cap: number;
@@ -1143,8 +978,6 @@ export async function runCompanionRole(
 
     await waitUntil(s, st => (st?.inGame ?? false) && !!st?.player, { timeoutTicks: 20 });
     await setAutoRetaliate(s, false);
-
-    const keepKit = opts.keepKit;
 
     if (opts.role === 'supplier' || opts.role === 'supplier-tank') {
         const kit = opts.kit!;
@@ -1173,7 +1006,7 @@ export async function runCompanionRole(
         if (opts.role === 'supplier') {
             return { ok: true, detail: `supplied ${opts.specialistName} in ${s.tick() - t0} ticks` };
         }
-        await bankAndReturnToKeep(s, stop, keepKit);
+        await bankAndReturnToKeep(s, stop);
     } else {
         const p = posOf(s)!;
         console.log('COMPANION_READY ' + JSON.stringify({ role: opts.role, name: s.name, at: { x: p.worldX, z: p.worldZ, level: p.level } }));
@@ -1186,8 +1019,6 @@ export async function runCompanionRole(
             ? { x: 3155, z: 3923, level: 0 }
             : { x: 3154, z: 3923, level: 0 };
     const specialistRe = exactNameRe(opts.specialistName);
-    const keepGiveList = (keepKit ?? []).map(k => ({ item: exactNameRe(k.name), amount: k.count }));
-    let keepDelivered = !keepKit?.length;
     let lastEatTick = -10;
     try {
         while (!stop()) {
@@ -1199,32 +1030,11 @@ export async function runCompanionRole(
             }
             if (p.worldZ < 3800) {
                 await setAutoRetaliate(s, false);
-                await bankAndReturnToKeep(s, stop, keepDelivered ? undefined : keepKit);
+                await bankAndReturnToKeep(s, stop);
                 continue;
             }
             if (d8({ x: p.worldX, z: p.worldZ }, postTile) > 0) {
                 await walkWaypoints(s, [{ x: postTile.x, z: postTile.z, tol: 0 }], 20, stop, 'tank step to post');
-            }
-            if (!keepDelivered && keepKit?.length) {
-                const specNear = (s.sdk.getState()?.nearbyPlayers ?? []).find(
-                    (np: any) => specialistRe.test(np.name ?? '') && (np.z ?? np.worldZ ?? 0) >= 3900 && d8({ x: np.x ?? np.worldX ?? 0, z: np.z ?? np.worldZ ?? 0 }, KEEP_SPECIALIST_POST) <= 2,
-                );
-                if (specNear) {
-                    const served = await s.bot.serveTrades({
-                        from: specialistRe,
-                        give: keepGiveList,
-                        accept: offer => offer.length === 0,
-                        maxTrades: 1,
-                        tradeTimeout: 12_000,
-                        timeout: 15_000,
-                        until: stop,
-                    });
-                    if (served.trades.some(t => t.success && keepKit.every(k => countById(t.gave, k.id) === k.count) && t.received.length === 0)) {
-                        keepDelivered = true;
-                        console.log('COMPANION_KEEP_HANDOFF ' + JSON.stringify({ name: s.name, specialist: opts.specialistName, tick: s.tick() - t0 }));
-                    }
-                    continue;
-                }
             }
             const mantaCount = countById(s.sdk.getInventory(), 391);
             const hp = skillInfo(s, 'Hitpoints').level;
@@ -1240,7 +1050,7 @@ export async function runCompanionRole(
                     await s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' });
                 }
             }
-            if (keepDelivered && ((mantaCount <= 10 && otherTanksAtPost >= 2) || (mantaCount <= 5 && otherTanksAtPost >= 1) || mantaCount <= 1)) {
+            if ((mantaCount <= 10 && otherTanksAtPost >= 2) || (mantaCount <= 5 && otherTanksAtPost >= 1) || mantaCount <= 1) {
                 if (await pullKeepLeverOutAndRebank(s, stop)) continue;
             }
             await waitTicks(s, 1);

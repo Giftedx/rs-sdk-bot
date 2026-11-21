@@ -52,10 +52,6 @@ const TANK_BANK = [
     { id: 563, count: 100 },
     { id: 2552, count: 50 },
     { id: 391, count: 1500 },
-    { id: 2440, count: 100 },
-    { id: 2436, count: 50 },
-    { id: 2434, count: 50 },
-    { id: 3016, count: 50 },
 ];
 
 export function supplierPresetConfig(kit: readonly KitSpecItem[]): SaveConfig {
