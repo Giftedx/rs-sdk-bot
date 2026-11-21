@@ -45,7 +45,7 @@ import { loadOwners, mySide, sideOf } from '../../core/src/fleet';
 import { liveLogoutRef } from '../../core/src/session-admission';
 import { readLogoutProof } from '../../core/src/session-lifecycle';
 import { releaseEntries, releaseFiles, runtimeTrees, standingAccounts, standingPeer, workerLaunchers, workerSourceRoots } from '../../core/src/worker-release';
-import { readPreloginFailure, validOrder, type Order, type TradeRole } from '../../../scripts/fleet-trade-settlement';
+import { readPreloginFailure, validOrder, type Order, type TradeRole } from '../../core/src/fleet-trade-settlement';
 import { patchNewFiles, patchState, type PatchState } from '../../../scripts/worktree-setup';
 
 // `mergedDelivery`: the local bytes are the snapshot of a coordinator delivery whose pull request merged (or had nothing

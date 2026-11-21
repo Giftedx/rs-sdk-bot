@@ -2,7 +2,7 @@
 // fleet sides plugins: .practice/coordinator/scoreboard.json (coverage per skill, quests and items, with the list of
 // what remains) and the fleet-data branch's fleet/snapshots/<side>.json, fleet/orders/*.json and fleet/receipts/*.json
 // (each side's last sync and the cross-side orders not yet done; scripts/fleet-trade.ts keeps an order file after it is done).
-import {terminalTradeReceipt,tradeSettlement,validOrder} from '../../scripts/fleet-trade-settlement';
+import {terminalTradeReceipt,tradeSettlement,validOrder} from '../core/src/fleet-trade-settlement';
 import {fleetStatusRows,type OwnerOf} from '../core/src/fleet-snapshots';
 import {isLocalServer} from '../core/src/localserver';
 

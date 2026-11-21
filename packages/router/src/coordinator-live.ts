@@ -11,7 +11,7 @@ import {evaluateLaunch} from '../../../scripts/haggis-gate';
 import {evaluateSpecialist, MAX_SPECIALIST_RUN_MS, SPECIALIST_BOARDS, specialistTokenPath} from '../../core/src/specialist-launch';
 import {loadOwners,FLEET_DIR} from '../../core/src/fleet';
 import {inOpenOrder} from '../../../scripts/autopilot';
-import {validOrder,type Order,type Receipt} from '../../../scripts/fleet-trade-settlement';
+import {validOrder,type Order,type Receipt} from '../../core/src/fleet-trade-settlement';
 import {readHeldFleetTradeClaims} from '../../core/src/fleet-trade-claim';
 import {cachedLaunchRevision,cachedReleaseFor,capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
 import {hashImportClosure} from './delivery-cli';
