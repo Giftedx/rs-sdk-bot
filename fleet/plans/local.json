@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795237332684,
+ "at": 1795237402360,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -322,23 +322,6 @@
    "repeat": true
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=8 EXPECTED_OWNED=0 LIMIT_PRICE=47000 CASH_RESERVE=1000 ORDER_KEY=liveops-ranarr-257-8-sm2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=2434 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=275000 CASH_RESERVE=1000 ORDER_KEY=liveops-ppot-2434-1-sm2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=253 QUANTITY=5 EXPECTED_OWNED=0 LIMIT_PRICE=29000 CASH_RESERVE=1000 ORDER_KEY=liveops-tarromin-253-5-sm2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=249 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=25000 CASH_RESERVE=1000 ORDER_KEY=liveops-guam-249-1-sm2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
-    "scripts/buy-owned-ge-item.ts ITEM_ID=383 QUANTITY=20 EXPECTED_OWNED=0 LIMIT_PRICE=650 CASH_RESERVE=1000 ORDER_KEY=liveops-rawshark-383-20-sm2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false
-  },
-  {
    "account": "OreElse",
    "script": "scripts/microbot-glass.ts",
    "args": [],
@@ -348,6 +331,34 @@
     "CAP": "4000",
     "MEMBERS": "1"
    },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "Woodenstaff",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/buy-owned-ge-item.ts ITEM_ID=560 QUANTITY=110 EXPECTED_OWNED=0 LIMIT_PRICE=2900 CASH_RESERVE=1000 ORDER_KEY=liveops-death-560-110-v2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=225 QUANTITY=11 EXPECTED_OWNED=0 LIMIT_PRICE=29500 CASH_RESERVE=1000 ORDER_KEY=liveops-limp-225-11-v2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=1359 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=490000 CASH_RESERVE=1000 ORDER_KEY=liveops-runeaxe-1359-1-v2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=2472 QUANTITY=1 EXPECTED_OWNED=0 LIMIT_PRICE=90000 CASH_RESERVE=1000 ORDER_KEY=liveops-flowers-2472-1-v2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=257 QUANTITY=8 EXPECTED_OWNED=0 LIMIT_PRICE=47000 CASH_RESERVE=1000 ORDER_KEY=liveops-ranarr-257-8-v2 ORDER_MS=900000 FILL_WAIT_TICKS=200",
+    "scripts/buy-owned-ge-item.ts ITEM_ID=383 QUANTITY=20 EXPECTED_OWNED=0 LIMIT_PRICE=650 CASH_RESERVE=1000 ORDER_KEY=liveops-rawshark-383-20-v2 ORDER_MS=900000 FILL_WAIT_TICKS=200"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "desertrescue"
+   ],
    "enabled": true,
    "standing": true,
    "repeat": false

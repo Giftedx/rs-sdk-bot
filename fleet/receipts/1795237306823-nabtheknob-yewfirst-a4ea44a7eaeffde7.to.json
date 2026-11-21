@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795237306823-nabtheknob-yewfirst-a4ea44a7eaeffde7",
  "account": "YewFirst",
  "partner": "NabTheKnob",
@@ -10,8 +10,22 @@
  "item": "Feather",
  "requested": 4697,
  "claim": "ce9e6cc3-572d-4841-9e4e-9226930c0b85",
- "count": 0,
- "ok": false,
- "at": 1795237382530,
- "detail": "trade claimed"
+ "count": 4697,
+ "ok": true,
+ "at": 1795237399028,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 4697
+ },
+ "bank": {
+  "count": 4697,
+  "at": 1795237394720
+ },
+ "logout": {
+  "attemptId": "1795237382540-0000027168-0000000001",
+  "at": 1795237399013,
+  "sha256": "d6f4020d3ec73f21685ae431fa37b5e609969a2a6eab3b222f7b7d08195fdfd4"
+ },
+ "screen": true
 }
