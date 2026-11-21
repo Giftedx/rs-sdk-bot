@@ -1,0 +1,22 @@
+{
+ "id": "1795232348996-pocketpython-knightstick",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Pocketpython",
+ "to": "Knightstick",
+ "item": "coins",
+ "count": 60309,
+ "start": 1795232348996,
+ "end": 1795234748996,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
