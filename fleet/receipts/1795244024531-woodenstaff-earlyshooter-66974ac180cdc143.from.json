@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795244024531-woodenstaff-earlyshooter-66974ac180cdc143",
+ "account": "Woodenstaff",
+ "partner": "Earlyshooter",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 44000,
+ "claim": "22818a9d-d0ac-4f30-b9c3-ad95715f4d67",
+ "count": 0,
+ "ok": false,
+ "at": 1795244115712,
+ "detail": "trade claimed"
+}

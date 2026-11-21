@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795243823239-billionaire-bonetopick",
  "account": "BoneToPick",
  "partner": "Billionaire",
@@ -10,8 +10,22 @@
  "item": "coins",
  "requested": 10,
  "claim": "64190aea-89c9-41f8-9e91-89ff08ffd618",
- "count": 0,
- "ok": false,
- "at": 1795243925201,
- "detail": "trade claimed"
+ "count": 10,
+ "ok": true,
+ "at": 1795244084301,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 230,
+  "after": 240
+ },
+ "bank": {
+  "count": 10,
+  "at": 1795244083163
+ },
+ "logout": {
+  "attemptId": "1795243925217-0000015532-0000000001",
+  "at": 1795244084255,
+  "sha256": "c39b97afefb5d2a86ed1dd51195826d5a67b57119ecfb8074f79532845a2d571"
+ },
+ "screen": true
 }
