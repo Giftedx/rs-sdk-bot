@@ -396,6 +396,16 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
   !!opts.giveIds?.length && opts.giveIds.some(id => countItem(helper.sdk.getInventory(), id) < (initialHelperGive.get(id) ?? 0));
  let sawConfirm = false;
  let lastOpenReqTick = -10;
+ let reqAttempt = 0;
+ let lastOpenDiag = 'none';
+ const hasIncomingReq = () =>
+  getMsgs().some(
+   m =>
+    m.type === 4 &&
+    m.sender?.toLowerCase() === helperName &&
+    /wishes to trade with you\./i.test(m.text) &&
+    (m.observationId !== undefined ? m.observationId > startObsId : m.tick >= startTick),
+  );
 
  while (spec.tick() < opts.deadlineTick) {
   const st = spec.sdk.getTradeState();
@@ -418,12 +428,37 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
    // When sending OPPLAYER4 this tick, OpPlayerHandler already calls clearPendingAction() -> closeModal(); avoid CloseModal's requestModalClose race.
    if (specDlg && !(canRequest && sTarget && hTarget)) openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
    // Send both OPPLAYER4 requests together once per 3-tick window so delayed packets cannot re-fire and close a newly opened trademain.
+   // If simultaneous requests stall past 12 ticks, alternate solo answer / closeModal+request so one-sided offers still complete.
+   let sendHelp = false;
+   let sendSpec = false;
    if (canRequest && sTarget && hTarget) {
     lastOpenReqTick = spec.tick();
-    openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
-    openActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
+    reqAttempt++;
+    const soloAnswer = spec.tick() - startTick >= 12 && hasIncomingReq() && reqAttempt % 2 === 1;
+    sendHelp = !soloAnswer;
+    sendSpec = true;
+    if (soloAnswer && specDlg) {
+     openActs.push(spec.direct({ type: 'closeModal', reason: 'SDK' }));
+    }
+    if (sendHelp) openActs.push(helper.direct({ type: 'interactPlayer', playerIndex: sTarget.index, optionIndex: 4, reason: 'SDK' }));
+    if (sendSpec) openActs.push(spec.direct({ type: 'interactPlayer', playerIndex: hTarget.index, optionIndex: 4, reason: 'SDK' }));
    }
-   if (openActs.length) await Promise.all(openActs);
+   const resList = openActs.length ? await Promise.all(openActs) : [];
+   const sp = playerPos(spec);
+   const hp = playerPos(helper);
+   lastOpenDiag = JSON.stringify({
+    t: spec.tick(),
+    ht: helper.tick(),
+    specDlg,
+    helpDlg,
+    sIdx: sTarget?.index ?? null,
+    hIdx: hTarget?.index ?? null,
+    sp: sp ? [sp.worldX, sp.worldZ] : null,
+    hp: hp ? [hp.worldX, hp.worldZ] : null,
+    sendHelp,
+    sendSpec,
+    res: resList,
+   });
    await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
    continue;
   }
@@ -490,7 +525,7 @@ async function burstTradeInner(spec: Session, helper: Session, opts: BurstTradeS
   await Promise.all([waitTicks(spec, 1), waitTicks(helper, 1)]);
  }
 
- throw Error(`burstTradeHost with ${helper.name} exceeded cap`);
+ throw Error(`burstTradeHost with ${helper.name} exceeded cap: ${lastOpenDiag}`);
 }
 
 function toWantCountMap(giveCounts?: ReadonlyMap<number, number> | Readonly<Record<number, number>>): Map<number, number> | null {
