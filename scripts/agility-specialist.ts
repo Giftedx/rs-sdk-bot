@@ -372,13 +372,15 @@ async function setProtectFromMelee(s: Session, on: boolean): Promise<void> {
 
 async function dropItemsById(s: Session, keepIds: ReadonlySet<number>, limit = 5): Promise<number> {
     let sent = 0;
+    const budget = s.sdk.getState()?.dialog?.isOpen ? Math.min(limit, 4) : limit;
+    if (s.sdk.getState()?.dialog?.isOpen) {
+        await s.direct({ type: 'closeModal', reason: 'SDK' });
+    }
     for (const item of invOf(s)) {
         if (keepIds.has(item.id)) continue;
-        const dropOp = item.optionsWithIndex?.find((o: any) => /^drop$/i.test(o.text))?.opIndex;
-        if (!dropOp) continue;
         await s.direct({ type: 'dropItem', slot: item.slot, reason: 'SDK' });
         sent++;
-        if (sent >= limit) break;
+        if (sent >= budget) break;
     }
     return sent;
 }
@@ -894,7 +896,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         const IRENA = { x: 3303, z: 3113 };
         const CAPTAIN = { x: 3270, z: 3029 };
         const GATE = { id: 2673, x: 3273, z: 3029 };
-        const SLAVE = { x: 3302, z: 3030 };
+        const SLAVE = { x: 3302, z: 3016 };
         const MINE_IN = { id: 2675, x: 3301, z: 3036 };
         const MINE_OUT = { id: 2690, x: 3278, z: 9426 };
         const CAVE_W = { id: 2699, x: 3281, z: 9415 };
@@ -924,7 +926,7 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         const loc = (l: { id: number; x: number; z: number }) => q.locAt(l.x, l.z) ?? l;
         const worn = (id: number) => wornOf(s).some(e => e.id === id);
         const inCamp = () => x() >= 3274 && x() <= 3306 && z() >= 3011 && z() <= 3043;
-        const inPrisonCell = () => lvl() === 0 && x() >= 3284 && x() <= 3288 && z() >= 3032 && z() <= 3036;
+        const inPrisonCell = () => lvl() === 0 && x() >= 3284 && x() <= 3287 && z() >= 3031 && z() <= 3037;
         const locTalk = async (label: string, sendFn: () => unknown, pats: RegExp[], okFn: () => boolean, tries = 4, ticks = 35) => {
             for (let i = 0; i < tries && !okFn(); i++) {
                 await q.guard(label);
@@ -940,11 +942,13 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         const fightCaptainForKey = async () => {
             await closeDlg();
             await wearItem(s, ITEMS.fireStaff);
-            await walkNear(s, { x: CAPTAIN.x + 1, z: CAPTAIN.z }, 1, 70);
+            await q.walk('to captain', [{ x: CAPTAIN.x + 2, z: CAPTAIN.z, tol: 2 }]);
             for (let w = 0; w < 60 && !q.npc(/^mercenary captain$/i); w++) await q.waitTicks(1);
             await q.talk('captain', /^mercenary captain$/i, [/wow! a real captain/i, /love to work for a tough guy/i, /can't i do something for a strong captain/i, /sorry sir, i don't think/i, /funny captain who can't fight/i, /i've some information/i],
                 () => q.sawText(/guards gather around to watch the fight|run you through myself/i), CAPTAIN, 70);
-            // Wait for Captain to initiate melee so %npc_attacking_uid is set (otherwise spellOnNpc triggers "Are you sure").
+            // Reset PrayerGuard's pending='other' left by clickDialogOption so Protect from Melee turns ON before Captain's attacks loop.
+            await s.direct({ type: 'walkTo', x: x(), z: z(), running: true, reason: 'SDK' });
+            await q.waitUntil(() => !!q.st()?.prayers?.activePrayers?.[PRAYER_MELEE], 12);
             const fightStart = q.s.tick();
             const hp0 = q.hp();
             await q.waitUntil(() => q.hp() < hp0 || (((q.npc(/^mercenary captain$/i)?.distance ?? 9) <= 1) && q.s.tick() - fightStart >= 3), 8);
@@ -979,28 +983,25 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         const escapePrisonCell = async () => {
             if (!inPrisonCell()) return;
             await closeDlg();
+            await walkNear(s, { x: 3284, z: 3032 }, 1, 20);
             for (let t = 0; t < 20 && inPrisonCell(); t++) {
-                const win = q.findLoc((l: any) => l.id === 2683 && Math.abs(l.x - 3284) <= 2 && Math.abs(l.z - 3032) <= 2);
+                const win = q.findLoc((l: any) => l.id === 2683 && l.x === 3284 && l.z === 3032);
                 if (!win) { await q.waitTicks(1); continue; }
                 const op = q.opIndex(win, /search/i);
                 await locTalk('cell window', () => q.opLoc(win, op === 1 ? 2 : op), [/yes, i'll bend the bar/i], () => !inPrisonCell(), 4, 30);
             }
-            const rocks = [
-                { id: 2694, destX: 3279 },
-                { id: 2695, destX: 3277 },
-                { id: 2696, destX: 3275 },
-                { id: 2697, destX: 3271 },
-            ] as const;
-            for (const step of rocks) {
-                if (x() <= step.destX) continue;
-                for (let retry = 0; retry < 8 && x() > step.destX; retry++) {
-                    await q.guard('cell rock');
-                    if (q.hp() <= 7) await drinkFirstMatching(s, [ITEMS.chocolateCake, 1899, 1901, ITEMS.shark]);
-                    const rock = q.findLoc((l: any) => l.id === step.id);
-                    if (!rock) break;
-                    const op = q.opIndex(rock, /climb/i);
-                    await locTalk(`cell rock ${step.id}`, () => q.opLoc(rock, op === 1 ? 2 : op), [/yes, i'll give it a try/i], () => x() <= step.destX, 3, 20);
-                }
+            if (x() >= 3281) await walkNear(s, { x: 3281, z: 3038 }, 1, 25);
+            for (let retry = 0; retry < 25 && x() > 3271 && !inPrisonCell(); retry++) {
+                await q.guard('cell rock');
+                if ((q.st()?.prayers?.prayerPoints ?? 99) <= 10) await drinkFirstMatching(s, ITEMS.prayerPot);
+                if (q.hp() <= 7) await drinkFirstMatching(s, [ITEMS.chocolateCake, 1899, 1901, ITEMS.shark]);
+                const curX = x();
+                const rid = curX >= 3280 ? 2694 : curX >= 3278 ? 2695 : curX >= 3276 ? 2696 : 2697;
+                const destX = rid === 2694 ? 3279 : rid === 2695 ? 3277 : rid === 2696 ? 3275 : 3271;
+                const rock = q.findLoc((l: any) => l.id === rid);
+                if (!rock) { await q.waitTicks(1); continue; }
+                const op = q.opIndex(rock, /climb/i);
+                await locTalk(`cell rock ${rid}`, () => q.opLoc(rock, op === 1 ? 2 : op), [/yes, i'll give it a try/i], () => x() <= destX, 3, 20);
             }
         };
         const gateIn = async () => {
@@ -1031,10 +1032,33 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         };
         const mineIn = async () => {
             await slaveClothes();
-            await q.walk('to mine doors', [{ x: MINE_IN.x, z: MINE_IN.z - 1, tol: 0 }]);
-            await q.step('mine doors', () => q.opLoc(loc(MINE_IN), 1), () => z() > 9000, 12, 4);
-            await q.waitTicks(2);
-            await closeDlg();
+            for (let attempt = 0; attempt < 3 && z() < 9427; attempt++) {
+                if (z() < 4000) {
+                    // Route up east wall (x>=3304) to keep clear of Rowdy Guard at (3296,3026).
+                    await q.walk('to mine doors', [
+                        ...(z() < 3024 ? [{ x: 3304, z: 3024, tol: 2 }] : []),
+                        { x: MINE_IN.x, z: MINE_IN.z - 1, tol: 0 },
+                    ]);
+                    await q.step('mine doors', () => q.opLoc(loc(MINE_IN), 1), () => z() > 9000, 12, 4);
+                }
+                // open_and_close_double_door2 opens 2690/2691 for only 3 ticks after p_delay(0); dismiss any mesbox
+                // and step north past (3278,9426) in the same tick so q.walk does not "open" 2690 back to surface.
+                await q.waitTicks(1);
+                const dlg: any = q.s.sdk.getDialog();
+                if (dlg?.isOpen && !dlg.isWaiting && dlg.options?.[0]) {
+                    await s.direct({ type: 'clickDialogOption', optionIndex: dlg.options[0].index, reason: 'SDK' });
+                }
+                if (z() > 9000 && z() < 9427) {
+                    await s.direct({ type: 'walkTo', x: 3278, z: 9430, running: true, reason: 'SDK' });
+                    await q.waitUntil(() => z() >= 9427 || z() < 4000, 6);
+                }
+                await closeDlg();
+                if (z() > 9000 && z() < 9427) {
+                    await q.step('mine exit retry', () => q.opLoc(loc(MINE_OUT), 1), () => z() < 4000, 12, 4);
+                    await q.waitTicks(2);
+                }
+            }
+            if (z() < 9427) await q.fail(`failed clearing mine entrance at ${x()},${z()}`);
         };
         const mineOut = async () => {
             await q.step('mine exit', () => q.opLoc(loc(MINE_OUT), 1), () => z() < 4000, 25, 4);
@@ -1052,26 +1076,52 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
 
         await gateIn();
         q.milestone(5);
+        const gotClothes = () => worn(ITEMS.slaveShirt) && worn(ITEMS.slaveRobe) && worn(ITEMS.slaveBoots);
+        const slavePats = [/i've just arrived/i, /oh yes, that sounds interesting/i, /what's that then/i, /i can try to undo them/i, /funny you should say that/i, /let's give it a go/i, /give it another go/i, /yes, i'll trade/i];
         // Picklock Male Slave at Thieving 1 (~8.6%/try); if 3rd fail within 10 tiles of a guard jails player, recover cell+key and retry.
-        for (let attempt = 0; attempt < 12 && !(worn(ITEMS.slaveShirt) && worn(ITEMS.slaveRobe) && worn(ITEMS.slaveBoots)); attempt++) {
+        for (let attempt = 0; attempt < 24 && !gotClothes(); attempt++) {
             await q.guard('slave loop');
+            if ((q.st()?.prayers?.prayerPoints ?? 99) <= 10) await drinkFirstMatching(s, ITEMS.prayerPot);
             if (inPrisonCell()) await escapePrisonCell();
             if (!q.has(ITEMS.metalKey)) await fightCaptainForKey();
             if (!inCamp()) await gateIn();
             for (const id of [ITEMS.desertShirt, ITEMS.desertRobe, ITEMS.desertBoots]) await wearItem(s, id);
-            await q.walk('to slave', [{ x: SLAVE.x - 1, z: SLAVE.z, tol: 1 }]);
-            const gotClothes = () => worn(ITEMS.slaveShirt) && worn(ITEMS.slaveRobe) && worn(ITEMS.slaveBoots);
-            await q.talk(
-                attempt === 0 ? 'slave' : 'slave retry',
-                /^male slave$/i,
-                [/i've just arrived/i, /oh yes, that sounds interesting/i, /what's that then/i, /i can try to undo them/i, /funny you should say that/i, /let's give it a go/i, /give it another go/i, /yes, i'll trade/i],
-                () => gotClothes() || inPrisonCell() || !inCamp(),
-                SLAVE,
-                55,
-            );
+            // Stay south (z<=3016) of surface Rowdy Guards at (3280,3026), (3287,3030), (3296,3026) so melee hits do not if_close slave dialog.
+            if (z() > 3018 || x() < 3290) {
+                await q.walk('to slave', [
+                    { x: 3274, z: 3014, tol: 2 },
+                    { x: 3294, z: 3014, tol: 2 },
+                    { x: SLAVE.x, z: SLAVE.z - 1, tol: 1 },
+                ]);
+            } else {
+                await q.walk('to slave', [{ x: SLAVE.x, z: SLAVE.z - 1, tol: 1 }]);
+            }
+            if (inPrisonCell()) { await escapePrisonCell(); continue; }
+            const slaveNpc = (q.st()?.nearbyNpcs ?? [])
+                .filter((n: any) => /^male slave$/i.test(n.name) && (n.z ?? 0) <= 3020)
+                .sort((a: any, b: any) => Math.hypot((a.x ?? 0) - SLAVE.x, (a.z ?? 0) - SLAVE.z) - Math.hypot((b.x ?? 0) - SLAVE.x, (b.z ?? 0) - SLAVE.z))[0]
+                ?? q.npc(/^male slave$/i);
+            if (!slaveNpc) { console.log(`SLAVE_TRACE attempt=${attempt} no_npc pos=${x()},${z()}`); await q.waitTicks(2); continue; }
             await closeDlg();
+            const attemptStart = q.s.tick();
+            const talkOp = slaveNpc.optionsWithIndex?.find((o: any) => /talk/i.test(o.text))?.opIndex ?? 1;
+            await s.direct({ type: 'interactNpc', npcIndex: slaveNpc.index, optionIndex: talkOp, reason: 'SDK' });
+            await q.waitUntil(() => q.dialogOpen() || gotClothes() || inPrisonCell() || !inCamp() || msgSince(/nearby guard spots you|guards search you|roughed up/i, attemptStart), 12);
+            let shut = 0;
+            await q.converse(slavePats, () => {
+                if (gotClothes() || inPrisonCell() || !inCamp() || msgSince(/nearby guard spots you|guards search you|roughed up/i, attemptStart)) return true;
+                shut = q.dialogOpen() ? 0 : shut + 1;
+                return shut >= 3;
+            }, 120);
+            const jailedMsg = msgSince(/nearby guard spots you|guards search you|roughed up/i, attemptStart);
+            if (jailedMsg) {
+                await q.waitUntil(() => inPrisonCell() || !inCamp(), 22);
+            }
+            await q.waitUntil(() => gotClothes() || inPrisonCell() || !inCamp() || !q.dialogOpen(), 4);
+            await closeDlg();
+            console.log(`SLAVE_TRACE attempt=${attempt} ticks=${q.s.tick() - attemptStart} got=${gotClothes()} inCell=${inPrisonCell()} inCamp=${inCamp()} key=${q.has(ITEMS.metalKey)} jailedMsg=${jailedMsg} pos=${x()},${z()}`);
         }
-        if (!(worn(ITEMS.slaveShirt) && worn(ITEMS.slaveRobe) && worn(ITEMS.slaveBoots))) {
+        if (!gotClothes()) {
             await q.fail('failed male slave clothes trade');
         }
         // Now Male Slave succeeded: drop combat magic items to leave inventory clear for barrel/plans.
@@ -1800,7 +1850,7 @@ export async function runAgilitySpecialist(bot: string, argv: readonly string[] 
 
             await walkNear(spec, { x: 3185, z: 3436, level: 0 }, 2, 40);
             await clearAllDialogs(spec, 3);
-            await dropExcept(spec, new Set([...GLORY_IDS, ITEMS.airRune, ITEMS.chaosRune, ...ITEMS.superEnergy]), 8);
+            await dropExcept(spec, new Set([...GLORY_IDS, ITEMS.airRune, ITEMS.chaosRune]), 8);
             if (invOf(spec).length > 6) {
                 throw Error(`pre-trade-2 inventory too full (${invOf(spec).length}): ${invOf(spec).map(i => i.id).join(',')}`);
             }
@@ -1809,7 +1859,7 @@ export async function runAgilitySpecialist(bot: string, argv: readonly string[] 
             await wearItem(spec, ITEMS.desertRobe);
             await wearItem(spec, ITEMS.desertBoots);
             await smithTo20AtVarrock(spec);
-            await dropExcept(spec, new Set([...GLORY_IDS, ITEMS.airRune, ITEMS.chaosRune, ITEMS.hammer, ...ITEMS.superEnergy]), 8);
+            await dropExcept(spec, new Set([...GLORY_IDS, ITEMS.airRune, ITEMS.chaosRune, ITEMS.hammer]), 8);
             await walkNear(spec, { x: 3185, z: 3436, level: 0 }, 2, 30);
             await receiveTradePhase(TOURIST_TRADE_2B, 3, 450);
             await rubGlory(spec, /al kharid/i, { x: 3293, z: 3163 }, 20);
