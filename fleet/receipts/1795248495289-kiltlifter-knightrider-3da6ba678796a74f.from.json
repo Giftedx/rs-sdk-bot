@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795248495289-kiltlifter-knightrider-3da6ba678796a74f",
  "account": "Kiltlifter",
  "partner": "KnightRider",
@@ -10,8 +10,22 @@
  "item": "Coins",
  "requested": 123000,
  "claim": "cb9e1b55-b444-44f0-87c4-540da9c56654",
- "count": 0,
- "ok": false,
- "at": 1795248728334,
- "detail": "trade claimed"
+ "count": 123000,
+ "ok": true,
+ "at": 1795248762563,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 123000,
+  "after": 0
+ },
+ "bank": {
+  "count": 123000,
+  "at": 1795248736538
+ },
+ "logout": {
+  "attemptId": "1795248728342-0000012672-0000000001",
+  "at": 1795248762495,
+  "sha256": "6966b62bc5682c93ef06460a5e8b0ecf3e7ceaf5a3fdc33066b238e7554f55e6"
+ },
+ "screen": true
 }
