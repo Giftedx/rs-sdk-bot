@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795223984554-fatstack-yewfirst-bowstring",
  "account": "Fatstack",
  "partner": "YewFirst",
@@ -10,8 +10,22 @@
  "item": "Bow string",
  "requested": 4,
  "claim": "20f99f3e-b993-4464-9d64-f9a82b27f46b",
- "count": 0,
- "ok": false,
- "at": 1795224041329,
- "detail": "trade claimed"
+ "count": 4,
+ "ok": true,
+ "at": 1795224265604,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 4,
+  "after": 0
+ },
+ "bank": {
+  "count": 4,
+  "at": 1795224198072
+ },
+ "logout": {
+  "attemptId": "1795224041338-0000020520-0000000001",
+  "at": 1795224265590,
+  "sha256": "d530ca61294279e0a7e799bf61f1642461cee4d8395e1d436964706bd6d63fb0"
+ },
+ "screen": true
 }
