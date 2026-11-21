@@ -24,6 +24,7 @@ import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { fleetStatusRows, readSnapshotFiles, type SnapshotFile } from '../packages/core/src/fleet-snapshots';
 import { publishedSideHold } from '../packages/core/src/fleet-side-card';
 import { START_BUDGET_GB, activeExternalLive, clearSwarmStop, pendingStartupCount, swarmWroteStop } from './swarm';
+import { spawnSyncTimed } from '../packages/practice/src/proc';
 import { STABLE_CAUSES, unplacedCause, type RefusalCause } from '../packages/core/src/order-refusal';
 import { freemem } from 'node:os';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
@@ -535,7 +536,7 @@ export function parseCatFileBatch(out: Uint8Array, count: number): (string | nul
 // --batch` reads every claim file (a process for each file took 2 s of a 14 s pass).
 function originClaims(fleetDir: string): any[] {
     if (!existsSync(fleetDir)) return [];
-    const git = (args: string[], input?: string) => Bun.spawnSync(['git', '-C', fleetDir, ...args], { stdout: 'pipe', stderr: 'ignore', ...(input === undefined ? {} : { stdin: Buffer.from(input) }), timeout: 30_000, windowsHide: true });
+    const git = (args: string[], input?: string) => spawnSyncTimed(['git', '-C', fleetDir, ...args], { stdout: 'pipe', stderr: 'ignore', ...(input === undefined ? {} : { stdin: Buffer.from(input) }), timeout: 30_000, windowsHide: true });
     if (git(['fetch', '-q', 'origin', 'fleet-data']).exitCode !== 0) return [];
     const files = git(['ls-tree', '--full-tree', '--name-only', 'origin/fleet-data', 'fleet/claims/']);
     if (files.exitCode !== 0) return [];

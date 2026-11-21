@@ -1,5 +1,5 @@
 import { test, expect, spyOn } from 'bun:test';
-import { commandLine, killTree, processMatches, processMatchesRecent, processStartTimes, safeKill, sleeperCommand, POWERSHELL_TIMEOUT_MS } from '../src/proc';
+import { commandLine, killTree, processMatches, processMatchesRecent, processStartTimes, safeKill, sleeperCommand, spawnSyncTimed, POWERSHELL_TIMEOUT_MS } from '../src/proc';
 
 function alive(pid: number): boolean {
     try { process.kill(pid, 0); return true; } catch { return false; }
@@ -114,4 +114,49 @@ test('a PowerShell read that times out gives "not known" and carries the time li
         spawn.mockRestore();
     }
 });
+
+test('spawnSyncTimed retries once on an immediate SIGTERM null exit and stops after two', () => {
+    const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+    const replies: any[] = [
+        { exitCode: null, signalCode: 'SIGTERM', stdout: Buffer.from(''), stderr: Buffer.from(''), success: false },
+        { exitCode: 0, stdout: Buffer.from('C:\\bun.exe'), stderr: Buffer.from(''), success: true },
+        { exitCode: null, signalCode: 'SIGTERM', stdout: Buffer.from(''), stderr: Buffer.from(''), success: false },
+        { exitCode: 0, stdout: Buffer.from('4242|1700000000000\nread\n'), stderr: Buffer.from(''), success: true },
+        { exitCode: null, signalCode: 'SIGTERM', stdout: Buffer.from(''), stderr: Buffer.from(''), success: false },
+        { exitCode: null, signalCode: 'SIGTERM', stdout: Buffer.from(''), stderr: Buffer.from(''), success: false },
+        { exitCode: null, signalCode: 'SIGTERM', stdout: Buffer.from(''), stderr: Buffer.from(''), success: false },
+        { exitCode: null, signalCode: 'SIGTERM', stdout: Buffer.from(''), stderr: Buffer.from(''), success: false },
+    ];
+    let calls = 0;
+    const spawn = spyOn(Bun, 'spawnSync').mockImplementation((() => replies[calls++]) as any);
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    try {
+        expect(commandLine(4242)).toBe('C:\\bun.exe');
+        expect(calls).toBe(2);
+        expect(processStartTimes([4242])).toEqual(new Map([[4242, 1700000000000]]));
+        expect(calls).toBe(4);
+        expect(commandLine(4242)).toBeNull();
+        expect(calls).toBe(6);
+        expect(processStartTimes([4242])).toBeNull();
+        expect(calls).toBe(8);
+    } finally {
+        Object.defineProperty(process, 'platform', platform);
+        spawn.mockRestore();
+    }
+});
+
+test.skipIf(process.platform !== 'win32')('spawnSyncTimed recovers after an async sleep longer than timeout while real hangs still time out', async () => {
+    const query = ['powershell', '-NoProfile', '-Command', `(Get-CimInstance Win32_Process -Filter "ProcessId=${process.pid}").CommandLine`];
+    const warm = spawnSyncTimed(query, { stdout: 'pipe', stderr: 'ignore', windowsHide: true, timeout: 1500 });
+    expect(warm.exitCode).toBe(0);
+    await Bun.sleep(2000);
+    const afterSleep = spawnSyncTimed(query, { stdout: 'pipe', stderr: 'ignore', windowsHide: true, timeout: 1500 });
+    expect(afterSleep.exitCode).toBe(0);
+    expect(afterSleep.stdout.toString().toLowerCase()).toContain('bun');
+    const started = Date.now();
+    const hung = spawnSyncTimed(['powershell', '-NoProfile', '-Command', 'Start-Sleep -Seconds 5'], { stdout: 'pipe', stderr: 'ignore', windowsHide: true, timeout: 800 });
+    const elapsed = Date.now() - started;
+    expect(hung.exitCode).toBeNull();
+    expect(elapsed).toBeGreaterThanOrEqual(700);
+}, 30_000);
 
