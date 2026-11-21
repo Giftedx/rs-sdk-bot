@@ -1,26 +1,21 @@
 // Every supported source of every item a ladder rung consumes or requires, with a cost per source.
-// Usage: bun packages/knowledge/src/item-sources.ts [--market <file>] [--owned] [--practice <dir>] [--out <file>]
+// Usage: bun packages/knowledge/src/item-sources.ts [--market <file>] [--practice <dir>] [--out <file>]
 //   writes knowledge/item-sources.json and knowledge/item-sources-gaps.md.
 //   --market: GE snapshot, either .practice/coordinator/market-prices.json ({debugname: {at, ask, bid, sell}}) or a
-//     research/market-*.json (scripts/market-snapshot.ts), or the shared <practice>/market-all.json cache. Default:
-//     newest quote per item from the fresh shared cache, coordinator prices and latest research snapshot.
-//   --owned: fill the owned slot from <practice>/status/*.json and the other sides' fleet/snapshots. Live stock is not
-//     committed, so the default output then is <practice>/coordinator/item-sources.json.
+//     research/market-*.json (scripts/market-snapshot.ts). Default: newest quote per item from coordinator and research
+//     snapshots. For live fleet owned stock and .practice/market-all.json quotes, run bun scripts/item-sources.ts.
 // Item set: rung inputs and requires (knowledge/ladders.json), the tools, bait and access items of the skill-tools
 // records that apply to a rung (knowledge/skill-tools.json), healing food from the cooking outputs, and then the inputs
 // and tools of every rung that makes or gathers an item already in the set, until the set stops growing.
 // Every source cites a content-relative path and 1-based line under vendor/rs-sdk/server/content, or the snapshot file.
 // Each cost keeps three numbers apart (helper ticks, coins, risk) and adds a wall-clock number; each says what it rests on.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { listConfigFiles, parseConfigs, type ConfigBlock } from './config';
 import { parseJm2 } from './jm2';
 import { parsePack } from './pack';
 import { contentRoot, knowledgeDir } from './paths';
-import { FLEET_DIR, mySide } from '../../core/src/fleet';
-import { fleetStatusRows, ownerOfIn, readSnapshotFiles } from '../../core/src/fleet-snapshots';
 import type { Rate } from './ladders';
-import { marketQuotes } from '../../../scripts/market-cache';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 
@@ -31,7 +26,6 @@ const LIVE_TICK_SECONDS = 0.4;
 // rates.json craft_air_runes_trade_loop evidence: a helper trade of one pack takes 12 ticks (scripts/measure/trade-supply.ts).
 const TRADE_TICKS = 12;
 const PACK_SLOTS = 28;
-const LIVE_SERVER = 'rs-sdk-demo.fly.dev';
 // The shop buy button takes at most 10 per click (shop.rs2 inv_button4 buys 10); one click per tick is a model.
 const SHOP_UNITS_PER_TICK = 10;
 // Wilderness bounds (x 2944-3391, z 3520-3967, level 0): a model of where death drops items to other players.
@@ -91,14 +85,22 @@ export function shopUnitPrice(objCost: number, sell: number, delta: number, stoc
     return Math.max(1, Math.floor((Math.max(100, sell - mod) * objCost) / 1000));
 }
 
+export interface MarketQuoteInput { ask: number | null; bid: number | null; sell: number }
+export type SharedMarketParser = (raw: unknown, now: number) => Record<number, MarketQuoteInput>;
+export interface OwnedItemRow { id?: number; baseId?: number; count?: number }
+export interface OwnedStatusRow { name: string; side: string; at?: unknown; bankAt?: unknown; inventory?: unknown; equipment?: unknown; bank?: unknown }
+export interface OwnedAccountStock { name: string; side: string; items: Map<number, number>; itemAt: Map<number, string | null> }
+export interface OwnedStock { at: string | null; accounts: OwnedAccountStock[] }
+
 export interface Market { at: string; file: string; prices: Record<string, { ask: number | null; bid: number | null; sell: number; at?: string; file?: string }> }
-export function readMarket(file: string): Market {
+export function readMarket(file: string, parseSharedQuotes?: SharedMarketParser): Market {
     const raw = json(file);
     // Shown relative to the checkout that holds it, so the output does not name this machine's folders.
     const norm = file.replace(/\\/g, '/'), cut = norm.search(/\/(\.practice|research)\//);
     const rel = cut >= 0 ? norm.slice(cut + 1) : norm;
     if (raw.items && Number.isSafeInteger(raw.at) && raw.at > 0) {
-        const quotes = marketQuotes(raw, raw.at), prices: Market['prices'] = {};
+        if (!parseSharedQuotes) throw Error('shared market cache requires a quote parser; use scripts/item-sources.ts');
+        const quotes = parseSharedQuotes(raw, raw.at), prices: Market['prices'] = {};
         const items = json(join(knowledgeDir(), 'items.json')) as { id: number; debugname: string }[];
         for (const item of items) if (quotes[item.id]) {
             const q = quotes[item.id]!;
@@ -118,15 +120,17 @@ export function readMarket(file: string): Market {
 }
 
 // Prefer the newest observation of each item; preserve that quote's source and age when combining caches.
-export function defaultMarket(practice: string, research = join(repoRoot, 'research'), now = Date.now()): Market | null {
+export function defaultMarket(practice: string, research = join(repoRoot, 'research'), now = Date.now(), parseSharedQuotes?: SharedMarketParser): Market | null {
     const historical = existsSync(research) ? readdirSync(research).filter(f => /^market-.*\.json$/.test(f)).sort().pop() : undefined;
     const shared = join(practice, 'market-all.json'), files = [join(practice, 'coordinator/market-prices.json'), ...(historical ? [join(research, historical)] : [])];
-    try { if (Object.keys(marketQuotes(json(shared), now)).length) files.push(shared); } catch { /* no shared cache */ }
+    if (parseSharedQuotes) {
+        try { if (Object.keys(parseSharedQuotes(json(shared), now)).length) files.push(shared); } catch { /* no shared cache */ }
+    }
     let newest: Market | null = null;
     const prices: Market['prices'] = {};
     for (const file of files) {
         let market: Market;
-        try { market = readMarket(file); } catch { continue; }
+        try { market = readMarket(file, parseSharedQuotes); } catch { continue; }
         const at = Date.parse(market.at);
         if (!Number.isFinite(at) || at > now) continue;
         if (!newest || at > Date.parse(newest.at)) newest = market;
@@ -141,32 +145,27 @@ export function defaultMarket(practice: string, research = join(repoRoot, 'resea
 
 const oldest = (times: readonly (string | null)[]): string | null => times.length && times.every(t => t !== null) ? [...times as string[]].sort()[0]! : null;
 
-// Each account uses the same owner/freshness rule as supply planning. Item ages are the oldest contributing
-// container observation, so a heartbeat or report generation cannot make an old or undated bank look recent.
-export function readOwned(practice: string, fleetDir = join(FLEET_DIR(), 'snapshots'), side = mySide(), now = Date.now()) {
-    const statusDir = join(practice, 'status');
-    const local = existsSync(statusDir) ? readdirSync(statusDir).filter(f => f.endsWith('.json')).flatMap(f => {
-        try { return [json(join(statusDir, f))]; } catch { return []; }
-    }) : [];
+// Aggregate already-resolved account status rows into per-account item counts and oldest contributing timestamps, so a
+// heartbeat or report run cannot make an undated bank look recent.
+export function ownedStockFromRows(rows: readonly OwnedStatusRow[], now = Date.now()): OwnedStock {
     const dated = (at: unknown, limit = now): string | null => typeof at === 'number' && Number.isFinite(at) && at > 0 && at <= limit ? new Date(at).toISOString() : null;
-    const accounts = fleetStatusRows(local, readSnapshotFiles(fleetDir), ownerOfIn(dirname(fleetDir)), side, LIVE_SERVER)
-        .filter(s => s.name.toLowerCase() !== 'haggis').map(s => {
-            const items = new Map<number, number>(), itemAt = new Map<number, string | null>();
-            const at = dated(s.at), bankAt = at === null ? null : dated(s.bankAt, s.at);
-            for (const [rows, observedAt] of [[s.inventory, at], [s.equipment, at], [s.bank, bankAt]] as const) {
-                for (const r of Array.isArray(rows) ? rows : []) {
-                    const id = r?.baseId ?? r?.id;
-                    if (!Number.isSafeInteger(id) || id < 0 || !Number.isSafeInteger(r?.count) || r.count <= 0) continue;
-                    itemAt.set(id, items.has(id) ? oldest([itemAt.get(id) ?? null, observedAt]) : observedAt);
-                    items.set(id, (items.get(id) ?? 0) + r.count);
-                }
+    const accounts = rows.filter(s => s.name.toLowerCase() !== 'haggis').map(s => {
+        const items = new Map<number, number>(), itemAt = new Map<number, string | null>();
+        const at = dated(s.at), bankAt = at === null ? null : dated(s.bankAt, s.at as number);
+        for (const [containers, observedAt] of [[s.inventory, at], [s.equipment, at], [s.bank, bankAt]] as const) {
+            for (const r of Array.isArray(containers) ? containers as OwnedItemRow[] : []) {
+                const id = r?.baseId ?? r?.id;
+                if (typeof id !== 'number' || !Number.isSafeInteger(id) || id < 0 || typeof r?.count !== 'number' || !Number.isSafeInteger(r.count) || r.count <= 0) continue;
+                itemAt.set(id, items.has(id) ? oldest([itemAt.get(id) ?? null, observedAt]) : observedAt);
+                items.set(id, (items.get(id) ?? 0) + r.count);
             }
-            return { name: s.name as string, side: s.side as string, items, itemAt };
-        });
+        }
+        return { name: s.name, side: s.side, items, itemAt };
+    });
     return { at: oldest(accounts.flatMap(a => [...a.itemAt.values()])), accounts };
 }
 
-export interface Options { market?: Market | null; owned?: ReturnType<typeof readOwned> | null }
+export interface Options { market?: Market | null; owned?: OwnedStock | null }
 
 export function buildItemSources(opts: Options = {}) {
     const kdir = knowledgeDir();
@@ -649,16 +648,9 @@ export function gapsMarkdown(rows: ItemSources[], market: Market | null) {
     return L.join('\n') + '\n';
 }
 
-if (import.meta.main) {
-    const arg = (k: string) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : undefined; };
-    const practice = resolve(arg('--practice') ?? join(repoRoot, '.practice'));
-    const marketFile = arg('--market');
-    const market = marketFile ? readMarket(resolve(marketFile)) : defaultMarket(practice);
-    const owned = process.argv.includes('--owned') ? readOwned(practice) : null;
-    const rows = buildItemSources({ market, owned });
-    const file = arg('--out') ?? (owned ? join(practice, 'coordinator/item-sources.json') : join(knowledgeDir(), 'item-sources.json'));
-    writeFileSync(file, JSON.stringify({
-        generatedBy: 'bun packages/knowledge/src/item-sources.ts',
+export function serializeItemSources(rows: ItemSources[], market: Market | null, owned: OwnedStock | null, generatedBy = 'bun packages/knowledge/src/item-sources.ts'): string {
+    return JSON.stringify({
+        generatedBy,
         notes: [
             'src is a content-relative path and 1-based line under vendor/rs-sdk/server/content, or the snapshot file for ge and owned.',
             'cost keeps helper ticks, coins and risk apart; realSecondsPerUnit is wall-clock wait beyond the ticks. Each has a basis: content, model, measured or unknown.',
@@ -667,7 +659,21 @@ if (import.meta.main) {
         ],
         market: market ? { file: market.file, at: market.at } : null, owned: owned ? { at: owned.at, accounts: owned.accounts.length } : null,
         counts: counts(rows), items: rows,
-    }, null, 1) + '\n');
-    if (!owned) writeFileSync(join(knowledgeDir(), 'item-sources-gaps.md'), gapsMarkdown(rows, market));
+    }, null, 1) + '\n';
+}
+
+if (import.meta.main) {
+    if (process.argv.includes('--owned')) {
+        console.error('owned fleet stock lives outside packages/knowledge; run: bun scripts/item-sources.ts --owned');
+        process.exit(2);
+    }
+    const arg = (k: string) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : undefined; };
+    const practice = resolve(arg('--practice') ?? join(repoRoot, '.practice'));
+    const marketFile = arg('--market');
+    const market = marketFile ? readMarket(resolve(marketFile)) : defaultMarket(practice);
+    const rows = buildItemSources({ market, owned: null });
+    const file = arg('--out') ?? join(knowledgeDir(), 'item-sources.json');
+    writeFileSync(file, serializeItemSources(rows, market, null));
+    writeFileSync(join(knowledgeDir(), 'item-sources-gaps.md'), gapsMarkdown(rows, market));
     console.log(JSON.stringify(counts(rows)));
 }
