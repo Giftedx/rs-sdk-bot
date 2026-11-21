@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795292688940-ballspinner-inthesack-ballofwool",
+ "account": "InTheSack",
+ "partner": "Ballspinner",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ball of wool",
+ "requested": 2,
+ "claim": "86a7661b-071d-41e3-9162-8fe441a04344",
+ "count": 2,
+ "ok": true,
+ "at": 1795292777106,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 2
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795292776344
+ },
+ "logout": {
+  "attemptId": "1795292765300-0000002300-0000000001",
+  "at": 1795292777092,
+  "sha256": "86285b1d1914f3e4ce25e41fb9b0942de686af780c7364ca845df7c40ba62868"
+ },
+ "screen": true
+}

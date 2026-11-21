@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795292688940-ballspinner-inthesack-ballofwool",
  "account": "Ballspinner",
  "partner": "InTheSack",
@@ -10,8 +10,22 @@
  "item": "Ball of wool",
  "requested": 2,
  "claim": "1f461704-b527-453f-9f3e-275366cd8bf2",
- "count": 0,
- "ok": false,
- "at": 1795292749268,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795292775692,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795292756739
+ },
+ "logout": {
+  "attemptId": "1795292749277-0000004984-0000000001",
+  "at": 1795292775497,
+  "sha256": "c7366b5ba7beee40fb1f1f6be739fd479a2a88c3dcd75874c401eb9c2acbc0fe"
+ },
+ "screen": true
 }
