@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795242604075-sausagefest-pocketrocket-waterrune",
+ "role": "to",
+ "account": "Pocketrocket",
+ "partner": "Sausagefest",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795242707125,
+ "detail": "Error: account logout is not confirmed: Pocketrocket ended disconnected"
+}

@@ -1,0 +1,23 @@
+{
+ "id": "1795242702085-masterbaiter-knightrider-0c969b7c631386d3",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Masterbaiter",
+ "to": "KnightRider",
+ "item": "Coins",
+ "count": 29000,
+ "start": 1795242702085,
+ "end": 1795245102085,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}

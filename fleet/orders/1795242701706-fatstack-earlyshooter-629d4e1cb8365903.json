@@ -1,0 +1,23 @@
+{
+ "id": "1795242701706-fatstack-earlyshooter-629d4e1cb8365903",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Fatstack",
+ "to": "Earlyshooter",
+ "item": "Coins",
+ "count": 129000,
+ "start": 1795242701706,
+ "end": 1795245101706,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "takerWaits": true
+}
