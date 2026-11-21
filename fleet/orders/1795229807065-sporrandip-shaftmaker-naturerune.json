@@ -1,0 +1,22 @@
+{
+ "id": "1795229807065-sporrandip-shaftmaker-naturerune",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "SporranDip",
+ "to": "Shaftmaker",
+ "item": "Nature rune",
+ "count": 404,
+ "start": 1795229807065,
+ "end": 1795232207065,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}

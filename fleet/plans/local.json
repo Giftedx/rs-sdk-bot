@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795229573720,
+ "at": 1795229822347,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -294,7 +294,7 @@
    "script": "scripts/gather-combat.ts",
    "args": [
     "6000",
-    "taverley_druid"
+    "giant"
    ],
    "env": {
     "MAX_KILLS": "40"
@@ -302,12 +302,12 @@
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "farm Taverley Dungeon Chaos druids (non-Wilderness) for herbs, snape grass, law and nature runes",
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic runes, nature runes and herbs",
    "role": "combat",
-   "template": "squad-taverley-druids",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "squad:taverley-druids"
+    "squad:ardougne-giants"
    ]
   },
   {
