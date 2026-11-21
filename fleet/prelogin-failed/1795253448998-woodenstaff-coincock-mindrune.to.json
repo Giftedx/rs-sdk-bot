@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "id": "1795253448998-woodenstaff-coincock-mindrune",
+ "role": "to",
+ "account": "CoinCock",
+ "partner": "Woodenstaff",
+ "server": "rs-sdk-demo.fly.dev",
+ "at": 1795253543886,
+ "detail": "Error: account logout is not confirmed: CoinCock ended disconnected"
+}

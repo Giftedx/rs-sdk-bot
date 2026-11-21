@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795253448998-mightyrod-ballbag",
+ "account": "Mightyrod",
+ "partner": "Ballbag",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 1481,
+ "claim": "00fc80ca-3901-48ce-8982-87c49fccf424",
+ "count": 0,
+ "ok": false,
+ "at": 1795253540423,
+ "detail": "trade claimed"
+}

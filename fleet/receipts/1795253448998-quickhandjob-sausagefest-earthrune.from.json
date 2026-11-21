@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795253448998-quickhandjob-sausagefest-earthrune",
+ "account": "Quickhandjob",
+ "partner": "Sausagefest",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Earth rune",
+ "requested": 3,
+ "claim": "4eba7c65-1bf2-405c-8848-bea98ec93b27",
+ "count": 0,
+ "ok": false,
+ "at": 1795253543754,
+ "detail": "trade claimed"
+}
