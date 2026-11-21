@@ -294,7 +294,7 @@ function createWildSurvival(
         canEat?: () => boolean;
     } = {},
 ): { step: (now: number) => boolean; tryEat: (now: number) => boolean; foodWait: (now: number) => number } {
-    let foodReady = -10, karamReady = -10, prayAt = -10, itemAt = -10, seenEvent = 0, hitStyle: CombatStyle | null = null, hitAt = -100;
+    let foodReady = -10, karamReady = -10, prayAt = -10, itemAt = -10, seenEvent = 0, hitStyle: CombatStyle | null = null, hitAt = -100, ateAt = -10;
     const sendEat = (slot: number, opIndex: number) => {
         if (opts.useDirect && typeof s.direct === 'function') void s.direct({ type: 'useInventoryItem', slot, optionIndex: opIndex, reason: 'SDK' });
         else if (typeof s.sdk.sendUseItem === 'function') void s.sdk.sendUseItem(slot, opIndex);
@@ -308,6 +308,7 @@ function createWildSurvival(
         const op = food?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
         if (!food || !op) return false;
         sendEat(food.slot, op.opIndex);
+        ateAt = now;
         foodReady = now + 3;
         if (food.id === ITEMS.karambwan) karamReady = now + 3;
         else if (me.hp <= comboThreshold(me.maxHp) && now >= karamReady) {
@@ -323,6 +324,7 @@ function createWildSurvival(
     return {
         tryEat,
         foodWait: (now: number) => Math.max(0, foodReady - now),
+        didEat: (now: number) => ateAt === now,
         step: (now: number) => {
             let acted = false;
             const st = s.sdk.getState(), me = st?.player;
@@ -590,7 +592,9 @@ export async function rescue(
                 }
                 const wornGlory = eq.find(e => (ITEMS.glory as readonly number[]).includes(e.id));
                 if (wornGlory) {
-                    const acted = curHp <= 92 ? survival.step(s.tick()) : false;
+                    const now = s.tick();
+                    const acted = curHp <= 92 ? survival.step(now) : false;
+                    const ate = survival.didEat(now);
                     if (inv.length < 28 && (typeof s.sdk.sendUseEquipmentItem === 'function' || typeof s.direct === 'function')) {
                         await unequipGlory(wornGlory.slot);
                         if (!await tick()) return false;
@@ -598,12 +602,31 @@ export async function rescue(
                     }
                     const vial = inv.find(i => i.id === 229);
                     const dropOp = vial?.optionsWithIndex?.find(x => /^Drop$/i.test(x.text));
+                    if (vial && dropOp) {
+                        await useItemAction(vial.slot, dropOp.opIndex);
+                        if (!await tick()) return false;
+                        continue;
+                    }
+                    // When inv.length === 28 and survival.step already ate a food this tick, inv stays at 28
+                    // synchronously until the next tick packet arrives: wait 1 tick instead of dropping a carried item.
+                    if (ate) {
+                        if (!await tick()) return false;
+                        continue;
+                    }
                     const food = bestFood(inv);
                     const eatOp = food?.optionsWithIndex?.find(x => /^eat$/i.test(x.text));
-                    const spareDrop = inv.find(i => !(ITEMS.glory as readonly number[]).includes(i.id) && i.optionsWithIndex?.some(x => /^Drop$/i.test(x.text)));
+                    const runeIds = new Set<number>([ITEMS.fireRune, ITEMS.airRune, ITEMS.waterRune, ITEMS.earthRune, ITEMS.natureRune, ITEMS.lawRune, ITEMS.deathRune, ITEMS.bloodRune, ITEMS.chaosRune, ITEMS.mindRune]);
+                    const keepIds = new Set<number>([861, 859, 1231, 1215, 1249, 1434, 1305, 1377, 1187, 1201, 1401]);
+                    const canDrop = (i: { id: number; optionsWithIndex?: readonly { text: string; opIndex: number }[] }) =>
+                        !(ITEMS.glory as readonly number[]).includes(i.id) && i.optionsWithIndex?.some(x => /^Drop$/i.test(x.text));
+                    const spareDrop = inv.find(i => canDrop(i) && !i.optionsWithIndex?.some(x => /^eat$/i.test(x.text)) && !runeIds.has(i.id) && !keepIds.has(i.id))
+                        ?? inv.find(i => canDrop(i) && !keepIds.has(i.id))
+                        ?? inv.find(canDrop);
                     const spareOp = spareDrop?.optionsWithIndex?.find(x => /^Drop$/i.test(x.text));
-                    if (vial && dropOp) await useItemAction(vial.slot, dropOp.opIndex);
-                    else if (!acted && food && eatOp) await useItemAction(food.slot, eatOp.opIndex);
+                    if (food && eatOp) {
+                        if (survival.foodWait(now) === 0) await useItemAction(food.slot, eatOp.opIndex);
+                        else { if (!await tick()) return false; continue; }
+                    }
                     else if (spareDrop && spareOp) await useItemAction(spareDrop.slot, spareOp.opIndex);
                     else if (!acted) break;
                     if (!await tick()) return false;

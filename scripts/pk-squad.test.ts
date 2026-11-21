@@ -1686,3 +1686,141 @@ test('rescue steps south after 2 interrupted Glory rubs (.if_close) instead of s
         spyTick.mockRestore();
     }
 });
+
+test('rescue with wornGlory and full 28-item pack keeps magic_shortbow, waits 1 tick after eating + praying, then unequips Glory', async () => {
+    const actions: string[] = [];
+    let z = 3600, hp = 80, ticks = 0, worn = true, dlgOpen = false, prayActive = false;
+    const inv: { id: number; count: number; slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [
+        { id: 861, count: 1, slot: 0, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }, { text: 'Drop', opIndex: 5 }] },
+        ...Array.from({ length: 26 }, (_, i) => ({
+            id: 2434, count: 1, slot: i + 1,
+            optionsWithIndex: [{ text: 'Drink', opIndex: 1 }, { text: 'Drop', opIndex: 5 }],
+        })),
+        { id: 385, count: 1, slot: 27, optionsWithIndex: [{ text: 'Eat', opIndex: 1 }, { text: 'Drop', opIndex: 5 }] },
+    ];
+    let pendingEatRemoval = false;
+    const mockSess: any = {
+        name: 'FullPackGlory',
+        tick: () => ticks,
+        ended: new Promise(() => {}),
+        client: { clickEquipmentSlot: () => {} },
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp, maxHp: 99 },
+                inventory: inv,
+                equipment: worn ? [{ id: 1712, slot: 2 }] : [],
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { prayerPoints: 99, activePrayers: prayActive ? { 14: true } : [] },
+                dialog: dlgOpen ? { isOpen: true, isWaiting: false, pageId: 'p28', options: [{ index: 1, text: 'Edgeville.', componentId: 2494 }] } : { isOpen: false },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => (worn ? [{ id: 1712, slot: 2 }] : []),
+            getSkill: () => ({ level: 99, baseLevel: 99 }),
+            sendTogglePrayer: (id: number) => {
+                prayActive = true;
+                actions.push(`pray:${id}@t${ticks}`);
+            },
+        },
+        direct: async (action: any) => {
+            actions.push(`${action.type}:${action.slot ?? action.optionIndex ?? action.componentId}:${action.optionIndex ?? ''}@t${ticks}`);
+            if (action.type === 'useInventoryItem' && action.slot === 27 && action.optionIndex === 1) {
+                pendingEatRemoval = true;
+                hp = 99;
+            } else if (action.type === 'useEquipmentItem') {
+                worn = false;
+                inv.push({ id: 1712, count: 1, slot: 27, optionsWithIndex: [{ text: 'Rub', opIndex: 4 }, { text: 'Drop', opIndex: 5 }] });
+            } else if (action.type === 'useInventoryItem' && action.slot === 27 && action.optionIndex === 4) {
+                dlgOpen = true;
+            } else if (action.type === 'clickDialogOption') {
+                dlgOpen = false;
+                z = 3496;
+            }
+            return { success: true };
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => {
+        ticks++;
+        if (pendingEatRemoval) {
+            pendingEatRemoval = false;
+            const idx = inv.findIndex(x => x.slot === 27);
+            if (idx >= 0) inv.splice(idx, 1);
+        }
+        return true;
+    });
+    try {
+        const res = await rescue(mockSess, () => {}, () => false, false, { protect: () => 'melee' });
+        expect(res).toBe(mockSess);
+        expect(inv.some(x => x.id === 861)).toBe(true);
+        expect(actions.some(a => a.startsWith('useInventoryItem:0:'))).toBe(false);
+        expect(actions).toEqual([
+            'pray:14@t0',
+            'useInventoryItem:27:1@t0',
+            'useEquipmentItem:2:1@t1',
+            'useInventoryItem:27:4@t2',
+            'clickDialogOption:1:1@t2',
+        ]);
+    } finally {
+        spyTick.mockRestore();
+    }
+});
+
+test('rescue with wornGlory and 28 non-food items drops consumable instead of primary switch magic_shortbow', async () => {
+    const actions: string[] = [];
+    let z = 3600, ticks = 0, worn = true, dlgOpen = false;
+    const inv: { id: number; count: number; slot: number; optionsWithIndex: { text: string; opIndex: number }[] }[] = [
+        { id: 861, count: 1, slot: 0, optionsWithIndex: [{ text: 'Wield', opIndex: 2 }, { text: 'Drop', opIndex: 5 }] },
+        { id: 561, count: 10, slot: 1, optionsWithIndex: [{ text: 'Drop', opIndex: 5 }] },
+        ...Array.from({ length: 26 }, (_, i) => ({
+            id: 2436, count: 1, slot: i + 2,
+            optionsWithIndex: [{ text: 'Drink', opIndex: 1 }, { text: 'Drop', opIndex: 5 }],
+        })),
+    ];
+    const mockSess: any = {
+        name: 'ZeroFoodFullPack',
+        tick: () => ticks,
+        ended: new Promise(() => {}),
+        client: { clickEquipmentSlot: () => {} },
+        sdk: {
+            getState: () => ({
+                player: { worldX: 3071, worldZ: z, hp: 95, maxHp: 99 },
+                inventory: inv,
+                equipment: worn ? [{ id: 1712, slot: 2 }] : [],
+                skills: [{ name: 'Magic', level: 45 }, { name: 'Prayer', level: 99, baseLevel: 99 }],
+                prayers: { prayerPoints: 99, activePrayers: [] },
+                dialog: dlgOpen ? { isOpen: true, isWaiting: false, pageId: 'p0f', options: [{ index: 1, text: 'Edgeville.', componentId: 2494 }] } : { isOpen: false },
+            }),
+            getInventory: () => inv,
+            getEquipment: () => (worn ? [{ id: 1712, slot: 2 }] : []),
+        },
+        direct: async (action: any) => {
+            actions.push(`${action.type}:${action.slot ?? action.optionIndex ?? action.componentId}:${action.optionIndex ?? ''}`);
+            if (action.type === 'useInventoryItem' && action.optionIndex === 5) {
+                const idx = inv.findIndex(i => i.slot === action.slot);
+                if (idx >= 0) inv.splice(idx, 1);
+            } else if (action.type === 'useEquipmentItem') {
+                worn = false;
+                inv.push({ id: 1712, count: 1, slot: 2, optionsWithIndex: [{ text: 'Rub', opIndex: 4 }, { text: 'Drop', opIndex: 5 }] });
+            } else if (action.type === 'useInventoryItem' && action.optionIndex === 4) {
+                dlgOpen = true;
+            } else if (action.type === 'clickDialogOption') {
+                dlgOpen = false;
+                z = 3496;
+            }
+            return { success: true };
+        },
+    };
+    const spyTick = spyOn(pk, 'nextTick').mockImplementation(async () => { ticks++; return true; });
+    try {
+        const res = await rescue(mockSess, () => {}, () => false, false);
+        expect(res).toBe(mockSess);
+        expect(inv.some(x => x.id === 861)).toBe(true);
+        expect(actions).toEqual([
+            'useInventoryItem:2:5',
+            'useEquipmentItem:2:1',
+            'useInventoryItem:2:4',
+            'clickDialogOption:1:1',
+        ]);
+    } finally {
+        spyTick.mockRestore();
+    }
+});
