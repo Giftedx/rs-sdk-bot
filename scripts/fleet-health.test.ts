@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beginSessionAttempt } from '../packages/core/src/session-lifecycle';
-import { auditFleetHealth, classifyLocation, HEALTH_STOP_PREFIX, remediateFleetHealth } from './fleet-health';
+import { auditFleetHealth, classifyLocation, HEALTH_STOP_PREFIX, RECOVER_SCRIPT, recoverEnvironment, remediateFleetHealth } from './fleet-health';
 import { recoverSessionToHub } from './recover-trapped';
 
 const dirs: string[] = [];
@@ -241,4 +241,37 @@ test('recoverSessionToHub refuses Wilderness positions and targets without dispa
         expect(res.kind).toBe('wilderness');
     }
     expect(inputs).toBe(0);
+});
+
+test('recoverEnvironment pins WORKER_ENTRY and WORKER_RELEASE, and transient release holds skip without writing stop files', async () => {
+    const env = recoverEnvironment('/repo', { EXISTING: '1' }, 'a'.repeat(64));
+    expect(env.WORKER_ENTRY).toBe(RECOVER_SCRIPT);
+    expect(env.WORKER_RELEASE).toBe('a'.repeat(64));
+    expect(env.DEMO_OK).toBe('1');
+    expect(env.EXISTING).toBe('1');
+
+    const root = tempWorkspace();
+    const prac = join(root, '.practice');
+    const now = 2_000_000;
+    const owners = new Map([['hocuspokeus', { side: 'local', server: 'rs-sdk-demo.fly.dev' }]]);
+    writeLogoutProof(root, 'Hocuspokeus', 'rs-sdk-demo.fly.dev', true);
+    const audit = auditFleetHealth({
+        root,
+        side: 'local',
+        now,
+        owners,
+        statusRows: [{ name: 'Hocuspokeus', server: 'rs-sdk-demo.fly.dev', pos: { x: 3077, z: 9774, level: 0 }, at: now - 1000 }],
+        swarmPlan: { jobs: [] },
+        results: [],
+        labels: { area: () => 21, areas: 1, tiles: 1, zones: { size: 0, keys: function* () {} }, cells: new Uint16Array(0), zoneKeys: new Int32Array(0) },
+    });
+    const actions = await remediateFleetHealth(audit, {
+        now: now + 1000,
+        freeMemGB: () => 12.0,
+        runRecovery: async () => ({ ok: false, detail: 'RESULT fail login: Error: no worker progress: release coordinator build in progress; live starts paused' }),
+    });
+    expect(actions.some(a => a.account === 'Hocuspokeus' && a.action === 'skipped')).toBe(true);
+    expect(existsSync(join(prac, 'stop-Hocuspokeus'))).toBe(false);
+    const savedState = JSON.parse(readFileSync(join(prac, 'fleet-health', 'state.json'), 'utf8'));
+    expect(savedState.attempts).toEqual({});
 });
