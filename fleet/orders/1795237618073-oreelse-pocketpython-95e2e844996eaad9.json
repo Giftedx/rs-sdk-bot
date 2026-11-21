@@ -1,0 +1,32 @@
+{
+ "id": "1795237618073-oreelse-pocketpython-95e2e844996eaad9",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "OreElse",
+ "to": "Pocketpython",
+ "item": "Molten glass",
+ "count": 2,
+ "start": 1795237618073,
+ "end": 1795240018073,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ],
+ "extra": [
+  {
+   "item": "Nails",
+   "count": 10
+  },
+  {
+   "item": "Gold bar",
+   "count": 1
+  }
+ ]
+}

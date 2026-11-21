@@ -1,0 +1,22 @@
+{
+ "id": "1795237617636-swordinhand-pocketpython-2a9945f1db2c59ad",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordinhand",
+ "to": "Pocketpython",
+ "item": "Snape grass",
+ "count": 18,
+ "start": 1795237617636,
+ "end": 1795240017636,
+ "meet": [
+  {
+   "x": 3183,
+   "z": 3440,
+   "level": 0
+  },
+  {
+   "x": 3182,
+   "z": 3440,
+   "level": 0
+  }
+ ]
+}
