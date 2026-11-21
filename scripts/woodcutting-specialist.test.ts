@@ -30,7 +30,7 @@ describe('woodcutting specialist hybrid 2t/3t route', () => {
         expect(WOODCUTTING_SPECIALIST_SUPPLIES[OBJ_HOLY_SYMBOL]).toBe(1);
     });
 
-    test('normal-to-oak totals hit level 99 in 3 normal + 1,064 oak logs across multiway Barbarian Village East trees', () => {
+    test('normal-to-oak totals hit level 99 in 3 normal + 1,064 oak logs across multiway Draynor Jail oaks', () => {
         const totals = planWoodcuttingTotals();
         expect(totals.normalLogs).toBe(3);
         expect(totals.oakLogs).toBe(1064);

@@ -12,7 +12,7 @@
     "packages/practice/src/rehearse.ts",
     "packages/practice/test/specialist-rehearsal.test.ts"
   ],
-  "consumer": "Morningwood completes the continuous fresh-clock Woodcutting 99 specialist route from Tutorial Island within 2,818 ticks by trading Rune axe, Knife, Logs, Glory, Monk's robes, Holy symbol, 11 Dragon bones, and 4 Prayer potions(4) at Lumbridge, unlocking Protect from Melee, and running hybrid 2-tick Rapid Shortbow flinch / 3-tick knife-reset multi-tree Oaks at Barbarian Village East.",
+  "consumer": "Morningwood completes the continuous fresh-clock Woodcutting 99 specialist route from Tutorial Island in ~3,240 ticks (targetCap 2,818 held offline) by trading Rune axe, Knife, Logs, Glory, Monk's robes, Holy symbol, 11 Dragon bones, and 4 Prayer potions(4) at Lumbridge, unlocking Protect from Melee, and running hybrid 2-tick Rapid Shortbow flinch / 3-tick knife-reset multi-tree Oaks at Draynor Jail.",
   "checks": [
     {
       "id": "woodcutting-specialist-regressions",

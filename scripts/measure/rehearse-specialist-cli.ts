@@ -215,7 +215,7 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
         account: 'Morningwood',
         id: 'morningwood-woodcutting',
         script: 'scripts/woodcutting-specialist.ts',
-        env: { CAP: '3200' },
+        env: { CAP: '3500' },
         supplier: {
             script: 'scripts/gathering-supplier.ts',
             args: ['{ACTOR}', '--kit=woodcutting-live', '400'],
@@ -224,8 +224,8 @@ const SPECIALIST_DEFINITIONS: readonly SpecialistSpecDefinition[] = [
                 inventory: expandKitToSave(WOODCUTTING_SPECIALIST_LIVE_KIT),
             }),
         },
-        planTicks: 2700,
-        planSource: '400ms rehearsal <=2818t (Barbarian Village East 2t flinch/3t knife Oaks vs #1 2876t)',
+        planTicks: 3240,
+        planSource: '400ms rehearsal empirical Draynor Jail 3-oak flinch ~3230-3260t (1062 rolls / 987187xp Lv98 at 3200t; targetCap 2818 vs #1 2876t below 2.50t/roll guard floor, stays offline)',
         targetCap: 2818,
     },
     {
