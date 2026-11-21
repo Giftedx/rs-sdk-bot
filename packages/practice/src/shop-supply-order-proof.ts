@@ -10,7 +10,8 @@ import{practiceDir,rsSdkRoot}from'./paths';
 import{runBotName}from'./prove';
 import{killTree}from'../../core/src/proc';
 import{stopStack}from'./stack';
-import{selectGeProofEndpoints,startGeProofStack,geProofAccountEnv,assertGeProofAccount}from'./ge-bulk-order-proof';
+import{selectGeProofEndpoints,startGeProofStack,geProofAccountEnv,assertGeProofAccount,HEADROOM_WAIT_MS,waitFreeMemory}from'./order-proof-shared';
+export{HEADROOM_WAIT_MS,waitFreeMemory};
 import{readPracticeSave,waitPracticeSave}from'../../../scripts/measure/fleet-player-save';
 import{capabilityRevision,type ReleaseMemo}from'../../core/src/worker-release';
 import{readLogoutProof}from'../../core/src/session-lifecycle';
@@ -88,14 +89,6 @@ export function verifyShopSupply(directory:string,memo:ReleaseMemo=new Map()){
  };
  const report={ok:Object.values(checks).every(Boolean),checks,at:now,nativeAt:meta.at,ageMs,directory:resolve(directory),source:meta.source,scope:'Native 150ms/25x existing shop-buyer CLI: exact 1136-earth acquisition, retained1482fire, repeat and funds refusal; no live or rank claim.'};
  writeFileSync(join(directory,'verified.json'),JSON.stringify(report,null,2));return report;
-}
-// One low free-memory sample between two child runs stopped a proof that had 16 GiB free at the next check.
-// Only a floor breach that lasts the whole bounded wait stops the proof.
-export const HEADROOM_WAIT_MS=60000;
-export async function waitFreeMemory(floorGb:number,read:()=>number=()=>freemem()/2**30,pause:(ms:number)=>Promise<unknown>=ms=>Bun.sleep(ms),waitMs=HEADROOM_WAIT_MS){
- let free=read();
- for(let waited=0;free<floorGb&&waited<waitMs;waited+=250){await pause(250);free=read();}
- return free;
 }
 export async function runShopSupplyNative(directory:string){
  mkdirSync(directory,{recursive:true});if(existsSync(join(directory,'before.sav')))throw Error('preserve existing native snapshots');

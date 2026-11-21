@@ -2,9 +2,7 @@ import {readFileSync,writeFileSync,copyFileSync,existsSync,openSync,closeSync,un
 import {join,resolve,sep} from 'node:path';
 import {freemem} from 'node:os';
 import {Database} from 'bun:sqlite';
-import {startStack,stopStack,pidsFile,type StackOptions} from './stack';
-import {canBind} from './ports';
-import {randomUUID} from 'node:crypto';
+import {stopStack,pidsFile,type startStack} from './stack';
 import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
@@ -18,44 +16,15 @@ import {openBot,finish,serverFromEnv} from '../../core/src/bot';
 import {waitUntil} from '../../core/src/ticks';
 import {orderPaths,orderQuantity,orderEscrow,orderAccounting,bankTotals,type ItemOrder} from '../../../scripts/buy-owned-ge-item';
 import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
-import {runShopSupplyNative,verifyShopSupply,waitFreeMemory} from './shop-supply-order-proof';
+import {runShopSupplyNative,verifyShopSupply} from './shop-supply-order-proof';
+import {geProofEndpoints,selectGeProofEndpoints,assertGeProofAccount,geProofAccountEnv,startGeProofStack,waitFreeMemory,type ProofEndpoints} from './order-proof-shared';
+export {geProofEndpoints,selectGeProofEndpoints,assertGeProofAccount,geProofAccountEnv,startGeProofStack,type ProofEndpoints};
 import {intentForEntry} from '../../planner/src/progression-catalog';
 
 // Native bulk GE order: an owned seller lists noted grapes, then the actual worker buys the exact
 // quantity, banks it and reruns the same order key. The consumer stage reads the saved bank.
 type Save=ReturnType<typeof readPracticeSave>;
 type Run={code:number;log:string};
-export function geProofEndpoints(ports:{engine:number;gateway:number;management:number;tcp:number},instance:string){
- if(!ports||![ports.engine,ports.gateway,ports.management,ports.tcp].every(p=>Number.isSafeInteger(p)&&p>=1024&&p<=65535&&p!==8888&&p!==7780&&p!==8898&&p!==43594)
-  ||new Set([ports.engine,ports.gateway,ports.management,ports.tcp]).size!==4||!/^ge-[a-z0-9-]{1,29}$/.test(instance))throw Error('owned practice endpoints required');
- const server=`127.0.0.1:${ports.engine}`,gateway=`ws://127.0.0.1:${ports.gateway}`;
- const env={GE_PROOF_ENGINE:String(ports.engine),GE_PROOF_GATEWAY:String(ports.gateway),GE_PROOF_INSTANCE:instance,
-  AGENT_PORT:String(ports.gateway),GATEWAY_URL:`http://127.0.0.1:${ports.gateway}`,WEB_MANAGEMENT_PORT:String(ports.management),NODE_PORT:String(ports.tcp),GE_DATABASE:`data/market-${instance}.sqlite`};
- return{ports:{...ports},instance,server,gateway,env};
-}
-export function selectGeProofEndpoints(bind:typeof canBind=canBind,random:()=>number=Math.random){
- for(let i=0;i<100;i++){
-  const engine=20000+Math.floor(random()*20000),gateway=engine+1,management=engine+2,tcp=engine+3;
-  if([engine,gateway,management,tcp].every(bind))return geProofEndpoints({engine,gateway,management,tcp},'ge-'+randomUUID().replaceAll('-','').slice(0,20));
- }
- throw Error('owned practice ports unavailable');
-}
-
-type ProofEndpoints=ReturnType<typeof geProofEndpoints>;
-export function assertGeProofAccount(text:string,env:Record<string,string|undefined>=process.env){
- const p=geProofEndpoints({engine:Number(env.GE_PROOF_ENGINE),gateway:Number(env.GE_PROOF_GATEWAY),management:Number(env.WEB_MANAGEMENT_PORT),tcp:Number(env.NODE_PORT)},env.GE_PROOF_INSTANCE??'');
- if(serverFromEnv(text)!==p.server||text.match(/^GATEWAY_URL=(.*)$/m)?.[1]?.trim()!==p.gateway)throw Error('owned practice account required');
- return p.server;
-}
-export function geProofAccountEnv(text:string,p:ProofEndpoints){
- if(!/^SERVER=localhost:8888\r?$/m.test(text))throw Error('new practice account required');
- return text.replace(/^SERVER=.*$/gm,`SERVER=${p.server}`).replace(/^GATEWAY_URL=.*$/gm,`GATEWAY_URL=${p.gateway}`);
-}
-export async function startGeProofStack(p:ProofEndpoints,start:(opts:StackOptions)=>ReturnType<typeof startStack>=startStack){
- const previous=Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]));
- try{Object.assign(process.env,p.env);return await start({ports:p.ports,instance:p.instance,tickMs:150,readyTimeoutMs:60000});}
- finally{for(const [k,v] of Object.entries(previous)){if(v===undefined)delete process.env[k];else process.env[k]=v;}}
-}
 function savedEndpoints(meta:any){
  const p=geProofEndpoints(meta.endpoints?.ports,meta.endpoints?.instance??'');
  if(meta.server!==p.server)throw Error('saved owned practice endpoint mismatch');
