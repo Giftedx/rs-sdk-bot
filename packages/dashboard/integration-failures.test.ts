@@ -2,34 +2,36 @@ import {expect,test} from 'bun:test';
 import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {marketRows,writeMarketCache,MARKET_FILE} from '../../scripts/market-cache';
+import {marketRows,writeMarketCache,MARKET_FILE} from '../core/src/market-cache';
 import {buildItemPrices,itemPrice,priceItemKey} from './item-prices';
 import {createVaultItems} from './vault-items';
 import {isLocalServer} from '../core/src/localserver';
 import {gameDialAddress} from '../core/src/websocket-proxy';
 
-const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
+const routes=readFileSync(new URL('./server/routes.ts',import.meta.url),'utf8');
+const world=readFileSync(new URL('./server/world.ts',import.meta.url),'utf8');
+const market=readFileSync(new URL('./server/market.ts',import.meta.url),'utf8');
 const shell=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
 const transpile=(source:string)=>new Bun.Transpiler({loader:'ts'}).transformSync(source);
 
 test('the asset route serves the NPC table requested by opponent information',async()=>{
- const start=server.indexOf("if(url.pathname.startsWith('/client-assets/'))"),end=server.indexOf("if (url.pathname === '/api/player')",start);
+ const start=routes.indexOf("if(url.pathname.startsWith('/client-assets/'))"),end=routes.indexOf("if (url.pathname === '/api/player')",start);
  // Bind the real dashboard directory without importing the long-running server.
- const run=new Function('url','Bun','join','BASE','req',transpile(server.slice(start,end)).replaceAll('import.meta.dir','BASE'));
+ const run=new Function('url','Bun','join','dashboardDir','req',transpile(routes.slice(start,end)));
  const response=run(new URL('http://localhost/client-assets/npc-names.json'),Bun,join,import.meta.dir,new Request('http://localhost/'));
  expect(response.status).toBe(200);expect(Array.isArray(await response.json())).toBe(true);
  expect(run(new URL('http://localhost/client-assets/private.env'),Bun,join,import.meta.dir,new Request('http://localhost/')).status).toBe(400);
 });
 
 test('failed rank reads preserve the last observation and have a request deadline',async()=>{
- const code=transpile(server.slice(server.indexOf('let ranksRefreshing'),server.indexOf('setInterval(() => void refreshRanks()')));
+ const code=transpile(world.slice(world.indexOf('let ranksRefreshing'),world.indexOf('function rankDelta(')));
  const previous={at:1,rows:[{board:'Mining',rank:2,level:50,time:'1m'}]},ranks=new Map([['Worker',previous]]);let signal:any;
  const run=new Function('fetch','Bun','ranks','gameDialAddress',`const liveAccounts=()=>['Worker'],remoteNames=()=>[],DEMO='http://example.test',SKILL_BOARDS=[],rankHist=new Map(),FILES={};const hiscoreRows=()=>[],append=()=>{};${code};return refreshRanks;`)(async(_url:any,options:any)=>{signal=options?.signal;return new Response('unavailable',{status:503});},{sleep:async()=>{}},ranks,gameDialAddress);
  await run();expect(ranks.get('Worker')).toEqual(previous);expect(signal).toBeInstanceOf(AbortSignal);
 });
 
 test('a failed market page cannot publish fresh prices or partial data',async()=>{
- const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
+ const code=transpile(market.slice(market.indexOf('async function refreshPrices()'),market.indexOf('const priceOf =')));
  const marketIds=new Map([['old',1]]),marketById=new Map(),prices=new Map([['old',10]]);let calls=0;
  const root=mkdtempSync(join(tmpdir(),'dashboard-market-failure-'));
  try{
@@ -49,15 +51,15 @@ test('opponent information retries a failed NPC table load',async()=>{
 });
 
 test('slow rank refreshes cannot overlap on the minute timer',async()=>{
- const start=server.indexOf('let ranksRefreshing');
- const code=transpile(server.slice(start<0?server.indexOf('async function refreshRanks()'):start,server.indexOf('setInterval(() => void refreshRanks()')));
+ const start=world.indexOf('let ranksRefreshing');
+ const code=transpile(world.slice(start<0?world.indexOf('async function refreshRanks()'):start,world.indexOf('function rankDelta(')));
  let calls=0,release!:()=>void;const pending=new Promise<void>(resolve=>{release=resolve;});
  const run=new Function('fetch','Bun','gameDialAddress',`const liveAccounts=()=>['Worker'],remoteNames=()=>[],ranks=new Map(),DEMO='http://example.test',SKILL_BOARDS=[],rankHist=new Map(),FILES={};const hiscoreRows=()=>[],append=()=>{};${code};return refreshRanks;`)(async()=>{calls++;await pending;return new Response('unavailable',{status:503});},{sleep:async()=>{}},gameDialAddress);
  const first=run(),second=run();release();await Promise.all([first,second]);expect(calls).toBe(1);
 });
 
 test('a complete market refresh replaces removed listings and publishes its timestamp',async()=>{
- const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
+ const code=transpile(market.slice(market.indexOf('async function refreshPrices()'),market.indexOf('const priceOf =')));
  const marketIds=new Map([['old',1]]),marketById=new Map([[1,{}]]),prices=new Map([['old',10]]);
  const root=mkdtempSync(join(tmpdir(),'dashboard-market-success-'));
  try{
@@ -69,14 +71,14 @@ test('a complete market refresh replaces removed listings and publishes its time
 });
 
 test('a shared-cache write failure does not hide a successful dashboard market refresh',async()=>{
- const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
+ const code=transpile(market.slice(market.indexOf('async function refreshPrices()'),market.indexOf('const priceOf =')));
  const marketIds=new Map(),marketById=new Map(),prices=new Map();let writes=0;
  const run=new Function('fetch','Bun','marketIds','marketById','prices','marketRows','writeMarketCache','root','buildItemPrices','gameDialAddress',`const DEMO='http://example.test',priceCatalogue=[{id:2,name:'New'}];let pricesAt=1,itemPrices;${code};return async()=>{await refreshPrices();return pricesAt;};`)(async()=>Response.json({total:1,items:[{id:2,name:'New',basePrice:20}]}),{sleep:async()=>{}},marketIds,marketById,prices,marketRows,()=>{writes++;throw Error('read-only cache');},'/unused',buildItemPrices,gameDialAddress);
  expect(await run()).toBeGreaterThan(1);expect(writes).toBe(1);expect([...prices]).toEqual([['new',20]]);
 });
 
 test('the complete dashboard scrape publishes exact variant values without a last-name alias',async()=>{
- const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
+ const code=transpile(market.slice(market.indexOf('async function refreshPrices()'),market.indexOf('const priceOf =')));
  const rows=[{id:1135,name:'Dragonhide body',basePrice:7800,ask:8000},{id:2503,name:'Dragonhide body',basePrice:13480,vwap:15000,trades:3,ask:16000}];
  const run=new Function('fetch','Bun','marketRows','buildItemPrices','priceCatalogue','gameDialAddress',`const DEMO='http://example.test',root='',marketIds=new Map(),marketById=new Map(),prices=new Map(),writeMarketCache=()=>{};let pricesAt=1,itemPrices;${code};return async()=>{await refreshPrices();return {itemPrices,prices};};`)
   (async()=>Response.json({total:2,items:rows}),{sleep:async()=>{}},marketRows,buildItemPrices,rows,gameDialAddress);
@@ -85,7 +87,7 @@ test('the complete dashboard scrape publishes exact variant values without a las
 });
 
 test('the exact ID and alias tables replace together only after a complete market scrape',async()=>{
- const code=transpile(server.slice(server.indexOf('async function refreshPrices()'),server.indexOf('setInterval(() => void refreshPrices()')));
+ const code=transpile(market.slice(market.indexOf('async function refreshPrices()'),market.indexOf('const priceOf =')));
  const previous=buildItemPrices([{id:1,name:'Old',basePrice:10}],[{id:1,name:'Old'}]);
  let fail=true,calls=0;
  const run=new Function('fetch','Bun','marketRows','buildItemPrices','previous','gameDialAddress',`const DEMO='http://example.test',root='',marketIds=new Map(),marketById=new Map(),prices=new Map(),writeMarketCache=()=>{},priceCatalogue=[{id:2,name:'New'}];let pricesAt=1,itemPrices=previous;${code};return async()=>{await refreshPrices();return itemPrices;};`)
@@ -95,7 +97,7 @@ test('the exact ID and alias tables replace together only after a complete marke
 });
 
 test('vault valuation retains exact variants and marks historical name-only outgoing stock unconfirmed',()=>{
- const code=transpile(server.slice(server.indexOf('function vault('),server.indexOf('// ---------- swarm controller')));
+ const code=transpile(market.slice(market.indexOf('function vault('),market.indexOf('// ---------- gear catalog')));
  const table=buildItemPrices([{id:1135,name:'Dragonhide body',basePrice:7800},{id:2503,name:'Dragonhide body',basePrice:13480}],
   [{id:1135,name:'Dragonhide body'},{id:2503,name:'Dragonhide body'}]);
  const log:any[]=[];
@@ -121,8 +123,8 @@ test('market holdings keep different item IDs with the same display name separat
 });
 
 test('the asset route serves the item effect table that the item tooltip reads',()=>{
- const start=server.indexOf("if(url.pathname.startsWith('/client-assets/'))"),end=server.indexOf("if (url.pathname === '/api/player')",start);
- const run=new Function('url','Bun','join','BASE','req',transpile(server.slice(start,end)).replaceAll('import.meta.dir','BASE'));
+ const start=routes.indexOf("if(url.pathname.startsWith('/client-assets/'))"),end=routes.indexOf("if (url.pathname === '/api/player')",start);
+ const run=new Function('url','Bun','join','dashboardDir','req',transpile(routes.slice(start,end)));
  const first=run(new URL('http://localhost/client-assets/item-stats.json'),Bun,join,import.meta.dir,new Request('http://localhost/'));
  expect(first.status).toBe(200);expect(first.headers.get('cache-control')).toBe('no-cache');
  // The same ETag back gets a 304 with no body; an image keeps the hour.
@@ -132,7 +134,7 @@ test('the asset route serves the item effect table that the item tooltip reads',
 });
 
 test('the rank change of a day starts from the rank held 24 hours ago',()=>{
- const code=transpile(server.slice(server.indexOf('function rankDelta('),server.indexOf('// Live #1 per skill board')));
+ const code=transpile(world.slice(world.indexOf('function rankDelta('),world.indexOf('// Live #1 per skill board')));
  const now=Date.now(),hour=3_600_000,rankHist=new Map<string,any[]>();
  const rankDelta=new Function('rankHist',`${code};return rankDelta;`)(rankHist);
  rankHist.set('A|Mining',[{at:now-72*hour,rank:50},{at:now-hour,rank:40}]);

@@ -71,7 +71,7 @@ test('a push waits while only clocks change, and goes after the heartbeat',()=>{
 });
 
 test("the collector reads logs from their tail, keeps 5000 results, caches the vault tail and the proof scan",()=>{
- const server=readFileSync(join(import.meta.dir,"server.ts"),"utf8");
+ const server=['server.ts','server/config.ts','server/market.ts','server/world.ts','server/state.ts','server/routes.ts'].map(f=>readFileSync(join(import.meta.dir,f),'utf8')).join('\n');
  expect(server).toContain("tailJsonlFile<T>(file, n)");
  expect(server).toContain("const RESULT_KEEP = 5000;");
  expect(server).toContain("cachedTail<any>(FILES.vault, 100_000)");

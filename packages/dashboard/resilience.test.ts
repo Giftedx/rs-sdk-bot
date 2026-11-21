@@ -2,7 +2,8 @@ import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {gameDialAddress} from '../core/src/websocket-proxy';
 const html=readFileSync(new URL('./index.html',import.meta.url),'utf8');
-const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
+const server=readFileSync(new URL('./server/state.ts',import.meta.url),'utf8');
+const world=readFileSync(new URL('./server/world.ts',import.meta.url),'utf8');
 
 test('stream loss and collector errors reach the visible title indicator without another render',()=>{
  const code=html.slice(html.indexOf('function connectionState(){'),html.indexOf("$('#inspector').addEventListener"));
@@ -62,13 +63,13 @@ test('an account in the world whose last action is idle reads idle, not playing'
 });
 
 test('state-build failures keep retained data private even when an exception names the protected account',()=>{
- const code=server.slice(server.indexOf('function current() {'),server.indexOf('setInterval(() => {',server.indexOf('function current() {')));
+ const code=server.slice(server.indexOf('function current() {'),server.indexOf('// ---------- SSE broadcast',server.indexOf('function current() {')));
  const run=new Function('buildState','console',`const SECRET_RE=/Haggis/gi,SECRET_MARK='⟦MAIN⟧',MAP={};let latest={at:0,json:''};${code};return current;`)(()=>{throw Error('Haggis invalid status');},{error:()=>{}});
  expect(run()).not.toMatch(/haggis/i);expect(JSON.parse(run()).stateError).toContain('⟦MAIN⟧');
 });
 
 function playerLookupHarness(fetcher:(url:string,init?:RequestInit)=>Promise<Response>,sleep:(ms:number)=>Promise<void>=async()=>{}){
- const code=new Bun.Transpiler({loader:'ts'}).transformSync(server.slice(server.indexOf('let lookupChain:'),server.indexOf('// Equipment, Bank and Runite boards:')));
+ const code=new Bun.Transpiler({loader:'ts'}).transformSync(world.slice(world.indexOf('let lookupChain:'),world.indexOf('// Equipment, Bank and Runite boards:')));
  let round!:()=>void,period=0;
  const api=new Function('fetch','Bun','gameDialAddress','setInterval',`const lookups=new Map(),roster=new Map(),DEMO='https://example.test',ONLINE_MS=30000,SKILL_BOARDS=[];const hiscoreRows=()=>[{board:'Mining'}],wornOf=async()=>null;${code};return {lookup:lookupPlayer,cache:lookups,wanted:names=>{lookupWanted=names;}};`)(fetcher,{sleep},gameDialAddress,(fn:()=>void,ms:number)=>{round=fn;period=ms;});
  return {...api,round,period};
@@ -115,7 +116,7 @@ test('distinct player lookups stay serial through cooldown while a fresh hit byp
 });
 
 test('the state carries no lookups and the server has no background lookup round',()=>{
- expect(server).not.toContain('lookupWanted');expect(server).not.toContain('lookups: looked');
+ for(const src of [server,world,readFileSync(new URL('./server.ts',import.meta.url),'utf8'),readFileSync(new URL('./server/routes.ts',import.meta.url),'utf8')]){expect(src).not.toContain('lookupWanted');expect(src).not.toContain('lookups: looked');}
 });
 
 test('an upstream 404 remains a cached unranked lookup with the same cooldown',async()=>{

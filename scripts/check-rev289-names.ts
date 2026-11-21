@@ -62,9 +62,9 @@ export const NOT_GAME_CALLEES = new Set(['getSkill', 'getSkillXp', 'level', 'xp'
 /** Strings that call a game helper but name no game thing. Each entry carries its reason. */
 export const NAME_ALLOW: ReadonlyArray<{ file: string; text: string; reason: string }> = [
     { file: 'scripts/generated/quest-scorpion.ts', text: 'equip failed', reason: 'the fallback text of `?? \'equip failed\'`, a message and not a name' },
-    { file: 'scripts/pk-kits.ts', text: 'Mage Arena', reason: 'the content has the Mage Arena varp (267) and no journal entry, so the label has no content spelling' },
+    { file: 'packages/planner/src/pk-kits.ts', text: 'Mage Arena', reason: 'the content has the Mage Arena varp (267) and no journal entry, so the label has no content spelling' },
     { file: 'packages/dashboard/goal-details.ts', text: 'Legends Guild shop', reason: 'prose label of the shop inventory generallegends' },
-    { file: 'packages/dashboard/server.ts', text: 'Quest Points', reason: 'a board name of the hiscores, not a game object' },
+    { file: 'packages/dashboard/server/world.ts', text: 'Quest Points', reason: 'a board name of the hiscores, not a game object' },
     { file: 'packages/planner/src/haggis.ts', text: 'Quest Points', reason: 'a board name of the hiscores, not a game object' },
     { file: 'packages/knowledge/src/method-model.ts', text: 'Glass orb', reason: 'the label of the skill guide row (skill_guide.dbrow:331), not an item name' },
     { file: 'packages/planner/src/gear-progression.ts', text: "heroes' quest", reason: 'alias key: an input spelling that maps to the journal name' },

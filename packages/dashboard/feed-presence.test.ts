@@ -2,12 +2,12 @@ import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {RosterFeed} from '../core/src/roster-feed';
 import {gameDialAddress} from '../core/src/websocket-proxy';
-const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
+const server=readFileSync(new URL('./server/world.ts',import.meta.url),'utf8');
 
 test('a full world roster removes departed players without waiting for the stale-data timeout',()=>{
  const code=new Bun.Transpiler({loader:'ts'}).transformSync(server.slice(server.indexOf('const roster ='),server.indexOf('const serverTick =')));
  let socket:any;class Socket{onmessage:any;constructor(readonly url:string){socket=this;}send(){}close(){}}
- const state=new Function('WebSocket','setTimeout','RosterFeed','gameDialAddress',`${code};return {roster,firstSeen,world};`)(Socket,()=>{},RosterFeed,gameDialAddress);
+ const state=new Function('WebSocket','setTimeout','RosterFeed','gameDialAddress',`${code};connectFeed();return {roster,firstSeen,world};`)(Socket,()=>{},RosterFeed,gameDialAddress);
  expect(socket.url).toBe('wss://rs-sdk.maxbittker.com/worldfeed');
  const send=(p:any)=>socket.onmessage({data:JSON.stringify({t:'roster',k:10,p})});
  send([[1,'Worker',3200,3200,0,10],[2,'Other',3201,3200,0,10]]);
