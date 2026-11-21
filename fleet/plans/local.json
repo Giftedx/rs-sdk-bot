@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795286180782,
+ "at": 1795286767625,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -252,33 +252,19 @@
    "repeat": true
   },
   {
-   "account": "Ballbag",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "ardy",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "vial of water",
-    "STOCK_TARGET": "100",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "600",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "400",
-    "AUTOPILOT_ORDER": "[0]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"227\":100}}"
-   },
+   "account": "YewGotWood",
+   "script": "scripts/blood-chest.ts",
+   "args": [],
+   "env": {},
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "buy vials of water from Aemad's store in East Ardougne",
-   "role": "bank",
-   "template": "squad-vial-of-water",
+   "goal": "loot the Ardougne Castle blood rune chests for the gang squad",
+   "role": "thieving",
+   "template": "squad-blood-chest",
    "autopilot": "local",
    "resources": [
-    "shop:ardy"
+    "squad:ardougne-blood-chest"
    ]
   },
   {
@@ -334,116 +320,22 @@
    ]
   },
   {
-   "account": "Shaftmaker",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/shop-buyer.ts magic_guild 900 ITEMS=nature.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=46000 COIN_RESERVE=500 MAX_SPEND=45000",
-    "scripts/shop-buyer.ts magic_guild 600 ITEMS=air.rune STOCK_TARGET=600 STOP_AT_TARGET=1 BANK_PACK=1 BANK_AT=0 NO_BUY_TICKS=25 FLOAT=11000 COIN_RESERVE=500 MAX_SPEND=10000"
-   ],
+   "account": "Swordinhand",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
    "env": {
-    "ROUNDS": "1"
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
    },
    "enabled": true,
    "standing": true,
    "repeat": true,
-   "goal": "buy nature and air runes at the Magic Guild in Yanille for the alchemy band",
-   "role": "supply",
-   "template": "army-nature-guild",
-   "autopilot": "local",
-   "resources": [
-    "shop:magic_guild"
-   ]
-  },
-  {
-   "account": "Swordinhand",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "taverley_black_knight"
-   ],
-   "env": {
-    "MAX_KILLS": "40"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
-   "role": "combat",
-   "template": "squad-taverley-black-knights",
-   "autopilot": "local",
-   "resources": [
-    "squad:taverley-black-knights"
-   ]
-  },
-  {
-   "account": "Swordswallow",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "aubury",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "water rune",
-    "STOCK_TARGET": "1509",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "12200",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "12000",
-    "AUTOPILOT_ORDER": "[9]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"555\":1509}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy water runes at Aubury's in Varrock for the gang squad",
-   "role": "bank",
-   "template": "squad-water-aubury",
-   "autopilot": "local",
-   "resources": [
-    "shop:aubury"
-   ]
-  },
-  {
-   "account": "YewGotWood",
-   "script": "scripts/blood-chest.ts",
-   "args": [],
-   "env": {},
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "loot the Ardougne Castle blood rune chests for the gang squad",
+   "goal": "goldfarm knights at 2669,3298",
    "role": "thieving",
-   "template": "squad-blood-chest",
+   "template": "goldfarm@2669,3298",
    "autopilot": "local",
    "resources": [
-    "squad:ardougne-blood-chest"
-   ]
-  },
-  {
-   "account": "BoneToPick",
-   "script": "scripts/microbot-production.ts",
-   "args": [
-    "strip:swamp-toad",
-    "MAX_MAKE=2",
-    "CAP=1500",
-    "MEMBERS=1",
-    "ORDER_MODE=best-effort"
-   ],
-   "env": {
-    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"2152\":2}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "strip banked swamp toads into toad's legs",
-   "role": "herblore",
-   "template": "squad-strip-swamp-toad",
-   "autopilot": "local",
-   "resources": [
-    "squad:herblore-bank"
+    "knight:2669,3298"
    ]
   }
  ],
