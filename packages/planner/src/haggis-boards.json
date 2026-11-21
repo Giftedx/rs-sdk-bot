@@ -4383,10 +4383,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 2337,
-    "realistic": 2414,
+    "floor": 2250,
+    "realistic": 2373,
     "evidence": "MEASURED",
-    "source": "quests-short without Doric's Quest (18/18/18, 1 QP on row doric): research/quest-points-board.md \"Short rest quests\" and lockstep bench seeds 7/8/9: Sheep Shearer 57/57/57 (burst: true); Imp Catcher 38/38/38; Witch's Potion 67/56/58 (burst: true); Rune Mysteries 449/432/441; The Restless Ghost 439/444/444 (burst: true); Vampire Slayer 287/295/297 (burst: true); Gertrude's Cat 369/385/397; Monk's Friend 244/247/250 (burst: true); Fishing Contest 415/415/415"
+    "source": "quests-short without Doric's Quest (18/18/18, 1 QP on row doric): research/quest-points-board.md \"Short rest quests\" and lockstep bench seeds 7/8/9: Sheep Shearer 57/57/57 (burst: true); Imp Catcher 38/38/38; Witch's Potion 67/56/58 (burst: true); Rune Mysteries 449/432/441; The Restless Ghost 439/444/444 (burst: true); Vampire Slayer 287/295/297 (burst: true); Gertrude's Cat 282/356/329 (burst: true, quest-fluffs.ts); Monk's Friend 244/247/250 (burst: true); Fishing Contest 415/415/415"
    },
    "lump": true,
    "qp": 11,
@@ -4407,8 +4407,8 @@
      "set": {
       "qp": 10,
       "ticks": {
-       "floor": 2299,
-       "realistic": 2376,
+       "floor": 2212,
+       "realistic": 2335,
        "evidence": "MEASURED",
        "source": "quests-short without Doric's Quest (18/18) and Imp Catcher (38/38, row imp-catcher)"
       }
