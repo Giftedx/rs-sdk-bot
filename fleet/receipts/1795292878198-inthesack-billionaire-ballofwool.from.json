@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795292878198-inthesack-billionaire-ballofwool",
+ "account": "InTheSack",
+ "partner": "Billionaire",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Ball of wool",
+ "requested": 2,
+ "claim": "d10d32fc-63fb-4ff1-95f0-46f8ab82a690",
+ "count": 0,
+ "ok": false,
+ "at": 1795292946727,
+ "detail": "trade claimed"
+}
