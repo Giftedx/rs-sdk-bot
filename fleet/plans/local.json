@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795242697809,
+ "at": 1795242766531,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -78,32 +78,6 @@
    "enabled": false,
    "goal": "Mock Haggis run on a clean playtime clock; legs by .practice/mock-run/blocks.json",
    "role": "rehearsal"
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/aio-skiller.ts",
-   "enabled": false,
-   "goal": "Ring crafter of the mock Haggis run (block 2); legs by .practice/rings",
-   "role": "crafter"
-  },
-  {
-   "account": "Abracadickra",
-   "script": "scripts/shop-to-bid.ts",
-   "args": [
-    "sarim,aubury",
-    "313,560,562,559,558,555,557"
-   ],
-   "env": {
-    "UNITS": "1500",
-    "MAX_SPEND": "40000",
-    "LOTS": "6",
-    "MIN_NET": "25"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "sell Port Sarim fishing bait and Aubury runes into open GE bids (scripts/shop-to-bid.ts)",
-   "role": "market"
   },
   {
    "account": "Porksword",
@@ -185,28 +159,6 @@
    "resources": [
     "squad:taverley-druids"
    ]
-  },
-  {
-   "account": "Hocuspokeus",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "4000",
-    "taverley_druid"
-   ],
-   "enabled": true,
-   "standing": true,
-   "repeat": true
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "4000",
-    "taverley_druid"
-   ],
-   "enabled": true,
-   "standing": true,
-   "repeat": true
   },
   {
    "account": "TossTheCaber",
@@ -413,6 +365,64 @@
    "resources": [
     "squad:herblore-bank"
    ]
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "4000",
+    "taverley_druid"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "4000",
+    "taverley_druid"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Deeppockets",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2653,3300"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2669,3298"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
+  },
+  {
+   "account": "Abracadickra",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "TICKS": "6000",
+    "KNIGHT_SPOT": "2671,3313"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true
   }
  ],
  "army": [
@@ -443,7 +453,6 @@
   "Ballspinner",
   "SporranBulge",
   "Sausagefest",
-  "deeppockets",
   "dipstick",
   "fatstack",
   "fingerblastr",
