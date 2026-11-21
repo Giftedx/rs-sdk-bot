@@ -3,7 +3,7 @@
 // health holds; safely pauses failing jobs and dispatches one-shot extraction while respecting owner stop files,
 // RESERVED_ACCOUNTS, swarm pauses, active runs and memory floors.
 // Usage: bun scripts/fleet-health.ts [--check] [--fix] [--json] [--clear-resolved]
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { freemem } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -236,21 +236,37 @@ function resolveMainRoot(fromDir: string): string {
     return fromDir;
 }
 
-function loadCachedLabels(rootDir: string): Labels | undefined {
+function readCompatibleHeaderSource(file: string, currentKey: string): string | null {
+    let fd: number | undefined;
+    try {
+        fd = openSync(file, 'r');
+        const head = Buffer.alloc(4);
+        if (readSync(fd, head, 0, 4, 0) !== 4) return null;
+        const hl = head.readUInt32LE(0);
+        if (hl <= 0 || hl > 65_536) return null;
+        const headerBytes = Buffer.alloc(hl);
+        if (readSync(fd, headerBytes, 0, hl, 4) !== hl) return null;
+        const hdr = JSON.parse(headerBytes.toString('utf8')) as { source?: string };
+        if (typeof hdr?.source !== 'string') return null;
+        const cur = JSON.parse(currentKey) as { v?: number; wasm?: string; data?: string };
+        const stored = JSON.parse(hdr.source) as { v?: number; wasm?: string; data?: string };
+        return cur.v === stored.v && cur.wasm === stored.wasm && cur.data === stored.data ? hdr.source : null;
+    } catch {
+        return null;
+    } finally {
+        if (fd !== undefined) closeSync(fd);
+    }
+}
+
+export function loadCachedLabels(rootDir: string): Labels | undefined {
     const file = join(rootDir, '.practice', 'cache', 'route-areas.bin');
     if (!existsSync(file)) return undefined;
-    try {
-        return readLabels(file, pathfindingDataKey()) ?? undefined;
-    } catch {
-        // Fallback: try reading stored header hash if pathfindingDataKey differs from current environment.
-        try {
-            const raw = readFileSync(file);
-            const len = raw.readUInt32LE(4);
-            const hdr = JSON.parse(raw.subarray(8, 8 + len).toString('utf8')) as { source?: string };
-            if (typeof hdr?.source === 'string') return readLabels(file, hdr.source) ?? undefined;
-        } catch { return undefined; }
-        return undefined;
-    }
+    const key = pathfindingDataKey();
+    const direct = readLabels(file, key);
+    if (direct) return direct;
+    // Allow cached area labels across commits that share map data/wasm even when initializer hash shifts.
+    const fallbackSource = readCompatibleHeaderSource(file, key);
+    return fallbackSource ? (readLabels(file, fallbackSource) ?? undefined) : undefined;
 }
 
 function activeSetFromRuns(file: string): Set<string> {
