@@ -1,0 +1,31 @@
+{
+ "version": 2,
+ "state": "settled",
+ "id": "1795248494920-nabtheknob-fatstack-a9f3b73d1d6e1070",
+ "account": "Fatstack",
+ "partner": "NabTheKnob",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 135000,
+ "claim": "f50dcaf1-a337-4b25-9730-8045706b4104",
+ "count": 135000,
+ "ok": true,
+ "at": 1795248748899,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 135000
+ },
+ "bank": {
+  "count": 135000,
+  "at": 1795248748097
+ },
+ "logout": {
+  "attemptId": "1795248737680-0000032124-0000000001",
+  "at": 1795248748816,
+  "sha256": "7c5f300834b3581822e79d88ddf39897826bf58bb18cc318d381e607c44b1ac7"
+ },
+ "screen": true
+}

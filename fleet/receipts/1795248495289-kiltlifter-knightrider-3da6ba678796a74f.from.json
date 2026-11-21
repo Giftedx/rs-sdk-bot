@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795248495289-kiltlifter-knightrider-3da6ba678796a74f",
+ "account": "Kiltlifter",
+ "partner": "KnightRider",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 123000,
+ "claim": "cb9e1b55-b444-44f0-87c4-540da9c56654",
+ "count": 0,
+ "ok": false,
+ "at": 1795248728334,
+ "detail": "trade claimed"
+}
