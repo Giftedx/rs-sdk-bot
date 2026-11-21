@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795289255520-ballspinner-sausagefest-bronzearrow",
  "account": "Sausagefest",
  "partner": "Ballspinner",
@@ -10,8 +10,22 @@
  "item": "Bronze arrow",
  "requested": 84,
  "claim": "2a877011-2b33-420a-a7e7-44fd8882cd7a",
- "count": 0,
- "ok": false,
- "at": 1795289294776,
- "detail": "trade claimed"
+ "count": 84,
+ "ok": true,
+ "at": 1795289308192,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 0,
+  "after": 84
+ },
+ "bank": {
+  "count": 84,
+  "at": 1795289307316
+ },
+ "logout": {
+  "attemptId": "1795289294784-0000004884-0000000001",
+  "at": 1795289308040,
+  "sha256": "a2c76569e5019ffb22341752a55a9b501092f7806e551e12930899121b5e91a0"
+ },
+ "screen": true
 }
