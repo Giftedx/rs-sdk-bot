@@ -4,7 +4,6 @@ import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import type { Session } from '../packages/core/src/inprocess';
 import type { NearbyNpc } from '../vendor/rs-sdk/sdk/types';
 import { runStagedFishing } from './microbot-b-fishing';
-import { openQuest } from './generated/quest-lib';
 import { runSeaSlugQuest } from './generated/quest-seaslug';
 import { LUMBRIDGE_FM_PATH, FM_LIGHT_OPOBJ, OBJ_TINDERBOX, OBJ_OAK_LOGS } from './firemaking-specialist';
 import {
@@ -162,15 +161,6 @@ if (import.meta.main) {
         await walkWaypointsSafe(main, [[2716, 3302, 2]], isStopped);
         await drinkEnergyIfLow(main, 75);
 
-        const q = await openQuest({
-            session: main,
-            keepAlive: true,
-            burst: true,
-            eatAt: 0,
-            food: [],
-            stop: isStopped,
-            cap: Math.max(400, cap - (main.tick() - t0)),
-        });
         let lastQuestDrink = -10;
         let lastQuestRunClick = -10;
         const offQuestEnergyWatch = main.onTick(() => {
@@ -189,7 +179,13 @@ if (import.meta.main) {
             }
         });
         try {
-            await runSeaSlugQuest(q);
+            const done = await runSeaSlugQuest(main, {
+                keepAlive: true,
+                eatAt: 0,
+                stop: isStopped,
+                cap: Math.max(400, cap - (main.tick() - t0)),
+            });
+            if (!done) throw Error('Sea Slug did not finish');
         } finally {
             offQuestEnergyWatch();
         }
