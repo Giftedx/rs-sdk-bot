@@ -38,7 +38,7 @@ import { gameDialAddress } from '../core/src/websocket-proxy';
 import { reloadDue, respawnDaemon } from '../core/src/live-reload';
 import { canonicalSnapshots, ownerOfIn } from '../core/src/fleet-snapshots';
 import { LEASE_MAX_AGE_MS, SIDE_NAME } from '../core/src/fleet';
-import { failLoops, LOOP_WINDOW_MS } from '../../scripts/fail-loops';
+import { failLoops, LOOP_WINDOW_MS } from '../core/src/fail-loops';
 import { marketRows, writeMarketCache, type MarketItem } from '../../scripts/market-cache';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, scheduleOverall, overallRequirementsFor, TRICKS } from '../planner/src/haggis';
 
