@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795252342498,
+ "at": 1795252849469,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -252,31 +252,6 @@
    "repeat": true
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/microbot-production.ts",
-   "args": [
-    "strip:swamp-toad",
-    "MAX_MAKE=2",
-    "CAP=1500",
-    "MEMBERS=1",
-    "ORDER_MODE=best-effort"
-   ],
-   "env": {
-    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"2152\":2}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "strip banked swamp toads into toad's legs",
-   "role": "herblore",
-   "template": "squad-strip-swamp-toad",
-   "autopilot": "local",
-   "resources": [
-    "squad:herblore-bank"
-   ]
-  },
-  {
    "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -307,32 +282,28 @@
    ]
   },
   {
-   "account": "CoinCock",
-   "script": "scripts/shop-buyer.ts",
+   "account": "BoneToPick",
+   "script": "scripts/microbot-production.ts",
    "args": [
-    "ardy",
-    "400"
+    "strip:swamp-toad",
+    "MAX_MAKE=2",
+    "CAP=1500",
+    "MEMBERS=1",
+    "ORDER_MODE=best-effort"
    ],
    "env": {
-    "ITEMS": "bronze arrow",
-    "STOCK_TARGET": "500",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "BANK_AT": "0",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "5000",
-    "COIN_RESERVE": "500",
-    "MAX_SPEND": "4000"
+    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"2152\":2}}"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "buy bronze arrows at Aemad in East Ardougne for the Ranged band",
-   "role": "supply",
-   "template": "army-arrows-ardy",
+   "repeat": false,
+   "goal": "strip banked swamp toads into toad's legs",
+   "role": "herblore",
+   "template": "squad-strip-swamp-toad",
    "autopilot": "local",
    "resources": [
-    "shop:ardy"
+    "squad:herblore-bank"
    ]
   }
  ],
