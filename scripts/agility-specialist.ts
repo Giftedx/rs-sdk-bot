@@ -1296,7 +1296,8 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await gateOut();
 
         await maintainEnergy(s, 50);
-        await shabim('shabim key', [/looking for a pineapple/i, /yes, i'm interested/i], () => q.has(ITEMS.bedKey));
+        console.log(`PRE_SHABIM inv=${invOf(s).length} ids=[${invOf(s).map(i => `${i.id}x${i.count}`).join(',')}] worn=[${wornOf(s).map(w => w.id).join(',')}]`);
+        await shabim('shabim key', [/looking for a pineapple/i, /yes, i'm interested/i, /lost the key/i], () => q.has(ITEMS.bedKey));
         q.milestone(11);
         onHalfway?.();
 
@@ -1315,15 +1316,20 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         await locTalk('bookcase', () => { const b = loc(BOOKCASE); return q.opLoc(b, q.opIndex(b, /search/i) === 1 ? 2 : q.opIndex(b, /search/i)); }, [], () => q.sawText(/subject of sailing/i));
         for (let i = 0; i < 4 && !q.has(ITEMS.plans); i++) {
             let siadDone = false;
-            await q.talk('siad', /^captain siad$/i, [/wanted to have a chat/i, /you seem to have a lot of books/i, /interested in sailing/i, /cut of your jib/i], () => {
-                if (i === 0) return q.sawText(/looks quite distracted/i);
-                if (q.dialogOpen() && /looks quite distracted/i.test([q.s.sdk.getDialog()?.text ?? '', ...(q.s.sdk.getDialog()?.allComponents ?? []).map((c: any) => c.text ?? '')].join(' '))) {
-                    siadDone = true;
-                }
+            const checkSiadDistracted = () => {
+                if (i === 0 && q.sawText(/looks quite distracted/i)) return true;
+                const d = q.s.sdk.getDialog() as any;
+                const curText = d?.isOpen ? [d.text ?? '', ...(d.allComponents ?? []).map((c: any) => c.text ?? '')].join(' ') : '';
+                if (/looks quite distracted/i.test(curText)) siadDone = true;
                 return siadDone;
-            }, { x: 3291, z: 3032 }, 60);
+            };
+            // On i > 0 pass stopOpen=true so burster stops and the distraction mesbox is observed live before closing.
+            await q.talk('siad', /^captain siad$/i, [/wanted to have a chat/i, /you seem to have a lot of books/i, /interested in sailing/i, /cut of your jib/i], checkSiadDistracted, { x: 3291, z: 3032 }, 60, i > 0);
+            if (i > 0) await closeDlg();
             const spot0 = q.msgCount(/spots you before you manage/i);
+            console.log(`PRE_CHEST try=${i} inv=${invOf(s).length} bedKey=${q.has(ITEMS.bedKey)} distracted=${checkSiadDistracted()}`);
             await locTalk('chest', () => { const c = loc(CHEST); return q.opLoc(c, q.opIndex(c, /open/i)); }, [], () => q.has(ITEMS.plans) || q.msgCount(/spots you before you manage/i) > spot0, 2);
+            console.log(`POST_CHEST try=${i} inv=${invOf(s).length} plans=${q.has(ITEMS.plans)} spot=${q.msgCount(/spots you before you manage/i) - spot0}`);
         }
         if (!q.has(ITEMS.plans)) await q.fail('no plans');
         await q.walk('to ladder top', [{ x: LADDER_TOP.x, z: LADDER_TOP.z - 1, tol: 0 }]);
