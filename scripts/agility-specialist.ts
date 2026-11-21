@@ -132,7 +132,7 @@ export const TOURIST_TRADE_3: readonly SupplyEntry[] = [
     { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 6 },
     { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 3 },
     { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 4 },
-    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 2 },
+    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 3 },
 ];
 
 export const MONKEYBARS_TRADE_1: readonly SupplyEntry[] = [
@@ -1148,6 +1148,37 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
         q.milestone(5);
         const gotClothes = () => worn(ITEMS.slaveShirt) && worn(ITEMS.slaveRobe) && worn(ITEMS.slaveBoots);
         const slavePats = [/i've just arrived/i, /oh yes, that sounds interesting/i, /what's that then/i, /i can try to undo them/i, /funny you should say that/i, /let's give it a go/i, /give it another go/i, /yes, i'll trade/i];
+        const findBlockingRowdyGuard = (maxDist: number) => (q.st()?.nearbyNpcs ?? [])
+            .filter((n: any) => /^rowdy guard$/i.test(n.name) && n.hp !== 0 && (n.distance ?? 9) <= maxDist)
+            .sort((a: any, b: any) => (a.distance ?? 9) - (b.distance ?? 9))[0];
+        const clearRowdyGuard = async (guardIndex: number) => {
+            await closeDlg();
+            await ensureFullPrayer();
+            await wearItem(s, ITEMS.fireStaff);
+            // Reset PrayerGuard's pending='other' so Protect from Melee engages immediately against Rowdy Guard swings.
+            await s.direct({ type: 'walkTo', x: x(), z: z(), running: true, reason: 'SDK' });
+            await q.waitUntil(() => !!q.st()?.prayers?.activePrayers?.[PRAYER_MELEE], 8);
+            const spellComp = componentId(fireSpell(skillLvl(s, 'Magic'), id => q.has(id)));
+            let lastCast = -999;
+            for (let t = 0; t < 150; t++) {
+                await q.guard('clear guard');
+                if (inPrisonCell() || !inCamp()) break;
+                if ((q.st()?.prayers?.prayerPoints ?? 0) <= 5) await drinkFirstMatching(s, ITEMS.prayerPot);
+                if (q.dialogOpen()) await closeDlg();
+                const g = (q.st()?.nearbyNpcs ?? []).find((n: any) => n.index === guardIndex);
+                if (!g || g.hp === 0) break;
+                if (q.s.tick() - lastCast >= 5) {
+                    lastCast = q.s.tick();
+                    await s.direct({ type: 'spellOnNpc', npcIndex: g.index, spellComponent: spellComp, reason: 'SDK' });
+                }
+                await q.waitTicks(1);
+            }
+            await q.waitTicks(2);
+            for (let t = 0; t < 10 && worn(ITEMS.fireStaff); t++) await removeWornItem(s, ITEMS.fireStaff);
+            if (worn(ITEMS.fireStaff)) await q.fail('failed to unequip fire staff after rowdy guard');
+            await ensureFullPrayer();
+        };
+
         // Picklock Male Slave at Thieving 1 (~8.6%/try); if 3rd fail within 10 tiles of a guard jails player, recover cell+key and retry.
         for (let attempt = 0; attempt < 24 && !gotClothes(); attempt++) {
             await q.guard('slave loop');
@@ -1166,6 +1197,13 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
                 await q.walk('to slave', [{ x: SLAVE.x, z: SLAVE.z - 1, tol: 1 }]);
             }
             if (inPrisonCell()) { await escapePrisonCell(); continue; }
+            const preGuard = findBlockingRowdyGuard(6);
+            if (preGuard && ((preGuard.distance ?? 9) <= 4 || preGuard.inCombat)) {
+                await clearRowdyGuard(preGuard.index);
+                if (inPrisonCell()) { await escapePrisonCell(); continue; }
+                await q.walk('to slave post-clear', [{ x: SLAVE.x, z: SLAVE.z - 1, tol: 1 }]);
+                if (inPrisonCell()) { await escapePrisonCell(); continue; }
+            }
             const slaveNpc = (q.st()?.nearbyNpcs ?? [])
                 .filter((n: any) => /^male slave$/i.test(n.name) && (n.z ?? 0) <= 3020)
                 .sort((a: any, b: any) => Math.hypot((a.x ?? 0) - SLAVE.x, (a.z ?? 0) - SLAVE.z) - Math.hypot((b.x ?? 0) - SLAVE.x, (b.z ?? 0) - SLAVE.z))[0]
@@ -1188,7 +1226,13 @@ async function runFastTouristTrap(s: Session, cap: number, _usePrayer: boolean, 
             }
             await q.waitUntil(() => gotClothes() || inPrisonCell() || !inCamp() || !q.dialogOpen(), 4);
             await closeDlg();
-            console.log(`SLAVE_TRACE attempt=${attempt} ticks=${q.s.tick() - attemptStart} got=${gotClothes()} inCell=${inPrisonCell()} inCamp=${inCamp()} key=${q.has(ITEMS.metalKey)} jailedMsg=${jailedMsg} pos=${x()},${z()}`);
+            if (!gotClothes()) {
+                console.log(`SLAVE_TRACE attempt=${attempt} ticks=${q.s.tick() - attemptStart} got=${gotClothes()} inCell=${inPrisonCell()} inCamp=${inCamp()} key=${q.has(ITEMS.metalKey)} jailedMsg=${jailedMsg} pos=${x()},${z()}`);
+            }
+            if (!gotClothes() && !inPrisonCell() && !jailedMsg && inCamp()) {
+                const postGuard = findBlockingRowdyGuard(8);
+                if (postGuard) await clearRowdyGuard(postGuard.index);
+            }
         }
         if (!gotClothes()) {
             await q.fail('failed male slave clothes trade');

@@ -48,7 +48,7 @@ const TOURIST_COMPANION = {
             { id: ITEMS.shantayPass, count: 2 },
             { id: ITEMS.waterskin4, count: 2 },
             { id: ITEMS.feather, count: 200 },
-            { id: ITEMS.prayerPot4, count: 4 },
+            { id: ITEMS.prayerPot4, count: 5 },
             { id: ITEMS.shark, count: 6 },
             { id: ITEMS.chocolateCake, count: 7 },
             { id: ITEMS.agilityPot4, count: 8 },
