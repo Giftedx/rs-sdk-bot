@@ -1,0 +1,24 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795240534425-yewfirst-mightyrod-ce6ca816423ae616",
+ "account": "Mightyrod",
+ "partner": "YewFirst",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Arrow shaft",
+ "requested": 10605,
+ "claim": "715251dd-8da5-4355-885a-42ad2309b969",
+ "count": 0,
+ "ok": false,
+ "at": 1795240651985,
+ "detail": "trade claimed",
+ "lines": [
+  {
+   "item": "Feather",
+   "requested": 8653,
+   "count": 0
+  }
+ ]
+}
