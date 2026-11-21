@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795249839813,
+ "at": 1795250039849,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -279,6 +279,31 @@
    "autopilot": "local",
    "resources": [
     "shop:aubury"
+   ]
+  },
+  {
+   "account": "DropMyLoad",
+   "script": "scripts/microbot-production.ts",
+   "args": [
+    "strip:swamp-toad",
+    "MAX_MAKE=2",
+    "CAP=1500",
+    "MEMBERS=1",
+    "ORDER_MODE=best-effort"
+   ],
+   "env": {
+    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"2152\":2}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "strip banked swamp toads into toad's legs",
+   "role": "herblore",
+   "template": "squad-strip-swamp-toad",
+   "autopilot": "local",
+   "resources": [
+    "squad:herblore-bank"
    ]
   }
  ],
