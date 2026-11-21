@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795250838834,
+ "at": 1795251137270,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -252,31 +252,6 @@
    "repeat": true
   },
   {
-   "account": "DropMyLoad",
-   "script": "scripts/microbot-production.ts",
-   "args": [
-    "strip:swamp-toad",
-    "MAX_MAKE=2",
-    "CAP=1500",
-    "MEMBERS=1",
-    "ORDER_MODE=best-effort"
-   ],
-   "env": {
-    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"2152\":2}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "strip banked swamp toads into toad's legs",
-   "role": "herblore",
-   "template": "squad-strip-swamp-toad",
-   "autopilot": "local",
-   "resources": [
-    "squad:herblore-bank"
-   ]
-  },
-  {
    "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -307,26 +282,55 @@
    ]
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/chain.ts",
+   "account": "CoinCock",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "scripts/walk-to.ts 2417 3512",
-    "scripts/gather-spawn.ts 2150 27"
+    "3000",
+    "cow"
    ],
    "env": {
-    "TICKS": "3000",
-    "ROUNDS": "1",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"2150\":27}}"
+    "TRAIN_SKILL": "Strength",
+    "TARGET_LEVEL": "45",
+    "COW_BANK_PROFILE": "north",
+    "MAX_KILLS": "8",
+    "COW_STAGE": "1",
+    "LOOT_WATCH": "0",
+    "PROGRESSION_CONSUMER": "{\"skills\":{\"Strength\":45}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "train Strength to 45 on the Ardougne cows",
+   "role": "combat",
+   "template": "army-cow-strength-45",
+   "autopilot": "local",
+   "resources": [
+    "cow:ardougne-north"
+   ]
+  },
+  {
+   "account": "BoneToPick",
+   "script": "scripts/microbot-production.ts",
+   "args": [
+    "strip:swamp-toad",
+    "MAX_MAKE=2",
+    "CAP=1500",
+    "MEMBERS=1",
+    "ORDER_MODE=best-effort"
+   ],
+   "env": {
+    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"2152\":2}}"
    },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "gather swamp toads in Tree Gnome Stronghold for agility potions",
+   "goal": "strip banked swamp toads into toad's legs",
    "role": "herblore",
-   "template": "squad-gnome-toads",
+   "template": "squad-strip-swamp-toad",
    "autopilot": "local",
    "resources": [
-    "squad:gnome-toads"
+    "squad:herblore-bank"
    ]
   }
  ],

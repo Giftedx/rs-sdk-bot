@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795251096837-knightrider-mightyrod-cc34f208b57b7209",
+ "account": "KnightRider",
+ "partner": "Mightyrod",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Coins",
+ "requested": 319000,
+ "claim": "50cd617a-f2c1-47d0-8cf8-95e49d18a883",
+ "count": 0,
+ "ok": false,
+ "at": 1795251117183,
+ "detail": "trade claimed"
+}
