@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795243823239-billionaire-bonetopick",
+ "account": "BoneToPick",
+ "partner": "Billionaire",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 10,
+ "claim": "64190aea-89c9-41f8-9e91-89ff08ffd618",
+ "count": 0,
+ "ok": false,
+ "at": 1795243925201,
+ "detail": "trade claimed"
+}

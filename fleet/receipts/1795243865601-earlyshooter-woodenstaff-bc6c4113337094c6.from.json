@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795243865601-earlyshooter-woodenstaff-bc6c4113337094c6",
+ "account": "Earlyshooter",
+ "partner": "Woodenstaff",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Prayer potion(4)",
+ "requested": 1,
+ "claim": "cf2d6166-c0fc-4e2b-a618-9cbbb16dc4ef",
+ "count": 0,
+ "ok": false,
+ "at": 1795243929721,
+ "detail": "trade claimed"
+}
