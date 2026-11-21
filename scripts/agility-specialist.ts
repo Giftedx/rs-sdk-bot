@@ -136,10 +136,10 @@ export const MONKEYBARS_TRADE_1: readonly SupplyEntry[] = [
     { id: ITEMS.glory4, name: 'Amulet of glory(4)', count: 1 },
     { id: ITEMS.coins, name: 'Coins', count: 500 },
     { id: ITEMS.dragonBones, name: 'Dragon bones', count: 11 },
-    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 1 },
-    { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 5 },
-    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 5 },
-    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 4 },
+    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 2 },
+    { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 3 },
+    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 7 },
+    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 3 },
 ];
 
 export const MONKEYBARS_TRADE_1_NOPOT: readonly SupplyEntry[] = [
@@ -332,9 +332,24 @@ async function drinkFirstMatching(s: Session, ids: readonly number[]): Promise<b
     return true;
 }
 
+const lastRunClick = new WeakMap<Session, number>();
+
+function canClickRunOn(s: Session): boolean {
+    const varp173 = (s.client as { var?: number[] } | undefined)?.var?.[173];
+    if (varp173 !== 0 || (posOf(s)?.runEnergy ?? 0) < 2) return false;
+    return s.tick() - (lastRunClick.get(s) ?? -10) >= 3;
+}
+
+async function ensureRunOn(s: Session): Promise<void> {
+    if (!canClickRunOn(s)) return;
+    lastRunClick.set(s, s.tick());
+    await s.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
+}
+
 async function maintainEnergy(s: Session, threshold = 65): Promise<void> {
     const energy = posOf(s)?.runEnergy ?? 100;
     if (energy < threshold) await drinkFirstMatching(s, ITEMS.superEnergy);
+    await ensureRunOn(s);
 }
 
 // Keeps Protect from Melee points above `floor` (the prayer guard flicks it on for hunters) with the traded potions.
@@ -452,12 +467,16 @@ async function walkNear(
         let lastEat = -10;
         let lastPot = -10;
         const off = s.onTick(() => {
-            if (s.tick() - lastDrink >= 3 && (posOf(s)?.runEnergy ?? 100) < 70) {
+            if (s.tick() - lastDrink >= 3 && (posOf(s)?.runEnergy ?? 100) < 78) {
                 const pot = invOf(s).find(i => ITEMS.superEnergy.includes(i.id));
                 if (pot) {
                     lastDrink = s.tick();
                     void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' });
                 }
+            }
+            if (canClickRunOn(s)) {
+                lastRunClick.set(s, s.tick());
+                void s.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' });
             }
             if (opts?.preDrinkAgility && s.tick() - lastPot >= 3 && skillCur(s, 'Agility') < 52) {
                 const pNow = posOf(s);
@@ -1466,7 +1485,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
 
         // Top-of-course potion, energy, prayer & HP prep before clicking Pipe.
         await sipAgilityPot();
-        await maintainEnergy(s, 70);
+        await maintainEnergy(s, 78);
         await syncPrayer(0);
         await maybeEat();
         await clickStep(WILDERNESS_STEPS[0]!);
@@ -1496,7 +1515,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
                 i = (i + 1) % WILDERNESS_STEPS.length;
                 if (i === 0) {
                     await sipAgilityPot();
-                    await maintainEnergy(s, 70);
+                    await maintainEnergy(s, 78);
                     await syncPrayer(0);
                     await maybeEat();
                     if (cfg.alignPipe && (p.worldX !== 3004 || p.worldZ !== 3937)) {
@@ -1521,7 +1540,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
                     i = 0;
                     stepXp = skillXp(s, 'Agility');
                     await sipAgilityPot();
-                    await maintainEnergy(s, 70);
+                    await maintainEnergy(s, 78);
                     await syncPrayer(0);
                     await maybeEat();
                     if (cfg.alignPipe && (p.worldX !== 3004 || p.worldZ !== 3937)) {
