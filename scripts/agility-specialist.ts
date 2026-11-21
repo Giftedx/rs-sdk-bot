@@ -136,10 +136,10 @@ export const MONKEYBARS_TRADE_1: readonly SupplyEntry[] = [
     { id: ITEMS.glory4, name: 'Amulet of glory(4)', count: 1 },
     { id: ITEMS.coins, name: 'Coins', count: 500 },
     { id: ITEMS.dragonBones, name: 'Dragon bones', count: 11 },
-    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 2 },
-    { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 5 },
-    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 5 },
-    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 3 },
+    { id: ITEMS.prayerPot4, name: 'Prayer potion(4)', count: 3 },
+    { id: ITEMS.agilityPot4, name: 'Agility potion(4)', count: 6 },
+    { id: ITEMS.superEnergy4, name: 'Super energy(4)', count: 2 },
+    { id: ITEMS.chocolateCake, name: 'Chocolate cake', count: 4 },
 ];
 
 export const MONKEYBARS_TRADE_1_NOPOT: readonly SupplyEntry[] = [
