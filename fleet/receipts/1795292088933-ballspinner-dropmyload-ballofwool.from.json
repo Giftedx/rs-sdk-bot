@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795292088933-ballspinner-dropmyload-ballofwool",
  "account": "Ballspinner",
  "partner": "DropMyLoad",
@@ -10,8 +10,22 @@
  "item": "Ball of wool",
  "requested": 2,
  "claim": "048c249a-503d-44bd-857a-af1b78a627a6",
- "count": 0,
- "ok": false,
- "at": 1795292209384,
- "detail": "trade claimed"
+ "count": 2,
+ "ok": true,
+ "at": 1795292225140,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 2,
+  "after": 0
+ },
+ "bank": {
+  "count": 2,
+  "at": 1795292217983
+ },
+ "logout": {
+  "attemptId": "1795292209393-0000021680-0000000001",
+  "at": 1795292225128,
+  "sha256": "be49ed361dff74b3030a1087d9c637284ee3362bdaaf7ecc4250f9c6bc83d90e"
+ },
+ "screen": true
 }
