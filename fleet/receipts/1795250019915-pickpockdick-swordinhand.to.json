@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795250019915-pickpockdick-swordinhand",
+ "account": "Swordinhand",
+ "partner": "PickpockDick",
+ "role": "to",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "coins",
+ "requested": 29776,
+ "claim": "d3891e40-0abb-489d-a25d-43a05f7617bf",
+ "count": 0,
+ "ok": false,
+ "at": 1795250127860,
+ "detail": "trade claimed"
+}

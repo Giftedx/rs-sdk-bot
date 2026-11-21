@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795249723486-quickhandjob-mightyrod-c4ddb9c3451eddb4",
  "account": "Quickhandjob",
  "partner": "Mightyrod",
@@ -10,20 +10,50 @@
  "item": "Coins",
  "requested": 218000,
  "claim": "e92973e8-47f4-4e6a-b5f2-a35ef97d09a2",
- "count": 0,
- "ok": false,
- "at": 1795250029619,
- "detail": "trade claimed",
+ "count": 218000,
+ "ok": true,
+ "at": 1795250134759,
+ "detail": "transfer observed",
  "lines": [
   {
    "item": "Ranarr weed",
    "requested": 7,
-   "count": 0
+   "count": 7,
+   "inventory": {
+    "before": 7,
+    "after": 0
+   },
+   "bank": {
+    "count": 7,
+    "at": 1795250040841
+   }
   },
   {
    "item": "Snape grass",
    "requested": 5,
-   "count": 0
+   "count": 5,
+   "inventory": {
+    "before": 5,
+    "after": 0
+   },
+   "bank": {
+    "count": 5,
+    "at": 1795250041225
+   }
   }
- ]
+ ],
+ "inventory": {
+  "before": 218000,
+  "after": 0
+ },
+ "bank": {
+  "count": 218000,
+  "at": 1795250039615
+ },
+ "logout": {
+  "attemptId": "1795250029629-0000014624-0000000001",
+  "at": 1795250134747,
+  "sha256": "934402a4a7d6027e956214f77198976402bc16b19f1546ddfce63e76d7122368"
+ },
+ "screen": true
 }
