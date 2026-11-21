@@ -1484,7 +1484,7 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
         };
         const syncPrayer = async (stepIdx: number) => {
             if (!cfg.usePrayer) return;
-            await sipPrayer(s, 10);
+            if (stepIdx !== 0) await sipPrayer(s, 10);
             if (!manualPrayer) return;
             const needPrayer = inPit || stepIdx === 3 || stepIdx === 4;
             if (needPrayer) {
@@ -1596,11 +1596,12 @@ async function runWildernessCourseTo99(s: Session, cfg: AgilityRouteConfig, stop
                 continue;
             }
 
-            // V2 wilderness pre-click: send next obstacle's click once current obstacle has started and target is reachable.
-            // Filtering unreachable pre-clicks avoids client cant_reach discards and false PrayerGuard holds.
+            // V2 wilderness pre-click: stay silent mid-obstacle so current crosses uninterrupted and PrayerGuard avoids
+            // false interactLoc holds, then send next obstacle's click on finishing tiles once reachable.
             if (preBlock < 0 && startedWildernessObstacle(step.name, p)) {
                 const nextIdx = (i + 1) % WILDERNESS_STEPS.length;
-                if (sentTick !== s.tick()) {
+                const readyToPreClick = step.name === 'ropeswing' || finishingWildernessObstacle(step.name, p);
+                if (readyToPreClick && sentTick !== s.tick()) {
                     if (nextIdx === 0 && cfg.alignPipe) {
                         preClicks++;
                         await s.direct({ type: 'walkTo', x: 3004, z: 3937, running: true, reason: 'SDK' });
