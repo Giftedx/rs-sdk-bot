@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "settled",
  "id": "1795297098176-mightyrod-pullmybow",
  "account": "Mightyrod",
  "partner": "Pullmybow",
@@ -10,8 +10,18 @@
  "item": "coins",
  "requested": 134,
  "claim": "9a8380da-4f87-4201-9635-4c3ce588b70b",
- "count": 0,
- "ok": false,
- "at": 1795297152172,
- "detail": "trade claimed"
+ "count": 134,
+ "ok": true,
+ "at": 1795297198149,
+ "detail": "transfer observed",
+ "inventory": {
+  "before": 105260,
+  "after": 105126
+ },
+ "logout": {
+  "attemptId": "1795297152184-0000013120-0000000001",
+  "at": 1795297198101,
+  "sha256": "43cfea45e68ec4fb9e8f3b7634cfac4debc176d2d1727d28c92f1127f03a643c"
+ },
+ "screen": true
 }
