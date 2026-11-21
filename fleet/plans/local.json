@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795294148285,
+ "at": 1795294569953,
  "jobs": [
   {
    "account": "TheFullMonty",
@@ -338,61 +338,6 @@
    ]
   },
   {
-   "account": "BoneToPick",
-   "script": "scripts/shop-buyer.ts",
-   "args": [
-    "ardy",
-    "1200"
-   ],
-   "env": {
-    "ITEMS": "vial of water",
-    "STOCK_TARGET": "73",
-    "STOP_AT_TARGET": "1",
-    "BANK_PACK": "1",
-    "NO_BUY_TICKS": "25",
-    "FLOAT": "492",
-    "COIN_RESERVE": "200",
-    "MAX_SPEND": "292",
-    "AUTOPILOT_ORDER": "[0]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"227\":73}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "buy vials of water from Aemad's store in East Ardougne",
-   "role": "bank",
-   "template": "squad-vial-of-water",
-   "autopilot": "local",
-   "resources": [
-    "shop:ardy"
-   ]
-  },
-  {
-   "account": "DropMyLoad",
-   "script": "scripts/microbot-production.ts",
-   "args": [
-    "strip:swamp-toad",
-    "MAX_MAKE=2",
-    "CAP=1500",
-    "MEMBERS=1",
-    "ORDER_MODE=best-effort"
-   ],
-   "env": {
-    "AUTOPILOT_ORDER": "[0,[\"swamp toad\",27]]",
-    "PROGRESSION_CONSUMER": "{\"bank\":{\"2152\":2}}"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "strip banked swamp toads into toad's legs",
-   "role": "herblore",
-   "template": "squad-strip-swamp-toad",
-   "autopilot": "local",
-   "resources": [
-    "squad:herblore-bank"
-   ]
-  },
-  {
    "account": "MineYourBiz",
    "script": "scripts/gather-combat.ts",
    "args": [
@@ -472,21 +417,23 @@
   },
   {
    "account": "Unsheathed",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "giant"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2653,3300",
-    "TICKS": "9000"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2653,3300",
-   "role": "thieving",
-   "template": "goldfarm@2653,3300",
+   "repeat": false,
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
+   "role": "combat",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "knight:2653,3300"
+    "squad:ardougne-giants"
    ]
   },
   {
@@ -517,45 +464,104 @@
   },
   {
    "account": "Magicwanda",
-   "script": "scripts/aio.ts",
+   "script": "scripts/gather-combat.ts",
    "args": [
-    "fighter",
-    "wizard",
-    "10000",
-    "wizard",
-    "MAX_KILLS=200",
-    "UNTIL_ITEM=water talisman"
+    "6000",
+    "giant"
    ],
-   "env": {},
+   "env": {
+    "MAX_KILLS": "40"
+   },
    "enabled": true,
    "standing": true,
    "repeat": false,
-   "goal": "kill wizards at the Wizards' Tower until a water talisman drops, for the gang squad's water runes",
+   "goal": "farm surface Hill Giants for limpwurt roots, cosmic, death, chaos and nature runes and herbs",
    "role": "combat",
-   "template": "squad-water-talisman",
+   "template": "squad-ardougne-giants",
    "autopilot": "local",
    "resources": [
-    "fighter:wizards-tower",
-    "aio:water-altar"
+    "squad:ardougne-giants"
    ]
   },
   {
    "account": "Shaftsinker",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "6000",
+    "taverley_black_knight"
+   ],
    "env": {
-    "KNIGHT_SPOT": "2652,3318",
-    "TICKS": "9000"
+    "MAX_KILLS": "40"
    },
    "enabled": true,
    "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2652,3318",
-   "role": "thieving",
-   "template": "goldfarm@2652,3318",
+   "repeat": false,
+   "goal": "farm Taverley Dungeon Black Knights (non-Wilderness) for death, chaos, cosmic and law runes",
+   "role": "combat",
+   "template": "squad-taverley-black-knights",
    "autopilot": "local",
    "resources": [
-    "knight:2652,3318"
+    "squad:taverley-black-knights"
+   ]
+  },
+  {
+   "account": "Spitroaster",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "ardy",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "vial of water",
+    "STOCK_TARGET": "73",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "492",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "292",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"227\":73}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy vials of water from Aemad's store in East Ardougne",
+   "role": "bank",
+   "template": "squad-vial-of-water",
+   "autopilot": "local",
+   "resources": [
+    "shop:ardy"
+   ]
+  },
+  {
+   "account": "Knightstick",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "dargaud",
+    "1200"
+   ],
+   "env": {
+    "ITEMS": "rune arrow",
+    "STOCK_TARGET": "400",
+    "STOP_AT_TARGET": "1",
+    "BANK_PACK": "1",
+    "NO_BUY_TICKS": "25",
+    "FLOAT": "320200",
+    "COIN_RESERVE": "200",
+    "MAX_SPEND": "320000",
+    "AUTOPILOT_ORDER": "[0]",
+    "PROGRESSION_CONSUMER": "{\"bank\":{\"892\":400}}"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "buy rune arrows in the Ranging Guild for the gang squad",
+   "role": "bank",
+   "template": "squad-arrows-dargaud",
+   "autopilot": "local",
+   "resources": [
+    "shop:dargaud"
    ]
   }
  ],
