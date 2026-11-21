@@ -120,6 +120,17 @@ export function inventoryRecipes():InventoryRecipe[]{
  add('poison:rune-arrow',['rune_arrow','weapon_poison'],'rune_arrow_p','Herblore',1,false,poison,[],true);
  recipes.at(-1)!.productUnits=5;recipes.at(-1)!.inputs[0]!.units=5;recipes.at(-1)!.byproducts=[{id:id('vial_empty'),units:1}];
  add('brew:weapon_poison',['dragon_scale_dust','kwuarmvial'],'weapon_poison','Herblore',60,true,'scripts/skill_herblore/scripts/brewing/brew_potion.rs2',[],true);
+ add('strip:swamp-toad',['swamp_toad'],'toads_legs','Herblore',1,false,'scripts/skill_cooking/scripts/gnome_cooking/swamp_toad.rs2',[],true);
+ recipes.at(-1)!.itemOption=1;
+ const decant='scripts/skill_herblore/scripts/decanting/decant_potion.rs2';
+ for(const [key,base]of [['prayer_restore','prayerrestore'],['super_attack','2attack'],['super_strength','2strength'],['super_defense','2defense'],['ranging_potion','rangerspotion'],['super_energy','2energy'],['agility_potion','1agility'],['super_antipoison','2antipoison']] as const){
+  add('decant:'+key,['3dose'+base],'4dose'+base,'Herblore',1,false,decant,[],true);
+  recipes.at(-1)!.inputs[0]!.units=2;recipes.at(-1)!.byproducts=[{id:id('2dose'+base),units:1}];
+  add('decant2:'+key,['2dose'+base],'4dose'+base,'Herblore',1,false,decant,[],true);
+  recipes.at(-1)!.inputs[0]!.units=2;recipes.at(-1)!.byproducts=[{id:id('vial_empty'),units:1}];
+  add('decant31:'+key,['3dose'+base,'1dose'+base],'4dose'+base,'Herblore',1,false,decant,[],true);
+  recipes.at(-1)!.byproducts=[{id:id('vial_empty'),units:1}];
+ }
  if(new Set(recipes.map(r=>r.name)).size!==recipes.length)throw Error('duplicate inventory production profile');
  cachedInventoryRecipes=recipes;
  return cachedInventoryRecipes;
@@ -221,7 +232,7 @@ export async function runInventoryBank(s:import('../packages/core/src/inprocess'
    if(stopped())throw Error('production session stopped');
    const source=inv().find(i=>i.id===(r.tools[0]??r.inputs[0]!.id));
    if(r.itemOption!==undefined){if(!source)throw Error('production item action missing');return s.sdk.sendUseItem(source.slot,r.itemOption);}
-   const target=inv().find(i=>i.id===(r.tools.length?r.inputs[0]!.id:r.inputs[1]!.id));
+   const target=r.tools.length?inv().find(i=>i.id===r.inputs[0]!.id):r.inputs.length>1?inv().find(i=>i.id===r.inputs[1]!.id):inv().find(i=>i.id===r.inputs[0]!.id&&i.slot!==source?.slot);
    if(!source||!target)throw Error('production dispatch inventory missing');
    const response=await s.sdk.sendUseItemOnItem(source.slot,target.slot);
    if(r.menu){

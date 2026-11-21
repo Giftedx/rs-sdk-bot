@@ -91,6 +91,7 @@ export const TRIBRID_BIS_ITEMS = {
     blackChaps: 2497,
     blackVambs: 2491,
     ringOfRecoil: 2550,
+    berserkerHelm: 3751,
     runeFullHelm: 1163,
     runePlatebody: 1127,
     runePlatelegs: 1079,
@@ -367,6 +368,10 @@ export function pickKit(a: Account, gear: ReadonlyMap<number, Gear>, rule: Rule,
                 reasons.push(`no ${label}${shortCount > 1 ? ` (${shortCount} short)` : ''}`);
             }
         }
+        if (a.quests.has('the fremennik trials') && (own.get(TRIBRID_BIS_ITEMS.berserkerHelm)?.count ?? 0) < 1) {
+            needs.push({ what: 'Berserker helm', id: TRIBRID_BIS_ITEMS.berserkerHelm, count: 1, blocking: false, accept: i => i.id === TRIBRID_BIS_ITEMS.berserkerHelm });
+            notes.push('no Berserker helm (upgrade over Rune full helm after The Fremennik Trials)');
+        }
         for (const [label, pairs] of Object.entries(TRIBRID_POTION_DOSE_IDS)) {
             if (label === 'Antipoison(3)') continue;
             const eq3 = pairs.reduce((n, [id, d]) => n + (own.get(id)?.count ?? 0) * d / 3, 0);
@@ -460,6 +465,7 @@ export type Shop = { inv: string; stock: { item: string; count: number }[] };
 export const WILDERNESS_SHOPS: ReadonlySet<string> = new Set(['magearena_runeshop', 'magearena_staffshop']);
 export const PROFILE_SHOP: Readonly<Record<string, string>> = {
     jiminua: 'junglestore',
+    ardy: 'adventurershop',
     lowe: 'archeryshop',
     catherby_arrows: 'archeryshop2',
     dargaud: 'ranging_guild_bowshop',
@@ -471,6 +477,15 @@ export const PROFILE_SHOP: Readonly<Record<string, string>> = {
     oziach: 'runeplateshop',
     jukat: 'dragonswordshop',
     jukat_dagger: 'dragonswordshop',
+    skulgrimen: 'viking_weapons_shop',
+    shantay: 'shantayshop',
+    horvik: 'armourshop',
+    louie: 'legsshop',
+    valaine: 'championshop',
+    thessalia: 'clotheshop',
+    thessalia_gown: 'clotheshop',
+    wydin_choc: 'wydinstore',
+    baker: 'bakery',
     alfonse: 'karamja_fishrestaurant',
     tiadeche: 'tbwt_tiadeche_final_inventory',
     herquin: 'gemshop',

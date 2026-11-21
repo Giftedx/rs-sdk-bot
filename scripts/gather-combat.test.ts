@@ -530,7 +530,7 @@ test('the giant and trooper ids and the bear boxes match the content',()=>{
 });
 
 test('non-Wilderness mainland supply configs resolve valid targets, guard Wilderness borders, and traverse Taverley Dungeon', async () => {
-    for (const key of ['unicorn', 'wizard', 'giant', 'taverley_druid', 'taverley_scales', 'taverley_blue_dragon', 'taverley_black_dragon', 'chaos_wine']) {
+    for (const key of ['unicorn', 'wizard', 'giant', 'taverley_druid', 'taverley_black_knight', 'taverley_scales', 'taverley_blue_dragon', 'taverley_black_dragon', 'chaos_wine']) {
         const conf = CONFIGS[key]!;
         expect(conf).toBeDefined();
         expect(isNonWildernessGatherGoal(conf.spot.x, conf.spot.z)).toBe(true);
@@ -544,6 +544,7 @@ test('non-Wilderness mainland supply configs resolve valid targets, guard Wilder
     const npcsJson = JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/npcs.json'), 'utf8')) as { id: number; name: string }[];
     const base = { distance: 2, reachable: true, inCombat: false, targetIndex: -1 };
     expect(genericCombatNpc('taverley_druid', [{ ...base, id: 181 }])?.id).toBe(181);
+    expect(genericCombatNpc('taverley_black_knight', [{ ...base, id: 179 }])?.id).toBe(179);
     const blueId = npcsJson.find(n => n.name === 'Blue dragon')!.id;
     const blackId = npcsJson.find(n => n.name === 'Black dragon')!.id;
     expect(genericCombatNpc('taverley_blue_dragon', [{ ...base, id: blueId }])?.id).toBe(blueId);

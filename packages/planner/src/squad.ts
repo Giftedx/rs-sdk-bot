@@ -37,6 +37,8 @@ export const SQUAD_POTION_ALIASES: Readonly<Record<string, readonly [name: strin
     'super strength(3)': [['super strength(3)', 3], ['super strength(4)', 4]],
     'super defence(3)': [['super defence(3)', 3], ['super defence(4)', 4]],
     'ranging potion(3)': [['ranging potion(3)', 3], ['ranging potion(4)', 4]],
+    'super energy(3)': [['super energy(3)', 3], ['super energy(4)', 4]],
+    'agility potion(3)': [['agility potion(3)', 3], ['agility potion(4)', 4]],
 };
 // Per-member spare PK gear buffers held continuously so a single trip loss does not stall squad readiness.
 export const SQUAD_SPARES: Readonly<Record<string, number>> = {
@@ -44,6 +46,7 @@ export const SQUAD_SPARES: Readonly<Record<string, number>> = {
     'climbing boot': 2,
     'dragon dagger(p)': 2,
     'magic shortbow': 2,
+    'berserker helm': 2,
     'rune full helm': 2,
     'rune platebody': 2,
     'rune plateleg': 2,

@@ -265,6 +265,8 @@ export const PROFILES: Record<string, {
             { re: /^pestle and mortar$/i, buyPerTick: 1 }, { re: /^knife$/i, buyPerTick: 1 }, { re: /^hammer$/i, buyPerTick: 1 },
             { re: /^chisel$/i, buyPerTick: 1 }, { re: /^bronze axe$/i, buyPerTick: 1 }, { re: /^bronze pickaxe$/i, buyPerTick: 1 },
             { re: /^bronze bar$/i, buyPerTick: 1 },
+            { re: /^papyrus$/i, buyPerTick: 10 },
+            { re: /^charcoal$/i, buyPerTick: 10 },
         ],
         fare: 60,
     },
@@ -320,12 +322,38 @@ export const PROFILES: Record<string, {
         bankSpot: { x: 3253, z: 3420 }, // Varrock East Bank
         items: [{ re: /^leather gloves$/i, buyPerTick: 1 }],
     },
+    thessalia_gown: {
+        npc: /^thessalia$/i,
+        npcSpot: { x: 3204, z: 3417 },
+        bankSpot: { x: 3253, z: 3420 }, // Varrock East Bank
+        items: [{ re: /^priest gown$/i, buyPerTick: 1 }],
+    },
+    baker: {
+        // Ardougne Bakery stall merchant (bakery inv: cake stock 3 restock 800, bread 10, chocolate slice 8).
+        npc: /^baker$/i,
+        npcSpot: { x: 2654, z: 3311 },
+        bankSpot: { x: 2654, z: 3283 },
+        items: [
+            { re: /^cake$/i, buyPerTick: 1, shelf: 3 },
+            { re: /^bread$/i, buyPerTick: 5, shelf: 10 },
+            { re: /^chocolate slice$/i, buyPerTick: 5, shelf: 8 },
+        ],
+    },
     wydin: {
         // NPC557, Trade3 -> wydinstore; cheese1985 stock3.
         npc: /^wydin$/i,
         npcSpot: { x: 3014, z: 3204 },
         bankSpot: { x: 3092, z: 3243 }, // Draynor Bank
         items: [{ re: /^cheese$/i, buyPerTick: 1 }],
+    },
+    wydin_choc: {
+        npc: /^wydin$/i,
+        npcSpot: { x: 3014, z: 3204 },
+        bankSpot: { x: 3092, z: 3243 }, // Draynor Bank
+        items: [
+            { re: /^chocolate bar$/i, buyPerTick: 5 },
+            { re: /^cheese$/i, buyPerTick: 1 },
+        ],
     },
     zeke: {
         npc: /^zeke$/i,
@@ -383,7 +411,7 @@ export const PROFILES: Record<string, {
         ],
         dialogOpen: /^can i buy a rune plate mail body/i,
     },
-    // Al Kharid Gem Trader (alkharid.inv gemshop2, npc 540 at 3288,3212): uncut and cut sapphires.
+    // Al Kharid Gem Trader (alkharid.inv gemshop2, npc 540 at 3288,3212): uncut and cut sapphires and emeralds.
     gem_trader: {
         npc: /^gem trader$/i,
         npcSpot: { x: 3288, z: 3212 },
@@ -391,6 +419,8 @@ export const PROFILES: Record<string, {
         items: [
             { re: /^uncut sapphire$/i, buyPerTick: 1, shelf: 1 },
             { re: /^sapphire$/i, buyPerTick: 1, shelf: 1 },
+            { re: /^uncut emerald$/i, buyPerTick: 1, shelf: 1 },
+            { re: /^emerald$/i, buyPerTick: 1, shelf: 1 },
         ],
     },
     // Herquin's Gems, Falador (falador.inv gemshop, npc 584 at 2944,3334): uncut and cut sapphires.
@@ -446,10 +476,71 @@ export const PROFILES: Record<string, {
         items: [
             { re: /^water rune$/i, buyPerTick: 100 },
             { re: /^earth rune$/i, buyPerTick: 100 },
+            { re: /^chaos rune$/i, buyPerTick: 100 },
         ],
         need: { skill: 'Magic', level: 66 },
         via: [{ x: 3028, z: 3221 }, { x: 2683, z: 3271 }],
         fare: 60,
+    },
+    // Skulgrimen's Gear in Rellekka (viking.inv viking_weapons_shop): Berserker/Warrior/Archer/Farseer helms after Fremennik Trials.
+    skulgrimen: {
+        npc: /^skulgrimen$/i,
+        npcSpot: { x: 2663, z: 3694 },
+        bankSpot: { x: 2727, z: 3492 }, // Seers' Village Bank
+        items: [
+            { re: /^berserker helm$/i, buyPerTick: 1, shelf: 5 },
+            { re: /^warrior helm$/i, buyPerTick: 1, shelf: 5 },
+            { re: /^archer helm$/i, buyPerTick: 1, shelf: 5 },
+            { re: /^farseer helm$/i, buyPerTick: 1, shelf: 5 },
+        ],
+    },
+    // Shantay's Pass Store (shantay.rs2 shantayshop): waterskin(4) stock 100, bronze bar 10, feather 500.
+    shantay: {
+        npc: /^shantay$/i,
+        npcSpot: { x: 3304, z: 3123 },
+        bankSpot: { x: 3269, z: 3167 }, // Al Kharid Bank
+        items: [
+            { re: /^waterskin\(4\)$/i, buyPerTick: 10 },
+            { re: /^bronze bar$/i, buyPerTick: 5 },
+            { re: /^feather$/i, buyPerTick: 50 },
+            { re: /^knife$/i, buyPerTick: 1 },
+            { re: /^hammer$/i, buyPerTick: 1 },
+            { re: /^shantay pass$/i, buyPerTick: 10 },
+        ],
+    },
+    // Horvik's Armour Shop in Varrock (armourshop): Black platebody (other metal platebodies use derived data:armourshop).
+    horvik: {
+        npc: /^horvik$/i,
+        npcSpot: { x: 3229, z: 3438 },
+        bankSpot: { x: 3253, z: 3420 }, // Varrock East Bank
+        items: [
+            { re: /^black platebody$/i, buyPerTick: 1 },
+        ],
+    },
+    // Louie's Armoured Legs Bazaar in Al Kharid (legsshop): Black platelegs & metal platelegs.
+    louie: {
+        npc: /^louie legs$/i,
+        npcSpot: { x: 3316, z: 3175 },
+        bankSpot: { x: 3269, z: 3167 }, // Al Kharid Bank
+        items: [
+            { re: /^black platelegs$/i, buyPerTick: 1 },
+            { re: /^adamant platelegs$/i, buyPerTick: 1 },
+            { re: /^mithril platelegs$/i, buyPerTick: 1 },
+            { re: /^steel platelegs$/i, buyPerTick: 1 },
+            { re: /^iron platelegs$/i, buyPerTick: 1 },
+        ],
+    },
+    // Valaine's Shop of Champions upstairs in Champions' Guild (championshop, 32 QP): Black full helm & Black platelegs.
+    valaine: {
+        npc: /^valaine$/i,
+        npcSpot: { x: 3193, z: 3361, level: 1 },
+        bankSpot: { x: 3185, z: 3436 }, // Varrock West Bank
+        items: [
+            { re: /^black full helm$/i, buyPerTick: 1 },
+            { re: /^black platelegs$/i, buyPerTick: 1 },
+            { re: /^adamant platebody$/i, buyPerTick: 1 },
+            { re: /^blue cape$/i, buyPerTick: 1 },
+        ],
     },
 };
 
