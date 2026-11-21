@@ -1,10 +1,10 @@
 // Rev-289 progressive loadout selection, upgrade planning, and skilling tool selection
-// backed by knowledge/gear.json (scripts/gear.ts canWear/best) and knowledge/shops.json.
+// backed by knowledge/gear.json (packages/knowledge/src/gear-query.ts canWear/best) and knowledge/shops.json.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Bonus, Gear, Skill } from '../../knowledge/src/gear';
 import type { Shop } from '../../knowledge/src/shops';
-import { canWear, loadGear, sumBonuses } from '../../../scripts/gear';
+import { canWear, loadGear, sumBonuses } from '../../knowledge/src/gear-query';
 import { gearSources, sourceCost, valueOf, type GearSource, type MarketAsks } from './gear-sources';
 import { ownedBestLoadout, ownedLoadout, type GearCount, type GearSlot, type OptionalGearSlot, type OwnedLoadout } from './owned-loadout';
 

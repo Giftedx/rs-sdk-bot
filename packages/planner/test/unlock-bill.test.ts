@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { marketPrices, skillRow, shoppingList, type Rung } from '../src/unlock-bill';
-import { MARKET_CACHE_MS, MARKET_FILE } from '../../../scripts/market-cache';
+import { MARKET_CACHE_MS, MARKET_FILE } from '../../core/src/market-cache';
 
 const rung = (id: string, level: number, xp: number, extra: Partial<Rung> = {}): Rung => ({ id, skill: 'runecraft', level, label: id, kind: 'k', xpPerAction: xp, xpPerTick: null, inputs: [], requires: [], quest: null, worker: null, ...extra });
 const own = new Map([['A', new Map([['air_talisman', 1]])], ['B', new Map([['mind_talisman', 2]])]]);

@@ -11,7 +11,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { liveHelperStatuses } from './supply-bill';
-import { MARKET_FILE, marketQuotes } from '../../../scripts/market-cache';
+import { MARKET_FILE, marketQuotes } from '../../core/src/market-cache';
 import { gameDialAddress } from '../../core/src/websocket-proxy';
 import type { Rate } from '../../knowledge/src/ladders';
 
