@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1795225199311,
+ "at": 1795225657975,
  "jobs": [
   {
    "account": "TrouserSnake",
@@ -241,6 +241,25 @@
    ]
   },
   {
+   "account": "Unsheathed",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
+  {
    "account": "Bigchopper",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -271,27 +290,6 @@
    ]
   },
   {
-   "account": "TossTheCaber",
-   "script": "scripts/gather-combat.ts",
-   "args": [
-    "6000",
-    "giant"
-   ],
-   "env": {
-    "MAX_KILLS": "40"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": false,
-   "goal": "farm surface Hill Giants for limpwurt roots, cosmic runes, nature runes and herbs",
-   "role": "combat",
-   "template": "squad-ardougne-giants",
-   "autopilot": "local",
-   "resources": [
-    "squad:ardougne-giants"
-   ]
-  },
-  {
    "account": "Swordswallow",
    "script": "scripts/shop-buyer.ts",
    "args": [
@@ -319,25 +317,6 @@
    "autopilot": "local",
    "resources": [
     "shop:aubury"
-   ]
-  },
-  {
-   "account": "Unsheathed",
-   "script": "scripts/goldfarm.ts",
-   "args": [],
-   "env": {
-    "KNIGHT_SPOT": "2582,3297",
-    "TICKS": "9000"
-   },
-   "enabled": true,
-   "standing": true,
-   "repeat": true,
-   "goal": "goldfarm knights at 2582,3297",
-   "role": "thieving",
-   "template": "goldfarm@2582,3297",
-   "autopilot": "local",
-   "resources": [
-    "knight:2582,3297"
    ]
   },
   {

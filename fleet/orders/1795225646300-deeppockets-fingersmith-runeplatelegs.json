@@ -1,0 +1,22 @@
+{
+ "id": "1795225646300-deeppockets-fingersmith-runeplatelegs",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Deeppockets",
+ "to": "Fingersmith",
+ "item": "Rune platelegs",
+ "count": 1,
+ "start": 1795225646300,
+ "end": 1795228046300,
+ "meet": [
+  {
+   "x": 2618,
+   "z": 3333,
+   "level": 0
+  },
+  {
+   "x": 2617,
+   "z": 3333,
+   "level": 0
+  }
+ ]
+}
