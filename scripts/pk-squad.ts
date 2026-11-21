@@ -453,7 +453,7 @@ export async function rescue(
         const survival = createWildSurvival(s, {
             protect: opts.protect,
             protectItem: opts.protectItem,
-            eatBelow: Math.max(85, start.maxHp - 8),
+            eatBelow: Math.max(90, start.maxHp - 7),
             comboBelow: Math.max(76, start.maxHp - 18),
             useDirect: true,
             canEat: () => !s.sdk.getState()?.dialog?.isOpen && (!suppressEat || (me()?.hp ?? start.maxHp) <= 52),
@@ -526,12 +526,21 @@ export async function rescue(
                 }
                 if (typeof s.sdk.sendUseEquipmentItem === 'function') await s.sdk.sendUseEquipmentItem(slot, 1);
             };
-            // Buffer above p_delay(3) lockout (~86 -> 99 HP) and abort open dialog to eat if spiked <= 68 HP.
+            // Pre-heal before locking into p_delay(3); while the Glory chat modal is open, server runScript
+            // sets player.protect=true so OpHeld food eats are ignored unless walking closes the modal first.
             const clickOrHeal = async (): Promise<'teleported' | 'healed' | 'stopped' | 'none'> => {
                 const dlg = s.sdk.getState()?.dialog as { isOpen?: boolean; isWaiting?: boolean } | undefined;
-                if (dlg?.isOpen && !dlg.isWaiting && (me()?.hp ?? start.maxHp) <= 68) {
+                const cur = me();
+                if (dlg?.isOpen && !dlg.isWaiting && (cur?.hp ?? start.maxHp) <= 68 && bestFood(s.sdk.getInventory?.() ?? [])) {
                     const now = s.tick();
-                    if (survival.tryEat(now) || (survival.foodWait(now) > 0 && bestFood(s.sdk.getInventory?.() ?? []))) {
+                    if (typeof s.sdk.sendWalk === 'function' && cur) {
+                        void s.sdk.sendWalk(cur.worldX, Math.max(3519, cur.worldZ - 6), true);
+                        if (!await tick()) return 'stopped';
+                        survival.step(s.tick());
+                        if (survival.foodWait(s.tick()) > 0 && !await tick()) return 'stopped';
+                        return 'healed';
+                    }
+                    if (survival.tryEat(now) || survival.foodWait(now) > 0) {
                         if (!await tick()) return 'stopped';
                         return 'healed';
                     }
@@ -539,43 +548,50 @@ export async function rescue(
                 if (await clickEdgeville()) return (await waitTeleport()) ? 'teleported' : 'stopped';
                 return 'none';
             };
+            let consecutiveInterrupts = 0;
             for (let attempt = 0; attempt < 60 && wildernessLevel(me()?.worldZ ?? 0) > 0 && wildernessLevel(me()?.worldZ ?? 0) <= 30 && hasChargedGlory(); attempt++) {
                 if (stopped()) return false;
                 const top = await clickOrHeal();
                 if (top === 'stopped') return false;
-                if (top !== 'none') continue;
+                if (top !== 'none') { consecutiveInterrupts = 0; continue; }
                 const stNow = s.sdk.getState(), inv = s.sdk.getInventory?.() ?? [];
                 const eq = (typeof s.sdk.getEquipment === 'function' ? s.sdk.getEquipment() : stNow?.equipment) ?? [];
                 const curHp = me()?.hp ?? start.maxHp;
                 const invGlory = inv.find(i => (ITEMS.glory as readonly number[]).includes(i.id));
                 const rubOp = invGlory?.optionsWithIndex?.find(x => /^Rub$/i.test(x.text));
                 if (invGlory && rubOp) {
-                    if (curHp <= 86 && survival.step(s.tick())) {
-                        if (!await tick()) return false;
-                        continue;
-                    }
+                    // Eating runs synchronously via %eat_delay with no player.protect lock, so heal and rub in the same tick.
+                    if (curHp <= 92) survival.step(s.tick());
                     if (!stopped()) await useItemAction(invGlory.slot, rubOp.opIndex);
                     // Dialog opens 1 tick later unless an enemy hit (.if_close) closed it on the rub tick; retry immediately instead of idling.
                     let opened = false;
                     for (let t = 0; t < 2 && wildernessLevel(me()?.worldZ ?? 0) > 0; t++) {
                         const res = await clickOrHeal();
                         if (res === 'stopped') return false;
-                        if (res !== 'none') { opened = true; break; }
+                        if (res !== 'none') { opened = true; consecutiveInterrupts = 0; break; }
                         if (t === 0 && !await tick()) return false;
                     }
-                    if (!opened && wildernessLevel(me()?.worldZ ?? 0) > 0 && (me()?.hp ?? start.maxHp) <= 86 && survival.step(s.tick())) {
-                        if (!await tick()) return false;
+                    if (!opened && wildernessLevel(me()?.worldZ ?? 0) > 0) {
+                        consecutiveInterrupts++;
+                        if ((me()?.hp ?? start.maxHp) <= 92) survival.step(s.tick());
+                        // Repeated .if_close hits mean melee/multi attackers are swinging every tick; step south 2 ticks
+                        // toward single-way / Wild 0 while healing instead of standing frozen on the pile.
+                        const cur = me();
+                        if (consecutiveInterrupts >= 2 && cur && typeof s.sdk.sendWalk === 'function') {
+                            consecutiveInterrupts = 0;
+                            void s.sdk.sendWalk(cur.worldX, Math.max(3519, cur.worldZ - 6), true);
+                            for (let w = 0; w < 2 && wildernessLevel(me()?.worldZ ?? 0) > 0; w++) {
+                                if (!await tick()) return false;
+                                if (wildernessLevel(me()?.worldZ ?? 0) > 0) survival.step(s.tick());
+                            }
+                        }
                     }
                     continue;
                 }
                 const wornGlory = eq.find(e => (ITEMS.glory as readonly number[]).includes(e.id));
                 if (wornGlory) {
-                    const acted = curHp <= 86 ? survival.step(s.tick()) : false;
+                    const acted = curHp <= 92 ? survival.step(s.tick()) : false;
                     if (inv.length < 28 && (typeof s.sdk.sendUseEquipmentItem === 'function' || typeof s.direct === 'function')) {
-                        if (acted) {
-                            if (!await tick()) return false;
-                            continue;
-                        }
                         await unequipGlory(wornGlory.slot);
                         if (!await tick()) return false;
                         continue;
