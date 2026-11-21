@@ -2,28 +2,81 @@
 // of each case. A hosted runner is clean and costs the PC no memory, so a bench never runs beside the live fleet.
 // Usage:
 //   bun scripts/hosted-bench.ts '<pattern> [<pattern> ...]' [--seeds 7,8,9] [--args '--profile --set KEY=value --set-b64 KEY=base64']
+//                               [--seed-jobs 1..4] [--batch 1..8] [--no-batch] [--arms 1]
 //                               [--ref <branch or commit>] [--workflow-ref <branch>] [--no-wait]
 //   bun scripts/hosted-bench.ts --run <run id>      the results of a run that was started before
-// Each pattern and each seed gets its own runner, all at one time. `--ref` is the code that the runners check out
-// (default: this branch, which must be pushed). `--workflow-ref` is the branch whose workflow file starts the run
-// (default: master). `--args` are added to `bun run bench` on each runner. The run's files are kept in
-// .practice/hosted-bench/<run id>/. Exit code 0 when every case passed, 1 when a case failed, 2 for a run that gave no result.
-import {existsSync, mkdirSync, readdirSync, readFileSync, rmSync} from 'node:fs';
+// Short patterns and multi-seed runs are automatically packed onto fewer 4-vCPU runners unless --no-batch is passed.
+// `--ref` is the code that the runners check out (default: this branch, which must be pushed). `--workflow-ref` is
+// the branch whose workflow file starts the run (default: master). The run's files are kept in .practice/hosted-bench/<run id>/.
+// Exit code 0 when every case passed, 1 when a case failed, 2 for a run that gave no result.
+import {copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync} from 'node:fs';
 import {join, resolve} from 'node:path';
 
 export const MAX_JOBS = 40;
-export const POLL_MS = 5_000;
-export type PlanRow = {id: string; pattern: string; seed: string};
-// The matrix of the hosted job: one row for each pattern and seed. Patterns are separated by spaces (a case key has none).
-export function benchPlan(patterns: string, seeds: string): PlanRow[] {
+export const POLL_MS = 2_500;
+export type PlanRow = {id: string; pattern: string; seed: string; seeds?: string; seedJobs?: string; parallel?: string};
+export type PlanOptions = {batch?: number; seedJobs?: number};
+
+/** Computes runner-packing defaults for 4-vCPU runners so multi-case and multi-arm sweeps stay inside one wave. */
+export function autoPlanOptions(
+    patternCount: number,
+    seedCount: number,
+    opts: {batch?: number; seedJobs?: number; noBatch?: boolean; arms?: number} = {},
+): PlanOptions {
+    if (opts.noBatch) return {batch: 1, seedJobs: 1};
+    const explicitBatch = opts.batch !== undefined ? Math.max(1, Math.min(8, Math.trunc(opts.batch))) : undefined;
+    const explicitSeedJobs = opts.seedJobs !== undefined ? Math.max(1, Math.min(4, Math.trunc(opts.seedJobs))) : undefined;
+    if (explicitBatch !== undefined || explicitSeedJobs !== undefined) {
+        const seedJobs = explicitSeedJobs ?? (seedCount >= 2 ? Math.min(4, seedCount) : 1);
+        return {batch: explicitBatch ?? 1, seedJobs};
+    }
+    const arms = Math.max(1, Math.trunc(opts.arms ?? 1));
+    if (seedCount >= 2) {
+        const seedJobs = Math.min(4, seedCount);
+        const runners = arms * patternCount * Math.ceil(seedCount / seedJobs);
+        const batch = runners > 20 && patternCount > 1 ? Math.min(4, patternCount, Math.ceil(runners / 20)) : 1;
+        return {batch, seedJobs};
+    }
+    return {batch: Math.min(4, Math.max(1, patternCount)), seedJobs: 1};
+}
+
+// The matrix of the hosted job: packs patterns by `batch` and seeds by `seedJobs` (defaults to 1x1 when unpassed).
+export function benchPlan(patterns: string, seeds: string, opts: PlanOptions = {}): PlanRow[] {
     const list = patterns.split(/\s+/).filter(Boolean), seedList = (seeds.trim() || '7').split(',').map(s => s.trim());
     if (!list.length) throw new Error('no bench pattern');
     // The runner hands the pattern to the bench as one argument; a leading dash would make it an option there.
     for (const p of list) if (p.startsWith('-')) throw new Error(`a bench pattern cannot start with "-": ${p}`);
     for (const p of list) new RegExp(p);
     if (seedList.some(s => !/^\d{1,9}$/.test(s))) throw new Error(`seeds must be integers separated by commas, got ${seeds}`);
-    const rows = list.flatMap((pattern, i) => seedList.map(seed => ({id: `p${i + 1}-s${seed}`, pattern, seed})));
-    if (rows.length > MAX_JOBS) throw new Error(`${rows.length} runners asked, ${MAX_JOBS} at most: use fewer patterns or seeds`);
+    const batch = Math.max(1, Math.min(8, Math.trunc(opts.batch ?? 1)));
+    const seedJobs = Math.max(1, Math.min(4, Math.trunc(opts.seedJobs ?? 1)));
+    const patternGroups: string[][] = [];
+    for (let i = 0; i < list.length; i += batch) patternGroups.push(list.slice(i, i + batch));
+    const seedGroups: string[][] = [];
+    for (let i = 0; i < seedList.length; i += seedJobs) seedGroups.push(seedList.slice(i, i + seedJobs));
+    const rows: PlanRow[] = [];
+    let multiIdx = 0;
+    for (let pi = 0; pi < patternGroups.length; pi++) {
+        const group = patternGroups[pi]!;
+        const pattern = group.length === 1 ? group[0]! : group.map(p => `(?:${p})`).join('|');
+        for (const seedSlice of seedGroups) {
+            if (seedSlice.length === 1 && group.length === 1) {
+                rows.push({id: `p${pi + 1}-s${seedSlice[0]!}`, pattern, seed: seedSlice[0]!});
+            } else if (seedSlice.length === 1) {
+                rows.push({id: `p${pi + 1}-s${seedSlice[0]!}`, pattern, seed: seedSlice[0]!, parallel: String(Math.min(4, group.length))});
+            } else {
+                multiIdx++;
+                rows.push({
+                    id: `m${multiIdx}`,
+                    pattern,
+                    seed: seedSlice[0]!,
+                    seeds: seedSlice.join(','),
+                    seedJobs: String(Math.min(4, seedSlice.length)),
+                });
+            }
+        }
+    }
+    if (rows.length > MAX_JOBS) throw new Error(`${rows.length} runners asked, ${MAX_JOBS} at most: use fewer patterns or seeds, or increase --batch / --seed-jobs`);
     return rows;
 }
 /** Validates and decodes a `KEY=<base64>` argument (standard or URL-safe base64). */
@@ -46,9 +99,54 @@ export function checkArgs(args: string): string[] {
         const a = list[i]!;
         if (a === '--set') { if (!/^[A-Z][A-Z0-9_]*=[\w.,:+@\/-]*$/.test(list[++i] ?? '')) throw new Error(`--set needs KEY=value, got ${list[i]}`); }
         else if (a === '--set-b64') { decodeSetB64(list[++i] ?? ''); }
+        else if (a === '--seed-jobs') { if (!/^[1-4]$/.test(list[++i] ?? '')) throw new Error(`--seed-jobs needs 1..4, got ${list[i]}`); }
+        else if (a === '--batch') { if (!/^[1-8]$/.test(list[++i] ?? '')) throw new Error(`--batch needs 1..8, got ${list[i]}`); }
         else if (!['--profile', '--no-keep', '--all', '--smoke', '--wall-clock'].includes(a)) throw new Error(`argument not allowed in a hosted bench: ${a}`);
     }
     return list;
+}
+/** Extracts workflow runner-packing flags embedded in BENCH_ARGS. */
+export function extractPlanOpts(args: string): PlanOptions {
+    const list = checkArgs(args);
+    const out: PlanOptions = {};
+    for (let i = 0; i < list.length; i++) {
+        if (list[i] === '--batch') out.batch = Number(list[++i]);
+        else if (list[i] === '--seed-jobs') out.seedJobs = Number(list[++i]);
+    }
+    return out;
+}
+/** Materializes per-seed bench-p<idx>-s<seed> folders from downloaded bench-m* multi-seed artifacts so downstream parsers read one layout. */
+export function expandMultiSeedArtifacts(dir: string): Set<string> {
+    const expandedSources = new Set<string>();
+    if (!existsSync(dir)) return expandedSources;
+    for (const entry of readdirSync(dir)) {
+        const m = /^bench-m(\d+)((?:-[0-9a-f]{40})?)$/.exec(entry);
+        if (!m) continue;
+        const mIdx = m[1]!, shaSuffix = m[2]!;
+        const src = join(dir, entry);
+        const srcCases = existsSync(join(src, 'bench-cases')) ? join(src, 'bench-cases') : src;
+        if (!existsSync(srcCases)) continue;
+        const seedFiles = readdirSync(srcCases).filter(f => /^seed-\d+\.json$/.test(f)).sort();
+        if (!seedFiles.length) continue;
+        // Retain the wrapper entry unless the runner finished writing aggregated cases.json (otherwise surface the crash).
+        if (existsSync(join(srcCases, 'cases.json'))) expandedSources.add(entry);
+        for (const f of seedFiles) {
+            const seed = /^seed-(\d+)\.json$/.exec(f)![1]!;
+            const target = join(dir, `bench-p${mIdx}-s${seed}${shaSuffix}`);
+            const targetCases = join(target, 'bench-cases');
+            const targetOut = join(target, 'aio-bench', 'output');
+            mkdirSync(targetCases, {recursive: true});
+            mkdirSync(targetOut, {recursive: true});
+            copyFileSync(join(srcCases, f), join(targetCases, 'cases.json'));
+            const seedLog = join(srcCases, `seed-${seed}.log`);
+            if (existsSync(seedLog)) copyFileSync(seedLog, join(targetCases, 'bench.log'));
+            const srcOut = join(src, 'aio-bench', `output-seed-${seed}`);
+            if (existsSync(srcOut)) {
+                for (const lf of readdirSync(srcOut).filter(x => x.endsWith('.log'))) copyFileSync(join(srcOut, lf), join(targetOut, lf));
+            }
+        }
+    }
+    return expandedSources;
 }
 export type CaseRow = {case: string; ok: boolean; elapsedMs: number; ledgerTicks: number[]; output?: number | null; result?: string | null; kept?: boolean};
 // One line for each case of each job, and one line for each profile.
@@ -77,21 +175,41 @@ if (import.meta.main) {
     const value = (flag: string) => { const i = argv.indexOf(flag); return i >= 0 ? argv.splice(i, 2)[1] : undefined; };
     const has = (flag: string) => { const i = argv.indexOf(flag); if (i < 0) return false; argv.splice(i, 1); return true; };
     // The workflow's first job: the matrix as a step output.
-    if (has('--plan')) { console.log(`matrix=${JSON.stringify({include: benchPlan(process.env.BENCH_PATTERN ?? '', process.env.BENCH_SEEDS ?? '')})}`); checkArgs(process.env.BENCH_ARGS ?? ''); process.exit(0); }
+    if (has('--plan')) {
+        const argsEnv = process.env.BENCH_ARGS ?? '';
+        console.log(`matrix=${JSON.stringify({include: benchPlan(process.env.BENCH_PATTERN ?? '', process.env.BENCH_SEEDS ?? '', extractPlanOpts(argsEnv))})}`);
+        process.exit(0);
+    }
     const gh = (args: string[]) => { const r = Bun.spawnSync(['gh', ...args], {cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true}); return {ok: r.exitCode === 0, out: r.stdout.toString(), err: r.stderr.toString()}; };
     let run = value('--run');
     const seeds = value('--seeds') ?? '', args = value('--args') ?? '', wait = !has('--no-wait');
+    const noBatch = has('--no-batch'), cliBatch = value('--batch'), cliSeedJobs = value('--seed-jobs'), cliArms = value('--arms');
     const branch = Bun.spawnSync(['git', '-C', root, 'rev-parse', '--abbrev-ref', 'HEAD'], {stdout: 'pipe', windowsHide: true}).stdout.toString().trim();
     const ref = value('--ref') ?? branch, workflowRef = value('--workflow-ref') ?? 'master';
     if (!run) {
-        if (argv.length !== 1 || argv[0]!.startsWith('--')) { console.error("usage: bun scripts/hosted-bench.ts '<pattern> [<pattern> ...]' [--seeds 7,8,9] [--args '--profile'] [--ref <branch>] [--workflow-ref <branch>] [--no-wait] | --run <id>"); process.exit(2); }
-        const plan = benchPlan(argv[0]!, seeds); checkArgs(args);
-        const started = gh(['workflow', 'run', 'CI', '--ref', workflowRef, '-f', `bench_pattern=${argv[0]}`, '-f', `bench_seeds=${seeds}`, '-f', `bench_args=${args}`, '-f', `bench_ref=${ref}`]);
+        if (argv.length !== 1 || argv[0]!.startsWith('--')) { console.error("usage: bun scripts/hosted-bench.ts '<pattern> [<pattern> ...]' [--seeds 7,8,9] [--args '--profile'] [--seed-jobs 1..4] [--batch 1..8] [--no-batch] [--ref <branch>] [--workflow-ref <branch>] [--no-wait] | --run <id>"); process.exit(2); }
+        const patternCount = argv[0]!.split(/\s+/).filter(Boolean).length;
+        const seedCount = (seeds.trim() || '7').split(',').filter(Boolean).length;
+        const parsedArgs = checkArgs(args);
+        const hasFlag = (f: string) => parsedArgs.includes(f);
+        const planOpts = autoPlanOptions(patternCount, seedCount, {
+            noBatch,
+            ...(cliBatch !== undefined ? {batch: Number(cliBatch)} : {}),
+            ...(cliSeedJobs !== undefined ? {seedJobs: Number(cliSeedJobs)} : {}),
+            ...(cliArms !== undefined ? {arms: Number(cliArms)} : {}),
+        });
+        const extraPlanTokens = [
+            ...(planOpts.seedJobs && planOpts.seedJobs > 1 && !hasFlag('--seed-jobs') ? ['--seed-jobs', String(planOpts.seedJobs)] : []),
+            ...(planOpts.batch && planOpts.batch > 1 && !hasFlag('--batch') ? ['--batch', String(planOpts.batch)] : []),
+        ];
+        const dispatchArgs = [...parsedArgs, ...extraPlanTokens].join(' ');
+        const plan = benchPlan(argv[0]!, seeds, extractPlanOpts(dispatchArgs));
+        const started = gh(['workflow', 'run', 'CI', '--ref', workflowRef, '-f', `bench_pattern=${argv[0]}`, '-f', `bench_seeds=${seeds}`, '-f', `bench_args=${dispatchArgs}`, '-f', `bench_ref=${ref}`]);
         if (!started.ok) { console.error(`hosted-bench: the run did not start: ${started.err.trim().split('\n').at(-1)}`); process.exit(2); }
         run = /actions\/runs\/(\d+)/.exec(started.out + started.err)?.[1];
-        for (let i = 0; !run && i < 10; i++) { await Bun.sleep(3000); run = JSON.parse(gh(['run', 'list', '--workflow', 'CI', '--event', 'workflow_dispatch', '--branch', workflowRef, '-L', '1', '--json', 'databaseId']).out || '[]')[0]?.databaseId?.toString(); }
+        for (let i = 0; !run && i < 10; i++) { await Bun.sleep(1000); run = JSON.parse(gh(['run', 'list', '--workflow', 'CI', '--event', 'workflow_dispatch', '--branch', workflowRef, '-L', '1', '--json', 'databaseId']).out || '[]')[0]?.databaseId?.toString(); }
         if (!run) { console.error('hosted-bench: the run started and its id was not found: see gh run list --workflow CI'); process.exit(2); }
-        console.log(`hosted-bench: run ${run}, ${plan.length} ${plan.length === 1 ? 'runner' : 'runners'}, code ${ref}`);
+        console.log(`hosted-bench: run ${run}, ${plan.length} ${plan.length === 1 ? 'runner' : 'runners'} (${patternCount * seedCount} pairs), code ${ref}`);
         if (!wait) process.exit(0);
     }
     // Wait for the bench jobs only: the other jobs of the workflow take longer and hold no bench result.
@@ -106,7 +224,8 @@ if (import.meta.main) {
     const dir = join(root, '.practice', 'hosted-bench', run);
     rmSync(dir, {recursive: true, force: true}); mkdirSync(dir, {recursive: true});
     gh(['run', 'download', run, '-p', 'bench-*', '-D', dir]);
-    const jobs = (existsSync(dir) ? readdirSync(dir) : []).filter(n => n.startsWith('bench-')).map(name => {
+    const expanded = expandMultiSeedArtifacts(dir);
+    const jobs = (existsSync(dir) ? readdirSync(dir) : []).filter(n => n.startsWith('bench-') && !expanded.has(n)).map(name => {
         // The artifact holds .practice/bench-cases, alone or beside the case logs.
         const base = existsSync(join(dir, name, 'bench-cases')) ? join(dir, name, 'bench-cases') : join(dir, name);
         const file = join(base, 'cases.json'), log = join(base, 'bench.log');

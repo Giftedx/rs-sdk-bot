@@ -113,8 +113,9 @@ if (import.meta.main) {
     env.BENCH_BUDGET_MIN = budget;
   }
   if (has('--over-budget')) env.BENCH_OVER_BUDGET = '1';
+  const parallel = value('--parallel');
   // A kept result runs nothing, so a profile reads no kept result.
-  if (has('--profile')) { env.BENCH_PROFILE = '1'; env.BENCH_PARALLEL = '1'; env.BENCH_CACHE = '0'; }
+  if (has('--profile')) { env.BENCH_PROFILE = '1'; env.BENCH_PARALLEL = parallel ?? '1'; env.BENCH_CACHE = '0'; }
   // --watch runs the selection, then runs it again each time a file under scripts/ or packages/ changes.
   if (has('--watch')) {
     const run = () => Bun.spawnSync(['bun', import.meta.path, ...process.argv.slice(2).filter(a => a !== '--watch')], { cwd: root, env, stdout: 'inherit', stderr: 'inherit', windowsHide: true });
@@ -146,12 +147,14 @@ if (import.meta.main) {
     const table = new Map<string, string[]>();
     // Each round of seeds at once gets an equal share of the budget.
     env.BENCH_BUDGET_MIN = String(Number(env.BENCH_BUDGET_MIN ?? BUDGET_MIN) / Math.ceil(list.length / seedJobs));
-    const outOf = (one: number) => seedArtifacts(one, 0, seedJobs, env).out;
+    const seedEnv = env.BENCH_OUT && !env.BENCH_SEED_OUT ? { ...env, BENCH_SEED_OUT: dirname(env.BENCH_OUT) } : env;
+    const outOf = (one: number) => seedArtifacts(one, 0, seedJobs, seedEnv).out;
     let overBudget = false;
     const runSeed = async (one: number, job: number) => {
-      const artifacts = seedArtifacts(one, job, seedJobs, env);
+      const artifacts = seedArtifacts(one, job, seedJobs, seedEnv);
       mkdirSync(dirname(resolve(root, artifacts.out)), { recursive: true });
-      const child = Bun.spawn(['bun', import.meta.path, ...argv, '--seed', String(one), ...SET_KEYS.flatMap(k => ['--set', `${k}=${artifacts.env[k]}`])], { cwd: root, env: artifacts.env, stdout: Bun.file(resolve(root, artifacts.stdout)), stderr: 'inherit', windowsHide: true });
+      const childArgs = [...argv, '--seed', String(one), ...(parallel && seedJobs === 1 ? ['--parallel', parallel] : []), ...SET_KEYS.flatMap(k => ['--set', `${k}=${artifacts.env[k]}`])];
+      const child = Bun.spawn(['bun', import.meta.path, ...childArgs], { cwd: root, env: artifacts.env, stdout: Bun.file(resolve(root, artifacts.stdout)), stderr: 'inherit', windowsHide: true });
       const code = await child.exited;
       if (code === BUDGET_EXIT) { overBudget = true; return; }
       if (code !== 0 && code !== 1) throw new Error(`seed ${one}: bench exited with code ${code}`);
@@ -159,10 +162,27 @@ if (import.meta.main) {
     let next = 0;
     await Promise.all(Array.from({ length: Math.min(seedJobs, list.length) }, async (_, job) => { while (next < list.length && !overBudget) await runSeed(list[next++]!, job); }));
     if (overBudget) process.exit(BUDGET_EXIT);
+    let coverage: unknown;
+    const allRows: Record<string, unknown>[] = [];
     for (const one of list) {
-      for (const r of JSON.parse(readFileSync(resolve(root, outOf(one)), 'utf8')).rows as { case: string; ok: boolean; ledgerTicks: number[] }[]) {
+      const seedData = JSON.parse(readFileSync(resolve(root, outOf(one)), 'utf8')) as { coverage?: unknown; rows: ({ case: string; ok: boolean; ledgerTicks: number[] } & Record<string, unknown>)[] };
+      coverage ??= seedData.coverage;
+      for (const r of seedData.rows) {
         table.set(r.case, [...(table.get(r.case) ?? []), r.ok ? String(r.ledgerTicks.at(-1) ?? '?') : 'FAIL']);
+        allRows.push({ ...r, seed: one });
       }
+      if (env.BENCH_PROFILE === '1') {
+        const logFile = resolve(root, seedArtifacts(one, 0, seedJobs, seedEnv).stdout);
+        if (existsSync(logFile)) {
+          for (const m of readFileSync(logFile, 'utf8').matchAll(/^AIO_BENCH_PROFILE (\{.*\})$/gm)) {
+            try { console.log(`AIO_BENCH_PROFILE ${JSON.stringify({ ...JSON.parse(m[1]!), seed: one })}`); } catch { /* cut line */ }
+          }
+        }
+      }
+    }
+    if (env.BENCH_OUT) {
+      mkdirSync(dirname(resolve(root, env.BENCH_OUT)), { recursive: true });
+      writeFileSync(resolve(root, env.BENCH_OUT), JSON.stringify({ coverage, concurrency: seedJobs, runs: 1, seeds: list, rows: allRows }, null, 2));
     }
     const rows = [...table].sort(([a], [b]) => a.localeCompare(b)).map(([key, cells]) => [key, `${cells.filter(c => c !== 'FAIL').length}/${list.length}`, ...cells]);
     const head = ['case', 'pass', ...list.map(n => `seed ${n}`)];
@@ -173,7 +193,7 @@ if (import.meta.main) {
     console.log(weak.length ? `\nnot passing at every seed: ${weak.join(', ')}` : `\nevery case passes at every seed`);
     process.exit(weak.length ? 1 : 0);
   }
-  const seed = value('--seed'), parallel = value('--parallel');
+  const seed = value('--seed');
   if (has('--smoke')) env.BENCH_SMOKE = '1';
   if (has('--all')) env.BENCH_ALL = '1';
   if (has('--save-baseline')) env.BENCH_SAVE_BASELINE = '1';
@@ -354,14 +374,12 @@ function report(rows: Row[]) {
 // The worker processes and engines of the cases in flight (bench-stop.ts): a bench that stops for the live fleet ends
 // them first, and after the stop no engine and no worker of this run is left.
 const tracker = runTracker(proc => { if (process.platform === 'win32') Bun.spawnSync(['taskkill', '/PID', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true }); else proc.kill(); });
-// Where the wall time of the last case went, for AIO_BENCH_TIMING.
-const phase = { prepareMs: 0, scriptMs: 0, cleanupMs: 0 };
-const timed = async <T>(key: keyof typeof phase, work: () => Promise<T>): Promise<T> => { const t = Date.now(); try { return await work(); } finally { phase[key] += Date.now() - t; } };
-
-async function runCase(c: BenchCase, bot: string, enginePort = 8888) {
+// Where the wall time of a case went, per runCase invocation for AIO_BENCH_TIMING.
+async function runCase(c: BenchCase, bot: string, enginePort = 8888, ackFile?: string) {
   const t0 = Date.now();
-  phase.prepareMs = phase.scriptMs = phase.cleanupMs = 0;
-  const bulkReady = new Set<string>();
+  const phase = { prepareMs: 0, scriptMs: 0, cleanupMs: 0 };
+  const timed = async <T>(key: keyof typeof phase, work: () => Promise<T>): Promise<T> => { const t = Date.now(); try { return await work(); } finally { phase[key] += Date.now() - t; } };
+  const bulkReady = new Set<string>(), seenMains = new Set<string>();
   // proveInProcess checks the START line against the named preset's tile, so a case fixture is registered under its own name.
   const presetName = c.presetConfig ? `bench:${c.key}` : c.preset;
   if (c.presetConfig) PRESETS[presetName] = c.presetConfig;
@@ -370,21 +388,21 @@ async function runCase(c: BenchCase, bot: string, enginePort = 8888) {
       ...(c.companions ? { companions: c.companions.map(k => ({ suffix: k.suffix, preset: k.preset })) } : {}) },
     {
       prepare: (name, preset) => timed('prepareMs', async () => {
-        // A partner account is `<bot><suffix>`; it takes its own start state, never the main account's fixture.
-        const partner = name === bot ? undefined : c.companions?.find(k => name.endsWith(k.suffix) && preset === k.preset);
+        // A partner account is `<main><suffix>`; proveInProcess prepares the main account before its companions.
+        const partner = c.companions?.find(k => name.endsWith(k.suffix) && preset === k.preset && seenMains.has(name.slice(0, -k.suffix.length)));
+        if (!partner) seenMains.add(name);
         const conf = partner ? partner.presetConfig ?? PRESETS[partner.preset] : c.presetConfig ?? PRESETS[preset!];
         if (!conf) throw new Error(`unknown preset ${preset}`);
-        // A case with many accounts (a spar batch has 32): the account folders are made 8 at a time and every save in
-        // one process. One account at a time is two process starts each, 9 s for 32 accounts.
+        // A multi-account case: create account folders in parallel and generate every save in one process.
         const everyConf = [conf, ...(c.companions ?? []).map(k => k.presetConfig ?? PRESETS[k.preset])];
         // applyPreset writes the varps above 308 itself; a case that sets one keeps the one-account path.
         const plain = everyConf.every(x => x && !Object.keys(x.varps ?? {}).some(k => Number(k) >= 309));
-        if (name === bot && (c.companions?.length ?? 0) >= 4 && plain) {
+        if (!partner && (c.companions?.length ?? 0) >= 2 && plain) {
           const saveDir = preparePresetDirectory();
-          const all = [{ name: bot, conf }, ...c.companions!.map(k => ({ name: bot + k.suffix, conf: k.presetConfig ?? PRESETS[k.preset]! }))]
+          const all = [{ name, conf }, ...c.companions!.map(k => ({ name: name + k.suffix, conf: k.presetConfig ?? PRESETS[k.preset]! }))]
             .map(a => ({ ...a, path: join(saveDir, `${a.name.toLowerCase()}.sav`) }));
           const missing = all.filter(a => !existsSync(join(rsSdkRoot(), 'bots', a.name, 'bot.env')));
-          for (let i = 0; i < missing.length; i += 8) await Promise.all(missing.slice(i, i + 8).map(a =>
+          for (let i = 0; i < missing.length; i += 16) await Promise.all(missing.slice(i, i + 16).map(a =>
             Bun.spawn(['bun', 'bots/create-bot.ts', a.name, '--local', '--no-chat'], { cwd: rsSdkRoot(), stdout: 'ignore', stderr: 'ignore', windowsHide: true }).exited));
           const code = `import { generateSave } from './sdk/test/utils/save-generator.ts';
 for (const a of JSON.parse(await Bun.file(process.env.BULK_FILE).text())) {
@@ -392,7 +410,7 @@ for (const a of JSON.parse(await Bun.file(process.env.BULK_FILE).text())) {
   if (path !== a.path || !await Bun.file(a.path).exists()) throw Error('unexpected preset save path: ' + path);
 }
 console.log('SAVES_DONE');`;
-          const bulk = resolve('.practice/aio-bench', `bulk-${bot}.json`);
+          const bulk = resolve('.practice/aio-bench', `bulk-${name}.json`);
           mkdirSync(dirname(bulk), { recursive: true });
           writeFileSync(bulk, JSON.stringify(all));
           const made = Bun.spawnSync(['bun', '-e', code], { cwd: rsSdkRoot(), env: { ...process.env, BULK_FILE: bulk }, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
@@ -408,7 +426,7 @@ console.log('SAVES_DONE');`;
         const fill = (text: string) => text.replaceAll('{bot}', name).replace(/\{bot:(\w)\}/g, (_all, suffix) => name + suffix)
           .replaceAll('{save}', `vendor/rs-sdk/server/engine/data/players/main/${name.toLowerCase()}.sav`);
         for (const [path, value] of Object.entries(c.jobFiles ?? {})) { mkdirSync(dirname(fill(path)), { recursive: true }); writeFileSync(fill(path), fill(JSON.stringify(value, null, 1))); }
-        const proc = Bun.spawn(['bun', resolve(script), name, ...args.map(fill)], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: { ...process.env } }); // Bun.spawn does not pass env set at run time unless given
+        const proc = Bun.spawn(['bun', resolve(script), name, ...args.map(fill)], { cwd: root, stdout: 'pipe', stderr: 'pipe', windowsHide: true, env: { ...process.env, ...(ackFile ? { SIM_ACK_FILE: ackFile } : {}) } }); // Bun.spawn does not pass env set at run time unless given
         // A stop for the fleet between the engine start and this spawn: the worker is ended at once.
         tracker.worker(proc);
         // An AIO dispatcher owns a worker child; a timeout must stop the whole tree or the worker keeps its session.
@@ -440,7 +458,7 @@ console.log('SAVES_DONE');`;
   const row = { case: c.key, ok, passes: r.passes, runs: RUNS, elapsedMs, ledgerTicks, rivalTicks: rivalTicks(c.key) ?? null, output: Number.isFinite(amount) ? amount : null, xp: xpGains.at(-1) ?? null, result: result?.slice(0, 400) ?? null };
   console.log(`AIO_BENCH_RESULT ${JSON.stringify(row)}`);
   if (!ok) console.log(`--- tail ${c.key} ---\n${tail.slice(-1500)}\n--- end tail ---`);
-  return row;
+  return { row, phase };
 }
 
 async function main() {
@@ -461,7 +479,7 @@ async function main() {
   const coverage = benchCoverage();
   console.log(`AIO_BENCH_COVERAGE ${JSON.stringify(coverage)}`);
   if (process.env.BENCH_COVERAGE_ONLY) return;
-  benchPlanners();
+  if (process.env.BENCH_SKIP_PLANNERS !== '1') benchPlanners();
 
   // BENCH_SMOKE=1 runs the short smoke set. BENCH_ALL=1 also runs the cases marked `known` (they cannot pass today).
   const smoke = process.env.BENCH_SMOKE === '1' ? new Set(SMOKE_KEYS) : undefined;
@@ -503,7 +521,7 @@ async function main() {
   if (profile) mkdirSync(profileDir, { recursive: true });
   let stack = FRESH ? null : await start();
 
-  const rows: Awaited<ReturnType<typeof runCase>>[] = [];
+  const rows: Awaited<ReturnType<typeof runCase>>['row'][] = [];
   // Beside a live fleet the bench reads the free memory each 5 s. Under the floor and the swarm's reserve it ends its
   // workers and engines and exits: the memory goes back to the fleet within one read.
   const watch = setInterval(() => {
@@ -550,11 +568,10 @@ async function main() {
             // --profile: the bots of this case write their ACK_STAT lines here; the engine's wait lines are read from
             // the bytes its stat file gains during the case.
             const ackFile = profile ? resolve(profileDir, `${c.key.replace(/[^a-z0-9-]/gi, '_')}.ack`) : '';
-            if (profile) { rmSync(ackFile, { force: true }); process.env.SIM_ACK_FILE = ackFile; }
+            if (profile) rmSync(ackFile, { force: true });
             const statFile = statFileOf(slot), statFrom = profile && existsSync(statFile) ? readFileSync(statFile).length : 0;
-            const row = await runCase(c, FRESH ? 'aiobf' : `aiob${i}`, FRESH ? slotPort(slot) : 8888);
+            const { row, phase } = await runCase(c, FRESH ? 'aiobf' : `aiob${i}`, FRESH ? slotPort(slot) : 8888, profile ? ackFile : undefined);
             if (profile) {
-              delete process.env.SIM_ACK_FILE;
               const ack = parseAckStats(readSince(ackFile, 0)), sim = parseSimStat(readSince(statFile, statFrom));
               console.log(`AIO_BENCH_PROFILE ${JSON.stringify({ case: c.key, wallMs: row.elapsedMs, engineStartMs, ...phase, engine: sim, client: ack, cappedCostMs: ack.capped * Number(process.env.SIM_BUSY_MS ?? 2000) })}`);
             }

@@ -1,5 +1,8 @@
+import {mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {expect, test} from 'bun:test';
-import {benchPlan, checkArgs, decodeSetB64, MAX_JOBS, POLL_MS, resultLines} from './hosted-bench';
+import {autoPlanOptions, benchPlan, checkArgs, decodeSetB64, expandMultiSeedArtifacts, extractPlanOpts, MAX_JOBS, POLL_MS, resultLines} from './hosted-bench';
 
 test('the plan gives one runner to each pattern and seed', () => {
     expect(benchPlan('^pvp:squad$  ^quester:quest:crest$', '7,8')).toEqual([
@@ -51,5 +54,49 @@ test('--set-b64 decodes standard and URL-safe base64 JSON payloads and rejects m
         expect(() => checkArgs(`--set-b64 ${bad}`)).toThrow();
     }
     expect(() => checkArgs('--set-b64')).toThrow();
-    expect(POLL_MS).toBe(5_000);
+    expect(POLL_MS).toBe(2_500);
+});
+
+test('batching and multi-seed fan-out pack patterns and seeds cleanly onto 4-vCPU runners', () => {
+    expect(autoPlanOptions(3, 4)).toEqual({batch: 1, seedJobs: 4});
+    expect(autoPlanOptions(6, 1)).toEqual({batch: 4, seedJobs: 1});
+    expect(autoPlanOptions(3, 4, {arms: 4})).toEqual({batch: 1, seedJobs: 4});
+    expect(autoPlanOptions(6, 4, {arms: 4})).toEqual({batch: 2, seedJobs: 4});
+    expect(autoPlanOptions(6, 4, {noBatch: true})).toEqual({batch: 1, seedJobs: 1});
+
+    expect(benchPlan('^a$ ^b$ ^c$ ^d$', '7', {batch: 4, seedJobs: 1})).toEqual([
+        {id: 'p1-s7', pattern: '(?:^a$)|(?:^b$)|(?:^c$)|(?:^d$)', seed: '7', parallel: '4'},
+    ]);
+    expect(benchPlan('^a$ ^b$', '1,2,3,4', {batch: 1, seedJobs: 4})).toEqual([
+        {id: 'm1', pattern: '^a$', seed: '1', seeds: '1,2,3,4', seedJobs: '4'},
+        {id: 'm2', pattern: '^b$', seed: '1', seeds: '1,2,3,4', seedJobs: '4'},
+    ]);
+    expect(extractPlanOpts('--profile --seed-jobs 4 --batch 2')).toEqual({seedJobs: 4, batch: 2});
+    expect(() => checkArgs('--seed-jobs 9')).toThrow();
+    expect(() => checkArgs('--batch 9')).toThrow();
+});
+
+test('expandMultiSeedArtifacts fans out multi-seed runner downloads into bench-p*-s* folders', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'hosted-multiseed-'));
+    try {
+        const mDir = join(dir, 'bench-m1-0123456789abcdef0123456789abcdef01234567');
+        mkdirSync(join(mDir, 'bench-cases'), {recursive: true});
+        mkdirSync(join(mDir, 'aio-bench', 'output-seed-1'), {recursive: true});
+        mkdirSync(join(mDir, 'aio-bench', 'output-seed-2'), {recursive: true});
+        writeFileSync(join(mDir, 'bench-cases', 'cases.json'), JSON.stringify({rows: [{case: 'extra:a', ok: true, seed: 1}]}));
+        writeFileSync(join(mDir, 'bench-cases', 'seed-1.json'), JSON.stringify({rows: [{case: 'extra:a', ok: true, elapsedMs: 9000, ledgerTicks: [200]}]}));
+        writeFileSync(join(mDir, 'bench-cases', 'seed-2.json'), JSON.stringify({rows: [{case: 'extra:a', ok: true, elapsedMs: 9500, ledgerTicks: [210]}]}));
+        writeFileSync(join(mDir, 'bench-cases', 'seed-1.log'), 'AIO_BENCH start cases=1 runs=1 lockstep seed=1\n');
+        writeFileSync(join(mDir, 'bench-cases', 'seed-2.log'), 'AIO_BENCH start cases=1 runs=1 lockstep seed=2\n');
+        writeFileSync(join(mDir, 'aio-bench', 'output-seed-1', 'extra_a.log'), 'RESULT ok s1\n');
+        writeFileSync(join(mDir, 'aio-bench', 'output-seed-2', 'extra_a.log'), 'RESULT ok s2\n');
+        const expanded = expandMultiSeedArtifacts(dir);
+        expect(expanded.has('bench-m1-0123456789abcdef0123456789abcdef01234567')).toBe(true);
+        const s1Out = readFileSync(join(dir, 'bench-p1-s1-0123456789abcdef0123456789abcdef01234567', 'aio-bench', 'output', 'extra_a.log'), 'utf8');
+        const s2Cases = JSON.parse(readFileSync(join(dir, 'bench-p1-s2-0123456789abcdef0123456789abcdef01234567', 'bench-cases', 'cases.json'), 'utf8'));
+        expect(s1Out).toBe('RESULT ok s1\n');
+        expect(s2Cases.rows[0].ledgerTicks).toEqual([210]);
+    } finally {
+        rmSync(dir, {recursive: true, force: true});
+    }
 });
