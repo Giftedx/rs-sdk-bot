@@ -10,7 +10,7 @@ import { isNoProgressFailure } from '../../practice/src/supervise';
 import { classify } from '../../practice/src/supervise-host';
 import { watchProductionLife } from '../../../scripts/microbot-c-lifetime';
 import { runBankProfile } from '../../../scripts/microbot-bank-jobs';
-import { monitoredPlayer } from '../../../scripts/microbot-c-player-monitor';
+import { monitoredPlayer } from '../src/pvp/monitor';
 import { BotActions } from '../../../vendor/rs-sdk/sdk/actions';
 import type { BotWorldState } from '../../../vendor/rs-sdk/sdk/types';
 import {

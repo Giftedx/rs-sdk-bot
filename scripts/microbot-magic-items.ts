@@ -57,24 +57,8 @@ export function itemMagicRecipe(mode:string,targetName?:string):Recipe{
  }
  return{name:mode,spell:'magic:'+field(row.body,'spell')!.replace('^',''),level:Number(field(row.body,'levelrequired')),smithing,target:objId(input),product:objId(product),inputs,output,members:field(row.body,'members')==='true'};
 }
-let staffRunes:Map<number,{runes:Set<number>;members:boolean}>|undefined;
-function nativeStaffRunes(){
- if(staffRunes)return staffRunes;staffRunes=new Map();
- const definitions=new Map<string,string>();
- for(const file of ['staves.obj','battlestaves.obj','mysticstaves.obj'])for(const row of blocks(readFileSync(content+'skill_combat/configs/magic/'+file,'utf8')))definitions.set(row.name,row.body);
- for(const row of blocks(readFileSync(content+'skill_magic/configs/magic_staff.dbrow','utf8'))){
-  const rune=row.body.match(/^data=rune,(\w+)/m)?.[1];if(!rune)continue;
-  for(const match of row.body.matchAll(/^data=staff,(\w+)/gm)){
-   const name=match[1]!,body=definitions.get(name);if(!body)throw Error('missing native staff object '+name);
-   const id=objId(name),entry=staffRunes.get(id)??{runes:new Set<number>(),members:/^members=yes\s*$/m.test(body)};entry.runes.add(objId(rune));staffRunes.set(id,entry);
-  }
- }
- return staffRunes;
-}
-export function elementalRuneCost(runeId:number,quantity:number,worn:readonly{id:number;slot:number}[],members=false){
- const id=worn.find(i=>i.slot===3)?.id,staff=id===undefined?undefined:nativeStaffRunes().get(id);
- return staff&&(!staff.members||members)&&staff.runes.has(runeId)?0:quantity;
-}
+import {elementalRuneCost} from '../packages/core/src/magic-data';
+export {elementalRuneCost} from '../packages/core/src/magic-data';
 // A staff replaces the spell's runes, never the conversion target: an alchemised air rune is still debited once.
 export function itemSpellCosts(recipe:Recipe,worn:readonly{id:number;slot:number}[],members=false){
  return Object.fromEntries(Object.entries(recipe.inputs).map(([id,n])=>{const target=Number(id)===recipe.target?1:0;return [id,target+elementalRuneCost(Number(id),n-target,worn,members)];}).filter(([,n])=>Number(n)>0)) as Record<number,number>;

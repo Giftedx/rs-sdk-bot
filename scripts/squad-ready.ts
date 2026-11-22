@@ -34,10 +34,10 @@ import { SQUAD_WAVE_BC } from '../packages/planner/src/squad';
 import { BANK_MEETS } from '../packages/workers/src/logistics';
 import { makeOrder, writeFleetOrder } from './fleet-order';
 import { castableFreeze, defaultSpec, ITEMS } from './pk';
-import { packOf } from './pk-gang';
-import { FOOD_LIST } from './pk-hunt';
+import { packOf } from '../packages/workers/src/pvp/pk-gang';
+import { FOOD_LIST } from '../packages/workers/src/pvp/hunt-kits';
 import { kitItems } from './pk-kits';
-import { kitFrom } from './pk-roam';
+import { kitFrom } from '../packages/workers/src/pvp/wild-rules';
 import { SQUAD_OPTS, SQUAD_POST, squadEscapeSpell, squadStartFood } from './pk-squad';
 import { PROFILES } from '../packages/workers/src/market';
 

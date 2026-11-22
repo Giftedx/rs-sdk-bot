@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import {assessQuestReadiness,prioritizeQuestsForAccount,resolveQuesterStep,runAioQuester} from './aio-quester';
-import {presetFor,needs,wornKitPlan} from './quest-sweep';
+import {presetFor,needs,wornKitPlan} from '../packages/workers/src/quest/sweep';
 
 const packFor = (quest: string) => Object.fromEntries(wornKitPlan(quest, needs(presetFor(quest), false, quest), [], [], []).need);
 

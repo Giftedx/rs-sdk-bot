@@ -4,7 +4,7 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {questSweepProofAccountEnv,questSweepProofEndpoints,questSweepChecks,questSweepChildConfiguration,questSweepElenaPreset,runQuestSweepProofCase,selectFreshQuestSweepProofName,selectQuestSweepProofCases,QUEST_SWEEP_PROOF_CASE_IDS} from '../src/quest-sweep-proof';
 import {converseDialogue,createBurstPageRecorder,dialogueTransition,liveDialoguePage,type ConverseIO} from '../../../scripts/generated/quest-lib';
-import {needs,plan,presetFor,shopCoinTake} from '../../../scripts/quest-sweep';
+import {needs,plan,presetFor,shopCoinTake} from '../../workers/src/quest/sweep';
 import {castable} from '../../../scripts/teleport-runes';
 
 test('the Seer conversation waits through an observed closure or pending continue and fails a refused live page',async()=>{
@@ -471,7 +471,7 @@ test('the proof keeps the current cases and real parameterized CLI without the a
  expect(new Set(QUEST_SWEEP_PROOF_CASE_IDS).size).toBe(22);
  const p=questSweepProofEndpoints({engine:22100,gateway:22101,management:22102,tcp:22103},'quest-sweep-12345678901234567890');
  const child=questSweepChildConfiguration('ordinary','rj',p,{CAP:'6000'});
- expect(child.cmd).toEqual(['bun','scripts/quest-sweep.ts','ordinary','rj']);
+ expect(child.cmd).toEqual(['bun','scripts/aio-quester.ts','ordinary','sweep','rj']);
  expect(child.env).toMatchObject({CAP:'6000',RANDOM_EVENTS:'0',GATEWAY_URL:p.gateway});
  expect(child.windowsHide).toBe(true);
  // Exact asset checks exclude incidental pickup even when the parent enables loot.

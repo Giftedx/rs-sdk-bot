@@ -1,13 +1,13 @@
 import { describe, expect, spyOn, test } from 'bun:test';
 import * as walking from '../packages/core/src/walk';
 import * as pk from './pk';
-import * as pkGang from './pk-gang';
-import { maxDeathsOf } from './pk-hunt';
+import * as pkGang from '../packages/workers/src/pvp/pk-gang';
+import { maxDeathsOf } from '../packages/workers/src/pvp/hunt-kits';
 import { activeCentroid, bankNear, configureBenchSession, createSquadCohesion, createSquadFocus, isKillLine, leaveWilderness, marchPlan, needsSingleWayMove, openSquad, outTripDue, pickSquadFocus, rescue, rescueDropped, shouldBreakSingleWayChase, shouldFollowReplan, shouldSwitchFocus, SINGLE_WAY_CHASE_LEASH, squadEscapeSpell, squadFallbackPlan, squadMetrics, squadPaused, squadStartFood, squadStopHandlers, squadTarget, squadWorkSession, stopSquadSession, VARROCK_WEST_BANK, watchSquadTicks } from './pk-squad';
 import { escapeCastable, isMulti, nextTick } from './pk';
 import { benchCases } from './measure/aio-bench-cases';
 import { hold, SQUAD_OPTS, squadEnd, squadFightOverrides } from './pk-squad';
-import { sparOptions } from './pk-spar';
+import { sparOptions } from '../packages/workers/src/pvp/pk-spar';
 import { newWatch, readLine } from './squad-watch';
 import { classify } from '../packages/practice/src/supervise-host';
 import { supervise } from '../packages/practice/src/supervise';

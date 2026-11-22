@@ -6,7 +6,7 @@
 import { openBot, finish } from '../../packages/core/src/bot';
 import { tickWaits } from '../../packages/core/src/tick-stream';
 import { nextTick } from '../pk';
-import { HUNT_SPOTS, SNARE_KIT, SNARE_TRIP, TRIBRID_KIT, TRIP, hunt } from '../pk-hunt';
+import { HUNT_SPOTS, SNARE_KIT, SNARE_TRIP, TRIBRID_KIT, TRIP, hunt } from '../../packages/workers/src/pvp/hunt';
 
 const [hunterName, targetName, capArg, kitArg] = process.argv.slice(2);
 if (!hunterName || !targetName) { console.log('RESULT fail usage: bun scripts/measure/pk-hunt-trip.ts <hunter> <target> [CAP ticks] [snare]'); process.exit(2); }

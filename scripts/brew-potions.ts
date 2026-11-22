@@ -4,7 +4,7 @@ import {openBot,finish,getWorld,accountOf} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {goTo} from '../packages/core/src/walk';
-import {nearestBank} from './quest-sweep';
+import {nearestBank} from '../packages/workers/src/quest/sweep';
 import {sellersByDistance} from '../packages/core/src/shop-index';
 import type {Tile} from '../packages/core/src/world';
 import {abortable,executionContext} from '../vendor/rs-sdk/sdk/execution-context';

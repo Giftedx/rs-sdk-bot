@@ -31,7 +31,7 @@ test('quest proof carries private endpoints through stack, fresh account and rea
     await expect(startQuestSweepProofStack(endpoints, async () => { throw Error('startup refused'); })).rejects.toThrow('startup refused');
     expect(Object.fromEntries(Object.keys(endpoints.env).map(k => [k, process.env[k]]))).toEqual(previous);
     const child = questSweepChildConfiguration('qswfixture', 'sheep', endpoints, { GATEWAY_URL: 'ws://localhost:7780', WEB_MANAGEMENT_PORT: '8898', NODE_PORT: '43594' });
-    expect(child.cmd).toEqual(['bun', 'scripts/quest-sweep.ts', 'qswfixture', 'sheep']);
+    expect(child.cmd).toEqual(['bun', 'scripts/aio-quester.ts', 'qswfixture', 'sweep', 'sheep']);
     expect(child.env).toMatchObject({ ...endpoints.env, GATEWAY_URL: endpoints.gateway, QUEST_SWEEP_OBSERVE_BANK: '', RANDOM_EVENTS: '0' });
     expect(child.env.GE_DATABASE).toBe(`data/market-${endpoints.instance}.sqlite`);
     expect(child.windowsHide).toBe(true);

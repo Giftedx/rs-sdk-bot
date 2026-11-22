@@ -35,6 +35,9 @@ export function knownBanks(): Tile[] {
     return banks ??= Object.values((JSON.parse(readFileSync(join(repoRoot, 'packages', 'planner', 'src', 'haggis-travel.json'), 'utf8')) as { banks: Record<string, Tile> }).banks)
         .map(b => ({ x: b.x, z: b.z, level: b.level }));
 }
+export function knownBankRecords(): Array<Tile & { site?: string }> {
+    return Object.values((JSON.parse(readFileSync(join(repoRoot, 'packages', 'planner', 'src', 'haggis-travel.json'), 'utf8')) as { banks: Record<string, Tile & { site?: string }> }).banks);
+}
 
 export function planTrip(world: World, from: Tile, to: Tile, acct: Account, stock: BankStock | undefined, bankTiles: Tile[] = knownBanks(), nearest = 3, routeOpts?: RouteOptions): TripPlan | null {
     const direct = world.route(from, to, acct, routeOpts);

@@ -9,7 +9,7 @@ import {PRESETS, type SaveConfig} from '../../packages/practice/src/presets';
 import {firemakingFixture} from '../../packages/practice/src/firemaking-order-proof';
 import {agilityFixturePreset} from '../../packages/practice/src/agility-order-proof';
 import {KITS, kitItems, kitSkills, kitVarps, levelsBeforeRoute, overBuild} from '../pk-kits';
-import { CLONE_NAMES, cloneProfileName, cloneSpec, pooledProfile, type CloneMode, type CloneName } from '../pk-gang-clone';
+import { CLONE_NAMES, cloneProfileName, cloneSpec, pooledProfile, type CloneMode, type CloneName } from '../../packages/workers/src/pvp/pk-gang-clone';
 import {carrierAltar, type CarrierAltarName} from '../rune-carrier-altar';
 import {PROGRESSION_BENCH_CASES} from './progression-bench-cases';
 import {SPECIALIST_RANGED_CASES} from './specialist-ranged-cases';

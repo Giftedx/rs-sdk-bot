@@ -7,10 +7,10 @@ import { accountOf, getWorld, openBot, settle } from '../../packages/core/src/bo
 import { goTo } from '../../packages/core/src/walk';
 import { waitUntil } from '../../packages/core/src/ticks';
 import { GOD_LOADOUTS, godCapeStaffConflict, type GodLoadoutSpec } from '../pk-kits';
-import { huntOnce, restockPlan } from './pk-hunt';
+import { huntOnce, restockPlan } from '../../packages/workers/src/pvp/roam';
 import {
     EDGEVILLE_BANK_TILE, escapeStep, hasVarrockTeleport, restockMarket, wearGlory, wildLevel,
-} from '../pk-roam';
+} from '../../packages/workers/src/pvp/wild-rules';
 
 // Best first. Attack level each needs (content levelrequire); dragon weapons also need Lost City. This revision has no
 // dragon scimitar (bun scripts/gear.ts find scimitar: bronze to rune).

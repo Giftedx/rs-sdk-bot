@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { AXE_ALLY_RANGE, defaultSpec, shootingKit, thrownAxeHitsAlly } from './pk';
 import { itemId, kitItems, kitSwitches } from './pk-kits';
-import { kitFrom } from './pk-roam';
+import { kitFrom } from '../packages/workers/src/pvp/wild-rules';
 
 // The rune throwing axe special (scripts/pk.ts defaultSpec, pvp_rune_thrownaxe.rs2): 10% energy, the thrown weapon bar.
 test('a kit that carries rune throwing axes uses their special in place of the dagger special', () => {

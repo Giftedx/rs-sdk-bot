@@ -2,9 +2,9 @@ import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { GOD_LOADOUTS } from '../pk-kits';
-import { restockPlan } from '../pk-roam';
+import { restockPlan } from '../../packages/workers/src/pvp/wild-rules';
 import marketRows from '../measure/pk-restock-market.json';
-import type { RestockMarket } from '../pk-roam';
+import type { RestockMarket } from '../../packages/workers/src/pvp/wild-rules';
 import {
     ANTIPOISON,
     assessPilotEscapePreflight,

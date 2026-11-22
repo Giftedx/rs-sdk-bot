@@ -10,19 +10,8 @@ import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {componentId} from '../packages/core/src/logout';
 import {objId} from './measure/floor-bands';
 import {elementalRuneCost,itemMagicRecipe,runItemMagic,type Recipe} from './microbot-magic-items';
-export interface NativeTeleport{name:string;component:string;level:number;members:boolean;runes:Record<number,number>;to:{x:number;z:number;level:number}}
-export function nativeTeleport(name:string):NativeTeleport{
- if(!/^(varrock|lumbridge|falador|camelot|ardougne|watchtower|trollheim)$/.test(name))throw Error('unsupported native teleport');
- const text=readFileSync(resolve(import.meta.dir,'../vendor/rs-sdk/server/content/scripts/skill_magic/configs/magic_spells.dbrow'),'utf8'),body=text.split('[magic_spell_teleport_'+name+']')[1]?.split('\n[')[0];if(!body)throw Error('native teleport missing');
- const field=(key:string)=>body.match(new RegExp('^data='+key+',(.+)$','m'))?.[1]?.trim(),parts=field('runesrequired')!.split(','),runes:Record<number,number>={};
- for(let i=0;i<parts.length;i+=2)if(parts[i]!=='null')runes[objId(parts[i]!)]=Number(parts[i+1]);
- const [level,mx,mz,lx,lz]=field('tele_coord')!.split('_').map(Number);
- return{name,component:'magic:'+name+'_teleport',level:Number(field('levelrequired')),members:field('members')==='true',runes,to:{x:mx!*64+lx!,z:mz!*64+lz!,level:level!}};
-}
-export function teleportReceipt(t:NativeTeleport,costs:Record<number,number>,b:Record<number,number>,a:Record<number,number>,xp0:number,xp1:number,p:{worldX:number;worldZ:number;level:number}|null|undefined){
- const keys=new Set([...Object.keys(b),...Object.keys(a),...Object.keys(costs)]);
- return xp1>xp0&&[...keys].every(k=>(b[Number(k)]??0)-(a[Number(k)]??0)===(costs[Number(k)]??0))&&!!p&&p.level===t.to.level&&Math.max(Math.abs(p.worldX-t.to.x),Math.abs(p.worldZ-t.to.z))<=2;
-}
+import {nativeTeleport,teleportReceipt,type NativeTeleport} from '../packages/core/src/magic-data';
+export {nativeTeleport,teleportReceipt,type NativeTeleport} from '../packages/core/src/magic-data';
 export async function runTeleportMagic(s:Session,t:NativeTeleport,o:{casts:number;cap:number;members?:boolean;combo?:Recipe;stop?:()=>boolean}){
  if(!Number.isSafeInteger(o.casts)||o.casts<1||o.casts>1000||!Number.isSafeInteger(o.cap)||o.cap<1||o.cap>100000)throw Error('invalid finite teleport limits');
  if(t.members&&!o.members)throw Error('member teleport requires explicit member batch scope');

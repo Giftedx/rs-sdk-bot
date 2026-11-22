@@ -125,3 +125,43 @@ export {
     guardCowWalker,
 } from './logistics/walk-helpers';
 export * from './gather';
+export * as quest from './quest';
+export {
+    QUESTER_MODES,
+    QUEST_NAMES,
+    QUEST_SCRIPT_ALIAS,
+    assessQuestReadiness,
+    dispatchQuesterCli,
+    listGeneratedQuestScripts,
+    prioritizeQuestsForAccount,
+    questCatalogSummary,
+    questModule,
+    resolveQuestScript,
+    resolveQuesterStep,
+    runAioQuester,
+    type QuestConfig,
+    type QuestOperation,
+    type QuestSaveItem,
+    type QuestSavePreset,
+    type QuesterModeSpec,
+} from './quest';
+export * as pvp from './pvp';
+export {
+    PVP_MODES,
+    PVP_MODES_LIST,
+    assessGodSpellReadiness,
+    assessTribridReadiness,
+    dispatchPvpCli,
+    isPvpMode,
+    pvpCombatBracket,
+    pvpModule,
+    resolveMageArenaWorkflow,
+    resolvePvpStep,
+    runAioPvp,
+    wildernessAgilityEscapeGuard,
+    type PvpConfig,
+    type PvpMode,
+    type PvpModeSpec,
+    type PvpOperation,
+    type PvpRequiredItem,
+} from './pvp';

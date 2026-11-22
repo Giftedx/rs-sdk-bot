@@ -48,7 +48,7 @@ export async function startQuestSweepProofStack(p:ProofEndpoints,start:(opts:Sta
  finally{for(const [k,v] of Object.entries(previous)){if(v===undefined)delete process.env[k];else process.env[k]=v;}}
 }
 export function questSweepChildConfiguration(name:string,quest:string,p:ProofEndpoints,inherited:NodeJS.ProcessEnv=process.env){
- return{cmd:['bun','scripts/quest-sweep.ts',name,quest],cwd:root,windowsHide:true,
+ return{cmd:['bun','scripts/aio-quester.ts',name,'sweep',quest],cwd:root,windowsHide:true,
   env:{...inherited,...p.env,GATEWAY_URL:p.gateway,QUEST_SWEEP_OBSERVE_BANK:'',RANDOM_EVENTS:'0',LOOT_WATCH:'0'}};
 }
 
