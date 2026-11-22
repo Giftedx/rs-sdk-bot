@@ -38,7 +38,7 @@ export function cowChildConfiguration(name:string,inherited:NodeJS.ProcessEnv=pr
 // -> reuse mutation-free retention. Path-based compare/rename/delete has a race.
 // Retire stop-test identities permanently; prove resume on an unstopped identity.
 // Acceptance: replacement/access-failure tests make zero retention filesystem calls.
-export type CowStop={path:string;marker:string;ino:bigint;dev:bigint};
+type CowStop={path:string;marker:string;ino:bigint;dev:bigint};
 export function claimCowStop(path:string,marker:string):CowStop{
  try{writeFileSync(path,marker,{flag:'wx'});}catch(error){if((error as NodeJS.ErrnoException).code==='EEXIST')throw Error('stop path already exists');throw error;}
  const info=statSync(path,{bigint:true});return {path,marker,ino:info.ino,dev:info.dev};
@@ -97,7 +97,7 @@ export function cowSaveChecks(before:Save,after:Save,result:any,kind:Kind){
 }
 // One surface-camp case: an ordinary owned start away from the bank, with the
 // melee weapon and food banked. Damaged current HP requires observed eating.
-export const giantCases=['giant'] as const;
+const giantCases=['giant'] as const;
 export const trooperCases=['trooper'] as const;
 const allCases=[...cases,...giantCases,...trooperCases];
 const SHARK=385,MELEE=1331,STAFF=1381,GIANT_DROPS=[532,225,199,201,203,205,207,209,211,213,215,217,219],GIANT_BANK={x:2655,z:3283};
@@ -224,7 +224,7 @@ export function cowSequenceChecks(receipts:any[]){
   unstopped:receipts.filter(c=>c.id!=='stopped').every(c=>c.stopRequested===false&&c.stopRetained===null&&c.retired===false&&c.stopFailure===null),
  };
 }
-export function verifyCow(directory:string){
+function verifyCow(directory:string){
  verifyCompletedRecoveryDelivery(directory);
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
  const receipt=(id:string)=>meta.cases?.find((v:any)=>v.id===id);
