@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runtimeTrees } from '../../../core/src/worker-release';
-import { patchNewFiles, patchState, type PatchState } from '../../../../scripts/worktree-setup';
+import { patchNewFiles, patchState, type PatchState } from '../../../core/src/worktree-setup';
 import { gitIn } from './inspect';
 
 export const SDK = 'vendor/rs-sdk', SDK_PATCH = 'patches/rs-sdk-working.patch';

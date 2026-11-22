@@ -124,6 +124,27 @@ test('packages/router/src production modules have zero circular dependencies', (
     expect(tarjanSccs(routerFiles)).toEqual([]);
 });
 
+function collectRouterImports(files: readonly string[]): {
+    bare: Array<{ rel: string; spec: string }>;
+    relative: Array<{ rel: string; target: string }>;
+} {
+    const bare: Array<{ rel: string; spec: string }> = [];
+    const relativeTargets: Array<{ rel: string; target: string }> = [];
+    for (const rel of files) {
+        const abs = join(repoRoot, rel);
+        const info = ts.preProcessFile(readFileSync(abs, 'utf8'), true, true);
+        for (const imp of info.importedFiles) {
+            const spec = imp.fileName;
+            if (!spec.startsWith('.')) {
+                bare.push({ rel, spec });
+                continue;
+            }
+            relativeTargets.push({ rel, target: resolveImportTarget(abs, spec) });
+        }
+    }
+    return { bare, relative: relativeTargets };
+}
+
 test('packages/router/src production modules never import promoted shared libraries from scripts', () => {
     const routerFiles = walkTs(join(repoRoot, 'packages', 'router', 'src'));
     const bannedTargets = new Set([
@@ -131,34 +152,48 @@ test('packages/router/src production modules never import promoted shared librar
         'scripts/fail-loops.ts',
         'scripts/fleet-owner-claim.ts',
         'scripts/heavy-admission.ts',
+        'scripts/worktree-setup.ts',
     ]);
-    const bannedBare = new Set([
-        'scripts/fleet-trade-settlement',
-        'scripts/fleet-trade-settlement.ts',
-        'scripts/fail-loops',
-        'scripts/fail-loops.ts',
-        'scripts/fleet-owner-claim',
-        'scripts/fleet-owner-claim.ts',
-        'scripts/heavy-admission',
-        'scripts/heavy-admission.ts',
-    ]);
-    const violations: string[] = [];
+    const bannedBare = new Set(
+        [...bannedTargets].flatMap(target => [target.slice(0, -3), target]),
+    );
+    const { bare, relative: relativeTargets } = collectRouterImports(routerFiles);
+    const violations = [
+        ...bare.filter(({ spec }) => bannedBare.has(spec)).map(({ rel, spec }) => `${rel} -> ${spec}`),
+        ...relativeTargets.filter(({ target }) => bannedTargets.has(target)).map(({ rel, target }) => `${rel} -> ${target}`),
+    ];
+    expect(violations).toEqual([]);
+});
 
-    for (const rel of routerFiles) {
-        const abs = join(repoRoot, rel);
-        const info = ts.preProcessFile(readFileSync(abs, 'utf8'), true, true);
-        for (const imp of info.importedFiles) {
-            const spec = imp.fileName;
-            if (bannedBare.has(spec)) {
-                violations.push(`${rel} -> ${spec}`);
-                continue;
-            }
-            if (!spec.startsWith('.')) continue;
-            const target = resolveImportTarget(abs, spec);
-            if (bannedTargets.has(target)) {
-                violations.push(`${rel} -> ${target}`);
-            }
+test('packages/router/src production modules only import explicitly allowlisted scripts targets', () => {
+    const routerFiles = walkTs(join(repoRoot, 'packages', 'router', 'src'));
+    const allowedRouterScriptImports = new Set([
+        'scripts/autopilot.ts',
+        'scripts/cloud-recover.ts',
+        'scripts/fleet.ts',
+        'scripts/haggis-gate.ts',
+        'scripts/provision-readiness.ts',
+        'scripts/ranged-train.ts',
+        'scripts/swarm.ts',
+        'scripts/train-prayer.ts',
+    ]);
+    const { bare, relative: relativeTargets } = collectRouterImports(routerFiles);
+    const violations: string[] = [];
+    const observedTargets = new Set<string>();
+
+    for (const { rel, spec } of bare) {
+        if (spec === 'scripts' || spec.startsWith('scripts/')) {
+            violations.push(`${rel} -> ${spec}`);
         }
     }
+    for (const { rel, target } of relativeTargets) {
+        if (target !== 'scripts' && !target.startsWith('scripts/')) continue;
+        observedTargets.add(target);
+        if (!allowedRouterScriptImports.has(target)) {
+            violations.push(`${rel} -> ${target}`);
+        }
+    }
+
     expect(violations).toEqual([]);
+    expect([...observedTargets].sort()).toEqual([...allowedRouterScriptImports].sort());
 });
