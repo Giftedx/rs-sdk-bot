@@ -97,8 +97,11 @@
       "start": {
         "preset": "smelt_bars_alkharid"
       },
-      "script": "scripts/smelt-bars.ts",
+      "script": "scripts/aio-skiller.ts",
       "args": [
+        "artisan",
+        "smithing",
+        "smelt",
         "600",
         "iron"
       ],

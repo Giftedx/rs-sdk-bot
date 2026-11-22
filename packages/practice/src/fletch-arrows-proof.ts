@@ -18,7 +18,7 @@ type Save=ReturnType<typeof readPracticeSave>;
 type Run={code:number;log:string};
 const HEADLESS=53,TIP=44,ARROW=892,MAKE=45;
 export const ORDER_ENV={MAX_MAKE:String(MAKE),TIP_RESERVE:'5',HEADLESS_RESERVE:'200'};
-export const ORDER_ARGS=['scripts/fletch-arrows.ts','3000','native-arrows','rune'];
+export const ORDER_ARGS=['scripts/aio-skiller.ts','artisan','fletching','arrows','3000','native-arrows','rune'];
 const BANK={x:3185,z:3436,level:0};
 const KIT=[{id:995,count:100}];
 export const PRODUCTION_BANK=[{id:HEADLESS,count:400},{id:TIP,count:50},{id:ARROW,count:12},{id:995,count:1000}];

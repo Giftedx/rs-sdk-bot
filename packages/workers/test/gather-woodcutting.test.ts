@@ -3,10 +3,12 @@ import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from '
 import { resolve } from 'node:path';
 import { expect, spyOn, test } from 'bun:test';
 import type { Session } from '../../core/src/inprocess';
+import * as cargo from '../../core/src/cargo';
 import * as walking from '../../core/src/walk';
 import { at, fakeSession } from '../../core/test/fake';
 import {
     chopProcessingTree,
+    normalizeGatherConfig,
     normalGrove,
     oakGrove,
     processingTreeEdges,
@@ -15,6 +17,7 @@ import {
     runDraynorOak,
     runEdgevilleWoodcut,
     runWoodSupply,
+    runYewsGather,
     seersProcessingGrove,
     selectEdgevilleWoodcutAxe,
     selectWoodSupplyAxe,
@@ -1143,4 +1146,103 @@ test('reconcileWoodSupplyAxe swaps starter Bronze for higher owned/Bob axe and e
     expect(highId).toBe(1359);
     expect(eq[0]?.id).toBe(1359);
     expect(pack).toHaveLength(0);
+});
+
+test('runYewsGather preserves MAX_TRIPS=1 after initial Draynor forceToolCheck bank visit', async () => {
+    let tick = 0;
+    let gen = 1;
+    let bankOpen = false;
+    let wcXp = 0;
+    const listeners = new Set<() => void>();
+    const timer = setInterval(() => {
+        tick++;
+        for (const fn of [...listeners]) fn();
+    }, 1);
+    const grove = normalGrove();
+    const pos = { worldX: 3092, worldZ: 3243, level: 0, isDead: false, lifeId: 1, respawnCount: 0, combatLevel: 20 };
+    const pack: any[] = [{ id: 1351, name: 'Bronze axe', count: 1 }];
+    const bank: any[] = [{ id: 946, name: 'Knife', count: 1 }];
+    const tree = { id: 1276, name: 'Tree', x: grove.spot.x, z: grove.spot.z, distance: 1, optionsWithIndex: [{ text: 'Chop down', opIndex: 1 }] };
+    const s: any = {
+        name: 'WoodYewsTrip',
+        tick: () => tick,
+        ended: new Promise(() => {}),
+        onTick: (fn: () => void) => {
+            listeners.add(fn);
+            return () => listeners.delete(fn);
+        },
+        bankObservation: () => (bankOpen ? { generation: gen, items: bank } : null),
+        direct: async () => ({ success: true }),
+        sdk: {
+            getState: () => ({
+                player: pos,
+                inventory: pack,
+                equipment: [],
+                bank: { isOpen: bankOpen, items: bank },
+                nearbyLocs: [tree],
+                nearbyPlayers: [],
+                dialog: { isOpen: false },
+                interface: { isOpen: false },
+                modalOpen: false,
+            }),
+            getInventory: () => pack,
+            getEquipment: () => [],
+            getSkill: (name: string) =>
+                name === 'Hitpoints' ? { level: 30, baseLevel: 30 } : name === 'Attack' ? { level: 20, baseLevel: 20 } : { level: 1, baseLevel: 1 },
+            getSkillXp: (name: string) => (name === 'Woodcutting' || name === 'woodcutting' ? wcXp : 0),
+            sendInteractLoc: async () => {
+                pack.push({ id: 1511, name: 'Logs', count: 1 });
+                wcXp += 25;
+                return { success: true };
+            },
+        },
+        bot: {
+            openBank: async () => {
+                bankOpen = true;
+                gen++;
+                return { success: true };
+            },
+            closeInterface: async () => {
+                bankOpen = false;
+                return { success: true };
+            },
+            depositItem: async (re: RegExp | string) => {
+                for (let i = pack.length - 1; i >= 0; i--) {
+                    const item = pack[i]!;
+                    const match = typeof re === 'string' ? item.name === re : re.test(item.name);
+                    if (!match) continue;
+                    pack.splice(i, 1);
+                    const row = bank.find(r => r.id === item.id);
+                    if (row) row.count += item.count;
+                    else bank.push({ ...item });
+                    gen++;
+                }
+                return { success: true };
+            },
+        },
+    };
+    const cargoSpy = spyOn(cargo, 'bankCargo').mockResolvedValue();
+    const walkSpy = spyOn(walking, 'walkPath').mockImplementation(async (_w: any, targets: readonly { x: number; z: number }[]) => {
+        const t = targets[0];
+        if (t) {
+            pos.worldX = t.x;
+            pos.worldZ = t.z;
+        }
+        return { ok: true } as any;
+    });
+    try {
+        const cfg = normalizeGatherConfig({
+            skill: 'woodcutting',
+            method: 'yews',
+            args: ['200', '1'],
+            env: { REGION: 'draynor', TREE: 'normal', MAX_TRIPS: '1', BANK_AT: '1', CAP: '200' },
+        });
+        const r = await runYewsGather(s as Session, cfg, () => false);
+        expect(r.ok).toBe(true);
+        expect(r.summary).toMatchObject({ chops: 1, banked: 1, tree: 'normal' });
+    } finally {
+        clearInterval(timer);
+        cargoSpy.mockRestore();
+        walkSpy.mockRestore();
+    }
 });

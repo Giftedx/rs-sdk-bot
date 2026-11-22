@@ -24,7 +24,7 @@ export const NATIVE_ADMISSION_GB=Math.max(FREE_FLOOR_GB,PRACTICE_STARTUP_GB);
 export const cases=['entry','short'] as const;
 export type Kind=typeof cases[number];
 export const NATIVE_DEADLINE_MS=900000;
-const owned=['scripts/train-prayer.ts','scripts/train-prayer.test.ts','packages/practice/src/prayer-order-proof.ts','packages/practice/test/prayer-order-proof.test.ts'];
+const owned=['scripts/aio-skiller.ts','packages/workers/src/bank-artisan/prayer.ts','packages/workers/test/bank-artisan.test.ts','packages/practice/src/prayer-order-proof.ts','packages/practice/test/prayer-order-proof.test.ts'];
 const pinned=['packages/core/src/bot.ts','packages/core/src/ticks.ts','packages/core/src/walk.ts','packages/planner/src/curve.ts',
  'scripts/measure/fleet-player-save.ts','vendor/rs-sdk/server/content/scripts/skill_prayer/scripts/bury_bone.rs2',
  'vendor/rs-sdk/server/content/scripts/skill_prayer/scripts/prayers/protectfrommelee.rs2',
@@ -74,7 +74,7 @@ export async function startPrayerProofStack(p:ProofEndpoints,start:(opts:StackOp
  finally{for(const [k,v] of Object.entries(previous)){if(v===undefined)delete process.env[k];else process.env[k]=v;}}
 }
 export function childConfiguration(name:string,inherited:NodeJS.ProcessEnv=process.env,endpoints?:ProofEndpoints){
- return{cmd:['bun','scripts/train-prayer.ts',name,String(TARGET)],cwd:root,windowsHide:true,
+ return{cmd:['bun','scripts/aio-skiller.ts',name,'artisan','prayer','bury',String(TARGET)],cwd:root,windowsHide:true,
   env:{...inherited,...endpoints?.env,...(endpoints?{GATEWAY_URL:endpoints.gateway}:{}),DEMO_OK:'',RANDOM_EVENTS:'0',CAP:'5000',MAX_BURY:'600',BONE_ID:String(BONE),BONE_RESERVE:String(RESERVE),BURY_HELD:'0',TARGET_LEVEL:String(TARGET),
    PROGRESSION_CONSUMER:JSON.stringify({skills:{Prayer:TARGET},bank:{[BONE]:RESERVE}})}};
 }

@@ -71,17 +71,16 @@ test('the written ladders.json matches a fresh build', () => {
     expect(written).toEqual(JSON.parse(JSON.stringify(out)));
 });
 
-test('all eight native smelting rungs name both existing workers', () => {
+test('all eight native smelting rungs name the consolidated skiller worker', () => {
     const metals = ['bronze', 'iron', 'silver', 'steel', 'gold', 'mithril', 'adamant', 'runite'];
     for (const metal of metals) {
         const rung = all.find(m => m.id === `smithing/smelt-${metal}`);
         expect(rung).toBeDefined();
-        expect(rung!.workers).toContain('scripts/smelt-bars.ts');
-        expect(rung!.workers).toContain('scripts/smelt-batch.ts');
+        expect(rung!.workers).toContain('scripts/aio-skiller.ts');
     }
     // The native guide labels this rung Adamant; the CLI recipe is Adamantite.
     expect(all.some(m => m.id === 'smithing/smelt-adamantite')).toBe(false);
-    expect(data.readFile('scripts/smelt-bars.ts')).toContain('adamantite | runite');
+    expect(data.readFile('packages/workers/src/bank-artisan/smithing.ts')).toContain('adamantite | runite');
 });
 
 test('unsupported guide metals do not inherit a smelting worker', () => {
@@ -101,7 +100,7 @@ test('unsupported guide metals do not inherit a smelting worker', () => {
 });
 
 test('native CLI recipe names resolve the rung products without accepting the guide alias', async () => {
-    const { smeltRecipe } = await import('../../../scripts/smelt-batch');
+    const { smeltRecipe } = await import('../../../packages/workers/src/bank-artisan');
     for (const metal of ['bronze', 'iron', 'silver', 'steel', 'gold', 'mithril', 'adamant', 'runite']) {
         const rung = all.find(m => m.id === `smithing/smelt-${metal}`)!;
         expect(smeltRecipe(metal === 'adamant' ? 'adamantite' : metal).product).toBe(rung.outputs[0]!.id!);

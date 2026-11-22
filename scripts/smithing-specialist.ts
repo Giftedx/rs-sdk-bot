@@ -1,6 +1,6 @@
 // Fresh-account 1-to-99 Smithing specialist via Glory-to-Edgeville, Varrock West bank runners, and platebody burst smithing.
 import type { Session } from '../packages/core/src/inprocess';
-import { smithRecipe } from './smith-batch';
+import { smithRecipe } from '../packages/workers/src/bank-artisan';
 import {
  assertCatalogItems,
  burstTradeHost,

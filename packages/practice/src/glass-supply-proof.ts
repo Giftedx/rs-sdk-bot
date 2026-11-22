@@ -12,10 +12,10 @@ import {killTree} from '../../core/src/proc';
 import {capabilityRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
-import {GLASS_BANK,GLASS_RETURN_BANK,glassSupplyLedger,glassSupplyOptions,planGlassSupply,type GlassStock} from '../../../scripts/microbot-glass';
+import {GLASS_BANK,GLASS_RETURN_BANK,glassSupplyLedger,glassSupplyOptions,planGlassSupply,type GlassStock} from '../../workers/src/bank-artisan';
 
 type Save=ReturnType<typeof readPracticeSave>;
-const root=resolve(import.meta.dir,'../../..'),worker='scripts/microbot-glass.ts',proof='packages/practice/src/glass-supply-proof.ts';
+const root=resolve(import.meta.dir,'../../..'),worker='scripts/aio-skiller.ts',artisanModule='packages/workers/src/bank-artisan/crafting.ts',proof='packages/practice/src/glass-supply-proof.ts';
 export const ADMISSION={floorGb:FREE_FLOOR_GB,startupGb:PRACTICE_STARTUP_GB};
 export const glassCases=['entry','owned','ingredients','refusal'] as const;
 export type GlassCase=typeof glassCases[number];
@@ -27,14 +27,14 @@ const pinned=[
  'maps/m47_51.jm2','maps/m43_52.jm2','maps/m44_52.jm2',
 ].map(p=>'vendor/rs-sdk/server/content/'+p);
 const hash=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
-export function glassProofSource(){return{runtime:capabilityRevision([worker,proof]),files:Object.fromEntries([worker,'scripts/microbot-glass.test.ts',proof,'packages/practice/test/glass-supply-proof.test.ts',...pinned].map(p=>[p,hash(join(root,p))]))};}
+export function glassProofSource(){return{runtime:capabilityRevision([worker,proof]),files:Object.fromEntries([worker,artisanModule,'packages/workers/test/bank-artisan.test.ts',proof,'packages/practice/test/glass-supply-proof.test.ts',...pinned].map(p=>[p,hash(join(root,p))]))};}
 export function glassProofPreset(id:GlassCase):SaveConfig{
  return{position:{...GLASS_BANK,level:0},skills:{Crafting:51,Hitpoints:39},varps:{160:2},
   inventory:[{id:995,count:17},{id:590,count:1},...(id==='owned'?[{id:1775,count:1}]:[]),...(id==='ingredients'?[{id:1781,count:1}]:[])],
   equipment:[{id:1205,count:1,slot:3}],bank:[{id:995,count:2000},{id:314,count:23},...(id==='owned'?[{id:1775,count:2}]:[]),...(id==='ingredients'?[{id:1783,count:1}]:[])]};
 }
 export function glassChildConfiguration(name:string,id:GlassCase,inherited:NodeJS.ProcessEnv=process.env){
- return{cmd:['bun',worker,name],cwd:root,windowsHide:true,env:{...inherited,DEMO_OK:'',RANDOM_EVENTS:'0',SUPPLY_MODE:'1',MEMBERS:id==='refusal'?'0':'1',MAX_MAKE:'1',MAX_SPEND:'0',CASH_RESERVE:'1000',CAP:'4000'}};
+ return{cmd:['bun',worker,name,'artisan','crafting','glass'],cwd:root,windowsHide:true,env:{...inherited,DEMO_OK:'',RANDOM_EVENTS:'0',SUPPLY_MODE:'1',MEMBERS:id==='refusal'?'0':'1',MAX_MAKE:'1',MAX_SPEND:'0',CASH_RESERVE:'1000',CAP:'4000'}};
 }
 const count=(s:Save,inv:number,id:number)=>(s.inventories[inv]??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 export function glassSaveStock(s:Save):GlassStock{const stock:GlassStock={};for(const item of Object.values(s.inventories).flat())stock[item.id]=(stock[item.id]??0)+item.count;return stock;}

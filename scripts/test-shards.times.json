@@ -18,10 +18,12 @@
  "packages/workers/test/gather-fishing.test.ts": 27,
  "packages/workers/test/gather-mining.test.ts": 6,
  "packages/workers/test/gather-foraging.test.ts": 6,
+ "packages/workers/test/bank-artisan-fletch-arrows.test.ts": 6,
+ "packages/workers/test/bank-artisan-magic.test.ts": 11,
+ "packages/workers/test/bank-artisan-smelt-batch.test.ts": 34,
+ "packages/workers/test/bank-artisan-train-prayer.test.ts": 13,
  "scripts/agility-order.test.ts": 14,
- "scripts/earth-production.test.ts": 9,
  "scripts/fleet-owner-claim.test.ts": 11,
- "scripts/fletch-arrows.test.ts": 6,
  "scripts/generated/quest-hero.test.ts": 4,
  "scripts/handoff-inputs.test.ts": 18,
  "scripts/magic-order.test.ts": 7,
@@ -29,7 +31,5 @@
  "scripts/quest-walk.test.ts": 20,
  "scripts/ranged-train.test.ts": 9,
  "scripts/rune-carrier-trade.test.ts": 14,
- "scripts/rune-supply.test.ts": 7,
- "scripts/smelt-batch.test.ts": 34,
- "scripts/train-prayer.test.ts": 13
+ "scripts/rune-supply.test.ts": 7
 }

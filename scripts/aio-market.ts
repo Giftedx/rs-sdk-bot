@@ -393,7 +393,8 @@ export async function runAioMarket(account: string, args: readonly string[], env
                             reserve: request.reserve,
                         }));
                         saveFallback({ request, phase: 'running', spent, seeded: seedUsed, at: Date.now() });
-                        const child = Bun.spawn([process.execPath, plan.entry, account, ...plan.args], {
+                        const spawnArgs = [plan.entry, account, ...plan.args];
+                        const child = Bun.spawn([process.execPath, ...spawnArgs], {
                             windowsHide: true,
                             stdout: 'pipe',
                             stderr: 'pipe',

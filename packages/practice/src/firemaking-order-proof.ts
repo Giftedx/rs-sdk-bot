@@ -1,5 +1,5 @@
 // Harness entry only. Import and --verify never start services or log in.
-// Native proof: the installed scripts/firemaking-order.ts CLI on ordinary generated fixtures, judged from saved state.
+// Native proof: the installed scripts/aio-skiller.ts (artisan firemaking order) CLI on ordinary generated fixtures, judged from saved state.
 import {copyFileSync,readFileSync,writeFileSync,mkdirSync,existsSync,openSync,closeSync,unlinkSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
@@ -12,12 +12,12 @@ import {killTree} from '../../core/src/proc';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
-import {levelForXp,lineTiles,firemakingSite,DRAYNOR_BANK,LOGS,TINDERBOX,COINS} from '../../../scripts/firemaking-order';
+import {levelForXp,lineTiles,firemakingSite,FM_DRAYNOR_BANK as DRAYNOR_BANK,LOGS,TINDERBOX,ARTISAN_COINS as COINS} from '../../workers/src/bank-artisan';
 
 type Save=ReturnType<typeof readPracticeSave>;
 type Child={code:number;timedOut:boolean};
 const root=resolve(import.meta.dir,'../../..');
-const owned=['scripts/firemaking-order.ts','scripts/firemaking-order.test.ts','packages/practice/src/firemaking-order-proof.ts','packages/practice/test/firemaking-order-proof.test.ts'];
+const owned=['scripts/aio-skiller.ts','packages/workers/src/bank-artisan/firemaking.ts','packages/workers/test/bank-artisan.test.ts','packages/practice/src/firemaking-order-proof.ts','packages/practice/test/firemaking-order-proof.test.ts'];
 const pinned=['packages/workers/src/market/shop-buy.ts','packages/core/src/walk.ts','packages/core/src/bot.ts','packages/core/src/deposit.ts','scripts/measure/fleet-player-save.ts',
  'vendor/rs-sdk/server/content/scripts/skill_firemaking/scripts/firemaking.rs2','vendor/rs-sdk/server/content/scripts/skill_firemaking/configs/firemaking.obj',
  'vendor/rs-sdk/server/content/scripts/areas/area_lumbridge/configs/lumbridge.inv','vendor/rs-sdk/server/content/scripts/areas/area_lumbridge/configs/lumbridge.npc',
@@ -52,7 +52,7 @@ export function firemakingFixture(kind:'entry'|'short'):SaveConfig{
   inventory:[{id:COINS,count:80},...Array.from({length:3},()=>({id:1933,count:1}))],bank};
 }
 export function childConfiguration(name:string,kind:Kind,inherited:NodeJS.ProcessEnv=process.env){
- return{cmd:['bun','scripts/firemaking-order.ts',name],cwd:root,windowsHide:true,
+ return{cmd:['bun','scripts/aio-skiller.ts',name,'artisan','firemaking','order'],cwd:root,windowsHide:true,
   env:{...inherited,DEMO_OK:'',RANDOM_EVENTS:'0',TARGET_LEVEL:String(TARGET),LOG:'normal',
    TOOL_BUDGET:String(TOOL_BUDGET),CASH_RESERVE:'0',CAP:'2000',MAX_LOGS:'2'}};
 }

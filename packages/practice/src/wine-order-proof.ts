@@ -42,7 +42,7 @@ async function run(directory:string){
   stack=await startStack({tickMs:400,readyTimeoutMs:60000});await createBot(name);
   if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(botDir,'bot.env'),'utf8')))throw Error('local fixture required');
   const path=await applyPreset(name,{position:{x:3092,z:3243,level:0},bank:[{id:1995,count:150}],inventory:[{id:1996,count:600}]});copyFileSync(path,join(directory,'before.sav'));
-  const started=Date.now(),child=Bun.spawn(['bun','scripts/cook-wine.ts',name,'99','80'],{cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0'},stdout:Bun.file(join(directory,'worker.log')),stderr:Bun.file(join(directory,'worker.err')),windowsHide:true});
+  const started=Date.now(),child=Bun.spawn(['bun','scripts/aio-skiller.ts',name,'artisan','cooking','wine','99','80'],{cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0'},stdout:Bun.file(join(directory,'worker.log')),stderr:Bun.file(join(directory,'worker.err')),windowsHide:true});
   let timedOut=false,termination:Promise<void>|undefined;const timer=setTimeout(()=>{timedOut=true;termination=killTree(child.pid)},90000);
   const code=await child.exited;clearTimeout(timer);await termination;
   const workerElapsedMs=Date.now()-started;

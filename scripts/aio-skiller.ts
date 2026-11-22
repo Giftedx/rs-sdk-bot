@@ -31,35 +31,44 @@ import { runMagicOrderCli } from './magic-order';
 import {approach,awayFrom,walkTargetPersist,leaveTutorial,sendHandoff,receiveHandoff,pendingCourierFunding,serviceCourierFunding} from '../packages/workers/src/logistics';
 import {leaveRuneStarter} from './rune-starter';
 import {walkFar,nearestBanks} from '../packages/workers/src/quest/sweep';
-import {cookSharks} from './cook-food';
-import {cookingRecipes,runCookingBatch,nativeHeatSources} from './microbot-b-cooking';
-import {jewelleryRecipes,runJewellery} from './microbot-b-jewellery';
-import {runSoftenClay} from './soften-clay';
-import {runShafts} from './fletch-shafts';
+import {
+ bankArtisanWorker,
+ runArtisanCli,
+ VALID_ARTISAN_SKILLS,
+ type ArtisanSkill,
+ type ArtisanExternalDeps,
+ cookSharks,cookingRecipes,runCookingBatch,nativeHeatSources,
+ jewelleryRecipes,runJewellery,
+ runSoftenClay,
+ runShafts,
+ inventoryRecipes,runInventoryBank,
+ tanningRecipes,tanInventory,type TanKind,
+ furnaceGlassRecipe,runFurnaceGlass,
+ itemMagicRecipe,itemSpellCosts,runItemMagic,
+ runMixedWine,runBonesBank,
+ smeltRecipe,planSmeltLoad,smeltEffect,validateSmeltOrder,validateSmeltRoute,nativeSmeltFurnace,nativeSmeltStands,runSmeltBatch,type SmeltOrder,type SmeltRecipe,
+ smithRecipe,planSmithLoad,smithEffect,runSmithBatch,HAMMER,SMITHING_INTERFACE,type SmithRecipe,
+ planHeadless,runHeadless,type HeadlessOptions,
+ validateWoodProcessingJob,runWoodProcessingCycle,runWoodProductDrop,runFletchingCycle,type WoodProcessingJob,
+ LOGS,BURN_ROWS,DRAYNOR_SITE,CATHERBY_SITE,firemakingSite,progressiveFiremakingLog,firemakingOptions,firemakingPreflight,lineTiles,nextFreeTile,packWant,type LogKind,type FiremakingOptions,
+ BONE_XP,prayerOptions,planPrayer,prayerBank,runPrayer,type PrayerOptions,
+ boundedHerbloreMove,tracedWalker,observeHerbloreStep,reachSeller,
+ kittenCare,weedMiscellania,fillDruidPouch,druidPouchFillDelta,
+} from '../packages/workers/src/bank-artisan';
 import {attackable,defaultSpec,fightPlayer,type FightOptions} from './pk';
 import {escapeStep,hasVarrockTeleport,kitFrom} from '../packages/workers/src/pvp/wild-rules';
-import {inventoryRecipes,runInventoryBank} from './microbot-production';
-import {tanningRecipes,tanInventory,type TanKind} from './microbot-c-tanner';
-import {furnaceGlassRecipe,runFurnaceGlass} from './microbot-glass';
-import {itemMagicRecipe,itemSpellCosts,runItemMagic} from './microbot-magic-items';
-import {runMixedWine} from './microbot-wine';
-import {runBonesBank} from './microbot-bones';
-import {smeltRecipe,planSmeltLoad,smeltEffect,validateSmeltOrder,validateSmeltRoute,nativeSmeltFurnace,nativeSmeltStands,runSmeltBatch,type SmeltOrder,type SmeltRecipe} from './smelt-batch';
-import {smithRecipe,planSmithLoad,smithEffect,runSmithBatch,HAMMER,SMITHING_INTERFACE,type SmithRecipe} from './smith-batch';
-import {planHeadless,runHeadless,type HeadlessOptions} from './fletch-arrows';
-import {validateWoodProcessingJob,runWoodProcessingCycle,runWoodProductDrop,runFletchingCycle,type WoodProcessingJob} from './fletch-worker';
-import {LOGS,BURN_ROWS,DRAYNOR_SITE,CATHERBY_SITE,firemakingSite,progressiveFiremakingLog,firemakingOptions,firemakingPreflight,lineTiles,nextFreeTile,packWant,type LogKind,type FiremakingOptions} from './firemaking-order';
 import {agilityWorker,runAgilityCli,COURSES,agilityOptions,agilityPreflight,onCourse,resumeStep,type Course,type AgilityOptions} from '../packages/workers/src/agility';
 import {runecraftWorker,runRunecraftCli,RUNE_ALTARS,chooseRuneAltar,ruinTarget,dispatchRuneEntry,settleRuneEntryModal,NATURE,natureProfile,runNatureTrips,createShiloTransit,type NatureJob,runRuneSupply,runeSupplyTarget,type RunecraftMode,type RunecraftExternalDeps} from '../packages/workers/src/runecraft';
 import {readPracticeSave} from './measure/fleet-player-save';
 import {runRuneMysteries} from './generated/quest-runemysteries';
-import {trainChickens} from '../packages/workers/src/combat/chickens';
-import {BONE_XP,prayerOptions,planPrayer,prayerBank,runPrayer,type PrayerOptions} from './train-prayer';
-import {boundedHerbloreMove,tracedWalker,observeHerbloreStep,reachSeller} from './brew-potions';
-import {kittenCare,weedMiscellania,fillDruidPouch,druidPouchFillDelta} from './microbot-c-care';
+import {trainChickens,nativeNpcSpell,runNpcMagic,combatTeleportAllowed,withdrawFireOwned} from '../packages/workers/src/combat';
+import {reconcileLoadout} from './gear-reconcile';
+import {installOrbFloorBridge} from './microbot-edgeville-travel';
+import {monitorWildernessLevel} from '../packages/workers/src/pvp/monitor';
 
 export {
  gatherWorker,
+ bankArtisanWorker,
  // Bank-profile engine & recipes
  runBankJob,runBankProfile,validateBankJob,type BankJob,
  FISH_PROFILES,runStagedFishing,pickFishSpot,fishSpotIds,searchNativeCatherbyFishing,type FishMethod,
@@ -115,12 +124,12 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'fishing',method:'fly30',script:'scripts/generated/fishing30.ts',description:'Fresh-account fly fishing to level 30'},
  {skill:'fishing',method:'specialist',script:'scripts/fishing-specialist.ts',description:'Fresh-clock specialist Fishing 1 to 99 with tutorial skip, helper trade, and 3-tick net/bait/fly fishing'},
  // Cooking
- {skill:'cooking',method:'food',script:'scripts/cook-food.ts',description:'Cook banked raw fish (lobster/shark/trout/salmon) at Catherby range'},
- {skill:'cooking',method:'stock',script:'scripts/cook-stock.ts',description:'Batch cook banked raw stock with burn/XP reconciliation'},
- {skill:'cooking',method:'wine',script:'scripts/cook-wine.ts',description:'Ferment jugs of wine from grapes and water jugs'},
- {skill:'cooking',method:'mixed-wine',script:'scripts/microbot-wine.ts',description:'Bank-staged wine fermentation with exact ferm/bad-wine reconciliation'},
- {skill:'cooking',method:'batch',script:'scripts/microbot-b-cooking.ts',description:'Staged range/fire cooking batch for any native recipe'},
- {skill:'cooking',method:'ge-cook',script:'scripts/microbot-ge-cooking.ts',description:'GE-restocked cooking batch'},
+ {skill:'cooking',method:'food',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','cooking','food'],description:'Cook banked raw fish (lobster/shark/trout/salmon) at Catherby range'},
+ {skill:'cooking',method:'stock',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','cooking','stock'],description:'Batch cook banked raw stock with burn/XP reconciliation'},
+ {skill:'cooking',method:'wine',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','cooking','wine'],description:'Ferment jugs of wine from grapes and water jugs'},
+ {skill:'cooking',method:'mixed-wine',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','cooking','mixed-wine'],description:'Bank-staged wine fermentation with exact ferm/bad-wine reconciliation'},
+ {skill:'cooking',method:'batch',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','cooking','batch'],description:'Staged range/fire cooking batch for any native recipe'},
+ {skill:'cooking',method:'ge-cook',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','cooking','ge-cook'],description:'GE-restocked cooking batch'},
  {skill:'cooking',method:'specialist',script:'scripts/cooking-specialist.ts',description:'Fresh-clock specialist Cooking 1 to 99 via noted wine fermentation and 4 Fruit Blasts'},
  // Woodcutting
  {skill:'woodcutting',method:'edgeville',script:'scripts/aio-skiller.ts',defaultArgs:['gather','woodcutting','edgeville'],description:'Edgeville tree/oak/yew woodcutting order'},
@@ -129,14 +138,14 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'woodcutting',method:'loop',script:'scripts/aio-skiller.ts',defaultArgs:['gather','woodcutting','loop'],description:'Continuous woodcutting loop'},
  {skill:'woodcutting',method:'specialist',script:'scripts/woodcutting-specialist.ts',description:'Fresh-clock specialist Woodcutting 1 to 99 with 2-tick goblin flinch / 3-tick knife-reset Oaks'},
  // Firemaking
- {skill:'firemaking',method:'order',script:'scripts/firemaking-order.ts',description:'Line firemaking order from banked logs (normal/oak/willow/maple/yew/magic)'},
- {skill:'firemaking',method:'line',script:'scripts/firemaking-line.ts',description:'Train a runner on a firemaking line supplied by named owned helper accounts'},
- {skill:'firemaking',method:'ge',script:'scripts/microbot-ge-firemaking.ts',description:'GE-supplied firemaking batch'},
+ {skill:'firemaking',method:'order',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','firemaking','order'],description:'Line firemaking order from banked logs (normal/oak/willow/maple/yew/magic)'},
+ {skill:'firemaking',method:'line',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','firemaking','line'],description:'Train a runner on a firemaking line supplied by named owned helper accounts'},
+ {skill:'firemaking',method:'ge',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','firemaking','ge'],description:'GE-supplied firemaking batch'},
  {skill:'firemaking',method:'specialist',script:'scripts/firemaking-specialist.ts',description:'Fresh-clock specialist Firemaking 1 to 99 lighting pre-dropped Lumbridge ground log lines'},
  // Fletching
- {skill:'fletching',method:'arrows',script:'scripts/fletch-arrows.ts',description:'Fletch shafts, headless arrows, and tipped arrows (bronze..rune)'},
- {skill:'fletching',method:'shafts',script:'scripts/fletch-arrows.ts',defaultEnv:{MODE:'shafts'},description:'Fletch arrow shafts from banked logs'},
- {skill:'fletching',method:'worker',script:'scripts/fletch-worker.ts',description:'Fletch unstrung/strung shortbows and longbows from banked logs'},
+ {skill:'fletching',method:'arrows',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','fletching','arrows'],description:'Fletch shafts, headless arrows, and tipped arrows (bronze..rune)'},
+ {skill:'fletching',method:'shafts',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','fletching','shafts'],defaultEnv:{MODE:'shafts'},description:'Fletch arrow shafts from banked logs'},
+ {skill:'fletching',method:'worker',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','fletching','worker'],description:'Fletch unstrung/strung shortbows and longbows from banked logs'},
  {skill:'fletching',method:'specialist',script:'scripts/fletching-specialist.ts',description:'Fresh-clock specialist Fletching 1 to 99 with tutorial skip, helper trade, and 5-action/tick arrow fletching'},
  // Mining
  {skill:'mining',method:'ore',script:'scripts/aio-skiller.ts',defaultArgs:['gather','mining','ore'],description:'Mine and bank copper/tin/iron/coal/gold/mithril/adamant'},
@@ -148,25 +157,25 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'mining',method:'lava-maze',script:'scripts/aio-skiller.ts',defaultArgs:['gather','mining','lava-maze'],description:'Wilderness Lava Maze runite ore mining'},
  {skill:'mining',method:'specialist',script:'scripts/mining-specialist.ts',description:'Fresh-clock specialist Mining 1 to 99 via Doric Quest and 3-tick Ardougne Zoo iron rotation'},
  // Smithing
- {skill:'smithing',method:'smelt',script:'scripts/smelt-bars.ts',description:'Smelt bronze/iron/steel/gold/mithril/adamant/runite bars at furnace'},
- {skill:'smithing',method:'anvil',script:'scripts/smelt-bars.ts',defaultEnv:{ORDER_ACTION:'smith'},description:'Smith bars on the anvil: PRODUCT_ID, MAX_MAKE and BAR_RESERVE name the order'},
- {skill:'smithing',method:'cannonballs',script:'scripts/microbot-a-cannonballs.ts',description:'Smelt steel bars into cannonballs'},
+ {skill:'smithing',method:'smelt',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','smithing','smelt'],description:'Smelt bronze/iron/steel/gold/mithril/adamant/runite bars at furnace'},
+ {skill:'smithing',method:'anvil',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','smithing','anvil'],defaultEnv:{ORDER_ACTION:'smith'},description:'Smith bars on the anvil: PRODUCT_ID, MAX_MAKE and BAR_RESERVE name the order'},
+ {skill:'smithing',method:'cannonballs',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','smithing','cannonballs'],description:'Smelt steel bars into cannonballs'},
  {skill:'smithing',method:'specialist',script:'scripts/smithing-specialist.ts',description:'Fresh-clock 1-to-99 Smithing via Glory Edgeville and Varrock West anvil runners'},
  // Crafting
- {skill:'crafting',method:'bowstrings',script:'scripts/spin-bowstrings.ts',description:'Spin flax into bowstrings at Seers/Lumbridge wheel'},
- {skill:'crafting',method:'jewellery',script:'scripts/microbot-b-jewellery.ts',description:'Craft rings, necklaces, and amulets at furnace'},
- {skill:'crafting',method:'jewellery-trip',script:'scripts/microbot-jewellery-trip.ts',description:'Full bank-to-furnace jewellery crafting trip'},
- {skill:'crafting',method:'legacy-jewelry',script:'scripts/craft-jewelry.ts',description:'Gem cutting at the Al Kharid bank (action cut). The smelt action does not end (bench case extra:same-jewel-legacy): use jewellery-trip for furnace jewellery'},
- {skill:'crafting',method:'glass',script:'scripts/microbot-glass.ts',description:'Smelt soda ash + sand into molten glass and blow glass items'},
- {skill:'crafting',method:'tanning',script:'scripts/microbot-c-tanner.ts',description:'Tan cowhide and dragonhides at Al Kharid tanner'},
- {skill:'crafting',method:'black-dhide-sets',script:'scripts/black-dhide-sets.ts',description:'Tan banked black dragonhide at Al Kharid and craft body, chaps and vambraces sets at the bank'},
- {skill:'crafting',method:'soften-clay',script:'scripts/soften-clay.ts',description:'Soften clay with water sources'},
- {skill:'crafting',method:'inventory',script:'scripts/microbot-production.ts',description:'Bank-staged inventory crafting (leather, gems, battle staves, pottery)'},
- {skill:'crafting',method:'progressive',script:'scripts/microbot-production-progressive.ts',description:'Progressive level-unlocked inventory crafting'},
+ {skill:'crafting',method:'bowstrings',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','bowstrings'],description:'Spin flax into bowstrings at Seers/Lumbridge wheel'},
+ {skill:'crafting',method:'jewellery',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','jewellery'],description:'Craft rings, necklaces, and amulets at furnace'},
+ {skill:'crafting',method:'jewellery-trip',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','jewellery-trip'],description:'Full bank-to-furnace jewellery crafting trip'},
+ {skill:'crafting',method:'legacy-jewelry',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','legacy-jewelry'],description:'Gem cutting at the Al Kharid bank (action cut). The smelt action does not end (bench case extra:same-jewel-legacy): use jewellery-trip for furnace jewellery'},
+ {skill:'crafting',method:'glass',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','glass'],description:'Smelt soda ash + sand into molten glass and blow glass items'},
+ {skill:'crafting',method:'tanning',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','tanning'],description:'Tan cowhide and dragonhides at Al Kharid tanner'},
+ {skill:'crafting',method:'black-dhide-sets',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','black-dhide-sets'],description:'Tan banked black dragonhide at Al Kharid and craft body, chaps and vambraces sets at the bank'},
+ {skill:'crafting',method:'soften-clay',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','soften-clay'],description:'Soften clay with water sources'},
+ {skill:'crafting',method:'inventory',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','inventory'],description:'Bank-staged inventory crafting (leather, gems, battle staves, pottery)'},
+ {skill:'crafting',method:'progressive',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','crafting','progressive'],description:'Progressive level-unlocked inventory crafting'},
  {skill:'crafting',method:'specialist',script:'scripts/crafting-specialist.ts',description:'Fresh-clock 1-to-99 Crafting via 5-per-tick unnoted gem cutting'},
  // Herblore
- {skill:'herblore',method:'potions',script:'scripts/brew-potions.ts',description:'Clean herbs, make unfinished potions, and brew finished potions'},
- {skill:'herblore',method:'meats',script:'scripts/druid-meats.ts',description:'Gather/prepare meats for Druidic Ritual Herblore unlock'},
+ {skill:'herblore',method:'potions',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','herblore','potions'],description:'Clean herbs, make unfinished potions, and brew finished potions'},
+ {skill:'herblore',method:'meats',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','herblore','meats'],description:'Gather/prepare meats for Druidic Ritual Herblore unlock'},
  {skill:'herblore',method:'specialist',script:'scripts/herblore-specialist.ts',description:'Fresh-clock 1-to-99 Herblore via Games necklace Druidic Ritual and Edgeville 10-potion bank cycles'},
  // Runecraft
  {skill:'runecraft',method:'bank-craft',script:'scripts/aio-skiller.ts',defaultArgs:['runecraft','bank-craft'],description:'Craft banked essence at best unlocked altar (air/mind/water/earth/fire/body/cosmic)'},
@@ -176,20 +185,20 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'runecraft',method:'specialist',script:'scripts/runecraft-specialist.ts',description:'Fresh-clock 1-to-99 Runecraft via Air altar unlock and Body altar essence runners'},
  // Magic
  {skill:'magic',method:'order',script:'scripts/aio-skiller.ts',defaultArgs:['combat','magic-order'],description:'Combat/curse/bolt magic training order'},
- {skill:'magic',method:'items',script:'scripts/microbot-magic-items.ts',description:'High/Low Alchemy, Superheat Item, and Jewellery Enchanting'},
+ {skill:'magic',method:'items',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','magic','items'],description:'High/Low Alchemy, Superheat Item, and Jewellery Enchanting'},
  {skill:'magic',method:'npc',script:'scripts/aio-skiller.ts',defaultArgs:['combat','magic-npc'],description:'Curse/Weakening/Strike/Bolt/Blast spell casting on NPCs'},
- {skill:'magic',method:'teleport',script:'scripts/microbot-magic-teleport.ts',description:'Repeated teleport spell training'},
- {skill:'magic',method:'trip',script:'scripts/microbot-magic-trip.ts',description:'Bank-staged magic training trip'},
- {skill:'magic',method:'orbs',script:'scripts/microbot-c-orbs.ts',defaultEnv:{ORB_TRIP:'1'},description:'Bank trip to an obelisk to charge air/earth/water/fire orbs'},
- {skill:'magic',method:'orbs-at-site',script:'scripts/microbot-c-orbs.ts',description:'At-obelisk orb charging batch'},
- {skill:'magic',method:'bones',script:'scripts/microbot-bones.ts',description:'Bones to Bananas conversion'},
- {skill:'magic',method:'earth-production',script:'scripts/earth-production.ts',description:'Earth rune production for magic/superheat'},
- {skill:'magic',method:'alch-train',script:'scripts/alch-train.ts',description:'Alchemy on a cheap stackable item at the Ardougne north bank: Low Alchemy to Magic 55, then High Alchemy to the target level'},
+ {skill:'magic',method:'teleport',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','magic','teleport'],description:'Repeated teleport spell training'},
+ {skill:'magic',method:'trip',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','magic','trip'],description:'Bank-staged magic training trip'},
+ {skill:'magic',method:'orbs',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','magic','orbs'],defaultEnv:{ORB_TRIP:'1'},description:'Bank trip to an obelisk to charge air/earth/water/fire orbs'},
+ {skill:'magic',method:'orbs-at-site',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','magic','orbs-at-site'],description:'At-obelisk orb charging batch'},
+ {skill:'magic',method:'bones',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','magic','bones'],description:'Bones to Bananas conversion'},
+ {skill:'magic',method:'earth-production',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','magic','earth-production'],description:'Earth rune production for magic/superheat'},
+ {skill:'magic',method:'alch-train',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','magic','alch-train'],description:'Alchemy on a cheap stackable item at the Ardougne north bank: Low Alchemy to Magic 55, then High Alchemy to the target level'},
  {skill:'magic',method:'splash',script:'scripts/aio-skiller.ts',defaultArgs:['combat','magic-splash'],description:'Curse casts over the fence of the Ardougne cow field to the target Magic level'},
  {skill:'magic',method:'splash-coop',script:'scripts/aio-skiller.ts',defaultArgs:['combat','magic-splash-coop'],defaultEnv:{SPLASH_SITE:'coop'},description:'The record route opening: Wind Strike and Confuse from the starter pack at the Lumbridge coop, no bank'},
  {skill:'magic',method:'specialist',script:'scripts/magic-specialist.ts',description:'Fresh-clock 1-to-99 Magic via enchant ladder, Mage Arena, and 5-per-tick Charge'},
  // Prayer
- {skill:'prayer',method:'bury',script:'scripts/train-prayer.ts',description:'Bury bones / big bones / dragon bones to target Prayer level'},
+ {skill:'prayer',method:'bury',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','prayer','bury'],description:'Bury bones / big bones / dragon bones to target Prayer level'},
  {skill:'prayer',method:'flick',script:'scripts/aio-skiller.ts',defaultArgs:['combat','prayer-flick'],description:'1-tick prayer flicking upkeep'},
  {skill:'prayer',method:'specialist',script:'scripts/prayer-specialist.ts',description:'Fresh-clock 1-to-99 Prayer via Draynor Bank dragon-bone runners and Lumbridge burying'},
  // Agility
@@ -202,7 +211,7 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'thieving',method:'stun-bury',script:'scripts/measure/stun-guest.ts',description:'Ardougne knights with a bone buried inside each stun (MODE=bury)'},
  {skill:'thieving',method:'stun-enchant',script:'scripts/measure/stun-guest.ts',description:'Ardougne knights with an enchant cast inside each stun (MODE=enchant)'},
  // Superheat Smithing 1-41 during Ardougne knight stuns: Magic 43+ casts superheat:bronze (1-15, 12 casts) and
- // superheat:iron (15-41, 45 casts) via scripts/microbot-magic-items.ts + fire staff during 8-tick stuns.
+ // superheat:iron (15-41, 45 casts) via packages/workers/src/bank-artisan (artisan magic:items) + fire staff during 8-tick stuns.
  {skill:'thieving',method:'bootstrap55',script:'scripts/generated/thieving60.ts',description:'Fresh-account Men -> Cake stall -> Guards -> Knights to 55/60 Thieving'},
  {skill:'thieving',method:'pickpocket',script:'scripts/aio-skiller.ts',defaultArgs:['gather','thieving','pickpocket'],description:'Bank-staged pickpocket trip for any native NPC profile'},
  {skill:'thieving',method:'pickpocket-at-site',script:'scripts/aio-skiller.ts',defaultArgs:['gather','thieving','pickpocket-at-site'],description:'At-site NPC pickpocketing'},
@@ -216,9 +225,9 @@ export const SKILLER_ROUTES: readonly SkillerRouteSpec[] = [
  {skill:'foraging',method:'feathers',script:'scripts/aio-skiller.ts',defaultArgs:['gather','foraging','feathers'],description:'Collect feathers at chicken pens'},
  {skill:'foraging',method:'spawn',script:'scripts/aio-skiller.ts',defaultArgs:['gather','foraging','spawn'],description:'Collect ground spawns and bank'},
  {skill:'foraging',method:'grapes',script:'scripts/aio-skiller.ts',defaultArgs:['gather','foraging','grapes'],description:'Collect grapes for wine making'},
- {skill:'foraging',method:'care',script:'scripts/microbot-c-care.ts',description:'Kitten care (feed/wool/stroke), Miscellania weeding, and Druid pouch filling'},
- {skill:'foraging',method:'miscellania-coffer',script:'scripts/microbot-misc-coffer.ts',description:'Manage Kingdom of Miscellania coffer and approval'},
- {skill:'foraging',method:'qol',script:'scripts/microbot-c-qol.ts',description:'Auto Cannon refill, prayer hold, special bar enable, and inventory drop patterns'},
+ {skill:'foraging',method:'care',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','foraging','care'],description:'Kitten care (feed/wool/stroke), Miscellania weeding, and Druid pouch filling'},
+ {skill:'foraging',method:'miscellania-coffer',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','foraging','miscellania-coffer'],description:'Manage Kingdom of Miscellania coffer and approval'},
+ {skill:'foraging',method:'qol',script:'scripts/aio-skiller.ts',defaultArgs:['artisan','foraging','qol'],description:'Auto Cannon refill, prayer hold, special bar enable, and inventory drop patterns'},
  {skill:'foraging',method:'crystal-chest',script:'scripts/aio-skiller.ts',defaultArgs:['gather','foraging','crystal-chest'],description:'Combine key halves and open Taverley crystal chests from Falador West Bank for uncut dragonstones'},
 ];
 
@@ -571,13 +580,13 @@ export function planStunSuperheatSmithing(currentSmithing: number, currentMagic:
  if (currentSmithing < 15) {
   bands.push({
    fromSmithing: currentSmithing, toSmithing: 15, metal: 'bronze', casts: 12,
-   step: { script: 'scripts/microbot-magic-items.ts', args: ['superheat:bronze', '-', '12', String(cap)], env: {} },
+   step: { script: 'scripts/aio-skiller.ts', args: ['artisan', 'magic', 'items', 'superheat:bronze', '-', '12', String(cap)], env: {} },
   });
  }
  if (currentSmithing < 41) {
   bands.push({
    fromSmithing: Math.max(currentSmithing, 15), toSmithing: 41, metal: 'iron', casts: 45,
-   step: { script: 'scripts/microbot-magic-items.ts', args: ['superheat:iron', '-', '45', String(cap)], env: {} },
+   step: { script: 'scripts/aio-skiller.ts', args: ['artisan', 'magic', 'items', 'superheat:iron', '-', '45', String(cap)], env: {} },
   });
  }
  return bands;
@@ -667,6 +676,45 @@ function buildRunecraftDeps(): RunecraftExternalDeps {
  };
 }
 
+const LEGACY_ARTISAN_METHOD_ALIASES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+ cooking: { 'cook-food': 'food', 'cook-stock': 'stock', 'cook-wine': 'wine', 'microbot-wine': 'mixed-wine', 'microbot-b-cooking': 'batch', 'microbot-ge-cooking': 'ge-cook' },
+ firemaking: { 'firemaking-order': 'order', 'firemaking-line': 'line', 'microbot-ge-firemaking': 'ge' },
+ fletching: { 'fletch-arrows': 'arrows', 'fletch-shafts': 'shafts', 'fletch-worker': 'worker' },
+ smithing: { 'smelt-bars': 'smelt', 'smelt-batch': 'smelt', 'smith-batch': 'anvil', 'microbot-a-cannonballs': 'cannonballs' },
+ crafting: {
+  'spin-bowstrings': 'bowstrings', 'microbot-b-jewellery': 'jewellery', 'microbot-jewellery-trip': 'jewellery-trip',
+  'craft-jewelry': 'legacy-jewelry', 'microbot-glass': 'glass', 'microbot-c-tanner': 'tanning',
+  'black-dhide-sets': 'black-dhide-sets', 'soften-clay': 'soften-clay', 'microbot-production': 'inventory',
+  'microbot-production-progressive': 'progressive',
+ },
+ herblore: { 'brew-potions': 'potions', 'druid-meats': 'meats' },
+ prayer: { 'train-prayer': 'bury' },
+ magic: {
+  'microbot-magic-items': 'items', 'microbot-magic-teleport': 'teleport', 'microbot-magic-trip': 'trip',
+  'microbot-c-orbs': 'orbs', 'microbot-orb-trip': 'orbs', 'microbot-bones': 'bones',
+  'earth-production': 'earth-production', 'alch-train': 'alch-train',
+ },
+ foraging: { 'microbot-c-care': 'care', 'microbot-misc-coffer': 'miscellania-coffer', 'microbot-c-qol': 'qol' },
+};
+
+function buildArtisanDeps(): ArtisanExternalDeps {
+ return {
+  workScript: 'scripts/aio-skiller.ts',
+  runBankJob: (s, job, stop) => runBankJob(s as Parameters<typeof runBankJob>[0], job as BankJob, stop),
+  validateBankJob: j => validateBankJob(j as BankJob),
+  runBankProfile: (s, j, p, stop) => runBankProfile(s as Parameters<typeof runBankProfile>[0], j as Parameters<typeof runBankProfile>[1], p as Parameters<typeof runBankProfile>[2], stop),
+  nativeNpcSpell,
+  runNpcMagic: (s, spell, opts) => runNpcMagic(s as Parameters<typeof runNpcMagic>[0], spell as Parameters<typeof runNpcMagic>[1], opts as unknown as Parameters<typeof runNpcMagic>[2]),
+  combatTeleportAllowed,
+  reconcileLoadout: (s, opts) => reconcileLoadout(s as Parameters<typeof reconcileLoadout>[0], opts as unknown as Parameters<typeof reconcileLoadout>[1]),
+  withdrawFireOwned: (s, id, amount) => withdrawFireOwned(s as Parameters<typeof withdrawFireOwned>[0], id, amount),
+  installOrbFloorBridge,
+  monitorWildernessLevel,
+  openQuest: async opts => (await import('./generated/quest-lib')).openQuest(opts),
+  walkTargetPersist,
+ };
+}
+
 export function resolveSkillerStep(skillInput: string, methodInput?: string, rest: readonly string[] = []): Step {
  const skill = skillInput.toLowerCase().replace(/^--skill=/, '');
  if(skill==='bank-job'){
@@ -678,8 +726,12 @@ export function resolveSkillerStep(skillInput: string, methodInput?: string, res
   const parsed = parseGatherTokens([methodInput ?? '', ...rest].filter(Boolean));
   return { script: 'scripts/aio-skiller.ts', args: ['gather', ...parsed.args], env: parsed.env };
  }
+ if(skill==='artisan'){
+  const parsed = parseGatherTokens([methodInput ?? '', ...rest].filter(Boolean));
+  return { script: 'scripts/aio-skiller.ts', args: ['artisan', ...parsed.args], env: parsed.env };
+ }
  const {method,args:extra} = resolveSkillerMethod(skill, methodInput, rest);
- const aliased = LEGACY_GATHER_METHOD_ALIASES[skill]?.[method] ?? method;
+ const aliased = LEGACY_GATHER_METHOD_ALIASES[skill]?.[method] ?? LEGACY_ARTISAN_METHOD_ALIASES[skill]?.[method] ?? method;
  const route = SKILLER_ROUTES.find(r => r.skill === skill && r.method === aliased)
   ?? SKILLER_ROUTES.find(r => r.skill === skill && r.script.endsWith(`${method}.ts`));
  if (!route) {
@@ -698,6 +750,11 @@ export function resolveSkillerStep(skillInput: string, methodInput?: string, res
  if (route.script === 'scripts/aio-skiller.ts' && route.defaultArgs?.[0] === 'combat') {
   const resolved = resolveRouteStep({ script: route.script, defaultEnv: route.defaultEnv }, extra);
   return { script: route.script, args: ['combat', route.defaultArgs[1]!, ...resolved.args], env: resolved.env };
+ }
+ if (route.script === 'scripts/aio-skiller.ts' && route.defaultArgs?.[0] === 'artisan') {
+  const resolved = resolveRouteStep({ script: route.script, defaultEnv: route.defaultEnv }, extra);
+  const tail = resolved.args.length ? resolved.args : route.defaultArgs.slice(3);
+  return { script: route.script, args: ['artisan', route.skill, route.method, ...tail], env: resolved.env };
  }
  return resolveRouteStep(route, extra);
 }
@@ -748,6 +805,24 @@ export async function runAioSkiller(account: string, args: readonly string[], en
   });
   return !process.exitCode || Number(process.exitCode) === 0 ? 'RESULT ok' : 'RESULT fail';
  }
+ if (first === 'artisan') {
+  if (!second || !VALID_ARTISAN_SKILLS.includes(second as ArtisanSkill)) {
+   throw Error(`aio-skiller artisan requires <skill> (${VALID_ARTISAN_SKILLS.join('|')})`);
+  }
+  if (second === 'bank-job') {
+   return runAioSkiller(account, ['bank-job', ...rest], env);
+  }
+  const [method = DEFAULT_METHOD[second] ?? '', ...tail] = rest;
+  const parsed = parseGatherTokens(tail);
+  const code = await runArtisanCli(account, {
+   skill: second as ArtisanSkill,
+   method,
+   args: parsed.args,
+   env: { ...env, ...parsed.env },
+   deps: buildArtisanDeps(),
+  });
+  return code === 0 ? 'RESULT ok' : 'RESULT fail';
+ }
  if (first === 'bank-job') {
   if (!second) throw Error('aio-skiller bank-job requires <job.json>');
   // Several job files run in one login, in order, and stop at the first failed job: each login costs board ticks.
@@ -772,7 +847,7 @@ export async function runAioSkiller(account: string, args: readonly string[], en
   return result;
  }
  const step = resolveSkillerStep(first, second, rest);
- if (step.script === 'scripts/aio-skiller.ts' && step.args[0] === 'combat') {
+ if (step.script === 'scripts/aio-skiller.ts' && (step.args[0] === 'combat' || step.args[0] === 'artisan')) {
   return runAioSkiller(account, step.args, { ...env, ...step.env });
  }
  return runDirectChild([step.script, account, ...step.args], { ...env, ...step.env });

@@ -1,7 +1,7 @@
 import {expect,test} from 'bun:test';
 import {caseChecks,childChecks,childConfiguration,firemakingFixture,keptAssets,progressChecks,refusalChecks,savedBurns,
  cases,NATIVE_ADMISSION_GB,RAW_PER_LOG,TARGET,ENTRY,RECOVERY_AFTER,type Kind} from '../src/firemaking-order-proof';
-import {xpForLevel,levelForXp} from '../../../scripts/firemaking-order';
+import {xpForLevel,levelForXp} from '../../workers/src/bank-artisan';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 
 type Item={slot:number;id:number;count:number};
@@ -55,7 +55,7 @@ test('recovery fixture keeps Shaftmaker ordinary skills and owned inputs at the 
 });
 test('real worker CLI retains the named consumer target, two-log cap and zero buying budget',()=>{
  const c=childConfiguration('flfmxabc1','entry',{PATH:'p',DEMO_OK:'1'});
- expect(c.cmd).toEqual(['bun','scripts/firemaking-order.ts','flfmxabc1']);
+ expect(c.cmd).toEqual(['bun','scripts/aio-skiller.ts','flfmxabc1','artisan','firemaking','order']);
  expect(c.env).toMatchObject({PATH:'p',DEMO_OK:'',RANDOM_EVENTS:'0',TARGET_LEVEL:'15',MAX_LOGS:'2',CAP:'2000',LOG:'normal',TOOL_BUDGET:'0',CASH_RESERVE:'0'});
  expect(c.windowsHide).toBe(true);
 });

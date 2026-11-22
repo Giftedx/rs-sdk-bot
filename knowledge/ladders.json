@@ -7009,11 +7009,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/train-prayer.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/train-prayer.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/train-prayer.ts contains \"BONE=526\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/prayer.ts contains \"BONE=526\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "prayer/bury-bones",
@@ -8103,11 +8103,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/craft-jewelry.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/craft-jewelry.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/craft-jewelry.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "magic/magic_spell_enchant_level1",
@@ -9067,11 +9067,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/craft-jewelry.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/craft-jewelry.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/craft-jewelry.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "magic/magic_spell_enchant_level2",
@@ -10021,11 +10021,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/craft-jewelry.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/craft-jewelry.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/craft-jewelry.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "magic/magic_spell_enchant_level3",
@@ -10602,11 +10602,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/craft-jewelry.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/craft-jewelry.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/craft-jewelry.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "magic/magic_spell_enchant_level4",
@@ -11725,11 +11725,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/craft-jewelry.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/craft-jewelry.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/craft-jewelry.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "magic/magic_spell_enchant_level5",
@@ -15661,13 +15661,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/cook-food.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/cook-food.ts",
-     "scripts/cook-stock.ts",
      "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/cook-food.ts contains \"FOOD_TYPE: lobster | swordfish | trout | salmon | shark\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/cooking.ts contains \"FOOD_TYPE: lobster | swordfish | trout | salmon | shark\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "cooking/cooking_generic_trout",
@@ -16493,13 +16491,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/cook-food.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/cook-food.ts",
-     "scripts/cook-stock.ts",
      "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/cook-food.ts contains \"FOOD_TYPE: lobster | swordfish | trout | salmon | shark\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/cooking.ts contains \"FOOD_TYPE: lobster | swordfish | trout | salmon | shark\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "cooking/cooking_generic_salmon",
@@ -17480,7 +17476,7 @@
     "workers": [
      "wine-order"
     ],
-    "workerEvidence": "scripts/cook-wine.ts contains \"wine\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/cooking.ts contains \"wine\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "cooking/wine-wine",
@@ -17725,11 +17721,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/cook-food.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/cook-food.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/cook-food.ts contains \"FOOD_TYPE: lobster | swordfish | trout | salmon | shark\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/cooking.ts contains \"FOOD_TYPE: lobster | swordfish | trout | salmon | shark\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "cooking/cooking_generic_lobster",
@@ -17981,11 +17977,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/cook-food.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/cook-food.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/cook-food.ts contains \"FOOD_TYPE: lobster | swordfish | trout | salmon | shark\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/cooking.ts contains \"FOOD_TYPE: lobster | swordfish | trout | salmon | shark\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "cooking/cooking_generic_swordfish",
@@ -18514,7 +18510,7 @@
     "worker": "shark-supply-order",
     "workers": [
      "shark-supply-order",
-     "scripts/cook-food.ts"
+     "scripts/aio-skiller.ts"
     ],
     "workerEvidence": "scripts/aio-skiller.ts contains \"shark\"",
     "pendingCapability": null,
@@ -22554,11 +22550,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/fletch-arrows.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/fletch-arrows.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/fletch-arrows.ts contains \"OAK_BOW = 845\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/fletching.ts contains \"OAK_BOW = 845\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "fletching/stringing_oak_longbow",
@@ -22635,11 +22631,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/fletch-arrows.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/fletch-arrows.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/fletch-arrows.ts contains \"TIP_TYPE: rune | adamant | mithril | steel\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/fletching.ts contains \"TIP_TYPE: rune | adamant | mithril | steel\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "fletching/fletching_steel_arrow",
@@ -23314,11 +23310,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/fletch-arrows.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/fletch-arrows.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/fletch-arrows.ts contains \"TIP_TYPE: rune | adamant | mithril | steel\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/fletching.ts contains \"TIP_TYPE: rune | adamant | mithril | steel\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "fletching/fletching_mithril_arrow",
@@ -23843,11 +23839,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/fletch-arrows.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/fletch-arrows.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/fletch-arrows.ts contains \"TIP_TYPE: rune | adamant | mithril | steel\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/fletching.ts contains \"TIP_TYPE: rune | adamant | mithril | steel\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "fletching/fletching_adamant_arrow",
@@ -24303,11 +24299,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/fletch-arrows.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/fletch-arrows.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/fletch-arrows.ts contains \"TIP_TYPE: rune | adamant | mithril | steel\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/fletching.ts contains \"TIP_TYPE: rune | adamant | mithril | steel\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "fletching/fletching_rune_arrow",
@@ -27749,7 +27745,7 @@
     "workers": [
      "firemaking-order"
     ],
-    "workerEvidence": "scripts/firemaking-order.ts contains \"normal:{id:1511\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/firemaking.ts contains \"normal: { id: 1511\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "firemaking/burn-normal-logs",
@@ -29870,11 +29866,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/spin-bowstrings.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/spin-bowstrings.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/spin-bowstrings.ts contains \"spins flax into bow strings\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"spins flax into bow strings\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "crafting/spin-flax-into-bow-strings",
@@ -30810,11 +30806,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/craft-jewelry.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/craft-jewelry.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/craft-jewelry.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "crafting/sapphire_cutting",
@@ -30896,11 +30892,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/craft-jewelry.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/craft-jewelry.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/craft-jewelry.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "crafting/jewellery-sapphire-ring",
@@ -31179,11 +31175,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/craft-jewelry.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/craft-jewelry.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/craft-jewelry.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "crafting/emerald_cutting",
@@ -31265,11 +31261,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/craft-jewelry.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/craft-jewelry.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/craft-jewelry.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "crafting/jewellery-emerald-ring",
@@ -31735,11 +31731,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/craft-jewelry.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/craft-jewelry.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/craft-jewelry.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "crafting/ruby_cutting",
@@ -31822,11 +31818,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/craft-jewelry.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/craft-jewelry.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/craft-jewelry.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "crafting/jewellery-ruby-ring",
@@ -32126,11 +32122,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/craft-jewelry.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/craft-jewelry.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/craft-jewelry.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "crafting/diamond_cutting",
@@ -32212,11 +32208,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/craft-jewelry.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/craft-jewelry.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/craft-jewelry.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "crafting/jewellery-diamond-ring",
@@ -32560,11 +32556,11 @@
     },
     "xpPerTick": 4884.8,
     "rateMethod": "cut_dragonstone_trade_loop",
-    "worker": "scripts/craft-jewelry.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/craft-jewelry.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/craft-jewelry.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "crafting/dragonstone_cutting",
@@ -32651,11 +32647,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/craft-jewelry.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/craft-jewelry.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/craft-jewelry.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/crafting.ts contains \"TIER: sapphire | emerald | ruby | diamond | dragonstone\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "crafting/jewellery-dragonstone-ring",
@@ -34530,12 +34526,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/smelt-bars.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/smelt-bars.ts",
-     "scripts/smelt-batch.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/smithing.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-bronze",
@@ -36827,10 +36822,9 @@
     "worker": "iron-progress-order",
     "workers": [
      "iron-progress-order",
-     "scripts/smelt-bars.ts",
-     "scripts/smelt-batch.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/smithing.ts contains \"BAR_TYPE: iron\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-iron",
@@ -37905,12 +37899,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/smelt-bars.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/smelt-bars.ts",
-     "scripts/smelt-batch.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/smithing.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-silver",
@@ -39318,12 +39311,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/smelt-bars.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/smelt-bars.ts",
-     "scripts/smelt-batch.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/smithing.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-steel",
@@ -41341,12 +41333,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/smelt-bars.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/smelt-bars.ts",
-     "scripts/smelt-batch.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/smithing.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-gold",
@@ -42299,12 +42290,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/smelt-bars.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/smelt-bars.ts",
-     "scripts/smelt-batch.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/smithing.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-mithril",
@@ -44645,12 +44635,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/smelt-bars.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/smelt-bars.ts",
-     "scripts/smelt-batch.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/smithing.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-adamant",
@@ -46661,12 +46650,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/smelt-bars.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/smelt-bars.ts",
-     "scripts/smelt-batch.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/smithing.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-runite",
@@ -54810,11 +54798,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/brew-potions.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/brew-potions.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/brew-potions.ts contains \"'super_def'\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/herblore.ts contains \"'super_def'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-energy-potion",
@@ -55125,11 +55113,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/brew-potions.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/brew-potions.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/brew-potions.ts contains \"'super_def'\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/herblore.ts contains \"'super_def'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-prayer-restore-potion",
@@ -55285,11 +55273,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/brew-potions.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/brew-potions.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/brew-potions.ts contains \"'super_def'\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/herblore.ts contains \"'super_def'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-super-attack-potion",
@@ -55753,11 +55741,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/brew-potions.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/brew-potions.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/brew-potions.ts contains \"'super_def'\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/herblore.ts contains \"'super_def'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-super-strength-potion",
@@ -56141,11 +56129,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/brew-potions.ts",
+    "worker": "scripts/aio-skiller.ts",
     "workers": [
-     "scripts/brew-potions.ts"
+     "scripts/aio-skiller.ts"
     ],
-    "workerEvidence": "scripts/brew-potions.ts contains \"'super_def'\"",
+    "workerEvidence": "packages/workers/src/bank-artisan/herblore.ts contains \"'super_def'\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-super-defence-potion",

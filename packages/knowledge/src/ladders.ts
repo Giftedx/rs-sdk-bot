@@ -94,14 +94,14 @@ const RULES: Rule[] = [
     { worker: 'cap:agility-order', evidence: 'Gnome Stronghold', methods: /^agility\/course-gnome-stronghold-agility-course$/ },
     { worker: 'cap:agility-order', evidence: 'Barbarian', methods: /^agility\/course-barbarian-outpost-agility-course$/ },
     { worker: 'cap:agility-order', evidence: 'Wilderness', methods: /^agility\/course-wilderness-course$/ },
-    { worker: 'cap:firemaking-order', evidence: 'normal:{id:1511', methods: /^firemaking\/burn-normal-logs$/ },
+    { worker: 'cap:firemaking-order', source: 'packages/workers/src/bank-artisan/firemaking.ts', evidence: 'normal: { id: 1511', methods: /^firemaking\/burn-normal-logs$/ },
     { worker: 'cap:magic-order', evidence: 'WIND_STRIKE', methods: /^magic\/magic_spell_wind_strike$/ },
-    { worker: 'cap:wine-order', evidence: 'wine', methods: /^cooking\/wine-wine$/ },
+    { worker: 'cap:wine-order', source: 'packages/workers/src/bank-artisan/cooking.ts', evidence: 'wine', methods: /^cooking\/wine-wine$/ },
     { worker: 'cap:rune-bank-craft', evidence: 'air/mind/water/earth/fire/body/cosmic', methods: /^runecraft\/runecraft_air$/ },
     { worker: 'cap:fresh-rune-supply-order', evidence: 'Rune Mysteries + essence + air', methods: /^(runecraft\/runecraft_air|mining\/rune_essence_table)$/ },
     { worker: 'cap:goldfarm-order', evidence: 'Pickpocket Knights of Ardougne', methods: /^thieving\/pickpocket_knight_of_ardougne$/ },
     { worker: 'cap:shark-supply-order', evidence: 'shark', methods: /^(fishing\/catch-shark|cooking\/cooking_generic_shark)$/ },
-    { worker: 'cap:iron-progress-order', evidence: "BAR_TYPE: iron", methods: /^smithing\/smelt-iron$/ },
+    { worker: 'cap:iron-progress-order', source: 'packages/workers/src/bank-artisan/smithing.ts', evidence: 'BAR_TYPE: iron', methods: /^smithing\/smelt-iron$/ },
     { worker: 'cap:cow-progress-order', evidence: 'cowProfile', methods: /^(attack|strength|defence|hitpoints)\/target-cow$/ },
     { worker: 'cap:ranged-train', evidence: 'BOWS', methods: /^ranged\/bow-gear-(standard-bows|oak-bows|willow-bows|maple-bows|yew-bows|magic-bows)$/ },
     { worker: 'cap:ranged-train', evidence: "'ranged/chickens'", methods: /^(ranged|hitpoints)\/target-chicken$/ },
@@ -110,21 +110,21 @@ const RULES: Rule[] = [
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/mining.ts', evidence: 'copper: [2090', methods: /^mining\/(copper|tin|iron|clay)_rock_table$/ },
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/mining.ts', evidence: 'RUNE_ESSENCE = 1436', methods: /^mining\/rune_essence_table$/ },
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/thieving.ts', evidence: 'runGoldfarmKnights', methods: /^thieving\/pickpocket_knight_of_ardougne$/ },
-    { worker: 'scripts/craft-jewelry.ts', evidence: 'TIER: sapphire | emerald | ruby | diamond | dragonstone', methods: /^(crafting\/(sapphire|emerald|ruby|diamond|dragonstone)_cutting|crafting\/jewellery-(sapphire|emerald|ruby|diamond|dragonstone)-ring|magic\/magic_spell_enchant_level[1-5])$/ },
-    { worker: 'scripts/spin-bowstrings.ts', evidence: 'spins flax into bow strings', methods: /^crafting\/spin-flax-into-bow-strings$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/bank-artisan/crafting.ts', evidence: 'TIER: sapphire | emerald | ruby | diamond | dragonstone', methods: /^(crafting\/(sapphire|emerald|ruby|diamond|dragonstone)_cutting|crafting\/jewellery-(sapphire|emerald|ruby|diamond|dragonstone)-ring|magic\/magic_spell_enchant_level[1-5])$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/bank-artisan/crafting.ts', evidence: 'spins flax into bow strings', methods: /^crafting\/spin-flax-into-bow-strings$/ },
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/foraging.ts', evidence: 'spinning wheel', methods: /^crafting\/spin-wool$/ },
-    { worker: 'scripts/fletch-arrows.ts', evidence: 'TIP_TYPE: rune | adamant | mithril | steel', methods: /^fletching\/fletching_(steel|mithril|adamant|rune)_arrow$/ },
-    { worker: 'scripts/fletch-arrows.ts', evidence: 'OAK_BOW = 845', methods: /^fletching\/stringing_oak_longbow$/ },
-    { worker: 'scripts/smelt-bars.ts', evidence: 'BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite', methods: /^smithing\/smelt-(bronze|iron|silver|steel|gold|mithril|adamant|runite)$/ },
-    { worker: 'scripts/smelt-batch.ts', evidence: "['bronze','iron','silver','steel','gold','mithril','adamantite','runite']", methods: /^smithing\/smelt-(bronze|iron|silver|steel|gold|mithril|adamant|runite)$/ },
-    { worker: 'scripts/cook-food.ts', evidence: 'FOOD_TYPE: lobster | swordfish | trout | salmon | shark', methods: /^cooking\/cooking_generic_(lobster|swordfish|trout|salmon|shark)$/ },
-    { worker: 'scripts/cook-stock.ts', evidence: 'Cook banked trout/salmon', methods: /^cooking\/cooking_generic_(trout|salmon)$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/bank-artisan/fletching.ts', evidence: 'TIP_TYPE: rune | adamant | mithril | steel', methods: /^fletching\/fletching_(steel|mithril|adamant|rune)_arrow$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/bank-artisan/fletching.ts', evidence: 'OAK_BOW = 845', methods: /^fletching\/stringing_oak_longbow$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/bank-artisan/smithing.ts', evidence: 'BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite', methods: /^smithing\/smelt-(bronze|iron|silver|steel|gold|mithril|adamant|runite)$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/bank-artisan/smithing.ts', evidence: 'SMELT_BAR_TYPES =', methods: /^smithing\/smelt-(bronze|iron|silver|steel|gold|mithril|adamant|runite)$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/bank-artisan/cooking.ts', evidence: 'FOOD_TYPE: lobster | swordfish | trout | salmon | shark', methods: /^cooking\/cooking_generic_(lobster|swordfish|trout|salmon|shark)$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/bank-artisan/cooking.ts', evidence: 'Cook banked trout/salmon', methods: /^cooking\/cooking_generic_(trout|salmon)$/ },
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/fishing.ts', evidence: 'export async function runFishcook', methods: /^(fishing\/catch-(trout|salmon)|cooking\/cooking_generic_(trout|salmon))$/ },
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/fishing.ts', evidence: 'raw chicken', methods: /^cooking\/cooking_generic_chicken$/ },
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/fishing.ts', evidence: "targetOp = isCage ? 'Cage' : 'Harpoon'", methods: /^fishing\/catch-(lobster|swordfish|tuna)$/ },
     { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/gather/fishing.ts', evidence: 'export function sharkSpot', methods: /^fishing\/catch-shark$/ },
-    { worker: 'scripts/brew-potions.ts', evidence: "'super_def'", methods: /^herblore\/potion-(prayer-restore-potion|super-attack-potion|super-strength-potion|super-defence-potion|energy-potion)$/ },
-    { worker: 'scripts/train-prayer.ts', evidence: 'BONE=526', methods: /^prayer\/bury-bones$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/bank-artisan/herblore.ts', evidence: "'super_def'", methods: /^herblore\/potion-(prayer-restore-potion|super-attack-potion|super-strength-potion|super-defence-potion|energy-potion)$/ },
+    { worker: 'scripts/aio-skiller.ts', source: 'packages/workers/src/bank-artisan/prayer.ts', evidence: 'BONE=526', methods: /^prayer\/bury-bones$/ },
     { worker: 'scripts/aio-fighter.ts', evidence: 'chickenTrainingProfile', methods: /^(attack|strength|defence|hitpoints)\/target-chicken$/ },
     { worker: 'scripts/aio-fighter.ts', evidence: 'genericCombatNpc', methods: /^(attack|strength|defence|hitpoints)\/target-(chaos_druid|giant)$/ },
     { worker: 'scripts/ranged-train.ts', evidence: 'BOWS', methods: /^(ranged\/bow-gear-standard-bows|ranged\/target-chicken)$/ },
@@ -388,8 +388,9 @@ export function buildLadders(d: Data) {
             const c = caps.get(rule.worker.slice(4));
             if (!c) { unused.push(`${rule.worker}: capability missing`); continue; }
             const entry = d.readFile(c.entry);
+            const src = rule.source ? d.readFile(rule.source) : entry;
             if (entry === null) { pending = c.id; worker = null; file = JSON.stringify(c); }
-            else { worker = c.id; file = entry + '\n' + JSON.stringify(c); }
+            else { worker = c.id; file = (src ?? entry) + '\n' + JSON.stringify(c); }
         } else file = d.readFile(rule.source ?? rule.worker);
         if (file === null || !file.includes(rule.evidence)) { unused.push(`${rule.worker}: evidence ${JSON.stringify(rule.evidence)} not found`); continue; }
         const hits = methods.filter(m => rule.methods.test(m.id));
@@ -397,7 +398,7 @@ export function buildLadders(d: Data) {
         for (const m of hits) {
             if (pending) { m.pendingCapability ??= pending; continue; }
             if (!m.workers.includes(worker!)) m.workers.push(worker!);
-            if (!m.worker) { m.worker = worker; m.workerEvidence = `${rule.worker.startsWith('cap:') ? caps.get(worker!)!.entry : (rule.source ?? rule.worker)} contains ${JSON.stringify(rule.evidence)}`; }
+            if (!m.worker) { m.worker = worker; m.workerEvidence = `${rule.worker.startsWith('cap:') ? (rule.source ?? caps.get(worker!)!.entry) : (rule.source ?? rule.worker)} contains ${JSON.stringify(rule.evidence)}`; }
         }
     }
     for (const u of unused) notes.push(`worker rule unused: ${u}`);
@@ -450,14 +451,14 @@ export function gapsMarkdown(out: ReturnType<typeof buildLadders>): string {
 
 const SCRIPT_CAPABILITIES: Capability[] = [
     { id: 'agility-order', entry: 'scripts/aio-skiller.ts' },
-    { id: 'firemaking-order', entry: 'scripts/firemaking-order.ts' },
+    { id: 'firemaking-order', entry: 'scripts/aio-skiller.ts' },
     { id: 'magic-order', entry: 'scripts/magic-order.ts' },
-    { id: 'wine-order', entry: 'scripts/cook-wine.ts' },
+    { id: 'wine-order', entry: 'scripts/aio-skiller.ts' },
     { id: 'rune-bank-craft', entry: 'scripts/aio-skiller.ts' },
     { id: 'fresh-rune-supply-order', entry: 'scripts/aio-skiller.ts' },
     { id: 'goldfarm-order', entry: 'scripts/aio-skiller.ts' },
     { id: 'shark-supply-order', entry: 'scripts/aio-skiller.ts' },
-    { id: 'iron-progress-order', entry: 'scripts/smelt-bars.ts' },
+    { id: 'iron-progress-order', entry: 'scripts/aio-skiller.ts' },
     { id: 'cow-progress-order', entry: 'scripts/aio-fighter.ts' },
     { id: 'ranged-train', entry: 'scripts/ranged-train.ts' },
 ];

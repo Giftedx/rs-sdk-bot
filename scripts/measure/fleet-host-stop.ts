@@ -9,7 +9,7 @@ import {runBotName} from '../../packages/practice/src/prove';
 import {readPracticeSave,setPracticeSkills,waitPracticeSave} from './fleet-player-save';
 import {parseJm2} from '../../packages/knowledge/src/jm2';
 const hash=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex').toUpperCase();
-const hostSha256=hash('packages/core/src/host.ts'),prayerSha256=hash('scripts/train-prayer.ts');
+const hostSha256=hash('packages/core/src/host.ts'),prayerSha256=hash('packages/workers/src/bank-artisan/prayer.ts');
 if(hostSha256!=='2F5C1509181F25E239D6ED91E8213F3C33A430E21BE9DD56D2A809AB25ED6C82'||prayerSha256!=='458AEDDE6C5043A6F336656291FEE297340FAF328DEBD6ACF96667CF6B722368')throw new Error('host/worker freeze changed');
 const sourcePath='.practice/fleet-proof/prayer-flprayxwwy01-source.json',sourceBytes=readFileSync(sourcePath),source=JSON.parse(sourceBytes.toString());
 const count=(items:readonly {id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
@@ -28,7 +28,7 @@ if(process.env.HOST_STOP_OBSERVER==='1'){
  const path=await applyPreset(actor,{position:source.pos,skills:Object.fromEntries(source.skills.map((s:{name:string;level:number})=>[s.name,s.level])),inventory:source.inventory.map((i:{id:number;count:number})=>({id:i.id,count:i.count})),equipment:source.equipment,bank:source.bank.map((i:{id:number;count:number})=>({id:i.id,count:i.count}))});setPracticeSkills(path,source.skills);
  const initial=readPracticeSave(path);writeFileSync(resolve(dir,`${prefix}-initial.json`),JSON.stringify(initial,null,2));
  console.log(`PROOF_START host-stop actor=${actor} host=${hostSha256} prayer=${prayerSha256} historicalFixture=true freeGiB=${free}`);
- const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),'--preload',import.meta.path,resolve('packages/core/src/host.ts'),'scripts/train-prayer.ts',actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',MAX_BURY:'175',BONE_RESERVE:'6',CAP:'200',HOST_STOP_OBSERVER:'1',HOST_STOP_ACTOR:actor,PROOF_EXPECT_SKILLS:JSON.stringify(source.skills),PROOF_TRACE_PATH:'1'},stdout:'pipe',stderr:'pipe',windowsHide:true});
+ const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),'--preload',import.meta.path,resolve('packages/core/src/host.ts'),'scripts/aio-skiller.ts',actor,'artisan','prayer','bury'],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',MAX_BURY:'175',BONE_RESERVE:'6',CAP:'200',HOST_STOP_OBSERVER:'1',HOST_STOP_ACTOR:actor,PROOF_EXPECT_SKILLS:JSON.stringify(source.skills),PROOF_TRACE_PATH:'1'},stdout:'pipe',stderr:'pipe',windowsHide:true});
  let output='',timedOut=false;const timer=setTimeout(()=>{timedOut=true;p.kill();},120000);
  const read=async(stream:ReadableStream<Uint8Array>)=>{for await(const bytes of stream){const part=new TextDecoder().decode(bytes);output+=part;writeFileSync(resolve(dir,`${prefix}.log`),output);process.stdout.write(part);}};await Promise.all([read(p.stdout),read(p.stderr)]);const code=await p.exited;clearTimeout(timer);
  const worker=JSON.parse(output.match(/PRAYER_BANK (.+)$/m)?.[1]??'null'),host=output.match(/^HOST done .+$/m)?.[0]??'',request=JSON.parse(output.match(/^HOST_STOP_REQUEST (.+)$/m)?.[1]??'null');
@@ -40,7 +40,7 @@ if(process.env.HOST_STOP_OBSERVER==='1'){
  const expectedWorkFailure=code===1&&host.startsWith('HOST done ok=0/1 ')&&output.includes(`[${actor}] RESULT fail mode=prayer` )&&worker?.ok===false&&worker.targetMet===false&&worker.stop==='stop-file';
  const cleanup=!!request&&request.prayerXp>0&&request.heldBones>0&&worker?.heldBones===0&&worker.buried===debit&&worker.consumed===debit&&worker.boneBank===222-debit&&worker.preserved===true&&worker.died===false&&debit>=1&&debit<=13;
  const life=/PROOF_SURVIVAL started=true died=false hpMin=70 finalHp=70/.test(output);
- const ok=expectedWorkFailure&&cleanup&&final.matched&&assets&&equipment&&skills&&atBank&&life&&!timedOut&&output.includes('PROOF_SKILLS_EXACT true')&&output.includes('HOST start bots=1 script=scripts/train-prayer.ts')&&output.includes('LOGOUT logged-out');
+ const ok=expectedWorkFailure&&cleanup&&final.matched&&assets&&equipment&&skills&&atBank&&life&&!timedOut&&output.includes('PROOF_SKILLS_EXACT true')&&output.includes('HOST start bots=1 script=scripts/aio-skiller.ts')&&output.includes('LOGOUT logged-out');
  writeFileSync(resolve(dir,`${prefix}-snapshot.json`),JSON.stringify({ok,actor,hostSha256,prayerSha256,harnessSha256:hash(import.meta.path),sourcePath,sourceSnapshotSha256:hash(sourcePath),qualification:'Historical PRE-Prayer Mighty fixture; SINGLE actual runHost entry/custom-onStop bank cleanup. Expected production RESULTfail remains failure. No fresh public prerequisite, multi-actor or memory/scaling claim.',code,worker,host,request,debit,expectedWorkFailure,cleanup,assets,equipment,skills,atBank,life,timedOut,initial,final:final.save},null,2));
  console.log(`PROOF_GATE host-stop ok=${ok} expectedWorkFailure=${expectedWorkFailure} unusedBanked=${cleanup} debit=${debit} assets=${assets}`);process.exitCode=ok?0:1;
 }

@@ -20,7 +20,7 @@ import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 import {xpForLevel} from '../../planner/src/curve';
 
 const root=resolve(import.meta.dir,'../../..'),QUANTITY=12,TARGET=72,HOLD_TICKS=25;
-const entries=['scripts/aio-logistics.ts','scripts/cook-wine.ts','packages/practice/src/wine-stock-order-proof.ts'];
+const entries=['scripts/aio-logistics.ts','scripts/aio-skiller.ts','packages/workers/src/bank-artisan/cooking.ts','packages/practice/src/wine-stock-order-proof.ts'];
 const rules=['vendor/rs-sdk/server/content/scripts/skill_cooking/scripts/cooking_inv/scripts/wine/wine.rs2',
  'vendor/rs-sdk/server/engine/src/engine/script/handlers/PlayerOps.ts','vendor/rs-sdk/server/engine/src/engine/entity/Player.ts',
  'vendor/rs-sdk/server/content/scripts/interface_bank/scripts/bank.rs2','vendor/rs-sdk/server/content/scripts/interface_trade/scripts/trade.rs2'];
@@ -165,7 +165,7 @@ export async function runWineStockNative(directory:string){
    await command(['packages/practice/src/wine-stock-order-proof.ts','--handoff'],'handoff');
    await snapshot(0,'makerAfter',s=>wineIds.every(id=>count(s,id)===0));
    await snapshot(1,'consumerReady',s=>count(s,1995,[95])===QUANTITY&&s.skills[7]!.level===69);
-   await command(['scripts/cook-wine.ts',names[1]!,String(TARGET),'80'],'consume',{PROGRESSION_CONSUMER:JSON.stringify({skills:{Cooking:TARGET}})});
+   await command(['scripts/aio-skiller.ts',names[1]!,'artisan','cooking','wine',String(TARGET),'80'],'consume',{PROGRESSION_CONSUMER:JSON.stringify({skills:{Cooking:TARGET}})});
    await snapshot(1,'consumerAfter',s=>s.skills[7]!.level===TARGET&&count(s,1993,[95])===QUANTITY);
    writeFileSync(join(directory,'native.json'),JSON.stringify({source:pin,children,elapsedMs:Date.now()-started},null,2));return verifyWineStock(directory);
   }catch(error){writeFileSync(join(directory,'native.json'),JSON.stringify({source:pin,children,error:String(error),elapsedMs:Date.now()-started},null,2));throw error;}

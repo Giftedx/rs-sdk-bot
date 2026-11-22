@@ -45,8 +45,7 @@ import { openBot, finish, countItems, releasePrayerGuard, sessionDied } from '..
 import { leaveRuneStarter, onStarterIsland } from '../rune-starter';
 import { waitTicks } from '../../packages/core/src/ticks';
 import {runWoodSupply} from '../../packages/workers/src/gather';
-import {runShafts} from '../fletch-shafts';
-import {runHeadless} from '../fletch-arrows';
+import {runShafts,runHeadless} from '../../packages/workers/src/bank-artisan';
 import { componentId } from '../../packages/core/src/logout';
 import { xpForLevel } from '../../packages/planner/src/curve';
 import { newGiver, stage, refollow, beside, handOver, staged, giverStats, type Giver } from '../site-givers';

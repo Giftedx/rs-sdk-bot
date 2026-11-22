@@ -9,7 +9,7 @@ import { resultCounters } from '../../core/src/status';
 import * as ticks from '../../core/src/ticks';
 import * as walking from '../../core/src/walk';
 import type { PathDeps, PathTile } from '../../core/src/walk';
-import { cookSharks, sharkCookDelta } from '../../../scripts/cook-food';
+import { cookSharks, sharkCookDelta } from '../src/bank-artisan';
 import type { BotWorldState } from '../../../vendor/rs-sdk/sdk/types';
 import {
     FISH_KNIFE_RESET,

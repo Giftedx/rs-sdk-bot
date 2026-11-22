@@ -124,7 +124,7 @@ export function earthShopFallback(request: ItemRequest, journal: ItemOrder | und
         throw Error('earth shop fallback requires the matching fully refunded zero-fill intent and bounded acquisition cap');
     }
     return {
-        entry: production ? 'scripts/earth-production.ts' : 'scripts/aio-market.ts',
+        entry: production ? 'packages/workers/src/bank-artisan/earth-production.ts' : 'scripts/aio-market.ts',
         mode: production ? 'earth-production' : refill ? 'earth-shop' : 'shop-buy',
         args: production ? [production, String(cap)] : [refill ? 'earth-shop' : 'shop-buy', shop, String(cap), '2000'],
         env: {

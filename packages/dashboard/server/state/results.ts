@@ -40,7 +40,7 @@ function nativeProofs(now: number): Map<string,ProofEntry> {
     proofScanAt=now;
     // The inputs are the three hashed sources, the proof files and the status files of their actors: unchanged stats, same answer.
     const stamp=(()=>{try{const proofDir=join(practice,'fleet-proof'),parts:string[]=[];
-        for(const f of ['packages/core/src/host.ts','scripts/train-prayer.ts','scripts/measure/fleet-host-stop.ts']){const t=statSync(join(root,f));parts.push(f+t.size+':'+t.mtimeMs);}
+        for(const f of ['packages/core/src/host.ts','packages/workers/src/bank-artisan/prayer.ts','scripts/measure/fleet-host-stop.ts']){const t=statSync(join(root,f));parts.push(f+t.size+':'+t.mtimeMs);}
         for(const f of readdirSync(proofDir)){const t=statSync(join(proofDir,f));parts.push(f+t.size+':'+t.mtimeMs);const m=/^host-stop-(fl[a-z0-9]+)-snapshot\.json$/i.exec(f);if(m)try{const t2=statSync(join(statusDir,m[1]+'.json'));parts.push('s'+t2.size+':'+t2.mtimeMs);}catch{/* no status */}}
         return parts.join('|');}catch{return '';}})();
     if(stamp&&stamp===proofStamp)return proofCache;
@@ -50,7 +50,7 @@ function nativeProofs(now: number): Map<string,ProofEntry> {
     const digest=(path:string)=>createHash('sha256').update(boundedText(path,512_000)).digest('hex').toUpperCase();
     try {
         // Exact known harness family only. No path or evidence file comes from an HTTP argument.
-        const hashes={host:digest(join(root,'packages/core/src/host.ts')),worker:digest(join(root,'scripts/train-prayer.ts')),harness:digest(join(root,'scripts/measure/fleet-host-stop.ts'))};
+        const hashes={host:digest(join(root,'packages/core/src/host.ts')),worker:digest(join(root,'packages/workers/src/bank-artisan/prayer.ts')),harness:digest(join(root,'scripts/measure/fleet-host-stop.ts'))};
         for(const filename of readdirSync(dir).filter(f=>/^host-stop-fl[a-z0-9]+-snapshot\.json$/i.test(f)).slice(-64))try{
             const path=join(dir,filename),s=JSON.parse(boundedText(path,256_000));
             if(typeof s.actor!=='string'||filename!==`host-stop-${s.actor}-snapshot.json`

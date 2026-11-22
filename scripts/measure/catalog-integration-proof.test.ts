@@ -69,10 +69,10 @@ test('a successful artisan log cannot qualify short output or the wrong saved XP
 test('retained artisan source pins include dispatcher, step resolver and save reader dependencies',()=>{
  const base=mkdtempSync(join(tmpdir(),'artisan-release-'));
  const sources:Record<string,string>={'package.json':'{}','bun.lock':'','tsconfig.json':'{}',
-  'scripts/microbot-production.ts':'export const cut=1;','scripts/microbot-jewellery-trip.ts':'export const ring=1;','scripts/aio-market.ts':'export const shop=1;',
+  'packages/workers/src/bank-artisan/index.ts':'export const artisan=1;','scripts/aio-market.ts':'export const shop=1;',
   'scripts/aio-logistics.ts':"import '../packages/core/src/inprocess';",'packages/core/src/inprocess.ts':'export const bankObservation=1;',
   'scripts/measure/catalog-integration-proof.ts':"import './fleet-player-save'; import '../aio-skiller';",
-  'scripts/measure/fleet-player-save.ts':'export const reader=1;','scripts/aio-skiller.ts':'export const resolveSkillerStep=1;',
+  'scripts/measure/fleet-player-save.ts':'export const reader=1;','scripts/aio-skiller.ts':"import '../packages/workers/src/bank-artisan'; export const resolveSkillerStep=1;",
   'packages/practice/src/supervise.ts':'export {};','packages/practice/src/supervise-host.ts':'export {};'};
  try{
   for(const dir of runtimeTrees)mkdirSync(join(base,dir),{recursive:true});
