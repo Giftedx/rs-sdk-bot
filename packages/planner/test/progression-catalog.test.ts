@@ -428,3 +428,9 @@ test('bounded bank-to-GE and shop-to-bid market routes admit valid finite reques
   expect(intentForEntry('scripts/aio-market.ts',['bank-seller',sellerFile],{},undefined,c)).toBeNull();
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+
+test('unified skiller gather routes retain escorted lava-maze pvp intent and bare grapes default cap',()=>{
+ const c=loadProgressionCatalog();
+ expect(intentForEntry('scripts/aio-skiller.ts',['mining','lava-maze','Buddy','CAP=1800','MAX_ORE=1','EXPECTED_BANK_ORE=0'],{},undefined,c)).toEqual({kind:'pvp',objective:'skiller:mining:lava-maze'});
+ expect(intentForEntry('scripts/aio-skiller.ts',['foraging','grapes'],{},undefined,c)).toEqual({kind:'service',objective:'grapes:skiller:foraging:grapes',units:1});
+});

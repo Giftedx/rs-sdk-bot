@@ -485,7 +485,7 @@ export function intentForEntry(
         }
         const service = entryNameServiceIntent(gather.mappedStem, script, gather.gatherArgs, env, consumer, gatherRoutes);
         if (service !== undefined) return service;
-        if (gatherRoutes.some(r => r.intents.includes('pvp'))) return { kind: 'pvp', objective: gatherRoutes[0]?.id ?? script };
+        if (gather.mappedStem === 'lava-maze-escorted-ore' || gatherRoutes.some(r => r.intents.includes('pvp'))) return { kind: 'pvp', objective: gatherRoutes[0]?.id ?? 'pvp:escort-ore' };
         if (gatherIntents.length === 1 && gatherIntents[0] === 'observe') return { kind: 'observe', objective: gatherRoutes[0]?.id ?? script };
         if (gatherIntents.length === 1 && gatherIntents[0] === 'service') return { kind: 'service', objective: gatherRoutes[0]?.id ?? script };
         return null;
