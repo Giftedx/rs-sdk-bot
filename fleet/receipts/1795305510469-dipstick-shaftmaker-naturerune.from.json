@@ -1,6 +1,6 @@
 {
  "version": 2,
- "state": "prepared",
+ "state": "failed",
  "id": "1795305510469-dipstick-shaftmaker-naturerune",
  "account": "Dipstick",
  "partner": "Shaftmaker",
@@ -12,6 +12,16 @@
  "claim": "43804e7e-3400-45dc-9872-d44a25f5fde8",
  "count": 0,
  "ok": false,
- "at": 1795305647662,
- "detail": "trade claimed"
+ "at": 1795305812527,
+ "detail": "release moved under the session: Error: partner failed: no trade",
+ "bank": {
+  "count": 33,
+  "at": 1795305801836
+ },
+ "logout": {
+  "attemptId": "1795305647672-0000006640-0000000001",
+  "at": 1795305812512,
+  "sha256": "4dccf8aa3269afa6c96803ca087f70cef97e754a11be31fc576ed1366b57e883"
+ },
+ "screen": false
 }
