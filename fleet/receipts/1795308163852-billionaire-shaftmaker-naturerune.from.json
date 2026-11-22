@@ -1,0 +1,17 @@
+{
+ "version": 2,
+ "state": "prepared",
+ "id": "1795308163852-billionaire-shaftmaker-naturerune",
+ "account": "Billionaire",
+ "partner": "Shaftmaker",
+ "role": "from",
+ "side": "local",
+ "server": "rs-sdk-demo.fly.dev",
+ "item": "Nature rune",
+ "requested": 37,
+ "claim": "0d7a7113-312f-4447-b80e-616c304ad72f",
+ "count": 0,
+ "ok": false,
+ "at": 1795308615643,
+ "detail": "trade claimed"
+}
